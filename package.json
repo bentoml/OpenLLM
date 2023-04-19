@@ -1,0 +1,14 @@
+{
+  "name": "openllm-tools",
+  "version": "0.0.0",
+  "description": "JS tooling for OpenLLM",
+  "author": "Aaron Pham",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "pyright": "^1.1.279",
+    "@grpc/grpc-js": "^1.7.1",
+    "google-protobuf": "^3.21.0",
+    "grpc-tools": "^1.11.2",
+    "ts-protoc-gen": "^0.15.0"
+  }
+}

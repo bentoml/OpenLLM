@@ -1,0 +1,57 @@
+name: 🐛 Bug Report
+description: Create a bug report on OpenLLM.
+title: ''
+labels: ['']
+body:
+  - type: markdown
+    id: exists
+    attributes:
+      value: |
+        Please search to see if an issue already exists for the bug you encountered.
+        See [Searching Issues and Pull Requests](https://docs.github.com/en/search-github/searching-on-github/searching-issues-and-pull-requests) for how to use the GitHub search bar and filters.
+  - type: textarea
+    id: describe-the-bug
+    validations:
+      required: true
+    attributes:
+      label: Describe the bug
+      description: |
+        Please provide a clear and concise description about the problem you ran into.
+      placeholder: This happened when I...
+  - type: textarea
+    id: to-reproduce
+    validations:
+      required: false
+    attributes:
+      label: To reproduce
+      description: |
+        Please provide a code sample or a code snipet to reproduce said problem. If you have code snippets, error messages, stack trace please also provide them here.
+
+        **IMPORTANT**: make sure to use [code tag](https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/creating-and-highlighting-code-blocks#syntax-highlighting) to correctly format your code. Screenshot is helpful but don't use it for code snippets as it doesn't allow others to copy-and-paste your code.
+
+        To give us more information for diagnosing the issue, it would be great if you can provide a minimal reproducible!
+      placeholder: |
+        Steps to reproduce the bug:
+
+          1. Provide '...'
+          2. Run '...'
+          3. See error
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: 'Please include the Python logs if you can.'
+      render: shell
+  - type: textarea
+    id: environment-info
+    attributes:
+      label: Environment
+      description: |
+        Please share your environment with us. You should run `bentoml env`, `transformers-cli env` and paste the result here.
+      placeholder: |
+        bentoml: ...
+        transformers: ...
+        python: ...
+        platform: ...
+    validations:
+      required: true

@@ -1,0 +1,211 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '0 0 * * 1/2'
+env:
+  LINES: 120
+  COLUMNS: 120
+  BENTOML_DO_NOT_TRACK: True
+  PYTEST_PLUGINS: bentoml.testing.pytest.plugin
+# https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#defaultsrun
+defaults:
+  run:
+    shell: bash --noprofile --norc -exo pipefail {0}
+jobs:
+  codestyle_check:
+    runs-on: ubuntu-latest
+    needs:
+      - diff
+    if: ${{ (github.event_name == 'pull_request' && needs.diff.outputs.bentoml == 'true') || github.event_name == 'push' }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10.6'
+          architecture: x64
+      - name: Get pip cache dir
+        id: cache-dir
+        run: |
+          echo ::set-output name=dir::$(pip cache dir)
+      - name: Fetch origin
+        run: git fetch origin "$GITHUB_BASE_REF"
+      - name: Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: '17'
+      - name: Install pyright
+        run: |
+          npm install -g npm@^7 pyright
+      - name: Setup bufbuild/buf
+        uses: bufbuild/buf-setup-action@v1.17.0
+        with:
+          github_token: ${{ github.token }}
+      - name: Cache pip dependencies
+        uses: actions/cache@v3
+        id: cache-pip
+        with:
+          path: ${{ steps.cache-dir.outputs.dir }}
+          key: codestyle-${{ hashFiles('requirements/dev-requirements.txt') }}
+      - name: Install dependencies
+        run: |
+          pip install .
+          pip install -r requirements/dev-requirements.txt
+      - name: Format check
+        run: |
+          black --check src examples tests
+          black --check --pyi typings
+          isort --check .
+      - name: Lint check
+        run: ruff check src tests examples
+      - name: Type check
+        if: ${{ github.event_name == 'pull_request' }}
+        run: git diff --name-only --diff-filter=AM "origin/$GITHUB_BASE_REF" -z -- '*.py{,i}' | xargs -0 --no-run-if-empty pyright
+      - name: Proto check
+        if: ${{ (github.event_name == 'pull_request' && needs.diff.outputs.protos == 'true') || github.event_name == 'push' }}
+        run: |
+          buf lint --config "src/bentoml/grpc/buf.yaml" --error-format msvs src
+  documentation_spelling_check:
+    runs-on: ubuntu-latest
+    needs:
+      - diff
+    if: ${{ (github.event_name == 'pull_request' && needs.diff.outputs.docs == 'true') || github.event_name == 'push' }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # fetch all tags and branches
+      - name: Setup python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+      - name: Get pip cache dir
+        id: cache-dir
+        run: |
+          echo ::set-output name=dir::$(pip cache dir)
+      - name: Cache pip dependencies
+        uses: actions/cache@v3
+        id: cache-pip
+        with:
+          path: ${{ steps.cache-dir.outputs.dir }}
+          key: ${{ runner.os }}-docs-${{ hashFiles('requirements/docs-requirements.txt') }}
+      - name: Install dependencies
+        run: |
+          pip install .
+          pip install -r requirements/docs-requirements.txt
+      - name: Install libenchant
+        run: |
+          sudo apt-get update && sudo apt-get install -y libenchant-2-dev
+      - name: Run spellcheck script
+        run: make spellcheck-docs
+  unit_tests:
+    needs:
+      - diff
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ['3.7', '3.8', '3.9', '3.10']
+    if: ${{ (github.event_name == 'pull_request' && needs.diff.outputs.bentoml == 'true') || github.event_name == 'push' }}
+    name: python${{ matrix.python-version }}_unit_tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # fetch all tags and branches
+      - name: Setup python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: x64
+      - name: Get pip cache dir
+        id: cache-dir
+        run: |
+          echo ::set-output name=dir::$(pip cache dir)
+      - name: Cache pip dependencies
+        uses: actions/cache@v3
+        id: cache-pip
+        with:
+          path: ${{ steps.cache-dir.outputs.dir }}
+          key: ${{ runner.os }}-tests-${{ hashFiles('requirements/tests-requirements.txt') }}
+      - name: Install dependencies
+        run: |
+          pip install ".[grpc]"
+          pip install -r requirements/tests-requirements.txt
+      - name: Run unit tests
+        run: |
+          OPTS=(--cov-config pyproject.toml --cov=src/bentoml --cov-append)
+          if [ "${{ matrix.os }}" != 'windows-latest' ]; then
+            # we will use pytest-xdist to improve tests run-time.
+            OPTS=(${OPTS[@]} --dist loadfile -n auto --run-grpc-tests)
+          fi
+          # Now run the unit tests
+          coverage run -m pytest tests/unit "${OPTS[@]}"
+  bento_server_e2e_tests:
+    needs:
+      - diff
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ['3.7', '3.8', '3.9', '3.10']
+        server_type: ['http', 'grpc']
+        exclude:
+          - os: windows-latest
+            server_type: 'grpc'
+          - os: macos-latest
+            server_type: 'grpc'
+            python-version: '3.10'
+    if: ${{ (github.event_name == 'pull_request' && needs.diff.outputs.bentoml == 'true') || github.event_name == 'push' }}
+    name: python${{ matrix.python-version }}_${{ matrix.server_type }}_e2e_tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    env:
+      SETUPTOOLS_USE_DISTUTILS: stdlib
+      BENTOML_BUNDLE_LOCAL_BUILD: True
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # fetch all tags and branches
+      - name: Setup python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: x64
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+      - name: Set up Docker Buildx
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        id: buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Get pip cache dir
+        id: cache-dir
+        run: |
+          echo ::set-output name=dir::$(pip cache dir)
+      - name: Cache pip dependencies
+        uses: actions/cache@v3
+        id: cache-pip
+        with:
+          path: ${{ steps.cache-dir.outputs.dir }}
+          key: ${{ runner.os }}-tests-${{ hashFiles('requirements/tests-requirements.txt') }}
+      - name: Install dependencies for ${{ matrix.server_type }}-based tests.
+        run: |
+          pip install -r requirements/tests-requirements.txt
+          if [ "${{ matrix.server_type }}" == 'grpc' ]; then
+            pip install -e ".[grpc]"
+          else
+            pip install -e .
+          fi
+          if [ -f "tests/e2e/bento_server_${{ matrix.server_type }}/requirements.txt" ]; then
+            pip install -r tests/e2e/bento_server_${{ matrix.server_type }}/requirements.txt
+          fi
+      - name: Run ${{ matrix.server_type }} tests and generate coverage report
+        run: |
+          OPTS=(--cov-config pyproject.toml --cov=src/bentoml --cov-append)
+          coverage run -m pytest tests/e2e/bento_server_${{ matrix.server_type }} "${OPTS[@]}"
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true

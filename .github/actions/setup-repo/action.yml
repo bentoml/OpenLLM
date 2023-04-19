@@ -1,0 +1,46 @@
+name: Setup repo
+description: Setup repo with all features on CI
+inputs:
+  python-version:
+    description: 'Python version'
+    required: true
+    default: '3.8'
+  architecture:
+    description: 'Which architecture to run on'
+    required: true
+    default: x64
+runs:
+  using: composite
+  steps:
+    - name: Fetch base reference.
+      shell: bash
+      run: git fetch origin $GITHUB_BASE_REF
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ inputs.python-version }}
+        architecture: ${{ inputs.architecture }}
+    - name: Setup node
+      uses: actions/setup-node@v3
+      with:
+        node-version: '17'
+    - name: Get cache key prefix
+      id: get-cache-key-prefix
+      shell: bash
+      run: echo "prefix=${{ runner.os }}-${{ inputs.python-version }}" >> $GITHUB_OUTPUT
+    - name: Get pip cache dir
+      id: pip-cache-dir
+      shell: bash
+      run: echo "dir=$(pip cache dir)" >> $GITHUB_OUTPUT
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      id: cache-pip
+      with:
+        path: ${{ steps.pip-cache-dir.outputs.dir }}
+        key: ${{ steps.get-cache-key-prefix.outputs.prefix }}-pypi
+        restore-keys: |
+          ${{ steps.get-cache-key-prefix.outputs.prefix }}-pypi-
+    # TODO: setup hatch actions instead
+    - name: Install dependencies
+      shell: bash
+      run: pip install -r requirements/tests.txt

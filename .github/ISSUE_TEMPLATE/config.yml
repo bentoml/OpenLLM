@@ -1,0 +1,9 @@
+blank_issues_enabled: true
+version: 2.1
+contact_links:
+  - name: Blank issues
+    url: https://github.com/bentoml/open-llm-server/issues/new
+    about: To create a blank issue
+  - name: BentoML Discussions
+    url: https://github.com/bentoml/BentoML/discussions
+    about: Please ask general questions here.

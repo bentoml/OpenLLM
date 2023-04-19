@@ -1,0 +1,19 @@
+#!/bin/bash
+
+set -e
+
+BASEDIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]:-$0}")" &> /dev/null && pwd 2> /dev/null)"
+GIT_ROOT=$(git rev-parse --show-toplevel)
+
+cd "$GIT_ROOT" || exit 1
+
+# NOTE that we are using local bazel instead of system bazel.
+bazel run //:buildcheck
+bazel run //:black -- --check "$GIT_ROOT/src"
+bazel run //:isort -- --check "$GIT_ROOT/src"
+# linting protos
+bazel run //:v1_proto_lint
+bazel run //:v1alpha1_proto_lint
+
+# Running ruff for whole codebase.
+ruff src examples docs tests

@@ -1,0 +1,25 @@
+#!/bin/bash
+
+set -e
+
+BASEDIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]:-$0}")" &> /dev/null && pwd 2> /dev/null)"
+
+GIT_ROOT=$(git rev-parse --show-toplevel)
+
+cd "$GIT_ROOT" || exit 1
+
+bazel run //:buildfmt
+bazel run //:black -- "$GIT_ROOT/src"
+bazel run //:black -- --pyi "$GIT_ROOT/typings" "$GIT_ROOT/src/bentoml/metrics.pyi"
+bazel run //:isort -- "$GIT_ROOT/src"
+
+# Running ruff for whole codebase.
+ruff --fix src examples docs tests
+
+if command -v buf > /dev/null 2>&1; then
+    buf format --config "$GIT_ROOT/src/bentoml/grpc/buf.yaml" -w src/bentoml/grpc
+else
+    if command -v docker > /dev/null 2>&1; then
+        docker run --init --rm --volume "$GIT_ROOT/src":/workspace --workdir /workspace bufbuild/buf format --config "/workspace/bentoml/grpc/buf.yaml" -w bentoml/grpc
+    fi
+fi

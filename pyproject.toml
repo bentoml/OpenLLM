@@ -1,0 +1,188 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "openllm"
+dynamic = ["version"]
+description = 'OpenLLM: REST/gRPC API server for running any open Large-Language Model - StableLM, Llama, Alpaca, Dolly, Flan-T5, Custom'
+readme = "README.md"
+requires-python = ">=3.8"
+license = "Apache-2.0"
+keywords = [
+    "MLOps",
+    "AI",
+    "BentoML",
+    "Model Serving",
+    "Model Deployment",
+    "LLMOps",
+    "Large Language Model",
+    "Generative AI",
+    "Stable Diffusion",
+    "StableLM",
+    "Alpaca",
+    "PyTorch",
+    "Transformers",
+]
+authors = [
+    { name = "Aaron Pham", email = "aarnphm@bentoml.com" },
+    { name = "BentoML Team", email = "contact@bentoml.com" },
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: Apache Software License",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+]
+dependencies = [
+    # bentoml[io] includes pydantic, PIL, filetype, pandas and numpy
+    # bentoml[grpc,grpc-reflection] include grpcio, grpcio-reflection
+    "bentoml[io,grpc,grpc-reflection]>=1.0.19",
+    # bentoml[torch] includes torch and transformers
+    "transformers[torch]>=4.28.1",
+    # Super fast JSON serialization
+    "orjson",
+    # clidantic
+    "clidantic",
+]
+
+[project.urls]
+Documentation = "https://github.com/bentoml/open-llm-server#readme"
+Issues = "https://github.com/bentoml/open-llm-server/issues"
+Source = "https://github.com/bentoml/open-llm-server"
+
+[project.scripts]
+openllm = "openllm.__main__:cli"
+
+[tool.hatch.version]
+path = "src/openllm/__about__.py"
+
+[tool.hatch.envs.default]
+dependencies = [
+    "coverage[toml]>=6.5",
+    "pytest",
+    "pytest-asyncio>=0.21.0",
+    "pytest-xdist[psutil]",
+    "pytest-cov",
+    "pytest-mock",
+    "pytest-randomly",
+    "pytest-rerunfailures",
+]
+[tool.hatch.envs.default.scripts]
+test = "pytest {args:tests}"
+test-cov = "coverage run -m pytest {args:tests}"
+cov-report = ["- coverage combine", "coverage report"]
+cov = ["test-cov", "cov-report"]
+
+[[tool.hatch.envs.all.matrix]]
+python = ["3.8", "3.9", "3.10", "3.11"]
+
+[tool.hatch.envs.lint]
+detached = true
+dependencies = ["black>=23.1.0", "mypy>=1.0.0", "ruff>=0.0.243", "pyright"]
+[tool.hatch.envs.lint.scripts]
+typing = "pyright {args:src/openllm tests}"
+style = ["ruff {args:.}", "black --check --diff {args:.}"]
+fmt = ["black {args:.}", "ruff --fix {args:.}", "style"]
+all = ["style", "typing"]
+
+[tool.pytest.ini_options]
+addopts = ["-rfEX", "-pno:warnings"]
+python_files = ["test_*.py", "*_test.py"]
+testpaths = ["tests"]
+
+[tool.black]
+target-version = ["py311"]
+line-length = 120
+exclude = '''
+(
+  /(
+      \.eggs
+    | \.git
+    | \.tox
+    | \.venv
+    | _build
+    | .build
+    | bazel-*
+    | build
+    | venv
+    | lib
+    | dist
+  )/
+  | src/openllm/__about__.py
+)
+'''
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+ignore = [
+    # Allow non-abstract empty methods in abstract base classes
+    "B027",
+    # Allow boolean positional values in function calls, like `dict.get(... True)`
+    "FBT003",
+    # Ignore checks for possible passwords
+    "S105",
+    "S106",
+    "S107",
+    # Ignore complexity
+    "C901",
+    "PLR0911",
+    "PLR0912",
+    "PLR0913",
+    "PLR0915",
+]
+unfixable = [
+    "F401", # Don't touch unused imports, just warn about it.
+]
+
+[tool.ruff.pydocstyle]
+convention = "google"
+
+[tool.ruff.isort]
+known-first-party = ["openllm", "bentoml"]
+
+[tool.ruff.flake8-quotes]
+inline-quotes = "single"
+
+[tool.ruff.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[tool.ruff.per-file-ignores]
+# Tests can use magic values, assertions, and relative imports
+"tests/**/*" = ["PLR2004", "S101", "TID252"]
+
+[tool.pyright]
+pythonVersion = "3.11"
+include = ["src/", "tests/"]
+analysis.useLibraryCodeForTypes = true
+typeCheckingMode = "strict"
+strictListInference = true
+strictDictionaryInference = true
+strictSetInference = true
+strictParameterNoneValue = true
+enableTypeIgnoreComments = true
+
+
+[tool.coverage.run]
+source_pkgs = ["openllm", "tests"]
+branch = true
+parallel = true
+omit = ["src/openllm/__about__.py"]
+
+[tool.coverage.paths]
+openllm = ["src/openllm", "*/openllm/src/openllm"]
+tests = ["tests", "*/openllm/tests"]
+
+[tool.coverage.report]
+exclude_lines = ["no cov", "if __name__ == .__main__.:", "if TYPE_CHECKING:"]
