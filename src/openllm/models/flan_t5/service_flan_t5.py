@@ -14,6 +14,8 @@
 
 from __future__ import annotations
 
+__use_config__ = "flan_t5"
+
 import bentoml
 
 import openllm
@@ -34,10 +36,10 @@ tokenizer_runner = openllm.Tokenizer.create_runner("flan-t5")
 svc = bentoml.Service(name=openllm.utils.generate_service_name(model_runner), runners=[model_runner, tokenizer_runner])
 
 
-@svc.api(input=openllm.Prompt(default="flan-t5"), output=openllm.Prompt(default="flan-t5"))
+@svc.api(input=openllm.Prompt(), output=bentoml.io.JSON(pydantic_model=openllm.schema.PromptOutput))
 async def generate(qa: openllm.schema.PromptInput) -> openllm.schema.PromptOutput:
     """Returns the generated text from given prompts."""
-    llm_config = model_runner.llm_config.dict()
+    llm_config = model_runner.llm_config.with_options(**qa.llm_config).dict()
 
     return_tensors = "np" if framework == "flax" else framework
     input_tensor = await tokenizer_runner.async_run(qa.prompt, return_tensors=return_tensors)
@@ -53,7 +55,13 @@ async def generate(qa: openllm.schema.PromptInput) -> openllm.schema.PromptOutpu
 
 
 @svc.api(input=bentoml.io.JSON(pydantic_model=openllm.FlanT5Config), output=bentoml.io.JSON())
-def update_llm_config(llm_config: openllm.FlanT5Config) -> str:
-    """Update the LLM configuration."""
-    object.__setattr__(model_runner, "llm_config", llm_config)
+def set_default_config(llm_config: openllm.FlanT5Config) -> dict[str, t.Any]:
+    """Set default LLM configuration."""
+    object.__setattr__(model_runner, "llm_config", model_runner.llm_config.with_options(**llm_config.dict()))
     return model_runner.llm_config.dict()
+
+
+@svc.api(input=bentoml.io.Text(), output=bentoml.io.Text())
+def get_model(_: str) -> str:
+    """Get model."""
+    return __use_config__

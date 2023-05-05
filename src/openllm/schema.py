@@ -61,8 +61,8 @@ class PromptInput(BaseIO):
     prompt: str
     """The prompt to be sent to system."""
 
-    inputs: t.Dict[str, str]
-    """A mapping of given inputs value. Should be use for cache."""
+    llm_config: t.Dict[str, t.Any]
+    """A mapping of given LLM configuration values for given system."""
 
 
 class PromptOutput(BaseIO):

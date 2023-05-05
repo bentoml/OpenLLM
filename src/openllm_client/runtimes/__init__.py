@@ -12,24 +12,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import annotations
-
-import logging
-import typing as t
-
-import bentoml
-
-logger = logging.getLogger(__name__)
-
-
-def create(address: str, kind: t.Literal["http", "grpc"] = "http", timeout: int = 30):
-    if kind == "http":
-        from .runtimes.http import HTTPClient as _HTTPClient
-
-        return _HTTPClient(address, timeout)
-    elif kind == "grpc":
-        from .runtimes.grpc import GrpcClient as _GrpcClient
-
-        return _GrpcClient(address, timeout)
-    else:
-        raise ValueError(f"Unknown kind: {kind}. Only 'http' and 'grpc' are supported.")
+from .grpc import GrpcClient as GrpcClient
+from .http import HTTPClient as HTTPClient

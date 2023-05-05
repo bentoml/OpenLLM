@@ -12,10 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-DEFAULT_PROMPT_TEMPLATE = """\
-Please use the following piece of context to answer the question at the end.
+from __future__ import annotations
 
-{context}
+from abc import abstractmethod
 
-Question: {question}
-Answer:"""
+import openllm
+
+
+class BaseClient:
+    def query(self, prompt: str, **llm_config: t.Any) -> openllm.schema.QaResult:
+        raise NotImplementedError

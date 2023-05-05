@@ -80,20 +80,8 @@ def build():
     """
 
 
-@cli.command(hidden=True)
-def deploy():
-    """
-    Deploy a model to a target platform.
-
-    Deployment options:
-    - BentoCloud
-    - Self-hosted Yatai
-    - SageMaker, ECR, EC2
-    """
-
-
-@cli.command(name="supported-models")
-def supported_models():
+@cli.command()
+def models():
     """
     List all supported models.
     """

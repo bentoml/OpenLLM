@@ -22,8 +22,11 @@ import difflib
 import functools
 import inspect
 import logging
+import subprocess
+import threading
 import typing as t
 
+import bentoml
 import click
 from click_option_group import optgroup
 
@@ -39,7 +42,7 @@ if t.TYPE_CHECKING:
         def __call__(*args: P.args, **kwargs: P.kwargs) -> t.Any:
             ...
 
-    ServeCommand = t.Literal["serve", "serve-grpc", "start-http-server", "start-grpc-server", "start-runner-server"]
+    ServeCommand = t.Literal["serve", "serve-grpc"]
 
 
 logger = logging.getLogger(__name__)
@@ -168,33 +171,6 @@ class OpenLLMCommandGroup(click.Group):
             raise click.exceptions.UsageError(error_msg, e.ctx)
 
 
-def start_model_command(
-    model_name: str, _context_settings: dict[str, t.Any] | None = None, _serve_grpc: bool = False
-) -> click.Command:
-    _context_settings = _context_settings or {}
-    config = openllm.Config.for_model(model_name)
-
-    def decorator(f: F[P]) -> click.Command:
-        f = openllm.configuration_utils.LLMConfig.generate_click_options(config)(f)
-        f = parse_serve_args(_serve_grpc)(f)
-        return click.command(
-            model_name,
-            short_help=f"Start a LLMServer for '{model_name}' ('--help' for more details)",
-            context_settings=_context_settings,
-            help=getattr(openllm, f"START_{openllm.utils.kebab_to_snake_case(model_name).upper()}_COMMAND_DOCSTRING"),
-        )(openllm.cli.OpenLLMCommandGroup.common_chain(f))
-
-    # The actual `start <model_name>` implementation
-    def model_start(**attrs: t.Any):
-        llm_config_args = {k: attrs[k] for k in config.__fields__ if k in attrs}
-        # The rest should be server-related args
-        server_args = {k: v for k, v in attrs.items() if k not in list(llm_config_args.keys())}
-
-        openllm.start(model_name, server_args=server_args, serve_grpc=_serve_grpc, **llm_config_args)
-
-    return decorator(model_start)
-
-
 class StartCommand(click.MultiCommand):
     def __init__(self, *args: t.Any, **kwargs: t.Any):
         self._serve_grpc = kwargs.pop("_serve_grpc", False)
@@ -210,7 +186,7 @@ class StartCommand(click.MultiCommand):
         return self._cached_command[cmd_name]
 
 
-def parse_serve_args(serve_grpc: bool = False) -> F[P]:
+def parse_serve_args(serve_grpc: bool) -> F[P]:
     """Parsing `bentoml serve|serve-grpc` click.Option to be parsed via `openllm start`"""
     from bentoml_cli.cli import cli
 
@@ -242,3 +218,101 @@ def parse_serve_args(serve_grpc: bool = False) -> F[P]:
         return group(f)
 
     return decorator
+
+
+def run_client(host: str, port: int, _serve_grpc: bool, llm_config_args: t.Any):
+    import openllm_client
+
+    client = openllm_client.create(f"{host}:{port}", kind="grpc" if _serve_grpc else "http", timeout=30)
+
+    while True:
+        try:
+            assert client.health()
+        except:
+            continue
+        else:
+            break
+
+    try:
+        client.setup(**llm_config_args)
+    except Exception as e:
+        logger.error("Exception caught while setting up LLM Server:\n")
+        logger.error(e)
+        raise
+
+    print("Successfully setup LLM Server")
+
+    raise SystemExit(0)
+
+
+def start_model_command(
+    model_name: str,
+    _context_settings: dict[str, t.Any] | None = None,
+    _serve_grpc: bool = False,
+) -> click.Command:
+    config = openllm.Config.for_model(model_name)
+
+    @click.command(
+        model_name,
+        short_help=f"Start a LLMServer for '{model_name}' ('--help' for more details)",
+        context_settings=_context_settings or {},
+        help=getattr(openllm, f"START_{openllm.utils.kebab_to_snake_case(model_name).upper()}_COMMAND_DOCSTRING"),
+    )
+    @openllm.LLMConfig.generate_click_options(config)
+    @parse_serve_args(_serve_grpc)
+    @openllm.cli.OpenLLMCommandGroup.common_chain
+    def model_start(**attrs: t.Any):
+        from bentoml._internal.log import configure_logging
+
+        # NOTE: We need the below imports so that the client can use the custom IO Descriptor.
+        from openllm.prompts import Prompt as Prompt
+
+        configure_logging()
+
+        start_env = {
+            openllm.utils.FRAMEWORK_ENV_VAR(model_name): openllm.utils.get_framework_env(model_name),
+        }
+
+        llm_config_kwargs = {k: attrs[k] for k in config.__fields__ if k in attrs}
+        # The rest should be server-related args
+        server_args = {k: v for k, v in attrs.items() if k not in list(llm_config_kwargs.keys())}
+        server_args.update(
+            {
+                "working_dir": openllm.utils.get_working_dir(model_name),
+                "bento": f'service_{model_name.replace("-", "_")}:svc',
+            }
+        )
+        # NOTE: currently, theres no development args in bentoml.Server. To be fixed upstream.
+        development = server_args.pop("development")
+        server_args.setdefault("production", not development)
+
+        click.secho(
+            f"\nStarting LLM Server for '{model_name}' at {'http://' if not _serve_grpc else ''}{server_args['host']}:{server_args['port']}\n",
+            fg="blue",
+        )
+        server = getattr(bentoml, "HTTPServer" if not _serve_grpc else "GrpcServer")(**server_args)
+        server.timeout = 90
+
+        try:
+            server.start(env=start_env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            assert server.process is not None
+            client = server.get_client()
+            if llm_config_kwargs:
+                click.secho(f"Setting default config for '{model_name}' with {llm_config_kwargs}", fg="blue")
+                res = client.set_default_config(llm_config_kwargs)
+                assert res
+
+            with server.process.stdout:
+                while True:
+                    line = server.process.stdout.readline()
+                    if not line:
+                        break
+                    click.secho(line.strip(), fg="blue")
+        except KeyboardInterrupt:
+            click.secho("\nStopping LLM Server...\n", fg="yellow")
+            # TODO: Add possible next step
+        except Exception as err:
+            click.secho(f"Error caught while starting LLM Server:\n{err}", fg="red")
+            raise
+
+    return model_start

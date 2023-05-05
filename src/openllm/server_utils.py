@@ -20,6 +20,7 @@ This is an experimental feature and can also be merged to upstream BentoML.
 from __future__ import annotations
 
 import logging
+import os
 import subprocess
 import typing as t
 from io import StringIO
@@ -31,22 +32,19 @@ import openllm
 logger = logging.getLogger(__name__)
 
 
-def start(
+def _start(
     model_name: str,
     framework: t.Literal["flax", "tf", "pt"] | None = None,
-    server_args: dict[str, t.Any] | None = None,
-    serve_grpc: bool = False,
-    **llm_config_args: t.Any,
+    _serve_grpc: bool = False,
+    **attrs: t.Any,
 ):
     # NOTE: We need the below imports so that the client can use the custom IO Descriptor.
     from openllm.prompts import Prompt as Prompt
 
-    if framework is None:
-        framework = openllm.utils.get_framework_env(model_name)
+    if framework is not None:
+        os.environ[openllm.utils.FRAMEWORK_ENV_VAR(model_name)] = framework
 
-    start_env = {
-        openllm.utils.FRAMEWORK_ENV_VAR(model_name): framework,
-    }
+    openllm.Config.for_model(model_name)
 
     server_args = server_args or {}
     server_args.update(

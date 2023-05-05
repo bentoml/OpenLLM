@@ -65,7 +65,7 @@ def models_to_options(
             multiple=allows_multiple(field.outer_type_),
             help=field.field_info.description,
             show_envvar=True,
-            envvar=f"OPENLLM_{model.__name__.partition('Config')[0].upper()}_{field.name.upper()}",
+            envvar=f"OPENLLM_{model.__module__.rsplit('.', maxsplit=2)[-2].upper()}_{field.name.upper()}",
         )
 
 
@@ -91,7 +91,7 @@ class LLMConfig(BaseConfig):
     @staticmethod
     def generate_click_options(config: LLMConfig) -> t.Callable[[t.Callable[..., t.Any]], click.Command]:
         klass = config.__class__
-        group = optgroup.group(f"{klass.__name__} options", help=f"[Auto-generated from '{klass}']")
+        group = optgroup.group(f"{klass.__name__} options", help=f"[Auto-generated from '{klass.__qualname__}']")
 
         def wrapper(f: t.Callable[..., t.Any]) -> click.Command:
             for option in reversed(list(models_to_options(klass))):
