@@ -71,15 +71,13 @@ class FlaxFlanT5(
 
     _llm_config: FlanT5Config
 
-    @staticmethod
-    def pretrained_models() -> list[str]:
-        return [
-            "google/flan-t5-small",
-            "google/flan-t5-base",
-            "google/flan-t5-large",
-            "google/flan-t5-xl",
-            "google/flan-t5-xxl",
-        ]
+    variants = [
+        "google/flan-t5-small",
+        "google/flan-t5-base",
+        "google/flan-t5-large",
+        "google/flan-t5-xl",
+        "google/flan-t5-xxl",
+    ]
 
     def _generate(
         self,

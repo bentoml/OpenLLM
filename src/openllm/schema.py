@@ -16,12 +16,36 @@ Schema definition for OpenLLM. This can be use for client interaction.
 """
 from __future__ import annotations
 
+import string
 import typing as t
 from abc import ABC
 
 import pydantic
 
 import openllm
+
+
+class PromptFormatter(string.Formatter):
+    def vformat(self, format_string: str, args: t.Sequence[t.Any], kwargs: t.Mapping[str, t.Any]) -> str:
+        if len(args) > 0:
+            raise ValueError("Positional arguments are not supported")
+        return super().vformat(format_string, args, kwargs)
+
+    def check_unused_args(
+        self, used_args: set[int | str], args: t.Sequence[t.Any], kwargs: t.Mapping[str, t.Any]
+    ) -> None:
+        """Check if extra params is passed."""
+        extras = set(kwargs).difference(used_args)
+        if extras:
+            raise KeyError(f"Extra params passed: {extras}")
+
+    def extract_template_variables(self, template: str) -> t.Sequence[str]:
+        """Extract template variables from a template string."""
+        return [field[1] for field in self.parse(template) if field[1] is not None]
+
+
+# TODO: Support jinja2 template, go template and possible other prompt template engine.
+_default_formatter = PromptFormatter()
 
 
 class PromptTemplate(pydantic.BaseModel):
@@ -37,11 +61,11 @@ class PromptTemplate(pydantic.BaseModel):
             raise ValueError("Keyword arguments are required")
         if not all(k in kwargs for k in self.input_variables):
             raise ValueError(f"Missing required input variables: {self.input_variables}")
-        return openllm.prompts.default_formatter.format(self.template, **kwargs)
+        return _default_formatter.format(self.template, **kwargs)
 
     @classmethod
     def from_template(cls, template: str) -> PromptTemplate:
-        input_variables = openllm.prompts.default_formatter.extract_template_variables(template)
+        input_variables = _default_formatter.extract_template_variables(template)
         return cls(template=template, input_variables=input_variables)
 
     @classmethod
@@ -57,7 +81,7 @@ class BaseIO(pydantic.BaseModel, ABC):
         extra = "forbid"
 
 
-class PromptInput(BaseIO):
+class GenerateInput(BaseIO):
     prompt: str
     """The prompt to be sent to system."""
 
@@ -65,7 +89,7 @@ class PromptInput(BaseIO):
     """A mapping of given LLM configuration values for given system."""
 
 
-class PromptOutput(BaseIO):
+class GenerateOutput(BaseIO):
     responses: t.List[str]
     """A list of responses from the system."""
 

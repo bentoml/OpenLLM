@@ -19,6 +19,7 @@ that returns a list of Click-compatible options for the model. such options will
 """
 from __future__ import annotations
 
+import os
 import typing as t
 from abc import ABC
 
@@ -35,7 +36,9 @@ from pydantic.utils import lenient_issubclass
 import openllm
 
 if t.TYPE_CHECKING:
-    from openllm.types import F, P
+    P = t.ParamSpec("P")
+
+    F = t.Callable[P, t.Any]
 
 
 __all__ = ["LLMConfig", "ModelSignature"]
@@ -74,11 +77,8 @@ class BaseConfig(pydantic.BaseModel, ABC):
         extra = "forbid"
         underscore_attrs_are_private = True
 
-    def with_options(self, **kwargs: t.Any) -> BaseConfig:
-        return self.copy(update=kwargs)
-
     @classmethod
-    def from_yaml(cls, path: str, ctx: str | None = None) -> BaseConfig:
+    def from_yaml_file(cls, path: str, ctx: str | None = None) -> BaseConfig:
         with open(openllm.utils.resolve_user_filepath(path, ctx=ctx), "rb") as f:
             content = yaml.safe_load(f)
         return cls(**content)
@@ -88,6 +88,13 @@ class BaseConfig(pydantic.BaseModel, ABC):
 
 
 class LLMConfig(BaseConfig):
+    if t.TYPE_CHECKING:
+        # populated by __init_subclass__
+        model_name: str
+
+    def __init_subclass__(cls, *, model_name: str):
+        cls.model_name = model_name
+
     @staticmethod
     def generate_click_options(config: LLMConfig) -> t.Callable[[t.Callable[..., t.Any]], click.Command]:
         klass = config.__class__
@@ -99,3 +106,26 @@ class LLMConfig(BaseConfig):
             return group(f)
 
         return wrapper
+
+    def dict(self, **kwargs: t.Any):
+        exclude = kwargs.pop("exclude", set())
+        exclude.add("model_name")
+        return super().dict(exclude=exclude, **kwargs)
+
+    def with_options(self, **kwargs: t.Any) -> BaseConfig:
+        from_env_ = self.from_env()
+        copied = self.copy(exclude={"model_name"})
+        if from_env_ is not None:
+            copied = self.copy(update=from_env_.dict(), exclude={"model_name"})
+        return copied.copy(update=kwargs)
+
+    @classmethod
+    def from_env(cls) -> LLMConfig | None:
+        envvar = openllm.utils.MODEL_CONFIG_ENV_VAR(cls.model_name)
+        env_json_string = os.environ.get(envvar, None)
+        if env_json_string is None:
+            return
+        try:
+            return cls.parse_raw(env_json_string)
+        except pydantic.ValidationError as e:
+            raise RuntimeError(f"Failed to parse environment variable '{envvar}' as a valid JSON string.") from e

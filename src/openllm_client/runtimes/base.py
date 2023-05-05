@@ -14,11 +14,27 @@
 
 from __future__ import annotations
 
+import typing as t
 from abc import abstractmethod
 
 import openllm
 
 
 class BaseClient:
-    def query(self, prompt: str, **llm_config: t.Any) -> openllm.schema.QaResult:
+    @abstractmethod
+    def query(
+        self,
+        prompt_template: str | openllm.PromptTemplate | None = None,
+        **llm_config: t.Any,
+    ) -> str:
+        raise NotImplementedError
+
+    @abstractmethod
+    def chat(
+        self,
+        prompt: str,
+        context: str,
+        prompt_template: str | openllm.PromptTemplate | None = None,
+        **llm_config: t.Any,
+    ) -> str:
         raise NotImplementedError

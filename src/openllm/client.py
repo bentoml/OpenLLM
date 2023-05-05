@@ -12,15 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Prompt interface for OpenLLM.
+OpenLLM client.
 
-This module exposes the `Prompt` descriptor, which is used to create prompts as a ``bentoml.io.IODescriptor``.
-This ``Prompt`` can also be used to interact with the client and provide similar interface to ``langchain.PromptTemplate``.
+To start interact with the server, you can do the following:
 
-Example:
-    >>> from openllm.prompts import Prompt
-    >>> prompt = Prompt.from_template("Use the following as context: {context}!")
+>>> import openllm
+>>> client = openllm.client.create("http://0.0.0.0:3000")
+>>> client.query("What is the meaning of life?")
 """
 
-from .descriptors import Prompt as Prompt
-from .formatter import default_formatter as default_formatter
+from openllm_client import create as create

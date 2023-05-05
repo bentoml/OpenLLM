@@ -131,7 +131,7 @@ class BaseLLMRunnable(bentoml.Runnable, ABC):
 
     default_model: str | None = None
     """Return the default model to use when using ``openllm start <model_name>``.
-    This could be one of the keys in self.pretrained_models() or custom users model."""
+    This could be one of the keys in self.variants or custom users model."""
 
     inference_config: InferenceConfig = InferenceConfig(generate=ModelSignatureDict(batchable=False))
     """The inference config for the two endpoints of this model.
@@ -141,17 +141,13 @@ class BaseLLMRunnable(bentoml.Runnable, ABC):
     config_class: type[LLMConfig] = LLMConfig
     """The config class for any given LLMRunnable implementation."""
 
-    @staticmethod
-    @abstractmethod
-    def pretrained_models() -> list[str]:
-        """A list of supported pretrainede models tag for this given runnable.
+    variants: list[str]
+    """A list of supported pretrainede models tag for this given runnable.
 
-        For example:
-            For FLAN-T5 impl, this would be ["google/flan-t5-small", "google/flan-t5-base",
-                                             "google/flan-t5-large", "google/flan-t5-xl", "google/flan-t5-xxl"]
-        """
-
-        raise NotImplementedError
+    For example:
+        For FLAN-T5 impl, this would be ["google/flan-t5-small", "google/flan-t5-base",
+                                            "google/flan-t5-large", "google/flan-t5-xl", "google/flan-t5-xxl"]
+    """
 
     @abstractmethod
     def _generate(self, *args: t.Any, **kwargs: t.Any) -> t.Any:
@@ -315,7 +311,7 @@ class LLMRunnable(BaseLLMRunnable, t.Generic[M, T]):
                     "A default model is required for any LLMRunnable. Make sure to specify a default_model or pass in a model_name."
                 )
             pretrained_or_path = cls.default_model
-            if pretrained_or_path not in cls.pretrained_models():
+            if pretrained_or_path not in cls.variants:
                 logger.debug("Creating runner for custom model '%s'", cls.default_model)
 
         models = models or []

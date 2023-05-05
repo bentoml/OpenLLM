@@ -33,10 +33,6 @@ from openllm.configuration_utils import LLMConfig
 from openllm.runner_utils import LLMRunnable
 from openllm.utils import LazyLoader
 
-P = t.ParamSpec("P")
-
-F = t.Callable[P, t.Any]
-
 
 class InferenceConfig(t.TypedDict):
     generate: ModelSignatureDict

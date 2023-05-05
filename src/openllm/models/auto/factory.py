@@ -21,24 +21,17 @@ from collections import OrderedDict
 
 import openllm
 
-from .configuration_auto import Config
+from .configuration_auto import AutoConfig
 
-M = t.TypeVar("M")
-K = t.TypeVar("K")
-V = t.TypeVar("V")
-
-
-def _get_runnable_class(
-    config: openllm.LLMConfig, runnable_mapping: _LazyAutoMapping[t.Any, t.Any]
-) -> type[openllm.LLMRunnable[t.Any, t.Any]]:
+def _get_runnable_class(config: openllm.LLMConfig, runnable_mapping: _LazyAutoMapping) -> type[openllm.LLMRunnable[t.Any, t.Any]]:
     supported_runnables = runnable_mapping[type(config)]
     if not isinstance(supported_runnables, (list, tuple)):
         return supported_runnables
     return supported_runnables[0]
 
 
-class _BaseAutoRunnerFactory(t.Generic[M]):
-    _model_mapping: _LazyAutoMapping[type[openllm.LLMConfig], type[openllm.LLMRunnable[M, t.Any]]]
+class _BaseAutoRunnerFactory:
+    _model_mapping: _LazyAutoMapping
 
     def __init__(self, *args: t.Any, **kwargs: t.Any):
         raise EnvironmentError(
@@ -65,7 +58,7 @@ class _BaseAutoRunnerFactory(t.Generic[M]):
 
         if not isinstance(config, openllm.LLMConfig):
             # The rest of kwargs is now passed to config
-            config = Config.for_model(model_name, **kwargs)
+            config = AutoConfig.for_model(model_name, **kwargs)
         if type(config) in cls._model_mapping.keys():
             runnable_class = _get_runnable_class(config, cls._model_mapping)
             if pretrained_or_path is None:
@@ -116,14 +109,14 @@ def getattribute_from_module(module: types.ModuleType, attr: t.Any) -> t.Any:
         raise ValueError(f"Could not find {attr} in {openllm_module}!")
 
 
-class _LazyAutoMapping(OrderedDict[K, V]):
+class _LazyAutoMapping(OrderedDict):
     """Based on transformers.models.auto.configuration_auto._LazyAutoMapping"""
 
     def __init__(self, config_mapping: OrderedDict[str, str], model_mapping: OrderedDict[str, str]):
         self._config_mapping = config_mapping
         self._reverse_config_mapping = {v: k for k, v in config_mapping.items()}
         self._model_mapping = model_mapping
-        self._extra_content: dict[K, V] = {}
+        self._extra_content: dict[t.Any, t.Any] = {}
         self._modules: dict[str, types.ModuleType] = {}
 
     def __len__(self):
@@ -199,7 +192,7 @@ class _LazyAutoMapping(OrderedDict[K, V]):
         model_type = self._reverse_config_mapping[item.__name__]
         return model_type in self._model_mapping
 
-    def register(self, key: K, value: V):
+    def register(self, key: t.Any, value: t.Any):
         """
         Register a new model in this mapping.
         """

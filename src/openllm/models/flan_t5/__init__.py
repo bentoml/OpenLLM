@@ -20,7 +20,7 @@ import openllm
 from openllm.utils import import_utils_shim as imports
 
 _import_structure = {
-    "configuration_flan_t5": ["FlanT5Config", "START_FLAN_T5_COMMAND_DOCSTRING"],
+    "configuration_flan_t5": ["FlanT5Config", "START_FLAN_T5_COMMAND_DOCSTRING", "DEFAULT_PROMPT_TEMPLATE"],
     "service_flan_t5": ["svc", "model_runner", "tokenizer_runner", "generate"],
 }
 
@@ -50,6 +50,8 @@ else:
 
 
 if t.TYPE_CHECKING:
+    from .configuration_flan_t5 import \
+        DEFAULT_PROMPT_TEMPLATE as DEFAULT_PROMPT_TEMPLATE
     from .configuration_flan_t5 import \
         START_FLAN_T5_COMMAND_DOCSTRING as START_FLAN_T5_COMMAND_DOCSTRING
     from .configuration_flan_t5 import FlanT5Config as FlanT5Config

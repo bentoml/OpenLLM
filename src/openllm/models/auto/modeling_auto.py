@@ -14,10 +14,7 @@
 
 from __future__ import annotations
 
-import typing as t
 from collections import OrderedDict
-
-import openllm
 
 from .configuration_auto import CONFIG_MAPPING_NAMES
 from .factory import _BaseAutoRunnerFactory, _LazyAutoMapping
@@ -26,18 +23,14 @@ MODEL_MAPPING_NAMES = OrderedDict([("flan_t5", "FlanT5")])
 
 MODEL_WITH_TOKENIZER_MAPPING_NAMES = OrderedDict([("flan_t5", "FlanT5WithTokenizer")])
 
-MODEL_MAPPING = _LazyAutoMapping[type[openllm.LLMConfig], type[openllm.LLMRunnable[t.Any, t.Any]]](
-    CONFIG_MAPPING_NAMES, MODEL_MAPPING_NAMES
-)
+MODEL_MAPPING = _LazyAutoMapping(CONFIG_MAPPING_NAMES, MODEL_MAPPING_NAMES)
 
-MODEL_WITH_TOKENIZER_MAPPING = _LazyAutoMapping[type[openllm.LLMConfig], type[openllm.LLMRunnable[t.Any, t.Any]]](
-    CONFIG_MAPPING_NAMES, MODEL_WITH_TOKENIZER_MAPPING_NAMES
-)
+MODEL_WITH_TOKENIZER_MAPPING = _LazyAutoMapping(CONFIG_MAPPING_NAMES, MODEL_WITH_TOKENIZER_MAPPING_NAMES)
 
 
-class LLM(_BaseAutoRunnerFactory[type[openllm.LLMRunnable[t.Any, t.Any]]]):
+class AutoLLM(_BaseAutoRunnerFactory):
     _model_mapping = MODEL_MAPPING
 
 
-class LLMWithTokenizer(_BaseAutoRunnerFactory[type[openllm.LLMRunnable[t.Any, t.Any]]]):
+class AutoLLMWithTokenizer(_BaseAutoRunnerFactory):
     _model_mapping = MODEL_WITH_TOKENIZER_MAPPING

@@ -24,8 +24,8 @@ from ...utils import LazyModule
 from ...utils import import_utils_shim as imports
 
 _import_structure = {
-    "configuration_auto": ["Config", "CONFIG_MAPPING", "CONFIG_MAPPING_NAMES"],
-    "tokenization_auto": ["Tokenizer", "TOKENIZER_MAPPING", "TOKENIZER_MAPPING_NAMES"],
+    "configuration_auto": ["AutoConfig", "CONFIG_MAPPING", "CONFIG_MAPPING_NAMES"],
+    "tokenization_auto": ["AutoTokenizer", "TOKENIZER_MAPPING", "TOKENIZER_MAPPING_NAMES"],
 }
 
 try:
@@ -35,8 +35,8 @@ except openllm.exceptions.MissingDependencyError:
     pass
 else:
     _import_structure["modeling_auto"] = [
-        "LLM",
-        "LLMWithTokenizer",
+        "AutoLLM",
+        "AutoLLMWithTokenizer",
         "MODEL_MAPPING_NAMES",
         "MODEL_WITH_TOKENIZER_MAPPING_NAMES",
         "MODEL_MAPPING",
@@ -50,8 +50,8 @@ except openllm.exceptions.MissingDependencyError:
     pass
 else:
     _import_structure["modeling_flax_auto"] = [
-        "FlaxLLM",
-        "FlaxLLMWithTokenizer",
+        "AutoFlaxLLM",
+        "AutoFlaxLLMWithTokenizer",
         "MODEL_FLAX_MAPPING_NAMES",
         "MODEL_FLAX_WITH_TOKENIZER_MAPPING_NAMES",
         "MODEL_FLAX_MAPPING",
@@ -65,8 +65,8 @@ except openllm.exceptions.MissingDependencyError:
     pass
 else:
     _import_structure["modeling_tf_auto"] = [
-        "TFLLM",
-        "TFLLMWithTokenizer",
+        "AutoTFLLM",
+        "AutoTFLLMWithTokenizer",
         "MODEL_TF_MAPPING_NAMES",
         "MODEL_TF_WITH_TOKENIZER_MAPPING_NAMES",
         "MODEL_TF_MAPPING",
@@ -77,11 +77,11 @@ if t.TYPE_CHECKING:
     from .configuration_auto import CONFIG_MAPPING as CONFIG_MAPPING
     from .configuration_auto import \
         CONFIG_MAPPING_NAMES as CONFIG_MAPPING_NAMES
-    from .configuration_auto import Config as Config
+    from .configuration_auto import AutoConfig as AutoConfig
     from .tokenization_auto import TOKENIZER_MAPPING as TOKENIZER_MAPPING
     from .tokenization_auto import \
         TOKENIZER_MAPPING_NAMES as TOKENIZER_MAPPING_NAMES
-    from .tokenization_auto import Tokenizer as Tokenizer
+    from .tokenization_auto import AutoTokenizer as AutoTokenizer
 
     try:
         if not imports.is_torch_available():
@@ -89,7 +89,6 @@ if t.TYPE_CHECKING:
     except openllm.exceptions.MissingDependencyError:
         pass
     else:
-        from .modeling_auto import LLM as LLM
         from .modeling_auto import MODEL_MAPPING as MODEL_MAPPING
         from .modeling_auto import MODEL_MAPPING_NAMES as MODEL_MAPPING_NAMES
         from .modeling_auto import \
@@ -97,7 +96,8 @@ if t.TYPE_CHECKING:
         from .modeling_auto import \
             MODEL_WITH_TOKENIZER_MAPPING_NAMES as \
             MODEL_WITH_TOKENIZER_MAPPING_NAMES
-        from .modeling_auto import LLMWithTokenizer as LLMWithTokenizer
+        from .modeling_auto import AutoLLM as AutoLLM
+        from .modeling_auto import AutoLLMWithTokenizer as AutoLLMWithTokenizer
 
     try:
         if not imports.is_flax_available():
@@ -115,9 +115,9 @@ if t.TYPE_CHECKING:
         from .modeling_flax_auto import \
             MODEL_FLAX_WITH_TOKENIZER_MAPPING_NAMES as \
             MODEL_FLAX_WITH_TOKENIZER_MAPPING_NAMES
-        from .modeling_flax_auto import FlaxLLM as FlaxLLM
+        from .modeling_flax_auto import AutoFlaxLLM as AutoFlaxLLM
         from .modeling_flax_auto import \
-            FlaxLLMWithTokenizer as FlaxLLMWithTokenizer
+            AutoFlaxLLMWithTokenizer as AutoFlaxLLMWithTokenizer
 
     try:
         if not imports.is_tf_available():
@@ -133,8 +133,9 @@ if t.TYPE_CHECKING:
         from .modeling_tf_auto import \
             MODEL_TF_WITH_TOKENIZER_MAPPING_NAMES as \
             MODEL_TF_WITH_TOKENIZER_MAPPING_NAMES
-        from .modeling_tf_auto import TFLLM as TFLLM
-        from .modeling_tf_auto import TFLLMWithTokenizer as TFLLMWithTokenizer
+        from .modeling_tf_auto import AutoTFLLM as AutoTFLLM
+        from .modeling_tf_auto import \
+            AutoTFLLMWithTokenizer as AutoTFLLMWithTokenizer
 else:
     import sys
 

@@ -26,7 +26,7 @@ TOKENIZER_MAPPING_NAMES = OrderedDict([("flan_t5", "FlanT5Tokenizer")])
 TOKENIZER_MAPPING = _LazyConfigMapping(TOKENIZER_MAPPING_NAMES)
 
 
-class Tokenizer:
+class AutoTokenizer:
     def __init__(self):
         raise EnvironmentError(
             "This class should not be initialized directly. Instead use 'Tokenizer.create_runner' instead"

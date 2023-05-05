@@ -23,7 +23,6 @@ import functools
 import inspect
 import logging
 import subprocess
-import threading
 import typing as t
 
 import bentoml
@@ -33,7 +32,9 @@ from click_option_group import optgroup
 import openllm
 
 if t.TYPE_CHECKING:
-    from openllm.types import F, P
+    P = t.ParamSpec("P")
+
+    F = t.Callable[P, t.Any]
 
     class ClickFunctionProtocol(t.Protocol[P]):
         __name__: str
@@ -190,14 +191,14 @@ def parse_serve_args(serve_grpc: bool) -> F[P]:
     """Parsing `bentoml serve|serve-grpc` click.Option to be parsed via `openllm start`"""
     from bentoml_cli.cli import cli
 
-    command = "serve-http" if not serve_grpc else "serve-grpc"
+    command = "serve" if not serve_grpc else "serve-grpc"
     group = optgroup.group(
         f"Start a {'HTTP' if not serve_grpc else 'gRPC'} server options",
-        help=f"Related to serving the model [synonymous to `bentoml {command}`]",
+        help=f"Related to serving the model [synonymous to `bentoml {'serve-http' if not serve_grpc else command }`]",
     )
 
     def decorator(f: F[P]) -> F[P]:
-        _, serve_command, _ = cli.resolve_command(click.get_current_context(), [command])
+        serve_command = cli.commands[command]
         # The first variable is the argument bento
         # and the last three are shared default, which we don't need.
         serve_options = serve_command.params[1:-3]
@@ -220,37 +221,12 @@ def parse_serve_args(serve_grpc: bool) -> F[P]:
     return decorator
 
 
-def run_client(host: str, port: int, _serve_grpc: bool, llm_config_args: t.Any):
-    import openllm_client
-
-    client = openllm_client.create(f"{host}:{port}", kind="grpc" if _serve_grpc else "http", timeout=30)
-
-    while True:
-        try:
-            assert client.health()
-        except:
-            continue
-        else:
-            break
-
-    try:
-        client.setup(**llm_config_args)
-    except Exception as e:
-        logger.error("Exception caught while setting up LLM Server:\n")
-        logger.error(e)
-        raise
-
-    print("Successfully setup LLM Server")
-
-    raise SystemExit(0)
-
-
 def start_model_command(
     model_name: str,
     _context_settings: dict[str, t.Any] | None = None,
     _serve_grpc: bool = False,
 ) -> click.Command:
-    config = openllm.Config.for_model(model_name)
+    config = openllm.AutoConfig.for_model(model_name)
 
     @click.command(
         model_name,
@@ -264,14 +240,7 @@ def start_model_command(
     def model_start(**attrs: t.Any):
         from bentoml._internal.log import configure_logging
 
-        # NOTE: We need the below imports so that the client can use the custom IO Descriptor.
-        from openllm.prompts import Prompt as Prompt
-
         configure_logging()
-
-        start_env = {
-            openllm.utils.FRAMEWORK_ENV_VAR(model_name): openllm.utils.get_framework_env(model_name),
-        }
 
         llm_config_kwargs = {k: attrs[k] for k in config.__fields__ if k in attrs}
         # The rest should be server-related args
@@ -286,22 +255,18 @@ def start_model_command(
         development = server_args.pop("development")
         server_args.setdefault("production", not development)
 
-        click.secho(
-            f"\nStarting LLM Server for '{model_name}' at {'http://' if not _serve_grpc else ''}{server_args['host']}:{server_args['port']}\n",
-            fg="blue",
-        )
+        start_env = {
+            openllm.utils.FRAMEWORK_ENV_VAR(model_name): openllm.utils.get_framework_env(model_name),
+            openllm.utils.MODEL_CONFIG_ENV_VAR(model_name): config.with_options(**llm_config_kwargs).json(),
+        }
+
+        click.secho(f"\nStarting LLM Server for '{model_name}'\n", fg="blue")
         server = getattr(bentoml, "HTTPServer" if not _serve_grpc else "GrpcServer")(**server_args)
         server.timeout = 90
 
         try:
             server.start(env=start_env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
             assert server.process is not None
-            client = server.get_client()
-            if llm_config_kwargs:
-                click.secho(f"Setting default config for '{model_name}' with {llm_config_kwargs}", fg="blue")
-                res = client.set_default_config(llm_config_kwargs)
-                assert res
-
             with server.process.stdout:
                 while True:
                     line = server.process.stdout.readline()

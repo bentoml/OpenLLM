@@ -81,6 +81,10 @@ def FRAMEWORK_ENV_VAR(model_name: str) -> str:
     return f"OPENLLM_{kebab_to_snake_case(model_name.upper())}_FRAMEWORK"
 
 
+def MODEL_CONFIG_ENV_VAR(model_name: str) -> str:
+    return f"OPENLLM_{kebab_to_snake_case(model_name.upper())}_CONFIG"
+
+
 def get_framework_env(model_name: str) -> str:
     envvar = os.environ.get(FRAMEWORK_ENV_VAR(model_name), "pt")
     if envvar not in ("pt", "tf", "flax"):

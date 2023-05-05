@@ -22,22 +22,25 @@ import openllm
 
 framework = openllm.utils.get_framework_env("flan-t5")
 if framework == "flax":
-    klass = openllm.FlaxLLM
+    klass = openllm.AutoFlaxLLM
 elif framework == "pt":
-    klass = openllm.LLM
+    klass = openllm.AutoLLM
 elif framework == "tf":
-    klass = openllm.TFLLM
+    klass = openllm.AutoTFLLM
 else:
     raise ValueError(f"Invalid framework {framework}")
 
 model_runner = klass.create_runner("flan-t5")
-tokenizer_runner = openllm.Tokenizer.create_runner("flan-t5")
+tokenizer_runner = openllm.AutoTokenizer.create_runner("flan-t5")
 
 svc = bentoml.Service(name=openllm.utils.generate_service_name(model_runner), runners=[model_runner, tokenizer_runner])
 
 
-@svc.api(input=openllm.Prompt(), output=bentoml.io.JSON(pydantic_model=openllm.schema.PromptOutput))
-async def generate(qa: openllm.schema.PromptInput) -> openllm.schema.PromptOutput:
+@svc.api(
+    input=bentoml.io.JSON(pydantic_model=openllm.schema.GenerateInput),
+    output=bentoml.io.JSON(pydantic_model=openllm.schema.GenerateOutput),
+)
+async def generate(qa: openllm.schema.GenerateInput) -> openllm.schema.GenerateOutput:
     """Returns the generated text from given prompts."""
     llm_config = model_runner.llm_config.with_options(**qa.llm_config).dict()
 
@@ -51,17 +54,9 @@ async def generate(qa: openllm.schema.PromptInput) -> openllm.schema.PromptOutpu
     else:
         outputs = await model_runner.generate.async_run(input_tensor.input_ids, **llm_config)
         responses = await tokenizer_runner.batch_decode.async_run(outputs, skip_special_tokens=True)
-    return openllm.schema.PromptOutput(responses=responses, configuration=llm_config)
-
-
-@svc.api(input=bentoml.io.JSON(pydantic_model=openllm.FlanT5Config), output=bentoml.io.JSON())
-def set_default_config(llm_config: openllm.FlanT5Config) -> dict[str, t.Any]:
-    """Set default LLM configuration."""
-    object.__setattr__(model_runner, "llm_config", model_runner.llm_config.with_options(**llm_config.dict()))
-    return model_runner.llm_config.dict()
+    return openllm.schema.GenerateOutput(responses=responses, configuration=llm_config)
 
 
 @svc.api(input=bentoml.io.Text(), output=bentoml.io.Text())
-def get_model(_: str) -> str:
-    """Get model."""
-    return __use_config__
+def model_name(_: str) -> str:
+    return openllm.utils.kebab_to_snake_case(model_runner.llm_config.model_name)

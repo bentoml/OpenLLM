@@ -57,7 +57,7 @@ def import_model(
     try:
         return bentoml.transformers.get(tag)
     except bentoml.exceptions.NotFound:
-        model = transformers.AutoModelForSeq2SeqLM.from_pretrained(pretrained_or_path, **model_kwargs)
+        model = transformers.T5ForConditionalGeneration.from_pretrained(pretrained_or_path, **model_kwargs)
         tokenizer = transformers.AutoTokenizer.from_pretrained(pretrained_or_path, **tokenizer_kwargs)
         return bentoml.transformers.save_model(str(tag), model, custom_objects={"tokenizer": tokenizer})
 
@@ -98,15 +98,13 @@ class FlanT5(
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    @staticmethod
-    def pretrained_models() -> list[str]:
-        return [
-            "google/flan-t5-small",
-            "google/flan-t5-base",
-            "google/flan-t5-large",
-            "google/flan-t5-xl",
-            "google/flan-t5-xxl",
-        ]
+    variants = [
+        "google/flan-t5-small",
+        "google/flan-t5-base",
+        "google/flan-t5-large",
+        "google/flan-t5-xl",
+        "google/flan-t5-xxl",
+    ]
 
     def _generate(
         self,

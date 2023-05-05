@@ -24,7 +24,7 @@ import openllm
 CONFIG_MAPPING_NAMES = OrderedDict([("flan_t5", "FlanT5Config")])
 
 
-class _LazyConfigMapping(OrderedDict[str, str]):
+class _LazyConfigMapping(OrderedDict):
     def __init__(self, mapping: OrderedDict[str, str]):
         self._mapping = mapping
         self._extra_content: dict[str, t.Any] = {}
@@ -73,12 +73,12 @@ class _LazyConfigMapping(OrderedDict[str, str]):
 CONFIG_MAPPING = _LazyConfigMapping(CONFIG_MAPPING_NAMES)
 
 
-class Config:
+class AutoConfig:
     def __init__(self, *args: t.Any, **kwargs: t.Any):
         raise EnvironmentError("Cannot instantiate Config. Please use `Config.for_model(model_name)` instead.")
 
     @classmethod
-    def for_model(cls, model_name: str, *args: t.Any, **kwargs: t.Any):
+    def for_model(cls, model_name: str, *args: t.Any, **kwargs: t.Any) -> openllm.LLMConfig:
         model_name = openllm.utils.kebab_to_snake_case(model_name)
         if model_name in CONFIG_MAPPING:
             return CONFIG_MAPPING[model_name](*args, **kwargs)

@@ -31,30 +31,21 @@ from .utils import import_utils_shim as imports
 
 _import_structure = {
     "build_utils": [],
-    # TODO: implement
-    # "cache": [],
     "cli": [],
     "configuration_utils": ["LLMConfig"],
     "exceptions": [],
-    "prompts": ["Prompt"],
     "runner_utils": ["LLMRunner", "LLMRunnable", "generate_tokenizer_runner"],
     "schema": ["PromptTemplate"],
-    "server_utils": ["start"],
+    "server_utils": ["start", "start_grpc"],
     "types": [],
-    "utils": [
-        "get_pretrained_env",
-        "get_working_dir",
-        "FRAMEWORK_ENV_VAR",
-        "generate_service_name",
-        "generate_tag_from_model_name",
-    ],
-    "utils.logging": [],
+    "utils": [],
     "models": [],
+    "client": [],
     # NOTE: models
     "models.auto": [
-        "Config",
+        "AutoConfig",
         "CONFIG_MAPPING",
-        "Tokenizer",
+        "AutoTokenizer",
         "TOKENIZER_MAPPING",
         "TOKENIZER_MAPPING_NAMES",
     ],
@@ -70,8 +61,8 @@ else:
     _import_structure["models.flan_t5"].extend(["FlanT5", "FlanT5WithTokenizer", "FlanT5Tokenizer"])
     _import_structure["models.auto"].extend(
         [
-            "LLM",
-            "LLMWithTokenizer",
+            "AutoLLM",
+            "AutoLLMWithTokenizer",
             "MODEL_MAPPING_NAMES",
             "MODEL_WITH_TOKENIZER_MAPPING_NAMES",
             "MODEL_MAPPING",
@@ -88,8 +79,8 @@ else:
     _import_structure["models.flan_t5"].extend(["FlaxFlanT5", "FlaxFlanT5WithTokenizer"])
     _import_structure["models.auto"].extend(
         [
-            "FlaxLLM",
-            "FlaxLLMWithTokenizer",
+            "AutoFlaxLLM",
+            "AutoFlaxLLMWithTokenizer",
             "MODEL_FLAX_MAPPING_NAMES",
             "MODEL_FLAX_WITH_TOKENIZER_MAPPING_NAMES",
             "MODEL_FLAX_MAPPING",
@@ -106,8 +97,8 @@ else:
     _import_structure["models.flan_t5"].extend(["TFFlanT5", "TFFlanT5WithTokenizer"])
     _import_structure["models.auto"].extend(
         [
-            "TFLLM",
-            "TFLLMWithTokenizer",
+            "AutoTFLLM",
+            "AutoTFLLMWithTokenizer",
             "MODEL_TF_MAPPING_NAMES",
             "MODEL_TF_WITH_TOKENIZER_MAPPING_NAMES",
             "MODEL_TF_MAPPING",
@@ -120,10 +111,10 @@ else:
 if t.TYPE_CHECKING:
     from . import build_utils as build_utils
     from . import cli as cli
+    from . import client as client
     from . import configuration_utils as configuration_utils
     from . import exceptions as exceptions
     from . import models as models
-    from . import prompts as prompts
     from . import runner_utils as runner_utils
     from . import schema as schema
     from . import server_utils as server_utils
@@ -134,24 +125,18 @@ if t.TYPE_CHECKING:
     from .models.auto import CONFIG_MAPPING as CONFIG_MAPPING
     from .models.auto import TOKENIZER_MAPPING as TOKENIZER_MAPPING
     from .models.auto import TOKENIZER_MAPPING_NAMES as TOKENIZER_MAPPING_NAMES
-    from .models.auto import Config as Config
-    from .models.auto import Tokenizer as Tokenizer
+    from .models.auto import AutoConfig as AutoConfig
+    from .models.auto import AutoTokenizer as AutoTokenizer
     from .models.flan_t5 import \
         START_FLAN_T5_COMMAND_DOCSTRING as START_FLAN_T5_COMMAND_DOCSTRING
     from .models.flan_t5 import FlanT5Config as FlanT5Config
-    from .prompts import Prompt as Prompt
     from .runner_utils import LLMRunnable as LLMRunnable
     from .runner_utils import LLMRunner as LLMRunner
     from .runner_utils import \
         generate_tokenizer_runner as generate_tokenizer_runner
     from .schema import PromptTemplate as PromptTemplate
     from .server_utils import start as start
-    from .utils import FRAMEWORK_ENV_VAR as FRAMEWORK_ENV_VAR
-    from .utils import generate_service_name as generate_service_name
-    from .utils import \
-        generate_tag_from_model_name as generate_tag_from_model_name
-    from .utils import get_pretrained_env as get_pretrained_env
-    from .utils import get_working_dir as get_working_dir
+    from .server_utils import start_grpc as start_grpc
 
     try:
         if not imports.is_torch_available():
@@ -159,7 +144,6 @@ if t.TYPE_CHECKING:
     except MissingDependencyError:
         pass
     else:
-        from .models.auto import LLM as LLM
         from .models.auto import MODEL_MAPPING as MODEL_MAPPING
         from .models.auto import MODEL_MAPPING_NAMES as MODEL_MAPPING_NAMES
         from .models.auto import \
@@ -167,7 +151,8 @@ if t.TYPE_CHECKING:
         from .models.auto import \
             MODEL_WITH_TOKENIZER_MAPPING_NAMES as \
             MODEL_WITH_TOKENIZER_MAPPING_NAMES
-        from .models.auto import LLMWithTokenizer as LLMWithTokenizer
+        from .models.auto import AutoLLM as AutoLLM
+        from .models.auto import AutoLLMWithTokenizer as AutoLLMWithTokenizer
         from .models.flan_t5 import FlanT5 as FlanT5
         from .models.flan_t5 import FlanT5Tokenizer as FlanT5Tokenizer
         from .models.flan_t5 import FlanT5WithTokenizer as FlanT5WithTokenizer
@@ -187,8 +172,9 @@ if t.TYPE_CHECKING:
         from .models.auto import \
             MODEL_FLAX_WITH_TOKENIZER_MAPPING_NAMES as \
             MODEL_FLAX_WITH_TOKENIZER_MAPPING_NAMES
-        from .models.auto import FlaxLLM as FlaxLLM
-        from .models.auto import FlaxLLMWithTokenizer as FlaxLLMWithTokenizer
+        from .models.auto import AutoFlaxLLM as AutoFlaxLLM
+        from .models.auto import \
+            AutoFlaxLLMWithTokenizer as AutoFlaxLLMWithTokenizer
         from .models.flan_t5 import FlaxFlanT5 as FlaxFlanT5
         from .models.flan_t5 import \
             FlaxFlanT5WithTokenizer as FlaxFlanT5WithTokenizer
@@ -207,8 +193,9 @@ if t.TYPE_CHECKING:
         from .models.auto import \
             MODEL_TF_WITH_TOKENIZER_MAPPING_NAMES as \
             MODEL_TF_WITH_TOKENIZER_MAPPING_NAMES
-        from .models.auto import TFLLM as TFLLM
-        from .models.auto import TFLLMWithTokenizer as TFLLMWithTokenizer
+        from .models.auto import AutoTFLLM as AutoTFLLM
+        from .models.auto import \
+            AutoTFLLMWithTokenizer as AutoTFLLMWithTokenizer
         from .models.flan_t5 import TFFlanT5 as TFFlanT5
         from .models.flan_t5 import \
             TFFlanT5WithTokenizer as TFFlanT5WithTokenizer
@@ -223,6 +210,3 @@ else:
         module_spec=__spec__,
         extra_objects={"__version__": __version__},
     )
-    del sys, _LazyModule
-
-del imports, t, _import_structure, MissingDependencyError
