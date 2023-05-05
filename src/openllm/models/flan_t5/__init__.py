@@ -21,7 +21,7 @@ from openllm.utils import import_utils_shim as imports
 
 _import_structure = {
     "configuration_flan_t5": ["FlanT5Config", "START_FLAN_T5_COMMAND_DOCSTRING", "DEFAULT_PROMPT_TEMPLATE"],
-    "service_flan_t5": ["svc", "model_runner", "tokenizer_runner", "generate"],
+    "service_flan_t5": ["svc", "model_runner", "generate"],
 }
 
 try:
@@ -30,7 +30,7 @@ try:
 except openllm.exceptions.MissingDependencyError:
     pass
 else:
-    _import_structure["modeling_flan_t5"] = ["FlanT5", "FlanT5WithTokenizer", "FlanT5Tokenizer"]
+    _import_structure["modeling_flan_t5"] = ["FlanT5"]
 
 try:
     if not imports.is_flax_available():
@@ -38,7 +38,7 @@ try:
 except openllm.exceptions.MissingDependencyError:
     pass
 else:
-    _import_structure["modeling_flax_flan_t5"] = ["FlaxFlanT5", "FlaxFlanT5WithTokenizer"]
+    _import_structure["modeling_flax_flan_t5"] = ["FlaxFlanT5"]
 
 try:
     if not imports.is_tf_available():
@@ -46,7 +46,7 @@ try:
 except openllm.exceptions.MissingDependencyError:
     pass
 else:
-    _import_structure["modeling_flax_flan_t5"] = ["TFFlanT5", "TFFlanT5WithTokenizer"]
+    _import_structure["modeling_flax_flan_t5"] = ["TFFlanT5"]
 
 
 if t.TYPE_CHECKING:
@@ -55,6 +55,7 @@ if t.TYPE_CHECKING:
     from .configuration_flan_t5 import \
         START_FLAN_T5_COMMAND_DOCSTRING as START_FLAN_T5_COMMAND_DOCSTRING
     from .configuration_flan_t5 import FlanT5Config as FlanT5Config
+    from .service_flan_t5 import svc as svc
 
     try:
         if not imports.is_torch_available():
@@ -63,9 +64,6 @@ if t.TYPE_CHECKING:
         pass
     else:
         from .modeling_flan_t5 import FlanT5 as FlanT5
-        from .modeling_flan_t5 import FlanT5Tokenizer as FlanT5Tokenizer
-        from .modeling_flan_t5 import \
-            FlanT5WithTokenizer as FlanT5WithTokenizer
 
     try:
         if not imports.is_flax_available():
@@ -74,8 +72,6 @@ if t.TYPE_CHECKING:
         pass
     else:
         from .modeling_flax_flan_t5 import FlaxFlanT5 as FlaxFlanT5
-        from .modeling_flax_flan_t5 import \
-            FlaxFlanT5WithTokenizer as FlaxFlanT5WithTokenizer
 
     try:
         if not imports.is_tf_available():
@@ -84,8 +80,6 @@ if t.TYPE_CHECKING:
         pass
     else:
         from .modeling_tf_flan_t5 import TFFlanT5 as TFFlanT5
-        from .modeling_tf_flan_t5 import \
-            TFFlanT5WithTokenizer as TFFlanT5WithTokenizer
 else:
     import sys
 

@@ -21,16 +21,8 @@ from .factory import _BaseAutoRunnerFactory, _LazyAutoMapping
 
 MODEL_MAPPING_NAMES = OrderedDict([("flan_t5", "FlanT5")])
 
-MODEL_WITH_TOKENIZER_MAPPING_NAMES = OrderedDict([("flan_t5", "FlanT5WithTokenizer")])
-
 MODEL_MAPPING = _LazyAutoMapping(CONFIG_MAPPING_NAMES, MODEL_MAPPING_NAMES)
-
-MODEL_WITH_TOKENIZER_MAPPING = _LazyAutoMapping(CONFIG_MAPPING_NAMES, MODEL_WITH_TOKENIZER_MAPPING_NAMES)
 
 
 class AutoLLM(_BaseAutoRunnerFactory):
     _model_mapping = MODEL_MAPPING
-
-
-class AutoLLMWithTokenizer(_BaseAutoRunnerFactory):
-    _model_mapping = MODEL_WITH_TOKENIZER_MAPPING

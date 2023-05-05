@@ -23,7 +23,8 @@ import openllm
 
 from .configuration_auto import AutoConfig
 
-def _get_runnable_class(config: openllm.LLMConfig, runnable_mapping: _LazyAutoMapping) -> type[openllm.LLMRunnable[t.Any, t.Any]]:
+
+def _get_runnable_class(config: openllm.LLMConfig, runnable_mapping: _LazyAutoMapping) -> type[openllm.LLMRunnable]:
     supported_runnables = runnable_mapping[type(config)]
     if not isinstance(supported_runnables, (list, tuple)):
         return supported_runnables
@@ -72,7 +73,7 @@ class _BaseAutoRunnerFactory:
         )
 
     @classmethod
-    def register(cls, config_class: type[openllm.LLMConfig], runnable_class: type[openllm.LLMRunnable[t.Any, t.Any]]):
+    def register(cls, config_class: type[openllm.LLMConfig], runnable_class: type[openllm.LLMRunnable]):
         """
         Register a new model for this class.
 

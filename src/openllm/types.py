@@ -48,14 +48,10 @@ class LLMModuleType(LazyLoader):
     ) -> bentoml.Model:
         ...
 
-    class LLMConfigImpl(LLMConfig):
+    class LLMConfigImpl(LLMConfig, model_name="dummy"):
         ...
 
-    class LLMRunnableImpl(LLMRunnable[t.Any, t.Any], start_model_name="dummy"):
-        ...
-
-    @staticmethod
-    def RunnableNameTokenizer(model_name: str | None = None, embedded: bool = True, **kwargs: t.Any) -> TokenizerRunner:
+    class LLMRunnableImpl(LLMRunnable, start_model_name="dummy"):
         ...
 
 

@@ -21,16 +21,8 @@ from .factory import _BaseAutoRunnerFactory, _LazyAutoMapping
 
 MODEL_FLAX_MAPPING_NAMES = OrderedDict([("flan_t5", "FlaxFlanT5")])
 
-MODEL_FLAX_WITH_TOKENIZER_MAPPING_NAMES = OrderedDict([("flan_t5", "FlaxFlanT5WithTokenizer")])
-
 MODEL_FLAX_MAPPING = _LazyAutoMapping(CONFIG_MAPPING_NAMES, MODEL_FLAX_MAPPING_NAMES)
-
-MODEL_FLAX_WITH_TOKENIZER_MAPPING = _LazyAutoMapping(CONFIG_MAPPING_NAMES, MODEL_FLAX_WITH_TOKENIZER_MAPPING_NAMES)
 
 
 class AutoFlaxLLM(_BaseAutoRunnerFactory):
     _model_mapping = MODEL_FLAX_MAPPING
-
-
-class AutoFlaxLLMWithTokenizer(_BaseAutoRunnerFactory):
-    _model_mapping = MODEL_FLAX_WITH_TOKENIZER_MAPPING

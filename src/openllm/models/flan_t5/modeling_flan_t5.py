@@ -17,8 +17,7 @@ import typing as t
 
 import openllm
 
-from ...runner_utils import (LLMRunnable, assign_start_model_name,
-                             generate_tokenizer_runner)
+from ...runner_utils import LLMRunnable
 from .configuration_flan_t5 import FlanT5Config
 
 if t.TYPE_CHECKING:
@@ -62,37 +61,11 @@ def import_model(
         return bentoml.transformers.save_model(str(tag), model, custom_objects={"tokenizer": tokenizer})
 
 
-def _FlanT5Tokenizer(
-    pretrained_or_path: str | None = None, embedded: bool = True, **kwargs: t.Any
-) -> openllm.types.TokenizerRunner:
-    """Get the runner for the tokenizer.
-
-    Args:
-        model_name: The name of the FLAN-T5 model to import.
-        embedded: Whether to use the embedded runner or not.
-        **kwargs: Additional kwargs to pass to the ``transformers.AutoTokenizer`` constructors.
-
-    Returns:
-        The runner for the tokenizer.
-    """
-    if pretrained_or_path is None:
-        pretrained_or_path = FlanT5.default_model
-
-    return generate_tokenizer_runner(
-        import_model(pretrained_or_path, **kwargs).custom_objects["tokenizer"], embedded=embedded
-    )
-
-
-FlanT5Tokenizer = assign_start_model_name("flan-t5")(_FlanT5Tokenizer)
-
-
-class FlanT5(
-    LLMRunnable[transformers.T5ForConditionalGeneration, transformers.T5TokenizerFast], start_model_name="flan-t5"
-):
+class FlanT5(LLMRunnable, start_model_name="flan-t5"):
     default_model: str = "google/flan-t5-large"
     config_class = FlanT5Config
 
-    ATTACH_TOKENIZER = False
+    ATTACH_TOKENIZER = True
 
     _llm_config: FlanT5Config
 
@@ -106,9 +79,10 @@ class FlanT5(
         "google/flan-t5-xxl",
     ]
 
+    @torch.inference_mode()
     def _generate(
         self,
-        input_ids: torch.Tensor,
+        prompt: str,
         max_length: int | None = None,
         do_sample: bool = True,
         temperature: float | None = None,
@@ -117,7 +91,9 @@ class FlanT5(
         repetition_penalty: float | None = None,
         **kwargs: t.Any,
     ) -> torch.Tensor:
-        return self.model.generate(
+        input_ids: torch.Tensor = self.tokenizer(prompt, return_tensors="pt").input_ids
+        input_ids = input_ids.to(self.device)
+        outputs = self.model.generate(
             input_ids,
             max_length=max_length if max_length is not None else self._llm_config.max_length,
             do_sample=do_sample,
@@ -129,15 +105,4 @@ class FlanT5(
             else self._llm_config.repetition_penalty,
             **kwargs,
         )
-
-
-class FlanT5WithTokenizer(FlanT5, start_model_name="flan-t5"):
-    default_model: str = "google/flan-t5-large"
-
-    ATTACH_TOKENIZER = True
-
-    def _generate(self, prompt: str, **kwargs: t.Any) -> list[str]:
-        input_ids: torch.Tensor = self.tokenizer(prompt, return_tensors="pt").input_ids
-        input_ids = input_ids.to(self.device)
-        outputs = super()._generate(input_ids, **kwargs)
         return self.tokenizer.batch_decode(outputs, skip_special_tokens=True)

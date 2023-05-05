@@ -44,9 +44,6 @@ else:
 
 logger = logging.getLogger(__name__)
 
-M = t.TypeVar("M")
-T = t.TypeVar("T")
-
 
 def assign_start_model_name(start_model_name: str) -> t.Callable[..., t.Any]:
     def wrapper(fn: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
@@ -156,7 +153,7 @@ class BaseLLMRunnable(bentoml.Runnable, ABC):
 
 
 # TODO: Add support for model validation
-class LLMRunnable(BaseLLMRunnable, t.Generic[M, T]):
+class LLMRunnable(BaseLLMRunnable):
     # The section below defines a loose contract with langchain's LLM interface.
     @property
     def _llm_type(self) -> str:
@@ -173,8 +170,8 @@ class LLMRunnable(BaseLLMRunnable, t.Generic[M, T]):
 
     # XXX: INTERNAL
     _module: LLMModuleType
-    _model: M | None = None
-    _tokenizer: T | None = None
+    _model: t.Any | None = None
+    _tokenizer: t.Any | None = None
 
     def __setattr__(self, attr_name: str, value: t.Any) -> None:
         if attr_name in ("ATTACH_TOKENIZER",):
@@ -249,18 +246,18 @@ class LLMRunnable(BaseLLMRunnable, t.Generic[M, T]):
         return super().__getattribute__(item)
 
     @classmethod
-    def dummy_object(cls) -> LLMRunnable[M, T]:
+    def dummy_object(cls) -> LLMRunnable:
         return cls(_dummy=True, _internal=True)
 
     @property
-    def model(self) -> M:
+    def model(self) -> t.Any:
         # NOTE: should we have support for nested runner here?
         if self._model is None:
             self._model = self._bentomodel.load_model()
         return self._model
 
     @property
-    def tokenizer(self) -> T:
+    def tokenizer(self) -> t.Any:
         # This is the runner generated from the bento model. This can
         # then be used for implementation of _generate.
         if self._tokenizer is None:
@@ -368,7 +365,7 @@ class LLMRunner(bentoml.Runner):
 
     def __init__(
         self,
-        runnable_class: type[LLMRunnable[t.Any, t.Any]],
+        runnable_class: type[LLMRunnable],
         llm_config: LLMConfig,
         **kwargs: t.Any,
     ):

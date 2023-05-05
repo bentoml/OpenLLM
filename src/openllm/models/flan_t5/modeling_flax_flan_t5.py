@@ -61,13 +61,11 @@ def import_model(
         return bentoml.transformers.save_model(str(tag), model, custom_objects={"tokenizer": tokenizer})
 
 
-class FlaxFlanT5(
-    LLMRunnable[transformers.FlaxT5ForConditionalGeneration, transformers.T5TokenizerFast], start_model_name="flan-t5"
-):
+class FlaxFlanT5(LLMRunnable, start_model_name="flan-t5"):
     default_model: str = "google/flan-t5-large"
     config_class = FlanT5Config
 
-    ATTACH_TOKENIZER = False
+    ATTACH_TOKENIZER = True
 
     _llm_config: FlanT5Config
 
@@ -81,7 +79,7 @@ class FlaxFlanT5(
 
     def _generate(
         self,
-        input_ids: jnp.ndarray,
+        prompt: str,
         max_length: int | None = None,
         do_sample: bool = True,
         temperature: float | None = None,
@@ -90,7 +88,8 @@ class FlaxFlanT5(
         repetition_penalty: float | None = None,
         **kwargs: t.Any,
     ) -> jnp.ndarray:
-        return self.model.generate(
+        input_ids = self.tokenizer(prompt, return_tensors="np")["input_ids"]
+        outputs = self.model.generate(
             input_ids,
             max_length=max_length if max_length is not None else self._llm_config.max_length,
             do_sample=do_sample,
@@ -102,16 +101,6 @@ class FlaxFlanT5(
             else self._llm_config.repetition_penalty,
             **kwargs,
         )
-
-
-class FlaxFlanT5WithTokenizer(FlaxFlanT5, start_model_name="flan-t5"):
-    default_model: str = "google/flan-t5-large"
-
-    ATTACH_TOKENIZER = True
-
-    def _generate(self, prompt: str, **kwargs: t.Any) -> list[str]:
-        input_ids = self.tokenizer(prompt, return_tensors="np")["input_ids"]
-        outputs = super()._generate(input_ids, **kwargs)
         return self.tokenizer.batch_decode(
             outputs.sequences, skip_special_tokens=True, clean_up_tokenization_spaces=True
         )

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""This module is derived from HuggingFace's AutoConfig, Tokenizer, AutoModel, etc."""
+"""This module is derived from HuggingFace's AutoConfig, AutoModel, etc."""
 
 from __future__ import annotations
 
@@ -25,7 +25,6 @@ from ...utils import import_utils_shim as imports
 
 _import_structure = {
     "configuration_auto": ["AutoConfig", "CONFIG_MAPPING", "CONFIG_MAPPING_NAMES"],
-    "tokenization_auto": ["AutoTokenizer", "TOKENIZER_MAPPING", "TOKENIZER_MAPPING_NAMES"],
 }
 
 try:
@@ -34,14 +33,7 @@ try:
 except openllm.exceptions.MissingDependencyError:
     pass
 else:
-    _import_structure["modeling_auto"] = [
-        "AutoLLM",
-        "AutoLLMWithTokenizer",
-        "MODEL_MAPPING_NAMES",
-        "MODEL_WITH_TOKENIZER_MAPPING_NAMES",
-        "MODEL_MAPPING",
-        "MODEL_WITH_TOKENIZER_MAPPING",
-    ]
+    _import_structure["modeling_auto"] = ["AutoLLM", "MODEL_MAPPING_NAMES", "MODEL_MAPPING"]
 
 try:
     if not imports.is_flax_available():
@@ -49,14 +41,7 @@ try:
 except openllm.exceptions.MissingDependencyError:
     pass
 else:
-    _import_structure["modeling_flax_auto"] = [
-        "AutoFlaxLLM",
-        "AutoFlaxLLMWithTokenizer",
-        "MODEL_FLAX_MAPPING_NAMES",
-        "MODEL_FLAX_WITH_TOKENIZER_MAPPING_NAMES",
-        "MODEL_FLAX_MAPPING",
-        "MODEL_FLAX_WITH_TOKENIZER_MAPPING",
-    ]
+    _import_structure["modeling_flax_auto"] = ["AutoFlaxLLM", "MODEL_FLAX_MAPPING_NAMES", "MODEL_FLAX_MAPPING"]
 
 try:
     if not imports.is_tf_available():
@@ -64,24 +49,13 @@ try:
 except openllm.exceptions.MissingDependencyError:
     pass
 else:
-    _import_structure["modeling_tf_auto"] = [
-        "AutoTFLLM",
-        "AutoTFLLMWithTokenizer",
-        "MODEL_TF_MAPPING_NAMES",
-        "MODEL_TF_WITH_TOKENIZER_MAPPING_NAMES",
-        "MODEL_TF_MAPPING",
-        "MODEL_TF_WITH_TOKENIZER_MAPPING",
-    ]
+    _import_structure["modeling_tf_auto"] = ["AutoTFLLM", "MODEL_TF_MAPPING_NAMES", "MODEL_TF_MAPPING"]
 
 if t.TYPE_CHECKING:
     from .configuration_auto import CONFIG_MAPPING as CONFIG_MAPPING
     from .configuration_auto import \
         CONFIG_MAPPING_NAMES as CONFIG_MAPPING_NAMES
     from .configuration_auto import AutoConfig as AutoConfig
-    from .tokenization_auto import TOKENIZER_MAPPING as TOKENIZER_MAPPING
-    from .tokenization_auto import \
-        TOKENIZER_MAPPING_NAMES as TOKENIZER_MAPPING_NAMES
-    from .tokenization_auto import AutoTokenizer as AutoTokenizer
 
     try:
         if not imports.is_torch_available():
@@ -91,13 +65,7 @@ if t.TYPE_CHECKING:
     else:
         from .modeling_auto import MODEL_MAPPING as MODEL_MAPPING
         from .modeling_auto import MODEL_MAPPING_NAMES as MODEL_MAPPING_NAMES
-        from .modeling_auto import \
-            MODEL_WITH_TOKENIZER_MAPPING as MODEL_WITH_TOKENIZER_MAPPING
-        from .modeling_auto import \
-            MODEL_WITH_TOKENIZER_MAPPING_NAMES as \
-            MODEL_WITH_TOKENIZER_MAPPING_NAMES
         from .modeling_auto import AutoLLM as AutoLLM
-        from .modeling_auto import AutoLLMWithTokenizer as AutoLLMWithTokenizer
 
     try:
         if not imports.is_flax_available():
@@ -109,15 +77,7 @@ if t.TYPE_CHECKING:
             MODEL_FLAX_MAPPING as MODEL_FLAX_MAPPING
         from .modeling_flax_auto import \
             MODEL_FLAX_MAPPING_NAMES as MODEL_FLAX_MAPPING_NAMES
-        from .modeling_flax_auto import \
-            MODEL_FLAX_WITH_TOKENIZER_MAPPING as \
-            MODEL_FLAX_WITH_TOKENIZER_MAPPING
-        from .modeling_flax_auto import \
-            MODEL_FLAX_WITH_TOKENIZER_MAPPING_NAMES as \
-            MODEL_FLAX_WITH_TOKENIZER_MAPPING_NAMES
         from .modeling_flax_auto import AutoFlaxLLM as AutoFlaxLLM
-        from .modeling_flax_auto import \
-            AutoFlaxLLMWithTokenizer as AutoFlaxLLMWithTokenizer
 
     try:
         if not imports.is_tf_available():
@@ -128,14 +88,7 @@ if t.TYPE_CHECKING:
         from .modeling_tf_auto import MODEL_TF_MAPPING as MODEL_TF_MAPPING
         from .modeling_tf_auto import \
             MODEL_TF_MAPPING_NAMES as MODEL_TF_MAPPING_NAMES
-        from .modeling_tf_auto import \
-            MODEL_TF_WITH_TOKENIZER_MAPPING as MODEL_TF_WITH_TOKENIZER_MAPPING
-        from .modeling_tf_auto import \
-            MODEL_TF_WITH_TOKENIZER_MAPPING_NAMES as \
-            MODEL_TF_WITH_TOKENIZER_MAPPING_NAMES
         from .modeling_tf_auto import AutoTFLLM as AutoTFLLM
-        from .modeling_tf_auto import \
-            AutoTFLLMWithTokenizer as AutoTFLLMWithTokenizer
 else:
     import sys
 

@@ -31,9 +31,8 @@ else:
     raise ValueError(f"Invalid framework {framework}")
 
 model_runner = klass.create_runner("flan-t5")
-tokenizer_runner = openllm.AutoTokenizer.create_runner("flan-t5")
 
-svc = bentoml.Service(name=openllm.utils.generate_service_name(model_runner), runners=[model_runner, tokenizer_runner])
+svc = bentoml.Service(name=openllm.utils.generate_service_name(model_runner), runners=[model_runner])
 
 
 @svc.api(
@@ -43,17 +42,7 @@ svc = bentoml.Service(name=openllm.utils.generate_service_name(model_runner), ru
 async def generate(qa: openllm.schema.GenerateInput) -> openllm.schema.GenerateOutput:
     """Returns the generated text from given prompts."""
     llm_config = model_runner.llm_config.with_options(**qa.llm_config).dict()
-
-    return_tensors = "np" if framework == "flax" else framework
-    input_tensor = await tokenizer_runner.async_run(qa.prompt, return_tensors=return_tensors)
-    if framework == "flax":
-        outputs = await model_runner.generate.async_run(input_tensor["input_ids"], **llm_config)
-        responses = await tokenizer_runner.batch_decode.async_run(
-            outputs.sequences, skip_special_tokens=True, clean_up_tokenization_spaces=True
-        )
-    else:
-        outputs = await model_runner.generate.async_run(input_tensor.input_ids, **llm_config)
-        responses = await tokenizer_runner.batch_decode.async_run(outputs, skip_special_tokens=True)
+    responses = await model_runner.generate.async_run(qa.prompt, **llm_config)
     return openllm.schema.GenerateOutput(responses=responses, configuration=llm_config)
 
 
