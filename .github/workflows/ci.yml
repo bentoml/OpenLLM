@@ -41,7 +41,7 @@ jobs:
         run: |
           npm install -g npm@^7 pyright
       - name: Setup bufbuild/buf
-        uses: bufbuild/buf-setup-action@v1.17.0
+        uses: bufbuild/buf-setup-action@v1.18.0
         with:
           github_token: ${{ github.token }}
       - name: Cache pip dependencies
