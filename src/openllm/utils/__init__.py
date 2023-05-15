@@ -38,6 +38,7 @@ from bentoml._internal.utils import reserve_free_port as reserve_free_port
 from bentoml._internal.utils import \
     resolve_user_filepath as resolve_user_filepath
 
+from . import codegen as codegen
 from .import_utils import DummyMetaclass as DummyMetaclass
 from .import_utils import is_flax_available as is_flax_available
 from .import_utils import is_tf_available as is_tf_available

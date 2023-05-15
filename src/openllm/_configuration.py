@@ -460,6 +460,8 @@ class LLMConfig(pydantic.BaseModel, ABC):
 
     def with_options(self, **kwargs: t.Any) -> LLMConfig:
         from_env_ = self.from_env()
+        # filtered out None values
+        kwargs = {k: v for k, v in kwargs.items() if v is not None}
         if from_env_:
             return from_env_.model_construct(**kwargs)
         return self.model_construct(**kwargs)

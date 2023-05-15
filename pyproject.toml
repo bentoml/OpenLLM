@@ -55,6 +55,8 @@ dependencies = [
     "inflection",
     # pydantic 2 ftw
     "pydantic@git+https://github.com/pydantic/pydantic/#egg=b5c65d19d76295aaf066f18d2d211a4a308a58a8",
+    # astor for generating service file.
+    "astor",
 ]
 
 [project.urls]

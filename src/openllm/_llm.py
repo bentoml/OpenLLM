@@ -18,6 +18,7 @@ import copy
 import enum
 import logging
 import os
+import types
 import typing as t
 from abc import ABC, abstractmethod
 
@@ -352,26 +353,24 @@ class LLM(LLMInterface):
         else:
             signature = ModelSignature.convert_signatures_dict(method_configs).get("generate", signature)
 
-        cls = t.cast(
-            "type[LLMRunnable]",
-            type(
-                inflection.camelize(self.config.__openllm_model_name__) + "Runnable",
-                (bentoml.Runnable,),
-                {
-                    "generate": bentoml.Runnable.method(
-                        self.generate,
-                        batchable=signature.batchable,
-                        batch_dim=signature.batch_dim,
-                        input_spec=signature.input_spec,
-                        output_spec=signature.output_spec,
-                    ),
-                    "SUPPORTED_RESOURCES": ("nvidia.com/gpu", "cpu"),
-                    "SUPPORTS_CPU_MULTI_THREADING": True,
-                },
-            ),
-        )
+        class _Runnable(bentoml.Runnable):
+            SUPPORTED_RESOURCES = ("nvidia.com/gpu", "cpu")
+            SUPPORTS_CPU_MULTI_THREADING = True
+
+            @bentoml.Runnable.method(
+                batchable=signature.batchable,
+                batch_dim=signature.batch_dim,
+                input_spec=signature.input_spec,
+                output_spec=signature.output_spec,
+            )
+            def generate(__self, prompt: str, **kwds: t.Any) -> list[str]:
+                return self.generate(prompt, **kwds)
+
         return bentoml.Runner(
-            cls,
+            t.cast(
+                "type[LLMRunnable]",
+                types.new_class(inflection.camelize(self.config.__openllm_model_name__) + "Runnable", (_Runnable,)),
+            ),
             runnable_init_params=kwargs,
             name=name,
             models=models,

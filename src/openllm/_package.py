@@ -168,10 +168,11 @@ def build(model_name: str, **kwds: t.Any) -> tuple[bentoml.Bento, bool]:
 
         labels = dict(llm._identifying_params)
         labels.update({"_type": llm._llm_type, "_framework": to_use_framework})
+        service_name = f"generated_{inflection.underscore(model_name)}_service.py"
 
         with fs.open_fs(f"temp://llm_{llm.config.__openllm_model_name__}") as llm_fs:
             # add service.py definition to this temporary folder
-            utils.copy_file_to_fs_folder(os.path.join(os.path.dirname(__file__), "_service.py"), llm_fs)
+            utils.codegen.write_service(model_name, service_name, llm_fs)
 
             bento_tag = bentoml.Tag.from_taglike(f"llm-{llm.tag.name}-service:{llm.tag.version}")
             try:
@@ -184,7 +185,7 @@ def build(model_name: str, **kwds: t.Any) -> tuple[bentoml.Bento, bool]:
                 logger.info("Building Bento for LLM '%s'", llm.__openllm_start_name__)
                 return (
                     bentoml.bentos.build(
-                        "_service.py:svc",
+                        f"{service_name}:svc",
                         name=bento_tag.name,
                         labels=labels,
                         description=f"OpenLLM service for {llm.__openllm_start_name__}",

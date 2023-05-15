@@ -19,6 +19,7 @@ from __future__ import annotations
 import string
 import typing as t
 
+import inflection
 import pydantic
 
 import openllm
@@ -80,8 +81,19 @@ class GenerationInput(pydantic.BaseModel):
     prompt: str
     """The prompt to be sent to system."""
 
-    llm_config: t.Dict[str, t.Any]
+    llm_config: openllm.LLMConfig
     """A mapping of given LLM configuration values for given system."""
+
+    @classmethod
+    def for_model(cls, model_name: str, **kwds: t.Any) -> type[GenerationInput]:
+        llm_config = openllm.AutoConfig.for_model(model_name, **kwds)
+        return pydantic.create_model(
+            inflection.camelize(llm_config.__openllm_model_name__) + "GenerationInput",
+            __base__=(cls,),
+            __module__=llm_config.__module__,
+            prompt=(str, ...),
+            llm_config=(llm_config.__class__, ...),
+        )
 
 
 class GenerationOutput(pydantic.BaseModel):
