@@ -24,51 +24,56 @@ from __future__ import annotations
 
 import typing as t
 
+from . import utils as utils
 from .__about__ import __version__ as __version__
 from .exceptions import MissingDependencyError
-from .utils import LazyModule as _LazyModule
-from .utils import import_utils_shim as imports
 
 _import_structure = {
-    "build_utils": [],
-    "cli": [],
-    "configuration_utils": ["LLMConfig"],
+    "_llm": ["LLM", "Runner"],
+    "cli": ["start", "start_grpc"],
+    "_configuration": ["LLMConfig"],
+    "_package": ["build"],
     "exceptions": [],
-    "runner_utils": ["LLMRunner", "LLMRunnable"],
-    "schema": ["PromptTemplate"],
-    "server_utils": ["start", "start_grpc"],
-    "types": [],
+    "_schema": ["PromptTemplate", "GenerationInput", "GenerationOutput"],
     "utils": [],
     "models": [],
     "client": [],
     # NOTE: models
     "models.auto": ["AutoConfig", "CONFIG_MAPPING"],
-    "models.flan_t5": ["FlanT5Config", "START_FLAN_T5_COMMAND_DOCSTRING"],
+    "models.flan_t5": ["FlanT5Config"],
 }
 
 try:
-    if not imports.is_torch_available():
+    if not utils.is_torch_available():
         raise MissingDependencyError
 except MissingDependencyError:
-    pass
+    from .utils import dummy_pt_objects
+
+    _import_structure["utils.dummy_pt_objects"] = [name for name in dir(dummy_pt_objects) if not name.startswith("_")]
 else:
     _import_structure["models.flan_t5"].extend(["FlanT5"])
     _import_structure["models.auto"].extend(["AutoLLM", "MODEL_MAPPING_NAMES", "MODEL_MAPPING"])
 
 try:
-    if not imports.is_flax_available():
+    if not utils.is_flax_available():
         raise MissingDependencyError
 except MissingDependencyError:
-    pass
+    from .utils import dummy_flax_objects
+
+    _import_structure["utils.dummy_flax_objects"] = [
+        name for name in dir(dummy_flax_objects) if not name.startswith("_")
+    ]
 else:
     _import_structure["models.flan_t5"].extend(["FlaxFlanT5"])
     _import_structure["models.auto"].extend(["AutoFlaxLLM", "MODEL_FLAX_MAPPING_NAMES", "MODEL_FLAX_MAPPING"])
 
 try:
-    if not imports.is_tf_available():
+    if not utils.is_tf_available():
         raise MissingDependencyError
 except MissingDependencyError:
-    pass
+    from .utils import dummy_tf_objects
+
+    _import_structure["utils.dummy_tf_objects"] = [name for name in dir(dummy_tf_objects) if not name.startswith("_")]
 else:
     _import_structure["models.flan_t5"].extend(["TFFlanT5"])
     _import_structure["models.auto"].extend(["AutoTFLLM", "MODEL_TF_MAPPING_NAMES", "MODEL_TF_MAPPING"])
@@ -76,35 +81,29 @@ else:
 
 # declaration for OpenLLM-related modules
 if t.TYPE_CHECKING:
-    from . import build_utils as build_utils
     from . import cli as cli
     from . import client as client
-    from . import configuration_utils as configuration_utils
     from . import exceptions as exceptions
     from . import models as models
-    from . import runner_utils as runner_utils
-    from . import schema as schema
-    from . import server_utils as server_utils
-    from . import types as types
-    from . import utils as utils
     # Specific types import
-    from .configuration_utils import LLMConfig as LLMConfig
+    from ._configuration import LLMConfig as LLMConfig
+    from ._llm import LLM as LLM
+    from ._llm import Runner as Runner
+    from ._package import build as build
+    from ._schema import GenerationInput as GenerationInput
+    from ._schema import GenerationOutput as GenerationOutput
+    from ._schema import PromptTemplate as PromptTemplate
+    from .cli import start as start
+    from .cli import start_grpc as start_grpc
     from .models.auto import CONFIG_MAPPING as CONFIG_MAPPING
     from .models.auto import AutoConfig as AutoConfig
-    from .models.flan_t5 import \
-        START_FLAN_T5_COMMAND_DOCSTRING as START_FLAN_T5_COMMAND_DOCSTRING
     from .models.flan_t5 import FlanT5Config as FlanT5Config
-    from .runner_utils import LLMRunnable as LLMRunnable
-    from .runner_utils import LLMRunner as LLMRunner
-    from .schema import PromptTemplate as PromptTemplate
-    from .server_utils import start as start
-    from .server_utils import start_grpc as start_grpc
 
     try:
-        if not imports.is_torch_available():
+        if not utils.is_torch_available():
             raise MissingDependencyError
     except MissingDependencyError:
-        pass
+        from .utils.dummy_pt_objects import *
     else:
         from .models.auto import MODEL_MAPPING as MODEL_MAPPING
         from .models.auto import MODEL_MAPPING_NAMES as MODEL_MAPPING_NAMES
@@ -112,10 +111,10 @@ if t.TYPE_CHECKING:
         from .models.flan_t5 import FlanT5 as FlanT5
 
     try:
-        if not imports.is_flax_available():
+        if not utils.is_flax_available():
             raise MissingDependencyError
     except MissingDependencyError:
-        pass
+        from .utils.dummy_flax_objects import *
     else:
         from .models.auto import MODEL_FLAX_MAPPING as MODEL_FLAX_MAPPING
         from .models.auto import \
@@ -124,10 +123,10 @@ if t.TYPE_CHECKING:
         from .models.flan_t5 import FlaxFlanT5 as FlaxFlanT5
 
     try:
-        if not imports.is_tf_available():
+        if not utils.is_tf_available():
             raise MissingDependencyError
     except MissingDependencyError:
-        pass
+        from .utils.dummy_tf_objects import *
     else:
         from .models.auto import MODEL_TF_MAPPING as MODEL_TF_MAPPING
         from .models.auto import \
@@ -138,7 +137,7 @@ if t.TYPE_CHECKING:
 else:
     import sys
 
-    sys.modules[__name__] = _LazyModule(
+    sys.modules[__name__] = utils.LazyModule(
         __name__,
         globals()["__file__"],
         _import_structure,

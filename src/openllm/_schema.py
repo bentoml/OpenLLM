@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import string
 import typing as t
-from abc import ABC
 
 import pydantic
 
@@ -52,8 +51,7 @@ class PromptTemplate(pydantic.BaseModel):
     template: str
     input_variables: t.Sequence[str]
 
-    class Config:
-        extra = "forbid"
+    model_config = {"extra": "forbid"}
 
     def to_str(self, **kwargs: str) -> str:
         """Generate a prompt from the template and input variables"""
@@ -76,12 +74,9 @@ class PromptTemplate(pydantic.BaseModel):
         return cls.from_template(template)
 
 
-class BaseIO(pydantic.BaseModel, ABC):
-    class Config:
-        extra = "forbid"
+class GenerationInput(pydantic.BaseModel):
+    model_config = {"extra": "forbid"}
 
-
-class GenerateInput(BaseIO):
     prompt: str
     """The prompt to be sent to system."""
 
@@ -89,7 +84,9 @@ class GenerateInput(BaseIO):
     """A mapping of given LLM configuration values for given system."""
 
 
-class GenerateOutput(BaseIO):
+class GenerationOutput(pydantic.BaseModel):
+    model_config = {"extra": "forbid"}
+
     responses: t.List[str]
     """A list of responses from the system."""
 

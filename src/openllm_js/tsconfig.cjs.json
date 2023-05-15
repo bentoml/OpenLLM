@@ -1,0 +1,8 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "nodenext",
+    "declaration": false
+  },
+  "exclude": ["node_modules", "dist", "**/tests"]
+}

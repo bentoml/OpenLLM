@@ -58,9 +58,9 @@ class HTTPClient(BaseClient):
         config = openllm.AutoConfig.for_model(model_name).with_options(
             **{k: v for k, v in attrs.items() if k not in variables}
         )
-        r = openllm.schema.GenerateOutput(
+        r = openllm.schema.GenerationOutput(
             **self._cached.generate(
-                openllm.schema.GenerateInput(prompt=prompt_template.to_str(**variables), llm_config=config.dict())
+                openllm.schema.GenerationInput(prompt=prompt_template.to_str(**variables), llm_config=config.dict())
             )
         )
         if return_raw_response:

@@ -17,15 +17,13 @@ from __future__ import annotations
 import typing as t
 
 import openllm
-from openllm.utils import import_utils_shim as imports
 
 _import_structure = {
     "configuration_flan_t5": ["FlanT5Config", "START_FLAN_T5_COMMAND_DOCSTRING", "DEFAULT_PROMPT_TEMPLATE"],
-    "service_flan_t5": ["svc", "model_runner", "generate"],
 }
 
 try:
-    if not imports.is_torch_available():
+    if not openllm.utils.is_torch_available():
         raise openllm.exceptions.MissingDependencyError
 except openllm.exceptions.MissingDependencyError:
     pass
@@ -33,7 +31,7 @@ else:
     _import_structure["modeling_flan_t5"] = ["FlanT5"]
 
 try:
-    if not imports.is_flax_available():
+    if not openllm.utils.is_flax_available():
         raise openllm.exceptions.MissingDependencyError
 except openllm.exceptions.MissingDependencyError:
     pass
@@ -41,12 +39,12 @@ else:
     _import_structure["modeling_flax_flan_t5"] = ["FlaxFlanT5"]
 
 try:
-    if not imports.is_tf_available():
+    if not openllm.utils.is_tf_available():
         raise openllm.exceptions.MissingDependencyError
 except openllm.exceptions.MissingDependencyError:
     pass
 else:
-    _import_structure["modeling_flax_flan_t5"] = ["TFFlanT5"]
+    _import_structure["modeling_tf_flan_t5"] = ["TFFlanT5"]
 
 
 if t.TYPE_CHECKING:
@@ -55,10 +53,9 @@ if t.TYPE_CHECKING:
     from .configuration_flan_t5 import \
         START_FLAN_T5_COMMAND_DOCSTRING as START_FLAN_T5_COMMAND_DOCSTRING
     from .configuration_flan_t5 import FlanT5Config as FlanT5Config
-    from .service_flan_t5 import svc as svc
 
     try:
-        if not imports.is_torch_available():
+        if not openllm.utils.is_torch_available():
             raise openllm.exceptions.MissingDependencyError
     except openllm.exceptions.MissingDependencyError:
         pass
@@ -66,7 +63,7 @@ if t.TYPE_CHECKING:
         from .modeling_flan_t5 import FlanT5 as FlanT5
 
     try:
-        if not imports.is_flax_available():
+        if not openllm.utils.is_flax_available():
             raise openllm.exceptions.MissingDependencyError
     except openllm.exceptions.MissingDependencyError:
         pass
@@ -74,7 +71,7 @@ if t.TYPE_CHECKING:
         from .modeling_flax_flan_t5 import FlaxFlanT5 as FlaxFlanT5
 
     try:
-        if not imports.is_tf_available():
+        if not openllm.utils.is_tf_available():
             raise openllm.exceptions.MissingDependencyError
     except openllm.exceptions.MissingDependencyError:
         pass

@@ -28,7 +28,7 @@ import bentoml
 logger = logging.getLogger(__name__)
 
 
-def create(address: str, kind: t.Literal["http", "grpc"] = "http", timeout: int = 30):
+def for_model(address: str, kind: t.Literal["http", "grpc"] = "http", timeout: int = 30):
     if kind == "http":
         from .runtimes.http import HTTPClient as _HTTPClient
 

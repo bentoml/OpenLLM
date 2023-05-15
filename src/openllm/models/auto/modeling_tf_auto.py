@@ -17,12 +17,12 @@ from __future__ import annotations
 from collections import OrderedDict
 
 from .configuration_auto import CONFIG_MAPPING_NAMES
-from .factory import _BaseAutoRunnerFactory, _LazyAutoMapping
+from .factory import _BaseAutoLLMClass, _LazyAutoMapping
 
 MODEL_TF_MAPPING_NAMES = OrderedDict([("flan_t5", "TFFlanT5")])
 
 MODEL_TF_MAPPING = _LazyAutoMapping(CONFIG_MAPPING_NAMES, MODEL_TF_MAPPING_NAMES)
 
 
-class AutoTFLLM(_BaseAutoRunnerFactory):
+class AutoTFLLM(_BaseAutoLLMClass):
     _model_mapping = MODEL_TF_MAPPING

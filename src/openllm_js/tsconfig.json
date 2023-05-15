@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "outDir": "../../dist",
+    "rootDir": "./src",
+    "target": "ES2021",
+    "module": "ES2020",
+    "strict": true,
+    "allowJS": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}

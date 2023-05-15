@@ -1,14 +1,22 @@
 {
-  "name": "openllm-tools",
-  "version": "0.0.0",
-  "description": "JS tooling for OpenLLM",
-  "author": "Aaron Pham",
-  "license": "Apache-2.0",
+  "name": "openllm",
+  "version": "0.0.2",
+  "description": "OpenLLM: Your one stop-and-go solution for serving Large Language Model",
+  "repository": "git@github.com:bentoml/OpenLLM.git",
+  "author": "Aaron Pham <29749331+aarnphm@users.noreply.github.com>",
+  "license": "Apache 2.0",
+  "engines": {
+    "node": ">=16"
+  },
+  "workspaces": [
+    "src/openllm_js"
+  ],
+  "private": true,
+  "devDependencies": {
+    "pyright": "^1.1.306",
+    "typescript": "^5.0.4"
+  },
   "dependencies": {
-    "pyright": "^1.1.279",
-    "@grpc/grpc-js": "^1.7.1",
-    "google-protobuf": "^3.21.0",
-    "grpc-tools": "^1.11.2",
-    "ts-protoc-gen": "^0.15.0"
+    "turbo": "^1.9.3"
   }
 }

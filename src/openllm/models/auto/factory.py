@@ -19,75 +19,120 @@ import types
 import typing as t
 from collections import OrderedDict
 
+import inflection
+
 import openllm
 
 from .configuration_auto import AutoConfig
 
-
-def _get_runnable_class(config: openllm.LLMConfig, runnable_mapping: _LazyAutoMapping) -> type[openllm.LLMRunnable]:
-    supported_runnables = runnable_mapping[type(config)]
-    if not isinstance(supported_runnables, (list, tuple)):
-        return supported_runnables
-    return supported_runnables[0]
+if t.TYPE_CHECKING:
+    ConfigModelOrderedDict = OrderedDict[openllm.LLMConfig, openllm.LLM]
+else:
+    ConfigModelOrderedDict = OrderedDict
 
 
-class _BaseAutoRunnerFactory:
+def _get_llm_class(config: openllm.LLMConfig, llm_mapping: _LazyAutoMapping) -> type[openllm.LLM]:
+    supported_llm = llm_mapping[type(config)]
+    if not isinstance(supported_llm, (list, tuple)):
+        return supported_llm
+    return supported_llm[0]
+
+
+class _BaseAutoLLMClass:
     _model_mapping: _LazyAutoMapping
 
     def __init__(self, *args: t.Any, **kwargs: t.Any):
         raise EnvironmentError(
             f"Cannot instantiate {self.__class__.__name__} directly. \
-            Please use '{self.__class__.__name__}.create_runner(model_name)' instead."
+            Please use '{self.__class__.__name__}.Runner(model_name)' instead."
         )
 
+    @t.overload
     @classmethod
-    def create_runner(cls, model_name: str, pretrained_or_path: str | None = None, **kwargs: t.Any):
-        config = kwargs.pop("config", None)
+    def for_model(
+        cls,
+        model_name: str,
+        pretrained: str | None = None,
+        return_runner_kwargs: t.Literal[True] = ...,
+        **kwargs: t.Any,
+    ) -> tuple[openllm.LLM, dict[str, t.Any]]:
+        ...
 
+    @t.overload
+    @classmethod
+    def for_model(
+        cls,
+        model_name: str,
+        pretrained: str | None = None,
+        return_runner_kwargs: t.Literal[False] = ...,
+        **kwargs: t.Any,
+    ) -> openllm.LLM:
+        ...
+
+    @classmethod
+    def for_model(
+        cls,
+        model_name: str,
+        pretrained: str | None = None,
+        return_runner_kwargs: bool = True,
+        **kwargs: t.Any,
+    ) -> tuple[openllm.LLM, dict[str, t.Any]] | openllm.LLM:
+        config = kwargs.pop("llm_config", None)
         runner_kwargs_name = [
-            "runner_name",
+            "name",
             "models",
             "max_batch_size",
             "max_latency_ms",
             "method_configs",
             "embedded",
-            "import_model_kwargs",
-            "import_tokenizer_kwargs",
-            "import_config_kwargs",
+            "scheduling_strategy",
         ]
-        create_runner_kwargs = {k: kwargs.pop(k) for k in runner_kwargs_name if k in kwargs}
-
+        to_runner_kwargs = {k: kwargs.pop(k) for k in runner_kwargs_name if k in kwargs}
         if not isinstance(config, openllm.LLMConfig):
             # The rest of kwargs is now passed to config
             config = AutoConfig.for_model(model_name, **kwargs)
         if type(config) in cls._model_mapping.keys():
-            runnable_class = _get_runnable_class(config, cls._model_mapping)
-            if pretrained_or_path is None:
-                pretrained_or_path = openllm.utils.get_pretrained_env(runnable_class.start_model_name)
-            return runnable_class.create_runner(
-                pretrained_or_path=pretrained_or_path, config=config, **create_runner_kwargs
-            )
+            llm = _get_llm_class(config, cls._model_mapping)(pretrained=pretrained, llm_config=config, **kwargs)
+            if not return_runner_kwargs:
+                return llm
+            return llm, to_runner_kwargs
         raise ValueError(
             f"Unrecognized configuration class {config.__class__} for this kind of AutoRunner: {cls.__name__}.\n"
             f"Runnable type should be one of {', '.join(c.__name__ for c in cls._model_mapping.keys())}."
         )
 
     @classmethod
-    def register(cls, config_class: type[openllm.LLMConfig], runnable_class: type[openllm.LLMRunnable]):
+    def create_runner(cls, model_name: str, pretrained: str | None = None, **kwargs: t.Any):
+        """
+        Create a LLM Runner for the given model name.
+
+        Args:
+            model_name: The model name to instantiate.
+            pretrained: The pretrained model name to instantiate.
+            **kwargs: Additional keyword arguments passed along to the specific configuration class.
+
+        Returns:
+            A LLM instance.
+        """
+        llm, runner_kwargs = cls.for_model(model_name, pretrained, **kwargs)
+        return llm.to_runner(**runner_kwargs)
+
+    @classmethod
+    def register(cls, config_class: type[openllm.LLMConfig], llm_class: type[openllm.LLM]):
         """
         Register a new model for this class.
 
         Args:
             config_class: The configuration corresponding to the model to register.
-            runnable_class: The runnable to register.
+            llm_class: The runnable to register.
         """
-        if hasattr(runnable_class, "config_class") and runnable_class.config_class != config_class:
+        if hasattr(llm_class, "config_class") and llm_class.config_class != config_class:
             raise ValueError(
                 "The model class you are passing has a `config_class` attribute that is not consistent with the "
-                f"config class you passed (model has {runnable_class.config_class} and you passed {config_class}. Fix "
+                f"config class you passed (model has {llm_class.config_class} and you passed {config_class}. Fix "
                 "one of those so they match!"
             )
-        cls._model_mapping.register(config_class, runnable_class)
+        cls._model_mapping.register(config_class, llm_class)
 
 
 def getattribute_from_module(module: types.ModuleType, attr: t.Any) -> t.Any:
@@ -110,7 +155,7 @@ def getattribute_from_module(module: types.ModuleType, attr: t.Any) -> t.Any:
         raise ValueError(f"Could not find {attr} in {openllm_module}!")
 
 
-class _LazyAutoMapping(OrderedDict):
+class _LazyAutoMapping(ConfigModelOrderedDict):
     """Based on transformers.models.auto.configuration_auto._LazyAutoMapping"""
 
     def __init__(self, config_mapping: OrderedDict[str, str], model_mapping: OrderedDict[str, str]):
@@ -124,7 +169,7 @@ class _LazyAutoMapping(OrderedDict):
         common_keys = set(self._config_mapping.keys()).intersection(self._model_mapping.keys())
         return len(common_keys) + len(self._extra_content)
 
-    def __getitem__(self, key: K) -> V:
+    def __getitem__(self, key: openllm.LLMConfig) -> openllm.LLM:
         if key in self._extra_content:
             return self._extra_content[key]
         model_type = self._reverse_config_mapping[key.__name__]
@@ -141,7 +186,7 @@ class _LazyAutoMapping(OrderedDict):
         raise KeyError(key)
 
     def _load_attr_from_module(self, model_type: str, attr: str) -> t.Any:
-        module_name = openllm.utils.kebab_to_snake_case(model_type)
+        module_name = inflection.underscore(model_type)
         if module_name not in self._modules:
             self._modules[module_name] = openllm.utils.get_lazy_module(module_name)
         return getattribute_from_module(self._modules[module_name], attr)
@@ -154,7 +199,7 @@ class _LazyAutoMapping(OrderedDict):
         ]
         return mapping_keys + list(self._extra_content.keys())
 
-    def get(self, key: str, default: t.Any):
+    def get(self, key: openllm.LLMConfig, default: t.Any):
         try:
             return self.__getitem__(key)
         except KeyError:
@@ -203,3 +248,6 @@ class _LazyAutoMapping(OrderedDict):
                 raise ValueError(f"'{key}' is already used by a OpenLLM model.")
 
         self._extra_content[key] = value
+
+
+__all__ = ["_BaseAutoLLMClass", "_LazyAutoMapping"]

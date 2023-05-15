@@ -22,13 +22,21 @@ To start any OpenLLM model:
 """
 from __future__ import annotations
 
-import typing as t
-
 import click
+import inflection
 
 import openllm
 
 _CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"]}
+
+OPENLLM_FIGLET = """\
+ ██████╗ ██████╗ ███████╗███╗   ██╗██╗     ██╗     ███╗   ███╗
+██╔═══██╗██╔══██╗██╔════╝████╗  ██║██║     ██║     ████╗ ████║
+██║   ██║██████╔╝█████╗  ██╔██╗ ██║██║     ██║     ██╔████╔██║
+██║   ██║██╔═══╝ ██╔══╝  ██║╚██╗██║██║     ██║     ██║╚██╔╝██║
+╚██████╔╝██║     ███████╗██║ ╚████║███████╗███████╗██║ ╚═╝ ██║
+ ╚═════╝ ╚═╝     ╚══════╝╚═╝  ╚═══╝╚══════╝╚══════╝╚═╝     ╚═╝
+"""
 
 
 @click.group(cls=openllm.cli.OpenLLMCommandGroup, context_settings=_CONTEXT_SETTINGS)
@@ -72,12 +80,35 @@ def start_grpc():
 
 
 @cli.command(aliases=["bundle"])
-def build():
-    """
-    Package a given models.
+@click.argument("model_name", type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING.keys()]))
+@click.option("--pretrained", default=None, help="Given pretrained model name for the given model name [Optional].")
+@click.option("--overwrite", is_flag=True, help="Overwrite existing Bento for given LLM if it already exists.")
+def build(model_name: str, pretrained: str | None, overwrite: bool):
+    """Package a given models into a Bento.
 
-    If given format is container, then also package the bundle into a container.
+    $ openllm build flan-t5
     """
+    from bentoml._internal.configuration import get_quiet_mode
+
+    bento, _previously_built = openllm.build(model_name, pretrained=pretrained, _overwrite_existing_bento=overwrite)
+
+    if not get_quiet_mode():
+        click.echo("\n" + OPENLLM_FIGLET)
+        if not _previously_built:
+            click.secho(f"Successfully built {bento}.", fg="green")
+        else:
+            click.secho(
+                f"'{model_name}' already has a Bento built [{bento}]. To overwrite it pass '--overwrite'.", fg="yellow"
+            )
+
+        click.secho(
+            f"\nPossible next steps:\n\n * Push to BentoCloud with `bentoml push`:\n    $ bentoml push {bento.tag}",
+            fg="blue",
+        )
+        click.secho(
+            f"\n * Containerize your Bento with `bentoml containerize`:\n    $ bentoml containerize {bento.tag}",
+            fg="blue",
+        )
 
 
 @cli.command()

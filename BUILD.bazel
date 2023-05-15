@@ -2,138 +2,15 @@ load("@bazel_skylib//rules:write_file.bzl", "write_file")
 
 # rules_python
 load("@com_github_bazelbuild_buildtools//buildifier:def.bzl", "buildifier", "buildifier_test")
-load("//rules/py/vendorred:pypi.bzl", "entry_point")
 
 package(default_visibility = ["//:__subpackages__"])
 
-exports_files([
-    "README.md",
-    "package.json",
-    "yarn.lock",
-])
+exports_files(["README.md"])
 
 # export default pyproject.toml config
 filegroup(
     name = "pyproject",
     srcs = ["pyproject.toml"],
-)
-
-genrule(
-    name = "make-tests-requirements",
-    srcs = ["@tests//:requirements.bzl"],
-    outs = ["tests.clean.bzl"],
-    cmd = " | ".join([
-        "cat $<",
-        "cat >$@",
-    ]),
-)
-
-write_file(
-    name = "gen-tests-starlark",
-    out = "update-tests.sh",
-    content = [
-        # This depends on bash, which is not going to work on Windows.
-        "#!/usr/bin/env bash",
-        "cd $BUILD_WORKSPACE_DIRECTORY",
-        "cp -fv bazel-bin/tests.clean.bzl rules/py/vendorred/tests.bzl",
-    ],
-)
-
-sh_binary(
-    name = "vendor-tests",
-    srcs = ["update-tests.sh"],
-    data = [":make-tests-requirements"],
-)
-
-genrule(
-    name = "make-tensorflow-requirements",
-    srcs = ["@tensorflow//:requirements.bzl"],
-    outs = ["tensorflow.clean.bzl"],
-    cmd = " | ".join([
-        "cat $<",
-        "cat >$@",
-    ]),
-)
-
-write_file(
-    name = "gen-tensorflow-starlark",
-    out = "update-tensorflow.sh",
-    content = [
-        # This depends on bash, which is not going to work on Windows.
-        "#!/usr/bin/env bash",
-        "cd $BUILD_WORKSPACE_DIRECTORY",
-        "cp -fv bazel-bin/tensorflow.clean.bzl rules/py/vendorred/tensorflow.bzl",
-    ],
-)
-
-sh_binary(
-    name = "vendor-tensorflow",
-    srcs = ["update-tensorflow.sh"],
-    data = [":make-tensorflow-requirements"],
-)
-
-genrule(
-    name = "make-pypi-requirements",
-    srcs = ["//rules/py/vendorred:pypi.bzl"],
-    outs = ["pypi.clean.bzl"],
-    cmd = " | ".join([
-        "cat $<",
-        "cat >$@",
-    ]),
-)
-
-write_file(
-    name = "gen-pypi-starlark",
-    out = "update-pypi.sh",
-    content = [
-        # This depends on bash, which is not going to work on Windows.
-        "#!/usr/bin/env bash",
-        "cd $BUILD_WORKSPACE_DIRECTORY",
-        "cp -fv bazel-bin/pypi.clean.bzl rules/py/vendorred/pypi.bzl",
-    ],
-)
-
-sh_binary(
-    name = "vendor-pypi",
-    srcs = ["update-pypi.sh"],
-    data = [":make-pypi-requirements"],
-)
-
-[
-    alias(
-        name = "{}_proto".format(version),
-        actual = "//src/bentoml/grpc/{}:service_proto".format(version),
-        visibility = ["//visibility:public"],
-    )
-    for version in [
-        "v1alpha1",
-        "v1",
-    ]
-]
-
-[
-    alias(
-        name = "{}_proto_lint".format(version),
-        actual = "//src/bentoml/grpc/{}:service_proto_lint".format(version),
-        visibility = ["//visibility:public"],
-    )
-    for version in [
-        "v1alpha1",
-        "v1",
-    ]
-]
-
-## Expose public entrypoint for Bazel target.
-alias(
-    name = "cli",
-    actual = "//src/bentoml_cli:cli",
-    visibility = ["//visibility:public"],
-)
-
-alias(
-    name = "sdk",
-    actual = "//src/bentoml:bentoml",
-    visibility = ["//visibility:public"],
 )
 
 # thirdparty alias
@@ -152,24 +29,6 @@ buildifier_test(
         "**/*.bzl",
         "**/*.bazel",
     ]),
-)
-
-alias(
-    name = "pyright",
-    actual = "@npm//:node_modules/pyright/index.js",
-)
-
-alias(
-    name = "sphinx-build",
-    actual = entry_point(
-        "sphinx",
-        script = "sphinx-build",
-    ),
-)
-
-alias(
-    name = "sphinx-autobuild",
-    actual = entry_point("sphinx-autobuild"),
 )
 
 [

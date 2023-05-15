@@ -23,6 +23,10 @@ class OpenLLMException(bentoml.exceptions.BentoMLException):
     """Base class for all OpenLLM exceptions. This extends BentoMLException."""
 
 
+class ValidationError(OpenLLMException):
+    """Raised when a validation fails."""
+
+
 class ForbiddenAttributeError(OpenLLMException):
     """Raised when using an _internal field."""
 

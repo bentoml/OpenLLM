@@ -23,38 +23,12 @@ import typing as t
 if not t.TYPE_CHECKING:
     raise RuntimeError(f"{__name__} should not be imported during runtime")
 
-import bentoml
-from bentoml._internal.io_descriptors.base import OpenAPIResponse
+import transformers
 from bentoml._internal.models.model import \
     ModelSignaturesType as ModelSignaturesType
-from bentoml.types import ModelSignatureDict
+from bentoml.types import ModelSignatureDict as ModelSignatureDict
 
-from openllm.configuration_utils import LLMConfig
-from openllm.runner_utils import LLMRunnable
-from openllm.utils import LazyLoader
-
-
-class InferenceConfig(t.TypedDict):
-    generate: ModelSignatureDict
-
-
-class LLMModuleType(LazyLoader):
-    @staticmethod
-    def import_model(
-        model_name: str,
-        model_kwargs: dict[str, t.Any] | None = None,
-        tokenizer_kwargs: dict[str, t.Any] | None = None,
-        config_kwargs: dict[str, t.Any] | None = None,
-    ) -> bentoml.Model:
-        ...
-
-    class LLMConfigImpl(LLMConfig, model_name="dummy"):
-        ...
-
-    class LLMRunnableImpl(LLMRunnable, start_model_name="dummy"):
-        ...
-
-
-# The following type definition are extensions of bentoml.Runner
-class TokenizerRunner(bentoml.Runner):
-    ...
+LLMModel = transformers.PreTrainedModel | transformers.TFPreTrainedModel | transformers.FlaxPreTrainedModel
+LLMTokenizer = (
+    transformers.PreTrainedTokenizer | transformers.PreTrainedTokenizerFast | transformers.PreTrainedTokenizerBase
+)

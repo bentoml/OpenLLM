@@ -22,11 +22,12 @@ import difflib
 import functools
 import inspect
 import logging
-import subprocess
+import os
 import typing as t
 
 import bentoml
 import click
+import inflection
 from click_option_group import optgroup
 
 import openllm
@@ -187,7 +188,7 @@ class StartCommand(click.MultiCommand):
         return self._cached_command[cmd_name]
 
 
-def parse_serve_args(serve_grpc: bool) -> F[P]:
+def parse_serve_args(serve_grpc: bool) -> t.Callable[[F[P]], F[P]]:
     """Parsing `bentoml serve|serve-grpc` click.Option to be parsed via `openllm start`"""
     from bentoml_cli.cli import cli
 
@@ -201,7 +202,7 @@ def parse_serve_args(serve_grpc: bool) -> F[P]:
         serve_command = cli.commands[command]
         # The first variable is the argument bento
         # and the last three are shared default, which we don't need.
-        serve_options = serve_command.params[1:-3]
+        serve_options = [p for p in serve_command.params[1:-3] if p.name not in ("protocol_version",)]
         for options in reversed(serve_options):
             attrs = options.to_info_dict()
             # we don't need param_type_name, since it should all be options
@@ -226,53 +227,57 @@ def start_model_command(
     _context_settings: dict[str, t.Any] | None = None,
     _serve_grpc: bool = False,
 ) -> click.Command:
-    config = openllm.AutoConfig.for_model(model_name)
+    """Create a click.Command for starting a model server"""
+    envvar = openllm.utils.get_framework_env(model_name)
+
+    if envvar == "flax":
+        llm = openllm.AutoFlaxLLM.for_model(model_name, return_runner_kwargs=False)
+    elif envvar == "tf":
+        llm = openllm.AutoTFLLM.for_model(model_name, return_runner_kwargs=False)
+    else:
+        llm = openllm.AutoLLM.for_model(model_name, return_runner_kwargs=False)
 
     @click.command(
         model_name,
         short_help=f"Start a LLMServer for '{model_name}' ('--help' for more details)",
         context_settings=_context_settings or {},
-        help=getattr(openllm, f"START_{openllm.utils.kebab_to_snake_case(model_name).upper()}_COMMAND_DOCSTRING"),
+        help=getattr(
+            openllm.utils.get_lazy_module(model_name),
+            f"START_{inflection.underscore(model_name).upper()}_COMMAND_DOCSTRING",
+        ),
     )
-    @openllm.LLMConfig.generate_click_options(config)
+    @llm.config.to_click_options
     @parse_serve_args(_serve_grpc)
     @openllm.cli.OpenLLMCommandGroup.common_chain
     def model_start(**attrs: t.Any):
+        from bentoml._internal.configuration import get_debug_mode
         from bentoml._internal.log import configure_logging
 
         configure_logging()
 
-        llm_config_kwargs = {k: attrs[k] for k in config.__fields__ if k in attrs}
-        # The rest should be server-related args
-        server_args = {k: v for k, v in attrs.items() if k not in list(llm_config_kwargs.keys())}
-        server_args.update(
-            {
-                "working_dir": openllm.utils.get_working_dir(model_name),
-                "bento": f'service_{model_name.replace("-", "_")}:svc',
-            }
-        )
+        nw_config, server_kwds = llm.config.model_validate_click(**attrs)
+
+        server_kwds.update({"working_dir": os.path.dirname(__file__)})
+        if _serve_grpc:
+            server_kwds["grpc_protocol_version"] = "v1"
         # NOTE: currently, theres no development args in bentoml.Server. To be fixed upstream.
-        development = server_args.pop("development")
-        server_args.setdefault("production", not development)
+        development = server_kwds.pop("development")
+        server_kwds.setdefault("production", not development)
 
         start_env = {
-            openllm.utils.FRAMEWORK_ENV_VAR(model_name): openllm.utils.get_framework_env(model_name),
-            openllm.utils.MODEL_CONFIG_ENV_VAR(model_name): config.with_options(**llm_config_kwargs).json(),
+            openllm.utils.FRAMEWORK_ENV_VAR(model_name): envvar,
+            openllm.utils.MODEL_CONFIG_ENV_VAR(model_name): nw_config.model_dump_json(),
+            "OPENLLM_MODEL": model_name,
+            "BENTOML_DEBUG": str(get_debug_mode()),
         }
 
         click.secho(f"\nStarting LLM Server for '{model_name}'\n", fg="blue")
-        server = getattr(bentoml, "HTTPServer" if not _serve_grpc else "GrpcServer")(**server_args)
+        server_cls = getattr(bentoml, "HTTPServer" if not _serve_grpc else "GrpcServer")
+        server: bentoml.server.Server = server_cls("_service.py:svc", **server_kwds)
         server.timeout = 90
 
         try:
-            server.start(env=start_env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-            assert server.process is not None
-            with server.process.stdout:
-                while True:
-                    line = server.process.stdout.readline()
-                    if not line:
-                        break
-                    click.secho(line.strip(), fg="blue")
+            server.start(env=start_env, blocking=True, text=True)
         except KeyboardInterrupt:
             click.secho("\nStopping LLM Server...\n", fg="yellow")
             # TODO: Add possible next step
@@ -281,3 +286,20 @@ def start_model_command(
             raise
 
     return model_start
+
+
+def _start(
+    model_name: str,
+    framework: t.Literal["flax", "tf", "pt"] | None = None,
+    **attrs: t.Any,
+):
+    """Python API to start a LLM server."""
+    _serve_grpc = attrs.pop("_serve_grpc", False)
+
+    if framework is not None:
+        os.environ[openllm.utils.FRAMEWORK_ENV_VAR(model_name)] = framework
+    start_model_command(model_name, _serve_grpc=_serve_grpc)(standalone_mode=False, **attrs)
+
+
+start = functools.partial(_start, _serve_grpc=False)
+start_grpc = functools.partial(_start, _serve_grpc=True)

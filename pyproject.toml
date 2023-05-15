@@ -47,13 +47,14 @@ classifiers = [
 dependencies = [
     # bentoml[io] includes pydantic, PIL, filetype, pandas and numpy
     # bentoml[grpc,grpc-reflection] include grpcio, grpcio-reflection
-    "bentoml[io,grpc,grpc-reflection]>=1.0.19",
+    "bentoml[io-image,io-pandas,io-file,grpc,grpc-reflection]>=1.0.19",
     # bentoml[torch] includes torch and transformers
-    "transformers[torch]>=4.28.1",
+    "transformers[torch]>=4.29.0",
     # Super fast JSON serialization
     "orjson",
-    # clidantic
-    "clidantic",
+    "inflection",
+    # pydantic 2 ftw
+    "pydantic@git+https://github.com/pydantic/pydantic/#egg=b5c65d19d76295aaf066f18d2d211a4a308a58a8",
 ]
 
 [project.urls]
@@ -66,6 +67,9 @@ openllm = "openllm.__main__:cli"
 
 [tool.hatch.version]
 path = "src/openllm/__about__.py"
+
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.hatch.envs.default]
 dependencies = [
@@ -150,7 +154,8 @@ unfixable = [
 convention = "google"
 
 [tool.ruff.isort]
-known-first-party = ["openllm", "bentoml"]
+lines-after-imports = 2
+known-first-party = ["openllm", "bentoml", 'transformers']
 
 [tool.ruff.flake8-quotes]
 inline-quotes = "single"
@@ -161,6 +166,7 @@ ban-relative-imports = "all"
 [tool.ruff.per-file-ignores]
 # Tests can use magic values, assertions, and relative imports
 "tests/**/*" = ["PLR2004", "S101", "TID252"]
+"__init__.py" = ["E402", "F401", "F403", "F811"]
 
 [tool.pyright]
 pythonVersion = "3.11"

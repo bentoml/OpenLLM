@@ -27,62 +27,44 @@ import types
 import typing as t
 
 import bentoml
+import inflection
 # NOTE: The following exports useful utils from bentoml
 from bentoml._internal.utils import LazyLoader as LazyLoader
-from bentoml._internal.utils import pkg as packaging_utils
+from bentoml._internal.utils import bentoml_cattr as cattr
+from bentoml._internal.utils import \
+    copy_file_to_fs_folder as copy_file_to_fs_folder
+from bentoml._internal.utils import pkg as pkg
 from bentoml._internal.utils import reserve_free_port as reserve_free_port
 from bentoml._internal.utils import \
     resolve_user_filepath as resolve_user_filepath
 
+from .import_utils import DummyMetaclass as DummyMetaclass
+from .import_utils import is_flax_available as is_flax_available
+from .import_utils import is_tf_available as is_tf_available
+from .import_utils import is_torch_available as is_torch_available
+from .import_utils import require_backends as require_backends
+
 if t.TYPE_CHECKING:
     import transformers
-    import transformers.utils as import_utils_shim
-
-    from openllm.runner_utils import LLMRunner
-
 else:
     transformers = LazyLoader("transformers", globals(), "transformers")
-
-    if packaging_utils.pkg_version_info("transformers")[:2] >= (4, 18):
-        import_utils_shim = LazyLoader("import_utils_shim", globals(), "transformers.utils")
-    else:
-        # NOTE: This logic below handle 4.18 compatibility for checking tf, jax, and torch availability.
-        import_utils_shim = LazyLoader(
-            "import_utils_shim", globals(), "bentoml._internal.frameworks.utils.transformers"
-        )
 
 logger = logging.getLogger(__name__)
 
 _object_setattr = object.__setattr__
 
 
-def kebab_to_snake_case(name: str) -> str:
-    """Convert a given kebab-case name to snake_case"""
-    return re.sub(r"-", "_", name)
-
-
-def get_pretrained_env(model_name: str) -> str | None:
-    """Convert a given runnable start model name (kebab-case) to a
-    ENV variable snake_case (OPENLLM_FLAN_T5_PRETRAINED)"""
-    return os.environ.get(f"OPENLLM_{kebab_to_snake_case(model_name.upper())}_PRETRAINED", None)
-
-
 def get_lazy_module(model_name: str) -> LazyLoader:
-    snaked_model_name = kebab_to_snake_case(model_name)
+    snaked_model_name = inflection.underscore(model_name)
     return LazyLoader(snaked_model_name, globals(), f"openllm.models.{snaked_model_name}")
 
 
-def get_working_dir(model_name: str) -> str:
-    """Get the working directory for a given model name"""
-    return os.path.dirname(importlib.import_module(f".{kebab_to_snake_case(model_name)}", "openllm.models").__file__)
-
-
 def FRAMEWORK_ENV_VAR(model_name: str) -> str:
-    return f"OPENLLM_{kebab_to_snake_case(model_name.upper())}_FRAMEWORK"
+    return f"OPENLLM_{inflection.underscore(model_name).upper()}_FRAMEWORK"
 
 
 def MODEL_CONFIG_ENV_VAR(model_name: str) -> str:
-    return f"OPENLLM_{kebab_to_snake_case(model_name.upper())}_CONFIG"
+    return f"OPENLLM_{inflection.underscore(model_name).upper()}_CONFIG"
 
 
 def get_framework_env(model_name: str) -> str:
@@ -92,42 +74,55 @@ def get_framework_env(model_name: str) -> str:
     return envvar
 
 
-def generate_service_name(runner: LLMRunner) -> str:
-    dummy_object = runner.runnable_class.dummy_object()
-    return f"llm-{dummy_object.start_model_name}-service"
-
-
 def convert_transformers_model_name(name: str) -> str:
     return re.sub("[^a-zA-Z0-9]+", "-", name)
 
 
-def generate_tag_from_model_name(model_name: str, prefix: str | None = None, **kwargs: t.Any) -> bentoml.Tag:
+def generate_tags(
+    model_name_or_path: str, prefix: str | None = None, **kwargs: t.Any
+) -> tuple[bentoml.Tag, dict[str, t.Any]]:
     """Generate a ``bentoml.Tag`` from a given transformers model name.
 
     Note that this depends on your model to have a config class available.
 
     Args:
-        model_name: The transformers model name.
+        model_name_or_path: The transformers model name or path to load the model from.
+                            If it is a path, then `openllm_model_version` must be passed in as a kwarg.
+        prefix: The prefix to prepend to the tag. If None, then no prefix will be prepended.
         **kwargs: Additional kwargs to pass to the ``transformers.AutoConfig`` constructor.
                   If your pass ``return_unused_kwargs=True``, it will be ignored.
+
+    Returns:
+        A tuple of ``bentoml.Tag`` and a dict of unused kwargs.
     """
     if "return_unused_kwargs" in kwargs:
         logger.debug("Ignoring 'return_unused_kwargs' in 'generate_tag_from_model_name'.")
-        kwargs.pop("return_unused_kwargs")
-    config = transformers.AutoConfig.from_pretrained(model_name, **kwargs)
-    commit_hash = getattr(config, "_commit_hash", None)
-    if commit_hash is None:
-        logger.warning(
-            "Given %s from '%s' doesn't contain a commit hash. We will generate the tag without specific version.",
-            config.__class__,
-            model_name,
-        )
-    tag_str = (
-        convert_transformers_model_name(model_name)
-        if commit_hash is None
-        else f"{convert_transformers_model_name(model_name)}:{commit_hash}"
+        kwargs.pop("return_unused_kwargs", None)
+
+    config, kwargs = t.cast(
+        "tuple[transformers.PretrainedConfig, dict[str, t.Any]]",
+        transformers.AutoConfig.from_pretrained(model_name_or_path, return_unused_kwargs=True, **kwargs),
     )
-    return bentoml.Tag.from_taglike((f"{prefix}-" if prefix is not None else "") + tag_str)
+
+    if os.path.exists(os.path.dirname(model_name_or_path)):
+        # If the model_name_or_path is a path, we assume it's a local path,
+        # then users must pass a version for this.
+        model_version = kwargs.pop("openllm_model_version", None)
+        assert model_version is not None, "Must pass in 'openllm_model_version' when model_name_or_path is a path."
+    else:
+        model_version = getattr(config, "_commit_hash", None)
+        if model_version is None:
+            logger.warning(
+                "Given %s from '%s' doesn't contain a commit hash. We will generate the tag without specific version.",
+                config.__class__,
+                model_name_or_path,
+            )
+    tag_str = (
+        convert_transformers_model_name(model_name_or_path)
+        if model_version is None
+        else f"{convert_transformers_model_name(model_name_or_path)}:{model_version}"
+    )
+    return bentoml.Tag.from_taglike((f"{prefix}-" if prefix is not None else "") + tag_str), kwargs
 
 
 class LazyModule(types.ModuleType):

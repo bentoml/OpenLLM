@@ -13,12 +13,10 @@
 # limitations under the License.
 from __future__ import annotations
 
-import pydantic
-
-from ...configuration_utils import LLMConfig
+import openllm
 
 START_FLAN_T5_COMMAND_DOCSTRING = """\
-Run a LLMServer for FLAN-T5 models .
+Run a LLMServer for FLAN-T5 model and variants.
 
 \b
 > See more information about FLAN-T5 at [huggingface/transformers](https://huggingface.co/docs/transformers/model_doc/flan-t5)
@@ -48,13 +46,12 @@ Question: {question}
 Answer:"""
 
 
-class FlanT5Config(LLMConfig, model_name="flan-t5"):
+class FlanT5Config(openllm.LLMConfig):
     """Configuration for the FLAN-T5 model."""
 
-    temperature: float = pydantic.Field(0.75, ge=0.01, le=5, description="Determine how random generation should be.")
-    max_length: int = pydantic.Field(
-        400, ge=1, description="Maximum number of tokens to generate. A word is around 2-3 tokens."
-    )
-    top_k: int = pydantic.Field(12, description="Total number of tokens to consider at each step.")
-    top_p: float = pydantic.Field(0.25, description="Total probability mass of tokens to consider at each step.")
-    repetition_penalty: float = pydantic.Field(1.2, description="Penalizes repeated tokens according to frequency.")
+    class GenerationConfig:
+        temperature: float = 0.75
+        max_length: int = 3000
+        top_k: int = 50
+        top_p: float = 0.4
+        repetition_penalty = 1.0

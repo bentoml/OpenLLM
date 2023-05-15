@@ -20,15 +20,14 @@ import typing as t
 
 import openllm
 
-from ...utils import LazyModule
-from ...utils import import_utils_shim as imports
+from ... import utils
 
 _import_structure = {
     "configuration_auto": ["AutoConfig", "CONFIG_MAPPING", "CONFIG_MAPPING_NAMES"],
 }
 
 try:
-    if not imports.is_torch_available():
+    if not utils.is_torch_available():
         raise openllm.exceptions.MissingDependencyError
 except openllm.exceptions.MissingDependencyError:
     pass
@@ -36,7 +35,7 @@ else:
     _import_structure["modeling_auto"] = ["AutoLLM", "MODEL_MAPPING_NAMES", "MODEL_MAPPING"]
 
 try:
-    if not imports.is_flax_available():
+    if not utils.is_flax_available():
         raise openllm.exceptions.MissingDependencyError
 except openllm.exceptions.MissingDependencyError:
     pass
@@ -44,7 +43,7 @@ else:
     _import_structure["modeling_flax_auto"] = ["AutoFlaxLLM", "MODEL_FLAX_MAPPING_NAMES", "MODEL_FLAX_MAPPING"]
 
 try:
-    if not imports.is_tf_available():
+    if not utils.is_tf_available():
         raise openllm.exceptions.MissingDependencyError
 except openllm.exceptions.MissingDependencyError:
     pass
@@ -58,7 +57,7 @@ if t.TYPE_CHECKING:
     from .configuration_auto import AutoConfig as AutoConfig
 
     try:
-        if not imports.is_torch_available():
+        if not utils.is_torch_available():
             raise openllm.exceptions.MissingDependencyError
     except openllm.exceptions.MissingDependencyError:
         pass
@@ -68,7 +67,7 @@ if t.TYPE_CHECKING:
         from .modeling_auto import AutoLLM as AutoLLM
 
     try:
-        if not imports.is_flax_available():
+        if not utils.is_flax_available():
             raise openllm.exceptions.MissingDependencyError
     except openllm.exceptions.MissingDependencyError:
         pass
@@ -80,7 +79,7 @@ if t.TYPE_CHECKING:
         from .modeling_flax_auto import AutoFlaxLLM as AutoFlaxLLM
 
     try:
-        if not imports.is_tf_available():
+        if not utils.is_tf_available():
             raise openllm.exceptions.MissingDependencyError
     except openllm.exceptions.MissingDependencyError:
         pass
@@ -92,4 +91,4 @@ if t.TYPE_CHECKING:
 else:
     import sys
 
-    sys.modules[__name__] = LazyModule(__name__, globals()["__file__"], _import_structure, module_spec=__spec__)
+    sys.modules[__name__] = utils.LazyModule(__name__, globals()["__file__"], _import_structure, module_spec=__spec__)

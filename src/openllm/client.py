@@ -21,4 +21,4 @@ To start interact with the server, you can do the following:
 >>> client.query("What is the meaning of life?")
 """
 
-from openllm_client import create as create
+from openllm_client import for_model as for_model
