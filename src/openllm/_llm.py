@@ -270,14 +270,9 @@ class LLM(LLMInterface):
                 logger.debug("Using custom 'import_model' defined in subclass.")
                 self._bentomodel = self.import_model(tag, *args, **kwargs)
             else:
+                kwargs["_for_framework"] = openllm.utils.get_framework_env(self.config.__openllm_model_name__)
                 # In this branch, we just use the default implementation.
-                self._bentomodel = import_model(
-                    self.default_model,
-                    tag=tag,
-                    *args,
-                    _for_framework=openllm.utils.get_framework_env(self.config.__openllm_model_name__),
-                    **kwargs,
-                )
+                self._bentomodel = import_model(pretrained, tag, *args, **kwargs)
 
         # NOTE: Save the args and kwargs for latter load
         self._args = args

@@ -147,11 +147,22 @@ def construct_docker_options(llm: openllm.LLM, llm_fs: FS) -> DockerOptions:
     )
 
 
-def build(model_name: str, **kwds: t.Any) -> tuple[bentoml.Bento, bool]:
+@t.overload
+def build(model_name: str, *, __cli__: t.Literal[False] = ..., **kwds: t.Any) -> bentoml.Bento:
+    ...
+
+
+@t.overload
+def build(model_name: str, *, __cli__: t.Literal[True] = ..., **kwds: t.Any) -> tuple[bentoml.Bento, bool]:
+    ...
+
+
+def build(model_name: str, *, __cli__: bool = False, **kwds: t.Any) -> tuple[bentoml.Bento, bool] | bentoml.Bento:
     """Package a LLM into a Bento."""
 
     overwrite_existing_bento = kwds.pop("_overwrite_existing_bento", False)
     current_model_envvar = os.environ.pop("OPENLLM_MODEL", None)
+    _previously_built = False
 
     # NOTE: We set this environment variable so that our service.py logic won't raise RuntimeError
     # during build. This is a current limitation of bentoml build where we actually import the service.py into sys.path
@@ -180,28 +191,29 @@ def build(model_name: str, **kwds: t.Any) -> tuple[bentoml.Bento, bool]:
                 if overwrite_existing_bento:
                     bentoml.delete(bento_tag)
                     raise bentoml.exceptions.NotFound("Overwriting previously saved Bento.")
-                return bento, True
+                _previously_built = True
             except bentoml.exceptions.NotFound:
                 logger.info("Building Bento for LLM '%s'", llm.__openllm_start_name__)
-                return (
-                    bentoml.bentos.build(
-                        f"{service_name}:svc",
-                        name=bento_tag.name,
-                        labels=labels,
-                        description=f"OpenLLM service for {llm.__openllm_start_name__}",
-                        include=[
-                            f for f in llm_fs.walk.files(filter=["*.py"])
-                        ],  # NOTE: By default, we are using _service.py as the default service, for now.
-                        exclude=["/venv", "__pycache__/", "*.py[cod]", "*$py.class"],
-                        python=construct_python_options(llm, llm_fs),
-                        docker=construct_docker_options(llm, llm_fs),
-                        version=bento_tag.version,
-                        build_ctx=llm_fs.getsyspath("/"),
-                    ),
-                    False,
+                bento = bentoml.bentos.build(
+                    f"{service_name}:svc",
+                    name=bento_tag.name,
+                    labels=labels,
+                    description=f"OpenLLM service for {llm.__openllm_start_name__}",
+                    include=[
+                        f for f in llm_fs.walk.files(filter=["*.py"])
+                    ],  # NOTE: By default, we are using _service.py as the default service, for now.
+                    exclude=["/venv", "__pycache__/", "*.py[cod]", "*$py.class"],
+                    python=construct_python_options(llm, llm_fs),
+                    docker=construct_docker_options(llm, llm_fs),
+                    version=bento_tag.version,
+                    build_ctx=llm_fs.getsyspath("/"),
                 )
+            if __cli__:
+                return bento, _previously_built
+            else:
+                return bento
     except Exception as e:
-        logger.error("Exception caught during building LLM %s: \n", model_name, exc_info=e)
+        logger.error("\nException caught during building LLM %s: \n", model_name, exc_info=e)
         raise
     finally:
         del os.environ["OPENLLM_MODEL"]

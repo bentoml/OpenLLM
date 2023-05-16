@@ -22,12 +22,14 @@ To start any OpenLLM model:
 """
 from __future__ import annotations
 
+import os
+
 import click
 import inflection
 
 import openllm
 
-_CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"]}
+_CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"], "max_content_width": os.environ.get("COLUMNS", 120)}
 
 OPENLLM_FIGLET = """\
  ██████╗ ██████╗ ███████╗███╗   ██╗██╗     ██╗     ███╗   ███╗
@@ -79,18 +81,20 @@ def start_grpc():
     """
 
 
-@cli.command(aliases=["bundle"])
+@cli.command(aliases=["build"])
 @click.argument("model_name", type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING.keys()]))
 @click.option("--pretrained", default=None, help="Given pretrained model name for the given model name [Optional].")
 @click.option("--overwrite", is_flag=True, help="Overwrite existing Bento for given LLM if it already exists.")
-def build(model_name: str, pretrained: str | None, overwrite: bool):
+def bundle(model_name: str, pretrained: str | None, overwrite: bool):
     """Package a given models into a Bento.
 
-    $ openllm build flan-t5
+    $ openllm flan-t5
     """
     from bentoml._internal.configuration import get_quiet_mode
 
-    bento, _previously_built = openllm.build(model_name, pretrained=pretrained, _overwrite_existing_bento=overwrite)
+    bento, _previously_built = openllm.build(
+        model_name, __cli__=True, pretrained=pretrained, _overwrite_existing_bento=overwrite
+    )
 
     if not get_quiet_mode():
         click.echo("\n" + OPENLLM_FIGLET)

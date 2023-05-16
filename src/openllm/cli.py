@@ -264,12 +264,19 @@ def start_model_command(
         development = server_kwds.pop("development")
         server_kwds.setdefault("production", not development)
 
+        bentoml_home_env = os.environ.get("BENTOML_HOME")
+        bentoml_do_not_track_env = os.environ.get("BENTOML_DO_NOT_TRACK")
+
         start_env = {
             openllm.utils.FRAMEWORK_ENV_VAR(model_name): envvar,
             openllm.utils.MODEL_CONFIG_ENV_VAR(model_name): nw_config.model_dump_json(),
             "OPENLLM_MODEL": model_name,
             "BENTOML_DEBUG": str(get_debug_mode()),
         }
+        if bentoml_home_env is not None:
+            start_env["BENTOML_HOME"] = bentoml_home_env
+        if bentoml_do_not_track_env is not None:
+            start_env["BENTOML_DO_NOT_TRACK"] = bentoml_do_not_track_env
 
         click.secho(f"\nStarting LLM Server for '{model_name}'\n", fg="blue")
         server_cls = getattr(bentoml, "HTTPServer" if not _serve_grpc else "GrpcServer")
@@ -277,13 +284,19 @@ def start_model_command(
         server.timeout = 90
 
         try:
-            server.start(env=start_env, blocking=True, text=True)
-        except KeyboardInterrupt:
-            click.secho("\nStopping LLM Server...\n", fg="yellow")
-            # TODO: Add possible next step
+            server.start(env=start_env, text=True)
+            assert server.process and server.process.stdout
+            with server.process.stdout:
+                for f in iter(server.process.stdout.readline, b""):
+                    click.secho(f, fg="green", nl=False)
         except Exception as err:
             click.secho(f"Error caught while starting LLM Server:\n{err}", fg="red")
             raise
+        finally:
+            click.secho("\nStopping LLM Server...\n", fg="yellow")
+            click.secho(
+                f"Next step: you can run 'openllm bundle {model_name}' to create a Bento for {model_name}", fg="blue"
+            )
 
     return model_start
 
