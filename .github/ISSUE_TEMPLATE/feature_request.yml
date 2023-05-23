@@ -1,6 +1,6 @@
 name: 🚀 Feature Request
 description: Submit a proposal/request for new OpenLLM features.
-title: ''
+title: 'feat: '
 labels: ['']
 body:
   - type: textarea
