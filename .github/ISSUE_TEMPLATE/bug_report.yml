@@ -1,6 +1,6 @@
 name: 🐛 Bug Report
 description: Create a bug report on OpenLLM.
-title: ''
+title: 'bug: '
 labels: ['']
 body:
   - type: markdown
