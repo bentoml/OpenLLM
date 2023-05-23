@@ -70,18 +70,31 @@ class TaskType(enum.Enum, metaclass=TypeMeta):
     TEXT2TEXT_GENERATION = enum.auto()
 
 
-# NOTE: Currently, all LLMs are either text-generation or text2text-generation
-# hence, the two dicts to check are
-# transformers.MODEL_FOR_CAUSAL_LM_MAPPING & transformers.MODEL_FOR_SEQ_TO_SEQ_CAUSAL_LM_MAPPING
-def import_model(model_name: str, tag: bentoml.Tag, *model_args: t.Any, **kwds: t.Any):
-    """Auto detect model type from given model_name and import it to bentoml's model store."""
-    _framework_impl = kwds.pop("_for_framework", "pt")
+def import_model(model_name: str, tag: bentoml.Tag, __openllm_framework__: str, *model_args: t.Any, **kwds: t.Any):
+    """Auto detect model type from given model_name and import it to bentoml's model store.
+
+    For all kwargs, it will be parsed into `transformers.AutoConfig.from_pretrained` first, returning all of the unused kwargs.
+    The unused kwargs then parsed directly into AutoModelForSeq2SeqLM or AutoModelForCausalLM (+ TF, Flax variants).
+    For all tokenizer kwargs, make sure to prefix it with `_tokenizer_` to avoid confusion.
+
+    Note: Currently, there are only two tasks supported: `text-generation` and `text2text-generation`.
+
+    Refer to Transformers documentation for more information about kwargs.
+
+    Args:
+        model_name: Model name to be imported. use `openllm models` to see available entries
+        tag: Tag to be used for the model. This is usually generated for you.
+        model_args: Args to be passed into AutoModelForSeq2SeqLM or AutoModelForCausalLM (+ TF, Flax variants).
+        **kwds: Kwargs to be passed into AutoModelForSeq2SeqLM or AutoModelForCausalLM (+ TF, Flax variants).
+    """
+
     config: transformers.PretrainedConfig = kwds.pop("config", None)
     trust_remote_code = kwds.pop("trust_remote_code", False)
 
     tokenizer_kwds = {k[len("_tokenizer_") :]: v for k, v in kwds.items() if k.startswith("_tokenizer_")}
 
     kwds = {k: v for k, v in kwds.items() if not k.startswith("_tokenizer_")}
+
     # this logic below is synonymous to handling `from_pretrained` kwds.
     hub_kwds_names = [
         "cache_dir",
@@ -114,7 +127,7 @@ def import_model(model_name: str, tag: bentoml.Tag, *model_args: t.Any, **kwds: 
     return bentoml.transformers.save_model(
         str(tag),
         getattr(
-            transformers, _return_tensors_to_framework_map[_framework_impl][TaskType[task_type].value - 1]
+            transformers, _return_tensors_to_framework_map[__openllm_framework__][TaskType[task_type].value - 1]
         ).from_pretrained(
             model_name, *model_args, config=config, trust_remote_code=trust_remote_code, **hub_kwds, **kwds
         ),
@@ -129,7 +142,14 @@ def import_model(model_name: str, tag: bentoml.Tag, *model_args: t.Any, **kwds: 
     )
 
 
-_reserved_namespace = {"default_model", "variants", "config_class", "model", "tokenizer"}
+_reserved_namespace = {
+    "default_model",
+    "variants",
+    "config_class",
+    "model",
+    "tokenizer",
+    "import_kwargs",
+}
 
 
 class LLMInterface(ABC):
@@ -150,6 +170,10 @@ class LLMInterface(ABC):
     config_class: type[openllm.LLMConfig]
     """The config class to use for this LLM. If you are creating a custom LLM, you must specify this class."""
 
+    import_kwargs: dict[str, t.Any] | None = None
+    """The default import kwargs to used when importing the model. 
+    This will be passed into the default 'openllm._llm.import_model'."""
+
     @abstractmethod
     def generate(self, prompt: str, **kwargs: t.Any) -> t.Any:
         """The main function implementation for generating from given prompt."""
@@ -157,7 +181,9 @@ class LLMInterface(ABC):
 
     def generate_iterator(self, prompt: str, **kwargs: t.Any) -> t.Iterator[t.Any]:
         """An iterator version of generate function."""
-        raise NotImplementedError
+        raise NotImplementedError(
+            "Currently generate_iterator requires SSE (Server-side events) support, which is not yet implemented."
+        )
 
 
 if t.TYPE_CHECKING:
@@ -235,23 +261,41 @@ class LLM(LLMInterface):
         If you need to overwrite the default ``import_model``, implement the following in your subclass:
 
         ```python
-        def import_model(self, pretrained: str, tag: bentoml.Tag, *args: t.Any, **kwargs: t.Any) -> bentoml.Model:
-            return bentoml.transformers.save_model(str(tag), ...)
+            def import_model(self, pretrained: str, tag: bentoml.Tag, *args: t.Any, **kwargs: t.Any):
+                tokenizer_kwargs = {k[len('_tokenizer_'):]: v for k, v in kwargs.items() if k.startswith('_tokenizer_')]}
+                kwargs = {k: v for k, v in kwargs.items() if not k.startswith('_tokenizer_')}
+                return bentoml.transformers.save_model(
+                    str(tag),
+                    transformers.AutoModelForCausalLM.from_pretrained(
+                        pretrained, device_map="auto", torch_dtype=torch.bfloat16, **kwargs
+                    ),
+                    custom_objects={"tokenizer": transformers.AutoTokenizer.from_pretrained(pretrained, padding_size="left",
+                        **tokenizer_kwargs)},
+                )
         ```
 
-        Note: See ``openllm.DollyV2`` for example
+        If your import model doesn't require customization, you can simply pass in `import_kwargs` at class level that will be then passed into
+        The default `import_model` implementation. See ``openllm.DollyV2`` for example.
+
+        ```python
+        dolly_v2_runner = openllm.Runner("dolly-v2", _tokenizer_padding_size="left", torch_dtype=torch.bfloat8, device_map='gpu')
+        ```
+
+        Note: If you implement your own `import_model`, then `import_kwargs` will be ignored.
 
         Note that this tag will be generated based on `self.default_model` or the given `pretrained` kwds.
         passed from the __init__ constructor.
 
         Args:
-            pretrained: The pretrained model to use. Defaults to None. It will use self.default_model if None.
-            llm_config: The config to use for this LLM. Defaults to None. It will use self.config_class to construct default configuration.
+            pretrained: The pretrained model to use. Defaults to None. It will use 'self.default_model' if None.
+            llm_config: The config to use for this LLM. Defaults to None. If not passed, we will use 'self.config_class'
+                        to construct default configuration.
             *args: The args to be passed to the model.
             **kwargs: The kwargs to be passed to the model.
         """
 
         if llm_config is not None:
+            logger.debug("Using given 'llm_config=%s' to initialize LLM", llm_config)
             self.config = llm_config
         else:
             self.config = self.config_class(**kwargs)
@@ -267,6 +311,7 @@ class LLM(LLMInterface):
                 pretrained = self.default_model
 
         self._pretrained = pretrained
+
         # NOTE: Save the args and kwargs for latter load
         self._args = args
         self._kwargs = kwargs
@@ -285,9 +330,12 @@ class LLM(LLMInterface):
                     logger.debug("Using custom 'import_model' defined in subclass.")
                     self.__bentomodel__ = self.import_model(self._pretrained, tag, *self._args, **kwargs)
                 else:
-                    self._kwargs["_for_framework"] = self._implementation
-                    # In this branch, we just use the default implementation.
-                    self.__bentomodel__ = import_model(self._pretrained, tag, *self._args, **kwargs)
+                    if self.import_kwargs:
+                        kwargs = {**self.import_kwargs, **kwargs}
+                    # NOTE: In this branch, we just use the default implementation.
+                    self.__bentomodel__ = import_model(
+                        self._pretrained, tag, __openllm_framework__=self._implementation, *self._args, **kwargs
+                    )
         return self.__bentomodel__
 
     @property
@@ -344,7 +392,7 @@ class LLM(LLMInterface):
             name = f"llm-{self.config.__openllm_start_name__}-runner"
         models = models if models is not None else []
 
-        # NOTE: The side effect of this is that i will load the imported model during runner creation.
+        # NOTE: The side effect of this is that will load the imported model during runner creation.
         models.append(self._bentomodel)
 
         if scheduling_strategy is None:
@@ -352,24 +400,35 @@ class LLM(LLMInterface):
 
             scheduling_strategy = DefaultStrategy
 
-        signature = ModelSignature.from_dict(ModelSignatureDict(batchable=False))
+        generate_sig = ModelSignature.from_dict(ModelSignatureDict(batchable=False))
+        generate_iterator_sig = ModelSignature.from_dict(ModelSignatureDict(batchable=True))
         if method_configs is None:
-            method_configs = {"generate": signature}
+            method_configs = {"generate": generate_sig, "generate_iterator": generate_iterator_sig}
         else:
-            signature = ModelSignature.convert_signatures_dict(method_configs).get("generate", signature)
+            generate_sig = ModelSignature.convert_signatures_dict(method_configs).get("generate", generate_sig)
+            ModelSignature.convert_signatures_dict(method_configs).get("generate_iterator", generate_iterator_sig)
 
         class _Runnable(bentoml.Runnable):
             SUPPORTED_RESOURCES = ("nvidia.com/gpu", "cpu")
             SUPPORTS_CPU_MULTI_THREADING = True
 
             @bentoml.Runnable.method(
-                batchable=signature.batchable,
-                batch_dim=signature.batch_dim,
-                input_spec=signature.input_spec,
-                output_spec=signature.output_spec,
+                batchable=generate_sig.batchable,
+                batch_dim=generate_sig.batch_dim,
+                input_spec=generate_sig.input_spec,
+                output_spec=generate_sig.output_spec,
             )
             def generate(__self, prompt: str, **kwds: t.Any) -> list[str]:
                 return self.generate(prompt, **kwds)
+
+            @bentoml.Runnable.method(
+                batchable=generate_iterator_sig.batchable,
+                batch_dim=generate_iterator_sig.batch_dim,
+                input_spec=generate_iterator_sig.input_spec,
+                output_spec=generate_iterator_sig.output_spec,
+            )
+            def generate_iterator(__self, prompt: str, **kwds: t.Any) -> t.Iterator[str]:
+                return self.generate_iterator(prompt, **kwds)
 
         return bentoml.Runner(
             t.cast(

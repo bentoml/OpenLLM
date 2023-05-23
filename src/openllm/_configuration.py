@@ -135,8 +135,10 @@ class GenerationConfig(pydantic.BaseModel):
         description="""Controls the stopping condition for beam-based methods, like beam-search. It accepts the 
         following values: 
         - `True`, where the generation stops as soon as there are `num_beams` complete candidates; 
-        - `False`, where an heuristic is applied and the generation stops when is it very unlikely to find better candidates; 
-        - `"never"`, where the beam search procedure only stops when there cannot be better candidates (canonical beam search algorithm)
+        - `False`, where an heuristic is applied and the generation stops when is it very unlikely to find 
+            better candidates; 
+        - `"never"`, where the beam search procedure only stops when there cannot be better candidates 
+            (canonical beam search algorithm)
     """,
     )
     max_time: t.Optional[float] = pydantic.Field(
@@ -154,7 +156,8 @@ class GenerationConfig(pydantic.BaseModel):
     )
     penalty_alpha: t.Optional[float] = pydantic.Field(
         None,
-        description="The values balance the model confidence and the degeneration penalty in contrastive search decoding.",
+        description="""The values balance the model confidence and the degeneration penalty in 
+        contrastive search decoding.""",
     )
     use_cache: bool = pydantic.Field(
         True,
@@ -347,12 +350,15 @@ class GenerationConfig(pydantic.BaseModel):
         __openllm_env_name__: str
         __openllm_model_name__: str
 
-    def __init_subclass__(cls, **kwargs: t.Any) -> None:
+    def __init_subclass__(cls, *, _internal: bool = False, **kwargs: t.Any) -> None:
+        if not _internal:
+            raise RuntimeError(
+                "GenerationConfig is not meant to be used directly, "
+                "but you can access this via a LLMConfig.generation_config"
+            )
         model_name = kwargs.get("model_name", None)
         if model_name is None:
-            raise RuntimeError(
-                "GenerationConfig is not meant to be used directly, but you can access this via a LLMConfig.generation_config"
-            )
+            raise RuntimeError("Failed to initialize GenerationConfig subclass (missing model_name)")
         cls.__openllm_model_name__ = inflection.underscore(model_name)
         cls.__openllm_env_name__ = cls.__openllm_model_name__.upper()
 
@@ -423,7 +429,15 @@ class LLMConfig(pydantic.BaseModel, ABC):
         # The following is handled via __pydantic_init_subclass__, and is only used for TYPE_CHECKING
         __openllm_model_name__: str = ""
         __openllm_start_name__: str = ""
+        __openllm_timeout__: int = 0
         GenerationConfig: type[t.Any] = GenerationConfig
+
+    def __init_subclass__(cls, *, default_timeout: int | None = None, **kwargs: t.Any):
+        if default_timeout is None:
+            default_timeout = 3600
+        cls.__openllm_timeout__ = default_timeout
+
+        super(LLMConfig, cls).__init_subclass__(**kwargs)
 
     @classmethod
     def __pydantic_init_subclass__(cls, **kwargs: t.Any):
@@ -435,7 +449,7 @@ class LLMConfig(pydantic.BaseModel, ABC):
                 types.new_class(
                     cls.__name__.replace("Config", "") + "GenerationConfig",
                     (GenerationConfig,),
-                    {"model_name": cls.__openllm_model_name__},
+                    {"model_name": cls.__openllm_model_name__, "_internal": True},
                 ),
             )
             cls.generation_config = generation_class.construct_from_llm_config(cls)
@@ -447,8 +461,6 @@ class LLMConfig(pydantic.BaseModel, ABC):
             if "env" in field.json_schema_extra:
                 continue
             field.json_schema_extra["env"] = f"OPENLLM_{cls.__openllm_model_name__.upper()}_{key.upper()}"
-
-        super().__init_subclass__(**kwargs)
 
     def model_post_init(self, _: t.Any):
         if self.__pydantic_extra__:

@@ -17,21 +17,41 @@ import logging
 import re
 import typing as t
 
-import bentoml
-
 import openllm
 
 from .configuration_dolly_v2 import (DEFAULT_PROMPT_TEMPLATE, END_KEY,
-                                     RESPONSE_KEY, get_special_token_id)
+                                     RESPONSE_KEY)
 
 if t.TYPE_CHECKING:
     import torch
-    import transformers
+
+    from openllm.types import LLMTokenizer
 else:
     torch = openllm.utils.LazyLoader("torch", globals(), "torch")
-    transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
 
 logger = logging.getLogger(__name__)
+
+
+def get_special_token_id(tokenizer: LLMTokenizer, key: str) -> int:
+    """
+    Gets the token ID for a given string that has been added to the tokenizer as a special token.
+    When training, we configure the tokenizer so that the sequences like "### Instruction:" and "### End" are
+    treated specially and converted to a single, new token.  This retrieves the token ID each of these keys map to.
+
+    Args:
+        tokenizer: the tokenizer
+        key: the key to convert to a single token
+
+    Raises:
+        RuntimeError: if more than one ID was generated
+
+    Returns:
+        int: the token ID for the given key
+    """
+    token_ids = tokenizer.encode(key)
+    if len(token_ids) > 1:
+        raise ValueError(f"Expected only a single token for '{key}' but found {token_ids}")
+    return token_ids[0]
 
 
 class DollyV2(openllm.LLM, _internal=True):
@@ -39,14 +59,7 @@ class DollyV2(openllm.LLM, _internal=True):
 
     variants = ["databricks/dolly-v2-3b", "databricks/dolly-v2-7b", "databricks/dolly-v2-12b"]
 
-    def import_model(self, pretrained: str, tag: bentoml.Tag, *args: t.Any, **kwargs: t.Any):
-        return bentoml.transformers.save_model(
-            str(tag),
-            transformers.AutoModelForCausalLM.from_pretrained(
-                pretrained, device_map="auto", torch_dtype=torch.bfloat16
-            ),
-            custom_objects={"tokenizer": transformers.AutoTokenizer.from_pretrained(pretrained, padding_size="left")},
-        )
+    import_kwargs = {"device_map": "auto", "torch_dtype": torch.bfloat16, "_tokenizer_padding_size": "left"}
 
     @torch.inference_mode()
     def generate(
@@ -58,7 +71,6 @@ class DollyV2(openllm.LLM, _internal=True):
         top_k: float | None = None,
         top_p: float | None = None,
         max_new_tokens: int | None = None,
-        eos_token_id: int | None = None,
         **kwargs: t.Any,
     ):
         """This is a implementation of InstructionTextGenerationPipeline from databricks."""
@@ -67,6 +79,7 @@ class DollyV2(openllm.LLM, _internal=True):
         )
         response_key_token_id = None
         end_key_token_id = None
+        eos_token_id = None
 
         llm_config = self.config.with_options(
             max_length=max_length,

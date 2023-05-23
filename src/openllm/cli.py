@@ -18,6 +18,7 @@ This extends clidantic and BentoML's internal CLI CommandGroup.
 """
 from __future__ import annotations
 
+import copy
 import difflib
 import functools
 import inspect
@@ -270,7 +271,8 @@ def start_model_command(
     @config.to_click_options
     @parse_serve_args(_serve_grpc)
     @OpenLLMCommandGroup.common_chain
-    def model_start(**attrs: t.Any):
+    @click.option("--server-timeout", type=int, default=3600, help="Server timeout in seconds")
+    def model_start(server_timeout: int, **attrs: t.Any):
         from bentoml._internal.configuration import get_debug_mode
         from bentoml._internal.log import configure_logging
 
@@ -286,12 +288,24 @@ def start_model_command(
         server_kwds.setdefault("production", not development)
 
         start_env = os.environ.copy()
+
+        # NOTE: This is a hack to set current configuration
+        _bentoml_config_options = start_env.pop("BENTOML_CONFIG_OPTIONS", "")
+        _bentoml_config_options += (
+            " "
+            if _bentoml_config_options
+            else ""
+            + f"api_server.timeout={server_timeout}"
+            + f' runners."llm-{config.__openllm_start_name__}-runner".timeout={config.__openllm_timeout__}'
+        )
+
         start_env.update(
             {
                 openllm.utils.FRAMEWORK_ENV_VAR(model_name): openllm.utils.get_framework_env(model_name),
                 openllm.utils.MODEL_CONFIG_ENV_VAR(model_name): nw_config.model_dump_json(),
                 "OPENLLM_MODEL": model_name,
                 "BENTOML_DEBUG": str(get_debug_mode()),
+                "BENTOML_CONFIG_OPTIONS": _bentoml_config_options,
             }
         )
 
