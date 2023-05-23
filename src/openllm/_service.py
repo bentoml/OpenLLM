@@ -25,7 +25,7 @@ svc = bentoml.Service(name=f"llm-{llm_config.__openllm_start_name__}-service", r
     route="/v1/generate",
 )
 async def generate_v1(qa: openllm.GenerationInput) -> openllm.GenerationOutput:
-    config = llm_config.with_options(**qa.llm_config.dict()).dict()
+    config = llm_config.with_options(__llm_config__=qa.llm_config).model_dump()
     responses = await runner.generate.async_run(qa.prompt, **config)
     return openllm.GenerationOutput(responses=responses, configuration=config)
 

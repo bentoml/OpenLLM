@@ -134,14 +134,11 @@ def construct_python_options(llm: openllm.LLM, llm_fs: FS) -> PythonOptions:
 
 
 def construct_docker_options(llm: openllm.LLM, llm_fs: FS) -> DockerOptions:
-    from bentoml._internal.configuration import get_debug_mode
-
     return DockerOptions(
         cuda_version="11.6",  # NOTE: Torch 2.0 currently only support 11.6 as the latest CUDA version
         env={
             utils.FRAMEWORK_ENV_VAR(llm.__openllm_start_name__): utils.get_framework_env(llm.__openllm_start_name__),
             "OPENLLM_MODEL": llm.config.__openllm_model_name__,
-            "BENTOML_DEBUG": str(get_debug_mode()),
         },
         system_packages=["git"],
     )
@@ -171,14 +168,14 @@ def build(model_name: str, *, __cli__: bool = False, **kwds: t.Any) -> tuple[ben
 
         to_use_framework = openllm.utils.get_framework_env(model_name)
         if to_use_framework == "flax":
-            llm = openllm.AutoFlaxLLM.for_model(model_name, return_runner_kwargs=False, **kwds)
+            llm = openllm.AutoFlaxLLM.for_model(model_name, **kwds)
         elif to_use_framework == "tf":
-            llm = openllm.AutoTFLLM.for_model(model_name, return_runner_kwargs=False, **kwds)
+            llm = openllm.AutoTFLLM.for_model(model_name, **kwds)
         else:
-            llm = openllm.AutoLLM.for_model(model_name, return_runner_kwargs=False, **kwds)
+            llm = openllm.AutoLLM.for_model(model_name, **kwds)
 
-        labels = dict(llm._identifying_params)
-        labels.update({"_type": llm._llm_type, "_framework": to_use_framework})
+        labels = dict(llm.identifying_params)
+        labels.update({"_type": llm.llm_type, "_framework": to_use_framework})
         service_name = f"generated_{inflection.underscore(model_name)}_service.py"
 
         with fs.open_fs(f"temp://llm_{llm.config.__openllm_model_name__}") as llm_fs:

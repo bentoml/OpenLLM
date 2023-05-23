@@ -40,14 +40,17 @@ class TFFlanT5(openllm.LLM, implementation="tf", _internal=True):
         repetition_penalty: float | None = None,
         **kwargs: t.Any,
     ) -> list[str]:
-        generation_kwargs = self.config.with_options(
-            max_length=max_length,
-            temperature=temperature,
-            top_k=top_k,
-            top_p=top_p,
-            repetition_penalty=repetition_penalty,
-            **kwargs,
-        ).dict()["generation_config"]
         input_ids = self.tokenizer(prompt, return_tensors="tf").input_ids
-        outputs = self.model.generate(input_ids, do_sample=do_sample, **generation_kwargs)
+        outputs = self.model.generate(
+            input_ids,
+            do_sample=do_sample,
+            generation_config=self.config.with_options(
+                max_length=max_length,
+                temperature=temperature,
+                top_k=top_k,
+                top_p=top_p,
+                repetition_penalty=repetition_penalty,
+                **kwargs,
+            ).to_generation_config(),
+        )
         return self.tokenizer.batch_decode(outputs, skip_special_tokens=True)

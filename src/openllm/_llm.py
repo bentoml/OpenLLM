@@ -155,6 +155,10 @@ class LLMInterface(ABC):
         """The main function implementation for generating from given prompt."""
         raise NotImplementedError
 
+    def generate_iterator(self, prompt: str, **kwargs: t.Any) -> t.Iterator[t.Any]:
+        """An iterator version of generate function."""
+        raise NotImplementedError
+
 
 if t.TYPE_CHECKING:
 
@@ -166,15 +170,15 @@ if t.TYPE_CHECKING:
 
 class LLM(LLMInterface):
     _implementation: t.Literal["pt", "tf", "flax"]
-    _bentomodel: bentoml.Model
 
+    __bentomodel__: bentoml.Model | None = None
     __llm_model__: LLMModel | None = None
     __llm_tokenizer__: LLMTokenizer | None = None
     __openllm_start_name__: str = ""
 
     if t.TYPE_CHECKING:
 
-        def import_model(self, tag: bentoml.Tag, *model_args: t.Any, **kwds: t.Any) -> bentoml.Model:
+        def import_model(self, pretrained: str, tag: bentoml.Tag, *model_args: t.Any, **kwds: t.Any) -> bentoml.Model:
             ...
 
     def __init_subclass__(cls, *, implementation: t.Literal["pt", "tf", "flax"] = "pt", _internal: bool = False):
@@ -206,13 +210,13 @@ class LLM(LLMInterface):
 
     # The section below defines a loose contract with langchain's LLM interface.
     @property
-    def _llm_type(self) -> str:
+    def llm_type(self) -> str:
         assert self.default_model is not None
         return openllm.utils.convert_transformers_model_name(self.default_model)
 
     @property
-    def _identifying_params(self) -> dict[str, t.Any]:
-        return {"configuration": self.config.dict(), "variants": self.variants}
+    def identifying_params(self) -> dict[str, t.Any]:
+        return {"configuration": self.config.model_dump(), "variants": self.variants}
 
     def __init__(
         self, pretrained: str | None = None, llm_config: openllm.LLMConfig | None = None, *args: t.Any, **kwargs: t.Any
@@ -228,12 +232,14 @@ class LLM(LLMInterface):
         We actually use the commit_hash to generate the model version, therefore, we can't use custom files.
         Current recommendation is to push the model onto huggingface hub, then use such tag to load with the model.
 
-        If you need to overwrite the default import_model, implement the following in your subclass:
+        If you need to overwrite the default ``import_model``, implement the following in your subclass:
 
         ```python
-        def import_model(self, tag: bentoml.Tag, *args: t.Any, **kwargs: t.Any) -> bentoml.Model:
-            # your implementation here
+        def import_model(self, pretrained: str, tag: bentoml.Tag, *args: t.Any, **kwargs: t.Any) -> bentoml.Model:
+            return bentoml.transformers.save_model(str(tag), ...)
         ```
+
+        Note: See ``openllm.DollyV2`` for example
 
         Note that this tag will be generated based on `self.default_model` or the given `pretrained` kwds.
         passed from the __init__ constructor.
@@ -260,23 +266,29 @@ class LLM(LLMInterface):
                 assert self.default_model, "A default model is required for any LLM."
                 pretrained = self.default_model
 
-        tag, kwargs = openllm.utils.generate_tags(pretrained, prefix=self._implementation, **kwargs)
-
-        try:
-            self._bentomodel = bentoml.transformers.get(tag)
-        except bentoml.exceptions.BentoMLException:
-            logger.info("'%s' with tag (%s) not found, importing from HuggingFace Hub.", self.__class__.__name__, tag)
-            if hasattr(self, "import_model"):
-                logger.debug("Using custom 'import_model' defined in subclass.")
-                self._bentomodel = self.import_model(tag, *args, **kwargs)
-            else:
-                kwargs["_for_framework"] = openllm.utils.get_framework_env(self.config.__openllm_model_name__)
-                # In this branch, we just use the default implementation.
-                self._bentomodel = import_model(pretrained, tag, *args, **kwargs)
-
+        self._pretrained = pretrained
         # NOTE: Save the args and kwargs for latter load
         self._args = args
         self._kwargs = kwargs
+
+    @property
+    def _bentomodel(self) -> bentoml.Model:
+        if self.__bentomodel__ is None:
+            tag, kwargs = openllm.utils.generate_tags(self._pretrained, prefix=self._implementation, **self._kwargs)
+            try:
+                self.__bentomodel__ = bentoml.transformers.get(tag)
+            except bentoml.exceptions.BentoMLException:
+                logger.info(
+                    "'%s' with tag (%s) not found, importing from HuggingFace Hub.", self.__class__.__name__, tag
+                )
+                if hasattr(self, "import_model"):
+                    logger.debug("Using custom 'import_model' defined in subclass.")
+                    self.__bentomodel__ = self.import_model(self._pretrained, tag, *self._args, **kwargs)
+                else:
+                    self._kwargs["_for_framework"] = self._implementation
+                    # In this branch, we just use the default implementation.
+                    self.__bentomodel__ = import_model(self._pretrained, tag, *self._args, **kwargs)
+        return self.__bentomodel__
 
     @property
     def tag(self) -> bentoml.Tag:
@@ -303,10 +315,6 @@ class LLM(LLMInterface):
                     the tokenizer within the model via 'custom_objects'."
                 )
         return self.__llm_tokenizer__
-
-    def reset(self) -> None:
-        # Reset the cached model for this LLM.
-        self.__llm_model__ = None
 
     def to_runner(
         self,
@@ -335,6 +343,8 @@ class LLM(LLMInterface):
         if name is None:
             name = f"llm-{self.config.__openllm_start_name__}-runner"
         models = models if models is not None else []
+
+        # NOTE: The side effect of this is that i will load the imported model during runner creation.
         models.append(self._bentomodel)
 
         if scheduling_strategy is None:

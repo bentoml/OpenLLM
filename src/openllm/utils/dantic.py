@@ -133,7 +133,7 @@ def parse_container_args(field_type: type) -> ParamType | tuple[ParamType]:
     """Parses the arguments inside a container type (lists, tuples and so on).
 
     Args:
-        field_type (type): pydantic field type
+        field_type: pydantic field type
 
     Returns:
         ParamType | tuple[ParamType]: single click-compatible type or a tuple

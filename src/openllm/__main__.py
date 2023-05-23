@@ -29,7 +29,7 @@ import inflection
 
 import openllm
 
-_CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"], "max_content_width": os.environ.get("COLUMNS", 120)}
+_CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"], "max_content_width": int(os.environ.get("COLUMNS", 120))}
 
 OPENLLM_FIGLET = """\
  ██████╗ ██████╗ ███████╗███╗   ██╗██╗     ██╗     ███╗   ███╗
@@ -63,7 +63,7 @@ def cli():
     """
 
 
-@cli.group(cls=openllm.cli.StartCommand, context_settings=_CONTEXT_SETTINGS)
+@cli.group(cls=openllm.cli.StartCommandGroup, context_settings=_CONTEXT_SETTINGS, aliases=["start-http"])
 def start():
     """
     Start any LLM as a REST server.
@@ -72,7 +72,7 @@ def start():
     """
 
 
-@cli.group(cls=openllm.cli.StartCommand, context_settings=_CONTEXT_SETTINGS, _serve_grpc=True, name="start-grpc")
+@cli.group(cls=openllm.cli.StartCommandGroup, context_settings=_CONTEXT_SETTINGS, _serve_grpc=True, name="start-grpc")
 def start_grpc():
     """
     Start any LLM as a gRPC server.
@@ -115,12 +115,15 @@ def bundle(model_name: str, pretrained: str | None, overwrite: bool):
         )
 
 
-@cli.command()
-def models():
+@cli.command(name="models")
+def list_supported_models():
     """
     List all supported models.
     """
-    click.secho(f"\nSupported LLM: {', '.join(openllm.CONFIG_MAPPING.keys())}", fg="blue")
+    click.secho(
+        f"\nSupported LLM: [{', '.join(map(lambda key: inflection.dasherize(key), openllm.CONFIG_MAPPING.keys()))}]",
+        fg="blue",
+    )
 
 
 if __name__ == "__main__":

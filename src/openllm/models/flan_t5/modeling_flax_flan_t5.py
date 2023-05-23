@@ -40,16 +40,19 @@ class FlaxFlanT5(openllm.LLM, implementation="flax", _internal=True):
         repetition_penalty: float | None = None,
         **kwargs: t.Any,
     ) -> list[str]:
-        generation_kwargs = self.config.with_options(
-            max_length=max_length,
-            temperature=temperature,
-            top_k=top_k,
-            top_p=top_p,
-            repetition_penalty=repetition_penalty,
-            **kwargs,
-        ).dict()["generation_config"]
         input_ids = self.tokenizer(prompt, return_tensors="np")["input_ids"]
-        result_tensor = self.model.generate(input_ids, do_sample=do_sample, **generation_kwargs)
+        result_tensor = self.model.generate(
+            input_ids,
+            do_sample=do_sample,
+            generation_config=self.config.with_options(
+                max_length=max_length,
+                temperature=temperature,
+                top_k=top_k,
+                top_p=top_p,
+                repetition_penalty=repetition_penalty,
+                **kwargs,
+            ).to_generation_config(),
+        )
         return self.tokenizer.batch_decode(
             result_tensor.sequences, skip_special_tokens=True, clean_up_tokenization_spaces=True
         )

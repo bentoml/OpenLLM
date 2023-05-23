@@ -99,7 +99,7 @@ class GenerationInput(pydantic.BaseModel):
 class GenerationOutput(pydantic.BaseModel):
     model_config = {"extra": "forbid"}
 
-    responses: t.List[str]
+    responses: t.List[t.Any]
     """A list of responses from the system."""
 
     configuration: t.Dict[str, t.Any]

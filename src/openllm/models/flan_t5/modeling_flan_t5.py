@@ -48,14 +48,17 @@ class FlanT5(openllm.LLM, _internal=True):
         repetition_penalty: float | None = None,
         **kwargs: t.Any,
     ) -> list[str]:
-        generation_kwargs = self.config.with_options(
-            max_length=max_length,
-            temperature=temperature,
-            top_k=top_k,
-            top_p=top_p,
-            repetition_penalty=repetition_penalty,
-            **kwargs,
-        ).dict()["generation_config"]
         input_ids = t.cast("torch.Tensor", self.tokenizer(prompt, return_tensors="pt").input_ids).to(self.device)
-        result_tensor = self.model.generate(input_ids, do_sample=do_sample, **generation_kwargs)
+        result_tensor = self.model.generate(
+            input_ids,
+            do_sample=do_sample,
+            generation_config=self.config.with_options(
+                max_length=max_length,
+                temperature=temperature,
+                top_k=top_k,
+                top_p=top_p,
+                repetition_penalty=repetition_penalty,
+                **kwargs,
+            ).to_generation_config(),
+        )
         return self.tokenizer.batch_decode(result_tensor, skip_special_tokens=True)

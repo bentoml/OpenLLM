@@ -39,6 +39,7 @@ class FlanT5Config(openllm.LLMConfig):
 """
 from __future__ import annotations
 
+import copy
 import os
 import types
 import typing as t
@@ -64,10 +65,13 @@ if t.TYPE_CHECKING:
 
     ReprArgs: t.TypeAlias = t.Iterable[tuple[str | None, t.Any]]
 
+    import transformers
     from pydantic.fields import FieldInfo
     from transformers.generation.beam_constraints import Constraint
 else:
     from transformers.utils.dummy_pt_objects import Constraint
+
+    transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
 
 __all__ = ["LLMConfig", "ModelSignature"]
 
@@ -77,14 +81,15 @@ def field_to_options(
 ) -> t.Callable[[F[P]], F[P]]:
     # TODO: support parsing nested model in FieldInfo
     envvar = field.json_schema_extra.get("env") if field.json_schema_extra else None
-    full_option_name = f"--{inflection.dasherize(name)}"
+    dasherized = inflection.dasherize(name)
+    underscored = inflection.underscore(name)
+    full_option_name = f"--{dasherized}"
     if field.annotation is bool:
-        full_disable_flag = f"--no-{inflection.dasherize(name)}"
-        full_option_name += f"/--{full_disable_flag}"
+        full_option_name += f"/--no-{dasherized}"
     if suffix_generation:
-        identifier = f"{model_name}_generation_{inflection.underscore(name)}"
+        identifier = f"{model_name}_generation_{underscored}"
     else:
-        identifier = f"{model_name}_{inflection.underscore(name)}"
+        identifier = f"{model_name}_{underscored}"
 
     return optgroup.option(
         identifier,
@@ -92,7 +97,7 @@ def field_to_options(
         type=field.annotation,
         required=field.is_required(),
         default=parse_default(field.default, field.annotation),
-        show_default=True,
+        show_default=False,
         multiple=allows_multiple(field.annotation),
         help=field.description,
         show_envvar=True if envvar else False,
@@ -110,8 +115,8 @@ class GenerationConfig(pydantic.BaseModel):
     # NOTE: parameters for controlling the length of the output
     max_length: t.Optional[int] = pydantic.Field(
         20,
-        description="The maximum length the generated tokens can have. Corresponds to the length of the input prompt + `max_new_tokens`."
-        "Its effect is overridden by `max_new_tokens`, if also set.",
+        description="""The maximum length the generated tokens can have. Corresponds to the length of the 
+        input prompt + `max_new_tokens`. Its effect is overridden by `max_new_tokens`, if also set.""",
     )
     max_new_tokens: t.Optional[int] = pydantic.Field(
         None, description="The maximum numbers of tokens to generate, ignoring the number of tokens in the prompt."
@@ -119,30 +124,33 @@ class GenerationConfig(pydantic.BaseModel):
     min_length: int = pydantic.Field(
         0,
         ge=0,
-        description="The minimum length of the sequence to be generated. Corresponds to the length of the input prompt + `min_new_tokens`. Its effect is overridden by `min_new_tokens`, if also set.",
+        description="""The minimum length of the sequence to be generated. Corresponds to the length of the 
+        input prompt + `min_new_tokens`. Its effect is overridden by `min_new_tokens`, if also set.""",
     )
     min_new_tokens: t.Optional[int] = pydantic.Field(
         None, description="The minimum numbers of tokens to generate, ignoring the number of tokens in the prompt."
     )
     early_stopping: bool = pydantic.Field(
         False,
-        description="""\
-        Controls the stopping condition for beam-based methods, like beam-search. It accepts the following values: 
-            `True`, where the generation stops as soon as there are `num_beams` complete candidates; 
-            `False`, where an heuristic is applied and the generation stops when is it very unlikely to find better candidates; 
-            `"never"`, where the beam search procedure only stops when there cannot be better candidates (canonical beam search algorithm)
+        description="""Controls the stopping condition for beam-based methods, like beam-search. It accepts the 
+        following values: 
+        - `True`, where the generation stops as soon as there are `num_beams` complete candidates; 
+        - `False`, where an heuristic is applied and the generation stops when is it very unlikely to find better candidates; 
+        - `"never"`, where the beam search procedure only stops when there cannot be better candidates (canonical beam search algorithm)
     """,
     )
     max_time: t.Optional[float] = pydantic.Field(
         None,
-        description="The maximum amount of time you allow the computation to run for in seconds. generation will still finish the current pass after allocated time has been passed.",
+        description="""The maximum amount of time you allow the computation to run for in seconds. generation will 
+        still finish the current pass after allocated time has been passed.""",
     )
 
     # NOTE: Parameters for controling generaiton strategies
     num_beams: int = pydantic.Field(1, description="Number of beams for beam search. 1 means no beam search.")
     num_beam_groups: int = pydantic.Field(
         1,
-        description="Number of groups to divide `num_beams` into in order to ensure diversity among different groups of beams. [this paper](https://arxiv.org/pdf/1610.02424.pdf) for more details.",
+        description="""Number of groups to divide `num_beams` into in order to ensure diversity among different 
+        groups of beams. [this paper](https://arxiv.org/pdf/1610.02424.pdf) for more details.""",
     )
     penalty_alpha: t.Optional[float] = pydantic.Field(
         None,
@@ -150,7 +158,8 @@ class GenerationConfig(pydantic.BaseModel):
     )
     use_cache: bool = pydantic.Field(
         True,
-        description="Whether or not the model should use the past last key/values attentions (if applicable to the model) to speed up decoding.",
+        description="""Whether or not the model should use the past last 
+        key/values attentions (if applicable to the model) to speed up decoding.""",
     )
 
     # NOTE: Parameters for manipulation of the model output logits
@@ -162,15 +171,15 @@ class GenerationConfig(pydantic.BaseModel):
     )
     top_p: float = pydantic.Field(
         1.0,
-        description="If set to float < 1, only the smallest set of most probable tokens with probabilities that add up to `top_p` or higher are kept for generation.",
+        description="""If set to float < 1, only the smallest set of most probable tokens with 
+        probabilities that add up to `top_p` or higher are kept for generation.""",
     )
     typical_p: float = pydantic.Field(
         1.0,
-        description="""\
-        Local typicality measures how similar the conditional probability of predicting a target token next is to
-        the expected conditional probability of predicting a random token next, given the partial text already
-        generated. If set to float < 1, the smallest set of the most locally typical tokens with probabilities that
-        add up to `typical_p` or higher are kept for generation. See [this
+        description="""Local typicality measures how similar the conditional probability of predicting a target 
+        token next is to the expected conditional probability of predicting a random token next, given the 
+        partial text already generated. If set to float < 1, the smallest set of the most locally typical 
+        tokens with probabilities that add up to `typical_p` or higher are kept for generation. See [this
         paper](https://arxiv.org/pdf/2202.00666.pdf) for more details.
     """,
     )
@@ -179,41 +188,43 @@ class GenerationConfig(pydantic.BaseModel):
         description="""\
         If set to float strictly between 0 and 1, only tokens with a conditional probability greater than
         `epsilon_cutoff` will be sampled. In the paper, suggested values range from 3e-4 to 9e-4, depending on the
-        size of the model. See [Truncation Sampling as Language Model Desmoothing](https://arxiv.org/abs/2210.15191) for more details.
+        size of the model. See [Truncation Sampling as Language Model Desmoothing](https://arxiv.org/abs/2210.15191) 
+        for more details.
     """,
     )
     eta_cutoff: float = pydantic.Field(
         0.0,
-        description="""\
-        Eta sampling is a hybrid of locally typical sampling and epsilon sampling. If set to float strictly between
-        0 and 1, a token is only considered if it is greater than either `eta_cutoff` or `sqrt(eta_cutoff) *
-        exp(-entropy(softmax(next_token_logits)))`. The latter term is intuitively the expected next token
-        probability, scaled by `sqrt(eta_cutoff)`. In the paper, suggested values range from 3e-4 to 2e-3,
-        depending on the size of the model. See [Truncation Sampling as Language Model Desmoothing](https://arxiv.org/abs/2210.15191) for more details.
+        description="""Eta sampling is a hybrid of locally typical sampling and epsilon sampling. 
+        If set to float strictly between 0 and 1, a token is only considered if it is greater than 
+        either `eta_cutoff` or `sqrt(eta_cutoff) * exp(-entropy(softmax(next_token_logits)))`. The latter term is 
+        intuitively the expected next token probability, scaled by `sqrt(eta_cutoff)`. In the paper, suggested 
+        values range from 3e-4 to 2e-3, depending on the size of the model. 
+        See [Truncation Sampling as Language Model Desmoothing](https://arxiv.org/abs/2210.15191) for more details.
     """,
     )
     diversity_penalty: float = pydantic.Field(
         0.0,
-        description="""\
-    This value is subtracted from a beam's score if it generates a token same as any beam from other group at a
-    particular time. Note that `diversity_penalty` is only effective if `group beam search` is enabled.
+        description="""This value is subtracted from a beam's score if it generates a token same 
+        as any beam from other group at a particular time. Note that `diversity_penalty` is only 
+        effective if `group beam search` is enabled.
     """,
     )
     repetition_penalty: float = pydantic.Field(
         1.0,
-        description="The parameter for repetition penalty. 1.0 means no penalty. See [this paper](https://arxiv.org/pdf/1909.05858.pdf) for more details.",
+        description="""The parameter for repetition penalty. 1.0 means no penalty. 
+        See [this paper](https://arxiv.org/pdf/1909.05858.pdf) for more details.""",
     )
     encoder_repetition_penalty: float = pydantic.Field(
         1.0,
-        description="The paramater for encoder_repetition_penalty. An exponential penalty on sequences that are not in the original input. 1.0 means no penalty.",
+        description="""The paramater for encoder_repetition_penalty. An exponential penalty on sequences that are 
+        not in the original input. 1.0 means no penalty.""",
     )
     length_penalty: float = pydantic.Field(
         1.0,
-        description="""\
-        Exponential penalty to the length that is used with beam-based generation. It is applied as an exponent to
-        the sequence length, which in turn is used to divide the score of the sequence. Since the score is the log
-        likelihood of the sequence (i.e. negative), `length_penalty` > 0.0 promotes longer sequences, while
-        `length_penalty` < 0.0 encourages shorter sequences.
+        description="""Exponential penalty to the length that is used with beam-based generation. It is applied 
+        as an exponent to the sequence length, which in turn is used to divide the score of the sequence. Since 
+        the score is the log likelihood of the sequence (i.e. negative), `length_penalty` > 0.0 promotes longer 
+        sequences, while `length_penalty` < 0.0 encourages shorter sequences.
     """,
     )
     no_repeat_ngram_size: int = pydantic.Field(
@@ -221,80 +232,75 @@ class GenerationConfig(pydantic.BaseModel):
     )
     bad_words_ids: t.Optional[t.List[t.List[int]]] = pydantic.Field(
         None,
-        description="""\
-        List of token ids that are not allowed to be generated. In order to get the token ids of the words that
-        should not appear in the generated text, 
-        use `tokenizer(bad_words, add_prefix_space=True, add_special_tokens=False).input_ids`.
+        description="""List of token ids that are not allowed to be generated. In order to get the token ids 
+        of the words that should not appear in the generated text, use 
+        `tokenizer(bad_words, add_prefix_space=True, add_special_tokens=False).input_ids`.
         """,
     )
     force_words_ids: t.Optional[t.Union[t.List[t.List[int]], t.List[t.List[t.List[int]]]]] = pydantic.Field(
         None,
-        description="""\
-        List of token ids that must be generated. If given a `List[List[int]]`, this is treated as a simple list of
-        words that must be included, the opposite to `bad_words_ids`. If given `List[List[List[int]]]`, this
-        triggers a [disjunctive constraint](https://github.com/huggingface/transformers/issues/14081), where one
+        description="""List of token ids that must be generated. If given a `List[List[int]]`, this is treated 
+        as a simple list of words that must be included, the opposite to `bad_words_ids`. 
+        If given `List[List[List[int]]]`, this triggers a 
+        [disjunctive constraint](https://github.com/huggingface/transformers/issues/14081), where one
         can allow different forms of each word.
         """,
     )
     renormalize_logits: bool = pydantic.Field(
         False,
-        description="""\
-        Whether to renormalize the logits after applying all the logits processors or warpers (including the custom
-        ones). It's highly recommended to set this flag to `True` as the search algorithms suppose the score logits
-        are normalized but some logit processors or warpers break the normalization.
+        description="""Whether to renormalize the logits after applying all the logits processors or warpers 
+        (including the custom ones). It's highly recommended to set this flag to `True` as the search 
+        algorithms suppose the score logits are normalized but some logit processors or warpers break the normalization.
     """,
     )
     constraints: t.Optional[t.List["Constraint"]] = pydantic.Field(
         None,
-        description="""\
-        Custom constraints that can be added to the generation to ensure that the output will contain the use of
-        certain tokens as defined by `Constraint` objects, in the most sensible way possible.
+        description="""Custom constraints that can be added to the generation to ensure that the output 
+        will contain the use of certain tokens as defined by ``Constraint`` objects, in the most sensible way possible.
         """,
     )
     forced_bos_token_id: t.Optional[int] = pydantic.Field(
         None,
-        description="""\
-        The id of the token to force as the first generated token after the `decoder_start_token_id`. Useful for
-        multilingual models like [mBART](../model_doc/mbart) where the first generated token needs to be the target
-        language token.
+        description="""The id of the token to force as the first generated token after the 
+        ``decoder_start_token_id``. Useful for multilingual models like 
+        [mBART](https://huggingface.co/docs/transformers/model_doc/mbart) where the first generated token needs 
+        to be the target language token.
     """,
     )
     forced_eos_token_id: t.Optional[t.Union[int, t.List[int]]] = pydantic.Field(
         None,
-        description="The id of the token to force as the last generated token when `max_length` is reached. Optionally, use a list to set multiple *end-of-sequence* tokens.",
+        description="""The id of the token to force as the last generated token when `max_length` is reached. 
+        Optionally, use a list to set multiple *end-of-sequence* tokens.""",
     )
     remove_invalid_values: bool = pydantic.Field(
         False,
-        description="Whether to remove possible *nan* and *inf* outputs of the model to prevent the generation method to crash. Note that using `remove_invalid_values` can slow down generation.",
+        description="""Whether to remove possible *nan* and *inf* outputs of the model to prevent the 
+        generation method to crash. Note that using `remove_invalid_values` can slow down generation.""",
     )
     exponential_decay_length_penalty: t.Optional[t.Tuple[int, float]] = pydantic.Field(
         None,
-        description="""\
-        This tuple adds an exponentially increasing length penalty, after a certain amount of tokens have been
-        generated. The tuple shall consist of: `(start_index, decay_factor)` where `start_index` indicates where
-        penalty starts and `decay_factor` represents the factor of exponential decay
+        description="""This tuple adds an exponentially increasing length penalty, after a certain amount of tokens 
+        have been generated. The tuple shall consist of: `(start_index, decay_factor)` where `start_index` 
+        indicates where penalty starts and `decay_factor` represents the factor of exponential decay
     """,
     )
     suppress_tokens: t.Optional[t.List[int]] = pydantic.Field(
         None,
-        description="""\
-        A list of tokens that will be suppressed at generation. The `SupressTokens` logit processor will set their
-        log probs to `-inf` so that they are not sampled.
+        description="""A list of tokens that will be suppressed at generation. The `SupressTokens` logit 
+        processor will set their log probs to `-inf` so that they are not sampled.
     """,
     )
     begin_suppress_tokens: t.Optional[t.List[int]] = pydantic.Field(
         None,
-        description="""\
-        A list of tokens that will be suppressed at the beginning of the generation. The `SupressBeginTokens` logit
-        processor will set their log probs to `-inf` so that they are not sampled.
+        description="""A list of tokens that will be suppressed at the beginning of the generation. The 
+        `SupressBeginTokens` logit processor will set their log probs to `-inf` so that they are not sampled.
         """,
     )
     forced_decoder_ids: t.Optional[t.List[t.List[int]]] = pydantic.Field(
         None,
-        description="""\
-        A list of pairs of integers which indicates a mapping from generation indices to token indices that will be
-        forced before sampling. For example, `[[1, 123]]` means the second generated token will always be a token
-        of index 123.
+        description="""A list of pairs of integers which indicates a mapping from generation indices to token indices 
+        that will be forced before sampling. For example, `[[1, 123]]` means the second generated token will always 
+        be a token of index 123.
         """,
     )
 
@@ -304,25 +310,33 @@ class GenerationConfig(pydantic.BaseModel):
     )
     output_attentions: bool = pydantic.Field(
         False,
-        description="Whether or not to return the attentions tensors of all attention layers. See `attentions` under returned tensors for more details.",
+        description="""Whether or not to return the attentions tensors of all attention layers. 
+        See `attentions` under returned tensors for more details. """,
     )
     output_hidden_states: bool = pydantic.Field(
         False,
-        description="Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors for more details.",
+        description="""Whether or not to return the hidden states of all layers. 
+        See `hidden_states` under returned tensors for more details.
+        """,
     )
     output_scores: bool = pydantic.Field(
         False,
-        description="Whether or not to return the prediction scores. See `scores` under returned tensors for more details.",
+        description="""Whether or not to return the prediction scores. See `scores` under returned 
+        tensors for more details.""",
     )
 
     # NOTE: Generation parameters exclusive to encoder-decoder models
     encoder_no_repeat_ngram_size: int = pydantic.Field(
         0,
-        description="If set to int > 0, all ngrams of that size that occur in the `encoder_input_ids` cannot occur in the `decoder_input_ids`.",
+        description="""If set to int > 0, all ngrams of that size that occur in the 
+        `encoder_input_ids` cannot occur in the `decoder_input_ids`.
+        """,
     )
     decoder_start_token_id: t.Optional[int] = pydantic.Field(
         None,
-        description="If an encoder-decoder model starts decoding with a different token than *bos*, the id of that token.",
+        description="""If an encoder-decoder model starts decoding with a 
+        different token than *bos*, the id of that token.
+        """,
     )
 
     # NOTE: pydantic definition
@@ -331,39 +345,54 @@ class GenerationConfig(pydantic.BaseModel):
     if t.TYPE_CHECKING:
         # The following is handled via __pydantic_init_subclass__
         __openllm_env_name__: str
+        __openllm_model_name__: str
 
     def __init_subclass__(cls, **kwargs: t.Any) -> None:
         model_name = kwargs.get("model_name", None)
-        assert (
-            model_name is not None
-        ), "GenerationConfig is not meant to be used directly, but you can access this via a LLMConfig.generation_config"
-        cls.__openllm_env_name__ = inflection.underscore(model_name).upper()
+        if model_name is None:
+            raise RuntimeError(
+                "GenerationConfig is not meant to be used directly, but you can access this via a LLMConfig.generation_config"
+            )
+        cls.__openllm_model_name__ = inflection.underscore(model_name)
+        cls.__openllm_env_name__ = cls.__openllm_model_name__.upper()
 
     @classmethod
-    def from_model_config(cls, model_config: type) -> GenerationConfig:
-        """Parse ModelConfig.GenerationConfig into a GenerationConfig object.
-        Currently doesn't support private attributes.
-        """
-        return cls.model_validate({k: v for k, v in vars(model_config).items() if not k.startswith("_")})
-
-    def dict(self, **kwargs: t.Any):
-        exclude = kwargs.pop("exclude", set())
-        final_exclude = {k for k, v in self.model_fields.items() if getattr(self, k) == v.default}
-        final_exclude.update(exclude)
-        return self.model_dump(exclude=final_exclude, **kwargs)
+    def construct_from_llm_config(cls, llm_config: type[LLMConfig]) -> GenerationConfig:
+        """Parse ModelConfig.GenerationConfig into a GenerationConfig object."""
+        return cls.model_validate(
+            {
+                k: v
+                for k, v in vars(llm_config.GenerationConfig).items()
+                if not k.startswith("_") and k in cls.model_fields
+            }
+        )
 
     def model_post_init(self, _: t.Any):
         # NOTE: I don't know how to do this more efficiently in pydantic v2 yet, will probably
         # need to consult the pydantic team on this.
         for key, field in self.model_fields.items():
-            if not field.json_schema_extra:
-                field.json_schema_extra = {}
+            json_schema: dict[str, t.Any] = (
+                copy.deepcopy(field.json_schema_extra) if field.json_schema_extra is not None else {}
+            )
             env_key = f"OPENLLM_{self.__openllm_env_name__}_GENERATION_{key.upper()}"
-            if "env" in field.json_schema_extra:
-                field.default = os.environ.get(field.json_schema_extra.get("env"), field.default)
+            if "env" in json_schema:
+                field.default = os.environ.get(json_schema["env"], field.default)
                 continue
-            field.json_schema_extra["env"] = env_key
+            json_schema["env"] = env_key
+            # then assign json_schema back to field
+            field.json_schema_extra = json_schema
             field.default = os.environ.get(env_key, field.default)
+
+    def to_click_options(self, f: F[P]) -> t.Callable[[t.Callable[..., t.Any]], click.Command]:
+        for name, field in self.model_fields.items():
+            if t.get_origin(field.annotation) is t.Union:
+                # NOTE: Union type is currently not yet supported, we probably just need to use environment instead.
+                continue
+            f = field_to_options(name, field, self.__openllm_model_name__, suffix_generation=True)(f)
+        return optgroup.group(
+            f"{self.__class__.__name__} generation options",
+            help=f"[Auto-generated from '{self.__class__.__qualname__}']",
+        )(f)
 
 
 class LLMConfig(pydantic.BaseModel, ABC):
@@ -382,29 +411,34 @@ class LLMConfig(pydantic.BaseModel, ABC):
             for k, v in self.__dict__.items()
             if not k.startswith("_") and (k not in self.model_fields or self.model_fields[k].repr)
         )
+        yield from (
+            (k, v)
+            for k, v in self.generation_config.__dict__.items()
+            if not k.startswith("_")
+            and (k not in self.generation_config.model_fields or self.generation_config.model_fields[k].repr)
+        )
         yield from ((k, getattr(self, k)) for k, v in self.model_computed_fields.items() if v.repr)
 
     if t.TYPE_CHECKING:
         # The following is handled via __pydantic_init_subclass__, and is only used for TYPE_CHECKING
         __openllm_model_name__: str = ""
         __openllm_start_name__: str = ""
-        __openllm_generation_class__: type[GenerationConfig] = GenerationConfig
+        GenerationConfig: type[t.Any] = GenerationConfig
 
     @classmethod
     def __pydantic_init_subclass__(cls, **kwargs: t.Any):
         cls.__openllm_model_name__ = inflection.underscore(cls.__name__.replace("Config", ""))
-        cls.__openllm_start_name__ = cls.__openllm_model_name__.replace("_", "-")
-        cls.__openllm_generation_class__ = t.cast(
-            "type[GenerationConfig]",
-            types.new_class(
-                cls.__name__.replace("Config", "") + "GenerationConfig",
-                (GenerationConfig,),
-                {"model_name": cls.__openllm_model_name__},
-            ),
-        )
-
+        cls.__openllm_start_name__ = inflection.dasherize(cls.__openllm_model_name__)
         if hasattr(cls, "GenerationConfig"):
-            cls.generation_config = cls.__openllm_generation_class__.from_model_config(getattr(cls, "GenerationConfig"))
+            generation_class = t.cast(
+                "type[GenerationConfig]",
+                types.new_class(
+                    cls.__name__.replace("Config", "") + "GenerationConfig",
+                    (GenerationConfig,),
+                    {"model_name": cls.__openllm_model_name__},
+                ),
+            )
+            cls.generation_config = generation_class.construct_from_llm_config(cls)
             delattr(cls, "GenerationConfig")
 
         for key, field in cls.model_fields.items():
@@ -422,7 +456,7 @@ class LLMConfig(pydantic.BaseModel, ABC):
             if generation_config is not None:
                 assert isinstance(generation_config, dict), "generation_config must be a dict."
                 self.generation_config = self.generation_config.model_copy(
-                    update=t.cast("dict[str, t.Any] ", generation_config), deep=True
+                    update=t.cast("dict[str, t.Any]", generation_config), deep=True
                 )
             else:
                 # The rest of the extras fields should just be the generation_config.
@@ -436,7 +470,7 @@ class LLMConfig(pydantic.BaseModel, ABC):
 
     def model_dump_yaml(self):
         try:
-            return yaml.safe_dump(self.dict(), sort_keys=False)
+            return yaml.safe_dump(self.model_dump(), sort_keys=False)
         except yaml.YAMLError as e:
             raise openllm.exceptions.ValidationError(f"Failed to dump configuration to yaml: {e}") from e
 
@@ -449,19 +483,24 @@ class LLMConfig(pydantic.BaseModel, ABC):
             except pydantic.ValidationError as e:
                 raise openllm.exceptions.ValidationError(f"Failed to parse configuration to {cls}: {e}") from e
 
-    def dict(self, **kwargs: t.Any):
+    def model_dump(self, **kwargs: t.Any):
         try:
-            to_dump = self.model_dump(**kwargs)
-            generation_config = self.generation_config.dict(**kwargs)
+            to_dump = super().model_dump(**kwargs)
+            generation_config = self.generation_config.model_dump(exclude_defaults=True)
             to_dump["generation_config"] = generation_config
             return to_dump
         except pydantic.ValidationError as e:
             raise openllm.exceptions.ValidationError(f"Failed to dump configuration to dict: {e}") from e
 
-    def with_options(self, **kwargs: t.Any) -> LLMConfig:
+    def with_options(self, __llm_config__: LLMConfig | None = None, **kwargs: t.Any) -> LLMConfig:
+        """A helpers that respect configuration values that
+        sets from environment variables for any given configuration class.
+        """
         from_env_ = self.from_env()
         # filtered out None values
         kwargs = {k: v for k, v in kwargs.items() if v is not None}
+        if __llm_config__ is not None:
+            kwargs = {**__llm_config__.model_dump(), **kwargs}
         if from_env_:
             return from_env_.model_construct(**kwargs)
         return self.model_construct(**kwargs)
@@ -494,27 +533,20 @@ class LLMConfig(pydantic.BaseModel, ABC):
             k: v for k, v in attrs.items() if not k.startswith(self.__openllm_model_name__)
         }
 
+    def to_generation_config(self) -> transformers.GenerationConfig:
+        return transformers.GenerationConfig(**self.generation_config.model_dump())
+
     def to_click_options(self, f: F[P]) -> t.Callable[[t.Callable[..., t.Any]], click.Command]:
         """
         Convert current model to click options. This can be used as a decorator for click commands.
         Note that the identifier for all LLMConfig will be prefixed with '<model_name>_*', and the generation config
         will be prefixed with '<model_name>_generation_*'.
         """
-        for name, field in self.generation_config.model_fields.items():
-            if t.get_origin(field.annotation) is t.Union:
-                # NOTE: Union type is currently not yet supported, we probably just need to use environment instead.
-                continue
-            option = field_to_options(name, field, self.__openllm_model_name__, suffix_generation=True)
-            f = option(f)
-        f = optgroup.group(
-            f"{self.__class__.__name__} generation options",
-            help=f"[Auto-generated from '{self.__class__.__qualname__}']",
-        )(f)
+        wrapped_generation = self.generation_config.to_click_options(f)
         if len(self.model_fields.values()) == 0:
-            return f
+            return wrapped_generation
         for name, field in self.model_fields.items():
-            option = field_to_options(name, field, self.__openllm_model_name__)
-            f = option(f)
+            wrapped_generation = field_to_options(name, field, self.__openllm_model_name__)(wrapped_generation)
         return optgroup.group(
             f"{self.__class__.__name__} options", help=f"[Auto-generated from '{self.__class__.__qualname__}']"
-        )(f)
+        )(wrapped_generation)

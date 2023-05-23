@@ -53,9 +53,9 @@ class _BaseAutoLLMClass:
         cls,
         model_name: str,
         pretrained: str | None = None,
-        return_runner_kwargs: t.Literal[True] = ...,
+        return_runner_kwargs: t.Literal[False] = ...,
         **kwargs: t.Any,
-    ) -> tuple[openllm.LLM, dict[str, t.Any]]:
+    ) -> openllm.LLM:
         ...
 
     @t.overload
@@ -64,9 +64,9 @@ class _BaseAutoLLMClass:
         cls,
         model_name: str,
         pretrained: str | None = None,
-        return_runner_kwargs: t.Literal[False] = ...,
+        return_runner_kwargs: t.Literal[True] = ...,
         **kwargs: t.Any,
-    ) -> openllm.LLM:
+    ) -> tuple[openllm.LLM, dict[str, t.Any]]:
         ...
 
     @classmethod
@@ -74,7 +74,7 @@ class _BaseAutoLLMClass:
         cls,
         model_name: str,
         pretrained: str | None = None,
-        return_runner_kwargs: bool = True,
+        return_runner_kwargs: bool = False,
         **kwargs: t.Any,
     ) -> tuple[openllm.LLM, dict[str, t.Any]] | openllm.LLM:
         config = kwargs.pop("llm_config", None)
@@ -114,7 +114,7 @@ class _BaseAutoLLMClass:
         Returns:
             A LLM instance.
         """
-        llm, runner_kwargs = cls.for_model(model_name, pretrained, **kwargs)
+        llm, runner_kwargs = cls.for_model(model_name, pretrained, return_runner_kwargs=True, **kwargs)
         return llm.to_runner(**runner_kwargs)
 
     @classmethod

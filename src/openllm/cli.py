@@ -87,6 +87,7 @@ class OpenLLMCommandGroup(click.Group):
         # these two dictionaries will store known aliases for commands and groups
         self._commands: dict[str, list[str]] = {}
         self._aliases: dict[str, str] = {}
+        self._alias_groups: dict[str, tuple[str, click.Group]] = {}
 
     # ported from bentoml_cli.utils.BentoMLCommandGroup to handle aliases and command difflib.
     def resolve_alias(self, cmd_name: str):
@@ -110,7 +111,32 @@ class OpenLLMCommandGroup(click.Group):
         )
         return wrapped
 
+    def group(self, *args: t.Any, **kwargs: t.Any) -> t.Callable[[F[P]], click.Group]:
+        """Override the default 'cli.group' with supports for aliases for given group."""
+        aliases = kwargs.pop("aliases", [])
+
+        def wrapper(f: F[P]) -> click.Group:
+            kwargs.setdefault("help", inspect.getdoc(f))
+            if len(aliases) > 0:
+                for alias in aliases:
+                    aliased_group = super(OpenLLMCommandGroup, self).group(alias, *args, **kwargs)(f)
+                    if aliased_group.short_help:
+                        aliased_group.short_help += f" (alias for '{kwargs.get('name', f.__name__)}')"
+                    else:
+                        aliased_group.short_help = f"(alias for '{kwargs.get('name', f.__name__)}')"
+                    self._alias_groups[kwargs.get("name", f.__name__)] = (alias, aliased_group)
+
+            group = super(OpenLLMCommandGroup, self).group(*args, **kwargs)(f)
+            for _, g in self._alias_groups.values():
+                g.commands = group.commands
+            return group
+
+        return wrapper
+
     def command(self, *args: t.Any, **kwargs: t.Any) -> t.Callable[[F[P]], click.Command]:
+        """Override the default 'cli.command' with supports for aliases for given command, and it
+        wraps the implementation with common parameters.
+        """
         if "context_settings" not in kwargs:
             kwargs["context_settings"] = {}
         kwargs["context_settings"]["max_content_width"] = 119
@@ -122,7 +148,7 @@ class OpenLLMCommandGroup(click.Group):
             kwargs.setdefault("name", name)
 
             cmd = super(OpenLLMCommandGroup, self).command(*args, **kwargs)(OpenLLMCommandGroup.common_chain(f))
-            # add aliases to a given commands if it is specified.
+            # NOTE: add aliases to a given commands if it is specified.
             if aliases is not None:
                 assert cmd.name
                 self._commands[cmd.name] = aliases
@@ -173,11 +199,13 @@ class OpenLLMCommandGroup(click.Group):
             raise click.exceptions.UsageError(error_msg, e.ctx)
 
 
-class StartCommand(click.MultiCommand):
+class StartCommandGroup(OpenLLMCommandGroup):
+    """A `start` factory that generate each models as its own click Command. See 'openllm start --help' for more details."""
+
     def __init__(self, *args: t.Any, **kwargs: t.Any):
         self._serve_grpc = kwargs.pop("_serve_grpc", False)
-        super(StartCommand, self).__init__(*args, **kwargs)
         self._cached_command: dict[str, click.Command] = {}
+        super(StartCommandGroup, self).__init__(*args, **kwargs)
 
     def list_commands(self, ctx: click.Context):
         return openllm.CONFIG_MAPPING.keys()
@@ -228,14 +256,7 @@ def start_model_command(
     _serve_grpc: bool = False,
 ) -> click.Command:
     """Create a click.Command for starting a model server"""
-    envvar = openllm.utils.get_framework_env(model_name)
-
-    if envvar == "flax":
-        llm = openllm.AutoFlaxLLM.for_model(model_name, return_runner_kwargs=False)
-    elif envvar == "tf":
-        llm = openllm.AutoTFLLM.for_model(model_name, return_runner_kwargs=False)
-    else:
-        llm = openllm.AutoLLM.for_model(model_name, return_runner_kwargs=False)
+    config = openllm.AutoConfig.for_model(model_name)
 
     @click.command(
         model_name,
@@ -246,16 +267,16 @@ def start_model_command(
             f"START_{inflection.underscore(model_name).upper()}_COMMAND_DOCSTRING",
         ),
     )
-    @llm.config.to_click_options
+    @config.to_click_options
     @parse_serve_args(_serve_grpc)
-    @openllm.cli.OpenLLMCommandGroup.common_chain
+    @OpenLLMCommandGroup.common_chain
     def model_start(**attrs: t.Any):
         from bentoml._internal.configuration import get_debug_mode
         from bentoml._internal.log import configure_logging
 
         configure_logging()
 
-        nw_config, server_kwds = llm.config.model_validate_click(**attrs)
+        nw_config, server_kwds = config.model_validate_click(**attrs)
 
         server_kwds.update({"working_dir": os.path.dirname(__file__)})
         if _serve_grpc:
@@ -264,19 +285,15 @@ def start_model_command(
         development = server_kwds.pop("development")
         server_kwds.setdefault("production", not development)
 
-        bentoml_home_env = os.environ.get("BENTOML_HOME")
-        bentoml_do_not_track_env = os.environ.get("BENTOML_DO_NOT_TRACK")
-
-        start_env = {
-            openllm.utils.FRAMEWORK_ENV_VAR(model_name): envvar,
-            openllm.utils.MODEL_CONFIG_ENV_VAR(model_name): nw_config.model_dump_json(),
-            "OPENLLM_MODEL": model_name,
-            "BENTOML_DEBUG": str(get_debug_mode()),
-        }
-        if bentoml_home_env is not None:
-            start_env["BENTOML_HOME"] = bentoml_home_env
-        if bentoml_do_not_track_env is not None:
-            start_env["BENTOML_DO_NOT_TRACK"] = bentoml_do_not_track_env
+        start_env = os.environ.copy()
+        start_env.update(
+            {
+                openllm.utils.FRAMEWORK_ENV_VAR(model_name): openllm.utils.get_framework_env(model_name),
+                openllm.utils.MODEL_CONFIG_ENV_VAR(model_name): nw_config.model_dump_json(),
+                "OPENLLM_MODEL": model_name,
+                "BENTOML_DEBUG": str(get_debug_mode()),
+            }
+        )
 
         click.secho(f"\nStarting LLM Server for '{model_name}'\n", fg="blue")
         server_cls = getattr(bentoml, "HTTPServer" if not _serve_grpc else "GrpcServer")
