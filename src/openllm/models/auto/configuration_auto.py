@@ -28,7 +28,13 @@ else:
     ConfigOrderedDict = OrderedDict
 
 # NOTE: This is the entrypoint when adding new model config
-CONFIG_MAPPING_NAMES = OrderedDict([("flan_t5", "FlanT5Config"), ("dolly_v2", "DollyV2Config")])
+CONFIG_MAPPING_NAMES = OrderedDict(
+    [
+        ("flan_t5", "FlanT5Config"),
+        ("dolly_v2", "DollyV2Config"),
+        ("chatglm", "ChatGLMConfig"),
+    ]
+)
 
 
 class _LazyConfigMapping(ConfigOrderedDict):

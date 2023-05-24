@@ -430,29 +430,43 @@ class LLMConfig(pydantic.BaseModel, ABC):
         __openllm_model_name__: str = ""
         __openllm_start_name__: str = ""
         __openllm_timeout__: int = 0
+        __openllm_name_type__: t.Literal["dasherize", "lowercase"] = "dasherize"
         GenerationConfig: type[t.Any] = GenerationConfig
 
-    def __init_subclass__(cls, *, default_timeout: int | None = None, **kwargs: t.Any):
+    def __init_subclass__(
+        cls,
+        *,
+        default_timeout: int | None = None,
+        name_type: t.Literal["dasherize", "lowercase"] = "dasherize",
+        **kwargs: t.Any,
+    ):
         if default_timeout is None:
             default_timeout = 3600
         cls.__openllm_timeout__ = default_timeout
+        if name_type not in ("dasherize", "lowercase"):
+            raise RuntimeError(f"Unknown name_type {name_type}. Only allowed are 'dasherize' and 'lowercase'.")
+        cls.__openllm_name_type__ = name_type
 
         super(LLMConfig, cls).__init_subclass__(**kwargs)
 
     @classmethod
-    def __pydantic_init_subclass__(cls, **kwargs: t.Any):
-        cls.__openllm_model_name__ = inflection.underscore(cls.__name__.replace("Config", ""))
-        cls.__openllm_start_name__ = inflection.dasherize(cls.__openllm_model_name__)
+    def __pydantic_init_subclass__(cls, **_: t.Any):
+        if cls.__openllm_name_type__ == "dasherize":
+            cls.__openllm_model_name__ = inflection.underscore(cls.__name__.replace("Config", ""))
+            cls.__openllm_start_name__ = inflection.dasherize(cls.__openllm_model_name__)
+        else:
+            cls.__openllm_model_name__ = cls.__name__.replace("Config", "").lower()
+            cls.__openllm_start_name__ = cls.__openllm_model_name__
+
         if hasattr(cls, "GenerationConfig"):
-            generation_class = t.cast(
+            cls.generation_config = t.cast(
                 "type[GenerationConfig]",
                 types.new_class(
                     cls.__name__.replace("Config", "") + "GenerationConfig",
                     (GenerationConfig,),
                     {"model_name": cls.__openllm_model_name__, "_internal": True},
                 ),
-            )
-            cls.generation_config = generation_class.construct_from_llm_config(cls)
+            ).construct_from_llm_config(cls)
             delattr(cls, "GenerationConfig")
 
         for key, field in cls.model_fields.items():

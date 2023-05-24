@@ -13,4 +13,6 @@
 # limitations under the License.
 
 from . import auto as auto
+from . import chatglm as chatglm
+from . import dolly_v2 as dolly_v2
 from . import flan_t5 as flan_t5

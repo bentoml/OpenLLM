@@ -19,7 +19,7 @@ from collections import OrderedDict
 from .configuration_auto import CONFIG_MAPPING_NAMES
 from .factory import _BaseAutoLLMClass, _LazyAutoMapping
 
-MODEL_MAPPING_NAMES = OrderedDict([("flan_t5", "FlanT5"), ("dolly_v2", "DollyV2")])
+MODEL_MAPPING_NAMES = OrderedDict([("flan_t5", "FlanT5"), ("dolly_v2", "DollyV2"), ("chatglm", "ChatGLM")])
 
 MODEL_MAPPING = _LazyAutoMapping(CONFIG_MAPPING_NAMES, MODEL_MAPPING_NAMES)
 

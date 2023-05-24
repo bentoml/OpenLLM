@@ -11,14 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""The following includes OpenLLM configuration and excerpt from 
-[instruct_pipeline.py](https://huggingface.co/databricks/dolly-v2-3b/blob/main/instruct_pipeline.py)"""
-
 from __future__ import annotations
 
 import openllm
 
 
+# NOTE: The following includes OpenLLM configuration and excerpt from [instruct_pipeline.py](https://huggingface.co/databricks/dolly-v2-3b/blob/main/instruct_pipeline.py)
 class DollyV2Config(openllm.LLMConfig, default_timeout=3600000):
     """Configuration for the dolly-v2 model."""
 
@@ -55,7 +53,7 @@ INTRO_BLURB = (
     "Below is an instruction that describes a task. Write a response that appropriately completes the request."
 )
 
-# This is the prompt that is used for generating responses using an already trained model.  It ends with the response
+# NOTE: This is the prompt that is used for generating responses using an already trained model.  It ends with the response
 # key, where the job of the model is to provide the completion that follows it (i.e. the response itself).
 DEFAULT_PROMPT_TEMPLATE = """{intro}
 {instruction_key}

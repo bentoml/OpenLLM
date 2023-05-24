@@ -42,6 +42,7 @@ _import_structure = {
     "models.auto": ["AutoConfig", "CONFIG_MAPPING"],
     "models.flan_t5": ["FlanT5Config"],
     "models.dolly_v2": ["DollyV2Config"],
+    "models.chatglm": ["ChatGLMConfig"],
 }
 
 try:
@@ -54,6 +55,7 @@ except MissingDependencyError:
 else:
     _import_structure["models.flan_t5"].extend(["FlanT5"])
     _import_structure["models.dolly_v2"].extend(["DollyV2"])
+    _import_structure["models.chatglm"].extend(["ChatGLM"])
     _import_structure["models.auto"].extend(["AutoLLM", "MODEL_MAPPING_NAMES", "MODEL_MAPPING"])
 
 try:
@@ -99,6 +101,7 @@ if t.TYPE_CHECKING:
     from .cli import start_grpc as start_grpc
     from .models.auto import CONFIG_MAPPING as CONFIG_MAPPING
     from .models.auto import AutoConfig as AutoConfig
+    from .models.chatglm import ChatGLMConfig as ChatGLMConfig
     from .models.dolly_v2 import DollyV2Config as DollyV2Config
     from .models.flan_t5 import FlanT5Config as FlanT5Config
 
@@ -111,6 +114,7 @@ if t.TYPE_CHECKING:
         from .models.auto import MODEL_MAPPING as MODEL_MAPPING
         from .models.auto import MODEL_MAPPING_NAMES as MODEL_MAPPING_NAMES
         from .models.auto import AutoLLM as AutoLLM
+        from .models.chatglm import ChatGLM as ChatGLM
         from .models.dolly_v2 import DollyV2 as DollyV2
         from .models.flan_t5 import FlanT5 as FlanT5
 
