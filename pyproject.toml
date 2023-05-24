@@ -193,4 +193,4 @@ openllm = ["src/openllm", "*/openllm/src/openllm"]
 tests = ["tests", "*/openllm/tests"]
 
 [tool.coverage.report]
-exclude_lines = ["no cov", "if __name__ == .__main__.:", "if TYPE_CHECKING:"]
+exclude_lines = ["no cov", "if __name__ == .__main__.:", "if t.TYPE_CHECKING:"]
