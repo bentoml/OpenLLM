@@ -26,7 +26,9 @@ import openllm
 from .configuration_auto import AutoConfig
 
 if t.TYPE_CHECKING:
-    ConfigModelOrderedDict = OrderedDict[openllm.LLMConfig, openllm.LLM]
+    import bentoml
+
+    ConfigModelOrderedDict = OrderedDict[type[openllm.LLMConfig], type[openllm.LLM]]
 else:
     ConfigModelOrderedDict = OrderedDict
 
@@ -43,8 +45,8 @@ class _BaseAutoLLMClass:
 
     def __init__(self, *args: t.Any, **kwargs: t.Any):
         raise EnvironmentError(
-            f"Cannot instantiate {self.__class__.__name__} directly. \
-            Please use '{self.__class__.__name__}.Runner(model_name)' instead."
+            f"Cannot instantiate {self.__class__.__name__} directly. "
+            "Please use '{self.__class__.__name__}.Runner(model_name)' instead."
         )
 
     @t.overload
@@ -76,7 +78,7 @@ class _BaseAutoLLMClass:
         pretrained: str | None = None,
         return_runner_kwargs: bool = False,
         **kwargs: t.Any,
-    ) -> tuple[openllm.LLM, dict[str, t.Any]] | openllm.LLM:
+    ) -> openllm.LLM | tuple[openllm.LLM, dict[str, t.Any]]:
         config = kwargs.pop("llm_config", None)
         runner_kwargs_name = [
             "name",
@@ -102,7 +104,7 @@ class _BaseAutoLLMClass:
         )
 
     @classmethod
-    def create_runner(cls, model_name: str, pretrained: str | None = None, **kwargs: t.Any):
+    def create_runner(cls, model_name: str, pretrained: str | None = None, **kwargs: t.Any) -> bentoml.Runner:
         """
         Create a LLM Runner for the given model name.
 

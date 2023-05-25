@@ -25,11 +25,10 @@ For example, the following config class:
 
 ```python
 class FlanT5Config(openllm.LLMConfig):
-    custom_prompt: str = DEFAULT_PROMPT_TEMPLATE
 
     class GenerationConfig:
         temperature: float = 0.75
-        max_length: int = 3000
+        max_new_tokens: int = 3000
         top_k: int = 50
         top_p: float = 0.4
         repetition_penalty = 1.0
@@ -113,13 +112,8 @@ class GenerationConfig(pydantic.BaseModel):
     """
 
     # NOTE: parameters for controlling the length of the output
-    max_length: t.Optional[int] = pydantic.Field(
-        20,
-        description="""The maximum length the generated tokens can have. Corresponds to the length of the 
-        input prompt + `max_new_tokens`. Its effect is overridden by `max_new_tokens`, if also set.""",
-    )
-    max_new_tokens: t.Optional[int] = pydantic.Field(
-        None, description="The maximum numbers of tokens to generate, ignoring the number of tokens in the prompt."
+    max_new_tokens: int = pydantic.Field(
+        20, ge=0, description="The maximum numbers of tokens to generate, ignoring the number of tokens in the prompt."
     )
     min_length: int = pydantic.Field(
         0,
@@ -326,6 +320,14 @@ class GenerationConfig(pydantic.BaseModel):
         False,
         description="""Whether or not to return the prediction scores. See `scores` under returned 
         tensors for more details.""",
+    )
+
+    # NOTE: Special tokens that can be used at generation time
+    pad_token_id: t.Optional[int] = pydantic.Field(None, description="The id of the *padding* token.")
+    bos_token_id: t.Optional[int] = pydantic.Field(None, description="The id of the *beginning-of-sequence* token.")
+    eos_token_id: t.Optional[t.Union[int, t.List[int]]] = pydantic.Field(
+        None,
+        description="The id of the *end-of-sequence* token. Optionally, use a list to set multiple *end-of-sequence* tokens.",
     )
 
     # NOTE: Generation parameters exclusive to encoder-decoder models

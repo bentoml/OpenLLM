@@ -32,7 +32,7 @@ class FlaxFlanT5(openllm.LLM, implementation="flax", _internal=True):
     def generate(
         self,
         prompt: str,
-        max_length: int | None = None,
+        max_new_tokens: int | None = None,
         do_sample: bool = True,
         temperature: float | None = None,
         top_k: float | None = None,
@@ -45,7 +45,7 @@ class FlaxFlanT5(openllm.LLM, implementation="flax", _internal=True):
             input_ids,
             do_sample=do_sample,
             generation_config=self.config.with_options(
-                max_length=max_length,
+                max_new_tokens=max_new_tokens,
                 temperature=temperature,
                 top_k=top_k,
                 top_p=top_p,

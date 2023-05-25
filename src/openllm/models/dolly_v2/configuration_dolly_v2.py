@@ -24,7 +24,6 @@ class DollyV2Config(openllm.LLMConfig, default_timeout=3600000):
 
     class GenerationConfig:
         temperature: float = 0.9
-        max_length: int = 100
         top_p: float = 0.92
         top_k: int = 0
         max_new_tokens: int = 256

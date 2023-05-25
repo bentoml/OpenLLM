@@ -67,12 +67,11 @@ class DollyV2(openllm.LLM, _internal=True):
     def generate(
         self,
         prompt: str,
-        max_length: int | None = None,
+        max_new_tokens: int | None = None,
         do_sample: bool = True,
         temperature: float | None = None,
         top_k: float | None = None,
         top_p: float | None = None,
-        max_new_tokens: int | None = None,
         **kwargs: t.Any,
     ):
         """This is a implementation of InstructionTextGenerationPipeline from databricks."""
@@ -84,11 +83,10 @@ class DollyV2(openllm.LLM, _internal=True):
         eos_token_id = None
 
         llm_config = self.config.with_options(
-            max_length=max_length,
+            max_new_tokens=max_new_tokens,
             temperature=temperature,
             top_k=top_k,
             top_p=top_p,
-            max_new_tokens=max_new_tokens,
             **kwargs,
         )
 

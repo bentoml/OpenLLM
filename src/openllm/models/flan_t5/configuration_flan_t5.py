@@ -47,8 +47,8 @@ class FlanT5Config(openllm.LLMConfig):
     """Configuration for the FLAN-T5 model."""
 
     class GenerationConfig:
-        temperature: float = 0.3
-        max_length: int = 400
+        temperature: float = 0.9
+        max_new_tokens: int = 2048
         top_k: int = 50
         top_p: float = 0.4
         repetition_penalty = 1.0
