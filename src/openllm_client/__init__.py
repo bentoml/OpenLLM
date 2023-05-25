@@ -23,7 +23,7 @@ from __future__ import annotations
 import logging
 import typing as t
 
-import bentoml
+from ._prompt import PromptTemplate as PromptTemplate
 
 logger = logging.getLogger(__name__)
 
