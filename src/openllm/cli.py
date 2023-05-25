@@ -18,7 +18,6 @@ This extends clidantic and BentoML's internal CLI CommandGroup.
 """
 from __future__ import annotations
 
-import copy
 import difflib
 import functools
 import inspect
@@ -29,6 +28,7 @@ import typing as t
 import bentoml
 import click
 import inflection
+import psutil
 from click_option_group import optgroup
 
 import openllm
@@ -49,6 +49,18 @@ if t.TYPE_CHECKING:
 
 
 logger = logging.getLogger(__name__)
+
+
+_CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"], "max_content_width": int(os.environ.get("COLUMNS", 120))}
+
+OPENLLM_FIGLET = """\
+ ██████╗ ██████╗ ███████╗███╗   ██╗██╗     ██╗     ███╗   ███╗
+██╔═══██╗██╔══██╗██╔════╝████╗  ██║██║     ██║     ████╗ ████║
+██║   ██║██████╔╝█████╗  ██╔██╗ ██║██║     ██║     ██╔████╔██║
+██║   ██║██╔═══╝ ██╔══╝  ██║╚██╗██║██║     ██║     ██║╚██╔╝██║
+╚██████╔╝██║     ███████╗██║ ╚████║███████╗███████╗██║ ╚═╝ ██║
+ ╚═════╝ ╚═╝     ╚══════╝╚═╝  ╚═══╝╚══════╝╚══════╝╚═╝     ╚═╝
+"""
 
 
 class OpenLLMCommandGroup(click.Group):
@@ -81,7 +93,7 @@ class OpenLLMCommandGroup(click.Group):
 
             return f(*args, **kwargs)
 
-        return wrapper
+        return t.cast("ClickFunctionProtocol[t.Any]", wrapper)
 
     def __init__(self, *args: t.Any, **kwargs: t.Any) -> None:
         super(OpenLLMCommandGroup, self).__init__(*args, **kwargs)
@@ -211,9 +223,10 @@ class StartCommandGroup(OpenLLMCommandGroup):
     def list_commands(self, ctx: click.Context):
         return openllm.CONFIG_MAPPING.keys()
 
-    def get_command(self, ctx: click.Context, cmd_name: str) -> click.Command:
+    def get_command(self, ctx: click.Context, cmd_name: str) -> click.Command | None:
+        cmd_name = self.resolve_alias(cmd_name)
         if cmd_name not in self._cached_command:
-            self._cached_command[cmd_name] = start_model_command(cmd_name, _serve_grpc=self._serve_grpc)
+            self._cached_command[cmd_name] = start_model_command(cmd_name, self, _serve_grpc=self._serve_grpc)
         return self._cached_command[cmd_name]
 
 
@@ -253,32 +266,43 @@ def parse_serve_args(serve_grpc: bool) -> t.Callable[[F[P]], F[P]]:
 
 def start_model_command(
     model_name: str,
+    factory: OpenLLMCommandGroup,
     _context_settings: dict[str, t.Any] | None = None,
     _serve_grpc: bool = False,
 ) -> click.Command:
     """Create a click.Command for starting a model server"""
-    config = openllm.AutoConfig.for_model(model_name)
+    envvar = openllm.utils.get_framework_env(model_name)
+    if envvar == "flax":
+        llm = openllm.AutoFlaxLLM.for_model(model_name)
+    elif envvar == "tf":
+        llm = openllm.AutoTFLLM.for_model(model_name)
+    else:
+        llm = openllm.AutoLLM.for_model(model_name)
 
-    @click.command(
-        model_name,
+    aliases: list[str] = []
+    if llm.config.__openllm_name_type__ == "dasherize":
+        aliases.append(llm.config.__openllm_start_name__)
+
+    @factory.command(
+        name=llm.config.__openllm_model_name__,
         short_help=f"Start a LLMServer for '{model_name}' ('--help' for more details)",
         context_settings=_context_settings or {},
         help=getattr(
             openllm.utils.get_lazy_module(model_name),
             f"START_{inflection.underscore(model_name).upper()}_COMMAND_DOCSTRING",
         ),
+        aliases=aliases if len(aliases) > 0 else None,
     )
-    @config.to_click_options
+    @llm.config.to_click_options
     @parse_serve_args(_serve_grpc)
-    @OpenLLMCommandGroup.common_chain
     @click.option("--server-timeout", type=int, default=3600, help="Server timeout in seconds")
-    def model_start(server_timeout: int, **attrs: t.Any):
+    def model_start(server_timeout: int, *args: t.Any, **attrs: t.Any):
         from bentoml._internal.configuration import get_debug_mode
         from bentoml._internal.log import configure_logging
 
         configure_logging()
 
-        nw_config, server_kwds = config.model_validate_click(**attrs)
+        nw_config, server_kwds = llm.config.model_validate_click(**attrs)
 
         server_kwds.update({"working_dir": os.path.dirname(__file__)})
         if _serve_grpc:
@@ -296,12 +320,12 @@ def start_model_command(
             if _bentoml_config_options
             else ""
             + f"api_server.timeout={server_timeout}"
-            + f' runners."llm-{config.__openllm_start_name__}-runner".timeout={config.__openllm_timeout__}'
+            + f' runners."llm-{llm.config.__openllm_start_name__}-runner".timeout={llm.config.__openllm_timeout__}'
         )
 
         start_env.update(
             {
-                openllm.utils.FRAMEWORK_ENV_VAR(model_name): openllm.utils.get_framework_env(model_name),
+                openllm.utils.FRAMEWORK_ENV_VAR(model_name): envvar,
                 openllm.utils.MODEL_CONFIG_ENV_VAR(model_name): nw_config.model_dump_json(),
                 "OPENLLM_MODEL": model_name,
                 "BENTOML_DEBUG": str(get_debug_mode()),
@@ -309,7 +333,11 @@ def start_model_command(
             }
         )
 
-        click.secho(f"\nStarting LLM Server for '{model_name}'\n", fg="blue")
+        if llm.requirements is not None:
+            click.secho(
+                f"Make sure that you have the following dependencies available: {llm.requirements}\n", fg="yellow"
+            )
+        click.secho(f"Starting LLM Server for '{model_name}'\n", fg="blue")
         server_cls = getattr(bentoml, "HTTPServer" if not _serve_grpc else "GrpcServer")
         server: bentoml.server.Server = server_cls("_service.py:svc", **server_kwds)
         server.timeout = 90
@@ -338,12 +366,112 @@ def _start(
     **attrs: t.Any,
 ):
     """Python API to start a LLM server."""
+
     _serve_grpc = attrs.pop("_serve_grpc", False)
 
     if framework is not None:
         os.environ[openllm.utils.FRAMEWORK_ENV_VAR(model_name)] = framework
-    start_model_command(model_name, _serve_grpc=_serve_grpc)(standalone_mode=False, **attrs)
+    start_model_command(model_name, cli, _serve_grpc=_serve_grpc)(standalone_mode=False, **attrs)
 
 
 start = functools.partial(_start, _serve_grpc=False)
 start_grpc = functools.partial(_start, _serve_grpc=True)
+
+
+def create_cli() -> click.Group:
+    @click.group(cls=openllm.cli.OpenLLMCommandGroup, context_settings=_CONTEXT_SETTINGS)
+    @click.version_option(openllm.__version__, "-v", "--version")
+    def cli():
+        """
+        \b
+        ██████╗ ██████╗ ███████╗███╗   ██╗██╗     ██╗     ███╗   ███╗
+        ██╔═══██╗██╔══██╗██╔════╝████╗  ██║██║     ██║     ████╗ ████║
+        ██║   ██║██████╔╝█████╗  ██╔██╗ ██║██║     ██║     ██╔████╔██║
+        ██║   ██║██╔═══╝ ██╔══╝  ██║╚██╗██║██║     ██║     ██║╚██╔╝██║
+        ╚██████╔╝██║     ███████╗██║ ╚████║███████╗███████╗██║ ╚═╝ ██║
+        ╚═════╝ ╚═╝     ╚══════╝╚═╝  ╚═══╝╚══════╝╚══════╝╚═╝     ╚═╝
+
+        \b
+        OpenLLM: Your one stop-and-go-solution for serving any Open Large-Language Model
+
+            - StableLM, Llama, Alpaca, Dolly, Flan-T5, and more
+
+        \b
+            - Powered by BentoML 🍱 + HuggingFace 🤗
+        """
+
+    @cli.group(cls=openllm.cli.StartCommandGroup, context_settings=_CONTEXT_SETTINGS, aliases=["start-http"])
+    def start():
+        """
+        Start any LLM as a REST server.
+
+        $ openllm start <model_name> --<options> ...
+        """
+
+    @cli.group(
+        cls=openllm.cli.StartCommandGroup, context_settings=_CONTEXT_SETTINGS, _serve_grpc=True, name="start-grpc"
+    )
+    def start_grpc():
+        """
+        Start any LLM as a gRPC server.
+
+        $ openllm start-grpc <model_name> --<options> ...
+        """
+
+    @cli.command(aliases=["build"])
+    @click.argument(
+        "model_name", type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING.keys()])
+    )
+    @click.option("--pretrained", default=None, help="Given pretrained model name for the given model name [Optional].")
+    @click.option("--overwrite", is_flag=True, help="Overwrite existing Bento for given LLM if it already exists.")
+    def bundle(model_name: str, pretrained: str | None, overwrite: bool):
+        """Package a given models into a Bento.
+
+        $ openllm bundle flan-t5
+        """
+        from bentoml._internal.configuration import get_quiet_mode
+
+        bento, _previously_built = openllm.build(
+            model_name, __cli__=True, pretrained=pretrained, _overwrite_existing_bento=overwrite
+        )
+
+        if not get_quiet_mode():
+            click.echo("\n" + OPENLLM_FIGLET)
+            if not _previously_built:
+                click.secho(f"Successfully built {bento}.", fg="green")
+            else:
+                click.secho(
+                    f"'{model_name}' already has a Bento built [{bento}]. To overwrite it pass '--overwrite'.",
+                    fg="yellow",
+                )
+
+            click.secho(
+                f"\nPossible next steps:\n\n * Push to BentoCloud with `bentoml push`:\n    $ bentoml push {bento.tag}",
+                fg="blue",
+            )
+            click.secho(
+                f"\n * Containerize your Bento with `bentoml containerize`:\n    $ bentoml containerize {bento.tag}",
+                fg="blue",
+            )
+
+    @cli.command(name="models")
+    def list_supported_models():
+        """
+        List all supported models.
+        """
+        click.secho(
+            f"\nSupported LLM: [{', '.join(map(lambda key: inflection.dasherize(key), openllm.CONFIG_MAPPING.keys()))}]",
+            fg="blue",
+        )
+
+    if psutil.WINDOWS:
+        import sys
+
+        sys.stdout.reconfigure(encoding="utf-8")  # type: ignore
+    return cli
+
+
+cli = create_cli()
+
+if __name__ == "__main__":
+    cli()
