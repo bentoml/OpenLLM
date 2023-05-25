@@ -18,7 +18,6 @@ import copy
 import enum
 import logging
 import os
-import types
 import typing as t
 from abc import ABC, abstractmethod
 
@@ -32,13 +31,17 @@ from .exceptions import ForbiddenAttributeError, OpenLLMException
 from .utils import cattr
 
 if t.TYPE_CHECKING:
+    import tensorflow as tf
+    import torch
     import transformers
     from bentoml._internal.runner.strategy import Strategy
 
     from ._types import LLMModel, LLMTokenizer, ModelSignatureDict
 else:
     ModelSignatureDict = dict
+    torch = openllm.utils.LazyLoader("torch", globals(), "torch")
     transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
+    tf = openllm.utils.LazyLoader("tf", globals(), "tensorflow")
 
 logger = logging.getLogger(__name__)
 
@@ -153,6 +156,7 @@ _reserved_namespace = {
     "model",
     "tokenizer",
     "import_kwargs",
+    "requirements",
 }
 
 
@@ -178,6 +182,10 @@ class LLMInterface(ABC):
     """The default import kwargs to used when importing the model. 
     This will be passed into the default 'openllm._llm.import_model'."""
 
+    requirements: list[str] | None = None
+    """The default PyPI requirements needed to run this given LLM. By default, we will depend on 
+    bentoml, torch, transformers."""
+
     @abstractmethod
     def generate(self, prompt: str, **kwargs: t.Any) -> t.Any:
         """The main function implementation for generating from given prompt."""
@@ -192,6 +200,7 @@ class LLMInterface(ABC):
 
 class LLM(LLMInterface):
     _implementation: t.Literal["pt", "tf", "flax"]
+    _requires_gpu: bool = False
 
     __bentomodel__: bentoml.Model | None = None
     __llm_model__: LLMModel | None = None
@@ -210,8 +219,29 @@ class LLM(LLMInterface):
         ) -> bentoml.Model:
             ...
 
-    def __init_subclass__(cls, *, implementation: t.Literal["pt", "tf", "flax"] = "pt", _internal: bool = False):
+    def __init_subclass__(
+        cls,
+        *,
+        implementation: t.Literal["pt", "tf", "flax"] = "pt",
+        _internal: bool = False,
+        requires_gpu: bool = False,
+    ):
         cls._implementation = implementation
+
+        try:
+            if requires_gpu:
+                if implementation in ("tf", "flax") and len(tf.config.list_physical_devices("GPU")) == 0:
+                    raise OpenLLMException("Required GPU for given model")
+                else:
+                    if not torch.cuda.is_available():
+                        raise OpenLLMException("Required GPU for given model")
+        except OpenLLMException:
+            raise RuntimeError(
+                f"{cls} only supports running with GPU. Make sure it is available on your system."
+            ) from None
+
+        cls._requires_gpu = requires_gpu
+
         if not _internal and getattr(cls, "config_class", None) is None:
             raise RuntimeError("'config_class' must be defined for LLM subclasses.")
         else:
@@ -246,6 +276,12 @@ class LLM(LLMInterface):
     @property
     def identifying_params(self) -> dict[str, t.Any]:
         return {"configuration": self.config.model_dump(), "variants": self.variants}
+
+    def model_post_init(self):
+        """This function can be implemented if you need to initialized any additional variables that doesn't
+        concern OpenLLM internals.
+        """
+        pass
 
     def __init__(
         self,
@@ -302,6 +338,8 @@ class LLM(LLMInterface):
         Note that this tag will be generated based on `self.default_model` or the given `pretrained` kwds.
         passed from the __init__ constructor.
 
+        ``model_post_init`` can also be implemented if you need to do any additional initialization after everything is setup.
+
         Args:
             pretrained: The pretrained model to use. Defaults to None. It will use 'self.default_model' if None.
             llm_config: The config to use for this LLM. Defaults to None. If not passed, we will use 'self.config_class'
@@ -326,11 +364,15 @@ class LLM(LLMInterface):
                 assert self.default_model, "A default model is required for any LLM."
                 pretrained = self.default_model
 
+        # NOTE: This is the actual given path or pretrained weight for this LLM.
         self._pretrained = pretrained
 
         # NOTE: Save the args and kwargs for latter load
         self._args = args
         self._kwargs = kwargs
+
+        if self.model_post_init is not LLM.model_post_init:
+            self.model_post_init()
 
     @property
     def _bentomodel(self) -> bentoml.Model:
@@ -391,9 +433,17 @@ class LLM(LLMInterface):
     @property
     def model(self) -> LLMModel:
         """The model to use for this LLM. This shouldn't be set at runtime, rather let OpenLLM handle it."""
+        if self.import_kwargs:
+            kwds = {
+                **{k: v for k, v in self.import_kwargs.items() if not k.startswith("_tokenizer_")},
+                **self._kwargs,
+            }
+        else:
+            kwds = self._kwargs
+
         if self.__llm_model__ is None:
             # Hmm, bentoml.transformers.load_model doesn't yet support args.
-            self.__llm_model__ = self._bentomodel.load_model(*self._args, **self._kwargs)
+            self.__llm_model__ = self._bentomodel.load_model(*self._args, **kwds)
         return self.__llm_model__
 
     @property
@@ -479,8 +529,17 @@ class LLM(LLMInterface):
             def generate_iterator(__self, prompt: str, **kwds: t.Any) -> t.Iterator[t.Any]:
                 yield self.generate_iterator(prompt, **kwds)
 
+        if self._requires_gpu:
+            _supported_resources = ("nvidia.com/gpu",)
+        else:
+            _supported_resources = ("nvidia.com/gpu", "cpu")
+
         return bentoml.Runner(
-            types.new_class(inflection.camelize(self.config.__openllm_model_name__) + "Runnable", (_Runnable,)),
+            type(
+                inflection.camelize(self.config.__openllm_model_name__) + "Runnable",
+                (_Runnable,),
+                {"SUPPORTED_RESOURCES": _supported_resources},
+            ),
             runnable_init_params=kwargs,
             name=name,
             models=models,
@@ -492,7 +551,7 @@ class LLM(LLMInterface):
         )
 
 
-def Runner(start_name: str, **kwds: t.Any):
+def Runner(start_name: str, **kwds: t.Any) -> bentoml.Runner:
     """Create a Runner for given LLM. For a list of currently supported LLM, check out 'openllm models'
 
     Args:

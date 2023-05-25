@@ -69,6 +69,9 @@ def build_editable(path: str) -> str | None:
 
 def construct_python_options(llm: openllm.LLM, llm_fs: FS) -> PythonOptions:
     packages: list[str] = []
+    if llm.requirements is not None:
+        packages.extend(llm.requirements)
+
     if not (str(os.environ.get("BENTOML_BUNDLE_LOCAL_BUILD", False)).lower() == "false"):
         packages.append(f"bentoml>={'.'.join([str(i) for i in pkg.pkg_version_info('bentoml')])}")
 
@@ -128,7 +131,7 @@ def construct_python_options(llm: openllm.LLM, llm_fs: FS) -> PythonOptions:
     wheels: list[str] = []
     built_wheels = build_editable(llm_fs.getsyspath("/"))
     if built_wheels is not None:
-        wheels.append(built_wheels)
+        wheels.append(llm_fs.getsyspath(f"/{built_wheels.split('/')[-1]}"))
 
     return PythonOptions(packages=packages, wheels=wheels, lock_packages=True)
 
@@ -160,6 +163,8 @@ def build(model_name: str, *, __cli__: bool = False, **kwds: t.Any) -> tuple[ben
     overwrite_existing_bento = kwds.pop("_overwrite_existing_bento", False)
     current_model_envvar = os.environ.pop("OPENLLM_MODEL", None)
     _previously_built = False
+
+    logger.info("Packing '%s' into a Bento with kwargs=%s...", model_name, kwds)
 
     # NOTE: We set this environment variable so that our service.py logic won't raise RuntimeError
     # during build. This is a current limitation of bentoml build where we actually import the service.py into sys.path
