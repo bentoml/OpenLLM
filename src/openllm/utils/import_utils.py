@@ -42,6 +42,19 @@ USE_JAX = os.environ.get("USE_FLAX", "AUTO").upper()
 
 FORCE_TF_AVAILABLE = os.environ.get("FORCE_TF_AVAILABLE", "AUTO").upper()
 
+_cpm_kernels_available = importlib.util.find_spec("cpm_kernels") is not None
+
+
+def is_cpm_kernels_available():
+    global _cpm_kernels_available
+    if _cpm_kernels_available:
+        try:
+            importlib.metadata.version("cpm_kernels")
+        except importlib.metadata.PackageNotFoundError:
+            _cpm_kernels_available = False
+    return _cpm_kernels_available
+
+
 _torch_available = importlib.util.find_spec("torch") is not None
 
 

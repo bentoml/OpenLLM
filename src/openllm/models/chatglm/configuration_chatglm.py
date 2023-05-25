@@ -26,7 +26,7 @@ class ChatGLMConfig(openllm.LLMConfig, name_type="lowercase", trust_remote_code=
     """Whether to use half precision for model."""
 
     class GenerationConfig:
-        max_length: int = 2048
+        max_new_tokens: int = 2048
         num_beams: int = 1
         top_p: float = 0.7
         temperature: float = 0.95

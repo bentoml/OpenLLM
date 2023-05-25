@@ -46,6 +46,19 @@ _import_structure = {
     "models.starcoder": ["StarCoderConfig"],
 }
 
+# NOTE: torch and cpm_kernels
+try:
+    if not (utils.is_torch_available() and utils.is_cpm_kernels_available()):
+        raise MissingDependencyError
+except MissingDependencyError:
+    from .utils import dummy_pt_and_cpm_kernels_objects
+
+    _import_structure["utils.dummy_pt_and_cpm_kernels_objects"] = [
+        name for name in dir(dummy_pt_and_cpm_kernels_objects) if not name.startswith("_")
+    ]
+else:
+    _import_structure["models.chatglm"].extend(["ChatGLM"])
+
 try:
     if not utils.is_torch_available():
         raise MissingDependencyError
@@ -97,7 +110,6 @@ if t.TYPE_CHECKING:
     from ._package import build as build
     from ._schema import GenerationInput as GenerationInput
     from ._schema import GenerationOutput as GenerationOutput
-    from ._schema import PromptTemplate as PromptTemplate
     from .cli import start as start
     from .cli import start_grpc as start_grpc
     from .models.auto import CONFIG_MAPPING as CONFIG_MAPPING
@@ -106,6 +118,15 @@ if t.TYPE_CHECKING:
     from .models.dolly_v2 import DollyV2Config as DollyV2Config
     from .models.flan_t5 import FlanT5Config as FlanT5Config
     from .models.starcoder import StarCoderConfig as StarCoderConfig
+
+    # NOTE: torch and cpm_kernels
+    try:
+        if not (utils.is_torch_available() and utils.is_cpm_kernels_available()):
+            raise MissingDependencyError
+    except MissingDependencyError:
+        from .utils.dummy_pt_and_cpm_kernels_objects import *
+    else:
+        from .models.chatglm import ChatGLM as ChatGLM
 
     try:
         if not utils.is_torch_available():
@@ -116,7 +137,6 @@ if t.TYPE_CHECKING:
         from .models.auto import MODEL_MAPPING as MODEL_MAPPING
         from .models.auto import MODEL_MAPPING_NAMES as MODEL_MAPPING_NAMES
         from .models.auto import AutoLLM as AutoLLM
-        from .models.chatglm import ChatGLM as ChatGLM
         from .models.dolly_v2 import DollyV2 as DollyV2
         from .models.flan_t5 import FlanT5 as FlanT5
         from .models.starcoder import StarCoder as StarCoder

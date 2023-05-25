@@ -28,6 +28,7 @@ import typing as t
 
 import bentoml
 import inflection
+
 # NOTE: The following exports useful utils from bentoml
 from bentoml._internal.utils import LazyLoader as LazyLoader
 from bentoml._internal.utils import bentoml_cattr as cattr
@@ -40,6 +41,7 @@ from bentoml._internal.utils import \
 
 from . import codegen as codegen
 from .import_utils import DummyMetaclass as DummyMetaclass
+from .import_utils import is_cpm_kernels_available as is_cpm_kernels_available
 from .import_utils import is_flax_available as is_flax_available
 from .import_utils import is_tf_available as is_tf_available
 from .import_utils import is_torch_available as is_torch_available
