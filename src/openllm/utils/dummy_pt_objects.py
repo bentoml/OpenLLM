@@ -19,7 +19,7 @@ class DollyV2(metaclass=DummyMetaclass):
         require_backends(self, ["torch"])
 
 
-class ChatGLM(metaclass=DummyMetaclass):
+class StarCoder(metaclass=DummyMetaclass):
     _backends = ["torch"]
 
     def __init__(self, *args: t.Any, **kwargs: t.Any):

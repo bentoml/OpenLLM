@@ -43,6 +43,7 @@ _import_structure = {
     "models.flan_t5": ["FlanT5Config"],
     "models.dolly_v2": ["DollyV2Config"],
     "models.chatglm": ["ChatGLMConfig"],
+    "models.starcoder": ["StarCoderConfig"],
 }
 
 try:
@@ -55,7 +56,7 @@ except MissingDependencyError:
 else:
     _import_structure["models.flan_t5"].extend(["FlanT5"])
     _import_structure["models.dolly_v2"].extend(["DollyV2"])
-    _import_structure["models.chatglm"].extend(["ChatGLM"])
+    _import_structure["models.starcoder"].extend(["StarCoder"])
     _import_structure["models.auto"].extend(["AutoLLM", "MODEL_MAPPING_NAMES", "MODEL_MAPPING"])
 
 try:
@@ -104,6 +105,7 @@ if t.TYPE_CHECKING:
     from .models.chatglm import ChatGLMConfig as ChatGLMConfig
     from .models.dolly_v2 import DollyV2Config as DollyV2Config
     from .models.flan_t5 import FlanT5Config as FlanT5Config
+    from .models.starcoder import StarCoderConfig as StarCoderConfig
 
     try:
         if not utils.is_torch_available():
@@ -117,6 +119,7 @@ if t.TYPE_CHECKING:
         from .models.chatglm import ChatGLM as ChatGLM
         from .models.dolly_v2 import DollyV2 as DollyV2
         from .models.flan_t5 import FlanT5 as FlanT5
+        from .models.starcoder import StarCoder as StarCoder
 
     try:
         if not utils.is_flax_available():

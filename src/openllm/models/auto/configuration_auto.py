@@ -33,6 +33,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("flan_t5", "FlanT5Config"),
         ("dolly_v2", "DollyV2Config"),
         ("chatglm", "ChatGLMConfig"),
+        ("starcoder", "StarCoderConfig"),
     ]
 )
 
