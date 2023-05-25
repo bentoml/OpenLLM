@@ -54,6 +54,7 @@ from click_option_group import optgroup
 
 import openllm
 
+from .exceptions import GpuNotAvailableError, OpenLLMException
 from .utils import _object_setattr
 from .utils.dantic import allows_multiple, parse_default
 
@@ -64,6 +65,8 @@ if t.TYPE_CHECKING:
 
     ReprArgs: t.TypeAlias = t.Iterable[tuple[str | None, t.Any]]
 
+    import tensorflow as tf
+    import torch
     import transformers
     from pydantic.fields import FieldInfo
     from transformers.generation.beam_constraints import Constraint
@@ -71,6 +74,8 @@ else:
     from transformers.utils.dummy_pt_objects import Constraint
 
     transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
+    torch = openllm.utils.LazyLoader("torch", globals(), "torch")
+    tf = openllm.utils.LazyLoader("tf", globals(), "tensorflow")
 
 __all__ = ["LLMConfig", "ModelSignature"]
 
@@ -434,6 +439,7 @@ class LLMConfig(pydantic.BaseModel, ABC):
         __openllm_timeout__: int = 0
         __openllm_name_type__: t.Literal["dasherize", "lowercase"] = "dasherize"
         __openllm_trust_remote_code__: bool = False
+        __openllm_requires_gpu__: bool = False
         GenerationConfig: type[t.Any] = GenerationConfig
 
     def __init_subclass__(
@@ -442,6 +448,7 @@ class LLMConfig(pydantic.BaseModel, ABC):
         default_timeout: int | None = None,
         name_type: t.Literal["dasherize", "lowercase"] = "dasherize",
         trust_remote_code: bool = False,
+        requires_gpu: bool = False,
         **kwargs: t.Any,
     ):
         if default_timeout is None:
@@ -451,8 +458,21 @@ class LLMConfig(pydantic.BaseModel, ABC):
             raise RuntimeError(f"Unknown name_type {name_type}. Only allowed are 'dasherize' and 'lowercase'.")
         cls.__openllm_name_type__ = name_type
         cls.__openllm_trust_remote_code__ = trust_remote_code
+        cls.__openllm_requires_gpu__ = requires_gpu
 
         super(LLMConfig, cls).__init_subclass__(**kwargs)
+
+    @classmethod
+    def check_for_gpu(cls, implementation: t.Literal["pt", "tf", "flax"] = "pt"):
+        try:
+            if cls.__openllm_requires_gpu__:
+                if implementation in ("tf", "flax") and len(tf.config.list_physical_devices("GPU")) == 0:
+                    raise OpenLLMException("Required GPU for given model")
+                else:
+                    if not torch.cuda.is_available():
+                        raise OpenLLMException("Required GPU for given model")
+        except OpenLLMException:
+            raise GpuNotAvailableError(f"{cls} only supports running with GPU (None available).") from None
 
     @classmethod
     def __pydantic_init_subclass__(cls, **_: t.Any):

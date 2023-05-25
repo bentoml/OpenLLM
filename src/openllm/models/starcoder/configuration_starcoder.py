@@ -16,7 +16,7 @@ from __future__ import annotations
 import openllm
 
 
-class StarCoderConfig(openllm.LLMConfig, name_type="lowercase"):
+class StarCoderConfig(openllm.LLMConfig, name_type="lowercase", requires_gpu=True):
     """Configuration for the StarCoder model."""
 
     class GenerationConfig:

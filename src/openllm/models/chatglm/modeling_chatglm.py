@@ -38,7 +38,7 @@ class InvalidScoreLogitsProcessor(LogitsProcessor):
         return scores
 
 
-class ChatGLM(openllm.LLM, _internal=True, requires_gpu=True):
+class ChatGLM(openllm.LLM, _internal=True):
     default_model = "THUDM/chatglm-6b-int4"
 
     requirements = ["cpm_kernels", "sentencepiece"]

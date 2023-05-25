@@ -28,7 +28,6 @@ import typing as t
 
 import bentoml
 import inflection
-
 # NOTE: The following exports useful utils from bentoml
 from bentoml._internal.utils import LazyLoader as LazyLoader
 from bentoml._internal.utils import bentoml_cattr as cattr
@@ -70,7 +69,7 @@ def MODEL_CONFIG_ENV_VAR(model_name: str) -> str:
     return f"OPENLLM_{inflection.underscore(model_name).upper()}_CONFIG"
 
 
-def get_framework_env(model_name: str) -> str:
+def get_framework_env(model_name: str) -> t.Literal["pt", "flax", "tf"]:
     envvar = os.environ.get(FRAMEWORK_ENV_VAR(model_name), "pt")
     if envvar not in ("pt", "tf", "flax"):
         raise ValueError(f"Invalid framework implementation {envvar}, must be one of 'pt', 'tf', 'flax'")

@@ -31,17 +31,13 @@ from .exceptions import ForbiddenAttributeError, OpenLLMException
 from .utils import cattr
 
 if t.TYPE_CHECKING:
-    import tensorflow as tf
-    import torch
     import transformers
     from bentoml._internal.runner.strategy import Strategy
 
     from ._types import LLMModel, LLMTokenizer, ModelSignatureDict
 else:
     ModelSignatureDict = dict
-    torch = openllm.utils.LazyLoader("torch", globals(), "torch")
     transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
-    tf = openllm.utils.LazyLoader("tf", globals(), "tensorflow")
 
 logger = logging.getLogger(__name__)
 
@@ -219,28 +215,8 @@ class LLM(LLMInterface):
         ) -> bentoml.Model:
             ...
 
-    def __init_subclass__(
-        cls,
-        *,
-        implementation: t.Literal["pt", "tf", "flax"] = "pt",
-        _internal: bool = False,
-        requires_gpu: bool = False,
-    ):
+    def __init_subclass__(cls, *, implementation: t.Literal["pt", "tf", "flax"] = "pt", _internal: bool = False):
         cls._implementation = implementation
-
-        try:
-            if requires_gpu:
-                if implementation in ("tf", "flax") and len(tf.config.list_physical_devices("GPU")) == 0:
-                    raise OpenLLMException("Required GPU for given model")
-                else:
-                    if not torch.cuda.is_available():
-                        raise OpenLLMException("Required GPU for given model")
-        except OpenLLMException:
-            raise RuntimeError(
-                f"{cls} only supports running with GPU. Make sure it is available on your system."
-            ) from None
-
-        cls._requires_gpu = requires_gpu
 
         if not _internal and getattr(cls, "config_class", None) is None:
             raise RuntimeError("'config_class' must be defined for LLM subclasses.")
@@ -254,6 +230,9 @@ class LLM(LLMInterface):
                     cls.config_class = getattr(openllm, f"{cls.__name__}Config")
             else:
                 logger.debug(f"Using config class {cls.config_class} for {cls.__name__}.")
+
+        cls.config_class.check_for_gpu(implementation)
+        cls._requires_gpu = cls.config_class.__openllm_requires_gpu__
 
         cls.__openllm_start_name__ = cls.config_class.__openllm_start_name__
 

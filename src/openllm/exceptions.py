@@ -23,6 +23,10 @@ class OpenLLMException(bentoml.exceptions.BentoMLException):
     """Base class for all OpenLLM exceptions. This extends BentoMLException."""
 
 
+class GpuNotAvailableError(OpenLLMException):
+    """Raised when there is no GPU available in given system."""
+
+
 class ValidationError(OpenLLMException):
     """Raised when a validation fails."""
 
