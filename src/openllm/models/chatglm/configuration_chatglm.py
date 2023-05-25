@@ -16,7 +16,7 @@ from __future__ import annotations
 import openllm
 
 
-class ChatGLMConfig(openllm.LLMConfig, name_type="lowercase"):
+class ChatGLMConfig(openllm.LLMConfig, name_type="lowercase", trust_remote_code=True, default_timeout=3600000):
     """Configuration for the ChatGLM model."""
 
     retain_history: bool = True

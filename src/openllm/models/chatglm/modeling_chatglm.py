@@ -44,6 +44,8 @@ class ChatGLM(openllm.LLM, _internal=True):
 
     variants = ["THUDM/chatglm-6b", "THUDM/chatglm-6b-int8", "THUDM/chatglm-6b-int4"]
 
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
     def model_post_init(self, _: t.Any):
         self.history: list[tuple[str, str]] = []
 
@@ -70,9 +72,9 @@ class ChatGLM(openllm.LLM, _internal=True):
         temperature: float | None = None,
         **kwargs: t.Any,
     ) -> t.Any:
-        if self.config.use_half_precision:
-            self.model = self.model.half()
         if torch.cuda.is_available():
+            if self.config.use_half_precision:
+                self.model = self.model.half()
             self.model = self.model.cuda()
         else:
             self.model = self.model.float()
@@ -90,19 +92,22 @@ class ChatGLM(openllm.LLM, _internal=True):
             prompt_text += f"[Round {i}]\n问：{old_query}\n答：{response}\n"
         prompt_text += f"[Round {len(self.history)}]\n问：{prompt}\n答："
 
-        inputs = self.tokenizer([prompt_text], return_tensors="pt").to(self.model.device)
-        outputs = self.model.generate(
-            **inputs,
-            generation_config=self.config.with_options(
-                max_length=max_length,
-                num_beams=num_beams,
-                top_p=top_p,
-                temperature=temperature,
-                do_sample=True,
-                **kwargs,
-            ).to_generation_config(),
-            logits_processor=logit_processor,
-        )
+        inputs = self.tokenizer([prompt_text], return_tensors="pt").to(self.device)
+        with torch.device(self.device):
+            outputs = self.model.generate(
+                **inputs,
+                generation_config=self.config.with_options(
+                    max_length=max_length,
+                    num_beams=num_beams,
+                    top_p=top_p,
+                    temperature=temperature,
+                    do_sample=True,
+                    **kwargs,
+                ).to_generation_config(),
+                logits_processor=logit_processor,
+            )
+        if torch.cuda.is_available():
+            outputs = outputs.cpu()
         outputs = outputs.tolist()[0][len(inputs["input_ids"][0]) :]
         response = self.tokenizer.decode(outputs)
         response = self.model.process_response(response)

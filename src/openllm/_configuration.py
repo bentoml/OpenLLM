@@ -431,6 +431,7 @@ class LLMConfig(pydantic.BaseModel, ABC):
         __openllm_start_name__: str = ""
         __openllm_timeout__: int = 0
         __openllm_name_type__: t.Literal["dasherize", "lowercase"] = "dasherize"
+        __openllm_trust_remote_code__: bool = False
         GenerationConfig: type[t.Any] = GenerationConfig
 
     def __init_subclass__(
@@ -438,6 +439,7 @@ class LLMConfig(pydantic.BaseModel, ABC):
         *,
         default_timeout: int | None = None,
         name_type: t.Literal["dasherize", "lowercase"] = "dasherize",
+        trust_remote_code: bool = False,
         **kwargs: t.Any,
     ):
         if default_timeout is None:
@@ -446,6 +448,7 @@ class LLMConfig(pydantic.BaseModel, ABC):
         if name_type not in ("dasherize", "lowercase"):
             raise RuntimeError(f"Unknown name_type {name_type}. Only allowed are 'dasherize' and 'lowercase'.")
         cls.__openllm_name_type__ = name_type
+        cls.__openllm_trust_remote_code__ = trust_remote_code
 
         super(LLMConfig, cls).__init_subclass__(**kwargs)
 

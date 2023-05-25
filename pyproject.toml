@@ -49,7 +49,7 @@ dependencies = [
     # bentoml[grpc,grpc-reflection] include grpcio, grpcio-reflection
     "bentoml[io-image,io-pandas,io-file,grpc,grpc-reflection]>=1.0.19",
     # bentoml[torch] includes torch and transformers
-    "transformers[torch]>=4.29.0",
+    "transformers[torch,accelerate,tokenizers,onnxruntime,onnx]>=4.29.0",
     # Super fast JSON serialization
     "orjson",
     "inflection",

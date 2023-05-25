@@ -25,7 +25,7 @@ from .configuration_dolly_v2 import (DEFAULT_PROMPT_TEMPLATE, END_KEY,
 if t.TYPE_CHECKING:
     import torch
 
-    from openllm.types import LLMTokenizer
+    from ..._types import LLMTokenizer
 else:
     torch = openllm.utils.LazyLoader("torch", globals(), "torch")
 
@@ -60,6 +60,8 @@ class DollyV2(openllm.LLM, _internal=True):
     variants = ["databricks/dolly-v2-3b", "databricks/dolly-v2-7b", "databricks/dolly-v2-12b"]
 
     import_kwargs = {"device_map": "auto", "torch_dtype": torch.bfloat16, "_tokenizer_padding_size": "left"}
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     @torch.inference_mode()
     def generate(
@@ -114,20 +116,23 @@ class DollyV2(openllm.LLM, _internal=True):
         else:
             in_b = input_ids.shape[0]
 
-        generated_sequence = self.model.generate(
-            input_ids=input_ids.to(self.model.device),
-            attention_mask=attention_mask.to(self.model.device) if attention_mask is not None else None,
-            pad_token_id=self.tokenizer.pad_token_id,
-            do_sample=do_sample,
-            eos_token_id=eos_token_id,
-            generation_config=llm_config.to_generation_config(),
-        )
+        with torch.device(self.device):
+            generated_sequence = self.model.generate(
+                input_ids=input_ids.to(self.device),
+                attention_mask=attention_mask.to(self.device) if attention_mask is not None else None,
+                pad_token_id=self.tokenizer.pad_token_id,
+                do_sample=do_sample,
+                eos_token_id=eos_token_id,
+                generation_config=llm_config.to_generation_config(),
+            )
 
         out_b = generated_sequence.shape[0]
 
-        generated_sequence: list[list[int]] = (
-            generated_sequence.reshape(in_b, out_b // in_b, *generated_sequence.shape[1:])[0].numpy().tolist()
-        )
+        generated_sequence = generated_sequence.reshape(in_b, out_b // in_b, *generated_sequence.shape[1:])[0]
+        if torch.cuda.is_available():
+            generated_sequence = generated_sequence.cpu()
+
+        generated_sequence: list[list[int]] = generated_sequence.numpy().tolist()
         records: list[dict[str, t.Any]] = []
         for sequence in generated_sequence:
             # The response will be set to this variable if we can identify it.

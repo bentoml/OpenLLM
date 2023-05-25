@@ -35,7 +35,7 @@ if t.TYPE_CHECKING:
     import transformers
     from bentoml._internal.runner.strategy import Strategy
 
-    from .types import LLMModel, LLMTokenizer, ModelSignatureDict
+    from ._types import LLMModel, LLMTokenizer, ModelSignatureDict
 else:
     ModelSignatureDict = dict
     transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
@@ -296,7 +296,8 @@ class LLM(LLMInterface):
         dolly_v2_runner = openllm.Runner("dolly-v2", _tokenizer_padding_size="left", torch_dtype=torch.bfloat8, device_map='gpu')
         ```
 
-        Note: If you implement your own `import_model`, then `import_kwargs` will be ignored.
+        Note: If you implement your own `import_model`, then `import_kwargs` will be the default kwargs for every load. You can still override those
+        via ``openllm.Runner``.
 
         Note that this tag will be generated based on `self.default_model` or the given `pretrained` kwds.
         passed from the __init__ constructor.
@@ -334,10 +335,25 @@ class LLM(LLMInterface):
     @property
     def _bentomodel(self) -> bentoml.Model:
         if self.__bentomodel__ is None:
-            tag, kwds = openllm.utils.generate_tags(self._pretrained, prefix=self._implementation, **self._kwargs)
+            trust_remote_code = self._kwargs.pop("trust_remote_code", self.config.__openllm_trust_remote_code__)
+            tag, kwds = openllm.utils.generate_tags(
+                self._pretrained, prefix=self._implementation, trust_remote_code=trust_remote_code, **self._kwargs
+            )
 
             tokenizer_kwds = {k[len("_tokenizer_") :]: v for k, v in kwds.items() if k.startswith("_tokenizer_")}
             kwds = {k: v for k, v in kwds.items() if not k.startswith("_tokenizer_")}
+
+            if self.import_kwargs:
+                tokenizer_kwds = {
+                    **{
+                        k[len("_tokenizer_") :]: v for k, v in self.import_kwargs.items() if k.startswith("_tokenizer_")
+                    },
+                    **tokenizer_kwds,
+                }
+                kwds = {
+                    **{k: v for k, v in self.import_kwargs.items() if not k.startswith("_tokenizer_")},
+                    **kwds,
+                }
 
             try:
                 self.__bentomodel__ = bentoml.transformers.get(tag)
@@ -348,17 +364,21 @@ class LLM(LLMInterface):
                 if hasattr(self, "import_model"):
                     logger.debug("Using custom 'import_model' defined in subclass.")
                     self.__bentomodel__ = self.import_model(
-                        self._pretrained, tag, *self._args, tokenizer_kwds=tokenizer_kwds, **kwds
+                        self._pretrained,
+                        tag,
+                        *self._args,
+                        tokenizer_kwds=tokenizer_kwds,
+                        trust_remote_code=trust_remote_code,
+                        **kwds,
                     )
                 else:
-                    if self.import_kwargs:
-                        kwds = {**self.import_kwargs, **kwds}
                     # NOTE: In this branch, we just use the default implementation.
                     self.__bentomodel__ = import_model(
                         self._pretrained,
                         tag,
                         *self._args,
                         tokenizer_kwds=tokenizer_kwds,
+                        trust_remote_code=trust_remote_code,
                         __openllm_framework__=self._implementation,
                         **kwds,
                     )
@@ -473,10 +493,24 @@ class LLM(LLMInterface):
 
 
 def Runner(start_name: str, **kwds: t.Any):
+    """Create a Runner for given LLM. For a list of currently supported LLM, check out 'openllm models'
+
+    Args:
+        start_name: Supported model name from 'openllm models'
+        init_local: Whether to init_local this given Runner. This is useful during development. (Default to False)
+        **kwds: The rest of kwargs will then be passed to the LLM. Refer to the LLM documentation for the kwargs
+                behaviour
+    """
+    init_local = kwds.pop("init_local", False)
     envvar = openllm.utils.get_framework_env(start_name)
     if envvar == "flax":
-        return openllm.AutoFlaxLLM.create_runner(start_name, **kwds)
+        runner = openllm.AutoFlaxLLM.create_runner(start_name, **kwds)
     elif envvar == "tf":
-        return openllm.AutoTFLLM.create_runner(start_name, **kwds)
+        runner = openllm.AutoTFLLM.create_runner(start_name, **kwds)
     else:
-        return openllm.AutoLLM.create_runner(start_name, **kwds)
+        runner = openllm.AutoLLM.create_runner(start_name, **kwds)
+
+    if init_local:
+        runner.init_local()
+
+    return runner
