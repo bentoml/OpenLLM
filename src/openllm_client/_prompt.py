@@ -13,15 +13,21 @@
 # limitations under the License.
 from __future__ import annotations
 
+import dataclasses
 import string
 import typing as t
 
-import pydantic
-
 import openllm
+
+if t.TYPE_CHECKING:
+    DictStrStr = dict[str, str]
+else:
+    DictStrStr = dict
 
 
 class PromptFormatter(string.Formatter):
+    """This PromptFormatter is largely based on langchain's implementation."""
+
     def vformat(self, format_string: str, args: t.Sequence[t.Any], kwargs: t.Mapping[str, t.Any]) -> str:
         if len(args) > 0:
             raise ValueError("Positional arguments are not supported")
@@ -44,14 +50,22 @@ class PromptFormatter(string.Formatter):
 _default_formatter = PromptFormatter()
 
 
-class PromptTemplate(pydantic.BaseModel):
+class PartialDict(DictStrStr):
+    def __missing__(self, key: str):
+        return "{" + key + "}"
+
+
+@dataclasses.dataclass(slots=True)
+class PromptTemplate:
     template: str
     input_variables: t.Sequence[str]
 
     model_config = {"extra": "forbid"}
 
-    def to_str(self, **kwargs: str) -> str:
+    def to_str(self, __partial_dict__: PartialDict | None = None, **kwargs: str) -> str:
         """Generate a prompt from the template and input variables"""
+        if __partial_dict__:
+            return _default_formatter.vformat(self.template, (), __partial_dict__)
         if not kwargs:
             raise ValueError("Keyword arguments are required")
         if not all(k in kwargs for k in self.input_variables):

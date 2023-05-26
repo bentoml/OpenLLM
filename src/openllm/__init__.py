@@ -30,14 +30,14 @@ from .exceptions import MissingDependencyError
 
 _import_structure = {
     "_llm": ["LLM", "Runner"],
-    "cli": ["start", "start_grpc"],
     "_configuration": ["LLMConfig"],
     "_package": ["build"],
     "exceptions": [],
-    "_schema": ["PromptTemplate", "GenerationInput", "GenerationOutput"],
+    "_schema": ["GenerationInput", "GenerationOutput"],
     "utils": [],
     "models": [],
     "client": [],
+    "cli": ["start", "start_grpc"],
     # NOTE: models
     "models.auto": ["AutoConfig", "CONFIG_MAPPING"],
     "models.flan_t5": ["FlanT5Config"],

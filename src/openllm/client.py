@@ -20,5 +20,16 @@ To start interact with the server, you can do the following:
 >>> client = openllm.client.create("http://0.0.0.0:3000")
 >>> client.query("What is the meaning of life?")
 """
+from __future__ import annotations
 
-from openllm_client import for_model as for_model
+import typing as t
+
+import openllm_client as _
+
+
+def __dir__():
+    return dir(_)
+
+
+def __getattr__(value: t.Any) -> t.Any:
+    return getattr(_, value)

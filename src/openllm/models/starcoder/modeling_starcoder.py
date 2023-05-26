@@ -37,7 +37,7 @@ EOD = "<|endoftext|>"
 FIM_INDICATOR = "<FILL_HERE>"
 
 
-class StarCoder(openllm.LLM, _internal=True, requires_gpu=True):
+class StarCoder(openllm.LLM, _internal=True):
     default_model = "bigcode/starcoder"
 
     requirements = ["bitandbytes"]

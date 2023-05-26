@@ -342,7 +342,7 @@ def start_model_command(
             if _bentoml_config_options
             else ""
             + f"api_server.timeout={server_timeout}"
-            + f' runners."llm-{llconfig.__openllm_start_name__}-runner".timeout={config.__openllm_timeout__}'
+            + f' runners."llm-{config.__openllm_start_name__}-runner".timeout={config.__openllm_timeout__}'
         )
 
         start_env.update(
@@ -354,6 +354,13 @@ def start_model_command(
                 "BENTOML_CONFIG_OPTIONS": _bentoml_config_options,
             }
         )
+
+        if envvar == "flax":
+            llm = openllm.AutoFlaxLLM.for_model(model_name, pretrained=pretrained)
+        elif envvar == "tf":
+            llm = openllm.AutoTFLLM.for_model(model_name, pretrained=pretrained)
+        else:
+            llm = openllm.AutoLLM.for_model(model_name, pretrained=pretrained)
 
         if llm.requirements is not None:
             click.secho(

@@ -18,8 +18,6 @@ import logging
 import typing as t
 from urllib.parse import urlparse
 
-import bentoml
-
 import openllm
 
 from .base import BaseClient
@@ -28,51 +26,26 @@ logger = logging.getLogger(__name__)
 
 
 class HTTPClient(BaseClient):
-    __: bentoml.client.HTTPClient | None = None
-
     def __init__(self, address: str, timeout: int = 30):
         address = address if "://" in address else "http://" + address
-        self._timeout = timeout
-        self._address = address
         self._host, self._port = urlparse(address).netloc.split(":")
-
-    @property
-    def _cached(self) -> bentoml.client.HTTPClient:
-        if self.__ is None:
-            bentoml.client.HTTPClient.wait_until_server_ready(self._host, int(self._port), timeout=self._timeout)
-            self.__ = bentoml.client.HTTPClient.from_url(self._address)
-        return self.__
+        super().__init__(address, timeout)
 
     def health(self) -> t.Any:
         return self._cached.health()
 
-    def query(self, prompt_template: str | openllm.PromptTemplate | None = None, **attrs: t.Any) -> str:
+    def query(self, prompt: str, **attrs: t.Any) -> dict[str, t.Any] | list[t.Any]:
         return_raw_response = attrs.pop("return_raw_response", False)
-        model_name = self._cached.model_name()
-        if prompt_template is None:
-            # return the default prompt
-            prompt_template = openllm.PromptTemplate.from_default(model_name)
-        elif isinstance(prompt_template, str):
-            prompt_template = openllm.PromptTemplate.from_template(prompt_template)
-        variables = {k: v for k, v in attrs.items() if k in prompt_template.input_variables}
-        config = openllm.AutoConfig.for_model(model_name).with_options(
-            **{k: v for k, v in attrs.items() if k not in variables}
-        )
-        r = openllm.schema.GenerationOutput(
-            **self._cached.generate(
-                openllm.schema.GenerationInput(prompt=prompt_template.to_str(**variables), llm_config=config.dict())
+        r = openllm.GenerationOutput(
+            **self.call(
+                "generate",
+                openllm.GenerationInput(
+                    prompt=prompt,
+                    llm_config=self.config.with_options(**attrs),
+                ),
             )
         )
         if return_raw_response:
-            return r.dict()
+            return r.model_dump()
 
-        return prompt_template.to_str(**variables) + "".join(r.responses)
-
-    def chat(
-        self,
-        prompt: str,
-        context: str,
-        prompt_template: str | openllm.PromptTemplate | None = None,
-        **llm_config: t.Any,
-    ):
-        ...
+        return r.responses

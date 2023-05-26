@@ -23,12 +23,12 @@ from __future__ import annotations
 import logging
 import typing as t
 
-from ._prompt import PromptTemplate as PromptTemplate
+from ._prompt import PromptTemplate
 
 logger = logging.getLogger(__name__)
 
 
-def for_model(address: str, kind: t.Literal["http", "grpc"] = "http", timeout: int = 30):
+def create(address: str, kind: t.Literal["http", "grpc"] = "http", timeout: int = 30):
     if kind == "http":
         from .runtimes.http import HTTPClient as _HTTPClient
 
@@ -39,3 +39,6 @@ def for_model(address: str, kind: t.Literal["http", "grpc"] = "http", timeout: i
         return _GrpcClient(address, timeout)
     else:
         raise ValueError(f"Unknown kind: {kind}. Only 'http' and 'grpc' are supported.")
+
+
+__all__ = ["create", "PromptTemplate"]

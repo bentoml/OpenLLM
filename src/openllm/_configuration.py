@@ -109,6 +109,16 @@ def field_to_options(
     )
 
 
+def generate_kwargs_from_envvar(model: GenerationConfig | LLMConfig) -> dict[str, str]:
+    kwargs: dict[str, t.Any] = {}
+    for key, field in model.model_fields.items():
+        if field.json_schema_extra is not None:
+            if "env" not in field.json_schema_extra:
+                raise RuntimeError(f"Invalid {model} passed. Only accept LLMConfig or LLMConfig.generation_config")
+            kwargs[key] = os.environ.get(field.json_schema_extra["env"], field.default)
+    return {k: v for k, v in kwargs.items() if v is not None}
+
+
 class GenerationConfig(pydantic.BaseModel):
     """Generation config provides the configuration to then be parsed to ``transformers.GenerationConfig``,
     with some additional validation and environment constructor.
@@ -549,9 +559,13 @@ class LLMConfig(pydantic.BaseModel, ABC):
         """
         from_env_ = self.from_env()
         # filtered out None values
-        kwargs = {k: v for k, v in kwargs.items() if v is not None}
+        kwargs = {**generate_kwargs_from_envvar(self), **{k: v for k, v in kwargs.items() if v is not None}}
         if __llm_config__ is not None:
             kwargs = {**__llm_config__.model_dump(), **kwargs}
+        kwargs["generation_config"] = {
+            **generate_kwargs_from_envvar(self.generation_config),
+            **kwargs.get("generation_config", {}),
+        }
         if from_env_:
             return from_env_.model_construct(**kwargs)
         return self.model_construct(**kwargs)
