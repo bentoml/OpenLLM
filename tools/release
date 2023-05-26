@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+
+echo "Releasing new version."
+
+! [ -x hatch ] && (
+    echo "Make sure to have hatch available: 'pip install hatch'"
+    exit 1
+)
+
+echo "Cleaning previously built artifacts..." && hatch clean
+
+echo "Bumping version ..." && hatch version micro
+
+NEW_VERSION=$(hatch version)
+
+git add src/openllm/__about__.py && git commit -sm "infra: prepare for release ${NEW_VERSION}"
+git push origin main
+
+echo "Building artifacts for releasing..." && hatch build
+
+echo "Releasing version ${NEW_VERSION}" && hatch release
+
+echo "Finish releasing version ${NEW_VERSION}"
