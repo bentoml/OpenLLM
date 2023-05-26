@@ -23,7 +23,9 @@ else:
     torch = openllm.utils.LazyLoader("torch", globals(), "torch")
 
 
-class FlanT5(openllm.LLM, _internal=True):
+class FlanT5(openllm.LLM):
+    __openllm_internal__ = True
+
     default_model = "google/flan-t5-large"
 
     variants = [
@@ -35,6 +37,29 @@ class FlanT5(openllm.LLM, _internal=True):
     ]
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    def preprocess_parameters(
+        self,
+        prompt: str,
+        max_new_tokens: int | None = None,
+        temperature: float | None = None,
+        top_k: float | None = None,
+        top_p: float | None = None,
+        repetition_penalty: float | None = None,
+        **kwargs: t.Any,
+    ) -> tuple[str, dict[str, t.Any]]:
+        return prompt, self.config.with_options(
+            max_new_tokens=max_new_tokens,
+            temperature=temperature,
+            top_k=top_k,
+            top_p=top_p,
+            do_sample=True,
+            repetition_penalty=repetition_penalty,
+            **kwargs,
+        ).to_generation_config(return_as_dict=True)
+
+    def postprocess_parameters(self, prompt: str, generation_result: t.Sequence[str], **_: t.Any) -> str:
+        return generation_result[0]
 
     @torch.inference_mode()
     def generate(

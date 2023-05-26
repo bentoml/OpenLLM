@@ -20,7 +20,7 @@ import typing as t
 import openllm
 
 from .configuration_dolly_v2 import (DEFAULT_PROMPT_TEMPLATE, END_KEY,
-                                     RESPONSE_KEY)
+                                     INTRO_BLURB, RESPONSE_KEY)
 
 if t.TYPE_CHECKING:
     import torch
@@ -54,7 +54,9 @@ def get_special_token_id(tokenizer: LLMTokenizer, key: str) -> int:
     return token_ids[0]
 
 
-class DollyV2(openllm.LLM, _internal=True):
+class DollyV2(openllm.LLM):
+    __openllm_internal__ = True
+
     default_model = "databricks/dolly-v2-3b"
 
     variants = ["databricks/dolly-v2-3b", "databricks/dolly-v2-7b", "databricks/dolly-v2-12b"]
@@ -63,12 +65,38 @@ class DollyV2(openllm.LLM, _internal=True):
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+    def preprocess_parameters(
+        self,
+        prompt: str,
+        max_new_tokens: int | None = None,
+        temperature: float | None = None,
+        top_k: float | None = None,
+        top_p: float | None = None,
+        **kwargs: t.Any,
+    ) -> tuple[str, dict[str, t.Any]]:
+        prompt_text = DEFAULT_PROMPT_TEMPLATE.format(instruction=prompt)
+
+        generation_config = self.config.with_options(
+            max_new_tokens=max_new_tokens,
+            temperature=temperature,
+            top_k=top_k,
+            top_p=top_p,
+            do_sample=True,
+            **kwargs,
+        ).to_generation_config(return_as_dict=True)
+
+        return prompt_text, generation_config
+
+    def postprocess_parameters(
+        self, prompt: str, generation_result: list[dict[t.Literal["generated_text"], str]], **_: t.Any
+    ) -> str:
+        return generation_result[0]["generated_text"]
+
     @torch.inference_mode()
     def generate(
         self,
         prompt: str,
         max_new_tokens: int | None = None,
-        do_sample: bool = True,
         temperature: float | None = None,
         top_k: float | None = None,
         top_p: float | None = None,
@@ -100,7 +128,10 @@ class DollyV2(openllm.LLM, _internal=True):
             except ValueError:
                 pass
 
-        prompt_text = DEFAULT_PROMPT_TEMPLATE.format(instruction=prompt)
+        if not prompt.startswith(INTRO_BLURB):
+            prompt_text = DEFAULT_PROMPT_TEMPLATE.format(instruction=prompt)
+        else:
+            prompt_text = prompt
 
         inputs = self.tokenizer(prompt_text, return_tensors="pt")
 
@@ -119,7 +150,7 @@ class DollyV2(openllm.LLM, _internal=True):
                 input_ids=input_ids.to(self.device),
                 attention_mask=attention_mask.to(self.device) if attention_mask is not None else None,
                 pad_token_id=self.tokenizer.pad_token_id,
-                do_sample=do_sample,
+                do_sample=True,
                 eos_token_id=eos_token_id,
                 generation_config=llm_config.to_generation_config(),
             )

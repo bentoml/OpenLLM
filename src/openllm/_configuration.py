@@ -473,7 +473,7 @@ class LLMConfig(pydantic.BaseModel, ABC):
         super(LLMConfig, cls).__init_subclass__(**kwargs)
 
     @classmethod
-    def check_for_gpu(cls, implementation: t.Literal["pt", "tf", "flax"] = "pt"):
+    def check_if_gpu_is_available(cls, implementation: t.Literal["pt", "tf", "flax"] = "pt"):
         try:
             if cls.__openllm_requires_gpu__:
                 if implementation in ("tf", "flax") and len(tf.config.list_physical_devices("GPU")) == 0:
@@ -547,7 +547,7 @@ class LLMConfig(pydantic.BaseModel, ABC):
     def model_dump(self, **kwargs: t.Any):
         try:
             to_dump = super().model_dump(**kwargs)
-            generation_config = self.generation_config.model_dump(exclude_defaults=True)
+            generation_config = self.generation_config.model_dump(exclude_none=True)
             to_dump["generation_config"] = generation_config
             return to_dump
         except pydantic.ValidationError as e:
@@ -598,8 +598,22 @@ class LLMConfig(pydantic.BaseModel, ABC):
             k: v for k, v in attrs.items() if not k.startswith(self.__openllm_model_name__)
         }
 
-    def to_generation_config(self) -> transformers.GenerationConfig:
-        return transformers.GenerationConfig(**self.generation_config.model_dump())
+    @t.overload
+    def to_generation_config(self, return_as_dict: t.Literal[True] = ...) -> dict[str, t.Any]:
+        ...
+
+    @t.overload
+    def to_generation_config(self, return_as_dict: t.Literal[False] = ...) -> transformers.GenerationConfig:
+        ...
+
+    def to_generation_config(self, return_as_dict: bool = False) -> transformers.GenerationConfig | dict[str, t.Any]:
+        config = transformers.GenerationConfig(**self.generation_config.model_dump())
+        if return_as_dict:
+            output = config.to_dict()
+            output.pop("transformers_version")
+            return output
+
+        return config
 
     def to_click_options(self, f: F[P]) -> t.Callable[[t.Callable[..., t.Any]], click.Command]:
         """

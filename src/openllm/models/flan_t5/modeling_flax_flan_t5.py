@@ -18,7 +18,9 @@ import typing as t
 import openllm
 
 
-class FlaxFlanT5(openllm.LLM, implementation="flax", _internal=True):
+class FlaxFlanT5(openllm.LLM):
+    __openllm_internal__ = True
+
     default_model: str = "google/flan-t5-large"
 
     variants = [
@@ -28,6 +30,29 @@ class FlaxFlanT5(openllm.LLM, implementation="flax", _internal=True):
         "google/flan-t5-xl",
         "google/flan-t5-xxl",
     ]
+
+    def preprocess_parameters(
+        self,
+        prompt: str,
+        max_new_tokens: int | None = None,
+        temperature: float | None = None,
+        top_k: float | None = None,
+        top_p: float | None = None,
+        repetition_penalty: float | None = None,
+        **kwargs: t.Any,
+    ) -> tuple[str, dict[str, t.Any]]:
+        return prompt, self.config.with_options(
+            max_new_tokens=max_new_tokens,
+            temperature=temperature,
+            top_k=top_k,
+            top_p=top_p,
+            do_sample=True,
+            repetition_penalty=repetition_penalty,
+            **kwargs,
+        ).to_generation_config(return_as_dict=True)
+
+    def postprocess_parameters(self, prompt: str, generation_result: t.Sequence[str], **_: t.Any) -> str:
+        return generation_result[0]
 
     def generate(
         self,

@@ -16,10 +16,11 @@ from __future__ import annotations
 
 import copy
 import enum
+import functools
 import logging
 import os
 import typing as t
-from abc import ABC, abstractmethod
+from abc import ABC, ABCMeta, abstractmethod
 
 import bentoml
 import inflection
@@ -145,9 +146,9 @@ def import_model(
     )
 
 
-_reserved_namespace = {
-    "default_model",
-    "variants",
+_required_namespace = {"default_model", "variants"}
+
+_reserved_namespace = _required_namespace | {
     "config_class",
     "model",
     "tokenizer",
@@ -176,16 +177,39 @@ class LLMInterface(ABC):
 
     import_kwargs: dict[str, t.Any] | None = None
     """The default import kwargs to used when importing the model. 
-    This will be passed into the default 'openllm._llm.import_model'."""
+    This will be passed into 'openllm.LLM.import_model'."""
 
     requirements: list[str] | None = None
     """The default PyPI requirements needed to run this given LLM. By default, we will depend on 
     bentoml, torch, transformers."""
 
+    def preprocess_parameters(self, prompt: str, **generation_kwds: t.Any) -> tuple[str, dict[str, t.Any]]:
+        """This handler will preprocess given prompt into the correct inputs with all
+        filled templates that the model accepts. It will returns a tuple of expected LLM prompt type and and dictionary
+        of expected arguments to be passed into model.generate.
+
+        You can customize the generation attributes for generate here. By default, it is a simple echo.
+
+        NOTE: this will be used from the client side.
+        """
+        return prompt, generation_kwds
+
     @abstractmethod
-    def generate(self, prompt: str, **kwargs: t.Any) -> t.Any:
-        """The main function implementation for generating from given prompt."""
+    def generate(self, prompt: str, **preprocess_generate_kwds: t.Any) -> t.Any:
+        """The main function implementation for generating from given prompt. It takes the outputs
+        of preprocess_generate, and then those can be pass to 'model.generate'.
+        """
         raise NotImplementedError
+
+    def postprocess_parameters(self, prompt: str, generation_result: t.Any, **kwds: t.Any) -> t.Any:
+        """This handler will postprocess generation results from LLM.generate and
+        then output nicely formatted results (if the LLM decide to do so.)
+
+        You can customize how the output of the LLM looks with this hook. By default, it is a simple echo.
+
+        NOTE: this will be used from the client side.
+        """
+        return generation_result
 
     def generate_iterator(self, prompt: str, **kwargs: t.Any) -> t.Iterator[t.Any]:
         """An iterator version of generate function."""
@@ -193,74 +217,116 @@ class LLMInterface(ABC):
             "Currently generate_iterator requires SSE (Server-side events) support, which is not yet implemented."
         )
 
-
-class LLM(LLMInterface):
-    _implementation: t.Literal["pt", "tf", "flax"]
-    _requires_gpu: bool = False
-
-    __bentomodel__: bentoml.Model | None = None
-    __llm_model__: LLMModel | None = None
-    __llm_tokenizer__: LLMTokenizer | None = None
-    __openllm_start_name__: str = ""
-
-    if t.TYPE_CHECKING:
-
-        def import_model(
-            self,
-            pretrained: str,
-            tag: bentoml.Tag,
-            *args: t.Any,
-            tokenizer_kwds: dict[str, t.Any],
-            **kwds: t.Any,
-        ) -> bentoml.Model:
-            ...
-
-    def __init_subclass__(cls, *, implementation: t.Literal["pt", "tf", "flax"] = "pt", _internal: bool = False):
-        cls._implementation = implementation
-
-        if not _internal and getattr(cls, "config_class", None) is None:
-            raise RuntimeError("'config_class' must be defined for LLM subclasses.")
-        else:
-            if getattr(cls, "config_class", None) is None:
-                if implementation == "tf":
-                    cls.config_class = getattr(openllm, f"{cls.__name__[2:]}Config")
-                elif implementation == "flax":
-                    cls.config_class = getattr(openllm, f"{cls.__name__[4:]}Config")
-                else:
-                    cls.config_class = getattr(openllm, f"{cls.__name__}Config")
-            else:
-                logger.debug(f"Using config class {cls.config_class} for {cls.__name__}.")
-
-        cls.config_class.check_for_gpu(implementation)
-        cls._requires_gpu = cls.config_class.__openllm_requires_gpu__
-
-        cls.__openllm_start_name__ = cls.config_class.__openllm_start_name__
-
-    def __setattr__(self, attr: str, value: t.Any):
-        if attr in _reserved_namespace:
-            raise ForbiddenAttributeError(
-                f"{attr} should not be set during runtime "
-                f"as these value will be reflected during runtime. "
-                f"Instead, you can create a custom LLM subclass {self.__class__.__name__}."
-            )
-
-        super().__setattr__(attr, value)
-
-    # The section below defines a loose contract with langchain's LLM interface.
-    @property
-    def llm_type(self) -> str:
-        assert self.default_model is not None
-        return openllm.utils.convert_transformers_model_name(self.default_model)
-
-    @property
-    def identifying_params(self) -> dict[str, t.Any]:
-        return {"configuration": self.config.model_dump(), "variants": self.variants}
-
-    def model_post_init(self):
+    def llm_post_init(self):
         """This function can be implemented if you need to initialized any additional variables that doesn't
         concern OpenLLM internals.
         """
         pass
+
+    def import_model(
+        self,
+        pretrained: str,
+        tag: bentoml.Tag,
+        *args: t.Any,
+        tokenizer_kwds: dict[str, t.Any],
+        **kwds: t.Any,
+    ) -> bentoml.Model:
+        """This function can be implemented if default import_model doesn't satisfy your needs."""
+        raise NotImplementedError
+
+
+class LLMMetaclass(ABCMeta):
+    def __new__(
+        mcls, cls_name: str, bases: tuple[type[t.Any], ...], namespace: dict[str, t.Any], **kwds: t.Any
+    ) -> type:
+        """Metaclass for creating a LLM."""
+        if LLMInterface not in bases:  # only actual openllm.LLM should hit this branch.
+            if "__annotations__" not in namespace:
+                annotations_dict: dict[str, t.Any] = {}
+                namespace["__annotations__"] = annotations_dict
+
+            # NOTE: check for required attributes
+            for k in _required_namespace:
+                if k not in namespace:
+                    raise RuntimeError(f"Missing required key '{k}'. Make sure to define it within the LLM subclass.")
+
+            # NOTE: set implementation branch
+            prefix_class_name_config = cls_name
+            if "__llm_implementation__" in namespace:
+                raise RuntimeError(
+                    f"""\
+                __llm_implementation__ should not be set directly. Instead make sure that your class
+                name follows the convention prefix: 
+                - For Tensorflow implementation: 'TF{cls_name}'
+                - For Flax implementation: 'Flax{cls_name}'
+                - For PyTorch implementation: '{cls_name}'"""
+                )
+            if cls_name.startswith("Flax"):
+                implementation = "flax"
+                prefix_class_name_config = cls_name[4:]
+                namespace["__annotations__"].update({"model": "transformers.FlaxPreTrainedModel"})
+            elif cls_name.startswith("TF"):
+                implementation = "tf"
+                prefix_class_name_config = cls_name[2:]
+                namespace["__annotations__"].update({"model": "transformers.TFPreTrainedModel"})
+            else:
+                implementation = "pt"
+                namespace["__annotations__"].update({"model": "transformers.PreTrainedModel"})
+            namespace["__llm_implementation__"] = implementation
+
+            # NOTE: setup config class branch
+            if "__openllm_internal__" in namespace:
+                # NOTE: we will automatically find the subclass for this given config class
+                if "config_class" not in namespace:
+                    # this branch we will automatically get the class
+                    namespace["config_class"] = getattr(openllm, f"{prefix_class_name_config}Config")
+                else:
+                    logger.debug(f"Using config class {namespace['config_class']} for {cls_name}.")
+
+            config_class: type[openllm.LLMConfig] = namespace["config_class"]
+            # Run check for GPU
+            config_class.check_if_gpu_is_available(namespace["__llm_implementation__"])
+
+            for key in ("__openllm_start_name__", "__openllm_requires_gpu__"):
+                namespace[key] = getattr(config_class, key)
+
+            # NOTE: import_model branch
+            if "import_model" not in namespace:
+                # using the default import model
+                namespace["import_model"] = functools.partial(
+                    import_model, __openllm_framework__=namespace["__llm_implementation__"]
+                )
+            else:
+                logger.debug("Using custom 'import_model' for %s", cls_name)
+
+            # NOTE: populate with default cache.
+            namespace.update({k: None for k in ("__llm_bentomodel__", "__llm_model__", "__llm_tokenizer__")})
+
+            cls: type[LLM] = super().__new__(mcls, cls_name, bases, namespace, **kwds)
+            cls.__openllm_post_init__ = None if cls.llm_post_init is LLMInterface.llm_post_init else cls.llm_post_init
+
+            if getattr(cls, "config_class") is None:
+                raise RuntimeError(f"'config_class' must be defined for '{cls.__name__}'")
+            return cls
+        else:
+            # the LLM class itself being created, no need to setup
+            return super().__new__(mcls, cls_name, bases, namespace, **kwds)
+
+
+class LLM(LLMInterface, metaclass=LLMMetaclass):
+    if t.TYPE_CHECKING:
+        # NOTE: the following will be populated by metaclass
+        __llm_bentomodel__: bentoml.Model | None = None
+        __llm_model__: LLMModel | None = None
+        __llm_tokenizer__: LLMTokenizer | None = None
+        __llm_implementation__: t.Literal["pt", "tf", "flax"]
+
+        __openllm_start_name__: str
+        __openllm_requires_gpu__: bool
+        __openllm_post_init__: t.Callable[[t.Self], None] | None
+
+        # NOTE: the following will be populated by __init__
+        config: openllm.LLMConfig
 
     def __init__(
         self,
@@ -317,7 +383,7 @@ class LLM(LLMInterface):
         Note that this tag will be generated based on `self.default_model` or the given `pretrained` kwds.
         passed from the __init__ constructor.
 
-        ``model_post_init`` can also be implemented if you need to do any additional initialization after everything is setup.
+        ``llm_post_init`` can also be implemented if you need to do any additional initialization after everything is setup.
 
         Args:
             pretrained: The pretrained model to use. Defaults to None. It will use 'self.default_model' if None.
@@ -350,15 +416,38 @@ class LLM(LLMInterface):
         self._args = args
         self._kwargs = kwargs
 
-        if self.model_post_init is not LLM.model_post_init:
-            self.model_post_init()
+        if self.__openllm_post_init__:
+            self.__openllm_post_init__(self)
+
+    def __setattr__(self, attr: str, value: t.Any):
+        if attr in _reserved_namespace:
+            raise ForbiddenAttributeError(
+                f"{attr} should not be set during runtime "
+                f"as these value will be reflected during runtime. "
+                f"Instead, you can create a custom LLM subclass {self.__class__.__name__}."
+            )
+
+        super().__setattr__(attr, value)
+
+    # NOTE: The section below defines a loose contract with langchain's LLM interface.
+    @property
+    def llm_type(self) -> str:
+        assert self.default_model is not None
+        return openllm.utils.convert_transformers_model_name(self.default_model)
+
+    @property
+    def identifying_params(self) -> dict[str, t.Any]:
+        return {"configuration": self.config.model_dump(), "variants": self.variants}
 
     @property
     def _bentomodel(self) -> bentoml.Model:
-        if self.__bentomodel__ is None:
+        if self.__llm_bentomodel__ is None:
             trust_remote_code = self._kwargs.pop("trust_remote_code", self.config.__openllm_trust_remote_code__)
             tag, kwds = openllm.utils.generate_tags(
-                self._pretrained, prefix=self._implementation, trust_remote_code=trust_remote_code, **self._kwargs
+                self._pretrained,
+                prefix=self.__llm_implementation__,
+                trust_remote_code=trust_remote_code,
+                **self._kwargs,
             )
 
             tokenizer_kwds = {k[len("_tokenizer_") :]: v for k, v in kwds.items() if k.startswith("_tokenizer_")}
@@ -377,33 +466,20 @@ class LLM(LLMInterface):
                 }
 
             try:
-                self.__bentomodel__ = bentoml.transformers.get(tag)
+                self.__llm_bentomodel__ = bentoml.transformers.get(tag)
             except bentoml.exceptions.BentoMLException:
                 logger.info(
                     "'%s' with tag (%s) not found, importing from HuggingFace Hub.", self.__class__.__name__, tag
                 )
-                if hasattr(self, "import_model"):
-                    logger.debug("Using custom 'import_model' defined in subclass.")
-                    self.__bentomodel__ = self.import_model(
-                        self._pretrained,
-                        tag,
-                        *self._args,
-                        tokenizer_kwds=tokenizer_kwds,
-                        trust_remote_code=trust_remote_code,
-                        **kwds,
-                    )
-                else:
-                    # NOTE: In this branch, we just use the default implementation.
-                    self.__bentomodel__ = import_model(
-                        self._pretrained,
-                        tag,
-                        *self._args,
-                        tokenizer_kwds=tokenizer_kwds,
-                        trust_remote_code=trust_remote_code,
-                        __openllm_framework__=self._implementation,
-                        **kwds,
-                    )
-        return self.__bentomodel__
+                self.__llm_bentomodel__ = self.import_model(
+                    self._pretrained,
+                    tag,
+                    *self._args,
+                    tokenizer_kwds=tokenizer_kwds,
+                    trust_remote_code=trust_remote_code,
+                    **kwds,
+                )
+        return self.__llm_bentomodel__
 
     @property
     def tag(self) -> bentoml.Tag:
@@ -449,7 +525,6 @@ class LLM(LLMInterface):
         method_configs: dict[str, ModelSignatureDict | ModelSignature] | None = None,
         embedded: bool = False,
         scheduling_strategy: type[Strategy] | None = None,
-        **kwargs: t.Any,
     ) -> bentoml.Runner:
         """Convert this LLM into a Runner.
 
@@ -461,7 +536,7 @@ class LLM(LLMInterface):
             method_configs: The method configs for the runner.
             strategy: The strategy to use for this runner.
             embedded: Whether to run this runner in embedded mode.
-            kwargs: Any additional kwargs will be then passed to LLM. Consult LLM.__init__() for more information.
+            scheduling_strategy: Whether to create a custom scheduling strategy for this Runner.
         """
 
         if name is None:
@@ -490,6 +565,14 @@ class LLM(LLMInterface):
             SUPPORTED_RESOURCES = ("nvidia.com/gpu", "cpu")
             SUPPORTS_CPU_MULTI_THREADING = True
 
+            llm_type: str
+            identifying_params: dict[str, t.Any]
+
+            def __init_subclass__(cls, **kwargs: t.Any):
+                cls.llm_type = self.llm_type
+                cls.identifying_params = self.identifying_params
+                super().__init_subclass__(**kwargs)
+
             @bentoml.Runnable.method(
                 batchable=generate_sig.batchable,
                 batch_dim=generate_sig.batch_dim,
@@ -508,7 +591,7 @@ class LLM(LLMInterface):
             def generate_iterator(__self, prompt: str, **kwds: t.Any) -> t.Iterator[t.Any]:
                 yield self.generate_iterator(prompt, **kwds)
 
-        if self._requires_gpu:
+        if self.__openllm_requires_gpu__:
             _supported_resources = ("nvidia.com/gpu",)
         else:
             _supported_resources = ("nvidia.com/gpu", "cpu")
@@ -519,7 +602,6 @@ class LLM(LLMInterface):
                 (_Runnable,),
                 {"SUPPORTED_RESOURCES": _supported_resources},
             ),
-            runnable_init_params=kwargs,
             name=name,
             models=models,
             max_batch_size=max_batch_size,

@@ -37,7 +37,9 @@ EOD = "<|endoftext|>"
 FIM_INDICATOR = "<FILL_HERE>"
 
 
-class StarCoder(openllm.LLM, _internal=True):
+class StarCoder(openllm.LLM):
+    __openllm_internal__ = True
+
     default_model = "bigcode/starcoder"
 
     requirements = ["bitandbytes"]
@@ -90,6 +92,38 @@ class StarCoder(openllm.LLM, _internal=True):
             # NOTE: We need to free the cache after saving here so that we can load it back later on.
             gc.collect()
             torch.cuda.empty_cache()
+
+    def preprocess_parameters(
+        self,
+        prompt: str,
+        temperature: float | None = None,
+        top_p: float | None = None,
+        max_new_tokens: int | None = None,
+        repetition_penalty: float | None = None,
+        **kwargs: t.Any,
+    ) -> tuple[str, dict[str, t.Any]]:
+        fim_mode = FIM_INDICATOR in prompt
+        prefix, suffix = None, None
+        if fim_mode:
+            try:
+                prefix, suffix = prompt.split(FIM_INDICATOR)
+            except Exception as err:
+                logger.error("Error while processing prompt with FIM mode:\n", exc_info=err)
+                raise ValueError(f"Only one {FIM_INDICATOR} allowed in prompt") from err
+            prompt = f"{FIM_PREFIX}{prefix}{FIM_SUFFIX}{suffix}{FIM_MIDDLE}"
+
+        return prompt, self.config.with_options(
+            top_p=top_p,
+            temperature=temperature,
+            max_new_tokens=max_new_tokens,
+            pad_token_id=49152,  # XXX: This value is currently a hack, need more investigate why the default starcoder doesn't include the same value as santacoder EOD
+            repetition_penalty=repetition_penalty,
+            do_sample=True,
+            **kwargs,
+        ).to_generation_config(return_as_dict=True)
+
+    def postprocess_parameters(self, prompt: str, generation_result: t.Sequence[str], **_: t.Any) -> str:
+        return generation_result[0]
 
     @torch.inference_mode()
     def generate(

@@ -290,7 +290,7 @@ def start_model_command(
     )
 
     try:
-        config.check_for_gpu(envvar)
+        config.check_if_gpu_is_available(envvar)
     except openllm.exceptions.GpuNotAvailableError:
         # NOTE: The model requires GPU, therefore we will return a dummy command
         model_command_decr.update({"short_help": "(Disabled because there is no GPU available)"})

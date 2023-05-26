@@ -38,7 +38,9 @@ class InvalidScoreLogitsProcessor(LogitsProcessor):
         return scores
 
 
-class ChatGLM(openllm.LLM, _internal=True):
+class ChatGLM(openllm.LLM):
+    __openllm_internal__ = True
+
     default_model = "THUDM/chatglm-6b-int4"
 
     requirements = ["cpm_kernels", "sentencepiece"]
@@ -46,9 +48,6 @@ class ChatGLM(openllm.LLM, _internal=True):
     variants = ["THUDM/chatglm-6b", "THUDM/chatglm-6b-int8", "THUDM/chatglm-6b-int4"]
 
     device = torch.device("cuda")
-
-    def model_post_init(self):
-        self.history: list[tuple[str, str]] = []
 
     def import_model(
         self, pretrained: str, tag: bentoml.Tag, *model_args: t.Any, tokenizer_kwds: dict[str, t.Any], **kwds: t.Any
@@ -64,6 +63,43 @@ class ChatGLM(openllm.LLM, _internal=True):
             },
         )
 
+    def preprocess_parameters(
+        self,
+        prompt: str,
+        max_new_tokens: int | None = None,
+        num_beams: int | None = None,
+        top_p: float | None = None,
+        temperature: float | None = None,
+        chat_history: list[str] | None = None,
+        **kwargs: t.Any,
+    ) -> tuple[str, dict[str, t.Any]]:
+        prompt_text = ""
+        if chat_history is not None:
+            for i, (old_query, response) in enumerate(chat_history):
+                prompt_text += f"[Round {i}]\n问：{old_query}\n答：{response}\n"
+            prompt_text += f"[Round {len(chat_history)}]\n问：{prompt}\n答："
+        else:
+            prompt_text = prompt
+
+        generation_config = self.config.with_options(
+            max_new_tokens=max_new_tokens,
+            num_beams=num_beams,
+            top_p=top_p,
+            temperature=temperature,
+            do_sample=True,
+            **kwargs,
+        ).to_generation_config(return_as_dict=True)
+
+        return prompt_text, generation_config
+
+    def postprocess_parameters(
+        self, prompt: str, generation_result: str, *, chat_history: list[tuple[str, str]] | None = None, **kwargs: t.Any
+    ):
+        if self.config.retain_history:
+            assert chat_history is not None, "'retain_history' is True while there is no history provided."
+            chat_history.append((prompt, generation_result))
+        return generation_result
+
     @torch.inference_mode()
     def generate(
         self,
@@ -73,7 +109,7 @@ class ChatGLM(openllm.LLM, _internal=True):
         top_p: float | None = None,
         temperature: float | None = None,
         **kwargs: t.Any,
-    ) -> t.Any:
+    ) -> str:
         self.model.eval()
 
         # Only use half precision if the model is not yet quantized
@@ -82,15 +118,10 @@ class ChatGLM(openllm.LLM, _internal=True):
 
         self.model.cuda()
 
-        logit_processor = LogitsProcessorList()
+        logit_processor: list[LogitsProcessor] = LogitsProcessorList()
         logit_processor.append(InvalidScoreLogitsProcessor())
 
-        prompt_text = ""
-        for i, (old_query, response) in enumerate(self.history):
-            prompt_text += f"[Round {i}]\n问：{old_query}\n答：{response}\n"
-        prompt_text += f"[Round {len(self.history)}]\n问：{prompt}\n答："
-
-        inputs = self.tokenizer([prompt_text], return_tensors="pt").to(self.device)
+        inputs = self.tokenizer([prompt], return_tensors="pt").to(self.device)
         outputs = self.model.generate(
             **inputs,
             generation_config=self.config.with_options(
@@ -105,7 +136,4 @@ class ChatGLM(openllm.LLM, _internal=True):
         )
         outputs = outputs.tolist()[0][len(inputs["input_ids"][0]) :]
         response = self.tokenizer.decode(outputs)
-        response = self.model.process_response(response)
-        if self.config.retain_history:
-            self.history.append((prompt, response))
-        return self.history
+        return self.model.process_response(response)
