@@ -53,7 +53,7 @@ dependencies = [
     "protobuf",
     "grpcio",
     "grpcio-health-checking",
-    "opentelemetry-instrumentation-grpc==0.35b0",
+    "opentelemetry-instrumentation-grpc==0.39b0",
     "grpcio-reflection",
     # bentoml[torch] includes torch and transformers
     "transformers[torch,accelerate,tokenizers,onnxruntime,onnx]>=4.29.0",
