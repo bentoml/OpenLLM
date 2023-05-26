@@ -47,7 +47,7 @@ classifiers = [
 dependencies = [
     # bentoml[io] includes pydantic, PIL, filetype, pandas and numpy
     # bentoml[grpc,grpc-reflection] include grpcio, grpcio-reflection
-    "bentoml@git+https://github.com/bentoml/bentoml.git@main",
+    "bentoml",
     "filetype",
     "Pillow",
     "protobuf",
@@ -61,7 +61,7 @@ dependencies = [
     "orjson",
     "inflection",
     # pydantic 2 ftw
-    "pydantic@git+https://github.com/pydantic/pydantic.git@main",
+    "pydantic",
     # astor for generating service file.
     "astor",
 ]
