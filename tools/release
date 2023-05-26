@@ -13,7 +13,7 @@ echo "Bumping version ..." && hatch version micro
 
 NEW_VERSION=$(hatch version)
 
-git add src/openllm/__about__.py && git commit -sm "infra: prepare for release ${NEW_VERSION}"
+git add src/openllm/__about__.py && git commit -sm "infra: prepare for release ${NEW_VERSION} [generated]"
 git push origin main
 
 echo "Building artifacts for releasing..." && hatch build
@@ -21,3 +21,8 @@ echo "Building artifacts for releasing..." && hatch build
 echo "Releasing version ${NEW_VERSION}" && hatch release
 
 echo "Finish releasing version ${NEW_VERSION}"
+
+echo "Bumping version to dev" && hatch version dev
+
+git add src/openllm/__about__.py && git commit -sm "infra: bump to dev version of ${NEW_VERSION} [generated]"
+git push origin main
