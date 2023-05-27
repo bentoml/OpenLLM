@@ -1,28 +1,35 @@
 #!/usr/bin/env bash
 
-echo "Releasing new version."
+set -e
 
-! [ -x hatch ] && (
-    echo "Make sure to have hatch available: 'pip install hatch'"
+if ! command -v hatch > /dev/null 2>&1; then
+    echo "Hatch is not installed. Make sure it is available: 'pip install hatch'. Aborting..."
     exit 1
-)
+fi
 
 echo "Cleaning previously built artifacts..." && hatch clean
 
-echo "Bumping version ..." && hatch version micro
+CURRENT_VERSION=$(hatch version)
 
-NEW_VERSION=$(hatch version)
+if [[ $CURRENT_VERSION =~ \.dev ]]; then
+    RELEASE_VERSION="${CURRENT_VERSION%%.dev*}"
+else
+    echo "Current version is not properly setup as dev version. Aborting..."
+    exit 1
+fi
 
-git add src/openllm/__about__.py && git commit -sm "infra: prepare for release ${NEW_VERSION} [generated]"
+echo "Releasing version $RELEASE_VERSION..." && hatch version "${RELEASE_VERSION}"
+
+git add src/openllm/__about__.py && git commit -sm "infra: prepare for release ${RELEASE_VERSION} [generated]"
 git push origin main
 
 echo "Building artifacts for releasing..." && hatch build
 
-echo "Releasing version ${NEW_VERSION}" && hatch release
+echo "Releasing version ${RELEASE_VERSION}" && hatch publish
 
-echo "Finish releasing version ${NEW_VERSION}"
+echo "Finish releasing version ${RELEASE_VERSION}"
 
-echo "Bumping version to dev" && hatch version dev
+echo "Bumping version to dev..." && hatch version dev
 
-git add src/openllm/__about__.py && git commit -sm "infra: bump to dev version of ${NEW_VERSION} [generated]"
+git add src/openllm/__about__.py && git commit -sm "infra: bump to dev version of $(hatch version) [generated]"
 git push origin main
