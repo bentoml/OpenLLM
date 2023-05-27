@@ -23,12 +23,18 @@ import functools
 import inspect
 import logging
 import os
+import sys
 import typing as t
 
 import bentoml
 import click
 import inflection
+import orjson
+import rich.box
+from click.utils import make_default_short_help
 from click_option_group import optgroup
+from rich.console import Console
+from rich.table import Table
 
 import openllm
 
@@ -60,6 +66,16 @@ OPENLLM_FIGLET = """\
 ╚██████╔╝██║     ███████╗██║ ╚████║███████╗███████╗██║ ╚═╝ ██║
  ╚═════╝ ╚═╝     ╚══════╝╚═╝  ╚═══╝╚══════╝╚══════╝╚═╝     ╚═╝
 """
+
+_console = Console()
+
+output_decorator = click.option(
+    "-o",
+    "--output",
+    type=click.Choice(["json", "pretty", "porcelain"]),
+    default="pretty",
+    help="Showing output type. Default to 'pretty'",
+)
 
 
 class OpenLLMCommandGroup(click.Group):
@@ -126,8 +142,6 @@ class OpenLLMCommandGroup(click.Group):
 
         def wrapper(f: F[P]) -> click.Group:
             from gettext import gettext as _
-
-            from click.utils import make_default_short_help
 
             name = kwargs.pop("name", f.__name__)
             group = super(OpenLLMCommandGroup, self).group(name, *args, **kwargs)(f)
@@ -398,7 +412,6 @@ start_grpc = functools.partial(_start, _serve_grpc=True)
 
 
 @click.group(cls=openllm.cli.OpenLLMCommandGroup, context_settings=_CONTEXT_SETTINGS)
-@click.version_option(openllm.__version__, "-v", "--version")
 def cli():
     """
     \b
@@ -417,6 +430,19 @@ def cli():
     \b
         - Powered by BentoML 🍱 + HuggingFace 🤗
     """
+
+
+@cli.command()
+@output_decorator
+def version(output: t.Literal["json", "pretty", "porcelain"]):
+    """Return current OpenLLM version."""
+    if output == "pretty":
+        _console.print(f"OpenLLM version: {openllm.__version__}")
+    elif output == "json":
+        _console.print(orjson.dumps({"version": openllm.__version__}, option=orjson.OPT_INDENT_2).decode())
+    else:
+        click.echo(openllm.__version__)
+    sys.exit(0)
 
 
 @cli.group(cls=OpenLLMCommandGroup, context_settings=_CONTEXT_SETTINGS, aliases=["start-http"], name="start")
@@ -483,14 +509,24 @@ def bundle(model_name: str, pretrained: str | None, overwrite: bool):
 
 
 @cli.command(name="models")
-def list_supported_models():
+@output_decorator
+def list_supported_models(output: t.Literal["json", "pretty", "porcelain"]):
     """
     List all supported models.
     """
-    click.secho(
-        f"\nSupported LLM: [{', '.join(map(lambda key: inflection.dasherize(key), openllm.CONFIG_MAPPING.keys()))}]",
-        fg="blue",
-    )
+    models = tuple(inflection.dasherize(key) for key in openllm.CONFIG_MAPPING.keys())
+    if output == "pretty":
+        table = Table(title="Supported LLMs", box=rich.box.SQUARE, show_lines=True)
+        table.add_column("LLM")
+        table.add_column("Description")
+        for m in models:
+            table.add_row(m, inspect.cleandoc(openllm.AutoConfig.for_model(m).__doc__ or "(No description)"))
+        _console.print(table)
+    elif output == "json":
+        _console.print(orjson.dumps({"supported": models}, option=orjson.OPT_INDENT_2).decode())
+    else:
+        click.echo("\n".join(models))
+    sys.exit(0)
 
 
 if __name__ == "__main__":
