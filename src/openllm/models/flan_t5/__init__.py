@@ -48,10 +48,8 @@ else:
 
 
 if t.TYPE_CHECKING:
-    from .configuration_flan_t5 import \
-        DEFAULT_PROMPT_TEMPLATE as DEFAULT_PROMPT_TEMPLATE
-    from .configuration_flan_t5 import \
-        START_FLAN_T5_COMMAND_DOCSTRING as START_FLAN_T5_COMMAND_DOCSTRING
+    from .configuration_flan_t5 import DEFAULT_PROMPT_TEMPLATE as DEFAULT_PROMPT_TEMPLATE
+    from .configuration_flan_t5 import START_FLAN_T5_COMMAND_DOCSTRING as START_FLAN_T5_COMMAND_DOCSTRING
     from .configuration_flan_t5 import FlanT5Config as FlanT5Config
 
     try:

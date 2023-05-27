@@ -19,8 +19,7 @@ import typing as t
 
 import openllm
 
-from .configuration_dolly_v2 import (DEFAULT_PROMPT_TEMPLATE, END_KEY,
-                                     INTRO_BLURB, RESPONSE_KEY)
+from .configuration_dolly_v2 import DEFAULT_PROMPT_TEMPLATE, END_KEY, INTRO_BLURB, RESPONSE_KEY
 
 if t.TYPE_CHECKING:
     import torch
@@ -70,7 +69,7 @@ class DollyV2(openllm.LLM):
         prompt: str,
         max_new_tokens: int | None = None,
         temperature: float | None = None,
-        top_k: int| None = None,
+        top_k: int | None = None,
         top_p: float | None = None,
         **kwargs: t.Any,
     ) -> tuple[str, dict[str, t.Any]]:
@@ -97,7 +96,7 @@ class DollyV2(openllm.LLM):
         prompt: str,
         max_new_tokens: int | None = None,
         temperature: float | None = None,
-        top_k: int| None = None,
+        top_k: int | None = None,
         top_p: float | None = None,
         **kwargs: t.Any,
     ):

@@ -16,6 +16,8 @@ from click import ParamType
 from pydantic import BaseModel
 from pydantic._internal._utils import lenient_issubclass
 
+from . import LazyType
+
 
 def parse_default(default: t.Any, field_type: t.Any) -> t.Any:
     """Converts pydantic defaults into click default types.
@@ -35,7 +37,9 @@ def parse_default(default: t.Any, field_type: t.Any) -> t.Any:
         return default.name
     # for modules and such, the name is returned
     if is_typing(field_type):
-        module_name = inspect.getmodule(default).__name__
+        module = inspect.getmodule(default)
+        assert module is not None
+        module_name = module.__name__
         return f"{module_name}.{default.__name__}"
     # for dictionary types, the default is transformed into string
     if is_mapping(field_type):
@@ -177,7 +181,7 @@ def parse_single_arg(arg: type) -> ParamType:
     return arg
 
 
-def parse_container_default(default: t.Any) -> tuple[t.Any, ...] | None:
+def parse_container_default(default: t.Sequence[t.Any | BaseModel]) -> tuple[t.Any, ...]:
     """Parses the default type of container types.
 
     Args:
@@ -187,7 +191,7 @@ def parse_container_default(default: t.Any) -> tuple[t.Any, ...] | None:
         tuple[types.Any, ...] | None: JSON version if a pydantic model, else the current default.
     """
     assert issubclass(type(default), t.Sequence)
-    return tuple(v.model_validate_json() if isinstance(v, BaseModel) else v for v in default)
+    return tuple(v.model_dump_json() if isinstance(v, BaseModel) else v for v in default)
 
 
 class BytesType(ParamType):
@@ -210,7 +214,7 @@ class JsonType(ParamType):
         self.should_load = should_load
 
     def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> t.Any:
-        if isinstance(value, t.Mapping) or not self.should_load:
+        if LazyType[t.Mapping[str, str]](t.Mapping).isinstance(value) or not self.should_load:
             return value
         try:
             return orjson.loads(value)

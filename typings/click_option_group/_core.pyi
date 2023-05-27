@@ -1,6 +1,5 @@
 from collections.abc import Callable
-from typing import (Any, Dict, List, Mapping, Optional, Sequence, Set, Tuple,
-                    Union)
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Set, Tuple, Union
 
 import click
 

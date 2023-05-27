@@ -56,7 +56,12 @@ class StarCoder(openllm.LLM):
     }
 
     def import_model(
-        self, pretrained: str, tag: bentoml.Tag, *model_args: t.Any, tokenizer_kwds: dict[str, t.Any], **kwds: t.Any
+        self,
+        pretrained: str,
+        tag: bentoml.Tag,
+        *model_args: t.Any,
+        tokenizer_kwds: dict[str, t.Any],
+        **kwds: t.Any,
     ) -> bentoml.Model:
         trust_remote_code = kwds.pop("trust_remote_code", True)
         kwds.pop("quantize", "bitandbytes")
@@ -116,7 +121,9 @@ class StarCoder(openllm.LLM):
             top_p=top_p,
             temperature=temperature,
             max_new_tokens=max_new_tokens,
-            pad_token_id=49152,  # XXX: This value is currently a hack, need more investigate why the default starcoder doesn't include the same value as santacoder EOD
+            # XXX: This value is currently a hack, need more investigate why the
+            # default starcoder doesn't include the same value as santacoder EOD
+            pad_token_id=49152,
             repetition_penalty=repetition_penalty,
             **kwargs,
         ).model_dump(flatten=True)
@@ -152,11 +159,13 @@ class StarCoder(openllm.LLM):
                 top_p=top_p,
                 temperature=temperature,
                 max_new_tokens=max_new_tokens,
-                pad_token_id=49152,  # XXX: This value is currently a hack, need more investigate why the default starcoder doesn't include the same value as santacoder EOD
+                # XXX: This value is currently a hack, need more investigate why the default starcoder
+                # doesn't include the same value as santacoder EOD
+                pad_token_id=49152,
                 repetition_penalty=repetition_penalty,
                 **kwargs,
             ).to_generation_config(),
         )
-        # TODO: We will probably want to return the tokenizer here so that we can manually process thisj
-        # return [self.tokenizer.decode(result_tensor[0], skip_special_tokens=False, clean_up_tokenization_spaces=False)]
+        # TODO: We will probably want to return the tokenizer here so that we can manually process this
+        # return (skip_special_tokens=False, clean_up_tokenization_spaces=False))
         return [self.tokenizer.decode(result_tensor[0])]

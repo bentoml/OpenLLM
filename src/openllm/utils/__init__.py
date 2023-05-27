@@ -28,17 +28,18 @@ import typing as t
 
 import bentoml
 import inflection
+from bentoml._internal.types import LazyType as LazyType
+
 # NOTE: The following exports useful utils from bentoml
 from bentoml._internal.utils import LazyLoader as LazyLoader
-from bentoml._internal.utils import bentoml_cattr as cattr
-from bentoml._internal.utils import \
-    copy_file_to_fs_folder as copy_file_to_fs_folder
+from bentoml._internal.utils import bentoml_cattr as bentoml_cattr
+from bentoml._internal.utils import copy_file_to_fs_folder as copy_file_to_fs_folder
 from bentoml._internal.utils import pkg as pkg
 from bentoml._internal.utils import reserve_free_port as reserve_free_port
-from bentoml._internal.utils import \
-    resolve_user_filepath as resolve_user_filepath
+from bentoml._internal.utils import resolve_user_filepath as resolve_user_filepath
 
 from . import codegen as codegen
+from . import dantic as dantic
 from .import_utils import DummyMetaclass as DummyMetaclass
 from .import_utils import is_cpm_kernels_available as is_cpm_kernels_available
 from .import_utils import is_flax_available as is_flax_available
@@ -116,7 +117,7 @@ def generate_tags(
         if model_version is None:
             logger.warning(
                 "Given %s from '%s' doesn't contain a commit hash. We will generate the tag without specific version.",
-                config.__class__,
+                t.cast("type[transformers.PretrainedConfig]", config.__class__),
                 model_name_or_path,
             )
     tag_str = (
@@ -130,7 +131,8 @@ def generate_tags(
 class LazyModule(types.ModuleType):
     """
     Module class that surfaces all objects but only performs associated imports when the objects are requested.
-    This is a direct port from transformers.utils.import_utils._LazyModule for backwards compatibility with transformers <4.18
+    This is a direct port from transformers.utils.import_utils._LazyModule for
+    backwards compatibility with transformers < 4.18
 
     This is an extension a more powerful LazyLoader.
     """

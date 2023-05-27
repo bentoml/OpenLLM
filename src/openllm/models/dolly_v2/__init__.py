@@ -31,10 +31,8 @@ else:
     _import_structure["modeling_dolly_v2"] = ["DollyV2"]
 
 if t.TYPE_CHECKING:
-    from .configuration_dolly_v2 import \
-        DEFAULT_PROMPT_TEMPLATE as DEFAULT_PROMPT_TEMPLATE
-    from .configuration_dolly_v2 import \
-        START_DOLLY_V2_COMMAND_DOCSTRING as START_DOLLY_V2_COMMAND_DOCSTRING
+    from .configuration_dolly_v2 import DEFAULT_PROMPT_TEMPLATE as DEFAULT_PROMPT_TEMPLATE
+    from .configuration_dolly_v2 import START_DOLLY_V2_COMMAND_DOCSTRING as START_DOLLY_V2_COMMAND_DOCSTRING
     from .configuration_dolly_v2 import DollyV2Config as DollyV2Config
 
     try:

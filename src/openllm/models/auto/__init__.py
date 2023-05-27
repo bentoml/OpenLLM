@@ -52,8 +52,7 @@ else:
 
 if t.TYPE_CHECKING:
     from .configuration_auto import CONFIG_MAPPING as CONFIG_MAPPING
-    from .configuration_auto import \
-        CONFIG_MAPPING_NAMES as CONFIG_MAPPING_NAMES
+    from .configuration_auto import CONFIG_MAPPING_NAMES as CONFIG_MAPPING_NAMES
     from .configuration_auto import AutoConfig as AutoConfig
 
     try:
@@ -72,10 +71,8 @@ if t.TYPE_CHECKING:
     except openllm.exceptions.MissingDependencyError:
         pass
     else:
-        from .modeling_flax_auto import \
-            MODEL_FLAX_MAPPING as MODEL_FLAX_MAPPING
-        from .modeling_flax_auto import \
-            MODEL_FLAX_MAPPING_NAMES as MODEL_FLAX_MAPPING_NAMES
+        from .modeling_flax_auto import MODEL_FLAX_MAPPING as MODEL_FLAX_MAPPING
+        from .modeling_flax_auto import MODEL_FLAX_MAPPING_NAMES as MODEL_FLAX_MAPPING_NAMES
         from .modeling_flax_auto import AutoFlaxLLM as AutoFlaxLLM
 
     try:
@@ -85,8 +82,7 @@ if t.TYPE_CHECKING:
         pass
     else:
         from .modeling_tf_auto import MODEL_TF_MAPPING as MODEL_TF_MAPPING
-        from .modeling_tf_auto import \
-            MODEL_TF_MAPPING_NAMES as MODEL_TF_MAPPING_NAMES
+        from .modeling_tf_auto import MODEL_TF_MAPPING_NAMES as MODEL_TF_MAPPING_NAMES
         from .modeling_tf_auto import AutoTFLLM as AutoTFLLM
 else:
     import sys

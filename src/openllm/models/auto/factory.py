@@ -128,7 +128,7 @@ class _BaseAutoLLMClass:
             config_class: The configuration corresponding to the model to register.
             llm_class: The runnable to register.
         """
-        if hasattr(llm_class, "config_class") and llm_class.config_class != config_class:
+        if hasattr(llm_class, "config_class") and llm_class.config_class is not config_class:
             raise ValueError(
                 "The model class you are passing has a `config_class` attribute that is not consistent with the "
                 f"config class you passed (model has {llm_class.config_class} and you passed {config_class}. Fix "

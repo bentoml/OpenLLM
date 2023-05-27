@@ -49,7 +49,7 @@ class GenerationInput(pydantic.BaseModel):
     def model_dump(self, **kwargs: t.Any):
         """Override the default model_dump to make sure llm_config is correctly flattened."""
         dumped = super().model_dump(**kwargs)
-        dumped['llm_config'] = self.llm_config.model_dump(flatten=True)
+        dumped["llm_config"] = self.llm_config.model_dump(flatten=True)
         return dumped
 
 

@@ -33,6 +33,11 @@ if t.TYPE_CHECKING:
     from black.lines import LinesBlock
     from fs.base import FS
 
+    class ModifyNodeProtocol(t.Protocol):
+        def __call__(self, node: Node, *args: t.Any, **kwargs: t.Any) -> None:
+            ...
+
+
 logger = logging.getLogger(__name__)
 
 OPENLLM_MODEL_NAME = {"# openllm: model name"}
@@ -59,11 +64,11 @@ class ModelFormatter(string.Formatter):
         return leaf.type == token.STRING and self.can_format(leaf.value)
 
 
-def recurse_modify_node(node: Node | Leaf, node_type: int, model_name: str) -> Node | None:
+def recurse_modify_node(node: Node | Leaf, node_type: int, callables: ModifyNodeProtocol, *args: t.Any) -> Node | None:
     if isinstance(node, Node) and node.type == node_type:
-        modify_node_with_comments(node, model_name)
+        callables(node, *args)
     for child in node.children:
-        recurse_modify_node(child, node_type, model_name)
+        recurse_modify_node(child, node_type, callables, *args)
 
 
 def modify_node_with_comments(node: Node, model_name: str):
@@ -108,7 +113,7 @@ def _parse_service_file(src_contents: str, model_name: str, mode: Mode) -> str:
         for comment in list_comments(leaf.prefix, is_endmarker=False):
             if comment.value in OPENLLM_MODEL_NAME:
                 assert leaf.prev_sibling is not None, "'# openllm: model name' line must not be modified."
-                recurse_modify_node(leaf.prev_sibling, syms.arglist, model_name)
+                recurse_modify_node(leaf.prev_sibling, syms.arglist, modify_node_with_comments, model_name)
 
     # NOTE: The below is the same as black.format_str
     dst_blocks: list[LinesBlock] = []

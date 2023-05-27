@@ -1,8 +1,8 @@
 {
   "name": "openllm",
-  "version": "0.0.2",
+  "version": "0.0.7.dev0",
   "description": "OpenLLM: Your one stop-and-go solution for serving Large Language Model",
-  "repository": "git@github.com:bentoml/OpenLLM.git",
+  "repository": "git@github.com:llmsys/OpenLLM.git",
   "author": "Aaron Pham <29749331+aarnphm@users.noreply.github.com>",
   "license": "Apache 2.0",
   "engines": {
@@ -13,7 +13,7 @@
   ],
   "private": true,
   "devDependencies": {
-    "pyright": "^1.1.306",
+    "pyright": "^1.1.310",
     "typescript": "^5.0.4"
   },
   "dependencies": {

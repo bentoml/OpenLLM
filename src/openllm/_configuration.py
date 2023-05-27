@@ -342,7 +342,8 @@ class GenerationConfig(pydantic.BaseModel):
     bos_token_id: t.Optional[int] = pydantic.Field(None, description="The id of the *beginning-of-sequence* token.")
     eos_token_id: t.Optional[t.Union[int, t.List[int]]] = pydantic.Field(
         None,
-        description="The id of the *end-of-sequence* token. Optionally, use a list to set multiple *end-of-sequence* tokens.",
+        description="""The id of the *end-of-sequence* token. Optionally, use a list to set 
+        multiple *end-of-sequence* tokens.""",
     )
 
     # NOTE: Generation parameters exclusive to encoder-decoder models

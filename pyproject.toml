@@ -90,8 +90,10 @@ dependencies = [
     "pytest-mock",
     "pytest-randomly",
     "pytest-rerunfailures",
+    "pre-commit",
 ]
 [tool.hatch.envs.default.scripts]
+setup = "pre-commit install"
 test = "pytest {args:tests}"
 test-cov = "coverage run -m pytest {args:tests}"
 cov-report = ["- coverage combine", "coverage report"]
@@ -100,15 +102,20 @@ cov = ["test-cov", "cov-report"]
 [[tool.hatch.envs.all.matrix]]
 python = ["3.8", "3.9", "3.10", "3.11"]
 
-[tool.hatch.envs.lint]
+[tool.hatch.envs.dev]
 detached = true
-dependencies = ["ruff>=0.0.243", "pyright"]
+dependencies = ["ruff>=0.0.243", "pyright", "hatch"]
 
-[tool.hatch.envs.lint.scripts]
+[tool.hatch.envs.dev.scripts]
 typing = "pyright {args:src/openllm tests}"
 style = ["ruff {args:.}", "black --check --diff {args:.}"]
-fmt = ["black {args:.}", "ruff --fix {args:.}", "style"]
-all = ["style", "typing"]
+fmt = [
+    "black {args:.}",
+    "black --pyi {args:typings/}",
+    "ruff --fix {args:.}",
+    "style",
+]
+all = ["fmt", "typing"]
 
 [tool.pytest.ini_options]
 addopts = ["-rfEX", "-pno:warnings"]
@@ -188,6 +195,11 @@ strictDictionaryInference = true
 strictSetInference = true
 strictParameterNoneValue = true
 enableTypeIgnoreComments = true
+reportMissingImports = "none"
+reportMissingTypeStubs = "warning"
+reportMissingModuleSource = "warning"
+reportUnknownVariableType = "warning"
+reportUnknownMemberType = "warning"
 
 
 [tool.coverage.run]

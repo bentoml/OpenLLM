@@ -31,10 +31,8 @@ else:
     _import_structure["modeling_starcoder"] = ["StarCoder"]
 
 if t.TYPE_CHECKING:
-    from .configuration_starcoder import \
-        DEFAULT_PROMPT_TEMPLATE as DEFAULT_PROMPT_TEMPLATE
-    from .configuration_starcoder import \
-        START_STARCODER_COMMAND_DOCSTRING as START_STARCODER_COMMAND_DOCSTRING
+    from .configuration_starcoder import DEFAULT_PROMPT_TEMPLATE as DEFAULT_PROMPT_TEMPLATE
+    from .configuration_starcoder import START_STARCODER_COMMAND_DOCSTRING as START_STARCODER_COMMAND_DOCSTRING
     from .configuration_starcoder import StarCoderConfig as StarCoderConfig
 
     try:

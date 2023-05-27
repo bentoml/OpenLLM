@@ -29,7 +29,7 @@ import openllm
 
 from ._configuration import ModelSignature
 from .exceptions import ForbiddenAttributeError, OpenLLMException
-from .utils import cattr
+from .utils import bentoml_cattr
 
 if t.TYPE_CHECKING:
     import transformers
@@ -80,7 +80,8 @@ def import_model(
 ):
     """Auto detect model type from given model_name and import it to bentoml's model store.
 
-    For all kwargs, it will be parsed into `transformers.AutoConfig.from_pretrained` first, returning all of the unused kwargs.
+    For all kwargs, it will be parsed into `transformers.AutoConfig.from_pretrained` first,
+    returning all of the unused kwargs.
     The unused kwargs then parsed directly into AutoModelForSeq2SeqLM or AutoModelForCausalLM (+ TF, Flax variants).
     For all tokenizer kwargs, make sure to prefix it with `_tokenizer_` to avoid confusion.
 
@@ -349,41 +350,45 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
         If you need to overwrite the default ``import_model``, implement the following in your subclass:
 
         ```python
-            def import_model(
-                self,
-                pretrained: str,
-                tag: bentoml.Tag,
-                *args: t.Any,
-                tokenizer_kwds: dict[str, t.Any],
-                **kwargs: t.Any,
-            ):
-                return bentoml.transformers.save_model(
-                    str(tag),
-                    transformers.AutoModelForCausalLM.from_pretrained(
-                        pretrained, device_map="auto", torch_dtype=torch.bfloat16, **kwargs
-                    ),
-                    custom_objects={
-                        "tokenizer": transformers.AutoTokenizer.from_pretrained(
-                            pretrained, padding_size="left", **tokenizer_kwds
-                        )
-                    },
-                )
+        def import_model(
+            self,
+            pretrained: str,
+            tag: bentoml.Tag,
+            *args: t.Any,
+            tokenizer_kwds: dict[str, t.Any],
+            **kwargs: t.Any,
+        ):
+            return bentoml.transformers.save_model(
+                str(tag),
+                transformers.AutoModelForCausalLM.from_pretrained(
+                    pretrained, device_map="auto", torch_dtype=torch.bfloat16, **kwargs
+                ),
+                custom_objects={
+                    "tokenizer": transformers.AutoTokenizer.from_pretrained(
+                        pretrained, padding_size="left", **tokenizer_kwds
+                    )
+                },
+            )
         ```
 
-        If your import model doesn't require customization, you can simply pass in `import_kwargs` at class level that will be then passed into
-        The default `import_model` implementation. See ``openllm.DollyV2`` for example.
+        If your import model doesn't require customization, you can simply pass in `import_kwargs`
+        at class level that will be then passed into The default `import_model` implementation.
+        See ``openllm.DollyV2`` for example.
 
         ```python
-        dolly_v2_runner = openllm.Runner("dolly-v2", _tokenizer_padding_size="left", torch_dtype=torch.bfloat8, device_map='gpu')
+        dolly_v2_runner = openllm.Runner(
+            "dolly-v2", _tokenizer_padding_size="left", torch_dtype=torch.bfloat8, device_map="gpu"
+        )
         ```
 
-        Note: If you implement your own `import_model`, then `import_kwargs` will be the default kwargs for every load. You can still override those
-        via ``openllm.Runner``.
+        Note: If you implement your own `import_model`, then `import_kwargs` will be the
+        default kwargs for every load. You can still override those via ``openllm.Runner``.
 
         Note that this tag will be generated based on `self.default_model` or the given `pretrained` kwds.
         passed from the __init__ constructor.
 
-        ``llm_post_init`` can also be implemented if you need to do any additional initialization after everything is setup.
+        ``llm_post_init`` can also be implemented if you need to do any
+        additional initialization after everything is setup.
 
         Args:
             pretrained: The pretrained model to use. Defaults to None. It will use 'self.default_model' if None.
@@ -530,7 +535,8 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
 
         Args:
             name: The name of the runner to generate. Optional as this will be generated based on the model_name.
-            models: Any additional ``bentoml.Model`` to be included in this given models. By default, this will be determined from the model_name.
+            models: Any additional ``bentoml.Model`` to be included in this given models.
+                    By default, this will be determined from the model_name.
             max_batch_size: The maximum batch size for the runner.
             max_latency_ms: The maximum latency for the runner.
             method_configs: The method configs for the runner.
@@ -606,7 +612,7 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
             models=models,
             max_batch_size=max_batch_size,
             max_latency_ms=max_latency_ms,
-            method_configs=cattr.unstructure(method_configs),
+            method_configs=bentoml_cattr.unstructure(method_configs),
             embedded=embedded,
             scheduling_strategy=scheduling_strategy,
         )

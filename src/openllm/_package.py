@@ -51,7 +51,8 @@ def build_editable(path: str) -> str | None:
     module_location = pkg.source_locations("openllm")
     if not module_location:
         raise RuntimeError(
-            "Could not find the source location of OpenLLM. Make sure to unset OPENLLM_DEV_BUILD if you are developing OpenLLM."
+            "Could not find the source location of OpenLLM. Make sure to unset"
+            " OPENLLM_DEV_BUILD if you are developing OpenLLM."
         )
     pyproject_path = Path(module_location).parent.parent / "pyproject.toml"
     if os.path.isfile(pyproject_path.__fspath__()):

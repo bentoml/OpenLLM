@@ -69,10 +69,7 @@ class OpenLLMCommandGroup(click.Group):
     def common_params(f: F[P]) -> ClickFunctionProtocol[t.Any]:
         # The following logics is similar to one of BentoMLCommandGroup
 
-        from bentoml._internal.configuration import (DEBUG_ENV_VAR,
-                                                     QUIET_ENV_VAR,
-                                                     set_debug_mode,
-                                                     set_quiet_mode)
+        from bentoml._internal.configuration import DEBUG_ENV_VAR, QUIET_ENV_VAR, set_debug_mode, set_quiet_mode
         from bentoml._internal.log import configure_logging
 
         @click.option("-q", "--quiet", envvar=QUIET_ENV_VAR, is_flag=True, default=False, help="Suppress all output.")

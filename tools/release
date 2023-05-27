@@ -7,6 +7,11 @@ if ! command -v hatch > /dev/null 2>&1; then
     exit 1
 fi
 
+if ! command -v jq > /dev/null 2>&1; then
+    echo "jq is not installed. Make sure it is available. Aborting..."
+    exit 1
+fi
+
 echo "Cleaning previously built artifacts..." && hatch clean
 
 CURRENT_VERSION=$(hatch version)
@@ -20,7 +25,9 @@ fi
 
 echo "Releasing version $RELEASE_VERSION..." && hatch version "${RELEASE_VERSION}"
 
-git add src/openllm/__about__.py && git commit -sm "infra: prepare for release ${RELEASE_VERSION} [generated]"
+jq --arg release_version "${RELEASE_VERSION}" '.version = $release_version' < package.json > package.json.tmp && mv package.json.tmp package.json
+
+git add src/openllm/__about__.py package.json && git commit -sm "infra: prepare for release ${RELEASE_VERSION} [generated]"
 git push origin main
 
 echo "Building artifacts for releasing..." && hatch build
@@ -34,5 +41,7 @@ git push origin "v${RELEASE_VERSION}"
 
 echo "Bumping version to dev..." && hatch version patch && hatch version dev
 
-git add src/openllm/__about__.py && git commit -sm "infra: bump to dev version of $(hatch version) [generated]"
+jq --arg release_version "$(hatch version)" '.version = $release_version' < package.json > package.json.tmp && mv package.json.tmp package.json
+
+git add src/openllm/__about__.py package.json && git commit -sm "infra: bump to dev version of $(hatch version) [generated]"
 git push origin main
