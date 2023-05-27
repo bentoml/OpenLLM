@@ -128,7 +128,6 @@ class StarCoder(openllm.LLM):
     def generate(
         self,
         prompt: str,
-        do_sample: bool = True,
         temperature: float | None = None,
         top_p: float | None = None,
         max_new_tokens: int | None = None,
@@ -148,7 +147,7 @@ class StarCoder(openllm.LLM):
         inputs = t.cast("torch.Tensor", self.tokenizer.encode(prompt, return_tensors="pt")).to(self.device)
         result_tensor = self.model.generate(
             inputs,
-            do_sample=do_sample,
+            do_sample=True,
             generation_config=self.config.with_options(
                 top_p=top_p,
                 temperature=temperature,

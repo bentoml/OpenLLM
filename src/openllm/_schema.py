@@ -44,6 +44,14 @@ class GenerationInput(pydantic.BaseModel):
             llm_config=(llm_config.__class__, ...),
         )
 
+    # XXX: Need more investigation why llm_config.model_dump is not invoked
+    # recursively when GenerationInput.model_dump is called
+    def model_dump(self, **kwargs: t.Any):
+        """Override the default model_dump to make sure llm_config is correctly flattened."""
+        dumped = super().model_dump(**kwargs)
+        dumped['llm_config'] = self.llm_config.model_dump(flatten=True)
+        return dumped
+
 
 class GenerationOutput(pydantic.BaseModel):
     model_config = {"extra": "forbid"}

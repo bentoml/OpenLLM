@@ -65,7 +65,6 @@ class FlanT5(openllm.LLM):
         self,
         prompt: str,
         max_new_tokens: int | None = None,
-        do_sample: bool = True,
         temperature: float | None = None,
         top_k: float | None = None,
         top_p: float | None = None,
@@ -75,7 +74,7 @@ class FlanT5(openllm.LLM):
         input_ids = t.cast("torch.Tensor", self.tokenizer(prompt, return_tensors="pt").input_ids).to(self.device)
         result_tensor = self.model.generate(
             input_ids,
-            do_sample=do_sample,
+            do_sample=True,
             generation_config=self.config.with_options(
                 max_new_tokens=max_new_tokens,
                 temperature=temperature,

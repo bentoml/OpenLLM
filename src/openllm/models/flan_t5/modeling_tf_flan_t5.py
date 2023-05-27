@@ -57,7 +57,6 @@ class TFFlanT5(openllm.LLM):
         self,
         prompt: str,
         max_new_tokens: int | None = None,
-        do_sample: bool = True,
         temperature: float | None = None,
         top_k: float | None = None,
         top_p: float | None = None,
@@ -67,7 +66,7 @@ class TFFlanT5(openllm.LLM):
         input_ids = self.tokenizer(prompt, return_tensors="tf").input_ids
         outputs = self.model.generate(
             input_ids,
-            do_sample=do_sample,
+            do_sample=True,
             generation_config=self.config.with_options(
                 max_new_tokens=max_new_tokens,
                 temperature=temperature,

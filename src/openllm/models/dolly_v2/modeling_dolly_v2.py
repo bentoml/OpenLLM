@@ -81,7 +81,6 @@ class DollyV2(openllm.LLM):
             temperature=temperature,
             top_k=top_k,
             top_p=top_p,
-            do_sample=True,
             **kwargs,
         ).model_dump(flatten=True)
 
