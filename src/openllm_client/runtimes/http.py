@@ -23,7 +23,25 @@ from .base import BaseAsyncClient, BaseClient
 logger = logging.getLogger(__name__)
 
 
-class HTTPClient(BaseClient):
+class HTTPClientMixin:
+    _metadata: dict[str, t.Any]
+
+    @property
+    def model_name(self) -> str:
+        try:
+            return self._metadata["model_name"]
+        except KeyError:
+            raise RuntimeError("Malformed service endpoint. (Possible malicious)")
+
+    @property
+    def framework(self) -> t.Literal["pt", "flax", "tf"]:
+        try:
+            return self._metadata["framework"]
+        except KeyError:
+            raise RuntimeError("Malformed service endpoint. (Possible malicious)")
+
+
+class HTTPClient(HTTPClientMixin, BaseClient):
     def __init__(self, address: str, timeout: int = 30):
         address = address if "://" in address else "http://" + address
         self._host, self._port = urlparse(address).netloc.split(":")
@@ -33,7 +51,7 @@ class HTTPClient(BaseClient):
         return self._cached.health()
 
 
-class AsyncHTTPClient(BaseAsyncClient):
+class AsyncHTTPClient(HTTPClientMixin, BaseAsyncClient):
     def __init__(self, address: str, timeout: int = 30):
         address = address if "://" in address else "http://" + address
         self._host, self._port = urlparse(address).netloc.split(":")

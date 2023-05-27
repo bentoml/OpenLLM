@@ -22,11 +22,33 @@ from .base import BaseAsyncClient, BaseClient
 
 if t.TYPE_CHECKING:
     import grpc_health.v1.health_pb2 as health_pb2
+    from bentoml.grpc.v1.service_pb2 import Response
 
 logger = logging.getLogger(__name__)
 
 
-class GrpcClient(BaseClient, client_type="grpc"):
+class GrpcClientMixin:
+    _metadata: Response
+
+    @property
+    def model_name(self) -> str:
+        try:
+            return self._metadata.json.struct_value.fields["model_name"].string_value
+        except KeyError:
+            raise RuntimeError("Malformed service endpoint. (Possible malicious)")
+
+    @property
+    def framework(self) -> t.Literal["pt", "flax", "tf"]:
+        try:
+            value = self._metadata.json.struct_value.fields["framework"].string_value
+            if value not in ("pt", "flax", "tf"):
+                raise KeyError
+            return value
+        except KeyError:
+            raise RuntimeError("Malformed service endpoint. (Possible malicious)")
+
+
+class GrpcClient(GrpcClientMixin, BaseClient, client_type="grpc"):
     def __init__(self, address: str, timeout: int = 30):
         self._host, self._port = address.split(":")
         super().__init__(address, timeout)
@@ -35,7 +57,7 @@ class GrpcClient(BaseClient, client_type="grpc"):
         return asyncio.run(self._cached.health("bentoml.grpc.v1.BentoService"))
 
 
-class AsyncGrpcClient(BaseAsyncClient, client_type="grpc"):
+class AsyncGrpcClient(GrpcClientMixin, BaseAsyncClient, client_type="grpc"):
     def __init__(self, address: str, timeout: int = 30):
         self._host, self._port = address.split(":")
         super().__init__(address, timeout)

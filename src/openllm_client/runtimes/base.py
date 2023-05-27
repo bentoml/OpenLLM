@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import typing as t
+from abc import abstractmethod
 
 import bentoml
 
@@ -64,18 +65,14 @@ class ClientMixin:
         cls._api_version = api_version
 
     @property
+    @abstractmethod
     def model_name(self) -> str:
-        try:
-            return self._metadata["model_name"]
-        except KeyError:
-            raise RuntimeError("Malformed service endpoint. (Possible malicious)")
+        raise NotImplementedError
 
     @property
+    @abstractmethod
     def framework(self) -> t.Literal["pt", "flax", "tf"]:
-        try:
-            return self._metadata["framework"]
-        except KeyError:
-            raise RuntimeError("Malformed service endpoint. (Possible malicious)")
+        raise NotImplementedError
 
     @property
     def llm(self) -> openllm.LLM:
