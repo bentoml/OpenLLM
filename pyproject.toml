@@ -62,14 +62,14 @@ dependencies = [
     "inflection",
     # pydantic 2 ftw
     "pydantic",
-    # astor for generating service file.
-    "astor",
+    # black for generating service file.
+    "black[jupyter]==23.3.0",
 ]
 
 [project.urls]
-Documentation = "https://github.com/bentoml/open-llm-server#readme"
-Issues = "https://github.com/bentoml/open-llm-server/issues"
-Source = "https://github.com/bentoml/open-llm-server"
+Documentation = "https://github.com/llmsys/openllm#readme"
+Issues = "https://github.com/llmsys/openllm/issues"
+Source = "https://github.com/llmsys/openllm"
 
 [project.scripts]
 openllm = "openllm.cli:cli"
@@ -102,7 +102,8 @@ python = ["3.8", "3.9", "3.10", "3.11"]
 
 [tool.hatch.envs.lint]
 detached = true
-dependencies = ["black>=23.1.0", "mypy>=1.0.0", "ruff>=0.0.243", "pyright"]
+dependencies = ["ruff>=0.0.243", "pyright"]
+
 [tool.hatch.envs.lint.scripts]
 typing = "pyright {args:src/openllm tests}"
 style = ["ruff {args:.}", "black --check --diff {args:.}"]
