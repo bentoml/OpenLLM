@@ -561,7 +561,7 @@ class LLMConfig(pydantic.BaseModel, ABC):
         # filtered out None values
         kwargs = {**generate_kwargs_from_envvar(self), **{k: v for k, v in kwargs.items() if v is not None}}
         if __llm_config__ is not None:
-            kwargs = {**__llm_config__.model_dump(), **kwargs}
+            kwargs = {**kwargs, **__llm_config__.model_dump()}
         kwargs["generation_config"] = {
             **generate_kwargs_from_envvar(self.generation_config),
             **kwargs.get("generation_config", {}),
