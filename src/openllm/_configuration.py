@@ -544,11 +544,14 @@ class LLMConfig(pydantic.BaseModel, ABC):
             except pydantic.ValidationError as e:
                 raise openllm.exceptions.ValidationError(f"Failed to parse configuration to {cls}: {e}") from e
 
-    def model_dump(self, **kwargs: t.Any):
+    def model_dump(self, flatten: bool = False, **kwargs: t.Any):
         try:
             to_dump = super().model_dump(**kwargs)
             generation_config = self.generation_config.model_dump(exclude_none=True)
-            to_dump["generation_config"] = generation_config
+            if not flatten:
+                to_dump["generation_config"] = generation_config
+            else:
+                to_dump.update(generation_config)
             return to_dump
         except pydantic.ValidationError as e:
             raise openllm.exceptions.ValidationError(f"Failed to dump configuration to dict: {e}") from e
@@ -559,13 +562,27 @@ class LLMConfig(pydantic.BaseModel, ABC):
         """
         from_env_ = self.from_env()
         # filtered out None values
-        kwargs = {**generate_kwargs_from_envvar(self), **{k: v for k, v in kwargs.items() if v is not None}}
+        kwargs = {k: v for k, v in kwargs.items() if v is not None}
+        generation_keys = {k for k in kwargs if k in self.generation_config.model_fields}
+
+        generation_kwargs = {k: v for k, v in kwargs.items() if k in generation_keys}
+        config_kwargs = {k: v for k, v in kwargs.items() if k not in generation_keys}
+
+        # NOTE: first set the default config kwargs.
+        # We will always respect envvar as default, then the one that is pass
+        kwargs = {**generate_kwargs_from_envvar(self), **config_kwargs}
+
         if __llm_config__ is not None:
+            # NOTE: Only hit this branch on the server. Client shouldn't use __llm_config__
             kwargs = {**kwargs, **__llm_config__.model_dump()}
+
+        # NOTE: Then we setup generation config values
         kwargs["generation_config"] = {
             **generate_kwargs_from_envvar(self.generation_config),
             **kwargs.get("generation_config", {}),
+            **generation_kwargs,
         }
+
         if from_env_:
             return from_env_.model_construct(**kwargs)
         return self.model_construct(**kwargs)

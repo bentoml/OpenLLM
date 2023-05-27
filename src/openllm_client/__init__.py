@@ -18,27 +18,7 @@ This holds the implementation of the client, which is used to communicate with t
 OpenLLM server. It is used to send requests to the server, and receive responses.
 """
 
-from __future__ import annotations
-
-import logging
-import typing as t
-
-from ._prompt import PromptTemplate
-
-logger = logging.getLogger(__name__)
-
-
-def create(address: str, kind: t.Literal["http", "grpc"] = "http", timeout: int = 30):
-    if kind == "http":
-        from .runtimes.http import HTTPClient as _HTTPClient
-
-        return _HTTPClient(address, timeout)
-    elif kind == "grpc":
-        from .runtimes.grpc import GrpcClient as _GrpcClient
-
-        return _GrpcClient(address, timeout)
-    else:
-        raise ValueError(f"Unknown kind: {kind}. Only 'http' and 'grpc' are supported.")
-
-
-__all__ = ["create", "PromptTemplate"]
+from .runtimes.grpc import AsyncGrpcClient as AsyncGrpcClient
+from .runtimes.grpc import GrpcClient as GrpcClient
+from .runtimes.http import AsyncHTTPClient as AsyncHTTPClient
+from .runtimes.http import HTTPClient as HTTPClient

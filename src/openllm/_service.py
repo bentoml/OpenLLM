@@ -25,6 +25,7 @@ svc = bentoml.Service(name=f"llm-{llm_config.__openllm_start_name__}-service", r
     route="/v1/generate",
 )
 async def generate_v1(qa: openllm.GenerationInput) -> openllm.GenerationOutput:
+    print(qa)
     config = llm_config.with_options(__llm_config__=qa.llm_config).model_dump()
     responses = await runner.generate.async_run(qa.prompt, **config)
     return openllm.GenerationOutput(responses=responses, configuration=config)
@@ -32,4 +33,7 @@ async def generate_v1(qa: openllm.GenerationInput) -> openllm.GenerationOutput:
 
 @svc.api(input=bentoml.io.Text(), output=bentoml.io.JSON(), route="/v1/metadata")
 def metadata_v1(_: str) -> dict[str, t.Any]:
-    return {"model_name": llm_config.__openllm_model_name__}
+    return {
+        "model_name": llm_config.__openllm_model_name__,
+        "framework": openllm.utils.get_framework_env(llm_config.__openllm_model_name__),
+    }

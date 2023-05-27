@@ -118,9 +118,8 @@ class StarCoder(openllm.LLM):
             max_new_tokens=max_new_tokens,
             pad_token_id=49152,  # XXX: This value is currently a hack, need more investigate why the default starcoder doesn't include the same value as santacoder EOD
             repetition_penalty=repetition_penalty,
-            do_sample=True,
             **kwargs,
-        ).to_generation_config(return_as_dict=True)
+        ).model_dump(flatten=True)
 
     def postprocess_parameters(self, prompt: str, generation_result: t.Sequence[str], **_: t.Any) -> str:
         return generation_result[0]

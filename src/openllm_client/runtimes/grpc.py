@@ -18,9 +18,7 @@ import asyncio
 import logging
 import typing as t
 
-import openllm
-
-from .base import BaseClient
+from .base import BaseAsyncClient, BaseClient
 
 if t.TYPE_CHECKING:
     import grpc_health.v1.health_pb2 as health_pb2
@@ -36,18 +34,11 @@ class GrpcClient(BaseClient, client_type="grpc"):
     def health(self) -> health_pb2.HealthCheckResponse:
         return asyncio.run(self._cached.health("bentoml.grpc.v1.BentoService"))
 
-    def query(self, prompt: str, **attrs: t.Any) -> dict[str, t.Any] | list[t.Any]:
-        return_raw_response = attrs.pop("return_raw_response", False)
-        r = openllm.GenerationOutput(
-            **self.call(
-                "generate",
-                openllm.GenerationInput(
-                    prompt=prompt,
-                    llm_config=self.config.with_options(**attrs),
-                ),
-            )
-        )
-        if return_raw_response:
-            return r.model_dump()
 
-        return r.responses
+class AsyncGrpcClient(BaseAsyncClient, client_type="grpc"):
+    def __init__(self, address: str, timeout: int = 30):
+        self._host, self._port = address.split(":")
+        super().__init__(address, timeout)
+
+    async def health(self) -> health_pb2.HealthCheckResponse:
+        return await self._cached.health("bentoml.grpc.v1.BentoService")

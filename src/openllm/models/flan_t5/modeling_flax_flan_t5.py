@@ -46,10 +46,9 @@ class FlaxFlanT5(openllm.LLM):
             temperature=temperature,
             top_k=top_k,
             top_p=top_p,
-            do_sample=True,
             repetition_penalty=repetition_penalty,
             **kwargs,
-        ).to_generation_config(return_as_dict=True)
+        ).model_dump(flatten=True)
 
     def postprocess_parameters(self, prompt: str, generation_result: t.Sequence[str], **_: t.Any) -> str:
         return generation_result[0]

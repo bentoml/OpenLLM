@@ -86,9 +86,8 @@ class ChatGLM(openllm.LLM):
             num_beams=num_beams,
             top_p=top_p,
             temperature=temperature,
-            do_sample=True,
             **kwargs,
-        ).to_generation_config(return_as_dict=True)
+        ).model_dump(flatten=True)
 
         return prompt_text, generation_config
 

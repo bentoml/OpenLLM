@@ -18,9 +18,7 @@ import logging
 import typing as t
 from urllib.parse import urlparse
 
-import openllm
-
-from .base import BaseClient
+from .base import BaseAsyncClient, BaseClient
 
 logger = logging.getLogger(__name__)
 
@@ -34,18 +32,12 @@ class HTTPClient(BaseClient):
     def health(self) -> t.Any:
         return self._cached.health()
 
-    def query(self, prompt: str, **attrs: t.Any) -> dict[str, t.Any] | list[t.Any]:
-        return_raw_response = attrs.pop("return_raw_response", False)
-        r = openllm.GenerationOutput(
-            **self.call(
-                "generate",
-                openllm.GenerationInput(
-                    prompt=prompt,
-                    llm_config=self.config.with_options(**attrs),
-                ),
-            )
-        )
-        if return_raw_response:
-            return r.model_dump()
 
-        return r.responses
+class AsyncHTTPClient(BaseAsyncClient):
+    def __init__(self, address: str, timeout: int = 30):
+        address = address if "://" in address else "http://" + address
+        self._host, self._port = urlparse(address).netloc.split(":")
+        super().__init__(address, timeout)
+
+    async def health(self) -> t.Any:
+        return await self._cached.async_health()
