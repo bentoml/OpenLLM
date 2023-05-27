@@ -70,7 +70,7 @@ class DollyV2(openllm.LLM):
         prompt: str,
         max_new_tokens: int | None = None,
         temperature: float | None = None,
-        top_k: float | None = None,
+        top_k: int| None = None,
         top_p: float | None = None,
         **kwargs: t.Any,
     ) -> tuple[str, dict[str, t.Any]]:
@@ -97,7 +97,7 @@ class DollyV2(openllm.LLM):
         prompt: str,
         max_new_tokens: int | None = None,
         temperature: float | None = None,
-        top_k: float | None = None,
+        top_k: int| None = None,
         top_p: float | None = None,
         **kwargs: t.Any,
     ):
