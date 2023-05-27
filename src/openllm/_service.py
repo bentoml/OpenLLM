@@ -1,3 +1,12 @@
+"""
+The service definition for running any LLMService.
+
+Note that the line `model = ...` is a special line and should not be modified. This will be handled by openllm 
+internally to generate the correct model service when bundling the LLM to a Bento. 
+This will ensure that 'bentoml serve llm-bento' will work accordingly.
+
+The generation code lives under ./utils/codegen.py
+"""
 from __future__ import annotations
 
 import os
@@ -7,10 +16,6 @@ import bentoml
 
 import openllm
 
-# NOTE: The below code should not be changed as it will be used by the ast parser
-# to generate the service code. This is the current drawback of this approach, but
-# good for now. The below make sure that users who use `bentoml serve llm-bento` would
-# work.
 model = os.environ.get("OPENLLM_MODEL", "{__model_name__}")  # openllm: model name
 
 llm_config = openllm.AutoConfig.for_model(model)
