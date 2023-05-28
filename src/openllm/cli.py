@@ -569,8 +569,13 @@ def list_supported_models(output: t.Literal["json", "pretty", "porcelain"]):
         table = Table(title="Supported LLMs", box=rich.box.SQUARE, show_lines=True)
         table.add_column("LLM")
         table.add_column("Description")
+        table.add_column("Variants")
         for m in models:
-            table.add_row(m, inspect.cleandoc(openllm.AutoConfig.for_model(m).__doc__ or "(No description)"))
+            table.add_row(
+                m,
+                inspect.cleandoc(openllm.AutoConfig.for_model(m).__doc__ or "(No description)"),
+                f"{openllm.AutoLLM.for_model(m).variants}",
+            )
         _console.print(table)
     elif output == "json":
         _console.print(orjson.dumps({"supported": models}, option=orjson.OPT_INDENT_2).decode())

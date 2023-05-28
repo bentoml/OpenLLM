@@ -285,8 +285,6 @@ class LLMMetaclass(ABCMeta):
                     logger.debug(f"Using config class {namespace['config_class']} for {cls_name}.")
 
             config_class: type[openllm.LLMConfig] = namespace["config_class"]
-            # Run check for GPU
-            config_class.check_if_gpu_is_available(namespace["__llm_implementation__"])
 
             for key in ("__openllm_start_name__", "__openllm_requires_gpu__"):
                 namespace[key] = getattr(config_class, key)
@@ -498,6 +496,8 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
     @property
     def model(self) -> LLMModel:
         """The model to use for this LLM. This shouldn't be set at runtime, rather let OpenLLM handle it."""
+        # Run check for GPU
+        self.config.check_if_gpu_is_available(self.__llm_implementation__)
         if self.import_kwargs:
             kwds = {
                 **{k: v for k, v in self.import_kwargs.items() if not k.startswith("_tokenizer_")},
@@ -514,6 +514,8 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
     @property
     def tokenizer(self) -> LLMTokenizer:
         """The tokenizer to use for this LLM. This shouldn't be set at runtime, rather let OpenLLM handle it."""
+        # Run check for GPU
+        self.config.check_if_gpu_is_available(self.__llm_implementation__)
         if self.__llm_tokenizer__ is None:
             try:
                 self.__llm_tokenizer__ = self._bentomodel.custom_objects["tokenizer"]
