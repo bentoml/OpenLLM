@@ -295,6 +295,11 @@ class LLMMetaclass(ABCMeta):
                 "__openllm_bettertransformer__", implementation in ("pt",)
             )
 
+            if namespace["__openllm_requires_gpu__"]:
+                # For all models that requires GPU, no need to offload it to BetterTransformer
+                # use bitsandbytes instead
+                namespace["__openllm_bettertransformer__"] = False
+
             # NOTE: import_model branch
             if "import_model" not in namespace:
                 # using the default import model
