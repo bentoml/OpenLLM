@@ -37,7 +37,7 @@ dependencies = [
     "httpx[http2]",
     # transformers[torch] includes torch and transformers
     "transformers[torch,accelerate,tokenizers,onnxruntime,onnx]>=4.29.0",
-    # BetterTransformers support for inference.
+    # BetterTransformer support for inference.
     "optimum",
     # Super fast JSON serialization
     "orjson",
@@ -73,7 +73,7 @@ requires-python = ">=3.8"
 all = ['openllm[fine-tune]', 'openllm[chatglm]', 'openllm[falcon]', 'openllm[flan-t5]', 'openllm[starcoder]']
 chatglm = ['cpm_kernels', 'sentencepiece']
 falcon = ['einops']
-fine-tune = ["peft", "bitsandbytes", "datasets"]
+fine-tune = ['peft', 'bitsandbytes', 'datasets']
 flan-t5 = ['flax', 'jax', 'jaxlib', 'tensorflow']
 starcoder = ['bitsandbytes']
 

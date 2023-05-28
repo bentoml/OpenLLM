@@ -6,6 +6,8 @@
     <br>
 </div>
 
+<br/>
+
 To get started, simply install OpenLLM with pip:
 
 ```bash
@@ -45,6 +47,8 @@ To package the LLM into a Bento, simply use `openllm build`:
 ```bash
 openllm build dolly-v2
 ```
+
+> NOTE: To build OpenLLM from git source, pass in `OPENLLM_DEV_BUILD=True` to include the generated wheels into the bundle.
 
 🎯 To streamline production deployment, you can use the following:
 

@@ -40,6 +40,7 @@ class InvalidScoreLogitsProcessor(LogitsProcessor):
 
 class ChatGLM(openllm.LLM):
     __openllm_internal__ = True
+    __openllm_bettertransformer__ = False  # NOTE: disable bettertransformer for ChatGLM since it is already quantized
 
     default_model = "THUDM/chatglm-6b-int4"
 
