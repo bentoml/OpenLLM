@@ -329,6 +329,14 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
         # NOTE: the following will be populated by __init__
         config: openllm.LLMConfig
 
+    # NOTE: the following is the similar interface to HuggingFace pretrained protocol.
+
+    @classmethod
+    def from_pretrained(
+        cls, pretrained: str | None = None, llm_config: openllm.LLMConfig | None = None, *args: t.Any, **attrs: t.Any
+    ) -> LLM:
+        return cls(pretrained=pretrained, llm_config=llm_config, *args, **attrs)
+
     def __init__(
         self,
         pretrained: str | None = None,
@@ -412,7 +420,7 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
             attrs = copy.deepcopy(self.config.__pydantic_extra__)
 
         if pretrained is None:
-            pretrained = os.environ.get(f"OPENLLM_{self.config.__openllm_model_name__.upper()}_PRETRAINED", None)
+            pretrained = os.environ.get(self.config.__openllm_env__.pretrained, None)
             if not pretrained:
                 assert self.default_model, "A default model is required for any LLM."
                 pretrained = self.default_model

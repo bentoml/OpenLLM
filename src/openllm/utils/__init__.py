@@ -76,6 +76,13 @@ class ModelEnv:
         return f"OPENLLM_{self.model_name.upper()}_CONFIG"
 
     @property
+    def pretrained(self) -> str:
+        return f"OPENLLM_{self.model_name.upper()}_PRETRAINED"
+
+    def gen_env_key(self, key: str) -> str:
+        return f"OPENLLM_{self.model_name.upper()}_{key.upper()}"
+
+    @property
     def start_docstring(self) -> str:
         return getattr(self.module, f"START_{self.model_name.upper()}_COMMAND_DOCSTRING")
 

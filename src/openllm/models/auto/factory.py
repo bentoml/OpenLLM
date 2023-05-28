@@ -33,13 +33,6 @@ else:
     ConfigModelOrderedDict = OrderedDict
 
 
-def _get_llm_class(config: openllm.LLMConfig, llm_mapping: _LazyAutoMapping) -> type[openllm.LLM]:
-    supported_llm = llm_mapping[type(config)]
-    if not isinstance(supported_llm, (list, tuple)):
-        return supported_llm
-    return supported_llm[0]
-
-
 class _BaseAutoLLMClass:
     _model_mapping: _LazyAutoMapping
 
@@ -56,6 +49,7 @@ class _BaseAutoLLMClass:
         model_name: str,
         pretrained: str | None = None,
         return_runner_kwargs: t.Literal[False] = ...,
+        llm_config: openllm.LLMConfig | None = ...,
         **attrs: t.Any,
     ) -> openllm.LLM:
         ...
@@ -67,6 +61,7 @@ class _BaseAutoLLMClass:
         model_name: str,
         pretrained: str | None = None,
         return_runner_kwargs: t.Literal[True] = ...,
+        llm_config: openllm.LLMConfig | None = ...,
         **attrs: t.Any,
     ) -> tuple[openllm.LLM, dict[str, t.Any]]:
         ...
@@ -77,9 +72,9 @@ class _BaseAutoLLMClass:
         model_name: str,
         pretrained: str | None = None,
         return_runner_kwargs: bool = False,
+        llm_config: openllm.LLMConfig | None = ...,
         **attrs: t.Any,
     ) -> openllm.LLM | tuple[openllm.LLM, dict[str, t.Any]]:
-        config = attrs.pop("llm_config", None)
         runner_kwargs_name = [
             "name",
             "models",
@@ -90,16 +85,16 @@ class _BaseAutoLLMClass:
             "scheduling_strategy",
         ]
         to_runner_attrs = {k: v for k, v in attrs.items() if k in runner_kwargs_name}
-        if not isinstance(config, openllm.LLMConfig):
+        if not isinstance(llm_config, openllm.LLMConfig):
             # The rest of kwargs is now passed to config
-            config = AutoConfig.for_model(model_name, **attrs)
-        if type(config) in cls._model_mapping.keys():
-            llm = _get_llm_class(config, cls._model_mapping)(pretrained=pretrained, llm_config=config, **attrs)
+            llm_config = AutoConfig.for_model(model_name, **attrs)
+        if type(llm_config) in cls._model_mapping.keys():
+            llm = cls._model_mapping[type(llm_config)](pretrained, llm_config=llm_config, **attrs)
             if not return_runner_kwargs:
                 return llm
             return llm, to_runner_attrs
         raise ValueError(
-            f"Unrecognized configuration class {config.__class__} for this kind of AutoRunner: {cls.__name__}.\n"
+            f"Unrecognized configuration class {llm_config.__class__} for this kind of AutoRunner: {cls.__name__}.\n"
             f"Runnable type should be one of {', '.join(c.__name__ for c in cls._model_mapping.keys())}."
         )
 
@@ -171,7 +166,7 @@ class _LazyAutoMapping(ConfigModelOrderedDict):
         common_keys = set(self._config_mapping.keys()).intersection(self._model_mapping.keys())
         return len(common_keys) + len(self._extra_content)
 
-    def __getitem__(self, key: openllm.LLMConfig) -> openllm.LLM:
+    def __getitem__(self, key: type[openllm.LLMConfig]) -> type[openllm.LLM]:
         if key in self._extra_content:
             return self._extra_content[key]
         model_type = self._reverse_config_mapping[key.__name__]

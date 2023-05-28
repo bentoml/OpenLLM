@@ -370,8 +370,8 @@ class GenerationConfig(pydantic.BaseModel):
 
     if t.TYPE_CHECKING:
         # The following is handled via __pydantic_init_subclass__
-        __openllm_env_name__: str
         __openllm_model_name__: str
+        __openllm_env__: openllm.utils.ModelEnv
 
     def __init_subclass__(cls, *, _internal: bool = False, **attrs: t.Any) -> None:
         if not _internal:
@@ -383,7 +383,7 @@ class GenerationConfig(pydantic.BaseModel):
         if model_name is None:
             raise RuntimeError("Failed to initialize GenerationConfig subclass (missing model_name)")
         cls.__openllm_model_name__ = inflection.underscore(model_name)
-        cls.__openllm_env_name__ = cls.__openllm_model_name__.upper()
+        cls.__openllm_env__ = openllm.utils.ModelEnv(cls.__openllm_model_name__)
 
     @classmethod
     def construct_from_llm_config(cls, llm_config: type[LLMConfig]) -> GenerationConfig:
@@ -404,7 +404,7 @@ class GenerationConfig(pydantic.BaseModel):
                 field.json_schema_extra = {}
             if "env" in field.json_schema_extra:
                 continue
-            field.json_schema_extra["env"] = f"OPENLLM_{self.__openllm_env_name__}_GENERATION_{key.upper()}"
+            field.json_schema_extra["env"] = self.__openllm_env__.gen_env_key(f"GENERATION_{key.upper()}")
 
 
 class LLMConfig(pydantic.BaseModel, ABC):
@@ -425,6 +425,7 @@ class LLMConfig(pydantic.BaseModel, ABC):
         __openllm_trust_remote_code__: bool = False
         __openllm_requires_gpu__: bool = False
         __openllm_env__: openllm.utils.ModelEnv
+
         GenerationConfig: type[t.Any] = GenerationConfig
 
     def __init_subclass__(
@@ -468,8 +469,6 @@ class LLMConfig(pydantic.BaseModel, ABC):
             cls.__openllm_model_name__ = cls.__name__.replace("Config", "").lower()
             cls.__openllm_start_name__ = cls.__openllm_model_name__
 
-        cls.__openllm_env__ = openllm.utils.ModelEnv(cls.__openllm_model_name__)
-
         if hasattr(cls, "GenerationConfig"):
             cls.generation_config = t.cast(
                 "type[GenerationConfig]",
@@ -481,12 +480,14 @@ class LLMConfig(pydantic.BaseModel, ABC):
             ).construct_from_llm_config(cls)
             delattr(cls, "GenerationConfig")
 
+        cls.__openllm_env__ = cls.generation_config.__openllm_env__
+
         for key, field in cls.model_fields.items():
             if not field.json_schema_extra:
                 field.json_schema_extra = {}
             if "env" in field.json_schema_extra:
                 continue
-            field.json_schema_extra["env"] = f"OPENLLM_{cls.__openllm_model_name__.upper()}_{key.upper()}"
+            field.json_schema_extra["env"] = cls.__openllm_env__.gen_env_key(key)
 
     def model_post_init(self, _: t.Any):
         if self.__pydantic_extra__:
