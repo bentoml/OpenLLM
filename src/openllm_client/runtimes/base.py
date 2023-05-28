@@ -44,7 +44,6 @@ if t.TYPE_CHECKING:
 
 
 class ClientMixin:
-    _metadata: dict[str, t.Any]
     _api_version: str
     _config_class: type[bentoml.client.Client]
 

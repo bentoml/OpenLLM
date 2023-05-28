@@ -345,9 +345,12 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
         - **attrs will first be parsed to the AutoConfig, then the rest will be parsed to the import_model
         - for tokenizer kwargs, it should be prefixed with _tokenizer_*
 
-        Current drawback with pretrained is that we don't have support loading from custom files yet.
-        We actually use the commit_hash to generate the model version, therefore, we can't use custom files.
-        Current recommendation is to push the model onto huggingface hub, then use such tag to load with the model.
+        For custom pretrained path, it is recommended to pass in 'openllm_model_version' alongside with the path
+        to ensure that it won't be loaded multiple times.
+        Internally, if a pretrained is given as a HuggingFace repository path , OpenLLM will usethe commit_hash
+        to generate the model version.
+
+        For better consistency, we recommend users to also push the fine-tuned model to HuggingFace repository.
 
         If you need to overwrite the default ``import_model``, implement the following in your subclass:
 
