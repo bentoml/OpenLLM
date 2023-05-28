@@ -162,44 +162,8 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
     def __init__(self, *args: t.Any, **attrs: t.Any) -> None:
         super(OpenLLMCommandGroup, self).__init__(*args, **attrs)
         # these two dictionaries will store known aliases for commands and groups
-        self._alias_groups: dict[str, tuple[str, click.Group]] = {}
         self._cached_http: dict[str, t.Any] = {}
         self._cached_grpc: dict[str, t.Any] = {}
-
-    def group(self, *args: t.Any, **attrs: t.Any) -> t.Callable[[F[P]], click.Group]:
-        """Override the default 'cli.group' with supports for aliases for given group."""
-        from click.utils import make_default_short_help
-
-        aliases = attrs.pop("aliases", [])
-
-        def wrapper(f: F[P]) -> click.Group:
-            from gettext import gettext
-
-            name = attrs.pop("name", f.__name__)
-            group = super(OpenLLMCommandGroup, self).group(name, *args, **attrs)(f)
-            if group.short_help:
-                text = inspect.cleandoc(group.short_help)
-            elif group.help:
-                text = make_default_short_help(group.help, 45)
-            else:
-                text = ""
-
-            if group.deprecated:
-                text = gettext("(Deprecated) {text}").format(text=text)
-
-            attrs.setdefault("help", inspect.getdoc(f))
-            attrs.setdefault("short_help", text)
-            if len(aliases) > 0:
-                for alias in aliases:
-                    aliased_group = super(OpenLLMCommandGroup, self).group(alias, *args, **attrs)(f)
-                    aliased_group.short_help = text + f" (alias for '{name}')"
-                    self._alias_groups[name] = (alias, aliased_group)
-
-            for __, g in self._alias_groups.values():
-                g.commands = group.commands
-            return group
-
-        return wrapper
 
     def get_command(self, ctx: click.Context, cmd_name: str) -> click.Command | None:
         cmd_name = self.resolve_alias(cmd_name)
@@ -534,7 +498,7 @@ def create_cli() -> click.Group:
 
         ctx.exit()
 
-    @cli.group(cls=OpenLLMCommandGroup, context_settings=_CONTEXT_SETTINGS, aliases=["start-http"], name="start")
+    @cli.group(cls=OpenLLMCommandGroup, context_settings=_CONTEXT_SETTINGS, name="start")
     def _():
         """
         Start any LLM as a REST server.
