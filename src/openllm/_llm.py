@@ -457,14 +457,21 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
     @property
     def _bentomodel(self) -> bentoml.Model:
         if self.__llm_bentomodel__ is None:
-            trust_remote_code = self.__llm_kwargs__.pop("trust_remote_code", self.config.__openllm_trust_remote_code__)
-            tag, kwds = openllm.utils.generate_tags(
-                self._pretrained,
-                prefix=self.__llm_implementation__,
-                trust_remote_code=trust_remote_code,
-                **self.__llm_kwargs__,
-            )
+            self.__llm_bentomodel__ = self.ensure_pretrained_exists()
+        return self.__llm_bentomodel__
 
+    def ensure_pretrained_exists(self):
+        trust_remote_code = self.__llm_kwargs__.pop("trust_remote_code", self.config.__openllm_trust_remote_code__)
+        tag, kwds = openllm.utils.generate_tags(
+            self._pretrained,
+            prefix=self.__llm_implementation__,
+            trust_remote_code=trust_remote_code,
+            **self.__llm_kwargs__,
+        )
+        try:
+            return bentoml.transformers.get(tag)
+        except bentoml.exceptions.BentoMLException:
+            logger.info("'%s' with tag (%s) not found, importing from HuggingFace Hub.", self.__class__.__name__, tag)
             tokenizer_kwds = {k[len("_tokenizer_") :]: v for k, v in kwds.items() if k.startswith("_tokenizer_")}
             kwds = {k: v for k, v in kwds.items() if not k.startswith("_tokenizer_")}
 
@@ -479,22 +486,14 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
                     **{k: v for k, v in self.import_kwargs.items() if not k.startswith("_tokenizer_")},
                     **kwds,
                 }
-
-            try:
-                self.__llm_bentomodel__ = bentoml.transformers.get(tag)
-            except bentoml.exceptions.BentoMLException:
-                logger.info(
-                    "'%s' with tag (%s) not found, importing from HuggingFace Hub.", self.__class__.__name__, tag
-                )
-                self.__llm_bentomodel__ = self.import_model(
-                    self._pretrained,
-                    tag,
-                    *self.__llm_args__,
-                    tokenizer_kwds=tokenizer_kwds,
-                    trust_remote_code=trust_remote_code,
-                    **kwds,
-                )
-        return self.__llm_bentomodel__
+            return self.import_model(
+                self._pretrained,
+                tag,
+                *self.__llm_args__,
+                tokenizer_kwds=tokenizer_kwds,
+                trust_remote_code=trust_remote_code,
+                **kwds,
+            )
 
     @property
     def tag(self) -> bentoml.Tag:

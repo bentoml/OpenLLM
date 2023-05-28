@@ -31,6 +31,7 @@ import click
 import inflection
 import orjson
 import rich.box
+from bentoml._internal.configuration.containers import BentoMLContainer
 from bentoml_cli.utils import BentoMLCommandGroup
 from click.utils import make_default_short_help
 from click_option_group import optgroup
@@ -314,11 +315,13 @@ def start_model_command(
     Note that the internal commands will return the llm_config and a boolean determine
     whether the server is run with GPU or not.
     """
+    from bentoml._internal.configuration import get_debug_mode
+    from bentoml._internal.log import configure_logging
+
+    configure_logging()
+
     ModelEnv = openllm.utils.ModelEnv(model_name)
-    model_command_decr: dict[str, t.Any] = {
-        "name": inflection.underscore(model_name),
-        "context_settings": _context_settings or {},
-    }
+    model_command_decr: dict[str, t.Any] = {"name": ModelEnv.model_name, "context_settings": _context_settings or {}}
 
     # TODO: Probably want to use docstring for the COMMAND_DOCSTRING here instead of just importing the module.
     config = openllm.AutoConfig.for_model(model_name)
@@ -365,12 +368,18 @@ def start_model_command(
         "--pretrained", type=click.STRING, default=None, help="Optional pretrained name or path to fine-tune weight."
     )
     def model_start(server_timeout: int, pretrained: str | None, **attrs: t.Any) -> openllm.LLMConfig:
-        from bentoml._internal.configuration import get_debug_mode
-        from bentoml._internal.log import configure_logging
+        if ModelEnv.get_framework_env() == "flax":
+            llm = openllm.AutoFlaxLLM.for_model(model_name, pretrained=pretrained, llm_config=config)
+        elif ModelEnv.get_framework_env() == "tf":
+            llm = openllm.AutoTFLLM.for_model(model_name, pretrained=pretrained, llm_config=config)
+        else:
+            llm = openllm.AutoLLM.for_model(model_name, pretrained=pretrained, llm_config=config)
 
-        configure_logging()
+        # NOTE: We need to initialize llm here first to check if the model is already downloaded to
+        # avoid deadlock before the subprocess forking.
+        llm.ensure_pretrained_exists()
 
-        updated_config, server_attrs = config.model_validate_click(**attrs)
+        updated_config, server_attrs = llm.config.model_validate_click(**attrs)
 
         # NOTE: check for GPU one more time in cases this model doesn't requires GPU but users can still
         # run this model on GPU
@@ -408,15 +417,9 @@ def start_model_command(
                 "OPENLLM_MODEL": model_name,
                 "BENTOML_DEBUG": str(get_debug_mode()),
                 "BENTOML_CONFIG_OPTIONS": _bentoml_config_options,
+                "BENTOML_HOME": os.environ.get("BENTOML_HOME", BentoMLContainer.bentoml_home.get()),
             }
         )
-
-        if ModelEnv.get_framework_env() == "flax":
-            llm = openllm.AutoFlaxLLM.for_model(model_name, pretrained=pretrained)
-        elif ModelEnv.get_framework_env() == "tf":
-            llm = openllm.AutoTFLLM.for_model(model_name, pretrained=pretrained)
-        else:
-            llm = openllm.AutoLLM.for_model(model_name, pretrained=pretrained)
 
         if llm.requirements is not None:
             click.secho(
