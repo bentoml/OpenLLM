@@ -38,7 +38,6 @@ class FlanT5Config(openllm.LLMConfig):
 """
 from __future__ import annotations
 
-import copy
 import os
 import types
 import typing as t
@@ -55,7 +54,7 @@ from click_option_group import optgroup
 import openllm
 
 from .exceptions import GpuNotAvailableError, OpenLLMException
-from .utils import _object_setattr
+from .utils import LazyType
 from .utils.dantic import allows_multiple, parse_default
 
 if t.TYPE_CHECKING:
@@ -70,14 +69,19 @@ if t.TYPE_CHECKING:
     import transformers
     from pydantic.fields import FieldInfo
     from transformers.generation.beam_constraints import Constraint
+
+    DictStrAny = dict[str, t.Any]
 else:
     from transformers.utils.dummy_pt_objects import Constraint
 
+    DictStrAny = dict
     transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
     torch = openllm.utils.LazyLoader("torch", globals(), "torch")
     tf = openllm.utils.LazyLoader("tf", globals(), "tensorflow")
 
 __all__ = ["LLMConfig", "ModelSignature"]
+
+_object_setattr = object.__setattr__
 
 
 def field_to_options(
@@ -87,6 +91,7 @@ def field_to_options(
     envvar = field.json_schema_extra.get("env") if field.json_schema_extra else None
     dasherized = inflection.dasherize(name)
     underscored = inflection.underscore(name)
+
     full_option_name = f"--{dasherized}"
     if field.annotation is bool:
         full_option_name += f"/--no-{dasherized}"
@@ -101,7 +106,7 @@ def field_to_options(
         type=field.annotation,
         required=field.is_required(),
         default=parse_default(field.default, field.annotation),
-        show_default=False,
+        show_default=True if field.default else False,
         multiple=allows_multiple(field.annotation),
         help=field.description,
         show_envvar=True if envvar else False,
@@ -109,14 +114,13 @@ def field_to_options(
     )
 
 
-def generate_kwargs_from_envvar(model: GenerationConfig | LLMConfig) -> dict[str, str]:
-    kwargs: dict[str, t.Any] = {}
-    for key, field in model.model_fields.items():
-        if field.json_schema_extra is not None:
-            if "env" not in field.json_schema_extra:
-                raise RuntimeError(f"Invalid {model} passed. Only accept LLMConfig or LLMConfig.generation_config")
-            kwargs[key] = os.environ.get(field.json_schema_extra["env"], field.default)
-    return {k: v for k, v in kwargs.items() if v is not None}
+def generate_kwargs_from_envvar(model: GenerationConfig | LLMConfig) -> dict[str, t.Any]:
+    # NOTE: We can safe cast here since all of the fields in GenerationConfig or LLMConfig
+    # will have a `env` field in `json_schema_extra`
+    return {
+        key: os.environ.get(t.cast("dict[str, t.Any]", field.json_schema_extra)["env"], field.default)
+        for key, field in model.model_fields.items()
+    }
 
 
 class GenerationConfig(pydantic.BaseModel):
@@ -136,7 +140,7 @@ class GenerationConfig(pydantic.BaseModel):
         description="""The minimum length of the sequence to be generated. Corresponds to the length of the 
         input prompt + `min_new_tokens`. Its effect is overridden by `min_new_tokens`, if also set.""",
     )
-    min_new_tokens: t.Optional[int] = pydantic.Field(
+    min_new_tokens: int = pydantic.Field(
         None, description="The minimum numbers of tokens to generate, ignoring the number of tokens in the prompt."
     )
     early_stopping: bool = pydantic.Field(
@@ -150,7 +154,7 @@ class GenerationConfig(pydantic.BaseModel):
             (canonical beam search algorithm)
     """,
     )
-    max_time: t.Optional[float] = pydantic.Field(
+    max_time: float = pydantic.Field(
         None,
         description="""The maximum amount of time you allow the computation to run for in seconds. generation will 
         still finish the current pass after allocated time has been passed.""",
@@ -163,7 +167,7 @@ class GenerationConfig(pydantic.BaseModel):
         description="""Number of groups to divide `num_beams` into in order to ensure diversity among different 
         groups of beams. [this paper](https://arxiv.org/pdf/1610.02424.pdf) for more details.""",
     )
-    penalty_alpha: t.Optional[float] = pydantic.Field(
+    penalty_alpha: float = pydantic.Field(
         None,
         description="""The values balance the model confidence and the degeneration penalty in 
         contrastive search decoding.""",
@@ -242,14 +246,15 @@ class GenerationConfig(pydantic.BaseModel):
     no_repeat_ngram_size: int = pydantic.Field(
         0, description="If set to int > 0, all ngrams of that size can only occur once."
     )
-    bad_words_ids: t.Optional[t.List[t.List[int]]] = pydantic.Field(
+    bad_words_ids: t.List[t.List[int]] = pydantic.Field(
         None,
         description="""List of token ids that are not allowed to be generated. In order to get the token ids 
         of the words that should not appear in the generated text, use 
         `tokenizer(bad_words, add_prefix_space=True, add_special_tokens=False).input_ids`.
         """,
     )
-    force_words_ids: t.Optional[t.Union[t.List[t.List[int]], t.List[t.List[t.List[int]]]]] = pydantic.Field(
+    # NOTE: t.Union is not yet supported on CLI, but the environment variable should already be available.
+    force_words_ids: t.Union[t.List[t.List[int]], t.List[t.List[t.List[int]]]] = pydantic.Field(
         None,
         description="""List of token ids that must be generated. If given a `List[List[int]]`, this is treated 
         as a simple list of words that must be included, the opposite to `bad_words_ids`. 
@@ -265,13 +270,13 @@ class GenerationConfig(pydantic.BaseModel):
         algorithms suppose the score logits are normalized but some logit processors or warpers break the normalization.
     """,
     )
-    constraints: t.Optional[t.List["Constraint"]] = pydantic.Field(
+    constraints: t.List["Constraint"] = pydantic.Field(
         None,
         description="""Custom constraints that can be added to the generation to ensure that the output 
         will contain the use of certain tokens as defined by ``Constraint`` objects, in the most sensible way possible.
         """,
     )
-    forced_bos_token_id: t.Optional[int] = pydantic.Field(
+    forced_bos_token_id: int = pydantic.Field(
         None,
         description="""The id of the token to force as the first generated token after the 
         ``decoder_start_token_id``. Useful for multilingual models like 
@@ -279,7 +284,7 @@ class GenerationConfig(pydantic.BaseModel):
         to be the target language token.
     """,
     )
-    forced_eos_token_id: t.Optional[t.Union[int, t.List[int]]] = pydantic.Field(
+    forced_eos_token_id: t.Union[int, t.List[int]] = pydantic.Field(
         None,
         description="""The id of the token to force as the last generated token when `max_length` is reached. 
         Optionally, use a list to set multiple *end-of-sequence* tokens.""",
@@ -289,26 +294,26 @@ class GenerationConfig(pydantic.BaseModel):
         description="""Whether to remove possible *nan* and *inf* outputs of the model to prevent the 
         generation method to crash. Note that using `remove_invalid_values` can slow down generation.""",
     )
-    exponential_decay_length_penalty: t.Optional[t.Tuple[int, float]] = pydantic.Field(
+    exponential_decay_length_penalty: t.Tuple[int, float] = pydantic.Field(
         None,
         description="""This tuple adds an exponentially increasing length penalty, after a certain amount of tokens 
         have been generated. The tuple shall consist of: `(start_index, decay_factor)` where `start_index` 
         indicates where penalty starts and `decay_factor` represents the factor of exponential decay
     """,
     )
-    suppress_tokens: t.Optional[t.List[int]] = pydantic.Field(
+    suppress_tokens: t.List[int] = pydantic.Field(
         None,
         description="""A list of tokens that will be suppressed at generation. The `SupressTokens` logit 
         processor will set their log probs to `-inf` so that they are not sampled.
     """,
     )
-    begin_suppress_tokens: t.Optional[t.List[int]] = pydantic.Field(
+    begin_suppress_tokens: t.List[int] = pydantic.Field(
         None,
         description="""A list of tokens that will be suppressed at the beginning of the generation. The 
         `SupressBeginTokens` logit processor will set their log probs to `-inf` so that they are not sampled.
         """,
     )
-    forced_decoder_ids: t.Optional[t.List[t.List[int]]] = pydantic.Field(
+    forced_decoder_ids: t.List[t.List[int]] = pydantic.Field(
         None,
         description="""A list of pairs of integers which indicates a mapping from generation indices to token indices 
         that will be forced before sampling. For example, `[[1, 123]]` means the second generated token will always 
@@ -338,9 +343,9 @@ class GenerationConfig(pydantic.BaseModel):
     )
 
     # NOTE: Special tokens that can be used at generation time
-    pad_token_id: t.Optional[int] = pydantic.Field(None, description="The id of the *padding* token.")
-    bos_token_id: t.Optional[int] = pydantic.Field(None, description="The id of the *beginning-of-sequence* token.")
-    eos_token_id: t.Optional[t.Union[int, t.List[int]]] = pydantic.Field(
+    pad_token_id: int = pydantic.Field(None, description="The id of the *padding* token.")
+    bos_token_id: int = pydantic.Field(None, description="The id of the *beginning-of-sequence* token.")
+    eos_token_id: t.Union[int, t.List[int]] = pydantic.Field(
         None,
         description="""The id of the *end-of-sequence* token. Optionally, use a list to set 
         multiple *end-of-sequence* tokens.""",
@@ -353,7 +358,7 @@ class GenerationConfig(pydantic.BaseModel):
         `encoder_input_ids` cannot occur in the `decoder_input_ids`.
         """,
     )
-    decoder_start_token_id: t.Optional[int] = pydantic.Field(
+    decoder_start_token_id: int = pydantic.Field(
         None,
         description="""If an encoder-decoder model starts decoding with a 
         different token than *bos*, the id of that token.
@@ -361,7 +366,7 @@ class GenerationConfig(pydantic.BaseModel):
     )
 
     # NOTE: pydantic definition
-    model_config = dict(arbitrary_types_allowed=True, extra="forbid")
+    model_config = {"extra": "forbid", "arbitrary_types_allowed": True}
 
     if t.TYPE_CHECKING:
         # The following is handled via __pydantic_init_subclass__
@@ -395,28 +400,11 @@ class GenerationConfig(pydantic.BaseModel):
         # NOTE: I don't know how to do this more efficiently in pydantic v2 yet, will probably
         # need to consult the pydantic team on this.
         for key, field in self.model_fields.items():
-            json_schema: dict[str, t.Any] = (
-                copy.deepcopy(field.json_schema_extra) if field.json_schema_extra is not None else {}
-            )
-            env_key = f"OPENLLM_{self.__openllm_env_name__}_GENERATION_{key.upper()}"
-            if "env" in json_schema:
-                field.default = os.environ.get(json_schema["env"], field.default)
+            if not field.json_schema_extra:
+                field.json_schema_extra = {}
+            if "env" in field.json_schema_extra:
                 continue
-            json_schema["env"] = env_key
-            # then assign json_schema back to field
-            field.json_schema_extra = json_schema
-            field.default = os.environ.get(env_key, field.default)
-
-    def to_click_options(self, f: F[P]) -> t.Callable[[t.Callable[..., t.Any]], click.Command]:
-        for name, field in self.model_fields.items():
-            if t.get_origin(field.annotation) is t.Union:
-                # NOTE: Union type is currently not yet supported, we probably just need to use environment instead.
-                continue
-            f = field_to_options(name, field, self.__openllm_model_name__, suffix_generation=True)(f)
-        return optgroup.group(
-            f"{self.__class__.__name__} generation options",
-            help=f"[Auto-generated from '{self.__class__.__qualname__}']",
-        )(f)
+            field.json_schema_extra["env"] = f"OPENLLM_{self.__openllm_env_name__}_GENERATION_{key.upper()}"
 
 
 class LLMConfig(pydantic.BaseModel, ABC):
@@ -428,23 +416,15 @@ class LLMConfig(pydantic.BaseModel, ABC):
             return getattr(self.generation_config, attr)
         return getattr(self, attr)
 
-    def __repr_args__(self) -> ReprArgs:
-        """Overwrite from default BaseModel and don't show __pydantic_extra__."""
-        yield from (
-            (k, v)
-            for k, v in self.__dict__.items()
-            if not k.startswith("_") and (k not in self.model_fields or self.model_fields[k].repr)
-        )
-        yield from ((k, getattr(self, k)) for k, v in self.model_computed_fields.items() if v.repr)
-
     if t.TYPE_CHECKING:
         # The following is handled via __pydantic_init_subclass__, and is only used for TYPE_CHECKING
-        __openllm_model_name__: str = ""
-        __openllm_start_name__: str = ""
-        __openllm_timeout__: int = 0
+        __openllm_model_name__: str
+        __openllm_start_name__: str
+        __openllm_timeout__: int = 3600
         __openllm_name_type__: t.Literal["dasherize", "lowercase"] = "dasherize"
         __openllm_trust_remote_code__: bool = False
         __openllm_requires_gpu__: bool = False
+        __openllm_env__: openllm.utils.ModelEnv
         GenerationConfig: type[t.Any] = GenerationConfig
 
     def __init_subclass__(
@@ -488,6 +468,8 @@ class LLMConfig(pydantic.BaseModel, ABC):
             cls.__openllm_model_name__ = cls.__name__.replace("Config", "").lower()
             cls.__openllm_start_name__ = cls.__openllm_model_name__
 
+        cls.__openllm_env__ = openllm.utils.ModelEnv(cls.__openllm_model_name__)
+
         if hasattr(cls, "GenerationConfig"):
             cls.generation_config = t.cast(
                 "type[GenerationConfig]",
@@ -508,12 +490,10 @@ class LLMConfig(pydantic.BaseModel, ABC):
 
     def model_post_init(self, _: t.Any):
         if self.__pydantic_extra__:
-            generation_config = self.__pydantic_extra__.pop("generation_config", None)
+            generation_config: dict[str, t.Any] | None = self.__pydantic_extra__.pop("generation_config", None)
             if generation_config is not None:
-                assert isinstance(generation_config, dict), "generation_config must be a dict."
-                self.generation_config = self.generation_config.model_copy(
-                    update=t.cast("dict[str, t.Any]", generation_config), deep=True
-                )
+                assert LazyType[DictStrAny](dict).isinstance(generation_config), "generation_config must be a dict."
+                self.generation_config = self.generation_config.model_copy(update=generation_config, deep=True)
             else:
                 # The rest of the extras fields should just be the generation_config.
                 self.generation_config = self.generation_config.model_copy(update=self.__pydantic_extra__, deep=True)
@@ -551,64 +531,48 @@ class LLMConfig(pydantic.BaseModel, ABC):
         except pydantic.ValidationError as e:
             raise openllm.exceptions.ValidationError(f"Failed to dump configuration to dict: {e}") from e
 
-    def with_options(self, __llm_config__: LLMConfig | None = None, **attrs: t.Any) -> LLMConfig:
+    @classmethod
+    def model_construct_env(cls, __llm_config__: LLMConfig | None = None, **attrs: t.Any) -> LLMConfig:
         """A helpers that respect configuration values that
         sets from environment variables for any given configuration class.
         """
-        from_env_ = self.from_env()
-        # filtered out None values
-        attrs = {k: v for k, v in attrs.items() if v is not None}
-        generation_keys = {k for k in attrs if k in self.generation_config.model_fields}
-
-        generation_attrs = {k: v for k, v in attrs.items() if k in generation_keys}
-        config_attrs = {k: v for k, v in attrs.items() if k not in generation_keys}
-
-        # NOTE: first set the default config kwargs.
-        # We will always respect envvar as default, then the one that is pass
-        attrs = {**generate_kwargs_from_envvar(self), **config_attrs}
+        env_json_string = os.environ.get(cls.__openllm_env__.model_config, None)
+        if env_json_string is not None:
+            try:
+                self = cls.model_construct(**orjson.loads(env_json_string))
+            except pydantic.ValidationError as e:
+                raise RuntimeError(f"Failed to parse '{cls.__openllm_env__.model_config}' as valid JSON string.") from e
+        else:
+            self = cls.model_construct()
 
         if __llm_config__ is not None:
             # NOTE: Only hit this branch on the server. Client shouldn't use __llm_config__
-            attrs = {**attrs, **__llm_config__.model_dump()}
+            # as it is not set.
+            return self.model_construct(**__llm_config__.model_dump(flatten=True))
 
-        # NOTE: Then we setup generation config values
-        attrs["generation_config"] = {
-            **generate_kwargs_from_envvar(self.generation_config),
-            **attrs.get("generation_config", {}),
-            **generation_attrs,
-        }
+        # filtered out None values
+        attrs = {k: v for k, v in attrs.items() if v is not None}
 
-        if from_env_:
-            return from_env_.model_construct(**attrs)
-        return self.model_construct(**attrs)
+        construct_attrs = generate_kwargs_from_envvar(self)
+        construct_attrs.update(generate_kwargs_from_envvar(self.generation_config))
+        construct_attrs.update(attrs)
 
-    @classmethod
-    def from_env(cls) -> LLMConfig | None:
-        envvar = openllm.utils.MODEL_CONFIG_ENV_VAR(cls.__openllm_model_name__)
-        env_json_string = os.environ.get(envvar, None)
-        if env_json_string is None:
-            return
-
-        try:
-            return cls.model_construct(**orjson.loads(env_json_string))
-        except pydantic.ValidationError as e:
-            raise RuntimeError(f"Failed to parse environment variable '{envvar}' as a valid JSON string.") from e
+        return self.model_construct(**construct_attrs)
 
     def model_validate_click(self, **attrs: t.Any) -> tuple[LLMConfig, dict[str, t.Any]]:
         """Parse given click attributes into a LLMConfig and return the remaining click attributes."""
-        llm_config_attrs = {
-            k[len(self.__openllm_model_name__) + 1 :]: v
-            for k, v in attrs.items()
-            if k[len(self.__openllm_model_name__) + 1 :] in self.model_fields
-        }
-        llm_config_attrs["generation_config"] = {
-            k[len(self.__openllm_model_name__ + "_generation") + 1 :]: v
-            for k, v in attrs.items()
-            if k[len(self.__openllm_model_name__ + "_generation") + 1 :] in self.generation_config.model_fields
-        }
-        return self.with_options(**llm_config_attrs), {
-            k: v for k, v in attrs.items() if not k.startswith(self.__openllm_model_name__)
-        }
+        llm_config_attrs = {}
+        key_to_remove: list[str] = []
+
+        for k, v in attrs.items():
+            if k.startswith(f"{self.__openllm_model_name__}_"):
+                llm_config_attrs[k[len(self.__openllm_model_name__) + 1 :]] = v
+                key_to_remove.append(k)
+            elif k.startswith(f"{self.__openllm_model_name__}_generation_"):
+                llm_config_attrs[k[len(self.__openllm_model_name__ + "_generation") + 1 :]] = v
+                key_to_remove.append(k)
+
+        return self.model_construct_env(**llm_config_attrs), {k: v for k, v in attrs.items() if k not in key_to_remove}
 
     @t.overload
     def to_generation_config(self, return_as_dict: t.Literal[True] = ...) -> dict[str, t.Any]:
@@ -627,17 +591,25 @@ class LLMConfig(pydantic.BaseModel, ABC):
 
         return config
 
-    def to_click_options(self, f: F[P]) -> t.Callable[[t.Callable[..., t.Any]], click.Command]:
+    def to_click_options(self, f: F[P]) -> t.Callable[[F[P]], click.Command]:
         """
         Convert current model to click options. This can be used as a decorator for click commands.
         Note that the identifier for all LLMConfig will be prefixed with '<model_name>_*', and the generation config
         will be prefixed with '<model_name>_generation_*'.
         """
-        wrapped_generation = self.generation_config.to_click_options(f)
+
+        for name, field in self.generation_config.model_fields.items():
+            if t.get_origin(field.annotation) is t.Union:
+                # NOTE: Union type is currently not yet supported, we probably just need to use environment instead.
+                continue
+            f = field_to_options(name, field, self.__openllm_model_name__, suffix_generation=True)(f)
+        f = optgroup.group(f"{self.__class__.__name__} generation options")(f)
+
         if len(self.model_fields.values()) == 0:
-            return wrapped_generation
+            return f
         for name, field in self.model_fields.items():
-            wrapped_generation = field_to_options(name, field, self.__openllm_model_name__)(wrapped_generation)
-        return optgroup.group(
-            f"{self.__class__.__name__} options", help=f"[Auto-generated from '{self.__class__.__qualname__}']"
-        )(wrapped_generation)
+            if t.get_origin(field.annotation) is t.Union:
+                # NOTE: Union type is currently not yet supported, we probably just need to use environment instead.
+                continue
+            f = field_to_options(name, field, self.__openllm_model_name__)(f)
+        return optgroup.group(f"{self.__class__.__name__} options")(f)

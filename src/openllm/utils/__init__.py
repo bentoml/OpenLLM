@@ -26,6 +26,7 @@ import re
 import types
 import typing as t
 
+import attrs
 import bentoml
 import inflection
 from bentoml._internal.types import LazyType as LazyType
@@ -56,27 +57,37 @@ else:
 
 logger = logging.getLogger(__name__)
 
-_object_setattr = object.__setattr__
-
 
 def get_lazy_module(model_name: str) -> LazyLoader:
     snaked_model_name = inflection.underscore(model_name)
     return LazyLoader(snaked_model_name, globals(), f"openllm.models.{snaked_model_name}")
 
 
-def FRAMEWORK_ENV_VAR(model_name: str) -> str:
-    return f"OPENLLM_{inflection.underscore(model_name).upper()}_FRAMEWORK"
+@attrs.define
+class ModelEnv:
+    model_name: str = attrs.field(converter=inflection.underscore)
 
+    @property
+    def framework(self) -> str:
+        return f"OPENLLM_{self.model_name.upper()}_FRAMEWORK"
 
-def MODEL_CONFIG_ENV_VAR(model_name: str) -> str:
-    return f"OPENLLM_{inflection.underscore(model_name).upper()}_CONFIG"
+    @property
+    def model_config(self) -> str:
+        return f"OPENLLM_{self.model_name.upper()}_CONFIG"
 
+    @property
+    def start_docstring(self) -> str:
+        return getattr(self.module, f"START_{self.model_name.upper()}_COMMAND_DOCSTRING")
 
-def get_framework_env(model_name: str) -> t.Literal["pt", "flax", "tf"]:
-    envvar = os.environ.get(FRAMEWORK_ENV_VAR(model_name), "pt")
-    if envvar not in ("pt", "tf", "flax"):
-        raise ValueError(f"Invalid framework implementation {envvar}, must be one of 'pt', 'tf', 'flax'")
-    return envvar
+    @property
+    def module(self) -> LazyLoader:
+        return LazyLoader(self.model_name, globals(), f"openllm.models.{self.model_name}")
+
+    def get_framework_env(self) -> t.Literal["pt", "flax", "tf"]:
+        envvar = os.environ.get(self.framework, "pt")
+        if envvar not in ("pt", "tf", "flax"):
+            raise ValueError(f"Invalid framework implementation {envvar}, must be one of 'pt', 'tf', 'flax'")
+        return envvar
 
 
 def convert_transformers_model_name(name: str) -> str:

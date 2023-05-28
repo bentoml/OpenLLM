@@ -190,7 +190,7 @@ class _LazyAutoMapping(ConfigModelOrderedDict):
     def _load_attr_from_module(self, model_type: str, attr: str) -> t.Any:
         module_name = inflection.underscore(model_type)
         if module_name not in self._modules:
-            self._modules[module_name] = openllm.utils.get_lazy_module(module_name)
+            self._modules[module_name] = openllm.utils.ModelEnv(module_name).module
         return getattribute_from_module(self._modules[module_name], attr)
 
     def keys(self):

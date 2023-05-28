@@ -116,7 +116,7 @@ class StarCoder(openllm.LLM):
                 raise ValueError(f"Only one {FIM_INDICATOR} allowed in prompt") from err
             prompt = f"{FIM_PREFIX}{prefix}{FIM_SUFFIX}{suffix}{FIM_MIDDLE}"
 
-        return prompt, self.config.with_options(
+        return prompt, self.config.model_construct_env(
             top_p=top_p,
             temperature=temperature,
             max_new_tokens=max_new_tokens,
@@ -154,7 +154,7 @@ class StarCoder(openllm.LLM):
         result_tensor = self.model.generate(
             inputs,
             do_sample=True,
-            generation_config=self.config.with_options(
+            generation_config=self.config.model_construct_env(
                 top_p=top_p,
                 temperature=temperature,
                 max_new_tokens=max_new_tokens,

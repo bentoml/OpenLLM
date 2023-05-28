@@ -79,7 +79,7 @@ class PromptTemplate:
 
     @classmethod
     def from_default(cls, model: str) -> PromptTemplate:
-        template = getattr(openllm.utils.get_lazy_module(model), "DEFAULT_PROMPT_TEMPLATE")
+        template = getattr(openllm.utils.ModelEnv(model).module, "DEFAULT_PROMPT_TEMPLATE")
         if template is None:
             raise ValueError(f"Model {model} does not have a default prompt template.")
         return cls.from_template(template)

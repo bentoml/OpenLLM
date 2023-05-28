@@ -81,7 +81,7 @@ class ChatGLM(openllm.LLM):
         else:
             prompt_text = prompt
 
-        generation_config = self.config.with_options(
+        generation_config = self.config.model_construct_env(
             max_new_tokens=max_new_tokens,
             num_beams=num_beams,
             top_p=top_p,
@@ -123,7 +123,7 @@ class ChatGLM(openllm.LLM):
         inputs = self.tokenizer([prompt], return_tensors="pt").to(self.device)
         outputs = self.model.generate(
             **inputs,
-            generation_config=self.config.with_options(
+            generation_config=self.config.model_construct_env(
                 max_new_tokens=max_new_tokens,
                 num_beams=num_beams,
                 top_p=top_p,

@@ -440,8 +440,7 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
     # NOTE: The section below defines a loose contract with langchain's LLM interface.
     @property
     def llm_type(self) -> str:
-        assert self.default_model is not None
-        return openllm.utils.convert_transformers_model_name(self.default_model)
+        return openllm.utils.convert_transformers_model_name(self._pretrained)
 
     @property
     def identifying_params(self) -> dict[str, t.Any]:
@@ -637,10 +636,10 @@ def Runner(start_name: str, **attrs: t.Any) -> bentoml.Runner:
                 behaviour
     """
     init_local = attrs.pop("init_local", False)
-    envvar = openllm.utils.get_framework_env(start_name)
-    if envvar == "flax":
+    ModelEnv = openllm.utils.ModelEnv(start_name)
+    if ModelEnv.get_framework_env() == "flax":
         runner = openllm.AutoFlaxLLM.create_runner(start_name, **attrs)
-    elif envvar == "tf":
+    elif ModelEnv.get_framework_env() == "tf":
         runner = openllm.AutoTFLLM.create_runner(start_name, **attrs)
     else:
         runner = openllm.AutoLLM.create_runner(start_name, **attrs)

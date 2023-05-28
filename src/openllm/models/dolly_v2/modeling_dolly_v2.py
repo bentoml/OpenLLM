@@ -79,7 +79,7 @@ class DollyV2(openllm.LLM):
     ) -> tuple[str, dict[str, t.Any]]:
         prompt_text = DEFAULT_PROMPT_TEMPLATE.format(instruction=prompt)
 
-        generation_config = self.config.with_options(
+        generation_config = self.config.model_construct_env(
             max_new_tokens=max_new_tokens,
             temperature=temperature,
             top_k=top_k,
@@ -112,7 +112,7 @@ class DollyV2(openllm.LLM):
         end_key_token_id = None
         eos_token_id = None
 
-        llm_config = self.config.with_options(
+        llm_config = self.config.model_construct_env(
             max_new_tokens=max_new_tokens,
             temperature=temperature,
             top_k=top_k,

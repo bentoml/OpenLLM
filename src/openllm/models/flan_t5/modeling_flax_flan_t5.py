@@ -41,7 +41,7 @@ class FlaxFlanT5(openllm.LLM):
         repetition_penalty: float | None = None,
         **attrs: t.Any,
     ) -> tuple[str, dict[str, t.Any]]:
-        return prompt, self.config.with_options(
+        return prompt, self.config.model_construct_env(
             max_new_tokens=max_new_tokens,
             temperature=temperature,
             top_k=top_k,
@@ -67,7 +67,7 @@ class FlaxFlanT5(openllm.LLM):
         result_tensor = self.model.generate(
             input_ids,
             do_sample=True,
-            generation_config=self.config.with_options(
+            generation_config=self.config.model_construct_env(
                 max_new_tokens=max_new_tokens,
                 temperature=temperature,
                 top_k=top_k,

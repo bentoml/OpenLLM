@@ -66,7 +66,7 @@ class Falcon(openllm.LLM):
         eos_token_id: int | None = None,
         **attrs: t.Any,
     ) -> tuple[str, dict[str, t.Any]]:
-        generation_config = self.config.with_options(
+        generation_config = self.config.model_construct_env(
             max_new_tokens=max_new_tokens,
             top_k=top_k,
             num_return_sequences=num_return_sequences,
@@ -95,7 +95,7 @@ class Falcon(openllm.LLM):
         return self.model(
             prompt,
             do_sample=True,
-            generation_config=self.config.with_options(
+            generation_config=self.config.model_construct_env(
                 max_new_tokens=max_new_tokens,
                 top_k=top_k,
                 num_return_sequences=num_return_sequences,

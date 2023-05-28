@@ -70,6 +70,8 @@ def build_editable(path: str) -> str | None:
 
 def construct_python_options(llm: openllm.LLM, llm_fs: FS) -> PythonOptions:
     packages: list[str] = []
+
+    ModelEnv = openllm.utils.ModelEnv(llm.__openllm_start_name__)
     if llm.requirements is not None:
         packages.extend(llm.requirements)
 
@@ -89,11 +91,9 @@ def construct_python_options(llm: openllm.LLM, llm_fs: FS) -> PythonOptions:
         ]
     )
 
-    to_use_framework = utils.get_framework_env(llm.__openllm_start_name__)
+    to_use_framework = ModelEnv.get_framework_env()
     if to_use_framework == "flax":
-        assert (
-            utils.is_flax_available()
-        ), f"Flax is not available, while {utils.FRAMEWORK_ENV_VAR(llm.__openllm_start_name__)} is set to 'flax'"
+        assert utils.is_flax_available(), f"Flax is not available, while {ModelEnv.framework} is set to 'flax'"
         packages.extend(
             [
                 f"flax>={importlib.metadata.version('flax')}",
@@ -102,9 +102,7 @@ def construct_python_options(llm: openllm.LLM, llm_fs: FS) -> PythonOptions:
             ]
         )
     elif to_use_framework == "tf":
-        assert (
-            utils.is_tf_available()
-        ), f"TensorFlow is not available, while {utils.FRAMEWORK_ENV_VAR(llm.__openllm_start_name__)} is set to 'tf'"
+        assert utils.is_tf_available(), f"TensorFlow is not available, while {ModelEnv.framework} is set to 'tf'"
         candidates = (
             "tensorflow",
             "tensorflow-cpu",
@@ -137,11 +135,12 @@ def construct_python_options(llm: openllm.LLM, llm_fs: FS) -> PythonOptions:
     return PythonOptions(packages=packages, wheels=wheels, lock_packages=True)
 
 
-def construct_docker_options(llm: openllm.LLM, llm_fs: FS) -> DockerOptions:
+def construct_docker_options(llm: openllm.LLM, _: FS) -> DockerOptions:
+    ModelEnv = openllm.utils.ModelEnv(llm.__openllm_start_name__)
     return DockerOptions(
         cuda_version="11.6",  # NOTE: Torch 2.0 currently only support 11.6 as the latest CUDA version
         env={
-            utils.FRAMEWORK_ENV_VAR(llm.__openllm_start_name__): utils.get_framework_env(llm.__openllm_start_name__),
+            ModelEnv.framework: ModelEnv.get_framework_env(),
             "OPENLLM_MODEL": llm.config.__openllm_model_name__,
         },
         system_packages=["git"],
@@ -165,14 +164,16 @@ def build(model_name: str, *, __cli__: bool = False, **attrs: t.Any) -> tuple[be
     current_model_envvar = os.environ.pop("OPENLLM_MODEL", None)
     _previously_built = False
 
-    logger.debug("Packing '%s' into a Bento with kwargs=%s...", model_name, attrs)
+    ModelEnv = openllm.utils.ModelEnv(model_name)
+
+    logger.info("Packing '%s' into a Bento with kwargs=%s...", model_name, attrs)
 
     # NOTE: We set this environment variable so that our service.py logic won't raise RuntimeError
     # during build. This is a current limitation of bentoml build where we actually import the service.py into sys.path
     try:
         os.environ["OPENLLM_MODEL"] = inflection.underscore(model_name)
 
-        to_use_framework = openllm.utils.get_framework_env(model_name)
+        to_use_framework = ModelEnv.get_framework_env()
         if to_use_framework == "flax":
             llm = openllm.AutoFlaxLLM.for_model(model_name, **attrs)
         elif to_use_framework == "tf":

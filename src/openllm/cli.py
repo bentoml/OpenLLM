@@ -314,7 +314,7 @@ def start_model_command(
     Note that the internal commands will return the llm_config and a boolean determine
     whether the server is run with GPU or not.
     """
-    envvar = openllm.utils.get_framework_env(model_name)
+    ModelEnv = openllm.utils.ModelEnv(model_name)
     model_command_decr: dict[str, t.Any] = {
         "name": inflection.underscore(model_name),
         "context_settings": _context_settings or {},
@@ -330,16 +330,15 @@ def start_model_command(
         {
             "name": config.__openllm_model_name__,
             "short_help": f"Start a LLMServer for '{model_name}' ('--help' for more details)",
-            "help": getattr(
-                openllm.utils.get_lazy_module(model_name),
-                f"START_{inflection.underscore(model_name).upper()}_COMMAND_DOCSTRING",
-            ),
+            "help": ModelEnv.start_docstring,
             "aliases": aliases if len(aliases) > 0 else None,
         }
     )
 
+    gpu_available = False
     try:
-        config.check_if_gpu_is_available(envvar)
+        config.check_if_gpu_is_available(ModelEnv.get_framework_env())
+        gpu_available = True
     except openllm.exceptions.GpuNotAvailableError:
         # NOTE: The model requires GPU, therefore we will return a dummy command
         model_command_decr.update(
@@ -353,7 +352,7 @@ def start_model_command(
         @factory.command(**model_command_decr)
         def noop() -> openllm.LLMConfig:
             click.secho("No GPU available, therefore this command is disabled", fg="red")
-            openllm.utils.analytics.track_start_init(config, False)
+            openllm.utils.analytics.track_start_init(config, gpu_available)
             return config
 
         return noop
@@ -371,15 +370,24 @@ def start_model_command(
 
         configure_logging()
 
-        updated_config, server_kwds = config.model_validate_click(**attrs)
-        openllm.utils.analytics.track_start_init(updated_config, False)
+        updated_config, server_attrs = config.model_validate_click(**attrs)
 
-        server_kwds.update({"working_dir": os.path.dirname(__file__)})
+        # NOTE: check for GPU one more time in cases this model doesn't requires GPU but users can still
+        # run this model on GPU
+        try:
+            updated_config.check_if_gpu_is_available(ModelEnv.get_framework_env())
+            gpu_available = True
+        except openllm.exceptions.GpuNotAvailableError:
+            gpu_available = False
+
+        openllm.utils.analytics.track_start_init(updated_config, gpu_available)
+
+        server_attrs.update({"working_dir": os.path.dirname(__file__)})
         if _serve_grpc:
-            server_kwds["grpc_protocol_version"] = "v1"
+            server_attrs["grpc_protocol_version"] = "v1"
         # NOTE: currently, theres no development args in bentoml.Server. To be fixed upstream.
-        development = server_kwds.pop("development")
-        server_kwds.setdefault("production", not development)
+        development = server_attrs.pop("development")
+        server_attrs.setdefault("production", not development)
 
         start_env = os.environ.copy()
 
@@ -395,17 +403,17 @@ def start_model_command(
 
         start_env.update(
             {
-                openllm.utils.FRAMEWORK_ENV_VAR(model_name): envvar,
-                openllm.utils.MODEL_CONFIG_ENV_VAR(model_name): updated_config.model_dump_json(),
+                ModelEnv.framework: ModelEnv.get_framework_env(),
+                ModelEnv.model_config: updated_config.model_dump_json(),
                 "OPENLLM_MODEL": model_name,
                 "BENTOML_DEBUG": str(get_debug_mode()),
                 "BENTOML_CONFIG_OPTIONS": _bentoml_config_options,
             }
         )
 
-        if envvar == "flax":
+        if ModelEnv.get_framework_env() == "flax":
             llm = openllm.AutoFlaxLLM.for_model(model_name, pretrained=pretrained)
-        elif envvar == "tf":
+        elif ModelEnv.get_framework_env() == "tf":
             llm = openllm.AutoTFLLM.for_model(model_name, pretrained=pretrained)
         else:
             llm = openllm.AutoLLM.for_model(model_name, pretrained=pretrained)
@@ -416,7 +424,7 @@ def start_model_command(
             )
         click.secho(f"Starting LLM Server for '{model_name}'\n", fg="blue")
         server_cls = getattr(bentoml, "HTTPServer" if not _serve_grpc else "GrpcServer")
-        server: bentoml.server.Server = server_cls("_service.py:svc", **server_kwds)
+        server: bentoml.server.Server = server_cls("_service.py:svc", **server_attrs)
         server.timeout = 90
 
         try:
@@ -449,8 +457,10 @@ def _start(
 
     _serve_grpc = attrs.pop("_serve_grpc", False)
 
+    ModelEnv = openllm.utils.ModelEnv(model_name)
+
     if framework is not None:
-        os.environ[openllm.utils.FRAMEWORK_ENV_VAR(model_name)] = framework
+        os.environ[ModelEnv.framework] = framework
     start_model_command(model_name, t.cast(OpenLLMCommandGroup, cli), _serve_grpc=_serve_grpc)(
         standalone_mode=False, **attrs
     )
@@ -585,9 +595,12 @@ def list_supported_models(output: t.Literal["json", "pretty", "porcelain"]):
             except Exception as err:
                 failed_initialized.append((m, err))
         _console.print(table)
-        _console.print("\n[bold yellow] The following models are supported but failed to initialize:[/bold yellow]\n")
-        for m, err in failed_initialized:
-            _console.print(Text(f"- {m}: ") + Text(f"{err}\n", style="bold red"))
+        if len(failed_initialized) > 0:
+            _console.print(
+                "\n[bold yellow] The following models are supported but failed to initialize:[/bold yellow]\n"
+            )
+            for m, err in failed_initialized:
+                _console.print(Text(f"- {m}: ") + Text(f"{err}\n", style="bold red"))
     elif output == "json":
         result_json: dict[str, dict[t.Literal["variants", "description"], t.Any]] = {}
         for m in models:

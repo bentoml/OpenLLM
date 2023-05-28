@@ -53,7 +53,7 @@ class _LazyConfigMapping(ConfigOrderedDict):
         value = self._mapping[key]
         module_name = inflection.underscore(key)
         if module_name not in self._modules:
-            self._modules[module_name] = openllm.utils.get_lazy_module(module_name)
+            self._modules[module_name] = openllm.utils.ModelEnv(module_name).module
         if hasattr(self._modules[module_name], value):
             return getattr(self._modules[module_name], value)
 
@@ -93,10 +93,10 @@ class AutoConfig:
         raise EnvironmentError("Cannot instantiate Config. Please use `Config.for_model(model_name)` instead.")
 
     @classmethod
-    def for_model(cls, model_name: str, *args: t.Any, **attrs: t.Any) -> openllm.LLMConfig:
+    def for_model(cls, model_name: str, **attrs: t.Any) -> openllm.LLMConfig:
         model_name = inflection.underscore(model_name)
         if model_name in CONFIG_MAPPING:
-            return CONFIG_MAPPING[model_name]().with_options(*args, **attrs)
+            return CONFIG_MAPPING[model_name].model_construct_env(**attrs)
         raise ValueError(
             f"Unrecognized configuration class for {model_name}. "
             f"Model name should be one of {', '.join(CONFIG_MAPPING.keys())}."

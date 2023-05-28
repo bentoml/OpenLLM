@@ -109,7 +109,7 @@ class BaseClient(ClientMixin):
     def query(self, prompt: str, **attrs: t.Any) -> dict[str, t.Any] | str:
         return_raw_response = attrs.pop("return_raw_response", False)
         prompt, attrs = self.llm.preprocess_parameters(prompt, **attrs)
-        inputs = openllm.GenerationInput(prompt=prompt, llm_config=self.config.with_options(**attrs))
+        inputs = openllm.GenerationInput(prompt=prompt, llm_config=self.config.model_construct_env(**attrs))
         r = openllm.GenerationOutput(**self.call("generate", inputs))
 
         if return_raw_response:
@@ -132,7 +132,7 @@ class BaseAsyncClient(ClientMixin):
     async def query(self, prompt: str, **attrs: t.Any) -> dict[str, t.Any] | str:
         return_raw_response = attrs.pop("return_raw_response", False)
         prompt, attrs = self.llm.preprocess_parameters(prompt, **attrs)
-        inputs = openllm.GenerationInput(prompt=prompt, llm_config=self.config.with_options(**attrs))
+        inputs = openllm.GenerationInput(prompt=prompt, llm_config=self.config.model_construct_env(**attrs))
         res = await self.acall("generate", inputs)
         r = openllm.GenerationOutput(**res)
 
