@@ -578,7 +578,18 @@ def list_supported_models(output: t.Literal["json", "pretty", "porcelain"]):
             )
         _console.print(table)
     elif output == "json":
-        _console.print(orjson.dumps({"supported": models}, option=orjson.OPT_INDENT_2).decode())
+        _console.print(
+            orjson.dumps(
+                {
+                    m: {
+                        "variants": openllm.AutoLLM.for_model(m).variants,
+                        "description": inspect.cleandoc(openllm.AutoConfig.for_model(m).__doc__ or "(No description)"),
+                    }
+                    for m in models
+                },
+                option=orjson.OPT_INDENT_2,
+            ).decode()
+        )
     else:
         click.echo("\n".join(models))
     sys.exit(0)
