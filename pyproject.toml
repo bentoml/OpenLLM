@@ -67,6 +67,9 @@ dependencies = [
     "black[jupyter]==23.3.0",
 ]
 
+[project.optional-dependencies]
+fine-tune = ["peft", "bitsandbytes"]
+
 [project.urls]
 Documentation = "https://github.com/llmsys/openllm#readme"
 Issues = "https://github.com/llmsys/openllm/issues"
