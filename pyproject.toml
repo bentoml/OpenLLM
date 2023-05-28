@@ -36,7 +36,9 @@ dependencies = [
     "grpcio-reflection",
     "httpx[http2]",
     # transformers[torch] includes torch and transformers
-    "transformers[torch,accelerate,tokenizers,onnxruntime,onnx,optimum]>=4.29.0",
+    "transformers[torch,accelerate,tokenizers,onnxruntime,onnx]>=4.29.0",
+    # BetterTransformers support for inference.
+    "optimum",
     # Super fast JSON serialization
     "orjson",
     "inflection",

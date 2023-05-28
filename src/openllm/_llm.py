@@ -460,14 +460,32 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
             self.__llm_bentomodel__ = self.ensure_pretrained_exists()
         return self.__llm_bentomodel__
 
-    def ensure_pretrained_exists(self):
-        trust_remote_code = self.__llm_kwargs__.pop("trust_remote_code", self.config.__openllm_trust_remote_code__)
+    @t.overload
+    def make_tag(self, return_unused_kwargs: t.Literal[False] = ..., trust_remote_code: bool = ...) -> bentoml.Tag:
+        ...
+
+    @t.overload
+    def make_tag(
+        self, return_unused_kwargs: t.Literal[True] = ..., trust_remote_code: bool = ...
+    ) -> tuple[bentoml.Tag, dict[str, t.Any]]:
+        ...
+
+    def make_tag(
+        self, return_unused_kwargs: bool = False, trust_remote_code: bool = False
+    ) -> bentoml.Tag | tuple[bentoml.Tag, dict[str, t.Any]]:
         tag, kwds = openllm.utils.generate_tags(
             self._pretrained,
             prefix=self.__llm_implementation__,
             trust_remote_code=trust_remote_code,
             **self.__llm_kwargs__,
         )
+        if not return_unused_kwargs:
+            return tag
+        return tag, kwds
+
+    def ensure_pretrained_exists(self):
+        trust_remote_code = self.__llm_kwargs__.pop("trust_remote_code", self.config.__openllm_trust_remote_code__)
+        tag, kwds = self.make_tag(return_unused_kwargs=True, trust_remote_code=trust_remote_code)
         try:
             return bentoml.transformers.get(tag)
         except bentoml.exceptions.BentoMLException:

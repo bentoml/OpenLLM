@@ -30,14 +30,8 @@ import bentoml
 import click
 import inflection
 import orjson
-import rich.box
-from bentoml._internal.configuration.containers import BentoMLContainer
+import psutil
 from bentoml_cli.utils import BentoMLCommandGroup
-from click.utils import make_default_short_help
-from click_option_group import optgroup
-from rich.console import Console
-from rich.table import Table
-from rich.text import Text
 
 import openllm
 
@@ -69,16 +63,6 @@ OPENLLM_FIGLET = """\
 ╚██████╔╝██║     ███████╗██║ ╚████║███████╗███████╗██║ ╚═╝ ██║
  ╚═════╝ ╚═╝     ╚══════╝╚═╝  ╚═══╝╚══════╝╚══════╝╚═╝     ╚═╝
 """
-
-_console = Console()
-
-output_decorator = click.option(
-    "-o",
-    "--output",
-    type=click.Choice(["json", "pretty", "porcelain"]),
-    default="pretty",
-    help="Showing output type. Default to 'pretty'",
-)
 
 
 class OpenLLMCommandGroup(BentoMLCommandGroup):
@@ -162,14 +146,9 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
 
         @functools.wraps(func)
         def wrapper(*args: P.args, **attrs: P.kwargs) -> t.Any:
-            from bentoml._internal.configuration import get_debug_mode
-
             try:
                 return func(*args, **attrs)
             except openllm.exceptions.OpenLLMException as err:
-                if get_debug_mode():
-                    _console.print_exception(show_locals=True, suppress=("click",))
-                    raise
                 raise click.ClickException(
                     click.style(f"[{group.name}] '{command_name}' failed: " + err.message, fg="red")
                 ) from err
@@ -182,13 +161,17 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
         super(OpenLLMCommandGroup, self).__init__(*args, **attrs)
         # these two dictionaries will store known aliases for commands and groups
         self._alias_groups: dict[str, tuple[str, click.Group]] = {}
+        self._cached_http: dict[str, t.Any] = {}
+        self._cached_grpc: dict[str, t.Any] = {}
 
     def group(self, *args: t.Any, **attrs: t.Any) -> t.Callable[[F[P]], click.Group]:
         """Override the default 'cli.group' with supports for aliases for given group."""
+        from click.utils import make_default_short_help
+
         aliases = attrs.pop("aliases", [])
 
         def wrapper(f: F[P]) -> click.Group:
-            from gettext import gettext as _
+            from gettext import gettext
 
             name = attrs.pop("name", f.__name__)
             group = super(OpenLLMCommandGroup, self).group(name, *args, **attrs)(f)
@@ -200,7 +183,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
                 text = ""
 
             if group.deprecated:
-                text = _("(Deprecated) {text}").format(text=text)
+                text = gettext("(Deprecated) {text}").format(text=text)
 
             attrs.setdefault("help", inspect.getdoc(f))
             attrs.setdefault("short_help", text)
@@ -215,6 +198,22 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
             return group
 
         return wrapper
+
+    def get_command(self, ctx: click.Context, cmd_name: str) -> click.Command | None:
+        cmd_name = self.resolve_alias(cmd_name)
+        if ctx.command.name == "start":
+            if cmd_name not in self._cached_http:
+                self._cached_http[cmd_name] = start_model_command(
+                    cmd_name, self, _context_settings=ctx.command.context_settings
+                )
+            return self._cached_http[cmd_name]
+        elif ctx.command.name == "start-grpc":
+            if cmd_name not in self._cached_grpc:
+                self._cached_grpc[cmd_name] = start_model_command(
+                    cmd_name, self, _context_settings=ctx.command.context_settings, _serve_grpc=True
+                )
+            return self._cached_grpc[cmd_name]
+        return super().get_command(ctx, cmd_name)
 
     def command(self, *args: t.Any, **attrs: t.Any) -> t.Callable[[F[P]], click.Command]:
         """Override the default 'cli.command' with supports for aliases for given command, and it
@@ -266,6 +265,7 @@ _IGNORED_OPTIONS = {"working_dir", "production", "protocol_version"}
 def parse_serve_args(serve_grpc: bool) -> t.Callable[[F[P]], F[P]]:
     """Parsing `bentoml serve|serve-grpc` click.Option to be parsed via `openllm start`"""
     from bentoml_cli.cli import cli
+    from click_option_group import optgroup
 
     command = "serve" if not serve_grpc else "serve-grpc"
     group = optgroup.group(
@@ -287,8 +287,7 @@ def parse_serve_args(serve_grpc: bool) -> t.Callable[[F[P]], F[P]]:
             # type can be determine from default value
             attrs.pop("type")
             param_decls = (*attrs.pop("opts"), *attrs.pop("secondary_opts"))
-            if name not in _IGNORED_OPTIONS:
-                f = optgroup.option(*param_decls, **attrs)(f)
+            f = optgroup.option(*param_decls, **attrs)(f)
 
         return group(f)
 
@@ -368,6 +367,8 @@ def start_model_command(
         "--pretrained", type=click.STRING, default=None, help="Optional pretrained name or path to fine-tune weight."
     )
     def model_start(server_timeout: int, pretrained: str | None, **attrs: t.Any) -> openllm.LLMConfig:
+        from bentoml._internal.configuration.containers import BentoMLContainer
+
         if ModelEnv.get_framework_env() == "flax":
             llm = openllm.AutoFlaxLLM.for_model(model_name, pretrained=pretrained, llm_config=config)
         elif ModelEnv.get_framework_env() == "tf":
@@ -473,153 +474,223 @@ start = functools.partial(_start, _serve_grpc=False)
 start_grpc = functools.partial(_start, _serve_grpc=True)
 
 
-@click.group(cls=openllm.cli.OpenLLMCommandGroup, context_settings=_CONTEXT_SETTINGS, name="openllm")
-def cli():
-    """
-    \b
-     ██████╗ ██████╗ ███████╗███╗   ██╗██╗     ██╗     ███╗   ███╗
-    ██╔═══██╗██╔══██╗██╔════╝████╗  ██║██║     ██║     ████╗ ████║
-    ██║   ██║██████╔╝█████╗  ██╔██╗ ██║██║     ██║     ██╔████╔██║
-    ██║   ██║██╔═══╝ ██╔══╝  ██║╚██╗██║██║     ██║     ██║╚██╔╝██║
-    ╚██████╔╝██║     ███████╗██║ ╚████║███████╗███████╗██║ ╚═╝ ██║
-     ╚═════╝ ╚═╝     ╚══════╝╚═╝  ╚═══╝╚══════╝╚══════╝╚═╝     ╚═╝
-
-    \b
-    OpenLLM: Your one stop-and-go-solution for serving any Open Large-Language Model
-
-        - StableLM, Llama, Alpaca, Dolly, Flan-T5, and more
-
-    \b
-        - Powered by BentoML 🍱 + HuggingFace 🤗
-    """
-
-
-@cli.command(name="version")
-@output_decorator
-def version(output: t.Literal["json", "pretty", "porcelain"]):
-    """🚀 OpenLLM version."""
-    if output == "pretty":
-        _console.print(f"OpenLLM version: {openllm.__version__}")
-    elif output == "json":
-        _console.print(orjson.dumps({"version": openllm.__version__}, option=orjson.OPT_INDENT_2).decode())
-    else:
-        click.echo(openllm.__version__)
-    sys.exit(0)
-
-
-@cli.group(cls=OpenLLMCommandGroup, context_settings=_CONTEXT_SETTINGS, aliases=["start-http"], name="start")
-def start_cli():
-    """
-    Start any LLM as a REST server.
-
-    $ openllm start <model_name> --<options> ...
-    """
-
-
-for name in openllm.CONFIG_MAPPING:
-    start_cli.add_command(start_model_command(name, start_cli, _context_settings=_CONTEXT_SETTINGS))
-
-
-@cli.group(cls=OpenLLMCommandGroup, context_settings=_CONTEXT_SETTINGS, name="start-grpc")
-def start_grpc_cli():
-    """
-    Start any LLM as a gRPC server.
-
-    $ openllm start-grpc <model_name> --<options> ...
-    """
-
-
-for name in openllm.CONFIG_MAPPING:
-    start_grpc_cli.add_command(
-        start_model_command(name, start_grpc_cli, _context_settings=_CONTEXT_SETTINGS, _serve_grpc=True)
+def create_cli() -> click.Group:
+    output_decorator = click.option(
+        "-o",
+        "--output",
+        type=click.Choice(["json", "pretty", "porcelain"]),
+        default="pretty",
+        help="Showing output type. Default to 'pretty'",
     )
 
+    @click.group(cls=openllm.cli.OpenLLMCommandGroup, context_settings=_CONTEXT_SETTINGS, name="openllm")
+    def cli():
+        """
+        \b
+         ██████╗ ██████╗ ███████╗███╗   ██╗██╗     ██╗     ███╗   ███╗
+        ██╔═══██╗██╔══██╗██╔════╝████╗  ██║██║     ██║     ████╗ ████║
+        ██║   ██║██████╔╝█████╗  ██╔██╗ ██║██║     ██║     ██╔████╔██║
+        ██║   ██║██╔═══╝ ██╔══╝  ██║╚██╗██║██║     ██║     ██║╚██╔╝██║
+        ╚██████╔╝██║     ███████╗██║ ╚████║███████╗███████╗██║ ╚═╝ ██║
+         ╚═════╝ ╚═╝     ╚══════╝╚═╝  ╚═══╝╚══════╝╚══════╝╚═╝     ╚═╝
 
-@cli.command(aliases=["build"])
-@click.argument("model_name", type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING.keys()]))
-@click.option("--pretrained", default=None, help="Given pretrained model name for the given model name [Optional].")
-@click.option("--overwrite", is_flag=True, help="Overwrite existing Bento for given LLM if it already exists.")
-@output_decorator
-def bundle(model_name: str, pretrained: str | None, overwrite: bool, output: t.Literal["json", "pretty", "porcelain"]):
-    """Package a given models into a Bento.
+        \b
+        OpenLLM: Your one stop-and-go-solution for serving any Open Large-Language Model
 
-    $ openllm bundle flan-t5
-    """
-    from bentoml._internal.configuration import get_quiet_mode
+            - StableLM, Llama, Alpaca, Dolly, Flan-T5, and more
 
-    bento, _previously_built = openllm.build(
-        model_name, __cli__=True, pretrained=pretrained, _overwrite_existing_bento=overwrite
+        \b
+            - Powered by BentoML 🍱 + HuggingFace 🤗
+        """
+
+    @cli.command(name="version")
+    @output_decorator
+    @click.pass_context
+    def _(ctx: click.Context, output: t.Literal["json", "pretty", "porcelain"]):
+        """🚀 OpenLLM version."""
+        from gettext import gettext
+
+        message = gettext("%(prog)s, version %(version)s")
+        version = openllm.__version__
+        prog_name = ctx.find_root().info_name
+
+        if output == "pretty":
+            click.echo(message % {"prog": prog_name, "version": version}, color=ctx.color)
+        elif output == "json":
+            click.echo(orjson.dumps({"version": version}, option=orjson.OPT_INDENT_2).decode())
+        else:
+            click.echo(version)
+
+        ctx.exit()
+
+    @cli.group(cls=OpenLLMCommandGroup, context_settings=_CONTEXT_SETTINGS, aliases=["start-http"], name="start")
+    def start_cli():
+        """
+        Start any LLM as a REST server.
+
+        $ openllm start <model_name> --<options> ...
+        """
+
+    for name in openllm.CONFIG_MAPPING:
+        start_cli.add_command(start_model_command(name, start_cli, _context_settings=_CONTEXT_SETTINGS))
+
+    @cli.group(cls=OpenLLMCommandGroup, context_settings=_CONTEXT_SETTINGS, name="start-grpc")
+    def start_grpc_cli():
+        """
+        Start any LLM as a gRPC server.
+
+        $ openllm start-grpc <model_name> --<options> ...
+        """
+
+    for name in openllm.CONFIG_MAPPING:
+        start_grpc_cli.add_command(
+            start_model_command(name, start_grpc_cli, _context_settings=_CONTEXT_SETTINGS, _serve_grpc=True)
+        )
+
+    @cli.command(name="bundle", aliases=["build"])
+    @click.argument(
+        "model_name", type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING.keys()])
     )
+    @click.option("--pretrained", default=None, help="Given pretrained model name for the given model name [Optional].")
+    @click.option("--overwrite", is_flag=True, help="Overwrite existing Bento for given LLM if it already exists.")
+    @output_decorator
+    def _(model_name: str, pretrained: str | None, overwrite: bool, output: t.Literal["json", "pretty", "porcelain"]):
+        """Package a given models into a Bento.
 
-    if output == "pretty":
-        if not get_quiet_mode():
-            click.echo("\n" + OPENLLM_FIGLET)
-            if not _previously_built:
-                click.secho(f"Successfully built {bento}.", fg="green")
-            else:
+        $ openllm bundle flan-t5
+        """
+        from bentoml._internal.configuration import get_quiet_mode
+
+        bento, _previously_built = openllm.build(
+            model_name, __cli__=True, pretrained=pretrained, _overwrite_existing_bento=overwrite
+        )
+
+        if output == "pretty":
+            if not get_quiet_mode():
+                click.echo("\n" + OPENLLM_FIGLET)
+                if not _previously_built:
+                    click.secho(f"Successfully built {bento}.", fg="green")
+                else:
+                    click.secho(
+                        f"'{model_name}' already has a Bento built [{bento}]. To overwrite it pass '--overwrite'.",
+                        fg="yellow",
+                    )
+
                 click.secho(
-                    f"'{model_name}' already has a Bento built [{bento}]. To overwrite it pass '--overwrite'.",
-                    fg="yellow",
+                    "\nPossible next steps:\n\n * Push to BentoCloud with `bentoml push`:\n    "
+                    + f"$ bentoml push {bento.tag}",
+                    fg="blue",
                 )
+                click.secho(
+                    "\n * Containerize your Bento with `bentoml containerize`:\n    "
+                    + f"$ bentoml containerize {bento.tag}",
+                    fg="blue",
+                )
+        elif output == "json":
+            click.secho(orjson.dumps(bento.info.to_dict(), option=orjson.OPT_INDENT_2).decode())
+        else:
+            click.echo(bento.tag)
+        return bento
 
-            click.secho(
-                f"\nPossible next steps:\n\n * Push to BentoCloud with `bentoml push`:\n    $ bentoml push {bento.tag}",
-                fg="blue",
-            )
-            click.secho(
-                f"\n * Containerize your Bento with `bentoml containerize`:\n    $ bentoml containerize {bento.tag}",
-                fg="blue",
-            )
-    elif output == "json":
-        _console.print(orjson.dumps(bento.info.to_dict(), option=orjson.OPT_INDENT_2).decode())
-    else:
-        click.echo(bento.tag)
-    return bento
+    @cli.command(name="models")
+    @output_decorator
+    def _(output: t.Literal["json", "pretty", "porcelain"]):
+        """List all supported models."""
+        models = tuple(inflection.dasherize(key) for key in openllm.CONFIG_MAPPING.keys())
+        failed_initialized: list[tuple[str, Exception]] = []
+        if output == "pretty":
+            import rich
+            import rich.box
+            from rich.table import Table
+            from rich.text import Text
+
+            console = rich.get_console()
+            table = Table(title="Supported LLMs", box=rich.box.SQUARE, show_lines=True)
+            table.add_column("LLM")
+            table.add_column("Description")
+            table.add_column("Variants")
+            for m in models:
+                docs = inspect.cleandoc(openllm.AutoConfig.for_model(m).__doc__ or "(No description)")
+                try:
+                    model = openllm.AutoLLM.for_model(m)
+                    table.add_row(m, docs, f"{model.variants}")
+                except Exception as err:
+                    failed_initialized.append((m, err))
+            console.print(table)
+            if len(failed_initialized) > 0:
+                console.print(
+                    "\n[bold yellow] The following models are supported but failed to initialize:[/bold yellow]\n"
+                )
+                for m, err in failed_initialized:
+                    console.print(Text(f"- {m}: ") + Text(f"{err}\n", style="bold red"))
+        elif output == "json":
+            result_json: dict[str, dict[t.Literal["variants", "description"], t.Any]] = {}
+            for m in models:
+                docs = inspect.cleandoc(openllm.AutoConfig.for_model(m).__doc__ or "(No description)")
+                try:
+                    model = openllm.AutoLLM.for_model(m)
+                    result_json[m] = {"variants": model.variants, "description": docs}
+                except Exception as err:
+                    logger.debug("Exception caught while parsing model %s", m, exc_info=err)
+                    result_json[m] = {"variants": None, "description": docs}
+
+            click.secho(orjson.dumps(result_json, option=orjson.OPT_INDENT_2).decode())
+        else:
+            click.echo("\n".join(models))
+        sys.exit(0)
+
+    @cli.command(name="download-models")
+    @click.argument(
+        "model_name", type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING.keys()])
+    )
+    @click.option(
+        "--pretrained", type=click.STRING, default=None, help="Optional pretrained name or path to fine-tune weight."
+    )
+    @output_decorator
+    def _(model_name: str, pretrained: str | None, output: t.Literal["json", "pretty", "porcelain"]):
+        """Setup LLM interactively.
+
+        Note: This is useful for development and setup for fine-tune.
+        """
+        config = openllm.AutoConfig.for_model(model_name)
+        env = config.__openllm_env__.get_framework_env()
+        if env == "flax":
+            model = openllm.AutoFlaxLLM.for_model(model_name, pretrained=pretrained, llm_config=config)
+        elif env == "tf":
+            model = openllm.AutoTFLLM.for_model(model_name, pretrained=pretrained, llm_config=config)
+        else:
+            model = openllm.AutoLLM.for_model(model_name, pretrained=pretrained, llm_config=config)
+
+        tag = model.make_tag()
+
+        if len(bentoml.models.list(tag)) == 0:
+            if output == "pretty":
+                click.secho(f"Setting up {model_name}...", nl=True)
+                m = model.ensure_pretrained_exists()
+                click.secho(f"Saved model: {m.tag}")
+            elif output == "json":
+                m = model.ensure_pretrained_exists()
+                click.secho(orjson.dumps({"previously_setup": False, "framework": env, "tag": str(m.tag)}).decode())
+            else:
+                m = model.ensure_pretrained_exists()
+                click.secho(m.tag)
+        else:
+            m = model.ensure_pretrained_exists()
+            if output == "pretty":
+                click.secho(f"{model_name} is already setup for framework '{env}': {str(m.tag)}", nl=True)
+            elif output == "json":
+                click.secho(orjson.dumps({"previously_setup": True, "framework": env, "model": str(m.tag)}).decode())
+            else:
+                click.echo(m.tag)
+        return m
+
+    if psutil.WINDOWS:
+        sys.stdout.reconfigure(encoding="utf-8")  # type: ignore
+
+    return cli
 
 
-@cli.command(name="models")
-@output_decorator
-def list_supported_models(output: t.Literal["json", "pretty", "porcelain"]):
-    """
-    List all supported models.
-    """
-    models = tuple(inflection.dasherize(key) for key in openllm.CONFIG_MAPPING.keys())
-    failed_initialized: list[tuple[str, Exception]] = []
-    if output == "pretty":
-        table = Table(title="Supported LLMs", box=rich.box.SQUARE, show_lines=True)
-        table.add_column("LLM")
-        table.add_column("Description")
-        table.add_column("Variants")
-        for m in models:
-            docs = inspect.cleandoc(openllm.AutoConfig.for_model(m).__doc__ or "(No description)")
-            try:
-                model = openllm.AutoLLM.for_model(m)
-                table.add_row(m, docs, f"{model.variants}")
-            except Exception as err:
-                failed_initialized.append((m, err))
-        _console.print(table)
-        if len(failed_initialized) > 0:
-            _console.print(
-                "\n[bold yellow] The following models are supported but failed to initialize:[/bold yellow]\n"
-            )
-            for m, err in failed_initialized:
-                _console.print(Text(f"- {m}: ") + Text(f"{err}\n", style="bold red"))
-    elif output == "json":
-        result_json: dict[str, dict[t.Literal["variants", "description"], t.Any]] = {}
-        for m in models:
-            docs = inspect.cleandoc(openllm.AutoConfig.for_model(m).__doc__ or "(No description)")
-            try:
-                model = openllm.AutoLLM.for_model(m)
-                result_json[m] = {"variants": model.variants, "description": docs}
-            except Exception as err:
-                logger.debug("Exception caught while parsing model %s", m, exc_info=err)
-                result_json[m] = {"variants": None, "description": docs}
-
-        _console.print_json(orjson.dumps(result_json, option=orjson.OPT_INDENT_2).decode())
-    else:
-        click.echo("\n".join(models))
-    sys.exit(0)
-
+cli = create_cli()
 
 if __name__ == "__main__":
     cli()

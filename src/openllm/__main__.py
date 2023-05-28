@@ -20,9 +20,7 @@ Usage:
 To start any OpenLLM model:
     openllm start <model_name> --options ...
 """
-from __future__ import annotations
-
 if __name__ == "__main__":
-    from openllm.cli import cli
+    from openllm.cli import create_cli
 
-    cli()
+    create_cli()()
