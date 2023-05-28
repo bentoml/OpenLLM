@@ -75,6 +75,8 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
         from bentoml._internal.configuration import DEBUG_ENV_VAR, QUIET_ENV_VAR, set_debug_mode, set_quiet_mode
         from bentoml._internal.log import configure_logging
 
+        from .utils import analytics
+
         @click.option("-q", "--quiet", envvar=QUIET_ENV_VAR, is_flag=True, default=False, help="Suppress all output.")
         @click.option(
             "--debug", "--verbose", envvar=DEBUG_ENV_VAR, is_flag=True, default=False, help="Print out debug logs."
@@ -83,7 +85,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
             "--do-not-track",
             is_flag=True,
             default=False,
-            envvar=openllm.utils.analytics.OPENLLM_DO_NOT_TRACK,
+            envvar=analytics.OPENLLM_DO_NOT_TRACK,
             help="Do not send usage info",
         )
         @functools.wraps(f)
@@ -103,7 +105,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
 
     @staticmethod
     def usage_tracking(func: F[P], group: click.Group, **attrs: t.Any) -> ClickFunctionProtocol[t.Any]:
-        from openllm.utils import analytics
+        from .utils import analytics
 
         command_name = attrs.get("name", func.__name__)
 
@@ -214,6 +216,12 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
                 )
             return self._cached_grpc[cmd_name]
         return super().get_command(ctx, cmd_name)
+
+    def list_commands(self, ctx: click.Context) -> list[str]:
+        if ctx.command.name == "start" or ctx.command.name == "start-grpc":
+            return list(openllm.CONFIG_MAPPING.keys())
+
+        return super().list_commands(ctx)
 
     def command(self, *args: t.Any, **attrs: t.Any) -> t.Callable[[F[P]], click.Command]:
         """Override the default 'cli.command' with supports for aliases for given command, and it
@@ -458,10 +466,11 @@ def _start(
     **attrs: t.Any,
 ):
     """Python API to start a LLM server."""
+    from . import utils
 
     _serve_grpc = attrs.pop("_serve_grpc", False)
 
-    ModelEnv = openllm.utils.ModelEnv(model_name)
+    ModelEnv = utils.ModelEnv(model_name)
 
     if framework is not None:
         os.environ[ModelEnv.framework] = framework
@@ -483,7 +492,7 @@ def create_cli() -> click.Group:
         help="Showing output type. Default to 'pretty'",
     )
 
-    @click.group(cls=openllm.cli.OpenLLMCommandGroup, context_settings=_CONTEXT_SETTINGS, name="openllm")
+    @click.group(cls=OpenLLMCommandGroup, context_settings=_CONTEXT_SETTINGS, name="openllm")
     def cli():
         """
         \b
@@ -510,8 +519,10 @@ def create_cli() -> click.Group:
         """🚀 OpenLLM version."""
         from gettext import gettext
 
+        from .__about__ import __version__
+
         message = gettext("%(prog)s, version %(version)s")
-        version = openllm.__version__
+        version = __version__
         prog_name = ctx.find_root().info_name
 
         if output == "pretty":
@@ -524,28 +535,20 @@ def create_cli() -> click.Group:
         ctx.exit()
 
     @cli.group(cls=OpenLLMCommandGroup, context_settings=_CONTEXT_SETTINGS, aliases=["start-http"], name="start")
-    def start_cli():
+    def _():
         """
         Start any LLM as a REST server.
 
         $ openllm start <model_name> --<options> ...
         """
 
-    for name in openllm.CONFIG_MAPPING:
-        start_cli.add_command(start_model_command(name, start_cli, _context_settings=_CONTEXT_SETTINGS))
-
     @cli.group(cls=OpenLLMCommandGroup, context_settings=_CONTEXT_SETTINGS, name="start-grpc")
-    def start_grpc_cli():
+    def _():
         """
         Start any LLM as a gRPC server.
 
         $ openllm start-grpc <model_name> --<options> ...
         """
-
-    for name in openllm.CONFIG_MAPPING:
-        start_grpc_cli.add_command(
-            start_model_command(name, start_grpc_cli, _context_settings=_CONTEXT_SETTINGS, _serve_grpc=True)
-        )
 
     @cli.command(name="bundle", aliases=["build"])
     @click.argument(
@@ -665,7 +668,7 @@ def create_cli() -> click.Group:
 
         if len(bentoml.models.list(tag)) == 0:
             if output == "pretty":
-                click.secho(f"Setting up {model_name}...", nl=True)
+                click.secho(f"{tag} does not exists yet!. Downloading...", nl=True)
                 m = model.ensure_pretrained_exists()
                 click.secho(f"Saved model: {m.tag}")
             elif output == "json":
