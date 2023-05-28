@@ -31,10 +31,8 @@ else:
     _import_structure["modeling_falcon"] = ["Falcon"]
 
 if t.TYPE_CHECKING:
-    from .configuration_falcon import \
-        DEFAULT_PROMPT_TEMPLATE as DEFAULT_PROMPT_TEMPLATE
-    from .configuration_falcon import \
-        START_FALCON_COMMAND_DOCSTRING as START_FALCON_COMMAND_DOCSTRING
+    from .configuration_falcon import DEFAULT_PROMPT_TEMPLATE as DEFAULT_PROMPT_TEMPLATE
+    from .configuration_falcon import START_FALCON_COMMAND_DOCSTRING as START_FALCON_COMMAND_DOCSTRING
     from .configuration_falcon import FalconConfig as FalconConfig
 
     try:

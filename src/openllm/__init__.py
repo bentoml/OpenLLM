@@ -117,6 +117,7 @@ if t.TYPE_CHECKING:
     from . import client as client
     from . import exceptions as exceptions
     from . import models as models
+
     # Specific types import
     from ._configuration import LLMConfig as LLMConfig
     from ._llm import LLM as LLM
@@ -172,8 +173,7 @@ if t.TYPE_CHECKING:
         from .utils.dummy_flax_objects import *
     else:
         from .models.auto import MODEL_FLAX_MAPPING as MODEL_FLAX_MAPPING
-        from .models.auto import \
-            MODEL_FLAX_MAPPING_NAMES as MODEL_FLAX_MAPPING_NAMES
+        from .models.auto import MODEL_FLAX_MAPPING_NAMES as MODEL_FLAX_MAPPING_NAMES
         from .models.auto import AutoFlaxLLM as AutoFlaxLLM
         from .models.flan_t5 import FlaxFlanT5 as FlaxFlanT5
 
@@ -184,8 +184,7 @@ if t.TYPE_CHECKING:
         from .utils.dummy_tf_objects import *
     else:
         from .models.auto import MODEL_TF_MAPPING as MODEL_TF_MAPPING
-        from .models.auto import \
-            MODEL_TF_MAPPING_NAMES as MODEL_TF_MAPPING_NAMES
+        from .models.auto import MODEL_TF_MAPPING_NAMES as MODEL_TF_MAPPING_NAMES
         from .models.auto import AutoTFLLM as AutoTFLLM
         from .models.flan_t5 import TFFlanT5 as TFFlanT5
 

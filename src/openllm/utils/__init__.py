@@ -29,15 +29,14 @@ import typing as t
 import bentoml
 import inflection
 from bentoml._internal.types import LazyType as LazyType
+
 # NOTE: The following exports useful utils from bentoml
 from bentoml._internal.utils import LazyLoader as LazyLoader
 from bentoml._internal.utils import bentoml_cattr as bentoml_cattr
-from bentoml._internal.utils import \
-    copy_file_to_fs_folder as copy_file_to_fs_folder
+from bentoml._internal.utils import copy_file_to_fs_folder as copy_file_to_fs_folder
 from bentoml._internal.utils import pkg as pkg
 from bentoml._internal.utils import reserve_free_port as reserve_free_port
-from bentoml._internal.utils import \
-    resolve_user_filepath as resolve_user_filepath
+from bentoml._internal.utils import resolve_user_filepath as resolve_user_filepath
 
 from . import analytics as analytics
 from . import codegen as codegen
