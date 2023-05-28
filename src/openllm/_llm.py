@@ -29,16 +29,17 @@ import openllm
 
 from ._configuration import ModelSignature
 from .exceptions import ForbiddenAttributeError, OpenLLMException
-from .utils import bentoml_cattr
+from .utils import LazyLoader, bentoml_cattr
 
 if t.TYPE_CHECKING:
+    import torch
     import transformers
     from bentoml._internal.runner.strategy import Strategy
 
     from ._types import LLMModel, LLMTokenizer, ModelSignatureDict
 else:
     ModelSignatureDict = dict
-    transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
+    transformers = LazyLoader("transformers", globals(), "transformers")
 
 logger = logging.getLogger(__name__)
 
@@ -166,7 +167,7 @@ class LLMInterface(ABC):
     This could be one of the keys in 'self.variants' or custom users model."""
 
     variants: list[str]
-    """A list of supported pretrainede models tag for this given runnable.
+    """A list of supported pretrained models tag for this given runnable.
 
     For example:
         For FLAN-T5 impl, this would be ["google/flan-t5-small", "google/flan-t5-base",
@@ -289,12 +290,15 @@ class LLMMetaclass(ABCMeta):
             for key in ("__openllm_start_name__", "__openllm_requires_gpu__"):
                 namespace[key] = getattr(config_class, key)
 
+            # NOTE: set a default variable to transform to BetterTransformer by default for inference
+            namespace["__openllm_bettertransformer__"] = namespace.get(
+                "__openllm_bettertransformer__", implementation in ("pt",)
+            )
+
             # NOTE: import_model branch
             if "import_model" not in namespace:
                 # using the default import model
-                namespace["import_model"] = functools.partial(
-                    import_model, __openllm_framework__=namespace["__llm_implementation__"]
-                )
+                namespace["import_model"] = functools.partial(import_model, __openllm_framework__=implementation)
             else:
                 logger.debug("Using custom 'import_model' for %s", cls_name)
 
@@ -324,6 +328,7 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
 
         __openllm_start_name__: str
         __openllm_requires_gpu__: bool
+        __openllm_bettertransformer__: bool
         __openllm_post_init__: t.Callable[[t.Self], None] | None
 
         # NOTE: the following will be populated by __init__
@@ -341,6 +346,7 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
         self,
         pretrained: str | None = None,
         llm_config: openllm.LLMConfig | None = None,
+        load_as_bttransformer: bool | None = None,
         *args: t.Any,
         **attrs: t.Any,
     ):
@@ -405,6 +411,9 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
             pretrained: The pretrained model to use. Defaults to None. It will use 'self.default_model' if None.
             llm_config: The config to use for this LLM. Defaults to None. If not passed, we will use 'self.config_class'
                         to construct default configuration.
+            load_as_bttransformer: Whether to apply BetterTransformer during inference load.
+                                   See https://pytorch.org/blog/a-better-transformer-for-fast-transformer-encoder-inference/
+                                   for more information.
             *args: The args to be passed to the model.
             **attrs: The kwargs to be passed to the model.
         """
@@ -431,6 +440,12 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
         # NOTE: Save the args and kwargs for latter load
         self.__llm_args__ = args
         self.__llm_kwargs__ = attrs
+
+        if load_as_bttransformer is None:
+            load_as_bttransformer = self.__openllm_bettertransformer__
+        self._load_as_bttransformer = os.environ.get(
+            self.config.__openllm_env__.bettertransformer, load_as_bttransformer
+        )
 
         if self.__openllm_post_init__:
             self.__openllm_post_init__(self)
@@ -518,7 +533,7 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
         return self._bentomodel.tag
 
     @property
-    def model(self) -> LLMModel:
+    def model(self) -> LLMModel | torch.nn.Module:
         """The model to use for this LLM. This shouldn't be set at runtime, rather let OpenLLM handle it."""
         # Run check for GPU
         trust_remote_code = self.__llm_kwargs__.pop("trust_remote_code", self.config.__openllm_trust_remote_code__)
@@ -531,10 +546,21 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
         else:
             kwds = self.__llm_kwargs__
         kwds["trust_remote_code"] = trust_remote_code
+        if self._load_as_bttransformer and "_pretrained_class" not in self._bentomodel.info.metadata:
+            # This is a pipeline, provide a accelerator args
+            kwds["accelerator"] = "bettertransformer"
 
         if self.__llm_model__ is None:
             # Hmm, bentoml.transformers.load_model doesn't yet support args.
             self.__llm_model__ = self._bentomodel.load_model(*self.__llm_args__, **kwds)
+        if (
+            self._load_as_bttransformer
+            and "_framework" in self._bentomodel.info.metadata
+            and self._bentomodel.info.metadata["_framework"] == "torch"
+        ):
+            from optimum.bettertransformer import BetterTransformer
+
+            return BetterTransformer.transform(self.__llm_model__)
         return self.__llm_model__
 
     @property

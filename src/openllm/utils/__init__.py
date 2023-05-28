@@ -79,8 +79,15 @@ class ModelEnv:
     def pretrained(self) -> str:
         return f"OPENLLM_{self.model_name.upper()}_PRETRAINED"
 
+    @property
+    def bettertransformer(self) -> str:
+        return f"OPENLLM_{self.model_name.upper()}_BETTERTRANSFORMER"
+
     def gen_env_key(self, key: str) -> str:
         return f"OPENLLM_{self.model_name.upper()}_{key.upper()}"
+
+    def convert_to_bettertransformer(self) -> bool:
+        return os.environ.get(self.bettertransformer, str(False)).lower() == "true"
 
     @property
     def start_docstring(self) -> str:
