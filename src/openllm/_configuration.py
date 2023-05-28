@@ -127,7 +127,7 @@ class GenerationConfig(pydantic.BaseModel):
     """Generation config provides the configuration to then be parsed to ``transformers.GenerationConfig``,
     with some additional validation and environment constructor.
 
-    Note that we always set `do_sample=True` and `return_dict_in_generate=False`
+    Note that we always set `do_sample=True`
     """
 
     # NOTE: parameters for controlling the length of the output
@@ -146,12 +146,10 @@ class GenerationConfig(pydantic.BaseModel):
     early_stopping: bool = pydantic.Field(
         False,
         description="""Controls the stopping condition for beam-based methods, like beam-search. It accepts the 
-        following values: 
-        - `True`, where the generation stops as soon as there are `num_beams` complete candidates; 
-        - `False`, where an heuristic is applied and the generation stops when is it very unlikely to find 
-            better candidates; 
-        - `"never"`, where the beam search procedure only stops when there cannot be better candidates 
-            (canonical beam search algorithm)
+        following values: `True`, where the generation stops as soon as there are `num_beams` complete candidates; 
+        `False`, where an heuristic is applied and the generation stops when is it very unlikely to find 
+        better candidates; `"never"`, where the beam search procedure only stops when there 
+        cannot be better candidates (canonical beam search algorithm)
     """,
     )
     max_time: float = pydantic.Field(

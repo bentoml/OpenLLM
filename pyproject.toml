@@ -1,29 +1,8 @@
 [build-system]
-requires = ["hatchling"]
 build-backend = "hatchling.build"
+requires = ["hatchling"]
 
 [project]
-name = "openllm"
-dynamic = ["version"]
-description = 'OpenLLM: REST/gRPC API server for running any open Large-Language Model - StableLM, Llama, Alpaca, Dolly, Flan-T5, Custom'
-readme = "README.md"
-requires-python = ">=3.8"
-license = "Apache-2.0"
-keywords = [
-    "MLOps",
-    "AI",
-    "BentoML",
-    "Model Serving",
-    "Model Deployment",
-    "LLMOps",
-    "Large Language Model",
-    "Generative AI",
-    "Stable Diffusion",
-    "StableLM",
-    "Alpaca",
-    "PyTorch",
-    "Transformers",
-]
 authors = [
     { name = "Aaron Pham", email = "aarnphm@bentoml.com" },
     { name = "BentoML Team", email = "contact@bentoml.com" },
@@ -57,7 +36,7 @@ dependencies = [
     "grpcio-reflection",
     "httpx[http2]",
     # transformers[torch] includes torch and transformers
-    "transformers[torch,accelerate,tokenizers,onnxruntime,onnx]>=4.29.0",
+    "transformers[torch,accelerate,tokenizers,onnxruntime,onnx,optimum]>=4.29.0",
     # Super fast JSON serialization
     "orjson",
     "inflection",
@@ -66,18 +45,33 @@ dependencies = [
     # black for generating service file.
     "black[jupyter]==23.3.0",
 ]
+description = 'OpenLLM: REST/gRPC API server for running any open Large-Language Model - StableLM, Llama, Alpaca, Dolly, Flan-T5, Custom'
+dynamic = ["version"]
+keywords = [
+    "MLOps",
+    "AI",
+    "BentoML",
+    "Model Serving",
+    "Model Deployment",
+    "LLMOps",
+    "Large Language Model",
+    "Generative AI",
+    "Stable Diffusion",
+    "StableLM",
+    "Alpaca",
+    "PyTorch",
+    "Transformers",
+]
+license = "Apache-2.0"
+name = "openllm"
+readme = "README.md"
+requires-python = ">=3.8"
 
 [project.optional-dependencies]
-all = [
-    'openllm[fine-tune]',
-    'openllm[chatglm]',
-    'openllm[falcon]',
-    'openllm[flan-t5]',
-    'openllm[starcoder]',
-]
-fine-tune = ["peft", "bitsandbytes", "datasets"]
+all = ['openllm[fine-tune]', 'openllm[chatglm]', 'openllm[falcon]', 'openllm[flan-t5]', 'openllm[starcoder]']
 chatglm = ['cpm_kernels', 'sentencepiece']
 falcon = ['einops']
+fine-tune = ["peft", "bitsandbytes", "datasets"]
 flan-t5 = ['flax', 'jax', 'jaxlib', 'tensorflow']
 starcoder = ['bitsandbytes']
 
@@ -108,29 +102,24 @@ dependencies = [
     "pre-commit",
 ]
 [tool.hatch.envs.default.scripts]
+cov = ["test-cov", "cov-report"]
+cov-report = ["- coverage combine", "coverage report"]
 setup = "pre-commit install"
 test = "pytest {args:tests}"
 test-cov = "coverage run -m pytest {args:tests}"
-cov-report = ["- coverage combine", "coverage report"]
-cov = ["test-cov", "cov-report"]
 
 [[tool.hatch.envs.all.matrix]]
 python = ["3.8", "3.9", "3.10", "3.11"]
 
 [tool.hatch.envs.dev]
-detached = true
 dependencies = ["ruff>=0.0.243", "pyright", "hatch"]
+detached = true
 
 [tool.hatch.envs.dev.scripts]
-typing = "pyright {args:src/openllm tests}"
-style = ["ruff {args:.}", "black --check --diff {args:.}"]
-fmt = [
-    "black {args:.}",
-    "black --pyi {args:typings/}",
-    "ruff --fix {args:.}",
-    "style",
-]
 all = ["fmt", "typing"]
+fmt = ["black {args:.}", "black --pyi {args:typings/}", "ruff --fix {args:.}", "style"]
+style = ["ruff {args:.}", "black --check --diff {args:.}"]
+typing = "pyright {args:src/openllm tests}"
 
 [tool.pytest.ini_options]
 addopts = ["-rfEX", "-pno:warnings"]
@@ -138,8 +127,6 @@ python_files = ["test_*.py", "*_test.py"]
 testpaths = ["tests"]
 
 [tool.black]
-target-version = ["py311"]
-line-length = 120
 exclude = '''
 (
   /(
@@ -158,10 +145,10 @@ exclude = '''
   | src/openllm/__about__.py
 )
 '''
+line-length = 120
+target-version = ["py311"]
 
 [tool.ruff]
-target-version = "py311"
-line-length = 120
 ignore = [
     # Allow non-abstract empty methods in abstract base classes
     "B027",
@@ -178,6 +165,8 @@ ignore = [
     "PLR0913",
     "PLR0915",
 ]
+line-length = 120
+target-version = "py311"
 unfixable = [
     "F401", # Don't touch unused imports, just warn about it.
 ]
@@ -186,8 +175,8 @@ unfixable = [
 convention = "google"
 
 [tool.ruff.isort]
-lines-after-imports = 2
 known-first-party = ["openllm", "bentoml", 'transformers']
+lines-after-imports = 2
 
 [tool.ruff.flake8-quotes]
 inline-quotes = "single"
@@ -197,31 +186,31 @@ ban-relative-imports = "all"
 
 [tool.ruff.per-file-ignores]
 # Tests can use magic values, assertions, and relative imports
-"tests/**/*" = ["PLR2004", "S101", "TID252"]
 "__init__.py" = ["E402", "F401", "F403", "F811"]
+"tests/**/*" = ["PLR2004", "S101", "TID252"]
 
 [tool.pyright]
-pythonVersion = "3.11"
-include = ["src/", "tests/"]
 analysis.useLibraryCodeForTypes = true
-typeCheckingMode = "strict"
-strictListInference = true
-strictDictionaryInference = true
-strictSetInference = true
-strictParameterNoneValue = true
 enableTypeIgnoreComments = true
+include = ["src/", "tests/"]
+pythonVersion = "3.11"
 reportMissingImports = "none"
-reportMissingTypeStubs = "warning"
 reportMissingModuleSource = "warning"
-reportUnknownVariableType = "warning"
+reportMissingTypeStubs = "warning"
 reportUnknownMemberType = "warning"
+reportUnknownVariableType = "warning"
+strictDictionaryInference = true
+strictListInference = true
+strictParameterNoneValue = true
+strictSetInference = true
+typeCheckingMode = "strict"
 
 
 [tool.coverage.run]
-source_pkgs = ["openllm", "tests"]
 branch = true
-parallel = true
 omit = ["src/openllm/__about__.py"]
+parallel = true
+source_pkgs = ["openllm", "tests"]
 
 [tool.coverage.paths]
 openllm = ["src/openllm", "*/openllm/src/openllm"]

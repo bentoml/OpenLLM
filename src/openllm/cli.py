@@ -497,7 +497,7 @@ def cli():
 @cli.command(name="version")
 @output_decorator
 def version(output: t.Literal["json", "pretty", "porcelain"]):
-    """Return current OpenLLM version."""
+    """🚀 OpenLLM version."""
     if output == "pretty":
         _console.print(f"OpenLLM version: {openllm.__version__}")
     elif output == "json":
