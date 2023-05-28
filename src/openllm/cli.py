@@ -425,7 +425,7 @@ def start_model_command(
             click.secho(
                 f"Make sure that you have the following dependencies available: {llm.requirements}\n", fg="yellow"
             )
-        click.secho(f"Starting LLM Server for '{model_name}'\n", fg="blue")
+        click.secho(f"\nStarting LLM Server for '{model_name}'\n", fg="blue")
         server_cls = getattr(bentoml, "HTTPServer" if not _serve_grpc else "GrpcServer")
         server: bentoml.server.Server = server_cls("_service.py:svc", **server_attrs)
         server.timeout = 90

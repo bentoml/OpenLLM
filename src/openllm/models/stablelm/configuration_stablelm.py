@@ -32,7 +32,9 @@ class StableLMConfig(openllm.LLMConfig, name_type="lowercase"):
 
     class GenerationConfig:
         temperature: float = 0.9
-        max_new_tokens: int = 64
+        max_new_tokens: int = 128
+        top_k: int = 0
+        top_p: float = 0.9
 
 
 START_STABLELM_COMMAND_DOCSTRING = """\
@@ -58,8 +60,6 @@ SYSTEM_PROMPT = """<|SYSTEM|># StableLM Tuned (Alpha version)
 - StableLM will refuse to participate in anything that could harm a human.
 """  # noqa
 
-DEFAULT_PROMPT_TEMPLATE = """{system_prompt}
-<|USER|>{instruction}<|ASSISTANT|>
-""".format(
+DEFAULT_PROMPT_TEMPLATE = """{system_prompt}<|USER|>{instruction}<|ASSISTANT|>""".format(
     system_prompt=SYSTEM_PROMPT, instruction="{instruction}"
 )
