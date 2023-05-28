@@ -89,7 +89,7 @@ class StarCoder(openllm.LLM):
         )
 
         try:
-            return bentoml.transformers.save_model(str(tag), model, custom_objects={"tokenizer": tokenizer})
+            return bentoml.transformers.save_model(tag, model, custom_objects={"tokenizer": tokenizer})
         finally:
             import gc
 

@@ -74,7 +74,7 @@ class TaskType(enum.Enum, metaclass=TypeMeta):
 def import_model(
     model_name: str,
     tag: bentoml.Tag,
-    __openllm_framework__: str,
+    _model_framework: str,
     *model_args: t.Any,
     tokenizer_kwds: dict[str, t.Any],
     **attrs: t.Any,
@@ -131,9 +131,9 @@ def import_model(
         raise OpenLLMException(f"Model type {type(config)} is not supported yet.")
 
     return bentoml.transformers.save_model(
-        str(tag),
+        tag,
         getattr(
-            transformers, _return_tensors_to_framework_map[__openllm_framework__][TaskType[task_type].value - 1]
+            transformers, _return_tensors_to_framework_map[_model_framework][TaskType[task_type].value - 1]
         ).from_pretrained(
             model_name, *model_args, config=config, trust_remote_code=trust_remote_code, **hub_attrs, **attrs
         ),
@@ -226,12 +226,7 @@ class LLMInterface(ABC):
         pass
 
     def import_model(
-        self,
-        pretrained: str,
-        tag: bentoml.Tag,
-        *args: t.Any,
-        tokenizer_kwds: dict[str, t.Any],
-        **attrs: t.Any,
+        self, pretrained: str, tag: bentoml.Tag, *args: t.Any, tokenizer_kwds: dict[str, t.Any], **attrs: t.Any
     ) -> bentoml.Model:
         """This function can be implemented if default import_model doesn't satisfy your needs."""
         raise NotImplementedError
@@ -303,7 +298,7 @@ class LLMMetaclass(ABCMeta):
             # NOTE: import_model branch
             if "import_model" not in namespace:
                 # using the default import model
-                namespace["import_model"] = functools.partial(import_model, __openllm_framework__=implementation)
+                namespace["import_model"] = functools.partial(import_model, _model_framework=implementation)
             else:
                 logger.debug("Using custom 'import_model' for %s", cls_name)
 
@@ -381,7 +376,7 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
             **attrs: t.Any,
         ):
             return bentoml.transformers.save_model(
-                str(tag),
+                tag,
                 transformers.AutoModelForCausalLM.from_pretrained(
                     pretrained, device_map="auto", torch_dtype=torch.bfloat16, **attrs
                 ),

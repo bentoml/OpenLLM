@@ -52,7 +52,7 @@ class Falcon(openllm.LLM):
         config = transformers.AutoConfig.from_pretrained(pretrained, trust_remote_code=trust_remote_code)
         transformers.AutoModelForCausalLM.register(config.__class__, model.__class__)
         return bentoml.transformers.save_model(
-            str(tag),
+            tag,
             transformers.pipeline("text-generation", model=model, tokenizer=tokenizer),
             custom_objects={"tokenizer": tokenizer},
         )

@@ -55,7 +55,7 @@ class ChatGLM(openllm.LLM):
     ) -> bentoml.Model:
         trust_remote_code = attrs.pop("trust_remote_code", True)
         return bentoml.transformers.save_model(
-            str(tag),
+            tag,
             transformers.AutoModel.from_pretrained(pretrained, trust_remote_code=trust_remote_code),
             custom_objects={
                 "tokenizer": transformers.AutoTokenizer.from_pretrained(
