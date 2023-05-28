@@ -158,23 +158,30 @@ If you really do want to use TensorFlow, please follow the instructions on the
 installation page https://www.tensorflow.org/install that match your environment.
 """
 
-TENSORFLOW_IMPORT_ERROR = """\
-{0} requires the TensorFlow library but it was not found in your environment. Checkout the instructions on the
-installation page: https://www.tensorflow.org/install and follow the ones that match your environment.
-Please note that you may need to restart your runtime after installation.
+TENSORFLOW_IMPORT_ERROR = """{0} requires the TensorFlow library but it was not found in your environment. 
+Checkout the instructions on the installation page: https://www.tensorflow.org/install and follow the 
+ones that match your environment. Please note that you may need to restart your runtime after installation.
 """
 
 
-FLAX_IMPORT_ERROR = """\
-{0} requires the FLAX library but it was not found in your environment. Checkout the instructions on the
-installation page: https://github.com/google/flax and follow the ones that match your environment.
-Please note that you may need to restart your runtime after installation.
+FLAX_IMPORT_ERROR = """{0} requires the FLAX library but it was not found in your environment. 
+Checkout the instructions on the installation page: https://github.com/google/flax and follow the 
+ones that match your environment. Please note that you may need to restart your runtime after installation.
 """
 
-PYTORCH_IMPORT_ERROR = """\
-{0} requires the PyTorch library but it was not found in your environment. Checkout the instructions on the
-installation page: https://pytorch.org/get-started/locally/ and follow the ones that match your environment.
-Please note that you may need to restart your runtime after installation.
+PYTORCH_IMPORT_ERROR = """{0} requires the PyTorch library but it was not found in your environment. 
+Checkout the instructions on the installation page: https://pytorch.org/get-started/locally/ and follow the 
+ones that match your environment. Please note that you may need to restart your runtime after installation.
+"""
+
+CPM_KERNELS_IMPORT_ERROR = """{0} requires the cpm_kernels library but it was not found in your environment. 
+You can install it with pip: `pip install cpm_kernels`. Please note that you may need to restart your 
+runtime after installation.
+"""
+
+EINOPS_IMPORT_ERROR = """{0} requires the einops library but it was not found in your environment. 
+You can install it with pip: `pip install einops`. Please note that you may need to restart 
+your runtime after installation.
 """
 
 BACKENDS_MAPPING = BackendOrderredDict(
@@ -182,6 +189,8 @@ BACKENDS_MAPPING = BackendOrderredDict(
         ("flax", (is_flax_available, FLAX_IMPORT_ERROR)),
         ("tf", (is_tf_available, TENSORFLOW_IMPORT_ERROR)),
         ("torch", (is_torch_available, PYTORCH_IMPORT_ERROR)),
+        ("cpm_kernels", (is_cpm_kernels_available, CPM_KERNELS_IMPORT_ERROR)),
+        ("einops", (is_einops_available, EINOPS_IMPORT_ERROR)),
     ]
 )
 

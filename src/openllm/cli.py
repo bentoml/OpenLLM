@@ -36,6 +36,7 @@ from click.utils import make_default_short_help
 from click_option_group import optgroup
 from rich.console import Console
 from rich.table import Table
+from rich.text import Text
 
 import openllm
 
@@ -570,31 +571,35 @@ def list_supported_models(output: t.Literal["json", "pretty", "porcelain"]):
     List all supported models.
     """
     models = tuple(inflection.dasherize(key) for key in openllm.CONFIG_MAPPING.keys())
+    failed_initialized: list[tuple[str, Exception]] = []
     if output == "pretty":
         table = Table(title="Supported LLMs", box=rich.box.SQUARE, show_lines=True)
         table.add_column("LLM")
         table.add_column("Description")
         table.add_column("Variants")
         for m in models:
-            table.add_row(
-                m,
-                inspect.cleandoc(openllm.AutoConfig.for_model(m).__doc__ or "(No description)"),
-                f"{openllm.AutoLLM.for_model(m).variants}",
-            )
+            docs = inspect.cleandoc(openllm.AutoConfig.for_model(m).__doc__ or "(No description)")
+            try:
+                model = openllm.AutoLLM.for_model(m)
+                table.add_row(m, docs, f"{model.variants}")
+            except Exception as err:
+                failed_initialized.append((m, err))
         _console.print(table)
+        _console.print("\n[bold yellow] The following models are supported but failed to initialize:[/bold yellow]\n")
+        for m, err in failed_initialized:
+            _console.print(Text(f"- {m}: ") + Text(f"{err}\n", style="bold red"))
     elif output == "json":
-        _console.print(
-            orjson.dumps(
-                {
-                    m: {
-                        "variants": openllm.AutoLLM.for_model(m).variants,
-                        "description": inspect.cleandoc(openllm.AutoConfig.for_model(m).__doc__ or "(No description)"),
-                    }
-                    for m in models
-                },
-                option=orjson.OPT_INDENT_2,
-            ).decode()
-        )
+        result_json: dict[str, dict[t.Literal["variants", "description"], t.Any]] = {}
+        for m in models:
+            docs = inspect.cleandoc(openllm.AutoConfig.for_model(m).__doc__ or "(No description)")
+            try:
+                model = openllm.AutoLLM.for_model(m)
+                result_json[m] = {"variants": model.variants, "description": docs}
+            except Exception as err:
+                logger.debug("Exception caught while parsing model %s", m, exc_info=err)
+                result_json[m] = {"variants": None, "description": docs}
+
+        _console.print_json(orjson.dumps(result_json, option=orjson.OPT_INDENT_2).decode())
     else:
         click.echo("\n".join(models))
     sys.exit(0)
