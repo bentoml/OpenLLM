@@ -41,6 +41,8 @@ logger = logging.getLogger(__name__)
 class StableLM(openllm.LLM):
     __openllm_internal__ = True
 
+    __openllm_bettertransformer__ = False
+
     default_model = "StabilityAI/stablelm-tuned-alpha-3b"
 
     variants = [
@@ -50,11 +52,9 @@ class StableLM(openllm.LLM):
         "StabilityAI/stablelm-base-alpha-7b",
     ]
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
     import_kwargs = {
         "torch_dtype": torch.float16,
-        "load_in_8bit": False,
+        "load_in_8bit": True if torch.cuda.is_available() and torch.cuda.device_count() == 1 else False,
         "device_map": "auto",
     }
 
@@ -93,10 +93,13 @@ class StableLM(openllm.LLM):
         top_p: float | None = None,
         **attrs: t.Any,
     ) -> list[str]:
-        if not self.model.is_loaded_in_8bit:
-            self.model.half()
         if torch.cuda.is_available():
             self.model.cuda()
+        if not self.model.is_loaded_in_8bit:
+            self.model.half()
+
+        if "tuned" in self._pretrained and not prompt.endswith("<|ASSISTANT|>"):
+            prompt = DEFAULT_PROMPT_TEMPLATE.format(instruction=prompt)
 
         generation_kwargs = {
             "do_sample": True,
@@ -108,11 +111,9 @@ class StableLM(openllm.LLM):
                 **attrs,
             ).to_generation_config(),
             "pad_token_id": self.tokenizer.eos_token_id,
+            "stopping_criteria": StoppingCriteriaList([StopOnTokens()]),
         }
-        if "tuned" in self._pretrained:
-            generation_kwargs["stopping_criteria"] = StoppingCriteriaList([StopOnTokens()])
 
-        inputs = t.cast("torch.Tensor", self.tokenizer(prompt, return_tensors="pt")).to(self.device)
-        with torch.device(self.device):
-            tokens = self.model.generate(**inputs, **generation_kwargs)
+        inputs = t.cast("torch.Tensor", self.tokenizer(prompt, return_tensors="pt")).to(self.model.device)
+        tokens = self.model.generate(**inputs, **generation_kwargs)
         return [self.tokenizer.decode(tokens[0], skip_special_tokens=True)]
