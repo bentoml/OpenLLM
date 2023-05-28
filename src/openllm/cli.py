@@ -525,7 +525,8 @@ for name in openllm.CONFIG_MAPPING:
 @click.argument("model_name", type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING.keys()]))
 @click.option("--pretrained", default=None, help="Given pretrained model name for the given model name [Optional].")
 @click.option("--overwrite", is_flag=True, help="Overwrite existing Bento for given LLM if it already exists.")
-def bundle(model_name: str, pretrained: str | None, overwrite: bool):
+@output_decorator
+def bundle(model_name: str, pretrained: str | None, overwrite: bool, output: t.Literal["json", "pretty", "porcelain"]):
     """Package a given models into a Bento.
 
     $ openllm bundle flan-t5
@@ -536,25 +537,29 @@ def bundle(model_name: str, pretrained: str | None, overwrite: bool):
         model_name, __cli__=True, pretrained=pretrained, _overwrite_existing_bento=overwrite
     )
 
-    if not get_quiet_mode():
-        click.echo("\n" + OPENLLM_FIGLET)
-        if not _previously_built:
-            click.secho(f"Successfully built {bento}.", fg="green")
-        else:
+    if output == "pretty":
+        if not get_quiet_mode():
+            click.echo("\n" + OPENLLM_FIGLET)
+            if not _previously_built:
+                click.secho(f"Successfully built {bento}.", fg="green")
+            else:
+                click.secho(
+                    f"'{model_name}' already has a Bento built [{bento}]. To overwrite it pass '--overwrite'.",
+                    fg="yellow",
+                )
+
             click.secho(
-                f"'{model_name}' already has a Bento built [{bento}]. To overwrite it pass '--overwrite'.",
-                fg="yellow",
+                f"\nPossible next steps:\n\n * Push to BentoCloud with `bentoml push`:\n    $ bentoml push {bento.tag}",
+                fg="blue",
             )
-
-        click.secho(
-            f"\nPossible next steps:\n\n * Push to BentoCloud with `bentoml push`:\n    $ bentoml push {bento.tag}",
-            fg="blue",
-        )
-        click.secho(
-            f"\n * Containerize your Bento with `bentoml containerize`:\n    $ bentoml containerize {bento.tag}",
-            fg="blue",
-        )
-
+            click.secho(
+                f"\n * Containerize your Bento with `bentoml containerize`:\n    $ bentoml containerize {bento.tag}",
+                fg="blue",
+            )
+    elif output == "json":
+        _console.print(orjson.dumps(bento.info.to_dict(), option=orjson.OPT_INDENT_2).decode())
+    else:
+        click.echo(bento.tag)
     return bento
 
 
