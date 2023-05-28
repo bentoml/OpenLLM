@@ -42,6 +42,7 @@ _import_structure = {
     "models.auto": ["AutoConfig", "CONFIG_MAPPING"],
     "models.flan_t5": ["FlanT5Config"],
     "models.dolly_v2": ["DollyV2Config"],
+    "models.falcon": ["FalconConfig"],
     "models.chatglm": ["ChatGLMConfig"],
     "models.starcoder": ["StarCoderConfig"],
 }
@@ -58,6 +59,19 @@ except MissingDependencyError:
     ]
 else:
     _import_structure["models.chatglm"].extend(["ChatGLM"])
+
+
+try:
+    if not (utils.is_torch_available() and utils.is_einops_available()):
+        raise MissingDependencyError
+except MissingDependencyError:
+    from .utils import dummy_pt_and_einops_objects
+
+    _import_structure["utils.dummy_pt_and_einops_objects"] = [
+        name for name in dir(dummy_pt_and_einops_objects) if not name.startswith("_")
+    ]
+else:
+    _import_structure["models.falcon"].extend(["Falcon"])
 
 try:
     if not utils.is_torch_available():
@@ -103,7 +117,6 @@ if t.TYPE_CHECKING:
     from . import client as client
     from . import exceptions as exceptions
     from . import models as models
-
     # Specific types import
     from ._configuration import LLMConfig as LLMConfig
     from ._llm import LLM as LLM
@@ -117,6 +130,7 @@ if t.TYPE_CHECKING:
     from .models.auto import AutoConfig as AutoConfig
     from .models.chatglm import ChatGLMConfig as ChatGLMConfig
     from .models.dolly_v2 import DollyV2Config as DollyV2Config
+    from .models.falcon import FalconConfig as FalconConfig
     from .models.flan_t5 import FlanT5Config as FlanT5Config
     from .models.starcoder import StarCoderConfig as StarCoderConfig
 
@@ -128,6 +142,15 @@ if t.TYPE_CHECKING:
         from .utils.dummy_pt_and_cpm_kernels_objects import *
     else:
         from .models.chatglm import ChatGLM as ChatGLM
+
+    # NOTE: torch and einops
+    try:
+        if not (utils.is_torch_available() and utils.is_einops_available()):
+            raise MissingDependencyError
+    except MissingDependencyError:
+        from .utils.dummy_pt_and_einops_objects import *
+    else:
+        from .models.falcon import Falcon as Falcon
 
     try:
         if not utils.is_torch_available():
@@ -149,7 +172,8 @@ if t.TYPE_CHECKING:
         from .utils.dummy_flax_objects import *
     else:
         from .models.auto import MODEL_FLAX_MAPPING as MODEL_FLAX_MAPPING
-        from .models.auto import MODEL_FLAX_MAPPING_NAMES as MODEL_FLAX_MAPPING_NAMES
+        from .models.auto import \
+            MODEL_FLAX_MAPPING_NAMES as MODEL_FLAX_MAPPING_NAMES
         from .models.auto import AutoFlaxLLM as AutoFlaxLLM
         from .models.flan_t5 import FlaxFlanT5 as FlaxFlanT5
 
@@ -160,7 +184,8 @@ if t.TYPE_CHECKING:
         from .utils.dummy_tf_objects import *
     else:
         from .models.auto import MODEL_TF_MAPPING as MODEL_TF_MAPPING
-        from .models.auto import MODEL_TF_MAPPING_NAMES as MODEL_TF_MAPPING_NAMES
+        from .models.auto import \
+            MODEL_TF_MAPPING_NAMES as MODEL_TF_MAPPING_NAMES
         from .models.auto import AutoTFLLM as AutoTFLLM
         from .models.flan_t5 import TFFlanT5 as TFFlanT5
 

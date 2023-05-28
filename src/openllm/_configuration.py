@@ -435,12 +435,6 @@ class LLMConfig(pydantic.BaseModel, ABC):
             for k, v in self.__dict__.items()
             if not k.startswith("_") and (k not in self.model_fields or self.model_fields[k].repr)
         )
-        yield from (
-            (k, v)
-            for k, v in self.generation_config.__dict__.items()
-            if not k.startswith("_")
-            and (k not in self.generation_config.model_fields or self.generation_config.model_fields[k].repr)
-        )
         yield from ((k, getattr(self, k)) for k, v in self.model_computed_fields.items() if v.repr)
 
     if t.TYPE_CHECKING:

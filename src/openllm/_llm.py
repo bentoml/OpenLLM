@@ -497,6 +497,7 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
     def model(self) -> LLMModel:
         """The model to use for this LLM. This shouldn't be set at runtime, rather let OpenLLM handle it."""
         # Run check for GPU
+        trust_remote_code = self.__llm_kwargs__.pop("trust_remote_code", self.config.__openllm_trust_remote_code__)
         self.config.check_if_gpu_is_available(self.__llm_implementation__)
         if self.import_kwargs:
             kwds = {
@@ -505,6 +506,7 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
             }
         else:
             kwds = self.__llm_kwargs__
+        kwds["trust_remote_code"] = trust_remote_code
 
         if self.__llm_model__ is None:
             # Hmm, bentoml.transformers.load_model doesn't yet support args.

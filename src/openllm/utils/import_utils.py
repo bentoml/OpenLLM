@@ -42,20 +42,30 @@ USE_JAX = os.environ.get("USE_FLAX", "AUTO").upper()
 
 FORCE_TF_AVAILABLE = os.environ.get("FORCE_TF_AVAILABLE", "AUTO").upper()
 
-_cpm_kernels_available = importlib.util.find_spec("cpm_kernels") is not None
 
-
-def is_cpm_kernels_available():
-    global _cpm_kernels_available
-    if _cpm_kernels_available:
+def _is_package_available(package: str) -> bool:
+    _package_available = importlib.util.find_spec(package) is not None
+    if _package_available:
         try:
-            importlib.metadata.version("cpm_kernels")
+            importlib.metadata.version(package)
         except importlib.metadata.PackageNotFoundError:
-            _cpm_kernels_available = False
-    return _cpm_kernels_available
+            _package_available = False
+    return _package_available
 
 
 _torch_available = importlib.util.find_spec("torch") is not None
+_tf_available = importlib.util.find_spec("tensorflow") is not None
+_flax_available = importlib.util.find_spec("jax") is not None and importlib.util.find_spec("flax") is not None
+_einops_available = _is_package_available("einops")
+_cpm_kernel_available = _is_package_available("cpm_kernels")
+
+
+def is_einops_available():
+    return _einops_available
+
+
+def is_cpm_kernels_available():
+    return _cpm_kernel_available
 
 
 def is_torch_available():
@@ -70,9 +80,6 @@ def is_torch_available():
         logger.info("Disabling PyTorch because USE_TF is set")
         _torch_available = False
     return _torch_available
-
-
-_tf_available = importlib.util.find_spec("tensorflow") is not None
 
 
 def is_tf_available():
@@ -113,9 +120,6 @@ def is_tf_available():
             logger.info("Disabling Tensorflow because USE_TORCH is set")
             _tf_available = False
     return _tf_available
-
-
-_flax_available = importlib.util.find_spec("jax") is not None and importlib.util.find_spec("flax") is not None
 
 
 def is_flax_available():

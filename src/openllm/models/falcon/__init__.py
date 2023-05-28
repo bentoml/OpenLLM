@@ -19,31 +19,31 @@ import typing as t
 import openllm
 
 _import_structure = {
-    "configuration_chatglm": ["ChatGLMConfig", "START_CHATGLM_COMMAND_DOCSTRING", "DEFAULT_PROMPT_TEMPLATE"],
+    "configuration_falcon": ["FalconConfig", "START_FALCON_COMMAND_DOCSTRING", "DEFAULT_PROMPT_TEMPLATE"],
 }
 
 try:
-    if not openllm.utils.is_torch_available() or not openllm.utils.is_cpm_kernels_available():
+    if not openllm.utils.is_torch_available():
         raise openllm.exceptions.MissingDependencyError
 except openllm.exceptions.MissingDependencyError:
     pass
 else:
-    _import_structure["modeling_chatglm"] = ["ChatGLM"]
+    _import_structure["modeling_falcon"] = ["Falcon"]
 
 if t.TYPE_CHECKING:
-    from .configuration_chatglm import \
+    from .configuration_falcon import \
         DEFAULT_PROMPT_TEMPLATE as DEFAULT_PROMPT_TEMPLATE
-    from .configuration_chatglm import \
-        START_CHATGLM_COMMAND_DOCSTRING as START_CHATGLM_COMMAND_DOCSTRING
-    from .configuration_chatglm import ChatGLMConfig as ChatGLMConfig
+    from .configuration_falcon import \
+        START_FALCON_COMMAND_DOCSTRING as START_FALCON_COMMAND_DOCSTRING
+    from .configuration_falcon import FalconConfig as FalconConfig
 
     try:
-        if not openllm.utils.is_torch_available() or not openllm.utils.is_cpm_kernels_available():
+        if not openllm.utils.is_torch_available():
             raise openllm.exceptions.MissingDependencyError
     except openllm.exceptions.MissingDependencyError:
         pass
     else:
-        from .modeling_chatglm import ChatGLM as ChatGLM
+        from .modeling_falcon import Falcon as Falcon
 else:
     import sys
 
