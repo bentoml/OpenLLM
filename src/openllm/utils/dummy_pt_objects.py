@@ -26,6 +26,13 @@ class StarCoder(metaclass=DummyMetaclass):
         require_backends(self, ["torch"])
 
 
+class StableLM(metaclass=DummyMetaclass):
+    _backends = ["torch"]
+
+    def __init__(self, *args: t.Any, **attrs: t.Any):
+        require_backends(self, ["torch"])
+
+
 class AutoLLM(metaclass=DummyMetaclass):
     _backends = ["torch"]
 

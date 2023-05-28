@@ -45,6 +45,7 @@ _import_structure = {
     "models.falcon": ["FalconConfig"],
     "models.chatglm": ["ChatGLMConfig"],
     "models.starcoder": ["StarCoderConfig"],
+    "models.stablelm": ["StableLMConfig"],
 }
 
 # NOTE: torch and cpm_kernels
@@ -84,6 +85,7 @@ else:
     _import_structure["models.flan_t5"].extend(["FlanT5"])
     _import_structure["models.dolly_v2"].extend(["DollyV2"])
     _import_structure["models.starcoder"].extend(["StarCoder"])
+    _import_structure["models.stablelm"].extend(["StableLM"])
     _import_structure["models.auto"].extend(["AutoLLM", "MODEL_MAPPING_NAMES", "MODEL_MAPPING"])
 
 try:
@@ -133,6 +135,7 @@ if t.TYPE_CHECKING:
     from .models.dolly_v2 import DollyV2Config as DollyV2Config
     from .models.falcon import FalconConfig as FalconConfig
     from .models.flan_t5 import FlanT5Config as FlanT5Config
+    from .models.stablelm import StableLMConfig as StableLMConfig
     from .models.starcoder import StarCoderConfig as StarCoderConfig
 
     # NOTE: torch and cpm_kernels
@@ -164,6 +167,7 @@ if t.TYPE_CHECKING:
         from .models.auto import AutoLLM as AutoLLM
         from .models.dolly_v2 import DollyV2 as DollyV2
         from .models.flan_t5 import FlanT5 as FlanT5
+        from .models.stablelm import StableLM as StableLM
         from .models.starcoder import StarCoder as StarCoder
 
     try:

@@ -26,6 +26,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("chatglm", "ChatGLM"),
         ("starcoder", "StarCoder"),
         ("falcon", "Falcon"),
+        ("stablelm", "StableLM"),
     ]
 )
 

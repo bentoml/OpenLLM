@@ -35,6 +35,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("chatglm", "ChatGLMConfig"),
         ("starcoder", "StarCoderConfig"),
         ("falcon", "FalconConfig"),
+        ("stablelm", "StableLMConfig"),
     ]
 )
 
