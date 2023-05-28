@@ -62,15 +62,15 @@ class PromptTemplate:
 
     model_config = {"extra": "forbid"}
 
-    def to_str(self, __partial_dict__: PartialDict | None = None, **kwargs: str) -> str:
+    def to_str(self, __partial_dict__: PartialDict | None = None, **attrs: str) -> str:
         """Generate a prompt from the template and input variables"""
         if __partial_dict__:
             return _default_formatter.vformat(self.template, (), __partial_dict__)
-        if not kwargs:
+        if not attrs:
             raise ValueError("Keyword arguments are required")
-        if not all(k in kwargs for k in self.input_variables):
+        if not all(k in attrs for k in self.input_variables):
             raise ValueError(f"Missing required input variables: {self.input_variables}")
-        return _default_formatter.format(self.template, **kwargs)
+        return _default_formatter.format(self.template, **attrs)
 
     @classmethod
     def from_template(cls, template: str) -> PromptTemplate:

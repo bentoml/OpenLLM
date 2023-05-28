@@ -368,13 +368,13 @@ class GenerationConfig(pydantic.BaseModel):
         __openllm_env_name__: str
         __openllm_model_name__: str
 
-    def __init_subclass__(cls, *, _internal: bool = False, **kwargs: t.Any) -> None:
+    def __init_subclass__(cls, *, _internal: bool = False, **attrs: t.Any) -> None:
         if not _internal:
             raise RuntimeError(
                 "GenerationConfig is not meant to be used directly, "
                 "but you can access this via a LLMConfig.generation_config"
             )
-        model_name = kwargs.get("model_name", None)
+        model_name = attrs.get("model_name", None)
         if model_name is None:
             raise RuntimeError("Failed to initialize GenerationConfig subclass (missing model_name)")
         cls.__openllm_model_name__ = inflection.underscore(model_name)
@@ -460,7 +460,7 @@ class LLMConfig(pydantic.BaseModel, ABC):
         name_type: t.Literal["dasherize", "lowercase"] = "dasherize",
         trust_remote_code: bool = False,
         requires_gpu: bool = False,
-        **kwargs: t.Any,
+        **attrs: t.Any,
     ):
         if default_timeout is None:
             default_timeout = 3600
@@ -471,7 +471,7 @@ class LLMConfig(pydantic.BaseModel, ABC):
         cls.__openllm_trust_remote_code__ = trust_remote_code
         cls.__openllm_requires_gpu__ = requires_gpu
 
-        super(LLMConfig, cls).__init_subclass__(**kwargs)
+        super(LLMConfig, cls).__init_subclass__(**attrs)
 
     @classmethod
     def check_if_gpu_is_available(cls, implementation: t.Literal["pt", "tf", "flax"] = "pt"):
@@ -545,9 +545,9 @@ class LLMConfig(pydantic.BaseModel, ABC):
             except pydantic.ValidationError as e:
                 raise openllm.exceptions.ValidationError(f"Failed to parse configuration to {cls}: {e}") from e
 
-    def model_dump(self, flatten: bool = False, **kwargs: t.Any):
+    def model_dump(self, flatten: bool = False, **attrs: t.Any):
         try:
-            to_dump = super().model_dump(**kwargs)
+            to_dump = super().model_dump(**attrs)
             generation_config = self.generation_config.model_dump(exclude_none=True)
             if not flatten:
                 to_dump["generation_config"] = generation_config
@@ -557,36 +557,36 @@ class LLMConfig(pydantic.BaseModel, ABC):
         except pydantic.ValidationError as e:
             raise openllm.exceptions.ValidationError(f"Failed to dump configuration to dict: {e}") from e
 
-    def with_options(self, __llm_config__: LLMConfig | None = None, **kwargs: t.Any) -> LLMConfig:
+    def with_options(self, __llm_config__: LLMConfig | None = None, **attrs: t.Any) -> LLMConfig:
         """A helpers that respect configuration values that
         sets from environment variables for any given configuration class.
         """
         from_env_ = self.from_env()
         # filtered out None values
-        kwargs = {k: v for k, v in kwargs.items() if v is not None}
-        generation_keys = {k for k in kwargs if k in self.generation_config.model_fields}
+        attrs = {k: v for k, v in attrs.items() if v is not None}
+        generation_keys = {k for k in attrs if k in self.generation_config.model_fields}
 
-        generation_kwargs = {k: v for k, v in kwargs.items() if k in generation_keys}
-        config_kwargs = {k: v for k, v in kwargs.items() if k not in generation_keys}
+        generation_attrs = {k: v for k, v in attrs.items() if k in generation_keys}
+        config_attrs = {k: v for k, v in attrs.items() if k not in generation_keys}
 
         # NOTE: first set the default config kwargs.
         # We will always respect envvar as default, then the one that is pass
-        kwargs = {**generate_kwargs_from_envvar(self), **config_kwargs}
+        attrs = {**generate_kwargs_from_envvar(self), **config_attrs}
 
         if __llm_config__ is not None:
             # NOTE: Only hit this branch on the server. Client shouldn't use __llm_config__
-            kwargs = {**kwargs, **__llm_config__.model_dump()}
+            attrs = {**attrs, **__llm_config__.model_dump()}
 
         # NOTE: Then we setup generation config values
-        kwargs["generation_config"] = {
+        attrs["generation_config"] = {
             **generate_kwargs_from_envvar(self.generation_config),
-            **kwargs.get("generation_config", {}),
-            **generation_kwargs,
+            **attrs.get("generation_config", {}),
+            **generation_attrs,
         }
 
         if from_env_:
-            return from_env_.model_construct(**kwargs)
-        return self.model_construct(**kwargs)
+            return from_env_.model_construct(**attrs)
+        return self.model_construct(**attrs)
 
     @classmethod
     def from_env(cls) -> LLMConfig | None:
@@ -602,17 +602,17 @@ class LLMConfig(pydantic.BaseModel, ABC):
 
     def model_validate_click(self, **attrs: t.Any) -> tuple[LLMConfig, dict[str, t.Any]]:
         """Parse given click attributes into a LLMConfig and return the remaining click attributes."""
-        llm_config_kwargs = {
+        llm_config_attrs = {
             k[len(self.__openllm_model_name__) + 1 :]: v
             for k, v in attrs.items()
             if k[len(self.__openllm_model_name__) + 1 :] in self.model_fields
         }
-        llm_config_kwargs["generation_config"] = {
+        llm_config_attrs["generation_config"] = {
             k[len(self.__openllm_model_name__ + "_generation") + 1 :]: v
             for k, v in attrs.items()
             if k[len(self.__openllm_model_name__ + "_generation") + 1 :] in self.generation_config.model_fields
         }
-        return self.with_options(**llm_config_kwargs), {
+        return self.with_options(**llm_config_attrs), {
             k: v for k, v in attrs.items() if not k.startswith(self.__openllm_model_name__)
         }
 

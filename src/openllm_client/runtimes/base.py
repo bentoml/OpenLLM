@@ -24,16 +24,16 @@ import openllm
 if t.TYPE_CHECKING:
 
     class AnnotatedClient(bentoml.client.Client):
-        def health(self, *args: t.Any, **kwargs: t.Any) -> t.Any:
+        def health(self, *args: t.Any, **attrs: t.Any) -> t.Any:
             ...
 
         async def async_health(self) -> t.Any:
             ...
 
-        def call(self, name: str, inputs: t.Any, **kwargs: t.Any) -> t.Any:
+        def call(self, name: str, inputs: t.Any, **attrs: t.Any) -> t.Any:
             ...
 
-        async def async_call(self, name: str, inputs: t.Any, **kwargs: t.Any) -> t.Any:
+        async def async_call(self, name: str, inputs: t.Any, **attrs: t.Any) -> t.Any:
             ...
 
         def generate_v1(self, qa: openllm.GenerationInput) -> dict[str, t.Any]:
@@ -89,11 +89,11 @@ class ClientMixin:
     def config(self) -> openllm.LLMConfig:
         return self.llm.config
 
-    def call(self, name: str, *args: t.Any, **kwargs: t.Any) -> t.Any:
-        return self._cached.call(f"{name}_{self._api_version}", *args, **kwargs)
+    def call(self, name: str, *args: t.Any, **attrs: t.Any) -> t.Any:
+        return self._cached.call(f"{name}_{self._api_version}", *args, **attrs)
 
-    async def acall(self, name: str, *args: t.Any, **kwargs: t.Any) -> t.Any:
-        return await self._cached.async_call(f"{name}_{self._api_version}", *args, **kwargs)
+    async def acall(self, name: str, *args: t.Any, **attrs: t.Any) -> t.Any:
+        return await self._cached.async_call(f"{name}_{self._api_version}", *args, **attrs)
 
     @property
     def _cached(self) -> AnnotatedClient:
@@ -109,8 +109,8 @@ class BaseClient(ClientMixin):
 
     def query(self, prompt: str, **attrs: t.Any) -> dict[str, t.Any] | str:
         return_raw_response = attrs.pop("return_raw_response", False)
-        prompt, kwds = self.llm.preprocess_parameters(prompt, **attrs)
-        inputs = openllm.GenerationInput(prompt=prompt, llm_config=self.config.with_options(**kwds))
+        prompt, attrs = self.llm.preprocess_parameters(prompt, **attrs)
+        inputs = openllm.GenerationInput(prompt=prompt, llm_config=self.config.with_options(**attrs))
         r = openllm.GenerationOutput(**self.call("generate", inputs))
 
         if return_raw_response:
@@ -132,8 +132,8 @@ class BaseAsyncClient(ClientMixin):
 
     async def query(self, prompt: str, **attrs: t.Any) -> dict[str, t.Any] | str:
         return_raw_response = attrs.pop("return_raw_response", False)
-        prompt, kwds = self.llm.preprocess_parameters(prompt, **attrs)
-        inputs = openllm.GenerationInput(prompt=prompt, llm_config=self.config.with_options(**kwds))
+        prompt, attrs = self.llm.preprocess_parameters(prompt, **attrs)
+        inputs = openllm.GenerationInput(prompt=prompt, llm_config=self.config.with_options(**attrs))
         res = await self.acall("generate", inputs)
         r = openllm.GenerationOutput(**res)
 

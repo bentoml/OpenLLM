@@ -46,7 +46,7 @@ class FlanT5(openllm.LLM):
         top_k: int | None = None,
         top_p: float | None = None,
         repetition_penalty: float | None = None,
-        **kwargs: t.Any,
+        **attrs: t.Any,
     ) -> tuple[str, dict[str, t.Any]]:
         return prompt, self.config.with_options(
             max_new_tokens=max_new_tokens,
@@ -54,7 +54,7 @@ class FlanT5(openllm.LLM):
             top_k=top_k,
             top_p=top_p,
             repetition_penalty=repetition_penalty,
-            **kwargs,
+            **attrs,
         ).model_dump(flatten=True)
 
     def postprocess_parameters(self, prompt: str, generation_result: t.Sequence[str], **_: t.Any) -> str:
@@ -69,7 +69,7 @@ class FlanT5(openllm.LLM):
         top_k: int | None = None,
         top_p: float | None = None,
         repetition_penalty: float | None = None,
-        **kwargs: t.Any,
+        **attrs: t.Any,
     ) -> list[str]:
         input_ids = t.cast("torch.Tensor", self.tokenizer(prompt, return_tensors="pt").input_ids).to(self.device)
         result_tensor = self.model.generate(
@@ -81,7 +81,7 @@ class FlanT5(openllm.LLM):
                 top_k=top_k,
                 top_p=top_p,
                 repetition_penalty=repetition_penalty,
-                **kwargs,
+                **attrs,
             ).to_generation_config(),
         )
         return self.tokenizer.batch_decode(result_tensor, skip_special_tokens=True)

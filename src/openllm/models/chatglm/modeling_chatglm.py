@@ -50,9 +50,9 @@ class ChatGLM(openllm.LLM):
     device = torch.device("cuda")
 
     def import_model(
-        self, pretrained: str, tag: bentoml.Tag, *model_args: t.Any, tokenizer_kwds: dict[str, t.Any], **kwds: t.Any
+        self, pretrained: str, tag: bentoml.Tag, *model_args: t.Any, tokenizer_kwds: dict[str, t.Any], **attrs: t.Any
     ) -> bentoml.Model:
-        trust_remote_code = kwds.pop("trust_remote_code", True)
+        trust_remote_code = attrs.pop("trust_remote_code", True)
         return bentoml.transformers.save_model(
             str(tag),
             transformers.AutoModel.from_pretrained(pretrained, trust_remote_code=trust_remote_code),
@@ -71,7 +71,7 @@ class ChatGLM(openllm.LLM):
         top_p: float | None = None,
         temperature: float | None = None,
         chat_history: list[str] | None = None,
-        **kwargs: t.Any,
+        **attrs: t.Any,
     ) -> tuple[str, dict[str, t.Any]]:
         prompt_text = ""
         if chat_history is not None:
@@ -86,13 +86,13 @@ class ChatGLM(openllm.LLM):
             num_beams=num_beams,
             top_p=top_p,
             temperature=temperature,
-            **kwargs,
+            **attrs,
         ).model_dump(flatten=True)
 
         return prompt_text, generation_config
 
     def postprocess_parameters(
-        self, prompt: str, generation_result: str, *, chat_history: list[tuple[str, str]] | None = None, **kwargs: t.Any
+        self, prompt: str, generation_result: str, *, chat_history: list[tuple[str, str]] | None = None, **attrs: t.Any
     ):
         if self.config.retain_history:
             assert chat_history is not None, "'retain_history' is True while there is no history provided."
@@ -107,7 +107,7 @@ class ChatGLM(openllm.LLM):
         num_beams: int | None = None,
         top_p: float | None = None,
         temperature: float | None = None,
-        **kwargs: t.Any,
+        **attrs: t.Any,
     ) -> str:
         self.model.eval()
 
@@ -129,7 +129,7 @@ class ChatGLM(openllm.LLM):
                 top_p=top_p,
                 temperature=temperature,
                 do_sample=True,
-                **kwargs,
+                **attrs,
             ).to_generation_config(),
             logits_processor=logit_processor,
         )

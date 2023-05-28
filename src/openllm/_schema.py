@@ -34,8 +34,8 @@ class GenerationInput(pydantic.BaseModel):
     """A mapping of given LLM configuration values for given system."""
 
     @classmethod
-    def for_model(cls, model_name: str, **kwds: t.Any) -> type[GenerationInput]:
-        llm_config = openllm.AutoConfig.for_model(model_name, **kwds)
+    def for_model(cls, model_name: str, **attrs: t.Any) -> type[GenerationInput]:
+        llm_config = openllm.AutoConfig.for_model(model_name, **attrs)
         return pydantic.create_model(
             inflection.camelize(llm_config.__openllm_model_name__) + "GenerationInput",
             __base__=(cls,),
@@ -46,9 +46,9 @@ class GenerationInput(pydantic.BaseModel):
 
     # XXX: Need more investigation why llm_config.model_dump is not invoked
     # recursively when GenerationInput.model_dump is called
-    def model_dump(self, **kwargs: t.Any):
+    def model_dump(self, **attrs: t.Any):
         """Override the default model_dump to make sure llm_config is correctly flattened."""
-        dumped = super().model_dump(**kwargs)
+        dumped = super().model_dump(**attrs)
         dumped["llm_config"] = self.llm_config.model_dump(flatten=True)
         return dumped
 

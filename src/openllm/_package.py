@@ -149,23 +149,23 @@ def construct_docker_options(llm: openllm.LLM, llm_fs: FS) -> DockerOptions:
 
 
 @t.overload
-def build(model_name: str, *, __cli__: t.Literal[False] = ..., **kwds: t.Any) -> bentoml.Bento:
+def build(model_name: str, *, __cli__: t.Literal[False] = ..., **attrs: t.Any) -> bentoml.Bento:
     ...
 
 
 @t.overload
-def build(model_name: str, *, __cli__: t.Literal[True] = ..., **kwds: t.Any) -> tuple[bentoml.Bento, bool]:
+def build(model_name: str, *, __cli__: t.Literal[True] = ..., **attrs: t.Any) -> tuple[bentoml.Bento, bool]:
     ...
 
 
-def build(model_name: str, *, __cli__: bool = False, **kwds: t.Any) -> tuple[bentoml.Bento, bool] | bentoml.Bento:
+def build(model_name: str, *, __cli__: bool = False, **attrs: t.Any) -> tuple[bentoml.Bento, bool] | bentoml.Bento:
     """Package a LLM into a Bento."""
 
-    overwrite_existing_bento = kwds.pop("_overwrite_existing_bento", False)
+    overwrite_existing_bento = attrs.pop("_overwrite_existing_bento", False)
     current_model_envvar = os.environ.pop("OPENLLM_MODEL", None)
     _previously_built = False
 
-    logger.info("Packing '%s' into a Bento with kwargs=%s...", model_name, kwds)
+    logger.debug("Packing '%s' into a Bento with kwargs=%s...", model_name, attrs)
 
     # NOTE: We set this environment variable so that our service.py logic won't raise RuntimeError
     # during build. This is a current limitation of bentoml build where we actually import the service.py into sys.path
@@ -174,11 +174,11 @@ def build(model_name: str, *, __cli__: bool = False, **kwds: t.Any) -> tuple[ben
 
         to_use_framework = openllm.utils.get_framework_env(model_name)
         if to_use_framework == "flax":
-            llm = openllm.AutoFlaxLLM.for_model(model_name, **kwds)
+            llm = openllm.AutoFlaxLLM.for_model(model_name, **attrs)
         elif to_use_framework == "tf":
-            llm = openllm.AutoTFLLM.for_model(model_name, **kwds)
+            llm = openllm.AutoTFLLM.for_model(model_name, **attrs)
         else:
-            llm = openllm.AutoLLM.for_model(model_name, **kwds)
+            llm = openllm.AutoLLM.for_model(model_name, **attrs)
 
         labels = dict(llm.identifying_params)
         labels.update({"_type": llm.llm_type, "_framework": to_use_framework})

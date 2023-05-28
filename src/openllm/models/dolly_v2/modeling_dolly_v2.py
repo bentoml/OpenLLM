@@ -60,7 +60,11 @@ class DollyV2(openllm.LLM):
 
     variants = ["databricks/dolly-v2-3b", "databricks/dolly-v2-7b", "databricks/dolly-v2-12b"]
 
-    import_kwargs = {"device_map": "auto", "torch_dtype": torch.bfloat16, "_tokenizer_padding_size": "left"}
+    import_kwargs = {
+        "device_map": "auto",
+        "torch_dtype": torch.bfloat16,
+        "_tokenizer_padding_size": "left",
+    }
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -71,7 +75,7 @@ class DollyV2(openllm.LLM):
         temperature: float | None = None,
         top_k: int | None = None,
         top_p: float | None = None,
-        **kwargs: t.Any,
+        **attrs: t.Any,
     ) -> tuple[str, dict[str, t.Any]]:
         prompt_text = DEFAULT_PROMPT_TEMPLATE.format(instruction=prompt)
 
@@ -80,7 +84,7 @@ class DollyV2(openllm.LLM):
             temperature=temperature,
             top_k=top_k,
             top_p=top_p,
-            **kwargs,
+            **attrs,
         ).model_dump(flatten=True)
 
         return prompt_text, generation_config
@@ -98,7 +102,7 @@ class DollyV2(openllm.LLM):
         temperature: float | None = None,
         top_k: int | None = None,
         top_p: float | None = None,
-        **kwargs: t.Any,
+        **attrs: t.Any,
     ):
         """This is a implementation of InstructionTextGenerationPipeline from databricks."""
         tokenizer_response_key = next(
@@ -113,7 +117,7 @@ class DollyV2(openllm.LLM):
             temperature=temperature,
             top_k=top_k,
             top_p=top_p,
-            **kwargs,
+            **attrs,
         )
 
         if tokenizer_response_key:

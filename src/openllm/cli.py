@@ -18,12 +18,12 @@ This extends clidantic and BentoML's internal CLI CommandGroup.
 """
 from __future__ import annotations
 
-import difflib
 import functools
 import inspect
 import logging
 import os
 import sys
+import time
 import typing as t
 
 import bentoml
@@ -31,6 +31,7 @@ import click
 import inflection
 import orjson
 import rich.box
+from bentoml_cli.utils import BentoMLCommandGroup
 from click.utils import make_default_short_help
 from click_option_group import optgroup
 from rich.console import Console
@@ -47,7 +48,7 @@ if t.TYPE_CHECKING:
         __name__: str
         __click_params__: list[click.Option]
 
-        def __call__(*args: P.args, **kwargs: P.kwargs) -> t.Any:
+        def __call__(*args: P.args, **attrs: P.kwargs) -> t.Any:
             ...
 
     ServeCommand = t.Literal["serve", "serve-grpc"]
@@ -78,8 +79,8 @@ output_decorator = click.option(
 )
 
 
-class OpenLLMCommandGroup(click.Group):
-    NUM_COMMON_PARAMS = 2
+class OpenLLMCommandGroup(BentoMLCommandGroup):
+    NUMBER_OF_COMMON_PARAMS = 3
 
     @staticmethod
     def common_params(f: F[P]) -> ClickFunctionProtocol[t.Any]:
@@ -92,8 +93,15 @@ class OpenLLMCommandGroup(click.Group):
         @click.option(
             "--debug", "--verbose", envvar=DEBUG_ENV_VAR, is_flag=True, default=False, help="Print out debug logs."
         )
+        @click.option(
+            "--do-not-track",
+            is_flag=True,
+            default=False,
+            envvar=openllm.utils.analytics.OPENLLM_DO_NOT_TRACK,
+            help="Do not send usage info",
+        )
         @functools.wraps(f)
-        def wrapper(quiet: bool, debug: bool, *args: P.args, **kwargs: P.kwargs) -> t.Any:
+        def wrapper(quiet: bool, debug: bool, *args: P.args, **attrs: P.kwargs) -> t.Any:
             if quiet:
                 set_quiet_mode(True)
                 if debug:
@@ -103,48 +111,85 @@ class OpenLLMCommandGroup(click.Group):
 
             configure_logging()
 
-            return f(*args, **kwargs)
+            return f(*args, **attrs)
 
         return t.cast("ClickFunctionProtocol[t.Any]", wrapper)
 
-    def __init__(self, *args: t.Any, **kwargs: t.Any) -> None:
-        super(OpenLLMCommandGroup, self).__init__(*args, **kwargs)
-        # these two dictionaries will store known aliases for commands and groups
-        self._commands: dict[str, list[str]] = {}
-        self._aliases: dict[str, str] = {}
-        self._alias_groups: dict[str, tuple[str, click.Group]] = {}
+    @staticmethod
+    def usage_tracking(func: F[P], group: click.Group, **attrs: t.Any) -> ClickFunctionProtocol[t.Any]:
+        from openllm.utils import analytics
 
-    # ported from bentoml_cli.utils.BentoMLCommandGroup to handle aliases and command difflib.
-    def resolve_alias(self, cmd_name: str):
-        return self._aliases[cmd_name] if cmd_name in self._aliases else cmd_name
+        command_name = attrs.get("name", func.__name__)
 
-    def get_command(self, ctx: click.Context, cmd_name: str) -> click.Command | None:
-        cmd_name = self.resolve_alias(cmd_name)
-        return super(OpenLLMCommandGroup, self).get_command(ctx, cmd_name)
+        @functools.wraps(func)
+        def wrapper(do_not_track: bool, *args: P.args, **attrs: P.kwargs) -> t.Any:
+            if do_not_track:
+                with analytics.set_bentoml_tracking():
+                    return func(*args, **attrs)
+
+            start_time = time.time_ns()
+
+            def get_tracking_event(return_value: t.Any):
+                assert group.name, "Group name is required"
+                if group.name in analytics.cli_events_map and command_name in analytics.cli_events_map[group.name]:
+                    return analytics.cli_events_map[group.name][command_name](group, command_name, return_value)
+                return analytics.OpenllmCliEvent(cmd_group=group.name, cmd_name=command_name)
+
+            with analytics.set_bentoml_tracking():
+                try:
+                    return_value = func(*args, **attrs)
+                    event = get_tracking_event(return_value)
+                    duration_in_ms = (time.time_ns() - start_time) / 1e6
+                    event.duration_in_ms = duration_in_ms
+                    analytics.track(event)
+                    return return_value
+                except Exception as e:
+                    event = get_tracking_event(None)
+                    duration_in_ms = (time.time_ns() - start_time) / 1e6
+                    event.duration_in_ms = duration_in_ms
+                    event.error_type = type(e).__name__
+                    event.return_code = 2 if isinstance(e, KeyboardInterrupt) else 1
+                    analytics.track(event)
+                    raise
+
+        return t.cast("ClickFunctionProtocol[t.Any]", wrapper)
 
     @staticmethod
-    def common_chain(f: F[P]) -> ClickFunctionProtocol[t.Any]:
-        # Wrap implementation withc common parameters
-        wrapped = OpenLLMCommandGroup.common_params(f)
-        # TODO: Tracking
-        # TODO: Handling exception, using ExceptionGroup and Rich
+    def exception_handling(func: F[P], group: click.Group, **attrs: t.Any) -> ClickFunctionProtocol[t.Any]:
+        command_name = attrs.get("name", func.__name__)
 
-        # move common parameters to end of the parameters list
-        wrapped.__click_params__ = (
-            wrapped.__click_params__[-OpenLLMCommandGroup.NUM_COMMON_PARAMS :]
-            + wrapped.__click_params__[: -OpenLLMCommandGroup.NUM_COMMON_PARAMS]
-        )
-        return wrapped
+        @functools.wraps(func)
+        def wrapper(*args: P.args, **attrs: P.kwargs) -> t.Any:
+            from bentoml._internal.configuration import get_debug_mode
 
-    def group(self, *args: t.Any, **kwargs: t.Any) -> t.Callable[[F[P]], click.Group]:
+            try:
+                return func(*args, **attrs)
+            except openllm.exceptions.OpenLLMException as err:
+                if get_debug_mode():
+                    _console.print_exception(show_locals=True, suppress=("click",))
+                    raise
+                raise click.ClickException(
+                    click.style(f"[{group.name}] '{command_name}' failed: " + err.message, fg="red")
+                ) from err
+            except KeyboardInterrupt:  # NOTE: silience KeyboardInterrupt
+                pass
+
+        return t.cast("ClickFunctionProtocol[t.Any]", wrapper)
+
+    def __init__(self, *args: t.Any, **attrs: t.Any) -> None:
+        super(OpenLLMCommandGroup, self).__init__(*args, **attrs)
+        # these two dictionaries will store known aliases for commands and groups
+        self._alias_groups: dict[str, tuple[str, click.Group]] = {}
+
+    def group(self, *args: t.Any, **attrs: t.Any) -> t.Callable[[F[P]], click.Group]:
         """Override the default 'cli.group' with supports for aliases for given group."""
-        aliases = kwargs.pop("aliases", [])
+        aliases = attrs.pop("aliases", [])
 
         def wrapper(f: F[P]) -> click.Group:
             from gettext import gettext as _
 
-            name = kwargs.pop("name", f.__name__)
-            group = super(OpenLLMCommandGroup, self).group(name, *args, **kwargs)(f)
+            name = attrs.pop("name", f.__name__)
+            group = super(OpenLLMCommandGroup, self).group(name, *args, **attrs)(f)
             if group.short_help:
                 text = inspect.cleandoc(group.short_help)
             elif group.help:
@@ -155,11 +200,11 @@ class OpenLLMCommandGroup(click.Group):
             if group.deprecated:
                 text = _("(Deprecated) {text}").format(text=text)
 
-            kwargs.setdefault("help", inspect.getdoc(f))
-            kwargs.setdefault("short_help", text)
+            attrs.setdefault("help", inspect.getdoc(f))
+            attrs.setdefault("short_help", text)
             if len(aliases) > 0:
                 for alias in aliases:
-                    aliased_group = super(OpenLLMCommandGroup, self).group(alias, *args, **kwargs)(f)
+                    aliased_group = super(OpenLLMCommandGroup, self).group(alias, *args, **attrs)(f)
                     aliased_group.short_help = text + f" (alias for '{name}')"
                     self._alias_groups[name] = (alias, aliased_group)
 
@@ -169,21 +214,36 @@ class OpenLLMCommandGroup(click.Group):
 
         return wrapper
 
-    def command(self, *args: t.Any, **kwargs: t.Any) -> t.Callable[[F[P]], click.Command]:
+    def command(self, *args: t.Any, **attrs: t.Any) -> t.Callable[[F[P]], click.Command]:
         """Override the default 'cli.command' with supports for aliases for given command, and it
         wraps the implementation with common parameters.
         """
-        if "context_settings" not in kwargs:
-            kwargs["context_settings"] = {}
-        kwargs["context_settings"]["max_content_width"] = 119
-        aliases = kwargs.pop("aliases", None)
+        if "context_settings" not in attrs:
+            attrs["context_settings"] = {}
+        attrs["context_settings"]["max_content_width"] = 120
+        aliases = attrs.pop("aliases", None)
 
         def wrapper(f: F[P]) -> click.Command:
             name = f.__name__.lower().replace("_", "-")
-            kwargs.setdefault("help", inspect.getdoc(f))
-            kwargs.setdefault("name", name)
+            attrs.setdefault("help", inspect.getdoc(f))
+            attrs.setdefault("name", name)
 
-            cmd = super(OpenLLMCommandGroup, self).command(*args, **kwargs)(OpenLLMCommandGroup.common_chain(f))
+            # Wrap implementation withc common parameters
+            wrapped = self.common_params(f)
+            # Wrap into OpenLLM tracking
+            wrapped = self.usage_tracking(wrapped, self, **attrs)
+            # Wrap into exception handling
+            wrapped = self.exception_handling(wrapped, self, **attrs)
+
+            # move common parameters to end of the parameters list
+            wrapped.__click_params__ = (
+                wrapped.__click_params__[-self.NUMBER_OF_COMMON_PARAMS :]
+                + wrapped.__click_params__[: -self.NUMBER_OF_COMMON_PARAMS]
+            )
+
+            # NOTE: we need to call super of super to avoid conflict with BentoMLCommandGroup command
+            # setup
+            cmd = super(BentoMLCommandGroup, self).command(*args, **attrs)(wrapped)
             # NOTE: add aliases to a given commands if it is specified.
             if aliases is not None:
                 assert cmd.name
@@ -194,45 +254,11 @@ class OpenLLMCommandGroup(click.Group):
 
         return wrapper
 
-    def format_commands(self, ctx: click.Context, formatter: click.HelpFormatter) -> None:
-        rows: list[tuple[str, str]] = []
-        sub_commands = self.list_commands(ctx)
 
-        max_len = max(len(cmd) for cmd in sub_commands)
-        limit = formatter.width - 6 - max_len
-
-        for sub_command in sub_commands:
-            cmd = self.get_command(ctx, sub_command)
-            if cmd is None:
-                continue
-            # If the command is hidden, then we skip it.
-            if hasattr(cmd, "hidden") and cmd.hidden:
-                continue
-            if sub_command in self._commands:
-                aliases = ",".join(sorted(self._commands[sub_command]))
-                sub_command = "%s (%s)" % (sub_command, aliases)
-            # this cmd_help is available since click>=7
-            # BentoML requires click>=7.
-            cmd_help = cmd.get_short_help_str(limit)
-            rows.append((sub_command, cmd_help))
-        if rows:
-            with formatter.section("Commands"):
-                formatter.write_dl(rows)
-
-    def resolve_command(
-        self, ctx: click.Context, args: list[str]
-    ) -> tuple[str | None, click.Command | None, list[str]]:
-        try:
-            return super(OpenLLMCommandGroup, self).resolve_command(ctx, args)
-        except click.exceptions.UsageError as e:
-            error_msg = str(e)
-            original_cmd_name = click.utils.make_str(args[0])
-            matches = difflib.get_close_matches(original_cmd_name, self.list_commands(ctx), 3, 0.5)
-            if matches:
-                fmt_matches = "\n    ".join(matches)
-                error_msg += "\n\n"
-                error_msg += f"Did you mean?\n    {fmt_matches}"
-            raise click.exceptions.UsageError(error_msg, e.ctx)
+# NOTE: A list of bentoml option that is not needed for parsing.
+# NOTE: User shouldn't set '--working-dir', as OpenLLM will setup this.
+# NOTE: production is also deprecated
+_IGNORED_OPTIONS = {"working_dir", "production", "protocol_version"}
 
 
 def parse_serve_args(serve_grpc: bool) -> t.Callable[[F[P]], F[P]]:
@@ -249,19 +275,17 @@ def parse_serve_args(serve_grpc: bool) -> t.Callable[[F[P]], F[P]]:
         serve_command = cli.commands[command]
         # The first variable is the argument bento
         # and the last three are shared default, which we don't need.
-        serve_options = [p for p in serve_command.params[1:-3] if p.name not in ("protocol_version",)]
+        serve_options = [p for p in serve_command.params[1:-3] if p.name not in _IGNORED_OPTIONS]
         for options in reversed(serve_options):
             attrs = options.to_info_dict()
             # we don't need param_type_name, since it should all be options
             attrs.pop("param_type_name")
             # name is not a valid args
-            name = attrs.pop("name")
+            attrs.pop("name")
             # type can be determine from default value
             attrs.pop("type")
             param_decls = (*attrs.pop("opts"), *attrs.pop("secondary_opts"))
-            # NOTE: User shouldn't set '--working-dir', as OpenLLM will setup this.
-            # NOTE: production is also deprecated
-            if name not in ("working_dir", "production"):
+            if name not in _IGNORED_OPTIONS:
                 f = optgroup.option(*param_decls, **attrs)(f)
 
         return group(f)
@@ -275,7 +299,20 @@ def start_model_command(
     _context_settings: dict[str, t.Any] | None = None,
     _serve_grpc: bool = False,
 ) -> click.Command:
-    """Create a click.Command for starting a model server"""
+    """Generate a 'click.Command' for any given LLM.
+
+    Args:
+        model_name: The name of the model
+        factory: The click.Group to add the command to
+        _context_settings: The context settings to use for the command
+        _serve_grpc: Whether to serve the model via gRPC or HTTP
+
+    Returns:
+        The click.Command for starting the model server
+
+    Note that the internal commands will return the llm_config and a boolean determine
+    whether the server is run with GPU or not.
+    """
     envvar = openllm.utils.get_framework_env(model_name)
     model_command_decr: dict[str, t.Any] = {
         "name": inflection.underscore(model_name),
@@ -304,12 +341,19 @@ def start_model_command(
         config.check_if_gpu_is_available(envvar)
     except openllm.exceptions.GpuNotAvailableError:
         # NOTE: The model requires GPU, therefore we will return a dummy command
-        model_command_decr.update({"short_help": "(Disabled because there is no GPU available)"})
+        model_command_decr.update(
+            {
+                "short_help": "(Disabled because there is no GPU available)",
+                "help": f"""{model_name} is currently not available to run on your 
+                local machine because it requires GPU for faster inference.""",
+            }
+        )
 
         @factory.command(**model_command_decr)
-        def noop():
+        def noop() -> openllm.LLMConfig:
             click.secho("No GPU available, therefore this command is disabled", fg="red")
-            return
+            openllm.utils.analytics.track_start_init(config, False)
+            return config
 
         return noop
 
@@ -320,13 +364,14 @@ def start_model_command(
     @click.option(
         "--pretrained", type=click.STRING, default=None, help="Optional pretrained name or path to fine-tune weight."
     )
-    def model_start(server_timeout: int, pretrained: str | None, *args: t.Any, **attrs: t.Any):
+    def model_start(server_timeout: int, pretrained: str | None, **attrs: t.Any) -> openllm.LLMConfig:
         from bentoml._internal.configuration import get_debug_mode
         from bentoml._internal.log import configure_logging
 
         configure_logging()
 
-        nw_config, server_kwds = config.model_validate_click(**attrs)
+        updated_config, server_kwds = config.model_validate_click(**attrs)
+        openllm.utils.analytics.track_start_init(updated_config, False)
 
         server_kwds.update({"working_dir": os.path.dirname(__file__)})
         if _serve_grpc:
@@ -350,7 +395,7 @@ def start_model_command(
         start_env.update(
             {
                 openllm.utils.FRAMEWORK_ENV_VAR(model_name): envvar,
-                openllm.utils.MODEL_CONFIG_ENV_VAR(model_name): nw_config.model_dump_json(),
+                openllm.utils.MODEL_CONFIG_ENV_VAR(model_name): updated_config.model_dump_json(),
                 "OPENLLM_MODEL": model_name,
                 "BENTOML_DEBUG": str(get_debug_mode()),
                 "BENTOML_CONFIG_OPTIONS": _bentoml_config_options,
@@ -388,6 +433,9 @@ def start_model_command(
                 f"Next step: you can run 'openllm bundle {model_name}' to create a Bento for {model_name}", fg="blue"
             )
 
+        # NOTE: Return the configuration for telemetry purposes.
+        return updated_config
+
     return model_start
 
 
@@ -411,7 +459,7 @@ start = functools.partial(_start, _serve_grpc=False)
 start_grpc = functools.partial(_start, _serve_grpc=True)
 
 
-@click.group(cls=openllm.cli.OpenLLMCommandGroup, context_settings=_CONTEXT_SETTINGS)
+@click.group(cls=openllm.cli.OpenLLMCommandGroup, context_settings=_CONTEXT_SETTINGS, name="openllm")
 def cli():
     """
     \b
@@ -432,7 +480,7 @@ def cli():
     """
 
 
-@cli.command()
+@cli.command(name="version")
 @output_decorator
 def version(output: t.Literal["json", "pretty", "porcelain"]):
     """Return current OpenLLM version."""
@@ -506,6 +554,8 @@ def bundle(model_name: str, pretrained: str | None, overwrite: bool):
             f"\n * Containerize your Bento with `bentoml containerize`:\n    $ bentoml containerize {bento.tag}",
             fg="blue",
         )
+
+    return bento
 
 
 @cli.command(name="models")

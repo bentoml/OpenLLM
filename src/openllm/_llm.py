@@ -76,7 +76,7 @@ def import_model(
     __openllm_framework__: str,
     *model_args: t.Any,
     tokenizer_kwds: dict[str, t.Any],
-    **kwds: t.Any,
+    **attrs: t.Any,
 ):
     """Auto detect model type from given model_name and import it to bentoml's model store.
 
@@ -93,13 +93,13 @@ def import_model(
         model_name: Model name to be imported. use `openllm models` to see available entries
         tag: Tag to be used for the model. This is usually generated for you.
         model_args: Args to be passed into AutoModelForSeq2SeqLM or AutoModelForCausalLM (+ TF, Flax variants).
-        **kwds: Kwargs to be passed into AutoModelForSeq2SeqLM or AutoModelForCausalLM (+ TF, Flax variants).
+        **attrs: Kwargs to be passed into AutoModelForSeq2SeqLM or AutoModelForCausalLM (+ TF, Flax variants).
     """
 
-    config: transformers.PretrainedConfig = kwds.pop("config", None)
-    trust_remote_code = kwds.pop("trust_remote_code", False)
+    config: transformers.PretrainedConfig = attrs.pop("config", None)
+    trust_remote_code = attrs.pop("trust_remote_code", False)
 
-    # this logic below is synonymous to handling `from_pretrained` kwds.
+    # this logic below is synonymous to handling `from_pretrained` attrs.
     hub_kwds_names = [
         "cache_dir",
         "force_download",
@@ -110,15 +110,15 @@ def import_model(
         "subfolder",
         "use_auth_token",
     ]
-    hub_kwds = {k: kwds.pop(k) for k in hub_kwds_names if k in kwds}
+    hub_attrs = {k: attrs.pop(k) for k in hub_kwds_names if k in attrs}
     if not isinstance(config, transformers.PretrainedConfig):
-        copied_kwds = copy.deepcopy(kwds)
-        if copied_kwds.get("torch_dtype", None) == "auto":
-            copied_kwds.pop("torch_dtype")
-        config, kwds = t.cast(
+        copied_attrs = copy.deepcopy(attrs)
+        if copied_attrs.get("torch_dtype", None) == "auto":
+            copied_attrs.pop("torch_dtype")
+        config, attrs = t.cast(
             "tuple[transformers.PretrainedConfig, dict[str, t.Any]]",
             transformers.AutoConfig.from_pretrained(
-                model_name, return_unused_kwargs=True, trust_remote_code=trust_remote_code, **hub_kwds, **copied_kwds
+                model_name, return_unused_kwargs=True, trust_remote_code=trust_remote_code, **hub_attrs, **copied_attrs
             ),
         )
 
@@ -134,13 +134,13 @@ def import_model(
         getattr(
             transformers, _return_tensors_to_framework_map[__openllm_framework__][TaskType[task_type].value - 1]
         ).from_pretrained(
-            model_name, *model_args, config=config, trust_remote_code=trust_remote_code, **hub_kwds, **kwds
+            model_name, *model_args, config=config, trust_remote_code=trust_remote_code, **hub_attrs, **attrs
         ),
         custom_objects={
             "tokenizer": t.cast(
                 "LLMTokenizer",
                 transformers.AutoTokenizer.from_pretrained(
-                    model_name, config=config, trust_remote_code=trust_remote_code, **hub_kwds, **tokenizer_kwds
+                    model_name, config=config, trust_remote_code=trust_remote_code, **hub_attrs, **tokenizer_kwds
                 ),
             )
         },
@@ -202,7 +202,7 @@ class LLMInterface(ABC):
         """
         raise NotImplementedError
 
-    def postprocess_parameters(self, prompt: str, generation_result: t.Any, **kwds: t.Any) -> t.Any:
+    def postprocess_parameters(self, prompt: str, generation_result: t.Any, **attrs: t.Any) -> t.Any:
         """This handler will postprocess generation results from LLM.generate and
         then output nicely formatted results (if the LLM decide to do so.)
 
@@ -212,7 +212,7 @@ class LLMInterface(ABC):
         """
         return generation_result
 
-    def generate_iterator(self, prompt: str, **kwargs: t.Any) -> t.Iterator[t.Any]:
+    def generate_iterator(self, prompt: str, **attrs: t.Any) -> t.Iterator[t.Any]:
         """An iterator version of generate function."""
         raise NotImplementedError(
             "Currently generate_iterator requires SSE (Server-side events) support, which is not yet implemented."
@@ -230,7 +230,7 @@ class LLMInterface(ABC):
         tag: bentoml.Tag,
         *args: t.Any,
         tokenizer_kwds: dict[str, t.Any],
-        **kwds: t.Any,
+        **attrs: t.Any,
     ) -> bentoml.Model:
         """This function can be implemented if default import_model doesn't satisfy your needs."""
         raise NotImplementedError
@@ -238,7 +238,7 @@ class LLMInterface(ABC):
 
 class LLMMetaclass(ABCMeta):
     def __new__(
-        mcls, cls_name: str, bases: tuple[type[t.Any], ...], namespace: dict[str, t.Any], **kwds: t.Any
+        mcls, cls_name: str, bases: tuple[type[t.Any], ...], namespace: dict[str, t.Any], **attrs: t.Any
     ) -> type:
         """Metaclass for creating a LLM."""
         if LLMInterface not in bases:  # only actual openllm.LLM should hit this branch.
@@ -303,7 +303,7 @@ class LLMMetaclass(ABCMeta):
             # NOTE: populate with default cache.
             namespace.update({k: None for k in ("__llm_bentomodel__", "__llm_model__", "__llm_tokenizer__")})
 
-            cls: type[LLM] = super().__new__(mcls, cls_name, bases, namespace, **kwds)
+            cls: type[LLM] = super().__new__(t.cast("type[type[LLM]]", mcls), cls_name, bases, namespace, **attrs)
             cls.__openllm_post_init__ = None if cls.llm_post_init is LLMInterface.llm_post_init else cls.llm_post_init
 
             if getattr(cls, "config_class") is None:
@@ -311,7 +311,7 @@ class LLMMetaclass(ABCMeta):
             return cls
         else:
             # the LLM class itself being created, no need to setup
-            return super().__new__(mcls, cls_name, bases, namespace, **kwds)
+            return super().__new__(mcls, cls_name, bases, namespace, **attrs)
 
 
 class LLM(LLMInterface, metaclass=LLMMetaclass):
@@ -321,6 +321,8 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
         __llm_model__: LLMModel | None = None
         __llm_tokenizer__: LLMTokenizer | None = None
         __llm_implementation__: t.Literal["pt", "tf", "flax"]
+        __llm_kwargs__: dict[str, t.Any]
+        __llm_args__: tuple[t.Any, ...]
 
         __openllm_start_name__: str
         __openllm_requires_gpu__: bool
@@ -334,13 +336,13 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
         pretrained: str | None = None,
         llm_config: openllm.LLMConfig | None = None,
         *args: t.Any,
-        **kwargs: t.Any,
+        **attrs: t.Any,
     ):
         """Initialize the LLM with given pretrained model.
 
         Note:
         - *args to be passed to the model.
-        - **kwargs will first be parsed to the AutoConfig, then the rest will be parsed to the import_model
+        - **attrs will first be parsed to the AutoConfig, then the rest will be parsed to the import_model
         - for tokenizer kwargs, it should be prefixed with _tokenizer_*
 
         Current drawback with pretrained is that we don't have support loading from custom files yet.
@@ -356,12 +358,12 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
             tag: bentoml.Tag,
             *args: t.Any,
             tokenizer_kwds: dict[str, t.Any],
-            **kwargs: t.Any,
+            **attrs: t.Any,
         ):
             return bentoml.transformers.save_model(
                 str(tag),
                 transformers.AutoModelForCausalLM.from_pretrained(
-                    pretrained, device_map="auto", torch_dtype=torch.bfloat16, **kwargs
+                    pretrained, device_map="auto", torch_dtype=torch.bfloat16, **attrs
                 ),
                 custom_objects={
                     "tokenizer": transformers.AutoTokenizer.from_pretrained(
@@ -395,18 +397,18 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
             llm_config: The config to use for this LLM. Defaults to None. If not passed, we will use 'self.config_class'
                         to construct default configuration.
             *args: The args to be passed to the model.
-            **kwargs: The kwargs to be passed to the model.
+            **attrs: The kwargs to be passed to the model.
         """
 
         if llm_config is not None:
             logger.debug("Using given 'llm_config=(%s)' to initialize LLM", llm_config)
             self.config = llm_config
         else:
-            self.config = self.config_class(**kwargs)
+            self.config = self.config_class(**attrs)
             assert self.config.__pydantic_extra__ is not None
             # The rests of the kwargs that is not used by the config class should
             # be stored into __pydantic_extra__.
-            kwargs = copy.deepcopy(self.config.__pydantic_extra__)
+            attrs = copy.deepcopy(self.config.__pydantic_extra__)
 
         if pretrained is None:
             pretrained = os.environ.get(f"OPENLLM_{self.config.__openllm_model_name__.upper()}_PRETRAINED", None)
@@ -418,8 +420,8 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
         self._pretrained = pretrained
 
         # NOTE: Save the args and kwargs for latter load
-        self._args = args
-        self._kwargs = kwargs
+        self.__llm_args__ = args
+        self.__llm_kwargs__ = attrs
 
         if self.__openllm_post_init__:
             self.__openllm_post_init__(self)
@@ -447,12 +449,12 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
     @property
     def _bentomodel(self) -> bentoml.Model:
         if self.__llm_bentomodel__ is None:
-            trust_remote_code = self._kwargs.pop("trust_remote_code", self.config.__openllm_trust_remote_code__)
+            trust_remote_code = self.__llm_kwargs__.pop("trust_remote_code", self.config.__openllm_trust_remote_code__)
             tag, kwds = openllm.utils.generate_tags(
                 self._pretrained,
                 prefix=self.__llm_implementation__,
                 trust_remote_code=trust_remote_code,
-                **self._kwargs,
+                **self.__llm_kwargs__,
             )
 
             tokenizer_kwds = {k[len("_tokenizer_") :]: v for k, v in kwds.items() if k.startswith("_tokenizer_")}
@@ -479,7 +481,7 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
                 self.__llm_bentomodel__ = self.import_model(
                     self._pretrained,
                     tag,
-                    *self._args,
+                    *self.__llm_args__,
                     tokenizer_kwds=tokenizer_kwds,
                     trust_remote_code=trust_remote_code,
                     **kwds,
@@ -496,14 +498,14 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
         if self.import_kwargs:
             kwds = {
                 **{k: v for k, v in self.import_kwargs.items() if not k.startswith("_tokenizer_")},
-                **self._kwargs,
+                **self.__llm_kwargs__,
             }
         else:
-            kwds = self._kwargs
+            kwds = self.__llm_kwargs__
 
         if self.__llm_model__ is None:
             # Hmm, bentoml.transformers.load_model doesn't yet support args.
-            self.__llm_model__ = self._bentomodel.load_model(*self._args, **kwds)
+            self.__llm_model__ = self._bentomodel.load_model(*self.__llm_args__, **kwds)
         return self.__llm_model__
 
     @property
@@ -574,10 +576,10 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
             llm_type: str
             identifying_params: dict[str, t.Any]
 
-            def __init_subclass__(cls, **kwargs: t.Any):
+            def __init_subclass__(cls, **attrs: t.Any):
                 cls.llm_type = self.llm_type
                 cls.identifying_params = self.identifying_params
-                super().__init_subclass__(**kwargs)
+                super().__init_subclass__(**attrs)
 
             @bentoml.Runnable.method(
                 batchable=generate_sig.batchable,
@@ -585,8 +587,8 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
                 input_spec=generate_sig.input_spec,
                 output_spec=generate_sig.output_spec,
             )
-            def generate(__self, prompt: str, **kwds: t.Any) -> list[t.Any]:
-                return self.generate(prompt, **kwds)
+            def generate(__self, prompt: str, **attrs: t.Any) -> list[t.Any]:
+                return self.generate(prompt, **attrs)
 
             @bentoml.Runnable.method(
                 batchable=generate_iterator_sig.batchable,
@@ -594,8 +596,8 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
                 input_spec=generate_iterator_sig.input_spec,
                 output_spec=generate_iterator_sig.output_spec,
             )
-            def generate_iterator(__self, prompt: str, **kwds: t.Any) -> t.Iterator[t.Any]:
-                yield self.generate_iterator(prompt, **kwds)
+            def generate_iterator(__self, prompt: str, **attrs: t.Any) -> t.Iterator[t.Any]:
+                yield self.generate_iterator(prompt, **attrs)
 
         if self.__openllm_requires_gpu__:
             _supported_resources = ("nvidia.com/gpu",)
@@ -618,23 +620,23 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
         )
 
 
-def Runner(start_name: str, **kwds: t.Any) -> bentoml.Runner:
+def Runner(start_name: str, **attrs: t.Any) -> bentoml.Runner:
     """Create a Runner for given LLM. For a list of currently supported LLM, check out 'openllm models'
 
     Args:
         start_name: Supported model name from 'openllm models'
         init_local: Whether to init_local this given Runner. This is useful during development. (Default to False)
-        **kwds: The rest of kwargs will then be passed to the LLM. Refer to the LLM documentation for the kwargs
+        **attrs: The rest of kwargs will then be passed to the LLM. Refer to the LLM documentation for the kwargs
                 behaviour
     """
-    init_local = kwds.pop("init_local", False)
+    init_local = attrs.pop("init_local", False)
     envvar = openllm.utils.get_framework_env(start_name)
     if envvar == "flax":
-        runner = openllm.AutoFlaxLLM.create_runner(start_name, **kwds)
+        runner = openllm.AutoFlaxLLM.create_runner(start_name, **attrs)
     elif envvar == "tf":
-        runner = openllm.AutoTFLLM.create_runner(start_name, **kwds)
+        runner = openllm.AutoTFLLM.create_runner(start_name, **attrs)
     else:
-        runner = openllm.AutoLLM.create_runner(start_name, **kwds)
+        runner = openllm.AutoLLM.create_runner(start_name, **attrs)
 
     if init_local:
         runner.init_local()

@@ -61,14 +61,13 @@ class StarCoder(openllm.LLM):
         tag: bentoml.Tag,
         *model_args: t.Any,
         tokenizer_kwds: dict[str, t.Any],
-        **kwds: t.Any,
+        **attrs: t.Any,
     ) -> bentoml.Model:
-        trust_remote_code = kwds.pop("trust_remote_code", True)
-        kwds.pop("quantize", "bitandbytes")
+        trust_remote_code = attrs.pop("trust_remote_code", True)
 
-        torch_dtype = kwds.pop("torch_dtype", torch.float16)
-        load_in_8bit = kwds.pop("load_in_8bit", True)
-        device_map = kwds.pop("device_map", "auto")
+        torch_dtype = attrs.pop("torch_dtype", torch.float16)
+        load_in_8bit = attrs.pop("load_in_8bit", True)
+        device_map = attrs.pop("device_map", "auto")
 
         tokenizer = transformers.AutoTokenizer.from_pretrained(
             pretrained, trust_remote_code=trust_remote_code, **tokenizer_kwds
@@ -86,7 +85,7 @@ class StarCoder(openllm.LLM):
             load_in_8bit=load_in_8bit,
             device_map=device_map,
             trust_remote_code=trust_remote_code,
-            **kwds,
+            **attrs,
         )
 
         try:
@@ -105,7 +104,7 @@ class StarCoder(openllm.LLM):
         top_p: float | None = None,
         max_new_tokens: int | None = None,
         repetition_penalty: float | None = None,
-        **kwargs: t.Any,
+        **attrs: t.Any,
     ) -> tuple[str, dict[str, t.Any]]:
         fim_mode = FIM_INDICATOR in prompt
         prefix, suffix = None, None
@@ -125,7 +124,7 @@ class StarCoder(openllm.LLM):
             # default starcoder doesn't include the same value as santacoder EOD
             pad_token_id=49152,
             repetition_penalty=repetition_penalty,
-            **kwargs,
+            **attrs,
         ).model_dump(flatten=True)
 
     def postprocess_parameters(self, prompt: str, generation_result: t.Sequence[str], **_: t.Any) -> str:
@@ -139,7 +138,7 @@ class StarCoder(openllm.LLM):
         top_p: float | None = None,
         max_new_tokens: int | None = None,
         repetition_penalty: float | None = None,
-        **kwargs: t.Any,
+        **attrs: t.Any,
     ) -> list[str]:
         fim_mode = FIM_INDICATOR in prompt
         prefix, suffix = None, None
@@ -163,7 +162,7 @@ class StarCoder(openllm.LLM):
                 # doesn't include the same value as santacoder EOD
                 pad_token_id=49152,
                 repetition_penalty=repetition_penalty,
-                **kwargs,
+                **attrs,
             ).to_generation_config(),
         )
         # TODO: We will probably want to return the tokenizer here so that we can manually process this

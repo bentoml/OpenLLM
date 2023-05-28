@@ -8,28 +8,28 @@ from ..utils import DummyMetaclass, require_backends
 class FlanT5(metaclass=DummyMetaclass):
     _backends = ["torch"]
 
-    def __init__(self, *args: t.Any, **kwargs: t.Any):
+    def __init__(self, *args: t.Any, **attrs: t.Any):
         require_backends(self, ["torch"])
 
 
 class DollyV2(metaclass=DummyMetaclass):
     _backends = ["torch"]
 
-    def __init__(self, *args: t.Any, **kwargs: t.Any):
+    def __init__(self, *args: t.Any, **attrs: t.Any):
         require_backends(self, ["torch"])
 
 
 class StarCoder(metaclass=DummyMetaclass):
     _backends = ["torch"]
 
-    def __init__(self, *args: t.Any, **kwargs: t.Any):
+    def __init__(self, *args: t.Any, **attrs: t.Any):
         require_backends(self, ["torch"])
 
 
 class AutoLLM(metaclass=DummyMetaclass):
     _backends = ["torch"]
 
-    def __init__(self, *args: t.Any, **kwargs: t.Any):
+    def __init__(self, *args: t.Any, **attrs: t.Any):
         require_backends(self, ["torch"])
 
 

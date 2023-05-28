@@ -43,7 +43,7 @@ def _get_llm_class(config: openllm.LLMConfig, llm_mapping: _LazyAutoMapping) -> 
 class _BaseAutoLLMClass:
     _model_mapping: _LazyAutoMapping
 
-    def __init__(self, *args: t.Any, **kwargs: t.Any):
+    def __init__(self, *args: t.Any, **attrs: t.Any):
         raise EnvironmentError(
             f"Cannot instantiate {self.__class__.__name__} directly. "
             "Please use '{self.__class__.__name__}.Runner(model_name)' instead."
@@ -56,7 +56,7 @@ class _BaseAutoLLMClass:
         model_name: str,
         pretrained: str | None = None,
         return_runner_kwargs: t.Literal[False] = ...,
-        **kwargs: t.Any,
+        **attrs: t.Any,
     ) -> openllm.LLM:
         ...
 
@@ -67,7 +67,7 @@ class _BaseAutoLLMClass:
         model_name: str,
         pretrained: str | None = None,
         return_runner_kwargs: t.Literal[True] = ...,
-        **kwargs: t.Any,
+        **attrs: t.Any,
     ) -> tuple[openllm.LLM, dict[str, t.Any]]:
         ...
 
@@ -77,9 +77,9 @@ class _BaseAutoLLMClass:
         model_name: str,
         pretrained: str | None = None,
         return_runner_kwargs: bool = False,
-        **kwargs: t.Any,
+        **attrs: t.Any,
     ) -> openllm.LLM | tuple[openllm.LLM, dict[str, t.Any]]:
-        config = kwargs.pop("llm_config", None)
+        config = attrs.pop("llm_config", None)
         runner_kwargs_name = [
             "name",
             "models",
@@ -89,35 +89,35 @@ class _BaseAutoLLMClass:
             "embedded",
             "scheduling_strategy",
         ]
-        to_runner_kwargs = {k: kwargs.pop(k) for k in runner_kwargs_name if k in kwargs}
+        to_runner_attrs = {k: v for k, v in attrs.items() if k in runner_kwargs_name}
         if not isinstance(config, openllm.LLMConfig):
             # The rest of kwargs is now passed to config
-            config = AutoConfig.for_model(model_name, **kwargs)
+            config = AutoConfig.for_model(model_name, **attrs)
         if type(config) in cls._model_mapping.keys():
-            llm = _get_llm_class(config, cls._model_mapping)(pretrained=pretrained, llm_config=config, **kwargs)
+            llm = _get_llm_class(config, cls._model_mapping)(pretrained=pretrained, llm_config=config, **attrs)
             if not return_runner_kwargs:
                 return llm
-            return llm, to_runner_kwargs
+            return llm, to_runner_attrs
         raise ValueError(
             f"Unrecognized configuration class {config.__class__} for this kind of AutoRunner: {cls.__name__}.\n"
             f"Runnable type should be one of {', '.join(c.__name__ for c in cls._model_mapping.keys())}."
         )
 
     @classmethod
-    def create_runner(cls, model_name: str, pretrained: str | None = None, **kwargs: t.Any) -> bentoml.Runner:
+    def create_runner(cls, model_name: str, pretrained: str | None = None, **attrs: t.Any) -> bentoml.Runner:
         """
         Create a LLM Runner for the given model name.
 
         Args:
             model_name: The model name to instantiate.
             pretrained: The pretrained model name to instantiate.
-            **kwargs: Additional keyword arguments passed along to the specific configuration class.
+            **attrs: Additional keyword arguments passed along to the specific configuration class.
 
         Returns:
             A LLM instance.
         """
-        llm, runner_kwargs = cls.for_model(model_name, pretrained, return_runner_kwargs=True, **kwargs)
-        return llm.to_runner(**runner_kwargs)
+        llm, runner_attrs = cls.for_model(model_name, pretrained, return_runner_kwargs=True, **attrs)
+        return llm.to_runner(**runner_attrs)
 
     @classmethod
     def register(cls, config_class: type[openllm.LLMConfig], llm_class: type[openllm.LLM]):

@@ -8,5 +8,5 @@ from ..utils import DummyMetaclass, require_backends
 class ChatGLM(metaclass=DummyMetaclass):
     _backends = ["torch", "cpm_kernels"]
 
-    def __init__(self, *args: t.Any, **kwargs: t.Any):
+    def __init__(self, *args: t.Any, **attrs: t.Any):
         require_backends(self, ["torch", "cpm_kernels"])

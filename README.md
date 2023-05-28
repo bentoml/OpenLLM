@@ -54,3 +54,22 @@ openllm build dolly-v2
   Kubernetes
 - [🚀 bentoctl](https://github.com/bentoml/bentoctl): Fast model deployment on
   AWS SageMaker, Lambda, ECE, GCP, Azure, Heroku, and more!
+
+## 🍇 Telemetry
+
+OpenLLM collects usage data that helps the team to improve the product. Only
+OpenLLM's internal API calls are being reported. We strip out as much
+potentially sensitive information as possible, and we will never collect user
+code, model data, or stack traces. Here's the
+[code](./src/openllm/utils/analytics.py) for usage tracking. You can opt-out of
+usage tracking by the `--do-not-track` CLI option:
+
+```bash
+openllm [command] --do-not-track
+```
+
+Or by setting environment variable `OPENLLM_DO_NOT_TRACK=True`:
+
+```bash
+export OPENLLM_DO_NOT_TRACK=True
+```
