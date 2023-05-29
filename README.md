@@ -16,10 +16,13 @@ pip install openllm
 
 > NOTE: Currently, OpenLLM is built with pydantic v2. At the time of writing,
 > Pydantic v2 is still in alpha stage. To get pydantic v2, do
-> `pip install -U --pre pydantic`
+> `pip install -U --pre pydantic` You should also do the following:
+> `pip install -U git+https://github.com/bentoml/bentoml.git@main`
 
 To start a LLM server, `openllm start` allows you to start any supported LLM
 with a single command. For example, to start a `dolly-v2` server:
+
+## 😌 tl;dr?
 
 ```bash
 openllm start dolly-v2
@@ -48,9 +51,39 @@ To package the LLM into a Bento, simply use `openllm build`:
 openllm build dolly-v2
 ```
 
-> NOTE: To build OpenLLM from git source, pass in `OPENLLM_DEV_BUILD=True` to include the generated wheels into the bundle.
+> NOTE: To build OpenLLM from git source, pass in `OPENLLM_DEV_BUILD=True` to
+> include the generated wheels into the bundle.
 
-🎯 To streamline production deployment, you can use the following:
+To fine-tune your own LLM, either use `LLM.tuning()`:
+
+```python
+>>> import openllm
+>>> flan_t5 = openllm.LLM.from_pretrained("flan-t5")
+>>> def fine_tuning():
+...     fined_tune = flan_t5.tuning(method=openllm.tune.LORA | openllm.tune.P_TUNING, dataset='wikitext-2', ...)
+...     fined_tune.save_pretrained('./fine-tuned-flan-t5', version='wikitext')
+...     return fined_tune.path  # get the path of the pretrained
+>>> finetune_path = fine_tuning()
+>>> fined_tune_flan_t5 = openllm.LLM.from_pretrained('flan-t5', pretrained=finetune_path)
+>>> fined_tune_flan_t5.generate('Explain to me the difference between "further" and "farther"')
+```
+
+## 📚 Features
+
+🚂 **SOTA LLMs**: One-click stop-and-go supports for state-of-the-art LLMs,
+including StableLM, Llama, Alpaca, Dolly, Flan-T5, ChatGLM, Falcon, and more.
+
+📦 **Fine-tuning your own LLM**: Easily fine-tune any LLM with `LLM.tuning()`.
+
+🔥 **BentoML 🤝 HuggingFace**: Built on top of BentoML and HuggingFace's
+ecosystem (transformers, optimum, peft, accelerate, datasets), provides similar
+APIs for ease-of-use.
+
+⛓️ **Interoperability**: First class support for LangChain and
+[🤗 Hub](https://huggingface.co/) allows you to easily chain LLMs together.
+
+🎯 **Streamline production deployment**: Easily deploy any LLM via
+`openllm bundle` with the following:
 
 - [☁️ BentoML Cloud](https://l.bentoml.com/bento-cloud): the fastest way to
   deploy your bento, simple and at scale
