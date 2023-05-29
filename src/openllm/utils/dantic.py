@@ -14,9 +14,16 @@ import click
 import orjson
 from click import ParamType
 from pydantic import BaseModel
-from pydantic._internal._utils import lenient_issubclass
+from pydantic.version import VERSION as PYDANTIC_VERSION
 
 from . import LazyType
+
+PYDANTIC_V2 = PYDANTIC_VERSION.startswith("2.")
+
+if PYDANTIC_V2:
+    from pydantic._internal._utils import lenient_issubclass
+else:
+    from pydantic.utils import lenient_issubclass as lenient_issubclass
 
 
 def parse_default(default: t.Any, field_type: t.Any) -> t.Any:

@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 class StableLM(openllm.LLM):
     __openllm_internal__ = True
 
-    __openllm_bettertransformer__ = False
+    load_in_mha = False
 
     default_model = "StabilityAI/stablelm-tuned-alpha-3b"
 

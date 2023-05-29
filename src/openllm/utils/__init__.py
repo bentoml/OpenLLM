@@ -22,12 +22,10 @@ import importlib.machinery
 import itertools
 import logging
 import os
-import re
 import types
 import typing as t
 
 import attrs
-import bentoml
 import inflection
 from bentoml._internal.types import LazyType as LazyType
 
@@ -42,6 +40,7 @@ from bentoml._internal.utils import resolve_user_filepath as resolve_user_filepa
 from . import analytics as analytics
 from . import codegen as codegen
 from . import dantic as dantic
+from .import_utils import ENV_VARS_TRUE_VALUES as ENV_VARS_TRUE_VALUES
 from .import_utils import DummyMetaclass as DummyMetaclass
 from .import_utils import is_cpm_kernels_available as is_cpm_kernels_available
 from .import_utils import is_einops_available as is_einops_available
@@ -102,76 +101,6 @@ class ModelEnv:
         if envvar not in ("pt", "tf", "flax"):
             raise ValueError(f"Invalid framework implementation {envvar}, must be one of 'pt', 'tf', 'flax'")
         return envvar
-
-
-def convert_transformers_model_name(name: str) -> str:
-    if os.path.exists(os.path.dirname(name)):
-        name = os.path.basename(name)
-        logger.debug("Given name is a path, only returning the basename %s")
-        return name
-    return re.sub("[^a-zA-Z0-9]+", "-", name)
-
-
-def generate_tags(
-    model_name_or_path: str, prefix: str | None = None, **attrs: t.Any
-) -> tuple[bentoml.Tag, dict[str, t.Any]]:
-    """Generate a ``bentoml.Tag`` from a given transformers model name.
-
-    Note that this depends on your model to have a config class available.
-
-    Args:
-        model_name_or_path: The transformers model name or path to load the model from.
-                            If it is a path, then `openllm_model_version` must be passed in as a kwarg.
-        prefix: The prefix to prepend to the tag. If None, then no prefix will be prepended.
-        **attrs: Additional kwargs to pass to the ``transformers.AutoConfig`` constructor.
-                  If your pass ``return_unused_kwargs=True``, it will be ignored.
-
-    Returns:
-        A tuple of ``bentoml.Tag`` and a dict of unused kwargs.
-    """
-    if "return_unused_kwargs" in attrs:
-        logger.debug("Ignoring 'return_unused_kwargs' in 'generate_tag_from_model_name'.")
-        attrs.pop("return_unused_kwargs", None)
-
-    config, attrs = t.cast(
-        "tuple[transformers.PretrainedConfig, dict[str, t.Any]]",
-        transformers.AutoConfig.from_pretrained(model_name_or_path, return_unused_kwargs=True, **attrs),
-    )
-    name = convert_transformers_model_name(model_name_or_path)
-
-    if os.path.exists(os.path.dirname(model_name_or_path)):
-        # If the model_name_or_path is a path, we assume it's a local path,
-        # then users must pass a version for this.
-        model_version = attrs.pop("openllm_model_version", None)
-        if model_version is None:
-            logger.warning(
-                """\
-        When passing a path, it is recommended to also pass 'openllm_model_version' into Runner/AutoLLM intialization.
-
-        For example:
-
-        >>> import openllm
-        >>> runner = openllm.Runner('/path/to/fine-tuning/model', openllm_model_version='lora-version')
-
-        Example with AutoLLM:
-
-        >>> import openllm
-        >>> model = openllm.AutoLLM.for_model('/path/to/fine-tuning/model', openllm_model_version='lora-version')
-
-        No worries, OpenLLM will generate one for you. But for your own convenience, make sure to 
-        specify 'openllm_model_version'.
-        """
-            )
-            model_version = bentoml.Tag.from_taglike(name).make_new_version().version
-    else:
-        model_version = getattr(config, "_commit_hash", None)
-        if model_version is None:
-            logger.warning(
-                "Given %s from '%s' doesn't contain a commit hash. We will generate the tag without specific version.",
-                t.cast("type[transformers.PretrainedConfig]", config.__class__),
-                model_name_or_path,
-            )
-    return bentoml.Tag.from_taglike((f"{prefix}-" if prefix is not None else "") + f"{name}:{model_version}"), attrs
 
 
 class LazyModule(types.ModuleType):
