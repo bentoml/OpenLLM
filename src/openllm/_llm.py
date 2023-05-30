@@ -401,7 +401,7 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
 
         ```python
         dolly_v2_runner = openllm.Runner(
-            "dolly-v2", _tokenizer_padding_size="left", torch_dtype=torch.bfloat8, device_map="gpu"
+            "dolly-v2", _tokenizer_padding_size="left", torch_dtype=torch.bfloat16, device_map="gpu"
         )
         ```
 
@@ -430,10 +430,8 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
             self.config = llm_config
         else:
             self.config = self.config_class(**attrs)
-            assert self.config.__pydantic_extra__ is not None
-            # The rests of the kwargs that is not used by the config class should
-            # be stored into __pydantic_extra__.
-            attrs = copy.deepcopy(self.config.__pydantic_extra__)
+            # The rests of the kwargs that is not used by the config class should be stored into __openllm_extras__.
+            attrs = self.config.__openllm_extras__
 
         if pretrained is None:
             pretrained = os.environ.get(self.config.__openllm_env__.pretrained, None)
@@ -620,13 +618,12 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
         # Run check for GPU
         trust_remote_code = self.__llm_kwargs__.pop("trust_remote_code", self.config.__openllm_trust_remote_code__)
         self.config.check_if_gpu_is_available(self.__llm_implementation__)
+
+        kwds = {k: v for k, v in self.__llm_kwargs__.items() if not k.startswith("_tokenizer_")}
+
         if self.import_kwargs:
-            kwds = {
-                **{k: v for k, v in self.import_kwargs.items() if not k.startswith("_tokenizer_")},
-                **self.__llm_kwargs__,
-            }
-        else:
-            kwds = self.__llm_kwargs__
+            kwds = {**{k: v for k, v in self.import_kwargs.items() if not k.startswith("_tokenizer_")}, **kwds}
+
         kwds["trust_remote_code"] = trust_remote_code
         if self.load_in_mha and "_pretrained_class" not in self._bentomodel.info.metadata:
             # This is a pipeline, provide a accelerator args
@@ -641,6 +638,7 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
             and all(i in self._bentomodel.info.metadata for i in ("_framework", "_pretrained_class"))
             and self._bentomodel.info.metadata["_framework"] == "torch"
         ):
+            # BetterTransformer is currently only supported on PyTorch.
             from optimum.bettertransformer import BetterTransformer
 
             self.__llm_model__ = BetterTransformer.transform(self.__llm_model__)

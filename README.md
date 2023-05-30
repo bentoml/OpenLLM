@@ -14,11 +14,6 @@ To get started, simply install OpenLLM with pip:
 pip install openllm
 ```
 
-> NOTE: Currently, OpenLLM is built with pydantic v2. At the time of writing,
-> Pydantic v2 is still in alpha stage. To get pydantic v2, do
-> `pip install -U --pre pydantic` You should also do the following:
-> `pip install -U git+https://github.com/bentoml/bentoml.git@main`
-
 To start a LLM server, `openllm start` allows you to start any supported LLM
 with a single command. For example, to start a `dolly-v2` server:
 

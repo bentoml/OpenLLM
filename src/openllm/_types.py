@@ -24,8 +24,8 @@ if not t.TYPE_CHECKING:
     raise RuntimeError(f"{__name__} should not be imported during runtime")
 
 import transformers
+from bentoml._internal.models.model import ModelSignatureDict as ModelSignatureDict
 from bentoml._internal.models.model import ModelSignaturesType as ModelSignaturesType
-from bentoml.types import ModelSignatureDict as ModelSignatureDict
 
 LLMModel = transformers.PreTrainedModel | transformers.TFPreTrainedModel | transformers.FlaxPreTrainedModel
 LLMTokenizer = (
