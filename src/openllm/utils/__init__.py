@@ -22,6 +22,7 @@ import importlib.machinery
 import itertools
 import logging
 import os
+import sys
 import types
 import typing as t
 
@@ -29,7 +30,6 @@ import attrs
 import inflection
 from bentoml._internal.types import LazyType as LazyType
 from bentoml._internal.types import get_origin as get_origin
-from bentoml._internal.types import lenient_issubclass as lenient_issubclass
 
 # NOTE: The following exports useful utils from bentoml
 from bentoml._internal.utils import LazyLoader as LazyLoader
@@ -52,6 +52,30 @@ from .import_utils import is_torch_available as is_torch_available
 from .import_utils import require_backends as require_backends
 
 logger = logging.getLogger(__name__)
+
+try:
+    from typing import GenericAlias as TypingGenericAlias  # type: ignore
+except ImportError:
+    # python < 3.9 does not have GenericAlias (list[int], tuple[str, ...] and so on)
+    TypingGenericAlias = ()
+
+if sys.version_info < (3, 10):
+    WithArgsTypes = (TypingGenericAlias,)
+else:
+    WithArgsTypes: t.Any = (
+        t._GenericAlias,  # type: ignore (_GenericAlias is the actual GenericAlias implementation)
+        types.GenericAlias,
+        types.UnionType,
+    )
+
+
+def lenient_issubclass(cls: t.Any, class_or_tuple: type[t.Any] | tuple[type[t.Any], ...] | None) -> bool:
+    try:
+        return isinstance(cls, type) and issubclass(cls, class_or_tuple)  # type: ignore[arg-type]
+    except TypeError:
+        if isinstance(cls, WithArgsTypes):
+            return False
+        raise
 
 
 @attrs.define

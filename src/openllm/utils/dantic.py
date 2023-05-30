@@ -22,12 +22,10 @@ import click
 import orjson
 from click import ParamType
 
-from . import LazyType, get_origin
+import openllm
 
 if t.TYPE_CHECKING:
     from attr import _ValidatorType  # type: ignore
-
-from bentoml._internal.types import lenient_issubclass
 
 _T = t.TypeVar("_T")
 
@@ -116,13 +114,13 @@ def is_mapping(field_type: type) -> bool:
         bool: true when the field is a dict-like object, false otherwise.
     """
     # Early out for standard containers.
-    if lenient_issubclass(field_type, t.Mapping):
+    if openllm.utils.lenient_issubclass(field_type, t.Mapping):
         return True
     # for everything else or when the typing is more complex, check its origin
-    origin = get_origin(field_type)
+    origin = openllm.utils.get_origin(field_type)
     if origin is None:
         return False
-    return lenient_issubclass(origin, t.Mapping)
+    return openllm.utils.lenient_issubclass(origin, t.Mapping)
 
 
 def is_container(field_type: type) -> bool:
@@ -139,13 +137,13 @@ def is_container(field_type: type) -> bool:
     if field_type in (str, bytes):
         return False
     # Early out for standard containers: list, tuple, range
-    if lenient_issubclass(field_type, t.Container):
+    if openllm.utils.lenient_issubclass(field_type, t.Container):
         return True
-    origin = get_origin(field_type)
+    origin = openllm.utils.get_origin(field_type)
     # Early out for non-typing objects
     if origin is None:
         return False
-    return lenient_issubclass(origin, t.Container)
+    return openllm.utils.lenient_issubclass(origin, t.Container)
 
 
 def parse_container_args(field_type: type) -> ParamType | tuple[ParamType]:
@@ -191,7 +189,7 @@ def parse_single_arg(arg: type) -> ParamType:
     # For containers and nested models, we use JSON
     if is_container(arg):
         return JsonType()
-    if lenient_issubclass(arg, bytes):
+    if openllm.utils.lenient_issubclass(arg, bytes):
         return BytesType()
     return arg
 
@@ -216,7 +214,7 @@ class JsonType(ParamType):
         self.should_load = should_load
 
     def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> t.Any:
-        if LazyType[t.Mapping[str, str]](t.Mapping).isinstance(value) or not self.should_load:
+        if openllm.utils.LazyType[t.Mapping[str, str]](t.Mapping).isinstance(value) or not self.should_load:
             return value
         try:
             return orjson.loads(value)

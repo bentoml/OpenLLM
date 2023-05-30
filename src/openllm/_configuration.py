@@ -48,13 +48,12 @@ import click
 import inflection
 import orjson
 from bentoml._internal.models.model import ModelSignature
-from bentoml._internal.types import lenient_issubclass
 from click_option_group import optgroup
 
 import openllm
 
 from .exceptions import GpuNotAvailableError, OpenLLMException
-from .utils import LazyType, ModelEnv, bentoml_cattr, dantic
+from .utils import LazyType, ModelEnv, bentoml_cattr, dantic, lenient_issubclass
 
 if t.TYPE_CHECKING:
     import tensorflow as tf

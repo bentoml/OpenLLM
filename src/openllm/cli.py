@@ -638,7 +638,11 @@ def create_cli() -> click.Group:
                 click.secho(f"Saved model: {m.tag}")
             elif output == "json":
                 m = model.ensure_pretrained_exists()
-                click.secho(orjson.dumps({"previously_setup": False, "framework": env, "tag": str(m.tag)}).decode())
+                click.secho(
+                    orjson.dumps(
+                        {"previously_setup": False, "framework": env, "tag": str(m.tag)}, option=orjson.OPT_INDENT_2
+                    ).decode()
+                )
             else:
                 m = model.ensure_pretrained_exists()
                 click.secho(m.tag)
@@ -647,7 +651,11 @@ def create_cli() -> click.Group:
             if output == "pretty":
                 click.secho(f"{model_name} is already setup for framework '{env}': {str(m.tag)}", nl=True)
             elif output == "json":
-                click.secho(orjson.dumps({"previously_setup": True, "framework": env, "model": str(m.tag)}).decode())
+                click.secho(
+                    orjson.dumps(
+                        {"previously_setup": True, "framework": env, "model": str(m.tag)}, option=orjson.OPT_INDENT_2
+                    ).decode()
+                )
             else:
                 click.echo(m.tag)
         return m
