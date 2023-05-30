@@ -1,60 +1,85 @@
-"""
-Code originally derived and adapted from:
-https://github.com/samuelcolvin/pydantic/issues/756#issuecomment-798779264.
-Credits to Frederik Aalund <https://github.com/frederikaalund> for his valuable suggestions.
-"""
+# Copyright 2023 BentoML Team. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""A shim provides usable transition from pydantic to attrs."""
 
 from __future__ import annotations
 
-import inspect
 import typing as t
-from enum import Enum
 
+import attr
 import click
 import orjson
 from click import ParamType
-from pydantic import BaseModel
-from pydantic.version import VERSION as PYDANTIC_VERSION
 
-from . import LazyType
+from . import LazyType, get_origin
 
-PYDANTIC_V2 = PYDANTIC_VERSION.startswith("2.")
+if t.TYPE_CHECKING:
+    from attr import _ValidatorType  # type: ignore
 
-if PYDANTIC_V2:
-    from pydantic._internal._utils import lenient_issubclass
-else:
-    from pydantic.utils import lenient_issubclass as lenient_issubclass
+from bentoml._internal.types import lenient_issubclass
+
+_T = t.TypeVar("_T")
 
 
-def parse_default(default: t.Any, field_type: t.Any) -> t.Any:
-    """Converts pydantic defaults into click default types.
+def Field(
+    value: t.Any,
+    *,
+    ge: int | float | None = None,
+    le: int | float | None = None,
+    validator: _ValidatorType[_T] | None = None,
+    description: str | None = None,
+    env: str | None = None,
+    **attrs: t.Any,
+):
+    """A decorator that extends attr.field with additional arguments, which provides the same
+    interface as pydantic's Field.
+
+    By default, if both validator and ge are provided, then then ge will be
+    piped into first, then all of the other validator will be run afterwards.
 
     Args:
-        default: the current field's default value
-        field_type: the type of the current pydantic field
-
-    Returns:
-        t.Any: click-compatible default
+        ge: Greater than or equal to. Defaults to None.
+        docs: the documentation for the field. Defaults to None.
+        **kwargs: The rest of the arguments are passed to attr.field
     """
-    # pydantic uses none and ..., click only supports none
-    if default in (None, Ellipsis):
-        return None
-    # for enums we return the name as default
-    if lenient_issubclass(field_type, Enum):
-        return default.name
-    # for modules and such, the name is returned
-    if is_typing(field_type):
-        module = inspect.getmodule(default)
-        assert module is not None
-        module_name = module.__name__
-        return f"{module_name}.{default.__name__}"
-    # for dictionary types, the default is transformed into string
-    if is_mapping(field_type):
-        return orjson.dumps(default)
-    # for container types, the origin is required
-    if is_container(field_type):
-        return parse_container_default(default)
-    return default
+    metadata = attrs.pop("metadata", {})
+    default = attrs.pop("default", value)
+    if default is not value:
+        raise ValueError("Either specify 'default=value' or provide 'value' as the only argument")
+
+    if description is None:
+        description = "(No description is available)"
+    metadata["description"] = description
+    if env is not None:
+        metadata["env"] = env
+    piped: list[_ValidatorType[t.Any]] = []
+
+    if ge is not None:
+        piped.append(attr.validators.ge(ge))
+    if le is not None:
+        piped.append(attr.validators.le(le))
+    if validator is not None:
+        piped.append(validator)
+
+    if len(piped) == 0:
+        _validator = None
+    elif len(piped) == 1:
+        _validator = piped[0]
+    else:
+        _validator = attr.validators.and_(*piped)
+
+    return attr.field(default=default, metadata=metadata, validator=_validator, **attrs)
 
 
 def allows_multiple(field_type: t.Any) -> bool:
@@ -94,7 +119,7 @@ def is_mapping(field_type: type) -> bool:
     if lenient_issubclass(field_type, t.Mapping):
         return True
     # for everything else or when the typing is more complex, check its origin
-    origin = t.get_origin(field_type)
+    origin = get_origin(field_type)
     if origin is None:
         return False
     return lenient_issubclass(origin, t.Mapping)
@@ -116,28 +141,11 @@ def is_container(field_type: type) -> bool:
     # Early out for standard containers: list, tuple, range
     if lenient_issubclass(field_type, t.Container):
         return True
-    origin = t.get_origin(field_type)
+    origin = get_origin(field_type)
     # Early out for non-typing objects
     if origin is None:
         return False
     return lenient_issubclass(origin, t.Container)
-
-
-def is_typing(field_type: type) -> bool:
-    """Checks whether the current type is a module-like type.
-
-    Args:
-        field_type (type): pydantic field type
-
-    Returns:
-        bool: true if the type is itself a type
-    """
-    raw = t.get_origin(field_type)
-    if raw is None:
-        return False
-    if raw is type or raw is t.Type:
-        return True
-    return False
 
 
 def parse_container_args(field_type: type) -> ParamType | tuple[ParamType]:
@@ -181,24 +189,11 @@ def parse_single_arg(arg: type) -> ParamType:
     if arg is t.Any:
         return str
     # For containers and nested models, we use JSON
-    if is_container(arg) or issubclass(arg, BaseModel):
+    if is_container(arg):
         return JsonType()
     if lenient_issubclass(arg, bytes):
         return BytesType()
     return arg
-
-
-def parse_container_default(default: t.Sequence[t.Any | BaseModel]) -> tuple[t.Any, ...]:
-    """Parses the default type of container types.
-
-    Args:
-        default: default type for a container argument.
-
-    Returns:
-        tuple[types.Any, ...] | None: JSON version if a pydantic model, else the current default.
-    """
-    assert issubclass(type(default), t.Sequence)
-    return tuple(v.model_dump_json() if isinstance(v, BaseModel) else v for v in default)
 
 
 class BytesType(ParamType):

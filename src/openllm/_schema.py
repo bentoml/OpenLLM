@@ -18,15 +18,14 @@ from __future__ import annotations
 
 import typing as t
 
+import attr
 import inflection
-import pydantic
 
 import openllm
 
 
-class GenerationInput(pydantic.BaseModel):
-    model_config = {"extra": "forbid"}
-
+@attr.frozen(slots=True)
+class GenerationInput:
     prompt: str
     """The prompt to be sent to system."""
 
@@ -36,26 +35,20 @@ class GenerationInput(pydantic.BaseModel):
     @classmethod
     def for_model(cls, model_name: str, **attrs: t.Any) -> type[GenerationInput]:
         llm_config = openllm.AutoConfig.for_model(model_name, **attrs)
-        return pydantic.create_model(
+        return attr.make_class(
             inflection.camelize(llm_config.__openllm_model_name__) + "GenerationInput",
-            __base__=(cls,),
-            __module__=llm_config.__module__,
-            prompt=(str, ...),
-            llm_config=(llm_config.__class__, ...),
+            attrs={
+                "prompt": attr.field(type=str),
+                "llm_config": attr.field(type=llm_config.__class__, default=llm_config),
+            },
         )
 
-    # XXX: Need more investigation why llm_config.model_dump is not invoked
-    # recursively when GenerationInput.model_dump is called
-    def model_dump(self, **attrs: t.Any):
-        """Override the default model_dump to make sure llm_config is correctly flattened."""
-        dumped = super().model_dump(**attrs)
-        dumped["llm_config"] = self.llm_config.model_dump(flatten=True)
-        return dumped
+    def model_dump(self) -> dict[str, t.Any]:
+        return {"prompt": self.prompt, "llm_config": self.llm_config.model_dump(flatten=True)}
 
 
-class GenerationOutput(pydantic.BaseModel):
-    model_config = {"extra": "forbid"}
-
+@attr.frozen(slots=True)
+class GenerationOutput:
     responses: t.List[t.Any]
     """A list of responses from the system."""
 

@@ -42,8 +42,6 @@ dependencies = [
     # Super fast JSON serialization
     "orjson",
     "inflection",
-    # pydantic 2 ftw
-    "pydantic",
     # black for generating service file.
     "black[jupyter]==23.3.0",
 ]

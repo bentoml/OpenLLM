@@ -28,6 +28,8 @@ import typing as t
 import attrs
 import inflection
 from bentoml._internal.types import LazyType as LazyType
+from bentoml._internal.types import get_origin as get_origin
+from bentoml._internal.types import lenient_issubclass as lenient_issubclass
 
 # NOTE: The following exports useful utils from bentoml
 from bentoml._internal.utils import LazyLoader as LazyLoader
@@ -49,17 +51,7 @@ from .import_utils import is_tf_available as is_tf_available
 from .import_utils import is_torch_available as is_torch_available
 from .import_utils import require_backends as require_backends
 
-if t.TYPE_CHECKING:
-    import transformers
-else:
-    transformers = LazyLoader("transformers", globals(), "transformers")
-
 logger = logging.getLogger(__name__)
-
-
-def get_lazy_module(model_name: str) -> LazyLoader:
-    snaked_model_name = inflection.underscore(model_name)
-    return LazyLoader(snaked_model_name, globals(), f"openllm.models.{snaked_model_name}")
 
 
 @attrs.define

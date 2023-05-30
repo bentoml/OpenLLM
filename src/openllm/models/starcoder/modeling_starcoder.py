@@ -64,7 +64,6 @@ class StarCoder(openllm.LLM):
         **attrs: t.Any,
     ) -> bentoml.Model:
         trust_remote_code = attrs.pop("trust_remote_code", True)
-
         torch_dtype = attrs.pop("torch_dtype", torch.float16)
         load_in_8bit = attrs.pop("load_in_8bit", True)
         device_map = attrs.pop("device_map", "auto")

@@ -268,7 +268,7 @@ def parse_serve_args(serve_grpc: bool) -> t.Callable[[F[P]], F[P]]:
 
 def start_model_command(
     model_name: str,
-    factory: click.Group,
+    group: click.Group,
     _context_settings: dict[str, t.Any] | None = None,
     _serve_grpc: bool = False,
 ) -> click.Command:
@@ -298,7 +298,7 @@ def start_model_command(
     config = openllm.AutoConfig.for_model(model_name)
 
     aliases: list[str] = []
-    if config.__openllm_name_type__ == "dasherize":
+    if config.name_type == "dasherize":
         aliases.append(config.__openllm_start_name__)
     model_command_decr.update(
         {
@@ -323,7 +323,7 @@ def start_model_command(
             }
         )
 
-        @factory.command(**model_command_decr)
+        @group.command(**model_command_decr)
         def noop() -> openllm.LLMConfig:
             click.secho("No GPU available, therefore this command is disabled", fg="red")
             openllm.utils.analytics.track_start_init(config, gpu_available)
@@ -331,7 +331,7 @@ def start_model_command(
 
         return noop
 
-    @factory.command(**model_command_decr)
+    @group.command(**model_command_decr)
     @config.to_click_options
     @parse_serve_args(_serve_grpc)
     @click.option("--server-timeout", type=int, default=3600, help="Server timeout in seconds")
@@ -340,6 +340,11 @@ def start_model_command(
     )
     def model_start(server_timeout: int, pretrained: str | None, **attrs: t.Any) -> openllm.LLMConfig:
         from bentoml._internal.configuration.containers import BentoMLContainer
+
+        nonlocal config
+        print(attrs)
+        config, server_attrs = config.model_validate_click(**attrs)
+        print(config.model_dump_json(), server_attrs)
 
         if ModelEnv.get_framework_env() == "flax":
             llm = openllm.AutoFlaxLLM.for_model(model_name, pretrained=pretrained, llm_config=config)
@@ -352,17 +357,15 @@ def start_model_command(
         # avoid deadlock before the subprocess forking.
         llm.ensure_pretrained_exists()
 
-        updated_config, server_attrs = llm.config.model_validate_click(**attrs)
-
         # NOTE: check for GPU one more time in cases this model doesn't requires GPU but users can still
         # run this model on GPU
         try:
-            updated_config.check_if_gpu_is_available(ModelEnv.get_framework_env())
+            llm.config.check_if_gpu_is_available(ModelEnv.get_framework_env())
             gpu_available = True
         except openllm.exceptions.GpuNotAvailableError:
             gpu_available = False
 
-        openllm.utils.analytics.track_start_init(updated_config, gpu_available)
+        openllm.utils.analytics.track_start_init(llm.config, gpu_available)
 
         server_attrs.update({"working_dir": os.path.dirname(__file__)})
         if _serve_grpc:
@@ -380,13 +383,13 @@ def start_model_command(
             if _bentoml_config_options
             else ""
             + f"api_server.timeout={server_timeout}"
-            + f' runners."llm-{config.__openllm_start_name__}-runner".timeout={config.__openllm_timeout__}'
+            + f' runners."llm-{llm.config.__openllm_start_name__}-runner".timeout={llm.config.__openllm_timeout__}'
         )
 
         start_env.update(
             {
                 ModelEnv.framework: ModelEnv.get_framework_env(),
-                ModelEnv.model_config: updated_config.model_dump_json(),
+                ModelEnv.model_config: llm.config.model_dump_json(),
                 "OPENLLM_MODEL": model_name,
                 "BENTOML_DEBUG": str(get_debug_mode()),
                 "BENTOML_CONFIG_OPTIONS": _bentoml_config_options,
@@ -419,7 +422,7 @@ def start_model_command(
             )
 
         # NOTE: Return the configuration for telemetry purposes.
-        return updated_config
+        return config
 
     return model_start
 

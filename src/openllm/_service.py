@@ -5,7 +5,7 @@ Note that the line `model = ...` is a special line and should not be modified. T
 internally to generate the correct model service when bundling the LLM to a Bento. 
 This will ensure that 'bentoml serve llm-bento' will work accordingly.
 
-The generation code lives under ./utils/codegen.py
+The generation code lives under utils/codegen.py
 """
 from __future__ import annotations
 
@@ -25,8 +25,8 @@ svc = bentoml.Service(name=f"llm-{llm_config.__openllm_start_name__}-service", r
 
 
 @svc.api(
-    input=bentoml.io.JSON(pydantic_model=openllm.GenerationInput.for_model(model)),
-    output=bentoml.io.JSON(pydantic_model=openllm.GenerationOutput),
+    input=bentoml.io.JSON(attr_model=openllm.GenerationInput.for_model(model)),
+    output=bentoml.io.JSON(attr_model=openllm.GenerationOutput),
     route="/v1/generate",
 )
 async def generate_v1(qa: openllm.GenerationInput) -> openllm.GenerationOutput:
