@@ -342,9 +342,7 @@ def start_model_command(
         from bentoml._internal.configuration.containers import BentoMLContainer
 
         nonlocal config
-        print(attrs)
         config, server_attrs = config.model_validate_click(**attrs)
-        print(config.model_dump_json(), server_attrs)
 
         if ModelEnv.get_framework_env() == "flax":
             llm = openllm.AutoFlaxLLM.for_model(model_name, pretrained=pretrained, llm_config=config)
