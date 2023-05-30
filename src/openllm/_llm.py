@@ -44,6 +44,8 @@ else:
 
 logger = logging.getLogger(__name__)
 
+_object_setattr = object.__setattr__
+
 # NOTE: `1-2` -> text-generation and text2text-generation
 FRAMEWORK_TO_AUTOCLASS_MAPPING = {
     "pt": ("AutoModelForCausalLM", "AutoModelForSeq2SeqLM"),
@@ -742,7 +744,7 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
         else:
             _supported_resources = ("nvidia.com/gpu", "cpu")
 
-        return bentoml.Runner(
+        runner = bentoml.Runner(
             type(
                 inflection.camelize(self.config.__openllm_model_name__) + "Runnable",
                 (_Runnable,),
@@ -756,6 +758,12 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
             embedded=embedded,
             scheduling_strategy=scheduling_strategy,
         )
+
+        # NOTE: returning the two langchain API's to the runner
+        _object_setattr(runner, "llm_type", self.llm_type)
+        _object_setattr(runner, "identifying_params", self.identifying_params)
+
+        return runner
 
 
 def Runner(start_name: str, **attrs: t.Any) -> bentoml.Runner:
