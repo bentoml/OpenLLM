@@ -61,6 +61,8 @@ if t.TYPE_CHECKING:
     import transformers
     from transformers.generation.beam_constraints import Constraint
 
+    from ._types import Attribute
+
     P = t.ParamSpec("P")
 
     F = t.Callable[P, t.Any]
@@ -394,9 +396,10 @@ def env_transformers(cls: type[GenerationConfig], fields: list[attr.Attribute[t.
     for f in fields:
         default = os.environ.get(f.metadata["env"], None)
         if default is not None:
-            # XXX: eval is pretty dangerous, tho we make sure that we strip away everything,
-            # including builtins, so that bad actors can't do __import__, at the very least.
-            default = eval(default, {}, {})
+            try:
+                default = orjson.loads(default)
+            except orjson.JSONDecodeError as err:
+                raise ValueError(f"Failed to load from environment variables: {err}")
         else:
             default = f.default
         transformed.append(f.evolve(default=default))
@@ -501,16 +504,22 @@ class LLMConfig:
                 env_key = f"OPENLLM_{model_name.upper()}_{key.upper()}"
                 default = os.environ.get(env_key, None)
                 if default is not None:
-                    # XXX: eval is pretty dangerous, tho we make sure that we strip away everything,
-                    # including builtins, so that bad actors can't do __import__, at the very least.
-                    default = eval(default, {}, {})
+                    try:
+                        default = orjson.loads(default)
+                    except orjson.JSONDecodeError as err:
+                        raise ValueError(f"Failed to load from environment variables: {err}")
                 else:
                     default = value
 
-                attribute: attr.Attribute[t.Any] = attr.Attribute.from_counting_attr(
-                    key,
-                    dantic.Field(default, env=env_key, alias=key),
-                    type=eval(anns.get(key), {}, {}) if anns.get(key) is not None else None,
+                annotation = anns.get(key, None)
+                if annotation is not None:
+                    try:
+                        annotation = orjson.loads(annotation)
+                    except orjson.JSONDecodeError as err:
+                        raise ValueError(f"Failed to load from environment variables: {err}")
+
+                attribute: attr.Attribute[t.Any] = t.cast(Attribute, attr.Attribute).from_counting_attr(
+                    key, dantic.Field(default, env=env_key, alias=key), type=annotation
                 )
 
                 openllm_attrs += (key,)

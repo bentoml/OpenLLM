@@ -20,6 +20,9 @@ from __future__ import annotations
 
 import typing as t
 
+from attr import Attribute as _Attribute
+from attr._make import _CountingAttr
+
 if not t.TYPE_CHECKING:
     raise RuntimeError(f"{__name__} should not be imported during runtime")
 
@@ -31,3 +34,10 @@ LLMModel = transformers.PreTrainedModel | transformers.TFPreTrainedModel | trans
 LLMTokenizer = (
     transformers.PreTrainedTokenizer | transformers.PreTrainedTokenizerFast | transformers.PreTrainedTokenizerBase
 )
+
+
+# NOTE: We are using attr.Attribute as a internal API for attrs
+class Attribute(_Attribute):
+    @classmethod
+    def from_counting_attr(cls, name: str, ca: _CountingAttr, type: type[t.Any] = None):
+        ...
