@@ -414,16 +414,21 @@ def start_model_command(
         except Exception as err:
             click.secho(f"Error caught while starting LLM Server:\n{err}", fg="red")
             raise
+        except KeyboardInterrupt:
+            on_start_end(model_name)
         else:
-            if not get_debug_mode():
-                click.secho("\nStopping LLM Server...\n", fg="yellow")
-                click.secho(
-                    f"Next step: you can run 'openllm bundle {model_name}' to create a Bento for {model_name}",
-                    fg="blue",
-                )
+            on_start_end(model_name)
 
         # NOTE: Return the configuration for telemetry purposes.
-        return config
+        return llm_config
+
+    def on_start_end(model_name: str):
+        if not get_debug_mode():
+            click.secho("\n\nStopping LLM Server...\n", fg="yellow")
+            click.secho(
+                f"Next step: you can run 'openllm bundle {model_name}' to create a Bento for {model_name}",
+                fg="blue",
+            )
 
     return model_start
 
