@@ -272,14 +272,11 @@ class LLMMetaclass(ABCMeta):
             if cls_name.startswith("Flax"):
                 implementation = "flax"
                 prefix_class_name_config = cls_name[4:]
-                namespace["__annotations__"].update({"model": "transformers.FlaxPreTrainedModel"})
             elif cls_name.startswith("TF"):
                 implementation = "tf"
                 prefix_class_name_config = cls_name[2:]
-                namespace["__annotations__"].update({"model": "transformers.TFPreTrainedModel"})
             else:
                 implementation = "pt"
-                namespace["__annotations__"].update({"model": "transformers.PreTrainedModel"})
             namespace["__llm_implementation__"] = implementation
 
             # NOTE: setup config class branch

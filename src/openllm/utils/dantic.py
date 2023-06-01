@@ -15,6 +15,8 @@
 
 from __future__ import annotations
 
+import functools
+import os
 import typing as t
 
 import attr
@@ -30,8 +32,16 @@ if t.TYPE_CHECKING:
 _T = t.TypeVar("_T")
 
 
+def _default_converter(value: t.Any, env: str | None) -> t.Any:
+    if env is not None:
+        value = os.environ.get(env, value)
+    if value is not None and isinstance(value, str):
+        return eval(value, {"__builtins__": {}}, {})
+    return value
+
+
 def Field(
-    value: t.Any,
+    default: t.Any = None,
     *,
     ge: int | float | None = None,
     le: int | float | None = None,
@@ -52,16 +62,14 @@ def Field(
         **kwargs: The rest of the arguments are passed to attr.field
     """
     metadata = attrs.pop("metadata", {})
-    default = attrs.pop("default", value)
-    if default is not value:
-        raise ValueError("Either specify 'default=value' or provide 'value' as the only argument")
-
     if description is None:
         description = "(No description is available)"
     metadata["description"] = description
     if env is not None:
         metadata["env"] = env
     piped: list[_ValidatorType[t.Any]] = []
+
+    converter = attrs.pop("converter", functools.partial(_default_converter, env=env))
 
     if ge is not None:
         piped.append(attr.validators.ge(ge))
@@ -77,7 +85,7 @@ def Field(
     else:
         _validator = attr.validators.and_(*piped)
 
-    return attr.field(default=default, metadata=metadata, validator=_validator, **attrs)
+    return attr.field(default=default, metadata=metadata, validator=_validator, converter=converter, **attrs)
 
 
 def allows_multiple(field_type: t.Any) -> bool:

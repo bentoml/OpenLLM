@@ -34,7 +34,9 @@ class DollyV2Config(openllm.LLMConfig, default_timeout=3600000):
     Refer to [Databricks's Dolly page](https://github.com/databrickslabs/dolly) for more information.
     """
 
-    return_full_text: bool = False
+    return_full_text: bool = openllm.LLMConfig.Field(
+        False, description="Whether to return the full prompt to the users."
+    )
 
     class GenerationConfig:
         temperature: float = 0.9

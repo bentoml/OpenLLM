@@ -9,6 +9,7 @@ from typing import (
     Literal,
     Mapping,
     Optional,
+    ParamSpec,
     Protocol,
     Sequence,
     Tuple,
@@ -42,6 +43,7 @@ __license__: str
 __copyright__: str
 _T = TypeVar("_T")
 _C = TypeVar("_C", bound=type)
+_P = ParamSpec("_P")
 _EqOrderType = Union[bool, Callable[[Any], Any]]
 _ValidatorType = Callable[[Any, "Attribute[_T]", _T], Any]
 _ConverterType = Callable[[Any], Any]
@@ -484,3 +486,17 @@ def get_run_validators() -> bool: ...
 attributes = ...
 attr = ...
 dataclass = ...
+
+def _make_init(
+    cls: type[AttrsInstance],
+    attrs: tuple[Attribute[_T]],
+    pre_init: bool,
+    post_init: bool,
+    frozen: bool,
+    slots: bool,
+    cache_hash: bool,
+    base_attr_map: dict[str, Any],
+    is_exc: bool,
+    cls_on_setattr: Any,
+    attrs_init: bool,
+) -> Callable[_P, Any]: ...

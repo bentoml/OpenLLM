@@ -35,5 +35,9 @@ class ForbiddenAttributeError(OpenLLMException):
     """Raised when using an _internal field."""
 
 
+class MissingAnnotationAttributeError(OpenLLMException):
+    """Raised when a field under openllm.LLMConfig is missing annotations."""
+
+
 class MissingDependencyError(BaseException):
     """Raised when a dependency is missing."""
