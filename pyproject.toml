@@ -32,7 +32,7 @@ dependencies = [
     "protobuf",
     "grpcio",
     "grpcio-health-checking",
-    "opentelemetry-instrumentation-grpc==0.35b0",
+    "opentelemetry-instrumentation-grpc==0.39b0",
     "grpcio-reflection",
     "httpx[http2]",
     # transformers[torch] includes torch and transformers
