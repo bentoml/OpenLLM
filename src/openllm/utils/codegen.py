@@ -34,6 +34,11 @@ if t.TYPE_CHECKING:
     from fs.base import FS
 
     class ModifyNodeProtocol(t.Protocol):
+        @t.overload
+        def __call__(self, node: Node, model_name: str) -> None:
+            ...
+
+        @t.overload
         def __call__(self, node: Node, *args: t.Any, **attrs: t.Any) -> None:
             ...
 
