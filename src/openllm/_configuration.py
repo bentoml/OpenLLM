@@ -61,8 +61,6 @@ if t.TYPE_CHECKING:
     import transformers
     from transformers.generation.beam_constraints import Constraint
 
-    from ._types import Attribute
-
     P = t.ParamSpec("P")
 
     F = t.Callable[P, t.Any]
@@ -513,12 +511,10 @@ class LLMConfig:
 
                 annotation = anns.get(key, None)
                 if annotation is not None:
-                    try:
-                        annotation = orjson.loads(annotation)
-                    except orjson.JSONDecodeError as err:
-                        raise ValueError(f"Failed to load from environment variables: {err}")
+                    # NOTE: eval is dangerous, but we don't provide any specific imports here.
+                    annotation = eval(annotation, {}, {})
 
-                attribute: attr.Attribute[t.Any] = t.cast(Attribute, attr.Attribute).from_counting_attr(
+                attribute: attr.Attribute[t.Any] = attr.Attribute.from_counting_attr(
                     key, dantic.Field(default, env=env_key, alias=key), type=annotation
                 )
 
