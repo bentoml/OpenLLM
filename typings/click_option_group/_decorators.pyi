@@ -16,6 +16,7 @@ class OptionStackItem(NamedTuple):
     ...
 
 class ClickFunctionWrapper(Protocol[P, O_co]):
+    __name__: str
     __click_params__: list[click.Option]
 
     def __call__(self, *args: P.args, **kwargs: P.kwargs) -> O_co: ...

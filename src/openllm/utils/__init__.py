@@ -26,7 +26,7 @@ import sys
 import types
 import typing as t
 
-import attrs
+import attr
 import inflection
 from bentoml._internal.types import LazyType as LazyType
 from bentoml._internal.types import get_origin as get_origin
@@ -78,9 +78,9 @@ def lenient_issubclass(cls: t.Any, class_or_tuple: type[t.Any] | tuple[type[t.An
         raise
 
 
-@attrs.define
+@attr.define
 class ModelEnv:
-    model_name: str = attrs.field(converter=inflection.underscore)
+    model_name: str = attr.field(converter=inflection.underscore)
 
     @property
     def framework(self) -> str:
@@ -160,9 +160,9 @@ class LazyModule(types.ModuleType):
         # may not be in the dir already, depending on whether
         # they have been accessed or not. So we only add the
         # elements of self.__all__ that are not already in the dir.
-        for attr in self.__all__:
-            if attr not in result:
-                result.append(attr)
+        for attribute in self.__all__:
+            if attribute not in result:
+                result.append(attribute)
         return result
 
     def __getattr__(self, name: str) -> t.Any:

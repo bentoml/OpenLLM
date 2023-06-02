@@ -573,7 +573,9 @@ def _make_internal_generation_class(cls: type[LLMConfig]) -> type[GenerationConf
             env = f"OPENLLM_{cls.__openllm_model_name__.upper()}_GENERATION_{f.name.upper()}"
             _from_env = _populate_value_from_env_var(env, fallback=f.default)
             default_value = f.default if not _has_gen_class else getattr(cls.GenerationConfig, f.name, _from_env)
-            transformed.append(f.evolve(default=default_value, metadata={"env": env}))
+            transformed.append(
+                f.evolve(default=default_value, metadata={"env": env, "description": f.metadata.get("description")})
+            )
         return transformed
 
     generated_cls = attr.make_class(
@@ -872,14 +874,24 @@ class LLMConfig:
         config = transformers.GenerationConfig(**bentoml_cattr.unstructure(self.generation_config))
         return config.to_dict() if return_as_dict else config
 
-    def to_click_options(self, f: F[P, openllm.LLMConfig]) -> F[P, ClickFunctionWrapper[P, openllm.LLMConfig]]:
+    @t.overload
+    def to_click_options(
+        self, f: t.Callable[..., openllm.LLMConfig]
+    ) -> F[P, ClickFunctionWrapper[..., openllm.LLMConfig]]:
+        ...
+
+    @t.overload
+    def to_click_options(self, f: t.Callable[P, O_co]) -> F[P, ClickFunctionWrapper[P, O_co]]:
+        ...
+
+    def to_click_options(self, f: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
         """
         Convert current model to click options. This can be used as a decorator for click commands.
         Note that the identifier for all LLMConfig will be prefixed with '<model_name>_*', and the generation config
         will be prefixed with '<model_name>_generation_*'.
         """
         for name, field in attr.fields_dict(self.generation_class).items():
-            if t.get_origin(field.type) is t.Union:
+            if openllm.utils.get_origin(field.type) is t.Union:
                 # NOTE: Union type is currently not yet supported, we probably just need to use environment instead.
                 continue
             f = attrs_to_options(
@@ -890,10 +902,10 @@ class LLMConfig:
         if len(self.__class__.__openllm_attrs__) == 0:
             # NOTE: in this case, the function is already a ClickFunctionWrapper
             # hence the casting
-            return t.cast("F[P, ClickFunctionWrapper[P, openllm.LLMConfig]]", f)
+            return f
 
         for name, field in attr.fields_dict(self.__class__).items():
-            if t.get_origin(field.type) is t.Union:
+            if openllm.utils.get_origin(field.type) is t.Union:
                 # NOTE: Union type is currently not yet supported, we probably just need to use environment instead.
                 continue
             f = attrs_to_options(name, field, self.__openllm_model_name__, typ=self.__openllm_hints__[name])(f)

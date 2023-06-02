@@ -39,6 +39,7 @@ LLMTokenizer = (
 
 
 class ClickFunctionWrapper(t.Protocol[P, O_co]):
+    __name__: str
     __click_params__: list[click.Option]
 
     def __call__(self, *args: P.args, **kwargs: P.kwargs) -> O_co:
@@ -47,6 +48,7 @@ class ClickFunctionWrapper(t.Protocol[P, O_co]):
 
 # F is a t.Callable[P, O_co] with compatible to ClickFunctionWrapper
 class F(t.Generic[P, O_co]):
+    __name__: str
     __click_params__: list[click.Option]
 
     def __call__(self, *args: P.args, **kwargs: P.kwargs) -> O_co:

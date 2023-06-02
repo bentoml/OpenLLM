@@ -44,6 +44,8 @@ dependencies = [
     "inflection",
     # black for generating service file.
     "black[jupyter]==23.3.0",
+    # tabulate for CLI with CJK support
+    "tabulate[widechars]",
 ]
 description = 'OpenLLM: REST/gRPC API server for running any open Large-Language Model - StableLM, Llama, Alpaca, Dolly, Flan-T5, Custom'
 dynamic = ["version"]
