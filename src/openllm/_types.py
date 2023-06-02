@@ -15,6 +15,7 @@
 Types definition for OpenLLM.
 
 Note that this module SHOULD NOT BE IMPORTED DURING RUNTIME, as this serve only for typing purposes.
+It will raises a RuntimeError if this is imported eagerly.
 """
 from __future__ import annotations
 
@@ -29,7 +30,6 @@ P = t.ParamSpec("P")
 O_co = t.TypeVar("O_co", covariant=True)
 
 import transformers
-from bentoml._internal.models.model import ModelSignatureDict as ModelSignatureDict
 from bentoml._internal.models.model import ModelSignaturesType as ModelSignaturesType
 
 LLMModel = transformers.PreTrainedModel | transformers.TFPreTrainedModel | transformers.FlaxPreTrainedModel

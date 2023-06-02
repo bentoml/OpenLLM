@@ -46,7 +46,6 @@ from operator import itemgetter
 import attr
 import inflection
 import orjson
-from bentoml._internal.models.model import ModelSignature
 from cattr.gen import make_dict_unstructure_fn, override
 from click_option_group import optgroup
 
@@ -80,7 +79,7 @@ else:
     torch = openllm.utils.LazyLoader("torch", globals(), "torch")
     tf = openllm.utils.LazyLoader("tf", globals(), "tensorflow")
 
-__all__ = ["LLMConfig", "ModelSignature"]
+__all__ = ["LLMConfig"]
 
 logger = logging.getLogger(__name__)
 

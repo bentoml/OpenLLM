@@ -27,8 +27,9 @@ import bentoml
 import inflection
 
 import openllm
+from bentoml.types import ModelSignatureDict
+from bentoml.types import ModelSignature
 
-from ._configuration import ModelSignature
 from .exceptions import ForbiddenAttributeError, OpenLLMException
 from .utils import ENV_VARS_TRUE_VALUES, LazyLoader, bentoml_cattr
 
@@ -37,9 +38,8 @@ if t.TYPE_CHECKING:
     import transformers
     from bentoml._internal.runner.strategy import Strategy
 
-    from ._types import LLMModel, LLMTokenizer, ModelSignatureDict
+    from ._types import LLMModel, LLMTokenizer
 else:
-    ModelSignatureDict = dict
     transformers = LazyLoader("transformers", globals(), "transformers")
 
 logger = logging.getLogger(__name__)
