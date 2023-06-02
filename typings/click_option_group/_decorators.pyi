@@ -1,14 +1,24 @@
-from typing import Any, Dict, NamedTuple, Optional, Tuple, Type
+from typing import Any, Callable, Dict, NamedTuple, Optional, ParamSpec, Protocol, Tuple, Type, TypeVar
 
 import click
 
 from ._core import FC, OptionGroup
+
+P = ParamSpec("P")
+O_co = TypeVar("O_co", covariant=True)
+
+F = Callable[P, O_co]
 
 class OptionStackItem(NamedTuple):
     param_decls: Tuple[str, ...]
     attrs: Dict[str, Any]
     param_count: int
     ...
+
+class ClickFunctionWrapper(Protocol[P, O_co]):
+    __click_params__: list[click.Option]
+
+    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> O_co: ...
 
 class _NotAttachedOption(click.Option):
     """The helper class to catch grouped options which were not attached to the group
@@ -76,7 +86,7 @@ class _OptGroup:
         :param attrs: Additional parameters of option group class
         """
         ...
-    def option(self, *param_decls: Any, **attrs: Any) -> FC:
+    def option(self, *param_decls: Any, **attrs: Any) -> F[P, ClickFunctionWrapper[P, O_co]]:
         """The decorator adds a new option to the group
 
         The decorator is lazy. It adds option decls and attrs.

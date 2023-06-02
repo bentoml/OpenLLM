@@ -23,6 +23,11 @@ import typing as t
 if not t.TYPE_CHECKING:
     raise RuntimeError(f"{__name__} should not be imported during runtime")
 
+import click
+
+P = t.ParamSpec("P")
+O_co = t.TypeVar("O_co", covariant=True)
+
 import transformers
 from bentoml._internal.models.model import ModelSignatureDict as ModelSignatureDict
 from bentoml._internal.models.model import ModelSignaturesType as ModelSignaturesType
@@ -31,3 +36,18 @@ LLMModel = transformers.PreTrainedModel | transformers.TFPreTrainedModel | trans
 LLMTokenizer = (
     transformers.PreTrainedTokenizer | transformers.PreTrainedTokenizerFast | transformers.PreTrainedTokenizerBase
 )
+
+
+class ClickFunctionWrapper(t.Protocol[P, O_co]):
+    __click_params__: list[click.Option]
+
+    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> O_co:
+        ...
+
+
+# F is a t.Callable[P, O_co] with compatible to ClickFunctionWrapper
+class F(t.Generic[P, O_co]):
+    __click_params__: list[click.Option]
+
+    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> O_co:
+        ...

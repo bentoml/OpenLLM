@@ -187,6 +187,7 @@ ban-relative-imports = "all"
 [tool.ruff.per-file-ignores]
 # Tests can use magic values, assertions, and relative imports
 "__init__.py" = ["E402", "F401", "F403", "F811"]
+"src/openllm/_types.py" = ["E402"]
 "tests/**/*" = ["PLR2004", "S101", "TID252"]
 
 [tool.pyright]
