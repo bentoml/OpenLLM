@@ -288,7 +288,6 @@ def start_model_command(
     """
     from bentoml._internal.configuration import get_debug_mode
 
-    breakpoint()
     ModelEnv = openllm.utils.ModelEnv(model_name)
     model_command_decr: dict[str, t.Any] = {"name": ModelEnv.model_name, "context_settings": _context_settings or {}}
 

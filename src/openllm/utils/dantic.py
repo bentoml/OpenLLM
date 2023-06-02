@@ -85,7 +85,16 @@ def Field(
     else:
         _validator = attr.validators.and_(*piped)
 
-    return attr.field(default=default, metadata=metadata, validator=_validator, converter=converter, **attrs)
+    factory = attrs.pop("factory", None)
+    if factory is not None and default is not None:
+        raise RuntimeError("'factory' and 'default' are mutually exclusive.")
+    # NOTE: the behaviour of this is we will respect factory over the default
+    if factory is not None:
+        attrs["factory"] = factory
+    else:
+        attrs["default"] = default
+
+    return attr.field(metadata=metadata, validator=_validator, converter=converter, **attrs)
 
 
 def allows_multiple(field_type: t.Any) -> bool:
