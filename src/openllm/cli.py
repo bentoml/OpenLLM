@@ -166,7 +166,6 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
         self._cached_grpc: dict[str, t.Any] = {}
 
     def get_command(self, ctx: click.Context, cmd_name: str) -> click.Command | None:
-        breakpoint()
         cmd_name = self.resolve_alias(cmd_name)
         if ctx.command.name == "start":
             if cmd_name not in self._cached_http:
@@ -289,6 +288,7 @@ def start_model_command(
     """
     from bentoml._internal.configuration import get_debug_mode
 
+    breakpoint()
     ModelEnv = openllm.utils.ModelEnv(model_name)
     model_command_decr: dict[str, t.Any] = {"name": ModelEnv.model_name, "context_settings": _context_settings or {}}
 
@@ -300,7 +300,6 @@ def start_model_command(
         aliases.append(llm_config.__openllm_start_name__)
     model_command_decr.update(
         {
-            "name": llm_config.__openllm_model_name__,
             "short_help": f"Start a LLMServer for '{model_name}' ('--help' for more details)",
             "help": ModelEnv.start_docstring,
             "aliases": aliases if len(aliases) > 0 else None,
@@ -310,7 +309,7 @@ def start_model_command(
     gpu_available = False
     try:
         llm_config.check_if_gpu_is_available(ModelEnv.get_framework_env())
-        gpu_available = True
+        gpu_available = True if llm_config.__openllm_requires_gpu__ else False
     except openllm.exceptions.GpuNotAvailableError:
         # NOTE: The model requires GPU, therefore we will return a dummy command
         model_command_decr.update(

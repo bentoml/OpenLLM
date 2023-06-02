@@ -657,10 +657,15 @@ class LLMConfig:
 
         # NOTE: we know need to determine the list of the attrs
         # by mro to at the very least support inheritance. Tho it is not recommended.
-        own_attrs: list[attr.Attribute[t.Any]] = [
-            attr.Attribute.from_counting_attr(name=attr_name, ca=ca, type=anns.get(attr_name))
-            for attr_name, ca in ca_list
-        ]
+        own_attrs: list[attr.Attribute[t.Any]] = []
+        for attr_name, ca in ca_list:
+            gen_attribute = attr.Attribute.from_counting_attr(name=attr_name, ca=ca, type=anns.get(attr_name))
+            if attr_name in ca_names:
+                metadata = ca.metadata
+                metadata["env"] = field_env_key(attr_name)
+                gen_attribute = gen_attribute.evolve(metadata=metadata)
+            own_attrs.append(gen_attribute)
+
         base_attrs, base_attr_map = _collect_base_attrs(cls, {a.name for a in own_attrs})
         attrs: list[attr.Attribute[t.Any]] = own_attrs + base_attrs
 
