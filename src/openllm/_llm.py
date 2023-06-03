@@ -25,10 +25,9 @@ from abc import ABC, ABCMeta, abstractmethod
 
 import bentoml
 import inflection
+from bentoml.types import ModelSignature, ModelSignatureDict
 
 import openllm
-from bentoml.types import ModelSignatureDict
-from bentoml.types import ModelSignature
 
 from .exceptions import ForbiddenAttributeError, OpenLLMException
 from .utils import ENV_VARS_TRUE_VALUES, LazyLoader, bentoml_cattr
@@ -782,6 +781,6 @@ def Runner(start_name: str, **attrs: t.Any) -> bentoml.Runner:
         runner = openllm.AutoLLM.create_runner(start_name, **attrs)
 
     if init_local:
-        runner.init_local()
+        runner.init_local(quiet=True)
 
     return runner
