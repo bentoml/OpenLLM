@@ -32,7 +32,7 @@ git push origin main
 
 echo "Building artifacts for releasing..." && hatch build
 
-echo "Releasing version ${RELEASE_VERSION}" && hatch publish
+echo "Releasing version ${RELEASE_VERSION}" && hatch publish --initialize-auth -u __token__
 
 echo "Finish releasing version ${RELEASE_VERSION}"
 
