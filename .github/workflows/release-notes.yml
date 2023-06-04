@@ -9,7 +9,7 @@ defaults:
   run:
     shell: bash --noprofile --norc -exo pipefail {0}
 jobs:
-  release:
+  gen-release-notes:
     if: github.repository_owner == 'bentoml'
     runs-on: ubuntu-latest
     steps:
