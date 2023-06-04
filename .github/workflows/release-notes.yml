@@ -4,6 +4,14 @@ on:
   push:
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
+env:
+  # This special value tells pypi that the user identity is supplied within the token
+  TWINE_USERNAME: __token__
+  # Note, the PYPI_API_TOKEN is for the OpenLLM PyPI user, on
+  # https://github.com/bentoml/openllm/settings/secrets/actions
+  TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+  GIT_AUTHOR_NAME: github-actions[bot]
+  GIT_AUTHOR_EMAIL: github-actions[bot]@users.noreply.github.com
 # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#defaultsrun
 defaults:
   run:
