@@ -1,0 +1,40 @@
+name: release
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - '*.*.*'
+env:
+  # This special value tells pypi that the user identity is supplied within the token
+  TWINE_USERNAME: __token__
+  # Note, the PYPI_API_TOKEN is for the OpenLLM PyPI user, on
+  # https://github.com/bentoml/openllm/settings/secrets/actions
+  TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+  GIT_AUTHOR_NAME: github-actions[bot]
+  GIT_AUTHOR_EMAIL: github-actions[bot]@users.noreply.github.com
+# https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#defaultsrun
+defaults:
+  run:
+    shell: bash --noprofile --norc -exo pipefail {0}
+jobs:
+  release:
+    if: github.repository_owner == 'bentoml'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Setup CI
+        uses: ./.github/actions/setup-repo
+      - name: Create release notes
+        run: ./.github/actions/create_release_and_archive.sh
+      - name: Create release
+        uses: softprops/action-gh-release@v1
+        with:
+          # Use GH feature to populate the changelog automatically
+          generate_release_notes: true
+          body_path: release_notes.txt
+          fail_on_unmatched_files: true
+          files: openllm-*.tar.gz

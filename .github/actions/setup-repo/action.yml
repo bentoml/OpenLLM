@@ -1,4 +1,4 @@
-name: Setup repo
+name: setup-repo
 description: Setup repo with all features on CI
 inputs:
   python-version:
@@ -7,15 +7,12 @@ inputs:
     default: '3.8'
   architecture:
     description: 'Which architecture to run on'
-    required: true
+    required: false
     default: x64
 runs:
   using: composite
   steps:
-    - name: Fetch base reference.
-      shell: bash
-      run: git fetch origin $GITHUB_BASE_REF
-    - name: Setup Python
+    - name: Setup python
       uses: actions/setup-python@v4
       with:
         python-version: ${{ inputs.python-version }}
@@ -40,7 +37,13 @@ runs:
         key: ${{ steps.get-cache-key-prefix.outputs.prefix }}-pypi
         restore-keys: |
           ${{ steps.get-cache-key-prefix.outputs.prefix }}-pypi-
-    # TODO: setup hatch actions instead
     - name: Install dependencies
       shell: bash
-      run: pip install -r requirements/tests.txt
+      run: pip install -e ".[all]" hatch -vv
+    - name: Install pyright
+      shell: bash
+      run: npm install -g npm@^7 pyright
+    - name: Setup bufbuild/buf
+      uses: bufbuild/buf-setup-action@v1.20.0
+      with:
+        github_token: ${{ github.token }}
