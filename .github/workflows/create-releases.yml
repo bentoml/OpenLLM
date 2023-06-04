@@ -1,9 +1,6 @@
 name: release
 on:
   workflow_dispatch:
-  push:
-    tags:
-      - '*.*.*'
 env:
   # This special value tells pypi that the user identity is supplied within the token
   TWINE_USERNAME: __token__
@@ -28,13 +25,10 @@ jobs:
           fetch-depth: 0
       - name: Setup CI
         uses: ./.github/actions/setup-repo
-      - name: Create release notes
-        run: ./.github/actions/create_release_and_archive.sh
-      - name: Create release
-        uses: softprops/action-gh-release@v1
-        with:
-          # Use GH feature to populate the changelog automatically
-          generate_release_notes: true
-          body_path: release_notes.txt
-          fail_on_unmatched_files: true
-          files: openllm-*.tar.gz
+      - name: Install jq and curl
+        run: sudo apt-get install -y jq curl
+      - name: Create a release
+        run: |
+          git config user.name "${{ env.GIT_AUTHOR_NAME }}"
+          git config user.email "${{ env.GIT_AUTHOR_EMAIL }}"
+          ./tools/release
