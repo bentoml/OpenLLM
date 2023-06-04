@@ -113,7 +113,7 @@ class BaseClient(ClientMixin):
         r = openllm.GenerationOutput(**self.call("generate", inputs))
 
         if return_raw_response:
-            return r.model_dump()
+            return openllm.utils.bentoml_cattr.unstructure(r)
 
         return self.llm.postprocess_parameters(prompt, r.responses)
 

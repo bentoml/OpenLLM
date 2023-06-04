@@ -20,6 +20,7 @@ import functools
 import logging
 import os
 import re
+import types
 import typing as t
 from abc import ABC, ABCMeta, abstractmethod
 
@@ -38,6 +39,15 @@ if t.TYPE_CHECKING:
     from bentoml._internal.runner.strategy import Strategy
 
     from ._types import LLMModel, LLMTokenizer
+
+    class LLMRunner(bentoml.Runner):
+        llm: openllm.LLM
+        llm_type: str
+        identifying_params: dict[str, t.Any]
+
+        def __call__(self, *args: t.Any, **attrs: t.Any) -> t.Any:
+            ...
+
 else:
     transformers = LazyLoader("transformers", globals(), "transformers")
 
@@ -712,10 +722,18 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
             llm_type: str
             identifying_params: dict[str, t.Any]
 
-            def __init_subclass__(cls, **attrs: t.Any):
-                cls.llm_type = self.llm_type
-                cls.identifying_params = self.identifying_params
-                super().__init_subclass__(**attrs)
+            def __init_subclass__(cls, llm_type: str, identifying_params: dict[str, t.Any], **_: t.Any):
+                cls.llm_type = llm_type
+                cls.identifying_params = identifying_params
+
+            @bentoml.Runnable.method(
+                batchable=generate_sig.batchable,
+                batch_dim=generate_sig.batch_dim,
+                input_spec=generate_sig.input_spec,
+                output_spec=generate_sig.output_spec,
+            )
+            def __call__(__self, prompt: str, **attrs: t.Any) -> list[t.Any]:
+                return self.generate(prompt, **attrs)
 
             @bentoml.Runnable.method(
                 batchable=generate_sig.batchable,
@@ -735,16 +753,33 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
             def generate_iterator(__self, prompt: str, **attrs: t.Any) -> t.Iterator[t.Any]:
                 yield self.generate_iterator(prompt, **attrs)
 
-        if self.__openllm_requires_gpu__:
-            _supported_resources = ("nvidia.com/gpu",)
-        else:
-            _supported_resources = ("nvidia.com/gpu", "cpu")
+        def _wrapped_generate(__self: bentoml.Runner, *args: t.Any, **kwargs: t.Any) -> t.Any:
+            """Wrapped runner() to runner.generate.run()"""
+            return __self.generate.run(*args, **kwargs)
 
-        runner = bentoml.Runner(
-            type(
+        # NOTE: returning the two langchain API's to the runner
+        return types.new_class(
+            inflection.camelize(self.config.__openllm_model_name__) + "Runner",
+            (bentoml.Runner,),
+            exec_body=lambda ns: ns.update(
+                {
+                    "llm_type": self.llm_type,
+                    "identifying_params": self.identifying_params,
+                    "llm": self,  # NOTE: self reference to LLM
+                    "__call__": _wrapped_generate,
+                }
+            ),
+        )(
+            runnable_class=types.new_class(
                 inflection.camelize(self.config.__openllm_model_name__) + "Runnable",
                 (_Runnable,),
-                {"SUPPORTED_RESOURCES": _supported_resources},
+                {
+                    "SUPPORTED_RESOURCES": ("nvidia.com/gpu", "cpu")
+                    if self.__openllm_requires_gpu__
+                    else ("nvidia.com/gpu",),
+                    "llm_type": self.llm_type,
+                    "identifying_params": self.identifying_params,
+                },
             ),
             name=name,
             models=models,
@@ -754,12 +789,6 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
             embedded=embedded,
             scheduling_strategy=scheduling_strategy,
         )
-
-        # NOTE: returning the two langchain API's to the runner
-        _object_setattr(runner, "llm_type", self.llm_type)
-        _object_setattr(runner, "identifying_params", self.identifying_params)
-
-        return runner
 
 
 def Runner(start_name: str, **attrs: t.Any) -> bentoml.Runner:
