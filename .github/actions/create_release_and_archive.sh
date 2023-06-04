@@ -8,7 +8,7 @@ TAG=${GITHUB_REF_NAME#v}
 PREFIX="openllm-${TAG}"
 ARCHIVE="openllm-${TAG}.tar.gz"
 
-git archive --format=tar --prefix="${PREFIX}/" "${TAG}" | gzip > "${ARCHIVE}"
+git archive --format=tar --prefix="${PREFIX}/" "v${TAG}" | gzip > "${ARCHIVE}"
 cat > release_notes.txt << EOF
 ## Installation
 
