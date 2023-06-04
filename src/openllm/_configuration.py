@@ -89,8 +89,6 @@ _T = t.TypeVar("_T")
 
 
 if t.TYPE_CHECKING:
-    import tensorflow as tf
-    import torch
     import transformers
     from attr import (_CountingAttr, _make_init, _make_repr,  # type: ignore
                       _transform_attrs)

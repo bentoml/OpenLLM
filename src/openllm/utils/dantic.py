@@ -15,9 +15,11 @@
 
 from __future__ import annotations
 
+import collections.abc
 import functools
 import importlib
 import os
+import re
 import typing as t
 from enum import Enum
 
@@ -26,7 +28,6 @@ import click
 import click_option_group as cog
 import inflection
 import orjson
-from click import ParamType
 
 import openllm
 
@@ -35,7 +36,80 @@ if t.TYPE_CHECKING:
 
     from .._types import ClickFunctionWrapper, F, O_co, P
 
+    ListAny = list[t.Any]
+    TupleAny = tuple[t.Any, ...]
+    SetAny = set[t.Any]
+    DictStrAny = dict[str, t.Any]
+else:
+    ListAny = list
+    TupleAny = tuple
+    SetAny = set
+    DictStrAny = dict
+
+
 _T = t.TypeVar("_T")
+
+DELIMITER = re.compile(r"\s*,\s*")
+
+
+def parse_list_type(typ: ListAny, value: str) -> list[click.ParamType]:
+    inner_type = t.get_args(typ)[0]
+    return [inner_type(it) for it in DELIMITER.split(value)]
+
+
+def parse_set_type(typ: SetAny, value: str) -> set[click.ParamType]:
+    inner_type = t.get_args(typ)[0]
+    return {inner_type(it) for it in DELIMITER.split(value)}
+
+
+def parse_tuple_type(typ: TupleAny, value: t.Any) -> tuple[click.ParamType, ...]:
+    args = t.get_args(typ)
+    if len(args) == 0:
+        return value
+    if len(args) == 1:
+        return (args[0](value),)
+    # Early out for homogenous tuples of indefinite length: Tuple[int, ...]
+    if len(args) == 2 and args[1] is Ellipsis:
+        return (args[0](value),)
+    return tuple(ty(it) for ty, it in zip(t.get_args(typ), DELIMITER.split(value)))
+
+
+def parse_dict_type(typ: DictStrAny, value: t.Any) -> click.ParamType:
+    try:
+        return orjson.loads(value)
+    except orjson.JSONDecodeError as exc:
+        raise click.BadParameter(f"Failed to parse JSON string: {exc}", param_hint=str(value))
+
+
+def parse_sequence_type(typ: t.Sequence[t.Any], value: t.Any) -> tuple[click.ParamType]:
+    inner_type = t.get_args(typ)[0]
+    return tuple(inner_type(it) for it in DELIMITER.split(value))
+
+
+def parse_bool_type(_: bool, value: str) -> bool:
+    norm = value.strip().lower()
+
+    if norm in {"1", "true", "t", "yes", "y", "on"}:
+        return True
+    elif norm in {"0", "false", "f", "no", "n", "off"}:
+        return False
+    else:
+        raise click.BadParameter("Failed to parse a boolean value", param_hint=str(value))
+
+
+TYPE_PARSER_MAPPING: dict[t.Any, t.Callable[[t.Any, str], t.Any]] = {
+    bool: parse_bool_type,
+    int: lambda _, value: int(value),
+    float: lambda _, value: float(value),
+    str: lambda _, value: value,
+    type(None): lambda _, value: None,
+    list: parse_list_type,
+    tuple: parse_tuple_type,
+    set: parse_set_type,
+    dict: parse_dict_type,
+    collections.abc.Sequence: parse_sequence_type,
+    t.ByteString: lambda _, value: value.encode(),
+}
 
 
 @t.overload
@@ -181,7 +255,7 @@ def Field(
     return attr.field(metadata=metadata, validator=_validator, converter=converter, **attrs)
 
 
-def parse_type(field_type: t.Any) -> ParamType | tuple[ParamType]:
+def parse_type(field_type: t.Any) -> click.ParamType | tuple[click.ParamType]:
     """Transforms the pydantic field's type into a click-compatible type.
 
     Args:
@@ -248,7 +322,7 @@ def is_literal(field_type: type) -> bool:
     return origin is not None and origin is t.Literal
 
 
-class ModuleType(ParamType):
+class ModuleType(click.ParamType):
     name = "module"
 
     def _import_object(self, value: str) -> t.Any:
@@ -369,14 +443,14 @@ def is_container(field_type: type) -> bool:
     return openllm.utils.lenient_issubclass(origin, t.Container)
 
 
-def parse_container_args(field_type: type[t.Any]) -> ParamType | tuple[ParamType]:
+def parse_container_args(field_type: type) -> click.ParamType | tuple[click.ParamType]:
     """Parses the arguments inside a container type (lists, tuples and so on).
 
     Args:
         field_type: pydantic field type
 
     Returns:
-        ParamType | tuple[ParamType]: single click-compatible type or a tuple
+        single click-compatible type or a tuple
     """
     assert is_container(field_type), "Field type is not a container"
     args = t.get_args(field_type)
@@ -394,17 +468,17 @@ def parse_container_args(field_type: type[t.Any]) -> ParamType | tuple[ParamType
     return tuple(parse_single_arg(arg) for arg in args)
 
 
-def parse_single_arg(arg: type) -> ParamType:
+def parse_single_arg(arg: type) -> click.ParamType:
     """Returns the click-compatible type for container origin types.
     In this case, returns string when it's not inferrable, a JSON for mappings
     and the original type itself in every other case (ints, floats and so on).
     Bytes is a special case, not natively handled by click.
 
     Args:
-        arg (type): single argument
+        arg: single argument
 
     Returns:
-        ParamType: click-compatible type
+        click-compatible type
     """
     # When we don't know the type, we choose 'str'
     if arg is t.Any:
@@ -417,7 +491,39 @@ def parse_single_arg(arg: type) -> ParamType:
     return arg
 
 
-class BytesType(ParamType):
+class UnionType(click.ParamType):
+    name = "union"
+
+    def __init__(self, hints: t.Any) -> None:
+        self.hints = hints
+
+    def __repr__(self) -> str:
+        return self.hints.__repr__()
+
+    def to_info_dict(self) -> dict[str, t.Any]:
+        info_dict = super().to_info_dict()
+        info_dict["hints"] = self.hints
+        return info_dict
+
+    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None):
+        for type_ in t.get_args(self.hints):
+            try:
+                return self.parse_type(value, type_)
+            except click.BadParameter:
+                continue
+        self.fail(f"Invalid value: {value}", param, ctx)
+
+    def parse_type(self, value: t.Any, type_: type) -> t.Any:
+        normalized = t.get_origin(type_)
+        if normalized in TYPE_PARSER_MAPPING:
+            return TYPE_PARSER_MAPPING[normalized](type_, value)
+        elif normalized is t.Union or type_ is t.Union:
+            return UnionType(type_).convert(value, None, None)
+        else:
+            raise click.BadParameter(f"Unable to parse {type_} for {value}")
+
+
+class BytesType(click.ParamType):
     name = "bytes"
 
     def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> t.Any:
@@ -429,7 +535,7 @@ class BytesType(ParamType):
             self.fail(f"'{value}' is not a valid string ({str(exc)})", param, ctx)
 
 
-class JsonType(ParamType):
+class JsonType(click.ParamType):
     name = "json"
 
     def __init__(self, should_load: bool = True) -> None:
