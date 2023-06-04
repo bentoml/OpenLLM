@@ -114,7 +114,7 @@ test-cov = "coverage run -m pytest {args:tests}"
 python = ["3.8", "3.9", "3.10", "3.11"]
 
 [tool.hatch.envs.dev]
-dependencies = ["ruff>=0.0.243", "pyright", "hatch"]
+dependencies = ["ruff", "pyright", "hatch"]
 detached = true
 
 [tool.hatch.envs.dev.scripts]
