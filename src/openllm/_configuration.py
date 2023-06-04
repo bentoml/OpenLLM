@@ -947,7 +947,7 @@ class LLMConfig:
         will be prefixed with '<model_name>_generation_*'.
         """
         for name, field in attr.fields_dict(self.generation_class).items():
-            if openllm.utils.get_origin(field.type) is t.Union:
+            if t.get_origin(field.type) is t.Union:
                 # NOTE: Union type is currently not yet supported, we probably just need to use environment instead.
                 continue
             f = attrs_to_options(
@@ -961,7 +961,7 @@ class LLMConfig:
             return f
 
         for name, field in attr.fields_dict(self.__class__).items():
-            if openllm.utils.get_origin(field.type) is t.Union:
+            if t.get_origin(field.type) is t.Union:
                 # NOTE: Union type is currently not yet supported, we probably just need to use environment instead.
                 continue
             f = attrs_to_options(name, field, self.__openllm_model_name__, typ=self.__openllm_hints__[name])(f)

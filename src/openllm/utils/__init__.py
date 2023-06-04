@@ -29,7 +29,6 @@ import typing as t
 import attr
 import inflection
 from bentoml._internal.types import LazyType as LazyType
-from bentoml._internal.types import get_origin as get_origin
 
 # NOTE: The following exports useful utils from bentoml
 from bentoml._internal.utils import LazyLoader as LazyLoader
