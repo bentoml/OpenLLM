@@ -20,6 +20,8 @@ import bentoml
 
 import openllm
 
+from .configuration_starcoder import DEFAULT_PROMPT_TEMPLATE
+
 if t.TYPE_CHECKING:
     import torch
     import transformers
@@ -96,73 +98,57 @@ class StarCoder(openllm.LLM):
             gc.collect()
             torch.cuda.empty_cache()
 
-    def preprocess_parameters(
+    def sanitize_parameters(
         self,
         prompt: str,
         temperature: float | None = None,
         top_p: float | None = None,
         max_new_tokens: int | None = None,
         repetition_penalty: float | None = None,
+        use_default_prompt_template: bool = True,
         **attrs: t.Any,
-    ) -> tuple[str, dict[str, t.Any]]:
-        fim_mode = FIM_INDICATOR in prompt
-        prefix, suffix = None, None
-        if fim_mode:
-            try:
-                prefix, suffix = prompt.split(FIM_INDICATOR)
-            except Exception as err:
-                logger.error("Error while processing prompt with FIM mode:\n", exc_info=err)
-                raise ValueError(f"Only one {FIM_INDICATOR} allowed in prompt") from err
-            prompt = f"{FIM_PREFIX}{prefix}{FIM_SUFFIX}{suffix}{FIM_MIDDLE}"
+    ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
+        if use_default_prompt_template:
+            fim_mode = FIM_INDICATOR in prompt
+            prefix, suffix = None, None
+            if fim_mode:
+                try:
+                    prefix, suffix = prompt.split(FIM_INDICATOR)
+                except Exception as err:
+                    logger.error("Error while processing prompt with FIM mode:\n", exc_info=err)
+                    raise ValueError(f"Only one {FIM_INDICATOR} allowed in prompt") from err
+                prompt_text = f"{FIM_PREFIX}{prefix}{FIM_SUFFIX}{suffix}{FIM_MIDDLE}"
+            else:
+                prompt_text = prompt
+        else:
+            prompt_text = prompt
 
-        return prompt, self.config.model_construct_env(
-            top_p=top_p,
-            temperature=temperature,
-            max_new_tokens=max_new_tokens,
+        generation_config = {
+            "temperature": temperature,
+            "top_p": top_p,
+            "max_new_tokens": max_new_tokens,
+            "repetition_penalty": repetition_penalty,
             # XXX: This value is currently a hack, need more investigate why the
             # default starcoder doesn't include the same value as santacoder EOD
-            pad_token_id=49152,
-            repetition_penalty=repetition_penalty,
+            "pad_token_id": 49152,
             **attrs,
-        ).model_dump(flatten=True)
+        }
 
-    def postprocess_parameters(self, prompt: str, generation_result: t.Sequence[str], **_: t.Any) -> str:
+        if use_default_prompt_template:
+            prompt_text = DEFAULT_PROMPT_TEMPLATE.format(instruction=prompt_text)
+
+        return prompt_text, generation_config, {}
+
+    def postprocess_generate(self, prompt: str, generation_result: t.Sequence[str], **_: t.Any) -> str:
         return generation_result[0]
 
     @torch.inference_mode()
-    def generate(
-        self,
-        prompt: str,
-        temperature: float | None = None,
-        top_p: float | None = None,
-        max_new_tokens: int | None = None,
-        repetition_penalty: float | None = None,
-        **attrs: t.Any,
-    ) -> list[str]:
-        fim_mode = FIM_INDICATOR in prompt
-        prefix, suffix = None, None
-        if fim_mode:
-            try:
-                prefix, suffix = prompt.split(FIM_INDICATOR)
-            except Exception as err:
-                logger.error("Error while processing prompt with FIM mode:\n", exc_info=err)
-                raise ValueError(f"Only one {FIM_INDICATOR} allowed in prompt") from err
-            prompt = f"{FIM_PREFIX}{prefix}{FIM_SUFFIX}{suffix}{FIM_MIDDLE}"
-
+    def generate(self, prompt: str, **attrs: t.Any) -> list[str]:
         inputs = t.cast("torch.Tensor", self.tokenizer.encode(prompt, return_tensors="pt")).to(self.device)
         result_tensor = self.model.generate(
             inputs,
             do_sample=True,
-            generation_config=self.config.model_construct_env(
-                top_p=top_p,
-                temperature=temperature,
-                max_new_tokens=max_new_tokens,
-                # XXX: This value is currently a hack, need more investigate why the default starcoder
-                # doesn't include the same value as santacoder EOD
-                pad_token_id=49152,
-                repetition_penalty=repetition_penalty,
-                **attrs,
-            ).to_generation_config(),
+            generation_config=self.config.model_construct_env(**attrs).to_generation_config(),
         )
         # TODO: We will probably want to return the tokenizer here so that we can manually process this
         # return (skip_special_tokens=False, clean_up_tokenization_spaces=False))

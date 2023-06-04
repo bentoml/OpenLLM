@@ -89,7 +89,7 @@ class _BaseAutoLLMClass:
             # The rest of kwargs is now passed to config
             llm_config = AutoConfig.for_model(model_name, **attrs)
         if type(llm_config) in cls._model_mapping.keys():
-            llm = cls._model_mapping[type(llm_config)](pretrained, llm_config=llm_config, **attrs)
+            llm = cls._model_mapping[type(llm_config)].from_pretrained(pretrained, llm_config=llm_config, **attrs)
             if not return_runner_kwargs:
                 return llm
             return llm, to_runner_attrs

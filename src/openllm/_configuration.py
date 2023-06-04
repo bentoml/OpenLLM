@@ -590,6 +590,15 @@ def _make_internal_generation_class(cls: type[LLMConfig]) -> type[GenerationConf
     return generated_cls
 
 
+USE_DEFAULT_PROMPT_TEMPLATE_DOCSTRING = """\
+Whether a model should use their default prompt template setup. This is useful if 
+users wants to do some prompt engineering. Default to True. 
+"""
+
+# NOTE: This DEFAULT_KEYMAP is a way to dynamically generate attr.field
+DEFAULT_LLMCONFIG_ATTRS = (("use_default_prompt_template", True, USE_DEFAULT_PROMPT_TEMPLATE_DOCSTRING, bool),)
+
+
 @attr.define
 class LLMConfig:
     Field = dantic.Field
@@ -598,21 +607,38 @@ class LLMConfig:
     """
 
     if t.TYPE_CHECKING:
+        # The following is handled via __init_subclass__, and is only used for TYPE_CHECKING
 
         def __attrs_init__(self, **attrs: t.Any):
-            ...
+            """Generated __attrs_init__ for LLMConfig subclass that follows the attrs contract."""
 
-        # The following is handled via __init_subclass__, and is only used for TYPE_CHECKING
         __attrs_attrs__: tuple[attr.Attribute[t.Any], ...] = tuple()
+        """Since we are writing our own __init_subclass__, which is an alternative way for __prepare__,
+        we want openllm.LLMConfig to be attrs-like dataclass that has pydantic-like interface.
+        __attrs_attrs__ will be handled dynamically by __init_subclass__.
+        """
+
         __openllm_attrs__: tuple[str, ...] = tuple()
+        """Internal attribute tracking to store converted LLMConfig attributes to correct attrs"""
 
         __openllm_timeout__: int = 3600
+        """The default timeout to be set for this given LLM."""
+
         __openllm_requires_gpu__: bool = False
+        """Determines if this model is only available on GPU. By default it supports GPU and fallback to CPU."""
+
         __openllm_trust_remote_code__: bool = False
+        """Whether to always trust remote code"""
 
         __openllm_model_name__: str = ""
+        """The normalized version of __openllm_start_name__, determined by __openllm_name_type__"""
+
         __openllm_start_name__: str = ""
+        """Default name to be used with `openllm start`"""
+
         __openllm_name_type__: t.Literal["dasherize", "lowercase"] = "dasherize"
+        """the default name typed for this model. "dasherize" will convert the name to lowercase and 
+        replace spaces with dashes. "lowercase" will convert the name to lowercase."""
 
         __openllm_env__: openllm.utils.ModelEnv = Field(None, init=False)
         """A ModelEnv instance for this LLMConfig."""
@@ -620,9 +646,27 @@ class LLMConfig:
         __openllm_hints__: dict[str, t.Any] = Field(None, init=False)
         """An internal cache of resolved types for this LLMConfig."""
 
-        generation_class: type[GenerationConfig] = Field(None, init=False)
-
         GenerationConfig: type = type
+        """Users can override this subclass of any given LLMConfig to provide GenerationConfig
+        default value. For example:
+
+        ```python
+        class MyAwesomeModelConfig(openllm.LLMConfig):
+            class GenerationConfig:
+                max_new_tokens: int = 200
+                top_k: int = 10
+                num_return_sequences: int = 1
+                eos_token_id: int = 11
+        ```
+        """
+
+        generation_class: type[GenerationConfig] = Field(None, init=False)
+        """The result generated GenerationConfig class for this LLMConfig. This will be used
+        to create the generation_config argument that can be used throughout the lifecycle."""
+
+        # NOTE: The following can be shared accross all LLMConfig subclasses.
+        use_default_prompt_template: bool = Field(True, init=False)
+        use_default_prompt_template.__doc__ = USE_DEFAULT_PROMPT_TEMPLATE_DOCSTRING
 
     def __init_subclass__(
         cls,
@@ -693,6 +737,12 @@ class LLMConfig:
             own_attrs.append(gen_attribute)
 
         base_attrs, base_attr_map = _collect_base_attrs(cls, {a.name for a in own_attrs})
+
+        # NOTE: Enable some default attributes that can be shared across all LLMConfig
+        base_attrs = [
+            attr.Attribute.from_counting_attr(k, cls.Field(default, env=field_env_key(k), description=docs), hints)
+            for k, default, docs, hints in DEFAULT_LLMCONFIG_ATTRS
+        ] + base_attrs
         attrs: list[attr.Attribute[t.Any]] = own_attrs + base_attrs
 
         # Mandatory vs non-mandatory attr order only matters when they are part of
@@ -750,6 +800,9 @@ class LLMConfig:
         cls.generation_class = _make_internal_generation_class(cls)
 
         hints.update(t.get_type_hints(cls.generation_class))
+
+        # NOTE: update the hints for default variables we dynamically added.
+        hints.update({k: hints for k, _, _, hints in DEFAULT_LLMCONFIG_ATTRS})
         cls.__openllm_hints__ = hints
 
     @property
@@ -826,6 +879,10 @@ class LLMConfig:
         """
         # NOTE: filter out None values
         attrs = {k: v for k, v in attrs.items() if v is not None}
+        if "generation_config" in attrs:
+            # NOTE: We will need to flatten the attrs dict
+            generation_config = attrs.pop("generation_config", {})
+            attrs.update(generation_config)
 
         env = ModelEnv(cls.__openllm_model_name__)
 
@@ -894,7 +951,7 @@ class LLMConfig:
                 # NOTE: Union type is currently not yet supported, we probably just need to use environment instead.
                 continue
             f = attrs_to_options(
-                name, field, self.__openllm_model_name__, typ=self.__openllm_hints__[name], suffix_generation=True
+                name, field, self.__openllm_model_name__, typ=self.__openllm_hints__.get(name), suffix_generation=True
             )(f)
         f = optgroup.group(f"{self.generation_class.__name__} generation options")(f)
 

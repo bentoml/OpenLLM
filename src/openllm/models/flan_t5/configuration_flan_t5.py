@@ -37,10 +37,7 @@ FLAN-T5 Runner will use google/flan-t5-large as the default model. To change any
 saved pretrained, or a fine-tune FLAN-T5, provide ``OPENLLM_FLAN_T5_PRETRAINED='google/flan-t5-xxl'``
 """
 
-DEFAULT_PROMPT_TEMPLATE = """\
-Answer the following question.
-Question:{instruction}
-Answer:"""
+DEFAULT_PROMPT_TEMPLATE = """Answer the following question:\nQuestion: {instruction}\nAnswer:"""
 
 
 class FlanT5Config(openllm.LLMConfig):

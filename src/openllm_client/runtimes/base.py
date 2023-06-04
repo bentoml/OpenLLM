@@ -101,21 +101,24 @@ class ClientMixin:
             self.__client__ = t.cast("AnnotatedClient", self._config_class.from_url(self._address))
         return self.__client__
 
+    def prepare(self, prompt: str, **attrs: t.Any):
+        return_raw_response = attrs.pop("return_raw_response", False)
+        return return_raw_response, *self.llm.sanitize_parameters(prompt, **attrs)
+
 
 class BaseClient(ClientMixin):
     def health(self) -> t.Any:
         raise NotImplementedError
 
     def query(self, prompt: str, **attrs: t.Any) -> dict[str, t.Any] | str:
-        return_raw_response = attrs.pop("return_raw_response", False)
-        prompt, attrs = self.llm.preprocess_parameters(prompt, **attrs)
-        inputs = openllm.GenerationInput(prompt=prompt, llm_config=self.config.model_construct_env(**attrs))
+        return_raw_response, prompt, generate_kwargs, postprocess_kwargs = self.prepare(prompt, **attrs)
+        inputs = openllm.GenerationInput(prompt=prompt, llm_config=self.config.model_construct_env(**generate_kwargs))
         r = openllm.GenerationOutput(**self.call("generate", inputs))
 
         if return_raw_response:
             return openllm.utils.bentoml_cattr.unstructure(r)
 
-        return self.llm.postprocess_parameters(prompt, r.responses)
+        return self.llm.postprocess_generate(prompt, r.responses, **postprocess_kwargs)
 
     # NOTE: Scikit interface
     def predict(self, prompt: str, **attrs: t.Any) -> t.Any:
@@ -130,16 +133,15 @@ class BaseAsyncClient(ClientMixin):
         raise NotImplementedError
 
     async def query(self, prompt: str, **attrs: t.Any) -> dict[str, t.Any] | str:
-        return_raw_response = attrs.pop("return_raw_response", False)
-        prompt, attrs = self.llm.preprocess_parameters(prompt, **attrs)
-        inputs = openllm.GenerationInput(prompt=prompt, llm_config=self.config.model_construct_env(**attrs))
+        return_raw_response, prompt, generate_kwargs, postprocess_kwargs = self.prepare(prompt, **attrs)
+        inputs = openllm.GenerationInput(prompt=prompt, llm_config=self.config.model_construct_env(**generate_kwargs))
         res = await self.acall("generate", inputs)
         r = openllm.GenerationOutput(**res)
 
         if return_raw_response:
-            return r.model_dump()
+            return openllm.utils.bentoml_cattr.unstructure(r)
 
-        return self.llm.postprocess_parameters(prompt, r.responses)
+        return self.llm.postprocess_generate(prompt, r.responses, **postprocess_kwargs)
 
     # NOTE: Scikit interface
     async def predict(self, prompt: str, **attrs: t.Any) -> t.Any:

@@ -21,6 +21,9 @@ import transformers
 
 import openllm
 
+from ..._prompt import default_formatter
+from .configuration_falcon import DEFAULT_PROMPT_TEMPLATE
+
 if t.TYPE_CHECKING:
     import torch
 else:
@@ -57,49 +60,56 @@ class Falcon(openllm.LLM):
             custom_objects={"tokenizer": tokenizer},
         )
 
-    def preprocess_parameters(
+    def sanitize_parameters(
         self,
         prompt: str,
         max_new_tokens: int | None = None,
         top_k: int | None = None,
         num_return_sequences: int | None = None,
         eos_token_id: int | None = None,
+        use_default_prompt_template: bool = True,
         **attrs: t.Any,
-    ) -> tuple[str, dict[str, t.Any]]:
-        generation_config = self.config.model_construct_env(
-            max_new_tokens=max_new_tokens,
-            top_k=top_k,
-            num_return_sequences=num_return_sequences,
-            eos_token_id=eos_token_id,
+    ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
+        if use_default_prompt_template:
+            prompt_variables = {
+                k: v
+                for k, v in attrs.items()
+                if k in default_formatter.extract_template_variables(DEFAULT_PROMPT_TEMPLATE)
+            }
+            if "instruction" in prompt_variables:
+                raise RuntimeError(
+                    "'instruction' should be passed as the first argument instead of "
+                    "kwargs when 'use_default_prompt_template=True'"
+                )
+            prompt_text = DEFAULT_PROMPT_TEMPLATE.format(instruction=prompt, **prompt_variables)
+        else:
+            prompt_text = prompt
+
+        generation_config = {
+            "max_new_tokens": max_new_tokens,
+            "top_k": top_k,
+            "num_return_sequences": num_return_sequences,
+            "eos_token_id": eos_token_id,
             **attrs,
-        ).model_dump(flatten=True)
+        }
 
-        return prompt, generation_config
+        return prompt_text, generation_config, {}
 
-    def postprocess_parameters(self, prompt: str, generation_result: t.Sequence[dict[str, t.Any]], **_: t.Any) -> str:
+    def postprocess_generate(self, prompt: str, generation_result: t.Sequence[dict[str, t.Any]], **_: t.Any) -> str:
         return "\n".join([i["generated_text"] for i in generation_result])
 
     @torch.inference_mode()
-    def generate(
-        self,
-        prompt: str,
-        max_new_tokens: int | None = None,
-        top_k: int | None = None,
-        num_return_sequences: int | None = None,
-        eos_token_id: int | None = None,
-        **attrs: t.Any,
-    ) -> list[dict[str, t.Any]]:
+    def generate(self, prompt: str, **attrs: t.Any) -> list[dict[str, t.Any]]:
         # NOTE: MK tokenizer into this pipeline, since we can't inject tokenizer at load time
         self.model.tokenizer = self.tokenizer
+
+        eos_token_id = attrs.pop("eos_token_id", self.tokenizer.eos_token_id)
+
         # NOTE: our model here is the pipeline
         return self.model(
             prompt,
             do_sample=True,
             generation_config=self.config.model_construct_env(
-                max_new_tokens=max_new_tokens,
-                top_k=top_k,
-                num_return_sequences=num_return_sequences,
-                eos_token_id=eos_token_id or self.tokenizer.eos_token_id,
-                **attrs,
+                eos_token_id=eos_token_id, **attrs
             ).to_generation_config(),
         )

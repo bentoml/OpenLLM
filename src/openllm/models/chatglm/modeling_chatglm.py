@@ -13,6 +13,7 @@
 # limitations under the License.
 from __future__ import annotations
 
+import re
 import typing as t
 
 import bentoml
@@ -36,6 +37,26 @@ class InvalidScoreLogitsProcessor(LogitsProcessor):
             scores.zero_()
             scores[..., 5] = 5e4
         return scores
+
+
+def process_response(
+    response: str,
+    use_default_prompt_template: bool = True,
+):
+    response = response.strip()
+    if use_default_prompt_template:
+        response = response.replace("[[训练时间]]", "2023年")
+        punkts = [
+            [",", "，"],
+            ["!", "！"],
+            [":", "："],
+            [";", "；"],
+            ["\?", "？"],
+        ]
+        for item in punkts:
+            response = re.sub(r"([\u4e00-\u9fff])%s" % item[0], r"\1%s" % item[1], response)
+            response = re.sub(r"%s([\u4e00-\u9fff])" % item[0], r"%s\1" % item[1], response)
+    return response
 
 
 class ChatGLM(openllm.LLM):
@@ -65,7 +86,7 @@ class ChatGLM(openllm.LLM):
             },
         )
 
-    def preprocess_parameters(
+    def sanitize_parameters(
         self,
         prompt: str,
         max_new_tokens: int | None = None,
@@ -73,27 +94,33 @@ class ChatGLM(openllm.LLM):
         top_p: float | None = None,
         temperature: float | None = None,
         chat_history: list[str] | None = None,
+        use_default_prompt_template: bool = True,
         **attrs: t.Any,
-    ) -> tuple[str, dict[str, t.Any]]:
+    ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
         prompt_text = ""
-        if chat_history is not None:
+
+        if use_default_prompt_template and chat_history is not None:
             for i, (old_query, response) in enumerate(chat_history):
                 prompt_text += f"[Round {i}]\n问：{old_query}\n答：{response}\n"
             prompt_text += f"[Round {len(chat_history)}]\n问：{prompt}\n答："
         else:
             prompt_text = prompt
 
-        generation_config = self.config.model_construct_env(
-            max_new_tokens=max_new_tokens,
-            num_beams=num_beams,
-            top_p=top_p,
-            temperature=temperature,
+        postprocess_generate_kwargs = {"chat_history": chat_history if chat_history is not None else None}
+
+        # NOTE: The rest of attrs should be kwargs for GenerationConfig
+        generate_kwargs = {
+            "max_new_tokens": max_new_tokens,
+            "num_beams": num_beams,
+            "top_p": top_p,
+            "temperature": temperature,
+            "use_default_prompt_template": use_default_prompt_template,
             **attrs,
-        ).model_dump(flatten=True)
+        }
 
-        return prompt_text, generation_config
+        return prompt_text, generate_kwargs, postprocess_generate_kwargs
 
-    def postprocess_parameters(
+    def postprocess_generate(
         self, prompt: str, generation_result: str, *, chat_history: list[tuple[str, str]] | None = None, **attrs: t.Any
     ):
         if self.config.retain_history:
@@ -102,15 +129,7 @@ class ChatGLM(openllm.LLM):
         return generation_result
 
     @torch.inference_mode()
-    def generate(
-        self,
-        prompt: str,
-        max_new_tokens: int | None = None,
-        num_beams: int | None = None,
-        top_p: float | None = None,
-        temperature: float | None = None,
-        **attrs: t.Any,
-    ) -> str:
+    def generate(self, prompt: str, use_default_prompt_template: bool = True, **attrs: t.Any) -> str:
         self.model.eval()
 
         # Only use half precision if the model is not yet quantized
@@ -125,16 +144,9 @@ class ChatGLM(openllm.LLM):
         inputs = self.tokenizer([prompt], return_tensors="pt").to(self.device)
         outputs = self.model.generate(
             **inputs,
-            generation_config=self.config.model_construct_env(
-                max_new_tokens=max_new_tokens,
-                num_beams=num_beams,
-                top_p=top_p,
-                temperature=temperature,
-                do_sample=True,
-                **attrs,
-            ).to_generation_config(),
+            generation_config=self.config.model_construct_env(do_sample=True, **attrs).to_generation_config(),
             logits_processor=logit_processor,
         )
         outputs = outputs.tolist()[0][len(inputs["input_ids"][0]) :]
         response = self.tokenizer.decode(outputs)
-        return self.model.process_response(response)
+        return process_response(response, use_default_prompt_template)

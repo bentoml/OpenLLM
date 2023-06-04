@@ -19,7 +19,7 @@ import typing as t
 
 import openllm
 
-from .configuration_dolly_v2 import DEFAULT_PROMPT_TEMPLATE, END_KEY, INTRO_BLURB, RESPONSE_KEY
+from .configuration_dolly_v2 import DEFAULT_PROMPT_TEMPLATE, END_KEY, RESPONSE_KEY
 
 if t.TYPE_CHECKING:
     import torch
@@ -68,42 +68,40 @@ class DollyV2(openllm.LLM):
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    def preprocess_parameters(
+    def sanitize_parameters(
         self,
         prompt: str,
         max_new_tokens: int | None = None,
         temperature: float | None = None,
         top_k: int | None = None,
         top_p: float | None = None,
+        use_default_prompt_template: bool = True,
         **attrs: t.Any,
-    ) -> tuple[str, dict[str, t.Any]]:
-        prompt_text = DEFAULT_PROMPT_TEMPLATE.format(instruction=prompt)
+    ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
+        if use_default_prompt_template:
+            prompt_text = DEFAULT_PROMPT_TEMPLATE.format(instruction=prompt)
+        else:
+            prompt_text = prompt
 
-        generation_config = self.config.model_construct_env(
-            max_new_tokens=max_new_tokens,
-            temperature=temperature,
-            top_k=top_k,
-            top_p=top_p,
+        # NOTE: The rest of attrs should be kwargs for GenerationConfig
+        generate_kwargs = {
+            "max_new_tokens": max_new_tokens,
+            "top_k": top_k,
+            "top_p": top_p,
+            "temperature": temperature,
+            "use_default_prompt_template": use_default_prompt_template,
             **attrs,
-        ).model_dump(flatten=True)
+        }
 
-        return prompt_text, generation_config
+        return prompt_text, generate_kwargs, {}
 
-    def postprocess_parameters(
+    def postprocess_generate(
         self, prompt: str, generation_result: list[dict[t.Literal["generated_text"], str]], **_: t.Any
     ) -> str:
         return generation_result[0]["generated_text"]
 
     @torch.inference_mode()
-    def generate(
-        self,
-        prompt: str,
-        max_new_tokens: int | None = None,
-        temperature: float | None = None,
-        top_k: int | None = None,
-        top_p: float | None = None,
-        **attrs: t.Any,
-    ):
+    def generate(self, prompt: str, **attrs: t.Any):
         """This is a implementation of InstructionTextGenerationPipeline from databricks."""
         tokenizer_response_key = next(
             (token for token in self.tokenizer.additional_special_tokens if token.startswith(RESPONSE_KEY)), None
@@ -112,13 +110,7 @@ class DollyV2(openllm.LLM):
         end_key_token_id = None
         eos_token_id = None
 
-        llm_config = self.config.model_construct_env(
-            max_new_tokens=max_new_tokens,
-            temperature=temperature,
-            top_k=top_k,
-            top_p=top_p,
-            **attrs,
-        )
+        llm_config: openllm.DollyV2Config = self.config.model_construct_env(**attrs)
 
         if tokenizer_response_key:
             try:
@@ -130,12 +122,7 @@ class DollyV2(openllm.LLM):
             except ValueError:
                 pass
 
-        if not prompt.startswith(INTRO_BLURB):
-            prompt_text = DEFAULT_PROMPT_TEMPLATE.format(instruction=prompt)
-        else:
-            prompt_text = prompt
-
-        inputs = self.tokenizer(prompt_text, return_tensors="pt")
+        inputs = self.tokenizer(prompt, return_tensors="pt")
 
         input_ids = inputs["input_ids"]
         attention_mask = inputs.get("attention_mask", None)
@@ -215,7 +202,7 @@ class DollyV2(openllm.LLM):
             # This technically isn't the full text, as we format the instruction in the prompt the model has been
             # trained on, but to the client it will appear to be the full text.
             if llm_config.return_full_text:
-                decoded = f"{prompt_text}\n{decoded}"
+                decoded = f"{prompt}\n{decoded}"
 
             rec = {"generated_text": decoded}
 

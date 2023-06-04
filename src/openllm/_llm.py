@@ -205,25 +205,36 @@ class LLMInterface(ABC):
     """The default PyPI requirements needed to run this given LLM. By default, we will depend on 
     bentoml, torch, transformers."""
 
-    def preprocess_parameters(self, prompt: str, **generation_kwds: t.Any) -> tuple[str, dict[str, t.Any]]:
-        """This handler will preprocess given prompt into the correct inputs with all
-        filled templates that the model accepts. It will returns a tuple of expected LLM prompt type and and dictionary
-        of expected arguments to be passed into model.generate.
-
-        You can customize the generation attributes for generate here. By default, it is a simple echo.
-
-        NOTE: this will be used from the client side.
-        """
-        return prompt, generation_kwds
-
     @abstractmethod
     def generate(self, prompt: str, **preprocess_generate_kwds: t.Any) -> t.Any:
-        """The main function implementation for generating from given prompt. It takes the outputs
-        of preprocess_generate, and then those can be pass to 'model.generate'.
+        """The main function implementation for generating from given prompt.  It takes the prompt
+        and the generation_kwargs from 'self.sanitize_parameters' and then
+        pass it to 'self.model.generate'.
         """
         raise NotImplementedError
 
-    def postprocess_parameters(self, prompt: str, generation_result: t.Any, **attrs: t.Any) -> t.Any:
+    def generate_iterator(self, prompt: str, **attrs: t.Any) -> t.Iterator[t.Any]:
+        """An iterator version of generate function."""
+        raise NotImplementedError(
+            "Currently generate_iterator requires SSE (Server-side events) support, which is not yet implemented."
+        )
+
+    def sanitize_parameters(self, prompt: str, **attrs: t.Any) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
+        """This handler will sanitize all attrs and setup prompt text.
+
+        It takes a prompt that is given by the user, attrs that can be parsed with the prompt.
+
+        NOTE: the attrs should also handle the following default attributes from all LLMConfig:
+        - use_default_prompt_template
+
+        Returns a tuple of three items:
+        - The processed prompt text depending on `use_default_prompt_template`
+        - The attributes dictionary that can be passed into LLMConfig to generate a GenerationConfig
+        - The attributes dictionary that will be passed into `self.postprocess_generate`.
+        """
+        return prompt, attrs, attrs
+
+    def postprocess_generate(self, prompt: str, generation_result: t.Any, **attrs: t.Any) -> t.Any:
         """This handler will postprocess generation results from LLM.generate and
         then output nicely formatted results (if the LLM decide to do so.)
 
@@ -232,12 +243,6 @@ class LLMInterface(ABC):
         NOTE: this will be used from the client side.
         """
         return generation_result
-
-    def generate_iterator(self, prompt: str, **attrs: t.Any) -> t.Iterator[t.Any]:
-        """An iterator version of generate function."""
-        raise NotImplementedError(
-            "Currently generate_iterator requires SSE (Server-side events) support, which is not yet implemented."
-        )
 
     def llm_post_init(self):
         """This function can be implemented if you need to initialized any additional variables that doesn't
@@ -299,6 +304,9 @@ class LLMMetaclass(ABCMeta):
 
             config_class: type[openllm.LLMConfig] = namespace["config_class"]
 
+            # NOTE: update the annotations for self.config
+            namespace["__annotations__"]["config"] = t.get_type_hints(config_class)
+
             for key in ("__openllm_start_name__", "__openllm_requires_gpu__"):
                 namespace[key] = getattr(config_class, key)
 
@@ -344,10 +352,6 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
         __openllm_start_name__: str
         __openllm_requires_gpu__: bool
         __openllm_post_init__: t.Callable[[t.Self], None] | None
-
-        # NOTE: the following will be populated by __init__
-        config: openllm.LLMConfig
-        load_in_mha: bool
 
     # NOTE: the following is the similar interface to HuggingFace pretrained protocol.
 
@@ -753,9 +757,24 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
             def generate_iterator(__self, prompt: str, **attrs: t.Any) -> t.Iterator[t.Any]:
                 yield self.generate_iterator(prompt, **attrs)
 
-        def _wrapped_generate(__self: bentoml.Runner, *args: t.Any, **kwargs: t.Any) -> t.Any:
-            """Wrapped runner() to runner.generate.run()"""
-            return __self.generate.run(*args, **kwargs)
+        def _wrapped_generate_run(__self: bentoml.Runner, *args: t.Any, **kwargs: t.Any) -> t.Any:
+            """Wrapper for runner.generate.run() to handle the prompt and postprocessing.
+
+            This will be used for LangChain API.
+
+            Usage:
+            ```python
+            runner = openllm.Runner("dolly-v2", init_local=True)
+            runner("What is the meaning of life?")
+            ```
+            """
+            if len(args) > 1:
+                raise RuntimeError("Only one positional argument is allowed for generate()")
+            prompt = args[0] if len(args) == 1 else kwargs.pop("prompt", "")
+
+            prompt, generate_kwargs, postprocess_kwargs = self.sanitize_parameters(prompt, **kwargs)
+            generated_result = __self.generate.run(prompt, **generate_kwargs)
+            return self.postprocess_generate(prompt, generated_result, **postprocess_kwargs)
 
         # NOTE: returning the two langchain API's to the runner
         return types.new_class(
@@ -766,11 +785,14 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
                     "llm_type": self.llm_type,
                     "identifying_params": self.identifying_params,
                     "llm": self,  # NOTE: self reference to LLM
-                    "__call__": _wrapped_generate,
+                    "config": self.config,
+                    "__call__": _wrapped_generate_run,
+                    "__module__": f"openllm.models.{self.config.__openllm_model_name__}",
+                    "__doc__": self.config.__openllm_env__.start_docstring,
                 }
             ),
         )(
-            runnable_class=types.new_class(
+            types.new_class(
                 inflection.camelize(self.config.__openllm_model_name__) + "Runnable",
                 (_Runnable,),
                 {
@@ -789,6 +811,21 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
             embedded=embedded,
             scheduling_strategy=scheduling_strategy,
         )
+
+    def predict(self, prompt: str, **attrs: t.Any) -> t.Any:
+        """The scikit-compatible API for self(...)"""
+        return self.__call__(prompt, **attrs)
+
+    def __call__(self, prompt: str, **attrs: t.Any) -> t.Any:
+        """Returns the generation result and format the result.
+
+        First, it runs `self.sanitize_parameters` to sanitize the parameters.
+        The the sanitized prompt and kwargs will be pass into self.generate.
+        Finally, run self.postprocess_generate to postprocess the generated result.
+        """
+        prompt, generate_kwargs, postprocess_kwargs = self.sanitize_parameters(prompt, **attrs)
+        generated_result = self.generate(prompt, **generate_kwargs)
+        return self.postprocess_generate(prompt, generated_result, **postprocess_kwargs)
 
 
 def Runner(start_name: str, **attrs: t.Any) -> bentoml.Runner:

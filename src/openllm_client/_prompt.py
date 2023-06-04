@@ -14,36 +14,15 @@
 from __future__ import annotations
 
 import dataclasses
-import string
 import typing as t
 
 import openllm
+from openllm._prompt import PromptFormatter
 
 if t.TYPE_CHECKING:
     DictStrStr = dict[str, str]
 else:
     DictStrStr = dict
-
-
-class PromptFormatter(string.Formatter):
-    """This PromptFormatter is largely based on langchain's implementation."""
-
-    def vformat(self, format_string: str, args: t.Sequence[t.Any], kwargs: t.Mapping[str, t.Any]) -> str:
-        if len(args) > 0:
-            raise ValueError("Positional arguments are not supported")
-        return super().vformat(format_string, args, kwargs)
-
-    def check_unused_args(
-        self, used_args: set[int | str], args: t.Sequence[t.Any], kwargs: t.Mapping[str, t.Any]
-    ) -> None:
-        """Check if extra params is passed."""
-        extras = set(kwargs).difference(used_args)
-        if extras:
-            raise KeyError(f"Extra params passed: {extras}")
-
-    def extract_template_variables(self, template: str) -> t.Sequence[str]:
-        """Extract template variables from a template string."""
-        return [field[1] for field in self.parse(template) if field[1] is not None]
 
 
 # TODO: Support jinja2 template, go template and possible other prompt template engine.

@@ -20,6 +20,7 @@ from transformers import StoppingCriteria, StoppingCriteriaList
 
 import openllm
 
+from ..._prompt import default_formatter
 from .configuration_stablelm import DEFAULT_PROMPT_TEMPLATE
 
 
@@ -58,58 +59,53 @@ class StableLM(openllm.LLM):
         "device_map": "auto",
     }
 
-    def preprocess_parameters(
+    def sanitize_parameters(
         self,
         prompt: str,
         temperature: float | None = None,
         max_new_tokens: int | None = None,
         top_k: int | None = None,
         top_p: float | None = None,
+        use_default_prompt_template: bool = True,
         **attrs: t.Any,
-    ) -> tuple[str, dict[str, t.Any]]:
-        if "tuned" in self._pretrained:
-            prompt_text = DEFAULT_PROMPT_TEMPLATE.format(instruction=prompt)
+    ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
+        if "tuned" in self._pretrained and use_default_prompt_template:
+            prompt_variables = {
+                k: v
+                for k, v in attrs.items()
+                if k in default_formatter.extract_template_variables(DEFAULT_PROMPT_TEMPLATE)
+            }
+            if "instruction" in prompt_variables:
+                raise RuntimeError(
+                    "'instruction' should be passed as the first argument "
+                    "instead of kwargs when 'use_default_prompt_template=True'"
+                )
+            prompt_text = DEFAULT_PROMPT_TEMPLATE.format(instruction=prompt, **prompt_variables)
         else:
             prompt_text = prompt
 
-        return prompt_text, self.config.model_construct_env(
-            temperature=temperature,
-            max_new_tokens=max_new_tokens,
-            top_k=top_k,
-            top_p=top_p,
-            **attrs,
-        ).model_dump(flatten=True)
+        generation_config = {
+            "max_new_tokens": max_new_tokens,
+            "temperature": temperature,
+            "top_k": top_k,
+            "top_p": top_p,
+        }
 
-    def postprocess_parameters(self, prompt: str, generation_result: list[str], **_: t.Any) -> str:
+        return prompt_text, generation_config, {}
+
+    def postprocess_generate(self, prompt: str, generation_result: list[str], **_: t.Any) -> str:
         return generation_result[0]
 
     @torch.inference_mode()
-    def generate(
-        self,
-        prompt: str,
-        temperature: float | None = None,
-        max_new_tokens: int | None = None,
-        top_k: int | None = None,
-        top_p: float | None = None,
-        **attrs: t.Any,
-    ) -> list[str]:
+    def generate(self, prompt: str, **attrs: t.Any) -> list[str]:
         if torch.cuda.is_available():
             self.model.cuda()
         if not self.model.is_loaded_in_8bit:
             self.model.half()
 
-        if "tuned" in self._pretrained and not prompt.endswith("<|ASSISTANT|>"):
-            prompt = DEFAULT_PROMPT_TEMPLATE.format(instruction=prompt)
-
         generation_kwargs = {
             "do_sample": True,
-            "generation_config": self.config.model_construct_env(
-                temperature=temperature,
-                max_new_tokens=max_new_tokens,
-                top_k=top_k,
-                top_p=top_p,
-                **attrs,
-            ).to_generation_config(),
+            "generation_config": self.config.model_construct_env(**attrs).to_generation_config(),
             "pad_token_id": self.tokenizer.eos_token_id,
             "stopping_criteria": StoppingCriteriaList([StopOnTokens()]),
         }
