@@ -1,0 +1,14 @@
+#!/bin/bash
+
+if ! command -v addlicense @ >&1 > /dev/null; then
+    if command -v go @ >&1 > /dev/null; then
+        go install github.com/google/addlicense@latest
+    else
+        echo "ERROR: addlicense not installed."
+        echo "Install using https://github.com/google/addlicense#install"
+        echo "Tip: If you have go installed, run 'go install github.com/google/addlicense@latest'"
+        exit 1
+    fi
+fi
+
+addlicense -v -l apache -c 'BentoML Team. All rights reserved.' "$@"
