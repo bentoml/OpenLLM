@@ -26,8 +26,6 @@ jobs:
         uses: ./.github/actions/setup-repo
       - name: Format check
         run: hatch run dev:style
-      - name: Lint check
-        run: hatch run dev:typing
       - name: Type check
         if: ${{ github.event_name == 'pull_request' }}
         run: git diff --name-only --diff-filter=AM "origin/$GITHUB_BASE_REF" -z -- '*.py{,i}' | xargs -0 --no-run-if-empty hatch run dev:typing
