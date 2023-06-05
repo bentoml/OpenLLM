@@ -6,95 +6,127 @@
     <br>
 </div>
 
-<br/>
+## 📖 Introduction
 
-To get started, simply install OpenLLM with pip:
+Welcome to OpenLLM, a robust platform designed to streamline the usage of large language models (LLMs). Here are some key features:
+
+🚂 **SOTA LLMs**: With a single click, access support for state-of-the-art LLMs, including StableLM, Llama, Alpaca, Dolly, Flan-T5, ChatGLM, Falcon, and more.
+
+🔥 **BentoML 🤝 HuggingFace**: Leveraging the power of BentoML and HuggingFace's ecosystem (transformers, optimum, peft, accelerate, datasets), OpenLLM offers user-friendly APIs for seamless integration and usage.
+
+📦 **Fine-tuning your own LLM**: Customize any LLM to suit your needs with `LLM.tuning()`. (Work In Progress)
+
+⛓️ **Interoperability**: Our first-class support for LangChain and [🤗 Hub](https://huggingface.co/) allows easy chaining of LLMs. (Work In Progress)
+
+🎯 **Streamline production deployment**: Deploy any LLM effortlessly using `openllm bundle` with [☁️ BentoML Cloud](https://l.bentoml.com/bento-cloud).
+
+## 🏃‍ Getting Started
+To use OpenLLM, you need to have Python 3.8 (or newer) and `pip` installed on your system. We highly recommend using a Virtual Environment to prevent package conflicts.
+
+You can install OpenLLM using pip as follows:
 
 ```bash
 pip install openllm
 ```
+To verify if it's installed correctly, run:
+```
+openllm version
+```
+The correct output will be:
+```
+Usage: openllm [OPTIONS] COMMAND [ARGS]...
 
-To start a LLM server, `openllm start` allows you to start any supported LLM
-with a single command. For example, to start a `dolly-v2` server:
+   ██████╗ ██████╗ ███████╗███╗   ██╗██╗     ██╗     ███╗   ███╗
+  ██╔═══██╗██╔══██╗██╔════╝████╗  ██║██║     ██║     ████╗ ████║
+  ██║   ██║██████╔╝█████╗  ██╔██╗ ██║██║     ██║     ██╔████╔██║
+  ██║   ██║██╔═══╝ ██╔══╝  ██║╚██╗██║██║     ██║     ██║╚██╔╝██║
+  ╚██████╔╝██║     ███████╗██║ ╚████║███████╗███████╗██║ ╚═╝ ██║
+   ╚═════╝ ╚═╝     ╚══════╝╚═╝  ╚═══╝╚══════╝╚══════╝╚═╝     ╚═╝
 
-## 😌 tl;dr?
+  OpenLLM: Your one stop-and-go-solution for serving any Open Large-Language Model
+
+      - StableLM, Falcon, ChatGLM, Dolly, Flan-T5, and more
+
+      - Powered by BentoML 🍱 + HuggingFace 🤗
+```
+
+### Starting an LLM Server
+To start an LLM server, use `openllm start`. For example, to start a `dolly-v2` server:
 
 ```bash
 openllm start dolly-v2
-
-# Starting LLM Server for 'dolly_v2'
-#
-# 2023-05-27T04:55:36-0700 [INFO] [cli] Environ for worker 0: set CPU thread coun t to 10
-# 2023-05-27T04:55:36-0700 [INFO] [cli] Prometheus metrics for HTTP BentoServer f rom "_service.py:svc" can be accessed at http://localhost:3000/metrics.
-# 2023-05-27T04:55:36-0700 [INFO] [cli] Starting production HTTP BentoServer from "_service.py:svc" listening on http://0.0.0.0:3000 (Press CTRL+C to quit)
 ```
+Following this, a swagger UI will be accessible at http://0.0.0.0:3000 where you can experiment with the endpoints and sample prompts.
 
-To see a list of supported LLMs, run `openllm start --help`.
-
-On a different terminal window, open a IPython session and create a client to
-start interacting with the model:
+OpenLLM provides a built-in Python client, allowing you to interact with the model. In a different terminal window or a Jupyter notebook, create a client to start interacting with the model:
 
 ```python
 >>> import openllm
 >>> client = openllm.client.HTTPClient('http://localhost:3000')
 >>> client.query('Explain to me the difference between "further" and "farther"')
 ```
+## 🚀 Deploying to Production 
+Take your Large Language Models (LLMs) from experimentation to production effortlessly with OpenLLM and [BentoCloud](https://www.bentoml.com/bento-cloud/). These are the steps:
 
-To package the LLM into a Bento, simply use `openllm build`:
+1. **Create a BentoCloud Account**: If you haven't already, start by signing up for a [BentoCloud](https://www.bentoml.com/bento-cloud/) account.
+
+2. **Login to BentoCloud**: Once you've created your account, authenticate your local environment with your BentoCloud account. Use the command below, replacing `<your-api-token>` and `<bento-cloud-endpoint>` with your specific API token and the BentoCloud endpoint respectively:
 
 ```bash
-openllm build dolly-v2
+bentoml yatai login --api-token <your-api-token> --endpoint <bento-cloud-endpoint>
 ```
 
-> NOTE: To build OpenLLM from git source, pass in `OPENLLM_DEV_BUILD=True` to
-> include the generated wheels into the bundle.
+3. **Build Your BentoML Service**: With OpenLLM, you can easily build your BentoML service for a specific model, like `dolly-v2`, using the `bundle` command:
 
-To fine-tune your own LLM, either use `LLM.tuning()`:
-
-```python
->>> import openllm
->>> flan_t5 = openllm.LLM.from_pretrained("flan-t5")
->>> def fine_tuning():
-...     fined_tune = flan_t5.tuning(method=openllm.tune.LORA | openllm.tune.P_TUNING, dataset='wikitext-2', ...)
-...     fined_tune.save_pretrained('./fine-tuned-flan-t5', version='wikitext')
-...     return fined_tune.path  # get the path of the pretrained
->>> finetune_path = fine_tuning()
->>> fined_tune_flan_t5 = openllm.LLM.from_pretrained('flan-t5', pretrained=finetune_path)
->>> fined_tune_flan_t5.generate('Explain to me the difference between "further" and "farther"')
+```bash
+openllm bundle dolly-v2
 ```
 
-## 📚 Features
+> _NOTE_: If you wish to build OpenLLM from the git source, set `OPENLLM_DEV_BUILD=True` to include the generated wheels in the bundle.
 
-🚂 **SOTA LLMs**: One-click stop-and-go supports for state-of-the-art LLMs,
-including StableLM, Llama, Alpaca, Dolly, Flan-T5, ChatGLM, Falcon, and more.
+4. **Push Your Service to BentoCloud**: Once you've built your BentoML service, it's time to push it to BentoCloud. Use the `push` command and replace `<name:version>` with your service's name and version:
 
-📦 **Fine-tuning your own LLM**: Easily fine-tune any LLM with `LLM.tuning()`.
+```bash
+bentoml push <name:version>
+```
 
-🔥 **BentoML 🤝 HuggingFace**: Built on top of BentoML and HuggingFace's
-ecosystem (transformers, optimum, peft, accelerate, datasets), provides similar
-APIs for ease-of-use.
+BentoML offers a comprehensive set of options for deploying and hosting online ML services in production. To learn more, check out the [Deploying a Bento](https://docs.bentoml.org/en/latest/concepts/deploy.html) guide.
 
-⛓️ **Interoperability**: First class support for LangChain and
-[🤗 Hub](https://huggingface.co/) allows you to easily chain LLMs together.
+## 🧩  Models and Dependencies
+OpenLLM currently supports the following:
+* [dolly-v2](https://github.com/databrickslabs/dolly)
+* [flan-t5](https://huggingface.co/docs/transformers/model_doc/flan-t5)
+* [chatglm](https://github.com/THUDM/ChatGLM-6B)
+* [falcon](https://falconllm.tii.ae/)
+* [starcoder](https://github.com/bigcode-project/starcoder)
 
-🎯 **Streamline production deployment**: Easily deploy any LLM via
-`openllm bundle` with the following:
+### Model-specific Dependencies
+We respect your system's space and efficiency. That's why we don't force users to install dependencies for all models. By default, you can run `dolly-v2` and `flan-t5` without installing any additional packages.
 
-- [☁️ BentoML Cloud](https://l.bentoml.com/bento-cloud): the fastest way to
-  deploy your bento, simple and at scale
-- [🦄️ Yatai](https://github.com/bentoml/yatai): Model Deployment at scale on
-  Kubernetes
-- [🚀 bentoctl](https://github.com/bentoml/bentoctl): Fast model deployment on
-  AWS SageMaker, Lambda, ECE, GCP, Azure, Heroku, and more!
+To enable support for a specific model, you'll need to install its corresponding dependencies. You can do this by using `pip install openllm[model_name]`. For example, to use **chatglm**:
+
+```bash
+pip install openllm[chatglm]
+```
+This will install `cpm_kernels` and `sentencepiece` additionally
+
+### Runtime Implementations
+
+Different LLMs may have multiple runtime implementations. For instance, they might use Pytorch (`pt`), Tensorflow (`tf`), or Flax (`flax`).
+
+If you wish to specify a particular runtime for a model, you can do so by setting the `OPENLLM_{MODEL_NAME}_FRAMEWORK={runtime}` environment variable before running `openllm start`.
+
+For example, if you want to use the Tensorflow (`tf`) implementation for the `flan-t5` model, you can use the following command:
+
+```bash
+OPENLLM_FLAN_T5_FRAMEWORK=tf openllm start flan-t5
+```
 
 ## 🍇 Telemetry
 
-OpenLLM collects usage data that helps the team to improve the product. Only
-OpenLLM's internal API calls are being reported. We strip out as much
-potentially sensitive information as possible, and we will never collect user
-code, model data, or stack traces. Here's the
-[code](./src/openllm/utils/analytics.py) for usage tracking. You can opt-out of
-usage tracking by the `--do-not-track` CLI option:
+OpenLLM collects usage data to enhance user experience and improve the product. We only report OpenLLM's internal API calls and ensure maximum privacy by excluding sensitive information. We will never collect user code, model data, or stack traces. For usage tracking, check out the [code](./src/openllm/utils/analytics.py).
+
+You can opt-out of usage tracking by using the `--do-not-track` CLI option:
 
 ```bash
 openllm [command] --do-not-track
@@ -105,3 +137,14 @@ Or by setting environment variable `OPENLLM_DO_NOT_TRACK=True`:
 ```bash
 export OPENLLM_DO_NOT_TRACK=True
 ```
+
+## 👥 Community
+Engage with like-minded individuals passionate about LLMs, AI, and more on our [Discord](https://l.bentoml.com/join-openllm-discord)!
+
+OpenLLM is actively maintained by the BentoML team. Feel free to reach out and join us in our pursuit to make LLMs more accessible and easy-to-use👉 [Join our Slack community!](https://l.bentoml.com/join-slack)
+
+
+## 🎁 Contributing
+We welcome contributions! If you're interested in enhancing OpenLLM's capabilities or have any questions, don't hesitate to reach out in our [discord channel](https://l.bentoml.com/join-openllm-discord).
+
+Checkout our [Developer Guide](https://github.com/bentoml/OpenLLM/blob/main/DEVELOPMENT.md) if you wish to contribute to OpenLLM's codebase.
