@@ -47,6 +47,13 @@ class GrpcClientMixin:
         except KeyError:
             raise RuntimeError("Malformed service endpoint. (Possible malicious)")
 
+    @property
+    def timeout(self) -> int:
+        try:
+            return int(self._metadata.json.struct_value.fields["timeout"].number_value)
+        except KeyError:
+            raise RuntimeError("Malformed service endpoint. (Possible malicious)")
+
 
 class GrpcClient(GrpcClientMixin, BaseClient, client_type="grpc"):
     def __init__(self, address: str, timeout: int = 30):

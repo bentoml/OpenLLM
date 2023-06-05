@@ -40,6 +40,13 @@ class HTTPClientMixin:
         except KeyError:
             raise RuntimeError("Malformed service endpoint. (Possible malicious)")
 
+    @property
+    def timeout(self) -> int:
+        try:
+            return self._metadata["timeout"]
+        except KeyError:
+            raise RuntimeError("Malformed service endpoint. (Possible malicious)")
+
 
 class HTTPClient(HTTPClientMixin, BaseClient):
     def __init__(self, address: str, timeout: int = 30):

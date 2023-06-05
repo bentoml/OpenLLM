@@ -74,6 +74,11 @@ class ClientMixin:
         raise NotImplementedError
 
     @property
+    @abstractmethod
+    def timeout(self) -> int:
+        raise NotImplementedError
+
+    @property
     def llm(self) -> openllm.LLM:
         if self.__llm__ is None:
             if self.framework == "flax":

@@ -15,8 +15,8 @@
 """
 The service definition for running any LLMService.
 
-Note that the line `model = ...` is a special line and should not be modified. This will be handled by openllm 
-internally to generate the correct model service when bundling the LLM to a Bento. 
+Note that the line `model = ...` is a special line and should not be modified. This will be handled by openllm
+internally to generate the correct model service when bundling the LLM to a Bento.
 This will ensure that 'bentoml serve llm-bento' will work accordingly.
 
 The generation code lives under utils/codegen.py
@@ -53,6 +53,7 @@ async def generate_v1(input_dict: dict[str, t.Any]) -> openllm.GenerationOutput:
 @svc.api(input=bentoml.io.Text(), output=bentoml.io.JSON(), route="/v1/metadata")
 def metadata_v1(_: str) -> dict[str, t.Any]:
     return {
+        "timeout": llm_config.__openllm_timeout__,
         "model_name": llm_config.__openllm_model_name__,
         "framework": llm_config.__openllm_env__.get_framework_env(),
     }
