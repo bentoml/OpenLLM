@@ -110,6 +110,14 @@ class BaseClient(ClientMixin):
     def health(self) -> t.Any:
         raise NotImplementedError
 
+    @t.overload
+    def query(self, prompt: str, *, return_raw_response: t.Literal[False] = ..., **attrs: t.Any) -> str:
+        ...
+
+    @t.overload
+    def query(self, prompt: str, *, return_raw_response: t.Literal[True] = ..., **attrs: t.Any) -> dict[str, t.Any]:
+        ...
+
     def query(self, prompt: str, **attrs: t.Any) -> dict[str, t.Any] | str:
         return_raw_response, prompt, generate_kwargs, postprocess_kwargs = self.prepare(prompt, **attrs)
         inputs = openllm.GenerationInput(prompt=prompt, llm_config=self.config.model_construct_env(**generate_kwargs))
@@ -131,6 +139,16 @@ class BaseClient(ClientMixin):
 class BaseAsyncClient(ClientMixin):
     async def health(self) -> t.Any:
         raise NotImplementedError
+
+    @t.overload
+    async def query(self, prompt: str, *, return_raw_response: t.Literal[False] = ..., **attrs: t.Any) -> str:
+        ...
+
+    @t.overload
+    async def query(
+        self, prompt: str, *, return_raw_response: t.Literal[True] = ..., **attrs: t.Any
+    ) -> dict[str, t.Any]:
+        ...
 
     async def query(self, prompt: str, **attrs: t.Any) -> dict[str, t.Any] | str:
         return_raw_response, prompt, generate_kwargs, postprocess_kwargs = self.prepare(prompt, **attrs)

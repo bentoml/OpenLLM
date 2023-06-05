@@ -134,7 +134,7 @@ def is_mapping(field_type: type) -> bool:
     if openllm.utils.lenient_issubclass(field_type, t.Mapping):
         return True
     # for everything else or when the typing is more complex, check its origin
-    origin = openllm.utils.get_origin(field_type)
+    origin = t.get_origin(field_type)
     if origin is None:
         return False
     return openllm.utils.lenient_issubclass(origin, t.Mapping)
@@ -156,7 +156,7 @@ def is_container(field_type: type) -> bool:
     # Early out for standard containers: list, tuple, range
     if openllm.utils.lenient_issubclass(field_type, t.Container):
         return True
-    origin = openllm.utils.get_origin(field_type)
+    origin = t.get_origin(field_type)
     # Early out for non-typing objects
     if origin is None:
         return False
