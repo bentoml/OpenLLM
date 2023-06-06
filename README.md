@@ -22,7 +22,7 @@ popular tools like BentoML, HuggingFace, LangChain, and more.
 `LLM.tuning()`. (Work In Progress)
 
 ⛓️ **Interoperability**: First-class support for LangChain and BentoML’s runner
-architecture, allows easy chaining of LLMs on multiple GPUs/Nodes
+architecture, allows easy chaining of LLMs on multiple GPUs/Nodes. (Work In Progress)
 
 🎯 **Streamline Production Deployment**: Seamlessly package into a Bento with
 `openllm build`, containerized into OCI Images, and deploy with a single click
@@ -92,11 +92,11 @@ start interacting with the model:
 To deploy your LLMs into production:
 
 1. **Build Your BentoML Service**: With OpenLLM, you can easily build your
-   BentoML service for a specific model, like `dolly-v2`, using the `bundle`
+   BentoML service for a specific model, like `dolly-v2`, using the `build`
    command:
 
 ```bash
-openllm bundle dolly-v2
+openllm build dolly-v2
 ```
 
 > _NOTE_: If you wish to build OpenLLM from the git source, set
