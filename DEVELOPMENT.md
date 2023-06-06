@@ -94,27 +94,32 @@ After setting up your environment, here's how you can start contributing:
    ```
 
 2. Make your changes to the codebase.
-3. Write tests that verify your feature or fix (see
+3. Run all formatter and linter with `hatch`:
+
+   ```bash
+   hatch run dev:fmt
+   ```
+4. Write tests that verify your feature or fix (see
    [Writing Tests](#writing-tests) below).
-4. Run all tests to ensure your changes haven't broken anything:
+5. Run all tests to ensure your changes haven't broken anything:
 
    ```bash
    hatch run test
    ```
 
-5. Commit your changes:
+6. Commit your changes:
 
    ```bash
    git commit -m "Add my feature"
    ```
 
-6. Push your changes to your fork:
+7. Push your changes to your fork:
 
    ```bash
    git push origin feature/my-feature
    ```
 
-7. Submit a Pull Request on GitHub.
+8. Submit a Pull Request on GitHub.
 
 ## Writing Tests
 

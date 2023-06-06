@@ -459,7 +459,7 @@ def start_model_command(
     def on_start_end(model_name: str):
         if not get_debug_mode():
             _echo(
-                f"\n🚀 Next step: run 'openllm bundle {model_name}' to create a Bento for {model_name}",
+                f"\n🚀 Next step: run 'openllm build {model_name}' to create a Bento for {model_name}",
                 fg="blue",
             )
 
@@ -560,17 +560,17 @@ def cli_factory() -> click.Group:
         $ openllm start-grpc <model_name> --<options> ...
         """
 
-    @cli.command(aliases=["build"])
+    @cli.command()
     @click.argument(
         "model_name", type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING.keys()])
     )
     @click.option("--pretrained", default=None, help="Given pretrained model name for the given model name [Optional].")
     @click.option("--overwrite", is_flag=True, help="Overwrite existing Bento for given LLM if it already exists.")
     @output_option
-    def bundle(model_name: str, pretrained: str | None, overwrite: bool, output: OutputLiteral):
+    def build(model_name: str, pretrained: str | None, overwrite: bool, output: OutputLiteral):
         """Package a given models into a Bento.
 
-        $ openllm bundle flan-t5
+        $ openllm build flan-t5
         """
         bento, _previously_built = openllm.build(
             model_name,
@@ -774,7 +774,7 @@ def cli_factory() -> click.Group:
             _echo(res["responses"], fg="white")
 
     if t.TYPE_CHECKING:
-        assert download_models and bundle and models and version and start and start_grpc and query
+        assert download_models and build and models and version and start and start_grpc and query
 
     if psutil.WINDOWS:
         sys.stdout.reconfigure(encoding="utf-8")  # type: ignore
