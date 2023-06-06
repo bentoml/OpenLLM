@@ -26,7 +26,7 @@ class FlaxFlanT5(openllm.LLM):
 
     default_model: str = "google/flan-t5-large"
 
-    variants = [
+    pretrained = [
         "google/flan-t5-small",
         "google/flan-t5-base",
         "google/flan-t5-large",

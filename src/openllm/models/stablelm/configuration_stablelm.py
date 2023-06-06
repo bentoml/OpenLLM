@@ -38,7 +38,7 @@ class StableLMConfig(openllm.LLMConfig, name_type="lowercase"):
 
 
 START_STABLELM_COMMAND_DOCSTRING = """\
-Run a LLMServer for StableLM model and variants.
+Run a LLMServer for StableLM model and pretrained.
 
 \b
 > See more information about StableLM at [stabilityai/stablelm-base-alpha-3b](https://huggingface.co/stabilityai/stablelm-base-alpha-3b)

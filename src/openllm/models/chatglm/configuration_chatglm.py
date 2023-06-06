@@ -53,7 +53,7 @@ class ChatGLMConfig(
 
 
 START_CHATGLM_COMMAND_DOCSTRING = """\
-Run a LLMServer for ChatGLM model and variants.
+Run a LLMServer for ChatGLM model and pretrained.
 
 \b
 > See more information about ChatGLM at [THUDM/ChatGLM-6b](https://huggingface.co/thudm/chatglm-6b)

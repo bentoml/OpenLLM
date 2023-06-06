@@ -46,7 +46,7 @@ class StableLM(openllm.LLM):
 
     default_model = "StabilityAI/stablelm-tuned-alpha-3b"
 
-    variants = [
+    pretrained = [
         "StabilityAI/stablelm-tuned-alpha-3b",
         "StabilityAI/stablelm-tuned-alpha-7b",
         "StabilityAI/stablelm-base-alpha-3b",

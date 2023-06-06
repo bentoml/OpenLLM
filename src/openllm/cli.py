@@ -613,13 +613,13 @@ def cli_factory() -> click.Group:
         else:
             failed_initialized: list[tuple[str, Exception]] = []
 
-            json_data: dict[str, dict[t.Literal["variants", "description"], t.Any]] = {}
+            json_data: dict[str, dict[t.Literal["pretrained", "description"], t.Any]] = {}
 
             for m in models:
                 try:
                     model = openllm.AutoLLM.for_model(m)
                     docs = inspect.cleandoc(model.config.__doc__ or "(No description)")
-                    json_data[m] = {"variants": model.variants, "description": docs}
+                    json_data[m] = {"pretrained": model.pretrained, "description": docs}
                 except Exception as err:
                     failed_initialized.append((m, err))
 
@@ -630,7 +630,7 @@ def cli_factory() -> click.Group:
 
                 data: list[str | tuple[str, str, list[str]]] = []
                 for m, v in json_data.items():
-                    data.extend([(m, v["description"], v["variants"])])
+                    data.extend([(m, v["description"], v["pretrained"])])
                 column_widths = [int(COLUMNS / 6), int(COLUMNS / 3 * 2), int(COLUMNS / 6)]
 
                 if len(data) == 0 and len(failed_initialized) > 0:
@@ -643,7 +643,7 @@ def cli_factory() -> click.Group:
                 table = tabulate.tabulate(
                     data,
                     tablefmt="fancy_grid",
-                    headers=["LLM", "Description", "Variants"],
+                    headers=["LLM", "Description", "Pretrained"],
                     maxcolwidths=column_widths,
                 )
 

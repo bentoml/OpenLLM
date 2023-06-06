@@ -168,7 +168,7 @@ def import_model(
     )
 
 
-_required_namespace = {"default_model", "variants"}
+_required_namespace = {"default_model", "pretrained"}
 
 _reserved_namespace = _required_namespace | {
     "config_class",
@@ -184,9 +184,9 @@ class LLMInterface(ABC):
 
     default_model: str
     """Return the default model to use when using 'openllm start <model_name>'.
-    This could be one of the keys in 'self.variants' or custom users model."""
+    This could be one of the keys in 'self.pretrained' or custom users model."""
 
-    variants: list[str]
+    pretrained: list[str]
     """A list of supported pretrained models tag for this given runnable.
 
     For example:
@@ -198,11 +198,11 @@ class LLMInterface(ABC):
     """The config class to use for this LLM. If you are creating a custom LLM, you must specify this class."""
 
     import_kwargs: dict[str, t.Any] | None = None
-    """The default import kwargs to used when importing the model. 
+    """The default import kwargs to used when importing the model.
     This will be passed into 'openllm.LLM.import_model'."""
 
     requirements: list[str] | None = None
-    """The default PyPI requirements needed to run this given LLM. By default, we will depend on 
+    """The default PyPI requirements needed to run this given LLM. By default, we will depend on
     bentoml, torch, transformers."""
 
     @abstractmethod
@@ -278,7 +278,7 @@ class LLMMetaclass(ABCMeta):
                 raise RuntimeError(
                     f"""\
                 __llm_implementation__ should not be set directly. Instead make sure that your class
-                name follows the convention prefix: 
+                name follows the convention prefix:
                 - For Tensorflow implementation: 'TF{cls_name}'
                 - For Flax implementation: 'Flax{cls_name}'
                 - For PyTorch implementation: '{cls_name}'"""
@@ -484,7 +484,7 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
 
     @property
     def identifying_params(self) -> dict[str, t.Any]:
-        return {"configuration": self.config.model_dump(), "variants": self.variants}
+        return {"configuration": self.config.model_dump(), "pretrained": self.pretrained}
 
     @property
     def _bentomodel(self) -> bentoml.Model:
@@ -557,7 +557,7 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
             if model_version is None:
                 logger.warning(
                     """\
-            When passing a path, it is recommended to also pass 'openllm_model_version' 
+            When passing a path, it is recommended to also pass 'openllm_model_version'
             into Runner/AutoLLM intialization.
 
             For example:
@@ -570,7 +570,7 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
             >>> import openllm
             >>> model = openllm.AutoLLM.for_model('/path/to/fine-tuning/model', openllm_model_version='lora-version')
 
-            No worries, OpenLLM will generate one for you. But for your own convenience, make sure to 
+            No worries, OpenLLM will generate one for you. But for your own convenience, make sure to
             specify 'openllm_model_version'.
             """
                 )

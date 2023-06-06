@@ -63,7 +63,7 @@ class DollyV2(openllm.LLM):
 
     load_in_mha = False  # NOTE: disable bettertransformer for dolly
 
-    variants = ["databricks/dolly-v2-3b", "databricks/dolly-v2-7b", "databricks/dolly-v2-12b"]
+    pretrained = ["databricks/dolly-v2-3b", "databricks/dolly-v2-7b", "databricks/dolly-v2-12b"]
 
     import_kwargs = {"device_map": "auto", "torch_dtype": torch.bfloat16, "_tokenizer_padding_side": "left"}
 

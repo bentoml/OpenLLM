@@ -37,7 +37,7 @@ class Falcon(openllm.LLM):
 
     requirements = ["einops"]
 
-    variants = ["tiiuae/falcon-7b", "tiiuae/falcon-40b", "tiiuae/falcon-7b-instruct", "tiiuae/falcon-40b-instruct"]
+    pretrained = ["tiiuae/falcon-7b", "tiiuae/falcon-40b", "tiiuae/falcon-7b-instruct", "tiiuae/falcon-40b-instruct"]
 
     import_kwargs = {"torch_dtype": torch.bfloat16, "device_map": "auto"}
 

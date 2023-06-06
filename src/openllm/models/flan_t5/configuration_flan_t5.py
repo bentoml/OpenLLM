@@ -16,7 +16,7 @@ from __future__ import annotations
 import openllm
 
 START_FLAN_T5_COMMAND_DOCSTRING = """\
-Run a LLMServer for FLAN-T5 model and variants.
+Run a LLMServer for FLAN-T5 model and pretrained.
 
 \b
 > See more information about FLAN-T5 at [huggingface/transformers](https://huggingface.co/docs/transformers/model_doc/flan-t5)

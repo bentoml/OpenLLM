@@ -36,7 +36,7 @@ class StarCoderConfig(openllm.LLMConfig, name_type="lowercase", requires_gpu=Tru
 
 
 START_STARCODER_COMMAND_DOCSTRING = """\
-Run a LLMServer for StarCoder model and variants.
+Run a LLMServer for StarCoder model and pretrained.
 
 \b
 > See more information about StarCoder at [bigcode/starcoder](https://huggingface.co/bigcode/starcoder)

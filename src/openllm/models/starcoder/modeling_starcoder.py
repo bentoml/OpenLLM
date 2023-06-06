@@ -46,7 +46,7 @@ class StarCoder(openllm.LLM):
 
     requirements = ["bitandbytes"]
 
-    variants = ["bigcode/starcoder", "bigcode/starcoderbase"]
+    pretrained = ["bigcode/starcoder", "bigcode/starcoderbase"]
 
     device = torch.device("cuda")
 

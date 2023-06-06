@@ -47,7 +47,7 @@ class DollyV2Config(openllm.LLMConfig, default_timeout=3600000, trust_remote_cod
 
 
 START_DOLLY_V2_COMMAND_DOCSTRING = """\
-Run a LLMServer for dolly-v2 model and variants.
+Run a LLMServer for dolly-v2 model and pretrained.
 
 \b
 > See more information about dolly-v2 at [databricks/dolly-v2-3b](https://huggingface.co/databricks/dolly-v2-3b)

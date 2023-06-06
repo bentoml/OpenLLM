@@ -32,7 +32,7 @@ class FalconConfig(openllm.LLMConfig, name_type="lowercase", trust_remote_code=T
 
 
 START_FALCON_COMMAND_DOCSTRING = """\
-Run a LLMServer for FalconLM model and variants.
+Run a LLMServer for FalconLM model and pretrained.
 
 \b
 > See more information about falcon at [tiiuae/falcon-7b](https://huggingface.co/tiiuae/falcon-7b)

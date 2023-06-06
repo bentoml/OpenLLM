@@ -68,7 +68,7 @@ class ChatGLM(openllm.LLM):
 
     requirements = ["cpm_kernels", "sentencepiece"]
 
-    variants = ["THUDM/chatglm-6b", "THUDM/chatglm-6b-int8", "THUDM/chatglm-6b-int4"]
+    pretrained = ["THUDM/chatglm-6b", "THUDM/chatglm-6b-int8", "THUDM/chatglm-6b-int4"]
 
     device = torch.device("cuda")
 
