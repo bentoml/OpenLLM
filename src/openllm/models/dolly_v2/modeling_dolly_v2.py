@@ -26,34 +26,10 @@ from .configuration_dolly_v2 import DEFAULT_PROMPT_TEMPLATE
 
 if t.TYPE_CHECKING:
     import torch
-
-    from ..._types import LLMTokenizer
 else:
     torch = openllm.utils.LazyLoader("torch", globals(), "torch")
 
 logger = logging.getLogger(__name__)
-
-
-def get_special_token_id(tokenizer: LLMTokenizer, key: str) -> int:
-    """
-    Gets the token ID for a given string that has been added to the tokenizer as a special token.
-    When training, we configure the tokenizer so that the sequences like "### Instruction:" and "### End" are
-    treated specially and converted to a single, new token.  This retrieves the token ID each of these keys map to.
-
-    Args:
-        tokenizer: the tokenizer
-        key: the key to convert to a single token
-
-    Raises:
-        RuntimeError: if more than one ID was generated
-
-    Returns:
-        int: the token ID for the given key
-    """
-    token_ids = tokenizer.encode(key)
-    if len(token_ids) > 1:
-        raise ValueError(f"Expected only a single token for '{key}' but found {token_ids}")
-    return token_ids[0]
 
 
 class DollyV2(openllm.LLM):

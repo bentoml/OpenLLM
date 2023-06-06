@@ -310,8 +310,16 @@ class LLMMetaclass(ABCMeta):
             for key in ("__openllm_start_name__", "__openllm_requires_gpu__"):
                 namespace[key] = getattr(config_class, key)
 
+            # load_in_mha: Whether to apply BetterTransformer (or Torch MultiHeadAttention) during inference load.
+            #              See https://pytorch.org/blog/a-better-transformer-for-fast-transformer-encoder-inference/
+            #              for more information.
             # NOTE: set a default variable to transform to BetterTransformer by default for inference
-            namespace["load_in_mha"] = namespace.get("load_in_mha", implementation in ("pt",))
+            if "load_in_mha" not in namespace:
+                load_in_mha = (
+                    os.environ.get(config_class().__openllm_env__.bettertransformer, str(False)).upper()
+                    in ENV_VARS_TRUE_VALUES
+                )
+                namespace["load_in_mha"] = load_in_mha
 
             if namespace["__openllm_requires_gpu__"]:
                 # For all models that requires GPU, no need to offload it to BetterTransformer
@@ -353,6 +361,8 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
         __openllm_requires_gpu__: bool
         __openllm_post_init__: t.Callable[[t.Self], None] | None
 
+        load_in_mha: bool
+
     # NOTE: the following is the similar interface to HuggingFace pretrained protocol.
 
     @classmethod
@@ -365,7 +375,6 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
         self,
         pretrained: str | None = None,
         llm_config: openllm.LLMConfig | None = None,
-        load_in_mha: bool | None = None,
         *args: t.Any,
         **attrs: t.Any,
     ):
@@ -430,9 +439,6 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
             pretrained: The pretrained model to use. Defaults to None. It will use 'self.default_model' if None.
             llm_config: The config to use for this LLM. Defaults to None. If not passed, we will use 'self.config_class'
                         to construct default configuration.
-            load_in_mha: Whether to apply BetterTransformer (or Torch MultiHeadAttention) during inference load.
-                         See https://pytorch.org/blog/a-better-transformer-for-fast-transformer-encoder-inference/
-                         for more information.
             *args: The args to be passed to the model.
             **attrs: The kwargs to be passed to the model.
         """
@@ -457,12 +463,6 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
         # NOTE: Save the args and kwargs for latter load
         self.__llm_args__ = args
         self.__llm_kwargs__ = attrs
-
-        if load_in_mha is not None:
-            self.load_in_mha = (
-                os.environ.get(self.config.__openllm_env__.bettertransformer, str(load_in_mha)).upper()
-                in ENV_VARS_TRUE_VALUES
-            )
 
         if self.__openllm_post_init__:
             self.__openllm_post_init__(self)

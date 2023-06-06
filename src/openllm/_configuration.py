@@ -845,6 +845,14 @@ class LLMConfig:
             bases += ")"
         return bases
 
+    def __getattr__(self, item: str) -> t.Any:
+        if hasattr(self.generation_config, item):
+            return getattr(self.generation_config, item)
+        elif item in self.__openllm_extras__:
+            return self.__openllm_extras__[item]
+        else:
+            return super().__getattribute__(item)
+
     @classmethod
     def check_if_gpu_is_available(cls, implementation: t.Literal["pt", "tf", "flax"] = "pt", force: bool = False):
         try:
