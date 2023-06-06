@@ -520,7 +520,7 @@ def cli_factory() -> click.Group:
             - StableLM, Falcon, ChatGLM, Dolly, Flan-T5, and more
 
         \b
-            - Powered by BentoML 🍱 + HuggingFace 🤗
+            - Powered by BentoML 🍱
         """
 
     @cli.command()

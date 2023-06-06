@@ -62,7 +62,7 @@ Usage: openllm [OPTIONS] COMMAND [ARGS]...
 
       - StableLM, Falcon, ChatGLM, Dolly, Flan-T5, and more
 
-      - Powered by BentoML 🍱 + HuggingFace 🤗
+      - Powered by BentoML 🍱
 ```
 
 ### Starting an LLM Server
