@@ -15,6 +15,8 @@
 
 from __future__ import annotations
 
+from enum import Enum
+import importlib
 import functools
 import os
 import typing as t
@@ -95,6 +97,128 @@ def Field(
         attrs["default"] = default
 
     return attr.field(metadata=metadata, validator=_validator, converter=converter, **attrs)
+
+
+def parse_type(field_type: type) -> ParamType:
+    """Transforms the pydantic field's type into a click-compatible type.
+
+    Args:
+        field_type: pydantic field type
+
+    Returns:
+        ParamType: click type equivalent
+    """
+    from . import lenient_issubclass
+
+    assert t.get_origin(field_type) is not t.Union, "Unions are not supported"
+    # enumeration strings or other Enum derivatives
+    if lenient_issubclass(field_type, Enum):
+        return EnumChoice(enum=field_type, case_sensitive=True)
+    # literals are enum-like with way less functionality
+    if is_literal(field_type):
+        return LiteralChoice(enum=field_type, case_sensitive=True)
+    # modules, classes, functions
+    if is_typing(field_type):
+        return ModuleType()
+    # entire dictionaries:
+    # using a Dict, convert in advance
+    if is_mapping(field_type):
+        return JsonType()
+    # list, List[p], Tuple[p], Set[p] and so on
+    if is_container(field_type):
+        return parse_container_args(field_type)
+    # bytes are not natively supported by click
+    if lenient_issubclass(field_type, bytes):
+        return BytesType()
+    # return the current type: it should be a primitive
+    return field_type
+
+
+def is_typing(field_type: type) -> bool:
+    """Checks whether the current type is a module-like type.
+
+    Args:
+        field_type: pydantic field type
+
+    Returns:
+        bool: true if the type is itself a type
+    """
+    raw = t.get_origin(field_type)
+    if raw is None:
+        return False
+    if raw is type or raw is t.Type:
+        return True
+    return False
+
+
+def is_literal(field_type: type) -> bool:
+    """Checks whether the given field type is a Literal type or not.
+    Literals are weird: isinstance and subclass do not work, so you compare
+    the origin with the Literal declaration itself.
+
+    Args:
+        field_type: current pydantic type
+
+    Returns:
+        bool: true if Literal type, false otherwise
+    """
+    origin = t.get_origin(field_type)
+    return origin is not None and origin is t.Literal
+
+
+class ModuleType(ParamType):
+    name = "module"
+
+    def _import_object(self, value: str) -> t.Any:
+        module_name, class_name = value.rsplit(".", maxsplit=1)
+        assert all(s.isidentifier() for s in module_name.split(".")), f"'{value}' is not a valid module name"
+        assert class_name.isidentifier(), f"Variable '{class_name}' is not a valid identifier"
+
+        module = importlib.import_module(module_name)
+        if class_name:
+            try:
+                return getattr(module, class_name)
+            except AttributeError:
+                raise ImportError(f"Module '{module_name}' does not define a '{class_name}' variable.")
+        return None
+
+    def convert(self, value: str, param: click.Parameter | None, ctx: click.Context | None) -> t.Any:
+        try:
+            if isinstance(value, str):
+                return self._import_object(value)
+            return value
+        except Exception as exc:
+            self.fail(f"'{value}' is not a valid object ({type(exc)}: {str(exc)})", param, ctx)
+
+
+class EnumChoice(click.Choice):
+    name = "enum"
+
+    def __init__(self, enum: Enum, case_sensitive: bool = False):
+        self.mapping = enum
+        self.internal_type = enum
+        super().__init__([e.name for e in self.mapping], case_sensitive)
+
+    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> t.Any:
+        if isinstance(value, self.internal_type):
+            return value
+        result = super().convert(value, param, ctx)
+        if isinstance(result, str):
+            result = self.mapping[result]
+        return result
+
+
+class LiteralChoice(EnumChoice):
+    name = "literal"
+
+    def __init__(self, enum: t.Literal, case_sensitive: bool = False):
+        # expect every literal value to belong to the same primitive type
+        values = list(enum.__args__)
+        item_type = type(values[0])
+        assert all(isinstance(v, item_type) for v in values), f"Field {enum} contains items of different types"
+        self.internal_type = item_type
+        self.mapping = {str(v): v for v in values}
+        super(EnumChoice, self).__init__(list(self.mapping.keys()), case_sensitive)
 
 
 def allows_multiple(field_type: t.Any) -> bool:

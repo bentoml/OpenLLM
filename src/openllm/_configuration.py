@@ -14,8 +14,8 @@
 """
 Configuration utilities for OpenLLM. All model configuration will inherit from openllm.configuration_utils.LLMConfig.
 
-Note that ``openllm.LLMConfig`` is a subclass of ``pydantic.BaseModel``. It also 
-has a ``to_click_options`` that returns a list of Click-compatible options for the model. 
+Note that ``openllm.LLMConfig`` is a subclass of ``pydantic.BaseModel``. It also
+has a ``to_click_options`` that returns a list of Click-compatible options for the model.
 Such options will then be parsed to ``openllm.__main__.cli``.
 
 Each fields in ``openllm.LLMConfig`` will also automatically generate a environment
@@ -118,6 +118,9 @@ def attrs_to_options(
     dasherized = inflection.dasherize(name)
     underscored = inflection.underscore(name)
 
+    if typ in (None, attr.NOTHING):
+        typ = field.type
+
     full_option_name = f"--{dasherized}"
     if field.type is bool:
         full_option_name += f"/--no-{dasherized}"
@@ -129,11 +132,11 @@ def attrs_to_options(
     return optgroup.option(
         identifier,
         full_option_name,
-        type=typ if typ is not None else field.type,
+        type=dantic.parse_type(typ),
         required=field.default is attr.NOTHING,
         default=field.default if field.default not in (attr.NOTHING, None) else None,
         show_default=True,
-        multiple=dantic.allows_multiple(field.type),
+        multiple=dantic.allows_multiple(typ),
         help=field.metadata.get("description", "(No description provided)"),
         show_envvar=True,
         envvar=envvar,
@@ -157,7 +160,7 @@ class GenerationConfig:
     min_length: int = dantic.Field(
         0,
         ge=0,
-        description="""The minimum length of the sequence to be generated. Corresponds to the length of the 
+        description="""The minimum length of the sequence to be generated. Corresponds to the length of the
         input prompt + `min_new_tokens`. Its effect is overridden by `min_new_tokens`, if also set.""",
     )
     min_new_tokens: int = dantic.Field(
@@ -165,15 +168,15 @@ class GenerationConfig:
     )
     early_stopping: bool = dantic.Field(
         False,
-        description="""Controls the stopping condition for beam-based methods, like beam-search. It accepts the 
-        following values: `True`, where the generation stops as soon as there are `num_beams` complete candidates; 
-        `False`, where an heuristic is applied and the generation stops when is it very unlikely to find 
-        better candidates; `"never"`, where the beam search procedure only stops when there 
+        description="""Controls the stopping condition for beam-based methods, like beam-search. It accepts the
+        following values: `True`, where the generation stops as soon as there are `num_beams` complete candidates;
+        `False`, where an heuristic is applied and the generation stops when is it very unlikely to find
+        better candidates; `"never"`, where the beam search procedure only stops when there
         cannot be better candidates (canonical beam search algorithm)
     """,
     )
     max_time: float = dantic.Field(
-        description="""The maximum amount of time you allow the computation to run for in seconds. generation will 
+        description="""The maximum amount of time you allow the computation to run for in seconds. generation will
         still finish the current pass after allocated time has been passed.""",
     )
 
@@ -181,16 +184,16 @@ class GenerationConfig:
     num_beams: int = dantic.Field(1, description="Number of beams for beam search. 1 means no beam search.")
     num_beam_groups: int = dantic.Field(
         1,
-        description="""Number of groups to divide `num_beams` into in order to ensure diversity among different 
+        description="""Number of groups to divide `num_beams` into in order to ensure diversity among different
         groups of beams. [this paper](https://arxiv.org/pdf/1610.02424.pdf) for more details.""",
     )
     penalty_alpha: float = dantic.Field(
-        description="""The values balance the model confidence and the degeneration penalty in 
+        description="""The values balance the model confidence and the degeneration penalty in
         contrastive search decoding.""",
     )
     use_cache: bool = dantic.Field(
         True,
-        description="""Whether or not the model should use the past last 
+        description="""Whether or not the model should use the past last
         key/values attentions (if applicable to the model) to speed up decoding.""",
     )
 
@@ -203,14 +206,14 @@ class GenerationConfig:
     )
     top_p: float = dantic.Field(
         1.0,
-        description="""If set to float < 1, only the smallest set of most probable tokens with 
+        description="""If set to float < 1, only the smallest set of most probable tokens with
         probabilities that add up to `top_p` or higher are kept for generation.""",
     )
     typical_p: float = dantic.Field(
         1.0,
-        description="""Local typicality measures how similar the conditional probability of predicting a target 
-        token next is to the expected conditional probability of predicting a random token next, given the 
-        partial text already generated. If set to float < 1, the smallest set of the most locally typical 
+        description="""Local typicality measures how similar the conditional probability of predicting a target
+        token next is to the expected conditional probability of predicting a random token next, given the
+        partial text already generated. If set to float < 1, the smallest set of the most locally typical
         tokens with probabilities that add up to `typical_p` or higher are kept for generation. See [this
         paper](https://arxiv.org/pdf/2202.00666.pdf) for more details.
     """,
@@ -220,42 +223,42 @@ class GenerationConfig:
         description="""\
         If set to float strictly between 0 and 1, only tokens with a conditional probability greater than
         `epsilon_cutoff` will be sampled. In the paper, suggested values range from 3e-4 to 9e-4, depending on the
-        size of the model. See [Truncation Sampling as Language Model Desmoothing](https://arxiv.org/abs/2210.15191) 
+        size of the model. See [Truncation Sampling as Language Model Desmoothing](https://arxiv.org/abs/2210.15191)
         for more details.
     """,
     )
     eta_cutoff: float = dantic.Field(
         0.0,
-        description="""Eta sampling is a hybrid of locally typical sampling and epsilon sampling. 
-        If set to float strictly between 0 and 1, a token is only considered if it is greater than 
-        either `eta_cutoff` or `sqrt(eta_cutoff) * exp(-entropy(softmax(next_token_logits)))`. The latter term is 
-        intuitively the expected next token probability, scaled by `sqrt(eta_cutoff)`. In the paper, suggested 
-        values range from 3e-4 to 2e-3, depending on the size of the model. 
+        description="""Eta sampling is a hybrid of locally typical sampling and epsilon sampling.
+        If set to float strictly between 0 and 1, a token is only considered if it is greater than
+        either `eta_cutoff` or `sqrt(eta_cutoff) * exp(-entropy(softmax(next_token_logits)))`. The latter term is
+        intuitively the expected next token probability, scaled by `sqrt(eta_cutoff)`. In the paper, suggested
+        values range from 3e-4 to 2e-3, depending on the size of the model.
         See [Truncation Sampling as Language Model Desmoothing](https://arxiv.org/abs/2210.15191) for more details.
     """,
     )
     diversity_penalty: float = dantic.Field(
         0.0,
-        description="""This value is subtracted from a beam's score if it generates a token same 
-        as any beam from other group at a particular time. Note that `diversity_penalty` is only 
+        description="""This value is subtracted from a beam's score if it generates a token same
+        as any beam from other group at a particular time. Note that `diversity_penalty` is only
         effective if `group beam search` is enabled.
     """,
     )
     repetition_penalty: float = dantic.Field(
         1.0,
-        description="""The parameter for repetition penalty. 1.0 means no penalty. 
+        description="""The parameter for repetition penalty. 1.0 means no penalty.
         See [this paper](https://arxiv.org/pdf/1909.05858.pdf) for more details.""",
     )
     encoder_repetition_penalty: float = dantic.Field(
         1.0,
-        description="""The paramater for encoder_repetition_penalty. An exponential penalty on sequences that are 
+        description="""The paramater for encoder_repetition_penalty. An exponential penalty on sequences that are
         not in the original input. 1.0 means no penalty.""",
     )
     length_penalty: float = dantic.Field(
         1.0,
-        description="""Exponential penalty to the length that is used with beam-based generation. It is applied 
-        as an exponent to the sequence length, which in turn is used to divide the score of the sequence. Since 
-        the score is the log likelihood of the sequence (i.e. negative), `length_penalty` > 0.0 promotes longer 
+        description="""Exponential penalty to the length that is used with beam-based generation. It is applied
+        as an exponent to the sequence length, which in turn is used to divide the score of the sequence. Since
+        the score is the log likelihood of the sequence (i.e. negative), `length_penalty` > 0.0 promotes longer
         sequences, while `length_penalty` < 0.0 encourages shorter sequences.
     """,
     )
@@ -263,25 +266,25 @@ class GenerationConfig:
         0, description="If set to int > 0, all ngrams of that size can only occur once."
     )
     bad_words_ids: t.List[t.List[int]] = dantic.Field(
-        description="""List of token ids that are not allowed to be generated. In order to get the token ids 
-        of the words that should not appear in the generated text, use 
+        description="""List of token ids that are not allowed to be generated. In order to get the token ids
+        of the words that should not appear in the generated text, use
         `tokenizer(bad_words, add_prefix_space=True, add_special_tokens=False).input_ids`.
         """,
     )
 
     # NOTE: t.Union is not yet supported on CLI, but the environment variable should already be available.
     force_words_ids: t.Union[t.List[t.List[int]], t.List[t.List[t.List[int]]]] = dantic.Field(
-        description="""List of token ids that must be generated. If given a `List[List[int]]`, this is treated 
-        as a simple list of words that must be included, the opposite to `bad_words_ids`. 
-        If given `List[List[List[int]]]`, this triggers a 
+        description="""List of token ids that must be generated. If given a `List[List[int]]`, this is treated
+        as a simple list of words that must be included, the opposite to `bad_words_ids`.
+        If given `List[List[List[int]]]`, this triggers a
         [disjunctive constraint](https://github.com/huggingface/transformers/issues/14081), where one
         can allow different forms of each word.
         """,
     )
     renormalize_logits: bool = dantic.Field(
         False,
-        description="""Whether to renormalize the logits after applying all the logits processors or warpers 
-        (including the custom ones). It's highly recommended to set this flag to `True` as the search 
+        description="""Whether to renormalize the logits after applying all the logits processors or warpers
+        (including the custom ones). It's highly recommended to set this flag to `True` as the search
         algorithms suppose the score logits are normalized but some logit processors or warpers break the normalization.
     """,
     )
@@ -291,40 +294,40 @@ class GenerationConfig:
         """,
     )
     forced_bos_token_id: int = dantic.Field(
-        description="""The id of the token to force as the first generated token after the 
-        ``decoder_start_token_id``. Useful for multilingual models like 
-        [mBART](https://huggingface.co/docs/transformers/model_doc/mbart) where the first generated token needs 
+        description="""The id of the token to force as the first generated token after the
+        ``decoder_start_token_id``. Useful for multilingual models like
+        [mBART](https://huggingface.co/docs/transformers/model_doc/mbart) where the first generated token needs
         to be the target language token.
     """,
     )
     forced_eos_token_id: t.Union[int, t.List[int]] = dantic.Field(
-        description="""The id of the token to force as the last generated token when `max_length` is reached. 
+        description="""The id of the token to force as the last generated token when `max_length` is reached.
         Optionally, use a list to set multiple *end-of-sequence* tokens.""",
     )
     remove_invalid_values: bool = dantic.Field(
         False,
-        description="""Whether to remove possible *nan* and *inf* outputs of the model to prevent the 
+        description="""Whether to remove possible *nan* and *inf* outputs of the model to prevent the
         generation method to crash. Note that using `remove_invalid_values` can slow down generation.""",
     )
     exponential_decay_length_penalty: t.Tuple[int, float] = dantic.Field(
-        description="""This tuple adds an exponentially increasing length penalty, after a certain amount of tokens 
-        have been generated. The tuple shall consist of: `(start_index, decay_factor)` where `start_index` 
+        description="""This tuple adds an exponentially increasing length penalty, after a certain amount of tokens
+        have been generated. The tuple shall consist of: `(start_index, decay_factor)` where `start_index`
         indicates where penalty starts and `decay_factor` represents the factor of exponential decay
     """,
     )
     suppress_tokens: t.List[int] = dantic.Field(
-        description="""A list of tokens that will be suppressed at generation. The `SupressTokens` logit 
+        description="""A list of tokens that will be suppressed at generation. The `SupressTokens` logit
         processor will set their log probs to `-inf` so that they are not sampled.
     """,
     )
     begin_suppress_tokens: t.List[int] = dantic.Field(
-        description="""A list of tokens that will be suppressed at the beginning of the generation. The 
+        description="""A list of tokens that will be suppressed at the beginning of the generation. The
         `SupressBeginTokens` logit processor will set their log probs to `-inf` so that they are not sampled.
         """,
     )
     forced_decoder_ids: t.List[t.List[int]] = dantic.Field(
-        description="""A list of pairs of integers which indicates a mapping from generation indices to token indices 
-        that will be forced before sampling. For example, `[[1, 123]]` means the second generated token will always 
+        description="""A list of pairs of integers which indicates a mapping from generation indices to token indices
+        that will be forced before sampling. For example, `[[1, 123]]` means the second generated token will always
         be a token of index 123.
         """,
     )
@@ -335,18 +338,18 @@ class GenerationConfig:
     )
     output_attentions: bool = dantic.Field(
         False,
-        description="""Whether or not to return the attentions tensors of all attention layers. 
+        description="""Whether or not to return the attentions tensors of all attention layers.
         See `attentions` under returned tensors for more details. """,
     )
     output_hidden_states: bool = dantic.Field(
         False,
-        description="""Whether or not to return the hidden states of all layers. 
+        description="""Whether or not to return the hidden states of all layers.
         See `hidden_states` under returned tensors for more details.
         """,
     )
     output_scores: bool = dantic.Field(
         False,
-        description="""Whether or not to return the prediction scores. See `scores` under returned 
+        description="""Whether or not to return the prediction scores. See `scores` under returned
         tensors for more details.""",
     )
 
@@ -354,19 +357,19 @@ class GenerationConfig:
     pad_token_id: int = dantic.Field(description="The id of the *padding* token.")
     bos_token_id: int = dantic.Field(description="The id of the *beginning-of-sequence* token.")
     eos_token_id: t.Union[int, t.List[int]] = dantic.Field(
-        description="""The id of the *end-of-sequence* token. Optionally, use a list to set 
+        description="""The id of the *end-of-sequence* token. Optionally, use a list to set
         multiple *end-of-sequence* tokens.""",
     )
 
     # NOTE: Generation parameters exclusive to encoder-decoder models
     encoder_no_repeat_ngram_size: int = dantic.Field(
         0,
-        description="""If set to int > 0, all ngrams of that size that occur in the 
+        description="""If set to int > 0, all ngrams of that size that occur in the
         `encoder_input_ids` cannot occur in the `decoder_input_ids`.
         """,
     )
     decoder_start_token_id: int = dantic.Field(
-        description="""If an encoder-decoder model starts decoding with a 
+        description="""If an encoder-decoder model starts decoding with a
         different token than *bos*, the id of that token.
         """,
     )
@@ -591,8 +594,8 @@ def _make_internal_generation_class(cls: type[LLMConfig]) -> type[GenerationConf
 
 
 USE_DEFAULT_PROMPT_TEMPLATE_DOCSTRING = """\
-Whether a model should use their default prompt template setup. This is useful if 
-users wants to do some prompt engineering. Default to True. 
+Whether a model should use their default prompt template setup. This is useful if
+users wants to do some prompt engineering. Default to True.
 """
 
 # NOTE: This DEFAULT_KEYMAP is a way to dynamically generate attr.field
@@ -637,7 +640,7 @@ class LLMConfig:
         """Default name to be used with `openllm start`"""
 
         __openllm_name_type__: t.Literal["dasherize", "lowercase"] = "dasherize"
-        """the default name typed for this model. "dasherize" will convert the name to lowercase and 
+        """the default name typed for this model. "dasherize" will convert the name to lowercase and
         replace spaces with dashes. "lowercase" will convert the name to lowercase."""
 
         __openllm_env__: openllm.utils.ModelEnv = Field(None, init=False)
@@ -947,12 +950,11 @@ class LLMConfig:
         will be prefixed with '<model_name>_generation_*'.
         """
         for name, field in attr.fields_dict(self.generation_class).items():
-            if t.get_origin(field.type) is t.Union:
+            ty = self.__openllm_hints__.get(name)
+            if t.get_origin(ty) is t.Union:
                 # NOTE: Union type is currently not yet supported, we probably just need to use environment instead.
                 continue
-            f = attrs_to_options(
-                name, field, self.__openllm_model_name__, typ=self.__openllm_hints__.get(name), suffix_generation=True
-            )(f)
+            f = attrs_to_options(name, field, self.__openllm_model_name__, typ=ty, suffix_generation=True)(f)
         f = optgroup.group(f"{self.generation_class.__name__} generation options")(f)
 
         if len(self.__class__.__openllm_attrs__) == 0:
@@ -961,10 +963,11 @@ class LLMConfig:
             return f
 
         for name, field in attr.fields_dict(self.__class__).items():
-            if t.get_origin(field.type) is t.Union:
+            ty = self.__openllm_hints__.get(name)
+            if t.get_origin(ty) is t.Union:
                 # NOTE: Union type is currently not yet supported, we probably just need to use environment instead.
                 continue
-            f = attrs_to_options(name, field, self.__openllm_model_name__, typ=self.__openllm_hints__[name])(f)
+            f = attrs_to_options(name, field, self.__openllm_model_name__, typ=ty)(f)
 
         return optgroup.group(f"{self.__class__.__name__} options")(f)
 

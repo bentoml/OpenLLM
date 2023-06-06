@@ -262,10 +262,9 @@ else:
 def parse_serve_args(serve_grpc: bool):
     """Parsing `bentoml serve|serve-grpc` click.Option to be parsed via `openllm start`"""
     from bentoml_cli.cli import cli
-    from click_option_group import optgroup
 
     command = "serve" if not serve_grpc else "serve-grpc"
-    group = optgroup.group(
+    group = cog.optgroup.group(
         f"Start a {'HTTP' if not serve_grpc else 'gRPC'} server options",
         help=f"Related to serving the model [synonymous to `bentoml {'serve-http' if not serve_grpc else command }`]",
     )
@@ -286,7 +285,7 @@ def parse_serve_args(serve_grpc: bool):
             # type can be determine from default value
             attrs.pop("type")
             param_decls = (*attrs.pop("opts"), *attrs.pop("secondary_opts"))
-            f = t.cast("WrappedServeFunction[P]", optgroup.option(*param_decls, **attrs)(f))
+            f = t.cast("WrappedServeFunction[P]", cog.optgroup.option(*param_decls, **attrs)(f))
 
         return group(f)
 
