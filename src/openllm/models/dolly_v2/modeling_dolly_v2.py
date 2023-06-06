@@ -125,7 +125,7 @@ class DollyV2(openllm.LLM):
     def generate(self, prompt: str, **attrs: t.Any) -> str:
         self.model.tokenizer = self.tokenizer
         llm_config: openllm.DollyV2Config = self.config.model_construct_env(**attrs)
-        decoded = self.model(prompt, do_sample=True, generation_config=llm_config.to_generation_config())
+        decoded = self.model(prompt, generation_config=llm_config.to_generation_config())
 
         # If the full text is requested, then append the decoded text to the original instruction.
         # This technically isn't the full text, as we format the instruction in the prompt the model has been
