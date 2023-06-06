@@ -20,7 +20,7 @@ from __future__ import annotations
 import openllm
 
 
-class DollyV2Config(openllm.LLMConfig, default_timeout=3600000):
+class DollyV2Config(openllm.LLMConfig, default_timeout=3600000, trust_remote_code=True):
     """Databricks’ Dolly is an instruction-following large language model trained on the Databricks
     machine learning platform that is licensed for commercial use.
 
@@ -37,6 +37,7 @@ class DollyV2Config(openllm.LLMConfig, default_timeout=3600000):
     return_full_text: bool = openllm.LLMConfig.Field(
         False, description="Whether to return the full prompt to the users."
     )
+    use_default_prompt_template: bool = False
 
     class GenerationConfig:
         temperature: float = 0.9

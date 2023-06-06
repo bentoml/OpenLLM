@@ -741,10 +741,15 @@ class LLMConfig:
 
         base_attrs, base_attr_map = _collect_base_attrs(cls, {a.name for a in own_attrs})
 
+        # __openllm_attrs__ is a tracking tuple[attr.Attribute[t.Any]]
+        # that we construct ourself.
+        cls.__openllm_attrs__ = tuple(a.name for a in own_attrs)
+
         # NOTE: Enable some default attributes that can be shared across all LLMConfig
         base_attrs = [
             attr.Attribute.from_counting_attr(k, cls.Field(default, env=field_env_key(k), description=docs), hints)
             for k, default, docs, hints in DEFAULT_LLMCONFIG_ATTRS
+            if k not in cls.__openllm_attrs__
         ] + base_attrs
         attrs: list[attr.Attribute[t.Any]] = own_attrs + base_attrs
 
@@ -776,9 +781,6 @@ class LLMConfig:
         _has_pre_init = bool(getattr(cls, "__attrs_pre_init__", False))
         _has_post_init = bool(getattr(cls, "__attrs_post_init__", False))
 
-        # __openllm_attrs__ is a tracking tuple[attr.Attribute[t.Any]]
-        # that we construct ourself.
-        cls.__openllm_attrs__ = tuple(a.name for a in attrs)
         AttrsTuple = _make_attr_tuple_class(cls.__name__, cls.__openllm_attrs__)
         # NOTE: generate a __attrs_init__ for the subclass
         cls.__attrs_init__ = _add_method_dunders(
