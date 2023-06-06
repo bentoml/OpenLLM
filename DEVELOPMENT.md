@@ -1,9 +1,14 @@
 # Developer Guide
 
-This Developer Guide is designed to help you contribute to the OpenLLM project. Follow these steps to set up your development environment and learn the process of contributing to our open-source project.
+This Developer Guide is designed to help you contribute to the OpenLLM project.
+Follow these steps to set up your development environment and learn the process
+of contributing to our open-source project.
 
-Join our [Discord Channel](https://l.bentoml.com/join-openllm-discord) and reach out to us if you have any question!
+Join our [Discord Channel](https://l.bentoml.com/join-openllm-discord) and reach
+out to us if you have any question!
+
 ## Table of Contents
+
 - [Setting Up Your Development Environment](#setting-up-your-development-environment)
 - [Project Structure](#project-structure)
 - [Development Workflow](#development-workflow)
@@ -11,28 +16,25 @@ Join our [Discord Channel](https://l.bentoml.com/join-openllm-discord) and reach
 - [Releasing a New Version](#releasing-a-new-version)
 
 ## Setting Up Your Development Environment
+
 Before you can start developing, you'll need to set up your environment:
 
-1. Ensure you have [Git](https://git-scm.com/), and [Python3.8+](https://www.python.org/downloads/) installed.
+1. Ensure you have [Git](https://git-scm.com/), and
+   [Python3.8+](https://www.python.org/downloads/) installed.
 2. Fork the OpenLLM repository from GitHub.
 3. Clone the forked repository from GitHub:
 
-    ```bash
-     git clone git@github.com:username/OpenLLM.git
-    ```
-4. Navigate to the cloned directory:
+   ```bash
+   git clone git@github.com:username/OpenLLM.git && cd openllm
+   ```
 
-    ```bash
-    cd openllm
-    ```
+4. Add the OpenLLM upstream remote to your local OpenLLM clone:
 
-5. Add the OpenLLM upstream remote to your local OpenLLM clone:
+   ```bash
+   git remote add upstream git@github.com:bentoml/OpenLLM.git
+   ```
 
-    ```bash
-    git remote add upstream git@github.com:bentoml/OpenLLM.git
-    ```
-
-6. Configure git to pull from the upstream remote:
+5. Configure git to pull from the upstream remote:
 
    ```bash
    git switch main # ensure you're on the main branch
@@ -40,10 +42,16 @@ Before you can start developing, you'll need to set up your environment:
    git branch --set-upstream-to=upstream/main
    ```
 
-7. Install [hatch](https://github.com/pypa/hatch) and [pre-commit](https://pre-commit.com/):
+6. Install [hatch](https://github.com/pypa/hatch):
 
    ```bash
    pip install hatch pre-commit
+   ```
+
+7. Run the following to setup all pre-commit hooks:
+
+   ```bash
+   hatch run setup
    ```
 
 8. Enter a project's environment with.
@@ -51,16 +59,11 @@ Before you can start developing, you'll need to set up your environment:
    hatch shell
    ```
 
-   This will automatically enter a virtual environment and update the relevant dependencies.
-
-9. Setup pre-commit hooks
-   ```bash
-   pre-commit install
-   ```
-   Now `pre-commit` will run automatically on `git commit`!
-
+   This will automatically enter a virtual environment and update the relevant
+   dependencies.
 
 ## Project Structure
+
 Here's a high-level overview of our project structure:
 
 ```
@@ -81,40 +84,45 @@ openllm/
 ```
 
 ## Development Workflow
+
 After setting up your environment, here's how you can start contributing:
 
 1. Create a new branch for your feature or fix:
 
-    ```bash
-    git checkout -b feature/my-feature
-    ```
+   ```bash
+   git checkout -b feature/my-feature
+   ```
 
 2. Make your changes to the codebase.
-3. Write tests that verify your feature or fix (see [Writing Tests](#writing-tests) below).
+3. Write tests that verify your feature or fix (see
+   [Writing Tests](#writing-tests) below).
 4. Run all tests to ensure your changes haven't broken anything:
 
-    ```bash
-    hatch run test
-    ```
+   ```bash
+   hatch run test
+   ```
 
 5. Commit your changes:
 
-    ```bash
-    git commit -m "Add my feature"
-    ```
+   ```bash
+   git commit -m "Add my feature"
+   ```
 
 6. Push your changes to your fork:
 
-    ```bash
-    git push origin feature/my-feature
-    ```
+   ```bash
+   git push origin feature/my-feature
+   ```
 
 7. Submit a Pull Request on GitHub.
 
 ## Writing Tests
-Good tests are crucial for the stability of our codebase. Always write tests for your features and fixes.
 
-We use `pytest` for our tests. Make sure your tests are in the `tests/` directory and their filenames start with `test_`.
+Good tests are crucial for the stability of our codebase. Always write tests for
+your features and fixes.
+
+We use `pytest` for our tests. Make sure your tests are in the `tests/`
+directory and their filenames start with `test_`.
 
 Run all tests with:
 
