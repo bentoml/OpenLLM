@@ -52,4 +52,4 @@ jobs:
         run: |
           git config --global user.name "${{ steps.import-gpg.outputs.name }}"
           git config --global user.email "${{ steps.import-gpg.outputs.email }}"
-          ./tools/release
+          ./.github/actions/release.sh
