@@ -15,10 +15,9 @@
 name: release-notes
 on:
   workflow_dispatch:
-  workflow_run:
-    workflows: [release]
-    types:
-      - completed
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
 env:
   # This special value tells pypi that the user identity is supplied within the token
   HATCH_INDEX_USER: __token__
