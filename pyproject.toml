@@ -26,14 +26,7 @@ classifiers = [
 dependencies = [
     # bentoml[io] includes pydantic, PIL, filetype, pandas and numpy
     # bentoml[grpc,grpc-reflection] include grpcio, grpcio-reflection
-    "bentoml",
-    "filetype",
-    "Pillow",
-    "protobuf",
-    "grpcio",
-    "grpcio-health-checking",
-    "opentelemetry-instrumentation-grpc==0.35b0",
-    "grpcio-reflection",
+    "bentoml[grpc,grpc-reflection,io]>=1.0.21",
     "httpx[http2]",
     # transformers[torch] includes torch and transformers
     "transformers[torch,accelerate,tokenizers,onnxruntime,onnx]>=4.29.0",
