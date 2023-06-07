@@ -18,6 +18,8 @@ import logging
 import typing as t
 from urllib.parse import urlparse
 
+import openllm
+
 from .base import BaseAsyncClient, BaseClient
 
 logger = logging.getLogger(__name__)
@@ -46,6 +48,9 @@ class HTTPClientMixin:
             return self._metadata["timeout"]
         except KeyError:
             raise RuntimeError("Malformed service endpoint. (Possible malicious)")
+
+    def postprocess(self, result: dict[str, t.Any]) -> openllm.GenerationOutput:
+        return openllm.GenerationOutput(**result)
 
 
 class HTTPClient(HTTPClientMixin, BaseClient):

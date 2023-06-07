@@ -16,12 +16,18 @@ Schema definition for OpenLLM. This can be use for client interaction.
 """
 from __future__ import annotations
 
+import functools
 import typing as t
 
 import attr
 import inflection
 
 import openllm
+
+if t.TYPE_CHECKING:
+    DictStrAny = dict[str, t.Any]
+else:
+    DictStrAny = dict
 
 
 @attr.frozen(slots=True)
@@ -32,6 +38,19 @@ class GenerationInput:
     llm_config: openllm.LLMConfig
     """A mapping of given LLM configuration values for given system."""
 
+    @staticmethod
+    def convert_llm_config(
+        data: dict[str, t.Any] | openllm.LLMConfig, cls: type[openllm.LLMConfig] | None = None
+    ) -> openllm.LLMConfig:
+        if isinstance(data, openllm.LLMConfig):
+            return data
+        elif openllm.utils.LazyType(DictStrAny).isinstance(data):
+            if cls is None:
+                raise ValueError("'cls' must pass if given data is a dictionary.")
+            return cls(**data)
+        else:
+            raise RuntimeError(f"Type {type(data)} is not yet supported.")
+
     @classmethod
     def for_model(cls, model_name: str, **attrs: t.Any) -> type[GenerationInput]:
         llm_config = openllm.AutoConfig.for_model(model_name, **attrs)
@@ -39,7 +58,11 @@ class GenerationInput:
             inflection.camelize(llm_config.__openllm_model_name__) + "GenerationInput",
             attrs={
                 "prompt": attr.field(type=str),
-                "llm_config": attr.field(type=llm_config.__class__, default=llm_config),
+                "llm_config": attr.field(
+                    type=llm_config.__class__,
+                    default=llm_config,
+                    converter=functools.partial(cls.convert_llm_config, cls=llm_config.__class__),
+                ),
             },
         )
 

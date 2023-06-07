@@ -45,7 +45,7 @@ if t.TYPE_CHECKING:
 
 class ClientMixin:
     _api_version: str
-    _config_class: type[bentoml.client.Client]
+    _client_class: type[bentoml.client.Client]
 
     _host: str
     _port: str
@@ -60,7 +60,7 @@ class ClientMixin:
         self._metadata = self.call("metadata")
 
     def __init_subclass__(cls, *, client_type: t.Literal["http", "grpc"] = "http", api_version: str = "v1"):
-        cls._config_class = bentoml.client.HTTPClient if client_type == "http" else bentoml.client.GrpcClient
+        cls._client_class = bentoml.client.HTTPClient if client_type == "http" else bentoml.client.GrpcClient
         cls._api_version = api_version
 
     @property
@@ -102,13 +102,17 @@ class ClientMixin:
     @property
     def _cached(self) -> AnnotatedClient:
         if self.__client__ is None:
-            self._config_class.wait_until_server_ready(self._host, int(self._port), timeout=self._timeout)
-            self.__client__ = t.cast("AnnotatedClient", self._config_class.from_url(self._address))
+            self._client_class.wait_until_server_ready(self._host, int(self._port), timeout=self._timeout)
+            self.__client__ = t.cast("AnnotatedClient", self._client_class.from_url(self._address))
         return self.__client__
 
     def prepare(self, prompt: str, **attrs: t.Any):
         return_raw_response = attrs.pop("return_raw_response", False)
         return return_raw_response, *self.llm.sanitize_parameters(prompt, **attrs)
+
+    @abstractmethod
+    def postprocess(self, result: t.Any) -> openllm.GenerationOutput:
+        ...
 
 
 class BaseClient(ClientMixin):
@@ -126,7 +130,8 @@ class BaseClient(ClientMixin):
     def query(self, prompt: str, **attrs: t.Any) -> dict[str, t.Any] | str:
         return_raw_response, prompt, generate_kwargs, postprocess_kwargs = self.prepare(prompt, **attrs)
         inputs = openllm.GenerationInput(prompt=prompt, llm_config=self.config.model_construct_env(**generate_kwargs))
-        r = openllm.GenerationOutput(**self.call("generate", inputs))
+        result = self.call("generate", inputs)
+        r = self.postprocess(result)
 
         if return_raw_response:
             return openllm.utils.bentoml_cattr.unstructure(r)

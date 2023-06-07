@@ -18,6 +18,8 @@ import asyncio
 import logging
 import typing as t
 
+import openllm
+
 from .base import BaseAsyncClient, BaseClient
 
 if t.TYPE_CHECKING:
@@ -53,6 +55,11 @@ class GrpcClientMixin:
             return int(self._metadata.json.struct_value.fields["timeout"].number_value)
         except KeyError:
             raise RuntimeError("Malformed service endpoint. (Possible malicious)")
+
+    def postprocess(self, result: Response) -> openllm.GenerationOutput:
+        from google.protobuf.json_format import MessageToDict
+
+        return openllm.GenerationOutput(**MessageToDict(result.json, preserving_proto_field_name=True))
 
 
 class GrpcClient(GrpcClientMixin, BaseClient, client_type="grpc"):
