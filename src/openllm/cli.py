@@ -33,7 +33,9 @@ import click_option_group as cog
 import inflection
 import orjson
 import psutil
-from bentoml._internal.configuration import get_debug_mode, get_quiet_mode
+from bentoml._internal.configuration import get_debug_mode, get_quiet_mode, set_quiet_mode
+from bentoml._internal.configuration.containers import BentoMLContainer
+from bentoml._internal.log import configure_logging, configure_server_logging
 from bentoml_cli.utils import BentoMLCommandGroup
 
 import openllm
@@ -79,8 +81,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
         """
         # The following logics is similar to one of BentoMLCommandGroup
 
-        from bentoml._internal.configuration import DEBUG_ENV_VAR, QUIET_ENV_VAR, set_debug_mode, set_quiet_mode
-        from bentoml._internal.log import configure_logging
+        from bentoml._internal.configuration import DEBUG_ENV_VAR, QUIET_ENV_VAR, set_debug_mode
 
         from .utils import analytics
 
@@ -492,9 +493,9 @@ output_option = click.option(
 
 
 def cli_factory() -> click.Group:
-    from bentoml._internal.log import configure_logging
-
     configure_logging()
+
+    model_store = BentoMLContainer.model_store.get()
 
     @click.group(cls=OpenLLMCommandGroup, context_settings=_CONTEXT_SETTINGS, name="openllm")
     def cli():
@@ -565,6 +566,9 @@ def cli_factory() -> click.Group:
 
         $ openllm build flan-t5
         """
+        if output == "porcelain":
+            set_quiet_mode(True)
+            configure_server_logging()
         bento, _previously_built = openllm.build(
             model_name,
             __cli__=True,
@@ -711,6 +715,33 @@ def cli_factory() -> click.Group:
                 _echo(m.tag)
         return m
 
+    @cli.command()
+    @click.option(
+        "-y",
+        "--yes",
+        "--assume-yes",
+        is_flag=True,
+        help="Skip confirmation when deleting a specific model",
+    )
+    def prune(yes: bool):
+        """Remove all saved models locally."""
+        available = [
+            m
+            for t in map(inflection.dasherize, openllm.CONFIG_MAPPING.keys())
+            for m in bentoml.models.list()
+            if t in m.tag.name
+        ]
+
+        for model in available:
+            if yes:
+                delete_confirmed = True
+            else:
+                delete_confirmed = click.confirm(f"delete model {model.tag}?")
+
+            if delete_confirmed:
+                model_store.delete(model.tag)
+                click.echo(f"{model} deleted.")
+
     @cli.command(name="query", aliases=["run", "ask"])
     @cog.optgroup.group(
         "Host options", cls=cog.RequiredMutuallyExclusiveOptionGroup, help="default host for the running LLM server"
@@ -767,7 +798,7 @@ def cli_factory() -> click.Group:
             _echo(res["responses"], fg="white")
 
     if t.TYPE_CHECKING:
-        assert download_models and build and models and version and start and start_grpc and query
+        assert download_models and build and models and version and start and start_grpc and query and prune
 
     if psutil.WINDOWS:
         sys.stdout.reconfigure(encoding="utf-8")  # type: ignore
