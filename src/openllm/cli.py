@@ -684,7 +684,7 @@ def cli_factory() -> click.Group:
         else:
             model = openllm.AutoLLM.for_model(model_name, pretrained=pretrained, llm_config=config)
 
-        tag = model.make_tag()
+        tag = model.make_tag(trust_remote_code=config.__openllm_trust_remote_code__)
 
         if len(bentoml.models.list(tag)) == 0:
             if output == "pretty":
