@@ -493,11 +493,14 @@ output_option = click.option(
 
 
 def cli_factory() -> click.Group:
+    from .__about__ import __version__
+
     configure_logging()
 
     model_store = BentoMLContainer.model_store.get()
 
     @click.group(cls=OpenLLMCommandGroup, context_settings=_CONTEXT_SETTINGS, name="openllm")
+    @click.version_option(__version__, "--version", "-v")
     def cli():
         """
         \b
@@ -516,27 +519,6 @@ def cli_factory() -> click.Group:
         \b
             - Powered by BentoML 🍱
         """
-
-    @cli.command()
-    @output_option
-    @click.pass_context
-    def version(ctx: click.Context, output: OutputLiteral):
-        """🚀 OpenLLM version."""
-        from gettext import gettext
-
-        from .__about__ import __version__
-
-        message = gettext("%(prog)s, version %(version)s")
-        prog_name = ctx.find_root().info_name
-
-        if output == "pretty":
-            _echo(message % {"prog": prog_name, "version": __version__}, color=ctx.color)
-        elif output == "json":
-            _echo(orjson.dumps({"version": __version__}, option=orjson.OPT_INDENT_2).decode())
-        else:
-            _echo(__version__)
-
-        ctx.exit()
 
     @cli.group(cls=OpenLLMCommandGroup, context_settings=_CONTEXT_SETTINGS)
     def start():
@@ -798,7 +780,7 @@ def cli_factory() -> click.Group:
             _echo(res["responses"], fg="white")
 
     if t.TYPE_CHECKING:
-        assert download_models and build and models and version and start and start_grpc and query and prune
+        assert download_models and build and models and start and start_grpc and query and prune
 
     if psutil.WINDOWS:
         sys.stdout.reconfigure(encoding="utf-8")  # type: ignore
