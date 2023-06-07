@@ -35,7 +35,7 @@ class Falcon(openllm.LLM):
 
     default_model = "tiiuae/falcon-7b"
 
-    requirements = ["einops"]
+    requirements = ["einops", "xformers", "safetensors"]
 
     pretrained = ["tiiuae/falcon-7b", "tiiuae/falcon-40b", "tiiuae/falcon-7b-instruct", "tiiuae/falcon-40b-instruct"]
 
@@ -49,16 +49,15 @@ class Falcon(openllm.LLM):
         device_map = attrs.pop("device_map", "auto")
 
         tokenizer = transformers.AutoTokenizer.from_pretrained(pretrained)
-        model = transformers.AutoModelForCausalLM.from_pretrained(
-            pretrained, trust_remote_code=trust_remote_code, torch_dtype=torch_dtype, device_map=device_map
+        pipeline = transformers.pipeline(
+            "text-generation",
+            model=pretrained,
+            trust_remote_code=trust_remote_code,
+            torch_dtype=torch_dtype,
+            device_map=device_map,
+            tokenizer=tokenizer,
         )
-        config = transformers.AutoConfig.from_pretrained(pretrained, trust_remote_code=trust_remote_code)
-        transformers.AutoModelForCausalLM.register(config.__class__, model.__class__)
-        return bentoml.transformers.save_model(
-            tag,
-            transformers.pipeline("text-generation", model=model, tokenizer=tokenizer),
-            custom_objects={"tokenizer": tokenizer},
-        )
+        return bentoml.transformers.save_model(tag, pipeline, custom_objects={"tokenizer": tokenizer})
 
     def sanitize_parameters(
         self,
@@ -67,7 +66,7 @@ class Falcon(openllm.LLM):
         top_k: int | None = None,
         num_return_sequences: int | None = None,
         eos_token_id: int | None = None,
-        use_default_prompt_template: bool = True,
+        use_default_prompt_template: bool = False,
         **attrs: t.Any,
     ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
         if use_default_prompt_template:

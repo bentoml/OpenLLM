@@ -642,7 +642,6 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
             kwds["accelerator"] = "bettertransformer"
 
         if self.__llm_model__ is None:
-            # Hmm, bentoml.transformers.load_model doesn't yet support args.
             self.__llm_model__ = self._bentomodel.load_model(*self.__llm_args__, **kwds)
 
         if (

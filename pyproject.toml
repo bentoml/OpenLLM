@@ -67,7 +67,7 @@ requires-python = ">=3.8"
 [project.optional-dependencies]
 all = ['openllm[fine-tune]', 'openllm[chatglm]', 'openllm[falcon]', 'openllm[flan-t5]', 'openllm[starcoder]']
 chatglm = ['cpm_kernels', 'sentencepiece']
-falcon = ['einops']
+falcon = ['einops', 'xformers', 'safetensors']
 fine-tune = ['peft', 'bitsandbytes', 'datasets']
 flan-t5 = ['flax', 'jax', 'jaxlib', 'tensorflow']
 starcoder = ['bitsandbytes']

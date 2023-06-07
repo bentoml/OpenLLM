@@ -22,16 +22,13 @@ import contextlib
 import functools
 import os
 import typing as t
-from datetime import datetime
 
 import attr
-import bentoml
 from bentoml._internal.utils import analytics as _internal_analytics
 from bentoml._internal.utils.analytics import usage_stats as _internal_usage
 
 if t.TYPE_CHECKING:
     import openllm
-    import click
 
 from ..__about__ import __version__
 
@@ -77,15 +74,6 @@ class OpenllmCliEvent(_internal_analytics.schemas.EventMeta):
     return_code: int = attr.field(default=None)
 
 
-if t.TYPE_CHECKING:
-    T_con = t.TypeVar("T_con", contravariant=True)
-
-    class HandlerProtocol(t.Protocol[T_con]):
-        @staticmethod
-        def __call__(group: click.Group, cmd_name: str, return_value: T_con | None = None) -> OpenllmCliEvent:
-            ...
-
-
 @attr.define
 class StartInitEvent(_internal_analytics.schemas.EventMeta):
     model_name: str
@@ -111,35 +99,3 @@ def track_start_init(
     if do_not_track():
         return
     track(StartInitEvent.handler(llm_config, supported_gpu))
-
-
-@attr.define
-class BuildEvent(OpenllmCliEvent):
-    bento_creation_timestamp: datetime = attr.field(default=None)
-    bento_size_in_gb: float = attr.field(default=0)
-    model_size_in_gb: float = attr.field(default=0)
-    model_type: str = attr.field(default=None)
-    model_framework: str = attr.field(default=None)
-
-    @staticmethod
-    def handler(group: click.Group, cmd_name: str, return_value: bentoml.Bento | None = None) -> BuildEvent:
-        from bentoml._internal.utils import calc_dir_size
-
-        assert group.name is not None, "group name should not be None"
-        if return_value is not None:
-            bento = return_value
-            return BuildEvent(
-                group.name,
-                cmd_name,
-                bento_creation_timestamp=bento.info.creation_time,
-                bento_size_in_gb=calc_dir_size(bento.path) / 1024**3,
-                model_size_in_gb=calc_dir_size(bento.path_of("/models")) / 1024**3,
-                model_type=bento.info.labels["_type"],
-                model_framework=bento.info.labels["_framework"],
-            )
-        return BuildEvent(group.name, cmd_name)
-
-
-cli_events_map: dict[str, dict[str, HandlerProtocol[t.Any]]] = {
-    "openllm": {"build": BuildEvent.handler, "bundle": BuildEvent.handler}
-}

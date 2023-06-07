@@ -129,22 +129,16 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
 
             start_time = time.time_ns()
 
-            def get_tracking_event(return_value: t.Any):
-                assert group.name, "Group name is required"
-                if group.name in analytics.cli_events_map and command_name in analytics.cli_events_map[group.name]:
-                    return analytics.cli_events_map[group.name][command_name](group, command_name, return_value)
-                return analytics.OpenllmCliEvent(cmd_group=group.name, cmd_name=command_name)
-
             with analytics.set_bentoml_tracking():
+                assert group.name is not None, "group.name should not be None"
+                event = analytics.OpenllmCliEvent(cmd_group=group.name, cmd_name=command_name)
                 try:
                     return_value = func(*args, **attrs)
-                    event = get_tracking_event(return_value)
                     duration_in_ms = (time.time_ns() - start_time) / 1e6
                     event.duration_in_ms = duration_in_ms
                     analytics.track(event)
                     return return_value
                 except Exception as e:
-                    event = get_tracking_event(None)
                     duration_in_ms = (time.time_ns() - start_time) / 1e6
                     event.duration_in_ms = duration_in_ms
                     event.error_type = type(e).__name__
@@ -580,7 +574,7 @@ def cli_factory() -> click.Group:
 
         if output == "pretty":
             if not get_quiet_mode():
-                _echo("\n" + OPENLLM_FIGLET)
+                _echo("\n" + OPENLLM_FIGLET, fg="white")
                 if not _previously_built:
                     _echo(f"Successfully built {bento}.", fg="green")
                 else:

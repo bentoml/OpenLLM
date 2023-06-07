@@ -86,7 +86,7 @@ def construct_python_options(llm: openllm.LLM, llm_fs: FS) -> PythonOptions:
             "protobuf",
             "grpcio",
             "grpcio-health-checking",
-            "opentelemetry-instrumentation-grpc==0.35b0",
+            "opentelemetry-instrumentation-grpc==0.38b0",
             "grpcio-reflection",
         ]
     )
