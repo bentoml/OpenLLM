@@ -8,8 +8,8 @@
 #####
 [![pypi_status](https://img.shields.io/pypi/v/openllm.svg)](https://pypi.org/project/openllm)
 [![ci](https://github.com/bentoml/OpenLLM/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/bentoml/OpenLLM/actions/workflows/ci.yml)
-[![Discord](https://badgen.net/badge/icon/Discord?icon=discord&label=Join%20Us)](https://discord.gg/qc3RekjtuY)
-[![Twitter](https://badgen.net/badge/icon/@bentomlai?icon=twitter&label=Follow%20Us)](https://twitter.com/bentomlai)
+[![Discord](https://badgen.net/badge/icon/OpenLLM/7289da?icon=discord&label=Join%20Us)](https://discord.gg/qc3RekjtuY)
+[![Twitter](https://badgen.net/badge/icon/@bentomlai/1DA1F2?icon=twitter&label=Follow%20Us)](https://twitter.com/bentomlai)
 
 
 ## 📖 Introduction
