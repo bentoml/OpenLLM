@@ -1,10 +1,16 @@
 <div align="center">
     <h1 align="center">OpenLLM</h1>
-    <br>
     <strong>Build, fine-tune, serve, and deploy Large-Language Models including popular ones like StableLM, Llama, Dolly, Flan-T5, Vicuna, or even your custom LLMs.<br></strong>
     <i>Powered by BentoML 🍱</i>
     <br>
 </div>
+
+#####
+[![pypi_status](https://img.shields.io/pypi/v/openllm.svg)](https://pypi.org/project/openllm)
+[![ci](https://github.com/bentoml/OpenLLM/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/bentoml/OpenLLM/actions/workflows/ci.yml)
+[![Discord](https://badgen.net/badge/icon/Discord?icon=discord&label=Join%20Us)](https://discord.gg/qc3RekjtuY)
+[![Twitter](https://badgen.net/badge/icon/@bentomlai?icon=twitter&label=Follow%20Us)](https://twitter.com/bentomlai)
+
 
 ## 📖 Introduction
 
