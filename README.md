@@ -91,27 +91,29 @@ start interacting with the model:
 
 To deploy your LLMs into production:
 
-1. **Build Your BentoML Service**: With OpenLLM, you can easily build your
-   BentoML service for a specific model, like `dolly-v2`, using the `build`
-   command:
+1. **Building a Bento**: With OpenLLM, you can easily build a
+   Bento for a specific model, like `dolly-v2`, using the `build`
+   command.:
 
-```bash
-openllm build dolly-v2
-```
+    ```bash
+    openllm build dolly-v2
+    ```
 
-> _NOTE_: If you wish to build OpenLLM from the git source, set
-> `OPENLLM_DEV_BUILD=True` to include the generated wheels in the bundle.
+    A [Bento](https://docs.bentoml.org/en/latest/concepts/bento.html#what-is-a-bento), in BentoML, is the unit of distribution. It packages your program's source code, models, files, artifacts, and dependencies.
+
+    > _NOTE_: If you wish to build OpenLLM from the git source, set
+    > `OPENLLM_DEV_BUILD=True` to include the generated wheels in the bundle.
 
 2. **Containerize your Bento**
 
-```
-bentoml containerize <name:version>
-```
+    ```
+    bentoml containerize <name:version>
+    ```
 
-BentoML offers a comprehensive set of options for deploying and hosting online
-ML services in production. To learn more, check out the
-[Deploying a Bento](https://docs.bentoml.org/en/latest/concepts/deploy.html)
-guide.
+    BentoML offers a comprehensive set of options for deploying and hosting online
+    ML services in production. To learn more, check out the
+    [Deploying a Bento](https://docs.bentoml.org/en/latest/concepts/deploy.html)
+    guide.
 
 ## 🧩 Models and Dependencies
 
@@ -130,11 +132,11 @@ to install dependencies for all models. By default, you can run `dolly-v2` and
 `flan-t5` without installing any additional packages.
 
 To enable support for a specific model, you'll need to install its corresponding
-dependencies. You can do this by using `pip install openllm[model_name]`. For
+dependencies. You can do this by using `pip install "openllm[model_name]"`. For
 example, to use **chatglm**:
 
 ```bash
-pip install openllm[chatglm]
+pip install "openllm[chatglm]"
 ```
 
 This will install `cpm_kernels` and `sentencepiece` additionally
@@ -161,6 +163,47 @@ OpenLLM encourages contributions by welcoming users to incorporate their custom
 LLMs into the ecosystem. Checkout
 [Adding a New Model Guide](https://github.com/bentoml/OpenLLM/blob/main/ADDING_NEW_MODEL.md)
 to see how you can do it yourself.
+
+## ⚙️ Integrations
+OpenLLM is not just a standalone product; it's a building block designed to easily integrate with other powerful tools. We currently offer integration with [BentoML](https://github.com/bentoml/BentoML) and [LangChain](https://github.com/hwchase17/langchain).
+
+### BentoML
+OpenLLM models can be integrated as a [Runner](https://docs.bentoml.org/en/latest/concepts/runner.html) in your BentoML service. These runners has a `generate` method that takes a string as a prompt and returns a corresponding output string. This will allow you to plug and play any OpenLLM models with your existing ML workflow.
+
+```python
+import bentoml
+import openllm
+
+model = "dolly-v2"
+
+llm_config = openllm.AutoConfig.for_model(model)
+llm_runner = openllm.Runner(model, llm_config=llm_config)
+
+svc = bentoml.Service(
+    name=f"llm-dolly-v2-service", runners=[llm_runner]
+)
+
+@svc.api(input=Text(), output=Text())
+async def prompt(input_text: str) -> str:
+    answer = await llm_runner.generate(input_text)
+    return answer
+```
+
+### LangChain (⏳Coming Soon!)
+In future LangChain releases, you'll be able to effortlessly invoke OpenLLM models, like so:
+```python
+from langchain.llms import OpenLLM
+llm = OpenLLM.for_model(model_name='flan-t5')
+llm("What is the difference between a duck and a goose?")
+```
+ if you have an OpenLLM server deployed elsewhere, you can connect to it by specifying its URL:
+
+```python
+from langchain.llms import OpenLLM
+llm = OpenLLM.for_model(server_url='http://localhost:8000', server_type='http')
+llm("What is the difference between a duck and a goose?")
+```
+
 
 ## 🍇 Telemetry
 
