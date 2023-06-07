@@ -1,16 +1,19 @@
 <div align="center">
     <h1 align="center">OpenLLM</h1>
+    <a href="https://pypi.org/project/openllm">
+        <img src="https://img.shields.io/pypi/v/openllm.svg" alt="pypi_status" />
+    </a><a href="https://github.com/bentoml/OpenLLM/actions/workflows/ci.yml">
+        <img src="https://github.com/bentoml/OpenLLM/actions/workflows/ci.yml/badge.svg?branch=main" alt="ci" />
+    </a><a href="https://l.bentoml.com/join-openllm-discord">
+        <img src="https://badgen.net/badge/icon/OpenLLM/7289da?icon=discord&label=Join%20Us" alt="Discord" />
+    </a><a href="https://twitter.com/bentomlai">
+        <img src="https://badgen.net/badge/icon/@bentomlai/1DA1F2?icon=twitter&label=Follow%20Us" alt="Twitter" />
+    </a><br>
     <strong>Build, fine-tune, serve, and deploy Large-Language Models including popular ones like StableLM, Llama, Dolly, Flan-T5, Vicuna, or even your custom LLMs.<br></strong>
     <i>Powered by BentoML 🍱</i>
-    <br>
 </div>
 
-#####
-[![pypi_status](https://img.shields.io/pypi/v/openllm.svg)](https://pypi.org/project/openllm)
-[![ci](https://github.com/bentoml/OpenLLM/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/bentoml/OpenLLM/actions/workflows/ci.yml)
-[![Discord](https://badgen.net/badge/icon/OpenLLM/7289da?icon=discord&label=Join%20Us)](https://discord.gg/qc3RekjtuY)
-[![Twitter](https://badgen.net/badge/icon/@bentomlai/1DA1F2?icon=twitter&label=Follow%20Us)](https://twitter.com/bentomlai)
-
+<br/>
 
 ## 📖 Introduction
 
