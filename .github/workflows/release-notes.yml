@@ -14,10 +14,10 @@
 
 name: release-notes
 on:
-  workflow_dispatch:
   push:
     tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - '*'
+  workflow_dispatch:
 env:
   # This special value tells pypi that the user identity is supplied within the token
   HATCH_INDEX_USER: __token__
@@ -80,6 +80,7 @@ jobs:
         run: |
           git config --global user.name "${{ steps.import-gpg.outputs.name }}"
           git config --global user.email "${{ steps.import-gpg.outputs.email }}"
+          git pull --autostash --no-edit --gpg-sign --ff
 
           echo "Bumping version to dev..." && hatch version patch && hatch version dev
 
