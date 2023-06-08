@@ -26,6 +26,7 @@ from abc import ABC, ABCMeta, abstractmethod
 
 import bentoml
 import inflection
+import orjson
 from bentoml.types import ModelSignature, ModelSignatureDict
 
 import openllm
@@ -486,7 +487,7 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
 
     @property
     def identifying_params(self) -> dict[str, t.Any]:
-        return {"configuration": self.config.model_dump(), "pretrained": self.pretrained}
+        return {"configuration": self.config.model_dump_json(), "pretrained": orjson.dumps(self.pretrained).decode()}
 
     @t.overload
     def make_tag(

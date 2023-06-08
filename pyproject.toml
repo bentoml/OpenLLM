@@ -88,6 +88,9 @@ path = "src/openllm/__about__.py"
 [tool.hatch.metadata]
 allow-direct-references = true
 
+[tool.hatch.build.targets.wheel]
+packages = ["src/openllm", "src/openllm_client"]
+
 [tool.hatch.envs.default]
 dependencies = [
     "coverage[toml]>=6.5",
