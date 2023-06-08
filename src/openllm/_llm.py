@@ -331,11 +331,6 @@ class LLMMetaclass(ABCMeta):
             else:
                 logger.debug("Using custom 'import_model' for %s", cls_name)
 
-            if "load_model" not in namespace:
-                namespace["load_model"] = bentoml.transformers.load_model
-            else:
-                logger.debug("Using custom 'load_model' for %s", cls_name)
-
             # NOTE: populate with default cache.
             namespace.update({k: None for k in ("__llm_bentomodel__", "__llm_model__", "__llm_tokenizer__")})
 
@@ -646,7 +641,10 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
             kwds["accelerator"] = "bettertransformer"
 
         if self.__llm_model__ is None:
-            self.__llm_model__ = self.load_model(self.tag, *self._llm_args, **kwds)
+            if hasattr(self, "load_model") and self.load_model is not self._bentomodel.load_model:
+                self.__llm_model__ = self.load_model(self.tag, *self._llm_args, **kwds)
+            else:
+                self.__llm_model__ = self._bentomodel.load_model(*self._llm_args, **kwds)
 
         if (
             self.load_in_mha
