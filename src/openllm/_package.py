@@ -69,7 +69,11 @@ def build_editable(path: str) -> str | None:
 
 
 def construct_python_options(llm: openllm.LLM, llm_fs: FS) -> PythonOptions:
-    packages: list[str] = []
+    # NOTE: add openllm to the default dependencies
+    # if users has openllm custom built wheels, it will still respect
+    # that since bentoml will always install dependencies from requirements.txt
+    # first, then proceed to install everything inside the wheels/ folder.
+    packages: list[str] = ["openllm"]
 
     ModelEnv = openllm.utils.ModelEnv(llm.__openllm_start_name__)
     if llm.config.__openllm_requirements__ is not None:
@@ -77,19 +81,6 @@ def construct_python_options(llm: openllm.LLM, llm_fs: FS) -> PythonOptions:
 
     if not (str(os.environ.get("BENTOML_BUNDLE_LOCAL_BUILD", False)).lower() == "false"):
         packages.append(f"bentoml>={'.'.join([str(i) for i in pkg.pkg_version_info('bentoml')])}")
-
-    # NOTE: auxilary packages from bentoml[io-image,grpc,grpc-reflection]
-    packages.extend(
-        [
-            "filetype",
-            "Pillow",
-            "protobuf",
-            "grpcio",
-            "grpcio-health-checking",
-            "opentelemetry-instrumentation-grpc==0.38b0",
-            "grpcio-reflection",
-        ]
-    )
 
     to_use_framework = ModelEnv.get_framework_env()
     if to_use_framework == "flax":
