@@ -26,6 +26,7 @@ import bentoml
 import fs
 import inflection
 from bentoml._internal.bento.build_config import DockerOptions, PythonOptions
+from bentoml._internal.configuration import get_debug_mode
 
 import openllm
 import openllm.utils as utils
@@ -128,11 +129,22 @@ def construct_python_options(llm: openllm.LLM, llm_fs: FS) -> PythonOptions:
 
 def construct_docker_options(llm: openllm.LLM, _: FS) -> DockerOptions:
     ModelEnv = openllm.utils.ModelEnv(llm.__openllm_start_name__)
+    _bentoml_config_options = os.environ.pop("BENTOML_CONFIG_OPTIONS", "")
+    _bentoml_config_options += (
+        " "
+        if _bentoml_config_options
+        else ""
+        + "api_server.traffic.timeout=3600"  # NOTE: Currently we hardcode this value
+        + f' runners."llm-{llm.config.__openllm_start_name__}-runner".traffic.timeout'
+        + f"={llm.config.__openllm_timeout__}"
+    )
     return DockerOptions(
         cuda_version="11.6",  # NOTE: Torch 2.0 currently only support 11.6 as the latest CUDA version
         env={
             ModelEnv.framework: ModelEnv.get_framework_env(),
             "OPENLLM_MODEL": llm.config.__openllm_model_name__,
+            "BENTOML_DEBUG": str(get_debug_mode()),
+            "BENTOML_CONFIG_OPTIONS": _bentoml_config_options,
         },
         system_packages=["git"],
     )
