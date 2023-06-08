@@ -143,4 +143,10 @@ To release a new version, use `gh workflow run`:
 gh workflow run create-releases.yml
 ```
 
+After the release CI finishes, then run the following:
+
+```bash
+gh workflow run release-notes.yml
+```
+
 > Note that currently this workflow can only be run by the BentoML team.
