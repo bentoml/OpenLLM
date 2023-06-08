@@ -35,7 +35,7 @@ while true; do
 done
 
 # Set the maximum timeout (in seconds)
-timeout=600
+timeout=36000
 
 sleep 10
 
