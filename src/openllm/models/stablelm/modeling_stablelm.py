@@ -42,8 +42,7 @@ logger = logging.getLogger(__name__)
 class StableLM(openllm.LLM):
     __openllm_internal__ = True
 
-    load_in_mha = False
-
+    load_in_mha = True
     default_model = "stabilityai/stablelm-tuned-alpha-3b"
 
     pretrained = [
@@ -55,9 +54,11 @@ class StableLM(openllm.LLM):
 
     import_kwargs = {
         "torch_dtype": torch.float16,
-        "load_in_8bit": True if torch.cuda.is_available() and torch.cuda.device_count() == 1 else False,
+        "load_in_8bit": False,
         "device_map": "auto",
     }
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     def sanitize_parameters(
         self,
@@ -98,11 +99,6 @@ class StableLM(openllm.LLM):
 
     @torch.inference_mode()
     def generate(self, prompt: str, **attrs: t.Any) -> list[str]:
-        if torch.cuda.is_available():
-            self.model.cuda()
-        if not self.model.is_loaded_in_8bit:
-            self.model.half()
-
         generation_kwargs = {
             "do_sample": True,
             "generation_config": self.config.model_construct_env(**attrs).to_generation_config(),
@@ -110,6 +106,6 @@ class StableLM(openllm.LLM):
             "stopping_criteria": StoppingCriteriaList([StopOnTokens()]),
         }
 
-        inputs = t.cast("torch.Tensor", self.tokenizer(prompt, return_tensors="pt")).to(self.model.device)
+        inputs = t.cast("torch.Tensor", self.tokenizer(prompt, return_tensors="pt")).to(self.device)
         tokens = self.model.generate(**inputs, **generation_kwargs)
         return [self.tokenizer.decode(tokens[0], skip_special_tokens=True)]

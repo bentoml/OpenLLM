@@ -62,8 +62,6 @@ def process_response(
 class ChatGLM(openllm.LLM):
     __openllm_internal__ = True
 
-    load_in_mha = False  # NOTE: disable bettertransformer for ChatGLM since it is already quantized
-
     default_model = "THUDM/chatglm-6b-int4"
 
     requirements = ["cpm_kernels", "sentencepiece"]
