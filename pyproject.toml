@@ -73,7 +73,7 @@ chatglm = ["cpm_kernels", "sentencepiece"]
 falcon = ["einops", "xformers", "safetensors"]
 fine-tune = ["peft", "bitsandbytes", "datasets", "accelerate"]
 flan-t5 = ["flax", "jax", "jaxlib", "tensorflow"]
-starcoder = ["bitandbytes"]
+starcoder = ["bitsandbytes"]
 
 [project.urls]
 Documentation = "https://github.com/llmsys/openllm#readme"
