@@ -729,12 +729,8 @@ def cli_factory() -> click.Group:
                 click.echo(f"{model} deleted.")
 
     @cli.command(name="query", aliases=["run", "ask"])
-    @cog.optgroup.group(
-        "Host options", cls=cog.RequiredMutuallyExclusiveOptionGroup, help="default host for the running LLM server"
-    )
-    @cog.optgroup.option("--endpoint", type=click.STRING, help="LLM Server endpoint, i.e: http://12.323.2.1")
-    @cog.optgroup.option(
-        "--local/--no-local", type=click.BOOL, is_flag=True, help="Whether the server is running locally."
+    @click.option(
+        "--endpoint", type=click.STRING, help="LLM Server endpoint, i.e: http://12.323.2.1", default="http://0.0.0.0"
     )
     @click.option("--port", type=click.INT, default=3000, help="LLM Server port", show_default=True)
     @click.option("--timeout", type=click.INT, default=30, help="Default server timeout", show_default=True)
@@ -748,7 +744,6 @@ def cli_factory() -> click.Group:
         endpoint: str,
         port: int,
         timeout: int,
-        local: bool,
         server_type: t.Literal["http", "grpc"],
         output: OutputLiteral,
     ):
@@ -756,7 +751,7 @@ def cli_factory() -> click.Group:
 
         $ openllm query --endpoint http://12.323.2.1 "What is the meaning of life?"
         """
-        target_url = f"http://0.0.0.0:{port}" if local else f"{endpoint}:{port}"
+        target_url = f"{endpoint}:{port}"
 
         client = (
             openllm.client.HTTPClient(target_url, timeout=timeout)
