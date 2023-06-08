@@ -146,7 +146,8 @@ gh workflow run create-releases.yml
 After the release CI finishes, then run the following:
 
 ```bash
-gh workflow run release-notes.yml
+git pull --rebase
+gh workflow run release-notes.yml --ref "v$(hatch version)"
 ```
 
 > Note that currently this workflow can only be run by the BentoML team.
