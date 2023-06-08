@@ -44,13 +44,13 @@ class StableLM(openllm.LLM):
 
     load_in_mha = False
 
-    default_model = "StabilityAI/stablelm-tuned-alpha-3b"
+    default_model = "stabilityai/stablelm-tuned-alpha-3b"
 
     pretrained = [
-        "StabilityAI/stablelm-tuned-alpha-3b",
-        "StabilityAI/stablelm-tuned-alpha-7b",
-        "StabilityAI/stablelm-base-alpha-3b",
-        "StabilityAI/stablelm-base-alpha-7b",
+        "stabilityai/stablelm-tuned-alpha-3b",
+        "stabilityai/stablelm-tuned-alpha-7b",
+        "stabilityai/stablelm-base-alpha-3b",
+        "stabilityai/stablelm-base-alpha-7b",
     ]
 
     import_kwargs = {
