@@ -20,13 +20,15 @@ fi
 echo "Running release actions (create-releases.yml)..."
 gh workflow run create-releases.yml --repo bentoml/openllm
 
+sleep 10
+
 echo "Getting 'create-releases.yml' workflow id..."
 WORKFLOW_ID=$(gh run list -w release --repo bentoml/openllm -L 1 --json databaseId | jq '.[]| .databaseId')
 
 echo "Waiting for workflow create-releases.yml to complete..."
 while true; do
-    status=$(gh run view "$WORKFLOW_ID" --json status --jq '.status')
-    if [[ $status == "completed" ]]; then
+    STATUS=$(gh run view "$WORKFLOW_ID" --json status --jq '.status')
+    if [[ "${STATUS}" == "completed" ]]; then
         break
     fi
     sleep 10
@@ -35,16 +37,20 @@ done
 # Set the maximum timeout (in seconds)
 timeout=600
 
+sleep 10
+
 echo "Generating release notes (release-notes.yml)..."
 git pull --rebase
 gh workflow run release-notes.yml --repo bentoml/openllm --ref "v$(hatch version)"
+
+sleep 10
 
 echo "Getting 'release-notes.yml' workflow id..."
 WORKFLOW_ID=$(gh run list -w release-notes --repo bentoml/openllm -L 1 --json databaseId | jq '.[]| .databaseId')
 start_time=$(date +%s)
 while true; do
-    status=$(gh run view "$WORKFLOW_ID" --json status --jq '.status')
-    if [[ $status == "completed" ]]; then
+    STATUS=$(gh run view "$WORKFLOW_ID" --json status --jq '.status')
+    if [[ $STATUS == "completed" ]]; then
         break
     fi
     current_time=$(date +%s)
@@ -57,7 +63,7 @@ while true; do
 done
 
 # Run the second workflow (b.yml) if the first workflow completed
-if [[ $status != "completed" ]]; then
+if [[ $STATUS != "completed" ]]; then
     echo "Failed to generate release notes. Check the logs at GitHub Actions."
     exit 1
 else
