@@ -180,7 +180,7 @@ def build(model_name: str, *, __cli__: bool = False, **attrs: t.Any) -> tuple[be
             # add service.py definition to this temporary folder
             utils.codegen.write_service(model_name, service_name, llm_fs)
 
-            bento_tag = bentoml.Tag.from_taglike(f"llm-{llm.tag.name}-service:{llm.tag.version}")
+            bento_tag = bentoml.Tag.from_taglike(f"{model_name}-service:{llm.tag.version}")
             try:
                 bento = bentoml.get(bento_tag)
                 if overwrite_existing_bento:
