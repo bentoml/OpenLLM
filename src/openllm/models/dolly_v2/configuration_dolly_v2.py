@@ -20,7 +20,12 @@ from __future__ import annotations
 import openllm
 
 
-class DollyV2Config(openllm.LLMConfig, default_timeout=3600000, trust_remote_code=True):
+class DollyV2Config(
+    openllm.LLMConfig,
+    default_timeout=3600000,
+    trust_remote_code=True,
+    url="https://github.com/databrickslabs/dolly",
+):
     """Databricks’ Dolly is an instruction-following large language model trained on the Databricks
     machine learning platform that is licensed for commercial use.
 

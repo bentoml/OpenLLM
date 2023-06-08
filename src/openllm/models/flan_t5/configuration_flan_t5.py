@@ -40,7 +40,7 @@ saved pretrained, or a fine-tune FLAN-T5, provide ``OPENLLM_FLAN_T5_PRETRAINED='
 DEFAULT_PROMPT_TEMPLATE = """Answer the following question:\nQuestion: {instruction}\nAnswer:"""
 
 
-class FlanT5Config(openllm.LLMConfig):
+class FlanT5Config(openllm.LLMConfig, url="https://huggingface.co/docs/transformers/model_doc/flan-t5"):
     """FLAN-T5 was released in the paper [Scaling Instruction-Finetuned Language Models](https://arxiv.org/pdf/2210.11416.pdf)
     - it is an enhanced version of T5 that has been finetuned in a mixture of tasks.
 

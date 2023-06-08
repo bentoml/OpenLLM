@@ -98,6 +98,7 @@ dependencies = [
     "pytest-randomly",
     "pytest-rerunfailures",
     "pre-commit",
+    "tomlkit",
 ]
 [tool.hatch.envs.default.scripts]
 cov = ["test-cov", "cov-report"]

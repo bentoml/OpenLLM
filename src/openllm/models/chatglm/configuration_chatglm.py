@@ -22,6 +22,7 @@ class ChatGLMConfig(
     trust_remote_code=True,
     default_timeout=3600000,
     requires_gpu=True,
+    url="https://github.com/THUDM/ChatGLM-6B",
 ):
     """
     ChatGLM is an open bilingual language model based on

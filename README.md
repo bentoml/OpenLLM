@@ -97,6 +97,13 @@ start interacting with the model:
 >>> client.query('Explain to me the difference between "further" and "farther"')
 ```
 
+You can also use the `openllm query` command to query the model from the
+terminal:
+
+```bash
+openllm query --local 'Explain to me the difference between "further" and "farther"'
+```
+
 ## 🚀 Deploying to Production
 
 To deploy your LLMs into production:
@@ -131,27 +138,23 @@ To deploy your LLMs into production:
 
 OpenLLM currently supports the following:
 
-- [dolly-v2](https://github.com/databrickslabs/dolly)
-- [flan-t5](https://huggingface.co/docs/transformers/model_doc/flan-t5)
-- [chatglm](https://github.com/THUDM/ChatGLM-6B)
-- [falcon](https://falconllm.tii.ae/)
-- [starcoder](https://github.com/bigcode-project/starcoder)
+<!-- update-readme.py: start -->
 
-### Model-specific Dependencies
+| Model                                                                 | CPU | GPU | Optional                         |
+| --------------------------------------------------------------------- | --- | --- | -------------------------------- |
+| [flan-t5](https://huggingface.co/docs/transformers/model_doc/flan-t5) | ✅  | ✅  | `pip install openllm[flan-t5]`   |
+| [dolly-v2](https://github.com/databrickslabs/dolly)                   | ✅  | ✅  | 👾 (not needed)                  |
+| [chatglm](https://github.com/THUDM/ChatGLM-6B)                        | ❌  | ✅  | `pip install openllm[chatglm]`   |
+| [starcoder](https://github.com/bigcode-project/starcoder)             | ❌  | ✅  | `pip install openllm[starcoder]` |
+| [falcon](https://falconllm.tii.ae/)                                   | ❌  | ✅  | `pip install openllm[falcon]`    |
+| [stablelm](https://github.com/Stability-AI/StableLM)                  | ✅  | ✅  | 👾 (not needed)                  |
 
-We respect your system's space and efficiency. That's why we don't force users
-to install dependencies for all models. By default, you can run `dolly-v2` and
-`flan-t5` without installing any additional packages.
+> NOTE: We respect users' system disk space. Hence, OpenLLM doesn't enforce to
+> install dependencies to run all models. If one wishes to use any of the
+> aforementioned models, make sure to install the optional dependencies
+> mentioned above.
 
-To enable support for a specific model, you'll need to install its corresponding
-dependencies. You can do this by using `pip install "openllm[model_name]"`. For
-example, to use **chatglm**:
-
-```bash
-pip install "openllm[chatglm]"
-```
-
-This will install `cpm_kernels` and `sentencepiece` additionally
+<!-- update-readme.py: stop -->
 
 ### Runtime Implementations
 

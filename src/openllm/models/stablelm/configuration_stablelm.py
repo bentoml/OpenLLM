@@ -16,7 +16,7 @@ from __future__ import annotations
 import openllm
 
 
-class StableLMConfig(openllm.LLMConfig, name_type="lowercase"):
+class StableLMConfig(openllm.LLMConfig, name_type="lowercase", url="https://github.com/Stability-AI/StableLM"):
     """StableLM-Base-Alpha is a suite of 3B and 7B parameter decoder-only language models
     pre-trained on a diverse collection of English datasets with a sequence
     length of 4096 to push beyond the context window limitations of existing open-source language models.
