@@ -101,7 +101,7 @@ You can also use the `openllm query` command to query the model from the
 terminal:
 
 ```bash
-openllm query --local 'Explain to me the difference between "further" and "farther"'
+openllm query --endpoint http://localhost:3000 'Explain to me the difference between "further" and "farther"'
 ```
 
 ## 🚀 Deploying to Production
