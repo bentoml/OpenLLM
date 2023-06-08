@@ -22,6 +22,7 @@ import functools
 import inspect
 import logging
 import os
+import re
 import sys
 import time
 import traceback
@@ -730,9 +731,11 @@ def cli_factory() -> click.Group:
 
     @cli.command(name="query", aliases=["run", "ask"])
     @click.option(
-        "--endpoint", type=click.STRING, help="LLM Server endpoint, i.e: http://12.323.2.1", default="http://0.0.0.0"
+        "--endpoint",
+        type=click.STRING,
+        help="LLM Server endpoint, i.e: http://12.323.2.1",
+        default="http://0.0.0.0:3000",
     )
-    @click.option("--port", type=click.INT, default=3000, help="LLM Server port", show_default=True)
     @click.option("--timeout", type=click.INT, default=30, help="Default server timeout", show_default=True)
     @click.option(
         "--server-type", type=click.Choice(["grpc", "http"]), help="Server type", default="http", show_default=True
@@ -742,7 +745,6 @@ def cli_factory() -> click.Group:
     def query(
         query: str,
         endpoint: str,
-        port: int,
         timeout: int,
         server_type: t.Literal["http", "grpc"],
         output: OutputLiteral,
@@ -751,12 +753,12 @@ def cli_factory() -> click.Group:
 
         $ openllm query --endpoint http://12.323.2.1 "What is the meaning of life?"
         """
-        target_url = f"{endpoint}:{port}"
-
+        if server_type == "grpc":
+            endpoint = re.sub(r"http://", "", endpoint)
         client = (
-            openllm.client.HTTPClient(target_url, timeout=timeout)
+            openllm.client.HTTPClient(endpoint, timeout=timeout)
             if server_type == "http"
-            else openllm.client.GrpcClient(target_url, timeout=timeout)
+            else openllm.client.GrpcClient(endpoint, timeout=timeout)
         )
 
         if client.framework == "flax":
