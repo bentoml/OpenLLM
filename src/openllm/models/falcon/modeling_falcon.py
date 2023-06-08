@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import importlib
 import typing as t
 
 import bentoml
@@ -49,29 +50,34 @@ class Falcon(openllm.LLM):
         device_map = attrs.pop("device_map", "auto")
 
         tokenizer = transformers.AutoTokenizer.from_pretrained(pretrained)
-        pipeline = transformers.pipeline(
-            "text-generation",
-            model=pretrained,
+        model = transformers.AutoModelForCausalLM.from_pretrained(
+            pretrained,
             trust_remote_code=trust_remote_code,
             torch_dtype=torch_dtype,
             device_map=device_map,
-            tokenizer=tokenizer,
         )
-        return bentoml.transformers.save_model(tag, pipeline, custom_objects={"tokenizer": tokenizer})
+        try:
+            return bentoml.transformers.save_model(
+                tag,
+                model,
+                custom_objects={"tokenizer": tokenizer},
+                external_modules=[importlib.import_module(model.__module__)],
+            )
+        finally:
+            import gc
+
+            # NOTE: We need to free the cache after saving here so that we can load it back later on.
+            gc.collect()
+            torch.cuda.empty_cache()
 
     def load_model(self, tag: bentoml.Tag, *args: t.Any, **attrs: t.Any) -> t.Any:
-        trust_remote_code = attrs.pop("trust_remote_code", True)
         torch_dtype = attrs.pop("torch_dtype", torch.bfloat16)
         device_map = attrs.pop("device_map", "auto")
+
         _ref = bentoml.transformers.get(tag)
-        return bentoml.transformers.load_model(
-            _ref,
-            tokenizer=_ref.custom_objects["tokenizer"],
-            trust_remote_code=trust_remote_code,
-            device_map=device_map,
-            torch_dtype=torch_dtype,
-            **attrs,
-        )
+
+        model = bentoml.transformers.load_model(_ref, device_map=device_map, torch_dtype=torch_dtype, **attrs)
+        return transformers.pipeline("text-generation", model=model, tokenizer=_ref.custom_objects["tokenizer"])
 
     def sanitize_parameters(
         self,
@@ -111,11 +117,7 @@ class Falcon(openllm.LLM):
     def postprocess_generate(self, prompt: str, generation_result: t.Sequence[dict[str, t.Any]], **_: t.Any) -> str:
         return "\n".join([i["generated_text"] for i in generation_result])
 
-    @torch.inference_mode()
     def generate(self, prompt: str, **attrs: t.Any) -> list[dict[str, t.Any]]:
-        # NOTE: MK tokenizer into this pipeline, since we can't inject tokenizer at load time
-        self.model.tokenizer = self.tokenizer
-
         eos_token_id = attrs.pop("eos_token_id", self.tokenizer.eos_token_id)
 
         # NOTE: our model here is the pipeline

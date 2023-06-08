@@ -406,8 +406,9 @@ def start_model_command(
             " "
             if _bentoml_config_options
             else ""
-            + f"api_server.timeout={server_timeout}"
-            + f' runners."llm-{llm.config.__openllm_start_name__}-runner".timeout={llm.config.__openllm_timeout__}'
+            + f"api_server.traffic.timeout={server_timeout}"
+            + f' runners."llm-{llm.config.__openllm_start_name__}-runner".traffic.timeout'
+            + f"={llm.config.__openllm_timeout__}"
         )
 
         start_env.update(
@@ -729,7 +730,9 @@ def cli_factory() -> click.Group:
         "Host options", cls=cog.RequiredMutuallyExclusiveOptionGroup, help="default host for the running LLM server"
     )
     @cog.optgroup.option("--endpoint", type=click.STRING, help="LLM Server endpoint, i.e: http://12.323.2.1")
-    @cog.optgroup.option("--local", type=click.BOOL, help="Whether the server is running locally.")
+    @cog.optgroup.option(
+        "--local/--no-local", type=click.BOOL, is_flag=True, help="Whether the server is running locally."
+    )
     @click.option("--port", type=click.INT, default=3000, help="LLM Server port", show_default=True)
     @click.option("--timeout", type=click.INT, default=30, help="Default server timeout", show_default=True)
     @click.option(

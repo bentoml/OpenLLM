@@ -108,18 +108,15 @@ class StarCoder(openllm.LLM):
         use_default_prompt_template: bool = True,
         **attrs: t.Any,
     ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
-        if use_default_prompt_template:
-            fim_mode = FIM_INDICATOR in prompt
-            prefix, suffix = None, None
-            if fim_mode:
-                try:
-                    prefix, suffix = prompt.split(FIM_INDICATOR)
-                except Exception as err:
-                    logger.error("Error while processing prompt with FIM mode:\n", exc_info=err)
-                    raise ValueError(f"Only one {FIM_INDICATOR} allowed in prompt") from err
-                prompt_text = f"{FIM_PREFIX}{prefix}{FIM_SUFFIX}{suffix}{FIM_MIDDLE}"
-            else:
-                prompt_text = prompt
+        fim_mode = FIM_INDICATOR in prompt
+        prefix, suffix = None, None
+        if fim_mode:
+            try:
+                prefix, suffix = prompt.split(FIM_INDICATOR)
+            except Exception as err:
+                logger.error("Error while processing prompt with FIM mode:\n", exc_info=err)
+                raise ValueError(f"Only one {FIM_INDICATOR} allowed in prompt") from err
+            prompt_text = f"{FIM_PREFIX}{prefix}{FIM_SUFFIX}{suffix}{FIM_MIDDLE}"
         else:
             prompt_text = prompt
 
@@ -145,11 +142,12 @@ class StarCoder(openllm.LLM):
     @torch.inference_mode()
     def generate(self, prompt: str, **attrs: t.Any) -> list[str]:
         inputs = t.cast("torch.Tensor", self.tokenizer.encode(prompt, return_tensors="pt")).to(self.device)
-        result_tensor = self.model.generate(
-            inputs,
-            do_sample=True,
-            generation_config=self.config.model_construct_env(**attrs).to_generation_config(),
-        )
+        with torch.device(self.device):
+            result_tensor = self.model.generate(
+                inputs,
+                do_sample=True,
+                generation_config=self.config.model_construct_env(**attrs).to_generation_config(),
+            )
         # TODO: We will probably want to return the tokenizer here so that we can manually process this
         # return (skip_special_tokens=False, clean_up_tokenization_spaces=False))
         return [self.tokenizer.decode(result_tensor[0])]

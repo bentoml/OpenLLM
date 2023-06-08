@@ -494,12 +494,6 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
     def identifying_params(self) -> dict[str, t.Any]:
         return {"configuration": self.config.model_dump(), "pretrained": self.pretrained}
 
-    @property
-    def _bentomodel(self) -> bentoml.Model:
-        if self.__llm_bentomodel__ is None:
-            self.__llm_bentomodel__ = self.ensure_pretrained_exists()
-        return self.__llm_bentomodel__
-
     @t.overload
     def make_tag(
         self,
@@ -619,6 +613,7 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
                     **{k: v for k, v in self.import_kwargs.items() if not k.startswith("_tokenizer_")},
                     **kwds,
                 }
+
             return self.import_model(
                 self._pretrained,
                 tag,
@@ -627,6 +622,12 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
                 trust_remote_code=trust_remote_code,
                 **kwds,
             )
+
+    @property
+    def _bentomodel(self) -> bentoml.Model:
+        if self.__llm_bentomodel__ is None:
+            self.__llm_bentomodel__ = self.ensure_pretrained_exists()
+        return self.__llm_bentomodel__
 
     @property
     def tag(self) -> bentoml.Tag:
