@@ -33,6 +33,13 @@ repos:
           - 'markdown'
           - 'toml'
           - 'json'
+  - repo: local
+    hooks:
+      - id: check-models-table-update
+        name: check-models-table-update
+        entry: ./tools/assert-model-table-latest
+        language: script
+        files: README.md
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.4.0
     hooks:

@@ -1,0 +1,27 @@
+#!/usr/bin/env python3
+
+from __future__ import annotations
+
+import os
+
+import marko
+import marko.ext.gfm as gfm
+import marko.ext.gfm.elements
+
+import openllm
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+with open(os.path.join(ROOT, "README.md"), "r") as f:
+    readme = gfm.gfm.parse(f.read())
+
+# NOTE: Currently, we only have one table in README, which is the Model readme.
+table = [r for r in readme.children if isinstance(r, marko.ext.gfm.elements.Table)][0]
+
+available = len(openllm.CONFIG_MAPPING.keys())
+
+on_table = len(table.children) - 1  # NOTE: minus the header
+
+if available - on_table != 0:
+    print("README.md is out of date! Make sure to run ./tools/update-readme.py")
+    raise SystemExit(1)
+raise SystemExit(0)
