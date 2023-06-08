@@ -149,22 +149,33 @@ def import_model(
     else:
         raise OpenLLMException(f"Model type {type(config)} is not supported yet.")
 
-    return bentoml.transformers.save_model(
-        tag,
-        getattr(
-            transformers, FRAMEWORK_TO_AUTOCLASS_MAPPING[_model_framework][TaskType[task_type].value - 1]
-        ).from_pretrained(
-            model_name, *model_args, config=config, trust_remote_code=trust_remote_code, **hub_attrs, **attrs
-        ),
-        custom_objects={
-            "tokenizer": t.cast(
-                "LLMTokenizer",
-                transformers.AutoTokenizer.from_pretrained(
-                    model_name, config=config, trust_remote_code=trust_remote_code, **hub_attrs, **tokenizer_kwds
-                ),
-            )
-        },
-    )
+    try:
+        return bentoml.transformers.save_model(
+            tag,
+            getattr(
+                transformers, FRAMEWORK_TO_AUTOCLASS_MAPPING[_model_framework][TaskType[task_type].value - 1]
+            ).from_pretrained(
+                model_name, *model_args, config=config, trust_remote_code=trust_remote_code, **hub_attrs, **attrs
+            ),
+            custom_objects={
+                "tokenizer": t.cast(
+                    "LLMTokenizer",
+                    transformers.AutoTokenizer.from_pretrained(
+                        model_name, config=config, trust_remote_code=trust_remote_code, **hub_attrs, **tokenizer_kwds
+                    ),
+                )
+            },
+        )
+    finally:
+        import gc
+
+        gc.collect()
+
+        # NOTE: We need to free up the cache after importing the model
+        # in the case where users first run openllm start without the model
+        # available locally.
+        if openllm.utils.is_torch_available() and torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
 
 _required_namespace = {"default_model", "pretrained"}
