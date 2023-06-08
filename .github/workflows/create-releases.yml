@@ -61,8 +61,12 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
+      - name: Get tags
+        run: git fetch --tags origin
       - name: Setup CI
         uses: ./.github/actions/setup-repo
+      - name: Checkout the new tag
+        run: git checkout "v$(hatch version)"
       - name: Create release notes
         run: ./.github/actions/create_release_and_archive.sh
       - name: Create release

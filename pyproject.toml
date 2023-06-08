@@ -29,7 +29,6 @@ dependencies = [
     "bentoml[grpc,grpc-reflection,io]>=1.0.21",
     "attrs>=23.1.0",
     "cattrs>=23.1.0",
-    "httpx[http2]",
     # transformers[torch] includes torch and transformers
     "transformers[torch,tokenizers,onnxruntime,onnx]>=4.29.0",
     # BetterTransformer support for inference.
