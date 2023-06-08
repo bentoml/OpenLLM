@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # License header pattern
-LICENSE_HEADER=$(cat << 'EOF'
+LICENSE_HEADER=$(
+    cat << 'EOF'
 # Copyright [0-9]{4} BentoML Team. All rights reserved.
 EOF
 )

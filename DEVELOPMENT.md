@@ -137,17 +137,11 @@ hatch run test
 
 ## Releasing a New Version
 
-To release a new version, use `gh workflow run`:
+To release a new version, use `./tools/run-release-action`. It requires `gh`,
+`jq` and `hatch`:
 
 ```bash
-gh workflow run create-releases.yml
-```
-
-After the release CI finishes, then run the following:
-
-```bash
-git pull --rebase
-gh workflow run release-notes.yml --ref "v$(hatch version)"
+./tools/run-release-action
 ```
 
 > Note that currently this workflow can only be run by the BentoML team.

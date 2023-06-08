@@ -33,6 +33,11 @@ repos:
           - 'markdown'
           - 'toml'
           - 'json'
+        exclude: |
+          (?x)^(
+              tools/.*|
+              .github/.*
+          )$
   - repo: local
     hooks:
       - id: check-models-table-update
