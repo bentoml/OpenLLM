@@ -337,6 +337,8 @@ class LLMMetaclass(ABCMeta):
             cls: type[LLM] = super().__new__(t.cast("type[type[LLM]]", mcls), cls_name, bases, namespace, **attrs)
             cls.__openllm_post_init__ = None if cls.llm_post_init is LLMInterface.llm_post_init else cls.llm_post_init
 
+            cls.__openllm_custom_load__ = None if cls.load_model is LLMInterface.load_model else cls.load_model
+
             if getattr(cls, "config_class") is None:
                 raise RuntimeError(f"'config_class' must be defined for '{cls.__name__}'")
             return cls
@@ -356,6 +358,8 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
         __openllm_start_name__: str
         __openllm_requires_gpu__: bool
         __openllm_post_init__: t.Callable[[t.Self], None] | None
+
+        __openllm_custom_load__: t.Callable[[t.Self, t.Any, t.Any], None] | None
 
         load_in_mha: bool
         _llm_attrs: dict[str, t.Any]
@@ -641,7 +645,7 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
             kwds["accelerator"] = "bettertransformer"
 
         if self.__llm_model__ is None:
-            if hasattr(self, "load_model") and self.load_model is not self._bentomodel.load_model:
+            if self.__openllm_custom_load__:
                 self.__llm_model__ = self.load_model(self.tag, *self._llm_args, **kwds)
             else:
                 self.__llm_model__ = self._bentomodel.load_model(*self._llm_args, **kwds)
