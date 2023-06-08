@@ -652,6 +652,10 @@ class LLMConfig:
         __openllm_url__: str = Field(None, init=False)
         """The resolved url for this LLMConfig."""
 
+        __openllm_requirements__: list[str] | None = None
+        """The default PyPI requirements needed to run this given LLM. By default, we will depend on
+        bentoml, torch, transformers."""
+
         GenerationConfig: type = type
         """Users can override this subclass of any given LLMConfig to provide GenerationConfig
         default value. For example:
@@ -682,6 +686,7 @@ class LLMConfig:
         trust_remote_code: bool = False,
         requires_gpu: bool = False,
         url: str | None = None,
+        requirements: list[str] | None = None,
     ):
         if name_type == "dasherize":
             model_name = inflection.underscore(cls.__name__.replace("Config", ""))
@@ -699,6 +704,7 @@ class LLMConfig:
         cls.__openllm_start_name__ = start_name
         cls.__openllm_env__ = openllm.utils.ModelEnv(model_name)
         cls.__openllm_url__ = url or "(not set)"
+        cls.__openllm_requirements__ = requirements
 
         # NOTE: Since we want to enable a pydantic-like experience
         # this means we will have to hide the attr abstraction, and generate

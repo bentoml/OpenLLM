@@ -23,6 +23,7 @@ class FalconConfig(
     requires_gpu=True,
     default_timeout=3600000,
     url="https://falconllm.tii.ae/",
+    requirements=["einops", "xformers", "safetensors"],
 ):
     """Falcon-7B is a 7B parameters causal decoder-only model built by
     TII and trained on 1,500B tokens of [RefinedWeb](https://huggingface.co/datasets/tiiuae/falcon-refinedweb)

@@ -72,8 +72,8 @@ def construct_python_options(llm: openllm.LLM, llm_fs: FS) -> PythonOptions:
     packages: list[str] = []
 
     ModelEnv = openllm.utils.ModelEnv(llm.__openllm_start_name__)
-    if llm.requirements is not None:
-        packages.extend(llm.requirements)
+    if llm.config.__openllm_requirements__ is not None:
+        packages.extend(llm.config.__openllm_requirements__)
 
     if not (str(os.environ.get("BENTOML_BUNDLE_LOCAL_BUILD", False)).lower() == "false"):
         packages.append(f"bentoml>={'.'.join([str(i) for i in pkg.pkg_version_info('bentoml')])}")

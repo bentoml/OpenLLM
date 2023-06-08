@@ -65,13 +65,15 @@ name = "openllm"
 readme = "README.md"
 requires-python = ">=3.8"
 
+# NOTE: Don't modify project.optional-dependencies
+# as it is managed by ./tools/update-optional-dependencies.py
 [project.optional-dependencies]
-all = ['openllm[fine-tune]', 'openllm[chatglm]', 'openllm[falcon]', 'openllm[flan-t5]', 'openllm[starcoder]']
-chatglm = ['cpm_kernels', 'sentencepiece']
-falcon = ['einops', 'xformers', 'safetensors']
-fine-tune = ['peft', 'bitsandbytes', 'datasets', 'accelerate']
-flan-t5 = ['flax', 'jax', 'jaxlib', 'tensorflow']
-starcoder = ['bitsandbytes']
+all = ["openllm[fine-tune]", "openllm[flan-t5]", "openllm[chatglm]", "openllm[starcoder]", "openllm[falcon]"]
+chatglm = ["cpm_kernels", "sentencepiece"]
+falcon = ["einops", "xformers", "safetensors"]
+fine-tune = ["peft", "bitsandbytes", "datasets", "accelerate"]
+flan-t5 = ["flax", "jax", "jaxlib", "tensorflow"]
+starcoder = ["bitandbytes"]
 
 [project.urls]
 Documentation = "https://github.com/llmsys/openllm#readme"

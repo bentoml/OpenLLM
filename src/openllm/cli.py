@@ -422,8 +422,11 @@ def start_model_command(
             }
         )
 
-        if llm.requirements is not None:
-            _echo(f"Make sure to have the following dependencies available: {llm.requirements}", fg="yellow")
+        if llm.config.__openllm_requirements__ is not None:
+            _echo(
+                f"Make sure to have the following dependencies available: {llm.config.__openllm_requirements__}",
+                fg="yellow",
+            )
 
         if t.TYPE_CHECKING:
             server_cls: type[bentoml.HTTPServer] if not _serve_grpc else type[bentoml.GrpcServer]

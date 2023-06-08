@@ -23,6 +23,7 @@ class ChatGLMConfig(
     default_timeout=3600000,
     requires_gpu=True,
     url="https://github.com/THUDM/ChatGLM-6B",
+    requirements=["cpm_kernels", "sentencepiece"],
 ):
     """
     ChatGLM is an open bilingual language model based on

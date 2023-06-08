@@ -173,7 +173,6 @@ _reserved_namespace = _required_namespace | {
     "model",
     "tokenizer",
     "import_kwargs",
-    "requirements",
 }
 
 
@@ -198,10 +197,6 @@ class LLMInterface(ABC):
     import_kwargs: dict[str, t.Any] | None = None
     """The default import kwargs to used when importing the model.
     This will be passed into 'openllm.LLM.import_model'."""
-
-    requirements: list[str] | None = None
-    """The default PyPI requirements needed to run this given LLM. By default, we will depend on
-    bentoml, torch, transformers."""
 
     @abstractmethod
     def generate(self, prompt: str, **preprocess_generate_kwds: t.Any) -> t.Any:
