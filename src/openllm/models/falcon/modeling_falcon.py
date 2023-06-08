@@ -59,6 +59,20 @@ class Falcon(openllm.LLM):
         )
         return bentoml.transformers.save_model(tag, pipeline, custom_objects={"tokenizer": tokenizer})
 
+    def load_model(self, tag: bentoml.Tag, *args: t.Any, **attrs: t.Any) -> t.Any:
+        trust_remote_code = attrs.pop("trust_remote_code", True)
+        torch_dtype = attrs.pop("torch_dtype", torch.bfloat16)
+        device_map = attrs.pop("device_map", "auto")
+        _ref = bentoml.transformers.get(tag)
+        return bentoml.transformers.load_model(
+            _ref,
+            tokenizer=_ref.custom_objects["tokenizer"],
+            trust_remote_code=trust_remote_code,
+            device_map=device_map,
+            torch_dtype=torch_dtype,
+            **attrs,
+        )
+
     def sanitize_parameters(
         self,
         prompt: str,
