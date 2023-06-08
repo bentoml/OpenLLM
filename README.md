@@ -31,7 +31,8 @@ popular tools like BentoML, HuggingFace, LangChain, and more.
 `LLM.tuning()`. (Work In Progress)
 
 ⛓️ **Interoperability**: First-class support for LangChain and BentoML’s runner
-architecture, allows easy chaining of LLMs on multiple GPUs/Nodes. (Work In Progress)
+architecture, allows easy chaining of LLMs on multiple GPUs/Nodes. (Work In
+Progress)
 
 🎯 **Streamline Production Deployment**: Seamlessly package into a Bento with
 `openllm build`, containerized into OCI Images, and deploy with a single click
@@ -100,29 +101,31 @@ start interacting with the model:
 
 To deploy your LLMs into production:
 
-1. **Building a Bento**: With OpenLLM, you can easily build a
-   Bento for a specific model, like `dolly-v2`, using the `build`
-   command.:
+1. **Building a Bento**: With OpenLLM, you can easily build a Bento for a
+   specific model, like `dolly-v2`, using the `build` command.:
 
-    ```bash
-    openllm build dolly-v2
-    ```
+   ```bash
+   openllm build dolly-v2
+   ```
 
-    A [Bento](https://docs.bentoml.org/en/latest/concepts/bento.html#what-is-a-bento), in BentoML, is the unit of distribution. It packages your program's source code, models, files, artifacts, and dependencies.
+   A
+   [Bento](https://docs.bentoml.org/en/latest/concepts/bento.html#what-is-a-bento),
+   in BentoML, is the unit of distribution. It packages your program's source
+   code, models, files, artifacts, and dependencies.
 
-    > _NOTE_: If you wish to build OpenLLM from the git source, set
-    > `OPENLLM_DEV_BUILD=True` to include the generated wheels in the bundle.
+   > _NOTE_: If you wish to build OpenLLM from the git source, set
+   > `OPENLLM_DEV_BUILD=True` to include the generated wheels in the bundle.
 
 2. **Containerize your Bento**
 
-    ```
-    bentoml containerize <name:version>
-    ```
+   ```
+   bentoml containerize <name:version>
+   ```
 
-    BentoML offers a comprehensive set of options for deploying and hosting online
-    ML services in production. To learn more, check out the
-    [Deploying a Bento](https://docs.bentoml.org/en/latest/concepts/deploy.html)
-    guide.
+   BentoML offers a comprehensive set of options for deploying and hosting
+   online ML services in production. To learn more, check out the
+   [Deploying a Bento](https://docs.bentoml.org/en/latest/concepts/deploy.html)
+   guide.
 
 ## 🧩 Models and Dependencies
 
@@ -174,10 +177,19 @@ LLMs into the ecosystem. Checkout
 to see how you can do it yourself.
 
 ## ⚙️ Integrations
-OpenLLM is not just a standalone product; it's a building block designed to easily integrate with other powerful tools. We currently offer integration with [BentoML](https://github.com/bentoml/BentoML) and [LangChain](https://github.com/hwchase17/langchain).
+
+OpenLLM is not just a standalone product; it's a building block designed to
+easily integrate with other powerful tools. We currently offer integration with
+[BentoML](https://github.com/bentoml/BentoML) and
+[LangChain](https://github.com/hwchase17/langchain).
 
 ### BentoML
-OpenLLM models can be integrated as a [Runner](https://docs.bentoml.org/en/latest/concepts/runner.html) in your BentoML service. These runners has a `generate` method that takes a string as a prompt and returns a corresponding output string. This will allow you to plug and play any OpenLLM models with your existing ML workflow.
+
+OpenLLM models can be integrated as a
+[Runner](https://docs.bentoml.org/en/latest/concepts/runner.html) in your
+BentoML service. These runners has a `generate` method that takes a string as a
+prompt and returns a corresponding output string. This will allow you to plug
+and play any OpenLLM models with your existing ML workflow.
 
 ```python
 import bentoml
@@ -199,20 +211,24 @@ async def prompt(input_text: str) -> str:
 ```
 
 ### LangChain (⏳Coming Soon!)
-In future LangChain releases, you'll be able to effortlessly invoke OpenLLM models, like so:
+
+In future LangChain releases, you'll be able to effortlessly invoke OpenLLM
+models, like so:
+
 ```python
 from langchain.llms import OpenLLM
 llm = OpenLLM.for_model(model_name='flan-t5')
 llm("What is the difference between a duck and a goose?")
 ```
- if you have an OpenLLM server deployed elsewhere, you can connect to it by specifying its URL:
+
+if you have an OpenLLM server deployed elsewhere, you can connect to it by
+specifying its URL:
 
 ```python
 from langchain.llms import OpenLLM
 llm = OpenLLM.for_model(server_url='http://localhost:8000', server_type='http')
 llm("What is the difference between a duck and a goose?")
 ```
-
 
 ## 🍇 Telemetry
 
