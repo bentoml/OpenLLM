@@ -147,7 +147,7 @@ OpenLLM currently supports the following:
 | [chatglm](https://github.com/THUDM/ChatGLM-6B)                        | ❌  | ✅  | `pip install openllm[chatglm]`   |
 | [starcoder](https://github.com/bigcode-project/starcoder)             | ❌  | ✅  | `pip install openllm[starcoder]` |
 | [falcon](https://falconllm.tii.ae/)                                   | ❌  | ✅  | `pip install openllm[falcon]`    |
-| [stablelm](https://github.com/Stability-AI/StableLM)                  | ✅  | ✅  | 👾 (not needed)                  |
+| [stablelm](https://github.com/Stability-AI/StableLM)                  | ❌  | ✅  | 👾 (not needed)                  |
 
 > NOTE: We respect users' system disk space. Hence, OpenLLM doesn't enforce to
 > install dependencies to run all models. If one wishes to use any of the
