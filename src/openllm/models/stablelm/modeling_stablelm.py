@@ -58,7 +58,7 @@ class StableLM(openllm.LLM):
         "device_map": "auto",
     }
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda")
 
     def sanitize_parameters(
         self,
