@@ -51,6 +51,7 @@ if t.TYPE_CHECKING:
 
 else:
     transformers = LazyLoader("transformers", globals(), "transformers")
+    torch = LazyLoader("torch", globals(), "torch")
 
 logger = logging.getLogger(__name__)
 
