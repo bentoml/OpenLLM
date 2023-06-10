@@ -84,6 +84,8 @@ class FlanT5(openllm.LLM):
 
     @torch.inference_mode()
     def generate(self, prompt: str, **attrs: t.Any) -> list[str]:
+        if torch.cuda.is_available():
+            self.model.cuda()
         input_ids = t.cast("torch.Tensor", self.tokenizer(prompt, return_tensors="pt").input_ids).to(self.device)
         result_tensor = self.model.generate(
             input_ids,

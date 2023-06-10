@@ -27,7 +27,7 @@ import openllm
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 FINE_TUNE_DEPS = ["peft", "bitsandbytes", "datasets", "accelerate"]
-FLAN_T5_DEPS = ["flax", "jax", "jaxlib", "tensorflow"]
+FLAN_T5_DEPS = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
 
 
 def main() -> int:

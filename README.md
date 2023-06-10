@@ -213,6 +213,10 @@ For example, if you want to use the Tensorflow (`tf`) implementation for the
 OPENLLM_FLAN_T5_FRAMEWORK=tf openllm start flan-t5
 ```
 
+> For GPU support on Flax, refers to
+> [Jax's installation](https://github.com/google/jax#pip-installation-gpu-cuda-installed-via-pip-easier)
+> to make sure that you have Jax support for the corresponding CUDA version.
+
 ### Integrating a New Model
 
 OpenLLM encourages contributions by welcoming users to incorporate their custom
