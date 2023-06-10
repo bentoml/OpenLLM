@@ -453,7 +453,7 @@ Tip: One can pass one of the aforementioned to '--model-id' to use other pretrai
         elif ModelEnv.get_framework_env() == "tf":
             llm = openllm.AutoTFLLM.for_model(model_name, model_id=model_id, llm_config=config)
         else:
-            llm = openllm.AutoLLM.for_model(model_name, mdoel_id=model_id, llm_config=config)
+            llm = openllm.AutoLLM.for_model(model_name, model_id=model_id, llm_config=config)
 
         # NOTE: We need to initialize llm here first to check if the model is already downloaded to
         # avoid deadlock before the subprocess forking.

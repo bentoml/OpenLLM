@@ -13,7 +13,7 @@
 # limitations under the License.
 
 """
-Vendorred from transformers/utils/import_utils.py for performance reasons.
+Some imports utils are vendorred from transformers/utils/import_utils.py for performance reasons.
 """
 import importlib
 import importlib.metadata
@@ -24,6 +24,9 @@ import typing as t
 from abc import ABCMeta
 from collections import OrderedDict
 
+import attr
+import inflection
+from bentoml._internal.utils import LazyLoader
 from packaging import version
 
 if t.TYPE_CHECKING:
@@ -226,3 +229,44 @@ def require_backends(o: t.Any, backends: t.MutableSequence[str]):
     failed = [msg.format(name) for available, msg in checks if not available()]
     if failed:
         raise ImportError("".join(failed))
+
+
+@attr.define
+class ModelEnv:
+    model_name: str = attr.field(converter=inflection.underscore)
+
+    @property
+    def framework(self) -> str:
+        return f"OPENLLM_{self.model_name.upper()}_FRAMEWORK"
+
+    @property
+    def model_config(self) -> str:
+        return f"OPENLLM_{self.model_name.upper()}_CONFIG"
+
+    @property
+    def model_id(self) -> str:
+        return f"OPENLLM_{self.model_name.upper()}_MODEL_ID"
+
+    @property
+    def bettertransformer(self) -> str:
+        return f"OPENLLM_{self.model_name.upper()}_BETTERTRANSFORMER"
+
+    def gen_env_key(self, key: str) -> str:
+        return f"OPENLLM_{self.model_name.upper()}_{key.upper()}"
+
+    def convert_to_bettertransformer(self) -> bool:
+        return os.environ.get(self.bettertransformer, str(False)).lower() == "true"
+
+    @property
+    def start_docstring(self) -> str:
+        return getattr(self.module, f"START_{self.model_name.upper()}_COMMAND_DOCSTRING")
+
+    @property
+    def module(self) -> LazyLoader:
+        return LazyLoader(self.model_name, globals(), f"openllm.models.{self.model_name}")
+
+    def get_framework_env(self) -> t.Literal["pt", "flax", "tf"]:
+        envvar = os.environ.get(self.framework, "pt")
+        if envvar not in ("pt", "tf", "flax"):
+            raise ValueError(f"Invalid framework implementation {envvar}, must be one of 'pt', 'tf', 'flax'")
+        return envvar
