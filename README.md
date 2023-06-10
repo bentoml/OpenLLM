@@ -30,8 +30,8 @@ via WebUI, CLI, our Python/Javascript client, or any HTTP client.
 ⛓️ **Freedom To Build**: First-class support for LangChain and BentoML allows you to
 easily create your own AI apps by composing LLMs with other models and services.
 
-🎯 **Streamline Deployment**: build your LLM server into docker Images or
-deploy as serverless endpoint via [☁️ BentoCloud](https://l.bentoml.com/bento-cloud).
+🎯 **Streamline Deployment**: build your LLM server Docker Images or deploy as
+serverless endpoint via [☁️ BentoCloud](https://l.bentoml.com/bento-cloud).
 
 🤖️ **Bring your own LLM**: Fine-tune any LLM to suit your needs with
 `LLM.tuning()`. (Coming soon)
