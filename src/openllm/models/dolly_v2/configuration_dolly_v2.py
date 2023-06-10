@@ -51,7 +51,7 @@ class DollyV2Config(
 
 
 START_DOLLY_V2_COMMAND_DOCSTRING = """\
-Run a LLMServer for dolly-v2 model and pretrained.
+Run a LLMServer for dolly-v2 model.
 
 \b
 > See more information about dolly-v2 at [databricks/dolly-v2-3b](https://huggingface.co/databricks/dolly-v2-3b)
@@ -63,7 +63,11 @@ Currently, dolly-v2 only supports PyTorch. Make sure ``torch`` is available in y
 
 \b
 Dolly-v2 Runner will use databricks/dolly-v2-3b as the default model. To change any to any other dolly-v2
-saved pretrained, or a fine-tune dolly-v2, provide ``OPENLLM_DOLLY_V2_PRETRAINED='databricks/dolly-v2-7b'``
+saved pretrained, or a fine-tune dolly-v2, provide ``OPENLLM_DOLLY_V2_MODEL_ID='databricks/dolly-v2-7b'``
+or provide `--model-id` flag when running ``openllm start dolly-v2``:
+
+\b
+$ openllm start dolly-v2 --model-id databricks/dolly-v2-7b
 """
 
 INSTRUCTION_KEY = "### Instruction:"

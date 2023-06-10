@@ -40,7 +40,7 @@ class FalconConfig(
 
 
 START_FALCON_COMMAND_DOCSTRING = """\
-Run a LLMServer for FalconLM model and pretrained.
+Run a LLMServer for FalconLM model.
 
 \b
 > See more information about falcon at [tiiuae/falcon-7b](https://huggingface.co/tiiuae/falcon-7b)
@@ -52,7 +52,11 @@ Currently, FalconLM only supports PyTorch. Make sure ``torch`` is available in y
 
 \b
 FalconLM Runner will use tiiuae/falcon-7b as the default model. To change any to any other FalconLM
-saved pretrained, or a fine-tune FalconLM, provide ``OPENLLM_FALCON_PRETRAINED='tiiuae/falcon-7b-instruct'``
+saved pretrained, or a fine-tune FalconLM, provide ``OPENLLM_FALCON_MODEL_ID='tiiuae/falcon-7b-instruct'``
+or provide `--model-id` flag when running ``openllm start falcon``:
+
+\b
+$ openllm start falcon --model-id tiiuae/falcon-7b-instruct
 """
 
 DEFAULT_PROMPT_TEMPLATE = """{context}

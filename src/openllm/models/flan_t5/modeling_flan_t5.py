@@ -29,9 +29,9 @@ else:
 class FlanT5(openllm.LLM):
     __openllm_internal__ = True
 
-    default_model = "google/flan-t5-large"
+    default_id = "google/flan-t5-large"
 
-    pretrained = [
+    model_ids = [
         "google/flan-t5-small",
         "google/flan-t5-base",
         "google/flan-t5-large",

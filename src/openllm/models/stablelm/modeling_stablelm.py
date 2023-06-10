@@ -43,9 +43,9 @@ class StableLM(openllm.LLM):
     __openllm_internal__ = True
 
     load_in_mha = True
-    default_model = "stabilityai/stablelm-tuned-alpha-3b"
+    default_id = "stabilityai/stablelm-tuned-alpha-3b"
 
-    pretrained = [
+    model_ids = [
         "stabilityai/stablelm-tuned-alpha-3b",
         "stabilityai/stablelm-tuned-alpha-7b",
         "stabilityai/stablelm-base-alpha-3b",
@@ -70,7 +70,7 @@ class StableLM(openllm.LLM):
         use_default_prompt_template: bool = True,
         **attrs: t.Any,
     ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
-        if "tuned" in self._pretrained and use_default_prompt_template:
+        if "tuned" in self._model_id and use_default_prompt_template:
             prompt_variables = {
                 k: v
                 for k, v in attrs.items()

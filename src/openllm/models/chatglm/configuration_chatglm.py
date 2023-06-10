@@ -55,7 +55,7 @@ class ChatGLMConfig(
 
 
 START_CHATGLM_COMMAND_DOCSTRING = """\
-Run a LLMServer for ChatGLM model and pretrained.
+Run a LLMServer for ChatGLM model.
 
 \b
 > See more information about ChatGLM at [THUDM/ChatGLM-6b](https://huggingface.co/thudm/chatglm-6b)
@@ -67,7 +67,11 @@ Currently, ChatGLM only supports PyTorch. Make sure ``torch`` is available in yo
 
 \b
 ChatGLM Runner will use THUDM/ChatGLM-6b as the default model. To change any to any other ChatGLM
-saved pretrained, or a fine-tune ChatGLM, provide ``OPENLLM_CHATGLM_PRETRAINED='thudm/chatglm-6b-int8'``
+saved pretrained, or a fine-tune ChatGLM, provide ``OPENLLM_CHATGLM_MODEL_ID='thudm/chatglm-6b-int8'``
+or provide `--model-id` flag when running ``openllm start chatglm``:
+
+\b
+$ openllm start chatglm --model-id='thudm/chatglm-6b-int8'
 """
 
 DEFAULT_PROMPT_TEMPLATE = """{instruction}"""

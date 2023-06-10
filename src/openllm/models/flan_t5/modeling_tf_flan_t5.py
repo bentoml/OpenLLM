@@ -24,9 +24,9 @@ from .configuration_flan_t5 import DEFAULT_PROMPT_TEMPLATE
 class TFFlanT5(openllm.LLM):
     __openllm_internal__ = True
 
-    default_model: str = "google/flan-t5-large"
+    default_id: str = "google/flan-t5-large"
 
-    pretrained = [
+    model_ids = [
         "google/flan-t5-small",
         "google/flan-t5-base",
         "google/flan-t5-large",

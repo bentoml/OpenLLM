@@ -47,7 +47,7 @@ class _BaseAutoLLMClass:
     def for_model(
         cls,
         model_name: str,
-        pretrained: str | None = None,
+        model_id: str | None = None,
         return_runner_kwargs: t.Literal[False] = ...,
         llm_config: openllm.LLMConfig | None = ...,
         **attrs: t.Any,
@@ -59,7 +59,7 @@ class _BaseAutoLLMClass:
     def for_model(
         cls,
         model_name: str,
-        pretrained: str | None = None,
+        model_id: str | None = None,
         return_runner_kwargs: t.Literal[True] = ...,
         llm_config: openllm.LLMConfig | None = ...,
         **attrs: t.Any,
@@ -70,11 +70,18 @@ class _BaseAutoLLMClass:
     def for_model(
         cls,
         model_name: str,
-        pretrained: str | None = None,
+        model_id: str | None = None,
         return_runner_kwargs: bool = False,
         llm_config: openllm.LLMConfig | None = ...,
         **attrs: t.Any,
     ) -> openllm.LLM | tuple[openllm.LLM, dict[str, t.Any]]:
+        """The lower level API for creating a LLM instance.
+
+        ```python
+        >>> import openllm
+        >>> llm = openllm.AutoLLM.for_model("flan-t5")
+        ```
+        """
         runner_kwargs_name = [
             "models",
             "max_batch_size",
@@ -88,7 +95,7 @@ class _BaseAutoLLMClass:
             # The rest of kwargs is now passed to config
             llm_config = AutoConfig.for_model(model_name, **attrs)
         if type(llm_config) in cls._model_mapping.keys():
-            llm = cls._model_mapping[type(llm_config)].from_pretrained(pretrained, llm_config=llm_config, **attrs)
+            llm = cls._model_mapping[type(llm_config)].from_pretrained(model_id, llm_config=llm_config, **attrs)
             if not return_runner_kwargs:
                 return llm
             return llm, to_runner_attrs
@@ -98,19 +105,19 @@ class _BaseAutoLLMClass:
         )
 
     @classmethod
-    def create_runner(cls, model_name: str, pretrained: str | None = None, **attrs: t.Any) -> bentoml.Runner:
+    def create_runner(cls, model_name: str, model_id: str | None = None, **attrs: t.Any) -> bentoml.Runner:
         """
         Create a LLM Runner for the given model name.
 
         Args:
             model_name: The model name to instantiate.
-            pretrained: The pretrained model name to instantiate.
+            model_id: The pretrained model name to instantiate.
             **attrs: Additional keyword arguments passed along to the specific configuration class.
 
         Returns:
             A LLM instance.
         """
-        llm, runner_attrs = cls.for_model(model_name, pretrained, return_runner_kwargs=True, **attrs)
+        llm, runner_attrs = cls.for_model(model_name, model_id, return_runner_kwargs=True, **attrs)
         return llm.to_runner(**runner_attrs)
 
     @classmethod

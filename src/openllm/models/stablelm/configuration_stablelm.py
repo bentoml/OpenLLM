@@ -38,7 +38,7 @@ class StableLMConfig(openllm.LLMConfig, name_type="lowercase", url="https://gith
 
 
 START_STABLELM_COMMAND_DOCSTRING = """\
-Run a LLMServer for StableLM model and pretrained.
+Run a LLMServer for StableLM model.
 
 \b
 > See more information about StableLM at [stabilityai/stablelm-base-alpha-3b](https://huggingface.co/stabilityai/stablelm-base-alpha-3b)
@@ -50,7 +50,11 @@ Currently, StableLM only supports PyTorch. Make sure ``torch`` is available in y
 
 \b
 StableLM Runner will use stabilityai/stablelm-base-alpha-3b as the default model. To change any to any other StableLM
-saved pretrained, or a fine-tune StableLM, provide ``OPENLLM_STABLELM_PRETRAINED='stabilityai/stablelm-tuned-alpha-3b'``
+saved pretrained, or a fine-tune StableLM, provide ``OPENLLM_STABLELM_MODEL_ID='stabilityai/stablelm-tuned-alpha-3b'``
+or provide `--model-id` flag when running ``openllm start stablelm``:
+
+\b
+$ openllm start stablelm --model-id 'stabilityai/stablelm-tuned-alpha-3b'
 """
 
 SYSTEM_PROMPT = """<|SYSTEM|># StableLM Tuned (Alpha version)

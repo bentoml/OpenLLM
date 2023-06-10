@@ -91,8 +91,8 @@ class ModelEnv:
         return f"OPENLLM_{self.model_name.upper()}_CONFIG"
 
     @property
-    def pretrained(self) -> str:
-        return f"OPENLLM_{self.model_name.upper()}_PRETRAINED"
+    def model_id(self) -> str:
+        return f"OPENLLM_{self.model_name.upper()}_MODEL_ID"
 
     @property
     def bettertransformer(self) -> str:

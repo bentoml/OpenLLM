@@ -41,22 +41,27 @@ class InvalidScoreLogitsProcessor(LogitsProcessor):
 class ChatGLM(openllm.LLM):
     __openllm_internal__ = True
 
-    default_model = "thudm/chatglm-6b-int4"
+    default_id = "thudm/chatglm-6b-int4"
 
-    pretrained = ["thudm/chatglm-6b", "thudm/chatglm-6b-int8", "thudm/chatglm-6b-int4"]
+    model_ids = ["thudm/chatglm-6b", "thudm/chatglm-6b-int8", "thudm/chatglm-6b-int4"]
 
     device = torch.device("cuda")
 
     def import_model(
-        self, pretrained: str, tag: bentoml.Tag, *model_args: t.Any, tokenizer_kwds: dict[str, t.Any], **attrs: t.Any
+        self,
+        model_id: str,
+        tag: bentoml.Tag,
+        *model_args: t.Any,
+        tokenizer_kwds: dict[str, t.Any],
+        **attrs: t.Any,
     ) -> bentoml.Model:
         trust_remote_code = attrs.pop("trust_remote_code", True)
         return bentoml.transformers.save_model(
             tag,
-            transformers.AutoModel.from_pretrained(pretrained, trust_remote_code=trust_remote_code),
+            transformers.AutoModel.from_pretrained(model_id, trust_remote_code=trust_remote_code),
             custom_objects={
                 "tokenizer": transformers.AutoTokenizer.from_pretrained(
-                    pretrained, trust_remote_code=trust_remote_code, **tokenizer_kwds
+                    model_id, trust_remote_code=trust_remote_code, **tokenizer_kwds
                 )
             },
         )

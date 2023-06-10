@@ -92,14 +92,14 @@ class TaskType(enum.Enum, metaclass=TypeMeta):
 
 
 def import_model(
-    model_name: str,
+    model_id: str,
     tag: bentoml.Tag,
     _model_framework: str,
     *model_args: t.Any,
     tokenizer_kwds: dict[str, t.Any],
     **attrs: t.Any,
 ):
-    """Auto detect model type from given model_name and import it to bentoml's model store.
+    """Auto detect model type from given model_id and import it to bentoml's model store.
 
     For all kwargs, it will be parsed into `transformers.AutoConfig.from_pretrained` first,
     returning all of the unused kwargs.
@@ -111,7 +111,7 @@ def import_model(
     Refer to Transformers documentation for more information about kwargs.
 
     Args:
-        model_name: Model name to be imported. use `openllm models` to see available entries
+        model_id: Model id to be imported. See `openllm models` for all supported models.
         tag: Tag to be used for the model. This is usually generated for you.
         model_args: Args to be passed into AutoModelForSeq2SeqLM or AutoModelForCausalLM (+ TF, Flax variants).
         **attrs: Kwargs to be passed into AutoModelForSeq2SeqLM or AutoModelForCausalLM (+ TF, Flax variants).
@@ -139,7 +139,7 @@ def import_model(
         config, attrs = t.cast(
             "tuple[transformers.PretrainedConfig, dict[str, t.Any]]",
             transformers.AutoConfig.from_pretrained(
-                model_name, return_unused_kwargs=True, trust_remote_code=trust_remote_code, **hub_attrs, **copied_attrs
+                model_id, return_unused_kwargs=True, trust_remote_code=trust_remote_code, **hub_attrs, **copied_attrs
             ),
         )
 
@@ -156,13 +156,13 @@ def import_model(
             getattr(
                 transformers, FRAMEWORK_TO_AUTOCLASS_MAPPING[_model_framework][TaskType[task_type].value - 1]
             ).from_pretrained(
-                model_name, *model_args, config=config, trust_remote_code=trust_remote_code, **hub_attrs, **attrs
+                model_id, *model_args, config=config, trust_remote_code=trust_remote_code, **hub_attrs, **attrs
             ),
             custom_objects={
                 "tokenizer": t.cast(
                     "LLMTokenizer",
                     transformers.AutoTokenizer.from_pretrained(
-                        model_name, config=config, trust_remote_code=trust_remote_code, **hub_attrs, **tokenizer_kwds
+                        model_id, config=config, trust_remote_code=trust_remote_code, **hub_attrs, **tokenizer_kwds
                     ),
                 )
             },
@@ -179,7 +179,7 @@ def import_model(
             torch.cuda.empty_cache()
 
 
-_required_namespace = {"default_model", "pretrained"}
+_required_namespace = {"default_id", "model_ids"}
 
 _reserved_namespace = _required_namespace | {
     "config_class",
@@ -192,11 +192,11 @@ _reserved_namespace = _required_namespace | {
 class LLMInterface(ABC):
     """This defines the loose contract for all openllm.LLM implementations."""
 
-    default_model: str
-    """Return the default model to use when using 'openllm start <model_name>'.
-    This could be one of the keys in 'self.pretrained' or custom users model."""
+    default_id: str
+    """Return the default model to use when using 'openllm start <model_id>'.
+    This could be one of the keys in 'self.model_ids' or custom users model."""
 
-    pretrained: list[str]
+    model_ids: list[str]
     """A list of supported pretrained models tag for this given runnable.
 
     For example:
@@ -253,7 +253,7 @@ class LLMInterface(ABC):
         pass
 
     def import_model(
-        self, pretrained: str, tag: bentoml.Tag, *args: t.Any, tokenizer_kwds: dict[str, t.Any], **attrs: t.Any
+        self, model_id: str, tag: bentoml.Tag, *args: t.Any, tokenizer_kwds: dict[str, t.Any], **attrs: t.Any
     ) -> bentoml.Model:
         """This function can be implemented if default import_model doesn't satisfy your needs."""
         raise NotImplementedError
@@ -275,6 +275,8 @@ class LLMMetaclass(ABCMeta):
                 namespace["__annotations__"] = annotations_dict
 
             # NOTE: check for required attributes
+            if "__openllm_internal__" not in namespace:
+                _required_namespace.add("config_class")
             for k in _required_namespace:
                 if k not in namespace:
                     raise RuntimeError(f"Missing required key '{k}'. Make sure to define it within the LLM subclass.")
@@ -378,13 +380,13 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
 
     @classmethod
     def from_pretrained(
-        cls, pretrained: str | None = None, llm_config: openllm.LLMConfig | None = None, *args: t.Any, **attrs: t.Any
+        cls, model_id: str | None = None, llm_config: openllm.LLMConfig | None = None, *args: t.Any, **attrs: t.Any
     ) -> LLM:
-        return cls(pretrained=pretrained, llm_config=llm_config, *args, **attrs)
+        return cls(model_id=model_id, llm_config=llm_config, *args, **attrs)
 
     def __init__(
         self,
-        pretrained: str | None = None,
+        model_id: str | None = None,
         llm_config: openllm.LLMConfig | None = None,
         *args: t.Any,
         **attrs: t.Any,
@@ -408,7 +410,7 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
         ```python
         def import_model(
             self,
-            pretrained: str,
+            model_id: str,
             tag: bentoml.Tag,
             *args: t.Any,
             tokenizer_kwds: dict[str, t.Any],
@@ -417,11 +419,11 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
             return bentoml.transformers.save_model(
                 tag,
                 transformers.AutoModelForCausalLM.from_pretrained(
-                    pretrained, device_map="auto", torch_dtype=torch.bfloat16, **attrs
+                    model_id, device_map="auto", torch_dtype=torch.bfloat16, **attrs
                 ),
                 custom_objects={
                     "tokenizer": transformers.AutoTokenizer.from_pretrained(
-                        pretrained, padding_size="left", **tokenizer_kwds
+                        model_id, padding_size="left", **tokenizer_kwds
                     )
                 },
             )
@@ -440,14 +442,14 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
         Note: If you implement your own `import_model`, then `import_kwargs` will be the
         default kwargs for every load. You can still override those via ``openllm.Runner``.
 
-        Note that this tag will be generated based on `self.default_model` or the given `pretrained` kwds.
+        Note that this tag will be generated based on `self.default_id` or the given `pretrained` kwds.
         passed from the __init__ constructor.
 
         ``llm_post_init`` can also be implemented if you need to do any
         additional initialization after everything is setup.
 
         Args:
-            pretrained: The pretrained model to use. Defaults to None. It will use 'self.default_model' if None.
+            model_id: The pretrained model to use. Defaults to None. If None, 'self.default_id' will be used.
             llm_config: The config to use for this LLM. Defaults to None. If not passed, we will use 'self.config_class'
                         to construct default configuration.
             *args: The args to be passed to the model.
@@ -462,14 +464,14 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
             # The rests of the kwargs that is not used by the config class should be stored into __openllm_extras__.
             attrs = self.config.__openllm_extras__
 
-        if pretrained is None:
-            pretrained = os.environ.get(self.config.__openllm_env__.pretrained, None)
-            if not pretrained:
-                assert self.default_model, "A default model is required for any LLM."
-                pretrained = self.default_model
+        if model_id is None:
+            model_id = os.environ.get(self.config.__openllm_env__.model_id, None)
+            if not model_id:
+                assert self.default_id, "A default model is required for any LLM."
+                model_id = self.default_id
 
         # NOTE: This is the actual given path or pretrained weight for this LLM.
-        self._pretrained = pretrained
+        self._model_id = model_id
 
         # NOTE: Save the args and kwargs for latter load
         self._llm_args = args
@@ -491,19 +493,19 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
     # NOTE: The section below defines a loose contract with langchain's LLM interface.
     @property
     def llm_type(self) -> str:
-        return convert_transformers_model_name(self._pretrained)
+        return convert_transformers_model_name(self._model_id)
 
     @property
     def identifying_params(self) -> dict[str, t.Any]:
         return {
             "configuration": self.config.model_dump_json().decode(),
-            "pretrained": orjson.dumps(self.pretrained).decode(),
+            "model_ids": orjson.dumps(self.model_ids).decode(),
         }
 
     @t.overload
     def make_tag(
         self,
-        model_name_or_path: str | None = None,
+        model_id: str | None = None,
         return_unused_kwargs: t.Literal[False] = ...,
         trust_remote_code: bool = ...,
         **attrs: t.Any,
@@ -513,7 +515,7 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
     @t.overload
     def make_tag(
         self,
-        model_name_or_path: str | None = None,
+        model_id: str | None = None,
         return_unused_kwargs: t.Literal[True] = ...,
         trust_remote_code: bool = ...,
         **attrs: t.Any,
@@ -522,7 +524,7 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
 
     def make_tag(
         self,
-        model_name_or_path: str | None = None,
+        model_id: str | None = None,
         return_unused_kwargs: bool = False,
         trust_remote_code: bool = False,
         **attrs: t.Any,
@@ -543,8 +545,8 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
         Returns:
             A tuple of ``bentoml.Tag`` and a dict of unused kwargs.
         """
-        if model_name_or_path is None:
-            model_name_or_path = self._pretrained
+        if model_id is None:
+            model_id = self._model_id
 
         if "return_unused_kwargs" in attrs:
             logger.debug("Ignoring 'return_unused_kwargs' in 'generate_tag_from_model_name'.")
@@ -553,12 +555,12 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
         config, attrs = t.cast(
             "tuple[transformers.PretrainedConfig, dict[str, t.Any]]",
             transformers.AutoConfig.from_pretrained(
-                model_name_or_path, return_unused_kwargs=True, trust_remote_code=trust_remote_code, **attrs
+                model_id, return_unused_kwargs=True, trust_remote_code=trust_remote_code, **attrs
             ),
         )
-        name = convert_transformers_model_name(model_name_or_path)
+        name = convert_transformers_model_name(model_id)
 
-        if os.path.exists(os.path.dirname(model_name_or_path)):
+        if os.path.exists(os.path.dirname(model_id)):
             # If the model_name_or_path is a path, we assume it's a local path,
             # then users must pass a version for this.
             model_version = attrs.pop("openllm_model_version", None)
@@ -590,7 +592,7 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
                     "Given %s from '%s' doesn't contain a commit hash. We will generate"
                     " the tag without specific version.",
                     t.cast("type[transformers.PretrainedConfig]", config.__class__),
-                    model_name_or_path,
+                    model_id,
                 )
         tag = bentoml.Tag.from_taglike(f"{self.__llm_implementation__}-{name}:{model_version}")
 
@@ -621,7 +623,7 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
                 }
 
             return self.import_model(
-                self._pretrained,
+                self._model_id,
                 tag,
                 *self._llm_args,
                 tokenizer_kwds=tokenizer_kwds,

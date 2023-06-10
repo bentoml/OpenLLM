@@ -16,7 +16,7 @@ from __future__ import annotations
 import openllm
 
 START_FLAN_T5_COMMAND_DOCSTRING = """\
-Run a LLMServer for FLAN-T5 model and pretrained.
+Run a LLMServer for FLAN-T5 model.
 
 \b
 > See more information about FLAN-T5 at [huggingface/transformers](https://huggingface.co/docs/transformers/model_doc/flan-t5)
@@ -34,7 +34,11 @@ By default, this model will use the PyTorch model for inference. However, this m
 
 \b
 FLAN-T5 Runner will use google/flan-t5-large as the default model. To change any to any other FLAN-T5
-saved pretrained, or a fine-tune FLAN-T5, provide ``OPENLLM_FLAN_T5_PRETRAINED='google/flan-t5-xxl'``
+saved pretrained, or a fine-tune FLAN-T5, provide ``OPENLLM_FLAN_T5_MODEL_ID='google/flan-t5-xxl'``
+or provide `--model-id` flag when running ``openllm start flan-t5``:
+
+\b
+$ openllm start flan-t5 --model-id google/flan-t5-xxl
 """
 
 DEFAULT_PROMPT_TEMPLATE = """Answer the following question:\nQuestion: {instruction}\nAnswer:"""

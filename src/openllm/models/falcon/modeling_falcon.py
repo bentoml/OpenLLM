@@ -34,9 +34,9 @@ else:
 class Falcon(openllm.LLM):
     __openllm_internal__ = True
 
-    default_model = "tiiuae/falcon-7b"
+    default_id = "tiiuae/falcon-7b"
 
-    pretrained = ["tiiuae/falcon-7b", "tiiuae/falcon-40b", "tiiuae/falcon-7b-instruct", "tiiuae/falcon-40b-instruct"]
+    model_ids = ["tiiuae/falcon-7b", "tiiuae/falcon-40b", "tiiuae/falcon-7b-instruct", "tiiuae/falcon-40b-instruct"]
 
     import_kwargs = {
         "torch_dtype": torch.bfloat16,
@@ -44,15 +44,15 @@ class Falcon(openllm.LLM):
     }
 
     def import_model(
-        self, pretrained: str, tag: bentoml.Tag, *model_args: t.Any, tokenizer_kwds: dict[str, t.Any], **attrs: t.Any
+        self, model_id: str, tag: bentoml.Tag, *model_args: t.Any, tokenizer_kwds: dict[str, t.Any], **attrs: t.Any
     ) -> bentoml.Model:
         trust_remote_code = attrs.pop("trust_remote_code", True)
         torch_dtype = attrs.pop("torch_dtype", torch.bfloat16)
         device_map = attrs.pop("device_map", "auto")
 
-        tokenizer = transformers.AutoTokenizer.from_pretrained(pretrained)
+        tokenizer = transformers.AutoTokenizer.from_pretrained(model_id)
         model = transformers.AutoModelForCausalLM.from_pretrained(
-            pretrained,
+            model_id,
             trust_remote_code=trust_remote_code,
             torch_dtype=torch_dtype,
             device_map=device_map,

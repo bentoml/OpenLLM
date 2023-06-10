@@ -388,8 +388,8 @@ def start_model_command(
     docstring = f"""\
 {ModelEnv.start_docstring}
 \b
-The available pretrained models to use with '{model_name}' are: {for_doc.pretrained} [default: {for_doc.default_model}]
-Tip: One can pass one of the aforementioned to '--pretrained' to use other pretrained weights.
+Available model_id(s) to use with '{model_name}' are: {for_doc.model_ids} [default: {for_doc.default_id}]
+Tip: One can pass one of the aforementioned to '--model-id' to use other pretrained weights.
 """
     command_attrs: dict[str, t.Any] = {
         "name": ModelEnv.model_name,
@@ -430,9 +430,7 @@ Tip: One can pass one of the aforementioned to '--pretrained' to use other pretr
     @llm_config.to_click_options
     @parse_serve_args(_serve_grpc)
     @click.option("--server-timeout", type=int, default=3600, help="Server timeout in seconds")
-    @click.option(
-        "--pretrained", type=click.STRING, default=None, help="Optional pretrained name or path to fine-tune weight."
-    )
+    @model_id_option
     @click.option(
         "--device",
         type=tuple,
@@ -444,18 +442,18 @@ Tip: One can pass one of the aforementioned to '--pretrained' to use other pretr
     )
     def model_start(
         server_timeout: int,
-        pretrained: str | None,
+        model_id: str | None,
         device: tuple[str, ...] | None,
         **attrs: t.Any,
     ) -> openllm.LLMConfig:
         config, server_attrs = llm_config.model_validate_click(**attrs)
 
         if ModelEnv.get_framework_env() == "flax":
-            llm = openllm.AutoFlaxLLM.for_model(model_name, pretrained=pretrained, llm_config=config)
+            llm = openllm.AutoFlaxLLM.for_model(model_name, model_id=model_id, llm_config=config)
         elif ModelEnv.get_framework_env() == "tf":
-            llm = openllm.AutoTFLLM.for_model(model_name, pretrained=pretrained, llm_config=config)
+            llm = openllm.AutoTFLLM.for_model(model_name, model_id=model_id, llm_config=config)
         else:
-            llm = openllm.AutoLLM.for_model(model_name, pretrained=pretrained, llm_config=config)
+            llm = openllm.AutoLLM.for_model(model_name, mdoel_id=model_id, llm_config=config)
 
         # NOTE: We need to initialize llm here first to check if the model is already downloaded to
         # avoid deadlock before the subprocess forking.
@@ -580,6 +578,12 @@ output_option = click.option(
     default="pretty",
     help="Showing output type. Default to 'pretty'",
 )
+model_id_option = click.option(
+    "--model-id",
+    type=click.STRING,
+    default=None,
+    help="Optional model_id name or path for (fine-tune) weight.",
+)
 
 
 def cli_factory() -> click.Group:
@@ -626,16 +630,15 @@ def cli_factory() -> click.Group:
     @click.argument(
         "model_name", type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING.keys()])
     )
-    @click.option("--pretrained", default=None, help="Given pretrained model name for the given model name [Optional].")
-    @click.option("--overwrite", is_flag=True, help="Overwrite existing Bento for given LLM if it already exists.")
+    @model_id_option
     @output_option
-    def build(model_name: str, pretrained: str | None, overwrite: bool, output: OutputLiteral):
+    @click.option("--overwrite", is_flag=True, help="Overwrite existing Bento for given LLM if it already exists.")
+    def build(model_name: str, model_id: str | None, overwrite: bool, output: OutputLiteral):
         """Package a given models into a Bento.
 
         $ openllm build flan-t5
 
         \b
-
         NOTE: To run a container built from this Bento with GPU support, make sure
         to have https://github.com/NVIDIA/nvidia-container-toolkit install locally.
         """
@@ -645,7 +648,7 @@ def cli_factory() -> click.Group:
         bento, _previously_built = openllm.build(
             model_name,
             __cli__=True,
-            pretrained=pretrained,
+            model_id=model_id,
             _overwrite_existing_bento=overwrite,
         )
 
@@ -684,13 +687,13 @@ def cli_factory() -> click.Group:
         else:
             failed_initialized: list[tuple[str, Exception]] = []
 
-            json_data: dict[str, dict[t.Literal["pretrained", "description"], t.Any]] = {}
+            json_data: dict[str, dict[t.Literal["model_id", "description"], t.Any]] = {}
 
             for m in models:
                 try:
                     model = openllm.AutoLLM.for_model(m)
                     docs = inspect.cleandoc(model.config.__doc__ or "(No description)")
-                    json_data[m] = {"pretrained": model.pretrained, "description": docs}
+                    json_data[m] = {"model_id": model.model_ids, "description": docs}
                 except Exception as err:
                     failed_initialized.append((m, err))
 
@@ -701,7 +704,7 @@ def cli_factory() -> click.Group:
 
                 data: list[str | tuple[str, str, list[str]]] = []
                 for m, v in json_data.items():
-                    data.extend([(m, v["description"], v["pretrained"])])
+                    data.extend([(m, v["description"], v["model_id"])])
                 column_widths = [int(COLUMNS / 6), int(COLUMNS / 3 * 2), int(COLUMNS / 6)]
 
                 if len(data) == 0 and len(failed_initialized) > 0:
@@ -714,7 +717,7 @@ def cli_factory() -> click.Group:
                 table = tabulate.tabulate(
                     data,
                     tablefmt="fancy_grid",
-                    headers=["LLM", "Description", "Pretrained"],
+                    headers=["LLM", "Description", "Models Id"],
                     maxcolwidths=column_widths,
                 )
 
@@ -739,11 +742,9 @@ def cli_factory() -> click.Group:
     @click.argument(
         "model_name", type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING.keys()])
     )
-    @click.option(
-        "--pretrained", type=click.STRING, default=None, help="Optional pretrained name or path to fine-tune weight."
-    )
+    @model_id_option
     @output_option
-    def download_models(model_name: str, pretrained: str | None, output: OutputLiteral):
+    def download_models(model_name: str, model_id: str | None, output: OutputLiteral):
         """Setup LLM interactively.
 
         Note: This is useful for development and setup for fine-tune.
@@ -751,11 +752,11 @@ def cli_factory() -> click.Group:
         config = openllm.AutoConfig.for_model(model_name)
         env = config.__openllm_env__.get_framework_env()
         if env == "flax":
-            model = openllm.AutoFlaxLLM.for_model(model_name, pretrained=pretrained, llm_config=config)
+            model = openllm.AutoFlaxLLM.for_model(model_name, model_id=model_id, llm_config=config)
         elif env == "tf":
-            model = openllm.AutoTFLLM.for_model(model_name, pretrained=pretrained, llm_config=config)
+            model = openllm.AutoTFLLM.for_model(model_name, model_id=model_id, llm_config=config)
         else:
-            model = openllm.AutoLLM.for_model(model_name, pretrained=pretrained, llm_config=config)
+            model = openllm.AutoLLM.for_model(model_name, model_id=model_id, llm_config=config)
 
         tag = model.make_tag(trust_remote_code=config.__openllm_trust_remote_code__)
 
@@ -829,7 +830,7 @@ def cli_factory() -> click.Group:
     )
     @output_option
     @click.argument("query", type=click.STRING)
-    def query(
+    def query_(
         query: str,
         endpoint: str,
         timeout: int,
@@ -838,7 +839,7 @@ def cli_factory() -> click.Group:
     ):
         """Ask a LLM interactively, from a terminal.
 
-        $ openllm query --endpoint http://12.323.2.1 "What is the meaning of life?"
+        $ openllm query --endpoint http://12.323.2.1:3000 "What is the meaning of life?"
         """
         if server_type == "grpc":
             endpoint = re.sub(r"http://", "", endpoint)
@@ -870,7 +871,7 @@ def cli_factory() -> click.Group:
             _echo(res["responses"], fg="white")
 
     if t.TYPE_CHECKING:
-        assert download_models and build and models and start and start_grpc and query and prune
+        assert download_models and build and models and start and start_grpc and query_ and prune
 
     if psutil.WINDOWS:
         sys.stdout.reconfigure(encoding="utf-8")  # type: ignore

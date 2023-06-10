@@ -40,21 +40,21 @@ FIM_INDICATOR = "<FILL_HERE>"
 class StarCoder(openllm.LLM):
     __openllm_internal__ = True
 
-    default_model = "bigcode/starcoder"
+    default_id = "bigcode/starcoder"
 
-    pretrained = ["bigcode/starcoder", "bigcode/starcoderbase"]
+    model_ids = ["bigcode/starcoder", "bigcode/starcoderbase"]
 
     device = torch.device("cuda")
 
     def import_model(
         self,
-        pretrained: str,
+        model_id: str,
         tag: bentoml.Tag,
         *model_args: t.Any,
         tokenizer_kwds: dict[str, t.Any],
         **attrs: t.Any,
     ) -> bentoml.Model:
-        tokenizer = transformers.AutoTokenizer.from_pretrained(pretrained, **tokenizer_kwds)
+        tokenizer = transformers.AutoTokenizer.from_pretrained(model_id, **tokenizer_kwds)
         tokenizer.add_special_tokens(
             {
                 "additional_special_tokens": [EOD, FIM_PREFIX, FIM_MIDDLE, FIM_SUFFIX, FIM_PAD],
@@ -62,7 +62,7 @@ class StarCoder(openllm.LLM):
             }
         )
 
-        model = transformers.AutoModelForCausalLM.from_pretrained(pretrained, **attrs)
+        model = transformers.AutoModelForCausalLM.from_pretrained(model_id, **attrs)
 
         try:
             return bentoml.transformers.save_model(tag, model, custom_objects={"tokenizer": tokenizer})
