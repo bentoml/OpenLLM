@@ -19,7 +19,7 @@
 ## 📖 Introduction
 
 With OpenLLM, you can run inference with any open-source large-language models(LLMs),
-serve LLMs over REST API or gRPC, and deploy to the cloud or on-premises.
+deploy to the cloud or on-premises, and build powerful AI apps.
 
 🚂 **SOTA LLMs**: built-in supports a wide range of open-source LLMs and model runtime,
 including StableLM, Falcon, Dolly, Flan-T5, ChatGLM, StarCoder and more.
@@ -27,7 +27,7 @@ including StableLM, Falcon, Dolly, Flan-T5, ChatGLM, StarCoder and more.
 🔥 **Flexible APIs**: serve LLMs over RESTful API or gRPC with one command, query
 via WebUI, CLI, our Python/Javascript client, or any HTTP client.
 
-⛓️ **Freedom To Build**: First-class support for LangChain and BentoML allows you to 
+⛓️ **Freedom To Build**: First-class support for LangChain and BentoML allows you to
 easily create your own AI apps by composing LLMs with other models and services.
 
 🎯 **Streamline Deployment**: build your LLM server into docker Images or
