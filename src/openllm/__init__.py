@@ -15,10 +15,13 @@
 OpenLLM
 =======
 
-OpenLLM: Your one stop-and-go-solution for serving any Open Large-Language Model
+An open platform for operating large language models in production. Fine-tune, serve,
+deploy, and monitor any LLMs with ease.
 
-- StableLM, Llama, Alpaca, Dolly, Flan-T5, and more
-- Powered by BentoML 🍱 + HuggingFace 🤗
+* Built-in support for StableLM, Llama, Dolly, Flan-T5, Vicuna
+* Option to bring your own fine-tuned LLMs
+* Online Serving with HTTP, gRPC, SSE(coming soon) or custom API
+* Native integration with BentoML and LangChain for custom LLM apps
 """
 from __future__ import annotations
 

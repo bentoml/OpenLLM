@@ -517,12 +517,8 @@ def cli_factory() -> click.Group:
          ╚═════╝ ╚═╝     ╚══════╝╚═╝  ╚═══╝╚══════╝╚══════╝╚═╝     ╚═╝
 
         \b
-        OpenLLM: Your one stop-and-go-solution for serving any Open Large-Language Model
-
-            - StableLM, Falcon, ChatGLM, Dolly, Flan-T5, and more
-
-        \b
-            - Powered by BentoML 🍱
+        An open platform for operating large language models in production.
+        Fine-tune, serve, deploy, and monitor any LLMs with ease.
         """
 
     @cli.group(cls=OpenLLMCommandGroup, context_settings=_CONTEXT_SETTINGS)
@@ -588,7 +584,7 @@ def cli_factory() -> click.Group:
             _echo(bento.tag)
         return bento
 
-    @cli.command(aliases=["list"])
+    @cli.command()
     @output_option
     def models(output: OutputLiteral):
         """List all supported models."""
@@ -649,7 +645,7 @@ def cli_factory() -> click.Group:
 
         sys.exit(0)
 
-    @cli.command(aliases=["save"])
+    @cli.command()
     @click.argument(
         "model_name", type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING.keys()])
     )
@@ -729,11 +725,12 @@ def cli_factory() -> click.Group:
                 model_store.delete(model.tag)
                 click.echo(f"{model} deleted.")
 
-    @cli.command(name="query", aliases=["run", "ask"])
+    @cli.command(name="query")
     @click.option(
         "--endpoint",
         type=click.STRING,
-        help="LLM Server endpoint, i.e: http://12.323.2.1",
+        help="OpenLLM Server endpoint, i.e: http://0.0.0.0:3000",
+        envvar="OPENLLM_ENDPOINT",
         default="http://0.0.0.0:3000",
     )
     @click.option("--timeout", type=click.INT, default=30, help="Default server timeout", show_default=True)

@@ -130,3 +130,6 @@ dmypy.json
 bazel-*
 
 package-lock.json
+
+# PyCharm config
+.idea

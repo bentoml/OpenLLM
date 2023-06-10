@@ -38,11 +38,11 @@ def main() -> int:
         readme = f.readlines()
 
     start_index, stop_index = readme.index(START_COMMENT), readme.index(END_COMMENT)
-    formatted: dict[t.Literal["Model", "CPU", "GPU", "Optional"], list[str]] = {
+    formatted: dict[t.Literal["Model", "CPU", "GPU", "Installation"], list[str]] = {
         "Model": [],
         "CPU": [],
         "GPU": [],
-        "Optional": [],
+        "Installation": [],
     }
     max_name_len_div = 0
     max_install_len_div = 0
@@ -55,19 +55,19 @@ def main() -> int:
         formatted["Model"].append(model_name)
         formatted["GPU"].append("✅")
         formatted["CPU"].append("✅" if not config.__openllm_requires_gpu__ else "❌")
-        instruction = "👾 (not needed)"
+        instruction = "`pip install openllm`"
         if dashed in deps:
-            instruction = f"`pip install openllm[{dashed}]`"
+            instruction = f"""`pip install "openllm[{dashed}]"`"""
         else:
             does_not_need_custom_installation.append(model_name)
         if len(instruction) > max_install_len_div:
             max_install_len_div = len(instruction)
-        formatted["Optional"].append(instruction)
+        formatted["Installation"].append(instruction)
 
     meta = ["\n"]
 
     # NOTE: headers
-    meta += f"| Model {' ' * (max_name_len_div - 6)} | CPU | GPU | Optional {' ' * (max_install_len_div - 8)}|\n"
+    meta += f"| Model {' ' * (max_name_len_div - 6)} | CPU | GPU | Installation {' ' * (max_install_len_div - 8)}|\n"
     # NOTE: divs
     meta += f"| {'-' * max_name_len_div}" + " | --- | --- | " + f"{'-' * max_install_len_div} |\n"
     # NOTE: rows
@@ -87,15 +87,6 @@ def main() -> int:
             + " |\n"
         )
     meta += "\n"
-
-    # NOTE: adding notes
-    meta += """\
-> NOTE: We respect users' system disk space. Hence, OpenLLM doesn't enforce to
-> install dependencies to run all models. If one wishes to use any of the
-> aforementioned models, make sure to install the optional dependencies
-> mentioned above.
-
-"""
 
     readme = readme[:start_index] + [START_COMMENT] + meta + [END_COMMENT] + readme[stop_index + 1 :]
 
