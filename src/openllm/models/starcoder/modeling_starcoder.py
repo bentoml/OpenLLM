@@ -46,13 +46,6 @@ class StarCoder(openllm.LLM):
 
     device = torch.device("cuda")
 
-    import_kwargs = {
-        "_tokenizer_padding_side": "left",
-        "device_map": "auto",
-        "load_in_8bit": True,
-        "torch_dtype": torch.float16,
-    }
-
     def import_model(
         self,
         pretrained: str,
@@ -61,14 +54,7 @@ class StarCoder(openllm.LLM):
         tokenizer_kwds: dict[str, t.Any],
         **attrs: t.Any,
     ) -> bentoml.Model:
-        trust_remote_code = attrs.pop("trust_remote_code", True)
-        torch_dtype = attrs.pop("torch_dtype", torch.float16)
-        load_in_8bit = attrs.pop("load_in_8bit", True)
-        device_map = attrs.pop("device_map", "auto")
-
-        tokenizer = transformers.AutoTokenizer.from_pretrained(
-            pretrained, trust_remote_code=trust_remote_code, **tokenizer_kwds
-        )
+        tokenizer = transformers.AutoTokenizer.from_pretrained(pretrained, **tokenizer_kwds)
         tokenizer.add_special_tokens(
             {
                 "additional_special_tokens": [EOD, FIM_PREFIX, FIM_MIDDLE, FIM_SUFFIX, FIM_PAD],
@@ -76,14 +62,7 @@ class StarCoder(openllm.LLM):
             }
         )
 
-        model = transformers.AutoModelForCausalLM.from_pretrained(
-            pretrained,
-            torch_dtype=torch_dtype,
-            load_in_8bit=load_in_8bit,
-            device_map=device_map,
-            trust_remote_code=trust_remote_code,
-            **attrs,
-        )
+        model = transformers.AutoModelForCausalLM.from_pretrained(pretrained, **attrs)
 
         try:
             return bentoml.transformers.save_model(tag, model, custom_objects={"tokenizer": tokenizer})
