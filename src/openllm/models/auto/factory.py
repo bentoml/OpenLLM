@@ -76,7 +76,6 @@ class _BaseAutoLLMClass:
         **attrs: t.Any,
     ) -> openllm.LLM | tuple[openllm.LLM, dict[str, t.Any]]:
         runner_kwargs_name = [
-            "name",
             "models",
             "max_batch_size",
             "max_latency_ms",

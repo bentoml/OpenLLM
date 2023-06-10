@@ -692,7 +692,6 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
 
     def to_runner(
         self,
-        name: str | None = None,
         models: list[bentoml.Model] | None = None,
         max_batch_size: int | None = None,
         max_latency_ms: int | None = None,
@@ -714,8 +713,7 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
             scheduling_strategy: Whether to create a custom scheduling strategy for this Runner.
         """
 
-        if name is None:
-            name = f"llm-{self.config.__openllm_start_name__}-runner"
+        name = f"llm-{self.config.__openllm_start_name__}-runner"
         models = models if models is not None else []
 
         # NOTE: The side effect of this is that will load the imported model during runner creation.

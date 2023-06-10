@@ -168,7 +168,7 @@ class BaseAsyncClient(ClientMixin):
         )
         inputs = openllm.GenerationInput(prompt=prompt, llm_config=self.config.model_construct_env(**generate_kwargs))
         res = await self.acall("generate", inputs)
-        r = openllm.GenerationOutput(**res)
+        r = self.postprocess(res)
 
         if return_raw_response:
             return openllm.utils.bentoml_cattr.unstructure(r)

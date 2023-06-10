@@ -47,6 +47,10 @@ if t.TYPE_CHECKING:
     ServeCommand = t.Literal["serve", "serve-grpc"]
     OutputLiteral = t.Literal["json", "pretty", "porcelain"]
 
+    TupleStrAny = tuple[str, ...]
+else:
+    TupleStrAny = tuple
+
 
 logger = logging.getLogger(__name__)
 
@@ -250,7 +254,7 @@ _IGNORED_OPTIONS = {"working_dir", "production", "protocol_version"}
 
 
 if t.TYPE_CHECKING:
-    WrappedServeFunction = ClickFunctionWrapper[t.Concatenate[int, str | None, OutputLiteral, P], openllm.LLMConfig]
+    WrappedServeFunction = ClickFunctionWrapper[t.Concatenate[int, str | None, P], openllm.LLMConfig]
 else:
     WrappedServeFunction = t.Any
 
@@ -266,7 +270,7 @@ def parse_serve_args(serve_grpc: bool):
     )
 
     def decorator(
-        f: t.Callable[t.Concatenate[int, str | None, t.Literal["porcelain", "pretty"], P], openllm.LLMConfig]
+        f: t.Callable[t.Concatenate[int, str | None, P], openllm.LLMConfig]
     ) -> ClickFunctionWrapper[P, openllm.LLMConfig]:
         serve_command = cli.commands[command]
         # The first variable is the argument bento
@@ -286,6 +290,70 @@ def parse_serve_args(serve_grpc: bool):
         return group(f)
 
     return decorator
+
+
+class NargsOptions(click.Option):
+    """An option that supports nargs=-1.
+    Derived from https://stackoverflow.com/a/48394004/8643197
+
+    We mk add_to_parser to handle multiple value that is passed into this specific
+    options.
+    """
+
+    def __init__(self, *args: t.Any, **attrs: t.Any):
+        nargs = attrs.pop("nargs", -1)
+        if nargs != -1:
+            raise openllm.exceptions.OpenLLMException(f"'nargs' is set, and must be -1 instead of {nargs}")
+        super(NargsOptions, self).__init__(*args, **attrs)
+        self._prev_parser_process: t.Callable[[t.Any, click.parser.ParsingState], None] | None = None
+        self._nargs_parser: click.parser.Option | None = None
+
+    def add_to_parser(self, parser: click.OptionParser, ctx: click.Context) -> None:
+        def _parser(value: t.Any, state: click.parser.ParsingState):
+            # method to hook to the parser.process
+            done = False
+            value = [value]
+            # grab everything up to the next option
+            assert self._nargs_parser is not None
+            while state.rargs and not done:
+                for prefix in self._nargs_parser.prefixes:
+                    if state.rargs[0].startswith(prefix):
+                        done = True
+                if not done:
+                    value.append(state.rargs.pop(0))
+            value = tuple(value)
+
+            # call the actual process
+            assert self._prev_parser_process is not None
+            self._prev_parser_process(value, state)
+
+        retval = super(NargsOptions, self).add_to_parser(parser, ctx)
+        for name in self.opts:
+            our_parser = parser._long_opt.get(name) or parser._short_opt.get(name)
+            if our_parser:
+                self._nargs_parser = our_parser
+                self._prev_parser_process = our_parser.process
+                our_parser.process = _parser
+                break
+        return retval
+
+
+def parse_device_callback(_: click.Context, params: click.Parameter, value: tuple[str, ...] | None) -> t.Any:
+    if value is None:
+        return value
+
+    if not openllm.utils.LazyType(TupleStrAny).isinstance(value):
+        raise RuntimeError(f"{params} only accept multiple values.")
+    parsed: tuple[str, ...] = tuple()
+    for v in value:
+        if v == ",":
+            # NOTE: This hits when CUDA_VISIBLE_DEVICES is set
+            continue
+        if "," in v:
+            parsed += tuple(v.split(","))
+        else:
+            parsed += tuple(v.split())
+    return tuple(filter(lambda x: x, parsed))
 
 
 def start_model_command(
@@ -366,16 +434,18 @@ Tip: One can pass one of the aforementioned to '--pretrained' to use other pretr
         "--pretrained", type=click.STRING, default=None, help="Optional pretrained name or path to fine-tune weight."
     )
     @click.option(
-        "-o",
-        "--output",
-        type=click.Choice(["pretty", "porcelain"]),
-        default="porcelain",
-        help="Showing output type. Default to 'pretty'",
+        "--device",
+        type=tuple,
+        cls=NargsOptions,
+        nargs=-1,
+        envvar="CUDA_VISIBLE_DEVICES",
+        callback=parse_device_callback,
+        help=f"Assign GPU devices (if available) for {model_name}.",
     )
     def model_start(
         server_timeout: int,
         pretrained: str | None,
-        output: t.Literal["pretty", "porcelain"],
+        device: tuple[str, ...] | None,
         **attrs: t.Any,
     ) -> openllm.LLMConfig:
         config, server_attrs = llm_config.model_validate_click(**attrs)
@@ -408,16 +478,24 @@ Tip: One can pass one of the aforementioned to '--pretrained' to use other pretr
 
         start_env = os.environ.copy()
 
-        # NOTE: This is a hack to set current configuration
+        # NOTE: This is to set current configuration
         _bentoml_config_options = start_env.pop("BENTOML_CONFIG_OPTIONS", "")
-        _bentoml_config_options += (
-            " "
-            if _bentoml_config_options
-            else ""
-            + f"api_server.traffic.timeout={server_timeout}"
-            + f' runners."llm-{llm.config.__openllm_start_name__}-runner".traffic.timeout'
-            + f"={llm.config.__openllm_timeout__}"
-        )
+        _bentoml_config_options_opts = [
+            f"api_server.traffic.timeout={server_timeout}",
+            f'runners."llm-{llm.config.__openllm_start_name__}-runner".traffic.timeout={llm.config.__openllm_timeout__}',
+        ]
+        if device:
+            if len(device) > 1:
+                for idx, dev in enumerate(device):
+                    _bentoml_config_options_opts.append(
+                        f'runners."llm-{llm.config.__openllm_start_name__}-runner".resources."nvidia.com/gpu"[{idx}]={dev}'
+                    )
+            else:
+                _bentoml_config_options_opts.append(
+                    f'runners."llm-{llm.config.__openllm_start_name__}-runner".resources."nvidia.com/gpu"={device[0]}'
+                )
+
+        _bentoml_config_options += " " if _bentoml_config_options else "" + " ".join(_bentoml_config_options_opts)
 
         start_env.update(
             {
@@ -555,6 +633,11 @@ def cli_factory() -> click.Group:
         """Package a given models into a Bento.
 
         $ openllm build flan-t5
+
+        \b
+
+        NOTE: To run a container built from this Bento with GPU support, make sure
+        to have https://github.com/NVIDIA/nvidia-container-toolkit install locally.
         """
         if output == "porcelain":
             set_quiet_mode(True)
