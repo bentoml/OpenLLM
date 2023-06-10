@@ -55,10 +55,10 @@ class StableLM(openllm.LLM):
     import_kwargs = {
         "torch_dtype": torch.float16,
         "load_in_8bit": False,
-        "device_map": "auto",
+        "device_map": "auto" if torch.cuda.is_available() and torch.cuda.device_count() > 1 else None,
     }
 
-    device = torch.device("cuda")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     def sanitize_parameters(
         self,

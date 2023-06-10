@@ -38,7 +38,10 @@ class Falcon(openllm.LLM):
 
     pretrained = ["tiiuae/falcon-7b", "tiiuae/falcon-40b", "tiiuae/falcon-7b-instruct", "tiiuae/falcon-40b-instruct"]
 
-    import_kwargs = {"torch_dtype": torch.bfloat16, "device_map": "auto"}
+    import_kwargs = {
+        "torch_dtype": torch.bfloat16,
+        "device_map": "auto" if torch.cuda.is_available() and torch.cuda.device_count() > 1 else None,
+    }
 
     def import_model(
         self, pretrained: str, tag: bentoml.Tag, *model_args: t.Any, tokenizer_kwds: dict[str, t.Any], **attrs: t.Any
