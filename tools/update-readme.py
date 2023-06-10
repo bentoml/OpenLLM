@@ -67,7 +67,7 @@ def main() -> int:
     meta = ["\n"]
 
     # NOTE: headers
-    meta += f"| Model {' ' * (max_name_len_div - 6)} | CPU | GPU | Installation {' ' * (max_install_len_div - 8)}|\n"
+    meta += f"| Model {' ' * (max_name_len_div - 6)} | CPU | GPU | Installation {' ' * (max_install_len_div - 12)}|\n"
     # NOTE: divs
     meta += f"| {'-' * max_name_len_div}" + " | --- | --- | " + f"{'-' * max_install_len_div} |\n"
     # NOTE: rows
@@ -78,12 +78,7 @@ def main() -> int:
             + " " * (max_name_len_div - len(links))
             + f" | {cpu}  | {gpu}  | "
             + custom_installation
-            + " "
-            * (
-                max_install_len_div
-                - len(custom_installation)
-                - (0 if links not in does_not_need_custom_installation else 1)
-            )
+            + " " * (max_install_len_div - len(custom_installation))
             + " |\n"
         )
     meta += "\n"

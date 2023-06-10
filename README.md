@@ -18,24 +18,25 @@
 
 ## 📖 Introduction
 
-With OpenLLM, you can run inference with any open-source large-language models(LLMs),
-deploy to the cloud or on-premises, and build powerful AI apps.
+With OpenLLM, you can run inference with any open-source large-language
+models(LLMs), deploy to the cloud or on-premises, and build powerful AI apps.
 
-🚂 **SOTA LLMs**: built-in supports a wide range of open-source LLMs and model runtime,
-including StableLM, Falcon, Dolly, Flan-T5, ChatGLM, StarCoder and more.
+🚂 **SOTA LLMs**: built-in supports a wide range of open-source LLMs and model
+runtime, including StableLM, Falcon, Dolly, Flan-T5, ChatGLM, StarCoder and
+more.
 
-🔥 **Flexible APIs**: serve LLMs over RESTful API or gRPC with one command, query
-via WebUI, CLI, our Python/Javascript client, or any HTTP client.
+🔥 **Flexible APIs**: serve LLMs over RESTful API or gRPC with one command,
+query via WebUI, CLI, our Python/Javascript client, or any HTTP client.
 
-⛓️ **Freedom To Build**: First-class support for LangChain and BentoML allows you to
-easily create your own AI apps by composing LLMs with other models and services.
+⛓️ **Freedom To Build**: First-class support for LangChain and BentoML allows you
+to easily create your own AI apps by composing LLMs with other models and
+services.
 
 🎯 **Streamline Deployment**: build your LLM server Docker Images or deploy as
 serverless endpoint via [☁️ BentoCloud](https://l.bentoml.com/bento-cloud).
 
 🤖️ **Bring your own LLM**: Fine-tune any LLM to suit your needs with
 `LLM.tuning()`. (Coming soon)
-
 
 ## 🏃‍ Getting Started
 
@@ -76,8 +77,8 @@ server:
 openllm start dolly-v2
 ```
 
-Following this, a Web UI will be accessible at http://0.0.0.0:3000 where you
-can experiment with the endpoints and sample input prompts.
+Following this, a Web UI will be accessible at http://0.0.0.0:3000 where you can
+experiment with the endpoints and sample input prompts.
 
 OpenLLM provides a built-in Python client, allowing you to interact with the
 model. In a different terminal window or a Jupyter notebook, create a client to
@@ -99,23 +100,22 @@ openllm query 'Explain to me the difference between "further" and "farther"'
 
 Visit `http://0.0.0.0:3000/docs.json` for OpenLLM's API specification.
 
-
 ## 🧩 Supported Models
 
-The following models are currently supported in OpenLLM. By default, OpenLLM doesn't
-include dependencies to run all models. The extra model-specific dependencies can be 
-installed with the instructions below:
+The following models are currently supported in OpenLLM. By default, OpenLLM
+doesn't include dependencies to run all models. The extra model-specific
+dependencies can be installed with the instructions below:
 
 <!-- update-readme.py: start -->
 
-| Model                                                                 | CPU | GPU | Installation                           |
+| Model                                                                 | CPU | GPU | Installation                       |
 | --------------------------------------------------------------------- | --- | --- | ---------------------------------- |
 | [flan-t5](https://huggingface.co/docs/transformers/model_doc/flan-t5) | ✅  | ✅  | `pip install "openllm[flan-t5]"`   |
-| [dolly-v2](https://github.com/databrickslabs/dolly)                   | ✅  | ✅  | `pip install openllm`             |
+| [dolly-v2](https://github.com/databrickslabs/dolly)                   | ✅  | ✅  | `pip install openllm`              |
 | [chatglm](https://github.com/THUDM/ChatGLM-6B)                        | ❌  | ✅  | `pip install "openllm[chatglm]"`   |
 | [starcoder](https://github.com/bigcode-project/starcoder)             | ❌  | ✅  | `pip install "openllm[starcoder]"` |
 | [falcon](https://falconllm.tii.ae/)                                   | ❌  | ✅  | `pip install "openllm[falcon]"`    |
-| [stablelm](https://github.com/Stability-AI/StableLM)                  | ❌  | ✅  | `pip install openllm`             |
+| [stablelm](https://github.com/Stability-AI/StableLM)                  | ❌  | ✅  | `pip install openllm`              |
 
 <!-- update-readme.py: stop -->
 
@@ -138,7 +138,8 @@ OPENLLM_FLAN_T5_FRAMEWORK=tf openllm start flan-t5
 ### Integrating a New Model
 
 OpenLLM encourages contributions by welcoming users to incorporate their custom
-LLMs into the ecosystem. Check out [Adding a New Model Guide](https://github.com/bentoml/OpenLLM/blob/main/ADDING_NEW_MODEL.md)
+LLMs into the ecosystem. Check out
+[Adding a New Model Guide](https://github.com/bentoml/OpenLLM/blob/main/ADDING_NEW_MODEL.md)
 to see how you can do it yourself.
 
 ## ⚙️ Integrations
@@ -206,10 +207,10 @@ To deploy your LLMs into production:
    openllm build dolly-v2
    ```
 
-   A [Bento](https://docs.bentoml.org/en/latest/concepts/bento.html#what-is-a-bento),
+   A
+   [Bento](https://docs.bentoml.org/en/latest/concepts/bento.html#what-is-a-bento),
    in BentoML, is the unit of distribution. It packages your program's source
    code, models, files, artifacts, and dependencies.
-
 
 2. **Containerize your Bento**
 
@@ -221,7 +222,6 @@ To deploy your LLMs into production:
    online ML services in production. To learn more, check out the
    [Deploying a Bento](https://docs.bentoml.org/en/latest/concepts/deploy.html)
    guide.
-
 
 ## 🍇 Telemetry
 
