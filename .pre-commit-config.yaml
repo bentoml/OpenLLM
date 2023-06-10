@@ -36,6 +36,7 @@ repos:
         exclude: |
           (?x)^(
               tools/.*|
+              typings/.*|
               .github/.*
           )$
   - repo: local
