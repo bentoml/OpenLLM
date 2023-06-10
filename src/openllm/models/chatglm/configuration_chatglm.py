@@ -41,7 +41,7 @@ class ChatGLMConfig(
     Refer to [ChatGLM's GitHub page](https://github.com/THUDM/ChatGLM-6B) for more information.
     """
 
-    retain_history: bool = True
+    retain_history: bool = False
     """Whether to retain history given to the model. If set to True, then the model will retain given history."""
 
     use_half_precision: bool = True
