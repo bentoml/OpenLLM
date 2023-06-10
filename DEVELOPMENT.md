@@ -9,11 +9,14 @@ out to us if you have any question!
 
 ## Table of Contents
 
-- [Setting Up Your Development Environment](#setting-up-your-development-environment)
-- [Project Structure](#project-structure)
-- [Development Workflow](#development-workflow)
-- [Writing Tests](#writing-tests)
-- [Releasing a New Version](#releasing-a-new-version)
+- [Developer Guide](#developer-guide)
+  - [Table of Contents](#table-of-contents)
+  - [Setting Up Your Development Environment](#setting-up-your-development-environment)
+  - [Project Structure](#project-structure)
+  - [Development Workflow](#development-workflow)
+  - [Using a custom fork](#using-a-custom-fork)
+  - [Writing Tests](#writing-tests)
+  - [Releasing a New Version](#releasing-a-new-version)
 
 ## Setting Up Your Development Environment
 
@@ -120,6 +123,12 @@ After setting up your environment, here's how you can start contributing:
    ```
 
 8. Submit a Pull Request on GitHub.
+
+## Using a custom fork
+
+If you wish to use a modified version of OpenLLM, install your fork from source
+with `pip install -e` and set `OPENLLM_DEV_BUILD=True`, so that Bentos built will
+include the generated wheels for OpenLLM in the bundle.
 
 ## Writing Tests
 
