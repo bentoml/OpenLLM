@@ -30,7 +30,7 @@ dependencies = [
     "attrs>=23.1.0",
     "cattrs>=23.1.0",
     # transformers[torch] includes torch and transformers
-    "transformers[torch,tokenizers,onnxruntime,onnx]>=4.29.0",
+    "transformers[torch,tokenizers]>=4.29.0",
     # BetterTransformer support for inference.
     "optimum",
     # Super fast JSON serialization
@@ -103,7 +103,7 @@ dependencies = [
     "pytest-rerunfailures",
     "pre-commit",
     "tomlkit",
-    "marko",
+    "markdown-it-py",
 ]
 [tool.hatch.envs.default.scripts]
 cov = ["test-cov", "cov-report"]

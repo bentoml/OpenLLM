@@ -38,50 +38,49 @@ def main() -> int:
         readme = f.readlines()
 
     start_index, stop_index = readme.index(START_COMMENT), readme.index(END_COMMENT)
-    formatted: dict[t.Literal["Model", "CPU", "GPU", "Installation"], list[str]] = {
+    formatted: dict[t.Literal["Model", "CPU", "GPU", "URL", "Installation"], list[str]] = {
         "Model": [],
+        "URL": [],
         "CPU": [],
         "GPU": [],
         "Installation": [],
     }
-    max_name_len_div = 0
     max_install_len_div = 0
-    does_not_need_custom_installation: list[str] = []
     for name, config in openllm.CONFIG_MAPPING.items():
         dashed = inflection.dasherize(name)
-        model_name = f"[{dashed}]({config.__openllm_url__})"
-        if len(model_name) > max_name_len_div:
-            max_name_len_div = len(model_name)
-        formatted["Model"].append(model_name)
+        formatted["Model"].append(dashed)
+        formatted["URL"].append(config.__openllm_url__)
         formatted["GPU"].append("✅")
         formatted["CPU"].append("✅" if not config.__openllm_requires_gpu__ else "❌")
-        instruction = "`pip install openllm`"
         if dashed in deps:
-            instruction = f"""`pip install "openllm[{dashed}]"`"""
+            instruction = f'```bash\npip install "openllm[{dashed}]"\n```'
         else:
-            does_not_need_custom_installation.append(model_name)
+            instruction = "```bash\npip install openllm\n```"
         if len(instruction) > max_install_len_div:
             max_install_len_div = len(instruction)
         formatted["Installation"].append(instruction)
 
-    meta = ["\n"]
+    meta: list[str] = ["\n", "<table align='center'>\n"]
 
     # NOTE: headers
-    meta += f"| Model {' ' * (max_name_len_div - 6)} | CPU | GPU | Installation {' ' * (max_install_len_div - 12)}|\n"
-    # NOTE: divs
-    meta += f"| {'-' * max_name_len_div}" + " | --- | --- | " + f"{'-' * max_install_len_div} |\n"
+    meta += ["<tr>\n"]
+    meta.extend([f"<th>{header}</th>\n" for header in formatted.keys() if header not in ("URL",)])
+    meta += ["</tr>\n"]
     # NOTE: rows
-    for links, cpu, gpu, custom_installation in t.cast("tuple[str, str, str, str]", zip(*formatted.values())):
-        meta += (
-            "| "
-            + links
-            + " " * (max_name_len_div - len(links))
-            + f" | {cpu}  | {gpu}  | "
-            + custom_installation
-            + " " * (max_install_len_div - len(custom_installation))
-            + " |\n"
+    for name, url, cpu, gpu, installation in t.cast(
+        t.Iterable[t.Tuple[str, str, str, str, str]], zip(*formatted.values())
+    ):
+        meta += "<tr>\n"
+        meta.extend(
+            [
+                f"\n<td><a href={url}>{name}</a></td>\n",
+                f"<td>{cpu}</td>\n",
+                f"<td>{gpu}</td>\n",
+                f"<td>\n\n{installation}\n\n</td>\n",
+            ]
         )
-    meta += "\n"
+        meta += "</tr>\n"
+    meta.extend(["</table>\n", "\n"])
 
     readme = readme[:start_index] + [START_COMMENT] + meta + [END_COMMENT] + readme[stop_index + 1 :]
 

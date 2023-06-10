@@ -108,14 +108,92 @@ dependencies can be installed with the instructions below:
 
 <!-- update-readme.py: start -->
 
-| Model                                                                 | CPU | GPU | Installation                       |
-| --------------------------------------------------------------------- | --- | --- | ---------------------------------- |
-| [flan-t5](https://huggingface.co/docs/transformers/model_doc/flan-t5) | ✅  | ✅  | `pip install "openllm[flan-t5]"`   |
-| [dolly-v2](https://github.com/databrickslabs/dolly)                   | ✅  | ✅  | `pip install openllm`              |
-| [chatglm](https://github.com/THUDM/ChatGLM-6B)                        | ❌  | ✅  | `pip install "openllm[chatglm]"`   |
-| [starcoder](https://github.com/bigcode-project/starcoder)             | ❌  | ✅  | `pip install "openllm[starcoder]"` |
-| [falcon](https://falconllm.tii.ae/)                                   | ❌  | ✅  | `pip install "openllm[falcon]"`    |
-| [stablelm](https://github.com/Stability-AI/StableLM)                  | ❌  | ✅  | `pip install openllm`              |
+<table align='center'>
+<tr>
+<th>Model</th>
+<th>CPU</th>
+<th>GPU</th>
+<th>Installation</th>
+</tr>
+<tr>
+
+<td><a href=https://huggingface.co/docs/transformers/model_doc/flan-t5>flan-t5</a></td>
+<td>✅</td>
+<td>✅</td>
+<td>
+
+```bash
+pip install "openllm[flan-t5]"
+```
+
+</td>
+</tr>
+<tr>
+
+<td><a href=https://github.com/databrickslabs/dolly>dolly-v2</a></td>
+<td>✅</td>
+<td>✅</td>
+<td>
+
+```bash
+pip install openllm
+```
+
+</td>
+</tr>
+<tr>
+
+<td><a href=https://github.com/THUDM/ChatGLM-6B>chatglm</a></td>
+<td>❌</td>
+<td>✅</td>
+<td>
+
+```bash
+pip install "openllm[chatglm]"
+```
+
+</td>
+</tr>
+<tr>
+
+<td><a href=https://github.com/bigcode-project/starcoder>starcoder</a></td>
+<td>❌</td>
+<td>✅</td>
+<td>
+
+```bash
+pip install "openllm[starcoder]"
+```
+
+</td>
+</tr>
+<tr>
+
+<td><a href=https://falconllm.tii.ae/>falcon</a></td>
+<td>❌</td>
+<td>✅</td>
+<td>
+
+```bash
+pip install "openllm[falcon]"
+```
+
+</td>
+</tr>
+<tr>
+
+<td><a href=https://github.com/Stability-AI/StableLM>stablelm</a></td>
+<td>❌</td>
+<td>✅</td>
+<td>
+
+```bash
+pip install openllm
+```
+
+</td>
+</tr>
+</table>
 
 <!-- update-readme.py: stop -->
 
