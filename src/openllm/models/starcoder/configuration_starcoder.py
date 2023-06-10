@@ -34,11 +34,13 @@ class StarCoderConfig(
     """
 
     class GenerationConfig:
-        temperature: float = 0.9
+        temperature: float = 0.2
         max_new_tokens: int = 256
+        min_new_tokens: int = 32
+        top_k: float = 50
         top_p: float = 0.95
         pad_token_id: int = 49152
-        repetition_penalty: float = 1.0
+        repetition_penalty: float = 1.2
 
 
 START_STARCODER_COMMAND_DOCSTRING = """\

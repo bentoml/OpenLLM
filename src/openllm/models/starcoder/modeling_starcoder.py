@@ -44,7 +44,14 @@ class StarCoder(openllm.LLM):
 
     model_ids = ["bigcode/starcoder", "bigcode/starcoderbase"]
 
-    device = torch.device("cuda")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    import_kwargs = {
+        "_tokenizer_padding_side": "left",
+        "device_map": "auto" if torch.cuda.is_available() and torch.cuda.device_count() > 1 else None,
+        "load_in_8bit": True if torch.cuda.device_count() > 1 else False,
+        "torch_dtype": torch.float16,
+    }
 
     def import_model(
         self,
@@ -54,6 +61,10 @@ class StarCoder(openllm.LLM):
         tokenizer_kwds: dict[str, t.Any],
         **attrs: t.Any,
     ) -> bentoml.Model:
+        torch_dtype = attrs.pop("torch_dtype", torch.float16)
+        load_in_8bit = attrs.pop("load_in_8bit", True)
+        device_map = attrs.pop("device_map", "auto")
+
         tokenizer = transformers.AutoTokenizer.from_pretrained(model_id, **tokenizer_kwds)
         tokenizer.add_special_tokens(
             {
@@ -62,8 +73,9 @@ class StarCoder(openllm.LLM):
             }
         )
 
-        model = transformers.AutoModelForCausalLM.from_pretrained(model_id, **attrs)
-
+        model = transformers.AutoModelForCausalLM.from_pretrained(
+            model_id, torch_dtype=torch_dtype, load_in_8bit=load_in_8bit, device_map=device_map, **attrs
+        )
         try:
             return bentoml.transformers.save_model(tag, model, custom_objects={"tokenizer": tokenizer})
         finally:
@@ -113,12 +125,15 @@ class StarCoder(openllm.LLM):
     @torch.inference_mode()
     def generate(self, prompt: str, **attrs: t.Any) -> list[str]:
         inputs = t.cast("torch.Tensor", self.tokenizer.encode(prompt, return_tensors="pt")).to(self.device)
-        with torch.device(self.device):
-            result_tensor = self.model.generate(
-                inputs,
-                do_sample=True,
-                generation_config=self.config.model_construct_env(**attrs).to_generation_config(),
-            )
+        result_tensor = self.model.generate(
+            inputs,
+            do_sample=True,
+            pad_token_id=self.tokenizer.eos_token_id,
+            # eos_token_id=self.tokenizer.convert_tokens_to_ids("<|end|>"), # NOTE: this is for finetuning starcoder
+            generation_config=self.config.model_construct_env(**attrs).to_generation_config(),
+        )
         # TODO: We will probably want to return the tokenizer here so that we can manually process this
         # return (skip_special_tokens=False, clean_up_tokenization_spaces=False))
-        return [self.tokenizer.decode(result_tensor[0])]
+        return self.tokenizer.batch_decode(
+            result_tensor[0], skip_special_tokens=True, clean_up_tokenization_spaces=True
+        )
