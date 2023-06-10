@@ -316,10 +316,12 @@ def start_model_command(
     ModelEnv = openllm.utils.ModelEnv(model_name)
     llm_config = openllm.AutoConfig.for_model(model_name)
 
+    for_doc = openllm.AutoLLM.for_model(model_name)
     docstring = f"""\
 {ModelEnv.start_docstring}
 \b
-The available pretrained models to use with '{model_name}' are: {openllm.AutoLLM.for_model(model_name).pretrained}
+The available pretrained models to use with '{model_name}' are: {for_doc.pretrained} [default: {for_doc.default_model}]
+Tip: One can pass one of the aforementioned to '--pretrained' to use other pretrained weights.
 """
     command_attrs: dict[str, t.Any] = {
         "name": ModelEnv.model_name,
