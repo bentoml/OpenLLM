@@ -20,8 +20,6 @@ import bentoml
 
 import openllm
 
-from .configuration_starcoder import DEFAULT_PROMPT_TEMPLATE
-
 if t.TYPE_CHECKING:
     import torch
     import transformers
@@ -103,7 +101,6 @@ class StarCoder(openllm.LLM):
         top_p: float | None = None,
         max_new_tokens: int | None = None,
         repetition_penalty: float | None = None,
-        use_default_prompt_template: bool = True,
         **attrs: t.Any,
     ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
         fim_mode = FIM_INDICATOR in prompt
@@ -128,9 +125,6 @@ class StarCoder(openllm.LLM):
             "pad_token_id": 49152,
             **attrs,
         }
-
-        if use_default_prompt_template:
-            prompt_text = DEFAULT_PROMPT_TEMPLATE.format(instruction=prompt_text)
 
         return prompt_text, generation_config, {}
 

@@ -42,7 +42,6 @@ class DollyV2Config(
     return_full_text: bool = openllm.LLMConfig.Field(
         False, description="Whether to return the full prompt to the users."
     )
-    use_default_prompt_template: bool = False
 
     class GenerationConfig:
         temperature: float = 0.9

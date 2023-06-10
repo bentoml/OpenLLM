@@ -21,7 +21,7 @@ from transformers import StoppingCriteria, StoppingCriteriaList
 import openllm
 
 from ..._prompt import default_formatter
-from .configuration_stablelm import DEFAULT_PROMPT_TEMPLATE
+from .configuration_stablelm import DEFAULT_PROMPT_TEMPLATE, SYSTEM_PROMPT
 
 
 class StopOnTokens(StoppingCriteria):
@@ -81,7 +81,8 @@ class StableLM(openllm.LLM):
                     "'instruction' should be passed as the first argument "
                     "instead of kwargs when 'use_default_prompt_template=True'"
                 )
-            prompt_text = DEFAULT_PROMPT_TEMPLATE.format(instruction=prompt, **prompt_variables)
+            system_prompt = prompt_variables.pop("system_prompt", SYSTEM_PROMPT)
+            prompt_text = DEFAULT_PROMPT_TEMPLATE.format(instruction=prompt, system_prompt=system_prompt)
         else:
             prompt_text = prompt
 

@@ -32,8 +32,6 @@ class FalconConfig(
     Refer to [Falcon's HuggingFace page](https://huggingface.co/tiiuae/falcon-7b) for more information.
     """
 
-    use_default_prompt_template: bool = False
-
     class GenerationConfig:
         max_new_tokens: int = 200
         top_k: int = 10

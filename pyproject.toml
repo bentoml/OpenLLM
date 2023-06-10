@@ -16,8 +16,6 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: Implementation :: CPython",
@@ -71,7 +69,7 @@ all = ["openllm[fine-tune]", "openllm[flan-t5]", "openllm[chatglm]", "openllm[st
 chatglm = ["cpm_kernels", "sentencepiece"]
 falcon = ["einops", "xformers", "safetensors"]
 fine-tune = ["peft", "bitsandbytes", "datasets", "accelerate"]
-flan-t5 = ["flax", "jax", "jaxlib", "tensorflow"]
+flan-t5 = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
 starcoder = ["bitsandbytes"]
 
 [project.urls]

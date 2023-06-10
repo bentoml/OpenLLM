@@ -33,6 +33,9 @@ logger = logging.getLogger(__name__)
 
 
 class DollyV2(openllm.LLM):
+    if t.TYPE_CHECKING:
+        config: openllm.DollyV2Config
+
     __openllm_internal__ = True
 
     default_model = "databricks/dolly-v2-3b"
@@ -58,12 +61,20 @@ class DollyV2(openllm.LLM):
             torch_dtype=torch_dtype,
             device_map=device_map,
         )
-        return bentoml.transformers.save_model(
-            tag,
-            pipeline,
-            custom_objects={"tokenizer": tokenizer},
-            external_modules=[importlib.import_module(pipeline.__module__)],
-        )
+        try:
+            return bentoml.transformers.save_model(
+                tag,
+                pipeline,
+                custom_objects={"tokenizer": tokenizer},
+                external_modules=[importlib.import_module(pipeline.__module__)],
+            )
+        finally:
+            import gc
+
+            gc.collect()
+
+            if openllm.utils.is_torch_available() and torch.cuda.is_available():
+                torch.cuda.empty_cache()
 
     def sanitize_parameters(
         self,
@@ -72,39 +83,37 @@ class DollyV2(openllm.LLM):
         temperature: float | None = None,
         top_k: int | None = None,
         top_p: float | None = None,
-        use_default_prompt_template: bool = False,
         **attrs: t.Any,
     ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
-        if use_default_prompt_template:
-            prompt_text = DEFAULT_PROMPT_TEMPLATE.format(instruction=prompt)
-        else:
-            prompt_text = prompt
-
         # NOTE: The rest of attrs should be kwargs for GenerationConfig
         generate_kwargs = {
             "max_new_tokens": max_new_tokens,
             "top_k": top_k,
             "top_p": top_p,
             "temperature": temperature,
-            "use_default_prompt_template": use_default_prompt_template,
             **attrs,
         }
 
-        return prompt_text, generate_kwargs, {}
+        return prompt, generate_kwargs, {}
 
-    def postprocess_generate(self, prompt: str, generation_result: str, **_: t.Any) -> str:
-        return generation_result
+    def postprocess_generate(
+        self, prompt: str, generation_result: list[dict[t.Literal["generated_text"], str]], **_: t.Any
+    ) -> str:
+        return generation_result[0]["generated_text"]
 
     @torch.inference_mode()
-    def generate(self, prompt: str, **attrs: t.Any) -> str:
+    def generate(self, prompt: str, **attrs: t.Any) -> list[dict[t.Literal["generated_text"], str]]:
         self.model.tokenizer = self.tokenizer
-        llm_config: openllm.DollyV2Config = self.config.model_construct_env(**attrs)
-        decoded = self.model(prompt, generation_config=llm_config.to_generation_config())
+        llm_config = self.config.model_construct_env(**attrs)
+        decoded: list[dict[t.Literal["generated_text"], str]] = self.model(
+            prompt, generation_config=llm_config.to_generation_config()
+        )
 
-        # If the full text is requested, then append the decoded text to the original instruction.
-        # This technically isn't the full text, as we format the instruction in the prompt the model has been
-        # trained on, but to the client it will appear to be the full text.
         if llm_config.return_full_text:
-            decoded = f"{DEFAULT_PROMPT_TEMPLATE.format(prompt)}\n{decoded}"
+            return [
+                {k: f"{DEFAULT_PROMPT_TEMPLATE.format(instruction=prompt)}\n{generated}"}
+                for i in decoded
+                for k, generated in i.items()
+            ]
 
         return decoded

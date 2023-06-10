@@ -42,23 +42,30 @@ class FlaxFlanT5(openllm.LLM):
         top_k: int | None = None,
         top_p: float | None = None,
         repetition_penalty: float | None = None,
+        decoder_start_token_id: int | None = None,
         use_default_prompt_template: bool = True,
         **attrs: t.Any,
     ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
         if use_default_prompt_template:
-            prompt_variables = {
-                k: v
-                for k, v in attrs.items()
-                if k in default_formatter.extract_template_variables(DEFAULT_PROMPT_TEMPLATE)
-            }
+            template_variables = default_formatter.extract_template_variables(DEFAULT_PROMPT_TEMPLATE)
+            prompt_variables = {k: v for k, v in attrs.items() if k in template_variables}
             if "instruction" in prompt_variables:
                 raise RuntimeError(
                     "'instruction' should be passed as the first argument "
                     "instead of kwargs when 'use_default_prompt_template=True'"
                 )
-            prompt_text = DEFAULT_PROMPT_TEMPLATE.format(instruction=prompt, **prompt_variables)
+            try:
+                prompt_text = DEFAULT_PROMPT_TEMPLATE.format(instruction=prompt, **prompt_variables)
+            except KeyError as e:
+                raise RuntimeError(
+                    f"Missing variable '{e.args[0]}' (required: {template_variables}) in the prompt template. "
+                    "Use 'use_default_prompt_template=False' to disable the default prompt template."
+                )
         else:
             prompt_text = prompt
+
+        if decoder_start_token_id is None:
+            decoder_start_token_id = 0
 
         generation_config = {
             "max_new_tokens": max_new_tokens,
@@ -66,6 +73,7 @@ class FlaxFlanT5(openllm.LLM):
             "top_k": top_k,
             "top_p": top_p,
             "repetition_penalty": repetition_penalty,
+            "decoder_start_token_id": decoder_start_token_id,
         }
         return prompt_text, generation_config, {}
 
@@ -73,11 +81,15 @@ class FlaxFlanT5(openllm.LLM):
         return generation_result[0]
 
     def generate(self, prompt: str, **attrs: t.Any) -> list[str]:
+        # XXX: decoder_start_token_id is extracted from https://huggingface.co/google/flan-t5-small/tree/main
+        # as it is required for encoder-decoder generation.
+        decoder_start_token_id = attrs.pop("decoder_start_token_id", 0)
         input_ids = self.tokenizer(prompt, return_tensors="np")["input_ids"]
         result_tensor = self.model.generate(
             input_ids,
             do_sample=True,
             generation_config=self.config.model_construct_env(**attrs).to_generation_config(),
+            decoder_start_token_id=decoder_start_token_id,
         )
         return self.tokenizer.batch_decode(
             result_tensor.sequences, skip_special_tokens=True, clean_up_tokenization_spaces=True

@@ -230,11 +230,7 @@ class LLMInterface(ABC):
 
         It takes a prompt that is given by the user, attrs that can be parsed with the prompt.
 
-        NOTE: the attrs should also handle the following default attributes from all LLMConfig:
-        - use_default_prompt_template
-
         Returns a tuple of three items:
-        - The processed prompt text depending on `use_default_prompt_template`
         - The attributes dictionary that can be passed into LLMConfig to generate a GenerationConfig
         - The attributes dictionary that will be passed into `self.postprocess_generate`.
         """

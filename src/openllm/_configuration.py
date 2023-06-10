@@ -48,6 +48,7 @@ import inflection
 import orjson
 from cattr.gen import make_dict_unstructure_fn, override
 from click_option_group import optgroup
+from deepmerge.merger import Merger
 
 import openllm
 
@@ -82,6 +83,15 @@ else:
 __all__ = ["LLMConfig"]
 
 logger = logging.getLogger(__name__)
+
+config_merger = Merger(
+    # merge dicts
+    type_strategies=[(DictStrAny, "merge")],
+    # override all other types
+    fallback_strategies=["override"],
+    # override conflicting types
+    type_conflict_strategies=["override"],
+)
 
 
 @t.overload
@@ -593,13 +603,9 @@ def _make_internal_generation_class(cls: type[LLMConfig]) -> type[GenerationConf
     return generated_cls
 
 
-USE_DEFAULT_PROMPT_TEMPLATE_DOCSTRING = """\
-Whether a model should use their default prompt template setup. This is useful if
-users wants to do some prompt engineering. Default to True.
-"""
-
-# NOTE: This DEFAULT_KEYMAP is a way to dynamically generate attr.field
-DEFAULT_LLMCONFIG_ATTRS = (("use_default_prompt_template", True, USE_DEFAULT_PROMPT_TEMPLATE_DOCSTRING, bool),)
+# NOTE: This DEFAULT_LLMCONFIG_ATTRS is a way to dynamically generate attr.field
+# and will be saved for future use in LLMConfig if we have some shared config.
+DEFAULT_LLMCONFIG_ATTRS: tuple[tuple[str, t.Any, str, type[t.Any]], ...] = ()
 
 
 @attr.define
@@ -652,6 +658,9 @@ class LLMConfig:
         __openllm_url__: str = Field(None, init=False)
         """The resolved url for this LLMConfig."""
 
+        __openllm_accepted_keys__: set[str] = Field(None, init=False)
+        """The accepted keys for this LLMConfig."""
+
         __openllm_requirements__: list[str] | None = None
         """The default PyPI requirements needed to run this given LLM. By default, we will depend on
         bentoml, torch, transformers."""
@@ -673,10 +682,6 @@ class LLMConfig:
         generation_class: type[GenerationConfig] = Field(None, init=False)
         """The result generated GenerationConfig class for this LLMConfig. This will be used
         to create the generation_config argument that can be used throughout the lifecycle."""
-
-        # NOTE: The following can be shared accross all LLMConfig subclasses.
-        use_default_prompt_template: bool = Field(True, init=False)
-        use_default_prompt_template.__doc__ = USE_DEFAULT_PROMPT_TEMPLATE_DOCSTRING
 
     def __init_subclass__(
         cls,
@@ -757,11 +762,15 @@ class LLMConfig:
         cls.__openllm_attrs__ = tuple(a.name for a in own_attrs)
 
         # NOTE: Enable some default attributes that can be shared across all LLMConfig
-        base_attrs = [
-            attr.Attribute.from_counting_attr(k, cls.Field(default, env=field_env_key(k), description=docs), hints)
-            for k, default, docs, hints in DEFAULT_LLMCONFIG_ATTRS
-            if k not in cls.__openllm_attrs__
-        ] + base_attrs
+        if len(DEFAULT_LLMCONFIG_ATTRS) > 0:
+            # NOTE: update the hints for default variables we dynamically added.
+            hints.update({k: hints for k, _, _, hints in DEFAULT_LLMCONFIG_ATTRS})
+            base_attrs = [
+                attr.Attribute.from_counting_attr(k, cls.Field(default, env=field_env_key(k), description=docs), hints)
+                for k, default, docs, hints in DEFAULT_LLMCONFIG_ATTRS
+                if k not in cls.__openllm_attrs__
+            ] + base_attrs
+
         attrs: list[attr.Attribute[t.Any]] = own_attrs + base_attrs
 
         # Mandatory vs non-mandatory attr order only matters when they are part of
@@ -817,9 +826,9 @@ class LLMConfig:
 
         hints.update(t.get_type_hints(cls.generation_class))
 
-        # NOTE: update the hints for default variables we dynamically added.
-        hints.update({k: hints for k, _, _, hints in DEFAULT_LLMCONFIG_ATTRS})
         cls.__openllm_hints__ = hints
+
+        cls.__openllm_accepted_keys__ = set(cls.__openllm_attrs__) | set(attr.fields_dict(cls.generation_class))
 
     @property
     def name_type(self) -> t.Literal["dasherize", "lowercase"]:
@@ -832,8 +841,10 @@ class LLMConfig:
         __openllm_extras__: dict[str, t.Any] | None = None,
         **attrs: t.Any,
     ):
-        to_exclude = list(attr.fields_dict(self.generation_class)) + list(self.__openllm_attrs__)
-        self.__openllm_extras__ = __openllm_extras__ or {k: v for k, v in attrs.items() if k not in to_exclude}
+        self.__openllm_extras__ = openllm.utils.first_not_none(__openllm_extras__, default={})
+        config_merger.merge(
+            self.__openllm_extras__, {k: v for k, v in attrs.items() if k not in self.__openllm_accepted_keys__}
+        )
 
         attrs = {k: v for k, v in attrs.items() if k not in self.__openllm_extras__ and v is not None}
 
@@ -844,9 +855,11 @@ class LLMConfig:
 
         attrs = {k: v for k, v in attrs.items() if k not in generation_config}
 
-        extras = set(attrs).difference(set(attr.fields_dict(self.__class__)))
+        self.__attrs_init__(**{k: v for k, v in attrs.items() if k in self.__openllm_attrs__})
 
-        self.__attrs_init__(**{k: v for k, v in attrs.items() if k not in extras})
+        # The rest update to extras
+        attrs = {k: v for k, v in attrs.items() if k not in self.__openllm_attrs__}
+        config_merger.merge(self.__openllm_extras__, attrs)
 
     def __repr__(self) -> str:
         bases = f"{self.__class__.__qualname__.rsplit('>.', 1)[-1]}(generation_config={repr(self.generation_class())}"
@@ -897,35 +910,35 @@ class LLMConfig:
         return orjson.dumps(self.model_dump(**kwargs))
 
     @classmethod
-    def model_construct_env(cls, __llm_config__: LLMConfig | None = None, **attrs: t.Any) -> LLMConfig:
+    def model_construct_env(cls, **attrs: t.Any) -> LLMConfig:
         """A helpers that respect configuration values that
         sets from environment variables for any given configuration class.
         """
-        # NOTE: filter out None values
         attrs = {k: v for k, v in attrs.items() if v is not None}
-        if "generation_config" in attrs:
-            # NOTE: We will need to flatten the attrs dict
-            generation_config = attrs.pop("generation_config", {})
-            attrs.update(generation_config)
 
-        env = ModelEnv(cls.__openllm_model_name__)
+        model_config = ModelEnv(cls.__openllm_model_name__).model_config
 
-        env_json_string = os.environ.get(env.model_config, None)
+        env_json_string = os.environ.get(model_config, None)
 
         if env_json_string is not None:
             try:
                 config_from_env = orjson.loads(env_json_string)
             except orjson.JSONDecodeError as e:
-                raise RuntimeError(f"Failed to parse '{env.model_config}' as valid JSON string.") from e
-            config_from_env.update(attrs)
-            return bentoml_cattr.structure(config_from_env, cls)
+                raise RuntimeError(f"Failed to parse '{model_config}' as valid JSON string.") from e
+            ncls = bentoml_cattr.structure(config_from_env, cls)
+        else:
+            ncls = cls()
 
-        if __llm_config__ is not None:
-            # NOTE: We only hit this branch on server-side, to ensure per-request configuration
-            # is respected.
-            attrs.update(__llm_config__.model_dump(flatten=True))
+        if "generation_config" in attrs:
+            generation_config = attrs.pop("generation_config")
+            if not LazyType(DictStrAny).isinstance(generation_config):
+                raise RuntimeError(f"Expected a dictionary, but got {type(generation_config)}")
+        else:
+            generation_config = {k: v for k, v in attrs.items() if k in attr.fields_dict(ncls.generation_class)}
 
-        return bentoml_cattr.structure(attrs, cls)
+        attrs = {k: v for k, v in attrs.items() if k not in generation_config}
+        ncls.generation_config = attr.evolve(ncls.generation_config, **generation_config)
+        return attr.evolve(ncls, **attrs)
 
     def model_validate_click(self, **attrs: t.Any) -> tuple[LLMConfig, dict[str, t.Any]]:
         """Parse given click attributes into a LLMConfig and return the remaining click attributes."""
@@ -1013,12 +1026,14 @@ def structure_llm_config(data: dict[str, t.Any], cls: type[LLMConfig]) -> LLMCon
         raise RuntimeError(f"Expected a dictionary, but got {type(data)}")
 
     cls_attrs = {k: v for k, v in data.items() if k in cls.__openllm_attrs__}
+    generation_cls_fields = attr.fields_dict(cls.generation_class)
     if "generation_config" in data:
         generation_config = data.pop("generation_config")
         if not LazyType(DictStrAny).isinstance(generation_config):
             raise RuntimeError(f"Expected a dictionary, but got {type(generation_config)}")
+        config_merger.merge(generation_config, {k: v for k, v in data.items() if k in generation_cls_fields})
     else:
-        generation_config = {k: v for k, v in data.items() if k in attr.fields_dict(cls.generation_class)}
+        generation_config = {k: v for k, v in data.items() if k in generation_cls_fields}
     not_extras = list(cls_attrs) + list(generation_config)
     # The rest should be passed to extras
     data = {k: v for k, v in data.items() if k not in not_extras}

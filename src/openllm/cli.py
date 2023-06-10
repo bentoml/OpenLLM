@@ -314,14 +314,19 @@ def start_model_command(
     configure_logging()
 
     ModelEnv = openllm.utils.ModelEnv(model_name)
+    llm_config = openllm.AutoConfig.for_model(model_name)
+
+    docstring = f"""\
+{ModelEnv.start_docstring}
+\b
+The available pretrained models to use with '{model_name}' are: {openllm.AutoLLM.for_model(model_name).pretrained}
+"""
     command_attrs: dict[str, t.Any] = {
         "name": ModelEnv.model_name,
         "context_settings": _context_settings or {},
         "short_help": f"Start a LLMServer for '{model_name}' ('--help' for more details)",
-        "help": ModelEnv.start_docstring,
+        "help": docstring,
     }
-
-    llm_config = openllm.AutoConfig.for_model(model_name)
 
     aliases: list[str] = []
     if llm_config.name_type == "dasherize":

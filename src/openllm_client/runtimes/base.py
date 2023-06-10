@@ -161,7 +161,11 @@ class BaseAsyncClient(ClientMixin):
         ...
 
     async def query(self, prompt: str, **attrs: t.Any) -> dict[str, t.Any] | str:
-        return_raw_response, prompt, generate_kwargs, postprocess_kwargs = self.prepare(prompt, **attrs)
+        # NOTE: We set use_default_prompt_template to False for now.
+        use_default_prompt_template = attrs.pop("use_default_prompt_template", False)
+        return_raw_response, prompt, generate_kwargs, postprocess_kwargs = self.prepare(
+            prompt, use_default_prompt_template=use_default_prompt_template, **attrs
+        )
         inputs = openllm.GenerationInput(prompt=prompt, llm_config=self.config.model_construct_env(**generate_kwargs))
         res = await self.acall("generate", inputs)
         r = openllm.GenerationOutput(**res)

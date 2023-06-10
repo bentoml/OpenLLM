@@ -110,7 +110,6 @@ class ChatGLM(openllm.LLM):
             "num_beams": num_beams,
             "top_p": top_p,
             "temperature": temperature,
-            "use_default_prompt_template": use_default_prompt_template,
             **attrs,
         }
 
