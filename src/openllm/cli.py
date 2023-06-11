@@ -679,23 +679,44 @@ def cli_factory() -> click.Group:
 
     @cli.command()
     @output_option
-    def models(output: OutputLiteral):
-        """List all supported models."""
+    @click.option(
+        "--show-available",
+        is_flag=True,
+        default=False,
+        help="Show available models in local store (mutually exclusive with '-o porcelain').",
+    )
+    def models(output: OutputLiteral, show_available: bool):
+        """List all supported models.
+
+        NOTE: '--show-available' and '-o porcelain' are mutually exclusive.
+        """
+        from ._llm import convert_transformers_model_name
+
         models = tuple(inflection.dasherize(key) for key in openllm.CONFIG_MAPPING.keys())
         if output == "porcelain":
+            if show_available:
+                raise click.BadOptionUsage(
+                    "--show-available", "Cannot use '--show-available' with '-o porcelain' (mutually exclusive)."
+                )
             _echo("\n".join(models), fg="white")
         else:
             failed_initialized: list[tuple[str, Exception]] = []
 
             json_data: dict[str, dict[t.Literal["model_id", "description"], t.Any]] = {}
 
+            converted: list[str] = []
             for m in models:
                 try:
                     model = openllm.AutoLLM.for_model(m)
                     docs = inspect.cleandoc(model.config.__doc__ or "(No description)")
                     json_data[m] = {"model_id": model.model_ids, "description": docs}
+                    converted.extend([convert_transformers_model_name(i) for i in model.model_ids])
                 except Exception as err:
                     failed_initialized.append((m, err))
+
+            ids_in_local_store = None
+            if show_available:
+                ids_in_local_store = [i for i in bentoml.models.list() if any(n in i.tag.name for n in converted)]
 
             if output == "pretty":
                 import tabulate
@@ -733,8 +754,24 @@ def cli_factory() -> click.Group:
                     for m, err in failed_initialized:
                         _echo(f"- {m}: ", fg="blue", nl=False)
                         _echo(err, fg="red")
+
+                if show_available:
+                    assert ids_in_local_store
+                    _echo("The following models are available in local store:\n", fg="white")
+                    for i in ids_in_local_store:
+                        _echo(f"- {i}", fg="white")
             else:
-                _echo(orjson.dumps(json_data, option=orjson.OPT_INDENT_2).decode())
+                dumped: dict[str, t.Any] = json_data
+                if show_available:
+                    assert ids_in_local_store
+                    dumped["local"] = [openllm.utils.bentoml_cattr.unstructure(i.tag) for i in ids_in_local_store]
+                _echo(
+                    orjson.dumps(
+                        dumped,
+                        option=orjson.OPT_INDENT_2,
+                    ).decode(),
+                    fg="white",
+                )
 
         sys.exit(0)
 
