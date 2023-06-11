@@ -183,7 +183,7 @@ pip install "openllm[falcon]"
 <tr>
 
 <td><a href=https://github.com/Stability-AI/StableLM>stablelm</a></td>
-<td>❌</td>
+<td>✅</td>
 <td>✅</td>
 <td>
 
