@@ -518,7 +518,12 @@ Tip: One can pass one of the aforementioned to '--model-id' to use other pretrai
 
         try:
             openllm.utils.analytics.track_start_init(llm.config, gpu_available)
-            server.start(env=start_env, text=True, blocking=True)
+            server.start(env=start_env, text=True, blocking=True if get_debug_mode() else False)
+            if not get_debug_mode():
+                assert server.process is not None and server.process.stdout is not None
+                with server.process.stdout:
+                    for f in iter(server.process.stdout.readline, b""):
+                        _echo(f, nl=False, fg="white")
         except KeyboardInterrupt:
             on_start_end(model_name)
         except Exception as err:
