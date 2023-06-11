@@ -134,8 +134,8 @@ def construct_docker_options(llm: openllm.LLM[t.Any, t.Any], _: FS, workers_per_
     _bentoml_config_options = os.environ.pop("BENTOML_CONFIG_OPTIONS", "")
     _bentoml_config_options_opts = [
         "api_server.traffic.timeout=3600",  # NOTE: Currently we hardcode this value
-            f'runners."llm-{llm.config.__openllm_start_name__}-runner".traffic.timeout={llm.config.__openllm_timeout__}',
-            f'runners."llm-{llm.config.__openllm_start_name__}-runner".workers_per_resource={workers_per_resource}',
+        f'runners."llm-{llm.config.__openllm_start_name__}-runner".traffic.timeout={llm.config.__openllm_timeout__}',
+        f'runners."llm-{llm.config.__openllm_start_name__}-runner".workers_per_resource={workers_per_resource}',
     ]
     _bentoml_config_options += " " if _bentoml_config_options else "" + " ".join(_bentoml_config_options_opts)
     return DockerOptions(

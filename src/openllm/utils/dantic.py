@@ -15,11 +15,11 @@
 
 from __future__ import annotations
 
-from enum import Enum
-import importlib
 import functools
+import importlib
 import os
 import typing as t
+from enum import Enum
 
 import attr
 import click
@@ -39,7 +39,7 @@ def _default_converter(value: t.Any, env: str | None) -> t.Any:
         value = os.environ.get(env, value)
     if value is not None and isinstance(value, str):
         try:
-            return orjson.loads(value)
+            return orjson.loads(value.lower())
         except orjson.JSONDecodeError as err:
             raise RuntimeError(f"Failed to parse '{value}' from '{env}': {err}")
     return value

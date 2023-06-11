@@ -159,7 +159,7 @@ Available model_id(s): {llm_config.__openllm_model_ids__} [default: {llm_config.
         help=f"Assign GPU devices (if available) for {model_name}.",
         show_envvar=True,
     )
-    @workers_option(cog.optgroup.option)
+    @workers_option(cog.optgroup)
     def model_start(
         server_timeout: int | None,
         model_id: str | None,
@@ -602,7 +602,7 @@ def workers_option(factory: t.Any, build: bool = False):
     if build:
         help_str += """\n
     NOTE: The workers value passed into 'build' will determine how the LLM can
-    be provisioned in Kubernetes as well as in standalone container. This will 
+    be provisioned in Kubernetes as well as in standalone container. This will
     ensure it has the same effect with 'openllm start --workers ...'"""
     return factory.option(
         "--workers",

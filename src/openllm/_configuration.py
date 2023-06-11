@@ -55,11 +55,14 @@ import openllm
 from .exceptions import GpuNotAvailableError, OpenLLMException
 from .utils import LazyType, ModelEnv, bentoml_cattr, dantic, first_not_none, lenient_issubclass
 
+_T = t.TypeVar("_T")
+
+
 if t.TYPE_CHECKING:
     import tensorflow as tf
     import torch
     import transformers
-    from attr import _CountingAttr, _make_init, _make_method, _make_repr
+    from attr import _CountingAttr, _make_init, _make_method, _make_repr, _transform_attrs
     from transformers.generation.beam_constraints import Constraint
 
     from ._types import ClickFunctionWrapper, F, O_co, P
@@ -69,6 +72,7 @@ if t.TYPE_CHECKING:
     DictStrAny = dict[str, t.Any]
     ListStr = list[str]
     ItemgetterAny = itemgetter[t.Any]
+    FieldTransformers = t.Callable[[_T, list[attr.Attribute[t.Any]]], list[attr.Attribute[t.Any]]]
 else:
     Constraint = t.Any
     ListStr = list
@@ -76,7 +80,7 @@ else:
     ItemgetterAny = itemgetter
     # NOTE: Using internal API from attr here, since we are actually
     # allowing subclass of openllm.LLMConfig to become 'attrs'-ish
-    from attr._make import _CountingAttr, _make_init, _make_method, _make_repr
+    from attr._make import _CountingAttr, _make_init, _make_method, _make_repr, _transform_attrs
 
     transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
     torch = openllm.utils.LazyLoader("torch", globals(), "torch")
@@ -94,8 +98,6 @@ config_merger = Merger(
     # override conflicting types
     type_conflict_strategies=["override"],
 )
-
-_T = t.TypeVar("_T")
 
 
 @t.overload
@@ -157,7 +159,7 @@ def attrs_to_options(
     )
 
 
-@attr.define
+@attr.frozen(slots=True)
 class GenerationConfig:
     """Generation config provides the configuration to then be parsed to ``transformers.GenerationConfig``,
     with some additional validation and environment constructor.
@@ -453,38 +455,6 @@ def _get_annotations(cls: type[t.Any]) -> DictStrAny:
     return DictStrAny()
 
 
-# The below is vendorred from attrs
-def _collect_base_attrs(
-    cls: type[LLMConfig], taken_attr_names: set[str]
-) -> tuple[list[attr.Attribute[t.Any]], dict[str, type[t.Any]]]:
-    """
-    Collect attr.ibs from base classes of *cls*, except *taken_attr_names*.
-    """
-    base_attrs: list[attr.Attribute[t.Any]] = []
-    base_attr_map: dict[str, type[t.Any]] = {}  # A dictionary of base attrs to their classes.
-
-    # Traverse the MRO and collect attributes.
-    for base_cls in reversed(cls.__mro__[1:-1]):
-        for a in getattr(base_cls, "__attrs_attrs__", []):
-            if a.inherited or a.name in taken_attr_names:
-                continue
-
-            a = a.evolve(inherited=True)
-            base_attrs.append(a)
-            base_attr_map[a.name] = base_cls
-
-    # For each name, only keep the freshest definition i.e. the furthest at the back.
-    filtered: list[attr.Attribute[t.Any]] = []
-    seen: set[str] = set()
-    for a in reversed(base_attrs):
-        if a.name in seen:
-            continue
-        filtered.insert(0, a)
-        seen.add(a.name)
-
-    return filtered, base_attr_map
-
-
 _classvar_prefixes = (
     "typing.ClassVar",
     "t.ClassVar",
@@ -532,76 +502,56 @@ def _add_method_dunders(cls: type[t.Any], method: t.Callable[..., t.Any]) -> t.C
     return method
 
 
-# NOTE: vendorred from attrs
-def _compile_and_eval(script: str, globs: dict[str, t.Any], locs: dict[str, t.Any] | None = None, filename: str = ""):
-    """
-    "Exec" the script with the given global (globs) and local (locs) variables.
-    """
-    bytecode = compile(script, filename, "exec")
-    eval(bytecode, globs, locs)
+# cached it here to save one lookup per assignment
+_object_getattribute = object.__getattribute__
 
 
-def _make_attr_tuple_class(cls_name: str, attr_names: t.Iterable[str]) -> type[tuple[attr.Attribute[t.Any], ...]]:
-    """
-    Create a tuple subclass to hold `Attribute`s for an `attrs` class.
+def _make_evolve_kwds(attr_name: str) -> str:
+    evolve_kwds = {
+        "metadata": f"dict(env=__env_{attr_name}, description=__description_{attr_name})",
+        "default": f"__extract_{attr_name}",
+    }
+    return ", ".join(f"{k}={v}" for k, v in evolve_kwds.items())
 
-    The subclass is a bare tuple with properties for names.
 
-    class MyClassAttributes(tuple):
-        __slots__ = ()
-        x = property(itemgetter(0))
-    """
-    attr_class_name = f"{cls_name}Attributes"
-    attr_class_template = [
-        f"class {attr_class_name}(tuple):",
-        "    __slots__ = ()",
+def _safe_getattribute_get(attr_name: str, value_var: t.Any) -> list[str]:
+    return [
+        f"__fallback = _getenv(__env_{attr_name}, {value_var})",
+        "try:",
+        f"    __extract_{attr_name} = _getenv(__env_{attr_name}, _getattr('{attr_name}'))",
+        "except AttributeError:",
+        f"    __extract_{attr_name} = __fallback",
+        f"transformed.append(__attr_{attr_name}.evolve({_make_evolve_kwds(attr_name)}))",
     ]
-    if attr_names:
-        for i, attr_name in enumerate(attr_names):
-            attr_class_template.append(f"    {attr_name} = _attrs_property(_attrs_itemgetter({i}))")
-    else:
-        attr_class_template.append("    pass")
-    globs: dict[str, t.Any] = {"_attrs_itemgetter": ItemgetterAny, "_attrs_property": property}
-    _compile_and_eval("\n".join(attr_class_template), globs)
-    return globs[attr_class_name]
 
 
-def _make_internal_generation_class(cls: type[LLMConfig]) -> type[GenerationConfig]:
-    _has_gen_class = _has_own_attribute(cls, "GenerationConfig")
+def _make_auto_generation_env(cls: type[LLMConfig], model_name: str) -> FieldTransformers[type[LLMConfig]]:
+    # Circumvent the descriptor protocol to save one lookup per assignment.
+    globs: dict[str, t.Any] = {
+        "_getenv": os.environ.get,
+        "_cached_getattribute_get": _object_getattribute.__get__,
+        "_cached_gen": getattr(cls, "GenerationConfig", _sentinel),
+    }
+    lines: list[str] = ["_getattr = _cached_getattribute_get(_cached_gen)", "transformed = []"]
+    for f in attr.fields(GenerationConfig):
+        attr_name = f.name
+        globs.update(
+            {
+                f"__env_{attr_name}": f"OPENLLM_{model_name.upper()}_GENERATION_{attr_name.upper()}",
+                f"__attr_{attr_name}": f,
+                f"__description_{attr_name}": f.metadata.get("description", "(not provided)"),
+            }
+        )
+        lines.extend(_safe_getattribute_get(attr_name, f.default))
+    lines.append("return transformed")
 
-    def _evolve_with_base_default(
-        _: type[GenerationConfig], fields: list[attr.Attribute[t.Any]]
-    ) -> list[attr.Attribute[t.Any]]:
-        transformed: list[attr.Attribute[t.Any]] = []
-        for f in fields:
-            env = f"OPENLLM_{cls.__openllm_model_name__.upper()}_GENERATION_{f.name.upper()}"
-            _from_env = _populate_value_from_env_var(env, fallback=f.default)
-            default_value = f.default if not _has_gen_class else getattr(cls.GenerationConfig, f.name, _from_env)
-            transformed.append(
-                f.evolve(default=default_value, metadata={"env": env, "description": f.metadata.get("description")})
-            )
-        return transformed
-
-    _cl = attr.make_class(
-        cls.__name__.replace("Config", "GenerationConfig"),
-        [],
-        bases=(GenerationConfig,),
-        frozen=True,
-        slots=True,
-        repr=True,
-        field_transformer=_evolve_with_base_default,
-    )
-    _cl.__doc__ = GenerationConfig.__doc__
-
-    if _has_gen_class:
-        delattr(cls, "GenerationConfig")
-
-    return _cl
+    script = "def auto_env(_, fields):\n    %s\n" % "\n    ".join(lines) if lines else "pass"
+    return _make_method("auto_env", script, _generate_unique_filename(cls, "auto_env"), globs)
 
 
-# NOTE: This is the ModelConfig where we can control the behaviour of the LLM.
+# NOTE: This is the ModelSettings where we can control the behaviour of the LLM.
 # refers to the __openllm_*__ docstring inside LLMConfig for more information.
-class ModelConfig(t.TypedDict, total=False):
+class ModelSettings(t.TypedDict, total=False):
     # NOTE: meta
     url: str
     requires_gpu: bool
@@ -623,12 +573,15 @@ class ModelConfig(t.TypedDict, total=False):
     default_id: str
     model_ids: list[str]
 
+    # NOTE: the target generation_config class to be used.
+    generation_class: t.Type[GenerationConfig]
 
-def _gen_default_model_config(cls: type[LLMConfig]) -> ModelConfig:
+
+def _gen_default_settings(cls: type[LLMConfig]) -> ModelSettings:
     """Generate the default ModelConfig and delete __config__ in LLMConfig
     if defined inplace."""
 
-    _internal_config = t.cast(ModelConfig, getattr(cls, "__config__", {}))
+    _internal_config = t.cast(ModelSettings, getattr(cls, "__config__", {}))
     default_id = _internal_config.get("default_id", None)
     if default_id is None:
         raise RuntimeError("'default_id' is required under '__config__'.")
@@ -652,7 +605,7 @@ def _gen_default_model_config(cls: type[LLMConfig]) -> ModelConfig:
 
     model_name = _first_not_null("model_name", default_model_name)
 
-    _config = ModelConfig(
+    return ModelSettings(
         name_type=name_type,
         model_name=model_name,
         default_id=default_id,
@@ -665,12 +618,17 @@ def _gen_default_model_config(cls: type[LLMConfig]) -> ModelConfig:
         env=_first_not_null("env", openllm.utils.ModelEnv(model_name)),
         timeout=_first_not_null("timeout", 3600),
         workers_per_resource=_first_not_null("workers_per_resource", 1),
+        generation_class=attr.make_class(
+            cls.__name__.replace("Config", "GenerationConfig"),
+            [],
+            bases=(GenerationConfig,),
+            frozen=True,
+            slots=True,
+            repr=True,
+            cache_hash=True,
+            field_transformer=_make_auto_generation_env(cls, model_name),
+        ),
     )
-
-    if hasattr(cls, "__config__"):
-        delattr(cls, "__config__")
-
-    return _config
 
 
 def _generate_unique_filename(cls: type[t.Any], func_name: str):
@@ -687,22 +645,21 @@ def _setattr_class(attr_name: str, value_var: t.Any):
 
 
 @t.overload
-def _make_assignment_with_prefix_script(cls: type[LLMConfig], attributes: ModelConfig) -> t.Callable[..., None]:
+def _make_assignment_script(cls: type[LLMConfig], attributes: ModelSettings) -> t.Callable[..., None]:
     ...
 
 
 @t.overload
-def _make_assignment_with_prefix_script(cls: type[LLMConfig], attributes: dict[str, t.Any]) -> t.Callable[..., None]:
+def _make_assignment_script(cls: type[LLMConfig], attributes: dict[str, t.Any]) -> t.Callable[..., None]:
     ...
 
 
-def _make_assignment_with_prefix_script(cls: type[LLMConfig], attributes: t.Any) -> t.Callable[..., None]:
+def _make_assignment_script(cls: type[LLMConfig], attributes: t.Any) -> t.Callable[..., None]:
     """Generate the assignment script with prefix attributes __openllm_<value>__"""
     args: list[str] = []
     globs: dict[str, t.Any] = {"cls": cls, "attr_dict": attributes}
     annotations: dict[str, t.Any] = {"return": None}
 
-    # Circumvent __setattr__ descriptor to save one lookup per assigment
     lines: list[str] = []
     for attr_name in attributes:
         arg_name = f"__openllm_{inflection.underscore(attr_name)}__"
@@ -720,6 +677,9 @@ def _make_assignment_with_prefix_script(cls: type[LLMConfig], attributes: t.Any)
     assign_method.__annotations__ = annotations
 
     return assign_method
+
+
+_object_setattr = object.__setattr__
 
 
 @attr.define
@@ -781,14 +741,29 @@ class LLMConfig:
 
     # NOTE: The following is handled via __init_subclass__, and is only used for TYPE_CHECKING
     if t.TYPE_CHECKING:
+        # NOTE: public attributes to override
+        __config__: ModelSettings | None = None
+        """Internal configuration for this LLM model. Each of the field in here will be populated
+        and prefixed with __openllm_<value>__"""
+
+        GenerationConfig: type = type
+        """Users can override this subclass of any given LLMConfig to provide GenerationConfig
+        default value. For example:
+
+        ```python
+        class MyAwesomeModelConfig(openllm.LLMConfig):
+            class GenerationConfig:
+                max_new_tokens: int = 200
+                top_k: int = 10
+                num_return_sequences: int = 1
+                eos_token_id: int = 11
+        ```
+        """
+
         # NOTE: Internal attributes that should only be used by OpenLLM. Users usually shouldn't
         # concern any of these.
         def __attrs_init__(self, **attrs: t.Any):
             """Generated __attrs_init__ for LLMConfig subclass that follows the attrs contract."""
-
-        __config__: ModelConfig | None = None
-        """Internal configuration for this LLM model. Each of the field in here will be populated
-        and prefixed with __openllm_<value>__"""
 
         __attrs_attrs__: tuple[attr.Attribute[t.Any], ...] = tuple()
         """Since we are writing our own __init_subclass__, which is an alternative way for __prepare__,
@@ -853,40 +828,37 @@ class LLMConfig:
                                                 "google/flan-t5-large", "google/flan-t5-xl", "google/flan-t5-xxl"]
         """
 
-        GenerationConfig: type = type
-        """Users can override this subclass of any given LLMConfig to provide GenerationConfig
-        default value. For example:
-
-        ```python
-        class MyAwesomeModelConfig(openllm.LLMConfig):
-            class GenerationConfig:
-                max_new_tokens: int = 200
-                top_k: int = 10
-                num_return_sequences: int = 1
-                eos_token_id: int = 11
-        ```
-        """
-
-        generation_class: type[GenerationConfig] = Field(None, init=False)
+        __openllm_generation_class__: type[GenerationConfig] = Field(None, init=False)
         """The result generated GenerationConfig class for this LLMConfig. This will be used
         to create the generation_config argument that can be used throughout the lifecycle."""
 
     def __init_subclass__(cls):
         # NOTE: auto assignment attributes generated from __config__
-        _make_assignment_with_prefix_script(cls, _gen_default_model_config(cls))(cls)
+        _make_assignment_script(cls, _gen_default_settings(cls))(cls)
 
         # NOTE: Since we want to enable a pydantic-like experience
         # this means we will have to hide the attr abstraction, and generate
         # all of the Field from __init_subclass__
-        # Some of the logics here are from attr._make._transform_attrs
         anns = _get_annotations(cls)
         cd = cls.__dict__
 
         def field_env_key(key: str) -> str:
             return f"OPENLLM_{cls.__openllm_model_name__.upper()}_{key.upper()}"
 
+        def auto_config_env(_: type[LLMConfig], attrs: list[attr.Attribute[t.Any]]) -> list[attr.Attribute[t.Any]]:
+            return [
+                a.evolve(
+                    default=_populate_value_from_env_var(a.name, transform=field_env_key, fallback=a.default),
+                    metadata={
+                        "env": a.metadata.get("env", field_env_key(a.name)),
+                        "description": a.metadata.get("description", "(not provided)"),
+                    },
+                )
+                for a in attrs
+            ]
+
         ca_names = {name for name, attr in cd.items() if isinstance(attr, _CountingAttr)}
-        ca_list: list[tuple[str, _CountingAttr[t.Any]]] = []
+        these: dict[str, _CountingAttr[t.Any]] = {}
         annotated_names: set[str] = set()
         for attr_name, typ in anns.items():
             if _is_class_var(typ):
@@ -898,7 +870,7 @@ class LLMConfig:
                     val = cls.Field(env=field_env_key(attr_name))
                 else:
                     val = cls.Field(default=val, env=field_env_key(attr_name))
-            ca_list.append((attr_name, val))
+            these[attr_name] = val
         unannotated = ca_names - annotated_names
 
         if len(unannotated) > 0:
@@ -907,66 +879,47 @@ class LLMConfig:
                 f"The following field doesn't have a type annotation: {missing_annotated}"
             )
 
-        hints = t.get_type_hints(cls)
-        # NOTE: we know need to determine the list of the attrs
-        # by mro to at the very least support inheritance. Tho it is not recommended.
-        own_attrs: list[attr.Attribute[t.Any]] = []
-        for attr_name, ca in ca_list:
-            gen_attribute = attr.Attribute.from_counting_attr(name=attr_name, ca=ca, type=hints.get(attr_name))
-            if attr_name in ca_names:
-                metadata = ca.metadata
-                metadata["env"] = field_env_key(attr_name)
-                gen_attribute = gen_attribute.evolve(metadata=metadata)
-            own_attrs.append(gen_attribute)
-
-        # This is to handle subclass of subclass of all provided LLMConfig.
-        # refer to attrs for the original implementation.
-        base_attrs, base_attr_map = _collect_base_attrs(cls, {a.name for a in own_attrs})
-
         # __openllm_attrs__ is a tracking tuple[attr.Attribute[t.Any]]
         # that we construct ourself.
-        cls.__openllm_attrs__ = tuple(a.name for a in own_attrs)
+        cls.__openllm_attrs__ = tuple(these.keys())
+        cls.__openllm_accepted_keys__ = set(cls.__openllm_attrs__) | set(
+            attr.fields_dict(cls.__openllm_generation_class__)
+        )
+        cls.__openllm_hints__ = {**t.get_type_hints(cls), **t.get_type_hints(cls.__openllm_generation_class__)}
 
-        attrs: list[attr.Attribute[t.Any]] = own_attrs + base_attrs
+        these["generation_config"] = cls.Field(
+            default=cls.__openllm_generation_class__(),
+            description=inspect.cleandoc(cls.__openllm_generation_class__.__doc__ or ""),
+        )
 
-        # Mandatory vs non-mandatory attr order only matters when they are part of
-        # the __init__ signature and when they aren't kw_only (which are moved to
-        # the end and can be mandatory or non-mandatory in any order, as they will
-        # be specified as keyword args anyway). Check the order of those attrs:
-        had_default = False
-        for a in (a for a in attrs if a.init is not False and a.kw_only is False):
-            if had_default is True and a.default is attr.NOTHING:
-                raise ValueError(
-                    "No mandatory attributes allowed after an attribute with a "
-                    f"default value or factory.  Attribute in question: {a!r}"
-                )
+        attrs, base_attrs, base_attr_map = _transform_attrs(
+            cls,  # the current class
+            these,  # the parsed attributes we previous did
+            False,  # disable auto_attribs, since we already handle these
+            False,  # disable kw_only
+            True,  # collect_by_mro
+            field_transformer=auto_config_env,
+        )
 
-            if had_default is False and a.default is not attr.NOTHING:
-                had_default = True
-
-        # NOTE: Resolve the alias and default value from environment variable
-        attrs = [
-            a.evolve(
-                alias=a.name.lstrip("_") if not a.alias else None,
-                # NOTE: This is where we actually populate with the environment variable set for this attrs.
-                default=_populate_value_from_env_var(a.name, transform=field_env_key, fallback=a.default),
-            )
-            for a in attrs
-        ]
-
+        _cls_dict = dict(cls.__dict__)
+        _base_names = {a.name for a in base_attrs}
+        _attr_names = tuple(a.name for a in attrs)
+        _slots = True
+        _weakref_slot = True
+        _delete_attribs = not bool(these)
         _has_pre_init = bool(getattr(cls, "__attrs_pre_init__", False))
         _has_post_init = bool(getattr(cls, "__attrs_post_init__", False))
 
-        AttrsTuple = _make_attr_tuple_class(cls.__name__, cls.__openllm_attrs__)
-        # NOTE: the protocol for attrs-decorated class
-        cls.__attrs_attrs__ = AttrsTuple(attrs)
-        # NOTE: generate a __attrs_init__ for the subclass
+        # the protocol for attrs-decorated class
+        cls.__attrs_attrs__ = attrs
+
+        # generate a __attrs_init__ for the subclass
         cls.__attrs_init__ = _add_method_dunders(
             cls,
             _make_init(
                 cls,  # cls (the attrs-decorated class)
-                cls.__attrs_attrs__,  # tuple of attr.Attribute of cls
-                _has_pre_init,  # pre_init
+                attrs,  # tuple of attr.Attribute of cls
+                _has_pre_init,  # pre_initjk
                 _has_post_init,  # post_init
                 False,  # frozen
                 True,  # slots
@@ -977,13 +930,36 @@ class LLMConfig:
                 attrs_init=True,  # whether to create __attrs_init__ instead of __init__
             ),
         )
+        # __repr__ function with the updated fields.
+        cls.__repr__ = _add_method_dunders(cls, _make_repr(cls.__attrs_attrs__, None, cls))
 
-        # NOTE: Finally, set the generation_class for this given config.
-        cls.generation_class = _make_internal_generation_class(cls)
+        # Traverse the MRO to collect existing slots
+        # and check for an existing __weakref__.
+        existing_slots: dict[str, t.Any] = dict()
+        weakref_inherited = False
+        for base_cls in cls.__mro__[1:-1]:
+            if base_cls.__dict__.get("__weakref__", None) is not None:
+                weakref_inherited = True
+            existing_slots.update({name: getattr(base_cls, name) for name in getattr(base_cls, "__slots__", [])})
 
-        hints.update(t.get_type_hints(cls.generation_class))
-        cls.__openllm_hints__ = hints
-        cls.__openllm_accepted_keys__ = set(cls.__openllm_attrs__) | set(attr.fields_dict(cls.generation_class))
+        if (
+            _weakref_slot
+            and "__weakref__" not in getattr(cls, "__slots__", ())
+            and "__weakref__" not in _attr_names
+            and not weakref_inherited
+        ):
+            _attr_names += ("__weakref__",)
+
+        # We only add the names of attributes that aren't inherited.
+        # Setting __slots__ to inherited attributes wastes memory.
+        slot_names = [name for name in _attr_names if name not in _base_names]
+        # There are slots for attributes from current class
+        # that are defined in parent classes.
+        # As their descriptors may be overridden by a child class,
+        # we collect them here and update the class dict
+        reused_slots = {slot: slot_descriptor for slot, slot_descriptor in existing_slots.items() if slot in slot_names}
+        slot_names = [name for name in slot_names if name not in reused_slots]
+        setattr(cls, "__slots__", tuple(slot_names))
 
     def __init__(
         self,
@@ -1005,7 +981,7 @@ class LLMConfig:
                 del attrs[k]
         _cached_keys = tuple(k for k in _cached_keys if k in attrs)
 
-        _generation_cl_dict = attr.fields_dict(self.generation_class)
+        _generation_cl_dict = attr.fields_dict(self.__openllm_generation_class__)
         if generation_config is None:
             generation_config = {k: v for k, v in attrs.items() if k in _generation_cl_dict}
         else:
@@ -1022,26 +998,12 @@ class LLMConfig:
                     del attrs[k]
             _cached_keys = tuple(k for k in _cached_keys if k in attrs)
 
-        self.generation_config = self.generation_class(**generation_config)
-        base_attrs: tuple[attr.Attribute[t.Any], ...] = attr.fields(self.__class__)
-        base_attrs += (
-            attr.Attribute.from_counting_attr(
-                name="generation_config",
-                ca=dantic.Field(
-                    self.generation_config, description=inspect.cleandoc(self.generation_class.__doc__ or "")
-                ),
-                type=self.generation_class,
-            ),
-        )
-        # mk the class __repr__ function with the updated fields.
-        self.__class__.__repr__ = _add_method_dunders(self.__class__, _make_repr(base_attrs, None, self.__class__))
-
         for k in _cached_keys:
             if k in generation_config:
                 del attrs[k]
 
         # The rest of attrs should only be the attributes to be passed to __attrs_init__
-        self.__attrs_init__(**attrs)
+        self.__attrs_init__(generation_config=self.__openllm_generation_class__(**generation_config), **attrs)
 
     def __getattr__(self, item: str) -> t.Any:
         if hasattr(self.generation_config, item):
@@ -1111,11 +1073,12 @@ class LLMConfig:
             if not LazyType(DictStrAny).isinstance(generation_config):
                 raise RuntimeError(f"Expected a dictionary, but got {type(generation_config)}")
         else:
-            generation_config = {k: v for k, v in attrs.items() if k in attr.fields_dict(ncls.generation_class)}
+            generation_config = {
+                k: v for k, v in attrs.items() if k in attr.fields_dict(ncls.__openllm_generation_class__)
+            }
 
         attrs = {k: v for k, v in attrs.items() if k not in generation_config}
-        ncls.generation_config = attr.evolve(ncls.generation_config, **generation_config)
-        return attr.evolve(ncls, **attrs)
+        return attr.evolve(ncls, generation_config=generation_config, **attrs)
 
     def model_validate_click(self, **attrs: t.Any) -> tuple[LLMConfig, dict[str, t.Any]]:
         """Parse given click attributes into a LLMConfig and return the remaining click attributes."""
@@ -1163,13 +1126,13 @@ class LLMConfig:
         Note that the identifier for all LLMConfig will be prefixed with '<model_name>_*', and the generation config
         will be prefixed with '<model_name>_generation_*'.
         """
-        for name, field in attr.fields_dict(cls.generation_class).items():
+        for name, field in attr.fields_dict(cls.__openllm_generation_class__).items():
             ty = cls.__openllm_hints__.get(name)
             if t.get_origin(ty) is t.Union:
                 # NOTE: Union type is currently not yet supported, we probably just need to use environment instead.
                 continue
             f = attrs_to_options(name, field, cls.__openllm_model_name__, typ=ty, suffix_generation=True)(f)
-        f = optgroup.group(f"{cls.generation_class.__name__} generation options")(f)
+        f = optgroup.group(f"{cls.__openllm_generation_class__.__name__} generation options")(f)
 
         if len(cls.__openllm_attrs__) == 0:
             # NOTE: in this case, the function is already a ClickFunctionWrapper
@@ -1178,7 +1141,7 @@ class LLMConfig:
 
         for name, field in attr.fields_dict(cls).items():
             ty = cls.__openllm_hints__.get(name)
-            if t.get_origin(ty) is t.Union:
+            if t.get_origin(ty) is t.Union or name == "generation_config":
                 # NOTE: Union type is currently not yet supported, we probably just need to use environment instead.
                 continue
             f = attrs_to_options(name, field, cls.__openllm_model_name__, typ=ty)(f)
@@ -1206,7 +1169,7 @@ def structure_llm_config(data: dict[str, t.Any], cls: type[LLMConfig]) -> LLMCon
         raise RuntimeError(f"Expected a dictionary, but got {type(data)}")
 
     cls_attrs = {k: v for k, v in data.items() if k in cls.__openllm_attrs__}
-    generation_cls_fields = attr.fields_dict(cls.generation_class)
+    generation_cls_fields = attr.fields_dict(cls.__openllm_generation_class__)
     if "generation_config" in data:
         generation_config = data.pop("generation_config")
         if not LazyType(DictStrAny).isinstance(generation_config):
