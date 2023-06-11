@@ -42,7 +42,13 @@ _import_structure = {
     "client": [],
     "cli": ["start", "start_grpc"],
     # NOTE: models
-    "models.auto": ["AutoConfig", "CONFIG_MAPPING"],
+    "models.auto": [
+        "AutoConfig",
+        "CONFIG_MAPPING",
+        "MODEL_MAPPING_NAMES",
+        "MODEL_FLAX_MAPPING_NAMES",
+        "MODEL_TF_MAPPING_NAMES",
+    ],
     "models.flan_t5": ["FlanT5Config"],
     "models.dolly_v2": ["DollyV2Config"],
     "models.falcon": ["FalconConfig"],
@@ -89,7 +95,7 @@ else:
     _import_structure["models.dolly_v2"].extend(["DollyV2"])
     _import_structure["models.starcoder"].extend(["StarCoder"])
     _import_structure["models.stablelm"].extend(["StableLM"])
-    _import_structure["models.auto"].extend(["AutoLLM", "MODEL_MAPPING_NAMES", "MODEL_MAPPING"])
+    _import_structure["models.auto"].extend(["AutoLLM", "MODEL_MAPPING"])
 
 try:
     if not utils.is_flax_available():
@@ -102,7 +108,7 @@ except MissingDependencyError:
     ]
 else:
     _import_structure["models.flan_t5"].extend(["FlaxFlanT5"])
-    _import_structure["models.auto"].extend(["AutoFlaxLLM", "MODEL_FLAX_MAPPING_NAMES", "MODEL_FLAX_MAPPING"])
+    _import_structure["models.auto"].extend(["AutoFlaxLLM", "MODEL_FLAX_MAPPING"])
 
 try:
     if not utils.is_tf_available():
@@ -113,7 +119,7 @@ except MissingDependencyError:
     _import_structure["utils.dummy_tf_objects"] = [name for name in dir(dummy_tf_objects) if not name.startswith("_")]
 else:
     _import_structure["models.flan_t5"].extend(["TFFlanT5"])
-    _import_structure["models.auto"].extend(["AutoTFLLM", "MODEL_TF_MAPPING_NAMES", "MODEL_TF_MAPPING"])
+    _import_structure["models.auto"].extend(["AutoTFLLM", "MODEL_TF_MAPPING"])
 
 
 # declaration for OpenLLM-related modules
@@ -133,6 +139,9 @@ if t.TYPE_CHECKING:
     from .cli import start as start
     from .cli import start_grpc as start_grpc
     from .models.auto import CONFIG_MAPPING as CONFIG_MAPPING
+    from .models.auto import MODEL_FLAX_MAPPING_NAMES as MODEL_FLAX_MAPPING_NAMES
+    from .models.auto import MODEL_MAPPING_NAMES as MODEL_MAPPING_NAMES
+    from .models.auto import MODEL_TF_MAPPING_NAMES as MODEL_TF_MAPPING_NAMES
     from .models.auto import AutoConfig as AutoConfig
     from .models.chatglm import ChatGLMConfig as ChatGLMConfig
     from .models.dolly_v2 import DollyV2Config as DollyV2Config
@@ -166,7 +175,6 @@ if t.TYPE_CHECKING:
         from .utils.dummy_pt_objects import *
     else:
         from .models.auto import MODEL_MAPPING as MODEL_MAPPING
-        from .models.auto import MODEL_MAPPING_NAMES as MODEL_MAPPING_NAMES
         from .models.auto import AutoLLM as AutoLLM
         from .models.dolly_v2 import DollyV2 as DollyV2
         from .models.flan_t5 import FlanT5 as FlanT5
@@ -180,7 +188,6 @@ if t.TYPE_CHECKING:
         from .utils.dummy_flax_objects import *
     else:
         from .models.auto import MODEL_FLAX_MAPPING as MODEL_FLAX_MAPPING
-        from .models.auto import MODEL_FLAX_MAPPING_NAMES as MODEL_FLAX_MAPPING_NAMES
         from .models.auto import AutoFlaxLLM as AutoFlaxLLM
         from .models.flan_t5 import FlaxFlanT5 as FlaxFlanT5
 
@@ -191,7 +198,6 @@ if t.TYPE_CHECKING:
         from .utils.dummy_tf_objects import *
     else:
         from .models.auto import MODEL_TF_MAPPING as MODEL_TF_MAPPING
-        from .models.auto import MODEL_TF_MAPPING_NAMES as MODEL_TF_MAPPING_NAMES
         from .models.auto import AutoTFLLM as AutoTFLLM
         from .models.flan_t5 import TFFlanT5 as TFFlanT5
 

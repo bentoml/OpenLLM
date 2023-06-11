@@ -24,6 +24,9 @@ from ... import utils
 
 _import_structure = {
     "configuration_auto": ["AutoConfig", "CONFIG_MAPPING", "CONFIG_MAPPING_NAMES"],
+    "modeling_auto": ["MODEL_MAPPING_NAMES"],
+    "modeling_flax_auto": ["MODEL_FLAX_MAPPING_NAMES"],
+    "modeling_tf_auto": ["MODEL_TF_MAPPING_NAMES"],
 }
 
 try:
@@ -32,7 +35,7 @@ try:
 except openllm.exceptions.MissingDependencyError:
     pass
 else:
-    _import_structure["modeling_auto"] = ["AutoLLM", "MODEL_MAPPING_NAMES", "MODEL_MAPPING"]
+    _import_structure["modeling_auto"].extend(["AutoLLM", "MODEL_MAPPING"])
 
 try:
     if not utils.is_flax_available():
@@ -40,7 +43,7 @@ try:
 except openllm.exceptions.MissingDependencyError:
     pass
 else:
-    _import_structure["modeling_flax_auto"] = ["AutoFlaxLLM", "MODEL_FLAX_MAPPING_NAMES", "MODEL_FLAX_MAPPING"]
+    _import_structure["modeling_flax_auto"].extend(["AutoFlaxLLM", "MODEL_FLAX_MAPPING"])
 
 try:
     if not utils.is_tf_available():
@@ -48,12 +51,15 @@ try:
 except openllm.exceptions.MissingDependencyError:
     pass
 else:
-    _import_structure["modeling_tf_auto"] = ["AutoTFLLM", "MODEL_TF_MAPPING_NAMES", "MODEL_TF_MAPPING"]
+    _import_structure["modeling_tf_auto"].extend(["AutoTFLLM", "MODEL_TF_MAPPING"])
 
 if t.TYPE_CHECKING:
     from .configuration_auto import CONFIG_MAPPING as CONFIG_MAPPING
     from .configuration_auto import CONFIG_MAPPING_NAMES as CONFIG_MAPPING_NAMES
     from .configuration_auto import AutoConfig as AutoConfig
+    from .modeling_auto import MODEL_MAPPING_NAMES as MODEL_MAPPING_NAMES
+    from .modeling_flax_auto import MODEL_FLAX_MAPPING_NAMES as MODEL_FLAX_MAPPING_NAMES
+    from .modeling_tf_auto import MODEL_TF_MAPPING_NAMES as MODEL_TF_MAPPING_NAMES
 
     try:
         if not utils.is_torch_available():
@@ -62,7 +68,6 @@ if t.TYPE_CHECKING:
         pass
     else:
         from .modeling_auto import MODEL_MAPPING as MODEL_MAPPING
-        from .modeling_auto import MODEL_MAPPING_NAMES as MODEL_MAPPING_NAMES
         from .modeling_auto import AutoLLM as AutoLLM
 
     try:
@@ -72,7 +77,6 @@ if t.TYPE_CHECKING:
         pass
     else:
         from .modeling_flax_auto import MODEL_FLAX_MAPPING as MODEL_FLAX_MAPPING
-        from .modeling_flax_auto import MODEL_FLAX_MAPPING_NAMES as MODEL_FLAX_MAPPING_NAMES
         from .modeling_flax_auto import AutoFlaxLLM as AutoFlaxLLM
 
     try:
@@ -82,7 +86,6 @@ if t.TYPE_CHECKING:
         pass
     else:
         from .modeling_tf_auto import MODEL_TF_MAPPING as MODEL_TF_MAPPING
-        from .modeling_tf_auto import MODEL_TF_MAPPING_NAMES as MODEL_TF_MAPPING_NAMES
         from .modeling_tf_auto import AutoTFLLM as AutoTFLLM
 else:
     import sys

@@ -699,14 +699,21 @@ def cli_factory() -> click.Group:
         else:
             failed_initialized: list[tuple[str, Exception]] = []
 
-            json_data: dict[str, dict[t.Literal["model_id", "description"], t.Any]] = {}
+            json_data: dict[str, dict[t.Literal["model_id", "description", "runtime_impl"], t.Any]] = {}
 
             converted: list[str] = []
             for m in models:
                 try:
                     model = openllm.AutoLLM.for_model(m)
                     docs = inspect.cleandoc(model.config.__doc__ or "(No description)")
-                    json_data[m] = {"model_id": model.model_ids, "description": docs}
+                    runtime_impl: tuple[t.Literal["pt", "flax", "tf"], ...] = tuple()
+                    if model.config.__openllm_model_name__ in openllm.MODEL_MAPPING_NAMES:
+                        runtime_impl += ("pt",)
+                    if model.config.__openllm_model_name__ in openllm.MODEL_FLAX_MAPPING_NAMES:
+                        runtime_impl += ("flax",)
+                    if model.config.__openllm_model_name__ in openllm.MODEL_TF_MAPPING_NAMES:
+                        runtime_impl += ("tf",)
+                    json_data[m] = {"model_id": model.model_ids, "description": docs, "runtime_impl": runtime_impl}
                     converted.extend([convert_transformers_model_name(i) for i in model.model_ids])
                 except Exception as err:
                     failed_initialized.append((m, err))
@@ -720,10 +727,10 @@ def cli_factory() -> click.Group:
 
                 tabulate.PRESERVE_WHITESPACE = True
 
-                data: list[str | tuple[str, str, list[str]]] = []
+                data: list[str | tuple[str, str, list[str], tuple[t.Literal["pt", "flax", "tf"], ...]]] = []
                 for m, v in json_data.items():
-                    data.extend([(m, v["description"], v["model_id"])])
-                column_widths = [int(COLUMNS / 6), int(COLUMNS / 3 * 2), int(COLUMNS / 6)]
+                    data.extend([(m, v["description"], v["model_id"], v["runtime_impl"])])
+                column_widths = [int(COLUMNS / 6), int(COLUMNS / 2), int(COLUMNS / 3), int(COLUMNS / 9)]
 
                 if len(data) == 0 and len(failed_initialized) > 0:
                     _echo("Exception found while parsing models:\n", fg="yellow")
@@ -735,7 +742,7 @@ def cli_factory() -> click.Group:
                 table = tabulate.tabulate(
                     data,
                     tablefmt="fancy_grid",
-                    headers=["LLM", "Description", "Models Id"],
+                    headers=["LLM", "Description", "Models Id", "Runtime"],
                     maxcolwidths=column_widths,
                 )
 

@@ -179,6 +179,7 @@ unfixable = [
 convention = "google"
 
 [tool.ruff.isort]
+force-single-line = true
 known-first-party = ["openllm", "bentoml", 'transformers']
 lines-after-imports = 2
 

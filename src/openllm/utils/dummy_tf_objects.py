@@ -33,6 +33,4 @@ class AutoTFLLM(metaclass=DummyMetaclass):
         require_backends(self, ["tf"])
 
 
-MODEL_TF_MAPPING_NAMES = None
-
 MODEL_TF_MAPPING = None

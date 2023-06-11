@@ -54,6 +54,4 @@ class AutoLLM(metaclass=DummyMetaclass):
         require_backends(self, ["torch"])
 
 
-MODEL_MAPPING_NAMES = None
-
 MODEL_MAPPING = None

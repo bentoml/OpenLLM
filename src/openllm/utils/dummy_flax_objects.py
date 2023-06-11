@@ -33,6 +33,4 @@ class AutoFlaxLLM(metaclass=DummyMetaclass):
         require_backends(self, ["flax"])
 
 
-MODEL_FLAX_MAPPING_NAMES = None
-
 MODEL_FLAX_MAPPING = None
