@@ -26,7 +26,7 @@ import openllm
 from .configuration_auto import AutoConfig
 
 if t.TYPE_CHECKING:
-    import bentoml
+    from ..._llm import LLMRunner
 
     ConfigModelOrderedDict = OrderedDict[type[openllm.LLMConfig], type[openllm.LLM]]
 else:
@@ -104,7 +104,7 @@ class _BaseAutoLLMClass:
         )
 
     @classmethod
-    def create_runner(cls, model_name: str, model_id: str | None = None, **attrs: t.Any) -> bentoml.Runner:
+    def create_runner(cls, model_name: str, model_id: str | None = None, **attrs: t.Any) -> LLMRunner:
         """
         Create a LLM Runner for the given model name.
 

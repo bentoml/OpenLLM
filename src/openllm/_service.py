@@ -38,6 +38,13 @@ runner = openllm.Runner(model, llm_config=llm_config)
 svc = bentoml.Service(name=f"llm-{llm_config.__openllm_start_name__}-service", runners=[runner])
 
 
+@svc.on_deployment
+def ensure_exists():
+    # NOTE: We need to initialize llm here first to check if the model is already downloaded to
+    # avoid deadlock before the subprocess forking.
+    runner.llm.ensure_pretrained_exists()
+
+
 @svc.api(
     input=bentoml.io.JSON.from_sample(sample={"prompt": "", "llm_config": llm_config.model_dump()}),
     output=bentoml.io.JSON.from_sample(sample={"responses": [], "configuration": llm_config.model_dump()}),

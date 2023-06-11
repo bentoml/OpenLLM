@@ -43,6 +43,7 @@ if t.TYPE_CHECKING:
 
     class LLMRunner(bentoml.Runner):
         llm: openllm.LLM
+        config: openllm.LLMConfig
         llm_type: str
         identifying_params: dict[str, t.Any]
 
@@ -600,7 +601,7 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
             return tag, attrs
         return tag
 
-    def ensure_pretrained_exists(self):
+    def ensure_pretrained_exists(self) -> bentoml.Model:
         trust_remote_code = self._llm_attrs.pop("trust_remote_code", self.config.__openllm_trust_remote_code__)
         tag, kwds = self.make_tag(return_unused_kwargs=True, trust_remote_code=trust_remote_code, **self._llm_attrs)
         try:
@@ -700,7 +701,7 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
         method_configs: dict[str, ModelSignatureDict | ModelSignature] | None = None,
         embedded: bool = False,
         scheduling_strategy: type[Strategy] | None = None,
-    ) -> bentoml.Runner:
+    ) -> LLMRunner:
         """Convert this LLM into a Runner.
 
         Args:
@@ -848,7 +849,7 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
         return self.postprocess_generate(prompt, generated_result, **postprocess_kwargs)
 
 
-def Runner(start_name: str, **attrs: t.Any) -> bentoml.Runner:
+def Runner(start_name: str, **attrs: t.Any) -> LLMRunner:
     """Create a Runner for given LLM. For a list of currently supported LLM, check out 'openllm models'
 
     Args:

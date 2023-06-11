@@ -455,10 +455,6 @@ Tip: One can pass one of the aforementioned to '--model-id' to use other pretrai
         else:
             llm = openllm.AutoLLM.for_model(model_name, model_id=model_id, llm_config=config)
 
-        # NOTE: We need to initialize llm here first to check if the model is already downloaded to
-        # avoid deadlock before the subprocess forking.
-        llm.ensure_pretrained_exists()
-
         # NOTE: check for GPU one more time in cases this model doesn't requires GPU but users can still
         # run this model on GPU
         try:
@@ -522,12 +518,7 @@ Tip: One can pass one of the aforementioned to '--model-id' to use other pretrai
 
         try:
             openllm.utils.analytics.track_start_init(llm.config, gpu_available)
-            server.start(env=start_env, text=True, blocking=True if get_debug_mode() else False)
-            if not get_debug_mode():
-                assert server.process is not None and server.process.stdout is not None
-                with server.process.stdout:
-                    for f in iter(server.process.stdout.readline, b""):
-                        _echo(f, nl=False, fg="white")
+            server.start(env=start_env, text=True, blocking=True)
         except KeyboardInterrupt:
             on_start_end(model_name)
         except Exception as err:
@@ -801,20 +792,19 @@ def cli_factory() -> click.Group:
         if len(bentoml.models.list(tag)) == 0:
             if output == "pretty":
                 _echo(f"{tag} does not exists yet!. Downloading...", nl=True)
-                m = model.ensure_pretrained_exists()
+            m = model.ensure_pretrained_exists()
+            if output == "pretty":
                 _echo(f"Saved model: {m.tag}")
             elif output == "json":
-                m = model.ensure_pretrained_exists()
                 _echo(
                     orjson.dumps(
                         {"previously_setup": False, "framework": env, "tag": str(m.tag)}, option=orjson.OPT_INDENT_2
                     ).decode()
                 )
             else:
-                m = model.ensure_pretrained_exists()
                 _echo(tag)
         else:
-            m = model.ensure_pretrained_exists()
+            m = bentoml.transformers.get(tag)
             if output == "pretty":
                 _echo(f"{model_name} is already setup for framework '{env}': {str(m.tag)}", nl=True)
             elif output == "json":
