@@ -76,6 +76,191 @@ def _echo(text: t.Any, fg: str = "green", _with_style: bool = True, **attrs: t.A
     call(text, **attrs)
 
 
+def start_model_command(
+    model_name: str,
+    group: click.Group,
+    _context_settings: dict[str, t.Any] | None = None,
+    _serve_grpc: bool = False,
+) -> click.Command:
+    """Generate a 'click.Command' for any given LLM.
+
+    Args:
+        model_name: The name of the model
+        factory: The click.Group to add the command to
+        _context_settings: The context settings to use for the command
+        _serve_grpc: Whether to serve the model via gRPC or HTTP
+
+    Returns:
+        The click.Command for starting the model server
+
+    Note that the internal commands will return the llm_config and a boolean determine
+    whether the server is run with GPU or not.
+    """
+    from bentoml._internal.configuration.containers import BentoMLContainer
+    from bentoml._internal.log import configure_logging
+
+    configure_logging()
+
+    llm_config = openllm.AutoConfig.for_model(model_name)
+
+    docstring = f"""\
+{llm_config.__openllm_env__.start_docstring}
+\b
+Available model_id(s): {llm_config.__openllm_model_ids__} [default: {llm_config.__openllm_default_id__}]
+"""
+    command_attrs: dict[str, t.Any] = {
+        "name": llm_config.__openllm_model_name__,
+        "context_settings": _context_settings or {},
+        "short_help": f"Start a LLMServer for '{model_name}' ('--help' for more details)",
+        "help": docstring,
+    }
+
+    aliases: list[str] = []
+    if llm_config.__openllm_name_type__ == "dasherize":
+        aliases.append(llm_config.__openllm_start_name__)
+
+    command_attrs["aliases"] = aliases if len(aliases) > 0 else None
+
+    serve_decorator = _http_server_args if not _serve_grpc else _grpc_server_args
+
+    try:
+        llm_config.check_if_gpu_is_available()
+    except openllm.exceptions.GpuNotAvailableError:
+        # NOTE: The model requires GPU, therefore we will return a dummy command
+        command_attrs.update(
+            {
+                "short_help": "(Disabled because there is no GPU available)",
+                "help": f"""{model_name} is currently not available to run on your
+                local machine because it requires GPU for faster inference.""",
+            }
+        )
+
+        @group.command(**command_attrs)
+        def noop() -> openllm.LLMConfig:
+            _echo("No GPU available, therefore this command is disabled", fg="red")
+            openllm.utils.analytics.track_start_init(llm_config)
+            return llm_config
+
+        return noop
+
+    @group.command(**command_attrs)
+    @llm_config.to_click_options
+    @serve_decorator
+    @cog.optgroup.group("General LLM Options")
+    @cog.optgroup.option("--server-timeout", type=int, default=None, help="Server timeout in seconds")
+    @model_id_option(cog.optgroup, model_env=llm_config.__openllm_env__)
+    @cog.optgroup.option(
+        "--device",
+        type=tuple,
+        cls=NargsOptions,
+        nargs=-1,
+        envvar="CUDA_VISIBLE_DEVICES",
+        callback=parse_device_callback,
+        help=f"Assign GPU devices (if available) for {model_name}.",
+        show_envvar=True,
+    )
+    @workers_option(cog.optgroup.option)
+    def model_start(
+        server_timeout: int | None,
+        model_id: str | None,
+        workers: float | None,
+        device: tuple[str, ...] | None,
+        **attrs: t.Any,
+    ) -> openllm.LLMConfig:
+        config, server_attrs = llm_config.model_validate_click(**attrs)
+
+        if llm_config.__openllm_env__.get_framework_env() == "flax":
+            llm = openllm.AutoFlaxLLM.for_model(model_name, model_id=model_id, llm_config=config)
+        elif llm_config.__openllm_env__.get_framework_env() == "tf":
+            llm = openllm.AutoTFLLM.for_model(model_name, model_id=model_id, llm_config=config)
+        else:
+            llm = openllm.AutoLLM.for_model(model_name, model_id=model_id, llm_config=config)
+
+        if llm.config.__openllm_requirements__ is not None and len(llm.config.__openllm_requirements__) > 0:
+            _echo(
+                f"Make sure to have the following dependencies available: {llm.config.__openllm_requirements__}",
+                fg="yellow",
+            )
+
+        workers_per_resource = openllm.utils.first_not_none(
+            workers, default=llm.config.__openllm_workers_per_resource__
+        )
+        server_timeout = openllm.utils.first_not_none(server_timeout, default=llm.config.__openllm_timeout__)
+
+        num_workers = int(1 / workers_per_resource)
+        if num_workers > 1:
+            _echo(
+                f"{model_name} requires at least {num_workers} GPUs/CPUs available per worker."
+                " Make sure that it has available resources to run inference.",
+                fg="yellow",
+            )
+
+        server_attrs.update({"working_dir": os.path.dirname(__file__)})
+        if _serve_grpc:
+            server_attrs["grpc_protocol_version"] = "v1"
+        # NOTE: currently, theres no development args in bentoml.Server. To be fixed upstream.
+        development = server_attrs.pop("development")
+        server_attrs.setdefault("production", not development)
+
+        start_env = os.environ.copy()
+
+        # NOTE: This is to set current configuration
+        _bentoml_config_options = start_env.pop("BENTOML_CONFIG_OPTIONS", "")
+        _bentoml_config_options_opts = [
+            f"api_server.traffic.timeout={server_timeout}",
+            f'runners."llm-{llm.config.__openllm_start_name__}-runner".traffic.timeout={llm.config.__openllm_timeout__}',
+            f'runners."llm-{llm.config.__openllm_start_name__}-runner".workers_per_resource={workers_per_resource}',
+        ]
+        if device:
+            if len(device) > 1:
+                for idx, dev in enumerate(device):
+                    _bentoml_config_options_opts.append(
+                        f'runners."llm-{llm.config.__openllm_start_name__}-runner".resources."nvidia.com/gpu"[{idx}]={dev}'
+                    )
+            else:
+                _bentoml_config_options_opts.append(
+                    f'runners."llm-{llm.config.__openllm_start_name__}-runner".resources."nvidia.com/gpu"=[{device[0]}]'
+                )
+
+        _bentoml_config_options += " " if _bentoml_config_options else "" + " ".join(_bentoml_config_options_opts)
+
+        start_env.update(
+            {
+                llm.config.__openllm_env__.framework: llm.config.__openllm_env__.get_framework_env(),
+                llm.config.__openllm_env__.model_config: llm.config.model_dump_json().decode(),
+                "OPENLLM_MODEL": model_name,
+                "BENTOML_DEBUG": str(get_debug_mode()),
+                "BENTOML_CONFIG_OPTIONS": _bentoml_config_options,
+                "BENTOML_HOME": os.environ.get("BENTOML_HOME", BentoMLContainer.bentoml_home.get()),
+            }
+        )
+
+        if t.TYPE_CHECKING:
+            server_cls: type[bentoml.HTTPServer] if not _serve_grpc else type[bentoml.GrpcServer]
+
+        server_cls = getattr(bentoml, "HTTPServer" if not _serve_grpc else "GrpcServer")
+        server_attrs["timeout"] = 90
+        server = server_cls("_service.py:svc", **server_attrs)
+
+        try:
+            openllm.utils.analytics.track_start_init(llm.config)
+            server.start(env=start_env, text=True, blocking=True)
+        except Exception as err:
+            _echo(f"Error caught while starting LLM Server:\n{err}", fg="red")
+            raise
+        else:
+            if not get_debug_mode():
+                _echo(
+                    f"\n🚀 Next step: run 'openllm build {model_name}' to create a Bento for {model_name}",
+                    fg="blue",
+                )
+
+        # NOTE: Return the configuration for telemetry purposes.
+        return llm_config
+
+    return model_start
+
+
 class OpenLLMCommandGroup(BentoMLCommandGroup):
     NUMBER_OF_COMMON_PARAMS = 3
 
@@ -210,7 +395,8 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
         """
         if "context_settings" not in attrs:
             attrs["context_settings"] = {}
-        attrs["context_settings"]["max_content_width"] = 120
+        if "max_content_width" not in attrs["context_settings"]:
+            attrs["context_settings"]["max_content_width"] = 120
         aliases = attrs.pop("aliases", None)
 
         def wrapper(f: F[P, t.Any]) -> click.Command:
@@ -360,186 +546,6 @@ def parse_device_callback(_: click.Context, params: click.Parameter, value: tupl
     return tuple(filter(lambda x: x, parsed))
 
 
-def start_model_command(
-    model_name: str,
-    group: click.Group,
-    _context_settings: dict[str, t.Any] | None = None,
-    _serve_grpc: bool = False,
-) -> click.Command:
-    """Generate a 'click.Command' for any given LLM.
-
-    Args:
-        model_name: The name of the model
-        factory: The click.Group to add the command to
-        _context_settings: The context settings to use for the command
-        _serve_grpc: Whether to serve the model via gRPC or HTTP
-
-    Returns:
-        The click.Command for starting the model server
-
-    Note that the internal commands will return the llm_config and a boolean determine
-    whether the server is run with GPU or not.
-    """
-    from bentoml._internal.configuration.containers import BentoMLContainer
-    from bentoml._internal.log import configure_logging
-
-    configure_logging()
-
-    llm_config = openllm.AutoConfig.for_model(model_name)
-
-    docstring = f"""\
-{llm_config.__openllm_env__.start_docstring}
-\b
-Available model_id(s): {llm_config.__openllm_model_ids__} [default: {llm_config.__openllm_default_id__}]
-"""
-    command_attrs: dict[str, t.Any] = {
-        "name": llm_config.__openllm_model_name__,
-        "context_settings": _context_settings or {},
-        "short_help": f"Start a LLMServer for '{model_name}' ('--help' for more details)",
-        "help": docstring,
-    }
-
-    aliases: list[str] = []
-    if llm_config.__openllm_name_type__ == "dasherize":
-        aliases.append(llm_config.__openllm_start_name__)
-
-    command_attrs["aliases"] = aliases if len(aliases) > 0 else None
-
-    serve_decorator = _http_server_args if not _serve_grpc else _grpc_server_args
-
-    try:
-        llm_config.check_if_gpu_is_available()
-    except openllm.exceptions.GpuNotAvailableError:
-        # NOTE: The model requires GPU, therefore we will return a dummy command
-        command_attrs.update(
-            {
-                "short_help": "(Disabled because there is no GPU available)",
-                "help": f"""{model_name} is currently not available to run on your
-                local machine because it requires GPU for faster inference.""",
-            }
-        )
-
-        @group.command(**command_attrs)
-        def noop() -> openllm.LLMConfig:
-            _echo("No GPU available, therefore this command is disabled", fg="red")
-            openllm.utils.analytics.track_start_init(llm_config)
-            return llm_config
-
-        return noop
-
-    @group.command(**command_attrs)
-    @llm_config.to_click_options
-    @serve_decorator
-    @cog.optgroup.group("General LLM Options")
-    @cog.optgroup.option("--server-timeout", type=int, default=3600, help="Server timeout in seconds")
-    @model_id_option(cog.optgroup, model_env=llm_config.__openllm_env__)
-    @cog.optgroup.option(
-        "--device",
-        type=tuple,
-        cls=NargsOptions,
-        nargs=-1,
-        envvar="CUDA_VISIBLE_DEVICES",
-        callback=parse_device_callback,
-        help=f"Assign GPU devices (if available) for {model_name}.",
-        show_envvar=True,
-    )
-    def model_start(
-        server_timeout: int,
-        model_id: str | None,
-        device: tuple[str, ...] | None,
-        **attrs: t.Any,
-    ) -> openllm.LLMConfig:
-        config, server_attrs = llm_config.model_validate_click(**attrs)
-
-        if llm_config.__openllm_env__.get_framework_env() == "flax":
-            llm = openllm.AutoFlaxLLM.for_model(model_name, model_id=model_id, llm_config=config)
-        elif llm_config.__openllm_env__.get_framework_env() == "tf":
-            llm = openllm.AutoTFLLM.for_model(model_name, model_id=model_id, llm_config=config)
-        else:
-            llm = openllm.AutoLLM.for_model(model_name, model_id=model_id, llm_config=config)
-
-        server_attrs.update({"working_dir": os.path.dirname(__file__)})
-        if _serve_grpc:
-            server_attrs["grpc_protocol_version"] = "v1"
-        # NOTE: currently, theres no development args in bentoml.Server. To be fixed upstream.
-        development = server_attrs.pop("development")
-        server_attrs.setdefault("production", not development)
-
-        start_env = os.environ.copy()
-
-        # NOTE: This is to set current configuration
-        _bentoml_config_options = start_env.pop("BENTOML_CONFIG_OPTIONS", "")
-        _bentoml_config_options_opts = [
-            f"api_server.traffic.timeout={server_timeout}",
-            f'runners."llm-{llm.config.__openllm_start_name__}-runner".traffic.timeout={llm.config.__openllm_timeout__}',
-            f'runners."llm-{llm.config.__openllm_start_name__}-runner".workers_per_resource={llm.config.__openllm_workers_per_resource__}',
-        ]
-        if device:
-            if len(device) > 1:
-                for idx, dev in enumerate(device):
-                    _bentoml_config_options_opts.append(
-                        f'runners."llm-{llm.config.__openllm_start_name__}-runner".resources."nvidia.com/gpu"[{idx}]={dev}'
-                    )
-            else:
-                _bentoml_config_options_opts.append(
-                    f'runners."llm-{llm.config.__openllm_start_name__}-runner".resources."nvidia.com/gpu"={device[0]}'
-                )
-
-        _bentoml_config_options += " " if _bentoml_config_options else "" + " ".join(_bentoml_config_options_opts)
-
-        start_env.update(
-            {
-                llm.config.__openllm_env__.framework: llm.config.__openllm_env__.get_framework_env(),
-                llm.config.__openllm_env__.model_config: llm.config.model_dump_json().decode(),
-                "OPENLLM_MODEL": model_name,
-                "BENTOML_DEBUG": str(get_debug_mode()),
-                "BENTOML_CONFIG_OPTIONS": _bentoml_config_options,
-                "BENTOML_HOME": os.environ.get("BENTOML_HOME", BentoMLContainer.bentoml_home.get()),
-            }
-        )
-
-        if llm.config.__openllm_requirements__ is not None and len(llm.config.__openllm_requirements__) > 0:
-            _echo(
-                f"Make sure to have the following dependencies available: {llm.config.__openllm_requirements__}",
-                fg="yellow",
-            )
-
-        if t.TYPE_CHECKING:
-            server_cls: type[bentoml.HTTPServer] if not _serve_grpc else type[bentoml.GrpcServer]
-
-        server_cls = getattr(bentoml, "HTTPServer" if not _serve_grpc else "GrpcServer")
-        server_attrs["timeout"] = 90
-        server = server_cls("_service.py:svc", **server_attrs)
-
-        try:
-            openllm.utils.analytics.track_start_init(llm.config)
-            server.start(env=start_env, text=True, blocking=True if get_debug_mode() else False)
-            if not get_debug_mode():
-                assert server.process is not None and server.process.stdout is not None
-                with server.process.stdout:
-                    for f in iter(server.process.stdout.readline, b""):
-                        _echo(f, nl=False, fg="white")
-        except KeyboardInterrupt:
-            on_start_end(model_name)
-        except Exception as err:
-            _echo(f"Error caught while starting LLM Server:\n{err}", fg="red")
-            raise
-        else:
-            on_start_end(model_name)
-
-        # NOTE: Return the configuration for telemetry purposes.
-        return llm_config
-
-    def on_start_end(model_name: str):
-        if not get_debug_mode():
-            _echo(
-                f"\n🚀 Next step: run 'openllm build {model_name}' to create a Bento for {model_name}",
-                fg="blue",
-            )
-
-    return model_start
-
-
 def _start(
     model_name: str,
     framework: t.Literal["flax", "tf", "pt"] | None = None,
@@ -568,7 +574,10 @@ output_option = click.option(
     "--output",
     type=click.Choice(["json", "pretty", "porcelain"]),
     default="pretty",
-    help="Showing output type. Default to 'pretty'",
+    help="Showing output type.",
+    show_default=True,
+    envvar="OPENLLM_OUTPUT",
+    show_envvar=True,
 )
 
 
@@ -583,6 +592,24 @@ def model_id_option(factory: t.Any, model_env: openllm.utils.ModelEnv | None = N
         help="Optional model_id name or path for (fine-tune) weight.",
         envvar=envvar,
         show_envvar=True if envvar is not None else False,
+    )
+
+
+def workers_option(factory: t.Any, build: bool = False):
+    help_str = """Number of workers per resource assigned.
+    See https://docs.bentoml.org/en/latest/guides/scheduling.html#resource-scheduling-strategy
+    for more information. By default, this is set to 1."""
+    if build:
+        help_str += """\n
+    NOTE: The workers value passed into 'build' will determine how the LLM can
+    be provisioned in Kubernetes as well as in standalone container. This will 
+    ensure it has the same effect with 'openllm start --workers ...'"""
+    return factory.option(
+        "--workers",
+        default=None,
+        type=click.FLOAT,
+        help=help_str,
+        required=False,
     )
 
 
@@ -633,7 +660,8 @@ def cli_factory() -> click.Group:
     @model_id_option(click)
     @output_option
     @click.option("--overwrite", is_flag=True, help="Overwrite existing Bento for given LLM if it already exists.")
-    def build(model_name: str, model_id: str | None, overwrite: bool, output: OutputLiteral):
+    @workers_option(click, build=True)
+    def build(model_name: str, model_id: str | None, overwrite: bool, output: OutputLiteral, workers: float | None):
         """Package a given models into a Bento.
 
         $ openllm build flan-t5
@@ -645,10 +673,12 @@ def cli_factory() -> click.Group:
         if output == "porcelain":
             set_quiet_mode(True)
             configure_server_logging()
+
         bento, _previously_built = openllm.build(
             model_name,
             __cli__=True,
             model_id=model_id,
+            _workers=workers,
             _overwrite_existing_bento=overwrite,
         )
 
