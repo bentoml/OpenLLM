@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 class StableLM(openllm.LLM):
     __openllm_internal__ = True
 
-    load_in_mha = True
+    load_in_mha = True if not torch.cuda.is_available() else False
     default_id = "stabilityai/stablelm-tuned-alpha-3b"
 
     model_ids = [
