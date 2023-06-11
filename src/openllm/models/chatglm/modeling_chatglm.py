@@ -41,11 +41,8 @@ class InvalidScoreLogitsProcessor(LogitsProcessor):
 class ChatGLM(openllm.LLM):
     __openllm_internal__ = True
 
-    default_id = "thudm/chatglm-6b-int4"
-
-    model_ids = ["thudm/chatglm-6b", "thudm/chatglm-6b-int8", "thudm/chatglm-6b-int4"]
-
-    device = torch.device("cuda")
+    def llm_post_init(self):
+        self.device = torch.device("cuda")
 
     def import_model(
         self,

@@ -42,23 +42,17 @@ logger = logging.getLogger(__name__)
 class StableLM(openllm.LLM):
     __openllm_internal__ = True
 
-    load_in_mha = True if not torch.cuda.is_available() else False
-    default_id = "stabilityai/stablelm-tuned-alpha-3b"
+    def llm_post_init(self):
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.load_in_mha = True if not torch.cuda.is_available() else False
 
-    model_ids = [
-        "stabilityai/stablelm-tuned-alpha-3b",
-        "stabilityai/stablelm-tuned-alpha-7b",
-        "stabilityai/stablelm-base-alpha-3b",
-        "stabilityai/stablelm-base-alpha-7b",
-    ]
-
-    import_kwargs = {
-        "torch_dtype": torch.float16 if torch.cuda.is_available() else torch.float32,
-        "load_in_8bit": False,
-        "device_map": "auto" if torch.cuda.is_available() and torch.cuda.device_count() > 1 else None,
-    }
-
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    @property
+    def import_kwargs(self):
+        return {
+            "torch_dtype": torch.float16 if torch.cuda.is_available() else torch.float32,
+            "load_in_8bit": False,
+            "device_map": "auto" if torch.cuda.is_available() and torch.cuda.device_count() > 1 else None,
+        }
 
     def sanitize_parameters(
         self,
@@ -98,7 +92,6 @@ class StableLM(openllm.LLM):
     def postprocess_generate(self, prompt: str, generation_result: list[str], **_: t.Any) -> str:
         return generation_result[0]
 
-    @torch.inference_mode()
     def generate(self, prompt: str, **attrs: t.Any) -> list[str]:
         generation_kwargs = {
             "do_sample": True,

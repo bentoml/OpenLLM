@@ -29,17 +29,8 @@ else:
 class FlanT5(openllm.LLM):
     __openllm_internal__ = True
 
-    default_id = "google/flan-t5-large"
-
-    model_ids = [
-        "google/flan-t5-small",
-        "google/flan-t5-base",
-        "google/flan-t5-large",
-        "google/flan-t5-xl",
-        "google/flan-t5-xxl",
-    ]
-
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    def llm_post_init(self):
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     def sanitize_parameters(
         self,

@@ -24,16 +24,6 @@ from .configuration_flan_t5 import DEFAULT_PROMPT_TEMPLATE
 class TFFlanT5(openllm.LLM):
     __openllm_internal__ = True
 
-    default_id: str = "google/flan-t5-large"
-
-    model_ids = [
-        "google/flan-t5-small",
-        "google/flan-t5-base",
-        "google/flan-t5-large",
-        "google/flan-t5-xl",
-        "google/flan-t5-xxl",
-    ]
-
     def sanitize_parameters(
         self,
         prompt: str,

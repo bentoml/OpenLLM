@@ -38,17 +38,16 @@ class DollyV2(openllm.LLM):
 
     __openllm_internal__ = True
 
-    default_id = "databricks/dolly-v2-3b"
+    @property
+    def import_kwargs(self):
+        return {
+            "device_map": "auto" if torch.cuda.is_available() and torch.cuda.device_count() > 1 else None,
+            "torch_dtype": torch.bfloat16,
+            "_tokenizer_padding_side": "left",
+        }
 
-    model_ids = ["databricks/dolly-v2-3b", "databricks/dolly-v2-7b", "databricks/dolly-v2-12b"]
-
-    import_kwargs = {
-        "device_map": "auto" if torch.cuda.is_available() and torch.cuda.device_count() > 1 else None,
-        "torch_dtype": torch.bfloat16,
-        "_tokenizer_padding_side": "left",
-    }
-
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    def llm_post_init(self):
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     def import_model(
         self, model_id: str, tag: bentoml.Tag, *model_args: t.Any, tokenizer_kwds: dict[str, t.Any], **attrs: t.Any

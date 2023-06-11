@@ -76,16 +76,17 @@ def construct_python_options(llm: openllm.LLM, llm_fs: FS) -> PythonOptions:
     # first, then proceed to install everything inside the wheels/ folder.
     packages: list[str] = ["openllm"]
 
-    ModelEnv = openllm.utils.ModelEnv(llm.__openllm_start_name__)
     if llm.config.__openllm_requirements__ is not None:
         packages.extend(llm.config.__openllm_requirements__)
 
     if not (str(os.environ.get("BENTOML_BUNDLE_LOCAL_BUILD", False)).lower() == "false"):
         packages.append(f"bentoml>={'.'.join([str(i) for i in pkg.pkg_version_info('bentoml')])}")
 
-    to_use_framework = ModelEnv.get_framework_env()
+    to_use_framework = llm.config.__openllm_env__.get_framework_env()
     if to_use_framework == "flax":
-        assert utils.is_flax_available(), f"Flax is not available, while {ModelEnv.framework} is set to 'flax'"
+        assert (
+            utils.is_flax_available()
+        ), f"Flax is not available, while {llm.config.__openllm_env__.framework} is set to 'flax'"
         packages.extend(
             [
                 f"flax>={importlib.metadata.version('flax')}",
@@ -94,7 +95,9 @@ def construct_python_options(llm: openllm.LLM, llm_fs: FS) -> PythonOptions:
             ]
         )
     elif to_use_framework == "tf":
-        assert utils.is_tf_available(), f"TensorFlow is not available, while {ModelEnv.framework} is set to 'tf'"
+        assert (
+            utils.is_tf_available()
+        ), f"TensorFlow is not available, while {llm.config.__openllm_env__.framework} is set to 'tf'"
         candidates = (
             "tensorflow",
             "tensorflow-cpu",
@@ -128,7 +131,6 @@ def construct_python_options(llm: openllm.LLM, llm_fs: FS) -> PythonOptions:
 
 
 def construct_docker_options(llm: openllm.LLM, _: FS) -> DockerOptions:
-    ModelEnv = openllm.utils.ModelEnv(llm.__openllm_start_name__)
     _bentoml_config_options = os.environ.pop("BENTOML_CONFIG_OPTIONS", "")
     _bentoml_config_options += (
         " "
@@ -141,7 +143,7 @@ def construct_docker_options(llm: openllm.LLM, _: FS) -> DockerOptions:
     return DockerOptions(
         cuda_version="11.6",  # NOTE: Torch 2.0 currently only support 11.6 as the latest CUDA version
         env={
-            ModelEnv.framework: ModelEnv.get_framework_env(),
+            llm.config.__openllm_env__.framework: llm.config.__openllm_env__.get_framework_env(),
             "OPENLLM_MODEL": llm.config.__openllm_model_name__,
             "BENTOML_DEBUG": str(get_debug_mode()),
             "BENTOML_CONFIG_OPTIONS": _bentoml_config_options,
@@ -200,12 +202,12 @@ def build(model_name: str, *, __cli__: bool = False, **attrs: t.Any) -> tuple[be
                     raise bentoml.exceptions.NotFound("Overwriting previously saved Bento.")
                 _previously_built = True
             except bentoml.exceptions.NotFound:
-                logger.info("Building Bento for LLM '%s'", llm.__openllm_start_name__)
+                logger.info("Building Bento for LLM '%s'", llm.config.__openllm_start_name__)
                 bento = bentoml.bentos.build(
                     f"{service_name}:svc",
                     name=bento_tag.name,
                     labels=labels,
-                    description=f"OpenLLM service for {llm.__openllm_start_name__}",
+                    description=f"OpenLLM service for {llm.config.__openllm_start_name__}",
                     include=[
                         f for f in llm_fs.walk.files(filter=["*.py"])
                     ],  # NOTE: By default, we are using _service.py as the default service, for now.

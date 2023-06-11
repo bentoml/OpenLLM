@@ -40,18 +40,17 @@ FIM_INDICATOR = "<FILL_HERE>"
 class StarCoder(openllm.LLM):
     __openllm_internal__ = True
 
-    default_id = "bigcode/starcoder"
+    def llm_post_init(self):
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    model_ids = ["bigcode/starcoder", "bigcode/starcoderbase"]
-
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    import_kwargs = {
-        "_tokenizer_padding_side": "left",
-        "device_map": "auto" if torch.cuda.is_available() and torch.cuda.device_count() > 1 else None,
-        "load_in_8bit": True if torch.cuda.device_count() > 1 else False,
-        "torch_dtype": torch.float16,
-    }
+    @property
+    def import_kwargs(self):
+        return {
+            "_tokenizer_padding_side": "left",
+            "device_map": "auto" if torch.cuda.is_available() and torch.cuda.device_count() > 1 else None,
+            "load_in_8bit": True if torch.cuda.device_count() > 1 else False,
+            "torch_dtype": torch.float16,
+        }
 
     def import_model(
         self,

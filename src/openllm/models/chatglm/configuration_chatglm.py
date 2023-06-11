@@ -16,15 +16,7 @@ from __future__ import annotations
 import openllm
 
 
-class ChatGLMConfig(
-    openllm.LLMConfig,
-    name_type="lowercase",
-    trust_remote_code=True,
-    default_timeout=3600000,
-    requires_gpu=True,
-    url="https://github.com/THUDM/ChatGLM-6B",
-    requirements=["cpm_kernels", "sentencepiece"],
-):
+class ChatGLMConfig(openllm.LLMConfig):
     """
     ChatGLM is an open bilingual language model based on
     [General Language Model (GLM)](https://github.com/THUDM/GLM) framework.
@@ -41,11 +33,24 @@ class ChatGLMConfig(
     Refer to [ChatGLM's GitHub page](https://github.com/THUDM/ChatGLM-6B) for more information.
     """
 
-    retain_history: bool = False
-    """Whether to retain history given to the model. If set to True, then the model will retain given history."""
+    __config__ = {
+        "name_type": "lowercase",
+        "trust_remote_code": True,
+        "timeout": 3600000,
+        "requires_gpu": True,
+        "url": "https://github.com/THUDM/ChatGLM-6B",
+        "requirements": ["cpm_kernels", "sentencepiece"],
+        "default_id": "thudm/chatglm-6b-int4",
+        "model_ids": ["thudm/chatglm-6b", "thudm/chatglm-6b-int8", "thudm/chatglm-6b-int4"],
+    }
 
-    use_half_precision: bool = True
-    """Whether to use half precision for model."""
+    retain_history: bool = openllm.LLMConfig.Field(
+        False,
+        description="""Whether to retain history given to the model. 
+        If set to True, then the model will retain given history.""",
+    )
+
+    use_half_precision: bool = openllm.LLMConfig.Field(True, description="Whether to use half precision for model.")
 
     class GenerationConfig:
         max_new_tokens: int = 2048

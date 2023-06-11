@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import enum
 import sys
 from typing import (
@@ -500,3 +502,5 @@ def _make_init(
     cls_on_setattr: Any,
     attrs_init: bool,
 ) -> Callable[_P, Any]: ...
+def _make_method(name: str, script: str, filename: str, globs: dict[str, Any]) -> Callable[..., Any]: ...
+def _make_repr(attrs: tuple[Attribute[Any]], ns: str | None, cls: AttrsInstance) -> Callable[[AttrsInstance], str]: ...

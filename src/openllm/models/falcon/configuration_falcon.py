@@ -16,21 +16,29 @@ from __future__ import annotations
 import openllm
 
 
-class FalconConfig(
-    openllm.LLMConfig,
-    name_type="lowercase",
-    trust_remote_code=True,
-    requires_gpu=True,
-    default_timeout=3600000,
-    url="https://falconllm.tii.ae/",
-    requirements=["einops", "xformers", "safetensors"],
-):
+class FalconConfig(openllm.LLMConfig):
     """Falcon-7B is a 7B parameters causal decoder-only model built by
     TII and trained on 1,500B tokens of [RefinedWeb](https://huggingface.co/datasets/tiiuae/falcon-refinedweb)
     enhanced with curated corpora. It is made available under the TII Falcon LLM License.
 
     Refer to [Falcon's HuggingFace page](https://huggingface.co/tiiuae/falcon-7b) for more information.
     """
+
+    __config__ = {
+        "name_type": "lowercase",
+        "trust_remote_code": True,
+        "requires_gpu": True,
+        "timeout": 3600000,
+        "url": "https://falconllm.tii.ae/",
+        "requirements": ["einops", "xformers", "safetensors"],
+        "default_id": "tiiuae/falcon-7b",
+        "model_ids": [
+            "tiiuae/falcon-7b",
+            "tiiuae/falcon-40b",
+            "tiiuae/falcon-7b-instruct",
+            "tiiuae/falcon-40b-instruct",
+        ],
+    }
 
     class GenerationConfig:
         max_new_tokens: int = 200

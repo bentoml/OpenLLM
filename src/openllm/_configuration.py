@@ -12,13 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Configuration utilities for OpenLLM. All model configuration will inherit from openllm.configuration_utils.LLMConfig.
+Configuration utilities for OpenLLM. All model configuration will inherit from ``openllm.LLMConfig``.
 
-Note that ``openllm.LLMConfig`` is a subclass of ``pydantic.BaseModel``. It also
-has a ``to_click_options`` that returns a list of Click-compatible options for the model.
-Such options will then be parsed to ``openllm.__main__.cli``.
-
-Each fields in ``openllm.LLMConfig`` will also automatically generate a environment
+Highlight feature: Each fields in ``openllm.LLMConfig`` will also automatically generate a environment
 variable based on its name field.
 
 For example, the following config class:
@@ -34,10 +30,14 @@ class FlanT5Config(openllm.LLMConfig):
         repetition_penalty = 1.0
 ```
 
+which generates the environment OPENLLM_FLAN_T5_GENERATION_TEMPERATURE for users to configure temperature
+dynamically during serve, ahead-of-serve or per requests.
 
+Refer to ``openllm.LLMConfig`` docstring for more information.
 """
 from __future__ import annotations
 
+import inspect
 import logging
 import os
 import typing as t
@@ -53,13 +53,13 @@ from deepmerge.merger import Merger
 import openllm
 
 from .exceptions import GpuNotAvailableError, OpenLLMException
-from .utils import LazyType, ModelEnv, bentoml_cattr, dantic, lenient_issubclass
+from .utils import LazyType, ModelEnv, bentoml_cattr, dantic, first_not_none, lenient_issubclass
 
 if t.TYPE_CHECKING:
     import tensorflow as tf
     import torch
     import transformers
-    from attr import _CountingAttr, _make_init
+    from attr import _CountingAttr, _make_init, _make_method, _make_repr
     from transformers.generation.beam_constraints import Constraint
 
     from ._types import ClickFunctionWrapper, F, O_co, P
@@ -67,14 +67,16 @@ if t.TYPE_CHECKING:
     ReprArgs: t.TypeAlias = t.Iterable[tuple[str | None, t.Any]]
 
     DictStrAny = dict[str, t.Any]
+    ListStr = list[str]
     ItemgetterAny = itemgetter[t.Any]
 else:
     Constraint = t.Any
+    ListStr = list
     DictStrAny = dict
     ItemgetterAny = itemgetter
     # NOTE: Using internal API from attr here, since we are actually
     # allowing subclass of openllm.LLMConfig to become 'attrs'-ish
-    from attr._make import _CountingAttr, _make_init
+    from attr._make import _CountingAttr, _make_init, _make_method, _make_repr
 
     transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
     torch = openllm.utils.LazyLoader("torch", globals(), "torch")
@@ -92,6 +94,8 @@ config_merger = Merger(
     # override conflicting types
     type_conflict_strategies=["override"],
 )
+
+_T = t.TypeVar("_T")
 
 
 @t.overload
@@ -158,7 +162,9 @@ class GenerationConfig:
     """Generation config provides the configuration to then be parsed to ``transformers.GenerationConfig``,
     with some additional validation and environment constructor.
 
-    Note that we always set `do_sample=True`
+    Note that we always set `do_sample=True`. This class is not designed to be used directly, rather
+    to be used conjunction with LLMConfig. The instance of the generation config can then be accessed
+    via ``LLMConfig.generation_config``.
     """
 
     # NOTE: parameters for controlling the length of the output
@@ -417,20 +423,6 @@ def _populate_value_from_env_var(
     return os.environ.get(key, fallback)
 
 
-def env_transformers(cls: type[GenerationConfig], fields: list[attr.Attribute[t.Any]]) -> list[attr.Attribute[t.Any]]:
-    transformed: list[attr.Attribute[t.Any]] = []
-    for f in fields:
-        if "env" not in f.metadata:
-            raise ValueError(
-                "Make sure to setup the field with 'cls.Field' or 'attr.field(..., metadata={\"env\": \"...\"})'"
-            )
-        _from_env = _populate_value_from_env_var(f.metadata["env"])
-        if _from_env is not None:
-            f = f.evolve(default=_from_env)
-        transformed.append(f)
-    return transformed
-
-
 # sentinel object for unequivocal object() getattr
 _sentinel = object()
 
@@ -590,7 +582,7 @@ def _make_internal_generation_class(cls: type[LLMConfig]) -> type[GenerationConf
             )
         return transformed
 
-    generated_cls = attr.make_class(
+    _cl = attr.make_class(
         cls.__name__.replace("Config", "GenerationConfig"),
         [],
         bases=(GenerationConfig,),
@@ -599,27 +591,204 @@ def _make_internal_generation_class(cls: type[LLMConfig]) -> type[GenerationConf
         repr=True,
         field_transformer=_evolve_with_base_default,
     )
+    _cl.__doc__ = GenerationConfig.__doc__
 
-    return generated_cls
+    if _has_gen_class:
+        delattr(cls, "GenerationConfig")
+
+    return _cl
 
 
-# NOTE: This DEFAULT_LLMCONFIG_ATTRS is a way to dynamically generate attr.field
-# and will be saved for future use in LLMConfig if we have some shared config.
-DEFAULT_LLMCONFIG_ATTRS: tuple[tuple[str, t.Any, str, type[t.Any]], ...] = ()
+# NOTE: This is the ModelConfig where we can control the behaviour of the LLM.
+# refers to the __openllm_*__ docstring inside LLMConfig for more information.
+class ModelConfig(t.TypedDict, total=False):
+    # NOTE: meta
+    url: str
+    requires_gpu: bool
+    trust_remote_code: bool
+    requirements: t.Optional[t.List[str]]
+
+    # NOTE: naming convention, only name_type is needed
+    # as the three below it can be determined automatically
+    name_type: t.Literal["dasherize", "lowercase"]
+    model_name: str
+    start_name: str
+    env: openllm.utils.ModelEnv
+
+    # NOTE: serving configuration
+    timeout: int
+    workers_per_resource: t.Union[int, float]
+
+    # NOTE: use t.Required once we drop 3.8 support
+    default_id: str
+    model_ids: list[str]
+
+
+def _gen_default_model_config(cls: type[LLMConfig]) -> ModelConfig:
+    """Generate the default ModelConfig and delete __config__ in LLMConfig
+    if defined inplace."""
+
+    _internal_config = t.cast(ModelConfig, getattr(cls, "__config__", {}))
+    default_id = _internal_config.get("default_id", None)
+    if default_id is None:
+        raise RuntimeError("'default_id' is required under '__config__'.")
+    model_ids = _internal_config.get("model_ids", None)
+    if model_ids is None:
+        raise RuntimeError("'model_ids' is required under '__config__'.")
+
+    def _first_not_null(key: str, default: _T) -> _T:
+        return first_not_none(_internal_config.get(key), default=default)
+
+    llm_config_striped = cls.__name__.replace("Config", "")
+
+    name_type: t.Literal["dasherize", "lowercase"] = _first_not_null("name_type", "dasherize")
+
+    if name_type == "dasherize":
+        default_model_name = inflection.underscore(llm_config_striped)
+        default_start_name = inflection.dasherize(default_model_name)
+    else:
+        default_model_name = llm_config_striped.lower()
+        default_start_name = default_model_name
+
+    model_name = _first_not_null("model_name", default_model_name)
+
+    _config = ModelConfig(
+        name_type=name_type,
+        model_name=model_name,
+        default_id=default_id,
+        model_ids=model_ids,
+        start_name=_first_not_null("start_name", default_start_name),
+        url=_first_not_null("url", "(not provided)"),
+        requires_gpu=_first_not_null("requires_gpu", False),
+        trust_remote_code=_first_not_null("trust_remote_code", False),
+        requirements=_first_not_null("requirements", ListStr()),
+        env=_first_not_null("env", openllm.utils.ModelEnv(model_name)),
+        timeout=_first_not_null("timeout", 3600),
+        workers_per_resource=_first_not_null("workers_per_resource", 1),
+    )
+
+    if hasattr(cls, "__config__"):
+        delattr(cls, "__config__")
+
+    return _config
+
+
+def _generate_unique_filename(cls: type[t.Any], func_name: str):
+    return f"<LLMConfig generated {func_name} {cls.__module__}." f"{getattr(cls, '__qualname__', cls.__name__)}>"
+
+
+def _setattr_class(attr_name: str, value_var: t.Any):
+    """
+    Use the builtin setattr to set *attr_name* to *value_var*.
+    We can't use the cached object.__setattr__ since we are setting
+    attributes to a class.
+    """
+    return f"setattr(cls, '{attr_name}', {value_var})"
+
+
+@t.overload
+def _make_assignment_with_prefix_script(cls: type[LLMConfig], attributes: ModelConfig) -> t.Callable[..., None]:
+    ...
+
+
+@t.overload
+def _make_assignment_with_prefix_script(cls: type[LLMConfig], attributes: dict[str, t.Any]) -> t.Callable[..., None]:
+    ...
+
+
+def _make_assignment_with_prefix_script(cls: type[LLMConfig], attributes: t.Any) -> t.Callable[..., None]:
+    """Generate the assignment script with prefix attributes __openllm_<value>__"""
+    args: list[str] = []
+    globs: dict[str, t.Any] = {"cls": cls, "attr_dict": attributes}
+    annotations: dict[str, t.Any] = {"return": None}
+
+    # Circumvent __setattr__ descriptor to save one lookup per assigment
+    lines: list[str] = []
+    for attr_name in attributes:
+        arg_name = f"__openllm_{inflection.underscore(attr_name)}__"
+        args.append(f"{attr_name}=attr_dict['{attr_name}']")
+        lines.append(_setattr_class(arg_name, attr_name))
+        annotations[attr_name] = type(attributes[attr_name])
+
+    script = "def __assign_attr(cls, %s):\n    %s\n" % (", ".join(args), "\n    ".join(lines) if lines else "pass")
+    assign_method = _make_method(
+        "__assign_attr",
+        script,
+        _generate_unique_filename(cls, "__assign_attr"),
+        globs,
+    )
+    assign_method.__annotations__ = annotations
+
+    return assign_method
 
 
 @attr.define
 class LLMConfig:
-    Field = dantic.Field
-    """Field is a alias to the internal dantic utilities to easily create
-    attrs.fields with pydantic-compatible interface.
+    """
+    ``openllm.LLMConfig`` is somewhat a hybrid combination between the performance of `attrs` with the
+    easy-to-use interface that pydantic offer. It lives in between where it allows users to quickly formulate
+    a LLMConfig for any LLM without worrying too much about performance. It does a few things:
+
+    - Automatic environment conversion: Each fields will automatically be provisioned with an environment
+        variable, make it easy to work with ahead-of-time or during serving time
+    - Familiar API: It is compatible with cattrs as well as providing a few Pydantic-2 like API,
+        i.e: ``model_construct_env``, ``to_generation_config``, ``to_click_options``
+    - Automatic CLI generation: It can identify each fields and convert it to compatible Click options.
+        This means developers can use any of the LLMConfig to create CLI with compatible-Python
+        CLI library (click, typer, ...)
+
+    > Internally, LLMConfig is an attrs class. All subclass of LLMConfig contains "attrs-like" features,
+    > which means LLMConfig will actually generate subclass to have attrs-compatible API, so that the subclass
+    > can be written as any normal Python class.
+
+    To directly configure GenerationConfig for any given LLM, create a GenerationConfig under the subclass:
+
+    ```python
+    class FlanT5Config(openllm.LLMConfig):
+
+        class GenerationConfig:
+            temperature: float = 0.75
+            max_new_tokens: int = 3000
+            top_k: int = 50
+            top_p: float = 0.4
+            repetition_penalty = 1.0
+    ```
+    By doing so, openllm.LLMConfig will create a compatible GenerationConfig attrs class that can be converted
+    to ``transformers.GenerationConfig``. These attribute can be accessed via ``LLMConfig.generation_config``.
+
+    By default, all LLMConfig has a __config__ that contains a default value. If any LLM requires customization,
+    provide a ``__config__`` under the class declaration:
+
+    ```python
+    class FalconConfig(openllm.LLMConfig):
+        __config__ = {"trust_remote_code": True, "default_timeout": 3600000}
+    ```
+
+    Note that ``model_name``, ``start_name``, and ``env`` is optional under ``__config__``. If set, then OpenLLM
+    will respect that option for start and other components within the library.
     """
 
-    if t.TYPE_CHECKING:
-        # The following is handled via __init_subclass__, and is only used for TYPE_CHECKING
+    Field = dantic.Field
+    """Field is a alias to the internal dantic utilities to easily create
+    attrs.fields with pydantic-compatible interface. For example:
 
+    ```python
+    class MyModelConfig(openllm.LLMConfig):
+
+        field1 = openllm.LLMConfig.Field(...)
+    ```
+    """
+
+    # NOTE: The following is handled via __init_subclass__, and is only used for TYPE_CHECKING
+    if t.TYPE_CHECKING:
+        # NOTE: Internal attributes that should only be used by OpenLLM. Users usually shouldn't
+        # concern any of these.
         def __attrs_init__(self, **attrs: t.Any):
             """Generated __attrs_init__ for LLMConfig subclass that follows the attrs contract."""
+
+        __config__: ModelConfig | None = None
+        """Internal configuration for this LLM model. Each of the field in here will be populated
+        and prefixed with __openllm_<value>__"""
 
         __attrs_attrs__: tuple[attr.Attribute[t.Any], ...] = tuple()
         """Since we are writing our own __init_subclass__, which is an alternative way for __prepare__,
@@ -630,14 +799,28 @@ class LLMConfig:
         __openllm_attrs__: tuple[str, ...] = tuple()
         """Internal attribute tracking to store converted LLMConfig attributes to correct attrs"""
 
-        __openllm_timeout__: int = 3600
-        """The default timeout to be set for this given LLM."""
+        __openllm_hints__: dict[str, t.Any] = Field(None, init=False)
+        """An internal cache of resolved types for this LLMConfig."""
+
+        __openllm_accepted_keys__: set[str] = Field(None, init=False)
+        """The accepted keys for this LLMConfig."""
+
+        # NOTE: The following will be populated from __config__
+        __openllm_url__: str = Field(None, init=False)
+        """The resolved url for this LLMConfig."""
 
         __openllm_requires_gpu__: bool = False
         """Determines if this model is only available on GPU. By default it supports GPU and fallback to CPU."""
 
         __openllm_trust_remote_code__: bool = False
         """Whether to always trust remote code"""
+
+        __openllm_requirements__: list[str] | None = None
+        """The default PyPI requirements needed to run this given LLM. By default, we will depend on
+        bentoml, torch, transformers."""
+
+        __openllm_env__: openllm.utils.ModelEnv = Field(None, init=False)
+        """A ModelEnv instance for this LLMConfig."""
 
         __openllm_model_name__: str = ""
         """The normalized version of __openllm_start_name__, determined by __openllm_name_type__"""
@@ -649,26 +832,25 @@ class LLMConfig:
         """the default name typed for this model. "dasherize" will convert the name to lowercase and
         replace spaces with dashes. "lowercase" will convert the name to lowercase."""
 
-        __openllm_env__: openllm.utils.ModelEnv = Field(None, init=False)
-        """A ModelEnv instance for this LLMConfig."""
-
-        __openllm_hints__: dict[str, t.Any] = Field(None, init=False)
-        """An internal cache of resolved types for this LLMConfig."""
-
-        __openllm_url__: str = Field(None, init=False)
-        """The resolved url for this LLMConfig."""
-
-        __openllm_accepted_keys__: set[str] = Field(None, init=False)
-        """The accepted keys for this LLMConfig."""
-
-        __openllm_requirements__: list[str] | None = None
-        """The default PyPI requirements needed to run this given LLM. By default, we will depend on
-        bentoml, torch, transformers."""
+        __openllm_timeout__: int = 3600
+        """The default timeout to be set for this given LLM."""
 
         __openllm_workers_per_resource__: int | float = 1
         """The default number of workers per resource. By default, we will use 1 worker per resource.
         See StarCoder for more advanced usage. See
         https://docs.bentoml.org/en/latest/guides/scheduling.html#resource-scheduling-strategy for more details.
+        """
+
+        __openllm_default_id__: str = Field(None)
+        """Return the default model to use when using 'openllm start <model_id>'.
+        This could be one of the keys in 'self.model_ids' or custom users model."""
+
+        __openllm_model_ids__: list[str] = Field(None)
+        """A list of supported pretrained models tag for this given runnable.
+
+        For example:
+            For FLAN-T5 impl, this would be ["google/flan-t5-small", "google/flan-t5-base",
+                                                "google/flan-t5-large", "google/flan-t5-xl", "google/flan-t5-xxl"]
         """
 
         GenerationConfig: type = type
@@ -689,35 +871,9 @@ class LLMConfig:
         """The result generated GenerationConfig class for this LLMConfig. This will be used
         to create the generation_config argument that can be used throughout the lifecycle."""
 
-    def __init_subclass__(
-        cls,
-        *,
-        name_type: t.Literal["dasherize", "lowercase"] = "dasherize",
-        default_timeout: int | None = None,
-        trust_remote_code: bool = False,
-        requires_gpu: bool = False,
-        url: str | None = None,
-        requirements: list[str] | None = None,
-        workers_per_resource: int | float = 1,
-    ):
-        if name_type == "dasherize":
-            model_name = inflection.underscore(cls.__name__.replace("Config", ""))
-            start_name = inflection.dasherize(model_name)
-        else:
-            model_name = cls.__name__.replace("Config", "").lower()
-            start_name = model_name
-
-        cls.__openllm_name_type__ = name_type
-        cls.__openllm_requires_gpu__ = requires_gpu
-        cls.__openllm_timeout__ = default_timeout or 3600
-        cls.__openllm_trust_remote_code__ = trust_remote_code
-
-        cls.__openllm_model_name__ = model_name
-        cls.__openllm_start_name__ = start_name
-        cls.__openllm_env__ = openllm.utils.ModelEnv(model_name)
-        cls.__openllm_url__ = url or "(not set)"
-        cls.__openllm_requirements__ = requirements
-        cls.__openllm_workers_per_resource__ = workers_per_resource
+    def __init_subclass__(cls):
+        # NOTE: auto assignment attributes generated from __config__
+        _make_assignment_with_prefix_script(cls, _gen_default_model_config(cls))(cls)
 
         # NOTE: Since we want to enable a pydantic-like experience
         # this means we will have to hide the attr abstraction, and generate
@@ -727,7 +883,7 @@ class LLMConfig:
         cd = cls.__dict__
 
         def field_env_key(key: str) -> str:
-            return f"OPENLLM_{model_name.upper()}_{key.upper()}"
+            return f"OPENLLM_{cls.__openllm_model_name__.upper()}_{key.upper()}"
 
         ca_names = {name for name, attr in cd.items() if isinstance(attr, _CountingAttr)}
         ca_list: list[tuple[str, _CountingAttr[t.Any]]] = []
@@ -763,21 +919,13 @@ class LLMConfig:
                 gen_attribute = gen_attribute.evolve(metadata=metadata)
             own_attrs.append(gen_attribute)
 
+        # This is to handle subclass of subclass of all provided LLMConfig.
+        # refer to attrs for the original implementation.
         base_attrs, base_attr_map = _collect_base_attrs(cls, {a.name for a in own_attrs})
 
         # __openllm_attrs__ is a tracking tuple[attr.Attribute[t.Any]]
         # that we construct ourself.
         cls.__openllm_attrs__ = tuple(a.name for a in own_attrs)
-
-        # NOTE: Enable some default attributes that can be shared across all LLMConfig
-        if len(DEFAULT_LLMCONFIG_ATTRS) > 0:
-            # NOTE: update the hints for default variables we dynamically added.
-            hints.update({k: hints for k, _, _, hints in DEFAULT_LLMCONFIG_ATTRS})
-            base_attrs = [
-                attr.Attribute.from_counting_attr(k, cls.Field(default, env=field_env_key(k), description=docs), hints)
-                for k, default, docs, hints in DEFAULT_LLMCONFIG_ATTRS
-                if k not in cls.__openllm_attrs__
-            ] + base_attrs
 
         attrs: list[attr.Attribute[t.Any]] = own_attrs + base_attrs
 
@@ -810,37 +958,32 @@ class LLMConfig:
         _has_post_init = bool(getattr(cls, "__attrs_post_init__", False))
 
         AttrsTuple = _make_attr_tuple_class(cls.__name__, cls.__openllm_attrs__)
+        # NOTE: the protocol for attrs-decorated class
+        cls.__attrs_attrs__ = AttrsTuple(attrs)
         # NOTE: generate a __attrs_init__ for the subclass
         cls.__attrs_init__ = _add_method_dunders(
             cls,
             _make_init(
-                cls,
-                AttrsTuple(attrs),
-                _has_pre_init,
-                _has_post_init,
-                False,
-                True,
-                True,
-                base_attr_map,
-                False,
-                None,
-                attrs_init=True,
+                cls,  # cls (the attrs-decorated class)
+                cls.__attrs_attrs__,  # tuple of attr.Attribute of cls
+                _has_pre_init,  # pre_init
+                _has_post_init,  # post_init
+                False,  # frozen
+                True,  # slots
+                True,  # cache_hash
+                base_attr_map,  # base_attr_map
+                False,  # is_exc (check if it is exception)
+                None,  # cls_on_setattr (essentially attr.setters)
+                attrs_init=True,  # whether to create __attrs_init__ instead of __init__
             ),
         )
-        cls.__attrs_attrs__ = AttrsTuple(attrs)
 
         # NOTE: Finally, set the generation_class for this given config.
         cls.generation_class = _make_internal_generation_class(cls)
 
         hints.update(t.get_type_hints(cls.generation_class))
-
         cls.__openllm_hints__ = hints
-
         cls.__openllm_accepted_keys__ = set(cls.__openllm_attrs__) | set(attr.fields_dict(cls.generation_class))
-
-    @property
-    def name_type(self) -> t.Literal["dasherize", "lowercase"]:
-        return self.__openllm_name_type__
 
     def __init__(
         self,
@@ -849,33 +992,56 @@ class LLMConfig:
         __openllm_extras__: dict[str, t.Any] | None = None,
         **attrs: t.Any,
     ):
-        self.__openllm_extras__ = openllm.utils.first_not_none(__openllm_extras__, default={})
+        # create a copy of the list of keys as cache
+        _cached_keys = tuple(attrs.keys())
+
+        self.__openllm_extras__ = first_not_none(__openllm_extras__, default={})
         config_merger.merge(
             self.__openllm_extras__, {k: v for k, v in attrs.items() if k not in self.__openllm_accepted_keys__}
         )
 
-        attrs = {k: v for k, v in attrs.items() if k not in self.__openllm_extras__ and v is not None}
+        for k in _cached_keys:
+            if k in self.__openllm_extras__ or attrs.get(k) is None:
+                del attrs[k]
+        _cached_keys = tuple(k for k in _cached_keys if k in attrs)
 
+        _generation_cl_dict = attr.fields_dict(self.generation_class)
         if generation_config is None:
-            generation_config = {k: v for k, v in attrs.items() if k in attr.fields_dict(self.generation_class)}
+            generation_config = {k: v for k, v in attrs.items() if k in _generation_cl_dict}
+        else:
+            generation_keys = {k for k in attrs if k in _generation_cl_dict}
+            if len(generation_keys) > 0:
+                logger.warning(
+                    "When 'generation_config' is passed, \
+                the following keys are ignored and won't be used: %s. If you wish to use those values, \
+                pass it into 'generation_config'.",
+                    ", ".join(generation_keys),
+                )
+            for k in _cached_keys:
+                if k in generation_keys:
+                    del attrs[k]
+            _cached_keys = tuple(k for k in _cached_keys if k in attrs)
 
         self.generation_config = self.generation_class(**generation_config)
+        base_attrs: tuple[attr.Attribute[t.Any], ...] = attr.fields(self.__class__)
+        base_attrs += (
+            attr.Attribute.from_counting_attr(
+                name="generation_config",
+                ca=dantic.Field(
+                    self.generation_config, description=inspect.cleandoc(self.generation_class.__doc__ or "")
+                ),
+                type=self.generation_class,
+            ),
+        )
+        # mk the class __repr__ function with the updated fields.
+        self.__class__.__repr__ = _add_method_dunders(self.__class__, _make_repr(base_attrs, None, self.__class__))
 
-        attrs = {k: v for k, v in attrs.items() if k not in generation_config}
+        for k in _cached_keys:
+            if k in generation_config:
+                del attrs[k]
 
-        self.__attrs_init__(**{k: v for k, v in attrs.items() if k in self.__openllm_attrs__})
-
-        # The rest update to extras
-        attrs = {k: v for k, v in attrs.items() if k not in self.__openllm_attrs__}
-        config_merger.merge(self.__openllm_extras__, attrs)
-
-    def __repr__(self) -> str:
-        bases = f"{self.__class__.__qualname__.rsplit('>.', 1)[-1]}(generation_config={repr(self.generation_class())}"
-        if len(self.__openllm_attrs__) > 0:
-            bases += ", " + ", ".join([f"{k}={getattr(self, k)}" for k in self.__openllm_attrs__]) + ")"
-        else:
-            bases += ")"
-        return bases
+        # The rest of attrs should only be the attributes to be passed to __attrs_init__
+        self.__attrs_init__(**attrs)
 
     def __getattr__(self, item: str) -> t.Any:
         if hasattr(self.generation_config, item):
@@ -975,43 +1141,46 @@ class LLMConfig:
         config = transformers.GenerationConfig(**bentoml_cattr.unstructure(self.generation_config))
         return config.to_dict() if return_as_dict else config
 
+    @classmethod
     @t.overload
     def to_click_options(
-        self, f: t.Callable[..., openllm.LLMConfig]
+        cls, f: t.Callable[..., openllm.LLMConfig]
     ) -> F[P, ClickFunctionWrapper[..., openllm.LLMConfig]]:
         ...
 
+    @classmethod
     @t.overload
-    def to_click_options(self, f: t.Callable[P, O_co]) -> F[P, ClickFunctionWrapper[P, O_co]]:
+    def to_click_options(cls, f: t.Callable[P, O_co]) -> F[P, ClickFunctionWrapper[P, O_co]]:
         ...
 
-    def to_click_options(self, f: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
+    @classmethod
+    def to_click_options(cls, f: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
         """
         Convert current model to click options. This can be used as a decorator for click commands.
         Note that the identifier for all LLMConfig will be prefixed with '<model_name>_*', and the generation config
         will be prefixed with '<model_name>_generation_*'.
         """
-        for name, field in attr.fields_dict(self.generation_class).items():
-            ty = self.__openllm_hints__.get(name)
+        for name, field in attr.fields_dict(cls.generation_class).items():
+            ty = cls.__openllm_hints__.get(name)
             if t.get_origin(ty) is t.Union:
                 # NOTE: Union type is currently not yet supported, we probably just need to use environment instead.
                 continue
-            f = attrs_to_options(name, field, self.__openllm_model_name__, typ=ty, suffix_generation=True)(f)
-        f = optgroup.group(f"{self.generation_class.__name__} generation options")(f)
+            f = attrs_to_options(name, field, cls.__openllm_model_name__, typ=ty, suffix_generation=True)(f)
+        f = optgroup.group(f"{cls.generation_class.__name__} generation options")(f)
 
-        if len(self.__class__.__openllm_attrs__) == 0:
+        if len(cls.__openllm_attrs__) == 0:
             # NOTE: in this case, the function is already a ClickFunctionWrapper
             # hence the casting
             return f
 
-        for name, field in attr.fields_dict(self.__class__).items():
-            ty = self.__openllm_hints__.get(name)
+        for name, field in attr.fields_dict(cls).items():
+            ty = cls.__openllm_hints__.get(name)
             if t.get_origin(ty) is t.Union:
                 # NOTE: Union type is currently not yet supported, we probably just need to use environment instead.
                 continue
-            f = attrs_to_options(name, field, self.__openllm_model_name__, typ=ty)(f)
+            f = attrs_to_options(name, field, cls.__openllm_model_name__, typ=ty)(f)
 
-        return optgroup.group(f"{self.__class__.__name__} options")(f)
+        return optgroup.group(f"{cls.__name__} options")(f)
 
 
 bentoml_cattr.register_unstructure_hook_factory(

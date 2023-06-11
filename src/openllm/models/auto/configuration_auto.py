@@ -87,6 +87,7 @@ class _LazyConfigMapping(ConfigOrderedDict):
 
 
 CONFIG_MAPPING = _LazyConfigMapping(CONFIG_MAPPING_NAMES)
+CONFIG_NAME_ALIASES: dict[str, str] = {"chat_glm": "chatglm", "stable_lm": "stablelm", "star_coder": "starcoder"}
 
 
 class AutoConfig:
@@ -98,6 +99,18 @@ class AutoConfig:
         model_name = inflection.underscore(model_name)
         if model_name in CONFIG_MAPPING:
             return CONFIG_MAPPING[model_name].model_construct_env(**attrs)
+        raise ValueError(
+            f"Unrecognized configuration class for {model_name}. "
+            f"Model name should be one of {', '.join(CONFIG_MAPPING.keys())}."
+        )
+
+    @classmethod
+    def infer_class_from_name(cls, name: str) -> type[openllm.LLMConfig]:
+        model_name = inflection.underscore(name)
+        if model_name in CONFIG_NAME_ALIASES:
+            model_name = CONFIG_NAME_ALIASES[model_name]
+        if model_name in CONFIG_MAPPING:
+            return CONFIG_MAPPING[model_name]
         raise ValueError(
             f"Unrecognized configuration class for {model_name}. "
             f"Model name should be one of {', '.join(CONFIG_MAPPING.keys())}."

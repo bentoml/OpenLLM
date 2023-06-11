@@ -384,12 +384,10 @@ def start_model_command(
     ModelEnv = openllm.utils.ModelEnv(model_name)
     llm_config = openllm.AutoConfig.for_model(model_name)
 
-    for_doc = openllm.AutoLLM.for_model(model_name)
     docstring = f"""\
 {ModelEnv.start_docstring}
 \b
-Available model_id(s) to use with '{model_name}' are: {for_doc.model_ids} [default: {for_doc.default_id}]
-Tip: One can pass one of the aforementioned to '--model-id' to use other pretrained weights.
+Available model_id(s): {llm_config.__openllm_model_ids__} [default: {llm_config.__openllm_default_id__}]
 """
     command_attrs: dict[str, t.Any] = {
         "name": ModelEnv.model_name,
@@ -399,7 +397,7 @@ Tip: One can pass one of the aforementioned to '--model-id' to use other pretrai
     }
 
     aliases: list[str] = []
-    if llm_config.name_type == "dasherize":
+    if llm_config.__openllm_name_type__ == "dasherize":
         aliases.append(llm_config.__openllm_start_name__)
 
     command_attrs["aliases"] = aliases if len(aliases) > 0 else None
@@ -429,8 +427,9 @@ Tip: One can pass one of the aforementioned to '--model-id' to use other pretrai
     @group.command(**command_attrs)
     @llm_config.to_click_options
     @parse_serve_args(_serve_grpc)
-    @click.option("--server-timeout", type=int, default=3600, help="Server timeout in seconds")
-    @model_id_option
+    @cog.optgroup.group("General LLM Options")
+    @cog.optgroup.option("--server-timeout", type=int, default=3600, help="Server timeout in seconds")
+    @model_id_option(cog.optgroup, model_env=ModelEnv)
     @click.option(
         "--device",
         type=tuple,
@@ -439,6 +438,7 @@ Tip: One can pass one of the aforementioned to '--model-id' to use other pretrai
         envvar="CUDA_VISIBLE_DEVICES",
         callback=parse_device_callback,
         help=f"Assign GPU devices (if available) for {model_name}.",
+        show_envvar=True,
     )
     def model_start(
         server_timeout: int,
@@ -575,12 +575,20 @@ output_option = click.option(
     default="pretty",
     help="Showing output type. Default to 'pretty'",
 )
-model_id_option = click.option(
-    "--model-id",
-    type=click.STRING,
-    default=None,
-    help="Optional model_id name or path for (fine-tune) weight.",
-)
+
+
+def model_id_option(factory: t.Any, model_env: openllm.utils.ModelEnv | None = None):
+    envvar = None
+    if model_env is not None:
+        envvar = model_env.model_id
+    return factory.option(
+        "--model-id",
+        type=click.STRING,
+        default=None,
+        help="Optional model_id name or path for (fine-tune) weight.",
+        envvar=envvar,
+        show_envvar=True if envvar is not None else False,
+    )
 
 
 def cli_factory() -> click.Group:
@@ -627,7 +635,7 @@ def cli_factory() -> click.Group:
     @click.argument(
         "model_name", type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING.keys()])
     )
-    @model_id_option
+    @model_id_option(click)
     @output_option
     @click.option("--overwrite", is_flag=True, help="Overwrite existing Bento for given LLM if it already exists.")
     def build(model_name: str, model_id: str | None, overwrite: bool, output: OutputLiteral):
@@ -713,8 +721,12 @@ def cli_factory() -> click.Group:
                         runtime_impl += ("flax",)
                     if model.config.__openllm_model_name__ in openllm.MODEL_TF_MAPPING_NAMES:
                         runtime_impl += ("tf",)
-                    json_data[m] = {"model_id": model.model_ids, "description": docs, "runtime_impl": runtime_impl}
-                    converted.extend([convert_transformers_model_name(i) for i in model.model_ids])
+                    json_data[m] = {
+                        "model_id": model.config.__openllm_model_ids__,
+                        "description": docs,
+                        "runtime_impl": runtime_impl,
+                    }
+                    converted.extend([convert_transformers_model_name(i) for i in model.config.__openllm_model_ids__])
                 except Exception as err:
                     failed_initialized.append((m, err))
 
@@ -783,7 +795,7 @@ def cli_factory() -> click.Group:
     @click.argument(
         "model_name", type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING.keys()])
     )
-    @model_id_option
+    @model_id_option(click)
     @output_option
     def download_models(model_name: str, model_id: str | None, output: OutputLiteral):
         """Setup LLM interactively.

@@ -44,12 +44,24 @@ $ openllm start flan-t5 --model-id google/flan-t5-xxl
 DEFAULT_PROMPT_TEMPLATE = """Answer the following question:\nQuestion: {instruction}\nAnswer:"""
 
 
-class FlanT5Config(openllm.LLMConfig, url="https://huggingface.co/docs/transformers/model_doc/flan-t5"):
+class FlanT5Config(openllm.LLMConfig):
     """FLAN-T5 was released in the paper [Scaling Instruction-Finetuned Language Models](https://arxiv.org/pdf/2210.11416.pdf)
     - it is an enhanced version of T5 that has been finetuned in a mixture of tasks.
 
     Refer to [FLAN-T5's page](https://huggingface.co/docs/transformers/model_doc/flan-t5) for more information.
     """
+
+    __config__ = {
+        "url": "https://huggingface.co/docs/transformers/model_doc/flan-t5",
+        "default_id": "google/flan-t5-large",
+        "model_ids": [
+            "google/flan-t5-small",
+            "google/flan-t5-base",
+            "google/flan-t5-large",
+            "google/flan-t5-xl",
+            "google/flan-t5-xxl",
+        ],
+    }
 
     class GenerationConfig:
         temperature: float = 0.9

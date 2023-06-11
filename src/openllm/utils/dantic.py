@@ -38,7 +38,10 @@ def _default_converter(value: t.Any, env: str | None) -> t.Any:
     if env is not None:
         value = os.environ.get(env, value)
     if value is not None and isinstance(value, str):
-        return eval(value, {"__builtins__": {}}, {})
+        try:
+            return orjson.loads(value)
+        except orjson.JSONDecodeError as err:
+            raise RuntimeError(f"Failed to parse '{value}' from '{env}': {err}")
     return value
 
 
@@ -65,7 +68,7 @@ def Field(
     """
     metadata = attrs.pop("metadata", {})
     if description is None:
-        description = "(No description is available)"
+        description = "(No description provided)"
     metadata["description"] = description
     if env is not None:
         metadata["env"] = env

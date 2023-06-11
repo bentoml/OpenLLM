@@ -32,6 +32,7 @@ from bentoml.types import ModelSignature, ModelSignatureDict
 import openllm
 
 from .exceptions import ForbiddenAttributeError, OpenLLMException
+from .models.auto import AutoConfig
 from .utils import ENV_VARS_TRUE_VALUES, LazyLoader, bentoml_cattr
 
 if t.TYPE_CHECKING:
@@ -180,37 +181,19 @@ def import_model(
             torch.cuda.empty_cache()
 
 
-_required_namespace = {"default_id", "model_ids"}
-
-_reserved_namespace = _required_namespace | {
-    "config_class",
-    "model",
-    "tokenizer",
-    "import_kwargs",
-}
+_reserved_namespace = {"config_class", "model", "tokenizer", "import_kwargs"}
 
 
 class LLMInterface(ABC):
     """This defines the loose contract for all openllm.LLM implementations."""
 
-    default_id: str
-    """Return the default model to use when using 'openllm start <model_id>'.
-    This could be one of the keys in 'self.model_ids' or custom users model."""
-
-    model_ids: list[str]
-    """A list of supported pretrained models tag for this given runnable.
-
-    For example:
-        For FLAN-T5 impl, this would be ["google/flan-t5-small", "google/flan-t5-base",
-                                            "google/flan-t5-large", "google/flan-t5-xl", "google/flan-t5-xxl"]
-    """
-
     config_class: type[openllm.LLMConfig]
     """The config class to use for this LLM. If you are creating a custom LLM, you must specify this class."""
 
-    import_kwargs: dict[str, t.Any] | None = None
-    """The default import kwargs to used when importing the model.
-    This will be passed into 'openllm.LLM.import_model'."""
+    @property
+    def import_kwargs(self) -> dict[str, t.Any] | None:
+        """The default import kwargs to used when importing the model.
+        This will be passed into 'openllm.LLM.import_model'."""
 
     @abstractmethod
     def generate(self, prompt: str, **preprocess_generate_kwds: t.Any) -> t.Any:
@@ -265,34 +248,29 @@ class LLMInterface(ABC):
         raise NotImplementedError
 
 
+def _default_post_init(self: LLM):
+    # load_in_mha: Whether to apply BetterTransformer (or Torch MultiHeadAttention) during inference load.
+    #              See https://pytorch.org/blog/a-better-transformer-for-fast-transformer-encoder-inference/
+    #              for more information.
+    # NOTE: set a default variable to transform to BetterTransformer by default for inference
+    self.load_in_mha = (
+        os.environ.get(self.config_class.__openllm_env__.bettertransformer, str(False)).upper() in ENV_VARS_TRUE_VALUES
+    )
+    if self.config_class.__openllm_requires_gpu__:
+        # For all models that requires GPU, no need to offload it to BetterTransformer
+        # use bitsandbytes instead
+
+        self.load_in_mha = False
+
+
 class LLMMetaclass(ABCMeta):
     def __new__(
         mcls, cls_name: str, bases: tuple[type[t.Any], ...], namespace: dict[str, t.Any], **attrs: t.Any
     ) -> type:
         """Metaclass for creating a LLM."""
         if LLMInterface not in bases:  # only actual openllm.LLM should hit this branch.
-            if "__annotations__" not in namespace:
-                annotations_dict: dict[str, t.Any] = {}
-                namespace["__annotations__"] = annotations_dict
-
-            # NOTE: check for required attributes
-            if "__openllm_internal__" not in namespace:
-                _required_namespace.add("config_class")
-            for k in _required_namespace:
-                if k not in namespace:
-                    raise RuntimeError(f"Missing required key '{k}'. Make sure to define it within the LLM subclass.")
-
             # NOTE: set implementation branch
             prefix_class_name_config = cls_name
-            if "__llm_implementation__" in namespace:
-                raise RuntimeError(
-                    f"""\
-                __llm_implementation__ should not be set directly. Instead make sure that your class
-                name follows the convention prefix:
-                - For Tensorflow implementation: 'TF{cls_name}'
-                - For Flax implementation: 'Flax{cls_name}'
-                - For PyTorch implementation: '{cls_name}'"""
-                )
             if cls_name.startswith("Flax"):
                 implementation = "flax"
                 prefix_class_name_config = cls_name[4:]
@@ -302,39 +280,37 @@ class LLMMetaclass(ABCMeta):
             else:
                 implementation = "pt"
             namespace["__llm_implementation__"] = implementation
+            config_class = AutoConfig.infer_class_from_name(prefix_class_name_config)
 
             # NOTE: setup config class branch
             if "__openllm_internal__" in namespace:
                 # NOTE: we will automatically find the subclass for this given config class
                 if "config_class" not in namespace:
                     # this branch we will automatically get the class
-                    namespace["config_class"] = getattr(openllm, f"{prefix_class_name_config}Config")
+                    namespace["config_class"] = config_class
                 else:
                     logger.debug(f"Using config class {namespace['config_class']} for {cls_name}.")
+            # NOTE: check for required attributes
+            else:
+                if "config_class" not in namespace:
+                    raise RuntimeError(
+                        "Missing required key 'config_class'. Make sure to define it within the LLM subclass."
+                    )
 
-            config_class: type[openllm.LLMConfig] = namespace["config_class"]
+            # NOTE: the llm_post_init branch
+            if "llm_post_init" in namespace:
+                original_llm_post_init = namespace["llm_post_init"]
 
-            # NOTE: update the annotations for self.config
-            namespace["__annotations__"]["config"] = t.get_type_hints(config_class)
+                def wrapped_llm_post_init(self: LLM) -> None:
+                    """We need to both initialize private attributes and call the user-defined model_post_init
+                    method.
+                    """
+                    _default_post_init(self)
+                    original_llm_post_init(self)
 
-            for key in ("__openllm_start_name__", "__openllm_requires_gpu__"):
-                namespace[key] = getattr(config_class, key)
-
-            # load_in_mha: Whether to apply BetterTransformer (or Torch MultiHeadAttention) during inference load.
-            #              See https://pytorch.org/blog/a-better-transformer-for-fast-transformer-encoder-inference/
-            #              for more information.
-            # NOTE: set a default variable to transform to BetterTransformer by default for inference
-            if "load_in_mha" not in namespace:
-                load_in_mha = (
-                    os.environ.get(config_class().__openllm_env__.bettertransformer, str(False)).upper()
-                    in ENV_VARS_TRUE_VALUES
-                )
-                namespace["load_in_mha"] = load_in_mha
-
-            if namespace["__openllm_requires_gpu__"]:
-                # For all models that requires GPU, no need to offload it to BetterTransformer
-                # use bitsandbytes instead
-                namespace["load_in_mha"] = False
+                namespace["llm_post_init"] = wrapped_llm_post_init
+            else:
+                namespace["llm_post_init"] = _default_post_init
 
             # NOTE: import_model branch
             if "import_model" not in namespace:
@@ -343,16 +319,10 @@ class LLMMetaclass(ABCMeta):
             else:
                 logger.debug("Using custom 'import_model' for %s", cls_name)
 
-            # NOTE: populate with default cache.
-            namespace.update({k: None for k in ("__llm_bentomodel__", "__llm_model__", "__llm_tokenizer__")})
-
             cls: type[LLM] = super().__new__(t.cast("type[type[LLM]]", mcls), cls_name, bases, namespace, **attrs)
+
             cls.__openllm_post_init__ = None if cls.llm_post_init is LLMInterface.llm_post_init else cls.llm_post_init
-
             cls.__openllm_custom_load__ = None if cls.load_model is LLMInterface.load_model else cls.load_model
-
-            if getattr(cls, "config_class") is None:
-                raise RuntimeError(f"'config_class' must be defined for '{cls.__name__}'")
             return cls
         else:
             # the LLM class itself being created, no need to setup
@@ -362,23 +332,19 @@ class LLMMetaclass(ABCMeta):
 class LLM(LLMInterface, metaclass=LLMMetaclass):
     if t.TYPE_CHECKING:
         # NOTE: the following will be populated by metaclass
-        __llm_bentomodel__: bentoml.Model | None = None
-        __llm_model__: LLMModel | None = None
-        __llm_tokenizer__: LLMTokenizer | None = None
         __llm_implementation__: t.Literal["pt", "tf", "flax"]
-
-        __openllm_start_name__: str
-        __openllm_requires_gpu__: bool
         __openllm_post_init__: t.Callable[[t.Self], None] | None
-
         __openllm_custom_load__: t.Callable[[t.Self, t.Any, t.Any], None] | None
 
         load_in_mha: bool
         _llm_attrs: dict[str, t.Any]
         _llm_args: tuple[t.Any, ...]
 
-    # NOTE: the following is the similar interface to HuggingFace pretrained protocol.
+    __llm_bentomodel__: bentoml.Model | None = None
+    __llm_model__: LLMModel | None = None
+    __llm_tokenizer__: LLMTokenizer | None = None
 
+    # NOTE: the following is the similar interface to HuggingFace pretrained protocol.
     @classmethod
     def from_pretrained(
         cls, model_id: str | None = None, llm_config: openllm.LLMConfig | None = None, *args: t.Any, **attrs: t.Any
@@ -446,15 +412,33 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
         Note that this tag will be generated based on `self.default_id` or the given `pretrained` kwds.
         passed from the __init__ constructor.
 
-        ``llm_post_init`` can also be implemented if you need to do any
-        additional initialization after everything is setup.
+        ``llm_post_init`` can also be implemented if you need to do any additional
+        initialization after everything is setup.
+
+        Note: If you need to implement a custom `load_model`, the following is an example from Falcon implementation:
+
+        ```python
+        def load_model(self, tag: bentoml.Tag, *args: t.Any, **attrs: t.Any) -> t.Any:
+            torch_dtype = attrs.pop("torch_dtype", torch.bfloat16)
+            device_map = attrs.pop("device_map", "auto")
+
+            _ref = bentoml.transformers.get(tag)
+
+            model = bentoml.transformers.load_model(_ref, device_map=device_map, torch_dtype=torch_dtype, **attrs)
+            return transformers.pipeline("text-generation", model=model, tokenizer=_ref.custom_objects["tokenizer"])
+        ```
 
         Args:
             model_id: The pretrained model to use. Defaults to None. If None, 'self.default_id' will be used.
-            llm_config: The config to use for this LLM. Defaults to None. If not passed, we will use 'self.config_class'
-                        to construct default configuration.
+            llm_config: The config to use for this LLM. Defaults to None. If not passed, OpenLLM
+                        will use `config_class` to construct default configuration.
             *args: The args to be passed to the model.
             **attrs: The kwargs to be passed to the model.
+
+        The following are optional:
+            openllm_model_version: version for this `model_id`. By default, users can ignore this if using pretrained
+                                   weights as OpenLLM will use the commit_hash of given model_id.
+                                   However, if `model_id` is a path, this argument is recomended to include.
         """
 
         if llm_config is not None:
@@ -466,10 +450,8 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
             attrs = self.config.__openllm_extras__
 
         if model_id is None:
-            model_id = os.environ.get(self.config.__openllm_env__.model_id, None)
-            if not model_id:
-                assert self.default_id, "A default model is required for any LLM."
-                model_id = self.default_id
+            model_id = os.environ.get(self.config.__openllm_env__.model_id, self.config.__openllm_default_id__)
+            assert model_id is not None
 
         # NOTE: This is the actual given path or pretrained weight for this LLM.
         self._model_id = model_id
@@ -479,7 +461,7 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
         self._llm_attrs = attrs
 
         if self.__openllm_post_init__:
-            self.__openllm_post_init__(self)
+            self.llm_post_init()
 
     def __setattr__(self, attr: str, value: t.Any):
         if attr in _reserved_namespace:
@@ -500,7 +482,7 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
     def identifying_params(self) -> dict[str, t.Any]:
         return {
             "configuration": self.config.model_dump_json().decode(),
-            "model_ids": orjson.dumps(self.model_ids).decode(),
+            "model_ids": orjson.dumps(self.config.__openllm_model_ids__).decode(),
         }
 
     @t.overload
@@ -643,7 +625,7 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
         return self._bentomodel.tag
 
     @property
-    def model(self) -> LLMModel | torch.nn.Module:
+    def model(self) -> LLMModel:
         """The model to use for this LLM. This shouldn't be set at runtime, rather let OpenLLM handle it."""
         # Run check for GPU
         trust_remote_code = self._llm_attrs.pop("trust_remote_code", self.config.__openllm_trust_remote_code__)
@@ -818,7 +800,7 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
                 (_Runnable,),
                 {
                     "SUPPORTED_RESOURCES": ("nvidia.com/gpu", "cpu")
-                    if self.__openllm_requires_gpu__
+                    if self.config.__openllm_requires_gpu__
                     else ("nvidia.com/gpu",),
                     "llm_type": self.llm_type,
                     "identifying_params": self.identifying_params,

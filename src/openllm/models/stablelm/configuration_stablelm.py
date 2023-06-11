@@ -16,7 +16,7 @@ from __future__ import annotations
 import openllm
 
 
-class StableLMConfig(openllm.LLMConfig, name_type="lowercase", url="https://github.com/Stability-AI/StableLM"):
+class StableLMConfig(openllm.LLMConfig):
     """StableLM-Base-Alpha is a suite of 3B and 7B parameter decoder-only language models
     pre-trained on a diverse collection of English datasets with a sequence
     length of 4096 to push beyond the context window limitations of existing open-source language models.
@@ -29,6 +29,18 @@ class StableLMConfig(openllm.LLMConfig, name_type="lowercase", url="https://gith
     and [StableLM-base's model card](https://huggingface.co/stabilityai/stablelm-base-alpha-7b)
     for more information.
     """
+
+    __config__ = {
+        "name_type": "lowercase",
+        "url": "https://github.com/Stability-AI/StableLM",
+        "default_id": "stabilityai/stablelm-tuned-alpha-3b",
+        "model_ids": [
+            "stabilityai/stablelm-tuned-alpha-3b",
+            "stabilityai/stablelm-tuned-alpha-7b",
+            "stabilityai/stablelm-base-alpha-3b",
+            "stabilityai/stablelm-base-alpha-7b",
+        ],
+    }
 
     class GenerationConfig:
         temperature: float = 0.9

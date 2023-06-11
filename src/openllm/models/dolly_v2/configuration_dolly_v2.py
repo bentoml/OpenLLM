@@ -20,12 +20,7 @@ from __future__ import annotations
 import openllm
 
 
-class DollyV2Config(
-    openllm.LLMConfig,
-    default_timeout=3600000,
-    trust_remote_code=True,
-    url="https://github.com/databrickslabs/dolly",
-):
+class DollyV2Config(openllm.LLMConfig):
     """Databricks’ Dolly is an instruction-following large language model trained on the Databricks
     machine learning platform that is licensed for commercial use.
 
@@ -38,6 +33,14 @@ class DollyV2Config(
 
     Refer to [Databricks's Dolly page](https://github.com/databrickslabs/dolly) for more information.
     """
+
+    __config__ = {
+        "timeout": 3600000,
+        "trust_remote_code": True,
+        "url": "https://github.com/databrickslabs/dolly",
+        "default_id": "databricks/dolly-v2-3b",
+        "model_ids": ["databricks/dolly-v2-3b", "databricks/dolly-v2-7b", "databricks/dolly-v2-12b"],
+    }
 
     return_full_text: bool = openllm.LLMConfig.Field(
         False, description="Whether to return the full prompt to the users."
