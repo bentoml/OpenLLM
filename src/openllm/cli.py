@@ -207,6 +207,7 @@ Available model_id(s): {llm_config.__openllm_model_ids__} [default: {llm_config.
         # NOTE: This is to set current configuration
         _bentoml_config_options = start_env.pop("BENTOML_CONFIG_OPTIONS", "")
         _bentoml_config_options_opts = [
+            "tracing.sample_rate=1.0",
             f"api_server.traffic.timeout={server_timeout}",
             f'runners."llm-{llm.config.__openllm_start_name__}-runner".traffic.timeout={llm.config.__openllm_timeout__}',
             f'runners."llm-{llm.config.__openllm_start_name__}-runner".workers_per_resource={workers_per_resource}',
@@ -698,7 +699,10 @@ def cli_factory() -> click.Group:
                     + "* Push to BentoCloud with `bentoml push`:\n"
                     + f"    $ bentoml push {bento.tag}\n"
                     + "* Containerize your Bento with `bentoml containerize`:\n"
-                    + f"    $ bentoml containerize {bento.tag}",
+                    + f"    $ bentoml containerize {bento.tag}\n"
+                    + "    Tip: To enable additional BentoML feature for 'containerize', "
+                    + "use '--enable-features=FEATURE[,FEATURE]' "
+                    + "[see 'bentoml containerize -h' for more advanced usage]\n",
                     fg="blue",
                 )
         elif output == "json":

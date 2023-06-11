@@ -41,6 +41,7 @@ dependencies = [
     # tabulate for CLI with CJK support
     # >=0.9.0 for some bug fixes
     "tabulate[widechars]>=0.9.0",
+    "typing_extensions",
 ]
 description = 'OpenLLM: REST/gRPC API server for running any open Large-Language Model - StableLM, Llama, Alpaca, Dolly, Flan-T5, Custom'
 dynamic = ["version"]
@@ -101,9 +102,14 @@ dependencies = [
     "pytest-mock",
     "pytest-randomly",
     "pytest-rerunfailures",
+    # NOTE: To run all hooks
     "pre-commit",
+    # NOTE: Using under ./tools/update-optional-dependencies.py
     "tomlkit",
+    # NOTE: Using under ./tools/update-readme.py
     "markdown-it-py",
+    # NOTE: Tests strategies with Hypothesis
+    "hypothesis",
 ]
 [tool.hatch.envs.default.scripts]
 cov = ["test-cov", "cov-report"]

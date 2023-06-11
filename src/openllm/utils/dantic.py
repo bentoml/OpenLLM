@@ -53,6 +53,8 @@ def Field(
     validator: _ValidatorType[_T] | None = None,
     description: str | None = None,
     env: str | None = None,
+    auto_default: bool = False,
+    use_default_converter: bool = True,
     **attrs: t.Any,
 ):
     """A decorator that extends attr.field with additional arguments, which provides the same
@@ -63,7 +65,14 @@ def Field(
 
     Args:
         ge: Greater than or equal to. Defaults to None.
-        docs: the documentation for the field. Defaults to None.
+        description: the documentation for the field. Defaults to None.
+        env: the environment variable to read from. Defaults to None.
+        auto_default: a bool indicating whether to use the default value as the environment.
+            Defaults to False. If set to True, the behaviour of this Field will also depends
+            on kw_only. If kw_only=True, the this field will become 'Required' and the default
+            value is omitted. If kw_only=False, then the default value will be used as before.
+        use_default_converter: a bool indicating whether to use the default converter. Defaults
+            to True. If set to False, then the default converter will not be used.
         **kwargs: The rest of the arguments are passed to attr.field
     """
     metadata = attrs.pop("metadata", {})
@@ -74,7 +83,9 @@ def Field(
         metadata["env"] = env
     piped: list[_ValidatorType[t.Any]] = []
 
-    converter = attrs.pop("converter", functools.partial(_default_converter, env=env))
+    converter = attrs.pop("converter", None)
+    if use_default_converter:
+        converter = functools.partial(_default_converter, env=env)
 
     if ge is not None:
         piped.append(attr.validators.ge(ge))
@@ -98,6 +109,10 @@ def Field(
         attrs["factory"] = factory
     else:
         attrs["default"] = default
+
+    kw_only = attrs.pop("kw_only", False)
+    if auto_default and kw_only:
+        attrs.pop("default")
 
     return attr.field(metadata=metadata, validator=_validator, converter=converter, **attrs)
 

@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import sys
 import types
+import os
 import typing as t
 
 from bentoml._internal.types import LazyType
@@ -60,6 +61,8 @@ def lenient_issubclass(cls: t.Any, class_or_tuple: type[t.Any] | tuple[type[t.An
             return False
         raise
 
+
+DEBUG = sys.flags.dev_mode or (not sys.flags.ignore_environment and bool(os.environ.get("OPENLLMDEVDEBUG")))
 
 _import_structure = {
     "analytics": [],
@@ -103,6 +106,7 @@ else:
             "pkg": pkg,
             "LazyModule": LazyModule,
             "LazyType": LazyType,
+            "DEBUG": DEBUG,
             "LazyLoader": LazyLoader,
             "bentoml_cattr": bentoml_cattr,
             "copy_file_to_fs_folder": copy_file_to_fs_folder,

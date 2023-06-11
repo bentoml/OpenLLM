@@ -30,6 +30,11 @@ import typing as t
 from . import utils as utils
 from .__about__ import __version__ as __version__
 from .exceptions import MissingDependencyError
+import logging as _
+
+if utils.DEBUG:
+    _.basicConfig(level=_.NOTSET)
+
 
 _import_structure = {
     "_llm": ["LLM", "Runner"],
