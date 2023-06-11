@@ -665,6 +665,12 @@ class LLMConfig:
         """The default PyPI requirements needed to run this given LLM. By default, we will depend on
         bentoml, torch, transformers."""
 
+        __openllm_workers_per_resource__: int | float = 1
+        """The default number of workers per resource. By default, we will use 1 worker per resource.
+        See StarCoder for more advanced usage. See
+        https://docs.bentoml.org/en/latest/guides/scheduling.html#resource-scheduling-strategy for more details.
+        """
+
         GenerationConfig: type = type
         """Users can override this subclass of any given LLMConfig to provide GenerationConfig
         default value. For example:
@@ -692,6 +698,7 @@ class LLMConfig:
         requires_gpu: bool = False,
         url: str | None = None,
         requirements: list[str] | None = None,
+        workers_per_resource: int | float = 1,
     ):
         if name_type == "dasherize":
             model_name = inflection.underscore(cls.__name__.replace("Config", ""))
@@ -710,6 +717,7 @@ class LLMConfig:
         cls.__openllm_env__ = openllm.utils.ModelEnv(model_name)
         cls.__openllm_url__ = url or "(not set)"
         cls.__openllm_requirements__ = requirements
+        cls.__openllm_workers_per_resource__ = workers_per_resource
 
         # NOTE: Since we want to enable a pydantic-like experience
         # this means we will have to hide the attr abstraction, and generate

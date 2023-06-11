@@ -22,6 +22,7 @@ class StarCoderConfig(
     requires_gpu=True,
     url="https://github.com/bigcode-project/starcoder",
     requirements=["bitsandbytes"],
+    workers_per_resource=0.5,
 ):
     """The StarCoder models are 15.5B parameter models trained on 80+ programming languages from
     [The Stack (v1.2)](https://huggingface.co/datasets/bigcode/the-stack), with opt-out requests excluded.

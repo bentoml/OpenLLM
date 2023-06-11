@@ -481,6 +481,7 @@ Tip: One can pass one of the aforementioned to '--model-id' to use other pretrai
         _bentoml_config_options_opts = [
             f"api_server.traffic.timeout={server_timeout}",
             f'runners."llm-{llm.config.__openllm_start_name__}-runner".traffic.timeout={llm.config.__openllm_timeout__}',
+            f'runners."llm-{llm.config.__openllm_start_name__}-runner".workers_per_resource={llm.config.__openllm_workers_per_resource__}',
         ]
         if device:
             if len(device) > 1:
