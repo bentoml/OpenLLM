@@ -77,25 +77,16 @@ class OpenllmCliEvent(_internal_analytics.schemas.EventMeta):
 @attr.define
 class StartInitEvent(_internal_analytics.schemas.EventMeta):
     model_name: str
-    supported_gpu: bool = attr.field(default=False)
     llm_config: t.Dict[str, t.Any] = attr.field(default=None)
 
     @staticmethod
-    def handler(
-        llm_config: openllm.LLMConfig,
-        supported_gpu: bool = False,
-    ) -> StartInitEvent:
-        return StartInitEvent(
-            model_name=llm_config.__openllm_model_name__,
-            llm_config=llm_config.model_dump(),
-            supported_gpu=supported_gpu,
-        )
+    def handler(llm_config: openllm.LLMConfig) -> StartInitEvent:
+        return StartInitEvent(model_name=llm_config.__openllm_model_name__, llm_config=llm_config.model_dump())
 
 
 def track_start_init(
     llm_config: openllm.LLMConfig,
-    supported_gpu: bool = False,
 ):
     if do_not_track():
         return
-    track(StartInitEvent.handler(llm_config, supported_gpu))
+    track(StartInitEvent.handler(llm_config))

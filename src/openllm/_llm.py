@@ -15,11 +15,11 @@
 from __future__ import annotations
 
 import copy
-import enum
 import functools
 import logging
 import os
 import re
+import sys
 import types
 import typing as t
 from abc import ABC, ABCMeta, abstractmethod
@@ -27,7 +27,8 @@ from abc import ABC, ABCMeta, abstractmethod
 import bentoml
 import inflection
 import orjson
-from bentoml.types import ModelSignature, ModelSignatureDict
+from bentoml._internal.models.model import ModelSignature
+from bentoml._internal.types import ModelSignatureDict
 
 import openllm
 
@@ -40,10 +41,8 @@ if t.TYPE_CHECKING:
     import transformers
     from bentoml._internal.runner.strategy import Strategy
 
-    from ._types import LLMModel, LLMTokenizer
-
     class LLMRunner(bentoml.Runner):
-        llm: openllm.LLM
+        llm: openllm.LLM[t.Any, t.Any]
         config: openllm.LLMConfig
         llm_type: str
         identifying_params: dict[str, t.Any]
@@ -71,26 +70,6 @@ def convert_transformers_model_name(name: str) -> str:
         logger.debug("Given name is a path, only returning the basename %s")
         return name
     return re.sub("[^a-zA-Z0-9]+", "-", name)
-
-
-class TypeMeta(enum.EnumMeta):
-    def __getitem__(self, key: str) -> enum.Enum:
-        # Type safe getters
-        normalised = key.replace("-", "_").upper()
-        try:
-            return self._member_map_[normalised]
-        except KeyError:
-            raise OpenLLMException(
-                f"TaskType '{key}' is not yet supported. Current supported tasks: {set(self._member_map_)}"
-            ) from None
-        except TypeError:
-            raise OpenLLMException(f"getitem key must be a string. Got {type(key)} instead.") from None
-
-
-@enum.unique
-class TaskType(enum.Enum, metaclass=TypeMeta):
-    TEXT_GENERATION = enum.auto()
-    TEXT2TEXT_GENERATION = enum.auto()
 
 
 def import_model(
@@ -146,9 +125,9 @@ def import_model(
         )
 
     if type(config) in transformers.MODEL_FOR_CAUSAL_LM_MAPPING:
-        task_type = "text-generation"
+        idx = 0
     elif type(config) in transformers.MODEL_FOR_SEQ_TO_SEQ_CAUSAL_LM_MAPPING:
-        task_type = "text2text-generation"
+        idx = 1
     else:
         raise OpenLLMException(f"Model type {type(config)} is not supported yet.")
 
@@ -156,16 +135,23 @@ def import_model(
         return bentoml.transformers.save_model(
             tag,
             getattr(
-                transformers, FRAMEWORK_TO_AUTOCLASS_MAPPING[_model_framework][TaskType[task_type].value - 1]
+                transformers,
+                FRAMEWORK_TO_AUTOCLASS_MAPPING[_model_framework][idx],
             ).from_pretrained(
-                model_id, *model_args, config=config, trust_remote_code=trust_remote_code, **hub_attrs, **attrs
+                model_id,
+                *model_args,
+                config=config,
+                trust_remote_code=trust_remote_code,
+                **hub_attrs,
+                **attrs,
             ),
             custom_objects={
-                "tokenizer": t.cast(
-                    "LLMTokenizer",
-                    transformers.AutoTokenizer.from_pretrained(
-                        model_id, config=config, trust_remote_code=trust_remote_code, **hub_attrs, **tokenizer_kwds
-                    ),
+                "tokenizer": transformers.AutoTokenizer.from_pretrained(
+                    model_id,
+                    config=config,
+                    trust_remote_code=trust_remote_code,
+                    **hub_attrs,
+                    **tokenizer_kwds,
                 )
             },
         )
@@ -248,7 +234,7 @@ class LLMInterface(ABC):
         raise NotImplementedError
 
 
-def _default_post_init(self: LLM):
+def _default_post_init(self: LLM[t.Any, t.Any]):
     # load_in_mha: Whether to apply BetterTransformer (or Torch MultiHeadAttention) during inference load.
     #              See https://pytorch.org/blog/a-better-transformer-for-fast-transformer-encoder-inference/
     #              for more information.
@@ -263,24 +249,51 @@ def _default_post_init(self: LLM):
         self.load_in_mha = False
 
 
+_M = t.TypeVar("_M")
+_T = t.TypeVar("_T")
+
+
 class LLMMetaclass(ABCMeta):
     def __new__(
         mcls, cls_name: str, bases: tuple[type[t.Any], ...], namespace: dict[str, t.Any], **attrs: t.Any
     ) -> type:
         """Metaclass for creating a LLM."""
         if LLMInterface not in bases:  # only actual openllm.LLM should hit this branch.
+            annotations_dict: dict[str, t.Any] = {}
+
             # NOTE: set implementation branch
             prefix_class_name_config = cls_name
             if cls_name.startswith("Flax"):
                 implementation = "flax"
                 prefix_class_name_config = cls_name[4:]
+                annotations_dict.update(
+                    {
+                        "__llm_model__": "transformers.FlaxPreTrainedModel",
+                        "model": "transformers.FlaxPreTrainedModel",
+                    }
+                )
             elif cls_name.startswith("TF"):
                 implementation = "tf"
                 prefix_class_name_config = cls_name[2:]
+                annotations_dict.update(
+                    {
+                        "__llm_model__": "transformers.TFPreTrainedModel",
+                        "model": "transformers.TFPreTrainedModel",
+                    }
+                )
             else:
                 implementation = "pt"
+                annotations_dict.update(
+                    {
+                        "__llm_model__": "transformers.PreTrainedModel",
+                        "model": "transformers.PreTrainedModel",
+                    }
+                )
             namespace["__llm_implementation__"] = implementation
+
             config_class = AutoConfig.infer_class_from_name(prefix_class_name_config)
+            annotations_dict["config_class"] = f"type[openllm.{config_class.__qualname__}]"
+            annotations_dict["config"] = f"openllm.{config_class.__qualname__}"
 
             # NOTE: setup config class branch
             if "__openllm_internal__" in namespace:
@@ -301,7 +314,7 @@ class LLMMetaclass(ABCMeta):
             if "llm_post_init" in namespace:
                 original_llm_post_init = namespace["llm_post_init"]
 
-                def wrapped_llm_post_init(self: LLM) -> None:
+                def wrapped_llm_post_init(self: LLM[t.Any, t.Any]) -> None:
                     """We need to both initialize private attributes and call the user-defined model_post_init
                     method.
                     """
@@ -319,7 +332,28 @@ class LLMMetaclass(ABCMeta):
             else:
                 logger.debug("Using custom 'import_model' for %s", cls_name)
 
-            cls: type[LLM] = super().__new__(t.cast("type[type[LLM]]", mcls), cls_name, bases, namespace, **attrs)
+            namespace.update({k: None for k in {"__llm_model__", "__llm_tokenizer__", "__llm_bentomodel__"}})
+            tokenizer_type = "typing.Optional[transformers.PreTrainedTokenizerFast]"
+            annotations_dict.update(
+                {
+                    "load_in_mha": "bool",
+                    "tokenizer": tokenizer_type,
+                    "__llm_tokenizer__": tokenizer_type,
+                    "__llm_bentomodel__": "typing.Optional[bentoml.Model]",
+                }
+            )
+            # NOTE: transformers to ForwardRef
+            for key, value in annotations_dict.items():
+                if (3, 10) > sys.version_info >= (3, 9, 8) or sys.version_info >= (3, 10, 1):
+                    annotations_dict[key] = t.ForwardRef(value, is_argument=False, is_class=True)
+                else:
+                    annotations_dict[key] = t.ForwardRef(value, is_argument=False)
+
+            namespace["__annotations__"] = annotations_dict
+
+            cls: type[LLM[t.Any, t.Any]] = super().__new__(
+                t.cast("type[type[LLM[t.Any, t.Any]]]", mcls), cls_name, bases, namespace, **attrs
+            )
 
             cls.__openllm_post_init__ = None if cls.llm_post_init is LLMInterface.llm_post_init else cls.llm_post_init
             cls.__openllm_custom_load__ = None if cls.load_model is LLMInterface.load_model else cls.load_model
@@ -329,10 +363,11 @@ class LLMMetaclass(ABCMeta):
             return super().__new__(mcls, cls_name, bases, namespace, **attrs)
 
 
-class LLM(LLMInterface, metaclass=LLMMetaclass):
+class LLM(LLMInterface, t.Generic[_M, _T], metaclass=LLMMetaclass):
     if t.TYPE_CHECKING:
         # NOTE: the following will be populated by metaclass
         __llm_implementation__: t.Literal["pt", "tf", "flax"]
+
         __openllm_post_init__: t.Callable[[t.Self], None] | None
         __openllm_custom_load__: t.Callable[[t.Self, t.Any, t.Any], None] | None
 
@@ -340,15 +375,11 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
         _llm_attrs: dict[str, t.Any]
         _llm_args: tuple[t.Any, ...]
 
-    __llm_bentomodel__: bentoml.Model | None = None
-    __llm_model__: LLMModel | None = None
-    __llm_tokenizer__: LLMTokenizer | None = None
-
     # NOTE: the following is the similar interface to HuggingFace pretrained protocol.
     @classmethod
     def from_pretrained(
         cls, model_id: str | None = None, llm_config: openllm.LLMConfig | None = None, *args: t.Any, **attrs: t.Any
-    ) -> LLM:
+    ) -> LLM[_M, _T]:
         return cls(model_id=model_id, llm_config=llm_config, *args, **attrs)
 
     def __init__(
@@ -625,11 +656,11 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
         return self._bentomodel.tag
 
     @property
-    def model(self) -> LLMModel:
+    def model(self) -> _M:
         """The model to use for this LLM. This shouldn't be set at runtime, rather let OpenLLM handle it."""
         # Run check for GPU
         trust_remote_code = self._llm_attrs.pop("trust_remote_code", self.config.__openllm_trust_remote_code__)
-        self.config.check_if_gpu_is_available(self.__llm_implementation__)
+        self.config.check_if_gpu_is_available(implementation=self.__llm_implementation__)
 
         kwds = {k: v for k, v in self._llm_attrs.items() if not k.startswith("_tokenizer_")}
 
@@ -656,13 +687,11 @@ class LLM(LLMInterface, metaclass=LLMMetaclass):
             from optimum.bettertransformer import BetterTransformer
 
             self.__llm_model__ = BetterTransformer.transform(self.__llm_model__)
-        return self.__llm_model__
+        return t.cast(_M, self.__llm_model__)
 
     @property
-    def tokenizer(self) -> LLMTokenizer:
+    def tokenizer(self) -> _T:
         """The tokenizer to use for this LLM. This shouldn't be set at runtime, rather let OpenLLM handle it."""
-        # Run check for GPU
-        self.config.check_if_gpu_is_available(self.__llm_implementation__)
         if self.__llm_tokenizer__ is None:
             try:
                 self.__llm_tokenizer__ = self._bentomodel.custom_objects["tokenizer"]

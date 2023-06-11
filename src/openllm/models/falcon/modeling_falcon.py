@@ -31,7 +31,7 @@ else:
     torch = openllm.utils.LazyLoader("torch", globals(), "torch")
 
 
-class Falcon(openllm.LLM):
+class Falcon(openllm.LLM["transformers.TextGenerationPipeline", "transformers.PreTrainedTokenizerFast"]):
     __openllm_internal__ = True
 
     @property

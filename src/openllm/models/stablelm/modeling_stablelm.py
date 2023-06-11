@@ -39,7 +39,7 @@ else:
 logger = logging.getLogger(__name__)
 
 
-class StableLM(openllm.LLM):
+class StableLM(openllm.LLM["transformers.GPTNeoXForCausalLM", "transformers.GPTNeoXTokenizerFast"]):
     __openllm_internal__ = True
 
     def llm_post_init(self):

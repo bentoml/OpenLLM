@@ -37,7 +37,7 @@ EOD = "<|endoftext|>"
 FIM_INDICATOR = "<FILL_HERE>"
 
 
-class StarCoder(openllm.LLM):
+class StarCoder(openllm.LLM["transformers.GPTBigCodeForCausalLM", "transformers.GPT2TokenizerFast"]):
     __openllm_internal__ = True
 
     def llm_post_init(self):

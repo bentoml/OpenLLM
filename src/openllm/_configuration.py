@@ -1052,7 +1052,10 @@ class LLMConfig:
             return super().__getattribute__(item)
 
     @classmethod
-    def check_if_gpu_is_available(cls, implementation: t.Literal["pt", "tf", "flax"] = "pt", force: bool = False):
+    def check_if_gpu_is_available(cls, implementation: str | None = None, force: bool = False):
+        if implementation is None:
+            implementation = cls.__openllm_env__.get_framework_env()
+
         try:
             if cls.__openllm_requires_gpu__ or force:
                 if implementation in ("tf", "flax") and len(tf.config.list_physical_devices("GPU")) == 0:
@@ -1084,7 +1087,7 @@ class LLMConfig:
         return orjson.dumps(self.model_dump(**kwargs))
 
     @classmethod
-    def model_construct_env(cls, **attrs: t.Any) -> LLMConfig:
+    def model_construct_env(cls, **attrs: t.Any) -> t.Self:
         """A helpers that respect configuration values that
         sets from environment variables for any given configuration class.
         """

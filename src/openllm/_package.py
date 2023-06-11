@@ -69,7 +69,7 @@ def build_editable(path: str) -> str | None:
     )
 
 
-def construct_python_options(llm: openllm.LLM, llm_fs: FS) -> PythonOptions:
+def construct_python_options(llm: openllm.LLM[t.Any, t.Any], llm_fs: FS) -> PythonOptions:
     # NOTE: add openllm to the default dependencies
     # if users has openllm custom built wheels, it will still respect
     # that since bentoml will always install dependencies from requirements.txt
@@ -130,7 +130,7 @@ def construct_python_options(llm: openllm.LLM, llm_fs: FS) -> PythonOptions:
     return PythonOptions(packages=packages, wheels=wheels, lock_packages=True)
 
 
-def construct_docker_options(llm: openllm.LLM, _: FS) -> DockerOptions:
+def construct_docker_options(llm: openllm.LLM[t.Any, t.Any], _: FS) -> DockerOptions:
     _bentoml_config_options = os.environ.pop("BENTOML_CONFIG_OPTIONS", "")
     _bentoml_config_options += (
         " "

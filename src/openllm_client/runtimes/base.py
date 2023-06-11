@@ -51,7 +51,7 @@ class ClientMixin:
     _port: str
 
     __client__: AnnotatedClient | None = None
-    __llm__: openllm.LLM | None = None
+    __llm__: openllm.LLM[t.Any, t.Any] | None = None
 
     def __init__(self, address: str, timeout: int = 30):
         self._address = address
@@ -79,7 +79,7 @@ class ClientMixin:
         raise NotImplementedError
 
     @property
-    def llm(self) -> openllm.LLM:
+    def llm(self) -> openllm.LLM[t.Any, t.Any]:
         if self.__llm__ is None:
             if self.framework == "flax":
                 self.__llm__ = openllm.AutoFlaxLLM.for_model(self.model_name)

@@ -29,14 +29,6 @@ import click
 P = t.ParamSpec("P")
 O_co = t.TypeVar("O_co", covariant=True)
 
-import transformers
-from bentoml._internal.models.model import ModelSignaturesType as ModelSignaturesType
-
-LLMModel = transformers.PreTrainedModel | transformers.TFPreTrainedModel | transformers.FlaxPreTrainedModel
-LLMTokenizer = (
-    transformers.PreTrainedTokenizer | transformers.PreTrainedTokenizerFast | transformers.PreTrainedTokenizerBase
-)
-
 
 class ClickFunctionWrapper(t.Protocol[P, O_co]):
     __name__: str

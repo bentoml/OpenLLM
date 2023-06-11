@@ -21,7 +21,7 @@ from ..._prompt import default_formatter
 from .configuration_flan_t5 import DEFAULT_PROMPT_TEMPLATE
 
 
-class TFFlanT5(openllm.LLM):
+class TFFlanT5(openllm.LLM["transformers.TFT5ForConditionalGeneration", "transformers.T5TokenizerFast"]):
     __openllm_internal__ = True
 
     def sanitize_parameters(

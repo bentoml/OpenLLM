@@ -32,10 +32,7 @@ else:
 logger = logging.getLogger(__name__)
 
 
-class DollyV2(openllm.LLM):
-    if t.TYPE_CHECKING:
-        config: openllm.DollyV2Config
-
+class DollyV2(openllm.LLM["transformers.Pipeline", "transformers.PreTrainedTokenizer"]):
     __openllm_internal__ = True
 
     @property

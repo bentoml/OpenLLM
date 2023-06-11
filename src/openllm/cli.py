@@ -292,7 +292,11 @@ def parse_serve_args(serve_grpc: bool):
     return decorator
 
 
-class NargsOptions(click.Option):
+_http_server_args = parse_serve_args(False)
+_grpc_server_args = parse_serve_args(True)
+
+
+class NargsOptions(cog.GroupedOption):
     """An option that supports nargs=-1.
     Derived from https://stackoverflow.com/a/48394004/8643197
 
@@ -381,16 +385,15 @@ def start_model_command(
 
     configure_logging()
 
-    ModelEnv = openllm.utils.ModelEnv(model_name)
     llm_config = openllm.AutoConfig.for_model(model_name)
 
     docstring = f"""\
-{ModelEnv.start_docstring}
+{llm_config.__openllm_env__.start_docstring}
 \b
 Available model_id(s): {llm_config.__openllm_model_ids__} [default: {llm_config.__openllm_default_id__}]
 """
     command_attrs: dict[str, t.Any] = {
-        "name": ModelEnv.model_name,
+        "name": llm_config.__openllm_model_name__,
         "context_settings": _context_settings or {},
         "short_help": f"Start a LLMServer for '{model_name}' ('--help' for more details)",
         "help": docstring,
@@ -402,10 +405,10 @@ Available model_id(s): {llm_config.__openllm_model_ids__} [default: {llm_config.
 
     command_attrs["aliases"] = aliases if len(aliases) > 0 else None
 
-    gpu_available = False
+    serve_decorator = _http_server_args if not _serve_grpc else _grpc_server_args
+
     try:
-        llm_config.check_if_gpu_is_available(ModelEnv.get_framework_env())
-        gpu_available = True if llm_config.__openllm_requires_gpu__ else False
+        llm_config.check_if_gpu_is_available()
     except openllm.exceptions.GpuNotAvailableError:
         # NOTE: The model requires GPU, therefore we will return a dummy command
         command_attrs.update(
@@ -419,18 +422,18 @@ Available model_id(s): {llm_config.__openllm_model_ids__} [default: {llm_config.
         @group.command(**command_attrs)
         def noop() -> openllm.LLMConfig:
             _echo("No GPU available, therefore this command is disabled", fg="red")
-            openllm.utils.analytics.track_start_init(llm_config, gpu_available)
+            openllm.utils.analytics.track_start_init(llm_config)
             return llm_config
 
         return noop
 
     @group.command(**command_attrs)
     @llm_config.to_click_options
-    @parse_serve_args(_serve_grpc)
+    @serve_decorator
     @cog.optgroup.group("General LLM Options")
     @cog.optgroup.option("--server-timeout", type=int, default=3600, help="Server timeout in seconds")
-    @model_id_option(cog.optgroup, model_env=ModelEnv)
-    @click.option(
+    @model_id_option(cog.optgroup, model_env=llm_config.__openllm_env__)
+    @cog.optgroup.option(
         "--device",
         type=tuple,
         cls=NargsOptions,
@@ -448,20 +451,12 @@ Available model_id(s): {llm_config.__openllm_model_ids__} [default: {llm_config.
     ) -> openllm.LLMConfig:
         config, server_attrs = llm_config.model_validate_click(**attrs)
 
-        if ModelEnv.get_framework_env() == "flax":
+        if llm_config.__openllm_env__.get_framework_env() == "flax":
             llm = openllm.AutoFlaxLLM.for_model(model_name, model_id=model_id, llm_config=config)
-        elif ModelEnv.get_framework_env() == "tf":
+        elif llm_config.__openllm_env__.get_framework_env() == "tf":
             llm = openllm.AutoTFLLM.for_model(model_name, model_id=model_id, llm_config=config)
         else:
             llm = openllm.AutoLLM.for_model(model_name, model_id=model_id, llm_config=config)
-
-        # NOTE: check for GPU one more time in cases this model doesn't requires GPU but users can still
-        # run this model on GPU
-        try:
-            llm.config.check_if_gpu_is_available(ModelEnv.get_framework_env(), force=True)
-            gpu_available = True
-        except openllm.exceptions.GpuNotAvailableError:
-            gpu_available = False
 
         server_attrs.update({"working_dir": os.path.dirname(__file__)})
         if _serve_grpc:
@@ -494,8 +489,8 @@ Available model_id(s): {llm_config.__openllm_model_ids__} [default: {llm_config.
 
         start_env.update(
             {
-                ModelEnv.framework: ModelEnv.get_framework_env(),
-                ModelEnv.model_config: llm.config.model_dump_json().decode(),
+                llm.config.__openllm_env__.framework: llm.config.__openllm_env__.get_framework_env(),
+                llm.config.__openllm_env__.model_config: llm.config.model_dump_json().decode(),
                 "OPENLLM_MODEL": model_name,
                 "BENTOML_DEBUG": str(get_debug_mode()),
                 "BENTOML_CONFIG_OPTIONS": _bentoml_config_options,
@@ -503,7 +498,7 @@ Available model_id(s): {llm_config.__openllm_model_ids__} [default: {llm_config.
             }
         )
 
-        if llm.config.__openllm_requirements__ is not None:
+        if llm.config.__openllm_requirements__ is not None and len(llm.config.__openllm_requirements__) > 0:
             _echo(
                 f"Make sure to have the following dependencies available: {llm.config.__openllm_requirements__}",
                 fg="yellow",
@@ -517,7 +512,7 @@ Available model_id(s): {llm_config.__openllm_model_ids__} [default: {llm_config.
         server = server_cls("_service.py:svc", **server_attrs)
 
         try:
-            openllm.utils.analytics.track_start_init(llm.config, gpu_available)
+            openllm.utils.analytics.track_start_init(llm.config)
             server.start(env=start_env, text=True, blocking=True if get_debug_mode() else False)
             if not get_debug_mode():
                 assert server.process is not None and server.process.stdout is not None
@@ -815,7 +810,7 @@ def cli_factory() -> click.Group:
 
         if len(bentoml.models.list(tag)) == 0:
             if output == "pretty":
-                _echo(f"{tag} does not exists yet!. Downloading...", nl=True)
+                _echo(f"{tag} does not exists yet!. Downloading...", fg="yellow", nl=True)
             m = model.ensure_pretrained_exists()
             if output == "pretty":
                 _echo(f"Saved model: {m.tag}")
@@ -830,15 +825,16 @@ def cli_factory() -> click.Group:
         else:
             m = bentoml.transformers.get(tag)
             if output == "pretty":
-                _echo(f"{model_name} is already setup for framework '{env}': {str(m.tag)}", nl=True)
+                _echo(f"{model_name} is already setup for framework '{env}': {str(m.tag)}", nl=True, fg="yellow")
             elif output == "json":
                 _echo(
                     orjson.dumps(
                         {"previously_setup": True, "framework": env, "model": str(m.tag)}, option=orjson.OPT_INDENT_2
-                    ).decode()
+                    ).decode(),
+                    fg="white",
                 )
             else:
-                _echo(m.tag)
+                _echo(m.tag, fg="white")
         return m
 
     @cli.command()

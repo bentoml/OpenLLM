@@ -26,7 +26,7 @@ else:
     torch = openllm.utils.LazyLoader("torch", globals(), "torch")
 
 
-class FlanT5(openllm.LLM):
+class FlanT5(openllm.LLM["transformers.T5ForConditionalGeneration", "transformers.T5TokenizerFast"]):
     __openllm_internal__ = True
 
     def llm_post_init(self):

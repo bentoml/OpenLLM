@@ -28,7 +28,7 @@ from .configuration_auto import AutoConfig
 if t.TYPE_CHECKING:
     from ..._llm import LLMRunner
 
-    ConfigModelOrderedDict = OrderedDict[type[openllm.LLMConfig], type[openllm.LLM]]
+    ConfigModelOrderedDict = OrderedDict[type[openllm.LLMConfig], type[openllm.LLM[t.Any, t.Any]]]
 else:
     ConfigModelOrderedDict = OrderedDict
 
@@ -51,7 +51,7 @@ class _BaseAutoLLMClass:
         return_runner_kwargs: t.Literal[False] = ...,
         llm_config: openllm.LLMConfig | None = ...,
         **attrs: t.Any,
-    ) -> openllm.LLM:
+    ) -> openllm.LLM[t.Any, t.Any]:
         ...
 
     @t.overload
@@ -63,7 +63,7 @@ class _BaseAutoLLMClass:
         return_runner_kwargs: t.Literal[True] = ...,
         llm_config: openllm.LLMConfig | None = ...,
         **attrs: t.Any,
-    ) -> tuple[openllm.LLM, dict[str, t.Any]]:
+    ) -> tuple[openllm.LLM[t.Any, t.Any], dict[str, t.Any]]:
         ...
 
     @classmethod
@@ -74,7 +74,7 @@ class _BaseAutoLLMClass:
         return_runner_kwargs: bool = False,
         llm_config: openllm.LLMConfig | None = ...,
         **attrs: t.Any,
-    ) -> openllm.LLM | tuple[openllm.LLM, dict[str, t.Any]]:
+    ) -> openllm.LLM[t.Any, t.Any] | tuple[openllm.LLM[t.Any, t.Any], dict[str, t.Any]]:
         """The lower level API for creating a LLM instance.
 
         ```python
@@ -120,7 +120,7 @@ class _BaseAutoLLMClass:
         return llm.to_runner(**runner_attrs)
 
     @classmethod
-    def register(cls, config_class: type[openllm.LLMConfig], llm_class: type[openllm.LLM]):
+    def register(cls, config_class: type[openllm.LLMConfig], llm_class: type[openllm.LLM[t.Any, t.Any]]):
         """
         Register a new model for this class.
 
@@ -174,7 +174,7 @@ class _LazyAutoMapping(ConfigModelOrderedDict):
         common_keys = set(self._config_mapping.keys()).intersection(self._model_mapping.keys())
         return len(common_keys) + len(self._extra_content)
 
-    def __getitem__(self, key: type[openllm.LLMConfig]) -> type[openllm.LLM]:
+    def __getitem__(self, key: type[openllm.LLMConfig]) -> type[openllm.LLM[t.Any, t.Any]]:
         if key in self._extra_content:
             return self._extra_content[key]
         model_type = self._reverse_config_mapping[key.__name__]
