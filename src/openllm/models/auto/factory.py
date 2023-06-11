@@ -88,7 +88,6 @@ class _BaseAutoLLMClass:
             "max_latency_ms",
             "method_configs",
             "embedded",
-            "scheduling_strategy",
         ]
         to_runner_attrs = {k: v for k, v in attrs.items() if k in runner_kwargs_name}
         if not isinstance(llm_config, openllm.LLMConfig):
