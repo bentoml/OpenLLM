@@ -107,6 +107,9 @@ class StableLM(openllm.LLM):
             "stopping_criteria": StoppingCriteriaList([StopOnTokens()]),
         }
 
+        if torch.cuda.is_available():
+            self.model.cuda()
+
         inputs = t.cast("torch.Tensor", self.tokenizer(prompt, return_tensors="pt")).to(self.device)
         tokens = self.model.generate(**inputs, **generation_kwargs)
         return [self.tokenizer.decode(tokens[0], skip_special_tokens=True)]
