@@ -14,7 +14,9 @@
     <i></i>
 </div>
 
+![Gif showing OpenLLM Intro](/assets/output.gif)
 <br/>
+
 
 ## 📖 Introduction
 
