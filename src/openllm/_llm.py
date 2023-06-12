@@ -19,6 +19,7 @@ import functools
 import logging
 import os
 import re
+import subprocess
 import sys
 import types
 import typing as t
@@ -510,6 +511,10 @@ class LLM(LLMInterface, t.Generic[_M, _T], metaclass=LLMMetaclass):
 
         super().__setattr__(attr, value)
 
+    @property
+    def model_id(self) -> str:
+        return self._model_id
+
     # NOTE: The section below defines a loose contract with langchain's LLM interface.
     @property
     def llm_type(self) -> str:
@@ -620,7 +625,7 @@ class LLM(LLMInterface, t.Generic[_M, _T], metaclass=LLMMetaclass):
             return tag, attrs
         return tag
 
-    def ensure_pretrained_exists(self) -> bentoml.Model:
+    def ensure_model_id_exists(self) -> bentoml.Model:
         trust_remote_code = self._llm_attrs.pop("trust_remote_code", self.config.__openllm_trust_remote_code__)
         tag, kwds = self.make_tag(return_unused_kwargs=True, trust_remote_code=trust_remote_code, **self._llm_attrs)
         try:
@@ -650,11 +655,32 @@ class LLM(LLMInterface, t.Generic[_M, _T], metaclass=LLMMetaclass):
                 trust_remote_code=trust_remote_code,
                 **kwds,
             )
+        finally:
+            if openllm.utils.is_torch_available() and torch.cuda.is_available():
+                torch.cuda.empty_cache()
 
     @property
     def _bentomodel(self) -> bentoml.Model:
         if self.__llm_bentomodel__ is None:
-            self.__llm_bentomodel__ = self.ensure_pretrained_exists()
+            self.__llm_bentomodel__ = bentoml.transformers.get(
+                bentoml.Tag.from_taglike(
+                    subprocess.check_output(
+                        [
+                            sys.executable,
+                            "-m",
+                            "openllm",
+                            "download-models",
+                            self.config.__openllm_start_name__,
+                            "--model-id",
+                            self.model_id,
+                            "--output",
+                            "porcelain",
+                        ]
+                    )
+                    .decode()
+                    .strip()
+                )
+            )
         return self.__llm_bentomodel__
 
     @property

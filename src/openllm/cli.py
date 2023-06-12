@@ -23,6 +23,7 @@ import inspect
 import logging
 import os
 import re
+import subprocess
 import sys
 import time
 import traceback
@@ -184,6 +185,22 @@ Available model_id(s): {llm_config.__openllm_model_ids__} [default: {llm_config.
                 fg="yellow",
             )
 
+        # NOTE: We need to initialize llm here first to check if the model is already downloaded to
+        # avoid deadlock before the subprocess forking.
+        subprocess.check_output(
+            [
+                sys.executable,
+                "-m",
+                "openllm",
+                "download-models",
+                model_name,
+                "--model-id",
+                llm.model_id,
+                "--output",
+                "porcelain",
+            ]
+        )
+
         workers_per_resource = first_not_none(workers, default=llm.config.__openllm_workers_per_resource__)
         server_timeout = first_not_none(server_timeout, default=llm.config.__openllm_timeout__)
 
@@ -230,7 +247,7 @@ Available model_id(s): {llm_config.__openllm_model_ids__} [default: {llm_config.
                 llm.config.__openllm_env__.framework: llm.config.__openllm_env__.get_framework_env(),
                 llm.config.__openllm_env__.model_config: llm.config.model_dump_json().decode(),
                 "OPENLLM_MODEL": model_name,
-                "OPENLLM_MODEL_ID": llm._model_id,
+                "OPENLLM_MODEL_ID": llm.model_id,
                 "BENTOML_DEBUG": str(get_debug_mode()),
                 "BENTOML_CONFIG_OPTIONS": _bentoml_config_options,
                 "BENTOML_HOME": os.environ.get("BENTOML_HOME", BentoMLContainer.bentoml_home.get()),
@@ -868,7 +885,7 @@ def cli_factory() -> click.Group:
         if len(bentoml.models.list(tag)) == 0:
             if output == "pretty":
                 _echo(f"{tag} does not exists yet!. Downloading...", fg="yellow", nl=True)
-            m = model.ensure_pretrained_exists()
+            m = model.ensure_model_id_exists()
             if output == "pretty":
                 _echo(f"Saved model: {m.tag}")
             elif output == "json":

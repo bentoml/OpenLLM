@@ -143,7 +143,7 @@ def construct_docker_options(llm: openllm.LLM[t.Any, t.Any], _: FS, workers_per_
         env={
             llm.config.__openllm_env__.framework: llm.config.__openllm_env__.get_framework_env(),
             "OPENLLM_MODEL": llm.config.__openllm_model_name__,
-            "OPENLLM_MODEL_ID": llm._model_id,
+            "OPENLLM_MODEL_ID": llm.model_id,
             "BENTOML_DEBUG": str(get_debug_mode()),
             "BENTOML_CONFIG_OPTIONS": _bentoml_config_options,
         },
@@ -188,7 +188,7 @@ def build(model_name: str, *, __cli__: bool = False, **attrs: t.Any) -> tuple[be
         else:
             llm = openllm.AutoLLM.for_model(model_name, model_id=model_id, llm_config=llm_config, **attrs)
 
-        os.environ["OPENLLM_MODEL_ID"] = llm._model_id
+        os.environ["OPENLLM_MODEL_ID"] = llm.model_id
 
         labels = dict(llm.identifying_params)
         labels.update({"_type": llm.llm_type, "_framework": to_use_framework})
@@ -199,7 +199,7 @@ def build(model_name: str, *, __cli__: bool = False, **attrs: t.Any) -> tuple[be
             # add service.py definition to this temporary folder
             utils.codegen.write_service(model_name, service_name, llm_fs)
 
-            bento_tag = bentoml.Tag.from_taglike(f"{model_name}-service:{llm.tag.version}")
+            bento_tag = bentoml.Tag.from_taglike(f"{llm.llm_type}-service:{llm.tag.version}")
             try:
                 bento = bentoml.get(bento_tag)
                 if overwrite_existing_bento:

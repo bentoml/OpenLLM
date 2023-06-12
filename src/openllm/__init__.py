@@ -25,14 +25,22 @@ deploy, and monitor any LLMs with ease.
 """
 from __future__ import annotations
 
+import logging as _
 import typing as t
 
 from . import utils as utils
 from .__about__ import __version__ as __version__
 from .exceptions import MissingDependencyError
-import logging as _
 
 if utils.DEBUG:
+    from bentoml._internal.configuration import set_debug_mode, set_quiet_mode
+
+    set_debug_mode(True)
+    set_quiet_mode(False)
+
+    from bentoml._internal.log import configure_logging
+
+    configure_logging()
     _.basicConfig(level=_.NOTSET)
 
 
