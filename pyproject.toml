@@ -26,7 +26,7 @@ classifiers = [
 dependencies = [
     # bentoml[io] includes pydantic, PIL, filetype, pandas and numpy
     # bentoml[grpc,grpc-reflection] include grpcio, grpcio-reflection
-    "bentoml[grpc,grpc-reflection,io]>=1.0.21",
+    "bentoml[grpc,grpc-reflection,io]>=1.0.22",
     "attrs>=23.1.0",
     "cattrs>=23.1.0",
     # transformers[torch] includes torch and transformers
