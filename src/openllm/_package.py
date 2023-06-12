@@ -143,6 +143,7 @@ def construct_docker_options(llm: openllm.LLM[t.Any, t.Any], _: FS, workers_per_
         env={
             llm.config.__openllm_env__.framework: llm.config.__openllm_env__.get_framework_env(),
             "OPENLLM_MODEL": llm.config.__openllm_model_name__,
+            "OPENLLM_MODEL_ID": llm._model_id,
             "BENTOML_DEBUG": str(get_debug_mode()),
             "BENTOML_CONFIG_OPTIONS": _bentoml_config_options,
         },
@@ -165,8 +166,10 @@ def build(model_name: str, *, __cli__: bool = False, **attrs: t.Any) -> tuple[be
 
     overwrite_existing_bento = attrs.pop("_overwrite_existing_bento", False)
     current_model_envvar = os.environ.pop("OPENLLM_MODEL", None)
+    current_model_id_envvar = os.environ.pop("OPENLLM_MODEL_ID", None)
     _previously_built = False
     workers = attrs.pop("_workers", None)
+    model_id: str = attrs.pop("model_id", None)
 
     llm_config = openllm.AutoConfig.for_model(model_name)
 
@@ -176,14 +179,15 @@ def build(model_name: str, *, __cli__: bool = False, **attrs: t.Any) -> tuple[be
     # during build. This is a current limitation of bentoml build where we actually import the service.py into sys.path
     try:
         os.environ["OPENLLM_MODEL"] = inflection.underscore(model_name)
+        os.environ["OPENLLM_MODEL_ID"] = model_id
 
         to_use_framework = llm_config.__openllm_env__.get_framework_env()
         if to_use_framework == "flax":
-            llm = openllm.AutoFlaxLLM.for_model(model_name, llm_config=llm_config, **attrs)
+            llm = openllm.AutoFlaxLLM.for_model(model_name, model_id=model_id, llm_config=llm_config, **attrs)
         elif to_use_framework == "tf":
-            llm = openllm.AutoTFLLM.for_model(model_name, llm_config=llm_config, **attrs)
+            llm = openllm.AutoTFLLM.for_model(model_name, model_id=model_id, llm_config=llm_config, **attrs)
         else:
-            llm = openllm.AutoLLM.for_model(model_name, llm_config=llm_config, **attrs)
+            llm = openllm.AutoLLM.for_model(model_name, model_id=model_id, llm_config=llm_config, **attrs)
 
         labels = dict(llm.identifying_params)
         labels.update({"_type": llm.llm_type, "_framework": to_use_framework})
@@ -226,6 +230,9 @@ def build(model_name: str, *, __cli__: bool = False, **attrs: t.Any) -> tuple[be
         raise
     finally:
         del os.environ["OPENLLM_MODEL"]
+        del os.environ["OPENLLM_MODEL_ID"]
         # restore original OPENLLM_MODEL envvar if set.
         if current_model_envvar is not None:
             os.environ["OPENLLM_MODEL"] = current_model_envvar
+        if current_model_id_envvar is not None:
+            os.environ["OPENLLM_MODEL_ID"] = current_model_id_envvar

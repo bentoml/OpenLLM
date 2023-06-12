@@ -34,21 +34,17 @@ if t.TYPE_CHECKING:
     from fs.base import FS
 
     class ModifyNodeProtocol(t.Protocol):
-        @t.overload
-        def __call__(self, node: Node, model_name: str) -> None:
-            ...
-
-        @t.overload
-        def __call__(self, node: Node, *args: t.Any, **attrs: t.Any) -> None:
+        def __call__(self, node: Node, model_name: str, formatter: type[ModelNameFormatter]) -> None:
             ...
 
 
 logger = logging.getLogger(__name__)
 
 OPENLLM_MODEL_NAME = {"# openllm: model name"}
+OPENLLM_MODEL_ID = {"# openllm: model id"}
 
 
-class ModelFormatter(string.Formatter):
+class ModelNameFormatter(string.Formatter):
     model_keyword: t.LiteralString = "__model_name__"
 
     def __init__(self, model_name: str):
@@ -69,6 +65,10 @@ class ModelFormatter(string.Formatter):
         return leaf.type == token.STRING and self.can_format(leaf.value)
 
 
+class ModelIdFormatter(ModelNameFormatter):
+    model_keyword: t.LiteralString = "__model_id__"
+
+
 def recurse_modify_node(node: Node | Leaf, node_type: int, callables: ModifyNodeProtocol, *args: t.Any) -> Node | None:
     if isinstance(node, Node) and node.type == node_type:
         callables(node, *args)
@@ -76,12 +76,12 @@ def recurse_modify_node(node: Node | Leaf, node_type: int, callables: ModifyNode
         recurse_modify_node(child, node_type, callables, *args)
 
 
-def modify_node_with_comments(node: Node, model_name: str):
+def modify_node_with_comments(node: Node, model_name: str, formatter: type[ModelNameFormatter]):
     """
     Modify the node with comments '# openllm: model name' and replace
     the formatted value with the actual model name.
     """
-    _formatter = ModelFormatter(model_name)
+    _formatter = formatter(model_name)
     for children in node.children:
         if isinstance(children, Leaf) and _formatter.is_correct_leaf(children):
             children.value = _formatter.vformat(children.value)
@@ -118,7 +118,14 @@ def _parse_service_file(src_contents: str, model_name: str, mode: Mode) -> str:
         for comment in list_comments(leaf.prefix, is_endmarker=False):
             if comment.value in OPENLLM_MODEL_NAME:
                 assert leaf.prev_sibling is not None, "'# openllm: model name' line must not be modified."
-                recurse_modify_node(leaf.prev_sibling, syms.arglist, modify_node_with_comments, model_name)
+                recurse_modify_node(
+                    leaf.prev_sibling, syms.arglist, modify_node_with_comments, model_name, ModelNameFormatter
+                )
+            if comment.value in OPENLLM_MODEL_ID:
+                assert leaf.prev_sibling is not None, "'# openllm: model id' line must not be modified."
+                recurse_modify_node(
+                    leaf.prev_sibling, syms.arglist, modify_node_with_comments, model_name, ModelIdFormatter
+                )
 
     # NOTE: The below is the same as black.format_str
     dst_blocks: list[LinesBlock] = []

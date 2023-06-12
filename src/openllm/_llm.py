@@ -472,6 +472,8 @@ class LLM(LLMInterface, t.Generic[_M, _T], metaclass=LLMMetaclass):
                                    However, if `model_id` is a path, this argument is recomended to include.
         """
 
+        load_in_mha = attrs.pop("load_in_mha", False)
+
         if llm_config is not None:
             logger.debug("Using given 'llm_config=(%s)' to initialize LLM", llm_config)
             self.config = llm_config
@@ -493,6 +495,10 @@ class LLM(LLMInterface, t.Generic[_M, _T], metaclass=LLMMetaclass):
 
         if self.__openllm_post_init__:
             self.llm_post_init()
+
+        # finally: we allow users to overwrite the load_in_mha defined by the LLM subclass.
+        if load_in_mha:
+            self.load_in_mha = load_in_mha
 
     def __setattr__(self, attr: str, value: t.Any):
         if attr in _reserved_namespace:

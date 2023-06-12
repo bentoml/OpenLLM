@@ -41,6 +41,8 @@ from bentoml_cli.utils import BentoMLCommandGroup
 
 import openllm
 
+from .utils import DEBUG, LazyType, ModelEnv, analytics, bentoml_cattr, first_not_none
+
 if t.TYPE_CHECKING:
     from ._types import ClickFunctionWrapper, F, P
 
@@ -138,7 +140,7 @@ Available model_id(s): {llm_config.__openllm_model_ids__} [default: {llm_config.
         @group.command(**command_attrs)
         def noop() -> openllm.LLMConfig:
             _echo("No GPU available, therefore this command is disabled", fg="red")
-            openllm.utils.analytics.track_start_init(llm_config)
+            analytics.track_start_init(llm_config)
             return llm_config
 
         return noop
@@ -182,10 +184,8 @@ Available model_id(s): {llm_config.__openllm_model_ids__} [default: {llm_config.
                 fg="yellow",
             )
 
-        workers_per_resource = openllm.utils.first_not_none(
-            workers, default=llm.config.__openllm_workers_per_resource__
-        )
-        server_timeout = openllm.utils.first_not_none(server_timeout, default=llm.config.__openllm_timeout__)
+        workers_per_resource = first_not_none(workers, default=llm.config.__openllm_workers_per_resource__)
+        server_timeout = first_not_none(server_timeout, default=llm.config.__openllm_timeout__)
 
         num_workers = int(1 / workers_per_resource)
         if num_workers > 1:
@@ -230,6 +230,7 @@ Available model_id(s): {llm_config.__openllm_model_ids__} [default: {llm_config.
                 llm.config.__openllm_env__.framework: llm.config.__openllm_env__.get_framework_env(),
                 llm.config.__openllm_env__.model_config: llm.config.model_dump_json().decode(),
                 "OPENLLM_MODEL": model_name,
+                "OPENLLM_MODEL_ID": llm._model_id,
                 "BENTOML_DEBUG": str(get_debug_mode()),
                 "BENTOML_CONFIG_OPTIONS": _bentoml_config_options,
                 "BENTOML_HOME": os.environ.get("BENTOML_HOME", BentoMLContainer.bentoml_home.get()),
@@ -244,7 +245,7 @@ Available model_id(s): {llm_config.__openllm_model_ids__} [default: {llm_config.
         server = server_cls("_service.py:svc", **server_attrs)
 
         try:
-            openllm.utils.analytics.track_start_init(llm.config)
+            analytics.track_start_init(llm.config)
             server.start(env=start_env, text=True, blocking=True)
         except Exception as err:
             _echo(f"Error caught while starting LLM Server:\n{err}", fg="red")
@@ -273,8 +274,6 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
         # The following logics is similar to one of BentoMLCommandGroup
 
         from bentoml._internal.configuration import DEBUG_ENV_VAR, QUIET_ENV_VAR, set_debug_mode
-
-        from .utils import analytics
 
         @click.option("-q", "--quiet", envvar=QUIET_ENV_VAR, is_flag=True, default=False, help="Suppress all output.")
         @click.option(
@@ -309,8 +308,6 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
         """This is not supposed to be used with unprocessed click function.
         This should be used a the last currying from common_params -> usage_tracking -> exception_handling
         """
-        from .utils import analytics
-
         command_name = attrs.get("name", func.__name__)
 
         @functools.wraps(func)
@@ -533,7 +530,7 @@ def parse_device_callback(_: click.Context, params: click.Parameter, value: tupl
     if value is None:
         return value
 
-    if not openllm.utils.LazyType(TupleStrAny).isinstance(value):
+    if not LazyType(TupleStrAny).isinstance(value):
         raise RuntimeError(f"{params} only accept multiple values.")
     parsed: tuple[str, ...] = tuple()
     for v in value:
@@ -553,14 +550,12 @@ def _start(
     **attrs: t.Any,
 ):
     """Python API to start a LLM server."""
-    from . import utils
-
     _serve_grpc = attrs.pop("_serve_grpc", False)
 
-    ModelEnv = utils.ModelEnv(model_name)
+    _ModelEnv = ModelEnv(model_name)
 
     if framework is not None:
-        os.environ[ModelEnv.framework] = framework
+        os.environ[_ModelEnv.framework] = framework
     start_model_command(model_name, t.cast(OpenLLMCommandGroup, cli), _serve_grpc=_serve_grpc)(
         standalone_mode=False, **attrs
     )
@@ -582,7 +577,7 @@ output_option = click.option(
 )
 
 
-def model_id_option(factory: t.Any, model_env: openllm.utils.ModelEnv | None = None):
+def model_id_option(factory: t.Any, model_env: ModelEnv | None = None):
     envvar = None
     if model_env is not None:
         envvar = model_env.model_id
@@ -745,25 +740,27 @@ def cli_factory() -> click.Group:
 
             converted: list[str] = []
             for m in models:
-                try:
-                    model = openllm.AutoLLM.for_model(m)
-                    runtime_impl: tuple[t.Literal["pt", "flax", "tf"], ...] = tuple()
-                    if model.config.__openllm_model_name__ in openllm.MODEL_MAPPING_NAMES:
-                        runtime_impl += ("pt",)
-                    if model.config.__openllm_model_name__ in openllm.MODEL_FLAX_MAPPING_NAMES:
-                        runtime_impl += ("flax",)
-                    if model.config.__openllm_model_name__ in openllm.MODEL_TF_MAPPING_NAMES:
-                        runtime_impl += ("tf",)
-                    json_data[m] = {
-                        "model_id": model.config.__openllm_model_ids__,
-                        "url": model.config.__openllm_url__,
-                        "requires_gpu": model.config.__openllm_requires_gpu__,
-                        "runtime_impl": runtime_impl,
-                        "installation": "pip install openllm" if m not in extras else f'pip install "openllm[{m}]"',
-                    }
-                    converted.extend([convert_transformers_model_name(i) for i in model.config.__openllm_model_ids__])
-                except Exception as err:
-                    failed_initialized.append((m, err))
+                config = openllm.AutoConfig.for_model(m)
+                runtime_impl: tuple[t.Literal["pt", "flax", "tf"], ...] = tuple()
+                if config.__openllm_model_name__ in openllm.MODEL_MAPPING_NAMES:
+                    runtime_impl += ("pt",)
+                if config.__openllm_model_name__ in openllm.MODEL_FLAX_MAPPING_NAMES:
+                    runtime_impl += ("flax",)
+                if config.__openllm_model_name__ in openllm.MODEL_TF_MAPPING_NAMES:
+                    runtime_impl += ("tf",)
+                json_data[m] = {
+                    "model_id": config.__openllm_model_ids__,
+                    "url": config.__openllm_url__,
+                    "requires_gpu": config.__openllm_requires_gpu__,
+                    "runtime_impl": runtime_impl,
+                    "installation": "pip install openllm" if m not in extras else f'pip install "openllm[{m}]"',
+                }
+                converted.extend([convert_transformers_model_name(i) for i in config.__openllm_model_ids__])
+                if DEBUG:
+                    try:
+                        openllm.AutoLLM.for_model(m, llm_config=config)
+                    except Exception as err:
+                        failed_initialized.append((m, err))
 
             ids_in_local_store = None
             if show_available:
@@ -820,7 +817,7 @@ def cli_factory() -> click.Group:
                     )
                 _echo(formatted_table, fg="white")
 
-                if len(failed_initialized) > 0:
+                if DEBUG and len(failed_initialized) > 0:
                     _echo("\nThe following models are supported but failed to initialize:\n")
                     for m, err in failed_initialized:
                         _echo(f"- {m}: ", fg="blue", nl=False)
@@ -835,7 +832,7 @@ def cli_factory() -> click.Group:
                 dumped: dict[str, t.Any] = json_data
                 if show_available:
                     assert ids_in_local_store
-                    dumped["local"] = [openllm.utils.bentoml_cattr.unstructure(i.tag) for i in ids_in_local_store]
+                    dumped["local"] = [bentoml_cattr.unstructure(i.tag) for i in ids_in_local_store]
                 _echo(
                     orjson.dumps(
                         dumped,

@@ -26,7 +26,7 @@ import openllm
 from openllm._configuration import GenerationConfig, ModelSettings, _field_env_key
 from openllm.utils import DEBUG
 
-from .strategies._configuration import make_llm_config, model_settings
+from ._strategies._configuration import make_llm_config, model_settings
 
 logger = logging.getLogger(__name__)
 
