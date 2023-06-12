@@ -43,6 +43,23 @@ jobs:
       - name: Type check
         if: ${{ github.event_name == 'pull_request' }}
         run: git diff --name-only --diff-filter=AM "origin/$GITHUB_BASE_REF" -z -- '*.py{,i}' | xargs -0 --no-run-if-empty hatch run dev:typing
+  tests:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ['3.8', '3.9', '3.10', '3.11']
+    name: Tests (${{ matrix.os }}-${{ matrix.python-version }})
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Setup CI
+        uses: ./.github/actions/setup-repo
+      - name: Run tests
+        run: hatch run test
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true

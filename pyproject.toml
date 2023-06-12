@@ -110,6 +110,8 @@ dependencies = [
     "markdown-it-py",
     # NOTE: Tests strategies with Hypothesis
     "hypothesis",
+    # NOTE: snapshot testing
+    "syrupy",
 ]
 [tool.hatch.envs.default.scripts]
 cov = ["test-cov", "cov-report"]

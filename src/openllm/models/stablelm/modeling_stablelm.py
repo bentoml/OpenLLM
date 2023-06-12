@@ -23,6 +23,9 @@ import openllm
 from ..._prompt import default_formatter
 from .configuration_stablelm import DEFAULT_PROMPT_TEMPLATE, SYSTEM_PROMPT
 
+if t.TYPE_CHECKING:
+    import transformers  # noqa
+
 
 class StopOnTokens(StoppingCriteria):
     def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> bool:

@@ -736,13 +736,17 @@ def cli_factory() -> click.Group:
         else:
             failed_initialized: list[tuple[str, Exception]] = []
 
-            json_data: dict[str, dict[t.Literal["model_id", "description", "runtime_impl"], t.Any]] = {}
+            json_data: dict[
+                str, dict[t.Literal["model_id", "url", "installation", "requires_gpu", "runtime_impl"], t.Any]
+            ] = {}
+
+            # NOTE: Keep a sync list with ./tools/update-optional-dependencies.py
+            extras = ["chatglm", "falcon", "flan-t5", "starcoder"]
 
             converted: list[str] = []
             for m in models:
                 try:
                     model = openllm.AutoLLM.for_model(m)
-                    docs = inspect.cleandoc(model.config.__doc__ or "(No description)")
                     runtime_impl: tuple[t.Literal["pt", "flax", "tf"], ...] = tuple()
                     if model.config.__openllm_model_name__ in openllm.MODEL_MAPPING_NAMES:
                         runtime_impl += ("pt",)
@@ -752,8 +756,10 @@ def cli_factory() -> click.Group:
                         runtime_impl += ("tf",)
                     json_data[m] = {
                         "model_id": model.config.__openllm_model_ids__,
-                        "description": docs,
+                        "url": model.config.__openllm_url__,
+                        "requires_gpu": model.config.__openllm_requires_gpu__,
                         "runtime_impl": runtime_impl,
+                        "installation": "pip install openllm" if m not in extras else f'pip install "openllm[{m}]"',
                     }
                     converted.extend([convert_transformers_model_name(i) for i in model.config.__openllm_model_ids__])
                 except Exception as err:
@@ -768,10 +774,30 @@ def cli_factory() -> click.Group:
 
                 tabulate.PRESERVE_WHITESPACE = True
 
-                data: list[str | tuple[str, str, list[str], tuple[t.Literal["pt", "flax", "tf"], ...]]] = []
+                data: list[
+                    str | tuple[str, str, list[str], str, t.LiteralString, tuple[t.Literal["pt", "flax", "tf"], ...]]
+                ] = []
                 for m, v in json_data.items():
-                    data.extend([(m, v["description"], v["model_id"], v["runtime_impl"])])
-                column_widths = [int(COLUMNS / 6), int(COLUMNS / 2), int(COLUMNS / 3), int(COLUMNS / 9)]
+                    data.extend(
+                        [
+                            (
+                                m,
+                                v["url"],
+                                v["model_id"],
+                                v["installation"],
+                                "✅" if v["requires_gpu"] else "❌",
+                                v["runtime_impl"],
+                            )
+                        ]
+                    )
+                column_widths = [
+                    int(COLUMNS / 6),
+                    int(COLUMNS / 6),
+                    int(COLUMNS / 3),
+                    int(COLUMNS / 6),
+                    int(COLUMNS / 6),
+                    int(COLUMNS / 9),
+                ]
 
                 if len(data) == 0 and len(failed_initialized) > 0:
                     _echo("Exception found while parsing models:\n", fg="yellow")
@@ -783,7 +809,7 @@ def cli_factory() -> click.Group:
                 table = tabulate.tabulate(
                     data,
                     tablefmt="fancy_grid",
-                    headers=["LLM", "Description", "Models Id", "Runtime"],
+                    headers=["LLM", "URL", "Models Id", "Installation", "GPU Only", "Runtime"],
                     maxcolwidths=column_widths,
                 )
 
