@@ -56,6 +56,13 @@ class GrpcClientMixin:
         except KeyError:
             raise RuntimeError("Malformed service endpoint. (Possible malicious)")
 
+    @property
+    def model_id(self) -> str:
+        try:
+            return self._metadata.json.struct_value.fields["model_id"].string_value
+        except KeyError:
+            raise RuntimeError("Malformed service endpoint. (Possible malicious)")
+
     def postprocess(self, result: Response) -> openllm.GenerationOutput:
         from google.protobuf.json_format import MessageToDict
 

@@ -36,6 +36,13 @@ class HTTPClientMixin:
             raise RuntimeError("Malformed service endpoint. (Possible malicious)")
 
     @property
+    def model_id(self) -> str:
+        try:
+            return self._metadata["model_name"]
+        except KeyError:
+            raise RuntimeError("Malformed service endpoint. (Possible malicious)")
+
+    @property
     def framework(self) -> t.Literal["pt", "flax", "tf"]:
         try:
             return self._metadata["framework"]

@@ -197,7 +197,7 @@ def build(model_name: str, *, __cli__: bool = False, **attrs: t.Any) -> tuple[be
 
         with fs.open_fs(f"temp://llm_{llm.config.__openllm_model_name__}") as llm_fs:
             # add service.py definition to this temporary folder
-            utils.codegen.write_service(model_name, service_name, llm_fs)
+            utils.codegen.write_service(model_name, llm.model_id, service_name, llm_fs)
 
             bento_tag = bentoml.Tag.from_taglike(f"{llm.llm_type}-service:{llm.tag.version}")
             try:

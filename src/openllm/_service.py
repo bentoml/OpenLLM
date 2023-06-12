@@ -54,6 +54,7 @@ async def generate_v1(input_dict: dict[str, t.Any]) -> openllm.GenerationOutput:
 @svc.api(input=bentoml.io.Text(), output=bentoml.io.JSON(), route="/v1/metadata")
 def metadata_v1(_: str) -> dict[str, t.Any]:
     return {
+        "model_id": model_id,
         "timeout": llm_config.__openllm_timeout__,
         "model_name": llm_config.__openllm_model_name__,
         "framework": llm_config.__openllm_env__.get_framework_env(),

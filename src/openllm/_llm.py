@@ -19,7 +19,6 @@ import functools
 import logging
 import os
 import re
-import subprocess
 import sys
 import types
 import typing as t
@@ -662,25 +661,7 @@ class LLM(LLMInterface, t.Generic[_M, _T], metaclass=LLMMetaclass):
     @property
     def _bentomodel(self) -> bentoml.Model:
         if self.__llm_bentomodel__ is None:
-            self.__llm_bentomodel__ = bentoml.transformers.get(
-                bentoml.Tag.from_taglike(
-                    subprocess.check_output(
-                        [
-                            sys.executable,
-                            "-m",
-                            "openllm",
-                            "download-models",
-                            self.config.__openllm_start_name__,
-                            "--model-id",
-                            self.model_id,
-                            "--output",
-                            "porcelain",
-                        ]
-                    )
-                    .decode()
-                    .strip()
-                )
-            )
+            self.__llm_bentomodel__ = self.ensure_model_id_exists()
         return self.__llm_bentomodel__
 
     @property

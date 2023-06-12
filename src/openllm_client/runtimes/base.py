@@ -79,6 +79,11 @@ class ClientMixin:
         raise NotImplementedError
 
     @property
+    @abstractmethod
+    def model_id(self) -> str:
+        raise NotImplementedError
+
+    @property
     def llm(self) -> openllm.LLM[t.Any, t.Any]:
         if self.__llm__ is None:
             if self.framework == "flax":

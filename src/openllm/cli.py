@@ -687,6 +687,10 @@ def cli_factory() -> click.Group:
             set_quiet_mode(True)
             configure_server_logging()
 
+        if output == "pretty":
+            if overwrite:
+                _echo(f"Overwriting existing Bento for {model_name}.", fg="yellow")
+
         bento, _previously_built = openllm.build(
             model_name,
             __cli__=True,
