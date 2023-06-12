@@ -11,11 +11,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import os
-
-from hypothesis import HealthCheck, settings
-
-settings.register_profile("CI", settings(suppress_health_check=[HealthCheck.too_slow]), deadline=None)
-
-if "CI" in os.environ:
-    settings.load_profile("CI")

@@ -20,6 +20,9 @@ import openllm
 from ..._prompt import default_formatter
 from .configuration_flan_t5 import DEFAULT_PROMPT_TEMPLATE
 
+if t.TYPE_CHECKING:
+    import transformers  # noqa
+
 
 class TFFlanT5(openllm.LLM["transformers.TFT5ForConditionalGeneration", "transformers.T5TokenizerFast"]):
     __openllm_internal__ = True

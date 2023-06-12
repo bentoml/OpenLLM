@@ -22,6 +22,7 @@ from .configuration_flan_t5 import DEFAULT_PROMPT_TEMPLATE
 
 if t.TYPE_CHECKING:
     import torch
+    import transformers  # noqa
 else:
     torch = openllm.utils.LazyLoader("torch", globals(), "torch")
 
