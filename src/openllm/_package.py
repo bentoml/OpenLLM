@@ -179,7 +179,6 @@ def build(model_name: str, *, __cli__: bool = False, **attrs: t.Any) -> tuple[be
     # during build. This is a current limitation of bentoml build where we actually import the service.py into sys.path
     try:
         os.environ["OPENLLM_MODEL"] = inflection.underscore(model_name)
-        os.environ["OPENLLM_MODEL_ID"] = model_id
 
         to_use_framework = llm_config.__openllm_env__.get_framework_env()
         if to_use_framework == "flax":
@@ -188,6 +187,8 @@ def build(model_name: str, *, __cli__: bool = False, **attrs: t.Any) -> tuple[be
             llm = openllm.AutoTFLLM.for_model(model_name, model_id=model_id, llm_config=llm_config, **attrs)
         else:
             llm = openllm.AutoLLM.for_model(model_name, model_id=model_id, llm_config=llm_config, **attrs)
+
+        os.environ["OPENLLM_MODEL_ID"] = llm._model_id
 
         labels = dict(llm.identifying_params)
         labels.update({"_type": llm.llm_type, "_framework": to_use_framework})
