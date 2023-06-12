@@ -38,12 +38,13 @@ def main() -> int:
         readme = f.readlines()
 
     start_index, stop_index = readme.index(START_COMMENT), readme.index(END_COMMENT)
-    formatted: dict[t.Literal["Model", "CPU", "GPU", "URL", "Installation"], list[str]] = {
+    formatted: dict[t.Literal["Model", "CPU", "GPU", "URL", "Installation", "Model Ids"], list[str]] = {
         "Model": [],
         "URL": [],
         "CPU": [],
         "GPU": [],
         "Installation": [],
+        "Model Ids": [],
     }
     max_install_len_div = 0
     for name, config in openllm.CONFIG_MAPPING.items():
@@ -52,6 +53,7 @@ def main() -> int:
         formatted["URL"].append(config.__openllm_url__)
         formatted["GPU"].append("✅")
         formatted["CPU"].append("✅" if not config.__openllm_requires_gpu__ else "❌")
+        formatted["Model Ids"].append(config.__openllm_model_ids__)
         if dashed in deps:
             instruction = f'```bash\npip install "openllm[{dashed}]"\n```'
         else:
@@ -67,8 +69,8 @@ def main() -> int:
     meta.extend([f"<th>{header}</th>\n" for header in formatted.keys() if header not in ("URL",)])
     meta += ["</tr>\n"]
     # NOTE: rows
-    for name, url, cpu, gpu, installation in t.cast(
-        t.Iterable[t.Tuple[str, str, str, str, str]], zip(*formatted.values())
+    for name, url, cpu, gpu, installation, model_ids in t.cast(
+        t.Iterable[t.Tuple[str, str, str, str, str, str]], zip(*formatted.values())
     ):
         meta += "<tr>\n"
         meta.extend(
@@ -79,6 +81,7 @@ def main() -> int:
                 f"<td>\n\n{installation}\n\n</td>\n",
             ]
         )
+        meta.append("<td>\n\n" + "\n".join(["<li><code>" + lid + "</code></li>" for lid in model_ids]) + "\n\n</td>\n")
         meta += "</tr>\n"
     meta.extend(["</table>\n", "\n"])
 

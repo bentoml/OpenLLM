@@ -103,14 +103,14 @@ openllm query 'Explain to me the difference between "further" and "farther"'
 
 Visit `http://0.0.0.0:3000/docs.json` for OpenLLM's API specification.
 
-Users can also specify different variants of the model to be served, by providing the 
+Users can also specify different variants of the model to be served, by providing the
 `--model-id` argument, e.g.:
 
 ```bash
 openllm start flan-t5 --model-id google/flan-t5-large
 ```
 
-Use the `openllm models` command to see the list of models and their variants supported 
+Use the `openllm models` command to see the list of models and their variants supported
 in OpenLLM.
 
 
@@ -128,6 +128,7 @@ dependencies can be installed with the instructions below:
 <th>CPU</th>
 <th>GPU</th>
 <th>Installation</th>
+<th>Model Ids</th>
 </tr>
 <tr>
 
@@ -139,6 +140,15 @@ dependencies can be installed with the instructions below:
 ```bash
 pip install "openllm[flan-t5]"
 ```
+
+</td>
+<td>
+
+<li><code>google/flan-t5-small</code></li>
+<li><code>google/flan-t5-base</code></li>
+<li><code>google/flan-t5-large</code></li>
+<li><code>google/flan-t5-xl</code></li>
+<li><code>google/flan-t5-xxl</code></li>
 
 </td>
 </tr>
@@ -154,6 +164,13 @@ pip install openllm
 ```
 
 </td>
+<td>
+
+<li><code>databricks/dolly-v2-3b</code></li>
+<li><code>databricks/dolly-v2-7b</code></li>
+<li><code>databricks/dolly-v2-12b</code></li>
+
+</td>
 </tr>
 <tr>
 
@@ -165,6 +182,13 @@ pip install openllm
 ```bash
 pip install "openllm[chatglm]"
 ```
+
+</td>
+<td>
+
+<li><code>thudm/chatglm-6b</code></li>
+<li><code>thudm/chatglm-6b-int8</code></li>
+<li><code>thudm/chatglm-6b-int4</code></li>
 
 </td>
 </tr>
@@ -180,6 +204,12 @@ pip install "openllm[starcoder]"
 ```
 
 </td>
+<td>
+
+<li><code>bigcode/starcoder</code></li>
+<li><code>bigcode/starcoderbase</code></li>
+
+</td>
 </tr>
 <tr>
 
@@ -193,6 +223,14 @@ pip install "openllm[falcon]"
 ```
 
 </td>
+<td>
+
+<li><code>tiiuae/falcon-7b</code></li>
+<li><code>tiiuae/falcon-40b</code></li>
+<li><code>tiiuae/falcon-7b-instruct</code></li>
+<li><code>tiiuae/falcon-40b-instruct</code></li>
+
+</td>
 </tr>
 <tr>
 
@@ -204,6 +242,14 @@ pip install "openllm[falcon]"
 ```bash
 pip install openllm
 ```
+
+</td>
+<td>
+
+<li><code>stabilityai/stablelm-tuned-alpha-3b</code></li>
+<li><code>stabilityai/stablelm-tuned-alpha-7b</code></li>
+<li><code>stabilityai/stablelm-base-alpha-3b</code></li>
+<li><code>stabilityai/stablelm-base-alpha-7b</code></li>
 
 </td>
 </tr>
