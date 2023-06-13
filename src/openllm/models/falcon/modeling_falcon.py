@@ -72,11 +72,18 @@ class Falcon(openllm.LLM["transformers.TextGenerationPipeline", "transformers.Pr
     def load_model(self, tag: bentoml.Tag, *args: t.Any, **attrs: t.Any) -> t.Any:
         torch_dtype = attrs.pop("torch_dtype", torch.bfloat16)
         device_map = attrs.pop("device_map", "auto")
+        trust_remote_code = attrs.pop("trust_remote_code", True)
 
         _ref = bentoml.transformers.get(tag)
-
-        model = bentoml.transformers.load_model(_ref, device_map=device_map, torch_dtype=torch_dtype, **attrs)
-        return transformers.pipeline("text-generation", model=model, tokenizer=_ref.custom_objects["tokenizer"])
+        return transformers.pipeline(
+            "text-generation",
+            model=_ref.path,
+            tokenizer=_ref.custom_objects["tokenizer"],
+            trust_remote_code=trust_remote_code,
+            device_map=device_map,
+            torch_dtype=torch_dtype,
+            **attrs,
+        )
 
     def sanitize_parameters(
         self,

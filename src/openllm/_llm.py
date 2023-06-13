@@ -691,15 +691,15 @@ class LLM(LLMInterface, t.Generic[_M, _T], metaclass=LLMMetaclass):
             else:
                 self.__llm_model__ = self._bentomodel.load_model(*self._llm_args, **kwds)
 
-        if (
-            self.load_in_mha
-            and all(i in self._bentomodel.info.metadata for i in ("_framework", "_pretrained_class"))
-            and self._bentomodel.info.metadata["_framework"] == "torch"
-        ):
-            # BetterTransformer is currently only supported on PyTorch.
-            from optimum.bettertransformer import BetterTransformer
+            if (
+                self.load_in_mha
+                and all(i in self._bentomodel.info.metadata for i in ("_framework", "_pretrained_class"))
+                and self._bentomodel.info.metadata["_framework"] == "torch"
+            ):
+                # BetterTransformer is currently only supported on PyTorch.
+                from optimum.bettertransformer import BetterTransformer
 
-            self.__llm_model__ = BetterTransformer.transform(self.__llm_model__)
+                self.__llm_model__ = BetterTransformer.transform(self.__llm_model__)
         return t.cast(_M, self.__llm_model__)
 
     @property
