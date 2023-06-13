@@ -946,9 +946,9 @@ def cli_factory() -> click.Group:
     @click.option(
         "--endpoint",
         type=click.STRING,
-        help="OpenLLM Server endpoint, i.e: http://0.0.0.0:3000",
+        help="OpenLLM Server endpoint, i.e: http://localhost:3000",
         envvar="OPENLLM_ENDPOINT",
-        default="http://0.0.0.0:3000",
+        default="http://localhost:3000",
     )
     @click.option("--timeout", type=click.INT, default=30, help="Default server timeout", show_default=True)
     @click.option(

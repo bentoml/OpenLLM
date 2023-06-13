@@ -17,7 +17,7 @@ OpenLLM client.
 To start interact with the server, you can do the following:
 
 >>> import openllm
->>> client = openllm.client.HTTPClient("http://0.0.0.0:3000")
+>>> client = openllm.client.HTTPClient("http://localhost:3000")
 >>> client.query("What is the meaning of life?")
 """
 from __future__ import annotations

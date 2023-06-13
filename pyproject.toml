@@ -76,9 +76,9 @@ flan-t5 = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
 starcoder = ["bitsandbytes"]
 
 [project.urls]
-Documentation = "https://github.com/llmsys/openllm#readme"
-Issues = "https://github.com/llmsys/openllm/issues"
-Source = "https://github.com/llmsys/openllm"
+Documentation = "https://github.com/bentoml/openllm#readme"
+Issues = "https://github.com/bentoml/openllm/issues"
+Source = "https://github.com/bentoml/openllm"
 
 [project.scripts]
 openllm = "openllm.cli:cli"
