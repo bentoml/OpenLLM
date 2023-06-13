@@ -45,7 +45,7 @@ if utils.DEBUG:
 
 
 _import_structure = {
-    "_llm": ["LLM", "Runner"],
+    "_llm": ["LLM", "Runner", "LLMRunner"],
     "_configuration": ["LLMConfig"],
     "_package": ["build"],
     "exceptions": [],

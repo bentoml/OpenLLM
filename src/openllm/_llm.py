@@ -51,6 +51,7 @@ if t.TYPE_CHECKING:
             ...
 
 else:
+    LLMRunner = bentoml.Runner
     transformers = LazyLoader("transformers", globals(), "transformers")
     torch = LazyLoader("torch", globals(), "torch")
 
@@ -873,23 +874,34 @@ class LLM(LLMInterface, t.Generic[_M, _T], metaclass=LLMMetaclass):
         return self.postprocess_generate(prompt, generated_result, **postprocess_kwargs)
 
 
-def Runner(start_name: str, **attrs: t.Any) -> LLMRunner:
+@t.overload
+def Runner(model_name: str, *, model_id: str | None = None, **attrs: t.Any) -> LLMRunner:
+    ...
+
+
+@t.overload
+def Runner(
+    model_name: str, *, model_id: str = ..., init_local: t.Literal[True, False] = ..., **attrs: t.Any
+) -> LLMRunner:
+    ...
+
+
+def Runner(model_name: str, **attrs: t.Any) -> LLMRunner:
     """Create a Runner for given LLM. For a list of currently supported LLM, check out 'openllm models'
 
     Args:
-        start_name: Supported model name from 'openllm models'
-        init_local: Whether to init_local this given Runner. This is useful during development. (Default to False)
+        model_name: Supported model name from 'openllm models'
         **attrs: The rest of kwargs will then be passed to the LLM. Refer to the LLM documentation for the kwargs
                 behaviour
     """
     init_local = attrs.pop("init_local", False)
-    ModelEnv = openllm.utils.ModelEnv(start_name)
+    ModelEnv = openllm.utils.ModelEnv(model_name)
     if ModelEnv.get_framework_env() == "flax":
-        runner = openllm.AutoFlaxLLM.create_runner(start_name, **attrs)
+        runner = openllm.AutoFlaxLLM.create_runner(model_name, **attrs)
     elif ModelEnv.get_framework_env() == "tf":
-        runner = openllm.AutoTFLLM.create_runner(start_name, **attrs)
+        runner = openllm.AutoTFLLM.create_runner(model_name, **attrs)
     else:
-        runner = openllm.AutoLLM.create_runner(start_name, **attrs)
+        runner = openllm.AutoLLM.create_runner(model_name, **attrs)
 
     if init_local:
         runner.init_local(quiet=True)
