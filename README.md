@@ -14,7 +14,6 @@
     <i></i>
 </div>
 
-
 ## 📖 Introduction
 
 With OpenLLM, you can run inference with any open-source large-language
@@ -31,15 +30,15 @@ query via WebUI, CLI, our Python/Javascript client, or any HTTP client.
 to easily create your own AI apps by composing LLMs with other models and
 services.
 
-🎯 **Streamline Deployment**: Automatically generate your LLM server Docker Images or
-deploy as serverless endpoint via [☁️ BentoCloud](https://l.bentoml.com/bento-cloud).
+🎯 **Streamline Deployment**: Automatically generate your LLM server Docker
+Images or deploy as serverless endpoint via
+[☁️ BentoCloud](https://l.bentoml.com/bento-cloud).
 
 🤖️ **Bring your own LLM**: Fine-tune any LLM to suit your needs with
 `LLM.tuning()`. (Coming soon)
 
 ![Gif showing OpenLLM Intro](/assets/output.gif)
 <br/>
-
 
 ## 🏃‍ Getting Started
 
@@ -103,16 +102,15 @@ openllm query 'Explain to me the difference between "further" and "farther"'
 
 Visit `http://0.0.0.0:3000/docs.json` for OpenLLM's API specification.
 
-Users can also specify different variants of the model to be served, by providing the
-`--model-id` argument, e.g.:
+Users can also specify different variants of the model to be served, by
+providing the `--model-id` argument, e.g.:
 
 ```bash
 openllm start flan-t5 --model-id google/flan-t5-large
 ```
 
-Use the `openllm models` command to see the list of models and their variants supported
-in OpenLLM.
-
+Use the `openllm models` command to see the list of models and their variants
+supported in OpenLLM.
 
 ## 🧩 Supported Models
 
