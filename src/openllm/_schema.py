@@ -77,3 +77,12 @@ class GenerationOutput:
 
     configuration: t.Dict[str, t.Any]
     """A mapping of configuration values for given system."""
+
+
+@attr.frozen(slots=True)
+class MetadataOutput:
+    model_id: str
+    timeout: int
+    model_name: str
+    framework: str
+    configuration: str

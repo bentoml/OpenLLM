@@ -23,15 +23,78 @@ from enum import Enum
 
 import attr
 import click
+import click_option_group as cog
+import inflection
 import orjson
 from click import ParamType
 
 import openllm
 
 if t.TYPE_CHECKING:
-    from attr import _ValidatorType  # type: ignore
+    from attr import _ValidatorType
+
+    from .._types import ClickFunctionWrapper, F, O_co, P
 
 _T = t.TypeVar("_T")
+
+
+@t.overload
+def attrs_to_options(
+    name: str,
+    field: attr.Attribute[t.Any],
+    model_name: str,
+    typ: type[t.Any] | None = None,
+    suffix_generation: bool = False,
+) -> F[..., F[..., openllm.LLMConfig]]:
+    ...
+
+
+@t.overload
+def attrs_to_options(  # type: ignore (overlapping overload)
+    name: str,
+    field: attr.Attribute[O_co],
+    model_name: str,
+    typ: type[t.Any] | None = None,
+    suffix_generation: bool = False,
+) -> F[..., F[P, O_co]]:
+    ...
+
+
+def attrs_to_options(
+    name: str,
+    field: attr.Attribute[t.Any],
+    model_name: str,
+    typ: type[t.Any] | None = None,
+    suffix_generation: bool = False,
+) -> t.Callable[..., ClickFunctionWrapper[..., t.Any]]:
+    # TODO: support parsing nested attrs class and Union
+    envvar = field.metadata["env"]
+    dasherized = inflection.dasherize(name)
+    underscored = inflection.underscore(name)
+
+    if typ in (None, attr.NOTHING):
+        typ = field.type
+
+    full_option_name = f"--{dasherized}"
+    if field.type is bool:
+        full_option_name += f"/--no-{dasherized}"
+    if suffix_generation:
+        identifier = f"{model_name}_generation_{underscored}"
+    else:
+        identifier = f"{model_name}_{underscored}"
+
+    return cog.optgroup.option(
+        identifier,
+        full_option_name,
+        type=parse_type(typ),
+        required=field.default is attr.NOTHING,
+        default=field.default if field.default not in (attr.NOTHING, None) else None,
+        show_default=True,
+        multiple=allows_multiple(typ),
+        help=field.metadata.get("description", "(No description provided)"),
+        show_envvar=True,
+        envvar=envvar,
+    )
 
 
 def _default_converter(value: t.Any, env: str | None) -> t.Any:
@@ -117,7 +180,7 @@ def Field(
     return attr.field(metadata=metadata, validator=_validator, converter=converter, **attrs)
 
 
-def parse_type(field_type: type) -> ParamType:
+def parse_type(field_type: t.Any) -> ParamType | tuple[ParamType]:
     """Transforms the pydantic field's type into a click-compatible type.
 
     Args:
@@ -305,7 +368,7 @@ def is_container(field_type: type) -> bool:
     return openllm.utils.lenient_issubclass(origin, t.Container)
 
 
-def parse_container_args(field_type: type) -> ParamType | tuple[ParamType]:
+def parse_container_args(field_type: type[t.Any]) -> ParamType | tuple[ParamType]:
     """Parses the arguments inside a container type (lists, tuples and so on).
 
     Args:

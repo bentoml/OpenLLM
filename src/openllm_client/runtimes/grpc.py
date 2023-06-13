@@ -18,6 +18,8 @@ import asyncio
 import logging
 import typing as t
 
+import orjson
+
 import openllm
 
 from .base import BaseAsyncClient, BaseClient
@@ -60,6 +62,14 @@ class GrpcClientMixin:
     def model_id(self) -> str:
         try:
             return self._metadata.json.struct_value.fields["model_id"].string_value
+        except KeyError:
+            raise RuntimeError("Malformed service endpoint. (Possible malicious)")
+
+    @property
+    def configuration(self) -> dict[str, t.Any]:
+        try:
+            v = self._metadata.json.struct_value.fields["configuration"].string_value
+            return orjson.loads(v)
         except KeyError:
             raise RuntimeError("Malformed service endpoint. (Possible malicious)")
 

@@ -23,7 +23,7 @@ import inflection
 import openllm
 
 if t.TYPE_CHECKING:
-    ConfigOrderedDict = OrderedDict[str, openllm.LLMConfig]
+    ConfigOrderedDict = OrderedDict[str, type[openllm.LLMConfig]]
 else:
     ConfigOrderedDict = OrderedDict
 
@@ -86,7 +86,7 @@ class _LazyConfigMapping(ConfigOrderedDict):
         self._extra_content[key] = value
 
 
-CONFIG_MAPPING = _LazyConfigMapping(CONFIG_MAPPING_NAMES)
+CONFIG_MAPPING: dict[str, type[openllm.LLMConfig]] = _LazyConfigMapping(CONFIG_MAPPING_NAMES)
 CONFIG_NAME_ALIASES: dict[str, str] = {"chat_glm": "chatglm", "stable_lm": "stablelm", "star_coder": "starcoder"}
 
 

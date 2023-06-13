@@ -14,10 +14,16 @@
 
 from __future__ import annotations
 
+import typing as t
 from collections import OrderedDict
 
 from .configuration_auto import CONFIG_MAPPING_NAMES
 from .factory import _BaseAutoLLMClass, _LazyAutoMapping
+
+if t.TYPE_CHECKING:
+    import transformers
+
+    import openllm
 
 MODEL_MAPPING_NAMES = OrderedDict(
     [
@@ -30,7 +36,9 @@ MODEL_MAPPING_NAMES = OrderedDict(
     ]
 )
 
-MODEL_MAPPING = _LazyAutoMapping(CONFIG_MAPPING_NAMES, MODEL_MAPPING_NAMES)
+MODEL_MAPPING: dict[
+    type[openllm.LLMConfig], type[openllm.LLM[transformers.PreTrainedModel, transformers.PreTrainedTokenizerFast]]
+] = _LazyAutoMapping(CONFIG_MAPPING_NAMES, MODEL_MAPPING_NAMES)
 
 
 class AutoLLM(_BaseAutoLLMClass):

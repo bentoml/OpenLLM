@@ -18,6 +18,8 @@ import logging
 import typing as t
 from urllib.parse import urlparse
 
+import orjson
+
 import openllm
 
 from .base import BaseAsyncClient, BaseClient
@@ -53,6 +55,13 @@ class HTTPClientMixin:
     def timeout(self) -> int:
         try:
             return self._metadata["timeout"]
+        except KeyError:
+            raise RuntimeError("Malformed service endpoint. (Possible malicious)")
+
+    @property
+    def configuration(self) -> dict[str, t.Any]:
+        try:
+            return orjson.loads(self._metadata["configuration"])
         except KeyError:
             raise RuntimeError("Malformed service endpoint. (Possible malicious)")
 

@@ -57,10 +57,10 @@ import typing as t
 from operator import itemgetter
 
 import attr
+import click_option_group as cog
 import inflection
 import orjson
 from cattr.gen import make_dict_unstructure_fn, override
-from click_option_group import optgroup
 from deepmerge.merger import Merger
 
 import openllm
@@ -121,65 +121,6 @@ config_merger = Merger(
     # override conflicting types
     type_conflict_strategies=["override"],
 )
-
-
-@t.overload
-def attrs_to_options(
-    name: str,
-    field: attr.Attribute[t.Any],
-    model_name: str,
-    typ: type[t.Any] | None = None,
-    suffix_generation: bool = False,
-) -> F[..., F[..., openllm.LLMConfig]]:
-    ...
-
-
-@t.overload
-def attrs_to_options(  # type: ignore (overlapping overload)
-    name: str,
-    field: attr.Attribute[O_co],
-    model_name: str,
-    typ: type[t.Any] | None = None,
-    suffix_generation: bool = False,
-) -> F[..., F[P, O_co]]:
-    ...
-
-
-def attrs_to_options(
-    name: str,
-    field: attr.Attribute[t.Any],
-    model_name: str,
-    typ: type[t.Any] | None = None,
-    suffix_generation: bool = False,
-) -> t.Callable[..., ClickFunctionWrapper[..., t.Any]]:
-    # TODO: support parsing nested attrs class and Union
-    envvar = field.metadata["env"]
-    dasherized = inflection.dasherize(name)
-    underscored = inflection.underscore(name)
-
-    if typ in (None, attr.NOTHING):
-        typ = field.type
-
-    full_option_name = f"--{dasherized}"
-    if field.type is bool:
-        full_option_name += f"/--no-{dasherized}"
-    if suffix_generation:
-        identifier = f"{model_name}_generation_{underscored}"
-    else:
-        identifier = f"{model_name}_{underscored}"
-
-    return optgroup.option(
-        identifier,
-        full_option_name,
-        type=dantic.parse_type(typ),
-        required=field.default is attr.NOTHING,
-        default=field.default if field.default not in (attr.NOTHING, None) else None,
-        show_default=True,
-        multiple=dantic.allows_multiple(typ),
-        help=field.metadata.get("description", "(No description provided)"),
-        show_envvar=True,
-        envvar=envvar,
-    )
 
 
 @attr.frozen(slots=True)
@@ -1215,8 +1156,8 @@ class LLMConfig:
             if t.get_origin(ty) is t.Union:
                 # NOTE: Union type is currently not yet supported, we probably just need to use environment instead.
                 continue
-            f = attrs_to_options(name, field, cls.__openllm_model_name__, typ=ty, suffix_generation=True)(f)
-        f = optgroup.group(f"{cls.__openllm_generation_class__.__name__} generation options")(f)
+            f = dantic.attrs_to_options(name, field, cls.__openllm_model_name__, typ=ty, suffix_generation=True)(f)
+        f = cog.optgroup.group(f"{cls.__openllm_generation_class__.__name__} generation options")(f)
 
         if len(cls.__openllm_accepted_keys__.difference(set(attr.fields_dict(cls.__openllm_generation_class__)))) == 0:
             # NOTE: in this case, the function is already a ClickFunctionWrapper
@@ -1230,9 +1171,9 @@ class LLMConfig:
             if t.get_origin(ty) is t.Union or name == "generation_config":
                 # NOTE: Union type is currently not yet supported, we probably just need to use environment instead.
                 continue
-            f = attrs_to_options(name, field, cls.__openllm_model_name__, typ=ty)(f)
+            f = dantic.attrs_to_options(name, field, cls.__openllm_model_name__, typ=ty)(f)
 
-        return optgroup.group(f"{cls.__name__} options")(f)
+        return cog.optgroup.group(f"{cls.__name__} options")(f)
 
 
 bentoml_cattr.register_unstructure_hook_factory(

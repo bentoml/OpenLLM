@@ -49,7 +49,7 @@ _import_structure = {
     "_configuration": ["LLMConfig"],
     "_package": ["build"],
     "exceptions": [],
-    "_schema": ["GenerationInput", "GenerationOutput"],
+    "_schema": ["GenerationInput", "GenerationOutput", "MetadataOutput"],
     "utils": [],
     "models": [],
     "client": [],
@@ -149,6 +149,7 @@ if t.TYPE_CHECKING:
     from ._package import build as build
     from ._schema import GenerationInput as GenerationInput
     from ._schema import GenerationOutput as GenerationOutput
+    from ._schema import MetadataOutput as MetadataOutput
     from .cli import start as start
     from .cli import start_grpc as start_grpc
     from .models.auto import CONFIG_MAPPING as CONFIG_MAPPING
