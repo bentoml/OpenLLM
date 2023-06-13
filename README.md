@@ -142,11 +142,11 @@ pip install "openllm[flan-t5]"
 </td>
 <td>
 
-<li><code>google/flan-t5-small</code></li>
-<li><code>google/flan-t5-base</code></li>
-<li><code>google/flan-t5-large</code></li>
-<li><code>google/flan-t5-xl</code></li>
-<li><code>google/flan-t5-xxl</code></li>
+<ul><li><a href=https://huggingface.co/google/flan-t5-small><code>google/flan-t5-small</code></a></li>
+<li><a href=https://huggingface.co/google/flan-t5-base><code>google/flan-t5-base</code></a></li>
+<li><a href=https://huggingface.co/google/flan-t5-large><code>google/flan-t5-large</code></a></li>
+<li><a href=https://huggingface.co/google/flan-t5-xl><code>google/flan-t5-xl</code></a></li>
+<li><a href=https://huggingface.co/google/flan-t5-xxl><code>google/flan-t5-xxl</code></a></li></ul>
 
 </td>
 </tr>
@@ -164,9 +164,9 @@ pip install openllm
 </td>
 <td>
 
-<li><code>databricks/dolly-v2-3b</code></li>
-<li><code>databricks/dolly-v2-7b</code></li>
-<li><code>databricks/dolly-v2-12b</code></li>
+<ul><li><a href=https://huggingface.co/databricks/dolly-v2-3b><code>databricks/dolly-v2-3b</code></a></li>
+<li><a href=https://huggingface.co/databricks/dolly-v2-7b><code>databricks/dolly-v2-7b</code></a></li>
+<li><a href=https://huggingface.co/databricks/dolly-v2-12b><code>databricks/dolly-v2-12b</code></a></li></ul>
 
 </td>
 </tr>
@@ -184,9 +184,9 @@ pip install "openllm[chatglm]"
 </td>
 <td>
 
-<li><code>thudm/chatglm-6b</code></li>
-<li><code>thudm/chatglm-6b-int8</code></li>
-<li><code>thudm/chatglm-6b-int4</code></li>
+<ul><li><a href=https://huggingface.co/thudm/chatglm-6b><code>thudm/chatglm-6b</code></a></li>
+<li><a href=https://huggingface.co/thudm/chatglm-6b-int8><code>thudm/chatglm-6b-int8</code></a></li>
+<li><a href=https://huggingface.co/thudm/chatglm-6b-int4><code>thudm/chatglm-6b-int4</code></a></li></ul>
 
 </td>
 </tr>
@@ -204,8 +204,8 @@ pip install "openllm[starcoder]"
 </td>
 <td>
 
-<li><code>bigcode/starcoder</code></li>
-<li><code>bigcode/starcoderbase</code></li>
+<ul><li><a href=https://huggingface.co/bigcode/starcoder><code>bigcode/starcoder</code></a></li>
+<li><a href=https://huggingface.co/bigcode/starcoderbase><code>bigcode/starcoderbase</code></a></li></ul>
 
 </td>
 </tr>
@@ -223,10 +223,10 @@ pip install "openllm[falcon]"
 </td>
 <td>
 
-<li><code>tiiuae/falcon-7b</code></li>
-<li><code>tiiuae/falcon-40b</code></li>
-<li><code>tiiuae/falcon-7b-instruct</code></li>
-<li><code>tiiuae/falcon-40b-instruct</code></li>
+<ul><li><a href=https://huggingface.co/tiiuae/falcon-7b><code>tiiuae/falcon-7b</code></a></li>
+<li><a href=https://huggingface.co/tiiuae/falcon-40b><code>tiiuae/falcon-40b</code></a></li>
+<li><a href=https://huggingface.co/tiiuae/falcon-7b-instruct><code>tiiuae/falcon-7b-instruct</code></a></li>
+<li><a href=https://huggingface.co/tiiuae/falcon-40b-instruct><code>tiiuae/falcon-40b-instruct</code></a></li></ul>
 
 </td>
 </tr>
@@ -244,10 +244,10 @@ pip install openllm
 </td>
 <td>
 
-<li><code>stabilityai/stablelm-tuned-alpha-3b</code></li>
-<li><code>stabilityai/stablelm-tuned-alpha-7b</code></li>
-<li><code>stabilityai/stablelm-base-alpha-3b</code></li>
-<li><code>stabilityai/stablelm-base-alpha-7b</code></li>
+<ul><li><a href=https://huggingface.co/stabilityai/stablelm-tuned-alpha-3b><code>stabilityai/stablelm-tuned-alpha-3b</code></a></li>
+<li><a href=https://huggingface.co/stabilityai/stablelm-tuned-alpha-7b><code>stabilityai/stablelm-tuned-alpha-7b</code></a></li>
+<li><a href=https://huggingface.co/stabilityai/stablelm-base-alpha-3b><code>stabilityai/stablelm-base-alpha-3b</code></a></li>
+<li><a href=https://huggingface.co/stabilityai/stablelm-base-alpha-7b><code>stabilityai/stablelm-base-alpha-7b</code></a></li></ul>
 
 </td>
 </tr>

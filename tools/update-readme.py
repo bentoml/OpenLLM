@@ -38,7 +38,7 @@ def main() -> int:
         readme = f.readlines()
 
     start_index, stop_index = readme.index(START_COMMENT), readme.index(END_COMMENT)
-    formatted: dict[t.Literal["Model", "CPU", "GPU", "URL", "Installation", "Model Ids"], list[str]] = {
+    formatted: dict[t.Literal["Model", "CPU", "GPU", "URL", "Installation", "Model Ids"], list[str | list[str]]] = {
         "Model": [],
         "URL": [],
         "CPU": [],
@@ -70,7 +70,7 @@ def main() -> int:
     meta += ["</tr>\n"]
     # NOTE: rows
     for name, url, cpu, gpu, installation, model_ids in t.cast(
-        t.Iterable[t.Tuple[str, str, str, str, str, str]], zip(*formatted.values())
+        t.Iterable[t.Tuple[str, str, str, str, str, t.List[str]]], zip(*formatted.values())
     ):
         meta += "<tr>\n"
         meta.extend(
@@ -81,7 +81,10 @@ def main() -> int:
                 f"<td>\n\n{installation}\n\n</td>\n",
             ]
         )
-        meta.append("<td>\n\n" + "\n".join(["<li><code>" + lid + "</code></li>" for lid in model_ids]) + "\n\n</td>\n")
+        format_with_links: list[str] = []
+        for lid in model_ids:
+            format_with_links.append(f"<li><a href=https://huggingface.co/{lid}><code>{lid}</code></a></li>")
+        meta.append("<td>\n\n<ul>" + "\n".join(format_with_links) + "</ul>\n\n</td>\n")
         meta += "</tr>\n"
     meta.extend(["</table>\n", "\n"])
 
