@@ -79,8 +79,8 @@ server:
 openllm start dolly-v2
 ```
 
-Following this, a Web UI will be accessible at http://0.0.0.0:3000 where you can
-experiment with the endpoints and sample input prompts.
+Following this, a Web UI will be accessible at http://localhost:3000 where you
+can experiment with the endpoints and sample input prompts.
 
 OpenLLM provides a built-in Python client, allowing you to interact with the
 model. In a different terminal window or a Jupyter notebook, create a client to
@@ -100,7 +100,7 @@ export OPENLLM_ENDPOINT=http://localhost:3000
 openllm query 'Explain to me the difference between "further" and "farther"'
 ```
 
-Visit `http://0.0.0.0:3000/docs.json` for OpenLLM's API specification.
+Visit `http://localhost:3000/docs.json` for OpenLLM's API specification.
 
 Users can also specify different variants of the model to be served, by
 providing the `--model-id` argument, e.g.:
