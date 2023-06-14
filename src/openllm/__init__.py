@@ -145,6 +145,7 @@ if t.TYPE_CHECKING:
     # Specific types import
     from ._configuration import LLMConfig as LLMConfig
     from ._llm import LLM as LLM
+    from ._llm import LLMRunner as LLMRunner
     from ._llm import Runner as Runner
     from ._package import build as build
     from ._schema import GenerationInput as GenerationInput
