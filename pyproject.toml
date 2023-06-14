@@ -100,8 +100,6 @@ dependencies = [
     "pytest-mock",
     "pytest-randomly",
     "pytest-rerunfailures",
-    # NOTE: black for generating service file.
-    "black[jupyter]==23.3.0",
     # NOTE: To run all hooks
     "pre-commit",
     # NOTE: Using under ./tools/update-optional-dependencies.py
@@ -124,7 +122,13 @@ test-cov = "coverage run -m pytest {args:tests}"
 python = ["3.8", "3.9", "3.10", "3.11"]
 
 [tool.hatch.envs.dev]
-dependencies = ["ruff", "pyright", "hatch"]
+dependencies = [
+    "ruff",
+    "pyright",
+    "hatch",
+    # NOTE: black for generating service file.
+    "black[jupyter]==23.3.0",
+]
 detached = true
 
 [tool.hatch.envs.dev.scripts]
