@@ -45,12 +45,13 @@ class StarCoder(openllm.LLM["transformers.GPTBigCodeForCausalLM", "transformers.
 
     @property
     def import_kwargs(self):
-        return {
-            "_tokenizer_padding_side": "left",
+        model_kwds = {
             "device_map": "auto" if torch.cuda.is_available() and torch.cuda.device_count() > 1 else None,
             "load_in_8bit": True if torch.cuda.device_count() > 1 else False,
             "torch_dtype": torch.float16,
         }
+        tokenizer_kwds = {"padding_side": "left"}
+        return model_kwds, tokenizer_kwds
 
     def import_model(
         self,

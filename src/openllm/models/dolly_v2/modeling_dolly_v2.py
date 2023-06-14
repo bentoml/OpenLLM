@@ -37,11 +37,12 @@ class DollyV2(openllm.LLM["transformers.Pipeline", "transformers.PreTrainedToken
 
     @property
     def import_kwargs(self):
-        return {
+        model_kwds = {
             "device_map": "auto" if torch.cuda.is_available() and torch.cuda.device_count() > 1 else None,
             "torch_dtype": torch.bfloat16,
-            "_tokenizer_padding_side": "left",
         }
+        tokenizer_kwds = {"padding_side": "left"}
+        return model_kwds, tokenizer_kwds
 
     def llm_post_init(self):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

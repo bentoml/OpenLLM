@@ -51,11 +51,13 @@ class StableLM(openllm.LLM["transformers.GPTNeoXForCausalLM", "transformers.GPTN
 
     @property
     def import_kwargs(self):
-        return {
+        model_kwds = {
             "torch_dtype": torch.float16 if torch.cuda.is_available() else torch.float32,
             "load_in_8bit": False,
             "device_map": "auto" if torch.cuda.is_available() and torch.cuda.device_count() > 1 else None,
         }
+        tokenizer_kwds: dict[str, t.Any] = {}
+        return model_kwds, tokenizer_kwds
 
     def sanitize_parameters(
         self,

@@ -36,10 +36,12 @@ class Falcon(openllm.LLM["transformers.TextGenerationPipeline", "transformers.Pr
 
     @property
     def import_kwargs(self):
-        return {
+        model_kwds = {
             "torch_dtype": torch.bfloat16,
             "device_map": "auto" if torch.cuda.is_available() and torch.cuda.device_count() > 1 else None,
         }
+        tokenizer_kwds: dict[str, t.Any] = {}
+        return model_kwds, tokenizer_kwds
 
     def import_model(
         self, model_id: str, tag: bentoml.Tag, *model_args: t.Any, tokenizer_kwds: dict[str, t.Any], **attrs: t.Any

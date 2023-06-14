@@ -884,11 +884,9 @@ def cli_factory() -> click.Group:
         else:
             model = openllm.AutoLLM.for_model(model_name, model_id=model_id, llm_config=config)
 
-        tag = model.make_tag(trust_remote_code=config.__openllm_trust_remote_code__)
-
-        if len(bentoml.models.list(tag)) == 0:
+        if len(bentoml.models.list(model.tag)) == 0:
             if output == "pretty":
-                _echo(f"{tag} does not exists yet!. Downloading...", fg="yellow", nl=True)
+                _echo(f"{model.tag} does not exists yet!. Downloading...", fg="yellow", nl=True)
             m = model.ensure_model_id_exists()
             if output == "pretty":
                 _echo(f"Saved model: {m.tag}")
@@ -899,9 +897,9 @@ def cli_factory() -> click.Group:
                     ).decode()
                 )
             else:
-                _echo(tag)
+                _echo(model.tag)
         else:
-            m = bentoml.transformers.get(tag)
+            m = bentoml.transformers.get(model.tag)
             if output == "pretty":
                 _echo(f"{model_name} is already setup for framework '{env}': {str(m.tag)}", nl=True, fg="yellow")
             elif output == "json":
