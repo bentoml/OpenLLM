@@ -36,8 +36,6 @@ dependencies = [
     # Super fast JSON serialization
     "orjson",
     "inflection",
-    # black for generating service file.
-    "black[jupyter]==23.3.0",
     # tabulate for CLI with CJK support
     # >=0.9.0 for some bug fixes
     "tabulate[widechars]>=0.9.0",
@@ -102,6 +100,8 @@ dependencies = [
     "pytest-mock",
     "pytest-randomly",
     "pytest-rerunfailures",
+    # NOTE: black for generating service file.
+    "black[jupyter]==23.3.0",
     # NOTE: To run all hooks
     "pre-commit",
     # NOTE: Using under ./tools/update-optional-dependencies.py
