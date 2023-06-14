@@ -162,11 +162,11 @@ Available model_id(s): {llm_config.__openllm_model_ids__} [default: {llm_config.
         help=f"Assign GPU devices (if available) for {model_name}.",
         show_envvar=True,
     )
-    @workers_option(cog.optgroup)
+    @workers_per_resource_option(cog.optgroup)
     def model_start(
         server_timeout: int | None,
         model_id: str | None,
-        workers: float | None,
+        workers_per_resource: float | None,
         device: tuple[str, ...] | None,
         **attrs: t.Any,
     ) -> openllm.LLMConfig:
@@ -201,7 +201,7 @@ Available model_id(s): {llm_config.__openllm_model_ids__} [default: {llm_config.
             ]
         )
 
-        workers_per_resource = first_not_none(workers, default=llm.config.__openllm_workers_per_resource__)
+        workers_per_resource = first_not_none(workers_per_resource, default=llm.config.__openllm_workers_per_resource__)
         server_timeout = first_not_none(server_timeout, default=llm.config.__openllm_timeout__)
 
         num_workers = int(1 / workers_per_resource)
@@ -543,9 +543,29 @@ class NargsOptions(cog.GroupedOption):
         return retval
 
 
-def parse_device_callback(_: click.Context, params: click.Parameter, value: tuple[str, ...] | None) -> t.Any:
+def parse_device_callback(
+    _: click.Context, params: click.Parameter, value: tuple[str, ...] | t.Literal["all"] | None
+) -> t.Any:
     if value is None:
         return value
+
+    # NOTE: --device all is a special case
+    if isinstance(value, str):
+        if value != "all":
+            raise RuntimeError(f"{params} parameter only accept 'all' as a string value.")
+        import pynvml  # transitive dependencies of BentoML
+
+        try:
+            pynvml.nvmlInit()
+            return tuple(range(pynvml.nvmlDeviceGetCount()))
+        except (pynvml.nvml.NVMLError, OSError):
+            logger.debug("GPU not detected. Unable to initialize pynvml lib.")
+            return ()
+        finally:
+            try:
+                pynvml.nvmlShutdown()
+            except Exception:
+                pass
 
     if not LazyType(TupleStrAny).isinstance(value):
         raise RuntimeError(f"{params} only accept multiple values.")
@@ -608,7 +628,7 @@ def model_id_option(factory: t.Any, model_env: ModelEnv | None = None):
     )
 
 
-def workers_option(factory: t.Any, build: bool = False):
+def workers_per_resource_option(factory: t.Any, build: bool = False):
     help_str = """Number of workers per resource assigned.
     See https://docs.bentoml.org/en/latest/guides/scheduling.html#resource-scheduling-strategy
     for more information. By default, this is set to 1."""
@@ -618,7 +638,7 @@ def workers_option(factory: t.Any, build: bool = False):
     be provisioned in Kubernetes as well as in standalone container. This will
     ensure it has the same effect with 'openllm start --workers ...'"""
     return factory.option(
-        "--workers",
+        "--workers-per-resource",
         default=None,
         type=click.FLOAT,
         help=help_str,
@@ -673,8 +693,14 @@ def cli_factory() -> click.Group:
     @model_id_option(click)
     @output_option
     @click.option("--overwrite", is_flag=True, help="Overwrite existing Bento for given LLM if it already exists.")
-    @workers_option(click, build=True)
-    def build(model_name: str, model_id: str | None, overwrite: bool, output: OutputLiteral, workers: float | None):
+    @workers_per_resource_option(click, build=True)
+    def build(
+        model_name: str,
+        model_id: str | None,
+        overwrite: bool,
+        output: OutputLiteral,
+        workers_per_resource: float | None,
+    ):
         """Package a given models into a Bento.
 
         $ openllm build flan-t5
@@ -695,7 +721,7 @@ def cli_factory() -> click.Group:
             model_name,
             __cli__=True,
             model_id=model_id,
-            _workers=workers,
+            _workers_per_resource=workers_per_resource,
             _overwrite_existing_bento=overwrite,
         )
 

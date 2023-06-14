@@ -168,7 +168,7 @@ def build(model_name: str, *, __cli__: bool = False, **attrs: t.Any) -> tuple[be
     current_model_envvar = os.environ.pop("OPENLLM_MODEL", None)
     current_model_id_envvar = os.environ.pop("OPENLLM_MODEL_ID", None)
     _previously_built = False
-    workers = attrs.pop("_workers", None)
+    workers_per_resource = attrs.pop("_workers_per_resource", None)
     model_id: str = attrs.pop("model_id", None)
 
     llm_config = openllm.AutoConfig.for_model(model_name)
@@ -193,7 +193,9 @@ def build(model_name: str, *, __cli__: bool = False, **attrs: t.Any) -> tuple[be
         labels = dict(llm.identifying_params)
         labels.update({"_type": llm.llm_type, "_framework": to_use_framework})
         service_name = f"generated_{llm.config.__openllm_model_name__}_service.py"
-        workers_per_resource = utils.first_not_none(workers, default=llm.config.__openllm_workers_per_resource__)
+        workers_per_resource = utils.first_not_none(
+            workers_per_resource, default=llm.config.__openllm_workers_per_resource__
+        )
 
         with fs.open_fs(f"temp://llm_{llm.config.__openllm_model_name__}") as llm_fs:
             # add service.py definition to this temporary folder
