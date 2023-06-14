@@ -1,8 +1,27 @@
 import bentoml
-from bentoml.io import Text
+from bentoml.io import Text, JSON
+from pydantic import BaseModel
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 from langchain.llms import OpenLLM
+
+
+class Query(BaseModel):
+    industry: str
+    product_name: str
+    keywords: list[str]
+
+SAMPLE_INPUT = Query(
+    industry="SAAS",
+    product_name="BentoML",
+    keywords=[
+        "open source",
+        "developer tool",
+        "AI application platform",
+        "serverless",
+        "cost-efficient"
+    ]
+    )
 
 llm = OpenLLM(
     model_name='dolly-v2',
@@ -10,13 +29,32 @@ llm = OpenLLM(
     embedded=False,
 )
 prompt = PromptTemplate(
-    input_variables=["company", "product"],
-    template="What is a good name for {company} that makes {product}?",
+    input_variables=["industry", "product_name", "keywords"],
+    template="""
+You are a Facebook Ads Copywriter with a strong background in persuasive
+writing and marketing. You craft compelling copy that appeals to the target
+audience's emotions and needs, peruading them to take action or make a 
+purchase. You are given the following context to create a facebook ad copy.
+It should provide an attention-grabbing headline optimizied for capivating
+leads and perusaive calls to action.
+
+Industry: {industry}
+Product: {product_name}
+Keywords: {keywords}
+Facebook Ads copy:
+    """,
 )
 chain = LLMChain(llm=llm, prompt=prompt)
 
-svc = bentoml.Service("langchain-openllm", runners=[llm.runner])
+svc = bentoml.Service("fb-ads-copy", runners=[llm.runner])
 
-@svc.api(input=Text.from_sample(SAMPLE_INPUT), output=Text())
-def chat(input_text: str):
-    return agent.run(input_text)
+@svc.api(
+    input=JSON.from_sample(sample=SAMPLE_INPUT),
+    output=Text()
+)
+def generate(query: Query):
+    return chain.run({
+        'industry': query.industry,
+        'product_name': query.product_name,
+        'keywords': ", ".join(query.keywords)
+    })
