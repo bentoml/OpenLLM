@@ -630,7 +630,7 @@ class LLM(LLMInterface, t.Generic[_M, _T], metaclass=LLMMetaclass):
         tag, kwds = self.make_tag(return_unused_kwargs=True, trust_remote_code=trust_remote_code, **self._llm_attrs)
         try:
             return bentoml.transformers.get(tag)
-        except bentoml.exceptions.BentoMLException:
+        except bentoml.exceptions.NotFound:
             logger.info("'%s' with tag (%s) not found, importing from HuggingFace Hub.", self.__class__.__name__, tag)
             tokenizer_kwds = {k[len("_tokenizer_") :]: v for k, v in kwds.items() if k.startswith("_tokenizer_")}
             kwds = {k: v for k, v in kwds.items() if not k.startswith("_tokenizer_")}
