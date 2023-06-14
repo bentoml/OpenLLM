@@ -14,30 +14,28 @@
 
 from __future__ import annotations
 
-import typing as t
+import pytest
 
-from ..utils import DummyMetaclass, require_backends
-
-
-class FlaxFlanT5(metaclass=DummyMetaclass):
-    _backends = ["flax"]
-
-    def __init__(self, *args: t.Any, **attrs: t.Any):
-        require_backends(self, ["flax"])
+import openllm
 
 
-class FlaxOPT(metaclass=DummyMetaclass):
-    _backends = ["flax"]
-
-    def __init__(self, *args: t.Any, **attrs: t.Any):
-        require_backends(self, ["flax"])
+@pytest.fixture
+def qa_prompt() -> str:
+    return "Answer the following yes/no question by reasoning step-by-step. What is the weather in SF?"
 
 
-class AutoFlaxLLM(metaclass=DummyMetaclass):
-    _backends = ["flax"]
-
-    def __init__(self, *args: t.Any, **attrs: t.Any):
-        require_backends(self, ["flax"])
+@pytest.fixture
+def opt_id() -> str:
+    return "facebook/opt-125m"
 
 
-MODEL_FLAX_MAPPING = None
+def test_small_opt(qa_prompt: str, opt_id: str):
+    llm = openllm.AutoLLM.for_model("opt", model_id=opt_id)
+    generate = llm(qa_prompt)
+    assert generate
+
+
+def test_small_runner_opt(qa_prompt: str, opt_id: str):
+    llm = openllm.Runner("opt", model_id=opt_id, init_local=True)
+    generate = llm(qa_prompt)
+    assert generate

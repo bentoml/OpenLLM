@@ -36,6 +36,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("starcoder", "StarCoderConfig"),
         ("falcon", "FalconConfig"),
         ("stablelm", "StableLMConfig"),
+        ("opt", "OPTConfig"),
     ]
 )
 

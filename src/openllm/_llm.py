@@ -133,30 +133,28 @@ def import_model(
     else:
         raise OpenLLMException(f"Model type {type(config)} is not supported yet.")
 
+    tokenizer = transformers.AutoTokenizer.from_pretrained(
+        model_id,
+        config=config,
+        trust_remote_code=trust_remote_code,
+        **hub_attrs,
+        **tokenizer_kwds,
+    )
+
+    model = getattr(
+        transformers,
+        FRAMEWORK_TO_AUTOCLASS_MAPPING[_model_framework][idx],
+    ).from_pretrained(
+        model_id,
+        *model_args,
+        config=config,
+        trust_remote_code=trust_remote_code,
+        **hub_attrs,
+        **attrs,
+    )
+
     try:
-        return bentoml.transformers.save_model(
-            tag,
-            getattr(
-                transformers,
-                FRAMEWORK_TO_AUTOCLASS_MAPPING[_model_framework][idx],
-            ).from_pretrained(
-                model_id,
-                *model_args,
-                config=config,
-                trust_remote_code=trust_remote_code,
-                **hub_attrs,
-                **attrs,
-            ),
-            custom_objects={
-                "tokenizer": transformers.AutoTokenizer.from_pretrained(
-                    model_id,
-                    config=config,
-                    trust_remote_code=trust_remote_code,
-                    **hub_attrs,
-                    **tokenizer_kwds,
-                )
-            },
-        )
+        return bentoml.transformers.save_model(tag, model, custom_objects={"tokenizer": tokenizer})
     finally:
         import gc
 
@@ -244,14 +242,18 @@ def _default_post_init(self: LLM[t.Any, t.Any]):
     #              See https://pytorch.org/blog/a-better-transformer-for-fast-transformer-encoder-inference/
     #              for more information.
     # NOTE: set a default variable to transform to BetterTransformer by default for inference
-    self.load_in_mha = (
-        os.environ.get(self.config_class.__openllm_env__.bettertransformer, str(False)).upper() in ENV_VARS_TRUE_VALUES
-    )
-    if self.config_class.__openllm_requires_gpu__:
-        # For all models that requires GPU, no need to offload it to BetterTransformer
-        # use bitsandbytes instead
-
+    if self.config.__openllm_runtime__ == "cpp":
         self.load_in_mha = False
+    else:
+        self.load_in_mha = (
+            os.environ.get(self.config_class.__openllm_env__.bettertransformer, str(False)).upper()
+            in ENV_VARS_TRUE_VALUES
+        )
+        if self.config_class.__openllm_requires_gpu__:
+            # For all models that requires GPU, no need to offload it to BetterTransformer
+            # use bitsandbytes instead
+
+            self.load_in_mha = False
 
 
 _M = t.TypeVar("_M")
@@ -471,15 +473,15 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
         self._model_attrs = model_kwds
         self._tokenizer_attrs = tokenizer_kwds
 
-        if self.__openllm_post_init__:
-            self.llm_post_init()
-
-        # finally: we allow users to overwrite the load_in_mha defined by the LLM subclass.
+        # we allow users to overwrite the load_in_mha defined by the LLM subclass.
         if load_in_mha:
             logger.debug("Overwriting 'load_in_mha=%s' (base load_in_mha=%s)", load_in_mha, self.load_in_mha)
             self.load_in_mha = load_in_mha
 
         self._openllm_model_version = openllm_model_version
+
+        if self.__openllm_post_init__:
+            self.llm_post_init()
 
     def __setattr__(self, attr: str, value: t.Any):
         if attr in _reserved_namespace:
@@ -605,11 +607,11 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
             else:
                 self.__llm_model__ = self._bentomodel.load_model(*self._model_args, **kwds)
 
-            # TODO: self.config.__openllm_runtime__: t.Literal['python', 'cpp']
             if (
                 self.load_in_mha
                 and all(i in self._bentomodel.info.metadata for i in ("_framework", "_pretrained_class"))
                 and self._bentomodel.info.metadata["_framework"] == "torch"
+                and self.config.__openllm_runtime__ == "transformers"
             ):
                 # BetterTransformer is currently only supported on PyTorch.
                 from optimum.bettertransformer import BetterTransformer

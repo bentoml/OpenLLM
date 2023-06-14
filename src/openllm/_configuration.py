@@ -411,6 +411,7 @@ class ModelSettings(t.TypedDict, total=False):
     requires_gpu: bool
     trust_remote_code: bool
     requirements: t.Optional[ListStr]
+    runtime: t.Literal["transformers", "cpp"]
 
     # naming convention, only name_type is needed to infer from the class
     # as the three below it can be determined automatically
@@ -507,6 +508,7 @@ def structure_settings(cl_: type[LLMConfig], cls: type[t.Any]):
         name_type=name_type,
         model_name=model_name,
         start_name=start_name,
+        runtime=settings.get("runtime", "transformers"),
         env=openllm.utils.ModelEnv(model_name),
         timeout=settings.get("timeout", 3600),
         workers_per_resource=settings.get("workers_per_resource", 1),
@@ -708,10 +710,19 @@ class LLMConfig:
         """The default timeout to be set for this given LLM."""
 
         __openllm_workers_per_resource__: int | float = 1
-        """The default number of workers per resource. By default, we will use 1 worker per resource.
+        """The number of workers per resource. This is used to determine the number of workers to use for this model.
+        For example, if this is set to 0.5, then OpenLLM will use 1 worker per 2 resources. If this is set to 1, then
+        OpenLLM will use 1 worker per resource. If this is set to 2, then OpenLLM will use 2 workers per resource.
+
         See StarCoder for more advanced usage. See
         https://docs.bentoml.org/en/latest/guides/scheduling.html#resource-scheduling-strategy for more details.
+
+        By default, it is set to 1.
         """
+
+        __openllm_runtime__: t.Literal["transformers", "cpp"] = "transformers"
+        """The runtime to use for this model. Possible values are `transformers` or `cpp`. See
+        LlaMA for more information."""
 
         __openllm_default_id__: str = Field(None)
         """Return the default model to use when using 'openllm start <model_id>'.
@@ -727,7 +738,8 @@ class LLMConfig:
 
         __openllm_generation_class__: type[GenerationConfig] = Field(None, init=False)
         """The result generated GenerationConfig class for this LLMConfig. This will be used
-        to create the generation_config argument that can be used throughout the lifecycle."""
+        to create the generation_config argument that can be used throughout the lifecycle.
+        This class will also be managed internally by OpenLLM."""
 
     def __init_subclass__(cls):
         """The purpose of this __init_subclass__ is that we want all subclass of LLMConfig
