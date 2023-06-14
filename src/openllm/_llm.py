@@ -875,13 +875,28 @@ class LLM(LLMInterface, t.Generic[_M, _T], metaclass=LLMMetaclass):
 
 
 @t.overload
-def Runner(model_name: str, *, model_id: str | None = None, **attrs: t.Any) -> LLMRunner:
+def Runner(
+    model_name: str,
+    *,
+    model_id: str | None = None,
+    init_local: t.Literal[False, True] = ...,
+    **attrs: t.Any,
+) -> LLMRunner:
     ...
 
 
 @t.overload
 def Runner(
-    model_name: str, *, model_id: str = ..., init_local: t.Literal[True, False] = ..., **attrs: t.Any
+    model_name: str,
+    *,
+    model_id: str = ...,
+    models: list[bentoml.Model] | None = ...,
+    max_batch_size: int | None = ...,
+    max_latency_ms: int | None = ...,
+    method_configs: dict[str, ModelSignatureDict | ModelSignature] | None = ...,
+    embedded: t.Literal[True, False] = ...,
+    scheduling_strategy: type[Strategy] | None = ...,
+    **attrs: t.Any,
 ) -> LLMRunner:
     ...
 

@@ -88,8 +88,11 @@ class _BaseAutoLLMClass:
             "max_latency_ms",
             "method_configs",
             "embedded",
+            "scheduling_strategy",
         ]
         to_runner_attrs = {k: v for k, v in attrs.items() if k in runner_kwargs_name}
+        for k in to_runner_attrs:
+            del attrs[k]
         if not isinstance(llm_config, openllm.LLMConfig):
             # The rest of kwargs is now passed to config
             llm_config = AutoConfig.for_model(model_name, **attrs)
