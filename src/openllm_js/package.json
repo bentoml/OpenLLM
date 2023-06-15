@@ -1,5 +1,5 @@
 {
-  "name": "openllm_client",
+  "name": "openllm",
   "version": "0.0.2",
   "description": "TS/JS binding for OpenLLM",
   "type": "module",
