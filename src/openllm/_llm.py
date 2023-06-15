@@ -275,9 +275,9 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
         __llm_tag__: bentoml.Tag | None
         __llm_bentomodel__: bentoml.Model | None
 
-        __openllm_post_init__: t.Callable[[t.Self], None] | None
-        __openllm_custom_load__: t.Callable[[t.Self, t.Any, t.Any], None] | None
-        __openllm_custom_import_kwargs__: property | None
+        __llm_post_init__: t.Callable[[t.Self], None] | None
+        __llm_custom_load__: t.Callable[[t.Self, t.Any, t.Any], None] | None
+        __llm_init_kwargs__: property | None
 
         _model_args: tuple[t.Any, ...]
         _model_attrs: dict[str, t.Any]
@@ -328,11 +328,9 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
         else:
             logger.debug("Custom 'import_model' will be used when loading modelj %s", cls.__name__)
 
-        cls.__openllm_post_init__ = None if cls.llm_post_init is LLMInterface.llm_post_init else cls.llm_post_init
-        cls.__openllm_custom_load__ = None if cls.load_model is LLMInterface.load_model else cls.load_model
-        cls.__openllm_custom_import_kwargs__ = (
-            None if cls.import_kwargs is LLMInterface.import_kwargs else cls.import_kwargs
-        )
+        cls.__llm_post_init__ = None if cls.llm_post_init is LLMInterface.llm_post_init else cls.llm_post_init
+        cls.__llm_custom_load__ = None if cls.load_model is LLMInterface.load_model else cls.load_model
+        cls.__llm_init_kwargs__ = None if cls.import_kwargs is LLMInterface.import_kwargs else cls.import_kwargs
 
         for at in {"bentomodel", "tag", "model", "tokenizer"}:
             setattr(cls, f"__llm_{at}__", None)
@@ -450,7 +448,7 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
             attrs = self.config.__openllm_extras__
 
         model_kwds, tokenizer_kwds = {}, {}
-        if self.__openllm_custom_import_kwargs__:
+        if self.__llm_init_kwargs__:
             if t.TYPE_CHECKING:
                 # the above meta value should determine that this LLM has custom kwargs
                 assert self.import_kwargs
@@ -490,7 +488,7 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
 
         self._openllm_model_version = openllm_model_version
 
-        if self.__openllm_post_init__:
+        if self.__llm_post_init__:
             self.llm_post_init()
 
     def __setattr__(self, attr: str, value: t.Any):
@@ -630,7 +628,7 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
             kwds["accelerator"] = "bettertransformer"
 
         if self.__llm_model__ is None:
-            if self.__openllm_custom_load__:
+            if self.__llm_custom_load__:
                 self.__llm_model__ = self.load_model(self.tag, *self._model_args, **kwds)
             else:
                 self.__llm_model__ = self._bentomodel.load_model(*self._model_args, **kwds)

@@ -16,8 +16,9 @@
 Fine-tuning OPT playground.
 
 This script demonstrate how one can easily fine tune OPT
-with [LoRA](https://arxiv.org/abs/2106.09685) and in int8 with bitsandbytes
+with [LoRA](https://arxiv.org/abs/2106.09685) and in int8 with bitsandbytes.
 
+It is based on one of the Peft examples fine tuning script.
 It requires at least one GPU to be available, so make sure to have it.
 
 python -m openllm.playground.ft_opt_lora --help
@@ -48,7 +49,6 @@ if openllm.utils.DEBUG:
 
 os.environ["BITSANDBYTES_NOWELCOME"] = str(1)
 
-import bitsandbytes as bnb
 import transformers
 from datasets import load_dataset
 from peft import LoraConfig, get_peft_model, prepare_model_for_int8_training
