@@ -43,6 +43,8 @@ if t.TYPE_CHECKING:
     from bentoml._internal.runner.strategy import Strategy
 
     class LLMRunner(bentoml.Runner):
+        __doc__: str
+        __module__: str
         llm: openllm.LLM[t.Any, t.Any]
         config: openllm.LLMConfig
         llm_type: str
@@ -698,9 +700,10 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
         if method_configs is None:
             method_configs = {"generate": generate_sig, "generate_iterator": generate_iterator_sig}
         else:
-            generate_sig = ModelSignature.convert_signatures_dict(method_configs).get("generate", generate_sig)
-            generate_iterator_sig = ModelSignature.convert_signatures_dict(method_configs).get(
-                "generate_iterator", generate_iterator_sig
+            signatures = ModelSignature.convert_signatures_dict(method_configs)
+            generate_sig = openllm.utils.first_not_none(signatures.get("generate"), default=generate_sig)
+            generate_iterator_sig = openllm.utils.first_not_none(
+                signatures.get("generate_iterator"), default=generate_iterator_sig
             )
 
         class _Runnable(bentoml.Runnable):
