@@ -77,11 +77,9 @@ class OPT(openllm.LLM["transformers.OPTForCausalLM", "transformers.GPT2Tokenizer
         trust_remote_code = attrs.pop("trust_remote_code", False)
 
         _ref = bentoml.transformers.get(tag)
-        model: transformers.OPTForCausalLM = bentoml.transformers.load_model(
-            _ref, trust_remote_code=trust_remote_code, torch_dtype=torch_dtype, **attrs
+        model: transformers.OPTForCausalLM = transformers.AutoModelForCausalLM.from_pretrained(
+            _ref.path, trust_remote_code=trust_remote_code, torch_dtype=torch_dtype, **attrs
         )
-        if torch.cuda.is_available() and torch.cuda.device_count() == 1:
-            model.cuda()
         return model
 
     def sanitize_parameters(
@@ -133,6 +131,9 @@ class OPT(openllm.LLM["transformers.OPTForCausalLM", "transformers.GPT2Tokenizer
 
     @torch.inference_mode()
     def generate(self, prompt: str, **attrs: t.Any) -> list[str]:
+        if torch.cuda.is_available() and torch.cuda.device_count() == 1:
+            self.model.cuda()
+
         input_ids = t.cast(torch.Tensor, self.tokenizer(prompt, return_tensors="pt").input_ids).to(self.device)
         generated_tensors = self.model.generate(
             input_ids,

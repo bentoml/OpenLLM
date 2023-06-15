@@ -19,6 +19,8 @@ import functools
 import logging
 import os
 import re
+import subprocess
+import sys
 import types
 import typing as t
 from abc import ABC, abstractmethod
@@ -66,7 +68,9 @@ FRAMEWORK_TO_AUTOCLASS_MAPPING = {
 TOKENIZER_PREFIX = "_tokenizer_"
 
 
-def convert_transformers_model_name(name: str) -> str:
+def convert_transformers_model_name(name: str | None) -> str:
+    if name is None:
+        raise ValueError("'name' cannot be None")
     if os.path.exists(os.path.dirname(name)):
         name = os.path.basename(name)
         logger.debug("Given name is a path, only returning the basename %s")
@@ -441,29 +445,35 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
             logger.debug("Using given 'llm_config=(%s)' to initialize LLM", llm_config)
             self.config = llm_config
         else:
-            self.config = self.config_class(**attrs)
+            self.config = self.config_class.model_construct_env(**attrs)
             # The rests of the kwargs that is not used by the config class should be stored into __openllm_extras__.
             attrs = self.config.__openllm_extras__
 
+        model_kwds, tokenizer_kwds = {}, {}
+        if self.__openllm_custom_import_kwargs__:
+            if t.TYPE_CHECKING:
+                # the above meta value should determine that this LLM has custom kwargs
+                assert self.import_kwargs
+            model_kwds, tokenizer_kwds = self.import_kwargs
+            logger.debug(
+                "'%s' default kwargs for model: '%s', tokenizer: '%s'",
+                self.__class__.__name__,
+                model_kwds,
+                tokenizer_kwds,
+            )
+
         if model_id is None:
             model_id = os.environ.get(self.config.__openllm_env__.model_id, self.config.__openllm_default_id__)
-            assert model_id is not None
 
         # NOTE: This is the actual given path or pretrained weight for this LLM.
+        assert model_id is not None
         self._model_id = model_id
 
         # parsing tokenizer and model kwargs
-        tokenizer_kwds = {k[len(TOKENIZER_PREFIX) :]: v for k, v in attrs.items() if k.startswith(TOKENIZER_PREFIX)}
-        for k in attrs:
-            if k in tokenizer_kwds:
-                del attrs[k]
-        # the rest of kwargs should be model kwargs
-        model_kwds = attrs
-
-        if self.import_kwargs:
-            _custom_model_kwds, _custom_tokenizer_kwds = self.import_kwargs
-            model_kwds.update(_custom_model_kwds)
-            tokenizer_kwds.update(_custom_tokenizer_kwds)
+        tokenizer_kwds.update(
+            {k[len(TOKENIZER_PREFIX) :]: v for k, v in attrs.items() if k.startswith(TOKENIZER_PREFIX)}
+        )
+        model_kwds.update({k: v for k, v in attrs.items() if not k.startswith(TOKENIZER_PREFIX)})
 
         # handle trust_remote_code
         self.__llm_trust_remote_code__ = model_kwds.pop("trust_remote_code", self.config.__openllm_trust_remote_code__)
@@ -517,7 +527,13 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
             "model_ids": orjson.dumps(self.config.__openllm_model_ids__).decode(),
         }
 
-    def make_tag(self, model_id: str | None = None) -> bentoml.Tag:
+    @staticmethod
+    def make_tag(
+        model_id: str | None = None,
+        trust_remote_code: bool = False,
+        openllm_model_version: str | None = None,
+        implementation: t.Literal["pt", "flax", "tf"] = "pt",
+    ) -> bentoml.Tag:
         """Generate a ``bentoml.Tag`` from a given transformers model name.
 
         Note that this depends on your model to have a config class available.
@@ -526,24 +542,25 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
             model_id: The transformers model name or path to load the model from.
                       If it is a path, then `openllm_model_version` must be passed in as a kwarg.
             trust_remote_code: Whether to trust the remote code. Defaults to False.
-            **attrs: Additional kwargs to pass to the ``transformers.AutoConfig`` constructor.
-                    If your pass ``return_unused_kwargs=True``, it will be ignored.
+            openllm_model_version: Optional model version to be saved with this tag.
+            implementation: Given implementation for said LLM. One of t.Literal['pt', 'tf', 'flax']
 
         Returns:
             A tuple of ``bentoml.Tag`` and a dict of unused kwargs.
         """
-        if model_id is None:
-            model_id = self._model_id
         name = convert_transformers_model_name(model_id)
 
         config = t.cast(
             "transformers.PretrainedConfig",
-            transformers.AutoConfig.from_pretrained(model_id, trust_remote_code=self.__llm_trust_remote_code__),
+            transformers.AutoConfig.from_pretrained(
+                model_id,
+                trust_remote_code=trust_remote_code,
+            ),
         )
 
         model_version = getattr(config, "_commit_hash", None)
         if model_version is None:
-            if self._openllm_model_version is not None:
+            if openllm_model_version is not None:
                 logger.warning(
                     "Given %s from '%s' doesn't contain a commit hash, and 'openllm_model_version' is not given. "
                     "We will generate the tag without specific version.",
@@ -552,29 +569,35 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
                 )
                 model_version = bentoml.Tag.from_taglike(name).make_new_version().version
             else:
-                logger.debug("Using %s for '%s' as model version", self._openllm_model_version, model_id)
-                model_version = self._openllm_model_version
+                logger.debug("Using %s for '%s' as model version", openllm_model_version, model_id)
+                model_version = openllm_model_version
 
-        return bentoml.Tag.from_taglike(f"{self.__llm_implementation__}-{name}:{model_version}")
+        return bentoml.Tag.from_taglike(f"{implementation}-{name}:{model_version}")
 
     def ensure_model_id_exists(self) -> bentoml.Model:
-        try:
-            return bentoml.transformers.get(self.tag)
-        except bentoml.exceptions.NotFound:
-            logger.info(
-                "'%s' with tag (%s) not found, importing from HuggingFace Hub.", self.__class__.__name__, self.tag
-            )
-            return self.import_model(
-                self._model_id,
-                self.tag,
-                *self._model_args,
-                tokenizer_kwds=self._tokenizer_attrs,
-                trust_remote_code=self.__llm_trust_remote_code__,
-                **self._model_attrs,
-            )
-        finally:
-            if openllm.utils.is_torch_available() and torch.cuda.is_available():
-                torch.cuda.empty_cache()
+        output = subprocess.check_output(
+            [
+                sys.executable,
+                "-m",
+                "openllm",
+                "download-models",
+                self.config.__openllm_model_name__,
+                "--model-id",
+                self.model_id,
+                "--output",
+                "porcelain",
+            ]
+        )
+        if openllm.utils.DEBUG:
+            # NOTE: This usually only concern BentoML devs.
+            pattern = r"^__tag__:[^:\n]+:[^:\n]+"
+            matched = re.search(pattern, output.decode("utf-8").strip(), re.MULTILINE)
+            assert matched is not None, f"Failed to find tag from output: {output}"
+            _, _, tag = matched.group(0).partition(":")
+        else:
+            tag = output.strip().decode()
+
+        return bentoml.transformers.get(tag)
 
     @property
     def _bentomodel(self) -> bentoml.Model:
@@ -585,7 +608,12 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
     @property
     def tag(self) -> bentoml.Tag:
         if self.__llm_tag__ is None:
-            self.__llm_tag__ = self.make_tag()
+            self.__llm_tag__ = self.make_tag(
+                self._model_id,
+                self.__llm_trust_remote_code__,
+                self._openllm_model_version,
+                self.__llm_implementation__,
+            )
         return self.__llm_tag__
 
     @property

@@ -14,11 +14,8 @@
 
 from __future__ import annotations
 
-import contextlib
 import importlib
 import logging
-import os
-import subprocess
 import types
 import typing as t
 from collections import OrderedDict
@@ -121,19 +118,7 @@ class _BaseAutoLLMClass:
             )
             if ensure_available:
                 logger.debug("'ensure_available=True', make sure model is available within local store.")
-                with open(os.devnull, "w") as devnull:
-                    with contextlib.redirect_stderr(devnull), contextlib.redirect_stdout(devnull):
-                        subprocess.check_output(
-                            [
-                                "openllm",
-                                "download-models",
-                                model_name,
-                                "--model-id",
-                                llm.model_id,
-                                "--output",
-                                "porcelain",
-                            ]
-                        )
+                llm.ensure_model_id_exists()
             if not return_runner_kwargs:
                 return llm
             return llm, to_runner_attrs
@@ -232,7 +217,7 @@ class _LazyAutoMapping(ConfigModelOrderedDict):
     def _load_attr_from_module(self, model_type: str, attr: str) -> t.Any:
         module_name = inflection.underscore(model_type)
         if module_name not in self._modules:
-            self._modules[module_name] = openllm.utils.ModelEnv(module_name).module
+            self._modules[module_name] = importlib.import_module(f".{module_name}", "openllm.models")
         return getattribute_from_module(self._modules[module_name], attr)
 
     def keys(self):

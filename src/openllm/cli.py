@@ -14,12 +14,10 @@
 """
 CLI utilities for OpenLLM.
 
-This extends clidantic and BentoML's internal CLI CommandGroup.
+This extends BentoML's internal CLI CommandGroup.
 """
 from __future__ import annotations
 
-import contextlib
-import subprocess
 import functools
 import inspect
 import logging
@@ -42,6 +40,8 @@ from bentoml_cli.utils import BentoMLCommandGroup
 import openllm
 
 if t.TYPE_CHECKING:
+    import torch
+
     from ._types import ClickFunctionWrapper, F, P
 
     ServeCommand = t.Literal["serve", "serve-grpc"]
@@ -50,6 +50,7 @@ if t.TYPE_CHECKING:
     TupleStrAny = tuple[str, ...]
 else:
     TupleStrAny = tuple
+    torch = openllm.utils.LazyLoader("torch", globals(), "torch")
 
 
 logger = logging.getLogger(__name__)
@@ -170,33 +171,17 @@ Available model_id(s): {llm_config.__openllm_model_ids__} [default: {llm_config.
         config, server_attrs = llm_config.model_validate_click(**attrs)
 
         if llm_config.__openllm_env__.get_framework_env() == "flax":
-            llm = openllm.AutoFlaxLLM.for_model(model_name, model_id=model_id, llm_config=config)
+            llm = openllm.AutoFlaxLLM.for_model(model_name, model_id=model_id, llm_config=config, ensure_available=True)
         elif llm_config.__openllm_env__.get_framework_env() == "tf":
-            llm = openllm.AutoTFLLM.for_model(model_name, model_id=model_id, llm_config=config)
+            llm = openllm.AutoTFLLM.for_model(model_name, model_id=model_id, llm_config=config, ensure_available=True)
         else:
-            llm = openllm.AutoLLM.for_model(model_name, model_id=model_id, llm_config=config)
+            llm = openllm.AutoLLM.for_model(model_name, model_id=model_id, llm_config=config, ensure_available=True)
 
         if llm.config.__openllm_requirements__ is not None and len(llm.config.__openllm_requirements__) > 0:
             _echo(
                 f"Make sure to have the following dependencies available: {llm.config.__openllm_requirements__}",
                 fg="yellow",
             )
-
-        # NOTE: We need to initialize llm here first to check if the model is already downloaded to
-        # avoid deadlock before the subprocess forking.
-        with open(os.devnull, "w") as devnull:
-            with contextlib.redirect_stderr(devnull), contextlib.redirect_stdout(devnull):
-                subprocess.check_output(
-                    [
-                        "openllm",
-                        "download-models",
-                        model_name,
-                        "--model-id",
-                        llm.model_id,
-                        "--output",
-                        "porcelain",
-                    ]
-                )
 
         workers_per_resource = openllm.utils.first_not_none(
             workers_per_resource, default=llm.config.__openllm_workers_per_resource__
@@ -984,6 +969,10 @@ def download_models(model_name: str, model_id: str | None, output: OutputLiteral
 
     Note: This is useful for development and setup for fine-tune.
     """
+    if output == "porcelain":
+        openllm.utils.set_quiet_mode(True)
+        openllm.utils.configure_logging()
+
     config = openllm.AutoConfig.for_model(model_name)
     env = config.__openllm_env__.get_framework_env()
     if env == "flax":
@@ -993,34 +982,64 @@ def download_models(model_name: str, model_id: str | None, output: OutputLiteral
     else:
         model = openllm.AutoLLM.for_model(model_name, model_id=model_id, llm_config=config)
 
-    if len(bentoml.models.list(model.tag)) == 0:
+    try:
+        _ref = bentoml.transformers.get(model.tag)
         if output == "pretty":
-            _echo(f"{model.tag} does not exists yet!. Downloading...", fg="yellow", nl=True)
-        m = model.ensure_model_id_exists()
-        if output == "pretty":
-            _echo(f"Saved model: {m.tag}")
+            _echo(f"{model_name} is already setup for framework '{env}': {str(_ref.tag)}", nl=True, fg="yellow")
         elif output == "json":
             _echo(
                 orjson.dumps(
-                    {"previously_setup": False, "framework": env, "tag": str(m.tag)}, option=orjson.OPT_INDENT_2
-                ).decode()
-            )
-        else:
-            _echo(model.tag)
-    else:
-        m = bentoml.transformers.get(model.tag)
-        if output == "pretty":
-            _echo(f"{model_name} is already setup for framework '{env}': {str(m.tag)}", nl=True, fg="yellow")
-        elif output == "json":
-            _echo(
-                orjson.dumps(
-                    {"previously_setup": True, "framework": env, "model": str(m.tag)}, option=orjson.OPT_INDENT_2
+                    {"previously_setup": True, "framework": env, "model": str(_ref.tag)}, option=orjson.OPT_INDENT_2
                 ).decode(),
                 fg="white",
             )
         else:
-            _echo(m.tag, fg="white")
-    return m
+            if openllm.utils.DEBUG:
+                # NOTE: When debug is enabled,
+                # We will prefix the tag with __tag__ and we can use regex to correctly
+                # get the tag from 'bentoml.bentos.build|build_bentofile'
+                _echo(f"__tag__:{_ref.tag}", fg="white")
+            else:
+                _echo(_ref.tag, fg="white")
+    except bentoml.exceptions.NotFound:
+        if output == "pretty":
+            _echo(
+                f"'{model.__class__.__name__}' with tag '{model.tag}'"
+                " does not exists in local store!. Saving to store...",
+                fg="yellow",
+                nl=True,
+            )
+
+        _ref = model.import_model(
+            model.model_id,
+            model.tag,
+            *model._model_args,
+            tokenizer_kwds=model._tokenizer_attrs,
+            trust_remote_code=model.__llm_trust_remote_code__,
+            **model._model_attrs,
+        )
+        if output == "pretty":
+            _echo(f"Saved model: {_ref.tag}")
+        elif output == "json":
+            _echo(
+                orjson.dumps(
+                    {"previously_setup": False, "framework": env, "tag": str(_ref.tag)},
+                    option=orjson.OPT_INDENT_2,
+                ).decode()
+            )
+        else:
+            if openllm.utils.DEBUG:
+                # NOTE: When debug is enabled,
+                # We will prefix the tag with __tag__ and we can use regex to correctly
+                # get the tag from 'bentoml.bentos.build|build_bentofile'
+                _echo(f"__tag__:{_ref.tag}")
+            else:
+                _echo(_ref.tag)
+    finally:
+        if openllm.utils.is_torch_available() and torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
+    return _ref
 
 
 if __name__ == "__main__":
