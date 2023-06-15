@@ -46,15 +46,14 @@ if openllm.utils.DEBUG:
     if os.system(f"pip install -U {' '.join(_deps)}") != 0:
         raise SystemExit(1)
 
+os.environ["BITSANDBYTES_NOWELCOME"] = str(1)
+
 import bitsandbytes as bnb
-import torch
-import torch.nn as nn
 import transformers
 from datasets import load_dataset
 from peft import LoraConfig, get_peft_model, prepare_model_for_int8_training
 
 if t.TYPE_CHECKING:
-    from datasets import DatasetDict
     from peft import PeftModel
 
 DEFAULT_MODEL_ID = "facebook/opt-6.7b"
@@ -100,9 +99,9 @@ def load_trainer(
         args=transformers.TrainingArguments(
             per_device_train_batch_size=4,
             gradient_accumulation_steps=4,
-            warmup_steps=100,
-            max_steps=200,
-            learning_rate=2e-4,
+            warmup_steps=10,
+            max_steps=50,
+            learning_rate=3e-4,
             fp16=True,
             logging_steps=1,
             output_dir=output_dir,
@@ -136,4 +135,7 @@ if __name__ == "__main__":
 
     trainer = load_trainer(model, tokenizer, data, args.output_dir)
     model.config.use_cache = False  # silence just for warning, reenable for inference later
+
     trainer.train()
+
+    model.save_pretrained(os.path.join(args.output_dir, "lora"))
