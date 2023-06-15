@@ -9,7 +9,7 @@
     </a><a href="https://l.bentoml.com/join-openllm-discord">
         <img src="https://badgen.net/badge/icon/OpenLLM/7289da?icon=discord&label=Join%20Us" alt="Discord" />
     </a><br>
-    <p>An open platform for operating large language models(LLMs) in production.</br>
+    <p>An open platform for operating large language models (LLMs) in production.</br>
     Fine-tune, serve, deploy, and monitor any LLMs with ease.</p>
     <i></i>
 </div>
@@ -17,7 +17,7 @@
 ## 📖 Introduction
 
 With OpenLLM, you can run inference with any open-source large-language
-models(LLMs), deploy to the cloud or on-premises, and build powerful AI apps.
+models (LLMs), deploy to the cloud or on-premises, and build powerful AI apps.
 
 🚂 **SOTA LLMs**: built-in supports a wide range of open-source LLMs and model
 runtime, including StableLM, Falcon, Dolly, Flan-T5, ChatGLM, StarCoder and
