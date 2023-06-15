@@ -18,12 +18,12 @@ This extends clidantic and BentoML's internal CLI CommandGroup.
 """
 from __future__ import annotations
 
+import contextlib
 import functools
 import inspect
 import logging
 import os
 import re
-import subprocess
 import sys
 import time
 import traceback
@@ -39,12 +39,16 @@ from bentoml._internal.configuration import get_debug_mode, get_quiet_mode, set_
 from bentoml._internal.configuration.containers import BentoMLContainer
 from bentoml._internal.log import configure_logging, configure_server_logging
 from bentoml_cli.utils import BentoMLCommandGroup
+from simple_di import Provide, inject
 
 import openllm
 
+from .__about__ import __version__
 from .utils import DEBUG, LazyType, ModelEnv, analytics, bentoml_cattr, first_not_none
 
 if t.TYPE_CHECKING:
+    from bentoml._internal.models import ModelStore
+
     from ._types import ClickFunctionWrapper, F, P
 
     ServeCommand = t.Literal["serve", "serve-grpc"]
@@ -54,6 +58,8 @@ if t.TYPE_CHECKING:
 else:
     TupleStrAny = tuple
 
+
+configure_logging()
 
 logger = logging.getLogger(__name__)
 
@@ -162,11 +168,13 @@ Available model_id(s): {llm_config.__openllm_model_ids__} [default: {llm_config.
         help=f"Assign GPU devices (if available) for {model_name}.",
         show_envvar=True,
     )
-    @workers_option(cog.optgroup)
+    @workers_per_resource_option(cog.optgroup)
+    @click.pass_context
     def model_start(
+        ctx: click.Context,
         server_timeout: int | None,
         model_id: str | None,
-        workers: float | None,
+        workers_per_resource: float | None,
         device: tuple[str, ...] | None,
         **attrs: t.Any,
     ) -> openllm.LLMConfig:
@@ -187,21 +195,16 @@ Available model_id(s): {llm_config.__openllm_model_ids__} [default: {llm_config.
 
         # NOTE: We need to initialize llm here first to check if the model is already downloaded to
         # avoid deadlock before the subprocess forking.
-        subprocess.check_output(
-            [
-                sys.executable,
-                "-m",
-                "openllm",
-                "download-models",
-                model_name,
-                "--model-id",
-                llm.model_id,
-                "--output",
-                "porcelain",
-            ]
-        )
+        with open(os.devnull, "w") as devnull:
+            with contextlib.redirect_stderr(devnull), contextlib.redirect_stdout(devnull):
+                ctx.invoke(
+                    download_models,
+                    model_name=model_name,
+                    model_id=llm.model_id,
+                    output="porcelain",
+                )
 
-        workers_per_resource = first_not_none(workers, default=llm.config.__openllm_workers_per_resource__)
+        workers_per_resource = first_not_none(workers_per_resource, default=llm.config.__openllm_workers_per_resource__)
         server_timeout = first_not_none(server_timeout, default=llm.config.__openllm_timeout__)
 
         num_workers = int(1 / workers_per_resource)
@@ -424,6 +427,9 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
             # Wrap into OpenLLM tracking
             wrapped = self.usage_tracking(wrapped, self, **attrs)
             # Wrap into exception handling
+            if "do_not_track" in attrs:
+                # We hit this branch when ctx.invoke the function
+                attrs.pop("do_not_track")
             wrapped = self.exception_handling(wrapped, self, **attrs)
 
             # move common parameters to end of the parameters list
@@ -543,12 +549,33 @@ class NargsOptions(cog.GroupedOption):
         return retval
 
 
-def parse_device_callback(_: click.Context, params: click.Parameter, value: tuple[str, ...] | None) -> t.Any:
+def parse_device_callback(
+    _: click.Context, params: click.Parameter, value: tuple[str, ...] | tuple[t.Literal["all"]] | None
+) -> t.Any:
     if value is None:
         return value
 
     if not LazyType(TupleStrAny).isinstance(value):
         raise RuntimeError(f"{params} only accept multiple values.")
+
+    # NOTE: --device all is a special case
+    if len(value) == 1:
+        if value[0] != "all":
+            raise RuntimeError(f"{params} parameter only accept 'all' as a string value.")
+        import pynvml  # transitive dependencies of BentoML
+
+        try:
+            pynvml.nvmlInit()
+            return tuple(range(pynvml.nvmlDeviceGetCount()))
+        except (pynvml.nvml.NVMLError, OSError):
+            logger.debug("GPU not detected. Unable to initialize pynvml lib.")
+            return ()
+        finally:
+            try:
+                pynvml.nvmlShutdown()
+            except Exception:
+                pass
+
     parsed: tuple[str, ...] = tuple()
     for v in value:
         if v == ",":
@@ -608,7 +635,7 @@ def model_id_option(factory: t.Any, model_env: ModelEnv | None = None):
     )
 
 
-def workers_option(factory: t.Any, build: bool = False):
+def workers_per_resource_option(factory: t.Any, build: bool = False):
     help_str = """Number of workers per resource assigned.
     See https://docs.bentoml.org/en/latest/guides/scheduling.html#resource-scheduling-strategy
     for more information. By default, this is set to 1."""
@@ -618,7 +645,7 @@ def workers_option(factory: t.Any, build: bool = False):
     be provisioned in Kubernetes as well as in standalone container. This will
     ensure it has the same effect with 'openllm start --workers ...'"""
     return factory.option(
-        "--workers",
+        "--workers-per-resource",
         default=None,
         type=click.FLOAT,
         help=help_str,
@@ -626,384 +653,384 @@ def workers_option(factory: t.Any, build: bool = False):
     )
 
 
-def cli_factory() -> click.Group:
-    from .__about__ import __version__
+@click.group(cls=OpenLLMCommandGroup, context_settings=_CONTEXT_SETTINGS, name="openllm")
+@click.version_option(__version__, "--version", "-v")
+def cli():
+    """
+    \b
+     ██████╗ ██████╗ ███████╗███╗   ██╗██╗     ██╗     ███╗   ███╗
+    ██╔═══██╗██╔══██╗██╔════╝████╗  ██║██║     ██║     ████╗ ████║
+    ██║   ██║██████╔╝█████╗  ██╔██╗ ██║██║     ██║     ██╔████╔██║
+    ██║   ██║██╔═══╝ ██╔══╝  ██║╚██╗██║██║     ██║     ██║╚██╔╝██║
+    ╚██████╔╝██║     ███████╗██║ ╚████║███████╗███████╗██║ ╚═╝ ██║
+     ╚═════╝ ╚═╝     ╚══════╝╚═╝  ╚═══╝╚══════╝╚══════╝╚═╝     ╚═╝
 
-    configure_logging()
+    \b
+    An open platform for operating large language models in production.
+    Fine-tune, serve, deploy, and monitor any LLMs with ease.
+    """
 
-    model_store = BentoMLContainer.model_store.get()
 
-    @click.group(cls=OpenLLMCommandGroup, context_settings=_CONTEXT_SETTINGS, name="openllm")
-    @click.version_option(__version__, "--version", "-v")
-    def cli():
-        """
-        \b
-         ██████╗ ██████╗ ███████╗███╗   ██╗██╗     ██╗     ███╗   ███╗
-        ██╔═══██╗██╔══██╗██╔════╝████╗  ██║██║     ██║     ████╗ ████║
-        ██║   ██║██████╔╝█████╗  ██╔██╗ ██║██║     ██║     ██╔████╔██║
-        ██║   ██║██╔═══╝ ██╔══╝  ██║╚██╗██║██║     ██║     ██║╚██╔╝██║
-        ╚██████╔╝██║     ███████╗██║ ╚████║███████╗███████╗██║ ╚═╝ ██║
-         ╚═════╝ ╚═╝     ╚══════╝╚═╝  ╚═══╝╚══════╝╚══════╝╚═╝     ╚═╝
+@cli.group(cls=OpenLLMCommandGroup, context_settings=_CONTEXT_SETTINGS)
+def start():
+    """
+    Start any LLM as a REST server.
 
-        \b
-        An open platform for operating large language models in production.
-        Fine-tune, serve, deploy, and monitor any LLMs with ease.
-        """
+    $ openllm start <model_name> --<options> ...
+    """
 
-    @cli.group(cls=OpenLLMCommandGroup, context_settings=_CONTEXT_SETTINGS)
-    def start():
-        """
-        Start any LLM as a REST server.
 
-        $ openllm start <model_name> --<options> ...
-        """
+@cli.group(cls=OpenLLMCommandGroup, context_settings=_CONTEXT_SETTINGS)
+def start_grpc():
+    """
+    Start any LLM as a gRPC server.
 
-    @cli.group(cls=OpenLLMCommandGroup, context_settings=_CONTEXT_SETTINGS)
-    def start_grpc():
-        """
-        Start any LLM as a gRPC server.
+    $ openllm start-grpc <model_name> --<options> ...
+    """
 
-        $ openllm start-grpc <model_name> --<options> ...
-        """
 
-    @cli.command()
-    @click.argument(
-        "model_name", type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING.keys()])
+@cli.command()
+@click.argument("model_name", type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING.keys()]))
+@model_id_option(click)
+@output_option
+@click.option("--overwrite", is_flag=True, help="Overwrite existing Bento for given LLM if it already exists.")
+@workers_per_resource_option(click, build=True)
+def build(
+    model_name: str,
+    model_id: str | None,
+    overwrite: bool,
+    output: OutputLiteral,
+    workers_per_resource: float | None,
+):
+    """Package a given models into a Bento.
+
+    $ openllm build flan-t5
+
+    \b
+    NOTE: To run a container built from this Bento with GPU support, make sure
+    to have https://github.com/NVIDIA/nvidia-container-toolkit install locally.
+    """
+    if output == "porcelain":
+        set_quiet_mode(True)
+        configure_server_logging()
+
+    if output == "pretty":
+        if overwrite:
+            _echo(f"Overwriting existing Bento for {model_name}.", fg="yellow")
+
+    bento, _previously_built = openllm.build(
+        model_name,
+        __cli__=True,
+        model_id=model_id,
+        _workers_per_resource=workers_per_resource,
+        _overwrite_existing_bento=overwrite,
     )
-    @model_id_option(click)
-    @output_option
-    @click.option("--overwrite", is_flag=True, help="Overwrite existing Bento for given LLM if it already exists.")
-    @workers_option(click, build=True)
-    def build(model_name: str, model_id: str | None, overwrite: bool, output: OutputLiteral, workers: float | None):
-        """Package a given models into a Bento.
 
-        $ openllm build flan-t5
-
-        \b
-        NOTE: To run a container built from this Bento with GPU support, make sure
-        to have https://github.com/NVIDIA/nvidia-container-toolkit install locally.
-        """
-        if output == "porcelain":
-            set_quiet_mode(True)
-            configure_server_logging()
-
-        if output == "pretty":
-            if overwrite:
-                _echo(f"Overwriting existing Bento for {model_name}.", fg="yellow")
-
-        bento, _previously_built = openllm.build(
-            model_name,
-            __cli__=True,
-            model_id=model_id,
-            _workers=workers,
-            _overwrite_existing_bento=overwrite,
-        )
-
-        if output == "pretty":
-            if not get_quiet_mode():
-                _echo("\n" + OPENLLM_FIGLET, fg="white")
-                if not _previously_built:
-                    _echo(f"Successfully built {bento}.", fg="green")
-                else:
-                    _echo(
-                        f"'{model_name}' already has a Bento built [{bento}]. To overwrite it pass '--overwrite'.",
-                        fg="yellow",
-                    )
-
+    if output == "pretty":
+        if not get_quiet_mode():
+            _echo("\n" + OPENLLM_FIGLET, fg="white")
+            if not _previously_built:
+                _echo(f"Successfully built {bento}.", fg="green")
+            else:
                 _echo(
-                    "\nPossible next steps:\n\n"
-                    + "* Push to BentoCloud with `bentoml push`:\n"
-                    + f"    $ bentoml push {bento.tag}\n"
-                    + "* Containerize your Bento with `bentoml containerize`:\n"
-                    + f"    $ bentoml containerize {bento.tag}\n"
-                    + "    Tip: To enable additional BentoML feature for 'containerize', "
-                    + "use '--enable-features=FEATURE[,FEATURE]' "
-                    + "[see 'bentoml containerize -h' for more advanced usage]\n",
-                    fg="blue",
+                    f"'{model_name}' already has a Bento built [{bento}]. To overwrite it pass '--overwrite'.",
+                    fg="yellow",
                 )
-        elif output == "json":
-            _echo(orjson.dumps(bento.info.to_dict(), option=orjson.OPT_INDENT_2).decode())
-        else:
-            _echo(bento.tag)
-        return bento
 
-    @cli.command()
-    @output_option
-    @click.option(
-        "--show-available",
-        is_flag=True,
-        default=False,
-        help="Show available models in local store (mutually exclusive with '-o porcelain').",
-    )
-    def models(output: OutputLiteral, show_available: bool):
-        """List all supported models.
+            _echo(
+                "\nPossible next steps:\n\n"
+                + "* Push to BentoCloud with `bentoml push`:\n"
+                + f"    $ bentoml push {bento.tag}\n"
+                + "* Containerize your Bento with `bentoml containerize`:\n"
+                + f"    $ bentoml containerize {bento.tag}\n"
+                + "    Tip: To enable additional BentoML feature for 'containerize', "
+                + "use '--enable-features=FEATURE[,FEATURE]' "
+                + "[see 'bentoml containerize -h' for more advanced usage]\n",
+                fg="blue",
+            )
+    elif output == "json":
+        _echo(orjson.dumps(bento.info.to_dict(), option=orjson.OPT_INDENT_2).decode())
+    else:
+        _echo(bento.tag)
+    return bento
 
-        NOTE: '--show-available' and '-o porcelain' are mutually exclusive.
-        """
-        from ._llm import convert_transformers_model_name
 
-        models = tuple(inflection.dasherize(key) for key in openllm.CONFIG_MAPPING.keys())
-        if output == "porcelain":
+@cli.command()
+@output_option
+@click.option(
+    "--show-available",
+    is_flag=True,
+    default=False,
+    help="Show available models in local store (mutually exclusive with '-o porcelain').",
+)
+def models(output: OutputLiteral, show_available: bool):
+    """List all supported models.
+
+    NOTE: '--show-available' and '-o porcelain' are mutually exclusive.
+    """
+    from ._llm import convert_transformers_model_name
+
+    models = tuple(inflection.dasherize(key) for key in openllm.CONFIG_MAPPING.keys())
+    if output == "porcelain":
+        if show_available:
+            raise click.BadOptionUsage(
+                "--show-available", "Cannot use '--show-available' with '-o porcelain' (mutually exclusive)."
+            )
+        _echo("\n".join(models), fg="white")
+    else:
+        failed_initialized: list[tuple[str, Exception]] = []
+
+        json_data: dict[
+            str, dict[t.Literal["model_id", "url", "installation", "requires_gpu", "runtime_impl"], t.Any]
+        ] = {}
+
+        # NOTE: Keep a sync list with ./tools/update-optional-dependencies.py
+        extras = ["chatglm", "falcon", "flan-t5", "starcoder"]
+
+        converted: list[str] = []
+        for m in models:
+            config = openllm.AutoConfig.for_model(m)
+            runtime_impl: tuple[t.Literal["pt", "flax", "tf"], ...] = tuple()
+            if config.__openllm_model_name__ in openllm.MODEL_MAPPING_NAMES:
+                runtime_impl += ("pt",)
+            if config.__openllm_model_name__ in openllm.MODEL_FLAX_MAPPING_NAMES:
+                runtime_impl += ("flax",)
+            if config.__openllm_model_name__ in openllm.MODEL_TF_MAPPING_NAMES:
+                runtime_impl += ("tf",)
+            json_data[m] = {
+                "model_id": config.__openllm_model_ids__,
+                "url": config.__openllm_url__,
+                "requires_gpu": config.__openllm_requires_gpu__,
+                "runtime_impl": runtime_impl,
+                "installation": "pip install openllm" if m not in extras else f'pip install "openllm[{m}]"',
+            }
+            converted.extend([convert_transformers_model_name(i) for i in config.__openllm_model_ids__])
+            if DEBUG:
+                try:
+                    openllm.AutoLLM.for_model(m, llm_config=config)
+                except Exception as err:
+                    failed_initialized.append((m, err))
+
+        ids_in_local_store = None
+        if show_available:
+            ids_in_local_store = [i for i in bentoml.models.list() if any(n in i.tag.name for n in converted)]
+
+        if output == "pretty":
+            import tabulate
+
+            tabulate.PRESERVE_WHITESPACE = True
+
+            data: list[
+                str | tuple[str, str, list[str], str, t.LiteralString, tuple[t.Literal["pt", "flax", "tf"], ...]]
+            ] = []
+            for m, v in json_data.items():
+                data.extend(
+                    [
+                        (
+                            m,
+                            v["url"],
+                            v["model_id"],
+                            v["installation"],
+                            "✅" if v["requires_gpu"] else "❌",
+                            v["runtime_impl"],
+                        )
+                    ]
+                )
+            column_widths = [
+                int(COLUMNS / 6),
+                int(COLUMNS / 6),
+                int(COLUMNS / 3),
+                int(COLUMNS / 6),
+                int(COLUMNS / 6),
+                int(COLUMNS / 9),
+            ]
+
+            if len(data) == 0 and len(failed_initialized) > 0:
+                _echo("Exception found while parsing models:\n", fg="yellow")
+                for m, err in failed_initialized:
+                    _echo(f"- {m}: ", fg="yellow", nl=False)
+                    _echo(traceback.print_exception(err, limit=3), fg="red")
+                sys.exit(1)
+
+            table = tabulate.tabulate(
+                data,
+                tablefmt="fancy_grid",
+                headers=["LLM", "URL", "Models Id", "Installation", "GPU Only", "Runtime"],
+                maxcolwidths=column_widths,
+            )
+
+            formatted_table = ""
+            for line in table.split("\n"):
+                formatted_table += (
+                    "".join(f"{cell:{width}}" for cell, width in zip(line.split("\t"), column_widths)) + "\n"
+                )
+            _echo(formatted_table, fg="white")
+
+            if DEBUG and len(failed_initialized) > 0:
+                _echo("\nThe following models are supported but failed to initialize:\n")
+                for m, err in failed_initialized:
+                    _echo(f"- {m}: ", fg="blue", nl=False)
+                    _echo(err, fg="red")
+
             if show_available:
-                raise click.BadOptionUsage(
-                    "--show-available", "Cannot use '--show-available' with '-o porcelain' (mutually exclusive)."
-                )
-            _echo("\n".join(models), fg="white")
+                assert ids_in_local_store
+                _echo("The following models are available in local store:\n", fg="white")
+                for i in ids_in_local_store:
+                    _echo(f"- {i}", fg="white")
         else:
-            failed_initialized: list[tuple[str, Exception]] = []
-
-            json_data: dict[
-                str, dict[t.Literal["model_id", "url", "installation", "requires_gpu", "runtime_impl"], t.Any]
-            ] = {}
-
-            # NOTE: Keep a sync list with ./tools/update-optional-dependencies.py
-            extras = ["chatglm", "falcon", "flan-t5", "starcoder"]
-
-            converted: list[str] = []
-            for m in models:
-                config = openllm.AutoConfig.for_model(m)
-                runtime_impl: tuple[t.Literal["pt", "flax", "tf"], ...] = tuple()
-                if config.__openllm_model_name__ in openllm.MODEL_MAPPING_NAMES:
-                    runtime_impl += ("pt",)
-                if config.__openllm_model_name__ in openllm.MODEL_FLAX_MAPPING_NAMES:
-                    runtime_impl += ("flax",)
-                if config.__openllm_model_name__ in openllm.MODEL_TF_MAPPING_NAMES:
-                    runtime_impl += ("tf",)
-                json_data[m] = {
-                    "model_id": config.__openllm_model_ids__,
-                    "url": config.__openllm_url__,
-                    "requires_gpu": config.__openllm_requires_gpu__,
-                    "runtime_impl": runtime_impl,
-                    "installation": "pip install openllm" if m not in extras else f'pip install "openllm[{m}]"',
-                }
-                converted.extend([convert_transformers_model_name(i) for i in config.__openllm_model_ids__])
-                if DEBUG:
-                    try:
-                        openllm.AutoLLM.for_model(m, llm_config=config)
-                    except Exception as err:
-                        failed_initialized.append((m, err))
-
-            ids_in_local_store = None
+            dumped: dict[str, t.Any] = json_data
             if show_available:
-                ids_in_local_store = [i for i in bentoml.models.list() if any(n in i.tag.name for n in converted)]
+                assert ids_in_local_store
+                dumped["local"] = [bentoml_cattr.unstructure(i.tag) for i in ids_in_local_store]
+            _echo(
+                orjson.dumps(
+                    dumped,
+                    option=orjson.OPT_INDENT_2,
+                ).decode(),
+                fg="white",
+            )
 
-            if output == "pretty":
-                import tabulate
+    sys.exit(0)
 
-                tabulate.PRESERVE_WHITESPACE = True
 
-                data: list[
-                    str | tuple[str, str, list[str], str, t.LiteralString, tuple[t.Literal["pt", "flax", "tf"], ...]]
-                ] = []
-                for m, v in json_data.items():
-                    data.extend(
-                        [
-                            (
-                                m,
-                                v["url"],
-                                v["model_id"],
-                                v["installation"],
-                                "✅" if v["requires_gpu"] else "❌",
-                                v["runtime_impl"],
-                            )
-                        ]
-                    )
-                column_widths = [
-                    int(COLUMNS / 6),
-                    int(COLUMNS / 6),
-                    int(COLUMNS / 3),
-                    int(COLUMNS / 6),
-                    int(COLUMNS / 6),
-                    int(COLUMNS / 9),
-                ]
+@cli.command()
+@click.option(
+    "-y",
+    "--yes",
+    "--assume-yes",
+    is_flag=True,
+    help="Skip confirmation when deleting a specific model",
+)
+@inject
+def prune(yes: bool, model_store: ModelStore = Provide[BentoMLContainer.model_store]):
+    """Remove all saved models locally."""
+    available = [
+        m
+        for t in map(inflection.dasherize, openllm.CONFIG_MAPPING.keys())
+        for m in bentoml.models.list()
+        if t in m.tag.name
+    ]
 
-                if len(data) == 0 and len(failed_initialized) > 0:
-                    _echo("Exception found while parsing models:\n", fg="yellow")
-                    for m, err in failed_initialized:
-                        _echo(f"- {m}: ", fg="yellow", nl=False)
-                        _echo(traceback.print_exception(err, limit=3), fg="red")
-                    sys.exit(1)
-
-                table = tabulate.tabulate(
-                    data,
-                    tablefmt="fancy_grid",
-                    headers=["LLM", "URL", "Models Id", "Installation", "GPU Only", "Runtime"],
-                    maxcolwidths=column_widths,
-                )
-
-                formatted_table = ""
-                for line in table.split("\n"):
-                    formatted_table += (
-                        "".join(f"{cell:{width}}" for cell, width in zip(line.split("\t"), column_widths)) + "\n"
-                    )
-                _echo(formatted_table, fg="white")
-
-                if DEBUG and len(failed_initialized) > 0:
-                    _echo("\nThe following models are supported but failed to initialize:\n")
-                    for m, err in failed_initialized:
-                        _echo(f"- {m}: ", fg="blue", nl=False)
-                        _echo(err, fg="red")
-
-                if show_available:
-                    assert ids_in_local_store
-                    _echo("The following models are available in local store:\n", fg="white")
-                    for i in ids_in_local_store:
-                        _echo(f"- {i}", fg="white")
-            else:
-                dumped: dict[str, t.Any] = json_data
-                if show_available:
-                    assert ids_in_local_store
-                    dumped["local"] = [bentoml_cattr.unstructure(i.tag) for i in ids_in_local_store]
-                _echo(
-                    orjson.dumps(
-                        dumped,
-                        option=orjson.OPT_INDENT_2,
-                    ).decode(),
-                    fg="white",
-                )
-
-        sys.exit(0)
-
-    @cli.command()
-    @click.argument(
-        "model_name", type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING.keys()])
-    )
-    @model_id_option(click)
-    @output_option
-    def download_models(model_name: str, model_id: str | None, output: OutputLiteral):
-        """Setup LLM interactively.
-
-        Note: This is useful for development and setup for fine-tune.
-        """
-        config = openllm.AutoConfig.for_model(model_name)
-        env = config.__openllm_env__.get_framework_env()
-        if env == "flax":
-            model = openllm.AutoFlaxLLM.for_model(model_name, model_id=model_id, llm_config=config)
-        elif env == "tf":
-            model = openllm.AutoTFLLM.for_model(model_name, model_id=model_id, llm_config=config)
+    for model in available:
+        if yes:
+            delete_confirmed = True
         else:
-            model = openllm.AutoLLM.for_model(model_name, model_id=model_id, llm_config=config)
+            delete_confirmed = click.confirm(f"delete model {model.tag}?")
 
-        if len(bentoml.models.list(model.tag)) == 0:
-            if output == "pretty":
-                _echo(f"{model.tag} does not exists yet!. Downloading...", fg="yellow", nl=True)
-            m = model.ensure_model_id_exists()
-            if output == "pretty":
-                _echo(f"Saved model: {m.tag}")
-            elif output == "json":
-                _echo(
-                    orjson.dumps(
-                        {"previously_setup": False, "framework": env, "tag": str(m.tag)}, option=orjson.OPT_INDENT_2
-                    ).decode()
-                )
-            else:
-                _echo(model.tag)
-        else:
-            m = bentoml.transformers.get(model.tag)
-            if output == "pretty":
-                _echo(f"{model_name} is already setup for framework '{env}': {str(m.tag)}", nl=True, fg="yellow")
-            elif output == "json":
-                _echo(
-                    orjson.dumps(
-                        {"previously_setup": True, "framework": env, "model": str(m.tag)}, option=orjson.OPT_INDENT_2
-                    ).decode(),
-                    fg="white",
-                )
-            else:
-                _echo(m.tag, fg="white")
-        return m
+        if delete_confirmed:
+            model_store.delete(model.tag)
+            click.echo(f"{model} deleted.")
 
-    @cli.command()
-    @click.option(
-        "-y",
-        "--yes",
-        "--assume-yes",
-        is_flag=True,
-        help="Skip confirmation when deleting a specific model",
+
+@cli.command(name="query")
+@click.option(
+    "--endpoint",
+    type=click.STRING,
+    help="OpenLLM Server endpoint, i.e: http://localhost:3000",
+    envvar="OPENLLM_ENDPOINT",
+    default="http://localhost:3000",
+)
+@click.option("--timeout", type=click.INT, default=30, help="Default server timeout", show_default=True)
+@click.option(
+    "--server-type", type=click.Choice(["grpc", "http"]), help="Server type", default="http", show_default=True
+)
+@output_option
+@click.argument("query", type=click.STRING)
+def query_(
+    query: str,
+    endpoint: str,
+    timeout: int,
+    server_type: t.Literal["http", "grpc"],
+    output: OutputLiteral,
+):
+    """Ask a LLM interactively, from a terminal.
+
+    $ openllm query --endpoint http://12.323.2.1:3000 "What is the meaning of life?"
+    """
+    if server_type == "grpc":
+        endpoint = re.sub(r"http://", "", endpoint)
+    client = (
+        openllm.client.HTTPClient(endpoint, timeout=timeout)
+        if server_type == "http"
+        else openllm.client.GrpcClient(endpoint, timeout=timeout)
     )
-    def prune(yes: bool):
-        """Remove all saved models locally."""
-        available = [
-            m
-            for t in map(inflection.dasherize, openllm.CONFIG_MAPPING.keys())
-            for m in bentoml.models.list()
-            if t in m.tag.name
-        ]
 
-        for model in available:
-            if yes:
-                delete_confirmed = True
-            else:
-                delete_confirmed = click.confirm(f"delete model {model.tag}?")
+    if client.framework == "flax":
+        model = openllm.AutoFlaxLLM.for_model(client.model_name)
+    elif client.framework == "tf":
+        model = openllm.AutoTFLLM.for_model(client.model_name)
+    else:
+        model = openllm.AutoLLM.for_model(client.model_name)
 
-            if delete_confirmed:
-                model_store.delete(model.tag)
-                click.echo(f"{model} deleted.")
+    if output != "porcelain":
+        _echo(f"Processing query: {query}\n", fg="white")
 
-    @cli.command(name="query")
-    @click.option(
-        "--endpoint",
-        type=click.STRING,
-        help="OpenLLM Server endpoint, i.e: http://localhost:3000",
-        envvar="OPENLLM_ENDPOINT",
-        default="http://localhost:3000",
-    )
-    @click.option("--timeout", type=click.INT, default=30, help="Default server timeout", show_default=True)
-    @click.option(
-        "--server-type", type=click.Choice(["grpc", "http"]), help="Server type", default="http", show_default=True
-    )
-    @output_option
-    @click.argument("query", type=click.STRING)
-    def query_(
-        query: str,
-        endpoint: str,
-        timeout: int,
-        server_type: t.Literal["http", "grpc"],
-        output: OutputLiteral,
-    ):
-        """Ask a LLM interactively, from a terminal.
+    res = client.query(query, return_raw_response=True)
 
-        $ openllm query --endpoint http://12.323.2.1:3000 "What is the meaning of life?"
-        """
-        if server_type == "grpc":
-            endpoint = re.sub(r"http://", "", endpoint)
-        client = (
-            openllm.client.HTTPClient(endpoint, timeout=timeout)
-            if server_type == "http"
-            else openllm.client.GrpcClient(endpoint, timeout=timeout)
-        )
+    if output == "pretty":
+        formatted = model.postprocess_generate(query, res["responses"])
+        _echo("Responses: ", fg="white", nl=False)
+        _echo(formatted, fg="cyan")
+    elif output == "json":
+        _echo(orjson.dumps(res, option=orjson.OPT_INDENT_2).decode(), fg="white")
+    else:
+        _echo(res["responses"], fg="white")
 
-        if client.framework == "flax":
-            model = openllm.AutoFlaxLLM.for_model(client.model_name)
-        elif client.framework == "tf":
-            model = openllm.AutoTFLLM.for_model(client.model_name)
-        else:
-            model = openllm.AutoLLM.for_model(client.model_name)
 
-        if output != "porcelain":
-            _echo(f"Processing query: {query}\n", fg="white")
+@cli.command()
+@click.argument(
+    "model_name",
+    type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING.keys()]),
+)
+@model_id_option(click)
+@output_option
+def download_models(model_name: str, model_id: str | None, output: OutputLiteral):
+    """Setup LLM interactively.
 
-        res = client.query(query, return_raw_response=True)
+    Note: This is useful for development and setup for fine-tune.
+    """
+    config = openllm.AutoConfig.for_model(model_name)
+    env = config.__openllm_env__.get_framework_env()
+    if env == "flax":
+        model = openllm.AutoFlaxLLM.for_model(model_name, model_id=model_id, llm_config=config)
+    elif env == "tf":
+        model = openllm.AutoTFLLM.for_model(model_name, model_id=model_id, llm_config=config)
+    else:
+        model = openllm.AutoLLM.for_model(model_name, model_id=model_id, llm_config=config)
 
+    if len(bentoml.models.list(model.tag)) == 0:
         if output == "pretty":
-            formatted = model.postprocess_generate(query, res["responses"])
-            _echo("Responses: ", fg="white", nl=False)
-            _echo(formatted, fg="cyan")
+            _echo(f"{model.tag} does not exists yet!. Downloading...", fg="yellow", nl=True)
+        m = model.ensure_model_id_exists()
+        if output == "pretty":
+            _echo(f"Saved model: {m.tag}")
         elif output == "json":
-            _echo(orjson.dumps(res, option=orjson.OPT_INDENT_2).decode(), fg="white")
+            _echo(
+                orjson.dumps(
+                    {"previously_setup": False, "framework": env, "tag": str(m.tag)}, option=orjson.OPT_INDENT_2
+                ).decode()
+            )
         else:
-            _echo(res["responses"], fg="white")
+            _echo(model.tag)
+    else:
+        m = bentoml.transformers.get(model.tag)
+        if output == "pretty":
+            _echo(f"{model_name} is already setup for framework '{env}': {str(m.tag)}", nl=True, fg="yellow")
+        elif output == "json":
+            _echo(
+                orjson.dumps(
+                    {"previously_setup": True, "framework": env, "model": str(m.tag)}, option=orjson.OPT_INDENT_2
+                ).decode(),
+                fg="white",
+            )
+        else:
+            _echo(m.tag, fg="white")
+    return m
 
-    if t.TYPE_CHECKING:
-        assert download_models and build and models and start and start_grpc and query_ and prune
 
-    if psutil.WINDOWS:
-        sys.stdout.reconfigure(encoding="utf-8")  # type: ignore
+if psutil.WINDOWS:
+    sys.stdout.reconfigure(encoding="utf-8")  # type: ignore
 
-    return cli
-
-
-cli = cli_factory()
 
 if __name__ == "__main__":
     cli()

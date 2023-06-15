@@ -1026,11 +1026,11 @@ class LLMConfig:
         return self.model_construct_env(**llm_config_attrs), {k: v for k, v in attrs.items() if k not in key_to_remove}
 
     @t.overload
-    def to_generation_config(self, return_as_dict: t.Literal[True] = ...) -> DictStrAny:
+    def to_generation_config(self, return_as_dict: t.Literal[False] = ...) -> transformers.GenerationConfig:
         ...
 
     @t.overload
-    def to_generation_config(self, return_as_dict: t.Literal[False] = ...) -> transformers.GenerationConfig:
+    def to_generation_config(self, return_as_dict: t.Literal[True] = ...) -> DictStrAny:
         ...
 
     def to_generation_config(self, return_as_dict: bool = False) -> transformers.GenerationConfig | DictStrAny:

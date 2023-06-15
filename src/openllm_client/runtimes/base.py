@@ -14,10 +14,13 @@
 
 from __future__ import annotations
 
+import asyncio
 import typing as t
 from abc import abstractmethod
+from urllib.parse import urljoin
 
 import bentoml
+import httpx
 
 import openllm
 
@@ -43,6 +46,14 @@ if t.TYPE_CHECKING:
             ...
 
 
+def in_async_context() -> bool:
+    try:
+        _ = asyncio.get_running_loop()
+        return True
+    except RuntimeError:
+        return False
+
+
 class ClientMixin:
     _api_version: str
     _client_class: type[bentoml.client.Client]
@@ -57,11 +68,16 @@ class ClientMixin:
         self._address = address
         self._timeout = timeout
         assert self._host and self._port, "Make sure to setup _host and _port based on your client implementation."
-        self._metadata = self.call("metadata")
 
     def __init_subclass__(cls, *, client_type: t.Literal["http", "grpc"] = "http", api_version: str = "v1"):
         cls._client_class = bentoml.client.HTTPClient if client_type == "http" else bentoml.client.GrpcClient
         cls._api_version = api_version
+
+    @property
+    def _metadata(self) -> dict[str, t.Any]:
+        if in_async_context():
+            return httpx.post(urljoin(self._address, f"/{self._api_version}/metadata")).json()
+        return self.call("metadata")
 
     @property
     @abstractmethod
@@ -140,7 +156,14 @@ class BaseClient(ClientMixin):
     def query(self, prompt: str, **attrs: t.Any) -> dict[str, t.Any] | str:
         return_raw_response, prompt, generate_kwargs, postprocess_kwargs = self.prepare(prompt, **attrs)
         inputs = openllm.GenerationInput(prompt=prompt, llm_config=self.config.model_construct_env(**generate_kwargs))
-        result = self.call("generate", inputs)
+        if in_async_context():
+            result = httpx.post(
+                urljoin(self._address, f"/{self._api_version}/generate"),
+                json=openllm.utils.bentoml_cattr.unstructure(inputs),
+                timeout=self.timeout,
+            ).json()
+        else:
+            result = self.call("generate", inputs)
         r = self.postprocess(result)
 
         if return_raw_response:

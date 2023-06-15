@@ -280,7 +280,7 @@ class EnumChoice(click.Choice):
         self.internal_type = enum
         super().__init__([e.name for e in self.mapping], case_sensitive)
 
-    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> t.Any:
+    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> Enum:
         if isinstance(value, self.internal_type):
             return value
         result = super().convert(value, param, ctx)
@@ -292,7 +292,7 @@ class EnumChoice(click.Choice):
 class LiteralChoice(EnumChoice):
     name = "literal"
 
-    def __init__(self, enum: t.Literal, case_sensitive: bool = False):
+    def __init__(self, enum: t.LiteralString, case_sensitive: bool = False):
         # expect every literal value to belong to the same primitive type
         values = list(enum.__args__)
         item_type = type(values[0])
