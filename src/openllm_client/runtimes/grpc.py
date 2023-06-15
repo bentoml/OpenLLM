@@ -73,7 +73,10 @@ class GrpcClientMixin:
         except KeyError:
             raise RuntimeError("Malformed service endpoint. (Possible malicious)")
 
-    def postprocess(self, result: Response) -> openllm.GenerationOutput:
+    def postprocess(self, result: Response | dict[str, t.Any]) -> openllm.GenerationOutput:
+        if isinstance(result, dict):
+            return openllm.GenerationOutput(**result)
+
         from google.protobuf.json_format import MessageToDict
 
         return openllm.GenerationOutput(**MessageToDict(result.json, preserving_proto_field_name=True))
