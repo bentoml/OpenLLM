@@ -1,3 +1,5 @@
+from typing import Any, Dict
+
 import bentoml
 from bentoml.io import Text, JSON
 from pydantic import BaseModel
@@ -10,18 +12,8 @@ class Query(BaseModel):
     industry: str
     product_name: str
     keywords: list[str]
+    llm_config: Dict[str, Any]
 
-SAMPLE_INPUT = Query(
-    industry="SAAS",
-    product_name="BentoML",
-    keywords=[
-        "open source",
-        "developer tool",
-        "AI application platform",
-        "serverless",
-        "cost-efficient"
-    ]
-    )
 
 llm = OpenLLM(
     model_name='dolly-v2',
@@ -47,6 +39,19 @@ Facebook Ads copy:
 chain = LLMChain(llm=llm, prompt=prompt)
 
 svc = bentoml.Service("fb-ads-copy", runners=[llm.runner])
+
+SAMPLE_INPUT = Query(
+    industry="SAAS",
+    product_name="BentoML",
+    keywords=[
+        "open source",
+        "developer tool",
+        "AI application platform",
+        "serverless",
+        "cost-efficient"
+    ],
+    llm_config=llm.runner.config.model_dump()
+)
 
 @svc.api(
     input=JSON.from_sample(sample=SAMPLE_INPUT),
