@@ -33,7 +33,7 @@ if t.TYPE_CHECKING:
         def call(self, name: str, inputs: t.Any, **attrs: t.Any) -> t.Any:
             ...
 
-        async def async_call(self, name: str, inputs: t.Any, **attrs: t.Any) -> t.Any:
+        async def acall(self, name: str, inputs: t.Any, **attrs: t.Any) -> t.Any:
             ...
 
         def generate_v1(self, qa: openllm.GenerationInput) -> dict[str, t.Any]:

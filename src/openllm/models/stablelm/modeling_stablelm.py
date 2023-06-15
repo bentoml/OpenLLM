@@ -66,7 +66,7 @@ class StableLM(openllm.LLM["transformers.GPTNeoXForCausalLM", "transformers.GPTN
         max_new_tokens: int | None = None,
         top_k: int | None = None,
         top_p: float | None = None,
-        use_default_prompt_template: bool = True,
+        use_default_prompt_template: bool = False,
         **attrs: t.Any,
     ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
         if "tuned" in self._model_id and use_default_prompt_template:
