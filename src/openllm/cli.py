@@ -19,6 +19,7 @@ This extends clidantic and BentoML's internal CLI CommandGroup.
 from __future__ import annotations
 
 import contextlib
+import subprocess
 import functools
 import inspect
 import logging
@@ -185,11 +186,16 @@ Available model_id(s): {llm_config.__openllm_model_ids__} [default: {llm_config.
         # avoid deadlock before the subprocess forking.
         with open(os.devnull, "w") as devnull:
             with contextlib.redirect_stderr(devnull), contextlib.redirect_stdout(devnull):
-                ctx.invoke(
-                    download_models,
-                    model_name=model_name,
-                    model_id=llm.model_id,
-                    output="porcelain",
+                subprocess.check_output(
+                    [
+                        "openllm",
+                        "download-models",
+                        model_name,
+                        "--model-id",
+                        llm.model_id,
+                        "--output",
+                        "porcelain",
+                    ]
                 )
 
         workers_per_resource = openllm.utils.first_not_none(
@@ -540,7 +546,7 @@ class NargsOptions(cog.GroupedOption):
 
 
 def parse_device_callback(
-    _: click.Context, params: click.Parameter, value: tuple[str, ...] | tuple[t.Literal["all"]] | None
+    _: click.Context, params: click.Parameter, value: tuple[str, ...] | tuple[t.Literal["all"] | str] | None
 ) -> t.Any:
     if value is None:
         return value
@@ -549,9 +555,7 @@ def parse_device_callback(
         raise RuntimeError(f"{params} only accept multiple values.")
 
     # NOTE: --device all is a special case
-    if len(value) == 1:
-        if value[0] != "all":
-            raise RuntimeError(f"{params} parameter only accept 'all' as a string value.")
+    if len(value) == 1 and value[0] == "all":
         return openllm.utils.gpu_count()
 
     parsed: tuple[str, ...] = tuple()

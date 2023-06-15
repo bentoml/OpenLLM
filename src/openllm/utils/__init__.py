@@ -27,19 +27,17 @@ from bentoml._internal.configuration import get_quiet_mode as get_quiet_mode
 from bentoml._internal.configuration import set_debug_mode as set_debug_mode
 from bentoml._internal.configuration import set_quiet_mode as set_quiet_mode
 from bentoml._internal.log import configure_logging as configure_logging
-from bentoml._internal.log import \
-    configure_server_logging as configure_server_logging
+from bentoml._internal.log import configure_server_logging as configure_server_logging
 from bentoml._internal.types import LazyType
+
 # NOTE: The following exports useful utils from bentoml
 from bentoml._internal.utils import LazyLoader as LazyLoader
 from bentoml._internal.utils import bentoml_cattr as bentoml_cattr
-from bentoml._internal.utils import \
-    copy_file_to_fs_folder as copy_file_to_fs_folder
+from bentoml._internal.utils import copy_file_to_fs_folder as copy_file_to_fs_folder
 from bentoml._internal.utils import first_not_none as first_not_none
 from bentoml._internal.utils import pkg as pkg
 from bentoml._internal.utils import reserve_free_port as reserve_free_port
-from bentoml._internal.utils import \
-    resolve_user_filepath as resolve_user_filepath
+from bentoml._internal.utils import resolve_user_filepath as resolve_user_filepath
 
 from .lazy import LazyModule as LazyModule
 
@@ -121,8 +119,7 @@ if t.TYPE_CHECKING:
     from .import_utils import ENV_VARS_TRUE_VALUES as ENV_VARS_TRUE_VALUES
     from .import_utils import DummyMetaclass as DummyMetaclass
     from .import_utils import ModelEnv as ModelEnv
-    from .import_utils import \
-        is_cpm_kernels_available as is_cpm_kernels_available
+    from .import_utils import is_cpm_kernels_available as is_cpm_kernels_available
     from .import_utils import is_einops_available as is_einops_available
     from .import_utils import is_flax_available as is_flax_available
     from .import_utils import is_tf_available as is_tf_available

@@ -88,7 +88,7 @@ class CastOutputToFloat(nn.Sequential):
         return super().forward(input).to(torch.float32)
 
 
-def load_model(model_id: str, max_memory: str) -> tuple[peft.PeftModel, transformers.GPT2TokenizerFast]:
+def load_model(model_id: str, max_memory: str) -> tuple[PeftModel, transformers.GPT2TokenizerFast]:
     opt = openllm.AutoLLM.for_model(
         "opt",
         model_id=model_id,
