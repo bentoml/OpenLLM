@@ -581,7 +581,7 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
                 "-m",
                 "openllm",
                 "download-models",
-                self.config.__openllm_model_name__,
+                self.config.__openllm_start_name__,
                 "--model-id",
                 self.model_id,
                 "--output",
