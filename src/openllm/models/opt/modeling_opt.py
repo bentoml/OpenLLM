@@ -62,25 +62,23 @@ class OPT(openllm.LLM["transformers.OPTForCausalLM", "transformers.GPT2Tokenizer
         **attrs: t.Any,
     ) -> bentoml.Model:
         torch_dtype = attrs.pop("torch_dtype", self.dtype)
-        device_map = attrs.pop("device_map", "auto")
         trust_remote_code = attrs.pop("trust_remote_code", False)
 
         config = transformers.AutoConfig.from_pretrained(model_id)
         tokenizer = transformers.AutoTokenizer.from_pretrained(model_id, **tokenizer_kwds)
         tokenizer.pad_token_id = config.pad_token_id
         model: transformers.OPTForCausalLM = transformers.AutoModelForCausalLM.from_pretrained(
-            model_id, torch_dtype=torch_dtype, device_map=device_map, trust_remote_code=trust_remote_code, **attrs
+            model_id, torch_dtype=torch_dtype, trust_remote_code=trust_remote_code, **attrs
         )
         return bentoml.transformers.save_model(tag, model, custom_objects={"tokenizer": tokenizer})
 
     def load_model(self, tag: bentoml.Tag, *args: t.Any, **attrs: t.Any) -> transformers.OPTForCausalLM:
         torch_dtype = attrs.pop("torch_dtype", self.dtype)
-        device_map = attrs.pop("device_map", "auto")
         trust_remote_code = attrs.pop("trust_remote_code", False)
 
         _ref = bentoml.transformers.get(tag)
         model: transformers.OPTForCausalLM = bentoml.transformers.load_model(
-            _ref, trust_remote_code=trust_remote_code, torch_dtype=torch_dtype, device_map=device_map, **attrs
+            _ref, trust_remote_code=trust_remote_code, torch_dtype=torch_dtype, **attrs
         )
         if torch.cuda.is_available() and torch.cuda.device_count() == 1:
             model.cuda()

@@ -23,8 +23,15 @@ import inflection
 import openllm
 
 if t.TYPE_CHECKING:
+    from collections import _odict_items, _odict_keys, _odict_values
+
     ConfigOrderedDict = OrderedDict[str, type[openllm.LLMConfig]]
+
+    ConfigKeysView = _odict_keys[str, type[openllm.LLMConfig]]
+    ConfigValuesView = _odict_values[str, type[openllm.LLMConfig]]
+    ConfigItemsView = _odict_items[str, type[openllm.LLMConfig]]
 else:
+    ConfigKeysView = ConfigValuesView = ConfigItemsView = t.Any
     ConfigOrderedDict = OrderedDict
 
 # NOTE: This is the entrypoint when adding new model config
@@ -64,13 +71,13 @@ class _LazyConfigMapping(ConfigOrderedDict):
         return getattr(openllm, value)
 
     def keys(self):
-        return list(self._mapping.keys()) + list(self._extra_content.keys())
+        return t.cast(ConfigKeysView, list(self._mapping.keys()) + list(self._extra_content.keys()))
 
     def values(self):
-        return [self[k] for k in self._mapping.keys()] + list(self._extra_content.values())
+        return t.cast(ConfigValuesView, [self[k] for k in self._mapping.keys()] + list(self._extra_content.values()))
 
     def items(self):
-        return [(k, self[k]) for k in self._mapping.keys()] + list(self._extra_content.items())
+        return t.cast(ConfigItemsView, [(k, self[k]) for k in self._mapping.keys()] + list(self._extra_content.items()))
 
     def __iter__(self):
         return iter(list(self._mapping.keys()) + list(self._extra_content.keys()))
@@ -88,7 +95,14 @@ class _LazyConfigMapping(ConfigOrderedDict):
 
 
 CONFIG_MAPPING: dict[str, type[openllm.LLMConfig]] = _LazyConfigMapping(CONFIG_MAPPING_NAMES)
-CONFIG_NAME_ALIASES: dict[str, str] = {"chat_glm": "chatglm", "stable_lm": "stablelm", "star_coder": "starcoder"}
+
+# The below handle special alias when we call underscore to the name directly
+# without processing camelcase first.
+CONFIG_NAME_ALIASES: dict[str, str] = {
+    "chat_glm": "chatglm",
+    "stable_lm": "stablelm",
+    "star_coder": "starcoder",
+}
 
 
 class AutoConfig:

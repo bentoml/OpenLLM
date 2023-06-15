@@ -14,7 +14,11 @@
 
 from __future__ import annotations
 
+import contextlib
 import importlib
+import logging
+import os
+import subprocess
 import types
 import typing as t
 from collections import OrderedDict
@@ -26,11 +30,19 @@ import openllm
 from .configuration_auto import AutoConfig
 
 if t.TYPE_CHECKING:
+    from collections import _odict_items, _odict_keys, _odict_values
+
     from ..._llm import LLMRunner
 
     ConfigModelOrderedDict = OrderedDict[type[openllm.LLMConfig], type[openllm.LLM[t.Any, t.Any]]]
+    ConfigModelKeysView = _odict_keys[type[openllm.LLMConfig], type[openllm.LLM[t.Any, t.Any]]]
+    ConfigModelValuesView = _odict_values[type[openllm.LLMConfig], type[openllm.LLM[t.Any, t.Any]]]
+    ConfigModelItemsView = _odict_items[type[openllm.LLMConfig], type[openllm.LLM[t.Any, t.Any]]]
 else:
+    ConfigModelKeysView = ConfigModelValuesView = ConfigModelItemsView = t.Any
     ConfigModelOrderedDict = OrderedDict
+
+logger = logging.getLogger(__name__)
 
 
 class _BaseAutoLLMClass:
@@ -50,6 +62,7 @@ class _BaseAutoLLMClass:
         model_id: str | None = None,
         return_runner_kwargs: t.Literal[False] = ...,
         llm_config: openllm.LLMConfig | None = ...,
+        ensure_available: t.Literal[False, True] = ...,
         **attrs: t.Any,
     ) -> openllm.LLM[t.Any, t.Any]:
         ...
@@ -62,6 +75,7 @@ class _BaseAutoLLMClass:
         model_id: str | None = None,
         return_runner_kwargs: t.Literal[True] = ...,
         llm_config: openllm.LLMConfig | None = ...,
+        ensure_available: t.Literal[False, True] = ...,
         **attrs: t.Any,
     ) -> tuple[openllm.LLM[t.Any, t.Any], dict[str, t.Any]]:
         ...
@@ -72,7 +86,8 @@ class _BaseAutoLLMClass:
         model_name: str,
         model_id: str | None = None,
         return_runner_kwargs: bool = False,
-        llm_config: openllm.LLMConfig | None = ...,
+        llm_config: openllm.LLMConfig | None = None,
+        ensure_available: bool = False,
         **attrs: t.Any,
     ) -> openllm.LLM[t.Any, t.Any] | tuple[openllm.LLM[t.Any, t.Any], dict[str, t.Any]]:
         """The lower level API for creating a LLM instance.
@@ -93,17 +108,38 @@ class _BaseAutoLLMClass:
         to_runner_attrs = {k: v for k, v in attrs.items() if k in runner_kwargs_name}
         for k in to_runner_attrs:
             del attrs[k]
-        if not isinstance(llm_config, openllm.LLMConfig):
-            # The rest of kwargs is now passed to config
-            llm_config = AutoConfig.for_model(model_name, **attrs)
-        if type(llm_config) in cls._model_mapping.keys():
-            llm = cls._model_mapping[type(llm_config)].from_pretrained(model_id, llm_config=llm_config, **attrs)
+        normalized = inflection.underscore(model_name)
+        if cls._model_mapping.get(normalized, None, mapping_type="name2model"):
+            if not isinstance(llm_config, openllm.LLMConfig):
+                # The rest of kwargs is now passed to config
+                llm_config = AutoConfig.for_model(normalized, **attrs)
+            # the rest of attrs will be saved to __openllm_extras__
+            llm = cls._model_mapping[type(llm_config)].from_pretrained(
+                model_id,
+                llm_config=llm_config,
+                **llm_config.__openllm_extras__,
+            )
+            if ensure_available:
+                logger.debug("'ensure_available=True', make sure model is available within local store.")
+                with open(os.devnull, "w") as devnull:
+                    with contextlib.redirect_stderr(devnull), contextlib.redirect_stdout(devnull):
+                        subprocess.check_output(
+                            [
+                                "openllm",
+                                "download-models",
+                                model_name,
+                                "--model-id",
+                                llm.model_id,
+                                "--output",
+                                "porcelain",
+                            ]
+                        )
             if not return_runner_kwargs:
                 return llm
             return llm, to_runner_attrs
         raise ValueError(
-            f"Unrecognized configuration class {llm_config.__class__} for this kind of AutoRunner: {cls.__name__}.\n"
-            f"Runnable type should be one of {', '.join(c.__name__ for c in cls._model_mapping.keys())}."
+            f"Unrecognized configuration class {llm_config.__class__} for this kind of AutoLLM: {cls.__name__}.\n"
+            f"LLM type should be one of {', '.join(c.__name__ for c in cls._model_mapping.keys())}."
         )
 
     @classmethod
@@ -205,13 +241,46 @@ class _LazyAutoMapping(ConfigModelOrderedDict):
             for key, name in self._config_mapping.items()
             if key in self._model_mapping.keys()
         ]
-        return mapping_keys + list(self._extra_content.keys())
+        return t.cast(ConfigModelKeysView, mapping_keys + list(self._extra_content.keys()))
 
-    def get(self, key: openllm.LLMConfig, default: t.Any):
-        try:
-            return self.__getitem__(key)
-        except KeyError:
-            return default
+    @t.overload
+    def get(
+        self, key: type[openllm.LLMConfig], default: t.Any, mapping_type: t.Literal["default"] = "default"
+    ) -> type[openllm.LLM[t.Any, t.Any]]:
+        ...
+
+    @t.overload
+    def get(self, key: str, default: t.Any, mapping_type: t.Literal["name2model", "name2config"] = ...) -> str:
+        ...
+
+    def get(
+        self,
+        key: str | type[openllm.LLMConfig],
+        default: t.Any,
+        mapping_type: t.Literal["default", "name2config", "name2model"] = "default",
+    ) -> str | type[openllm.LLM[t.Any, t.Any]]:
+        _supported = {"default", "name2model", "name2config"}
+        if mapping_type not in _supported:
+            raise RuntimeError(f"Unknown mapping type {mapping_type} (supported: {_supported})")
+
+        if mapping_type == "default":
+            if t.TYPE_CHECKING:
+                # we check for lenient_issubclass below, but pyright is too dumb to understand
+                assert not isinstance(key, str)
+            else:
+                if not openllm.utils.lenient_issubclass(key, openllm.LLMConfig):
+                    raise KeyError(f"Key must be a type of 'openllm.LLMConfig', got {key} instead.")
+            try:
+                return self.__getitem__(key)
+            except KeyError:
+                return default
+        else:
+            mapping = self._model_mapping if mapping_type == "name2model" else self._config_mapping
+            assert isinstance(key, str), f"Key must be a string type if mapping_type={mapping_type}"
+            try:
+                return mapping.__getitem__(key)
+            except KeyError:
+                return default
 
     def __bool__(self):
         return bool(self.keys())
@@ -222,7 +291,7 @@ class _LazyAutoMapping(ConfigModelOrderedDict):
             for key, name in self._model_mapping.items()
             if key in self._config_mapping.keys()
         ]
-        return mapping_values + list(self._extra_content.values())
+        return t.cast(ConfigModelValuesView, mapping_values + list(self._extra_content.values()))
 
     def items(self):
         mapping_items = [
@@ -233,7 +302,7 @@ class _LazyAutoMapping(ConfigModelOrderedDict):
             for key in self._model_mapping.keys()
             if key in self._config_mapping.keys()
         ]
-        return mapping_items + list(self._extra_content.items())
+        return t.cast(ConfigModelItemsView, mapping_items + list(self._extra_content.items()))
 
     def __iter__(self):
         return iter(self.keys())

@@ -53,6 +53,7 @@ _import_structure = {
     "utils": [],
     "models": [],
     "client": [],
+    "playground": [],
     "cli": ["start", "start_grpc"],
     # NOTE: models
     "models.auto": [
@@ -145,6 +146,7 @@ if t.TYPE_CHECKING:
     from . import client as client
     from . import exceptions as exceptions
     from . import models as models
+    from . import playground as playground
 
     # Specific types import
     from ._configuration import LLMConfig as LLMConfig

@@ -322,7 +322,7 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
             # using the default import model
             setattr(cls, "import_model", functools.partial(import_model, _model_framework=implementation))
         else:
-            logger.debug("Using custom 'import_model' for %s", cls.__name__)
+            logger.debug("Custom 'import_model' will be used when loading modelj %s", cls.__name__)
 
         cls.__openllm_post_init__ = None if cls.llm_post_init is LLMInterface.llm_post_init else cls.llm_post_init
         cls.__openllm_custom_load__ = None if cls.load_model is LLMInterface.load_model else cls.load_model

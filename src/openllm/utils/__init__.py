@@ -17,25 +17,31 @@ we won't ensure backward compatibility for these functions. So use with caution.
 """
 from __future__ import annotations
 
+import os
 import sys
 import types
-import os
 import typing as t
 
+from bentoml._internal.configuration import get_debug_mode as get_debug_mode
+from bentoml._internal.configuration import get_quiet_mode as get_quiet_mode
+from bentoml._internal.configuration import set_debug_mode as set_debug_mode
+from bentoml._internal.configuration import set_quiet_mode as set_quiet_mode
+from bentoml._internal.log import configure_logging as configure_logging
+from bentoml._internal.log import \
+    configure_server_logging as configure_server_logging
 from bentoml._internal.types import LazyType
-
 # NOTE: The following exports useful utils from bentoml
-from bentoml._internal.utils import (
-    LazyLoader,
-    bentoml_cattr,
-    copy_file_to_fs_folder,
-    first_not_none,
-    pkg,
-    reserve_free_port,
-    resolve_user_filepath,
-)
+from bentoml._internal.utils import LazyLoader as LazyLoader
+from bentoml._internal.utils import bentoml_cattr as bentoml_cattr
+from bentoml._internal.utils import \
+    copy_file_to_fs_folder as copy_file_to_fs_folder
+from bentoml._internal.utils import first_not_none as first_not_none
+from bentoml._internal.utils import pkg as pkg
+from bentoml._internal.utils import reserve_free_port as reserve_free_port
+from bentoml._internal.utils import \
+    resolve_user_filepath as resolve_user_filepath
 
-from .lazy import LazyModule
+from .lazy import LazyModule as LazyModule
 
 try:
     from typing import GenericAlias as TypingGenericAlias  # type: ignore
@@ -62,7 +68,34 @@ def lenient_issubclass(cls: t.Any, class_or_tuple: type[t.Any] | tuple[type[t.An
         raise
 
 
+def gpu_count() -> tuple[int, ...]:
+    from bentoml._internal.resource import NvidiaGpuResource
+
+    return tuple(NvidiaGpuResource.from_system())
+
+
 DEBUG = sys.flags.dev_mode or (not sys.flags.ignore_environment and bool(os.environ.get("OPENLLMDEVDEBUG")))
+
+_extras = {
+    "get_debug_mode": get_debug_mode,
+    "get_quiet_mode": get_quiet_mode,
+    "set_debug_mode": set_debug_mode,
+    "set_quiet_mode": set_quiet_mode,
+    "configure_logging": configure_logging,
+    "configure_server_logging": configure_server_logging,
+    "LazyType": LazyType,
+    "LazyLoader": LazyLoader,
+    "LazyModule": LazyModule,
+    "bentoml_cattr": bentoml_cattr,
+    "copy_file_to_fs_folder": copy_file_to_fs_folder,
+    "first_not_none": first_not_none,
+    "pkg": pkg,
+    "reserve_free_port": reserve_free_port,
+    "resolve_user_filepath": resolve_user_filepath,
+    "lenient_issubclass": lenient_issubclass,
+    "gpu_count": gpu_count,
+    "DEBUG": DEBUG,
+}
 
 _import_structure = {
     "analytics": [],
@@ -88,7 +121,8 @@ if t.TYPE_CHECKING:
     from .import_utils import ENV_VARS_TRUE_VALUES as ENV_VARS_TRUE_VALUES
     from .import_utils import DummyMetaclass as DummyMetaclass
     from .import_utils import ModelEnv as ModelEnv
-    from .import_utils import is_cpm_kernels_available as is_cpm_kernels_available
+    from .import_utils import \
+        is_cpm_kernels_available as is_cpm_kernels_available
     from .import_utils import is_einops_available as is_einops_available
     from .import_utils import is_flax_available as is_flax_available
     from .import_utils import is_tf_available as is_tf_available
@@ -102,17 +136,5 @@ else:
         globals()["__file__"],
         _import_structure,
         module_spec=__spec__,
-        extra_objects={
-            "pkg": pkg,
-            "LazyModule": LazyModule,
-            "LazyType": LazyType,
-            "DEBUG": DEBUG,
-            "LazyLoader": LazyLoader,
-            "bentoml_cattr": bentoml_cattr,
-            "copy_file_to_fs_folder": copy_file_to_fs_folder,
-            "first_not_none": first_not_none,
-            "reserve_free_port": reserve_free_port,
-            "lenient_issubclass": lenient_issubclass,
-            "resolve_user_filepath": resolve_user_filepath,
-        },
+        extra_objects=_extras,
     )
