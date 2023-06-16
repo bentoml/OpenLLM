@@ -983,7 +983,7 @@ def query_(
         _echo(res["responses"], fg="white")
 
 
-@cli.command()
+@cli.command(name="download")
 @click.argument(
     "model_name",
     type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING.keys()]),

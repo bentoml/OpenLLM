@@ -632,7 +632,7 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
                 sys.executable,
                 "-m",
                 "openllm",
-                "download-models",
+                "download",
                 self.config["start_name"],
                 "--model-id",
                 self.model_id,
