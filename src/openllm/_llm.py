@@ -35,7 +35,8 @@ from bentoml._internal.types import ModelSignatureDict
 import openllm
 
 from .exceptions import ForbiddenAttributeError, OpenLLMException
-from .utils import LazyLoader, bentoml_cattr, non_intrusive_setattr
+from .utils import (LazyLoader, bentoml_cattr, is_bitsandbytes_available,
+                    non_intrusive_setattr)
 
 if t.TYPE_CHECKING:
     import torch
@@ -439,6 +440,11 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
             # quantize is a openllm.LLM feature, where we can quantize the model
             # with bitsandbytes or quantization aware training.
             if quantize is not None:
+                if not is_bitsandbytes_available():
+                    raise RuntimeError(
+                        "Quantization requires bitsandbytes to be installed. Make "
+                        "sure to install OpenLLM with 'pip install \"openllm[fine-tune]\"'"
+                    )
                 logger.debug(
                     "'quantize' is not None. %s will use a default 'quantization_config' for %s. "
                     "If you want to customise the quantization config, make sure to pass your "
