@@ -18,31 +18,24 @@ we won't ensure backward compatibility for these functions. So use with caution.
 from __future__ import annotations as _annotations
 
 import functools
+import logging
 import os
 import sys
 import types
 import typing as t
 
-from bentoml._internal.configuration import get_debug_mode as get_debug_mode
-from bentoml._internal.configuration import get_quiet_mode as get_quiet_mode
-from bentoml._internal.configuration import set_debug_mode as set_debug_mode
-from bentoml._internal.configuration import set_quiet_mode as set_quiet_mode
-from bentoml._internal.log import configure_logging as configure_logging
-from bentoml._internal.log import \
-    configure_server_logging as configure_server_logging
-from bentoml._internal.types import LazyType as LazyType
-# NOTE: The following exports useful utils from bentoml
-from bentoml._internal.utils import LazyLoader as LazyLoader
-from bentoml._internal.utils import bentoml_cattr as bentoml_cattr
-from bentoml._internal.utils import \
-    copy_file_to_fs_folder as copy_file_to_fs_folder
-from bentoml._internal.utils import first_not_none as first_not_none
-from bentoml._internal.utils import pkg as pkg
-from bentoml._internal.utils import reserve_free_port as reserve_free_port
-from bentoml._internal.utils import \
-    resolve_user_filepath as resolve_user_filepath
+from bentoml._internal.configuration import (get_debug_mode, get_quiet_mode,
+                                             set_debug_mode, set_quiet_mode)
+from bentoml._internal.log import configure_logging, configure_server_logging
+from bentoml._internal.types import LazyType
+from bentoml._internal.utils import (LazyLoader, bentoml_cattr,
+                                     copy_file_to_fs_folder, first_not_none,
+                                     pkg, reserve_free_port,
+                                     resolve_user_filepath)
 
 from .lazy import LazyModule
+
+logger = logging.getLogger(__name__)
 
 try:
     from typing import GenericAlias as _TypingGenericAlias  # type: ignore
@@ -115,9 +108,27 @@ _import_structure = {
 }
 
 if t.TYPE_CHECKING:
+    # NOTE: The following exports useful utils from bentoml
+    from . import LazyLoader as LazyLoader
+    from . import LazyType as LazyType
     from . import analytics as analytics
+    from . import bentoml_cattr as bentoml_cattr
     from . import codegen as codegen
+    from . import configure_logging as configure_logging
+    from . import configure_server_logging as configure_server_logging
+    from . import copy_file_to_fs_folder as copy_file_to_fs_folder
     from . import dantic as dantic
+    from . import first_not_none as first_not_none
+    from . import get_debug_mode as get_debug_mode
+    from . import get_quiet_mode as get_quiet_mode
+    from . import gpu_count as gpu_count
+    from . import lenient_issubclass as lenient_issubclass
+    from . import non_intrusive_setattr as non_intrusive_setattr
+    from . import pkg as pkg
+    from . import reserve_free_port as reserve_free_port
+    from . import resolve_user_filepath as resolve_user_filepath
+    from . import set_debug_mode as set_debug_mode
+    from . import set_quiet_mode as set_quiet_mode
     from .import_utils import ENV_VARS_TRUE_VALUES as ENV_VARS_TRUE_VALUES
     from .import_utils import DummyMetaclass as DummyMetaclass
     from .import_utils import ModelEnv as ModelEnv
@@ -130,6 +141,7 @@ if t.TYPE_CHECKING:
     from .import_utils import is_tf_available as is_tf_available
     from .import_utils import is_torch_available as is_torch_available
     from .import_utils import require_backends as require_backends
+    from .lazy import LazyModule as LazyModule
 else:
     import sys
 

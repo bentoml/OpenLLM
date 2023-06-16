@@ -323,7 +323,7 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
         llm_config: openllm.LLMConfig | None = None,
         *args: t.Any,
         quantize: t.Literal["8bit", "4bit", "gptq"] | None = None,
-        bettertransformer: bool = False,
+        bettertransformer: bool | None = None,
         **attrs: t.Any,
     ):
         """Initialize the LLM with given pretrained model.
@@ -521,7 +521,8 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
             model_id = os.environ.get(self.config["env"].model_id, self.config["default_id"])
 
         # NOTE: This is the actual given path or pretrained weight for this LLM.
-        assert model_id is not None
+        if t.TYPE_CHECKING:
+            assert model_id is not None
         self._model_id = model_id
 
         # parsing tokenizer and model kwargs
@@ -543,7 +544,11 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
             self.llm_post_init()
 
         # we set it here so that we allow subclass to overwrite bettertransformer in llm_post_init
-        non_intrusive_setattr(self, "bettertransformer", bettertransformer or self.config["bettertransformer"])
+        if bettertransformer:
+            logger.debug("Using %r with BetterTransformer", self)
+            self.bettertransformer = bettertransformer
+        else:
+            non_intrusive_setattr(self, "bettertransformer", self.config["bettertransformer"])
 
     def __setattr__(self, attr: str, value: t.Any):
         if attr in _reserved_namespace:

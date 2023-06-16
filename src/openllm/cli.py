@@ -83,22 +83,26 @@ def _echo(text: t.Any, fg: str = "green", _with_style: bool = True, **attrs: t.A
     call(text, **attrs)
 
 
-def quantize_option(factory: t.Any, model_name: str):
-    envvar = openllm.utils.ModelEnv(model_name).get_framework_env()
-
+def quantize_option(factory: t.Any):
     help_str = """Running this model in quantized mode.
     Note that GPTQ is currently working in progress and will be available soon.
-    """
-    if envvar in ("flax", "tf"):
-        help_str += """\n
-        NOTE: Quantization is only available for PyTorch models.
-        """
 
+    NOTE: Quantization is only available for PyTorch models.
+    """
     return factory.option(
         "--quantize",
         type=click.Choice(["8bit", "4bit", "gptq"]),
         default=None,
         help=help_str,
+    )
+
+
+def bettertransformer_option(factory: t.Any):
+    return factory.option(
+        "--bettertransformer",
+        is_flag=True,
+        default=None,
+        help="Use BetterTransformer wrapper to serve model",
     )
 
 
@@ -172,7 +176,12 @@ Available model_id(s): {llm_config['model_ids']} [default: {llm_config['default_
     @llm_config.to_click_options
     @serve_decorator
     @cog.optgroup.group("General LLM Options")
-    @cog.optgroup.option("--server-timeout", type=int, default=None, help="Server timeout in seconds")
+    @cog.optgroup.option(
+        "--server-timeout",
+        type=int,
+        default=None,
+        help="Server timeout in seconds",
+    )
     @model_id_option(cog.optgroup, model_env=env)
     @cog.optgroup.option(
         "--device",
@@ -185,15 +194,15 @@ Available model_id(s): {llm_config['model_ids']} [default: {llm_config['default_
         show_envvar=True,
     )
     @workers_per_resource_option(cog.optgroup)
-    @quantize_option(cog.optgroup, model_name)
-    @click.pass_context
+    @quantize_option(cog.optgroup)
+    @bettertransformer_option(cog.optgroup)
     def model_start(
-        ctx: click.Context,
         server_timeout: int | None,
         model_id: str | None,
         workers_per_resource: float | None,
         device: tuple[str, ...] | None,
         quantize: t.Literal["8bit", "4bit", "gptq"] | None,
+        bettertransformer: bool | None,
         **attrs: t.Any,
     ) -> openllm.LLMConfig:
         config, server_attrs = llm_config.model_validate_click(**attrs)
@@ -211,6 +220,7 @@ Available model_id(s): {llm_config['model_ids']} [default: {llm_config['default_
                 model_id=model_id,
                 llm_config=config,
                 quantize=quantize,
+                bettertransformer=bettertransformer,
                 ensure_available=True,
             )
 
@@ -701,11 +711,15 @@ def start_grpc_cli():
 @output_option
 @click.option("--overwrite", is_flag=True, help="Overwrite existing Bento for given LLM if it already exists.")
 @workers_per_resource_option(click, build=True)
+@quantize_option(click)
+@bettertransformer_option(click)
 def build(
     model_name: str,
     model_id: str | None,
     overwrite: bool,
     output: OutputLiteral,
+    quantize: t.Literal["8bit", "4bit", "gptq"] | None,
+    bettertransformer: bool | None,
     workers_per_resource: float | None,
 ):
     """Package a given models into a Bento.
@@ -728,6 +742,8 @@ def build(
         model_name,
         __cli__=True,
         model_id=model_id,
+        quantize=quantize,
+        bettertransformer=bettertransformer,
         _workers_per_resource=workers_per_resource,
         _overwrite_existing_bento=overwrite,
     )
