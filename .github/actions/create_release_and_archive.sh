@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 set -o errexit -o nounset -o pipefail
 
 # Set by GH actions, see
@@ -40,5 +39,7 @@ pip install --upgrade openllm==${TAG}
 All available models: \`\`\`python -m openllm.models\`\`\`
 
 To start a LLM: \`\`\`python -m openllm start dolly-v2\`\`\`
+
+Find more information about this release in the [CHANGELOG.md](https://github.com/bentoml/OpenLLM/blob/main/CHANGELOG.md)
 
 EOF
