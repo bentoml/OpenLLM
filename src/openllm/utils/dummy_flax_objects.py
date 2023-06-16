@@ -26,6 +26,13 @@ class FlaxFlanT5(metaclass=DummyMetaclass):
         require_backends(self, ["flax"])
 
 
+class FlaxOPT(metaclass=DummyMetaclass):
+    _backends = ["flax"]
+
+    def __init__(self, *args: t.Any, **attrs: t.Any):
+        require_backends(self, ["flax"])
+
+
 class AutoFlaxLLM(metaclass=DummyMetaclass):
     _backends = ["flax"]
 

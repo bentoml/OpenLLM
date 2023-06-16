@@ -53,6 +53,7 @@ _import_structure = {
     "utils": [],
     "models": [],
     "client": [],
+    "playground": [],
     "cli": ["start", "start_grpc"],
     # NOTE: models
     "models.auto": [
@@ -68,6 +69,7 @@ _import_structure = {
     "models.chatglm": ["ChatGLMConfig"],
     "models.starcoder": ["StarCoderConfig"],
     "models.stablelm": ["StableLMConfig"],
+    "models.opt": ["OPTConfig"],
 }
 
 # NOTE: torch and cpm_kernels
@@ -108,6 +110,7 @@ else:
     _import_structure["models.dolly_v2"].extend(["DollyV2"])
     _import_structure["models.starcoder"].extend(["StarCoder"])
     _import_structure["models.stablelm"].extend(["StableLM"])
+    _import_structure["models.opt"].extend(["OPT"])
     _import_structure["models.auto"].extend(["AutoLLM", "MODEL_MAPPING"])
 
 try:
@@ -121,6 +124,7 @@ except MissingDependencyError:
     ]
 else:
     _import_structure["models.flan_t5"].extend(["FlaxFlanT5"])
+    _import_structure["models.opt"].extend(["FlaxOPT"])
     _import_structure["models.auto"].extend(["AutoFlaxLLM", "MODEL_FLAX_MAPPING"])
 
 try:
@@ -132,6 +136,7 @@ except MissingDependencyError:
     _import_structure["utils.dummy_tf_objects"] = [name for name in dir(dummy_tf_objects) if not name.startswith("_")]
 else:
     _import_structure["models.flan_t5"].extend(["TFFlanT5"])
+    _import_structure["models.opt"].extend(["TFOPT"])
     _import_structure["models.auto"].extend(["AutoTFLLM", "MODEL_TF_MAPPING"])
 
 
@@ -141,6 +146,7 @@ if t.TYPE_CHECKING:
     from . import client as client
     from . import exceptions as exceptions
     from . import models as models
+    from . import playground as playground
 
     # Specific types import
     from ._configuration import LLMConfig as LLMConfig
@@ -162,6 +168,7 @@ if t.TYPE_CHECKING:
     from .models.dolly_v2 import DollyV2Config as DollyV2Config
     from .models.falcon import FalconConfig as FalconConfig
     from .models.flan_t5 import FlanT5Config as FlanT5Config
+    from .models.opt import OPTConfig as OPTConfig
     from .models.stablelm import StableLMConfig as StableLMConfig
     from .models.starcoder import StarCoderConfig as StarCoderConfig
 
@@ -193,6 +200,7 @@ if t.TYPE_CHECKING:
         from .models.auto import AutoLLM as AutoLLM
         from .models.dolly_v2 import DollyV2 as DollyV2
         from .models.flan_t5 import FlanT5 as FlanT5
+        from .models.opt import OPT as OPT
         from .models.stablelm import StableLM as StableLM
         from .models.starcoder import StarCoder as StarCoder
 
@@ -205,6 +213,7 @@ if t.TYPE_CHECKING:
         from .models.auto import MODEL_FLAX_MAPPING as MODEL_FLAX_MAPPING
         from .models.auto import AutoFlaxLLM as AutoFlaxLLM
         from .models.flan_t5 import FlaxFlanT5 as FlaxFlanT5
+        from .models.opt import FlaxOPT as FlaxOPT
 
     try:
         if not utils.is_tf_available():
@@ -215,6 +224,7 @@ if t.TYPE_CHECKING:
         from .models.auto import MODEL_TF_MAPPING as MODEL_TF_MAPPING
         from .models.auto import AutoTFLLM as AutoTFLLM
         from .models.flan_t5 import TFFlanT5 as TFFlanT5
+        from .models.opt import TFOPT as TFOPT
 
 else:
     import sys

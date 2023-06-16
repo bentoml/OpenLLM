@@ -26,8 +26,24 @@ import openllm
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-FINE_TUNE_DEPS = ["peft", "bitsandbytes", "datasets", "accelerate"]
+FINE_TUNE_DEPS = ["peft", "bitsandbytes", "datasets", "accelerate", "deepspeed", "auto-gptq"]
 FLAN_T5_DEPS = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
+OPENAI_DEPS = ["openai", "tiktoken"]
+
+_base_requirements = {
+    inflection.dasherize(name): config.__openllm_requirements__
+    for name, config in openllm.CONFIG_MAPPING.items()
+    if config.__openllm_requirements__
+}
+
+# NOTE: update this table when adding new external dependencies
+_deps_table = {
+    "fine-tune": FINE_TUNE_DEPS,
+    "flan-t5": FLAN_T5_DEPS,
+    "openai": OPENAI_DEPS,
+}
+
+_base_requirements.update(_deps_table)
 
 
 def main() -> int:
@@ -35,15 +51,9 @@ def main() -> int:
         pyproject = tomlkit.parse(f.read())
 
     table = tomlkit.table()
-    table.add("fine-tune", FINE_TUNE_DEPS)
+    for name, config in _base_requirements.items():
+        table.add(name, config)
 
-    for name, config in openllm.CONFIG_MAPPING.items():
-        dashed = inflection.dasherize(name)
-        if name == "flan_t5":
-            table.add(dashed, FLAN_T5_DEPS)
-            continue
-        if config.__openllm_requirements__:
-            table.add(dashed, config.__openllm_requirements__)
     table.add("all", [f"openllm[{k}]" for k in table.keys()])
 
     pyproject["project"]["optional-dependencies"] = table

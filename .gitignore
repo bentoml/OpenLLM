@@ -133,3 +133,4 @@ package-lock.json
 
 # PyCharm config
 .idea
+outputs

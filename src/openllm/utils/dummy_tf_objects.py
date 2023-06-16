@@ -26,6 +26,13 @@ class TFFlanT5(metaclass=DummyMetaclass):
         require_backends(self, ["tf"])
 
 
+class TFOPT(metaclass=DummyMetaclass):
+    _backends = ["tf"]
+
+    def __init__(self, *args: t.Any, **attrs: t.Any):
+        require_backends(self, ["tf"])
+
+
 class AutoTFLLM(metaclass=DummyMetaclass):
     _backends = ["tf"]
 

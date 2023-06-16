@@ -25,7 +25,12 @@ if t.TYPE_CHECKING:
 
     import openllm
 
-MODEL_FLAX_MAPPING_NAMES = OrderedDict([("flan_t5", "FlaxFlanT5")])
+MODEL_FLAX_MAPPING_NAMES = OrderedDict(
+    [
+        ("flan_t5", "FlaxFlanT5"),
+        ("opt", "FlaxOPT"),
+    ]
+)
 
 MODEL_FLAX_MAPPING: dict[
     type[openllm.LLMConfig], type[openllm.LLM[transformers.FlaxPreTrainedModel, transformers.PreTrainedTokenizerFast]]

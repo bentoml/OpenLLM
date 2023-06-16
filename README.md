@@ -251,6 +251,29 @@ pip install openllm
 
 </td>
 </tr>
+<tr>
+
+<td><a href=https://huggingface.co/docs/transformers/model_doc/opt>opt</a></td>
+<td>✅</td>
+<td>✅</td>
+<td>
+
+```bash
+pip install openllm
+```
+
+</td>
+<td>
+
+<ul><li><a href=https://huggingface.co/facebook/opt-125m><code>facebook/opt-125m</code></a></li>
+<li><a href=https://huggingface.co/facebook/opt-350m><code>facebook/opt-350m</code></a></li>
+<li><a href=https://huggingface.co/facebook/opt-1.3b><code>facebook/opt-1.3b</code></a></li>
+<li><a href=https://huggingface.co/facebook/opt-2.7b><code>facebook/opt-2.7b</code></a></li>
+<li><a href=https://huggingface.co/facebook/opt-6.7b><code>facebook/opt-6.7b</code></a></li>
+<li><a href=https://huggingface.co/facebook/opt-66b><code>facebook/opt-66b</code></a></li></ul>
+
+</td>
+</tr>
 </table>
 
 <!-- update-readme.py: stop -->
