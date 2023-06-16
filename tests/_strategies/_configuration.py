@@ -36,6 +36,8 @@ def model_settings(draw: st.DrawFn):
         url=st.text(),
         requires_gpu=st.booleans(),
         trust_remote_code=st.booleans(),
+        bettertransformer=st.booleans(),
+        model_type=st.sampled_from(["causal_lm", "seq2seq_lm"]),
         requirements=st.none() | st.lists(st.text(), min_size=1),
         name_type=st.sampled_from(["dasherize", "lowercase"]),
         timeout=st.integers(min_value=3600),

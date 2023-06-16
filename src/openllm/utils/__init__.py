@@ -72,6 +72,18 @@ def gpu_count() -> tuple[int, ...]:
     return tuple(NvidiaGpuResource.from_system())
 
 
+# equivocal setattr to save one lookup per assignment
+_object_setattr = object.__setattr__
+
+
+def non_intrusive_setattr(obj: t.Any, name: str, value: t.Any) -> None:
+    """This makes sure that we don't overwrite any existing attributes on the object"""
+    _setattr = _object_setattr.__get__(obj)
+
+    if not hasattr(obj, name):
+        _setattr(name, value)
+
+
 DEBUG = sys.flags.dev_mode or (not sys.flags.ignore_environment and bool(os.environ.get("OPENLLMDEVDEBUG")))
 
 _extras = {
@@ -92,6 +104,7 @@ _extras = {
     "resolve_user_filepath": resolve_user_filepath,
     "lenient_issubclass": lenient_issubclass,
     "gpu_count": gpu_count,
+    "non_intrusive_setattr": non_intrusive_setattr,
     "DEBUG": DEBUG,
 }
 
@@ -108,6 +121,7 @@ _import_structure = {
         "is_flax_available",
         "is_tf_available",
         "is_torch_available",
+        "is_bitsandbytes_available",
         "require_backends",
     ],
 }
@@ -119,6 +133,7 @@ if t.TYPE_CHECKING:
     from .import_utils import ENV_VARS_TRUE_VALUES as ENV_VARS_TRUE_VALUES
     from .import_utils import DummyMetaclass as DummyMetaclass
     from .import_utils import ModelEnv as ModelEnv
+    from .import_utils import is_bitsandbytes_available as is_bitsandbytes_available
     from .import_utils import is_cpm_kernels_available as is_cpm_kernels_available
     from .import_utils import is_einops_available as is_einops_available
     from .import_utils import is_flax_available as is_flax_available

@@ -47,13 +47,13 @@ def main() -> int:
         "Model Ids": [],
     }
     max_install_len_div = 0
-    for name, config in openllm.CONFIG_MAPPING.items():
+    for name, config_cls in openllm.CONFIG_MAPPING.items():
         dashed = inflection.dasherize(name)
         formatted["Model"].append(dashed)
-        formatted["URL"].append(config.__openllm_url__)
+        formatted["URL"].append(config_cls.__openllm_url__)
         formatted["GPU"].append("✅")
-        formatted["CPU"].append("✅" if not config.__openllm_requires_gpu__ else "❌")
-        formatted["Model Ids"].append(config.__openllm_model_ids__)
+        formatted["CPU"].append("✅" if not config_cls.__openllm_requires_gpu__ else "❌")
+        formatted["Model Ids"].append(config_cls.__openllm_model_ids__)
         if dashed in deps:
             instruction = f'```bash\npip install "openllm[{dashed}]"\n```'
         else:

@@ -61,6 +61,7 @@ class FlanT5Config(openllm.LLMConfig):
             "google/flan-t5-xl",
             "google/flan-t5-xxl",
         ],
+        "model_type": "seq2seq_lm",
     }
 
     class GenerationConfig:

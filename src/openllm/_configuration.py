@@ -66,7 +66,16 @@ from deepmerge.merger import Merger
 import openllm
 
 from .exceptions import ForbiddenAttributeError, GpuNotAvailableError, OpenLLMException
-from .utils import DEBUG, LazyType, bentoml_cattr, codegen, dantic, first_not_none, lenient_issubclass
+from .utils import (
+    DEBUG,
+    ENV_VARS_TRUE_VALUES,
+    LazyType,
+    bentoml_cattr,
+    codegen,
+    dantic,
+    first_not_none,
+    lenient_issubclass,
+)
 
 if hasattr(t, "Required"):
     from typing import Required
@@ -77,6 +86,11 @@ if hasattr(t, "NotRequired"):
     from typing import NotRequired
 else:
     from typing_extensions import NotRequired
+
+if hasattr(t, "dataclass_transform"):
+    from typing import dataclass_transform
+else:
+    from typing_extensions import dataclass_transform
 
 _T = t.TypeVar("_T")
 
@@ -369,6 +383,11 @@ class GenerationConfig:
             )
         self.__attrs_init__(**attrs)
 
+    def __getitem__(self, item: str) -> t.Any:
+        if hasattr(self, item):
+            return getattr(self, item)
+        raise KeyError(f"GenerationConfig has no attribute {item}")
+
 
 bentoml_cattr.register_unstructure_hook_factory(
     lambda cls: attr.has(cls) and lenient_issubclass(cls, GenerationConfig),
@@ -411,6 +430,10 @@ class ModelSettings(t.TypedDict, total=False):
     requires_gpu: bool
     trust_remote_code: bool
     requirements: t.Optional[ListStr]
+
+    # llm implementation specifics
+    bettertransformer: bool
+    model_type: t.Literal["causal_lm", "seq2seq_lm"]
     runtime: t.Literal["transformers", "cpp"]
 
     # naming convention, only name_type is needed to infer from the class
@@ -498,30 +521,48 @@ def structure_settings(cl_: type[LLMConfig], cls: type[t.Any]):
             for f in fields
         ]
 
+    generation_class = attr.make_class(
+        f"{_cl_name}GenerationConfig",
+        [],
+        bases=(GenerationConfig,),
+        slots=True,
+        weakref_slot=True,
+        frozen=False,
+        repr=True,
+        collect_by_mro=True,
+        field_transformer=auto_env_transformers,
+    )
+
+    # bettertransformer support
+    env = openllm.utils.ModelEnv(model_name)
+    requires_gpu = settings.get("requires_gpu", False)
+    bettertransformer = settings.get(
+        "bettertransformer", os.environ.get(env.bettertransformer, str(False)).upper() in ENV_VARS_TRUE_VALUES
+    )
+    if requires_gpu:
+        # For all models that requires GPU, no need to offload it to BetterTransformer
+        # use bitsandbytes or gptq instead for latency improvement
+        if bettertransformer:
+            logger.debug("Model requires GPU by default, disabling bettertransformer.")
+        bettertransformer = False
+
     return cls(
         default_id=settings["default_id"],
         model_ids=settings["model_ids"],
         url=settings.get("url", ""),
-        requires_gpu=settings.get("requires_gpu", False),
+        model_type=settings.get("model_type", "causal_lm"),
         trust_remote_code=settings.get("trust_remote_code", False),
         requirements=settings.get("requirements", None),
+        timeout=settings.get("timeout", 3600),
+        workers_per_resource=settings.get("workers_per_resource", 1),
+        runtime=settings.get("runtime", "transformers"),
+        requires_gpu=requires_gpu,
+        bettertransformer=bettertransformer,
         name_type=name_type,
         model_name=model_name,
         start_name=start_name,
-        runtime=settings.get("runtime", "transformers"),
-        env=openllm.utils.ModelEnv(model_name),
-        timeout=settings.get("timeout", 3600),
-        workers_per_resource=settings.get("workers_per_resource", 1),
-        generation_class=attr.make_class(
-            f"{_cl_name}GenerationConfig",
-            [],
-            bases=(GenerationConfig,),
-            slots=True,
-            weakref_slot=True,
-            frozen=False,
-            repr=True,
-            field_transformer=auto_env_transformers,
-        ),
+        env=env,
+        generation_class=generation_class,
     )
 
 
@@ -568,6 +609,21 @@ def _make_assignment_script(cls: type[LLMConfig], attributes: attr.AttrsInstance
 _reserved_namespace = {"__config__", "GenerationConfig"}
 
 
+@dataclass_transform(order_default=True, field_specifiers=(attr.field, dantic.Field))
+def __llm_config_transform__(cls: type[LLMConfig]) -> type[LLMConfig]:
+    kwargs: dict[str, t.Any] = {}
+    breakpoint()
+    if hasattr(cls, "GenerationConfig"):
+        kwargs = {k: v for k, v in vars(cls.GenerationConfig).items() if not k.startswith("_")}
+    cls.__dataclass_transform__ = {
+        "order_default": True,
+        "field_specifiers": (attr.field, dantic.Field),
+        "kwargs": kwargs,
+    }
+    return cls
+
+
+@__llm_config_transform__
 @attr.define(slots=True)
 class LLMConfig:
     """
@@ -699,6 +755,17 @@ class LLMConfig:
         __openllm_model_name__: str = ""
         """The normalized version of __openllm_start_name__, determined by __openllm_name_type__"""
 
+        __openllm_model_type__: t.Literal["causal_lm", "seq2seq_lm"] = "causal_lm"
+        """The model type for this given LLM. By default, it should be causal language modeling.
+        Currently supported 'causal_lm' or 'seq2seq_lm'
+        """
+
+        __openllm_bettertransformer__: bool = False
+        """Whether to use BetterTransformer for this given LLM. This depends per model
+        architecture. By default, we will use BetterTransformer for T5 and StableLM models,
+        and set to False for every other models.
+        """
+
         __openllm_start_name__: str = ""
         """Default name to be used with `openllm start`"""
 
@@ -804,6 +871,7 @@ class LLMConfig:
         these["generation_config"] = cls.Field(
             default=cls.__openllm_generation_class__(),
             description=inspect.cleandoc(cls.__openllm_generation_class__.__doc__ or ""),
+            type=GenerationConfig,
         )
 
         # Generate the base __attrs_attrs__ transformation here.
@@ -884,6 +952,12 @@ class LLMConfig:
         cls.__openllm_hints__ = {
             f.name: f.type for ite in map(attr.fields, (cls, cls.__openllm_generation_class__)) for f in ite
         }
+        # finally update the signature of cls.__getitem__
+        _getitem_annotations = {
+            "item": f'typing.Literal[{", ".join([*cls.__openllm_hints__, *ModelSettings.__annotations__])}]',
+            "return": "typing.Any",
+        }
+        setattr(cls.__getitem__, "__annotations__", _getitem_annotations)
 
     def __setattr__(self, attr: str, value: t.Any):
         if attr in _reserved_namespace:
@@ -912,7 +986,7 @@ class LLMConfig:
             generation_keys = {k for k in attrs if k in _generation_cl_dict}
             if len(generation_keys) > 0:
                 logger.warning(
-                    "Both 'generation_config' and keys for 'generation_config' are passed."
+                    "Both 'generation_config' and kwargs to construct 'generation_config' are passed."
                     " The following keys in 'generation_config' will be overriden be keywords argument: %s",
                     ", ".join(generation_keys),
                 )
@@ -943,6 +1017,25 @@ class LLMConfig:
 
         # The rest of attrs should only be the attributes to be passed to __attrs_init__
         self.__attrs_init__(generation_config=self.__openllm_generation_class__(**generation_config), **attrs)
+
+    @t.no_type_check
+    def __getitem__(self, item: str | t.Any) -> t.Any:
+        if not isinstance(item, str):
+            raise TypeError(f"LLM only supports string indexing, not {item.__class__.__name__}")
+        if item in _reserved_namespace:
+            raise ForbiddenAttributeError(
+                f"'{item}' is a reserved namespace for {self.__class__} and should not be access nor modified."
+            )
+        if item in self.__openllm_extras__:
+            return self.__openllm_extras__[item]
+
+        internal_attributes = f"__openllm_{item}__"
+        if hasattr(self, internal_attributes):
+            return getattr(self, internal_attributes)
+        elif hasattr(self, item):
+            return getattr(self, item)
+        else:
+            raise KeyError(item)
 
     def __getattribute__(self, item: str) -> t.Any:
         if item in _reserved_namespace:

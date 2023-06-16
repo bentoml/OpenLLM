@@ -55,7 +55,7 @@ class GenerationInput:
     def for_model(cls, model_name: str, **attrs: t.Any) -> type[GenerationInput]:
         llm_config = openllm.AutoConfig.for_model(model_name, **attrs)
         return attr.make_class(
-            inflection.camelize(llm_config.__openllm_model_name__) + "GenerationInput",
+            inflection.camelize(llm_config["model_name"]) + "GenerationInput",
             attrs={
                 "prompt": attr.field(type=str),
                 "llm_config": attr.field(

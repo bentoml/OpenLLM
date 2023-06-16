@@ -47,13 +47,12 @@ class StableLM(openllm.LLM["transformers.GPTNeoXForCausalLM", "transformers.GPTN
 
     def llm_post_init(self):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.load_in_mha = True if not torch.cuda.is_available() else False
+        self.bettertransformer = True if not torch.cuda.is_available() else False
 
     @property
     def import_kwargs(self):
         model_kwds = {
             "torch_dtype": torch.float16 if torch.cuda.is_available() else torch.float32,
-            "load_in_8bit": False,
             "device_map": "auto" if torch.cuda.is_available() and torch.cuda.device_count() > 1 else None,
         }
         tokenizer_kwds: dict[str, t.Any] = {}
