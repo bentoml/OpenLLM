@@ -1076,10 +1076,8 @@ class LLMConfig:
 
     def model_dump(self, flatten: bool = False, **_: t.Any):
         dumped = bentoml_cattr.unstructure(self)
-        generation_config = bentoml_cattr.unstructure(self.generation_config)
-        if not flatten:
-            dumped["generation_config"] = generation_config
-        else:
+        if flatten:
+            generation_config = dumped.pop("generation_config")
             dumped.update(generation_config)
         return dumped
 
