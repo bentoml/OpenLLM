@@ -13,20 +13,31 @@
 # limitations under the License.
 
 ci:
-  autoupdate_schedule: monthly
+  autoupdate_schedule: weekly
+  skip: [check-models-table-update, check-models-table-update]
+exclude: '.*\.(css|js|svg)$'
 repos:
-  - repo: local
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    rev: 'v0.0.272'
     hooks:
-      - id: format-check
-        name: format-check
-        language: system
-        entry: hatch run dev:style
-        always_run: true
-        pass_filenames: false
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix, --show-fixes]
+  - repo: https://github.com/psf/black
+    rev: 23.3.0
+    hooks:
+      - id: black-jupyter
+        files: '/(src|tests|docs|examples|typings)/'
+  - repo: https://github.com/econchick/interrogate
+    rev: 1.5.0
+    hooks:
+      - id: interrogate
+        types: [python]
+        exclude: ^(docs|tools|tests)
+        args: [--config=pyproject.toml]
   - repo: local
     hooks:
       - id: check-license-header
-        name: license-header-check
+        name: check for license headers
         entry: ./tools/assert-license-headers
         language: script
         exclude_types:
@@ -42,7 +53,7 @@ repos:
   - repo: local
     hooks:
       - id: check-models-table-update
-        name: check-models-table-update
+        name: check if table in README.md is up-to-date
         entry: ./tools/assert-model-table-latest
         language: script
         files: README.md

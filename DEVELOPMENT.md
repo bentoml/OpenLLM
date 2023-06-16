@@ -100,7 +100,7 @@ After setting up your environment, here's how you can start contributing:
 3. Run all formatter and linter with `hatch`:
 
    ```bash
-   hatch run dev:fmt
+   hatch run fmt
    ```
 4. Write tests that verify your feature or fix (see
    [Writing Tests](#writing-tests) below).
@@ -127,8 +127,8 @@ After setting up your environment, here's how you can start contributing:
 ## Using a custom fork
 
 If you wish to use a modified version of OpenLLM, install your fork from source
-with `pip install -e` and set `OPENLLM_DEV_BUILD=True`, so that Bentos built will
-include the generated wheels for OpenLLM in the bundle.
+with `pip install -e` and set `OPENLLM_DEV_BUILD=True`, so that Bentos built
+will include the generated wheels for OpenLLM in the bundle.
 
 ## Writing Tests
 
@@ -154,3 +154,61 @@ To release a new version, use `./tools/run-release-action`. It requires `gh`,
 ```
 
 > Note that currently this workflow can only be run by the BentoML team.
+
+## Changelog
+
+_modeled after the [attrs](https://github.com/python-attrs/attrs) workflow_
+
+If the change is noteworthy, there needs to be a changelog entry so users can
+learn about it!
+
+To avoid merge conflicts, we use the
+[_Towncrier_](https://pypi.org/project/towncrier) package to manage our
+changelog. _towncrier_ uses independent _Markdown_ files for each pull request –
+so called _news fragments_ – instead of one monolithic changelog file. On
+release, those news fragments are compiled into
+[`CHANGELOG.md`](https://github.com/bentoml/openllm/blob/main/CHANGELOG.md).
+
+You don't need to install _Towncrier_ yourself, you just have to abide by a few
+simple rules:
+
+- For each pull request, add a new file into `changelog.d` with a filename
+  adhering to the `<pr#>.(change|deprecation|breaking|feature).md` schema: For
+  example, `changelog.d/42.change.md` for a non-breaking change that is proposed
+  in pull request #42.
+- As with other docs, please use [semantic newlines] within news fragments.
+- Wrap symbols like modules, functions, or classes into backticks so they are
+  rendered in a `monospace font`.
+- Wrap arguments into asterisks like in docstrings:
+  `Added new argument *an_argument*.`
+- If you mention functions or other callables, add parentheses at the end of
+  their names: `openllm.func()` or `openllm.LLMClass.method()`. This makes the
+  changelog a lot more readable.
+- Prefer simple past tense or constructions with "now". For example:
+
+  - Added `LLM.func()`.
+  - `LLM.func()` now doesn't do X.Y.Z anymore when passed the _foobar_ argument.
+- If you want to reference multiple issues, copy the news fragment to another
+  filename. _Towncrier_ will merge all news fragments with identical contents
+  into one entry with multiple links to the respective pull requests.
+
+Example entries:
+
+```md
+Added `LLM.func()`.
+The feature really _is_ awesome.
+```
+
+or:
+
+```md
+`openllm.utils.func()` now doesn't X.Y.Z anymore when passed the _foobar_ argument.
+The bug really _was_ nasty.
+```
+
+---
+
+`hatch run changelog` will render the current changelog to the terminal if you have
+any doubts.
+
+[semantic newlines]: https://rhodesmill.org/brandon/2012/one-sentence-per-line/

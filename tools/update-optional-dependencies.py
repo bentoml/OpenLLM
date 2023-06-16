@@ -31,9 +31,9 @@ FLAN_T5_DEPS = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
 OPENAI_DEPS = ["openai", "tiktoken"]
 
 _base_requirements = {
-    inflection.dasherize(name): config.__openllm_requirements__
-    for name, config in openllm.CONFIG_MAPPING.items()
-    if config.__openllm_requirements__
+    inflection.dasherize(name): config_cls.__openllm_requirements__
+    for name, config_cls in openllm.CONFIG_MAPPING.items()
+    if config_cls.__openllm_requirements__
 }
 
 # NOTE: update this table when adding new external dependencies

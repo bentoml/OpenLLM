@@ -29,6 +29,7 @@ class FalconConfig(openllm.LLMConfig):
         "trust_remote_code": True,
         "requires_gpu": True,
         "timeout": int(36e6),
+        "use_pipeline": True,
         "url": "https://falconllm.tii.ae/",
         "requirements": ["einops", "xformers", "safetensors"],
         "default_id": "tiiuae/falcon-7b",

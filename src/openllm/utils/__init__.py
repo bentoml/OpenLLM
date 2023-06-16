@@ -15,8 +15,9 @@
 Utilities function for OpenLLM. User can import these function for convenience, but
 we won't ensure backward compatibility for these functions. So use with caution.
 """
-from __future__ import annotations
+from __future__ import annotations as _annotations
 
+import functools
 import os
 import sys
 import types
@@ -27,30 +28,32 @@ from bentoml._internal.configuration import get_quiet_mode as get_quiet_mode
 from bentoml._internal.configuration import set_debug_mode as set_debug_mode
 from bentoml._internal.configuration import set_quiet_mode as set_quiet_mode
 from bentoml._internal.log import configure_logging as configure_logging
-from bentoml._internal.log import configure_server_logging as configure_server_logging
-from bentoml._internal.types import LazyType
-
+from bentoml._internal.log import \
+    configure_server_logging as configure_server_logging
+from bentoml._internal.types import LazyType as LazyType
 # NOTE: The following exports useful utils from bentoml
 from bentoml._internal.utils import LazyLoader as LazyLoader
 from bentoml._internal.utils import bentoml_cattr as bentoml_cattr
-from bentoml._internal.utils import copy_file_to_fs_folder as copy_file_to_fs_folder
+from bentoml._internal.utils import \
+    copy_file_to_fs_folder as copy_file_to_fs_folder
 from bentoml._internal.utils import first_not_none as first_not_none
 from bentoml._internal.utils import pkg as pkg
 from bentoml._internal.utils import reserve_free_port as reserve_free_port
-from bentoml._internal.utils import resolve_user_filepath as resolve_user_filepath
+from bentoml._internal.utils import \
+    resolve_user_filepath as resolve_user_filepath
 
-from .lazy import LazyModule as LazyModule
+from .lazy import LazyModule
 
 try:
-    from typing import GenericAlias as TypingGenericAlias  # type: ignore
+    from typing import GenericAlias as _TypingGenericAlias  # type: ignore
 except ImportError:
     # python < 3.9 does not have GenericAlias (list[int], tuple[str, ...] and so on)
-    TypingGenericAlias = ()
+    _TypingGenericAlias = ()
 
 if sys.version_info < (3, 10):
-    WithArgsTypes = (TypingGenericAlias,)
+    _WithArgsTypes = (_TypingGenericAlias,)
 else:
-    WithArgsTypes: t.Any = (
+    _WithArgsTypes: t.Any = (
         t._GenericAlias,  # type: ignore (_GenericAlias is the actual GenericAlias implementation)
         types.GenericAlias,
         types.UnionType,
@@ -61,7 +64,7 @@ def lenient_issubclass(cls: t.Any, class_or_tuple: type[t.Any] | tuple[type[t.An
     try:
         return isinstance(cls, type) and issubclass(cls, class_or_tuple)  # type: ignore[arg-type]
     except TypeError:
-        if isinstance(cls, WithArgsTypes):
+        if isinstance(cls, _WithArgsTypes):
             return False
         raise
 
@@ -78,7 +81,7 @@ _object_setattr = object.__setattr__
 
 def non_intrusive_setattr(obj: t.Any, name: str, value: t.Any) -> None:
     """This makes sure that we don't overwrite any existing attributes on the object"""
-    _setattr = _object_setattr.__get__(obj)
+    _setattr = functools.partial(setattr, obj) if isinstance(obj, type) else _object_setattr.__get__(obj)
 
     if not hasattr(obj, name):
         _setattr(name, value)
@@ -86,26 +89,11 @@ def non_intrusive_setattr(obj: t.Any, name: str, value: t.Any) -> None:
 
 DEBUG = sys.flags.dev_mode or (not sys.flags.ignore_environment and bool(os.environ.get("OPENLLMDEVDEBUG")))
 
-_extras = {
-    "get_debug_mode": get_debug_mode,
-    "get_quiet_mode": get_quiet_mode,
-    "set_debug_mode": set_debug_mode,
-    "set_quiet_mode": set_quiet_mode,
-    "configure_logging": configure_logging,
-    "configure_server_logging": configure_server_logging,
-    "LazyType": LazyType,
-    "LazyLoader": LazyLoader,
-    "LazyModule": LazyModule,
-    "bentoml_cattr": bentoml_cattr,
-    "copy_file_to_fs_folder": copy_file_to_fs_folder,
-    "first_not_none": first_not_none,
-    "pkg": pkg,
-    "reserve_free_port": reserve_free_port,
-    "resolve_user_filepath": resolve_user_filepath,
-    "lenient_issubclass": lenient_issubclass,
-    "gpu_count": gpu_count,
-    "non_intrusive_setattr": non_intrusive_setattr,
-    "DEBUG": DEBUG,
+
+# XXX: define all classes, functions import above this line
+# since _extras will be the locals() import from this file.
+_extras: dict[str, t.Any] = {
+    k: v for k, v in locals().items() if not isinstance(v, types.ModuleType) and not k.startswith("_")
 }
 
 _import_structure = {
@@ -133,8 +121,10 @@ if t.TYPE_CHECKING:
     from .import_utils import ENV_VARS_TRUE_VALUES as ENV_VARS_TRUE_VALUES
     from .import_utils import DummyMetaclass as DummyMetaclass
     from .import_utils import ModelEnv as ModelEnv
-    from .import_utils import is_bitsandbytes_available as is_bitsandbytes_available
-    from .import_utils import is_cpm_kernels_available as is_cpm_kernels_available
+    from .import_utils import \
+        is_bitsandbytes_available as is_bitsandbytes_available
+    from .import_utils import \
+        is_cpm_kernels_available as is_cpm_kernels_available
     from .import_utils import is_einops_available as is_einops_available
     from .import_utils import is_flax_available as is_flax_available
     from .import_utils import is_tf_available as is_tf_available

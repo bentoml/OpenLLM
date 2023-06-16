@@ -414,7 +414,7 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
 
         openllm_model_version = attrs.pop("openllm_model_version", None)
 
-        # low_cpu_mem_usage
+        # low_cpu_mem_usage is only available for model
         # this is helpful on system with low memory to avoid OOM
         low_cpu_mem_usage = attrs.pop("low_cpu_mem_usage", True)
 
@@ -449,7 +449,7 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
                 if quantize == "8bit":
                     if int8_skip_modules is None:
                         int8_skip_modules = []
-                    if "lm_head" not in int8_skip_modules and self.config.__openllm_model_type__ == "causal_lm":
+                    if "lm_head" not in int8_skip_modules and self.config["model_type"] == "causal_lm":
                         logger.debug("Skipping 'lm_head' for quantization for %s", self)
                         int8_skip_modules.append("lm_head")
                     quantization_config = transformers.BitsAndBytesConfig(
@@ -491,7 +491,7 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
                 else:
                     raise ValueError(f"'quantize' must be one of ['8bit', '4bit', 'gptq'], got {quantize} instead.")
 
-        attrs.update({"quantization_config": quantization_config, "low_cpu_mem_usage": low_cpu_mem_usage})
+        attrs.update({"quantization_config": quantization_config})
 
         if llm_config is not None:
             logger.debug("Using given 'llm_config=(%s)' to initialize LLM", llm_config)
@@ -499,7 +499,10 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
         else:
             self.config = self.config_class.model_construct_env(**attrs)
             # The rests of the kwargs that is not used by the config class should be stored into __openllm_extras__.
-            attrs = self.config.__openllm_extras__
+            attrs = self.config["extras"]
+
+        if not self.config["use_pipeline"]:
+            attrs["low_cpu_mem_usage"] = low_cpu_mem_usage
 
         model_kwds, tokenizer_kwds = {}, {}
         if self.__llm_init_kwargs__:
@@ -515,7 +518,7 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
             )
 
         if model_id is None:
-            model_id = os.environ.get(self.config.__openllm_env__.model_id, self.config.__openllm_default_id__)
+            model_id = os.environ.get(self.config["env"].model_id, self.config["default_id"])
 
         # NOTE: This is the actual given path or pretrained weight for this LLM.
         assert model_id is not None
@@ -562,7 +565,7 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
 
     @property
     def runner_name(self) -> str:
-        return f"llm-{self.config.__openllm_start_name__}-runner"
+        return f"llm-{self.config['start_name']}-runner"
 
     # NOTE: The section below defines a loose contract with langchain's LLM interface.
     @property
@@ -573,7 +576,7 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
     def identifying_params(self) -> dict[str, t.Any]:
         return {
             "configuration": self.config.model_dump_json().decode(),
-            "model_ids": orjson.dumps(self.config.__openllm_model_ids__).decode(),
+            "model_ids": orjson.dumps(self.config["model_ids"]).decode(),
         }
 
     @staticmethod
@@ -630,7 +633,7 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
                 "-m",
                 "openllm",
                 "download-models",
-                self.config.__openllm_start_name__,
+                self.config["start_name"],
                 "--model-id",
                 self.model_id,
                 "--output",
@@ -678,7 +681,7 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
         # differentiate when saving tokenizer or other pretrained type.
         is_pretrained_model = is_pipeline and "_framework" in self._bentomodel.info.metadata
 
-        if self.bettertransformer and is_pipeline:
+        if self.bettertransformer and is_pipeline and self.config["use_pipeline"]:
             # This is a pipeline, provide a accelerator args
             kwds["accelerator"] = "bettertransformer"
 
@@ -692,7 +695,7 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
                 self.bettertransformer
                 and is_pretrained_model
                 and self._bentomodel.info.metadata["_framework"] == "torch"
-                and self.config.__openllm_runtime__ == "transformers"
+                and self.config["runtime"] == "transformers"
             ):
                 # BetterTransformer is currently only supported on PyTorch.
                 from optimum.bettertransformer import BetterTransformer
@@ -820,7 +823,7 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
 
         # NOTE: returning the two langchain API's to the runner
         return types.new_class(
-            inflection.camelize(self.config.__openllm_model_name__) + "Runner",
+            inflection.camelize(self.config["model_name"]) + "Runner",
             (bentoml.Runner,),
             exec_body=lambda ns: ns.update(
                 {
@@ -829,17 +832,17 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
                     "llm": self,  # NOTE: self reference to LLM
                     "config": self.config,
                     "__call__": _wrapped_generate_run,
-                    "__module__": f"openllm.models.{self.config.__openllm_model_name__}",
-                    "__doc__": self.config.__openllm_env__.start_docstring,
+                    "__module__": f"openllm.models.{self.config['model_name']}",
+                    "__doc__": self.config["env"].start_docstring,
                 }
             ),
         )(
             types.new_class(
-                inflection.camelize(self.config.__openllm_model_name__) + "Runnable",
+                inflection.camelize(self.config["model_name"]) + "Runnable",
                 (_Runnable,),
                 {
                     "SUPPORTED_RESOURCES": ("nvidia.com/gpu", "cpu")
-                    if self.config.__openllm_requires_gpu__
+                    if self.config["requires_gpu"]
                     else ("nvidia.com/gpu",),
                     "llm_type": self.llm_type,
                     "identifying_params": self.identifying_params,
