@@ -46,7 +46,7 @@ class ChatGLMConfig(openllm.LLMConfig):
 
     retain_history: bool = openllm.LLMConfig.Field(
         False,
-        description="""Whether to retain history given to the model. 
+        description="""Whether to retain history given to the model.
         If set to True, then the model will retain given history.""",
     )
 

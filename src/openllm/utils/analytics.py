@@ -81,7 +81,7 @@ class StartInitEvent(_internal_analytics.schemas.EventMeta):
 
     @staticmethod
     def handler(llm_config: openllm.LLMConfig) -> StartInitEvent:
-        return StartInitEvent(model_name=llm_config.__openllm_model_name__, llm_config=llm_config.model_dump())
+        return StartInitEvent(model_name=llm_config["model_name"], llm_config=llm_config.model_dump())
 
 
 def track_start_init(

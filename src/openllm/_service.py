@@ -36,7 +36,7 @@ model_id = os.environ.get("OPENLLM_MODEL_ID", "{__model_id__}")  # openllm: mode
 llm_config = openllm.AutoConfig.for_model(model)
 runner = openllm.Runner(model, model_id=model_id, llm_config=llm_config)
 
-svc = bentoml.Service(name=f"llm-{llm_config.__openllm_start_name__}-service", runners=[runner])
+svc = bentoml.Service(name=f"llm-{llm_config['start_name']}-service", runners=[runner])
 
 
 @svc.api(
@@ -55,8 +55,8 @@ async def generate_v1(input_dict: dict[str, t.Any]) -> openllm.GenerationOutput:
 def metadata_v1(_: str) -> openllm.MetadataOutput:
     return openllm.MetadataOutput(
         model_id=model_id,
-        timeout=llm_config.__openllm_timeout__,
-        model_name=llm_config.__openllm_model_name__,
-        framework=llm_config.__openllm_env__.get_framework_env(),
+        timeout=llm_config["timeout"],
+        model_name=llm_config["model_name"],
+        framework=llm_config["env"].get_framework_env(),
         configuration=llm_config.model_dump_json().decode(),
     )

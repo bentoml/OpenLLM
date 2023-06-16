@@ -61,6 +61,7 @@ _tf_available = importlib.util.find_spec("tensorflow") is not None
 _flax_available = importlib.util.find_spec("jax") is not None and importlib.util.find_spec("flax") is not None
 _einops_available = _is_package_available("einops")
 _cpm_kernel_available = _is_package_available("cpm_kernels")
+_bitsandbytes_available = _is_package_available("bitsandbytes")
 
 
 def is_einops_available():
@@ -69,6 +70,10 @@ def is_einops_available():
 
 def is_cpm_kernels_available():
     return _cpm_kernel_available
+
+
+def is_bitsandbytes_available():
+    return _bitsandbytes_available
 
 
 def is_torch_available():

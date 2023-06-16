@@ -22,8 +22,7 @@ on:
 env:
   LINES: 120
   COLUMNS: 120
-  BENTOML_DO_NOT_TRACK: True
-  PYTEST_PLUGINS: bentoml.testing.pytest.plugin
+  OPENLLM_DO_NOT_TRACK: True
 # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#defaultsrun
 defaults:
   run:
@@ -38,8 +37,10 @@ jobs:
           fetch-depth: 0
       - name: Setup CI
         uses: ./.github/actions/setup-repo
-      - name: Format check
-        run: hatch run dev:style
+      - name: Running changelog check
+        run: hatch run changelog
+      - name: Format and lint check
+        run: hatch run fmt
       - name: Type check
         if: ${{ github.event_name == 'pull_request' }}
         run: git diff --name-only --diff-filter=AM "origin/$GITHUB_BASE_REF" -z -- '*.py{,i}' | xargs -0 --no-run-if-empty hatch run dev:typing

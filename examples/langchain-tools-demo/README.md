@@ -24,9 +24,3 @@ docker run \
   ..image_name
 
 ```
-
-
-
-
-
-

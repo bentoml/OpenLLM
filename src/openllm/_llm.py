@@ -35,7 +35,8 @@ from bentoml._internal.types import ModelSignatureDict
 import openllm
 
 from .exceptions import ForbiddenAttributeError, OpenLLMException
-from .utils import ENV_VARS_TRUE_VALUES, LazyLoader, bentoml_cattr
+from .utils import (LazyLoader, bentoml_cattr, is_bitsandbytes_available,
+                    non_intrusive_setattr)
 
 if t.TYPE_CHECKING:
     import torch
@@ -60,7 +61,6 @@ else:
 
 logger = logging.getLogger(__name__)
 
-# NOTE: `1-2` -> text-generation and text2text-generation
 FRAMEWORK_TO_AUTOCLASS_MAPPING = {
     "pt": ("AutoModelForCausalLM", "AutoModelForSeq2SeqLM"),
     "tf": ("TFAutoModelForCausalLM", "TFAutoModelForSeq2SeqLM"),
@@ -132,6 +132,7 @@ def import_model(
             ),
         )
 
+    # NOTE: `1-2` -> text-generation and text2text-generation
     if type(config) in transformers.MODEL_FOR_CAUSAL_LM_MAPPING:
         idx = 0
     elif type(config) in transformers.MODEL_FOR_SEQ_TO_SEQ_CAUSAL_LM_MAPPING:
@@ -243,25 +244,6 @@ class LLMInterface(ABC):
         raise NotImplementedError
 
 
-def _default_post_init(self: LLM[t.Any, t.Any]):
-    # load_in_mha: Whether to apply BetterTransformer (or Torch MultiHeadAttention) during inference load.
-    #              See https://pytorch.org/blog/a-better-transformer-for-fast-transformer-encoder-inference/
-    #              for more information.
-    # NOTE: set a default variable to transform to BetterTransformer by default for inference
-    if self.config.__openllm_runtime__ == "cpp":
-        self.load_in_mha = False
-    else:
-        self.load_in_mha = (
-            os.environ.get(self.config_class.__openllm_env__.bettertransformer, str(False)).upper()
-            in ENV_VARS_TRUE_VALUES
-        )
-        if self.config_class.__openllm_requires_gpu__:
-            # For all models that requires GPU, no need to offload it to BetterTransformer
-            # use bitsandbytes instead
-
-            self.load_in_mha = False
-
-
 _M = t.TypeVar("_M")
 _T = t.TypeVar("_T")
 
@@ -284,6 +266,8 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
         _model_args: tuple[t.Any, ...]
         _model_attrs: dict[str, t.Any]
         _tokenizer_attrs: dict[str, t.Any]
+
+        bettertransformer: bool
 
     def __init_subclass__(cls):
         cd = cls.__dict__
@@ -309,20 +293,6 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
                 raise RuntimeError(
                     "Missing required key 'config_class'. Make sure to define it within the LLM subclass."
                 )
-
-        if cls.llm_post_init is not LLMInterface.llm_post_init:
-            original_llm_post_init = cd["llm_post_init"]
-
-            def wrapped_llm_post_init(self: t.Self) -> None:
-                """We need to both initialize private attributes and call the user-defined model_post_init
-                method.
-                """
-                _default_post_init(self)
-                original_llm_post_init(self)
-
-            cls.llm_post_init = wrapped_llm_post_init
-        else:
-            setattr(cls, "llm_post_init", _default_post_init)
 
         if cls.import_model is LLMInterface.import_model:
             # using the default import model
@@ -353,6 +323,8 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
         model_id: str | None = None,
         llm_config: openllm.LLMConfig | None = None,
         *args: t.Any,
+        quantize: t.Literal["8bit", "4bit", "gptq"] | None = None,
+        bettertransformer: bool | None = None,
         **attrs: t.Any,
     ):
         """Initialize the LLM with given pretrained model.
@@ -429,6 +401,9 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
             model_id: The pretrained model to use. Defaults to None. If None, 'self.default_id' will be used.
             llm_config: The config to use for this LLM. Defaults to None. If not passed, OpenLLM
                         will use `config_class` to construct default configuration.
+            quantize: The quantization to use for this LLM. Defaults to None. Possible values
+                      include 8bit, 4bit and gptq.
+            bettertransformer: Whether to use BetterTransformer with this model. Defaults to False.
             *args: The args to be passed to the model.
             **attrs: The kwargs to be passed to the model.
 
@@ -438,8 +413,91 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
                                    However, if `model_id` is a path, this argument is recomended to include.
         """
 
-        load_in_mha = attrs.pop("load_in_mha", False)
         openllm_model_version = attrs.pop("openllm_model_version", None)
+
+        # low_cpu_mem_usage is only available for model
+        # this is helpful on system with low memory to avoid OOM
+        low_cpu_mem_usage = attrs.pop("low_cpu_mem_usage", True)
+
+        # quantization setup
+        quantization_config = attrs.pop("quantization_config", None)
+        # 8 bit configuration
+        int8_threshold = attrs.pop("llm_int8_threshhold", 6.0)
+        cpu_offloading = attrs.pop("llm_int8_enable_fp32_cpu_offload", False)
+        int8_skip_modules: list[str] | None = attrs.pop("llm_int8_skip_modules", None)
+        int8_has_fp16_weight = attrs.pop("llm_int8_has_fp16_weight", False)
+        # 4 bit configuration
+        int4_compute_dtype = attrs.pop("llm_bnb_4bit_compute_dtype", torch.bfloat16)
+        int4_quant_type = attrs.pop("llm_bnb_4bit_quant_type", "nf4")
+        int4_use_double_quant = attrs.pop("llm_bnb_4bit_use_double_quant", True)
+
+        if quantization_config and quantize:
+            raise ValueError(
+                """'quantization_config' and 'quantize' are mutually exclusive. Either customise
+            your quantization_config or use the quantize argument."""
+            )
+        if quantization_config is None:
+            # quantize is a openllm.LLM feature, where we can quantize the model
+            # with bitsandbytes or quantization aware training.
+            if quantize is not None:
+                if not is_bitsandbytes_available():
+                    raise RuntimeError(
+                        "Quantization requires bitsandbytes to be installed. Make "
+                        "sure to install OpenLLM with 'pip install \"openllm[fine-tune]\"'"
+                    )
+                logger.debug(
+                    "'quantize' is not None. %s will use a default 'quantization_config' for %s. "
+                    "If you want to customise the quantization config, make sure to pass your "
+                    "own 'quantization_config'",
+                    self,
+                    quantize,
+                )
+                if quantize == "8bit":
+                    if int8_skip_modules is None:
+                        int8_skip_modules = []
+                    if "lm_head" not in int8_skip_modules and self.config["model_type"] == "causal_lm":
+                        logger.debug("Skipping 'lm_head' for quantization for %s", self)
+                        int8_skip_modules.append("lm_head")
+                    quantization_config = transformers.BitsAndBytesConfig(
+                        load_in_8bit=True,
+                        llm_int8_enable_fp32_cpu_offload=cpu_offloading,
+                        llm_int8_threshhold=int8_threshold,
+                        llm_int8_skip_modules=int8_skip_modules,
+                        llm_int8_has_fp16_weight=int8_has_fp16_weight,
+                    )
+                elif quantize == "4bit":
+                    trf_versions = openllm.utils.pkg.pkg_version_info("transformers")
+                    supports_kbits = trf_versions[:2] >= (4, 30)
+                    if supports_kbits:
+                        quantization_config = transformers.BitsAndBytesConfig(
+                            load_in_4bit=True,
+                            llm_bnb_4bit_compute_dtype=int4_compute_dtype,
+                            llm_bnb_4bit_quant_type=int4_quant_type,
+                            llm_bnb_4bit_use_double_quant=int4_use_double_quant,
+                        )
+                    else:
+                        logger.warning(
+                            "'quantize' is set to 4bit, while the current transformers version %s does not support "
+                            "k-bit quantization. k-bit quantization is supported since transformers 4.30, therefore "
+                            "make sure to install the latest version of transformers either via PyPI or "
+                            "from git source: 'pip install git+https://github.com/huggingface/transformers'.",
+                            trf_versions,
+                        )
+                elif quantize == "gptq":
+                    # TODO: support GPTQ loading quantization
+                    if model_id is None:
+                        raise RuntimeError(
+                            "'quantize=%s' requires passing custom path to quantized weights as we are unable to load "
+                            "the model on the fly. See https://github.com/qwopqwop200/GPTQ-for-LLaMa for "
+                            "instruction on how to quantize '%s' with GPTQ.",
+                            quantize,
+                            self,
+                        )
+                    raise NotImplementedError("GPTQ is not supported yet.")
+                else:
+                    raise ValueError(f"'quantize' must be one of ['8bit', '4bit', 'gptq'], got {quantize} instead.")
+
+        attrs.update({"quantization_config": quantization_config})
 
         if llm_config is not None:
             logger.debug("Using given 'llm_config=(%s)' to initialize LLM", llm_config)
@@ -447,7 +505,10 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
         else:
             self.config = self.config_class.model_construct_env(**attrs)
             # The rests of the kwargs that is not used by the config class should be stored into __openllm_extras__.
-            attrs = self.config.__openllm_extras__
+            attrs = self.config["extras"]
+
+        if not self.config["use_pipeline"]:
+            attrs["low_cpu_mem_usage"] = low_cpu_mem_usage
 
         model_kwds, tokenizer_kwds = {}, {}
         if self.__llm_init_kwargs__:
@@ -463,10 +524,11 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
             )
 
         if model_id is None:
-            model_id = os.environ.get(self.config.__openllm_env__.model_id, self.config.__openllm_default_id__)
+            model_id = os.environ.get(self.config["env"].model_id, self.config["default_id"])
 
         # NOTE: This is the actual given path or pretrained weight for this LLM.
-        assert model_id is not None
+        if t.TYPE_CHECKING:
+            assert model_id is not None
         self._model_id = model_id
 
         # parsing tokenizer and model kwargs
@@ -476,22 +538,23 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
         model_kwds.update({k: v for k, v in attrs.items() if not k.startswith(TOKENIZER_PREFIX)})
 
         # handle trust_remote_code
-        self.__llm_trust_remote_code__ = model_kwds.pop("trust_remote_code", self.config.__openllm_trust_remote_code__)
+        self.__llm_trust_remote_code__ = model_kwds.pop("trust_remote_code", self.config["trust_remote_code"])
 
         # NOTE: Save the args and kwargs for latter load
         self._model_args = args
         self._model_attrs = model_kwds
         self._tokenizer_attrs = tokenizer_kwds
-
-        # we allow users to overwrite the load_in_mha defined by the LLM subclass.
-        if load_in_mha:
-            logger.debug("Overwriting 'load_in_mha=%s' (base load_in_mha=%s)", load_in_mha, self.load_in_mha)
-            self.load_in_mha = load_in_mha
-
         self._openllm_model_version = openllm_model_version
 
         if self.__llm_post_init__:
             self.llm_post_init()
+
+        # we set it here so that we allow subclass to overwrite bettertransformer in llm_post_init
+        if bettertransformer:
+            logger.debug("Using %r with BetterTransformer", self)
+            self.bettertransformer = bettertransformer
+        else:
+            non_intrusive_setattr(self, "bettertransformer", self.config["bettertransformer"])
 
     def __setattr__(self, attr: str, value: t.Any):
         if attr in _reserved_namespace:
@@ -513,7 +576,7 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
 
     @property
     def runner_name(self) -> str:
-        return f"llm-{self.config.__openllm_start_name__}-runner"
+        return f"llm-{self.config['start_name']}-runner"
 
     # NOTE: The section below defines a loose contract with langchain's LLM interface.
     @property
@@ -524,7 +587,7 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
     def identifying_params(self) -> dict[str, t.Any]:
         return {
             "configuration": self.config.model_dump_json().decode(),
-            "model_ids": orjson.dumps(self.config.__openllm_model_ids__).decode(),
+            "model_ids": orjson.dumps(self.config["model_ids"]).decode(),
         }
 
     @staticmethod
@@ -580,8 +643,8 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
                 sys.executable,
                 "-m",
                 "openllm",
-                "download-models",
-                self.config.__openllm_start_name__,
+                "download",
+                self.config["start_name"],
                 "--model-id",
                 self.model_id,
                 "--output",
@@ -625,7 +688,11 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
         kwds = self._model_attrs
         kwds["trust_remote_code"] = self.__llm_trust_remote_code__
 
-        if self.load_in_mha and "_pretrained_class" not in self._bentomodel.info.metadata:
+        is_pipeline = "_pretrained_class" in self._bentomodel.info.metadata
+        # differentiate when saving tokenizer or other pretrained type.
+        is_pretrained_model = is_pipeline and "_framework" in self._bentomodel.info.metadata
+
+        if self.bettertransformer and is_pipeline and self.config["use_pipeline"]:
             # This is a pipeline, provide a accelerator args
             kwds["accelerator"] = "bettertransformer"
 
@@ -636,10 +703,10 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
                 self.__llm_model__ = self._bentomodel.load_model(*self._model_args, **kwds)
 
             if (
-                self.load_in_mha
-                and all(i in self._bentomodel.info.metadata for i in ("_framework", "_pretrained_class"))
+                self.bettertransformer
+                and is_pretrained_model
                 and self._bentomodel.info.metadata["_framework"] == "torch"
-                and self.config.__openllm_runtime__ == "transformers"
+                and self.config["runtime"] == "transformers"
             ):
                 # BetterTransformer is currently only supported on PyTorch.
                 from optimum.bettertransformer import BetterTransformer
@@ -767,7 +834,7 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
 
         # NOTE: returning the two langchain API's to the runner
         return types.new_class(
-            inflection.camelize(self.config.__openllm_model_name__) + "Runner",
+            inflection.camelize(self.config["model_name"]) + "Runner",
             (bentoml.Runner,),
             exec_body=lambda ns: ns.update(
                 {
@@ -776,17 +843,17 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
                     "llm": self,  # NOTE: self reference to LLM
                     "config": self.config,
                     "__call__": _wrapped_generate_run,
-                    "__module__": f"openllm.models.{self.config.__openllm_model_name__}",
-                    "__doc__": self.config.__openllm_env__.start_docstring,
+                    "__module__": f"openllm.models.{self.config['model_name']}",
+                    "__doc__": self.config["env"].start_docstring,
                 }
             ),
         )(
             types.new_class(
-                inflection.camelize(self.config.__openllm_model_name__) + "Runnable",
+                inflection.camelize(self.config["model_name"]) + "Runnable",
                 (_Runnable,),
                 {
                     "SUPPORTED_RESOURCES": ("nvidia.com/gpu", "cpu")
-                    if self.config.__openllm_requires_gpu__
+                    if self.config["requires_gpu"]
                     else ("nvidia.com/gpu",),
                     "llm_type": self.llm_type,
                     "identifying_params": self.identifying_params,

@@ -23,7 +23,8 @@ from hypothesis import assume, given
 from hypothesis import strategies as st
 
 import openllm
-from openllm._configuration import GenerationConfig, ModelSettings, _field_env_key
+from openllm._configuration import (GenerationConfig, ModelSettings,
+                                    _field_env_key)
 from openllm.utils import DEBUG
 
 from ._strategies._configuration import make_llm_config, model_settings
@@ -67,7 +68,7 @@ def test_forbidden_access():
 
 @given(model_settings())
 def test_class_normal_gen(gen_settings: ModelSettings):
-    assume(gen_settings["default_id"] and gen_settings["model_ids"])
+    assume(gen_settings["default_id"] and all(i for i in gen_settings["model_ids"]))
     cl_: type[openllm.LLMConfig] = make_llm_config("NotFullLLM", gen_settings)
     assert issubclass(cl_, openllm.LLMConfig)
     for key in gen_settings:

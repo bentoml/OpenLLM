@@ -83,6 +83,29 @@ def _echo(text: t.Any, fg: str = "green", _with_style: bool = True, **attrs: t.A
     call(text, **attrs)
 
 
+def quantize_option(factory: t.Any):
+    help_str = """Running this model in quantized mode.
+    Note that GPTQ is currently working in progress and will be available soon.
+
+    NOTE: Quantization is only available for PyTorch models.
+    """
+    return factory.option(
+        "--quantize",
+        type=click.Choice(["8bit", "4bit", "gptq"]),
+        default=None,
+        help=help_str,
+    )
+
+
+def bettertransformer_option(factory: t.Any):
+    return factory.option(
+        "--bettertransformer",
+        is_flag=True,
+        default=None,
+        help="Use BetterTransformer wrapper to serve model",
+    )
+
+
 def start_model_command(
     model_name: str,
     group: click.Group,
@@ -108,29 +131,30 @@ def start_model_command(
     openllm.utils.configure_logging()
 
     llm_config = openllm.AutoConfig.for_model(model_name)
+    env = llm_config["env"]
 
     docstring = f"""\
-{llm_config.__openllm_env__.start_docstring}
+{env.start_docstring}
 \b
-Available model_id(s): {llm_config.__openllm_model_ids__} [default: {llm_config.__openllm_default_id__}]
+Available model_id(s): {llm_config['model_ids']} [default: {llm_config['default_id']}]
 """
     command_attrs: dict[str, t.Any] = {
-        "name": llm_config.__openllm_model_name__,
+        "name": llm_config["model_name"],
         "context_settings": _context_settings or {},
         "short_help": f"Start a LLMServer for '{model_name}' ('--help' for more details)",
         "help": docstring,
     }
 
     aliases: list[str] = []
-    if llm_config.__openllm_name_type__ == "dasherize":
-        aliases.append(llm_config.__openllm_start_name__)
+    if llm_config["name_type"] == "dasherize":
+        aliases.append(llm_config["start_name"])
 
     command_attrs["aliases"] = aliases if len(aliases) > 0 else None
 
     serve_decorator = _http_server_args if not _serve_grpc else _grpc_server_args
 
     available_gpu = openllm.utils.gpu_count()
-    if llm_config.__openllm_requires_gpu__ and len(available_gpu) < 1:
+    if llm_config["requires_gpu"] and len(available_gpu) < 1:
         # NOTE: The model requires GPU, therefore we will return a dummy command
         command_attrs.update(
             {
@@ -152,8 +176,13 @@ Available model_id(s): {llm_config.__openllm_model_ids__} [default: {llm_config.
     @llm_config.to_click_options
     @serve_decorator
     @cog.optgroup.group("General LLM Options")
-    @cog.optgroup.option("--server-timeout", type=int, default=None, help="Server timeout in seconds")
-    @model_id_option(cog.optgroup, model_env=llm_config.__openllm_env__)
+    @cog.optgroup.option(
+        "--server-timeout",
+        type=int,
+        default=None,
+        help="Server timeout in seconds",
+    )
+    @model_id_option(cog.optgroup, model_env=env)
     @cog.optgroup.option(
         "--device",
         type=tuple,
@@ -165,34 +194,47 @@ Available model_id(s): {llm_config.__openllm_model_ids__} [default: {llm_config.
         show_envvar=True,
     )
     @workers_per_resource_option(cog.optgroup)
-    @click.pass_context
+    @quantize_option(cog.optgroup)
+    @bettertransformer_option(cog.optgroup)
     def model_start(
-        ctx: click.Context,
         server_timeout: int | None,
         model_id: str | None,
         workers_per_resource: float | None,
         device: tuple[str, ...] | None,
+        quantize: t.Literal["8bit", "4bit", "gptq"] | None,
+        bettertransformer: bool | None,
         **attrs: t.Any,
     ) -> openllm.LLMConfig:
         config, server_attrs = llm_config.model_validate_click(**attrs)
 
-        if llm_config.__openllm_env__.get_framework_env() == "flax":
+        if quantize and env.get_framework_env() != "pt":
+            _echo("Quantization is only available for PyTorch models.", fg="yellow")
+
+        if env.get_framework_env() == "flax":
             llm = openllm.AutoFlaxLLM.for_model(model_name, model_id=model_id, llm_config=config, ensure_available=True)
-        elif llm_config.__openllm_env__.get_framework_env() == "tf":
+        elif env.get_framework_env() == "tf":
             llm = openllm.AutoTFLLM.for_model(model_name, model_id=model_id, llm_config=config, ensure_available=True)
         else:
-            llm = openllm.AutoLLM.for_model(model_name, model_id=model_id, llm_config=config, ensure_available=True)
+            llm = openllm.AutoLLM.for_model(
+                model_name,
+                model_id=model_id,
+                llm_config=config,
+                quantize=quantize,
+                bettertransformer=bettertransformer,
+                ensure_available=True,
+            )
 
-        if llm.config.__openllm_requirements__ is not None and len(llm.config.__openllm_requirements__) > 0:
+        requirements = config["requirements"]
+        if requirements is not None and len(requirements) > 0:
             _echo(
-                f"Make sure to have the following dependencies available: {llm.config.__openllm_requirements__}",
+                f"Make sure to have the following dependencies available: {requirements}",
                 fg="yellow",
             )
 
         workers_per_resource = openllm.utils.first_not_none(
-            workers_per_resource, default=llm.config.__openllm_workers_per_resource__
+            workers_per_resource, default=config["workers_per_resource"]
         )
-        server_timeout = openllm.utils.first_not_none(server_timeout, default=llm.config.__openllm_timeout__)
+        server_timeout = openllm.utils.first_not_none(server_timeout, default=config["timeout"])
 
         num_workers = int(1 / workers_per_resource)
         if num_workers > 1:
@@ -216,26 +258,26 @@ Available model_id(s): {llm_config.__openllm_model_ids__} [default: {llm_config.
         _bentoml_config_options_opts = [
             "tracing.sample_rate=1.0",
             f"api_server.traffic.timeout={server_timeout}",
-            f'runners."llm-{llm.config.__openllm_start_name__}-runner".traffic.timeout={llm.config.__openllm_timeout__}',
-            f'runners."llm-{llm.config.__openllm_start_name__}-runner".workers_per_resource={workers_per_resource}',
+            f'runners."llm-{config["start_name"]}-runner".traffic.timeout={config["timeout"]}',
+            f'runners."llm-{config["start_name"]}-runner".workers_per_resource={workers_per_resource}',
         ]
         if device:
             if len(device) > 1:
                 for idx, dev in enumerate(device):
                     _bentoml_config_options_opts.append(
-                        f'runners."llm-{llm.config.__openllm_start_name__}-runner".resources."nvidia.com/gpu"[{idx}]={dev}'
+                        f'runners."llm-{config["start_name"]}-runner".resources."nvidia.com/gpu"[{idx}]={dev}'
                     )
             else:
                 _bentoml_config_options_opts.append(
-                    f'runners."llm-{llm.config.__openllm_start_name__}-runner".resources."nvidia.com/gpu"=[{device[0]}]'
+                    f'runners."llm-{config["start_name"]}-runner".resources."nvidia.com/gpu"=[{device[0]}]'
                 )
 
         _bentoml_config_options += " " if _bentoml_config_options else "" + " ".join(_bentoml_config_options_opts)
 
         start_env.update(
             {
-                llm.config.__openllm_env__.framework: llm.config.__openllm_env__.get_framework_env(),
-                llm.config.__openllm_env__.model_config: llm.config.model_dump_json().decode(),
+                env.framework: env.get_framework_env(),
+                env.model_config: llm.config.model_dump_json().decode(),
                 "OPENLLM_MODEL": model_name,
                 "OPENLLM_MODEL_ID": llm.model_id,
                 "BENTOML_DEBUG": str(openllm.utils.get_debug_mode()),
@@ -280,7 +322,8 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
         """
         # The following logics is similar to one of BentoMLCommandGroup
 
-        from bentoml._internal.configuration import DEBUG_ENV_VAR, QUIET_ENV_VAR
+        from bentoml._internal.configuration import (DEBUG_ENV_VAR,
+                                                     QUIET_ENV_VAR)
 
         @click.option("-q", "--quiet", envvar=QUIET_ENV_VAR, is_flag=True, default=False, help="Suppress all output.")
         @click.option(
@@ -668,11 +711,15 @@ def start_grpc_cli():
 @output_option
 @click.option("--overwrite", is_flag=True, help="Overwrite existing Bento for given LLM if it already exists.")
 @workers_per_resource_option(click, build=True)
+@quantize_option(click)
+@bettertransformer_option(click)
 def build(
     model_name: str,
     model_id: str | None,
     overwrite: bool,
     output: OutputLiteral,
+    quantize: t.Literal["8bit", "4bit", "gptq"] | None,
+    bettertransformer: bool | None,
     workers_per_resource: float | None,
 ):
     """Package a given models into a Bento.
@@ -695,6 +742,8 @@ def build(
         model_name,
         __cli__=True,
         model_id=model_id,
+        quantize=quantize,
+        bettertransformer=bettertransformer,
         _workers_per_resource=workers_per_resource,
         _overwrite_existing_bento=overwrite,
     )
@@ -764,20 +813,20 @@ def models(output: OutputLiteral, show_available: bool):
         for m in models:
             config = openllm.AutoConfig.for_model(m)
             runtime_impl: tuple[t.Literal["pt", "flax", "tf"], ...] = tuple()
-            if config.__openllm_model_name__ in openllm.MODEL_MAPPING_NAMES:
+            if config["model_name"] in openllm.MODEL_MAPPING_NAMES:
                 runtime_impl += ("pt",)
-            if config.__openllm_model_name__ in openllm.MODEL_FLAX_MAPPING_NAMES:
+            if config["model_name"] in openllm.MODEL_FLAX_MAPPING_NAMES:
                 runtime_impl += ("flax",)
-            if config.__openllm_model_name__ in openllm.MODEL_TF_MAPPING_NAMES:
+            if config["model_name"] in openllm.MODEL_TF_MAPPING_NAMES:
                 runtime_impl += ("tf",)
             json_data[m] = {
-                "model_id": config.__openllm_model_ids__,
-                "url": config.__openllm_url__,
-                "requires_gpu": config.__openllm_requires_gpu__,
+                "model_id": config["model_ids"],
+                "url": config["url"],
+                "requires_gpu": config["requires_gpu"],
                 "runtime_impl": runtime_impl,
                 "installation": "pip install openllm" if m not in extras else f'pip install "openllm[{m}]"',
             }
-            converted.extend([convert_transformers_model_name(i) for i in config.__openllm_model_ids__])
+            converted.extend([convert_transformers_model_name(i) for i in config["model_ids"]])
             if openllm.utils.DEBUG:
                 try:
                     openllm.AutoLLM.for_model(m, llm_config=config)
@@ -950,7 +999,7 @@ def query_(
         _echo(res["responses"], fg="white")
 
 
-@cli.command()
+@cli.command(name="download")
 @click.argument(
     "model_name",
     type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING.keys()]),
@@ -967,10 +1016,10 @@ def download_models(model_name: str, model_id: str | None, output: OutputLiteral
         openllm.utils.configure_logging()
 
     config = openllm.AutoConfig.for_model(model_name)
-    env = config.__openllm_env__.get_framework_env()
-    if env == "flax":
+    envvar = config["env"].get_framework_env()
+    if envvar == "flax":
         model = openllm.AutoFlaxLLM.for_model(model_name, model_id=model_id, llm_config=config)
-    elif env == "tf":
+    elif envvar == "tf":
         model = openllm.AutoTFLLM.for_model(model_name, model_id=model_id, llm_config=config)
     else:
         model = openllm.AutoLLM.for_model(model_name, model_id=model_id, llm_config=config)
@@ -978,11 +1027,11 @@ def download_models(model_name: str, model_id: str | None, output: OutputLiteral
     try:
         _ref = bentoml.transformers.get(model.tag)
         if output == "pretty":
-            _echo(f"{model_name} is already setup for framework '{env}': {str(_ref.tag)}", nl=True, fg="yellow")
+            _echo(f"{model_name} is already setup for framework '{envvar}': {str(_ref.tag)}", nl=True, fg="yellow")
         elif output == "json":
             _echo(
                 orjson.dumps(
-                    {"previously_setup": True, "framework": env, "model": str(_ref.tag)}, option=orjson.OPT_INDENT_2
+                    {"previously_setup": True, "framework": envvar, "model": str(_ref.tag)}, option=orjson.OPT_INDENT_2
                 ).decode(),
                 fg="white",
             )
@@ -1016,7 +1065,7 @@ def download_models(model_name: str, model_id: str | None, output: OutputLiteral
         elif output == "json":
             _echo(
                 orjson.dumps(
-                    {"previously_setup": False, "framework": env, "tag": str(_ref.tag)},
+                    {"previously_setup": False, "framework": envvar, "tag": str(_ref.tag)},
                     option=orjson.OPT_INDENT_2,
                 ).decode()
             )

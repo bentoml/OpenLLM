@@ -47,8 +47,7 @@ class StarCoder(openllm.LLM["transformers.GPTBigCodeForCausalLM", "transformers.
     def import_kwargs(self):
         model_kwds = {
             "device_map": "auto" if torch.cuda.is_available() and torch.cuda.device_count() > 1 else None,
-            "load_in_8bit": True if torch.cuda.device_count() > 1 else False,
-            "torch_dtype": torch.float16,
+            "torch_dtype": torch.float16 if torch.cuda.is_available() else torch.float32,
         }
         tokenizer_kwds = {"padding_side": "left"}
         return model_kwds, tokenizer_kwds
@@ -62,7 +61,6 @@ class StarCoder(openllm.LLM["transformers.GPTBigCodeForCausalLM", "transformers.
         **attrs: t.Any,
     ) -> bentoml.Model:
         torch_dtype = attrs.pop("torch_dtype", torch.float16)
-        load_in_8bit = attrs.pop("load_in_8bit", True)
         device_map = attrs.pop("device_map", "auto")
 
         tokenizer = transformers.AutoTokenizer.from_pretrained(model_id, **tokenizer_kwds)
@@ -74,7 +72,7 @@ class StarCoder(openllm.LLM["transformers.GPTBigCodeForCausalLM", "transformers.
         )
 
         model = transformers.AutoModelForCausalLM.from_pretrained(
-            model_id, torch_dtype=torch_dtype, load_in_8bit=load_in_8bit, device_map=device_map, **attrs
+            model_id, torch_dtype=torch_dtype, device_map=device_map, **attrs
         )
         try:
             return bentoml.transformers.save_model(tag, model, custom_objects={"tokenizer": tokenizer})

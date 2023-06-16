@@ -104,6 +104,7 @@ packages = ["src/openllm", "src/openllm_client"]
 [tool.hatch.envs.default]
 dependencies = [
     "coverage[toml]>=6.5",
+    # NOTE: Tests strategies with Hypothesis and pytest, and snapshot testing with syrupy
     "pytest",
     "pytest-asyncio>=0.21.0",
     "pytest-xdist[psutil]",
@@ -111,42 +112,69 @@ dependencies = [
     "pytest-mock",
     "pytest-randomly",
     "pytest-rerunfailures",
+    "hypothesis",
+    "syrupy",
     # NOTE: To run all hooks
     "pre-commit",
     # NOTE: Using under ./tools/update-optional-dependencies.py
     "tomlkit",
     # NOTE: Using under ./tools/update-readme.py
     "markdown-it-py",
-    # NOTE: Tests strategies with Hypothesis
-    "hypothesis",
-    # NOTE: snapshot testing
-    "syrupy",
+    # NOTE: pyright for type
+    "pyright",
+    # NOTE: towncrier for changelog
+    "towncrier",
 ]
 [tool.hatch.envs.default.scripts]
-cov = ["test-cov", "cov-report"]
+changelog = "towncrier build --version main --draft"
+cov = ["cov-test", "cov-report"]
 cov-report = ["- coverage combine", "coverage report"]
+cov-test = "coverage run -m pytest {args:tests}"
+fmt = "pre-commit run --all-files"
 setup = "pre-commit install"
 test = "pytest {args:tests}"
-test-cov = "coverage run -m pytest {args:tests}"
+typing = "pyright {args:src/openllm tests}"
+
+[tool.towncrier]
+directory = "changelog.d"
+filename = "CHANGELOG.md"
+issue_format = "[#{issue}](https://github.com/bentoml/openllm/issues/{issue})"
+name = "openllm"
+start_string = "<!-- towncrier release notes start -->\n"
+template = "changelog.d/template.md.jinja"
+title_format = ""
+underlines = ["", "", ""]
+
+[[tool.towncrier.section]]
+path = ""
+
+[[tool.towncrier.type]]
+directory = "breaking"
+name = "Backwards-incompatible Changes"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "deprecation"
+name = "Deprecations"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "change"
+name = "Changes"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "feature"
+name = "Features"
+showcontent = true
 
 [[tool.hatch.envs.all.matrix]]
 python = ["3.8", "3.9", "3.10", "3.11"]
 
-[tool.hatch.envs.dev]
-dependencies = [
-    "ruff",
-    "pyright",
-    "hatch",
-    # NOTE: black for generating service file.
-    "black[jupyter]==23.3.0",
-]
-detached = true
-
-[tool.hatch.envs.dev.scripts]
-all = ["fmt", "typing"]
-fmt = ["black {args:.}", "black --pyi {args:typings/}", "ruff --fix {args:.}", "style"]
-style = ["ruff {args:.}", "black --check --diff {args:.}"]
-typing = "pyright {args:src/openllm tests}"
+[tool.interrogate]
+fail-under = 100
+verbose = 2
+whitelist-regex = ["test_.*"]
 
 [tool.pytest.ini_options]
 addopts = ["-rfEX", "-pno:warnings"]
@@ -206,12 +234,6 @@ force-single-line = true
 known-first-party = ["openllm", "bentoml", 'transformers']
 lines-after-imports = 2
 
-[tool.ruff.flake8-quotes]
-inline-quotes = "single"
-
-[tool.ruff.flake8-tidy-imports]
-ban-relative-imports = "all"
-
 [tool.ruff.per-file-ignores]
 # Tests can use magic values, assertions, and relative imports
 "__init__.py" = ["E402", "F401", "F403", "F811"]
@@ -222,7 +244,7 @@ ban-relative-imports = "all"
 [tool.pyright]
 analysis.useLibraryCodeForTypes = true
 enableTypeIgnoreComments = true
-include = ["src/", "tests/"]
+include = ["src/", "tests/", "tools/", "examples/"]
 pythonVersion = "3.11"
 reportMissingImports = "none"
 reportMissingModuleSource = "warning"
