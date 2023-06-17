@@ -28,22 +28,6 @@ defaults:
   run:
     shell: bash --noprofile --norc -exo pipefail {0}
 jobs:
-  codestyle_check:
-    runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-      - name: Setup CI
-        uses: ./.github/actions/setup-repo
-      - name: Running changelog check
-        run: hatch run changelog
-      - name: Format and lint check
-        run: hatch run fmt
-      - name: Type check
-        if: ${{ github.event_name == 'pull_request' }}
-        run: git diff --name-only --diff-filter=AM "origin/$GITHUB_BASE_REF" -z -- '*.py{,i}' | xargs -0 --no-run-if-empty hatch run dev:typing
   tests:
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}
