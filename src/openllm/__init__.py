@@ -25,7 +25,7 @@ deploy, and monitor any LLMs with ease.
 """
 from __future__ import annotations
 
-import logging as _
+import logging
 import typing as t
 
 from . import utils as utils
@@ -33,15 +33,11 @@ from .__about__ import __version__ as __version__
 from .exceptions import MissingDependencyError
 
 if utils.DEBUG:
-    from bentoml._internal.configuration import set_debug_mode, set_quiet_mode
+    utils.set_debug_mode(True)
+    utils.set_quiet_mode(False)
 
-    set_debug_mode(True)
-    set_quiet_mode(False)
-
-    from bentoml._internal.log import configure_logging
-
-    configure_logging()
-    _.basicConfig(level=_.NOTSET)
+    utils.configure_logging()
+    logging.basicConfig(level=logging.NOTSET)
 
 
 _import_structure = {
@@ -147,7 +143,6 @@ if t.TYPE_CHECKING:
     from . import exceptions as exceptions
     from . import models as models
     from . import playground as playground
-
     # Specific types import
     from ._configuration import LLMConfig as LLMConfig
     from ._llm import LLM as LLM
@@ -160,7 +155,8 @@ if t.TYPE_CHECKING:
     from .cli import start as start
     from .cli import start_grpc as start_grpc
     from .models.auto import CONFIG_MAPPING as CONFIG_MAPPING
-    from .models.auto import MODEL_FLAX_MAPPING_NAMES as MODEL_FLAX_MAPPING_NAMES
+    from .models.auto import \
+        MODEL_FLAX_MAPPING_NAMES as MODEL_FLAX_MAPPING_NAMES
     from .models.auto import MODEL_MAPPING_NAMES as MODEL_MAPPING_NAMES
     from .models.auto import MODEL_TF_MAPPING_NAMES as MODEL_TF_MAPPING_NAMES
     from .models.auto import AutoConfig as AutoConfig
@@ -234,5 +230,11 @@ else:
         globals()["__file__"],
         _import_structure,
         module_spec=__spec__,
-        extra_objects={"__version__": __version__},
+        extra_objects={
+            "__version__": __version__,
+            # The below is a special mapping that allows openllm to be used as a dictionary.
+            # This is purely for convenience sake, and should not be used in performance critcal
+            # code. This is also not considered as a public API.
+            "__openllm_special__": {"flax": "AutoFlaxLLM", "tf": "AutoTFLLM", "pt": "AutoLLM"},
+        },
     )

@@ -532,7 +532,7 @@ def structure_settings(cl_: type[LLMConfig], cls: type[t.Any]):
             bases=(GenerationConfig,),
             slots=True,
             weakref_slot=True,
-            frozen=False,
+            frozen=True,
             repr=True,
             collect_by_mro=True,
             field_transformer=auto_env_transformers,

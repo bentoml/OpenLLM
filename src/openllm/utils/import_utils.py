@@ -15,18 +15,20 @@
 """
 Some imports utils are vendorred from transformers/utils/import_utils.py for performance reasons.
 """
+from __future__ import annotations
+
 import importlib
 import importlib.metadata
 import importlib.util
 import logging
 import os
+import types
 import typing as t
 from abc import ABCMeta
 from collections import OrderedDict
 
 import attr
 import inflection
-from bentoml._internal.utils import LazyLoader
 from packaging import version
 
 if t.TYPE_CHECKING:
@@ -240,6 +242,26 @@ def require_backends(o: t.Any, backends: t.MutableSequence[str]):
 class ModelEnv:
     model_name: str = attr.field(converter=inflection.underscore)
 
+    module: types.ModuleType = attr.field(
+        init=False,
+        default=attr.Factory(
+            lambda self: importlib.import_module(f".{self.model_name}", "openllm.models"),
+            takes_self=True,
+        ),
+    )
+
+    start_docstring: str = attr.field(
+        init=False,
+        default=attr.Factory(
+            lambda self: getattr(
+                self.module,
+                f"START_{self.model_name.upper()}_COMMAND_DOCSTRING",
+                f"(No docstring available for {self.model_name})",
+            ),
+            takes_self=True,
+        ),
+    )
+
     @property
     def framework(self) -> str:
         return f"OPENLLM_{self.model_name.upper()}_FRAMEWORK"
@@ -256,19 +278,18 @@ class ModelEnv:
     def bettertransformer(self) -> str:
         return f"OPENLLM_{self.model_name.upper()}_BETTERTRANSFORMER"
 
-    def gen_env_key(self, key: str) -> str:
-        return f"OPENLLM_{self.model_name.upper()}_{key.upper()}"
-
-    def convert_to_bettertransformer(self) -> bool:
-        return os.environ.get(self.bettertransformer, str(False)).lower() == "true"
-
     @property
-    def start_docstring(self) -> str:
-        return getattr(self.module, f"START_{self.model_name.upper()}_COMMAND_DOCSTRING")
+    def quantize(self) -> str:
+        return f"OPENLLM_{self.model_name.upper()}_QUANTIZE"
 
-    @property
-    def module(self) -> LazyLoader:
-        return LazyLoader(self.model_name, globals(), f"openllm.models.{self.model_name}")
+    def get_bettertransformer_env(self, default: t.Any | None = None) -> str:
+        return str(os.environ.get(self.bettertransformer, str(default)).upper() in ENV_VARS_TRUE_VALUES)
+
+    def get_quantize_env(self, default: t.Any | None = None) -> str | None:
+        val = os.environ.get(self.quantize, default)
+        if val is not None and val not in {"int8", "int4", "gptq"}:
+            raise ValueError(f"Invalid quantization {val}, must be one of 'int8', 'int4', 'gptq'")
+        return val
 
     def get_framework_env(self) -> t.Literal["pt", "flax", "tf"]:
         envvar = os.environ.get(self.framework, "pt")

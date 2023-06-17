@@ -104,25 +104,25 @@ class ChatGLM(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTrain
             chat_history.append((prompt, generation_result))
         return "".join(generation_result)
 
-    @torch.inference_mode()
-    def generate(self, prompt: str, use_default_prompt_template: bool = True, **attrs: t.Any) -> str:
-        self.model.eval()
+    def generate(self, prompt: str, **attrs: t.Any) -> str:
+        with torch.inference_mode():
+            self.model.eval()
 
-        # Only use half precision if the model is not yet quantized
-        if self.config.use_half_precision:
-            self.model.half()
+            # Only use half precision if the model is not yet quantized
+            if self.config.use_half_precision:
+                self.model.half()
 
-        self.model.cuda()
+            self.model.cuda()
 
-        logit_processor: list[LogitsProcessor] = LogitsProcessorList()
-        logit_processor.append(InvalidScoreLogitsProcessor())
+            logit_processor: list[LogitsProcessor] = LogitsProcessorList()
+            logit_processor.append(InvalidScoreLogitsProcessor())
 
-        inputs = self.tokenizer([prompt], return_tensors="pt").to(self.device)
-        outputs = self.model.generate(
-            **inputs,
-            generation_config=self.config.model_construct_env(do_sample=True, **attrs).to_generation_config(),
-            logits_processor=logit_processor,
-        )
-        outputs = outputs.tolist()[0][len(inputs["input_ids"][0]) :]
-        response = self.tokenizer.decode(outputs)
-        return self.model.process_response(response)
+            inputs = self.tokenizer([prompt], return_tensors="pt").to(self.device)
+            outputs = self.model.generate(
+                **inputs,
+                generation_config=self.config.model_construct_env(do_sample=True, **attrs).to_generation_config(),
+                logits_processor=logit_processor,
+            )
+            outputs = outputs.tolist()[0][len(inputs["input_ids"][0]) :]
+            response = self.tokenizer.decode(outputs)
+            return self.model.process_response(response)

@@ -94,22 +94,21 @@ class _BaseAutoLLMClass:
         >>> llm = openllm.AutoLLM.for_model("flan-t5")
         ```
         """
-        runner_kwargs_name = [
+        # order matters here
+        runner_kwargs_name = {
             "models",
             "max_batch_size",
             "max_latency_ms",
             "method_configs",
-            "embedded",
             "scheduling_strategy",
-        ]
+        }
         to_runner_attrs = {k: v for k, v in attrs.items() if k in runner_kwargs_name}
-        for k in to_runner_attrs:
-            del attrs[k]
-        normalized = inflection.underscore(model_name)
-        if cls._model_mapping.get(normalized, None, mapping_type="name2model"):
+        attrs = {k: v for k, v in attrs.items() if k not in to_runner_attrs}
+        if cls._model_mapping.get(inflection.underscore(model_name), None, mapping_type="name2model"):
             if not isinstance(llm_config, openllm.LLMConfig):
                 # The rest of kwargs is now passed to config
-                llm_config = AutoConfig.for_model(normalized, **attrs)
+                llm_config = AutoConfig.for_model(model_name, **attrs)
+                attrs = llm_config.__openllm_extras__
             # the rest of attrs will be saved to __openllm_extras__
             llm = cls._model_mapping[type(llm_config)].from_pretrained(
                 model_id,

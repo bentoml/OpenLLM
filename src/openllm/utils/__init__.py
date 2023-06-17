@@ -35,6 +35,11 @@ from bentoml._internal.utils import (LazyLoader, bentoml_cattr,
 
 from .lazy import LazyModule
 
+# NOTE: The set marks contains a set of modules name
+# that are available above and are whitelisted
+# to be included in the extra_objects map.
+_whitelist_modules = {"pkg"}
+
 logger = logging.getLogger(__name__)
 
 try:
@@ -86,7 +91,9 @@ DEBUG = sys.flags.dev_mode or (not sys.flags.ignore_environment and bool(os.envi
 # XXX: define all classes, functions import above this line
 # since _extras will be the locals() import from this file.
 _extras: dict[str, t.Any] = {
-    k: v for k, v in locals().items() if not isinstance(v, types.ModuleType) and not k.startswith("_")
+    k: v
+    for k, v in locals().items()
+    if k in _whitelist_modules or (not isinstance(v, types.ModuleType) and not k.startswith("_"))
 }
 
 _import_structure = {

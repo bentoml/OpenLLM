@@ -120,18 +120,20 @@ class StarCoder(openllm.LLM["transformers.GPTBigCodeForCausalLM", "transformers.
     def postprocess_generate(self, prompt: str, generation_result: t.Sequence[str], **_: t.Any) -> str:
         return generation_result[0]
 
-    @torch.inference_mode()
     def generate(self, prompt: str, **attrs: t.Any) -> list[str]:
-        inputs = t.cast("torch.Tensor", self.tokenizer.encode(prompt, return_tensors="pt")).to(self.device)
-        result_tensor = self.model.generate(
-            inputs,
-            do_sample=True,
-            pad_token_id=self.tokenizer.eos_token_id,
-            # eos_token_id=self.tokenizer.convert_tokens_to_ids("<|end|>"), # NOTE: this is for finetuning starcoder
-            generation_config=self.config.model_construct_env(**attrs).to_generation_config(),
-        )
-        # TODO: We will probably want to return the tokenizer here so that we can manually process this
-        # return (skip_special_tokens=False, clean_up_tokenization_spaces=False))
-        return self.tokenizer.batch_decode(
-            result_tensor[0], skip_special_tokens=True, clean_up_tokenization_spaces=True
-        )
+        with torch.inference_mode():
+            inputs = t.cast("torch.Tensor", self.tokenizer.encode(prompt, return_tensors="pt")).to(self.device)
+            result_tensor = self.model.generate(
+                inputs,
+                do_sample=True,
+                pad_token_id=self.tokenizer.eos_token_id,
+                # eos_token_id=self.tokenizer.convert_tokens_to_ids("<|end|>"), # NOTE: this is for finetuning starcoder
+                generation_config=self.config.model_construct_env(**attrs).to_generation_config(),
+            )
+            # TODO: We will probably want to return the tokenizer here so that we can manually process this
+            # return (skip_special_tokens=False, clean_up_tokenization_spaces=False))
+            return self.tokenizer.batch_decode(
+                result_tensor[0],
+                skip_special_tokens=True,
+                clean_up_tokenization_spaces=True,
+            )

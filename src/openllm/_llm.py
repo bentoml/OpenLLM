@@ -35,13 +35,16 @@ from bentoml._internal.types import ModelSignatureDict
 import openllm
 
 from .exceptions import ForbiddenAttributeError, OpenLLMException
-from .utils import (LazyLoader, bentoml_cattr, is_bitsandbytes_available,
-                    non_intrusive_setattr)
+from .utils import (DEBUG, LazyLoader, ModelEnv, bentoml_cattr, first_not_none,
+                    get_debug_mode, is_bitsandbytes_available,
+                    is_torch_available, non_intrusive_setattr, pkg)
 
 if t.TYPE_CHECKING:
     import torch
     import transformers
     from bentoml._internal.runner.strategy import Strategy
+
+    from .models.auto.factory import _BaseAutoLLMClass
 
     class LLMRunner(bentoml.Runner):
         __doc__: str
@@ -170,7 +173,7 @@ def import_model(
         # NOTE: We need to free up the cache after importing the model
         # in the case where users first run openllm start without the model
         # available locally.
-        if openllm.utils.is_torch_available() and torch.cuda.is_available():
+        if is_torch_available() and torch.cuda.is_available():
             torch.cuda.empty_cache()
 
 
@@ -314,16 +317,25 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
         model_id: str | None = None,
         llm_config: openllm.LLMConfig | None = None,
         *args: t.Any,
+        quantize: t.Literal["int8", "int4", "gptq"] | None = None,
+        bettertransformer: bool | None = None,
         **attrs: t.Any,
     ) -> LLM[_M, _T]:
-        return cls(model_id=model_id, llm_config=llm_config, *args, **attrs)
+        return cls(
+            model_id=model_id,
+            llm_config=llm_config,
+            *args,
+            quantize=quantize,
+            bettertransformer=bettertransformer,
+            **attrs,
+        )
 
     def __init__(
         self,
         model_id: str | None = None,
         llm_config: openllm.LLMConfig | None = None,
         *args: t.Any,
-        quantize: t.Literal["8bit", "4bit", "gptq"] | None = None,
+        quantize: t.Literal["int8", "int4", "gptq"] | None = None,
         bettertransformer: bool | None = None,
         **attrs: t.Any,
     ):
@@ -402,7 +414,7 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
             llm_config: The config to use for this LLM. Defaults to None. If not passed, OpenLLM
                         will use `config_class` to construct default configuration.
             quantize: The quantization to use for this LLM. Defaults to None. Possible values
-                      include 8bit, 4bit and gptq.
+                      include int8, int4 and gptq.
             bettertransformer: Whether to use BetterTransformer with this model. Defaults to False.
             *args: The args to be passed to the model.
             **attrs: The kwargs to be passed to the model.
@@ -431,6 +443,14 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
         int4_quant_type = attrs.pop("llm_bnb_4bit_quant_type", "nf4")
         int4_use_double_quant = attrs.pop("llm_bnb_4bit_use_double_quant", True)
 
+        if llm_config is not None:
+            logger.debug("Using given 'llm_config=(%s)' to initialize LLM.", llm_config)
+            self.config = llm_config
+        else:
+            self.config = self.config_class.model_construct_env(**attrs)
+            # The rests of the kwargs that is not used by the config class should be stored into __openllm_extras__.
+            attrs = self.config["extras"]
+
         if quantization_config and quantize:
             raise ValueError(
                 """'quantization_config' and 'quantize' are mutually exclusive. Either customise
@@ -452,7 +472,7 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
                     self,
                     quantize,
                 )
-                if quantize == "8bit":
+                if quantize == "int8":
                     if int8_skip_modules is None:
                         int8_skip_modules = []
                     if "lm_head" not in int8_skip_modules and self.config["model_type"] == "causal_lm":
@@ -465,8 +485,8 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
                         llm_int8_skip_modules=int8_skip_modules,
                         llm_int8_has_fp16_weight=int8_has_fp16_weight,
                     )
-                elif quantize == "4bit":
-                    trf_versions = openllm.utils.pkg.pkg_version_info("transformers")
+                elif quantize == "int4":
+                    trf_versions = pkg.pkg_version_info("transformers")
                     supports_kbits = trf_versions[:2] >= (4, 30)
                     if supports_kbits:
                         quantization_config = transformers.BitsAndBytesConfig(
@@ -477,7 +497,7 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
                         )
                     else:
                         logger.warning(
-                            "'quantize' is set to 4bit, while the current transformers version %s does not support "
+                            "'quantize' is set to int4, while the current transformers version %s does not support "
                             "k-bit quantization. k-bit quantization is supported since transformers 4.30, therefore "
                             "make sure to install the latest version of transformers either via PyPI or "
                             "from git source: 'pip install git+https://github.com/huggingface/transformers'.",
@@ -495,17 +515,9 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
                         )
                     raise NotImplementedError("GPTQ is not supported yet.")
                 else:
-                    raise ValueError(f"'quantize' must be one of ['8bit', '4bit', 'gptq'], got {quantize} instead.")
+                    raise ValueError(f"'quantize' must be one of ['int8', 'int4', 'gptq'], got {quantize} instead.")
 
         attrs.update({"quantization_config": quantization_config})
-
-        if llm_config is not None:
-            logger.debug("Using given 'llm_config=(%s)' to initialize LLM", llm_config)
-            self.config = llm_config
-        else:
-            self.config = self.config_class.model_construct_env(**attrs)
-            # The rests of the kwargs that is not used by the config class should be stored into __openllm_extras__.
-            attrs = self.config["extras"]
 
         if not self.config["use_pipeline"]:
             attrs["low_cpu_mem_usage"] = low_cpu_mem_usage
@@ -527,8 +539,7 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
             model_id = os.environ.get(self.config["env"].model_id, self.config["default_id"])
 
         # NOTE: This is the actual given path or pretrained weight for this LLM.
-        if t.TYPE_CHECKING:
-            assert model_id is not None
+        assert model_id is not None
         self._model_id = model_id
 
         # parsing tokenizer and model kwargs
@@ -590,6 +601,16 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
             "model_ids": orjson.dumps(self.config["model_ids"]).decode(),
         }
 
+    @property
+    def llm_parameters(self) -> tuple[tuple[tuple[t.Any, ...], dict[str, t.Any]], dict[str, t.Any]]:
+        """Returning the processed model and tokenizer parameters to be used with
+        'import_model' or any other place that requires loading model and tokenizer.
+
+        See 'openllm.cli.download_models' for example usage.
+        It returns a tuple of (model_args, model_kwargs) & tokenizer_kwargs
+        """
+        return (self._model_args, self._model_attrs), self._tokenizer_attrs
+
     @staticmethod
     def make_tag(
         model_id: str | None = None,
@@ -638,6 +659,10 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
         return bentoml.Tag.from_taglike(f"{implementation}-{name}:{model_version}")
 
     def ensure_model_id_exists(self) -> bentoml.Model:
+        """This utility function will download the model if it doesn't exist yet.
+        Make sure to call this function if 'ensure_available' is not set during
+        Auto LLM initialisation.
+        """
         output = subprocess.check_output(
             [
                 sys.executable,
@@ -651,7 +676,7 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
                 "porcelain",
             ]
         )
-        if openllm.utils.DEBUG:
+        if DEBUG or get_debug_mode():
             # NOTE: This usually only concern BentoML devs.
             pattern = r"^__tag__:[^:\n]+:[^:\n]+"
             matched = re.search(pattern, output.decode("utf-8").strip(), re.MULTILINE)
@@ -665,7 +690,15 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
     @property
     def _bentomodel(self) -> bentoml.Model:
         if self.__llm_bentomodel__ is None:
-            self.__llm_bentomodel__ = self.ensure_model_id_exists()
+            # NOTE: Since PR#28, self.__llm_bentomodel__ changed from
+            # ensure_model_id_exists() into just returning the model ref.
+            # This is because we want to save a few seconds of loading time,
+            # as openllm.Runner and openllm.AutoLLM initialisation is around 700ms
+            # before #28.
+            # If users want to make sure to have the model downloaded,
+            # one should invoke `LLM.ensure_model_id_exists()` manually,
+            # or pass `ensure_available=True` into the Auto LLM initialisation.
+            self.__llm_bentomodel__ = bentoml.transformers.get(self.tag)
         return self.__llm_bentomodel__
 
     @property
@@ -729,13 +762,14 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
                 )
         return self.__llm_tokenizer__
 
+    # order of these fields matter here, make sure to sync it with
+    # openllm.models.auto.factory._BaseAutoLLMClass.for_model
     def to_runner(
         self,
         models: list[bentoml.Model] | None = None,
         max_batch_size: int | None = None,
         max_latency_ms: int | None = None,
         method_configs: dict[str, ModelSignatureDict | ModelSignature] | None = None,
-        embedded: bool = False,
         scheduling_strategy: type[Strategy] | None = None,
     ) -> LLMRunner:
         """Convert this LLM into a Runner.
@@ -753,6 +787,7 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
         NOTE: There are some difference between bentoml.models.get().to_runner() and LLM.to_runner(): 'name'.
         - 'name': will be generated by OpenLLM, hence users don't shouldn't worry about this.
             The generated name will be 'llm-<model-start-name>-runner' (ex: llm-dolly-v2-runner, llm-chatglm-runner)
+        - 'embedded': Will be disabled by default. There is no reason to run LLM in embedded mode.
         """
         models = models if models is not None else []
         models.append(self._bentomodel)
@@ -768,10 +803,8 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
             method_configs = {"generate": generate_sig, "generate_iterator": generate_iterator_sig}
         else:
             signatures = ModelSignature.convert_signatures_dict(method_configs)
-            generate_sig = openllm.utils.first_not_none(signatures.get("generate"), default=generate_sig)
-            generate_iterator_sig = openllm.utils.first_not_none(
-                signatures.get("generate_iterator"), default=generate_iterator_sig
-            )
+            generate_sig = first_not_none(signatures.get("generate"), default=generate_sig)
+            generate_iterator_sig = first_not_none(signatures.get("generate_iterator"), default=generate_iterator_sig)
 
         class _Runnable(bentoml.Runnable):
             SUPPORTED_RESOURCES = ("nvidia.com/gpu", "cpu")
@@ -860,11 +893,11 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
                 },
             ),
             name=self.runner_name,
+            embedded=False,
             models=models,
             max_batch_size=max_batch_size,
             max_latency_ms=max_latency_ms,
             method_configs=bentoml_cattr.unstructure(method_configs),
-            embedded=embedded,
             scheduling_strategy=scheduling_strategy,
         )
 
@@ -918,22 +951,29 @@ def Runner(
     ...
 
 
-def Runner(model_name: str, **attrs: t.Any) -> LLMRunner:
+def Runner(model_name: str, ensure_available: bool = True, init_local: bool = False, **attrs: t.Any) -> LLMRunner:
     """Create a Runner for given LLM. For a list of currently supported LLM, check out 'openllm models'
 
     Args:
         model_name: Supported model name from 'openllm models'
+        ensure_available: If True, it will ensure the model is available before creating the runner.
+                          Set to False for faster creation time. Note that you will need to make sure
+                          the model for this 'model_id' is available before calling the runner.
+                          One can do this by doing the following:
+                          ```python
+                          runner = openllm.Runner("dolly-v2", ensure_available=False)
+                          runner.llm.ensure_model_id_exists()
+                          ```
+        init_local: If True, it will initialize the model locally. This is useful if you want to
+                    run the model locally. (Symmetrical to bentoml.Runner.init_local())
         **attrs: The rest of kwargs will then be passed to the LLM. Refer to the LLM documentation for the kwargs
                 behaviour
     """
-    init_local = attrs.pop("init_local", False)
-    ModelEnv = openllm.utils.ModelEnv(model_name)
-    if ModelEnv.get_framework_env() == "flax":
-        runner = openllm.AutoFlaxLLM.create_runner(model_name, **attrs)
-    elif ModelEnv.get_framework_env() == "tf":
-        runner = openllm.AutoTFLLM.create_runner(model_name, **attrs)
-    else:
-        runner = openllm.AutoLLM.create_runner(model_name, **attrs)
+    _ModelEnv = ModelEnv(model_name)
+    runner = t.cast(
+        "_BaseAutoLLMClass",
+        openllm[_ModelEnv.get_framework_env()],  # type: ignore (internal API)
+    ).create_runner(model_name, ensure_available=ensure_available, **attrs)
 
     if init_local:
         runner.init_local(quiet=True)
