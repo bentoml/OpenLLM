@@ -26,9 +26,19 @@ from __future__ import annotations
 import os
 import typing as t
 
+import attr
 import bentoml
+import cattr.errors
+import orjson
+from starlette.applications import Starlette
+from starlette.responses import JSONResponse
+from starlette.routing import Route
 
 import openllm
+
+if t.TYPE_CHECKING:
+    from starlette.requests import Request
+    from starlette.responses import Response
 
 model = os.environ.get("OPENLLM_MODEL", "{__model_name__}")  # openllm: model name
 model_id = os.environ.get("OPENLLM_MODEL_ID", "{__model_id__}")  # openllm: model id
@@ -69,3 +79,36 @@ def metadata_v1(_: str) -> openllm.MetadataOutput:
         framework=llm_config["env"]["framework_value"],
         configuration=llm_config.model_dump_json().decode(),
     )
+
+
+@attr.define
+class HfAgentInput:
+    inputs: str
+    parameters: t.Dict[str, t.Any]
+
+
+async def hf_agent(request: Request) -> Response:
+    json_str = await request.json()
+    try:
+        input_data = openllm.utils.bentoml_cattr.structure(orjson.loads(json_str), HfAgentInput)
+    except orjson.JSONDecodeError as err:
+        raise openllm.exceptions.OpenLLMException(f"Invalid JSON input received: {err}") from None
+    except cattr.errors.BaseValidationError as er:
+        raise openllm.exceptions.OpenLLMException(f"Failed to validate given input: {er}") from None
+
+    qa = openllm.GenerationInput.for_model(model)(
+        prompt=input_data.inputs,
+        llm_config=openllm.utils.bentoml_cattr.structure(
+            input_data.parameters,
+            llm_config.__class__,
+        ),
+    )
+    config = qa.llm_config.model_dump()
+    res = await runner.generate.async_run(qa.prompt, **config)
+    resp = [{"generated_text": runner.llm.postprocess_generate(res, qa.prompt)}]
+    return JSONResponse(orjson.dumps(resp).decode(), status_code=200)
+
+
+hf_app = Starlette(debug=True, routes=[Route("/hf_agent", hf_agent)])
+
+svc.mount_asgi_app(hf_app)

@@ -18,6 +18,7 @@ This extends BentoML's internal CLI CommandGroup.
 """
 from __future__ import annotations
 
+import itertools
 import functools
 import inspect
 import logging
@@ -751,12 +752,22 @@ start_grpc = functools.partial(_start, _serve_grpc=True)
 @cog.optgroup.group(cls=cog.MutuallyExclusiveOptionGroup, name="Optimisation options.")
 @quantize_option(cog.optgroup, build=True)
 @bettertransformer_option(cog.optgroup)
+@click.option(
+    "--enable-features",
+    help="Enable additional features for building this LLM Bento. Available: {}".format(
+        ", ".join(openllm.utils.OPTIONAL_DEPENDENCIES)
+    ),
+    multiple=True,
+    nargs=1,
+    metavar="FEATURE[,FEATURE]",
+)
 def build(
     model_name: str,
     model_id: str | None,
     overwrite: bool,
     output: OutputLiteral,
     quantize: t.Literal["int8", "int4", "gptq"] | None,
+    enable_features: tuple[str] | None,
     bettertransformer: bool | None,
     workers_per_resource: float | None,
 ):
@@ -776,12 +787,20 @@ def build(
         if overwrite:
             _echo(f"Overwriting existing Bento for {model_name}.", fg="yellow")
 
+    if enable_features:
+        enable_features = tuple(
+            itertools.chain.from_iterable(
+                map(lambda s: s.split(","), enable_features)
+            )
+        )
+
     bento, _previously_built = openllm.build(
         model_name,
         __cli__=True,
         model_id=model_id,
         quantize=quantize,
         bettertransformer=bettertransformer,
+        _build_extra_dependencies=enable_features,
         _workers_per_resource=workers_per_resource,
         _overwrite_existing_bento=overwrite,
     )

@@ -37,7 +37,8 @@ import openllm
 from .exceptions import ForbiddenAttributeError, OpenLLMException
 from .utils import (DEBUG, LazyLoader, ModelEnv, bentoml_cattr, first_not_none,
                     get_debug_mode, is_bitsandbytes_available,
-                    is_torch_available, non_intrusive_setattr, pkg)
+                    is_torch_available, is_transformers_supports_kbit,
+                    non_intrusive_setattr, pkg)
 
 if t.TYPE_CHECKING:
     import torch
@@ -486,9 +487,7 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
                         llm_int8_has_fp16_weight=int8_has_fp16_weight,
                     )
                 elif quantize == "int4":
-                    trf_versions = pkg.pkg_version_info("transformers")
-                    supports_kbits = trf_versions[:2] >= (4, 30)
-                    if supports_kbits:
+                    if is_transformers_supports_kbit():
                         quantization_config = transformers.BitsAndBytesConfig(
                             load_in_4bit=True,
                             llm_bnb_4bit_compute_dtype=int4_compute_dtype,
@@ -501,7 +500,7 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
                             "k-bit quantization. k-bit quantization is supported since transformers 4.30, therefore "
                             "make sure to install the latest version of transformers either via PyPI or "
                             "from git source: 'pip install git+https://github.com/huggingface/transformers'.",
-                            trf_versions,
+                            pkg.pkg_version_info("transformers"),
                         )
                 elif quantize == "gptq":
                     # TODO: support GPTQ loading quantization

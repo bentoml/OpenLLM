@@ -27,7 +27,7 @@ from abc import ABCMeta
 from collections import OrderedDict
 
 import inflection
-from bentoml._internal.utils import LazyLoader
+from bentoml._internal.utils import LazyLoader, pkg
 from packaging import version
 
 if t.TYPE_CHECKING:
@@ -37,6 +37,7 @@ else:
 
 logger = logging.getLogger(__name__)
 
+OPTIONAL_DEPENDENCIES = {"fine-tune", "flan-t5", "openai", "agents"}
 ENV_VARS_TRUE_VALUES = {"1", "ON", "YES", "TRUE"}
 ENV_VARS_TRUE_AND_AUTO_VALUES = ENV_VARS_TRUE_VALUES.union({"AUTO"})
 
@@ -63,6 +64,14 @@ _flax_available = importlib.util.find_spec("jax") is not None and importlib.util
 _einops_available = _is_package_available("einops")
 _cpm_kernel_available = _is_package_available("cpm_kernels")
 _bitsandbytes_available = _is_package_available("bitsandbytes")
+
+
+def is_transformers_supports_kbit() -> bool:
+    return pkg.pkg_version_info("transformers")[:2] >= (4, 30)
+
+
+def is_transformers_supports_agent() -> bool:
+    return pkg.pkg_version_info("transformers")[:2] >= (4, 29)
 
 
 def is_einops_available():
