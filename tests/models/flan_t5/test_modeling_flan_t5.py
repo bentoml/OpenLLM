@@ -32,7 +32,7 @@ def flan_t5_id() -> str:
 
 
 def test_small_flan(qa_prompt: str, flan_t5_id: str):
-    llm = openllm.AutoLLM.for_model("flan-t5", model_id=flan_t5_id)
+    llm = openllm.AutoLLM.for_model("flan-t5", model_id=flan_t5_id, ensure_available=True)
     generate = llm(qa_prompt)
     assert generate
 

@@ -30,7 +30,7 @@ def opt_id() -> str:
 
 
 def test_small_opt(qa_prompt: str, opt_id: str):
-    llm = openllm.AutoLLM.for_model("opt", model_id=opt_id)
+    llm = openllm.AutoLLM.for_model("opt", model_id=opt_id, ensure_available=True)
     generate = llm(qa_prompt)
     assert generate
 
