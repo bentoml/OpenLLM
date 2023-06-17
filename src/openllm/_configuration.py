@@ -1088,29 +1088,6 @@ class LLMConfig:
             )
         return _object_getattribute.__get__(self)(item)
 
-    @classmethod
-    def check_if_gpu_is_available(cls, implementation: str | None = None, force: bool = False):
-        if implementation is None:
-            implementation = cls.__openllm_env__["framework_value"]
-
-        try:
-            if cls.__openllm_requires_gpu__ or force:
-                if implementation in ("tf", "flax") and len(tf.config.list_physical_devices("GPU")) == 0:
-                    raise OpenLLMException("Required GPU for given model")
-                else:
-                    if not torch.cuda.is_available():
-                        raise OpenLLMException("Required GPU for given model")
-            else:
-                logger.debug(
-                    f"{cls} doesn't requires GPU by default. If you still want to check for GPU, set 'force=True'"
-                )
-        except OpenLLMException:
-            if force:
-                msg = "GPU is not available"
-            else:
-                msg = f"{cls} only supports running with GPU (None available)."
-            raise GpuNotAvailableError(msg) from None
-
     def model_dump(self, flatten: bool = False, **_: t.Any):
         dumped = bentoml_cattr.unstructure(self)
         if flatten:

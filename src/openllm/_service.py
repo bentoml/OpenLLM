@@ -28,7 +28,6 @@ import typing as t
 
 import attr
 import bentoml
-import cattr.errors
 import orjson
 from starlette.applications import Starlette
 from starlette.responses import JSONResponse
@@ -88,27 +87,20 @@ class HfAgentInput:
 
 
 async def hf_agent(request: Request) -> Response:
-    json_str = await request.json()
+    json_str = await request.body()
     try:
         input_data = openllm.utils.bentoml_cattr.structure(orjson.loads(json_str), HfAgentInput)
     except orjson.JSONDecodeError as err:
         raise openllm.exceptions.OpenLLMException(f"Invalid JSON input received: {err}") from None
-    except cattr.errors.BaseValidationError as er:
-        raise openllm.exceptions.OpenLLMException(f"Failed to validate given input: {er}") from None
 
-    qa = openllm.GenerationInput.for_model(model)(
-        prompt=input_data.inputs,
-        llm_config=openllm.utils.bentoml_cattr.structure(
-            input_data.parameters,
-            llm_config.__class__,
-        ),
-    )
-    config = qa.llm_config.model_dump()
-    res = await runner.generate.async_run(qa.prompt, **config)
-    resp = [{"generated_text": runner.llm.postprocess_generate(res, qa.prompt)}]
-    return JSONResponse(orjson.dumps(resp).decode(), status_code=200)
+    stop = input_data.parameters.pop("stop", "\n")
+    try:
+        resp = await runner.generate_one.async_run(input_data.inputs, stop, **input_data.parameters)
+        return JSONResponse(resp, status_code=200)
+    except NotImplementedError:
+        return JSONResponse(f"'{model}' is currently not supported with HuggingFace agents.", status_code=500)
 
 
-hf_app = Starlette(debug=True, routes=[Route("/hf_agent", hf_agent)])
+hf_app = Starlette(debug=True, routes=[Route("/agent", hf_agent, methods=["POST"])])
 
-svc.mount_asgi_app(hf_app)
+svc.mount_asgi_app(hf_app, path="/hf")

@@ -37,6 +37,25 @@ EOD = "<|endoftext|>"
 FIM_INDICATOR = "<FILL_HERE>"
 
 
+class StopSequenceCriteria(transformers.StoppingCriteria):
+    """This class used to stop generation when a seq of tokens are met.
+
+    Args:
+        stop_sequences: `str` or `list[str]` of the sequence (list of sequences) on which to stop execution.
+        tokenizer: Tokenizer to be used to decode the model outputs.
+    """
+
+    def __init__(self, stop_sequences: str | list[str], tokenizer: transformers.PreTrainedTokenizer):
+        if isinstance(stop_sequences, str):
+            stop_sequences = [stop_sequences]
+        self.stop_sequences = stop_sequences
+        self.tokenizer: transformers.PreTrainedTokenizer = tokenizer
+
+    def __call__(self, input_ids: torch.Tensor, scores: t.Any, **attrs: t.Any) -> bool:
+        decoded_output = self.tokenizer.decode(input_ids.tolist()[0])
+        return any(decoded_output.endswith(stop_sequence) for stop_sequence in self.stop_sequences)
+
+
 class StarCoder(openllm.LLM["transformers.GPTBigCodeForCausalLM", "transformers.GPT2TokenizerFast"]):
     __openllm_internal__ = True
 
@@ -137,3 +156,22 @@ class StarCoder(openllm.LLM["transformers.GPTBigCodeForCausalLM", "transformers.
                 skip_special_tokens=True,
                 clean_up_tokenization_spaces=True,
             )
+
+    def generate_one(
+        self, prompt: str, stop: list[str], **preprocess_generate_kwds: t.Any
+    ) -> list[dict[t.Literal["generated_text"], str]]:
+        max_new_tokens = preprocess_generate_kwds.pop("max_new_tokens", 200)
+        encoded_inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
+        src_len = encoded_inputs["input_ids"].shape[1]
+        stopping_criteria = preprocess_generate_kwds.pop("stopping_criteria", transformers.StoppingCriteriaList([]))
+        stopping_criteria.append(StopSequenceCriteria(stop, self.tokenizer))
+        outputs = self.model.generate(
+            encoded_inputs["input_ids"], max_new_tokens=max_new_tokens, stopping_criteria=stopping_criteria
+        )
+
+        result = self.tokenizer.decode(outputs[0].tolist()[src_len:])
+        # Inference API returns the stop sequence
+        for stop_seq in stop:
+            if result.endswith(stop_seq):
+                result = result[: -len(stop_seq)]
+        return [{"generated_text": result}]
