@@ -14,7 +14,7 @@
 
 ci:
   autoupdate_schedule: weekly
-  skip: [check-models-table-update, check-models-table-update]
+  skip: [check-models-table-update, check-models-table-update, changelog-dry-run]
 exclude: '.*\.(css|js|svg)$'
 repos:
   - repo: https://github.com/charliermarsh/ruff-pre-commit
@@ -56,7 +56,7 @@ repos:
         entry: ./tools/assert-model-table-latest
         language: script
         files: README.md
-      - id: changelog-dryrun
+      - id: changelog-dry-run
         name: Running changelog dry-run
         entry: hatch run changelog
         language: system
