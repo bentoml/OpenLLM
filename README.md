@@ -355,8 +355,7 @@ agent = transformers.HfAgent("http://localhost:300/hf/agent")  # URL that runs t
 agent.run("Is the following `text` positive or negative?", text="I don't like how this models is generate inputs")
 ```
 
-> NOTE: For example, the above example works with `starcoder`. The command to start starcoder
-> is: `openllm start starcoder --debug --device all --workers-per-resource 0.25` Using 4 GPUs.
+> Warnings: Currently only `starcoder` is supported. It was run with 4 T4s on `g4dn.12xlarge`
 
 ### LangChain (⏳Coming Soon!)
 

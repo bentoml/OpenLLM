@@ -34,6 +34,7 @@ from bentoml._internal.types import ModelSignatureDict
 
 import openllm
 
+from ._generation import StopSequenceCriteria
 from .exceptions import (ForbiddenAttributeError, GpuNotAvailableError,
                          OpenLLMException)
 from .utils import (DEBUG, LazyLoader, ModelEnv, bentoml_cattr, first_not_none,
@@ -457,7 +458,7 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
         int4_use_double_quant = attrs.pop("llm_bnb_4bit_use_double_quant", True)
 
         if llm_config is not None:
-            logger.debug("Using given 'llm_config=(%s)' to initialize LLM.", llm_config)
+            logger.debug("Using provided LLMConfig to initialize LLM instead of from default.", llm_config)
             self.config = llm_config
         else:
             self.config = self.config_class.model_construct_env(**attrs)
