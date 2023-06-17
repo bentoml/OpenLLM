@@ -62,9 +62,7 @@ class LazyModule(types.ModuleType):
             for value in values:
                 self._class_to_module[value] = key
         # Needed for autocompletion in an IDE
-        self.__all__ = (
-            list(import_structure.keys()) + list(itertools.chain(*import_structure.values())) + list(_extra_objects)
-        )
+        self.__all__ = list(import_structure.keys()) + list(itertools.chain(*import_structure.values()))
         self.__file__ = module_file
         self.__spec__ = module_spec
         self.__path__ = [os.path.dirname(module_file)]

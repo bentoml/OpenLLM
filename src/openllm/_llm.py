@@ -517,10 +517,10 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
                 else:
                     raise ValueError(f"'quantize' must be one of ['int8', 'int4', 'gptq'], got {quantize} instead.")
 
-        attrs.update({"quantization_config": quantization_config})
-
-        if not self.config["use_pipeline"]:
-            attrs["low_cpu_mem_usage"] = low_cpu_mem_usage
+        if self.__llm_implementation__ == "pt":
+            if not self.config["use_pipeline"]:
+                attrs["low_cpu_mem_usage"] = low_cpu_mem_usage
+            attrs["quantization_config"] = quantization_config
 
         model_kwds, tokenizer_kwds = {}, {}
         if self.__llm_init_kwargs__:
@@ -969,10 +969,9 @@ def Runner(model_name: str, ensure_available: bool = True, init_local: bool = Fa
         **attrs: The rest of kwargs will then be passed to the LLM. Refer to the LLM documentation for the kwargs
                 behaviour
     """
-    _ModelEnv = ModelEnv(model_name)
     runner = t.cast(
         "_BaseAutoLLMClass",
-        openllm[_ModelEnv.get_framework_env()],  # type: ignore (internal API)
+        openllm[ModelEnv(model_name)["framework_value"]],  # type: ignore (internal API)
     ).create_runner(model_name, ensure_available=ensure_available, **attrs)
 
     if init_local:

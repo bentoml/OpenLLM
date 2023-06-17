@@ -33,10 +33,10 @@ logger = logging.getLogger(__name__)
 
 
 def test_missing_default():
-    with pytest.raises(ValueError, match="The following keys are required*"):
+    with pytest.raises(ValueError, match="Either 'default_id' or 'model_ids'*"):
         make_llm_config("MissingDefaultId", {"name_type": "lowercase", "requirements": ["bentoml"]})
 
-    with pytest.raises(ValueError, match="The following keys are required*"):
+    with pytest.raises(ValueError, match="Either 'default_id' or 'model_ids'*"):
         make_llm_config("MissingModelId", {"default_id": "huggingface/t5-tiny-testing", "requirements": ["bentoml"]})
 
 

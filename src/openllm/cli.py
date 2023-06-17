@@ -206,8 +206,9 @@ def quantize_option(factory: t.Any, build: bool = False):
     help_str = (
         "Running this model in quantized mode." if not build else "Set quantization mode for serving in deployment."
     )
-    help_str += """\
-    Note that GPTQ is currently working in progress and will be available soon.
+    help_str += """\n
+
+    GPTQ is currently working in progress and will be available soon.
 
     NOTE: Quantization is only available for PyTorch models.
     """
@@ -219,12 +220,17 @@ def quantize_option(factory: t.Any, build: bool = False):
     )
 
 
-def bettertransformer_option(factory: t.Any):
+def bettertransformer_option(factory: t.Any, model_env: ModelEnv | None = None):
+    envvar = None
+    if model_env is not None:
+        envvar = model_env.model_id
     return factory.option(
         "--bettertransformer",
         is_flag=True,
         default=None,
         help="Use BetterTransformer wrapper to serve model. This will applies during serving time.",
+        envvar=envvar,
+        show_envvar=True if envvar is not None else False,
     )
 
 
@@ -501,7 +507,7 @@ def start_model_command(
     configure_logging()
 
     llm_config = openllm.AutoConfig.for_model(model_name)
-    env = llm_config["env"]
+    env: ModelEnv = llm_config["env"]
 
     docstring = f"""\
 {env.start_docstring}
@@ -566,7 +572,7 @@ Available model_id(s): {llm_config['model_ids']} [default: {llm_config['default_
         show_envvar=True,
     )
     @quantize_option(cog.optgroup)
-    @bettertransformer_option(cog.optgroup)
+    @bettertransformer_option(cog.optgroup, model_env=env)
     @cog.optgroup.option(
         "--fast",
         is_flag=True,
@@ -587,14 +593,22 @@ Available model_id(s): {llm_config['model_ids']} [default: {llm_config['default_
     ) -> openllm.LLMConfig:
         config, server_attrs = llm_config.model_validate_click(**attrs)
 
+        # Create a new model env to work with the envvar during CLI invocation
+        env = ModelEnv(config["model_name"])
+        framework_envvar = env.framework_value
+
         if quantize:
             gpu_available = gpu_count()
             if len(gpu_available) < 1:
                 _echo(f"Quantization requires at least 1 GPU (got {len(gpu_available)})", fg="red")
                 ctx.exit(1)
-            if env.get_framework_env() != "pt":
+            if framework_envvar != "pt":
                 _echo("Quantization is currently only available for PyTorch models.", fg="red")
                 ctx.exit(1)
+
+        # We need to handle None separately here, as env from subprocess doesn't
+        # accept None value.
+        env = ModelEnv(env.model_name, bettertransformer=bettertransformer, quantize=quantize)
 
         requirements = config["requirements"]
         if requirements is not None and len(requirements) > 0:
@@ -650,9 +664,10 @@ Available model_id(s): {llm_config['model_ids']} [default: {llm_config['default_
             "llm_config": config,
             "ensure_available": not fast,
         }
-        framework_envvar = env.get_framework_env()
+
         if framework_envvar == "pt":
             automodel_attrs.update({"quantize": quantize, "bettertransformer": bettertransformer})
+
         llm = t.cast(
             "_BaseAutoLLMClass",
             openllm[framework_envvar],  # type: ignore (internal API)
@@ -660,8 +675,8 @@ Available model_id(s): {llm_config['model_ids']} [default: {llm_config['default_
 
         start_env.update(
             {
-                env.framework: env.get_framework_env(),
-                env.model_config: llm.config.model_dump_json().decode(),
+                env.framework: env.framework_value,
+                env.config: llm.config.model_dump_json().decode(),
                 "OPENLLM_MODEL": model_name,
                 "OPENLLM_MODEL_ID": llm.model_id,
                 "BENTOML_DEBUG": str(get_debug_mode()),
@@ -670,15 +685,10 @@ Available model_id(s): {llm_config['model_ids']} [default: {llm_config['default_
             }
         )
 
-        # We need to handle None separately here, as env from subprocess doesn't
-        # accept None value.
-        enable_bettertransformer = env.get_bettertransformer_env(default=bettertransformer)
-        enable_quantize = env.get_quantize_env(default=quantize)
-
-        if enable_bettertransformer is not None:
-            start_env[env.bettertransformer] = enable_bettertransformer
-        if enable_quantize is not None:
-            start_env[env.quantize] = enable_quantize
+        if env.bettertransformer_value is not None:
+            start_env[env.bettertransformer] = env.bettertransformer_value
+        if env.quantize_value is not None:
+            start_env[env.quantize] = env.quantize_value
 
         if t.TYPE_CHECKING:
             server_cls: type[bentoml.HTTPServer] if not _serve_grpc else type[bentoml.GrpcServer]
@@ -863,7 +873,8 @@ def models(output: OutputLiteral, show_available: bool):
 
         ids_in_local_store = None
         if show_available:
-            ids_in_local_store = [i for i in bentoml.models.list() if any(n in i.tag.name for n in converted)]
+            ids_in_local_store = {k: [i for i in bentoml.models.list() if k in i.tag.name] for k in json_data.keys()}
+            ids_in_local_store = {k: v for k, v in ids_in_local_store.items() if v}
 
         if output == "pretty":
             import tabulate
@@ -924,14 +935,28 @@ def models(output: OutputLiteral, show_available: bool):
 
             if show_available:
                 assert ids_in_local_store
-                _echo("The following models are available in local store:\n", fg="white")
-                for i in ids_in_local_store:
-                    _echo(f"- {i}", fg="white")
+
+                _available = [[k + "\n\n" * len(v), [str(i.tag) for i in v]] for k, v in ids_in_local_store.items()]
+                column_widths = [int(COLUMNS / 6), int(COLUMNS / 2)]
+                table = tabulate.tabulate(
+                    _available,
+                    tablefmt="fancy_grid",
+                    headers=["Model Id", "Models"],
+                    maxcolwidths=column_widths,
+                )
+                _echo("The following models are available in local store:\n", fg="magenta")
+
+                formatted_table = ""
+                for line in table.split("\n"):
+                    formatted_table += (
+                        "".join(f"{cell:{width}}" for cell, width in zip(line.split("\t"), column_widths)) + "\n"
+                    )
+                _echo(formatted_table, fg="white")
         else:
             dumped: dict[str, t.Any] = json_data
             if show_available:
                 assert ids_in_local_store
-                dumped["local"] = [bentoml_cattr.unstructure(i.tag) for i in ids_in_local_store]
+                dumped["local"] = [bentoml_cattr.unstructure(i.tag) for m in ids_in_local_store.values() for i in m]
             _echo(
                 orjson.dumps(
                     dumped,
@@ -1042,7 +1067,7 @@ def download_models(model_name: str, model_id: str | None, output: OutputLiteral
         configure_logging()
 
     config = openllm.AutoConfig.for_model(model_name)
-    envvar = config["env"].get_framework_env()
+    envvar = config["env"]["framework_value"]
     model = t.cast(
         "_BaseAutoLLMClass",
         openllm[envvar],  # type: ignore (internal API)

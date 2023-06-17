@@ -395,16 +395,7 @@ bentoml_cattr.register_unstructure_hook_factory(
 )
 
 
-def _populate_value_from_env_var(
-    key: str, transform: t.Callable[[str], str] | None = None, fallback: t.Any = None
-) -> t.Any:
-    if transform is not None and callable(transform):
-        key = transform(key)
-
-    return os.environ.get(key, fallback)
-
-
-def _field_env_key(model_name: str, key: str, suffix: str | None = None) -> str:
+def _field_env_key(model_name: str, key: str, suffix: str | t.Literal[""] | None = None) -> str:
     return "_".join(filter(None, map(str.upper, ["OPENLLM", model_name, suffix.strip("_") if suffix else "", key])))
 
 
@@ -425,6 +416,7 @@ class ModelSettings(t.TypedDict, total=False):
     url: str
     requires_gpu: bool
     trust_remote_code: bool
+    service_name: NotRequired[str]
     requirements: t.Optional[ListStr]
 
     # llm implementation specifics
@@ -448,128 +440,174 @@ class ModelSettings(t.TypedDict, total=False):
     generation_class: t.Type[GenerationConfig]
 
 
-_ModelSettings: type[attr.AttrsInstance] = codegen.add_method_dunders(
-    type("__openllm_internal__", (ModelSettings,), {"__module__": "openllm._configuration"}),
-    attr.make_class(
-        "ModelSettings",
-        {
-            k: dantic.Field(
+def _settings_field_transformer(
+    _: type[attr.AttrsInstance], __: list[attr.Attribute[t.Any]]
+) -> list[attr.Attribute[t.Any]]:
+    return [
+        attr.Attribute.from_counting_attr(
+            k,
+            dantic.Field(
                 kw_only=False if t.get_origin(ann) is not Required else True,
                 auto_default=True,
                 use_default_converter=False,
                 type=ann,
-                metadata={
-                    "target": f"__openllm_{k}__",
-                    "required": False if t.get_origin(ann) is NotRequired else t.get_origin(ann) is Required,
-                },
+                metadata={"target": f"__openllm_{k}__"},
                 description=f"ModelSettings field for {k}.",
-            )
-            for k, ann in t.get_type_hints(ModelSettings).items()
-        },
-        bases=(DictStrAny,),
-        slots=True,
-        weakref_slot=True,
-        collect_by_mro=True,
-    ),
-    _overwrite_doc="Internal attrs representation of ModelSettings.",
-)
+            ),
+        )
+        for k, ann in t.get_type_hints(ModelSettings).items()
+    ]
 
 
-def structure_settings(cl_: type[LLMConfig], cls: type[t.Any]):
+@attr.define(slots=True, field_transformer=_settings_field_transformer, frozen=False)
+class _ModelSettingsAttr:
+    """Internal attrs representation of ModelSettings."""
+
+    def __getitem__(self, key: str) -> t.Any:
+        if key in codegen.get_annotations(ModelSettings):
+            return _object_getattribute(self, key)
+        raise KeyError(key)
+
+    @classmethod
+    def default(cls) -> _ModelSettingsAttr:
+        _ = ModelSettings(
+            default_id="__default__",
+            model_ids=["__default__"],
+            name_type="dasherize",
+            requires_gpu=False,
+            url="",
+            use_pipeline=False,
+            model_type="causal_lm",
+            trust_remote_code=False,
+            requirements=None,
+            timeout=3600,
+            service_name="",
+            workers_per_resource=1,
+            runtime="transformers",
+        )
+        return cls(**t.cast(DictStrAny, _))
+
+
+def structure_settings(cl_: type[LLMConfig], cls: type[_ModelSettingsAttr]):
     if not lenient_issubclass(cl_, LLMConfig):
-        raise RuntimeError(f"Given LLMConfig must be a subclass type of 'LLMConfig', got '{cl_}' instead.")
+        raise RuntimeError(f"Given '{cl_}' must be a subclass type of 'LLMConfig', got '{cl_}' instead.")
 
     if not hasattr(cl_, "__config__") or getattr(cl_, "__config__") is None:
         raise RuntimeError("Given LLMConfig must have '__config__' that is not None defined.")
 
-    settings = cl_.__config__
-    assert settings
+    assert cl_.__config__ is not None
 
-    required = [i.name for i in attr.fields(cls) if i.metadata.get("required", False)]
-
-    missing = set(required) - set(settings.keys())
-
-    if len(missing) > 0:
-        raise ValueError(f"The following keys are required under '__config__': {required} (missing: {missing})")
-
-    if "generation_class" in settings:
+    if "generation_class" in cl_.__config__:
         raise ValueError(
             "'generation_class' shouldn't be defined in '__config__', rather defining "
-            f"all required attributes under '{cl_}.GenerationConfig' when defining the class."
+            f"all required attributes under '{cl_}.GenerationConfig' instead."
         )
 
-    if not settings["default_id"] or not settings["model_ids"]:
+    _cl_name = cl_.__name__.replace("Config", "")
+
+    _settings_attr = _ModelSettingsAttr.default()
+    try:
+        cls(**t.cast(DictStrAny, cl_.__config__))
+        _settings_attr = attr.evolve(_settings_attr, **t.cast(DictStrAny, cl_.__config__))
+    except TypeError:
         raise ValueError("Either 'default_id' or 'model_ids' are emptied under '__config__' (required fields).")
 
-    # NOTE: value in __config__ can be None, hense we use setdefault
-    # to update in-place
-    _cl_name = cl_.__name__.replace("Config", "")
-    name_type = settings.setdefault("name_type", "dasherize")
-    model_name = settings.setdefault(
-        "model_name", inflection.underscore(_cl_name) if name_type == "dasherize" else _cl_name.lower()
+    _final_value_dct: DictStrAny = {
+        "model_name": inflection.underscore(_cl_name)
+        if _settings_attr["name_type"] == "dasherize"
+        else _cl_name.lower()
+    }
+    _final_value_dct["start_name"] = (
+        inflection.dasherize(_final_value_dct["model_name"])
+        if _settings_attr["name_type"] == "dasherize"
+        else _final_value_dct["model_name"]
     )
-    partialed = functools.partial(_field_env_key, model_name=model_name, suffix="generation")
+    env = openllm.utils.ModelEnv(_final_value_dct["model_name"])
+    _final_value_dct["env"] = env
 
-    def auto_env_transformers(_: t.Any, fields: list[attr.Attribute[t.Any]]) -> list[attr.Attribute[t.Any]]:
-        _has_own_gen = codegen.has_own_attribute(cl_, "GenerationConfig")
-        return [
-            f.evolve(
-                default=_populate_value_from_env_var(
-                    partialed(key=f.name),
-                    fallback=getattr(cl_.GenerationConfig, f.name, f.default) if _has_own_gen else f.default,
-                ),
-                metadata={"env": partialed(key=f.name), "description": f.metadata.get("description", "(not provided)")},
-                converter=None,
-            )
-            for f in fields
-        ]
+    # bettertransformer support
+    if _settings_attr["bettertransformer"] is None:
+        _final_value_dct["bettertransformer"] = (
+            os.environ.get(env.bettertransformer, str(False)).upper() in ENV_VARS_TRUE_VALUES
+        )
+    if _settings_attr["requires_gpu"]:
+        # if requires_gpu is True, then disable BetterTransformer for quantization.
+        _final_value_dct["bettertransformer"] = False
 
-    settings.setdefault(
-        "generation_class",
-        attr.make_class(
-            f"{_cl_name}GenerationConfig",
-            [],
-            bases=(GenerationConfig,),
-            slots=True,
-            weakref_slot=True,
-            frozen=True,
-            repr=True,
-            collect_by_mro=True,
-            field_transformer=auto_env_transformers,
+    _final_value_dct["service_name"] = f"generated_{_final_value_dct['model_name']}_service.py"
+    _final_value_dct["generation_class"] = attr.make_class(
+        f"{_cl_name}GenerationConfig",
+        [],
+        bases=(GenerationConfig,),
+        slots=True,
+        weakref_slot=True,
+        frozen=True,
+        repr=True,
+        collect_by_mro=True,
+        field_transformer=_make_env_transformer(
+            cl_,
+            _final_value_dct["model_name"],
+            suffix="generation",
+            default_callback=lambda field_name, field_default: getattr(cl_.GenerationConfig, field_name, field_default)
+            if codegen.has_own_attribute(cl_, "GenerationConfig")
+            else field_default,
+            globs={"cl_": cl_},
         ),
     )
 
-    env = settings.setdefault("env", openllm.utils.ModelEnv(model_name))
-    requires_gpu = settings.setdefault("requires_gpu", False)
+    return attr.evolve(_settings_attr, **_final_value_dct)
 
-    # bettertransformer support
-    bettertransformer = settings.setdefault(
-        "bettertransformer",
-        os.environ.get(env.bettertransformer, str(False)).upper() in ENV_VARS_TRUE_VALUES,
+
+bentoml_cattr.register_structure_hook(_ModelSettingsAttr, structure_settings)
+
+
+def _make_env_transformer(
+    cls: type[LLMConfig],
+    model_name: str,
+    suffix: t.LiteralString | None = None,
+    default_callback: t.Callable[[str, t.Any], t.Any] | None = None,
+    globs: DictStrAny | None = None,
+):
+    def identity(_: str, x_value: t.Any) -> t.Any:
+        return x_value
+
+    default_callback = identity if default_callback is None else default_callback
+
+    globs = {} if globs is None else globs
+    globs.update(
+        {
+            "functools": functools,
+            "__populate_env": dantic.env_converter,
+            "__default_callback": default_callback,
+            "__field_env": _field_env_key,
+            "__suffix": suffix or "",
+            "__model_name": model_name,
+        }
     )
-    if requires_gpu:
-        # For all models that requires GPU, no need to offload it to BetterTransformer
-        # use bitsandbytes or gptq instead for latency improvement
-        if bettertransformer:
-            logger.debug("Model requires GPU by default, disabling bettertransformer.")
-        bettertransformer = False
-    settings["bettertransformer"] = bettertransformer
 
-    # default value
-    settings.setdefault("url", "")
-    settings.setdefault("use_pipeline", False)
-    settings.setdefault("model_type", "causal_lm")
-    settings.setdefault("trust_remote_code", False)
-    settings.setdefault("requirements", None)
-    settings.setdefault("timeout", 3600)
-    settings.setdefault("workers_per_resource", 1)
-    settings.setdefault("runtime", "transformers")
-    settings.setdefault("start_name", inflection.dasherize(model_name) if name_type == "dasherize" else model_name)
+    lines: ListStr = [
+        "__env = lambda field_name: __field_env(__model_name, field_name, __suffix)",
+        "return [",
+        "    f.evolve(",
+        "        default=__populate_env(__default_callback(f.name, f.default), __env(f.name)),",
+        "        metadata={",
+        "            'env': f.metadata.get('env', __env(f.name)),",
+        "            'description': f.metadata.get('description', '(not provided)'),",
+        "        },",
+        "    )",
+        "    for f in fields",
+        "]",
+    ]
+    fields_ann = "list[attr.Attribute[t.Any]]"
 
-    return cls(**settings)
-
-
-bentoml_cattr.register_structure_hook(_ModelSettings, structure_settings)
+    return codegen.generate_function(
+        cls,
+        "__auto_env",
+        lines,
+        args=("_", "fields"),
+        globs=globs,
+        annotations={"_": "type[LLMConfig]", "fields": fields_ann, "return": fields_ann},
+    )
 
 
 def _setattr_class(attr_name: str, value_var: t.Any, add_dunder: bool = False):
@@ -577,6 +615,10 @@ def _setattr_class(attr_name: str, value_var: t.Any, add_dunder: bool = False):
     Use the builtin setattr to set *attr_name* to *value_var*.
     We can't use the cached object.__setattr__ since we are setting
     attributes to a class.
+
+    If add_dunder to True, the generated globs should include a __add_dunder
+    value that will be used to add the dunder methods to the class for given
+    value_var
     """
     val = f"__add_dunder(cls, {value_var})" if add_dunder else value_var
     return f"setattr(cls, '{attr_name}', {val})"
@@ -742,6 +784,23 @@ class LLMConfig:
 
         # NOTE: The following will be populated from __config__ and also
         # considered to be public API.
+        __openllm_default_id__: str = Field(None)
+        """Return the default model to use when using 'openllm start <model_id>'.
+        This could be one of the keys in 'self.model_ids' or custom users model.
+
+        This field is required when defining under '__config__'.
+        """
+
+        __openllm_model_ids__: ListStr = Field(None)
+        """A list of supported pretrained models tag for this given runnable.
+
+        For example:
+            For FLAN-T5 impl, this would be ["google/flan-t5-small", "google/flan-t5-base",
+                                                "google/flan-t5-large", "google/flan-t5-xl", "google/flan-t5-xxl"]
+
+        This field is required when defining under '__config__'.
+        """
+
         __openllm_url__: str = Field(None, init=False)
         """The resolved url for this LLMConfig."""
 
@@ -751,45 +810,12 @@ class LLMConfig:
         __openllm_trust_remote_code__: bool = Field(False)
         """Whether to always trust remote code"""
 
+        __openllm_service_name__: str = Field(None)
+        """Generated service name for this LLMConfig. By default, it is 'generated_{model_name}_service.py'"""
+
         __openllm_requirements__: ListStr | None = Field(None)
         """The default PyPI requirements needed to run this given LLM. By default, we will depend on
         bentoml, torch, transformers."""
-
-        __openllm_env__: openllm.utils.ModelEnv = Field(None, init=False)
-        """A ModelEnv instance for this LLMConfig."""
-
-        __openllm_model_name__: str = Field("")
-        """The normalized version of __openllm_start_name__, determined by __openllm_name_type__"""
-
-        __openllm_model_type__: t.Literal["causal_lm", "seq2seq_lm"] = Field("causal_lm")
-        """The model type for this given LLM. By default, it should be causal language modeling.
-        Currently supported 'causal_lm' or 'seq2seq_lm'
-        """
-
-        __openllm_start_name__: str = Field("")
-        """Default name to be used with `openllm start`"""
-
-        __openllm_name_type__: t.Literal["dasherize", "lowercase"] = Field("dasherize")
-        """the default name typed for this model. "dasherize" will convert the name to lowercase and
-        replace spaces with dashes. "lowercase" will convert the name to lowercase."""
-
-        __openllm_timeout__: int = Field(36000)
-        """The default timeout to be set for this given LLM."""
-
-        __openllm_workers_per_resource__: int | float = Field(1)
-        """The number of workers per resource. This is used to determine the number of workers to use for this model.
-        For example, if this is set to 0.5, then OpenLLM will use 1 worker per 2 resources. If this is set to 1, then
-        OpenLLM will use 1 worker per resource. If this is set to 2, then OpenLLM will use 2 workers per resource.
-
-        See StarCoder for more advanced usage. See
-        https://docs.bentoml.org/en/latest/guides/scheduling.html#resource-scheduling-strategy for more details.
-
-        By default, it is set to 1.
-        """
-
-        __openllm_runtime__: t.Literal["transformers", "cpp"] = Field("transformers")
-        """The runtime to use for this model. Possible values are `transformers` or `cpp`. See
-        LlaMA for more information."""
 
         __openllm_use_pipeline__: bool = Field(False)
         """Whether this LLM will use HuggingFace Pipeline API. By default, this is set to False.
@@ -804,16 +830,40 @@ class LLMConfig:
         and set to False for every other models.
         """
 
-        __openllm_default_id__: str = Field(None)
-        """Return the default model to use when using 'openllm start <model_id>'.
-        This could be one of the keys in 'self.model_ids' or custom users model."""
+        __openllm_model_type__: t.Literal["causal_lm", "seq2seq_lm"] = Field("causal_lm")
+        """The model type for this given LLM. By default, it should be causal language modeling.
+        Currently supported 'causal_lm' or 'seq2seq_lm'
+        """
 
-        __openllm_model_ids__: ListStr = Field(None)
-        """A list of supported pretrained models tag for this given runnable.
+        __openllm_runtime__: t.Literal["transformers", "cpp"] = Field("transformers")
+        """The runtime to use for this model. Possible values are `transformers` or `cpp`. See
+        LlaMA for more information."""
 
-        For example:
-            For FLAN-T5 impl, this would be ["google/flan-t5-small", "google/flan-t5-base",
-                                                "google/flan-t5-large", "google/flan-t5-xl", "google/flan-t5-xxl"]
+        __openllm_name_type__: t.Literal["dasherize", "lowercase"] = Field("dasherize")
+        """the default name typed for this model. "dasherize" will convert the name to lowercase and
+        replace spaces with dashes. "lowercase" will convert the name to lowercase."""
+
+        __openllm_model_name__: str = Field(None)
+        """The normalized version of __openllm_start_name__, determined by __openllm_name_type__"""
+
+        __openllm_start_name__: str = Field(None)
+        """Default name to be used with `openllm start`"""
+
+        __openllm_env__: openllm.utils.ModelEnv = Field(None, init=False)
+        """A ModelEnv instance for this LLMConfig."""
+
+        __openllm_timeout__: int = Field(36000)
+        """The default timeout to be set for this given LLM."""
+
+        __openllm_workers_per_resource__: int | float = Field(1)
+        """The number of workers per resource. This is used to determine the number of workers to use for this model.
+        For example, if this is set to 0.5, then OpenLLM will use 1 worker per 2 resources. If this is set to 1, then
+        OpenLLM will use 1 worker per resource. If this is set to 2, then OpenLLM will use 2 workers per resource.
+
+        See StarCoder for more advanced usage. See
+        https://docs.bentoml.org/en/latest/guides/scheduling.html#resource-scheduling-strategy for more details.
+
+        By default, it is set to 1.
         """
 
         __openllm_generation_class__: type[GenerationConfig] = Field(None, init=False)
@@ -835,23 +885,10 @@ class LLMConfig:
             cls.__name__ = f"{cls.__name__}Config"
 
         # NOTE: auto assignment attributes generated from __config__
-        _make_assignment_script(cls, bentoml_cattr.structure(cls, _ModelSettings))(cls)
+        _make_assignment_script(cls, bentoml_cattr.structure(cls, _ModelSettingsAttr))(cls)
         # process a fields under cls.__dict__ and auto convert them with dantic.Field
         cd = cls.__dict__
         anns = codegen.get_annotations(cls)
-        partialed = functools.partial(_field_env_key, model_name=cls.__openllm_model_name__)
-
-        def auto_config_env(_: type[LLMConfig], attrs: list[attr.Attribute[t.Any]]) -> list[attr.Attribute[t.Any]]:
-            return [
-                a.evolve(
-                    default=_populate_value_from_env_var(partialed(key=a.name), fallback=a.default),
-                    metadata={
-                        "env": a.metadata.get("env", partialed(key=a.name)),
-                        "description": a.metadata.get("description", "(not provided)"),
-                    },
-                )
-                for a in attrs
-            ]
 
         # _CountingAttr is the underlying representation of attr.field
         ca_names = {name for name, attr in cd.items() if isinstance(attr, _CountingAttr)}
@@ -864,9 +901,9 @@ class LLMConfig:
             val = cd.get(attr_name, attr.NOTHING)
             if not LazyType["_CountingAttr[t.Any]"](_CountingAttr).isinstance(val):
                 if val is attr.NOTHING:
-                    val = cls.Field(env=partialed(key=attr_name))
+                    val = cls.Field(env=_field_env_key(cls.__openllm_model_name__, attr_name))
                 else:
-                    val = cls.Field(default=val, env=partialed(key=attr_name))
+                    val = cls.Field(default=val, env=_field_env_key(cls.__openllm_model_name__, attr_name))
             these[attr_name] = val
         unannotated = ca_names - annotated_names
         if len(unannotated) > 0:
@@ -894,7 +931,7 @@ class LLMConfig:
             False,  # disable auto_attribs, since we already handle these
             False,  # disable kw_only
             True,  # collect_by_mro
-            field_transformer=auto_config_env,
+            field_transformer=_make_env_transformer(cls, cls.__openllm_model_name__),
         )
         _weakref_slot = True  # slots = True
         _base_names = {a.name for a in base_attrs}
@@ -910,7 +947,7 @@ class LLMConfig:
             _make_init(
                 cls,  # cls (the attrs-decorated class)
                 attrs,  # tuple of attr.Attribute of cls
-                _has_pre_init,  # pre_initjk
+                _has_pre_init,  # pre_init
                 _has_post_init,  # post_init
                 False,  # frozen
                 True,  # slots
@@ -1047,14 +1084,14 @@ class LLMConfig:
     def __getattribute__(self, item: str) -> t.Any:
         if item in _reserved_namespace:
             raise ForbiddenAttributeError(
-                f"'{item}' is a reserved namespace for {self.__class__} and should not be access nor modified."
+                f"'{item}' belongs to a private namespace for {self.__class__} and should not be access nor modified."
             )
         return _object_getattribute.__get__(self)(item)
 
     @classmethod
     def check_if_gpu_is_available(cls, implementation: str | None = None, force: bool = False):
         if implementation is None:
-            implementation = cls.__openllm_env__.get_framework_env()
+            implementation = cls.__openllm_env__["framework_value"]
 
         try:
             if cls.__openllm_requires_gpu__ or force:
@@ -1091,7 +1128,7 @@ class LLMConfig:
         """
         attrs = {k: v for k, v in attrs.items() if v is not None}
 
-        model_config = cls.__openllm_env__.model_config
+        model_config = cls.__openllm_env__.config
 
         env_json_string = os.environ.get(model_config, None)
 
