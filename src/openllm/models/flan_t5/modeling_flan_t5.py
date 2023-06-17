@@ -74,14 +74,14 @@ class FlanT5(openllm.LLM["transformers.T5ForConditionalGeneration", "transformer
     def postprocess_generate(self, prompt: str, generation_result: t.Sequence[str], **_: t.Any) -> str:
         return generation_result[0]
 
-    @torch.inference_mode()
     def generate(self, prompt: str, **attrs: t.Any) -> list[str]:
-        if torch.cuda.is_available():
-            self.model.cuda()
-        input_ids = t.cast("torch.Tensor", self.tokenizer(prompt, return_tensors="pt").input_ids).to(self.device)
-        result_tensor = self.model.generate(
-            input_ids,
-            do_sample=True,
-            generation_config=self.config.model_construct_env(**attrs).to_generation_config(),
-        )
-        return self.tokenizer.batch_decode(result_tensor, skip_special_tokens=True)
+        with torch.inference_mode():
+            if torch.cuda.is_available():
+                self.model.cuda()
+            input_ids = t.cast("torch.Tensor", self.tokenizer(prompt, return_tensors="pt").input_ids).to(self.device)
+            result_tensor = self.model.generate(
+                input_ids,
+                do_sample=True,
+                generation_config=self.config.model_construct_env(**attrs).to_generation_config(),
+            )
+            return self.tokenizer.batch_decode(result_tensor, skip_special_tokens=True)

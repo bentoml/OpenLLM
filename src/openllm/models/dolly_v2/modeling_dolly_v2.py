@@ -98,19 +98,19 @@ class DollyV2(openllm.LLM["transformers.Pipeline", "transformers.PreTrainedToken
     ) -> str:
         return generation_result[0]["generated_text"]
 
-    @torch.inference_mode()
     def generate(self, prompt: str, **attrs: t.Any) -> list[dict[t.Literal["generated_text"], str]]:
-        self.model.tokenizer = self.tokenizer
-        llm_config = self.config.model_construct_env(**attrs)
-        decoded: list[dict[t.Literal["generated_text"], str]] = self.model(
-            prompt, generation_config=llm_config.to_generation_config()
-        )
+        with torch.inference_mode():
+            self.model.tokenizer = self.tokenizer
+            llm_config = self.config.model_construct_env(**attrs)
+            decoded: list[dict[t.Literal["generated_text"], str]] = self.model(
+                prompt, generation_config=llm_config.to_generation_config()
+            )
 
-        if llm_config.return_full_text:
-            return [
-                {k: f"{DEFAULT_PROMPT_TEMPLATE.format(instruction=prompt)}\n{generated}"}
-                for i in decoded
-                for k, generated in i.items()
-            ]
+            if llm_config.return_full_text:
+                return [
+                    {k: f"{DEFAULT_PROMPT_TEMPLATE.format(instruction=prompt)}\n{generated}"}
+                    for i in decoded
+                    for k, generated in i.items()
+                ]
 
-        return decoded
+            return decoded

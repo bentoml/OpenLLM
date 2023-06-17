@@ -13,8 +13,9 @@
 # limitations under the License.
 from __future__ import annotations
 
-import dataclasses
 import typing as t
+
+import attr
 
 import openllm
 from openllm._prompt import PromptFormatter
@@ -34,12 +35,10 @@ class PartialDict(DictStrStr):
         return "{" + key + "}"
 
 
-@dataclasses.dataclass(slots=True)
+@attr.define(slots=True)
 class PromptTemplate:
     template: str
     input_variables: t.Sequence[str]
-
-    model_config = {"extra": "forbid"}
 
     def to_str(self, __partial_dict__: PartialDict | None = None, **attrs: str) -> str:
         """Generate a prompt from the template and input variables"""

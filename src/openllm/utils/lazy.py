@@ -21,6 +21,19 @@ import os
 import types
 import typing as t
 
+from ..exceptions import ForbiddenAttributeError, OpenLLMException
+
+
+class UsageNotAllowedError(OpenLLMException):
+    """Raised when LazyModule.__getitem__ is forbidden."""
+
+
+class MissingAttributesError(OpenLLMException):
+    """Raised when given keys is not available in LazyModule special mapping."""
+
+
+_reserved_namespace = {"__openllm_special__"}
+
 
 class LazyModule(types.ModuleType):
     """
@@ -49,9 +62,7 @@ class LazyModule(types.ModuleType):
             for value in values:
                 self._class_to_module[value] = key
         # Needed for autocompletion in an IDE
-        self.__all__ = (
-            list(import_structure.keys()) + list(itertools.chain(*import_structure.values())) + list(_extra_objects)
-        )
+        self.__all__ = list(import_structure.keys()) + list(itertools.chain(*import_structure.values()))
         self.__file__ = module_file
         self.__spec__ = module_spec
         self.__path__ = [os.path.dirname(module_file)]
@@ -71,13 +82,30 @@ class LazyModule(types.ModuleType):
                 result.append(attribute)
         return result
 
+    def __getitem__(self, key: str) -> t.Any:
+        if self._objects.get("__openllm_special__") is None:
+            raise UsageNotAllowedError(f"'{self._name}' is not allowed to be used as a dict.")
+        _special_mapping = self._objects.get("__openllm_special__", {})
+        try:
+            if key in _special_mapping:
+                return getattr(self, _special_mapping.__getitem__(key))
+            raise MissingAttributesError(f"Requested '{key}' is not available in given mapping.")
+        except AttributeError as e:
+            raise KeyError(f"'{self._name}' has no attribute {_special_mapping[key]}") from e
+        except Exception as e:
+            raise KeyError(f"Failed to lookup '{key}' in '{self._name}'") from e
+
     def __getattr__(self, name: str) -> t.Any:
+        if name in _reserved_namespace:
+            raise ForbiddenAttributeError(
+                f"'{name}' is a reserved namespace for {self._name} and should not be access nor modified."
+            )
         if name in self._objects:
-            return self._objects[name]
+            return self._objects.__getitem__(name)
         if name in self._modules:
             value = self._get_module(name)
         elif name in self._class_to_module.keys():
-            module = self._get_module(self._class_to_module[name])
+            module = self._get_module(self._class_to_module.__getitem__(name))
             value = getattr(module, name)
         else:
             raise AttributeError(f"module {self.__name__} has no attribute {name}")

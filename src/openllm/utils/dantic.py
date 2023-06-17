@@ -97,7 +97,7 @@ def attrs_to_options(
     )
 
 
-def _default_converter(value: t.Any, env: str | None) -> t.Any:
+def env_converter(value: t.Any, env: str | None = None) -> t.Any:
     if env is not None:
         value = os.environ.get(env, value)
     if value is not None and isinstance(value, str):
@@ -135,7 +135,8 @@ def Field(
             on kw_only. If kw_only=True, the this field will become 'Required' and the default
             value is omitted. If kw_only=False, then the default value will be used as before.
         use_default_converter: a bool indicating whether to use the default converter. Defaults
-            to True. If set to False, then the default converter will not be used.
+            to True. If set to False, then the default converter will not be used. The default
+            converter converts a given value from the environment variable for this given Field.
         **kwargs: The rest of the arguments are passed to attr.field
     """
     metadata = attrs.pop("metadata", {})
@@ -148,7 +149,7 @@ def Field(
 
     converter = attrs.pop("converter", None)
     if use_default_converter:
-        converter = functools.partial(_default_converter, env=env)
+        converter = functools.partial(env_converter, env=env)
 
     if ge is not None:
         piped.append(attr.validators.ge(ge))

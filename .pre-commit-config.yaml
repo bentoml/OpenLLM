@@ -14,7 +14,7 @@
 
 ci:
   autoupdate_schedule: weekly
-  skip: [check-models-table-update, check-models-table-update]
+  skip: [check-models-table-update, check-models-table-update, changelog-dry-run]
 exclude: '.*\.(css|js|svg)$'
 repos:
   - repo: https://github.com/charliermarsh/ruff-pre-commit
@@ -51,13 +51,16 @@ repos:
               typings/.*|
               .github/.*
           )$
-  - repo: local
-    hooks:
       - id: check-models-table-update
         name: check if table in README.md is up-to-date
         entry: ./tools/assert-model-table-latest
         language: script
         files: README.md
+      - id: changelog-dry-run
+        name: Running changelog dry-run
+        entry: hatch run changelog
+        language: system
+        files: CHANGELOG.md
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.4.0
     hooks:

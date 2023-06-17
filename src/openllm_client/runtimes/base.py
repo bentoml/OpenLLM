@@ -25,6 +25,7 @@ import httpx
 import openllm
 
 if t.TYPE_CHECKING:
+    from openllm.models.auto.factory import _BaseAutoLLMClass
 
     class AnnotatedClient(bentoml.client.Client):
         def health(self, *args: t.Any, **attrs: t.Any) -> t.Any:
@@ -107,12 +108,10 @@ class ClientMixin:
     @property
     def llm(self) -> openllm.LLM[t.Any, t.Any]:
         if self.__llm__ is None:
-            if self.framework == "flax":
-                self.__llm__ = openllm.AutoFlaxLLM.for_model(self.model_name)
-            elif self.framework == "tf":
-                self.__llm__ = openllm.AutoTFLLM.for_model(self.model_name)
-            else:
-                self.__llm__ = openllm.AutoLLM.for_model(self.model_name)
+            self.__llm__ = t.cast(
+                "_BaseAutoLLMClass",
+                openllm[self.framework],  # type: ignore (internal API)
+            ).for_model(self.model_name)
         return self.__llm__
 
     @property

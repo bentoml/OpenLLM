@@ -15,6 +15,8 @@
 """
 Some imports utils are vendorred from transformers/utils/import_utils.py for performance reasons.
 """
+from __future__ import annotations
+
 import importlib
 import importlib.metadata
 import importlib.util
@@ -24,7 +26,6 @@ import typing as t
 from abc import ABCMeta
 from collections import OrderedDict
 
-import attr
 import inflection
 from bentoml._internal.utils import LazyLoader
 from packaging import version
@@ -236,31 +237,73 @@ def require_backends(o: t.Any, backends: t.MutableSequence[str]):
         raise ImportError("".join(failed))
 
 
-@attr.define
 class ModelEnv:
-    model_name: str = attr.field(converter=inflection.underscore)
+    model_name: str
 
-    @property
-    def framework(self) -> str:
-        return f"OPENLLM_{self.model_name.upper()}_FRAMEWORK"
+    if t.TYPE_CHECKING:
+        config: property
+        model_id: property
+        quantize: property
+        framework: property
+        bettertransformer: property
 
-    @property
-    def model_config(self) -> str:
-        return f"OPENLLM_{self.model_name.upper()}_CONFIG"
+        framework_value: property
+        quantize_value: property
+        bettertransformer_value: property
 
-    @property
-    def model_id(self) -> str:
-        return f"OPENLLM_{self.model_name.upper()}_MODEL_ID"
+    def __getitem__(self, item: str | t.Any) -> t.Any:
+        if hasattr(self, item):
+            return getattr(self, item)
+        raise KeyError(f"Key {item} not found in {self}")
 
-    @property
-    def bettertransformer(self) -> str:
-        return f"OPENLLM_{self.model_name.upper()}_BETTERTRANSFORMER"
+    def __new__(cls, model_name: str, bettertransformer: bool | None = None, quantize: t.LiteralString | None = None):
+        from .._configuration import _field_env_key
+        from . import codegen
 
-    def gen_env_key(self, key: str) -> str:
-        return f"OPENLLM_{self.model_name.upper()}_{key.upper()}"
+        model_name = inflection.underscore(model_name)
 
-    def convert_to_bettertransformer(self) -> bool:
-        return os.environ.get(self.bettertransformer, str(False)).lower() == "true"
+        res = super().__new__(cls)
+        res.model_name = model_name
+
+        # gen properties env key
+        attributes = {"config", "model_id", "quantize", "framework", "bettertransformer"}
+        for att in attributes:
+            setattr(res, att, _field_env_key(model_name, att.upper()))
+
+        # gen properties env value
+        attributes_with_values = {
+            "quantize": (bool, quantize),
+            "bettertransformer": (bool, bettertransformer),
+            "framework": (str, "pt"),
+        }
+        globs: dict[str, t.Any] = {
+            "__bool_vars_value": ENV_VARS_TRUE_VALUES,
+            "__env_get": os.environ.get,
+            "self": res,
+        }
+
+        for attribute, (default_type, default_value) in attributes_with_values.items():
+            lines: list[str] = []
+            if default_type is bool:
+                lines.append(
+                    f"return str(__env_get(self['{attribute}'], str(__env_default)).upper() in __bool_vars_value)"
+                )
+            else:
+                lines.append(f"return __env_get(self['{attribute}'], __env_default)")
+
+            setattr(
+                res,
+                f"{attribute}_value",
+                codegen.generate_function(
+                    cls,
+                    "_env_get_" + attribute,
+                    lines,
+                    ("__env_default",),
+                    globs,
+                )(default_value),
+            )
+
+        return res
 
     @property
     def start_docstring(self) -> str:
@@ -269,9 +312,3 @@ class ModelEnv:
     @property
     def module(self) -> LazyLoader:
         return LazyLoader(self.model_name, globals(), f"openllm.models.{self.model_name}")
-
-    def get_framework_env(self) -> t.Literal["pt", "flax", "tf"]:
-        envvar = os.environ.get(self.framework, "pt")
-        if envvar not in ("pt", "tf", "flax"):
-            raise ValueError(f"Invalid framework implementation {envvar}, must be one of 'pt', 'tf', 'flax'")
-        return envvar

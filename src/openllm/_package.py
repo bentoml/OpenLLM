@@ -29,11 +29,14 @@ from bentoml._internal.bento.build_config import DockerOptions, PythonOptions
 from bentoml._internal.configuration import get_debug_mode
 
 import openllm
-import openllm.utils as utils
-from openllm.utils import pkg
+
+from .utils import (ModelEnv, codegen, first_not_none, is_flax_available,
+                    is_tf_available, is_torch_available, pkg)
 
 if t.TYPE_CHECKING:
     from fs.base import FS
+
+    from .models.auto.factory import _BaseAutoLLMClass
 
 logger = logging.getLogger(__name__)
 
@@ -82,10 +85,10 @@ def construct_python_options(llm: openllm.LLM[t.Any, t.Any], llm_fs: FS) -> Pyth
     if not (str(os.environ.get("BENTOML_BUNDLE_LOCAL_BUILD", False)).lower() == "false"):
         packages.append(f"bentoml>={'.'.join([str(i) for i in pkg.pkg_version_info('bentoml')])}")
 
-    env = llm.config["env"]
-    to_use_framework = env.get_framework_env()
-    if to_use_framework == "flax":
-        assert utils.is_flax_available(), f"Flax is not available, while {env.framework} is set to 'flax'"
+    env: ModelEnv = llm.config["env"]
+    framework_envvar = env["framework_value"]
+    if framework_envvar == "flax":
+        assert is_flax_available(), f"Flax is not available, while {env.framework} is set to 'flax'"
         packages.extend(
             [
                 f"flax>={importlib.metadata.version('flax')}",
@@ -93,8 +96,8 @@ def construct_python_options(llm: openllm.LLM[t.Any, t.Any], llm_fs: FS) -> Pyth
                 f"jaxlib>={importlib.metadata.version('jaxlib')}",
             ]
         )
-    elif to_use_framework == "tf":
-        assert utils.is_tf_available(), f"TensorFlow is not available, while {env.framework} is set to 'tf'"
+    elif framework_envvar == "tf":
+        assert is_tf_available(), f"TensorFlow is not available, while {env.framework} is set to 'tf'"
         candidates = (
             "tensorflow",
             "tensorflow-cpu",
@@ -116,7 +119,7 @@ def construct_python_options(llm: openllm.LLM[t.Any, t.Any], llm_fs: FS) -> Pyth
             except importlib.metadata.PackageNotFoundError:
                 pass
     else:
-        assert utils.is_torch_available(), "PyTorch is not available. Make sure to have it locally installed."
+        assert is_torch_available(), "PyTorch is not available. Make sure to have it locally installed."
         packages.extend([f"torch>={importlib.metadata.version('torch')}"])
 
     wheels: list[str] = []
@@ -127,7 +130,13 @@ def construct_python_options(llm: openllm.LLM[t.Any, t.Any], llm_fs: FS) -> Pyth
     return PythonOptions(packages=packages, wheels=wheels, lock_packages=True)
 
 
-def construct_docker_options(llm: openllm.LLM[t.Any, t.Any], _: FS, workers_per_resource: int | float) -> DockerOptions:
+def construct_docker_options(
+    llm: openllm.LLM[t.Any, t.Any],
+    _: FS,
+    workers_per_resource: int | float,
+    quantize: t.LiteralString | None,
+    bettertransformer: bool | None,
+) -> DockerOptions:
     _bentoml_config_options = os.environ.pop("BENTOML_CONFIG_OPTIONS", "")
     _bentoml_config_options_opts = [
         "api_server.traffic.timeout=36000",  # NOTE: Currently we hardcode this value
@@ -135,39 +144,112 @@ def construct_docker_options(llm: openllm.LLM[t.Any, t.Any], _: FS, workers_per_
         f'runners."llm-{llm.config["start_name"]}-runner".workers_per_resource={workers_per_resource}',
     ]
     _bentoml_config_options += " " if _bentoml_config_options else "" + " ".join(_bentoml_config_options_opts)
-    env = llm.config["env"]
-    return DockerOptions(
-        cuda_version="11.6",  # NOTE: Torch 2.0 currently only support 11.6 as the latest CUDA version
-        env={
-            env.framework: env.get_framework_env(),
-            "OPENLLM_MODEL": llm.config["model_name"],
-            "OPENLLM_MODEL_ID": llm.model_id,
-            "BENTOML_DEBUG": str(get_debug_mode()),
-            "BENTOML_CONFIG_OPTIONS": _bentoml_config_options,
-        },
-        system_packages=["git"],
+    env: ModelEnv = llm.config["env"]
+
+    env_dict = {
+        env.framework: env.framework_value,
+        env.config: llm.config.model_dump_json().decode(),
+        "OPENLLM_MODEL": llm.config["model_name"],
+        "OPENLLM_MODEL_ID": llm.model_id,
+        "BENTOML_DEBUG": str(get_debug_mode()),
+        "BENTOML_CONFIG_OPTIONS": _bentoml_config_options,
+    }
+
+    # We need to handle None separately here, as env from subprocess doesn't
+    # accept None value.
+    _env = ModelEnv(llm.config["model_name"], bettertransformer=bettertransformer, quantize=quantize)
+
+    if _env.bettertransformer_value is not None:
+        env_dict[_env.bettertransformer] = _env.bettertransformer_value
+    if _env.quantize_value is not None:
+        env_dict[_env.quantize] = _env.quantize_value
+
+    # NOTE: Torch 2.0 currently only support 11.6 as the latest CUDA version
+    return DockerOptions(cuda_version="11.6", env=env_dict, system_packages=["git"])
+
+
+@t.overload
+def build(
+    model_name: str,
+    *,
+    model_id: str | None = ...,
+    quantize: t.LiteralString | None = ...,
+    bettertransformer: bool | None = ...,
+    _workers_per_resource: int | float | None = ...,
+    _overwrite_existing_bento: bool = ...,
+    __cli__: t.Literal[False] = ...,
+    **attrs: t.Any,
+) -> bentoml.Bento:
+    ...
+
+
+@t.overload
+def build(
+    model_name: str,
+    *,
+    model_id: str | None = ...,
+    quantize: t.LiteralString | None = ...,
+    bettertransformer: bool | None = ...,
+    _workers_per_resource: int | float | None = ...,
+    _overwrite_existing_bento: bool = ...,
+    __cli__: t.Literal[True] = ...,
+    **attrs: t.Any,
+) -> tuple[bentoml.Bento, bool]:
+    ...
+
+
+def _build_bento(
+    bento_tag: bentoml.Tag,
+    service_name: str,
+    llm_fs: FS,
+    llm: openllm.LLM[t.Any, t.Any],
+    workers_per_resource: int | float,
+    quantize: t.LiteralString | None,
+    bettertransformer: bool | None,
+) -> bentoml.Bento:
+    framework_envvar = llm.config["env"]["framework_value"]
+    labels = dict(llm.identifying_params)
+    labels.update({"_type": llm.llm_type, "_framework": framework_envvar})
+    logger.info("Building Bento for LLM '%s'", llm.config["start_name"])
+    return bentoml.bentos.build(
+        f"{service_name}:svc",
+        name=bento_tag.name,
+        labels=labels,
+        description=f"OpenLLM service for {llm.config['start_name']}",
+        include=[
+            f for f in llm_fs.walk.files(filter=["*.py"])
+        ],  # NOTE: By default, we are using _service.py as the default service, for now.
+        exclude=["/venv", "__pycache__/", "*.py[cod]", "*$py.class"],
+        python=construct_python_options(llm, llm_fs),
+        docker=construct_docker_options(llm, llm_fs, workers_per_resource, quantize, bettertransformer),
+        version=bento_tag.version,
+        build_ctx=llm_fs.getsyspath("/"),
     )
 
 
-@t.overload
-def build(model_name: str, *, __cli__: t.Literal[False] = ..., **attrs: t.Any) -> bentoml.Bento:
-    ...
+def build(
+    model_name: str,
+    *,
+    model_id: str | None = None,
+    quantize: t.LiteralString | None = None,
+    bettertransformer: bool | None = None,
+    _workers_per_resource: int | float | None = None,
+    _overwrite_existing_bento: bool = False,
+    __cli__: bool = False,
+    **attrs: t.Any,
+) -> tuple[bentoml.Bento, bool] | bentoml.Bento:
+    """Package a LLM into a Bento.
 
+    The LLM will be built into a BentoService with the following structure:
+    if quantize is passed, it will instruct the model to be quantized dynamically during serving time.
+    if bettertransformer is passed, it will instruct the model to use BetterTransformer during serving time.
 
-@t.overload
-def build(model_name: str, *, __cli__: t.Literal[True] = ..., **attrs: t.Any) -> tuple[bentoml.Bento, bool]:
-    ...
+    Other parameters including model_name, model_id and attrs will be passed to the LLM class itself.
+    """
 
-
-def build(model_name: str, *, __cli__: bool = False, **attrs: t.Any) -> tuple[bentoml.Bento, bool] | bentoml.Bento:
-    """Package a LLM into a Bento."""
-
-    overwrite_existing_bento = attrs.pop("_overwrite_existing_bento", False)
+    _previously_built = False
     current_model_envvar = os.environ.pop("OPENLLM_MODEL", None)
     current_model_id_envvar = os.environ.pop("OPENLLM_MODEL_ID", None)
-    _previously_built = False
-    workers_per_resource = attrs.pop("_workers_per_resource", None)
-    model_id: str = attrs.pop("model_id", None)
 
     llm_config = openllm.AutoConfig.for_model(model_name)
 
@@ -178,52 +260,58 @@ def build(model_name: str, *, __cli__: bool = False, **attrs: t.Any) -> tuple[be
     try:
         os.environ["OPENLLM_MODEL"] = inflection.underscore(model_name)
 
-        to_use_framework = llm_config["env"].get_framework_env()
-        if to_use_framework == "flax":
-            llm = openllm.AutoFlaxLLM.for_model(model_name, model_id=model_id, llm_config=llm_config, **attrs)
-        elif to_use_framework == "tf":
-            llm = openllm.AutoTFLLM.for_model(model_name, model_id=model_id, llm_config=llm_config, **attrs)
-        else:
-            llm = openllm.AutoLLM.for_model(model_name, model_id=model_id, llm_config=llm_config, **attrs)
+        framework_envvar = llm_config["env"]["framework_value"]
+        llm = t.cast(
+            "_BaseAutoLLMClass",
+            openllm[framework_envvar],  # type: ignore (internal API)
+        ).for_model(
+            model_name,
+            model_id=model_id,
+            llm_config=llm_config,
+            quantize=quantize,
+            bettertransformer=bettertransformer,
+            **attrs,
+        )
 
         os.environ["OPENLLM_MODEL_ID"] = llm.model_id
 
         labels = dict(llm.identifying_params)
-        labels.update({"_type": llm.llm_type, "_framework": to_use_framework})
+        labels.update({"_type": llm.llm_type, "_framework": framework_envvar})
         service_name = f"generated_{llm_config['model_name']}_service.py"
-        workers_per_resource = utils.first_not_none(workers_per_resource, default=llm_config["workers_per_resource"])
+        workers_per_resource = first_not_none(_workers_per_resource, default=llm_config["workers_per_resource"])
 
         with fs.open_fs(f"temp://llm_{llm_config['model_name']}") as llm_fs:
             # add service.py definition to this temporary folder
-            utils.codegen.write_service(model_name, llm.model_id, service_name, llm_fs)
+            codegen.write_service(model_name, llm.model_id, service_name, llm_fs)
 
             bento_tag = bentoml.Tag.from_taglike(f"{llm.llm_type}-service:{llm.tag.version}")
             try:
                 bento = bentoml.get(bento_tag)
-                if overwrite_existing_bento:
+                if _overwrite_existing_bento:
+                    logger.info("Overwriting previously saved Bento.")
                     bentoml.delete(bento_tag)
-                    raise bentoml.exceptions.NotFound("Overwriting previously saved Bento.")
+                    bento = _build_bento(
+                        bento_tag,
+                        service_name,
+                        llm_fs,
+                        llm,
+                        workers_per_resource=workers_per_resource,
+                        quantize=quantize,
+                        bettertransformer=bettertransformer,
+                    )
                 _previously_built = True
             except bentoml.exceptions.NotFound:
                 logger.info("Building Bento for LLM '%s'", llm_config["start_name"])
-                bento = bentoml.bentos.build(
-                    f"{service_name}:svc",
-                    name=bento_tag.name,
-                    labels=labels,
-                    description=f"OpenLLM service for {llm_config['start_name']}",
-                    include=[
-                        f for f in llm_fs.walk.files(filter=["*.py"])
-                    ],  # NOTE: By default, we are using _service.py as the default service, for now.
-                    exclude=["/venv", "__pycache__/", "*.py[cod]", "*$py.class"],
-                    python=construct_python_options(llm, llm_fs),
-                    docker=construct_docker_options(llm, llm_fs, workers_per_resource),
-                    version=bento_tag.version,
-                    build_ctx=llm_fs.getsyspath("/"),
+                bento = _build_bento(
+                    bento_tag,
+                    service_name,
+                    llm_fs,
+                    llm,
+                    workers_per_resource=workers_per_resource,
+                    quantize=quantize,
+                    bettertransformer=bettertransformer,
                 )
-            if __cli__:
-                return bento, _previously_built
-            else:
-                return bento
+            return (bento, _previously_built) if __cli__ else bento
     except Exception as e:
         logger.error("\nException caught during building LLM %s: \n", model_name, exc_info=e)
         raise

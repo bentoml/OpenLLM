@@ -129,15 +129,15 @@ class OPT(openllm.LLM["transformers.OPTForCausalLM", "transformers.GPT2Tokenizer
         else:
             return "\n".join(generation_result)
 
-    @torch.inference_mode()
     def generate(self, prompt: str, **attrs: t.Any) -> list[str]:
-        if torch.cuda.is_available() and torch.cuda.device_count() == 1:
-            self.model.cuda()
+        with torch.inference_mode():
+            if torch.cuda.is_available() and torch.cuda.device_count() == 1:
+                self.model.cuda()
 
-        input_ids = t.cast(torch.Tensor, self.tokenizer(prompt, return_tensors="pt").input_ids).to(self.device)
-        generated_tensors = self.model.generate(
-            input_ids,
-            do_sample=True,
-            generation_config=self.config.model_construct_env(**attrs).to_generation_config(),
-        )
-        return self.tokenizer.batch_decode(generated_tensors, skip_special_tokens=True)
+            input_ids = t.cast(torch.Tensor, self.tokenizer(prompt, return_tensors="pt").input_ids).to(self.device)
+            generated_tensors = self.model.generate(
+                input_ids,
+                do_sample=True,
+                generation_config=self.config.model_construct_env(**attrs).to_generation_config(),
+            )
+            return self.tokenizer.batch_decode(generated_tensors, skip_special_tokens=True)
