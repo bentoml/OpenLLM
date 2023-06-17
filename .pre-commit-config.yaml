@@ -47,6 +47,7 @@ repos:
         exclude: |
           (?x)^(
               tools/.*|
+              assets/.*|
               changelog.d/.*|
               typings/.*|
               .github/.*
