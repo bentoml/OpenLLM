@@ -16,19 +16,19 @@
 
 ## 📖 Introduction
 
-With OpenLLM, you can run inference with any open-source large-language
-models (LLMs), deploy to the cloud or on-premises, and build powerful AI apps.
+With OpenLLM, you can run inference with any open-source large-language models,
+deploy to the cloud or on-premises, and build powerful AI apps.
 
-🚂 **SOTA LLMs**: built-in supports a wide range of open-source LLMs and model
-runtime, including StableLM, Falcon, Dolly, Flan-T5, ChatGLM, StarCoder and
-more.
+🚂 **State-of-the-art LLMs**: built-in supports a wide range of open-source LLMs
+and model runtime, including StableLM, Falcon, Dolly, Flan-T5, ChatGLM,
+StarCoder and more.
 
 🔥 **Flexible APIs**: serve LLMs over RESTful API or gRPC with one command,
 query via WebUI, CLI, our Python/Javascript client, or any HTTP client.
 
-⛓️ **Freedom To Build**: First-class support for LangChain and BentoML allows you
-to easily create your own AI apps by composing LLMs with other models and
-services.
+⛓️ **Freedom To Build**: First-class support for LangChain, BentoML and
+HuggingFace that allows you to easily create your own AI apps by composing LLMs
+with other models and services.
 
 🎯 **Streamline Deployment**: Automatically generate your LLM server Docker
 Images or deploy as serverless endpoint via
@@ -294,7 +294,7 @@ For example, if you want to use the Tensorflow (`tf`) implementation for the
 OPENLLM_FLAN_T5_FRAMEWORK=tf openllm start flan-t5
 ```
 
-> For GPU support on Flax, refers to
+> **Note** For GPU support on Flax, refers to
 > [Jax's installation](https://github.com/google/jax#pip-installation-gpu-cuda-installed-via-pip-easier)
 > to make sure that you have Jax support for the corresponding CUDA version.
 
@@ -343,19 +343,19 @@ async def prompt(input_text: str) -> str:
 
 OpenLLM seamlessly integrates with HuggingFace Agents.
 
-> Warnings: Currently, to get the latest version of HuggingFace agent,
-> Install transformers from source or get version >=4.29
+> **Warning** The HuggingFace Agent is still at experimental stage. It is
+> recommended to install transformers from git source
 
 ```python
-
 import transformers
 
-agent = transformers.HfAgent("http://localhost:300/hf/agent")  # URL that runs the OpenLLM server
+agent = transformers.HfAgent("http://localhost:3000/hf/agent")  # URL that runs the OpenLLM server
 
 agent.run("Is the following `text` positive or negative?", text="I don't like how this models is generate inputs")
 ```
 
-> Warnings: Currently only `starcoder` is supported. It was run with 4 T4s on `g4dn.12xlarge`
+> **Note** Only `starcoder` is currently supported with Agent integration. The
+> example aboved was also ran with four T4s on EC2 `g4dn.12xlarge`
 
 ### LangChain (⏳Coming Soon!)
 
@@ -395,7 +395,7 @@ To deploy your LLMs into production:
 
 2. **Containerize your Bento**
 
-   ```
+   ```bash
    bentoml containerize <name:version>
    ```
 
