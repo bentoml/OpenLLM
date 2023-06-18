@@ -1,3 +1,5 @@
+![Banner for OpenLLM](/assets/main-banner.png)
+
 <div align="center">
     <h1 align="center">🦾 OpenLLM</h1>
     <a href="https://pypi.org/project/openllm">
