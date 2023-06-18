@@ -807,7 +807,7 @@ def build(
         model_id=model_id,
         quantize=quantize,
         bettertransformer=bettertransformer,
-        _build_extra_dependencies=enable_features,
+        _extra_dependencies=enable_features,
         _workers_per_resource=workers_per_resource,
         _overwrite_existing_bento=overwrite,
     )

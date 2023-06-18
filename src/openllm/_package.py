@@ -182,7 +182,7 @@ def build(
     model_id: str | None = ...,
     quantize: t.LiteralString | None = ...,
     bettertransformer: bool | None = ...,
-    _build_extra_dependencies: tuple[str, ...] | None = ...,
+    _extra_dependencies: tuple[str, ...] | None = ...,
     _workers_per_resource: int | float | None = ...,
     _overwrite_existing_bento: bool = ...,
     __cli__: t.Literal[False] = ...,
@@ -198,7 +198,7 @@ def build(
     model_id: str | None = ...,
     quantize: t.LiteralString | None = ...,
     bettertransformer: bool | None = ...,
-    _build_extra_dependencies: tuple[str, ...] | None = ...,
+    _extra_dependencies: tuple[str, ...] | None = ...,
     _workers_per_resource: int | float | None = ...,
     _overwrite_existing_bento: bool = ...,
     __cli__: t.Literal[True] = ...,
@@ -243,7 +243,7 @@ def build(
     model_id: str | None = None,
     quantize: t.LiteralString | None = None,
     bettertransformer: bool | None = None,
-    _build_extra_dependencies: tuple[str, ...] | None = None,
+    _extra_dependencies: tuple[str, ...] | None = None,
     _workers_per_resource: int | float | None = None,
     _overwrite_existing_bento: bool = False,
     __cli__: bool = False,
@@ -309,7 +309,7 @@ def build(
                         workers_per_resource=workers_per_resource,
                         quantize=quantize,
                         bettertransformer=bettertransformer,
-                        extra_dependencies=_build_extra_dependencies,
+                        extra_dependencies=_extra_dependencies,
                     )
                 _previously_built = True
             except bentoml.exceptions.NotFound:
@@ -322,7 +322,7 @@ def build(
                     workers_per_resource=workers_per_resource,
                     quantize=quantize,
                     bettertransformer=bettertransformer,
-                    extra_dependencies=_build_extra_dependencies,
+                    extra_dependencies=_extra_dependencies,
                 )
             return (bento, _previously_built) if __cli__ else bento
     except Exception as e:
