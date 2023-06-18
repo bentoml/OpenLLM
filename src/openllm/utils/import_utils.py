@@ -123,9 +123,9 @@ def is_tf_available():
                 )
                 _tf_version = None
                 # For the metadata, we have to look for both tensorflow and tensorflow-cpu
-                for pkg in candidates:
+                for _pkg in candidates:
                     try:
-                        _tf_version = importlib.metadata.version(pkg)
+                        _tf_version = importlib.metadata.version(_pkg)
                         break
                     except importlib.metadata.PackageNotFoundError:
                         pass

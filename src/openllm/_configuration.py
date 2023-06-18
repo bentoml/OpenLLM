@@ -65,8 +65,7 @@ from deepmerge.merger import Merger
 
 import openllm
 
-from .exceptions import (ForbiddenAttributeError, GpuNotAvailableError,
-                         OpenLLMException)
+from .exceptions import ForbiddenAttributeError
 from .utils import (DEBUG, ENV_VARS_TRUE_VALUES, LazyType, bentoml_cattr,
                     codegen, dantic, first_not_none, lenient_issubclass,
                     non_intrusive_setattr)

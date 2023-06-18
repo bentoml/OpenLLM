@@ -34,7 +34,6 @@ from bentoml._internal.types import ModelSignatureDict
 
 import openllm
 
-from ._generation import StopSequenceCriteria
 from .exceptions import (ForbiddenAttributeError, GpuNotAvailableError,
                          OpenLLMException)
 from .utils import (DEBUG, LazyLoader, ModelEnv, bentoml_cattr, first_not_none,

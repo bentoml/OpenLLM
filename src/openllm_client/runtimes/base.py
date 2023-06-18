@@ -21,6 +21,7 @@ from urllib.parse import urljoin
 
 import bentoml
 import httpx
+import transformers
 
 import openllm
 
@@ -63,6 +64,7 @@ class ClientMixin:
     _port: str
 
     __client__: AnnotatedClient | None = None
+    __agent__: transformers.HfAgent | None = None
     __llm__: openllm.LLM[t.Any, t.Any] | None = None
 
     def __init__(self, address: str, timeout: int = 30):
@@ -73,6 +75,17 @@ class ClientMixin:
     def __init_subclass__(cls, *, client_type: t.Literal["http", "grpc"] = "http", api_version: str = "v1"):
         cls._client_class = bentoml.client.HTTPClient if client_type == "http" else bentoml.client.GrpcClient
         cls._api_version = api_version
+
+    @property
+    def _hf_agent(self) -> transformers.HfAgent:
+        if self.__agent__ is None:
+            if not openllm.utils.is_transformers_supports_agent():
+                raise RuntimeError(
+                    "Current 'transformers' does not support Agent."
+                    " Make sure to upgrade to at least 4.29: 'pip install -U \"transformers>=4.29\"'"
+                )
+            self.__agent__ = transformers.HfAgent(urljoin(self._address, "/hf/agent"))
+        return self.__agent__
 
     @property
     def _metadata(self) -> dict[str, t.Any]:
@@ -170,6 +183,20 @@ class BaseClient(ClientMixin):
 
         return self.llm.postprocess_generate(prompt, r.responses, **postprocess_kwargs)
 
+    def agent(
+        self,
+        prompt: str,
+        *,
+        return_code: bool = False,
+        remote: bool = False,
+        agent_type: t.LiteralString = "hf",
+        **attrs: t.Any,
+    ) -> t.Any:
+        if agent_type == "hf":
+            return self._hf_agent.run(prompt, return_code=return_code, remote=remote, **attrs)
+        else:
+            raise RuntimeError(f"Unknown 'agent_type={agent_type}'")
+
     # NOTE: Scikit interface
     def predict(self, prompt: str, **attrs: t.Any) -> t.Any:
         return self.query(prompt, **attrs)
@@ -206,6 +233,20 @@ class BaseAsyncClient(ClientMixin):
             return openllm.utils.bentoml_cattr.unstructure(r)
 
         return self.llm.postprocess_generate(prompt, r.responses, **postprocess_kwargs)
+
+    async def agent(
+        self,
+        prompt: str,
+        *,
+        return_code: bool = False,
+        remote: bool = False,
+        agent_type: t.LiteralString = "hf",
+        **attrs: t.Any,
+    ) -> t.Any:
+        if agent_type == "hf":
+            return self._hf_agent.run(prompt, return_code=return_code, remote=remote, **attrs)
+        else:
+            raise RuntimeError(f"Unknown 'agent_type={agent_type}'")
 
     # NOTE: Scikit interface
     async def predict(self, prompt: str, **attrs: t.Any) -> t.Any:

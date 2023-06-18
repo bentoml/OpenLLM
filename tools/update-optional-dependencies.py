@@ -26,10 +26,10 @@ import openllm
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-FINE_TUNE_DEPS = ["peft", "bitsandbytes", "datasets", "accelerate", "deepspeed", "auto-gptq"]
+FINE_TUNE_DEPS = ["peft", "bitsandbytes", "datasets", "accelerate", "deepspeed"]
 FLAN_T5_DEPS = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
 OPENAI_DEPS = ["openai", "tiktoken"]
-AGENTS_DEPS = ["transformers[agents]"]
+AGENTS_DEPS = ["transformers[agents]", "diffusers"]
 
 _base_requirements = {
     inflection.dasherize(name): config_cls.__openllm_requirements__
