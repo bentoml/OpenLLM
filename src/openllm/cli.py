@@ -36,7 +36,7 @@ import inflection
 import orjson
 import psutil
 from bentoml._internal.configuration.containers import BentoMLContainer
-from bentoml_cli.utils import BentoMLCommandGroup
+from bentoml_cli.utils import BentoMLCommandGroup, opt_callback
 from simple_di import Provide, inject
 
 import openllm
@@ -1074,62 +1074,54 @@ def shared_client_options(f: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
     return f
 
 
-def make_agent_type_option(f: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
-    if not is_transformers_supports_agent():
-        raise RuntimeError(
-            "Transformers version should be at least 4.29 to support HfAgent. "
-            "Upgrade with 'pip install -U transformers'"
-        )
-
-    from transformers.tools.agent_types import AGENT_TYPE_MAPPING
-
-    return [
-        cog.optgroup.option(
-            f"--{k}",
-        )
-    ]
-
-
-@cli.command(context_settings={"ignore_unknown_options": True, "allow_extra_args": True})
+@cli.command()
+@click.argument("task", type=click.STRING, metavar="TASK")
 @shared_client_options
 @click.option(
     "--agent",
     type=click.Choice(["hf"]),
-    default=None,
+    default="hf",
     help="Whether to interact with Agents from given Server endpoint.",
+    show_default=True,
 )
 @click.option(
     "--remote",
     is_flag=True,
     default=False,
     help="Whether or not to use remote tools (inference endpoints) instead of local ones.",
+    show_default=True,
 )
-@click.argument("task", type=click.STRING, metavar="task")
-@click.argument(
-    "instruct_args", type=click.UNPROCESSED, nargs=-1, metavar="--ARGS=VALUE", callback=parsing_instruction_callback
+@click.option(
+    "--opt",
+    help="Define prompt options. "
+    "(format: ``--opt text='I love this' --opt audio:./path/to/audio  --opt image:/path/to/file``)",
+    required=False,
+    multiple=True,
+    callback=opt_callback,
+    metavar="ARG=VALUE[,ARG=VALUE]",
 )
-@click.pass_context
 def instruct(
-    ctx: click.Context,
     endpoint: str,
     timeout: int,
     agent: t.LiteralString,
     output: OutputLiteral,
     remote: bool,
     task: str,
-    instruct_args: tuple[tuple[str | None, bool], ...],
+    _memoized: dict[str, t.Any],
+    **attrs: t.Any,
 ):
-    """Instruct Agents interactively for given task, from a terminal
+    """Instruct agents interactively for given tasks, from a terminal
 
     \b
     ```bash
-    $ openllm instruct --endpoint http://12.323.2.1:3000 \
-        --agent hf "Is the following `text` (in Spanish) positive or negative?" \
+    $ openllm instruct --endpoint http://12.323.2.1:3000 \\
+        "Is the following `text` (in Spanish) positive or negative?" \\
         --text "¡Este es un API muy agradable!"
     ```
     """
     client = openllm.client.HTTPClient(endpoint, timeout=timeout)
-    instruct_var = {k: v for k, v in instruct_args if k is not None}
+
+    breakpoint()
 
     if agent == "hf":
         if not is_transformers_supports_agent():
@@ -1138,11 +1130,18 @@ def instruct(
                 "Upgrade with 'pip install -U transformers'"
             )
 
+        _memoized = {k: v[0] for k, v in _memoized.items() if v}
+
         client._hf_agent.set_stream(logger)
         if output != "porcelain":
-            _echo(f"Sending the following prompt ('{task}') with the following vars: {instruct_var}", fg="magenta")
+            _echo(f"Sending the following prompt ('{task}') with the following vars: {_memoized}", fg="magenta")
 
-        return client.agent(task, agent_type=agent, return_code=False, remote=remote, **instruct_var)
+        result = client.agent(task, agent_type=agent, return_code=False, remote=remote, **_memoized)
+        if output == "json":
+            _echo(orjson.dumps(result, option=orjson.OPT_INDENT_2).decode(), fg="white")
+        else:
+            _echo(result, fg="white")
+        return result
     else:
         raise click.BadOptionUsage("agent", f"Unknown agent type {agent}")
 
