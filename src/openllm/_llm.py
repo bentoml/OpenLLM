@@ -211,7 +211,7 @@ class LLMInterface(ABC):
         **preprocess_generate_kwds: t.Any,
     ) -> list[dict[t.Literal["generated_text"], str]]:
         """The entrypoint for generating one prompt. This provides additional stop
-        tokens for generating per token level. This is to help with Agents integration, such as HFAgent.
+        tokens for generating per token level. This is useful when running with agents, or initial streaming support.
         """
         raise NotImplementedError
 
