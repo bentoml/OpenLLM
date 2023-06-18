@@ -1074,6 +1074,22 @@ def shared_client_options(f: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
     return f
 
 
+def make_agent_type_option(f: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
+    if not is_transformers_supports_agent():
+        raise RuntimeError(
+            "Transformers version should be at least 4.29 to support HfAgent. "
+            "Upgrade with 'pip install -U transformers'"
+        )
+
+    from transformers.tools.agent_types import AGENT_TYPE_MAPPING
+
+    return [
+        cog.optgroup.option(
+            f"--{k}",
+        )
+    ]
+
+
 @cli.command(context_settings={"ignore_unknown_options": True, "allow_extra_args": True})
 @shared_client_options
 @click.option(
