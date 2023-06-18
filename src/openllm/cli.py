@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import functools
 import inspect
+import itertools
 import logging
 import os
 import re
@@ -35,7 +36,7 @@ import inflection
 import orjson
 import psutil
 from bentoml._internal.configuration.containers import BentoMLContainer
-from bentoml_cli.utils import BentoMLCommandGroup
+from bentoml_cli.utils import BentoMLCommandGroup, opt_callback
 from simple_di import Provide, inject
 
 import openllm
@@ -45,7 +46,8 @@ from .exceptions import OpenLLMException
 from .utils import (DEBUG, LazyLoader, LazyType, ModelEnv, analytics,
                     bentoml_cattr, configure_logging, configure_server_logging,
                     first_not_none, get_debug_mode, get_quiet_mode, gpu_count,
-                    is_torch_available, set_debug_mode, set_quiet_mode)
+                    is_torch_available, is_transformers_supports_agent,
+                    set_debug_mode, set_quiet_mode)
 
 if t.TYPE_CHECKING:
     import torch
@@ -421,7 +423,10 @@ def start_cli():
     """
     Start any LLM as a REST server.
 
+    \b
+    ```bash
     $ openllm start <model_name> --<options> ...
+    ```
     """
 
 
@@ -430,7 +435,10 @@ def start_grpc_cli():
     """
     Start any LLM as a gRPC server.
 
+    \b
+    ```bash
     $ openllm start-grpc <model_name> --<options> ...
+    ```
     """
 
 
@@ -562,6 +570,13 @@ Available model_id(s): {llm_config['model_ids']} [default: {llm_config['default_
     @workers_per_resource_option(cog.optgroup)
     @model_id_option(cog.optgroup, model_env=env, click_type=click.Choice(llm_config["model_ids"]))
     @cog.optgroup.option(
+        "--fast",
+        is_flag=True,
+        default=False,
+        help="Bypass auto model checks and setup. This option is ahead-of-serving time.",
+    )
+    @cog.optgroup.group("LLM Optimization Options.")
+    @cog.optgroup.option(
         "--device",
         type=tuple,
         cls=NargsOptions,
@@ -573,12 +588,6 @@ Available model_id(s): {llm_config['model_ids']} [default: {llm_config['default_
     )
     @quantize_option(cog.optgroup)
     @bettertransformer_option(cog.optgroup, model_env=env)
-    @cog.optgroup.option(
-        "--fast",
-        is_flag=True,
-        default=False,
-        help="Bypass auto model checks and setup. This option is ahead-of-serving time.",
-    )
     @click.pass_context
     def model_start(
         ctx: click.Context,
@@ -751,22 +760,35 @@ start_grpc = functools.partial(_start, _serve_grpc=True)
 @cog.optgroup.group(cls=cog.MutuallyExclusiveOptionGroup, name="Optimisation options.")
 @quantize_option(cog.optgroup, build=True)
 @bettertransformer_option(cog.optgroup)
+@click.option(
+    "--enable-features",
+    help="Enable additional features for building this LLM Bento. Available: {}".format(
+        ", ".join(openllm.utils.OPTIONAL_DEPENDENCIES)
+    ),
+    multiple=True,
+    nargs=1,
+    metavar="FEATURE[,FEATURE]",
+)
 def build(
     model_name: str,
     model_id: str | None,
     overwrite: bool,
     output: OutputLiteral,
     quantize: t.Literal["int8", "int4", "gptq"] | None,
+    enable_features: tuple[str] | None,
     bettertransformer: bool | None,
     workers_per_resource: float | None,
 ):
     """Package a given models into a Bento.
 
-    $ openllm build flan-t5
+    \b
+    ```bash
+    $ openllm build flan-t5 --model-id google/flan-t5-large
+    ```
 
     \b
-    NOTE: To run a container built from this Bento with GPU support, make sure
-    to have https://github.com/NVIDIA/nvidia-container-toolkit install locally.
+    > NOTE: To run a container built from this Bento with GPU support, make sure
+    > to have https://github.com/NVIDIA/nvidia-container-toolkit install locally.
     """
     if output == "porcelain":
         set_quiet_mode(True)
@@ -776,12 +798,16 @@ def build(
         if overwrite:
             _echo(f"Overwriting existing Bento for {model_name}.", fg="yellow")
 
+    if enable_features:
+        enable_features = tuple(itertools.chain.from_iterable(map(lambda s: s.split(","), enable_features)))
+
     bento, _previously_built = openllm.build(
         model_name,
         __cli__=True,
         model_id=model_id,
         quantize=quantize,
         bettertransformer=bettertransformer,
+        _extra_dependencies=enable_features,
         _workers_per_resource=workers_per_resource,
         _overwrite_existing_bento=overwrite,
     )
@@ -826,7 +852,13 @@ def build(
 def models(output: OutputLiteral, show_available: bool):
     """List all supported models.
 
-    NOTE: '--show-available' and '-o porcelain' are mutually exclusive.
+    \b
+    > NOTE: '--show-available' and '-o porcelain' are mutually exclusive.
+
+    \b
+    ```bash
+    openllm models --show-available
+    ```
     """
     from ._llm import convert_transformers_model_name
 
@@ -997,22 +1029,131 @@ def prune(yes: bool, model_store: ModelStore = Provide[BentoMLContainer.model_st
             click.echo(f"{model} deleted.")
 
 
-@cli.command(name="query")
+# Can also support agent type such as langchain and other variants here.
+_AGENT_MAPPING = {"hf": "/hf/agent"}
+
+
+def parsing_instruction_callback(
+    ctx: click.Context, param: click.Parameter, value: list[str] | str | None
+) -> tuple[str, bool | str] | list[str] | str | None:
+    if value is None:
+        return value
+
+    if isinstance(value, list):
+        # we only parse --text foo bar -> --text foo and omit bar
+        value = value[-1]
+    if not isinstance(value, str):
+        raise click.BadParameter(f"Invalid option format: {value}")
+
+    key, *values = value.split("=")
+    if not key.startswith("--"):
+        raise click.BadParameter(f"Invalid option format: {value}")
+    key = key[2:]
+    if len(values) == 0:
+        return key, True
+    elif len(values) == 1:
+        return key, values[0]
+    else:
+        raise click.BadParameter(f"Invalid option format: {value}")
+
+
+def shared_client_options(f: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
+    options = [
+        click.option(
+            "--endpoint",
+            type=click.STRING,
+            help="OpenLLM Server endpoint, i.e: http://localhost:3000",
+            envvar="OPENLLM_ENDPOINT",
+            default="http://localhost:3000",
+        ),
+        click.option("--timeout", type=click.INT, default=30, help="Default server timeout", show_default=True),
+        output_option,
+    ]
+    for opt in reversed(options):
+        f = opt(f)
+    return f
+
+
+@cli.command()
+@click.argument("task", type=click.STRING, metavar="TASK")
+@shared_client_options
 @click.option(
-    "--endpoint",
-    type=click.STRING,
-    help="OpenLLM Server endpoint, i.e: http://localhost:3000",
-    envvar="OPENLLM_ENDPOINT",
-    default="http://localhost:3000",
+    "--agent",
+    type=click.Choice(["hf"]),
+    default="hf",
+    help="Whether to interact with Agents from given Server endpoint.",
+    show_default=True,
 )
-@click.option("--timeout", type=click.INT, default=30, help="Default server timeout", show_default=True)
+@click.option(
+    "--remote",
+    is_flag=True,
+    default=False,
+    help="Whether or not to use remote tools (inference endpoints) instead of local ones.",
+    show_default=True,
+)
+@click.option(
+    "--opt",
+    help="Define prompt options. "
+    "(format: ``--opt text='I love this' --opt audio:./path/to/audio  --opt image:/path/to/file``)",
+    required=False,
+    multiple=True,
+    callback=opt_callback,
+    metavar="ARG=VALUE[,ARG=VALUE]",
+)
+def instruct(
+    endpoint: str,
+    timeout: int,
+    agent: t.LiteralString,
+    output: OutputLiteral,
+    remote: bool,
+    task: str,
+    _memoized: dict[str, t.Any],
+    **attrs: t.Any,
+):
+    """Instruct agents interactively for given tasks, from a terminal
+
+    \b
+    ```bash
+    $ openllm instruct --endpoint http://12.323.2.1:3000 \\
+        "Is the following `text` (in Spanish) positive or negative?" \\
+        --text "¡Este es un API muy agradable!"
+    ```
+    """
+    client = openllm.client.HTTPClient(endpoint, timeout=timeout)
+
+    breakpoint()
+
+    if agent == "hf":
+        if not is_transformers_supports_agent():
+            raise click.UsageError(
+                "Transformers version should be at least 4.29 to support HfAgent. "
+                "Upgrade with 'pip install -U transformers'"
+            )
+
+        _memoized = {k: v[0] for k, v in _memoized.items() if v}
+
+        client._hf_agent.set_stream(logger)
+        if output != "porcelain":
+            _echo(f"Sending the following prompt ('{task}') with the following vars: {_memoized}", fg="magenta")
+
+        result = client.agent(task, agent_type=agent, return_code=False, remote=remote, **_memoized)
+        if output == "json":
+            _echo(orjson.dumps(result, option=orjson.OPT_INDENT_2).decode(), fg="white")
+        else:
+            _echo(result, fg="white")
+        return result
+    else:
+        raise click.BadOptionUsage("agent", f"Unknown agent type {agent}")
+
+
+@cli.command()
+@shared_client_options
 @click.option(
     "--server-type", type=click.Choice(["grpc", "http"]), help="Server type", default="http", show_default=True
 )
-@output_option
-@click.argument("query", type=click.STRING)
-def query_(
-    query: str,
+@click.argument("prompt", type=click.STRING)
+def query(
+    prompt: str,
     endpoint: str,
     timeout: int,
     server_type: t.Literal["http", "grpc"],
@@ -1020,7 +1161,10 @@ def query_(
 ):
     """Ask a LLM interactively, from a terminal.
 
+    \b
+    ```bash
     $ openllm query --endpoint http://12.323.2.1:3000 "What is the meaning of life?"
+    ```
     """
     if server_type == "grpc":
         endpoint = re.sub(r"http://", "", endpoint)
@@ -1036,12 +1180,12 @@ def query_(
     ).for_model(client.model_name)
 
     if output != "porcelain":
-        _echo(f"Processing query: {query}\n", fg="white")
+        _echo(f"Processing query: {prompt}", fg="white")
 
-    res = client.query(query, return_raw_response=True)
+    res = client.query(prompt, return_raw_response=True)
 
     if output == "pretty":
-        formatted = model.postprocess_generate(query, res["responses"])
+        formatted = model.postprocess_generate(prompt, res["responses"])
         _echo("Responses: ", fg="white", nl=False)
         _echo(formatted, fg="cyan")
     elif output == "json":
@@ -1060,7 +1204,13 @@ def query_(
 def download_models(model_name: str, model_id: str | None, output: OutputLiteral):
     """Setup LLM interactively.
 
+    \b
     Note: This is useful for development and setup for fine-tune.
+
+    \b
+    ```bash
+    $ openllm download opt --model-id facebook/opt-2.7b
+    ```
     """
     if output == "porcelain":
         set_quiet_mode(True)

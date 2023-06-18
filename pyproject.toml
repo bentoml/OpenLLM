@@ -69,17 +69,19 @@ requires-python = ">=3.8"
 # NOTE: Don't modify project.optional-dependencies
 # as it is managed by ./tools/update-optional-dependencies.py
 [project.optional-dependencies]
+agents = ["transformers[agents]", "diffusers", "soundfile"]
 all = [
     "openllm[chatglm]",
     "openllm[starcoder]",
     "openllm[falcon]",
-    "openllm[fine-tune]",
+    "openllm[agents]",
     "openllm[flan-t5]",
+    "openllm[fine-tune]",
     "openllm[openai]",
 ]
 chatglm = ["cpm_kernels", "sentencepiece"]
 falcon = ["einops", "xformers", "safetensors"]
-fine-tune = ["peft", "bitsandbytes", "datasets", "accelerate", "deepspeed", "auto-gptq"]
+fine-tune = ["peft", "bitsandbytes", "datasets", "accelerate", "deepspeed"]
 flan-t5 = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
 openai = ["openai", "tiktoken"]
 starcoder = ["bitsandbytes"]

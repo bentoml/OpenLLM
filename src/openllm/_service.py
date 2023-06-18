@@ -26,9 +26,18 @@ from __future__ import annotations
 import os
 import typing as t
 
+import attr
 import bentoml
+import orjson
+from starlette.applications import Starlette
+from starlette.responses import JSONResponse
+from starlette.routing import Route
 
 import openllm
+
+if t.TYPE_CHECKING:
+    from starlette.requests import Request
+    from starlette.responses import Response
 
 model = os.environ.get("OPENLLM_MODEL", "{__model_name__}")  # openllm: model name
 model_id = os.environ.get("OPENLLM_MODEL_ID", "{__model_id__}")  # openllm: model id
@@ -69,3 +78,29 @@ def metadata_v1(_: str) -> openllm.MetadataOutput:
         framework=llm_config["env"]["framework_value"],
         configuration=llm_config.model_dump_json().decode(),
     )
+
+
+@attr.define
+class HfAgentInput:
+    inputs: str
+    parameters: t.Dict[str, t.Any]
+
+
+async def hf_agent(request: Request) -> Response:
+    json_str = await request.body()
+    try:
+        input_data = openllm.utils.bentoml_cattr.structure(orjson.loads(json_str), HfAgentInput)
+    except orjson.JSONDecodeError as err:
+        raise openllm.exceptions.OpenLLMException(f"Invalid JSON input received: {err}") from None
+
+    stop = input_data.parameters.pop("stop", "\n")
+    try:
+        resp = await runner.generate_one.async_run(input_data.inputs, stop, **input_data.parameters)
+        return JSONResponse(resp, status_code=200)
+    except NotImplementedError:
+        return JSONResponse(f"'{model}' is currently not supported with HuggingFace agents.", status_code=500)
+
+
+hf_app = Starlette(debug=True, routes=[Route("/agent", hf_agent, methods=["POST"])])
+
+svc.mount_asgi_app(hf_app, path="/hf")

@@ -87,7 +87,6 @@ def non_intrusive_setattr(obj: t.Any, name: str, value: t.Any) -> None:
 
 DEBUG = sys.flags.dev_mode or (not sys.flags.ignore_environment and bool(os.environ.get("OPENLLMDEVDEBUG")))
 
-
 # XXX: define all classes, functions import above this line
 # since _extras will be the locals() import from this file.
 _extras: dict[str, t.Any] = {
@@ -101,6 +100,7 @@ _import_structure = {
     "codegen": [],
     "dantic": [],
     "import_utils": [
+        "OPTIONAL_DEPENDENCIES",
         "ENV_VARS_TRUE_VALUES",
         "DummyMetaclass",
         "ModelEnv",
@@ -110,6 +110,8 @@ _import_structure = {
         "is_tf_available",
         "is_torch_available",
         "is_bitsandbytes_available",
+        "is_transformers_supports_kbit",
+        "is_transformers_supports_agent",
         "require_backends",
     ],
 }
@@ -137,6 +139,7 @@ if t.TYPE_CHECKING:
     from . import set_debug_mode as set_debug_mode
     from . import set_quiet_mode as set_quiet_mode
     from .import_utils import ENV_VARS_TRUE_VALUES as ENV_VARS_TRUE_VALUES
+    from .import_utils import OPTIONAL_DEPENDENCIES as OPTIONAL_DEPENDENCIES
     from .import_utils import DummyMetaclass as DummyMetaclass
     from .import_utils import ModelEnv as ModelEnv
     from .import_utils import \
@@ -147,6 +150,10 @@ if t.TYPE_CHECKING:
     from .import_utils import is_flax_available as is_flax_available
     from .import_utils import is_tf_available as is_tf_available
     from .import_utils import is_torch_available as is_torch_available
+    from .import_utils import \
+        is_transformers_supports_agent as is_transformers_supports_agent
+    from .import_utils import \
+        is_transformers_supports_kbit as is_transformers_supports_kbit
     from .import_utils import require_backends as require_backends
     from .lazy import LazyModule as LazyModule
 else:

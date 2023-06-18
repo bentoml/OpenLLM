@@ -72,12 +72,19 @@ def build_editable(path: str) -> str | None:
     )
 
 
-def construct_python_options(llm: openllm.LLM[t.Any, t.Any], llm_fs: FS) -> PythonOptions:
+def construct_python_options(
+    llm: openllm.LLM[t.Any, t.Any],
+    llm_fs: FS,
+    extra_dependencies: tuple[str, ...] | None = None,
+) -> PythonOptions:
     # NOTE: add openllm to the default dependencies
     # if users has openllm custom built wheels, it will still respect
     # that since bentoml will always install dependencies from requirements.txt
     # first, then proceed to install everything inside the wheels/ folder.
-    packages: list[str] = ["openllm"]
+    if extra_dependencies is not None:
+        packages = [f"openllm[{k}]" for k in extra_dependencies]
+    else:
+        packages = ["openllm"]
 
     if llm.config["requirements"] is not None:
         packages.extend(llm.config["requirements"])
@@ -175,6 +182,7 @@ def build(
     model_id: str | None = ...,
     quantize: t.LiteralString | None = ...,
     bettertransformer: bool | None = ...,
+    _extra_dependencies: tuple[str, ...] | None = ...,
     _workers_per_resource: int | float | None = ...,
     _overwrite_existing_bento: bool = ...,
     __cli__: t.Literal[False] = ...,
@@ -190,6 +198,7 @@ def build(
     model_id: str | None = ...,
     quantize: t.LiteralString | None = ...,
     bettertransformer: bool | None = ...,
+    _extra_dependencies: tuple[str, ...] | None = ...,
     _workers_per_resource: int | float | None = ...,
     _overwrite_existing_bento: bool = ...,
     __cli__: t.Literal[True] = ...,
@@ -206,6 +215,7 @@ def _build_bento(
     workers_per_resource: int | float,
     quantize: t.LiteralString | None,
     bettertransformer: bool | None,
+    extra_dependencies: tuple[str, ...] | None = None,
 ) -> bentoml.Bento:
     framework_envvar = llm.config["env"]["framework_value"]
     labels = dict(llm.identifying_params)
@@ -220,7 +230,7 @@ def _build_bento(
             f for f in llm_fs.walk.files(filter=["*.py"])
         ],  # NOTE: By default, we are using _service.py as the default service, for now.
         exclude=["/venv", "__pycache__/", "*.py[cod]", "*$py.class"],
-        python=construct_python_options(llm, llm_fs),
+        python=construct_python_options(llm, llm_fs, extra_dependencies),
         docker=construct_docker_options(llm, llm_fs, workers_per_resource, quantize, bettertransformer),
         version=bento_tag.version,
         build_ctx=llm_fs.getsyspath("/"),
@@ -233,6 +243,7 @@ def build(
     model_id: str | None = None,
     quantize: t.LiteralString | None = None,
     bettertransformer: bool | None = None,
+    _extra_dependencies: tuple[str, ...] | None = None,
     _workers_per_resource: int | float | None = None,
     _overwrite_existing_bento: bool = False,
     __cli__: bool = False,
@@ -298,6 +309,7 @@ def build(
                         workers_per_resource=workers_per_resource,
                         quantize=quantize,
                         bettertransformer=bettertransformer,
+                        extra_dependencies=_extra_dependencies,
                     )
                 _previously_built = True
             except bentoml.exceptions.NotFound:
@@ -310,6 +322,7 @@ def build(
                     workers_per_resource=workers_per_resource,
                     quantize=quantize,
                     bettertransformer=bettertransformer,
+                    extra_dependencies=_extra_dependencies,
                 )
             return (bento, _previously_built) if __cli__ else bento
     except Exception as e:

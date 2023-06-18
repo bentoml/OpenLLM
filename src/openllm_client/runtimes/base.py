@@ -21,6 +21,7 @@ from urllib.parse import urljoin
 
 import bentoml
 import httpx
+import transformers
 
 import openllm
 
@@ -63,6 +64,7 @@ class ClientMixin:
     _port: str
 
     __client__: AnnotatedClient | None = None
+    __agent__: transformers.HfAgent | None = None
     __llm__: openllm.LLM[t.Any, t.Any] | None = None
 
     def __init__(self, address: str, timeout: int = 30):
@@ -73,6 +75,17 @@ class ClientMixin:
     def __init_subclass__(cls, *, client_type: t.Literal["http", "grpc"] = "http", api_version: str = "v1"):
         cls._client_class = bentoml.client.HTTPClient if client_type == "http" else bentoml.client.GrpcClient
         cls._api_version = api_version
+
+    @property
+    def _hf_agent(self) -> transformers.HfAgent:
+        if self.__agent__ is None:
+            if not openllm.utils.is_transformers_supports_agent():
+                raise RuntimeError(
+                    "Current 'transformers' does not support Agent."
+                    " Make sure to upgrade to at least 4.29: 'pip install -U \"transformers>=4.29\"'"
+                )
+            self.__agent__ = transformers.HfAgent(urljoin(self._address, "/hf/agent"))
+        return self.__agent__
 
     @property
     def _metadata(self) -> dict[str, t.Any]:
@@ -139,6 +152,10 @@ class ClientMixin:
     def postprocess(self, result: t.Any) -> openllm.GenerationOutput:
         ...
 
+    @abstractmethod
+    def _run_hf_agent(self, *args: t.Any, **kwargs: t.Any) -> t.Any:
+        ...
+
 
 class BaseClient(ClientMixin):
     def health(self) -> t.Any:
@@ -169,6 +186,28 @@ class BaseClient(ClientMixin):
             return openllm.utils.bentoml_cattr.unstructure(r)
 
         return self.llm.postprocess_generate(prompt, r.responses, **postprocess_kwargs)
+
+    def ask_agent(
+        self,
+        task: str,
+        *,
+        return_code: bool = False,
+        remote: bool = False,
+        agent_type: t.LiteralString = "hf",
+        **attrs: t.Any,
+    ) -> t.Any:
+        if agent_type == "hf":
+            return self._run_hf_agent(task, return_code=return_code, remote=remote, **attrs)
+        else:
+            raise RuntimeError(f"Unknown 'agent_type={agent_type}'")
+
+    def _run_hf_agent(self, *args: t.Any, **kwargs: t.Any) -> t.Any:
+        if len(args) > 1:
+            raise ValueError("'args' should only take one positional argument.")
+        task = kwargs.pop("task", args[0])
+        return_code = kwargs.pop("return_code", False)
+        remote = kwargs.pop("remote", False)
+        return self._hf_agent.run(task, return_code=return_code, remote=remote, **kwargs)
 
     # NOTE: Scikit interface
     def predict(self, prompt: str, **attrs: t.Any) -> t.Any:
@@ -206,6 +245,68 @@ class BaseAsyncClient(ClientMixin):
             return openllm.utils.bentoml_cattr.unstructure(r)
 
         return self.llm.postprocess_generate(prompt, r.responses, **postprocess_kwargs)
+
+    async def ask_agent(
+        self,
+        task: str,
+        *,
+        return_code: bool = False,
+        remote: bool = False,
+        agent_type: t.LiteralString = "hf",
+        **attrs: t.Any,
+    ) -> t.Any:
+        """Async version of agent.run"""
+        if agent_type == "hf":
+            return await self._run_hf_agent(task, return_code=return_code, remote=remote, **attrs)
+        else:
+            raise RuntimeError(f"Unknown 'agent_type={agent_type}'")
+
+    async def _run_hf_agent(self, *args: t.Any, **kwargs: t.Any) -> t.Any:
+        if len(args) > 1:
+            raise ValueError("'args' should only take one positional argument.")
+        task = kwargs.pop("task", args[0])
+        return_code = kwargs.pop("return_code", False)
+        remote = kwargs.pop("remote", False)
+
+        from transformers.tools.agents import (clean_code_for_run,
+                                               get_tool_creation_code,
+                                               resolve_tools)
+        from transformers.tools.python_interpreter import evaluate
+
+        _hf_agent = self._hf_agent
+
+        prompt = _hf_agent.format_prompt(task)
+        stop = ["Task:"]
+        async with httpx.AsyncClient(timeout=httpx.Timeout(self.timeout)) as client:
+            response = await client.post(
+                _hf_agent.url_endpoint,
+                json={"inputs": prompt, "parameters": {"max_new_tokens": 200, "return_full_text": False, "stop": stop}},
+            )
+            if response.status_code != 200:
+                raise ValueError(f"Error {response.status_code}: {response.json()}")
+
+        result = response.json()[0]["generated_text"]
+        # Inference API returns the stop sequence
+        for stop_seq in stop:
+            if result.endswith(stop_seq):
+                result = result[: -len(stop_seq)]
+                break
+
+        # the below have the same logic as agent.run API
+        explanation, code = clean_code_for_run(result)
+
+        _hf_agent.log(f"==Explanation from the agent==\n{explanation}")
+
+        _hf_agent.log(f"\n\n==Code generated by the agent==\n{code}")
+        if not return_code:
+            _hf_agent.log("\n\n==Result==")
+            _hf_agent.cached_tools = resolve_tools(
+                code, _hf_agent.toolbox, remote=remote, cached_tools=_hf_agent.cached_tools
+            )
+            return evaluate(code, _hf_agent.cached_tools, state=kwargs.copy())
+        else:
+            tool_code = get_tool_creation_code(code, _hf_agent.toolbox, remote=remote)
+            return f"{tool_code}\n{code}"
 
     # NOTE: Scikit interface
     async def predict(self, prompt: str, **attrs: t.Any) -> t.Any:

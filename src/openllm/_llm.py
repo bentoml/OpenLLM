@@ -34,10 +34,12 @@ from bentoml._internal.types import ModelSignatureDict
 
 import openllm
 
-from .exceptions import ForbiddenAttributeError, OpenLLMException
+from .exceptions import (ForbiddenAttributeError, GpuNotAvailableError,
+                         OpenLLMException)
 from .utils import (DEBUG, LazyLoader, ModelEnv, bentoml_cattr, first_not_none,
                     get_debug_mode, is_bitsandbytes_available,
-                    is_torch_available, non_intrusive_setattr, pkg)
+                    is_torch_available, is_transformers_supports_kbit,
+                    non_intrusive_setattr, pkg)
 
 if t.TYPE_CHECKING:
     import torch
@@ -202,6 +204,17 @@ class LLMInterface(ABC):
         """
         raise NotImplementedError
 
+    def generate_one(
+        self,
+        prompt: str,
+        stop: list[str],
+        **preprocess_generate_kwds: t.Any,
+    ) -> list[dict[t.Literal["generated_text"], str]]:
+        """The entrypoint for generating one prompt. This provides additional stop
+        tokens for generating per token level. This is useful when running with agents, or initial streaming support.
+        """
+        raise NotImplementedError
+
     def generate_iterator(self, prompt: str, **attrs: t.Any) -> t.Iterator[t.Any]:
         """An iterator version of generate function."""
         raise NotImplementedError(
@@ -301,7 +314,7 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
             # using the default import model
             setattr(cls, "import_model", functools.partial(import_model, _model_framework=implementation))
         else:
-            logger.debug("Custom 'import_model' will be used when loading modelj %s", cls.__name__)
+            logger.debug("Custom 'import_model' will be used when loading model %s", cls.__name__)
 
         cls.__llm_post_init__ = None if cls.llm_post_init is LLMInterface.llm_post_init else cls.llm_post_init
         cls.__llm_custom_load__ = None if cls.load_model is LLMInterface.load_model else cls.load_model
@@ -444,7 +457,7 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
         int4_use_double_quant = attrs.pop("llm_bnb_4bit_use_double_quant", True)
 
         if llm_config is not None:
-            logger.debug("Using given 'llm_config=(%s)' to initialize LLM.", llm_config)
+            logger.debug("Using provided LLMConfig to initialize LLM instead of from default.", llm_config)
             self.config = llm_config
         else:
             self.config = self.config_class.model_construct_env(**attrs)
@@ -486,9 +499,7 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
                         llm_int8_has_fp16_weight=int8_has_fp16_weight,
                     )
                 elif quantize == "int4":
-                    trf_versions = pkg.pkg_version_info("transformers")
-                    supports_kbits = trf_versions[:2] >= (4, 30)
-                    if supports_kbits:
+                    if is_transformers_supports_kbit():
                         quantization_config = transformers.BitsAndBytesConfig(
                             load_in_4bit=True,
                             llm_bnb_4bit_compute_dtype=int4_compute_dtype,
@@ -501,7 +512,7 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
                             "k-bit quantization. k-bit quantization is supported since transformers 4.30, therefore "
                             "make sure to install the latest version of transformers either via PyPI or "
                             "from git source: 'pip install git+https://github.com/huggingface/transformers'.",
-                            trf_versions,
+                            pkg.pkg_version_info("transformers"),
                         )
                 elif quantize == "gptq":
                     # TODO: support GPTQ loading quantization
@@ -716,7 +727,8 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
     def model(self) -> _M:
         """The model to use for this LLM. This shouldn't be set at runtime, rather let OpenLLM handle it."""
         # Run check for GPU
-        self.config.check_if_gpu_is_available(implementation=self.__llm_implementation__)
+        if self.config["requires_gpu"] and len(openllm.utils.gpu_count()) < 1:
+            raise GpuNotAvailableError(f"{self} only supports running with GPU (None available).") from None
 
         kwds = self._model_attrs
         kwds["trust_remote_code"] = self.__llm_trust_remote_code__
@@ -800,7 +812,11 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
         generate_sig = ModelSignature.from_dict(ModelSignatureDict(batchable=False))
         generate_iterator_sig = ModelSignature.from_dict(ModelSignatureDict(batchable=True))
         if method_configs is None:
-            method_configs = {"generate": generate_sig, "generate_iterator": generate_iterator_sig}
+            method_configs = {
+                "generate": generate_sig,
+                "generate_one": generate_sig,
+                "generate_iterator": generate_iterator_sig,
+            }
         else:
             signatures = ModelSignature.convert_signatures_dict(method_configs)
             generate_sig = first_not_none(signatures.get("generate"), default=generate_sig)
@@ -840,6 +856,17 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
             )
             def generate(__self, prompt: str, **attrs: t.Any) -> list[t.Any]:
                 return self.generate(prompt, **attrs)
+
+            @bentoml.Runnable.method(
+                batchable=generate_sig.batchable,
+                batch_dim=generate_sig.batch_dim,
+                input_spec=generate_sig.input_spec,
+                output_spec=generate_sig.output_spec,
+            )
+            def generate_one(
+                __self, prompt: str, stop: list[str], **attrs: t.Any
+            ) -> list[dict[t.Literal["generated_text"], str]]:
+                return self.generate_one(prompt, stop, **attrs)
 
             @bentoml.Runnable.method(
                 batchable=generate_iterator_sig.batchable,

@@ -26,9 +26,10 @@ import openllm
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-FINE_TUNE_DEPS = ["peft", "bitsandbytes", "datasets", "accelerate", "deepspeed", "auto-gptq"]
+FINE_TUNE_DEPS = ["peft", "bitsandbytes", "datasets", "accelerate", "deepspeed"]
 FLAN_T5_DEPS = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
 OPENAI_DEPS = ["openai", "tiktoken"]
+AGENTS_DEPS = ["transformers[agents]", "diffusers", "soundfile"]
 
 _base_requirements = {
     inflection.dasherize(name): config_cls.__openllm_requirements__
@@ -36,14 +37,14 @@ _base_requirements = {
     if config_cls.__openllm_requirements__
 }
 
-# NOTE: update this table when adding new external dependencies
-_deps_table = {
-    "fine-tune": FINE_TUNE_DEPS,
-    "flan-t5": FLAN_T5_DEPS,
-    "openai": OPENAI_DEPS,
-}
+# shallow copy from locals()
+_locals = locals().copy()
 
-_base_requirements.update(_deps_table)
+# NOTE: update this table when adding new external dependencies
+# sync with openllm.utils.OPTIONAL_DEPENDENCIES
+_base_requirements.update(
+    {v: _locals[f"{inflection.underscore(v).upper()}_DEPS"] for v in openllm.utils.OPTIONAL_DEPENDENCIES}
+)
 
 
 def main() -> int:

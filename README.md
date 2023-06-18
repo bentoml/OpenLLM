@@ -339,6 +339,24 @@ async def prompt(input_text: str) -> str:
     return answer
 ```
 
+### HuggingFace Agents
+
+OpenLLM seamlessly integrates with HuggingFace Agents.
+
+> Warnings: Currently, to get the latest version of HuggingFace agent,
+> Install transformers from source or get version >=4.29
+
+```python
+
+import transformers
+
+agent = transformers.HfAgent("http://localhost:300/hf/agent")  # URL that runs the OpenLLM server
+
+agent.run("Is the following `text` positive or negative?", text="I don't like how this models is generate inputs")
+```
+
+> Warnings: Currently only `starcoder` is supported. It was run with 4 T4s on `g4dn.12xlarge`
+
 ### LangChain (⏳Coming Soon!)
 
 In future LangChain releases, you'll be able to effortlessly invoke OpenLLM
