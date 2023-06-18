@@ -69,14 +69,14 @@ requires-python = ">=3.8"
 # NOTE: Don't modify project.optional-dependencies
 # as it is managed by ./tools/update-optional-dependencies.py
 [project.optional-dependencies]
-agents = ["transformers[agents]", "diffusers"]
+agents = ["transformers[agents]", "diffusers", "soundfile"]
 all = [
     "openllm[chatglm]",
     "openllm[starcoder]",
     "openllm[falcon]",
-    "openllm[fine-tune]",
-    "openllm[flan-t5]",
     "openllm[agents]",
+    "openllm[flan-t5]",
+    "openllm[fine-tune]",
     "openllm[openai]",
 ]
 chatglm = ["cpm_kernels", "sentencepiece"]
