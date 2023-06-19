@@ -12,14 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict
+from typing import Any
+from typing import Dict
 
-import bentoml
-from bentoml.io import Text, JSON
-from pydantic import BaseModel
-from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 from langchain.llms import OpenLLM
+from langchain.prompts import PromptTemplate
+from pydantic import BaseModel
+
+import bentoml
+from bentoml.io import JSON
+from bentoml.io import Text
 
 
 class Query(BaseModel):

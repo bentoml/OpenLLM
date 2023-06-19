@@ -30,10 +30,14 @@ from click import ParamType
 
 import openllm
 
+
 if t.TYPE_CHECKING:
     from attr import _ValidatorType
 
-    from .._types import ClickFunctionWrapper, F, O_co, P
+    from .._types import ClickFunctionWrapper
+    from .._types import F
+    from .._types import O_co
+    from .._types import P
 
 _T = t.TypeVar("_T")
 

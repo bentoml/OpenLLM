@@ -19,11 +19,12 @@ import typing as t
 from abc import abstractmethod
 from urllib.parse import urljoin
 
-import bentoml
 import httpx
+
+import bentoml
+import openllm
 import transformers
 
-import openllm
 
 if t.TYPE_CHECKING:
     from openllm.models.auto.factory import _BaseAutoLLMClass
@@ -268,9 +269,9 @@ class BaseAsyncClient(ClientMixin):
         return_code = kwargs.pop("return_code", False)
         remote = kwargs.pop("remote", False)
 
-        from transformers.tools.agents import (clean_code_for_run,
-                                               get_tool_creation_code,
-                                               resolve_tools)
+        from transformers.tools.agents import clean_code_for_run
+        from transformers.tools.agents import get_tool_creation_code
+        from transformers.tools.agents import resolve_tools
         from transformers.tools.python_interpreter import evaluate
 
         _hf_agent = self._hf_agent

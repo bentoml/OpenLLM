@@ -3,10 +3,7 @@ build-backend = "hatchling.build"
 requires = ["hatchling"]
 
 [project]
-authors = [
-    { name = "Aaron Pham", email = "aarnphm@bentoml.com" },
-    { name = "BentoML Team", email = "contact@bentoml.com" },
-]
+authors = [{ name = "Aaron Pham", email = "aarnphm@bentoml.com" }]
 classifiers = [
     "Development Status :: 4 - Beta",
     "License :: OSI Approved :: Apache Software License",
@@ -105,8 +102,28 @@ packages = ["src/openllm", "src/openllm_client"]
 
 [tool.hatch.envs.default]
 dependencies = [
-    "coverage[toml]>=6.5",
+    # NOTE: To run all hooks
+    "pre-commit",
+    # NOTE: towncrier for changelog
+    "towncrier",
+    # NOTE: Using under ./tools/update-optional-dependencies.py
+    "tomlkit",
+    # NOTE: Using under ./tools/update-readme.py
+    "markdown-it-py",
+    # NOTE: pyright for type
+    "pyright",
+]
+
+[tool.hatch.envs.default.scripts]
+changelog = "towncrier build --version main --draft"
+fmt = "pre-commit run --all-files"
+setup = "pre-commit install"
+typing = "pyright {args:src/openllm tests}"
+
+[tool.hatch.env.test]
+dependencies = [
     # NOTE: Tests strategies with Hypothesis and pytest, and snapshot testing with syrupy
+    "coverage[toml]>=6.5",
     "pytest",
     "pytest-asyncio>=0.21.0",
     "pytest-xdist[psutil]",
@@ -116,26 +133,15 @@ dependencies = [
     "pytest-rerunfailures",
     "hypothesis",
     "syrupy",
-    # NOTE: To run all hooks
-    "pre-commit",
-    # NOTE: Using under ./tools/update-optional-dependencies.py
-    "tomlkit",
-    # NOTE: Using under ./tools/update-readme.py
-    "markdown-it-py",
-    # NOTE: pyright for type
-    "pyright",
-    # NOTE: towncrier for changelog
-    "towncrier",
 ]
-[tool.hatch.envs.default.scripts]
-changelog = "towncrier build --version main --draft"
-cov = ["cov-test", "cov-report"]
-cov-report = ["- coverage combine", "coverage report"]
+
+[tool.hatch.envs.test.scripts]
+cov = ["cov-test", "- coverage combine", "coverage report"]
 cov-test = "coverage run -m pytest {args:tests}"
-fmt = "pre-commit run --all-files"
-setup = "pre-commit install"
-test = "pytest {args:tests}"
-typing = "pyright {args:src/openllm tests}"
+p = "pytest {args:tests}"
+
+[[tool.hatch.envs.test.matrix]]
+python = ["3.8", "3.9", "3.10", "3.11"]
 
 [tool.towncrier]
 directory = "changelog.d"
@@ -198,31 +204,29 @@ exclude = '''
     | venv
     | lib
     | dist
+    | tools
   )/
   | src/openllm/__about__.py
 )
 '''
-line-length = 120
+line-length = 119
 target-version = ["py311"]
 
 [tool.ruff]
+exclude = ["tools"]
 ignore = [
     # Allow non-abstract empty methods in abstract base classes
     "B027",
     # Allow boolean positional values in function calls, like `dict.get(... True)`
     "FBT003",
-    # Ignore checks for possible passwords
-    "S105",
-    "S106",
-    "S107",
     # Ignore complexity
     "C901",
-    "PLR0911",
-    "PLR0912",
-    "PLR0913",
-    "PLR0915",
+    # Never enforce `E501` (line length violations).
+    "E501",
+    "E741",
 ]
-line-length = 120
+line-length = 119
+select = ["C", "E", "F", "I", "W"]
 target-version = "py311"
 unfixable = [
     "F401", # Don't touch unused imports, just warn about it.

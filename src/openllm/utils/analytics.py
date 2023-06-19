@@ -24,13 +24,16 @@ import os
 import typing as t
 
 import attr
+
 from bentoml._internal.utils import analytics as _internal_analytics
 from bentoml._internal.utils.analytics import usage_stats as _internal_usage
+
 
 if t.TYPE_CHECKING:
     import openllm
 
 from ..__about__ import __version__
+
 
 ENV_VARS_TRUE_VALUES = {"1", "ON", "YES", "TRUE"}
 

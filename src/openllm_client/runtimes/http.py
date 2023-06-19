@@ -22,7 +22,9 @@ import orjson
 
 import openllm
 
-from .base import BaseAsyncClient, BaseClient
+from .base import BaseAsyncClient
+from .base import BaseClient
+
 
 logger = logging.getLogger(__name__)
 

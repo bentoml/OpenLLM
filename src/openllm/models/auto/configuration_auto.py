@@ -22,8 +22,11 @@ import inflection
 
 import openllm
 
+
 if t.TYPE_CHECKING:
-    from collections import _odict_items, _odict_keys, _odict_values
+    from collections import _odict_items
+    from collections import _odict_keys
+    from collections import _odict_values
 
     ConfigOrderedDict = OrderedDict[str, type[openllm.LLMConfig]]
 

@@ -32,6 +32,7 @@ from . import utils as utils
 from .__about__ import __version__ as __version__
 from .exceptions import MissingDependencyError
 
+
 if utils.DEBUG:
     utils.set_debug_mode(True)
     utils.set_quiet_mode(False)
@@ -143,6 +144,7 @@ if t.TYPE_CHECKING:
     from . import exceptions as exceptions
     from . import models as models
     from . import playground as playground
+
     # Specific types import
     from ._configuration import LLMConfig as LLMConfig
     from ._llm import LLM as LLM
@@ -155,8 +157,7 @@ if t.TYPE_CHECKING:
     from .cli import start as start
     from .cli import start_grpc as start_grpc
     from .models.auto import CONFIG_MAPPING as CONFIG_MAPPING
-    from .models.auto import \
-        MODEL_FLAX_MAPPING_NAMES as MODEL_FLAX_MAPPING_NAMES
+    from .models.auto import MODEL_FLAX_MAPPING_NAMES as MODEL_FLAX_MAPPING_NAMES
     from .models.auto import MODEL_MAPPING_NAMES as MODEL_MAPPING_NAMES
     from .models.auto import MODEL_TF_MAPPING_NAMES as MODEL_TF_MAPPING_NAMES
     from .models.auto import AutoConfig as AutoConfig

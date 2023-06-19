@@ -1,6 +1,9 @@
-from typing import Callable, TypeVar, overload
+from typing import Callable
+from typing import TypeVar
+from typing import overload
 
 from . import _ConverterType
+
 
 _T = TypeVar("_T")
 

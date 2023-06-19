@@ -2,25 +2,23 @@ from __future__ import annotations
 
 import enum
 import sys
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    Generic,
-    List,
-    Literal,
-    Mapping,
-    Optional,
-    ParamSpec,
-    Protocol,
-    Sequence,
-    Tuple,
-    Type,
-    TypeGuard,
-    TypeVar,
-    Union,
-    overload,
-)
+from typing import Any
+from typing import Callable
+from typing import Dict
+from typing import Generic
+from typing import List
+from typing import Literal
+from typing import Mapping
+from typing import Optional
+from typing import ParamSpec
+from typing import Protocol
+from typing import Sequence
+from typing import Tuple
+from typing import Type
+from typing import TypeGuard
+from typing import TypeVar
+from typing import Union
+from typing import overload
 
 from . import converters as converters
 from . import exceptions as exceptions
@@ -30,6 +28,7 @@ from . import validators as validators
 from ._cmp import cmp_using as cmp_using
 from ._typing_compat import AttrsInstance_
 from ._version_info import VersionInfo
+
 
 if sys.version_info >= (3, 10): ...
 else: ...

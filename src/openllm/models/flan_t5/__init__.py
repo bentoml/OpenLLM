@@ -18,6 +18,7 @@ import typing as t
 
 import openllm
 
+
 _import_structure = {
     "configuration_flan_t5": ["FlanT5Config", "START_FLAN_T5_COMMAND_DOCSTRING", "DEFAULT_PROMPT_TEMPLATE"],
 }

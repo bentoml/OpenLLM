@@ -18,12 +18,12 @@ import importlib
 import typing as t
 
 import bentoml
-import transformers
-
 import openllm
+import transformers
 
 from ..._prompt import default_formatter
 from .configuration_falcon import DEFAULT_PROMPT_TEMPLATE
+
 
 if t.TYPE_CHECKING:
     import torch

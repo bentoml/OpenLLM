@@ -32,6 +32,7 @@ import typing as t
 # import openllm here for OPENLLMDEVDEBUG
 import openllm
 
+
 openllm.utils.configure_logging()
 
 logger = logging.getLogger(__name__)
@@ -49,9 +50,13 @@ if openllm.utils.DEBUG:
 
 os.environ["BITSANDBYTES_NOWELCOME"] = str(1)
 
-import transformers
 from datasets import load_dataset
-from peft import LoraConfig, get_peft_model, prepare_model_for_int8_training
+from peft import LoraConfig
+from peft import get_peft_model
+from peft import prepare_model_for_int8_training
+
+import transformers
+
 
 if t.TYPE_CHECKING:
     from peft import PeftModel

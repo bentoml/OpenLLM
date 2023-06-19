@@ -1,14 +1,13 @@
-from ._core import (
-    AllOptionGroup,
-    GroupedOption,
-    MutuallyExclusiveOptionGroup,
-    OptionGroup,
-    RequiredAllOptionGroup,
-    RequiredAnyOptionGroup,
-    RequiredMutuallyExclusiveOptionGroup,
-)
+from ._core import AllOptionGroup
+from ._core import GroupedOption
+from ._core import MutuallyExclusiveOptionGroup
+from ._core import OptionGroup
+from ._core import RequiredAllOptionGroup
+from ._core import RequiredAnyOptionGroup
+from ._core import RequiredMutuallyExclusiveOptionGroup
 from ._decorators import optgroup
 from ._version import __version__
+
 
 """
 click-option-group

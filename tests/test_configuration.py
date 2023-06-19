@@ -19,15 +19,19 @@ from __future__ import annotations
 import logging
 
 import pytest
-from hypothesis import assume, given
+from hypothesis import assume
+from hypothesis import given
 from hypothesis import strategies as st
 
 import openllm
-from openllm._configuration import (GenerationConfig, ModelSettings,
-                                    _field_env_key)
+from openllm._configuration import GenerationConfig
+from openllm._configuration import ModelSettings
+from openllm._configuration import _field_env_key
 from openllm.utils import DEBUG
 
-from ._strategies._configuration import make_llm_config, model_settings
+from ._strategies._configuration import make_llm_config
+from ._strategies._configuration import model_settings
+
 
 logger = logging.getLogger(__name__)
 

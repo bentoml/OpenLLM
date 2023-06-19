@@ -20,6 +20,7 @@ import attr
 import openllm
 from openllm._prompt import PromptFormatter
 
+
 if t.TYPE_CHECKING:
     DictStrStr = dict[str, str]
 else:

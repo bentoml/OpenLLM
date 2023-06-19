@@ -17,13 +17,14 @@ import logging
 import typing as t
 
 import bentoml
-
 import openllm
 
 from ..._generation import StopSequenceCriteria
 
+
 if t.TYPE_CHECKING:
     import torch
+
     import transformers
 else:
     torch = openllm.utils.LazyLoader("torch", globals(), "torch")

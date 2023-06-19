@@ -16,11 +16,11 @@ from __future__ import annotations
 import typing as t
 
 import bentoml
+import openllm
 import transformers
 from transformers.generation.logits_process import LogitsProcessor
 from transformers.generation.utils import LogitsProcessorList
 
-import openllm
 
 if t.TYPE_CHECKING:
     import torch

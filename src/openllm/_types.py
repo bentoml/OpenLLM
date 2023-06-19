@@ -21,10 +21,12 @@ from __future__ import annotations
 
 import typing as t
 
+
 if not t.TYPE_CHECKING:
     raise RuntimeError(f"{__name__} should not be imported during runtime")
 
 import click
+
 
 P = t.ParamSpec("P")
 O_co = t.TypeVar("O_co", covariant=True)

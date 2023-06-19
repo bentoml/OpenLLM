@@ -20,6 +20,7 @@ import openllm
 from ..._prompt import default_formatter
 from .configuration_flan_t5 import DEFAULT_PROMPT_TEMPLATE
 
+
 if t.TYPE_CHECKING:
     import transformers  # noqa
 
