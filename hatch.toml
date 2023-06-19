@@ -1,0 +1,38 @@
+[envs.default]
+dependencies = [
+    # NOTE: To run all hooks
+    "pre-commit",
+    # NOTE: towncrier for changelog
+    "towncrier",
+    # NOTE: Using under ./tools/update-optional-dependencies.py
+    "tomlkit",
+    # NOTE: Using under ./tools/update-readme.py
+    "markdown-it-py",
+    # NOTE: pyright for type
+    "pyright",
+]
+[envs.default.scripts]
+changelog = "towncrier build --version main --draft"
+fmt = "pre-commit run --all-files"
+setup = "pre-commit install"
+typing = "pyright {args:src/openllm tests}"
+[envs.test]
+dependencies = [
+    # NOTE: Tests strategies with Hypothesis and pytest, and snapshot testing with syrupy
+    "coverage[toml]>=6.5",
+    "pytest",
+    "pytest-asyncio>=0.21.0",
+    "pytest-xdist[psutil]",
+    "pytest-cov",
+    "pytest-mock",
+    "pytest-randomly",
+    "pytest-rerunfailures",
+    "hypothesis",
+    "syrupy",
+]
+[envs.test.scripts]
+cov = ["cov-test", "- coverage combine", "coverage report"]
+cov-test = "coverage run -m pytest {args:tests}"
+p = "pytest {args:tests}"
+[[envs.test.matrix]]
+python = ["3.8", "3.9", "3.10", "3.11"]
