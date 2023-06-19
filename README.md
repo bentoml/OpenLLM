@@ -346,8 +346,9 @@ async def prompt(input_text: str) -> str:
 OpenLLM seamlessly integrates with HuggingFace Agents.
 
 > **Warning** The HuggingFace Agent is still at experimental stage. It is
-> recommended to OpenLLM with `pip install 'openllm[nightly]'` to get the latest
-> API update for HuggingFace agent.
+> recommended to OpenLLM with
+> `pip install -r nightly-requirements.generated.txt` to get the latest API
+> update for HuggingFace agent.
 
 ```python
 import transformers
