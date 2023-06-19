@@ -1,0 +1,15 @@
+# might be a little aggressive
+**/www/js/**
+**/www/css/**
+/.clj-kondo
+/.lsp
+/*.iml
+/.cpcache
+/.vscode
+/.idea
+
+/node_modules
+
+/target
+/.shadow-cljs
+/.nrepl-port
