@@ -346,7 +346,8 @@ async def prompt(input_text: str) -> str:
 OpenLLM seamlessly integrates with HuggingFace Agents.
 
 > **Warning** The HuggingFace Agent is still at experimental stage. It is
-> recommended to install transformers from git source
+> recommended to OpenLLM with `pip install 'openllm[nightly]'` to get the latest
+> API update for HuggingFace agent.
 
 ```python
 import transformers
@@ -358,6 +359,20 @@ agent.run("Is the following `text` positive or negative?", text="I don't like ho
 
 > **Note** Only `starcoder` is currently supported with Agent integration. The
 > example aboved was also ran with four T4s on EC2 `g4dn.12xlarge`
+
+If you want to use OpenLLM client to ask questions to the running agent, you can
+also do so:
+
+```python
+import openllm
+
+client = openllm.client.HTTPClient("http://localhost:3000")
+
+client.ask_agent(
+    task="Is the following `text` positive or negative?",
+    text="What are you thinking about?",
+)
+```
 
 ### LangChain (⏳Coming Soon!)
 
