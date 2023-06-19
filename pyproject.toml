@@ -121,7 +121,7 @@ setup = "pre-commit install"
 typing = "pyright {args:src/openllm tests}"
 
 [tool.hatch.env.test]
-dependencies = [
+extra-dependencies = [
     # NOTE: Tests strategies with Hypothesis and pytest, and snapshot testing with syrupy
     "coverage[toml]>=6.5",
     "pytest",
