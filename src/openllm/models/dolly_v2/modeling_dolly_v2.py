@@ -38,7 +38,7 @@ class DollyV2(openllm.LLM["transformers.Pipeline", "transformers.PreTrainedToken
     @property
     def import_kwargs(self):
         model_kwds = {
-            "device_map": "auto" if torch.cuda.is_available() else None,
+            "device_map": "auto",
             "torch_dtype": torch.bfloat16,
         }
         tokenizer_kwds = {"padding_side": "left"}
@@ -70,6 +70,9 @@ class DollyV2(openllm.LLM["transformers.Pipeline", "transformers.PreTrainedToken
                 external_modules=[importlib.import_module(pipeline.__module__)],
             )
         finally:
+            import gc
+
+            gc.collect()
             if openllm.utils.is_torch_available() and torch.cuda.is_available():
                 torch.cuda.empty_cache()
 
