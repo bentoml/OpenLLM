@@ -20,25 +20,17 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
+# NOTE: The below is managed by ./tools/update-optional-dependencies.py
 dependencies = [
-    # bentoml[io] includes pydantic, PIL, filetype, pandas and numpy
-    # bentoml[grpc,grpc-reflection] include grpcio, grpcio-reflection
     "bentoml[grpc,io]>=1.0.22",
+    "transformers[torch,tokenizers,accelerate]>=4.29.0",
+    "optimum",
     "attrs>=23.1.0",
     "cattrs>=23.1.0",
-    # transformers[torch] includes torch and transformers
-    "transformers[torch,tokenizers]>=4.29.0",
-    # BetterTransformer support for inference.
-    "optimum",
-    # Super fast JSON serialization
     "orjson",
     "inflection",
-    # tabulate for CLI with CJK support
-    # >=0.9.0 for some bug fixes
     "tabulate[widechars]>=0.9.0",
-    # httpx used within openllm.client
     "httpx",
-    # for typing support
     "typing_extensions",
 ]
 description = 'OpenLLM: REST/gRPC API server for running any open Large-Language Model - StableLM, Llama, Alpaca, Dolly, Flan-T5, Custom'
@@ -71,8 +63,8 @@ all = [
     "openllm[chatglm]",
     "openllm[starcoder]",
     "openllm[falcon]",
-    "openllm[agents]",
     "openllm[flan-t5]",
+    "openllm[agents]",
     "openllm[fine-tune]",
     "openllm[openai]",
 ]
@@ -80,6 +72,14 @@ chatglm = ["cpm_kernels", "sentencepiece"]
 falcon = ["einops", "xformers", "safetensors"]
 fine-tune = ["peft", "bitsandbytes", "datasets", "accelerate", "deepspeed"]
 flan-t5 = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
+nightly = [
+    "bentoml[grpc,io] @ git+https://github.com/bentoml/bentoml.git@main",
+    "peft @ git+https://github.com/huggingface/peft.git@main",
+    "transformers[torch,tokenizers,accelerate] @ git+https://github.com/huggingface/transformers.git@main",
+    "optimum @ git+https://github.com/huggingface/optimum.git@main",
+    "accelerate @ git+https://github.com/huggingface/accelerate.git@main",
+    "bitsandbytes @ git+https://github.com/TimDettmers/bitsandbytes.git@main",
+]
 openai = ["openai", "tiktoken"]
 starcoder = ["bitsandbytes"]
 

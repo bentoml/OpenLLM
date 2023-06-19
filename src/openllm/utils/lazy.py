@@ -84,6 +84,7 @@ class LazyModule(types.ModuleType):
         return result
 
     def __getitem__(self, key: str) -> t.Any:
+        # currently, this is reserved to only internal uses and users shouldn't use this.
         if self._objects.get("__openllm_special__") is None:
             raise UsageNotAllowedError(f"'{self._name}' is not allowed to be used as a dict.")
         _special_mapping = self._objects.get("__openllm_special__", {})

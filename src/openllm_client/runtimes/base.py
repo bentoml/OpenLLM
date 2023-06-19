@@ -281,7 +281,10 @@ class BaseAsyncClient(ClientMixin):
         async with httpx.AsyncClient(timeout=httpx.Timeout(self.timeout)) as client:
             response = await client.post(
                 _hf_agent.url_endpoint,
-                json={"inputs": prompt, "parameters": {"max_new_tokens": 200, "return_full_text": False, "stop": stop}},
+                json={
+                    "inputs": prompt,
+                    "parameters": {"max_new_tokens": 200, "return_full_text": False, "stop": stop},
+                },
             )
             if response.status_code != 200:
                 raise ValueError(f"Error {response.status_code}: {response.json()}")

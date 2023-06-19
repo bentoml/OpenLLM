@@ -119,7 +119,11 @@ class _BaseAutoLLMClass:
                 **llm_config.__openllm_extras__,
             )
             if ensure_available:
-                logger.debug("'ensure_available=True', make sure model is available within local store.")
+                logger.debug(
+                    "'ensure_available=True', Downloading '%s' with 'model_id=%s' to local model store.",
+                    model_name,
+                    llm.model_id,
+                )
                 llm.ensure_model_id_exists()
             if not return_runner_kwargs:
                 return llm

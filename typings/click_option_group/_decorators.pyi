@@ -1,6 +1,7 @@
 from typing import Any
 from typing import Callable
 from typing import Dict
+from typing import Generic
 from typing import NamedTuple
 from typing import Optional
 from typing import ParamSpec
@@ -41,7 +42,7 @@ class _NotAttachedOption(click.Option):
     def __init__(self, param_decls: Any = ..., *, all_not_attached_options: Any, **attrs: Any) -> None: ...
     def handle_parse_result(self, ctx: click.Context, opts: Any, args: tuple[Any]) -> Any: ...
 
-class _OptGroup:
+class _OptGroup(Generic[O_co]):
     """A helper class to manage creating groups and group options via decorators
 
     The class provides two decorator-methods: `group`/`__call__` and `option`.
@@ -109,4 +110,4 @@ class _OptGroup:
         """
         ...
 
-optgroup: _OptGroup = ...
+optgroup: _OptGroup[Any] = ...

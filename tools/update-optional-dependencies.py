@@ -19,6 +19,8 @@ from __future__ import annotations
 import os
 import shutil
 
+import typing as t
+import dataclasses
 import inflection
 import tomlkit
 
@@ -26,6 +28,66 @@ import openllm
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+
+@dataclasses.dataclass(frozen=True)
+class Dependencies:
+    name: str
+    git_repo_url: t.Optional[str] = None
+    branch: t.Optional[str] = None
+    extensions: t.Optional[t.List[str]] = None
+
+    lower_constraint: t.Optional[str] = None
+
+    def with_options(self, **kwargs: t.Any) -> Dependencies:
+        return dataclasses.replace(self, **kwargs)
+
+    @property
+    def has_constraint(self) -> bool:
+        return self.lower_constraint is not None
+
+    @property
+    def pypi_extensions(self) -> str:
+        return "" if self.extensions is None else f"[{','.join(self.extensions)}]"
+
+    def to_str(self) -> str:
+        if self.lower_constraint is not None:
+            return f"{self.name}{self.pypi_extensions}>={self.lower_constraint}"
+        elif self.branch is not None:
+            return f"{self.name}{self.pypi_extensions} @ git+https://github.com/{self.git_repo_url}.git@{self.branch}"
+        else:
+            return f"{self.name}{self.pypi_extensions}"
+
+    @classmethod
+    def from_tuple(cls, *decls: t.Any) -> Dependencies:
+        return cls(*decls)
+
+
+_BENTOML_EXT = ["grpc", "io"]
+_TRANSFORMERS_EXT = ["torch", "tokenizers", "accelerate"]
+
+_BASE_DEPENDENCIES = [
+    Dependencies(name="bentoml", extensions=_BENTOML_EXT, lower_constraint="1.0.22"),
+    Dependencies(name="transformers", extensions=_TRANSFORMERS_EXT, lower_constraint="4.29.0"),
+    Dependencies(name="optimum"),
+    Dependencies(name="attrs", lower_constraint="23.1.0"),
+    Dependencies(name="cattrs", lower_constraint="23.1.0"),
+    Dependencies(name="orjson"),
+    Dependencies(name="inflection"),
+    Dependencies(name="tabulate", extensions=["widechars"], lower_constraint="0.9.0"),
+    Dependencies(name="httpx"),
+    Dependencies(name="typing_extensions"),
+]
+
+_NIGHTLY_MAPPING: dict[str, Dependencies] = {
+    "bentoml": Dependencies.from_tuple("bentoml", "bentoml/bentoml", "main", _BENTOML_EXT),
+    "peft": Dependencies.from_tuple("peft", "huggingface/peft", "main", None),
+    "transformers": Dependencies.from_tuple("transformers", "huggingface/transformers", "main", _TRANSFORMERS_EXT),
+    "optimum": Dependencies.from_tuple("optimum", "huggingface/optimum", "main", None),
+    "accelerate": Dependencies.from_tuple("accelerate", "huggingface/accelerate", "main", None),
+    "bitsandbytes": Dependencies.from_tuple("bitsandbytes", "TimDettmers/bitsandbytes", "main", None),
+}
+
+NIGHTLY_DEPS = [v.to_str() for v in _NIGHTLY_MAPPING.values()]
 FINE_TUNE_DEPS = ["peft", "bitsandbytes", "datasets", "accelerate", "deepspeed"]
 FLAN_T5_DEPS = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
 OPENAI_DEPS = ["openai", "tiktoken"]
@@ -55,9 +117,13 @@ def main() -> int:
     for name, config in _base_requirements.items():
         table.add(name, config)
 
-    table.add("all", [f"openllm[{k}]" for k in table.keys()])
+    # ignore nightly for all
+    table.add("all", [f"openllm[{k}]" for k in table.keys() if k != "nightly"])
 
     pyproject["project"]["optional-dependencies"] = table
+
+    # write project dependencies
+    pyproject["project"]["dependencies"] = [v.to_str() for v in _BASE_DEPENDENCIES]
     with open(os.path.join(ROOT, "pyproject.toml"), "w") as f:
         f.write(tomlkit.dumps(pyproject))
 

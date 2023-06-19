@@ -52,7 +52,6 @@ from .utils import ModelEnv
 from .utils import analytics
 from .utils import bentoml_cattr
 from .utils import configure_logging
-from .utils import configure_server_logging
 from .utils import first_not_none
 from .utils import get_debug_mode
 from .utils import get_quiet_mode
@@ -685,6 +684,11 @@ Available model_id(s): {llm_config['model_ids']} [default: {llm_config['default_
             " " if _bentoml_config_options_env else "" + " ".join(_bentoml_config_options_opts)
         )
 
+        if fast and not get_quiet_mode():
+            _echo(
+                f"Make sure to download the model before 'start': 'openllm download {model_name}{'--model-id ' + model_id if model_id else ''}'",
+                fg="yellow",
+            )
         automodel_attrs = {
             "model_id": model_id,
             "llm_config": config,
@@ -769,7 +773,9 @@ start_grpc = functools.partial(_start, _serve_grpc=True)
 
 
 @cli.command()
-@click.argument("model_name", type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING.keys()]))
+@click.argument(
+    "model_name", type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING.keys()])
+)
 @model_id_option(click)
 @output_option
 @click.option("--overwrite", is_flag=True, help="Overwrite existing Bento for given LLM if it already exists.")
@@ -809,7 +815,7 @@ def build(
     """
     if output == "porcelain":
         set_quiet_mode(True)
-        configure_server_logging()
+        configure_logging()
 
     if output == "pretty":
         if overwrite:
@@ -899,7 +905,7 @@ def models(output: OutputLiteral, show_available: bool):
         converted: list[str] = []
         for m in models:
             config = openllm.AutoConfig.for_model(m)
-            runtime_impl: tuple[t.Literal["pt", "flax", "tf"], ...] = ()
+            runtime_impl: tuple[t.Literal["pt", "flax", "tf"] | str, ...] = ()
             if config["model_name"] in openllm.MODEL_MAPPING_NAMES:
                 runtime_impl += ("pt",)
             if config["model_name"] in openllm.MODEL_FLAX_MAPPING_NAMES:
@@ -948,8 +954,8 @@ def models(output: OutputLiteral, show_available: bool):
                 )
             column_widths = [
                 int(COLUMNS / 6),
-                int(COLUMNS / 6),
                 int(COLUMNS / 3),
+                int(COLUMNS / 4),
                 int(COLUMNS / 6),
                 int(COLUMNS / 6),
                 int(COLUMNS / 9),

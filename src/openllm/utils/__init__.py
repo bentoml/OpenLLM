@@ -19,6 +19,7 @@ from __future__ import annotations as _annotations
 
 import functools
 import logging
+import logging.config
 import os
 import sys
 import types
@@ -28,8 +29,7 @@ from bentoml._internal.configuration import get_debug_mode
 from bentoml._internal.configuration import get_quiet_mode
 from bentoml._internal.configuration import set_debug_mode
 from bentoml._internal.configuration import set_quiet_mode
-from bentoml._internal.log import configure_logging
-from bentoml._internal.log import configure_server_logging
+from bentoml._internal.log import CLI_LOGGING_CONFIG as _CLI_LOGGING_CONFIG
 from bentoml._internal.types import LazyType
 from bentoml._internal.utils import LazyLoader
 from bentoml._internal.utils import bentoml_cattr
@@ -41,11 +41,6 @@ from bentoml._internal.utils import resolve_user_filepath
 
 from .lazy import LazyModule
 
-
-# NOTE: The set marks contains a set of modules name
-# that are available above and are whitelisted
-# to be included in the extra_objects map.
-_whitelist_modules = {"pkg"}
 
 logger = logging.getLogger(__name__)
 
@@ -94,6 +89,41 @@ def non_intrusive_setattr(obj: t.Any, name: str, value: t.Any) -> None:
 
 DEBUG = sys.flags.dev_mode or (not sys.flags.ignore_environment and bool(os.environ.get("OPENLLMDEVDEBUG")))
 
+
+_LOGGING_CONFIG = _CLI_LOGGING_CONFIG.copy()
+_LOGGING_CONFIG["loggers"].update(
+    {
+        "openllm": {
+            "level": logging.INFO,
+            "handlers": ["bentomlhandler", "defaulthandler"],
+            "propagate": False,
+        }
+    }
+)
+
+
+def configure_logging() -> None:
+    if get_quiet_mode():
+        _LOGGING_CONFIG["loggers"]["openllm"]["level"] = logging.ERROR
+        _LOGGING_CONFIG["loggers"]["bentoml"]["level"] = logging.ERROR
+        _LOGGING_CONFIG["root"]["level"] = logging.ERROR
+    elif get_debug_mode() or DEBUG:
+        _LOGGING_CONFIG["loggers"]["openllm"]["level"] = logging.DEBUG
+        _LOGGING_CONFIG["loggers"]["bentoml"]["level"] = logging.DEBUG
+        _LOGGING_CONFIG["root"]["level"] = logging.DEBUG
+    else:
+        _LOGGING_CONFIG["loggers"]["openllm"]["level"] = logging.INFO
+        _LOGGING_CONFIG["loggers"]["bentoml"]["level"] = logging.INFO
+        _LOGGING_CONFIG["root"]["level"] = logging.INFO
+
+    logging.config.dictConfig(_LOGGING_CONFIG)
+
+
+# NOTE: The set marks contains a set of modules name
+# that are available above and are whitelisted
+# to be included in the extra_objects map.
+_whitelist_modules = {"pkg"}
+
 # XXX: define all classes, functions import above this line
 # since _extras will be the locals() import from this file.
 _extras: dict[str, t.Any] = {
@@ -131,7 +161,6 @@ if t.TYPE_CHECKING:
     from . import bentoml_cattr as bentoml_cattr
     from . import codegen as codegen
     from . import configure_logging as configure_logging
-    from . import configure_server_logging as configure_server_logging
     from . import copy_file_to_fs_folder as copy_file_to_fs_folder
     from . import dantic as dantic
     from . import first_not_none as first_not_none
