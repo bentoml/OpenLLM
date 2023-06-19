@@ -491,7 +491,7 @@ class _ModelSettingsAttr:
             model_type="causal_lm",
             trust_remote_code=False,
             requirements=None,
-            timeout=3600,
+            timeout=int(36e6),
             service_name="",
             workers_per_resource=1,
             runtime="transformers",
@@ -863,7 +863,7 @@ class LLMConfig:
         __openllm_env__: openllm.utils.ModelEnv = Field(None, init=False)
         """A ModelEnv instance for this LLMConfig."""
 
-        __openllm_timeout__: int = Field(36000)
+        __openllm_timeout__: int = Field(36e6)
         """The default timeout to be set for this given LLM."""
 
         __openllm_workers_per_resource__: int | float = Field(1)
