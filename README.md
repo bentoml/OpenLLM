@@ -74,11 +74,12 @@ Usage: openllm [OPTIONS] COMMAND [ARGS]...
 
 ### Starting an LLM Server
 
-To start an LLM server, use `openllm start`. For example, to start a `dolly-v2`
-server:
+To start an LLM server, use `openllm start`. For example, to start a
+[`OPT`](https://huggingface.co/docs/transformers/model_doc/opt) server, do the
+following:
 
 ```bash
-openllm start dolly-v2
+openllm start opt
 ```
 
 Following this, a Web UI will be accessible at http://localhost:3000 where you
@@ -326,13 +327,13 @@ and play any OpenLLM models with your existing ML workflow.
 import bentoml
 import openllm
 
-model = "dolly-v2"
+model = "opt"
 
 llm_config = openllm.AutoConfig.for_model(model)
 llm_runner = openllm.Runner(model, llm_config=llm_config)
 
 svc = bentoml.Service(
-    name=f"llm-dolly-v2-service", runners=[llm_runner]
+    name=f"llm-opt-service", runners=[llm_runner]
 )
 
 @svc.api(input=Text(), output=Text())
