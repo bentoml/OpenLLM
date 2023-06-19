@@ -1157,7 +1157,7 @@ def instruct(
         if output != "porcelain":
             _echo(f"Sending the following prompt ('{task}') with the following vars: {_memoized}", fg="magenta")
 
-        result = client.agent(task, agent_type=agent, return_code=False, remote=remote, **_memoized)
+        result = client.ask_agent(task, agent_type=agent, return_code=False, remote=remote, **_memoized)
         if output == "json":
             _echo(orjson.dumps(result, option=orjson.OPT_INDENT_2).decode(), fg="white")
         else:
