@@ -468,7 +468,7 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
         int4_use_double_quant = attrs.pop("llm_bnb_4bit_use_double_quant", True)
 
         if llm_config is not None:
-            logger.debug("Using provided LLMConfig to initialize LLM instead of from default.", llm_config)
+            logger.debug("Using provided LLMConfig to initialize LLM instead of from default: %r", llm_config)
             self.config = llm_config
         else:
             self.config = self.config_class.model_construct_env(**attrs)
