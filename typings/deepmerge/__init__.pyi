@@ -1,9 +1,10 @@
 from typing import List
+from typing import Literal
 from typing import Tuple
 from typing import Union
-from typing import Literal
 
 from .merger import Merger
+
 
 DEFAULT_TYPE_SPECIFIC_MERGE_STRATEGIES: List[
     Tuple[type, Union[Literal["append"], Literal["merge"], Literal["union"]]]

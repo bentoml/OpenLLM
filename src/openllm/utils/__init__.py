@@ -24,16 +24,23 @@ import sys
 import types
 import typing as t
 
-from bentoml._internal.configuration import (get_debug_mode, get_quiet_mode,
-                                             set_debug_mode, set_quiet_mode)
-from bentoml._internal.log import configure_logging, configure_server_logging
+from bentoml._internal.configuration import get_debug_mode
+from bentoml._internal.configuration import get_quiet_mode
+from bentoml._internal.configuration import set_debug_mode
+from bentoml._internal.configuration import set_quiet_mode
+from bentoml._internal.log import configure_logging
+from bentoml._internal.log import configure_server_logging
 from bentoml._internal.types import LazyType
-from bentoml._internal.utils import (LazyLoader, bentoml_cattr,
-                                     copy_file_to_fs_folder, first_not_none,
-                                     pkg, reserve_free_port,
-                                     resolve_user_filepath)
+from bentoml._internal.utils import LazyLoader
+from bentoml._internal.utils import bentoml_cattr
+from bentoml._internal.utils import copy_file_to_fs_folder
+from bentoml._internal.utils import first_not_none
+from bentoml._internal.utils import pkg
+from bentoml._internal.utils import reserve_free_port
+from bentoml._internal.utils import resolve_user_filepath
 
 from .lazy import LazyModule
+
 
 # NOTE: The set marks contains a set of modules name
 # that are available above and are whitelisted
@@ -142,18 +149,14 @@ if t.TYPE_CHECKING:
     from .import_utils import OPTIONAL_DEPENDENCIES as OPTIONAL_DEPENDENCIES
     from .import_utils import DummyMetaclass as DummyMetaclass
     from .import_utils import ModelEnv as ModelEnv
-    from .import_utils import \
-        is_bitsandbytes_available as is_bitsandbytes_available
-    from .import_utils import \
-        is_cpm_kernels_available as is_cpm_kernels_available
+    from .import_utils import is_bitsandbytes_available as is_bitsandbytes_available
+    from .import_utils import is_cpm_kernels_available as is_cpm_kernels_available
     from .import_utils import is_einops_available as is_einops_available
     from .import_utils import is_flax_available as is_flax_available
     from .import_utils import is_tf_available as is_tf_available
     from .import_utils import is_torch_available as is_torch_available
-    from .import_utils import \
-        is_transformers_supports_agent as is_transformers_supports_agent
-    from .import_utils import \
-        is_transformers_supports_kbit as is_transformers_supports_kbit
+    from .import_utils import is_transformers_supports_agent as is_transformers_supports_agent
+    from .import_utils import is_transformers_supports_kbit as is_transformers_supports_kbit
     from .import_utils import require_backends as require_backends
     from .lazy import LazyModule as LazyModule
 else:

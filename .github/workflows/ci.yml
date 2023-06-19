@@ -35,8 +35,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        python-version: ['3.8', '3.9', '3.10', '3.11']
-    name: tests (${{ matrix.os }}-${{ matrix.python-version }})
+    name: tests-${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -44,7 +43,7 @@ jobs:
       - name: Setup CI
         uses: ./.github/actions/setup-repo
       - name: Run tests
-        run: hatch run test
+        run: hatch run test:p
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true

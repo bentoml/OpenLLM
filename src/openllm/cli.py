@@ -29,31 +29,48 @@ import time
 import traceback
 import typing as t
 
-import bentoml
 import click
 import click_option_group as cog
 import inflection
 import orjson
 import psutil
-from bentoml._internal.configuration.containers import BentoMLContainer
-from bentoml_cli.utils import BentoMLCommandGroup, opt_callback
-from simple_di import Provide, inject
+from bentoml_cli.utils import BentoMLCommandGroup
+from bentoml_cli.utils import opt_callback
+from simple_di import Provide
+from simple_di import inject
 
+import bentoml
 import openllm
+from bentoml._internal.configuration.containers import BentoMLContainer
 
 from .__about__ import __version__
 from .exceptions import OpenLLMException
-from .utils import (DEBUG, LazyLoader, LazyType, ModelEnv, analytics,
-                    bentoml_cattr, configure_logging, configure_server_logging,
-                    first_not_none, get_debug_mode, get_quiet_mode, gpu_count,
-                    is_torch_available, is_transformers_supports_agent,
-                    set_debug_mode, set_quiet_mode)
+from .utils import DEBUG
+from .utils import LazyLoader
+from .utils import LazyType
+from .utils import ModelEnv
+from .utils import analytics
+from .utils import bentoml_cattr
+from .utils import configure_logging
+from .utils import configure_server_logging
+from .utils import first_not_none
+from .utils import get_debug_mode
+from .utils import get_quiet_mode
+from .utils import gpu_count
+from .utils import is_torch_available
+from .utils import is_transformers_supports_agent
+from .utils import set_debug_mode
+from .utils import set_quiet_mode
+
 
 if t.TYPE_CHECKING:
     import torch
+
     from bentoml._internal.models import ModelStore
 
-    from ._types import ClickFunctionWrapper, F, P
+    from ._types import ClickFunctionWrapper
+    from ._types import F
+    from ._types import P
     from .models.auto.factory import _BaseAutoLLMClass
 
     ServeCommand = t.Literal["serve", "serve-grpc"]
@@ -140,7 +157,7 @@ def parse_device_callback(
     if len(value) == 1 and value[0] == "all":
         return gpu_count()
 
-    parsed: tuple[str, ...] = tuple()
+    parsed: tuple[str, ...] = ()
     for v in value:
         if v == ",":
             # NOTE: This hits when CUDA_VISIBLE_DEVICES is set
@@ -246,8 +263,8 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
         """
         # The following logics is similar to one of BentoMLCommandGroup
 
-        from bentoml._internal.configuration import (DEBUG_ENV_VAR,
-                                                     QUIET_ENV_VAR)
+        from bentoml._internal.configuration import DEBUG_ENV_VAR
+        from bentoml._internal.configuration import QUIET_ENV_VAR
 
         @click.option("-q", "--quiet", envvar=QUIET_ENV_VAR, is_flag=True, default=False, help="Suppress all output.")
         @click.option(
@@ -799,7 +816,7 @@ def build(
             _echo(f"Overwriting existing Bento for {model_name}.", fg="yellow")
 
     if enable_features:
-        enable_features = tuple(itertools.chain.from_iterable(map(lambda s: s.split(","), enable_features)))
+        enable_features = tuple(itertools.chain.from_iterable((s.split(",") for s in enable_features)))
 
     bento, _previously_built = openllm.build(
         model_name,
@@ -882,7 +899,7 @@ def models(output: OutputLiteral, show_available: bool):
         converted: list[str] = []
         for m in models:
             config = openllm.AutoConfig.for_model(m)
-            runtime_impl: tuple[t.Literal["pt", "flax", "tf"], ...] = tuple()
+            runtime_impl: tuple[t.Literal["pt", "flax", "tf"], ...] = ()
             if config["model_name"] in openllm.MODEL_MAPPING_NAMES:
                 runtime_impl += ("pt",)
             if config["model_name"] in openllm.MODEL_FLAX_MAPPING_NAMES:

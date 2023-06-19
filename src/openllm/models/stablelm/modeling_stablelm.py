@@ -16,12 +16,14 @@ from __future__ import annotations
 import logging
 import typing as t
 
-from transformers import StoppingCriteria, StoppingCriteriaList
-
 import openllm
+from transformers import StoppingCriteria
+from transformers import StoppingCriteriaList
 
 from ..._prompt import default_formatter
-from .configuration_stablelm import DEFAULT_PROMPT_TEMPLATE, SYSTEM_PROMPT
+from .configuration_stablelm import DEFAULT_PROMPT_TEMPLATE
+from .configuration_stablelm import SYSTEM_PROMPT
+
 
 if t.TYPE_CHECKING:
     import transformers  # noqa
@@ -29,7 +31,7 @@ if t.TYPE_CHECKING:
 
 class StopOnTokens(StoppingCriteria):
     def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> bool:
-        stop_ids = set([50278, 50279, 50277, 1, 0])
+        stop_ids = {50278, 50279, 50277, 1, 0}
         return input_ids[0][-1] in stop_ids
 
 

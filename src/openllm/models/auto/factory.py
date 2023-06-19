@@ -26,8 +26,11 @@ import openllm
 
 from .configuration_auto import AutoConfig
 
+
 if t.TYPE_CHECKING:
-    from collections import _odict_items, _odict_keys, _odict_values
+    from collections import _odict_items
+    from collections import _odict_keys
+    from collections import _odict_values
 
     from ..._llm import LLMRunner
 

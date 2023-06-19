@@ -18,11 +18,11 @@ import logging
 import typing as t
 
 import bentoml
+import openllm
 import transformers
 
-import openllm
-
 from .configuration_dolly_v2 import DEFAULT_PROMPT_TEMPLATE
+
 
 if t.TYPE_CHECKING:
     import torch

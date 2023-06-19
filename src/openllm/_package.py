@@ -22,16 +22,23 @@ import os
 import typing as t
 from pathlib import Path
 
-import bentoml
 import fs
 import inflection
-from bentoml._internal.bento.build_config import DockerOptions, PythonOptions
+
+import bentoml
+import openllm
+from bentoml._internal.bento.build_config import DockerOptions
+from bentoml._internal.bento.build_config import PythonOptions
 from bentoml._internal.configuration import get_debug_mode
 
-import openllm
+from .utils import ModelEnv
+from .utils import codegen
+from .utils import first_not_none
+from .utils import is_flax_available
+from .utils import is_tf_available
+from .utils import is_torch_available
+from .utils import pkg
 
-from .utils import (ModelEnv, codegen, first_not_none, is_flax_available,
-                    is_tf_available, is_torch_available, pkg)
 
 if t.TYPE_CHECKING:
     from fs.base import FS
@@ -226,9 +233,7 @@ def _build_bento(
         name=bento_tag.name,
         labels=labels,
         description=f"OpenLLM service for {llm.config['start_name']}",
-        include=[
-            f for f in llm_fs.walk.files(filter=["*.py"])
-        ],  # NOTE: By default, we are using _service.py as the default service, for now.
+        include=list(llm_fs.walk.files(filter=["*.py"])),  # NOTE: By default, we are using _service.py as the default service, for now.
         exclude=["/venv", "__pycache__/", "*.py[cod]", "*$py.class"],
         python=construct_python_options(llm, llm_fs, extra_dependencies),
         docker=construct_docker_options(llm, llm_fs, workers_per_resource, quantize, bettertransformer),

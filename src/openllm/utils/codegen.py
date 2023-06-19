@@ -19,6 +19,7 @@ import string
 import typing as t
 from pathlib import Path
 
+
 if t.TYPE_CHECKING:
     from fs.base import FS
 

@@ -1,7 +1,16 @@
 from collections.abc import Callable
-from typing import Any, Dict, List, Mapping, Optional, Sequence, Set, Tuple, Union
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Mapping
+from typing import Optional
+from typing import Sequence
+from typing import Set
+from typing import Tuple
+from typing import Union
 
 import click
+
 
 FC = Union[Callable[..., Any], click.Command]
 

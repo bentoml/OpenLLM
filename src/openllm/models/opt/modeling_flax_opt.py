@@ -18,11 +18,11 @@ import logging
 import typing as t
 
 import bentoml
-
 import openllm
 
 from ..._prompt import default_formatter
 from .configuration_opt import DEFAULT_PROMPT_TEMPLATE
+
 
 if t.TYPE_CHECKING:
     import transformers

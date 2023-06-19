@@ -1,8 +1,19 @@
-from typing import Any, Callable, Dict, NamedTuple, Optional, ParamSpec, Protocol, Tuple, Type, TypeVar
+from typing import Any
+from typing import Callable
+from typing import Dict
+from typing import NamedTuple
+from typing import Optional
+from typing import ParamSpec
+from typing import Protocol
+from typing import Tuple
+from typing import Type
+from typing import TypeVar
 
 import click
 
-from ._core import FC, OptionGroup
+from ._core import FC
+from ._core import OptionGroup
+
 
 P = ParamSpec("P")
 O_co = TypeVar("O_co", covariant=True)

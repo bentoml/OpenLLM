@@ -4,10 +4,11 @@ from typing import List
 from typing import Tuple
 from typing import Union
 
-from .strategy.set import SetStrategies
 from .strategy.core import StrategyList
 from .strategy.dict import DictStrategies
 from .strategy.list import ListStrategies
+from .strategy.set import SetStrategies
+
 
 ConfigDictType = Dict[str, Any]
 

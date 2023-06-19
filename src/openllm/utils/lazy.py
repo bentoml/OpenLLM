@@ -21,7 +21,8 @@ import os
 import types
 import typing as t
 
-from ..exceptions import ForbiddenAttributeError, OpenLLMException
+from ..exceptions import ForbiddenAttributeError
+from ..exceptions import OpenLLMException
 
 
 class UsageNotAllowedError(OpenLLMException):

@@ -60,15 +60,23 @@ import attr
 import click_option_group as cog
 import inflection
 import orjson
-from cattr.gen import make_dict_unstructure_fn, override
+from cattr.gen import make_dict_unstructure_fn
+from cattr.gen import override
 from deepmerge.merger import Merger
 
 import openllm
 
 from .exceptions import ForbiddenAttributeError
-from .utils import (DEBUG, ENV_VARS_TRUE_VALUES, LazyType, bentoml_cattr,
-                    codegen, dantic, first_not_none, lenient_issubclass,
-                    non_intrusive_setattr)
+from .utils import DEBUG
+from .utils import ENV_VARS_TRUE_VALUES
+from .utils import LazyType
+from .utils import bentoml_cattr
+from .utils import codegen
+from .utils import dantic
+from .utils import first_not_none
+from .utils import lenient_issubclass
+from .utils import non_intrusive_setattr
+
 
 if hasattr(t, "Required"):
     from typing import Required
@@ -91,12 +99,18 @@ _T = t.TypeVar("_T")
 if t.TYPE_CHECKING:
     import tensorflow as tf
     import torch
+    from attr import _CountingAttr  # type: ignore
+    from attr import _make_init  # type: ignore
+    from attr import _make_repr  # type: ignore
+    from attr import _transform_attrs  # type: ignore
+
     import transformers
-    from attr import (_CountingAttr, _make_init, _make_repr,  # type: ignore
-                      _transform_attrs)
     from transformers.generation.beam_constraints import Constraint
 
-    from ._types import ClickFunctionWrapper, F, O_co, P
+    from ._types import ClickFunctionWrapper
+    from ._types import F
+    from ._types import O_co
+    from ._types import P
 
     ReprArgs: t.TypeAlias = t.Iterable[tuple[str | None, t.Any]]
 
@@ -111,8 +125,10 @@ else:
     ItemgetterAny = itemgetter
     # NOTE: Using internal API from attr here, since we are actually
     # allowing subclass of openllm.LLMConfig to become 'attrs'-ish
-    from attr._make import (_CountingAttr, _make_init, _make_repr,
-                            _transform_attrs)
+    from attr._make import _CountingAttr
+    from attr._make import _make_init
+    from attr._make import _make_repr
+    from attr._make import _transform_attrs
 
     transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
     torch = openllm.utils.LazyLoader("torch", globals(), "torch")
@@ -961,7 +977,7 @@ class LLMConfig:
         cls.__repr__ = codegen.add_method_dunders(cls, _make_repr(cls.__attrs_attrs__, None, cls))
         # Traverse the MRO to collect existing slots
         # and check for an existing __weakref__.
-        existing_slots: DictStrAny = dict()
+        existing_slots: DictStrAny = {}
         weakref_inherited = False
         for base_cls in cls.__mro__[1:-1]:
             if base_cls.__dict__.get("__weakref__", None) is not None:

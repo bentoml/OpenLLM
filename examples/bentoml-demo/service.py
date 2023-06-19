@@ -16,6 +16,7 @@ import bentoml
 import openllm
 from bentoml.io import Text
 
+
 model = "dolly-v2"
 
 llm_config = openllm.AutoConfig.for_model(model)

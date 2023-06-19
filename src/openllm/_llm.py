@@ -23,26 +23,37 @@ import subprocess
 import sys
 import types
 import typing as t
-from abc import ABC, abstractmethod
+from abc import ABC
+from abc import abstractmethod
 
 import attr
-import bentoml
 import inflection
 import orjson
+
+import bentoml
+import openllm
 from bentoml._internal.models.model import ModelSignature
 from bentoml._internal.types import ModelSignatureDict
 
-import openllm
+from .exceptions import ForbiddenAttributeError
+from .exceptions import GpuNotAvailableError
+from .exceptions import OpenLLMException
+from .utils import DEBUG
+from .utils import LazyLoader
+from .utils import ModelEnv
+from .utils import bentoml_cattr
+from .utils import first_not_none
+from .utils import get_debug_mode
+from .utils import is_bitsandbytes_available
+from .utils import is_torch_available
+from .utils import is_transformers_supports_kbit
+from .utils import non_intrusive_setattr
+from .utils import pkg
 
-from .exceptions import (ForbiddenAttributeError, GpuNotAvailableError,
-                         OpenLLMException)
-from .utils import (DEBUG, LazyLoader, ModelEnv, bentoml_cattr, first_not_none,
-                    get_debug_mode, is_bitsandbytes_available,
-                    is_torch_available, is_transformers_supports_kbit,
-                    non_intrusive_setattr, pkg)
 
 if t.TYPE_CHECKING:
     import torch
+
     import transformers
     from bentoml._internal.runner.strategy import Strategy
 

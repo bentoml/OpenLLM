@@ -27,13 +27,14 @@ import os
 import typing as t
 
 import attr
-import bentoml
 import orjson
 from starlette.applications import Starlette
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 
+import bentoml
 import openllm
+
 
 if t.TYPE_CHECKING:
     from starlette.requests import Request

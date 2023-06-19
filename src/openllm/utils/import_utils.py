@@ -27,8 +27,11 @@ from abc import ABCMeta
 from collections import OrderedDict
 
 import inflection
-from bentoml._internal.utils import LazyLoader, pkg
 from packaging import version
+
+from bentoml._internal.utils import LazyLoader
+from bentoml._internal.utils import pkg
+
 
 if t.TYPE_CHECKING:
     BackendOrderredDict = OrderedDict[str, tuple[t.Callable[[], bool], str]]
