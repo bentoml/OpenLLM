@@ -1153,7 +1153,7 @@ def instruct(
 
         _memoized = {k: v[0] for k, v in _memoized.items() if v}
 
-        client._hf_agent.set_stream(logger)
+        client._hf_agent.set_stream(logger.info)
         if output != "porcelain":
             _echo(f"Sending the following prompt ('{task}') with the following vars: {_memoized}", fg="magenta")
 
