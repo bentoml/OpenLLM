@@ -18,6 +18,40 @@ This changelog is managed by towncrier and is compiled at release time.
 
 <!-- towncrier release notes start -->
 
+## [0.1.7](https://github.com/bentoml/openllm/tree/v0.1.7)
+
+### Features
+
+- OpenLLM now seamlessly integrates with HuggingFace Agents.
+  Replace the HfAgent endpoint with a running remote server.
+
+  ```python
+  import transformers
+
+  agent = transformers.HfAgent("http://localhost:3000/hf/agent")  # URL that runs the OpenLLM server
+
+  agent.run("Is the following `text` positive or negative?", text="I don't like how this models is generate inputs")
+  ```
+
+  Note that only `starcoder` is currently supported for agent feature.
+
+  To use it from the `openllm.client`, do:
+  ```python
+  import openllm
+
+  client = openllm.client.HTTPClient("http://123.23.21.1:3000")
+
+  client.ask_agent(
+      task="Is the following `text` positive or negative?",
+      text="What are you thinking about?",
+      agent_type="hf",
+  )
+  ```
+
+  Fixes a Asyncio exception by increasing the timeout
+  [#29](https://github.com/bentoml/openllm/issues/29)
+
+
 ## [0.1.6](https://github.com/bentoml/openllm/tree/v0.1.6)
 
 ### Changes
