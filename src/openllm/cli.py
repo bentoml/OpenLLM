@@ -1144,8 +1144,6 @@ def instruct(
     """
     client = openllm.client.HTTPClient(endpoint, timeout=timeout)
 
-    breakpoint()
-
     if agent == "hf":
         if not is_transformers_supports_agent():
             raise click.UsageError(
