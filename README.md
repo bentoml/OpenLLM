@@ -29,7 +29,7 @@ StarCoder and more.
 query via WebUI, CLI, our Python/Javascript client, or any HTTP client.
 
 ⛓️ **Freedom To Build**: First-class support for LangChain, BentoML and
-HuggingFace that allows you to easily create your own AI apps by composing LLMs
+Hugging Face that allows you to easily create your own AI apps by composing LLMs
 with other models and services.
 
 🎯 **Streamline Deployment**: Automatically generate your LLM server Docker
@@ -342,14 +342,14 @@ async def prompt(input_text: str) -> str:
     return answer
 ```
 
-### HuggingFace Agents
+### Hugging Face Agents
 
-OpenLLM seamlessly integrates with HuggingFace Agents.
+OpenLLM seamlessly integrates with Hugging Face Agents.
 
-> **Warning** The HuggingFace Agent is still at experimental stage. It is
+> **Warning** The Hugging Face Agent is still at experimental stage. It is
 > recommended to OpenLLM with
 > `pip install -r nightly-requirements.generated.txt` to get the latest API
-> update for HuggingFace agent.
+> update for Hugging Face agent.
 
 ```python
 import transformers
