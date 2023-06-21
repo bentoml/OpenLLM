@@ -17,7 +17,10 @@ Types definition for OpenLLM.
 Note that this module SHOULD NOT BE IMPORTED DURING RUNTIME, as this serve only for typing purposes.
 It will raises a RuntimeError if this is imported eagerly.
 """
-from typing import ParamSpec, TypeVar, cast
+from typing import ParamSpec
+from typing import TypeVar
+from typing import cast
+
 import click
 
 
