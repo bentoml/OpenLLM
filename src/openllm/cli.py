@@ -188,13 +188,13 @@ output_option = click.option(
 )
 
 
-def model_id_option(factory: t.Any, model_env: ModelEnv | None = None, click_type: click.ParamType | None = None):
+def model_id_option(factory: t.Any, model_env: ModelEnv | None = None):
     envvar = None
     if model_env is not None:
         envvar = model_env.model_id
     return factory.option(
         "--model-id",
-        type=click_type if click_type else click.STRING,
+        type=click.STRING,
         default=None,
         help="Optional model_id name or path for (fine-tune) weight.",
         envvar=envvar,
@@ -584,7 +584,7 @@ Available model_id(s): {llm_config['model_ids']} [default: {llm_config['default_
         help="Server timeout in seconds",
     )
     @workers_per_resource_option(cog.optgroup)
-    @model_id_option(cog.optgroup, model_env=env, click_type=click.Choice(llm_config["model_ids"]))
+    @model_id_option(cog.optgroup, model_env=env)
     @cog.optgroup.option(
         "--fast",
         is_flag=True,
