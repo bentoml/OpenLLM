@@ -84,14 +84,13 @@ def construct_python_options(
     llm_fs: FS,
     extra_dependencies: tuple[str, ...] | None = None,
 ) -> PythonOptions:
+    packages = ["openllm"]
     # NOTE: add openllm to the default dependencies
     # if users has openllm custom built wheels, it will still respect
     # that since bentoml will always install dependencies from requirements.txt
     # first, then proceed to install everything inside the wheels/ folder.
     if extra_dependencies is not None:
-        packages = [f"openllm[{k}]" for k in extra_dependencies]
-    else:
-        packages = ["openllm"]
+        packages += [f"openllm[{k}]" for k in extra_dependencies]
 
     if llm.config["requirements"] is not None:
         packages.extend(llm.config["requirements"])
