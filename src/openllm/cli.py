@@ -840,7 +840,7 @@ def build(
             _echo("\n" + OPENLLM_FIGLET, fg="white")
             if not _previously_built:
                 _echo(f"Successfully built {bento}.", fg="green")
-            else:
+            elif not overwrite:
                 _echo(
                     f"'{model_name}' already has a Bento built [{bento}]. To overwrite it pass '--overwrite'.",
                     fg="yellow",

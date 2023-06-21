@@ -162,7 +162,7 @@ def construct_docker_options(
 
     env_dict = {
         env.framework: env.framework_value,
-        env.config: llm.config.model_dump_json().decode(),
+        env.config: f"'{llm.config.model_dump_json().decode()}'",
         "OPENLLM_MODEL": llm.config["model_name"],
         "OPENLLM_MODEL_ID": llm.model_id,
         "BENTOML_DEBUG": str(get_debug_mode()),
@@ -233,7 +233,9 @@ def _build_bento(
         name=bento_tag.name,
         labels=labels,
         description=f"OpenLLM service for {llm.config['start_name']}",
-        include=list(llm_fs.walk.files(filter=["*.py"])),  # NOTE: By default, we are using _service.py as the default service, for now.
+        include=list(
+            llm_fs.walk.files(filter=["*.py"])
+        ),  # NOTE: By default, we are using _service.py as the default service, for now.
         exclude=["/venv", "__pycache__/", "*.py[cod]", "*$py.class"],
         python=construct_python_options(llm, llm_fs, extra_dependencies),
         docker=construct_docker_options(llm, llm_fs, workers_per_resource, quantize, bettertransformer),
