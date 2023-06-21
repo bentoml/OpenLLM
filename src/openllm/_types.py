@@ -17,22 +17,20 @@ Types definition for OpenLLM.
 Note that this module SHOULD NOT BE IMPORTED DURING RUNTIME, as this serve only for typing purposes.
 It will raises a RuntimeError if this is imported eagerly.
 """
-from __future__ import annotations
-
-import typing as t
-
-
-if not t.TYPE_CHECKING:
-    raise RuntimeError(f"{__name__} should not be imported during runtime")
-
+from typing import ParamSpec, TypeVar, cast
 import click
 
 
-P = t.ParamSpec("P")
-O_co = t.TypeVar("O_co", covariant=True)
+if not TYPE_CHECKING:
+    raise RuntimeError(f"{__name__} should not be imported during runtime")
 
 
-class ClickFunctionWrapper(t.Protocol[P, O_co]):
+
+P = ParamSpec("P")
+O_co = TypeVar("O_co", covariant=True)
+
+
+class ClickFunctionWrapper(Protocol[P, O_co]):
     __name__: str
     __click_params__: list[click.Option]
 
@@ -40,10 +38,17 @@ class ClickFunctionWrapper(t.Protocol[P, O_co]):
         ...
 
 
-# F is a t.Callable[P, O_co] with compatible to ClickFunctionWrapper
-class F(t.Generic[P, O_co]):
-    __name__: str
-    __click_params__: list[click.Option]
+def is_click_function_wrapper(f: t.Callable[P, O_co]) -> bool:
+    return (
+        hasattr(f, "__name__")
+        and hasattr(f, "__click_params__")
+        and callable(f)
+        and isinstance(f, t.Generic[P, O_co])
+    )
 
-    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> O_co:
-        ...
+
+def wrap_click_function(f: t.Callable[P, O_co]) -> ClickFunctionWrapper[P, O_co]:
+    if not is_click_function_wrapper(f):
+        raise TypeError(f"{f} is not a click function wrapper")
+
+    return cast(ClickFunctionWrapper[P, O_co], f)
