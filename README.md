@@ -28,9 +28,9 @@ StarCoder and more.
 🔥 **Flexible APIs**: serve LLMs over RESTful API or gRPC with one command,
 query via WebUI, CLI, our Python/Javascript client, or any HTTP client.
 
-⛓️ **Freedom To Build**: First-class support for LangChain, BentoML and
-Hugging Face that allows you to easily create your own AI apps by composing LLMs
-with other models and services.
+⛓️ **Freedom To Build**: First-class support for LangChain, BentoML and Hugging
+Face that allows you to easily create your own AI apps by composing LLMs with
+other models and services.
 
 🎯 **Streamline Deployment**: Automatically generate your LLM server Docker
 Images or deploy as serverless endpoint via
@@ -376,25 +376,49 @@ client.ask_agent(
 )
 ```
 
-### LangChain (⏳Coming Soon!)
+### LangChain
 
-In future LangChain releases, you'll be able to effortlessly invoke OpenLLM
-models, like so:
-
-```python
-from langchain.llms import OpenLLM
-llm = OpenLLM.for_model(model_name='flan-t5')
-llm("What is the difference between a duck and a goose?")
-```
-
-if you have an OpenLLM server deployed elsewhere, you can connect to it by
-specifying its URL:
+To quickly start a local LLM with `langchain`, simply do the following:
 
 ```python
 from langchain.llms import OpenLLM
-llm = OpenLLM.for_model(server_url='http://localhost:8000', server_type='http')
-llm("What is the difference between a duck and a goose?")
+
+llm = OpenLLM(model_name="dolly-v2", model_id='databricks/dolly-v2-7b', device_map='auto')
+
+llm("What is the difference between a duck and a goose? And why there are so many Goose in Canada?")
 ```
+
+`langchain.llms.OpenLLM` has the capabilities to interact with remote OpenLLM
+Server. Given there is an OpenLLM server deployed elsewhere, you can connect to
+it by specifying its URL:
+
+```python
+from langchain.llms import OpenLLM
+
+llm = OpenLLM(server_url='http://44.23.123.1:3000', server_type='grpc')
+llm("What is the difference between a duck and a goose? And why there are so many Goose in Canada?")
+```
+
+To integrate a LangChain agent with BentoML, you can do the following:
+
+```python
+llm = OpenLLM(
+    model_name='flan-t5',
+    model_id='google/flan-t5-large',
+    embedded=False,
+)
+tools = load_tools(["serpapi", "llm-math"], llm=llm)
+agent = initialize_agent(
+    tools, llm, agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION
+)
+svc = bentoml.Service("langchain-openllm", runners=[llm.runner])
+@svc.api(input=Text(), output=Text())
+def chat(input_text: str):
+    return agent.run(input_text)
+```
+
+> **Note** You can find out more examples under the
+> [examples](https://github.com/bentoml/OpenLLM/tree/main/examples) folder.
 
 ## 🚀 Deploying to Production
 
