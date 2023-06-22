@@ -86,7 +86,7 @@ Following this, a Web UI will be accessible at http://localhost:3000 where you
 can experiment with the endpoints and sample input prompts.
 
 OpenLLM provides a built-in Python client, allowing you to interact with the
-model. In a different terminal window or a Jupyter notebook, create a client to
+model. In a different terminal window or a Jupyter Notebook, create a client to
 start interacting with the model:
 
 ```python
@@ -311,7 +311,7 @@ to see how you can do it yourself.
 ## ⚙️ Integrations
 
 OpenLLM is not just a standalone product; it's a building block designed to
-easily integrate with other powerful tools. We currently offer integration with
+integrate with other powerful tools easily. We currently offer integration with
 [BentoML](https://github.com/bentoml/BentoML) and
 [LangChain](https://github.com/hwchase17/langchain).
 
@@ -346,7 +346,7 @@ async def prompt(input_text: str) -> str:
 
 OpenLLM seamlessly integrates with Hugging Face Agents.
 
-> **Warning** The Hugging Face Agent is still at experimental stage. It is
+> **Warning** The Hugging Face Agent is still in the experimental stage. It is
 > recommended to OpenLLM with
 > `pip install -r nightly-requirements.generated.txt` to get the latest API
 > update for Hugging Face agent.
@@ -360,7 +360,7 @@ agent.run("Is the following `text` positive or negative?", text="I don't like ho
 ```
 
 > **Note** Only `starcoder` is currently supported with Agent integration. The
-> example aboved was also ran with four T4s on EC2 `g4dn.12xlarge`
+> example above was also ran with four T4s on EC2 `g4dn.12xlarge`
 
 If you want to use OpenLLM client to ask questions to the running agent, you can
 also do so:
@@ -376,7 +376,7 @@ client.ask_agent(
 )
 ```
 
-### LangChain
+### [LangChain](https://python.langchain.com/docs/ecosystem/integrations/openllm)
 
 To quickly start a local LLM with `langchain`, simply do the following:
 
@@ -388,7 +388,7 @@ llm = OpenLLM(model_name="dolly-v2", model_id='databricks/dolly-v2-7b', device_m
 llm("What is the difference between a duck and a goose? And why there are so many Goose in Canada?")
 ```
 
-`langchain.llms.OpenLLM` has the capabilities to interact with remote OpenLLM
+`langchain.llms.OpenLLM` has the capability to interact with remote OpenLLM
 Server. Given there is an OpenLLM server deployed elsewhere, you can connect to
 it by specifying its URL:
 
@@ -434,7 +434,7 @@ To deploy your LLMs into production:
    A
    [Bento](https://docs.bentoml.org/en/latest/concepts/bento.html#what-is-a-bento),
    in BentoML, is the unit of distribution. It packages your program's source
-   code, models, files, artifacts, and dependencies.
+   code, models, files, artefacts, and dependencies.
 
 2. **Containerize your Bento**
 
@@ -455,13 +455,13 @@ excluding sensitive information. We will never collect user code, model data, or
 stack traces. For usage tracking, check out the
 [code](./src/openllm/utils/analytics.py).
 
-You can opt-out of usage tracking by using the `--do-not-track` CLI option:
+You can opt out of usage tracking by using the `--do-not-track` CLI option:
 
 ```bash
 openllm [command] --do-not-track
 ```
 
-Or by setting environment variable `OPENLLM_DO_NOT_TRACK=True`:
+Or by setting the environment variable `OPENLLM_DO_NOT_TRACK=True`:
 
 ```bash
 export OPENLLM_DO_NOT_TRACK=True
@@ -473,7 +473,7 @@ Engage with like-minded individuals passionate about LLMs, AI, and more on our
 [Discord](https://l.bentoml.com/join-openllm-discord)!
 
 OpenLLM is actively maintained by the BentoML team. Feel free to reach out and
-join us in our pursuit to make LLMs more accessible and easy-to-use👉
+join us in our pursuit to make LLMs more accessible and easy to use 👉
 [Join our Slack community!](https://l.bentoml.com/join-slack)
 
 ## 🎁 Contributing
