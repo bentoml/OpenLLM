@@ -85,6 +85,13 @@ def test_simple_struct_dump(gen_settings: ModelSettings, field1: int):
     assert cl_().model_dump()["field1"] == field1
 
 
+@given(model_settings(), st.integers())
+def test_config_derivation(gen_settings: ModelSettings, field1: int):
+    cl_ = make_llm_config("IdempotentLLM", gen_settings, fields=(("field1", "float", field1),))
+    new_cls = cl_.model_derivate("DerivedLLM", default_id="asdfasdf")
+    assert new_cls.__openllm_default_id__ == "asdfasdf"
+
+
 @given(
     model_settings(),
     st.integers(max_value=283473),
