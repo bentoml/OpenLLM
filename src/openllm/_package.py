@@ -35,7 +35,6 @@ from bentoml._internal.configuration import get_debug_mode
 
 from .utils import ModelEnv
 from .utils import codegen
-from .utils import copy_file_to_fs_folder
 from .utils import first_not_none
 from .utils import is_flax_available
 from .utils import is_tf_available

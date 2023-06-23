@@ -70,7 +70,6 @@ from deepmerge.merger import Merger
 import openllm
 
 from .exceptions import ForbiddenAttributeError
-from .utils import DEBUG
 from .utils import ENV_VARS_TRUE_VALUES
 from .utils import LazyType
 from .utils import bentoml_cattr
@@ -1215,7 +1214,7 @@ class LLMConfig(_ConfigAttr):
             for base_cls in self._cls.__mro__[1:-1]:
                 if base_cls.__dict__.get("__weakref__", None) is not None:
                     weakref_inherited = True
-                existing_slots.update({name: getattr(base_cls, name) for name in getattr(base_cls, "__slots__", [])})
+                existing_slots.update({name: getattr(base_cls, name, codegen._sentinel) for name in getattr(base_cls, "__slots__", [])})
 
             base_names = set(self._base_names)
             names = self._attr_names
