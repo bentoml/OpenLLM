@@ -241,7 +241,7 @@ def quantize_option(factory: t.Any, build: bool = False):
 def bettertransformer_option(factory: t.Any, model_env: ModelEnv | None = None):
     envvar = None
     if model_env is not None:
-        envvar = model_env.model_id
+        envvar = model_env.bettertransformer
     return factory.option(
         "--bettertransformer",
         is_flag=True,
