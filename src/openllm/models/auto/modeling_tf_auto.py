@@ -30,6 +30,7 @@ MODEL_TF_MAPPING_NAMES = OrderedDict(
     [
         ("flan_t5", "TFFlanT5"),
         ("opt", "TFOPT"),
+        ("bart", "TFBart"),
     ]
 )
 

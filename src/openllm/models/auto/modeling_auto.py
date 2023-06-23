@@ -35,6 +35,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("falcon", "Falcon"),
         ("stablelm", "StableLM"),
         ("opt", "OPT"),
+        ("bart", "Bart"),
     ]
 )
 

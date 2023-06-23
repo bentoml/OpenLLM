@@ -47,6 +47,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("falcon", "FalconConfig"),
         ("stablelm", "StableLMConfig"),
         ("opt", "OPTConfig"),
+        ("bart", "BartConfig"),
     ]
 )
 

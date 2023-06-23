@@ -1,0 +1,17 @@
+services:
+  app:
+    image: nvidia/cuda:12.1.1-runtime-ubuntu22.04
+    entrypoint:
+      - sleep
+      - infinity
+    init: true
+    volumes:
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu]

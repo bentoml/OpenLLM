@@ -5,14 +5,14 @@ import typing as t
 import openllm
 
 from ..._prompt import default_formatter
-from .configuration_flan_t5 import DEFAULT_PROMPT_TEMPLATE
+from .configuration_bart import DEFAULT_PROMPT_TEMPLATE
 
 
 if t.TYPE_CHECKING:
     import transformers  # noqa
 
 
-class TFFlanT5(openllm.LLM["transformers.TFT5ForConditionalGeneration", "transformers.T5TokenizerFast"]):
+class TFFlanT5(openllm.LLM["transformers.AutoModelForSeq2SeqLM", "transformers.BartTokenizerFast"]):
     __openllm_internal__ = True
 
     def sanitize_parameters(
@@ -22,7 +22,8 @@ class TFFlanT5(openllm.LLM["transformers.TFT5ForConditionalGeneration", "transfo
         temperature: float | None = None,
         top_k: int | None = None,
         top_p: float | None = None,
-        repetition_penalty: float | None = None,
+        use_cache: bool | None = None,
+        early_stopping: bool | None = None,
         use_default_prompt_template: bool = True,
         **attrs: t.Any,
     ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
@@ -46,7 +47,8 @@ class TFFlanT5(openllm.LLM["transformers.TFT5ForConditionalGeneration", "transfo
             "temperature": temperature,
             "top_k": top_k,
             "top_p": top_p,
-            "repetition_penalty": repetition_penalty,
+            "use_cache": use_cache,
+            "early_stopping": early_stopping,
         }
         return prompt_text, generation_config, {}
 
@@ -57,7 +59,6 @@ class TFFlanT5(openllm.LLM["transformers.TFT5ForConditionalGeneration", "transfo
         input_ids = self.tokenizer(prompt, return_tensors="tf").input_ids
         outputs = self.model.generate(
             input_ids,
-            do_sample=True,
             generation_config=self.config.model_construct_env(**attrs).to_generation_config(),
         )
         return self.tokenizer.batch_decode(outputs, skip_special_tokens=True)
