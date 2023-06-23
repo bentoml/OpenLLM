@@ -48,11 +48,13 @@ Refer to ``openllm.LLMConfig`` docstring for more information.
 """
 from __future__ import annotations
 
+import copy
 import functools
 import inspect
 import logging
 import os
 import sys
+import types
 import typing as t
 from operator import itemgetter
 
@@ -978,7 +980,9 @@ class LLMConfig:
         for base_cls in cls.__mro__[1:-1]:
             if base_cls.__dict__.get("__weakref__", None) is not None:
                 weakref_inherited = True
-            existing_slots.update({name: getattr(base_cls, name) for name in getattr(base_cls, "__slots__", [])})
+            existing_slots.update(
+                {name: getattr(base_cls, name, codegen._sentinel) for name in getattr(base_cls, "__slots__", [])}
+            )
 
         if (
             _weakref_slot
@@ -1100,6 +1104,38 @@ class LLMConfig:
                 f"'{item}' belongs to a private namespace for {self.__class__} and should not be access nor modified."
             )
         return _object_getattribute.__get__(self)(item)
+
+    @classmethod
+    def model_derivate(cls, name: str | None = None, **attrs: t.Any) -> LLMConfig:
+        """A helper class to generate a new LLMConfig class with additional attributes.
+
+        This is useful to modify builtin __config__ value attributes.
+
+        ```python
+        class DollyV2Config(openllm.LLMConfig):
+            ...
+
+        my_new_class = DollyV2Config.model_derivate(default_id='...')
+        ```
+
+        Args:
+            name: The name of the new class.
+            **attrs: The attributes to be added to the new class. This will override
+                     any existing attributes with the same name.
+        """
+        assert cls.__config__ is not None, "Cannot derivate a LLMConfig without __config__"
+        _new_cfg = {k: v for k, v in attrs.items() if k in attr.fields_dict(_ModelSettingsAttr)}
+        attrs = {k: v for k, v in attrs.items() if k not in _new_cfg}
+        return types.new_class(
+            name or f"{cls.__name__.replace('Config', '')}DerivateConfig",
+            (cls,),
+            {},
+            lambda ns: ns.update(
+                {
+                    "__config__": config_merger.merge(copy.deepcopy(cls.__dict__["__config__"]), _new_cfg),
+                }
+            ),
+        )(**attrs)
 
     def model_dump(self, flatten: bool = False, **_: t.Any):
         dumped = bentoml_cattr.unstructure(self)
