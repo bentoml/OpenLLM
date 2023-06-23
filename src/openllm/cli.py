@@ -56,8 +56,10 @@ from .utils import first_not_none
 from .utils import get_debug_mode
 from .utils import get_quiet_mode
 from .utils import gpu_count
+from .utils import is_peft_available
 from .utils import is_torch_available
 from .utils import is_transformers_supports_agent
+from .utils import resolve_user_filepath
 from .utils import set_debug_mode
 from .utils import set_quiet_mode
 
@@ -105,13 +107,14 @@ class NargsOptions(cog.GroupedOption):
     options.
     """
 
+    _nargs_parser: click.parser.Option
+    _prev_parser_process: t.Callable[[t.Any, click.parser.ParsingState], None]
+
     def __init__(self, *args: t.Any, **attrs: t.Any):
         nargs = attrs.pop("nargs", -1)
         if nargs != -1:
             raise OpenLLMException(f"'nargs' is set, and must be -1 instead of {nargs}")
         super(NargsOptions, self).__init__(*args, **attrs)
-        self._prev_parser_process: t.Callable[[t.Any, click.parser.ParsingState], None] | None = None
-        self._nargs_parser: click.parser.Option | None = None
 
     def add_to_parser(self, parser: click.OptionParser, ctx: click.Context) -> None:
         def _parser(value: t.Any, state: click.parser.ParsingState):
@@ -238,22 +241,43 @@ def quantize_option(factory: t.Any, build: bool = False):
     )
 
 
-def bettertransformer_option(factory: t.Any, model_env: ModelEnv | None = None):
+def bettertransformer_option(factory: t.Any, build: bool = False, model_env: ModelEnv | None = None):
     envvar = None
     if model_env is not None:
-        envvar = model_env.model_id
+        envvar = model_env.bettertransformer
     return factory.option(
         "--bettertransformer",
         is_flag=True,
         default=None,
-        help="Use BetterTransformer wrapper to serve model. This will applies during serving time.",
+        help="Apply FasterTransformer wrapper to serve model. This will applies during serving time."
+        if not build
+        else "Set defaul environment variable whether to serve this model with FasterTransformer in build time.",
         envvar=envvar,
         show_envvar=True if envvar is not None else False,
     )
 
 
+_adapter_mapping_key = "adapter_map"
+
+
+def _id_callback(ctx: click.Context, _: click.Parameter, value: tuple[str, ...] | None) -> dict[str, str] | None:
+    if not value:
+        return
+    if _adapter_mapping_key not in ctx.params:
+        ctx.params[_adapter_mapping_key] = {}
+    for v in value:
+        adapter_id, *adapter_name = v.rsplit(":", maxsplit=1)
+        try:
+            # try to resolve the full path if users pass in relative,
+            # currently only support one level of resolve path.
+            adapter_id = resolve_user_filepath(adapter_id, os.getcwd())
+        except FileNotFoundError:
+            pass
+        ctx.params[_adapter_mapping_key][adapter_id] = adapter_name[0] if len(adapter_name) > 0 else None
+
+
 class OpenLLMCommandGroup(BentoMLCommandGroup):
-    NUMBER_OF_COMMON_PARAMS = 3
+    NUMBER_OF_COMMON_PARAMS = 4  # parameters in common_params + 1 faked group option header
 
     @staticmethod
     def common_params(f: F[P, t.Any]) -> ClickFunctionWrapper[..., t.Any]:
@@ -265,11 +289,14 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
         from bentoml._internal.configuration import DEBUG_ENV_VAR
         from bentoml._internal.configuration import QUIET_ENV_VAR
 
-        @click.option("-q", "--quiet", envvar=QUIET_ENV_VAR, is_flag=True, default=False, help="Suppress all output.")
-        @click.option(
+        @cog.optgroup.group("Miscellaneous options")
+        @cog.optgroup.option(
+            "-q", "--quiet", envvar=QUIET_ENV_VAR, is_flag=True, default=False, help="Suppress all output."
+        )
+        @cog.optgroup.option(
             "--debug", "--verbose", envvar=DEBUG_ENV_VAR, is_flag=True, default=False, help="Print out debug logs."
         )
-        @click.option(
+        @cog.optgroup.option(
             "--do-not-track",
             is_flag=True,
             default=False,
@@ -507,7 +534,7 @@ _http_server_args = parse_serve_args(False)
 _grpc_server_args = parse_serve_args(True)
 
 
-def start_model_command(
+def start_command_factory(
     model_name: str,
     _context_settings: dict[str, t.Any] | None = None,
     _serve_grpc: bool = False,
@@ -531,7 +558,7 @@ def start_model_command(
     configure_logging()
 
     llm_config = openllm.AutoConfig.for_model(model_name)
-    env: ModelEnv = llm_config["env"]
+    env = llm_config["env"]
 
     docstring = f"""\
 {env.start_docstring}
@@ -576,7 +603,7 @@ Available model_id(s): {llm_config['model_ids']} [default: {llm_config['default_
     @group.command(**command_attrs)
     @llm_config.to_click_options
     @serve_decorator
-    @cog.optgroup.group("General LLM Options")
+    @cog.optgroup.group("General LLM Options", help="The following options are related to running the LLM Server.")
     @cog.optgroup.option(
         "--server-timeout",
         type=int,
@@ -591,7 +618,25 @@ Available model_id(s): {llm_config['model_ids']} [default: {llm_config['default_
         default=False,
         help="Bypass auto model checks and setup. This option is ahead-of-serving time.",
     )
-    @cog.optgroup.group("LLM Optimization Options.")
+    @cog.optgroup.group(
+        "LLM Optimization Options",
+        help="""\
+    These options are related for dynamic optimization on the fly. Current supported strategies:
+
+    - int8: Quantize the model with 8bit (bitsandbytes required)
+
+    - int4: Quantize the model with 4bit (bitsandbytes required)
+
+    - bettertransformer: Convert given model to FastTransformer
+
+    The following are currently being worked on:
+
+    - GPTQ: [paper](https://arxiv.org/abs/2210.17323)
+
+    - DeepSpeed Inference: [link](https://www.deepspeed.ai/inference/)
+
+      """,
+    )
     @cog.optgroup.option(
         "--device",
         type=tuple,
@@ -604,6 +649,32 @@ Available model_id(s): {llm_config['model_ids']} [default: {llm_config['default_
     )
     @quantize_option(cog.optgroup)
     @bettertransformer_option(cog.optgroup, model_env=env)
+    @cog.optgroup.group(
+        "Fine-tuning related options",
+        help="""\
+    Note that the argument `--adapter-id` can accept the following format:
+
+    - `--adapter-id /path/to/adapter` (local adapter)
+
+    - `--adapter-id remote/adapter` (remote adapter from HuggingFace Hub)
+
+    - `--adapter-id remote/adapter:eng_lora` (two previous adapter options with the given adapter_name)
+
+    ```bash
+
+    openllm start opt --adapter-id /path/to/adapter_dir --adapter-id remote/adapter:eng_lora
+
+    ```
+    """,
+    )
+    @cog.optgroup.option(
+        "--adapter-id",
+        default=None,
+        help="Optional name or path for given LoRA adapter" + f" to wrap '{model_name}'",
+        multiple=True,
+        callback=_id_callback,
+        metavar="[PATH | [remote/][adapter_name:]adapter_id][, ...]",
+    )
     @click.pass_context
     def model_start(
         ctx: click.Context,
@@ -616,6 +687,10 @@ Available model_id(s): {llm_config['model_ids']} [default: {llm_config['default_
         fast: bool,
         **attrs: t.Any,
     ) -> openllm.LLMConfig:
+        adapter_map: dict[str, str | None] | None = attrs.pop(_adapter_mapping_key, None)
+        # remove adapter_id
+        attrs.pop("adapter_id", None)
+
         config, server_attrs = llm_config.model_validate_click(**attrs)
 
         # Create a new model env to work with the envvar during CLI invocation
@@ -630,6 +705,13 @@ Available model_id(s): {llm_config['model_ids']} [default: {llm_config['default_
             if framework_envvar != "pt":
                 _echo("Quantization is currently only available for PyTorch models.", fg="red")
                 ctx.exit(1)
+
+        if adapter_map and not is_peft_available():
+            _echo(
+                "Using adapter requires 'peft' to be available. Make sure to install with 'pip install \"openllm[fine-tune]\"'",
+                fg="red",
+            )
+            ctx.exit(1)
 
         # We need to handle None separately here, as env from subprocess doesn't
         # accept None value.
@@ -686,22 +768,29 @@ Available model_id(s): {llm_config['model_ids']} [default: {llm_config['default_
 
         if fast and not get_quiet_mode():
             _echo(
-                f"Make sure to download the model before 'start': 'openllm download {model_name}{'--model-id ' + model_id if model_id else ''}'",
+                f"Fast mode is enabled. Make sure to download the model before 'start': 'openllm download {model_name}{'--model-id ' + model_id if model_id else ''}'",
                 fg="yellow",
             )
-        automodel_attrs = {
-            "model_id": model_id,
-            "llm_config": config,
-            "ensure_available": not fast,
-        }
 
+        automodel_attrs: dict[str, t.Any] = {}
         if framework_envvar == "pt":
             automodel_attrs.update({"quantize": quantize, "bettertransformer": bettertransformer})
+
+        if adapter_map:
+            _echo(f"OpenLLM will convert '{model_name}' to use provided adapters layers: {list(adapter_map)}")
+            automodel_attrs.update({"adapter_map": adapter_map})
 
         llm = t.cast(
             "_BaseAutoLLMClass",
             openllm[framework_envvar],  # type: ignore (internal API)
-        ).for_model(model_name, **automodel_attrs)
+        ).for_model(
+            model_name,
+            model_id=model_id,
+            llm_config=config,
+            ensure_available=not fast,
+            return_runner_kwargs=False,
+            **automodel_attrs,
+        )
 
         start_env.update(
             {
@@ -709,6 +798,7 @@ Available model_id(s): {llm_config['model_ids']} [default: {llm_config['default_
                 env.config: llm.config.model_dump_json().decode(),
                 "OPENLLM_MODEL": model_name,
                 "OPENLLM_MODEL_ID": llm.model_id,
+                "OPENLLM_ADAPTER_MAP": orjson.dumps(adapter_map),
                 "BENTOML_DEBUG": str(get_debug_mode()),
                 "BENTOML_CONFIG_OPTIONS": _bentoml_config_options_env,
                 "BENTOML_HOME": os.environ.get("BENTOML_HOME", BentoMLContainer.bentoml_home.get()),
@@ -735,8 +825,19 @@ Available model_id(s): {llm_config['model_ids']} [default: {llm_config['default_
             raise
         else:
             if not get_debug_mode():
+                cmd_name = f"openllm build {model_name}"
+                if adapter_map is not None:
+                    cmd_name += " " + " ".join(
+                        [
+                            f"--adapter-id {s}"
+                            for s in [
+                                f"{p}:{name}" if name not in (None, "default") else p
+                                for p, name in adapter_map.items()
+                            ]
+                        ]
+                    )
                 _echo(
-                    f"\n🚀 Next step: run 'openllm build {model_name}' to create a Bento for {model_name}",
+                    f"\n🚀 Next step: run '{cmd_name}' to create a Bento for {model_name}",
                     fg="blue",
                 )
 
@@ -746,9 +847,9 @@ Available model_id(s): {llm_config['model_ids']} [default: {llm_config['default_
     return model_start
 
 
-_cached_http = {key: start_model_command(key, _context_settings=_CONTEXT_SETTINGS) for key in openllm.CONFIG_MAPPING}
+_cached_http = {key: start_command_factory(key, _context_settings=_CONTEXT_SETTINGS) for key in openllm.CONFIG_MAPPING}
 _cached_grpc = {
-    key: start_model_command(key, _context_settings=_CONTEXT_SETTINGS, _serve_grpc=True)
+    key: start_command_factory(key, _context_settings=_CONTEXT_SETTINGS, _serve_grpc=True)
     for key in openllm.CONFIG_MAPPING
 }
 
@@ -765,7 +866,7 @@ def _start(
 
     if framework is not None:
         os.environ[_ModelEnv.framework] = framework
-    start_model_command(model_name, _serve_grpc=_serve_grpc)(standalone_mode=False, **attrs)
+    start_command_factory(model_name, _serve_grpc=_serve_grpc)(standalone_mode=False, **attrs)
 
 
 start = functools.partial(_start, _serve_grpc=False)
@@ -792,7 +893,17 @@ start_grpc = functools.partial(_start, _serve_grpc=True)
     nargs=1,
     metavar="FEATURE[,FEATURE]",
 )
+@click.option(
+    "--adapter-id",
+    default=None,
+    help="Optional adapters id to be included within the Bento. Note that if you are using relative path, '--build-ctx' must be passed.",
+    multiple=True,
+    metavar="[PATH | [remote/][adapter_name:]adapter_id][, ...]",
+)
+@click.option("--build-ctx", default=".", help="Build context. This is required if --adapter-id uses relative path")
+@click.pass_context
 def build(
+    ctx: click.Context,
     model_name: str,
     model_id: str | None,
     overwrite: bool,
@@ -801,6 +912,9 @@ def build(
     enable_features: tuple[str] | None,
     bettertransformer: bool | None,
     workers_per_resource: float | None,
+    adapter_id: tuple[str, ...],
+    build_ctx: str | None,
+    **attrs: t.Any,
 ):
     """Package a given models into a Bento.
 
@@ -813,6 +927,20 @@ def build(
     > NOTE: To run a container built from this Bento with GPU support, make sure
     > to have https://github.com/NVIDIA/nvidia-container-toolkit install locally.
     """
+    adapter_map: dict[str, str | None] | None = None
+
+    if adapter_id:
+        if not build_ctx:
+            _echo("'build_ctx' must not be None when '--adapter-id' is passsed.", fg="red")
+            ctx.exit(1)
+
+        adapter_map = {}
+        for v in adapter_id:
+            _adapter_id, *adapter_name = v.rsplit(":", maxsplit=1)
+            # We don't resolve full path here, leave it to build
+            # we are just doing the parsing here.
+            adapter_map[_adapter_id] = adapter_name[0] if len(adapter_name) > 0 else None
+
     if output == "porcelain":
         set_quiet_mode(True)
         configure_logging()
@@ -824,12 +952,15 @@ def build(
     if enable_features:
         enable_features = tuple(itertools.chain.from_iterable((s.split(",") for s in enable_features)))
 
+    # TODO: xxx
     bento, _previously_built = openllm.build(
         model_name,
         __cli__=True,
         model_id=model_id,
         quantize=quantize,
         bettertransformer=bettertransformer,
+        adapter_map=adapter_map,
+        _build_ctx=build_ctx,
         _extra_dependencies=enable_features,
         _workers_per_resource=workers_per_resource,
         _overwrite_existing_bento=overwrite,
@@ -851,8 +982,8 @@ def build(
                 + "* Push to BentoCloud with `bentoml push`:\n"
                 + f"    $ bentoml push {bento.tag}\n"
                 + "* Containerize your Bento with `bentoml containerize`:\n"
-                + f"    $ bentoml containerize {bento.tag}\n"
-                + "    Tip: To enable additional BentoML feature for 'containerize', "
+                + f"    $ bentoml containerize {bento.tag}\n\n"
+                + "    Tip: To enable additional BentoML features for 'containerize', "
                 + "use '--enable-features=FEATURE[,FEATURE]' "
                 + "[see 'bentoml containerize -h' for more advanced usage]\n",
                 fg="blue",

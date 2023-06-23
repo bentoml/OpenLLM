@@ -7,3 +7,5 @@ Refer to each script docstring for more information.
 python -m openllm.playground.general --help
 
 python -m openllm.plaground.ft_opt_lora --help
+
+NOte that this folder will be considered 'breaking' most of the cases, so use will care.

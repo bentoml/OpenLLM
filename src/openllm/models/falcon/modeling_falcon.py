@@ -65,10 +65,6 @@ class Falcon(openllm.LLM["transformers.TextGenerationPipeline", "transformers.Pr
                 external_modules=[importlib.import_module(model.__module__)],
             )
         finally:
-            import gc
-
-            # NOTE: We need to free the cache after saving here so that we can load it back later on.
-            gc.collect()
             torch.cuda.empty_cache()
 
     def load_model(self, tag: bentoml.Tag, *args: t.Any, **attrs: t.Any) -> t.Any:

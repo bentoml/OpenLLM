@@ -48,12 +48,15 @@ if openllm.utils.DEBUG:
     if os.system(f"pip install -U {' '.join(_deps)}") != 0:
         raise SystemExit(1)
 
-os.environ["BITSANDBYTES_NOWELCOME"] = str(1)
-
 from datasets import load_dataset
 from peft import LoraConfig
 from peft import get_peft_model
-from peft import prepare_model_for_int8_training
+
+
+if openllm.utils.pkg.pkg_version_info("peft")[:2] >= (0, 4):
+    from peft import prepare_model_for_kbit_training
+else:
+    from peft import prepare_model_for_int8_training as prepare_model_for_kbit_training
 
 import transformers
 
@@ -75,7 +78,7 @@ def load_model(model_id: str) -> tuple[PeftModel, transformers.GPT2TokenizerFast
     model, tokenizer = opt.model, opt.tokenizer
 
     # prep the model for int8 training
-    model = prepare_model_for_int8_training(model)
+    model = prepare_model_for_kbit_training(model)
 
     lora_config = LoraConfig(
         r=16,

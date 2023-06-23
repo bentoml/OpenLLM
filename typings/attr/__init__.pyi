@@ -493,7 +493,7 @@ dataclass = ...
 
 def _make_init(
     cls: type[AttrsInstance],
-    attrs: tuple[Attribute[_T]],
+    attrs: tuple[Attribute[Any]],
     pre_init: bool,
     post_init: bool,
     frozen: bool,
