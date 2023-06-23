@@ -16,7 +16,7 @@ except openllm.exceptions.MissingDependencyError:
     pass
 else:
     _import_structure["modeling_bart"] = ["Bart"]
-    
+
 try:
     if not openllm.utils.is_tf_available():
         raise openllm.exceptions.MissingDependencyError

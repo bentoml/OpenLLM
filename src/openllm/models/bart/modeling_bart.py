@@ -61,10 +61,10 @@ class Bart(openllm.LLM["transformers.AutoModelForSeq2Seq", "transformers.BartTok
             "early_stopping": early_stopping,
         }
         return prompt_text, generation_config, {}
-    
+
     def postprocess_generate(self, prompt: str, generation_result: t.Sequence[str], **_: t.Any) -> str:
         return generation_result[0]
-    
+
     def generate(self, prompt: str, **attrs: t.Any) -> list[str]:
         with torch.inference_mode():
             if torch.cuda.is_available():
