@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import os
 import typing as t
+import warnings
 
 import attr
 import orjson
@@ -40,8 +41,25 @@ if t.TYPE_CHECKING:
     from starlette.requests import Request
     from starlette.responses import Response
 
+# The following warnings from bitsandbytes, and probably not that important
+# for users to see
+warnings.filterwarnings(
+    "ignore", message="MatMul8bitLt: inputs will be cast from torch.float32 to float16 during quantization"
+)
+warnings.filterwarnings(
+    "ignore", message="MatMul8bitLt: inputs will be cast from torch.bfloat16 to float16 during quantization"
+)
+warnings.filterwarnings(
+    "ignore",
+    message=(
+        "The installed version of bitsandbytes was compiled without GPU support. 8-bit optimizers and GPU quantization"
+        " are unavailable."
+    ),
+)
+
 model = os.environ.get("OPENLLM_MODEL", "{__model_name__}")  # openllm: model name
 model_id = os.environ.get("OPENLLM_MODEL_ID", "{__model_id__}")  # openllm: model id
+adapter_map = os.environ.get("OPENLLM_ADAPTER_MAP", """{__model_adapter_map__}""")  # openllm: model adapter map
 
 llm_config = openllm.AutoConfig.for_model(model)
 
@@ -51,6 +69,7 @@ runner = openllm.Runner(
     llm_config=llm_config,
     bettertransformer=llm_config["env"]["bettertransformer_value"],
     quantize=llm_config["env"]["quantize_value"],
+    adapter_map=orjson.loads(adapter_map),
     ensure_available=False,
     init_local=False,
 )
@@ -70,7 +89,19 @@ async def generate_v1(input_dict: dict[str, t.Any]) -> openllm.GenerationOutput:
     return openllm.GenerationOutput(responses=responses, configuration=config)
 
 
-@svc.api(input=bentoml.io.Text(), output=bentoml.io.JSON(), route="/v1/metadata")
+@svc.api(
+    input=bentoml.io.Text(),
+    output=bentoml.io.JSON.from_sample(
+        sample={
+            "model_id": model_id,
+            "timeout": 3600,
+            "model_name": llm_config["model_name"],
+            "framework": "pt",
+            "configuration": "",
+        }
+    ),
+    route="/v1/metadata",
+)
 def metadata_v1(_: str) -> openllm.MetadataOutput:
     return openllm.MetadataOutput(
         model_id=model_id,
@@ -79,6 +110,15 @@ def metadata_v1(_: str) -> openllm.MetadataOutput:
         framework=llm_config["env"]["framework_value"],
         configuration=llm_config.model_dump_json().decode(),
     )
+
+
+@svc.api(
+    input=bentoml.io.Text.from_sample(sample="default"),
+    output=bentoml.io.JSON.from_sample(sample={"success": True, "error_msg": "some error message"}),
+    route="/v1/adapters",
+)
+async def adapters_v1(adapter_name: str) -> dict[str, bool | str]:
+    return await runner.set_adapter.async_run(adapter_name)
 
 
 @attr.define
@@ -105,3 +145,14 @@ async def hf_agent(request: Request) -> Response:
 hf_app = Starlette(debug=True, routes=[Route("/agent", hf_agent, methods=["POST"])])
 
 svc.mount_asgi_app(hf_app, path="/hf")
+
+
+async def list_adapter_v1(_: Request) -> Response:
+    res = await runner.list_adapter.async_run()
+    if res["success"]:
+        res["result"] = {k: v.to_dict() for k, v in res["result"].items()}
+    return JSONResponse(res, status_code=200)
+
+
+metadata_app = Starlette(debug=True, routes=[Route("/adapters", list_adapter_v1, methods=["GET"])])
+svc.mount_asgi_app(metadata_app, path="/v1")

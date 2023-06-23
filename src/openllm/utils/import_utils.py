@@ -17,6 +17,7 @@ Some imports utils are vendorred from transformers/utils/import_utils.py for per
 """
 from __future__ import annotations
 
+import functools
 import importlib
 import importlib.metadata
 import importlib.util
@@ -32,9 +33,19 @@ from packaging import version
 from bentoml._internal.utils import LazyLoader
 from bentoml._internal.utils import pkg
 
+from .representation import ReprMixin
+
+
+# NOTE: We need to do this so that overload can register
+# correct overloads to typing registry
+if hasattr(t, "get_overloads"):
+    from typing import overload
+else:
+    from typing_extensions import overload
 
 if t.TYPE_CHECKING:
     BackendOrderredDict = OrderedDict[str, tuple[t.Callable[[], bool], str]]
+    from .._types import P
 else:
     BackendOrderredDict = OrderedDict
 
@@ -64,9 +75,12 @@ def _is_package_available(package: str) -> bool:
 _torch_available = importlib.util.find_spec("torch") is not None
 _tf_available = importlib.util.find_spec("tensorflow") is not None
 _flax_available = importlib.util.find_spec("jax") is not None and importlib.util.find_spec("flax") is not None
+
+_peft_available = _is_package_available("peft")
 _einops_available = _is_package_available("einops")
 _cpm_kernel_available = _is_package_available("cpm_kernels")
 _bitsandbytes_available = _is_package_available("bitsandbytes")
+_datasets_available = _is_package_available("datasets")
 
 
 def is_transformers_supports_kbit() -> bool:
@@ -75,6 +89,14 @@ def is_transformers_supports_kbit() -> bool:
 
 def is_transformers_supports_agent() -> bool:
     return pkg.pkg_version_info("transformers")[:2] >= (4, 29)
+
+
+def is_datasets_available() -> bool:
+    return _datasets_available
+
+
+def is_peft_available() -> bool:
+    return _peft_available
 
 
 def is_einops_available():
@@ -155,6 +177,33 @@ def is_flax_available():
     else:
         _flax_available = False
     return _flax_available
+
+
+def requires_dependencies(
+    package: str | list[str], *, extra: str | list[str] | None = None
+) -> t.Callable[[t.Callable[P, t.Any]], t.Callable[P, t.Any]]:
+    import openllm.utils
+
+    if isinstance(package, str):
+        package = [package]
+    if isinstance(extra, str):
+        extra = [extra]
+
+    def decorator(func: t.Callable[P, t.Any]):
+        @functools.wraps(func)
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> t.Any:
+            for p in package:
+                cached_check: t.Callable[[], bool] | None = getattr(openllm.utils, f"is_{p}_available", None)
+                if not ((cached_check is not None and cached_check()) or _is_package_available(p)):
+                    raise ImportError(
+                        f"{func.__name__} requires '{p}' to be available locally (Currently missing)."
+                        f"Make sure to have {p} to be installed: 'pip install \"{p if not extra else 'openllm['+', '.join(extra)+']'}\"'"
+                    )
+            return func(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
 
 
 PYTORCH_IMPORT_ERROR_WITH_TF = """\
@@ -249,19 +298,44 @@ def require_backends(o: t.Any, backends: t.MutableSequence[str]):
         raise ImportError("".join(failed))
 
 
-class ModelEnv:
+class ModelEnv(ReprMixin):
     model_name: str
 
-    if t.TYPE_CHECKING:
-        config: property
-        model_id: property
-        quantize: property
-        framework: property
-        bettertransformer: property
+    @property
+    def __repr_keys__(self) -> set[str]:
+        return {"config", "model_id", "quantize", "framework", "bettertransformer"}
 
-        framework_value: property
-        quantize_value: property
-        bettertransformer_value: property
+    if t.TYPE_CHECKING:
+        config: str
+        model_id: str
+        quantize: str
+        framework: str
+        bettertransformer: str
+
+        framework_value: t.Literal["pt", "tf", "flax"]
+        quantize_value: str | None
+        bettertransformer_value: str | None
+
+        # fmt: off
+
+        @overload
+        def __getitem__(self, item: t.Literal["config"]) -> str: ...
+        @overload
+        def __getitem__(self, item: t.Literal["model_id"]) -> str: ...
+        @overload
+        def __getitem__(self, item: t.Literal["quantize"]) -> str: ...
+        @overload
+        def __getitem__(self, item: t.Literal["framework"]) -> str: ...
+        @overload
+        def __getitem__(self, item: t.Literal["bettertransformer"]) -> str: ...
+        @overload
+        def __getitem__(self, item: t.Literal['framework_value']) -> t.Literal['pt', 'tf', 'flax']: ...
+        @overload
+        def __getitem__(self, item: t.Literal['quantize_value']) -> str | None: ...
+        @overload
+        def __getitem__(self, item: t.Literal['bettertransformer_value']) -> str | None: ...
+
+        # fmt: on
 
     def __getitem__(self, item: str | t.Any) -> t.Any:
         if hasattr(self, item):
@@ -284,7 +358,7 @@ class ModelEnv:
 
         # gen properties env value
         attributes_with_values = {
-            "quantize": (bool, quantize),
+            "quantize": (str, quantize),
             "bettertransformer": (bool, bettertransformer),
             "framework": (str, "pt"),
         }

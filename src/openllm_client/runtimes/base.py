@@ -26,6 +26,13 @@ import openllm
 import transformers
 
 
+# NOTE: We need to do this so that overload can register
+# correct overloads to typing registry
+if hasattr(t, "get_overloads"):
+    from typing import overload
+else:
+    from typing_extensions import overload
+
 if t.TYPE_CHECKING:
     from openllm.models.auto.factory import _BaseAutoLLMClass
 
@@ -162,11 +169,11 @@ class BaseClient(ClientMixin):
     def health(self) -> t.Any:
         raise NotImplementedError
 
-    @t.overload
+    @overload
     def query(self, prompt: str, *, return_raw_response: t.Literal[False] = ..., **attrs: t.Any) -> str:
         ...
 
-    @t.overload
+    @overload
     def query(self, prompt: str, *, return_raw_response: t.Literal[True] = ..., **attrs: t.Any) -> dict[str, t.Any]:
         ...
 
@@ -222,11 +229,11 @@ class BaseAsyncClient(ClientMixin):
     async def health(self) -> t.Any:
         raise NotImplementedError
 
-    @t.overload
+    @overload
     async def query(self, prompt: str, *, return_raw_response: t.Literal[False] = ..., **attrs: t.Any) -> str:
         ...
 
-    @t.overload
+    @overload
     async def query(
         self, prompt: str, *, return_raw_response: t.Literal[True] = ..., **attrs: t.Any
     ) -> dict[str, t.Any]:

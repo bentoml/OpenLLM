@@ -41,3 +41,7 @@ class MissingAnnotationAttributeError(OpenLLMException):
 
 class MissingDependencyError(BaseException):
     """Raised when a dependency is missing."""
+
+
+class FineTuneStrategyNotSupportedError(OpenLLMException):
+    """Raised when a fine-tune strategy is not supported for given LLM."""

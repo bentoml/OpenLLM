@@ -31,6 +31,13 @@ from click import ParamType
 import openllm
 
 
+# NOTE: We need to do this so that overload can register
+# correct overloads to typing registry
+if hasattr(t, "get_overloads"):
+    from typing import overload
+else:
+    from typing_extensions import overload
+
 if t.TYPE_CHECKING:
     from attr import _ValidatorType
 
@@ -42,7 +49,7 @@ if t.TYPE_CHECKING:
 _T = t.TypeVar("_T")
 
 
-@t.overload
+@overload
 def attrs_to_options(
     name: str,
     field: attr.Attribute[t.Any],
@@ -53,7 +60,7 @@ def attrs_to_options(
     ...
 
 
-@t.overload
+@overload
 def attrs_to_options(  # type: ignore (overlapping overload)
     name: str,
     field: attr.Attribute[O_co],

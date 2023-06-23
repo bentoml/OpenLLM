@@ -70,9 +70,6 @@ class DollyV2(openllm.LLM["transformers.Pipeline", "transformers.PreTrainedToken
                 external_modules=[importlib.import_module(pipeline.__module__)],
             )
         finally:
-            import gc
-
-            gc.collect()
             if openllm.utils.is_torch_available() and torch.cuda.is_available():
                 torch.cuda.empty_cache()
 

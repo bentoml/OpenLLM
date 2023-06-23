@@ -103,6 +103,8 @@ _LOGGING_CONFIG["loggers"].update(
 
 
 def configure_logging() -> None:
+    """Configure logging for OpenLLM. Behaves similar to how BentoML loggers
+    are being configured."""
     if get_quiet_mode():
         _LOGGING_CONFIG["loggers"]["openllm"]["level"] = logging.ERROR
         _LOGGING_CONFIG["loggers"]["bentoml"]["level"] = logging.ERROR
@@ -136,17 +138,22 @@ _import_structure = {
     "analytics": [],
     "codegen": [],
     "dantic": [],
+    "constants": [],
+    "representation": ["ReprMixin"],
     "import_utils": [
         "OPTIONAL_DEPENDENCIES",
         "ENV_VARS_TRUE_VALUES",
         "DummyMetaclass",
         "ModelEnv",
+        "requires_dependencies",
         "is_cpm_kernels_available",
         "is_einops_available",
         "is_flax_available",
         "is_tf_available",
         "is_torch_available",
         "is_bitsandbytes_available",
+        "is_peft_available",
+        "is_datasets_available",
         "is_transformers_supports_kbit",
         "is_transformers_supports_agent",
         "require_backends",
@@ -161,6 +168,7 @@ if t.TYPE_CHECKING:
     from . import bentoml_cattr as bentoml_cattr
     from . import codegen as codegen
     from . import configure_logging as configure_logging
+    from . import constants as constants
     from . import copy_file_to_fs_folder as copy_file_to_fs_folder
     from . import dantic as dantic
     from . import first_not_none as first_not_none
@@ -180,14 +188,18 @@ if t.TYPE_CHECKING:
     from .import_utils import ModelEnv as ModelEnv
     from .import_utils import is_bitsandbytes_available as is_bitsandbytes_available
     from .import_utils import is_cpm_kernels_available as is_cpm_kernels_available
+    from .import_utils import is_datasets_available as is_datasets_available
     from .import_utils import is_einops_available as is_einops_available
     from .import_utils import is_flax_available as is_flax_available
+    from .import_utils import is_peft_available as is_peft_available
     from .import_utils import is_tf_available as is_tf_available
     from .import_utils import is_torch_available as is_torch_available
     from .import_utils import is_transformers_supports_agent as is_transformers_supports_agent
     from .import_utils import is_transformers_supports_kbit as is_transformers_supports_kbit
     from .import_utils import require_backends as require_backends
+    from .import_utils import requires_dependencies as requires_dependencies
     from .lazy import LazyModule as LazyModule
+    from .representation import ReprMixin as ReprMixin
 else:
     import sys
 
