@@ -291,7 +291,7 @@ class FineTuneConfig:
         return peft.PEFT_TYPE_TO_CONFIG_MAPPING[self.adapter_type.to_str()](
             task_type=task_type,
             inference_mode=inference_mode,
-            **self.adapter_config,
+            **adapter_config,
         )
 
     def train(self) -> FineTuneConfig:
@@ -1427,30 +1427,19 @@ class LLMConfig(_ConfigAttr):
         if generation_config is None:
             generation_config = {k: v for k, v in attrs.items() if k in _generation_cl_dict}
         else:
-            config_merger.merge(generation_config, {k: v for k, v in attrs.items() if k in _generation_cl_dict})
+            generation_config = config_merger.merge(generation_config, {k: v for k, v in attrs.items() if k in _generation_cl_dict})
 
         for k in _cached_keys:
             if k in generation_config or attrs.get(k) is None:
                 del attrs[k]
         _cached_keys = tuple(k for k in _cached_keys if k in attrs)
 
-        self.__openllm_extras__ = first_not_none(__openllm_extras__, default={})
-        config_merger.merge(
-            self.__openllm_extras__, {k: v for k, v in attrs.items() if k not in self.__openllm_accepted_keys__}
-        )
+        self.__openllm_extras__ = config_merger.merge( first_not_none(__openllm_extras__, default={}), {k: v for k, v in attrs.items() if k not in self.__openllm_accepted_keys__})
 
         for k in _cached_keys:
             if k in self.__openllm_extras__:
                 del attrs[k]
         _cached_keys = tuple(k for k in _cached_keys if k in attrs)
-
-        if DEBUG:
-            logger.info(
-                "Creating %s with the following attributes: %s, generation_config=%s",
-                self.__class__.__name__,
-                _cached_keys,
-                generation_config,
-            )
 
         # The rest of attrs should only be the attributes to be passed to __attrs_init__
         self.__attrs_init__(generation_config=self["generation_class"](**generation_config), **attrs)

@@ -709,9 +709,6 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
             raise ValueError(f"{self} will be used as a Pipeline, which is not yet compatible with LoRA adapter.")
 
         self._adapters_mapping = _adapters_mapping
-        # We keep a copy of the original lora mapping for inference
-        # since we are going to change the lora mapping during training
-        self._inference_adapters_mapping = copy.deepcopy(_adapters_mapping)
 
         if self.__llm_implementation__ == "pt":
             if not self.config["use_pipeline"]:
@@ -786,9 +783,6 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
         self, value: dict[AdapterType, tuple[tuple[str | None, str | None, dict[str, t.Any]], ...]] | None
     ):
         self._adapters_mapping = value
-
-    def _reset_lora_mapping(self):
-        self._adapters_mapping = None
 
     @property
     def __repr_keys__(self) -> set[str]:
@@ -966,7 +960,7 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
         self,
         inference_mode: bool = True,
         use_cache: bool = True,
-    ) -> dict[AdapterType, dict[str | t.Literal["default"], peft.PeftConfig]]:
+    ) -> dict[AdapterType, dict[str | t.Literal["default"], tuple[peft.PeftConfig, str]]]:
         assert self._adapters_mapping is not None, "LoRA mapping is not set up correctly."
 
         if not use_cache:
@@ -978,7 +972,7 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
             # early out if we already serialized everything.
             return self.__llm_adapter_map__
 
-        adapter_map: dict[AdapterType, dict[str | t.Literal["default"], peft.PeftConfig]] = {}
+        adapter_map: dict[AdapterType, dict[str | t.Literal["default"], tuple[peft.PeftConfig, str]]] = {}
         # this is a temporary check to accept the first option name as 'default'
         # then we will raise Error when the optional_name is set to None in next iteration.
         _converted_first_none = False
@@ -989,30 +983,31 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
                 _adapter_type, FineTuneConfig(adapter_type=_adapter_type, llm_config_class=self.config_class)
             )
             default_config = default_config.eval() if inference_mode else default_config.train()
-            for pretrained_or_path, optional_name, resolved_mapping in _adapter_tuple:
-                resolved_mapping["base_model_name_or_path"] = first_not_none(
-                    resolved_mapping["base_model_name_or_path"], pretrained_or_path, default=None
-                )
+            for pretrained_or_peft_id, optional_name, resolved_mapping in _adapter_tuple:
                 if not optional_name:
                     if not _converted_first_none:
                         _converted_first_none = True
                         optional_name = "default"
                     else:
                         raise ValueError(
-                            f"{self.__class__.__name__} doesn't know how to resolve adapter_name None mapping: {pretrained_or_path, resolved_mapping}"
+                            f"{self.__class__.__name__} doesn't know how to resolve adapter_name None mapping: {pretrained_or_peft_id, resolved_mapping}"
                         )
                 assert isinstance(optional_name, str)  # optional_name should all be resolved here
                 if optional_name == "default":
-                    adapter_map[_adapter_type][optional_name] = default_config.with_config(
-                        **resolved_mapping
-                    ).to_peft_config()
+                    adapter_map[_adapter_type][optional_name] = (
+                        default_config.with_config(**resolved_mapping).to_peft_config(),
+                        pretrained_or_peft_id,
+                    )
                 else:
-                    adapter_map[_adapter_type][optional_name] = FineTuneConfig(
-                        adapter_type=_adapter_type,
-                        adapter_config=resolved_mapping,
-                        inference_mode=inference_mode,
-                        llm_config_class=self.config_class,
-                    ).to_peft_config()
+                    adapter_map[_adapter_type][optional_name] = (
+                        FineTuneConfig(
+                            adapter_type=_adapter_type,
+                            adapter_config=resolved_mapping,
+                            inference_mode=inference_mode,
+                            llm_config_class=self.config_class,
+                        ).to_peft_config(),
+                        pretrained_or_peft_id,
+                    )
 
         if self.__llm_adapter_map__ is None and use_cache:
             self.__llm_adapter_map__ = adapter_map
@@ -1022,7 +1017,7 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
         return adapter_map
 
     @requires_dependencies("peft", extra="fine-tune")
-    def _apply_adapter(
+    def apply_adapter(
         self,
         inference_mode: bool = True,
         adapter_type: AdapterType = "lora",
@@ -1047,13 +1042,12 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
                 f"Given adapter type {adapter_type} is not supported. Please choose from {list(_mapping.keys())}"
             )
         adapter_mapping = _mapping[adapter_type]
-        default_config = adapter_mapping.pop("default", None)
+        default_config, peft_model_id = adapter_mapping.pop("default", None)
         if default_config is None:
             raise ValueError(
                 "There is no 'default' mapping. Please check the adapter mapping and report this bug to the OpenLLM team."
             )
 
-        _ignore_keys = {"base_model_name_or_path"}
         # the below shared similar logics with `get_peft_model`
         # TODO: Support PromptLearningConfig
         if default_config.task_type not in peft.MODEL_TYPE_TO_PEFT_MODEL_MAPPING.keys() and not isinstance(
@@ -1073,10 +1067,8 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
                 if "config" in inspect.signature(peft_class.from_pretrained).parameters:
                     kwargs["config"] = default_config
                 else:
-                    kwargs.update({k: v for k, v in default_config.to_dict() if k not in _ignore_keys})
-                self.__llm_model__ = peft_class.from_pretrained(
-                    self.__llm_model__, default_config.base_model_name_or_path, **kwargs
-                )
+                    kwargs.update(dict(default_config.to_dict().items()))
+                self.__llm_model__ = peft_class.from_pretrained(self.__llm_model__, peft_model_id, **kwargs)
             else:
                 # in this case, the given base_model_name_or_path is None. This will be hit during training
                 self.__llm_model__ = peft_class(self.__llm_model__, default_config)
@@ -1091,12 +1083,12 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
             if load_adapters is not None:
                 adapters_to_load = adapter_mapping.keys() if load_adapters == "all" else load_adapters
                 for adapter_name in adapters_to_load:
-                    _peft_config = adapter_mapping[adapter_name]
+                    _peft_config, _peft_model_id = adapter_mapping[adapter_name]
                     self.__llm_model__.load_adapter(
-                        _peft_config.base_model_name_or_path,
+                        _peft_model_id,
                         adapter_name=adapter_name,
                         is_trainable=not inference_mode,
-                        **{k: v for k, v in _peft_config.to_dict() if k not in _ignore_keys},
+                        **dict(_peft_config.to_dict()),
                     )
 
         return self.__llm_model__
@@ -1168,26 +1160,34 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
             SUPPORTED_RESOURCES = ("nvidia.com/gpu", "cpu")
             SUPPORTS_CPU_MULTI_THREADING = True
 
-            llm_type: str
-            identifying_params: dict[str, t.Any]
-
-            def __init_subclass__(cls, llm_type: str, identifying_params: dict[str, t.Any], **_: t.Any):
-                cls.llm_type = llm_type
-                cls.identifying_params = identifying_params
-
             def __init__(__self: _Runnable):
                 # NOTE: The side effect of this line
                 # is that it will load the imported model during
                 # runner startup. So don't remove it!!
                 assert self.model, "Internal error: Model is not loaded"
-                self.adapters_mapping = self._inference_adapters_mapping
                 if self.adapters_mapping is not None:
                     logger.info("Applying LoRA to %s...", self.runner_name)
-                    self._apply_adapter(inference_mode=True, load_adapters="all")
+                    self.apply_adapter(inference_mode=True, load_adapters="all")
 
             @bentoml.Runnable.method(batchable=False)
-            @requires_dependencies("peft", extra="fine-tune")
-            def set_adapter(self, adapter_name: str) -> dict[t.Literal["success", "error_msg"], bool | str]:
+            def list_adapter(__self) -> dict[str, t.Any]:
+                if not is_peft_available():
+                    return {
+                        "success": False,
+                        "result": {},
+                        "error_msg": "peft is not available. Make sure to install: 'pip install \"openllm[fine-tune]\"'",
+                    }
+                if not isinstance(self.model, peft.PeftModel):
+                    return {"success": False, "result": {}, "error_msg": "Model is not a PeftModel"}
+                return {"success": True, "result": self.model.peft_config, "error_msg": ""}
+
+            @bentoml.Runnable.method(batchable=False)
+            def set_adapter(__self, adapter_name: str) -> dict[t.Literal["success", "error_msg"], bool | str]:
+                if not is_peft_available():
+                    return {
+                        "success": False,
+                        "error_msg": "peft is not available. Make sure to install: 'pip install \"openllm[fine-tune]\"'",
+                    }
                 if not isinstance(self.model, peft.PeftModel):
                     return {"success": False, "error_msg": "Model is not a PeftModel"}
                 try:
@@ -1273,13 +1273,14 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
             types.new_class(
                 inflection.camelize(self.config["model_name"]) + "Runnable",
                 (_Runnable,),
-                {
-                    "SUPPORTED_RESOURCES": ("nvidia.com/gpu", "cpu")
-                    if self.config["requires_gpu"]
-                    else ("nvidia.com/gpu",),
-                    "llm_type": self.llm_type,
-                    "identifying_params": self.identifying_params,
-                },
+                {},
+                lambda ns: ns.update(
+                    {
+                        "SUPPORTED_RESOURCES": ("nvidia.com/gpu", "cpu")
+                        if self.config["requires_gpu"]
+                        else ("nvidia.com/gpu",),
+                    }
+                ),
             ),
             name=self.runner_name,
             embedded=False,

@@ -124,7 +124,7 @@ class _BaseAutoLLMClass:
             llm = cls._model_mapping[type(llm_config)].from_pretrained(
                 model_id,
                 llm_config=llm_config,
-                **llm_config.__openllm_extras__,
+                **attrs,
             )
             if ensure_available:
                 logger.debug(

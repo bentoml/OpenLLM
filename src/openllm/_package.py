@@ -23,7 +23,9 @@ import typing as t
 from pathlib import Path
 
 import fs
+import fs.copy
 import inflection
+import orjson
 
 import bentoml
 import openllm
@@ -33,11 +35,13 @@ from bentoml._internal.configuration import get_debug_mode
 
 from .utils import ModelEnv
 from .utils import codegen
+from .utils import copy_file_to_fs_folder
 from .utils import first_not_none
 from .utils import is_flax_available
 from .utils import is_tf_available
 from .utils import is_torch_available
 from .utils import pkg
+from .utils import resolve_user_filepath
 
 
 # NOTE: We need to do this so that overload can register
@@ -156,10 +160,11 @@ def construct_python_options(
 
 def construct_docker_options(
     llm: openllm.LLM[t.Any, t.Any],
-    llm_fs: FS,
+    _: FS,
     workers_per_resource: int | float,
     quantize: t.LiteralString | None,
     bettertransformer: bool | None,
+    adapter_map: dict[str, str | None] | None,
 ) -> DockerOptions:
     _bentoml_config_options = os.environ.pop("BENTOML_CONFIG_OPTIONS", "")
     _bentoml_config_options_opts = [
@@ -175,9 +180,13 @@ def construct_docker_options(
         env.config: f"'{llm.config.model_dump_json().decode()}'",
         "OPENLLM_MODEL": llm.config["model_name"],
         "OPENLLM_MODEL_ID": llm.model_id,
+        "OPENLLM_ADAPTER_MAP": f"'{orjson.dumps(adapter_map).decode()}'",
         "BENTOML_DEBUG": str(get_debug_mode()),
         "BENTOML_CONFIG_OPTIONS": _bentoml_config_options,
     }
+
+    if adapter_map:
+        env_dict["BITSANDBYTES_NOWELCOME"] = os.environ.get("BITSANDBYTES_NOWELCOME", "1")
 
     # We need to handle None separately here, as env from subprocess doesn't
     # accept None value.
@@ -192,40 +201,6 @@ def construct_docker_options(
     return DockerOptions(cuda_version="11.6", env=env_dict, system_packages=["git"])
 
 
-@overload
-def build(
-    model_name: str,
-    *,
-    model_id: str | None = ...,
-    quantize: t.LiteralString | None = ...,
-    bettertransformer: bool | None = ...,
-    adapter_map: dict[str, str | None] | None = None,
-    _extra_dependencies: tuple[str, ...] | None = ...,
-    _workers_per_resource: int | float | None = ...,
-    _overwrite_existing_bento: bool = ...,
-    __cli__: t.Literal[False] = ...,
-    **attrs: t.Any,
-) -> bentoml.Bento:
-    ...
-
-
-@overload
-def build(
-    model_name: str,
-    *,
-    model_id: str | None = ...,
-    quantize: t.LiteralString | None = ...,
-    bettertransformer: bool | None = ...,
-    adapter_map: dict[str, str | None] | None = None,
-    _extra_dependencies: tuple[str, ...] | None = ...,
-    _workers_per_resource: int | float | None = ...,
-    _overwrite_existing_bento: bool = ...,
-    __cli__: t.Literal[True] = ...,
-    **attrs: t.Any,
-) -> tuple[bentoml.Bento, bool]:
-    ...
-
-
 def _build_bento(
     bento_tag: bentoml.Tag,
     service_name: str,
@@ -236,25 +211,75 @@ def _build_bento(
     bettertransformer: bool | None,
     adapter_map: dict[str, str | None] | None = None,
     extra_dependencies: tuple[str, ...] | None = None,
+    build_ctx: str | None = None,
 ) -> bentoml.Bento:
     framework_envvar = llm.config["env"]["framework_value"]
     labels = dict(llm.identifying_params)
     labels.update({"_type": llm.llm_type, "_framework": framework_envvar})
     logger.info("Building Bento for LLM '%s'", llm.config["start_name"])
+
+    if adapter_map is not None:
+        assert build_ctx is not None, "build_ctx is required when 'adapter_map' is not None"
+        updated_mapping: dict[str, str | None] = {}
+        for adapter_id, name in adapter_map.items():
+            try:
+                resolve_user_filepath(adapter_id, build_ctx)
+                src_folder_name = os.path.basename(adapter_id)
+                src_fs = fs.open_fs(build_ctx)
+                llm_fs.makedir(src_folder_name, recreate=True)
+                fs.copy.copy_dir(src_fs, adapter_id, llm_fs, src_folder_name)
+                updated_mapping[src_folder_name] = name
+            except FileNotFoundError:
+                # this is the remote adapter, then just added back
+                # note that there is a drawback here. If the path of the local adapter
+                # path have the same name as the remote, then we currently don't support
+                # that edge case.
+                updated_mapping[adapter_id] = name
+        adapter_map = updated_mapping
+
+    # add service.py definition to this temporary folder
+    codegen.write_service(llm.config["model_name"], llm.model_id, adapter_map, llm.config["service_name"], llm_fs)
+
     return bentoml.bentos.build(
         f"{service_name}:svc",
         name=bento_tag.name,
         labels=labels,
         description=f"OpenLLM service for {llm.config['start_name']}",
-        include=list(
-            llm_fs.walk.files(filter=["*.py"])
-        ),  # NOTE: By default, we are using _service.py as the default service, for now.
-        exclude=["/venv", "__pycache__/", "*.py[cod]", "*$py.class"],
+        include=list(llm_fs.walk.files()),
+        exclude=["/venv", "/.venv", "__pycache__/", "*.py[cod]", "*$py.class"],
         python=construct_python_options(llm, llm_fs, extra_dependencies, adapter_map),
-        docker=construct_docker_options(llm, llm_fs, workers_per_resource, quantize, bettertransformer),
+        docker=construct_docker_options(llm, llm_fs, workers_per_resource, quantize, bettertransformer, adapter_map),
         version=bento_tag.version,
         build_ctx=llm_fs.getsyspath("/"),
     )
+
+
+@overload
+def build(
+    model_name: str,
+    *,
+    model_id: str | None = ...,
+    quantize: t.LiteralString | None = ...,
+    bettertransformer: bool | None = ...,
+    adapter_map: dict[str, str | None] | None = ...,
+    __cli__: t.Literal[False] = False,
+    **attrs: t.Any,
+) -> bentoml.Bento:
+    ...
+
+
+@overload
+def build(
+    model_name: str,
+    *,
+    model_id: str | None = ...,
+    quantize: t.LiteralString | None = ...,
+    bettertransformer: bool | None = ...,
+    adapter_map: dict[str, str | None] | None = ...,
+    __cli__: t.Literal[True] = ...,
+    **attrs: t.Any,
+) -> tuple[bentoml.Bento, bool]:
+    ...
 
 
 def build(
@@ -264,6 +289,7 @@ def build(
     quantize: t.LiteralString | None = None,
     bettertransformer: bool | None = None,
     adapter_map: dict[str, str | None] | None = None,
+    _build_ctx: str | None = None,
     _extra_dependencies: tuple[str, ...] | None = None,
     _workers_per_resource: int | float | None = None,
     _overwrite_existing_bento: bool = False,
@@ -311,22 +337,17 @@ def build(
 
         labels = dict(llm.identifying_params)
         labels.update({"_type": llm.llm_type, "_framework": framework_envvar})
-        service_name = f"generated_{llm_config['model_name']}_service.py"
         workers_per_resource = first_not_none(_workers_per_resource, default=llm_config["workers_per_resource"])
 
         with fs.open_fs(f"temp://llm_{llm_config['model_name']}") as llm_fs:
-            # add service.py definition to this temporary folder
-            codegen.write_service(model_name, llm.model_id, service_name, llm_fs)
-
             bento_tag = bentoml.Tag.from_taglike(f"{llm.llm_type}-service:{llm.tag.version}")
             try:
                 bento = bentoml.get(bento_tag)
                 if _overwrite_existing_bento:
-                    logger.info("Overwriting previously saved Bento.")
                     bentoml.delete(bento_tag)
                     bento = _build_bento(
                         bento_tag,
-                        service_name,
+                        llm.config["service_name"],
                         llm_fs,
                         llm,
                         workers_per_resource=workers_per_resource,
@@ -334,13 +355,14 @@ def build(
                         quantize=quantize,
                         bettertransformer=bettertransformer,
                         extra_dependencies=_extra_dependencies,
+                        build_ctx=_build_ctx,
                     )
                 _previously_built = True
             except bentoml.exceptions.NotFound:
                 logger.info("Building Bento for LLM '%s'", llm_config["start_name"])
                 bento = _build_bento(
                     bento_tag,
-                    service_name,
+                    llm.config["service_name"],
                     llm_fs,
                     llm,
                     workers_per_resource=workers_per_resource,
@@ -348,6 +370,7 @@ def build(
                     quantize=quantize,
                     bettertransformer=bettertransformer,
                     extra_dependencies=_extra_dependencies,
+                    build_ctx=_build_ctx,
                 )
             return (bento, _previously_built) if __cli__ else bento
     except Exception as e:

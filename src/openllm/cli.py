@@ -59,6 +59,7 @@ from .utils import gpu_count
 from .utils import is_peft_available
 from .utils import is_torch_available
 from .utils import is_transformers_supports_agent
+from .utils import resolve_user_filepath
 from .utils import set_debug_mode
 from .utils import set_quiet_mode
 
@@ -259,34 +260,24 @@ def bettertransformer_option(factory: t.Any, build: bool = False, model_env: Mod
 _adapter_mapping_key = "adapter_map"
 
 
-def adapter_option(factory: t.Any, build: bool = False, model_name: str | None = None):
-    def _id_callback(
-        ctx: click.Context, param: click.Parameter, value: tuple[str, ...] | None
-    ) -> dict[str, str] | None:
-        if not value:
-            return
-        if _adapter_mapping_key not in ctx.params:
-            ctx.params[_adapter_mapping_key] = {}
-        for v in value:
-            adapter_id, *adapter_name = v.rsplit(":", maxsplit=1)
-            ctx.params[_adapter_mapping_key][adapter_id] = adapter_name[0] if len(adapter_name) > 0 else None
-
-    help_str = "Optional name or path for given LoRA adapter" + f" to wrap '{model_name}'" if model_name else ""
-    if build:
-        help_str = "Optional name or path for given LoRA adapter to be included into the Bento"
-
-    return factory.option(
-        "--adapter-id",
-        default=None,
-        help=help_str,
-        multiple=True,
-        callback=_id_callback,
-        metavar="[PATH | [remote/][adapter_name:]adapter_id][, ...]",
-    )
+def _id_callback(ctx: click.Context, _: click.Parameter, value: tuple[str, ...] | None) -> dict[str, str] | None:
+    if not value:
+        return
+    if _adapter_mapping_key not in ctx.params:
+        ctx.params[_adapter_mapping_key] = {}
+    for v in value:
+        adapter_id, *adapter_name = v.rsplit(":", maxsplit=1)
+        try:
+            # try to resolve the full path if users pass in relative,
+            # currently only support one level of resolve path.
+            adapter_id = resolve_user_filepath(adapter_id, os.getcwd())
+        except FileNotFoundError:
+            pass
+        ctx.params[_adapter_mapping_key][adapter_id] = adapter_name[0] if len(adapter_name) > 0 else None
 
 
 class OpenLLMCommandGroup(BentoMLCommandGroup):
-    NUMBER_OF_COMMON_PARAMS = 4  # parameters in common_params + 1 faked group option heaader
+    NUMBER_OF_COMMON_PARAMS = 4  # parameters in common_params + 1 faked group option header
 
     @staticmethod
     def common_params(f: F[P, t.Any]) -> ClickFunctionWrapper[..., t.Any]:
@@ -671,12 +662,19 @@ Available model_id(s): {llm_config['model_ids']} [default: {llm_config['default_
 
     ```bash
 
-    openllm start opt --adapter-id /path/to/adapter --adapter-id remote/adapter:eng_lora
+    openllm start opt --adapter-id /path/to/adapter_dir --adapter-id remote/adapter:eng_lora
 
     ```
     """,
     )
-    @adapter_option(factory=cog.optgroup, model_name=model_name)
+    @cog.optgroup.option(
+        "--adapter-id",
+        default=None,
+        help="Optional name or path for given LoRA adapter" + f" to wrap '{model_name}'",
+        multiple=True,
+        callback=_id_callback,
+        metavar="[PATH | [remote/][adapter_name:]adapter_id][, ...]",
+    )
     @click.pass_context
     def model_start(
         ctx: click.Context,
@@ -770,7 +768,7 @@ Available model_id(s): {llm_config['model_ids']} [default: {llm_config['default_
 
         if fast and not get_quiet_mode():
             _echo(
-                f"Make sure to download the model before 'start': 'openllm download {model_name}{'--model-id ' + model_id if model_id else ''}'",
+                f"Fast mode is enabled. Make sure to download the model before 'start': 'openllm download {model_name}{'--model-id ' + model_id if model_id else ''}'",
                 fg="yellow",
             )
 
@@ -779,6 +777,7 @@ Available model_id(s): {llm_config['model_ids']} [default: {llm_config['default_
             automodel_attrs.update({"quantize": quantize, "bettertransformer": bettertransformer})
 
         if adapter_map:
+            _echo(f"OpenLLM will convert '{model_name}' to use provided adapters layers: {list(adapter_map)}")
             automodel_attrs.update({"adapter_map": adapter_map})
 
         llm = t.cast(
@@ -799,6 +798,7 @@ Available model_id(s): {llm_config['model_ids']} [default: {llm_config['default_
                 env.config: llm.config.model_dump_json().decode(),
                 "OPENLLM_MODEL": model_name,
                 "OPENLLM_MODEL_ID": llm.model_id,
+                "OPENLLM_ADAPTER_MAP": orjson.dumps(adapter_map),
                 "BENTOML_DEBUG": str(get_debug_mode()),
                 "BENTOML_CONFIG_OPTIONS": _bentoml_config_options_env,
                 "BENTOML_HOME": os.environ.get("BENTOML_HOME", BentoMLContainer.bentoml_home.get()),
@@ -882,8 +882,17 @@ start_grpc = functools.partial(_start, _serve_grpc=True)
     nargs=1,
     metavar="FEATURE[,FEATURE]",
 )
-@adapter_option(factory=click, build=True)
+@click.option(
+    "--adapter-id",
+    default=None,
+    help="Optional adapters id to be included within the Bento. Note that if you are using relative path, '--build-ctx' must be passed.",
+    multiple=True,
+    metavar="[PATH | [remote/][adapter_name:]adapter_id][, ...]",
+)
+@click.option("--build-ctx", default=".", help="Build context. This is required if --adapter-id uses relative path")
+@click.pass_context
 def build(
+    ctx: click.Context,
     model_name: str,
     model_id: str | None,
     overwrite: bool,
@@ -892,6 +901,8 @@ def build(
     enable_features: tuple[str] | None,
     bettertransformer: bool | None,
     workers_per_resource: float | None,
+    adapter_id: tuple[str, ...],
+    build_ctx: str | None,
     **attrs: t.Any,
 ):
     """Package a given models into a Bento.
@@ -905,10 +916,23 @@ def build(
     > NOTE: To run a container built from this Bento with GPU support, make sure
     > to have https://github.com/NVIDIA/nvidia-container-toolkit install locally.
     """
-    adapter_map: dict[str, str | None] | None = attrs.pop(_adapter_mapping_key, None)
+    adapter_map: dict[str, str | None] | None = None
+
+    if adapter_id:
+        if not build_ctx:
+            _echo("'build_ctx' must not be None when '--adapter-id' is passsed.", fg="red")
+            ctx.exit(1)
+
+        adapter_map = {}
+        for v in adapter_id:
+            _adapter_id, *adapter_name = v.rsplit(":", maxsplit=1)
+            # We don't resolve full path here, leave it to build
+            # we are just doing the parsing here.
+            adapter_map[_adapter_id] = adapter_name[0] if len(adapter_name) > 0 else None
 
     if output == "porcelain":
         set_quiet_mode(True)
+        set_debug_mode(False)
         configure_logging()
 
     if output == "pretty":
@@ -926,6 +950,7 @@ def build(
         quantize=quantize,
         bettertransformer=bettertransformer,
         adapter_map=adapter_map,
+        _build_ctx=build_ctx,
         _extra_dependencies=enable_features,
         _workers_per_resource=workers_per_resource,
         _overwrite_existing_bento=overwrite,
@@ -1331,6 +1356,7 @@ def download_models(model_name: str, model_id: str | None, output: OutputLiteral
     """
     if output == "porcelain":
         set_quiet_mode(True)
+        set_debug_mode(False)
         configure_logging()
 
     config = openllm.AutoConfig.for_model(model_name)

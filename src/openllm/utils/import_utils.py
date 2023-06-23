@@ -358,7 +358,7 @@ class ModelEnv(ReprMixin):
 
         # gen properties env value
         attributes_with_values = {
-            "quantize": (bool, quantize),
+            "quantize": (str, quantize),
             "bettertransformer": (bool, bettertransformer),
             "framework": (str, "pt"),
         }
