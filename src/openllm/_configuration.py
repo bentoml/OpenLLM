@@ -1126,7 +1126,7 @@ class LLMConfig:
         assert cls.__config__ is not None, "Cannot derivate a LLMConfig without __config__"
         _new_cfg = {k: v for k, v in attrs.items() if k in attr.fields_dict(_ModelSettingsAttr)}
         attrs = {k: v for k, v in attrs.items() if k not in _new_cfg}
-        return types.new_class(
+        new_cls = types.new_class(
             name or f"{cls.__name__.replace('Config', '')}DerivateConfig",
             (cls,),
             {},
@@ -1135,7 +1135,18 @@ class LLMConfig:
                     "__config__": config_merger.merge(copy.deepcopy(cls.__dict__["__config__"]), _new_cfg),
                 }
             ),
-        )(**attrs)
+        )
+
+        # For pickling to work, the __module__ variable needs to be set to the
+        # frame where the class is created.  Bypass this step in environments where
+        # sys._getframe is not defined (Jython for example) or sys._getframe is not
+        # defined for arguments greater than 0 (IronPython).
+        try:
+            new_cls.__module__ = sys._getframe(1).f_globals.get("__name__", "__main__")
+        except (AttributeError, ValueError):
+            pass
+
+        return new_cls(**attrs)
 
     def model_dump(self, flatten: bool = False, **_: t.Any):
         dumped = bentoml_cattr.unstructure(self)
