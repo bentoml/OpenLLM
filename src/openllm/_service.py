@@ -89,7 +89,19 @@ async def generate_v1(input_dict: dict[str, t.Any]) -> openllm.GenerationOutput:
     return openllm.GenerationOutput(responses=responses, configuration=config)
 
 
-@svc.api(input=bentoml.io.Text(), output=bentoml.io.JSON(), route="/v1/metadata")
+@svc.api(
+    input=bentoml.io.Text(),
+    output=bentoml.io.JSON.from_sample(
+        sample={
+            "model_id": model_id,
+            "timeout": 3600,
+            "model_name": llm_config["model_name"],
+            "framework": "pt",
+            "configuration": "",
+        }
+    ),
+    route="/v1/metadata",
+)
 def metadata_v1(_: str) -> openllm.MetadataOutput:
     return openllm.MetadataOutput(
         model_id=model_id,
