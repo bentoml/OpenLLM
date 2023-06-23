@@ -932,7 +932,6 @@ def build(
 
     if output == "porcelain":
         set_quiet_mode(True)
-        set_debug_mode(False)
         configure_logging()
 
     if output == "pretty":
@@ -1356,7 +1355,6 @@ def download_models(model_name: str, model_id: str | None, output: OutputLiteral
     """
     if output == "porcelain":
         set_quiet_mode(True)
-        set_debug_mode(False)
         configure_logging()
 
     config = openllm.AutoConfig.for_model(model_name)
