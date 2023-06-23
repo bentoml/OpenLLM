@@ -1,7 +1,5 @@
 (ns openllm.views
-  (:require [re-frame.core :as rf]
-            [openllm.events :as events]
-            [openllm.db :as db]))
+  (:require [re-frame.core :as rf]))
 
 (def icon-path-4-bars "M4 6h16M4 10h16M4 14h16M4 18h16")
 (def icon-path-house "M12 20v-6h4v6h5v-8h3L12 3 1 12h3v8z")
@@ -118,6 +116,14 @@
     [navigation-elements]]
    [status-display true]])
 
+(defn chat-controls
+  []
+  [:div {:class "absolute bottom-0 px-4 py-2 mt-6 w-full"}
+   [:input {:class "py-1 rounded-md border border-gray-300 focus:outline-none w-[calc(100%_-_80px)]"
+            :type "text" :placeholder "Type your message..."}]
+   [:button {:class "ml-2 px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none"
+             :type "button"} "Send"]])
+
 (defn dashboard
   []
   [:div {:class "h-screen flex overflow-hidden bg-white"}
@@ -126,4 +132,5 @@
    [:div {:class "flex flex-col w-0 flex-1 overflow-hidden"}
     [:main {:class "flex-1 relative z-0 overflow-y-auto focus:outline-none" :tabIndex "0"}
      [:div {:class "px-4 mt-6 sm:px-6 lg:px-8"}
-      [:h2 {:class "text-gray-500 text-xs font-medium uppercase tracking-wide"} "Main"]]]]])
+      [:h2 {:class "text-gray-500 text-xs font-medium uppercase tracking-wide"} "Main"]]
+     [chat-controls]]]])
