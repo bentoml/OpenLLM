@@ -825,8 +825,19 @@ Available model_id(s): {llm_config['model_ids']} [default: {llm_config['default_
             raise
         else:
             if not get_debug_mode():
+                cmd_name = f"openllm build {model_name}"
+                if adapter_map is not None:
+                    cmd_name += " " + " ".join(
+                        [
+                            f"--adapter-id {s}"
+                            for s in [
+                                f"{p}:{name}" if name not in (None, "default") else p
+                                for p, name in adapter_map.items()
+                            ]
+                        ]
+                    )
                 _echo(
-                    f"\n🚀 Next step: run 'openllm build {model_name}' to create a Bento for {model_name}",
+                    f"\n🚀 Next step: run '{cmd_name}' to create a Bento for {model_name}",
                     fg="blue",
                 )
 
