@@ -772,7 +772,7 @@ start = functools.partial(_start, _serve_grpc=False)
 start_grpc = functools.partial(_start, _serve_grpc=True)
 
 
-@cli.command()
+@cli.command(context_settings={"token_normalize_func": inflection.underscore})
 @click.argument(
     "model_name", type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING.keys()])
 )
