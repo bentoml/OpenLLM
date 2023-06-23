@@ -40,6 +40,13 @@ from .utils import is_torch_available
 from .utils import pkg
 
 
+# NOTE: We need to do this so that overload can register
+# correct overloads to typing registry
+if hasattr(t, "get_overloads"):
+    from typing import overload
+else:
+    from typing_extensions import overload
+
 if t.TYPE_CHECKING:
     from fs.base import FS
 
@@ -83,19 +90,23 @@ def construct_python_options(
     llm: openllm.LLM[t.Any, t.Any],
     llm_fs: FS,
     extra_dependencies: tuple[str, ...] | None = None,
+    adapter_map: dict[str, str | None] | None = None,
 ) -> PythonOptions:
     packages = ["openllm"]
+    if adapter_map is not None:
+        packages += ["openllm[fine-tune]"]
     # NOTE: add openllm to the default dependencies
     # if users has openllm custom built wheels, it will still respect
     # that since bentoml will always install dependencies from requirements.txt
     # first, then proceed to install everything inside the wheels/ folder.
     if extra_dependencies is not None:
-        packages += [f"openllm[{k}]" for k in extra_dependencies]
+        filtered = set(extra_dependencies + ("fine-tune",))
+        packages += [f"openllm[{k}]" for k in filtered]
 
     if llm.config["requirements"] is not None:
         packages.extend(llm.config["requirements"])
 
-    if not (str(os.environ.get("BENTOML_BUNDLE_LOCAL_BUILD", False)).lower() == "false"):
+    if str(os.environ.get("BENTOML_BUNDLE_LOCAL_BUILD", False)).lower() == "false":
         packages.append(f"bentoml>={'.'.join([str(i) for i in pkg.pkg_version_info('bentoml')])}")
 
     env: ModelEnv = llm.config["env"]
@@ -145,7 +156,7 @@ def construct_python_options(
 
 def construct_docker_options(
     llm: openllm.LLM[t.Any, t.Any],
-    _: FS,
+    llm_fs: FS,
     workers_per_resource: int | float,
     quantize: t.LiteralString | None,
     bettertransformer: bool | None,
@@ -181,13 +192,14 @@ def construct_docker_options(
     return DockerOptions(cuda_version="11.6", env=env_dict, system_packages=["git"])
 
 
-@t.overload
+@overload
 def build(
     model_name: str,
     *,
     model_id: str | None = ...,
     quantize: t.LiteralString | None = ...,
     bettertransformer: bool | None = ...,
+    adapter_map: dict[str, str | None] | None = None,
     _extra_dependencies: tuple[str, ...] | None = ...,
     _workers_per_resource: int | float | None = ...,
     _overwrite_existing_bento: bool = ...,
@@ -197,13 +209,14 @@ def build(
     ...
 
 
-@t.overload
+@overload
 def build(
     model_name: str,
     *,
     model_id: str | None = ...,
     quantize: t.LiteralString | None = ...,
     bettertransformer: bool | None = ...,
+    adapter_map: dict[str, str | None] | None = None,
     _extra_dependencies: tuple[str, ...] | None = ...,
     _workers_per_resource: int | float | None = ...,
     _overwrite_existing_bento: bool = ...,
@@ -221,6 +234,7 @@ def _build_bento(
     workers_per_resource: int | float,
     quantize: t.LiteralString | None,
     bettertransformer: bool | None,
+    adapter_map: dict[str, str | None] | None = None,
     extra_dependencies: tuple[str, ...] | None = None,
 ) -> bentoml.Bento:
     framework_envvar = llm.config["env"]["framework_value"]
@@ -236,7 +250,7 @@ def _build_bento(
             llm_fs.walk.files(filter=["*.py"])
         ),  # NOTE: By default, we are using _service.py as the default service, for now.
         exclude=["/venv", "__pycache__/", "*.py[cod]", "*$py.class"],
-        python=construct_python_options(llm, llm_fs, extra_dependencies),
+        python=construct_python_options(llm, llm_fs, extra_dependencies, adapter_map),
         docker=construct_docker_options(llm, llm_fs, workers_per_resource, quantize, bettertransformer),
         version=bento_tag.version,
         build_ctx=llm_fs.getsyspath("/"),
@@ -249,6 +263,7 @@ def build(
     model_id: str | None = None,
     quantize: t.LiteralString | None = None,
     bettertransformer: bool | None = None,
+    adapter_map: dict[str, str | None] | None = None,
     _extra_dependencies: tuple[str, ...] | None = None,
     _workers_per_resource: int | float | None = None,
     _overwrite_existing_bento: bool = False,
@@ -270,14 +285,14 @@ def build(
 
     llm_config = openllm.AutoConfig.for_model(model_name)
 
-    logger.info("Packing '%s' into a Bento with kwargs=%s...", model_name, attrs)
+    logger.info("Packing '%s' into a Bento%s...", model_name, f" with 'kwargs={attrs}' " if attrs else "")
 
     # NOTE: We set this environment variable so that our service.py logic won't raise RuntimeError
     # during build. This is a current limitation of bentoml build where we actually import the service.py into sys.path
     try:
         os.environ["OPENLLM_MODEL"] = inflection.underscore(model_name)
 
-        framework_envvar = llm_config["env"]["framework_value"]
+        framework_envvar = llm_config["env"].framework_value
         llm = t.cast(
             "_BaseAutoLLMClass",
             openllm[framework_envvar],  # type: ignore (internal API)
@@ -286,7 +301,9 @@ def build(
             model_id=model_id,
             llm_config=llm_config,
             quantize=quantize,
+            adapter_map=adapter_map,
             bettertransformer=bettertransformer,
+            return_runner_kwargs=False,
             **attrs,
         )
 
@@ -313,6 +330,7 @@ def build(
                         llm_fs,
                         llm,
                         workers_per_resource=workers_per_resource,
+                        adapter_map=adapter_map,
                         quantize=quantize,
                         bettertransformer=bettertransformer,
                         extra_dependencies=_extra_dependencies,
@@ -326,6 +344,7 @@ def build(
                     llm_fs,
                     llm,
                     workers_per_resource=workers_per_resource,
+                    adapter_map=adapter_map,
                     quantize=quantize,
                     bettertransformer=bettertransformer,
                     extra_dependencies=_extra_dependencies,

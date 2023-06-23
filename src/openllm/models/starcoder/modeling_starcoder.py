@@ -80,10 +80,7 @@ class StarCoder(openllm.LLM["transformers.GPTBigCodeForCausalLM", "transformers.
         try:
             return bentoml.transformers.save_model(tag, model, custom_objects={"tokenizer": tokenizer})
         finally:
-            import gc
-
             # NOTE: We need to free the cache after saving here so that we can load it back later on.
-            gc.collect()
             torch.cuda.empty_cache()
 
     def sanitize_parameters(

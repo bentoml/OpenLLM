@@ -26,7 +26,9 @@ deploy, and monitor any LLMs with ease.
 from __future__ import annotations
 
 import logging
+import os
 import typing as t
+import warnings
 
 from . import utils as utils
 from .__about__ import __version__ as __version__
@@ -39,6 +41,24 @@ if utils.DEBUG:
 
     utils.configure_logging()
     logging.basicConfig(level=logging.NOTSET)
+else:
+    # configuration for bitsandbytes before import
+    os.environ["BITSANDBYTES_NOWELCOME"] = os.environ.get("BITSANDBYTES_NOWELCOME", "1")
+    # The following warnings from bitsandbytes, and probably not that important
+    # for users to see when DEBUG is False
+    warnings.filterwarnings(
+        "ignore", message="MatMul8bitLt: inputs will be cast from torch.float32 to float16 during quantization"
+    )
+    warnings.filterwarnings(
+        "ignore", message="MatMul8bitLt: inputs will be cast from torch.bfloat16 to float16 during quantization"
+    )
+    warnings.filterwarnings(
+        "ignore",
+        message=(
+            "The installed version of bitsandbytes was compiled without GPU support. 8-bit optimizers and GPU quantization"
+            " are unavailable."
+        ),
+    )
 
 
 _import_structure = {

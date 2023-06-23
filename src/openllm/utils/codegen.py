@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import string
 import typing as t
 from pathlib import Path
@@ -33,7 +34,7 @@ else:
 
     DictStrAny = dict
 
-_T = t.TypeVar("_T")
+_T = t.TypeVar("_T", bound=t.Callable[..., t.Any])
 
 logger = logging.getLogger(__name__)
 
@@ -108,6 +109,14 @@ def has_own_attribute(cls: type[t.Any], attrib_name: t.Any):
             return False
 
     return True
+
+
+def determine_whether_to_implement(cls: type[t.Any], dunders: list[str], default: bool = True) -> bool:
+    """Check whether we should codegen given dunder functions."""
+    for dunder in dunders:
+        if has_own_attribute(cls, dunder):
+            return False
+    return default
 
 
 def get_annotations(cls: type[t.Any]) -> DictStrAny:
@@ -192,7 +201,7 @@ def generate_function(
     if annotations:
         meth.__annotations__ = annotations
 
-    if DEBUG:
+    if DEBUG and int(os.environ.get("OPENLLMDEVDEBUG", str(0))) > 3:
         logger.info("Generated script for %s:\n\n%s", typ, script)
 
     return meth

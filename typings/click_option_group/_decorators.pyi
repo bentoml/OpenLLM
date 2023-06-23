@@ -99,7 +99,7 @@ class _OptGroup(Generic[O_co]):
         :param attrs: Additional parameters of option group class
         """
         ...
-    def option(self, *param_decls: Any, **attrs: Any) -> F[P, ClickFunctionWrapper[P, O_co]]:
+    def option(self, *param_decls: Any, **attrs: Any) -> FC:
         """The decorator adds a new option to the group
 
         The decorator is lazy. It adds option decls and attrs.
