@@ -72,6 +72,7 @@ import openllm
 from .exceptions import ForbiddenAttributeError
 from .utils import ENV_VARS_TRUE_VALUES
 from .utils import LazyType
+from .utils import ReprMixin
 from .utils import bentoml_cattr
 from .utils import codegen
 from .utils import dantic
@@ -110,7 +111,6 @@ if t.TYPE_CHECKING:
     import peft
     from attr import _CountingAttr  # type: ignore
     from attr import _make_init  # type: ignore
-    from attr import _make_repr  # type: ignore
     from attr import _transform_attrs  # type: ignore
     from attr._compat import set_closure_cell
 
@@ -136,7 +136,6 @@ else:
     from attr._compat import set_closure_cell
     from attr._make import _CountingAttr
     from attr._make import _make_init
-    from attr._make import _make_repr
     from attr._make import _transform_attrs
 
     transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
@@ -652,7 +651,6 @@ class ModelSettings(t.TypedDict, total=False):
     requirements: t.Optional[ListStr]
 
     # llm implementation specifics
-    use_pipeline: bool
     bettertransformer: bool
     model_type: t.Literal["causal_lm", "seq2seq_lm"]
     runtime: t.Literal["transformers", "cpp"]
@@ -712,7 +710,6 @@ class _ModelSettingsAttr:
                     name_type="dasherize",
                     requires_gpu=False,
                     url="",
-                    use_pipeline=False,
                     model_type="causal_lm",
                     trust_remote_code=False,
                     requirements=None,
@@ -988,13 +985,6 @@ class _ConfigAttr:
         """The default PyPI requirements needed to run this given LLM. By default, we will depend on
         bentoml, torch, transformers."""
 
-        __openllm_use_pipeline__: bool = Field(False)
-        """Whether this LLM will use HuggingFace Pipeline API. By default, this is set to False.
-        The reason for this to be here is because we want to access this object before loading
-        the _bentomodel. This is because we will actually download the model weights when accessing
-        _bentomodel.
-        """
-
         __openllm_bettertransformer__: bool = Field(False)
         """Whether to use BetterTransformer for this given LLM. This depends per model
         architecture. By default, we will use BetterTransformer for T5 and StableLM models,
@@ -1214,7 +1204,9 @@ class LLMConfig(_ConfigAttr):
             for base_cls in self._cls.__mro__[1:-1]:
                 if base_cls.__dict__.get("__weakref__", None) is not None:
                     weakref_inherited = True
-                existing_slots.update({name: getattr(base_cls, name, codegen._sentinel) for name in getattr(base_cls, "__slots__", [])})
+                existing_slots.update(
+                    {name: getattr(base_cls, name, codegen._sentinel) for name in getattr(base_cls, "__slots__", [])}
+                )
 
             base_names = set(self._base_names)
             names = self._attr_names
@@ -1295,8 +1287,11 @@ class LLMConfig(_ConfigAttr):
             )
             return self
 
-        def add_repr(self, ns: str | None):
-            self._cls_dict["__repr__"] = codegen.add_method_dunders(self._cls, _make_repr(self._attrs, ns, self._cls))
+        def add_repr(self):
+            for key, fn in ReprMixin.__dict__.items():
+                if key not in ("__module__", "__doc__", "__repr_keys__"):
+                    self._cls_dict[key] = codegen.add_method_dunders(self._cls, fn)
+            self._cls_dict["__repr_keys__"] = property(lambda _: {i.name for i in self._attrs})
             return self
 
     def __init_subclass__(cls: type[LLMConfig]):
@@ -1384,7 +1379,7 @@ class LLMConfig(_ConfigAttr):
             type=GenerationConfig,
         )
 
-        cls = cls._ConfigBuilder(cls, model_name, these).add_attrs_init().add_repr(None).build_class()
+        cls = cls._ConfigBuilder(cls, model_name, these).add_attrs_init().add_repr().build_class()
         # auto assignment attributes generated from __config__ after create the new slot class.
         _make_assignment_script(cls, bentoml_cattr.structure(cls, _ModelSettingsAttr))(cls)
 
@@ -1426,14 +1421,19 @@ class LLMConfig(_ConfigAttr):
         if generation_config is None:
             generation_config = {k: v for k, v in attrs.items() if k in _generation_cl_dict}
         else:
-            generation_config = config_merger.merge(generation_config, {k: v for k, v in attrs.items() if k in _generation_cl_dict})
+            generation_config = config_merger.merge(
+                generation_config, {k: v for k, v in attrs.items() if k in _generation_cl_dict}
+            )
 
         for k in _cached_keys:
             if k in generation_config or attrs.get(k) is None:
                 del attrs[k]
         _cached_keys = tuple(k for k in _cached_keys if k in attrs)
 
-        self.__openllm_extras__ = config_merger.merge( first_not_none(__openllm_extras__, default={}), {k: v for k, v in attrs.items() if k not in self.__openllm_accepted_keys__})
+        self.__openllm_extras__ = config_merger.merge(
+            first_not_none(__openllm_extras__, default={}),
+            {k: v for k, v in attrs.items() if k not in self.__openllm_accepted_keys__},
+        )
 
         for k in _cached_keys:
             if k in self.__openllm_extras__:
@@ -1463,8 +1463,6 @@ class LLMConfig(_ConfigAttr):
         def __getitem__(self, item: t.Literal["service_name"] = ...) -> str: ...
         @overload
         def __getitem__(self, item: t.Literal["requirements"] = ...) -> t.Optional[ListStr]: ...
-        @overload
-        def __getitem__(self, item: t.Literal["use_pipeline"] = ...) -> bool: ...
         @overload
         def __getitem__(self, item: t.Literal["bettertransformer"] = ...) -> bool: ...
         @overload

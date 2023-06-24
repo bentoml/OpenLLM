@@ -58,4 +58,4 @@ class ReprMixin:
 
     def __repr_args__(self) -> ReprArgs:
         attrs = ((k, getattr(self, k)) for k in self.__repr_keys__)
-        return tuple((k, v) for k, v in attrs if v)
+        return tuple((k, v) for k, v in attrs)

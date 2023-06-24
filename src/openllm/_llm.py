@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import collections
 import copy
 import functools
 import inspect
@@ -41,6 +42,7 @@ from ._configuration import FineTuneConfig
 from .exceptions import ForbiddenAttributeError
 from .exceptions import GpuNotAvailableError
 from .exceptions import OpenLLMException
+from .utils import DEBUG
 from .utils import EnvVarMixin
 from .utils import LazyLoader
 from .utils import ReprMixin
@@ -83,7 +85,15 @@ if t.TYPE_CHECKING:
         def __call__(self, *args: t.Any, **attrs: t.Any) -> t.Any:
             ...
 
+    DictStrAny = dict[str, t.Any]
+    TupleAny = tuple[t.Any, ...]
+    ListAny = list[t.Any]
+    UserDictAny = collections.UserDict[str, t.Any]
 else:
+    DicsStrAny = dict
+    TupleAny = tuple
+    ListAny = list
+    UserDictAny = collections.UserDict
     LLMRunner = bentoml.Runner
     transformers = LazyLoader("transformers", globals(), "transformers")
     torch = LazyLoader("torch", globals(), "torch")
@@ -242,6 +252,13 @@ _M = t.TypeVar("_M")
 _T = t.TypeVar("_T")
 
 
+def _default_post_init(self: LLM[t.Any, t.Any]):
+    self.device = None
+
+    if self.__llm_implementation__ == "pt" and is_torch_available():
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
 class LLMInterface(ABC, t.Generic[_M, _T]):
     """This defines the loose contract for all openllm.LLM implementations."""
 
@@ -332,6 +349,9 @@ class LLMInterface(ABC, t.Generic[_M, _T]):
     > **Note** that if LoRA is enabled, bettertransformer will be disabled.
     """
 
+    device: torch.device | str | int | None
+    """The device to be used for this LLM. If the implementation is 'pt', then it will be torch.device, else string."""
+
     # NOTE: The following will be populated by __init_subclass__, note that these should not
     # be mutated by users.
     __llm_trust_remote_code__: bool
@@ -361,14 +381,8 @@ class LLMInterface(ABC, t.Generic[_M, _T]):
     __llm_bentomodel__: bentoml.Model | None
     """A reference to the bentomodel used for this LLM. Instead of access this directly, you should use `_bentomodel` property instead."""
 
-    __llm_trainer__: transformers.Trainer | None
-    """A reference to the Trainer to be used for this LLM to fine-tune."""
-
     __llm_adapter_map__: dict[AdapterType, dict[str | t.Literal["default"], peft.PeftConfig]] | None
     """A reference to the the cached LoRA adapter mapping."""
-
-    __llm_post_init__: t.Callable[[t.Self], None] | None
-    """A callable that will be called after the LLM is initialized. This is set if subclass contains a 'llm_post_init'"""
 
     __llm_custom_load__: t.Callable[[t.Self, t.Any, t.Any], None] | None
     """A callable that will be called after the model is loaded. This is set when 'load_model' is implemented"""
@@ -415,13 +429,24 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
             # using the default import model if no custom import is set
             setattr(cls, "import_model", functools.partial(import_model, _model_framework=implementation))
 
-        cls.__llm_post_init__ = None if cls.llm_post_init is LLMInterface[_M, _T].llm_post_init else cls.llm_post_init
+        if cls.llm_post_init is LLMInterface[_M, _T].llm_post_init:
+            # using the default post init if no custom post init is set
+            wrapped_post_init = _default_post_init
+        else:
+            original_post_init = getattr(cls, "llm_post_init")
+
+            def wrapped_post_init(self: LLM[_M, _T]):
+                _default_post_init(self)
+                original_post_init(self)
+
+        setattr(cls, "llm_post_init", wrapped_post_init)
+
         cls.__llm_custom_load__ = None if cls.load_model is LLMInterface[_M, _T].load_model else cls.load_model
         cls.__llm_init_kwargs__ = (
             None if cls.import_kwargs is LLMInterface[_M, _T].import_kwargs else cls.import_kwargs
         )
 
-        for at in {"bentomodel", "tag", "model", "tokenizer", "adapter_map", "trainer"}:
+        for at in {"bentomodel", "tag", "model", "tokenizer", "adapter_map"}:
             setattr(cls, f"__llm_{at}__", None)
 
         # update docstring for given entrypoint
@@ -696,21 +721,18 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
         quantization_config = attrs.pop("quantization_config", None)
 
         if llm_config is not None:
-            logger.debug("Using provided LLMConfig to initialize LLM instead of from default: %r", llm_config)
+            if DEBUG and int(os.environ.get("OPENLLMDEVDEBUG", str(0))) > 3:
+                logger.debug("Using provided LLMConfig to initialize LLM instead of from default: %r", llm_config)
             self.config = llm_config
         else:
             self.config = self.config_class.model_construct_env(**attrs)
             # The rests of the kwargs that is not used by the config class should be stored into __openllm_extras__.
             attrs = self.config["extras"]
 
-        if self.config["use_pipeline"] and _adapters_mapping:
-            raise ValueError(f"{self} will be used as a Pipeline, which is not yet compatible with LoRA adapter.")
-
         self._adapters_mapping = _adapters_mapping
 
         if self.__llm_implementation__ == "pt":
-            if not self.config["use_pipeline"]:
-                attrs["low_cpu_mem_usage"] = low_cpu_mem_usage
+            attrs["low_cpu_mem_usage"] = low_cpu_mem_usage
             attrs["quantization_config"] = quantization_config
 
         model_kwds, tokenizer_kwds = {}, {}
@@ -746,8 +768,7 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
         self._tokenizer_attrs = tokenizer_kwds
         self._openllm_model_version = openllm_model_version
 
-        if self.__llm_post_init__:
-            self.llm_post_init()
+        self.llm_post_init()
 
         # we set it here so that we allow subclass to overwrite bettertransformer in llm_post_init
         if bettertransformer:
@@ -927,10 +948,6 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
             is_pipeline = "_pretrained_class" in self._bentomodel.info.metadata
             # differentiate when saving tokenizer or other pretrained type.
             is_pretrained_model = is_pipeline and "_framework" in self._bentomodel.info.metadata
-
-            if self.bettertransformer and is_pipeline and self.config["use_pipeline"]:
-                # This is a pipeline, provide a accelerator args
-                kwds["accelerator"] = "bettertransformer"
 
             if self.__llm_custom_load__:
                 self.__llm_model__ = self.load_model(self.tag, *self._model_args, **kwds)
@@ -1335,19 +1352,34 @@ def Runner(
     ...
 
 
-def Runner(model_name: str, ensure_available: bool = True, init_local: bool = False, **attrs: t.Any) -> LLMRunner:
+def Runner(
+    model_name: str,
+    ensure_available: bool | None = None,
+    init_local: bool = False,
+    **attrs: t.Any,
+) -> LLMRunner:
     """Create a Runner for given LLM. For a list of currently supported LLM, check out 'openllm models'
+
+    The behaviour of ensure_available that is synonymous to `AutoLLM.for_model` depends on `init_local`.
+    By default, `ensure_available` is synonymous to `init_local`, meaning on the service when creating
+    runner, it won't download the model. So before running your BentoML Service, you should create a `on_startup`
+    hook to check download if you don't want to do it manually:
+
+    ```python
+
+    runner = openllm.Runner("dolly-v2")
+
+    @svc.on_startup
+    def download():
+        runner.llm.ensure_model_id_exists()
+    ...
+    ```
+
+    if `init_local=True` (For development workflow), it will also enable `ensure_available`.
+    Default value of `ensure_available` is None. If set then use that given value, otherwise fallback to the aforementioned behaviour.
 
     Args:
         model_name: Supported model name from 'openllm models'
-        ensure_available: If True, it will ensure the model is available before creating the runner.
-                          Set to False for faster creation time. Note that you will need to make sure
-                          the model for this 'model_id' is available before calling the runner.
-                          One can do this by doing the following:
-                          ```python
-                          runner = openllm.Runner("dolly-v2", ensure_available=False)
-                          runner.llm.ensure_model_id_exists()
-                          ```
         init_local: If True, it will initialize the model locally. This is useful if you want to
                     run the model locally. (Symmetrical to bentoml.Runner.init_local())
         **attrs: The rest of kwargs will then be passed to the LLM. Refer to the LLM documentation for the kwargs
@@ -1356,7 +1388,9 @@ def Runner(model_name: str, ensure_available: bool = True, init_local: bool = Fa
     runner = t.cast(
         "_BaseAutoLLMClass",
         openllm[EnvVarMixin(model_name)["framework_value"]],  # type: ignore (internal API)
-    ).create_runner(model_name, ensure_available=ensure_available, **attrs)
+    ).create_runner(
+        model_name, ensure_available=ensure_available if ensure_available is not None else init_local, **attrs
+    )
 
     if init_local:
         runner.init_local(quiet=True)

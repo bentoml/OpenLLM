@@ -221,7 +221,6 @@ def workers_per_resource_option(factory: t.Any, build: bool = False):
     be provisioned in Kubernetes as well as in standalone container. This will
     ensure it has the same effect with 'openllm start --workers ...'"""
     return factory.option(
-        "-wpr",
         "--workers-per-resource",
         default=None,
         type=click.FLOAT,
@@ -731,7 +730,7 @@ Available model_id(s): {llm_config['model_ids']} [default: {llm_config['default_
 
         requirements = config["requirements"]
         if requirements is not None and len(requirements) > 0:
-            missing_requirements = [i for i in requirements if importlib.util.find_spec(i) is not None]
+            missing_requirements = [i for i in requirements if importlib.util.find_spec(i) is None]
             if len(missing_requirements) > 0:
                 _echo(
                     f"Make sure to have the following dependencies available: {missing_requirements}",
@@ -1361,7 +1360,7 @@ def query(
         _echo(res["responses"], fg="white")
 
 
-@cli.command(name="download")
+@cli.command(name="download", aliases=["download-models"])
 @click.argument(
     "model_name",
     type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING.keys()]),

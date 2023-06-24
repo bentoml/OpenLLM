@@ -70,8 +70,6 @@ runner = openllm.Runner(
     bettertransformer=llm_config["env"]["bettertransformer_value"],
     quantize=llm_config["env"]["quantize_value"],
     adapter_map=orjson.loads(adapter_map),
-    ensure_available=False,
-    init_local=False,
 )
 
 svc = bentoml.Service(name=f"llm-{llm_config['start_name']}-service", runners=[runner])
