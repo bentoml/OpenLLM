@@ -1,3 +1,4 @@
+# modified workflow from ofek/hatch, big kudos to them.
 name: binary-distribution
 on:
   push:
@@ -227,7 +228,7 @@ jobs:
           name: installers
           path: installers/*
   macos-packaging:
-    name: Build macOS installer and sign/notarize artifacts
+    name: Build macOS installer
     if: github.event.pull_request.head.repo.full_name == github.repository
     needs: binaries
     runs-on: macos-12
@@ -257,41 +258,6 @@ jobs:
           for f in archives/*; do
             tar -xzf "$f" -C bin
           done
-      # - name: Write credentials
-      #   env:
-      #     APPLE_DEVELOPER_ID_APPLICATION_CERTIFICATE: '${{ secrets.APPLE_DEVELOPER_ID_APPLICATION_CERTIFICATE }}'
-      #     APPLE_DEVELOPER_ID_APPLICATION_PRIVATE_KEY: '${{ secrets.APPLE_DEVELOPER_ID_APPLICATION_PRIVATE_KEY }}'
-      #     APPLE_APP_STORE_CONNECT_API_DATA: '${{ secrets.APPLE_APP_STORE_CONNECT_API_DATA }}'
-      #   run: |-
-      #     echo "$APPLE_DEVELOPER_ID_APPLICATION_CERTIFICATE" > /tmp/certificate.pem
-      #     echo "$APPLE_DEVELOPER_ID_APPLICATION_PRIVATE_KEY" > /tmp/private-key.pem
-      #     echo "$APPLE_APP_STORE_CONNECT_API_DATA" > /tmp/app-store-connect.json
-      # # https://developer.apple.com/documentation/security/hardened_runtime
-      # - name: Sign binaries
-      #   run: |-
-      #     for f in bin/*; do
-      #       rcodesign sign -vv \
-      #       --pem-source /tmp/certificate.pem \
-      #       --pem-source /tmp/private-key.pem \
-      #       --code-signature-flags runtime \
-      #       "$f"
-      #     done
-      # # https://developer.apple.com/documentation/security/notarizing_macos_software_before_distribution
-      # - name: Notarize binaries
-      #   run: |-
-      #     mkdir notarize-bin
-      #
-      #     cd bin
-      #     for f in *; do
-      #       zip "../notarize-bin/$f.zip" "$f"
-      #     done
-      #
-      #     cd ../notarize-bin
-      #     for f in *; do
-      #       rcodesign notary-submit -vv \
-      #       --api-key-path /tmp/app-store-connect.json \
-      #       "$f"
-      #     done
       - name: Archive binaries
         run: |-
           rm archives/*
@@ -318,7 +284,6 @@ jobs:
         id: stage
         run: |-
           mkdir staged
-          mkdir signed
           mv build/*/release/*/*.app staged
           app_bundle="$(ls staged)"
           app_name="${app_bundle:0:${#app_bundle}-4}"
@@ -326,18 +291,9 @@ jobs:
           echo "app-bundle=$app_bundle" >> "$GITHUB_OUTPUT"
           echo "app-name=$app_name-${{ env.VERSION }}.dmg" >> "$GITHUB_OUTPUT"
           echo "dmg-file=$app_name-${{ env.VERSION }}.dmg" >> "$GITHUB_OUTPUT"
-      # - name: Sign app bundle
-      #   run: >-
-      #     rcodesign sign -vv --pem-source /tmp/certificate.pem --pem-source /tmp/private-key.pem "staged/${{ steps.stage.outputs.app-bundle }}" "signed/${{ steps.stage.outputs.app-bundle }}"
       - name: Create DMG
         run: >-
-          create-dmg --volname "${{ steps.stage.outputs.app-name }}" --hide-extension "${{ steps.stage.outputs.app-bundle }}" --window-pos 200 120 --window-size 800 400 --icon-size 100 --app-drop-link 600 185 "${{ steps.stage.outputs.dmg-file }}" signed
-      # - name: Sign DMG
-      #   run: >-
-      #     rcodesign sign -vv --pem-source /tmp/certificate.pem --pem-source /tmp/private-key.pem "${{ steps.stage.outputs.dmg-file }}" "${{ steps.stage.outputs.dmg-file }}"
-      # - name: Notarize DMG
-      #   run: >-
-      #     rcodesign notary-submit --api-key-path /tmp/app-store-connect.json --staple "${{ steps.stage.outputs.dmg-file }}"
+          create-dmg --volname "${{ steps.stage.outputs.app-name }}" --hide-extension "${{ steps.stage.outputs.app-bundle }}" --window-pos 200 120 --window-size 800 400 --icon-size 100 --app-drop-link 600 185 "${{ steps.stage.outputs.dmg-file }}" staged
       - name: Upload binaries
         uses: actions/upload-artifact@v3
         with:
@@ -377,10 +333,6 @@ jobs:
         with:
           name: installers
           path: installers
-      - name: Push Python artifacts to PyPI
-        uses: pypa/gh-action-pypi-publish@v1.8.6
-        with:
-          skip-existing: true
       - name: Add assets to current release
         uses: softprops/action-gh-release@v1
         with:
