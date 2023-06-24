@@ -42,6 +42,7 @@ from ._configuration import FineTuneConfig
 from .exceptions import ForbiddenAttributeError
 from .exceptions import GpuNotAvailableError
 from .exceptions import OpenLLMException
+from .utils import DEBUG
 from .utils import EnvVarMixin
 from .utils import LazyLoader
 from .utils import ReprMixin
@@ -720,7 +721,8 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
         quantization_config = attrs.pop("quantization_config", None)
 
         if llm_config is not None:
-            logger.debug("Using provided LLMConfig to initialize LLM instead of from default: %r", llm_config)
+            if DEBUG and int(os.environ.get("OPENLLMDEVDEBUG", str(0))) > 3:
+                logger.debug("Using provided LLMConfig to initialize LLM instead of from default: %r", llm_config)
             self.config = llm_config
         else:
             self.config = self.config_class.model_construct_env(**attrs)

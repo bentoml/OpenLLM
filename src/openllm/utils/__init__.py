@@ -140,7 +140,6 @@ _import_structure = {
     "analytics": [],
     "codegen": [],
     "dantic": [],
-    "constants": [],
     "representation": ["ReprMixin"],
     "import_utils": [
         "OPTIONAL_DEPENDENCIES",
@@ -170,7 +169,6 @@ if t.TYPE_CHECKING:
     from . import bentoml_cattr as bentoml_cattr
     from . import codegen as codegen
     from . import configure_logging as configure_logging
-    from . import constants as constants
     from . import copy_file_to_fs_folder as copy_file_to_fs_folder
     from . import dantic as dantic
     from . import first_not_none as first_not_none

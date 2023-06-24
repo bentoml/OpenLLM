@@ -57,6 +57,7 @@ class DollyV2Config(openllm.LLMConfig):
         top_p: float = 0.92
         top_k: int = 5
         max_new_tokens: int = 256
+        eos_token_id: int = 50277  # NOTE: from get_special_token_id(self.tokenizer, END_KEY)
 
 
 START_DOLLY_V2_COMMAND_DOCSTRING = """\
