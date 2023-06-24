@@ -44,7 +44,6 @@ from .exceptions import GpuNotAvailableError
 from .exceptions import OpenLLMException
 from .utils import EnvVarMixin
 from .utils import LazyLoader
-from .utils import LazyType
 from .utils import ReprMixin
 from .utils import bentoml_cattr
 from .utils import first_not_none
@@ -946,7 +945,7 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
 
         if self.__llm_model__ is None:
             kwds = self._model_attrs
-            kwds["trust_remote_code"] = self.__llm_trust_remote_code__
+            # kwds["trust_remote_code"] = self.__llm_trust_remote_code__
 
             is_pipeline = "_pretrained_class" in self._bentomodel.info.metadata
             # differentiate when saving tokenizer or other pretrained type.
@@ -1330,62 +1329,6 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
         prompt, generate_kwargs, postprocess_kwargs = self.sanitize_parameters(prompt, **attrs)
         generated_result = self.generate(prompt, **generate_kwargs)
         return self.postprocess_generate(prompt, generated_result, **postprocess_kwargs)
-
-    @overload
-    def ensure_tensor_on_device(
-        self, inputs: transformers.utils.ModelOutput, device: str | torch.device | int
-    ) -> transformers.utils.ModelOutput:
-        ...
-
-    @overload
-    def ensure_tensor_on_device(self, inputs: DictStrAny, device: str | torch.device | int) -> DictStrAny:
-        ...
-
-    @overload
-    def ensure_tensor_on_device(self, inputs: UserDictAny, device: str | torch.device | int) -> UserDictAny:
-        ...
-
-    @overload
-    def ensure_tensor_on_device(self, inputs: ListAny, device: str | torch.device | int) -> ListAny:
-        ...
-
-    @overload
-    def ensure_tensor_on_device(self, inputs: TupleAny, device: str | torch.device | int) -> TupleAny:
-        ...
-
-    @overload
-    def ensure_tensor_on_device(self, inputs: torch.Tensor, device: str | torch.device | int) -> torch.Tensor:
-        ...
-
-    def ensure_tensor_on_device(self, inputs: t.Any, device: t.Any):
-        """
-        Ensure PyTorch tensors are on the specified device.
-
-        Args:
-            inputs: The tensors to place on `self.device`. Recursive on lists **only**.
-            device: The device to place the tensors on.
-
-        Return:
-            `Dict[str, torch.Tensor]`: The same as `inputs` but on the proper device.
-        """
-        if isinstance(inputs, transformers.utils.ModelOutput):
-            return transformers.utils.ModelOutput(
-                {name: self.ensure_tensor_on_device(tensor, device) for name, tensor in inputs.items()}
-            )
-        elif LazyType(DictStrAny).isinstance(inputs):
-            return DictStrAny({name: self.ensure_tensor_on_device(tensor, device) for name, tensor in inputs.items()})
-        elif LazyType(UserDictAny).isinstance(inputs):
-            return UserDictAny({name: self.ensure_tensor_on_device(tensor, device) for name, tensor in inputs.items()})
-        elif LazyType(ListAny).isinstance(inputs):
-            return ListAny(self.ensure_tensor_on_device(item, device) for item in inputs)
-        elif LazyType(TupleAny).isinstance(inputs):
-            return TupleAny([self.ensure_tensor_on_device(item, device) for item in inputs])
-        elif isinstance(inputs, torch.Tensor):
-            if device == torch.device("cpu") and inputs.dtype in {torch.float16, torch.bfloat16}:
-                inputs = inputs.float()
-            return t.cast("torch.Tensor", inputs.to(device))
-        else:
-            return inputs
 
 
 @overload
