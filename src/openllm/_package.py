@@ -33,7 +33,7 @@ from bentoml._internal.bento.build_config import DockerOptions
 from bentoml._internal.bento.build_config import PythonOptions
 from bentoml._internal.configuration import get_debug_mode
 
-from .utils import ModelEnv
+from .utils import EnvVarMixin
 from .utils import codegen
 from .utils import first_not_none
 from .utils import is_flax_available
@@ -112,7 +112,7 @@ def construct_python_options(
     if str(os.environ.get("BENTOML_BUNDLE_LOCAL_BUILD", False)).lower() == "false":
         packages.append(f"bentoml>={'.'.join([str(i) for i in pkg.pkg_version_info('bentoml')])}")
 
-    env: ModelEnv = llm.config["env"]
+    env: EnvVarMixin = llm.config["env"]
     framework_envvar = env["framework_value"]
     if framework_envvar == "flax":
         assert is_flax_available(), f"Flax is not available, while {env.framework} is set to 'flax'"
@@ -172,7 +172,7 @@ def construct_docker_options(
         f'runners."llm-{llm.config["start_name"]}-runner".workers_per_resource={workers_per_resource}',
     ]
     _bentoml_config_options += " " if _bentoml_config_options else "" + " ".join(_bentoml_config_options_opts)
-    env: ModelEnv = llm.config["env"]
+    env: EnvVarMixin = llm.config["env"]
 
     env_dict = {
         env.framework: env.framework_value,
@@ -189,7 +189,7 @@ def construct_docker_options(
 
     # We need to handle None separately here, as env from subprocess doesn't
     # accept None value.
-    _env = ModelEnv(llm.config["model_name"], bettertransformer=bettertransformer, quantize=quantize)
+    _env = EnvVarMixin(llm.config["model_name"], bettertransformer=bettertransformer, quantize=quantize)
 
     if _env.bettertransformer_value is not None:
         env_dict[_env.bettertransformer] = _env.bettertransformer_value

@@ -25,7 +25,7 @@ from openllm._configuration import ModelSettings
 
 logger = logging.getLogger(__name__)
 
-env_strats = st.sampled_from([openllm.utils.ModelEnv(model_name) for model_name in openllm.CONFIG_MAPPING.keys()])
+env_strats = st.sampled_from([openllm.utils.EnvVarMixin(model_name) for model_name in openllm.CONFIG_MAPPING.keys()])
 
 
 @st.composite
