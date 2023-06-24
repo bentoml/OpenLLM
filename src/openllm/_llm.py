@@ -41,13 +41,11 @@ from ._configuration import FineTuneConfig
 from .exceptions import ForbiddenAttributeError
 from .exceptions import GpuNotAvailableError
 from .exceptions import OpenLLMException
-from .utils import DEBUG
 from .utils import EnvVarMixin
 from .utils import LazyLoader
 from .utils import ReprMixin
 from .utils import bentoml_cattr
 from .utils import first_not_none
-from .utils import get_debug_mode
 from .utils import is_bitsandbytes_available
 from .utils import is_peft_available
 from .utils import is_torch_available
