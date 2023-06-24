@@ -16,7 +16,11 @@
 for ModelEnv construction and parsing environment variables."""
 from __future__ import annotations
 
+import contextlib
 import logging
+import os
+import typing as t
+from unittest import mock
 
 import pytest
 from hypothesis import assume
@@ -26,8 +30,7 @@ from hypothesis import strategies as st
 import openllm
 from openllm._configuration import GenerationConfig
 from openllm._configuration import ModelSettings
-from openllm._configuration import _field_env_key
-from openllm.utils import DEBUG
+from openllm._configuration import field_env_key
 
 from ._strategies._configuration import make_llm_config
 from ._strategies._configuration import model_settings
@@ -134,7 +137,37 @@ def test_complex_struct_dump(
     )
 
 
-def test_struct_envvar(monkeypatch: pytest.MonkeyPatch):
+@contextlib.contextmanager
+def patch_env(**attrs: t.Any):
+    with mock.patch.dict(os.environ, attrs, clear=True):
+        yield
+
+
+def test_struct_envvar():
+    with patch_env(
+        **{
+            field_env_key("env_llm", "field1"): "4",
+            field_env_key("env_llm", "temperature", suffix="generation"): "0.2",
+        }
+    ):
+
+        class EnvLLM(openllm.LLMConfig):
+            __config__ = {"default_id": "asdfasdf", "model_ids": ["asdf", "asdfasdfads"]}
+            field1: int = 2
+
+            class GenerationConfig:
+                temperature: float = 0.8
+
+        sent = EnvLLM.model_construct_env()
+        assert sent.field1 == 4
+        assert sent["temperature"] == 0.2
+
+        overwrite_default = EnvLLM()
+        assert overwrite_default.field1 == 4
+        assert overwrite_default["temperature"] == 0.2
+
+
+def test_struct_provided_fields():
     class EnvLLM(openllm.LLMConfig):
         __config__ = {"default_id": "asdfasdf", "model_ids": ["asdf", "asdfasdfads"]}
         field1: int = 2
@@ -142,23 +175,19 @@ def test_struct_envvar(monkeypatch: pytest.MonkeyPatch):
         class GenerationConfig:
             temperature: float = 0.8
 
-    f1_env = _field_env_key(EnvLLM.__openllm_model_name__, "field1")
-    temperature_env = _field_env_key(EnvLLM.__openllm_model_name__, "temperature", suffix="generation")
+    sent = EnvLLM.model_construct_env(field1=20, temperature=0.4)
+    assert sent.field1 == 20
+    assert sent.generation_config.temperature == 0.4
 
-    if DEBUG:
-        logger.info(f"Env keys: {f1_env}, {temperature_env}")
 
-    with monkeypatch.context() as m:
-        m.setenv(f1_env, "4")
-        m.setenv(temperature_env, "0.2")
-        sent = EnvLLM()
-        assert sent.field1 == 4
-        assert sent.generation_config.temperature == 0.8
-
-    # NOTE: This is the expected behaviour, where users pass in value, we respect it over envvar.
-    with monkeypatch.context() as m:
-        m.setenv(f1_env, "4")
-        m.setenv(temperature_env, "0.2")
-        sent = EnvLLM.model_construct_env(field1=20, temperature=0.4)
-        assert sent.field1 == 4
+def test_struct_envvar_with_overwrite_provided_env(monkeypatch: pytest.MonkeyPatch):
+    with monkeypatch.context() as mk:
+        mk.setenv(field_env_key("overwrite_with_env_available", "field1"), str(4.0))
+        mk.setenv(field_env_key("overwrite_with_env_available", "temperature", suffix="generation"), str(0.2))
+        sent = make_llm_config(
+            "OverwriteWithEnvAvailable",
+            {"default_id": "asdfasdf", "model_ids": ["asdf", "asdfasdfads"]},
+            fields=(("field1", "float", 3.0),),
+        ).model_construct_env(field1=20.0, temperature=0.4)
         assert sent.generation_config.temperature == 0.4
+        assert sent.field1 == 20.0

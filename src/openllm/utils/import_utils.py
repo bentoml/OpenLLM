@@ -343,7 +343,7 @@ class EnvVarMixin(ReprMixin):
         raise KeyError(f"Key {item} not found in {self}")
 
     def __new__(cls, model_name: str, bettertransformer: bool | None = None, quantize: t.LiteralString | None = None):
-        from .._configuration import _field_env_key
+        from .._configuration import field_env_key
         from . import codegen
 
         model_name = inflection.underscore(model_name)
@@ -354,7 +354,7 @@ class EnvVarMixin(ReprMixin):
         # gen properties env key
         attributes = {"config", "model_id", "quantize", "framework", "bettertransformer"}
         for att in attributes:
-            setattr(res, att, _field_env_key(model_name, att.upper()))
+            setattr(res, att, field_env_key(model_name, att.upper()))
 
         # gen properties env value
         attributes_with_values = {

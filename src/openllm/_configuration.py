@@ -50,8 +50,6 @@ from __future__ import annotations
 
 import copy
 import enum
-import functools
-import inspect
 import logging
 import os
 import sys
@@ -358,8 +356,8 @@ class FineTuneConfig:
         return klass
 
 
-@attr.frozen(slots=True)
-class GenerationConfig:
+@attr.frozen(slots=True, repr=False)
+class GenerationConfig(ReprMixin):
     """Generation config provides the configuration to then be parsed to ``transformers.GenerationConfig``,
     with some additional validation and environment constructor.
 
@@ -609,6 +607,10 @@ class GenerationConfig:
             return getattr(self, item)
         raise KeyError(f"GenerationConfig has no attribute {item}")
 
+    @property
+    def __repr_keys__(self) -> set[str]:
+        return {i.name for i in attr.fields(self.__class__)}
+
 
 bentoml_cattr.register_unstructure_hook_factory(
     lambda cls: attr.has(cls) and lenient_issubclass(cls, GenerationConfig),
@@ -623,7 +625,7 @@ bentoml_cattr.register_unstructure_hook_factory(
 )
 
 
-def _field_env_key(model_name: str, key: str, suffix: str | t.Literal[""] | None = None) -> str:
+def field_env_key(model_name: str, key: str, suffix: str | t.Literal[""] | None = None) -> str:
     return "_".join(filter(None, map(str.upper, ["OPENLLM", model_name, suffix.strip("_") if suffix else "", key])))
 
 
@@ -731,12 +733,12 @@ def structure_settings(cl_: type[LLMConfig], cls: type[_ModelSettingsAttr]):
         )
 
     _cl_name = cl_.__name__.replace("Config", "")
-    _settings_attr = _ModelSettingsAttr.default()
-    try:
-        cls(**t.cast(DictStrAny, cl_.__config__))
-        _settings_attr = attr.evolve(_settings_attr, **t.cast(DictStrAny, cl_.__config__))
-    except TypeError:
+    _settings_attr = cls.default()
+
+    if any(i not in cl_.__config__ for i in {"default_id", "model_ids"}):
         raise ValueError("Either 'default_id' or 'model_ids' are emptied under '__config__' (required fields).")
+
+    _settings_attr = attr.evolve(_settings_attr, **t.cast(DictStrAny, cl_.__config__))
 
     _final_value_dct: DictStrAny = {
         "model_name": inflection.underscore(_cl_name)
@@ -805,10 +807,9 @@ def _make_env_transformer(
     globs = {} if globs is None else globs
     globs.update(
         {
-            "functools": functools,
             "__populate_env": dantic.env_converter,
             "__default_callback": default_callback,
-            "__field_env": _field_env_key,
+            "__field_env": field_env_key,
             "__suffix": suffix or "",
             "__model_name": model_name,
         }
@@ -1289,9 +1290,9 @@ class LLMConfig(_ConfigAttr):
 
         def add_repr(self):
             for key, fn in ReprMixin.__dict__.items():
-                if key not in ("__module__", "__doc__", "__repr_keys__"):
+                if key in ("__repr__", "__str__", "__repr_name__", "__repr_str__", "__repr_args__"):
                     self._cls_dict[key] = codegen.add_method_dunders(self._cls, fn)
-            self._cls_dict["__repr_keys__"] = property(lambda _: {i.name for i in self._attrs})
+            self._cls_dict["__repr_keys__"] = property(lambda _: {i.name for i in self._attrs} | {"generation_config"})
             return self
 
     def __init_subclass__(cls: type[LLMConfig]):
@@ -1326,7 +1327,7 @@ class LLMConfig(_ConfigAttr):
             slots=True,
             weakref_slot=True,
             frozen=True,
-            repr=True,
+            repr=False,
             collect_by_mro=True,
             field_transformer=_make_env_transformer(
                 cls,
@@ -1356,9 +1357,9 @@ class LLMConfig(_ConfigAttr):
             val = cd.get(attr_name, attr.NOTHING)
             if not LazyType["_CountingAttr[t.Any]"](_CountingAttr).isinstance(val):
                 if val is attr.NOTHING:
-                    val = cls.Field(env=_field_env_key(model_name, attr_name))
+                    val = cls.Field(env=field_env_key(model_name, attr_name))
                 else:
-                    val = cls.Field(default=val, env=_field_env_key(model_name, attr_name))
+                    val = cls.Field(default=val, env=field_env_key(model_name, attr_name))
             these[attr_name] = val
         unannotated = ca_names - annotated_names
         if len(unannotated) > 0:
@@ -1371,13 +1372,6 @@ class LLMConfig(_ConfigAttr):
         cls.__openllm_accepted_keys__ = set(these.keys()) | {
             a.name for a in attr.fields(cls.__openllm_generation_class__)
         }
-        # 'generation_config' wraps the GenerationConfig class
-        # which is handled in _make_assignment_script
-        these["generation_config"] = cls.Field(
-            default=cls.__openllm_generation_class__(),
-            description=inspect.cleandoc(cls.__openllm_generation_class__.__doc__ or ""),
-            type=GenerationConfig,
-        )
 
         cls = cls._ConfigBuilder(cls, model_name, these).add_attrs_init().add_repr().build_class()
         # auto assignment attributes generated from __config__ after create the new slot class.
@@ -1390,7 +1384,6 @@ class LLMConfig(_ConfigAttr):
             if cls.__module__ in sys.modules:
                 globs.update(sys.modules[cls.__module__].__dict__)
             attr.resolve_types(cls.__openllm_generation_class__, globalns=globs)
-
             cls = attr.resolve_types(cls, globalns=globs)
         # the hint cache for easier access
         cls.__openllm_hints__ = {
@@ -1428,20 +1421,15 @@ class LLMConfig(_ConfigAttr):
         for k in _cached_keys:
             if k in generation_config or attrs.get(k) is None:
                 del attrs[k]
-        _cached_keys = tuple(k for k in _cached_keys if k in attrs)
 
         self.__openllm_extras__ = config_merger.merge(
             first_not_none(__openllm_extras__, default={}),
             {k: v for k, v in attrs.items() if k not in self.__openllm_accepted_keys__},
         )
-
-        for k in _cached_keys:
-            if k in self.__openllm_extras__:
-                del attrs[k]
-        _cached_keys = tuple(k for k in _cached_keys if k in attrs)
+        self.generation_config = self["generation_class"](**generation_config)
 
         # The rest of attrs should only be the attributes to be passed to __attrs_init__
-        self.__attrs_init__(generation_config=self["generation_class"](**generation_config), **attrs)
+        self.__attrs_init__(**attrs)
 
     # NOTE: These required fields should be at the top, as it will be kw_only
 
@@ -1573,9 +1561,11 @@ class LLMConfig(_ConfigAttr):
 
     def model_dump(self, flatten: bool = False, **_: t.Any):
         dumped = bentoml_cattr.unstructure(self)
+        generation_config = bentoml_cattr.unstructure(self.generation_config)
         if flatten:
-            generation_config = dumped.pop("generation_config")
             dumped.update(generation_config)
+        else:
+            dumped["generation_config"] = generation_config
         return dumped
 
     def model_dump_json(self, **kwargs: t.Any):

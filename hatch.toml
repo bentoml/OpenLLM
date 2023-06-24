@@ -32,7 +32,7 @@ dependencies = [
 ]
 [envs.test.scripts]
 cov = ["cov-test", "- coverage combine", "coverage report"]
-cov-test = "coverage run -m pytest {args:tests}"
-p = "pytest {args:tests}"
+cov-test = "coverage run -m pytest -n 3 {args:tests}"
+p = "pytest -n 3 {args:tests}"
 [[envs.test.matrix]]
 python = ["3.8", "3.9", "3.10", "3.11"]
