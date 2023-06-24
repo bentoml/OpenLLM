@@ -307,6 +307,7 @@ def build(
     _previously_built = False
     current_model_envvar = os.environ.pop("OPENLLM_MODEL", None)
     current_model_id_envvar = os.environ.pop("OPENLLM_MODEL_ID", None)
+    current_adapter_map_envvar = os.environ.pop("OPENLLM_ADAPTER_MAP", None)
 
     llm_config = openllm.AutoConfig.for_model(model_name)
 
@@ -316,6 +317,7 @@ def build(
     # during build. This is a current limitation of bentoml build where we actually import the service.py into sys.path
     try:
         os.environ["OPENLLM_MODEL"] = inflection.underscore(model_name)
+        os.environ["OPENLLM_ADAPTER_MAP"] = orjson.dumps(None).decode()
 
         framework_envvar = llm_config["env"].framework_value
         llm = t.cast(
@@ -378,8 +380,11 @@ def build(
     finally:
         del os.environ["OPENLLM_MODEL"]
         del os.environ["OPENLLM_MODEL_ID"]
+        del os.environ["OPENLLM_ADAPTER_MAP"]
         # restore original OPENLLM_MODEL envvar if set.
         if current_model_envvar is not None:
             os.environ["OPENLLM_MODEL"] = current_model_envvar
         if current_model_id_envvar is not None:
             os.environ["OPENLLM_MODEL_ID"] = current_model_id_envvar
+        if current_adapter_map_envvar is not None:
+            os.environ["OPENLLM_ADAPTER_MAP"] = current_adapter_map_envvar
