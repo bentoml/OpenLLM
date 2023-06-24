@@ -1352,13 +1352,18 @@ def Runner(
     ...
 
 
-def Runner(model_name: str, init_local: bool = False, **attrs: t.Any) -> LLMRunner:
+def Runner(
+    model_name: str,
+    ensure_available: bool | None = None,
+    init_local: bool = False,
+    **attrs: t.Any,
+) -> LLMRunner:
     """Create a Runner for given LLM. For a list of currently supported LLM, check out 'openllm models'
 
-    The behaviour of ensure_available that is synonymous to AutoLLM.for_model depends on `init_local`.
+    The behaviour of ensure_available that is synonymous to `AutoLLM.for_model` depends on `init_local`.
     By default, `ensure_available` is synonymous to `init_local`, meaning on the service when creating
     runner, it won't download the model. So before running your BentoML Service, you should create a `on_startup`
-    hook to check download if you don't want to do it manually
+    hook to check download if you don't want to do it manually:
 
     ```python
 
@@ -1366,11 +1371,12 @@ def Runner(model_name: str, init_local: bool = False, **attrs: t.Any) -> LLMRunn
 
     @svc.on_startup
     def download():
-        runner.ensure_model_id_exists()
+        runner.llm.ensure_model_id_exists()
     ...
     ```
 
     if `init_local=True` (For development workflow), it will also enable `ensure_available`.
+    Default value of `ensure_available` is None. If set then use that given value, otherwise fallback to the aforementioned behaviour.
 
     Args:
         model_name: Supported model name from 'openllm models'
@@ -1382,7 +1388,9 @@ def Runner(model_name: str, init_local: bool = False, **attrs: t.Any) -> LLMRunn
     runner = t.cast(
         "_BaseAutoLLMClass",
         openllm[EnvVarMixin(model_name)["framework_value"]],  # type: ignore (internal API)
-    ).create_runner(model_name, ensure_available=init_local, **attrs)
+    ).create_runner(
+        model_name, ensure_available=ensure_available if ensure_available is not None else init_local, **attrs
+    )
 
     if init_local:
         runner.init_local(quiet=True)
