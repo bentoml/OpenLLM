@@ -121,7 +121,6 @@ class Falcon(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTraine
             outputs = self.model.generate(
                 input_ids=inputs["input_ids"],
                 attention_mask=inputs["attention_mask"],
-                do_sample=True,
                 generation_config=self.config.model_construct_env(
                     eos_token_id=eos_token_id, **attrs
                 ).to_generation_config(),
