@@ -235,7 +235,12 @@ class DollyV2(openllm.LLM["transformers.Pipeline", "transformers.PreTrainedToken
     def load_model(self, tag: bentoml.Tag, *args: t.Any, **attrs: t.Any) -> InstructionTextGenerationPipeline:
         _ref = bentoml.transformers.get(tag)
         model = transformers.AutoModelForCausalLM.from_pretrained(_ref.path, **attrs)
-        return InstructionTextGenerationPipeline(model=model, tokenizer=_ref.custom_objects["tokenizer"])
+
+        kwds: dict[str, t.Any] = {}
+        if self.bettertransformer:
+            # This is a pipeline, provide a accelerator args
+            kwds["accelerator"] = "bettertransformer"
+        return InstructionTextGenerationPipeline(model=model, tokenizer=_ref.custom_objects["tokenizer"], **kwds)
 
     def sanitize_parameters(
         self,

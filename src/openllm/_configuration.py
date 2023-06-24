@@ -651,7 +651,6 @@ class ModelSettings(t.TypedDict, total=False):
     requirements: t.Optional[ListStr]
 
     # llm implementation specifics
-    use_pipeline: bool
     bettertransformer: bool
     model_type: t.Literal["causal_lm", "seq2seq_lm"]
     runtime: t.Literal["transformers", "cpp"]
@@ -711,7 +710,6 @@ class _ModelSettingsAttr:
                     name_type="dasherize",
                     requires_gpu=False,
                     url="",
-                    use_pipeline=False,
                     model_type="causal_lm",
                     trust_remote_code=False,
                     requirements=None,
@@ -986,13 +984,6 @@ class _ConfigAttr:
         __openllm_requirements__: ListStr | None = Field(None)
         """The default PyPI requirements needed to run this given LLM. By default, we will depend on
         bentoml, torch, transformers."""
-
-        __openllm_use_pipeline__: bool = Field(False)
-        """Whether this LLM will use HuggingFace Pipeline API. By default, this is set to False.
-        The reason for this to be here is because we want to access this object before loading
-        the _bentomodel. This is because we will actually download the model weights when accessing
-        _bentomodel.
-        """
 
         __openllm_bettertransformer__: bool = Field(False)
         """Whether to use BetterTransformer for this given LLM. This depends per model
@@ -1472,8 +1463,6 @@ class LLMConfig(_ConfigAttr):
         def __getitem__(self, item: t.Literal["service_name"] = ...) -> str: ...
         @overload
         def __getitem__(self, item: t.Literal["requirements"] = ...) -> t.Optional[ListStr]: ...
-        @overload
-        def __getitem__(self, item: t.Literal["use_pipeline"] = ...) -> bool: ...
         @overload
         def __getitem__(self, item: t.Literal["bettertransformer"] = ...) -> bool: ...
         @overload

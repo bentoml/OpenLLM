@@ -729,14 +729,10 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
             # The rests of the kwargs that is not used by the config class should be stored into __openllm_extras__.
             attrs = self.config["extras"]
 
-        if self.config["use_pipeline"] and _adapters_mapping:
-            raise ValueError(f"{self} will be used as a Pipeline, which is not yet compatible with LoRA adapter.")
-
         self._adapters_mapping = _adapters_mapping
 
         if self.__llm_implementation__ == "pt":
-            if not self.config["use_pipeline"]:
-                attrs["low_cpu_mem_usage"] = low_cpu_mem_usage
+            attrs["low_cpu_mem_usage"] = low_cpu_mem_usage
             attrs["quantization_config"] = quantization_config
 
         model_kwds, tokenizer_kwds = {}, {}
@@ -952,10 +948,6 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
             is_pipeline = "_pretrained_class" in self._bentomodel.info.metadata
             # differentiate when saving tokenizer or other pretrained type.
             is_pretrained_model = is_pipeline and "_framework" in self._bentomodel.info.metadata
-
-            if self.bettertransformer and is_pipeline and self.config["use_pipeline"]:
-                # This is a pipeline, provide a accelerator args
-                kwds["accelerator"] = "bettertransformer"
 
             if self.__llm_custom_load__:
                 self.__llm_model__ = self.load_model(self.tag, *self._model_args, **kwds)
