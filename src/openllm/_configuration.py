@@ -662,7 +662,7 @@ class ModelSettings(t.TypedDict, total=False):
     name_type: t.Literal["dasherize", "lowercase"]
     model_name: NotRequired[str]
     start_name: NotRequired[str]
-    env: NotRequired[openllm.utils.ModelEnv]
+    env: NotRequired[openllm.utils.EnvVarMixin]
 
     # serving configuration
     timeout: int
@@ -751,7 +751,7 @@ def structure_settings(cl_: type[LLMConfig], cls: type[_ModelSettingsAttr]):
         if _settings_attr["name_type"] == "dasherize"
         else _final_value_dct["model_name"]
     )
-    env = openllm.utils.ModelEnv(_final_value_dct["model_name"])
+    env = openllm.utils.EnvVarMixin(_final_value_dct["model_name"])
     _final_value_dct["env"] = env
 
     # bettertransformer support
@@ -1020,7 +1020,7 @@ class _ConfigAttr:
         __openllm_start_name__: str = Field(None)
         """Default name to be used with `openllm start`"""
 
-        __openllm_env__: openllm.utils.ModelEnv = Field(None, init=False)
+        __openllm_env__: openllm.utils.EnvVarMixin = Field(None, init=False)
         """A ModelEnv instance for this LLMConfig."""
 
         __openllm_timeout__: int = Field(36e6)
@@ -1478,7 +1478,7 @@ class LLMConfig(_ConfigAttr):
         @overload
         def __getitem__(self, item: t.Literal["start_name"] = ...) -> str: ...
         @overload
-        def __getitem__(self, item: t.Literal["env"] = ...) -> openllm.utils.ModelEnv: ...
+        def __getitem__(self, item: t.Literal["env"] = ...) -> openllm.utils.EnvVarMixin: ...
         @overload
         def __getitem__(self, item: t.Literal["timeout"] = ...) -> int: ...
         @overload

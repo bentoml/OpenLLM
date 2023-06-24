@@ -41,13 +41,11 @@ from ._configuration import FineTuneConfig
 from .exceptions import ForbiddenAttributeError
 from .exceptions import GpuNotAvailableError
 from .exceptions import OpenLLMException
-from .utils import DEBUG
+from .utils import EnvVarMixin
 from .utils import LazyLoader
-from .utils import ModelEnv
 from .utils import ReprMixin
 from .utils import bentoml_cattr
 from .utils import first_not_none
-from .utils import get_debug_mode
 from .utils import is_bitsandbytes_available
 from .utils import is_peft_available
 from .utils import is_torch_available
@@ -879,18 +877,14 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
                 self.config["start_name"],
                 "--model-id",
                 self.model_id,
-                "--output",
-                "porcelain",
+                "--machine",
             ]
         )
-        if DEBUG or get_debug_mode():
-            # NOTE: This usually only concern BentoML devs.
-            pattern = r"^__tag__:[^:\n]+:[^:\n]+"
-            matched = re.search(pattern, output.decode("utf-8").strip(), re.MULTILINE)
-            assert matched is not None, f"Failed to find tag from output: {output}"
-            _, _, tag = matched.group(0).partition(":")
-        else:
-            tag = output.strip().decode()
+        # NOTE: This usually only concern BentoML devs.
+        pattern = r"^__tag__:[^:\n]+:[^:\n]+"
+        matched = re.search(pattern, output.decode("utf-8").strip(), re.MULTILINE)
+        assert matched is not None, f"Failed to find tag from output: {output}"
+        _, _, tag = matched.group(0).partition(":")
 
         return bentoml.transformers.get(tag)
 
@@ -1361,7 +1355,7 @@ def Runner(model_name: str, ensure_available: bool = True, init_local: bool = Fa
     """
     runner = t.cast(
         "_BaseAutoLLMClass",
-        openllm[ModelEnv(model_name)["framework_value"]],  # type: ignore (internal API)
+        openllm[EnvVarMixin(model_name)["framework_value"]],  # type: ignore (internal API)
     ).create_runner(model_name, ensure_available=ensure_available, **attrs)
 
     if init_local:

@@ -298,7 +298,7 @@ def require_backends(o: t.Any, backends: t.MutableSequence[str]):
         raise ImportError("".join(failed))
 
 
-class ModelEnv(ReprMixin):
+class EnvVarMixin(ReprMixin):
     model_name: str
 
     @property

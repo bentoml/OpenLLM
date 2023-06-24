@@ -125,6 +125,11 @@ directory = "feature"
 name = "Features"
 showcontent = true
 
+[[tool.towncrier.type]]
+directory = "fix"
+name = "Bug fix"
+showcontent = true
+
 [[tool.hatch.envs.all.matrix]]
 python = ["3.8", "3.9", "3.10", "3.11"]
 

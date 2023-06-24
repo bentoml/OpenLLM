@@ -19,6 +19,7 @@ This extends BentoML's internal CLI CommandGroup.
 from __future__ import annotations
 
 import functools
+import importlib.util
 import inspect
 import itertools
 import logging
@@ -46,9 +47,9 @@ from bentoml._internal.configuration.containers import BentoMLContainer
 from .__about__ import __version__
 from .exceptions import OpenLLMException
 from .utils import DEBUG
+from .utils import EnvVarMixin
 from .utils import LazyLoader
 from .utils import LazyType
-from .utils import ModelEnv
 from .utils import analytics
 from .utils import bentoml_cattr
 from .utils import configure_logging
@@ -147,13 +148,13 @@ class NargsOptions(cog.GroupedOption):
 
 
 def parse_device_callback(
-    _: click.Context, params: click.Parameter, value: tuple[str, ...] | tuple[t.Literal["all"] | str] | None
+    _: click.Context, param: click.Parameter, value: tuple[str, ...] | tuple[t.Literal["all"] | str] | None
 ) -> t.Any:
     if value is None:
         return value
 
     if not LazyType(TupleStrAny).isinstance(value):
-        raise RuntimeError(f"{params} only accept multiple values.")
+        raise RuntimeError(f"{param} only accept multiple values.")
 
     # NOTE: --device all is a special case
     if len(value) == 1 and value[0] == "all":
@@ -165,9 +166,14 @@ def parse_device_callback(
             # NOTE: This hits when CUDA_VISIBLE_DEVICES is set
             continue
         if "," in v:
-            parsed += tuple(v.split(","))
+            v = tuple(v.split(","))
         else:
-            parsed += tuple(v.split())
+            v = tuple(v.split())
+        try:
+            [orjson.loads(_v) for _v in v]
+        except orjson.JSONDecodeError:
+            raise ValueError(f"Device nargs {value} should only contain all numbers for GPU devices.")
+        parsed += v
     return tuple(filter(lambda x: x, parsed))
 
 
@@ -191,7 +197,7 @@ output_option = click.option(
 )
 
 
-def model_id_option(factory: t.Any, model_env: ModelEnv | None = None):
+def model_id_option(factory: t.Any, model_env: EnvVarMixin | None = None):
     envvar = None
     if model_env is not None:
         envvar = model_env.model_id
@@ -215,6 +221,7 @@ def workers_per_resource_option(factory: t.Any, build: bool = False):
     be provisioned in Kubernetes as well as in standalone container. This will
     ensure it has the same effect with 'openllm start --workers ...'"""
     return factory.option(
+        "-wpr",
         "--workers-per-resource",
         default=None,
         type=click.FLOAT,
@@ -223,7 +230,10 @@ def workers_per_resource_option(factory: t.Any, build: bool = False):
     )
 
 
-def quantize_option(factory: t.Any, build: bool = False):
+def quantize_option(factory: t.Any, build: bool = False, model_env: EnvVarMixin | None = None):
+    envvar = None
+    if model_env is not None:
+        envvar = model_env.quantize
     help_str = (
         "Running this model in quantized mode." if not build else "Set quantization mode for serving in deployment."
     )
@@ -238,10 +248,12 @@ def quantize_option(factory: t.Any, build: bool = False):
         type=click.Choice(["int8", "int4", "gptq"]),
         default=None,
         help=help_str,
+        envvar=envvar,
+        show_envvar=True if envvar is not None else False,
     )
 
 
-def bettertransformer_option(factory: t.Any, build: bool = False, model_env: ModelEnv | None = None):
+def bettertransformer_option(factory: t.Any, build: bool = False, model_env: EnvVarMixin | None = None):
     envvar = None
     if model_env is not None:
         envvar = model_env.bettertransformer
@@ -647,7 +659,7 @@ Available model_id(s): {llm_config['model_ids']} [default: {llm_config['default_
         help=f"Assign GPU devices (if available) for {model_name}.",
         show_envvar=True,
     )
-    @quantize_option(cog.optgroup)
+    @quantize_option(cog.optgroup, model_env=env)
     @bettertransformer_option(cog.optgroup, model_env=env)
     @cog.optgroup.group(
         "Fine-tuning related options",
@@ -694,11 +706,11 @@ Available model_id(s): {llm_config['model_ids']} [default: {llm_config['default_
         config, server_attrs = llm_config.model_validate_click(**attrs)
 
         # Create a new model env to work with the envvar during CLI invocation
-        env = ModelEnv(config["model_name"])
+        env = EnvVarMixin(config["model_name"])
         framework_envvar = env.framework_value
 
+        gpu_available = gpu_count()
         if quantize:
-            gpu_available = gpu_count()
             if len(gpu_available) < 1:
                 _echo(f"Quantization requires at least 1 GPU (got {len(gpu_available)})", fg="red")
                 ctx.exit(1)
@@ -715,24 +727,27 @@ Available model_id(s): {llm_config['model_ids']} [default: {llm_config['default_
 
         # We need to handle None separately here, as env from subprocess doesn't
         # accept None value.
-        env = ModelEnv(env.model_name, bettertransformer=bettertransformer, quantize=quantize)
+        env = EnvVarMixin(env.model_name, bettertransformer=bettertransformer, quantize=quantize)
 
         requirements = config["requirements"]
         if requirements is not None and len(requirements) > 0:
-            _echo(
-                f"Make sure to have the following dependencies available: {requirements}",
-                fg="yellow",
-            )
+            missing_requirements = [i for i in requirements if importlib.util.find_spec(i) is not None]
+            if len(missing_requirements) > 0:
+                _echo(
+                    f"Make sure to have the following dependencies available: {missing_requirements}",
+                    fg="yellow",
+                )
 
         workers_per_resource = first_not_none(workers_per_resource, default=config["workers_per_resource"])
         server_timeout = first_not_none(server_timeout, default=config["timeout"])
 
         num_workers = int(1 / workers_per_resource)
-        if num_workers > 1:
-            _echo(
-                f"Running '{model_name}' requires at least {num_workers} GPUs/CPUs available per worker."
-                " Make sure that it has available resources for inference.",
-                fg="yellow",
+        if num_workers > 1 and len(gpu_available) < num_workers:
+            raise click.BadOptionUsage(
+                "workers_per_resource",
+                f"# of workers is infered to {num_workers} GPUs per runner worker, while there are only"
+                f"'{gpu_available}' for inference. (Tip: Try again using '--workers-per-resource={1/len(gpu_available)}')",
+                ctx=ctx,
             )
 
         server_attrs.update({"working_dir": os.path.dirname(__file__)})
@@ -862,7 +877,7 @@ def _start(
     """Python API to start a LLM server."""
     _serve_grpc = attrs.pop("_serve_grpc", False)
 
-    _ModelEnv = ModelEnv(model_name)
+    _ModelEnv = EnvVarMixin(model_name)
 
     if framework is not None:
         os.environ[_ModelEnv.framework] = framework
@@ -1353,7 +1368,8 @@ def query(
 )
 @model_id_option(click)
 @output_option
-def download_models(model_name: str, model_id: str | None, output: OutputLiteral):
+@click.option("--machine", is_flag=True, default=False, hidden=True)
+def download_models(model_name: str, model_id: str | None, output: OutputLiteral, machine: bool):
     """Setup LLM interactively.
 
     \b
@@ -1364,7 +1380,7 @@ def download_models(model_name: str, model_id: str | None, output: OutputLiteral
     $ openllm download opt --model-id facebook/opt-2.7b
     ```
     """
-    if output == "porcelain":
+    if output == "porcelain" or machine:
         set_quiet_mode(True)
         configure_logging()
 
@@ -1377,7 +1393,12 @@ def download_models(model_name: str, model_id: str | None, output: OutputLiteral
 
     try:
         _ref = bentoml.transformers.get(model.tag)
-        if output == "pretty":
+        if machine:
+            # NOTE: When debug is enabled,
+            # We will prefix the tag with __tag__ and we can use regex to correctly
+            # get the tag from 'bentoml.bentos.build|build_bentofile'
+            _echo(f"__tag__:{_ref.tag}", fg="white")
+        elif output == "pretty":
             _echo(f"{model_name} is already setup for framework '{envvar}': {str(_ref.tag)}", nl=True, fg="yellow")
         elif output == "json":
             _echo(
@@ -1387,13 +1408,7 @@ def download_models(model_name: str, model_id: str | None, output: OutputLiteral
                 fg="white",
             )
         else:
-            if DEBUG or get_debug_mode():
-                # NOTE: When debug is enabled,
-                # We will prefix the tag with __tag__ and we can use regex to correctly
-                # get the tag from 'bentoml.bentos.build|build_bentofile'
-                _echo(f"__tag__:{_ref.tag}", fg="white")
-            else:
-                _echo(_ref.tag, fg="white")
+            _echo(_ref.tag)
     except bentoml.exceptions.NotFound:
         if output == "pretty":
             _echo(
@@ -1412,7 +1427,12 @@ def download_models(model_name: str, model_id: str | None, output: OutputLiteral
             trust_remote_code=model.__llm_trust_remote_code__,
             **model_attrs,
         )
-        if output == "pretty":
+        if machine:
+            # NOTE: When debug is enabled,
+            # We will prefix the tag with __tag__ and we can use regex to correctly
+            # get the tag from 'bentoml.bentos.build|build_bentofile'
+            _echo(f"__tag__:{_ref.tag}", fg="white")
+        elif output == "pretty":
             _echo(f"Saved model: {_ref.tag}")
         elif output == "json":
             _echo(
@@ -1422,13 +1442,7 @@ def download_models(model_name: str, model_id: str | None, output: OutputLiteral
                 ).decode()
             )
         else:
-            if DEBUG or get_debug_mode():
-                # NOTE: When debug is enabled,
-                # We will prefix the tag with __tag__ and we can use regex to correctly
-                # get the tag from 'bentoml.bentos.build|build_bentofile'
-                _echo(f"__tag__:{_ref.tag}")
-            else:
-                _echo(_ref.tag)
+            _echo(_ref.tag)
     finally:
         if is_torch_available() and torch.cuda.is_available():
             torch.cuda.empty_cache()
