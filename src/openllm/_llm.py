@@ -1352,19 +1352,28 @@ def Runner(
     ...
 
 
-def Runner(model_name: str, ensure_available: bool = True, init_local: bool = False, **attrs: t.Any) -> LLMRunner:
+def Runner(model_name: str, init_local: bool = False, **attrs: t.Any) -> LLMRunner:
     """Create a Runner for given LLM. For a list of currently supported LLM, check out 'openllm models'
+
+    The behaviour of ensure_available that is synonymous to AutoLLM.for_model depends on `init_local`.
+    By default, `ensure_available` is synonymous to `init_local`, meaning on the service when creating
+    runner, it won't download the model. So before running your BentoML Service, you should create a `on_startup`
+    hook to check download if you don't want to do it manually
+
+    ```python
+
+    runner = openllm.Runner("dolly-v2")
+
+    @svc.on_startup
+    def download():
+        runner.ensure_model_id_exists()
+    ...
+    ```
+
+    if `init_local=True` (For development workflow), it will also enable `ensure_available`.
 
     Args:
         model_name: Supported model name from 'openllm models'
-        ensure_available: If True, it will ensure the model is available before creating the runner.
-                          Set to False for faster creation time. Note that you will need to make sure
-                          the model for this 'model_id' is available before calling the runner.
-                          One can do this by doing the following:
-                          ```python
-                          runner = openllm.Runner("dolly-v2", ensure_available=False)
-                          runner.llm.ensure_model_id_exists()
-                          ```
         init_local: If True, it will initialize the model locally. This is useful if you want to
                     run the model locally. (Symmetrical to bentoml.Runner.init_local())
         **attrs: The rest of kwargs will then be passed to the LLM. Refer to the LLM documentation for the kwargs
@@ -1373,7 +1382,7 @@ def Runner(model_name: str, ensure_available: bool = True, init_local: bool = Fa
     runner = t.cast(
         "_BaseAutoLLMClass",
         openllm[EnvVarMixin(model_name)["framework_value"]],  # type: ignore (internal API)
-    ).create_runner(model_name, ensure_available=ensure_available, **attrs)
+    ).create_runner(model_name, ensure_available=init_local, **attrs)
 
     if init_local:
         runner.init_local(quiet=True)
