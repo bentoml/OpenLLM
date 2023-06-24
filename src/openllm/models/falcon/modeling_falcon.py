@@ -115,7 +115,7 @@ class Falcon(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTraine
 
     def generate(self, prompt: str, **attrs: t.Any) -> list[str]:
         eos_token_id = attrs.pop("eos_token_id", self.tokenizer.eos_token_id)
-        with torch.inference_mode(), torch.amp.autocast("cuda", dtype=torch.bfloat16):
+        with torch.inference_mode(), torch.amp.autocast("cuda", dtype=torch.float16):
             inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
             outputs = self.model.generate(
                 input_ids=inputs["input_ids"],
