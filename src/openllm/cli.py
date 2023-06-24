@@ -1360,7 +1360,7 @@ def query(
         _echo(res["responses"], fg="white")
 
 
-@cli.command(name="download")
+@cli.command(name="download", aliases=["download-models"])
 @click.argument(
     "model_name",
     type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING.keys()]),
