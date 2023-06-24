@@ -13,7 +13,9 @@
 # limitations under the License.
 import os
 
-from hypothesis import HealthCheck, settings
+from hypothesis import HealthCheck
+from hypothesis import settings
+
 
 settings.register_profile("CI", settings(suppress_health_check=[HealthCheck.too_slow]), deadline=None)
 

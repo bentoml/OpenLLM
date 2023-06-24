@@ -16,26 +16,14 @@ from __future__ import annotations
 import typing as t
 
 import bentoml
-import transformers
-from transformers.generation.logits_process import LogitsProcessor
-from transformers.generation.utils import LogitsProcessorList
-
 import openllm
+import transformers
+
 
 if t.TYPE_CHECKING:
     import torch
 else:
     torch = openllm.utils.LazyLoader("torch", globals(), "torch")
-
-
-class InvalidScoreLogitsProcessor(LogitsProcessor):
-    """Ported from modeling_chatglm.py"""
-
-    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor) -> torch.FloatTensor:
-        if torch.isnan(scores).any() or torch.isinf(scores).any():
-            scores.zero_()
-            scores[..., 5] = 5e4
-        return scores
 
 
 class ChatGLM(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTrainedTokenizerFast"]):
@@ -71,7 +59,7 @@ class ChatGLM(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTrain
         top_p: float | None = None,
         temperature: float | None = None,
         chat_history: list[str] | None = None,
-        use_default_prompt_template: bool = True,
+        use_default_prompt_template: bool = False,
         **attrs: t.Any,
     ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
         prompt_text = ""
@@ -97,14 +85,20 @@ class ChatGLM(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTrain
         return prompt_text, generate_kwargs, postprocess_generate_kwargs
 
     def postprocess_generate(
-        self, prompt: str, generation_result: str, *, chat_history: list[tuple[str, str]] | None = None, **attrs: t.Any
+        self,
+        prompt: str,
+        generation_result: tuple[str, list[tuple[str, str]]],
+        *,
+        chat_history: list[tuple[str, str]] | None = None,
+        **attrs: t.Any,
     ):
+        generated, history = generation_result
         if self.config.retain_history:
             assert chat_history is not None, "'retain_history' is True while there is no history provided."
-            chat_history.append((prompt, generation_result))
-        return "".join(generation_result)
+            chat_history.extend(history)
+        return generated
 
-    def generate(self, prompt: str, **attrs: t.Any) -> str:
+    def generate(self, prompt: str, **attrs: t.Any) -> tuple[str, list[tuple[str, str]]]:
         with torch.inference_mode():
             self.model.eval()
 
@@ -114,15 +108,8 @@ class ChatGLM(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTrain
 
             self.model.cuda()
 
-            logit_processor: list[LogitsProcessor] = LogitsProcessorList()
-            logit_processor.append(InvalidScoreLogitsProcessor())
-
-            inputs = self.tokenizer([prompt], return_tensors="pt").to(self.device)
-            outputs = self.model.generate(
-                **inputs,
+            return self.model.chat(
+                self.tokenizer,
+                prompt,
                 generation_config=self.config.model_construct_env(do_sample=True, **attrs).to_generation_config(),
-                logits_processor=logit_processor,
             )
-            outputs = outputs.tolist()[0][len(inputs["input_ids"][0]) :]
-            response = self.tokenizer.decode(outputs)
-            return self.model.process_response(response)

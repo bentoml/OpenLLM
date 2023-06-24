@@ -20,6 +20,7 @@ import attr
 import openllm
 from openllm._prompt import PromptFormatter
 
+
 if t.TYPE_CHECKING:
     DictStrStr = dict[str, str]
 else:
@@ -57,7 +58,7 @@ class PromptTemplate:
 
     @classmethod
     def from_default(cls, model: str) -> PromptTemplate:
-        template = getattr(openllm.utils.ModelEnv(model).module, "DEFAULT_PROMPT_TEMPLATE")
+        template = getattr(openllm.utils.EnvVarMixin(model).module, "DEFAULT_PROMPT_TEMPLATE")
         if template is None:
             raise ValueError(f"Model {model} does not have a default prompt template.")
         return cls.from_template(template)

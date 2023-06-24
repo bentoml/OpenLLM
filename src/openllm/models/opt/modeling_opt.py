@@ -18,17 +18,21 @@ import logging
 import typing as t
 
 import bentoml
-
 import openllm
 
 from ..._prompt import default_formatter
+from ...utils import is_peft_available
 from .configuration_opt import DEFAULT_PROMPT_TEMPLATE
 
+
 if t.TYPE_CHECKING:
+    import peft
     import torch
+
     import transformers  # noqa
 else:
     torch = openllm.utils.LazyLoader("torch", globals(), "torch")
+    peft = openllm.utils.LazyLoader("peft", globals(), "peft")
     transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
 
 logger = logging.getLogger(__name__)
@@ -134,9 +138,17 @@ class OPT(openllm.LLM["transformers.OPTForCausalLM", "transformers.GPT2Tokenizer
             if torch.cuda.is_available() and torch.cuda.device_count() == 1:
                 self.model.cuda()
 
-            input_ids = t.cast(torch.Tensor, self.tokenizer(prompt, return_tensors="pt").input_ids).to(self.device)
+            if is_peft_available() and isinstance(self.model, peft.PeftModel):
+                inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
+            else:
+                inputs = {
+                    "inputs": t.cast(torch.Tensor, self.tokenizer(prompt, return_tensors="pt").input_ids).to(
+                        self.device
+                    )
+                }
+
             generated_tensors = self.model.generate(
-                input_ids,
+                **inputs,
                 do_sample=True,
                 generation_config=self.config.model_construct_env(**attrs).to_generation_config(),
             )

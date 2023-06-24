@@ -19,15 +19,19 @@ from __future__ import annotations
 import logging
 
 import pytest
-from hypothesis import assume, given
+from hypothesis import assume
+from hypothesis import given
 from hypothesis import strategies as st
 
 import openllm
-from openllm._configuration import (GenerationConfig, ModelSettings,
-                                    _field_env_key)
+from openllm._configuration import GenerationConfig
+from openllm._configuration import ModelSettings
+from openllm._configuration import _field_env_key
 from openllm.utils import DEBUG
 
-from ._strategies._configuration import make_llm_config, model_settings
+from ._strategies._configuration import make_llm_config
+from ._strategies._configuration import model_settings
+
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +83,13 @@ def test_class_normal_gen(gen_settings: ModelSettings):
 def test_simple_struct_dump(gen_settings: ModelSettings, field1: int):
     cl_ = make_llm_config("IdempotentLLM", gen_settings, fields=(("field1", "float", field1),))
     assert cl_().model_dump()["field1"] == field1
+
+
+@given(model_settings(), st.integers())
+def test_config_derivation(gen_settings: ModelSettings, field1: int):
+    cl_ = make_llm_config("IdempotentLLM", gen_settings, fields=(("field1", "float", field1),))
+    new_cls = cl_.model_derivate("DerivedLLM", default_id="asdfasdf")
+    assert new_cls.__openllm_default_id__ == "asdfasdf"
 
 
 @given(

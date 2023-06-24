@@ -1,7 +1,8 @@
 from typing import Any
 
-from .core import StrategyList
 from ..merger import Merger
+from .core import StrategyList
+
 
 class SetStrategies(StrategyList):
     NAME = ...

@@ -26,8 +26,19 @@ import openllm
 
 from .configuration_auto import AutoConfig
 
+
+# NOTE: We need to do this so that overload can register
+# correct overloads to typing registry
+if hasattr(t, "get_overloads"):
+    from typing import overload
+else:
+    from typing_extensions import overload
+
+
 if t.TYPE_CHECKING:
-    from collections import _odict_items, _odict_keys, _odict_values
+    from collections import _odict_items
+    from collections import _odict_keys
+    from collections import _odict_values
 
     from ..._llm import LLMRunner
 
@@ -51,7 +62,7 @@ class _BaseAutoLLMClass:
             "Please use '{self.__class__.__name__}.Runner(model_name)' instead."
         )
 
-    @t.overload
+    @overload
     @classmethod
     def for_model(
         cls,
@@ -64,7 +75,7 @@ class _BaseAutoLLMClass:
     ) -> openllm.LLM[t.Any, t.Any]:
         ...
 
-    @t.overload
+    @overload
     @classmethod
     def for_model(
         cls,
@@ -113,10 +124,14 @@ class _BaseAutoLLMClass:
             llm = cls._model_mapping[type(llm_config)].from_pretrained(
                 model_id,
                 llm_config=llm_config,
-                **llm_config.__openllm_extras__,
+                **attrs,
             )
             if ensure_available:
-                logger.debug("'ensure_available=True', make sure model is available within local store.")
+                logger.debug(
+                    "'ensure_available=True', Downloading '%s' with 'model_id=%s' to local model store.",
+                    model_name,
+                    llm.model_id,
+                )
                 llm.ensure_model_id_exists()
             if not return_runner_kwargs:
                 return llm
@@ -227,13 +242,13 @@ class _LazyAutoMapping(ConfigModelOrderedDict):
         ]
         return t.cast(ConfigModelKeysView, mapping_keys + list(self._extra_content.keys()))
 
-    @t.overload
+    @overload
     def get(
         self, key: type[openllm.LLMConfig], default: t.Any, mapping_type: t.Literal["default"] = "default"
     ) -> type[openllm.LLM[t.Any, t.Any]]:
         ...
 
-    @t.overload
+    @overload
     def get(self, key: str, default: t.Any, mapping_type: t.Literal["name2model", "name2config"] = ...) -> str:
         ...
 

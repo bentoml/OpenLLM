@@ -18,30 +18,32 @@ import importlib
 import typing as t
 
 import bentoml
-import transformers
-
 import openllm
+import transformers
 
 from ..._prompt import default_formatter
 from .configuration_falcon import DEFAULT_PROMPT_TEMPLATE
 
+
 if t.TYPE_CHECKING:
     import torch
+    import torch.amp
 else:
     torch = openllm.utils.LazyLoader("torch", globals(), "torch")
+    torch.amp = openllm.utils.LazyLoader("torch.amp", globals(), "torch.amp")
 
 
-class Falcon(openllm.LLM["transformers.TextGenerationPipeline", "transformers.PreTrainedTokenizerFast"]):
+class Falcon(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTrainedTokenizerFast"]):
     __openllm_internal__ = True
 
     @property
     def import_kwargs(self):
-        model_kwds = {
-            "torch_dtype": torch.bfloat16,
-            "device_map": "auto" if torch.cuda.is_available() and torch.cuda.device_count() > 1 else None,
-        }
+        model_kwds = {"torch_dtype": torch.bfloat16, "device_map": "auto"}
         tokenizer_kwds: dict[str, t.Any] = {}
         return model_kwds, tokenizer_kwds
+
+    def llm_post_init(self):
+        self.device = torch.device("cuda")
 
     def import_model(
         self, model_id: str, tag: bentoml.Tag, *model_args: t.Any, tokenizer_kwds: dict[str, t.Any], **attrs: t.Any
@@ -65,27 +67,10 @@ class Falcon(openllm.LLM["transformers.TextGenerationPipeline", "transformers.Pr
                 external_modules=[importlib.import_module(model.__module__)],
             )
         finally:
-            import gc
-
-            # NOTE: We need to free the cache after saving here so that we can load it back later on.
-            gc.collect()
             torch.cuda.empty_cache()
 
     def load_model(self, tag: bentoml.Tag, *args: t.Any, **attrs: t.Any) -> t.Any:
-        torch_dtype = attrs.pop("torch_dtype", torch.bfloat16)
-        device_map = attrs.pop("device_map", "auto")
-        trust_remote_code = attrs.pop("trust_remote_code", True)
-
-        _ref = bentoml.transformers.get(tag)
-        return transformers.pipeline(
-            "text-generation",
-            model=_ref.path,
-            tokenizer=_ref.custom_objects["tokenizer"],
-            trust_remote_code=trust_remote_code,
-            device_map=device_map,
-            torch_dtype=torch_dtype,
-            **attrs,
-        )
+        return transformers.AutoModelForCausalLM.from_pretrained(bentoml.transformers.get(tag).path, **attrs)
 
     def sanitize_parameters(
         self,
@@ -125,17 +110,18 @@ class Falcon(openllm.LLM["transformers.TextGenerationPipeline", "transformers.Pr
 
         return prompt_text, generation_config, {}
 
-    def postprocess_generate(self, prompt: str, generation_result: t.Sequence[dict[str, t.Any]], **_: t.Any) -> str:
-        return "\n".join([i["generated_text"] for i in generation_result])
+    def postprocess_generate(self, prompt: str, generation_result: t.Sequence[str], **_: t.Any) -> str:
+        return generation_result[0]
 
-    def generate(self, prompt: str, **attrs: t.Any) -> list[dict[str, t.Any]]:
+    def generate(self, prompt: str, **attrs: t.Any) -> list[str]:
         eos_token_id = attrs.pop("eos_token_id", self.tokenizer.eos_token_id)
-
-        # NOTE: our model here is the pipeline
-        return self.model(
-            prompt,
-            do_sample=True,
-            generation_config=self.config.model_construct_env(
-                eos_token_id=eos_token_id, **attrs
-            ).to_generation_config(),
-        )
+        with torch.inference_mode(), torch.amp.autocast("cuda", dtype=torch.float16):
+            inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
+            outputs = self.model.generate(
+                input_ids=inputs["input_ids"],
+                attention_mask=inputs["attention_mask"],
+                generation_config=self.config.model_construct_env(
+                    eos_token_id=eos_token_id, **attrs
+                ).to_generation_config(),
+            )
+            return self.tokenizer.batch_decode(outputs, skip_special_tokens=True)

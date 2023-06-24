@@ -14,8 +14,10 @@
 
 from __future__ import annotations
 
+import collections
 import copy
 import functools
+import inspect
 import logging
 import os
 import re
@@ -23,29 +25,53 @@ import subprocess
 import sys
 import types
 import typing as t
-from abc import ABC, abstractmethod
+from abc import ABC
+from abc import abstractmethod
 
 import attr
-import bentoml
 import inflection
 import orjson
+from huggingface_hub import hf_hub_download
+
+import bentoml
+import openllm
 from bentoml._internal.models.model import ModelSignature
 from bentoml._internal.types import ModelSignatureDict
 
-import openllm
+from ._configuration import FineTuneConfig
+from .exceptions import ForbiddenAttributeError
+from .exceptions import GpuNotAvailableError
+from .exceptions import OpenLLMException
+from .utils import DEBUG
+from .utils import EnvVarMixin
+from .utils import LazyLoader
+from .utils import ReprMixin
+from .utils import bentoml_cattr
+from .utils import first_not_none
+from .utils import is_bitsandbytes_available
+from .utils import is_peft_available
+from .utils import is_torch_available
+from .utils import is_transformers_supports_kbit
+from .utils import non_intrusive_setattr
+from .utils import pkg
+from .utils import requires_dependencies
 
-from .exceptions import (ForbiddenAttributeError, GpuNotAvailableError,
-                         OpenLLMException)
-from .utils import (DEBUG, LazyLoader, ModelEnv, bentoml_cattr, first_not_none,
-                    get_debug_mode, is_bitsandbytes_available,
-                    is_torch_available, is_transformers_supports_kbit,
-                    non_intrusive_setattr, pkg)
+
+# NOTE: We need to do this so that overload can register
+# correct overloads to typing registry
+if hasattr(t, "get_overloads"):
+    from typing import overload
+else:
+    from typing_extensions import overload
 
 if t.TYPE_CHECKING:
+    import peft
     import torch
+
     import transformers
     from bentoml._internal.runner.strategy import Strategy
 
+    from ._configuration import AdapterType
     from .models.auto.factory import _BaseAutoLLMClass
 
     class LLMRunner(bentoml.Runner):
@@ -59,10 +85,19 @@ if t.TYPE_CHECKING:
         def __call__(self, *args: t.Any, **attrs: t.Any) -> t.Any:
             ...
 
+    DictStrAny = dict[str, t.Any]
+    TupleAny = tuple[t.Any, ...]
+    ListAny = list[t.Any]
+    UserDictAny = collections.UserDict[str, t.Any]
 else:
+    DicsStrAny = dict
+    TupleAny = tuple
+    ListAny = list
+    UserDictAny = collections.UserDict
     LLMRunner = bentoml.Runner
     transformers = LazyLoader("transformers", globals(), "transformers")
     torch = LazyLoader("torch", globals(), "torch")
+    peft = LazyLoader("peft", globals(), "peft")
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +118,41 @@ def convert_transformers_model_name(name: str | None) -> str:
         logger.debug("Given name is a path, only returning the basename %s")
         return name
     return re.sub("[^a-zA-Z0-9]+", "-", name)
+
+
+# the below is similar to peft.utils.other.CONFIG_NAME
+PEFT_CONFIG_NAME = "adapter_config.json"
+
+
+def resolve_peft_config_type(adapter_map: dict[str, str | None] | None):
+    """Resolve the type of the PeftConfig given the adapter_map.
+    This is similar to how PeftConfig resolve its config type.
+    """
+    if adapter_map is None:
+        return
+
+    resolved: dict[AdapterType, tuple[tuple[str | None, str | None, dict[str, t.Any]], ...]] = {}
+    _has_set_default = False
+    for path_or_adapter_id, name in adapter_map.items():
+        if _has_set_default:
+            raise ValueError("Only one adapter can be set as default.")
+        if os.path.isfile(os.path.join(path_or_adapter_id, PEFT_CONFIG_NAME)):
+            config_file = os.path.join(path_or_adapter_id, PEFT_CONFIG_NAME)
+        else:
+            try:
+                config_file = hf_hub_download(path_or_adapter_id, PEFT_CONFIG_NAME)
+            except Exception:
+                raise ValueError(f"Can't find '{PEFT_CONFIG_NAME}' at '{path_or_adapter_id}'")
+        with open(config_file, "r") as file:
+            resolved_config = orjson.loads(file.read())
+        # all peft_type should be available in PEFT_CONFIG_NAME
+        _peft_type: AdapterType = resolved_config["peft_type"].lower()
+        if _peft_type not in resolved:
+            resolved[_peft_type] = ()
+        resolved[_peft_type] += ((path_or_adapter_id, name, resolved_config),)
+        if name == "default":
+            _has_set_default = True
+    return resolved
 
 
 def import_model(
@@ -168,10 +238,6 @@ def import_model(
     try:
         return bentoml.transformers.save_model(tag, model, custom_objects={"tokenizer": tokenizer})
     finally:
-        import gc
-
-        gc.collect()
-
         # NOTE: We need to free up the cache after importing the model
         # in the case where users first run openllm start without the model
         # available locally.
@@ -182,11 +248,19 @@ def import_model(
 _reserved_namespace = {"config_class", "model", "tokenizer", "import_kwargs"}
 
 
-class LLMInterface(ABC):
-    """This defines the loose contract for all openllm.LLM implementations."""
+_M = t.TypeVar("_M")
+_T = t.TypeVar("_T")
 
-    config_class: type[openllm.LLMConfig]
-    """The config class to use for this LLM. If you are creating a custom LLM, you must specify this class."""
+
+def _default_post_init(self: LLM[t.Any, t.Any]):
+    self.device = None
+
+    if self.__llm_implementation__ == "pt" and is_torch_available():
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
+class LLMInterface(ABC, t.Generic[_M, _T]):
+    """This defines the loose contract for all openllm.LLM implementations."""
 
     @property
     def import_kwargs(self) -> tuple[dict[str, t.Any], dict[str, t.Any]] | None:
@@ -259,32 +333,73 @@ class LLMInterface(ABC):
         example implementation."""
         raise NotImplementedError
 
+    # NOTE: All fields below are attributes that can be accessed by users.
+    config_class: type[openllm.LLMConfig]
+    """The config class to use for this LLM. If you are creating a custom LLM, you must specify this class."""
 
-_M = t.TypeVar("_M")
-_T = t.TypeVar("_T")
+    config: openllm.LLMConfig
+    """The config instance to use for this LLM. This will be created based on config_class"""
+
+    bettertransformer: bool
+    """Whether to load this LLM with FasterTransformer enabled. The order of loading is:
+    - If pass within `for_model`, `from_pretrained` or `__init__`.
+    - If `self.bettertransformer` is set within `llm_post_init`.
+    - Finally, if none of the above, default to self.config['bettertransformer']
+
+    > **Note** that if LoRA is enabled, bettertransformer will be disabled.
+    """
+
+    device: torch.device | str | int | None
+    """The device to be used for this LLM. If the implementation is 'pt', then it will be torch.device, else string."""
+
+    # NOTE: The following will be populated by __init_subclass__, note that these should not
+    # be mutated by users.
+    __llm_trust_remote_code__: bool
+    """This is used to determine during 'import_model' whether to trust remote code or not.
+    This works synonymous with `trust_remote_code` kwarg in transformers Auto classes. If not passed,
+    then by default fallback to config_class['trust_remote_code']
+    """
+
+    __llm_implementation__: t.Literal["pt", "tf", "flax"]
+    """This is used to determine which implementation that this LLM has. Usually, this will inferred from
+    class name, that follows the HuggingFace's naming convention:
+
+    - `OPTForConditionalGeneration` -> `pt`
+    - `TFOPTForConditionalGeneration` -> `tf`
+    - `FlaxOPTForConditionalGeneration` -> `flax`
+    """
+
+    __llm_model__: _M | peft.PeftModel | torch.nn.Module | None
+    """A reference to the actual model. Instead of access this directly, you should use `model` property instead."""
+
+    __llm_tokenizer__: _T | None
+    """A reference to the actual tokenizer. Instead of access this directly, you should use `tokenizer` property instead."""
+
+    __llm_tag__: bentoml.Tag | None
+    """A reference to the tag used for this LLM. Instead of access this directly, you should use `tag` property instead."""
+
+    __llm_bentomodel__: bentoml.Model | None
+    """A reference to the bentomodel used for this LLM. Instead of access this directly, you should use `_bentomodel` property instead."""
+
+    __llm_adapter_map__: dict[AdapterType, dict[str | t.Literal["default"], peft.PeftConfig]] | None
+    """A reference to the the cached LoRA adapter mapping."""
+
+    __llm_custom_load__: t.Callable[[t.Self, t.Any, t.Any], None] | None
+    """A callable that will be called after the model is loaded. This is set when 'load_model' is implemented"""
+
+    __llm_init_kwargs__: property | None
+    """A check if 'import_kwargs' is implemented in subclass."""
+
+    # The following are internal, users shouldn't access this directly.
+    _model_args: tuple[t.Any, ...]
+    _model_attrs: dict[str, t.Any]
+    _tokenizer_attrs: dict[str, t.Any]
+
+    _adapters_mapping: dict[AdapterType, tuple[tuple[str | None, str | None, dict[str, t.Any]], ...]] | None
 
 
 @attr.define(slots=True, repr=False)
-class LLM(LLMInterface, t.Generic[_M, _T]):
-    if t.TYPE_CHECKING:
-        # The following will be populated by metaclass
-        __llm_trust_remote_code__: bool
-        __llm_implementation__: t.Literal["pt", "tf", "flax"]
-        __llm_model__: _M | None
-        __llm_tokenizer__: _T | None
-        __llm_tag__: bentoml.Tag | None
-        __llm_bentomodel__: bentoml.Model | None
-
-        __llm_post_init__: t.Callable[[t.Self], None] | None
-        __llm_custom_load__: t.Callable[[t.Self, t.Any, t.Any], None] | None
-        __llm_init_kwargs__: property | None
-
-        _model_args: tuple[t.Any, ...]
-        _model_attrs: dict[str, t.Any]
-        _tokenizer_attrs: dict[str, t.Any]
-
-        bettertransformer: bool
-
+class LLM(LLMInterface[_M, _T], ReprMixin):
     def __init_subclass__(cls):
         cd = cls.__dict__
         prefix_class_name_config = cls.__name__
@@ -310,18 +425,43 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
                     "Missing required key 'config_class'. Make sure to define it within the LLM subclass."
                 )
 
-        if cls.import_model is LLMInterface.import_model:
-            # using the default import model
+        if cls.import_model is LLMInterface[_M, _T].import_model:
+            # using the default import model if no custom import is set
             setattr(cls, "import_model", functools.partial(import_model, _model_framework=implementation))
+
+        if cls.llm_post_init is LLMInterface[_M, _T].llm_post_init:
+            # using the default post init if no custom post init is set
+            wrapped_post_init = _default_post_init
         else:
-            logger.debug("Custom 'import_model' will be used when loading model %s", cls.__name__)
+            original_post_init = getattr(cls, "llm_post_init")
 
-        cls.__llm_post_init__ = None if cls.llm_post_init is LLMInterface.llm_post_init else cls.llm_post_init
-        cls.__llm_custom_load__ = None if cls.load_model is LLMInterface.load_model else cls.load_model
-        cls.__llm_init_kwargs__ = None if cls.import_kwargs is LLMInterface.import_kwargs else cls.import_kwargs
+            def wrapped_post_init(self: LLM[_M, _T]):
+                _default_post_init(self)
+                original_post_init(self)
 
-        for at in {"bentomodel", "tag", "model", "tokenizer"}:
+        setattr(cls, "llm_post_init", wrapped_post_init)
+
+        cls.__llm_custom_load__ = None if cls.load_model is LLMInterface[_M, _T].load_model else cls.load_model
+        cls.__llm_init_kwargs__ = (
+            None if cls.import_kwargs is LLMInterface[_M, _T].import_kwargs else cls.import_kwargs
+        )
+
+        for at in {"bentomodel", "tag", "model", "tokenizer", "adapter_map"}:
             setattr(cls, f"__llm_{at}__", None)
+
+        # update docstring for given entrypoint
+        for fn in {"generate", "generate_one", "generate_iterator"}:
+            original_fn = getattr(cls, fn, getattr(LLMInterface, fn))
+            original_fn.__doc__ = (
+                original_fn.__doc__
+                or f"""\
+            '{fn}' implementation {cls.__name__}.
+
+            Note that if LoRA is enabled (via either SDK or CLI), `self.model` will become a `peft.PeftModel`
+            The original can then be accessed with 'self.model.get_base_model()'.
+            """
+            )
+            setattr(cls, fn, original_fn)
 
     # The following is the similar interface to HuggingFace pretrained protocol.
     @classmethod
@@ -332,14 +472,146 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
         *args: t.Any,
         quantize: t.Literal["int8", "int4", "gptq"] | None = None,
         bettertransformer: bool | None = None,
+        adapter_id: str | None = None,
+        adapter_name: str | None = None,
+        adapter_map: dict[str, str | None] | None = None,
         **attrs: t.Any,
     ) -> LLM[_M, _T]:
+        """Instantiate a pretrained LLM.
+        it follows the same design principle as HuggingFace's `from_pretrained` method, plus the following:
+
+        Optimization options:
+
+        > This is most notable during serving time.
+
+        - quantize: quantize the model with the given quantization method. Currently supported int8, int4 quantization
+        - bettertransformer: Apply FasterTransformer to given pretrained weight
+
+        > Currently, the above two options are mutually exclusive.
+
+        Adapter options:
+
+        > This is used in conjunction with the fine-tuning features
+
+        - adapter_id: Optional [LoRA](https://arxiv.org/pdf/2106.09685.pdf) pretrained id or local path to apply to said model.
+        - adapter_name: Optional name of the adapter to apply to said model. If not provided, it will be handled internally by OpenLLM.
+        - adapter_map: optional dictionary of adapter_id to adapter_name. Note that this is mutually exclusive with adapter_id/adapter_name arguments.
+
+        Args:
+            model_id: The pretrained model to use. Defaults to None. If None, 'self.default_id' will be used.
+            llm_config: The config to use for this LLM. Defaults to None. If not passed, OpenLLM
+                        will use `config_class` to construct default configuration.
+            quantize: The quantization to use for this LLM. Defaults to None. Possible values
+                      include int8, int4 and gptq.
+            bettertransformer: Whether to use BetterTransformer with this model. Defaults to False.
+            adapter_id: The [LoRA](https://arxiv.org/pdf/2106.09685.pdf) pretrained id or local path to use for this LLM. Defaults to None.
+            adapter_name: The adapter name to use for this LLM. Defaults to None.
+            adapter_map: The adapter map to use for this LLM. Defaults to None. Note that this is mutually exclusive with adapter_id/adapter_name arguments.
+            *args: The args to be passed to the model.
+            **attrs: The kwargs to be passed to the model.
+        """
+        quantization_config = attrs.pop("quantization_config", None)
+        if quantization_config and quantize:
+            raise ValueError(
+                """'quantization_config' and 'quantize' are mutually exclusive. Either customise
+            your quantization_config or use the quantize argument."""
+            )
+
+        # quantization setup
+        quantization_config = attrs.pop("quantization_config", None)
+        # 8 bit configuration
+        int8_threshold = attrs.pop("llm_int8_threshhold", 6.0)
+        cpu_offloading = attrs.pop("llm_int8_enable_fp32_cpu_offload", False)
+        int8_skip_modules: list[str] | None = attrs.pop("llm_int8_skip_modules", None)
+        int8_has_fp16_weight = attrs.pop("llm_int8_has_fp16_weight", False)
+        # 4 bit configuration
+        int4_compute_dtype = attrs.pop("llm_bnb_4bit_compute_dtype", torch.bfloat16)
+        int4_quant_type = attrs.pop("llm_bnb_4bit_quant_type", "nf4")
+        int4_use_double_quant = attrs.pop("llm_bnb_4bit_use_double_quant", True)
+
+        # NOTE: Quantization setup
+        if quantization_config is None:
+            # quantize is a openllm.LLM feature, where we can quantize the model
+            # with bitsandbytes or quantization aware training.
+            if quantize is not None:
+                if not is_bitsandbytes_available():
+                    raise RuntimeError(
+                        "Quantization requires bitsandbytes to be installed. Make "
+                        "sure to install OpenLLM with 'pip install \"openllm[fine-tune]\"'"
+                    )
+                logger.debug(
+                    "'quantize' is not None. %s will use a default 'quantization_config' for %s. "
+                    "If you want to customise the quantization config, make sure to pass your "
+                    "own 'quantization_config'",
+                    cls.__name__,
+                    quantize,
+                )
+                if quantize == "int8":
+                    if int8_skip_modules is None:
+                        int8_skip_modules = []
+                    if "lm_head" not in int8_skip_modules and cls.config_class.__openllm_model_type__ == "causal_lm":
+                        logger.debug("Skipping 'lm_head' for quantization for %s", cls.__name__)
+                        int8_skip_modules.append("lm_head")
+                    quantization_config = transformers.BitsAndBytesConfig(
+                        load_in_8bit=True,
+                        llm_int8_enable_fp32_cpu_offload=cpu_offloading,
+                        llm_int8_threshhold=int8_threshold,
+                        llm_int8_skip_modules=int8_skip_modules,
+                        llm_int8_has_fp16_weight=int8_has_fp16_weight,
+                    )
+                elif quantize == "int4":
+                    if is_transformers_supports_kbit():
+                        quantization_config = transformers.BitsAndBytesConfig(
+                            load_in_4bit=True,
+                            llm_bnb_4bit_compute_dtype=int4_compute_dtype,
+                            llm_bnb_4bit_quant_type=int4_quant_type,
+                            llm_bnb_4bit_use_double_quant=int4_use_double_quant,
+                        )
+                    else:
+                        logger.warning(
+                            "'quantize' is set to int4, while the current transformers version %s does not support "
+                            "k-bit quantization. k-bit quantization is supported since transformers 4.30, therefore "
+                            "make sure to install the latest version of transformers either via PyPI or "
+                            "from git source: 'pip install git+https://github.com/huggingface/transformers'.",
+                            pkg.pkg_version_info("transformers"),
+                        )
+                elif quantize == "gptq":
+                    # TODO: support GPTQ loading quantization
+                    raise NotImplementedError("GPTQ is not supported yet.")
+                    if model_id is None:
+                        raise RuntimeError(
+                            "'quantize=%s' requires passing custom path to quantized weights as we are unable to load "
+                            "the model on the fly. See https://github.com/qwopqwop200/GPTQ-for-LLaMa for "
+                            "instruction on how to quantize '%s' with GPTQ.",
+                            quantize,
+                            cls.__name__,
+                        )
+                else:
+                    raise ValueError(f"'quantize' must be one of ['int8', 'int4', 'gptq'], got {quantize} instead.")
+
+        # NOTE: Fine-tuning setup
+        if adapter_map and adapter_id:
+            raise ValueError(
+                """'adapter_map' and 'adapter_id' are mutually exclusive. Either provide a
+                'adapter_map' ({adapter_id: adapter_name | None, ...}) or use
+                the combination of adapter_id/adapter_name arguments.
+                """
+            )
+        if adapter_map is None and adapter_id is not None:
+            adapter_map = {adapter_id: adapter_name}
+
+        if adapter_map is not None and not is_peft_available():
+            raise RuntimeError(
+                "LoRA adapter requires 'peft' to be installed. Make sure to install OpenLLM with 'pip install \"openllm[fine-tune]\"'"
+            )
+
         return cls(
             model_id=model_id,
             llm_config=llm_config,
             *args,
-            quantize=quantize,
             bettertransformer=bettertransformer,
+            _adapters_mapping=resolve_peft_config_type(adapter_map),
+            quantization_config=quantization_config,
             **attrs,
         )
 
@@ -348,11 +620,16 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
         model_id: str | None = None,
         llm_config: openllm.LLMConfig | None = None,
         *args: t.Any,
-        quantize: t.Literal["int8", "int4", "gptq"] | None = None,
         bettertransformer: bool | None = None,
+        _adapters_mapping: dict[AdapterType, tuple[tuple[str | None, str | None, dict[str, t.Any]], ...]]
+        | None = None,
         **attrs: t.Any,
     ):
         """Initialize the LLM with given pretrained model.
+
+        > **Warning**
+        > To initializing any LLM, you should use `openllm.AutoLLM` or `openllm.LLM.from_pretrained` instead.
+        > `__init__` initialization is only for internal use.
 
         Note:
         - *args to be passed to the model.
@@ -426,8 +703,6 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
             model_id: The pretrained model to use. Defaults to None. If None, 'self.default_id' will be used.
             llm_config: The config to use for this LLM. Defaults to None. If not passed, OpenLLM
                         will use `config_class` to construct default configuration.
-            quantize: The quantization to use for this LLM. Defaults to None. Possible values
-                      include int8, int4 and gptq.
             bettertransformer: Whether to use BetterTransformer with this model. Defaults to False.
             *args: The args to be passed to the model.
             **attrs: The kwargs to be passed to the model.
@@ -443,102 +718,27 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
         # low_cpu_mem_usage is only available for model
         # this is helpful on system with low memory to avoid OOM
         low_cpu_mem_usage = attrs.pop("low_cpu_mem_usage", True)
-
-        # quantization setup
         quantization_config = attrs.pop("quantization_config", None)
-        # 8 bit configuration
-        int8_threshold = attrs.pop("llm_int8_threshhold", 6.0)
-        cpu_offloading = attrs.pop("llm_int8_enable_fp32_cpu_offload", False)
-        int8_skip_modules: list[str] | None = attrs.pop("llm_int8_skip_modules", None)
-        int8_has_fp16_weight = attrs.pop("llm_int8_has_fp16_weight", False)
-        # 4 bit configuration
-        int4_compute_dtype = attrs.pop("llm_bnb_4bit_compute_dtype", torch.bfloat16)
-        int4_quant_type = attrs.pop("llm_bnb_4bit_quant_type", "nf4")
-        int4_use_double_quant = attrs.pop("llm_bnb_4bit_use_double_quant", True)
 
         if llm_config is not None:
-            logger.debug("Using provided LLMConfig to initialize LLM instead of from default.", llm_config)
+            if DEBUG and int(os.environ.get("OPENLLMDEVDEBUG", str(0))) > 3:
+                logger.debug("Using provided LLMConfig to initialize LLM instead of from default: %r", llm_config)
             self.config = llm_config
         else:
             self.config = self.config_class.model_construct_env(**attrs)
             # The rests of the kwargs that is not used by the config class should be stored into __openllm_extras__.
             attrs = self.config["extras"]
 
-        if quantization_config and quantize:
-            raise ValueError(
-                """'quantization_config' and 'quantize' are mutually exclusive. Either customise
-            your quantization_config or use the quantize argument."""
-            )
-        if quantization_config is None:
-            # quantize is a openllm.LLM feature, where we can quantize the model
-            # with bitsandbytes or quantization aware training.
-            if quantize is not None:
-                if not is_bitsandbytes_available():
-                    raise RuntimeError(
-                        "Quantization requires bitsandbytes to be installed. Make "
-                        "sure to install OpenLLM with 'pip install \"openllm[fine-tune]\"'"
-                    )
-                logger.debug(
-                    "'quantize' is not None. %s will use a default 'quantization_config' for %s. "
-                    "If you want to customise the quantization config, make sure to pass your "
-                    "own 'quantization_config'",
-                    self,
-                    quantize,
-                )
-                if quantize == "int8":
-                    if int8_skip_modules is None:
-                        int8_skip_modules = []
-                    if "lm_head" not in int8_skip_modules and self.config["model_type"] == "causal_lm":
-                        logger.debug("Skipping 'lm_head' for quantization for %s", self)
-                        int8_skip_modules.append("lm_head")
-                    quantization_config = transformers.BitsAndBytesConfig(
-                        load_in_8bit=True,
-                        llm_int8_enable_fp32_cpu_offload=cpu_offloading,
-                        llm_int8_threshhold=int8_threshold,
-                        llm_int8_skip_modules=int8_skip_modules,
-                        llm_int8_has_fp16_weight=int8_has_fp16_weight,
-                    )
-                elif quantize == "int4":
-                    if is_transformers_supports_kbit():
-                        quantization_config = transformers.BitsAndBytesConfig(
-                            load_in_4bit=True,
-                            llm_bnb_4bit_compute_dtype=int4_compute_dtype,
-                            llm_bnb_4bit_quant_type=int4_quant_type,
-                            llm_bnb_4bit_use_double_quant=int4_use_double_quant,
-                        )
-                    else:
-                        logger.warning(
-                            "'quantize' is set to int4, while the current transformers version %s does not support "
-                            "k-bit quantization. k-bit quantization is supported since transformers 4.30, therefore "
-                            "make sure to install the latest version of transformers either via PyPI or "
-                            "from git source: 'pip install git+https://github.com/huggingface/transformers'.",
-                            pkg.pkg_version_info("transformers"),
-                        )
-                elif quantize == "gptq":
-                    # TODO: support GPTQ loading quantization
-                    if model_id is None:
-                        raise RuntimeError(
-                            "'quantize=%s' requires passing custom path to quantized weights as we are unable to load "
-                            "the model on the fly. See https://github.com/qwopqwop200/GPTQ-for-LLaMa for "
-                            "instruction on how to quantize '%s' with GPTQ.",
-                            quantize,
-                            self,
-                        )
-                    raise NotImplementedError("GPTQ is not supported yet.")
-                else:
-                    raise ValueError(f"'quantize' must be one of ['int8', 'int4', 'gptq'], got {quantize} instead.")
+        self._adapters_mapping = _adapters_mapping
 
         if self.__llm_implementation__ == "pt":
-            if not self.config["use_pipeline"]:
-                attrs["low_cpu_mem_usage"] = low_cpu_mem_usage
+            attrs["low_cpu_mem_usage"] = low_cpu_mem_usage
             attrs["quantization_config"] = quantization_config
 
         model_kwds, tokenizer_kwds = {}, {}
         if self.__llm_init_kwargs__:
-            if t.TYPE_CHECKING:
-                # the above meta value should determine that this LLM has custom kwargs
-                assert self.import_kwargs
-            model_kwds, tokenizer_kwds = self.import_kwargs
+            # NOTE: recast here for type safety
+            model_kwds, tokenizer_kwds = t.cast("tuple[dict[str, t.Any], dict[str, t.Any]]", self.__llm_init_kwargs__)
             logger.debug(
                 "'%s' default kwargs for model: '%s', tokenizer: '%s'",
                 self.__class__.__name__,
@@ -553,7 +753,7 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
         assert model_id is not None
         self._model_id = model_id
 
-        # parsing tokenizer and model kwargs
+        # parsing tokenizer and model kwargs, as the hierachy is param pass > default
         tokenizer_kwds.update(
             {k[len(TOKENIZER_PREFIX) :]: v for k, v in attrs.items() if k.startswith(TOKENIZER_PREFIX)}
         )
@@ -568,8 +768,7 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
         self._tokenizer_attrs = tokenizer_kwds
         self._openllm_model_version = openllm_model_version
 
-        if self.__llm_post_init__:
-            self.llm_post_init()
+        self.llm_post_init()
 
         # we set it here so that we allow subclass to overwrite bettertransformer in llm_post_init
         if bettertransformer:
@@ -577,6 +776,10 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
             self.bettertransformer = bettertransformer
         else:
             non_intrusive_setattr(self, "bettertransformer", self.config["bettertransformer"])
+        # If lora is passed, the disable bettertransformer
+        if _adapters_mapping and self.bettertransformer is True:
+            logger.debug("LoRA is visible for %s, disabling BetterTransformer", self)
+            self.bettertransformer = False
 
     def __setattr__(self, attr: str, value: t.Any):
         if attr in _reserved_namespace:
@@ -588,9 +791,21 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
 
         super().__setattr__(attr, value)
 
-    def __repr__(self) -> str:
-        keys = {"model_id", "runner_name", "llm_type", "config"}
-        return f"{self.__class__.__name__}({', '.join(f'{k}={getattr(self, k)!r}' for k in keys)})"
+    @property
+    def adapters_mapping(
+        self,
+    ) -> dict[AdapterType, tuple[tuple[str | None, str | None, dict[str, t.Any]], ...]] | None:
+        return self._adapters_mapping
+
+    @adapters_mapping.setter
+    def adapters_mapping(
+        self, value: dict[AdapterType, tuple[tuple[str | None, str | None, dict[str, t.Any]], ...]] | None
+    ):
+        self._adapters_mapping = value
+
+    @property
+    def __repr_keys__(self) -> set[str]:
+        return {"model_id", "runner_name", "config"}
 
     @property
     def model_id(self) -> str:
@@ -683,27 +898,23 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
                 self.config["start_name"],
                 "--model-id",
                 self.model_id,
-                "--output",
-                "porcelain",
+                "--machine",
             ]
         )
-        if DEBUG or get_debug_mode():
-            # NOTE: This usually only concern BentoML devs.
-            pattern = r"^__tag__:[^:\n]+:[^:\n]+"
-            matched = re.search(pattern, output.decode("utf-8").strip(), re.MULTILINE)
-            assert matched is not None, f"Failed to find tag from output: {output}"
-            _, _, tag = matched.group(0).partition(":")
-        else:
-            tag = output.strip().decode()
+        # NOTE: This usually only concern BentoML devs.
+        pattern = r"^__tag__:[^:\n]+:[^:\n]+"
+        matched = re.search(pattern, output.decode("utf-8").strip(), re.MULTILINE)
+        assert matched is not None, f"Failed to find tag from output: {output}"
+        _, _, tag = matched.group(0).partition(":")
 
         return bentoml.transformers.get(tag)
 
     @property
     def _bentomodel(self) -> bentoml.Model:
         if self.__llm_bentomodel__ is None:
-            # NOTE: Since PR#28, self.__llm_bentomodel__ changed from
+            # NOTE: Since #28, self.__llm_bentomodel__ changed from
             # ensure_model_id_exists() into just returning the model ref.
-            # This is because we want to save a few seconds of loading time,
+            # This is purely a performance reason.
             # as openllm.Runner and openllm.AutoLLM initialisation is around 700ms
             # before #28.
             # If users want to make sure to have the model downloaded,
@@ -730,23 +941,20 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
         if self.config["requires_gpu"] and len(openllm.utils.gpu_count()) < 1:
             raise GpuNotAvailableError(f"{self} only supports running with GPU (None available).") from None
 
-        kwds = self._model_attrs
-        kwds["trust_remote_code"] = self.__llm_trust_remote_code__
-
-        is_pipeline = "_pretrained_class" in self._bentomodel.info.metadata
-        # differentiate when saving tokenizer or other pretrained type.
-        is_pretrained_model = is_pipeline and "_framework" in self._bentomodel.info.metadata
-
-        if self.bettertransformer and is_pipeline and self.config["use_pipeline"]:
-            # This is a pipeline, provide a accelerator args
-            kwds["accelerator"] = "bettertransformer"
-
         if self.__llm_model__ is None:
+            kwds = self._model_attrs
+            kwds["trust_remote_code"] = self.__llm_trust_remote_code__
+
+            is_pipeline = "_pretrained_class" in self._bentomodel.info.metadata
+            # differentiate when saving tokenizer or other pretrained type.
+            is_pretrained_model = is_pipeline and "_framework" in self._bentomodel.info.metadata
+
             if self.__llm_custom_load__:
                 self.__llm_model__ = self.load_model(self.tag, *self._model_args, **kwds)
             else:
                 self.__llm_model__ = self._bentomodel.load_model(*self._model_args, **kwds)
 
+            # This branch shouldn't hit when LoRA is visible.
             if (
                 self.bettertransformer
                 and is_pretrained_model
@@ -758,6 +966,143 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
 
                 self.__llm_model__ = BetterTransformer.transform(self.__llm_model__)
         return t.cast(_M, self.__llm_model__)
+
+    def _transpose_adapter_mapping(
+        self,
+        inference_mode: bool = True,
+        use_cache: bool = True,
+    ) -> dict[AdapterType, dict[str | t.Literal["default"], tuple[peft.PeftConfig, str]]]:
+        assert self._adapters_mapping is not None, "LoRA mapping is not set up correctly."
+
+        if not use_cache:
+            logger.debug(
+                "'use_cache' is set to False. This means the adapter mapping resolution will not be cached. This should only be used during training."
+            )
+
+        if self.__llm_adapter_map__ is not None and use_cache:
+            # early out if we already serialized everything.
+            return self.__llm_adapter_map__
+
+        adapter_map: dict[AdapterType, dict[str | t.Literal["default"], tuple[peft.PeftConfig, str]]] = {}
+        # this is a temporary check to accept the first option name as 'default'
+        # then we will raise Error when the optional_name is set to None in next iteration.
+        _converted_first_none = False
+        for _adapter_type, _adapter_tuple in self._adapters_mapping.items():
+            if _adapter_type not in adapter_map:
+                adapter_map[_adapter_type] = {}
+            default_config = self.config["fine_tune_strategies"].get(
+                _adapter_type, FineTuneConfig(adapter_type=_adapter_type, llm_config_class=self.config_class)
+            )
+            default_config = default_config.eval() if inference_mode else default_config.train()
+            for pretrained_or_peft_id, optional_name, resolved_mapping in _adapter_tuple:
+                if not optional_name:
+                    if not _converted_first_none:
+                        _converted_first_none = True
+                        optional_name = "default"
+                    else:
+                        raise ValueError(
+                            f"{self.__class__.__name__} doesn't know how to resolve adapter_name None mapping: {pretrained_or_peft_id, resolved_mapping}"
+                        )
+                assert isinstance(optional_name, str)  # optional_name should all be resolved here
+                if optional_name == "default":
+                    adapter_map[_adapter_type][optional_name] = (
+                        default_config.with_config(**resolved_mapping).to_peft_config(),
+                        pretrained_or_peft_id,
+                    )
+                else:
+                    adapter_map[_adapter_type][optional_name] = (
+                        FineTuneConfig(
+                            adapter_type=_adapter_type,
+                            adapter_config=resolved_mapping,
+                            inference_mode=inference_mode,
+                            llm_config_class=self.config_class,
+                        ).to_peft_config(),
+                        pretrained_or_peft_id,
+                    )
+
+        if self.__llm_adapter_map__ is None and use_cache:
+            self.__llm_adapter_map__ = adapter_map
+
+            return self.__llm_adapter_map__
+
+        return adapter_map
+
+    @requires_dependencies("peft", extra="fine-tune")
+    def apply_adapter(
+        self,
+        inference_mode: bool = True,
+        adapter_type: AdapterType = "lora",
+        load_adapters: t.Literal["all"] | list[str] | None = None,
+        use_cache: bool = True,
+    ) -> peft.PeftModel | _M | torch.nn.Module:
+        """Apply given LoRA mapping to the model. Note that the base model can still
+        be accessed via self.model.get_base_model().
+        """
+        assert self.model, "Internal error: Model is not loaded correctly."
+        assert self.__llm_model__ is not None
+
+        # early out if _adapters_mapping is empty or it is already wrapped
+        # with peft.
+        if not self._adapters_mapping:
+            logger.debug("No adapter mapping is found. Skip applying adapter.")
+            return self.__llm_model__
+
+        _mapping = self._transpose_adapter_mapping(inference_mode=inference_mode, use_cache=use_cache)
+        if adapter_type not in _mapping:
+            raise ValueError(
+                f"Given adapter type {adapter_type} is not supported. Please choose from {list(_mapping.keys())}"
+            )
+        adapter_mapping = _mapping[adapter_type]
+        default_config, peft_model_id = adapter_mapping.pop("default", None)
+        if default_config is None:
+            raise ValueError(
+                "There is no 'default' mapping. Please check the adapter mapping and report this bug to the OpenLLM team."
+            )
+
+        # the below shared similar logics with `get_peft_model`
+        # TODO: Support PromptLearningConfig
+        if default_config.task_type not in peft.MODEL_TYPE_TO_PEFT_MODEL_MAPPING.keys() and not isinstance(
+            default_config, peft.PromptLearningConfig
+        ):
+            logger.debug(
+                "Given task type '%s' is not supported by peft. This means it can be a custom PeftModel implementation. Make sure the adapter is loaded manually before running inference.",
+                default_config.task_type,
+            )
+            self.__llm_model__ = peft.PeftModel(self.__llm_model__, default_config)
+        else:
+            # this is not ideal to serialize like this, wait until https://github.com/huggingface/peft/pull/612
+            # is merged
+            peft_class = peft.MODEL_TYPE_TO_PEFT_MODEL_MAPPING[default_config.task_type]
+            if t.cast("str | None", default_config.base_model_name_or_path) is not None:
+                kwargs: dict[str, t.Any] = {"is_trainable": not inference_mode}
+                if "config" in inspect.signature(peft_class.from_pretrained).parameters:
+                    kwargs["config"] = default_config
+                else:
+                    kwargs.update(dict(default_config.to_dict().items()))
+                self.__llm_model__ = peft_class.from_pretrained(self.__llm_model__, peft_model_id, **kwargs)
+            else:
+                # in this case, the given base_model_name_or_path is None. This will be hit during training
+                self.__llm_model__ = peft_class(self.__llm_model__, default_config)
+
+        # now we loop through the rest with add_adapter
+        if len(adapter_mapping) > 0:
+            for adapter_name, _peft_config in adapter_mapping.items():
+                self.__llm_model__.add_adapter(adapter_name, _peft_config)
+
+            # optionally load adapters. In case of multiple adapters, or on Runner,
+            # we will need to set load_adapters='all'
+            if load_adapters is not None:
+                adapters_to_load = adapter_mapping.keys() if load_adapters == "all" else load_adapters
+                for adapter_name in adapters_to_load:
+                    _peft_config, _peft_model_id = adapter_mapping[adapter_name]
+                    self.__llm_model__.load_adapter(
+                        _peft_model_id,
+                        adapter_name=adapter_name,
+                        is_trainable=not inference_mode,
+                        **dict(_peft_config.to_dict()),
+                    )
+
+        return self.__llm_model__
 
     @property
     def tokenizer(self) -> _T:
@@ -826,18 +1171,45 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
             SUPPORTED_RESOURCES = ("nvidia.com/gpu", "cpu")
             SUPPORTS_CPU_MULTI_THREADING = True
 
-            llm_type: str
-            identifying_params: dict[str, t.Any]
-
-            def __init_subclass__(cls, llm_type: str, identifying_params: dict[str, t.Any], **_: t.Any):
-                cls.llm_type = llm_type
-                cls.identifying_params = identifying_params
-
             def __init__(__self: _Runnable):
                 # NOTE: The side effect of this line
                 # is that it will load the imported model during
-                # runner creation. So don't remove it!!
-                self.model
+                # runner startup. So don't remove it!!
+                assert self.model, "Internal error: Model is not loaded"
+                if self.adapters_mapping is not None:
+                    logger.info("Applying LoRA to %s...", self.runner_name)
+                    self.apply_adapter(inference_mode=True, load_adapters="all")
+
+            @bentoml.Runnable.method(batchable=False)
+            def list_adapter(__self) -> dict[str, t.Any]:
+                if not is_peft_available():
+                    return {
+                        "success": False,
+                        "result": {},
+                        "error_msg": "peft is not available. Make sure to install: 'pip install \"openllm[fine-tune]\"'",
+                    }
+                if not isinstance(self.model, peft.PeftModel):
+                    return {"success": False, "result": {}, "error_msg": "Model is not a PeftModel"}
+                return {"success": True, "result": self.model.peft_config, "error_msg": ""}
+
+            @bentoml.Runnable.method(batchable=False)
+            def set_adapter(__self, adapter_name: str) -> dict[t.Literal["success", "error_msg"], bool | str]:
+                if not is_peft_available():
+                    return {
+                        "success": False,
+                        "error_msg": "peft is not available. Make sure to install: 'pip install \"openllm[fine-tune]\"'",
+                    }
+                if not isinstance(self.model, peft.PeftModel):
+                    return {"success": False, "error_msg": "Model is not a PeftModel"}
+                try:
+                    self.model.set_adapter(adapter_name)
+                    return {"success": True, "error_msg": ""}
+                except ValueError:
+                    logger.info("Adapter %s not found", adapter_name)
+                    return {
+                        "success": False,
+                        "error_msg": f"Adapter {adapter_name} not found. Available adapters: {list(self.model.peft_config)}",
+                    }
 
             @bentoml.Runnable.method(
                 batchable=generate_sig.batchable,
@@ -905,19 +1277,21 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
                     "__call__": _wrapped_generate_run,
                     "__module__": f"openllm.models.{self.config['model_name']}",
                     "__doc__": self.config["env"].start_docstring,
+                    "__repr_keys__": lambda _: {"llm", "config", "llm_type", "identifying_params"},
                 }
             ),
         )(
             types.new_class(
                 inflection.camelize(self.config["model_name"]) + "Runnable",
                 (_Runnable,),
-                {
-                    "SUPPORTED_RESOURCES": ("nvidia.com/gpu", "cpu")
-                    if self.config["requires_gpu"]
-                    else ("nvidia.com/gpu",),
-                    "llm_type": self.llm_type,
-                    "identifying_params": self.identifying_params,
-                },
+                {},
+                lambda ns: ns.update(
+                    {
+                        "SUPPORTED_RESOURCES": ("nvidia.com/gpu", "cpu")
+                        if self.config["requires_gpu"]
+                        else ("nvidia.com/gpu",),
+                    }
+                ),
             ),
             name=self.runner_name,
             embedded=False,
@@ -951,7 +1325,7 @@ class LLM(LLMInterface, t.Generic[_M, _T]):
         return self.postprocess_generate(prompt, generated_result, **postprocess_kwargs)
 
 
-@t.overload
+@overload
 def Runner(
     model_name: str,
     *,
@@ -962,7 +1336,7 @@ def Runner(
     ...
 
 
-@t.overload
+@overload
 def Runner(
     model_name: str,
     *,
@@ -978,19 +1352,34 @@ def Runner(
     ...
 
 
-def Runner(model_name: str, ensure_available: bool = True, init_local: bool = False, **attrs: t.Any) -> LLMRunner:
+def Runner(
+    model_name: str,
+    ensure_available: bool | None = None,
+    init_local: bool = False,
+    **attrs: t.Any,
+) -> LLMRunner:
     """Create a Runner for given LLM. For a list of currently supported LLM, check out 'openllm models'
+
+    The behaviour of ensure_available that is synonymous to `AutoLLM.for_model` depends on `init_local`.
+    By default, `ensure_available` is synonymous to `init_local`, meaning on the service when creating
+    runner, it won't download the model. So before running your BentoML Service, you should create a `on_startup`
+    hook to check download if you don't want to do it manually:
+
+    ```python
+
+    runner = openllm.Runner("dolly-v2")
+
+    @svc.on_startup
+    def download():
+        runner.llm.ensure_model_id_exists()
+    ...
+    ```
+
+    if `init_local=True` (For development workflow), it will also enable `ensure_available`.
+    Default value of `ensure_available` is None. If set then use that given value, otherwise fallback to the aforementioned behaviour.
 
     Args:
         model_name: Supported model name from 'openllm models'
-        ensure_available: If True, it will ensure the model is available before creating the runner.
-                          Set to False for faster creation time. Note that you will need to make sure
-                          the model for this 'model_id' is available before calling the runner.
-                          One can do this by doing the following:
-                          ```python
-                          runner = openllm.Runner("dolly-v2", ensure_available=False)
-                          runner.llm.ensure_model_id_exists()
-                          ```
         init_local: If True, it will initialize the model locally. This is useful if you want to
                     run the model locally. (Symmetrical to bentoml.Runner.init_local())
         **attrs: The rest of kwargs will then be passed to the LLM. Refer to the LLM documentation for the kwargs
@@ -998,8 +1387,10 @@ def Runner(model_name: str, ensure_available: bool = True, init_local: bool = Fa
     """
     runner = t.cast(
         "_BaseAutoLLMClass",
-        openllm[ModelEnv(model_name)["framework_value"]],  # type: ignore (internal API)
-    ).create_runner(model_name, ensure_available=ensure_available, **attrs)
+        openllm[EnvVarMixin(model_name)["framework_value"]],  # type: ignore (internal API)
+    ).create_runner(
+        model_name, ensure_available=ensure_available if ensure_available is not None else init_local, **attrs
+    )
 
     if init_local:
         runner.init_local(quiet=True)

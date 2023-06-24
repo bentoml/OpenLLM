@@ -107,7 +107,7 @@ After setting up your environment, here's how you can start contributing:
 5. Run all tests to ensure your changes haven't broken anything:
 
    ```bash
-   hatch run test
+   hatch run test:p
    ```
 
 6. Commit your changes:
@@ -141,7 +141,7 @@ directory and their filenames start with `test_`.
 Run all tests with:
 
 ```bash
-hatch run test
+hatch run test:p
 ```
 
 ## Releasing a New Version
@@ -195,20 +195,19 @@ simple rules:
 Example entries:
 
 ```md
-Added `LLM.func()`.
-The feature really _is_ awesome.
+Added `LLM.func()`. The feature really _is_ awesome.
 ```
 
 or:
 
 ```md
-`openllm.utils.func()` now doesn't X.Y.Z anymore when passed the _foobar_ argument.
-The bug really _was_ nasty.
+`openllm.utils.func()` now doesn't X.Y.Z anymore when passed the _foobar_
+argument. The bug really _was_ nasty.
 ```
 
 ---
 
-`hatch run changelog` will render the current changelog to the terminal if you have
-any doubts.
+`hatch run changelog` will render the current changelog to the terminal if you
+have any doubts.
 
 [semantic newlines]: https://rhodesmill.org/brandon/2012/one-sentence-per-line/

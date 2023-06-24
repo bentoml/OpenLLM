@@ -12,9 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import bentoml
 import openllm
-from bentoml.io import Text
+
 
 model = "dolly-v2"
 
@@ -24,7 +26,12 @@ llm_runner = openllm.Runner(model, llm_config=llm_config)
 svc = bentoml.Service(name="llm-service", runners=[llm_runner])
 
 
-@svc.api(input=Text(), output=Text())
+@svc.on_startup
+def download(_: bentoml.Context):
+    llm_runner.llm.ensure_model_id_exists()
+
+
+@svc.api(input=bentoml.io.Text(), output=bentoml.io.Text())
 async def prompt(input_text: str) -> str:
-    answer = await llm_runner.generate(input_text)
-    return answer
+    answer = await llm_runner.generate.async_run(input_text)
+    return answer[0]["generated_text"]

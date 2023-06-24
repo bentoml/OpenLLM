@@ -22,6 +22,7 @@ import openllm
 
 from ... import utils
 
+
 _import_structure = {
     "configuration_auto": ["AutoConfig", "CONFIG_MAPPING", "CONFIG_MAPPING_NAMES"],
     "modeling_auto": ["MODEL_MAPPING_NAMES"],

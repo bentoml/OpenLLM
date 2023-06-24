@@ -1,8 +1,20 @@
-from typing import Any, Callable, Dict, NamedTuple, Optional, ParamSpec, Protocol, Tuple, Type, TypeVar
+from typing import Any
+from typing import Callable
+from typing import Dict
+from typing import Generic
+from typing import NamedTuple
+from typing import Optional
+from typing import ParamSpec
+from typing import Protocol
+from typing import Tuple
+from typing import Type
+from typing import TypeVar
 
 import click
 
-from ._core import FC, OptionGroup
+from ._core import FC
+from ._core import OptionGroup
+
 
 P = ParamSpec("P")
 O_co = TypeVar("O_co", covariant=True)
@@ -30,7 +42,7 @@ class _NotAttachedOption(click.Option):
     def __init__(self, param_decls: Any = ..., *, all_not_attached_options: Any, **attrs: Any) -> None: ...
     def handle_parse_result(self, ctx: click.Context, opts: Any, args: tuple[Any]) -> Any: ...
 
-class _OptGroup:
+class _OptGroup(Generic[O_co]):
     """A helper class to manage creating groups and group options via decorators
 
     The class provides two decorator-methods: `group`/`__call__` and `option`.
@@ -87,7 +99,7 @@ class _OptGroup:
         :param attrs: Additional parameters of option group class
         """
         ...
-    def option(self, *param_decls: Any, **attrs: Any) -> F[P, ClickFunctionWrapper[P, O_co]]:
+    def option(self, *param_decls: Any, **attrs: Any) -> FC:
         """The decorator adds a new option to the group
 
         The decorator is lazy. It adds option decls and attrs.
@@ -98,4 +110,4 @@ class _OptGroup:
         """
         ...
 
-optgroup: _OptGroup = ...
+optgroup: _OptGroup[Any] = ...

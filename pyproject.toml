@@ -3,10 +3,7 @@ build-backend = "hatchling.build"
 requires = ["hatchling"]
 
 [project]
-authors = [
-    { name = "Aaron Pham", email = "aarnphm@bentoml.com" },
-    { name = "BentoML Team", email = "contact@bentoml.com" },
-]
+authors = [{ name = "Aaron Pham", email = "aarnphm@bentoml.com" }]
 classifiers = [
     "Development Status :: 4 - Beta",
     "License :: OSI Approved :: Apache Software License",
@@ -23,25 +20,17 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
+# NOTE: The below is managed by ./tools/update-optional-dependencies.py
 dependencies = [
-    # bentoml[io] includes pydantic, PIL, filetype, pandas and numpy
-    # bentoml[grpc,grpc-reflection] include grpcio, grpcio-reflection
     "bentoml[grpc,io]>=1.0.22",
+    "transformers[torch,tokenizers,accelerate]>=4.29.0",
+    "optimum",
     "attrs>=23.1.0",
     "cattrs>=23.1.0",
-    # transformers[torch] includes torch and transformers
-    "transformers[torch,tokenizers]>=4.29.0",
-    # BetterTransformer support for inference.
-    "optimum",
-    # Super fast JSON serialization
     "orjson",
     "inflection",
-    # tabulate for CLI with CJK support
-    # >=0.9.0 for some bug fixes
     "tabulate[widechars]>=0.9.0",
-    # httpx used within openllm.client
     "httpx",
-    # for typing support
     "typing_extensions",
 ]
 description = 'OpenLLM: REST/gRPC API server for running any open Large-Language Model - StableLM, Llama, Alpaca, Dolly, Flan-T5, Custom'
@@ -69,7 +58,7 @@ requires-python = ">=3.8"
 # NOTE: Don't modify project.optional-dependencies
 # as it is managed by ./tools/update-optional-dependencies.py
 [project.optional-dependencies]
-agents = ["transformers[agents]", "diffusers", "soundfile"]
+agents = ["transformers[agents]>=4.30", "diffusers", "soundfile"]
 all = [
     "openllm[chatglm]",
     "openllm[starcoder]",
@@ -102,40 +91,6 @@ allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/openllm", "src/openllm_client"]
-
-[tool.hatch.envs.default]
-dependencies = [
-    "coverage[toml]>=6.5",
-    # NOTE: Tests strategies with Hypothesis and pytest, and snapshot testing with syrupy
-    "pytest",
-    "pytest-asyncio>=0.21.0",
-    "pytest-xdist[psutil]",
-    "pytest-cov",
-    "pytest-mock",
-    "pytest-randomly",
-    "pytest-rerunfailures",
-    "hypothesis",
-    "syrupy",
-    # NOTE: To run all hooks
-    "pre-commit",
-    # NOTE: Using under ./tools/update-optional-dependencies.py
-    "tomlkit",
-    # NOTE: Using under ./tools/update-readme.py
-    "markdown-it-py",
-    # NOTE: pyright for type
-    "pyright",
-    # NOTE: towncrier for changelog
-    "towncrier",
-]
-[tool.hatch.envs.default.scripts]
-changelog = "towncrier build --version main --draft"
-cov = ["cov-test", "cov-report"]
-cov-report = ["- coverage combine", "coverage report"]
-cov-test = "coverage run -m pytest {args:tests}"
-fmt = "pre-commit run --all-files"
-setup = "pre-commit install"
-test = "pytest {args:tests}"
-typing = "pyright {args:src/openllm tests}"
 
 [tool.towncrier]
 directory = "changelog.d"
@@ -170,6 +125,11 @@ directory = "feature"
 name = "Features"
 showcontent = true
 
+[[tool.towncrier.type]]
+directory = "fix"
+name = "Bug fix"
+showcontent = true
+
 [[tool.hatch.envs.all.matrix]]
 python = ["3.8", "3.9", "3.10", "3.11"]
 
@@ -198,31 +158,29 @@ exclude = '''
     | venv
     | lib
     | dist
+    | tools
   )/
   | src/openllm/__about__.py
 )
 '''
-line-length = 120
+line-length = 119
 target-version = ["py311"]
 
 [tool.ruff]
+exclude = ["tools"]
 ignore = [
     # Allow non-abstract empty methods in abstract base classes
     "B027",
     # Allow boolean positional values in function calls, like `dict.get(... True)`
     "FBT003",
-    # Ignore checks for possible passwords
-    "S105",
-    "S106",
-    "S107",
     # Ignore complexity
     "C901",
-    "PLR0911",
-    "PLR0912",
-    "PLR0913",
-    "PLR0915",
+    # Never enforce `E501` (line length violations).
+    "E501",
+    "E741",
 ]
-line-length = 120
+line-length = 119
+select = ["C", "E", "F", "I", "W"]
 target-version = "py311"
 unfixable = [
     "F401", # Don't touch unused imports, just warn about it.

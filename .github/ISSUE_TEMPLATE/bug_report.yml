@@ -30,7 +30,7 @@ body:
     attributes:
       label: Describe the bug
       description: |
-        Please provide a clear and concise description about the problem you ran into.
+        Please provide a clear and concise description of the problem you ran into.
       placeholder: This happened when I...
   - type: textarea
     id: to-reproduce
@@ -39,7 +39,7 @@ body:
     attributes:
       label: To reproduce
       description: |
-        Please provide a code sample or a code snipet to reproduce said problem. If you have code snippets, error messages, stack trace please also provide them here.
+        Please provide a code sample or a code snippet to reproduce said problem. If you have code snippets, error messages, stack trace please also provide them here.
 
         **IMPORTANT**: make sure to use [code tag](https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/creating-and-highlighting-code-blocks#syntax-highlighting) to correctly format your code. Screenshot is helpful but don't use it for code snippets as it doesn't allow others to copy-and-paste your code.
 
@@ -49,7 +49,7 @@ body:
 
           1. Provide '...'
           2. Run '...'
-          3. See error
+          3. See the error
   - type: textarea
     id: logs
     attributes:
@@ -69,3 +69,15 @@ body:
         platform: ...
     validations:
       required: true
+  - type: textarea
+    id: system-info
+    attributes:
+      label: System information (Optional)
+      description: |
+        Please share your system information with us.
+      placeholder: |
+        memory: ...
+        platform: ...
+        architecture: ...
+        CPU: ...
+        GPU: ...

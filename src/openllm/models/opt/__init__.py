@@ -18,6 +18,7 @@ import typing as t
 
 import openllm
 
+
 _import_structure = {
     "configuration_opt": ["OPTConfig", "START_OPT_COMMAND_DOCSTRING", "DEFAULT_PROMPT_TEMPLATE"],
 }

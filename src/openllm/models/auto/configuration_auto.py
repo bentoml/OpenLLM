@@ -22,8 +22,11 @@ import inflection
 
 import openllm
 
+
 if t.TYPE_CHECKING:
-    from collections import _odict_items, _odict_keys, _odict_values
+    from collections import _odict_items
+    from collections import _odict_keys
+    from collections import _odict_values
 
     ConfigOrderedDict = OrderedDict[str, type[openllm.LLMConfig]]
 
@@ -62,7 +65,7 @@ class _LazyConfigMapping(ConfigOrderedDict):
         value = self._mapping[key]
         module_name = inflection.underscore(key)
         if module_name not in self._modules:
-            self._modules[module_name] = openllm.utils.ModelEnv(module_name).module
+            self._modules[module_name] = openllm.utils.EnvVarMixin(module_name).module
         if hasattr(self._modules[module_name], value):
             return getattr(self._modules[module_name], value)
 
@@ -77,7 +80,9 @@ class _LazyConfigMapping(ConfigOrderedDict):
         return t.cast(ConfigValuesView, [self[k] for k in self._mapping.keys()] + list(self._extra_content.values()))
 
     def items(self):
-        return t.cast(ConfigItemsView, [(k, self[k]) for k in self._mapping.keys()] + list(self._extra_content.items()))
+        return t.cast(
+            ConfigItemsView, [(k, self[k]) for k in self._mapping.keys()] + list(self._extra_content.items())
+        )
 
     def __iter__(self):
         return iter(list(self._mapping.keys()) + list(self._extra_content.keys()))

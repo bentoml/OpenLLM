@@ -19,11 +19,19 @@ import typing as t
 from abc import abstractmethod
 from urllib.parse import urljoin
 
-import bentoml
 import httpx
+
+import bentoml
+import openllm
 import transformers
 
-import openllm
+
+# NOTE: We need to do this so that overload can register
+# correct overloads to typing registry
+if hasattr(t, "get_overloads"):
+    from typing import overload
+else:
+    from typing_extensions import overload
 
 if t.TYPE_CHECKING:
     from openllm.models.auto.factory import _BaseAutoLLMClass
@@ -161,11 +169,11 @@ class BaseClient(ClientMixin):
     def health(self) -> t.Any:
         raise NotImplementedError
 
-    @t.overload
+    @overload
     def query(self, prompt: str, *, return_raw_response: t.Literal[False] = ..., **attrs: t.Any) -> str:
         ...
 
-    @t.overload
+    @overload
     def query(self, prompt: str, *, return_raw_response: t.Literal[True] = ..., **attrs: t.Any) -> dict[str, t.Any]:
         ...
 
@@ -221,11 +229,11 @@ class BaseAsyncClient(ClientMixin):
     async def health(self) -> t.Any:
         raise NotImplementedError
 
-    @t.overload
+    @overload
     async def query(self, prompt: str, *, return_raw_response: t.Literal[False] = ..., **attrs: t.Any) -> str:
         ...
 
-    @t.overload
+    @overload
     async def query(
         self, prompt: str, *, return_raw_response: t.Literal[True] = ..., **attrs: t.Any
     ) -> dict[str, t.Any]:
@@ -268,9 +276,9 @@ class BaseAsyncClient(ClientMixin):
         return_code = kwargs.pop("return_code", False)
         remote = kwargs.pop("remote", False)
 
-        from transformers.tools.agents import (clean_code_for_run,
-                                               get_tool_creation_code,
-                                               resolve_tools)
+        from transformers.tools.agents import clean_code_for_run
+        from transformers.tools.agents import get_tool_creation_code
+        from transformers.tools.agents import resolve_tools
         from transformers.tools.python_interpreter import evaluate
 
         _hf_agent = self._hf_agent
@@ -280,7 +288,10 @@ class BaseAsyncClient(ClientMixin):
         async with httpx.AsyncClient(timeout=httpx.Timeout(self.timeout)) as client:
             response = await client.post(
                 _hf_agent.url_endpoint,
-                json={"inputs": prompt, "parameters": {"max_new_tokens": 200, "return_full_text": False, "stop": stop}},
+                json={
+                    "inputs": prompt,
+                    "parameters": {"max_new_tokens": 200, "return_full_text": False, "stop": stop},
+                },
             )
             if response.status_code != 200:
                 raise ValueError(f"Error {response.status_code}: {response.json()}")

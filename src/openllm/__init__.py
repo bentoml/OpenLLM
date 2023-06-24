@@ -26,11 +26,14 @@ deploy, and monitor any LLMs with ease.
 from __future__ import annotations
 
 import logging
+import os
 import typing as t
+import warnings
 
 from . import utils as utils
 from .__about__ import __version__ as __version__
 from .exceptions import MissingDependencyError
+
 
 if utils.DEBUG:
     utils.set_debug_mode(True)
@@ -38,6 +41,24 @@ if utils.DEBUG:
 
     utils.configure_logging()
     logging.basicConfig(level=logging.NOTSET)
+else:
+    # configuration for bitsandbytes before import
+    os.environ["BITSANDBYTES_NOWELCOME"] = os.environ.get("BITSANDBYTES_NOWELCOME", "1")
+    # The following warnings from bitsandbytes, and probably not that important
+    # for users to see when DEBUG is False
+    warnings.filterwarnings(
+        "ignore", message="MatMul8bitLt: inputs will be cast from torch.float32 to float16 during quantization"
+    )
+    warnings.filterwarnings(
+        "ignore", message="MatMul8bitLt: inputs will be cast from torch.bfloat16 to float16 during quantization"
+    )
+    warnings.filterwarnings(
+        "ignore",
+        message=(
+            "The installed version of bitsandbytes was compiled without GPU support. 8-bit optimizers and GPU quantization"
+            " are unavailable."
+        ),
+    )
 
 
 _import_structure = {
@@ -143,6 +164,7 @@ if t.TYPE_CHECKING:
     from . import exceptions as exceptions
     from . import models as models
     from . import playground as playground
+
     # Specific types import
     from ._configuration import LLMConfig as LLMConfig
     from ._llm import LLM as LLM
@@ -155,8 +177,7 @@ if t.TYPE_CHECKING:
     from .cli import start as start
     from .cli import start_grpc as start_grpc
     from .models.auto import CONFIG_MAPPING as CONFIG_MAPPING
-    from .models.auto import \
-        MODEL_FLAX_MAPPING_NAMES as MODEL_FLAX_MAPPING_NAMES
+    from .models.auto import MODEL_FLAX_MAPPING_NAMES as MODEL_FLAX_MAPPING_NAMES
     from .models.auto import MODEL_MAPPING_NAMES as MODEL_MAPPING_NAMES
     from .models.auto import MODEL_TF_MAPPING_NAMES as MODEL_TF_MAPPING_NAMES
     from .models.auto import AutoConfig as AutoConfig

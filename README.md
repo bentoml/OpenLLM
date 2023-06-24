@@ -1,3 +1,5 @@
+![Banner for OpenLLM](/assets/main-banner.png)
+
 <div align="center">
     <h1 align="center">🦾 OpenLLM</h1>
     <a href="https://pypi.org/project/openllm">
@@ -26,9 +28,9 @@ StarCoder and more.
 🔥 **Flexible APIs**: serve LLMs over RESTful API or gRPC with one command,
 query via WebUI, CLI, our Python/Javascript client, or any HTTP client.
 
-⛓️ **Freedom To Build**: First-class support for LangChain, BentoML and
-HuggingFace that allows you to easily create your own AI apps by composing LLMs
-with other models and services.
+⛓️ **Freedom To Build**: First-class support for LangChain, BentoML and Hugging
+Face that allows you to easily create your own AI apps by composing LLMs with
+other models and services.
 
 🎯 **Streamline Deployment**: Automatically generate your LLM server Docker
 Images or deploy as serverless endpoint via
@@ -72,18 +74,19 @@ Usage: openllm [OPTIONS] COMMAND [ARGS]...
 
 ### Starting an LLM Server
 
-To start an LLM server, use `openllm start`. For example, to start a `dolly-v2`
-server:
+To start an LLM server, use `openllm start`. For example, to start a
+[`OPT`](https://huggingface.co/docs/transformers/model_doc/opt) server, do the
+following:
 
 ```bash
-openllm start dolly-v2
+openllm start opt
 ```
 
 Following this, a Web UI will be accessible at http://localhost:3000 where you
 can experiment with the endpoints and sample input prompts.
 
 OpenLLM provides a built-in Python client, allowing you to interact with the
-model. In a different terminal window or a Jupyter notebook, create a client to
+model. In a different terminal window or a Jupyter Notebook, create a client to
 start interacting with the model:
 
 ```python
@@ -308,7 +311,7 @@ to see how you can do it yourself.
 ## ⚙️ Integrations
 
 OpenLLM is not just a standalone product; it's a building block designed to
-easily integrate with other powerful tools. We currently offer integration with
+integrate with other powerful tools easily. We currently offer integration with
 [BentoML](https://github.com/bentoml/BentoML) and
 [LangChain](https://github.com/hwchase17/langchain).
 
@@ -324,13 +327,13 @@ and play any OpenLLM models with your existing ML workflow.
 import bentoml
 import openllm
 
-model = "dolly-v2"
+model = "opt"
 
 llm_config = openllm.AutoConfig.for_model(model)
 llm_runner = openllm.Runner(model, llm_config=llm_config)
 
 svc = bentoml.Service(
-    name=f"llm-dolly-v2-service", runners=[llm_runner]
+    name=f"llm-opt-service", runners=[llm_runner]
 )
 
 @svc.api(input=Text(), output=Text())
@@ -339,12 +342,13 @@ async def prompt(input_text: str) -> str:
     return answer
 ```
 
-### HuggingFace Agents
+### Hugging Face Agents
 
-OpenLLM seamlessly integrates with HuggingFace Agents.
+OpenLLM seamlessly integrates with Hugging Face Agents.
 
 > **Warning** The HuggingFace Agent is still at experimental stage. It is
-> recommended to install transformers from git source
+> recommended to OpenLLM with `pip install -r nightly-requirements.txt` to get
+> the latest API update for HuggingFace agent.
 
 ```python
 import transformers
@@ -355,27 +359,65 @@ agent.run("Is the following `text` positive or negative?", text="I don't like ho
 ```
 
 > **Note** Only `starcoder` is currently supported with Agent integration. The
-> example aboved was also ran with four T4s on EC2 `g4dn.12xlarge`
+> example above was also ran with four T4s on EC2 `g4dn.12xlarge`
 
-### LangChain (⏳Coming Soon!)
+If you want to use OpenLLM client to ask questions to the running agent, you can
+also do so:
 
-In future LangChain releases, you'll be able to effortlessly invoke OpenLLM
-models, like so:
+```python
+import openllm
+
+client = openllm.client.HTTPClient("http://localhost:3000")
+
+client.ask_agent(
+    task="Is the following `text` positive or negative?",
+    text="What are you thinking about?",
+)
+```
+
+### [LangChain](https://python.langchain.com/docs/ecosystem/integrations/openllm)
+
+To quickly start a local LLM with `langchain`, simply do the following:
 
 ```python
 from langchain.llms import OpenLLM
-llm = OpenLLM.for_model(model_name='flan-t5')
-llm("What is the difference between a duck and a goose?")
+
+llm = OpenLLM(model_name="dolly-v2", model_id='databricks/dolly-v2-7b', device_map='auto')
+
+llm("What is the difference between a duck and a goose? And why there are so many Goose in Canada?")
 ```
 
-if you have an OpenLLM server deployed elsewhere, you can connect to it by
-specifying its URL:
+`langchain.llms.OpenLLM` has the capability to interact with remote OpenLLM
+Server. Given there is an OpenLLM server deployed elsewhere, you can connect to
+it by specifying its URL:
 
 ```python
 from langchain.llms import OpenLLM
-llm = OpenLLM.for_model(server_url='http://localhost:8000', server_type='http')
-llm("What is the difference between a duck and a goose?")
+
+llm = OpenLLM(server_url='http://44.23.123.1:3000', server_type='grpc')
+llm("What is the difference between a duck and a goose? And why there are so many Goose in Canada?")
 ```
+
+To integrate a LangChain agent with BentoML, you can do the following:
+
+```python
+llm = OpenLLM(
+    model_name='flan-t5',
+    model_id='google/flan-t5-large',
+    embedded=False,
+)
+tools = load_tools(["serpapi", "llm-math"], llm=llm)
+agent = initialize_agent(
+    tools, llm, agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION
+)
+svc = bentoml.Service("langchain-openllm", runners=[llm.runner])
+@svc.api(input=Text(), output=Text())
+def chat(input_text: str):
+    return agent.run(input_text)
+```
+
+> **Note** You can find out more examples under the
+> [examples](https://github.com/bentoml/OpenLLM/tree/main/examples) folder.
 
 ## 🚀 Deploying to Production
 
@@ -391,7 +433,7 @@ To deploy your LLMs into production:
    A
    [Bento](https://docs.bentoml.org/en/latest/concepts/bento.html#what-is-a-bento),
    in BentoML, is the unit of distribution. It packages your program's source
-   code, models, files, artifacts, and dependencies.
+   code, models, files, artefacts, and dependencies.
 
 2. **Containerize your Bento**
 
@@ -412,13 +454,13 @@ excluding sensitive information. We will never collect user code, model data, or
 stack traces. For usage tracking, check out the
 [code](./src/openllm/utils/analytics.py).
 
-You can opt-out of usage tracking by using the `--do-not-track` CLI option:
+You can opt out of usage tracking by using the `--do-not-track` CLI option:
 
 ```bash
 openllm [command] --do-not-track
 ```
 
-Or by setting environment variable `OPENLLM_DO_NOT_TRACK=True`:
+Or by setting the environment variable `OPENLLM_DO_NOT_TRACK=True`:
 
 ```bash
 export OPENLLM_DO_NOT_TRACK=True
@@ -430,7 +472,7 @@ Engage with like-minded individuals passionate about LLMs, AI, and more on our
 [Discord](https://l.bentoml.com/join-openllm-discord)!
 
 OpenLLM is actively maintained by the BentoML team. Feel free to reach out and
-join us in our pursuit to make LLMs more accessible and easy-to-use👉
+join us in our pursuit to make LLMs more accessible and easy to use 👉
 [Join our Slack community!](https://l.bentoml.com/join-slack)
 
 ## 🎁 Contributing

@@ -18,6 +18,7 @@ import typing as t
 
 import openllm
 
+
 _import_structure = {
     "configuration_starcoder": ["StarCoderConfig", "START_STARCODER_COMMAND_DOCSTRING", "DEFAULT_PROMPT_TEMPLATE"],
 }

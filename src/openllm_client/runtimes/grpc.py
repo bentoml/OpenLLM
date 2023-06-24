@@ -22,10 +22,13 @@ import orjson
 
 import openllm
 
-from .base import BaseAsyncClient, BaseClient
+from .base import BaseAsyncClient
+from .base import BaseClient
+
 
 if t.TYPE_CHECKING:
     import grpc_health.v1.health_pb2 as health_pb2
+
     from bentoml.grpc.v1.service_pb2 import Response
 
 logger = logging.getLogger(__name__)

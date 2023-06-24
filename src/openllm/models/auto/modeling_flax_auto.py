@@ -18,12 +18,13 @@ import typing as t
 from collections import OrderedDict
 
 from .configuration_auto import CONFIG_MAPPING_NAMES
-from .factory import _BaseAutoLLMClass, _LazyAutoMapping
+from .factory import _BaseAutoLLMClass
+from .factory import _LazyAutoMapping
+
 
 if t.TYPE_CHECKING:
-    import transformers
-
     import openllm
+    import transformers
 
 MODEL_FLAX_MAPPING_NAMES = OrderedDict(
     [

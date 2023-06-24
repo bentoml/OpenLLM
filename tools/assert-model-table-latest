@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import os
 import subprocess
+import sys
 
 from markdown_it import MarkdownIt
+
 
 md = MarkdownIt()
 
@@ -16,7 +18,17 @@ with open(os.path.join(ROOT, "README.md"), "r") as f:
 # NOTE: Currently, we only have one table in README, which is the Model readme.
 table = [r for r in readme if r.type == "html_block" and r.content.startswith("<td><a")]
 
-available = subprocess.check_output(["openllm", "models", "-o", "porcelain"]).strip().decode("utf-8").count("\n") + 1
+prev = os.environ.pop("OPENLLMDEVDEBUG", str(0))
+available = (
+    subprocess.check_output(
+        [sys.executable, "-m", "openllm", "models", "-o", "porcelain"],
+    )
+    .strip()
+    .decode("utf-8")
+    .count("\n")
+    + 1
+)
+os.environ["OPENLLMDEVDEBUG"] = prev
 
 on_table = len(table)  # NOTE: minus the header
 

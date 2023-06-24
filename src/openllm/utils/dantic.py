@@ -31,10 +31,21 @@ import orjson
 
 import openllm
 
+
+# NOTE: We need to do this so that overload can register
+# correct overloads to typing registry
+if hasattr(t, "get_overloads"):
+    from typing import overload
+else:
+    from typing_extensions import overload
+
 if t.TYPE_CHECKING:
     from attr import _ValidatorType
 
-    from .._types import ClickFunctionWrapper, F, O_co, P
+    from .._types import ClickFunctionWrapper
+    from .._types import F
+    from .._types import O_co
+    from .._types import P
 
     ListAny = list[t.Any]
     TupleAny = tuple[t.Any, ...]
@@ -112,7 +123,7 @@ TYPE_PARSER_MAPPING: dict[t.Any, t.Callable[[t.Any, str], t.Any]] = {
 }
 
 
-@t.overload
+@overload
 def attrs_to_options(
     name: str,
     field: attr.Attribute[t.Any],
@@ -123,7 +134,7 @@ def attrs_to_options(
     ...
 
 
-@t.overload
+@overload
 def attrs_to_options(  # type: ignore (overlapping overload)
     name: str,
     field: attr.Attribute[O_co],

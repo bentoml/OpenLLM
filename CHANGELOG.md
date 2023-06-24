@@ -18,6 +18,122 @@ This changelog is managed by towncrier and is compiled at release time.
 
 <!-- towncrier release notes start -->
 
+## [0.1.13](https://github.com/bentoml/openllm/tree/v0.1.13)
+No significant changes.
+
+
+## [0.1.12](https://github.com/bentoml/openllm/tree/v0.1.12)
+
+### Features
+
+- Serving LLM with fine-tuned LoRA, QLoRA adapters layers
+
+  Then the given fine tuning weights can be served with the model via
+  `openllm start`:
+
+  ```bash
+  openllm start opt --model-id facebook/opt-6.7b --adapter-id /path/to/adapters
+  ```
+
+  If you just wish to try some pretrained adapter checkpoint, you can use
+  `--adapter-id`:
+
+  ```bash
+  openllm start opt --model-id facebook/opt-6.7b --adapter-id aarnphm/opt-6.7b-lora
+  ```
+
+  To use multiple adapters, use the following format:
+
+  ```bash
+  openllm start opt --model-id facebook/opt-6.7b --adapter-id aarnphm/opt-6.7b-lora --adapter-id aarnphm/opt-6.7b-lora:french_lora
+  ```
+
+  By default, the first `adapter-id` will be the default lora layer, but
+  optionally users can change what lora layer to use for inference via
+  `/v1/adapters`:
+
+  ```bash
+  curl -X POST http://localhost:3000/v1/adapters --json '{"adapter_name": "vn_lora"}'
+  ```
+
+  > Note that for multiple `adapter-name` and `adapter-id`, it is recomended to
+  > update to use the default adapter before sending the inference, to avoid any
+  > performance degradation
+
+  To include this into the Bento, one can also provide a `--adapter-id` into
+  `openllm build`:
+
+  ```bash
+  openllm build opt --model-id facebook/opt-6.7b --adapter-id ...
+  ```
+
+  Separate out configuration builder, to make it more flexible for future
+  configuration generation.
+  [#52](https://github.com/bentoml/openllm/issues/52)
+
+
+### Bug fix
+
+- Fixes how `llm.ensure_model_id_exists` parse `openllm download` correctly
+
+  Renamed `openllm.utils.ModelEnv` to `openllm.utils.EnvVarMixin`
+  [#58](https://github.com/bentoml/openllm/issues/58)
+
+
+## [0.1.11](https://github.com/bentoml/openllm/tree/v0.1.11)
+No significant changes.
+
+
+## [0.1.10](https://github.com/bentoml/openllm/tree/v0.1.10)
+No significant changes.
+
+
+## [0.1.9](https://github.com/bentoml/openllm/tree/v0.1.9)
+
+### Changes
+
+- Fixes setting logs for agents to info instead of logger object.
+  [#37](https://github.com/bentoml/openllm/issues/37)
+
+
+## [0.1.8](https://github.com/bentoml/openllm/tree/v0.1.8)
+No significant changes.
+
+
+## [0.1.7](https://github.com/bentoml/openllm/tree/v0.1.7)
+
+### Features
+
+- OpenLLM now seamlessly integrates with HuggingFace Agents.
+  Replace the HfAgent endpoint with a running remote server.
+
+  ```python
+  import transformers
+
+  agent = transformers.HfAgent("http://localhost:3000/hf/agent")  # URL that runs the OpenLLM server
+
+  agent.run("Is the following `text` positive or negative?", text="I don't like how this models is generate inputs")
+  ```
+
+  Note that only `starcoder` is currently supported for agent feature.
+
+  To use it from the `openllm.client`, do:
+  ```python
+  import openllm
+
+  client = openllm.client.HTTPClient("http://123.23.21.1:3000")
+
+  client.ask_agent(
+      task="Is the following `text` positive or negative?",
+      text="What are you thinking about?",
+      agent_type="hf",
+  )
+  ```
+
+  Fixes a Asyncio exception by increasing the timeout
+  [#29](https://github.com/bentoml/openllm/issues/29)
+
+
 ## [0.1.6](https://github.com/bentoml/openllm/tree/v0.1.6)
 
 ### Changes

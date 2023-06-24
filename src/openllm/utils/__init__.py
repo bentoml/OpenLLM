@@ -19,26 +19,28 @@ from __future__ import annotations as _annotations
 
 import functools
 import logging
+import logging.config
 import os
 import sys
 import types
 import typing as t
 
-from bentoml._internal.configuration import (get_debug_mode, get_quiet_mode,
-                                             set_debug_mode, set_quiet_mode)
-from bentoml._internal.log import configure_logging, configure_server_logging
+from bentoml._internal.configuration import get_debug_mode
+from bentoml._internal.configuration import get_quiet_mode
+from bentoml._internal.configuration import set_debug_mode
+from bentoml._internal.configuration import set_quiet_mode
+from bentoml._internal.log import CLI_LOGGING_CONFIG as _CLI_LOGGING_CONFIG
 from bentoml._internal.types import LazyType
-from bentoml._internal.utils import (LazyLoader, bentoml_cattr,
-                                     copy_file_to_fs_folder, first_not_none,
-                                     pkg, reserve_free_port,
-                                     resolve_user_filepath)
+from bentoml._internal.utils import LazyLoader
+from bentoml._internal.utils import bentoml_cattr
+from bentoml._internal.utils import copy_file_to_fs_folder
+from bentoml._internal.utils import first_not_none
+from bentoml._internal.utils import pkg
+from bentoml._internal.utils import reserve_free_port
+from bentoml._internal.utils import resolve_user_filepath
 
 from .lazy import LazyModule
 
-# NOTE: The set marks contains a set of modules name
-# that are available above and are whitelisted
-# to be included in the extra_objects map.
-_whitelist_modules = {"pkg"}
 
 logger = logging.getLogger(__name__)
 
@@ -87,6 +89,43 @@ def non_intrusive_setattr(obj: t.Any, name: str, value: t.Any) -> None:
 
 DEBUG = sys.flags.dev_mode or (not sys.flags.ignore_environment and bool(os.environ.get("OPENLLMDEVDEBUG")))
 
+
+_LOGGING_CONFIG = _CLI_LOGGING_CONFIG.copy()
+_LOGGING_CONFIG["loggers"].update(
+    {
+        "openllm": {
+            "level": logging.INFO,
+            "handlers": ["bentomlhandler", "defaulthandler"],
+            "propagate": False,
+        }
+    }
+)
+
+
+def configure_logging() -> None:
+    """Configure logging for OpenLLM. Behaves similar to how BentoML loggers
+    are being configured."""
+    if get_quiet_mode():
+        _LOGGING_CONFIG["loggers"]["openllm"]["level"] = logging.ERROR
+        _LOGGING_CONFIG["loggers"]["bentoml"]["level"] = logging.ERROR
+        _LOGGING_CONFIG["root"]["level"] = logging.ERROR
+    elif get_debug_mode() or DEBUG:
+        _LOGGING_CONFIG["loggers"]["openllm"]["level"] = logging.DEBUG
+        _LOGGING_CONFIG["loggers"]["bentoml"]["level"] = logging.DEBUG
+        _LOGGING_CONFIG["root"]["level"] = logging.DEBUG
+    else:
+        _LOGGING_CONFIG["loggers"]["openllm"]["level"] = logging.INFO
+        _LOGGING_CONFIG["loggers"]["bentoml"]["level"] = logging.INFO
+        _LOGGING_CONFIG["root"]["level"] = logging.INFO
+
+    logging.config.dictConfig(_LOGGING_CONFIG)
+
+
+# NOTE: The set marks contains a set of modules name
+# that are available above and are whitelisted
+# to be included in the extra_objects map.
+_whitelist_modules = {"pkg"}
+
 # XXX: define all classes, functions import above this line
 # since _extras will be the locals() import from this file.
 _extras: dict[str, t.Any] = {
@@ -95,21 +134,27 @@ _extras: dict[str, t.Any] = {
     if k in _whitelist_modules or (not isinstance(v, types.ModuleType) and not k.startswith("_"))
 }
 
+_extras["__openllm_migration__"] = {"ModelEnv": "EnvVarMixin"}
+
 _import_structure = {
     "analytics": [],
     "codegen": [],
     "dantic": [],
+    "representation": ["ReprMixin"],
     "import_utils": [
         "OPTIONAL_DEPENDENCIES",
         "ENV_VARS_TRUE_VALUES",
         "DummyMetaclass",
-        "ModelEnv",
+        "EnvVarMixin",
+        "requires_dependencies",
         "is_cpm_kernels_available",
         "is_einops_available",
         "is_flax_available",
         "is_tf_available",
         "is_torch_available",
         "is_bitsandbytes_available",
+        "is_peft_available",
+        "is_datasets_available",
         "is_transformers_supports_kbit",
         "is_transformers_supports_agent",
         "require_backends",
@@ -124,7 +169,6 @@ if t.TYPE_CHECKING:
     from . import bentoml_cattr as bentoml_cattr
     from . import codegen as codegen
     from . import configure_logging as configure_logging
-    from . import configure_server_logging as configure_server_logging
     from . import copy_file_to_fs_folder as copy_file_to_fs_folder
     from . import dantic as dantic
     from . import first_not_none as first_not_none
@@ -141,21 +185,21 @@ if t.TYPE_CHECKING:
     from .import_utils import ENV_VARS_TRUE_VALUES as ENV_VARS_TRUE_VALUES
     from .import_utils import OPTIONAL_DEPENDENCIES as OPTIONAL_DEPENDENCIES
     from .import_utils import DummyMetaclass as DummyMetaclass
-    from .import_utils import ModelEnv as ModelEnv
-    from .import_utils import \
-        is_bitsandbytes_available as is_bitsandbytes_available
-    from .import_utils import \
-        is_cpm_kernels_available as is_cpm_kernels_available
+    from .import_utils import EnvVarMixin as EnvVarMixin
+    from .import_utils import is_bitsandbytes_available as is_bitsandbytes_available
+    from .import_utils import is_cpm_kernels_available as is_cpm_kernels_available
+    from .import_utils import is_datasets_available as is_datasets_available
     from .import_utils import is_einops_available as is_einops_available
     from .import_utils import is_flax_available as is_flax_available
+    from .import_utils import is_peft_available as is_peft_available
     from .import_utils import is_tf_available as is_tf_available
     from .import_utils import is_torch_available as is_torch_available
-    from .import_utils import \
-        is_transformers_supports_agent as is_transformers_supports_agent
-    from .import_utils import \
-        is_transformers_supports_kbit as is_transformers_supports_kbit
+    from .import_utils import is_transformers_supports_agent as is_transformers_supports_agent
+    from .import_utils import is_transformers_supports_kbit as is_transformers_supports_kbit
     from .import_utils import require_backends as require_backends
+    from .import_utils import requires_dependencies as requires_dependencies
     from .lazy import LazyModule as LazyModule
+    from .representation import ReprMixin as ReprMixin
 else:
     import sys
 

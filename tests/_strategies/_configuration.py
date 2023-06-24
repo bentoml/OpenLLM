@@ -22,28 +22,28 @@ from hypothesis import strategies as st
 import openllm
 from openllm._configuration import ModelSettings
 
+
 logger = logging.getLogger(__name__)
 
-env_strats = st.sampled_from([openllm.utils.ModelEnv(model_name) for model_name in openllm.CONFIG_MAPPING.keys()])
+env_strats = st.sampled_from([openllm.utils.EnvVarMixin(model_name) for model_name in openllm.CONFIG_MAPPING.keys()])
 
 
 @st.composite
 def model_settings(draw: st.DrawFn):
     """Strategy for generating ModelSettings objects."""
-    kwargs: dict[str, t.Any] = dict(
-        default_id=st.text(min_size=1),
-        model_ids=st.lists(st.text(), min_size=1),
-        url=st.text(),
-        requires_gpu=st.booleans(),
-        trust_remote_code=st.booleans(),
-        requirements=st.none() | st.lists(st.text(), min_size=1),
-        use_pipeline=st.booleans(),
-        model_type=st.sampled_from(["causal_lm", "seq2seq_lm"]),
-        runtime=st.sampled_from(["transformers", "cpp"]),
-        name_type=st.sampled_from(["dasherize", "lowercase"]),
-        timeout=st.integers(min_value=3600),
-        workers_per_resource=st.one_of(st.integers(min_value=1), st.floats(min_value=0.1, max_value=1.0)),
-    )
+    kwargs: dict[str, t.Any] = {
+        "default_id": st.text(min_size=1),
+        "model_ids": st.lists(st.text(), min_size=1),
+        "url": st.text(),
+        "requires_gpu": st.booleans(),
+        "trust_remote_code": st.booleans(),
+        "requirements": st.none() | st.lists(st.text(), min_size=1),
+        "model_type": st.sampled_from(["causal_lm", "seq2seq_lm"]),
+        "runtime": st.sampled_from(["transformers", "cpp"]),
+        "name_type": st.sampled_from(["dasherize", "lowercase"]),
+        "timeout": st.integers(min_value=3600),
+        "workers_per_resource": st.one_of(st.integers(min_value=1), st.floats(min_value=0.1, max_value=1.0)),
+    }
     return draw(st.builds(ModelSettings, **kwargs))
 
 
@@ -67,7 +67,7 @@ def make_llm_config(
         generation_lines = ["class GenerationConfig:"]
         for field, default in generation_fields:
             generation_lines.append(f"    {field} = {repr(default)}")
-        lines.extend(map(lambda line: "    " + line, generation_lines))
+        lines.extend(("    " + line for line in generation_lines))
 
     script = "\n".join(lines)
 

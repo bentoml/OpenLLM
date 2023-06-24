@@ -16,7 +16,8 @@ from __future__ import annotations
 
 import typing as t
 
-from ..utils import DummyMetaclass, require_backends
+from ..utils import DummyMetaclass
+from ..utils import require_backends
 
 
 class ChatGLM(metaclass=DummyMetaclass):
