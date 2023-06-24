@@ -16,7 +16,7 @@ name: release-notes
 on:
   push:
     tags:
-      - '*'
+      - v*
   workflow_dispatch:
 env:
   # This special value tells pypi that the user identity is supplied within the token
