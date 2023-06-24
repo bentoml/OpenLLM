@@ -107,7 +107,7 @@ After setting up your environment, here's how you can start contributing:
 5. Run all tests to ensure your changes haven't broken anything:
 
    ```bash
-   hatch run test:p
+   hatch run test:full
    ```
 
 6. Commit your changes:
@@ -141,7 +141,7 @@ directory and their filenames start with `test_`.
 Run all tests with:
 
 ```bash
-hatch run test:p
+hatch run test:full
 ```
 
 ## Releasing a New Version
