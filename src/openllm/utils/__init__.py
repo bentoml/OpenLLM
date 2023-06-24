@@ -134,6 +134,8 @@ _extras: dict[str, t.Any] = {
     if k in _whitelist_modules or (not isinstance(v, types.ModuleType) and not k.startswith("_"))
 }
 
+_extras["__openllm_migration__"] = {"ModelEnv": "EnvVarMixin"}
+
 _import_structure = {
     "analytics": [],
     "codegen": [],
