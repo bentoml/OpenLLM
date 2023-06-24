@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import collections
 import copy
 import functools
 import inspect
@@ -43,6 +44,7 @@ from .exceptions import GpuNotAvailableError
 from .exceptions import OpenLLMException
 from .utils import EnvVarMixin
 from .utils import LazyLoader
+from .utils import LazyType
 from .utils import ReprMixin
 from .utils import bentoml_cattr
 from .utils import first_not_none
@@ -83,7 +85,15 @@ if t.TYPE_CHECKING:
         def __call__(self, *args: t.Any, **attrs: t.Any) -> t.Any:
             ...
 
+    DictStrAny = dict[str, t.Any]
+    TupleAny = tuple[t.Any, ...]
+    ListAny = list[t.Any]
+    UserDictAny = collections.UserDict[str, t.Any]
 else:
+    DicsStrAny = dict
+    TupleAny = tuple
+    ListAny = list
+    UserDictAny = collections.UserDict
     LLMRunner = bentoml.Runner
     transformers = LazyLoader("transformers", globals(), "transformers")
     torch = LazyLoader("torch", globals(), "torch")
@@ -242,6 +252,13 @@ _M = t.TypeVar("_M")
 _T = t.TypeVar("_T")
 
 
+def _default_post_init(self: LLM[t.Any, t.Any]):
+    self.device = None
+
+    if self.__llm_implementation__ == "pt" and is_torch_available():
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
 class LLMInterface(ABC, t.Generic[_M, _T]):
     """This defines the loose contract for all openllm.LLM implementations."""
 
@@ -332,6 +349,9 @@ class LLMInterface(ABC, t.Generic[_M, _T]):
     > **Note** that if LoRA is enabled, bettertransformer will be disabled.
     """
 
+    device: torch.device | str | int | None
+    """The device to be used for this LLM. If the implementation is 'pt', then it will be torch.device, else string."""
+
     # NOTE: The following will be populated by __init_subclass__, note that these should not
     # be mutated by users.
     __llm_trust_remote_code__: bool
@@ -361,14 +381,8 @@ class LLMInterface(ABC, t.Generic[_M, _T]):
     __llm_bentomodel__: bentoml.Model | None
     """A reference to the bentomodel used for this LLM. Instead of access this directly, you should use `_bentomodel` property instead."""
 
-    __llm_trainer__: transformers.Trainer | None
-    """A reference to the Trainer to be used for this LLM to fine-tune."""
-
     __llm_adapter_map__: dict[AdapterType, dict[str | t.Literal["default"], peft.PeftConfig]] | None
     """A reference to the the cached LoRA adapter mapping."""
-
-    __llm_post_init__: t.Callable[[t.Self], None] | None
-    """A callable that will be called after the LLM is initialized. This is set if subclass contains a 'llm_post_init'"""
 
     __llm_custom_load__: t.Callable[[t.Self, t.Any, t.Any], None] | None
     """A callable that will be called after the model is loaded. This is set when 'load_model' is implemented"""
@@ -415,13 +429,24 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
             # using the default import model if no custom import is set
             setattr(cls, "import_model", functools.partial(import_model, _model_framework=implementation))
 
-        cls.__llm_post_init__ = None if cls.llm_post_init is LLMInterface[_M, _T].llm_post_init else cls.llm_post_init
+        if cls.llm_post_init is LLMInterface[_M, _T].llm_post_init:
+            # using the default post init if no custom post init is set
+            wrapped_post_init = _default_post_init
+        else:
+            original_post_init = getattr(cls, "llm_post_init")
+
+            def wrapped_post_init(self: LLM[_M, _T]):
+                _default_post_init(self)
+                original_post_init(self)
+
+        setattr(cls, "llm_post_init", wrapped_post_init)
+
         cls.__llm_custom_load__ = None if cls.load_model is LLMInterface[_M, _T].load_model else cls.load_model
         cls.__llm_init_kwargs__ = (
             None if cls.import_kwargs is LLMInterface[_M, _T].import_kwargs else cls.import_kwargs
         )
 
-        for at in {"bentomodel", "tag", "model", "tokenizer", "adapter_map", "trainer"}:
+        for at in {"bentomodel", "tag", "model", "tokenizer", "adapter_map"}:
             setattr(cls, f"__llm_{at}__", None)
 
         # update docstring for given entrypoint
@@ -746,8 +771,7 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
         self._tokenizer_attrs = tokenizer_kwds
         self._openllm_model_version = openllm_model_version
 
-        if self.__llm_post_init__:
-            self.llm_post_init()
+        self.llm_post_init()
 
         # we set it here so that we allow subclass to overwrite bettertransformer in llm_post_init
         if bettertransformer:
@@ -1306,6 +1330,62 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
         prompt, generate_kwargs, postprocess_kwargs = self.sanitize_parameters(prompt, **attrs)
         generated_result = self.generate(prompt, **generate_kwargs)
         return self.postprocess_generate(prompt, generated_result, **postprocess_kwargs)
+
+    @overload
+    def ensure_tensor_on_device(
+        self, inputs: transformers.utils.ModelOutput, device: str | torch.device | int
+    ) -> transformers.utils.ModelOutput:
+        ...
+
+    @overload
+    def ensure_tensor_on_device(self, inputs: DictStrAny, device: str | torch.device | int) -> DictStrAny:
+        ...
+
+    @overload
+    def ensure_tensor_on_device(self, inputs: UserDictAny, device: str | torch.device | int) -> UserDictAny:
+        ...
+
+    @overload
+    def ensure_tensor_on_device(self, inputs: ListAny, device: str | torch.device | int) -> ListAny:
+        ...
+
+    @overload
+    def ensure_tensor_on_device(self, inputs: TupleAny, device: str | torch.device | int) -> TupleAny:
+        ...
+
+    @overload
+    def ensure_tensor_on_device(self, inputs: torch.Tensor, device: str | torch.device | int) -> torch.Tensor:
+        ...
+
+    def ensure_tensor_on_device(self, inputs: t.Any, device: t.Any):
+        """
+        Ensure PyTorch tensors are on the specified device.
+
+        Args:
+            inputs: The tensors to place on `self.device`. Recursive on lists **only**.
+            device: The device to place the tensors on.
+
+        Return:
+            `Dict[str, torch.Tensor]`: The same as `inputs` but on the proper device.
+        """
+        if isinstance(inputs, transformers.utils.ModelOutput):
+            return transformers.utils.ModelOutput(
+                {name: self.ensure_tensor_on_device(tensor, device) for name, tensor in inputs.items()}
+            )
+        elif LazyType(DictStrAny).isinstance(inputs):
+            return DictStrAny({name: self.ensure_tensor_on_device(tensor, device) for name, tensor in inputs.items()})
+        elif LazyType(UserDictAny).isinstance(inputs):
+            return UserDictAny({name: self.ensure_tensor_on_device(tensor, device) for name, tensor in inputs.items()})
+        elif LazyType(ListAny).isinstance(inputs):
+            return ListAny(self.ensure_tensor_on_device(item, device) for item in inputs)
+        elif LazyType(TupleAny).isinstance(inputs):
+            return TupleAny([self.ensure_tensor_on_device(item, device) for item in inputs])
+        elif isinstance(inputs, torch.Tensor):
+            if device == torch.device("cpu") and inputs.dtype in {torch.float16, torch.bfloat16}:
+                inputs = inputs.float()
+            return t.cast("torch.Tensor", inputs.to(device))
+        else:
+            return inputs
 
 
 @overload

@@ -13,7 +13,6 @@
 # limitations under the License.
 from __future__ import annotations
 
-import importlib
 import logging
 import typing as t
 
@@ -55,20 +54,14 @@ class DollyV2(openllm.LLM["transformers.Pipeline", "transformers.PreTrainedToken
         device_map = attrs.pop("device_map", "auto")
 
         tokenizer = transformers.AutoTokenizer.from_pretrained(model_id, **tokenizer_kwds)
-        pipeline = transformers.pipeline(
-            model=model_id,
-            tokenizer=tokenizer,
+        model = transformers.AutoModelForCausalLM.from_pretrained(
+            model_id,
             trust_remote_code=trust_remote_code,
             torch_dtype=torch_dtype,
             device_map=device_map,
         )
         try:
-            return bentoml.transformers.save_model(
-                tag,
-                pipeline,
-                custom_objects={"tokenizer": tokenizer},
-                external_modules=[importlib.import_module(pipeline.__module__)],
-            )
+            return bentoml.transformers.save_model(tag, model, custom_objects={"tokenizer": tokenizer})
         finally:
             if openllm.utils.is_torch_available() and torch.cuda.is_available():
                 torch.cuda.empty_cache()

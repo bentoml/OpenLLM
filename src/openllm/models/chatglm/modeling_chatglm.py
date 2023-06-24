@@ -117,12 +117,14 @@ class ChatGLM(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTrain
             logit_processor: list[LogitsProcessor] = LogitsProcessorList()
             logit_processor.append(InvalidScoreLogitsProcessor())
 
-            inputs = self.tokenizer([prompt], return_tensors="pt").to(self.device)
+            inputs = self.ensure_tensor_on_device(self.tokenizer([prompt], return_tensors="pt"), device=self.device)
             outputs = self.model.generate(
                 **inputs,
                 generation_config=self.config.model_construct_env(do_sample=True, **attrs).to_generation_config(),
                 logits_processor=logit_processor,
             )
-            outputs = outputs.tolist()[0][len(inputs["input_ids"][0]) :]
+            outputs = self.ensure_tensor_on_device(outputs, device=torch.device("cpu")).tolist()[0][
+                len(inputs["input_ids"][0]) :
+            ]
             response = self.tokenizer.decode(outputs)
             return self.model.process_response(response)
