@@ -943,7 +943,7 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
 
         if self.__llm_model__ is None:
             kwds = self._model_attrs
-            # kwds["trust_remote_code"] = self.__llm_trust_remote_code__
+            kwds["trust_remote_code"] = self.__llm_trust_remote_code__
 
             is_pipeline = "_pretrained_class" in self._bentomodel.info.metadata
             # differentiate when saving tokenizer or other pretrained type.

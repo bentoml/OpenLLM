@@ -27,8 +27,10 @@ from .configuration_falcon import DEFAULT_PROMPT_TEMPLATE
 
 if t.TYPE_CHECKING:
     import torch
+    import torch.amp
 else:
     torch = openllm.utils.LazyLoader("torch", globals(), "torch")
+    torch.amp = openllm.utils.LazyLoader("torch.amp", globals(), "torch.amp")
 
 
 class Falcon(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTrainedTokenizerFast"]):
@@ -36,15 +38,12 @@ class Falcon(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTraine
 
     @property
     def import_kwargs(self):
-        model_kwds = {
-            "torch_dtype": torch.bfloat16,
-            "device_map": "auto" if torch.cuda.is_available() and torch.cuda.device_count() > 1 else None,
-        }
+        model_kwds = {"torch_dtype": torch.bfloat16, "device_map": "auto"}
         tokenizer_kwds: dict[str, t.Any] = {}
         return model_kwds, tokenizer_kwds
 
     def llm_post_init(self):
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device("cuda")
 
     def import_model(
         self, model_id: str, tag: bentoml.Tag, *model_args: t.Any, tokenizer_kwds: dict[str, t.Any], **attrs: t.Any
@@ -116,7 +115,7 @@ class Falcon(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTraine
 
     def generate(self, prompt: str, **attrs: t.Any) -> list[str]:
         eos_token_id = attrs.pop("eos_token_id", self.tokenizer.eos_token_id)
-        with torch.inference_mode():
+        with torch.inference_mode(), torch.amp.autocast("cuda", dtype=torch.bfloat16):
             inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
             outputs = self.model.generate(
                 input_ids=inputs["input_ids"],
