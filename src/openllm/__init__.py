@@ -35,6 +35,13 @@ from .__about__ import __version__ as __version__
 from .exceptions import MissingDependencyError
 
 
+# NOTE: We need to do this so that overload can register
+# correct overloads to typing registry
+if hasattr(t, "get_overloads"):
+    from typing import overload
+else:
+    from typing_extensions import overload
+
 if utils.DEBUG:
     utils.set_debug_mode(True)
     utils.set_quiet_mode(False)
@@ -71,6 +78,7 @@ _import_structure = {
     "models": [],
     "client": [],
     "playground": [],
+    "tests": [],
     "cli": ["start", "start_grpc"],
     # NOTE: models
     "models.auto": [
@@ -164,6 +172,7 @@ if t.TYPE_CHECKING:
     from . import exceptions as exceptions
     from . import models as models
     from . import playground as playground
+    from . import tests as tests
 
     # Specific types import
     from ._configuration import LLMConfig as LLMConfig

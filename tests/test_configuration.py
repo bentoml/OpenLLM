@@ -22,12 +22,14 @@ import os
 import typing as t
 from unittest import mock
 
+import attr
 import pytest
 from hypothesis import assume
 from hypothesis import given
 from hypothesis import strategies as st
 
 import openllm
+import transformers
 from openllm._configuration import GenerationConfig
 from openllm._configuration import ModelSettings
 from openllm._configuration import field_env_key
@@ -37,6 +39,11 @@ from ._strategies._configuration import model_settings
 
 
 logger = logging.getLogger(__name__)
+
+if t.TYPE_CHECKING:
+    DictStrAny = dict[str, t.Any]
+else:
+    DictStrAny = dict
 
 
 def test_missing_default():
@@ -93,6 +100,12 @@ def test_config_derivation(gen_settings: ModelSettings, field1: int):
     cl_ = make_llm_config("IdempotentLLM", gen_settings, fields=(("field1", "float", field1),))
     new_cls = cl_.model_derivate("DerivedLLM", default_id="asdfasdf")
     assert new_cls.__openllm_default_id__ == "asdfasdf"
+
+
+@given(model_settings())
+def test_config_derived_follow_attrs_protocol(gen_settings: ModelSettings):
+    cl_ = make_llm_config("AttrsProtocolLLM", gen_settings)
+    assert attr.has(cl_)
 
 
 @given(
@@ -191,3 +204,23 @@ def test_struct_envvar_with_overwrite_provided_env(monkeypatch: pytest.MonkeyPat
         ).model_construct_env(field1=20.0, temperature=0.4)
         assert sent.generation_config.temperature == 0.4
         assert sent.field1 == 20.0
+
+
+@given(model_settings())
+@pytest.mark.parametrize("return_dict,typ", [(True, DictStrAny), (False, transformers.GenerationConfig)])
+def test_conversion_to_transformers(return_dict: bool, typ: type[t.Any], gen_settings: ModelSettings):
+    cl_ = make_llm_config("ConversionLLM", gen_settings)
+    assert isinstance(cl_().to_generation_config(return_as_dict=return_dict), typ)
+
+
+@given(model_settings())
+def test_click_conversion(gen_settings: ModelSettings):
+    # currently our conversion omit Union type.
+    def cli_mock(**attrs: t.Any):
+        return attrs
+
+    cl_ = make_llm_config("ClickConversionLLM", gen_settings)
+    wrapped = cl_.to_click_options(cli_mock)
+    filtered = {k for k, v in cl_.__openllm_hints__.items() if t.get_origin(v) is not t.Union}
+    click_options_filtered = [i for i in wrapped.__click_params__ if i.name and not i.name.startswith("fake_")]
+    assert len(filtered) == len(click_options_filtered)

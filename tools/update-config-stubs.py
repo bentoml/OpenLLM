@@ -14,14 +14,13 @@
 
 from __future__ import annotations
 
-import typing as t
 import os
 
 from pathlib import Path
 
 import openllm
 import importlib
-from openllm._configuration import ModelSettings
+from openllm._configuration import ModelSettings, GenerationConfig, PeftType
 
 # currently we are assuming the indentatio level is 4 for comments
 START_COMMENT = f"# {os.path.basename(__file__)}: start\n"
@@ -76,6 +75,31 @@ def main() -> int:
             )
         )
     )
+    for keys, type_pep563 in openllm.utils.codegen.get_annotations(GenerationConfig).items():
+        lines.extend(
+            list(
+                map(
+                    lambda line: " " * 8 + line,
+                    [
+                        "@overload\n" if "overload" in dir(_imported) else "@t.overload\n",
+                        f'def __getitem__(self, item: t.Literal["{keys}"] = ...) -> {type_pep563}: ...\n',
+                    ],
+                )
+            )
+        )
+
+    for keys in PeftType._member_names_:
+        lines.extend(
+            list(
+                map(
+                    lambda line: " " * 8 + line,
+                    [
+                        "@overload\n" if "overload" in dir(_imported) else "@t.overload\n",
+                        f'def __getitem__(self, item: t.Literal["{keys.lower()}"] = ...) -> dict[str, t.Any]: ...\n',
+                    ],
+                )
+            )
+        )
 
     processed = (
         processed[:start_idx] + [" " * 4 + START_COMMENT] + lines + [" " * 4 + END_COMMENT] + processed[end_idx + 1 :]

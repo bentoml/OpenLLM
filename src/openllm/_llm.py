@@ -1356,6 +1356,7 @@ def Runner(
     model_name: str,
     ensure_available: bool | None = None,
     init_local: bool = False,
+    implementation: t.Literal["pt", "flax", "tf"] | None = None,
     **attrs: t.Any,
 ) -> LLMRunner:
     """Create a Runner for given LLM. For a list of currently supported LLM, check out 'openllm models'
@@ -1380,6 +1381,10 @@ def Runner(
 
     Args:
         model_name: Supported model name from 'openllm models'
+        ensure_available: If True, it will download the model if it is not available. If False, it will skip downloading the model.
+                          If False, make sure the model is available locally.
+        implementation: The given Runner implementation one choose for this Runner. By default, it is retrieved from the enviroment variable
+                        of the respected model_name. For example: 'flan-t5' -> "OPENLLM_FLAN_T5_FRAMEWORK"
         init_local: If True, it will initialize the model locally. This is useful if you want to
                     run the model locally. (Symmetrical to bentoml.Runner.init_local())
         **attrs: The rest of kwargs will then be passed to the LLM. Refer to the LLM documentation for the kwargs
@@ -1387,9 +1392,11 @@ def Runner(
     """
     runner = t.cast(
         "_BaseAutoLLMClass",
-        openllm[EnvVarMixin(model_name)["framework_value"]],  # type: ignore (internal API)
+        openllm[implementation if implementation is not None else EnvVarMixin(model_name)["framework_value"]],  # type: ignore (internal API)
     ).create_runner(
-        model_name, ensure_available=ensure_available if ensure_available is not None else init_local, **attrs
+        model_name,
+        ensure_available=ensure_available if ensure_available is not None else init_local,
+        **attrs,
     )
 
     if init_local:
