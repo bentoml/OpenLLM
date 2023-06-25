@@ -375,6 +375,9 @@ client.ask_agent(
 )
 ```
 
+![Gif showing Agent integration](/assets/agent.gif)
+<br/>
+
 ### [LangChain](https://python.langchain.com/docs/ecosystem/integrations/openllm)
 
 To quickly start a local LLM with `langchain`, simply do the following:
