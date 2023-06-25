@@ -18,6 +18,7 @@ setup = "pre-commit install"
 typing = "pyright {args:src/openllm tests}"
 [envs.test]
 dependencies = [
+    "openllm[all]",
     # NOTE: Tests strategies with Hypothesis and pytest, and snapshot testing with syrupy
     "coverage[toml]>=6.5",
     "lxml",
