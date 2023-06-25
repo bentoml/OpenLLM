@@ -909,7 +909,8 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
                 "--machine",
                 "--implementation",
                 self.__llm_implementation__,
-            ]
+            ],
+            env=os.environ.copy()
         )
         # NOTE: This usually only concern BentoML devs.
         pattern = r"^__tag__:[^:\n]+:[^:\n]+"
