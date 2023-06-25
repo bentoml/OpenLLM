@@ -65,9 +65,13 @@ jobs:
           git config --global user.name "${{ steps.import-gpg.outputs.name }}"
           git config --global user.email "${{ steps.import-gpg.outputs.email }}"
           ./.github/actions/release.sh --release ${{ inputs.release_type }}
-      - name: Create binary/wheels distribution
-        id: populate-dist
-        uses: bentoml/OpenLLM/.github/workflows/binary-releases.yml@main
-      - name: Create release notes and setup for next cycle
-        if: ${{ steps.populate-dist.conclusion == 'success' }}
-        uses: bentoml/OpenLLM/.github/workflows/release-notes.yml@main
+  binary-distribution:
+    if: github.repository_owner == 'bentoml'
+    needs: release
+    name: Create binary/wheels distribution
+    uses: bentoml/OpenLLM/.github/workflows/binary-releases.yml@main
+  prepare-for-dev-cycle:
+    if: github.repository_owner == 'bentoml'
+    needs: binary-distribution
+    name: Create release notes and setup for next cycle
+    uses: bentoml/OpenLLM/.github/workflows/release-notes.yml@main
