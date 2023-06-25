@@ -37,20 +37,17 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ['3.8', '3.9', '3.10', '3.11']
-    name: tests-${{ matrix.os }}-${{ matrix.python-version }}
+    name: tests-${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
       - name: Setup CI
         uses: ./.github/actions/setup-repo
-        with:
-          python-version: ${{ matrix.python-version }}
       - name: Run tests
         run: hatch run test:full
       - name: Disambiguate coverage filename
-        run: mv .coverage ".coverage.${{ matrix.os }}.${{ matrix.python-version }}"
+        run: mv .coverage ".coverage.${{ matrix.os }}"
       - name: Upload coverage data
         uses: actions/upload-artifact@v3
         with:
@@ -94,7 +91,7 @@ jobs:
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           path: coverage-report.md
-  check: # https://github.com/marketplace/actions/alls-green#why
+  evergreen: # https://github.com/marketplace/actions/alls-green#why
     if: always()
     needs:
       - coverage

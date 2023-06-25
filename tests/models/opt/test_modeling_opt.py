@@ -36,6 +36,6 @@ def test_small_opt(qa_prompt: str, opt_id: str):
 
 
 def test_small_runner_opt(qa_prompt: str, opt_id: str):
-    llm = openllm.Runner("opt", model_id=opt_id, init_local=True)
+    llm = openllm.Runner("opt", model_id=opt_id, ensure_available=True, init_local=True)
     generate = llm(qa_prompt)
     assert generate

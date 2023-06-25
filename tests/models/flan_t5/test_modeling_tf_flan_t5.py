@@ -38,6 +38,6 @@ def test_small_tf_flan(qa_prompt: str, flan_t5_id: str):
 
 @openllm.tests.require_tf
 def test_small_tf_runner_flan(qa_prompt: str, flan_t5_id: str):
-    llm = openllm.Runner("flan-t5", model_id=flan_t5_id, implementation="tf", init_local=True)
+    llm = openllm.Runner("flan-t5", model_id=flan_t5_id, ensure_available=True, implementation="tf", init_local=True)
     generate = llm(qa_prompt)
     assert generate

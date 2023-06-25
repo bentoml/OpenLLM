@@ -38,6 +38,6 @@ def test_small_flax_flan(qa_prompt: str, flan_t5_id: str):
 
 @openllm.tests.require_flax
 def test_small_flax_runner_flan(qa_prompt: str, flan_t5_id: str):
-    llm = openllm.Runner("flan-t5", model_id=flan_t5_id, implementation="flax", init_local=True)
+    llm = openllm.Runner("flan-t5", model_id=flan_t5_id, ensure_available=True, implementation="flax", init_local=True)
     generate = llm(qa_prompt)
     assert generate
