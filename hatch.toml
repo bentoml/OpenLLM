@@ -12,15 +12,18 @@ dependencies = [
     "pyright",
     # NOTE: Tests strategies with Hypothesis and pytest, and snapshot testing with syrupy
     "openllm[flan-t5]",
-    "coverage[toml]>=6.2",
+    "coverage[toml]>=6.5",
     "filelock>=3.7.1",
     "pytest",
     "pytest-cov",
     "pytest-mock",
     "pytest-randomly",
     "pytest-rerunfailures",
-    "pytest-xdist",
+    "pytest-asyncio>=0.21.0",
+    "pytest-xdist[psutil]",
     "trustme",
+    "hypothesis",
+    "syrupy",
 ]
 [envs.default.scripts]
 _run_script = "pytest --cov --cov-report={env:COVERAGE_REPORT:term-missing} --cov-config=pyproject.toml"
