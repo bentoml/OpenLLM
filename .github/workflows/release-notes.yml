@@ -16,8 +16,11 @@ name: release-notes
 on:
   push:
     tags:
-      - v*
+      - 'v*.*.*'
   workflow_dispatch:
+  workflow_run:
+    workflows: [binary-distribution]
+    types: [completed]
 env:
   # This special value tells pypi that the user identity is supplied within the token
   HATCH_INDEX_USER: __token__
@@ -32,6 +35,9 @@ jobs:
   gen-release-notes:
     if: github.repository_owner == 'bentoml'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
     steps:
       - uses: actions/checkout@v3
         with:
@@ -40,6 +46,21 @@ jobs:
         uses: ./.github/actions/setup-repo
       - name: Create release notes
         run: ./.github/actions/create_release_and_archive.sh
+      - name: Download Python artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: python-artifacts
+          path: dist
+      - name: Download binaries
+        uses: actions/download-artifact@v3
+        with:
+          name: standalone
+          path: archives
+      - name: Download installers
+        uses: actions/download-artifact@v3
+        with:
+          name: installers
+          path: installers
       - name: Create release
         uses: softprops/action-gh-release@v1
         with:
@@ -47,7 +68,10 @@ jobs:
           generate_release_notes: true
           body_path: release_notes.txt
           fail_on_unmatched_files: true
-          files: openllm-*.tar.gz
+          files: |-
+            dist/*
+            archives/*
+            installers/*
   bump-dev:
     if: github.repository_owner == 'bentoml'
     needs: [gen-release-notes]

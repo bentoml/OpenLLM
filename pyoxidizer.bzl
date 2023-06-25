@@ -19,10 +19,10 @@ APP_NAME = "openllm"
 DISPLAY_NAME = "OpenLLM"
 AUTHOR = "BentoML"
 
-def make_msi(target):
-    if target == "x86_64-pc-windows-msvc":
+def make_msi(target_triple):
+    if target_triple == "x86_64-pc-windows-msvc":
         arch = "x64"
-    elif target == "i686-pc-windows-msvc":
+    elif target_triple == "i686-pc-windows-msvc":
         arch = "x86"
     else:
         arch = "unknown"
@@ -42,7 +42,7 @@ def make_msi(target):
     # https://gregoryszorc.com/docs/pyoxidizer/main/tugger_starlark_type_file_manifest.html
     m = FileManifest()
 
-    exe_prefix = "targets/" + target + "/"
+    exe_prefix = "targets/" + target_triple + "/"
     m.add_path(
         path = exe_prefix + APP_NAME + ".exe",
         strip_prefix = exe_prefix,
@@ -82,9 +82,9 @@ def make_macos_app_bundle():
     bundle = MacOsApplicationBundleBuilder(DISPLAY_NAME)
     bundle.set_info_plist_required_keys(
         display_name = DISPLAY_NAME,
-        identifier = "org.python." + APP_NAME,
+        identifier = "com.github.bentoml." + APP_NAME,
         version = VERSION,
-        signature = "htch",
+        signature = "oplm",
         executable = APP_NAME,
     )
 

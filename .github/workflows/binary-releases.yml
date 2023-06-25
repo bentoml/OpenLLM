@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     tags:
-      - v*
+      - 'v*.*.*'
   pull_request:
     branches: [main]
 defaults:
@@ -229,7 +229,7 @@ jobs:
           path: installers/*
   macos-packaging:
     name: Build macOS installer
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    if: ${{ false }} # XXX: eh disable installer for MacOS for now, needs more investigation
     needs: binaries
     runs-on: macos-12
     env:
@@ -245,8 +245,6 @@ jobs:
         run: pip install pyoxidizer==${{ env.PYOXIDIZER_VERSION }}
       - name: Install create-dmg
         run: brew install create-dmg
-      # - name: Install rcodesign
-      #   run: cargo install apple-codesign
       - name: Download staged binaries
         uses: actions/download-artifact@v3
         with:
@@ -305,37 +303,3 @@ jobs:
         with:
           name: installers
           path: ${{ steps.stage.outputs.dmg-file }}
-  publish:
-    name: Publish release
-    if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags')
-    needs:
-      - python-artifacts
-      - binaries
-      - windows-packaging
-      - macos-packaging
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      id-token: write
-    steps:
-      - name: Download Python artifacts
-        uses: actions/download-artifact@v3
-        with:
-          name: python-artifacts
-          path: dist
-      - name: Download binaries
-        uses: actions/download-artifact@v3
-        with:
-          name: standalone
-          path: archives
-      - name: Download installers
-        uses: actions/download-artifact@v3
-        with:
-          name: installers
-          path: installers
-      - name: Add assets to current release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: |-
-            archives/*
-            installers/*
