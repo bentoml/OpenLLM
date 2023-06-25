@@ -812,7 +812,7 @@ Available model_id(s): {llm_config['model_ids']} [default: {llm_config['default_
                 env.config: llm.config.model_dump_json().decode(),
                 "OPENLLM_MODEL": model_name,
                 "OPENLLM_MODEL_ID": llm.model_id,
-                "OPENLLM_ADAPTER_MAP": orjson.dumps(adapter_map),
+                "OPENLLM_ADAPTER_MAP": orjson.dumps(adapter_map).decode(),
                 "BENTOML_DEBUG": str(get_debug_mode()),
                 "BENTOML_CONFIG_OPTIONS": _bentoml_config_options_env,
                 "BENTOML_HOME": os.environ.get("BENTOML_HOME", BentoMLContainer.bentoml_home.get()),
