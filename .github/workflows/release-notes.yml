@@ -14,13 +14,8 @@
 
 name: release-notes
 on:
-  push:
-    tags:
-      - 'v*.*.*'
   workflow_dispatch:
-  workflow_run:
-    workflows: [binary-distribution]
-    types: [completed]
+  workflow_call:
 env:
   # This special value tells pypi that the user identity is supplied within the token
   HATCH_INDEX_USER: __token__

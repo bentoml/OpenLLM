@@ -3,10 +3,9 @@ name: binary-distribution
 on:
   push:
     branches: [main]
-    tags:
-      - 'v*.*.*'
   pull_request:
     branches: [main]
+  workflow_call:
 defaults:
   run:
     shell: bash --noprofile --norc -exo pipefail {0}
