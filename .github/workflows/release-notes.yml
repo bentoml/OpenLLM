@@ -105,5 +105,5 @@ jobs:
 
           jq --arg release_version "$(hatch version)" '.version = $release_version' < package.json > package.json.tmp && mv package.json.tmp package.json
 
-          git add src/openllm/__about__.py package.json && git commit -sm "infra: bump to dev version of $(hatch version) [generated]"
+          git add src/openllm/__about__.py package.json && git commit -S -sm "infra: bump to dev version of $(hatch version) [generated]"
           git push origin HEAD:main

@@ -80,7 +80,7 @@ echo "Releasing $release version $RELEASE_VERSION..." && hatch version "${RELEAS
 jq --arg release_version "${RELEASE_VERSION}" '.version = $release_version' < package.json > package.json.tmp && mv package.json.tmp package.json
 
 towncrier build --yes --version "${RELEASE_VERSION}" && git add CHANGELOG.md changelog.d
-git add src/openllm/__about__.py package.json && git commit -sm "infra: prepare for release ${RELEASE_VERSION} [generated]"
+git add src/openllm/__about__.py package.json && git commit -S -sm "infra: prepare for release ${RELEASE_VERSION} [generated]"
 git push origin main
 
 echo "Building artifacts for releasing..." && hatch build
