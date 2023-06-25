@@ -57,5 +57,4 @@ class ReprMixin:
         return join_str.join(repr(v) if a is None else f"{a}={repr(v)}" for a, v in self.__repr_args__())
 
     def __repr_args__(self) -> ReprArgs:
-        attrs = ((k, getattr(self, k)) for k in self.__repr_keys__)
-        return tuple((k, v) for k, v in attrs)
+        return ((k, getattr(self, k)) for k in self.__repr_keys__)

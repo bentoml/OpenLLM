@@ -1368,7 +1368,8 @@ def query(
 @model_id_option(click)
 @output_option
 @click.option("--machine", is_flag=True, default=False, hidden=True)
-def download_models(model_name: str, model_id: str | None, output: OutputLiteral, machine: bool):
+@click.option("--implementation", type=click.Choice(['pt', 'tf', 'flax']), default=None, hidden=True)
+def download_models(model_name: str, model_id: str | None, output: OutputLiteral, machine: bool, implementation: t.Literal['pt', 'tf', 'flax'] | None):
     """Setup LLM interactively.
 
     \b
@@ -1387,7 +1388,7 @@ def download_models(model_name: str, model_id: str | None, output: OutputLiteral
     envvar = config["env"]["framework_value"]
     model = t.cast(
         "_BaseAutoLLMClass",
-        openllm[envvar],  # type: ignore (internal API)
+        openllm[implementation if implementation is not None else envvar],  # type: ignore (internal API)
     ).for_model(model_name, model_id=model_id, llm_config=config)
 
     try:
@@ -1412,7 +1413,7 @@ def download_models(model_name: str, model_id: str | None, output: OutputLiteral
         if output == "pretty":
             _echo(
                 f"'{model.__class__.__name__}' with tag '{model.tag}'"
-                " does not exists in local store!. Saving to store...",
+                " does not exists in local store. Saving to store...",
                 fg="yellow",
                 nl=True,
             )

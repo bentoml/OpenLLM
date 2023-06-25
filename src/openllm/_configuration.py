@@ -1779,7 +1779,7 @@ class LLMConfig(_ConfigAttr):
 
 bentoml_cattr.register_unstructure_hook_factory(
     lambda cls: lenient_issubclass(cls, LLMConfig),
-    lambda cls: make_dict_unstructure_fn(cls, bentoml_cattr, _cattrs_omit_if_default=False),
+    lambda cls: make_dict_unstructure_fn(cls, bentoml_cattr, _cattrs_omit_if_default=False, _cattrs_use_linecache=True, ),
 )
 
 

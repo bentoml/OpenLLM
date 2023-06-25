@@ -14,30 +14,16 @@
 
 from __future__ import annotations
 
-import pytest
+import typing as t
 
 import openllm
 
 
-@pytest.fixture
-def qa_prompt() -> str:
-    return "Answer the following yes/no question by reasoning step-by-step. Can you write a whole Haiku in a single tweet?"
-
-
-@pytest.fixture
-def flan_t5_id() -> str:
-    return "google/flan-t5-small"
+@openllm.tests.require_tf
+def test_small_tf_flan(prompt: str, llm: openllm.LLM[t.Any, t.Any], qa: bool):
+    assert llm(prompt)
 
 
 @openllm.tests.require_tf
-def test_small_tf_flan(qa_prompt: str, flan_t5_id: str):
-    llm = openllm.AutoTFLLM.for_model("flan-t5", model_id=flan_t5_id, ensure_available=True)
-    generate = llm(qa_prompt)
-    assert generate
-
-
-@openllm.tests.require_tf
-def test_small_tf_runner_flan(qa_prompt: str, flan_t5_id: str):
-    llm = openllm.Runner("flan-t5", model_id=flan_t5_id, ensure_available=True, implementation="tf", init_local=True)
-    generate = llm(qa_prompt)
-    assert generate
+def test_small_tf_runner_flan(prompt: str, llm: openllm.LLMRunner, qa: bool):
+    assert llm(prompt)

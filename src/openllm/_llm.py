@@ -73,6 +73,7 @@ if t.TYPE_CHECKING:
 
     from ._configuration import AdapterType
     from .models.auto.factory import _BaseAutoLLMClass
+    from .utils.representation import ReprArgs
 
     class LLMRunner(bentoml.Runner):
         __doc__: str
@@ -807,6 +808,13 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
     def __repr_keys__(self) -> set[str]:
         return {"model_id", "runner_name", "config"}
 
+    def __repr_args__(self) -> ReprArgs:
+        for k in self.__repr_keys__:
+            if k == 'config':
+                yield k, self.config.model_dump(flatten=True)
+            else:
+                yield k ,getattr(self, k)
+
     @property
     def model_id(self) -> str:
         return self._model_id
@@ -899,6 +907,8 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
                 "--model-id",
                 self.model_id,
                 "--machine",
+                "--implementation",
+                self.__llm_implementation__,
             ]
         )
         # NOTE: This usually only concern BentoML devs.
