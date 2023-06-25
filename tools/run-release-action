@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -o errexit -o nounset -o pipefail
+set -ex -o pipefail
 
 # Function to print script usage
 print_usage() {
