@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -ex -o pipefail
+set -e -o pipefail
 
 # Function to print script usage
 print_usage() {
