@@ -1,0 +1,305 @@
+# modified workflow from ofek/hatch, big kudos to them.
+name: binary-distribution
+on:
+  push:
+    branches: [main]
+    tags:
+      - 'v*.*.*'
+  pull_request:
+    branches: [main]
+defaults:
+  run:
+    shell: bash --noprofile --norc -exo pipefail {0}
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+env:
+  APP_NAME: openllm
+  PYTHON_VERSION: '3.11'
+  PYOXIDIZER_VERSION: '0.24.0'
+jobs:
+  python-artifacts:
+    name: Build wheel and source distribution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Setup CI
+        uses: ./.github/actions/setup-repo
+      - name: Install build frontend
+        run: python -m pip install --upgrade build
+      - name: Build
+        run: python -m build
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: python-artifacts
+          path: dist/*
+          if-no-files-found: error
+  binaries:
+    name: ${{ matrix.job.target }} (${{ matrix.job.os }})
+    needs:
+      - python-artifacts
+    runs-on: ${{ matrix.job.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        job:
+          # Linux
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-22.04
+            cross: true
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-22.04
+            cross: true
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-22.04
+            cross: true
+          - target: i686-unknown-linux-gnu
+            os: ubuntu-22.04
+            cross: true
+          - target: powerpc64le-unknown-linux-gnu
+            os: ubuntu-22.04
+            cross: true
+          # Windows
+          - target: x86_64-pc-windows-msvc
+            os: windows-2022
+          - target: i686-pc-windows-msvc
+            os: windows-2022
+          # macOS
+          - target: aarch64-apple-darwin
+            os: macos-12
+          - target: x86_64-apple-darwin
+            os: macos-12
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    env:
+      CARGO: cargo
+      CARGO_BUILD_TARGET: ${{ matrix.job.target }}
+      PYAPP_REPO: pyapp
+      PYAPP_VERSION: '0.8.0'
+      PYAPP_PIP_EXTERNAL: 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Fetch PyApp
+        run: >-
+          mkdir $PYAPP_REPO && curl -L https://github.com/ofek/pyapp/releases/download/v$PYAPP_VERSION/source.tar.gz | tar --strip-components=1 -xzf - -C $PYAPP_REPO
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install Hatch
+        run: pip install -U hatch
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.job.target }}
+      - name: Set up cross compiling
+        if: matrix.job.cross
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cross
+      - name: Configure cross compiling
+        if: matrix.job.cross
+        run: echo "CARGO=cross" >> $GITHUB_ENV
+      - name: Configure target
+        run: |-
+          config_file="$PYAPP_REPO/.cargo/config_${{ matrix.job.target }}.toml"
+          if [[ -f "$config_file" ]]; then
+            mv "$config_file" "$PYAPP_REPO/.cargo/config.toml"
+          fi
+      - name: Download Python artifacts
+        if: ${{ !startsWith(github.event.ref, 'refs/tags') }}
+        uses: actions/download-artifact@v3
+        with:
+          name: python-artifacts
+          path: dist
+      - name: Configure embedded project
+        if: ${{ !startsWith(github.event.ref, 'refs/tags') }}
+        run: |-
+          cd dist
+          wheel="$(echo *.whl)"
+          mv "$wheel" "../$PYAPP_REPO"
+          echo "PYAPP_PROJECT_PATH=$wheel" >> $GITHUB_ENV
+      - name: Build binary
+        run: hatch build --target app
+      # Windows installers don't accept non-integer versions so we ubiquitously
+      # perform the following transformation: X.Y.Z.devN -> X.Y.Z.N
+      - name: Set project version
+        id: version
+        run: |-
+          old_version="$(hatch version)"
+          version="${old_version/dev/}"
+
+          if [[ "$version" != "$old_version" ]]; then
+            cd dist/app
+            old_binary="$(ls)"
+            binary="${old_binary/$old_version/$version}"
+            mv "$old_binary" "$binary"
+          fi
+
+          echo "version=$version" >> $GITHUB_OUTPUT
+          echo "$version"
+      - name: Archive binary
+        run: |-
+          mkdir packaging
+          cd dist/app
+
+          binary="$(ls)"
+
+          if [[ "$binary" =~ -pc-windows- ]]; then
+            7z a "../../packaging/${binary:0:-4}.zip" "$binary"
+          else
+            chmod +x "$binary"
+            tar -czf "../../packaging/$binary.tar.gz" "$binary"
+          fi
+      - name: Upload staged archive
+        if: runner.os != 'Linux'
+        uses: actions/upload-artifact@v3
+        with:
+          name: staged-${{ runner.os }}
+          path: packaging/*
+          if-no-files-found: error
+      - name: Upload archive
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v3
+        with:
+          name: standalone
+          path: packaging/*
+          if-no-files-found: error
+  windows-packaging:
+    name: Build Windows installers
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    needs: binaries
+    runs-on: windows-2022
+    env:
+      VERSION: ${{ needs.binaries.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install PyOxidizer ${{ env.PYOXIDIZER_VERSION }}
+        run: pip install pyoxidizer==${{ env.PYOXIDIZER_VERSION }}
+      - name: Download staged binaries
+        uses: actions/download-artifact@v3
+        with:
+          name: staged-${{ runner.os }}
+          path: archives
+      - name: Extract staged binaries
+        run: |-
+          mkdir bin
+          for f in archives/*; do
+            7z e "$f" -obin
+          done
+      # bin/<APP_NAME>-<VERSION>-<TARGET>.exe -> targets/<TARGET>/<APP_NAME>.exe
+      - name: Prepare binaries
+        run: |-
+          mkdir targets
+          for f in bin/*; do
+            if [[ "$f" =~ ${{ env.VERSION }}-(.+).exe$ ]]; then
+              target="${BASH_REMATCH[1]}"
+              mkdir "targets/$target"
+              mv "$f" "targets/$target/${{ env.APP_NAME }}.exe"
+            fi
+          done
+      - name: Build installers
+        run: >-
+          pyoxidizer build windows_installers --release --var version ${{ env.VERSION }}
+      - name: Prepare installers
+        run: |-
+          mkdir installers
+          mv build/*/release/*/*.{exe,msi} installers
+      - name: Upload binaries
+        uses: actions/upload-artifact@v3
+        with:
+          name: standalone
+          path: archives/*
+          if-no-files-found: error
+      - name: Upload installers
+        uses: actions/upload-artifact@v3
+        with:
+          name: installers
+          path: installers/*
+  macos-packaging:
+    name: Build macOS installer
+    if: ${{ false }} # XXX: eh disable installer for MacOS for now, needs more investigation
+    needs: binaries
+    runs-on: macos-12
+    env:
+      VERSION: ${{ needs.binaries.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install PyOxidizer ${{ env.PYOXIDIZER_VERSION }}
+        run: pip install pyoxidizer==${{ env.PYOXIDIZER_VERSION }}
+      - name: Install create-dmg
+        run: brew install create-dmg
+      - name: Download staged binaries
+        uses: actions/download-artifact@v3
+        with:
+          name: staged-${{ runner.os }}
+          path: archives
+      - name: Extract staged binaries
+        run: |-
+          mkdir bin
+          for f in archives/*; do
+            tar -xzf "$f" -C bin
+          done
+      - name: Archive binaries
+        run: |-
+          rm archives/*
+          cd bin
+
+          for f in *; do
+            tar -czf "../archives/$f.tar.gz" "$f"
+          done
+      # bin/<APP_NAME>-<VERSION>-<TARGET> -> targets/<TARGET>/<APP_NAME>
+      - name: Prepare binaries
+        run: |-
+          mkdir targets
+          for f in bin/*; do
+            if [[ "$f" =~ ${{ env.VERSION }}-(.+)$ ]]; then
+              target="${BASH_REMATCH[1]}"
+              mkdir "targets/$target"
+              mv "$f" "targets/$target/${{ env.APP_NAME }}"
+            fi
+          done
+      - name: Build app bundle
+        run: >-
+          pyoxidizer build macos_app_bundle --release --var version ${{ env.VERSION }}
+      - name: Stage app bundle
+        id: stage
+        run: |-
+          mkdir staged
+          mv build/*/release/*/*.app staged
+          app_bundle="$(ls staged)"
+          app_name="${app_bundle:0:${#app_bundle}-4}"
+
+          echo "app-bundle=$app_bundle" >> "$GITHUB_OUTPUT"
+          echo "app-name=$app_name-${{ env.VERSION }}.dmg" >> "$GITHUB_OUTPUT"
+          echo "dmg-file=$app_name-${{ env.VERSION }}.dmg" >> "$GITHUB_OUTPUT"
+      - name: Create DMG
+        run: >-
+          create-dmg --volname "${{ steps.stage.outputs.app-name }}" --hide-extension "${{ steps.stage.outputs.app-bundle }}" --window-pos 200 120 --window-size 800 400 --icon-size 100 --app-drop-link 600 185 "${{ steps.stage.outputs.dmg-file }}" staged
+      - name: Upload binaries
+        uses: actions/upload-artifact@v3
+        with:
+          name: standalone
+          path: archives/*
+          if-no-files-found: error
+      - name: Upload installer
+        uses: actions/upload-artifact@v3
+        with:
+          name: installers
+          path: ${{ steps.stage.outputs.dmg-file }}

@@ -134,3 +134,7 @@ package-lock.json
 # PyCharm config
 .idea
 outputs
+
+# PyOxidizer and binary related
+pyapp
+/target

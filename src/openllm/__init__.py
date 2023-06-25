@@ -35,13 +35,6 @@ from .__about__ import __version__ as __version__
 from .exceptions import MissingDependencyError
 
 
-# NOTE: We need to do this so that overload can register
-# correct overloads to typing registry
-if hasattr(t, "get_overloads"):
-    from typing import overload
-else:
-    from typing_extensions import overload
-
 if utils.DEBUG:
     utils.set_debug_mode(True)
     utils.set_quiet_mode(False)

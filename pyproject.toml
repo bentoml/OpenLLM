@@ -91,6 +91,8 @@ allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/openllm", "src/openllm_client"]
+[tool.hatch.build.targets.sdist]
+exclude = ["/.github", "/typings", "/examples", "/assets", "/changelog.d", "/tools"]
 
 [tool.towncrier]
 directory = "changelog.d"

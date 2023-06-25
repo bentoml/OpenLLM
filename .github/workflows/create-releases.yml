@@ -15,6 +15,16 @@
 name: release
 on:
   workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Release type'
+        required: true
+        type: choice
+        default: 'patch'
+        options:
+          - major
+          - minor
+          - patch
 env:
   # This special value tells pypi that the user identity is supplied within the token
   HATCH_INDEX_USER: __token__
@@ -37,6 +47,8 @@ jobs:
           fetch-depth: 0
       - name: Setup CI
         uses: ./.github/actions/setup-repo
+        with:
+          python-version: '3.11'
       - name: Import bot's GPG key for signing commits
         id: import-gpg
         uses: crazy-max/ghaction-import-gpg@v5
@@ -52,4 +64,4 @@ jobs:
         run: |
           git config --global user.name "${{ steps.import-gpg.outputs.name }}"
           git config --global user.email "${{ steps.import-gpg.outputs.email }}"
-          ./.github/actions/release.sh
+          ./.github/actions/release.sh --release ${{ inputs.release_type }}

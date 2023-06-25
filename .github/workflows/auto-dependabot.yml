@@ -12,18 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import annotations
-
-import typing as t
-
-import openllm
-
-
-@openllm.tests.require_tf
-def test_small_tf_flan(prompt: str, llm: openllm.LLM[t.Any, t.Any], qa: bool):
-    assert llm(prompt)
-
-
-@openllm.tests.require_tf
-def test_small_tf_runner_flan(prompt: str, llm: openllm.LLMRunner, qa: bool):
-    assert llm(prompt)
+name: auto-dependabot
+on:
+  pull_request_target:
+    types:
+      - opened
+      - reopened
+      - synchronize
+    branches:
+      - main
+jobs:
+  dependabot:
+    runs-on: ubuntu-latest
+    if: ${{ github.actor == 'dependabot[bot]' }}
+    steps:
+      - name: Enable auto-merge for Dependabot PRs
+        run: gh pr merge --auto --squash ${{ github.event.pull_request.html_url }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

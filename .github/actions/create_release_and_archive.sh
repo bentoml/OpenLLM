@@ -18,10 +18,7 @@ set -o errexit -o nounset -o pipefail
 # Set by GH actions, see
 # https://docs.github.com/en/actions/learn-github-actions/environment-variables#default-environment-variables
 TAG=${GITHUB_REF_NAME#v}
-PREFIX="openllm-${TAG}"
-ARCHIVE="openllm-${TAG}.tar.gz"
 
-git archive --format=tar --prefix="${PREFIX}/" "v${TAG}" | gzip > "${ARCHIVE}"
 cat > release_notes.txt << EOF
 ## Installation
 
