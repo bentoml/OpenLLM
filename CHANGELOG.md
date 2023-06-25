@@ -18,6 +18,46 @@ This changelog is managed by towncrier and is compiled at release time.
 
 <!-- towncrier release notes start -->
 
+## [0.1.14](https://github.com/bentoml/openllm/tree/v0.1.14)
+
+### Features
+
+- Added support for standalone binary distribution. Currently works on Linux and
+  Windows:
+
+  The following are supported:
+
+  - aarch64-unknown-linux-gnu
+  - x86_64-unknown-linux-gnu
+  - x86_64-unknown-linux-musl
+  - i686-unknown-linux-gnu
+  - powerpc64le-unknown-linux-gnu
+  - x86_64-pc-windows-msvc
+  - i686-pc-windows-msvc
+
+  Reverted matrices expansion for CI to all Python version. Now leveraging Hatch
+  env matrices
+  [#66](https://github.com/bentoml/openllm/issues/66)
+
+
+### Bug fix
+
+- Moved implementation of dolly-v2 and falcon serialization to save PreTrainedModel instead of pipeline.
+
+  Save dolly-v2 now save the actual model instead of the pipeline abstraction. If you have a Dolly-V2
+  model available locally, kindly ask you to do `openllm prune` to have the new implementation available.
+
+  Dolly-v2 and falcon nows implements some memory optimization to help with loading with lower resources system
+
+  Configuration removed field: 'use_pipeline'
+  [#60](https://github.com/bentoml/openllm/issues/60)
+- Remove duplicated class instance of `generation_config` as it should be set via
+  instance attributes.
+
+  fixes tests flakiness and one broken cases for parsing env
+  [#64](https://github.com/bentoml/openllm/issues/64)
+
+
 ## [0.1.13](https://github.com/bentoml/openllm/tree/v0.1.13)
 No significant changes.
 
