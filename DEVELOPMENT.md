@@ -150,7 +150,7 @@ To release a new version, use `./tools/run-release-action`. It requires `gh`,
 `jq` and `hatch`:
 
 ```bash
-./tools/run-release-action
+./tools/run-release-action --release <major|minor|patch>
 ```
 
 > Note that currently this workflow can only be run by the BentoML team.

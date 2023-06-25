@@ -2,6 +2,22 @@
 
 set -o errexit -o nounset -o pipefail
 
+# Function to print script usage
+print_usage() {
+    echo "Usage: $0 [--release <major|minor|patch>]"
+}
+
+# Function to validate release argument
+validate_release() {
+    local release=$1
+
+    if [[ $release == "major" || $release == "minor" || $release == "patch" ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
 if ! command -v gh @ >&1 > /dev/null; then
     echo "ERROR: gh not installed. Aborting..."
     exit 1
@@ -17,8 +33,30 @@ if ! command -v hatch @ >&1 > /dev/null; then
     exit 1
 fi
 
+# Check if release flag is provided
+if [[ $1 == "--release" ]]; then
+    # Check if release argument is provided
+    if [[ -z $2 ]]; then
+        echo "Error: No release argument provided."
+        print_usage
+        exit 1
+    fi
+
+    release=$2
+
+    if ! validate_release "$release"; then
+        echo "Error: Invalid release argument. Only 'major', 'minor', or 'patch' are allowed."
+        print_usage
+        exit 1
+    fi
+else
+    echo "Error: Unknown option or no option provided."
+    print_usage
+    exit 1
+fi
+
 echo "Running release actions (create-releases.yml)..."
-gh workflow run create-releases.yml --repo bentoml/openllm
+echo '{"release_type": "'"$release"'"}' | gh workflow run create-releases.yml --repo bentoml/openllm --json
 
 sleep 10
 
