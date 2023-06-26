@@ -453,6 +453,22 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
         # loosely define it
         return t.cast("F[[t.Callable[..., t.Any]], click.Command]", wrapper)
 
+    def group(self, *args: t.Any, **kwargs: t.Any) -> t.Callable[[t.Callable[P, t.Any]], click.Group]:
+        aliases = kwargs.pop("aliases", None)
+
+        def decorator(f: t.Callable[P, t.Any]):
+            # create the main group
+            grp = super(BentoMLCommandGroup, self).group(*args, **kwargs)(f)
+
+            if aliases is not None:
+                assert grp.name
+                self._commands[grp.name] = aliases
+                self._aliases.update({k: grp.name for k in aliases})
+
+            return grp
+
+        return decorator
+
 
 @click.group(cls=OpenLLMCommandGroup, context_settings=_CONTEXT_SETTINGS, name="openllm")
 @click.version_option(__version__, "--version", "-v")
@@ -472,7 +488,7 @@ def cli():
     """
 
 
-@cli.group(cls=OpenLLMCommandGroup, context_settings=_CONTEXT_SETTINGS, name="start")
+@cli.group(cls=OpenLLMCommandGroup, context_settings=_CONTEXT_SETTINGS, name="start", aliases=["start-http"])
 def start_cli():
     """
     Start any LLM as a REST server.
@@ -480,6 +496,8 @@ def start_cli():
     \b
     ```bash
     $ openllm start <model_name> --<options> ...
+
+    $ openllm start-http <model_name> --<options> ...
     ```
     """
 
