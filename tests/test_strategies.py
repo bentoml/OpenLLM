@@ -10,7 +10,7 @@ if t.TYPE_CHECKING:
 
 import bentoml
 from bentoml._internal.resource import get_resource
-from bentoml._internal.runner import strategy
+from openllm import _strategies as strategy
 from openllm._strategies import CascadingResourceStrategy
 
 
@@ -116,3 +116,18 @@ def test_cascade_strategy_worker_env(monkeypatch: MonkeyPatch, gpu_type: str):
         GPURunnable, {gpu_type: [2, 6, 7, 8, 9]}, 0.4, 2
     )
     assert envs.get("CUDA_VISIBLE_DEVICES") == "9"
+
+
+@pytest.mark.parametrize('gpu_type', ['nvidia.com/gpu', 'amd.com/gpu'])
+def test_cascade_strategy_disabled_via_env(monkeypatch: MonkeyPatch, gpu_type: str):
+    monkeypatch.setattr(strategy, "get_resource", unvalidated_get_resource)
+
+    monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "")
+    envs = CascadingResourceStrategy.get_worker_env(GPURunnable, {gpu_type: 2}, 1, 0)
+    assert envs.get("CUDA_VISIBLE_DEVICES") == ""
+    monkeypatch.delenv("CUDA_VISIBLE_DEVICES")
+
+    monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "-1")
+    envs = CascadingResourceStrategy.get_worker_env(GPURunnable, {gpu_type: 2}, 1, 1)
+    assert envs.get("CUDA_VISIBLE_DEVICES") == "-1"
+    monkeypatch.delenv("CUDA_VISIBLE_DEVICES")

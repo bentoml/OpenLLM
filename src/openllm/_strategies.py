@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 class AmdGpuResource(Resource[t.List[int]], resource_id='amd.com/gpu'):
     @classmethod
     def from_spec(cls, spec: int | str | list[str | int]) -> list[int]:
-        if not isinstance(spec, (int, str)) or not LazyType(ListIntStr).isinstance(spec):
+        if not isinstance(spec, (int, str)) and not LazyType(ListIntStr).isinstance(spec):
             raise TypeError(
                 "AMD GPU device IDs must be int, str or a list specifing the exact GPUs to use."
             )
@@ -164,10 +164,10 @@ class CascadingResourceStrategy(Strategy, ReprMixin):
             resource_request : The resource request of the runnable.
             worker_index : The index of the worker, start from 0.
         """
-        cuda_env = os.environ.get('CUDA_VISIBLE_DEVICES', str(-1))
+        cuda_env = os.environ.get('CUDA_VISIBLE_DEVICES', None)
         disabled = cuda_env in ("", "-1")
 
-        environ: dict[str, t.Any] = {'CUDA_VISIBLE_DEVICES': cuda_env}
+        environ: dict[str, t.Any] = {}
 
         if resource_request is None:
             resource_request = system_resources()
@@ -180,14 +180,17 @@ class CascadingResourceStrategy(Strategy, ReprMixin):
             and "nvidia.com/gpu" in runnable_class.SUPPORTED_RESOURCES
         ):
             dev = cls.transpile_workers_to_cuda_visible_devices(workers_per_resource, nvidia_gpus, worker_index)
-            if not disabled:
-                environ["CUDA_VISIBLE_DEVICES"] = dev
-                logger.info(
-                    "Environ for worker %s: set CUDA_VISIBLE_DEVICES to %s",
-                    worker_index,
-                    dev,
-                )
+            if disabled:
+                logger.debug("CUDA_VISIBLE_DEVICES is disabled, %s will not be using GPU.", worker_index)
+                environ["CUDA_VISIBLE_DEVICES"] = cuda_env
                 return environ
+            environ["CUDA_VISIBLE_DEVICES"] = dev
+            logger.info(
+                "Environ for worker %s: set CUDA_VISIBLE_DEVICES to %s",
+                worker_index,
+                dev,
+            )
+            return environ
 
         # use amd gpu
         amd_gpus = get_resource(resource_request, "amd.com/gpu")
@@ -197,18 +200,23 @@ class CascadingResourceStrategy(Strategy, ReprMixin):
             and "amd.com/gpu" in runnable_class.SUPPORTED_RESOURCES
         ):
             dev = cls.transpile_workers_to_cuda_visible_devices(workers_per_resource, amd_gpus, worker_index)
-            if not disabled:
-                environ["CUDA_VISIBLE_DEVICES"] = dev
-                logger.info(
-                    "Environ for worker %s: set CUDA_VISIBLE_DEVICES to %s",
-                    worker_index,
-                    dev,
-                )
+            if disabled:
+                logger.debug("CUDA_VISIBLE_DEVICES is disabled, %s will not be using GPU.", worker_index)
+                environ["CUDA_VISIBLE_DEVICES"] = cuda_env
                 return environ
+            environ["CUDA_VISIBLE_DEVICES"] = dev
+            logger.info(
+                "Environ for worker %s: set CUDA_VISIBLE_DEVICES to %s",
+                worker_index,
+                dev,
+            )
+            return environ
 
         # use CPU
         cpus = get_resource(resource_request, "cpu")
         if cpus is not None and cpus > 0:
+            if not disabled:
+                logger.warning("'CUDA_VISIBLE_DEVICES' has no effect when only CPU is available.")
             environ["CUDA_VISIBLE_DEVICES"] = "-1"  # disable gpu
             if runnable_class.SUPPORTS_CPU_MULTI_THREADING:
                 thread_count = math.ceil(cpus)
