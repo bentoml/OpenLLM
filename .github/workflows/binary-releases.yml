@@ -169,7 +169,6 @@ jobs:
           if-no-files-found: error
   windows-packaging:
     name: Build Windows installers
-    if: github.event.pull_request.head.repo.full_name == github.repository
     needs: binaries
     runs-on: windows-2022
     env:
