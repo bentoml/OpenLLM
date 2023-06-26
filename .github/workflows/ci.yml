@@ -17,8 +17,7 @@ on:
   push:
     branches: [main]
   pull_request:
-  schedule:
-    - cron: '0 0 * * 1/2'
+    branches: [main]
 env:
   LINES: 120
   COLUMNS: 120
@@ -98,6 +97,7 @@ jobs:
     if: always()
     needs:
       - coverage
+      - tests
     runs-on: ubuntu-latest
     steps:
       - name: Decide whether the needed jobs succeeded or failed
