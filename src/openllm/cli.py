@@ -1017,7 +1017,8 @@ def build(
     default=False,
     help="Show available models in local store (mutually exclusive with '-o porcelain').",
 )
-def models(output: OutputLiteral, show_available: bool):
+@click.pass_context
+def models(ctx: click.Context, output: OutputLiteral, show_available: bool):
     """List all supported models.
 
     \b
@@ -1134,7 +1135,10 @@ def models(output: OutputLiteral, show_available: bool):
                     _echo(err, fg="red")
 
             if show_available:
-                assert ids_in_local_store
+                assert ids_in_local_store is not None
+                if len(ids_in_local_store) == 0:
+                    _echo("No models available locally.")
+                    ctx.exit(0)
 
                 _available = [[k + "\n\n" * len(v), [str(i.tag) for i in v]] for k, v in ids_in_local_store.items()]
                 column_widths = [int(COLUMNS / 6), int(COLUMNS / 2)]
@@ -1164,8 +1168,7 @@ def models(output: OutputLiteral, show_available: bool):
                 ).decode(),
                 fg="white",
             )
-
-    sys.exit(0)
+    ctx.exit(0)
 
 
 @cli.command()
@@ -1195,10 +1198,6 @@ def prune(yes: bool, model_store: ModelStore = Provide[BentoMLContainer.model_st
         if delete_confirmed:
             model_store.delete(model.tag)
             click.echo(f"{model} deleted.")
-
-
-# Can also support agent type such as langchain and other variants here.
-_AGENT_MAPPING = {"hf": "/hf/agent"}
 
 
 def parsing_instruction_callback(
@@ -1368,8 +1367,14 @@ def query(
 @model_id_option(click)
 @output_option
 @click.option("--machine", is_flag=True, default=False, hidden=True)
-@click.option("--implementation", type=click.Choice(['pt', 'tf', 'flax']), default=None, hidden=True)
-def download_models(model_name: str, model_id: str | None, output: OutputLiteral, machine: bool, implementation: t.Literal['pt', 'tf', 'flax'] | None):
+@click.option("--implementation", type=click.Choice(["pt", "tf", "flax"]), default=None, hidden=True)
+def download_models(
+    model_name: str,
+    model_id: str | None,
+    output: OutputLiteral,
+    machine: bool,
+    implementation: t.Literal["pt", "tf", "flax"] | None,
+):
     """Setup LLM interactively.
 
     \b
