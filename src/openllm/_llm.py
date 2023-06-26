@@ -1161,9 +1161,11 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
         models.append(self._bentomodel)
 
         if scheduling_strategy is None:
-            from bentoml._internal.runner.strategy import DefaultStrategy
+            from ._strategies import CascadingResourceStrategy
 
-            scheduling_strategy = DefaultStrategy
+            scheduling_strategy = CascadingResourceStrategy
+        else:
+            logger.debug("Using custom scheduling strategy: %s", scheduling_strategy)
 
         generate_sig = ModelSignature.from_dict(ModelSignatureDict(batchable=False))
         generate_iterator_sig = ModelSignature.from_dict(ModelSignatureDict(batchable=True))
@@ -1179,7 +1181,7 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
             generate_iterator_sig = first_not_none(signatures.get("generate_iterator"), default=generate_iterator_sig)
 
         class _Runnable(bentoml.Runnable):
-            SUPPORTED_RESOURCES = ("nvidia.com/gpu", "cpu")
+            SUPPORTED_RESOURCES = ("amd.com/gpu","nvidia.com/gpu", "cpu")
             SUPPORTS_CPU_MULTI_THREADING = True
 
             def __init__(__self: _Runnable):
@@ -1298,11 +1300,11 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
                 {},
                 lambda ns: ns.update(
                     {
-                        "SUPPORTED_RESOURCES": ("nvidia.com/gpu", "cpu")
+                        "SUPPORTED_RESOURCES": ("nvidia.com/gpu", "amd.com/gpu")
                         if self.config["requires_gpu"]
-                        else ("nvidia.com/gpu",),
+                        else ("nvidia.com/gpu", "amd.com/gpu", "cpu"),
                     }
-                ),
+                )
             ),
             name=self.runner_name,
             embedded=False,
