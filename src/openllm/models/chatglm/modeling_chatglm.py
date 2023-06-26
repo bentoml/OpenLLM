@@ -111,5 +111,5 @@ class ChatGLM(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTrain
             return self.model.chat(
                 self.tokenizer,
                 prompt,
-                generation_config=self.config.model_construct_env(do_sample=True, **attrs).to_generation_config(),
+                generation_config=self.config.model_construct_env(**attrs).to_generation_config(),
             )
