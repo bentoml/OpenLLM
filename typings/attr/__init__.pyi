@@ -30,8 +30,6 @@ from ._typing_compat import AttrsInstance_
 from ._version_info import VersionInfo
 
 
-if sys.version_info >= (3, 10): ...
-else: ...
 __version__: str
 __version_info__: VersionInfo
 __title__: str
@@ -74,8 +72,6 @@ if sys.version_info >= (3, 8):
     def Factory(factory: Callable[[Any], _T], takes_self: Literal[True]) -> _T: ...
     @overload
     def Factory(factory: Callable[[], _T], takes_self: Literal[False]) -> _T: ...
-
-else: ...
 
 def __dataclass_transform__(
     *,
