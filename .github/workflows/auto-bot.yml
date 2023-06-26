@@ -30,3 +30,11 @@ jobs:
         run: gh pr merge --auto --squash ${{ github.event.pull_request.html_url }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  pre-commit:
+    runs-on: ubuntu-latest
+    if: ${{ github.actor == 'pre-commit-ci[bot]' }}
+    steps:
+      - name: Enable auto-merge for Dependabot PRs
+        run: gh pr merge --auto --squash ${{ github.event.pull_request.html_url }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
