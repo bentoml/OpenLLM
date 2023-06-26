@@ -18,6 +18,17 @@ This changelog is managed by towncrier and is compiled at release time.
 
 <!-- towncrier release notes start -->
 
+## [0.1.15](https://github.com/bentoml/openllm/tree/v0.1.15)
+
+### Features
+
+- `openllm.Runner` now supports AMD GPU, addresses #65.
+
+  It also respect CUDA_VISIBLE_DEVICES set correctly, allowing disabling GPU and
+  run on CPU only.
+  [#72](https://github.com/bentoml/openllm/issues/72)
+
+
 ## [0.1.14](https://github.com/bentoml/openllm/tree/v0.1.14)
 
 ### Features
