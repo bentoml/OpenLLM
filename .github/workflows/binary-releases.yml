@@ -1,11 +1,8 @@
 # modified workflow from ofek/hatch, big kudos to them.
 name: binary-distribution
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
   workflow_call:
+  workflow_dispatch:
 defaults:
   run:
     shell: bash --noprofile --norc -exo pipefail {0}
