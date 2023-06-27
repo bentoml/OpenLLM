@@ -16,6 +16,10 @@ name: release-notes
 on:
   workflow_dispatch:
   workflow_call:
+    inputs:
+      tags:
+        required: true
+        type: string
 env:
   # This special value tells pypi that the user identity is supplied within the token
   HATCH_INDEX_USER: __token__
@@ -37,6 +41,7 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
+          ref: ${{ inputs.tags }}
       - name: Setup CI
         uses: ./.github/actions/setup-repo
       - name: Create release notes
