@@ -26,6 +26,8 @@ import orjson
 if t.TYPE_CHECKING:
     from fs.base import FS
 
+    import openllm
+
     DictStrAny = dict[str, t.Any]
 
     from attr import _make_method
@@ -74,12 +76,13 @@ class ModelAdapterMapFormatter(ModelNameFormatter):
 _service_file = Path(__file__).parent.parent / "_service.py"
 
 
-def write_service(
-    model_name: str, model_id: str, adapter_map: dict[str, str | None] | None, target_path: str, llm_fs: FS
-):
+def write_service(llm: openllm.LLM[t.Any, t.Any], adapter_map: dict[str, str | None] | None, llm_fs: FS):
     from . import DEBUG
 
-    logger.debug("Generating service for %s to %s", model_name, target_path)
+    model_name = llm.config["model_name"]
+
+    logger.debug("Generating service for %s", model_name)
+
     with open(_service_file.__fspath__(), "r") as f:
         src_contents = f.readlines()
 
@@ -88,10 +91,6 @@ def write_service(
         if OPENLLM_MODEL_NAME in it:
             src_contents[src_contents.index(it)] = (
                 ModelNameFormatter(model_name).vformat(it)[: -(len(OPENLLM_MODEL_NAME) + 3)] + "\n"
-            )
-        elif OPENLLM_MODEL_ID in it:
-            src_contents[src_contents.index(it)] = (
-                ModelIdFormatter(model_id).vformat(it)[: -(len(OPENLLM_MODEL_ID) + 3)] + "\n"
             )
         elif OPENLLM_MODEL_ADAPTER_MAP in it:
             src_contents[src_contents.index(it)] = (
@@ -106,7 +105,7 @@ def write_service(
     if DEBUG:
         logger.info("Generated script:\n%s", script)
 
-    llm_fs.writetext(target_path, script)
+    llm_fs.writetext(llm.config["service_name"], script)
 
 
 # NOTE: The following ins extracted from attrs internal APIs

@@ -60,7 +60,7 @@ warnings.filterwarnings(
 )
 
 model = os.environ.get("OPENLLM_MODEL", "{__model_name__}")  # openllm: model name
-model_id = os.environ.get("OPENLLM_MODEL_ID", "{__model_id__}")  # openllm: model id
+model_id = os.environ.get("OPENLLM_MODEL_ID", os.path.abspath("{__model_id__}"))  # openllm: model id
 adapter_map = os.environ.get("OPENLLM_ADAPTER_MAP", """{__model_adapter_map__}""")  # openllm: model adapter map
 
 llm_config = openllm.AutoConfig.for_model(model)
@@ -72,6 +72,7 @@ runner = openllm.Runner(
     bettertransformer=llm_config["env"]["bettertransformer_value"],
     quantize=llm_config["env"]["quantize_value"],
     adapter_map=orjson.loads(adapter_map),
+    trust_remote_code=True,
 )
 
 svc = bentoml.Service(name=f"llm-{llm_config['start_name']}-service", runners=[runner])

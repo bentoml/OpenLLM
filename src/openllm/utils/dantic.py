@@ -142,12 +142,13 @@ def Field(
         description: the documentation for the field. Defaults to None.
         env: the environment variable to read from. Defaults to None.
         auto_default: a bool indicating whether to use the default value as the environment.
-            Defaults to False. If set to True, the behaviour of this Field will also depends
-            on kw_only. If kw_only=True, the this field will become 'Required' and the default
-            value is omitted. If kw_only=False, then the default value will be used as before.
+                      Defaults to False. If set to True, the behaviour of this Field will also depends
+                      on kw_only. If kw_only=True, the this field will become 'Required' and the default
+                      value is omitted. If kw_only=False, then the default value will be used as before.
         use_default_converter: a bool indicating whether to use the default converter. Defaults
-            to True. If set to False, then the default converter will not be used. The default
-            converter converts a given value from the environment variable for this given Field.
+                               to True. If set to False, then the default converter will not be used.
+                               The default converter converts a given value from the environment variable
+                               for this given Field.
         **kwargs: The rest of the arguments are passed to attr.field
     """
     metadata = attrs.pop("metadata", {})

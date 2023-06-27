@@ -1490,20 +1490,26 @@ def query(
         else openllm.client.GrpcClient(endpoint, timeout=timeout)
     )
 
+    input_fg = "yellow"
+    generated_fg = "cyan"
+
     model = t.cast(
         "_BaseAutoLLMClass",
         openllm[client.framework],  # type: ignore (internal API)
     ).for_model(client.model_name)
 
     if output != "porcelain":
-        _echo(f"Processing query: {prompt}", fg="white")
+        _echo("\n==Input==\n", fg="white")
+        _echo(prompt, fg=input_fg, nl=False)
 
     res = client.query(prompt, return_raw_response=True)
 
     if output == "pretty":
         formatted = model.postprocess_generate(prompt, res["responses"])
-        _echo("Responses: ", fg="white", nl=False)
-        _echo(formatted, fg="cyan")
+        generated = formatted[len(prompt) :]
+        _echo("\n\n==Responses==\n", fg="white")
+        _echo(formatted[: len(prompt)], fg=input_fg, nl=False)
+        _echo(generated, fg=generated_fg)
     elif output == "json":
         _echo(orjson.dumps(res, option=orjson.OPT_INDENT_2).decode(), fg="white")
     else:

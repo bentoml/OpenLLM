@@ -274,10 +274,8 @@ class FineTuneConfig:
         # makes a copy to correctly set all modules
         adapter_config = self.adapter_config.copy()
         if "peft_type" in adapter_config:
-            logger.debug(
-                "'peft_type' is not required as it is managed internally by '%s' and 'peft'.",
-                self.__class__.__name__,
-            )
+            # no need for peft_type since it is internally
+            # managed by OpenLLM and PEFT
             adapter_config.pop("peft_type")
 
         # respect user set task_type if it is passed, otherwise use one managed by OpenLLM
@@ -1419,13 +1417,10 @@ class LLMConfig(_ConfigAttr):
             )
 
         for k in _cached_keys:
-            if k in generation_config or attrs.get(k) is None:
+            if k in generation_config or attrs[k] is None:
                 del attrs[k]
 
-        self.__openllm_extras__ = config_merger.merge(
-            first_not_none(__openllm_extras__, default={}),
-            {k: v for k, v in attrs.items() if k not in self.__openllm_accepted_keys__},
-        )
+        self.__openllm_extras__ = config_merger.merge(first_not_none(__openllm_extras__, default={}), {k: v for k, v in attrs.items() if k not in self.__openllm_accepted_keys__})
         self.generation_config = self["generation_class"](**generation_config)
 
         # The rest of attrs should only be the attributes to be passed to __attrs_init__
@@ -1683,15 +1678,12 @@ class LLMConfig(_ConfigAttr):
 
         env_json_string = os.environ.get(model_config, None)
 
+        config_from_env: DictStrAny = {}
         if env_json_string is not None:
             try:
                 config_from_env = orjson.loads(env_json_string)
             except orjson.JSONDecodeError as e:
                 raise RuntimeError(f"Failed to parse '{model_config}' as valid JSON string.") from e
-        else:
-            config_from_env = {}
-
-        env_struct = bentoml_cattr.structure(config_from_env, cls)
 
         if "generation_config" in attrs:
             generation_config = attrs.pop("generation_config")
@@ -1699,14 +1691,16 @@ class LLMConfig(_ConfigAttr):
                 raise RuntimeError(f"Expected a dictionary, but got {type(generation_config)}")
         else:
             generation_config = {
-                k: v for k, v in attrs.items() if k in attr.fields_dict(env_struct.__openllm_generation_class__)
+                k: v for k, v in attrs.items() if k in attr.fields_dict(cls.__openllm_generation_class__)
             }
 
         for k in tuple(attrs.keys()):
             if k in generation_config:
                 del attrs[k]
 
-        return attr.evolve(env_struct, generation_config=generation_config, **attrs)
+        config_from_env.update(attrs)
+        config_from_env['generation_config'] = generation_config
+        return bentoml_cattr.structure(config_from_env, cls)
 
     def model_validate_click(self, **attrs: t.Any) -> tuple[LLMConfig, DictStrAny]:
         """Parse given click attributes into a LLMConfig and return the remaining click attributes."""
@@ -1809,10 +1803,10 @@ def structure_llm_config(data: DictStrAny, cls: type[LLMConfig]) -> LLMConfig:
     if not LazyType(DictStrAny).isinstance(data):
         raise RuntimeError(f"Expected a dictionary, but got {type(data)}")
 
-    generation_cls_fields = attr.fields_dict(cls.__openllm_generation_class__)
     cls_attrs = {
-        k: v for k, v in data.items() if k in cls.__openllm_accepted_keys__ and k not in generation_cls_fields
+        k: v for k, v in data.items() if k in cls.__openllm_accepted_keys__
     }
+    generation_cls_fields = attr.fields_dict(cls.__openllm_generation_class__)
     if "generation_config" in data:
         generation_config = data.pop("generation_config")
         if not LazyType(DictStrAny).isinstance(generation_config):
@@ -1820,9 +1814,8 @@ def structure_llm_config(data: DictStrAny, cls: type[LLMConfig]) -> LLMConfig:
         config_merger.merge(generation_config, {k: v for k, v in data.items() if k in generation_cls_fields})
     else:
         generation_config = {k: v for k, v in data.items() if k in generation_cls_fields}
-    not_extras = list(cls_attrs) + list(generation_config)
     # The rest should be passed to extras
-    data = {k: v for k, v in data.items() if k not in not_extras}
+    data = {k: v for k, v in data.items() if k not in cls.__openllm_accepted_keys__}
 
     return cls(generation_config=generation_config, __openllm_extras__=data, **cls_attrs)
 

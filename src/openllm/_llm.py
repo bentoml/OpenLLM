@@ -43,6 +43,7 @@ from .exceptions import ForbiddenAttributeError
 from .exceptions import GpuNotAvailableError
 from .exceptions import OpenLLMException
 from .utils import DEBUG
+from .utils import ENV_VARS_TRUE_VALUES
 from .utils import EnvVarMixin
 from .utils import LazyLoader
 from .utils import ReprMixin
@@ -107,6 +108,11 @@ FRAMEWORK_TO_AUTOCLASS_MAPPING = {
     "tf": ("TFAutoModelForCausalLM", "TFAutoModelForSeq2SeqLM"),
     "flax": ("FlaxAutoModelForCausalLM", "FlaxAutoModelForSeq2SeqLM"),
 }
+
+# NOTE: This is a custom mapping for the autoclass to be used when loading as path
+# since will try to infer the auto class to load, we will need this mapping
+# in addition to FRAMEWORK_TO_AUTOCLASS_MAPPING for it to work properly.
+MODEL_TO_AUTOCLASS_MAPPING = {"falcon": {"pt": "AutoModelForCausalLM"}}
 
 TOKENIZER_PREFIX = "_tokenizer_"
 
@@ -340,7 +346,12 @@ class LLMInterface(ABC, t.Generic[_M, _T]):
         raise NotImplementedError
 
     def load_model(self, tag: bentoml.Tag, *args: t.Any, **attrs: t.Any) -> t.Any:
-        """This function can be implemented to override th default load_model behaviour. See falcon for
+        """This function can be implemented to override the default load_model behaviour. See falcon for
+        example implementation."""
+        raise NotImplementedError
+
+    def load_tokenizer(self, tag: bentoml.Tag, **attrs: t.Any) -> t.Any:
+        """This function can be implemented to override how to load the tokenizer. See falcon for
         example implementation."""
         raise NotImplementedError
 
@@ -398,6 +409,9 @@ class LLMInterface(ABC, t.Generic[_M, _T]):
     __llm_custom_load__: t.Callable[[t.Self, t.Any, t.Any], None] | None
     """A callable that will be called after the model is loaded. This is set when 'load_model' is implemented"""
 
+    __llm_custom_tokenizer__: t.Callable[[t.Self, t.Any, t.Any], None] | None
+    """A callable that will be called after the tokenizer is loaded. This is set when 'load_tokenizer' is implemented"""
+
     __llm_init_kwargs__: property | None
     """A check if 'import_kwargs' is implemented in subclass."""
 
@@ -453,6 +467,9 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
         setattr(cls, "llm_post_init", wrapped_post_init)
 
         cls.__llm_custom_load__ = None if cls.load_model is LLMInterface[_M, _T].load_model else cls.load_model
+        cls.__llm_custom_tokenizer__ = (
+            None if cls.load_tokenizer is LLMInterface[_M, _T].load_tokenizer else cls.load_tokenizer
+        )
         cls.__llm_init_kwargs__ = (
             None if cls.import_kwargs is LLMInterface[_M, _T].import_kwargs else cls.import_kwargs
         )
@@ -482,7 +499,7 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
         llm_config: openllm.LLMConfig | None = None,
         *args: t.Any,
         quantize: t.Literal["int8", "int4", "gptq"] | None = None,
-        bettertransformer: bool | None = None,
+        bettertransformer: str | bool | None = None,
         adapter_id: str | None = None,
         adapter_name: str | None = None,
         adapter_map: dict[str, str | None] | None = None,
@@ -525,7 +542,7 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
         if quantization_config and quantize:
             raise ValueError(
                 """'quantization_config' and 'quantize' are mutually exclusive. Either customise
-            your quantization_config or use the quantize argument."""
+            your quantization_config or use the 'quantize' argument."""
             )
 
         # quantization setup
@@ -620,7 +637,7 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
             model_id=model_id,
             llm_config=llm_config,
             *args,
-            bettertransformer=bettertransformer,
+            bettertransformer=str(bettertransformer).upper() in ENV_VARS_TRUE_VALUES,
             _adapters_mapping=resolve_peft_config_type(adapter_map),
             quantization_config=quantization_config,
             **attrs,
@@ -784,7 +801,7 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
         self.llm_post_init()
 
         # we set it here so that we allow subclass to overwrite bettertransformer in llm_post_init
-        if bettertransformer:
+        if bettertransformer is True:
             logger.debug("Using %r with BetterTransformer", self)
             self.bettertransformer = bettertransformer
         else:
@@ -908,16 +925,20 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
 
         return bentoml.Tag.from_taglike(f"{implementation}-{name}:{model_version}")
 
-    def ensure_model_id_exists(self) -> bentoml.Model | str:
+    def ensure_model_id_exists(self, quiet: bool = False) -> bentoml.Model | str:
         """This utility function will download the model if it doesn't exist yet.
         Make sure to call this function if 'ensure_available' is not set during
         Auto LLM initialisation.
         """
 
         if self._model_id_is_path:
-            logger.warning("Loading model from local path: %s", self._model_id)
-            logger.warning("Make sure that both 'model' and 'tokenizer' are saved to '%s'", self._model_id)
-            return self._model_id
+            if not quiet:
+                logger.warning("Loading model from local path: %s", self._model_id)
+                logger.warning(
+                    "Make sure that '%s' contains all required files to construct transformers.PretrainedConfig, transformers.PreTrainedTokenizer and transformers.PreTrainedModel.",
+                    self._model_id,
+                )
+            return os.path.abspath(self._model_id)
         else:
             output = subprocess.check_output(
                 [
@@ -978,20 +999,29 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
             kwds = self._model_attrs
 
             if self._model_id_is_path:
+                resolved = self.ensure_model_id_exists(quiet=True)
+                assert isinstance(resolved, str)
                 config, hub_attrs, attrs = process_transformers_config(
-                    self._model_id, self.__llm_trust_remote_code__, **kwds
+                    resolved, self.__llm_trust_remote_code__, **kwds
                 )
 
-                if type(config) in transformers.MODEL_FOR_CAUSAL_LM_MAPPING:
-                    idx = 0
-                elif type(config) in transformers.MODEL_FOR_SEQ_TO_SEQ_CAUSAL_LM_MAPPING:
-                    idx = 1
+                if self.config["model_name"] in MODEL_TO_AUTOCLASS_MAPPING:
+                    klass = getattr(
+                        transformers,
+                        MODEL_TO_AUTOCLASS_MAPPING[self.config["model_name"]][self.__llm_implementation__],
+                    )
                 else:
-                    raise OpenLLMException(f"Model type {type(config)} is not supported yet.")
-                self.__llm_model__ = getattr(
-                    transformers, FRAMEWORK_TO_AUTOCLASS_MAPPING[self.__llm_implementation__][idx]
-                ).from_pretrained(
-                    self._model_id,
+                    if type(config) in transformers.MODEL_FOR_CAUSAL_LM_MAPPING:
+                        idx = 0
+                    elif type(config) in transformers.MODEL_FOR_SEQ_TO_SEQ_CAUSAL_LM_MAPPING:
+                        idx = 1
+                    else:
+                        raise OpenLLMException(f"Model type {type(config)} is not supported yet.")
+
+                    klass = getattr(transformers, FRAMEWORK_TO_AUTOCLASS_MAPPING[self.__llm_implementation__][idx])
+
+                self.__llm_model__ = klass.from_pretrained(
+                    resolved,
                     *self._model_args,
                     config=config,
                     trust_remote_code=self.__llm_trust_remote_code__,
@@ -1037,16 +1067,19 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
         """The tokenizer to use for this LLM. This shouldn't be set at runtime, rather let OpenLLM handle it."""
         if self.__llm_tokenizer__ is None:
             if self._model_id_is_path:
-                config, _, _ = process_transformers_config(self._model_id, self.__llm_trust_remote_code__)
+                resolved = self.ensure_model_id_exists(quiet=True)
+                assert isinstance(resolved, str)
                 self.__llm_tokenizer__ = transformers.AutoTokenizer.from_pretrained(
-                    self._model_id,
-                    config=config,
+                    resolved,
                     trust_remote_code=self.__llm_trust_remote_code__,
                     **self._tokenizer_attrs,
                 )
             else:
                 try:
-                    self.__llm_tokenizer__ = self._bentomodel.custom_objects["tokenizer"]
+                    if self.__llm_custom_tokenizer__:
+                        self.__llm_tokenizer__ = self.load_tokenizer(self.tag, **self._tokenizer_attrs)
+                    else:
+                        self.__llm_tokenizer__ = self._bentomodel.custom_objects["tokenizer"]
                 except KeyError:
                     # This could happen if users implement their own import_model
                     raise openllm.exceptions.OpenLLMException(
