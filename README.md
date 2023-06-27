@@ -318,7 +318,7 @@ integrate with other powerful tools easily. We currently offer integration with
 ### BentoML
 
 OpenLLM models can be integrated as a
-[Runner](https://docs.bentoml.org/en/latest/concepts/runner.html) in your
+[Runner](https://docs.bentoml.com/en/latest/concepts/runner.html) in your
 BentoML service. These runners have a `generate` method that takes a string as a
 prompt and returns a corresponding output string. This will allow you to plug
 and play any OpenLLM models with your existing ML workflow.
@@ -424,7 +424,9 @@ def chat(input_text: str):
 
 ## 🚀 Deploying to Production
 
-To deploy your LLMs into production:
+There are several ways to deploy your LLMs:
+
+### 🐳 Docker container
 
 1. **Building a Bento**: With OpenLLM, you can easily build a Bento for a
    specific model, like `dolly-v2`, using the `build` command.:
@@ -434,7 +436,7 @@ To deploy your LLMs into production:
    ```
 
    A
-   [Bento](https://docs.bentoml.org/en/latest/concepts/bento.html#what-is-a-bento),
+   [Bento](https://docs.bentoml.com/en/latest/concepts/bento.html#what-is-a-bento),
    in BentoML, is the unit of distribution. It packages your program's source
    code, models, files, artefacts, and dependencies.
 
@@ -444,10 +446,43 @@ To deploy your LLMs into production:
    bentoml containerize <name:version>
    ```
 
-   BentoML offers a comprehensive set of options for deploying and hosting
-   online ML services in production. To learn more, check out the
-   [Deploying a Bento](https://docs.bentoml.org/en/latest/concepts/deploy.html)
-   guide.
+### ☁️ BentoCloud
+
+Deploy your LLMs using [BentoCloud](https://www.bentoml.com/bento-cloud/), the
+production-ready platform for managing and deploying machine learning models.
+
+1. **Create a BentoCloud account:** [sign up here](https://bentoml.com/cloud)
+   for early access
+
+2. **Log into your BentoCloud account:**
+
+   ```bash
+   bentoml cloud login --api-token <your-api-token> --endpoint <bento-cloud-endpoint>
+   ```
+
+> **Note**: Replace `<your-api-token>` and `<bento-cloud-endpoint>` with your
+> specific API token and the BentoCloud endpoint respectively.
+
+3. **Bulding a Bento**: With OpenLLM, you can easily build a Bento for a
+   specific model, such as `dolly-v2`:
+
+   ```bash
+   openllm build dolly-v2
+   ```
+
+4. **Pushing a Bento**: Push your freshly-built Bento service to BentoCloud via
+   the `push` command:
+
+   ```bash
+   bentoml push <name:version>
+   ```
+
+5. **Deploying a Bento**: Deploy your LLMs to BentoCloud with a single
+   `bentoml deployment create` command following the
+   [deployment instructions](https://docs.bentoml.com/en/latest/reference/cli.html#bentoml-deployment-create).
+
+Explore other options for deploying and hosting online ML services at
+[BentoML's Documentation](https://docs.bentoml.com/en/latest/concepts/deploy.html).
 
 ## 🍇 Telemetry
 
