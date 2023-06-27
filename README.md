@@ -450,7 +450,7 @@ There are several ways to deploy your LLMs:
    guide.
 
 ### ☁️ BentoCloud
-To deploy your LLMs into a production-ready application using [BentoCloud](https://www.bentoml.com/bento-cloud/), the production-ready platform for managing and deploying machine learning models.
+Deploy your LLMs using [BentoCloud](https://www.bentoml.com/bento-cloud/), the production-ready platform for managing and deploying machine learning models.
 
 1. **Create a BentoCloud account:** [sign up here](https://bentoml.com/cloud) for early access
 
