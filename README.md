@@ -444,11 +444,6 @@ There are several ways to deploy your LLMs:
    bentoml containerize <name:version>
    ```
 
-   BentoML offers a comprehensive set of options for deploying and hosting
-   online ML services in production. To learn more, check out the
-   [Deploying a Bento](https://docs.bentoml.org/en/latest/concepts/deploy.html)
-   guide.
-
 ### ☁️ BentoCloud
 Deploy your LLMs using [BentoCloud](https://www.bentoml.com/bento-cloud/), the production-ready platform for managing and deploying machine learning models.
 
