@@ -423,8 +423,8 @@ def chat(input_text: str):
 > [examples](https://github.com/bentoml/OpenLLM/tree/main/examples) folder.
 
 ## 🚀 Deploying to Production
-
-To deploy your LLMs as a Docker container:
+There are several ways to deploy your LLMs:
+### 🐳 Docker container
 
 1. **Building a Bento**: With OpenLLM, you can easily build a Bento for a
    specific model, like `dolly-v2`, using the `build` command.:
@@ -450,7 +450,7 @@ To deploy your LLMs as a Docker container:
    guide.
 
 ---
-
+### ☁️ BentoCloud
 To deploy your LLMs into a production-ready application using [BentoCloud](https://www.bentoml.com/bento-cloud/), the production-ready platform for managing and deploying machine learning models.
 
 1. **Create a BentoCloud account:** [sign up here](https://bentoml.com/cloud) for early access
