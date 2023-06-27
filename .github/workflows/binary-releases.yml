@@ -23,6 +23,8 @@ jobs:
           fetch-depth: 0
       - name: Setup CI
         uses: ./.github/actions/setup-repo
+      - name: Pull latest change
+        run: git pull --autostash --no-edit --gpg-sign --ff origin main
       - name: Install build frontend
         run: python -m pip install --upgrade build
       - name: Build
