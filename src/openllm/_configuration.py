@@ -1665,6 +1665,14 @@ class LLMConfig(_ConfigAttr):
         return orjson.dumps(self.model_dump(**kwargs))
 
     @classmethod
+    def model_construct_json(cls, json_str: str | bytes) -> t.Self:
+        try:
+            attrs = orjson.loads(json_str)
+        except orjson.JSONDecodeError as err:
+            raise openllm.exceptions.ValidationError(f"Failed to load JSON: {err}")
+        return bentoml_cattr.structure(attrs, cls)
+
+    @classmethod
     def model_construct_env(cls, **attrs: t.Any) -> t.Self:
         """A helpers that respect configuration values that
         sets from environment variables for any given configuration class.
@@ -1779,7 +1787,12 @@ class LLMConfig(_ConfigAttr):
 
 bentoml_cattr.register_unstructure_hook_factory(
     lambda cls: lenient_issubclass(cls, LLMConfig),
-    lambda cls: make_dict_unstructure_fn(cls, bentoml_cattr, _cattrs_omit_if_default=False, _cattrs_use_linecache=True, ),
+    lambda cls: make_dict_unstructure_fn(
+        cls,
+        bentoml_cattr,
+        _cattrs_omit_if_default=False,
+        _cattrs_use_linecache=True,
+    ),
 )
 
 

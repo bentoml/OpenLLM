@@ -93,7 +93,7 @@ def write_service(
             src_contents[src_contents.index(it)] = (
                 ModelIdFormatter(model_id).vformat(it)[: -(len(OPENLLM_MODEL_ID) + 3)] + "\n"
             )
-        elif OPENLLM_MODEL_ADAPTER_MAP in it and adapter_map:
+        elif OPENLLM_MODEL_ADAPTER_MAP in it:
             src_contents[src_contents.index(it)] = (
                 ModelAdapterMapFormatter(orjson.dumps(adapter_map).decode()).vformat(it)[
                     : -(len(OPENLLM_MODEL_ADAPTER_MAP) + 3)

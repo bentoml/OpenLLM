@@ -214,8 +214,8 @@ def _build_bento(
 ) -> bentoml.Bento:
     framework_envvar = llm.config["env"]["framework_value"]
     labels = dict(llm.identifying_params)
-    labels.update({"_type": llm.llm_type, "_framework": framework_envvar})
-    logger.info("Building Bento for LLM '%s'", llm.config["start_name"])
+    labels.update({"_type": llm.llm_type, "_framework": framework_envvar, "start_name": llm.config["start_name"]})
+    logger.info("Building Bento for '%s'", llm.config["start_name"])
 
     if adapter_map is not None:
         assert build_ctx is not None, "build_ctx is required when 'adapter_map' is not None"
@@ -317,7 +317,7 @@ def build(
     # during build. This is a current limitation of bentoml build where we actually import the service.py into sys.path
     try:
         os.environ["OPENLLM_MODEL"] = inflection.underscore(model_name)
-        os.environ["OPENLLM_ADAPTER_MAP"] = orjson.dumps(None).decode()
+        os.environ["OPENLLM_ADAPTER_MAP"] = orjson.dumps(adapter_map).decode()
 
         framework_envvar = llm_config["env"].framework_value
         llm = t.cast(
@@ -360,7 +360,6 @@ def build(
                     )
                 _previously_built = True
             except bentoml.exceptions.NotFound:
-                logger.info("Building Bento for LLM '%s'", llm_config["start_name"])
                 bento = _build_bento(
                     bento_tag,
                     llm.config["service_name"],

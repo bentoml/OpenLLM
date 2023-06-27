@@ -16,15 +16,16 @@
 
 from __future__ import annotations
 
+import dataclasses
 import os
 import shutil
-
 import typing as t
-import dataclasses
+
 import inflection
 import tomlkit
 
 import openllm
+
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -91,7 +92,7 @@ _NIGHTLY_MAPPING: dict[str, Dependencies] = {
 FINE_TUNE_DEPS = ["peft", "bitsandbytes", "datasets", "accelerate", "deepspeed"]
 FLAN_T5_DEPS = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
 OPENAI_DEPS = ["openai", "tiktoken"]
-AGENTS_DEPS = ["transformers[agents]", "diffusers", "soundfile"]
+AGENTS_DEPS = ["transformers[agents]>=4.30", "diffusers", "soundfile"]
 
 _base_requirements = {
     inflection.dasherize(name): config_cls.__openllm_requirements__
