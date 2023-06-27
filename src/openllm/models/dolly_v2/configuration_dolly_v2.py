@@ -42,7 +42,6 @@ class DollyV2Config(openllm.LLMConfig):
 
     __config__ = {
         "timeout": 3600000,
-        "trust_remote_code": True,
         "url": "https://github.com/databrickslabs/dolly",
         "default_id": "databricks/dolly-v2-3b",
         "model_ids": ["databricks/dolly-v2-3b", "databricks/dolly-v2-7b", "databricks/dolly-v2-12b"],

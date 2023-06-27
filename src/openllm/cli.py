@@ -393,11 +393,23 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
             try:
                 return _cached_http[cmd_name]
             except KeyError:
+                # support start from a bento
+                try:
+                    bento = bentoml.get(cmd_name)
+                    return start_command_factory(bento, _context_settings=_CONTEXT_SETTINGS)
+                except bentoml.exceptions.NotFound:
+                    pass
                 raise click.BadArgumentUsage(f"{cmd_name} is not a valid model identifier supported by OpenLLM.")
         elif ctx.command.name == "start-grpc":
             try:
                 return _cached_grpc[cmd_name]
             except KeyError:
+                # support start from a bento
+                try:
+                    bento = bentoml.get(cmd_name)
+                    return start_command_factory(bento, _context_settings=_CONTEXT_SETTINGS, _serve_grpc=True)
+                except bentoml.exceptions.NotFound:
+                    pass
                 raise click.BadArgumentUsage(f"{cmd_name} is not a valid model identifier supported by OpenLLM.")
         return super().get_command(ctx, cmd_name)
 
@@ -563,8 +575,96 @@ _http_server_args = parse_serve_args(False)
 _grpc_server_args = parse_serve_args(True)
 
 
+def start_decorator(
+    llm_config: openllm.LLMConfig, serve_grpc: bool = False
+) -> t.Callable[[t.Callable[P, t.Any]], F[P, t.Any]]:
+    opts = [
+        llm_config.to_click_options,
+        _http_server_args if not serve_grpc else _grpc_server_args,
+        cog.optgroup.group("General LLM Options", help="The following options are related to running the LLM Server."),
+        cog.optgroup.option(
+            "--server-timeout",
+            type=int,
+            default=None,
+            help="Server timeout in seconds",
+        ),
+        workers_per_resource_option(cog.optgroup),
+        model_id_option(cog.optgroup, model_env=llm_config["env"]),
+        cog.optgroup.option(
+            "--fast",
+            is_flag=True,
+            default=False,
+            help="Bypass auto model checks and setup. This option is ahead-of-serving time.",
+        ),
+        cog.optgroup.group(
+            "LLM Optimization Options",
+            help="""\
+    These options are related for dynamic optimization on the fly. Current supported strategies:
+
+    - int8: Quantize the model with 8bit (bitsandbytes required)
+
+    - int4: Quantize the model with 4bit (bitsandbytes required)
+
+    - bettertransformer: Convert given model to FastTransformer
+
+    The following are currently being worked on:
+
+    - GPTQ: [paper](https://arxiv.org/abs/2210.17323)
+
+    - DeepSpeed Inference: [link](https://www.deepspeed.ai/inference/)
+
+      """,
+        ),
+        cog.optgroup.option(
+            "--device",
+            type=tuple,
+            cls=NargsOptions,
+            nargs=-1,
+            envvar="CUDA_VISIBLE_DEVICES",
+            callback=parse_device_callback,
+            help=f"Assign GPU devices (if available) for {llm_config['model_name']}.",
+            show_envvar=True,
+        ),
+        quantize_option(cog.optgroup, model_env=llm_config["env"]),
+        bettertransformer_option(cog.optgroup, model_env=llm_config["env"]),
+        cog.optgroup.group(
+            "Fine-tuning related options",
+            help="""\
+    Note that the argument `--adapter-id` can accept the following format:
+
+    - `--adapter-id /path/to/adapter` (local adapter)
+
+    - `--adapter-id remote/adapter` (remote adapter from HuggingFace Hub)
+
+    - `--adapter-id remote/adapter:eng_lora` (two previous adapter options with the given adapter_name)
+
+    ```bash
+
+    openllm start opt --adapter-id /path/to/adapter_dir --adapter-id remote/adapter:eng_lora
+
+    ```
+    """,
+        ),
+        cog.optgroup.option(
+            "--adapter-id",
+            default=None,
+            help="Optional name or path for given LoRA adapter" + f" to wrap '{llm_config['model_name']}'",
+            multiple=True,
+            callback=_id_callback,
+            metavar="[PATH | [remote/][adapter_name:]adapter_id][, ...]",
+        ),
+    ]
+
+    def decorator(f: t.Callable[P, t.Any]) -> t.Callable[P, t.Any]:
+        for opt in reversed(opts):
+            f = opt(f)
+        return f
+
+    return decorator
+
+
 def start_command_factory(
-    model_name: str,
+    model_name_or_bento: str | bentoml.Bento,
     _context_settings: dict[str, t.Any] | None = None,
     _serve_grpc: bool = False,
 ) -> click.Command:
@@ -582,11 +682,23 @@ def start_command_factory(
     Note that the internal commands will return the llm_config and a boolean determine
     whether the server is run with GPU or not.
     """
-    from bentoml._internal.configuration.containers import BentoMLContainer
 
     configure_logging()
 
-    llm_config = openllm.AutoConfig.for_model(model_name)
+    group = start_cli if not _serve_grpc else start_grpc_cli
+
+    if isinstance(model_name_or_bento, bentoml.Bento):
+        if "start_name" not in model_name_or_bento.info.labels:
+            raise click.BadOptionUsage(
+                "model_name",
+                f"'{model_name_or_bento.tag}' is built with older version of OpenLLM and not supported with 'openllm start'. Please use 'bentoml {'serve-http' if not _serve_grpc else 'serve-grpc'} {model_name_or_bento.tag!s}' instead.",
+            )
+        llm_config = openllm.AutoConfig.infer_class_from_name(
+            model_name_or_bento.info.labels["start_name"]
+        ).model_construct_json(model_name_or_bento.info.labels["configuration"])
+        return start_generator(group, model_name_or_bento, llm_config, _serve_grpc, context_settings=_CONTEXT_SETTINGS)
+
+    llm_config = openllm.AutoConfig.for_model(model_name_or_bento)
     env = llm_config["env"]
 
     docstring = f"""\
@@ -597,7 +709,7 @@ Available model_id(s): {llm_config['model_ids']} [default: {llm_config['default_
     command_attrs: dict[str, t.Any] = {
         "name": llm_config["model_name"],
         "context_settings": _context_settings or {},
-        "short_help": f"Start a LLMServer for '{model_name}' ('--help' for more details)",
+        "short_help": f"Start a LLMServer for '{model_name_or_bento}' ('--help' for more details)",
         "help": docstring,
     }
 
@@ -607,105 +719,97 @@ Available model_id(s): {llm_config['model_ids']} [default: {llm_config['default_
 
     command_attrs["aliases"] = aliases if len(aliases) > 0 else None
 
-    serve_decorator = _http_server_args if not _serve_grpc else _grpc_server_args
-    group = start_cli if not _serve_grpc else start_grpc_cli
+    return start_generator(group, model_name_or_bento, llm_config, _serve_grpc, **command_attrs)
 
-    available_gpu = gpu_count()
-    if llm_config["requires_gpu"] and len(available_gpu) < 1:
+
+def start_generator(
+    group: click.Group,
+    model_name_or_bento: str | bentoml.Bento,
+    llm_config: openllm.LLMConfig,
+    serve_grpc: bool,
+    **command_attrs: t.Any,
+):
+    gpu_available = gpu_count()
+    if llm_config["requires_gpu"] and len(gpu_available) < 1:
+        if isinstance(model_name_or_bento, str):
+            # NOTE: The model requires GPU, therefore we will return a dummy command
+            command_attrs.update(
+                {
+                    "short_help": "(Disabled because there is no GPU available)",
+                    "help": f"""{model_name_or_bento} is currently not available to run on your
+                    local machine because it requires GPU for inference.""",
+                }
+            )
+            _msg = "No GPU available, therefore this command is disabled"
+        else:
+            _msg = f"No GPU available, while {model_name_or_bento!r} requires GPU to run."
+
         # NOTE: The model requires GPU, therefore we will return a dummy command
-        command_attrs.update(
-            {
-                "short_help": "(Disabled because there is no GPU available)",
-                "help": f"""{model_name} is currently not available to run on your
-                local machine because it requires GPU for faster inference.""",
-            }
-        )
-
         @group.command(**command_attrs)
         def noop() -> openllm.LLMConfig:
-            _echo("No GPU available, therefore this command is disabled", fg="red")
+            _echo(_msg, fg="red")
             analytics.track_start_init(llm_config)
             return llm_config
 
         return noop
 
+    if isinstance(model_name_or_bento, bentoml.Bento):
+        _bentoml_config_options_env = os.environ.get("BENTOML_CONFIG_OPTIONS", "")
+        _bentoml_config_options_opts = [
+            "tracing.sample_rate=1.0",
+            f"api_server.traffic.timeout={llm_config['timeout']}",
+            f'runners."llm-{llm_config["start_name"]}-runner".traffic.timeout={llm_config["timeout"]}',
+            f'runners."llm-{llm_config["start_name"]}-runner".workers_per_resource={llm_config["workers_per_resource"]}',
+        ]
+
+        _bentoml_config_options_env += (
+            " " if _bentoml_config_options_env else "" + " ".join(_bentoml_config_options_opts)
+        )
+
+        serve_cmd_equi = f"BENTOML_DEBUG={get_debug_mode()} BENTOML_CONFIG_OPTIONS='{_bentoml_config_options_env}' bentoml {'serve-http' if not serve_grpc else 'serve-grpc'} {model_name_or_bento.tag!s}"
+        command_attrs[
+            "help"
+        ] = f"""\
+Start {model_name_or_bento!r} with OpenLLM.
+
+\b
+This is a lightwrapper around 'bentoml serve' to provide nicer interaction with LLM Bentos.
+
+\b
+The equivalent 'bentoml {'serve' if not serve_grpc else 'serve-grpc'}' command:
+
+\b
+```bash
+$ {serve_cmd_equi}
+```
+
+\b
+> Note that if you want to enable GPU with 'bentoml serve', add the following to BENTOML_CONFIG_OPTIONS:
+
+\b
+If you have more than 1 GPU:
+
+\b
+```bash
+BENTOML_CONFIG_OPTIONS += ' runners."llm-{llm_config['start_name']}-runner".resources."nvidia.com/gpu"[<gpu_idx>]=<gpu_device_id>'
+```
+
+Make sure to adjust `workers_per_resource` in BENTOML_CONFIG_OPTIONS accordingly. See https://docs.bentoml.com/en/latest/guides/scheduling.html
+for more information.
+
+\b
+If you only have 1 GPU:
+
+\b
+```bash
+BENTOML_CONFIG_OPTIONS += ' runners."llm-{llm_config['start_name']}-runner".resources."nvidia.com/gpu"=[<gpu_device_id>]'
+```
+"""
+
     @group.command(**command_attrs)
-    @llm_config.to_click_options
-    @serve_decorator
-    @cog.optgroup.group("General LLM Options", help="The following options are related to running the LLM Server.")
-    @cog.optgroup.option(
-        "--server-timeout",
-        type=int,
-        default=None,
-        help="Server timeout in seconds",
-    )
-    @workers_per_resource_option(cog.optgroup)
-    @model_id_option(cog.optgroup, model_env=env)
-    @cog.optgroup.option(
-        "--fast",
-        is_flag=True,
-        default=False,
-        help="Bypass auto model checks and setup. This option is ahead-of-serving time.",
-    )
-    @cog.optgroup.group(
-        "LLM Optimization Options",
-        help="""\
-    These options are related for dynamic optimization on the fly. Current supported strategies:
-
-    - int8: Quantize the model with 8bit (bitsandbytes required)
-
-    - int4: Quantize the model with 4bit (bitsandbytes required)
-
-    - bettertransformer: Convert given model to FastTransformer
-
-    The following are currently being worked on:
-
-    - GPTQ: [paper](https://arxiv.org/abs/2210.17323)
-
-    - DeepSpeed Inference: [link](https://www.deepspeed.ai/inference/)
-
-      """,
-    )
-    @cog.optgroup.option(
-        "--device",
-        type=tuple,
-        cls=NargsOptions,
-        nargs=-1,
-        envvar="CUDA_VISIBLE_DEVICES",
-        callback=parse_device_callback,
-        help=f"Assign GPU devices (if available) for {model_name}.",
-        show_envvar=True,
-    )
-    @quantize_option(cog.optgroup, model_env=env)
-    @bettertransformer_option(cog.optgroup, model_env=env)
-    @cog.optgroup.group(
-        "Fine-tuning related options",
-        help="""\
-    Note that the argument `--adapter-id` can accept the following format:
-
-    - `--adapter-id /path/to/adapter` (local adapter)
-
-    - `--adapter-id remote/adapter` (remote adapter from HuggingFace Hub)
-
-    - `--adapter-id remote/adapter:eng_lora` (two previous adapter options with the given adapter_name)
-
-    ```bash
-
-    openllm start opt --adapter-id /path/to/adapter_dir --adapter-id remote/adapter:eng_lora
-
-    ```
-    """,
-    )
-    @cog.optgroup.option(
-        "--adapter-id",
-        default=None,
-        help="Optional name or path for given LoRA adapter" + f" to wrap '{model_name}'",
-        multiple=True,
-        callback=_id_callback,
-        metavar="[PATH | [remote/][adapter_name:]adapter_id][, ...]",
-    )
+    @start_decorator(llm_config, serve_grpc=serve_grpc)
     @click.pass_context
-    def model_start(
+    def start_cmd(
         ctx: click.Context,
         server_timeout: int | None,
         model_id: str | None,
@@ -726,7 +830,6 @@ Available model_id(s): {llm_config['model_ids']} [default: {llm_config['default_
         env = EnvVarMixin(config["model_name"])
         framework_envvar = env.framework_value
 
-        gpu_available = gpu_count()
         if quantize:
             if len(gpu_available) < 1:
                 _echo(f"Quantization requires at least 1 GPU (got {len(gpu_available)})", fg="red")
@@ -768,7 +871,7 @@ Available model_id(s): {llm_config['model_ids']} [default: {llm_config['default_
             )
 
         server_attrs.update({"working_dir": os.path.dirname(__file__)})
-        if _serve_grpc:
+        if serve_grpc:
             server_attrs["grpc_protocol_version"] = "v1"
         # NOTE: currently, theres no development args in bentoml.Server. To be fixed upstream.
         development = server_attrs.pop("development")
@@ -798,44 +901,68 @@ Available model_id(s): {llm_config['model_ids']} [default: {llm_config['default_
             " " if _bentoml_config_options_env else "" + " ".join(_bentoml_config_options_opts)
         )
 
-        if fast and not get_quiet_mode():
-            _echo(
-                f"Fast mode is enabled. Make sure to download the model before 'start': 'openllm download {model_name}{'--model-id ' + model_id if model_id else ''}'",
-                fg="yellow",
-            )
-
-        automodel_attrs: dict[str, t.Any] = {}
-        if framework_envvar == "pt":
-            automodel_attrs.update({"quantize": quantize, "bettertransformer": bettertransformer})
-
-        if adapter_map:
-            _echo(f"OpenLLM will convert '{model_name}' to use provided adapters layers: {list(adapter_map)}")
-            automodel_attrs.update({"adapter_map": adapter_map})
-
-        llm = t.cast(
-            "_BaseAutoLLMClass",
-            openllm[framework_envvar],  # type: ignore (internal API)
-        ).for_model(
-            model_name,
-            model_id=model_id,
-            llm_config=config,
-            ensure_available=not fast,
-            return_runner_kwargs=False,
-            **automodel_attrs,
-        )
+        if fast:
+            if isinstance(model_name_or_bento, str) and not get_quiet_mode():
+                _echo(
+                    f"Fast mode is enabled. Make sure to download the model before 'start': 'openllm download {model_name_or_bento}{'--model-id ' + model_id if model_id else ''}'",
+                    fg="yellow",
+                )
+            else:
+                assert isinstance(model_name_or_bento, bentoml.Bento)
+                _echo(f"Fast mode has no effects with starting {model_name_or_bento.tag!s}", fg="yellow")
 
         start_env.update(
             {
                 env.framework: env.framework_value,
-                env.config: llm.config.model_dump_json().decode(),
-                "OPENLLM_MODEL": model_name,
-                "OPENLLM_MODEL_ID": llm.model_id,
-                "OPENLLM_ADAPTER_MAP": orjson.dumps(adapter_map).decode(),
                 "BENTOML_DEBUG": str(get_debug_mode()),
                 "BENTOML_CONFIG_OPTIONS": _bentoml_config_options_env,
                 "BENTOML_HOME": os.environ.get("BENTOML_HOME", BentoMLContainer.bentoml_home.get()),
             }
         )
+
+        llm: openllm.LLM[t.Any, t.Any] | None = None
+        if isinstance(model_name_or_bento, str):
+            automodel_attrs: dict[str, t.Any] = {}
+            if framework_envvar == "pt":
+                automodel_attrs.update({"quantize": quantize, "bettertransformer": bettertransformer})
+
+            if adapter_map:
+                _echo(
+                    f"OpenLLM will convert '{model_name_or_bento}' to use provided adapters layers: {list(adapter_map)}"
+                )
+                automodel_attrs.update({"adapter_map": adapter_map})
+
+            llm = t.cast(
+                "_BaseAutoLLMClass",
+                openllm[framework_envvar],  # type: ignore (internal API)
+            ).for_model(
+                model_name_or_bento,
+                model_id=model_id,
+                llm_config=config,
+                ensure_available=not fast,
+                return_runner_kwargs=False,
+                **automodel_attrs,
+            )
+
+            start_env.update(
+                {
+                    env.config: llm.config.model_dump_json().decode(),
+                    "OPENLLM_MODEL": model_name_or_bento,
+                    "OPENLLM_MODEL_ID": llm.model_id,
+                    "OPENLLM_ADAPTER_MAP": orjson.dumps(adapter_map).decode(),
+                }
+            )
+        else:
+            start_env.update(
+                {
+                    env.config: config.model_dump_json().decode(),
+                }
+            )
+            if adapter_map:
+                _echo(
+                    f"OpenLLM will convert '{model_name_or_bento.tag!s}' to use provided adapters layers: {list(adapter_map)}"
+                )
+            start_env["OPENLLM_ADAPTER_MAP"] = orjson.dumps(adapter_map).decode()
 
         if env.bettertransformer_value is not None:
             start_env[env.bettertransformer] = env.bettertransformer_value
@@ -843,21 +970,27 @@ Available model_id(s): {llm_config['model_ids']} [default: {llm_config['default_
             start_env[env.quantize] = env.quantize_value
 
         if t.TYPE_CHECKING:
-            server_cls: type[bentoml.HTTPServer] if not _serve_grpc else type[bentoml.GrpcServer]
+            server_cls: type[bentoml.HTTPServer] if not serve_grpc else type[bentoml.GrpcServer]
 
-        server_cls = getattr(bentoml, "HTTPServer" if not _serve_grpc else "GrpcServer")
+        server_cls = getattr(bentoml, "HTTPServer" if not serve_grpc else "GrpcServer")
         server_attrs["timeout"] = server_timeout
-        server = server_cls("_service.py:svc", **server_attrs)
+
+        if isinstance(model_name_or_bento, str):
+            assert llm is not None
+            server = server_cls("_service.py:svc", **server_attrs)
+            analytics.track_start_init(llm.config)
+        else:
+            server = server_cls(model_name_or_bento, **server_attrs)
+            analytics.track_start_init(config)
 
         try:
-            analytics.track_start_init(llm.config)
             server.start(env=start_env, text=True, blocking=True)
         except Exception as err:
             _echo(f"Error caught while starting LLM Server:\n{err}", fg="red")
             raise
         else:
-            if not get_debug_mode():
-                cmd_name = f"openllm build {model_name}"
+            if not get_debug_mode() and isinstance(model_name_or_bento, str):
+                cmd_name = f"openllm build {model_name_or_bento}"
                 if adapter_map is not None:
                     cmd_name += " " + " ".join(
                         [
@@ -869,14 +1002,14 @@ Available model_id(s): {llm_config['model_ids']} [default: {llm_config['default_
                         ]
                     )
                 _echo(
-                    f"\n🚀 Next step: run '{cmd_name}' to create a Bento for {model_name}",
+                    f"\n🚀 Next step: run '{cmd_name}' to create a Bento for {model_name_or_bento}",
                     fg="blue",
                 )
 
         # NOTE: Return the configuration for telemetry purposes.
-        return llm_config
+        return config
 
-    return model_start
+    return start_cmd
 
 
 _cached_http = {key: start_command_factory(key, _context_settings=_CONTEXT_SETTINGS) for key in openllm.CONFIG_MAPPING}
@@ -1012,7 +1145,7 @@ def build(
             _echo(
                 "\nPossible next steps:\n\n"
                 + "* Push to BentoCloud with `bentoml push`:\n"
-                + f"    $ bentoml push {bento.tag}\n"
+                + f"    $ bentoml push {bento.tag}\n\n"
                 + "* Containerize your Bento with `bentoml containerize`:\n"
                 + f"    $ bentoml containerize {bento.tag}\n\n"
                 + "    Tip: To enable additional BentoML features for 'containerize', "
@@ -1357,20 +1490,26 @@ def query(
         else openllm.client.GrpcClient(endpoint, timeout=timeout)
     )
 
+    input_fg = "yellow"
+    generated_fg = "cyan"
+
     model = t.cast(
         "_BaseAutoLLMClass",
         openllm[client.framework],  # type: ignore (internal API)
     ).for_model(client.model_name)
 
     if output != "porcelain":
-        _echo(f"Processing query: {prompt}", fg="white")
+        _echo("\n==Input==\n", fg="white")
+        _echo(prompt, fg=input_fg, nl=False)
 
     res = client.query(prompt, return_raw_response=True)
 
     if output == "pretty":
         formatted = model.postprocess_generate(prompt, res["responses"])
-        _echo("Responses: ", fg="white", nl=False)
-        _echo(formatted, fg="cyan")
+        generated = formatted[len(prompt) :]
+        _echo("\n\n==Responses==\n", fg="white")
+        _echo(formatted[: len(prompt)], fg=input_fg, nl=False)
+        _echo(generated, fg=generated_fg)
     elif output == "json":
         _echo(orjson.dumps(res, option=orjson.OPT_INDENT_2).decode(), fg="white")
     else:

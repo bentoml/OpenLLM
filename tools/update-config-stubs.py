@@ -15,13 +15,15 @@
 
 from __future__ import annotations
 
+import importlib
 import os
-
 from pathlib import Path
 
 import openllm
-import importlib
-from openllm._configuration import ModelSettings, GenerationConfig, PeftType
+from openllm._configuration import GenerationConfig
+from openllm._configuration import ModelSettings
+from openllm._configuration import PeftType
+
 
 # currently we are assuming the indentatio level is 4 for comments
 START_COMMENT = f"# {os.path.basename(__file__)}: start\n"
@@ -52,54 +54,46 @@ def main() -> int:
     lines = [" " * 4 + "if t.TYPE_CHECKING:\n"]
     for keys, ForwardRef in openllm.utils.codegen.get_annotations(ModelSettings).items():
         lines.extend(
-            list(
-                map(
-                    lambda line: " " * 8 + line,
-                    [
-                        "@overload\n" if "overload" in dir(_imported) else "@t.overload\n",
-                        f'def __getitem__(self, item: t.Literal["{keys}"] = ...) -> {transformed.get(keys, process_annotations(ForwardRef.__forward_arg__))}: ...\n',
-                    ],
-                )
-            )
+            [
+                " " * 8 + line
+                for line in [
+                    "@overload\n" if "overload" in dir(_imported) else "@t.overload\n",
+                    f'def __getitem__(self, item: t.Literal["{keys}"] = ...) -> {transformed.get(keys, process_annotations(ForwardRef.__forward_arg__))}: ...\n',
+                ]
+            ]
         )
     # special case variables: generation_class, extras
     lines.extend(
-        list(
-            map(
-                lambda line: " " * 8 + line,
-                [
-                    "@overload\n" if "overload" in dir(_imported) else "@t.overload\n",
-                    'def __getitem__(self, item: t.Literal["generation_class"] = ...) -> t.Type[GenerationConfig]: ...\n',
-                    "@overload\n" if "overload" in dir(_imported) else "@t.overload\n",
-                    'def __getitem__(self, item: t.Literal["extras"] = ...) -> t.Dict[str, t.Any]: ...\n',
-                ],
-            )
-        )
+        [
+            " " * 8 + line
+            for line in [
+                "@overload\n" if "overload" in dir(_imported) else "@t.overload\n",
+                'def __getitem__(self, item: t.Literal["generation_class"] = ...) -> t.Type[GenerationConfig]: ...\n',
+                "@overload\n" if "overload" in dir(_imported) else "@t.overload\n",
+                'def __getitem__(self, item: t.Literal["extras"] = ...) -> t.Dict[str, t.Any]: ...\n',
+            ]
+        ]
     )
     for keys, type_pep563 in openllm.utils.codegen.get_annotations(GenerationConfig).items():
         lines.extend(
-            list(
-                map(
-                    lambda line: " " * 8 + line,
-                    [
-                        "@overload\n" if "overload" in dir(_imported) else "@t.overload\n",
-                        f'def __getitem__(self, item: t.Literal["{keys}"] = ...) -> {type_pep563}: ...\n',
-                    ],
-                )
-            )
+            [
+                " " * 8 + line
+                for line in [
+                    "@overload\n" if "overload" in dir(_imported) else "@t.overload\n",
+                    f'def __getitem__(self, item: t.Literal["{keys}"] = ...) -> {type_pep563}: ...\n',
+                ]
+            ]
         )
 
     for keys in PeftType._member_names_:
         lines.extend(
-            list(
-                map(
-                    lambda line: " " * 8 + line,
-                    [
-                        "@overload\n" if "overload" in dir(_imported) else "@t.overload\n",
-                        f'def __getitem__(self, item: t.Literal["{keys.lower()}"] = ...) -> dict[str, t.Any]: ...\n',
-                    ],
-                )
-            )
+            [
+                " " * 8 + line
+                for line in [
+                    "@overload\n" if "overload" in dir(_imported) else "@t.overload\n",
+                    f'def __getitem__(self, item: t.Literal["{keys.lower()}"] = ...) -> dict[str, t.Any]: ...\n',
+                ]
+            ]
         )
 
     processed = (

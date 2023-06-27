@@ -1,3 +1,17 @@
+# Copyright 2023 BentoML Team. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
 import functools
@@ -28,13 +42,12 @@ else:
 
 logger = logging.getLogger(__name__)
 
-class AmdGpuResource(Resource[t.List[int]], resource_id='amd.com/gpu'):
+
+class AmdGpuResource(Resource[t.List[int]], resource_id="amd.com/gpu"):
     @classmethod
     def from_spec(cls, spec: int | str | list[str | int]) -> list[int]:
         if not isinstance(spec, (int, str)) and not LazyType(ListIntStr).isinstance(spec):
-            raise TypeError(
-                "AMD GPU device IDs must be int, str or a list specifing the exact GPUs to use."
-            )
+            raise TypeError("AMD GPU device IDs must be int, str or a list specifing the exact GPUs to use.")
         try:
             if isinstance(spec, int):
                 if spec < -1:
@@ -45,9 +58,7 @@ class AmdGpuResource(Resource[t.List[int]], resource_id='amd.com/gpu'):
             else:
                 return [int(x) for x in spec]
         except ValueError:
-            raise openllm.exceptions.OpenLLMException(
-                f"Invalid AMD GPU resource limit '{spec}'. "
-            )
+            raise openllm.exceptions.OpenLLMException(f"Invalid AMD GPU resource limit '{spec}'. ")
 
     @classmethod  # type: ignore (overload)
     @functools.lru_cache(maxsize=1)
@@ -137,9 +148,7 @@ class CascadingResourceStrategy(Strategy, ReprMixin):
 
             if runnable_class.SUPPORTS_CPU_MULTI_THREADING:
                 if isinstance(workers_per_resource, float):
-                    raise ValueError(
-                        "Fractional CPU multi threading support is not yet supported."
-                    )
+                    raise ValueError("Fractional CPU multi threading support is not yet supported.")
                 return workers_per_resource
 
             return math.ceil(cpus) * workers_per_resource
@@ -164,7 +173,7 @@ class CascadingResourceStrategy(Strategy, ReprMixin):
             resource_request : The resource request of the runnable.
             worker_index : The index of the worker, start from 0.
         """
-        cuda_env = os.environ.get('CUDA_VISIBLE_DEVICES', None)
+        cuda_env = os.environ.get("CUDA_VISIBLE_DEVICES", None)
         disabled = cuda_env in ("", "-1")
 
         environ: dict[str, t.Any] = {}
@@ -174,11 +183,7 @@ class CascadingResourceStrategy(Strategy, ReprMixin):
 
         # use nvidia gpu
         nvidia_gpus: list[int] | None = get_resource(resource_request, "nvidia.com/gpu")
-        if (
-            nvidia_gpus is not None
-            and len(nvidia_gpus) > 0
-            and "nvidia.com/gpu" in runnable_class.SUPPORTED_RESOURCES
-        ):
+        if nvidia_gpus is not None and len(nvidia_gpus) > 0 and "nvidia.com/gpu" in runnable_class.SUPPORTED_RESOURCES:
             dev = cls.transpile_workers_to_cuda_visible_devices(workers_per_resource, nvidia_gpus, worker_index)
             if disabled:
                 logger.debug("CUDA_VISIBLE_DEVICES is disabled, %s will not be using GPU.", worker_index)
@@ -194,11 +199,7 @@ class CascadingResourceStrategy(Strategy, ReprMixin):
 
         # use amd gpu
         amd_gpus = get_resource(resource_request, "amd.com/gpu")
-        if (
-            amd_gpus is not None
-            and len(amd_gpus) > 0
-            and "amd.com/gpu" in runnable_class.SUPPORTED_RESOURCES
-        ):
+        if amd_gpus is not None and len(amd_gpus) > 0 and "amd.com/gpu" in runnable_class.SUPPORTED_RESOURCES:
             dev = cls.transpile_workers_to_cuda_visible_devices(workers_per_resource, amd_gpus, worker_index)
             if disabled:
                 logger.debug("CUDA_VISIBLE_DEVICES is disabled, %s will not be using GPU.", worker_index)
@@ -236,7 +237,9 @@ class CascadingResourceStrategy(Strategy, ReprMixin):
         return environ
 
     @staticmethod
-    def transpile_workers_to_cuda_visible_devices(workers_per_resource: float | int, gpus: list[int], worker_index: int) -> str:
+    def transpile_workers_to_cuda_visible_devices(
+        workers_per_resource: float | int, gpus: list[int], worker_index: int
+    ) -> str:
         # Convert given workers_per_resource to correct CUDA_VISIBLE_DEVICES string.
         if isinstance(workers_per_resource, float):
             # NOTE: We hit this branch when workers_per_resource is set to
@@ -259,9 +262,7 @@ class CascadingResourceStrategy(Strategy, ReprMixin):
                     f"There aren't enough assigned GPU(s) for given worker id '{worker_index}' [required: {assigned_resource_per_worker}]."
                 )
             assigned_gpu = gpus[
-                assigned_resource_per_worker
-                * worker_index : assigned_resource_per_worker
-                * (worker_index + 1)
+                assigned_resource_per_worker * worker_index : assigned_resource_per_worker * (worker_index + 1)
             ]
             return ",".join(map(str, assigned_gpu))
         else:

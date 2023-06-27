@@ -31,6 +31,12 @@ changelog = "towncrier build --version main --draft"
 fmt = "pre-commit run --all-files"
 full = "_run_script --reruns 5 --reruns-delay 3 -r aR {args:tests}"
 setup = "pre-commit install"
+tools = [
+    "./tools/update-readme.py",
+    "./tools/update-optional-dependencies.py",
+    "./tools/update-config-stubs.py",
+    "- ./tools/add-license-headers .",
+]
 typing = "pyright {args:src/openllm tests}"
 [envs.test.overrides]
 env.GITHUB_ACTIONS.env-vars = "COVERAGE_REPORT="

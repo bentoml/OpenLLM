@@ -15,13 +15,21 @@
 from __future__ import annotations
 
 import importlib
+import platform
 import typing as t
 
 import bentoml
 import openllm
 import transformers
+from bentoml._internal.frameworks.transformers import make_default_signatures
+from bentoml._internal.models.model import ModelContext
+from bentoml._internal.models.model import ModelOptions
 
 from ..._prompt import default_formatter
+from ...utils import is_flax_available
+from ...utils import is_tf_available
+from ...utils import is_torch_available
+from ...utils import pkg
 from .configuration_falcon import DEFAULT_PROMPT_TEMPLATE
 
 
@@ -59,18 +67,54 @@ class Falcon(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTraine
             torch_dtype=torch_dtype,
             device_map=device_map,
         )
-        try:
-            return bentoml.transformers.save_model(
-                tag,
-                model,
-                custom_objects={"tokenizer": tokenizer},
-                external_modules=[importlib.import_module(model.__module__)],
+
+        framework_versions = {"transformers": pkg.get_pkg_version("transformers")}
+        if is_torch_available():
+            framework_versions["torch"] = pkg.get_pkg_version("torch")
+        if is_tf_available():
+            from bentoml._internal.frameworks.utils.tensorflow import get_tf_version
+
+            framework_versions[
+                "tensorflow-macos" if platform.system() == "Darwin" else "tensorflow"
+            ] = get_tf_version()
+        if is_flax_available():
+            framework_versions.update(
+                {
+                    "flax": pkg.get_pkg_version("flax"),
+                    "jax": pkg.get_pkg_version("jax"),
+                    "jaxlib": pkg.get_pkg_version("jaxlib"),
+                }
             )
+
+        try:
+            with bentoml.models.create(
+                tag,
+                module="bentoml.transformers",
+                api_version="v2",
+                context=ModelContext(framework_name="transformers", framework_versions=framework_versions),
+                options=ModelOptions(),
+                signatures=make_default_signatures(model),
+                external_modules=[
+                    importlib.import_module(model.__module__),
+                    importlib.import_module(tokenizer.__module__),
+                ],
+                metadata={"_pretrained_class": model.__class__.__name__, "_framework": model.framework},
+            ) as bento_model:
+                model.save_pretrained(bento_model.path)
+                tokenizer.save_pretrained(bento_model.path)
+
+                return bento_model
         finally:
             torch.cuda.empty_cache()
 
     def load_model(self, tag: bentoml.Tag, *args: t.Any, **attrs: t.Any) -> t.Any:
-        return transformers.AutoModelForCausalLM.from_pretrained(bentoml.transformers.get(tag).path, **attrs)
+        return transformers.AutoModelForCausalLM.from_pretrained(bentoml.models.get(tag).path, **attrs)
+
+    def load_tokenizer(self, tag: bentoml.Tag, **attrs: t.Any) -> t.Any:
+        trust_remote_code = attrs.pop("trust_remote_code", True)
+        return transformers.AutoTokenizer.from_pretrained(
+            bentoml.models.get(tag).path, trust_remote_code=trust_remote_code, **attrs
+        )
 
     def sanitize_parameters(
         self,

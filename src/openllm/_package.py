@@ -29,10 +29,13 @@ import orjson
 
 import bentoml
 import openllm
+from bentoml._internal.bento.build_config import BentoBuildConfig
 from bentoml._internal.bento.build_config import DockerOptions
 from bentoml._internal.bento.build_config import PythonOptions
 from bentoml._internal.configuration import get_debug_mode
+from bentoml._internal.models.model import ModelStore
 
+from .utils import DEBUG
 from .utils import EnvVarMixin
 from .utils import codegen
 from .utils import first_not_none
@@ -106,8 +109,9 @@ def construct_python_options(
         filtered = set(extra_dependencies + ("fine-tune",))
         packages += [f"openllm[{k}]" for k in filtered]
 
-    if llm.config["requirements"] is not None:
-        packages.extend(llm.config["requirements"])
+    req = llm.config["requirements"]
+    if req is not None:
+        packages.extend(req)
 
     if str(os.environ.get("BENTOML_BUNDLE_LOCAL_BUILD", False)).lower() == "false":
         packages.append(f"bentoml>={'.'.join([str(i) for i in pkg.pkg_version_info('bentoml')])}")
@@ -202,7 +206,6 @@ def construct_docker_options(
 
 def _build_bento(
     bento_tag: bentoml.Tag,
-    service_name: str,
     llm_fs: FS,
     llm: openllm.LLM[t.Any, t.Any],
     workers_per_resource: int | float,
@@ -214,8 +217,8 @@ def _build_bento(
 ) -> bentoml.Bento:
     framework_envvar = llm.config["env"]["framework_value"]
     labels = dict(llm.identifying_params)
-    labels.update({"_type": llm.llm_type, "_framework": framework_envvar})
-    logger.info("Building Bento for LLM '%s'", llm.config["start_name"])
+    labels.update({"_type": llm.llm_type, "_framework": framework_envvar, "start_name": llm.config["start_name"]})
+    logger.info("Building Bento for '%s'", llm.config["start_name"])
 
     if adapter_map is not None:
         assert build_ctx is not None, "build_ctx is required when 'adapter_map' is not None"
@@ -237,10 +240,10 @@ def _build_bento(
         adapter_map = updated_mapping
 
     # add service.py definition to this temporary folder
-    codegen.write_service(llm.config["model_name"], llm.model_id, adapter_map, llm.config["service_name"], llm_fs)
+    codegen.write_service(llm, adapter_map, llm_fs)
 
-    return bentoml.bentos.build(
-        f"{service_name}:svc",
+    build_config = BentoBuildConfig(
+        service=f"{llm.config['service_name']}:svc",
         name=bento_tag.name,
         labels=labels,
         description=f"OpenLLM service for {llm.config['start_name']}",
@@ -248,9 +251,46 @@ def _build_bento(
         exclude=["/venv", "/.venv", "__pycache__/", "*.py[cod]", "*$py.class"],
         python=construct_python_options(llm, llm_fs, extra_dependencies, adapter_map),
         docker=construct_docker_options(llm, llm_fs, workers_per_resource, quantize, bettertransformer, adapter_map),
+    )
+
+    bento = bentoml.Bento.create(
+        build_config=build_config,
         version=bento_tag.version,
         build_ctx=llm_fs.getsyspath("/"),
     )
+    # Now we have to format the model_id accordingly based on the model_fs
+    model_type = bento.info.labels["_type"]
+    model_framework = bento.info.labels["_framework"]
+    model_store = ModelStore(bento._fs.opendir("models"))
+    # the models should have the type
+    try:
+        model = model_store.get(f"{model_framework}-{model_type}")
+    except bentoml.exceptions.NotFound:
+        raise openllm.exceptions.OpenLLMException(f"Failed to find models for {llm.config['start_name']}")
+
+    model_id_path = bento._fs.getsyspath(fs.path.join("models", model.tag.path()))
+    service_fs_path = fs.path.join("src", llm.config["service_name"])
+    service_path = bento._fs.getsyspath(service_fs_path)
+    with open(service_path, "r") as f:
+        service_contents = f.readlines()
+
+    for it in service_contents:
+        if codegen.OPENLLM_MODEL_ID in it:
+            service_contents[service_contents.index(it)] = (
+                codegen.ModelIdFormatter(fs.path.relativefrom(bento._fs.getsyspath("/src"), model_id_path)).vformat(
+                    it
+                )[: -(len(codegen.OPENLLM_MODEL_ID) + 3)]
+                + "\n"
+            )
+
+    script = "".join(service_contents)
+
+    if DEBUG:
+        logger.info("Generated script:\n%s", script)
+
+    bento._fs.writetext(service_fs_path, script)
+
+    return bento.save()
 
 
 @overload
@@ -317,7 +357,7 @@ def build(
     # during build. This is a current limitation of bentoml build where we actually import the service.py into sys.path
     try:
         os.environ["OPENLLM_MODEL"] = inflection.underscore(model_name)
-        os.environ["OPENLLM_ADAPTER_MAP"] = orjson.dumps(None).decode()
+        os.environ["OPENLLM_ADAPTER_MAP"] = orjson.dumps(adapter_map).decode()
 
         framework_envvar = llm_config["env"].framework_value
         llm = t.cast(
@@ -331,6 +371,7 @@ def build(
             adapter_map=adapter_map,
             bettertransformer=bettertransformer,
             return_runner_kwargs=False,
+            ensure_available=True,
             **attrs,
         )
 
@@ -348,7 +389,6 @@ def build(
                     bentoml.delete(bento_tag)
                     bento = _build_bento(
                         bento_tag,
-                        llm.config["service_name"],
                         llm_fs,
                         llm,
                         workers_per_resource=workers_per_resource,
@@ -360,10 +400,8 @@ def build(
                     )
                 _previously_built = True
             except bentoml.exceptions.NotFound:
-                logger.info("Building Bento for LLM '%s'", llm_config["start_name"])
                 bento = _build_bento(
                     bento_tag,
-                    llm.config["service_name"],
                     llm_fs,
                     llm,
                     workers_per_resource=workers_per_resource,
