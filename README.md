@@ -460,7 +460,7 @@ production-ready platform for managing and deploying machine learning models.
    bentoml cloud login --api-token <your-api-token> --endpoint <bento-cloud-endpoint>
    ```
 
-> **Note** Replace `<your-api-token>` and `<bento-cloud-endpoint>` with your
+> **Note**: Replace `<your-api-token>` and `<bento-cloud-endpoint>` with your
 > specific API token and the BentoCloud endpoint respectively.
 
 3. **Bulding a Bento**: With OpenLLM, you can easily build a Bento for a
