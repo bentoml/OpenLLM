@@ -44,10 +44,12 @@ if t.TYPE_CHECKING:
 # The following warnings from bitsandbytes, and probably not that important
 # for users to see
 warnings.filterwarnings(
-    "ignore", message="MatMul8bitLt: inputs will be cast from torch.float32 to float16 during quantization"
+    "ignore",
+    message="MatMul8bitLt: inputs will be cast from torch.float32 to float16 during quantization",
 )
 warnings.filterwarnings(
-    "ignore", message="MatMul8bitLt: inputs will be cast from torch.bfloat16 to float16 during quantization"
+    "ignore",
+    message="MatMul8bitLt: inputs will be cast from torch.bfloat16 to float16 during quantization",
 )
 warnings.filterwarnings(
     "ignore",

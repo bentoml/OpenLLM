@@ -23,6 +23,7 @@ import openllm
 def test_small_opt(prompt: str, llm: openllm.LLM[t.Any, t.Any], qa: bool):
     assert llm(prompt)
 
+
 @openllm.tests.require_flax
 def test_small_runner_opt(prompt: str, llm: openllm.LLMRunner, qa: bool):
     assert llm(prompt)

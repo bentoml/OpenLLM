@@ -575,7 +575,9 @@ _http_server_args = parse_serve_args(False)
 _grpc_server_args = parse_serve_args(True)
 
 
-def start_decorator(llm_config: openllm.LLMConfig, serve_grpc: bool = False) -> t.Callable[[t.Callable[P, t.Any]], F[P, t.Any]]:
+def start_decorator(
+    llm_config: openllm.LLMConfig, serve_grpc: bool = False
+) -> t.Callable[[t.Callable[P, t.Any]], F[P, t.Any]]:
     opts = [
         llm_config.to_click_options,
         _http_server_args if not serve_grpc else _grpc_server_args,
