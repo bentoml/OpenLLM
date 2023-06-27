@@ -29,7 +29,7 @@ dependencies = [
 _run_script = "pytest --cov --cov-report={env:COVERAGE_REPORT:term-missing} --cov-config=pyproject.toml"
 changelog = "towncrier build --version main --draft"
 fmt = "pre-commit run --all-files"
-full = "_run_script -n 3 --reruns 5 --reruns-delay 3 -r aR {args:tests}"
+full = "_run_script --reruns 5 --reruns-delay 3 -r aR {args:tests}"
 setup = "pre-commit install"
 tools = [
     "./tools/update-readme.py",
