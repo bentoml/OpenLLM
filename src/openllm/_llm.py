@@ -114,10 +114,11 @@ TOKENIZER_PREFIX = "_tokenizer_"
 def convert_transformers_model_name(name: str | None) -> str:
     if name is None:
         raise ValueError("'name' cannot be None")
-    if os.path.exists(os.path.dirname(name)):
-        name = os.path.basename(name)
-        logger.debug("Given name is a path, only returning the basename %s")
-        return name
+    if os.path.exists(os.path.dirname(os.path.abspath(name))):
+        resolved = os.path.basename(os.path.abspath(name))
+        logger.debug("Given name is a path, only returning the basename %s", resolved)
+        return resolved
+
     return re.sub("[^a-zA-Z0-9]+", "-", name)
 
 
@@ -705,6 +706,7 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
             llm_config: The config to use for this LLM. Defaults to None. If not passed, OpenLLM
                         will use `config_class` to construct default configuration.
             bettertransformer: Whether to use BetterTransformer with this model. Defaults to False.
+            openllm_model_version: Optional specific version for this given LLM. This is useful when saving from custom path.
             *args: The args to be passed to the model.
             **attrs: The kwargs to be passed to the model.
 
@@ -741,7 +743,7 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
             # NOTE: recast here for type safety
             model_kwds, tokenizer_kwds = t.cast("tuple[dict[str, t.Any], dict[str, t.Any]]", self.__llm_init_kwargs__)
             logger.debug(
-                "'%s' default kwargs for model: '%s', tokenizer: '%s'",
+                '\'%s\' default kwargs for model: "%s", tokenizer: "%s\'"',
                 self.__class__.__name__,
                 model_kwds,
                 tokenizer_kwds,
@@ -810,10 +812,10 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
 
     def __repr_args__(self) -> ReprArgs:
         for k in self.__repr_keys__:
-            if k == 'config':
+            if k == "config":
                 yield k, self.config.model_dump(flatten=True)
             else:
-                yield k ,getattr(self, k)
+                yield k, getattr(self, k)
 
     @property
     def model_id(self) -> str:
@@ -878,14 +880,18 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
 
         model_version = getattr(config, "_commit_hash", None)
         if model_version is None:
-            if openllm_model_version is not None:
+            if openllm_model_version is None:
+                model_version = bentoml.Tag.from_taglike(name).make_new_version().version
                 logger.warning(
-                    "Given %s from '%s' doesn't contain a commit hash, and 'openllm_model_version' is not given. "
-                    "We will generate the tag without specific version.",
+                    "Given %r from '%s' doesn't contain a commit hash, and 'openllm_model_version' is not given. "
+                    "We will generate the tag without specific commit version (generated version: %s).",
                     config.__class__,
                     model_id,
+                    model_version,
                 )
-                model_version = bentoml.Tag.from_taglike(name).make_new_version().version
+                logger.warning(
+                    "To ensure hermeticity, make sure to provide 'openllm_model_version' when creating 'openllm.LLM'."
+                )
             else:
                 logger.debug("Using %s for '%s' as model version", openllm_model_version, model_id)
                 model_version = openllm_model_version
@@ -910,7 +916,7 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
                 "--implementation",
                 self.__llm_implementation__,
             ],
-            env=os.environ.copy()
+            env=os.environ.copy(),
         )
         # NOTE: This usually only concern BentoML devs.
         pattern = r"^__tag__:[^:\n]+:[^:\n]+"
@@ -1181,7 +1187,7 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
             generate_iterator_sig = first_not_none(signatures.get("generate_iterator"), default=generate_iterator_sig)
 
         class _Runnable(bentoml.Runnable):
-            SUPPORTED_RESOURCES = ("amd.com/gpu","nvidia.com/gpu", "cpu")
+            SUPPORTED_RESOURCES = ("amd.com/gpu", "nvidia.com/gpu", "cpu")
             SUPPORTS_CPU_MULTI_THREADING = True
 
             def __init__(__self: _Runnable):
@@ -1304,7 +1310,7 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
                         if self.config["requires_gpu"]
                         else ("nvidia.com/gpu", "amd.com/gpu", "cpu"),
                     }
-                )
+                ),
             ),
             name=self.runner_name,
             embedded=False,
