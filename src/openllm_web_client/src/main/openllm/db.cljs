@@ -24,12 +24,45 @@
 ;; re-frame people) find it good practice.
 (s/def ::screen-id keyword?)
 (s/def ::model-dropdown-active? boolean?)
+(s/def ::chat-input-value string?)
+(s/def ::chat-history (s/coll-of (s/keys :req-un [::user ::text]) :kind vector?))
 (s/def ::db (s/keys :req-un [::screen-id
-                             ::model-dropdown-active?]))
+                             ::model-dropdown-active?
+                             ::chat-input-value
+                             ::chat-history]))
 
 (def default-db
   "What gets put into app-db by default.
    See 'core.cljs' for `(dispatch-sync [:initialise-db])` and 'events.cljs'
    for the registration of `:initialise-db` handler)"
   {:screen-id :main
-   :model-dropdown-active? false})
+   :model-dropdown-active? false
+   :chat-input-value ""
+   :chat-history []})
+
+(def standard-llm-config
+  "Very arbitrary. Review this please." ;; TODO
+  {:max_new_tokens 2048
+   :min_length 0
+   :early_stopping false
+   :num_beams 1
+   :num_beam_groups 1
+   :use_cache true
+   :temperature 0.9
+   :top_k 50
+   :top_p 0.4
+   :typical_p 1
+   :epsilon_cutoff 0
+   :eta_cutoff 0
+   :diversity_penalty 0
+   :repetition_penalty 1
+   :encoder_repetition_penalty 1
+   :length_penalty 1
+   :no_repeat_ngram_size 0
+   :renormalize_logits false
+   :remove_invalid_values false
+   :num_return_sequences 1
+   :output_attentions false
+   :output_hidden_states false
+   :output_scores false
+   :encoder_no_repeat_ngram_size 0})

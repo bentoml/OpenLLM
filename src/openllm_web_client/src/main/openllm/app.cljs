@@ -4,6 +4,7 @@
               [re-frame.core :as rf]
 
               ;; the following are only required to make the compiler load the namespaces
+              [day8.re-frame.http-fx]
               [openllm.events]
               [openllm.subs]
               ))

@@ -1,5 +1,6 @@
 (ns openllm.views
-  (:require [re-frame.core :as rf]))
+  (:require [re-frame.core :as rf]
+            [openllm.db :as db])) ;; TODO: remove this. just for the standard llm-config for now
 
 (def icon-path-4-bars "M4 6h16M4 10h16M4 14h16M4 18h16")
 (def icon-path-house "M12 20v-6h4v6h5v-8h3L12 3 1 12h3v8z")
@@ -118,11 +119,23 @@
 
 (defn chat-controls
   []
-  [:div {:class "absolute bottom-0 px-4 py-2 mt-6 w-full"}
-   [:input {:class "py-1 rounded-md border border-gray-300 focus:outline-none w-[calc(100%_-_80px)]"
-            :type "text" :placeholder "Type your message..."}]
-   [:button {:class "ml-2 px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none"
-             :type "button"} "Send"]])
+  (let [chat-input-sub (rf/subscribe [:chat-input-value])
+        on-change #(rf/dispatch [:set-chat-input-value (.. % -target -value)])
+        on-send-click #(rf/dispatch [:on-send-button-click @chat-input-sub db/standard-llm-config])]
+    (fn chat-controls
+      []
+      [:div {:class "absolute bottom-0 px-4 py-2 mt-6 w-full"}
+       [:form {:class "flex items-center justify-between" :action "#" :method "POST"}
+        [:input {:class "py-1 w-[calc(100%_-_80px)] appearance-none block border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm"
+                 :type "text" :placeholder "Type your message..."
+                 :value @chat-input-sub
+                 :on-change on-change
+                 :id "chat-input"
+                 :autocomplete "off"
+                 :autocorrect "off"}]
+        [:button {:class "ml-2 px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none"
+                  :on-click on-send-click
+                  :type "button"} "Send"]]])))
 
 (defn dashboard
   []
