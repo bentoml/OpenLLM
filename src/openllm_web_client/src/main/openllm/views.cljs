@@ -39,7 +39,7 @@
    that is used to toggle the dropdown menu."
   []
   [:div
-   [sidebar-group-headline "Select model"] 
+   [sidebar-group-headline "Select model"]
    [:button {:type "button"
              :on-click #(rf/dispatch [:toggle-model-dropdown])
              :class "group w-full bg-gray-100 rounded-md mt-2 px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-pink-500"
@@ -110,7 +110,7 @@
 (defn side-bar
   "The render function of the toolbar on the very left of the screen"
   []
-  [:div {:class "flex flex-col w-80 border-r border-gray-200 pt-5 pb-4 bg-gray-200"} ;; sidebar div + background 
+  [:div {:class "flex flex-col w-80 border-r border-gray-200 pt-5 pb-4 bg-gray-200"} ;; sidebar div + background
    [openllm-tag]
    [:div {:class "h-0 flex-1 flex flex-col overflow-y-auto"}
     [model-dropdown]

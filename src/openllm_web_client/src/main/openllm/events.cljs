@@ -75,7 +75,7 @@
    {:dispatch [:add-to-chat-history :model (first (:responses response))]}))
 
 (reg-event-fx
- :on-send-button-click 
+ :on-send-button-click
  []
  (fn [_ [_ prompt llm-config]]
    {:dispatch-n [[:send-prompt prompt llm-config]

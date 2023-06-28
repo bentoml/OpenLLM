@@ -3,7 +3,7 @@
    and the backing data structure should be the only part of the application
    that has state and is mutable.
    Other parts of the application should stay as pure as possible.
-   
+
    Do not directly interact with this namespace! Use the 'subs'
    (subscriptions) and events namespaces for this.
    The subscription namespaces may read the respective data that is of
