@@ -68,7 +68,7 @@ svc = bentoml.Service("fb-ads-copy", runners=[llm.runner])
 
 @svc.on_startup
 def download(_: bentoml.Context):
-    llm.runner.llm.ensure_model_id_exists()
+    llm.runner.download_model()
 
 
 SAMPLE_INPUT = Query(

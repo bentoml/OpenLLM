@@ -28,7 +28,7 @@ svc = bentoml.Service(name="llm-service", runners=[llm_runner])
 
 @svc.on_startup
 def download(_: bentoml.Context):
-    llm_runner.llm.ensure_model_id_exists()
+    llm_runner.download_model()
 
 
 @svc.api(input=bentoml.io.Text(), output=bentoml.io.Text())

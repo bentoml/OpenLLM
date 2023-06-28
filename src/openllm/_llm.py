@@ -31,6 +31,8 @@ from abc import ABC
 from abc import abstractmethod
 
 import attr
+import cloudpickle
+import fs
 import inflection
 import orjson
 from huggingface_hub import hf_hub_download
@@ -38,6 +40,7 @@ from huggingface_hub import hf_hub_download
 import bentoml
 import openllm
 from bentoml._internal.frameworks.transformers import make_default_signatures
+from bentoml._internal.models.model import CUSTOM_OBJECTS_FILENAME
 from bentoml._internal.models.model import ModelContext
 from bentoml._internal.models.model import ModelOptions
 from bentoml._internal.models.model import ModelSignature
@@ -92,6 +95,9 @@ if t.TYPE_CHECKING:
         identifying_params: dict[str, t.Any]
 
         def __call__(self, *args: t.Any, **attrs: t.Any) -> t.Any:
+            ...
+
+        def download_model(self, quiet: bool = ...) -> None:
             ...
 
     class PreTrainedProtocol(t.Protocol):
@@ -1146,13 +1152,27 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
         """The tokenizer to use for this LLM. This shouldn't be set at runtime, rather let OpenLLM handle it."""
         if self.__llm_tokenizer__ is None:
             if self.model_custom_path:
-                resolved = self.ensure_model_id_exists(quiet=True)
-                assert isinstance(resolved, str)
-                self.__llm_tokenizer__ = transformers.AutoTokenizer.from_pretrained(
-                    resolved,
-                    trust_remote_code=self.__llm_trust_remote_code__,
-                    **self._tokenizer_attrs,
-                )
+                # safe cast here since model is a custom path
+                resolve_fs = fs.open_fs(t.cast(str, self.ensure_model_id_exists(quiet=True)))
+                if resolve_fs.isfile(CUSTOM_OBJECTS_FILENAME):
+                    # this branch is hit when loading within the bento.
+                    with resolve_fs.open(CUSTOM_OBJECTS_FILENAME, "rb") as cofile:
+                        try:
+                            self.__llm_tokenizer__ = cloudpickle.load(t.cast("t.IO[bytes]", cofile))["tokenizer"]
+                        except KeyError:
+                            # This could happen if users implement their own import_model
+                            raise openllm.exceptions.OpenLLMException(
+                                "Model does not have tokenizer. Make sure to save \
+                                the tokenizer within the model via 'custom_objects'.\
+                                For example: bentoml.transformers.save_model(..., custom_objects={'tokenizer': tokenizer}))"
+                            )
+                else:
+                    self.__llm_tokenizer__ = transformers.AutoTokenizer.from_pretrained(
+                        resolve_fs.getsyspath("/"),
+                        trust_remote_code=self.__llm_trust_remote_code__,
+                        **self._tokenizer_attrs,
+                    )
+                resolve_fs.close()
             else:
                 try:
                     if self.__llm_custom_tokenizer__:
@@ -1166,7 +1186,7 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
                         the tokenizer within the model via 'custom_objects'.\
                         For example: bentoml.transformers.save_model(..., custom_objects={'tokenizer': tokenizer}))"
                     )
-        return self.__llm_tokenizer__
+        return t.cast(_T, self.__llm_tokenizer__)
 
     def _transpose_adapter_mapping(
         self,
@@ -1377,6 +1397,12 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
                         "result": {},
                         "error_msg": "peft is not available. Make sure to install: 'pip install \"openllm[fine-tune]\"'",
                     }
+                if self.__llm_adapter_map__ is None:
+                    return {
+                        "success": False,
+                        "result": {},
+                        "error_msg": "No adapters available for current running server.",
+                    }
                 if not isinstance(self.model, peft.PeftModel):
                     return {"success": False, "result": {}, "error_msg": "Model is not a PeftModel"}
                 return {"success": True, "result": self.model.peft_config, "error_msg": ""}
@@ -1387,6 +1413,12 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
                     return {
                         "success": False,
                         "error_msg": "peft is not available. Make sure to install: 'pip install \"openllm[fine-tune]\"'",
+                    }
+                if self.__llm_adapter_map__ is None:
+                    return {
+                        "success": False,
+                        "result": {},
+                        "error_msg": "No adapters available for current running server.",
                     }
                 if not isinstance(self.model, peft.PeftModel):
                     return {"success": False, "error_msg": "Model is not a PeftModel"}
@@ -1463,6 +1495,7 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
                     "identifying_params": self.identifying_params,
                     "llm": self,  # NOTE: self reference to LLM
                     "config": self.config,
+                    "download_model": self.ensure_model_id_exists,
                     "__call__": _wrapped_generate_run,
                     "__module__": f"openllm.models.{self.config['model_name']}",
                     "__doc__": self.config["env"].start_docstring,

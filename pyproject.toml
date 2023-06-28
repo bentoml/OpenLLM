@@ -63,9 +63,9 @@ all = [
     "openllm[chatglm]",
     "openllm[starcoder]",
     "openllm[falcon]",
-    "openllm[agents]",
-    "openllm[fine-tune]",
     "openllm[openai]",
+    "openllm[fine-tune]",
+    "openllm[agents]",
     "openllm[flan-t5]",
 ]
 chatglm = ["cpm_kernels", "sentencepiece"]
