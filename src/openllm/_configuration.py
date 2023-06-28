@@ -1575,8 +1575,6 @@ class LLMConfig(_ConfigAttr):
         """
         if item is None:
             raise TypeError(f"{self} doesn't understand how to index None.")
-        if not isinstance(item, str):
-            raise TypeError(f"LLM only supports string indexing, not {item.__class__.__name__}")
         item = inflection.underscore(item)
         if item in _reserved_namespace:
             raise ForbiddenAttributeError(
@@ -1602,6 +1600,27 @@ class LLMConfig(_ConfigAttr):
                 f"'{item}' belongs to a private namespace for {self.__class__} and should not be access nor modified."
             )
         return _object_getattribute.__get__(self)(item)
+
+    def __len__(self):
+        return len(self.__openllm_accepted_keys__) + len(self.__openllm_extras__)
+
+    def keys(self) -> list[str]:
+        return list(self.__openllm_accepted_keys__) + list(self.__openllm_extras__)
+
+    def values(self) -> list[t.Any]:
+        return [getattr(self, k.name) for k in attr.fields(self.__class__)] + [getattr(self.generation_config, k.name) for k in attr.fields(self.__openllm_generation_class__)] + list(self.__openllm_extras__.values())
+
+    def items(self) -> list[tuple[str, t.Any]]:
+        return [(k.name, getattr(self, k.name)) for k in attr.fields(self.__class__)] + [(k.name, getattr(self.generation_config, k.name)) for k in attr.fields(self.__openllm_generation_class__)] + list(self.__openllm_extras__.items())
+
+    def __iter__(self):
+        return iter(self.keys())
+
+    def __contains__(self, item: t.Any):
+        if item in self.__openllm_extras__:
+            return True
+        return item in self.__openllm_accepted_keys__
+
 
     @classmethod
     def model_derivate(cls, name: str | None = None, **attrs: t.Any) -> LLMConfig:
