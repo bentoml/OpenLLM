@@ -224,3 +224,12 @@ def test_click_conversion(gen_settings: ModelSettings):
     filtered = {k for k, v in cl_.__openllm_hints__.items() if t.get_origin(v) is not t.Union}
     click_options_filtered = [i for i in wrapped.__click_params__ if i.name and not i.name.startswith("fake_")]
     assert len(filtered) == len(click_options_filtered)
+
+
+@pytest.mark.parametrize("model_name", openllm.CONFIG_MAPPING.keys())
+def test_configuration_dict_protocol(model_name: str):
+    config = openllm.AutoConfig.for_model(model_name)
+    assert isinstance(config.items(), list)
+    assert isinstance(config.keys(), list)
+    assert isinstance(config.values(), list)
+    assert isinstance(dict(config), dict)
