@@ -118,14 +118,17 @@
    [status-display true]])
 
 (defn chat-controls
+  "The chat input field and the send button."
   []
   (let [chat-input-sub (rf/subscribe [:chat-input-value])
         on-change #(rf/dispatch [:set-chat-input-value (.. % -target -value)])
         on-send-click #(rf/dispatch [:on-send-button-click @chat-input-sub db/standard-llm-config])]
     (fn chat-controls
       []
-      [:div {:class "absolute bottom-0 px-4 py-2 mt-6 w-full"}
-       [:form {:class "flex items-center justify-between" :action "#" :method "POST"}
+      [:div {:class "fixed bottom-0 px-4 py-2 mt-6 w-full"}
+       [:form {:class "flex items-center justify-between"
+               :on-submit #(do % (on-send-click)
+                               (.preventDefault %))}
         [:input {:class "py-1 w-[calc(100%_-_80px)] appearance-none block border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm"
                  :type "text" :placeholder "Type your message..."
                  :value @chat-input-sub
@@ -137,6 +140,20 @@
                   :on-click on-send-click
                   :type "button"} "Send"]]])))
 
+(defn chat-history
+  "The chat history."
+  []
+  (let [history (rf/subscribe [:chat-history])]
+    (fn chat-history []
+      (into [:div {:class "flex-1 overflow-auto mt-6"}]
+            (map (fn [{:keys [user text]}]
+                   (let [diplay-user (if (= user :model) "Model" "You")
+                         color (if (= user :model) "bg-gray-200" "bg-blue-200")]
+                     [:div {:class (str "p-2 rounded-lg mb-2 " color)}
+                      [:h3 {:class "font-bold text-lg"} diplay-user]
+                      [:p {:class "text-gray-700"} text]]))
+                 @history)))))
+
 (defn dashboard
   []
   [:div {:class "h-screen flex overflow-hidden bg-white"}
@@ -145,5 +162,6 @@
    [:div {:class "flex flex-col w-0 flex-1 overflow-hidden"}
     [:main {:class "flex-1 relative z-0 overflow-y-auto focus:outline-none" :tabIndex "0"}
      [:div {:class "px-4 mt-6 sm:px-6 lg:px-8"}
-      [:h2 {:class "text-gray-500 text-xs font-medium uppercase tracking-wide"} "Main"]]
+      [:h2 {:class "text-gray-500 text-xs font-medium uppercase tracking-wide"} "Chat"]
+      [chat-history]]
      [chat-controls]]]])
