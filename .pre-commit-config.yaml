@@ -19,7 +19,7 @@ ci:
   autoupdate_commit_msg: 'ci: pre-commit autoupdate [pre-commit.ci]'
 exclude: '.*\.(css|js|svg)$'
 repos:
-  - repo: https://github.com/charliermarsh/ruff-pre-commit
+  - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: 'v0.0.275'
     hooks:
       - id: ruff

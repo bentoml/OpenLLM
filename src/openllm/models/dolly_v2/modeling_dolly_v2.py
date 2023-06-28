@@ -206,7 +206,7 @@ class DollyV2(openllm.LLM["transformers.Pipeline", "transformers.PreTrainedToken
     @property
     def import_kwargs(self):
         model_kwds = {
-            "device_map": "auto",
+            "device_map": "auto" if torch.cuda.is_available() else None,
             "torch_dtype": torch.bfloat16,
         }
         tokenizer_kwds = {"padding_side": "left"}
@@ -220,7 +220,7 @@ class DollyV2(openllm.LLM["transformers.Pipeline", "transformers.PreTrainedToken
     ) -> bentoml.Model:
         attrs.pop("trust_remote_code", True)
         torch_dtype = attrs.pop("torch_dtype", torch.bfloat16)
-        device_map = attrs.pop("device_map", "auto")
+        device_map = attrs.pop("device_map", "auto" if torch.cuda.is_available() else None)
 
         tokenizer = transformers.AutoTokenizer.from_pretrained(model_id, **tokenizer_kwds)
         model = transformers.AutoModelForCausalLM.from_pretrained(
@@ -237,6 +237,9 @@ class DollyV2(openllm.LLM["transformers.Pipeline", "transformers.PreTrainedToken
         model = transformers.AutoModelForCausalLM.from_pretrained(_ref.path, **attrs)
 
         kwds: dict[str, t.Any] = {}
+        if self.bettertransformer:
+            kwds["accelerator"] = "bettertransformer"
+
         return InstructionTextGenerationPipeline(model=model, tokenizer=_ref.custom_objects["tokenizer"], **kwds)
 
     def sanitize_parameters(

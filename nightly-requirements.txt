@@ -8,3 +8,4 @@ optimum @ git+https://github.com/huggingface/optimum.git@main
 accelerate @ git+https://github.com/huggingface/accelerate.git@main
 bitsandbytes @ git+https://github.com/TimDettmers/bitsandbytes.git@main
 deepspeed @ git+https://github.com/microsoft/deepspeed.git@master
+trl @ git+https://github.com/lvwerra/trl.git@main

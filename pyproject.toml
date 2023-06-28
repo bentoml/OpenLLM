@@ -63,14 +63,14 @@ all = [
     "openllm[chatglm]",
     "openllm[starcoder]",
     "openllm[falcon]",
-    "openllm[fine-tune]",
     "openllm[agents]",
+    "openllm[fine-tune]",
     "openllm[openai]",
     "openllm[flan-t5]",
 ]
 chatglm = ["cpm_kernels", "sentencepiece"]
 falcon = ["einops", "xformers", "safetensors"]
-fine-tune = ["peft", "bitsandbytes", "datasets", "accelerate", "deepspeed"]
+fine-tune = ["peft", "bitsandbytes", "datasets", "accelerate", "deepspeed", "trl"]
 flan-t5 = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
 openai = ["openai", "tiktoken"]
 starcoder = ["bitsandbytes"]
