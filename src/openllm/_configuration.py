@@ -1608,10 +1608,10 @@ class LLMConfig(_ConfigAttr):
         return list(self.__openllm_accepted_keys__) + list(self.__openllm_extras__)
 
     def values(self) -> list[t.Any]:
-        return list(getattr(self, k.name) for k in attr.fields(self.__class__)) + list(getattr(self.generation_config, k.name) for k in attr.fields(self.__openllm_generation_class__)) + list(self.__openllm_extras__.values())
+        return [getattr(self, k.name) for k in attr.fields(self.__class__)] + [getattr(self.generation_config, k.name) for k in attr.fields(self.__openllm_generation_class__)] + list(self.__openllm_extras__.values())
 
     def items(self) -> list[tuple[str, t.Any]]:
-        return list((k.name, getattr(self, k.name)) for k in attr.fields(self.__class__)) + list((k.name, getattr(self.generation_config, k.name)) for k in attr.fields(self.__openllm_generation_class__)) + list(self.__openllm_extras__.items())
+        return [(k.name, getattr(self, k.name)) for k in attr.fields(self.__class__)] + [(k.name, getattr(self.generation_config, k.name)) for k in attr.fields(self.__openllm_generation_class__)] + list(self.__openllm_extras__.items())
 
     def __iter__(self):
         return iter(self.keys())
