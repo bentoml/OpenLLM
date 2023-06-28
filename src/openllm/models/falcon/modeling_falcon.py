@@ -41,7 +41,7 @@ class Falcon(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTraine
 
     @property
     def import_kwargs(self):
-        model_kwds = {"torch_dtype": torch.bfloat16, "device_map": "auto"}
+        model_kwds = {"torch_dtype": torch.bfloat16, "device_map": "auto" if torch.cuda.is_available() else None}
         tokenizer_kwds: dict[str, t.Any] = {}
         return model_kwds, tokenizer_kwds
 
