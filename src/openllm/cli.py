@@ -18,7 +18,6 @@ This extends BentoML's internal CLI CommandGroup.
 """
 from __future__ import annotations
 
-import fs
 import functools
 import importlib.util
 import inspect
@@ -33,6 +32,7 @@ import typing as t
 
 import click
 import click_option_group as cog
+import fs
 import inflection
 import orjson
 import psutil

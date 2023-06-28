@@ -16,28 +16,29 @@ Any build-related utilities. This is used for CI.
 """
 from __future__ import annotations
 
-import sys
 import importlib.metadata
 import logging
 import os
+import re
+import subprocess
+import sys
 import typing as t
 from pathlib import Path
 
-import re
-import subprocess
 import fs
 import fs.copy
 import orjson
+from simple_di import Provide
+from simple_di import inject
 
-from simple_di import inject, Provide
 import bentoml
 import openllm
 from bentoml._internal.bento.build_config import BentoBuildConfig
 from bentoml._internal.bento.build_config import DockerOptions
 from bentoml._internal.bento.build_config import PythonOptions
 from bentoml._internal.configuration import get_debug_mode
-from bentoml._internal.models.model import ModelStore
 from bentoml._internal.configuration.containers import BentoMLContainer
+from bentoml._internal.models.model import ModelStore
 
 from .utils import DEBUG
 from .utils import EnvVarMixin
@@ -48,8 +49,10 @@ from .utils import is_torch_available
 from .utils import pkg
 from .utils import resolve_user_filepath
 
+
 if t.TYPE_CHECKING:
     from fs.base import FS
+
     from bentoml._internal.bento import BentoStore
 
     from .models.auto.factory import _BaseAutoLLMClass
