@@ -15,21 +15,16 @@
 from __future__ import annotations
 
 import importlib
-import platform
 import typing as t
 
 import bentoml
 import openllm
 import transformers
 from bentoml._internal.frameworks.transformers import make_default_signatures
-from bentoml._internal.models.model import ModelContext
 from bentoml._internal.models.model import ModelOptions
 
+from ..._llm import generate_context
 from ..._prompt import default_formatter
-from ...utils import is_flax_available
-from ...utils import is_tf_available
-from ...utils import is_torch_available
-from ...utils import pkg
 from .configuration_falcon import DEFAULT_PROMPT_TEMPLATE
 
 
@@ -68,30 +63,12 @@ class Falcon(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTraine
             device_map=device_map,
         )
 
-        framework_versions = {"transformers": pkg.get_pkg_version("transformers")}
-        if is_torch_available():
-            framework_versions["torch"] = pkg.get_pkg_version("torch")
-        if is_tf_available():
-            from bentoml._internal.frameworks.utils.tensorflow import get_tf_version
-
-            framework_versions[
-                "tensorflow-macos" if platform.system() == "Darwin" else "tensorflow"
-            ] = get_tf_version()
-        if is_flax_available():
-            framework_versions.update(
-                {
-                    "flax": pkg.get_pkg_version("flax"),
-                    "jax": pkg.get_pkg_version("jax"),
-                    "jaxlib": pkg.get_pkg_version("jaxlib"),
-                }
-            )
-
         try:
             with bentoml.models.create(
                 tag,
                 module="bentoml.transformers",
                 api_version="v2",
-                context=ModelContext(framework_name="transformers", framework_versions=framework_versions),
+                context=generate_context(framework_name="transformers"),
                 options=ModelOptions(),
                 signatures=make_default_signatures(model),
                 external_modules=[
@@ -160,7 +137,7 @@ class Falcon(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTraine
     def generate(self, prompt: str, **attrs: t.Any) -> list[str]:
         eos_token_id = attrs.pop("eos_token_id", self.tokenizer.eos_token_id)
         with torch.inference_mode(), torch.amp.autocast("cuda", dtype=torch.float16):
-            inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
+            inputs = self.tokenizer(prompt, return_tensors="pt")
             outputs = self.model.generate(
                 input_ids=inputs["input_ids"],
                 attention_mask=inputs["attention_mask"],

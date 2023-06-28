@@ -18,6 +18,7 @@ This extends BentoML's internal CLI CommandGroup.
 """
 from __future__ import annotations
 
+import fs
 import functools
 import importlib.util
 import inspect
@@ -1044,6 +1045,7 @@ start_grpc = functools.partial(_start, _serve_grpc=True)
 )
 @model_id_option(click)
 @output_option
+@click.option("--machine", is_flag=True, default=False, hidden=True)
 @click.option("--overwrite", is_flag=True, help="Overwrite existing Bento for given LLM if it already exists.")
 @workers_per_resource_option(click, build=True)
 @cog.optgroup.group(cls=cog.MutuallyExclusiveOptionGroup, name="Optimisation options.")
@@ -1066,6 +1068,7 @@ start_grpc = functools.partial(_start, _serve_grpc=True)
     metavar="[PATH | [remote/][adapter_name:]adapter_id][, ...]",
 )
 @click.option("--build-ctx", default=".", help="Build context. This is required if --adapter-id uses relative path")
+@click.option("--model-version", envvar="OPENLLM_MODEL_VERSION", show_envvar=True, default=None, type=click.STRING, help="Model version provided for this 'model-id' if it is a custom path.")
 @click.pass_context
 def build(
     ctx: click.Context,
@@ -1079,6 +1082,8 @@ def build(
     workers_per_resource: float | None,
     adapter_id: tuple[str, ...],
     build_ctx: str | None,
+    machine: bool,
+    model_version: str | None,
     **attrs: t.Any,
 ):
     """Package a given models into a Bento.
@@ -1092,6 +1097,8 @@ def build(
     > NOTE: To run a container built from this Bento with GPU support, make sure
     > to have https://github.com/NVIDIA/nvidia-container-toolkit install locally.
     """
+    from ._package import create_bento
+
     adapter_map: dict[str, str | None] | None = None
 
     if adapter_id:
@@ -1106,9 +1113,10 @@ def build(
             # we are just doing the parsing here.
             adapter_map[_adapter_id] = adapter_name[0] if len(adapter_name) > 0 else None
 
-    if output == "porcelain":
-        set_quiet_mode(True)
+    if output == "porcelain" or machine:
         configure_logging()
+    if machine:
+        output = "porcelain"
 
     if output == "pretty":
         if overwrite:
@@ -1117,21 +1125,105 @@ def build(
     if enable_features:
         enable_features = tuple(itertools.chain.from_iterable((s.split(",") for s in enable_features)))
 
-    # TODO: xxx
-    bento, _previously_built = openllm.build(
-        model_name,
-        __cli__=True,
-        model_id=model_id,
-        quantize=quantize,
-        bettertransformer=bettertransformer,
-        adapter_map=adapter_map,
-        _build_ctx=build_ctx,
-        _extra_dependencies=enable_features,
-        _workers_per_resource=workers_per_resource,
-        _overwrite_existing_bento=overwrite,
-    )
+    _previously_built = False
+    current_model_envvar = os.environ.pop("OPENLLM_MODEL", None)
+    current_model_id_envvar = os.environ.pop("OPENLLM_MODEL_ID", None)
+    current_adapter_map_envvar = os.environ.pop("OPENLLM_ADAPTER_MAP", None)
 
-    if output == "pretty":
+    if not model_version:
+        _echo("Given model id does not provide a '--model-version', which will disable hermetic Bento. To ensure you don't rebuild the bento, make sure to pass in '--model-version'", fg='yellow')
+    else:
+        os.environ['OPENLLM_MODEL_VERSION'] = model_version
+
+    if model_id is not None and os.path.exists(os.path.dirname(os.path.abspath(model_id))):
+        model_id = os.path.abspath(model_id)
+
+    llm_config = openllm.AutoConfig.for_model(model_name)
+
+    logger.info("Packing '%s' into a Bento%s...", model_name, f" with 'kwargs={attrs}' " if attrs else "")
+
+    # NOTE: We set this environment variable so that our service.py logic won't raise RuntimeError
+    # during build. This is a current limitation of bentoml build where we actually import the service.py into sys.path
+    try:
+        os.environ["OPENLLM_MODEL"] = inflection.underscore(model_name)
+        os.environ["OPENLLM_ADAPTER_MAP"] = orjson.dumps(adapter_map).decode()
+
+        framework_envvar = llm_config["env"].framework_value
+        llm = t.cast(
+            "_BaseAutoLLMClass",
+            openllm[framework_envvar],  # type: ignore (internal API)
+        ).for_model(
+            model_name,
+            model_id=model_id,
+            llm_config=llm_config,
+            quantize=quantize,
+            adapter_map=adapter_map,
+            bettertransformer=bettertransformer,
+            return_runner_kwargs=False,
+            ensure_available=True,
+            openllm_model_version=model_version,
+            **attrs,
+        )
+
+        os.environ["OPENLLM_MODEL_ID"] = llm.model_id
+
+        labels = dict(llm.identifying_params)
+        labels.update({"_type": llm.llm_type, "_framework": framework_envvar})
+        workers_per_resource = first_not_none(workers_per_resource, default=llm_config["workers_per_resource"])
+
+        with fs.open_fs(f"temp://llm_{llm_config['model_name']}") as llm_fs:
+            bento_tag = bentoml.Tag.from_taglike(f"{llm.llm_type}-service:{llm.tag.version}")
+            try:
+                bento = bentoml.get(bento_tag)
+                if overwrite:
+                    if output == "pretty":
+                        _echo(f"Overwriting existing Bento {bento_tag}", fg="yellow")
+                    bentoml.delete(bento_tag)
+                    bento = create_bento(
+                        bento_tag,
+                        llm_fs,
+                        llm,
+                        workers_per_resource=workers_per_resource,
+                        adapter_map=adapter_map,
+                        quantize=quantize,
+                        bettertransformer=bettertransformer,
+                        extra_dependencies=enable_features,
+                        build_ctx=build_ctx,
+                    )
+                _previously_built = True
+            except bentoml.exceptions.NotFound:
+                bento = create_bento(
+                    bento_tag,
+                    llm_fs,
+                    llm,
+                    workers_per_resource=workers_per_resource,
+                    adapter_map=adapter_map,
+                    quantize=quantize,
+                    bettertransformer=bettertransformer,
+                    extra_dependencies=enable_features,
+                    build_ctx=build_ctx,
+                )
+    except Exception as e:
+        logger.error("\nException caught during building LLM %s: \n", model_name, exc_info=e)
+        raise
+    finally:
+        del os.environ["OPENLLM_MODEL"]
+        del os.environ["OPENLLM_MODEL_ID"]
+        del os.environ["OPENLLM_ADAPTER_MAP"]
+        # restore original OPENLLM_MODEL envvar if set.
+        if current_model_envvar is not None:
+            os.environ["OPENLLM_MODEL"] = current_model_envvar
+        if current_model_id_envvar is not None:
+            os.environ["OPENLLM_MODEL_ID"] = current_model_id_envvar
+        if current_adapter_map_envvar is not None:
+            os.environ["OPENLLM_ADAPTER_MAP"] = current_adapter_map_envvar
+
+    if machine:
+        # NOTE: When debug is enabled,
+        # We will prefix the tag with __tag__ and we can use regex to correctly
+        # get the tag from 'bentoml.bentos.build|build_bentofile'
+        _echo(f"__tag__:{bento.tag}", fg="white")
+    elif output == "pretty":
         if not get_quiet_mode():
             _echo("\n" + OPENLLM_FIGLET, fg="white")
             if not _previously_built:
@@ -1157,6 +1249,7 @@ def build(
         _echo(orjson.dumps(bento.info.to_dict(), option=orjson.OPT_INDENT_2).decode())
     else:
         _echo(bento.tag)
+
     return bento
 
 
@@ -1543,8 +1636,9 @@ def download_models(
     ```
     """
     if output == "porcelain" or machine:
-        set_quiet_mode(True)
         configure_logging()
+    if machine:
+        output = "porcelain"
 
     config = openllm.AutoConfig.for_model(model_name)
     envvar = config["env"]["framework_value"]

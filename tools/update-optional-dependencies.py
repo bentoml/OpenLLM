@@ -87,9 +87,10 @@ _NIGHTLY_MAPPING: dict[str, Dependencies] = {
     "accelerate": Dependencies.from_tuple("accelerate", "huggingface/accelerate", "main", None),
     "bitsandbytes": Dependencies.from_tuple("bitsandbytes", "TimDettmers/bitsandbytes", "main", None),
     "deepspeed": Dependencies.from_tuple("deepspeed", "microsoft/deepspeed", "master", None),
+    "trl": Dependencies.from_tuple("trl", "lvwerra/trl", "main", None),
 }
 
-FINE_TUNE_DEPS = ["peft", "bitsandbytes", "datasets", "accelerate", "deepspeed"]
+FINE_TUNE_DEPS = ["peft", "bitsandbytes", "datasets", "accelerate", "deepspeed", "trl"]
 FLAN_T5_DEPS = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
 OPENAI_DEPS = ["openai", "tiktoken"]
 AGENTS_DEPS = ["transformers[agents]>=4.30", "diffusers", "soundfile"]

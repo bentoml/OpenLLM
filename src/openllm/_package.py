@@ -16,17 +16,20 @@ Any build-related utilities. This is used for CI.
 """
 from __future__ import annotations
 
+import sys
 import importlib.metadata
 import logging
 import os
 import typing as t
 from pathlib import Path
 
+import re
+import subprocess
 import fs
 import fs.copy
-import inflection
 import orjson
 
+from simple_di import inject, Provide
 import bentoml
 import openllm
 from bentoml._internal.bento.build_config import BentoBuildConfig
@@ -34,27 +37,20 @@ from bentoml._internal.bento.build_config import DockerOptions
 from bentoml._internal.bento.build_config import PythonOptions
 from bentoml._internal.configuration import get_debug_mode
 from bentoml._internal.models.model import ModelStore
+from bentoml._internal.configuration.containers import BentoMLContainer
 
 from .utils import DEBUG
 from .utils import EnvVarMixin
 from .utils import codegen
-from .utils import first_not_none
 from .utils import is_flax_available
 from .utils import is_tf_available
 from .utils import is_torch_available
 from .utils import pkg
 from .utils import resolve_user_filepath
 
-
-# NOTE: We need to do this so that overload can register
-# correct overloads to typing registry
-if hasattr(t, "get_overloads"):
-    from typing import overload
-else:
-    from typing_extensions import overload
-
 if t.TYPE_CHECKING:
     from fs.base import FS
+    from bentoml._internal.bento import BentoStore
 
     from .models.auto.factory import _BaseAutoLLMClass
 
@@ -204,7 +200,7 @@ def construct_docker_options(
     return DockerOptions(cuda_version="11.6", env=env_dict, system_packages=["git"])
 
 
-def _build_bento(
+def create_bento(
     bento_tag: bentoml.Tag,
     llm_fs: FS,
     llm: openllm.LLM[t.Any, t.Any],
@@ -218,6 +214,10 @@ def _build_bento(
     framework_envvar = llm.config["env"]["framework_value"]
     labels = dict(llm.identifying_params)
     labels.update({"_type": llm.llm_type, "_framework": framework_envvar, "start_name": llm.config["start_name"]})
+
+    if adapter_map:
+        labels.update(adapter_map)
+
     logger.info("Building Bento for '%s'", llm.config["start_name"])
 
     if adapter_map is not None:
@@ -258,6 +258,7 @@ def _build_bento(
         version=bento_tag.version,
         build_ctx=llm_fs.getsyspath("/"),
     )
+
     # Now we have to format the model_id accordingly based on the model_fs
     model_type = bento.info.labels["_type"]
     model_framework = bento.info.labels["_framework"]
@@ -293,48 +294,21 @@ def _build_bento(
     return bento.save()
 
 
-@overload
-def build(
-    model_name: str,
-    *,
-    model_id: str | None = ...,
-    quantize: t.LiteralString | None = ...,
-    bettertransformer: bool | None = ...,
-    adapter_map: dict[str, str | None] | None = ...,
-    __cli__: t.Literal[False] = False,
-    **attrs: t.Any,
-) -> bentoml.Bento:
-    ...
-
-
-@overload
-def build(
-    model_name: str,
-    *,
-    model_id: str | None = ...,
-    quantize: t.LiteralString | None = ...,
-    bettertransformer: bool | None = ...,
-    adapter_map: dict[str, str | None] | None = ...,
-    __cli__: t.Literal[True] = ...,
-    **attrs: t.Any,
-) -> tuple[bentoml.Bento, bool]:
-    ...
-
-
+@inject
 def build(
     model_name: str,
     *,
     model_id: str | None = None,
-    quantize: t.LiteralString | None = None,
+    model_version: str | None = None,
+    quantize: t.Literal["int8", "int4", "gptq"] | None = None,
     bettertransformer: bool | None = None,
     adapter_map: dict[str, str | None] | None = None,
-    _build_ctx: str | None = None,
-    _extra_dependencies: tuple[str, ...] | None = None,
-    _workers_per_resource: int | float | None = None,
-    _overwrite_existing_bento: bool = False,
-    __cli__: bool = False,
-    **attrs: t.Any,
-) -> tuple[bentoml.Bento, bool] | bentoml.Bento:
+    build_ctx: str | None = None,
+    extra_dependencies: tuple[str, ...] | None = None,
+    workers_per_resource: int | float | None = None,
+    overwrite_existing_bento: bool = False,
+    bento_store: BentoStore = Provide[BentoMLContainer.bento_store],
+) -> bentoml.Bento:
     """Package a LLM into a Bento.
 
     The LLM will be built into a BentoService with the following structure:
@@ -343,86 +317,43 @@ def build(
 
     Other parameters including model_name, model_id and attrs will be passed to the LLM class itself.
     """
+    args = [sys.executable, "-m", "openllm", "build", model_name, "--machine"]
 
-    _previously_built = False
-    current_model_envvar = os.environ.pop("OPENLLM_MODEL", None)
-    current_model_id_envvar = os.environ.pop("OPENLLM_MODEL_ID", None)
-    current_adapter_map_envvar = os.environ.pop("OPENLLM_ADAPTER_MAP", None)
-
-    llm_config = openllm.AutoConfig.for_model(model_name)
-
-    logger.info("Packing '%s' into a Bento%s...", model_name, f" with 'kwargs={attrs}' " if attrs else "")
-
-    # NOTE: We set this environment variable so that our service.py logic won't raise RuntimeError
-    # during build. This is a current limitation of bentoml build where we actually import the service.py into sys.path
-    try:
-        os.environ["OPENLLM_MODEL"] = inflection.underscore(model_name)
-        os.environ["OPENLLM_ADAPTER_MAP"] = orjson.dumps(adapter_map).decode()
-
-        framework_envvar = llm_config["env"].framework_value
-        llm = t.cast(
-            "_BaseAutoLLMClass",
-            openllm[framework_envvar],  # type: ignore (internal API)
-        ).for_model(
-            model_name,
-            model_id=model_id,
-            llm_config=llm_config,
-            quantize=quantize,
-            adapter_map=adapter_map,
-            bettertransformer=bettertransformer,
-            return_runner_kwargs=False,
-            ensure_available=True,
-            **attrs,
+    if quantize and bettertransformer:
+        raise openllm.exceptions.OpenLLMException(
+            "'quantize' and 'bettertransformer' are currently mutually exclusive."
         )
 
-        os.environ["OPENLLM_MODEL_ID"] = llm.model_id
+    if quantize:
+        args.extend(["--quantize", quantize])
+    if bettertransformer:
+        args.append("--bettertransformer")
 
-        labels = dict(llm.identifying_params)
-        labels.update({"_type": llm.llm_type, "_framework": framework_envvar})
-        workers_per_resource = first_not_none(_workers_per_resource, default=llm_config["workers_per_resource"])
+    if model_id:
+        args.extend(["--model-id", model_id])
+    if build_ctx:
+        args.extend(["--build-ctx", build_ctx])
+    if extra_dependencies:
+        args.extend([f"--enable-features={f}" for f in extra_dependencies])
+    if workers_per_resource:
+        args.extend(["--workers-per-resource", str(workers_per_resource)])
+    if overwrite_existing_bento:
+        args.append("--overwrite")
+    if adapter_map:
+        args.extend([f"--adapter-id={k}{':'+v if v is not None else ''}" for k, v in adapter_map.items()])
+    if model_version:
+        args.extend(["--model-version", model_version])
 
-        with fs.open_fs(f"temp://llm_{llm_config['model_name']}") as llm_fs:
-            bento_tag = bentoml.Tag.from_taglike(f"{llm.llm_type}-service:{llm.tag.version}")
-            try:
-                bento = bentoml.get(bento_tag)
-                if _overwrite_existing_bento:
-                    bentoml.delete(bento_tag)
-                    bento = _build_bento(
-                        bento_tag,
-                        llm_fs,
-                        llm,
-                        workers_per_resource=workers_per_resource,
-                        adapter_map=adapter_map,
-                        quantize=quantize,
-                        bettertransformer=bettertransformer,
-                        extra_dependencies=_extra_dependencies,
-                        build_ctx=_build_ctx,
-                    )
-                _previously_built = True
-            except bentoml.exceptions.NotFound:
-                bento = _build_bento(
-                    bento_tag,
-                    llm_fs,
-                    llm,
-                    workers_per_resource=workers_per_resource,
-                    adapter_map=adapter_map,
-                    quantize=quantize,
-                    bettertransformer=bettertransformer,
-                    extra_dependencies=_extra_dependencies,
-                    build_ctx=_build_ctx,
-                )
-            return (bento, _previously_built) if __cli__ else bento
-    except Exception as e:
-        logger.error("\nException caught during building LLM %s: \n", model_name, exc_info=e)
-        raise
-    finally:
-        del os.environ["OPENLLM_MODEL"]
-        del os.environ["OPENLLM_MODEL_ID"]
-        del os.environ["OPENLLM_ADAPTER_MAP"]
-        # restore original OPENLLM_MODEL envvar if set.
-        if current_model_envvar is not None:
-            os.environ["OPENLLM_MODEL"] = current_model_envvar
-        if current_model_id_envvar is not None:
-            os.environ["OPENLLM_MODEL_ID"] = current_model_id_envvar
-        if current_adapter_map_envvar is not None:
-            os.environ["OPENLLM_ADAPTER_MAP"] = current_adapter_map_envvar
+    try:
+        output = subprocess.check_output(args, env=os.environ.copy(), cwd=build_ctx or os.getcwd())
+    except subprocess.CalledProcessError as e:
+        logger.error("Exception caught while building %s", model_name, exc_info=e)
+        if e.stderr:
+            raise openllm.exceptions.OpenLLMException(e.stderr.decode("utf-8")) from None
+        raise openllm.exceptions.OpenLLMException(str(e)) from None
+    # NOTE: This usually only concern BentoML devs.
+    pattern = r"^__tag__:[^:\n]+:[^:\n]+"
+    matched = re.search(pattern, output.decode("utf-8").strip(), re.MULTILINE)
+    assert matched is not None, f"Failed to find tag from output: {output}"
+    _, _, tag = matched.group(0).partition(":")
+    return bentoml.get(tag, _bento_store=bento_store)

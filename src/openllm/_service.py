@@ -73,6 +73,8 @@ runner = openllm.Runner(
     quantize=llm_config["env"]["quantize_value"],
     adapter_map=orjson.loads(adapter_map),
     trust_remote_code=True,
+    ensure_available=False,
+    openllm_model_version=os.environ.get("OPENLLM_MODEL_VERSION", None),
 )
 
 svc = bentoml.Service(name=f"llm-{llm_config['start_name']}-service", runners=[runner])
