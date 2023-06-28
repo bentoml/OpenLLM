@@ -697,7 +697,7 @@ def start_command_factory(
         llm_config = openllm.AutoConfig.infer_class_from_name(
             model_name_or_bento.info.labels["start_name"]
         ).model_construct_json(model_name_or_bento.info.labels["configuration"])
-        return start_generator(group, model_name_or_bento, llm_config, _serve_grpc, context_settings=_CONTEXT_SETTINGS)
+        return start_mixin(group, model_name_or_bento, llm_config, _serve_grpc, context_settings=_CONTEXT_SETTINGS)
 
     llm_config = openllm.AutoConfig.for_model(model_name_or_bento)
     env = llm_config["env"]
@@ -720,10 +720,10 @@ Available model_id(s): {llm_config['model_ids']} [default: {llm_config['default_
 
     command_attrs["aliases"] = aliases if len(aliases) > 0 else None
 
-    return start_generator(group, model_name_or_bento, llm_config, _serve_grpc, **command_attrs)
+    return start_mixin(group, model_name_or_bento, llm_config, _serve_grpc, **command_attrs)
 
 
-def start_generator(
+def start_mixin(
     group: click.Group,
     model_name_or_bento: str | bentoml.Bento,
     llm_config: openllm.LLMConfig,
@@ -1021,16 +1021,17 @@ _cached_grpc = {
 
 
 def _start(
-    model_name: str,
+    model_name: str | bentoml.Bento,
     framework: t.Literal["flax", "tf", "pt"] | None = None,
     **attrs: t.Any,
 ):
     """Python API to start a LLM server."""
     _serve_grpc = attrs.pop("_serve_grpc", False)
 
-    _ModelEnv = EnvVarMixin(model_name)
-
-    if framework is not None:
+    if isinstance(model_name, str):
+        _ModelEnv = EnvVarMixin(model_name)
+        if framework is None:
+            framework = _ModelEnv.framework_value
         os.environ[_ModelEnv.framework] = framework
     start_command_factory(model_name, _serve_grpc=_serve_grpc)(standalone_mode=False, **attrs)
 

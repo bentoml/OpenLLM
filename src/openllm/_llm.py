@@ -1000,7 +1000,7 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
                 ],
                 env=os.environ.copy(),
             )
-            # NOTE: This usually only concern BentoML devs.
+            # NOTE: This usually only concern OpenLLM devs.
             pattern = r"^__tag__:[^:\n]+:[^:\n]+"
             matched = re.search(pattern, output.decode("utf-8").strip(), re.MULTILINE)
             assert matched is not None, f"Failed to find tag from output: {output}"
@@ -1026,7 +1026,10 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
                             importlib.import_module(self.model.__module__),
                             importlib.import_module(self.tokenizer.__module__),
                         ],
-                        metadata={"_pretrained_class": self.model.__class__.__name__, "_framework": self.model.framework},
+                        metadata={
+                            "_pretrained_class": self.model.__class__.__name__,
+                            "_framework": self.model.framework,
+                        },
                     ) as bento_model:
                         if (
                             self.bettertransformer
