@@ -63,10 +63,10 @@ all = [
     "openllm[chatglm]",
     "openllm[starcoder]",
     "openllm[falcon]",
-    "openllm[flan-t5]",
+    "openllm[agents]",
     "openllm[openai]",
     "openllm[fine-tune]",
-    "openllm[agents]",
+    "openllm[flan-t5]",
 ]
 chatglm = ["cpm_kernels", "sentencepiece"]
 falcon = ["einops", "xformers", "safetensors"]

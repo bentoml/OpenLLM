@@ -55,8 +55,6 @@ if t.TYPE_CHECKING:
 
     from bentoml._internal.bento import BentoStore
 
-    from .models.auto.factory import _BaseAutoLLMClass
-
 logger = logging.getLogger(__name__)
 
 OPENLLM_DEV_BUILD = "OPENLLM_DEV_BUILD"
