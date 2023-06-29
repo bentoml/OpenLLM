@@ -50,7 +50,7 @@ jobs:
       - name: Setup CI
         uses: ./.github/actions/setup-repo
       - name: Create release notes
-        run: ./.github/actions/create_release_and_archive.sh
+        run: ./.github/actions/create_release_and_archive.sh ${{ inputs.tags }}
       - name: Download Python artifacts
         uses: actions/download-artifact@v3
         with:
