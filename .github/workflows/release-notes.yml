@@ -15,6 +15,11 @@
 name: release-notes
 on:
   workflow_dispatch:
+    inputs:
+      tags:
+        description: 'Tag for releases'
+        required: true
+        type: string
   workflow_call:
     inputs:
       tags:
@@ -68,6 +73,7 @@ jobs:
           generate_release_notes: true
           body_path: release_notes.txt
           fail_on_unmatched_files: true
+          tag_name: 'v${{ inputs.tags }}'
           files: |-
             dist/*
             archives/*
