@@ -64,10 +64,10 @@ all = [
     "openllm[starcoder]",
     "openllm[falcon]",
     "openllm[mpt]",
-    "openllm[fine-tune]",
     "openllm[openai]",
-    "openllm[flan-t5]",
     "openllm[agents]",
+    "openllm[flan-t5]",
+    "openllm[fine-tune]",
 ]
 chatglm = ["cpm-kernels", "sentencepiece"]
 falcon = ["einops", "xformers", "safetensors"]
@@ -224,7 +224,13 @@ typeCheckingMode = "strict"
 
 [tool.coverage.run]
 branch = true
-omit = ["src/openllm/__about__.py", "src/openllm/__main__.py", "src/openllm/tests.py", "src/openllm/utils/dummy_*.py"]
+omit = [
+    "src/openllm/playground/",
+    "src/openllm/__about__.py",
+    "src/openllm/__main__.py",
+    "src/openllm/tests.py",
+    "src/openllm/utils/dummy_*.py",
+]
 source_pkgs = ["openllm"]
 
 [tool.coverage.paths]
