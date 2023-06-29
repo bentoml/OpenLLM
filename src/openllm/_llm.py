@@ -87,29 +87,30 @@ if t.TYPE_CHECKING:
     from .utils.representation import ReprArgs
 
     _MT = t.TypeVar("_MT", covariant=True)
-    PeftAdapterOutput = dict[t.Literal["success", 'result', "error_msg"], bool | str | dict[t.Any, t.Any]]
+    PeftAdapterOutput = dict[t.Literal["success", "result", "error_msg"], bool | str | dict[t.Any, t.Any]]
 
     class _StubsMixin(t.Generic[_MT], t.Protocol):
-        def save_pretrained(self, save_directory: str, **kwargs: t.Any) -> None:
+        def save_pretrained(self, save_directory: str, **kwargs: t.Any) -> t.Any:
             ...
 
         @classmethod
         def from_pretrained(cls, pretrained_model_name_or_path: str, *args: t.Any, **kwargs: t.Any) -> _MT:
             ...
 
-    class ModelProtocol(_StubsMixin["ModelProtocol"], t.Protocol):
+    class ModelProtocol(_StubsMixin[_MT], t.Protocol):
         @property
         def framework(self) -> str:
             ...
 
-    class TokenizerProtocol(_StubsMixin["TokenizerProtocol"], t.Protocol):
-        ...
-
+    class TokenizerProtocol(_StubsMixin[_MT], t.Protocol):
+        @t.override
+        def save_pretrained(self, save_directory: str, **kwargs: t.Any) -> tuple[str]:
+            ...
 
     class LLMRunner(bentoml.Runner):
         __doc__: str
         __module__: str
-        model: ModelProtocol
+        model: ModelProtocol[t.Any]
         llm: openllm.LLM[t.Any, t.Any]
         config: openllm.LLMConfig
         llm_type: str
@@ -320,8 +321,8 @@ def import_model(
 _reserved_namespace = {"config_class", "model", "tokenizer", "import_kwargs"}
 
 
-_M = t.TypeVar("_M", bound="ModelProtocol")
-_T = t.TypeVar("_T", bound="TokenizerProtocol")
+_M = t.TypeVar("_M", bound="ModelProtocol[_M]")
+_T = t.TypeVar("_T", bound="TokenizerProtocol[_T]")
 
 
 def _default_post_init(self: LLM[t.Any, t.Any]):
@@ -608,9 +609,9 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
         int8_skip_modules: list[str] | None = attrs.pop("llm_int8_skip_modules", None)
         int8_has_fp16_weight = attrs.pop("llm_int8_has_fp16_weight", False)
         # 4 bit configuration
-        int4_compute_dtype = attrs.pop("llm_bnb_4bit_compute_dtype", torch.bfloat16)
-        int4_quant_type = attrs.pop("llm_bnb_4bit_quant_type", "nf4")
-        int4_use_double_quant = attrs.pop("llm_bnb_4bit_use_double_quant", True)
+        int4_compute_dtype = attrs.pop("bnb_4bit_compute_dtype", torch.bfloat16)
+        int4_quant_type = attrs.pop("bnb_4bit_quant_type", "nf4")
+        int4_use_double_quant = attrs.pop("bnb_4bit_use_double_quant", True)
 
         # NOTE: Quantization setup
         if quantization_config is None:
@@ -646,9 +647,9 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
                     if is_transformers_supports_kbit():
                         quantization_config = transformers.BitsAndBytesConfig(
                             load_in_4bit=True,
-                            llm_bnb_4bit_compute_dtype=int4_compute_dtype,
-                            llm_bnb_4bit_quant_type=int4_quant_type,
-                            llm_bnb_4bit_use_double_quant=int4_use_double_quant,
+                            bnb_4bit_compute_dtype=int4_compute_dtype,
+                            bnb_4bit_quant_type=int4_quant_type,
+                            bnb_4bit_use_double_quant=int4_use_double_quant,
                         )
                     else:
                         logger.warning(
@@ -1489,7 +1490,6 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
             if not isinstance(__self.model, peft.PeftModel):
                 return {"success": False, "result": {}, "error_msg": "Model is not a PeftModel"}
             return {"success": True, "result": __self.model.peft_config, "error_msg": ""}
-
 
         def _wrapped_generate_run(__self: LLMRunner, prompt: str, **kwargs: t.Any) -> t.Any:
             """Wrapper for runner.generate.run() to handle the prompt and postprocessing.
