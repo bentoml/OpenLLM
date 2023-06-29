@@ -259,6 +259,26 @@ You can install it with pip: `pip install einops`. Please note that you may need
 your runtime after installation.
 """
 
+TRITON_IMPORT_ERROR = """{0} requires the triton library but it was not found in your environment.
+You can install it with pip: `pip install git+https://github.com/openai/triton`.
+Please note that you may need to restart your runtime after installation.
+"""
+
+DATASETS_IMPORT_ERROR = """{0} requires the datasets library but it was not found in your environment.
+You can install it with pip: `pip install datasets`. Please note that you may need to restart
+your runtime after installation.
+"""
+
+PEFT_IMPORT_ERROR = """{0} requires the peft library but it was not found in your environment.
+You can install it with pip: `pip install peft`. Please note that you may need to restart
+your runtime after installation.
+"""
+
+BITSANDBYTES_IMPORT_ERROR = """{0} requires the bitsandbytes library but it was not found in your environment.
+You can install it with pip: `pip install bitsandbytes`. Please note that you may need to restart
+your runtime after installation.
+"""
+
 BACKENDS_MAPPING = BackendOrderredDict(
     [
         ("flax", (is_flax_available, FLAX_IMPORT_ERROR)),
@@ -266,6 +286,10 @@ BACKENDS_MAPPING = BackendOrderredDict(
         ("torch", (is_torch_available, PYTORCH_IMPORT_ERROR)),
         ("cpm_kernels", (is_cpm_kernels_available, CPM_KERNELS_IMPORT_ERROR)),
         ("einops", (is_einops_available, EINOPS_IMPORT_ERROR)),
+        ("triton", (is_triton_available, TRITON_IMPORT_ERROR)),
+        ("datasets", (is_datasets_available, DATASETS_IMPORT_ERROR)),
+        ("peft", (is_peft_available, PEFT_IMPORT_ERROR)),
+        ("bitsandbytes", (is_bitsandbytes_available, BITSANDBYTES_IMPORT_ERROR)),
     ]
 )
 

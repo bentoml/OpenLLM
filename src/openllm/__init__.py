@@ -117,6 +117,19 @@ except MissingDependencyError:
 else:
     _import_structure["models.falcon"].extend(["Falcon"])
 
+
+try:
+    if not (utils.is_torch_available() and utils.is_triton_available()):
+        raise MissingDependencyError
+except MissingDependencyError:
+    from .utils import dummy_pt_and_triton_objects
+
+    _import_structure["utils.dummy_pt_and_triton_objects"] = [
+        name for name in dir(dummy_pt_and_triton_objects) if not name.startswith("_")
+    ]
+else:
+    _import_structure["models.mpt"].extend(["MPT"])
+
 try:
     if not utils.is_torch_available():
         raise MissingDependencyError
@@ -130,7 +143,6 @@ else:
     _import_structure["models.starcoder"].extend(["StarCoder"])
     _import_structure["models.stablelm"].extend(["StableLM"])
     _import_structure["models.opt"].extend(["OPT"])
-    _import_structure["models.mpt"].extend(["MPT"])
     _import_structure["models.auto"].extend(["AutoLLM", "MODEL_MAPPING"])
 
 try:
@@ -189,6 +201,7 @@ if t.TYPE_CHECKING:
     from .models.dolly_v2 import DollyV2Config as DollyV2Config
     from .models.falcon import FalconConfig as FalconConfig
     from .models.flan_t5 import FlanT5Config as FlanT5Config
+    from .models.mpt import MPTConfig as MPTConfig
     from .models.opt import OPTConfig as OPTConfig
     from .models.stablelm import StableLMConfig as StableLMConfig
     from .models.starcoder import StarCoderConfig as StarCoderConfig
@@ -210,6 +223,15 @@ if t.TYPE_CHECKING:
         from .utils.dummy_pt_and_einops_objects import *
     else:
         from .models.falcon import Falcon as Falcon
+
+    # NOTE: torch and triton
+    try:
+        if not (utils.is_torch_available() and utils.is_triton_available()):
+            raise MissingDependencyError
+    except MissingDependencyError:
+        from .utils.dummy_pt_and_triton_objects import *
+    else:
+        from .models.mpt import MPT as MPT
 
     try:
         if not utils.is_torch_available():
