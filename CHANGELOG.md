@@ -18,6 +18,28 @@ This changelog is managed by towncrier and is compiled at release time.
 
 <!-- towncrier release notes start -->
 
+## [0.1.18](https://github.com/bentoml/openllm/tree/v0.1.18)
+
+### Features
+
+- `openllm.LLMConfig` now supports `dict()` protocol
+
+  ```bash
+
+  config = openllm.LLMConfig.for_model("opt")
+
+  print(config.items())
+  print(config.values())
+  print(config.keys())
+  print(dict(config))
+  ```
+  [#85](https://github.com/bentoml/openllm/issues/85)
+- Added supports for MPT to OpenLLM
+
+  Fixes a LLMConfig to only parse environment when it is available
+  [#91](https://github.com/bentoml/openllm/issues/91)
+
+
 ## [0.1.17](https://github.com/bentoml/openllm/tree/v0.1.17)
 
 ### Bug fix
