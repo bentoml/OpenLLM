@@ -83,8 +83,6 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - name: Pull latest change
-        run: git pull --autostash --no-edit --gpg-sign --ff origin main
       - name: Fetch PyApp
         run: >-
           mkdir $PYAPP_REPO && curl -L https://github.com/ofek/pyapp/releases/download/v$PYAPP_VERSION/source.tar.gz | tar --strip-components=1 -xzf - -C $PYAPP_REPO
@@ -181,8 +179,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
       - name: Set up Python ${{ env.PYTHON_VERSION }}
-      - name: Pull latest change
-        run: git pull --autostash --no-edit --gpg-sign --ff origin main
         uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
@@ -238,8 +234,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      - name: Pull latest change
-        run: git pull --autostash --no-edit --gpg-sign --ff origin main
       - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v4
         with:
