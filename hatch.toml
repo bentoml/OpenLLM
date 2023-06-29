@@ -16,6 +16,7 @@ changelog = "towncrier build --version main --draft"
 fmt = "pre-commit run --all-files"
 setup = "pre-commit install"
 typing = "pyright {args:src/openllm tests}"
+clojure-ui = "cd dashboard/clojure && npm install && npm run dev"
 [envs.test]
 dependencies = [
     # NOTE: Tests strategies with Hypothesis and pytest, and snapshot testing with syrupy

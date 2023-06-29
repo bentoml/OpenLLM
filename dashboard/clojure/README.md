@@ -11,10 +11,15 @@
 ## Developement Build
 ### Raw terminal:
 ```bash
-cd src/openllm_web_client
+cd dashboard/clojure
 npm install
 npm run dev
 ```
+Or simply using hatch:
+```bash
+hatch run clojure-ui
+```
+Please refer to external resources on how to connect a REPL to the running shadow-cljs instance. A good resource to start out is the [REPL section](https://shadow-cljs.github.io/docs/UsersGuide.html#_repl_2) in the shadow-cljs manual.
 
 ### VS Code + Calva:
 ```text
