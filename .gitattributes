@@ -1,2 +1,3 @@
 nightly-requirements.txt linguist-generated=true
+nightly-requirements-gpu.txt linguist-generated=true
 * text=auto eol=lf

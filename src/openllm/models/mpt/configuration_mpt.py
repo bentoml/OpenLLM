@@ -133,5 +133,8 @@ _PROMPT_MAPPING = {
     "chat": _chat_prompt,
 }
 
-def DEFAULT_PROMPT_TEMPLATE(model_type):
+
+def _get_prompt(model_type: str) -> str:
     return _PROMPT_MAPPING[model_type]
+
+DEFAULT_PROMPT_TEMPLATE = _get_prompt

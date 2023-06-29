@@ -86,9 +86,30 @@ if t.TYPE_CHECKING:
     from .models.auto.factory import _BaseAutoLLMClass
     from .utils.representation import ReprArgs
 
+    _MT = t.TypeVar("_MT", covariant=True)
+    PeftAdapterOutput = dict[t.Literal["success", 'result', "error_msg"], bool | str | dict[t.Any, t.Any]]
+
+    class _StubsMixin(t.Generic[_MT], t.Protocol):
+        def save_pretrained(self, save_directory: str, **kwargs: t.Any) -> None:
+            ...
+
+        @classmethod
+        def from_pretrained(cls, pretrained_model_name_or_path: str, *args: t.Any, **kwargs: t.Any) -> _MT:
+            ...
+
+    class ModelProtocol(_StubsMixin["ModelProtocol"], t.Protocol):
+        @property
+        def framework(self) -> str:
+            ...
+
+    class TokenizerProtocol(_StubsMixin["TokenizerProtocol"], t.Protocol):
+        ...
+
+
     class LLMRunner(bentoml.Runner):
         __doc__: str
         __module__: str
+        model: ModelProtocol
         llm: openllm.LLM[t.Any, t.Any]
         config: openllm.LLMConfig
         llm_type: str
@@ -100,23 +121,9 @@ if t.TYPE_CHECKING:
         def download_model(self, quiet: bool = ...) -> None:
             ...
 
-    _MT = t.TypeVar("_MT", covariant=True)
-    class _StubsMixin(t.Generic[_MT], t.Protocol):
-        def save_pretrained(self, save_directory: str, **kwargs: t.Any) -> None:
-            ...
-
-        @classmethod
-        def from_pretrained(
-            cls, pretrained_model_name_or_path: str, *args: t.Any, **kwargs: t.Any
-        ) -> _MT:
-            ...
-
-    class PreTrainedProtocol(_StubsMixin["PreTrainedProtocol"], t.Protocol):
         @property
-        def framework(self) -> str:
+        def peft_adapters(self) -> PeftAdapterOutput:
             ...
-
-    class TokenizerProtocol(_StubsMixin["TokenizerProtocol"], t.Protocol): ...
 
     DictStrAny = dict[str, t.Any]
     TupleAny = tuple[t.Any, ...]
@@ -313,7 +320,7 @@ def import_model(
 _reserved_namespace = {"config_class", "model", "tokenizer", "import_kwargs"}
 
 
-_M = t.TypeVar("_M", bound="PreTrainedProtocol")
+_M = t.TypeVar("_M", bound="ModelProtocol")
 _T = t.TypeVar("_T", bound="TokenizerProtocol")
 
 
@@ -843,7 +850,9 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
         self._model_args = args
         self._model_attrs = model_kwds
         self._tokenizer_attrs = tokenizer_kwds
-        self._openllm_model_version = openllm_model_version if openllm_model_version is not None else self.config['env']['model_version_value']
+        self._openllm_model_version = (
+            openllm_model_version if openllm_model_version is not None else self.config["env"]["model_version_value"]
+        )
 
         self.llm_post_init()
 
@@ -1397,28 +1406,10 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
                 # NOTE: The side effect of this line
                 # is that it will load the imported model during
                 # runner startup. So don't remove it!!
-                assert self.model, "Internal error: Model is not loaded"
+                __self.model = self.model  # keep a loaded reference
                 if self.adapters_mapping is not None:
                     logger.info("Applying LoRA to %s...", self.runner_name)
                     self.apply_adapter(inference_mode=True, load_adapters="all")
-
-            @bentoml.Runnable.method(batchable=False)
-            def list_adapter(__self) -> dict[str, t.Any]:
-                if not is_peft_available():
-                    return {
-                        "success": False,
-                        "result": {},
-                        "error_msg": "peft is not available. Make sure to install: 'pip install \"openllm[fine-tune]\"'",
-                    }
-                if self.__llm_adapter_map__ is None:
-                    return {
-                        "success": False,
-                        "result": {},
-                        "error_msg": "No adapters available for current running server.",
-                    }
-                if not isinstance(self.model, peft.PeftModel):
-                    return {"success": False, "result": {}, "error_msg": "Model is not a PeftModel"}
-                return {"success": True, "result": self.model.peft_config, "error_msg": ""}
 
             @bentoml.Runnable.method(batchable=False)
             def set_adapter(__self, adapter_name: str) -> dict[t.Literal["success", "error_msg"], bool | str]:
@@ -1430,7 +1421,6 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
                 if self.__llm_adapter_map__ is None:
                     return {
                         "success": False,
-                        "result": {},
                         "error_msg": "No adapters available for current running server.",
                     }
                 if not isinstance(self.model, peft.PeftModel):
@@ -1483,6 +1473,24 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
             def generate_iterator(__self, prompt: str, **attrs: t.Any) -> t.Iterator[t.Any]:
                 yield self.generate_iterator(prompt, **attrs)
 
+        def available_adapters(__self: LLMRunner) -> PeftAdapterOutput:
+            if not is_peft_available():
+                return {
+                    "success": False,
+                    "result": {},
+                    "error_msg": "peft is not available. Make sure to install: 'pip install \"openllm[fine-tune]\"'",
+                }
+            if self.__llm_adapter_map__ is None:
+                return {
+                    "success": False,
+                    "result": {},
+                    "error_msg": "No adapters available for current running server.",
+                }
+            if not isinstance(__self.model, peft.PeftModel):
+                return {"success": False, "result": {}, "error_msg": "Model is not a PeftModel"}
+            return {"success": True, "result": __self.model.peft_config, "error_msg": ""}
+
+
         def _wrapped_generate_run(__self: LLMRunner, prompt: str, **kwargs: t.Any) -> t.Any:
             """Wrapper for runner.generate.run() to handle the prompt and postprocessing.
 
@@ -1508,6 +1516,7 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
                     "identifying_params": self.identifying_params,
                     "llm": self,  # NOTE: self reference to LLM
                     "config": self.config,
+                    "peft_adapters": property(fget=available_adapters),
                     "download_model": self.ensure_model_id_exists,
                     "__call__": _wrapped_generate_run,
                     "__module__": f"openllm.models.{self.config['model_name']}",
@@ -1627,12 +1636,13 @@ def Runner(
                 behaviour
     """
     if llm_config is not None:
-        attrs.update({
-
-            "bettertransformer": llm_config["env"]["bettertransformer_value"],
-            "quantize": llm_config["env"]["quantize_value"],
-            "openllm_model_version": llm_config["env"]["model_version_value"],
-        })
+        attrs.update(
+            {
+                "bettertransformer": llm_config["env"]["bettertransformer_value"],
+                "quantize": llm_config["env"]["quantize_value"],
+                "openllm_model_version": llm_config["env"]["model_version_value"],
+            }
+        )
 
     if implementation is None:
         implementation = EnvVarMixin(model_name)["framework_value"]

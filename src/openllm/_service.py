@@ -151,7 +151,7 @@ svc.mount_asgi_app(hf_app, path="/hf")
 
 
 async def list_adapter_v1(_: Request) -> Response:
-    res = await runner.list_adapter.async_run()
+    res = runner.peft_adapters
     if res["success"]:
         res["result"] = {k: v.to_dict() for k, v in res["result"].items()}
     return JSONResponse(res, status_code=200)

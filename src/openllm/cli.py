@@ -1067,7 +1067,12 @@ start_grpc = functools.partial(_start, _serve_grpc=True)
     metavar="[PATH | [remote/][adapter_name:]adapter_id][, ...]",
 )
 @click.option("--build-ctx", default=".", help="Build context. This is required if --adapter-id uses relative path")
-@click.option("--model-version", default=None, type=click.STRING, help="Model version provided for this 'model-id' if it is a custom path.")
+@click.option(
+    "--model-version",
+    default=None,
+    type=click.STRING,
+    help="Model version provided for this 'model-id' if it is a custom path.",
+)
 @click.pass_context
 def build(
     ctx: click.Context,
@@ -1138,9 +1143,12 @@ def build(
 
     if not model_version:
         if _is_path:
-            _echo("Given model id does not provide a '--model-version', which will disable hermetic Bento. To ensure you don't rebuild the bento, make sure to pass in '--model-version'", fg='yellow')
+            _echo(
+                "Given model id does not provide a '--model-version', which will disable hermetic Bento. To ensure you don't rebuild the bento, make sure to pass in '--model-version'",
+                fg="yellow",
+            )
     else:
-        os.environ[llm_config['env'].model_version] = model_version
+        os.environ[llm_config["env"].model_version] = model_version
 
     logger.info("Packing '%s' into a Bento%s...", model_name, f" with 'kwargs={attrs}' " if attrs else "")
 
@@ -1306,7 +1314,9 @@ def models(ctx: click.Context, output: OutputLiteral, show_available: bool):
                 "url": config["url"],
                 "requires_gpu": config["requires_gpu"],
                 "runtime_impl": runtime_impl,
-                "installation": "pip install openllm" if m not in openllm.utils.OPTIONAL_DEPENDENCIES else  f'pip install "openllm[{m}]"',
+                "installation": "pip install openllm"
+                if m not in openllm.utils.OPTIONAL_DEPENDENCIES
+                else f'pip install "openllm[{m}]"',
             }
             converted.extend([convert_transformers_model_name(i) for i in config["model_ids"]])
             if DEBUG:
