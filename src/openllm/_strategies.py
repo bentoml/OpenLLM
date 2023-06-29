@@ -174,7 +174,7 @@ class CascadingResourceStrategy(Strategy, ReprMixin):
             worker_index : The index of the worker, start from 0.
         """
         cuda_env = os.environ.get("CUDA_VISIBLE_DEVICES", None)
-        disabled = cuda_env in ("", "-1")
+        disabled = cuda_env in ("", "-1", None)
 
         environ: dict[str, t.Any] = {}
 

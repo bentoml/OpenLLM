@@ -50,12 +50,11 @@ def main() -> int:
 
     start_idx, end_idx = processed.index(" " * 4 + START_COMMENT), processed.index(" " * 4 + END_COMMENT)
 
-    # convention to use t.TYPE_CHECKING
-    lines = [" " * 4 + "if t.TYPE_CHECKING:\n"]
+    lines: list[str]= []
     for keys, ForwardRef in openllm.utils.codegen.get_annotations(ModelSettings).items():
         lines.extend(
             [
-                " " * 8 + line
+                " " * 4 + line
                 for line in [
                     "@overload\n" if "overload" in dir(_imported) else "@t.overload\n",
                     f'def __getitem__(self, item: t.Literal["{keys}"] = ...) -> {transformed.get(keys, process_annotations(ForwardRef.__forward_arg__))}: ...\n',
@@ -65,7 +64,7 @@ def main() -> int:
     # special case variables: generation_class, extras
     lines.extend(
         [
-            " " * 8 + line
+            " " * 4 + line
             for line in [
                 "@overload\n" if "overload" in dir(_imported) else "@t.overload\n",
                 'def __getitem__(self, item: t.Literal["generation_class"] = ...) -> t.Type[GenerationConfig]: ...\n',
@@ -77,7 +76,7 @@ def main() -> int:
     for keys, type_pep563 in openllm.utils.codegen.get_annotations(GenerationConfig).items():
         lines.extend(
             [
-                " " * 8 + line
+                " " * 4 + line
                 for line in [
                     "@overload\n" if "overload" in dir(_imported) else "@t.overload\n",
                     f'def __getitem__(self, item: t.Literal["{keys}"] = ...) -> {type_pep563}: ...\n',
@@ -88,7 +87,7 @@ def main() -> int:
     for keys in PeftType._member_names_:
         lines.extend(
             [
-                " " * 8 + line
+                " " * 4 + line
                 for line in [
                     "@overload\n" if "overload" in dir(_imported) else "@t.overload\n",
                     f'def __getitem__(self, item: t.Literal["{keys.lower()}"] = ...) -> dict[str, t.Any]: ...\n',

@@ -47,16 +47,16 @@ def get_mpt_config(
     device_map: str | None = None,
     trust_remote_code: bool = True,
 ) -> transformers.PretrainedConfig:
-    config: transformers.PretrainedConfig = transformers.AutoConfig.from_pretrained(
+    config = transformers.AutoConfig.from_pretrained(
         model_id_or_path, trust_remote_code=trust_remote_code
     )
-    if hasattr(config, "init_device") and device_map is None:
-        config.init_device = device
+    if hasattr(config, "init_device") and device_map is None and isinstance(device, (str, torch.device)):
+        config.init_device = str(device)
     if hasattr(config, "attn_config") and is_triton_available():
         config.attn_config["attn_impl"] = "triton"
     else:
-        logger.warning(
-            "'triton' is not available, Flash Attention will use the default implementation. For faster inference, make sure to install triton with 'pip install git+https://github.com/openai/triton.git@main'"
+        logger.debug(
+            "'triton' is not available, Flash Attention will use the default Torch implementation. For faster inference, make sure to install triton with 'pip install \"git+https://github.com/openai/triton.git#egg=triton&subdirectory=python\"'"
         )
     # setting max_seq_len
     config.max_seq_len = max_sequence_length
@@ -90,6 +90,7 @@ class MPT(openllm.LLM["transformers.PreTrainedModel", "transformers.GPTNeoXToken
         torch_dtype = attrs.pop("torch_dtype", torch.float32)
         device_map = attrs.pop("device_map", None)
         trust_remote_code = attrs.pop("trust_remote_code", True)
+        attrs.pop("low_cpu_mem_usage", None)
 
         config = get_mpt_config(
             model_id,
@@ -114,7 +115,7 @@ class MPT(openllm.LLM["transformers.PreTrainedModel", "transformers.GPTNeoXToken
         )
         return bentoml.transformers.save_model(tag, model, custom_objects={"tokenizer": tokenizer})
 
-    def load_model(self, tag: bentoml.Tag, *args: t.Any, **attrs: t.Any) -> transformers.OPTForCausalLM:
+    def load_model(self, tag: bentoml.Tag, *args: t.Any, **attrs: t.Any) -> transformers.PreTrainedModel:
         torch_dtype = attrs.pop("torch_dtype", torch.float32)
         device_map = attrs.pop("device_map", None)
         trust_remote_code = attrs.pop("trust_remote_code", False)
@@ -127,7 +128,7 @@ class MPT(openllm.LLM["transformers.PreTrainedModel", "transformers.GPTNeoXToken
             device_map=device_map,
             trust_remote_code=trust_remote_code,
         )
-        model = transformers.AutoModelForCausalLM.from_pretrained(
+        return transformers.AutoModelForCausalLM.from_pretrained(
             _ref.path,
             config=config,
             trust_remote_code=trust_remote_code,
@@ -135,7 +136,6 @@ class MPT(openllm.LLM["transformers.PreTrainedModel", "transformers.GPTNeoXToken
             device_map=device_map,
             **attrs,
         )
-        return model
 
     def sanitize_parameters(
         self,
