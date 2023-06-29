@@ -111,11 +111,11 @@ def attrs_to_options(
 def env_converter(value: t.Any, env: str | None = None) -> t.Any:
     if env is not None:
         value = os.environ.get(env, value)
-    if value is not None and isinstance(value, str):
-        try:
-            return orjson.loads(value.lower())
-        except orjson.JSONDecodeError as err:
-            raise RuntimeError(f"Failed to parse '{value}' from '{env}': {err}")
+        if value is not None and isinstance(value, str):
+            try:
+                return orjson.loads(value.lower())
+            except orjson.JSONDecodeError as err:
+                raise RuntimeError(f"Failed to parse ({value!r}) from '{env}': {err}")
     return value
 
 

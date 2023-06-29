@@ -157,6 +157,7 @@ _import_structure = {
         "is_datasets_available",
         "is_transformers_supports_kbit",
         "is_transformers_supports_agent",
+        "is_triton_available",
         "require_backends",
     ],
 }
@@ -196,6 +197,7 @@ if t.TYPE_CHECKING:
     from .import_utils import is_torch_available as is_torch_available
     from .import_utils import is_transformers_supports_agent as is_transformers_supports_agent
     from .import_utils import is_transformers_supports_kbit as is_transformers_supports_kbit
+    from .import_utils import is_triton_available as is_triton_available
     from .import_utils import require_backends as require_backends
     from .import_utils import requires_dependencies as requires_dependencies
     from .lazy import LazyModule as LazyModule

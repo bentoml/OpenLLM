@@ -508,9 +508,7 @@ def start_cli():
 
     \b
     ```bash
-    $ openllm start <model_name> --<options> ...
-
-    $ openllm start-http <model_name> --<options> ...
+    $ openllm <start|start-http> <model_name> --<options> ...
     ```
     """
 
@@ -710,7 +708,7 @@ Available model_id(s): {llm_config['model_ids']} [default: {llm_config['default_
     command_attrs: dict[str, t.Any] = {
         "name": llm_config["model_name"],
         "context_settings": _context_settings or {},
-        "short_help": f"Start a LLMServer for '{model_name_or_bento}' ('--help' for more details)",
+        "short_help": f"Start a LLMServer for '{model_name_or_bento}'",
         "help": docstring,
     }
 
@@ -1069,7 +1067,7 @@ start_grpc = functools.partial(_start, _serve_grpc=True)
     metavar="[PATH | [remote/][adapter_name:]adapter_id][, ...]",
 )
 @click.option("--build-ctx", default=".", help="Build context. This is required if --adapter-id uses relative path")
-@click.option("--model-version", envvar="OPENLLM_MODEL_VERSION", show_envvar=True, default=None, type=click.STRING, help="Model version provided for this 'model-id' if it is a custom path.")
+@click.option("--model-version", default=None, type=click.STRING, help="Model version provided for this 'model-id' if it is a custom path.")
 @click.pass_context
 def build(
     ctx: click.Context,
@@ -1131,15 +1129,18 @@ def build(
     current_model_id_envvar = os.environ.pop("OPENLLM_MODEL_ID", None)
     current_adapter_map_envvar = os.environ.pop("OPENLLM_ADAPTER_MAP", None)
 
-    if not model_version:
-        _echo("Given model id does not provide a '--model-version', which will disable hermetic Bento. To ensure you don't rebuild the bento, make sure to pass in '--model-version'", fg='yellow')
-    else:
-        os.environ['OPENLLM_MODEL_VERSION'] = model_version
-
+    _is_path = False
     if model_id is not None and os.path.exists(os.path.dirname(os.path.abspath(model_id))):
+        _is_path = True
         model_id = os.path.abspath(model_id)
 
     llm_config = openllm.AutoConfig.for_model(model_name)
+
+    if not model_version:
+        if _is_path:
+            _echo("Given model id does not provide a '--model-version', which will disable hermetic Bento. To ensure you don't rebuild the bento, make sure to pass in '--model-version'", fg='yellow')
+    else:
+        os.environ[llm_config['env'].model_version] = model_version
 
     logger.info("Packing '%s' into a Bento%s...", model_name, f" with 'kwargs={attrs}' " if attrs else "")
 
@@ -1290,9 +1291,6 @@ def models(ctx: click.Context, output: OutputLiteral, show_available: bool):
             str, dict[t.Literal["model_id", "url", "installation", "requires_gpu", "runtime_impl"], t.Any]
         ] = {}
 
-        # NOTE: Keep a sync list with ./tools/update-optional-dependencies.py
-        extras = ["chatglm", "falcon", "flan-t5", "starcoder"]
-
         converted: list[str] = []
         for m in models:
             config = openllm.AutoConfig.for_model(m)
@@ -1308,7 +1306,7 @@ def models(ctx: click.Context, output: OutputLiteral, show_available: bool):
                 "url": config["url"],
                 "requires_gpu": config["requires_gpu"],
                 "runtime_impl": runtime_impl,
-                "installation": "pip install openllm" if m not in extras else f'pip install "openllm[{m}]"',
+                "installation": "pip install openllm" if m not in openllm.utils.OPTIONAL_DEPENDENCIES else  f'pip install "openllm[{m}]"',
             }
             converted.extend([convert_transformers_model_name(i) for i in config["model_ids"]])
             if DEBUG:

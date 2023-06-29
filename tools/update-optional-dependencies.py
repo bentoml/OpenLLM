@@ -88,12 +88,17 @@ _NIGHTLY_MAPPING: dict[str, Dependencies] = {
     "bitsandbytes": Dependencies.from_tuple("bitsandbytes", "TimDettmers/bitsandbytes", "main", None),
     "deepspeed": Dependencies.from_tuple("deepspeed", "microsoft/deepspeed", "master", None),
     "trl": Dependencies.from_tuple("trl", "lvwerra/trl", "main", None),
+    "triton": Dependencies.from_tuple("triton", "openai/triton", "main", None),
 }
 
 FINE_TUNE_DEPS = ["peft", "bitsandbytes", "datasets", "accelerate", "deepspeed", "trl"]
 FLAN_T5_DEPS = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
+MPT_DEPS = ["triton"]
 OPENAI_DEPS = ["openai", "tiktoken"]
 AGENTS_DEPS = ["transformers[agents]>=4.30", "diffusers", "soundfile"]
+FALCON_DEPS = ["einops", "xformers", "safetensors"]
+STARCODER_DEPS = ["bitsandbytes"]
+CHATGLM_DEPS = ["cpm-kernels", "sentencepiece"]
 
 _base_requirements = {
     inflection.dasherize(name): config_cls.__openllm_requirements__

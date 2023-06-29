@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import importlib
+import inspect
 import logging
 import types
 import typing as t
@@ -105,14 +106,7 @@ class _BaseAutoLLMClass:
         >>> llm = openllm.AutoLLM.for_model("flan-t5")
         ```
         """
-        # order matters here
-        runner_kwargs_name = {
-            "models",
-            "max_batch_size",
-            "max_latency_ms",
-            "method_configs",
-            "scheduling_strategy",
-        }
+        runner_kwargs_name = set(inspect.signature(openllm.LLM[t.Any, t.Any].to_runner).parameters)
         to_runner_attrs = {k: v for k, v in attrs.items() if k in runner_kwargs_name}
         attrs = {k: v for k, v in attrs.items() if k not in to_runner_attrs}
         if cls._model_mapping.get(inflection.underscore(model_name), None, mapping_type="name2model"):

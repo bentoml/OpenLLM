@@ -59,6 +59,9 @@ warnings.filterwarnings(
     ),
 )
 
+# NOTE: The value below is a special variable and should not be modified
+__serving__ = False  # openllm: serving
+
 model = os.environ.get("OPENLLM_MODEL", "{__model_name__}")  # openllm: model name
 model_id = os.environ.get("OPENLLM_MODEL_ID", os.path.abspath("{__model_id__}"))  # openllm: model id
 adapter_map = os.environ.get("OPENLLM_ADAPTER_MAP", """{__model_adapter_map__}""")  # openllm: model adapter map
@@ -69,12 +72,9 @@ runner = openllm.Runner(
     model,
     model_id=model_id,
     llm_config=llm_config,
-    bettertransformer=llm_config["env"]["bettertransformer_value"],
-    quantize=llm_config["env"]["quantize_value"],
-    adapter_map=orjson.loads(adapter_map),
-    trust_remote_code=True,
     ensure_available=False,
-    openllm_model_version=os.environ.get("OPENLLM_MODEL_VERSION", None),
+    adapter_map=orjson.loads(adapter_map),
+    serving=__serving__,
 )
 
 svc = bentoml.Service(name=f"llm-{llm_config['start_name']}-service", runners=[runner])

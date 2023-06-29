@@ -12,12 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from . import auto as auto
-from . import chatglm as chatglm
-from . import dolly_v2 as dolly_v2
-from . import falcon as falcon
-from . import flan_t5 as flan_t5
-from . import mpt as mpt
-from . import opt as opt
-from . import stablelm as stablelm
-from . import starcoder as starcoder
+from __future__ import annotations
+
+import typing as t
+
+from ..utils import DummyMetaclass
+from ..utils import require_backends
+
+
+class MPT(metaclass=DummyMetaclass):
+    _backends = ["torch", "triton"]
+
+    def __init__(self, *args: t.Any, **attrs: t.Any):
+        require_backends(self, ["torch"])
