@@ -325,6 +325,42 @@ OPENLLM_FLAN_T5_FRAMEWORK=tf openllm start flan-t5
 > [Jax's installation](https://github.com/google/jax#pip-installation-gpu-cuda-installed-via-pip-easier)
 > to make sure that you have Jax support for the corresponding CUDA version.
 
+### Fine-tuning support (Experimental)
+
+One can serve OpenLLM models with any PEFT-compatible layers with `--adapter-id`:
+
+```bash
+openllm start opt --model-id facebook/opt-6.7b --adapter-id aarnphm/opt-6-7b-quotes
+```
+
+It also supports adapters from custom paths:
+
+```bash
+openllm start opt --model-id facebook/opt-6.7b --adapter-id /path/to/adapters
+```
+
+To use multiple adapters, use the following format:
+
+```bash
+openllm start opt --model-id facebook/opt-6.7b --adapter-id aarnphm/opt-6.7b-lora --adapter-id aarnphm/opt-6.7b-lora:french_lora
+```
+
+By default, the first adapter-id will be the default Lora layer, but optionally users can change what Lora layer to use for inference via `/v1/adapters`:
+
+```bash
+curl -X POST http://localhost:3000/v1/adapters --json '{"adapter_name": "vn_lora"}'
+```
+
+Note that for multiple adapter-name and adapter-id, it is recommended to update to use the default adapter before sending the inference, to avoid any performance degradation
+
+To include this into the Bento, one can also provide a `--adapter-id` into `openllm build`:
+
+```bash
+openllm build opt --model-id facebook/opt-6.7b --adapter-id ...
+ ```
+
+> **Note**: We will gradually roll out support for fine-tuning all models. Currently, only OPT has fully adapters support.
+
 ### Integrating a New Model
 
 OpenLLM encourages contributions by welcoming users to incorporate their custom
