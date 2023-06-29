@@ -51,7 +51,7 @@ else:
 
 logger = logging.getLogger(__name__)
 
-OPTIONAL_DEPENDENCIES = {"fine-tune", "flan-t5", "openai", "agents"}
+OPTIONAL_DEPENDENCIES = {"fine-tune", "flan-t5", "mpt", "falcon", "starcoder", "chatglm", "openai", "agents"}
 ENV_VARS_TRUE_VALUES = {"1", "ON", "YES", "TRUE"}
 ENV_VARS_TRUE_AND_AUTO_VALUES = ENV_VARS_TRUE_VALUES.union({"AUTO"})
 
@@ -81,6 +81,7 @@ _einops_available = _is_package_available("einops")
 _cpm_kernel_available = _is_package_available("cpm_kernels")
 _bitsandbytes_available = _is_package_available("bitsandbytes")
 _datasets_available = _is_package_available("datasets")
+_triton_available = _is_package_available("triton")
 
 
 def is_transformers_supports_kbit() -> bool:
@@ -89,6 +90,10 @@ def is_transformers_supports_kbit() -> bool:
 
 def is_transformers_supports_agent() -> bool:
     return pkg.pkg_version_info("transformers")[:2] >= (4, 29)
+
+
+def is_triton_available() -> bool:
+    return _triton_available
 
 
 def is_datasets_available() -> bool:
@@ -303,7 +308,7 @@ class EnvVarMixin(ReprMixin):
 
     @property
     def __repr_keys__(self) -> set[str]:
-        return {"config", "model_id", "quantize", "framework", "bettertransformer"}
+        return {"config", "model_id", "quantize", "framework", "bettertransformer", "model_version"}
 
     if t.TYPE_CHECKING:
         config: str
@@ -311,15 +316,19 @@ class EnvVarMixin(ReprMixin):
         quantize: str
         framework: str
         bettertransformer: str
+        model_version: str
 
         framework_value: t.Literal["pt", "tf", "flax"]
         quantize_value: str | None
+        model_version_value: str | None
         bettertransformer_value: str | None
 
         # fmt: off
 
         @overload
         def __getitem__(self, item: t.Literal["config"]) -> str: ...
+        @overload
+        def __getitem__(self, item: t.Literal["model_version"]) -> str: ...
         @overload
         def __getitem__(self, item: t.Literal["model_id"]) -> str: ...
         @overload
@@ -333,6 +342,8 @@ class EnvVarMixin(ReprMixin):
         @overload
         def __getitem__(self, item: t.Literal['quantize_value']) -> str | None: ...
         @overload
+        def __getitem__(self, item: t.Literal['model_version_value']) -> str | None: ...
+        @overload
         def __getitem__(self, item: t.Literal['bettertransformer_value']) -> str | None: ...
 
         # fmt: on
@@ -342,7 +353,13 @@ class EnvVarMixin(ReprMixin):
             return getattr(self, item)
         raise KeyError(f"Key {item} not found in {self}")
 
-    def __new__(cls, model_name: str, bettertransformer: bool | None = None, quantize: t.LiteralString | None = None):
+    def __new__(
+        cls,
+        model_name: str,
+        bettertransformer: bool | None = None,
+        quantize: t.LiteralString | None = None,
+        model_version: str | None = None,
+    ):
         from .._configuration import field_env_key
         from . import codegen
 
@@ -352,15 +369,16 @@ class EnvVarMixin(ReprMixin):
         res.model_name = model_name
 
         # gen properties env key
-        attributes = {"config", "model_id", "quantize", "framework", "bettertransformer"}
+        attributes = {"config", "model_id", "quantize", "framework", "bettertransformer", "model_version"}
         for att in attributes:
             setattr(res, att, field_env_key(model_name, att.upper()))
 
         # gen properties env value
         attributes_with_values = {
+            "framework": (str, "pt"),
             "quantize": (str, quantize),
             "bettertransformer": (bool, bettertransformer),
-            "framework": (str, "pt"),
+            "model_version": (str, model_version),
         }
         globs: dict[str, t.Any] = {
             "__bool_vars_value": ENV_VARS_TRUE_VALUES,

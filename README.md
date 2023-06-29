@@ -277,6 +277,30 @@ pip install openllm
 
 </td>
 </tr>
+<tr>
+
+<td><a href=https://huggingface.co/mosaicml>mpt</a></td>
+<td>✅</td>
+<td>✅</td>
+<td>
+
+```bash
+pip install "openllm[mpt]"
+```
+
+</td>
+<td>
+
+<ul><li><a href=https://huggingface.co/mosaicml/mpt-7b><code>mosaicml/mpt-7b</code></a></li>
+<li><a href=https://huggingface.co/mosaicml/mpt-7b-instruct><code>mosaicml/mpt-7b-instruct</code></a></li>
+<li><a href=https://huggingface.co/mosaicml/mpt-7b-chat><code>mosaicml/mpt-7b-chat</code></a></li>
+<li><a href=https://huggingface.co/mosaicml/mpt-7b-storywriter><code>mosaicml/mpt-7b-storywriter</code></a></li>
+<li><a href=https://huggingface.co/mosaicml/mpt-30b><code>mosaicml/mpt-30b</code></a></li>
+<li><a href=https://huggingface.co/mosaicml/mpt-30b-instruct><code>mosaicml/mpt-30b-instruct</code></a></li>
+<li><a href=https://huggingface.co/mosaicml/mpt-30b-chat><code>mosaicml/mpt-30b-chat</code></a></li></ul>
+
+</td>
+</tr>
 </table>
 
 <!-- update-readme.py: stop -->

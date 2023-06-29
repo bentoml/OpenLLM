@@ -63,15 +63,17 @@ all = [
     "openllm[chatglm]",
     "openllm[starcoder]",
     "openllm[falcon]",
-    "openllm[openai]",
+    "openllm[mpt]",
+    "openllm[flan-t5]",
     "openllm[fine-tune]",
     "openllm[agents]",
-    "openllm[flan-t5]",
+    "openllm[openai]",
 ]
-chatglm = ["cpm_kernels", "sentencepiece"]
+chatglm = ["cpm-kernels", "sentencepiece"]
 falcon = ["einops", "xformers", "safetensors"]
 fine-tune = ["peft", "bitsandbytes", "datasets", "accelerate", "deepspeed", "trl"]
 flan-t5 = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
+mpt = ["triton"]
 openai = ["openai", "tiktoken"]
 starcoder = ["bitsandbytes"]
 

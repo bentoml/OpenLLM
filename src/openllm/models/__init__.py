@@ -17,6 +17,7 @@ from . import chatglm as chatglm
 from . import dolly_v2 as dolly_v2
 from . import falcon as falcon
 from . import flan_t5 as flan_t5
+from . import mpt as mpt
 from . import opt as opt
 from . import stablelm as stablelm
 from . import starcoder as starcoder

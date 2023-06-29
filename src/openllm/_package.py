@@ -103,8 +103,7 @@ def construct_python_options(
     # that since bentoml will always install dependencies from requirements.txt
     # first, then proceed to install everything inside the wheels/ folder.
     if extra_dependencies is not None:
-        filtered = set(extra_dependencies + ("fine-tune",))
-        packages += [f"openllm[{k}]" for k in filtered]
+        packages += [f"openllm[{k}]" for k in extra_dependencies]
 
     req = llm.config["requirements"]
     if req is not None:
@@ -284,6 +283,8 @@ def create_bento(
                 )[: -(len(codegen.OPENLLM_MODEL_ID) + 3)]
                 + "\n"
             )
+        if codegen.OPENLLM_SERVING in it:
+            service_contents[service_contents.index(it)] = "__serving__ = True\n"
 
     script = "".join(service_contents)
 

@@ -88,6 +88,7 @@ _import_structure = {
     "models.starcoder": ["StarCoderConfig"],
     "models.stablelm": ["StableLMConfig"],
     "models.opt": ["OPTConfig"],
+    "models.mpt": ["MPTConfig"],
 }
 
 # NOTE: torch and cpm_kernels
@@ -129,6 +130,7 @@ else:
     _import_structure["models.starcoder"].extend(["StarCoder"])
     _import_structure["models.stablelm"].extend(["StableLM"])
     _import_structure["models.opt"].extend(["OPT"])
+    _import_structure["models.mpt"].extend(["MPT"])
     _import_structure["models.auto"].extend(["AutoLLM", "MODEL_MAPPING"])
 
 try:
