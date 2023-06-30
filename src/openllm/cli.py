@@ -1089,7 +1089,7 @@ def build(
     build_ctx: str | None,
     machine: bool,
     model_version: str | None,
-    dockerfile_template: str | t.TextIO | None,
+    dockerfile_template: t.TextIO | None,
     **attrs: t.Any,
 ):
     """Package a given models into a Bento.
@@ -1184,17 +1184,10 @@ def build(
         workers_per_resource = first_not_none(workers_per_resource, default=llm_config["workers_per_resource"])
 
         with fs.open_fs(f"temp://llm_{llm_config['model_name']}") as llm_fs:
+            dockerfile_template_path = None
             if dockerfile_template is not None:
-                if isinstance(dockerfile_template, str):
-                    try:
-                        dockerfile_template = resolve_user_filepath(dockerfile_template, build_ctx)
-                    except FileNotFoundError:
-                        raise openllm.exceptions.OpenLLMException(f"Given {dockerfile_template} cannot be resolved from {build_ctx}.")
-                else:
-                    llm_fs.touch("/Dockerfile.template")
-                    to_dump = llm_fs.getsyspath("/Dockerfile.template")
-                    llm_fs.writefile(to_dump ,dockerfile_template)
-                    dockerfile_template = to_dump
+                llm_fs.writetext("Dockerfile.template" ,dockerfile_template.read())
+                dockerfile_template_path = llm_fs.getsyspath("/Dockerfile.template")
 
             bento_tag = bentoml.Tag.from_taglike(f"{llm.llm_type}-service:{llm.tag.version}")
             try:
@@ -1213,7 +1206,7 @@ def build(
                         bettertransformer=bettertransformer,
                         extra_dependencies=enable_features,
                         build_ctx=build_ctx,
-                        dockerfile_template=dockerfile_template,
+                        dockerfile_template=dockerfile_template_path,
                     )
                 _previously_built = True
             except bentoml.exceptions.NotFound:
@@ -1232,7 +1225,7 @@ def build(
     except Exception as e:
         logger.error("\nException caught during building LLM %s: \n", model_name, exc_info=e)
         raise
-    finally:
+    else:
         del os.environ["OPENLLM_MODEL"]
         del os.environ["OPENLLM_MODEL_ID"]
         del os.environ["OPENLLM_ADAPTER_MAP"]

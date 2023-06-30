@@ -74,6 +74,7 @@ def fixture_dockerfile_template(tmp_path_factory: pytest.TempPathFactory):
                 "{% block SETUP_BENTO_ENTRYPOINT %}",
                 "{{ super() }}",
                 "RUN echo 'sanity from custom dockerfile'",
+                "{% endblock %}",
             ]
         )
     )
@@ -86,5 +87,5 @@ def test_build_with_custom_dockerfile(dockerfile_template: Path):
         "flan-t5",
         model_id=HF_INTERNAL_T5_TESTING,
         overwrite_existing_bento=True,
-        dockerfile_template=dockerfile_template.__fspath__(),
+        dockerfile_template=str(dockerfile_template),
     )
