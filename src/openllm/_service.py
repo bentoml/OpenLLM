@@ -63,6 +63,9 @@ warnings.filterwarnings(
 __serving__ = False  # openllm: serving
 
 model = os.environ.get("OPENLLM_MODEL", "{__model_name__}")  # openllm: model name
+# NOTE: The default value is used when running inside the container
+# OPENLLM_MODEL_ID must be set when running this service from `bentoml serve`
+# See `openllm start {__bento_name__} -h for more information`
 model_id = os.environ.get("OPENLLM_MODEL_ID", os.path.abspath("{__model_id__}"))  # openllm: model id
 adapter_map = os.environ.get("OPENLLM_ADAPTER_MAP", """{__model_adapter_map__}""")  # openllm: model adapter map
 

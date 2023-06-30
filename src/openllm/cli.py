@@ -33,6 +33,7 @@ import typing as t
 import click
 import click_option_group as cog
 import fs
+import fs.errors
 import inflection
 import orjson
 import psutil
@@ -43,6 +44,7 @@ from simple_di import inject
 
 import bentoml
 import openllm
+from bentoml._internal.models.model import ModelStore
 from bentoml._internal.configuration.containers import BentoMLContainer
 
 from .__about__ import __version__
@@ -765,7 +767,8 @@ def start_mixin(
             " " if _bentoml_config_options_env else "" + " ".join(_bentoml_config_options_opts)
         )
 
-        serve_cmd_equi = f"BENTOML_DEBUG={get_debug_mode()} BENTOML_CONFIG_OPTIONS='{_bentoml_config_options_env}' bentoml {'serve-http' if not serve_grpc else 'serve-grpc'} {model_name_or_bento.tag!s}"
+        serve_cmd_equi = f"OPENLLM_MODEL_ID=$(bentoml models get {model_name_or_bento.info.labels['_framework']}-{model_name_or_bento.info.labels['_type']} -o path)"
+        serve_cmd_equi += f" BENTOML_DEBUG={get_debug_mode()} BENTOML_CONFIG_OPTIONS='{_bentoml_config_options_env}' bentoml {'serve-http' if not serve_grpc else 'serve-grpc'} {model_name_or_bento.tag!s}"
         command_attrs[
             "help"
         ] = f"""\
@@ -957,6 +960,17 @@ BENTOML_CONFIG_OPTIONS += ' runners."llm-{llm_config['start_name']}-runner".reso
                     env.config: config.model_dump_json().decode(),
                 }
             )
+
+            try:
+                # previous behaviour
+                model_store = ModelStore(model_name_or_bento._fs.opendir('models'))
+            except fs.errors.ResourceNotFound:
+                # the new behaviour of model store from bento
+                model_store = BentoMLContainer.model_store.get()
+
+            llm_model = model_store.get(f'{model_name_or_bento.info.labels["_framework"]}-{model_name_or_bento.info.labels["_type"]}')
+            start_env['OPENLLM_MODEL_ID'] = llm_model.path
+
             if adapter_map:
                 _echo(
                     f"OpenLLM will convert '{model_name_or_bento.tag!s}' to use provided adapters layers: {list(adapter_map)}"
@@ -1185,8 +1199,9 @@ def build(
 
         with fs.open_fs(f"temp://llm_{llm_config['model_name']}") as llm_fs:
             dockerfile_template_path = None
-            if dockerfile_template is not None:
-                llm_fs.writetext("Dockerfile.template" ,dockerfile_template.read())
+            if dockerfile_template:
+                with dockerfile_template:
+                    llm_fs.writetext("Dockerfile.template" ,dockerfile_template.read())
                 dockerfile_template_path = llm_fs.getsyspath("/Dockerfile.template")
 
             bento_tag = bentoml.Tag.from_taglike(f"{llm.llm_type}-service:{llm.tag.version}")
@@ -1220,7 +1235,7 @@ def build(
                     bettertransformer=bettertransformer,
                     extra_dependencies=enable_features,
                     build_ctx=build_ctx,
-                    dockerfile_template=dockerfile_template,
+                        dockerfile_template=dockerfile_template_path,
                 )
     except Exception as e:
         logger.error("\nException caught during building LLM %s: \n", model_name, exc_info=e)
