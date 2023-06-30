@@ -21,6 +21,7 @@ from __future__ import annotations
 import functools
 import importlib.util
 import inspect
+import tempfile
 import itertools
 import logging
 import os
@@ -1073,6 +1074,7 @@ start_grpc = functools.partial(_start, _serve_grpc=True)
     type=click.STRING,
     help="Model version provided for this 'model-id' if it is a custom path.",
 )
+@click.option('--dockerfile-template', default=None, type=click.File(), help="Optional custom dockerfile template to be used with this BentoLLM.")
 @click.pass_context
 def build(
     ctx: click.Context,
@@ -1088,6 +1090,7 @@ def build(
     build_ctx: str | None,
     machine: bool,
     model_version: str | None,
+    dockerfile_template: str | t.TextIO | None,
     **attrs: t.Any,
 ):
     """Package a given models into a Bento.
@@ -1182,6 +1185,17 @@ def build(
         workers_per_resource = first_not_none(workers_per_resource, default=llm_config["workers_per_resource"])
 
         with fs.open_fs(f"temp://llm_{llm_config['model_name']}") as llm_fs:
+            if dockerfile_template is not None:
+                if isinstance(dockerfile_template, str):
+                    try:
+                        dockerfile_template = resolve_user_filepath(dockerfile_template, build_ctx)
+                    except FileNotFoundError:
+                        raise openllm.exceptions.OpenLLMException(f"Given {dockerfile_template} cannot be resolved from {build_ctx}.")
+                else:
+                    to_dump = llm_fs.getsyspath("/Dockerfile.template")
+                    llm_fs.writefile(to_dump ,dockerfile_template)
+                    dockerfile_template = to_dump
+
             bento_tag = bentoml.Tag.from_taglike(f"{llm.llm_type}-service:{llm.tag.version}")
             try:
                 bento = bentoml.get(bento_tag)
@@ -1199,6 +1213,7 @@ def build(
                         bettertransformer=bettertransformer,
                         extra_dependencies=enable_features,
                         build_ctx=build_ctx,
+                        dockerfile_template=dockerfile_template,
                     )
                 _previously_built = True
             except bentoml.exceptions.NotFound:
@@ -1212,6 +1227,7 @@ def build(
                     bettertransformer=bettertransformer,
                     extra_dependencies=enable_features,
                     build_ctx=build_ctx,
+                    dockerfile_template=dockerfile_template,
                 )
     except Exception as e:
         logger.error("\nException caught during building LLM %s: \n", model_name, exc_info=e)
