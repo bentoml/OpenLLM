@@ -65,6 +65,9 @@ all = [
     "openllm[falcon]",
     "openllm[mpt]",
     "openllm[flan-t5]",
+    "openllm[openai]",
+    "openllm[playground]",
+    "openllm[agents]",
     "openllm[fine-tune]",
     "openllm[agents]",
     "openllm[openai]",
@@ -75,6 +78,7 @@ fine-tune = ["peft", "bitsandbytes", "datasets", "accelerate", "deepspeed", "trl
 flan-t5 = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
 mpt = ["triton"]
 openai = ["openai", "tiktoken"]
+playground = ["jupyter", "notebook", "ipython", "jupytext"]
 starcoder = ["bitsandbytes"]
 
 [project.urls]

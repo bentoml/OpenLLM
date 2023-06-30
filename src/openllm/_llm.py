@@ -83,6 +83,7 @@ if t.TYPE_CHECKING:
     from bentoml._internal.runner.strategy import Strategy
 
     from ._configuration import AdapterType
+    from ._types import P
     from .models.auto.factory import _BaseAutoLLMClass
     from .utils.representation import ReprArgs
 
@@ -151,7 +152,7 @@ FRAMEWORK_TO_AUTOCLASS_MAPPING = {
 # NOTE: This is a custom mapping for the autoclass to be used when loading as path
 # since will try to infer the auto class to load, we will need this mapping
 # in addition to FRAMEWORK_TO_AUTOCLASS_MAPPING for it to work properly.
-MODEL_TO_AUTOCLASS_MAPPING = {"falcon": {"pt": "AutoModelForCausalLM"}}
+MODEL_TO_AUTOCLASS_MAPPING = {"falcon": {"pt": "AutoModelForCausalLM"}, "chatglm": {"pt": "AutoModel"}}
 
 TOKENIZER_PREFIX = "_tokenizer_"
 
@@ -167,6 +168,15 @@ def convert_transformers_model_name(name: str) -> str:
 
 # the below is similar to peft.utils.other.CONFIG_NAME
 PEFT_CONFIG_NAME = "adapter_config.json"
+
+
+def normalize_attrs_to_model_tokenizer_pair(**attrs: t.Any) -> tuple[DictStrAny, DictStrAny]:
+    # normalize kwargs with model attrs and tokenizer attrs starting with _tokenizer
+    tokenizer_attrs = {k[len(TOKENIZER_PREFIX) :]: v for k, v in attrs.items() if k.startswith(TOKENIZER_PREFIX)}
+    for k in tuple(attrs.keys()):
+        if k.startswith(TOKENIZER_PREFIX):
+            del attrs[k]
+    return attrs, tokenizer_attrs
 
 
 def resolve_peft_config_type(adapter_map: dict[str, str | None] | None):
@@ -420,6 +430,7 @@ class LLMInterface(ABC, t.Generic[_M, _T]):
 
     bettertransformer: bool
     """Whether to load this LLM with FasterTransformer enabled. The order of loading is:
+
     - If pass within `for_model`, `from_pretrained` or `__init__`.
     - If `self.bettertransformer` is set within `llm_post_init`.
     - Finally, if none of the above, default to self.config['bettertransformer']
@@ -699,6 +710,33 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
             **attrs,
         )
 
+    def save_pretrained(
+        self,
+        save_directory: str,
+        is_main_process: bool = True,
+        state_dict: DictStrAny | None = None,
+        save_function: t.Callable[P, None] = torch.save,
+        push_to_hub: bool = False,
+        max_shard_size: int | str = "10GB",
+        safe_serialization: bool = False,
+        variant: str | None = None,
+        **attrs: t.Any,
+    ) -> None:
+        self.ensure_model_id_exists()
+        model_save_attrs, tokenizer_save_attrs = normalize_attrs_to_model_tokenizer_pair(**attrs)
+        self.model.save_pretrained(
+            save_directory,
+            is_main_process=is_main_process,
+            state_dict=state_dict,
+            save_function=save_function,
+            push_to_hub=push_to_hub,
+            max_shard_size=max_shard_size,
+            safe_serialization=safe_serialization,
+            variant=variant,
+            **model_save_attrs,
+        )
+        self.tokenizer.save_pretrained(save_directory, push_to_hub=push_to_hub, **tokenizer_save_attrs)
+
     def __init__(
         self,
         model_id: str | None = None,
@@ -803,6 +841,7 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
         # this is helpful on system with low memory to avoid OOM
         low_cpu_mem_usage = attrs.pop("low_cpu_mem_usage", True)
         quantization_config = attrs.pop("quantization_config", None)
+        self.quantization_config = quantization_config
 
         if llm_config is not None:
             if DEBUG and int(os.environ.get("OPENLLMDEVDEBUG", str(0))) > 3:
@@ -822,7 +861,7 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
         model_kwds, tokenizer_kwds = {}, {}
         if self.__llm_init_kwargs__:
             # NOTE: recast here for type safety
-            model_kwds, tokenizer_kwds = t.cast("tuple[dict[str, t.Any], dict[str, t.Any]]", self.__llm_init_kwargs__)
+            model_kwds, tokenizer_kwds = t.cast("tuple[DictStrAny, DictStrAny]", self.__llm_init_kwargs__)
             logger.debug(
                 '\'%s\' default kwargs for model: "%s", tokenizer: "%s"',
                 self.__class__.__name__,
@@ -833,16 +872,15 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
         if model_id is None:
             model_id = os.environ.get(self.config["env"].model_id, self.config["default_id"])
 
-        # NOTE: This is the actual given path or pretrained weight for this LLM.
+        # ; NOTE: This is the actual given path or pretrained weight for this LLM.
         assert model_id is not None
         self._model_id = model_id
         self._model_id_is_path = os.path.exists(os.path.dirname(os.path.abspath(model_id)))
 
         # parsing tokenizer and model kwargs, as the hierachy is param pass > default
-        tokenizer_kwds.update(
-            {k[len(TOKENIZER_PREFIX) :]: v for k, v in attrs.items() if k.startswith(TOKENIZER_PREFIX)}
-        )
-        model_kwds.update({k: v for k, v in attrs.items() if not k.startswith(TOKENIZER_PREFIX)})
+        normalized_model_kwds, normalized_tokenizer_kwds = normalize_attrs_to_model_tokenizer_pair(**attrs)
+        tokenizer_kwds.update(normalized_tokenizer_kwds)
+        model_kwds.update(normalized_model_kwds)
 
         # handle trust_remote_code
         self.__llm_trust_remote_code__ = model_kwds.pop("trust_remote_code", self.config["trust_remote_code"])
@@ -930,6 +968,17 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
         It returns a tuple of (model_args, model_kwargs) & tokenizer_kwargs
         """
         return (self._model_args, self._model_attrs), self._tokenizer_attrs
+
+    @property
+    def tag(self) -> bentoml.Tag:
+        if self.__llm_tag__ is None:
+            self.__llm_tag__ = self.make_tag(
+                self._model_id,
+                self.__llm_trust_remote_code__,
+                self._openllm_model_version,
+                self.__llm_implementation__,
+            )
+        return self.__llm_tag__
 
     @staticmethod
     def make_tag(
@@ -1036,7 +1085,7 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
                 except bentoml.exceptions.NotFound:
                     with bentoml.models.create(
                         self.tag,
-                        module="openllm._llm",
+                        module=self.__module__,
                         api_version="v1",
                         context=generate_context(framework_name="openllm"),
                         options=ModelOptions(),
@@ -1045,7 +1094,7 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
                             importlib.import_module(self.model.__module__),
                             importlib.import_module(self.tokenizer.__module__),
                         ],
-                        metadata={
+                        metadata={  # similar to bentoml.transformers metadata
                             "_pretrained_class": self.model.__class__.__name__,
                             "_framework": self.model.framework,
                         },
@@ -1074,17 +1123,6 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
                 # or pass `ensure_available=True` into the Auto LLM initialisation.
                 self.__llm_bentomodel__ = bentoml.transformers.get(self.tag)
         return self.__llm_bentomodel__
-
-    @property
-    def tag(self) -> bentoml.Tag:
-        if self.__llm_tag__ is None:
-            self.__llm_tag__ = self.make_tag(
-                self._model_id,
-                self.__llm_trust_remote_code__,
-                self._openllm_model_version,
-                self.__llm_implementation__,
-            )
-        return self.__llm_tag__
 
     @property
     def model(self) -> _M:
@@ -1376,7 +1414,7 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
         """
         models = models if models is not None else []
 
-        if not serving:
+        if str(serving).upper() not in ENV_VARS_TRUE_VALUES:
             models.append(self._bentomodel)
 
         if scheduling_strategy is None:

@@ -1,0 +1,12 @@
+opt_tuned:
+  description: |
+    Fine tuning OPT
+
+    This script demonstrate how one can easily fine tune OPT
+    with [LoRA](https://arxiv.org/abs/2106.09685) and in int8 with bitsandbytes.
+
+    It is based on one of the Peft examples fine tuning script.
+    It requires at least one GPU to be available, so make sure to have it.
+
+    python -m openllm.playground.opt_tuned --help
+features:

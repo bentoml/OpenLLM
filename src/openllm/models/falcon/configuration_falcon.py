@@ -38,13 +38,22 @@ class FalconConfig(openllm.LLMConfig):
             "tiiuae/falcon-7b-instruct",
             "tiiuae/falcon-40b-instruct",
         ],
+        "fine_tune_strategies": (
+            {
+                "adapter_type": "lora",
+                "r": 64,
+                "lora_alpha": 16,
+                "lora_dropout": 0.1,
+                "bias": "none",
+                "target_modules": ["query_key_value", "dense", "dense_h_to_4h", "dense_4h_to_h"],
+            },
+        ),
     }
 
     class GenerationConfig:
         max_new_tokens: int = 200
         top_k: int = 10
         num_return_sequences: int = 1
-        eos_token_id: int = 11  # NOTE: Get from tokenizer.eos_token_id
         num_beams: int = 4
         early_stopping: bool = True
 

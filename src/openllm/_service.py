@@ -77,7 +77,7 @@ runner = openllm.Runner(
     llm_config=llm_config,
     ensure_available=False,
     adapter_map=orjson.loads(adapter_map),
-    serving=__serving__,
+    serving=os.environ.get("OPENLLM_SERVING", __serving__),
 )
 
 svc = bentoml.Service(name=f"llm-{llm_config['start_name']}-service", runners=[runner])

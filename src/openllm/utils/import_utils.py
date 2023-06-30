@@ -51,7 +51,17 @@ else:
 
 logger = logging.getLogger(__name__)
 
-OPTIONAL_DEPENDENCIES = {"fine-tune", "flan-t5", "mpt", "falcon", "starcoder", "chatglm", "openai", "agents"}
+OPTIONAL_DEPENDENCIES = {
+    "fine-tune",
+    "flan-t5",
+    "mpt",
+    "falcon",
+    "starcoder",
+    "chatglm",
+    "openai",
+    "agents",
+    "playground",
+}
 ENV_VARS_TRUE_VALUES = {"1", "ON", "YES", "TRUE"}
 ENV_VARS_TRUE_AND_AUTO_VALUES = ENV_VARS_TRUE_VALUES.union({"AUTO"})
 

@@ -950,6 +950,7 @@ BENTOML_CONFIG_OPTIONS += ' runners."llm-{llm_config['start_name']}-runner".reso
                     "OPENLLM_MODEL": model_name_or_bento,
                     "OPENLLM_MODEL_ID": llm.model_id,
                     "OPENLLM_ADAPTER_MAP": orjson.dumps(adapter_map).decode(),
+                    "OPENLLM_SERVING": str(True)
                 }
             )
         else:
