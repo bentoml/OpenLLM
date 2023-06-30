@@ -125,12 +125,12 @@
         on-send-click #(rf/dispatch [:on-send-button-click @chat-input-sub db/standard-llm-config])]
     (fn chat-controls
       []
-      [:div {:class "fixed bottom-0 px-4 py-2 mt-6 w-full"}
+      [:div {:class "fixed bottom-0 px-4 py-2 mt-6 w-10/12"}
        [:form {:class "flex items-center justify-between"
                :on-submit #(do % (on-send-click)
                                (.preventDefault %))}
-        [:input {:class "py-1 w-[calc(100%_-_80px)] appearance-none block border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm"
-                 :type "text" :placeholder "Type your message..."
+        [:textarea {:class "py-1 w-[calc(100%_-_80px)] appearance-none block border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm"
+                 :type "text" :placeholder "Type your prompt..."
                  :value @chat-input-sub
                  :on-change on-change
                  :id "chat-input"
