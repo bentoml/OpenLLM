@@ -28,10 +28,10 @@ from pathlib import Path
 import fs
 import fs.copy
 import orjson
+from packaging.version import Version
 from simple_di import Provide
 from simple_di import inject
 
-from packaging.version import Version
 import bentoml
 import openllm
 from bentoml._internal.bento.build_config import BentoBuildConfig

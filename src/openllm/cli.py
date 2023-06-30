@@ -21,7 +21,6 @@ from __future__ import annotations
 import functools
 import importlib.util
 import inspect
-import tempfile
 import itertools
 import logging
 import os
