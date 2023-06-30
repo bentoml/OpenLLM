@@ -26,7 +26,6 @@ import logging
 import os
 import re
 import sys
-import tempfile
 import time
 import traceback
 import typing as t
@@ -1192,6 +1191,7 @@ def build(
                     except FileNotFoundError:
                         raise openllm.exceptions.OpenLLMException(f"Given {dockerfile_template} cannot be resolved from {build_ctx}.")
                 else:
+                    llm_fs.touch("/Dockerfile.template")
                     to_dump = llm_fs.getsyspath("/Dockerfile.template")
                     llm_fs.writefile(to_dump ,dockerfile_template)
                     dockerfile_template = to_dump
