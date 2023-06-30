@@ -1786,6 +1786,9 @@ def playground(port: int, output_dir: str | None):
     if output_dir is None:
         _temp_dir = True
         output_dir = tempfile.mkdtemp(prefix="openllm-playground-")
+    else:
+        os.makedirs(os.path.abspath(os.path.expandvars(os.path.expanduser(output_dir))), exist_ok=True)
+
     _echo("The playground notebooks will be saved to: " + output_dir, fg="blue")
     for module in pkgutil.iter_modules(openllm.playground.__path__):
         if module.ispkg or os.path.exists(os.path.join(output_dir, module.name + ".ipynb")):

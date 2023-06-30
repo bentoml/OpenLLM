@@ -21,9 +21,12 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("question", default=question)
 
-    args = parser.parse_args()
+    if openllm.utils.in_notebook():
+        args = parser.parse_args(args=[question])
+    else:
+        args = parser.parse_args()
 
-    model = openllm.AutoLLM.for_model("opt", model_id="facebook/opt-2.7b")
+    model = openllm.AutoLLM.for_model("opt", model_id="facebook/opt-2.7b", ensure_available=True)
     prompt = Q.format(q=args.question)
 
     logger.info("-" * 50, "Running with 'generate()'", "-" * 50)
