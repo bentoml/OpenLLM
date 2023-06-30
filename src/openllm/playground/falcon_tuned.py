@@ -90,6 +90,7 @@ model, tokenizer = openllm.AutoLLM.for_model(
         "dense_4h_to_h",
     ],
 )
+model.config.use_cache = False
 tokenizer.pad_token = tokenizer.eos_token
 
 dataset = load_dataset(DATASET_NAME, split="train")
