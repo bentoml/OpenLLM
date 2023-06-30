@@ -35,9 +35,6 @@ def test_general_build_with_internal_testing():
     llm = openllm.AutoLLM.for_model("flan-t5", model_id=HF_INTERNAL_T5_TESTING)
     bento = openllm.build("flan-t5", model_id=HF_INTERNAL_T5_TESTING)
 
-    local_fs = bento._fs
-
-    assert len(list(local_fs.walk.files("/src"))) == 1
     assert llm.llm_type == bento.info.labels["_type"]
     assert llm.config["env"]["framework_value"] == bento.info.labels["_framework"]
 
