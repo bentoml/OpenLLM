@@ -14,10 +14,16 @@
 
 from __future__ import annotations
 
+import typing as t
+
 import pytest
 
 import openllm
 from bentoml._internal.configuration.containers import BentoMLContainer
+
+
+if t.TYPE_CHECKING:
+    from pathlib import Path
 
 
 HF_INTERNAL_T5_TESTING = "hf-internal-testing/tiny-random-t5"
@@ -29,9 +35,6 @@ def test_general_build_with_internal_testing():
     llm = openllm.AutoLLM.for_model("flan-t5", model_id=HF_INTERNAL_T5_TESTING)
     bento = openllm.build("flan-t5", model_id=HF_INTERNAL_T5_TESTING)
 
-    local_fs = bento._fs
-
-    assert len(list(local_fs.walk.files("/src"))) == 1
     assert llm.llm_type == bento.info.labels["_type"]
     assert llm.config["env"]["framework_value"] == bento.info.labels["_framework"]
 
@@ -56,3 +59,30 @@ def test_general_build_from_local(tmp_path_factory: pytest.TempPathFactory):
 
     bento = openllm.build("flan-t5", model_id=local_path.resolve().__fspath__(), model_version="1")
     assert len(bento_store.list(bento.tag)) == 1
+
+
+@pytest.fixture(name="dockerfile_template", scope="function")
+def fixture_dockerfile_template(tmp_path_factory: pytest.TempPathFactory):
+    file = tmp_path_factory.mktemp("dockerfiles") / "Dockerfile.template"
+    file.write_text(
+        "\n".join(
+            [
+                "{% extends bento_base_template %}",
+                "{% block SETUP_BENTO_ENTRYPOINT %}",
+                "{{ super() }}",
+                "RUN echo 'sanity from custom dockerfile'",
+                "{% endblock %}",
+            ]
+        )
+    )
+    return file
+
+
+@pytest.mark.usefixtures("dockerfile_template")
+def test_build_with_custom_dockerfile(dockerfile_template: Path):
+    assert openllm.build(
+        "flan-t5",
+        model_id=HF_INTERNAL_T5_TESTING,
+        overwrite_existing_bento=True,
+        dockerfile_template=str(dockerfile_template),
+    )

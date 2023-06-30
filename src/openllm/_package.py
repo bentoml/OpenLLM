@@ -27,7 +27,9 @@ from pathlib import Path
 
 import fs
 import fs.copy
+import fs.errors
 import orjson
+from packaging.version import Version
 from simple_di import Provide
 from simple_di import inject
 
@@ -89,9 +91,26 @@ def build_editable(path: str) -> str | None:
     )
 
 
+def handle_package_version(package: str, has_dockerfile_template: bool, lower_bound: bool = True):
+    version = Version(pkg.get_pkg_version(package))
+    if version.is_devrelease:
+        if has_dockerfile_template:
+            logger.warning(
+                "Installed %s has version %s as a dev release. This means you have a custom build of %s with %s. Make sure to use custom dockerfile templates (--dockerfile-template) to setup %s correctly. See https://docs.bentoml.com/en/latest/guides/containerization.html#dockerfile-template for more information.",
+                package,
+                version,
+                package,
+                "CUDA support" if "cu" in str(version) else "more features",
+                package,
+            )
+        return package
+    return f"{package}>={importlib.metadata.version(package)}" if lower_bound else package
+
+
 def construct_python_options(
     llm: openllm.LLM[t.Any, t.Any],
     llm_fs: FS,
+    has_dockerfile_template: bool,
     extra_dependencies: tuple[str, ...] | None = None,
     adapter_map: dict[str, str | None] | None = None,
 ) -> PythonOptions:
@@ -118,9 +137,9 @@ def construct_python_options(
         assert is_flax_available(), f"Flax is not available, while {env.framework} is set to 'flax'"
         packages.extend(
             [
-                f"flax>={importlib.metadata.version('flax')}",
-                f"jax>={importlib.metadata.version('jax')}",
-                f"jaxlib>={importlib.metadata.version('jaxlib')}",
+                handle_package_version("flax", has_dockerfile_template),
+                handle_package_version("jax", has_dockerfile_template),
+                handle_package_version("jaxlib", has_dockerfile_template),
             ]
         )
     elif framework_envvar == "tf":
@@ -140,14 +159,18 @@ def construct_python_options(
         # For the metadata, we have to look for both tensorflow and tensorflow-cpu
         for candidate in candidates:
             try:
-                _tf_version = importlib.metadata.version(candidate)
-                packages.extend([f"tensorflow>={_tf_version}"])
+                pkgver = handle_package_version(candidate, has_dockerfile_template)
+                if pkgver == candidate:
+                    packages.extend(["tensorflow"])
+                else:
+                    _tf_version = importlib.metadata.version(candidate)
+                    packages.extend([f"tensorflow>={_tf_version}"])
                 break
             except importlib.metadata.PackageNotFoundError:
                 pass
     else:
         assert is_torch_available(), "PyTorch is not available. Make sure to have it locally installed."
-        packages.extend([f"torch>={importlib.metadata.version('torch')}"])
+        packages.extend([handle_package_version("torch", has_dockerfile_template)])
 
     wheels: list[str] = []
     built_wheels = build_editable(llm_fs.getsyspath("/"))
@@ -164,6 +187,7 @@ def construct_docker_options(
     quantize: t.LiteralString | None,
     bettertransformer: bool | None,
     adapter_map: dict[str, str | None] | None,
+    dockerfile_template: str | None,
 ) -> DockerOptions:
     _bentoml_config_options = os.environ.pop("BENTOML_CONFIG_OPTIONS", "")
     _bentoml_config_options_opts = [
@@ -178,7 +202,6 @@ def construct_docker_options(
         env.framework: env.framework_value,
         env.config: f"'{llm.config.model_dump_json().decode()}'",
         "OPENLLM_MODEL": llm.config["model_name"],
-        "OPENLLM_MODEL_ID": llm.model_id,
         "OPENLLM_ADAPTER_MAP": f"'{orjson.dumps(adapter_map).decode()}'",
         "BENTOML_DEBUG": str(get_debug_mode()),
         "BENTOML_CONFIG_OPTIONS": _bentoml_config_options,
@@ -196,10 +219,12 @@ def construct_docker_options(
     if _env.quantize_value is not None:
         env_dict[_env.quantize] = _env.quantize_value
 
-    # NOTE: Torch 2.0 currently only support 11.6 as the latest CUDA version
-    return DockerOptions(cuda_version="11.6", env=env_dict, system_packages=["git"])
+    return DockerOptions(
+        cuda_version="11.7", env=env_dict, system_packages=["git"], dockerfile_template=dockerfile_template
+    )
 
 
+@inject
 def create_bento(
     bento_tag: bentoml.Tag,
     llm_fs: FS,
@@ -207,9 +232,11 @@ def create_bento(
     workers_per_resource: int | float,
     quantize: t.LiteralString | None,
     bettertransformer: bool | None,
+    dockerfile_template: str | None,
     adapter_map: dict[str, str | None] | None = None,
     extra_dependencies: tuple[str, ...] | None = None,
     build_ctx: str | None = None,
+    _model_store: ModelStore = Provide[BentoMLContainer.model_store],
 ) -> bentoml.Bento:
     framework_envvar = llm.config["env"]["framework_value"]
     labels = dict(llm.identifying_params)
@@ -249,8 +276,22 @@ def create_bento(
         description=f"OpenLLM service for {llm.config['start_name']}",
         include=list(llm_fs.walk.files()),
         exclude=["/venv", "/.venv", "__pycache__/", "*.py[cod]", "*$py.class"],
-        python=construct_python_options(llm, llm_fs, extra_dependencies, adapter_map),
-        docker=construct_docker_options(llm, llm_fs, workers_per_resource, quantize, bettertransformer, adapter_map),
+        python=construct_python_options(
+            llm,
+            llm_fs,
+            dockerfile_template is None,
+            extra_dependencies,
+            adapter_map,
+        ),
+        docker=construct_docker_options(
+            llm,
+            llm_fs,
+            workers_per_resource,
+            quantize,
+            bettertransformer,
+            adapter_map,
+            dockerfile_template,
+        ),
     )
 
     bento = bentoml.Bento.create(
@@ -262,14 +303,19 @@ def create_bento(
     # Now we have to format the model_id accordingly based on the model_fs
     model_type = bento.info.labels["_type"]
     model_framework = bento.info.labels["_framework"]
-    model_store = ModelStore(bento._fs.opendir("models"))
     # the models should have the type
     try:
+        model_store = ModelStore(bento._fs.opendir("models"))
         model = model_store.get(f"{model_framework}-{model_type}")
+    except fs.errors.ResourceNotFound:
+        # new behaviour with BentoML models
+        model = _model_store.get(f"{model_framework}-{model_type}")
     except bentoml.exceptions.NotFound:
         raise openllm.exceptions.OpenLLMException(f"Failed to find models for {llm.config['start_name']}")
 
-    model_id_path = bento._fs.getsyspath(fs.path.join("models", model.tag.path()))
+    # NOTE: the model_id_path here are only used for setting this environment variable within the container
+    # built with for BentoLLM.
+    model_id_path = f"../models/{model.tag.name}/{model.tag.version}"
     service_fs_path = fs.path.join("src", llm.config["service_name"])
     service_path = bento._fs.getsyspath(service_fs_path)
     with open(service_path, "r") as f:
@@ -278,13 +324,12 @@ def create_bento(
     for it in service_contents:
         if codegen.OPENLLM_MODEL_ID in it:
             service_contents[service_contents.index(it)] = (
-                codegen.ModelIdFormatter(fs.path.relativefrom(bento._fs.getsyspath("/src"), model_id_path)).vformat(
-                    it
-                )[: -(len(codegen.OPENLLM_MODEL_ID) + 3)]
-                + "\n"
+                codegen.ModelIdFormatter(model_id_path).vformat(it)[: -(len(codegen.OPENLLM_MODEL_ID) + 3)] + "\n"
             )
         if codegen.OPENLLM_SERVING in it:
             service_contents[service_contents.index(it)] = "__serving__ = True\n"
+        if "__bento_name__" in it:
+            service_contents[service_contents.index(it)] = it.format(__bento_name__=str(bento.tag))
 
     script = "".join(service_contents)
 
@@ -309,6 +354,7 @@ def build(
     extra_dependencies: tuple[str, ...] | None = None,
     workers_per_resource: int | float | None = None,
     overwrite_existing_bento: bool = False,
+    dockerfile_template: str | None = None,
     bento_store: BentoStore = Provide[BentoMLContainer.bento_store],
 ) -> bentoml.Bento:
     """Package a LLM into a Bento.
@@ -345,6 +391,8 @@ def build(
         args.extend([f"--adapter-id={k}{':'+v if v is not None else ''}" for k, v in adapter_map.items()])
     if model_version:
         args.extend(["--model-version", model_version])
+    if dockerfile_template:
+        args.extend(["--dockerfile-template", dockerfile_template])
 
     try:
         output = subprocess.check_output(args, env=os.environ.copy(), cwd=build_ctx or os.getcwd())
