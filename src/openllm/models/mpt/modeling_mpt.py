@@ -47,9 +47,7 @@ def get_mpt_config(
     device_map: str | None = None,
     trust_remote_code: bool = True,
 ) -> transformers.PretrainedConfig:
-    config = transformers.AutoConfig.from_pretrained(
-        model_id_or_path, trust_remote_code=trust_remote_code
-    )
+    config = transformers.AutoConfig.from_pretrained(model_id_or_path, trust_remote_code=trust_remote_code)
     if hasattr(config, "init_device") and device_map is None and isinstance(device, (str, torch.device)):
         config.init_device = str(device)
     if hasattr(config, "attn_config") and is_triton_available():

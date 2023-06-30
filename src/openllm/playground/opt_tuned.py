@@ -26,14 +26,6 @@ if openllm.utils.DEBUG:
         raise SystemExit(1)
 
 from datasets import load_dataset
-from peft import LoraConfig
-from peft import get_peft_model
-
-
-if openllm.utils.pkg.pkg_version_info("peft")[:2] >= (0, 4):
-    from peft import prepare_model_for_kbit_training
-else:
-    from peft import prepare_model_for_int8_training as prepare_model_for_kbit_training
 
 import transformers
 
@@ -44,44 +36,19 @@ if t.TYPE_CHECKING:
 DEFAULT_MODEL_ID = "facebook/opt-6.7b"
 
 
-def load_model(model_id: str) -> tuple[PeftModel, transformers.GPT2TokenizerFast]:
-    opt = openllm.AutoLLM.for_model(
-        "opt",
-        model_id=model_id,
-        load_in_8bit=True,
-        ensure_available=True,
-    )
-
-    model, tokenizer = opt.model, opt.tokenizer
-
-    # prep the model for int8 training
-    model = prepare_model_for_kbit_training(model)
-
-    lora_config = LoraConfig(
-        r=16,
-        lora_alphadata=32,
-        target_modules=["q_proj", "v_proj"],
-        lora_dropout=0.05,
-        bias="none",
-        task_type="CAUSAL_LM",
-    )
-
-    model = get_peft_model(model, lora_config)
-    model.print_trainable_parameters()
-
-    return model, tokenizer
-
-
 def load_trainer(
     model: PeftModel,
     tokenizer: transformers.GPT2TokenizerFast,
     dataset_dict: t.Any,
-    training_args: transformers.TrainingArguments,
+    training_args: TrainingArguments,
 ):
     return transformers.Trainer(
         model=model,
         train_dataset=dataset_dict["train"],
-        args=training_args,
+        args=dataclasses.replace(
+            transformers.TrainingArguments(training_args.output_dir),
+            **dataclasses.asdict(training_args),
+        ),
         data_collator=transformers.DataCollatorForLanguageModeling(tokenizer, mlm=False),
     )
 
@@ -114,7 +81,19 @@ else:
     )
 
 
-model, tokenizer = load_model(model_args.model_id)
+model, tokenizer = openllm.AutoLLM.for_model(
+    "opt",
+    model_id=model_args.model_id,
+    quantize="int8",
+    ensure_available=True,
+).prepare_for_training(
+    adapter_type="lora",
+    r=16,
+    lora_alpha=32,
+    target_modules=["q_proj", "v_proj"],
+    lora_dropout=0.05,
+    bias="none",
+)
 
 # ft on english_quotes
 data = load_dataset("Abirate/english_quotes")

@@ -950,7 +950,7 @@ BENTOML_CONFIG_OPTIONS += ' runners."llm-{llm_config['start_name']}-runner".reso
                     "OPENLLM_MODEL": model_name_or_bento,
                     "OPENLLM_MODEL_ID": llm.model_id,
                     "OPENLLM_ADAPTER_MAP": orjson.dumps(adapter_map).decode(),
-                    "OPENLLM_SERVING": str(True)
+                    "OPENLLM_SERVING": str(True),
                 }
             )
         else:
@@ -962,13 +962,15 @@ BENTOML_CONFIG_OPTIONS += ' runners."llm-{llm_config['start_name']}-runner".reso
 
             try:
                 # previous behaviour
-                model_store = ModelStore(model_name_or_bento._fs.opendir('models'))
+                model_store = ModelStore(model_name_or_bento._fs.opendir("models"))
             except fs.errors.ResourceNotFound:
                 # the new behaviour of model store from bento
                 model_store = BentoMLContainer.model_store.get()
 
-            llm_model = model_store.get(f'{model_name_or_bento.info.labels["_framework"]}-{model_name_or_bento.info.labels["_type"]}')
-            start_env['OPENLLM_MODEL_ID'] = llm_model.path
+            llm_model = model_store.get(
+                f'{model_name_or_bento.info.labels["_framework"]}-{model_name_or_bento.info.labels["_type"]}'
+            )
+            start_env["OPENLLM_MODEL_ID"] = llm_model.path
 
             if adapter_map:
                 _echo(
@@ -1086,7 +1088,12 @@ start_grpc = functools.partial(_start, _serve_grpc=True)
     type=click.STRING,
     help="Model version provided for this 'model-id' if it is a custom path.",
 )
-@click.option('--dockerfile-template', default=None, type=click.File(), help="Optional custom dockerfile template to be used with this BentoLLM.")
+@click.option(
+    "--dockerfile-template",
+    default=None,
+    type=click.File(),
+    help="Optional custom dockerfile template to be used with this BentoLLM.",
+)
 @click.pass_context
 def build(
     ctx: click.Context,
@@ -1200,7 +1207,7 @@ def build(
             dockerfile_template_path = None
             if dockerfile_template:
                 with dockerfile_template:
-                    llm_fs.writetext("Dockerfile.template" ,dockerfile_template.read())
+                    llm_fs.writetext("Dockerfile.template", dockerfile_template.read())
                 dockerfile_template_path = llm_fs.getsyspath("/Dockerfile.template")
 
             bento_tag = bentoml.Tag.from_taglike(f"{llm.llm_type}-service:{llm.tag.version}")
@@ -1234,7 +1241,7 @@ def build(
                     bettertransformer=bettertransformer,
                     extra_dependencies=enable_features,
                     build_ctx=build_ctx,
-                        dockerfile_template=dockerfile_template_path,
+                    dockerfile_template=dockerfile_template_path,
                 )
     except Exception as e:
         logger.error("\nException caught during building LLM %s: \n", model_name, exc_info=e)

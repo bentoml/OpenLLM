@@ -1300,6 +1300,25 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
         return adapter_map
 
     @requires_dependencies("peft", extra="fine-tune")
+    def prepare_for_training(self, adapter_type: AdapterType = "lora", **attrs: t.Any) -> tuple[_M, _T]:
+        if pkg.pkg_version_info("peft")[:2] >= (0, 4):
+            from peft import prepare_model_for_kbit_training
+        else:
+            from peft import prepare_model_for_int8_training as prepare_model_for_kbit_training
+
+        peft_config = (
+            self.config["fine_tune_strategies"]
+            .get(adapter_type, FineTuneConfig(adapter_type=adapter_type, llm_config_class=self.config_class))
+            .train()
+            .with_config(**attrs)
+            .to_peft_config()
+        )
+        wrapped_peft = peft.get_peft_model(prepare_model_for_kbit_training(self.model), peft_config)
+        if DEBUG:
+            wrapped_peft.print_trainable_parameters()
+        return wrapped_peft, self.tokenizer
+
+    @requires_dependencies("peft", extra="fine-tune")
     def apply_adapter(
         self,
         inference_mode: bool = True,
