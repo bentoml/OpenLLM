@@ -11,12 +11,12 @@ python -m openllm.playground.features
 
 from __future__ import annotations
 
+import argparse
 import logging
+import typing as t
 
 import openllm
 
-import argparse
-import typing as t
 
 openllm.utils.configure_logging()
 
