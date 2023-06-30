@@ -6,10 +6,11 @@ import os
 import sys
 import typing as t
 
+import torch
+
 # import openllm here for OPENLLMDEVDEBUG
 import openllm
 import transformers
-import torch
 
 
 openllm.utils.configure_logging()
@@ -29,6 +30,7 @@ if openllm.utils.DEBUG:
 
 from datasets import load_dataset
 from trl import SFTTrainer
+
 
 DEFAULT_MODEL_ID = "ybelkada/falcon-7b-sharded-bf16"
 DATASET_NAME = "timdettmers/openassistant-guanaco"
