@@ -44,8 +44,8 @@ from simple_di import inject
 
 import bentoml
 import openllm
-from bentoml._internal.models.model import ModelStore
 from bentoml._internal.configuration.containers import BentoMLContainer
+from bentoml._internal.models.model import ModelStore
 
 from .__about__ import __version__
 from .exceptions import OpenLLMException
