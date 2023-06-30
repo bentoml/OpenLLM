@@ -8,6 +8,7 @@ import typing as t
 
 # import openllm here for OPENLLMDEVDEBUG
 import openllm
+import transformers
 
 
 openllm.utils.configure_logging()
@@ -26,8 +27,6 @@ if openllm.utils.DEBUG:
         raise SystemExit(1)
 
 from datasets import load_dataset
-
-import transformers
 
 
 if t.TYPE_CHECKING:
