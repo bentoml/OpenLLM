@@ -71,8 +71,6 @@ from .utils import set_quiet_mode
 if t.TYPE_CHECKING:
     import torch
 
-    from bentoml._internal.models import ModelStore
-
     from ._types import ClickFunctionWrapper
     from ._types import F
     from ._types import P
