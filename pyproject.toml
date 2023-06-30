@@ -5,11 +5,19 @@ requires = ["hatchling"]
 [project]
 authors = [{ name = "Aaron Pham", email = "aarnphm@bentoml.com" }]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: GPU :: NVIDIA CUDA",
+    "Environment :: GPU :: NVIDIA CUDA :: 12",
+    "Environment :: GPU :: NVIDIA CUDA :: 11.8",
+    "Environment :: GPU :: NVIDIA CUDA :: 11.7",
     "License :: OSI Approved :: Apache Software License",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Software Development :: Libraries",
     "Operating System :: OS Independent",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: System Administrators",
+    "Typing :: Typed",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
@@ -17,6 +25,7 @@ classifiers = [
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
@@ -44,7 +53,6 @@ keywords = [
     "LLMOps",
     "Large Language Model",
     "Generative AI",
-    "Stable Diffusion",
     "StableLM",
     "Alpaca",
     "PyTorch",
@@ -64,11 +72,11 @@ all = [
     "openllm[starcoder]",
     "openllm[falcon]",
     "openllm[mpt]",
+    "openllm[playground]",
+    "openllm[fine-tune]",
+    "openllm[openai]",
     "openllm[agents]",
     "openllm[flan-t5]",
-    "openllm[openai]",
-    "openllm[fine-tune]",
-    "openllm[playground]",
 ]
 chatglm = ["cpm-kernels", "sentencepiece"]
 falcon = ["einops", "xformers", "safetensors"]
@@ -76,7 +84,7 @@ fine-tune = ["peft", "bitsandbytes", "datasets", "accelerate", "deepspeed", "trl
 flan-t5 = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
 mpt = ["triton"]
 openai = ["openai", "tiktoken"]
-playground = ["jupyter", "notebook", "ipython", "jupytext"]
+playground = ["jupyter", "notebook", "ipython", "jupytext", "nbformat"]
 starcoder = ["bitsandbytes"]
 
 [project.urls]
@@ -179,14 +187,21 @@ ignore = [
     "B027",
     # Allow boolean positional values in function calls, like `dict.get(... True)`
     "FBT003",
+    # Ignore checks for possible passwords
+    "S105",
+    "S106",
+    "S107",
     # Ignore complexity
     "C901",
+    "PLR0911",
+    "PLR0912",
+    "PLR0913",
+    "PLR0915",
     # Never enforce `E501` (line length violations).
     "E501",
     "E741",
 ]
 line-length = 119
-select = ["C", "E", "F", "I", "W"]
 target-version = "py311"
 unfixable = [
     "F401", # Don't touch unused imports, just warn about it.

@@ -1,14 +1,3 @@
-"""
-General instroduction to OpenLLM.
-
-This script will demo a few features from OpenLLM:
-- Usage of Auto class abstraction and run prediction with 'generate'
-- Ability to set per-requests parameters
-- Runner integration with BentoML
-
-python -m openllm.playground.features
-"""
-
 from __future__ import annotations
 
 import argparse
@@ -62,5 +51,7 @@ def _mp_fn(index: t.Any):  # noqa # type: ignore
     main()
 
 
-if __name__ == "__main__":
+if openllm.utils.in_notebook():
+    main()
+else:
     raise SystemExit(main())

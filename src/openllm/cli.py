@@ -19,6 +19,10 @@ This extends BentoML's internal CLI CommandGroup.
 from __future__ import annotations
 
 import functools
+import tempfile
+import pkgutil
+import yaml
+import subprocess
 import importlib.util
 import inspect
 import itertools
@@ -62,7 +66,7 @@ from .utils import get_quiet_mode
 from .utils import gpu_count
 from .utils import is_peft_available
 from .utils import is_torch_available
-from .utils import is_transformers_supports_agent
+from .utils import is_transformers_supports_agent, is_jupyter_available, is_jupytext_available, is_notebook_available
 from .utils import resolve_user_filepath
 from .utils import set_debug_mode
 from .utils import set_quiet_mode
@@ -1743,6 +1747,65 @@ def download_models(
             torch.cuda.empty_cache()
 
     return _ref
+
+def load_notebook_metadata() -> dict[str, t.Any]:
+    with open(os.path.join(os.path.dirname(openllm.playground.__file__), '_meta.yml'), 'r') as f:
+        content = yaml.safe_load(f)
+    if not all('description' in k for k in content.values()):
+        raise ValueError("Invalid metadata file. All entries must have a 'description' key.")
+    return content
+
+@cli.command()
+@click.option("--port", envvar="JUPYTER_PORT", show_envvar=True, show_default=True, default=8888, help='Default port for Jupyter server')
+@click.option('--output-dir', default=None, help="Directory to save the generated notebooks. By default, it will use a temporary directory.")
+def playground(port: int, output_dir: str | None):
+    """OpenLLM Playground
+
+    A collections of notebooks to explore the capabilities of OpenLLM.
+    This includes notebooks for fine-tuning, inference, and more.
+
+    All of the script available in the playground can also be run directly as a Python script:
+    For example:
+
+    \b
+    ```bash
+    python -m openllm.playground.falcon_tuned --help
+    ```
+
+    \b
+    > Note: This command requires Jupyter to be installed. Install it with 'pip install "openllm[playground]"'
+    """
+    if not is_jupyter_available() or not is_jupytext_available() or not is_notebook_available():
+        raise RuntimeError("Playground requires 'jupyter', 'jupytext', and 'notebook'. Install it with 'pip install \"openllm[playground]\"'")
+
+    import jupytext
+    import nbformat
+
+    metadata = load_notebook_metadata()
+    _temp_dir = False
+    if output_dir is None:
+        _temp_dir = True
+        output_dir = tempfile.mkdtemp(prefix="openllm-playground-")
+    _echo("The playground notebooks will be saved to: " + output_dir, fg="blue")
+    for module in pkgutil.iter_modules(openllm.playground.__path__):
+        if module.ispkg or os.path.exists(os.path.join(output_dir, module.name + ".ipynb")):
+            logger.debug("Skipping: %s (%s)", module.name, "File already exists" if not module.ispkg else f"{module.name} is a module")
+            continue
+        _echo("Generating notebook for: " + module.name, fg="magenta")
+        markdown_cell = nbformat.v4.new_markdown_cell(metadata[module.name]['description'])
+        f = jupytext.read(os.path.join(module.module_finder.path, module.name + ".py"))
+        f.cells.insert(0, markdown_cell)
+        jupytext.write(f, os.path.join(output_dir, module.name + ".ipynb"), fmt='notebook')
+    try:
+        subprocess.check_output(['jupyter', 'notebook', '--notebook-dir', output_dir, '--port', str(port), '--no-browser', '--debug'])
+    except subprocess.CalledProcessError as e:
+        _echo(e.output, fg="red")
+        raise e
+    except KeyboardInterrupt:
+        _echo("Shutting down Jupyter server...", fg="yellow")
+        if _temp_dir:
+            _echo("Note: You can access the generated notebooks in: " + output_dir, fg="blue")
+
 
 
 if psutil.WINDOWS:

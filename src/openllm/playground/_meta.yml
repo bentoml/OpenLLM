@@ -12,15 +12,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+features:
+  description: |
+    ## General introduction to OpenLLM.
+
+    This script will demo a few features from OpenLLM:
+
+    - Usage of Auto class abstraction and run prediction with `generate`
+    - Ability to send per-requests parameters
+    - Runner integration with BentoML
 opt_tuned:
   description: |
-    Fine tuning OPT
+    ## Fine tuning OPT
 
     This script demonstrate how one can easily fine tune OPT
-    with [LoRA](https://arxiv.org/abs/2106.09685) and in int8 with bitsandbytes.
+    with [LoRa](https://arxiv.org/abs/2106.09685) and in int8 with bitsandbytes.
 
     It is based on one of the Peft examples fine tuning script.
     It requires at least one GPU to be available, so make sure to have it.
+falcon_tuned:
+  description: |
+    ## Fine tuning Falcon
 
-    python -m openllm.playground.opt_tuned --help
-features:
+    This script demonstrate how one can fine tune Falcon using [QLoRa](https://arxiv.org/pdf/2305.14314.pdf),
+    [trl](https://github.com/lvwerra/trl).
+
+    It is trained using OpenAssistant's Guanaco [dataset](https://huggingface.co/datasets/timdettmers/openassistant-guanaco)
+
+    It requires at least one GPU to be available, so make sure to have it.
