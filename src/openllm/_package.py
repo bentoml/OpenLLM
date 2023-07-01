@@ -42,6 +42,7 @@ from bentoml._internal.configuration import get_debug_mode
 from bentoml._internal.configuration.containers import BentoMLContainer
 from bentoml._internal.models.model import ModelStore
 
+from .exceptions import OpenLLMException
 from .utils import DEBUG
 from .utils import EnvVarMixin
 from .utils import codegen
@@ -311,7 +312,7 @@ def create_bento(
         # new behaviour with BentoML models
         model = _model_store.get(f"{model_framework}-{model_type}")
     except bentoml.exceptions.NotFound:
-        raise openllm.exceptions.OpenLLMException(f"Failed to find models for {llm.config['start_name']}")
+        raise OpenLLMException(f"Failed to find models for {llm.config['start_name']}")
 
     # NOTE: the model_id_path here are only used for setting this environment variable within the container
     # built with for BentoLLM.
@@ -368,9 +369,7 @@ def build(
     args = [sys.executable, "-m", "openllm", "build", model_name, "--machine"]
 
     if quantize and bettertransformer:
-        raise openllm.exceptions.OpenLLMException(
-            "'quantize' and 'bettertransformer' are currently mutually exclusive."
-        )
+        raise OpenLLMException("'quantize' and 'bettertransformer' are currently mutually exclusive.")
 
     if quantize:
         args.extend(["--quantize", quantize])
@@ -399,8 +398,8 @@ def build(
     except subprocess.CalledProcessError as e:
         logger.error("Exception caught while building %s", model_name, exc_info=e)
         if e.stderr:
-            raise openllm.exceptions.OpenLLMException(e.stderr.decode("utf-8")) from None
-        raise openllm.exceptions.OpenLLMException(str(e)) from None
+            raise OpenLLMException(e.stderr.decode("utf-8")) from None
+        raise OpenLLMException(str(e)) from None
     # NOTE: This usually only concern BentoML devs.
     pattern = r"^__tag__:[^:\n]+:[^:\n]+"
     matched = re.search(pattern, output.decode("utf-8").strip(), re.MULTILINE)

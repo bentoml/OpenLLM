@@ -4,7 +4,6 @@ from typing import List
 from typing import Optional
 from typing import Union
 
-
 _StringOrFunction = Union[str, Callable[..., Any]]
 STRATEGY_END: object = ...
 

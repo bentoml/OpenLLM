@@ -17,13 +17,14 @@ import typing as t
 
 import bentoml
 import openllm
-import transformers
 
 
 if t.TYPE_CHECKING:
     import torch
+    import transformers
 else:
     torch = openllm.utils.LazyLoader("torch", globals(), "torch")
+    transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
 
 
 class ChatGLM(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTrainedTokenizerFast"]):

@@ -9,7 +9,6 @@ from .strategy.dict import DictStrategies
 from .strategy.list import ListStrategies
 from .strategy.set import SetStrategies
 
-
 ConfigDictType = Dict[str, Any]
 
 class Merger:

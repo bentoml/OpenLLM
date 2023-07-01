@@ -19,8 +19,6 @@ import typing as t
 import bentoml
 import openllm
 
-from ..._generation import StopSequenceCriteria
-
 
 if t.TYPE_CHECKING:
     import torch
@@ -141,6 +139,8 @@ class StarCoder(openllm.LLM["transformers.GPTBigCodeForCausalLM", "transformers.
     def generate_one(
         self, prompt: str, stop: list[str], **preprocess_generate_kwds: t.Any
     ) -> list[dict[t.Literal["generated_text"], str]]:
+        from ..._generation import StopSequenceCriteria
+
         max_new_tokens = preprocess_generate_kwds.pop("max_new_tokens", 200)
         encoded_inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
         src_len = encoded_inputs["input_ids"].shape[1]

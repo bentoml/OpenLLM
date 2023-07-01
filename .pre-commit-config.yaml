@@ -28,8 +28,6 @@ repos:
     rev: 23.3.0
     hooks:
       - id: black-jupyter
-        files: '/(src|tests|docs|examples|typings|tools)/'
-        language_version: python3.11
   - repo: https://github.com/econchick/interrogate
     rev: 1.5.0
     hooks:

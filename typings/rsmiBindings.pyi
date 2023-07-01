@@ -2,7 +2,6 @@
 import ctypes
 from typing import LiteralString
 
-
 class rocmsmi(ctypes.CDLL):
     @staticmethod
     def rsmi_num_monitor_devices(num_devices: ctypes._CArgObject) -> LiteralString: ...

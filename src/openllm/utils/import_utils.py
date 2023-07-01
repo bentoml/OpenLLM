@@ -108,11 +108,14 @@ def is_transformers_supports_agent() -> bool:
 def is_jupyter_available() -> bool:
     return _jupyter_available
 
+
 def is_jupytext_available() -> bool:
     return _jupytext_available
 
+
 def is_notebook_available() -> bool:
     return _notebook_available
+
 
 def is_triton_available() -> bool:
     return _triton_available
@@ -387,6 +390,8 @@ class EnvVarMixin(ReprMixin):
     @overload
     def __getitem__(self, item: t.Literal['quantize_value']) -> str | None: ...
     @overload
+    def __getitem__(self, item: t.Literal['model_id_value']) -> str | None: ...
+    @overload
     def __getitem__(self, item: t.Literal['model_version_value']) -> str | None: ...
     @overload
     def __getitem__(self, item: t.Literal['bettertransformer_value']) -> str | None: ...
@@ -421,6 +426,7 @@ class EnvVarMixin(ReprMixin):
             "framework": (str, "pt"),
             "quantize": (str, quantize),
             "bettertransformer": (bool, bettertransformer),
+            "model_id": (str, None),
             "model_version": (str, model_version),
         }
         globs: dict[str, t.Any] = {

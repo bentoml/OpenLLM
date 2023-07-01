@@ -19,9 +19,6 @@ import typing as t
 
 import bentoml
 import openllm
-import transformers
-from bentoml._internal.frameworks.transformers import make_default_signatures
-from bentoml._internal.models.model import ModelOptions
 
 from ..._llm import generate_context
 from ..._prompt import default_formatter
@@ -31,9 +28,11 @@ from .configuration_falcon import DEFAULT_PROMPT_TEMPLATE
 if t.TYPE_CHECKING:
     import torch
     import torch.amp
+    import transformers
 else:
     torch = openllm.utils.LazyLoader("torch", globals(), "torch")
     torch.amp = openllm.utils.LazyLoader("torch.amp", globals(), "torch.amp")
+    transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
 
 
 class Falcon(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTrainedTokenizerBase"]):
@@ -51,6 +50,9 @@ class Falcon(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTraine
     def import_model(
         self, model_id: str, tag: bentoml.Tag, *model_args: t.Any, tokenizer_kwds: dict[str, t.Any], **attrs: t.Any
     ) -> bentoml.Model:
+        from bentoml._internal.frameworks.transformers import make_default_signatures
+        from bentoml._internal.models.model import ModelOptions
+
         trust_remote_code = attrs.pop("trust_remote_code", True)
         torch_dtype = attrs.pop("torch_dtype", torch.bfloat16)
         device_map = attrs.pop("device_map", "auto")

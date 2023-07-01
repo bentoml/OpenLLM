@@ -109,17 +109,14 @@ class _BaseAutoLLMClass:
         runner_kwargs_name = set(inspect.signature(openllm.LLM[t.Any, t.Any].to_runner).parameters)
         to_runner_attrs = {k: v for k, v in attrs.items() if k in runner_kwargs_name}
         attrs = {k: v for k, v in attrs.items() if k not in to_runner_attrs}
-        if cls._model_mapping.get(inflection.underscore(model_name), None, mapping_type="name2model"):
-            if not isinstance(llm_config, openllm.LLMConfig):
-                # The rest of kwargs is now passed to config
-                llm_config = AutoConfig.for_model(model_name, **attrs)
-                attrs = llm_config.__openllm_extras__
-            # the rest of attrs will be saved to __openllm_extras__
-            llm = cls._model_mapping[type(llm_config)].from_pretrained(
-                model_id,
-                llm_config=llm_config,
-                **attrs,
-            )
+        if not isinstance(llm_config, openllm.LLMConfig):
+            # The rest of kwargs is now passed to config
+            llm_config = AutoConfig.for_model(model_name, **attrs)
+            attrs = llm_config.__openllm_extras__
+        # the rest of attrs will be saved to __openllm_extras__
+        if type(llm_config) in cls._model_mapping.keys():
+            model_class = cls._model_mapping[type(llm_config)]
+            llm = model_class.from_pretrained(model_id, llm_config=llm_config, **attrs)
             if ensure_available:
                 logger.debug(
                     "'ensure_available=True', Downloading '%s' with 'model_id=%s' to local model store.",

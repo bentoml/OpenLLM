@@ -30,18 +30,7 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
 # NOTE: The below is managed by ./tools/update-optional-dependencies.py
-dependencies = [
-    "bentoml[grpc,io]>=1.0.22",
-    "transformers[torch,tokenizers,accelerate]>=4.29.0",
-    "optimum",
-    "attrs>=23.1.0",
-    "cattrs>=23.1.0",
-    "orjson",
-    "inflection",
-    "tabulate[widechars]>=0.9.0",
-    "httpx",
-    "typing_extensions",
-]
+dependencies = ["bentoml[grpc,io]>=1.0.22", "transformers[torch,tokenizers,accelerate]>=4.29.0", "optimum", "attrs>=23.1.0", "cattrs>=23.1.0", "orjson", "inflection", "tabulate[widechars]>=0.9.0", "httpx", "typing_extensions"]
 description = 'OpenLLM: REST/gRPC API server for running any open Large-Language Model - StableLM, Llama, Alpaca, Dolly, Flan-T5, Custom'
 dynamic = ["version"]
 keywords = [
@@ -66,26 +55,16 @@ requires-python = ">=3.8"
 # NOTE: Don't modify project.optional-dependencies
 # as it is managed by ./tools/update-optional-dependencies.py
 [project.optional-dependencies]
-agents = ["transformers[agents]>=4.30", "diffusers", "soundfile"]
-all = [
-    "openllm[chatglm]",
-    "openllm[starcoder]",
-    "openllm[falcon]",
-    "openllm[mpt]",
-    "openllm[flan-t5]",
-    "openllm[openai]",
-    "openllm[agents]",
-    "openllm[fine-tune]",
-    "openllm[playground]",
-]
 chatglm = ["cpm-kernels", "sentencepiece"]
+starcoder = ["bitsandbytes"]
 falcon = ["einops", "xformers", "safetensors"]
+mpt = ["triton"]
 fine-tune = ["peft", "bitsandbytes", "datasets", "accelerate", "deepspeed", "trl"]
 flan-t5 = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
-mpt = ["triton"]
-openai = ["openai", "tiktoken"]
 playground = ["jupyter", "notebook", "ipython", "jupytext", "nbformat"]
-starcoder = ["bitsandbytes"]
+openai = ["openai", "tiktoken"]
+agents = ["transformers[agents]>=4.30", "diffusers", "soundfile"]
+all = ["openllm[chatglm]", "openllm[starcoder]", "openllm[falcon]", "openllm[mpt]", "openllm[fine-tune]", "openllm[flan-t5]", "openllm[playground]", "openllm[openai]", "openllm[agents]"]
 
 [project.urls]
 Documentation = "https://github.com/bentoml/openllm#readme"

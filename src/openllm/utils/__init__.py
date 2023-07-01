@@ -120,6 +120,7 @@ def configure_logging() -> None:
 
     logging.config.dictConfig(_LOGGING_CONFIG)
 
+
 @functools.lru_cache(maxsize=1)
 def in_notebook() -> bool:
     try:
@@ -132,6 +133,18 @@ def in_notebook() -> bool:
     except AttributeError:
         return False
     return True
+
+
+def resolve_filepath(path: str) -> str:
+    """Resolve a file path to an absolute path, expand user and environment variables"""
+    try:
+        return resolve_user_filepath(path, None)
+    except FileNotFoundError:
+        return path
+
+
+def validate_is_path(maybe_path: str) -> bool:
+    return os.path.exists(os.path.dirname(resolve_filepath(maybe_path)))
 
 
 # NOTE: The set marks contains a set of modules name
@@ -200,6 +213,7 @@ if t.TYPE_CHECKING:
     from . import set_debug_mode as set_debug_mode
     from . import set_quiet_mode as set_quiet_mode
     from . import in_notebook as in_notebook
+    from . import validate_is_path as validate_is_path, resolve_filepath as resolve_filepath
     from .import_utils import ENV_VARS_TRUE_VALUES as ENV_VARS_TRUE_VALUES
     from .import_utils import OPTIONAL_DEPENDENCIES as OPTIONAL_DEPENDENCIES
     from .import_utils import DummyMetaclass as DummyMetaclass

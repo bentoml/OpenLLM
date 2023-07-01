@@ -2,7 +2,6 @@ from typing import Any
 from typing import Callable
 from typing import Optional
 
-
 _CompareWithType = Callable[[Any, Any], bool]
 
 def cmp_using(
