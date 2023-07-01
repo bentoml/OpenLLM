@@ -36,7 +36,7 @@ else:
     torch.amp = openllm.utils.LazyLoader("torch.amp", globals(), "torch.amp")
 
 
-class Falcon(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTrainedTokenizerFast"]):
+class Falcon(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTrainedTokenizerBase"]):
     __openllm_internal__ = True
 
     @property
@@ -55,12 +55,17 @@ class Falcon(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTraine
         torch_dtype = attrs.pop("torch_dtype", torch.bfloat16)
         device_map = attrs.pop("device_map", "auto")
 
-        tokenizer = transformers.AutoTokenizer.from_pretrained(model_id)
-        model = transformers.AutoModelForCausalLM.from_pretrained(
-            model_id,
-            trust_remote_code=trust_remote_code,
-            torch_dtype=torch_dtype,
-            device_map=device_map,
+        tokenizer = t.cast(
+            "transformers.PreTrainedTokenizerBase", transformers.AutoTokenizer.from_pretrained(model_id)
+        )
+        model = t.cast(
+            "transformers.PreTrainedModel",
+            transformers.AutoModelForCausalLM.from_pretrained(
+                model_id,
+                trust_remote_code=trust_remote_code,
+                torch_dtype=torch_dtype,
+                device_map=device_map,
+            ),
         )
 
         try:
@@ -136,8 +141,8 @@ class Falcon(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTraine
 
     def generate(self, prompt: str, **attrs: t.Any) -> list[str]:
         eos_token_id = attrs.pop("eos_token_id", self.tokenizer.eos_token_id)
+        inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
         with torch.inference_mode(), torch.amp.autocast("cuda", dtype=torch.float16):
-            inputs = self.tokenizer(prompt, return_tensors="pt")
             outputs = self.model.generate(
                 input_ids=inputs["input_ids"],
                 attention_mask=inputs["attention_mask"],

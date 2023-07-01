@@ -51,7 +51,17 @@ else:
 
 logger = logging.getLogger(__name__)
 
-OPTIONAL_DEPENDENCIES = {"fine-tune", "flan-t5", "mpt", "falcon", "starcoder", "chatglm", "openai", "agents"}
+OPTIONAL_DEPENDENCIES = {
+    "fine-tune",
+    "flan-t5",
+    "mpt",
+    "falcon",
+    "starcoder",
+    "chatglm",
+    "openai",
+    "agents",
+    "playground",
+}
 ENV_VARS_TRUE_VALUES = {"1", "ON", "YES", "TRUE"}
 ENV_VARS_TRUE_AND_AUTO_VALUES = ENV_VARS_TRUE_VALUES.union({"AUTO"})
 
@@ -82,6 +92,9 @@ _cpm_kernel_available = _is_package_available("cpm_kernels")
 _bitsandbytes_available = _is_package_available("bitsandbytes")
 _datasets_available = _is_package_available("datasets")
 _triton_available = _is_package_available("triton")
+_jupyter_available = _is_package_available("jupyter")
+_jupytext_available = _is_package_available("jupytext")
+_notebook_available = _is_package_available("notebook")
 
 
 def is_transformers_supports_kbit() -> bool:
@@ -91,6 +104,15 @@ def is_transformers_supports_kbit() -> bool:
 def is_transformers_supports_agent() -> bool:
     return pkg.pkg_version_info("transformers")[:2] >= (4, 29)
 
+
+def is_jupyter_available() -> bool:
+    return _jupyter_available
+
+def is_jupytext_available() -> bool:
+    return _jupytext_available
+
+def is_notebook_available() -> bool:
+    return _notebook_available
 
 def is_triton_available() -> bool:
     return _triton_available

@@ -102,6 +102,7 @@ AGENTS_DEPS = ["transformers[agents]>=4.30", "diffusers", "soundfile"]
 FALCON_DEPS = ["einops", "xformers", "safetensors"]
 STARCODER_DEPS = ["bitsandbytes"]
 CHATGLM_DEPS = ["cpm-kernels", "sentencepiece"]
+PLAYGROUND_DEPS = ["jupyter", "notebook", "ipython", "jupytext", "nbformat"]
 
 _base_requirements = {
     inflection.dasherize(name): config_cls.__openllm_requirements__

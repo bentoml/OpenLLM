@@ -19,4 +19,6 @@ import openllm
 
 def test_import_client():
     assert len(openllm.client.__all__) == 4
-    assert all(hasattr(openllm.client, attr) for attr in ("AsyncGrpcClient", "GrpcClient", "AsyncHTTPClient", "HTTPClient"))
+    assert all(
+        hasattr(openllm.client, attr) for attr in ("AsyncGrpcClient", "GrpcClient", "AsyncHTTPClient", "HTTPClient")
+    )

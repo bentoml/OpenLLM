@@ -19,6 +19,10 @@ This extends BentoML's internal CLI CommandGroup.
 from __future__ import annotations
 
 import functools
+import tempfile
+import pkgutil
+import yaml
+import subprocess
 import importlib.util
 import inspect
 import itertools
@@ -62,7 +66,7 @@ from .utils import get_quiet_mode
 from .utils import gpu_count
 from .utils import is_peft_available
 from .utils import is_torch_available
-from .utils import is_transformers_supports_agent
+from .utils import is_transformers_supports_agent, is_jupyter_available, is_jupytext_available, is_notebook_available
 from .utils import resolve_user_filepath
 from .utils import set_debug_mode
 from .utils import set_quiet_mode
@@ -950,6 +954,7 @@ BENTOML_CONFIG_OPTIONS += ' runners."llm-{llm_config['start_name']}-runner".reso
                     "OPENLLM_MODEL": model_name_or_bento,
                     "OPENLLM_MODEL_ID": llm.model_id,
                     "OPENLLM_ADAPTER_MAP": orjson.dumps(adapter_map).decode(),
+                    "OPENLLM_SERVING": str(True),
                 }
             )
         else:
@@ -961,13 +966,15 @@ BENTOML_CONFIG_OPTIONS += ' runners."llm-{llm_config['start_name']}-runner".reso
 
             try:
                 # previous behaviour
-                model_store = ModelStore(model_name_or_bento._fs.opendir('models'))
+                model_store = ModelStore(model_name_or_bento._fs.opendir("models"))
             except fs.errors.ResourceNotFound:
                 # the new behaviour of model store from bento
                 model_store = BentoMLContainer.model_store.get()
 
-            llm_model = model_store.get(f'{model_name_or_bento.info.labels["_framework"]}-{model_name_or_bento.info.labels["_type"]}')
-            start_env['OPENLLM_MODEL_ID'] = llm_model.path
+            llm_model = model_store.get(
+                f'{model_name_or_bento.info.labels["_framework"]}-{model_name_or_bento.info.labels["_type"]}'
+            )
+            start_env["OPENLLM_MODEL_ID"] = llm_model.path
 
             if adapter_map:
                 _echo(
@@ -1085,7 +1092,12 @@ start_grpc = functools.partial(_start, _serve_grpc=True)
     type=click.STRING,
     help="Model version provided for this 'model-id' if it is a custom path.",
 )
-@click.option('--dockerfile-template', default=None, type=click.File(), help="Optional custom dockerfile template to be used with this BentoLLM.")
+@click.option(
+    "--dockerfile-template",
+    default=None,
+    type=click.File(),
+    help="Optional custom dockerfile template to be used with this BentoLLM.",
+)
 @click.pass_context
 def build(
     ctx: click.Context,
@@ -1199,7 +1211,7 @@ def build(
             dockerfile_template_path = None
             if dockerfile_template:
                 with dockerfile_template:
-                    llm_fs.writetext("Dockerfile.template" ,dockerfile_template.read())
+                    llm_fs.writetext("Dockerfile.template", dockerfile_template.read())
                 dockerfile_template_path = llm_fs.getsyspath("/Dockerfile.template")
 
             bento_tag = bentoml.Tag.from_taglike(f"{llm.llm_type}-service:{llm.tag.version}")
@@ -1233,7 +1245,7 @@ def build(
                     bettertransformer=bettertransformer,
                     extra_dependencies=enable_features,
                     build_ctx=build_ctx,
-                        dockerfile_template=dockerfile_template_path,
+                    dockerfile_template=dockerfile_template_path,
                 )
     except Exception as e:
         logger.error("\nException caught during building LLM %s: \n", model_name, exc_info=e)
@@ -1735,6 +1747,68 @@ def download_models(
             torch.cuda.empty_cache()
 
     return _ref
+
+def load_notebook_metadata() -> dict[str, t.Any]:
+    with open(os.path.join(os.path.dirname(openllm.playground.__file__), '_meta.yml'), 'r') as f:
+        content = yaml.safe_load(f)
+    if not all('description' in k for k in content.values()):
+        raise ValueError("Invalid metadata file. All entries must have a 'description' key.")
+    return content
+
+@cli.command()
+@click.argument('output-dir', default=".")
+@click.option("--port", envvar="JUPYTER_PORT", show_envvar=True, show_default=True, default=8888, help='Default port for Jupyter server')
+def playground(output_dir: str | None, port: int):
+    """OpenLLM Playground
+
+    A collections of notebooks to explore the capabilities of OpenLLM.
+    This includes notebooks for fine-tuning, inference, and more.
+
+    All of the script available in the playground can also be run directly as a Python script:
+    For example:
+
+    \b
+    ```bash
+    python -m openllm.playground.falcon_tuned --help
+    ```
+
+    \b
+    > Note: This command requires Jupyter to be installed. Install it with 'pip install "openllm[playground]"'
+    """
+    if not is_jupyter_available() or not is_jupytext_available() or not is_notebook_available():
+        raise RuntimeError("Playground requires 'jupyter', 'jupytext', and 'notebook'. Install it with 'pip install \"openllm[playground]\"'")
+
+    import jupytext
+    import nbformat
+
+    metadata = load_notebook_metadata()
+    _temp_dir = False
+    if output_dir is None:
+        _temp_dir = True
+        output_dir = tempfile.mkdtemp(prefix="openllm-playground-")
+    else:
+        os.makedirs(os.path.abspath(os.path.expandvars(os.path.expanduser(output_dir))), exist_ok=True)
+
+    _echo("The playground notebooks will be saved to: " + os.path.abspath(output_dir), fg="blue")
+    for module in pkgutil.iter_modules(openllm.playground.__path__):
+        if module.ispkg or os.path.exists(os.path.join(output_dir, module.name + ".ipynb")):
+            logger.debug("Skipping: %s (%s)", module.name, "File already exists" if not module.ispkg else f"{module.name} is a module")
+            continue
+        _echo("Generating notebook for: " + module.name, fg="magenta")
+        markdown_cell = nbformat.v4.new_markdown_cell(metadata[module.name]['description'])
+        f = jupytext.read(os.path.join(module.module_finder.path, module.name + ".py"))
+        f.cells.insert(0, markdown_cell)
+        jupytext.write(f, os.path.join(output_dir, module.name + ".ipynb"), fmt='notebook')
+    try:
+        subprocess.check_output(['jupyter', 'notebook', '--notebook-dir', output_dir, '--port', str(port), '--no-browser', '--debug'])
+    except subprocess.CalledProcessError as e:
+        _echo(e.output, fg="red")
+        raise e
+    except KeyboardInterrupt:
+        _echo("Shutting down Jupyter server...", fg="yellow")
+        if _temp_dir:
+            _echo("Note: You can access the generated notebooks in: " + output_dir, fg="blue")
+
 
 
 if psutil.WINDOWS:

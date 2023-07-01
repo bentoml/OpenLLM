@@ -120,6 +120,19 @@ def configure_logging() -> None:
 
     logging.config.dictConfig(_LOGGING_CONFIG)
 
+@functools.lru_cache(maxsize=1)
+def in_notebook() -> bool:
+    try:
+        from IPython.core.getipython import get_ipython
+
+        if "IPKernelApp" not in get_ipython().config:  # pragma: no cover
+            return False
+    except ImportError:
+        return False
+    except AttributeError:
+        return False
+    return True
+
 
 # NOTE: The set marks contains a set of modules name
 # that are available above and are whitelisted
@@ -157,6 +170,9 @@ _import_structure = {
         "is_datasets_available",
         "is_transformers_supports_kbit",
         "is_transformers_supports_agent",
+        "is_jupyter_available",
+        "is_jupytext_available",
+        "is_notebook_available",
         "is_triton_available",
         "require_backends",
     ],
@@ -183,6 +199,7 @@ if t.TYPE_CHECKING:
     from . import resolve_user_filepath as resolve_user_filepath
     from . import set_debug_mode as set_debug_mode
     from . import set_quiet_mode as set_quiet_mode
+    from . import in_notebook as in_notebook
     from .import_utils import ENV_VARS_TRUE_VALUES as ENV_VARS_TRUE_VALUES
     from .import_utils import OPTIONAL_DEPENDENCIES as OPTIONAL_DEPENDENCIES
     from .import_utils import DummyMetaclass as DummyMetaclass
@@ -200,6 +217,9 @@ if t.TYPE_CHECKING:
     from .import_utils import is_triton_available as is_triton_available
     from .import_utils import require_backends as require_backends
     from .import_utils import requires_dependencies as requires_dependencies
+    from .import_utils import is_jupyter_available as is_jupyter_available
+    from .import_utils import is_jupytext_available as is_jupytext_available
+    from .import_utils import is_notebook_available as is_notebook_available
     from .lazy import LazyModule as LazyModule
     from .representation import ReprMixin as ReprMixin
 else:

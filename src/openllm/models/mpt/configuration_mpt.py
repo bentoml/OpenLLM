@@ -137,4 +137,5 @@ _PROMPT_MAPPING = {
 def _get_prompt(model_type: str) -> str:
     return _PROMPT_MAPPING[model_type]
 
+
 DEFAULT_PROMPT_TEMPLATE = _get_prompt
