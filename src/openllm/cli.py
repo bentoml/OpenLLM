@@ -1756,9 +1756,9 @@ def load_notebook_metadata() -> dict[str, t.Any]:
     return content
 
 @cli.command()
+@click.argument('output-dir', default=".")
 @click.option("--port", envvar="JUPYTER_PORT", show_envvar=True, show_default=True, default=8888, help='Default port for Jupyter server')
-@click.option('--output-dir', default=None, help="Directory to save the generated notebooks. By default, it will use a temporary directory.")
-def playground(port: int, output_dir: str | None):
+def playground(output_dir: str | None, port: int):
     """OpenLLM Playground
 
     A collections of notebooks to explore the capabilities of OpenLLM.
@@ -1789,7 +1789,7 @@ def playground(port: int, output_dir: str | None):
     else:
         os.makedirs(os.path.abspath(os.path.expandvars(os.path.expanduser(output_dir))), exist_ok=True)
 
-    _echo("The playground notebooks will be saved to: " + output_dir, fg="blue")
+    _echo("The playground notebooks will be saved to: " + os.path.abspath(output_dir), fg="blue")
     for module in pkgutil.iter_modules(openllm.playground.__path__):
         if module.ispkg or os.path.exists(os.path.join(output_dir, module.name + ".ipynb")):
             logger.debug("Skipping: %s (%s)", module.name, "File already exists" if not module.ispkg else f"{module.name} is a module")
