@@ -88,8 +88,8 @@
   [status-good?]
   (let [status-color (if status-good? "bg-green-500" "bg-red-500")
         status-text (if status-good? "Operational" "Degraded Performance")]
-    [:div {:class "px-3 mt-6"}
-     [:div {:class "mt-8"}
+    [:div {:class "px-1 mt-1"}
+     [:div {:class "mt-4"}
       [sidebar-group-headline "Service Status"]
       [:div {:class "space-y-1" :role "group" :aria-labelledby "service-status-headline"}
        [:a {:href "#" :class "group flex items-center px-3 py-1 text-sm font-medium text-gray-700 rounded-md"}
@@ -121,6 +121,7 @@
                :on-submit #(do % (on-send-click)
                                (.preventDefault %))}
         [:textarea {:class "py-1 w-[calc(100%_-_80px)] appearance-none block border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm"
+                    :style {:resize "none"}
                     :type "text" :placeholder "Type your prompt..."
                     :value @chat-input-sub
                     :on-change on-change
@@ -148,12 +149,15 @@
 (defn tabs
   "The tabs at the top of the screen."
   [screen-id]
-  [:div {:class "mt-3 grid grid-cols-3 bg-white rounded-lg shadow divide-x divide-gray-200"}
-   [:button {:class (when (= screen-id :playground) "bg-pink-600 hover:bg-red-pink-700 text-white font-bold py-2 px-4 rounded-l")
+  [:div {:class "mt-4 grid grid-cols-3 bg-white rounded-lg shadow divide-x divide-gray-300"}
+   [:button {:class (if (= screen-id :playground) "bg-pink-600 hover:bg-red-pink-700 text-white font-bold py-2 px-4 rounded-l-lg" 
+                                                  "bg-white shadow divide-x divide-gray-300 rounded-l-lg hover:bg-gray-100")
              :on-click #(rf/dispatch [:set-screen-id :playground])} "Playground"]
-   [:button {:class (when (= screen-id :chat) "bg-pink-600 hover:bg-red-pink-700 text-white font-bold py-2 px-4 rounded-l")
+   [:button {:class (if (= screen-id :chat) "bg-pink-600 hover:bg-red-pink-700 text-white font-bold py-2 px-4"
+                                            "bg-white shadow divide-x divide-gray-300 hover:bg-gray-100")
              :on-click #(rf/dispatch [:set-screen-id :chat])} "Chat"]
-   [:button {:class (when (= screen-id :apis) "bg-pink-600 hover:bg-red-pink-700 text-white font-bold py-2 px-4 rounded-l")
+   [:button {:class (if (= screen-id :apis) "bg-pink-600 hover:bg-red-pink-700 text-white font-bold py-2 px-4 rounded-r-lg"
+                                            "bg-white shadow divide-x divide-gray-300 rounded-r-lg hover:bg-gray-100")
              :on-click #(rf/dispatch [:set-screen-id :apis])} "APIs"]])
 
 (defn dashboard
@@ -165,7 +169,6 @@
         [:main {:class "flex-1 relative z-0 overflow-y-auto focus:outline-none" :tabIndex "0"}
          [:div {:class "px-4 mt-6 sm:px-6 lg:px-8"}
           [:h2 {:class "text-gray-500 text-xs font-medium uppercase tracking-wide"} "Dashboard"]
-          ;; 3 tabs: Playground, Chat, APIs 
           [tabs @screen-id]
           (case @screen-id
             :playground [:div]
