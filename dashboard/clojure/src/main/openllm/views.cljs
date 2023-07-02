@@ -68,7 +68,8 @@
 (defn parameter-list-entry
   "Renders a single parameter in the sidebar's parameter list."
   [[parameter-name parameter-value]]
-  [:div {:class "flex flex-col px-3 py-2 text-sm font-medium text-gray-700"}
+  [:div {:class "flex flex-col px-3 py-2 text-sm font-medium text-gray-700"
+         :key (str parameter-name)}
    [:span {:class "text-gray-500"} parameter-name]
    [:div {:class "mt-1"}
     [parameter-list-entry-value parameter-name parameter-value]]])
