@@ -2,7 +2,8 @@
   (:require [openllm.components.playground.events :as events]
             [openllm.components.playground.subs :as subs]
             [openllm.subs :as root-subs]
-            [re-frame.core :as rf]))
+            [re-frame.core :as rf]
+            [openllm.api.core :as api]))
 
 (defn model-selection
   "The dropdowns selecting the model."
@@ -25,13 +26,18 @@
        [:textarea {:class "pt-3 appearance-none w-full h-64 block border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm"
                    :value @input-value
                    :on-change #(rf/dispatch [::events/set-prompt-input (.. % -target -value)])}]
-       [:div {:class "mt-3 flex justify-end"}
-        [:button {:class "px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none"
-                  :type "button"
-                  :on-click #(rf/dispatch [::events/on-send-button-click @input-value @llm-config])} "Send"]
-        [:button {:class "ml-2 px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none"
-                  :type "button"
-                  :on-click #(rf/dispatch [::events/set-prompt-input ""])} "Clear"]]])))
+       [:div {:class "grid grid-cols-2"}
+        [:div
+         [api/file-upload {:callback-event ::events/set-prompt-input
+                           :class "w-8/12 mt-3 shadow-sm rounded-md cursor-pointer bg-blue-600 text-white hover:bg-blue-700 focus:z-10 file:bg-transparent
+                                   file:cursor-pointer file:border-0 file:bg-blue-900 file:hover:bg-blue-950 file:mr-4 file:py-2 file:px-4 file:text-white"}]]
+        [:div {:class "mt-3 flex justify-end"} 
+             [:button {:class "px-4 py-2 mr-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none"
+                       :type "button"
+                       :on-click #(rf/dispatch [::events/set-prompt-input ""])} "Clear"]
+             [:button {:class "px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none"
+                       :type "button"
+                       :on-click #(rf/dispatch [::events/on-send-button-click @input-value @llm-config])} "Send"]]]])))    
 
 (defn response-area
   "The latest response will be displayed in the component."

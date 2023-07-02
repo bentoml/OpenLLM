@@ -1,6 +1,6 @@
 (ns openllm.components.playground.events
     (:require [openllm.events :refer [check-spec-interceptor]]
-              [re-frame.core :refer [reg-event-db reg-event-fx]]
+              [re-frame.core :as rf :refer [reg-event-db reg-event-fx]]
               [openllm.api.events :as api]))
 
 (reg-event-db
