@@ -111,7 +111,7 @@
   "What gets put into app-db by default.
    See 'core.cljs' for `(dispatch-sync [:initialise-db])` and 'events.cljs'
    for the registration of `:initialise-db` handler)"
-  {:screen-id :main
+  {:screen-id :playground
    :chat-input-value ""
    :chat-history []
    :model-config standard-llm-config})

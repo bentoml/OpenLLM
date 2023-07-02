@@ -145,14 +145,32 @@
                       [:p {:class "text-gray-700"} text]]))
                  @history)))))
 
+(defn tabs
+  "The tabs at the top of the screen."
+  [screen-id]
+  [:div {:class "mt-3 grid grid-cols-3 bg-white rounded-lg shadow divide-x divide-gray-200"}
+   [:button {:class (when (= screen-id :playground) "bg-pink-600 hover:bg-red-pink-700 text-white font-bold py-2 px-4 rounded-l")
+             :on-click #(rf/dispatch [:set-screen-id :playground])} "Playground"]
+   [:button {:class (when (= screen-id :chat) "bg-pink-600 hover:bg-red-pink-700 text-white font-bold py-2 px-4 rounded-l")
+             :on-click #(rf/dispatch [:set-screen-id :chat])} "Chat"]
+   [:button {:class (when (= screen-id :apis) "bg-pink-600 hover:bg-red-pink-700 text-white font-bold py-2 px-4 rounded-l")
+             :on-click #(rf/dispatch [:set-screen-id :apis])} "APIs"]])
+
 (defn dashboard
   []
-  [:div {:class "h-screen flex overflow-hidden bg-white"}
-   [:div {:class "flex flex-col w-0 flex-1 overflow-hidden"}
-    [:main {:class "flex-1 relative z-0 overflow-y-auto focus:outline-none" :tabIndex "0"}
-     [:div {:class "px-4 mt-6 sm:px-6 lg:px-8"}
-      [:h2 {:class "text-gray-500 text-xs font-medium uppercase tracking-wide"} "Chat"]
-      [chat-history]]
-     [chat-controls]]]
-   [:div {:class "hidden lg:flex lg:flex-shrink-0"}
-    [side-bar]]])
+  (let [screen-id (rf/subscribe [:screen-id])]
+    (fn []
+      [:div {:class "h-screen flex overflow-hidden bg-white"}
+       [:div {:class "flex flex-col w-0 flex-1 overflow-hidden"}
+        [:main {:class "flex-1 relative z-0 overflow-y-auto focus:outline-none" :tabIndex "0"}
+         [:div {:class "px-4 mt-6 sm:px-6 lg:px-8"}
+          [:h2 {:class "text-gray-500 text-xs font-medium uppercase tracking-wide"} "Dashboard"]
+          ;; 3 tabs: Playground, Chat, APIs 
+          [tabs @screen-id]
+          (case @screen-id
+            :playground [:div]
+            :chat [chat-history]
+            :apis [:div])]]]
+       (when (= @screen-id :chat) [chat-controls])
+       [:div {:class "hidden lg:flex lg:flex-shrink-0"}
+        [side-bar]]])))

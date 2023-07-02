@@ -32,6 +32,12 @@
    db/default-db))
 
 (reg-event-db
+ :set-screen-id
+ [check-spec-interceptor]
+ (fn [db [_ new-screen-id]]
+   (assoc db :screen-id new-screen-id)))
+
+(reg-event-db
  :set-chat-input-value
  [check-spec-interceptor]
  (fn [db [_ new-value]]
@@ -75,6 +81,4 @@
  :set-model-config-parameter
  [check-spec-interceptor]
  (fn [db [_ parameter value]]
-   (print (type value))
-   (pprint/pprint (assoc-in db [:model-config parameter] value))
    (assoc-in db [:model-config parameter] value)))

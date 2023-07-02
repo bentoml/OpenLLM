@@ -9,17 +9,9 @@
               [openllm.subs]
               ))
 
-(def screen->view
-  "This map acts the central router for now. This the values of this map are the
-   render functions and the keys are clojure keywords that are used to identify
-   the screen that should be rendered."
-  {:main [views/dashboard]
-   :second-page [views/second-page]})
-
 (defn app
   []
-  (let [screen-id @(rf/subscribe [:screen-id])]
-    (screen->view screen-id)))
+  [views/dashboard])
 
 (defn ^:dev/after-load start []
     (dom/render [app]
