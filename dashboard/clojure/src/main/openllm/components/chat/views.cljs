@@ -2,15 +2,16 @@
   (:require [re-frame.core :as rf]
             [openllm.components.chat.events :as events]
             [openllm.components.chat.subs :as subs]
-            [openllm.db :as db]
+            [openllm.subs :as root-subs]
             [openllm.components.chat.views :as views]))
 
 (defn chat-controls
   "The chat input field and the send button."
   []
   (let [chat-input-sub (rf/subscribe [::subs/chat-input-value])
+        llm-config (rf/subscribe [::root-subs/model-config])
         on-change #(rf/dispatch [::events/set-chat-input-value (.. % -target -value)])
-        on-send-click #(rf/dispatch [::events/on-send-button-click @chat-input-sub db/standard-llm-config])]
+        on-send-click #(rf/dispatch [::events/on-send-button-click @chat-input-sub @llm-config])]
     (fn chat-controls []
        [:form {:class "flex items-center justify-between"
                :on-submit #(do % (on-send-click)
@@ -32,7 +33,7 @@
   []
   (let [history (rf/subscribe [::subs/chat-history])]
     (fn chat-history []
-      (into [:div]
+      (into [:div {:class "px-4"}]
             (map (fn [{:keys [user text]}]
                    (let [diplay-user (if (= user :model) "Model" "You")
                          color (if (= user :model) "bg-gray-200" "bg-blue-200")]

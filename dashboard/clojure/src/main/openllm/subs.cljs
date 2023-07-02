@@ -7,6 +7,6 @@
    (:screen-id db)))
 
 (reg-sub
- :model-config
+ ::model-config
  (fn [db _]
    (:model-config db)))

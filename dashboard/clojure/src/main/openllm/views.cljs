@@ -1,6 +1,7 @@
 (ns openllm.views
   (:require [re-frame.core :as rf]
             [openllm.components.side-bar.views :as side-bar-views]
+            [openllm.components.playground.views :as playground-views]
             [openllm.components.chat.views :as chat-views])) 
 
 (defn tabs
@@ -28,7 +29,7 @@
           [:h2 {:class "text-gray-500 text-xs font-medium uppercase tracking-wide"} "Dashboard"]
           [tabs @screen-id]
           (case @screen-id
-            :playground [:div]
+            :playground [playground-views/playground-tab]
             :chat [chat-views/chat-tab]
             :apis [:div])]]]
        [:div {:class "hidden lg:flex lg:flex-shrink-0"}

@@ -24,6 +24,10 @@
 ;; re-frame people) find it good practice.
 
 (s/def ::screen-id keyword?)
+
+(s/def ::playground-input-value string?)
+(s/def ::playground-last-response string?)
+
 (s/def ::chat-input-value string?)
 (s/def ::chat-history (s/coll-of (s/keys :req-un [::user ::text]) :kind vector?))
 
@@ -80,6 +84,8 @@
 
 ;; ########################### AGGREGATE ############################
 (s/def ::db (s/keys :req-un [::screen-id
+                             ::playground-input-value
+                             ::playground-last-response
                              ::chat-input-value
                              ::chat-history
                              ::model-config]))
@@ -112,6 +118,8 @@
    See 'core.cljs' for `(dispatch-sync [:initialise-db])` and 'events.cljs'
    for the registration of `:initialise-db` handler)"
   {:screen-id :playground
+   :playground-input-value ""
+   :playground-last-response ""
    :chat-input-value ""
    :chat-history []
    :model-config standard-llm-config})

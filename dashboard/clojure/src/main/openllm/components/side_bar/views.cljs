@@ -1,7 +1,8 @@
 (ns openllm.components.side-bar.views
   (:require [re-frame.core :as rf]
             [openllm.db :as db]
-            [openllm.components.side-bar.events :as events]
+            [openllm.subs :as subs]
+            [openllm.components.side-bar.events :as events] 
             [clojure.string :as str]))
 
 (defn openllm-tag
@@ -71,7 +72,7 @@
 (defn parameter-list
   "Renders the parameters in the sidebar."
   []
-  (let [model-config (rf/subscribe [:model-config])]
+  (let [model-config (rf/subscribe [::subs/model-config])]
     (fn parameter-list
       []
       [:div {:class "space-y-2"}
