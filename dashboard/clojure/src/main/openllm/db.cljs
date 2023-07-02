@@ -24,6 +24,7 @@
 ;; re-frame people) find it good practice.
 
 (s/def ::screen-id keyword?)
+(s/def ::indexed-db js/Object)
 
 (s/def ::playground-input-value string?)
 (s/def ::playground-last-response string?)
@@ -84,6 +85,7 @@
 
 ;; ########################### AGGREGATE ############################
 (s/def ::db (s/keys :req-un [::screen-id
+                             ::indexed-db
                              ::playground-input-value
                              ::playground-last-response
                              ::chat-input-value
@@ -118,6 +120,7 @@
    See 'core.cljs' for `(dispatch-sync [:initialise-db])` and 'events.cljs'
    for the registration of `:initialise-db` handler)"
   {:screen-id :playground
+   :indexed-db nil
    :playground-input-value ""
    :playground-last-response ""
    :chat-input-value ""

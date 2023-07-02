@@ -1,5 +1,6 @@
 (ns openllm.app
-    (:require [reagent.dom :as dom]
+    (:require [openllm.api.indexed-db.core :as idb]
+              [reagent.dom :as dom]
               [openllm.views :as views]
               [re-frame.core :as rf]
 
@@ -14,12 +15,13 @@
   [views/dashboard])
 
 (defn ^:dev/after-load start []
-    (dom/render [app]
-        (.getElementById js/document "app")))
+  (dom/render [app]
+              (.getElementById js/document "app")))
 
 (defn init
   "This init function is called exactly once when the page loads."
   []
-  (enable-console-print!) ;; so that println writes to `console.log`
+  (enable-console-print!) ;; so that print writes to `console.log`
   (rf/dispatch-sync [:initialise-db])
+  (idb/initialize!)
   (start))

@@ -29,8 +29,8 @@
        [:div {:class "grid grid-cols-2"}
         [:div
          [api/file-upload {:callback-event ::events/set-prompt-input
-                           :class (str "w-8/12 mt-3 shadow-sm rounded-md cursor-pointer bg-blue-600 text-white hover:bg-blue-700 focus:z-10 file:bg-transparent " 
-                                       "file:cursor-pointer file:border-0 file:bg-blue-900 file:hover:bg-blue-950 file:mr-4 file:py-2 file:px-4 file:text-white")}]]
+                           :class (str "w-8/12 mt-3 shadow-sm rounded-md cursor-pointer bg-blue-600 text-white hover:bg-blue-700 focus:z-10 file:bg-transparent file:bg-indigo-800 " 
+                                       "file:cursor-pointer file:border-0 file:hover:bg-blue-950 file:mr-4 file:py-2 file:px-4 file:text-white")}]]
         [:div {:class "mt-3 flex justify-end"} 
              [:button {:class "px-4 py-2 mr-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none"
                        :type "button"

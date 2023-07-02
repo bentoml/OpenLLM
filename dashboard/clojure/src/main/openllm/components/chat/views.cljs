@@ -12,7 +12,7 @@
         llm-config (rf/subscribe [::root-subs/model-config])
         on-change #(rf/dispatch [::events/set-chat-input-value (.. % -target -value)])
         on-send-click #(rf/dispatch [::events/on-send-button-click @chat-input-sub @llm-config])]
-    (fn chat-controls []
+    (fn chat-controls [] 
       [:form {:class "flex items-center justify-between"}
        [:textarea {:class "py-1 w-[calc(100%_-_80px)] appearance-none block border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm h-20"
                    :style {:resize "none"}
