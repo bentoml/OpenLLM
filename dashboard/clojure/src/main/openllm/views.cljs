@@ -1,10 +1,6 @@
 (ns openllm.views
   (:require [re-frame.core :as rf]
-            [openllm.db :as db]
-            [clojure.spec.alpha :as s])) ;; TODO: remove this. just for the standard llm-config for now
-
-(def icon-path-4-bars "M4 6h16M4 10h16M4 14h16M4 18h16")
-(def icon-path-house "M12 20v-6h4v6h5v-8h3L12 3 1 12h3v8z")
+            [openllm.db :as db])) ;; TODO: remove this. just for the standard llm-config for now
 
 (defn second-page
   []
@@ -17,7 +13,8 @@
   "The 'OpenLLM' tag in the very top left corner of the screen."
   []
   [:div {:class "flex items-center flex-shrink-0 px-6"}
-   [:div {:class "text-center text-3xl font-bold text-blue-1000"} "OpenLLM"]])
+   [:img {:class "h-11 w-auto" :src "./static/logo-light.svg" :alt "LOGO"}]
+   [:span {:class "text-3xl font-bold text-gray-900 ml-2"} "OpenLLM"]])
 
 (defn sidebar-group-headline
   "The headlines for the different groups in the sidebar are rendered using this component."
