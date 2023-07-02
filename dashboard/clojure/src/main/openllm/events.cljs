@@ -37,12 +37,6 @@
    (assoc db :screen-id new-screen-id)))
 
 (reg-event-db
- :toggle-model-dropdown
- [check-spec-interceptor]
- (fn [db _]
-  (assoc db :model-dropdown-active? (not (:model-dropdown-active? db)))))
-
-(reg-event-db
  :set-chat-input-value
  [check-spec-interceptor]
  (fn [db [_ new-value]]
@@ -81,3 +75,9 @@
    {:dispatch-n [[:send-prompt prompt llm-config]
                  [:add-to-chat-history :user prompt]
                  [:set-chat-input-value ""]]}))
+
+(reg-event-db
+ :set-model-config
+ [check-spec-interceptor]
+ (fn [db [_ new-config]]
+   (assoc db :model-config new-config)))

@@ -1,6 +1,7 @@
 (ns openllm.views
   (:require [re-frame.core :as rf]
-            [openllm.db :as db])) ;; TODO: remove this. just for the standard llm-config for now
+            [openllm.db :as db]
+            [clojure.spec.alpha :as s])) ;; TODO: remove this. just for the standard llm-config for now
 
 (def icon-path-4-bars "M4 6h16M4 10h16M4 14h16M4 18h16")
 (def icon-path-house "M12 20v-6h4v6h5v-8h3L12 3 1 12h3v8z")
@@ -23,58 +24,62 @@
   [headline]
   [:h3 {:class "px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider" :id (str "sidebar-headline-" headline)} headline])
 
-(defn selected-model-data
-  "The part of the dropdown menu that is actually being displayed."
-  []
-  [:span {:class "flex min-w-0 items-center justify-between space-x-3"}
-   [:img {:class "w-10 h-10 bg-gray-300 rounded-full flex-shrink-0"
-          :src "https://www.promptx.ai/assets/images/promptxai-logo-256.png" :alt ""}]
-   [:span {:class "flex-1 min-w-0 text-left"}
-    [:span {:class "text-gray-900 text-sm font-medium truncate"} "FLAN-T5"]
-    [:br]
-    [:span {:class "text-gray-500 text-sm truncate"} "flan-t5-large"]]])
+(defn parameter-slider-with-input
+  "Renders a slider with an input field next to it."
+  [name value]
+  (let [min-max (name db/parameter-min-max)]
+    [:div {:class "flex flex-row items-center"}
+     [:span {:class "mr-2 text-xs text-gray-500"} (str (first min-max))]
+     [:input {:type "range"
+              :min (str (first min-max))
+              :max (str (second min-max))
+              :value (str value)
+              :class "w-28"}]
+     [:span {:class "ml-2 text-xs text-gray-500"} (str (second min-max))]
+     [:input {:type "number"
+              :class "w-16 px-1 py-1 text-xs text-gray-700 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm ml-auto"
+              :value (str value)}]]))
 
-(defn model-dropdown-collapsed
-  "The whole drop down menu where models are selected by the user. At the core there is a button
-   that is used to toggle the dropdown menu."
-  []
-  [:div
-   [sidebar-group-headline "Select model"]
-   [:button {:type "button"
-             :on-click #(rf/dispatch [:toggle-model-dropdown])
-             :class "group w-full bg-gray-100 rounded-md mt-2 px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-pink-500"
-             :id "options-menu"
-             :aria-expanded "false"
-             :aria-haspopup "true"}
-    [:span {:class "flex w-full justify-between items-center"}
-     [selected-model-data]
-     [:svg {:class "flex-shrink-0 h-5 w-5 text-gray-400 group-hover:text-gray-500" :xmlns "http://www.w3.org/2000/svg" :viewBox "0 0 20 20" :fill "currentColor" :aria-hidden "true"}
-      [:path {:fill-rule "evenodd" :d "M10 3a1 1 0 01.707.293l3 3a1 1 0 01-1.414 1.414L10 5.414 7.707 7.707a1 1 0 01-1.414-1.414l3-3A1 1 0 0110 3zm-3.707 9.293a1 1 0 011.414 0L10 14.586l2.293-2.293a1 1 0 011.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" :clip-rule "evenodd"}]]]]])
+(defn parameter-checkbox
+  "Renders a checkbox."
+  [name value]
+  [:input {:type "checkbox"
+           :checked value
+           :class "h-4 w-4 text-pink-600 focus:ring-pink-500 border-gray-300 rounded"}])
 
-(defn model-dropdown-item-container
-  "Renders if the dropdown is expanded. It contains all the models that the user can select."
-  []
-  (let [dropdown-active? (rf/subscribe [:model-dropdown-active?])]
-    (fn model-dropdown-item-container []
-      (when @dropdown-active?
-        [:div {:class "z-10 mx-3 origin-top absolute right-0 left-0 mt-1 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 divide-y divide-gray-200 focus:outline-none" :role "menu" :aria-orientation "vertical" :aria-labelledby "options-menu"}
-         [:div {:class "py-1" :role "none"}
-          [:a {:href "#" :class "block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900" :role "menuitem"} "This should look like above"]
-          [:a {:href "#" :class "block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900" :role "menuitem"} "And there should be models"]
-          [:a {:href "#" :class "block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900" :role "menuitem"} "bla bla"]]
-         [:div {:class "py-1" :role "none"}
-          [:a {:href "#"
-               :on-click #(rf/dispatch [:set-screen-id :second-page])
-               :class "block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900" :role "menuitem"}
-           "Change View"]]]))))
+(defn parameter-list-entry-value
+  [name value]
+  (cond
+    (contains? db/parameter-min-max name) [parameter-slider-with-input name value]
+    (boolean? value) [:input {:type "checkbox" :checked value}]
+    :else
+    [:input {:type "number"
+             :class "px-1 py-1 text-xs text-gray-700 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm ml-auto"
+             :value value}]))
 
+(defn parameter-list-entry
+  "Renders a single parameter in the sidebar's parameter list."
+  [[parameter-name parameter-value]]
+  [:div {:class "flex flex-col px-3 py-2 text-sm font-medium text-gray-700"}
+   [:span {:class "text-gray-500"} parameter-name]
+   [:div {:class "mt-1"}
+    [parameter-list-entry-value parameter-name parameter-value]]])
+
+(defn parameter-list
+  "Renders the parameters in the sidebar."
+  []
+  (let [model-config (rf/subscribe [:model-config])]
+    (fn parameter-list
+      []
+      [:div
+       [sidebar-group-headline "Parameters"]
+       (map parameter-list-entry @model-config)])))
 
 (defn model-dropdown
   "Aggregates the two components making up the dropdown menu."
   []
   [:div {:class "px-3 mt-8 relative inline-block text-left"}
-   [model-dropdown-collapsed]
-   [model-dropdown-item-container]])
+   [parameter-list]])
 
 (defn option-button
   "A button from the status bar."
@@ -82,17 +87,6 @@
   [:a {:href "#" :class "text-gray-700 hover:text-gray-900 hover:bg-gray-50 group flex items-center px-2 py-2 text-sm font-medium rounded-md"}
    [:svg {:class "text-gray-400 group-hover:text-gray-500 mr-3 h-6 w-6" :xmlns "http://www.w3.org/2000/svg" :fill "none" :viewBox "0 0 24 24" :stroke "currentColor" :aria-hidden "true"}
     [:path {:stroke-linecap "round" :stroke-linejoin "round" :stroke-width "2" :d icon-path}]] text])
-
-(defn navigation-elements
-  "The navigation elements in the sidebar."
-  []
-  [:div {:class "mt-8"}
-   [:div {:class "px-3 mt-8"}
-    [sidebar-group-headline "Model options (?)"]]
-   [:nav {:class "end-96 px-2 mt-1"}
-    [:div {:class "space-y-1"}
-     [option-button "Another view" icon-path-house]
-     [option-button "I do not know" icon-path-4-bars]]]])
 
 (defn status-display
   "Displays the current service status at the bottom of the sidebar."
@@ -113,8 +107,7 @@
   [:div {:class "flex flex-col w-80 border-r border-gray-200 pt-5 pb-4 bg-gray-200"} ;; sidebar div + background
    [openllm-tag]
    [:div {:class "h-0 flex-1 flex flex-col overflow-y-auto"}
-    [model-dropdown]
-    [navigation-elements]]
+    [model-dropdown]]
    [status-display true]])
 
 (defn chat-controls
@@ -130,12 +123,12 @@
                :on-submit #(do % (on-send-click)
                                (.preventDefault %))}
         [:textarea {:class "py-1 w-[calc(100%_-_80px)] appearance-none block border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm"
-                 :type "text" :placeholder "Type your prompt..."
-                 :value @chat-input-sub
-                 :on-change on-change
-                 :id "chat-input"
-                 :autocomplete "off"
-                 :autocorrect "off"}]
+                    :type "text" :placeholder "Type your prompt..."
+                    :value @chat-input-sub
+                    :on-change on-change
+                    :id "chat-input"
+                    :auto-complete "off"
+                    :auto-correct "off"}]
         [:button {:class "ml-2 px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none"
                   :on-click on-send-click
                   :type "button"} "Send"]]])))
@@ -157,11 +150,11 @@
 (defn dashboard
   []
   [:div {:class "h-screen flex overflow-hidden bg-white"}
-   [:div {:class "hidden lg:flex lg:flex-shrink-0"}
-    [side-bar]]
    [:div {:class "flex flex-col w-0 flex-1 overflow-hidden"}
     [:main {:class "flex-1 relative z-0 overflow-y-auto focus:outline-none" :tabIndex "0"}
      [:div {:class "px-4 mt-6 sm:px-6 lg:px-8"}
       [:h2 {:class "text-gray-500 text-xs font-medium uppercase tracking-wide"} "Chat"]
       [chat-history]]
-     [chat-controls]]]])
+     [chat-controls]]]
+   [:div {:class "hidden lg:flex lg:flex-shrink-0"}
+    [side-bar]]])

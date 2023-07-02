@@ -7,11 +7,6 @@
    (:screen-id db)))
 
 (reg-sub
- :model-dropdown-active?
- (fn [db _]
-   (:model-dropdown-active? db)))
-
-(reg-sub
  :chat-input-value
  (fn [db _]
    (:chat-input-value db)))
@@ -20,3 +15,8 @@
  :chat-history
  (fn [db _]
    (:chat-history db)))
+
+(reg-sub
+ :model-config
+ (fn [db _]
+   (:model-config db)))
