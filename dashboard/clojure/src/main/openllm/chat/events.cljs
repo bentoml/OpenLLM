@@ -1,7 +1,8 @@
 (ns openllm.chat.events
     (:require [ajax.core :as ajax]
               [openllm.events :refer [api-base-url check-spec-interceptor]]
-              [re-frame.core :refer [reg-event-db reg-event-fx]]))
+              [re-frame.core :refer [reg-event-db reg-event-fx]]
+              [clojure.string :as str]))
 
 (reg-event-db
  ::set-chat-input-value
@@ -33,20 +34,33 @@
  ::send-prompt-success
  []
  (fn [_ [_ response]]
-   {:dispatch [:add-to-chat-history :model (first (:responses response))]}))
+   {:dispatch [::add-to-chat-history :model (first (:responses response))]}))
+
+(reg-event-fx
+ ::send-prompt-failure
+ []
+ (fn [_ [_ _]]
+   {:dispatch-later [{:ms 10 :dispatch [::add-to-chat-history :model "Sorry, something went wrong."]}
+                     {:ms 20 :dispatch [::auto-scroll]}]}))
 
 (reg-event-fx
  ::on-send-button-click
  []
  (fn [_ [_ prompt llm-config]]
-   {:dispatch-n [[::send-prompt prompt llm-config]
-                 [::add-to-chat-history :user prompt]
-                 [::set-chat-input-value ""]]
-    :dispatch-later [{:ms 20 :dispatch [::auto-scroll]}]}))
+   (when (not (str/blank? prompt))
+     {:dispatch-n [[::send-prompt prompt llm-config]
+                   [::add-to-chat-history :user prompt]
+                   [::set-chat-input-value ""]]
+      :dispatch-later [{:ms 20 :dispatch [::auto-scroll]}]})))
+
+(defn auto-scroll!
+  "Scrolls the chat history to the bottom. Has side effects obviously."
+  []
+  (let [chat-history (js/document.getElementById "chat-history-container")]
+    (set! (.-scrollTop chat-history) (.-scrollHeight chat-history))))
 
 (reg-event-fx
  ::auto-scroll
  []
  (fn [_ _]
-   (let [chat-history (js/document.getElementById "chat-history-container")]
-     (set! (.-scrollTop chat-history) (.-scrollHeight chat-history)))))
+   (auto-scroll!) {}))
