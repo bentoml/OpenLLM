@@ -16,3 +16,14 @@
                  :response-format (ajax/json-response-format {:keywords? true})
                  :on-success      on-success
                  :on-failure      on-failure}}))
+
+(reg-event-fx
+ ::v1-metadata
+ []
+ (fn [_ [_ & {:keys [on-success on-failure]}]]
+   {:http-xhrio {:method :get
+                 :uri (str api-base-url "/v1/metadata")
+                 :format          (ajax/json-request-format)
+                 :response-format (ajax/json-response-format {:keywords? true})
+                 :on-success      on-success
+                 :on-failure      on-failure}}))
