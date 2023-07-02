@@ -9,9 +9,11 @@
   []
   [:div {:class "mt-1 px-2 py-2 items-center relative rounded-md shadow-sm grid grid-cols-4"}
    [:label {:class "text-end pr-6"} "Model-Type"]
-   [:select {:class "w-2/3 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm rounded-md"}]
+   [:select {:class "w-2/3 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm rounded-md"}
+    [:option {:value "flan-type"} "FLAN-T5"]]
    [:label {:class "text-end pr-6"} "Model-ID"]
-   [:select {:class "w-2/3 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm rounded-md"}]])
+   [:select {:class "w-2/3 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm rounded-md"}
+    [:option {:value "flan-id"} "google/flan-t5-large"]]])
 
 (defn input-field
   "The input field for the prompt."
@@ -27,7 +29,9 @@
         [:button {:class "px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none"
                   :type "button"
                   :on-click #(rf/dispatch [::events/on-send-button-click @input-value @llm-config])} "Send"]
-        [:button {:class "ml-2 px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none"} "Clear"]]])))
+        [:button {:class "ml-2 px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none"
+                  :type "button"
+                  :on-click #(rf/dispatch [::events/set-prompt-input ""])} "Clear"]]])))
 
 (defn response-area
   "The latest response will be displayed in the component."

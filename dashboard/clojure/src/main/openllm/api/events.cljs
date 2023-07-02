@@ -21,7 +21,7 @@
  ::v1-metadata
  []
  (fn [_ [_ & {:keys [on-success on-failure]}]]
-   {:http-xhrio {:method :get
+   {:http-xhrio {:method :post
                  :uri (str api-base-url "/v1/metadata")
                  :format          (ajax/json-request-format)
                  :response-format (ajax/json-response-format {:keywords? true})

@@ -18,7 +18,7 @@
                                (.preventDefault %))}
         [:textarea {:class "py-1 w-[calc(100%_-_80px)] appearance-none block border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm"
                     :style {:resize "none"}
-                    :type "text" :placeholder "Type your prompt..."
+                    :type "text" :placeholder "Type your message..."
                     :value @chat-input-sub
                     :on-change on-change
                     :id "chat-input"
@@ -33,13 +33,16 @@
   []
   (let [history (rf/subscribe [::subs/chat-history])]
     (fn chat-history []
-      (into [:div {:class "px-4"}]
+      (into [:div {:class "px-4 flex flex-col items-center"}]
             (map (fn [{:keys [user text]}]
-                   (let [diplay-user (if (= user :model) "Model" "You")
-                         color (if (= user :model) "bg-gray-200" "bg-blue-200")]
-                     [:div {:class (str "p-2 rounded-lg mb-2 " color)}
-                      [:h3 {:class "font-bold text-lg"} diplay-user]
-                      [:p {:class "text-gray-700"} text]]))
+                   (let [display-user (if (= user :model) "System" "You")
+                         color (if (= user :model) "bg-gray-200" "bg-pink-300")
+                         alignment (if (= user :model) "flex-row" "flex-row-reverse")
+                         margin (if (= user :model) "mr-10" "ml-10")]
+                     [:div {:class (str "flex " alignment " items-center my-2 w-4/5")}
+                      [:h3 {:class "font-bold text-lg mx-2"} display-user]
+                      [:div {:class (str "p-2 rounded-xl " color " " margin)}
+                       [:p {:class "text-gray-700"} text]]]))
                  @history)))))
 
 (defn chat-tab
