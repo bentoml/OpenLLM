@@ -1,8 +1,9 @@
 (ns openllm.events
-    (:require [openllm.db :refer [default-db]]
-              [re-frame.core :refer [reg-event-db reg-event-fx after]]
-              [ajax.core :as ajax]
-              [cljs.spec.alpha :as s]))
+    (:require [ajax.core :as ajax]
+              [cljs.spec.alpha :as s]
+              [clojure.pprint :as pprint]
+              [openllm.db :as db]
+              [re-frame.core :refer [after reg-event-db reg-event-fx]]))
 
 (def api-base-url "http://localhost:3000")
 
@@ -28,13 +29,7 @@
  :initialise-db
  [check-spec-interceptor] ;; why? to force people to update the spec :D
  (fn [_ _]
-   default-db))
-
-(reg-event-db
- :set-screen-id
- [check-spec-interceptor]
- (fn [db [_ new-screen-id]]
-   (assoc db :screen-id new-screen-id)))
+   db/default-db))
 
 (reg-event-db
  :set-chat-input-value
@@ -77,7 +72,9 @@
                  [:set-chat-input-value ""]]}))
 
 (reg-event-db
- :set-model-config
+ :set-model-config-parameter
  [check-spec-interceptor]
- (fn [db [_ new-config]]
-   (assoc db :model-config new-config)))
+ (fn [db [_ parameter value]]
+   (print (type value))
+   (pprint/pprint (assoc-in db [:model-config parameter] value))
+   (assoc-in db [:model-config parameter] value)))

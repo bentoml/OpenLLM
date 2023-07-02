@@ -1,6 +1,7 @@
 (ns openllm.views
   (:require [re-frame.core :as rf]
-            [openllm.db :as db])) ;; TODO: remove this. just for the standard llm-config for now
+            [openllm.db :as db]
+            [clojure.string :as str])) ;; TODO: remove this. just for the standard llm-config for now
 
 (defn second-page
   []
@@ -24,25 +25,34 @@
 (defn parameter-slider-with-input
   "Renders a slider with an input field next to it."
   [name value]
-  (let [min-max (name db/parameter-min-max)]
+  (let [min-max (name db/parameter-min-max)
+        num-type? (or (str/includes? (str name) "num") (= name ::db/top_k))
+        on-change #(rf/dispatch [:set-model-config-parameter name (if num-type?
+                                                                    (parse-long (.. % -target -value))
+                                                                    (parse-double (.. % -target -value)))])]
     [:div {:class "flex flex-row items-center"}
      [:span {:class "mr-2 text-xs text-gray-500"} (str (first min-max))]
      [:input {:type "range"
-              :min (str (first min-max))
-              :max (str (second min-max))
-              :value (str value)
-              :class "w-28 h-2 bg-gray-300 accent-pink-600"}]
+              :min (first min-max)
+              :max (second min-max)
+              :step (if num-type? 1 0.01)
+              :value value
+              :class "w-28 h-2 bg-gray-300 accent-pink-600"
+              :on-change on-change}]
      [:span {:class "ml-2 text-xs text-gray-500"} (str (second min-max))]
      [:input {:type "number"
               :class "w-16 px-1 py-1 text-xs text-gray-700 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm ml-auto"
-              :value (str value)}]]))
+              :step (if num-type? 1 0.01)
+              :value value
+              :on-change on-change}]]))
 
 (defn parameter-checkbox
   "Renders a checkbox."
   [name value]
   [:input {:type "checkbox"
            :checked value
-           :class "h-4 w-4 text-pink-600 focus:ring-pink-500 border-gray-300 rounded"}])
+           :class "h-4 w-4 text-pink-600 focus:ring-pink-500 border-gray-300 rounded"
+           :on-change #(rf/dispatch [:set-model-config-parameter name (boolean (.. % -target -checked))])}])
 
 (defn parameter-list-entry-value
   [name value]
@@ -52,7 +62,8 @@
     :else
     [:input {:type "number"
              :class "px-1 py-1 text-xs text-gray-700 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm w-full"
-             :value value}]))
+             :value value
+             :on-change #(rf/dispatch [:set-model-config-parameter name (int (.. % -target -value))])}]))
 
 (defn parameter-list-entry
   "Renders a single parameter in the sidebar's parameter list."

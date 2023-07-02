@@ -39,26 +39,26 @@
    ::repetition_penalty [0.0 5.0]
    ::encoder_repetition_penalty [0.0 5.0]
    ::length_penalty [0.0 5.0]
-   ::num_beams [0 10.0]
+   ::num_beams [0 10]
    ::penalty_alpha [0.0 10.0]})
 
-(defn get-validate-range-predicate [keyword]
+(defn get-validate-range-predicate [keyword type-predicate]
   (let [param (keyword parameter-min-max)]
-    (s/and float?
+    (s/and type-predicate
            #(<= (first param) % (second param)))))
 
-(s/def ::temperature (get-validate-range-predicate ::temperature))
-(s/def ::top_k (get-validate-range-predicate ::top_k))
-(s/def ::top_p (get-validate-range-predicate ::top_p))
-(s/def ::typical_p (get-validate-range-predicate ::typical_p))
-(s/def ::epsilon_cutoff (get-validate-range-predicate ::epsilon_cutoff))
-(s/def ::eta_cutoff (get-validate-range-predicate ::eta_cutoff))
-(s/def ::diversity_penalty (get-validate-range-predicate ::diversity_penalty))
-(s/def ::repetition_penalty (get-validate-range-predicate ::repetition_penalty))
-(s/def ::encoder_repetition_penalty (get-validate-range-predicate ::encoder_repetition_penalty))
-(s/def ::length_penalty (get-validate-range-predicate ::length_penalty))
-(s/def ::num_beams (get-validate-range-predicate ::num_beams))
-(s/def ::penalty_alpha (get-validate-range-predicate ::penalty_alpha))
+(s/def ::temperature (get-validate-range-predicate ::temperature float?))
+(s/def ::top_k (get-validate-range-predicate ::top_k int?))
+(s/def ::top_p (get-validate-range-predicate ::top_p float?))
+(s/def ::typical_p (get-validate-range-predicate ::typical_p float?))
+(s/def ::epsilon_cutoff (get-validate-range-predicate ::epsilon_cutoff float?))
+(s/def ::eta_cutoff (get-validate-range-predicate ::eta_cutoff float?))
+(s/def ::diversity_penalty (get-validate-range-predicate ::diversity_penalty float?))
+(s/def ::repetition_penalty (get-validate-range-predicate ::repetition_penalty float?))
+(s/def ::encoder_repetition_penalty (get-validate-range-predicate ::encoder_repetition_penalty float?))
+(s/def ::length_penalty (get-validate-range-predicate ::length_penalty float?))
+(s/def ::num_beams (get-validate-range-predicate ::num_beams int?))
+(s/def ::penalty_alpha (get-validate-range-predicate ::penalty_alpha float?))
 (s/def ::max_new_tokens int?)
 (s/def ::min_length int?)
 (s/def ::min_new_tokens int?)
@@ -66,11 +66,16 @@
 (s/def ::max_time float?)
 (s/def ::num_beam_groups int?)
 (s/def ::use_cache boolean?)
-(s/def ::model-config (s/keys :req [::temperature ::top_k ::top_p ::typical_p ::epsilon_cutoff
-                                    ::eta_cutoff ::diversity_penalty ::repetition_penalty
-                                    ::encoder_repetition_penalty ::length_penalty ::max_new_tokens
-                                    ::min_length ::min_new_tokens ::early_stopping ::max_time
-                                    ::num_beams ::num_beam_groups ::penalty_alpha ::use_cache]))
+(s/def ::model-config (s/keys :req [::temperature ::top_k
+                                    ::top_p ::typical_p
+                                    ::epsilon_cutoff ::eta_cutoff
+                                    ::diversity_penalty ::repetition_penalty
+                                    ::encoder_repetition_penalty ::length_penalty
+                                    ::max_new_tokens ::min_length
+                                    ::min_new_tokens ::early_stopping
+                                    ::max_time ::num_beams
+                                    ::num_beam_groups ::penalty_alpha
+                                    ::use_cache]))
 ;; ####################### MODEL CONFIG  END ########################
 
 ;; ########################### AGGREGATE ############################
@@ -81,25 +86,25 @@
 ;; ######################## AGGREGATE END ###########################
 
 (def standard-llm-config
-  "Very arbitrary. Review this please."
+  "Very arbitrary. Should be fetched from metadata endpoint eventually." ;; TODO: fetch from metadata endpoint
   {::temperature 0.9
    ::top_k 50
    ::top_p 0.4
-   ::typical_p 1
-   ::epsilon_cutoff 0
-   ::eta_cutoff 0
-   ::diversity_penalty 0
-   ::repetition_penalty 1
-   ::encoder_repetition_penalty 1
-   ::length_penalty 1
+   ::typical_p 1.0
+   ::epsilon_cutoff 0.0
+   ::eta_cutoff 0.0
+   ::diversity_penalty 0.0
+   ::repetition_penalty 1.0
+   ::encoder_repetition_penalty 1.0
+   ::length_penalty 1.0
    ::max_new_tokens 2048
    ::min_length 0
    ::min_new_tokens 0
    ::early_stopping false
-   ::max_time 0
+   ::max_time 0.0
    ::num_beams 1
    ::num_beam_groups 1
-   ::penalty_alpha 0
+   ::penalty_alpha 0.0
    ::use_cache true})
 
 (def default-db
