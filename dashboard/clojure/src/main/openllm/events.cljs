@@ -1,9 +1,7 @@
 (ns openllm.events
     (:require [cljs.spec.alpha :as s]
               [openllm.db :as db]
-              [re-frame.core :refer [after reg-event-db reg-event-fx]]))
-
-(def api-base-url "http://localhost:3000")
+              [re-frame.core :refer [after reg-event-db]]))
 
 (defn check-and-throw
   "Throws an exception if `db` doesn't match the Spec `a-spec`. Acts as a helper

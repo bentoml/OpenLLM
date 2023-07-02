@@ -1,4 +1,4 @@
-(ns openllm.side-bar.events
+(ns openllm.components.side-bar.events
     (:require [re-frame.core :refer [reg-event-db]]
               [openllm.events :refer [check-spec-interceptor]]))
 

@@ -1,4 +1,4 @@
-(ns openllm.chat.subs
+(ns openllm.components.chat.subs
     (:require [re-frame.core :refer [reg-sub]]))
 
 (reg-sub

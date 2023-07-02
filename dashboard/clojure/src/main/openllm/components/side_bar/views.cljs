@@ -1,7 +1,7 @@
-(ns openllm.side-bar.views
+(ns openllm.components.side-bar.views
   (:require [re-frame.core :as rf]
             [openllm.db :as db]
-            [openllm.side-bar.events :as events]
+            [openllm.components.side-bar.events :as events]
             [clojure.string :as str]))
 
 (defn openllm-tag

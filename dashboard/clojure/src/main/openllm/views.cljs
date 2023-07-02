@@ -1,9 +1,7 @@
 (ns openllm.views
   (:require [re-frame.core :as rf]
-            [openllm.db :as db]
-            [clojure.string :as str]
-            [openllm.side-bar.views :as side-bar-views]
-            [openllm.chat.views :as chat-views])) 
+            [openllm.components.side-bar.views :as side-bar-views]
+            [openllm.components.chat.views :as chat-views])) 
 
 (defn tabs
   "The tabs at the top of the screen."

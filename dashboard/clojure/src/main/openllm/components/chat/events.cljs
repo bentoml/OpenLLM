@@ -1,6 +1,6 @@
-(ns openllm.chat.events
-    (:require [ajax.core :as ajax]
-              [openllm.events :refer [api-base-url check-spec-interceptor]]
+(ns openllm.components.chat.events
+    (:require [openllm.events :refer [check-spec-interceptor]] 
+              [openllm.api.events :as api]
               [re-frame.core :refer [reg-event-db reg-event-fx]]
               [clojure.string :as str]))
 
@@ -9,19 +9,6 @@
  [check-spec-interceptor]
  (fn [db [_ new-value]]
    (assoc db :chat-input-value new-value)))
-
-(reg-event-fx
- ::send-prompt
- []
- (fn [_ [_ prompt llm-config]]
-   {:http-xhrio {:method :post
-                 :uri (str api-base-url "/v1/generate")
-                 :params {:prompt prompt
-                          :llm_config llm-config}
-                 :format          (ajax/json-request-format)
-                 :response-format (ajax/json-response-format {:keywords? true})
-                 :on-success      [::send-prompt-success]
-                 :on-failure      [::send-prompt-failure]}})) ;; TODO: register handler
 
 (reg-event-db
  ::add-to-chat-history
@@ -48,7 +35,8 @@
  []
  (fn [_ [_ prompt llm-config]]
    (when (not (str/blank? prompt))
-     {:dispatch-n [[::send-prompt prompt llm-config]
+     {:dispatch-n [[::api/v1-generate prompt llm-config {:on-success [::send-prompt-success]
+                                                         :on-failure [::send-prompt-failure]}]
                    [::add-to-chat-history :user prompt]
                    [::set-chat-input-value ""]]
       :dispatch-later [{:ms 20 :dispatch [::auto-scroll]}]})))

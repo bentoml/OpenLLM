@@ -7,7 +7,7 @@
               [day8.re-frame.http-fx]
               [openllm.events]
               [openllm.subs]
-              ))
+              [openllm.api.events]))
 
 (defn app
   []

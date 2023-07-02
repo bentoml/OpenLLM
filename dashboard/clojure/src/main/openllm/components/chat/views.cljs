@@ -1,9 +1,9 @@
-(ns openllm.chat.views
+(ns openllm.components.chat.views
   (:require [re-frame.core :as rf]
-            [openllm.chat.events :as events]
-            [openllm.chat.subs :as subs]
+            [openllm.components.chat.events :as events]
+            [openllm.components.chat.subs :as subs]
             [openllm.db :as db]
-            [openllm.chat.views :as chat-views]))
+            [openllm.components.chat.views :as views]))
 
 (defn chat-controls
   "The chat input field and the send button."
