@@ -13,20 +13,21 @@
         on-change #(rf/dispatch [::events/set-chat-input-value (.. % -target -value)])
         on-send-click #(rf/dispatch [::events/on-send-button-click @chat-input-sub @llm-config])]
     (fn chat-controls []
-       [:form {:class "flex items-center justify-between"
-               :on-submit #(do % (on-send-click)
-                               (.preventDefault %))}
-        [:textarea {:class "py-1 w-[calc(100%_-_80px)] appearance-none block border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm"
-                    :style {:resize "none"}
-                    :type "text" :placeholder "Type your message..."
-                    :value @chat-input-sub
-                    :on-change on-change
-                    :id "chat-input"
-                    :auto-complete "off"
-                    :auto-correct "off"}]
-        [:button {:class "ml-2 px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none"
-                  :on-click on-send-click
-                  :type "button"} "Send"]])))
+      [:form {:class "flex items-center justify-between"}
+       [:textarea {:class "py-1 w-[calc(100%_-_80px)] appearance-none block border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm h-20"
+                   :style {:resize "none"}
+                   :type "text" :placeholder "Type your message..."
+                   :value @chat-input-sub
+                   :on-change on-change
+                   :on-key-press (fn [e]
+                                   (when (and (= (.-charCode e) 13) (not (.-shiftKey e)))
+                                     (on-send-click)))
+                   :id "chat-input"
+                   :auto-complete "off"
+                   :auto-correct "off"}]
+       [:button {:class "ml-2 px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none"
+                 :on-click on-send-click
+                 :type "button"} "Send"]])))
 
 (defn chat-history
   "The chat history."
@@ -53,5 +54,5 @@
          :style {:scrollBehavior "smooth"}}
    [:div
     [chat-history]]
-   [:div {:class "bottom-1 fixed w-[calc(100%_-_380px)]"}  
+   [:div {:class "bottom-1 fixed w-[calc(100%_-_380px)] mb-2"}  
     [chat-controls]]])
