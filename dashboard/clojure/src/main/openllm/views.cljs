@@ -19,7 +19,7 @@
 (defn sidebar-group-headline
   "The headlines for the different groups in the sidebar are rendered using this component."
   [headline]
-  [:h3 {:class "px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider" :id (str "sidebar-headline-" headline)} headline])
+  [:h3 {:class "px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider" :id (str "sidebar-headline-" headline)} headline])
 
 (defn parameter-slider-with-input
   "Renders a slider with an input field next to it."
@@ -31,7 +31,7 @@
               :min (str (first min-max))
               :max (str (second min-max))
               :value (str value)
-              :class "w-28"}]
+              :class "w-28 h-2 bg-gray-300 accent-pink-600"}]
      [:span {:class "ml-2 text-xs text-gray-500"} (str (second min-max))]
      [:input {:type "number"
               :class "w-16 px-1 py-1 text-xs text-gray-700 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm ml-auto"
@@ -48,10 +48,10 @@
   [name value]
   (cond
     (contains? db/parameter-min-max name) [parameter-slider-with-input name value]
-    (boolean? value) [:input {:type "checkbox" :checked value}]
+    (boolean? value) [parameter-checkbox]
     :else
     [:input {:type "number"
-             :class "px-1 py-1 text-xs text-gray-700 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm ml-auto"
+             :class "px-1 py-1 text-xs text-gray-700 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm w-full"
              :value value}]))
 
 (defn parameter-list-entry
@@ -69,21 +69,7 @@
     (fn parameter-list
       []
       [:div
-       [sidebar-group-headline "Parameters"]
        (map parameter-list-entry @model-config)])))
-
-(defn model-dropdown
-  "Aggregates the two components making up the dropdown menu."
-  []
-  [:div {:class "px-3 mt-8 relative inline-block text-left"}
-   [parameter-list]])
-
-(defn option-button
-  "A button from the status bar."
-  [text icon-path]
-  [:a {:href "#" :class "text-gray-700 hover:text-gray-900 hover:bg-gray-50 group flex items-center px-2 py-2 text-sm font-medium rounded-md"}
-   [:svg {:class "text-gray-400 group-hover:text-gray-500 mr-3 h-6 w-6" :xmlns "http://www.w3.org/2000/svg" :fill "none" :viewBox "0 0 24 24" :stroke "currentColor" :aria-hidden "true"}
-    [:path {:stroke-linecap "round" :stroke-linejoin "round" :stroke-width "2" :d icon-path}]] text])
 
 (defn status-display
   "Displays the current service status at the bottom of the sidebar."
@@ -103,8 +89,11 @@
   []
   [:div {:class "flex flex-col w-80 border-r border-gray-200 pt-5 pb-4 bg-gray-200"} ;; sidebar div + background
    [openllm-tag]
-   [:div {:class "h-0 flex-1 flex flex-col overflow-y-auto"}
-    [model-dropdown]]
+   [:hr {:class "my-5 border-1 border-black"}]
+   [sidebar-group-headline "Parameters"]
+   [:div {:class "my-4 h-0 flex-1 flex flex-col overflow-y-auto"}
+    [:div {:class "px-3 mt-8 relative inline-block text-left"}
+     [parameter-list]]]
    [status-display true]])
 
 (defn chat-controls
