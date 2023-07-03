@@ -591,4 +591,16 @@ if you wish to contribute to OpenLLM's codebase.
 
 ## 📔 Citation
 
-If you use OpenLLM in your research, we provide a [citation](./CITATION.cff).
+If you use OpenLLM in your research, we provide a [citation](./CITATION.cff) to
+use:
+
+```bibtex
+@software{Pham_OpenLLM_Operating_LLMs_2023,
+author = {Pham, Aaron and Yang, Chaoyu and Sheng, Sean and  Zhao, Shenyang and Lee, Sauyon and Jiang, Bo and Dong, Fog and Guan, Xipeng and Ming, Frost},
+license = {Apache-2.0},
+month = jun,
+title = {{OpenLLM: Operating LLMs in production}},
+url = {https://github.com/bentoml/OpenLLM},
+year = {2023}
+}
+```
