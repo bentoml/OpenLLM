@@ -64,3 +64,9 @@
  []
  (fn [_ _]
    (auto-scroll!) {}))
+
+(reg-event-db
+ ::clear-chat-history
+ []
+ (fn [db _]
+   (assoc db :chat-history [])))

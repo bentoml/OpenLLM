@@ -108,6 +108,13 @@
                        (rf/dispatch [::set-chat-history-app-db (js->clj result :keywordize-keys true)]))]
      (idb/os-get-all {:db indexed-db :os-name (:name idb-table-info)} callback-fn))))
 
+(rf/reg-event-fx
+ ::clear-chat-history
+ [(rf/inject-cofx ::indexed-db)]
+ (fn [cofx [_]]
+   (let [indexed-db (:idb cofx)]
+     (idb/wipe-object-store! {:db indexed-db :os-name (:name idb-table-info)}))))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;           Rich Comments            ;;

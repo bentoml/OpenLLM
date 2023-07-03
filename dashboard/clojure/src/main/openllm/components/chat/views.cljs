@@ -3,7 +3,9 @@
             [openllm.components.chat.events :as events]
             [openllm.components.chat.subs :as subs]
             [openllm.subs :as root-subs]
-            [openllm.components.chat.views :as views]))
+            [openllm.components.chat.views :as views]
+            [openllm.api.persistence :as persistence]
+            [openllm.api.components :as ui]))
 
 (defn chat-controls
   "The chat input field and the send button."
@@ -46,13 +48,27 @@
                        [:p {:class "text-gray-700"} text]]]))
                  @history)))))
 
+(defn clear-history-button
+  "The button to clear the chat history."
+  []
+  [:div {:class "fixed top-32 h-[calc(100%_-_220px)] pr-2 pt-2"
+         :style {:zIndex "9999"
+                 :right "21.1rem"}}
+   [ui/tooltip
+    [:button {:class "bg-red-400 hover:bg-red-500 text-white font-bold py-2 px-4 rounded block"
+              :on-click #(do (rf/dispatch [::events/clear-chat-history])
+                             (rf/dispatch [::persistence/clear-chat-history]))} "🗑️"]
+    "Click to clear chat history"]])
+
 (defn chat-tab
   "The component rendered if the chat tab is active."
   []
-  [:div {:id "chat-history-container"
-         :class "overflow-y-scroll mt-6 h-[calc(100%_-_220px)] w-full no-scrollbar"
-         :style {:scrollBehavior "smooth"}}
-   [:div
-    [chat-history]]
-   [:div {:class "bottom-1 fixed w-[calc(100%_-_380px)] mb-2"}  
+  [:<>
+   [:div {:id "chat-history-container"
+          :class "overflow-y-scroll mt-6 h-[calc(100%_-_220px)] w-full no-scrollbar"
+          :style {:scrollBehavior "smooth"}}
+    [:div
+     [chat-history]]]
+   [clear-history-button]
+   [:div {:class "bottom-1 fixed w-[calc(100%_-_380px)] mb-2"}
     [chat-controls]]])
