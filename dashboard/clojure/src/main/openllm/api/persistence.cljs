@@ -1,5 +1,6 @@
 (ns openllm.api.persistence
   (:require [openllm.api.indexed-db.core :as idb]
+            [openllm.api.log4cljs.core :refer [log]]
             [re-frame.core :as rf]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -24,6 +25,7 @@
    populate the chat history in the app-db with the data from the
    IndexedDB database."
   [idb]
+  (log :debug "IndexedDB database initialized")
   (rf/dispatch-sync [::set-indexed-db idb])
   (rf/dispatch [::sync-chat-history]))
 
@@ -35,6 +37,7 @@
    as a callback function to be called when the IndexedDB database
    is initialized."
   []
+  (log :debug "Initializing IndexedDB database...")
   (idb/initialize! idb-info idb-table-info on-db-initialized))
 
 (defn idb-chat-history->clean-chat-history
@@ -87,6 +90,8 @@
  ::set-chat-history-app-db
  (fn [db [_ chat-history]]
    (let [clean-chat-history (idb-chat-history->clean-chat-history chat-history)]
+     (log :debug "Synchronized chat history with IndexedDB database, loaded"
+          (count clean-chat-history) "messages.")
      (assoc db :chat-history clean-chat-history))))
 
 ;; Will be dispatched when the IndexedDB database is initialized, and will

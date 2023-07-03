@@ -4,30 +4,8 @@
    in the re-frame sense, but an independent API which will be used for
    client-side persistence.
    false
-   I recommend to import this namespace as `idb` to avoid any confusion.")
-
-(defn log
-  "Log a message to the browser's console. It can log to the levels
-   `:debug`, `:info`, `:warn` and `:error`. Additionally you can use
-   `:log` to log to the `log` level, although you can do that with
-   clojure's `print` function as well, assuming you have enabled
-   console printing with `enable-console-print!`.
-
-   This function is meant to be used for logging debugging information
-   and ultimately remote troubleshooting.
-   It is a consideration to also persist any incoming messages to the
-   database in the future."
-  [level & args]
-  (let [out js/console
-        kw->js-log-fn {:debug out.debug :info out.info :warn out.warn
-                       :error out.error :log out.log}
-        log-fn (kw->js-log-fn level)]
-    (if (some? log-fn)
-      (apply log-fn args)
-      (throw
-       (ex-info "Invalid log level. Valid log levels are :debug, :info, :warn, :error and :log."
-                {:level level
-                 :original-args args})))))
+   I recommend to import this namespace as `idb` to avoid any confusion."
+  (:require [openllm.api.log4cljs.core :refer [log]]))
 
 (def ^:private ^:const READ_WRITE "readwrite")
 (def ^:private ^:const READ_ONLY "readonly")
