@@ -1,6 +1,6 @@
 (ns openllm.components.chat.events
     (:require [openllm.events :refer [check-spec-interceptor]] 
-              [openllm.api.events :as api]
+              [openllm.api.http :as api]
               [re-frame.core :refer [reg-event-db reg-event-fx]]
               [clojure.string :as str]))
 

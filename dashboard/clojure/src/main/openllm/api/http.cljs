@@ -1,6 +1,6 @@
-(ns openllm.api.events
+(ns openllm.api.http
   (:require [ajax.core :as ajax]
-            [re-frame.core :refer [reg-event-fx reg-event-db]]))
+            [re-frame.core :refer [reg-event-fx]]))
 
 (def api-base-url "http://localhost:3000")
 
@@ -27,8 +27,3 @@
                  :response-format (ajax/json-response-format {:keywords? true})
                  :on-success      on-success
                  :on-failure      on-failure}}))
-
-(reg-event-db
- ::set-idb
- (fn [db [_ idb]]
-   (assoc db :idb idb)))

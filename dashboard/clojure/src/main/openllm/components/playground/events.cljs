@@ -1,7 +1,7 @@
 (ns openllm.components.playground.events
     (:require [openllm.events :refer [check-spec-interceptor]]
               [re-frame.core :as rf :refer [reg-event-db reg-event-fx]]
-              [openllm.api.events :as api]))
+              [openllm.api.http :as api]))
 
 (reg-event-db
  ::set-prompt-input

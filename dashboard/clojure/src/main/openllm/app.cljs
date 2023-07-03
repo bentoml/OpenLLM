@@ -1,6 +1,5 @@
 (ns openllm.app
-    (:require [openllm.api.core :as api]
-              [openllm.api.indexed-db.core :as idb]
+    (:require [openllm.api.persistence :as persistence]
               [reagent.dom :as dom]
               [openllm.views :as views]
               [re-frame.core :as rf]
@@ -9,7 +8,7 @@
               [day8.re-frame.http-fx]
               [openllm.events]
               [openllm.subs]
-              [openllm.api.events]))
+              [openllm.api.http]))
 
 (defn app
   []
@@ -24,6 +23,5 @@
   []
   (enable-console-print!) ;; so that print writes to `console.log`
   (rf/dispatch-sync [:initialise-db])
-  (api/init-idb)
-  (rf/dispatch-sync [::set-idb idb/idb])
+  (persistence/init-idb)
   (start))
