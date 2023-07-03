@@ -1,5 +1,5 @@
 (ns openllm.app
-    (:require [openllm.api.indexed-db.core :as idb]
+    (:require [openllm.api.core :as api]
               [reagent.dom :as dom]
               [openllm.views :as views]
               [re-frame.core :as rf]
@@ -23,5 +23,5 @@
   []
   (enable-console-print!) ;; so that print writes to `console.log`
   (rf/dispatch-sync [:initialise-db])
-  (idb/initialize!)
+  (api/init-idb)
   (start))

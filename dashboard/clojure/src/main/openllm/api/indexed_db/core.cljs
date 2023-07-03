@@ -33,15 +33,8 @@
                 {:level level
                  :original-args args})))))
 
-(def db-name "OpenLLM_clj_GutZuFusss")
-(def db-version 1)
-
 (def ^:private ^:const READ_WRITE "readwrite")
 (def ^:private ^:const READ_ONLY "readonly")
-
-(def table-chat-history
-  {:name "chat-history"
-   :index [{:name "user" :unique false}]})
 
 (defn idb-error-callback
   "This function is called when an error occurs during an IndexedDB
@@ -175,7 +168,7 @@
    1. The database did not exist before and was created.
    2. The database existed before, but the version (and presumably the
       schema) was lower/older than the current version."
-  [os-name user-callback e]
+  [table-info user-callback e]
   (let [db (.. e -target -result)
         old-version (.-oldVersion db)
         new-version (.-version db)]
@@ -187,7 +180,7 @@
       (do (log :info (str "Received upgrade needed event, current version is " new-version ", old version is " old-version ". Calling user callback."))
           (user-callback old-version new-version))
       (do (log :info (str "Database and object store created. Current database version is " (.-version db) "."))
-          (create-object-store! {:db db :os-name os-name} table-chat-history)))
+          (create-object-store! {:db db :os-name (:name table-info)} table-info)))
     nil))
 
 (defn on-initialize-success!
@@ -218,17 +211,19 @@
    (create-object-store! {:db db :os-name store-name}
                          your-table-definition)
    ```"
-  ([] (initialize! nil))
-  ([on-upgrade-db-version]
-   (let [upgrade-callback! (partial on-upgrade-needed!
-                                    (:name table-chat-history)
+  ([db-info table-info] (initialize! db-info table-info nil))
+  ([db-info table-info on-upgrade-db-version]
+   (let [{:keys [db-name db-version]} db-info
+         upgrade-callback! (partial on-upgrade-needed!
+                                    table-info
                                     on-upgrade-db-version)
          request (.open
                   (. js/window -indexedDB)
                   db-name db-version)]
      (set! (.-onerror request) idb-error-callback)
      (set! (.-onupgradeneeded request) upgrade-callback!)
-     (set! (.-onsuccess request) on-initialize-success!))))
+     (set! (.-onsuccess request) on-initialize-success!))
+   nil))
 
 
 ;; rich comments for documentation purposes. execute in order to get the same results
@@ -236,7 +231,7 @@
 (comment
   (def idb-sub (re-frame/subscribe [::subs/indexed-db])) ;; => [#object[reagent.ratom.Reaction {:val #object[IDBDatabase [object IDBDatabase]]}]]
 
-  (def obj-store-name (:name table-chat-history)) ;; => ["chat-history"]
+  (def obj-store-name "chat-history") ;; => ["chat-history"]
 
   (def obj-store-fqn {:db @idb-sub :os-name obj-store-name})
 
@@ -258,7 +253,10 @@
 
 
   ;; initialize the database and creates the object stores
-  (initialize!) ;; => #object[openllm$api$indexed_db$core$on_upgrade_needed]
+  (initialize! {:db-name "test-db" :db-version 1}
+               {:name "chat-history"
+                :index [{:name "user"
+                         :unique false}]}) ;; => nil
 
 
   ;; add a single test message to the object store
