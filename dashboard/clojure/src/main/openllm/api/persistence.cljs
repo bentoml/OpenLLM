@@ -19,9 +19,14 @@
    (assoc db :idb idb)))
 
 ;; FUNCTIONS
+(defn on-db-initialized
+  "Passed as the callback function to `idb/initialize!` to set the
+   :idb key in the app-db."
+  [idb]
+  (rf/dispatch-sync [::set-indexed-db idb]))
+
 (defn init-idb
   "Initializes the IndexedDB database and creates the object store
    if it does not exist."
   []
-  (idb/initialize! idb-info idb-table-info)
-  (rf/dispatch-sync [::set-indexed-db idb/idb]))
+  (idb/initialize! on-db-initialized idb-info idb-table-info))

@@ -29,8 +29,6 @@
                 {:level level
                  :original-args args})))))
 
-(def idb (atom nil))
-
 (def ^:private ^:const READ_WRITE "readwrite")
 (def ^:private ^:const READ_ONLY "readonly")
 
@@ -181,23 +179,20 @@
           (create-object-store! {:db db :os-name (:name table-info)} table-info)))
     nil))
 
-(defn on-initialize-success!
+(defn- on-initialize-success!
   "This function is called as a callback when the database is initialized.
-   It will save the backing database in the app-db for later use.
-   
-   If this function is called, the database already exists and the version
-   is the same as the current version."
-  [e]
+   It will call the callback fn passed into `initialize` by the user."
+  [user-callback e]
   (let [db (.. e -target -result)]
-    (reset! idb db)
-    (log :debug "Database initialized and registered in re-frame app-db." e)))
+    (user-callback db)
+    (log :debug "Database initialized and callback function triggered." e)))
 
 (defn initialize!
   "Initialize the indexed-db. This function should be called once
-   when the application starts. This function will pull the database
-   from the browser and register a callback that creates an object
-   store.
-   
+   when the application starts. The `db-init-callback` function will
+   be called when the database is initialized. It will be called with
+   the database as its only argument.
+
    Optionally you can pass an on-upgrade callback function, which will
    be called when the database is upgraded to a new version. The
    function will be called with the old version number as its first
@@ -209,8 +204,8 @@
    (create-object-store! {:db db :os-name store-name}
                          your-table-definition)
    ```"
-  ([db-info table-info] (initialize! db-info table-info nil))
-  ([db-info table-info on-upgrade-db-version]
+  ([db-info table-info db-init-callback] (initialize! db-info table-info db-init-callback nil))
+  ([db-info table-info db-init-callback on-upgrade-db-version]
    (let [{:keys [db-name db-version]} db-info
          upgrade-callback! (partial on-upgrade-needed!
                                     table-info
@@ -220,14 +215,14 @@
                   db-name db-version)]
      (set! (.-onerror request) idb-error-callback)
      (set! (.-onupgradeneeded request) upgrade-callback!)
-     (set! (.-onsuccess request) on-initialize-success!))
+     (set! (.-onsuccess request) (partial on-initialize-success! db-init-callback)))
    nil))
 
 
 ;; rich comments for documentation purposes. execute in order to get the same results
 ;; as the ones in the ";; =>" comments
 (comment
-  (def db-atom idb) ;; => [#object[cljs.core.Atom {:val #object[IDBDatabase [object IDBDatabase]]}]]
+  (def db-atom (atom nil)) ;; => [#object[cljs.core.Atom {:val #object[IDBDatabase [object IDBDatabase]]}]]
 
   (def obj-store-name "chat-history") ;; => ["chat-history"]
 
@@ -254,7 +249,8 @@
   (initialize! {:db-name "test-db" :db-version 1}
                {:name "chat-history"
                 :index [{:name "user"
-                         :unique false}]}) ;; => nil
+                         :unique false}]}
+               #(reset! db-atom %)) ;; => nil
 
 
   ;; add a single test message to the object store
