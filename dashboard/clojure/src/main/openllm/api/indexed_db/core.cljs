@@ -4,11 +4,7 @@
    in the re-frame sense, but an independent API which will be used for
    client-side persistence.
    false
-   I recommend to import this namespace as `idb` to avoid any confusion."
-  (:require [openllm.api.indexed-db.events :as events]
-            [openllm.api.indexed-db.subs :as subs]
-            [re-frame.core :as re-frame]
-            [reagent.core :as r]))
+   I recommend to import this namespace as `idb` to avoid any confusion.")
 
 (defn log
   "Log a message to the browser's console. It can log to the levels
@@ -32,6 +28,8 @@
        (ex-info "Invalid log level. Valid log levels are :debug, :info, :warn, :error and :log."
                 {:level level
                  :original-args args})))))
+
+(def idb (atom nil))
 
 (def ^:private ^:const READ_WRITE "readwrite")
 (def ^:private ^:const READ_ONLY "readonly")
@@ -131,7 +129,7 @@
    will call the callback-fn with the objects from the object store.
    It might be possible to at least get rid of the atom."
   [obj-store-fqn callback-fn]
-  (let [values (r/atom []) ;; grrr
+  (let [values (atom []) ;; TODO: grrr
         request
         (->
          (create-transaction obj-store-fqn READ_ONLY)
@@ -191,7 +189,7 @@
    is the same as the current version."
   [e]
   (let [db (.. e -target -result)]
-    (re-frame/dispatch-sync [::events/init-indexed-db db])
+    (reset! idb db)
     (log :debug "Database initialized and registered in re-frame app-db." e)))
 
 (defn initialize!
@@ -229,11 +227,11 @@
 ;; rich comments for documentation purposes. execute in order to get the same results
 ;; as the ones in the ";; =>" comments
 (comment
-  (def idb-sub (re-frame/subscribe [::subs/indexed-db])) ;; => [#object[reagent.ratom.Reaction {:val #object[IDBDatabase [object IDBDatabase]]}]]
+  (def db-atom idb) ;; => [#object[cljs.core.Atom {:val #object[IDBDatabase [object IDBDatabase]]}]]
 
   (def obj-store-name "chat-history") ;; => ["chat-history"]
 
-  (def obj-store-fqn {:db @idb-sub :os-name obj-store-name})
+  (def obj-store-fqn {:db @db-atom :os-name obj-store-name})
 
   (def test-messages [{:user :user :text "Hey"}
                       {:user :model :text "Hey, how are you?"}
