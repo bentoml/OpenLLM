@@ -20,7 +20,7 @@
 (defn on-db-initialized
   "Passed as the callback function to `idb/initialize!` to set the
    :idb key in the app-db.
-   
+
    This function also dispatches the `::sync-chat-history` event to
    populate the chat history in the app-db with the data from the
    IndexedDB database."
@@ -32,7 +32,7 @@
 (defn init-idb
   "Initializes the IndexedDB database and creates the object store
    if it does not exist.
-   
+
    This function notably registers the `on-db-initialized` function
    as a callback function to be called when the IndexedDB database
    is initialized."
@@ -40,10 +40,10 @@
   (log :debug "Initializing IndexedDB database...")
   (idb/initialize! idb-info idb-table-info on-db-initialized))
 
-(defn idb-chat-history->clean-chat-history
+(defn chat-history->sanitized
   "Takes the chat history from the IndexedDB database and cleans it
    up to be used in the app-db.
-   
+
    First, the `:id` key is removed from each message, and then the
    values belonging to the `:user` keys are converted to a keyword.
    Finally, the chat history is converted to a vector."
@@ -89,7 +89,7 @@
 (rf/reg-event-db
  ::set-chat-history-app-db
  (fn [db [_ chat-history]]
-   (let [clean-chat-history (idb-chat-history->clean-chat-history chat-history)]
+   (let [clean-chat-history (chat-history->sanitized chat-history)]
      (log :debug "Synchronized chat history with IndexedDB database, loaded"
           (count clean-chat-history) "messages.")
      (assoc db :chat-history clean-chat-history))))
@@ -116,10 +116,10 @@
   ;; add a chat message to the database
   (rf/dispatch [::add-to-indexed-db-history :model "hello"])
 
-  ;; cleaning chat history demo
+  ;; sanitizing chat history demo
   (def chat-history [{:id 1 :user "model" :text "hi"}
                      {:id 2 :user "user" :text "hey"}])
-  (idb-chat-history->clean-chat-history chat-history) ;; => [{:user :model, :text "hi"} {:user :user, :text "hey"}]
+  (chat-history->sanitized chat-history) ;; => [{:user :model, :text "hi"} {:user :user, :text "hey"}]
 
   ;; set the chat history in the app-db to the data from the indexed-db database
   (rf/dispatch [::sync-chat-history]))

@@ -2,6 +2,7 @@
     (:require [openllm.events :refer [check-spec-interceptor]] 
               [openllm.api.http :as api]
               [openllm.api.persistence :as persistence]
+              [openllm.api.log4cljs.core :refer [log]]
               [re-frame.core :refer [reg-event-db reg-event-fx]]
               [clojure.string :as str]))
 
@@ -36,7 +37,8 @@
 (reg-event-fx
  ::send-prompt-failure
  []
- (fn [_ [_ _]]
+ (fn [_ [_ e]]
+   (log :error "Failed to send prompt" e)
    {:dispatch-later [{:ms 10 :dispatch [::add-to-chat-history :model "Sorry, something went wrong."]}
                      {:ms 20 :dispatch [::auto-scroll]}]}))
 

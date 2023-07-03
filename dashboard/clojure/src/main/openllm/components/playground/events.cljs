@@ -1,7 +1,8 @@
 (ns openllm.components.playground.events
     (:require [openllm.events :refer [check-spec-interceptor]]
               [re-frame.core :as rf :refer [reg-event-db reg-event-fx]]
-              [openllm.api.http :as api]))
+              [openllm.api.http :as api]
+              [openllm.api.log4cljs.core :refer [log]]))
 
 (reg-event-db
  ::set-prompt-input
@@ -18,7 +19,8 @@
 (reg-event-db
  ::send-prompt-failure
  [check-spec-interceptor]
- (fn [db [_ _]]
+ (fn [db [_ e]]
+   (log :error "Failed to send prompt" e)
    (assoc db :playground-last-response "Sorry, something went wrong.")))
 
 (reg-event-fx

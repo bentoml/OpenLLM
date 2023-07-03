@@ -1,4 +1,4 @@
-(ns openllm.api.core
+(ns openllm.api.components
   (:require [re-frame.core :as rf]
             [reagent.core :as r]))
 

@@ -6,7 +6,7 @@
             [clojure.string :as str]))
 
 (defn openllm-tag
-  "The 'OpenLLM' tag in the very top left corner of the screen."
+  "The 'OpenLLM' tag in the very top right corner of the screen."
   []
   [:div {:class "flex items-center flex-shrink-0 px-6"}
    [:img {:class "h-11 w-auto" :src "./static/logo-light.svg" :alt "LOGO"}]

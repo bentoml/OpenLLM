@@ -3,6 +3,10 @@
               [openllm.db :as db]
               [re-frame.core :refer [after reg-event-db]]))
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;              Functions             ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn check-and-throw
   "Throws an exception if `db` doesn't match the Spec `a-spec`. Acts as a helper
    for our spec checking interceptor."
@@ -16,11 +20,9 @@
   (after (partial check-and-throw :openllm.db/db)))
 
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;               Events               ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 (reg-event-db
  :initialise-db
  [check-spec-interceptor] ;; why? to force people to update the spec :D

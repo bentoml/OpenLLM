@@ -50,7 +50,7 @@
   "The component rendered if the chat tab is active."
   []
   [:div {:id "chat-history-container"
-         :class "overflow-y-scroll mt-6 h-[calc(100%_-_200px)] w-full no-scrollbar"
+         :class "overflow-y-scroll mt-6 h-[calc(100%_-_220px)] w-full no-scrollbar"
          :style {:scrollBehavior "smooth"}}
    [:div
     [chat-history]]
