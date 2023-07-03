@@ -1,43 +1,42 @@
 (ns openllm.api.indexed-db.core
-  "The indexed-db API may be accessed through this namespace. This
-   namespace is meant to be used directly, this is not a db namespace
-   in the re-frame sense, but an independent API which will be used for
-   client-side persistence.
-   false
-   I recommend to import this namespace as `idb` to avoid any confusion."
+  "This namespace is a wrapper for the IndexedDB API. It provides
+   functions to create object stores, add objects to them and retrieve
+   objects from them.
+
+   The functions in this namespace are meant to be used by other
+   namespaces, which will provide a higher level API for the application
+   to use.
+
+   If you stumble upon a parameter named `obj-store-fqn`, this is the fully
+   qualified name of the object store. This name (or identifier rather)
+   must consist of a map with two keys: `:db` and `:os-name`. `:db` must
+   be a database object, which can be obtained via the `db-init-callback`
+   of the `initialize!` function. `:os-name` must be a string, which is
+   the name of the object store."
   (:require [openllm.api.log4cljs.core :refer [log]]))
 
 (def ^:private ^:const READ_WRITE "readwrite")
 (def ^:private ^:const READ_ONLY "readonly")
 
-(defn idb-error-callback
+(declare create-object-store!)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;             Private API            ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defn- idb-error-callback
   "This function is called when an error occurs during an IndexedDB
    request.
    It will log the error to the browser's console."
   [e]
   (log :error "Error during IndexedDB request" e))
 
-(defn create-object-store!
-  "Create an object store inside a database.
-   Will return the object store object with a transaction attached."
-  [obj-store-fqn table-info]
-  (let [{:keys [db os-name]} obj-store-fqn
-        object-store (.createObjectStore db os-name #js {:keyPath "id" :autoIncrement true})]
-    (for [table-idx (:index table-info)]
-      (.createIndex
-       object-store
-       (:name table-idx) (:name table-idx) #js {:unique (:unique table-idx)}))
-    (set! (.. object-store -transaction -oncomplete)
-          #(-> db
-                (.transaction os-name READ_WRITE)
-                (.objectStore os-name)))))
-
 (defn- create-transaction
-  "Create a transaction. This function is meant to be used by the
-   object store ('os-*') functions. This function will create a 
-   transaction and return the object store, which can be used
-   right away.
-   
+  "Create a transaction for the object store identified by the
+   `obj-store-fqn` (see namespace docstring for more information). This
+   function is meant to be used by the object store ('os-*') functions.
+   This function will create a transaction and return the object store,
+   which can be used to interact with the database right away.
+
    We consider this function semi-pure since there are no *notable* 
    direct side effects."
   [obj-store-fqn mode]
@@ -47,92 +46,6 @@
     (-> transaction
         (.objectStore os-name))))
 
-(defn os-add!
-  "Add an object to the given object store. This function will
-   create a transaction and add the object to the object store.
-   Returns nil."
-  [obj-store-fqn entry]
-  (let [object-store (create-transaction obj-store-fqn READ_WRITE)]
-    (-> object-store
-        (.put (clj->js entry))))
-  nil)
-
-(defn os-add-all!
-  "Add an vector of objects to the given object store. This function will
-   create a transaction and add the objects to the object store.
-   Note that we create a new transaction for each object.
-   TODO: Figure out if there is a way with clojure looping constructs to
-   create a single transaction and add all objects to the object store
-   at once.
-   
-   An exception will be thrown, if the third argument is not a vector!
-   There are no guarantees that the objects will be added in the excpected
-   order if the algorithm is not adjusted, so for not no other collections
-   are allowed."
-  [obj-store-fqn entries]
-    (when-not (vector? entries)
-      (throw
-       (ex-info "os-add-all! expects a vector of objects as its third argument."
-                {:entries entries})))
-    (loop [entries entries]
-      (if (empty? entries)
-        nil
-        (do (os-add! obj-store-fqn (first entries))
-            (recur (rest entries))))))
-
-(defn os-index->object
-  "Use this function to get a single object from the object store. In
-   order to retrieve all objects from the object store, use the function
-   `os-get-all` instead."
-  [obj-store-fqn idx callback-fn]
-  (let [object-store (create-transaction obj-store-fqn READ_ONLY)
-        request (.get object-store idx)]
-    (set! (.-onerror request) idb-error-callback)
-    (set! (.-onsuccess request)
-          (fn [e]
-            (callback-fn (.-result (.-target e))))))
-  nil)
-
-(defn os-get-all
-  "Get all objects from the object store. This function will create
-   a transaction and get all objects from the object store.
-   callback-fn should be a function that takes a vector of objects
-   as its only argument.
-
-   It is up for discussion, whether this function should be considered
-   to have side effects or not. I think it should be given some thoughts,
-   because it opens a transaction and thus locks the data-base and it
-   will call the callback-fn with the objects from the object store.
-   It might be possible to at least get rid of the atom."
-  [obj-store-fqn callback-fn]
-  (let [values (atom []) ;; TODO: grrr
-        request
-        (->
-         (create-transaction obj-store-fqn READ_ONLY)
-         .openCursor)]
-    (set! (.-onerror request) idb-error-callback)
-    (set! (.-onsuccess request)
-          (fn [e]
-            (if-let [cursor (.. e -target -result)]
-              (do
-                (swap! values conj (.-value cursor))
-                (.continue cursor))
-              (callback-fn @values)))))
-  nil)
-
-(defn- wipe-object-store!
-  "Wipe the object store identified by os-name and the database. 
-   This function is meant to be used for testing purposes only, it
-   should stay private and only be called via the REPL. Or test
-   runners... eventually..."
-  [obj-store-fqn]
-  (let [object-store (create-transaction obj-store-fqn READ_WRITE)
-        transaction (.-transaction object-store)]
-    (set! (.-oncomplete transaction) #(log :info "Object store wiped."))
-    (set! (.-onerror transaction) idb-error-callback)
-    (.clear object-store))
-  nil)
-
 (defn- on-upgrade-needed!
   "This function is called as a callback when the database is upgraded.
    It will create the object stores for the application and and save the
@@ -141,7 +54,9 @@
    There are two possible reasons that the database got upgraded:
    1. The database did not exist before and was created.
    2. The database existed before, but the version (and presumably the
-      schema) was lower/older than the current version."
+      schema) was lower/older than the current version.
+
+   Returns `nil`."
   [table-info user-callback e]
   (let [db (.. e -target -result)
         old-version (.-oldVersion db)
@@ -159,24 +74,172 @@
 
 (defn- on-initialize-success!
   "This function is called as a callback when the database is initialized.
-   It will call the callback fn passed into `initialize` by the user."
+   It will call the callback fn passed into `initialize!` by the user.
+
+   Returns `nil`."
   [user-callback e]
   (let [db (.. e -target -result)]
     (user-callback db)
-    (log :debug "Database initialized and callback function triggered." e)))
+    (log :debug "Database initialized and callback function triggered." e))
+  nil)
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;             Public API             ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defn create-object-store!
+  "Create an object store identified by the `obj-store-fqn` (see namespace
+   docstring for more information) inside a database. The `:os-name` key of
+   the `obj-store-fqn` parameter can be chosen freely, but it must be unique
+   within the database (see namespace docstring for more info) and it should
+   match the `:name` key of the `table-info` parameter. The `table-info`
+   parameter must be a map with the following structure:
+    ```clojure
+    {:name \"my-obj-store-name\"
+     :index [{:name \"my-field\"
+              :unique false}]}
+    ```
+   The `:index` key is a vector of maps, each of which will describe one
+   index (aka field) of the object store. The `:name` key of the index map
+   must be unique within the object store.
+
+   Will return the object store object with an open transaction attached,
+   so that it can be used right away."
+  [obj-store-fqn table-info]
+  (let [{:keys [db os-name]} obj-store-fqn
+        object-store (.createObjectStore db os-name #js {:keyPath "id" :autoIncrement true})]
+    (for [table-idx (:index table-info)]
+      (.createIndex
+       object-store
+       (:name table-idx) (:name table-idx) #js {:unique (:unique table-idx)}))
+    (set! (.. object-store -transaction -oncomplete)
+          #(-> db
+               (.transaction os-name READ_WRITE)
+               (.objectStore os-name)))))
+
+(defn os-add!
+  "Add a single object to the given object store identified by the
+   `obj-store-fqn` (see namespace docstring for more information). This
+   function will create a transaction and add the object to the object store.
+
+   Returns `nil`."
+  [obj-store-fqn entry]
+  (let [object-store (create-transaction obj-store-fqn READ_WRITE)]
+    (-> object-store
+        (.put (clj->js entry))))
+  nil)
+
+(defn os-add-all!
+  "Add an vector of objects to the given object store identified by the
+   `obj-store-fqn` (see namespace docstring for more information). This
+   function will create a transaction and add the objects to the object store.
+   Note that we create a new transaction for each object.
+   TODO: Figure out if there is a way with clojure looping constructs to
+   create a single transaction and add all objects to the object store
+   at once.
+
+   An exception will be thrown, if the second argument is not a vector!
+   There are no guarantees that the objects will be added in the excpected
+   order if the algorithm is not adjusted, so for not no other collections
+   are allowed."
+  [obj-store-fqn entries]
+    (when-not (vector? entries)
+      (throw
+       (ex-info "os-add-all! expects a vector of objects as its third argument."
+                {:entries entries})))
+    (loop [entries entries]
+      (if (empty? entries)
+        nil
+        (do (os-add! obj-store-fqn (first entries))
+            (recur (rest entries))))))
+
+(defn os-index->object
+  "Use this function to retrieve a single object from the object store. In
+   order to retrieve all objects from the object store, use the function
+   `os-get-all` instead.
+   You will need to pass `callback-fn`, which must be a function that takes
+   a single argument. This argument will be the object that was retrieved
+   from the object store.
+
+   Returns `nil`."
+  [obj-store-fqn idx callback-fn]
+  (let [object-store (create-transaction obj-store-fqn READ_ONLY)
+        request (.get object-store idx)]
+    (set! (.-onerror request) idb-error-callback)
+    (set! (.-onsuccess request)
+          (fn [e]
+            (callback-fn (.-result (.-target e))))))
+  nil)
+
+(defn os-get-all
+  "Get all objects from the object store identified by the `obj-store-fqn`
+   (see namespace docstring for more information). This function will create
+   a transaction and get all objects from the object store.
+   `callback-fn` should be a function that takes a vector of objects
+   as its only argument.
+
+   It is up for discussion, whether this function should be considered
+   to have side effects or not. I think it should be given some thoughts,
+   because it opens a transaction and thus locks the data-base, and it
+   will call the `callback-fn` with the objects from the object store.
+   TODO: It might be possible to at least get rid of the atom.
+
+   Returns `nil`."
+  [obj-store-fqn callback-fn]
+  (let [values (atom []) ;; TODO: grrr
+        request
+        (->
+         (create-transaction obj-store-fqn READ_ONLY)
+         .openCursor)]
+    (set! (.-onerror request) idb-error-callback)
+    (set! (.-onsuccess request)
+          (fn [e]
+            (if-let [cursor (.. e -target -result)]
+              (do
+                (swap! values conj (.-value cursor))
+                (.continue cursor))
+              (callback-fn @values)))))
+  nil)
+
+(defn wipe-object-store!
+  "Wipe the object store identified by the `obj-store-fqn`, see the
+   docstring of this namespace for more information.
+   This function should be used with great care, as the wipe will not be
+   reversible. It will create a transaction and clear the object store.
+
+   Returns `nil`."
+  [obj-store-fqn]
+  (let [object-store (create-transaction obj-store-fqn READ_WRITE)
+        transaction (.-transaction object-store)]
+    (set! (.-oncomplete transaction) #(log :info "Object store wiped."))
+    (set! (.-onerror transaction) idb-error-callback)
+    (.clear object-store))
+  nil)
 
 (defn initialize!
   "Initialize the indexed-db. This function should be called once
    when the application starts. The `db-init-callback` function will
    be called when the database is initialized. It will be called with
-   the database as its only argument.
+   the database as its only argument. You should save the database, as
+   it is required to build the fully qualified object store name
+   (`obj-store-fqn`, see docstring of this namespace for more information),
+   which you will need to interact with the database and object store.
 
-   Optionally you can pass an on-upgrade callback function, which will
+   The `table-info` parameter must be a map with the following structure:
+    ```clojure
+    {:name \"my-obj-store-name\"
+     :index [{:name \"my-field\"
+              :unique false}]}
+    ```
+   The `:index` key is a vector of maps, each of which will describe one
+   index (the equivalend of a field in a SQL table) of the object store.
+
+   Optionally you can pass an `on-upgrade` callback function, which will
    be called when the database is upgraded to a new version. The
    function will be called with the old version number as its first
-   and the new version as its last argument. If you do pass a function,
-   it will be called instead of the default callback function. This
-   means, that you will have to create the object store.
+   and the new version as it's second argument. If you do pass a function,
+   it will be called *instead* of the default callback function. This
+   means, that you will have to create the object store yourself!
    An example of how to do this:
    ```clojure
    (create-object-store! {:db db :os-name store-name}
@@ -210,13 +273,6 @@
                       {:user :model :text "Hey, how are you?"}
                       {:user :user :text "I'm fine, thanks."}
                       {:user :model :text "That's good to hear."}])
-  
-  ;; test ultra advanced logging framework. checks all the boxes for an enterprise
-  ;; grade logging framework:
-  ;; 1. logs stuff
-  ;; 2. does not allow RCE
-  ;;    -> this technology is years ahead of the competition. looking at you, log4j.
-  (log :warn "uptempo hardcore" 200 "bpm") ;; => nil
 
 
   ;; very simple sanity check
@@ -254,6 +310,6 @@
    ;; and prints a vector of size 5 with the test messages added above
 
 
-  
+
   ;; this will wipe the object store
   (wipe-object-store! obj-store-fqn))
