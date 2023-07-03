@@ -1,6 +1,7 @@
 (ns openllm.components.chat.events
     (:require [openllm.events :refer [check-spec-interceptor]] 
               [openllm.api.http :as api]
+              [openllm.api.persistence :as persistence]
               [re-frame.core :refer [reg-event-db reg-event-fx]]
               [clojure.string :as str]))
 
@@ -11,11 +12,20 @@
    (assoc db :chat-input-value new-value)))
 
 (reg-event-db
- ::add-to-chat-history
+ ::add-to-app-db-history
  [check-spec-interceptor]
  (fn [db [_ user text]]
    (assoc db :chat-history (conj (:chat-history db) {:user user
                                                      :text text}))))
+
+;; Puts the received or sent message into the IndexedDB database aswell
+;; as the app-db.
+(reg-event-fx
+ ::add-to-chat-history
+ []
+ (fn [_ [_ user text]]
+   {:dispatch-n [[::add-to-app-db-history user text]
+                 [::persistence/add-to-indexed-db-history user text]]}))
 
 (reg-event-fx
  ::send-prompt-success
