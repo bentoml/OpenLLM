@@ -4,5 +4,4 @@
 (re-frame/reg-event-db
  ::init-indexed-db
  (fn [db [_ indexed-db]]
-   (println "db" indexed-db)
    (assoc db :indexed-db indexed-db)))

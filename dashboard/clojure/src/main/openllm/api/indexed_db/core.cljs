@@ -10,8 +10,31 @@
             [re-frame.core :as re-frame]
             [reagent.core :as r]))
 
+(defn log
+  "Log a message to the browser's console. It can log to the levels
+   `:debug`, `:info`, `:warn` and `:error`. Additionally you can use
+   `:log` to log to the `log` level, although you can do that with
+   clojure's `print` function as well, assuming you have enabled
+   console printing with `enable-console-print!`.
+
+   This function is meant to be used for logging debugging information
+   and ultimately remote troubleshooting.
+   It is a consideration to also persist any incoming messages to the
+   database in the future."
+  [level & args]
+  (let [out js/console
+        kw->js-log-fn {:debug out.debug :info out.info :warn out.warn
+                       :error out.error :log out.log}
+        log-fn (kw->js-log-fn level)]
+    (if (some? log-fn)
+      (apply log-fn args)
+      (throw
+       (ex-info "Invalid log level. Valid log levels are :debug, :info, :warn, :error and :log."
+                {:level level
+                 :original-args args})))))
+
 (def db-name "OpenLLM_clj_GutZuFusss")
-(def db-version 4)
+(def db-version 1)
 
 (def ^:private ^:const READ_WRITE "readwrite")
 (def ^:private ^:const READ_ONLY "readonly")
@@ -25,7 +48,7 @@
    request.
    It will log the error to the browser's console."
   [e]
-  (.error js/console "Error during IndexedDB request" e))
+  (log :error "Error during IndexedDB request" e))
 
 (defn create-object-store!
   "Create an object store inside a database.
@@ -39,7 +62,7 @@
        (:name table-idx) (:name table-idx) #js {:unique (:unique table-idx)}))
     (set! (.. object-store -transaction -oncomplete)
           #(-> db
-                (.transaction os-name "readwrite")
+                (.transaction os-name READ_WRITE)
                 (.objectStore os-name)))))
 
 (defn- create-transaction
@@ -59,11 +82,13 @@
 
 (defn os-add!
   "Add an object to the given object store. This function will
-   create a transaction and add the object to the object store."
+   create a transaction and add the object to the object store.
+   Returns nil."
   [obj-store-fqn entry]
   (let [object-store (create-transaction obj-store-fqn READ_WRITE)]
     (-> object-store
-        (.put (clj->js entry)))))
+        (.put (clj->js entry))))
+  nil)
 
 (defn os-add-all!
   "Add an vector of objects to the given object store. This function will
@@ -85,10 +110,8 @@
     (loop [entries entries]
       (if (empty? entries)
         nil
-        (do
-          (print (first entries))
-          (os-add! obj-store-fqn (first entries))
-          (recur (rest entries))))))
+        (do (os-add! obj-store-fqn (first entries))
+            (recur (rest entries))))))
 
 (defn os-index->object
   "Use this function to get a single object from the object store. In
@@ -100,14 +123,15 @@
     (set! (.-onerror request) idb-error-callback)
     (set! (.-onsuccess request)
           (fn [e]
-            (callback-fn (.-result (.-target e)))))))
+            (callback-fn (.-result (.-target e))))))
+  nil)
 
 (defn os-get-all
   "Get all objects from the object store. This function will create
    a transaction and get all objects from the object store.
    callback-fn should be a function that takes a vector of objects
    as its only argument.
-   
+
    It is up for discussion, whether this function should be considered
    to have side effects or not. I think it should be given some thoughts,
    because it opens a transaction and thus locks the data-base and it
@@ -126,7 +150,8 @@
               (do
                 (swap! values conj (.-value cursor))
                 (.continue cursor))
-              (callback-fn @values))))))
+              (callback-fn @values)))))
+  nil)
 
 (defn- wipe-object-store!
   "Wipe the object store identified by os-name and the database. 
@@ -136,34 +161,78 @@
   [obj-store-fqn]
   (let [object-store (create-transaction obj-store-fqn READ_WRITE)
         transaction (.-transaction object-store)]
-    (set! (.-oncomplete transaction) #(print "Object stores wiped."))
+    (set! (.-oncomplete transaction) #(log :info "Object store wiped."))
     (set! (.-onerror transaction) idb-error-callback)
-    (.clear object-store)))
+    (.clear object-store))
+  nil)
 
-(defn on-upgrade-needed!
+(defn- on-upgrade-needed!
   "This function is called as a callback when the database is upgraded.
    It will create the object stores for the application and and save the
-   backing database in the app-db for later use."
-  [os-name e]
+   backing database in the app-db for later use.
+
+   There are two possible reasons that the database got upgraded:
+   1. The database did not exist before and was created.
+   2. The database existed before, but the version (and presumably the
+      schema) was lower/older than the current version."
+  [os-name user-callback e]
+  (let [db (.. e -target -result)
+        old-version (.-oldVersion db)
+        new-version (.-version db)]
+    (when (and (> 0 old-version) (nil? user-callback))
+      (throw
+       (ex-info "The database version was upgraded, but no 'on-upgrade-db-version' callback was provided to 'initialize!'."
+                {:old-version old-version :new-version new-version})))
+    (if (some? user-callback)
+      (do (log :info (str "Received upgrade needed event, current version is " new-version ", old version is " old-version ". Calling user callback."))
+          (user-callback old-version new-version))
+      (do (log :info (str "Database and object store created. Current database version is " (.-version db) "."))
+          (create-object-store! {:db db :os-name os-name} table-chat-history)))
+    nil))
+
+(defn on-initialize-success!
+  "This function is called as a callback when the database is initialized.
+   It will save the backing database in the app-db for later use.
+   
+   If this function is called, the database already exists and the version
+   is the same as the current version."
+  [e]
   (let [db (.. e -target -result)]
     (re-frame/dispatch-sync [::events/init-indexed-db db])
-    (create-object-store! {:db db :os-name os-name}
-                          table-chat-history)))
+    (log :debug "Database initialized and registered in re-frame app-db." e)))
 
 (defn initialize!
   "Initialize the indexed-db. This function should be called once
    when the application starts. This function will pull the database
    from the browser and register a callback that creates an object
-   store."
-  []
-  (let [upgrade-callback! (partial on-upgrade-needed! (:name table-chat-history))
-        request (.open
-                 (. js/window -indexedDB)
-                 db-name db-version)]
-    (set! (.-onerror request) idb-error-callback)
-    (set! (.-onupgradeneeded request) upgrade-callback!)))
+   store.
+   
+   Optionally you can pass an on-upgrade callback function, which will
+   be called when the database is upgraded to a new version. The
+   function will be called with the old version number as its first
+   and the new version as its last argument. If you do pass a function,
+   it will be called instead of the default callback function. This
+   means, that you will have to create the object store.
+   An example of how to do this:
+   ```clojure
+   (create-object-store! {:db db :os-name store-name}
+                         your-table-definition)
+   ```"
+  ([] (initialize! nil))
+  ([on-upgrade-db-version]
+   (let [upgrade-callback! (partial on-upgrade-needed!
+                                    (:name table-chat-history)
+                                    on-upgrade-db-version)
+         request (.open
+                  (. js/window -indexedDB)
+                  db-name db-version)]
+     (set! (.-onerror request) idb-error-callback)
+     (set! (.-onupgradeneeded request) upgrade-callback!)
+     (set! (.-onsuccess request) on-initialize-success!))))
 
 
+;; rich comments for documentation purposes. execute in order to get the same results
+;; as the ones in the ";; =>" comments
 (comment
   (def idb-sub (re-frame/subscribe [::subs/indexed-db])) ;; => [#object[reagent.ratom.Reaction {:val #object[IDBDatabase [object IDBDatabase]]}]]
 
@@ -175,34 +244,46 @@
                       {:user :model :text "Hey, how are you?"}
                       {:user :user :text "I'm fine, thanks."}
                       {:user :model :text "That's good to hear."}])
-
   
+  ;; test ultra advanced logging framework. checks all the boxes for an enterprise
+  ;; grade logging framework:
+  ;; 1. logs stuff
+  ;; 2. does not allow RCE
+  ;;    -> this technology is years ahead of the competition. looking at you, log4j.
+  (log :warn "uptempo hardcore" 200 "bpm") ;; => nil
+
+
   ;; very simple sanity check
   (. js/window -indexedDB) ;; => #object[IDBFactory [object IDBFactory]]
-  
+
 
   ;; initialize the database and creates the object stores
   (initialize!) ;; => #object[openllm$api$indexed_db$core$on_upgrade_needed]
 
-  
+
+  ;; add a single test message to the object store
+  (os-add! obj-store-fqn
+           {:user :model :text "test message"}) ;; => nil
+
+
   ;; add the test messages from above to the object store
   (os-add-all! obj-store-fqn
                test-messages) ;; => nil
 
 
-  ;; get the first object from the object store
+  ;; get the second object from the object store
   (os-index->object obj-store-fqn
-                    1
-                    #(print (js->clj % :keywordize-keys true))) ;; => #object[Function]
+                    2
+                    #(print (js->clj % :keywordize-keys true))) ;; => nil
   ;; and prints: {:user :user, :text Hey}
 
 
   ;; get all objects from the object store
   (os-get-all obj-store-fqn
-              #(print (js->clj % :keywordize-keys true))) ;; => #object[Function]
-   ;; and prints: "{:user :user, :text Hey}{:user :model, :text Hey, how are you?}{:user :user, :text I'm fine, thanks.}{:user :model, :text That's good to hear.}#object[Function]"
+              #(print (js->clj % :keywordize-keys true))) ;; => nil
+   ;; and prints a vector of size 5 with the test messages added above
 
 
-
+  
   ;; this will wipe the object store
   (wipe-object-store! obj-store-fqn))
