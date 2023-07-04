@@ -1,4 +1,4 @@
-{:deps {:aliases [:cljs]}
+{:deps {:aliases [:dev]}
  :dev-http {8420 "www"}
 
  :builds

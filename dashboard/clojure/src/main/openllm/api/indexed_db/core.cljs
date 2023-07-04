@@ -141,17 +141,19 @@
    An exception will be thrown, if the second argument is not a vector!
    There are no guarantees that the objects will be added in the excpected
    order if the algorithm is not adjusted, so for not no other collections
-   are allowed."
+   are allowed.
+   
+   Returns `nil`."
   [obj-store-fqn entries]
-    (when-not (vector? entries)
-      (throw
-       (ex-info "os-add-all! expects a vector of objects as its third argument."
-                {:entries entries})))
-    (loop [entries entries]
-      (if (empty? entries)
-        nil
-        (do (os-add! obj-store-fqn (first entries))
-            (recur (rest entries))))))
+  (when-not (vector? entries)
+    (throw
+     (ex-info "os-add-all! expects a vector of objects as its third argument."
+              {:entries entries})))
+  (loop [entries entries]
+    (if (empty? entries)
+      nil
+      (do (os-add! obj-store-fqn (first entries))
+          (recur (rest entries))))))
 
 (defn os-index->object
   "Use this function to retrieve a single object from the object store. In
@@ -182,7 +184,6 @@
    to have side effects or not. I think it should be given some thoughts,
    because it opens a transaction and thus locks the data-base, and it
    will call the `callback-fn` with the objects from the object store.
-   TODO: It might be possible to at least get rid of the atom.
 
    Returns `nil`."
   [obj-store-fqn callback-fn]
@@ -244,7 +245,9 @@
    ```clojure
    (create-object-store! {:db db :os-name store-name}
                          your-table-definition)
-   ```"
+   ```
+   
+   Returns `nil`."
   ([db-info table-info db-init-callback] (initialize! db-info table-info db-init-callback nil))
   ([db-info table-info db-init-callback on-upgrade-db-version]
    (let [{:keys [db-name db-version]} db-info
@@ -260,8 +263,9 @@
    nil))
 
 
-;; rich comments for documentation purposes. execute in order to get the same results
-;; as the ones in the ";; =>" comments
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;           Rich Comments            ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (comment
   (def db-atom (atom nil)) ;; => [#object[cljs.core.Atom {:val #object[IDBDatabase [object IDBDatabase]]}]]
 

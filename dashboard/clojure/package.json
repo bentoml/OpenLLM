@@ -3,7 +3,7 @@
     "shadow:watch": "shadow-cljs watch app",
     "shadow:release": "shadow-cljs release app",
     "postcss:build": "cross-env postcss src/css/tailwind.css -o ./www/css/main.css --verbose",
-    "postcss:watch": "cross-env postcss src/css/tailwind.css -o ./www/css/main.css --verbose -w",
+    "postcss:watch": "cross-env postcss src/css/tailwind.css -o ./www/css/main.css --verbose -w --poll 200",
     "postcss:release": "cross-env NODE_ENV=production postcss src/css/tailwind.css -o ./www/css/main.css --verbose",
     "dev": "run-p -l *:watch",
     "release": "run-s *:release"

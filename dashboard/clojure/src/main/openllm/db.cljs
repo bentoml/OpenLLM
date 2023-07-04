@@ -118,7 +118,7 @@
 (def default-db
   "What gets put into app-db by default.
    See 'core.cljs' for `(dispatch-sync [:initialise-db])` and 'events.cljs'
-   for the registration of `:initialise-db` handler)"
+   for the registration of `:initialise-db` effect handler."
   {:screen-id :playground
    :indexed-db nil
    :playground-input-value ""
