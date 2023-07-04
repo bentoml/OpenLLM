@@ -43,23 +43,18 @@ class FlaxOPT(openllm.LLM["transformers.TFOPTForCausalLM", "transformers.GPT2Tok
         }
         return {}, tokenizer_kwds
 
-    def import_model(
-        self,
-        model_id: str,
-        tag: bentoml.Tag,
-        *args: t.Any,
-        tokenizer_kwds: dict[str, t.Any],
-        **attrs: t.Any,
-    ) -> bentoml.Model:
-        trust_remote_code = attrs.pop("trust_remote_code", False)
+    def import_model(self, *args: t.Any, trust_remote_code: bool = False, **attrs: t.Any) -> bentoml.Model:
+        (_, model_attrs), tokenizer_kwds = self.llm_parameters
+        attrs = {**model_attrs, **attrs}
 
-        config = transformers.AutoConfig.from_pretrained(model_id)
-        tokenizer = transformers.AutoTokenizer.from_pretrained(model_id, **tokenizer_kwds)
+        config = transformers.AutoConfig.from_pretrained(self.model_id)
+        tokenizer = transformers.AutoTokenizer.from_pretrained(self.model_id, **tokenizer_kwds)
         tokenizer.pad_token_id = config.pad_token_id
-        model: transformers.FlaxOPTForCausalLM = transformers.FlaxOPTForCausalLM.from_pretrained(
-            model_id, trust_remote_code=trust_remote_code, **attrs
+        model = t.cast(
+            "transformers.FlaxOPTForCausalLM",
+            transformers.FlaxAutoModelForCausalLM.from_pretrained(self.model_id, **attrs),
         )
-        return bentoml.transformers.save_model(tag, model, custom_objects={"tokenizer": tokenizer})
+        return bentoml.transformers.save_model(self.tag, model, custom_objects={"tokenizer": tokenizer})
 
     def sanitize_parameters(
         self,

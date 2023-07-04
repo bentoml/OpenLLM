@@ -102,6 +102,7 @@ FALCON_DEPS = ["einops", "xformers", "safetensors"]
 STARCODER_DEPS = ["bitsandbytes"]
 CHATGLM_DEPS = ["cpm-kernels", "sentencepiece"]
 PLAYGROUND_DEPS = ["jupyter", "notebook", "ipython", "jupytext", "nbformat"]
+GGML_DEPS = ["ctransformers"]
 
 _base_requirements = {
     inflection.dasherize(name): config_cls.__openllm_requirements__

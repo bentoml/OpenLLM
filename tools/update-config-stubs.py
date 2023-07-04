@@ -55,7 +55,7 @@ _value_docstring = {
 
         For example:
             For FLAN-T5 impl, this would be ["google/flan-t5-small", "google/flan-t5-base",
-                                                "google/flan-t5-large", "google/flan-t5-xl", "google/flan-t5-xxl"]
+                                             "google/flan-t5-large", "google/flan-t5-xl", "google/flan-t5-xxl"]
 
         This field is required when defining under '__config__'.
         """,
@@ -90,9 +90,6 @@ _value_docstring = {
         By default, it is set to 1.
         """,
     "fine_tune_strategies": """The fine-tune strategies for this given LLM.""",
-    "generation_class": """The result generated GenerationConfig class for this LLMConfig. This will be used
-        to create the generation_config argument that can be used throughout the lifecycle.
-        This class will also be managed internally by OpenLLM.""",
 }
 
 
@@ -118,16 +115,6 @@ def main() -> int:
                 ]
             ]
         )
-    # special case for generation_class
-    config_attr_lines.extend(
-        [
-            " " * 8 + line
-            for line in [
-                f"__openllm_generation_class__: type[GenerationConfig] = Field(None)\n",
-                f'"""{_value_docstring["generation_class"]}"""\n',
-            ]
-        ]
-    )
 
     # NOTE: inline runtime __getitem__ overload process
     lines: list[str] = []

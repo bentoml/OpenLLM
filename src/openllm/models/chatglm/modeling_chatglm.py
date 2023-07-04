@@ -33,21 +33,16 @@ class ChatGLM(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTrain
     def llm_post_init(self):
         self.device = torch.device("cuda")
 
-    def import_model(
-        self,
-        model_id: str,
-        tag: bentoml.Tag,
-        *model_args: t.Any,
-        tokenizer_kwds: dict[str, t.Any],
-        **attrs: t.Any,
-    ) -> bentoml.Model:
-        trust_remote_code = attrs.pop("trust_remote_code", True)
+    def import_model(self, *args: t.Any, trust_remote_code: bool = True, **attrs: t.Any) -> bentoml.Model:
+        (_, model_attrs), tokenizer_kwds = self.llm_parameters
+        attrs = {**model_attrs, **attrs}
+
         return bentoml.transformers.save_model(
-            tag,
-            transformers.AutoModel.from_pretrained(model_id, trust_remote_code=trust_remote_code),
+            self.tag,
+            transformers.AutoModel.from_pretrained(self.model_id, trust_remote_code=trust_remote_code),
             custom_objects={
                 "tokenizer": transformers.AutoTokenizer.from_pretrained(
-                    model_id, trust_remote_code=trust_remote_code, **tokenizer_kwds
+                    self.model_id, trust_remote_code=trust_remote_code, **tokenizer_kwds
                 )
             },
         )

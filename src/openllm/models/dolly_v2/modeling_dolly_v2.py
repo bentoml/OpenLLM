@@ -20,6 +20,7 @@ import typing as t
 import bentoml
 import openllm
 
+from ...utils import normalize_attrs_to_model_tokenizer_pair
 from .configuration_dolly_v2 import DEFAULT_PROMPT_TEMPLATE
 from .configuration_dolly_v2 import END_KEY
 from .configuration_dolly_v2 import RESPONSE_KEY
@@ -43,6 +44,7 @@ def get_pipeline(
     model: transformers.PreTrainedModel,
     tokenizer: transformers.PreTrainedTokenizer,
     _init: t.Literal[True] = True,
+    **attrs: t.Any,
 ) -> transformers.Pipeline:
     ...
 
@@ -52,6 +54,7 @@ def get_pipeline(
     model: transformers.PreTrainedModel,
     tokenizer: transformers.PreTrainedTokenizer,
     _init: t.Literal[False] = ...,
+    **attrs: t.Any,
 ) -> type[transformers.Pipeline]:
     ...
 
@@ -60,6 +63,7 @@ def get_pipeline(
     model: transformers.PreTrainedModel,
     tokenizer: transformers.PreTrainedTokenizer,
     _init: bool = False,
+    **attrs: t.Any,
 ) -> type[transformers.Pipeline] | transformers.Pipeline:
     class InstructionTextGenerationPipeline(transformers.Pipeline):
         def __init__(
@@ -258,31 +262,17 @@ class DollyV2(openllm.LLM["transformers.Pipeline", "transformers.PreTrainedToken
     def llm_post_init(self):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    def import_model(
-        self, model_id: str, tag: bentoml.Tag, *model_args: t.Any, tokenizer_kwds: dict[str, t.Any], **attrs: t.Any
-    ) -> bentoml.Model:
-        attrs.pop("trust_remote_code", True)
-        torch_dtype = attrs.pop("torch_dtype", torch.bfloat16)
-        device_map = attrs.pop("device_map", "auto" if torch.cuda.is_available() else None)
-
-        tokenizer: transformers.GPT2TokenizerFast = transformers.AutoTokenizer.from_pretrained(
-            model_id, **tokenizer_kwds
-        )
-        model: transformers.GPTNeoXForCausalLM = transformers.AutoModelForCausalLM.from_pretrained(
-            model_id, torch_dtype=torch_dtype, device_map=device_map
-        )
-        try:
-            return bentoml.transformers.save_model(tag, model, custom_objects={"tokenizer": tokenizer})
-        finally:
-            if openllm.utils.is_torch_available() and torch.cuda.is_available():
-                torch.cuda.empty_cache()
-
     def load_model(self, tag: bentoml.Tag, *args: t.Any, **attrs: t.Any) -> transformers.Pipeline:
-        _ref = bentoml.transformers.get(tag)
+        (_, model_attrs), tokenizer_attrs = self.llm_parameters
+        normalized_model_attrs, normalized_tokenizer_attrs = normalize_attrs_to_model_tokenizer_pair(**attrs)
+        attrs = {**model_attrs, **normalized_model_attrs}
+        tokenizer_attrs = {**tokenizer_attrs, **normalized_tokenizer_attrs}
+        _ref = openllm.serialisation.get(self)
         return get_pipeline(
             model=transformers.AutoModelForCausalLM.from_pretrained(_ref.path, **attrs),
-            tokenizer=_ref.custom_objects["tokenizer"],
+            tokenizer=transformers.AutoTokenizer.from_pretrained(_ref.path, **tokenizer_attrs),
             _init=True,
+            return_full_text=self.config.return_full_text,
         )
 
     def sanitize_parameters(

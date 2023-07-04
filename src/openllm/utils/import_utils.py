@@ -61,6 +61,7 @@ OPTIONAL_DEPENDENCIES = {
     "openai",
     "agents",
     "playground",
+    "ggml",
 }
 ENV_VARS_TRUE_VALUES = {"1", "ON", "YES", "TRUE"}
 ENV_VARS_TRUE_AND_AUTO_VALUES = ENV_VARS_TRUE_VALUES.union({"AUTO"})
@@ -357,7 +358,7 @@ class EnvVarMixin(ReprMixin):
 
     @property
     def __repr_keys__(self) -> set[str]:
-        return {"config", "model_id", "quantize", "framework", "bettertransformer", "model_version"}
+        return {"config", "model_id", "quantize", "framework", "bettertransformer", "runtime"}
 
     if t.TYPE_CHECKING:
         config: str
@@ -365,18 +366,16 @@ class EnvVarMixin(ReprMixin):
         quantize: str
         framework: str
         bettertransformer: str
-        model_version: str
+        runtime: t.Literal["ggml", "transformers"]
 
         framework_value: t.Literal["pt", "tf", "flax"]
         quantize_value: str | None
-        model_version_value: str | None
         bettertransformer_value: str | None
+        runtime_value: t.Literal["ggml", "transformers"]
 
     # fmt: off
     @overload
     def __getitem__(self, item: t.Literal["config"]) -> str: ...
-    @overload
-    def __getitem__(self, item: t.Literal["model_version"]) -> str: ...
     @overload
     def __getitem__(self, item: t.Literal["model_id"]) -> str: ...
     @overload
@@ -386,15 +385,17 @@ class EnvVarMixin(ReprMixin):
     @overload
     def __getitem__(self, item: t.Literal["bettertransformer"]) -> str: ...
     @overload
+    def __getitem__(self, item: t.Literal['runtime']) -> str: ...
+    @overload
     def __getitem__(self, item: t.Literal['framework_value']) -> t.Literal['pt', 'tf', 'flax']: ...
     @overload
     def __getitem__(self, item: t.Literal['quantize_value']) -> str | None: ...
     @overload
     def __getitem__(self, item: t.Literal['model_id_value']) -> str | None: ...
     @overload
-    def __getitem__(self, item: t.Literal['model_version_value']) -> str | None: ...
-    @overload
     def __getitem__(self, item: t.Literal['bettertransformer_value']) -> str | None: ...
+    @overload
+    def __getitem__(self, item: t.Literal['runtime_value']) -> t.Literal['ggml', 'transformers']: ...
     # fmt: on
     def __getitem__(self, item: str | t.Any) -> t.Any:
         if hasattr(self, item):
@@ -406,7 +407,7 @@ class EnvVarMixin(ReprMixin):
         model_name: str,
         bettertransformer: bool | None = None,
         quantize: t.LiteralString | None = None,
-        model_version: str | None = None,
+        runtime: t.Literal["ggml", "transformers"] = "transformers",
     ):
         from .._configuration import field_env_key
         from . import codegen
@@ -417,7 +418,7 @@ class EnvVarMixin(ReprMixin):
         res.model_name = model_name
 
         # gen properties env key
-        attributes = {"config", "model_id", "quantize", "framework", "bettertransformer", "model_version"}
+        attributes = {"config", "model_id", "quantize", "framework", "bettertransformer", "runtime"}
         for att in attributes:
             setattr(res, att, field_env_key(model_name, att.upper()))
 
@@ -427,7 +428,7 @@ class EnvVarMixin(ReprMixin):
             "quantize": (str, quantize),
             "bettertransformer": (bool, bettertransformer),
             "model_id": (str, None),
-            "model_version": (str, model_version),
+            "runtime": (str, runtime),
         }
         globs: dict[str, t.Any] = {
             "__bool_vars_value": ENV_VARS_TRUE_VALUES,

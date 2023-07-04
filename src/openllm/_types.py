@@ -28,8 +28,16 @@ if not t.TYPE_CHECKING:
 import click
 import bentoml
 import openllm
+import transformers
+from ._configuration import AdapterType
+
+from bentoml._internal.runner.runnable import RunnableMethod
+from bentoml._internal.runner.runner import RunnerMethod
 
 
+DictStrAny = dict[str, t.Any]
+ListAny = list[t.Any]
+TupleAny = tuple[t.Any, ...]
 P = t.ParamSpec("P")
 O_co = t.TypeVar("O_co", covariant=True)
 
@@ -77,22 +85,64 @@ class TokenizerProtocol(_StubsMixin[_MT], t.Protocol):
 
 PeftAdapterOutput = dict[t.Literal["success", "result", "error_msg"], bool | str | dict[t.Any, t.Any]]
 
+AdaptersMapping = dict[AdapterType, tuple[tuple[str | None, str | None, dict[str, t.Any]], ...]] | None
+
+
+class LLMRunnable(bentoml.Runnable):
+    SUPPORTED_RESOURCES = ("amd.com/gpu", "nvidia.com/gpu", "cpu")
+    SUPPORTS_CPU_MULTI_THREADING = True
+
+    model: ModelProtocol[t.Any]
+
+    set_adapter: RunnableMethod[LLMRunnable, [str], dict[t.Literal["success", "error_msg"], bool | str]]
+    __call__: RunnableMethod[LLMRunnable, [str], list[t.Any]]
+    generate: RunnableMethod[LLMRunnable, [str], list[t.Any]]
+    generate_one: RunnableMethod[LLMRunnable, [str, list[str]], list[dict[t.Literal["generated_text"], str]]]
+    generate_iterator: RunnableMethod[LLMRunnable, [str], t.Generator[t.Any, None, None]]
+
 
 class LLMRunner(bentoml.Runner):
     __doc__: str
     __module__: str
-    model: ModelProtocol[t.Any]
-    llm: openllm.LLM[t.Any, t.Any]
-    config: openllm.LLMConfig
     llm_type: str
     identifying_params: dict[str, t.Any]
+    llm: openllm.LLM[t.Any, t.Any]
+    model: ModelProtocol[t.Any]
+    config: openllm.LLMConfig
 
-    def __call__(self, *args: t.Any, **attrs: t.Any) -> t.Any:
+    generate: RunnerMethod[LLMRunnable, [str], list[t.Any]]
+    generate_one: RunnerMethod[LLMRunnable, [str, list[str]], list[dict[t.Literal["generated_text"], str]]]
+    generate_iterator: RunnerMethod[LLMRunnable, [str], t.Generator[t.Any, None, None]]
+
+    def __call__(self, prompt: str, **attrs: t.Any) -> t.Any:
         ...
 
-    def download_model(self, quiet: bool = ...) -> None:
+    def run(self, prompt: str, **attrs: t.Any) -> t.Any:
+        ...
+
+    async def async_run(self, prompt: str, **attrs: t.Any) -> t.Any:
+        ...
+
+    def download_model(self) -> bentoml.Model:
         ...
 
     @property
     def peft_adapters(self) -> PeftAdapterOutput:
         ...
+
+    @property
+    def __repr_keys__(self) -> set[str]:
+        ...
+
+
+class LLMInitAttrs(t.TypedDict):
+    config: openllm.LLMConfig
+    quantization_config: transformers.BitsAndBytesConfig | None
+    model_id: str
+    runtime: t.Literal["ggml", "transformers"]
+    model_decls: TupleAny
+    model_attrs: DictStrAny
+    tokenizer_attrs: DictStrAny
+    tag: bentoml.Tag
+    adapters_mapping: AdaptersMapping
+    model_version: str | None

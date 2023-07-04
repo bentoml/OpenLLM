@@ -77,41 +77,36 @@ class MPT(openllm.LLM["transformers.PreTrainedModel", "transformers.GPTNeoXToken
         tokenizer_kwds = {"padding_side": "left"}
         return model_kwds, tokenizer_kwds
 
-    def import_model(
-        self,
-        model_id: str,
-        tag: bentoml.Tag,
-        *args: t.Any,
-        tokenizer_kwds: dict[str, t.Any],
-        **attrs: t.Any,
-    ) -> bentoml.Model:
+    def import_model(self, *args: t.Any, trust_remote_code: bool = True, **attrs: t.Any) -> bentoml.Model:
+        (_, model_attrs), tokenizer_kwds = self.llm_parameters
+        attrs = {**model_attrs, **attrs}
+
         torch_dtype = attrs.pop("torch_dtype", torch.float32)
         device_map = attrs.pop("device_map", None)
-        trust_remote_code = attrs.pop("trust_remote_code", True)
         attrs.pop("low_cpu_mem_usage", None)
 
         config = get_mpt_config(
-            model_id,
+            self.model_id,
             self.config.max_sequence_length,
             self.device,
             device_map=device_map,
             trust_remote_code=trust_remote_code,
         )
 
-        tokenizer = transformers.AutoTokenizer.from_pretrained(model_id, **tokenizer_kwds)
+        tokenizer = transformers.AutoTokenizer.from_pretrained(self.model_id, **tokenizer_kwds)
         if tokenizer.pad_token_id is None:
             logger.warning("pad_token_id is not set. Setting it to eos_token")
             tokenizer.pad_token = tokenizer.eos_token
 
         model = transformers.AutoModelForCausalLM.from_pretrained(
-            model_id,
+            self.model_id,
             config=config,
             torch_dtype=torch_dtype,
             trust_remote_code=trust_remote_code,
             device_map=device_map,
             **attrs,
         )
-        return bentoml.transformers.save_model(tag, model, custom_objects={"tokenizer": tokenizer})
+        return bentoml.transformers.save_model(self.tag, model, custom_objects={"tokenizer": tokenizer})
 
     def load_model(self, tag: bentoml.Tag, *args: t.Any, **attrs: t.Any) -> transformers.PreTrainedModel:
         torch_dtype = attrs.pop("torch_dtype", torch.float32)
