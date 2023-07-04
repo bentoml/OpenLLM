@@ -32,7 +32,7 @@
          [:button {:class "bg-blue-400 hover:bg-blue-600 text-white py-1 px-2 rounded text-xl"
                    :on-click #(js/window.alert "not implemented")
                    :type "button"} "📋"]
-         "Click to open prompt layout dialog"]
+         "Edit prompt layout"]
         [:button {:class "mt-1 px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none block"
                   :on-click on-send-click
                   :type "button"} "Send"]]])))
@@ -64,17 +64,21 @@
     [:button {:class "bg-pink-600 hover:bg-pink-800 text-white rounded block text-xl"
               :on-click #(do (rf/dispatch [::events/clear-chat-history])
                              (rf/dispatch [::persistence/clear-chat-history]))} "🗑️"]
-    "Click to clear chat history"]])
+    "Clear chat history"]])
 
 (defn chat-tab-contents
   "The component rendered if the chat tab is active."
   []
-  [:<>
-   [:div {:id "chat-history-container"
-          :class "overflow-y-scroll mt-6 h-[calc(100%_-_220px)] w-full no-scrollbar"
-          :style {:scrollBehavior "smooth"}}
-    [:div
-     [chat-history]]]
-   [clear-history-button]
-   [:div {:class "bottom-1 fixed w-[calc(100%_-_380px)] mb-2"}
-    [chat-controls]]])
+  (let [chat-empty? (rf/subscribe [::subs/chat-history-empty?])]
+    (fn []
+      [:<>
+       [:div {:id "chat-history-container"
+              :class "overflow-y-scroll mt-6 h-[calc(100%_-_220px)] w-full no-scrollbar"
+              :style {:scrollBehavior "smooth"}}
+        [:div
+         [chat-history]]]
+       (when (not @chat-empty?)
+         [clear-history-button])
+       [:div {:class "bottom-1 fixed w-[calc(100%_-_380px)] mb-2"}
+        [chat-controls]]])))
+  
