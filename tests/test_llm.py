@@ -36,7 +36,7 @@ def test_tag_generation_from_custom_path(
 ):
     monkeypatch.setattr(openllm._llm, "generate_hash_from_file", patch_hash_from_file)
     local_path = tmp_path_factory.mktemp("local_t5")
-    llm = openllm.AutoLLM.for_model("flan-t5", model_id=HF_INTERNAL_T5_TESTING)
+    llm = openllm.AutoLLM.for_model("flan-t5", model_id=HF_INTERNAL_T5_TESTING, ensure_available=True)
     llm.save_pretrained(local_path)
 
     with caplog.at_level("WARNING"):
@@ -48,7 +48,7 @@ def test_tag_generation_from_custom_path(
 
 def test_tag_generation_quiet_log(tmp_path_factory: pytest.TempPathFactory, caplog: pytest.LogCaptureFixture):
     local_path = tmp_path_factory.mktemp("local_t5")
-    llm = openllm.AutoLLM.for_model("flan-t5", model_id=HF_INTERNAL_T5_TESTING)
+    llm = openllm.AutoLLM.for_model("flan-t5", model_id=HF_INTERNAL_T5_TESTING, ensure_available=True)
     llm.save_pretrained(local_path)
 
     with caplog.at_level("WARNING"):
