@@ -67,9 +67,10 @@ class _BaseAutoLLMClass:
     @classmethod
     def for_model(
         cls,
-        model_name: str,
+        model: str,
         model_id: str | None = None,
-        return_runner_kwargs: t.Literal[False] = ...,
+        model_version: str | None = None,
+        return_runner_kwargs: t.Literal[False] = False,
         llm_config: openllm.LLMConfig | None = ...,
         ensure_available: t.Literal[False, True] = ...,
         **attrs: t.Any,
@@ -80,8 +81,9 @@ class _BaseAutoLLMClass:
     @classmethod
     def for_model(
         cls,
-        model_name: str,
+        model: str,
         model_id: str | None = None,
+        model_version: str | None = None,
         return_runner_kwargs: t.Literal[True] = ...,
         llm_config: openllm.LLMConfig | None = ...,
         ensure_available: t.Literal[False, True] = ...,
@@ -92,8 +94,9 @@ class _BaseAutoLLMClass:
     @classmethod
     def for_model(
         cls,
-        model_name: str,
+        model: str,
         model_id: str | None = None,
+        model_version: str | None = None,
         return_runner_kwargs: bool = False,
         llm_config: openllm.LLMConfig | None = None,
         ensure_available: bool = False,
@@ -105,25 +108,29 @@ class _BaseAutoLLMClass:
         >>> import openllm
         >>> llm = openllm.AutoLLM.for_model("flan-t5")
         ```
+
+        To return the runner kwargs instead of the LLM instance, set `return_runner_kwargs=True`:
+        ```python
+        >>> import openllm_module
+        >>> llm, runner_kwargs = openllm.AutoLLM.for_model("flan-t5", return_runner_kwargs=True)
+        >>> runner = llm.to_runner(**runner_kwargs)
+        ```
         """
         runner_kwargs_name = set(inspect.signature(openllm.LLM[t.Any, t.Any].to_runner).parameters)
         to_runner_attrs = {k: v for k, v in attrs.items() if k in runner_kwargs_name}
         attrs = {k: v for k, v in attrs.items() if k not in to_runner_attrs}
-        if cls._model_mapping.get(inflection.underscore(model_name), None, mapping_type="name2model"):
-            if not isinstance(llm_config, openllm.LLMConfig):
-                # The rest of kwargs is now passed to config
-                llm_config = AutoConfig.for_model(model_name, **attrs)
-                attrs = llm_config.__openllm_extras__
-            # the rest of attrs will be saved to __openllm_extras__
-            llm = cls._model_mapping[type(llm_config)].from_pretrained(
-                model_id,
-                llm_config=llm_config,
-                **attrs,
-            )
+        if not isinstance(llm_config, openllm.LLMConfig):
+            # The rest of kwargs is now passed to config
+            llm_config = AutoConfig.for_model(model, **attrs)
+            attrs = llm_config.__openllm_extras__
+        # the rest of attrs will be saved to __openllm_extras__
+        if type(llm_config) in cls._model_mapping.keys():
+            model_class = cls._model_mapping[type(llm_config)]
+            llm = model_class.from_pretrained(model_id, model_version=model_version, llm_config=llm_config, **attrs)
             if ensure_available:
                 logger.debug(
                     "'ensure_available=True', Downloading '%s' with 'model_id=%s' to local model store.",
-                    model_name,
+                    model,
                     llm.model_id,
                 )
                 llm.ensure_model_id_exists()
@@ -136,19 +143,19 @@ class _BaseAutoLLMClass:
         )
 
     @classmethod
-    def create_runner(cls, model_name: str, model_id: str | None = None, **attrs: t.Any) -> LLMRunner:
+    def create_runner(cls, model: str, model_id: str | None = None, **attrs: t.Any) -> LLMRunner:
         """
         Create a LLM Runner for the given model name.
 
         Args:
-            model_name: The model name to instantiate.
+            model: The model name to instantiate.
             model_id: The pretrained model name to instantiate.
             **attrs: Additional keyword arguments passed along to the specific configuration class.
 
         Returns:
             A LLM instance.
         """
-        llm, runner_attrs = cls.for_model(model_name, model_id, return_runner_kwargs=True, **attrs)
+        llm, runner_attrs = cls.for_model(model, model_id, return_runner_kwargs=True, **attrs)
         return llm.to_runner(**runner_attrs)
 
     @classmethod
@@ -235,45 +242,6 @@ class _LazyAutoMapping(ConfigModelOrderedDict):
             if key in self._model_mapping.keys()
         ]
         return t.cast(ConfigModelKeysView, mapping_keys + list(self._extra_content.keys()))
-
-    @overload
-    def get(
-        self, key: type[openllm.LLMConfig], default: t.Any, mapping_type: t.Literal["default"] = "default"
-    ) -> type[openllm.LLM[t.Any, t.Any]]:
-        ...
-
-    @overload
-    def get(self, key: str, default: t.Any, mapping_type: t.Literal["name2model", "name2config"] = ...) -> str:
-        ...
-
-    def get(
-        self,
-        key: str | type[openllm.LLMConfig],
-        default: t.Any,
-        mapping_type: t.Literal["default", "name2config", "name2model"] = "default",
-    ) -> str | type[openllm.LLM[t.Any, t.Any]]:
-        _supported = {"default", "name2model", "name2config"}
-        if mapping_type not in _supported:
-            raise RuntimeError(f"Unknown mapping type {mapping_type} (supported: {_supported})")
-
-        if mapping_type == "default":
-            if t.TYPE_CHECKING:
-                # we check for lenient_issubclass below, but pyright is too dumb to understand
-                assert not isinstance(key, str)
-            else:
-                if not openllm.utils.lenient_issubclass(key, openllm.LLMConfig):
-                    raise KeyError(f"Key must be a type of 'openllm.LLMConfig', got {key} instead.")
-            try:
-                return self.__getitem__(key)
-            except KeyError:
-                return default
-        else:
-            mapping = self._model_mapping if mapping_type == "name2model" else self._config_mapping
-            assert isinstance(key, str), f"Key must be a string type if mapping_type={mapping_type}"
-            try:
-                return mapping.__getitem__(key)
-            except KeyError:
-                return default
 
     def __bool__(self):
         return bool(self.keys())

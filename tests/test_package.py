@@ -48,11 +48,10 @@ def test_general_build_from_local(tmp_path_factory: pytest.TempPathFactory):
     local_path = tmp_path_factory.mktemp("local_t5")
     llm = openllm.AutoLLM.for_model("flan-t5", model_id=HF_INTERNAL_T5_TESTING, ensure_available=True)
 
-    if llm.bettertransformer:
+    if llm.bettertransformer.upper() in openllm.utils.ENV_VARS_TRUE_VALUES:
         llm.__llm_model__ = llm.model.reverse_bettertransformer()
 
-    llm.model.save_pretrained(local_path.__fspath__())
-    llm.tokenizer.save_pretrained(local_path.__fspath__())
+    llm.save_pretrained(local_path)
 
     bento = openllm.build("flan-t5", model_id=local_path.resolve().__fspath__(), model_version="1")
     assert len(bento_store.list(bento.tag)) == 1

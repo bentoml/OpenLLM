@@ -29,7 +29,6 @@ from ._cmp import cmp_using as cmp_using
 from ._typing_compat import AttrsInstance_
 from ._version_info import VersionInfo
 
-
 __version__: str
 __version_info__: VersionInfo
 __title__: str

@@ -39,7 +39,7 @@ def model_settings(draw: st.DrawFn):
         "trust_remote_code": st.booleans(),
         "requirements": st.none() | st.lists(st.text(), min_size=1),
         "model_type": st.sampled_from(["causal_lm", "seq2seq_lm"]),
-        "runtime": st.sampled_from(["transformers", "cpp"]),
+        "runtime": st.sampled_from(["transformers", "ggml"]),
         "name_type": st.sampled_from(["dasherize", "lowercase"]),
         "timeout": st.integers(min_value=3600),
         "workers_per_resource": st.one_of(st.integers(min_value=1), st.floats(min_value=0.1, max_value=1.0)),

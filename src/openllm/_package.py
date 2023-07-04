@@ -42,6 +42,7 @@ from bentoml._internal.configuration import get_debug_mode
 from bentoml._internal.configuration.containers import BentoMLContainer
 from bentoml._internal.models.model import ModelStore
 
+from .exceptions import OpenLLMException
 from .utils import DEBUG
 from .utils import EnvVarMixin
 from .utils import codegen
@@ -188,6 +189,7 @@ def construct_docker_options(
     bettertransformer: bool | None,
     adapter_map: dict[str, str | None] | None,
     dockerfile_template: str | None,
+    runtime: t.Literal["ggml", "transformers"],
 ) -> DockerOptions:
     _bentoml_config_options = os.environ.pop("BENTOML_CONFIG_OPTIONS", "")
     _bentoml_config_options_opts = [
@@ -212,15 +214,21 @@ def construct_docker_options(
 
     # We need to handle None separately here, as env from subprocess doesn't
     # accept None value.
-    _env = EnvVarMixin(llm.config["model_name"], bettertransformer=bettertransformer, quantize=quantize)
+    _env = EnvVarMixin(
+        llm.config["model_name"], bettertransformer=bettertransformer, quantize=quantize, runtime=runtime
+    )
 
     if _env.bettertransformer_value is not None:
         env_dict[_env.bettertransformer] = _env.bettertransformer_value
     if _env.quantize_value is not None:
         env_dict[_env.quantize] = _env.quantize_value
+    env_dict[_env.runtime] = _env.runtime_value
 
     return DockerOptions(
-        cuda_version="11.7", env=env_dict, system_packages=["git"], dockerfile_template=dockerfile_template
+        cuda_version="11.7",
+        env=env_dict,
+        system_packages=["git"],
+        dockerfile_template=dockerfile_template,
     )
 
 
@@ -236,6 +244,7 @@ def create_bento(
     adapter_map: dict[str, str | None] | None = None,
     extra_dependencies: tuple[str, ...] | None = None,
     build_ctx: str | None = None,
+    runtime: t.Literal["ggml", "transformers"] = "transformers",
     _model_store: ModelStore = Provide[BentoMLContainer.model_store],
 ) -> bentoml.Bento:
     framework_envvar = llm.config["env"]["framework_value"]
@@ -291,6 +300,7 @@ def create_bento(
             bettertransformer,
             adapter_map,
             dockerfile_template,
+            runtime,
         ),
     )
 
@@ -311,11 +321,10 @@ def create_bento(
         # new behaviour with BentoML models
         model = _model_store.get(f"{model_framework}-{model_type}")
     except bentoml.exceptions.NotFound:
-        raise openllm.exceptions.OpenLLMException(f"Failed to find models for {llm.config['start_name']}")
+        raise OpenLLMException(f"Failed to find models for {llm.config['start_name']}")
 
     # NOTE: the model_id_path here are only used for setting this environment variable within the container
     # built with for BentoLLM.
-    model_id_path = f"../models/{model.tag.name}/{model.tag.version}"
     service_fs_path = fs.path.join("src", llm.config["service_name"])
     service_path = bento._fs.getsyspath(service_fs_path)
     with open(service_path, "r") as f:
@@ -324,10 +333,8 @@ def create_bento(
     for it in service_contents:
         if codegen.OPENLLM_MODEL_ID in it:
             service_contents[service_contents.index(it)] = (
-                codegen.ModelIdFormatter(model_id_path).vformat(it)[: -(len(codegen.OPENLLM_MODEL_ID) + 3)] + "\n"
+                codegen.ModelIdFormatter(str(model.tag)).vformat(it)[: -(len(codegen.OPENLLM_MODEL_ID) + 3)] + "\n"
             )
-        if codegen.OPENLLM_SERVING in it:
-            service_contents[service_contents.index(it)] = "__serving__ = True\n"
         if "__bento_name__" in it:
             service_contents[service_contents.index(it)] = it.format(__bento_name__=str(bento.tag))
 
@@ -354,6 +361,7 @@ def build(
     extra_dependencies: tuple[str, ...] | None = None,
     workers_per_resource: int | float | None = None,
     overwrite_existing_bento: bool = False,
+    runtime: t.Literal["ggml", "transformers"] = "transformers",
     dockerfile_template: str | None = None,
     bento_store: BentoStore = Provide[BentoMLContainer.bento_store],
 ) -> bentoml.Bento:
@@ -365,12 +373,10 @@ def build(
 
     Other parameters including model_name, model_id and attrs will be passed to the LLM class itself.
     """
-    args = [sys.executable, "-m", "openllm", "build", model_name, "--machine"]
+    args = [sys.executable, "-m", "openllm", "build", model_name, "--machine", "--runtime", runtime]
 
     if quantize and bettertransformer:
-        raise openllm.exceptions.OpenLLMException(
-            "'quantize' and 'bettertransformer' are currently mutually exclusive."
-        )
+        raise OpenLLMException("'quantize' and 'bettertransformer' are currently mutually exclusive.")
 
     if quantize:
         args.extend(["--quantize", quantize])
@@ -399,8 +405,8 @@ def build(
     except subprocess.CalledProcessError as e:
         logger.error("Exception caught while building %s", model_name, exc_info=e)
         if e.stderr:
-            raise openllm.exceptions.OpenLLMException(e.stderr.decode("utf-8")) from None
-        raise openllm.exceptions.OpenLLMException(str(e)) from None
+            raise OpenLLMException(e.stderr.decode("utf-8")) from None
+        raise OpenLLMException(str(e)) from None
     # NOTE: This usually only concern BentoML devs.
     pattern = r"^__tag__:[^:\n]+:[^:\n]+"
     matched = re.search(pattern, output.decode("utf-8").strip(), re.MULTILINE)

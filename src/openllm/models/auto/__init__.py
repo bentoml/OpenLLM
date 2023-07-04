@@ -20,7 +20,7 @@ import typing as t
 
 import openllm
 
-from ... import utils
+from ...utils import is_torch_available, is_flax_available, is_tf_available, LazyModule
 
 
 _import_structure = {
@@ -31,7 +31,7 @@ _import_structure = {
 }
 
 try:
-    if not utils.is_torch_available():
+    if not is_torch_available():
         raise openllm.exceptions.MissingDependencyError
 except openllm.exceptions.MissingDependencyError:
     pass
@@ -39,7 +39,7 @@ else:
     _import_structure["modeling_auto"].extend(["AutoLLM", "MODEL_MAPPING"])
 
 try:
-    if not utils.is_flax_available():
+    if not is_flax_available():
         raise openllm.exceptions.MissingDependencyError
 except openllm.exceptions.MissingDependencyError:
     pass
@@ -47,7 +47,7 @@ else:
     _import_structure["modeling_flax_auto"].extend(["AutoFlaxLLM", "MODEL_FLAX_MAPPING"])
 
 try:
-    if not utils.is_tf_available():
+    if not is_tf_available():
         raise openllm.exceptions.MissingDependencyError
 except openllm.exceptions.MissingDependencyError:
     pass
@@ -63,7 +63,7 @@ if t.TYPE_CHECKING:
     from .modeling_tf_auto import MODEL_TF_MAPPING_NAMES as MODEL_TF_MAPPING_NAMES
 
     try:
-        if not utils.is_torch_available():
+        if not is_torch_available():
             raise openllm.exceptions.MissingDependencyError
     except openllm.exceptions.MissingDependencyError:
         pass
@@ -72,7 +72,7 @@ if t.TYPE_CHECKING:
         from .modeling_auto import AutoLLM as AutoLLM
 
     try:
-        if not utils.is_flax_available():
+        if not is_flax_available():
             raise openllm.exceptions.MissingDependencyError
     except openllm.exceptions.MissingDependencyError:
         pass
@@ -81,7 +81,7 @@ if t.TYPE_CHECKING:
         from .modeling_flax_auto import AutoFlaxLLM as AutoFlaxLLM
 
     try:
-        if not utils.is_tf_available():
+        if not is_tf_available():
             raise openllm.exceptions.MissingDependencyError
     except openllm.exceptions.MissingDependencyError:
         pass
@@ -91,4 +91,4 @@ if t.TYPE_CHECKING:
 else:
     import sys
 
-    sys.modules[__name__] = utils.LazyModule(__name__, globals()["__file__"], _import_structure, module_spec=__spec__)
+    sys.modules[__name__] = LazyModule(__name__, globals()["__file__"], _import_structure, module_spec=__spec__)

@@ -42,7 +42,7 @@ dependencies = [
     "httpx",
     "typing_extensions",
 ]
-description = 'OpenLLM: REST/gRPC API server for running any open Large-Language Model - StableLM, Llama, Alpaca, Dolly, Flan-T5, Custom'
+description = 'OpenLLM: Operating LLMs in production'
 dynamic = ["version"]
 keywords = [
     "MLOps",
@@ -74,14 +74,16 @@ all = [
     "openllm[mpt]",
     "openllm[flan-t5]",
     "openllm[openai]",
-    "openllm[agents]",
     "openllm[fine-tune]",
+    "openllm[agents]",
     "openllm[playground]",
+    "openllm[ggml]",
 ]
 chatglm = ["cpm-kernels", "sentencepiece"]
 falcon = ["einops", "xformers", "safetensors"]
 fine-tune = ["peft", "bitsandbytes", "datasets", "accelerate", "deepspeed", "trl"]
 flan-t5 = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
+ggml = ["ctransformers"]
 mpt = ["triton"]
 openai = ["openai", "tiktoken"]
 playground = ["jupyter", "notebook", "ipython", "jupytext", "nbformat"]
@@ -197,7 +199,6 @@ ignore = [
     "PLR0912",
     "PLR0913",
     "PLR0915",
-    # Never enforce `E501` (line length violations).
     "E501",
     "E741",
 ]
@@ -219,7 +220,7 @@ lines-after-imports = 2
 # Tests can use magic values, assertions, and relative imports
 "__init__.py" = ["E402", "F401", "F403", "F811"]
 "src/openllm/_types.py" = ["E402"]
-"src/openllm/playground/**/*" = ['E402', 'F401']
+"src/openllm/playground/**/*" = ["E402", "F401"]
 "tests/**/*" = ["PLR2004", "S101", "TID252"]
 
 [tool.pyright]

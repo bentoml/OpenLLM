@@ -62,7 +62,7 @@ else:
 
 
 _import_structure = {
-    "_llm": ["LLM", "Runner", "LLMRunner"],
+    "_llm": ["LLM", "Runner", "LLMRunner", "LLMRunnable"],
     "_configuration": ["LLMConfig"],
     "_package": ["build"],
     "exceptions": [],
@@ -72,6 +72,7 @@ _import_structure = {
     "client": [],
     "playground": [],
     "tests": [],
+    "serialisation": ["ggml", "transformers"],
     "cli": ["start", "start_grpc"],
     # NOTE: models
     "models.auto": [
@@ -180,11 +181,13 @@ if t.TYPE_CHECKING:
     from . import models as models
     from . import playground as playground
     from . import tests as tests
+    from . import serialisation as serialisation
 
     # Specific types import
     from ._configuration import LLMConfig as LLMConfig
     from ._llm import LLM as LLM
     from ._llm import LLMRunner as LLMRunner
+    from ._llm import LLMRunnable as LLMRunnable
     from ._llm import Runner as Runner
     from ._package import build as build
     from ._schema import GenerationInput as GenerationInput
@@ -192,6 +195,8 @@ if t.TYPE_CHECKING:
     from ._schema import MetadataOutput as MetadataOutput
     from .cli import start as start
     from .cli import start_grpc as start_grpc
+    from .serialisation import ggml as ggml
+    from .serialisation import transformers as transformers
     from .models.auto import CONFIG_MAPPING as CONFIG_MAPPING
     from .models.auto import MODEL_FLAX_MAPPING_NAMES as MODEL_FLAX_MAPPING_NAMES
     from .models.auto import MODEL_MAPPING_NAMES as MODEL_MAPPING_NAMES

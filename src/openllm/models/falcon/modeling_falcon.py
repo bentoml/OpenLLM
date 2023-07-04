@@ -14,16 +14,11 @@
 
 from __future__ import annotations
 
-import importlib
 import typing as t
 
 import bentoml
 import openllm
-import transformers
-from bentoml._internal.frameworks.transformers import make_default_signatures
-from bentoml._internal.models.model import ModelOptions
 
-from ..._llm import generate_context
 from ..._prompt import default_formatter
 from .configuration_falcon import DEFAULT_PROMPT_TEMPLATE
 
@@ -31,9 +26,11 @@ from .configuration_falcon import DEFAULT_PROMPT_TEMPLATE
 if t.TYPE_CHECKING:
     import torch
     import torch.amp
+    import transformers
 else:
     torch = openllm.utils.LazyLoader("torch", globals(), "torch")
     torch.amp = openllm.utils.LazyLoader("torch.amp", globals(), "torch.amp")
+    transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
 
 
 class Falcon(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTrainedTokenizerBase"]):
@@ -48,54 +45,16 @@ class Falcon(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTraine
     def llm_post_init(self):
         self.device = torch.device("cuda")
 
-    def import_model(
-        self, model_id: str, tag: bentoml.Tag, *model_args: t.Any, tokenizer_kwds: dict[str, t.Any], **attrs: t.Any
-    ) -> bentoml.Model:
-        trust_remote_code = attrs.pop("trust_remote_code", True)
-        torch_dtype = attrs.pop("torch_dtype", torch.bfloat16)
-        device_map = attrs.pop("device_map", "auto")
-
-        tokenizer = t.cast(
-            "transformers.PreTrainedTokenizerBase", transformers.AutoTokenizer.from_pretrained(model_id)
-        )
-        model = t.cast(
-            "transformers.PreTrainedModel",
-            transformers.AutoModelForCausalLM.from_pretrained(
-                model_id,
-                trust_remote_code=trust_remote_code,
-                torch_dtype=torch_dtype,
-                device_map=device_map,
-            ),
-        )
-
-        try:
-            with bentoml.models.create(
-                tag,
-                module="bentoml.transformers",
-                api_version="v2",
-                context=generate_context(framework_name="transformers"),
-                options=ModelOptions(),
-                signatures=make_default_signatures(model),
-                external_modules=[
-                    importlib.import_module(model.__module__),
-                    importlib.import_module(tokenizer.__module__),
-                ],
-                metadata={"_pretrained_class": model.__class__.__name__, "_framework": model.framework},
-            ) as bento_model:
-                model.save_pretrained(bento_model.path)
-                tokenizer.save_pretrained(bento_model.path)
-
-                return bento_model
-        finally:
-            torch.cuda.empty_cache()
-
     def load_model(self, tag: bentoml.Tag, *args: t.Any, **attrs: t.Any) -> t.Any:
-        return transformers.AutoModelForCausalLM.from_pretrained(bentoml.models.get(tag).path, **attrs)
+        trust_remote_code = attrs.pop("trust_remote_code", True)
+        return transformers.AutoModelForCausalLM.from_pretrained(
+            openllm.serialisation.get(self).path, trust_remote_code=trust_remote_code, **attrs
+        )
 
     def load_tokenizer(self, tag: bentoml.Tag, **attrs: t.Any) -> t.Any:
         trust_remote_code = attrs.pop("trust_remote_code", True)
         return transformers.AutoTokenizer.from_pretrained(
-            bentoml.models.get(tag).path, trust_remote_code=trust_remote_code, **attrs
+            openllm.serialisation.get(self).path, trust_remote_code=trust_remote_code, **attrs
         )
 
     def sanitize_parameters(

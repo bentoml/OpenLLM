@@ -216,8 +216,6 @@ class CascadingResourceStrategy(Strategy, ReprMixin):
         # use CPU
         cpus = get_resource(resource_request, "cpu")
         if cpus is not None and cpus > 0:
-            if not disabled:
-                logger.warning("'CUDA_VISIBLE_DEVICES' has no effect when only CPU is available.")
             environ["CUDA_VISIBLE_DEVICES"] = "-1"  # disable gpu
             if runnable_class.SUPPORTS_CPU_MULTI_THREADING:
                 thread_count = math.ceil(cpus)

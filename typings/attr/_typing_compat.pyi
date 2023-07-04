@@ -2,7 +2,6 @@ from typing import Any
 from typing import ClassVar
 from typing import Protocol
 
-
 MYPY = False
 
 if MYPY:

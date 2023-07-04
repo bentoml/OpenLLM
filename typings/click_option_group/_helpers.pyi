@@ -8,7 +8,6 @@ from typing import Tuple
 
 import click
 
-
 FAKE_OPT_NAME_LEN = ...
 
 def get_callback_and_params(func) -> Tuple[abc.Callable, List[click.Option]]:

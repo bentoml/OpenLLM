@@ -11,7 +11,6 @@ from typing import Union
 
 import click
 
-
 FC = Union[Callable[..., Any], click.Command]
 
 class GroupedOption(click.Option):

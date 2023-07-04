@@ -41,7 +41,13 @@ class ChatGLMConfig(openllm.LLMConfig):
         "url": "https://github.com/THUDM/ChatGLM-6B",
         "requirements": ["cpm_kernels", "sentencepiece"],
         "default_id": "thudm/chatglm-6b",
-        "model_ids": ["thudm/chatglm-6b", "thudm/chatglm-6b-int8", "thudm/chatglm-6b-int4"],
+        "model_ids": [
+            "thudm/chatglm-6b",
+            "thudm/chatglm-6b-int8",
+            "thudm/chatglm-6b-int4",
+            "thudm/chatglm2-6b",
+            "thudm/chatglm2-6b-int4",
+        ],
     }
 
     retain_history: bool = openllm.LLMConfig.Field(

@@ -8,7 +8,6 @@ from ._core import RequiredMutuallyExclusiveOptionGroup
 from ._decorators import optgroup
 from ._version import __version__
 
-
 """
 click-option-group
 ~~~~~~~~~~~~~~~~~~

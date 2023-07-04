@@ -11,7 +11,6 @@ dependencies = [
     # NOTE: pyright for type
     "pyright",
     # NOTE: Tests strategies with Hypothesis and pytest, and snapshot testing with syrupy
-    "openllm[flan-t5]",
     "coverage[toml]>=6.5",
     "filelock>=3.7.1",
     "pytest",
@@ -25,6 +24,7 @@ dependencies = [
     "hypothesis",
     "syrupy",
 ]
+features = ['flan-t5']
 [envs.default.scripts]
 _run_script = "pytest --cov --cov-report={env:COVERAGE_REPORT:term-missing} --cov-config=pyproject.toml"
 changelog = "towncrier build --version main --draft"
