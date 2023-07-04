@@ -48,7 +48,7 @@ def test_general_build_from_local(tmp_path_factory: pytest.TempPathFactory):
     local_path = tmp_path_factory.mktemp("local_t5")
     llm = openllm.AutoLLM.for_model("flan-t5", model_id=HF_INTERNAL_T5_TESTING, ensure_available=True)
 
-    if llm.bettertransformer.upper() in openllm.utils.ENV_VARS_TRUE_VALUES:
+    if llm.bettertransformer:
         llm.__llm_model__ = llm.model.reverse_bettertransformer()
 
     llm.save_pretrained(local_path)

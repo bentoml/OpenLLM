@@ -28,7 +28,6 @@ import cloudpickle
 from bentoml._internal.models.model import CUSTOM_OBJECTS_FILENAME
 from ..utils import LazyLoader, is_torch_available
 from ..utils import generate_context, normalize_attrs_to_model_tokenizer_pair
-from ..utils import ENV_VARS_TRUE_VALUES
 from .constants import FRAMEWORK_TO_AUTOCLASS_MAPPING, MODEL_TO_AUTOCLASS_MAPPING
 
 if t.TYPE_CHECKING:
@@ -221,11 +220,7 @@ def load_model(llm: openllm.LLM[_M, t.Any], *decls: t.Any, **attrs: t.Any) -> Mo
         model = infer_autoclass_from_llm_config(llm, config).from_pretrained(
             llm._bentomodel.path, *decls, config=config, **hub_attrs, **attrs
         )
-    if (
-        llm.bettertransformer.upper() in ENV_VARS_TRUE_VALUES
-        and llm.__llm_implementation__ == "pt"
-        and not isinstance(model, transformers.Pipeline)
-    ):
+    if llm.bettertransformer and llm.__llm_implementation__ == "pt" and not isinstance(model, transformers.Pipeline):
         # BetterTransformer is currently only supported on PyTorch.
         from optimum.bettertransformer import BetterTransformer
 

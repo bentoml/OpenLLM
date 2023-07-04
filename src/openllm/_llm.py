@@ -472,7 +472,7 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
     def save_pretrained(self, save_directory: str | Path, **attrs: t.Any) -> None:
         if isinstance(save_directory, Path):
             save_directory = str(save_directory)
-        if self.__llm_model__ is not None and self.bettertransformer.upper() in ENV_VARS_TRUE_VALUES:
+        if self.__llm_model__ is not None and self.bettertransformer:
             from optimum.bettertransformer import BetterTransformer
 
             self.__llm_model__ = BetterTransformer.reverse(self.__llm_model__)
