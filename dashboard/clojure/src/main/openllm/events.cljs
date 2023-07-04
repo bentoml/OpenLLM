@@ -8,7 +8,7 @@
 ;;              Functions             ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn check-and-throw
-  "Throws an exception if `db` doesn't match the Spec `a-spec`. Acts as a helper
+  "Throws an exception if `db` does not match the Spec `a-spec`. Acts as a helper
    for our spec checking interceptor."
   [a-spec db]
   (when-not (s/valid? a-spec db)
@@ -34,3 +34,16 @@
  [check-spec-interceptor]
  (fn [db [_ new-screen-id]]
    (assoc db :screen-id new-screen-id)))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;           Rich Comments            ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(comment
+  (require '[re-frame.core :as rf])
+
+  ;; set screen-id to :chat
+  (rf/dispatch-sync [:set-screen-id :chat])
+
+  ;; reset app-db to default-db
+  (rf/dispatch-sync [:initialise-db]))

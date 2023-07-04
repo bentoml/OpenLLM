@@ -126,3 +126,19 @@
    :chat-input-value ""
    :chat-history []
    :model-config standard-llm-config})
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;           Rich Comments            ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(comment
+  ;; check if default db complies with spec
+  (s/valid? ::db default-db) ;; => true
+
+
+  ;; check if manipulated db (no screen-id key) complies with spec
+  (s/valid? ::db (dissoc default-db :screen-id)) ;; => false
+
+  ;; reset app-db to default-db
+  (do (require '[re-frame.core :as rf])
+      (rf/dispatch-sync [:initialise-db])))

@@ -53,7 +53,7 @@
                    [::set-chat-input-value ""]]
       :dispatch-later [{:ms 20 :dispatch [::auto-scroll]}]})))
 
-(defn auto-scroll!
+(defn- auto-scroll!
   "Scrolls the chat history to the bottom. Has side effects obviously."
   []
   (let [chat-history (js/document.getElementById "chat-history-container")]
@@ -70,3 +70,21 @@
  []
  (fn [db _]
    (assoc db :chat-history [])))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;           Rich Comments            ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(comment
+  ;; import re-frame
+  #_{:clj-kondo/ignore [:duplicate-require]}
+  (require '[re-frame.core :as rf])
+
+  ;; add a chat message to the app-db (makes is appear in the chat history screen)
+  (rf/dispatch [::add-to-app-db-history :model "hello"])
+
+  ;; scroll to the bottom
+  (rf/dispatch [::auto-scroll])
+
+  ;; clear the chat history
+  (rf/dispatch [::clear-chat-history]))

@@ -55,12 +55,12 @@
          :style {:zIndex "9999"
                  :right "21.1rem"}}
    [ui/tooltip
-    [:button {:class "bg-red-400 hover:bg-red-500 text-white font-bold py-2 px-4 rounded block"
+    [:button {:class "bg-pink-600 hover:bg-pink-800 text-white py-2 px-4 rounded block text-xl"
               :on-click #(do (rf/dispatch [::events/clear-chat-history])
                              (rf/dispatch [::persistence/clear-chat-history]))} "🗑️"]
     "Click to clear chat history"]])
 
-(defn chat-tab
+(defn chat-tab-contents
   "The component rendered if the chat tab is active."
   []
   [:<>

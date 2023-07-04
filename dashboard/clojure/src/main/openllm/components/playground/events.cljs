@@ -29,3 +29,9 @@
  (fn [_ [_ prompt llm-config]]
    {:dispatch [::api/v1-generate prompt llm-config {:on-success [::send-prompt-success]
                                                     :on-failure [::send-prompt-failure]}]}))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;           Rich Comments            ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(comment
+  ;; clear input field
+  (rf/dispatch [::set-prompt-input ""]))

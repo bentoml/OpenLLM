@@ -4,12 +4,12 @@
 * [npm](https://www.npmjs.com/) (v9.5.1)
 * [Clojure](https://clojure.org/guides/getting_started) (v1.10.3)
 
-## Optional
-* [VS Code](https://code.visualstudio.com/)
-* [Calva](https://marketplace.visualstudio.com/items?itemName=betterthantomorrow.calva)
+## Recommended
+* [Visual Studio Code](https://code.visualstudio.com/)
+* [Calva](https://marketplace.visualstudio.com/items?itemName=betterthantomorrow.calva) (Plugin for VS Code)
 
 # Developement Build
-## Raw terminal
+Open a terminal in the projects root and execute the following commands to start the development build:
 ```bash
 cd dashboard/clojure
 npm install
@@ -19,6 +19,7 @@ Or simply using hatch:
 ```bash
 hatch run clojure-ui
 ```
+You will now have a shadow-cljs instance running in the background, which will automatically compile the ClojureScript code and serve it to the browser. Since this is a `watch` build, the ClojureScript and Tailwind code will be recompiled and the browser will be refreshed whenever a file is changed.
 
 ## Connecting a REPL
 The REPL is the most important tool for developing Clojure applications.
@@ -43,7 +44,7 @@ For more information on Calva, please consider reading the [Calva documentation]
 ## Source maps
 Important to have a sane way to understand what is going on in the browser console.
 
-TODO: document this
+Please refer to your browsers documentation on how to enable source maps. For Chrome, simply open the dev tools (`Ctrl+Shift+I`) and click the settings icon in the top right corner. Under "Sources" check the "Enable JavaScript source maps" checkbox, you should now correctly see the source code references in the browser console.
 
 # Production Build
 Run the following commands to build the production version of the dashboard:

@@ -47,7 +47,7 @@
   [:input {:type "checkbox"
            :checked value
            :class "h-4 w-4 text-pink-600 focus:ring-pink-500 border-gray-300 rounded"
-           :on-change #(rf/dispatch [::events/set-model-config-parameter name (boolean (.. % -target -checked))])}])
+           :on-change #(rf/dispatch [::events/set-model-config-parameter name (parse-boolean (.. % -target -checked))])}])
 
 (defn parameter-list-entry-value
   [name value]
@@ -67,7 +67,8 @@
          :key (str parameter-name)}
    [:span {:class "text-gray-500"} parameter-name]
    [:div {:class "mt-1"}
-    [parameter-list-entry-value parameter-name parameter-value]]])
+    [parameter-list-entry-value parameter-name parameter-value]]
+   [:hr {:class "mt-6 border-1 border-black border-opacity-10"}]])
 
 (defn parameter-list
   "Renders the parameters in the sidebar."
@@ -75,7 +76,7 @@
   (let [model-config (rf/subscribe [::subs/model-config])]
     (fn parameter-list
       []
-      [:div {:class "space-y-2"}
+      [:div
        (map parameter-list-entry @model-config)])))
 
 (defn status-display
@@ -87,7 +88,7 @@
      [:div {:class "mt-4"}
       [sidebar-group-headline "Service Status"]
       [:div {:class "space-y-1" :role "group" :aria-labelledby "service-status-headline"}
-       [:a {:href "#" :class "group flex items-center px-3 py-1 text-sm font-medium text-gray-700 rounded-md"}
+       [:a {:href "#" :class "group ml-3 flex items-center px-3 py-1 text-sm font-medium text-gray-700 rounded-md"}
         [:span {:class (str "w-2.5 h-2.5 mr-4 rounded-full " status-color) :aria-hidden "true"}]
         [:span {:class "truncate"} status-text]]]]]))
 

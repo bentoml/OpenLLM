@@ -11,7 +11,9 @@
               [openllm.api.http]))
 
 (defn app
-  "The main app component, which is rendered into the DOM."
+  "The main app component, which is rendered into the DOM. This component
+   just wraps the dashboard component, which is the effective root
+   component of the application."
   []
   [views/dashboard])
 
