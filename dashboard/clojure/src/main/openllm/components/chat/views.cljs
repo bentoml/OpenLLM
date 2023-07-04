@@ -14,7 +14,7 @@
         llm-config (rf/subscribe [::root-subs/model-config])
         on-change #(rf/dispatch [::events/set-chat-input-value (.. % -target -value)])
         on-send-click #(rf/dispatch [::events/on-send-button-click @chat-input-sub @llm-config])]
-    (fn chat-controls [] 
+    (fn chat-controls []
       [:form {:class "flex items-center justify-between"}
        [:textarea {:class "py-1 w-[calc(100%_-_80px)] appearance-none block border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm h-20"
                    :style {:resize "none"}
@@ -26,12 +26,12 @@
                                      (on-send-click)))
                    :id "chat-input"
                    :auto-complete "off"
-                   :auto-correct "off"}] 
+                   :auto-correct "off"}]
        [:div {:class "grid grid-rows-1"}
         [ui/tooltip
-         [:button {:class "bg-blue-400 hover:bg-blue-600 text-white py-1 pl-2 pr-1 rounded text-xl"
+         [:button {:class "bg-blue-400 hover:bg-blue-600 text-white py-1 px-2 rounded text-xl"
                    :on-click #(js/window.alert "not implemented")
-                   :type "button"} "📝"]
+                   :type "button"} "📋"]
          "Click to open prompt layout dialog"]
         [:button {:class "mt-1 px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none block"
                   :on-click on-send-click

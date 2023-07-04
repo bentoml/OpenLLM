@@ -47,13 +47,13 @@
   [:input {:type "checkbox"
            :checked value
            :class "h-4 w-4 text-pink-600 focus:ring-pink-500 border-gray-300 rounded"
-           :on-change #(rf/dispatch [::events/set-model-config-parameter name (parse-boolean (.. % -target -checked))])}])
+           :on-change #(rf/dispatch [::events/set-model-config-parameter name (not value)])}])
 
 (defn parameter-list-entry-value
   [name value]
   (cond
     (contains? db/parameter-min-max name) [parameter-slider-with-input name value]
-    (boolean? value) [parameter-checkbox]
+    (boolean? value) [parameter-checkbox name value]
     :else
     [:input {:type "number"
              :class "px-1 py-1 text-xs text-gray-700 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm w-full"
@@ -76,8 +76,8 @@
   (let [model-config (rf/subscribe [::subs/model-config])]
     (fn parameter-list
       []
-      [:div
-       (map parameter-list-entry @model-config)])))
+      (into [:div
+             (map parameter-list-entry @model-config)]))))
 
 (defn status-display
   "Displays the current service status at the bottom of the sidebar."
