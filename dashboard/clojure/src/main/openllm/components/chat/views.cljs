@@ -26,10 +26,16 @@
                                      (on-send-click)))
                    :id "chat-input"
                    :auto-complete "off"
-                   :auto-correct "off"}]
-       [:button {:class "ml-2 px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none"
-                 :on-click on-send-click
-                 :type "button"} "Send"]])))
+                   :auto-correct "off"}] 
+       [:div {:class "grid grid-rows-1"}
+        [ui/tooltip
+         [:button {:class "bg-blue-400 hover:bg-blue-600 text-white py-1 pl-2 pr-1 rounded text-xl"
+                   :on-click #(js/window.alert "not implemented")
+                   :type "button"} "📝"]
+         "Click to open prompt layout dialog"]
+        [:button {:class "mt-1 px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none block"
+                  :on-click on-send-click
+                  :type "button"} "Send"]]])))
 
 (defn chat-history
   "The chat history."
@@ -52,10 +58,10 @@
   "The button to clear the chat history."
   []
   [:div {:class "fixed top-32 h-[calc(100%_-_220px)] pr-2 pt-2"
-         :style {:zIndex "9999"
+         :style {:zIndex "99"
                  :right "21.1rem"}}
    [ui/tooltip
-    [:button {:class "bg-pink-600 hover:bg-pink-800 text-white py-2 px-4 rounded block text-xl"
+    [:button {:class "bg-pink-600 hover:bg-pink-800 text-white rounded block text-xl"
               :on-click #(do (rf/dispatch [::events/clear-chat-history])
                              (rf/dispatch [::persistence/clear-chat-history]))} "🗑️"]
     "Click to clear chat history"]])

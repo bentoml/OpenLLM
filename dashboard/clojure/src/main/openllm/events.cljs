@@ -40,6 +40,7 @@
 ;;           Rich Comments            ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (comment
+  #_{:clj-kondo/ignore [:duplicate-require]}
   (require '[re-frame.core :as rf])
 
   ;; set screen-id to :chat
