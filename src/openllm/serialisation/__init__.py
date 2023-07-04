@@ -55,47 +55,45 @@ def import_model(
     **attrs: t.Any,
 ) -> bentoml.Model:
     if llm.runtime == "transformers":
-        return openllm.serialisation.transformers.import_model(
-            llm, *decls, trust_remote_code=trust_remote_code, **attrs
-        )
+        return openllm.transformers.import_model(llm, *decls, trust_remote_code=trust_remote_code, **attrs)
     elif llm.runtime == "ggml":
-        return openllm.serialisation.ggml.import_model(llm, *decls, trust_remote_code=trust_remote_code, **attrs)
+        return openllm.ggml.import_model(llm, *decls, trust_remote_code=trust_remote_code, **attrs)
     else:
         raise ValueError(f"Unknown runtime: {llm.config['runtime']}")
 
 
 def get(llm: openllm.LLM[t.Any, t.Any], auto_import: bool = False) -> bentoml.Model:
     if llm.runtime == "transformers":
-        return openllm.serialisation.transformers.get(llm, auto_import=auto_import)
+        return openllm.transformers.get(llm, auto_import=auto_import)
     elif llm.runtime == "ggml":
-        return openllm.serialisation.ggml.get(llm, auto_import=auto_import)
+        return openllm.ggml.get(llm, auto_import=auto_import)
     else:
         raise ValueError(f"Unknown runtime: {llm.config['runtime']}")
 
 
 def save_pretrained(llm: openllm.LLM[t.Any, t.Any], save_directory: str, **attrs: t.Any):
     if llm.runtime == "transformers":
-        return openllm.serialisation.transformers.save_pretrained(llm, save_directory, **attrs)
+        return openllm.transformers.save_pretrained(llm, save_directory, **attrs)
     elif llm.runtime == "ggml":
-        return openllm.serialisation.ggml.save_pretrained(llm, save_directory, **attrs)
+        return openllm.ggml.save_pretrained(llm, save_directory, **attrs)
     else:
         raise ValueError(f"Unknown runtime: {llm.config['runtime']}")
 
 
 def load_model(llm: openllm.LLM[_M, t.Any], *decls: t.Any, **attrs: t.Any) -> ModelProtocol[_M]:
     if llm.runtime == "transformers":
-        return openllm.serialisation.transformers.load_model(llm, *decls, **attrs)
+        return openllm.transformers.load_model(llm, *decls, **attrs)
     elif llm.runtime == "ggml":
-        return openllm.serialisation.ggml.load_model(llm, *decls, **attrs)
+        return openllm.ggml.load_model(llm, *decls, **attrs)
     else:
         raise ValueError(f"Unknown runtime: {llm.config['runtime']}")
 
 
 def load_tokenizer(llm: openllm.LLM[t.Any, _T]) -> TokenizerProtocol[_T]:
     if llm.runtime == "transformers":
-        return openllm.serialisation.transformers.load_tokenizer(llm)
+        return openllm.transformers.load_tokenizer(llm)
     elif llm.runtime == "ggml":
-        return openllm.serialisation.ggml.load_tokenizer(llm)
+        return openllm.ggml.load_tokenizer(llm)
     else:
         raise ValueError(f"Unknown runtime: {llm.config['runtime']}")
 
