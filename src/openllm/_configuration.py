@@ -69,7 +69,7 @@ import openllm
 
 from .exceptions import ForbiddenAttributeError
 from .utils import LazyType
-from .utils import ReprMixin
+from .utils import ReprMixin, ENV_VARS_TRUE_VALUES
 from .utils import bentoml_cattr
 from .utils import codegen
 from .utils import dantic
@@ -783,7 +783,7 @@ def structure_settings(cl_: type[LLMConfig], cls: type[_ModelSettingsAttr]):
 
     # bettertransformer support
     if _settings_attr["bettertransformer"] is None:
-        _final_value_dct["bettertransformer"] = env.bettertransformer_value
+        _final_value_dct["bettertransformer"] = str(env.bettertransformer_value).upper() in ENV_VARS_TRUE_VALUES
     if _settings_attr["requires_gpu"]:
         # if requires_gpu is True, then disable BetterTransformer for quantization.
         _final_value_dct["bettertransformer"] = False
