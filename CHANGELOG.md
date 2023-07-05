@@ -18,6 +18,43 @@ This changelog is managed by towncrier and is compiled at release time.
 
 <!-- towncrier release notes start -->
 
+## [0.1.20](https://github.com/bentoml/openllm/tree/v0.1.20)
+
+### Features
+
+- ### Fine-tuning support for Falcon
+
+  Added support for fine-tuning Falcon models with QLoRa
+
+  OpenLLM now brings a `openllm playground`, which create a jupyter notebook for
+  easy fine-tuning script
+
+  Currently, it supports fine-tuning OPT and Falcon, more to come.
+
+  `openllm.LLM` now provides a `prepare_for_training` helpers to easily setup LoRA
+  and related configuration for fine-tuning
+  [#98](https://github.com/bentoml/openllm/issues/98)
+
+
+### Bug fix
+
+- Fixes loading MPT config on CPU
+
+  Fixes runner StopIteration on GET for Starlette App
+  [#92](https://github.com/bentoml/openllm/issues/92)
+- `openllm.LLM` now generates tags based on given `model_id` and optional
+  `model_version`.
+
+  If given `model_id` is a custom path, the name would be the basename of the
+  directory, and version would be the hash of the last modified time.
+
+  `openllm start` now provides a `--runtime`, allowing setup different runtime.
+  Currently it refactors to `transformers`. GGML is working in progress.
+
+  Fixes miscellaneous items when saving models with quantized weights.
+  [#102](https://github.com/bentoml/openllm/issues/102)
+
+
 ## [0.1.19](https://github.com/bentoml/openllm/tree/v0.1.19)
 No significant changes.
 
