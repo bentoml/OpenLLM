@@ -107,7 +107,7 @@ After setting up your environment, here's how you can start contributing:
 5. Run all tests to ensure your changes haven't broken anything:
 
    ```bash
-   hatch run test:p
+   hatch run full
    ```
 
 6. Commit your changes:
@@ -141,7 +141,7 @@ directory and their filenames start with `test_`.
 Run all tests with:
 
 ```bash
-hatch run test:p
+hatch run full
 ```
 
 ## Releasing a New Version
@@ -150,7 +150,7 @@ To release a new version, use `./tools/run-release-action`. It requires `gh`,
 `jq` and `hatch`:
 
 ```bash
-./tools/run-release-action
+./tools/run-release-action --release <major|minor|patch>
 ```
 
 > Note that currently this workflow can only be run by the BentoML team.

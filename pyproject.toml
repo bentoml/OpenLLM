@@ -5,11 +5,19 @@ requires = ["hatchling"]
 [project]
 authors = [{ name = "Aaron Pham", email = "aarnphm@bentoml.com" }]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: GPU :: NVIDIA CUDA",
+    "Environment :: GPU :: NVIDIA CUDA :: 12",
+    "Environment :: GPU :: NVIDIA CUDA :: 11.8",
+    "Environment :: GPU :: NVIDIA CUDA :: 11.7",
     "License :: OSI Approved :: Apache Software License",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Software Development :: Libraries",
     "Operating System :: OS Independent",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: System Administrators",
+    "Typing :: Typed",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
@@ -17,6 +25,7 @@ classifiers = [
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
@@ -33,7 +42,7 @@ dependencies = [
     "httpx",
     "typing_extensions",
 ]
-description = 'OpenLLM: REST/gRPC API server for running any open Large-Language Model - StableLM, Llama, Alpaca, Dolly, Flan-T5, Custom'
+description = 'OpenLLM: Operating LLMs in production'
 dynamic = ["version"]
 keywords = [
     "MLOps",
@@ -44,7 +53,6 @@ keywords = [
     "LLMOps",
     "Large Language Model",
     "Generative AI",
-    "Stable Diffusion",
     "StableLM",
     "Alpaca",
     "PyTorch",
@@ -58,29 +66,27 @@ requires-python = ">=3.8"
 # NOTE: Don't modify project.optional-dependencies
 # as it is managed by ./tools/update-optional-dependencies.py
 [project.optional-dependencies]
-agents = ["transformers[agents]", "diffusers", "soundfile"]
+agents = ["transformers[agents]>=4.30", "diffusers", "soundfile"]
 all = [
     "openllm[chatglm]",
     "openllm[starcoder]",
     "openllm[falcon]",
+    "openllm[mpt]",
     "openllm[flan-t5]",
-    "openllm[agents]",
+    "openllm[ggml]",
     "openllm[fine-tune]",
+    "openllm[agents]",
     "openllm[openai]",
+    "openllm[playground]",
 ]
-chatglm = ["cpm_kernels", "sentencepiece"]
+chatglm = ["cpm-kernels", "sentencepiece"]
 falcon = ["einops", "xformers", "safetensors"]
-fine-tune = ["peft", "bitsandbytes", "datasets", "accelerate", "deepspeed"]
+fine-tune = ["peft", "bitsandbytes", "datasets", "accelerate", "deepspeed", "trl"]
 flan-t5 = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
-nightly = [
-    "bentoml[grpc,io] @ git+https://github.com/bentoml/bentoml.git@main",
-    "peft @ git+https://github.com/huggingface/peft.git@main",
-    "transformers[torch,tokenizers,accelerate] @ git+https://github.com/huggingface/transformers.git@main",
-    "optimum @ git+https://github.com/huggingface/optimum.git@main",
-    "accelerate @ git+https://github.com/huggingface/accelerate.git@main",
-    "bitsandbytes @ git+https://github.com/TimDettmers/bitsandbytes.git@main",
-]
+ggml = ["ctransformers"]
+mpt = ["triton"]
 openai = ["openai", "tiktoken"]
+playground = ["jupyter", "notebook", "ipython", "jupytext", "nbformat"]
 starcoder = ["bitsandbytes"]
 
 [project.urls]
@@ -99,6 +105,8 @@ allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/openllm", "src/openllm_client"]
+[tool.hatch.build.targets.sdist]
+exclude = ["/.github", "/typings", "/examples", "/assets", "/changelog.d", "/tools"]
 
 [tool.towncrier]
 directory = "changelog.d"
@@ -131,6 +139,11 @@ showcontent = true
 [[tool.towncrier.type]]
 directory = "feature"
 name = "Features"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "fix"
+name = "Bug fix"
 showcontent = true
 
 [[tool.hatch.envs.all.matrix]]
@@ -176,14 +189,20 @@ ignore = [
     "B027",
     # Allow boolean positional values in function calls, like `dict.get(... True)`
     "FBT003",
+    # Ignore checks for possible passwords
+    "S105",
+    "S106",
+    "S107",
     # Ignore complexity
     "C901",
-    # Never enforce `E501` (line length violations).
+    "PLR0911",
+    "PLR0912",
+    "PLR0913",
+    "PLR0915",
     "E501",
     "E741",
 ]
 line-length = 119
-select = ["C", "E", "F", "I", "W"]
 target-version = "py311"
 unfixable = [
     "F401", # Don't touch unused imports, just warn about it.
@@ -201,14 +220,14 @@ lines-after-imports = 2
 # Tests can use magic values, assertions, and relative imports
 "__init__.py" = ["E402", "F401", "F403", "F811"]
 "src/openllm/_types.py" = ["E402"]
-"src/openllm/playground/**/*" = ['E402', 'F401']
+"src/openllm/playground/**/*" = ["E402", "F401"]
 "tests/**/*" = ["PLR2004", "S101", "TID252"]
 
 [tool.pyright]
 analysis.useLibraryCodeForTypes = true
 enableTypeIgnoreComments = true
 include = ["src/", "tests/", "tools/", "examples/"]
-pythonVersion = "3.11"
+pythonVersion = "3.12"
 reportMissingImports = "none"
 reportMissingModuleSource = "warning"
 reportMissingTypeStubs = "warning"
@@ -223,13 +242,17 @@ typeCheckingMode = "strict"
 
 [tool.coverage.run]
 branch = true
-omit = ["src/openllm/__about__.py"]
-parallel = true
-source_pkgs = ["openllm", "tests"]
+omit = [
+    "src/openllm/playground/",
+    "src/openllm/__about__.py",
+    "src/openllm/__main__.py",
+    "src/openllm/tests.py",
+    "src/openllm/utils/dummy_*.py",
+]
+source_pkgs = ["openllm"]
 
 [tool.coverage.paths]
 openllm = ["src/openllm", "*/openllm/src/openllm"]
-tests = ["tests", "*/openllm/tests"]
 
 [tool.coverage.report]
-exclude_lines = ["no cov", "if __name__ == .__main__.:", "if t.TYPE_CHECKING:"]
+exclude_lines = ["no cov", "if __name__ == .__main__.:", "if t.TYPE_CHECKING:", "@overload", "# pragma: no cover"]

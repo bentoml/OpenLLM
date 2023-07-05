@@ -22,6 +22,7 @@ import logging
 import logging.config
 import os
 import sys
+import platform
 import types
 import typing as t
 
@@ -29,6 +30,7 @@ from bentoml._internal.configuration import get_debug_mode
 from bentoml._internal.configuration import get_quiet_mode
 from bentoml._internal.configuration import set_debug_mode
 from bentoml._internal.configuration import set_quiet_mode
+from bentoml._internal.models.model import ModelContext as _ModelContext
 from bentoml._internal.log import CLI_LOGGING_CONFIG as _CLI_LOGGING_CONFIG
 from bentoml._internal.types import LazyType
 from bentoml._internal.utils import LazyLoader
@@ -38,6 +40,7 @@ from bentoml._internal.utils import first_not_none
 from bentoml._internal.utils import pkg
 from bentoml._internal.utils import reserve_free_port
 from bentoml._internal.utils import resolve_user_filepath
+from bentoml._internal.utils import validate_or_create_dir
 
 from .lazy import LazyModule
 
@@ -58,6 +61,9 @@ else:
         types.GenericAlias,
         types.UnionType,
     )
+
+if t.TYPE_CHECKING:
+    from .._types import DictStrAny
 
 
 def lenient_issubclass(cls: t.Any, class_or_tuple: type[t.Any] | tuple[type[t.Any], ...] | None) -> bool:
@@ -103,6 +109,8 @@ _LOGGING_CONFIG["loggers"].update(
 
 
 def configure_logging() -> None:
+    """Configure logging for OpenLLM. Behaves similar to how BentoML loggers
+    are being configured."""
     if get_quiet_mode():
         _LOGGING_CONFIG["loggers"]["openllm"]["level"] = logging.ERROR
         _LOGGING_CONFIG["loggers"]["bentoml"]["level"] = logging.ERROR
@@ -119,6 +127,65 @@ def configure_logging() -> None:
     logging.config.dictConfig(_LOGGING_CONFIG)
 
 
+@functools.lru_cache(maxsize=1)
+def in_notebook() -> bool:
+    try:
+        from IPython.core.getipython import get_ipython
+
+        if "IPKernelApp" not in get_ipython().config:  # pragma: no cover
+            return False
+    except ImportError:
+        return False
+    except AttributeError:
+        return False
+    return True
+
+
+def resolve_filepath(path: str) -> str:
+    """Resolve a file path to an absolute path, expand user and environment variables"""
+    try:
+        return resolve_user_filepath(path, None)
+    except FileNotFoundError:
+        return path
+
+
+def validate_is_path(maybe_path: str) -> bool:
+    return os.path.exists(os.path.dirname(resolve_filepath(maybe_path)))
+
+
+def generate_context(framework_name: str) -> _ModelContext:
+    from .import_utils import is_torch_available, is_flax_available, is_tf_available
+
+    framework_versions = {"transformers": pkg.get_pkg_version("transformers")}
+    if is_torch_available():
+        framework_versions["torch"] = pkg.get_pkg_version("torch")
+    if is_tf_available():
+        from bentoml._internal.frameworks.utils.tensorflow import get_tf_version
+
+        framework_versions["tensorflow-macos" if platform.system() == "Darwin" else "tensorflow"] = get_tf_version()
+    if is_flax_available():
+        framework_versions.update(
+            {
+                "flax": pkg.get_pkg_version("flax"),
+                "jax": pkg.get_pkg_version("jax"),
+                "jaxlib": pkg.get_pkg_version("jaxlib"),
+            }
+        )
+    return _ModelContext(framework_name=framework_name, framework_versions=framework_versions)
+
+
+_TOKENIZER_PREFIX = "_tokenizer_"
+
+
+def normalize_attrs_to_model_tokenizer_pair(**attrs: t.Any) -> tuple[DictStrAny, DictStrAny]:
+    """Normalize the given attrs to a model and tokenizer kwargs accordingly."""
+    tokenizer_attrs = {k[len(_TOKENIZER_PREFIX) :]: v for k, v in attrs.items() if k.startswith(_TOKENIZER_PREFIX)}
+    for k in tuple(attrs.keys()):
+        if k.startswith(_TOKENIZER_PREFIX):
+            del attrs[k]
+    return attrs, tokenizer_attrs
+
+
 # NOTE: The set marks contains a set of modules name
 # that are available above and are whitelisted
 # to be included in the extra_objects map.
@@ -132,23 +199,33 @@ _extras: dict[str, t.Any] = {
     if k in _whitelist_modules or (not isinstance(v, types.ModuleType) and not k.startswith("_"))
 }
 
+_extras["__openllm_migration__"] = {"ModelEnv": "EnvVarMixin"}
+
 _import_structure = {
     "analytics": [],
     "codegen": [],
     "dantic": [],
+    "representation": ["ReprMixin"],
     "import_utils": [
         "OPTIONAL_DEPENDENCIES",
         "ENV_VARS_TRUE_VALUES",
         "DummyMetaclass",
-        "ModelEnv",
+        "EnvVarMixin",
+        "requires_dependencies",
         "is_cpm_kernels_available",
         "is_einops_available",
         "is_flax_available",
         "is_tf_available",
         "is_torch_available",
         "is_bitsandbytes_available",
+        "is_peft_available",
+        "is_datasets_available",
         "is_transformers_supports_kbit",
         "is_transformers_supports_agent",
+        "is_jupyter_available",
+        "is_jupytext_available",
+        "is_notebook_available",
+        "is_triton_available",
         "require_backends",
     ],
 }
@@ -174,20 +251,34 @@ if t.TYPE_CHECKING:
     from . import resolve_user_filepath as resolve_user_filepath
     from . import set_debug_mode as set_debug_mode
     from . import set_quiet_mode as set_quiet_mode
+    from . import in_notebook as in_notebook
+    from . import validate_or_create_dir as validate_or_create_dir
+    from . import validate_is_path as validate_is_path
+    from . import resolve_filepath as resolve_filepath
+    from . import normalize_attrs_to_model_tokenizer_pair as normalize_attrs_to_model_tokenizer_pair
+    from . import generate_context as generate_context
     from .import_utils import ENV_VARS_TRUE_VALUES as ENV_VARS_TRUE_VALUES
     from .import_utils import OPTIONAL_DEPENDENCIES as OPTIONAL_DEPENDENCIES
     from .import_utils import DummyMetaclass as DummyMetaclass
-    from .import_utils import ModelEnv as ModelEnv
+    from .import_utils import EnvVarMixin as EnvVarMixin
     from .import_utils import is_bitsandbytes_available as is_bitsandbytes_available
     from .import_utils import is_cpm_kernels_available as is_cpm_kernels_available
+    from .import_utils import is_datasets_available as is_datasets_available
     from .import_utils import is_einops_available as is_einops_available
     from .import_utils import is_flax_available as is_flax_available
+    from .import_utils import is_peft_available as is_peft_available
     from .import_utils import is_tf_available as is_tf_available
     from .import_utils import is_torch_available as is_torch_available
     from .import_utils import is_transformers_supports_agent as is_transformers_supports_agent
     from .import_utils import is_transformers_supports_kbit as is_transformers_supports_kbit
+    from .import_utils import is_triton_available as is_triton_available
     from .import_utils import require_backends as require_backends
+    from .import_utils import requires_dependencies as requires_dependencies
+    from .import_utils import is_jupyter_available as is_jupyter_available
+    from .import_utils import is_jupytext_available as is_jupytext_available
+    from .import_utils import is_notebook_available as is_notebook_available
     from .lazy import LazyModule as LazyModule
+    from .representation import ReprMixin as ReprMixin
 else:
     import sys
 

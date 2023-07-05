@@ -20,6 +20,7 @@ import itertools
 import os
 import types
 import typing as t
+import warnings
 
 from ..exceptions import ForbiddenAttributeError
 from ..exceptions import OpenLLMException
@@ -33,7 +34,9 @@ class MissingAttributesError(OpenLLMException):
     """Raised when given keys is not available in LazyModule special mapping."""
 
 
-_reserved_namespace = {"__openllm_special__"}
+_sentinel = object()
+
+_reserved_namespace = {"__openllm_special__", "__openllm_migration__"}
 
 
 class LazyModule(types.ModuleType):
@@ -102,6 +105,14 @@ class LazyModule(types.ModuleType):
             raise ForbiddenAttributeError(
                 f"'{name}' is a reserved namespace for {self._name} and should not be access nor modified."
             )
+        if "__openllm_migration__" in self._objects:
+            cur_value = self._objects["__openllm_migration__"].get(name, _sentinel)
+            if cur_value is not _sentinel:
+                warnings.warn(
+                    f"'{name}' is deprecated and will be removed in future version. Make sure to use '{cur_value}' instead",
+                    DeprecationWarning,
+                )
+                return getattr(self, cur_value)
         if name in self._objects:
             return self._objects.__getitem__(name)
         if name in self._modules:

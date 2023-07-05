@@ -23,10 +23,18 @@ import httpx
 
 import bentoml
 import openllm
-import transformers
+import logging
 
+
+# NOTE: We need to do this so that overload can register
+# correct overloads to typing registry
+if hasattr(t, "get_overloads"):
+    from typing import overload
+else:
+    from typing_extensions import overload
 
 if t.TYPE_CHECKING:
+    import transformers
     from openllm.models.auto.factory import _BaseAutoLLMClass
 
     class AnnotatedClient(bentoml.client.Client):
@@ -47,6 +55,11 @@ if t.TYPE_CHECKING:
 
         def metadata_v1(self) -> dict[str, t.Any]:
             ...
+
+else:
+    transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
+
+logger = logging.getLogger(__name__)
 
 
 def in_async_context() -> bool:
@@ -162,11 +175,11 @@ class BaseClient(ClientMixin):
     def health(self) -> t.Any:
         raise NotImplementedError
 
-    @t.overload
+    @overload
     def query(self, prompt: str, *, return_raw_response: t.Literal[False] = ..., **attrs: t.Any) -> str:
         ...
 
-    @t.overload
+    @overload
     def query(self, prompt: str, *, return_raw_response: t.Literal[True] = ..., **attrs: t.Any) -> dict[str, t.Any]:
         ...
 
@@ -208,7 +221,11 @@ class BaseClient(ClientMixin):
         task = kwargs.pop("task", args[0])
         return_code = kwargs.pop("return_code", False)
         remote = kwargs.pop("remote", False)
-        return self._hf_agent.run(task, return_code=return_code, remote=remote, **kwargs)
+        try:
+            return self._hf_agent.run(task, return_code=return_code, remote=remote, **kwargs)
+        except Exception as err:
+            logger.error("Exception caught while sending instruction to HF agent: %s", err, exc_info=err)
+            logger.info("Tip: LLMServer at '%s' might not support single generation yet.", self._address)
 
     # NOTE: Scikit interface
     def predict(self, prompt: str, **attrs: t.Any) -> t.Any:
@@ -222,11 +239,11 @@ class BaseAsyncClient(ClientMixin):
     async def health(self) -> t.Any:
         raise NotImplementedError
 
-    @t.overload
+    @overload
     async def query(self, prompt: str, *, return_raw_response: t.Literal[False] = ..., **attrs: t.Any) -> str:
         ...
 
-    @t.overload
+    @overload
     async def query(
         self, prompt: str, *, return_raw_response: t.Literal[True] = ..., **attrs: t.Any
     ) -> dict[str, t.Any]:

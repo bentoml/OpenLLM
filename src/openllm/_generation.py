@@ -39,3 +39,9 @@ class StopSequenceCriteria(transformers.StoppingCriteria):
     def __call__(self, input_ids: torch.Tensor, scores: t.Any, **attrs: t.Any) -> bool:
         decoded_output = self.tokenizer.decode(input_ids.tolist()[0])
         return any(decoded_output.endswith(stop_sequence) for stop_sequence in self.stop_sequences)
+
+
+class StopOnTokens(transformers.StoppingCriteria):
+    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> bool:
+        stop_ids = {50278, 50279, 50277, 1, 0}
+        return input_ids[0][-1] in stop_ids

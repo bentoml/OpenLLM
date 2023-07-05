@@ -31,6 +31,13 @@ from click import ParamType
 import openllm
 
 
+# NOTE: We need to do this so that overload can register
+# correct overloads to typing registry
+if hasattr(t, "get_overloads"):
+    from typing import overload
+else:
+    from typing_extensions import overload
+
 if t.TYPE_CHECKING:
     from attr import _ValidatorType
 
@@ -42,7 +49,7 @@ if t.TYPE_CHECKING:
 _T = t.TypeVar("_T")
 
 
-@t.overload
+@overload
 def attrs_to_options(
     name: str,
     field: attr.Attribute[t.Any],
@@ -53,7 +60,7 @@ def attrs_to_options(
     ...
 
 
-@t.overload
+@overload
 def attrs_to_options(  # type: ignore (overlapping overload)
     name: str,
     field: attr.Attribute[O_co],
@@ -104,11 +111,11 @@ def attrs_to_options(
 def env_converter(value: t.Any, env: str | None = None) -> t.Any:
     if env is not None:
         value = os.environ.get(env, value)
-    if value is not None and isinstance(value, str):
-        try:
-            return orjson.loads(value.lower())
-        except orjson.JSONDecodeError as err:
-            raise RuntimeError(f"Failed to parse '{value}' from '{env}': {err}")
+        if value is not None and isinstance(value, str):
+            try:
+                return orjson.loads(value.lower())
+            except orjson.JSONDecodeError as err:
+                raise RuntimeError(f"Failed to parse ({value!r}) from '{env}': {err}")
     return value
 
 
@@ -135,12 +142,13 @@ def Field(
         description: the documentation for the field. Defaults to None.
         env: the environment variable to read from. Defaults to None.
         auto_default: a bool indicating whether to use the default value as the environment.
-            Defaults to False. If set to True, the behaviour of this Field will also depends
-            on kw_only. If kw_only=True, the this field will become 'Required' and the default
-            value is omitted. If kw_only=False, then the default value will be used as before.
+                      Defaults to False. If set to True, the behaviour of this Field will also depends
+                      on kw_only. If kw_only=True, the this field will become 'Required' and the default
+                      value is omitted. If kw_only=False, then the default value will be used as before.
         use_default_converter: a bool indicating whether to use the default converter. Defaults
-            to True. If set to False, then the default converter will not be used. The default
-            converter converts a given value from the environment variable for this given Field.
+                               to True. If set to False, then the default converter will not be used.
+                               The default converter converts a given value from the environment variable
+                               for this given Field.
         **kwargs: The rest of the arguments are passed to attr.field
     """
     metadata = attrs.pop("metadata", {})

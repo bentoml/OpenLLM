@@ -1,0 +1,65 @@
+cff-version: 1.2.0
+title: 'OpenLLM: Operating LLMs in production'
+message: >-
+  If you use this software, please cite it using these
+  metadata.
+type: software
+authors:
+  - given-names: Aaron
+    family-names: Pham
+    email: aarnphm@bentoml.com
+    orcid: 'https://orcid.org/0009-0008-3180-5115'
+  - given-names: Chaoyu
+    family-names: Yang
+    email: chaoyu@bentoml.com
+  - given-names: Sean
+    family-names: Sheng
+    email: ssheng@bentoml.com
+  - given-names: Shenyang
+    family-names: ' Zhao'
+    email: larme@bentoml.com
+  - given-names: Sauyon
+    family-names: Lee
+    email: sauyon@bentoml.com
+  - given-names: Bo
+    family-names: Jiang
+    email: jiang@bentoml.com
+  - given-names: Fog
+    family-names: Dong
+    email: fog@bentoml.com
+  - given-names: Xipeng
+    family-names: Guan
+    email: xipeng@bentoml.com
+  - given-names: Frost
+    family-names: Ming
+    email: frost@bentoml.com
+repository-code: 'https://github.com/bentoml/OpenLLM'
+url: 'https://bentoml.com/'
+abstract: >-
+  OpenLLM is an open platform for operating large language
+  models (LLMs) in production. With OpenLLM, you can run
+  inference with any open-source large-language models,
+  deploy to the cloud or on-premises, and build powerful AI
+  apps. It has built-in support for a wide range of
+  open-source LLMs and model runtime, including StableLM,
+  Falcon, Dolly, Flan-T5, ChatGLM, StarCoder and more.
+  OpenLLM helps serve LLMs over RESTful API or gRPC with one
+  command or query via WebUI, CLI, our Python/Javascript
+  client, or any HTTP client. It provides first-class
+  support for LangChain, BentoML and Hugging Face that
+  allows you to easily create your own AI apps by composing
+  LLMs with other models and services. Last but not least,
+  it automatically generates LLM server OCI-compatible
+  Container Images or easily deploys as a serverless
+  endpoint via BentoCloud.
+keywords:
+  - MLOps
+  - LLMOps
+  - LLM
+  - Infrastructure
+  - Transformers
+  - LLM Serving
+  - Model Serving
+  - Serverless Deployment
+license: Apache-2.0
+date-released: '2023-06-13'

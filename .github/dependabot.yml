@@ -24,6 +24,6 @@ updates:
   - package-ecosystem: pip
     directory: '/'
     schedule:
-      interval: 'daily'
+      interval: 'weekly'
     open-pull-requests-limit: 5
     versioning-strategy: increase-if-necessary

@@ -15,10 +15,12 @@
 ci:
   autoupdate_schedule: weekly
   skip: [check-models-table-update, check-models-table-update, changelog-dry-run]
+  autofix_commit_msg: "ci: auto fixes from pre-commit.ci\nFor more information, see https://pre-commit.ci"
+  autoupdate_commit_msg: 'ci: pre-commit autoupdate [pre-commit.ci]'
 exclude: '.*\.(css|js|svg)$'
 repos:
-  - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: 'v0.0.272'
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: 'v0.0.275'
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix, --show-fixes]
@@ -26,7 +28,6 @@ repos:
     rev: 23.3.0
     hooks:
       - id: black-jupyter
-        files: '/(src|tests|docs|examples|typings)/'
   - repo: https://github.com/econchick/interrogate
     rev: 1.5.0
     hooks:
@@ -44,6 +45,7 @@ repos:
           - 'markdown'
           - 'toml'
           - 'json'
+          - 'text'
         exclude: |
           (?x)^(
               tools/.*|

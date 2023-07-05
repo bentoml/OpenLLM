@@ -19,8 +19,6 @@ import typing as t
 import bentoml
 import openllm
 
-from ..._generation import StopSequenceCriteria
-
 
 if t.TYPE_CHECKING:
     import torch
@@ -55,18 +53,14 @@ class StarCoder(openllm.LLM["transformers.GPTBigCodeForCausalLM", "transformers.
         tokenizer_kwds = {"padding_side": "left"}
         return model_kwds, tokenizer_kwds
 
-    def import_model(
-        self,
-        model_id: str,
-        tag: bentoml.Tag,
-        *model_args: t.Any,
-        tokenizer_kwds: dict[str, t.Any],
-        **attrs: t.Any,
-    ) -> bentoml.Model:
+    def import_model(self, *args: t.Any, trust_remote_code: bool = False, **attrs: t.Any) -> bentoml.Model:
+        (_, model_attrs), tokenizer_kwds = self.llm_parameters
+        attrs = {**model_attrs, **attrs}
+
         torch_dtype = attrs.pop("torch_dtype", torch.float16)
         device_map = attrs.pop("device_map", "auto")
 
-        tokenizer = transformers.AutoTokenizer.from_pretrained(model_id, **tokenizer_kwds)
+        tokenizer = transformers.AutoTokenizer.from_pretrained(self.model_id, **tokenizer_kwds)
         tokenizer.add_special_tokens(
             {
                 "additional_special_tokens": [EOD, FIM_PREFIX, FIM_MIDDLE, FIM_SUFFIX, FIM_PAD],
@@ -75,15 +69,12 @@ class StarCoder(openllm.LLM["transformers.GPTBigCodeForCausalLM", "transformers.
         )
 
         model = transformers.AutoModelForCausalLM.from_pretrained(
-            model_id, torch_dtype=torch_dtype, device_map=device_map, **attrs
+            self.model_id, torch_dtype=torch_dtype, device_map=device_map, **attrs
         )
         try:
-            return bentoml.transformers.save_model(tag, model, custom_objects={"tokenizer": tokenizer})
+            return bentoml.transformers.save_model(self.tag, model, custom_objects={"tokenizer": tokenizer})
         finally:
-            import gc
-
             # NOTE: We need to free the cache after saving here so that we can load it back later on.
-            gc.collect()
             torch.cuda.empty_cache()
 
     def sanitize_parameters(
@@ -144,6 +135,8 @@ class StarCoder(openllm.LLM["transformers.GPTBigCodeForCausalLM", "transformers.
     def generate_one(
         self, prompt: str, stop: list[str], **preprocess_generate_kwds: t.Any
     ) -> list[dict[t.Literal["generated_text"], str]]:
+        from ..._generation import StopSequenceCriteria
+
         max_new_tokens = preprocess_generate_kwds.pop("max_new_tokens", 200)
         encoded_inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
         src_len = encoded_inputs["input_ids"].shape[1]

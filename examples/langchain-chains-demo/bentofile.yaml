@@ -14,9 +14,6 @@
 
 service: "service:svc"
 include:
-- "*.py"
+  - "*.py"
 python:
-  packages:
-  - openllm
-  - langchain
-  - pydantic
+  requirements_txt: ./requirements.txt

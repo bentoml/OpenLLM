@@ -17,7 +17,13 @@ The following includes OpenLLM configuration and excerpt from
 """
 from __future__ import annotations
 
+import typing as t
+
 import openllm
+
+
+if t.TYPE_CHECKING:
+    from transformers import PreTrainedTokenizer
 
 
 class DollyV2Config(openllm.LLMConfig):
@@ -36,9 +42,7 @@ class DollyV2Config(openllm.LLMConfig):
 
     __config__ = {
         "timeout": 3600000,
-        "trust_remote_code": True,
         "url": "https://github.com/databrickslabs/dolly",
-        "use_pipeline": True,
         "default_id": "databricks/dolly-v2-3b",
         "model_ids": ["databricks/dolly-v2-3b", "databricks/dolly-v2-7b", "databricks/dolly-v2-12b"],
     }
@@ -50,8 +54,9 @@ class DollyV2Config(openllm.LLMConfig):
     class GenerationConfig:
         temperature: float = 0.9
         top_p: float = 0.92
-        top_k: int = 0
+        top_k: int = 5
         max_new_tokens: int = 256
+        eos_token_id: int = 50277  # NOTE: from get_special_token_id(self.tokenizer, END_KEY)
 
 
 START_DOLLY_V2_COMMAND_DOCSTRING = """\
@@ -94,3 +99,21 @@ DEFAULT_PROMPT_TEMPLATE = """{intro}
     instruction="{instruction}",
     response_key=RESPONSE_KEY,
 )
+
+
+def get_special_token_id(tokenizer: PreTrainedTokenizer, key: str) -> int:
+    """Gets the token ID for a given string that has been added to the tokenizer as a special token.
+    When training, we configure the tokenizer so that the sequences like "### Instruction:" and "### End" are
+    treated specially and converted to a single, new token.  This retrieves the token ID each of these keys map to.
+    Args:
+        tokenizer (PreTrainedTokenizer): the tokenizer
+        key (str): the key to convert to a single token
+    Raises:
+        RuntimeError: if more than one ID was generated
+    Returns:
+        int: the token ID for the given key
+    """
+    token_ids = tokenizer.encode(key)
+    if len(token_ids) > 1:
+        raise ValueError(f"Expected only a single token for '{key}' but found {token_ids}")
+    return token_ids[0]

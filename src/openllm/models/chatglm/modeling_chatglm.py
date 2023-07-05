@@ -17,25 +17,14 @@ import typing as t
 
 import bentoml
 import openllm
-import transformers
-from transformers.generation.logits_process import LogitsProcessor
-from transformers.generation.utils import LogitsProcessorList
 
 
 if t.TYPE_CHECKING:
     import torch
+    import transformers
 else:
     torch = openllm.utils.LazyLoader("torch", globals(), "torch")
-
-
-class InvalidScoreLogitsProcessor(LogitsProcessor):
-    """Ported from modeling_chatglm.py"""
-
-    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor) -> torch.FloatTensor:
-        if torch.isnan(scores).any() or torch.isinf(scores).any():
-            scores.zero_()
-            scores[..., 5] = 5e4
-        return scores
+    transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
 
 
 class ChatGLM(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTrainedTokenizerFast"]):
@@ -44,21 +33,16 @@ class ChatGLM(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTrain
     def llm_post_init(self):
         self.device = torch.device("cuda")
 
-    def import_model(
-        self,
-        model_id: str,
-        tag: bentoml.Tag,
-        *model_args: t.Any,
-        tokenizer_kwds: dict[str, t.Any],
-        **attrs: t.Any,
-    ) -> bentoml.Model:
-        trust_remote_code = attrs.pop("trust_remote_code", True)
+    def import_model(self, *args: t.Any, trust_remote_code: bool = True, **attrs: t.Any) -> bentoml.Model:
+        (_, model_attrs), tokenizer_kwds = self.llm_parameters
+        attrs = {**model_attrs, **attrs}
+
         return bentoml.transformers.save_model(
-            tag,
-            transformers.AutoModel.from_pretrained(model_id, trust_remote_code=trust_remote_code),
+            self.tag,
+            transformers.AutoModel.from_pretrained(self.model_id, trust_remote_code=trust_remote_code),
             custom_objects={
                 "tokenizer": transformers.AutoTokenizer.from_pretrained(
-                    model_id, trust_remote_code=trust_remote_code, **tokenizer_kwds
+                    self.model_id, trust_remote_code=trust_remote_code, **tokenizer_kwds
                 )
             },
         )
@@ -71,7 +55,7 @@ class ChatGLM(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTrain
         top_p: float | None = None,
         temperature: float | None = None,
         chat_history: list[str] | None = None,
-        use_default_prompt_template: bool = True,
+        use_default_prompt_template: bool = False,
         **attrs: t.Any,
     ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
         prompt_text = ""
@@ -97,14 +81,20 @@ class ChatGLM(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTrain
         return prompt_text, generate_kwargs, postprocess_generate_kwargs
 
     def postprocess_generate(
-        self, prompt: str, generation_result: str, *, chat_history: list[tuple[str, str]] | None = None, **attrs: t.Any
+        self,
+        prompt: str,
+        generation_result: tuple[str, list[tuple[str, str]]],
+        *,
+        chat_history: list[tuple[str, str]] | None = None,
+        **attrs: t.Any,
     ):
+        generated, history = generation_result
         if self.config.retain_history:
             assert chat_history is not None, "'retain_history' is True while there is no history provided."
-            chat_history.append((prompt, generation_result))
-        return "".join(generation_result)
+            chat_history.extend(history)
+        return generated
 
-    def generate(self, prompt: str, **attrs: t.Any) -> str:
+    def generate(self, prompt: str, **attrs: t.Any) -> tuple[str, list[tuple[str, str]]]:
         with torch.inference_mode():
             self.model.eval()
 
@@ -114,15 +104,8 @@ class ChatGLM(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTrain
 
             self.model.cuda()
 
-            logit_processor: list[LogitsProcessor] = LogitsProcessorList()
-            logit_processor.append(InvalidScoreLogitsProcessor())
-
-            inputs = self.tokenizer([prompt], return_tensors="pt").to(self.device)
-            outputs = self.model.generate(
-                **inputs,
-                generation_config=self.config.model_construct_env(do_sample=True, **attrs).to_generation_config(),
-                logits_processor=logit_processor,
+            return self.model.chat(
+                self.tokenizer,
+                prompt,
+                generation_config=self.config.model_construct_env(**attrs).to_generation_config(),
             )
-            outputs = outputs.tolist()[0][len(inputs["input_ids"][0]) :]
-            response = self.tokenizer.decode(outputs)
-            return self.model.process_response(response)
