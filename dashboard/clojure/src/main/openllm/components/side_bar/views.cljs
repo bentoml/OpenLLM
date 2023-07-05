@@ -3,6 +3,7 @@
             [openllm.db :as db]
             [openllm.subs :as subs]
             [openllm.components.side-bar.events :as events] 
+            [openllm.components.common.views :as ui]
             [clojure.string :as str]))
 
 (defn openllm-tag
@@ -11,11 +12,6 @@
   [:div {:class "flex items-center flex-shrink-0 px-6"}
    [:img {:class "h-11 w-auto" :src "./static/logo-light.svg" :alt "LOGO"}]
    [:span {:class "text-3xl font-bold text-gray-900 ml-2"} "OpenLLM"]])
-
-(defn sidebar-group-headline
-  "The headlines for the different groups in the sidebar are rendered using this component."
-  [headline]
-  [:h3 {:class "px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider" :id (str "sidebar-headline-" headline)} headline])
 
 (defn parameter-slider-with-input
   "Renders a slider with an input field next to it."
@@ -86,8 +82,8 @@
         status-text (if status-good? "Operational" "Degraded Performance")]
     [:div {:class "px-1 mt-1"}
      [:div {:class "mt-4"}
-      [sidebar-group-headline "Service Status"]
-      [:div {:class "space-y-1" :role "group" :aria-labelledby "service-status-headline"}
+      [ui/headline "Service Status"]
+      [:div {:class "space-y-1" :role "group"}
        [:a {:href "#" :class "group ml-3 flex items-center px-3 py-1 text-sm font-medium text-gray-700 rounded-md"}
         [:span {:class (str "w-2.5 h-2.5 mr-4 rounded-full " status-color) :aria-hidden "true"}]
         [:span {:class "truncate"} status-text]]]]]))
@@ -98,7 +94,7 @@
   [:div {:class "flex flex-col w-80 border-r border-gray-200 pt-5 pb-4 bg-gray-200"} ;; sidebar div + background
    [openllm-tag]
    [:hr {:class "my-5 border-1 border-black"}]
-   [sidebar-group-headline "Parameters"]
+   [ui/headline "Parameters"]
    [:div {:class "my-4 h-0 flex-1 flex flex-col overflow-y-auto scrollbar"}
     [:div {:class "px-3 mt-3 relative inline-block text-left"}
      [parameter-list]]]

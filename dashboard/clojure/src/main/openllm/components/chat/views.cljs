@@ -5,7 +5,7 @@
             [openllm.subs :as root-subs]
             [openllm.components.chat.views :as views]
             [openllm.api.persistence :as persistence]
-            [openllm.api.components :as ui]))
+            [openllm.components.common.views :as ui]))
 
 (defn chat-controls
   "The chat input field and the send button."

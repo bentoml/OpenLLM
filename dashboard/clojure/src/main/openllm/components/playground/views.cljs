@@ -2,9 +2,10 @@
   (:require [openllm.components.playground.events :as events]
             [openllm.components.playground.subs :as subs]
             [openllm.components.model-selection.views :as model-selection-view]
+            [openllm.api.components :as api-components]
+            [openllm.components.common.views :as ui]
             [openllm.subs :as root-subs]
-            [re-frame.core :as rf]
-            [openllm.api.components :as api-components]))
+            [re-frame.core :as rf]))
 
 (defn input-field
   "The input field for the prompt to send to the backend."
@@ -44,8 +45,8 @@
   (let [last-response (rf/subscribe [::subs/last-response])]
     (fn []
       [:div
-       [:label {:class "text-end pr-6"} "Response"]
-       [:textarea {:class "pt-3 appearance-none w-full h-64 block border bg-gray-200 border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm"
+       [ui/headline "Response" 0]
+       [:textarea {:class "pt-3 mt-1 appearance-none w-full h-64 block border bg-gray-200 border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm"
                    :value @last-response
                    :disabled true}]])))
 
