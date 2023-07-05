@@ -2,6 +2,7 @@
   (:require [re-frame.core :as rf]
             [openllm.components.chat.events :as events]
             [openllm.components.chat.subs :as subs]
+            [openllm.components.side-bar.subs :as side-bar-subs]
             [openllm.subs :as root-subs]
             [openllm.components.chat.views :as views]
             [openllm.api.persistence :as persistence]
@@ -50,11 +51,11 @@
   []
   (let [history (rf/subscribe [::subs/chat-history])]
     (fn chat-history []
-      (into [:div {:class "px-4 flex flex-col items-center"}]
+      (into [:div {:class "px-8 flex flex-col items-center"}]
             (map (fn [{:keys [user text]}]
                    (let [display-user (if (= user :model) "System" "You")
                          alignment (if (= user :model) "flex-row" "flex-row-reverse")]
-                     [:div {:class (str "flex " alignment " items-end my-2 w-4/5")}
+                     [:div {:class (str "flex " alignment " items-end my-2 w-full")}
                       [:h3 {:class "font-bold text-lg mx-2"} display-user]
                       [:div {:class (str "p-2 rounded-xl border " (user->extra-bubble-style user))}
                        [:p {:class "text-gray-700"} text]]]))
@@ -63,19 +64,24 @@
 (defn clear-history-button
   "The button to clear the chat history."
   []
-  [:div {:class "fixed top-32 h-[calc(100%_-_220px)] pr-2 pt-2"
-         :style {:zIndex "99"
-                 :right "21.1rem"}}
-   [ui/tooltip
-    [:button {:class "bg-pink-600 hover:bg-pink-800 text-white rounded block text-xl"
-              :on-click #(do (rf/dispatch [::events/clear-chat-history])
-                             (rf/dispatch [::persistence/clear-chat-history]))} "🗑️"]
-    "Clear chat history"]])
+  (let [side-bar-open? (rf/subscribe [::side-bar-subs/side-bar-open?])]
+    (fn []
+      [:div {:class "fixed top-32 h-[calc(100%_-_220px)] pr-2 pt-2"
+             :style {:zIndex "99"
+                     :right (if @side-bar-open?
+                              "20rem"
+                              "0")}}
+       [ui/tooltip
+        [:button {:class "bg-pink-600 hover:bg-pink-800 text-white rounded block text-xl"
+                  :on-click #(do (rf/dispatch [::events/clear-chat-history])
+                                 (rf/dispatch [::persistence/clear-chat-history]))} "🗑️"]
+        "Clear chat history"]])))
 
 (defn chat-tab-contents
   "The component rendered if the chat tab is active."
   []
-  (let [chat-empty? (rf/subscribe [::subs/chat-history-empty?])]
+  (let [chat-empty? (rf/subscribe [::subs/chat-history-empty?])
+        side-bar-open? (rf/subscribe [::side-bar-subs/side-bar-open?])]
     (fn []
       [:<>
        [:div {:id "chat-history-container"
@@ -85,5 +91,8 @@
          [chat-history]]]
        (when (not @chat-empty?)
          [clear-history-button])
-       [:div {:class "bottom-1 fixed w-[calc(100%_-_380px)] mb-2"}
+       [:div {:class (str "bottom-1 fixed w-[calc(100%_-_200px)] mb-2"
+                          (if @side-bar-open?
+                            " w-[calc(100%_-_350px)]"
+                            " w-[calc(100%_-_30px)]"))}
         [chat-controls]]])))

@@ -104,7 +104,7 @@
 (defn sidebar-minimized
   "The render function of the sidebar when it is minimized."
   [open?]
-  [:div {:class "mt-5 h-7 float-left bg-gray-500 hover:bg-gray-700 text-xl rounded rounded-l-2xl rounded-r-none"}
+  [:div {:class "mt-5 h-7 float-left bg-pink-950 hover:bg-pink-800 text-xl rounded rounded-l-2xl rounded-r-none"}
    [:button {:class "text-xl text-white font-bold"
              :on-click #(rf/dispatch [::events/toggle-side-bar])}
     (if open? "→" "←")]])
