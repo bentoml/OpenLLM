@@ -1,4 +1,4 @@
-(ns openllm.components.apis.views 
+(ns openllm.components.apis.views
   (:require [openllm.components.apis.events :as events]
             [openllm.components.apis.subs :as subs]
             [openllm.components.apis.data :as data]

@@ -29,7 +29,7 @@
   "This init function is called exactly once when the page loads.
    Responsible for initializing the app-db as well as the IndexedDB
    (persistent) database.
-   
+
    This marks the entry point of the application, and is called by shadow-cljs
    directly."
   []

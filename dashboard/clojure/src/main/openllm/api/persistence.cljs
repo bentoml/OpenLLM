@@ -104,7 +104,7 @@
  [(rf/inject-cofx ::indexed-db)]
  (fn [cofx [_]]
    (let [indexed-db (:idb cofx)
-         callback-fn (fn [result] 
+         callback-fn (fn [result]
                        (rf/dispatch [::set-chat-history-app-db (js->clj result :keywordize-keys true)]))]
      (idb/os-get-all {:db indexed-db :os-name (:name idb-table-info)} callback-fn))))
 

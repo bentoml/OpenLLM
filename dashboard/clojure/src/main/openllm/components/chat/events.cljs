@@ -1,5 +1,5 @@
 (ns openllm.components.chat.events
-    (:require [openllm.events :refer [check-spec-interceptor]] 
+    (:require [openllm.events :refer [check-spec-interceptor]]
               [openllm.api.http :as api]
               [openllm.api.persistence :as persistence]
               [openllm.api.log4cljs.core :refer [log]]

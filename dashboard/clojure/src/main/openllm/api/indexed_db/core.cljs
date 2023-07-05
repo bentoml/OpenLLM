@@ -37,7 +37,7 @@
    This function will create a transaction and return the object store,
    which can be used to interact with the database right away.
 
-   We consider this function semi-pure since there are no *notable* 
+   We consider this function semi-pure since there are no *notable*
    direct side effects."
   [obj-store-fqn mode]
   (let [{:keys [db os-name]} obj-store-fqn
@@ -142,7 +142,7 @@
    There are no guarantees that the objects will be added in the excpected
    order if the algorithm is not adjusted, so for not no other collections
    are allowed.
-   
+
    Returns `nil`."
   [obj-store-fqn entries]
   (when-not (vector? entries)
@@ -246,7 +246,7 @@
    (create-object-store! {:db db :os-name store-name}
                          your-table-definition)
    ```
-   
+
    Returns `nil`."
   ([db-info table-info db-init-callback] (initialize! db-info table-info db-init-callback nil))
   ([db-info table-info db-init-callback on-upgrade-db-version]

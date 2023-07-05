@@ -100,7 +100,7 @@
 ;; ######################## AGGREGATE END ###########################
 
 (def standard-llm-config
-  "Very arbitrary. Should be fetched from metadata endpoint eventually." ;; TODO: fetch from metadata endpoint 
+  "Very arbitrary. Should be fetched from metadata endpoint eventually." ;; TODO: fetch from metadata endpoint
   (array-map ::temperature 0.9
              ::top_k 50
              ::top_p 0.4

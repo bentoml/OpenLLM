@@ -14,7 +14,7 @@
     (fn []
       [:textarea {:class "pt-3 appearance-none w-full h-64 block border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm"
                   :value @value
-                  :on-change #(rf/dispatch [::events/set-prompt-input (.. % -target -value)])}])))    
+                  :on-change #(rf/dispatch [::events/set-prompt-input (.. % -target -value)])}])))
 
 
 (defn input-field-controls

@@ -25,7 +25,7 @@
 
 (reg-event-db
  ::set-last-response
- [check-spec-interceptor] 
+ [check-spec-interceptor]
  (fn [db [_ id value]]
    (assoc-in db [:apis-data id :last-response] value)))
 
