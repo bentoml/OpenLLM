@@ -68,9 +68,9 @@ class MPTConfig(openllm.LLMConfig):
     )
 
     class GenerationConfig:
-        max_new_tokens: int = 100
-        temperature: float = 0.2
-        top_p: float = 0.9
+        max_new_tokens: int = 128
+        temperature: float = 0
+        top_p: float = 0.8
 
 
 START_MPT_COMMAND_DOCSTRING = """\
