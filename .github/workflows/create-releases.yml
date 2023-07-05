@@ -39,8 +39,10 @@ jobs:
   release:
     if: github.repository_owner == 'bentoml'
     runs-on: ubuntu-latest
+    environment: release
     permissions:
       contents: write
+      id-token: write
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
