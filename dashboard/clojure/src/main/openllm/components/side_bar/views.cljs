@@ -29,11 +29,11 @@
               :max (second min-max)
               :step (if num-type? 1 0.01)
               :value value
-              :class "w-28 h-2 bg-gray-300 accent-pink-600"
+              :class "w-28 h-2 bg-gray-300 accent-gray-600"
               :on-change on-change}]
      [:span {:class "ml-2 text-xs text-gray-500"} (str (second min-max))]
      [:input {:type "number"
-              :class "w-16 px-1 py-1 text-xs text-gray-700 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm ml-auto"
+              :class "w-16 px-1 py-1 text-xs text-gray-700 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm ml-auto"
               :step (if num-type? 1 0.01)
               :value value
               :on-change on-change}]]))
@@ -43,7 +43,7 @@
   [name value]
   [:input {:type "checkbox"
            :checked value
-           :class "h-4 w-4 text-pink-600 focus:ring-pink-500 border-gray-300 rounded"
+           :class "h-4 w-4 text-gray-600 focus:ring-gray-500 border-gray-300 rounded"
            :on-change #(rf/dispatch [::events/set-model-config-parameter name (not value)])}])
 
 (defn parameter-list-entry-value
@@ -53,7 +53,7 @@
     (boolean? value) [parameter-checkbox name value]
     :else
     [:input {:type "number"
-             :class "px-1 py-1 text-xs text-gray-700 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm w-full"
+             :class "px-1 py-1 text-xs text-gray-700 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm w-full"
              :value value
              :on-change #(rf/dispatch [::events/set-model-config-parameter name (int (.. % -target -value))])}]))
 
@@ -104,7 +104,7 @@
 (defn sidebar-minimized
   "The render function of the sidebar when it is minimized."
   [open?]
-  [:div {:class "mt-5 h-7 float-left bg-pink-950 hover:bg-pink-800 text-xl rounded rounded-l-2xl rounded-r-none"}
+  [:div {:class "mt-5 h-7 float-left bg-gray-950 hover:bg-gray-800 text-xl rounded rounded-l-2xl rounded-r-none"}
    [:button {:class "text-xl text-white font-bold"
              :on-click #(rf/dispatch [::events/toggle-side-bar])}
     (if open? "→" "←")]])

@@ -11,14 +11,14 @@
    content is rendered in the central area of the screen."
   [screen-id]
   [:div {:class "mt-4 grid grid-cols-3 bg-white rounded-lg shadow divide-x divide-gray-300"}
-   [:button {:class (if (= screen-id :playground) "bg-pink-700 text-white font-bold py-2 px-4 rounded-l-lg"
+   [:button {:class (if (= screen-id :playground) "bg-gray-700 text-white font-bold py-2 px-4 rounded-l-lg"
                                                   "bg-white shadow divide-x divide-gray-300 rounded-l-lg hover:bg-gray-100")
              :on-click #(rf/dispatch [:set-screen-id :playground])} "Playground"]
-   [:button {:class (if (= screen-id :chat) "bg-pink-700 text-white font-bold py-2 px-4"
+   [:button {:class (if (= screen-id :chat) "bg-gray-700 text-white font-bold py-2 px-4"
                                             "bg-white shadow divide-x divide-gray-300 hover:bg-gray-100")
              :on-click #(do (rf/dispatch-sync [:set-screen-id :chat])
                             (rf/dispatch [::chat-events/auto-scroll]))} "Chat"]
-   [:button {:class (if (= screen-id :apis) "bg-pink-700 text-white font-bold py-2 px-4 rounded-r-lg"
+   [:button {:class (if (= screen-id :apis) "bg-gray-700 text-white font-bold py-2 px-4 rounded-r-lg"
                                             "bg-white shadow divide-x divide-gray-300 rounded-r-lg hover:bg-gray-100")
              :on-click #(rf/dispatch [:set-screen-id :apis])} "APIs"]])
 

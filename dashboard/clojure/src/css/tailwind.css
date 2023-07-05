@@ -16,7 +16,7 @@
     /* Firefox */
     .scrollbar {
       scrollbar-width: thin;
-      scrollbar-color: #831843 #f9a8d4;
+      scrollbar-color: #000000 #8d8d8d;
     }
 
     /* Chrome, Safari and Opera */
@@ -28,12 +28,12 @@
     /* Chrome, Safari and Opera */
     .scrollbar::-webkit-scrollbar-track {
       border-radius: 100vh;
-      background: #f9a8d4;
+      background: #8d8d8d;
     }
 
     /* Chrome, Safari and Opera */
     .scrollbar::-webkit-scrollbar-thumb {
-      background: #831843;
+      background: #000000;
       border-radius: 100vh;
       /*border: 1px solid #f9a8d4;*/
     }

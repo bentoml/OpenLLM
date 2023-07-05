@@ -5,7 +5,7 @@
 (defn file-upload
   "The file upload reagent custom component."
   [{:keys [callback-event class]
-    :or {class "w-full mt-3 shadow-sm rounded-md focus:z-10 file:bg-transparent file:border-0 file:bg-blue-800 file:mr-4 file:py-2 file:px-4 bg-blue-600 text-white hover:bg-blue-700 file:text-white"}}]
+    :or {class "w-full mt-3 shadow-sm rounded-md focus:z-10 file:bg-transparent file:border-0 file:bg-gray-800 file:mr-4 file:py-2 file:px-4 bg-gray-600 text-white hover:bg-gray-700 file:text-white"}}]
   (let [file-reader (js/FileReader.)]
     (r/create-class
      {:component-did-mount

@@ -17,7 +17,7 @@
         on-send-click #(rf/dispatch [::events/on-send-button-click @chat-input-sub @llm-config])]
     (fn chat-controls []
       [:form {:class "flex items-center justify-between"}
-       [:textarea {:class "py-1 w-[calc(100%_-_80px)] appearance-none block border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm h-20"
+       [:textarea {:class "py-1 w-[calc(100%_-_80px)] appearance-none block border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm h-20"
                    :style {:resize "none"}
                    :type "text" :placeholder "Type your message..."
                    :value @chat-input-sub
@@ -30,11 +30,11 @@
                    :auto-correct "off"}]
        [:div {:class "grid grid-rows-1"}
         [ui/tooltip
-         [:button {:class "bg-blue-400 hover:bg-blue-600 text-white py-1 px-2 rounded text-xl"
+         [:button {:class "bg-gray-400 hover:bg-gray-600 text-white py-1 px-2 rounded text-xl"
                    :on-click #(js/window.alert "not implemented")
                    :type "button"} "📋"]
          "Edit prompt layout"]
-        [:button {:class "mt-1 px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none block"
+        [:button {:class "mt-1 px-4 py-2 text-white bg-gray-600 rounded-md hover:bg-gray-700 focus:outline-none block"
                   :on-click on-send-click
                   :type "button"} "Send"]]])))
 
@@ -43,8 +43,8 @@
    the provided user."
   [user]
   (if (= user :model)
-     "bg-gray-200 mr-10 rounded-bl-none border-gray-400"
-     "bg-pink-200 ml-10 rounded-br-none border-pink-400"))
+     "bg-gray-50 mr-10 rounded-bl-none border-gray-200"
+     "bg-gray-300 ml-10 rounded-br-none border-gray-400"))
 
 (defn chat-history
   "The chat history."
@@ -58,7 +58,7 @@
                      [:div {:class (str "flex " alignment " items-end my-2 w-full")}
                       [:h3 {:class "font-bold text-lg mx-2"} display-user]
                       [:div {:class (str "p-2 rounded-xl border " (user->extra-bubble-style user))}
-                       [:p {:class "text-gray-700"} text]]]))
+                       [:p {:class (if (= user :model) "text-gray-700" "text-gray-950")} text]]]))
                  @history)))))
 
 (defn clear-history-button
@@ -66,15 +66,15 @@
   []
   (let [side-bar-open? (rf/subscribe [::side-bar-subs/side-bar-open?])]
     (fn []
-      [:div {:class "fixed top-32 h-[calc(100%_-_220px)] pr-2 pt-2"
+      [:div {:class "fixed top-24 h-[calc(100%_-_220px)] pr-1"
              :style {:zIndex "99"
                      :right (if @side-bar-open?
                               "20rem"
                               "0")}}
        [ui/tooltip
-        [:button {:class "bg-pink-600 hover:bg-pink-800 text-white rounded block text-xl"
+        [:button {:class "bg-gray-200 hover:bg-black rounded block text-xl font-bold border border-gray-500"
                   :on-click #(do (rf/dispatch [::events/clear-chat-history])
-                                 (rf/dispatch [::persistence/clear-chat-history]))} "🗑️"]
+                                 (rf/dispatch [::persistence/clear-chat-history]))} "✖"]
         "Clear chat history"]])))
 
 (defn chat-tab-contents
