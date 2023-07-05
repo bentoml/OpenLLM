@@ -219,10 +219,17 @@ def model_id_option(factory: t.Any, model_env: EnvVarMixin | None = None):
 def workers_per_resource_option(factory: t.Any, build: bool = False):
     help_str = """Number of workers per resource assigned.
     See https://docs.bentoml.org/en/latest/guides/scheduling.html#resource-scheduling-strategy
-    for more information. By default, this is set to 1."""
+    for more information. By default, this is set to 1.
+
+    > **Note**: ``--workers-per-resource`` will also accept the following strategies:
+    > - ``round_robin``: Similar behaviour when setting ``--workers-per-resource 1``.
+    > - ``conserved``: This will determine the number of available GPU resources, and only assign
+    >   one worker for the LLMRunner. For example, if ther are 4 GPUs available, then ``conserved`` is
+    >   equivalent to ``--workers-per-resource 0.25``.
+    """
     if build:
         help_str += """\n
-    NOTE: The workers value passed into 'build' will determine how the LLM can
+    **Note**: The workers value passed into 'build' will determine how the LLM can
     be provisioned in Kubernetes as well as in standalone container. This will
     ensure it has the same effect with 'openllm start --workers ...'"""
     return factory.option(
@@ -230,8 +237,26 @@ def workers_per_resource_option(factory: t.Any, build: bool = False):
         default=None,
         type=click.FLOAT,
         help=help_str,
+        callback=parse_workers_per_resource_callback,
         required=False,
     )
+
+
+_wpr_strategies = {"round_robin", "conserved"}
+
+
+def parse_workers_per_resource_callback(_: click.Context, param: click.Parameter, value: str | float | None) -> float:
+    if value is None:
+        return 1.0
+
+    if isinstance(value, str):
+        if value == "round_robin":
+            return 1.0
+        elif value == "conserved":
+            return float(1 / len(gpu_count()))
+        else:
+            raise ValueError(f"'workers_per_resource' only accept '{_wpr_strategies}' as possible strategies.")
+    return value
 
 
 def quantize_option(factory: t.Any, build: bool = False, model_env: EnvVarMixin | None = None):
