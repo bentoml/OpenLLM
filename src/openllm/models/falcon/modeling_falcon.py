@@ -110,3 +110,24 @@ class Falcon(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTraine
                 ).to_generation_config(),
             )
             return self.tokenizer.batch_decode(outputs, skip_special_tokens=True)
+
+    def generate_one(
+        self, prompt: str, stop: list[str], **preprocess_generate_kwds: t.Any
+    ) -> list[dict[t.Literal["generated_text"], str]]:
+        from ..._generation import StopSequenceCriteria
+
+        max_new_tokens = preprocess_generate_kwds.pop("max_new_tokens", 200)
+        encoded_inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
+        src_len = encoded_inputs["input_ids"].shape[1]
+        stopping_criteria = preprocess_generate_kwds.pop("stopping_criteria", transformers.StoppingCriteriaList([]))
+        stopping_criteria.append(StopSequenceCriteria(stop, self.tokenizer))
+        outputs = self.model.generate(
+            encoded_inputs["input_ids"], max_new_tokens=max_new_tokens, stopping_criteria=stopping_criteria
+        )
+
+        result = self.tokenizer.decode(outputs[0].tolist()[src_len:])
+        # Inference API returns the stop sequence
+        for stop_seq in stop:
+            if result.endswith(stop_seq):
+                result = result[: -len(stop_seq)]
+        return [{"generated_text": result}]
