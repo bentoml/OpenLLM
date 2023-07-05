@@ -376,6 +376,13 @@ def infer_auto_class(implementation: LiteralRuntime) -> type[BaseAutoLLMClass]:
     return auto
 
 
+def update_if_none(mapping: t.MutableMapping[str, t.Any], **attrs: t.Any) -> t.MutableMapping[str, t.Any]:
+    for k, v in attrs.items():
+        if k not in mapping or mapping[k] is None:
+            mapping[k] = v
+    return mapping
+
+
 # NOTE: The set marks contains a set of modules name
 # that are available above and are whitelisted
 # to be included in the extra_objects map.
@@ -439,6 +446,11 @@ if t.TYPE_CHECKING:
     from . import set_quiet_mode as set_quiet_mode
     from . import validate_is_path as validate_is_path
     from . import validate_or_create_dir as validate_or_create_dir
+    from . import resolve_filepath as resolve_filepath
+    from . import normalize_attrs_to_model_tokenizer_pair as normalize_attrs_to_model_tokenizer_pair
+    from . import generate_context as generate_context
+    from . import field_env_key as field_env_key
+    from . import update_if_none as update_if_none
     from .import_utils import ENV_VARS_TRUE_VALUES as ENV_VARS_TRUE_VALUES
     from .import_utils import OPTIONAL_DEPENDENCIES as OPTIONAL_DEPENDENCIES
     from .import_utils import DummyMetaclass as DummyMetaclass

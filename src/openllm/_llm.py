@@ -54,6 +54,7 @@ from .utils import in_docker
 from .utils import is_peft_available
 from .utils import is_torch_available
 from .utils import non_intrusive_setattr
+from .utils import update_if_none
 from .utils import normalize_attrs_to_model_tokenizer_pair
 from .utils import pkg
 from .utils import requires_dependencies
@@ -467,7 +468,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
         else:
             return "pt", name
 
-    def __init_subclass__(cls):
+    def __init_subclass__(cls, **_: t.Any):
         cd = cls.__dict__
         implementation, config_class_name = cls._infer_implementation_from_name(cls.__name__)
         cls.__llm_implementation__ = implementation
@@ -534,7 +535,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
             )
             setattr(cls, fn, original_fn)
 
-    # The following is the similar interface to HuggingFace pretrained protocol.
+    # NOTE: The following is the similar interface to HuggingFace pretrained protocol.
     def save_pretrained(self, save_directory: str | Path, **attrs: t.Any) -> None:
         if isinstance(save_directory, Path):
             save_directory = str(save_directory)
@@ -587,10 +588,12 @@ class LLM(LLMInterface[M, T], ReprMixin):
 
         Args:
             model_id: The pretrained model to use. Defaults to None. If None, 'self.default_id' will be used.
+
                       > **Warning**: If custom path is passed, make sure it contains all available file to construct
                       > ``transformers.PretrainedConfig``, ``transformers.PreTrainedModel``, and ``transformers.PreTrainedTokenizer``.
-            model_name: Optional model name to be saved with this LLM. Default to None. It will be inferred automatically from model_id.
-                        If model_id is a custom path, it will be the basename of the given path.
+
+                      > **Note**: If `default` is passed, OpenLLM will infer the default model_id from given config. For example: dolly-v2 -> `databricks/dolly-v2-3b`
+                      > If `env` is passed, then OpenLLM will use the value passed via the environment variable. If None, then it will raises an exception.
             model_version: Optional version for this given model id. Default to None. This is useful for saving from custom path.
                            If set to None, the version will either be the git hash from given pretrained model, or the hash inferred
                            from last modified time of the given directory.
@@ -600,6 +603,8 @@ class LLM(LLMInterface[M, T], ReprMixin):
                       include int8, int4 and gptq.
             runtime: Optional runtime to run this LLM. Default to 'transformers'. 'ggml' supports is working in progress.
             quantization_config: The quantization config (`transformers.BitsAndBytesConfig`) to use. Note that this is mutually exclusive with `quantize`
+            runtime: The runtime to use for this LLM. Defaults to 'transformers'. Possible values include ggml and transformers.
+                     > **Note**: if GGML is specified, then we will do model conversion from given implementation to ggml format.
             bettertransformer: Whether to use BetterTransformer with this model. Defaults to False.
             adapter_id: The [LoRA](https://arxiv.org/pdf/2106.09685.pdf) pretrained id or local path to use for this LLM. Defaults to None.
             adapter_name: The adapter name to use for this LLM. Defaults to None.
@@ -612,6 +617,14 @@ class LLM(LLMInterface[M, T], ReprMixin):
             model_id = first_not_none(
                 cfg_cls.__openllm_env__["model_id_value"], default=cfg_cls.__openllm_default_id__
             )
+        elif model_id == "default":
+            model_id = cfg_cls.__openllm_default_id__
+        elif model_id == "env":
+            model_id = cfg_cls.__openllm_env__["model_id_value"]
+            if model_id is None:
+                raise ValueError(
+                    f"'model_id' is set to 'env', but {cfg_cls.__openllm_env__['model_id_value']} is not set."
+                )
         if runtime is None:
             runtime = cfg_cls.__openllm_runtime__
 
@@ -1269,12 +1282,11 @@ def Runner(
                 behaviour
     """
     if llm_config is not None:
-        attrs.update(
-            {
-                "bettertransformer": llm_config["env"]["bettertransformer_value"],
-                "quantize": llm_config["env"]["quantize_value"],
-                "runtime": llm_config["env"]["runtime_value"],
-            }
+        update_if_none(
+            attrs,
+            bettertransformer=llm_config["env"]["bettertransformer_value"],
+            quantize=llm_config["env"]["quantize_value"],
+            runtime=llm_config["env"]["runtime_value"],
         )
 
     if implementation is None:

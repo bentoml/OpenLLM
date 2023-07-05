@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Serialisation related implementation for GGML-based implementation.
+"""Serialisation related utilities for GGML-based implementation.
 
 This requires ctransformers to be installed.
 """
@@ -21,20 +21,19 @@ import typing as t
 import cloudpickle
 
 import bentoml
+from ...exceptions import OpenLLMException
+from ...utils import LazyLoader
 from bentoml._internal.models.model import CUSTOM_OBJECTS_FILENAME
-
-from ..exceptions import OpenLLMException
-from ..utils import LazyLoader
 
 
 if t.TYPE_CHECKING:
     import openllm
     import transformers
 
-    from .._llm import M
-    from .._llm import T
-    from .._types import ModelProtocol
-    from .._types import TokenizerProtocol
+    from ..._llm import M
+    from ..._llm import T
+    from ..._types import ModelProtocol
+    from ..._types import TokenizerProtocol
 else:
     transformers = LazyLoader("transformers", globals(), "transformers")
 
@@ -45,6 +44,8 @@ def import_model(
     trust_remote_code: bool = True,
     **attrs: t.Any,
 ) -> bentoml.Model:
+    if llm.runtime != "ggml":
+        raise OpenLLMException(f"Model {llm.tag} was saved with runtime {llm.runtime}, not loading with ggml.")
     raise NotImplementedError("Currently work in progress.")
 
 
@@ -79,7 +80,8 @@ def load_model(llm: openllm.LLM[M, t.Any], *decls: t.Any, **attrs: t.Any) -> Mod
     By default, it will try to find check the model in the local store.
     If model is not found, it will raises a ``bentoml.exceptions.NotFound``.
     """
-    raise NotImplementedError("Currently work in progress.")
+    if llm.runtime != "ggml":
+        raise OpenLLMException(f"Model {llm.tag} was saved with runtime {llm.runtime}, not loading with ggml.")
 
 
 def load_tokenizer(llm: openllm.LLM[t.Any, T]) -> TokenizerProtocol[T]:
