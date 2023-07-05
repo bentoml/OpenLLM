@@ -99,7 +99,7 @@
    [openllm-tag]
    [:hr {:class "my-5 border-1 border-black"}]
    [sidebar-group-headline "Parameters"]
-   [:div {:class "my-4 h-0 flex-1 flex flex-col overflow-y-auto"}
+   [:div {:class "my-4 h-0 flex-1 flex flex-col overflow-y-auto scrollbar"}
     [:div {:class "px-3 mt-3 relative inline-block text-left"}
      [parameter-list]]]
    [status-display true]])
