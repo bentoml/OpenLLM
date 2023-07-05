@@ -1,7 +1,8 @@
 (ns openllm.components.side-bar.views
   (:require [re-frame.core :as rf]
             [openllm.db :as db]
-            [openllm.subs :as subs]
+            [openllm.subs :as root-subs]
+            [openllm.components.side-bar.subs :as subs] 
             [openllm.components.side-bar.events :as events]
             [openllm.components.common.views :as ui]
             [clojure.string :as str]))
@@ -69,7 +70,7 @@
 (defn parameter-list
   "Renders the parameters in the sidebar."
   []
-  (let [model-config (rf/subscribe [::subs/model-config])]
+  (let [model-config (rf/subscribe [::root-subs/model-config])]
     (fn parameter-list
       []
       (into [:div
@@ -88,8 +89,8 @@
         [:span {:class (str "w-2.5 h-2.5 mr-4 rounded-full " status-color) :aria-hidden "true"}]
         [:span {:class "truncate"} status-text]]]]]))
 
-(defn side-bar
-  "The render function of the toolbar on the very left of the screen"
+(defn sidebar-expanded
+  "The render function of the sidebar when it is expanded."
   []
   [:div {:class "flex flex-col w-80 border-r border-gray-200 pt-5 pb-4 bg-gray-200"} ;; sidebar div + background
    [openllm-tag]
@@ -99,3 +100,20 @@
     [:div {:class "px-3 mt-3 relative inline-block text-left"}
      [parameter-list]]]
    [status-display true]])
+
+(defn sidebar-minimized
+  "The render function of the sidebar when it is minimized."
+  [open?]
+  [:div {:class "mt-5 h-7 float-left bg-gray-500 hover:bg-gray-700 text-xl rounded rounded-l-2xl rounded-r-none"}
+   [:button {:class "text-xl text-white font-bold"
+             :on-click #(rf/dispatch [::events/toggle-side-bar])}
+    (if open? "→" "←")]])
+
+(defn side-bar
+  "The render function of the toolbar on the very left of the screen"
+  []
+  (let [side-bar-open? (rf/subscribe [::subs/side-bar-open?])]
+    (fn []
+      [:div {:class "hidden lg:flex lg:flex-shrink-0"}
+       [sidebar-minimized @side-bar-open?]
+       (when @side-bar-open? [sidebar-expanded])])))
