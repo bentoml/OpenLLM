@@ -235,7 +235,6 @@ def workers_per_resource_option(factory: t.Any, build: bool = False):
     return factory.option(
         "--workers-per-resource",
         default=None,
-        type=click.FLOAT,
         help=help_str,
         callback=parse_workers_per_resource_callback,
         required=False,
@@ -256,7 +255,7 @@ def parse_workers_per_resource_callback(_: click.Context, param: click.Parameter
             return float(1 / len(gpu_count()))
         else:
             raise ValueError(f"'workers_per_resource' only accept '{_wpr_strategies}' as possible strategies.")
-    return value
+    return float(value)
 
 
 def quantize_option(factory: t.Any, build: bool = False, model_env: EnvVarMixin | None = None):
