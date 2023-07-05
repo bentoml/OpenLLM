@@ -81,7 +81,7 @@ class MPT(openllm.LLM["transformers.PreTrainedModel", "transformers.GPTNeoXToken
         (_, model_attrs), tokenizer_kwds = self.llm_parameters
         attrs = {**model_attrs, **attrs}
 
-        torch_dtype = attrs.pop("torch_dtype", torch.float32)
+        torch_dtype = attrs.pop("torch_dtype", self.dtype)
         device_map = attrs.pop("device_map", None)
         attrs.pop("low_cpu_mem_usage", None)
 
@@ -106,10 +106,13 @@ class MPT(openllm.LLM["transformers.PreTrainedModel", "transformers.GPTNeoXToken
             device_map=device_map,
             **attrs,
         )
-        return bentoml.transformers.save_model(self.tag, model, custom_objects={"tokenizer": tokenizer})
+        try:
+            return bentoml.transformers.save_model(self.tag, model, custom_objects={"tokenizer": tokenizer})
+        finally:
+            torch.cuda.empty_cache()
 
     def load_model(self, tag: bentoml.Tag, *args: t.Any, **attrs: t.Any) -> transformers.PreTrainedModel:
-        torch_dtype = attrs.pop("torch_dtype", torch.float32)
+        torch_dtype = attrs.pop("torch_dtype", self.dtype)
         device_map = attrs.pop("device_map", None)
         trust_remote_code = attrs.pop("trust_remote_code", True)
 
@@ -121,7 +124,7 @@ class MPT(openllm.LLM["transformers.PreTrainedModel", "transformers.GPTNeoXToken
             device_map=device_map,
             trust_remote_code=trust_remote_code,
         )
-        return transformers.AutoModelForCausalLM.from_pretrained(
+        model = transformers.AutoModelForCausalLM.from_pretrained(
             _ref.path,
             config=config,
             trust_remote_code=trust_remote_code,
@@ -129,6 +132,8 @@ class MPT(openllm.LLM["transformers.PreTrainedModel", "transformers.GPTNeoXToken
             device_map=device_map,
             **attrs,
         )
+        model.tie_weights()
+        return model
 
     def sanitize_parameters(
         self,
@@ -183,24 +188,21 @@ class MPT(openllm.LLM["transformers.PreTrainedModel", "transformers.GPTNeoXToken
 
         inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
 
+        if torch.cuda.is_available():
+            self.model.cuda()
+
+        attrs = {
+            "do_sample": False if llm_config["temperature"] == 0 else True,
+            "eos_token_id": self.tokenizer.eos_token_id,
+            "pad_token_id": self.tokenizer.pad_token_id,
+            "generation_config": llm_config.to_generation_config(),
+        }
+
         with torch.inference_mode():
             if torch.cuda.is_available():
-                self.model.cuda()
                 with torch.amp.autocast("cuda", torch.float16):
-                    generated_tensors = self.model.generate(
-                        **inputs,
-                        do_sample=False if llm_config["temperature"] == 0 else True,
-                        generation_config=llm_config.to_generation_config(),
-                        eos_token_id=self.tokenizer.eos_token_id,
-                        pad_token_id=self.tokenizer.pad_token_id,
-                    )
+                    generated_tensors = self.model.generate(**inputs, **attrs)
             else:
-                generated_tensors = self.model.generate(
-                    **inputs,
-                    do_sample=False if llm_config["temperature"] == 0 else True,
-                    generation_config=llm_config.to_generation_config(),
-                    eos_token_id=self.tokenizer.eos_token_id,
-                    pad_token_id=self.tokenizer.pad_token_id,
-                )
+                generated_tensors = self.model.generate(**inputs, **attrs)
 
-            return self.tokenizer.batch_decode(generated_tensors, skip_special_tokens=True)
+        return self.tokenizer.batch_decode(generated_tensors, skip_special_tokens=True)
