@@ -1,5 +1,7 @@
 (ns openllm.components.apis.subs
-  (:require [re-frame.core :refer [reg-sub]]))
+  (:require [clojure.pprint :as pprint]
+            [clojure.string :as str]
+            [re-frame.core :refer [reg-sub]]))
 
 (reg-sub
  ::selected-api
@@ -20,4 +22,8 @@
  ::response-message
  :<- [::last-response]
  (fn [last-response]
-   (.stringify js/JSON (.parse js/JSON last-response) (clj->js nil) (clj->js 2))))
+   (if (map? last-response)
+     (with-out-str (pprint/pprint last-response))
+     (try (.stringify js/JSON (.parse js/JSON last-response) (clj->js nil) (clj->js 2))
+          (catch js/Error _
+            (str last-response))))))

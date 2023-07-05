@@ -4,8 +4,11 @@
             [openllm.components.apis.data :as data]
             [openllm.components.model-selection.views :as model-selection-view]
             [openllm.components.common.views :as ui]
-            [re-frame.core :as rf]))
+            [re-highlight.core :as hl]
+            [re-frame.core :as rf]
+            ["highlight.js/lib/languages/json" :as json]))
 
+(hl/register-language "json" json)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                                                             ;;
@@ -38,7 +41,7 @@
 (defn request-input-field
   "The input field for the data to send to the backend."
   [selected-api value]
-  [:textarea {:class "pt-3 mt-1 appearance-none w-full h-64 block border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm"
+  [:textarea {:class "pt-3 mt-1 font-mono appearance-none w-full h-64 block border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm"
               :value value
               :on-change #(rf/dispatch [::events/set-input-value selected-api (.. % -target -value)])}])
 
@@ -64,9 +67,7 @@
     (fn []
       [:div
        [ui/headline "Response" 0]
-       [:textarea {:class "pt-3 mt-1 appearance-none w-full h-64 block border bg-gray-200 border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm"
-                   :value @last-message
-                   :disabled true}]])))
+       [hl/highlight {:language "json"} @last-message]])))
 
 (defn endpoint-request-response
   "The request and response area of the selected endpoint."
@@ -90,7 +91,7 @@
      [ui/headline "Endpoint" 6]
      [:hr {:class "border-pink-200 mt-1"}]
      [endpoints-list]]
-    [:div {:class "col-span-3 border-l border-pink-200 h-full"}
+    [:div {:class "col-span-3 border-l border-pink-200 h-full overflow-y-scroll no-scrollbar"}
      [ui/headline "Data" 6]
      [:hr {:class "border-pink-200 mt-1 w-fill"}]
      [endpoint-request-response]]]])
