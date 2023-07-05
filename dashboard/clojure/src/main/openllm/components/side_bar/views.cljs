@@ -11,7 +11,7 @@
   "The 'OpenLLM' tag in the very top right corner of the screen."
   []
   [:div {:class "flex items-center flex-shrink-0 px-6"}
-   [:img {:class "h-11 w-auto" :src "./static/logo-light.svg" :alt "LOGO"}]
+   [:img {:class "ml-10 h-11 w-auto" :src "./static/logo-light.svg" :alt "LOGO"}]
    [:span {:class "text-3xl font-bold text-gray-900 ml-2"} "OpenLLM"]])
 
 (defn parameter-slider-with-input
