@@ -27,8 +27,10 @@
   (let [selected-api (rf/subscribe [::subs/selected-api])]
     [(fn []
        [:div {:class "mt-2"}
-        [:button {:class (str "rounded-l-md w-full py-2 px-2 text-left text-sm bg-pink-50 font-medium text-gray-700 hover:bg-pink-100 hover:text-gray-900"
-                              (when (= @selected-api (:id endpoint-data)) " outline-none border-t border-l border-b border-pink-300 text-gray-900"))
+        [:button {:class (str "rounded-l-md w-full py-2 px-2 text-left text-sm font-medium text-gray-700"
+                              (if (= @selected-api (:id endpoint-data))
+                                " bg-pink-700 text-white font-bold"
+                                " bg-gray-200 hover:bg-gray-100 hover:text-gray-900  border-t border-l border-b border-pink-300"))
                   :on-click #(rf/dispatch [::events/set-selected-api (:id endpoint-data)])}
          (str (:name endpoint-data))]])]))
 

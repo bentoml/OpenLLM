@@ -1,6 +1,5 @@
 (ns openllm.components.apis.subs
   (:require [clojure.pprint :as pprint]
-            [clojure.string :as str]
             [re-frame.core :refer [reg-sub]]))
 
 (reg-sub
