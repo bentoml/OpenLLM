@@ -1,20 +1,10 @@
 (ns openllm.components.playground.views
   (:require [openllm.components.playground.events :as events]
             [openllm.components.playground.subs :as subs]
+            [openllm.components.model-selection.views :as model-selection-view]
             [openllm.subs :as root-subs]
             [re-frame.core :as rf]
             [openllm.api.components :as api-components]))
-
-(defn model-selection
-  "The dropdowns selecting the model."
-  []
-  [:div {:class "mt-1 px-2 py-2 items-center relative rounded-md shadow-md shadow-pink-200 border-gray-200 border-solid border grid grid-cols-4"}
-   [:label {:class "text-end pr-6"} "Model-Type"]
-   [:select {:class "w-2/3 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm rounded-md"}
-    [:option {:value "flan-type"} "FLAN-T5"]]
-   [:label {:class "text-end pr-6"} "Model-ID"]
-   [:select {:class "w-2/3 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm rounded-md"}
-    [:option {:value "flan-id"} "google/flan-t5-large"]]])
 
 (defn input-field
   "The input field for the prompt to send to the backend."
@@ -65,7 +55,7 @@
    directly."
   []
   [:div {:class "mt-6 px-4"}
-   [model-selection]
+   [model-selection-view/model-selection]
    [:div {:class "mt-4"}
     [input-field]
     [input-field-controls]]
