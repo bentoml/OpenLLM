@@ -37,6 +37,14 @@
                   :on-click on-send-click
                   :type "button"} "Send"]]])))
 
+(defn user->extra-bubble-style
+  "Produces additional style attributes for a chatbubble contingent upon
+   the provided user."
+  [user]
+  (if (= user :model)
+     "bg-gray-200 mr-10 rounded-bl-none border-gray-400"
+     "bg-pink-200 ml-10 rounded-br-none border-pink-400"))
+
 (defn chat-history
   "The chat history."
   []
@@ -45,12 +53,10 @@
       (into [:div {:class "px-4 flex flex-col items-center"}]
             (map (fn [{:keys [user text]}]
                    (let [display-user (if (= user :model) "System" "You")
-                         color (if (= user :model) "bg-gray-200" "bg-pink-300")
-                         alignment (if (= user :model) "flex-row" "flex-row-reverse")
-                         margin (if (= user :model) "mr-10" "ml-10")]
-                     [:div {:class (str "flex " alignment " items-center my-2 w-4/5")}
+                         alignment (if (= user :model) "flex-row" "flex-row-reverse")]
+                     [:div {:class (str "flex " alignment " items-end my-2 w-4/5")}
                       [:h3 {:class "font-bold text-lg mx-2"} display-user]
-                      [:div {:class (str "p-2 rounded-xl " color " " margin)}
+                      [:div {:class (str "p-2 rounded-xl border " (user->extra-bubble-style user))}
                        [:p {:class "text-gray-700"} text]]]))
                  @history)))))
 
