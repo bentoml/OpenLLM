@@ -17,8 +17,6 @@ import logging
 import typing as t
 
 import openllm
-from transformers import StoppingCriteria
-from transformers import StoppingCriteriaList
 
 from ..._prompt import default_formatter
 from .configuration_stablelm import DEFAULT_PROMPT_TEMPLATE
@@ -27,12 +25,8 @@ from .configuration_stablelm import SYSTEM_PROMPT
 
 if t.TYPE_CHECKING:
     import transformers  # noqa
-
-
-class StopOnTokens(StoppingCriteria):
-    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> bool:
-        stop_ids = {50278, 50279, 50277, 1, 0}
-        return input_ids[0][-1] in stop_ids
+else:
+    transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
 
 
 if t.TYPE_CHECKING:
@@ -99,11 +93,13 @@ class StableLM(openllm.LLM["transformers.GPTNeoXForCausalLM", "transformers.GPTN
         return generation_result[0]
 
     def generate(self, prompt: str, **attrs: t.Any) -> list[str]:
+        from ..._generation import StopOnTokens
+
         generation_kwargs = {
             "do_sample": True,
             "generation_config": self.config.model_construct_env(**attrs).to_generation_config(),
             "pad_token_id": self.tokenizer.eos_token_id,
-            "stopping_criteria": StoppingCriteriaList([StopOnTokens()]),
+            "stopping_criteria": transformers.StoppingCriteriaList([StopOnTokens()]),
         }
 
         if torch.cuda.is_available():

@@ -14,28 +14,14 @@
 
 from __future__ import annotations
 
-import pytest
+import typing as t
 
 import openllm
 
 
-@pytest.fixture
-def qa_prompt() -> str:
-    return "Answer the following yes/no question by reasoning step-by-step. What is the weather in SF?"
+def test_small_opt(prompt: str, llm: openllm.LLM[t.Any, t.Any], qa: bool):
+    assert llm(prompt)
 
 
-@pytest.fixture
-def opt_id() -> str:
-    return "facebook/opt-125m"
-
-
-def test_small_opt(qa_prompt: str, opt_id: str):
-    llm = openllm.AutoLLM.for_model("opt", model_id=opt_id, ensure_available=True)
-    generate = llm(qa_prompt)
-    assert generate
-
-
-def test_small_runner_opt(qa_prompt: str, opt_id: str):
-    llm = openllm.Runner("opt", model_id=opt_id, init_local=True)
-    generate = llm(qa_prompt)
-    assert generate
+def test_small_runner_opt(prompt: str, llm: openllm.LLMRunner, qa: bool):
+    assert llm(prompt)

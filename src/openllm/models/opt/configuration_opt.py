@@ -43,6 +43,16 @@ class OPTConfig(openllm.LLMConfig):
             "facebook/opt-6.7b",
             "facebook/opt-66b",
         ],
+        "fine_tune_strategies": (
+            {
+                "adapter_type": "lora",
+                "r": 16,
+                "lora_alpha": 32,
+                "target_modules": ["q_proj", "v_proj"],
+                "lora_dropout": 0.05,
+                "bias": "none",
+            },
+        ),
     }
 
     format_outputs: bool = openllm.LLMConfig.Field(

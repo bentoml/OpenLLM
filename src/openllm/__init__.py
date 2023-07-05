@@ -26,7 +26,9 @@ deploy, and monitor any LLMs with ease.
 from __future__ import annotations
 
 import logging
+import os
 import typing as t
+import warnings
 
 from . import utils as utils
 from .__about__ import __version__ as __version__
@@ -39,10 +41,28 @@ if utils.DEBUG:
 
     utils.configure_logging()
     logging.basicConfig(level=logging.NOTSET)
+else:
+    # configuration for bitsandbytes before import
+    os.environ["BITSANDBYTES_NOWELCOME"] = os.environ.get("BITSANDBYTES_NOWELCOME", "1")
+    # The following warnings from bitsandbytes, and probably not that important
+    # for users to see when DEBUG is False
+    warnings.filterwarnings(
+        "ignore", message="MatMul8bitLt: inputs will be cast from torch.float32 to float16 during quantization"
+    )
+    warnings.filterwarnings(
+        "ignore", message="MatMul8bitLt: inputs will be cast from torch.bfloat16 to float16 during quantization"
+    )
+    warnings.filterwarnings(
+        "ignore",
+        message=(
+            "The installed version of bitsandbytes was compiled without GPU support. 8-bit optimizers and GPU quantization"
+            " are unavailable."
+        ),
+    )
 
 
 _import_structure = {
-    "_llm": ["LLM", "Runner", "LLMRunner"],
+    "_llm": ["LLM", "Runner", "LLMRunner", "LLMRunnable"],
     "_configuration": ["LLMConfig"],
     "_package": ["build"],
     "exceptions": [],
@@ -51,6 +71,8 @@ _import_structure = {
     "models": [],
     "client": [],
     "playground": [],
+    "tests": [],
+    "serialisation": ["ggml", "transformers"],
     "cli": ["start", "start_grpc"],
     # NOTE: models
     "models.auto": [
@@ -67,6 +89,7 @@ _import_structure = {
     "models.starcoder": ["StarCoderConfig"],
     "models.stablelm": ["StableLMConfig"],
     "models.opt": ["OPTConfig"],
+    "models.mpt": ["MPTConfig"],
 }
 
 # NOTE: torch and cpm_kernels
@@ -94,6 +117,19 @@ except MissingDependencyError:
     ]
 else:
     _import_structure["models.falcon"].extend(["Falcon"])
+
+
+try:
+    if not (utils.is_torch_available() and utils.is_triton_available()):
+        raise MissingDependencyError
+except MissingDependencyError:
+    from .utils import dummy_pt_and_triton_objects
+
+    _import_structure["utils.dummy_pt_and_triton_objects"] = [
+        name for name in dir(dummy_pt_and_triton_objects) if not name.startswith("_")
+    ]
+else:
+    _import_structure["models.mpt"].extend(["MPT"])
 
 try:
     if not utils.is_torch_available():
@@ -144,11 +180,14 @@ if t.TYPE_CHECKING:
     from . import exceptions as exceptions
     from . import models as models
     from . import playground as playground
+    from . import tests as tests
+    from . import serialisation as serialisation
 
     # Specific types import
     from ._configuration import LLMConfig as LLMConfig
     from ._llm import LLM as LLM
     from ._llm import LLMRunner as LLMRunner
+    from ._llm import LLMRunnable as LLMRunnable
     from ._llm import Runner as Runner
     from ._package import build as build
     from ._schema import GenerationInput as GenerationInput
@@ -156,6 +195,8 @@ if t.TYPE_CHECKING:
     from ._schema import MetadataOutput as MetadataOutput
     from .cli import start as start
     from .cli import start_grpc as start_grpc
+    from .serialisation import ggml as ggml
+    from .serialisation import transformers as transformers
     from .models.auto import CONFIG_MAPPING as CONFIG_MAPPING
     from .models.auto import MODEL_FLAX_MAPPING_NAMES as MODEL_FLAX_MAPPING_NAMES
     from .models.auto import MODEL_MAPPING_NAMES as MODEL_MAPPING_NAMES
@@ -165,6 +206,7 @@ if t.TYPE_CHECKING:
     from .models.dolly_v2 import DollyV2Config as DollyV2Config
     from .models.falcon import FalconConfig as FalconConfig
     from .models.flan_t5 import FlanT5Config as FlanT5Config
+    from .models.mpt import MPTConfig as MPTConfig
     from .models.opt import OPTConfig as OPTConfig
     from .models.stablelm import StableLMConfig as StableLMConfig
     from .models.starcoder import StarCoderConfig as StarCoderConfig
@@ -186,6 +228,15 @@ if t.TYPE_CHECKING:
         from .utils.dummy_pt_and_einops_objects import *
     else:
         from .models.falcon import Falcon as Falcon
+
+    # NOTE: torch and triton
+    try:
+        if not (utils.is_torch_available() and utils.is_triton_available()):
+            raise MissingDependencyError
+    except MissingDependencyError:
+        from .utils.dummy_pt_and_triton_objects import *
+    else:
+        from .models.mpt import MPT as MPT
 
     try:
         if not utils.is_torch_available():

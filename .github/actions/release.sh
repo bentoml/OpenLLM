@@ -15,28 +15,72 @@
 
 set -e
 
+# Function to print script usage
+print_usage() {
+    echo "Usage: $0 [--release <major|minor|patch>]"
+}
+
+# Function to validate release argument
+validate_release() {
+    local release=$1
+
+    if [[ $release == "major" || $release == "minor" || $release == "patch" ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
 if ! [ "$GITHUB_ACTIONS" = true ]; then
     echo "This script should only be run on GitHub Actions. Aborting."
     exit 1
 fi
 
-echo "Cleaning previously built artifacts..." && hatch clean
+# Check if release flag is provided
+if [[ $1 == "--release" ]]; then
+    # Check if release argument is provided
+    if [[ -z $2 ]]; then
+        echo "Error: No release argument provided."
+        print_usage
+        exit 1
+    fi
 
-CURRENT_VERSION=$(hatch version)
+    release=$2
 
-if [[ $CURRENT_VERSION =~ \.dev ]]; then
-    RELEASE_VERSION="${CURRENT_VERSION%%.dev*}"
+    if ! validate_release "$release"; then
+        echo "Error: Invalid release argument. Only 'major', 'minor', or 'patch' are allowed."
+        print_usage
+        exit 1
+    fi
 else
-    echo "Current version is not properly setup as dev version. Aborting..."
+    echo "Error: Unknown option or no option provided."
+    print_usage
     exit 1
 fi
 
-echo "Releasing version $RELEASE_VERSION..." && hatch version "${RELEASE_VERSION}"
+echo "Cleaning previously built artifacts..." && hatch clean
+
+if [[ $release == 'major' ]]; then
+    RELEASE_VERSION=$(hatch version major)
+elif [[ $release == 'minor' ]]; then
+    RELEASE_VERSION=$(hatch version minor)
+else
+    CURRENT_VERSION=$(hatch version)
+
+    if [[ $CURRENT_VERSION =~ \.dev ]]; then
+        RELEASE_VERSION="${CURRENT_VERSION%%.dev*}"
+    else
+        echo "Current version is not properly setup as dev version. Aborting..."
+        exit 1
+    fi
+fi
+
+echo "Releasing $release version $RELEASE_VERSION..." && hatch version "${RELEASE_VERSION}"
 
 jq --arg release_version "${RELEASE_VERSION}" '.version = $release_version' < package.json > package.json.tmp && mv package.json.tmp package.json
 
 towncrier build --yes --version "${RELEASE_VERSION}" && git add CHANGELOG.md changelog.d
-git add src/openllm/__about__.py package.json && git commit -sm "infra: prepare for release ${RELEASE_VERSION} [generated]"
+git add src/openllm/__about__.py package.json && git commit -S -sm "infra: prepare for release ${RELEASE_VERSION} [generated]"
 git push origin main
 
 echo "Building artifacts for releasing..." && hatch build

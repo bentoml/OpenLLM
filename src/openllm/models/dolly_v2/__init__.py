@@ -16,17 +16,17 @@ from __future__ import annotations
 
 import typing as t
 
-import openllm
-
+from ...utils import is_torch_available, LazyModule
+from ...exceptions import MissingDependencyError
 
 _import_structure = {
     "configuration_dolly_v2": ["DollyV2Config", "START_DOLLY_V2_COMMAND_DOCSTRING", "DEFAULT_PROMPT_TEMPLATE"],
 }
 
 try:
-    if not openllm.utils.is_torch_available():
-        raise openllm.exceptions.MissingDependencyError
-except openllm.exceptions.MissingDependencyError:
+    if not is_torch_available():
+        raise MissingDependencyError
+except MissingDependencyError:
     pass
 else:
     _import_structure["modeling_dolly_v2"] = ["DollyV2"]
@@ -37,15 +37,13 @@ if t.TYPE_CHECKING:
     from .configuration_dolly_v2 import DollyV2Config as DollyV2Config
 
     try:
-        if not openllm.utils.is_torch_available():
-            raise openllm.exceptions.MissingDependencyError
-    except openllm.exceptions.MissingDependencyError:
+        if not is_torch_available():
+            raise MissingDependencyError
+    except MissingDependencyError:
         pass
     else:
         from .modeling_dolly_v2 import DollyV2 as DollyV2
 else:
     import sys
 
-    sys.modules[__name__] = openllm.utils.LazyModule(
-        __name__, globals()["__file__"], _import_structure, module_spec=__spec__
-    )
+    sys.modules[__name__] = LazyModule(__name__, globals()["__file__"], _import_structure, module_spec=__spec__)

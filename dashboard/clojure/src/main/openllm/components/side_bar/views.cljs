@@ -2,7 +2,7 @@
   (:require [re-frame.core :as rf]
             [openllm.db :as db]
             [openllm.subs :as subs]
-            [openllm.components.side-bar.events :as events] 
+            [openllm.components.side-bar.events :as events]
             [openllm.components.common.views :as ui]
             [clojure.string :as str]))
 

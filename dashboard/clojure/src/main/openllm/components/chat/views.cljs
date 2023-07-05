@@ -87,4 +87,3 @@
          [clear-history-button])
        [:div {:class "bottom-1 fixed w-[calc(100%_-_380px)] mb-2"}
         [chat-controls]]])))
-  

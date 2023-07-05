@@ -25,7 +25,7 @@ from openllm._configuration import ModelSettings
 
 logger = logging.getLogger(__name__)
 
-env_strats = st.sampled_from([openllm.utils.ModelEnv(model_name) for model_name in openllm.CONFIG_MAPPING.keys()])
+env_strats = st.sampled_from([openllm.utils.EnvVarMixin(model_name) for model_name in openllm.CONFIG_MAPPING.keys()])
 
 
 @st.composite
@@ -38,9 +38,8 @@ def model_settings(draw: st.DrawFn):
         "requires_gpu": st.booleans(),
         "trust_remote_code": st.booleans(),
         "requirements": st.none() | st.lists(st.text(), min_size=1),
-        "use_pipeline": st.booleans(),
         "model_type": st.sampled_from(["causal_lm", "seq2seq_lm"]),
-        "runtime": st.sampled_from(["transformers", "cpp"]),
+        "runtime": st.sampled_from(["transformers", "ggml"]),
         "name_type": st.sampled_from(["dasherize", "lowercase"]),
         "timeout": st.integers(min_value=3600),
         "workers_per_resource": st.one_of(st.integers(min_value=1), st.floats(min_value=0.1, max_value=1.0)),
@@ -63,7 +62,7 @@ def make_llm_config(
     lines.append(f'    __config__ = {{ {", ".join(_config_args)} }}')
     if fields is not None:
         for field, type_, default in fields:
-            lines.append(f"    {field}: {type_} = {repr(default)}")
+            lines.append(f"    {field}: {type_} = openllm.LLMConfig.Field({repr(default)})")
     if generation_fields is not None:
         generation_lines = ["class GenerationConfig:"]
         for field, default in generation_fields:

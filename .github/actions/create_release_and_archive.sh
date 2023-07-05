@@ -15,13 +15,23 @@
 
 set -o errexit -o nounset -o pipefail
 
-# Set by GH actions, see
-# https://docs.github.com/en/actions/learn-github-actions/environment-variables#default-environment-variables
-TAG=${GITHUB_REF_NAME#v}
-PREFIX="openllm-${TAG}"
-ARCHIVE="openllm-${TAG}.tar.gz"
+TAG="$1"
 
-git archive --format=tar --prefix="${PREFIX}/" "v${TAG}" | gzip > "${ARCHIVE}"
+semver_regex='^[1-9][0-9]*\.[1-9][0-9]*\.[1-9][0-9]*$'
+
+# Check if an argument is provided
+if [ $# -eq 0 ]; then
+    echo "No argument provided."
+    exit 1
+fi
+
+if [[ $TAG =~ $semver_regex ]]; then
+    echo "Valid semver: $TAG"
+else
+    echo "Invalid semver: $TAG"
+    exit 1
+fi
+
 cat > release_notes.txt << EOF
 ## Installation
 

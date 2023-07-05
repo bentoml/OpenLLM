@@ -18,7 +18,6 @@ from typing import overload
 from . import _ValidatorArgType
 from . import _ValidatorType
 
-
 _T = TypeVar("_T")
 _T1 = TypeVar("_T1")
 _T2 = TypeVar("_T2")

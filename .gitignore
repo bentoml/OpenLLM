@@ -26,6 +26,7 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+node_modules
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -134,3 +135,7 @@ package-lock.json
 # PyCharm config
 .idea
 outputs
+
+# PyOxidizer and binary related
+pyapp
+/target

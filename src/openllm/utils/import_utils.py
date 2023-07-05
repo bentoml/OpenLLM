@@ -17,6 +17,7 @@ Some imports utils are vendorred from transformers/utils/import_utils.py for per
 """
 from __future__ import annotations
 
+import functools
 import importlib
 import importlib.metadata
 import importlib.util
@@ -32,15 +33,36 @@ from packaging import version
 from bentoml._internal.utils import LazyLoader
 from bentoml._internal.utils import pkg
 
+from .representation import ReprMixin
+
+
+# NOTE: We need to do this so that overload can register
+# correct overloads to typing registry
+if hasattr(t, "get_overloads"):
+    from typing import overload
+else:
+    from typing_extensions import overload
 
 if t.TYPE_CHECKING:
     BackendOrderredDict = OrderedDict[str, tuple[t.Callable[[], bool], str]]
+    from .._types import P
 else:
     BackendOrderredDict = OrderedDict
 
 logger = logging.getLogger(__name__)
 
-OPTIONAL_DEPENDENCIES = {"fine-tune", "flan-t5", "openai", "agents"}
+OPTIONAL_DEPENDENCIES = {
+    "fine-tune",
+    "flan-t5",
+    "mpt",
+    "falcon",
+    "starcoder",
+    "chatglm",
+    "openai",
+    "agents",
+    "playground",
+    "ggml",
+}
 ENV_VARS_TRUE_VALUES = {"1", "ON", "YES", "TRUE"}
 ENV_VARS_TRUE_AND_AUTO_VALUES = ENV_VARS_TRUE_VALUES.union({"AUTO"})
 
@@ -64,9 +86,16 @@ def _is_package_available(package: str) -> bool:
 _torch_available = importlib.util.find_spec("torch") is not None
 _tf_available = importlib.util.find_spec("tensorflow") is not None
 _flax_available = importlib.util.find_spec("jax") is not None and importlib.util.find_spec("flax") is not None
+
+_peft_available = _is_package_available("peft")
 _einops_available = _is_package_available("einops")
 _cpm_kernel_available = _is_package_available("cpm_kernels")
 _bitsandbytes_available = _is_package_available("bitsandbytes")
+_datasets_available = _is_package_available("datasets")
+_triton_available = _is_package_available("triton")
+_jupyter_available = _is_package_available("jupyter")
+_jupytext_available = _is_package_available("jupytext")
+_notebook_available = _is_package_available("notebook")
 
 
 def is_transformers_supports_kbit() -> bool:
@@ -75,6 +104,30 @@ def is_transformers_supports_kbit() -> bool:
 
 def is_transformers_supports_agent() -> bool:
     return pkg.pkg_version_info("transformers")[:2] >= (4, 29)
+
+
+def is_jupyter_available() -> bool:
+    return _jupyter_available
+
+
+def is_jupytext_available() -> bool:
+    return _jupytext_available
+
+
+def is_notebook_available() -> bool:
+    return _notebook_available
+
+
+def is_triton_available() -> bool:
+    return _triton_available
+
+
+def is_datasets_available() -> bool:
+    return _datasets_available
+
+
+def is_peft_available() -> bool:
+    return _peft_available
 
 
 def is_einops_available():
@@ -157,6 +210,33 @@ def is_flax_available():
     return _flax_available
 
 
+def requires_dependencies(
+    package: str | list[str], *, extra: str | list[str] | None = None
+) -> t.Callable[[t.Callable[P, t.Any]], t.Callable[P, t.Any]]:
+    import openllm.utils
+
+    if isinstance(package, str):
+        package = [package]
+    if isinstance(extra, str):
+        extra = [extra]
+
+    def decorator(func: t.Callable[P, t.Any]):
+        @functools.wraps(func)
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> t.Any:
+            for p in package:
+                cached_check: t.Callable[[], bool] | None = getattr(openllm.utils, f"is_{p}_available", None)
+                if not ((cached_check is not None and cached_check()) or _is_package_available(p)):
+                    raise ImportError(
+                        f"{func.__name__} requires '{p}' to be available locally (Currently missing)."
+                        f"Make sure to have {p} to be installed: 'pip install \"{p if not extra else 'openllm['+', '.join(extra)+']'}\"'"
+                    )
+            return func(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
 PYTORCH_IMPORT_ERROR_WITH_TF = """\
 {0} requires the PyTorch library but it was not found in your environment.
 However, we were able to find a TensorFlow installation. TensorFlow classes begin
@@ -205,6 +285,26 @@ You can install it with pip: `pip install einops`. Please note that you may need
 your runtime after installation.
 """
 
+TRITON_IMPORT_ERROR = """{0} requires the triton library but it was not found in your environment.
+You can install it with pip: 'pip install \"git+https://github.com/openai/triton.git#egg=triton&subdirectory=python\"'.
+Please note that you may need to restart your runtime after installation.
+"""
+
+DATASETS_IMPORT_ERROR = """{0} requires the datasets library but it was not found in your environment.
+You can install it with pip: `pip install datasets`. Please note that you may need to restart
+your runtime after installation.
+"""
+
+PEFT_IMPORT_ERROR = """{0} requires the peft library but it was not found in your environment.
+You can install it with pip: `pip install peft`. Please note that you may need to restart
+your runtime after installation.
+"""
+
+BITSANDBYTES_IMPORT_ERROR = """{0} requires the bitsandbytes library but it was not found in your environment.
+You can install it with pip: `pip install bitsandbytes`. Please note that you may need to restart
+your runtime after installation.
+"""
+
 BACKENDS_MAPPING = BackendOrderredDict(
     [
         ("flax", (is_flax_available, FLAX_IMPORT_ERROR)),
@@ -212,6 +312,10 @@ BACKENDS_MAPPING = BackendOrderredDict(
         ("torch", (is_torch_available, PYTORCH_IMPORT_ERROR)),
         ("cpm_kernels", (is_cpm_kernels_available, CPM_KERNELS_IMPORT_ERROR)),
         ("einops", (is_einops_available, EINOPS_IMPORT_ERROR)),
+        ("triton", (is_triton_available, TRITON_IMPORT_ERROR)),
+        ("datasets", (is_datasets_available, DATASETS_IMPORT_ERROR)),
+        ("peft", (is_peft_available, PEFT_IMPORT_ERROR)),
+        ("bitsandbytes", (is_bitsandbytes_available, BITSANDBYTES_IMPORT_ERROR)),
     ]
 )
 
@@ -249,27 +353,63 @@ def require_backends(o: t.Any, backends: t.MutableSequence[str]):
         raise ImportError("".join(failed))
 
 
-class ModelEnv:
+class EnvVarMixin(ReprMixin):
     model_name: str
 
+    @property
+    def __repr_keys__(self) -> set[str]:
+        return {"config", "model_id", "quantize", "framework", "bettertransformer", "runtime"}
+
     if t.TYPE_CHECKING:
-        config: property
-        model_id: property
-        quantize: property
-        framework: property
-        bettertransformer: property
+        config: str
+        model_id: str
+        quantize: str
+        framework: str
+        bettertransformer: str
+        runtime: t.Literal["ggml", "transformers"]
 
-        framework_value: property
-        quantize_value: property
-        bettertransformer_value: property
+        framework_value: t.Literal["pt", "tf", "flax"]
+        quantize_value: str | None
+        bettertransformer_value: str | None
+        runtime_value: t.Literal["ggml", "transformers"]
 
+    # fmt: off
+    @overload
+    def __getitem__(self, item: t.Literal["config"]) -> str: ...
+    @overload
+    def __getitem__(self, item: t.Literal["model_id"]) -> str: ...
+    @overload
+    def __getitem__(self, item: t.Literal["quantize"]) -> str: ...
+    @overload
+    def __getitem__(self, item: t.Literal["framework"]) -> str: ...
+    @overload
+    def __getitem__(self, item: t.Literal["bettertransformer"]) -> str: ...
+    @overload
+    def __getitem__(self, item: t.Literal['runtime']) -> str: ...
+    @overload
+    def __getitem__(self, item: t.Literal['framework_value']) -> t.Literal['pt', 'tf', 'flax']: ...
+    @overload
+    def __getitem__(self, item: t.Literal['quantize_value']) -> str | None: ...
+    @overload
+    def __getitem__(self, item: t.Literal['model_id_value']) -> str | None: ...
+    @overload
+    def __getitem__(self, item: t.Literal['bettertransformer_value']) -> str | None: ...
+    @overload
+    def __getitem__(self, item: t.Literal['runtime_value']) -> t.Literal['ggml', 'transformers']: ...
+    # fmt: on
     def __getitem__(self, item: str | t.Any) -> t.Any:
         if hasattr(self, item):
             return getattr(self, item)
         raise KeyError(f"Key {item} not found in {self}")
 
-    def __new__(cls, model_name: str, bettertransformer: bool | None = None, quantize: t.LiteralString | None = None):
-        from .._configuration import _field_env_key
+    def __new__(
+        cls,
+        model_name: str,
+        bettertransformer: bool | None = None,
+        quantize: t.LiteralString | None = None,
+        runtime: t.Literal["ggml", "transformers"] = "transformers",
+    ):
+        from .._configuration import field_env_key
         from . import codegen
 
         model_name = inflection.underscore(model_name)
@@ -278,15 +418,17 @@ class ModelEnv:
         res.model_name = model_name
 
         # gen properties env key
-        attributes = {"config", "model_id", "quantize", "framework", "bettertransformer"}
+        attributes = {"config", "model_id", "quantize", "framework", "bettertransformer", "runtime"}
         for att in attributes:
-            setattr(res, att, _field_env_key(model_name, att.upper()))
+            setattr(res, att, field_env_key(model_name, att.upper()))
 
         # gen properties env value
         attributes_with_values = {
-            "quantize": (bool, quantize),
-            "bettertransformer": (bool, bettertransformer),
             "framework": (str, "pt"),
+            "quantize": (str, quantize),
+            "bettertransformer": (bool, bettertransformer),
+            "model_id": (str, None),
+            "runtime": (str, runtime),
         }
         globs: dict[str, t.Any] = {
             "__bool_vars_value": ENV_VARS_TRUE_VALUES,

@@ -3,7 +3,6 @@ from typing import Any
 from ..merger import Merger
 from .core import StrategyList
 
-
 class SetStrategies(StrategyList):
     NAME = ...
 

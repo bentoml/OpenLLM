@@ -70,11 +70,11 @@
   ;; will print a message to the console, level "warn"
   (log :warn "uptempo hardcore" 200 "bpm, gabber hakken hardcore") ;; => nil
 
-  ;; demonstates how a log looks when it got put into the log history atom 
+  ;; demonstates how a log looks when it got put into the log history atom
   @log-history ;; => [{:level :warn,
                ;;      :message "uptempo hardcore 200 bpm, gabber hakken hardcore",
                ;;      :timestamp "Thu Apr 08 2021 16:20:00 GMT+0200 (Central European Summer Time)"}]
-  
-  
+
+
   ;; clear the log history atom
   (reset! log-history []))

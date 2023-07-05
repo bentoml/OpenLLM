@@ -14,12 +14,10 @@
 
 from __future__ import annotations
 
-import importlib
 import typing as t
 
 import bentoml
 import openllm
-import transformers
 
 from ..._prompt import default_formatter
 from .configuration_falcon import DEFAULT_PROMPT_TEMPLATE
@@ -27,64 +25,36 @@ from .configuration_falcon import DEFAULT_PROMPT_TEMPLATE
 
 if t.TYPE_CHECKING:
     import torch
+    import torch.amp
+    import transformers
 else:
     torch = openllm.utils.LazyLoader("torch", globals(), "torch")
+    torch.amp = openllm.utils.LazyLoader("torch.amp", globals(), "torch.amp")
+    transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
 
 
-class Falcon(openllm.LLM["transformers.TextGenerationPipeline", "transformers.PreTrainedTokenizerFast"]):
+class Falcon(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTrainedTokenizerBase"]):
     __openllm_internal__ = True
 
     @property
     def import_kwargs(self):
-        model_kwds = {
-            "torch_dtype": torch.bfloat16,
-            "device_map": "auto" if torch.cuda.is_available() and torch.cuda.device_count() > 1 else None,
-        }
+        model_kwds = {"torch_dtype": torch.bfloat16, "device_map": "auto" if torch.cuda.is_available() else None}
         tokenizer_kwds: dict[str, t.Any] = {}
         return model_kwds, tokenizer_kwds
 
-    def import_model(
-        self, model_id: str, tag: bentoml.Tag, *model_args: t.Any, tokenizer_kwds: dict[str, t.Any], **attrs: t.Any
-    ) -> bentoml.Model:
-        trust_remote_code = attrs.pop("trust_remote_code", True)
-        torch_dtype = attrs.pop("torch_dtype", torch.bfloat16)
-        device_map = attrs.pop("device_map", "auto")
-
-        tokenizer = transformers.AutoTokenizer.from_pretrained(model_id)
-        model = transformers.AutoModelForCausalLM.from_pretrained(
-            model_id,
-            trust_remote_code=trust_remote_code,
-            torch_dtype=torch_dtype,
-            device_map=device_map,
-        )
-        try:
-            return bentoml.transformers.save_model(
-                tag,
-                model,
-                custom_objects={"tokenizer": tokenizer},
-                external_modules=[importlib.import_module(model.__module__)],
-            )
-        finally:
-            import gc
-
-            # NOTE: We need to free the cache after saving here so that we can load it back later on.
-            gc.collect()
-            torch.cuda.empty_cache()
+    def llm_post_init(self):
+        self.device = torch.device("cuda")
 
     def load_model(self, tag: bentoml.Tag, *args: t.Any, **attrs: t.Any) -> t.Any:
-        torch_dtype = attrs.pop("torch_dtype", torch.bfloat16)
-        device_map = attrs.pop("device_map", "auto")
         trust_remote_code = attrs.pop("trust_remote_code", True)
+        return transformers.AutoModelForCausalLM.from_pretrained(
+            openllm.serialisation.get(self).path, trust_remote_code=trust_remote_code, **attrs
+        )
 
-        _ref = bentoml.transformers.get(tag)
-        return transformers.pipeline(
-            "text-generation",
-            model=_ref.path,
-            tokenizer=_ref.custom_objects["tokenizer"],
-            trust_remote_code=trust_remote_code,
-            device_map=device_map,
-            torch_dtype=torch_dtype,
-            **attrs,
+    def load_tokenizer(self, tag: bentoml.Tag, **attrs: t.Any) -> t.Any:
+        trust_remote_code = attrs.pop("trust_remote_code", True)
+        return transformers.AutoTokenizer.from_pretrained(
+            openllm.serialisation.get(self).path, trust_remote_code=trust_remote_code, **attrs
         )
 
     def sanitize_parameters(
@@ -125,17 +95,39 @@ class Falcon(openllm.LLM["transformers.TextGenerationPipeline", "transformers.Pr
 
         return prompt_text, generation_config, {}
 
-    def postprocess_generate(self, prompt: str, generation_result: t.Sequence[dict[str, t.Any]], **_: t.Any) -> str:
-        return "\n".join([i["generated_text"] for i in generation_result])
+    def postprocess_generate(self, prompt: str, generation_result: t.Sequence[str], **_: t.Any) -> str:
+        return generation_result[0]
 
-    def generate(self, prompt: str, **attrs: t.Any) -> list[dict[str, t.Any]]:
+    def generate(self, prompt: str, **attrs: t.Any) -> list[str]:
         eos_token_id = attrs.pop("eos_token_id", self.tokenizer.eos_token_id)
+        inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
+        with torch.inference_mode(), torch.amp.autocast("cuda", dtype=torch.float16):
+            outputs = self.model.generate(
+                input_ids=inputs["input_ids"],
+                attention_mask=inputs["attention_mask"],
+                generation_config=self.config.model_construct_env(
+                    eos_token_id=eos_token_id, **attrs
+                ).to_generation_config(),
+            )
+            return self.tokenizer.batch_decode(outputs, skip_special_tokens=True)
 
-        # NOTE: our model here is the pipeline
-        return self.model(
-            prompt,
-            do_sample=True,
-            generation_config=self.config.model_construct_env(
-                eos_token_id=eos_token_id, **attrs
-            ).to_generation_config(),
+    def generate_one(
+        self, prompt: str, stop: list[str], **preprocess_generate_kwds: t.Any
+    ) -> list[dict[t.Literal["generated_text"], str]]:
+        from ..._generation import StopSequenceCriteria
+
+        max_new_tokens = preprocess_generate_kwds.pop("max_new_tokens", 200)
+        encoded_inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
+        src_len = encoded_inputs["input_ids"].shape[1]
+        stopping_criteria = preprocess_generate_kwds.pop("stopping_criteria", transformers.StoppingCriteriaList([]))
+        stopping_criteria.append(StopSequenceCriteria(stop, self.tokenizer))
+        outputs = self.model.generate(
+            encoded_inputs["input_ids"], max_new_tokens=max_new_tokens, stopping_criteria=stopping_criteria
         )
+
+        result = self.tokenizer.decode(outputs[0].tolist()[src_len:])
+        # Inference API returns the stop sequence
+        for stop_seq in stop:
+            if result.endswith(stop_seq):
+                result = result[: -len(stop_seq)]
+        return [{"generated_text": result}]

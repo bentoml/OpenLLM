@@ -54,24 +54,22 @@ class OPT(openllm.LLM["transformers.OPTForCausalLM", "transformers.GPT2Tokenizer
         }
         return model_kwds, tokenizer_kwds
 
-    def import_model(
-        self,
-        model_id: str,
-        tag: bentoml.Tag,
-        *args: t.Any,
-        tokenizer_kwds: dict[str, t.Any],
-        **attrs: t.Any,
-    ) -> bentoml.Model:
-        torch_dtype = attrs.pop("torch_dtype", self.dtype)
-        trust_remote_code = attrs.pop("trust_remote_code", False)
+    def import_model(self, *args: t.Any, trust_remote_code: bool = False, **attrs: t.Any) -> bentoml.Model:
+        (_, model_attrs), tokenizer_kwds = self.llm_parameters
+        attrs = {**model_attrs, **attrs}
 
-        config = transformers.AutoConfig.from_pretrained(model_id)
-        tokenizer = transformers.AutoTokenizer.from_pretrained(model_id, **tokenizer_kwds)
+        torch_dtype = attrs.pop("torch_dtype", self.dtype)
+
+        config = transformers.AutoConfig.from_pretrained(self.model_id)
+        tokenizer = transformers.AutoTokenizer.from_pretrained(self.model_id, **tokenizer_kwds)
         tokenizer.pad_token_id = config.pad_token_id
-        model: transformers.OPTForCausalLM = transformers.AutoModelForCausalLM.from_pretrained(
-            model_id, torch_dtype=torch_dtype, trust_remote_code=trust_remote_code, **attrs
+        model = t.cast(
+            "transformers.OPTForCausalLM",
+            transformers.AutoModelForCausalLM.from_pretrained(
+                self.model_id, torch_dtype=torch_dtype, trust_remote_code=trust_remote_code, **attrs
+            ),
         )
-        return bentoml.transformers.save_model(tag, model, custom_objects={"tokenizer": tokenizer})
+        return bentoml.transformers.save_model(self.tag, model, custom_objects={"tokenizer": tokenizer})
 
     def load_model(self, tag: bentoml.Tag, *args: t.Any, **attrs: t.Any) -> transformers.OPTForCausalLM:
         torch_dtype = attrs.pop("torch_dtype", self.dtype)
@@ -135,9 +133,10 @@ class OPT(openllm.LLM["transformers.OPTForCausalLM", "transformers.GPT2Tokenizer
             if torch.cuda.is_available() and torch.cuda.device_count() == 1:
                 self.model.cuda()
 
-            input_ids = t.cast(torch.Tensor, self.tokenizer(prompt, return_tensors="pt").input_ids).to(self.device)
+            inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
+
             generated_tensors = self.model.generate(
-                input_ids,
+                **inputs,
                 do_sample=True,
                 generation_config=self.config.model_construct_env(**attrs).to_generation_config(),
             )
