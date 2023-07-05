@@ -28,14 +28,15 @@ if t.TYPE_CHECKING:
 
 MODEL_MAPPING_NAMES = OrderedDict(
     [
-        ("flan_t5", "FlanT5"),
-        ("dolly_v2", "DollyV2"),
         ("chatglm", "ChatGLM"),
-        ("starcoder", "StarCoder"),
+        ("dolly_v2", "DollyV2"),
         ("falcon", "Falcon"),
-        ("stablelm", "StableLM"),
-        ("opt", "OPT"),
+        ("flan_t5", "FlanT5"),
+        ("gpt_neox", "GPTNeoX"),
         ("mpt", "MPT"),
+        ("opt", "OPT"),
+        ("stablelm", "StableLM"),
+        ("starcoder", "StarCoder"),
     ]
 )
 

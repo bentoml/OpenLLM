@@ -29,6 +29,7 @@ if t.TYPE_CHECKING:
     import openllm
 
     DictStrAny = dict[str, t.Any]
+    ListStr = list[str]
 
     from attr import _make_method
 else:
@@ -37,6 +38,7 @@ else:
     from attr._make import _make_method
 
     DictStrAny = dict
+    ListStr = list
 
 _T = t.TypeVar("_T", bound=t.Callable[..., t.Any])
 
@@ -216,3 +218,53 @@ def generate_function(
         logger.info("Generated script for %s:\n\n%s", typ, script)
 
     return meth
+
+
+def make_env_transformer(
+    cls: type[openllm.LLMConfig],
+    model_name: str,
+    suffix: t.LiteralString | None = None,
+    default_callback: t.Callable[[str, t.Any], t.Any] | None = None,
+    globs: DictStrAny | None = None,
+):
+    from . import dantic, field_env_key
+
+    def identity(_: str, x_value: t.Any) -> t.Any:
+        return x_value
+
+    default_callback = identity if default_callback is None else default_callback
+
+    globs = {} if globs is None else globs
+    globs.update(
+        {
+            "__populate_env": dantic.env_converter,
+            "__default_callback": default_callback,
+            "__field_env": field_env_key,
+            "__suffix": suffix or "",
+            "__model_name": model_name,
+        }
+    )
+
+    lines: ListStr = [
+        "__env = lambda field_name: __field_env(__model_name, field_name, __suffix)",
+        "return [",
+        "    f.evolve(",
+        "        default=__populate_env(__default_callback(f.name, f.default), __env(f.name)),",
+        "        metadata={",
+        "            'env': f.metadata.get('env', __env(f.name)),",
+        "            'description': f.metadata.get('description', '(not provided)'),",
+        "        },",
+        "    )",
+        "    for f in fields",
+        "]",
+    ]
+    fields_ann = "list[attr.Attribute[t.Any]]"
+
+    return generate_function(
+        cls,
+        "__auto_env",
+        lines,
+        args=("_", "fields"),
+        globs=globs,
+        annotations={"_": "type[LLMConfig]", "fields": fields_ann, "return": fields_ann},
+    )

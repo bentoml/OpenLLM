@@ -86,7 +86,7 @@ By default, this model will use the PyTorch model for inference. However, this m
 - To use Tensorflow, set the environment variable ``OPENLLM_OPT_FRAMEWORK="tf"``
 
 \b
-OPT Runner will use facebook/opt-2.7b as the default model. To change any to any other OPT
+OPT Runner will use facebook/opt-2.7b as the default model. To change to any other OPT
 saved pretrained, or a fine-tune OPT, provide ``OPENLLM_OPT_MODEL_ID='facebook/opt-6.7b'``
 or provide `--model-id` flag when running ``openllm start opt``:
 

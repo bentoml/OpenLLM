@@ -40,14 +40,15 @@ else:
 # NOTE: This is the entrypoint when adding new model config
 CONFIG_MAPPING_NAMES = OrderedDict(
     [
-        ("flan_t5", "FlanT5Config"),
-        ("dolly_v2", "DollyV2Config"),
         ("chatglm", "ChatGLMConfig"),
-        ("starcoder", "StarCoderConfig"),
+        ("dolly_v2", "DollyV2Config"),
         ("falcon", "FalconConfig"),
-        ("stablelm", "StableLMConfig"),
-        ("opt", "OPTConfig"),
+        ("flan_t5", "FlanT5Config"),
+        ("gpt_neox", "GPTNeoXConfig"),
         ("mpt", "MPTConfig"),
+        ("opt", "OPTConfig"),
+        ("stablelm", "StableLMConfig"),
+        ("starcoder", "StarCoderConfig"),
     ]
 )
 
@@ -108,6 +109,7 @@ CONFIG_NAME_ALIASES: dict[str, str] = {
     "chat_glm": "chatglm",
     "stable_lm": "stablelm",
     "star_coder": "starcoder",
+    "gpt_neo_x": "gpt_neox",
 }
 
 

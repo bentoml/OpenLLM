@@ -69,15 +69,15 @@ requires-python = ">=3.8"
 agents = ["transformers[agents]>=4.30", "diffusers", "soundfile"]
 all = [
     "openllm[chatglm]",
-    "openllm[starcoder]",
     "openllm[falcon]",
     "openllm[mpt]",
-    "openllm[flan-t5]",
-    "openllm[ggml]",
-    "openllm[fine-tune]",
-    "openllm[agents]",
-    "openllm[openai]",
+    "openllm[starcoder]",
     "openllm[playground]",
+    "openllm[ggml]",
+    "openllm[agents]",
+    "openllm[fine-tune]",
+    "openllm[flan-t5]",
+    "openllm[openai]",
 ]
 chatglm = ["cpm-kernels", "sentencepiece"]
 falcon = ["einops", "xformers", "safetensors"]

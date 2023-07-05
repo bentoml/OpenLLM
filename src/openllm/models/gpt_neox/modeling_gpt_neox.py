@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 from __future__ import annotations
 
 import logging
@@ -19,8 +20,7 @@ import typing as t
 import openllm
 
 from ..._prompt import default_formatter
-from .configuration_stablelm import DEFAULT_PROMPT_TEMPLATE
-from .configuration_stablelm import SYSTEM_PROMPT
+from .configuration_gpt_neox import DEFAULT_PROMPT_TEMPLATE
 
 
 if t.TYPE_CHECKING:
@@ -34,7 +34,7 @@ else:
 logger = logging.getLogger(__name__)
 
 
-class StableLM(openllm.LLM["transformers.GPTNeoXForCausalLM", "transformers.GPTNeoXTokenizerFast"]):
+class GPTNeoX(openllm.LLM["transformers.GPTNeoXForCausalLM", "transformers.GPTNeoXTokenizerFast"]):
     __openllm_internal__ = True
 
     def llm_post_init(self):
@@ -55,32 +55,30 @@ class StableLM(openllm.LLM["transformers.GPTNeoXForCausalLM", "transformers.GPTN
         prompt: str,
         temperature: float | None = None,
         max_new_tokens: int | None = None,
-        top_k: int | None = None,
-        top_p: float | None = None,
-        use_default_prompt_template: bool = False,
+        use_default_prompt_template: bool = True,
         **attrs: t.Any,
     ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
-        if "tuned" in self._model_id and use_default_prompt_template:
-            prompt_variables = {
-                k: v
-                for k, v in attrs.items()
-                if k in default_formatter.extract_template_variables(DEFAULT_PROMPT_TEMPLATE)
-            }
+        if use_default_prompt_template:
+            template_variables = default_formatter.extract_template_variables(DEFAULT_PROMPT_TEMPLATE)
+            prompt_variables = {k: v for k, v in attrs.items() if k in template_variables}
             if "instruction" in prompt_variables:
                 raise RuntimeError(
                     "'instruction' should be passed as the first argument "
                     "instead of kwargs when 'use_default_prompt_template=True'"
                 )
-            system_prompt = prompt_variables.pop("system_prompt", SYSTEM_PROMPT)
-            prompt_text = DEFAULT_PROMPT_TEMPLATE.format(instruction=prompt, system_prompt=system_prompt)
+            try:
+                prompt_text = DEFAULT_PROMPT_TEMPLATE.format(instruction=prompt, **prompt_variables)
+            except KeyError as e:
+                raise RuntimeError(
+                    f"Missing variable '{e.args[0]}' (required: {template_variables}) in the prompt template. "
+                    "Use 'use_default_prompt_template=False' to disable the default prompt template."
+                )
         else:
             prompt_text = prompt
 
         generation_config = {
             "max_new_tokens": max_new_tokens,
             "temperature": temperature,
-            "top_k": top_k,
-            "top_p": top_p,
         }
 
         return prompt_text, generation_config, {}
@@ -99,8 +97,11 @@ class StableLM(openllm.LLM["transformers.GPTNeoXForCausalLM", "transformers.GPTN
         }
 
         if torch.cuda.is_available():
-            self.model.cuda()
+            if self.config.use_half_precision:
+                self.model.half().cuda()
+            else:
+                self.model.cuda()
 
-        inputs = t.cast("torch.Tensor", self.tokenizer(prompt, return_tensors="pt")).to(self.device)
-        tokens = self.model.generate(**inputs, **generation_kwargs)
-        return [self.tokenizer.decode(tokens[0], skip_special_tokens=True)]
+        inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
+        gen_tokens = self.model.generate(**inputs, **generation_kwargs)
+        return self.tokenizer.batch_decode(gen_tokens)

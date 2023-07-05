@@ -35,6 +35,7 @@ tools = [
     "./tools/update-readme.py",
     "./tools/update-optional-dependencies.py",
     "./tools/update-config-stubs.py",
+    "./tools/update-models-import.py",
     "- ./tools/add-license-headers .",
 ]
 typing = "pyright {args:src/openllm tests}"

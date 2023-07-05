@@ -1526,7 +1526,7 @@ def models(ctx: click.Context, output: OutputLiteral, show_available: bool):
         failed_initialized: list[tuple[str, Exception]] = []
 
         json_data: dict[
-            str, dict[t.Literal["model_id", "url", "installation", "requires_gpu", "runtime_impl"], t.Any]
+            str, dict[t.Literal["model_id", "url", "installation", "cpu", "gpu", "runtime_impl"], t.Any]
         ] = {}
 
         converted: list[str] = []
@@ -1542,7 +1542,8 @@ def models(ctx: click.Context, output: OutputLiteral, show_available: bool):
             json_data[m] = {
                 "model_id": config["model_ids"],
                 "url": config["url"],
-                "requires_gpu": config["requires_gpu"],
+                "cpu": not config["requires_gpu"],
+                "gpu": True,
                 "runtime_impl": runtime_impl,
                 "installation": "pip install openllm"
                 if m not in openllm.utils.OPTIONAL_DEPENDENCIES
@@ -1565,8 +1566,18 @@ def models(ctx: click.Context, output: OutputLiteral, show_available: bool):
 
             tabulate.PRESERVE_WHITESPACE = True
 
+            # llm, url, model_id, installation, cpu, gpu, runtime_impl
             data: list[
-                str | tuple[str, str, list[str], str, t.LiteralString, tuple[t.Literal["pt", "flax", "tf"], ...]]
+                str
+                | tuple[
+                    str,
+                    str,
+                    list[str],
+                    str,
+                    t.LiteralString,
+                    t.LiteralString,
+                    tuple[t.Literal["pt", "flax", "tf"], ...],
+                ]
             ] = []
             for m, v in json_data.items():
                 data.extend(
@@ -1576,7 +1587,8 @@ def models(ctx: click.Context, output: OutputLiteral, show_available: bool):
                             v["url"],
                             v["model_id"],
                             v["installation"],
-                            "✅" if v["requires_gpu"] else "❌",
+                            "❌" if not v["cpu"] else "✅",
+                            "✅",
                             v["runtime_impl"],
                         )
                     ]
@@ -1585,6 +1597,7 @@ def models(ctx: click.Context, output: OutputLiteral, show_available: bool):
                 int(COLUMNS / 6),
                 int(COLUMNS / 3),
                 int(COLUMNS / 4),
+                int(COLUMNS / 6),
                 int(COLUMNS / 6),
                 int(COLUMNS / 6),
                 int(COLUMNS / 9),
@@ -1600,7 +1613,7 @@ def models(ctx: click.Context, output: OutputLiteral, show_available: bool):
             table = tabulate.tabulate(
                 data,
                 tablefmt="fancy_grid",
-                headers=["LLM", "URL", "Models Id", "Installation", "GPU Only", "Runtime"],
+                headers=["LLM", "URL", "Models Id", "Installation", "CPU", "GPU", "Runtime"],
                 maxcolwidths=column_widths,
             )
 

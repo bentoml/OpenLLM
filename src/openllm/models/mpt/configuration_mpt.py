@@ -92,7 +92,7 @@ pip install "openllm[mpt]"
 ```
 
 \b
-MPT Runner will use mosaicml/mpt-7b-instruct as the default model. To change any to any other MPT
+MPT Runner will use mosaicml/mpt-7b-instruct as the default model. To change to any other MPT
 saved pretrained, or a fine-tune MPT, provide ``OPENLLM_MPT_MODEL_ID='mosaicml/mpt-30b'``
 or provide `--model-id` flag when running ``openllm start mpt``:
 
