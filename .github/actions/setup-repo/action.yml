@@ -53,7 +53,7 @@ runs:
           ${{ steps.get-cache-key-prefix.outputs.prefix }}-pypi-
     - name: Install dependencies
       shell: bash
-      run: pip install hatch towncrier && pip install -e ".[all]"
+      run: pip install hatch towncrier
     - name: Install pyright
       shell: bash
       run: npm install -g npm@^7 pyright
