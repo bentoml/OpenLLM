@@ -21,10 +21,10 @@
  ::v1-generate
  []
  (fn [_ [_ prompt llm-config & {:keys [on-success on-failure]}]]
-   {:http-xhrio {:method :post
-                 :uri (get-uri "/v1/generate")
-                 :params {:prompt prompt
-                          :llm_config llm-config}
+   {:http-xhrio {:method          :post
+                 :uri             (get-uri "/v1/generate")
+                 :params          {:prompt prompt
+                                   :llm_config llm-config}
                  :format          (ajax/json-request-format)
                  :response-format (ajax/json-response-format {:keywords? true})
                  :on-success      on-success
@@ -33,10 +33,23 @@
 (reg-event-fx
  ::v1-metadata
  []
- (fn [_ [_ & {:keys [on-success on-failure]}]]
-   {:http-xhrio {:method :post
-                 :uri (get-uri "/v1/metadata")
-                 :format          (ajax/json-request-format)
-                 :response-format (ajax/json-response-format {:keywords? true})
+ (fn [_ [_ json {:keys [on-success on-failure]}]]
+   {:http-xhrio {:method          :post
+                 :uri             (get-uri "/v1/metadata")
+                 :params           json
+                 :format          (ajax/text-request-format)
+                 :response-format (ajax/text-response-format)
+                 :on-success      on-success
+                 :on-failure      on-failure}}))
+
+(reg-event-fx
+ ::v1-generate-raw
+ []
+ (fn [_ [_ json & {:keys [on-success on-failure]}]]
+   {:http-xhrio {:method          :post
+                 :uri             (get-uri "/v1/generate")
+                 :params          json
+                 :format          (ajax/text-request-format)
+                 :response-format (ajax/text-response-format)
                  :on-success      on-success
                  :on-failure      on-failure}}))
