@@ -150,10 +150,6 @@ def main() -> int:
         f.write("-r nightly-requirements.txt\n-e .[all]\n")
         f.writelines([f"{v.to_str()}\n" for v in _NIGHTLY_MAPPING.values() if v.requires_gpu])
 
-    os.system("git update-index -q --refresh")
-    if os.system("git diff-index --quiet HEAD -- nightly-requirements.txt") == 0 and shutil.which("taplo"):
-        return os.system(f"taplo fmt {os.path.join(ROOT, 'pyproject.toml')}")
-
     return 0
 
 
