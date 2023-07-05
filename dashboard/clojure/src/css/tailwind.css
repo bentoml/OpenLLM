@@ -40,6 +40,6 @@
 
     /* Chrome, Safari and Opera */
     .scrollbar::-webkit-scrollbar-thumb:hover {
-      background: #be185d;
+      background: #333333;
     }
 }

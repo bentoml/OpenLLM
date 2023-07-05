@@ -12,7 +12,7 @@
   []
   (let [value (rf/subscribe [::subs/playground-input-value])]
     (fn []
-      [:textarea {:class "pt-3 appearance-none w-full h-64 block border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm"
+      [:textarea {:class "pt-3 appearance-none w-full h-64 block border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm scrollbar"
                   :value @value
                   :on-change #(rf/dispatch [::events/set-prompt-input (.. % -target -value)])}])))
 
@@ -46,7 +46,7 @@
     (fn []
       [:div
        [ui/headline "Response" 0]
-       [:textarea {:class "pt-3 mt-1 appearance-none w-full h-64 block border bg-gray-200 border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm"
+       [:textarea {:class "pt-3 mt-1 appearance-none w-full h-64 block border bg-gray-200 border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm scrollbar"
                    :value @last-response
                    :disabled true}]])))
 

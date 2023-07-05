@@ -43,7 +43,7 @@
 (defn request-input-field
   "The input field for the data to send to the backend."
   [selected-api value]
-  [:textarea {:class "pt-3 mt-1 font-mono appearance-none w-full h-64 block border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm"
+  [:textarea {:class "pt-3 mt-1 font-mono appearance-none w-full h-64 block border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm scrollbar"
               :value value
               :on-change #(rf/dispatch [::events/set-input-value selected-api (.. % -target -value)])}])
 
