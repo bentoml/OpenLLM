@@ -70,7 +70,7 @@
                      :right (if @side-bar-open?
                               "20rem"
                               "0")}}
-       
+
         [icon-button {:on-click #(do (rf/dispatch [::events/clear-chat-history])
                                      (rf/dispatch [::persistence/clear-chat-history]))
                       :size "small"
