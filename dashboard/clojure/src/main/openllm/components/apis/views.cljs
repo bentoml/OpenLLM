@@ -1,7 +1,7 @@
 (ns openllm.components.apis.views
   (:require [openllm.components.apis.events :as events]
             [openllm.components.apis.subs :as subs]
-            [openllm.components.apis.data :as data] 
+            [openllm.components.apis.data :as data]
             [openllm.components.common.views :as ui]
             [re-highlight.core :as hl]
             [re-frame.core :as rf]
