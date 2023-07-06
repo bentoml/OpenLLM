@@ -21,7 +21,7 @@
 (defn parameter-slider
   "Renders a slider with an input field next to it."
   [id value]
-  (let [min-max (id db/parameter-min-max) 
+  (let [min-max (id db/parameter-min-max)
         on-change #(rf/dispatch [::events/set-model-config-parameter id (if (num-type? id)
                                                                             (parse-long (.. % -target -value))
                                                                             (parse-double (.. % -target -value)))])]
