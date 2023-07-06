@@ -18,7 +18,11 @@
     "tailwindcss": "^3.3.2"
   },
   "dependencies": {
-    "@headlessui/react": "^1.7.7",
+    "@emotion/react": "^11.10.6",
+    "@emotion/styled": "^11.11.0",
+    "@mui/icons-material": "^5.13.7",
+    "@mui/base": "5.0.0-alpha.120",
+    "@mui/material": "5.11.12",
     "@tailwindcss/forms": "^0.5.3",
     "create-react-class": "15.7.0",
     "cross-env": "^7.0.3",

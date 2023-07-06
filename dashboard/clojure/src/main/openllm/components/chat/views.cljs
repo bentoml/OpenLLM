@@ -6,7 +6,10 @@
             [openllm.subs :as root-subs]
             [openllm.components.chat.views :as views]
             [openllm.api.persistence :as persistence]
-            [openllm.components.common.views :as ui]))
+            [openllm.components.common.views :as ui]
+            [reagent-mui.material.icon-button :refer [icon-button]]
+            [reagent-mui.icons.delete :as delete-icon]
+            [reagent-mui.icons.design-services :as ds-icon]))
 
 (defn chat-controls
   "The chat input field and the send button."
@@ -28,9 +31,10 @@
                    :id "chat-input"}]
        [:div {:class "grid grid-rows-1"}
         [ui/tooltip
-         [:button {:class "py-1 px-2 text-xl"
-                   :on-click #(js/window.alert "not implemented")
-                   :type "button"} "📋"]
+         [icon-button {:class "py-1 px-2 text-xl"
+                       :on-click #(js/window.alert "not implemented")
+                       :color "secondary"}
+          [ds-icon/design-services]]
          "Edit prompt layout"]
         [:button {:class "mt-1 px-4 py-2 block"
                   :on-click on-send-click
@@ -70,9 +74,10 @@
                               "20rem"
                               "0")}}
        [ui/tooltip
-        [:button {:class "bg-gray-200 hover:bg-black rounded block text-xl font-bold border border-gray-500"
-                  :on-click #(do (rf/dispatch [::events/clear-chat-history])
-                                 (rf/dispatch [::persistence/clear-chat-history]))} "✖"]
+        [icon-button {:on-click #(do (rf/dispatch [::events/clear-chat-history])
+                                     (rf/dispatch [::persistence/clear-chat-history]))
+                      :size "small"}
+         [delete-icon/delete]]
         "Clear chat history"]])))
 
 (defn chat-tab-contents
