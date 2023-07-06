@@ -34,7 +34,7 @@
                       "file:cursor-pointer file:border-0 file:hover:bg-gray-950 file:mr-4 file:py-2 file:px-4 file:text-white")}]]
        [:div {:class "mt-3 flex justify-end space-x-2"}
         [button {:type "button"
-                 :variant "outlined" 
+                 :variant "outlined"
                  :on-click #(rf/dispatch [::events/set-prompt-input ""])} "Clear"]
         [button {:type "button"
                  :variant "outlined"

@@ -35,7 +35,7 @@
         [:div {:class "items-start"}
          [icon-button {:on-click #(js/window.alert "not implemented")
                        :color "primary"}
-          [ds-icon/design-services]]] 
+          [ds-icon/design-services]]]
         [button {:on-click on-send-click
                  :variant "outlined"
                  :end-icon (r/as-element [send-icon/send])
