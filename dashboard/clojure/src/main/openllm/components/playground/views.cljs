@@ -4,7 +4,10 @@
             [openllm.api.components :as api-components]
             [openllm.components.common.views :as ui]
             [openllm.subs :as root-subs]
-            [re-frame.core :as rf]))
+            [re-frame.core :as rf]
+            [reagent-mui.material.button :refer [button]]
+            [reagent-mui.icons.send :as send-icon]
+            [reagent.core :as r]))
 
 (defn input-field
   "The input field for the prompt to send to the backend."
@@ -29,13 +32,14 @@
          {:callback-event ::events/set-prompt-input
           :class (str "w-7/12 mt-3 rounded cursor-pointer bg-gray-600 text-white hover:bg-gray-700 file:bg-gray-900 "
                       "file:cursor-pointer file:border-0 file:hover:bg-gray-950 file:mr-4 file:py-2 file:px-4 file:text-white")}]]
-       [:div {:class "mt-3 flex justify-end"}
-        [:button {:class "px-4 py-2 mr-2"
-                  :type "button"
-                  :on-click #(rf/dispatch [::events/set-prompt-input ""])} "Clear"]
-        [:button {:class "px-4 py-2"
-                  :type "button"
-                  :on-click #(rf/dispatch [::events/on-send-button-click @input-value @llm-config])} "Send"]]])))
+       [:div {:class "mt-3 flex justify-end space-x-2"}
+        [button {:type "button"
+                 :variant "outlined" 
+                 :on-click #(rf/dispatch [::events/set-prompt-input ""])} "Clear"]
+        [button {:type "button"
+                 :variant "outlined"
+                 :end-icon (r/as-element [send-icon/send])
+                 :on-click #(rf/dispatch [::events/on-send-button-click @input-value @llm-config])} "Send"]]])))
 
 (defn response-area
   "The latest response retrieved from the backend will be displayed in

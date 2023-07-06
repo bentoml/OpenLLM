@@ -14,8 +14,13 @@
               [openllm.api.http]))
 
 (def openllm-theme
-  {:palette {:primary   colors/grey
-             :secondary colors/deep-purple}})
+  {:palette {:primary   {:main (:black colors/common)
+                         :light (get colors/grey 800)
+                         :dark (get colors/deep-purple 900)}
+             :secondary {:main (get colors/deep-purple 700)
+                         :light (get colors/deep-purple 400)
+                         :dark (get colors/deep-purple 900)}
+             :error     colors/red}})
 
 
 (defn app

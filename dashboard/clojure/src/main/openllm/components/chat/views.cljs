@@ -7,8 +7,11 @@
             [openllm.components.chat.views :as views]
             [openllm.api.persistence :as persistence]
             [reagent-mui.material.icon-button :refer [icon-button]]
+            [reagent-mui.material.button :refer [button]]
             [reagent-mui.icons.delete :as delete-icon]
-            [reagent-mui.icons.design-services :as ds-icon]))
+            [reagent-mui.icons.design-services :as ds-icon]
+            [reagent-mui.icons.send :as send-icon]
+            [reagent.core :as r]))
 
 (defn chat-controls
   "The chat input field and the send button."
@@ -18,7 +21,7 @@
         on-change #(rf/dispatch [::events/set-chat-input-value (.. % -target -value)])
         on-send-click #(rf/dispatch [::events/on-send-button-click @chat-input-sub @llm-config])]
     (fn chat-controls []
-      [:form {:class "flex items-center justify-between"}
+      [:form {:class "flex justify-end"}
        [:textarea {:class "py-1 h-20 w-[calc(100%_-_80px)] block"
                    :style {:resize "none"}
                    :placeholder "Type your message..."
@@ -28,14 +31,15 @@
                                    (when (and (= (.-charCode e) 13) (not (.-shiftKey e)))
                                      (on-send-click)))
                    :id "chat-input"}]
-       [:div {:class "grid grid-rows-1"}
-         [icon-button {:class "py-1 px-2 text-xl"
-                       :on-click #(js/window.alert "not implemented")
-                       :color "secondary"}
-          [ds-icon/design-services]]]
-        [:button {:class "mt-1 px-4 py-2 block"
-                  :on-click on-send-click
-                  :type "button"} "Send"]])))
+       [:div {:class "grid grid-rows-2 ml-1.5"}
+        [:div {:class "items-start"}
+         [icon-button {:on-click #(js/window.alert "not implemented")
+                       :color "primary"}
+          [ds-icon/design-services]]] 
+        [button {:on-click on-send-click
+                 :variant "outlined"
+                 :end-icon (r/as-element [send-icon/send])
+                 :color "primary"} "Send"]]])))
 
 (defn user->extra-bubble-style
   "Produces additional style attributes for a chatbubble contingent upon
@@ -70,11 +74,10 @@
                      :right (if @side-bar-open?
                               "20rem"
                               "0")}}
-       
         [icon-button {:on-click #(do (rf/dispatch [::events/clear-chat-history])
                                      (rf/dispatch [::persistence/clear-chat-history]))
                       :size "small"
-                      :color "primary"}
+                      :color "error"}
          [delete-icon/delete]]])))
 
 (defn chat-tab-contents

@@ -5,6 +5,9 @@
             [openllm.components.common.views :as ui]
             [re-highlight.core :as hl]
             [re-frame.core :as rf]
+            [reagent-mui.material.button :refer [button]]
+            [reagent-mui.icons.send :as send-icon]
+            [reagent.core :as r]
             ["highlight.js/lib/languages/json" :as json]))
 
 (hl/register-language "json" json)
@@ -53,12 +56,14 @@
   [:div {:class "grid grid-cols-2"}
    "maybe"
    [:div {:class "mt-3 flex justify-end"}
-    [:button {:class "px-4 py-2 mr-2"
-              :type "button"
-              :on-click #(rf/dispatch [::events/set-input-value selected-api ""])} "Clear"]
-    [:button {:class "px-4 py-2"
-              :type "button"
-              :on-click #(rf/dispatch [::events/on-send-button-click selected-api value])} "Send"]]])
+    [button {:type "button"
+             :variant "outlined"
+             :on-click #(rf/dispatch [::events/set-input-value selected-api ""])} "Clear"]
+    [:div {:class "ml-2"}
+     [button {:type "button"
+              :variant "outlined"
+              :end-icon (r/as-element [send-icon/send])
+              :on-click #(rf/dispatch [::events/on-send-button-click selected-api value])} "Send"]]]])
 
 (defn result-area
   "The latest response retrieved from the backend will be displayed in
