@@ -33,7 +33,7 @@
 (reg-sub
  ::human-readable-config
  :<- [::root-subs/model-config]
- (fn [model-config _] 
+ (fn [model-config _]
    (vec (map (fn [[k v]]
                [k {:name (parameter-id->human-readable k)
                    :value v}])
