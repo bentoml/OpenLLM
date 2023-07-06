@@ -59,18 +59,18 @@
 
 (defn parameter-list-entry
   "Renders a single parameter in the sidebar's parameter list."
-  [[parameter-name parameter-value]]
+  [[id {:keys [value name]}]]
   [:div {:class "flex flex-col px-3 py-2 text-sm font-medium text-gray-700"
-         :key (str parameter-name)}
-   [:span {:class "text-gray-500"} parameter-name]
+         :key (str id)}
+   [:span {:class "text-gray-800"} name]
    [:div {:class "mt-1"}
-    [parameter-list-entry-value parameter-name parameter-value]]
+    [parameter-list-entry-value id value]]
    [:hr {:class "mt-6 border-1 border-black border-opacity-10"}]])
 
 (defn parameter-list
   "Renders the parameters in the sidebar."
   []
-  (let [model-config (rf/subscribe [::root-subs/model-config])]
+  (let [model-config (rf/subscribe [::subs/human-readable-config])]
     (fn parameter-list
       []
       (into [:div
