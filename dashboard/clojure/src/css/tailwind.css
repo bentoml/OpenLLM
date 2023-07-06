@@ -59,4 +59,16 @@
     input[type='range']::-ms-thumb {
         @apply appearance-none bg-white border-2 border-gray-400 rounded-full h-4 w-4;
     }
+
+    input[type='number'] {
+        @apply appearance-none text-gray-700 border border-gray-300 shadow-sm focus:ring-gray-500 focus:border-gray-500;
+    }
+
+    input[type='number']::-webkit-outer-spin-button,
+        input[type='number']::-webkit-inner-spin-button,
+        input[type='number'] {
+          -webkit-appearance: none;
+          margin: 0;
+          -moz-appearance: textfield !important;
+        }
 }

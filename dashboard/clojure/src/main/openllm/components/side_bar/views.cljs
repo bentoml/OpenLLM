@@ -1,11 +1,15 @@
 (ns openllm.components.side-bar.views
   (:require [re-frame.core :as rf]
             [openllm.db :as db]
-            [openllm.subs :as root-subs]
             [openllm.components.side-bar.subs :as subs]
             [openllm.components.side-bar.events :as events]
             [openllm.components.common.views :as ui]
             [clojure.string :as str]))
+
+(defn num-type?
+  "Returns true if the parameter is a number, false otherwise."
+  [id]
+  (or (str/includes? (str id) "num") (= id ::db/top_k)))
 
 (defn openllm-tag
   "The 'OpenLLM' tag in the very top right corner of the screen."
@@ -14,57 +18,66 @@
    [:img {:class "ml-10 h-11 w-auto" :src "./static/logo-light.svg" :alt "LOGO"}]
    [:span {:class "text-3xl font-bold text-gray-900 ml-2"} "OpenLLM"]])
 
-(defn parameter-slider-with-input
+(defn parameter-slider
   "Renders a slider with an input field next to it."
-  [name value]
-  (let [min-max (name db/parameter-min-max)
-        num-type? (or (str/includes? (str name) "num") (= name ::db/top_k))
-        on-change #(rf/dispatch [::events/set-model-config-parameter name (if num-type?
+  [id value]
+  (let [min-max (id db/parameter-min-max) 
+        on-change #(rf/dispatch [::events/set-model-config-parameter id (if (num-type? id)
                                                                             (parse-long (.. % -target -value))
                                                                             (parse-double (.. % -target -value)))])]
-    [:div {:class "flex flex-row items-center"}
+    [:div {:class "flex flex-row items-center w-full"}
      [:span {:class "mr-2 text-xs text-gray-500"} (str (first min-max))]
      [:input {:type "range"
               :min (first min-max)
               :max (second min-max)
-              :step (if num-type? 1 0.01)
+              :step (if (num-type? id) 1 0.01)
               :value value
-              :class "w-28"
+              :class "w-full"
               :on-change on-change}]
-     [:span {:class "ml-2 text-xs text-gray-500"} (str (second min-max))]
-     [:input {:type "number"
-              :class "w-16 px-1 py-1 text-xs text-gray-700 border border-gray-300 rounded shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm ml-auto"
-              :step (if num-type? 1 0.01)
-              :value value
-              :on-change on-change}]]))
+     [:span {:class "ml-2 text-xs text-gray-500"} (str (second min-max))]]))
+
+(defn parameter-small-input
+  "Renders a small input field, used in combination with the sliders."
+  [id value]
+  (let [on-change #(rf/dispatch [::events/set-model-config-parameter id (if (num-type? id)
+                                                                          (parse-long (.. % -target -value))
+                                                                          (parse-double (.. % -target -value)))])]
+    [:input {:type "number"
+             :class "display-none absolute right-6 w-12 px-0 py-0 pr-0.5 text-xs text-center"
+             :step (if (num-type? id) 1 0.01)
+             :value value
+             :on-change on-change}]))
 
 (defn parameter-checkbox
   "Renders a checkbox."
-  [name value]
+  [id value]
   [:input {:type "checkbox"
            :checked value
            :class "h-4 w-4 text-gray-600 focus:ring-gray-500 border-gray-300 rounded"
-           :on-change #(rf/dispatch [::events/set-model-config-parameter name (not value)])}])
+           :on-change #(rf/dispatch [::events/set-model-config-parameter id (not value)])}])
 
 (defn parameter-list-entry-value
-  [name value]
+  [id value]
   (cond
-    (contains? db/parameter-min-max name) [parameter-slider-with-input name value]
-    (boolean? value) [parameter-checkbox name value]
+    (contains? db/parameter-min-max id) [:div {:class "mt-1"} [parameter-slider id value]]
+    (boolean? value) [:div {:class "mt-1"} [parameter-checkbox id value]]
     :else
-    [:input {:type "number"
-             :class "px-1 py-1 text-xs text-gray-700 border border-gray-300 rounded shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm w-full"
-             :value value
-             :on-change #(rf/dispatch [::events/set-model-config-parameter name (int (.. % -target -value))])}]))
+    [:div {:class "mt-1"}
+     [:input {:type "number"
+              :class "px-1 py-1 text-xs rounded w-full"
+              :value value
+              :on-change #(rf/dispatch [::events/set-model-config-parameter id (int (.. % -target -value))])}]]))
 
 (defn parameter-list-entry
   "Renders a single parameter in the sidebar's parameter list."
   [[id {:keys [value name]}]]
   [:div {:class "flex flex-col px-3 py-2 text-sm font-medium text-gray-700"
          :key (str id)}
-   [:span {:class "text-gray-800"} name]
-   [:div {:class "mt-1"}
-    [parameter-list-entry-value id value]]
+   [:label {:class "flex flex-row items-center"}
+    name
+    (when (contains? db/parameter-min-max id)
+      [parameter-small-input id value])]
+   [parameter-list-entry-value id value]
    [:hr {:class "mt-6 border-1 border-black border-opacity-10"}]])
 
 (defn parameter-list
@@ -92,7 +105,7 @@
 (defn sidebar-expanded
   "The render function of the sidebar when it is expanded."
   []
-  [:div {:class "flex flex-col w-80 border-r border-gray-200 pt-5 pb-4 bg-gray-200"} ;; sidebar div + background
+  [:div {:class "flex flex-col w-80 border-r border-gray-200 pt-5 pb-4 bg-gray-50"} ;; sidebar div + background
    [openllm-tag]
    [:hr {:class "my-5 border-1 border-black"}]
    [ui/headline "Parameters"]

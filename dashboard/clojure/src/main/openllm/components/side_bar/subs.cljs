@@ -1,5 +1,6 @@
 (ns openllm.components.side-bar.subs
-  (:require [openllm.db :as db]
+  (:require [clojure.pprint :as pprint]
+            [openllm.db :as db]
             [openllm.subs :as root-subs]
             [re-frame.core :refer [reg-sub]]))
 
@@ -32,7 +33,8 @@
 (reg-sub
  ::human-readable-config
  :<- [::root-subs/model-config]
- (fn [model-config _]
-   (map (fn [[k v]]
-          [k {:value v :name (parameter-id->human-readable k)}])
-        model-config)))
+ (fn [model-config _] 
+   (vec (map (fn [[k v]]
+               [k {:name (parameter-id->human-readable k)
+                   :value v}])
+             model-config))))
