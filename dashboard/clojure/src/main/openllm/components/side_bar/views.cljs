@@ -4,8 +4,11 @@
             [openllm.components.model-selection.views :as model-selection-view]
             [openllm.components.side-bar.subs :as subs]
             [openllm.components.side-bar.events :as events]
-            [openllm.components.common.views :as ui]
-            [clojure.string :as str]))
+            [openllm.components.common.views :as ui] 
+            [clojure.string :as str]
+            [reagent-mui.icons.keyboard-double-arrow-right :as right-icon]
+            [reagent-mui.icons.keyboard-double-arrow-left :as left-icon]
+            [reagent.core :as r]))
 
 (defn num-type?
   "Returns true if the parameter is a number, false otherwise."
@@ -98,10 +101,13 @@
 (defn sidebar-minimized
   "The render function of the sidebar when it is minimized."
   [open?]
-  [:div {:class "mt-5 h-7 float-left bg-gray-950 hover:bg-gray-800 text-xl rounded rounded-l-2xl rounded-r-none"}
-   [:button {:class "text-xl text-white font-bold"
+  [:div {:class "mt-5 h-7 float-left bg-gray-950 hover:bg-gray-800 rounded-l-2xl rounded-r-none"}
+   [:button {:class "text-white"
              :on-click #(rf/dispatch [::events/toggle-side-bar])}
-    (if open? "→" "←")]])
+    [:div {:class "flex mt-0.5"}
+     (if open?
+       [(r/as-element right-icon/keyboard-double-arrow-right)]
+       [(r/as-element left-icon/keyboard-double-arrow-left)])]]])
 
 (defn side-bar
   "The render function of the toolbar on the very left of the screen"
