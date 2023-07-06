@@ -222,7 +222,7 @@ def workers_per_resource_option(factory: t.Any, build: bool = False):
     for more information. By default, this is set to 1.
 
     > **Note**: ``--workers-per-resource`` will also accept the following strategies:
-    > - ``round_robin``: Similar behaviour when setting ``--workers-per-resource 1``.
+    > - ``round_robin``: Similar behaviour when setting ``--workers-per-resource 1``. This is useful for smaller models.
     > - ``conserved``: This will determine the number of available GPU resources, and only assign
     >   one worker for the LLMRunner. For example, if ther are 4 GPUs available, then ``conserved`` is
     >   equivalent to ``--workers-per-resource 0.25``.

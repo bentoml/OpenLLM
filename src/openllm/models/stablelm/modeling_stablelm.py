@@ -102,5 +102,7 @@ class StableLM(openllm.LLM["transformers.GPTNeoXForCausalLM", "transformers.GPTN
             self.model.cuda()
 
         inputs = t.cast("torch.Tensor", self.tokenizer(prompt, return_tensors="pt")).to(self.device)
-        tokens = self.model.generate(**inputs, **generation_kwargs)
-        return [self.tokenizer.decode(tokens[0], skip_special_tokens=True)]
+
+        with torch.inference_mode():
+            tokens = self.model.generate(**inputs, **generation_kwargs)
+            return [self.tokenizer.decode(tokens[0], skip_special_tokens=True)]

@@ -24,11 +24,14 @@ from .configuration_gpt_neox import DEFAULT_PROMPT_TEMPLATE
 
 
 if t.TYPE_CHECKING:
+    import bentoml
     import transformers  # noqa
     import torch
+    import torch.amp
 else:
     transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
     torch = openllm.utils.LazyLoader("torch", globals(), "torch")
+    torch.amp = openllm.utils.LazyLoader("torch.amp", globals(), "torch.amp")
 
 
 logger = logging.getLogger(__name__)
@@ -36,19 +39,6 @@ logger = logging.getLogger(__name__)
 
 class GPTNeoX(openllm.LLM["transformers.GPTNeoXForCausalLM", "transformers.GPTNeoXTokenizerFast"]):
     __openllm_internal__ = True
-
-    def llm_post_init(self):
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.bettertransformer = True if not torch.cuda.is_available() else False
-
-    @property
-    def import_kwargs(self):
-        model_kwds = {
-            "torch_dtype": torch.float16 if torch.cuda.is_available() else torch.float32,
-            "device_map": "auto" if torch.cuda.is_available() and torch.cuda.device_count() > 1 else None,
-        }
-        tokenizer_kwds: dict[str, t.Any] = {}
-        return model_kwds, tokenizer_kwds
 
     def sanitize_parameters(
         self,
@@ -76,15 +66,24 @@ class GPTNeoX(openllm.LLM["transformers.GPTNeoXForCausalLM", "transformers.GPTNe
         else:
             prompt_text = prompt
 
-        generation_config = {
-            "max_new_tokens": max_new_tokens,
-            "temperature": temperature,
-        }
+        generation_config = {"max_new_tokens": max_new_tokens, "temperature": temperature}
 
         return prompt_text, generation_config, {}
 
+    @property
+    def import_kwargs(self):
+        model_kwds = {"device_map": "auto" if torch.cuda.device_count() > 1 else None}
+        tokenizer_kwds: dict[str, t.Any] = {}
+        return model_kwds, tokenizer_kwds
+
     def postprocess_generate(self, prompt: str, generation_result: list[str], **_: t.Any) -> str:
         return generation_result[0]
+
+    def load_model(self, tag: bentoml.Tag, *args: t.Any, **attrs: t.Any) -> t.Any:
+        model = transformers.AutoModelForCausalLM.from_pretrained(self._bentomodel.path, **attrs)
+        if self.config.use_half_precision:
+            model.half()
+        return model
 
     def generate(self, prompt: str, **attrs: t.Any) -> list[str]:
         from ..._generation import StopOnTokens
@@ -96,12 +95,7 @@ class GPTNeoX(openllm.LLM["transformers.GPTNeoXForCausalLM", "transformers.GPTNe
             "stopping_criteria": transformers.StoppingCriteriaList([StopOnTokens()]),
         }
 
-        if torch.cuda.is_available():
-            if self.config.use_half_precision:
-                self.model.half().cuda()
-            else:
-                self.model.cuda()
-
         inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
-        gen_tokens = self.model.generate(**inputs, **generation_kwargs)
-        return self.tokenizer.batch_decode(gen_tokens)
+        with torch.inference_mode():
+            gen_tokens = self.model.generate(inputs.input_ids, **generation_kwargs)
+            return self.tokenizer.batch_decode(gen_tokens)
