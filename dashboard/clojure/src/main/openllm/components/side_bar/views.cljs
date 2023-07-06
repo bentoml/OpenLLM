@@ -1,6 +1,7 @@
 (ns openllm.components.side-bar.views
   (:require [re-frame.core :as rf]
             [openllm.db :as db]
+            [openllm.components.model-selection.views :as model-selection-view]
             [openllm.components.side-bar.subs :as subs]
             [openllm.components.side-bar.events :as events]
             [openllm.components.common.views :as ui]
@@ -89,30 +90,20 @@
       (into [:div
              (map parameter-list-entry @model-config)]))))
 
-(defn status-display
-  "Displays the current service status at the bottom of the sidebar."
-  [status-good?]
-  (let [status-color (if status-good? "bg-green-500" "bg-red-500")
-        status-text (if status-good? "Operational" "Degraded Performance")]
-    [:div {:class "px-1 mt-1"}
-     [:div {:class "mt-4"}
-      [ui/headline "Service Status"]
-      [:div {:class "space-y-1" :role "group"}
-       [:a {:href "#" :class "group ml-3 flex items-center px-3 py-1 text-sm font-medium text-gray-700 rounded-md"}
-        [:span {:class (str "w-2.5 h-2.5 mr-4 rounded-full " status-color) :aria-hidden "true"}]
-        [:span {:class "truncate"} status-text]]]]]))
 
 (defn sidebar-expanded
   "The render function of the sidebar when it is expanded."
   []
   [:div {:class "flex flex-col w-80 border-r border-gray-200 pt-5 pb-4 bg-gray-50"} ;; sidebar div + background
-   [openllm-tag]
-   [:hr {:class "my-5 border-1 border-black"}]
+   [:div
+    [openllm-tag]
+    [:hr {:class "mt-5 border-1 border-black"}]]
+   [model-selection-view/model-selection]
+   [:hr {:class "mb-2 border-1 border-black"}]
    [ui/headline "Parameters"]
-   [:div {:class "my-4 h-0 flex-1 flex flex-col overflow-y-auto scrollbar"}
-    [:div {:class "px-3 mt-3 relative inline-block text-left"}
-     [parameter-list]]]
-   [status-display true]])
+   [:div {:class "my-0 h-0 flex-1 flex flex-col overflow-y-auto scrollbar"}
+    [:div {:class "px-3 mt-0 relative inline-block text-left"}
+     [parameter-list]]]])
 
 (defn sidebar-minimized
   "The render function of the sidebar when it is minimized."

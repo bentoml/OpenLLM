@@ -1,7 +1,7 @@
 const defaultTheme = require('tailwindcss/defaultTheme')
 
 module.exports = {
-    content: process.env.NODE_ENV == 'production' ? ["./www/js/main.js"] : ["./src/main/**/*.cljs", "./www/js/cljs-runtime/*.js"],
+    content: process.env.NODE_ENV == 'production' ? ["./www/js/main.js"] : ["./src/main/**/*.cljs"/*, "./www/js/cljs-runtime/*.js"*/],
     theme: {
         extend: {
             fontFamily: {

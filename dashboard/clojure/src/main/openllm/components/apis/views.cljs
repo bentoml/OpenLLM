@@ -1,8 +1,7 @@
 (ns openllm.components.apis.views
   (:require [openllm.components.apis.events :as events]
             [openllm.components.apis.subs :as subs]
-            [openllm.components.apis.data :as data]
-            [openllm.components.model-selection.views :as model-selection-view]
+            [openllm.components.apis.data :as data] 
             [openllm.components.common.views :as ui]
             [re-highlight.core :as hl]
             [re-frame.core :as rf]
@@ -87,7 +86,6 @@
   "The contents of the APIs tab."
   []
   [:div {:class "mt-6 px-4 h-[calc(100%-14.5rem)]"}
-   [model-selection-view/model-selection]
    [:div {:class "mt-6 grid-container grid grid-cols-4 h-full"} ;; 4 cols: div 1 will span 1 col, the other one 3
     [:div {:class "col-span-1"}
      [ui/headline "Endpoint" 6]

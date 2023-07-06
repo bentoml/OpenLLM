@@ -1,7 +1,6 @@
 (ns openllm.components.playground.views
   (:require [openllm.components.playground.events :as events]
             [openllm.components.playground.subs :as subs]
-            [openllm.components.model-selection.views :as model-selection-view]
             [openllm.api.components :as api-components]
             [openllm.components.common.views :as ui]
             [openllm.subs :as root-subs]
@@ -56,7 +55,6 @@
    directly."
   []
   [:div {:class "mt-6 px-4"}
-   [model-selection-view/model-selection]
    [:div {:class "mt-4"}
     [input-field]
     [input-field-controls]]
