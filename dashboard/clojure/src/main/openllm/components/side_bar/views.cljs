@@ -12,13 +12,6 @@
   [id]
   (or (str/includes? (str id) "num") (= id ::db/top_k)))
 
-(defn openllm-tag
-  "The 'OpenLLM' tag in the very top right corner of the screen."
-  []
-  [:div {:class "flex items-center flex-shrink-0 px-6"}
-   [:img {:class "ml-10 h-11 w-auto" :src "./static/logo-light.svg" :alt "LOGO"}]
-   [:span {:class "text-3xl font-bold text-gray-900 ml-2"} "OpenLLM"]])
-
 (defn parameter-slider
   "Renders a slider with an input field next to it."
   [id value]
@@ -94,10 +87,7 @@
 (defn sidebar-expanded
   "The render function of the sidebar when it is expanded."
   []
-  [:div {:class "flex flex-col w-80 border-r border-gray-200 pt-5 pb-4 bg-gray-50"} ;; sidebar div + background
-   [:div
-    [openllm-tag]
-    [:hr {:class "mt-5 border-1 border-black"}]]
+  [:div {:class "flex flex-col w-80 border-r border-gray-200 pt-0.5 pb-4 bg-gray-50"} ;; sidebar div + background
    [model-selection-view/model-selection]
    [:hr {:class "mb-2 border-1 border-black"}]
    [ui/headline "Parameters"]
