@@ -24,6 +24,8 @@
   []
   (dom/render [app]
               (.getElementById js/document "app")))
+  (let [root (rdom/create-root (js/document.getElementById "app"))]
+    (rdom/render root [app])))
 
 (defn init
   "This init function is called exactly once when the page loads.
