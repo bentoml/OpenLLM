@@ -19,6 +19,31 @@
             [reagent-mui.icons.delete-forever :as delete-icon]
             [reagent.core :as r]))
 
+(defn- collapse-side-bar-button
+  "The collapse side bar button. Only visible when the side bar is open."
+  []
+  (let [side-bar-open? (rf/subscribe [::side-bar-subs/side-bar-open?])]
+    (fn []
+      [:div {:class "w-full flex justify-end -mr-8"}
+       [icon-button {:on-click #(rf/dispatch [::side-bar-events/toggle-side-bar])
+                     :color "inherit"}
+        (if @side-bar-open?
+          [right-icon/keyboard-double-arrow-right]
+          [left-icon/keyboard-double-arrow-left])]])))
+
+(defn- clear-chat-history-button
+  "The clear chat history button. Only visible when the chat history is not empty
+   and we are in the chat history screen."
+  []
+  (let [active-screen (rf/subscribe [:screen-id])
+        chat-history-empty? (rf/subscribe [::subs/chat-history-empty?])]
+    (fn []
+      (when (and (= @active-screen :chat) (not @chat-history-empty?))
+        [icon-button {:on-click #(do (rf/dispatch [::chat-events/clear-chat-history])
+                                     (rf/dispatch [::persistence/clear-chat-history]))
+                      :size "large"
+                      :color "inherit"}
+         [delete-icon/delete-forever]]))))
 (defn nav-bar
   "Renders the navigation bar."
   []
@@ -29,25 +54,10 @@
      [:div {:class "ml-10"}
       [button {:on-click #(rf/dispatch [:set-screen-id :playground])
                :color "inherit"
-               :start-icon (r/as-element [brush-icon/brush])}
-       "Playground"]]
+               :start-icon (r/as-element [brush-icon/brush])} "Playground"]]
      [:div {:class "ml-3 pl-3 border-l border-gray-800"}
       [button {:on-click #(rf/dispatch [:set-screen-id :chat])
                :color "inherit"
-               :start-icon (r/as-element [chat-icon/chat])}
-       "Conversation"]]
-     (let [side-bar-open? (rf/subscribe [::side-bar-subs/side-bar-open?])]
-       [:div {:class "w-full flex justify-end -mr-8"}
-        (let [active-screen (rf/subscribe [:screen-id])
-              chat-history-empty? (rf/subscribe [::subs/chat-history-empty?])]
-          (when (and (= @active-screen :chat) (not @chat-history-empty?))
-           [icon-button {:on-click #(do (rf/dispatch [::chat-events/clear-chat-history])
-                                        (rf/dispatch [::persistence/clear-chat-history]))
-                         :size "large"
-                         :color "inherit"}
-            [delete-icon/delete-forever]]))
-        [icon-button {:on-click #(rf/dispatch [::side-bar-events/toggle-side-bar])
-                      :color "inherit"}
-         (if @side-bar-open?
-           [right-icon/keyboard-double-arrow-right]
-           [left-icon/keyboard-double-arrow-left])]])]]])
+               :start-icon (r/as-element [chat-icon/chat])} "Conversation"]
+      [clear-chat-history-button]]
+     [collapse-side-bar-button]]]])
