@@ -43,7 +43,7 @@
 (defn request-input-field
   "The input field for the data to send to the backend."
   [selected-api value]
-  [:textarea {:class "pt-3 mt-1 font-mono appearance-none w-full h-64 block border border-gray-300 rounded-none shadow-sm placeholder-gray-400 focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm scrollbar"
+  [:textarea {:class "pt-3 mt-1 font-mono w-full h-64 block"
               :value value
               :on-change #(rf/dispatch [::events/set-input-value selected-api (.. % -target -value)])}])
 
@@ -54,10 +54,10 @@
   [:div {:class "grid grid-cols-2"}
    "maybe"
    [:div {:class "mt-3 flex justify-end"}
-    [:button {:class "px-4 py-2 mr-2 text-white bg-gray-600 rounded hover:bg-gray-700 focus:outline-none"
+    [:button {:class "px-4 py-2 mr-2"
               :type "button"
               :on-click #(rf/dispatch [::events/set-input-value selected-api ""])} "Clear"]
-    [:button {:class "px-4 py-2 text-white bg-gray-600 rounded hover:bg-gray-700 focus:outline-none"
+    [:button {:class "px-4 py-2"
               :type "button"
               :on-click #(rf/dispatch [::events/on-send-button-click selected-api value])} "Send"]]])
 

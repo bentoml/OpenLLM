@@ -12,7 +12,7 @@
   []
   (let [value (rf/subscribe [::subs/playground-input-value])]
     (fn []
-      [:textarea {:class "pt-3 appearance-none w-full h-64 block border border-gray-300 rounded-none shadow-sm placeholder-gray-400 focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm scrollbar"
+      [:textarea {:class "pt-3 w-full h-64 block border"
                   :value @value
                   :on-change #(rf/dispatch [::events/set-prompt-input (.. % -target -value)])}])))
 
@@ -31,10 +31,10 @@
           :class (str "w-7/12 mt-3 rounded cursor-pointer bg-gray-600 text-white hover:bg-gray-700 file:bg-gray-900 "
                       "file:cursor-pointer file:border-0 file:hover:bg-gray-950 file:mr-4 file:py-2 file:px-4 file:text-white")}]]
        [:div {:class "mt-3 flex justify-end"}
-        [:button {:class "px-4 py-2 mr-2 text-white bg-gray-600 rounded hover:bg-gray-700 focus:outline-none"
+        [:button {:class "px-4 py-2 mr-2"
                   :type "button"
                   :on-click #(rf/dispatch [::events/set-prompt-input ""])} "Clear"]
-        [:button {:class "px-4 py-2 text-white bg-gray-600 rounded hover:bg-gray-700 focus:outline-none"
+        [:button {:class "px-4 py-2"
                   :type "button"
                   :on-click #(rf/dispatch [::events/on-send-button-click @input-value @llm-config])} "Send"]]])))
 
@@ -46,7 +46,7 @@
     (fn []
       [:div
        [ui/headline "Response" 0]
-       [:textarea {:class "pt-3 mt-1 appearance-none w-full h-64 block border bg-gray-200 border-gray-300 rounded-none shadow-sm placeholder-gray-400 focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm scrollbar"
+       [:textarea {:class "pt-3 mt-1 w-full h-64 block border bg-gray-200"
                    :value @last-response
                    :disabled true}]])))
 
