@@ -26,15 +26,13 @@
                                                                             (parse-long (.. % -target -value))
                                                                             (parse-double (.. % -target -value)))])]
     [:div {:class "flex flex-row items-center w-full"}
-     [:span {:class "mr-2 text-xs text-gray-500"} (str (first min-max))]
      [:input {:type "range"
               :min (first min-max)
               :max (second min-max)
               :step (if (num-type? id) 1 0.01)
               :value value
-              :class "w-full"
-              :on-change on-change}]
-     [:span {:class "ml-2 text-sm text-gray-500"} (str (second min-max))]]))
+              :class "w-full mt-2 mb-1"
+              :on-change on-change}]]))
 
 (defn parameter-small-input
   "Renders a small input field, used in combination with the sliders."
@@ -56,6 +54,15 @@
            :checked value
            :on-change #(rf/dispatch [::events/set-model-config-parameter id (not value)])}])
 
+(defn parameter-number
+  "Renders a number input field."
+  [id value]
+  [:div {:class "absolute right-5 -mt-0.5"}
+   [:input {:type "text"
+            :class "px-1 py-0 text-xs rounded w-16"
+            :value value
+            :on-change #(rf/dispatch [::events/set-model-config-parameter id (.. % -target -value)])}]])
+
 (defn parameter-list-entry
   "Renders a single parameter in the sidebar's parameter list."
   [[id {:keys [value name]}]]
@@ -68,11 +75,7 @@
     (when (boolean? value)
       [parameter-checkbox id value])
     (when (and (not (contains? db/parameter-min-max id)) (not (boolean? value)))
-      [:div {:class "absolute right-5"}
-       [:input {:type "text"
-                :class "px-1 py-0 text-xs rounded w-16"
-                :value value
-                :on-change #(rf/dispatch [::events/set-model-config-parameter id (.. % -target -value)])}]])]
+      [parameter-number id value])]
    (when (contains? db/parameter-min-max id)
      [:div {:class "mt-0.5"} [parameter-slider id value]])
    [:hr {:class "mt-1.5 border-1 border-gray-100"}]])
