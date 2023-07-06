@@ -78,6 +78,14 @@ def lenient_issubclass(cls: t.Any, class_or_tuple: type[t.Any] | tuple[type[t.An
 def gpu_count() -> tuple[int, ...]:
     from bentoml._internal.resource import NvidiaGpuResource
 
+    cuda_visible_devices = os.environ.get("CUDA_VISIBLE_DEVICES", None)
+    if cuda_visible_devices is not None:
+        if "," in cuda_visible_devices:
+            available_gpu = tuple(int(i) for i in cuda_visible_devices.split(","))
+        else:
+            available_gpu = tuple(int(i) for i in cuda_visible_devices.split())
+        return available_gpu
+
     return tuple(NvidiaGpuResource.from_system())
 
 
