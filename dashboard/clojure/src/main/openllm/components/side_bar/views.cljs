@@ -34,7 +34,7 @@
               :value value
               :class "w-full"
               :on-change on-change}]
-     [:span {:class "ml-2 text-xs text-gray-500"} (str (second min-max))]]))
+     [:span {:class "ml-2 text-sm text-gray-500"} (str (second min-max))]]))
 
 (defn parameter-small-input
   "Renders a small input field, used in combination with the sliders."
@@ -43,7 +43,7 @@
                                                                           (parse-long (.. % -target -value))
                                                                           (parse-double (.. % -target -value)))])]
     [:input {:type "number"
-             :class "display-none absolute right-6 w-12 px-0 py-0 pr-0.5 text-xs text-center"
+             :class "display-none absolute right-5 w-12 px-0 py-0 pr-0.5 text-xs text-center"
              :step (if (num-type? id) 1 0.01)
              :value value
              :on-change on-change}]))
@@ -52,33 +52,30 @@
   "Renders a checkbox."
   [id value]
   [:input {:type "checkbox"
+           :class "ml-6 mt-1"
            :checked value
-           :class "h-4 w-4 text-gray-600 focus:ring-gray-500 border-gray-300 rounded"
            :on-change #(rf/dispatch [::events/set-model-config-parameter id (not value)])}])
-
-(defn parameter-list-entry-value
-  [id value]
-  (cond
-    (contains? db/parameter-min-max id) [:div {:class "mt-1"} [parameter-slider id value]]
-    (boolean? value) [:div {:class "mt-1"} [parameter-checkbox id value]]
-    :else
-    [:div {:class "mt-1"}
-     [:input {:type "number"
-              :class "px-1 py-1 text-xs rounded w-full"
-              :value value
-              :on-change #(rf/dispatch [::events/set-model-config-parameter id (int (.. % -target -value))])}]]))
 
 (defn parameter-list-entry
   "Renders a single parameter in the sidebar's parameter list."
   [[id {:keys [value name]}]]
-  [:div {:class "flex flex-col px-3 py-2 text-sm font-medium text-gray-700"
+  [:div {:class "flex flex-col px-2 py-1"
          :key (str id)}
-   [:label {:class "flex flex-row items-center"}
+   [:label {:class "flex w-fit text-xs"}
     name
     (when (contains? db/parameter-min-max id)
-      [parameter-small-input id value])]
-   [parameter-list-entry-value id value]
-   [:hr {:class "mt-6 border-1 border-black border-opacity-10"}]])
+      [parameter-small-input id value])
+    (when (boolean? value)
+      [parameter-checkbox id value])
+    (when (and (not (contains? db/parameter-min-max id)) (not (boolean? value)))
+      [:div {:class "absolute right-5"}
+       [:input {:type "text"
+                :class "px-1 py-0 text-xs rounded w-16"
+                :value value
+                :on-change #(rf/dispatch [::events/set-model-config-parameter id (.. % -target -value)])}]])]
+   (when (contains? db/parameter-min-max id)
+     [:div {:class "mt-0.5"} [parameter-slider id value]])
+   [:hr {:class "mt-1.5 border-1 border-gray-100"}]])
 
 (defn parameter-list
   "Renders the parameters in the sidebar."

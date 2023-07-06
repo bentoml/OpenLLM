@@ -11,6 +11,11 @@ module.exports = {
 
         /* These basically behave like the h1, h2, h3, etc. tags in HTML */
         fontSize: {
+            'sm': ['1.0rem', {
+                lineHeight: '1.5rem',
+                letterSpacing: '0.00em',
+                fontWeight: '400',
+            }],
             'xl': ['1.25rem', {
                 lineHeight: '1.75rem',
                 letterSpacing: '-0.01em',

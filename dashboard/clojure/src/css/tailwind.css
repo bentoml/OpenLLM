@@ -8,13 +8,21 @@
     }
 
     button[type='button'] {
-        @apply text-white bg-gray-600 rounded hover:bg-gray-700 focus:outline-none;
+        @apply text-white bg-gray-950 rounded hover:bg-gray-800 focus:outline-none;
     }
 
     input[type='range'] {
         height: 0.25rem;
         @apply appearance-none bg-gray-900 rounded-md;
-    }      
+    }
+
+    select {
+        @apply appearance-none text-sm border-gray-300 focus:outline-none focus:ring-gray-500 focus:border-gray-500;
+    }
+
+    input[type='checkbox'] {
+        @apply appearance-none w-4 h-4 border border-gray-400 checked:bg-gray-900 checked:border-transparent focus:outline-none focus:ring-gray-500 focus:border-gray-500;
+    }
 
     input[type='range']::-webkit-slider-thumb {
         @apply appearance-none bg-white border-2 border-gray-900 border-solid rounded-full h-4 w-4 mt-px hover:bg-gray-200;
