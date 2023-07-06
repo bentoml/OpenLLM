@@ -47,6 +47,6 @@
        [:div {:class "flex flex-col flex-1 w-screen"}
         [:main {:class "flex-1 relative z-0 overflow-hidden focus:outline-none" :tabIndex "0"}
          [nav-bar-views/nav-bar]
-         [:div {:class "mt-2 pr-0.5 pl-4 w-full h-full"} 
+         [:div {:class "mt-2 pr-0.5 pl-4 w-full h-full"}
           [tab-content @screen-id]]]]
        [side-bar-views/side-bar]])))
