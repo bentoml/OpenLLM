@@ -5,6 +5,8 @@
             [openllm.events :as root-events]
             [openllm.components.side-bar.events :as side-bar-events]
             [openllm.components.side-bar.subs :as side-bar-subs]
+            [openllm.components.chat.events :as chat-events]
+            [openllm.api.persistence :as persistence]
             [reagent-mui.icons.chat :as chat-icon]
             [reagent-mui.icons.brush :as brush-icon]
             [reagent-mui.material.app-bar :refer [app-bar]]
@@ -14,6 +16,7 @@
             [reagent-mui.material.typography :refer [typography]]
             [reagent-mui.icons.keyboard-double-arrow-right :as right-icon]
             [reagent-mui.icons.keyboard-double-arrow-left :as left-icon]
+            [reagent-mui.icons.delete-forever :as delete-icon]
             [reagent.core :as r]))
 
 (defn nav-bar
@@ -23,7 +26,7 @@
    [app-bar {:position "static"}
     [toolbar {:variant "dense"}
      [typography {:variant "h6"} "OpenLLM"]
-     [:div {:class "ml-64"}
+     [:div {:class "ml-10"}
       [button {:on-click #(rf/dispatch [:set-screen-id :playground])
                :color "inherit"
                :start-icon (r/as-element [brush-icon/brush])}
@@ -35,6 +38,14 @@
        "Conversation"]]
      (let [side-bar-open? (rf/subscribe [::side-bar-subs/side-bar-open?])]
        [:div {:class "w-full flex justify-end -mr-8"}
+        (let [active-screen (rf/subscribe [:screen-id])
+              chat-history-empty? (rf/subscribe [::subs/chat-history-empty?])]
+          (when (and (= @active-screen :chat) (not @chat-history-empty?))
+           [icon-button {:on-click #(do (rf/dispatch [::chat-events/clear-chat-history])
+                                        (rf/dispatch [::persistence/clear-chat-history]))
+                         :size "large"
+                         :color "inherit"}
+            [delete-icon/delete-forever]]))
         [icon-button {:on-click #(rf/dispatch [::side-bar-events/toggle-side-bar])
                       :color "inherit"}
          (if @side-bar-open?

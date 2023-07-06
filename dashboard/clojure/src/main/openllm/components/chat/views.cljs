@@ -64,27 +64,10 @@
                        [:p {:class (if (= user :model) "text-gray-700" "text-gray-950")} text]]]))
                  @history)))))
 
-(defn clear-history-button
-  "The button to clear the chat history."
-  []
-  (let [side-bar-open? (rf/subscribe [::side-bar-subs/side-bar-open?])]
-    (fn []
-      [:div {:class "fixed top-24 h-[calc(100%_-_220px)] pr-1"
-             :style {:zIndex "99"
-                     :right (if @side-bar-open?
-                              "20rem"
-                              "0")}}
-        [icon-button {:on-click #(do (rf/dispatch [::events/clear-chat-history])
-                                     (rf/dispatch [::persistence/clear-chat-history]))
-                      :size "small"
-                      :color "error"}
-         [delete-icon/delete]]])))
-
 (defn chat-tab-contents
   "The component rendered if the chat tab is active."
   []
-  (let [chat-empty? (rf/subscribe [::subs/chat-history-empty?])
-        side-bar-open? (rf/subscribe [::side-bar-subs/side-bar-open?])]
+  (let [side-bar-open? (rf/subscribe [::side-bar-subs/side-bar-open?])]
     (fn []
       [:div
        [:div {:id "chat-history-container"
@@ -92,8 +75,6 @@
               :style {:scrollBehavior "smooth"}}
         [:div
          [chat-history]]]
-       (when (not @chat-empty?)
-         [clear-history-button])
        [:div {:class (str "bottom-1 fixed w-[calc(100%_-_200px)] mb-2"
                           (if @side-bar-open?
                             " w-[calc(100%_-_350px)]"
