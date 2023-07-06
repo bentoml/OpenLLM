@@ -5,10 +5,7 @@
             [openllm.components.side-bar.subs :as subs]
             [openllm.components.side-bar.events :as events]
             [openllm.components.common.views :as ui] 
-            [clojure.string :as str]
-            [reagent-mui.icons.keyboard-double-arrow-right :as right-icon]
-            [reagent-mui.icons.keyboard-double-arrow-left :as left-icon]
-            [reagent.core :as r]))
+            [clojure.string :as str]))
 
 (defn num-type?
   "Returns true if the parameter is a number, false otherwise."
@@ -98,22 +95,10 @@
     [:div {:class "px-3 mt-0 relative inline-block text-left"}
      [parameter-list]]]])
 
-(defn sidebar-minimized
-  "The render function of the sidebar when it is minimized."
-  [open?]
-  [:div {:class "mt-5 h-7 float-left bg-gray-950 hover:bg-gray-800 rounded-l-2xl rounded-r-none"}
-   [:button {:class "text-white"
-             :on-click #(rf/dispatch [::events/toggle-side-bar])}
-    [:div {:class "flex mt-0.5"}
-     (if open?
-       [(r/as-element right-icon/keyboard-double-arrow-right)]
-       [(r/as-element left-icon/keyboard-double-arrow-left)])]]])
-
 (defn side-bar
   "The render function of the toolbar on the very left of the screen"
   []
   (let [side-bar-open? (rf/subscribe [::subs/side-bar-open?])]
     (fn []
       [:div {:class "hidden lg:flex lg:flex-shrink-0"}
-       [sidebar-minimized @side-bar-open?]
        (when @side-bar-open? [sidebar-expanded])])))

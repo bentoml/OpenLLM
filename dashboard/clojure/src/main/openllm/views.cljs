@@ -1,5 +1,6 @@
 (ns openllm.views
   (:require [re-frame.core :as rf]
+            [openllm.components.nav-bar.views :as nav-bar-views]
             [openllm.components.side-bar.views :as side-bar-views]
             [openllm.components.playground.views :as playground-views]
             [openllm.components.chat.views :as chat-views]
@@ -45,8 +46,7 @@
       [:div {:class "h-screen flex bg-white"}
        [:div {:class "flex flex-col flex-1 w-screen"}
         [:main {:class "flex-1 relative z-0 overflow-hidden focus:outline-none" :tabIndex "0"}
-         [:div {:class "mt-2 pr-0.5 pl-4 w-full h-full"}
-          [:h2 {:class "text-gray-500 text-xs font-medium uppercase tracking-wide"} "Dashboard"]
-          [tabs @screen-id]
+         [nav-bar-views/nav-bar]
+         [:div {:class "mt-2 pr-0.5 pl-4 w-full h-full"} 
           [tab-content @screen-id]]]]
        [side-bar-views/side-bar]])))
