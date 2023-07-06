@@ -42,4 +42,21 @@
     .scrollbar::-webkit-scrollbar-thumb:hover {
       background: #333333;
     }
+
+    input[type='range'] {
+        height: 0.25rem;
+        @apply appearance-none bg-gray-900 rounded-md;
+    }      
+
+    input[type='range']::-webkit-slider-thumb {
+        @apply appearance-none bg-white border-2 border-gray-900 border-solid rounded-full h-4 w-4 mt-px hover:bg-gray-200;
+    }
+    
+    input[type='range']::-moz-range-thumb {
+        @apply appearance-none bg-white border-2 border-gray-900 border-solid rounded-full h-3 w-3 hover:bg-gray-200;
+    }
+    
+    input[type='range']::-ms-thumb {
+        @apply appearance-none bg-white border-2 border-gray-400 rounded-full h-4 w-4;
+    }
 }
