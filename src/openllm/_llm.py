@@ -1129,7 +1129,10 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
         """
         models = models if models is not None else []
 
-        models.append(self._bentomodel)
+        try:
+            models.append(self._bentomodel)
+        except bentoml.exceptions.NotFound:
+            models.append(openllm.serialisation.get(self, auto_import=True))
 
         if scheduling_strategy is None:
             from ._strategies import CascadingResourceStrategy
