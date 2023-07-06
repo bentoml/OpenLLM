@@ -7,9 +7,9 @@
         @apply appearance-none border border-gray-300 rounded-none shadow-sm placeholder-gray-400 focus:outline-none focus:ring-gray-500 focus:border-gray-500 scrollbar;
     }
 
-    button[type='button'] {
+    /*button[type='button'] {
         @apply text-white bg-gray-950 rounded hover:bg-gray-800 focus:outline-none;
-    }
+    }*/
 
     input[type='range'] {
         height: 0.25rem;

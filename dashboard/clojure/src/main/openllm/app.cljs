@@ -1,8 +1,11 @@
 (ns openllm.app
     (:require [openllm.api.persistence :as persistence]
-              [reagent.dom :as dom]
+              [reagent.dom.client :as rdom]
               [openllm.views :as views]
               [re-frame.core :as rf]
+              [reagent-mui.styles :as styles]
+              [reagent-mui.colors :as colors]
+              [reagent-mui.material.css-baseline :refer [css-baseline]]
 
               ;; the following are only required to make the compiler load the namespaces
               [day8.re-frame.http-fx]
@@ -10,20 +13,26 @@
               [openllm.subs]
               [openllm.api.http]))
 
+(def openllm-theme
+  {:palette {:primary   colors/grey
+             :secondary colors/deep-purple}})
+
+
 (defn app
   "The main app component, which is rendered into the DOM. This component
    just wraps the dashboard component, which is the effective root
    component of the application."
-  []
-  [views/dashboard])
+  [] 
+  [:<>
+   [css-baseline] 
+   [styles/theme-provider (styles/create-theme openllm-theme)
+    [views/dashboard]]])
 
 (defn ^:dev/after-load start
   "Starts the app by rendering the app component into the DOM. This
    function is the root rendering function, and is called by the
    `init` function right after the databases are initialized."
   []
-  (dom/render [app]
-              (.getElementById js/document "app")))
   (let [root (rdom/create-root (js/document.getElementById "app"))]
     (rdom/render root [app])))
 

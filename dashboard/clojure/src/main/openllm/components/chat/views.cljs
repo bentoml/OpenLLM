@@ -6,7 +6,6 @@
             [openllm.subs :as root-subs]
             [openllm.components.chat.views :as views]
             [openllm.api.persistence :as persistence]
-            [openllm.components.common.views :as ui]
             [reagent-mui.material.icon-button :refer [icon-button]]
             [reagent-mui.icons.delete :as delete-icon]
             [reagent-mui.icons.design-services :as ds-icon]))
@@ -30,15 +29,13 @@
                                      (on-send-click)))
                    :id "chat-input"}]
        [:div {:class "grid grid-rows-1"}
-        [ui/tooltip
          [icon-button {:class "py-1 px-2 text-xl"
                        :on-click #(js/window.alert "not implemented")
                        :color "secondary"}
-          [ds-icon/design-services]]
-         "Edit prompt layout"]
+          [ds-icon/design-services]]]
         [:button {:class "mt-1 px-4 py-2 block"
                   :on-click on-send-click
-                  :type "button"} "Send"]]])))
+                  :type "button"} "Send"]])))
 
 (defn user->extra-bubble-style
   "Produces additional style attributes for a chatbubble contingent upon
@@ -73,12 +70,12 @@
                      :right (if @side-bar-open?
                               "20rem"
                               "0")}}
-       [ui/tooltip
+       
         [icon-button {:on-click #(do (rf/dispatch [::events/clear-chat-history])
                                      (rf/dispatch [::persistence/clear-chat-history]))
-                      :size "small"}
-         [delete-icon/delete]]
-        "Clear chat history"]])))
+                      :size "small"
+                      :color "primary"}
+         [delete-icon/delete]]])))
 
 (defn chat-tab-contents
   "The component rendered if the chat tab is active."
@@ -86,7 +83,7 @@
   (let [chat-empty? (rf/subscribe [::subs/chat-history-empty?])
         side-bar-open? (rf/subscribe [::side-bar-subs/side-bar-open?])]
     (fn []
-      [:<>
+      [:div
        [:div {:id "chat-history-container"
               :class "overflow-y-scroll mt-6 h-[calc(100%_-_220px)] w-full no-scrollbar"
               :style {:scrollBehavior "smooth"}}
