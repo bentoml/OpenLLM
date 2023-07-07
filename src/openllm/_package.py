@@ -225,7 +225,7 @@ def construct_docker_options(
     env_dict[_env.runtime] = _env.runtime_value
 
     return DockerOptions(
-        cuda_version="11.7",
+        cuda_version="12.0",
         env=env_dict,
         system_packages=["git"],
         dockerfile_template=dockerfile_template,

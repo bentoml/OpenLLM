@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from . import __pycache__ as __pycache__
 from . import auto as auto
 from . import chatglm as chatglm
 from . import dolly_v2 as dolly_v2

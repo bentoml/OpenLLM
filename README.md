@@ -219,7 +219,7 @@ pip install "openllm[flan-t5]"
 <tr>
 
 <td><a href=https://github.com/EleutherAI/gpt-neox>gpt-neox</a></td>
-<td>✅</td>
+<td>❌</td>
 <td>✅</td>
 <td>
 

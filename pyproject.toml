@@ -72,10 +72,10 @@ all = [
     "openllm[falcon]",
     "openllm[mpt]",
     "openllm[starcoder]",
-    "openllm[playground]",
     "openllm[ggml]",
-    "openllm[agents]",
+    "openllm[playground]",
     "openllm[fine-tune]",
+    "openllm[agents]",
     "openllm[flan-t5]",
     "openllm[openai]",
 ]

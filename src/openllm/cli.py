@@ -63,7 +63,7 @@ from .utils import configure_logging
 from .utils import first_not_none
 from .utils import get_debug_mode
 from .utils import get_quiet_mode
-from .utils import gpu_count
+from .utils import gpu_count, dantic
 from .utils import is_peft_available
 from .utils import is_torch_available
 from .utils import is_transformers_supports_agent, is_jupyter_available, is_jupytext_available, is_notebook_available
@@ -83,9 +83,9 @@ if t.TYPE_CHECKING:
     ServeCommand = t.Literal["serve", "serve-grpc"]
     OutputLiteral = t.Literal["json", "pretty", "porcelain"]
 
-    TupleStrAny = tuple[str, ...]
+    TupleStr = tuple[str, ...]
 else:
-    TupleStrAny = tuple
+    TupleStr = tuple
     torch = LazyLoader("torch", globals(), "torch")
 
 
@@ -105,81 +105,22 @@ OPENLLM_FIGLET = """\
 """
 
 
-class NargsOptions(cog.GroupedOption):
-    """An option that supports nargs=-1.
-    Derived from https://stackoverflow.com/a/48394004/8643197
-
-    We mk add_to_parser to handle multiple value that is passed into this specific
-    options.
-    """
-
-    _nargs_parser: click.parser.Option
-    _prev_parser_process: t.Callable[[t.Any, click.parser.ParsingState], None]
-
-    def __init__(self, *args: t.Any, **attrs: t.Any):
-        nargs = attrs.pop("nargs", -1)
-        if nargs != -1:
-            raise OpenLLMException(f"'nargs' is set, and must be -1 instead of {nargs}")
-        super(NargsOptions, self).__init__(*args, **attrs)
-
-    def add_to_parser(self, parser: click.OptionParser, ctx: click.Context) -> None:
-        def _parser(value: t.Any, state: click.parser.ParsingState):
-            # method to hook to the parser.process
-            done = False
-            value = [value]
-            # grab everything up to the next option
-            assert self._nargs_parser is not None
-            while state.rargs and not done:
-                for prefix in self._nargs_parser.prefixes:
-                    if state.rargs[0].startswith(prefix):
-                        done = True
-                if not done:
-                    value.append(state.rargs.pop(0))
-            value = tuple(value)
-
-            # call the actual process
-            assert self._prev_parser_process is not None
-            self._prev_parser_process(value, state)
-
-        retval = super(NargsOptions, self).add_to_parser(parser, ctx)
-        for name in self.opts:
-            our_parser = parser._long_opt.get(name) or parser._short_opt.get(name)
-            if our_parser:
-                self._nargs_parser = our_parser
-                self._prev_parser_process = our_parser.process
-                our_parser.process = _parser
-                break
-        return retval
-
-
 def parse_device_callback(
-    _: click.Context, param: click.Parameter, value: tuple[str, ...] | tuple[t.Literal["all"] | str] | None
-) -> t.Any:
+    ctx: click.Context, param: click.Parameter, value: tuple[tuple[str], ...] | None
+) -> TupleStr | None:
     if value is None:
         return value
 
-    if not LazyType(TupleStrAny).isinstance(value):
-        raise RuntimeError(f"{param} only accept multiple values.")
+    if not LazyType(TupleStr).isinstance(value):
+        ctx.fail(f"{param} only accept multiple values, not {type(value)} (value: {value})")
+
+    el: TupleStr = tuple(i for k in value for i in k)
 
     # NOTE: --device all is a special case
-    if len(value) == 1 and value[0] == "all":
-        return gpu_count()
+    if len(el) == 1 and el[0] == "all":
+        return tuple(map(str, gpu_count()))
 
-    parsed: tuple[str, ...] = ()
-    for v in value:
-        if v == ",":
-            # NOTE: This hits when CUDA_VISIBLE_DEVICES is set
-            continue
-        if "," in v:
-            v = tuple(v.split(","))
-        else:
-            v = tuple(v.split())
-        try:
-            [orjson.loads(_v) for _v in v]
-        except orjson.JSONDecodeError:
-            raise ValueError(f"Device nargs {value} should only contain all numbers for GPU devices.")
-        parsed += v
-    return tuple(filter(lambda x: x, parsed))
+    return el
 
 
 def _echo(text: t.Any, fg: str = "green", _with_style: bool = True, **attrs: t.Any) -> None:
@@ -254,7 +195,10 @@ def parse_workers_per_resource_callback(_: click.Context, param: click.Parameter
         elif value == "conserved":
             return float(1 / len(gpu_count()))
         else:
-            raise ValueError(f"'workers_per_resource' only accept '{_wpr_strategies}' as possible strategies.")
+            try:
+                value = float(value)
+            except ValueError:
+                raise ValueError(f"'workers_per_resource' only accept '{_wpr_strategies}' as possible strategies.")
     return float(value)
 
 
@@ -644,9 +588,8 @@ def start_decorator(
         ),
         cog.optgroup.option(
             "--device",
-            type=tuple,
-            cls=NargsOptions,
-            nargs=-1,
+            type=dantic.CUDA,
+            multiple=True,
             envvar="CUDA_VISIBLE_DEVICES",
             callback=parse_device_callback,
             help=f"Assign GPU devices (if available) for {llm_config['model_name']}.",
@@ -1004,7 +947,6 @@ def start_model(
         return noop_command(group, llm_config, "No GPU available, therefore this command is disabled", **command_attrs)
 
     @group.command(**command_attrs)
-    @llm_config.to_click_options
     @start_decorator(llm_config, serve_grpc=serve_grpc)
     @click.pass_context
     def start_cmd(
@@ -1868,8 +1810,8 @@ def query(
     ).for_model(client.model_name)
 
     if output != "porcelain":
-        _echo("\n==Input==\n", fg="white")
-        _echo(prompt, fg=input_fg, nl=False)
+        _echo("Input prompt: ", nl=False, fg="white")
+        _echo(f"{prompt}", fg="magenta", nl=False)
 
     res = client.query(prompt, return_raw_response=True)
 

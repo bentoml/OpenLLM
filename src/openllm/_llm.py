@@ -1155,7 +1155,7 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
             generate_iterator_sig = first_not_none(signatures.get("generate_iterator"), default=generate_iterator_sig)
 
         class _Runnable(bentoml.Runnable):
-            SUPPORTED_RESOURCES = ("amd.com/gpu", "nvidia.com/gpu", "cpu")
+            SUPPORTED_RESOURCES = ("nvidia.com/gpu", "amd.com/gpu", "cpu")
             SUPPORTS_CPU_MULTI_THREADING = True
 
             def __init__(__self: _Runnable):
