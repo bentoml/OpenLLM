@@ -67,11 +67,10 @@ _import_structure = {
     "_package": ["build"],
     "exceptions": [],
     "_schema": ["GenerationInput", "GenerationOutput", "MetadataOutput"],
-    "utils": [],
+    "utils": ["infer_auto_class"],
     "models": [],
     "client": [],
     "playground": [],
-    "tests": [],
     "serialisation": ["ggml", "transformers"],
     "cli": ["start", "start_grpc"],
     # NOTE: models
@@ -182,7 +181,6 @@ if t.TYPE_CHECKING:
     from . import exceptions as exceptions
     from . import models as models
     from . import playground as playground
-    from . import tests as tests
     from . import serialisation as serialisation
 
     # Specific types import
@@ -195,6 +193,7 @@ if t.TYPE_CHECKING:
     from ._schema import GenerationInput as GenerationInput
     from ._schema import GenerationOutput as GenerationOutput
     from ._schema import MetadataOutput as MetadataOutput
+    from .utils import infer_auto_class as infer_auto_class
     from .cli import start as start
     from .cli import start_grpc as start_grpc
     from .serialisation import ggml as ggml

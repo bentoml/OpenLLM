@@ -45,7 +45,7 @@ else:
 
 if t.TYPE_CHECKING:
     BackendOrderredDict = OrderedDict[str, tuple[t.Callable[[], bool], str]]
-    from .._types import P
+    from .._types import P, LiteralRuntime
 else:
     BackendOrderredDict = OrderedDict
 
@@ -368,7 +368,7 @@ class EnvVarMixin(ReprMixin):
         bettertransformer: str
         runtime: t.Literal["ggml", "transformers"]
 
-        framework_value: t.Literal["pt", "tf", "flax"]
+        framework_value: LiteralRuntime
         quantize_value: str | None
         bettertransformer_value: str | None
         runtime_value: t.Literal["ggml", "transformers"]
@@ -387,7 +387,7 @@ class EnvVarMixin(ReprMixin):
     @overload
     def __getitem__(self, item: t.Literal['runtime']) -> str: ...
     @overload
-    def __getitem__(self, item: t.Literal['framework_value']) -> t.Literal['pt', 'tf', 'flax']: ...
+    def __getitem__(self, item: t.Literal['framework_value']) -> LiteralRuntime: ...
     @overload
     def __getitem__(self, item: t.Literal['quantize_value']) -> str | None: ...
     @overload

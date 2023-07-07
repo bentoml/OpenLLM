@@ -25,6 +25,9 @@ import openllm
 from .base import BaseAsyncClient
 from .base import BaseClient
 
+if t.TYPE_CHECKING:
+    from openllm._types import LiteralRuntime
+
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +50,7 @@ class HTTPClientMixin:
             raise RuntimeError("Malformed service endpoint. (Possible malicious)")
 
     @property
-    def framework(self) -> t.Literal["pt", "flax", "tf"]:
+    def framework(self) -> LiteralRuntime:
         try:
             return self._metadata["framework"]
         except KeyError:

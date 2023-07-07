@@ -71,14 +71,17 @@ from .utils import resolve_user_filepath
 from .utils import set_debug_mode
 from .utils import set_quiet_mode
 
+if hasattr(t, "override"):
+    override = t.override
+else:
+    from typing_extensions import override
 
 if t.TYPE_CHECKING:
     import torch
 
     from ._types import ClickFunctionWrapper
     from ._types import F
-    from ._types import P
-    from .models.auto.factory import _BaseAutoLLMClass
+    from ._types import P, LiteralRuntime
 
     ServeCommand = t.Literal["serve", "serve-grpc"]
     OutputLiteral = t.Literal["json", "pretty", "porcelain"]
@@ -185,7 +188,7 @@ def workers_per_resource_option(factory: t.Any, build: bool = False):
 _wpr_strategies = {"round_robin", "conserved"}
 
 
-def parse_workers_per_resource_callback(_: click.Context, param: click.Parameter, value: str | float | None) -> float:
+def parse_workers_per_resource_callback(ctx: click.Context, _: click.Parameter, value: str | float | None) -> float:
     if value is None:
         return 1.0
 
@@ -198,8 +201,8 @@ def parse_workers_per_resource_callback(_: click.Context, param: click.Parameter
             try:
                 value = float(value)
             except ValueError:
-                raise ValueError(f"'workers_per_resource' only accept '{_wpr_strategies}' as possible strategies.")
-    return float(value)
+                ctx.fail(f"'workers_per_resource' only accept '{_wpr_strategies}' as possible strategies.")
+    return value
 
 
 def quantize_option(factory: t.Any, build: bool = False, model_env: EnvVarMixin | None = None):
@@ -392,6 +395,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
 
         return super().list_commands(ctx)
 
+    @override
     def command(self, *args: t.Any, **attrs: t.Any) -> F[[t.Callable[P, t.Any]], click.Command]:
         """Override the default 'cli.command' with supports for aliases for given command, and it
         wraps the implementation with common parameters.
@@ -437,23 +441,6 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
         # XXX: The current type coercion is not ideal, but we can really
         # loosely define it
         return t.cast("F[[t.Callable[..., t.Any]], click.Command]", wrapper)
-
-    def group(self, *args: t.Any, **kwargs: t.Any) -> t.Callable[[t.Callable[P, t.Any]], click.Group]:
-        aliases = kwargs.pop("aliases", None)
-
-        def decorator(f: t.Callable[P, t.Any]):
-            # create the main group
-            grp = super(BentoMLCommandGroup, self).group(*args, **kwargs)(f)
-
-            if aliases is not None:
-                assert grp.name
-                self._commands[grp.name] = aliases
-                self._aliases.update({k: grp.name for k in aliases})
-
-            return grp
-
-        return decorator
-
 
 @click.group(cls=OpenLLMCommandGroup, context_settings=_CONTEXT_SETTINGS, name="openllm")
 @click.version_option(__version__, "--version", "-v")
@@ -1005,10 +992,7 @@ def start_model(
         if adapter_map:
             _echo(f"OpenLLM will convert '{model_name}' to use provided adapters layers: {list(adapter_map)}")
 
-        llm = t.cast(
-            "_BaseAutoLLMClass",
-            openllm[env.framework_value],  # type: ignore (internal API)
-        ).for_model(
+        llm = openllm.infer_auto_class(env.framework_value).for_model(
             model_name,
             model_id=model_id,
             llm_config=config,
@@ -1100,7 +1084,7 @@ def download_models(
     output: OutputLiteral,
     runtime: t.Literal["ggml", "transformers"],
     machine: bool,
-    implementation: t.Literal["pt", "tf", "flax"] | None,
+    implementation: LiteralRuntime | None,
     quantize: t.Literal["int8", "int4", "gptq"] | None,
 ):
     """Setup LLM interactively.
@@ -1139,11 +1123,8 @@ def download_models(
     if machine:
         output = "porcelain"
 
-    impl = first_not_none(implementation, default=EnvVarMixin(model).framework_value)
-    llm = t.cast(
-        "_BaseAutoLLMClass",
-        openllm[impl],  # type: ignore
-    ).for_model(
+    impl: t.Literal['pt', 'tf', 'flax'] = first_not_none(implementation, default=EnvVarMixin(model).framework_value)
+    llm = openllm.infer_auto_class(impl).for_model(
         model,
         model_id=model_id,
         model_version=model_version,
@@ -1345,10 +1326,7 @@ def build(
         os.environ["OPENLLM_ADAPTER_MAP"] = orjson.dumps(adapter_map).decode()
 
         framework_envvar = llm_config["env"].framework_value
-        llm = t.cast(
-            "_BaseAutoLLMClass",
-            openllm[framework_envvar],  # type: ignore (internal API)
-        ).for_model(
+        llm = openllm.infer_auto_class(framework_envvar).for_model(
             model_name,
             model_id=model_id,
             llm_config=llm_config,
@@ -1498,7 +1476,7 @@ def models(ctx: click.Context, output: OutputLiteral, show_available: bool):
         converted: list[str] = []
         for m in models:
             config = openllm.AutoConfig.for_model(m)
-            runtime_impl: tuple[t.Literal["pt", "flax", "tf"] | str, ...] = ()
+            runtime_impl: tuple[LiteralRuntime, ...] = ()
             if config["model_name"] in openllm.MODEL_MAPPING_NAMES:
                 runtime_impl += ("pt",)
             if config["model_name"] in openllm.MODEL_FLAX_MAPPING_NAMES:
@@ -1542,7 +1520,7 @@ def models(ctx: click.Context, output: OutputLiteral, show_available: bool):
                     str,
                     t.LiteralString,
                     t.LiteralString,
-                    tuple[t.Literal["pt", "flax", "tf"], ...],
+                    tuple[LiteralRuntime, ...],
                 ]
             ] = []
             for m, v in json_data.items():
@@ -1804,11 +1782,6 @@ def query(
     input_fg = "yellow"
     generated_fg = "cyan"
 
-    model = t.cast(
-        "_BaseAutoLLMClass",
-        openllm[client.framework],  # type: ignore (internal API)
-    ).for_model(client.model_name)
-
     if output != "porcelain":
         _echo("Input prompt: ", nl=False, fg="white")
         _echo(f"{prompt}", fg="magenta", nl=False)
@@ -1816,7 +1789,7 @@ def query(
     res = client.query(prompt, return_raw_response=True)
 
     if output == "pretty":
-        formatted = model.postprocess_generate(prompt, res["responses"])
+        formatted = client.llm.postprocess_generate(prompt, res["responses"])
         generated = formatted[len(prompt) :]
         _echo("\n\n==Responses==\n", fg="white")
         _echo(formatted[: len(prompt)], fg=input_fg, nl=False)

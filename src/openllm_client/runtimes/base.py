@@ -35,7 +35,7 @@ else:
 
 if t.TYPE_CHECKING:
     import transformers
-    from openllm.models.auto.factory import _BaseAutoLLMClass
+    from openllm._types import LiteralRuntime
 
     class AnnotatedClient(bentoml.client.Client):
         def health(self, *args: t.Any, **attrs: t.Any) -> t.Any:
@@ -114,7 +114,7 @@ class ClientMixin:
 
     @property
     @abstractmethod
-    def framework(self) -> t.Literal["pt", "flax", "tf"]:
+    def framework(self) -> LiteralRuntime:
         raise NotImplementedError
 
     @property
@@ -135,10 +135,7 @@ class ClientMixin:
     @property
     def llm(self) -> openllm.LLM[t.Any, t.Any]:
         if self.__llm__ is None:
-            self.__llm__ = t.cast(
-                "_BaseAutoLLMClass",
-                openllm[self.framework],  # type: ignore (internal API)
-            ).for_model(self.model_name)
+            self.__llm__ = openllm.infer_auto_class(self.framework).for_model(self.model_name)
         return self.__llm__
 
     @property

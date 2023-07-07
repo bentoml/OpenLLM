@@ -62,8 +62,17 @@ else:
         types.UnionType,
     )
 
+# NOTE: We need to do this so that overload can register
+# correct overloads to typing registry
+if hasattr(t, "get_overloads"):
+    from typing import overload as _overload
+else:
+    from typing_extensions import overload as _overload
+
 if t.TYPE_CHECKING:
-    from .._types import DictStrAny
+    import openllm
+    from .._types import DictStrAny, LiteralRuntime
+    from ..models.auto.factory import _BaseAutoLLMClass
 
 
 def lenient_issubclass(cls: t.Any, class_or_tuple: type[t.Any] | tuple[type[t.Any], ...] | None) -> bool:
@@ -198,6 +207,33 @@ def normalize_attrs_to_model_tokenizer_pair(**attrs: t.Any) -> tuple[DictStrAny,
     return attrs, tokenizer_attrs
 
 
+@_overload
+def infer_auto_class(implementation: t.Literal["pt"]) -> type[openllm.AutoLLM]:
+    ...
+
+
+@_overload
+def infer_auto_class(implementation: t.Literal["tf"]) -> type[openllm.AutoTFLLM]:
+    ...
+
+
+@_overload
+def infer_auto_class(implementation: t.Literal["flax"]) -> type[openllm.AutoFlaxLLM]:
+    ...
+
+
+def infer_auto_class(implementation: LiteralRuntime) -> type[_BaseAutoLLMClass]:
+    if implementation == "tf":
+        from ..models.auto import AutoTFLLM as auto
+    elif implementation == "flax":
+        from ..models.auto import AutoFlaxLLM as auto
+    elif implementation == "pt":
+        from ..models.auto import AutoLLM as auto
+    else:
+        raise RuntimeError(f"Unknown implementation: {implementation} (supported: 'pt', 'flax', 'tf')")
+    return auto
+
+
 # NOTE: The set marks contains a set of modules name
 # that are available above and are whitelisted
 # to be included in the extra_objects map.
@@ -270,6 +306,7 @@ if t.TYPE_CHECKING:
     from . import normalize_attrs_to_model_tokenizer_pair as normalize_attrs_to_model_tokenizer_pair
     from . import generate_context as generate_context
     from . import field_env_key as field_env_key
+    from . import infer_auto_class as infer_auto_class
     from .import_utils import ENV_VARS_TRUE_VALUES as ENV_VARS_TRUE_VALUES
     from .import_utils import OPTIONAL_DEPENDENCIES as OPTIONAL_DEPENDENCIES
     from .import_utils import DummyMetaclass as DummyMetaclass

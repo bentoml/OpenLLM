@@ -73,11 +73,11 @@ all = [
     "openllm[mpt]",
     "openllm[starcoder]",
     "openllm[ggml]",
-    "openllm[playground]",
-    "openllm[fine-tune]",
-    "openllm[agents]",
     "openllm[flan-t5]",
     "openllm[openai]",
+    "openllm[fine-tune]",
+    "openllm[agents]",
+    "openllm[playground]",
 ]
 chatglm = ["cpm-kernels", "sentencepiece"]
 falcon = ["einops", "xformers", "safetensors"]
@@ -246,7 +246,6 @@ omit = [
     "src/openllm/playground/",
     "src/openllm/__about__.py",
     "src/openllm/__main__.py",
-    "src/openllm/tests.py",
     "src/openllm/utils/dummy_*.py",
 ]
 source_pkgs = ["openllm"]

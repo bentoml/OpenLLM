@@ -40,6 +40,8 @@ ListAny = list[t.Any]
 TupleAny = tuple[t.Any, ...]
 P = t.ParamSpec("P")
 O_co = t.TypeVar("O_co", covariant=True)
+LiteralRuntime = t.Literal["pt", "tf", "flax"]
+Ts = t.TypeVarTuple("Ts")
 
 
 class ClickFunctionWrapper(t.Protocol[P, O_co]):

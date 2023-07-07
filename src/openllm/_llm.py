@@ -83,8 +83,8 @@ if t.TYPE_CHECKING:
         LLMRunnable as LLMRunnable,
         LLMInitAttrs,
         AdaptersMapping,
+        LiteralRuntime,
     )
-    from .models.auto.factory import _BaseAutoLLMClass
     from .utils.representation import ReprArgs
 
     DictStrAny = dict[str, t.Any]
@@ -113,7 +113,7 @@ def make_tag(
     model_id: str,
     model_version: str | None = None,
     trust_remote_code: bool = False,
-    implementation: t.Literal["pt", "flax", "tf"] = "pt",
+    implementation: LiteralRuntime = "pt",
     quiet: bool = False,
 ) -> bentoml.Tag:
     """Generate a ``bentoml.Tag`` from a given transformers model name.
@@ -342,7 +342,7 @@ class LLMInterface(ABC, t.Generic[_M, _T]):
     This works synonymous with `trust_remote_code` kwarg in transformers Auto classes. If not passed,
     then by default fallback to config_class['trust_remote_code']
     """
-    __llm_implementation__: t.Literal["pt", "tf", "flax"]
+    __llm_implementation__: LiteralRuntime
     """This is used to determine which implementation that this LLM has. Usually, this will inferred from
     class name, that follows the HuggingFace's naming convention:
 
@@ -391,7 +391,9 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
     config: openllm.LLMConfig
     """The config instance to use for this LLM. This will be created based on config_class and available
     when initialising the LLM."""
+
     quantization_config: transformers.BitsAndBytesConfig | None
+    """Quantisation config for quantised model on the fly."""
 
     _model_id: str
     _runtime: t.Literal["ggml", "transformers"]
@@ -1376,7 +1378,7 @@ def Runner(
     model_name: str,
     ensure_available: bool | None = None,
     init_local: bool = False,
-    implementation: t.Literal["pt", "flax", "tf"] | None = None,
+    implementation: LiteralRuntime | None = None,
     llm_config: openllm.LLMConfig | None = None,
     **attrs: t.Any,
 ) -> LLMRunner:
@@ -1423,10 +1425,7 @@ def Runner(
     if implementation is None:
         implementation = EnvVarMixin(model_name)["framework_value"]
 
-    runner = t.cast(
-        "_BaseAutoLLMClass",
-        openllm[implementation],  # type: ignore (internal API)
-    ).create_runner(
+    runner = openllm.infer_auto_class(implementation).create_runner(
         model_name,
         llm_config=llm_config,
         ensure_available=ensure_available if ensure_available is not None else init_local,
