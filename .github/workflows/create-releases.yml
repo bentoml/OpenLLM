@@ -25,13 +25,6 @@ on:
           - major
           - minor
           - patch
-env:
-  # This special value tells pypi that the user identity is supplied within the token
-  HATCH_INDEX_USER: __token__
-  # Note, the PYPI_API_TOKEN is for the OpenLLM PyPI user, on
-  # https://github.com/bentoml/openllm/settings/secrets/actions
-  HATCH_INDEX_AUTH: ${{ secrets.PYPI_API_TOKEN }}
-# https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#defaultsrun
 defaults:
   run:
     shell: bash --noprofile --norc -exo pipefail {0}
@@ -39,7 +32,6 @@ jobs:
   release:
     if: github.repository_owner == 'bentoml'
     runs-on: ubuntu-latest
-    environment: release
     permissions:
       contents: write
       id-token: write
@@ -88,10 +80,29 @@ jobs:
     needs: release
     name: Create binary/wheels distribution
     uses: bentoml/OpenLLM/.github/workflows/binary-releases.yml@main
+  publish-python:
+    if: github.repository_owner == 'bentoml' && github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags')
+    needs:
+      - binary-distribution
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - name: Download Python artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: python-artifacts
+          path: dist
+      - name: Push Python artifacts to PyPI
+        uses: pypa/gh-action-pypi-publish@v1.8.7
+        with:
+          skip-existing: true
   prepare-for-dev-cycle:
     if: github.repository_owner == 'bentoml'
     needs:
       - release
+      - publish-python
       - binary-distribution
     name: Create release notes and setup for next cycle
     uses: bentoml/OpenLLM/.github/workflows/release-notes.yml@main

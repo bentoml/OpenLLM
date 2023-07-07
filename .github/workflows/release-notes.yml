@@ -25,13 +25,6 @@ on:
       tags:
         required: true
         type: string
-env:
-  # This special value tells pypi that the user identity is supplied within the token
-  HATCH_INDEX_USER: __token__
-  # Note, the PYPI_API_TOKEN is for the OpenLLM PyPI user, on
-  # https://github.com/bentoml/openllm/settings/secrets/actions
-  HATCH_INDEX_AUTH: ${{ secrets.PYPI_API_TOKEN }}
-# https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#defaultsrun
 defaults:
   run:
     shell: bash --noprofile --norc -exo pipefail {0}
