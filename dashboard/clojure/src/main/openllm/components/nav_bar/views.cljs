@@ -41,6 +41,7 @@
                       :size "large"
                       :color "inherit"}
          [delete-icon/delete-forever]]))))
+
 (defn nav-bar
   "Renders the navigation bar."
   []
@@ -56,8 +57,8 @@
       [button {:on-click #(rf/dispatch [:set-screen-id :chat])
                :color "inherit"
                :start-icon (r/as-element [chat-icon/chat])} "Conversation"]]
-      [:div {:class "w-full flex justify-end items-center"}
-       [:div {:class "mr-8"}
-        [clear-chat-history-button]]
-       [:div {:class "-mr-8"}
-        [collapse-side-bar-button]]]]]])
+     [:div {:class "w-full flex justify-end items-center"}
+      [:div {:class "mr-8"}
+       [clear-chat-history-button]]
+      [:div {:class "-mr-8"}
+       [collapse-side-bar-button]]]]]])

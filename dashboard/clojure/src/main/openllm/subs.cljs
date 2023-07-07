@@ -6,6 +6,12 @@
  (fn [db _]
    (:screen-id db)))
 
+;; intended to be used as a parent subscription, not direct use
+(reg-sub
+ :modal-open?-map
+ (fn [db _]
+   (:modal-open? db)))
+
 (reg-sub
  ::model-config
  (fn [db _]

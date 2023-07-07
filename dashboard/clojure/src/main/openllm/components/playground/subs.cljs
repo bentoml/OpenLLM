@@ -10,3 +10,9 @@
  ::last-response
  (fn [db _]
    (:playground-last-response db)))
+
+(reg-sub
+ ::modal-open?
+ :<- [:modal-open?-map]
+ (fn [map _]
+   (:playground (or map {}))))

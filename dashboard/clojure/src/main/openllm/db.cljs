@@ -26,6 +26,7 @@
 
 (s/def ::screen-id keyword?)
 (s/def ::side-bar-open? boolean?)
+(s/def ::modal-open? (s/keys :req-un [::playground boolean?]))
 (s/def ::indexed-db js/Object)
 
 (s/def ::playground-input-value string?)
@@ -91,6 +92,7 @@
 ;; ########################### AGGREGATE ############################
 (s/def ::db (s/keys :req-un [::screen-id
                              ::side-bar-open?
+                             ::modal-open?
                              ::indexed-db
                              ::playground-input-value
                              ::playground-last-response
@@ -140,6 +142,7 @@
    for the registration of `:initialise-db` effect handler."
   {:screen-id :playground
    :side-bar-open? true
+   :modal-open? {:playground false}
    :indexed-db nil
    :playground-input-value ""
    :playground-last-response ""

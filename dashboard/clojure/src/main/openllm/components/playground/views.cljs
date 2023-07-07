@@ -6,6 +6,10 @@
             [openllm.subs :as root-subs]
             [re-frame.core :as rf]
             [reagent-mui.material.button :refer [button]]
+            [reagent-mui.material.modal :refer [modal]]
+            [reagent-mui.material.box :refer [box]]
+            [reagent-mui.material.paper :refer [paper]]
+            [reagent-mui.material.typography :refer [typography]]
             [reagent-mui.icons.send :as send-icon]
             [reagent.core :as r]))
 
@@ -53,12 +57,38 @@
                    :value @last-response
                    :disabled true}]])))
 
+(defn- result-modal
+  "The modal that is shown to display server response in the playground view."
+  []
+  (let [modal-open? (rf/subscribe [::subs/modal-open?])
+        last-response (rf/subscribe [::subs/last-response])]
+    (fn []
+      [modal
+       {:open @modal-open?
+        :on-close #(rf/dispatch [::events/toggle-modal])
+        :aria-labelledby "result-modal-title"
+        :aria-describedby "result-modal-description"
+        :actions [{:label "Close"
+                   :on-click #(rf/dispatch [::events/toggle-modal])}]}
+       [box {:style {:position "absolute"
+                     :width 400,
+                     :top "50%"
+                     :left "50%"
+                     :transform "translate(-50%, -50%)"}}
+        [paper {:elevation 24
+                :style {:padding "20px 30px"}}
+         [typography {:id "result-modal-title"
+                      :variant "h6"} "Response"]
+         [typography {:id "result-modal-description"
+                      :variant "body1"} @last-response]]]])))
+
 (defn playground-tab-contents
   "This function aggregates all contents of the playground tab, and is
    called by the `tab-content` function residing in the `views` namespace
    directly."
   []
   [:div {:class "mt-6 px-4"}
+   [result-modal]
    [:div {:class "mt-4"}
     [input-field]
     [input-field-controls]]
