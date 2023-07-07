@@ -22,12 +22,11 @@
   []
   (let [side-bar-open? (rf/subscribe [::side-bar-subs/side-bar-open?])]
     (fn []
-      [:div {:class "w-full flex justify-end -mr-8"}
-       [icon-button {:on-click #(rf/dispatch [::side-bar-events/toggle-side-bar])
-                     :color "inherit"}
-        (if @side-bar-open?
-          [right-icon/keyboard-double-arrow-right]
-          [left-icon/keyboard-double-arrow-left])]])))
+      [icon-button {:on-click #(rf/dispatch [::side-bar-events/toggle-side-bar])
+                    :color "inherit"}
+       (if @side-bar-open?
+         [right-icon/keyboard-double-arrow-right]
+         [left-icon/keyboard-double-arrow-left])])))
 
 (defn- clear-chat-history-button
   "The clear chat history button. Only visible when the chat history is not empty
@@ -56,6 +55,9 @@
      [:div {:class "ml-3 pl-3 border-l border-gray-800"}
       [button {:on-click #(rf/dispatch [:set-screen-id :chat])
                :color "inherit"
-               :start-icon (r/as-element [chat-icon/chat])} "Conversation"]
-      [clear-chat-history-button]]
-     [collapse-side-bar-button]]]])
+               :start-icon (r/as-element [chat-icon/chat])} "Conversation"]]
+      [:div {:class "w-full flex justify-end items-center"}
+       [:div {:class "mr-8"}
+        [clear-chat-history-button]]
+       [:div {:class "-mr-8"}
+        [collapse-side-bar-button]]]]]])
