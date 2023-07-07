@@ -442,6 +442,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
         # loosely define it
         return t.cast("F[[t.Callable[..., t.Any]], click.Command]", wrapper)
 
+
 @click.group(cls=OpenLLMCommandGroup, context_settings=_CONTEXT_SETTINGS, name="openllm")
 @click.version_option(__version__, "--version", "-v")
 def cli():
@@ -1123,7 +1124,7 @@ def download_models(
     if machine:
         output = "porcelain"
 
-    impl: t.Literal['pt', 'tf', 'flax'] = first_not_none(implementation, default=EnvVarMixin(model).framework_value)
+    impl: t.Literal["pt", "tf", "flax"] = first_not_none(implementation, default=EnvVarMixin(model).framework_value)
     llm = openllm.infer_auto_class(impl).for_model(
         model,
         model_id=model_id,
