@@ -5,7 +5,8 @@
             [openllm.components.side-bar.subs :as subs]
             [openllm.components.side-bar.events :as events]
             [openllm.components.common.views :as ui]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [reagent-mui.material.collapse :refer [collapse]]))
 
 (defn num-type?
   "Returns true if the parameter is a number, false otherwise."
@@ -84,21 +85,23 @@
              (map parameter-list-entry @model-config)]))))
 
 
-(defn sidebar-expanded
-  "The render function of the sidebar when it is expanded."
+(defn side-bar-with-mui-collapse
+  "The sidebar wrapped with a Material UI Collapse component."
   []
-  [:div {:class "flex flex-col w-80 border-r border-gray-200 pt-0.5 pb-4 bg-gray-50"} ;; sidebar div + background
-   [model-selection-view/model-selection]
-   [:hr {:class "mb-2 border-1 border-black"}]
-   [ui/headline "Parameters"]
-   [:div {:class "my-0 h-0 flex-1 flex flex-col overflow-y-auto scrollbar"}
-    [:div {:class "px-3 mt-0 relative inline-block text-left"}
-     [parameter-list]]]])
+  (let [side-bar-open? (rf/subscribe [::subs/side-bar-open?])]
+    (fn []
+      [collapse {:in @side-bar-open?
+                 :orientation "horizontal"}
+       [:div {:class "flex flex-col w-80 border-r border-gray-200 pt-0.5 pb-4 bg-gray-50"} ;; sidebar div + background
+        [model-selection-view/model-selection]
+        [:hr {:class "mb-2 border-1 border-black"}]
+        [ui/headline "Parameters"]
+        [:div {:class "my-0 h-0 flex-1 flex flex-col overflow-y-auto scrollbar"}
+         [:div {:class "px-3 mt-0 relative inline-block text-left"}
+          [parameter-list]]]]])))
 
 (defn side-bar
   "The render function of the toolbar on the very left of the screen"
   []
-  (let [side-bar-open? (rf/subscribe [::subs/side-bar-open?])]
-    (fn []
-      [:div {:class "hidden lg:flex lg:flex-shrink-0"}
-       (when @side-bar-open? [sidebar-expanded])])))
+  [:div {:class "hidden lg:flex lg:flex-shrink-0"}
+   [side-bar-with-mui-collapse]])
