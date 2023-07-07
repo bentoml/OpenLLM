@@ -18,7 +18,7 @@
  (fn [cofx _]
    {:dispatch-sync true
     :fx (let [textareas (js/document.querySelectorAll "textarea")
-              active-screen (get-in cofx [:db :screen-id])] 
+              active-screen (get-in cofx [:db :screen-id])]
           (condp = active-screen
             :playground
             (start-download! "export-playground.txt"
