@@ -1,8 +1,6 @@
 (ns openllm.components.nav-bar.views
   (:require [re-frame.core :as rf]
             [openllm.components.nav-bar.subs :as subs]
-            [openllm.components.nav-bar.events :as events]
-            [openllm.events :as root-events]
             [openllm.components.side-bar.events :as side-bar-events]
             [openllm.components.side-bar.subs :as side-bar-subs]
             [openllm.components.chat.events :as chat-events]

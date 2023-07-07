@@ -5,10 +5,8 @@
             [openllm.components.side-bar.subs :as side-bar-subs]
             [openllm.subs :as root-subs]
             [openllm.components.chat.views :as views]
-            [openllm.api.persistence :as persistence]
             [reagent-mui.material.icon-button :refer [icon-button]]
             [reagent-mui.material.button :refer [button]]
-            [reagent-mui.icons.delete :as delete-icon]
             [reagent-mui.icons.design-services :as ds-icon]
             [reagent-mui.icons.send :as send-icon]
             [reagent.core :as r]))

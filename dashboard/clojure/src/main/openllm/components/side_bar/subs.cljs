@@ -1,6 +1,5 @@
 (ns openllm.components.side-bar.subs
-  (:require [clojure.pprint :as pprint]
-            [openllm.db :as db]
+  (:require [openllm.db :as db]
             [openllm.subs :as root-subs]
             [re-frame.core :refer [reg-sub]]))
 
