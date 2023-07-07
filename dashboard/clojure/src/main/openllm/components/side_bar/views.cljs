@@ -91,10 +91,11 @@
   (let [side-bar-open? (rf/subscribe [::subs/side-bar-open?])]
     (fn []
       [collapse {:in @side-bar-open?
-                 :orientation "horizontal"}
-       [:div {:class "flex flex-col w-80 border-r border-gray-200 pt-0.5 pb-4 bg-gray-50"} ;; sidebar div + background
+                 :orientation "horizontal"
+                 :class "flex flex-col h-full w-80"}
+       [:div {:class "flex flex-col w-80 h-screen border-l border-gray-200 pt-0.5 pb-4 bg-gray-50"}
         [model-selection-view/model-selection]
-        [:hr {:class "mb-2 border-1 border-black"}]
+        [:hr {:class "mb-2 border-1 border-gray-200"}]
         [ui/headline "Parameters"]
         [:div {:class "my-0 h-0 flex-1 flex flex-col overflow-y-auto scrollbar"}
          [:div {:class "px-3 mt-0 relative inline-block text-left"}

@@ -13,32 +13,6 @@
                                 :error out.error
                                 :log out.log}))
 
-(def ^:private log-history-max-length 10000)
-(def ^:private log-history (atom []))
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;             Private API            ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defn- ->log-history-atom!
-  "Adds a given string to the log history atom. Also adds a timestamp
-   to the message string and respects the log level that was used
-   to log the message.
-
-   The maximum length of the log history is determined be the value of
-   `log-history-max-length` for now. After the maximum length is reached,
-   the oldest messages are removed from the log history atom.
-
-   Returns `nil`."
-  [level message-str]
-  (when (> (count @log-history) log-history-max-length)
-    (swap! log-history rest))
-  (swap! log-history conj {:level level
-                           :message message-str
-                           :timestamp (str (js/Date.))})
-  nil)
-
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;             Public API             ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -61,20 +35,10 @@
        (ex-info "Invalid log level. Valid log levels are :debug, :info, :warn, :error and :log."
                 {:level level
                  :original-args args})))
-      (apply log-fn args)
-      (->log-history-atom! level (str args)))
+      (apply log-fn args))
   nil)
 
 
 (comment
   ;; will print a message to the console, level "warn"
-  (log :warn "uptempo hardcore" 200 "bpm, gabber hakken hardcore") ;; => nil
-
-  ;; demonstates how a log looks when it got put into the log history atom
-  @log-history ;; => [{:level :warn,
-               ;;      :message "uptempo hardcore 200 bpm, gabber hakken hardcore",
-               ;;      :timestamp "Thu Apr 08 2021 16:20:00 GMT+0200 (Central European Summer Time)"}]
-
-
-  ;; clear the log history atom
-  (reset! log-history []))
+  (log :warn "uptempo hardcore" 200 "bpm, gabber hakken hardcore")) ;; => nil

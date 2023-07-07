@@ -1,6 +1,7 @@
 (ns openllm.components.nav-bar.views
   (:require [re-frame.core :as rf]
             [openllm.components.nav-bar.subs :as subs]
+            [openllm.components.nav-bar.events :as events]
             [openllm.components.side-bar.events :as side-bar-events]
             [openllm.components.side-bar.subs :as side-bar-subs]
             [openllm.components.chat.events :as chat-events]
@@ -15,6 +16,7 @@
             [reagent-mui.icons.keyboard-double-arrow-right :as right-icon]
             [reagent-mui.icons.keyboard-double-arrow-left :as left-icon]
             [reagent-mui.icons.delete-forever :as delete-icon]
+            [reagent-mui.icons.ios-share :as share-icon]
             [reagent.core :as r]))
 
 (defn- collapse-side-bar-button
@@ -35,18 +37,24 @@
   (let [active-screen (rf/subscribe [:screen-id])
         chat-history-empty? (rf/subscribe [::subs/chat-history-empty?])]
     (fn []
-      (when (and (= @active-screen :chat) (not @chat-history-empty?))
-        [icon-button {:on-click #(do (rf/dispatch [::chat-events/clear-chat-history])
-                                     (rf/dispatch [::persistence/clear-chat-history]))
-                      :size "large"
-                      :color "inherit"}
-         [delete-icon/delete-forever]]))))
+      [:<>
+       [icon-button {:on-click #(rf/dispatch [::events/export-button-clicked])
+                     :size "large"
+                     :color "inherit"}
+        [share-icon/ios-share]]
+       (when (and (= @active-screen :chat) (not @chat-history-empty?))
+         [icon-button {:on-click #(do (rf/dispatch [::chat-events/clear-chat-history])
+                                      (rf/dispatch [::persistence/clear-chat-history]))
+                       :size "large"
+                       :color "inherit"}
+          [delete-icon/delete-forever]])])))
 
 (defn nav-bar
   "Renders the navigation bar."
   []
   [:div {:class "w-full static"}
-   [app-bar {:position "static"}
+   [app-bar {:position "static"
+             :color "primary"}
     [toolbar {:variant "dense"}
      [typography {:variant "h6"} "OpenLLM"]
      [:div {:class "ml-10"}
