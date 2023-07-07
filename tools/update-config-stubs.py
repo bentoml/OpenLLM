@@ -30,6 +30,8 @@ START_COMMENT = f"# {os.path.basename(__file__)}: start\n"
 END_COMMENT = f"# {os.path.basename(__file__)}: stop\n"
 START_SPECIAL_COMMENT = f"# {os.path.basename(__file__)}: special start\n"
 END_SPECIAL_COMMENT = f"# {os.path.basename(__file__)}: special stop\n"
+START_ATTRS_COMMENT = f"# {os.path.basename(__file__)}: attrs start\n"
+END_ATTRS_COMMENT = f"# {os.path.basename(__file__)}: attrs stop\n"
 
 _TARGET_FILE = Path(__file__).parent.parent / "src" / "openllm" / "_configuration.py"
 
@@ -75,7 +77,8 @@ _value_docstring = {
     "runtime": """The runtime to use for this model. Possible values are `transformers` or `ggml`. See
         LlaMA for more information.""",
     "name_type": """The default name typed for this model. "dasherize" will convert the name to lowercase and
-        replace spaces with dashes. "lowercase" will convert the name to lowercase.""",
+        replace spaces with dashes. "lowercase" will convert the name to lowercase. If this is not set, then both
+        `model_name` and `start_name` must be specified.""",
     "model_name": """The normalized version of __openllm_start_name__, determined by __openllm_name_type__""",
     "start_name": """Default name to be used with `openllm start`""",
     "env": """A EnvVarMixin instance for this LLMConfig.""",
@@ -102,6 +105,16 @@ def main() -> int:
     start_stub_idx, end_stub_idx = processed.index(" " * 8 + START_SPECIAL_COMMENT), processed.index(
         " " * 8 + END_SPECIAL_COMMENT
     )
+    start_attrs_idx, end_attrs_idx = processed.index(" " * 8 + START_ATTRS_COMMENT), processed.index(
+        " " * 8 + END_ATTRS_COMMENT
+    )
+
+    # NOTE: inline stubs __config__ attrs representation
+    special_attrs_lines: list[str] = []
+    for keys, ForwardRef in openllm.utils.codegen.get_annotations(ModelSettings).items():
+        special_attrs_lines.append(
+            f"{' ' * 8}{keys}: {transformed.get(keys, process_annotations(ForwardRef.__forward_arg__))}\n"
+        )
 
     # NOTE: inline stubs for _ConfigAttr type stubs
     config_attr_lines: list[str] = []
@@ -163,7 +176,11 @@ def main() -> int:
         )
 
     processed = (
-        processed[:start_stub_idx]
+        processed[:start_attrs_idx]
+        + [" " * 8 + START_ATTRS_COMMENT]
+        + special_attrs_lines
+        + [" " * 8 + END_ATTRS_COMMENT]
+        + processed[end_attrs_idx + 1 : start_stub_idx]
         + [" " * 8 + START_SPECIAL_COMMENT]
         + config_attr_lines
         + [" " * 8 + END_SPECIAL_COMMENT]

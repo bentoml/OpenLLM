@@ -78,6 +78,14 @@ def lenient_issubclass(cls: t.Any, class_or_tuple: type[t.Any] | tuple[type[t.An
 def gpu_count() -> tuple[int, ...]:
     from bentoml._internal.resource import NvidiaGpuResource
 
+    cuda_visible_devices = os.environ.get("CUDA_VISIBLE_DEVICES", None)
+    if cuda_visible_devices is not None:
+        if "," in cuda_visible_devices:
+            available_gpu = tuple(int(i) for i in cuda_visible_devices.split(","))
+        else:
+            available_gpu = tuple(int(i) for i in cuda_visible_devices.split())
+        return available_gpu
+
     return tuple(NvidiaGpuResource.from_system())
 
 
@@ -91,6 +99,10 @@ def non_intrusive_setattr(obj: t.Any, name: str, value: t.Any) -> None:
 
     if not hasattr(obj, name):
         _setattr(name, value)
+
+
+def field_env_key(model_name: str, key: str, suffix: str | t.Literal[""] | None = None) -> str:
+    return "_".join(filter(None, map(str.upper, ["OPENLLM", model_name, suffix.strip("_") if suffix else "", key])))
 
 
 DEBUG = sys.flags.dev_mode or (not sys.flags.ignore_environment and bool(os.environ.get("OPENLLMDEVDEBUG")))
@@ -257,6 +269,7 @@ if t.TYPE_CHECKING:
     from . import resolve_filepath as resolve_filepath
     from . import normalize_attrs_to_model_tokenizer_pair as normalize_attrs_to_model_tokenizer_pair
     from . import generate_context as generate_context
+    from . import field_env_key as field_env_key
     from .import_utils import ENV_VARS_TRUE_VALUES as ENV_VARS_TRUE_VALUES
     from .import_utils import OPTIONAL_DEPENDENCIES as OPTIONAL_DEPENDENCIES
     from .import_utils import DummyMetaclass as DummyMetaclass

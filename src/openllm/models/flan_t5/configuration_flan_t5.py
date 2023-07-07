@@ -34,7 +34,7 @@ By default, this model will use the PyTorch model for inference. However, this m
 - To use Tensorflow, set the environment variable ``OPENLLM_FLAN_T5_FRAMEWORK="tf"``
 
 \b
-FLAN-T5 Runner will use google/flan-t5-large as the default model. To change any to any other FLAN-T5
+FLAN-T5 Runner will use google/flan-t5-large as the default model. To change to any other FLAN-T5
 saved pretrained, or a fine-tune FLAN-T5, provide ``OPENLLM_FLAN_T5_MODEL_ID='google/flan-t5-xxl'``
 or provide `--model-id` flag when running ``openllm start flan-t5``:
 

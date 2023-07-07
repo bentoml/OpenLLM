@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 from __future__ import annotations
 
 import logging
@@ -19,74 +20,70 @@ import typing as t
 import openllm
 
 from ..._prompt import default_formatter
-from .configuration_stablelm import DEFAULT_PROMPT_TEMPLATE
-from .configuration_stablelm import SYSTEM_PROMPT
+from .configuration_gpt_neox import DEFAULT_PROMPT_TEMPLATE
 
 
 if t.TYPE_CHECKING:
+    import bentoml
     import transformers  # noqa
     import torch
+    import torch.amp
 else:
     transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
     torch = openllm.utils.LazyLoader("torch", globals(), "torch")
+    torch.amp = openllm.utils.LazyLoader("torch.amp", globals(), "torch.amp")
 
 
 logger = logging.getLogger(__name__)
 
 
-class StableLM(openllm.LLM["transformers.GPTNeoXForCausalLM", "transformers.GPTNeoXTokenizerFast"]):
+class GPTNeoX(openllm.LLM["transformers.GPTNeoXForCausalLM", "transformers.GPTNeoXTokenizerFast"]):
     __openllm_internal__ = True
-
-    def llm_post_init(self):
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.bettertransformer = True if not torch.cuda.is_available() else False
-
-    @property
-    def import_kwargs(self):
-        model_kwds = {
-            "torch_dtype": torch.float16 if torch.cuda.is_available() else torch.float32,
-            "device_map": "auto" if torch.cuda.is_available() and torch.cuda.device_count() > 1 else None,
-        }
-        tokenizer_kwds: dict[str, t.Any] = {}
-        return model_kwds, tokenizer_kwds
 
     def sanitize_parameters(
         self,
         prompt: str,
         temperature: float | None = None,
         max_new_tokens: int | None = None,
-        top_k: int | None = None,
-        top_p: float | None = None,
-        use_default_prompt_template: bool = False,
+        use_default_prompt_template: bool = True,
         **attrs: t.Any,
     ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
-        if "tuned" in self._model_id and use_default_prompt_template:
-            prompt_variables = {
-                k: v
-                for k, v in attrs.items()
-                if k in default_formatter.extract_template_variables(DEFAULT_PROMPT_TEMPLATE)
-            }
+        if use_default_prompt_template:
+            template_variables = default_formatter.extract_template_variables(DEFAULT_PROMPT_TEMPLATE)
+            prompt_variables = {k: v for k, v in attrs.items() if k in template_variables}
             if "instruction" in prompt_variables:
                 raise RuntimeError(
                     "'instruction' should be passed as the first argument "
                     "instead of kwargs when 'use_default_prompt_template=True'"
                 )
-            system_prompt = prompt_variables.pop("system_prompt", SYSTEM_PROMPT)
-            prompt_text = DEFAULT_PROMPT_TEMPLATE.format(instruction=prompt, system_prompt=system_prompt)
+            try:
+                prompt_text = DEFAULT_PROMPT_TEMPLATE.format(instruction=prompt, **prompt_variables)
+            except KeyError as e:
+                raise RuntimeError(
+                    f"Missing variable '{e.args[0]}' (required: {template_variables}) in the prompt template. "
+                    "Use 'use_default_prompt_template=False' to disable the default prompt template."
+                )
         else:
             prompt_text = prompt
 
-        generation_config = {
-            "max_new_tokens": max_new_tokens,
-            "temperature": temperature,
-            "top_k": top_k,
-            "top_p": top_p,
-        }
+        generation_config = {"max_new_tokens": max_new_tokens, "temperature": temperature}
 
         return prompt_text, generation_config, {}
 
+    @property
+    def import_kwargs(self):
+        model_kwds = {"device_map": "auto" if torch.cuda.device_count() > 1 else None}
+        tokenizer_kwds: dict[str, t.Any] = {}
+        return model_kwds, tokenizer_kwds
+
     def postprocess_generate(self, prompt: str, generation_result: list[str], **_: t.Any) -> str:
         return generation_result[0]
+
+    def load_model(self, tag: bentoml.Tag, *args: t.Any, **attrs: t.Any) -> t.Any:
+        model = transformers.AutoModelForCausalLM.from_pretrained(self._bentomodel.path, **attrs)
+        if self.config.use_half_precision:
+            model.half()
+        return model
 
     def generate(self, prompt: str, **attrs: t.Any) -> list[str]:
         from ..._generation import StopOnTokens
@@ -98,11 +95,7 @@ class StableLM(openllm.LLM["transformers.GPTNeoXForCausalLM", "transformers.GPTN
             "stopping_criteria": transformers.StoppingCriteriaList([StopOnTokens()]),
         }
 
-        if torch.cuda.is_available():
-            self.model.cuda()
-
-        inputs = t.cast("torch.Tensor", self.tokenizer(prompt, return_tensors="pt")).to(self.device)
-
+        inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
         with torch.inference_mode():
-            tokens = self.model.generate(**inputs, **generation_kwargs)
-            return [self.tokenizer.decode(tokens[0], skip_special_tokens=True)]
+            gen_tokens = self.model.generate(inputs.input_ids, **generation_kwargs)
+            return self.tokenizer.batch_decode(gen_tokens)

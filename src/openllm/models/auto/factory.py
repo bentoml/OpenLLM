@@ -202,7 +202,11 @@ class _LazyAutoMapping(ConfigModelOrderedDict):
     have to do list(mapping.values()) to get the list of values.
     """
 
-    def __init__(self, config_mapping: OrderedDict[str, str], model_mapping: OrderedDict[str, str]):
+    def __init__(
+        self,
+        config_mapping: OrderedDict[t.LiteralString, t.LiteralString],
+        model_mapping: OrderedDict[t.LiteralString, t.LiteralString],
+    ):
         self._config_mapping = config_mapping
         self._reverse_config_mapping = {v: k for k, v in config_mapping.items()}
         self._model_mapping = model_mapping

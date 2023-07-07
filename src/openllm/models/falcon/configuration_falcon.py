@@ -70,7 +70,7 @@ Run a LLMServer for FalconLM model.
 Currently, FalconLM only supports PyTorch. Make sure ``torch`` is available in your system.
 
 \b
-FalconLM Runner will use tiiuae/falcon-7b as the default model. To change any to any other FalconLM
+FalconLM Runner will use tiiuae/falcon-7b as the default model. To change to any other FalconLM
 saved pretrained, or a fine-tune FalconLM, provide ``OPENLLM_FALCON_MODEL_ID='tiiuae/falcon-7b-instruct'``
 or provide `--model-id` flag when running ``openllm start falcon``:
 

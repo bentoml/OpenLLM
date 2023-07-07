@@ -23,10 +23,11 @@ from enum import Enum
 
 import attr
 import click
+import sys
 import click_option_group as cog
 import inflection
 import orjson
-from click import ParamType
+from click import ParamType, shell_completion as sc, types as click_types
 
 import openllm
 
@@ -439,6 +440,76 @@ class BytesType(ParamType):
             return str.encode(value)
         except Exception as exc:
             self.fail(f"'{value}' is not a valid string ({str(exc)})", param, ctx)
+
+
+CYGWIN = sys.platform.startswith("cygwin")
+WIN = sys.platform.startswith("win")
+if sys.platform.startswith("win") and WIN:
+
+    def _get_argv_encoding() -> str:
+        import locale
+
+        return locale.getpreferredencoding()
+
+else:
+
+    def _get_argv_encoding() -> str:
+        return getattr(sys.stdin, "encoding", None) or sys.getfilesystemencoding()
+
+
+class CudaValueType(ParamType):
+    name = "cuda"
+    envvar_list_splitter = ","
+    is_composite = True
+    typ = click_types.convert_type(str)
+
+    def split_envvar_value(self, rv: str) -> t.Sequence[str]:
+        var = tuple(i for i in rv.split(self.envvar_list_splitter))
+        if "-1" in var:
+            return var[: var.index("-1")]
+        return var
+
+    def shell_complete(self, ctx: click.Context, param: click.Parameter, incomplete: str) -> list[sc.CompletionItem]:
+        """Return a list of
+        :class:`~click.shell_completion.CompletionItem` objects for the
+        incomplete value. Most types do not provide completions, but
+        some do, and this allows custom types to provide custom
+        completions as well.
+
+        :param ctx: Invocation context for this command.
+        :param param: The parameter that is requesting completion.
+        :param incomplete: Value being completed. May be empty.
+
+        .. versionadded:: 8.0
+        """
+        from ..utils import gpu_count
+
+        mapping = incomplete.split(self.envvar_list_splitter) if incomplete else gpu_count()
+
+        return [sc.CompletionItem(str(i), help=f"CUDA device index {i}") for i in mapping]
+
+    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> t.Any:
+        if isinstance(value, bytes):
+            enc = _get_argv_encoding()
+            try:
+                value = value.decode(enc)
+            except UnicodeError:
+                fs_enc = sys.getfilesystemencoding()
+                if fs_enc != enc:
+                    try:
+                        value = value.decode(fs_enc)
+                    except UnicodeError:
+                        value = value.decode("utf-8", "replace")
+                else:
+                    value = value.decode("utf-8", "replace")
+
+        return tuple(self.typ(x, param, ctx) for x in value.split(","))
+
+    def __repr__(self) -> str:
+        return "STRING"
+
+
+CUDA = CudaValueType()
 
 
 class JsonType(ParamType):

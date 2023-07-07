@@ -182,7 +182,7 @@ class CascadingResourceStrategy(Strategy, ReprMixin):
             resource_request = system_resources()
 
         # use nvidia gpu
-        nvidia_gpus: list[int] | None = get_resource(resource_request, "nvidia.com/gpu")
+        nvidia_gpus = get_resource(resource_request, "nvidia.com/gpu")
         if nvidia_gpus is not None and len(nvidia_gpus) > 0 and "nvidia.com/gpu" in runnable_class.SUPPORTED_RESOURCES:
             dev = cls.transpile_workers_to_cuda_visible_devices(workers_per_resource, nvidia_gpus, worker_index)
             if disabled:
@@ -220,7 +220,7 @@ class CascadingResourceStrategy(Strategy, ReprMixin):
             if runnable_class.SUPPORTS_CPU_MULTI_THREADING:
                 thread_count = math.ceil(cpus)
                 for thread_env in THREAD_ENVS:
-                    environ[thread_env] = str(thread_count)
+                    environ[thread_env] = os.getenv(thread_env, str(thread_count))
                 logger.info(
                     "Environ for worker %d: set CPU thread count to %d",
                     worker_index,
@@ -229,14 +229,14 @@ class CascadingResourceStrategy(Strategy, ReprMixin):
                 return environ
             else:
                 for thread_env in THREAD_ENVS:
-                    environ[thread_env] = "1"
+                    environ[thread_env] = os.getenv(thread_env, "1")
                 return environ
 
         return environ
 
     @staticmethod
     def transpile_workers_to_cuda_visible_devices(
-        workers_per_resource: float | int, gpus: list[int], worker_index: int
+        workers_per_resource: float | int, gpus: list[str], worker_index: int
     ) -> str:
         # Convert given workers_per_resource to correct CUDA_VISIBLE_DEVICES string.
         if isinstance(workers_per_resource, float):
@@ -262,6 +262,12 @@ class CascadingResourceStrategy(Strategy, ReprMixin):
             assigned_gpu = gpus[
                 assigned_resource_per_worker * worker_index : assigned_resource_per_worker * (worker_index + 1)
             ]
-            return ",".join(map(str, assigned_gpu))
+            dev = ",".join(assigned_gpu)
         else:
-            return str(gpus[worker_index // workers_per_resource])
+            idx = worker_index // workers_per_resource
+            if len(gpus) == idx:
+                raise ValueError(
+                    f"Number of available GPU ({gpus}) preceeds the given workers_per_resource {workers_per_resource}"
+                )
+            dev = gpus[idx]
+        return dev
