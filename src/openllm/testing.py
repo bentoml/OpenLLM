@@ -12,8 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests utilities for OpenLLM.
-"""
+"""Tests utilities for OpenLLM."""
 
 from __future__ import annotations
 

@@ -17,7 +17,6 @@ from __future__ import annotations
 import importlib
 import inspect
 import logging
-import types
 import typing as t
 from collections import OrderedDict
 
@@ -37,6 +36,7 @@ else:
 
 
 if t.TYPE_CHECKING:
+    import types
     from collections import _odict_items
     from collections import _odict_keys
     from collections import _odict_values
@@ -144,8 +144,7 @@ class _BaseAutoLLMClass:
 
     @classmethod
     def create_runner(cls, model: str, model_id: str | None = None, **attrs: t.Any) -> LLMRunner:
-        """
-        Create a LLM Runner for the given model name.
+        """Create a LLM Runner for the given model name.
 
         Args:
             model: The model name to instantiate.
@@ -160,8 +159,7 @@ class _BaseAutoLLMClass:
 
     @classmethod
     def register(cls, config_class: type[openllm.LLMConfig], llm_class: type[openllm.LLM[t.Any, t.Any]]):
-        """
-        Register a new model for this class.
+        """Register a new model for this class.
 
         Args:
             config_class: The configuration corresponding to the model to register.
@@ -281,9 +279,7 @@ class _LazyAutoMapping(ConfigModelOrderedDict):
         return model_type in self._model_mapping
 
     def register(self, key: t.Any, value: t.Any):
-        """
-        Register a new model in this mapping.
-        """
+        """Register a new model in this mapping."""
         if hasattr(key, "__name__") and key.__name__ in self._reverse_config_mapping:
             model_type = self._reverse_config_mapping[key.__name__]
             if model_type in self._model_mapping.keys():

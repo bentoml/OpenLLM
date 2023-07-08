@@ -17,9 +17,11 @@ from __future__ import annotations
 
 import typing as t
 
-import torch
-
 import transformers
+
+
+if t.TYPE_CHECKING:
+    import torch
 
 
 class StopSequenceCriteria(transformers.StoppingCriteria):

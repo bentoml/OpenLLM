@@ -1,8 +1,7 @@
 import requests
 
 class DockerException(Exception):
-    """
-    A base class from which all other exceptions inherit.
+    """A base class from which all other exceptions inherit.
 
     If you want to catch all errors that the Docker SDK might raise,
     catch this base exception.
@@ -11,15 +10,11 @@ class DockerException(Exception):
     ...
 
 def create_api_error_from_http_exception(e):
-    """
-    Create a suitable APIError from requests.exceptions.HTTPError.
-    """
+    """Create a suitable APIError from requests.exceptions.HTTPError."""
     ...
 
 class APIError(requests.exceptions.HTTPError, DockerException):
-    """
-    An HTTP error from the API.
-    """
+    """An HTTP error from the API."""
 
     def __init__(self, message, response=..., explanation=...) -> None: ...
     def __str__(self) -> str: ...
@@ -44,9 +39,7 @@ class TLSParameterError(DockerException):
 class NullResource(DockerException, ValueError): ...
 
 class ContainerError(DockerException):
-    """
-    Represents a container that has exited with a non-zero exit code.
-    """
+    """Represents a container that has exited with a non-zero exit code."""
 
     def __init__(self, container, exit_status, command, image, stderr) -> None: ...
 

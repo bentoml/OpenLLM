@@ -18,7 +18,6 @@ import asyncio
 import contextlib
 import itertools
 import logging
-import subprocess
 import sys
 import time
 import typing as t
@@ -40,6 +39,8 @@ from openllm._llm import normalise_model_name
 logger = logging.getLogger(__name__)
 
 if t.TYPE_CHECKING:
+    import subprocess
+
     from openllm_client.runtimes.base import BaseAsyncClient
     from syrupy.assertion import SnapshotAssertion
     from syrupy.types import PropertyFilter

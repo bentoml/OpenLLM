@@ -11,8 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Serialisation related implementation for Transformers-based implementation.
-"""
+"""Serialisation related implementation for Transformers-based implementation."""
 
 from __future__ import annotations
 
@@ -23,7 +22,6 @@ import typing as t
 import cloudpickle
 
 import bentoml
-import openllm
 from bentoml._internal.frameworks.transformers import make_default_signatures
 from bentoml._internal.models.model import CUSTOM_OBJECTS_FILENAME
 from bentoml._internal.models.model import ModelOptions
@@ -41,6 +39,7 @@ from .constants import MODEL_TO_AUTOCLASS_MAPPING
 if t.TYPE_CHECKING:
     import torch
 
+    import openllm
     import transformers
     from transformers.models.auto.auto_factory import _BaseAutoModelClass
 
@@ -59,7 +58,6 @@ def process_transformers_config(
     model_id: str, trust_remote_code: bool, **attrs: t.Any
 ) -> tuple[transformers.PretrainedConfig, dict[str, t.Any], dict[str, t.Any]]:
     """Process transformers config and return PretrainedConfig with hub_kwargs and the rest of kwargs."""
-
     config: transformers.PretrainedConfig = attrs.pop("config", None)
 
     # this logic below is synonymous to handling `from_pretrained` attrs.

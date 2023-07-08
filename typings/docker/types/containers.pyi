@@ -6,8 +6,7 @@ class LogConfigTypesEnum:
     _values = ...
 
 class LogConfig(DictType):
-    """
-    Configure logging for a container, when provided as an argument to
+    """Configure logging for a container, when provided as an argument to
     :py:meth:`~docker.api.container.ContainerApiMixin.create_host_config`.
     You may refer to the
     `official logging driver documentation <https://docs.docker.com/config/containers/logging/configure/>`_
@@ -23,7 +22,6 @@ class LogConfig(DictType):
             keys.
 
     Example:
-
         >>> from docker.types import LogConfig
         >>> lc = LogConfig(type=LogConfig.types.JSON, config={
         ...   'max-size': '1g',
@@ -54,19 +52,16 @@ class LogConfig(DictType):
         ...
 
 class Ulimit(DictType):
-    """
-    Create a ulimit declaration to be used with
+    """Create a ulimit declaration to be used with
     :py:meth:`~docker.api.container.ContainerApiMixin.create_host_config`.
 
     Args:
-
         name (str): Which ulimit will this apply to. The valid names can be
             found in '/etc/security/limits.conf' on a gnu/linux system.
         soft (int): The soft limit for this ulimit. Optional.
         hard (int): The hard limit for this ulimit. Optional.
 
     Example:
-
         >>> nproc_limit = docker.types.Ulimit(name='nproc', soft=1024)
         >>> hc = client.create_host_config(ulimits=[nproc_limit])
         >>> container = client.create_container(
@@ -92,12 +87,10 @@ class Ulimit(DictType):
     def hard(self, value): ...
 
 class DeviceRequest(DictType):
-    """
-    Create a device request to be used with
+    """Create a device request to be used with
     :py:meth:`~docker.api.container.ContainerApiMixin.create_host_config`.
 
     Args:
-
         driver (str): Which driver to use for this device. Optional.
         count (int): Number or devices to request. Optional.
             Set to -1 to request all available devices.

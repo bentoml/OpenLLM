@@ -33,7 +33,7 @@ class ClickFunctionWrapper(Protocol[P, O_co]):
     def __call__(self, *args: P.args, **kwargs: P.kwargs) -> O_co: ...
 
 class _NotAttachedOption(click.Option):
-    """The helper class to catch grouped options which were not attached to the group
+    """The helper class to catch grouped options which were not attached to the group.
 
     Raises TypeError if not attached options exist.
     """
@@ -42,7 +42,7 @@ class _NotAttachedOption(click.Option):
     def handle_parse_result(self, ctx: click.Context, opts: Any, args: tuple[Any]) -> Any: ...
 
 class _OptGroup(Generic[O_co]):
-    """A helper class to manage creating groups and group options via decorators
+    """A helper class to manage creating groups and group options via decorators.
 
     The class provides two decorator-methods: `group`/`__call__` and `option`.
     These decorators should be used for adding grouped options. The class have
@@ -68,7 +68,7 @@ class _OptGroup(Generic[O_co]):
         cls: Optional[Type[OptionGroup]] = ...,
         **attrs: Any,
     ) -> FC:
-        """Creates a new group and collects its options
+        """Creates a new group and collects its options.
 
         Creates the option group and registers all grouped options
         which were added by `option` decorator.
@@ -87,7 +87,7 @@ class _OptGroup(Generic[O_co]):
         cls: Optional[Type[OptionGroup]] = ...,
         **attrs: Any,
     ) -> FC:
-        """The decorator creates a new group and collects its options
+        """The decorator creates a new group and collects its options.
 
         Creates the option group and registers all grouped options
         which were added by `option` decorator.
@@ -99,7 +99,7 @@ class _OptGroup(Generic[O_co]):
         """
         ...
     def option(self, *param_decls: Any, **attrs: Any) -> FC:
-        """The decorator adds a new option to the group
+        """The decorator adds a new option to the group.
 
         The decorator is lazy. It adds option decls and attrs.
         All options will be registered by `group` decorator.

@@ -11,8 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
-Configuration utilities for OpenLLM. All model configuration will inherit from ``openllm.LLMConfig``.
+"""Configuration utilities for OpenLLM. All model configuration will inherit from ``openllm.LLMConfig``.
 
 Highlight feature: Each fields in ``openllm.LLMConfig`` will also automatically generate a environment
 variable based on its name field.
@@ -320,8 +319,7 @@ class FineTuneConfig:
         docs: str | None = None,
         **attrs: t.Any,
     ) -> type[FineTuneConfig]:
-        """A loose codegen to create default subclass for given adapter config type"""
-
+        """A loose codegen to create default subclass for given adapter config type."""
         _new_default = {
             "adapter_type": PeftType[adapter_type],
             "adapter_config": attrs,
@@ -730,9 +728,9 @@ class _ModelSettingsAttr:
         service_name: str
         requirements: t.Optional[ListStr]
         bettertransformer: bool
-        model_type: t.Literal['causal_lm', 'seq2seq_lm']
-        runtime: t.Literal['transformers', 'ggml']
-        name_type: t.Optional[t.Literal['dasherize', 'lowercase']]
+        model_type: t.Literal["causal_lm", "seq2seq_lm"]
+        runtime: t.Literal["transformers", "ggml"]
+        name_type: t.Optional[t.Literal["dasherize", "lowercase"]]
         model_name: str
         start_name: str
         env: openllm.utils.EnvVarMixin
@@ -815,8 +813,7 @@ bentoml_cattr.register_structure_hook(_ModelSettingsAttr, structure_settings)
 
 
 def _setattr_class(attr_name: str, value_var: t.Any):
-    """
-    Use the builtin setattr to set *attr_name* to *value_var*.
+    """Use the builtin setattr to set *attr_name* to *value_var*.
     We can't use the cached object.__setattr__ since we are setting
     attributes to a class.
 
@@ -830,7 +827,7 @@ def _setattr_class(attr_name: str, value_var: t.Any):
 def _make_assignment_script(
     cls: type[LLMConfig], attributes: attr.AttrsInstance, _prefix: t.LiteralString = "openllm"
 ) -> t.Callable[..., None]:
-    """Generate the assignment script with prefix attributes __openllm_<value>__"""
+    """Generate the assignment script with prefix attributes __openllm_<value>__."""
     args: ListStr = []
     globs: DictStrAny = {
         "cls": cls,
@@ -957,14 +954,14 @@ class _ConfigAttr:
         architecture. By default, we will use BetterTransformer for T5 and StableLM models,
         and set to False for every other models.
         """
-        __openllm_model_type__: t.Literal['causal_lm', 'seq2seq_lm'] = Field(None)
+        __openllm_model_type__: t.Literal["causal_lm", "seq2seq_lm"] = Field(None)
         """The model type for this given LLM. By default, it should be causal language modeling.
         Currently supported 'causal_lm' or 'seq2seq_lm'
         """
-        __openllm_runtime__: t.Literal['transformers', 'ggml'] = Field(None)
+        __openllm_runtime__: t.Literal["transformers", "ggml"] = Field(None)
         """The runtime to use for this model. Possible values are `transformers` or `ggml`. See
         LlaMA for more information."""
-        __openllm_name_type__: t.Optional[t.Literal['dasherize', 'lowercase']] = Field(None)
+        __openllm_name_type__: t.Optional[t.Literal["dasherize", "lowercase"]] = Field(None)
         """The default name typed for this model. "dasherize" will convert the name to lowercase and
         replace spaces with dashes. "lowercase" will convert the name to lowercase. If this is not set, then both
         `model_name` and `start_name` must be specified."""
@@ -995,8 +992,7 @@ class _ConfigAttr:
 
 @attr.define(slots=True)
 class LLMConfig(_ConfigAttr):
-    """
-    ``openllm.LLMConfig`` is somewhat a hybrid combination between the performance of `attrs` with the
+    """``openllm.LLMConfig`` is somewhat a hybrid combination between the performance of `attrs` with the
     easy-to-use interface that pydantic offer. It lives in between where it allows users to quickly formulate
     a LLMConfig for any LLM without worrying too much about performance. It does a few things:
 
@@ -1139,8 +1135,7 @@ class LLMConfig(_ConfigAttr):
             self._cls_dict["__attrs_attrs__"] = self._attrs
 
         def build_class(self) -> type[LLMConfig]:
-            """
-            Finalize class based on the accumulated configuration.
+            """Finalize class based on the accumulated configuration.
 
             Builder cannot be used after calling this method.
 
@@ -1400,11 +1395,11 @@ class LLMConfig(_ConfigAttr):
     @overload
     def __getitem__(self, item: t.Literal["bettertransformer"] = ...) -> bool: ...
     @overload
-    def __getitem__(self, item: t.Literal["model_type"] = ...) -> t.Literal['causal_lm', 'seq2seq_lm']: ...
+    def __getitem__(self, item: t.Literal["model_type"] = ...) -> t.Literal["causal_lm", "seq2seq_lm"]: ...
     @overload
-    def __getitem__(self, item: t.Literal["runtime"] = ...) -> t.Literal['transformers', 'ggml']: ...
+    def __getitem__(self, item: t.Literal["runtime"] = ...) -> t.Literal["transformers", "ggml"]: ...
     @overload
-    def __getitem__(self, item: t.Literal["name_type"] = ...) -> t.Optional[t.Literal['dasherize', 'lowercase']]: ...
+    def __getitem__(self, item: t.Literal["name_type"] = ...) -> t.Optional[t.Literal["dasherize", "lowercase"]]: ...
     @overload
     def __getitem__(self, item: t.Literal["model_name"] = ...) -> str: ...
     @overload
@@ -1518,7 +1513,7 @@ class LLMConfig(_ConfigAttr):
     # fmt: on
 
     def __getitem__(self, item: t.LiteralString | t.Any = None) -> t.Any:
-        """Allowing access LLMConfig as a dictionary. The order will always evaluate as
+        """Allowing access LLMConfig as a dictionary. The order will always evaluate as.
 
         __openllm_*__ > self.key > self.generation_config > self['fine_tune_strategies'] > __openllm_extras__
 
@@ -1723,8 +1718,7 @@ class LLMConfig(_ConfigAttr):
 
     @classmethod
     def to_click_options(cls, f: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
-        """
-        Convert current model to click options. This can be used as a decorator for click commands.
+        """Convert current model to click options. This can be used as a decorator for click commands.
         Note that the identifier for all LLMConfig will be prefixed with '<model_name>_*', and the generation config
         will be prefixed with '<model_name>_generation_*'.
         """
@@ -1771,8 +1765,7 @@ bentoml_cattr.register_unstructure_hook_factory(
 
 
 def structure_llm_config(data: DictStrAny, cls: type[LLMConfig]) -> LLMConfig:
-    """
-    Structure a dictionary to a LLMConfig object.
+    """Structure a dictionary to a LLMConfig object.
 
     Essentially, if the given dictionary contains a 'generation_config' key, then we will
     use it for LLMConfig.generation_config

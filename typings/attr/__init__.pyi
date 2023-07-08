@@ -1,20 +1,15 @@
 from __future__ import annotations
 
 import enum
-import sys
 from typing import Any
 from typing import Callable
-from typing import Dict
 from typing import Generic
 from typing import List
 from typing import Literal
 from typing import Mapping
-from typing import Optional
 from typing import ParamSpec
 from typing import Protocol
 from typing import Sequence
-from typing import Tuple
-from typing import Type
 from typing import TypeGuard
 from typing import TypeVar
 from typing import Union
@@ -64,13 +59,13 @@ class _Nothing(enum.Enum):
     NOTHING = ...
 
 NOTHING = ...
+
 @overload
 def Factory(factory: Callable[[], _T]) -> _T: ...
 @overload
 def Factory(factory: Callable[[Any], _T], takes_self: Literal[True]) -> _T: ...
 @overload
 def Factory(factory: Callable[[], _T], takes_self: Literal[False]) -> _T: ...
-
 def __dataclass_transform__(
     *,
     eq_default: bool = ...,

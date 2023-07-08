@@ -12,8 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-The actual client implementation. Use ``openllm.client`` instead.
+"""The actual client implementation. Use ``openllm.client`` instead.
 This holds the implementation of the client, which is used to communicate with the
 OpenLLM server. It is used to send requests to the server, and receive responses.
 """

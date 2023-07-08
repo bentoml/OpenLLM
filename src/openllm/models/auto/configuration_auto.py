@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-import types
 import typing as t
 from collections import OrderedDict
 
@@ -24,6 +23,7 @@ import openllm
 
 
 if t.TYPE_CHECKING:
+    import types
     from collections import _odict_items
     from collections import _odict_keys
     from collections import _odict_values
@@ -93,9 +93,7 @@ class _LazyConfigMapping(ConfigOrderedDict):
         return item in self._mapping or item in self._extra_content
 
     def register(self, key: str, value: t.Any):
-        """
-        Register a new configuration in this mapping.
-        """
+        """Register a new configuration in this mapping."""
         if key in self._mapping.keys():
             raise ValueError(f"'{key}' is already used by a OpenLLM config, pick another name.")
         self._extra_content[key] = value

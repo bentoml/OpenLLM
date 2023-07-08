@@ -11,8 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
-Utilities function for OpenLLM. User can import these function for convenience, but
+"""Utilities function for OpenLLM. User can import these function for convenience, but
 we won't ensure backward compatibility for these functions. So use with caution.
 """
 from __future__ import annotations as _annotations
@@ -117,7 +116,7 @@ _object_setattr = object.__setattr__
 
 
 def non_intrusive_setattr(obj: t.Any, name: str, value: t.Any) -> None:
-    """This makes sure that we don't overwrite any existing attributes on the object"""
+    """This makes sure that we don't overwrite any existing attributes on the object."""
     _setattr = functools.partial(setattr, obj) if isinstance(obj, type) else _object_setattr.__get__(obj)
 
     if not hasattr(obj, name):
@@ -184,7 +183,8 @@ _LOGGING_CONFIG: DictStrAny = {
 
 def configure_logging() -> None:
     """Configure logging for OpenLLM. Behaves similar to how BentoML loggers
-    are being configured."""
+    are being configured.
+    """
     if get_quiet_mode():
         _LOGGING_CONFIG["loggers"]["openllm"]["level"] = logging.ERROR
         _LOGGING_CONFIG["loggers"]["bentoml"]["level"] = logging.ERROR
@@ -220,8 +220,7 @@ _cgroup = Path("/proc/self/cgroup")
 
 
 class suppress(contextlib.suppress, contextlib.ContextDecorator):
-    """
-    A version of contextlib.suppress with decorator support.
+    """A version of contextlib.suppress with decorator support.
 
     >>> @suppress(KeyError)
     ... def key_error():
@@ -231,8 +230,7 @@ class suppress(contextlib.suppress, contextlib.ContextDecorator):
 
 
 def compose(*funcs: t.Callable[..., t.Any]):
-    """
-    Compose any number of unary functions into a single unary function.
+    """Compose any number of unary functions into a single unary function.
 
     >>> import textwrap
     >>> expected = str.strip(textwrap.dedent(compose.__doc__))
@@ -258,8 +256,7 @@ def compose(*funcs: t.Callable[..., t.Any]):
 
 
 def apply(transform: t.Callable[..., t.Any]):
-    """
-    Decorate a function with a transform function that is
+    """Decorate a function with a transform function that is
     invoked on results returned from the decorated function.
 
     >>> @apply(reversed)
@@ -285,8 +282,7 @@ def _text_in_file(text: str, filename: Path):
 
 
 def in_docker() -> bool:
-    """
-    Is this current environment running in docker?
+    """Is this current environment running in docker?
 
     >>> type(is_docker())
     <class 'bool'>
@@ -295,7 +291,7 @@ def in_docker() -> bool:
 
 
 def resolve_filepath(path: str) -> str:
-    """Resolve a file path to an absolute path, expand user and environment variables"""
+    """Resolve a file path to an absolute path, expand user and environment variables."""
     try:
         return resolve_user_filepath(path, None)
     except FileNotFoundError:

@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-import contextlib
 import typing as t
 
 import pytest
@@ -23,6 +22,8 @@ import openllm
 
 
 if t.TYPE_CHECKING:
+    import contextlib
+
     from .conftest import HandleProtocol
     from .conftest import ResponseComparator
     from .conftest import _Handle

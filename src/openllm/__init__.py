@@ -11,9 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
-OpenLLM
-=======
+"""OpenLLM.
 
 An open platform for operating large language models in production. Fine-tune, serve,
 deploy, and monitor any LLMs with ease.

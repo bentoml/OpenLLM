@@ -4,11 +4,9 @@ from typing import Self
 from .models.containers import ContainerCollection
 
 class DockerClient:
-    """
-    A client for communicating with a Docker server.
+    """A client for communicating with a Docker server.
 
     Example:
-
         >>> import docker
         >>> client = docker.DockerClient(base_url='unix://var/run/docker.sock')
 
@@ -34,8 +32,7 @@ class DockerClient:
 
     @classmethod
     def from_env(cls, **kwargs: Any) -> Self:
-        """
-        Return a client configured from environment variables.
+        """Return a client configured from environment variables.
 
         The environment variables used are the same as those used by the
         Docker command-line client. They are:
@@ -70,7 +67,6 @@ class DockerClient:
                 client is installed and configured on the host.
 
         Example:
-
             >>> import docker
             >>> client = docker.from_env()
 
@@ -79,8 +75,7 @@ class DockerClient:
         """
     @property
     def containers(self) -> ContainerCollection:
-        """
-        An object for managing containers on the server. See the
+        """An object for managing containers on the server. See the
         :doc:`containers documentation <containers>` for full details.
         """
         ...

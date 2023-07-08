@@ -11,8 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
-Any build-related utilities. This is used for CI.
+"""Build-related utilities. Some of these utilities are mainly used for 'openllm.build'.
+
+These utilities will stay internal, and its API can be changed or updated without backward-compatibility.
 """
 from __future__ import annotations
 
@@ -31,7 +32,6 @@ from simple_di import Provide
 from simple_di import inject
 
 import bentoml
-import openllm
 from bentoml._internal.bento.build_config import BentoBuildConfig
 from bentoml._internal.bento.build_config import DockerOptions
 from bentoml._internal.bento.build_config import PythonOptions
@@ -52,6 +52,8 @@ from .utils import resolve_user_filepath
 
 if t.TYPE_CHECKING:
     from fs.base import FS
+
+    import openllm
 
 logger = logging.getLogger(__name__)
 

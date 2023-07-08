@@ -16,37 +16,26 @@ class Container(Model):
 
     @property
     def name(self):  # -> None:
-        """
-        The name of the container.
-        """
+        """The name of the container."""
         ...
     @property
     def image(self):  # -> None:
-        """
-        The image of the container.
-        """
+        """The image of the container."""
         ...
     @property
     def labels(self) -> dict[Any, Any]:
-        """
-        The labels of a container as dictionary.
-        """
+        """The labels of a container as dictionary."""
         ...
     @property
     def status(self) -> Literal["created", "restarting", "running", "removing", "paused", "exited"]:
-        """
-        The status of the container. For example, ``running``, or ``exited``.
-        """
+        """The status of the container. For example, ``running``, or ``exited``."""
         ...
     @property
     def ports(self) -> dict[Any, Any]:
-        """
-        The ports that the container exposes as a dictionary.
-        """
+        """The ports that the container exposes as a dictionary."""
         ...
     def attach(self, **kwargs):
-        """
-        Attach to this container.
+        """Attach to this container.
 
         :py:meth:`logs` is a wrapper around this method, which you can
         use instead if you want to fetch/stream container output without first
@@ -70,8 +59,7 @@ class Container(Model):
         """
         ...
     def attach_socket(self, **kwargs):
-        """
-        Like :py:meth:`attach`, but returns the underlying socket-like object
+        """Like :py:meth:`attach`, but returns the underlying socket-like object
         for the HTTP request.
 
         Args:
@@ -85,8 +73,7 @@ class Container(Model):
         """
         ...
     def commit(self, repository=..., tag=..., **kwargs):
-        """
-        Commit a container to an image. Similar to the ``docker commit``
+        """Commit a container to an image. Similar to the ``docker commit``
         command.
 
         Args:
@@ -106,8 +93,7 @@ class Container(Model):
         """
         ...
     def diff(self):
-        """
-        Inspect changes on a container's filesystem.
+        """Inspect changes on a container's filesystem.
 
         Returns:
             (list) A list of dictionaries containing the attributes `Path`
@@ -134,8 +120,7 @@ class Container(Model):
         workdir=...,
         demux=...,
     ):  # -> ExecResult:
-        """
-        Run a command inside this container. Similar to
+        """Run a command inside this container. Similar to
         ``docker exec``.
 
         Args:
@@ -174,8 +159,7 @@ class Container(Model):
         """
         ...
     def export(self, chunk_size=...):
-        """
-        Export the contents of the container's filesystem as a tar archive.
+        """Export the contents of the container's filesystem as a tar archive.
 
         Args:
             chunk_size (int): The number of bytes returned by each iteration
@@ -191,8 +175,7 @@ class Container(Model):
         """
         ...
     def get_archive(self, path, chunk_size=..., encode_stream=...):
-        """
-        Retrieve a file or folder from the container in the form of a tar
+        """Retrieve a file or folder from the container in the form of a tar
         archive.
 
         Args:
@@ -212,7 +195,6 @@ class Container(Model):
                 If the server returns an error.
 
         Example:
-
             >>> f = open('./sh_bin.tar', 'wb')
             >>> bits, stat = container.get_archive('/bin/sh')
             >>> print(stat)
@@ -224,8 +206,7 @@ class Container(Model):
         """
         ...
     def kill(self, signal: str | int = ...) -> None:
-        """
-        Kill or send a signal to the container.
+        """Kill or send a signal to the container.
 
         Args:
             signal (str or int): The signal to send. Defaults to ``SIGKILL``
@@ -239,8 +220,7 @@ class Container(Model):
     def logs(self, stream: Literal[False] = False, **kwargs: Any) -> bytes: ...
     @overload
     def logs(self, stream: Literal[True] = ..., **kwargs: Any) -> Iterator[bytes]:
-        """
-        Get logs from this container. Similar to the ``docker logs`` command.
+        """Get logs from this container. Similar to the ``docker logs`` command.
 
         The ``stream`` parameter makes the ``logs`` function return a blocking
         generator you can iterate over to retrieve log output as it happens.
@@ -269,8 +249,7 @@ class Container(Model):
         """
         ...
     def pause(self):
-        """
-        Pauses all processes within this container.
+        """Pauses all processes within this container.
 
         Raises:
             :py:class:`docker.errors.APIError`
@@ -278,8 +257,7 @@ class Container(Model):
         """
         ...
     def put_archive(self, path, data):
-        """
-        Insert a file or folder in this container using a tar archive as
+        """Insert a file or folder in this container using a tar archive as
         source.
 
         Args:
@@ -295,8 +273,7 @@ class Container(Model):
         """
         ...
     def remove(self, v: bool | None = ..., link: bool | None = ..., force: bool | None = ...) -> None:
-        """
-        Remove this container. Similar to the ``docker rm`` command.
+        """Remove this container. Similar to the ``docker rm`` command.
 
         Args:
             v (bool): Remove the volumes associated with the container
@@ -311,8 +288,7 @@ class Container(Model):
         """
         ...
     def rename(self, name):
-        """
-        Rename this container. Similar to the ``docker rename`` command.
+        """Rename this container. Similar to the ``docker rename`` command.
 
         Args:
             name (str): New name for the container
@@ -323,8 +299,7 @@ class Container(Model):
         """
         ...
     def resize(self, height, width):
-        """
-        Resize the tty session.
+        """Resize the tty session.
 
         Args:
             height (int): Height of tty session
@@ -336,8 +311,7 @@ class Container(Model):
         """
         ...
     def restart(self, **kwargs):
-        """
-        Restart this container. Similar to the ``docker restart`` command.
+        """Restart this container. Similar to the ``docker restart`` command.
 
         Args:
             timeout (int): Number of seconds to try to stop for before killing
@@ -350,8 +324,7 @@ class Container(Model):
         """
         ...
     def start(self, **kwargs):
-        """
-        Start this container. Similar to the ``docker start`` command, but
+        """Start this container. Similar to the ``docker start`` command, but
         doesn't support attach options.
 
         Raises:
@@ -360,8 +333,7 @@ class Container(Model):
         """
         ...
     def stats(self, **kwargs):
-        """
-        Stream statistics for this container. Similar to the
+        """Stream statistics for this container. Similar to the
         ``docker stats`` command.
 
         Args:
@@ -377,8 +349,7 @@ class Container(Model):
         """
         ...
     def stop(self, **kwargs: Any) -> None:
-        """
-        Stops a container. Similar to the ``docker stop`` command.
+        """Stops a container. Similar to the ``docker stop`` command.
 
         Args:
             timeout (int): Timeout in seconds to wait for the container to
@@ -390,8 +361,7 @@ class Container(Model):
         """
         ...
     def top(self, **kwargs: Any) -> str:
-        """
-        Display the running processes of the container.
+        """Display the running processes of the container.
 
         Args:
             ps_args (str): An optional arguments passed to ps (e.g. ``aux``)
@@ -405,8 +375,7 @@ class Container(Model):
         """
         ...
     def unpause(self):
-        """
-        Unpause all processes within the container.
+        """Unpause all processes within the container.
 
         Raises:
             :py:class:`docker.errors.APIError`
@@ -414,8 +383,7 @@ class Container(Model):
         """
         ...
     def update(self, **kwargs):
-        """
-        Update resource configuration of the containers.
+        """Update resource configuration of the containers.
 
         Args:
             blkio_weight (int): Block IO (relative weight), between 10 and 1000
@@ -440,8 +408,7 @@ class Container(Model):
         """
         ...
     def wait(self, **kwargs: Any) -> dict[Any, Any]:
-        """
-        Block until the container stops, then return its exit code. Similar to
+        """Block until the container stops, then return its exit code. Similar to
         the ``docker wait`` command.
 
         Args:
@@ -470,8 +437,7 @@ class ContainerCollection(Collection):
     ) -> Container: ...
     @overload
     def run(self, image: str, command: list[str] | str = ..., detach: Literal[False] = ..., **kwargs: Any) -> bytes:
-        """
-        Run a container. By default, it will wait for the container to finish
+        """Run a container. By default, it will wait for the container to finish
         and return its logs, similar to ``docker run``.
 
         If the ``detach`` argument is ``True``, it will start the container
@@ -781,8 +747,7 @@ class ContainerCollection(Collection):
                 If the server returns an error.
         """
     def create(self, image, command=..., **kwargs):  # -> Model:
-        """
-        Create a container without starting it. Similar to ``docker create``.
+        """Create a container without starting it. Similar to ``docker create``.
 
         Takes the same arguments as :py:meth:`run`, except for ``stdout``,
         ``stderr``, and ``remove``.
@@ -798,8 +763,7 @@ class ContainerCollection(Collection):
         """
         ...
     def get(self, container_id: str) -> Container:
-        """
-        Get a container by name or ID.
+        """Get a container by name or ID.
 
         Args:
             container_id (str): Container name or ID.
@@ -817,8 +781,7 @@ class ContainerCollection(Collection):
     def list(
         self, all=..., before=..., filters=..., limit=..., since=..., sparse=..., ignore_removed=...
     ):  # -> list[Model] | list[Unknown]:
-        """
-        List containers. Similar to the ``docker ps`` command.
+        """List containers. Similar to the ``docker ps`` command.
 
         Args:
             all (bool): Show all containers. Only running containers are shown

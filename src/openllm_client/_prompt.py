@@ -42,7 +42,7 @@ class PromptTemplate:
     input_variables: t.Sequence[str]
 
     def to_str(self, __partial_dict__: PartialDict | None = None, **attrs: str) -> str:
-        """Generate a prompt from the template and input variables"""
+        """Generate a prompt from the template and input variables."""
         if __partial_dict__:
             return _default_formatter.vformat(self.template, (), __partial_dict__)
         if not attrs:

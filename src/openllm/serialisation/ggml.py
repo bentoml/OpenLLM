@@ -22,7 +22,6 @@ import typing as t
 import cloudpickle
 
 import bentoml
-import openllm
 from bentoml._internal.models.model import CUSTOM_OBJECTS_FILENAME
 
 from ..exceptions import OpenLLMException
@@ -30,6 +29,7 @@ from ..utils import LazyLoader
 
 
 if t.TYPE_CHECKING:
+    import openllm
     import transformers
 
     from .._types import ModelProtocol

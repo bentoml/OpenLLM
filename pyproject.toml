@@ -185,7 +185,8 @@ target-version = ["py311"]
 [tool.ruff]
 exclude = ["tools"]
 # extends quotes, pydocstyle, pycodestyle, logging format, isort, future-annotations
-extend-select = ["I", "G", "D", "W", "Q", "FA", "UP", "S"]
+# type-checking, refactor and warning
+extend-select = ["I", "G", "D", "W", "Q", "FA", "S", "TCH", "PLW", "PLR"]
 fix = true
 ignore = [
     # Allow non-abstract empty methods in abstract base classes
@@ -202,11 +203,23 @@ ignore = [
     "PLR0912",
     "PLR0913",
     "PLR0915",
+    # ignore line length violation
     "E501",
     "E741",
+    # don't move runtime import out
+    "TCH004",
 ]
 line-length = 119
-target-version = "py311"
+target-version = "py312"
+
+[tool.ruff.flake8-type-checking]
+runtime-evaluated-base-classes = [
+    "pydantic.BaseModel",
+    "openllm._configuration.LLMConfig",
+    "openllm._configuration.GenerationConfig",
+    "openllm._configuration.ModelSettings",
+]
+runtime-evaluated-decorators = ["attrs.define", "attrs.frozen"]
 
 [tool.ruff.pydocstyle]
 convention = "google"
@@ -225,6 +238,7 @@ avoid-escape = false
 [tool.ruff.per-file-ignores]
 # Tests can use magic values, assertions, and relative imports
 "__init__.py" = ["E402", "F401", "F403", "F811"]
+"examples/**/*" = ["D"]
 "src/openllm/_types.py" = ["E402"]
 "src/openllm/playground/**/*" = ["E402", "F401"]
 "tests/**/*" = ["PLR2004", "S101", "TID252"]

@@ -40,10 +40,9 @@ _reserved_namespace = {"__openllm_special__", "__openllm_migration__"}
 
 
 class LazyModule(types.ModuleType):
-    """
-    Module class that surfaces all objects but only performs associated imports when the objects are requested.
+    """Module class that surfaces all objects but only performs associated imports when the objects are requested.
     This is a direct port from transformers.utils.import_utils._LazyModule for
-    backwards compatibility with transformers < 4.18
+    backwards compatibility with transformers < 4.18.
 
     This is an extension a more powerful LazyLoader.
     """

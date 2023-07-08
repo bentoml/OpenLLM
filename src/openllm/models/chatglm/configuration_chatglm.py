@@ -17,8 +17,7 @@ import openllm
 
 
 class ChatGLMConfig(openllm.LLMConfig):
-    """
-    ChatGLM is an open bilingual language model based on
+    """ChatGLM is an open bilingual language model based on
     [General Language Model (GLM)](https://github.com/THUDM/GLM) framework.
 
     With the quantization technique, users can deploy locally on consumer-grade graphics cards

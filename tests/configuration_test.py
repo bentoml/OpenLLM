@@ -13,7 +13,8 @@
 # limitations under the License.
 
 """All configuration-related tests for openllm.LLMConfig. This will include testing
-for ModelEnv construction and parsing environment variables."""
+for ModelEnv construction and parsing environment variables.
+"""
 from __future__ import annotations
 
 import contextlib

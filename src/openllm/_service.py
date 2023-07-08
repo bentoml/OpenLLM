@@ -12,8 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-The service definition for running any LLMService.
+"""The service definition for running any LLMService.
 
 Note that the line `model = ...` is a special line and should not be modified. This will be handled by openllm
 internally to generate the correct model service when bundling the LLM to a Bento.

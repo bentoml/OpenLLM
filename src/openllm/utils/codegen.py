@@ -124,9 +124,7 @@ _sentinel = object()
 
 
 def has_own_attribute(cls: type[t.Any], attrib_name: t.Any):
-    """
-    Check whether *cls* defines *attrib_name* (and doesn't just inherit it).
-    """
+    """Check whether *cls* defines *attrib_name* (and doesn't just inherit it)."""
     attr = getattr(cls, attrib_name, _sentinel)
     if attr is _sentinel:
         return False
@@ -140,9 +138,7 @@ def has_own_attribute(cls: type[t.Any], attrib_name: t.Any):
 
 
 def get_annotations(cls: type[t.Any]) -> DictStrAny:
-    """
-    Get annotations for *cls*.
-    """
+    """Get annotations for *cls*."""
     if has_own_attribute(cls, "__annotations__"):
         return cls.__annotations__
 
@@ -158,8 +154,7 @@ _classvar_prefixes = (
 
 
 def is_class_var(annot: str | t.Any) -> bool:
-    """
-    Check whether *annot* is a typing.ClassVar.
+    """Check whether *annot* is a typing.ClassVar.
 
     The string comparison hack is used to avoid evaluating all string
     annotations which would put attrs-based classes at a performance
@@ -175,9 +170,7 @@ def is_class_var(annot: str | t.Any) -> bool:
 
 
 def add_method_dunders(cls: type[t.Any], method_or_cls: _T, _overwrite_doc: str | None = None) -> _T:
-    """
-    Add __module__ and __qualname__ to a *method* if possible.
-    """
+    """Add __module__ and __qualname__ to a *method* if possible."""
     try:
         method_or_cls.__module__ = cls.__module__
     except AttributeError:

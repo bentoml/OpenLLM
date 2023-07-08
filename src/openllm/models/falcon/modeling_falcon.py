@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import typing as t
 
-import bentoml
 import openllm
 
 from ..._prompt import default_formatter
@@ -27,6 +26,7 @@ if t.TYPE_CHECKING:
     import torch
     import torch.amp
 
+    import bentoml
     import transformers
 else:
     torch = openllm.utils.LazyLoader("torch", globals(), "torch")

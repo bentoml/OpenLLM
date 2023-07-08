@@ -16,7 +16,9 @@ from __future__ import annotations
 
 import typing as t
 
-import openllm
+
+if t.TYPE_CHECKING:
+    import openllm
 
 
 def test_flan_t5_implementation(prompt: str, llm: openllm.LLM[t.Any, t.Any]):

@@ -11,8 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
-CLI utilities for OpenLLM.
+"""CLI utilities for OpenLLM.
 
 This module also contains the SDK to call ``start`` and ``build`` from SDK
 
@@ -276,7 +275,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
     @staticmethod
     def common_params(f: F[P, t.Any]) -> ClickFunctionWrapper[..., t.Any]:
         """This is not supposed to be used with unprocessed click function.
-        This should be used a the last currying from common_params -> usage_tracking -> exception_handling
+        This should be used a the last currying from common_params -> usage_tracking -> exception_handling.
         """
         # The following logics is similar to one of BentoMLCommandGroup
 
@@ -317,7 +316,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
         func: ClickFunctionWrapper[..., t.Any], group: click.Group, **attrs: t.Any
     ) -> ClickFunctionWrapper[..., t.Any]:
         """This is not supposed to be used with unprocessed click function.
-        This should be used a the last currying from common_params -> usage_tracking -> exception_handling
+        This should be used a the last currying from common_params -> usage_tracking -> exception_handling.
         """
         command_name = attrs.get("name", func.__name__)
 
@@ -353,7 +352,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
         func: ClickFunctionWrapper[..., t.Any], group: click.Group, **attrs: t.Any
     ) -> ClickFunctionWrapper[..., t.Any]:
         """This is not supposed to be used with unprocessed click function.
-        This should be used a the last currying from common_params -> usage_tracking -> exception_handling
+        This should be used a the last currying from common_params -> usage_tracking -> exception_handling.
         """
         command_name = attrs.get("name", func.__name__)
 
@@ -453,14 +452,13 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
 @click.group(cls=OpenLLMCommandGroup, context_settings=_CONTEXT_SETTINGS, name="openllm")
 @click.version_option(__version__, "--version", "-v")
 def cli():
-    """
-    \b
+    """\b
      ██████╗ ██████╗ ███████╗███╗   ██╗██╗     ██╗     ███╗   ███╗
     ██╔═══██╗██╔══██╗██╔════╝████╗  ██║██║     ██║     ████╗ ████║
     ██║   ██║██████╔╝█████╗  ██╔██╗ ██║██║     ██║     ██╔████╔██║
     ██║   ██║██╔═══╝ ██╔══╝  ██║╚██╗██║██║     ██║     ██║╚██╔╝██║
     ╚██████╔╝██║     ███████╗██║ ╚████║███████╗███████╗██║ ╚═╝ ██║
-     ╚═════╝ ╚═╝     ╚══════╝╚═╝  ╚═══╝╚══════╝╚══════╝╚═╝     ╚═╝
+     ╚═════╝ ╚═╝     ╚══════╝╚═╝  ╚═══╝╚══════╝╚══════╝╚═╝     ╚═╝.
 
     \b
     An open platform for operating large language models in production.
@@ -470,8 +468,7 @@ def cli():
 
 @cli.group(cls=OpenLLMCommandGroup, context_settings=_CONTEXT_SETTINGS, name="start", aliases=["start-http"])
 def start_command():
-    """
-    Start any LLM as a REST server.
+    """Start any LLM as a REST server.
 
     \b
     ```bash
@@ -482,8 +479,7 @@ def start_command():
 
 @cli.group(cls=OpenLLMCommandGroup, context_settings=_CONTEXT_SETTINGS, name="start-grpc")
 def start_grpc_command():
-    """
-    Start any LLM as a gRPC server.
+    """Start any LLM as a gRPC server.
 
     \b
     ```bash
@@ -505,7 +501,7 @@ else:
 
 
 def parse_serve_args(serve_grpc: bool):
-    """Parsing `bentoml serve|serve-grpc` click.Option to be parsed via `openllm start`"""
+    """Parsing `bentoml serve|serve-grpc` click.Option to be parsed via `openllm start`."""
     from bentoml_cli.cli import cli
 
     command = "serve" if not serve_grpc else "serve-grpc"
@@ -1362,7 +1358,6 @@ def _start(
         framework: The framework to use for this LLM. By default, this is set to ``pt``.
         additional_args: Additional arguments to pass to ``openllm start``.
     """
-
     if isinstance(model_name, str):
         _ModelEnv = EnvVarMixin(model_name)
         if framework is None:
@@ -2166,7 +2161,7 @@ def instruct(
     _memoized: DictStrAny,
     **attrs: t.Any,
 ):
-    """Instruct agents interactively for given tasks, from a terminal
+    """Instruct agents interactively for given tasks, from a terminal.
 
     \b
     ```bash
@@ -2268,7 +2263,7 @@ def load_notebook_metadata() -> DictStrAny:
     help="Default port for Jupyter server",
 )
 def playground(output_dir: str | None, port: int):
-    """OpenLLM Playground
+    """OpenLLM Playground.
 
     A collections of notebooks to explore the capabilities of OpenLLM.
     This includes notebooks for fine-tuning, inference, and more.

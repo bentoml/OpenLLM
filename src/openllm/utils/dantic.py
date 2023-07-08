@@ -323,8 +323,9 @@ def allows_multiple(field_type: t.Any) -> bool:
     For containers, it exploits click's support for lists and such to use the same option multiple times
     to create a complex object: `python run.py --subsets train --subsets test`
     # becomes `subsets: ["train", "test"]`.
+
     Args:
-        field_type (type): pydantic type
+        field_type (type): pydantic type.
 
     Returns:
         bool: true if it's a composite field (lists, containers and so on), false otherwise

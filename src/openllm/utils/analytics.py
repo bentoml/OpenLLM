@@ -11,8 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
-Telemetry related for OpenLLM tracking.
+"""Telemetry related for OpenLLM tracking.
 
 Users can disable this with OPENLLM_DO_NOT_TRACK envvar.
 """

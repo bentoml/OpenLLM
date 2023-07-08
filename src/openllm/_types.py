@@ -11,8 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
-Types definition for OpenLLM.
+"""Types definition for OpenLLM.
 
 Note that this module SHOULD NOT BE IMPORTED DURING RUNTIME, as this serve only for typing purposes.
 It will raises a RuntimeError if this is imported eagerly.
@@ -25,15 +24,19 @@ import typing as t
 if not t.TYPE_CHECKING:
     raise RuntimeError(f"{__name__} should not be imported during runtime")
 
-import click
 
 import bentoml
-import openllm
-import transformers
-from bentoml._internal.runner.runnable import RunnableMethod
-from bentoml._internal.runner.runner import RunnerMethod
 
 from ._configuration import AdapterType
+
+
+if t.TYPE_CHECKING:
+    import click
+
+    import openllm
+    import transformers
+    from bentoml._internal.runner.runnable import RunnableMethod
+    from bentoml._internal.runner.runner import RunnerMethod
 
 
 DictStrAny = dict[str, t.Any]

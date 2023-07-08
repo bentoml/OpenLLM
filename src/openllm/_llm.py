@@ -296,7 +296,7 @@ class LLMInterface(ABC, t.Generic[_M, _T]):
 
     def postprocess_generate(self, prompt: str, generation_result: t.Any, **attrs: t.Any) -> t.Any:
         """This handler will postprocess generation results from LLM.generate and
-        then output nicely formatted results (if the LLM decide to do so.)
+        then output nicely formatted results (if the LLM decide to do so.).
 
         You can customize how the output of the LLM looks with this hook. By default, it is a simple echo.
 
@@ -312,7 +312,7 @@ class LLMInterface(ABC, t.Generic[_M, _T]):
 
     def import_model(self, *args: t.Any, trust_remote_code: bool, **attrs: t.Any) -> bentoml.Model:
         """This function can be implemented if default import_model doesn't satisfy your needs.
-        Note that tokenizer attrs can be accessed via ``llm.llm_parameters``
+        Note that tokenizer attrs can be accessed via ``llm.llm_parameters``.
 
         ```python
         _, tokenizer_attrs = llm.llm_parameters
@@ -324,12 +324,14 @@ class LLMInterface(ABC, t.Generic[_M, _T]):
 
     def load_model(self, tag: bentoml.Tag, *args: t.Any, **attrs: t.Any) -> t.Any:
         """This function can be implemented to override the default load_model behaviour. See falcon for
-        example implementation."""
+        example implementation.
+        """
         raise NotImplementedError
 
     def load_tokenizer(self, tag: bentoml.Tag, **attrs: t.Any) -> t.Any:
         """This function can be implemented to override how to load the tokenizer. See falcon for
-        example implementation."""
+        example implementation.
+        """
         raise NotImplementedError
 
     # NOTE: All fields below are attributes that can be accessed by users.
@@ -399,7 +401,7 @@ class LLMInterface(ABC, t.Generic[_M, _T]):
             /,
             **attrs: t.Unpack[LLMInitAttrs],
         ) -> None:
-            """Generated __attrs_init__ for openllm.LLM"""
+            """Generated __attrs_init__ for openllm.LLM."""
 
 
 @attr.define(slots=True, repr=False)
@@ -803,7 +805,6 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
             *args: The args to be passed to the model.
             **attrs: The kwargs to be passed to the model.
         """
-
         # low_cpu_mem_usage is only available for model
         # this is helpful on system with low memory to avoid OOM
         low_cpu_mem_usage = attrs.pop("low_cpu_mem_usage", True)
@@ -1348,7 +1349,7 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
         )
 
     def predict(self, prompt: str, **attrs: t.Any) -> t.Any:
-        """The scikit-compatible API for self(...)"""
+        """The scikit-compatible API for self(...)."""
         return self.__call__(prompt, **attrs)
 
     def __call__(self, prompt: str, **attrs: t.Any) -> t.Any:
@@ -1405,7 +1406,7 @@ def Runner(
     llm_config: openllm.LLMConfig | None = None,
     **attrs: t.Any,
 ) -> LLMRunner:
-    """Create a Runner for given LLM. For a list of currently supported LLM, check out 'openllm models'
+    """Create a Runner for given LLM. For a list of currently supported LLM, check out 'openllm models'.
 
     The behaviour of ensure_available that is synonymous to `AutoLLM.for_model` depends on `init_local`.
     By default, `ensure_available` is synonymous to `init_local`, meaning on the service when creating

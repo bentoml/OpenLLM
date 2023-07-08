@@ -22,7 +22,6 @@ import typing as t
 
 import psutil
 
-import bentoml
 from bentoml._internal.resource import Resource
 from bentoml._internal.resource import get_resource
 from bentoml._internal.resource import system_resources
@@ -34,6 +33,8 @@ from .utils import ReprMixin
 
 
 if t.TYPE_CHECKING:
+    import bentoml
+
     ListIntStr = list[int | str]
 else:
     ListIntStr = list
@@ -69,8 +70,8 @@ class AmdGpuResource(Resource[t.List[str]], resource_id="amd.com/gpu"):
     @classmethod
     def from_system(cls) -> list[str]:
         """Retrieve AMD GPU from system, currently only supports on Linux.
-        This assumes that ROCm is setup correctly."""
-
+        This assumes that ROCm is setup correctly.
+        """
         cuda_visible_devices = os.getenv("CUDA_VISIBLE_DEVICES")
         if cuda_visible_devices in ("", "-1"):
             return []
@@ -187,11 +188,10 @@ class CascadingResourceStrategy(Strategy, ReprMixin):
         workers_per_resource: int | float,
         worker_index: int,
     ) -> dict[str, t.Any]:
-        """
-        Args:
-            runnable_class : The runnable class to be run.
-            resource_request : The resource request of the runnable.
-            worker_index : The index of the worker, start from 0.
+        """Args:
+        runnable_class : The runnable class to be run.
+        resource_request : The resource request of the runnable.
+        worker_index : The index of the worker, start from 0.
         """
         cuda_env = os.environ.get("CUDA_VISIBLE_DEVICES", None)
         disabled = cuda_env in ("", "-1")

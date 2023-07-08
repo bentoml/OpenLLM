@@ -293,7 +293,7 @@ class BaseAsyncClient(ClientMixin):
         agent_type: t.LiteralString = "hf",
         **attrs: t.Any,
     ) -> t.Any:
-        """Async version of agent.run"""
+        """Async version of agent.run."""
         if agent_type == "hf":
             return await self._run_hf_agent(task, return_code=return_code, remote=remote, **attrs)
         else:

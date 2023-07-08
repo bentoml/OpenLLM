@@ -17,7 +17,6 @@ import logging
 import re
 import typing as t
 
-import bentoml
 import openllm
 
 from ...utils import normalize_attrs_to_model_tokenizer_pair
@@ -31,6 +30,7 @@ if t.TYPE_CHECKING:
     import tensorflow as tf
     import torch
 
+    import bentoml
     import transformers
 else:
     tf = openllm.utils.LazyLoader("tf", globals(), "tensorflow")
