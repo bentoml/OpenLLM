@@ -180,8 +180,17 @@ class BaseClient(ClientMixin):
     def query(self, prompt: str, *, return_raw_response: t.Literal[True] = ..., **attrs: t.Any) -> dict[str, t.Any]:
         ...
 
-    def query(self, prompt: str, **attrs: t.Any) -> dict[str, t.Any] | str:
-        return_raw_response, prompt, generate_kwargs, postprocess_kwargs = self.prepare(prompt, **attrs)
+    @overload
+    def query(self, prompt: str, *, return_attrs: t.Literal[True] = True, **attrs: t.Any) -> openllm.GenerationOutput:
+        ...
+
+    def query(self, prompt: str, **attrs: t.Any) -> openllm.GenerationOutput | dict[str, t.Any] | str:
+        # NOTE: We set use_default_prompt_template to False for now.
+        use_default_prompt_template = attrs.pop("use_default_prompt_template", False)
+        return_attrs = attrs.pop("return_attrs", False)
+        return_raw_response, prompt, generate_kwargs, postprocess_kwargs = self.prepare(
+            prompt, use_default_prompt_template=use_default_prompt_template, **attrs
+        )
         inputs = openllm.GenerationInput(prompt=prompt, llm_config=self.config.model_construct_env(**generate_kwargs))
         if in_async_context():
             result = httpx.post(
@@ -193,9 +202,10 @@ class BaseClient(ClientMixin):
             result = self.call("generate", inputs)
         r = self.postprocess(result)
 
+        if return_attrs:
+            return r
         if return_raw_response:
             return openllm.utils.bentoml_cattr.unstructure(r)
-
         return self.llm.postprocess_generate(prompt, r.responses, **postprocess_kwargs)
 
     def ask_agent(
@@ -237,6 +247,17 @@ class BaseAsyncClient(ClientMixin):
         raise NotImplementedError
 
     @overload
+    async def query(
+        self,
+        prompt: str,
+        *,
+        return_attrs: t.Literal[True] = True,
+        return_raw_response: bool | None = ...,
+        **attrs: t.Any,
+    ) -> openllm.GenerationOutput:
+        ...
+
+    @overload
     async def query(self, prompt: str, *, return_raw_response: t.Literal[False] = ..., **attrs: t.Any) -> str:
         ...
 
@@ -246,9 +267,10 @@ class BaseAsyncClient(ClientMixin):
     ) -> dict[str, t.Any]:
         ...
 
-    async def query(self, prompt: str, **attrs: t.Any) -> dict[str, t.Any] | str:
+    async def query(self, prompt: str, **attrs: t.Any) -> dict[str, t.Any] | str | openllm.GenerationOutput:
         # NOTE: We set use_default_prompt_template to False for now.
         use_default_prompt_template = attrs.pop("use_default_prompt_template", False)
+        return_attrs = attrs.pop("return_attrs", False)
         return_raw_response, prompt, generate_kwargs, postprocess_kwargs = self.prepare(
             prompt, use_default_prompt_template=use_default_prompt_template, **attrs
         )
@@ -256,9 +278,10 @@ class BaseAsyncClient(ClientMixin):
         res = await self.acall("generate", inputs)
         r = self.postprocess(res)
 
+        if return_attrs:
+            return r
         if return_raw_response:
             return openllm.utils.bentoml_cattr.unstructure(r)
-
         return self.llm.postprocess_generate(prompt, r.responses, **postprocess_kwargs)
 
     async def ask_agent(

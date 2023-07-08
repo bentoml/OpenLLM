@@ -23,7 +23,6 @@ import logging.config
 import os
 import sys
 import types
-import copy
 import typing as t
 from circus.exc import ConflictError
 
@@ -34,7 +33,6 @@ from bentoml._internal.configuration import GRPC_DEBUG_ENV_VAR as _GRPC_DEBUG_EN
 from bentoml._internal.configuration import set_quiet_mode
 from bentoml._internal.log import configure_server_logging
 from bentoml._internal.models.model import ModelContext as _ModelContext
-from bentoml._internal.log import CLI_LOGGING_CONFIG as _CLI_LOGGING_CONFIG
 from bentoml._internal.types import LazyType
 from bentoml._internal.utils import LazyLoader
 from bentoml._internal.utils import bentoml_cattr
@@ -147,22 +145,35 @@ class _ExceptionFilter(logging.Filter):
         return True
 
 
-_LOGGING_CONFIG = copy.deepcopy(_CLI_LOGGING_CONFIG)
-_LOGGING_CONFIG["filters"]["excfilter"] = {"()": _ExceptionFilter}
-_LOGGING_CONFIG["handlers"]["bentomlhandler"] = {
-    "class": "logging.StreamHandler",
-    "filters": ["excfilter", "infofilter"],
-    "stream": "ext://sys.stdout",
-}
-_LOGGING_CONFIG["loggers"].update(
-    {
-        "openllm": {
-            "level": logging.INFO,
+_LOGGING_CONFIG: DictStrAny = {
+    "version": 1,
+    "disable_existing_loggers": True,
+    "filters": {"excfilter": {"()": _ExceptionFilter}},
+    "handlers": {
+        "bentomlhandler": {
+            "class": "logging.StreamHandler",
+            "filters": ["excfilter"],
+            "stream": "ext://sys.stdout",
+        },
+        "defaulthandler": {
+            "class": "logging.StreamHandler",
+            "level": logging.WARNING,
+        },
+    },
+    "loggers": {
+        "bentoml": {
             "handlers": ["bentomlhandler", "defaulthandler"],
+            "level": logging.INFO,
             "propagate": False,
-        }
-    }
-)
+        },
+        "openllm": {
+            "handlers": ["bentomlhandler", "defaulthandler"],
+            "level": logging.INFO,
+            "propagate": False,
+        },
+    },
+    "root": {"level": logging.WARNING},
+}
 
 
 def configure_logging() -> None:

@@ -190,11 +190,11 @@ def workers_per_resource_option(factory: t.Any, build: bool = False):
     See https://docs.bentoml.org/en/latest/guides/scheduling.html#resource-scheduling-strategy
     for more information. By default, this is set to 1.
 
-    > **Note**: ``--workers-per-resource`` will also accept the following strategies:
-    > - ``round_robin``: Similar behaviour when setting ``--workers-per-resource 1``. This is useful for smaller models.
-    > - ``conserved``: This will determine the number of available GPU resources, and only assign
-    >   one worker for the LLMRunner. For example, if ther are 4 GPUs available, then ``conserved`` is
-    >   equivalent to ``--workers-per-resource 0.25``.
+    **Note**: ``--workers-per-resource`` will also accept the following strategies:
+
+    - ``round_robin``: Similar behaviour when setting ``--workers-per-resource 1``. This is useful for smaller models.
+
+    - ``conserved``: This will determine the number of available GPU resources, and only assign one worker for the LLMRunner. For example, if ther are 4 GPUs available, then ``conserved`` is equivalent to ``--workers-per-resource 0.25``.
     """
     if build:
         help_str += """\n
@@ -642,6 +642,7 @@ def start_decorator(
             callback=_id_callback,
             metavar="[PATH | [remote/][adapter_name:]adapter_id][, ...]",
         ),
+        click.option("--return-process", is_flag=True, default=False, help="Internal use only.", hidden=True),
     ]
 
     def decorator(f: t.Callable[P, t.Any]) -> t.Callable[P, t.Any]:
@@ -657,8 +658,8 @@ def parse_config_options(
     server_timeout: int,
     workers_per_resource: float,
     device: tuple[str, ...] | None,
-    environ: dict[str, t.Any],
-) -> dict[str, t.Any]:
+    environ: DictStrAny,
+) -> DictStrAny:
     _bentoml_config_options_env = environ.pop("BENTOML_CONFIG_OPTIONS", "")
     _bentoml_config_options_opts = [
         "tracing.sample_rate=1.0",
@@ -684,7 +685,7 @@ def parse_config_options(
 
 def start_command_factory(
     model_name_or_bento: str | bentoml.Bento,
-    _context_settings: dict[str, t.Any] | None = None,
+    _context_settings: DictStrAny | None = None,
     _serve_grpc: bool = False,
 ) -> click.Command:
     """Generate a 'click.Command' for any given LLM.
@@ -872,8 +873,9 @@ def start_bento(
         runtime: t.Literal["ggml", "transformers"],
         fast: bool,
         adapter_id: str | None,
+        return_process: bool,
         **attrs: t.Any,
-    ) -> openllm.LLMConfig:
+    ) -> openllm.LLMConfig | subprocess.Popen[bytes]:
         adapter_map: dict[str, str | None] | None = attrs.pop(_adapter_mapping_key, None)
 
         config, server_attrs = llm_config.model_validate_click(**attrs)
@@ -929,8 +931,18 @@ def start_bento(
             server = bentoml.HTTPServer(bento, **server_attrs)
         analytics.track_start_init(config)
 
+        server.start(env=start_env, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        process = server.process
+        assert process
+
+        if return_process:
+            return process
+
         try:
-            server.start(env=start_env, text=True, blocking=True)
+            assert process.stdout
+            with process:
+                for line in iter(process.stdout.readline, b""):
+                    _echo(line.strip(), fg="white")
         except Exception as err:
             _echo(f"Error caught while starting LLM Server:\n{err}", fg="red")
             raise
@@ -974,8 +986,9 @@ def start_model(
         runtime: t.Literal["ggml", "transformers"],
         fast: bool,
         adapter_id: str | None,
+        return_process: bool,
         **attrs: t.Any,
-    ) -> openllm.LLMConfig:
+    ) -> openllm.LLMConfig | subprocess.Popen[bytes]:
         adapter_map: dict[str, str | None] | None = attrs.pop(_adapter_mapping_key, None)
 
         config, server_attrs = llm_config.model_validate_click(**attrs)
@@ -1053,28 +1066,36 @@ def start_model(
             server = bentoml.HTTPServer("_service.py:svc", **server_attrs)
         analytics.track_start_init(llm.config)
 
+        server.start(env=start_env, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        process = server.process
+        assert process
+
+        if return_process:
+            return process
+
         try:
-            server.start(env=start_env, text=True, blocking=True)
+            assert process.stdout
+            with process:
+                for line in iter(process.stdout.readline, b""):
+                    _echo(line.strip(), fg="white")
         except Exception as err:
             _echo(f"Error caught while starting LLM Server:\n{err}", fg="red")
             raise
-        else:
-            if not get_debug_mode():
-                cmd_name = f"openllm build {model_name}"
-                if adapter_map is not None:
-                    cmd_name += " " + " ".join(
-                        [
-                            f"--adapter-id {s}"
-                            for s in [
-                                f"{p}:{name}" if name not in (None, "default") else p
-                                for p, name in adapter_map.items()
-                            ]
+        finally:
+            cmd_name = f"openllm build {model_name}"
+            if adapter_map is not None:
+                cmd_name += " " + " ".join(
+                    [
+                        f"--adapter-id {s}"
+                        for s in [
+                            f"{p}:{name}" if name not in (None, "default") else p for p, name in adapter_map.items()
                         ]
-                    )
-                _echo(
-                    f"\n🚀 Next step: run '{cmd_name}' to create a Bento for {model_name}",
-                    fg="blue",
+                    ]
                 )
+            _echo(
+                f"\n🚀 Next step: run '{cmd_name}' to create a Bento for {model_name}",
+                fg="blue",
+            )
 
         # NOTE: Return the configuration for telemetry purposes.
         return config
@@ -1202,6 +1223,48 @@ _cached_grpc = {
 }
 
 
+@overload
+def _start(
+    model_name: str | bentoml.Bento,
+    /,
+    model_id: str | None = ...,
+    timeout: int = ...,
+    workers_per_resource: t.Literal["conserved", "round_robin"] | float | None = ...,
+    device: tuple[str, ...] | t.Literal["all"] | None = ...,
+    quantize: t.Literal["int8", "int4", "gptq"] | None = ...,
+    bettertransformer: bool | None = ...,
+    runtime: t.Literal["ggml", "transformers"] = ...,
+    fast: bool = ...,
+    adapter_map: dict[t.LiteralString, str | None] | None = ...,
+    framework: t.Literal["flax", "tf", "pt"] | None = ...,
+    additional_args: ListStr | None = ...,
+    _serve_grpc: bool = ...,
+    __test__: t.Literal[False] = ...,
+) -> openllm.LLMConfig:
+    ...
+
+
+@overload
+def _start(
+    model_name: str | bentoml.Bento,
+    /,
+    model_id: str | None = ...,
+    timeout: int = ...,
+    workers_per_resource: t.Literal["conserved", "round_robin"] | float | None = ...,
+    device: tuple[str, ...] | t.Literal["all"] | None = ...,
+    quantize: t.Literal["int8", "int4", "gptq"] | None = ...,
+    bettertransformer: bool | None = ...,
+    runtime: t.Literal["ggml", "transformers"] = ...,
+    fast: bool = ...,
+    adapter_map: dict[t.LiteralString, str | None] | None = ...,
+    framework: t.Literal["flax", "tf", "pt"] | None = ...,
+    additional_args: ListStr | None = ...,
+    _serve_grpc: bool = ...,
+    __test__: t.Literal[True] = ...,
+) -> subprocess.Popen[bytes]:
+    ...
+
+
 def _start(
     model_name: str | bentoml.Bento,
     /,
@@ -1217,7 +1280,8 @@ def _start(
     framework: t.Literal["flax", "tf", "pt"] | None = None,
     additional_args: ListStr | None = None,
     _serve_grpc: bool = False,
-):
+    __test__: bool = False,
+) -> openllm.LLMConfig | subprocess.Popen[bytes]:
     """Python API to start a LLM server. These provides one-to-one mapping to CLI arguments.
 
     For all additional arguments, pass it as string to ``additional_args``. For example, if you want to
@@ -1239,10 +1303,12 @@ def _start(
                               for more information. By default, this is set to 1.
 
                               > **Note**: ``--workers-per-resource`` will also accept the following strategies:
+
                               > - ``round_robin``: Similar behaviour when setting ``--workers-per-resource 1``. This is useful for smaller models.
-                              > - ``conserved``: This will determine the number of available GPU resources, and only assign
-                              >   one worker for the LLMRunner. For example, if ther are 4 GPUs available, then ``conserved`` is
-                              >   equivalent to ``--workers-per-resource 0.25``.
+
+                              > - ``conserved``: Thjis will determine the number of available GPU resources, and only assign
+                                                 one worker for the LLMRunner. For example, if ther are 4 GPUs available, then ``conserved`` is
+                                                 equivalent to ``--workers-per-resource 0.25``.
         device: Assign GPU devices (if available) to this LLM. By default, this is set to ``None``. It also accepts 'all'
                 argument to assign all available GPUs to this LLM.
         quantize: Quantize the model weights. This is only applicable for PyTorch models.
@@ -1297,7 +1363,10 @@ def _start(
     if additional_args:
         args.extend(additional_args)
 
-    start_command_factory(model_name, _context_settings=_CONTEXT_SETTINGS, _serve_grpc=_serve_grpc).main(
+    if __test__:
+        args.append("--return-process")
+
+    return start_command_factory(model_name, _context_settings=_CONTEXT_SETTINGS, _serve_grpc=_serve_grpc).main(
         args=args if len(args) > 0 else None,
         standalone_mode=False,
     )
@@ -1348,10 +1417,12 @@ def _build(
                               for more information. By default, this is set to 1.
 
                               > **Note**: ``--workers-per-resource`` will also accept the following strategies:
+
                               > - ``round_robin``: Similar behaviour when setting ``--workers-per-resource 1``. This is useful for smaller models.
+
                               > - ``conserved``: This will determine the number of available GPU resources, and only assign
-                              >   one worker for the LLMRunner. For example, if ther are 4 GPUs available, then ``conserved`` is
-                              >   equivalent to ``--workers-per-resource 0.25``.
+                                                 one worker for the LLMRunner. For example, if ther are 4 GPUs available, then ``conserved`` is
+                                                 equivalent to ``--workers-per-resource 0.25``.
         runtime: The runtime to use for this LLM. By default, this is set to ``transformers``. In the future, this will include supports for GGML.
         dockerfile_template: The dockerfile template to use for building BentoLLM. See
                              https://docs.bentoml.com/en/latest/guides/containerization.html#dockerfile-template.
@@ -1762,7 +1833,7 @@ def models_command(
             ids_in_local_store = {k: v for k, v in ids_in_local_store.items() if v}
 
         if machine:
-            dumped: dict[str, t.Any] = json_data
+            dumped: DictStrAny = json_data
             if show_available:
                 assert ids_in_local_store
                 dumped["local"] = [bentoml_cattr.unstructure(i.tag) for m in ids_in_local_store.values() for i in m]
@@ -1859,7 +1930,7 @@ def models_command(
                     )
                 _echo(formatted_table, fg="white")
         else:
-            dumped: dict[str, t.Any] = json_data
+            dumped: DictStrAny = json_data
             if show_available:
                 assert ids_in_local_store
                 dumped["local"] = [bentoml_cattr.unstructure(i.tag) for m in ids_in_local_store.values() for i in m]
@@ -1976,7 +2047,7 @@ def instruct(
     output: OutputLiteral,
     remote: bool,
     task: str,
-    _memoized: dict[str, t.Any],
+    _memoized: DictStrAny,
     **attrs: t.Any,
 ):
     """Instruct agents interactively for given tasks, from a terminal
@@ -2062,7 +2133,7 @@ def query(
         _echo(res["responses"], fg="white")
 
 
-def load_notebook_metadata() -> dict[str, t.Any]:
+def load_notebook_metadata() -> DictStrAny:
     with open(os.path.join(os.path.dirname(openllm.playground.__file__), "_meta.yml"), "r") as f:
         content = yaml.safe_load(f)
     if not all("description" in k for k in content.values()):

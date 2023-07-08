@@ -1,3 +1,17 @@
+# Copyright 2023 BentoML Team. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """Tests utilities for OpenLLM.
 """
 
@@ -11,6 +25,9 @@ import contextlib
 import logging
 
 logger = logging.getLogger(__name__)
+
+if t.TYPE_CHECKING:
+    from ._types import LiteralRuntime
 
 
 @contextlib.contextmanager
@@ -47,9 +64,43 @@ def build_container(
 
     try:
         logger.info("Building container for %s", bento_tag)
-        bentoml.container.build(bento_tag, backend=backend, image_tag=(image_tag,), progress="plain", **attrs)
+        bentoml.container.build(
+            bento_tag,
+            backend=backend,
+            image_tag=(image_tag,),
+            progress="plain",
+            **attrs,
+        )
         yield image_tag
     finally:
         if cleanup:
             logger.info("Deleting container %s", image_tag)
             subprocess.call([backend, "rmi", image_tag])
+
+
+@contextlib.contextmanager
+def prepare(
+    model: str,
+    model_id: str | None = None,
+    implementation: LiteralRuntime = "pt",
+    deployment_mode: t.Literal["container", "local"] = "local",
+    clean_context: contextlib.ExitStack | None = None,
+):
+    if clean_context is None:
+        clean_context = contextlib.ExitStack()
+
+    llm = openllm.infer_auto_class(implementation).for_model(model, model_id=model_id)
+    bento_tag = bentoml.Tag.from_taglike(f"{llm.llm_type}-service:{llm.tag.version}")
+
+    if not bentoml.list(bento_tag):
+        bento = clean_context.enter_context(build_bento(model, model_id=model_id))
+    else:
+        bento = bentoml.get(bento_tag)
+
+    image_tag = f"openllm-{model}-{llm.llm_type}"
+
+    if deployment_mode == "container":
+        image_tag = clean_context.enter_context(build_container(bento, image_tag=image_tag))
+
+    yield image_tag
+    clean_context.close()

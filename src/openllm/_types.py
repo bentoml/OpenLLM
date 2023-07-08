@@ -41,7 +41,7 @@ ListStr = list[str]
 TupleAny = tuple[t.Any, ...]
 P = t.ParamSpec("P")
 O_co = t.TypeVar("O_co", covariant=True)
-LiteralRuntime = t.Literal["pt", "tf", "flax"]
+LiteralRuntime: t.TypeAlias = t.Literal["pt", "tf", "flax"]
 Ts = t.TypeVarTuple("Ts")
 
 

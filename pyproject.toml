@@ -73,11 +73,11 @@ all = [
     "openllm[mpt]",
     "openllm[starcoder]",
     "openllm[ggml]",
-    "openllm[flan-t5]",
-    "openllm[openai]",
     "openllm[fine-tune]",
     "openllm[agents]",
     "openllm[playground]",
+    "openllm[flan-t5]",
+    "openllm[openai]",
 ]
 chatglm = ["cpm-kernels", "sentencepiece"]
 falcon = ["einops", "xformers", "safetensors"]
@@ -155,7 +155,7 @@ verbose = 2
 whitelist-regex = ["test_.*"]
 
 [tool.pytest.ini_options]
-addopts = ["-rfEX", "-pno:warnings"]
+addopts = ["-rfEX", "-pno:warnings", "--snapshot-warn-unused"]
 python_files = ["test_*.py", "*_test.py"]
 testpaths = ["tests"]
 

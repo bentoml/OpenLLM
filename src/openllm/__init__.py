@@ -34,7 +34,6 @@ from . import utils as utils
 from .__about__ import __version__ as __version__
 from .exceptions import MissingDependencyError
 
-
 if utils.DEBUG:
     utils.set_debug_mode(True)
     utils.set_quiet_mode(False)
@@ -69,6 +68,7 @@ _import_structure = {
     "models": [],
     "client": [],
     "playground": [],
+    "testing": [],
     "serialisation": ["ggml", "transformers"],
     "cli": ["start", "start_grpc", "build", "import_model", "list_models"],
     # NOTE: models
@@ -180,6 +180,7 @@ if t.TYPE_CHECKING:
     from . import models as models
     from . import playground as playground
     from . import serialisation as serialisation
+    from . import testing as testing
 
     # Specific types import
     from ._configuration import LLMConfig as LLMConfig

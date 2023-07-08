@@ -23,6 +23,8 @@ dependencies = [
     "trustme",
     "hypothesis",
     "syrupy",
+    # NOTE: interact with docker for container tests.
+    "docker",
 ]
 features = ['flan-t5']
 [envs.default.scripts]
