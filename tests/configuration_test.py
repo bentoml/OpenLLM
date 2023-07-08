@@ -126,29 +126,20 @@ def test_complex_struct_dump(
         generation_fields=(("temperature", temperature),),
     )
     sent = cl_()
-    assert (
-        sent.model_dump()["field1"] == field1 and sent.model_dump()["generation_config"]["temperature"] == temperature
-    )
-    assert (
-        sent.model_dump(flatten=True)["field1"] == field1
-        and sent.model_dump(flatten=True)["temperature"] == temperature
-    )
+    assert sent.model_dump()["field1"] == field1
+    assert sent.model_dump()["generation_config"]["temperature"] == temperature
+    assert sent.model_dump(flatten=True)["field1"] == field1
+    assert sent.model_dump(flatten=True)["temperature"] == temperature
 
     passed = cl_(field1=input_field1, temperature=input_temperature)
-    assert (
-        passed.model_dump()["field1"] == input_field1
-        and passed.model_dump()["generation_config"]["temperature"] == input_temperature
-    )
-    assert (
-        passed.model_dump(flatten=True)["field1"] == input_field1
-        and passed.model_dump(flatten=True)["temperature"] == input_temperature
-    )
+    assert passed.model_dump()["field1"] == input_field1
+    assert passed.model_dump()["generation_config"]["temperature"] == input_temperature
+    assert passed.model_dump(flatten=True)["field1"] == input_field1
+    assert passed.model_dump(flatten=True)["temperature"] == input_temperature
 
     pas_nested = cl_(generation_config={"temperature": input_temperature}, field1=input_field1)
-    assert (
-        pas_nested.model_dump()["field1"] == input_field1
-        and pas_nested.model_dump()["generation_config"]["temperature"] == input_temperature
-    )
+    assert pas_nested.model_dump()["field1"] == input_field1
+    assert pas_nested.model_dump()["generation_config"]["temperature"] == input_temperature
 
 
 @contextlib.contextmanager
@@ -208,7 +199,7 @@ def test_struct_envvar_with_overwrite_provided_env(monkeypatch: pytest.MonkeyPat
 
 
 @given(model_settings())
-@pytest.mark.parametrize("return_dict,typ", [(True, DictStrAny), (False, transformers.GenerationConfig)])
+@pytest.mark.parametrize(("return_dict", "typ"), [(True, DictStrAny), (False, transformers.GenerationConfig)])
 def test_conversion_to_transformers(return_dict: bool, typ: type[t.Any], gen_settings: ModelSettings):
     cl_ = make_llm_config("ConversionLLM", gen_settings)
     assert isinstance(cl_().to_generation_config(return_as_dict=return_dict), typ)

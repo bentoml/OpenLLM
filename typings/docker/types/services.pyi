@@ -229,8 +229,6 @@ class RollbackConfig(UpdateConfig):
           accepted.
     """
 
-    ...
-
 class RestartConditionTypesEnum:
     _values = ...
 

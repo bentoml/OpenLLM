@@ -185,8 +185,8 @@ target-version = ["py311"]
 [tool.ruff]
 exclude = ["tools"]
 # extends quotes, pydocstyle, pycodestyle, logging format, isort, future-annotations
-# type-checking, refactor and warning
-extend-select = ["I", "G", "D", "W", "Q", "FA", "S", "TCH", "PLW", "PLR"]
+# type-checking, refactor, warning, pytest-style, flake8-pyi
+extend-select = ["I", "G", "D", "W", "Q", "FA", "S", "TCH", "PLW", "PLR", "PT", "PYI"]
 fix = true
 ignore = [
     # Allow non-abstract empty methods in abstract base classes
@@ -208,6 +208,8 @@ ignore = [
     "E741",
     # don't move runtime import out
     "TCH004",
+    # ignore docstring in stubs, as pyright will include docstring in stubs.
+    "PYI021",
 ]
 line-length = 119
 target-version = "py312"
@@ -242,6 +244,7 @@ avoid-escape = false
 "src/openllm/_types.py" = ["E402"]
 "src/openllm/playground/**/*" = ["E402", "F401"]
 "tests/**/*" = ["PLR2004", "S101", "TID252"]
+"typings/**/*" = ["D"]
 
 
 [tool.pyright]

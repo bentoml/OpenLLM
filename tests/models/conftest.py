@@ -143,7 +143,7 @@ class ResponseComparator(JSONSnapshotExtension):
         )
 
 
-@pytest.fixture
+@pytest.fixture()
 def response_snapshot(snapshot: SnapshotAssertion):
     return snapshot.use_extension(ResponseComparator)
 

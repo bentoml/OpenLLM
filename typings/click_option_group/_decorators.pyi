@@ -24,7 +24,6 @@ class OptionStackItem(NamedTuple):
     param_decls: Tuple[str, ...]
     attrs: Dict[str, Any]
     param_count: int
-    ...
 
 class ClickFunctionWrapper(Protocol[P, O_co]):
     __name__: str

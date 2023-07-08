@@ -60,7 +60,7 @@ async def flan_t5_small(flan_t5_small_handle: _Handle):
     return flan_t5_small_handle.client
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_flan_t5_small(
     flan_t5_small: t.Awaitable[openllm.client.AsyncHTTPClient], response_snapshot: ResponseComparator
 ):

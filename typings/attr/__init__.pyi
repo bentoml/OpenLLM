@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import enum
 from typing import Any
 from typing import Callable
@@ -38,14 +36,14 @@ _T = TypeVar("_T")
 _C = TypeVar("_C", bound=type)
 _P = ParamSpec("_P")
 _EqOrderType = Union[bool, Callable[[Any], Any]]
-_ValidatorType = Callable[[Any, "Attribute[_T]", _T], Any]
+_ValidatorType = Callable[[Any, Attribute[_T], _T], Any]
 _ConverterType = Callable[[Any], Any]
-_FilterType = Callable[["Attribute[_T]", _T], bool]
+_FilterType = Callable[[Attribute[_T], _T], bool]
 _ReprType = Callable[[Any], str]
 _ReprArgType = Union[bool, _ReprType]
-_OnSetAttrType = Callable[[Any, "Attribute[Any]", Any], Any]
+_OnSetAttrType = Callable[[Any, Attribute[Any], Any], Any]
 _OnSetAttrArgType = Union[_OnSetAttrType, List[_OnSetAttrType], setters._NoOpType]
-_FieldTransformer = Callable[[type, List["Attribute[Any]"]], List["Attribute[Any]"]]
+_FieldTransformer = Callable[[type, List[Attribute[Any]]], List[Attribute[Any]]]
 _ValidatorArgType = Union[_ValidatorType[_T], Sequence[_ValidatorType[_T]]]
 
 class ReprProtocol(Protocol):

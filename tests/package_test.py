@@ -60,7 +60,7 @@ def test_general_build_from_local(tmp_path_factory: pytest.TempPathFactory):
     assert len(bento_store.list(bento.tag)) == 1
 
 
-@pytest.fixture(name="dockerfile_template", scope="function")
+@pytest.fixture(name="dockerfile_template")
 def fixture_dockerfile_template(tmp_path_factory: pytest.TempPathFactory):
     file = tmp_path_factory.mktemp("dockerfiles") / "Dockerfile.template"
     file.write_text(
