@@ -26,7 +26,8 @@
 
 (s/def ::screen-id keyword?)
 (s/def ::side-bar-open? boolean?)
-(s/def ::modal-open? (s/keys :req-un [::playground boolean?]))
+(s/def ::modal-open? (s/keys :req-un [::playground boolean?
+                                      ::chat boolean?]))
 (s/def ::indexed-db js/Object)
 
 (s/def ::playground-input-value string?)
@@ -34,6 +35,7 @@
 
 (s/def ::chat-input-value string?)
 (s/def ::chat-history (s/coll-of (s/keys :req-un [::user ::text]) :kind vector?))
+(s/def ::prompt-layout string?)
 
 (s/def ::apis-data (s/map-of keyword? (s/keys :req-un [::input-value ::last-response])))
 (s/def ::selected-api keyword?)
@@ -98,6 +100,7 @@
                              ::playground-last-response
                              ::chat-input-value
                              ::chat-history
+                             ::prompt-layout
                              ::apis-data
                              ::selected-api
                              ::model-config]))
@@ -142,12 +145,14 @@
    for the registration of `:initialise-db` effect handler."
   {:screen-id :playground
    :side-bar-open? true
-   :modal-open? {:playground false}
+   :modal-open? {:playground false
+                 :chat false}
    :indexed-db nil
    :playground-input-value ""
    :playground-last-response ""
    :chat-input-value ""
    :chat-history []
+   :prompt-layout ""
    :apis-data (get-default-apis-data)
    :selected-api (:id (first apis-data/endpoints-data))
    :model-config standard-llm-config})

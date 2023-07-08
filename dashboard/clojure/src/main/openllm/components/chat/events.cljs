@@ -53,6 +53,18 @@
                    [::set-chat-input-value ""]]
       :dispatch-later [{:ms 20 :dispatch [::auto-scroll]}]})))
 
+(reg-event-db
+ ::toggle-modal
+ [check-spec-interceptor]
+ (fn [db [_ _]]
+   (assoc-in db [:modal-open? :chat] (not (get-in db [:modal-open? :chat])))))
+
+(reg-event-db
+ ::set-prompt-layout
+ [check-spec-interceptor]
+ (fn [db [_ layout]]
+   (assoc db :prompt-layout layout)))
+
 (defn- auto-scroll!
   "Scrolls the chat history to the bottom. Has side effects obviously."
   []

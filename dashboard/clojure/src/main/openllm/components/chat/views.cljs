@@ -7,6 +7,10 @@
             [openllm.components.chat.views :as views]
             [reagent-mui.material.icon-button :refer [icon-button]]
             [reagent-mui.material.button :refer [button]]
+            [reagent-mui.material.modal :refer [modal]]
+            [reagent-mui.material.box :refer [box]]
+            [reagent-mui.material.paper :refer [paper]]
+            [reagent-mui.material.typography :refer [typography]]
             [reagent-mui.icons.design-services :as ds-icon]
             [reagent-mui.icons.send :as send-icon]
             [reagent.core :as r]))
@@ -31,7 +35,7 @@
                    :id "chat-input"}]
        [:div {:class "grid grid-rows-2 ml-1.5"}
         [:div {:class "items-start"}
-         [icon-button {:on-click #(js/window.alert "not implemented")
+         [icon-button {:on-click #(rf/dispatch [::events/toggle-modal])
                        :color "primary"}
           [ds-icon/design-services]]]
         [button {:on-click on-send-click
@@ -62,12 +66,40 @@
                        [:p {:class (if (= user :model) "text-gray-700" "text-gray-950")} text]]]))
                  @history)))))
 
+(defn prompt-layout-modal
+  "The modal for editing the prompt layout."
+  []
+  (let [modal-open? (rf/subscribe [::subs/modal-open?])
+        prompt-layout (rf/subscribe [::subs/prompt-layout])
+        on-change #(rf/dispatch [::events/set-prompt-layout (.. % -target -value)])]
+    (fn []
+      [modal {:open @modal-open?
+              :on-close #(rf/dispatch [::events/toggle-modal])}
+       [:div {:class "p-4"}
+        [:div
+         [box {:style {:position "absolute"
+                       :width 800,
+                       :top "50%"
+                       :left "50%"
+                       :transform "translate(-50%, -50%)"}}
+          [paper {:elevation 24
+                  :style {:padding "20px 30px"}}
+           [typography {:variant "h5"} "Prompt Layout"]
+           [:textarea {:class "pt-3 mt-1 w-full h-64 block border bg-gray-200"
+                       :value @prompt-layout
+                       :on-change on-change}]
+          [:div {:class "mt-4 flex justify-end space-x-2"}
+           [button {:type "button"
+                    :variant "outlined"
+                    :on-click #(rf/dispatch [::events/toggle-modal])} "Save"]]]]]]])))
+
 (defn chat-tab-contents
   "The component rendered if the chat tab is active."
   []
   (let [side-bar-open? (rf/subscribe [::side-bar-subs/side-bar-open?])]
     (fn []
       [:div
+       [prompt-layout-modal]
        [:div {:id "chat-history-container"
               :class "overflow-y-scroll mt-6 h-[calc(100%_-_220px)] w-full no-scrollbar"
               :style {:scrollBehavior "smooth"}}
