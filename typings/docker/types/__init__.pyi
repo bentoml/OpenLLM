@@ -1,35 +1,30 @@
-from .containers import (
-    ContainerConfig as ContainerConfig,
-    DeviceRequest as DeviceRequest,
-    HostConfig as HostConfig,
-    LogConfig as LogConfig,
-    Ulimit as Ulimit,
-)
+from .containers import ContainerConfig as ContainerConfig
+from .containers import DeviceRequest as DeviceRequest
+from .containers import HostConfig as HostConfig
+from .containers import LogConfig as LogConfig
+from .containers import Ulimit as Ulimit
 from .daemon import CancellableStream as CancellableStream
 from .healthcheck import Healthcheck as Healthcheck
-from .networks import (
-    EndpointConfig as EndpointConfig,
-    IPAMConfig as IPAMConfig,
-    IPAMPool as IPAMPool,
-    NetworkingConfig as NetworkingConfig,
-)
-from .services import (
-    ConfigReference as ConfigReference,
-    ContainerSpec as ContainerSpec,
-    DNSConfig as DNSConfig,
-    DriverConfig as DriverConfig,
-    EndpointSpec as EndpointSpec,
-    Mount as Mount,
-    NetworkAttachmentConfig as NetworkAttachmentConfig,
-    Placement as Placement,
-    PlacementPreference as PlacementPreference,
-    Privileges as Privileges,
-    Resources as Resources,
-    RestartPolicy as RestartPolicy,
-    RollbackConfig as RollbackConfig,
-    SecretReference as SecretReference,
-    ServiceMode as ServiceMode,
-    TaskTemplate as TaskTemplate,
-    UpdateConfig as UpdateConfig,
-)
-from .swarm import SwarmExternalCA as SwarmExternalCA, SwarmSpec as SwarmSpec
+from .networks import EndpointConfig as EndpointConfig
+from .networks import IPAMConfig as IPAMConfig
+from .networks import IPAMPool as IPAMPool
+from .networks import NetworkingConfig as NetworkingConfig
+from .services import ConfigReference as ConfigReference
+from .services import ContainerSpec as ContainerSpec
+from .services import DNSConfig as DNSConfig
+from .services import DriverConfig as DriverConfig
+from .services import EndpointSpec as EndpointSpec
+from .services import Mount as Mount
+from .services import NetworkAttachmentConfig as NetworkAttachmentConfig
+from .services import Placement as Placement
+from .services import PlacementPreference as PlacementPreference
+from .services import Privileges as Privileges
+from .services import Resources as Resources
+from .services import RestartPolicy as RestartPolicy
+from .services import RollbackConfig as RollbackConfig
+from .services import SecretReference as SecretReference
+from .services import ServiceMode as ServiceMode
+from .services import TaskTemplate as TaskTemplate
+from .services import UpdateConfig as UpdateConfig
+from .swarm import SwarmExternalCA as SwarmExternalCA
+from .swarm import SwarmSpec as SwarmSpec

@@ -17,12 +17,14 @@
 
 from __future__ import annotations
 
-import typing as t
-import bentoml
-import subprocess
-import openllm
 import contextlib
 import logging
+import subprocess
+import typing as t
+
+import bentoml
+import openllm
+
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +38,7 @@ def build_bento(
     model_id: str | None = None,
     quantize: t.Literal["int4", "int8", "gptq"] | None = None,
     runtime: t.Literal["ggml", "transformers"] = "transformers",
-    cleanup: bool = True,
+    cleanup: bool = False,
 ):
     logger.info("Building BentoML for %s", model)
     bento = openllm.build(model, model_id=model_id, quantize=quantize, runtime=runtime)
@@ -50,7 +52,7 @@ def build_bento(
 def build_container(
     bento: bentoml.Bento | str | bentoml.Tag,
     image_tag: str | None = None,
-    cleanup: bool = True,
+    cleanup: bool = False,
     backend: t.LiteralString = "docker",
     **attrs: t.Any,
 ):
@@ -97,10 +99,10 @@ def prepare(
     else:
         bento = bentoml.get(bento_tag)
 
-    image_tag = f"openllm-{model}-{llm.llm_type}"
+    container_name = f"openllm-{model}-{llm.llm_type}".replace("-", "_")
 
     if deployment_mode == "container":
-        image_tag = clean_context.enter_context(build_container(bento, image_tag=image_tag))
+        container_name = clean_context.enter_context(build_container(bento, image_tag=container_name))
 
-    yield image_tag
+    yield container_name
     clean_context.close()

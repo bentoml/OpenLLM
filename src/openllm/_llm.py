@@ -25,8 +25,8 @@ import types
 import typing as t
 from abc import ABC
 from abc import abstractmethod
-
 from pathlib import Path
+
 import attr
 import inflection
 import orjson
@@ -34,11 +34,12 @@ from huggingface_hub import hf_hub_download
 
 import bentoml
 import openllm
+from bentoml._internal.models import ModelStore
 from bentoml._internal.models.model import ModelSignature
 from bentoml._internal.types import ModelSignatureDict
 
-from ._configuration import FineTuneConfig
 from ._configuration import AdapterType
+from ._configuration import FineTuneConfig
 from .exceptions import ForbiddenAttributeError
 from .exceptions import GpuNotAvailableError
 from .utils import DEBUG
@@ -48,16 +49,18 @@ from .utils import LazyLoader
 from .utils import ReprMixin
 from .utils import bentoml_cattr
 from .utils import first_not_none
+from .utils import get_debug_mode
+from .utils import in_docker
 from .utils import is_bitsandbytes_available
 from .utils import is_peft_available
 from .utils import is_torch_available
 from .utils import is_transformers_supports_kbit
 from .utils import non_intrusive_setattr
-from .utils import pkg
-from .utils import validate_is_path, resolve_filepath
-from .utils import requires_dependencies
 from .utils import normalize_attrs_to_model_tokenizer_pair
-from .utils import get_debug_mode
+from .utils import pkg
+from .utils import requires_dependencies
+from .utils import resolve_filepath
+from .utils import validate_is_path
 
 
 # NOTE: We need to do this so that overload can register
@@ -74,16 +77,14 @@ if t.TYPE_CHECKING:
     import transformers
     from bentoml._internal.runner.strategy import Strategy
 
-    from ._types import (
-        ModelProtocol,
-        TokenizerProtocol,
-        LLMRunner,
-        PeftAdapterOutput,
-        LLMRunnable as LLMRunnable,
-        LLMInitAttrs,
-        AdaptersMapping,
-        LiteralRuntime,
-    )
+    from ._types import AdaptersMapping
+    from ._types import LiteralRuntime
+    from ._types import LLMInitAttrs
+    from ._types import LLMRunnable as LLMRunnable
+    from ._types import LLMRunner
+    from ._types import ModelProtocol
+    from ._types import PeftAdapterOutput
+    from ._types import TokenizerProtocol
     from .utils.representation import ReprArgs
 
     DictStrAny = dict[str, t.Any]
@@ -135,13 +136,21 @@ def make_tag(
 
     if validate_is_path(model_id):
         model_id = resolve_filepath(model_id)
-        if model_version is None:
-            if not quiet:
-                logger.warning(
-                    "Given 'model_id=%s' is a path, and 'model_version' is not passed. OpenLLM will generate the version based on the last modified time of this given directory.",
-                    model_id,
-                )
-            model_version = generate_hash_from_file(model_id)
+        # special cases, if it is the model store, then we return the tags
+        # this will happens within the container, where we use the relative path
+        if in_docker() and os.getenv("BENTO_PATH") is not None:
+            _store = ModelStore(Path(model_id).parent.parent)
+            tag = _store.list()[0].tag
+            model_version = tag.version
+            model_name = tag.name
+        else:
+            if model_version is None:
+                if not quiet:
+                    logger.warning(
+                        "Given 'model_id=%s' is a path, and 'model_version' is not passed. OpenLLM will generate the version based on the last modified time of this given directory.",
+                        model_id,
+                    )
+                model_version = generate_hash_from_file(model_id)
     else:
         config = t.cast(
             "transformers.PretrainedConfig",
@@ -158,14 +167,17 @@ def make_tag(
                 f"Internal errors when parsing config for pretrained {model_id} ('commit_hash' not found)"
             )
 
-    logger.debug(
-        "'model_id=%s' will use 'model_version=%s'. The full tag to be saved under model store: '%s-%s:%s'",
-        model_id,
-        model_version,
-        implementation,
-        model_name,
-        model_version,
-    )
+    if in_docker() and os.getenv("BENTO_PATH") is not None:
+        logger.debug("The model will be loaded as relative path within BentoContainer.")
+    else:
+        logger.debug(
+            "'model_id=%s' will use 'model_version=%s'. The full tag to be saved under model store: '%s-%s:%s'",
+            model_id,
+            model_version,
+            implementation,
+            model_name,
+            model_version,
+        )
 
     return bentoml.Tag.from_taglike(f"{implementation}-{model_name}:{model_version}".strip())
 

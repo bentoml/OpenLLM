@@ -26,13 +26,14 @@ if not t.TYPE_CHECKING:
     raise RuntimeError(f"{__name__} should not be imported during runtime")
 
 import click
+
 import bentoml
 import openllm
 import transformers
-from ._configuration import AdapterType
-
 from bentoml._internal.runner.runnable import RunnableMethod
 from bentoml._internal.runner.runner import RunnerMethod
+
+from ._configuration import AdapterType
 
 
 DictStrAny = dict[str, t.Any]

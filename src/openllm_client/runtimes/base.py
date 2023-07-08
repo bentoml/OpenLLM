@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import typing as t
 from abc import abstractmethod
 from urllib.parse import urljoin
@@ -23,7 +24,6 @@ import httpx
 
 import bentoml
 import openllm
-import logging
 
 
 # NOTE: We need to do this so that overload can register
@@ -195,11 +195,11 @@ class BaseClient(ClientMixin):
         if in_async_context():
             result = httpx.post(
                 urljoin(self._address, f"/{self._api_version}/generate"),
-                json=openllm.utils.bentoml_cattr.unstructure(inputs),
+                json=inputs.model_dump(),
                 timeout=self.timeout,
             ).json()
         else:
-            result = self.call("generate", inputs)
+            result = self.call("generate", inputs.model_dump())
         r = self.postprocess(result)
 
         if return_attrs:
@@ -275,7 +275,7 @@ class BaseAsyncClient(ClientMixin):
             prompt, use_default_prompt_template=use_default_prompt_template, **attrs
         )
         inputs = openllm.GenerationInput(prompt=prompt, llm_config=self.config.model_construct_env(**generate_kwargs))
-        res = await self.acall("generate", inputs)
+        res = await self.acall("generate", inputs.model_dump())
         r = self.postprocess(res)
 
         if return_attrs:

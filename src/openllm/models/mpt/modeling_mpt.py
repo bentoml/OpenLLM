@@ -21,7 +21,8 @@ import bentoml
 import openllm
 
 from ..._prompt import default_formatter
-from ...utils import is_triton_available, generate_labels
+from ...utils import generate_labels
+from ...utils import is_triton_available
 from .configuration_mpt import DEFAULT_PROMPT_TEMPLATE
 
 

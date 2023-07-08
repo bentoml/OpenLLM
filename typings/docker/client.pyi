@@ -1,4 +1,6 @@
-from typing import Any, Self
+from typing import Any
+from typing import Self
+
 from .models.containers import ContainerCollection
 
 class DockerClient:

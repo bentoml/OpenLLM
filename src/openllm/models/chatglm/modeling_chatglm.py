@@ -20,8 +20,10 @@ import openllm
 
 from ...utils import generate_labels
 
+
 if t.TYPE_CHECKING:
     import torch
+
     import transformers
 else:
     torch = openllm.utils.LazyLoader("torch", globals(), "torch")

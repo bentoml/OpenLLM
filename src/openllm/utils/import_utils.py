@@ -45,7 +45,8 @@ else:
 
 if t.TYPE_CHECKING:
     BackendOrderredDict = OrderedDict[str, tuple[t.Callable[[], bool], str]]
-    from .._types import P, LiteralRuntime
+    from .._types import LiteralRuntime
+    from .._types import P
 else:
     BackendOrderredDict = OrderedDict
 

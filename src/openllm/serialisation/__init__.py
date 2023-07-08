@@ -38,14 +38,20 @@ llm.save_pretrained("./path/to/local-dolly")
 
 from __future__ import annotations
 
-from ..utils import LazyModule
 import typing as t
+
 import openllm
+
+from ..utils import LazyModule
+
 
 if t.TYPE_CHECKING:
     import bentoml
-    from .._types import ModelProtocol, TokenizerProtocol
-    from .transformers import _M, _T
+
+    from .._types import ModelProtocol
+    from .._types import TokenizerProtocol
+    from .transformers import _M
+    from .transformers import _T
 
 
 def import_model(
@@ -109,12 +115,12 @@ _extras = {
 _import_structure: dict[str, list[str]] = {"ggml": [], "transformers": []}
 
 if t.TYPE_CHECKING:
-    from . import import_model as import_model
     from . import get as get
-    from . import save_pretrained as save_pretrained
+    from . import ggml as ggml
+    from . import import_model as import_model
     from . import load_model as load_model
     from . import load_tokenizer as load_tokenizer
-    from . import ggml as ggml
+    from . import save_pretrained as save_pretrained
     from . import transformers as transformers
 else:
     import sys

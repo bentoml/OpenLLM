@@ -14,45 +14,42 @@
 
 from __future__ import annotations
 
-import sys
-import types
-import attr
-import functools
-import time
-import logging
 import asyncio
+import contextlib
+import itertools
+import logging
 import subprocess
+import sys
+import time
+import typing as t
+from abc import ABC
+from abc import abstractmethod
+
+import attr
 import docker
 import docker.errors
 import docker.types
-import contextlib
-from abc import ABC
-from abc import abstractmethod
-import typing as t
-
-import pytest
 import orjson
+import pytest
+from syrupy.extensions.json import JSONSnapshotExtension
 
 import openllm
 from openllm._llm import normalise_model_name
-import itertools
-from syrupy.extensions.json import JSONSnapshotExtension
+
 
 logger = logging.getLogger(__name__)
 
 if t.TYPE_CHECKING:
     from openllm_client.runtimes.base import BaseAsyncClient
+    from syrupy.assertion import SnapshotAssertion
+    from syrupy.types import PropertyFilter
+    from syrupy.types import PropertyMatcher
+    from syrupy.types import SerializableData
+    from syrupy.types import SerializedData
+
+    from openllm._configuration import GenerationConfig
     from openllm._types import DictStrAny
     from openllm._types import ListAny
-    from openllm._configuration import GenerationConfig
-    from syrupy.assertion import SnapshotAssertion
-
-    from syrupy.types import (
-        PropertyFilter,
-        PropertyMatcher,
-        SerializableData,
-        SerializedData,
-    )
     from openllm._types import LiteralRuntime
 
 else:
@@ -69,7 +66,7 @@ _PROMPT_MAPPING = {
 
 def parametrise_local_llm(
     model: str,
-) -> t.Generator[tuple[openllm.LLMRunner | openllm.LLM[t.Any, t.Any], str], None, None]:
+) -> t.Generator[tuple[str, openllm.LLMRunner | openllm.LLM[t.Any, t.Any]], None, None]:
     if model not in _FRAMEWORK_MAPPING:
         pytest.skip(f"'{model}' is not yet supported in framework testing.")
 
@@ -85,29 +82,17 @@ def parametrise_local_llm(
         llm, runner_kwargs = openllm.infer_auto_class(framework).for_model(
             model, model_id=_FRAMEWORK_MAPPING[model], ensure_available=True, return_runner_kwargs=True
         )
-        yield llm, prompt
+        yield prompt, llm
         runner = llm.to_runner(**runner_kwargs)
         runner.init_local(quiet=True)
-        yield runner, prompt
+        yield prompt, runner
 
 
 def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
-    model = t.cast(types.ModuleType, metafunc.module).__name__.split(".")[-1].strip("test_")
     if "prompt" in metafunc.fixturenames and "llm" in metafunc.fixturenames:
-        metafunc.parametrize("prompt,llm", [(p, llm) for p, llm in parametrise_local_llm(model)])
-
-
-def convert_data(data: SerializableData) -> openllm.GenerationOutput | t.Sequence[openllm.GenerationOutput]:
-    try:
-        data = orjson.loads(data)
-    except orjson.JSONDecodeError:
-        raise ValueError(f"Failed to decode JSON data: {data}")
-    if openllm.utils.LazyType(DictStrAny).isinstance(data):
-        return openllm.GenerationOutput(**data)
-    elif openllm.utils.LazyType(ListAny).isinstance(data):
-        return [openllm.GenerationOutput(**d) for d in data]
-    else:
-        raise NotImplementedError(f"Data {data} has unsupported type.")
+        metafunc.parametrize(
+            "prompt,llm", [(p, llm) for p, llm in parametrise_local_llm(metafunc.function.__name__[5:-15])]
+        )
 
 
 class ResponseComparator(JSONSnapshotExtension):
@@ -119,9 +104,21 @@ class ResponseComparator(JSONSnapshotExtension):
         matcher: PropertyMatcher | None = None,
     ) -> SerializedData:
         data = self._filter(data=data, depth=0, path=(), exclude=exclude, matcher=matcher)
-        return orjson.dumps(data, option=orjson.OPT_INDENT_2 | orjson.OPT_SORT_KEYS)
+        return orjson.dumps(data.model_dump(), option=orjson.OPT_INDENT_2 | orjson.OPT_SORT_KEYS).decode()
 
     def matches(self, *, serialized_data: SerializableData, snapshot_data: SerializableData) -> bool:
+        def convert_data(data: SerializableData) -> openllm.GenerationOutput | t.Sequence[openllm.GenerationOutput]:
+            try:
+                data = orjson.loads(data)
+            except orjson.JSONDecodeError:
+                raise ValueError(f"Failed to decode JSON data: {data}")
+            if openllm.utils.LazyType(DictStrAny).isinstance(data):
+                return openllm.GenerationOutput(**data)
+            elif openllm.utils.LazyType(ListAny).isinstance(data):
+                return [openllm.GenerationOutput(**d) for d in data]
+            else:
+                raise NotImplementedError(f"Data {data} has unsupported type.")
+
         serialized_data = convert_data(serialized_data)
         snapshot_data = convert_data(snapshot_data)
 
@@ -145,17 +142,22 @@ class ResponseComparator(JSONSnapshotExtension):
         )
 
 
-@pytest.fixture(scope="module", name="response_snapshot")
-def fixture_response_snapshot(snapshot: SnapshotAssertion):
-    snapshot.use_extension(ResponseComparator)
+@pytest.fixture
+def response_snapshot(snapshot: SnapshotAssertion):
+    return snapshot.use_extension(ResponseComparator)
 
 
-@attr.define
+@attr.define(init=False)
 class _Handle(ABC):
     port: int
-    timeout: int = attr.field(default=60)
+    timeout: int
 
     client: BaseAsyncClient = attr.field(init=False)
+
+    if t.TYPE_CHECKING:
+
+        def __attrs_init__(*args: t.Any, **_: t.Any):
+            ...
 
     def __attrs_post_init__(self):
         self.client = openllm.client.AsyncHTTPClient(f"http://localhost:{self.port}")
@@ -185,8 +187,7 @@ class LocalHandle(_Handle):
     process: subprocess.Popen[bytes]
 
     def __init__(self, process: subprocess.Popen[bytes], port: int, timeout: int = 60):
-        super().__init__(port=port, timeout=timeout)
-        self.process = process
+        self.__attrs_init__(port, timeout, process)
 
     def status(self) -> bool:
         return self.process.poll() is None
@@ -210,9 +211,7 @@ class DockerHandle(_Handle):
     docker_client: docker.DockerClient
 
     def __init__(self, docker_client: docker.DockerClient, container_name: str, port: int, timeout: int = 60):
-        super().__init__(port=port, timeout=timeout)
-        self.docker_client = docker_client
-        self.container_name = container_name
+        self.__attrs_init__(port, timeout, container_name, docker_client)
 
     def status(self) -> bool:
         container = self.docker_client.containers.get(self.container_name)
@@ -226,10 +225,11 @@ def _local_handle(
     image_tag: str,
     quantize: t.Literal["int8", "int4", "gptq"] | None = None,
     *,
-    clean_context: contextlib.ExitStack,
     _serve_grpc: bool = False,
 ):
-    port = clean_context.enter_context(openllm.utils.reserve_free_port())
+    with openllm.utils.reserve_free_port() as port:
+        pass
+
     if not _serve_grpc:
         proc = openllm.start(
             model, model_id=model_id, quantize=quantize, additional_args=["--port", str(port)], __test__=True
@@ -243,12 +243,12 @@ def _local_handle(
     proc.terminate()
     proc.wait(60)
 
-    process_output = proc.stdout.read().decode("utf-8")
+    process_output = proc.stdout.read()
     print(process_output, file=sys.stderr)
 
     proc.stdout.close()
-    proc.stderr.close()
-    clean_context.close()
+    if proc.stderr:
+        proc.stderr.close()
 
 
 @contextlib.contextmanager
@@ -258,13 +258,13 @@ def _container_handle(
     image_tag: str,
     quantize: t.Literal["int8", "int4", "gptq"] | None = None,
     *,
-    clean_context: contextlib.ExitStack,
     _serve_grpc: bool = False,
 ):
     envvar = openllm.utils.EnvVarMixin(model)
 
-    port = clean_context.enter_context(openllm.utils.reserve_free_port())
-    container_name = f"openllm-{model}-{normalise_model_name(model_id)}"
+    with openllm.utils.reserve_free_port() as port:
+        pass
+    container_name = f"openllm-{model}-{normalise_model_name(model_id)}".replace("-", "_")
     client = docker.from_env()
     try:
         container = client.containers.get(container_name)
@@ -291,7 +291,7 @@ def _container_handle(
         auto_remove=False,
         detach=True,
         device_requests=[docker.types.DeviceRequest(count=gpus, capabilities=[["gpu"]])],
-        ports={"80/tcp": port},
+        ports={port: port},
     )
 
     yield DockerHandle(client, container_name, port)
@@ -308,38 +308,30 @@ def _container_handle(
     container.remove()
 
 
-@pytest.fixture(scope="session", autouse=True, name="clean_context")
-def fixture_clean_context() -> t.Generator[contextlib.ExitStack, None, None]:
+@pytest.fixture(scope="session", autouse=True)
+def clean_context() -> t.Generator[contextlib.ExitStack, None, None]:
     stack = contextlib.ExitStack()
     yield stack
     stack.close()
 
 
-@pytest.fixture(scope="module", name="el")
-def fixture_el() -> t.Generator[asyncio.AbstractEventLoop, None, None]:
+@pytest.fixture(scope="module")
+def el() -> t.Generator[asyncio.AbstractEventLoop, None, None]:
     loop = asyncio.get_event_loop()
     yield loop
     loop.close()
 
 
-@pytest.fixture(
-    name="deployment_mode",
-    params=["container", "local"],
-    scope="session",
-)
-def fixture_deployment_mode(request: pytest.FixtureRequest) -> str:
+@pytest.fixture(params=["container", "local"], scope="session")
+def deployment_mode(request: pytest.FixtureRequest) -> str:
     return request.param
 
 
-@pytest.fixture(scope="module", name="handler")
-def fixture_handler(
-    el: asyncio.AbstractEventLoop,
-    clean_context: contextlib.ExitStack,
-    deployment_mode: t.Literal["container", "local"],
-):
+@pytest.fixture(scope="module")
+def handler(el: asyncio.AbstractEventLoop, deployment_mode: t.Literal["container", "local"]):
     if deployment_mode == "container":
-        return functools.partial(_container_handle, clean_context=clean_context)
+        return _container_handle
     elif deployment_mode == "local":
-        return functools.partial(_local_handle, clean_context=clean_context)
+        return _local_handle
     else:
         raise ValueError(f"Unknown deployment mode: {deployment_mode}")

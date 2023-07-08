@@ -26,6 +26,7 @@ from .configuration_falcon import DEFAULT_PROMPT_TEMPLATE
 if t.TYPE_CHECKING:
     import torch
     import torch.amp
+
     import transformers
 else:
     torch = openllm.utils.LazyLoader("torch", globals(), "torch")

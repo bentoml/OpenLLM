@@ -15,9 +15,12 @@
 from __future__ import annotations
 
 import typing as t
-import openllm
+
 import pytest
+
+import openllm
 from openllm._llm import make_tag
+
 
 HF_INTERNAL_T5_TESTING = "hf-internal-testing/tiny-random-t5"
 

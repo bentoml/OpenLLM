@@ -14,34 +14,32 @@
 
 from __future__ import annotations
 
-import openllm
 import contextlib
 import typing as t
+
 import pytest
 
+import openllm
+
+
 if t.TYPE_CHECKING:
-    from .conftest import HandleProtocol, _Handle
+    from .conftest import HandleProtocol
     from .conftest import ResponseComparator
-
-
-def test_runtime_impl(prompt: str, llm: openllm.LLM[t.Any, t.Any]):
-    assert llm(prompt)
-
-    assert llm(prompt, temperature=0.8, top_p=0.23)
+    from .conftest import _Handle
 
 
 model = "flan_t5"
 model_id = "google/flan-t5-small"
 
 
-@pytest.fixture()
+@pytest.fixture(scope="module")
 def flan_t5_small_handle(
     handler: HandleProtocol,
     deployment_mode: t.Literal["container", "local"],
     clean_context: contextlib.ExitStack,
 ):
     with handler(
-        model="flan_t5",
+        model=model,
         model_id=model_id,
         image_tag=clean_context.enter_context(
             openllm.testing.prepare(
@@ -62,10 +60,11 @@ async def flan_t5_small(flan_t5_small_handle: _Handle):
 
 
 @pytest.mark.asyncio
-async def test_flan_t5_small(flan_t5_small: openllm.client.AsyncHTTPClient, response_snapshot: ResponseComparator):
-    response = await flan_t5_small.query(
-        "What is the meaning of life?", max_new_tokens=10, top_p=0.9, return_attrs=True
-    )
+async def test_flan_t5_small(
+    flan_t5_small: t.Awaitable[openllm.client.AsyncHTTPClient], response_snapshot: ResponseComparator
+):
+    client = await flan_t5_small
+    response = await client.query("What is the meaning of life?", max_new_tokens=10, top_p=0.9, return_attrs=True)
 
-    assert response.configuration["max_new_tokens"] == 10
+    assert response.configuration["generation_config"]["max_new_tokens"] == 10
     assert response == response_snapshot

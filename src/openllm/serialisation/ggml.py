@@ -17,18 +17,25 @@ This requires ctransformers to be installed.
 """
 from __future__ import annotations
 
-import openllm
 import typing as t
-import bentoml
+
 import cloudpickle
-from ..exceptions import OpenLLMException
-from ..utils import LazyLoader
+
+import bentoml
+import openllm
 from bentoml._internal.models.model import CUSTOM_OBJECTS_FILENAME
 
+from ..exceptions import OpenLLMException
+from ..utils import LazyLoader
+
+
 if t.TYPE_CHECKING:
-    from .._types import ModelProtocol, TokenizerProtocol
-    from .transformers import _M, _T
     import transformers
+
+    from .._types import ModelProtocol
+    from .._types import TokenizerProtocol
+    from .transformers import _M
+    from .transformers import _T
 else:
     transformers = LazyLoader("transformers", globals(), "transformers")
 

@@ -23,13 +23,13 @@ import typing as t
 import psutil
 
 import bentoml
-from .exceptions import OpenLLMException
 from bentoml._internal.resource import Resource
 from bentoml._internal.resource import get_resource
 from bentoml._internal.resource import system_resources
 from bentoml._internal.runner.strategy import THREAD_ENVS
 from bentoml._internal.runner.strategy import Strategy
 
+from .exceptions import OpenLLMException
 from .utils import ReprMixin
 
 

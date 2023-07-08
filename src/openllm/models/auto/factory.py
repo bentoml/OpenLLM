@@ -129,7 +129,7 @@ class _BaseAutoLLMClass:
             llm = model_class.from_pretrained(model_id, model_version=model_version, llm_config=llm_config, **attrs)
             if ensure_available:
                 logger.debug(
-                    "'ensure_available=True', Downloading '%s' with 'model_id=%s' to local model store.",
+                    "'ensure_available=True', OpenLLM will automatically import '%s' with 'model_id=%s' to local store if the entry does not exists.",
                     model,
                     llm.model_id,
                 )

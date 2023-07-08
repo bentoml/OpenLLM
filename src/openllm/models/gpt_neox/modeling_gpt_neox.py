@@ -24,10 +24,11 @@ from .configuration_gpt_neox import DEFAULT_PROMPT_TEMPLATE
 
 
 if t.TYPE_CHECKING:
-    import bentoml
-    import transformers  # noqa
     import torch
     import torch.amp
+
+    import bentoml
+    import transformers  # noqa
 else:
     transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
     torch = openllm.utils.LazyLoader("torch", globals(), "torch")

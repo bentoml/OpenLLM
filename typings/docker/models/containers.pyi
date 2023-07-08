@@ -1,5 +1,10 @@
-from .resource import Collection, Model
-from typing import Any, Iterator, Literal, overload
+from typing import Any
+from typing import Iterator
+from typing import Literal
+from typing import overload
+
+from .resource import Collection
+from .resource import Model
 
 class Container(Model):
     """Local representation of a container object. Detailed configuration may

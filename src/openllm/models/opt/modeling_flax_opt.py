@@ -20,8 +20,8 @@ import typing as t
 import bentoml
 import openllm
 
-from ...utils import generate_labels
 from ..._prompt import default_formatter
+from ...utils import generate_labels
 from .configuration_opt import DEFAULT_PROMPT_TEMPLATE
 
 

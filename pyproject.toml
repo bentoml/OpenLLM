@@ -72,12 +72,12 @@ all = [
     "openllm[falcon]",
     "openllm[mpt]",
     "openllm[starcoder]",
-    "openllm[ggml]",
-    "openllm[fine-tune]",
-    "openllm[agents]",
     "openllm[playground]",
     "openllm[flan-t5]",
+    "openllm[fine-tune]",
+    "openllm[ggml]",
     "openllm[openai]",
+    "openllm[agents]",
 ]
 chatglm = ["cpm-kernels", "sentencepiece"]
 falcon = ["einops", "xformers", "safetensors"]
@@ -184,6 +184,8 @@ target-version = ["py311"]
 
 [tool.ruff]
 exclude = ["tools"]
+extend-select = ["I"]
+fix = true
 ignore = [
     # Allow non-abstract empty methods in abstract base classes
     "B027",
@@ -204,9 +206,6 @@ ignore = [
 ]
 line-length = 119
 target-version = "py311"
-unfixable = [
-    "F401", # Don't touch unused imports, just warn about it.
-]
 
 [tool.ruff.pydocstyle]
 convention = "google"
@@ -226,7 +225,7 @@ lines-after-imports = 2
 [tool.pyright]
 analysis.useLibraryCodeForTypes = true
 enableTypeIgnoreComments = true
-include = ["src/", "tests/", "tools/", "examples/"]
+include = ["src/openllm", "src/openllm_client", "tests/", "tools/", "examples/"]
 pythonVersion = "3.12"
 reportMissingImports = "none"
 reportMissingModuleSource = "warning"

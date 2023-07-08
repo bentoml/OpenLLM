@@ -33,6 +33,7 @@ changelog = "towncrier build --version main --draft"
 fmt = ["tools", "pre-commit run --all-files"]
 full = "_run_script --reruns 5 --reruns-delay 3 -r aR {args:tests}"
 setup = "pre-commit install"
+snapshot-update = "pytest tests/models --snapshot-update"
 tools = [
     "./tools/update-readme.py",
     "./tools/update-optional-dependencies.py",

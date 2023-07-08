@@ -17,26 +17,39 @@
 from __future__ import annotations
 
 import copy
-import openllm
-import typing as t
 import importlib
-import bentoml
-from bentoml._internal.frameworks.transformers import make_default_signatures
-from bentoml._internal.models.model import ModelOptions
-from ..exceptions import OpenLLMException
+import typing as t
+
 import cloudpickle
+
+import bentoml
+import openllm
+from bentoml._internal.frameworks.transformers import make_default_signatures
 from bentoml._internal.models.model import CUSTOM_OBJECTS_FILENAME
-from ..utils import LazyLoader, is_torch_available, generate_labels
-from ..utils import generate_context, normalize_attrs_to_model_tokenizer_pair
-from .constants import FRAMEWORK_TO_AUTOCLASS_MAPPING, MODEL_TO_AUTOCLASS_MAPPING
+from bentoml._internal.models.model import ModelOptions
+
+from ..exceptions import OpenLLMException
+from ..utils import LazyLoader
+from ..utils import generate_context
+from ..utils import generate_labels
+from ..utils import is_torch_available
+from ..utils import normalize_attrs_to_model_tokenizer_pair
+from .constants import FRAMEWORK_TO_AUTOCLASS_MAPPING
+from .constants import MODEL_TO_AUTOCLASS_MAPPING
+
 
 if t.TYPE_CHECKING:
-    import transformers
     import torch
-    from .._types import P
-    from .._llm import _M, _T
-    from .._types import DictStrAny, ModelProtocol, TokenizerProtocol
+
+    import transformers
     from transformers.models.auto.auto_factory import _BaseAutoModelClass
+
+    from .._llm import _M
+    from .._llm import _T
+    from .._types import DictStrAny
+    from .._types import ModelProtocol
+    from .._types import P
+    from .._types import TokenizerProtocol
 else:
     transformers = LazyLoader("transformers", globals(), "transformers")
     torch = LazyLoader("torch", globals(), "torch")

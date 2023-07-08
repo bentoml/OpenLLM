@@ -20,7 +20,10 @@ import typing as t
 
 import openllm
 
-from ...utils import is_torch_available, is_flax_available, is_tf_available, LazyModule
+from ...utils import LazyModule
+from ...utils import is_flax_available
+from ...utils import is_tf_available
+from ...utils import is_torch_available
 
 
 _import_structure = {

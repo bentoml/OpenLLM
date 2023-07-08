@@ -201,7 +201,7 @@ def construct_docker_options(
         "OPENLLM_MODEL": llm.config["model_name"],
         "OPENLLM_ADAPTER_MAP": f"'{orjson.dumps(adapter_map).decode()}'",
         "BENTOML_DEBUG": str(get_debug_mode()),
-        "BENTOML_CONFIG_OPTIONS": _bentoml_config_options,
+        "BENTOML_CONFIG_OPTIONS": f"'{_bentoml_config_options}'",
     }
 
     if adapter_map:
@@ -325,10 +325,12 @@ def create_bento(
     with open(service_path, "r") as f:
         service_contents = f.readlines()
 
+    rel_path = f"../models/{model.tag.path()}"
+
     for it in service_contents:
         if codegen.OPENLLM_MODEL_ID in it:
             service_contents[service_contents.index(it)] = (
-                codegen.ModelIdFormatter(str(model.tag)).vformat(it)[: -(len(codegen.OPENLLM_MODEL_ID) + 3)] + "\n"
+                codegen.ModelIdFormatter(rel_path).vformat(it)[: -(len(codegen.OPENLLM_MODEL_ID) + 3)] + "\n"
             )
         if "__bento_name__" in it:
             service_contents[service_contents.index(it)] = it.format(__bento_name__=str(bento.tag))

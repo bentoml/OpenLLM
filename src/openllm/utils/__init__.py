@@ -17,6 +17,7 @@ we won't ensure backward compatibility for these functions. So use with caution.
 """
 from __future__ import annotations as _annotations
 
+import contextlib
 import functools
 import logging
 import logging.config
@@ -24,25 +25,27 @@ import os
 import sys
 import types
 import typing as t
+from pathlib import Path
+
 from circus.exc import ConflictError
 
-from bentoml._internal.configuration import get_debug_mode
-from bentoml._internal.configuration import get_quiet_mode
 from bentoml._internal.configuration import DEBUG_ENV_VAR as _DEBUG_ENV_VAR
 from bentoml._internal.configuration import GRPC_DEBUG_ENV_VAR as _GRPC_DEBUG_ENV_VAR
+from bentoml._internal.configuration import get_debug_mode
+from bentoml._internal.configuration import get_quiet_mode
 from bentoml._internal.configuration import set_quiet_mode
 from bentoml._internal.log import configure_server_logging
 from bentoml._internal.models.model import ModelContext as _ModelContext
 from bentoml._internal.types import LazyType
 from bentoml._internal.utils import LazyLoader
 from bentoml._internal.utils import bentoml_cattr
+from bentoml._internal.utils import cached_contextmanager
 from bentoml._internal.utils import copy_file_to_fs_folder
 from bentoml._internal.utils import first_not_none
 from bentoml._internal.utils import pkg
 from bentoml._internal.utils import reserve_free_port
 from bentoml._internal.utils import resolve_user_filepath
 from bentoml._internal.utils import validate_or_create_dir
-from bentoml._internal.utils import cached_contextmanager
 
 from .lazy import LazyModule
 
@@ -73,7 +76,10 @@ else:
 
 if t.TYPE_CHECKING:
     import openllm
-    from .._types import DictStrAny, LiteralRuntime
+
+    from .._types import DictStrAny
+    from .._types import LiteralRuntime
+    from .._types import P
     from ..models.auto.factory import _BaseAutoLLMClass
 
 
@@ -209,6 +215,85 @@ def in_notebook() -> bool:
     return True
 
 
+_dockerenv = Path("/.dockerenv")
+_cgroup = Path("/proc/self/cgroup")
+
+
+class suppress(contextlib.suppress, contextlib.ContextDecorator):
+    """
+    A version of contextlib.suppress with decorator support.
+
+    >>> @suppress(KeyError)
+    ... def key_error():
+    ...     {}['']
+    >>> key_error()
+    """
+
+
+def compose(*funcs: t.Callable[..., t.Any]):
+    """
+    Compose any number of unary functions into a single unary function.
+
+    >>> import textwrap
+    >>> expected = str.strip(textwrap.dedent(compose.__doc__))
+    >>> strip_and_dedent = compose(str.strip, textwrap.dedent)
+    >>> strip_and_dedent(compose.__doc__) == expected
+    True
+
+    Compose also allows the innermost function to take arbitrary arguments.
+
+    >>> round_three = lambda x: round(x, ndigits=3)
+    >>> f = compose(round_three, int.__truediv__)
+    >>> [f(3*x, x+1) for x in range(1,10)]
+    [1.5, 2.0, 2.25, 2.4, 2.5, 2.571, 2.625, 2.667, 2.7]
+    """
+
+    def compose_two(f1: t.Callable[..., t.Any], f2: t.Callable[P, t.Any]):
+        def _(*args: P.args, **kwargs: P.kwargs) -> t.Any:
+            return f1(f2(*args, **kwargs))
+
+        return _
+
+    return functools.reduce(compose_two, funcs)
+
+
+def apply(transform: t.Callable[..., t.Any]):
+    """
+    Decorate a function with a transform function that is
+    invoked on results returned from the decorated function.
+
+    >>> @apply(reversed)
+    ... def get_numbers(start):
+    ...     "doc for get_numbers"
+    ...     return range(start, start+3)
+    >>> list(get_numbers(4))
+    [6, 5, 4]
+    >>> get_numbers.__doc__
+    'doc for get_numbers'
+    """
+
+    def wrap(func: t.Callable[P, t.Any]):
+        return functools.wraps(func)(compose(transform, func))
+
+    return wrap
+
+
+@apply(bool)
+@suppress(FileNotFoundError)
+def _text_in_file(text: str, filename: Path):
+    return any(text in line for line in filename.open())
+
+
+def in_docker() -> bool:
+    """
+    Is this current environment running in docker?
+
+    >>> type(is_docker())
+    <class 'bool'>
+    """
+    return _dockerenv.exists() or _text_in_file("docker", _cgroup)
+
+
 def resolve_filepath(path: str) -> str:
     """Resolve a file path to an absolute path, expand user and environment variables"""
     try:
@@ -222,7 +307,9 @@ def validate_is_path(maybe_path: str) -> bool:
 
 
 def generate_context(framework_name: str) -> _ModelContext:
-    from .import_utils import is_torch_available, is_flax_available, is_tf_available
+    from .import_utils import is_flax_available
+    from .import_utils import is_tf_available
+    from .import_utils import is_torch_available
 
     framework_versions = {"transformers": pkg.get_pkg_version("transformers")}
     if is_torch_available():
@@ -334,33 +421,37 @@ if t.TYPE_CHECKING:
     from . import LazyLoader as LazyLoader
     from . import LazyType as LazyType
     from . import analytics as analytics
+    from . import apply as apply
     from . import bentoml_cattr as bentoml_cattr
+    from . import cached_contextmanager as cached_contextmanager
     from . import codegen as codegen
+    from . import compose as compose
     from . import configure_logging as configure_logging
+    from . import configure_server_logging as configure_server_logging
     from . import copy_file_to_fs_folder as copy_file_to_fs_folder
     from . import dantic as dantic
+    from . import field_env_key as field_env_key
     from . import first_not_none as first_not_none
+    from . import generate_context as generate_context
+    from . import generate_labels as generate_labels
     from . import get_debug_mode as get_debug_mode
     from . import get_quiet_mode as get_quiet_mode
     from . import gpu_count as gpu_count
+    from . import in_docker as in_docker
+    from . import in_notebook as in_notebook
+    from . import infer_auto_class as infer_auto_class
     from . import lenient_issubclass as lenient_issubclass
     from . import non_intrusive_setattr as non_intrusive_setattr
+    from . import normalize_attrs_to_model_tokenizer_pair as normalize_attrs_to_model_tokenizer_pair
     from . import pkg as pkg
     from . import reserve_free_port as reserve_free_port
+    from . import resolve_filepath as resolve_filepath
     from . import resolve_user_filepath as resolve_user_filepath
     from . import set_debug_mode as set_debug_mode
     from . import set_quiet_mode as set_quiet_mode
-    from . import in_notebook as in_notebook
-    from . import validate_or_create_dir as validate_or_create_dir
+    from . import suppress as suppress
     from . import validate_is_path as validate_is_path
-    from . import resolve_filepath as resolve_filepath
-    from . import normalize_attrs_to_model_tokenizer_pair as normalize_attrs_to_model_tokenizer_pair
-    from . import generate_context as generate_context
-    from . import field_env_key as field_env_key
-    from . import infer_auto_class as infer_auto_class
-    from . import cached_contextmanager as cached_contextmanager
-    from . import generate_labels as generate_labels
-    from . import configure_server_logging as configure_server_logging
+    from . import validate_or_create_dir as validate_or_create_dir
     from .import_utils import ENV_VARS_TRUE_VALUES as ENV_VARS_TRUE_VALUES
     from .import_utils import OPTIONAL_DEPENDENCIES as OPTIONAL_DEPENDENCIES
     from .import_utils import DummyMetaclass as DummyMetaclass
@@ -370,6 +461,9 @@ if t.TYPE_CHECKING:
     from .import_utils import is_datasets_available as is_datasets_available
     from .import_utils import is_einops_available as is_einops_available
     from .import_utils import is_flax_available as is_flax_available
+    from .import_utils import is_jupyter_available as is_jupyter_available
+    from .import_utils import is_jupytext_available as is_jupytext_available
+    from .import_utils import is_notebook_available as is_notebook_available
     from .import_utils import is_peft_available as is_peft_available
     from .import_utils import is_tf_available as is_tf_available
     from .import_utils import is_torch_available as is_torch_available
@@ -378,9 +472,6 @@ if t.TYPE_CHECKING:
     from .import_utils import is_triton_available as is_triton_available
     from .import_utils import require_backends as require_backends
     from .import_utils import requires_dependencies as requires_dependencies
-    from .import_utils import is_jupyter_available as is_jupyter_available
-    from .import_utils import is_jupytext_available as is_jupytext_available
-    from .import_utils import is_notebook_available as is_notebook_available
     from .lazy import LazyModule as LazyModule
     from .representation import ReprMixin as ReprMixin
 else:

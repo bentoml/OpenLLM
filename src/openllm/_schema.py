@@ -22,9 +22,9 @@ import typing as t
 import attr
 import inflection
 
+import openllm
 from openllm._configuration import GenerationConfig
 from openllm.utils import bentoml_cattr
-import openllm
 
 
 if t.TYPE_CHECKING:

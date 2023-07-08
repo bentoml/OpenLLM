@@ -34,6 +34,7 @@ from . import utils as utils
 from .__about__ import __version__ as __version__
 from .exceptions import MissingDependencyError
 
+
 if utils.DEBUG:
     utils.set_debug_mode(True)
     utils.set_quiet_mode(False)
@@ -185,20 +186,17 @@ if t.TYPE_CHECKING:
     # Specific types import
     from ._configuration import LLMConfig as LLMConfig
     from ._llm import LLM as LLM
-    from ._llm import LLMRunner as LLMRunner
     from ._llm import LLMRunnable as LLMRunnable
+    from ._llm import LLMRunner as LLMRunner
     from ._llm import Runner as Runner
     from ._schema import GenerationInput as GenerationInput
     from ._schema import GenerationOutput as GenerationOutput
     from ._schema import MetadataOutput as MetadataOutput
-    from .utils import infer_auto_class as infer_auto_class
     from .cli import build as build
-    from .cli import start as start
-    from .cli import start_grpc as start_grpc
     from .cli import import_model as import_model
     from .cli import list_models as list_models
-    from .serialisation import ggml as ggml
-    from .serialisation import transformers as transformers
+    from .cli import start as start
+    from .cli import start_grpc as start_grpc
     from .models.auto import CONFIG_MAPPING as CONFIG_MAPPING
     from .models.auto import MODEL_FLAX_MAPPING_NAMES as MODEL_FLAX_MAPPING_NAMES
     from .models.auto import MODEL_MAPPING_NAMES as MODEL_MAPPING_NAMES
@@ -213,6 +211,9 @@ if t.TYPE_CHECKING:
     from .models.opt import OPTConfig as OPTConfig
     from .models.stablelm import StableLMConfig as StableLMConfig
     from .models.starcoder import StarCoderConfig as StarCoderConfig
+    from .serialisation import ggml as ggml
+    from .serialisation import transformers as transformers
+    from .utils import infer_auto_class as infer_auto_class
 
     # NOTE: torch and cpm_kernels
     try:

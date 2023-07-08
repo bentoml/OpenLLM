@@ -18,16 +18,18 @@ from __future__ import annotations
 import functools
 import importlib
 import os
+import sys
 import typing as t
 from enum import Enum
 
 import attr
 import click
-import sys
 import click_option_group as cog
 import inflection
 import orjson
-from click import ParamType, shell_completion as sc, types as click_types
+from click import ParamType
+from click import shell_completion as sc
+from click import types as click_types
 
 import openllm
 

@@ -1,1 +1,2 @@
-from .client import DockerClient as DockerClient, from_env as from_env
+from .client import DockerClient as DockerClient
+from .client import from_env as from_env

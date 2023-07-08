@@ -68,12 +68,14 @@ from deepmerge.merger import Merger
 import openllm
 
 from .exceptions import ForbiddenAttributeError
+from .utils import ENV_VARS_TRUE_VALUES
 from .utils import LazyType
-from .utils import ReprMixin, ENV_VARS_TRUE_VALUES
+from .utils import ReprMixin
 from .utils import bentoml_cattr
 from .utils import codegen
 from .utils import dantic
-from .utils import first_not_none, field_env_key
+from .utils import field_env_key
+from .utils import first_not_none
 from .utils import lenient_issubclass
 from .utils import non_intrusive_setattr
 from .utils import requires_dependencies

@@ -14,12 +14,12 @@
 
 from __future__ import annotations
 
-import logging
-import os
-import types
 import functools
 import inspect
+import logging
+import os
 import string
+import types
 import typing as t
 from pathlib import Path
 
@@ -30,7 +30,10 @@ if t.TYPE_CHECKING:
     from fs.base import FS
 
     import openllm
-    from .._types import P, DictStrAny, ListStr
+
+    from .._types import DictStrAny
+    from .._types import ListStr
+    from .._types import P
 
     PartialAny = functools.partial[t.Any]
 
@@ -231,7 +234,8 @@ def make_env_transformer(
     default_callback: t.Callable[[str, t.Any], t.Any] | None = None,
     globs: DictStrAny | None = None,
 ):
-    from . import dantic, field_env_key
+    from . import dantic
+    from . import field_env_key
 
     def identity(_: str, x_value: t.Any) -> t.Any:
         return x_value
