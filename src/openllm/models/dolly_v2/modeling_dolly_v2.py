@@ -196,7 +196,7 @@ def get_pipeline(
                     try:
                         response_pos = sequence.index(response_key_token_id)
                     except ValueError:
-                        logger.warn(f"Could not find response key {response_key_token_id} in: {sequence}")
+                        logger.warning(f"Could not find response key {response_key_token_id} in: {sequence}")
                         response_pos = None
 
                     if response_pos:
@@ -229,7 +229,7 @@ def get_pipeline(
                         if m:
                             decoded = m.group(1).strip()
                         else:
-                            logger.warn(f"Failed to find response in:\n{fully_decoded}")
+                            logger.warning(f"Failed to find response in:\n{fully_decoded}")
 
                 # If the full text is requested, then append the decoded text to the original instruction.
                 # This technically isn't the full text, as we format the instruction in the prompt the model has been

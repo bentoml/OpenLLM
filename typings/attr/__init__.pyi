@@ -64,13 +64,12 @@ class _Nothing(enum.Enum):
     NOTHING = ...
 
 NOTHING = ...
-if sys.version_info >= (3, 8):
-    @overload
-    def Factory(factory: Callable[[], _T]) -> _T: ...
-    @overload
-    def Factory(factory: Callable[[Any], _T], takes_self: Literal[True]) -> _T: ...
-    @overload
-    def Factory(factory: Callable[[], _T], takes_self: Literal[False]) -> _T: ...
+@overload
+def Factory(factory: Callable[[], _T]) -> _T: ...
+@overload
+def Factory(factory: Callable[[Any], _T], takes_self: Literal[True]) -> _T: ...
+@overload
+def Factory(factory: Callable[[], _T], takes_self: Literal[False]) -> _T: ...
 
 def __dataclass_transform__(
     *,
@@ -78,7 +77,7 @@ def __dataclass_transform__(
     order_default: bool = ...,
     kw_only_default: bool = ...,
     frozen_default: bool = ...,
-    field_descriptors: Tuple[Union[type, Callable[..., Any]], ...] = ...,
+    field_descriptors: tuple[type | Callable[..., Any], ...] = ...,
 ) -> Callable[[_T], _T]: ...
 
 class _CountingAttr(Generic[_T]):
@@ -90,32 +89,32 @@ class _CountingAttr(Generic[_T]):
     eq_key: str
     order: _EqOrderType
     order_key: str
-    hash: Optional[bool]
+    hash: bool | None
     init: bool
-    converter: Optional[_ConverterType]
-    metadata: Dict[Any, Any]
-    _validator: Optional[_ValidatorType[_T]]
-    type: Optional[Type[_T]]
+    converter: _ConverterType | None
+    metadata: dict[Any, Any]
+    _validator: _ValidatorType[_T] | None
+    type: type[_T] | None
     kw_only: bool
     on_setattr: _OnSetAttrType
-    alias: Optional[str]
+    alias: str | None
 
 class Attribute(Generic[_T]):
     name: str
-    default: Optional[_T]
-    validator: Optional[_ValidatorType[_T]]
+    default: _T | None
+    validator: _ValidatorType[_T] | None
     repr: _ReprArgType
     cmp: _EqOrderType
     eq: _EqOrderType
     order: _EqOrderType
-    hash: Optional[bool]
+    hash: bool | None
     init: bool
-    converter: Optional[_ConverterType]
-    metadata: Dict[Any, Any]
-    type: Optional[Type[_T]]
+    converter: _ConverterType | None
+    metadata: dict[Any, Any]
+    type: type[_T] | None
     kw_only: bool
     on_setattr: _OnSetAttrType
-    alias: Optional[str]
+    alias: str | None
     def evolve(self, **changes: Any) -> Attribute[Any]: ...
     @classmethod
     def from_counting_attr(cls, name: str, ca: _CountingAttr[_T], type: type[Any] | None = None) -> Attribute[_T]: ...
@@ -125,72 +124,72 @@ def attrib(
     default: None = ...,
     validator: None = ...,
     repr: _ReprArgType = ...,
-    cmp: Optional[_EqOrderType] = ...,
-    hash: Optional[bool] = ...,
+    cmp: _EqOrderType | None = ...,
+    hash: bool | None = ...,
     init: bool = ...,
-    metadata: Optional[Mapping[Any, Any]] = ...,
+    metadata: Mapping[Any, Any] | None = ...,
     type: None = ...,
     converter: None = ...,
     factory: None = ...,
     kw_only: bool = ...,
-    eq: Optional[_EqOrderType] = ...,
-    order: Optional[_EqOrderType] = ...,
-    on_setattr: Optional[_OnSetAttrArgType] = ...,
-    alias: Optional[str] = ...,
+    eq: _EqOrderType | None = ...,
+    order: _EqOrderType | None = ...,
+    on_setattr: _OnSetAttrArgType | None = ...,
+    alias: str | None = ...,
 ) -> Any: ...
 @overload
 def attrib(
     default: None = ...,
-    validator: Optional[_ValidatorArgType[_T]] = ...,
+    validator: _ValidatorArgType[_T] | None = ...,
     repr: _ReprArgType = ...,
-    cmp: Optional[_EqOrderType] = ...,
-    hash: Optional[bool] = ...,
+    cmp: _EqOrderType | None = ...,
+    hash: bool | None = ...,
     init: bool = ...,
-    metadata: Optional[Mapping[Any, Any]] = ...,
-    type: Optional[Type[_T]] = ...,
-    converter: Optional[_ConverterType] = ...,
-    factory: Optional[Callable[[], _T]] = ...,
+    metadata: Mapping[Any, Any] | None = ...,
+    type: type[_T] | None = ...,
+    converter: _ConverterType | None = ...,
+    factory: Callable[[], _T] | None = ...,
     kw_only: bool = ...,
-    eq: Optional[_EqOrderType] = ...,
-    order: Optional[_EqOrderType] = ...,
-    on_setattr: Optional[_OnSetAttrArgType] = ...,
-    alias: Optional[str] = ...,
+    eq: _EqOrderType | None = ...,
+    order: _EqOrderType | None = ...,
+    on_setattr: _OnSetAttrArgType | None = ...,
+    alias: str | None = ...,
 ) -> _T: ...
 @overload
 def attrib(
     default: _T,
-    validator: Optional[_ValidatorArgType[_T]] = ...,
+    validator: _ValidatorArgType[_T] | None = ...,
     repr: _ReprArgType = ...,
-    cmp: Optional[_EqOrderType] = ...,
-    hash: Optional[bool] = ...,
+    cmp: _EqOrderType | None = ...,
+    hash: bool | None = ...,
     init: bool = ...,
-    metadata: Optional[Mapping[Any, Any]] = ...,
-    type: Optional[Type[_T]] = ...,
-    converter: Optional[_ConverterType] = ...,
-    factory: Optional[Callable[[], _T]] = ...,
+    metadata: Mapping[Any, Any] | None = ...,
+    type: type[_T] | None = ...,
+    converter: _ConverterType | None = ...,
+    factory: Callable[[], _T] | None = ...,
     kw_only: bool = ...,
-    eq: Optional[_EqOrderType] = ...,
-    order: Optional[_EqOrderType] = ...,
-    on_setattr: Optional[_OnSetAttrArgType] = ...,
-    alias: Optional[str] = ...,
+    eq: _EqOrderType | None = ...,
+    order: _EqOrderType | None = ...,
+    on_setattr: _OnSetAttrArgType | None = ...,
+    alias: str | None = ...,
 ) -> _T: ...
 @overload
 def attrib(
-    default: Optional[_T] = ...,
-    validator: Optional[_ValidatorArgType[_T]] = ...,
+    default: _T | None = ...,
+    validator: _ValidatorArgType[_T] | None = ...,
     repr: _ReprArgType = ...,
-    cmp: Optional[_EqOrderType] = ...,
-    hash: Optional[bool] = ...,
+    cmp: _EqOrderType | None = ...,
+    hash: bool | None = ...,
     init: bool = ...,
-    metadata: Optional[Mapping[Any, Any]] = ...,
+    metadata: Mapping[Any, Any] | None = ...,
     type: object = ...,
-    converter: Optional[_ConverterType] = ...,
-    factory: Optional[Callable[[], _T]] = ...,
+    converter: _ConverterType | None = ...,
+    factory: Callable[[], _T] | None = ...,
     kw_only: bool = ...,
-    eq: Optional[_EqOrderType] = ...,
-    order: Optional[_EqOrderType] = ...,
-    on_setattr: Optional[_OnSetAttrArgType] = ...,
-    alias: Optional[str] = ...,
+    eq: _EqOrderType | None = ...,
+    order: _EqOrderType | None = ...,
+    on_setattr: _OnSetAttrArgType | None = ...,
+    alias: str | None = ...,
 ) -> Any: ...
 @overload
 def field(
@@ -198,81 +197,81 @@ def field(
     default: None = ...,
     validator: None = ...,
     repr: _ReprArgType = ...,
-    hash: Optional[bool] = ...,
+    hash: bool | None = ...,
     init: bool = ...,
-    metadata: Optional[Mapping[Any, Any]] = ...,
+    metadata: Mapping[Any, Any] | None = ...,
     converter: None = ...,
     factory: None = ...,
     kw_only: bool = ...,
-    eq: Optional[bool] = ...,
-    order: Optional[bool] = ...,
-    on_setattr: Optional[_OnSetAttrArgType] = ...,
-    alias: Optional[str] = ...,
-    type: Optional[type] = ...,
+    eq: bool | None = ...,
+    order: bool | None = ...,
+    on_setattr: _OnSetAttrArgType | None = ...,
+    alias: str | None = ...,
+    type: type | None = ...,
 ) -> Any: ...
 @overload
 def field(
     *,
     default: None = ...,
-    validator: Optional[_ValidatorArgType[_T]] = ...,
+    validator: _ValidatorArgType[_T] | None = ...,
     repr: _ReprArgType = ...,
-    hash: Optional[bool] = ...,
+    hash: bool | None = ...,
     init: bool = ...,
-    metadata: Optional[Mapping[Any, Any]] = ...,
-    converter: Optional[_ConverterType] = ...,
-    factory: Optional[Callable[[], _T]] = ...,
+    metadata: Mapping[Any, Any] | None = ...,
+    converter: _ConverterType | None = ...,
+    factory: Callable[[], _T] | None = ...,
     kw_only: bool = ...,
-    eq: Optional[_EqOrderType] = ...,
-    order: Optional[_EqOrderType] = ...,
-    on_setattr: Optional[_OnSetAttrArgType] = ...,
-    alias: Optional[str] = ...,
-    type: Optional[type] = ...,
+    eq: _EqOrderType | None = ...,
+    order: _EqOrderType | None = ...,
+    on_setattr: _OnSetAttrArgType | None = ...,
+    alias: str | None = ...,
+    type: type | None = ...,
 ) -> _T: ...
 @overload
 def field(
     *,
     default: _T,
-    validator: Optional[_ValidatorArgType[_T]] = ...,
+    validator: _ValidatorArgType[_T] | None = ...,
     repr: _ReprArgType = ...,
-    hash: Optional[bool] = ...,
+    hash: bool | None = ...,
     init: bool = ...,
-    metadata: Optional[Mapping[Any, Any]] = ...,
-    converter: Optional[_ConverterType] = ...,
-    factory: Optional[Callable[[], _T]] = ...,
+    metadata: Mapping[Any, Any] | None = ...,
+    converter: _ConverterType | None = ...,
+    factory: Callable[[], _T] | None = ...,
     kw_only: bool = ...,
-    eq: Optional[_EqOrderType] = ...,
-    order: Optional[_EqOrderType] = ...,
-    on_setattr: Optional[_OnSetAttrArgType] = ...,
-    alias: Optional[str] = ...,
-    type: Optional[type] = ...,
+    eq: _EqOrderType | None = ...,
+    order: _EqOrderType | None = ...,
+    on_setattr: _OnSetAttrArgType | None = ...,
+    alias: str | None = ...,
+    type: type | None = ...,
 ) -> _T: ...
 @overload
 def field(
     *,
-    default: Optional[_T] = ...,
-    validator: Optional[_ValidatorArgType[_T]] = ...,
+    default: _T | None = ...,
+    validator: _ValidatorArgType[_T] | None = ...,
     repr: _ReprArgType = ...,
-    hash: Optional[bool] = ...,
+    hash: bool | None = ...,
     init: bool = ...,
-    metadata: Optional[Mapping[Any, Any]] = ...,
-    converter: Optional[_ConverterType] = ...,
-    factory: Optional[Callable[[], _T]] = ...,
+    metadata: Mapping[Any, Any] | None = ...,
+    converter: _ConverterType | None = ...,
+    factory: Callable[[], _T] | None = ...,
     kw_only: bool = ...,
-    eq: Optional[_EqOrderType] = ...,
-    order: Optional[_EqOrderType] = ...,
-    on_setattr: Optional[_OnSetAttrArgType] = ...,
-    alias: Optional[str] = ...,
-    type: Optional[type] = ...,
+    eq: _EqOrderType | None = ...,
+    order: _EqOrderType | None = ...,
+    on_setattr: _OnSetAttrArgType | None = ...,
+    alias: str | None = ...,
+    type: type | None = ...,
 ) -> Any: ...
 @overload
 @__dataclass_transform__(order_default=True, field_descriptors=(attrib, field))
 def attrs(
     maybe_cls: _C,
-    these: Optional[Dict[str, Any]] = ...,
-    repr_ns: Optional[str] = ...,
+    these: dict[str, Any] | None = ...,
+    repr_ns: str | None = ...,
     repr: bool = ...,
-    cmp: Optional[_EqOrderType] = ...,
-    hash: Optional[bool] = ...,
+    cmp: _EqOrderType | None = ...,
+    hash: bool | None = ...,
     init: bool = ...,
     slots: bool = ...,
     frozen: bool = ...,
@@ -282,25 +281,25 @@ def attrs(
     kw_only: bool = ...,
     cache_hash: bool = ...,
     auto_exc: bool = ...,
-    eq: Optional[_EqOrderType] = ...,
-    order: Optional[_EqOrderType] = ...,
+    eq: _EqOrderType | None = ...,
+    order: _EqOrderType | None = ...,
     auto_detect: bool = ...,
     collect_by_mro: bool = ...,
-    getstate_setstate: Optional[bool] = ...,
-    on_setattr: Optional[_OnSetAttrArgType] = ...,
-    field_transformer: Optional[_FieldTransformer] = ...,
+    getstate_setstate: bool | None = ...,
+    on_setattr: _OnSetAttrArgType | None = ...,
+    field_transformer: _FieldTransformer | None = ...,
     match_args: bool = ...,
-    unsafe_hash: Optional[bool] = ...,
+    unsafe_hash: bool | None = ...,
 ) -> _C: ...
 @overload
 @__dataclass_transform__(order_default=True, field_descriptors=(attrib, field))
 def attrs(
     maybe_cls: None = ...,
-    these: Optional[Dict[str, Any]] = ...,
-    repr_ns: Optional[str] = ...,
+    these: dict[str, Any] | None = ...,
+    repr_ns: str | None = ...,
     repr: bool = ...,
-    cmp: Optional[_EqOrderType] = ...,
-    hash: Optional[bool] = ...,
+    cmp: _EqOrderType | None = ...,
+    hash: bool | None = ...,
     init: bool = ...,
     slots: bool = ...,
     frozen: bool = ...,
@@ -310,25 +309,25 @@ def attrs(
     kw_only: bool = ...,
     cache_hash: bool = ...,
     auto_exc: bool = ...,
-    eq: Optional[_EqOrderType] = ...,
-    order: Optional[_EqOrderType] = ...,
+    eq: _EqOrderType | None = ...,
+    order: _EqOrderType | None = ...,
     auto_detect: bool = ...,
     collect_by_mro: bool = ...,
-    getstate_setstate: Optional[bool] = ...,
-    on_setattr: Optional[_OnSetAttrArgType] = ...,
-    field_transformer: Optional[_FieldTransformer] = ...,
+    getstate_setstate: bool | None = ...,
+    on_setattr: _OnSetAttrArgType | None = ...,
+    field_transformer: _FieldTransformer | None = ...,
     match_args: bool = ...,
-    unsafe_hash: Optional[bool] = ...,
+    unsafe_hash: bool | None = ...,
 ) -> Callable[[_C], _C]: ...
 @overload
 @__dataclass_transform__(field_descriptors=(attrib, field))
 def define(
     maybe_cls: _C,
     *,
-    these: Optional[Dict[str, Any]] = ...,
+    these: dict[str, Any] | None = ...,
     repr: bool = ...,
-    unsafe_hash: Optional[bool] = ...,
-    hash: Optional[bool] = ...,
+    unsafe_hash: bool | None = ...,
+    hash: bool | None = ...,
     init: bool = ...,
     slots: bool = ...,
     frozen: bool = ...,
@@ -338,12 +337,12 @@ def define(
     kw_only: bool = ...,
     cache_hash: bool = ...,
     auto_exc: bool = ...,
-    eq: Optional[bool] = ...,
-    order: Optional[bool] = ...,
+    eq: bool | None = ...,
+    order: bool | None = ...,
     auto_detect: bool = ...,
-    getstate_setstate: Optional[bool] = ...,
-    on_setattr: Optional[_OnSetAttrArgType] = ...,
-    field_transformer: Optional[_FieldTransformer] = ...,
+    getstate_setstate: bool | None = ...,
+    on_setattr: _OnSetAttrArgType | None = ...,
+    field_transformer: _FieldTransformer | None = ...,
     match_args: bool = ...,
 ) -> _C: ...
 @overload
@@ -351,10 +350,10 @@ def define(
 def define(
     maybe_cls: None = ...,
     *,
-    these: Optional[Dict[str, Any]] = ...,
+    these: dict[str, Any] | None = ...,
     repr: bool = ...,
-    unsafe_hash: Optional[bool] = ...,
-    hash: Optional[bool] = ...,
+    unsafe_hash: bool | None = ...,
+    hash: bool | None = ...,
     init: bool = ...,
     slots: bool = ...,
     frozen: bool = ...,
@@ -364,12 +363,12 @@ def define(
     kw_only: bool = ...,
     cache_hash: bool = ...,
     auto_exc: bool = ...,
-    eq: Optional[bool] = ...,
-    order: Optional[bool] = ...,
+    eq: bool | None = ...,
+    order: bool | None = ...,
     auto_detect: bool = ...,
-    getstate_setstate: Optional[bool] = ...,
-    on_setattr: Optional[_OnSetAttrArgType] = ...,
-    field_transformer: Optional[_FieldTransformer] = ...,
+    getstate_setstate: bool | None = ...,
+    on_setattr: _OnSetAttrArgType | None = ...,
+    field_transformer: _FieldTransformer | None = ...,
     match_args: bool = ...,
 ) -> Callable[[_C], _C]: ...
 
@@ -380,10 +379,10 @@ mutable = ...
 def frozen(
     maybe_cls: _C,
     *,
-    these: Optional[Dict[str, Any]] = ...,
+    these: dict[str, Any] | None = ...,
     repr: bool = ...,
-    unsafe_hash: Optional[bool] = ...,
-    hash: Optional[bool] = ...,
+    unsafe_hash: bool | None = ...,
+    hash: bool | None = ...,
     init: bool = ...,
     slots: bool = ...,
     frozen: bool = ...,
@@ -393,12 +392,12 @@ def frozen(
     kw_only: bool = ...,
     cache_hash: bool = ...,
     auto_exc: bool = ...,
-    eq: Optional[bool] = ...,
-    order: Optional[bool] = ...,
+    eq: bool | None = ...,
+    order: bool | None = ...,
     auto_detect: bool = ...,
-    getstate_setstate: Optional[bool] = ...,
-    on_setattr: Optional[_OnSetAttrArgType] = ...,
-    field_transformer: Optional[_FieldTransformer] = ...,
+    getstate_setstate: bool | None = ...,
+    on_setattr: _OnSetAttrArgType | None = ...,
+    field_transformer: _FieldTransformer | None = ...,
     match_args: bool = ...,
 ) -> _C: ...
 @overload
@@ -406,10 +405,10 @@ def frozen(
 def frozen(
     maybe_cls: None = ...,
     *,
-    these: Optional[Dict[str, Any]] = ...,
+    these: dict[str, Any] | None = ...,
     repr: bool = ...,
-    unsafe_hash: Optional[bool] = ...,
-    hash: Optional[bool] = ...,
+    unsafe_hash: bool | None = ...,
+    hash: bool | None = ...,
     init: bool = ...,
     slots: bool = ...,
     frozen: bool = ...,
@@ -419,32 +418,32 @@ def frozen(
     kw_only: bool = ...,
     cache_hash: bool = ...,
     auto_exc: bool = ...,
-    eq: Optional[bool] = ...,
-    order: Optional[bool] = ...,
+    eq: bool | None = ...,
+    order: bool | None = ...,
     auto_detect: bool = ...,
-    getstate_setstate: Optional[bool] = ...,
-    on_setattr: Optional[_OnSetAttrArgType] = ...,
-    field_transformer: Optional[_FieldTransformer] = ...,
+    getstate_setstate: bool | None = ...,
+    on_setattr: _OnSetAttrArgType | None = ...,
+    field_transformer: _FieldTransformer | None = ...,
     match_args: bool = ...,
 ) -> Callable[[_C], _C]: ...
-def fields(cls: Type[AttrsInstance]) -> Any: ...
-def fields_dict(cls: Type[AttrsInstance]) -> Dict[str, Attribute[Any]]: ...
+def fields(cls: type[AttrsInstance]) -> Any: ...
+def fields_dict(cls: type[AttrsInstance]) -> dict[str, Attribute[Any]]: ...
 def validate(inst: AttrsInstance) -> None: ...
 def resolve_types(
     cls: _A,
-    globalns: Optional[Dict[str, Any]] = ...,
-    localns: Optional[Dict[str, Any]] = ...,
-    attribs: Optional[List[Attribute[Any]]] = ...,
+    globalns: dict[str, Any] | None = ...,
+    localns: dict[str, Any] | None = ...,
+    attribs: list[Attribute[Any]] | None = ...,
     include_extras: bool = ...,
 ) -> _A: ...
 def make_class(
     name: str,
-    attrs: Union[List[str], Tuple[str, ...], Dict[str, Any]],
-    bases: Tuple[type, ...] = ...,
-    repr_ns: Optional[str] = ...,
+    attrs: list[str] | tuple[str, ...] | dict[str, Any],
+    bases: tuple[type, ...] = ...,
+    repr_ns: str | None = ...,
     repr: bool = ...,
-    cmp: Optional[_EqOrderType] = ...,
-    hash: Optional[bool] = ...,
+    cmp: _EqOrderType | None = ...,
+    hash: bool | None = ...,
     init: bool = ...,
     slots: bool = ...,
     frozen: bool = ...,
@@ -454,29 +453,29 @@ def make_class(
     kw_only: bool = ...,
     cache_hash: bool = ...,
     auto_exc: bool = ...,
-    eq: Optional[_EqOrderType] = ...,
-    order: Optional[_EqOrderType] = ...,
+    eq: _EqOrderType | None = ...,
+    order: _EqOrderType | None = ...,
     collect_by_mro: bool = ...,
-    on_setattr: Optional[_OnSetAttrArgType] = ...,
-    field_transformer: Optional[_FieldTransformer] = ...,
+    on_setattr: _OnSetAttrArgType | None = ...,
+    field_transformer: _FieldTransformer | None = ...,
 ) -> type: ...
 def asdict(
     inst: AttrsInstance,
     recurse: bool = ...,
-    filter: Optional[_FilterType[Any]] = ...,
-    dict_factory: Type[Mapping[Any, Any]] = ...,
+    filter: _FilterType[Any] | None = ...,
+    dict_factory: type[Mapping[Any, Any]] = ...,
     retain_collection_types: bool = ...,
-    value_serializer: Optional[Callable[[type, Attribute[Any], Any], Any]] = ...,
-    tuple_keys: Optional[bool] = ...,
-) -> Dict[str, Any]: ...
+    value_serializer: Callable[[type, Attribute[Any], Any], Any] | None = ...,
+    tuple_keys: bool | None = ...,
+) -> dict[str, Any]: ...
 def astuple(
     inst: AttrsInstance,
     recurse: bool = ...,
-    filter: Optional[_FilterType[Any]] = ...,
-    tuple_factory: Type[Sequence[Any]] = ...,
+    filter: _FilterType[Any] | None = ...,
+    tuple_factory: type[Sequence[Any]] = ...,
     retain_collection_types: bool = ...,
-) -> Tuple[Any, ...]: ...
-def has(cls: type) -> TypeGuard[Type[AttrsInstance]]: ...
+) -> tuple[Any, ...]: ...
+def has(cls: type) -> TypeGuard[type[AttrsInstance]]: ...
 def assoc(inst: _T, **changes: Any) -> _T: ...
 def evolve(inst: _T, **changes: Any) -> _T: ...
 def set_run_validators(run: bool) -> None: ...
@@ -507,5 +506,5 @@ def _transform_attrs(
     auto_attribs: bool,
     kw_only: bool,
     collect_by_mro: bool,
-    field_transformer: Optional[_FieldTransformer],
+    field_transformer: _FieldTransformer | None,
 ) -> tuple[tuple[attr.Attribute[Any], ...], tuple[attr.Attribute[Any], ...], dict[attr.Attribute[Any], type[Any]]]: ...
