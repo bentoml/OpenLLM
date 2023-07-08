@@ -26,7 +26,7 @@ from bentoml._internal.models.model import ModelOptions
 from ..exceptions import OpenLLMException
 import cloudpickle
 from bentoml._internal.models.model import CUSTOM_OBJECTS_FILENAME
-from ..utils import LazyLoader, is_torch_available
+from ..utils import LazyLoader, is_torch_available, generate_labels
 from ..utils import generate_context, normalize_attrs_to_model_tokenizer_pair
 from .constants import FRAMEWORK_TO_AUTOCLASS_MAPPING, MODEL_TO_AUTOCLASS_MAPPING
 
@@ -123,7 +123,7 @@ def import_model(
     attrs = {**model_attrs, **attrs}
 
     tokenizer = t.cast(
-        transformers.PreTrainedTokenizer,
+        "transformers.PreTrainedTokenizer",
         transformers.AutoTokenizer.from_pretrained(
             llm.model_id,
             config=config,
@@ -133,13 +133,16 @@ def import_model(
         ),
     )
 
-    model = infer_autoclass_from_llm_config(llm, config).from_pretrained(
-        llm.model_id,
-        *decls,
-        config=config,
-        trust_remote_code=trust_remote_code,
-        **hub_attrs,
-        **attrs,
+    model = t.cast(
+        "transformers.PreTrainedModel",
+        infer_autoclass_from_llm_config(llm, config).from_pretrained(
+            llm.model_id,
+            *decls,
+            config=config,
+            trust_remote_code=trust_remote_code,
+            **hub_attrs,
+            **attrs,
+        ),
     )
 
     try:
@@ -148,7 +151,7 @@ def import_model(
             module="openllm.serialisation.transformers",
             api_version="v1",
             context=generate_context(framework_name="openllm"),
-            labels={"runtime": llm.runtime},
+            labels=generate_labels(llm),
             options=ModelOptions(),
             signatures=make_default_signatures(model),
             external_modules=[

@@ -56,6 +56,7 @@ class LazyModule(types.ModuleType):
         module_file: str,
         import_structure: dict[str, list[str]],
         module_spec: importlib.machinery.ModuleSpec | None = None,
+        doc: str | None = None,
         extra_objects: dict[str, t.Any] | None = None,
     ):
         super().__init__(name)
@@ -70,6 +71,7 @@ class LazyModule(types.ModuleType):
         self.__file__ = module_file
         self.__spec__ = module_spec
         self.__path__ = [os.path.dirname(module_file)]
+        self.__doc__ = doc
         self._objects = _extra_objects
         self._name = name
         self._import_structure = import_structure

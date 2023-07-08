@@ -21,6 +21,7 @@ import bentoml
 import openllm
 
 from ..._prompt import default_formatter
+from ...utils import generate_labels
 from .configuration_opt import DEFAULT_PROMPT_TEMPLATE
 
 
@@ -55,13 +56,12 @@ class OPT(openllm.LLM["transformers.OPTForCausalLM", "transformers.GPT2Tokenizer
         return model_kwds, tokenizer_kwds
 
     def import_model(self, *args: t.Any, trust_remote_code: bool = False, **attrs: t.Any) -> bentoml.Model:
-        (_, model_attrs), tokenizer_kwds = self.llm_parameters
-        attrs = {**model_attrs, **attrs}
+        _, tokenizer_attrs = self.llm_parameters
 
         torch_dtype = attrs.pop("torch_dtype", self.dtype)
 
         config = transformers.AutoConfig.from_pretrained(self.model_id)
-        tokenizer = transformers.AutoTokenizer.from_pretrained(self.model_id, **tokenizer_kwds)
+        tokenizer = transformers.AutoTokenizer.from_pretrained(self.model_id, **tokenizer_attrs)
         tokenizer.pad_token_id = config.pad_token_id
         model = t.cast(
             "transformers.OPTForCausalLM",
@@ -69,7 +69,12 @@ class OPT(openllm.LLM["transformers.OPTForCausalLM", "transformers.GPT2Tokenizer
                 self.model_id, torch_dtype=torch_dtype, trust_remote_code=trust_remote_code, **attrs
             ),
         )
-        return bentoml.transformers.save_model(self.tag, model, custom_objects={"tokenizer": tokenizer})
+        return bentoml.transformers.save_model(
+            self.tag,
+            model,
+            custom_objects={"tokenizer": tokenizer},
+            labels=generate_labels(self),
+        )
 
     def load_model(self, tag: bentoml.Tag, *args: t.Any, **attrs: t.Any) -> transformers.OPTForCausalLM:
         torch_dtype = attrs.pop("torch_dtype", self.dtype)

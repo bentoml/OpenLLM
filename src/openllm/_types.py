@@ -37,6 +37,7 @@ from bentoml._internal.runner.runner import RunnerMethod
 
 DictStrAny = dict[str, t.Any]
 ListAny = list[t.Any]
+ListStr = list[str]
 TupleAny = tuple[t.Any, ...]
 P = t.ParamSpec("P")
 O_co = t.TypeVar("O_co", covariant=True)

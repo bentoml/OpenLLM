@@ -22,14 +22,17 @@ import logging
 import logging.config
 import os
 import sys
-import platform
 import types
+import copy
 import typing as t
+from circus.exc import ConflictError
 
 from bentoml._internal.configuration import get_debug_mode
 from bentoml._internal.configuration import get_quiet_mode
-from bentoml._internal.configuration import set_debug_mode
+from bentoml._internal.configuration import DEBUG_ENV_VAR as _DEBUG_ENV_VAR
+from bentoml._internal.configuration import GRPC_DEBUG_ENV_VAR as _GRPC_DEBUG_ENV_VAR
 from bentoml._internal.configuration import set_quiet_mode
+from bentoml._internal.log import configure_server_logging
 from bentoml._internal.models.model import ModelContext as _ModelContext
 from bentoml._internal.log import CLI_LOGGING_CONFIG as _CLI_LOGGING_CONFIG
 from bentoml._internal.types import LazyType
@@ -41,6 +44,7 @@ from bentoml._internal.utils import pkg
 from bentoml._internal.utils import reserve_free_port
 from bentoml._internal.utils import resolve_user_filepath
 from bentoml._internal.utils import validate_or_create_dir
+from bentoml._internal.utils import cached_contextmanager
 
 from .lazy import LazyModule
 
@@ -73,6 +77,12 @@ if t.TYPE_CHECKING:
     import openllm
     from .._types import DictStrAny, LiteralRuntime
     from ..models.auto.factory import _BaseAutoLLMClass
+
+
+def set_debug_mode(enabled: bool):
+    # monkeypatch bentoml._internal.configuration.set_debug_mode to remove unused logs
+    os.environ[_DEBUG_ENV_VAR] = str(enabled)
+    os.environ[_GRPC_DEBUG_ENV_VAR] = "DEBUG" if enabled else "ERROR"
 
 
 def lenient_issubclass(cls: t.Any, class_or_tuple: type[t.Any] | tuple[type[t.Any], ...] | None) -> bool:
@@ -117,7 +127,33 @@ def field_env_key(model_name: str, key: str, suffix: str | t.Literal[""] | None 
 DEBUG = sys.flags.dev_mode or (not sys.flags.ignore_environment and bool(os.environ.get("OPENLLMDEVDEBUG")))
 
 
-_LOGGING_CONFIG = _CLI_LOGGING_CONFIG.copy()
+class _ExceptionFilter(logging.Filter):
+    def __init__(self, exclude_exceptions: list[type[Exception]] | None = None, **kwargs: t.Any):
+        if exclude_exceptions is None:
+            exclude_exceptions = [ConflictError]
+        else:
+            exclude_exceptions.append(ConflictError)
+
+        super(_ExceptionFilter, self).__init__(**kwargs)
+        self.EXCLUDE_EXCEPTIONS = exclude_exceptions
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if record.exc_info:
+            etype, _, _ = record.exc_info
+            if etype is not None:
+                for exc in self.EXCLUDE_EXCEPTIONS:
+                    if issubclass(etype, exc):
+                        return False
+        return True
+
+
+_LOGGING_CONFIG = copy.deepcopy(_CLI_LOGGING_CONFIG)
+_LOGGING_CONFIG["filters"]["excfilter"] = {"()": _ExceptionFilter}
+_LOGGING_CONFIG["handlers"]["bentomlhandler"] = {
+    "class": "logging.StreamHandler",
+    "filters": ["excfilter", "infofilter"],
+    "stream": "ext://sys.stdout",
+}
 _LOGGING_CONFIG["loggers"].update(
     {
         "openllm": {
@@ -183,7 +219,7 @@ def generate_context(framework_name: str) -> _ModelContext:
     if is_tf_available():
         from bentoml._internal.frameworks.utils.tensorflow import get_tf_version
 
-        framework_versions["tensorflow-macos" if platform.system() == "Darwin" else "tensorflow"] = get_tf_version()
+        framework_versions["tensorflow"] = get_tf_version()
     if is_flax_available():
         framework_versions.update(
             {
@@ -193,6 +229,10 @@ def generate_context(framework_name: str) -> _ModelContext:
             }
         )
     return _ModelContext(framework_name=framework_name, framework_versions=framework_versions)
+
+
+def generate_labels(llm: openllm.LLM[t.Any, t.Any]) -> DictStrAny:
+    return {"runtime": llm.runtime, "framework": "openllm"}
 
 
 _TOKENIZER_PREFIX = "_tokenizer_"
@@ -307,6 +347,9 @@ if t.TYPE_CHECKING:
     from . import generate_context as generate_context
     from . import field_env_key as field_env_key
     from . import infer_auto_class as infer_auto_class
+    from . import cached_contextmanager as cached_contextmanager
+    from . import generate_labels as generate_labels
+    from . import configure_server_logging as configure_server_logging
     from .import_utils import ENV_VARS_TRUE_VALUES as ENV_VARS_TRUE_VALUES
     from .import_utils import OPTIONAL_DEPENDENCIES as OPTIONAL_DEPENDENCIES
     from .import_utils import DummyMetaclass as DummyMetaclass

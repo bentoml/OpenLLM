@@ -39,7 +39,6 @@ if utils.DEBUG:
     utils.set_debug_mode(True)
     utils.set_quiet_mode(False)
 
-    utils.configure_logging()
     logging.basicConfig(level=logging.NOTSET)
 else:
     # configuration for bitsandbytes before import
@@ -64,7 +63,6 @@ else:
 _import_structure = {
     "_llm": ["LLM", "Runner", "LLMRunner", "LLMRunnable"],
     "_configuration": ["LLMConfig"],
-    "_package": ["build"],
     "exceptions": [],
     "_schema": ["GenerationInput", "GenerationOutput", "MetadataOutput"],
     "utils": ["infer_auto_class"],
@@ -72,7 +70,7 @@ _import_structure = {
     "client": [],
     "playground": [],
     "serialisation": ["ggml", "transformers"],
-    "cli": ["start", "start_grpc"],
+    "cli": ["start", "start_grpc", "build", "import_model", "list_models"],
     # NOTE: models
     "models.auto": [
         "AutoConfig",
@@ -189,13 +187,15 @@ if t.TYPE_CHECKING:
     from ._llm import LLMRunner as LLMRunner
     from ._llm import LLMRunnable as LLMRunnable
     from ._llm import Runner as Runner
-    from ._package import build as build
     from ._schema import GenerationInput as GenerationInput
     from ._schema import GenerationOutput as GenerationOutput
     from ._schema import MetadataOutput as MetadataOutput
     from .utils import infer_auto_class as infer_auto_class
+    from .cli import build as build
     from .cli import start as start
     from .cli import start_grpc as start_grpc
+    from .cli import import_model as import_model
+    from .cli import list_models as list_models
     from .serialisation import ggml as ggml
     from .serialisation import transformers as transformers
     from .models.auto import CONFIG_MAPPING as CONFIG_MAPPING
@@ -285,6 +285,7 @@ else:
         globals()["__file__"],
         _import_structure,
         module_spec=__spec__,
+        doc=__doc__,
         extra_objects={
             "__version__": __version__,
             # The below is a special mapping that allows openllm to be used as a dictionary.

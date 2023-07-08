@@ -20,6 +20,7 @@ import typing as t
 import bentoml
 import openllm
 
+from ...utils import generate_labels
 from ..._prompt import default_formatter
 from .configuration_opt import DEFAULT_PROMPT_TEMPLATE
 
@@ -45,16 +46,20 @@ class TFOPT(openllm.LLM["transformers.TFOPTForCausalLM", "transformers.GPT2Token
         return {}, tokenizer_kwds
 
     def import_model(self, *args: t.Any, trust_remote_code: bool = False, **attrs: t.Any) -> bentoml.Model:
-        (_, model_attrs), tokenizer_kwds = self.llm_parameters
-        attrs = {**model_attrs, **attrs}
+        _, tokenizer_attrs = self.llm_parameters
 
         config = transformers.AutoConfig.from_pretrained(self.model_id)
-        tokenizer = transformers.AutoTokenizer.from_pretrained(self.model_id, **tokenizer_kwds)
+        tokenizer = transformers.AutoTokenizer.from_pretrained(self.model_id, **tokenizer_attrs)
         tokenizer.pad_token_id = config.pad_token_id
         model: transformers.TFOPTForCausalLM = transformers.TFOPTForCausalLM.from_pretrained(
             self.model_id, trust_remote_code=trust_remote_code, **attrs
         )
-        return bentoml.transformers.save_model(self.tag, model, custom_objects={"tokenizer": tokenizer})
+        return bentoml.transformers.save_model(
+            self.tag,
+            model,
+            custom_objects={"tokenizer": tokenizer},
+            labels=generate_labels(self),
+        )
 
     def sanitize_parameters(
         self,

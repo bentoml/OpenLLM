@@ -16,6 +16,9 @@ from __future__ import annotations
 
 import logging
 import os
+import types
+import functools
+import inspect
 import string
 import typing as t
 from pathlib import Path
@@ -27,9 +30,9 @@ if t.TYPE_CHECKING:
     from fs.base import FS
 
     import openllm
+    from .._types import P, DictStrAny, ListStr
 
-    DictStrAny = dict[str, t.Any]
-    ListStr = list[str]
+    PartialAny = functools.partial[t.Any]
 
     from attr import _make_method
 else:
@@ -39,6 +42,7 @@ else:
 
     DictStrAny = dict
     ListStr = list
+    PartialAny = functools.partial
 
 _T = t.TypeVar("_T", bound=t.Callable[..., t.Any])
 
@@ -267,4 +271,36 @@ def make_env_transformer(
         args=("_", "fields"),
         globs=globs,
         annotations={"_": "type[LLMConfig]", "fields": fields_ann, "return": fields_ann},
+    )
+
+
+def gen_sdk(func: t.Callable[P, t.Any], name: str | None = None, **attrs: t.Any):
+    from .representation import ReprMixin
+
+    if name is None:
+        name = func.__name__.strip("_")
+
+    _signatures = inspect.signature(func).parameters
+
+    def _repr(self: ReprMixin) -> str:
+        return f"<generated function {name} {orjson.dumps(dict(self.__repr_args__()), option=orjson.OPT_NON_STR_KEYS | orjson.OPT_INDENT_2).decode()}>"
+
+    def _repr_args(self: ReprMixin) -> t.Iterator[t.Tuple[str, t.Any]]:
+        return ((k, _signatures[k].annotation) for k in self.__repr_keys__)
+
+    return functools.update_wrapper(
+        types.new_class(
+            name,
+            (PartialAny, ReprMixin),
+            exec_body=lambda ns: ns.update(
+                {
+                    "__repr_keys__": property(lambda _: [i for i in _signatures.keys() if not i.startswith("_")]),
+                    "__repr_args__": _repr_args,
+                    "__repr__": _repr,
+                    "__doc__": inspect.cleandoc(t.cast(str, func.__doc__)),
+                    "__module__": "openllm",
+                }
+            ),
+        )(func, **attrs),
+        func,
     )

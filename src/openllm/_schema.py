@@ -22,6 +22,8 @@ import typing as t
 import attr
 import inflection
 
+from openllm._configuration import GenerationConfig
+from openllm.utils import bentoml_cattr
 import openllm
 
 
@@ -78,6 +80,10 @@ class GenerationOutput:
 
     configuration: t.Dict[str, t.Any]
     """A mapping of configuration values for given system."""
+
+    @property
+    def marshaled_config(self) -> GenerationConfig:
+        return bentoml_cattr.structure(self.configuration, GenerationConfig)
 
 
 @attr.frozen(slots=True)
