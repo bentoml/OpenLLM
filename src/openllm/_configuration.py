@@ -746,9 +746,9 @@ class _ModelSettingsAttr:
         service_name: str
         requirements: t.Optional[ListStr]
         bettertransformer: bool
-        model_type: t.Literal['causal_lm', 'seq2seq_lm']
-        runtime: t.Literal['transformers', 'ggml']
-        name_type: t.Optional[t.Literal['dasherize', 'lowercase']]
+        model_type: t.Literal["causal_lm", "seq2seq_lm"]
+        runtime: t.Literal["transformers", "ggml"]
+        name_type: t.Optional[t.Literal["dasherize", "lowercase"]]
         model_name: str
         start_name: str
         env: openllm.utils.EnvVarMixin
@@ -972,14 +972,14 @@ class _ConfigAttr:
         architecture. By default, we will use BetterTransformer for T5 and StableLM models,
         and set to False for every other models.
         """
-        __openllm_model_type__: t.Literal['causal_lm', 'seq2seq_lm'] = Field(None)
+        __openllm_model_type__: t.Literal["causal_lm", "seq2seq_lm"] = Field(None)
         """The model type for this given LLM. By default, it should be causal language modeling.
         Currently supported 'causal_lm' or 'seq2seq_lm'
         """
-        __openllm_runtime__: t.Literal['transformers', 'ggml'] = Field(None)
+        __openllm_runtime__: t.Literal["transformers", "ggml"] = Field(None)
         """The runtime to use for this model. Possible values are `transformers` or `ggml`. See
         LlaMA for more information."""
-        __openllm_name_type__: t.Optional[t.Literal['dasherize', 'lowercase']] = Field(None)
+        __openllm_name_type__: t.Optional[t.Literal["dasherize", "lowercase"]] = Field(None)
         """The default name typed for this model. "dasherize" will convert the name to lowercase and
         replace spaces with dashes. "lowercase" will convert the name to lowercase. If this is not set, then both
         `model_name` and `start_name` must be specified."""
@@ -1416,11 +1416,11 @@ class LLMConfig(_ConfigAttr):
     @overload
     def __getitem__(self, item: t.Literal["bettertransformer"] = ...) -> bool: ...
     @overload
-    def __getitem__(self, item: t.Literal["model_type"] = ...) -> t.Literal['causal_lm', 'seq2seq_lm']: ...
+    def __getitem__(self, item: t.Literal["model_type"] = ...) -> t.Literal["causal_lm", "seq2seq_lm"]: ...
     @overload
-    def __getitem__(self, item: t.Literal["runtime"] = ...) -> t.Literal['transformers', 'ggml']: ...
+    def __getitem__(self, item: t.Literal["runtime"] = ...) -> t.Literal["transformers", "ggml"]: ...
     @overload
-    def __getitem__(self, item: t.Literal["name_type"] = ...) -> t.Optional[t.Literal['dasherize', 'lowercase']]: ...
+    def __getitem__(self, item: t.Literal["name_type"] = ...) -> t.Optional[t.Literal["dasherize", "lowercase"]]: ...
     @overload
     def __getitem__(self, item: t.Literal["model_name"] = ...) -> str: ...
     @overload
