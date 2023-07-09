@@ -16,12 +16,12 @@ from __future__ import annotations
 import itertools
 import typing as t
 
+import pytest
+
 import openllm
 
 
 if t.TYPE_CHECKING:
-    import pytest
-
     from openllm._types import LiteralRuntime
 
 

@@ -246,7 +246,8 @@ def _container_handle(
         env[envvar.quantize] = quantize
 
     available = openllm.utils.gpu_count()
-    gpus = len(available) if len(available) > 0 else 1
+    gpus = len(available) if len(available) > 0 else -1
+    devs = [docker.types.DeviceRequest(count=gpus, capabilities=[["gpu"]])] if gpus > 0 else None
 
     container = client.containers.run(
         image_tag,
@@ -255,7 +256,7 @@ def _container_handle(
         environment=env,
         auto_remove=False,
         detach=True,
-        device_requests=[docker.types.DeviceRequest(count=gpus, capabilities=[["gpu"]])],
+        device_requests=devs,
         ports={"3000/tcp": port, "3001/tcp": prom_port},
     )
 
