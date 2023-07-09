@@ -189,7 +189,7 @@ def getattribute_from_module(module: types.ModuleType, attr: t.Any) -> t.Any:
         try:
             return getattribute_from_module(openllm_module, attr)
         except ValueError:
-            raise ValueError(f"Could not find {attr} neither in {module} nor in {openllm_module}!")
+            raise ValueError(f"Could not find {attr} neither in {module} nor in {openllm_module}!") from None
     else:
         raise ValueError(f"Could not find {attr} in {openllm_module}!")
 

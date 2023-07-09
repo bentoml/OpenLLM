@@ -64,8 +64,8 @@ class ChatGLM(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTrain
 
         if use_default_prompt_template and chat_history is not None:
             for i, (old_query, response) in enumerate(chat_history):
-                prompt_text += f"[Round {i}]\n问：{old_query}\n答：{response}\n"
-            prompt_text += f"[Round {len(chat_history)}]\n问：{prompt}\n答："
+                prompt_text += f"[Round {i}]\n问：{old_query}\n答：{response}\n"  # noqa: RUF001
+            prompt_text += f"[Round {len(chat_history)}]\n问：{prompt}\n答："  # noqa: RUF001
         else:
             prompt_text = prompt
 

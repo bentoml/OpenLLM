@@ -61,11 +61,11 @@ def make_llm_config(
     lines.append(f'    __config__ = {{ {", ".join(_config_args)} }}')
     if fields is not None:
         for field, type_, default in fields:
-            lines.append(f"    {field}: {type_} = openllm.LLMConfig.Field({repr(default)})")
+            lines.append(f"    {field}: {type_} = openllm.LLMConfig.Field({default!r})")
     if generation_fields is not None:
         generation_lines = ["class GenerationConfig:"]
         for field, default in generation_fields:
-            generation_lines.append(f"    {field} = {repr(default)}")
+            generation_lines.append(f"    {field} = {default!r}")
         lines.extend(("    " + line for line in generation_lines))
 
     script = "\n".join(lines)

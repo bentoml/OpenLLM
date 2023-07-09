@@ -1,6 +1,7 @@
 # See https://github.com/RadeonOpenCompute/rocm_smi_lib/blob/master/python_smi_tools/rsmiBindings.py
 import ctypes
-from typing import LiteralString, Literal
+from typing import Literal
+from typing import LiteralString
 
 class rocmsmi(ctypes.CDLL):
     @staticmethod

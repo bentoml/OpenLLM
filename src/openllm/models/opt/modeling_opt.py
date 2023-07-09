@@ -27,7 +27,7 @@ from ...utils import generate_labels
 if t.TYPE_CHECKING:
     import torch
 
-    import transformers  # noqa
+    import transformers
 else:
     torch = openllm.utils.LazyLoader("torch", globals(), "torch")
     transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
@@ -109,7 +109,7 @@ class OPT(openllm.LLM["transformers.OPTForCausalLM", "transformers.GPT2Tokenizer
                 raise RuntimeError(
                     f"Missing variable '{e.args[0]}' (required: {template_variables}) in the prompt template. "
                     "Use 'use_default_prompt_template=False' to disable the default prompt template."
-                )
+                ) from None
         else:
             prompt_text = prompt
 

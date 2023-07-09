@@ -21,7 +21,7 @@ from ..._prompt import default_formatter
 
 
 if t.TYPE_CHECKING:
-    import transformers  # noqa
+    import transformers  # noqa: F401
 
 
 class TFFlanT5(openllm.LLM["transformers.TFT5ForConditionalGeneration", "transformers.T5TokenizerFast"]):
@@ -39,17 +39,20 @@ class TFFlanT5(openllm.LLM["transformers.TFT5ForConditionalGeneration", "transfo
         **attrs: t.Any,
     ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
         if use_default_prompt_template:
-            prompt_variables = {
-                k: v
-                for k, v in attrs.items()
-                if k in default_formatter.extract_template_variables(DEFAULT_PROMPT_TEMPLATE)
-            }
+            template_variables = default_formatter.extract_template_variables(DEFAULT_PROMPT_TEMPLATE)
+            prompt_variables = {k: v for k, v in attrs.items() if k in template_variables}
             if "instruction" in prompt_variables:
                 raise RuntimeError(
                     "'instruction' should be passed as the first argument "
                     "instead of kwargs when 'use_default_prompt_template=True'"
                 )
-            prompt_text = DEFAULT_PROMPT_TEMPLATE.format(instruction=prompt, **prompt_variables)
+            try:
+                prompt_text = DEFAULT_PROMPT_TEMPLATE.format(instruction=prompt, **prompt_variables)
+            except KeyError as e:
+                raise RuntimeError(
+                    f"Missing variable '{e.args[0]}' (required: {template_variables}) in the prompt template. "
+                    "Use 'use_default_prompt_template=False' to disable the default prompt template."
+                ) from None
         else:
             prompt_text = prompt
 

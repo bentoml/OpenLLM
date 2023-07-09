@@ -597,7 +597,7 @@ class GenerationConfig(ReprMixin):
 
     if t.TYPE_CHECKING:
 
-        def __attrs_init__(self, **_: t.Any):
+        def __attrs_init__(self, *args: t.Any, **attrs: t.Any):
             ...
 
     def __init__(self, *, _internal: bool = False, **attrs: t.Any):
@@ -861,13 +861,14 @@ def _make_assignment_script(
 _reserved_namespace = {"__config__", "GenerationConfig"}
 
 
-@dataclass_transform(order_default=True, field_specifiers=(attr.field, dantic.Field))
+@dataclass_transform(kw_only_default=True, order_default=True, field_specifiers=(attr.field, dantic.Field))
 def llm_config_transform(cls: type[LLMConfig]) -> type[LLMConfig]:
     non_intrusive_setattr(
         cls,
         "__dataclass_transform__",
         {
             "order_default": True,
+            "kw_only_default": True,
             "field_specifiers": (attr.field, dantic.Field),
         },
     )
@@ -923,7 +924,7 @@ class _ConfigAttr:
         to create the generation_config argument that can be used throughout the lifecycle.
         This class will also be managed internally by OpenLLM."""
 
-        def __attrs_init__(self, **attrs: t.Any):
+        def __attrs_init__(self, *args: t.Any, **attrs: t.Any):
             """Generated __attrs_init__ for LLMConfig subclass that follows the attrs contract."""
 
         # NOTE: The following will be populated from __config__ and also
@@ -1000,7 +1001,183 @@ class _ConfigAttr:
         # fmt: on
 
 
-@attr.define(slots=True)
+class _ConfigBuilder:
+    """A modified version of attrs internal _ClassBuilder, and should only be called within __init_subclass__ of LLMConfig.
+
+    Where:
+    - has_custom_setattr=True
+    - getstate_setstate=None (config class will always be a slotted class.)
+    - slots=True
+    - auto_attribs=False (We should handle it before _ConfigBuilder is invoked)
+    - cache_hash=False (We don't need to cache the hash code of this object for now.)
+    - collect_by_mro=True (The correct behaviour to resolve inheritance)
+    - field_transformer=codegen.make_env_transformer (We need to transform the field to have env variable)
+
+    It takes `these` arguments as a fully parsed attr.Attribute[t.Any] from __init_subclass__
+    """
+
+    __slots__ = (
+        "_cls",
+        "_cls_dict",
+        "_attr_names",
+        "_attrs",
+        "_model_name",
+        "_base_attr_map",
+        "_base_names",
+        "_has_pre_init",
+        "_has_post_init",
+    )
+
+    def __init__(
+        self,
+        cls: type[LLMConfig],
+        these: dict[str, _CountingAttr[t.Any]],
+        auto_attribs: bool = False,
+        kw_only: bool = False,
+        collect_by_mro: bool = True,
+    ):
+        attrs, base_attrs, base_attr_map = _transform_attrs(
+            cls,
+            these,
+            auto_attribs,
+            kw_only,
+            collect_by_mro,
+            field_transformer=codegen.make_env_transformer(cls, cls.__openllm_model_name__),
+        )
+
+        self._cls = cls
+        self._model_name = cls.__openllm_model_name__
+        self._cls_dict = dict(cls.__dict__)
+        self._attrs = attrs
+        self._base_names = {a.name for a in base_attrs}
+        self._base_attr_map = base_attr_map
+        self._attr_names = tuple(a.name for a in attrs)
+        self._has_pre_init = bool(getattr(cls, "__attrs_pre_init__", False))
+        self._has_post_init = bool(getattr(cls, "__attrs_post_init__", False))
+
+        self._cls_dict["__attrs_attrs__"] = self._attrs
+
+    def build_class(self) -> type[LLMConfig]:
+        """Finalize class based on the accumulated configuration.
+
+        Builder cannot be used after calling this method.
+
+        > A difference between this and attrs._ClassBuilder is that we don't
+        > create a new class after constructing all __dict__. This has to do
+        > with recursive called within __init_subclass__
+        """
+        cd = {
+            k: v for k, v in self._cls_dict.items() if k not in (*tuple(self._attr_names), "__dict__", "__weakref__")
+        }
+        # Traverse the MRO to collect existing slots
+        # and check for an existing __weakref__.
+        existing_slots: DictStrAny = {}
+        weakref_inherited = False
+        for base_cls in self._cls.__mro__[1:-1]:
+            if base_cls.__dict__.get("__weakref__", None) is not None:
+                weakref_inherited = True
+            existing_slots.update(
+                {name: getattr(base_cls, name, codegen._sentinel) for name in getattr(base_cls, "__slots__", [])}
+            )
+
+        base_names = set(self._base_names)
+        names = self._attr_names
+        if (
+            "__weakref__" not in getattr(self._cls, "__slots__", ())
+            and "__weakref__" not in names
+            and not weakref_inherited
+        ):
+            names += ("__weakref__",)
+
+        # We only add the names of attributes that aren't inherited.
+        # Setting __slots__ to inherited attributes wastes memory.
+        slot_names = [name for name in names if name not in base_names]
+        # There are slots for attributes from current class
+        # that are defined in parent classes.
+        # As their descriptors may be overridden by a child class,
+        # we collect them here and update the class dict
+        reused_slots = {
+            slot: slot_descriptor for slot, slot_descriptor in existing_slots.items() if slot in slot_names
+        }
+        # We only add the names of attributes that aren't inherited.
+        # Setting __slots__ to inherited attributes wastes memory.
+        # __openllm_extras__ holds additional metadata that might be usefule for users, hence we add it to slots
+        slot_names = [name for name in slot_names if name not in reused_slots]
+        cd.update(reused_slots)
+        cd["__slots__"] = tuple(slot_names)
+
+        cd["__qualname__"] = self._cls.__qualname__
+
+        # We can only patch the class here, rather than instantiate
+        # a new one, since type.__new__ actually will invoke __init_subclass__
+        # and since we use the _ConfigBuilder in __init_subclass__, it will
+        # raise recusion error. See https://peps.python.org/pep-0487/ for more
+        # information on how __init_subclass__ works.
+        for k, value in cd.items():
+            setattr(self._cls, k, value)
+
+        return self.make_closure(self._cls)
+
+    def make_closure(self, cls: type):
+        # The following is a fix for
+        # <https://github.com/python-attrs/attrs/issues/102>.
+        # If a method mentions `__class__` or uses the no-arg super(), the
+        # compiler will bake a reference to the class in the method itself
+        # as `method.__closure__`.  Since we replace the class with a
+        # clone, we rewrite these references so it keeps working.
+        for item in cls.__dict__.values():
+            if isinstance(item, (classmethod, staticmethod)):
+                # Class- and staticmethods hide their functions inside.
+                # These might need to be rewritten as well.
+                closure_cells = getattr(item.__func__, "__closure__", None)
+            elif isinstance(item, property):
+                # Workaround for property `super()` shortcut (PY3-only).
+                # There is no universal way for other descriptors.
+                closure_cells = getattr(item.fget, "__closure__", None)
+            else:
+                closure_cells = getattr(item, "__closure__", None)
+
+            if not closure_cells:  # Catch None or the empty list.
+                continue
+            for cell in closure_cells:
+                try:
+                    match = cell.cell_contents is self._cls
+                except ValueError:  # ValueError: Cell is empty
+                    pass
+                else:
+                    if match:
+                        set_closure_cell(cell, cls)
+
+        return llm_config_transform(cls)
+
+    def add_attrs_init(self) -> t.Self:
+        self._cls_dict["__attrs_init__"] = codegen.add_method_dunders(
+            self._cls,
+            _make_init(
+                self._cls,
+                self._attrs,
+                self._has_pre_init,
+                self._has_post_init,
+                False,  # frozen
+                True,  # slots
+                False,  # cache_hash
+                self._base_attr_map,
+                False,  # This is not an exception
+                None,  # no on_setattr
+                True,
+            ),
+        )
+        return self
+
+    def add_repr(self):
+        for key, fn in ReprMixin.__dict__.items():
+            if key in ("__repr__", "__str__", "__repr_name__", "__repr_str__", "__repr_args__"):
+                self._cls_dict[key] = codegen.add_method_dunders(self._cls, fn)
+        self._cls_dict["__repr_keys__"] = property(lambda _: {i.name for i in self._attrs} | {"generation_config"})
+        return self
+
+
+@attr.define(slots=True, init=False)
 class LLMConfig(_ConfigAttr):
     """``openllm.LLMConfig`` is a pydantic-like ``attrs`` interface that offers fast and easy-to-use APIs.
 
@@ -1091,173 +1268,6 @@ class LLMConfig(_ConfigAttr):
     - Support pydantic-core as validation backend.
     """
 
-    class _ConfigBuilder:
-        """A modified version of attrs internal _ClassBuilder, and should only be called within __init_subclass__ of LLMConfig.
-
-        Where:
-        - has_custom_setattr=True
-        - getstate_setstate=None (config class will always be a slotted class.)
-        - slots=True
-        - auto_attribs=False (We should handle it before _ConfigBuilder is invoked)
-        - cache_hash=False (We don't need to cache the hash code of this object for now.)
-        - collect_by_mro=True (The correct behaviour to resolve inheritance)
-        - field_transformer=codegen.make_env_transformer (We need to transform the field to have env variable)
-
-        It takes `these` arguments as a fully parsed attr.Attribute[t.Any] from __init_subclass__
-        """
-
-        __slots__ = (
-            "_cls",
-            "_cls_dict",
-            "_attr_names",
-            "_attrs",
-            "_model_name",
-            "_base_attr_map",
-            "_base_names",
-            "_has_pre_init",
-            "_has_post_init",
-        )
-
-        def __init__(
-            self,
-            cls: type[LLMConfig],
-            these: dict[str, _CountingAttr[t.Any]],
-            auto_attribs: bool = False,
-            kw_only: bool = False,
-            collect_by_mro: bool = True,
-        ):
-            attrs, base_attrs, base_attr_map = _transform_attrs(
-                cls,
-                these,
-                auto_attribs,
-                kw_only,
-                collect_by_mro,
-                field_transformer=codegen.make_env_transformer(cls, cls.__openllm_model_name__),
-            )
-
-            self._cls = cls
-            self._model_name = cls.__openllm_model_name__
-            self._cls_dict = dict(cls.__dict__)
-            self._attrs = attrs
-            self._base_names = {a.name for a in base_attrs}
-            self._base_attr_map = base_attr_map
-            self._attr_names = tuple(a.name for a in attrs)
-            self._has_pre_init = bool(getattr(cls, "__attrs_pre_init__", False))
-            self._has_post_init = bool(getattr(cls, "__attrs_post_init__", False))
-
-            self._cls_dict["__attrs_attrs__"] = self._attrs
-
-        def build_class(self) -> type[LLMConfig]:
-            """Finalize class based on the accumulated configuration.
-
-            Builder cannot be used after calling this method.
-
-            > A difference between this and attrs._ClassBuilder is that we don't
-            > create a new class after constructing all __dict__. This has to do
-            > with recursive called within __init_subclass__
-            """
-            cd = {
-                k: v
-                for k, v in self._cls_dict.items()
-                if k not in tuple(self._attr_names) + ("__dict__", "__weakref__")
-            }
-            # Traverse the MRO to collect existing slots
-            # and check for an existing __weakref__.
-            existing_slots: DictStrAny = {}
-            weakref_inherited = False
-            for base_cls in self._cls.__mro__[1:-1]:
-                if base_cls.__dict__.get("__weakref__", None) is not None:
-                    weakref_inherited = True
-                existing_slots.update(
-                    {name: getattr(base_cls, name, codegen._sentinel) for name in getattr(base_cls, "__slots__", [])}
-                )
-
-            base_names = set(self._base_names)
-            names = self._attr_names
-            if (
-                "__weakref__" not in getattr(self._cls, "__slots__", ())
-                and "__weakref__" not in names
-                and not weakref_inherited
-            ):
-                names += ("__weakref__",)
-
-            # We only add the names of attributes that aren't inherited.
-            # Setting __slots__ to inherited attributes wastes memory.
-            slot_names = [name for name in names if name not in base_names]
-            # There are slots for attributes from current class
-            # that are defined in parent classes.
-            # As their descriptors may be overridden by a child class,
-            # we collect them here and update the class dict
-            reused_slots = {
-                slot: slot_descriptor for slot, slot_descriptor in existing_slots.items() if slot in slot_names
-            }
-            # We only add the names of attributes that aren't inherited.
-            # Setting __slots__ to inherited attributes wastes memory.
-            # __openllm_extras__ holds additional metadata that might be usefule for users, hence we add it to slots
-            slot_names = [name for name in slot_names if name not in reused_slots]
-            cd.update(reused_slots)
-            cd["__slots__"] = tuple(slot_names)
-
-            for k, value in cd.items():
-                setattr(self._cls, k, value)
-
-            # The following is a fix for
-            # <https://github.com/python-attrs/attrs/issues/102>.
-            # If a method mentions `__class__` or uses the no-arg super(), the
-            # compiler will bake a reference to the class in the method itself
-            # as `method.__closure__`.  Since we replace the class with a
-            # clone, we rewrite these references so it keeps working.
-            for item in self._cls.__dict__.values():
-                if isinstance(item, (classmethod, staticmethod)):
-                    # Class- and staticmethods hide their functions inside.
-                    # These might need to be rewritten as well.
-                    closure_cells = getattr(item.__func__, "__closure__", None)
-                elif isinstance(item, property):
-                    # Workaround for property `super()` shortcut (PY3-only).
-                    # There is no universal way for other descriptors.
-                    closure_cells = getattr(item.fget, "__closure__", None)
-                else:
-                    closure_cells = getattr(item, "__closure__", None)
-
-                if not closure_cells:  # Catch None or the empty list.
-                    continue
-                for cell in closure_cells:
-                    try:
-                        match = cell.cell_contents is self._cls
-                    except ValueError:  # ValueError: Cell is empty
-                        pass
-                    else:
-                        if match:
-                            set_closure_cell(cell, self._cls)
-
-            return llm_config_transform(self._cls)
-
-        def add_attrs_init(self) -> t.Self:
-            self._cls_dict["__attrs_init__"] = codegen.add_method_dunders(
-                self._cls,
-                _make_init(
-                    self._cls,
-                    self._attrs,
-                    self._has_pre_init,
-                    self._has_post_init,
-                    False,  # frozen
-                    True,  # slots
-                    False,  # cache_hash
-                    self._base_attr_map,
-                    False,  # This is not an exception
-                    None,  # no on_setattr
-                    attrs_init=True,
-                ),
-            )
-            return self
-
-        def add_repr(self):
-            for key, fn in ReprMixin.__dict__.items():
-                if key in ("__repr__", "__str__", "__repr_name__", "__repr_str__", "__repr_args__"):
-                    self._cls_dict[key] = codegen.add_method_dunders(self._cls, fn)
-            self._cls_dict["__repr_keys__"] = property(lambda _: {i.name for i in self._attrs} | {"generation_config"})
-            return self
-
     def __init_subclass__(cls: type[LLMConfig]):
         """The purpose of this ``__init_subclass__`` is to offer pydantic UX while adhering to attrs contract.
 
@@ -1330,7 +1340,7 @@ class LLMConfig(_ConfigAttr):
             a.name for a in attr.fields(cls.__openllm_generation_class__)
         }
 
-        cls = cls._ConfigBuilder(cls, these).add_attrs_init().add_repr().build_class()
+        cls = _ConfigBuilder(cls, these).add_attrs_init().add_repr().build_class()
 
         # Finally, resolve the types
         if getattr(cls, "__attrs_types_resolved__", None) != cls:
@@ -1651,7 +1661,7 @@ class LLMConfig(_ConfigAttr):
         try:
             attrs = orjson.loads(json_str)
         except orjson.JSONDecodeError as err:
-            raise openllm.exceptions.ValidationError(f"Failed to load JSON: {err}")
+            raise openllm.exceptions.ValidationError(f"Failed to load JSON: {err}") from None
         return bentoml_cattr.structure(attrs, cls)
 
     @classmethod

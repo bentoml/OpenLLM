@@ -63,7 +63,7 @@ class ReprMixin:
 
     def __repr_str__(self, join_str: str) -> str:
         """To be used with __str__."""
-        return join_str.join(repr(v) if a is None else f"{a}={repr(v)}" for a, v in self.__repr_args__())
+        return join_str.join(repr(v) if a is None else f"{a}={v!r}" for a, v in self.__repr_args__())
 
     def __repr_args__(self) -> ReprArgs:
         """This can also be overriden by base class using this mixin.

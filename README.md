@@ -11,6 +11,9 @@
     </a><a href="https://l.bentoml.com/join-openllm-discord">
         <img src="https://badgen.net/badge/icon/OpenLLM/7289da?icon=discord&label=Join%20Us" alt="Discord" />
     </a><br>
+    </a><a href="https://pdm.fming.dev">
+        <img src="https://img.shields.io/badge/pdm-managed-blueviolet" alt="PDM" />
+    </a><br>
     <p>An open platform for operating large language models (LLMs) in production.</br>
     Fine-tune, serve, deploy, and monitor any LLMs with ease.</p>
     <i></i>

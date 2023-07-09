@@ -94,10 +94,7 @@ class LazyModule(types.ModuleType):
         # may not be in the dir already, depending on whether
         # they have been accessed or not. So we only add the
         # elements of self.__all__ that are not already in the dir.
-        for attribute in self.__all__:
-            if attribute not in result:
-                result.append(attribute)
-        return result
+        return result + [i for i in self.__all__ if i not in result]
 
     def __getitem__(self, key: str) -> t.Any:
         """This is reserved to only internal uses and users shouldn't use this."""
@@ -128,6 +125,7 @@ class LazyModule(types.ModuleType):
                 warnings.warn(
                     f"'{name}' is deprecated and will be removed in future version. Make sure to use '{cur_value}' instead",
                     DeprecationWarning,
+                    stacklevel=3,
                 )
                 return getattr(self, cur_value)
         if name in self._objects:

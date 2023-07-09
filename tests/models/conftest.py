@@ -15,6 +15,7 @@
 from __future__ import annotations
 import asyncio
 import contextlib
+import functools
 import logging
 import sys
 import time
@@ -64,9 +65,9 @@ class ResponseComparator(JSONSnapshotExtension):
         matcher: PropertyMatcher | None = None,
     ) -> SerializedData:
         if openllm.utils.LazyType(ListAny).isinstance(data):
-            data = [d.unmarshaled_config for d in data]
+            data = [d.unmarshaled for d in data]
         else:
-            data = data.unmarshaled_config
+            data = data.unmarshaled
         data = self._filter(data=data, depth=0, path=(), exclude=exclude, matcher=matcher)
         return orjson.dumps(data, option=orjson.OPT_INDENT_2 | orjson.OPT_SORT_KEYS).decode()
 
@@ -74,8 +75,8 @@ class ResponseComparator(JSONSnapshotExtension):
         def convert_data(data: SerializableData) -> openllm.GenerationOutput | t.Sequence[openllm.GenerationOutput]:
             try:
                 data = orjson.loads(data)
-            except orjson.JSONDecodeError:
-                raise ValueError(f"Failed to decode JSON data: {data}")
+            except orjson.JSONDecodeError as err:
+                raise ValueError(f"Failed to decode JSON data: {data}") from err
             if openllm.utils.LazyType(DictStrAny).isinstance(data):
                 return openllm.GenerationOutput(**data)
             elif openllm.utils.LazyType(ListAny).isinstance(data):
@@ -115,12 +116,13 @@ def response_snapshot(snapshot: SnapshotAssertion):
 class _Handle(ABC):
     port: int
     timeout: int
+    deployment_mode: t.Literal["container", "local"]
 
     client: BaseAsyncClient[t.Any] = attr.field(init=False)
 
     if t.TYPE_CHECKING:
 
-        def __attrs_init__(*args: t.Any, **_: t.Any):
+        def __attrs_init__(self, *args: t.Any, **attrs: t.Any):
             ...
 
     def __attrs_post_init__(self):
@@ -150,8 +152,14 @@ class _Handle(ABC):
 class LocalHandle(_Handle):
     process: subprocess.Popen[bytes]
 
-    def __init__(self, process: subprocess.Popen[bytes], port: int, timeout: int = 60):
-        self.__attrs_init__(port, timeout, process)
+    def __init__(
+        self,
+        process: subprocess.Popen[bytes],
+        port: int,
+        deployment_mode: t.Literal["container", "local"],
+        timeout: int = 60,
+    ):
+        self.__attrs_init__(port, timeout, deployment_mode, process)
 
     def status(self) -> bool:
         return self.process.poll() is None
@@ -174,8 +182,15 @@ class DockerHandle(_Handle):
     container_name: str
     docker_client: docker.DockerClient
 
-    def __init__(self, docker_client: docker.DockerClient, container_name: str, port: int, timeout: int = 60):
-        self.__attrs_init__(port, timeout, container_name, docker_client)
+    def __init__(
+        self,
+        docker_client: docker.DockerClient,
+        container_name: str,
+        port: int,
+        deployment_mode: t.Literal["container", "local"],
+        timeout: int = 60,
+    ):
+        self.__attrs_init__(port, timeout, deployment_mode, container_name, docker_client)
 
     def status(self) -> bool:
         container = self.docker_client.containers.get(self.container_name)
@@ -187,6 +202,7 @@ def _local_handle(
     model: str,
     model_id: str,
     image_tag: str,
+    deployment_mode: t.Literal["container", "local"],
     quantize: t.Literal["int8", "int4", "gptq"] | None = None,
     *,
     _serve_grpc: bool = False,
@@ -203,7 +219,7 @@ def _local_handle(
             model, model_id=model_id, quantize=quantize, additional_args=["--port", str(port)], __test__=True
         )
 
-    yield LocalHandle(proc, port)
+    yield LocalHandle(proc, port, deployment_mode)
     proc.terminate()
     proc.wait(60)
 
@@ -220,6 +236,7 @@ def _container_handle(
     model: str,
     model_id: str,
     image_tag: str,
+    deployment_mode: t.Literal["container", "local"],
     quantize: t.Literal["int8", "int4", "gptq"] | None = None,
     *,
     _serve_grpc: bool = False,
@@ -260,7 +277,7 @@ def _container_handle(
         ports={"3000/tcp": port, "3001/tcp": prom_port},
     )
 
-    yield DockerHandle(client, container.name, port)
+    yield DockerHandle(client, container.name, port, deployment_mode)
 
     try:
         container.stop()
@@ -296,8 +313,8 @@ def deployment_mode(request: pytest.FixtureRequest) -> str:
 @pytest.fixture(scope="module")
 def handler(el: asyncio.AbstractEventLoop, deployment_mode: t.Literal["container", "local"]):
     if deployment_mode == "container":
-        return _container_handle
+        return functools.partial(_container_handle, deployment_mode=deployment_mode)
     elif deployment_mode == "local":
-        return _local_handle
+        return functools.partial(_local_handle, deployment_mode=deployment_mode)
     else:
         raise ValueError(f"Unknown deployment mode: {deployment_mode}")

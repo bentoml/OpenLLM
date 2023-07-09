@@ -331,7 +331,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
             start_time = time.time_ns()
 
             with analytics.set_bentoml_tracking():
-                assert group.name is not None, "group.name should not be None"  # noqa: S101
+                assert group.name is not None, "group.name should not be None"
                 event = analytics.OpenllmCliEvent(cmd_group=group.name, cmd_name=command_name)
                 try:
                     return_value = func(*args, **attrs)
@@ -383,7 +383,9 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
                     return start_command_factory(bentoml.get(cmd_name), _context_settings=_CONTEXT_SETTINGS)
                 except bentoml.exceptions.NotFound:
                     pass
-                raise click.BadArgumentUsage(f"{cmd_name} is not a valid model identifier supported by OpenLLM.")
+                raise click.BadArgumentUsage(
+                    f"{cmd_name} is not a valid model identifier supported by OpenLLM."
+                ) from None
         elif ctx.command.name == "start-grpc":
             try:
                 return _cached_grpc[cmd_name]
@@ -395,7 +397,9 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
                     )
                 except bentoml.exceptions.NotFound:
                     pass
-                raise click.BadArgumentUsage(f"{cmd_name} is not a valid model identifier supported by OpenLLM.")
+                raise click.BadArgumentUsage(
+                    f"{cmd_name} is not a valid model identifier supported by OpenLLM."
+                ) from None
         return super().get_command(ctx, cmd_name)
 
     def list_commands(self, ctx: click.Context) -> list[str]:
@@ -439,7 +443,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
             cmd = super(BentoMLCommandGroup, self).command(*args, **attrs)(wrapped)
             # NOTE: add aliases to a given commands if it is specified.
             if aliases is not None:
-                assert cmd.name  # noqa: S101
+                assert cmd.name
                 self._commands[cmd.name] = aliases
                 self._aliases.update({alias: cmd.name for alias in aliases})
 
@@ -781,7 +785,7 @@ def prerequisite_check(
     ctx: click.Context,
     llm_config: openllm.LLMConfig,
     env: EnvVarMixin,
-    gpu_available: tuple[int, ...],
+    gpu_available: tuple[str, ...],
     quantize: t.LiteralString | None,
     adapter_map: dict[str, str | None] | None,
     num_workers: int,
@@ -851,7 +855,7 @@ def start_bento(
         _model_store = BentoMLContainer.model_store.get()
         model = _model_store.get(f"{model_framework}-{model_type}")
     except bentoml.exceptions.NotFound:
-        raise OpenLLMException(f"Failed to find models for {llm_config['start_name']}")
+        raise OpenLLMException(f"Failed to find models for {llm_config['start_name']}") from None
 
     @group.command(**command_attrs)
     @start_decorator(llm_config, serve_grpc=serve_grpc)
@@ -1229,7 +1233,7 @@ def download_models_command(
         if output == "pretty":
             if _previously_saved:
                 _echo(
-                    f"{model} with 'model_id={model_id}' is already setup for framework '{impl}': {str(_ref.tag)}",
+                    f"{model} with 'model_id={model_id}' is already setup for framework '{impl}': {_ref.tag!s}",
                     nl=True,
                     fg="yellow",
                 )

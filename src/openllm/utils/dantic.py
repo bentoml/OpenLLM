@@ -117,7 +117,7 @@ def env_converter(value: t.Any, env: str | None = None) -> t.Any:
             try:
                 return orjson.loads(value.lower())
             except orjson.JSONDecodeError as err:
-                raise RuntimeError(f"Failed to parse ({value!r}) from '{env}': {err}")
+                raise RuntimeError(f"Failed to parse ({value!r}) from '{env}': {err}") from None
     return value
 
 
@@ -281,7 +281,7 @@ class ModuleType(ParamType):
             try:
                 return getattr(module, class_name)
             except AttributeError:
-                raise ImportError(f"Module '{module_name}' does not define a '{class_name}' variable.")
+                raise ImportError(f"Module '{module_name}' does not define a '{class_name}' variable.") from None
         return None
 
     def convert(self, value: str | t.Any, param: click.Parameter | None, ctx: click.Context | None) -> t.Any:
@@ -290,7 +290,7 @@ class ModuleType(ParamType):
                 return self._import_object(value)
             return value
         except Exception as exc:
-            self.fail(f"'{value}' is not a valid object ({type(exc)}: {str(exc)})", param, ctx)
+            self.fail(f"'{value}' is not a valid object ({type(exc)}: {exc!s})", param, ctx)
 
 
 class EnumChoice(click.Choice):
@@ -457,7 +457,7 @@ class BytesType(ParamType):
         try:
             return str.encode(value)
         except Exception as exc:
-            self.fail(f"'{value}' is not a valid string ({str(exc)})", param, ctx)
+            self.fail(f"'{value}' is not a valid string ({exc!s})", param, ctx)
 
 
 CYGWIN = sys.platform.startswith("cygwin")
@@ -546,4 +546,4 @@ class JsonType(ParamType):
         try:
             return orjson.loads(value)
         except orjson.JSONDecodeError as exc:
-            self.fail(f"'{value}' is not a valid JSON string ({str(exc)})", param, ctx)
+            self.fail(f"'{value}' is not a valid JSON string ({exc!s})", param, ctx)

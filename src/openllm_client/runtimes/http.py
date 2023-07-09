@@ -37,39 +37,43 @@ logger = logging.getLogger(__name__)
 
 class HTTPClientMixin:
     @property
+    def _metadata(self) -> DictStrAny:
+        ...
+
+    @property
     def model_name(self) -> str:
         try:
             return self._metadata["model_name"]
         except KeyError:
-            raise RuntimeError("Malformed service endpoint. (Possible malicious)")
+            raise RuntimeError("Malformed service endpoint. (Possible malicious)") from None
 
     @property
     def model_id(self) -> str:
         try:
             return self._metadata["model_name"]
         except KeyError:
-            raise RuntimeError("Malformed service endpoint. (Possible malicious)")
+            raise RuntimeError("Malformed service endpoint. (Possible malicious)") from None
 
     @property
     def framework(self) -> LiteralRuntime:
         try:
             return self._metadata["framework"]
         except KeyError:
-            raise RuntimeError("Malformed service endpoint. (Possible malicious)")
+            raise RuntimeError("Malformed service endpoint. (Possible malicious)") from None
 
     @property
     def timeout(self) -> int:
         try:
             return self._metadata["timeout"]
         except KeyError:
-            raise RuntimeError("Malformed service endpoint. (Possible malicious)")
+            raise RuntimeError("Malformed service endpoint. (Possible malicious)") from None
 
     @property
     def configuration(self) -> dict[str, t.Any]:
         try:
             return orjson.loads(self._metadata["configuration"])
         except KeyError:
-            raise RuntimeError("Malformed service endpoint. (Possible malicious)")
+            raise RuntimeError("Malformed service endpoint. (Possible malicious)") from None
 
     def postprocess(self, result: dict[str, t.Any]) -> openllm.GenerationOutput:
         return openllm.GenerationOutput(**result)

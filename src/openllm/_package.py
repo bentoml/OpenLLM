@@ -321,7 +321,7 @@ def create_bento(
         # new behaviour with BentoML models
         model = _model_store.get(f"{model_framework}-{model_type}")
     except bentoml.exceptions.NotFound:
-        raise OpenLLMException(f"Failed to find models for {llm.config['start_name']}")
+        raise OpenLLMException(f"Failed to find models for {llm.config['start_name']}") from None
 
     # NOTE: the model_id_path here are only used for setting this environment variable within the container
     # built with for BentoLLM.

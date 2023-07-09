@@ -57,7 +57,7 @@ class PromptTemplate:
 
     @classmethod
     def from_default(cls, model: str, /, **prompt_attrs: t.Any) -> PromptTemplate:
-        template = getattr(openllm.utils.EnvVarMixin(model).module, "DEFAULT_PROMPT_TEMPLATE")
+        template = openllm.utils.EnvVarMixin(model).module.DEFAULT_PROMPT_TEMPLATE
         if template is None:
             raise ValueError(f"Model {model} does not have a default prompt template.")
         if callable(template):

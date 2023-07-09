@@ -31,6 +31,8 @@ if t.TYPE_CHECKING:
 model = "flan_t5"
 model_id = "google/flan-t5-small"
 
+_mappings = {"container": "in the process of death", "local": "living in the woods"}
+
 
 @pytest.fixture(scope="module")
 def flan_t5_small_handle(
@@ -41,7 +43,7 @@ def flan_t5_small_handle(
     with openllm.testing.prepare(
         model, model_id=model_id, deployment_mode=deployment_mode, clean_context=clean_context
     ) as image_tag:
-        with handler(model=model, model_id=model_id, image_tag=image_tag) as handle:
+        with handler(model=model, model_id=model_id, image_tag=image_tag, deployment_mode=deployment_mode) as handle:
             yield handle
 
 
@@ -53,7 +55,8 @@ async def flan_t5_small(flan_t5_small_handle: _Handle):
 
 @pytest.mark.asyncio()
 async def test_flan_t5_small(
-    flan_t5_small: t.Awaitable[openllm.client.AsyncHTTPClient], response_snapshot: ResponseComparator
+    flan_t5_small: t.Awaitable[openllm.client.AsyncHTTPClient],
+    response_snapshot: ResponseComparator,
 ):
     client = await flan_t5_small
     response = await client.query("What is the meaning of life?", max_new_tokens=10, top_p=0.9, return_attrs=True)

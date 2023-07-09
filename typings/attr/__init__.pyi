@@ -1,16 +1,21 @@
 import enum
 from typing import Any
 from typing import Callable
+from typing import Dict
 from typing import Generic
 from typing import List
 from typing import Literal
 from typing import Mapping
+from typing import Optional
 from typing import ParamSpec
 from typing import Protocol
 from typing import Sequence
+from typing import Tuple
+from typing import Type
 from typing import TypeGuard
 from typing import TypeVar
 from typing import Union
+from typing import dataclass_transform
 from typing import overload
 
 from . import converters as converters
@@ -64,14 +69,6 @@ def Factory(factory: Callable[[], _T]) -> _T: ...
 def Factory(factory: Callable[[Any], _T], takes_self: Literal[True]) -> _T: ...
 @overload
 def Factory(factory: Callable[[], _T], takes_self: Literal[False]) -> _T: ...
-def __dataclass_transform__(
-    *,
-    eq_default: bool = ...,
-    order_default: bool = ...,
-    kw_only_default: bool = ...,
-    frozen_default: bool = ...,
-    field_descriptors: tuple[type | Callable[..., Any], ...] = ...,
-) -> Callable[[_T], _T]: ...
 
 class _CountingAttr(Generic[_T]):
     counter: int
@@ -112,77 +109,108 @@ class Attribute(Generic[_T]):
     @classmethod
     def from_counting_attr(cls, name: str, ca: _CountingAttr[_T], type: type[Any] | None = None) -> Attribute[_T]: ...
 
+# NOTE: We had several choices for the annotation to use for type arg:
+# 1) Type[_T]
+#   - Pros: Handles simple cases correctly
+#   - Cons: Might produce less informative errors in the case of conflicting
+#     TypeVars e.g. `attr.ib(default='bad', type=int)`
+# 2) Callable[..., _T]
+#   - Pros: Better error messages than #1 for conflicting TypeVars
+#   - Cons: Terrible error messages for validator checks.
+#   e.g. attr.ib(type=int, validator=validate_str)
+#        -> error: Cannot infer function type argument
+# 3) type (and do all of the work in the mypy plugin)
+#   - Pros: Simple here, and we could customize the plugin with our own errors.
+#   - Cons: Would need to write mypy plugin code to handle all the cases.
+# We chose option #1.
+
+# `attr` lies about its return type to make the following possible:
+#     attr()    -> Any
+#     attr(8)   -> int
+#     attr(validator=<some callable>)  -> Whatever the callable expects.
+# This makes this type of assignments possible:
+#     x: int = attr(8)
+#
+# This form catches explicit None or no default but with no other arguments
+# returns Any.
 @overload
 def attrib(
     default: None = ...,
     validator: None = ...,
     repr: _ReprArgType = ...,
-    cmp: _EqOrderType | None = ...,
-    hash: bool | None = ...,
+    cmp: Optional[_EqOrderType] = ...,
+    hash: Optional[bool] = ...,
     init: bool = ...,
-    metadata: Mapping[Any, Any] | None = ...,
+    metadata: Optional[Mapping[Any, Any]] = ...,
     type: None = ...,
     converter: None = ...,
     factory: None = ...,
     kw_only: bool = ...,
-    eq: _EqOrderType | None = ...,
-    order: _EqOrderType | None = ...,
-    on_setattr: _OnSetAttrArgType | None = ...,
-    alias: str | None = ...,
+    eq: Optional[_EqOrderType] = ...,
+    order: Optional[_EqOrderType] = ...,
+    on_setattr: Optional[_OnSetAttrArgType] = ...,
+    alias: Optional[str] = ...,
 ) -> Any: ...
+
+# This form catches an explicit None or no default and infers the type from the
+# other arguments.
 @overload
 def attrib(
     default: None = ...,
-    validator: _ValidatorArgType[_T] | None = ...,
+    validator: Optional[_ValidatorArgType[_T]] = ...,
     repr: _ReprArgType = ...,
-    cmp: _EqOrderType | None = ...,
-    hash: bool | None = ...,
+    cmp: Optional[_EqOrderType] = ...,
+    hash: Optional[bool] = ...,
     init: bool = ...,
-    metadata: Mapping[Any, Any] | None = ...,
-    type: type[_T] | None = ...,
-    converter: _ConverterType | None = ...,
-    factory: Callable[[], _T] | None = ...,
+    metadata: Optional[Mapping[Any, Any]] = ...,
+    type: Optional[Type[_T]] = ...,
+    converter: Optional[_ConverterType] = ...,
+    factory: Optional[Callable[[], _T]] = ...,
     kw_only: bool = ...,
-    eq: _EqOrderType | None = ...,
-    order: _EqOrderType | None = ...,
-    on_setattr: _OnSetAttrArgType | None = ...,
-    alias: str | None = ...,
+    eq: Optional[_EqOrderType] = ...,
+    order: Optional[_EqOrderType] = ...,
+    on_setattr: Optional[_OnSetAttrArgType] = ...,
+    alias: Optional[str] = ...,
 ) -> _T: ...
+
+# This form catches an explicit default argument.
 @overload
 def attrib(
     default: _T,
-    validator: _ValidatorArgType[_T] | None = ...,
+    validator: Optional[_ValidatorArgType[_T]] = ...,
     repr: _ReprArgType = ...,
-    cmp: _EqOrderType | None = ...,
-    hash: bool | None = ...,
+    cmp: Optional[_EqOrderType] = ...,
+    hash: Optional[bool] = ...,
     init: bool = ...,
-    metadata: Mapping[Any, Any] | None = ...,
-    type: type[_T] | None = ...,
-    converter: _ConverterType | None = ...,
-    factory: Callable[[], _T] | None = ...,
+    metadata: Optional[Mapping[Any, Any]] = ...,
+    type: Optional[Type[_T]] = ...,
+    converter: Optional[_ConverterType] = ...,
+    factory: Optional[Callable[[], _T]] = ...,
     kw_only: bool = ...,
-    eq: _EqOrderType | None = ...,
-    order: _EqOrderType | None = ...,
-    on_setattr: _OnSetAttrArgType | None = ...,
-    alias: str | None = ...,
+    eq: Optional[_EqOrderType] = ...,
+    order: Optional[_EqOrderType] = ...,
+    on_setattr: Optional[_OnSetAttrArgType] = ...,
+    alias: Optional[str] = ...,
 ) -> _T: ...
+
+# This form covers type=non-Type: e.g. forward references (str), Any
 @overload
 def attrib(
-    default: _T | None = ...,
-    validator: _ValidatorArgType[_T] | None = ...,
+    default: Optional[_T] = ...,
+    validator: Optional[_ValidatorArgType[_T]] = ...,
     repr: _ReprArgType = ...,
-    cmp: _EqOrderType | None = ...,
-    hash: bool | None = ...,
+    cmp: Optional[_EqOrderType] = ...,
+    hash: Optional[bool] = ...,
     init: bool = ...,
-    metadata: Mapping[Any, Any] | None = ...,
+    metadata: Optional[Mapping[Any, Any]] = ...,
     type: object = ...,
-    converter: _ConverterType | None = ...,
-    factory: Callable[[], _T] | None = ...,
+    converter: Optional[_ConverterType] = ...,
+    factory: Optional[Callable[[], _T]] = ...,
     kw_only: bool = ...,
-    eq: _EqOrderType | None = ...,
-    order: _EqOrderType | None = ...,
-    on_setattr: _OnSetAttrArgType | None = ...,
-    alias: str | None = ...,
+    eq: Optional[_EqOrderType] = ...,
+    order: Optional[_EqOrderType] = ...,
+    on_setattr: Optional[_OnSetAttrArgType] = ...,
+    alias: Optional[str] = ...,
 ) -> Any: ...
 @overload
 def field(
@@ -190,81 +218,88 @@ def field(
     default: None = ...,
     validator: None = ...,
     repr: _ReprArgType = ...,
-    hash: bool | None = ...,
+    hash: Optional[bool] = ...,
     init: bool = ...,
-    metadata: Mapping[Any, Any] | None = ...,
+    metadata: Optional[Mapping[Any, Any]] = ...,
     converter: None = ...,
     factory: None = ...,
     kw_only: bool = ...,
-    eq: bool | None = ...,
-    order: bool | None = ...,
-    on_setattr: _OnSetAttrArgType | None = ...,
-    alias: str | None = ...,
-    type: type | None = ...,
+    eq: Optional[bool] = ...,
+    order: Optional[bool] = ...,
+    on_setattr: Optional[_OnSetAttrArgType] = ...,
+    alias: Optional[str] = ...,
+    type: Optional[type] = ...,
 ) -> Any: ...
+
+# This form catches an explicit None or no default and infers the type from the
+# other arguments.
 @overload
 def field(
     *,
     default: None = ...,
-    validator: _ValidatorArgType[_T] | None = ...,
+    validator: Optional[_ValidatorArgType[_T]] = ...,
     repr: _ReprArgType = ...,
-    hash: bool | None = ...,
+    hash: Optional[bool] = ...,
     init: bool = ...,
-    metadata: Mapping[Any, Any] | None = ...,
-    converter: _ConverterType | None = ...,
-    factory: Callable[[], _T] | None = ...,
+    metadata: Optional[Mapping[Any, Any]] = ...,
+    converter: Optional[_ConverterType] = ...,
+    factory: Optional[Callable[[], _T]] = ...,
     kw_only: bool = ...,
-    eq: _EqOrderType | None = ...,
-    order: _EqOrderType | None = ...,
-    on_setattr: _OnSetAttrArgType | None = ...,
-    alias: str | None = ...,
-    type: type | None = ...,
+    eq: Optional[_EqOrderType] = ...,
+    order: Optional[_EqOrderType] = ...,
+    on_setattr: Optional[_OnSetAttrArgType] = ...,
+    alias: Optional[str] = ...,
+    type: Optional[type] = ...,
 ) -> _T: ...
+
+# This form catches an explicit default argument.
 @overload
 def field(
     *,
     default: _T,
-    validator: _ValidatorArgType[_T] | None = ...,
+    validator: Optional[_ValidatorArgType[_T]] = ...,
     repr: _ReprArgType = ...,
-    hash: bool | None = ...,
+    hash: Optional[bool] = ...,
     init: bool = ...,
-    metadata: Mapping[Any, Any] | None = ...,
-    converter: _ConverterType | None = ...,
-    factory: Callable[[], _T] | None = ...,
+    metadata: Optional[Mapping[Any, Any]] = ...,
+    converter: Optional[_ConverterType] = ...,
+    factory: Optional[Callable[[], _T]] = ...,
     kw_only: bool = ...,
-    eq: _EqOrderType | None = ...,
-    order: _EqOrderType | None = ...,
-    on_setattr: _OnSetAttrArgType | None = ...,
-    alias: str | None = ...,
-    type: type | None = ...,
+    eq: Optional[_EqOrderType] = ...,
+    order: Optional[_EqOrderType] = ...,
+    on_setattr: Optional[_OnSetAttrArgType] = ...,
+    alias: Optional[str] = ...,
+    type: Optional[type] = ...,
 ) -> _T: ...
+
+# This form covers type=non-Type: e.g. forward references (str), Any
 @overload
 def field(
     *,
-    default: _T | None = ...,
-    validator: _ValidatorArgType[_T] | None = ...,
+    default: Optional[_T] = ...,
+    validator: Optional[_ValidatorArgType[_T]] = ...,
     repr: _ReprArgType = ...,
-    hash: bool | None = ...,
+    hash: Optional[bool] = ...,
     init: bool = ...,
-    metadata: Mapping[Any, Any] | None = ...,
-    converter: _ConverterType | None = ...,
-    factory: Callable[[], _T] | None = ...,
+    metadata: Optional[Mapping[Any, Any]] = ...,
+    converter: Optional[_ConverterType] = ...,
+    factory: Optional[Callable[[], _T]] = ...,
     kw_only: bool = ...,
-    eq: _EqOrderType | None = ...,
-    order: _EqOrderType | None = ...,
-    on_setattr: _OnSetAttrArgType | None = ...,
-    alias: str | None = ...,
-    type: type | None = ...,
+    eq: Optional[_EqOrderType] = ...,
+    order: Optional[_EqOrderType] = ...,
+    on_setattr: Optional[_OnSetAttrArgType] = ...,
+    alias: Optional[str] = ...,
+    type: Optional[type] = ...,
 ) -> Any: ...
 @overload
-@__dataclass_transform__(order_default=True, field_descriptors=(attrib, field))
+@dataclass_transform(order_default=True, field_specifiers=(attrib, field))
 def attrs(
     maybe_cls: _C,
-    these: dict[str, Any] | None = ...,
-    repr_ns: str | None = ...,
+    these: Optional[Dict[str, Any]] = ...,
+    repr_ns: Optional[str] = ...,
     repr: bool = ...,
-    cmp: _EqOrderType | None = ...,
-    hash: bool | None = ...,
+    cmp: Optional[_EqOrderType] = ...,
+    hash: Optional[bool] = ...,
     init: bool = ...,
     slots: bool = ...,
     frozen: bool = ...,
@@ -274,25 +309,25 @@ def attrs(
     kw_only: bool = ...,
     cache_hash: bool = ...,
     auto_exc: bool = ...,
-    eq: _EqOrderType | None = ...,
-    order: _EqOrderType | None = ...,
+    eq: Optional[_EqOrderType] = ...,
+    order: Optional[_EqOrderType] = ...,
     auto_detect: bool = ...,
     collect_by_mro: bool = ...,
-    getstate_setstate: bool | None = ...,
-    on_setattr: _OnSetAttrArgType | None = ...,
-    field_transformer: _FieldTransformer | None = ...,
+    getstate_setstate: Optional[bool] = ...,
+    on_setattr: Optional[_OnSetAttrArgType] = ...,
+    field_transformer: Optional[_FieldTransformer] = ...,
     match_args: bool = ...,
-    unsafe_hash: bool | None = ...,
+    unsafe_hash: Optional[bool] = ...,
 ) -> _C: ...
 @overload
-@__dataclass_transform__(order_default=True, field_descriptors=(attrib, field))
+@dataclass_transform(order_default=True, field_specifiers=(attrib, field))
 def attrs(
     maybe_cls: None = ...,
-    these: dict[str, Any] | None = ...,
-    repr_ns: str | None = ...,
+    these: Optional[Dict[str, Any]] = ...,
+    repr_ns: Optional[str] = ...,
     repr: bool = ...,
-    cmp: _EqOrderType | None = ...,
-    hash: bool | None = ...,
+    cmp: Optional[_EqOrderType] = ...,
+    hash: Optional[bool] = ...,
     init: bool = ...,
     slots: bool = ...,
     frozen: bool = ...,
@@ -302,25 +337,25 @@ def attrs(
     kw_only: bool = ...,
     cache_hash: bool = ...,
     auto_exc: bool = ...,
-    eq: _EqOrderType | None = ...,
-    order: _EqOrderType | None = ...,
+    eq: Optional[_EqOrderType] = ...,
+    order: Optional[_EqOrderType] = ...,
     auto_detect: bool = ...,
     collect_by_mro: bool = ...,
-    getstate_setstate: bool | None = ...,
-    on_setattr: _OnSetAttrArgType | None = ...,
-    field_transformer: _FieldTransformer | None = ...,
+    getstate_setstate: Optional[bool] = ...,
+    on_setattr: Optional[_OnSetAttrArgType] = ...,
+    field_transformer: Optional[_FieldTransformer] = ...,
     match_args: bool = ...,
-    unsafe_hash: bool | None = ...,
+    unsafe_hash: Optional[bool] = ...,
 ) -> Callable[[_C], _C]: ...
 @overload
-@__dataclass_transform__(field_descriptors=(attrib, field))
+@dataclass_transform(field_specifiers=(attrib, field))
 def define(
     maybe_cls: _C,
     *,
-    these: dict[str, Any] | None = ...,
+    these: Optional[Dict[str, Any]] = ...,
     repr: bool = ...,
-    unsafe_hash: bool | None = ...,
-    hash: bool | None = ...,
+    unsafe_hash: Optional[bool] = ...,
+    hash: Optional[bool] = ...,
     init: bool = ...,
     slots: bool = ...,
     frozen: bool = ...,
@@ -330,23 +365,23 @@ def define(
     kw_only: bool = ...,
     cache_hash: bool = ...,
     auto_exc: bool = ...,
-    eq: bool | None = ...,
-    order: bool | None = ...,
+    eq: Optional[bool] = ...,
+    order: Optional[bool] = ...,
     auto_detect: bool = ...,
-    getstate_setstate: bool | None = ...,
-    on_setattr: _OnSetAttrArgType | None = ...,
-    field_transformer: _FieldTransformer | None = ...,
+    getstate_setstate: Optional[bool] = ...,
+    on_setattr: Optional[_OnSetAttrArgType] = ...,
+    field_transformer: Optional[_FieldTransformer] = ...,
     match_args: bool = ...,
 ) -> _C: ...
 @overload
-@__dataclass_transform__(field_descriptors=(attrib, field))
+@dataclass_transform(field_specifiers=(attrib, field))
 def define(
     maybe_cls: None = ...,
     *,
-    these: dict[str, Any] | None = ...,
+    these: Optional[Dict[str, Any]] = ...,
     repr: bool = ...,
-    unsafe_hash: bool | None = ...,
-    hash: bool | None = ...,
+    unsafe_hash: Optional[bool] = ...,
+    hash: Optional[bool] = ...,
     init: bool = ...,
     slots: bool = ...,
     frozen: bool = ...,
@@ -356,26 +391,26 @@ def define(
     kw_only: bool = ...,
     cache_hash: bool = ...,
     auto_exc: bool = ...,
-    eq: bool | None = ...,
-    order: bool | None = ...,
+    eq: Optional[bool] = ...,
+    order: Optional[bool] = ...,
     auto_detect: bool = ...,
-    getstate_setstate: bool | None = ...,
-    on_setattr: _OnSetAttrArgType | None = ...,
-    field_transformer: _FieldTransformer | None = ...,
+    getstate_setstate: Optional[bool] = ...,
+    on_setattr: Optional[_OnSetAttrArgType] = ...,
+    field_transformer: Optional[_FieldTransformer] = ...,
     match_args: bool = ...,
 ) -> Callable[[_C], _C]: ...
 
-mutable = ...
+mutable = define
 
 @overload
-@__dataclass_transform__(frozen_default=True, field_descriptors=(attrib, field))
+@dataclass_transform(frozen_default=True, field_specifiers=(attrib, field))
 def frozen(
     maybe_cls: _C,
     *,
-    these: dict[str, Any] | None = ...,
+    these: Optional[Dict[str, Any]] = ...,
     repr: bool = ...,
-    unsafe_hash: bool | None = ...,
-    hash: bool | None = ...,
+    unsafe_hash: Optional[bool] = ...,
+    hash: Optional[bool] = ...,
     init: bool = ...,
     slots: bool = ...,
     frozen: bool = ...,
@@ -385,23 +420,23 @@ def frozen(
     kw_only: bool = ...,
     cache_hash: bool = ...,
     auto_exc: bool = ...,
-    eq: bool | None = ...,
-    order: bool | None = ...,
+    eq: Optional[bool] = ...,
+    order: Optional[bool] = ...,
     auto_detect: bool = ...,
-    getstate_setstate: bool | None = ...,
-    on_setattr: _OnSetAttrArgType | None = ...,
-    field_transformer: _FieldTransformer | None = ...,
+    getstate_setstate: Optional[bool] = ...,
+    on_setattr: Optional[_OnSetAttrArgType] = ...,
+    field_transformer: Optional[_FieldTransformer] = ...,
     match_args: bool = ...,
 ) -> _C: ...
 @overload
-@__dataclass_transform__(frozen_default=True, field_descriptors=(attrib, field))
+@dataclass_transform(frozen_default=True, field_specifiers=(attrib, field))
 def frozen(
     maybe_cls: None = ...,
     *,
-    these: dict[str, Any] | None = ...,
+    these: Optional[Dict[str, Any]] = ...,
     repr: bool = ...,
-    unsafe_hash: bool | None = ...,
-    hash: bool | None = ...,
+    unsafe_hash: Optional[bool] = ...,
+    hash: Optional[bool] = ...,
     init: bool = ...,
     slots: bool = ...,
     frozen: bool = ...,
@@ -411,32 +446,36 @@ def frozen(
     kw_only: bool = ...,
     cache_hash: bool = ...,
     auto_exc: bool = ...,
-    eq: bool | None = ...,
-    order: bool | None = ...,
+    eq: Optional[bool] = ...,
+    order: Optional[bool] = ...,
     auto_detect: bool = ...,
-    getstate_setstate: bool | None = ...,
-    on_setattr: _OnSetAttrArgType | None = ...,
-    field_transformer: _FieldTransformer | None = ...,
+    getstate_setstate: Optional[bool] = ...,
+    on_setattr: Optional[_OnSetAttrArgType] = ...,
+    field_transformer: Optional[_FieldTransformer] = ...,
     match_args: bool = ...,
 ) -> Callable[[_C], _C]: ...
-def fields(cls: type[AttrsInstance]) -> Any: ...
-def fields_dict(cls: type[AttrsInstance]) -> dict[str, Attribute[Any]]: ...
+def fields(cls: Type[AttrsInstance]) -> Any: ...
+def fields_dict(cls: Type[AttrsInstance]) -> Dict[str, Attribute[Any]]: ...
 def validate(inst: AttrsInstance) -> None: ...
 def resolve_types(
     cls: _A,
-    globalns: dict[str, Any] | None = ...,
-    localns: dict[str, Any] | None = ...,
-    attribs: list[Attribute[Any]] | None = ...,
+    globalns: Optional[Dict[str, Any]] = ...,
+    localns: Optional[Dict[str, Any]] = ...,
+    attribs: Optional[List[Attribute[Any]]] = ...,
     include_extras: bool = ...,
 ) -> _A: ...
+
+# TODO: add support for returning a proper attrs class from the mypy plugin
+# we use Any instead of _CountingAttr so that e.g. `make_class('Foo',
+# [attr.ib()])` is valid
 def make_class(
     name: str,
-    attrs: list[str] | tuple[str, ...] | dict[str, Any],
-    bases: tuple[type, ...] = ...,
-    repr_ns: str | None = ...,
+    attrs: Union[List[str], Tuple[str, ...], Dict[str, Any]],
+    bases: Tuple[type, ...] = ...,
+    repr_ns: Optional[str] = ...,
     repr: bool = ...,
-    cmp: _EqOrderType | None = ...,
-    hash: bool | None = ...,
+    cmp: Optional[_EqOrderType] = ...,
+    hash: Optional[bool] = ...,
     init: bool = ...,
     slots: bool = ...,
     frozen: bool = ...,
@@ -446,37 +485,53 @@ def make_class(
     kw_only: bool = ...,
     cache_hash: bool = ...,
     auto_exc: bool = ...,
-    eq: _EqOrderType | None = ...,
-    order: _EqOrderType | None = ...,
+    eq: Optional[_EqOrderType] = ...,
+    order: Optional[_EqOrderType] = ...,
     collect_by_mro: bool = ...,
-    on_setattr: _OnSetAttrArgType | None = ...,
-    field_transformer: _FieldTransformer | None = ...,
+    on_setattr: Optional[_OnSetAttrArgType] = ...,
+    field_transformer: Optional[_FieldTransformer] = ...,
 ) -> type: ...
+
+# _funcs --
+
+# TODO: add support for returning TypedDict from the mypy plugin
+# FIXME: asdict/astuple do not honor their factory args. Waiting on one of
+# these:
+# https://github.com/python/mypy/issues/4236
+# https://github.com/python/typing/issues/253
+# XXX: remember to fix attrs.asdict/astuple too!
 def asdict(
     inst: AttrsInstance,
     recurse: bool = ...,
-    filter: _FilterType[Any] | None = ...,
-    dict_factory: type[Mapping[Any, Any]] = ...,
+    filter: Optional[_FilterType[Any]] = ...,
+    dict_factory: Type[Mapping[Any, Any]] = ...,
     retain_collection_types: bool = ...,
-    value_serializer: Callable[[type, Attribute[Any], Any], Any] | None = ...,
-    tuple_keys: bool | None = ...,
-) -> dict[str, Any]: ...
+    value_serializer: Optional[Callable[[type, Attribute[Any], Any], Any]] = ...,
+    tuple_keys: Optional[bool] = ...,
+) -> Dict[str, Any]: ...
+
+# TODO: add support for returning NamedTuple from the mypy plugin
 def astuple(
     inst: AttrsInstance,
     recurse: bool = ...,
-    filter: _FilterType[Any] | None = ...,
-    tuple_factory: type[Sequence[Any]] = ...,
+    filter: Optional[_FilterType[Any]] = ...,
+    tuple_factory: Type[Sequence[Any]] = ...,
     retain_collection_types: bool = ...,
-) -> tuple[Any, ...]: ...
-def has(cls: type) -> TypeGuard[type[AttrsInstance]]: ...
+) -> Tuple[Any, ...]: ...
+def has(cls: type) -> TypeGuard[Type[AttrsInstance]]: ...
 def assoc(inst: _T, **changes: Any) -> _T: ...
 def evolve(inst: _T, **changes: Any) -> _T: ...
+
+# _config --
+
 def set_run_validators(run: bool) -> None: ...
 def get_run_validators() -> bool: ...
 
-attributes = ...
-attr = ...
-dataclass = ...
+# aliases --
+
+s = attributes = attrs
+ib = attr = attrib
+dataclass = attrs  # Technically, partial(attrs, auto_attribs=True) ;)
 
 def _make_init(
     cls: type[AttrsInstance],
@@ -486,7 +541,7 @@ def _make_init(
     frozen: bool,
     slots: bool,
     cache_hash: bool,
-    base_attr_map: dict[str, Any],
+    base_attr_map: dict[Any, Any],
     is_exc: bool,
     cls_on_setattr: Any,
     attrs_init: bool,
@@ -500,4 +555,4 @@ def _transform_attrs(
     kw_only: bool,
     collect_by_mro: bool,
     field_transformer: _FieldTransformer | None,
-) -> tuple[tuple[attr.Attribute[Any], ...], tuple[attr.Attribute[Any], ...], dict[attr.Attribute[Any], type[Any]]]: ...
+) -> tuple[tuple[Attribute[Any], ...], tuple[Attribute[Any], ...], dict[Attribute[Any], type[Any]]]: ...

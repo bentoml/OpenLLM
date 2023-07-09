@@ -167,7 +167,7 @@ class CascadingResourceStrategy(Strategy, ReprMixin):
                 )
 
             if runnable_class.SUPPORTS_CPU_MULTI_THREADING:
-                if isinstance(workers_per_resource, float) and workers_per_resource < 1.0:  # noqa: PLR2004
+                if isinstance(workers_per_resource, float) and workers_per_resource < 1.0:
                     raise ValueError("Fractional CPU multi threading support is not yet supported.")
                 return int(workers_per_resource)
 

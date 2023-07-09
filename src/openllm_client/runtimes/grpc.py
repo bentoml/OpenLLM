@@ -36,11 +36,15 @@ logger = logging.getLogger(__name__)
 
 class GrpcClientMixin:
     @property
+    def _metadata(self) -> Response:
+        ...
+
+    @property
     def model_name(self) -> str:
         try:
             return self._metadata.json.struct_value.fields["model_name"].string_value
         except KeyError:
-            raise RuntimeError("Malformed service endpoint. (Possible malicious)")
+            raise RuntimeError("Malformed service endpoint. (Possible malicious)") from None
 
     @property
     def framework(self) -> LiteralRuntime:
@@ -50,21 +54,21 @@ class GrpcClientMixin:
                 raise KeyError
             return value
         except KeyError:
-            raise RuntimeError("Malformed service endpoint. (Possible malicious)")
+            raise RuntimeError("Malformed service endpoint. (Possible malicious)") from None
 
     @property
     def timeout(self) -> int:
         try:
             return int(self._metadata.json.struct_value.fields["timeout"].number_value)
         except KeyError:
-            raise RuntimeError("Malformed service endpoint. (Possible malicious)")
+            raise RuntimeError("Malformed service endpoint. (Possible malicious)") from None
 
     @property
     def model_id(self) -> str:
         try:
             return self._metadata.json.struct_value.fields["model_id"].string_value
         except KeyError:
-            raise RuntimeError("Malformed service endpoint. (Possible malicious)")
+            raise RuntimeError("Malformed service endpoint. (Possible malicious)") from None
 
     @property
     def configuration(self) -> dict[str, t.Any]:
@@ -72,7 +76,7 @@ class GrpcClientMixin:
             v = self._metadata.json.struct_value.fields["configuration"].string_value
             return orjson.loads(v)
         except KeyError:
-            raise RuntimeError("Malformed service endpoint. (Possible malicious)")
+            raise RuntimeError("Malformed service endpoint. (Possible malicious)") from None
 
     def postprocess(self, result: Response | dict[str, t.Any]) -> openllm.GenerationOutput:
         if isinstance(result, dict):

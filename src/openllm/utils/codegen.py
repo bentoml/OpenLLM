@@ -176,7 +176,7 @@ def add_method_dunders(cls: type[t.Any], method_or_cls: _T, _overwrite_doc: str 
         pass
 
     try:
-        method_or_cls.__qualname__ = ".".join((cls.__qualname__, method_or_cls.__name__))
+        method_or_cls.__qualname__ = f"{cls.__qualname__}.{method_or_cls.__name__}"
     except AttributeError:
         pass
 

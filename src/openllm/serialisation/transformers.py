@@ -264,7 +264,7 @@ def load_tokenizer(llm: openllm.LLM[t.Any, _T]) -> TokenizerProtocol[_T]:
                         "Model does not have tokenizer. Make sure to save \
                         the tokenizer within the model via 'custom_objects'.\
                         For example: bentoml.transformers.save_model(..., custom_objects={'tokenizer': tokenizer}))"
-                    )
+                    ) from None
         else:
             tokenizer = transformers.AutoTokenizer.from_pretrained(
                 bentomodel_fs.getsyspath("/"),

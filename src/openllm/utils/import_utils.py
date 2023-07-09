@@ -45,7 +45,12 @@ if t.TYPE_CHECKING:
     BackendOrderredDict = OrderedDict[str, tuple[t.Callable[[], bool], str]]
     from .._types import LiteralRuntime
     from .._types import P
+
+    class _AnnotatedLazyLoader(LazyLoader):
+        DEFAULT_PROMPT_TEMPLATE: t.LiteralString | None | t.Callable[..., t.LiteralString]
+
 else:
+    _AnnotatedLazyLoader = LazyLoader
     BackendOrderredDict = OrderedDict
 
 logger = logging.getLogger(__name__)
@@ -464,5 +469,5 @@ class EnvVarMixin(ReprMixin):
         return getattr(self.module, f"START_{self.model_name.upper()}_COMMAND_DOCSTRING")
 
     @property
-    def module(self) -> LazyLoader:
-        return LazyLoader(self.model_name, globals(), f"openllm.models.{self.model_name}")
+    def module(self):
+        return _AnnotatedLazyLoader(self.model_name, globals(), f"openllm.models.{self.model_name}")

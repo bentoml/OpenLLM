@@ -80,6 +80,7 @@ if t.TYPE_CHECKING:
     from .._types import DictStrAny
     from .._types import LiteralRuntime
     from .._types import P
+    from .._types import Ts
     from ..models.auto.factory import _BaseAutoLLMClass
 
 
@@ -298,6 +299,15 @@ def in_docker() -> bool:
     return _dockerenv.exists() or _text_in_file("docker", _cgroup)
 
 
+T = t.TypeVar("T")
+K = t.TypeVar("K")
+
+
+def iter_key_tuples(dct: dict[K, tuple[tuple[T, *Ts]]]) -> t.Generator[tuple[K, tuple[T, *Ts]], None, None]:
+    for key, vals in dct.items():
+        yield from ((key, val) for val in vals)
+
+
 def resolve_filepath(path: str) -> str:
     """Resolve a file path to an absolute path, expand user and environment variables."""
     try:
@@ -396,6 +406,7 @@ _import_structure = {
     "codegen": [],
     "dantic": [],
     "representation": ["ReprMixin"],
+    "lazy": ["LazyModule"],
     "import_utils": [
         "OPTIONAL_DEPENDENCIES",
         "ENV_VARS_TRUE_VALUES",
@@ -425,35 +436,17 @@ if t.TYPE_CHECKING:
     from . import LazyLoader as LazyLoader
     from . import LazyType as LazyType
     from . import analytics as analytics
-    from . import apply as apply
     from . import bentoml_cattr as bentoml_cattr
     from . import cached_contextmanager as cached_contextmanager
     from . import codegen as codegen
-    from . import compose as compose
     from . import configure_logging as configure_logging
     from . import configure_server_logging as configure_server_logging
     from . import copy_file_to_fs_folder as copy_file_to_fs_folder
     from . import dantic as dantic
-    from . import field_env_key as field_env_key
     from . import first_not_none as first_not_none
-    from . import generate_context as generate_context
-    from . import generate_labels as generate_labels
-    from . import get_debug_mode as get_debug_mode
-    from . import get_quiet_mode as get_quiet_mode
-    from . import gpu_count as gpu_count
-    from . import in_docker as in_docker
-    from . import in_notebook as in_notebook
-    from . import infer_auto_class as infer_auto_class
-    from . import lenient_issubclass as lenient_issubclass
-    from . import non_intrusive_setattr as non_intrusive_setattr
-    from . import normalize_attrs_to_model_tokenizer_pair as normalize_attrs_to_model_tokenizer_pair
-    from . import pkg as pkg
     from . import reserve_free_port as reserve_free_port
-    from . import resolve_filepath as resolve_filepath
-    from . import resolve_user_filepath as resolve_user_filepath
     from . import set_debug_mode as set_debug_mode
     from . import set_quiet_mode as set_quiet_mode
-    from . import suppress as suppress
     from . import validate_is_path as validate_is_path
     from . import validate_or_create_dir as validate_or_create_dir
     from .import_utils import ENV_VARS_TRUE_VALUES as ENV_VARS_TRUE_VALUES
@@ -476,7 +469,6 @@ if t.TYPE_CHECKING:
     from .import_utils import is_triton_available as is_triton_available
     from .import_utils import require_backends as require_backends
     from .import_utils import requires_dependencies as requires_dependencies
-    from .lazy import LazyModule as LazyModule
     from .representation import ReprMixin as ReprMixin
 else:
     import sys

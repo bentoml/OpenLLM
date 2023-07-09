@@ -63,15 +63,7 @@ def test_general_build_from_local(tmp_path_factory: pytest.TempPathFactory):
 def fixture_dockerfile_template(tmp_path_factory: pytest.TempPathFactory):
     file = tmp_path_factory.mktemp("dockerfiles") / "Dockerfile.template"
     file.write_text(
-        "\n".join(
-            [
-                "{% extends bento_base_template %}",
-                "{% block SETUP_BENTO_ENTRYPOINT %}",
-                "{{ super() }}",
-                "RUN echo 'sanity from custom dockerfile'",
-                "{% endblock %}",
-            ]
-        )
+        "{% extends bento_base_template %}\n{% block SETUP_BENTO_ENTRYPOINT %}\n{{ super() }}\nRUN echo 'sanity from custom dockerfile'\n{% endblock %}"
     )
     return file
 

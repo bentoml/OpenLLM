@@ -84,7 +84,7 @@ class TFOPT(openllm.LLM["transformers.TFOPTForCausalLM", "transformers.GPT2Token
                 raise RuntimeError(
                     f"Missing variable '{e.args[0]}' (required: {template_variables}) in the prompt template. "
                     "Use 'use_default_prompt_template=False' to disable the default prompt template."
-                )
+                ) from None
         else:
             prompt_text = prompt
 

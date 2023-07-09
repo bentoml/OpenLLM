@@ -23,7 +23,7 @@ from ..._prompt import default_formatter
 if t.TYPE_CHECKING:
     import torch
 
-    import transformers  # noqa
+    import transformers  # noqa: F401
 else:
     torch = openllm.utils.LazyLoader("torch", globals(), "torch")
 
@@ -59,7 +59,7 @@ class FlanT5(openllm.LLM["transformers.T5ForConditionalGeneration", "transformer
                 raise RuntimeError(
                     f"Missing variable '{e.args[0]}' (required: {template_variables}) in the prompt template. "
                     "Use 'use_default_prompt_template=False' to disable the default prompt template."
-                )
+                ) from None
         else:
             prompt_text = prompt
 
