@@ -20,6 +20,7 @@ import inspect
 import logging
 import os
 import re
+import sys
 import types
 import typing as t
 from abc import ABC
@@ -64,7 +65,7 @@ from .utils import validate_is_path
 
 # NOTE: We need to do this so that overload can register
 # correct overloads to typing registry
-if hasattr(t, "get_overloads"):
+if sys.version_info[:2] >= (3, 11):
     from typing import overload
 else:
     from typing_extensions import overload

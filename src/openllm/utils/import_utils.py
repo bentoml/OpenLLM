@@ -20,6 +20,7 @@ import importlib.metadata
 import importlib.util
 import logging
 import os
+import sys
 import typing as t
 from abc import ABCMeta
 from collections import OrderedDict
@@ -35,7 +36,7 @@ from .representation import ReprMixin
 
 # NOTE: We need to do this so that overload can register
 # correct overloads to typing registry
-if hasattr(t, "get_overloads"):
+if sys.version_info[:2] >= (3, 11):
     from typing import overload
 else:
     from typing_extensions import overload

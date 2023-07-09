@@ -92,11 +92,6 @@ from .utils import set_debug_mode
 from .utils import set_quiet_mode
 
 
-if hasattr(t, "override"):
-    override = t.override
-else:
-    from typing_extensions import override
-
 if t.TYPE_CHECKING:
     import torch
 
@@ -118,10 +113,16 @@ else:
 
 # NOTE: We need to do this so that overload can register
 # correct overloads to typing registry
-if hasattr(t, "get_overloads"):
+if sys.version_info[:2] >= (3, 11):
     from typing import overload
 else:
     from typing_extensions import overload
+
+if sys.version_info[:2] >= (3, 12):
+    from typing import override
+else:
+    from typing_extensions import override
+
 
 logger = logging.getLogger(__name__)
 

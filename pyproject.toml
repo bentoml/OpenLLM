@@ -72,12 +72,12 @@ all = [
     "openllm[falcon]",
     "openllm[mpt]",
     "openllm[starcoder]",
-    "openllm[fine-tune]",
-    "openllm[agents]",
-    "openllm[flan-t5]",
-    "openllm[openai]",
     "openllm[ggml]",
+    "openllm[openai]",
     "openllm[playground]",
+    "openllm[flan-t5]",
+    "openllm[agents]",
+    "openllm[fine-tune]",
 ]
 chatglm = ["cpm-kernels", "sentencepiece"]
 falcon = ["einops", "xformers", "safetensors"]

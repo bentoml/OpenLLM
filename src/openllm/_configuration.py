@@ -79,26 +79,18 @@ from .utils import non_intrusive_setattr
 from .utils import requires_dependencies
 
 
-if hasattr(t, "Required"):
-    from typing import Required
-else:
-    from typing_extensions import Required
-
-if hasattr(t, "NotRequired"):
-    from typing import NotRequired
-else:
-    from typing_extensions import NotRequired
-
-if hasattr(t, "dataclass_transform"):
-    from typing import dataclass_transform
-else:
-    from typing_extensions import dataclass_transform
-
-# NOTE: We need to do this so that overload can register
+# NOTE: We need to do check overload import
+# so that it can register
 # correct overloads to typing registry
-if hasattr(t, "get_overloads"):
+if sys.version_info[:2] >= (3, 11):
+    from typing import NotRequired
+    from typing import Required
+    from typing import dataclass_transform
     from typing import overload
 else:
+    from typing_extensions import NotRequired
+    from typing_extensions import Required
+    from typing_extensions import dataclass_transform
     from typing_extensions import overload
 
 _T = t.TypeVar("_T")
