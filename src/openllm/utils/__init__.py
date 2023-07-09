@@ -11,11 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Utilities function for OpenLLM. User can import these function for convenience, but
+"""Utilities function for OpenLLM.
+
+User can import these function for convenience, but
 we won't ensure backward compatibility for these functions. So use with caution.
 """
 from __future__ import annotations as _annotations
-
 import contextlib
 import functools
 import logging
@@ -97,7 +98,7 @@ def lenient_issubclass(cls: t.Any, class_or_tuple: type[t.Any] | tuple[type[t.An
         raise
 
 
-def gpu_count() -> tuple[int, ...]:
+def gpu_count() -> tuple[str, ...]:
     from bentoml._internal.resource import NvidiaGpuResource
 
     cuda_visible_devices = os.environ.get("CUDA_VISIBLE_DEVICES", None)
@@ -128,6 +129,8 @@ def field_env_key(model_name: str, key: str, suffix: str | t.Literal[""] | None 
 
 
 DEBUG = sys.flags.dev_mode or (not sys.flags.ignore_environment and bool(os.environ.get("OPENLLMDEVDEBUG")))
+
+SHOW_CODEGEN = DEBUG and int(os.environ.get("OPENLLMDEVDEBUG", str(0))) > 3
 
 
 class _ExceptionFilter(logging.Filter):
@@ -182,8 +185,9 @@ _LOGGING_CONFIG: DictStrAny = {
 
 
 def configure_logging() -> None:
-    """Configure logging for OpenLLM. Behaves similar to how BentoML loggers
-    are being configured.
+    """Configure logging for OpenLLM.
+
+    Behaves similar to how BentoML loggers are being configured.
     """
     if get_quiet_mode():
         _LOGGING_CONFIG["loggers"]["openllm"]["level"] = logging.ERROR
@@ -256,17 +260,20 @@ def compose(*funcs: t.Callable[..., t.Any]):
 
 
 def apply(transform: t.Callable[..., t.Any]):
-    """Decorate a function with a transform function that is
-    invoked on results returned from the decorated function.
+    """Decorate a function with a transform function that is invoked on results returned from the decorated function.
 
-    >>> @apply(reversed)
-    ... def get_numbers(start):
-    ...     "doc for get_numbers"
-    ...     return range(start, start+3)
-    >>> list(get_numbers(4))
-    [6, 5, 4]
-    >>> get_numbers.__doc__
-    'doc for get_numbers'
+    ```python
+    @apply(reversed)
+    def get_numbers(start):
+        "doc for get_numbers"
+        return range(start, start+3)
+    list(get_numbers(4))
+    # [6, 5, 4]
+    ```
+    ```python
+    get_numbers.__doc__
+    # 'doc for get_numbers'
+    ```
     """
 
     def wrap(func: t.Callable[P, t.Any]):
@@ -284,8 +291,9 @@ def _text_in_file(text: str, filename: Path):
 def in_docker() -> bool:
     """Is this current environment running in docker?
 
-    >>> type(is_docker())
-    <class 'bool'>
+    ```python
+    type(in_docker())
+    ```
     """
     return _dockerenv.exists() or _text_in_file("docker", _cgroup)
 

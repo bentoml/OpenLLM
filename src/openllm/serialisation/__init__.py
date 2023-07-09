@@ -37,7 +37,6 @@ llm.save_pretrained("./path/to/local-dolly")
 """
 
 from __future__ import annotations
-
 import typing as t
 
 import openllm
@@ -48,10 +47,10 @@ from ..utils import LazyModule
 if t.TYPE_CHECKING:
     import bentoml
 
-    from .._types import ModelProtocol
-    from .._types import TokenizerProtocol
     from .transformers import _M
     from .transformers import _T
+    from .._types import ModelProtocol
+    from .._types import TokenizerProtocol
 
 
 def import_model(

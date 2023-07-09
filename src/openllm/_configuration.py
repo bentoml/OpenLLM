@@ -46,7 +46,6 @@ dynamically during serve, ahead-of-serve or per requests.
 Refer to ``openllm.LLMConfig`` docstring for more information.
 """
 from __future__ import annotations
-
 import copy
 import enum
 import logging
@@ -208,7 +207,26 @@ def _adapter_converter(value: AdapterType | str | PeftType | None) -> PeftType:
 
 @attr.define(slots=True)
 class FineTuneConfig:
-    """FineTuneConfig defines a default value for fine-tuning this any given LLM. For example:
+    """FineTuneConfig defines a default value for fine-tuning this any given LLM.
+
+    For example:
+
+    ```python
+    class FalconConfig(openllm.LLMConfig):
+
+        __config__ = {
+            "fine_tune_strategies": (
+                {
+                    "adapter_type": "lora",
+                    "r": 64,
+                    "lora_alpha": 16,
+                    "lora_dropout": 0.1,
+                    "bias": "none",
+                    "target_modules": ["query_key_value", "dense", "dense_h_to_4h", "dense_4h_to_h"],
+                },
+            ),
+        }
+    ```
 
     This is a lower level API that leverage `peft` as well as openllm.LLMConfig to create default
     and customization
@@ -355,8 +373,7 @@ class FineTuneConfig:
 
 @attr.frozen(slots=True, repr=False)
 class GenerationConfig(ReprMixin):
-    """Generation config provides the configuration to then be parsed to ``transformers.GenerationConfig``,
-    with some additional validation and environment constructor.
+    """GenerationConfig is the attrs-compatible version of ``transformers.GenerationConfig``, with some additional validation and environment constructor.
 
     Note that we always set `do_sample=True`. This class is not designed to be used directly, rather
     to be used conjunction with LLMConfig. The instance of the generation config can then be accessed
@@ -628,6 +645,7 @@ _object_getattribute = object.__getattribute__
 
 class ModelSettings(t.TypedDict, total=False):
     """ModelSettings serve only for typing purposes as this is transcribed into LLMConfig.__config__.
+
     Note that all fields from this dictionary will then be converted to __openllm_*__ fields in LLMConfig.
 
     If the field below changes, make sure to run ./tools/update-config-stubs.py to generate correct __getitem__
@@ -728,9 +746,9 @@ class _ModelSettingsAttr:
         service_name: str
         requirements: t.Optional[ListStr]
         bettertransformer: bool
-        model_type: t.Literal["causal_lm", "seq2seq_lm"]
-        runtime: t.Literal["transformers", "ggml"]
-        name_type: t.Optional[t.Literal["dasherize", "lowercase"]]
+        model_type: t.Literal['causal_lm', 'seq2seq_lm']
+        runtime: t.Literal['transformers', 'ggml']
+        name_type: t.Optional[t.Literal['dasherize', 'lowercase']]
         model_name: str
         start_name: str
         env: openllm.utils.EnvVarMixin
@@ -743,7 +761,6 @@ class _ModelSettingsAttr:
 
 
 def structure_settings(cl_: type[LLMConfig], cls: type[_ModelSettingsAttr]):
-    assert cl_.__config__ is not None, f"'__config__' is required for {cls}."
     if "generation_class" in cl_.__config__:
         raise ValueError(
             "'generation_class' shouldn't be defined in '__config__', rather defining "
@@ -814,6 +831,7 @@ bentoml_cattr.register_structure_hook(_ModelSettingsAttr, structure_settings)
 
 def _setattr_class(attr_name: str, value_var: t.Any):
     """Use the builtin setattr to set *attr_name* to *value_var*.
+
     We can't use the cached object.__setattr__ since we are setting
     attributes to a class.
 
@@ -879,7 +897,7 @@ class _ConfigAttr:
     # NOTE: The following is handled via __init_subclass__, and is only used for TYPE_CHECKING
     if t.TYPE_CHECKING:
         # NOTE: public attributes to override
-        __config__: ModelSettings | None = Field(None)
+        __config__: ModelSettings = Field(None)
         """Internal configuration for this LLM model. Each of the field in here will be populated
         and prefixed with __openllm_<value>__"""
         GenerationConfig: type = Field(None)
@@ -954,14 +972,14 @@ class _ConfigAttr:
         architecture. By default, we will use BetterTransformer for T5 and StableLM models,
         and set to False for every other models.
         """
-        __openllm_model_type__: t.Literal["causal_lm", "seq2seq_lm"] = Field(None)
+        __openllm_model_type__: t.Literal['causal_lm', 'seq2seq_lm'] = Field(None)
         """The model type for this given LLM. By default, it should be causal language modeling.
         Currently supported 'causal_lm' or 'seq2seq_lm'
         """
-        __openllm_runtime__: t.Literal["transformers", "ggml"] = Field(None)
+        __openllm_runtime__: t.Literal['transformers', 'ggml'] = Field(None)
         """The runtime to use for this model. Possible values are `transformers` or `ggml`. See
         LlaMA for more information."""
-        __openllm_name_type__: t.Optional[t.Literal["dasherize", "lowercase"]] = Field(None)
+        __openllm_name_type__: t.Optional[t.Literal['dasherize', 'lowercase']] = Field(None)
         """The default name typed for this model. "dasherize" will convert the name to lowercase and
         replace spaces with dashes. "lowercase" will convert the name to lowercase. If this is not set, then both
         `model_name` and `start_name` must be specified."""
@@ -992,8 +1010,9 @@ class _ConfigAttr:
 
 @attr.define(slots=True)
 class LLMConfig(_ConfigAttr):
-    """``openllm.LLMConfig`` is somewhat a hybrid combination between the performance of `attrs` with the
-    easy-to-use interface that pydantic offer. It lives in between where it allows users to quickly formulate
+    """``openllm.LLMConfig`` is a pydantic-like ``attrs`` interface that offers fast and easy-to-use APIs.
+
+    It lives in between the nice UX of `pydantic` and fast performance of `attrs` where it allows users to quickly formulate
     a LLMConfig for any LLM without worrying too much about performance. It does a few things:
 
     - Automatic environment conversion: Each fields will automatically be provisioned with an environment
@@ -1075,11 +1094,13 @@ class LLMConfig(_ConfigAttr):
             ),
         }
     ```
+
+    Future work:
+    - Support pydantic-core as validation backend.
     """
 
     class _ConfigBuilder:
-        """A modified version of attrs internal _ClassBuilder, should only be called
-        within __init_subclass__ of LLMConfig.
+        """A modified version of attrs internal _ClassBuilder, and should only be called within __init_subclass__ of LLMConfig.
 
         Where:
         - has_custom_setattr=True
@@ -1246,10 +1267,10 @@ class LLMConfig(_ConfigAttr):
             return self
 
     def __init_subclass__(cls: type[LLMConfig]):
-        """The purpose of this __init_subclass__ is that we want all subclass of LLMConfig
-        to adhere to the attrs contract, and have pydantic-like interface. This means we will
-        construct all fields and metadata and hack into how attrs use some of the 'magic' construction
-        to generate the fields.
+        """The purpose of this ``__init_subclass__`` is to offer pydantic UX while adhering to attrs contract.
+
+        This means we will construct all fields and metadata and hack into
+        how attrs use some of the 'magic' construction to generate the fields.
 
         It also does a few more extra features: It also generate all __openllm_*__ config from
         ModelSettings (derived from __config__) to the class.
@@ -1258,7 +1279,7 @@ class LLMConfig(_ConfigAttr):
             logger.warning("LLMConfig subclass should end with 'Config'. Updating to %sConfig", cls.__name__)
             cls.__name__ = f"{cls.__name__}Config"
 
-        if not hasattr(cls, "__config__") or cls.__config__ is None:
+        if not hasattr(cls, "__config__"):
             raise RuntimeError("Given LLMConfig must have '__config__' that is not None defined.")
 
         # auto assignment attributes generated from __config__ after create the new slot class.
@@ -1395,11 +1416,11 @@ class LLMConfig(_ConfigAttr):
     @overload
     def __getitem__(self, item: t.Literal["bettertransformer"] = ...) -> bool: ...
     @overload
-    def __getitem__(self, item: t.Literal["model_type"] = ...) -> t.Literal["causal_lm", "seq2seq_lm"]: ...
+    def __getitem__(self, item: t.Literal["model_type"] = ...) -> t.Literal['causal_lm', 'seq2seq_lm']: ...
     @overload
-    def __getitem__(self, item: t.Literal["runtime"] = ...) -> t.Literal["transformers", "ggml"]: ...
+    def __getitem__(self, item: t.Literal["runtime"] = ...) -> t.Literal['transformers', 'ggml']: ...
     @overload
-    def __getitem__(self, item: t.Literal["name_type"] = ...) -> t.Optional[t.Literal["dasherize", "lowercase"]]: ...
+    def __getitem__(self, item: t.Literal["name_type"] = ...) -> t.Optional[t.Literal['dasherize', 'lowercase']]: ...
     @overload
     def __getitem__(self, item: t.Literal["model_name"] = ...) -> str: ...
     @overload
@@ -1596,7 +1617,6 @@ class LLMConfig(_ConfigAttr):
             **attrs: The attributes to be added to the new class. This will override
                      any existing attributes with the same name.
         """
-        assert cls.__config__ is not None, "Cannot derivate a LLMConfig without __config__"
         _new_cfg = {k: v for k, v in attrs.items() if k in attr.fields_dict(_ModelSettingsAttr)}
         attrs = {k: v for k, v in attrs.items() if k not in _new_cfg}
         new_cls = types.new_class(
@@ -1644,9 +1664,7 @@ class LLMConfig(_ConfigAttr):
 
     @classmethod
     def model_construct_env(cls, **attrs: t.Any) -> t.Self:
-        """A helpers that respect configuration values that
-        sets from environment variables for any given configuration class.
-        """
+        """A helpers that respect configuration values environment variables."""
         attrs = {k: v for k, v in attrs.items() if v is not None}
 
         model_config = cls.__openllm_env__.config
@@ -1718,8 +1736,11 @@ class LLMConfig(_ConfigAttr):
 
     @classmethod
     def to_click_options(cls, f: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
-        """Convert current model to click options. This can be used as a decorator for click commands.
-        Note that the identifier for all LLMConfig will be prefixed with '<model_name>_*', and the generation config
+        """Convert current configuration to click options.
+
+        This can be used as a decorator for click commands.
+
+        > **Note**: that the identifier for all LLMConfig will be prefixed with '<model_name>_*', and the generation config
         will be prefixed with '<model_name>_generation_*'.
         """
         for name, field in attr.fields_dict(cls.__openllm_generation_class__).items():

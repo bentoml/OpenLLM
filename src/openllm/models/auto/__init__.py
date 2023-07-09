@@ -15,7 +15,6 @@
 """This module is derived from HuggingFace's AutoConfig, AutoModel, etc."""
 
 from __future__ import annotations
-
 import typing as t
 
 import openllm

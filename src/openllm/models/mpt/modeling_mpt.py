@@ -13,17 +13,16 @@
 # limitations under the License.
 
 from __future__ import annotations
-
 import logging
 import typing as t
 
 import bentoml
 import openllm
 
+from .configuration_mpt import DEFAULT_PROMPT_TEMPLATE
 from ..._prompt import default_formatter
 from ...utils import generate_labels
 from ...utils import is_triton_available
-from .configuration_mpt import DEFAULT_PROMPT_TEMPLATE
 
 
 if t.TYPE_CHECKING:

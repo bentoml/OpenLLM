@@ -13,14 +13,13 @@
 # limitations under the License.
 
 from __future__ import annotations
-
 import logging
 import typing as t
 
 import openllm
 
-from ..._prompt import default_formatter
 from .configuration_gpt_neox import DEFAULT_PROMPT_TEMPLATE
+from ..._prompt import default_formatter
 
 
 if t.TYPE_CHECKING:

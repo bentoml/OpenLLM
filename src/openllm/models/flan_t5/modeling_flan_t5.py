@@ -12,13 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from __future__ import annotations
-
 import typing as t
 
 import openllm
 
-from ..._prompt import default_formatter
 from .configuration_flan_t5 import DEFAULT_PROMPT_TEMPLATE
+from ..._prompt import default_formatter
 
 
 if t.TYPE_CHECKING:

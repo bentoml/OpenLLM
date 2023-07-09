@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from __future__ import annotations
-
 import typing as t
 
 import pytest
@@ -47,7 +46,7 @@ def test_cascade_strategy_worker_count(monkeypatch: MonkeyPatch, gpu_type: str):
         GPURunnable,
         {gpu_type: 0},
         1,
-    )
+    ).match("No known supported resource available for *")
     assert CascadingResourceStrategy.get_worker_count(GPURunnable, {gpu_type: [2, 7]}, 1) == 2
     assert CascadingResourceStrategy.get_worker_count(GPURunnable, {gpu_type: [2, 7]}, 2) == 4
 

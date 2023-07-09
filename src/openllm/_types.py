@@ -17,7 +17,6 @@ Note that this module SHOULD NOT BE IMPORTED DURING RUNTIME, as this serve only 
 It will raises a RuntimeError if this is imported eagerly.
 """
 from __future__ import annotations
-
 import typing as t
 
 
@@ -92,7 +91,7 @@ class TokenizerProtocol(_StubsMixin[_MT], t.Protocol):
 
 PeftAdapterOutput = dict[t.Literal["success", "result", "error_msg"], bool | str | dict[t.Any, t.Any]]
 
-AdaptersMapping = dict[AdapterType, tuple[tuple[str | None, str | None, dict[str, t.Any]], ...]] | None
+AdaptersMapping = dict[AdapterType, tuple[tuple[str, str | None, dict[str, t.Any]], ...]] | None
 
 
 class LLMRunnable(bentoml.Runnable):

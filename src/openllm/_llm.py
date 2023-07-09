@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from __future__ import annotations
-
 import collections
 import functools
 import hashlib
@@ -128,6 +127,7 @@ def make_tag(
         trust_remote_code: Whether to trust the remote code. Defaults to False.
         model_version: Optional model version to be saved with this tag.
         implementation: Given implementation for said LLM. One of t.Literal['pt', 'tf', 'flax']
+        quiet: Whether to show warning logs. Default to 'False'
 
     Returns:
         A tuple of ``bentoml.Tag`` and a dict of unused kwargs.
@@ -143,14 +143,13 @@ def make_tag(
             tag = _store.list()[0].tag
             model_version = tag.version
             model_name = tag.name
-        else:
-            if model_version is None:
-                if not quiet:
-                    logger.warning(
-                        "Given 'model_id=%s' is a path, and 'model_version' is not passed. OpenLLM will generate the version based on the last modified time of this given directory.",
-                        model_id,
-                    )
-                model_version = generate_hash_from_file(model_id)
+        elif model_version is None:
+            if not quiet:
+                logger.warning(
+                    "Given 'model_id=%s' is a path, and 'model_version' is not passed. OpenLLM will generate the version based on the last modified time of this given directory.",
+                    model_id,
+                )
+            model_version = generate_hash_from_file(model_id)
     else:
         config = t.cast(
             "transformers.PretrainedConfig",
@@ -204,7 +203,11 @@ PEFT_CONFIG_NAME = "adapter_config.json"
 
 def resolve_peft_config_type(adapter_map: dict[str, str | None] | None):
     """Resolve the type of the PeftConfig given the adapter_map.
+
     This is similar to how PeftConfig resolve its config type.
+
+    Args:
+        adapter_map: The given mapping from either SDK or CLI. See CLI docs for more information.
     """
     if adapter_map is None:
         return
@@ -253,6 +256,7 @@ class LLMInterface(ABC, t.Generic[_M, _T]):
     @property
     def import_kwargs(self) -> tuple[dict[str, t.Any], dict[str, t.Any]] | None:
         """The default import kwargs to used when importing the model.
+
         This will be passed into 'openllm.LLM.import_model'.
         It returns two dictionaries: one for model kwargs and one for tokenizer kwargs.
         """
@@ -260,7 +264,8 @@ class LLMInterface(ABC, t.Generic[_M, _T]):
 
     @abstractmethod
     def generate(self, prompt: str, **preprocess_generate_kwds: t.Any) -> t.Any:
-        """The main function implementation for generating from given prompt.  It takes the prompt
+        """The main function implementation for generating from given prompt.  It takes the prompt.
+
         and the generation_kwargs from 'self.sanitize_parameters' and then
         pass it to 'self.model.generate'.
         """
@@ -272,8 +277,10 @@ class LLMInterface(ABC, t.Generic[_M, _T]):
         stop: list[str],
         **preprocess_generate_kwds: t.Any,
     ) -> list[dict[t.Literal["generated_text"], str]]:
-        """The entrypoint for generating one prompt. This provides additional stop
-        tokens for generating per token level. This is useful when running with agents, or initial streaming support.
+        """The entrypoint for generating one prompt.
+
+        This provides additional stop tokens for generating per token level.
+        This is useful when running with agents, or initial streaming support.
         """
         raise NotImplementedError
 
@@ -295,8 +302,7 @@ class LLMInterface(ABC, t.Generic[_M, _T]):
         return prompt, attrs, attrs
 
     def postprocess_generate(self, prompt: str, generation_result: t.Any, **attrs: t.Any) -> t.Any:
-        """This handler will postprocess generation results from LLM.generate and
-        then output nicely formatted results (if the LLM decide to do so.).
+        """This handler will postprocess generation results from LLM.generate and then output nicely formatted results (if the LLM decide to do so.).
 
         You can customize how the output of the LLM looks with this hook. By default, it is a simple echo.
 
@@ -305,13 +311,12 @@ class LLMInterface(ABC, t.Generic[_M, _T]):
         return generation_result
 
     def llm_post_init(self):
-        """This function can be implemented if you need to initialized any additional variables that doesn't
-        concern OpenLLM internals.
-        """
+        """This function can be implemented if you need to initialized any additional variables that doesn't concern OpenLLM internals."""
         pass
 
     def import_model(self, *args: t.Any, trust_remote_code: bool, **attrs: t.Any) -> bentoml.Model:
         """This function can be implemented if default import_model doesn't satisfy your needs.
+
         Note that tokenizer attrs can be accessed via ``llm.llm_parameters``.
 
         ```python
@@ -323,14 +328,16 @@ class LLMInterface(ABC, t.Generic[_M, _T]):
         raise NotImplementedError
 
     def load_model(self, tag: bentoml.Tag, *args: t.Any, **attrs: t.Any) -> t.Any:
-        """This function can be implemented to override the default load_model behaviour. See falcon for
-        example implementation.
+        """This function can be implemented to override the default load_model behaviour.
+
+        See falcon for example implementation.
         """
         raise NotImplementedError
 
     def load_tokenizer(self, tag: bentoml.Tag, **attrs: t.Any) -> t.Any:
-        """This function can be implemented to override how to load the tokenizer. See falcon for
-        example implementation.
+        """This function can be implemented to override how to load the tokenizer.
+
+        See falcon for example implementation.
         """
         raise NotImplementedError
 
@@ -354,12 +361,14 @@ class LLMInterface(ABC, t.Generic[_M, _T]):
     # NOTE: The following will be populated by __init_subclass__, note that these should be immutable.
     __llm_trust_remote_code__: bool
     """This is used to determine during 'import_model' whether to trust remote code or not.
+
     This works synonymous with `trust_remote_code` kwarg in transformers Auto classes. If not passed,
     then by default fallback to config_class['trust_remote_code']
     """
     __llm_implementation__: LiteralRuntime
-    """This is used to determine which implementation that this LLM has. Usually, this will inferred from
-    class name, that follows the HuggingFace's naming convention:
+    """This is used to determine which implementation that this LLM has.
+
+    Usually, this will inferred from class name, that follows the HuggingFace's naming convention:
 
     - `OPTForConditionalGeneration` -> `pt`
     - `TFOPTForConditionalGeneration` -> `tf`
@@ -441,12 +450,9 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
             if "config_class" not in cd:
                 cls.config_class = config_class
             else:
-                logger.debug(f"Using config class {cd['config_class']} for {cls.__name__}.")
-        else:
-            if "config_class" not in cd:
-                raise RuntimeError(
-                    "Missing required key 'config_class'. Make sure to define it within the LLM subclass."
-                )
+                logger.debug("Using config class %s for %s.", cd["config_class"], cls.__name__)
+        elif "config_class" not in cd:
+            raise RuntimeError("Missing required key 'config_class'. Make sure to define it within the LLM subclass.")
 
         _custom_import = True
         if cls.import_model is LLMInterface[_M, _T].import_model:
@@ -534,9 +540,10 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
         **attrs: t.Any,
     ) -> LLM[_M, _T]:
         """Instantiate a pretrained LLM.
-        it follows the same design principle as HuggingFace's `from_pretrained` method, plus the following:
 
-        Optimization options:
+        ``LLM.from_pretrained`` follows the same design principle as HuggingFace's `from_pretrained` method, plus the following:
+
+        ### Optimization options:
 
         > This is most notable during serving time.
 
@@ -545,7 +552,7 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
 
         > Currently, the above two options are mutually exclusive.
 
-        Adapter options:
+        ### Adapter options:
 
         > This is used in conjunction with the fine-tuning features
 
@@ -566,6 +573,7 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
                         will use `config_class` to construct default configuration.
             quantize: The quantization to use for this LLM. Defaults to None. Possible values
                       include int8, int4 and gptq.
+            runtime: Optional runtime to run this LLM. Default to 'transformers'. 'ggml' supports is working in progress.
             quantization_config: The quantization config (`transformers.BitsAndBytesConfig`) to use. Note that this is mutually exclusive with `quantize`
             bettertransformer: Whether to use BetterTransformer with this model. Defaults to False.
             adapter_id: The [LoRA](https://arxiv.org/pdf/2106.09685.pdf) pretrained id or local path to use for this LLM. Defaults to None.
@@ -674,10 +682,7 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
                 "LoRA adapter requires 'peft' to be installed. Make sure to install OpenLLM with 'pip install \"openllm[fine-tune]\"'"
             )
 
-        if llm_config is not None:
-            if DEBUG and int(os.environ.get("OPENLLMDEVDEBUG", str(0))) > 3:
-                logger.debug("Using provided LLMConfig to initialize LLM instead of from default: %r", llm_config)
-        else:
+        if llm_config is None:
             llm_config = cls.config_class.model_construct_env(**attrs)
             # The rests of the kwargs that is not used by the config class should be stored into __openllm_extras__.
             attrs = llm_config["extras"]
@@ -692,7 +697,8 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
                 implementation=cls.__llm_implementation__,
                 quiet=True,
             )
-        assert _tag.version is not None, "Failed to resolve model version."
+        if _tag.version is None:
+            raise RuntimeError("Failed to resolve model version.")
 
         return cls(
             model_id=model_id,
@@ -802,6 +808,7 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
             llm_config: The config to use for this LLM. Defaults to None. If not passed, OpenLLM
                         will use `config_class` to construct default configuration.
             bettertransformer: Whether to use BetterTransformer with this model. Defaults to False.
+            quantization_config: ``transformers.BitsAndBytesConfig`` configuration, or 'gptq' denoting this model to be loaded with GPTQ.
             *args: The args to be passed to the model.
             **attrs: The kwargs to be passed to the model.
         """
@@ -911,11 +918,14 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
 
     @property
     def llm_parameters(self) -> tuple[tuple[tuple[t.Any, ...], dict[str, t.Any]], dict[str, t.Any]]:
-        """Returning the processed model and tokenizer parameters to be used with
-        'import_model' or any other place that requires loading model and tokenizer.
+        """Returning the processed model and tokenizer parameters.
+
+        These can then be used with 'import_model' or any other place that requires loading model and tokenizer.
 
         See 'openllm.cli.download_models' for example usage.
-        It returns a tuple of (model_args, model_kwargs) & tokenizer_kwargs
+
+        Returns:
+            ``tuple``: It returns a tuple of (model_args, model_kwargs) & tokenizer_kwargs
         """
         return (self._model_decls, self._model_attrs), self._tokenizer_attrs
 
@@ -925,8 +935,11 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
 
     def ensure_model_id_exists(self) -> bentoml.Model:
         """This utility function will download the model if it doesn't exist yet.
+
         Make sure to call this function if 'ensure_available' is not set during
         Auto LLM initialisation.
+
+        The equivalent for ``openllm.Runner`` is ``openllm.Runner.download_model``.
         """
         additional_args = ["--machine"]
         if not get_debug_mode():
@@ -972,7 +985,8 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
         inference_mode: bool = True,
         use_cache: bool = True,
     ) -> dict[AdapterType, dict[str | t.Literal["default"], tuple[peft.PeftConfig, str]]]:
-        assert self._adapters_mapping is not None, "LoRA mapping is not set up correctly."
+        if self._adapters_mapping is None:
+            raise ValueError("LoRA mapping is not set up correctly.")
 
         if not use_cache:
             logger.debug(
@@ -998,12 +1012,11 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
                 if not optional_name:
                     if not _converted_first_none:
                         _converted_first_none = True
-                        optional_name = "default"
+                        optional_name = "default"  # noqa: PLW2901
                     else:
                         raise ValueError(
                             f"{self.__class__.__name__} doesn't know how to resolve adapter_name None mapping: {pretrained_or_peft_id, resolved_mapping}"
                         )
-                assert isinstance(optional_name, str)  # optional_name should all be resolved here
                 if optional_name == "default":
                     adapter_map[_adapter_type][optional_name] = (
                         default_config.with_config(**resolved_mapping).to_peft_config(),
@@ -1054,11 +1067,12 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
         load_adapters: t.Literal["all"] | list[str] | None = None,
         use_cache: bool = True,
     ) -> peft.PeftModel | _M | torch.nn.Module:
-        """Apply given LoRA mapping to the model. Note that the base model can still
-        be accessed via self.model.get_base_model().
+        """Apply given LoRA mapping to the model.
+
+        Note that the base model can still be accessed via self.model.get_base_model().
         """
-        assert self.model, "Internal error: Model is not loaded correctly."
-        assert self.__llm_model__ is not None
+        assert self.model, "Internal error: Model is not loaded correctly."  # noqa: S101
+        assert self.__llm_model__ is not None  # noqa: S101
 
         # early out if _adapters_mapping is empty or it is already wrapped
         # with peft.
@@ -1432,6 +1446,7 @@ def Runner(
                           If False, make sure the model is available locally.
         implementation: The given Runner implementation one choose for this Runner. By default, it is retrieved from the enviroment variable
                         of the respected model_name. For example: 'flan-t5' -> "OPENLLM_FLAN_T5_FRAMEWORK"
+        llm_config: Optional ``openllm.LLMConfig`` to initialise this ``openllm.LLMRunner``.
         init_local: If True, it will initialize the model locally. This is useful if you want to
                     run the model locally. (Symmetrical to bentoml.Runner.init_local())
         **attrs: The rest of kwargs will then be passed to the LLM. Refer to the LLM documentation for the kwargs

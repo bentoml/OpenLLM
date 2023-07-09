@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from __future__ import annotations
-
 import asyncio
 import contextlib
 import itertools
@@ -153,7 +152,7 @@ class _Handle(ABC):
     port: int
     timeout: int
 
-    client: BaseAsyncClient = attr.field(init=False)
+    client: BaseAsyncClient[t.Any] = attr.field(init=False)
 
     if t.TYPE_CHECKING:
 

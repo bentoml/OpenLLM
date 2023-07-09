@@ -13,11 +13,11 @@
 # limitations under the License.
 
 from __future__ import annotations
-
 import asyncio
 import logging
 import typing as t
 from abc import abstractmethod
+from http import HTTPStatus
 from urllib.parse import urljoin
 
 import httpx
@@ -70,7 +70,10 @@ def in_async_context() -> bool:
         return False
 
 
-class ClientMixin:
+T = t.TypeVar("T")
+
+
+class ClientMixin(t.Generic[T]):
     _api_version: str
     _client_class: type[bentoml.client.Client]
 
@@ -84,9 +87,9 @@ class ClientMixin:
     def __init__(self, address: str, timeout: int = 30):
         self._address = address
         self._timeout = timeout
-        assert self._host and self._port, "Make sure to setup _host and _port based on your client implementation."
 
     def __init_subclass__(cls, *, client_type: t.Literal["http", "grpc"] = "http", api_version: str = "v1"):
+        """Initialise subclass for HTTP and gRPC client type."""
         cls._client_class = bentoml.client.HTTPClient if client_type == "http" else bentoml.client.GrpcClient
         cls._api_version = api_version
 
@@ -102,7 +105,7 @@ class ClientMixin:
         return self.__agent__
 
     @property
-    def _metadata(self) -> dict[str, t.Any]:
+    def _metadata(self) -> T:
         if in_async_context():
             return httpx.post(urljoin(self._address, f"/{self._api_version}/metadata")).json()
         return self.call("metadata")
@@ -168,7 +171,7 @@ class ClientMixin:
         ...
 
 
-class BaseClient(ClientMixin):
+class BaseClient(ClientMixin[T]):
     def health(self) -> t.Any:
         raise NotImplementedError
 
@@ -242,7 +245,7 @@ class BaseClient(ClientMixin):
         raise NotImplementedError
 
 
-class BaseAsyncClient(ClientMixin):
+class BaseAsyncClient(ClientMixin[T]):
     async def health(self) -> t.Any:
         raise NotImplementedError
 
@@ -323,7 +326,7 @@ class BaseAsyncClient(ClientMixin):
                     "parameters": {"max_new_tokens": 200, "return_full_text": False, "stop": stop},
                 },
             )
-            if response.status_code != 200:
+            if response.status_code != HTTPStatus.OK:
                 raise ValueError(f"Error {response.status_code}: {response.json()}")
 
         result = response.json()[0]["generated_text"]

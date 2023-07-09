@@ -20,7 +20,6 @@ To start interact with the server, you can do the following:
 >>> client.query("What is the meaning of life?")
 """
 from __future__ import annotations
-
 import importlib
 import itertools
 import typing as t

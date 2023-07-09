@@ -33,7 +33,6 @@ bentomodel = openllm.import_model("falcon", model_id='tiiuae/falcon-7b-instruct'
 ```
 """
 from __future__ import annotations
-
 import functools
 import importlib.util
 import inspect
@@ -275,6 +274,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
     @staticmethod
     def common_params(f: F[P, t.Any]) -> ClickFunctionWrapper[..., t.Any]:
         """This is not supposed to be used with unprocessed click function.
+
         This should be used a the last currying from common_params -> usage_tracking -> exception_handling.
         """
         # The following logics is similar to one of BentoMLCommandGroup
@@ -316,6 +316,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
         func: ClickFunctionWrapper[..., t.Any], group: click.Group, **attrs: t.Any
     ) -> ClickFunctionWrapper[..., t.Any]:
         """This is not supposed to be used with unprocessed click function.
+
         This should be used a the last currying from common_params -> usage_tracking -> exception_handling.
         """
         command_name = attrs.get("name", func.__name__)
@@ -329,7 +330,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
             start_time = time.time_ns()
 
             with analytics.set_bentoml_tracking():
-                assert group.name is not None, "group.name should not be None"
+                assert group.name is not None, "group.name should not be None"  # noqa: S101
                 event = analytics.OpenllmCliEvent(cmd_group=group.name, cmd_name=command_name)
                 try:
                     return_value = func(*args, **attrs)
@@ -352,6 +353,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
         func: ClickFunctionWrapper[..., t.Any], group: click.Group, **attrs: t.Any
     ) -> ClickFunctionWrapper[..., t.Any]:
         """This is not supposed to be used with unprocessed click function.
+
         This should be used a the last currying from common_params -> usage_tracking -> exception_handling.
         """
         command_name = attrs.get("name", func.__name__)
@@ -403,9 +405,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
 
     @override
     def command(self, *args: t.Any, **attrs: t.Any) -> F[[t.Callable[P, t.Any]], click.Command]:
-        """Override the default 'cli.command' with supports for aliases for given command, and it
-        wraps the implementation with common parameters.
-        """
+        """Override the default 'cli.command' with supports for aliases for given command, and it wraps the implementation with common parameters."""
         if "context_settings" not in attrs:
             attrs["context_settings"] = {}
         if "max_content_width" not in attrs["context_settings"]:
@@ -438,7 +438,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
             cmd = super(BentoMLCommandGroup, self).command(*args, **attrs)(wrapped)
             # NOTE: add aliases to a given commands if it is specified.
             if aliases is not None:
-                assert cmd.name
+                assert cmd.name  # noqa: S101
                 self._commands[cmd.name] = aliases
                 self._aliases.update({alias: cmd.name for alias in aliases})
 
@@ -452,7 +452,8 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
 @click.group(cls=OpenLLMCommandGroup, context_settings=_CONTEXT_SETTINGS, name="openllm")
 @click.version_option(__version__, "--version", "-v")
 def cli():
-    """\b
+    """\b.
+
      ██████╗ ██████╗ ███████╗███╗   ██╗██╗     ██╗     ███╗   ███╗
     ██╔═══██╗██╔══██╗██╔════╝████╗  ██║██║     ██║     ████╗ ████║
     ██║   ██║██████╔╝█████╗  ██╔██╗ ██║██║     ██║     ██╔████╔██║
@@ -669,10 +670,7 @@ def start_command_factory(
     """Generate a 'click.Command' for any given LLM.
 
     Args:
-        model_name: The name of the model
-        factory: The click.Group to add the command to
-        _context_settings: The context settings to use for the command
-        _serve_grpc: Whether to serve the model via gRPC or HTTP
+        model_name_or_bento: The name of the model or the ``bentoml.Bento`` instance.
 
     Returns:
         The click.Command for starting the model server
@@ -948,7 +946,7 @@ def start_bento(
             server = bentoml.HTTPServer(bento, **server_attrs)
         analytics.track_start_init(config)
 
-        server.start(env=start_env, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        server.start(env=start_env, text=True)
         process = server.process
         assert process
 
@@ -1101,7 +1099,7 @@ def start_model(
             server = bentoml.HTTPServer("_service.py:svc", **server_attrs)
         analytics.track_start_init(llm.config)
 
-        server.start(env=start_env, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        server.start(env=start_env, text=True)
         process = server.process
         assert process
 
@@ -2234,10 +2232,9 @@ def query(
 
     if output == "pretty":
         formatted = client.llm.postprocess_generate(prompt, res["responses"])
-        generated = formatted[len(prompt) :]
         _echo("\n\n==Responses==\n", fg="white")
-        _echo(formatted[: len(prompt)], fg=input_fg, nl=False)
-        _echo(generated, fg=generated_fg)
+        _echo(f"{prompt} ", fg=input_fg, nl=False)
+        _echo(formatted, fg=generated_fg)
     elif output == "json":
         _echo(orjson.dumps(res, option=orjson.OPT_INDENT_2).decode(), fg="white")
     else:
@@ -2311,13 +2308,24 @@ def playground(output_dir: str | None, port: int):
         jupytext.write(f, os.path.join(output_dir, module.name + ".ipynb"), fmt="notebook")
     try:
         subprocess.check_output(
-            ["jupyter", "notebook", "--notebook-dir", output_dir, "--port", str(port), "--no-browser", "--debug"]
+            [
+                sys.executable,
+                "-m",
+                "jupyter",
+                "notebook",
+                "--notebook-dir",
+                output_dir,
+                "--port",
+                str(port),
+                "--no-browser",
+                "--debug",
+            ]
         )
     except subprocess.CalledProcessError as e:
         _echo(e.output, fg="red")
         raise e
     except KeyboardInterrupt:
-        _echo("Shutting down Jupyter server...", fg="yellow")
+        _echo("\nShutting down Jupyter server...", fg="yellow")
         if _temp_dir:
             _echo("Note: You can access the generated notebooks in: " + output_dir, fg="blue")
 

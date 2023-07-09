@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from __future__ import annotations
-
 import typing as t
 from collections import OrderedDict
 
@@ -113,7 +112,10 @@ CONFIG_NAME_ALIASES: dict[str, str] = {
 
 class AutoConfig:
     def __init__(self, *_: t.Any, **__: t.Any):
-        raise EnvironmentError("Cannot instantiate Config. Please use `Config.for_model(model_name)` instead.")
+        """This metaclass should be initialised via `AutoConfig.for_model`."""
+        raise EnvironmentError(
+            "Cannot instantiate AutoConfig directly. Please use `AutoConfig.for_model(model_name)` instead."
+        )
 
     @classmethod
     def for_model(cls, model_name: str, **attrs: t.Any) -> openllm.LLMConfig:

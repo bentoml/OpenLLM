@@ -13,7 +13,6 @@
 # limitations under the License.
 """Schema definition for OpenLLM. This can be use for client interaction."""
 from __future__ import annotations
-
 import functools
 import typing as t
 

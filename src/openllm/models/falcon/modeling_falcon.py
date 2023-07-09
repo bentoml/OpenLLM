@@ -13,13 +13,12 @@
 # limitations under the License.
 
 from __future__ import annotations
-
 import typing as t
 
 import openllm
 
-from ..._prompt import default_formatter
 from .configuration_falcon import DEFAULT_PROMPT_TEMPLATE
+from ..._prompt import default_formatter
 
 
 if t.TYPE_CHECKING:

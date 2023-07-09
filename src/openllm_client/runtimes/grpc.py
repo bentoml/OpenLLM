@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from __future__ import annotations
-
 import asyncio
 import logging
 import typing as t
@@ -36,8 +35,6 @@ logger = logging.getLogger(__name__)
 
 
 class GrpcClientMixin:
-    _metadata: Response
-
     @property
     def model_name(self) -> str:
         try:
@@ -86,7 +83,7 @@ class GrpcClientMixin:
         return openllm.GenerationOutput(**MessageToDict(result.json, preserving_proto_field_name=True))
 
 
-class GrpcClient(GrpcClientMixin, BaseClient, client_type="grpc"):
+class GrpcClient(GrpcClientMixin, BaseClient["Response"], client_type="grpc"):
     def __init__(self, address: str, timeout: int = 30):
         self._host, self._port = address.split(":")
         super().__init__(address, timeout)
@@ -95,7 +92,7 @@ class GrpcClient(GrpcClientMixin, BaseClient, client_type="grpc"):
         return asyncio.run(self._cached.health("bentoml.grpc.v1.BentoService"))
 
 
-class AsyncGrpcClient(GrpcClientMixin, BaseAsyncClient, client_type="grpc"):
+class AsyncGrpcClient(GrpcClientMixin, BaseAsyncClient["Response"], client_type="grpc"):
     def __init__(self, address: str, timeout: int = 30):
         self._host, self._port = address.split(":")
         super().__init__(address, timeout)

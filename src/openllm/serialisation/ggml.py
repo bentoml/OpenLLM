@@ -16,7 +16,6 @@
 This requires ctransformers to be installed.
 """
 from __future__ import annotations
-
 import typing as t
 
 import cloudpickle
@@ -32,10 +31,10 @@ if t.TYPE_CHECKING:
     import openllm
     import transformers
 
-    from .._types import ModelProtocol
-    from .._types import TokenizerProtocol
     from .transformers import _M
     from .transformers import _T
+    from .._types import ModelProtocol
+    from .._types import TokenizerProtocol
 else:
     transformers = LazyLoader("transformers", globals(), "transformers")
 
@@ -51,6 +50,7 @@ def import_model(
 
 def get(llm: openllm.LLM[t.Any, t.Any], auto_import: bool = False) -> bentoml.Model:
     """Return an instance of ``bentoml.Model`` from given LLM instance.
+
     By default, it will try to check the model in the local store.
     If model is not found, and ``auto_import`` is set to True, it will try to import the model from HuggingFace Hub.
 
@@ -75,6 +75,7 @@ def get(llm: openllm.LLM[t.Any, t.Any], auto_import: bool = False) -> bentoml.Mo
 
 def load_model(llm: openllm.LLM[_M, t.Any], *decls: t.Any, **attrs: t.Any) -> ModelProtocol[_M]:
     """Load the model from BentoML store.
+
     By default, it will try to find check the model in the local store.
     If model is not found, it will raises a ``bentoml.exceptions.NotFound``.
     """

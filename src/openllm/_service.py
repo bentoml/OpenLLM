@@ -21,7 +21,6 @@ This will ensure that 'bentoml serve llm-bento' will work accordingly.
 The generation code lives under utils/codegen.py
 """
 from __future__ import annotations
-
 import os
 import typing as t
 import warnings

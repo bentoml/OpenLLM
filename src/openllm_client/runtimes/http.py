@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from __future__ import annotations
-
 import logging
 import typing as t
 from urllib.parse import urlparse
@@ -27,15 +26,16 @@ from .base import BaseClient
 
 
 if t.TYPE_CHECKING:
+    from openllm._types import DictStrAny
     from openllm._types import LiteralRuntime
+else:
+    DictStrAny = dict
 
 
 logger = logging.getLogger(__name__)
 
 
 class HTTPClientMixin:
-    _metadata: dict[str, t.Any]
-
     @property
     def model_name(self) -> str:
         try:
@@ -75,7 +75,7 @@ class HTTPClientMixin:
         return openllm.GenerationOutput(**result)
 
 
-class HTTPClient(HTTPClientMixin, BaseClient):
+class HTTPClient(HTTPClientMixin, BaseClient[DictStrAny]):
     def __init__(self, address: str, timeout: int = 30):
         address = address if "://" in address else "http://" + address
         self._host, self._port = urlparse(address).netloc.split(":")
@@ -85,7 +85,7 @@ class HTTPClient(HTTPClientMixin, BaseClient):
         return self._cached.health()
 
 
-class AsyncHTTPClient(HTTPClientMixin, BaseAsyncClient):
+class AsyncHTTPClient(HTTPClientMixin, BaseAsyncClient[DictStrAny]):
     def __init__(self, address: str, timeout: int = 30):
         address = address if "://" in address else "http://" + address
         self._host, self._port = urlparse(address).netloc.split(":")

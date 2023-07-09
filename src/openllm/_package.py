@@ -16,7 +16,6 @@
 These utilities will stay internal, and its API can be changed or updated without backward-compatibility.
 """
 from __future__ import annotations
-
 import importlib.metadata
 import logging
 import os
@@ -132,7 +131,8 @@ def construct_python_options(
     env: EnvVarMixin = llm.config["env"]
     framework_envvar = env["framework_value"]
     if framework_envvar == "flax":
-        assert is_flax_available(), f"Flax is not available, while {env.framework} is set to 'flax'"
+        if not is_flax_available():
+            raise ValueError(f"Flax is not available, while {env.framework} is set to 'flax'")
         packages.extend(
             [
                 handle_package_version("flax", has_dockerfile_template),
@@ -141,7 +141,8 @@ def construct_python_options(
             ]
         )
     elif framework_envvar == "tf":
-        assert is_tf_available(), f"TensorFlow is not available, while {env.framework} is set to 'tf'"
+        if not is_tf_available():
+            raise ValueError(f"TensorFlow is not available, while {env.framework} is set to 'tf'")
         candidates = (
             "tensorflow",
             "tensorflow-cpu",
@@ -167,7 +168,8 @@ def construct_python_options(
             except importlib.metadata.PackageNotFoundError:
                 pass
     else:
-        assert is_torch_available(), "PyTorch is not available. Make sure to have it locally installed."
+        if not is_torch_available():
+            raise ValueError("PyTorch is not available. Make sure to have it locally installed.")
         packages.extend([handle_package_version("torch", has_dockerfile_template)])
 
     wheels: list[str] = []
@@ -254,7 +256,8 @@ def create_bento(
     logger.info("Building Bento for '%s'", llm.config["start_name"])
 
     if adapter_map is not None:
-        assert build_ctx is not None, "build_ctx is required when 'adapter_map' is not None"
+        if build_ctx is None:
+            raise ValueError("build_ctx is required when 'adapter_map' is not None")
         updated_mapping: dict[str, str | None] = {}
         for adapter_id, name in adapter_map.items():
             try:

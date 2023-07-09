@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from __future__ import annotations
-
 import logging
 import math
 import os
@@ -70,6 +69,7 @@ class AmdGpuResource(Resource[t.List[str]], resource_id="amd.com/gpu"):
     @classmethod
     def from_system(cls) -> list[str]:
         """Retrieve AMD GPU from system, currently only supports on Linux.
+
         This assumes that ROCm is setup correctly.
         """
         cuda_visible_devices = os.getenv("CUDA_VISIBLE_DEVICES")
@@ -124,8 +124,7 @@ class AmdGpuResource(Resource[t.List[str]], resource_id="amd.com/gpu"):
 
 
 class CascadingResourceStrategy(Strategy, ReprMixin):
-    """This is rather an extension of bentoml._internal.runner.strategy.DefaultStrategy
-    where we check for NVIDIA GPU resource -> AMD GPU resource -> CPU resource.
+    """This is extends the default BentoML strategy where we check for NVIDIA GPU resource -> AMD GPU resource -> CPU resource.
 
     It also respect CUDA_VISIBLE_DEVICES for both AMD and NVIDIA GPU.
     See https://rocm.docs.amd.com/en/develop/understand/gpu_isolation.html#cuda-visible-devices
@@ -168,7 +167,7 @@ class CascadingResourceStrategy(Strategy, ReprMixin):
                 )
 
             if runnable_class.SUPPORTS_CPU_MULTI_THREADING:
-                if isinstance(workers_per_resource, float) and workers_per_resource < 1.0:
+                if isinstance(workers_per_resource, float) and workers_per_resource < 1.0:  # noqa: PLR2004
                     raise ValueError("Fractional CPU multi threading support is not yet supported.")
                 return int(workers_per_resource)
 
@@ -188,10 +187,13 @@ class CascadingResourceStrategy(Strategy, ReprMixin):
         workers_per_resource: int | float,
         worker_index: int,
     ) -> dict[str, t.Any]:
-        """Args:
-        runnable_class : The runnable class to be run.
-        resource_request : The resource request of the runnable.
-        worker_index : The index of the worker, start from 0.
+        """Get worker env for this given worker_index.
+
+        Args:
+            runnable_class: The runnable class to be run.
+            resource_request: The resource request of the runnable.
+            workers_per_resource: # of workers per resource.
+            worker_index: The index of the worker, start from 0.
         """
         cuda_env = os.environ.get("CUDA_VISIBLE_DEVICES", None)
         disabled = cuda_env in ("", "-1")
@@ -207,7 +209,7 @@ class CascadingResourceStrategy(Strategy, ReprMixin):
             dev = cls.transpile_workers_to_cuda_visible_devices(workers_per_resource, nvidia_gpus, worker_index)
             if disabled:
                 logger.debug("CUDA_VISIBLE_DEVICES is disabled, %s will not be using GPU.", worker_index)
-                environ["CUDA_VISIBLE_DEVICES"] = "-1"
+                environ["CUDA_VISIBLE_DEVICES"] = cuda_env
                 return environ
             environ["CUDA_VISIBLE_DEVICES"] = dev
             logger.info(
@@ -223,7 +225,7 @@ class CascadingResourceStrategy(Strategy, ReprMixin):
             dev = cls.transpile_workers_to_cuda_visible_devices(workers_per_resource, amd_gpus, worker_index)
             if disabled:
                 logger.debug("CUDA_VISIBLE_DEVICES is disabled, %s will not be using GPU.", worker_index)
-                environ["CUDA_VISIBLE_DEVICES"] = "-1"
+                environ["CUDA_VISIBLE_DEVICES"] = cuda_env
                 return environ
             environ["CUDA_VISIBLE_DEVICES"] = dev
             logger.info(

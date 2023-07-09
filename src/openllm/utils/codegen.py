@@ -13,11 +13,9 @@
 # limitations under the License.
 
 from __future__ import annotations
-
 import functools
 import inspect
 import logging
-import os
 import string
 import types
 import typing as t
@@ -60,10 +58,11 @@ class ModelNameFormatter(string.Formatter):
     model_keyword: t.LiteralString = "__model_name__"
 
     def __init__(self, model_name: str):
+        """The formatter that extends model_name to be formatted the 'service.py'."""
         super().__init__()
         self.model_name = model_name
 
-    def vformat(self, format_string: str) -> str:
+    def vformat(self, format_string: t.LiteralString) -> str:
         return super().vformat(format_string, (), {self.model_keyword: self.model_name})
 
     def can_format(self, value: str) -> bool:
@@ -203,7 +202,7 @@ def generate_function(
     globs: dict[str, t.Any],
     annotations: dict[str, t.Any] | None = None,
 ):
-    from . import DEBUG
+    from . import SHOW_CODEGEN
 
     script = "def %s(%s):\n    %s\n" % (
         func_name,
@@ -214,7 +213,7 @@ def generate_function(
     if annotations:
         meth.__annotations__ = annotations
 
-    if DEBUG and int(os.environ.get("OPENLLMDEVDEBUG", str(0))) > 3:
+    if SHOW_CODEGEN:
         logger.info("Generated script for %s:\n\n%s", typ, script)
 
     return meth

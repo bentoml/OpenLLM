@@ -17,8 +17,9 @@ import openllm
 
 
 class StableLMConfig(openllm.LLMConfig):
-    """StableLM-Base-Alpha is a suite of 3B and 7B parameter decoder-only language models
-    pre-trained on a diverse collection of English datasets with a sequence
+    """StableLM-Base-Alpha is a suite of 3B and 7B parameter decoder-only language models.
+
+    It is pre-trained on a diverse collection of English datasets with a sequence
     length of 4096 to push beyond the context window limitations of existing open-source language models.
 
     StableLM-Tuned-Alpha is a suite of 3B and 7B parameter decoder-only language models

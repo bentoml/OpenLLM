@@ -15,7 +15,6 @@
 """Tests utilities for OpenLLM."""
 
 from __future__ import annotations
-
 import contextlib
 import logging
 import subprocess
@@ -76,7 +75,7 @@ def build_container(
     finally:
         if cleanup:
             logger.info("Deleting container %s", image_tag)
-            subprocess.call([backend, "rmi", image_tag])
+            subprocess.check_output([backend, "rmi", image_tag])
 
 
 @contextlib.contextmanager

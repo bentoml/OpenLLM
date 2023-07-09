@@ -11,6 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Client that supports REST/gRPC protocol to interact with a LLMServer."""
 
+from .grpc import AsyncGrpcClient as AsyncGrpcClient
 from .grpc import GrpcClient as GrpcClient
+from .http import AsyncHTTPClient as AsyncHTTPClient
 from .http import HTTPClient as HTTPClient

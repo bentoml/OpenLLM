@@ -14,7 +14,6 @@
 """Serialisation related implementation for Transformers-based implementation."""
 
 from __future__ import annotations
-
 import copy
 import importlib
 import typing as t
@@ -26,14 +25,14 @@ from bentoml._internal.frameworks.transformers import make_default_signatures
 from bentoml._internal.models.model import CUSTOM_OBJECTS_FILENAME
 from bentoml._internal.models.model import ModelOptions
 
+from .constants import FRAMEWORK_TO_AUTOCLASS_MAPPING
+from .constants import MODEL_TO_AUTOCLASS_MAPPING
 from ..exceptions import OpenLLMException
 from ..utils import LazyLoader
 from ..utils import generate_context
 from ..utils import generate_labels
 from ..utils import is_torch_available
 from ..utils import normalize_attrs_to_model_tokenizer_pair
-from .constants import FRAMEWORK_TO_AUTOCLASS_MAPPING
-from .constants import MODEL_TO_AUTOCLASS_MAPPING
 
 
 if t.TYPE_CHECKING:
@@ -187,6 +186,7 @@ def import_model(
 
 def get(llm: openllm.LLM[t.Any, t.Any], auto_import: bool = False) -> bentoml.Model:
     """Return an instance of ``bentoml.Model`` from given LLM instance.
+
     By default, it will try to check the model in the local store.
     If model is not found, and ``auto_import`` is set to True, it will try to import the model from HuggingFace Hub.
 
@@ -217,6 +217,7 @@ def get(llm: openllm.LLM[t.Any, t.Any], auto_import: bool = False) -> bentoml.Mo
 
 def load_model(llm: openllm.LLM[_M, t.Any], *decls: t.Any, **attrs: t.Any) -> ModelProtocol[_M]:
     """Load the model from BentoML store.
+
     By default, it will try to find check the model in the local store.
     If model is not found, it will raises a ``bentoml.exceptions.NotFound``.
     """

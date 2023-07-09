@@ -15,21 +15,21 @@ import click
 from ._core import FC
 from ._core import OptionGroup
 
-P = ParamSpec("P")
-O_co = TypeVar("O_co", covariant=True)
+_P = ParamSpec("_P")
+_O_co = TypeVar("_O_co", covariant=True)
 
-F = Callable[P, O_co]
+F = Callable[_P, _O_co]
 
 class OptionStackItem(NamedTuple):
     param_decls: Tuple[str, ...]
     attrs: Dict[str, Any]
     param_count: int
 
-class ClickFunctionWrapper(Protocol[P, O_co]):
+class ClickFunctionWrapper(Protocol[_P, _O_co]):
     __name__: str
     __click_params__: list[click.Option]
 
-    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> O_co: ...
+    def __call__(self, *args: _P.args, **kwargs: _P.kwargs) -> _O_co: ...
 
 class _NotAttachedOption(click.Option):
     """The helper class to catch grouped options which were not attached to the group.
@@ -40,7 +40,7 @@ class _NotAttachedOption(click.Option):
     def __init__(self, param_decls: Any = ..., *, all_not_attached_options: Any, **attrs: Any) -> None: ...
     def handle_parse_result(self, ctx: click.Context, opts: Any, args: tuple[Any]) -> Any: ...
 
-class _OptGroup(Generic[O_co]):
+class _OptGroup(Generic[_O_co]):
     """A helper class to manage creating groups and group options via decorators.
 
     The class provides two decorator-methods: `group`/`__call__` and `option`.

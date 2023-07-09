@@ -72,12 +72,12 @@ all = [
     "openllm[falcon]",
     "openllm[mpt]",
     "openllm[starcoder]",
-    "openllm[openai]",
-    "openllm[playground]",
     "openllm[fine-tune]",
-    "openllm[flan-t5]",
-    "openllm[ggml]",
     "openllm[agents]",
+    "openllm[flan-t5]",
+    "openllm[openai]",
+    "openllm[ggml]",
+    "openllm[playground]",
 ]
 chatglm = ["cpm-kernels", "sentencepiece"]
 falcon = ["einops", "xformers", "safetensors"]
@@ -183,7 +183,7 @@ line-length = 119
 target-version = ["py311"]
 
 [tool.ruff]
-exclude = ["tools"]
+exclude = ["tools", "src/openllm/playground"]
 # extends quotes, pydocstyle, pycodestyle, logging format, isort, future-annotations
 # type-checking, refactor, warning, pytest-style, flake8-pyi
 extend-select = ["I", "G", "D", "W", "Q", "FA", "S", "TCH", "PLW", "PLR", "PT", "PYI"]
@@ -197,6 +197,8 @@ ignore = [
     "S105",
     "S106",
     "S107",
+    # ignore subprocess.call
+    "S603",
     # Ignore complexity
     "C901",
     "PLR0911",
@@ -206,14 +208,24 @@ ignore = [
     # ignore line length violation
     "E501",
     "E741",
-    # don't move runtime import out
-    "TCH004",
     # ignore docstring in stubs, as pyright will include docstring in stubs.
     "PYI021",
+    # Just missing docstring
+    "D103",
+    "D102",
+    "D101",
+    "D100",
+    # don't move runtime import out, just warn about it
+    "TCH004",
 ]
 line-length = 119
 target-version = "py312"
-
+unfixable = [
+    # Don't touch unused imports, just warn about it.
+    "F401",
+    # don't move runtime import out, just warn about it
+    "TCH004",
+]
 [tool.ruff.flake8-type-checking]
 runtime-evaluated-base-classes = [
     "pydantic.BaseModel",
@@ -233,6 +245,8 @@ ignore-overlong-task-comments = true
 force-single-line = true
 known-first-party = ["openllm", "bentoml", 'transformers']
 lines-after-imports = 2
+no-lines-before = ["future", "standard-library"]
+relative-imports-order = "closest-to-furthest"
 
 [tool.ruff.flake8-quotes]
 avoid-escape = false
@@ -242,9 +256,31 @@ avoid-escape = false
 "__init__.py" = ["E402", "F401", "F403", "F811"]
 "examples/**/*" = ["D"]
 "src/openllm/_types.py" = ["E402"]
-"src/openllm/playground/**/*" = ["E402", "F401"]
-"tests/**/*" = ["PLR2004", "S101", "TID252"]
-"typings/**/*" = ["D"]
+"src/openllm/cli.py" = ["D301", "S101"]
+"src/openllm/models/**/*" = ["D106", "S101", "D104"]
+"src/openllm/playground/**/*" = ["E402", "F401", "TCH004", "PLR", "D"]
+"src/openllm/serialisation/__init__.py" = ["TCH004"]
+"src/openllm/utils/**/*" = ["PLR2004", "TCH004"]
+"src/openllm/utils/dummy_*" = ["D107"]
+"src/openllm/utils/import_utils.py" = [
+    # OK to ignore global access here
+    "PLW0603",
+    # magic docstring
+    "D105",
+]
+"src/openllm_client/runtimes/*" = ["D107"]
+"tests/**/*" = [
+    "PLR2004",
+    "S101",
+    "TID252",
+    # No docstring in tests
+    "D",
+    # ignore too broad raises, as it can be use pytest.raises().match()
+    "PT011",
+    # Ignore eval(compile) as it is a known script execution
+    "S307",
+]
+"typings/**/*" = ["D", "I001"]
 
 
 [tool.pyright]

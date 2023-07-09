@@ -16,7 +16,6 @@
 for ModelEnv construction and parsing environment variables.
 """
 from __future__ import annotations
-
 import contextlib
 import logging
 import os

@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from __future__ import annotations
-
 import importlib
 import inspect
 import logging
@@ -195,7 +194,8 @@ def getattribute_from_module(module: types.ModuleType, attr: t.Any) -> t.Any:
 
 
 class _LazyAutoMapping(ConfigModelOrderedDict):
-    """Based on transformers.models.auto.configuration_auto._LazyAutoMapping
+    """Based on transformers.models.auto.configuration_auto._LazyAutoMapping.
+
     This OrderedDict values() and keys() returns the list instead, so you don't
     have to do list(mapping.values()) to get the list of values.
     """

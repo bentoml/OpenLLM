@@ -14,7 +14,6 @@
 
 """Generation utilities to be reused throughout."""
 from __future__ import annotations
-
 import typing as t
 
 import transformers
