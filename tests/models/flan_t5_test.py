@@ -38,19 +38,11 @@ def flan_t5_small_handle(
     deployment_mode: t.Literal["container", "local"],
     clean_context: contextlib.ExitStack,
 ):
-    with handler(
-        model=model,
-        model_id=model_id,
-        image_tag=clean_context.enter_context(
-            openllm.testing.prepare(
-                model,
-                model_id=model_id,
-                deployment_mode=deployment_mode,
-                clean_context=clean_context,
-            )
-        ),
-    ) as handle:
-        yield handle
+    with openllm.testing.prepare(
+        model, model_id=model_id, deployment_mode=deployment_mode, clean_context=clean_context
+    ) as image_tag:
+        with handler(model=model, model_id=model_id, image_tag=image_tag) as handle:
+            yield handle
 
 
 @pytest.fixture(scope="module")

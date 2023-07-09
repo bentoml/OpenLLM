@@ -82,6 +82,10 @@ class GenerationOutput:
     def marshaled_config(self) -> GenerationConfig:
         return bentoml_cattr.structure(self.configuration, GenerationConfig)
 
+    @property
+    def unmarshaled_config(self) -> dict[str, t.Any]:
+        return bentoml_cattr.unstructure(self)
+
 
 @attr.frozen(slots=True)
 class MetadataOutput:

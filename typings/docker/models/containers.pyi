@@ -15,25 +15,20 @@ class Container(Model):
     """
 
     @property
-    def name(self):  # -> None:
+    def name(self) -> str:
         """The name of the container."""
-        ...
     @property
     def image(self):  # -> None:
         """The image of the container."""
-        ...
     @property
     def labels(self) -> dict[Any, Any]:
         """The labels of a container as dictionary."""
-        ...
     @property
     def status(self) -> Literal["created", "restarting", "running", "removing", "paused", "exited"]:
         """The status of the container. For example, ``running``, or ``exited``."""
-        ...
     @property
     def ports(self) -> dict[Any, Any]:
         """The ports that the container exposes as a dictionary."""
-        ...
     def attach(self, **kwargs):
         """Attach to this container.
 
@@ -57,7 +52,6 @@ class Container(Model):
             :py:class:`docker.errors.APIError`
                 If the server returns an error.
         """
-        ...
     def attach_socket(self, **kwargs):
         """Like :py:meth:`attach`, but returns the underlying socket-like object
         for the HTTP request.

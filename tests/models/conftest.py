@@ -15,7 +15,6 @@
 from __future__ import annotations
 import asyncio
 import contextlib
-import itertools
 import logging
 import sys
 import time
@@ -50,49 +49,10 @@ if t.TYPE_CHECKING:
     from openllm._configuration import GenerationConfig
     from openllm._types import DictStrAny
     from openllm._types import ListAny
-    from openllm._types import LiteralRuntime
 
 else:
     DictStrAny = dict
     ListAny = list
-
-
-_FRAMEWORK_MAPPING = {"flan_t5": "google/flan-t5-small", "opt": "facebook/opt-125m"}
-_PROMPT_MAPPING = {
-    "qa": "Answer the following yes/no question by reasoning step-by-step. Can you write a whole Haiku in a single tweet?",
-    "default": "What is the weather in SF?",
-}
-
-
-def parametrise_local_llm(
-    model: str,
-) -> t.Generator[tuple[str, openllm.LLMRunner | openllm.LLM[t.Any, t.Any]], None, None]:
-    if model not in _FRAMEWORK_MAPPING:
-        pytest.skip(f"'{model}' is not yet supported in framework testing.")
-
-    runtime_impl: tuple[LiteralRuntime, ...] = tuple()
-    if model in openllm.MODEL_MAPPING_NAMES:
-        runtime_impl += ("pt",)
-    if model in openllm.MODEL_FLAX_MAPPING_NAMES:
-        runtime_impl += ("flax",)
-    if model in openllm.MODEL_TF_MAPPING_NAMES:
-        runtime_impl += ("tf",)
-
-    for framework, prompt in itertools.product(runtime_impl, _PROMPT_MAPPING.keys()):
-        llm, runner_kwargs = openllm.infer_auto_class(framework).for_model(
-            model, model_id=_FRAMEWORK_MAPPING[model], ensure_available=True, return_runner_kwargs=True
-        )
-        yield prompt, llm
-        runner = llm.to_runner(**runner_kwargs)
-        runner.init_local(quiet=True)
-        yield prompt, runner
-
-
-def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
-    if "prompt" in metafunc.fixturenames and "llm" in metafunc.fixturenames:
-        metafunc.parametrize(
-            "prompt,llm", [(p, llm) for p, llm in parametrise_local_llm(metafunc.function.__name__[5:-15])]
-        )
 
 
 class ResponseComparator(JSONSnapshotExtension):
@@ -103,8 +63,12 @@ class ResponseComparator(JSONSnapshotExtension):
         exclude: PropertyFilter | None = None,
         matcher: PropertyMatcher | None = None,
     ) -> SerializedData:
+        if openllm.utils.LazyType(ListAny).isinstance(data):
+            data = [d.unmarshaled_config for d in data]
+        else:
+            data = data.unmarshaled_config
         data = self._filter(data=data, depth=0, path=(), exclude=exclude, matcher=matcher)
-        return orjson.dumps(data.model_dump(), option=orjson.OPT_INDENT_2 | orjson.OPT_SORT_KEYS).decode()
+        return orjson.dumps(data, option=orjson.OPT_INDENT_2 | orjson.OPT_SORT_KEYS).decode()
 
     def matches(self, *, serialized_data: SerializableData, snapshot_data: SerializableData) -> bool:
         def convert_data(data: SerializableData) -> openllm.GenerationOutput | t.Sequence[openllm.GenerationOutput]:
@@ -262,7 +226,7 @@ def _container_handle(
 ):
     envvar = openllm.utils.EnvVarMixin(model)
 
-    with openllm.utils.reserve_free_port() as port:
+    with openllm.utils.reserve_free_port() as port, openllm.utils.reserve_free_port() as prom_port:
         pass
     container_name = f"openllm-{model}-{normalise_model_name(model_id)}".replace("-", "_")
     client = docker.from_env()
@@ -270,6 +234,7 @@ def _container_handle(
         container = client.containers.get(container_name)
         container.stop()
         container.wait()
+        container.remove()
     except docker.errors.NotFound:
         pass
 
@@ -291,10 +256,10 @@ def _container_handle(
         auto_remove=False,
         detach=True,
         device_requests=[docker.types.DeviceRequest(count=gpus, capabilities=[["gpu"]])],
-        ports={port: port},
+        ports={"3000/tcp": port, "3001/tcp": prom_port},
     )
 
-    yield DockerHandle(client, container_name, port)
+    yield DockerHandle(client, container.name, port)
 
     try:
         container.stop()

@@ -179,7 +179,9 @@ def make_tag(
             model_version,
         )
 
-    return bentoml.Tag.from_taglike(f"{implementation}-{model_name}:{model_version}".strip())
+    return bentoml.Tag.from_taglike(
+        f"{model_name if in_docker() and os.getenv('BENTO_PATH') is not None else implementation + '-' + model_name}:{model_version}".strip()
+    )
 
 
 @functools.lru_cache(maxsize=128)

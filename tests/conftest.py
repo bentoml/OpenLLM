@@ -13,11 +13,52 @@
 # limitations under the License.
 
 from __future__ import annotations
-from typing import TYPE_CHECKING
+import typing as t
 
+import openllm
+import itertools
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     import pytest
+    from openllm._types import LiteralRuntime
+
+
+_FRAMEWORK_MAPPING = {"flan_t5": "google/flan-t5-small", "opt": "facebook/opt-125m"}
+_PROMPT_MAPPING = {
+    "qa": "Answer the following yes/no question by reasoning step-by-step. Can you write a whole Haiku in a single tweet?",
+    "default": "What is the weather in SF?",
+}
+
+
+def parametrise_local_llm(
+    model: str,
+) -> t.Generator[tuple[str, openllm.LLMRunner | openllm.LLM[t.Any, t.Any]], None, None]:
+    if model not in _FRAMEWORK_MAPPING:
+        pytest.skip(f"'{model}' is not yet supported in framework testing.")
+
+    runtime_impl: tuple[LiteralRuntime, ...] = tuple()
+    if model in openllm.MODEL_MAPPING_NAMES:
+        runtime_impl += ("pt",)
+    if model in openllm.MODEL_FLAX_MAPPING_NAMES:
+        runtime_impl += ("flax",)
+    if model in openllm.MODEL_TF_MAPPING_NAMES:
+        runtime_impl += ("tf",)
+
+    for framework, prompt in itertools.product(runtime_impl, _PROMPT_MAPPING.keys()):
+        llm, runner_kwargs = openllm.infer_auto_class(framework).for_model(
+            model, model_id=_FRAMEWORK_MAPPING[model], ensure_available=True, return_runner_kwargs=True
+        )
+        yield prompt, llm
+        runner = llm.to_runner(**runner_kwargs)
+        runner.init_local(quiet=True)
+        yield prompt, runner
+
+
+def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
+    if "prompt" in metafunc.fixturenames and "llm" in metafunc.fixturenames:
+        metafunc.parametrize(
+            "prompt,llm", [(p, llm) for p, llm in parametrise_local_llm(metafunc.function.__name__[5:-15])]
+        )
 
 
 def pytest_sessionfinish(session: pytest.Session, exitstatus: int):
