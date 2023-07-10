@@ -5,6 +5,7 @@
             [openllm.components.side-bar.subs :as side-bar-subs]
             [openllm.subs :as root-subs]
             [openllm.components.chat.views :as views]
+            [openllm.api.components :as api-components]
             [reagent-mui.material.icon-button :refer [icon-button]]
             [reagent-mui.material.button :refer [button]]
             [reagent-mui.material.modal :refer [modal]]
@@ -88,10 +89,15 @@
            [:textarea {:class "pt-3 mt-1 w-full h-64 block border bg-gray-200"
                        :value @prompt-layout
                        :on-change on-change}]
-          [:div {:class "mt-4 flex justify-end space-x-2"}
-           [button {:type "button"
-                    :variant "outlined"
-                    :on-click #(rf/dispatch [::events/toggle-modal])} "Save"]]]]]]])))
+           [:div {:class "grid grid-cols-2"} 
+            [:div {:class ""}
+             [api-components/file-upload
+              {:callback-event ::events/set-prompt-layout
+               :class "w-7/12 mt-3 py-2 px-4 rounded cursor-pointer bg-gray-600 text-white hover:bg-gray-700 file:bg-gray-900 file:hidden"}]]
+            [:div {:class "mt-4 flex justify-end space-x-2"}
+             [button {:type "button"
+                      :variant "outlined"
+                      :on-click #(rf/dispatch [::events/toggle-modal])} "Save"]]]]]]]])))
 
 (defn chat-tab-contents
   "The component rendered if the chat tab is active."
