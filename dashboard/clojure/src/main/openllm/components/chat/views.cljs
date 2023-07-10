@@ -89,7 +89,7 @@
            [:textarea {:class "pt-3 mt-1 w-full h-64 block border bg-gray-200"
                        :value @prompt-layout
                        :on-change on-change}]
-           [:div {:class "grid grid-cols-2"} 
+           [:div {:class "grid grid-cols-2"}
             [:div {:class ""}
              [api-components/file-upload
               {:callback-event ::events/set-prompt-layout
