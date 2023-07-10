@@ -73,6 +73,6 @@ def test_build_with_custom_dockerfile(dockerfile_template: Path):
     assert openllm.build(
         "flan-t5",
         model_id=HF_INTERNAL_T5_TESTING,
-        overwrite_existing_bento=True,
+        overwrite=True,
         dockerfile_template=str(dockerfile_template),
     )
