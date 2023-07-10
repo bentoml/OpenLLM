@@ -11,9 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
-OpenLLM
-=======
+"""OpenLLM.
 
 An open platform for operating large language models in production. Fine-tune, serve,
 deploy, and monitor any LLMs with ease.
@@ -24,7 +22,6 @@ deploy, and monitor any LLMs with ease.
 * Native integration with BentoML and LangChain for custom LLM apps
 """
 from __future__ import annotations
-
 import logging
 import os
 import typing as t
@@ -39,7 +36,6 @@ if utils.DEBUG:
     utils.set_debug_mode(True)
     utils.set_quiet_mode(False)
 
-    utils.configure_logging()
     logging.basicConfig(level=logging.NOTSET)
 else:
     # configuration for bitsandbytes before import
@@ -64,16 +60,15 @@ else:
 _import_structure = {
     "_llm": ["LLM", "Runner", "LLMRunner", "LLMRunnable"],
     "_configuration": ["LLMConfig"],
-    "_package": ["build"],
     "exceptions": [],
     "_schema": ["GenerationInput", "GenerationOutput", "MetadataOutput"],
-    "utils": [],
+    "utils": ["infer_auto_class"],
     "models": [],
     "client": [],
     "playground": [],
-    "tests": [],
+    "testing": [],
     "serialisation": ["ggml", "transformers"],
-    "cli": ["start", "start_grpc"],
+    "cli": ["start", "start_grpc", "build", "import_model", "list_models"],
     # NOTE: models
     "models.auto": [
         "AutoConfig",
@@ -182,23 +177,23 @@ if t.TYPE_CHECKING:
     from . import exceptions as exceptions
     from . import models as models
     from . import playground as playground
-    from . import tests as tests
     from . import serialisation as serialisation
+    from . import testing as testing
 
     # Specific types import
     from ._configuration import LLMConfig as LLMConfig
     from ._llm import LLM as LLM
-    from ._llm import LLMRunner as LLMRunner
     from ._llm import LLMRunnable as LLMRunnable
+    from ._llm import LLMRunner as LLMRunner
     from ._llm import Runner as Runner
-    from ._package import build as build
     from ._schema import GenerationInput as GenerationInput
     from ._schema import GenerationOutput as GenerationOutput
     from ._schema import MetadataOutput as MetadataOutput
+    from .cli import build as build
+    from .cli import import_model as import_model
+    from .cli import list_models as list_models
     from .cli import start as start
     from .cli import start_grpc as start_grpc
-    from .serialisation import ggml as ggml
-    from .serialisation import transformers as transformers
     from .models.auto import CONFIG_MAPPING as CONFIG_MAPPING
     from .models.auto import MODEL_FLAX_MAPPING_NAMES as MODEL_FLAX_MAPPING_NAMES
     from .models.auto import MODEL_MAPPING_NAMES as MODEL_MAPPING_NAMES
@@ -213,6 +208,9 @@ if t.TYPE_CHECKING:
     from .models.opt import OPTConfig as OPTConfig
     from .models.stablelm import StableLMConfig as StableLMConfig
     from .models.starcoder import StarCoderConfig as StarCoderConfig
+    from .serialisation import ggml as ggml
+    from .serialisation import transformers as transformers
+    from .utils import infer_auto_class as infer_auto_class
 
     # NOTE: torch and cpm_kernels
     try:
@@ -286,6 +284,7 @@ else:
         globals()["__file__"],
         _import_structure,
         module_spec=__spec__,
+        doc=__doc__,
         extra_objects={
             "__version__": __version__,
             # The below is a special mapping that allows openllm to be used as a dictionary.

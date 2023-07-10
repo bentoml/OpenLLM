@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from __future__ import annotations
-
 import typing as t
 
 import attr
@@ -42,7 +41,7 @@ class PromptTemplate:
     input_variables: t.Sequence[str]
 
     def to_str(self, __partial_dict__: PartialDict | None = None, **attrs: str) -> str:
-        """Generate a prompt from the template and input variables"""
+        """Generate a prompt from the template and input variables."""
         if __partial_dict__:
             return _default_formatter.vformat(self.template, (), __partial_dict__)
         if not attrs:
@@ -58,7 +57,7 @@ class PromptTemplate:
 
     @classmethod
     def from_default(cls, model: str, /, **prompt_attrs: t.Any) -> PromptTemplate:
-        template = getattr(openllm.utils.EnvVarMixin(model).module, "DEFAULT_PROMPT_TEMPLATE")
+        template = openllm.utils.EnvVarMixin(model).module.DEFAULT_PROMPT_TEMPLATE
         if template is None:
             raise ValueError(f"Model {model} does not have a default prompt template.")
         if callable(template):

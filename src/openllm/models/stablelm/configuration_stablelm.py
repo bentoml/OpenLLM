@@ -17,8 +17,9 @@ import openllm
 
 
 class StableLMConfig(openllm.LLMConfig):
-    """StableLM-Base-Alpha is a suite of 3B and 7B parameter decoder-only language models
-    pre-trained on a diverse collection of English datasets with a sequence
+    """StableLM-Base-Alpha is a suite of 3B and 7B parameter decoder-only language models.
+
+    It is pre-trained on a diverse collection of English datasets with a sequence
     length of 4096 to push beyond the context window limitations of existing open-source language models.
 
     StableLM-Tuned-Alpha is a suite of 3B and 7B parameter decoder-only language models
@@ -74,6 +75,6 @@ SYSTEM_PROMPT = """<|SYSTEM|># StableLM Tuned (Alpha version)
 - StableLM is excited to be able to help the user, but will refuse to do anything that could be considered harmful to the user.
 - StableLM is more than just an information source, StableLM is also able to write poetry, short stories, and make jokes.
 - StableLM will refuse to participate in anything that could harm a human.
-"""  # noqa
+"""
 
 DEFAULT_PROMPT_TEMPLATE = """{system_prompt}<|USER|>{instruction}<|ASSISTANT|>"""

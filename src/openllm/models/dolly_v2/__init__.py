@@ -13,11 +13,12 @@
 # limitations under the License.
 
 from __future__ import annotations
-
 import typing as t
 
-from ...utils import is_torch_available, LazyModule
 from ...exceptions import MissingDependencyError
+from ...utils import LazyModule
+from ...utils import is_torch_available
+
 
 _import_structure = {
     "configuration_dolly_v2": ["DollyV2Config", "START_DOLLY_V2_COMMAND_DOCSTRING", "DEFAULT_PROMPT_TEMPLATE"],

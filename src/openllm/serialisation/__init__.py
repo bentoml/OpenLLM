@@ -37,15 +37,20 @@ llm.save_pretrained("./path/to/local-dolly")
 """
 
 from __future__ import annotations
+import typing as t
+
+import openllm
 
 from ..utils import LazyModule
-import typing as t
-import openllm
+
 
 if t.TYPE_CHECKING:
     import bentoml
-    from .._types import ModelProtocol, TokenizerProtocol
-    from .transformers import _M, _T
+
+    from .._llm import M
+    from .._llm import T
+    from .._types import ModelProtocol
+    from .._types import TokenizerProtocol
 
 
 def import_model(
@@ -80,7 +85,7 @@ def save_pretrained(llm: openllm.LLM[t.Any, t.Any], save_directory: str, **attrs
         raise ValueError(f"Unknown runtime: {llm.config['runtime']}")
 
 
-def load_model(llm: openllm.LLM[_M, t.Any], *decls: t.Any, **attrs: t.Any) -> ModelProtocol[_M]:
+def load_model(llm: openllm.LLM[M, t.Any], *decls: t.Any, **attrs: t.Any) -> ModelProtocol[M]:
     if llm.runtime == "transformers":
         return openllm.transformers.load_model(llm, *decls, **attrs)
     elif llm.runtime == "ggml":
@@ -89,7 +94,7 @@ def load_model(llm: openllm.LLM[_M, t.Any], *decls: t.Any, **attrs: t.Any) -> Mo
         raise ValueError(f"Unknown runtime: {llm.config['runtime']}")
 
 
-def load_tokenizer(llm: openllm.LLM[t.Any, _T]) -> TokenizerProtocol[_T]:
+def load_tokenizer(llm: openllm.LLM[t.Any, T]) -> TokenizerProtocol[T]:
     if llm.runtime == "transformers":
         return openllm.transformers.load_tokenizer(llm)
     elif llm.runtime == "ggml":
@@ -109,11 +114,6 @@ _extras = {
 _import_structure: dict[str, list[str]] = {"ggml": [], "transformers": []}
 
 if t.TYPE_CHECKING:
-    from . import import_model as import_model
-    from . import get as get
-    from . import save_pretrained as save_pretrained
-    from . import load_model as load_model
-    from . import load_tokenizer as load_tokenizer
     from . import ggml as ggml
     from . import transformers as transformers
 else:

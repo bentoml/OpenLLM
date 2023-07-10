@@ -12,19 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from __future__ import annotations
-
 import typing as t
 
 import openllm
 
-from ..._prompt import default_formatter
 from .configuration_flan_t5 import DEFAULT_PROMPT_TEMPLATE
+from ..._prompt import default_formatter
 
 
 if t.TYPE_CHECKING:
     import torch
 
-    import transformers  # noqa
+    import transformers  # noqa: F401
 else:
     torch = openllm.utils.LazyLoader("torch", globals(), "torch")
 
@@ -60,7 +59,7 @@ class FlanT5(openllm.LLM["transformers.T5ForConditionalGeneration", "transformer
                 raise RuntimeError(
                     f"Missing variable '{e.args[0]}' (required: {template_variables}) in the prompt template. "
                     "Use 'use_default_prompt_template=False' to disable the default prompt template."
-                )
+                ) from None
         else:
             prompt_text = prompt
 

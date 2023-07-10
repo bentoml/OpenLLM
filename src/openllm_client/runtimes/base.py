@@ -13,41 +13,36 @@
 # limitations under the License.
 
 from __future__ import annotations
-
 import asyncio
+import logging
+import sys
 import typing as t
 from abc import abstractmethod
+from http import HTTPStatus
 from urllib.parse import urljoin
 
 import httpx
 
 import bentoml
 import openllm
-import logging
 
 
 # NOTE: We need to do this so that overload can register
 # correct overloads to typing registry
-if hasattr(t, "get_overloads"):
+if sys.version_info[:2] >= (3, 11):
     from typing import overload
 else:
     from typing_extensions import overload
 
 if t.TYPE_CHECKING:
     import transformers
-    from openllm.models.auto.factory import _BaseAutoLLMClass
+    from openllm._types import LiteralRuntime
 
     class AnnotatedClient(bentoml.client.Client):
         def health(self, *args: t.Any, **attrs: t.Any) -> t.Any:
             ...
 
         async def async_health(self) -> t.Any:
-            ...
-
-        def call(self, name: str, inputs: t.Any, **attrs: t.Any) -> t.Any:
-            ...
-
-        async def acall(self, name: str, inputs: t.Any, **attrs: t.Any) -> t.Any:
             ...
 
         def generate_v1(self, qa: openllm.GenerationInput) -> dict[str, t.Any]:
@@ -70,7 +65,10 @@ def in_async_context() -> bool:
         return False
 
 
-class ClientMixin:
+T = t.TypeVar("T")
+
+
+class ClientMeta(t.Generic[T]):
     _api_version: str
     _client_class: type[bentoml.client.Client]
 
@@ -84,9 +82,9 @@ class ClientMixin:
     def __init__(self, address: str, timeout: int = 30):
         self._address = address
         self._timeout = timeout
-        assert self._host and self._port, "Make sure to setup _host and _port based on your client implementation."
 
     def __init_subclass__(cls, *, client_type: t.Literal["http", "grpc"] = "http", api_version: str = "v1"):
+        """Initialise subclass for HTTP and gRPC client type."""
         cls._client_class = bentoml.client.HTTPClient if client_type == "http" else bentoml.client.GrpcClient
         cls._api_version = api_version
 
@@ -102,7 +100,7 @@ class ClientMixin:
         return self.__agent__
 
     @property
-    def _metadata(self) -> dict[str, t.Any]:
+    def _metadata(self) -> T:
         if in_async_context():
             return httpx.post(urljoin(self._address, f"/{self._api_version}/metadata")).json()
         return self.call("metadata")
@@ -114,7 +112,7 @@ class ClientMixin:
 
     @property
     @abstractmethod
-    def framework(self) -> t.Literal["pt", "flax", "tf"]:
+    def framework(self) -> LiteralRuntime:
         raise NotImplementedError
 
     @property
@@ -135,10 +133,7 @@ class ClientMixin:
     @property
     def llm(self) -> openllm.LLM[t.Any, t.Any]:
         if self.__llm__ is None:
-            self.__llm__ = t.cast(
-                "_BaseAutoLLMClass",
-                openllm[self.framework],  # type: ignore (internal API)
-            ).for_model(self.model_name)
+            self.__llm__ = openllm.infer_auto_class(self.framework).for_model(self.model_name)
         return self.__llm__
 
     @property
@@ -171,7 +166,7 @@ class ClientMixin:
         ...
 
 
-class BaseClient(ClientMixin):
+class BaseClient(ClientMeta[T]):
     def health(self) -> t.Any:
         raise NotImplementedError
 
@@ -183,22 +178,32 @@ class BaseClient(ClientMixin):
     def query(self, prompt: str, *, return_raw_response: t.Literal[True] = ..., **attrs: t.Any) -> dict[str, t.Any]:
         ...
 
-    def query(self, prompt: str, **attrs: t.Any) -> dict[str, t.Any] | str:
-        return_raw_response, prompt, generate_kwargs, postprocess_kwargs = self.prepare(prompt, **attrs)
+    @overload
+    def query(self, prompt: str, *, return_attrs: t.Literal[True] = True, **attrs: t.Any) -> openllm.GenerationOutput:
+        ...
+
+    def query(self, prompt: str, **attrs: t.Any) -> openllm.GenerationOutput | dict[str, t.Any] | str:
+        # NOTE: We set use_default_prompt_template to False for now.
+        use_default_prompt_template = attrs.pop("use_default_prompt_template", False)
+        return_attrs = attrs.pop("return_attrs", False)
+        return_raw_response, prompt, generate_kwargs, postprocess_kwargs = self.prepare(
+            prompt, use_default_prompt_template=use_default_prompt_template, **attrs
+        )
         inputs = openllm.GenerationInput(prompt=prompt, llm_config=self.config.model_construct_env(**generate_kwargs))
         if in_async_context():
             result = httpx.post(
                 urljoin(self._address, f"/{self._api_version}/generate"),
-                json=openllm.utils.bentoml_cattr.unstructure(inputs),
+                json=inputs.model_dump(),
                 timeout=self.timeout,
             ).json()
         else:
-            result = self.call("generate", inputs)
+            result = self.call("generate", inputs.model_dump())
         r = self.postprocess(result)
 
+        if return_attrs:
+            return r
         if return_raw_response:
             return openllm.utils.bentoml_cattr.unstructure(r)
-
         return self.llm.postprocess_generate(prompt, r.responses, **postprocess_kwargs)
 
     def ask_agent(
@@ -235,9 +240,20 @@ class BaseClient(ClientMixin):
         raise NotImplementedError
 
 
-class BaseAsyncClient(ClientMixin):
+class BaseAsyncClient(ClientMeta[T]):
     async def health(self) -> t.Any:
         raise NotImplementedError
+
+    @overload
+    async def query(
+        self,
+        prompt: str,
+        *,
+        return_attrs: t.Literal[True] = True,
+        return_raw_response: bool | None = ...,
+        **attrs: t.Any,
+    ) -> openllm.GenerationOutput:
+        ...
 
     @overload
     async def query(self, prompt: str, *, return_raw_response: t.Literal[False] = ..., **attrs: t.Any) -> str:
@@ -249,19 +265,21 @@ class BaseAsyncClient(ClientMixin):
     ) -> dict[str, t.Any]:
         ...
 
-    async def query(self, prompt: str, **attrs: t.Any) -> dict[str, t.Any] | str:
+    async def query(self, prompt: str, **attrs: t.Any) -> dict[str, t.Any] | str | openllm.GenerationOutput:
         # NOTE: We set use_default_prompt_template to False for now.
         use_default_prompt_template = attrs.pop("use_default_prompt_template", False)
+        return_attrs = attrs.pop("return_attrs", False)
         return_raw_response, prompt, generate_kwargs, postprocess_kwargs = self.prepare(
             prompt, use_default_prompt_template=use_default_prompt_template, **attrs
         )
         inputs = openllm.GenerationInput(prompt=prompt, llm_config=self.config.model_construct_env(**generate_kwargs))
-        res = await self.acall("generate", inputs)
+        res = await self.acall("generate", inputs.model_dump())
         r = self.postprocess(res)
 
+        if return_attrs:
+            return r
         if return_raw_response:
             return openllm.utils.bentoml_cattr.unstructure(r)
-
         return self.llm.postprocess_generate(prompt, r.responses, **postprocess_kwargs)
 
     async def ask_agent(
@@ -273,13 +291,17 @@ class BaseAsyncClient(ClientMixin):
         agent_type: t.LiteralString = "hf",
         **attrs: t.Any,
     ) -> t.Any:
-        """Async version of agent.run"""
+        """Async version of agent.run."""
         if agent_type == "hf":
             return await self._run_hf_agent(task, return_code=return_code, remote=remote, **attrs)
         else:
             raise RuntimeError(f"Unknown 'agent_type={agent_type}'")
 
     async def _run_hf_agent(self, *args: t.Any, **kwargs: t.Any) -> t.Any:
+        if not openllm.utils.is_transformers_supports_agent():
+            raise RuntimeError(
+                "This version of transformers does not support agent.run. Make sure to upgrade to transformers>4.30.0"
+            )
         if len(args) > 1:
             raise ValueError("'args' should only take one positional argument.")
         task = kwargs.pop("task", args[0])
@@ -293,7 +315,7 @@ class BaseAsyncClient(ClientMixin):
 
         _hf_agent = self._hf_agent
 
-        prompt = _hf_agent.format_prompt(task)
+        prompt = t.cast(str, _hf_agent.format_prompt(task))
         stop = ["Task:"]
         async with httpx.AsyncClient(timeout=httpx.Timeout(self.timeout)) as client:
             response = await client.post(
@@ -303,7 +325,7 @@ class BaseAsyncClient(ClientMixin):
                     "parameters": {"max_new_tokens": 200, "return_full_text": False, "stop": stop},
                 },
             )
-            if response.status_code != 200:
+            if response.status_code != HTTPStatus.OK:
                 raise ValueError(f"Error {response.status_code}: {response.json()}")
 
         result = response.json()[0]["generated_text"]

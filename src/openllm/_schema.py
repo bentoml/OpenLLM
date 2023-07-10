@@ -11,11 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
-Schema definition for OpenLLM. This can be use for client interaction.
-"""
+"""Schema definition for OpenLLM. This can be use for client interaction."""
 from __future__ import annotations
-
 import functools
 import typing as t
 
@@ -23,6 +20,8 @@ import attr
 import inflection
 
 import openllm
+from openllm._configuration import GenerationConfig
+from openllm.utils import bentoml_cattr
 
 
 if t.TYPE_CHECKING:
@@ -78,6 +77,14 @@ class GenerationOutput:
 
     configuration: t.Dict[str, t.Any]
     """A mapping of configuration values for given system."""
+
+    @property
+    def marshaled_config(self) -> GenerationConfig:
+        return bentoml_cattr.structure(self.configuration, GenerationConfig)
+
+    @property
+    def unmarshaled(self) -> dict[str, t.Any]:
+        return bentoml_cattr.unstructure(self)
 
 
 @attr.frozen(slots=True)

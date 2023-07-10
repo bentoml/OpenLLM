@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from __future__ import annotations
-
 import typing as t
 
 import openllm
@@ -27,10 +26,11 @@ else:
 
 
 class MPTConfig(openllm.LLMConfig):
-    """MPT is a decoder-style transformer pretrained from scratch on
-    English text and code. This model was trained by [MosaicML](https://www.mosaicml.com/).
+    """MPT is a decoder-style transformer pretrained from scratch on English text and code.
 
-    `openllm.MPT` encapsulate a family of MPT variants that is publicly available
+    This model was trained by [MosaicML](https://www.mosaicml.com/).
+
+    ``openllm.MPT`` encapsulate a family of MPT variants that is publicly available
     on HuggingFace. Refers [HuggingFace's MosaicML page](https://huggingface.co/mosaicml)
     for more details on specific models.
     """

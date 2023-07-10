@@ -17,8 +17,7 @@ import openllm
 
 
 class StarCoderConfig(openllm.LLMConfig):
-    """The StarCoder models are 15.5B parameter models trained on 80+ programming languages from
-    [The Stack (v1.2)](https://huggingface.co/datasets/bigcode/the-stack), with opt-out requests excluded.
+    """The StarCoder models are 15.5B parameter models trained on 80+ programming languages from [The Stack (v1.2)](https://huggingface.co/datasets/bigcode/the-stack), with opt-out requests excluded.
 
     The model uses [Multi Query Attention](https://arxiv.org/abs/1911.02150),
     [a context window of 8192 tokens](https://arxiv.org/abs/2205.14135), and was trained using the

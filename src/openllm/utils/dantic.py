@@ -14,71 +14,40 @@
 """A shim provides usable transition from pydantic to attrs."""
 
 from __future__ import annotations
-
 import functools
 import importlib
 import os
+import sys
 import typing as t
 from enum import Enum
 
 import attr
 import click
-import sys
 import click_option_group as cog
 import inflection
 import orjson
-from click import ParamType, shell_completion as sc, types as click_types
+from click import ParamType
+from click import shell_completion as sc
+from click import types as click_types
 
 import openllm
 
 
-# NOTE: We need to do this so that overload can register
-# correct overloads to typing registry
-if hasattr(t, "get_overloads"):
-    from typing import overload
-else:
-    from typing_extensions import overload
-
 if t.TYPE_CHECKING:
     from attr import _ValidatorType
 
-    from .._types import ClickFunctionWrapper
-    from .._types import F
-    from .._types import O_co
-    from .._types import P
+    from .._types import ListAny
 
 _T = t.TypeVar("_T")
 
 
-@overload
 def attrs_to_options(
     name: str,
     field: attr.Attribute[t.Any],
     model_name: str,
     typ: type[t.Any] | None = None,
     suffix_generation: bool = False,
-) -> F[..., F[..., openllm.LLMConfig]]:
-    ...
-
-
-@overload
-def attrs_to_options(  # type: ignore (overlapping overload)
-    name: str,
-    field: attr.Attribute[O_co],
-    model_name: str,
-    typ: type[t.Any] | None = None,
-    suffix_generation: bool = False,
-) -> F[..., F[P, O_co]]:
-    ...
-
-
-def attrs_to_options(
-    name: str,
-    field: attr.Attribute[t.Any],
-    model_name: str,
-    typ: type[t.Any] | None = None,
-    suffix_generation: bool = False,
-) -> t.Callable[..., ClickFunctionWrapper[..., t.Any]]:
+):
     # TODO: support parsing nested attrs class and Union
     envvar = field.metadata["env"]
     dasherized = inflection.dasherize(name)
@@ -86,6 +55,8 @@ def attrs_to_options(
 
     if typ in (None, attr.NOTHING):
         typ = field.type
+        if typ is None:
+            raise RuntimeError(f"Failed to parse type for {name}")
 
     full_option_name = f"--{dasherized}"
     if field.type is bool:
@@ -116,7 +87,7 @@ def env_converter(value: t.Any, env: str | None = None) -> t.Any:
             try:
                 return orjson.loads(value.lower())
             except orjson.JSONDecodeError as err:
-                raise RuntimeError(f"Failed to parse ({value!r}) from '{env}': {err}")
+                raise RuntimeError(f"Failed to parse ({value!r}) from '{env}': {err}") from None
     return value
 
 
@@ -132,14 +103,16 @@ def Field(
     use_default_converter: bool = True,
     **attrs: t.Any,
 ):
-    """A decorator that extends attr.field with additional arguments, which provides the same
-    interface as pydantic's Field.
+    """A decorator that extends attr.field with additional arguments, which provides the same interface as pydantic's Field.
 
     By default, if both validator and ge are provided, then then ge will be
     piped into first, then all of the other validator will be run afterwards.
 
     Args:
+        default: The default value for ``dantic.Field``. Defaults to ``None``.
         ge: Greater than or equal to. Defaults to None.
+        le: Less than or equal to. Defaults to None.
+        validator: Optional attrs-compatible validators type. Default to None
         description: the documentation for the field. Defaults to None.
         env: the environment variable to read from. Defaults to None.
         auto_default: a bool indicating whether to use the default value as the environment.
@@ -150,7 +123,7 @@ def Field(
                                to True. If set to False, then the default converter will not be used.
                                The default converter converts a given value from the environment variable
                                for this given Field.
-        **kwargs: The rest of the arguments are passed to attr.field
+        **attrs: The rest of the arguments are passed to attr.field
     """
     metadata = attrs.pop("metadata", {})
     if description is None:
@@ -205,13 +178,14 @@ def parse_type(field_type: t.Any) -> ParamType | tuple[ParamType]:
     """
     from . import lenient_issubclass
 
-    assert t.get_origin(field_type) is not t.Union, "Unions are not supported"
+    if t.get_origin(field_type) is t.Union:
+        raise NotImplementedError("Unions are not supported")
     # enumeration strings or other Enum derivatives
     if lenient_issubclass(field_type, Enum):
         return EnumChoice(enum=field_type, case_sensitive=True)
     # literals are enum-like with way less functionality
     if is_literal(field_type):
-        return LiteralChoice(enum=field_type, case_sensitive=True)
+        return LiteralChoice(value=field_type, case_sensitive=True)
     # modules, classes, functions
     if is_typing(field_type):
         return ModuleType()
@@ -248,6 +222,7 @@ def is_typing(field_type: type) -> bool:
 
 def is_literal(field_type: type) -> bool:
     """Checks whether the given field type is a Literal type or not.
+
     Literals are weird: isinstance and subclass do not work, so you compare
     the origin with the Literal declaration itself.
 
@@ -266,63 +241,76 @@ class ModuleType(ParamType):
 
     def _import_object(self, value: str) -> t.Any:
         module_name, class_name = value.rsplit(".", maxsplit=1)
-        assert all(s.isidentifier() for s in module_name.split(".")), f"'{value}' is not a valid module name"
-        assert class_name.isidentifier(), f"Variable '{class_name}' is not a valid identifier"
+        if not all(s.isidentifier() for s in module_name.split(".")):
+            raise ValueError(f"'{value}' is not a valid module name")
+        if not class_name.isidentifier():
+            raise ValueError(f"Variable '{class_name}' is not a valid identifier")
 
         module = importlib.import_module(module_name)
         if class_name:
             try:
                 return getattr(module, class_name)
             except AttributeError:
-                raise ImportError(f"Module '{module_name}' does not define a '{class_name}' variable.")
+                raise ImportError(f"Module '{module_name}' does not define a '{class_name}' variable.") from None
         return None
 
-    def convert(self, value: str, param: click.Parameter | None, ctx: click.Context | None) -> t.Any:
+    def convert(self, value: str | t.Any, param: click.Parameter | None, ctx: click.Context | None) -> t.Any:
         try:
             if isinstance(value, str):
                 return self._import_object(value)
             return value
         except Exception as exc:
-            self.fail(f"'{value}' is not a valid object ({type(exc)}: {str(exc)})", param, ctx)
+            self.fail(f"'{value}' is not a valid object ({type(exc)}: {exc!s})", param, ctx)
 
 
 class EnumChoice(click.Choice):
     name = "enum"
 
     def __init__(self, enum: Enum, case_sensitive: bool = False):
+        """Enum type support for click that extends ``click.Choice``.
+
+        Args:
+            enum: Given enum
+            case_sensitive: Whether this choice should be case case_sensitive.
+        """
         self.mapping = enum
-        self.internal_type = enum
-        super().__init__([e.name for e in self.mapping], case_sensitive)
+        self.internal_type = type(enum)
+        choices: ListAny = [e.name for e in enum.__class__]
+        super().__init__(choices, case_sensitive)
 
     def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> Enum:
         if isinstance(value, self.internal_type):
             return value
         result = super().convert(value, param, ctx)
         if isinstance(result, str):
-            result = self.mapping[result]
+            result = self.internal_type[result]
         return result
 
 
 class LiteralChoice(EnumChoice):
     name = "literal"
 
-    def __init__(self, enum: t.LiteralString, case_sensitive: bool = False):
+    def __init__(self, value: t.Any, case_sensitive: bool = False):
+        """Literal support for click."""
         # expect every literal value to belong to the same primitive type
-        values = list(enum.__args__)
+        values = list(value.__args__)
         item_type = type(values[0])
-        assert all(isinstance(v, item_type) for v in values), f"Field {enum} contains items of different types"
+        if not all(isinstance(v, item_type) for v in values):
+            raise ValueError(f"Field {value} contains items of different types.")
         self.internal_type = item_type
         self.mapping = {str(v): v for v in values}
         super(EnumChoice, self).__init__(list(self.mapping.keys()), case_sensitive)
 
 
-def allows_multiple(field_type: t.Any) -> bool:
+def allows_multiple(field_type: type) -> bool:
     """Checks whether the current type allows for multiple arguments to be provided as input or not.
+
     For containers, it exploits click's support for lists and such to use the same option multiple times
     to create a complex object: `python run.py --subsets train --subsets test`
     # becomes `subsets: ["train", "test"]`.
+
     Args:
-        field_type (type): pydantic type
+        field_type: pydantic type.
 
     Returns:
         bool: true if it's a composite field (lists, containers and so on), false otherwise
@@ -360,8 +348,7 @@ def is_mapping(field_type: type) -> bool:
 
 
 def is_container(field_type: type) -> bool:
-    """Checks whether the current type is a container type ('contains' other types), like
-    lists and tuples.
+    """Checks whether the current type is a container type ('contains' other types), like lists and tuples.
 
     Args:
         field_type: pydantic field type
@@ -391,12 +378,13 @@ def parse_container_args(field_type: type[t.Any]) -> ParamType | tuple[ParamType
     Returns:
         ParamType | tuple[ParamType]: single click-compatible type or a tuple
     """
-    assert is_container(field_type), "Field type is not a container"
+    if not is_container(field_type):
+        raise ValueError("Field type is not a container type.")
     args = t.get_args(field_type)
     # Early out for untyped containers: standard lists, tuples, List[Any]
     # Use strings when the type is unknown, avoid click's type guessing
     if len(args) == 0:
-        return str
+        return click_types.convert_type(str)
     # Early out for homogenous containers: Tuple[int], List[str]
     if len(args) == 1:
         return parse_single_arg(args[0])
@@ -409,6 +397,7 @@ def parse_container_args(field_type: type[t.Any]) -> ParamType | tuple[ParamType
 
 def parse_single_arg(arg: type) -> ParamType:
     """Returns the click-compatible type for container origin types.
+
     In this case, returns string when it's not inferrable, a JSON for mappings
     and the original type itself in every other case (ints, floats and so on).
     Bytes is a special case, not natively handled by click.
@@ -421,13 +410,13 @@ def parse_single_arg(arg: type) -> ParamType:
     """
     # When we don't know the type, we choose 'str'
     if arg is t.Any:
-        return str
+        return click_types.convert_type(str)
     # For containers and nested models, we use JSON
     if is_container(arg):
         return JsonType()
     if openllm.utils.lenient_issubclass(arg, bytes):
         return BytesType()
-    return arg
+    return click_types.convert_type(arg)
 
 
 class BytesType(ParamType):
@@ -439,7 +428,7 @@ class BytesType(ParamType):
         try:
             return str.encode(value)
         except Exception as exc:
-            self.fail(f"'{value}' is not a valid string ({str(exc)})", param, ctx)
+            self.fail(f"'{value}' is not a valid string ({exc!s})", param, ctx)
 
 
 CYGWIN = sys.platform.startswith("cygwin")
@@ -470,17 +459,14 @@ class CudaValueType(ParamType):
         return var
 
     def shell_complete(self, ctx: click.Context, param: click.Parameter, incomplete: str) -> list[sc.CompletionItem]:
-        """Return a list of
-        :class:`~click.shell_completion.CompletionItem` objects for the
-        incomplete value. Most types do not provide completions, but
-        some do, and this allows custom types to provide custom
-        completions as well.
+        """Return a list of :class:`~click.shell_completion.CompletionItem` objects for the incomplete value.
 
-        :param ctx: Invocation context for this command.
-        :param param: The parameter that is requesting completion.
-        :param incomplete: Value being completed. May be empty.
+        Most types do not provide completions, but some do, and this allows custom types to provide custom completions as well.
 
-        .. versionadded:: 8.0
+        Args:
+            ctx: Invocation context for this command.
+            param: The parameter that is requesting completion.
+            incomplete: Value being completed. May be empty.
         """
         from ..utils import gpu_count
 
@@ -506,6 +492,7 @@ class CudaValueType(ParamType):
         return tuple(self.typ(x, param, ctx) for x in value.split(","))
 
     def __repr__(self) -> str:
+        """CUDA is a click.STRING extension."""
         return "STRING"
 
 
@@ -516,6 +503,11 @@ class JsonType(ParamType):
     name = "json"
 
     def __init__(self, should_load: bool = True) -> None:
+        """Support JSON type for click.ParamType.
+
+        Args:
+        should_load: Whether to load the JSON. Default to True. If False, the value won't be converted.
+        """
         super().__init__()
         self.should_load = should_load
 
@@ -525,4 +517,4 @@ class JsonType(ParamType):
         try:
             return orjson.loads(value)
         except orjson.JSONDecodeError as exc:
-            self.fail(f"'{value}' is not a valid JSON string ({str(exc)})", param, ctx)
+            self.fail(f"'{value}' is not a valid JSON string ({exc!s})", param, ctx)

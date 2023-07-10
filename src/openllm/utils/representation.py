@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from __future__ import annotations
-
 import typing as t
 from abc import abstractmethod
 
@@ -27,6 +26,7 @@ if t.TYPE_CHECKING:
 
 class ReprMixin:
     """This class display possible representation of given class.
+
     It can be used for implementing __rich_pretty__ and __pretty__ methods in the future.
     Most subclass needs to implement a __repr_keys__ property.
 
@@ -41,12 +41,20 @@ class ReprMixin:
         """This can be overriden by base class using this mixin."""
 
     def __repr__(self) -> str:
+        """The `__repr__` for any subclass of Mixin.
+
+        It will print nicely the class name with each of the fields under '__repr_keys__' as kv JSON dict.
+        """
         from . import bentoml_cattr
 
         serialized = {k: bentoml_cattr.unstructure(v) if attr.has(v) else v for k, v in self.__repr_args__()}
         return f"{self.__class__.__name__} {orjson.dumps(serialized, option=orjson.OPT_INDENT_2).decode()}"
 
     def __str__(self) -> str:
+        """The string representation of the given Mixin subclass.
+
+        It will contains all of the attributes from __repr_keys__
+        """
         return self.__repr_str__(" ")
 
     def __repr_name__(self) -> str:
@@ -54,7 +62,12 @@ class ReprMixin:
         return self.__class__.__name__
 
     def __repr_str__(self, join_str: str) -> str:
-        return join_str.join(repr(v) if a is None else f"{a}={repr(v)}" for a, v in self.__repr_args__())
+        """To be used with __str__."""
+        return join_str.join(repr(v) if a is None else f"{a}={v!r}" for a, v in self.__repr_args__())
 
     def __repr_args__(self) -> ReprArgs:
+        """This can also be overriden by base class using this mixin.
+
+        By default it does a getattr of the current object from __repr_keys__.
+        """
         return ((k, getattr(self, k)) for k in self.__repr_keys__)

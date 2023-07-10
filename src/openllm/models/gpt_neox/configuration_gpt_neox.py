@@ -14,14 +14,13 @@
 
 from __future__ import annotations
 
-from __future__ import annotations
-
 import openllm
 
 
 class GPTNeoXConfig(openllm.LLMConfig):
-    """GPTNeoX is an autoregressive language model trained on the Pile, whose weights will be made freely and
-    openly available to the public through a permissive license. It is, to the best of our knowledge, the largest dense autoregressive model
+    """GPTNeoX is an autoregressive language model trained on the Pile, whose weights will be made freely and openly available to the public through a permissive license.
+
+    It is, to the best of our knowledge, the largest dense autoregressive model
     that has publicly available weights at the time of submission. The training and evaluation code, as well as the model weights,
     can be found at https://github.com/EleutherAI/gpt-neox.
 

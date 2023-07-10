@@ -11,8 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
-Configuration utilities for OpenLLM. All model configuration will inherit from ``openllm.LLMConfig``.
+"""Configuration utilities for OpenLLM. All model configuration will inherit from ``openllm.LLMConfig``.
 
 Highlight feature: Each fields in ``openllm.LLMConfig`` will also automatically generate a environment
 variable based on its name field.
@@ -47,7 +46,6 @@ dynamically during serve, ahead-of-serve or per requests.
 Refer to ``openllm.LLMConfig`` docstring for more information.
 """
 from __future__ import annotations
-
 import copy
 import enum
 import logging
@@ -68,56 +66,48 @@ from deepmerge.merger import Merger
 import openllm
 
 from .exceptions import ForbiddenAttributeError
+from .utils import ENV_VARS_TRUE_VALUES
 from .utils import LazyType
-from .utils import ReprMixin, ENV_VARS_TRUE_VALUES
+from .utils import ReprMixin
 from .utils import bentoml_cattr
 from .utils import codegen
 from .utils import dantic
-from .utils import first_not_none, field_env_key
+from .utils import field_env_key
+from .utils import first_not_none
 from .utils import lenient_issubclass
 from .utils import non_intrusive_setattr
 from .utils import requires_dependencies
 
 
-if hasattr(t, "Required"):
-    from typing import Required
-else:
-    from typing_extensions import Required
-
-if hasattr(t, "NotRequired"):
-    from typing import NotRequired
-else:
-    from typing_extensions import NotRequired
-
-if hasattr(t, "dataclass_transform"):
-    from typing import dataclass_transform
-else:
-    from typing_extensions import dataclass_transform
-
-# NOTE: We need to do this so that overload can register
+# NOTE: We need to do check overload import
+# so that it can register
 # correct overloads to typing registry
-if hasattr(t, "get_overloads"):
+if sys.version_info[:2] >= (3, 11):
+    from typing import NotRequired
+    from typing import Required
+    from typing import dataclass_transform
     from typing import overload
 else:
+    from typing_extensions import NotRequired
+    from typing_extensions import Required
+    from typing_extensions import dataclass_transform
     from typing_extensions import overload
 
 _T = t.TypeVar("_T")
 
 
 if t.TYPE_CHECKING:
+    import click
     import peft
-    from attr import _CountingAttr  # type: ignore
-    from attr import _make_init  # type: ignore
-    from attr import _transform_attrs  # type: ignore
+    from attr import _CountingAttr
+    from attr import _make_init
+    from attr import _transform_attrs
     from attr._compat import set_closure_cell
 
     import transformers
     from transformers.generation.beam_constraints import Constraint
 
-    from ._types import ClickFunctionWrapper
-    from ._types import F
-    from ._types import O_co
-    from ._types import P
+    from ._types import AnyCallable
 
     DictStrAny = dict[str, t.Any]
     ListStr = list[str]
@@ -154,10 +144,10 @@ config_merger = Merger(
 
 # case insensitive, but rename to conform with type
 class _PeftEnumMeta(enum.EnumMeta):
-    def __getitem__(self, __key: str | t.Any) -> PeftType:
+    def __getitem__(self, __key: str | t.Any) -> enum.Enum:
         if isinstance(__key, str):
             __key = inflection.underscore(__key).upper()
-        return super().__getitem__(__key)
+        return self._member_map_[__key]
 
 
 # vendorred from peft.utils.config.PeftType
@@ -171,11 +161,11 @@ class PeftType(enum.Enum, metaclass=_PeftEnumMeta):
     ADAPTION_PROMPT = "ADAPTION_PROMPT"
 
     @classmethod
-    def _missing_(cls, value: object) -> PeftType | None:
+    def _missing_(cls, value: object) -> enum.Enum | None:
         if isinstance(value, str):
             normalized = inflection.underscore(value).upper()
             if normalized in cls._member_map_:
-                return cls[normalized]
+                return cls._member_map_[normalized]
 
     @classmethod
     def supported(cls) -> set[str]:
@@ -183,6 +173,11 @@ class PeftType(enum.Enum, metaclass=_PeftEnumMeta):
 
     def to_str(self) -> str:
         return self.value
+
+    @staticmethod
+    def get(__key: str | t.Any) -> PeftType:
+        """type-safe getitem."""
+        return t.cast(PeftType, PeftType[__key])
 
 
 _PEFT_TASK_TYPE_TARGET_MAPPING = {"causal_lm": "CAUSAL_LM", "seq2seq_lm": "SEQ_2_SEQ_LM"}
@@ -200,14 +195,33 @@ def _adapter_converter(value: AdapterType | str | PeftType | None) -> PeftType:
         raise ValueError("'AdapterType' cannot be None.")
     if isinstance(value, PeftType):
         return value
-    if isinstance(value, str) and value not in PeftType.supported():
+    if value not in PeftType.supported():
         raise ValueError(f"Given '{value}' is not a supported adapter type.")
-    return PeftType[value]
+    return PeftType.get(value)
 
 
 @attr.define(slots=True)
 class FineTuneConfig:
-    """FineTuneConfig defines a default value for fine-tuning this any given LLM. For example:
+    """FineTuneConfig defines a default value for fine-tuning this any given LLM.
+
+    For example:
+
+    ```python
+    class FalconConfig(openllm.LLMConfig):
+
+        __config__ = {
+            "fine_tune_strategies": (
+                {
+                    "adapter_type": "lora",
+                    "r": 64,
+                    "lora_alpha": 16,
+                    "lora_dropout": 0.1,
+                    "bias": "none",
+                    "target_modules": ["query_key_value", "dense", "dense_h_to_4h", "dense_4h_to_h"],
+                },
+            ),
+        }
+    ```
 
     This is a lower level API that leverage `peft` as well as openllm.LLMConfig to create default
     and customization
@@ -318,8 +332,7 @@ class FineTuneConfig:
         docs: str | None = None,
         **attrs: t.Any,
     ) -> type[FineTuneConfig]:
-        """A loose codegen to create default subclass for given adapter config type"""
-
+        """A loose codegen to create default subclass for given adapter config type."""
         _new_default = {
             "adapter_type": PeftType[adapter_type],
             "adapter_config": attrs,
@@ -355,8 +368,7 @@ class FineTuneConfig:
 
 @attr.frozen(slots=True, repr=False)
 class GenerationConfig(ReprMixin):
-    """Generation config provides the configuration to then be parsed to ``transformers.GenerationConfig``,
-    with some additional validation and environment constructor.
+    """GenerationConfig is the attrs-compatible version of ``transformers.GenerationConfig``, with some additional validation and environment constructor.
 
     Note that we always set `do_sample=True`. This class is not designed to be used directly, rather
     to be used conjunction with LLMConfig. The instance of the generation config can then be accessed
@@ -588,7 +600,7 @@ class GenerationConfig(ReprMixin):
 
     if t.TYPE_CHECKING:
 
-        def __attrs_init__(self, **_: t.Any):
+        def __attrs_init__(self, *args: t.Any, **attrs: t.Any):
             ...
 
     def __init__(self, *, _internal: bool = False, **attrs: t.Any):
@@ -628,6 +640,7 @@ _object_getattribute = object.__getattribute__
 
 class ModelSettings(t.TypedDict, total=False):
     """ModelSettings serve only for typing purposes as this is transcribed into LLMConfig.__config__.
+
     Note that all fields from this dictionary will then be converted to __openllm_*__ fields in LLMConfig.
 
     If the field below changes, make sure to run ./tools/update-config-stubs.py to generate correct __getitem__
@@ -728,9 +741,9 @@ class _ModelSettingsAttr:
         service_name: str
         requirements: t.Optional[ListStr]
         bettertransformer: bool
-        model_type: t.Literal['causal_lm', 'seq2seq_lm']
-        runtime: t.Literal['transformers', 'ggml']
-        name_type: t.Optional[t.Literal['dasherize', 'lowercase']]
+        model_type: t.Literal["causal_lm", "seq2seq_lm"]
+        runtime: t.Literal["transformers", "ggml"]
+        name_type: t.Optional[t.Literal["dasherize", "lowercase"]]
         model_name: str
         start_name: str
         env: openllm.utils.EnvVarMixin
@@ -743,7 +756,6 @@ class _ModelSettingsAttr:
 
 
 def structure_settings(cl_: type[LLMConfig], cls: type[_ModelSettingsAttr]):
-    assert cl_.__config__ is not None, f"'__config__' is required for {cls}."
     if "generation_class" in cl_.__config__:
         raise ValueError(
             "'generation_class' shouldn't be defined in '__config__', rather defining "
@@ -813,8 +825,8 @@ bentoml_cattr.register_structure_hook(_ModelSettingsAttr, structure_settings)
 
 
 def _setattr_class(attr_name: str, value_var: t.Any):
-    """
-    Use the builtin setattr to set *attr_name* to *value_var*.
+    """Use the builtin setattr to set *attr_name* to *value_var*.
+
     We can't use the cached object.__setattr__ since we are setting
     attributes to a class.
 
@@ -828,7 +840,7 @@ def _setattr_class(attr_name: str, value_var: t.Any):
 def _make_assignment_script(
     cls: type[LLMConfig], attributes: attr.AttrsInstance, _prefix: t.LiteralString = "openllm"
 ) -> t.Callable[..., None]:
-    """Generate the assignment script with prefix attributes __openllm_<value>__"""
+    """Generate the assignment script with prefix attributes __openllm_<value>__."""
     args: ListStr = []
     globs: DictStrAny = {
         "cls": cls,
@@ -852,13 +864,14 @@ def _make_assignment_script(
 _reserved_namespace = {"__config__", "GenerationConfig"}
 
 
-@dataclass_transform(order_default=True, field_specifiers=(attr.field, dantic.Field))
+@dataclass_transform(kw_only_default=True, order_default=True, field_specifiers=(attr.field, dantic.Field))
 def llm_config_transform(cls: type[LLMConfig]) -> type[LLMConfig]:
     non_intrusive_setattr(
         cls,
         "__dataclass_transform__",
         {
             "order_default": True,
+            "kw_only_default": True,
             "field_specifiers": (attr.field, dantic.Field),
         },
     )
@@ -880,7 +893,7 @@ class _ConfigAttr:
     # NOTE: The following is handled via __init_subclass__, and is only used for TYPE_CHECKING
     if t.TYPE_CHECKING:
         # NOTE: public attributes to override
-        __config__: ModelSettings | None = Field(None)
+        __config__: ModelSettings = Field(None)
         """Internal configuration for this LLM model. Each of the field in here will be populated
         and prefixed with __openllm_<value>__"""
         GenerationConfig: type = Field(None)
@@ -914,7 +927,7 @@ class _ConfigAttr:
         to create the generation_config argument that can be used throughout the lifecycle.
         This class will also be managed internally by OpenLLM."""
 
-        def __attrs_init__(self, **attrs: t.Any):
+        def __attrs_init__(self, *args: t.Any, **attrs: t.Any):
             """Generated __attrs_init__ for LLMConfig subclass that follows the attrs contract."""
 
         # NOTE: The following will be populated from __config__ and also
@@ -955,14 +968,14 @@ class _ConfigAttr:
         architecture. By default, we will use BetterTransformer for T5 and StableLM models,
         and set to False for every other models.
         """
-        __openllm_model_type__: t.Literal['causal_lm', 'seq2seq_lm'] = Field(None)
+        __openllm_model_type__: t.Literal["causal_lm", "seq2seq_lm"] = Field(None)
         """The model type for this given LLM. By default, it should be causal language modeling.
         Currently supported 'causal_lm' or 'seq2seq_lm'
         """
-        __openllm_runtime__: t.Literal['transformers', 'ggml'] = Field(None)
+        __openllm_runtime__: t.Literal["transformers", "ggml"] = Field(None)
         """The runtime to use for this model. Possible values are `transformers` or `ggml`. See
         LlaMA for more information."""
-        __openllm_name_type__: t.Optional[t.Literal['dasherize', 'lowercase']] = Field(None)
+        __openllm_name_type__: t.Optional[t.Literal["dasherize", "lowercase"]] = Field(None)
         """The default name typed for this model. "dasherize" will convert the name to lowercase and
         replace spaces with dashes. "lowercase" will convert the name to lowercase. If this is not set, then both
         `model_name` and `start_name` must be specified."""
@@ -991,11 +1004,187 @@ class _ConfigAttr:
         # fmt: on
 
 
-@attr.define(slots=True)
-class LLMConfig(_ConfigAttr):
+class _ConfigBuilder:
+    """A modified version of attrs internal _ClassBuilder, and should only be called within __init_subclass__ of LLMConfig.
+
+    Where:
+    - has_custom_setattr=True
+    - getstate_setstate=None (config class will always be a slotted class.)
+    - slots=True
+    - auto_attribs=False (We should handle it before _ConfigBuilder is invoked)
+    - cache_hash=False (We don't need to cache the hash code of this object for now.)
+    - collect_by_mro=True (The correct behaviour to resolve inheritance)
+    - field_transformer=codegen.make_env_transformer (We need to transform the field to have env variable)
+
+    It takes `these` arguments as a fully parsed attr.Attribute[t.Any] from __init_subclass__
     """
-    ``openllm.LLMConfig`` is somewhat a hybrid combination between the performance of `attrs` with the
-    easy-to-use interface that pydantic offer. It lives in between where it allows users to quickly formulate
+
+    __slots__ = (
+        "_cls",
+        "_cls_dict",
+        "_attr_names",
+        "_attrs",
+        "_model_name",
+        "_base_attr_map",
+        "_base_names",
+        "_has_pre_init",
+        "_has_post_init",
+    )
+
+    def __init__(
+        self,
+        cls: type[LLMConfig],
+        these: dict[str, _CountingAttr[t.Any]],
+        auto_attribs: bool = False,
+        kw_only: bool = False,
+        collect_by_mro: bool = True,
+    ):
+        attrs, base_attrs, base_attr_map = _transform_attrs(
+            cls,
+            these,
+            auto_attribs,
+            kw_only,
+            collect_by_mro,
+            field_transformer=codegen.make_env_transformer(cls, cls.__openllm_model_name__),
+        )
+
+        self._cls = cls
+        self._model_name = cls.__openllm_model_name__
+        self._cls_dict = dict(cls.__dict__)
+        self._attrs = attrs
+        self._base_names = {a.name for a in base_attrs}
+        self._base_attr_map = base_attr_map
+        self._attr_names = tuple(a.name for a in attrs)
+        self._has_pre_init = bool(getattr(cls, "__attrs_pre_init__", False))
+        self._has_post_init = bool(getattr(cls, "__attrs_post_init__", False))
+
+        self._cls_dict["__attrs_attrs__"] = self._attrs
+
+    def build_class(self) -> type[LLMConfig]:
+        """Finalize class based on the accumulated configuration.
+
+        Builder cannot be used after calling this method.
+
+        > A difference between this and attrs._ClassBuilder is that we don't
+        > create a new class after constructing all __dict__. This has to do
+        > with recursive called within __init_subclass__
+        """
+        cd = {
+            k: v for k, v in self._cls_dict.items() if k not in (*tuple(self._attr_names), "__dict__", "__weakref__")
+        }
+        # Traverse the MRO to collect existing slots
+        # and check for an existing __weakref__.
+        existing_slots: DictStrAny = {}
+        weakref_inherited = False
+        for base_cls in self._cls.__mro__[1:-1]:
+            if base_cls.__dict__.get("__weakref__", None) is not None:
+                weakref_inherited = True
+            existing_slots.update(
+                {name: getattr(base_cls, name, codegen._sentinel) for name in getattr(base_cls, "__slots__", [])}
+            )
+
+        base_names = set(self._base_names)
+        names = self._attr_names
+        if (
+            "__weakref__" not in getattr(self._cls, "__slots__", ())
+            and "__weakref__" not in names
+            and not weakref_inherited
+        ):
+            names += ("__weakref__",)
+
+        # We only add the names of attributes that aren't inherited.
+        # Setting __slots__ to inherited attributes wastes memory.
+        slot_names = [name for name in names if name not in base_names]
+        # There are slots for attributes from current class
+        # that are defined in parent classes.
+        # As their descriptors may be overridden by a child class,
+        # we collect them here and update the class dict
+        reused_slots = {
+            slot: slot_descriptor for slot, slot_descriptor in existing_slots.items() if slot in slot_names
+        }
+        # We only add the names of attributes that aren't inherited.
+        # Setting __slots__ to inherited attributes wastes memory.
+        # __openllm_extras__ holds additional metadata that might be usefule for users, hence we add it to slots
+        slot_names = [name for name in slot_names if name not in reused_slots]
+        cd.update(reused_slots)
+        cd["__slots__"] = tuple(slot_names)
+
+        cd["__qualname__"] = self._cls.__qualname__
+
+        # We can only patch the class here, rather than instantiate
+        # a new one, since type.__new__ actually will invoke __init_subclass__
+        # and since we use the _ConfigBuilder in __init_subclass__, it will
+        # raise recusion error. See https://peps.python.org/pep-0487/ for more
+        # information on how __init_subclass__ works.
+        for k, value in cd.items():
+            setattr(self._cls, k, value)
+
+        return self.make_closure(self._cls)
+
+    def make_closure(self, cls: type):
+        # The following is a fix for
+        # <https://github.com/python-attrs/attrs/issues/102>.
+        # If a method mentions `__class__` or uses the no-arg super(), the
+        # compiler will bake a reference to the class in the method itself
+        # as `method.__closure__`.  Since we replace the class with a
+        # clone, we rewrite these references so it keeps working.
+        for item in cls.__dict__.values():
+            if isinstance(item, (classmethod, staticmethod)):
+                # Class- and staticmethods hide their functions inside.
+                # These might need to be rewritten as well.
+                closure_cells = getattr(item.__func__, "__closure__", None)
+            elif isinstance(item, property):
+                # Workaround for property `super()` shortcut (PY3-only).
+                # There is no universal way for other descriptors.
+                closure_cells = getattr(item.fget, "__closure__", None)
+            else:
+                closure_cells = getattr(item, "__closure__", None)
+
+            if not closure_cells:  # Catch None or the empty list.
+                continue
+            for cell in closure_cells:
+                try:
+                    match = cell.cell_contents is self._cls
+                except ValueError:  # ValueError: Cell is empty
+                    pass
+                else:
+                    if match:
+                        set_closure_cell(cell, cls)
+
+        return llm_config_transform(cls)
+
+    def add_attrs_init(self) -> t.Self:
+        self._cls_dict["__attrs_init__"] = codegen.add_method_dunders(
+            self._cls,
+            _make_init(
+                self._cls,
+                self._attrs,
+                self._has_pre_init,
+                self._has_post_init,
+                False,  # frozen
+                True,  # slots
+                False,  # cache_hash
+                self._base_attr_map,
+                False,  # This is not an exception
+                None,  # no on_setattr
+                True,
+            ),
+        )
+        return self
+
+    def add_repr(self):
+        for key, fn in ReprMixin.__dict__.items():
+            if key in ("__repr__", "__str__", "__repr_name__", "__repr_str__", "__repr_args__"):
+                self._cls_dict[key] = codegen.add_method_dunders(self._cls, fn)
+        self._cls_dict["__repr_keys__"] = property(lambda _: {i.name for i in self._attrs} | {"generation_config"})
+        return self
+
+
+@attr.define(slots=True, init=False)
+class LLMConfig(_ConfigAttr):
+    """``openllm.LLMConfig`` is a pydantic-like ``attrs`` interface that offers fast and easy-to-use APIs.
+
+    It lives in between the nice UX of `pydantic` and fast performance of `attrs` where it allows users to quickly formulate
     a LLMConfig for any LLM without worrying too much about performance. It does a few things:
 
     - Automatic environment conversion: Each fields will automatically be provisioned with an environment
@@ -1077,182 +1266,16 @@ class LLMConfig(_ConfigAttr):
             ),
         }
     ```
+
+    Future work:
+    - Support pydantic-core as validation backend.
     """
 
-    class _ConfigBuilder:
-        """A modified version of attrs internal _ClassBuilder, should only be called
-        within __init_subclass__ of LLMConfig.
-
-        Where:
-        - has_custom_setattr=True
-        - getstate_setstate=None (config class will always be a slotted class.)
-        - slots=True
-        - auto_attribs=False (We should handle it before _ConfigBuilder is invoked)
-        - cache_hash=False (We don't need to cache the hash code of this object for now.)
-        - collect_by_mro=True (The correct behaviour to resolve inheritance)
-        - field_transformer=codegen.make_env_transformer (We need to transform the field to have env variable)
-
-        It takes `these` arguments as a fully parsed attr.Attribute[t.Any] from __init_subclass__
-        """
-
-        __slots__ = (
-            "_cls",
-            "_cls_dict",
-            "_attr_names",
-            "_attrs",
-            "_model_name",
-            "_base_attr_map",
-            "_base_names",
-            "_has_pre_init",
-            "_has_post_init",
-        )
-
-        def __init__(
-            self,
-            cls: type[LLMConfig],
-            these: dict[str, _CountingAttr[t.Any]],
-            auto_attribs: bool = False,
-            kw_only: bool = False,
-            collect_by_mro: bool = True,
-        ):
-            attrs, base_attrs, base_attr_map = _transform_attrs(
-                cls,
-                these,
-                auto_attribs,
-                kw_only,
-                collect_by_mro,
-                field_transformer=codegen.make_env_transformer(cls, cls.__openllm_model_name__),
-            )
-
-            self._cls = cls
-            self._model_name = cls.__openllm_model_name__
-            self._cls_dict = dict(cls.__dict__)
-            self._attrs = attrs
-            self._base_names = {a.name for a in base_attrs}
-            self._base_attr_map = base_attr_map
-            self._attr_names = tuple(a.name for a in attrs)
-            self._has_pre_init = bool(getattr(cls, "__attrs_pre_init__", False))
-            self._has_post_init = bool(getattr(cls, "__attrs_post_init__", False))
-
-            self._cls_dict["__attrs_attrs__"] = self._attrs
-
-        def build_class(self) -> type[LLMConfig]:
-            """
-            Finalize class based on the accumulated configuration.
-
-            Builder cannot be used after calling this method.
-
-            > A difference between this and attrs._ClassBuilder is that we don't
-            > create a new class after constructing all __dict__. This has to do
-            > with recursive called within __init_subclass__
-            """
-            cd = {
-                k: v
-                for k, v in self._cls_dict.items()
-                if k not in tuple(self._attr_names) + ("__dict__", "__weakref__")
-            }
-            # Traverse the MRO to collect existing slots
-            # and check for an existing __weakref__.
-            existing_slots: DictStrAny = {}
-            weakref_inherited = False
-            for base_cls in self._cls.__mro__[1:-1]:
-                if base_cls.__dict__.get("__weakref__", None) is not None:
-                    weakref_inherited = True
-                existing_slots.update(
-                    {name: getattr(base_cls, name, codegen._sentinel) for name in getattr(base_cls, "__slots__", [])}
-                )
-
-            base_names = set(self._base_names)
-            names = self._attr_names
-            if (
-                "__weakref__" not in getattr(self._cls, "__slots__", ())
-                and "__weakref__" not in names
-                and not weakref_inherited
-            ):
-                names += ("__weakref__",)
-
-            # We only add the names of attributes that aren't inherited.
-            # Setting __slots__ to inherited attributes wastes memory.
-            slot_names = [name for name in names if name not in base_names]
-            # There are slots for attributes from current class
-            # that are defined in parent classes.
-            # As their descriptors may be overridden by a child class,
-            # we collect them here and update the class dict
-            reused_slots = {
-                slot: slot_descriptor for slot, slot_descriptor in existing_slots.items() if slot in slot_names
-            }
-            # We only add the names of attributes that aren't inherited.
-            # Setting __slots__ to inherited attributes wastes memory.
-            # __openllm_extras__ holds additional metadata that might be usefule for users, hence we add it to slots
-            slot_names = [name for name in slot_names if name not in reused_slots]
-            cd.update(reused_slots)
-            cd["__slots__"] = tuple(slot_names)
-
-            for k, value in cd.items():
-                setattr(self._cls, k, value)
-
-            # The following is a fix for
-            # <https://github.com/python-attrs/attrs/issues/102>.
-            # If a method mentions `__class__` or uses the no-arg super(), the
-            # compiler will bake a reference to the class in the method itself
-            # as `method.__closure__`.  Since we replace the class with a
-            # clone, we rewrite these references so it keeps working.
-            for item in self._cls.__dict__.values():
-                if isinstance(item, (classmethod, staticmethod)):
-                    # Class- and staticmethods hide their functions inside.
-                    # These might need to be rewritten as well.
-                    closure_cells = getattr(item.__func__, "__closure__", None)
-                elif isinstance(item, property):
-                    # Workaround for property `super()` shortcut (PY3-only).
-                    # There is no universal way for other descriptors.
-                    closure_cells = getattr(item.fget, "__closure__", None)
-                else:
-                    closure_cells = getattr(item, "__closure__", None)
-
-                if not closure_cells:  # Catch None or the empty list.
-                    continue
-                for cell in closure_cells:
-                    try:
-                        match = cell.cell_contents is self._cls
-                    except ValueError:  # ValueError: Cell is empty
-                        pass
-                    else:
-                        if match:
-                            set_closure_cell(cell, self._cls)
-
-            return llm_config_transform(self._cls)
-
-        def add_attrs_init(self) -> t.Self:
-            self._cls_dict["__attrs_init__"] = codegen.add_method_dunders(
-                self._cls,
-                _make_init(
-                    self._cls,
-                    self._attrs,
-                    self._has_pre_init,
-                    self._has_post_init,
-                    False,  # frozen
-                    True,  # slots
-                    False,  # cache_hash
-                    self._base_attr_map,
-                    False,  # This is not an exception
-                    None,  # no on_setattr
-                    attrs_init=True,
-                ),
-            )
-            return self
-
-        def add_repr(self):
-            for key, fn in ReprMixin.__dict__.items():
-                if key in ("__repr__", "__str__", "__repr_name__", "__repr_str__", "__repr_args__"):
-                    self._cls_dict[key] = codegen.add_method_dunders(self._cls, fn)
-            self._cls_dict["__repr_keys__"] = property(lambda _: {i.name for i in self._attrs} | {"generation_config"})
-            return self
-
     def __init_subclass__(cls: type[LLMConfig]):
-        """The purpose of this __init_subclass__ is that we want all subclass of LLMConfig
-        to adhere to the attrs contract, and have pydantic-like interface. This means we will
-        construct all fields and metadata and hack into how attrs use some of the 'magic' construction
-        to generate the fields.
+        """The purpose of this ``__init_subclass__`` is to offer pydantic UX while adhering to attrs contract.
+
+        This means we will construct all fields and metadata and hack into
+        how attrs use some of the 'magic' construction to generate the fields.
 
         It also does a few more extra features: It also generate all __openllm_*__ config from
         ModelSettings (derived from __config__) to the class.
@@ -1261,7 +1284,7 @@ class LLMConfig(_ConfigAttr):
             logger.warning("LLMConfig subclass should end with 'Config'. Updating to %sConfig", cls.__name__)
             cls.__name__ = f"{cls.__name__}Config"
 
-        if not hasattr(cls, "__config__") or cls.__config__ is None:
+        if not hasattr(cls, "__config__"):
             raise RuntimeError("Given LLMConfig must have '__config__' that is not None defined.")
 
         # auto assignment attributes generated from __config__ after create the new slot class.
@@ -1320,7 +1343,7 @@ class LLMConfig(_ConfigAttr):
             a.name for a in attr.fields(cls.__openllm_generation_class__)
         }
 
-        cls = cls._ConfigBuilder(cls, these).add_attrs_init().add_repr().build_class()
+        cls = _ConfigBuilder(cls, these).add_attrs_init().add_repr().build_class()
 
         # Finally, resolve the types
         if getattr(cls, "__attrs_types_resolved__", None) != cls:
@@ -1398,11 +1421,11 @@ class LLMConfig(_ConfigAttr):
     @overload
     def __getitem__(self, item: t.Literal["bettertransformer"] = ...) -> bool: ...
     @overload
-    def __getitem__(self, item: t.Literal["model_type"] = ...) -> t.Literal['causal_lm', 'seq2seq_lm']: ...
+    def __getitem__(self, item: t.Literal["model_type"] = ...) -> t.Literal["causal_lm", "seq2seq_lm"]: ...
     @overload
-    def __getitem__(self, item: t.Literal["runtime"] = ...) -> t.Literal['transformers', 'ggml']: ...
+    def __getitem__(self, item: t.Literal["runtime"] = ...) -> t.Literal["transformers", "ggml"]: ...
     @overload
-    def __getitem__(self, item: t.Literal["name_type"] = ...) -> t.Optional[t.Literal['dasherize', 'lowercase']]: ...
+    def __getitem__(self, item: t.Literal["name_type"] = ...) -> t.Optional[t.Literal["dasherize", "lowercase"]]: ...
     @overload
     def __getitem__(self, item: t.Literal["model_name"] = ...) -> str: ...
     @overload
@@ -1516,7 +1539,7 @@ class LLMConfig(_ConfigAttr):
     # fmt: on
 
     def __getitem__(self, item: t.LiteralString | t.Any = None) -> t.Any:
-        """Allowing access LLMConfig as a dictionary. The order will always evaluate as
+        """Allowing access LLMConfig as a dictionary. The order will always evaluate as.
 
         __openllm_*__ > self.key > self.generation_config > self['fine_tune_strategies'] > __openllm_extras__
 
@@ -1599,7 +1622,6 @@ class LLMConfig(_ConfigAttr):
             **attrs: The attributes to be added to the new class. This will override
                      any existing attributes with the same name.
         """
-        assert cls.__config__ is not None, "Cannot derivate a LLMConfig without __config__"
         _new_cfg = {k: v for k, v in attrs.items() if k in attr.fields_dict(_ModelSettingsAttr)}
         attrs = {k: v for k, v in attrs.items() if k not in _new_cfg}
         new_cls = types.new_class(
@@ -1642,14 +1664,12 @@ class LLMConfig(_ConfigAttr):
         try:
             attrs = orjson.loads(json_str)
         except orjson.JSONDecodeError as err:
-            raise openllm.exceptions.ValidationError(f"Failed to load JSON: {err}")
+            raise openllm.exceptions.ValidationError(f"Failed to load JSON: {err}") from None
         return bentoml_cattr.structure(attrs, cls)
 
     @classmethod
     def model_construct_env(cls, **attrs: t.Any) -> t.Self:
-        """A helpers that respect configuration values that
-        sets from environment variables for any given configuration class.
-        """
+        """A helpers that respect configuration values environment variables."""
         attrs = {k: v for k, v in attrs.items() if v is not None}
 
         model_config = cls.__openllm_env__.config
@@ -1696,7 +1716,7 @@ class LLMConfig(_ConfigAttr):
         return self.model_construct_env(**llm_config_attrs), {k: v for k, v in attrs.items() if k not in key_to_remove}
 
     @overload
-    def to_generation_config(self, return_as_dict: t.Literal[False] = ...) -> transformers.GenerationConfig:
+    def to_generation_config(self, return_as_dict: t.Literal[False] = False) -> transformers.GenerationConfig:
         ...
 
     @overload
@@ -1708,22 +1728,12 @@ class LLMConfig(_ConfigAttr):
         return config.to_dict() if return_as_dict else config
 
     @classmethod
-    @overload
-    def to_click_options(
-        cls, f: t.Callable[..., openllm.LLMConfig]
-    ) -> F[P, ClickFunctionWrapper[..., openllm.LLMConfig]]:
-        ...
+    def to_click_options(cls, f: AnyCallable) -> click.Command:
+        """Convert current configuration to click options.
 
-    @classmethod
-    @overload
-    def to_click_options(cls, f: t.Callable[P, O_co]) -> F[P, ClickFunctionWrapper[P, O_co]]:
-        ...
+        This can be used as a decorator for click commands.
 
-    @classmethod
-    def to_click_options(cls, f: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
-        """
-        Convert current model to click options. This can be used as a decorator for click commands.
-        Note that the identifier for all LLMConfig will be prefixed with '<model_name>_*', and the generation config
+        > **Note**: that the identifier for all LLMConfig will be prefixed with '<model_name>_*', and the generation config
         will be prefixed with '<model_name>_generation_*'.
         """
         for name, field in attr.fields_dict(cls.__openllm_generation_class__).items():
@@ -1769,8 +1779,7 @@ bentoml_cattr.register_unstructure_hook_factory(
 
 
 def structure_llm_config(data: DictStrAny, cls: type[LLMConfig]) -> LLMConfig:
-    """
-    Structure a dictionary to a LLMConfig object.
+    """Structure a dictionary to a LLMConfig object.
 
     Essentially, if the given dictionary contains a 'generation_config' key, then we will
     use it for LLMConfig.generation_config

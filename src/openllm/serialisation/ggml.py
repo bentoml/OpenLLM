@@ -16,19 +16,25 @@
 This requires ctransformers to be installed.
 """
 from __future__ import annotations
-
-import openllm
 import typing as t
-import bentoml
+
 import cloudpickle
-from ..exceptions import OpenLLMException
-from ..utils import LazyLoader
+
+import bentoml
 from bentoml._internal.models.model import CUSTOM_OBJECTS_FILENAME
 
+from ..exceptions import OpenLLMException
+from ..utils import LazyLoader
+
+
 if t.TYPE_CHECKING:
-    from .._types import ModelProtocol, TokenizerProtocol
-    from .transformers import _M, _T
+    import openllm
     import transformers
+
+    from .._llm import M
+    from .._llm import T
+    from .._types import ModelProtocol
+    from .._types import TokenizerProtocol
 else:
     transformers = LazyLoader("transformers", globals(), "transformers")
 
@@ -44,6 +50,7 @@ def import_model(
 
 def get(llm: openllm.LLM[t.Any, t.Any], auto_import: bool = False) -> bentoml.Model:
     """Return an instance of ``bentoml.Model`` from given LLM instance.
+
     By default, it will try to check the model in the local store.
     If model is not found, and ``auto_import`` is set to True, it will try to import the model from HuggingFace Hub.
 
@@ -66,15 +73,16 @@ def get(llm: openllm.LLM[t.Any, t.Any], auto_import: bool = False) -> bentoml.Mo
         raise
 
 
-def load_model(llm: openllm.LLM[_M, t.Any], *decls: t.Any, **attrs: t.Any) -> ModelProtocol[_M]:
+def load_model(llm: openllm.LLM[M, t.Any], *decls: t.Any, **attrs: t.Any) -> ModelProtocol[M]:
     """Load the model from BentoML store.
+
     By default, it will try to find check the model in the local store.
     If model is not found, it will raises a ``bentoml.exceptions.NotFound``.
     """
     raise NotImplementedError("Currently work in progress.")
 
 
-def load_tokenizer(llm: openllm.LLM[t.Any, _T]) -> TokenizerProtocol[_T]:
+def load_tokenizer(llm: openllm.LLM[t.Any, T]) -> TokenizerProtocol[T]:
     """Load the tokenizer from BentoML store.
 
     By default, it will try to find the bentomodel whether it is in store..
@@ -95,14 +103,14 @@ def load_tokenizer(llm: openllm.LLM[t.Any, _T]) -> TokenizerProtocol[_T]:
                         "Model does not have tokenizer. Make sure to save \
                         the tokenizer within the model via 'custom_objects'.\
                         For example: bentoml.transformers.save_model(..., custom_objects={'tokenizer': tokenizer}))"
-                    )
+                    ) from None
         else:
             tokenizer = transformers.AutoTokenizer.from_pretrained(
                 bentomodel_fs.getsyspath("/"),
                 trust_remote_code=llm.__llm_trust_remote_code__,
                 **tokenizer_attrs,
             )
-    return t.cast("TokenizerProtocol[_T]", tokenizer)
+    return t.cast("TokenizerProtocol[T]", tokenizer)
 
 
 def save_pretrained(llm: openllm.LLM[t.Any, t.Any], save_directory: str, **attrs: t.Any):

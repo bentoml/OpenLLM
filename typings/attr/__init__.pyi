@@ -1,7 +1,4 @@
-from __future__ import annotations
-
 import enum
-import sys
 from typing import Any
 from typing import Callable
 from typing import Dict
@@ -18,6 +15,7 @@ from typing import Type
 from typing import TypeGuard
 from typing import TypeVar
 from typing import Union
+from typing import dataclass_transform
 from typing import overload
 
 from . import converters as converters
@@ -43,14 +41,14 @@ _T = TypeVar("_T")
 _C = TypeVar("_C", bound=type)
 _P = ParamSpec("_P")
 _EqOrderType = Union[bool, Callable[[Any], Any]]
-_ValidatorType = Callable[[Any, "Attribute[_T]", _T], Any]
+_ValidatorType = Callable[[Any, Attribute[_T], _T], Any]
 _ConverterType = Callable[[Any], Any]
-_FilterType = Callable[["Attribute[_T]", _T], bool]
+_FilterType = Callable[[Attribute[_T], _T], bool]
 _ReprType = Callable[[Any], str]
 _ReprArgType = Union[bool, _ReprType]
-_OnSetAttrType = Callable[[Any, "Attribute[Any]", Any], Any]
+_OnSetAttrType = Callable[[Any, Attribute[Any], Any], Any]
 _OnSetAttrArgType = Union[_OnSetAttrType, List[_OnSetAttrType], setters._NoOpType]
-_FieldTransformer = Callable[[type, List["Attribute[Any]"]], List["Attribute[Any]"]]
+_FieldTransformer = Callable[[type, List[Attribute[Any]]], List[Attribute[Any]]]
 _ValidatorArgType = Union[_ValidatorType[_T], Sequence[_ValidatorType[_T]]]
 
 class ReprProtocol(Protocol):
@@ -64,22 +62,13 @@ class _Nothing(enum.Enum):
     NOTHING = ...
 
 NOTHING = ...
-if sys.version_info >= (3, 8):
-    @overload
-    def Factory(factory: Callable[[], _T]) -> _T: ...
-    @overload
-    def Factory(factory: Callable[[Any], _T], takes_self: Literal[True]) -> _T: ...
-    @overload
-    def Factory(factory: Callable[[], _T], takes_self: Literal[False]) -> _T: ...
 
-def __dataclass_transform__(
-    *,
-    eq_default: bool = ...,
-    order_default: bool = ...,
-    kw_only_default: bool = ...,
-    frozen_default: bool = ...,
-    field_descriptors: Tuple[Union[type, Callable[..., Any]], ...] = ...,
-) -> Callable[[_T], _T]: ...
+@overload
+def Factory(factory: Callable[[], _T]) -> _T: ...
+@overload
+def Factory(factory: Callable[[Any], _T], takes_self: Literal[True]) -> _T: ...
+@overload
+def Factory(factory: Callable[[], _T], takes_self: Literal[False]) -> _T: ...
 
 class _CountingAttr(Generic[_T]):
     counter: int
@@ -90,36 +79,60 @@ class _CountingAttr(Generic[_T]):
     eq_key: str
     order: _EqOrderType
     order_key: str
-    hash: Optional[bool]
+    hash: bool | None
     init: bool
-    converter: Optional[_ConverterType]
-    metadata: Dict[Any, Any]
-    _validator: Optional[_ValidatorType[_T]]
-    type: Optional[Type[_T]]
+    converter: _ConverterType | None
+    metadata: dict[Any, Any]
+    _validator: _ValidatorType[_T] | None
+    type: type[_T] | None
     kw_only: bool
     on_setattr: _OnSetAttrType
-    alias: Optional[str]
+    alias: str | None
 
 class Attribute(Generic[_T]):
     name: str
-    default: Optional[_T]
-    validator: Optional[_ValidatorType[_T]]
+    default: _T | None
+    validator: _ValidatorType[_T] | None
     repr: _ReprArgType
     cmp: _EqOrderType
     eq: _EqOrderType
     order: _EqOrderType
-    hash: Optional[bool]
+    hash: bool | None
     init: bool
-    converter: Optional[_ConverterType]
-    metadata: Dict[Any, Any]
-    type: Optional[Type[_T]]
+    converter: _ConverterType | None
+    metadata: dict[Any, Any]
+    type: type[_T] | None
     kw_only: bool
     on_setattr: _OnSetAttrType
-    alias: Optional[str]
+    alias: str | None
     def evolve(self, **changes: Any) -> Attribute[Any]: ...
     @classmethod
     def from_counting_attr(cls, name: str, ca: _CountingAttr[_T], type: type[Any] | None = None) -> Attribute[_T]: ...
 
+# NOTE: We had several choices for the annotation to use for type arg:
+# 1) Type[_T]
+#   - Pros: Handles simple cases correctly
+#   - Cons: Might produce less informative errors in the case of conflicting
+#     TypeVars e.g. `attr.ib(default='bad', type=int)`
+# 2) Callable[..., _T]
+#   - Pros: Better error messages than #1 for conflicting TypeVars
+#   - Cons: Terrible error messages for validator checks.
+#   e.g. attr.ib(type=int, validator=validate_str)
+#        -> error: Cannot infer function type argument
+# 3) type (and do all of the work in the mypy plugin)
+#   - Pros: Simple here, and we could customize the plugin with our own errors.
+#   - Cons: Would need to write mypy plugin code to handle all the cases.
+# We chose option #1.
+
+# `attr` lies about its return type to make the following possible:
+#     attr()    -> Any
+#     attr(8)   -> int
+#     attr(validator=<some callable>)  -> Whatever the callable expects.
+# This makes this type of assignments possible:
+#     x: int = attr(8)
+#
+# This form catches explicit None or no default but with no other arguments
+# returns Any.
 @overload
 def attrib(
     default: None = ...,
@@ -138,6 +151,9 @@ def attrib(
     on_setattr: Optional[_OnSetAttrArgType] = ...,
     alias: Optional[str] = ...,
 ) -> Any: ...
+
+# This form catches an explicit None or no default and infers the type from the
+# other arguments.
 @overload
 def attrib(
     default: None = ...,
@@ -156,6 +172,8 @@ def attrib(
     on_setattr: Optional[_OnSetAttrArgType] = ...,
     alias: Optional[str] = ...,
 ) -> _T: ...
+
+# This form catches an explicit default argument.
 @overload
 def attrib(
     default: _T,
@@ -174,6 +192,8 @@ def attrib(
     on_setattr: Optional[_OnSetAttrArgType] = ...,
     alias: Optional[str] = ...,
 ) -> _T: ...
+
+# This form covers type=non-Type: e.g. forward references (str), Any
 @overload
 def attrib(
     default: Optional[_T] = ...,
@@ -210,6 +230,9 @@ def field(
     alias: Optional[str] = ...,
     type: Optional[type] = ...,
 ) -> Any: ...
+
+# This form catches an explicit None or no default and infers the type from the
+# other arguments.
 @overload
 def field(
     *,
@@ -228,6 +251,8 @@ def field(
     alias: Optional[str] = ...,
     type: Optional[type] = ...,
 ) -> _T: ...
+
+# This form catches an explicit default argument.
 @overload
 def field(
     *,
@@ -246,6 +271,8 @@ def field(
     alias: Optional[str] = ...,
     type: Optional[type] = ...,
 ) -> _T: ...
+
+# This form covers type=non-Type: e.g. forward references (str), Any
 @overload
 def field(
     *,
@@ -265,7 +292,7 @@ def field(
     type: Optional[type] = ...,
 ) -> Any: ...
 @overload
-@__dataclass_transform__(order_default=True, field_descriptors=(attrib, field))
+@dataclass_transform(order_default=True, field_specifiers=(attrib, field))
 def attrs(
     maybe_cls: _C,
     these: Optional[Dict[str, Any]] = ...,
@@ -293,7 +320,7 @@ def attrs(
     unsafe_hash: Optional[bool] = ...,
 ) -> _C: ...
 @overload
-@__dataclass_transform__(order_default=True, field_descriptors=(attrib, field))
+@dataclass_transform(order_default=True, field_specifiers=(attrib, field))
 def attrs(
     maybe_cls: None = ...,
     these: Optional[Dict[str, Any]] = ...,
@@ -321,7 +348,7 @@ def attrs(
     unsafe_hash: Optional[bool] = ...,
 ) -> Callable[[_C], _C]: ...
 @overload
-@__dataclass_transform__(field_descriptors=(attrib, field))
+@dataclass_transform(field_specifiers=(attrib, field))
 def define(
     maybe_cls: _C,
     *,
@@ -347,7 +374,7 @@ def define(
     match_args: bool = ...,
 ) -> _C: ...
 @overload
-@__dataclass_transform__(field_descriptors=(attrib, field))
+@dataclass_transform(field_specifiers=(attrib, field))
 def define(
     maybe_cls: None = ...,
     *,
@@ -373,10 +400,10 @@ def define(
     match_args: bool = ...,
 ) -> Callable[[_C], _C]: ...
 
-mutable = ...
+mutable = define
 
 @overload
-@__dataclass_transform__(frozen_default=True, field_descriptors=(attrib, field))
+@dataclass_transform(frozen_default=True, field_specifiers=(attrib, field))
 def frozen(
     maybe_cls: _C,
     *,
@@ -402,7 +429,7 @@ def frozen(
     match_args: bool = ...,
 ) -> _C: ...
 @overload
-@__dataclass_transform__(frozen_default=True, field_descriptors=(attrib, field))
+@dataclass_transform(frozen_default=True, field_specifiers=(attrib, field))
 def frozen(
     maybe_cls: None = ...,
     *,
@@ -437,6 +464,10 @@ def resolve_types(
     attribs: Optional[List[Attribute[Any]]] = ...,
     include_extras: bool = ...,
 ) -> _A: ...
+
+# TODO: add support for returning a proper attrs class from the mypy plugin
+# we use Any instead of _CountingAttr so that e.g. `make_class('Foo',
+# [attr.ib()])` is valid
 def make_class(
     name: str,
     attrs: Union[List[str], Tuple[str, ...], Dict[str, Any]],
@@ -460,6 +491,15 @@ def make_class(
     on_setattr: Optional[_OnSetAttrArgType] = ...,
     field_transformer: Optional[_FieldTransformer] = ...,
 ) -> type: ...
+
+# _funcs --
+
+# TODO: add support for returning TypedDict from the mypy plugin
+# FIXME: asdict/astuple do not honor their factory args. Waiting on one of
+# these:
+# https://github.com/python/mypy/issues/4236
+# https://github.com/python/typing/issues/253
+# XXX: remember to fix attrs.asdict/astuple too!
 def asdict(
     inst: AttrsInstance,
     recurse: bool = ...,
@@ -469,6 +509,8 @@ def asdict(
     value_serializer: Optional[Callable[[type, Attribute[Any], Any], Any]] = ...,
     tuple_keys: Optional[bool] = ...,
 ) -> Dict[str, Any]: ...
+
+# TODO: add support for returning NamedTuple from the mypy plugin
 def astuple(
     inst: AttrsInstance,
     recurse: bool = ...,
@@ -479,12 +521,17 @@ def astuple(
 def has(cls: type) -> TypeGuard[Type[AttrsInstance]]: ...
 def assoc(inst: _T, **changes: Any) -> _T: ...
 def evolve(inst: _T, **changes: Any) -> _T: ...
+
+# _config --
+
 def set_run_validators(run: bool) -> None: ...
 def get_run_validators() -> bool: ...
 
-attributes = ...
-attr = ...
-dataclass = ...
+# aliases --
+
+s = attributes = attrs
+ib = attr = attrib
+dataclass = attrs  # Technically, partial(attrs, auto_attribs=True) ;)
 
 def _make_init(
     cls: type[AttrsInstance],
@@ -494,12 +541,11 @@ def _make_init(
     frozen: bool,
     slots: bool,
     cache_hash: bool,
-    base_attr_map: dict[str, Any],
+    base_attr_map: dict[Any, Any],
     is_exc: bool,
     cls_on_setattr: Any,
     attrs_init: bool,
 ) -> Callable[_P, Any]: ...
-def _make_method(name: str, script: str, filename: str, globs: dict[str, Any]) -> Callable[..., Any]: ...
 def _make_repr(attrs: tuple[Attribute[Any]], ns: str | None, cls: AttrsInstance) -> ReprProtocol: ...
 def _transform_attrs(
     cls: type[AttrsInstance],
@@ -507,5 +553,5 @@ def _transform_attrs(
     auto_attribs: bool,
     kw_only: bool,
     collect_by_mro: bool,
-    field_transformer: Optional[_FieldTransformer],
-) -> tuple[tuple[attr.Attribute[Any], ...], tuple[attr.Attribute[Any], ...], dict[attr.Attribute[Any], type[Any]]]: ...
+    field_transformer: _FieldTransformer | None,
+) -> tuple[tuple[Attribute[Any], ...], tuple[Attribute[Any], ...], dict[Attribute[Any], type[Any]]]: ...

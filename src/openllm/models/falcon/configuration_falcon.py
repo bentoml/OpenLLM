@@ -17,9 +17,9 @@ import openllm
 
 
 class FalconConfig(openllm.LLMConfig):
-    """Falcon-7B is a 7B parameters causal decoder-only model built by
-    TII and trained on 1,500B tokens of [RefinedWeb](https://huggingface.co/datasets/tiiuae/falcon-refinedweb)
-    enhanced with curated corpora. It is made available under the TII Falcon LLM License.
+    """Falcon-7B is a 7B parameters causal decoder-only model built by TII and trained on 1,500B tokens of [RefinedWeb](https://huggingface.co/datasets/tiiuae/falcon-refinedweb) enhanced with curated corpora.
+
+    It is made available under the TII Falcon LLM License.
 
     Refer to [Falcon's HuggingFace page](https://huggingface.co/tiiuae/falcon-7b) for more information.
     """
