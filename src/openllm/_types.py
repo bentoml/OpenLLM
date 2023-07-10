@@ -97,7 +97,13 @@ class PeftAdapterOutput(t.TypedDict):
     error_msg: str
 
 
-AdaptersMapping = dict[AdapterType, tuple[tuple[str, str | None, dict[str, t.Any]], ...]] | None
+class AdaptersTuple(TupleAny):
+    adapter_id: str
+    name: str | None
+    config: DictStrAny
+
+
+AdaptersMapping = dict[AdapterType, tuple[AdaptersTuple, ...]] | None
 
 
 class LLMRunnable(bentoml.Runnable):

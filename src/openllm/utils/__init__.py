@@ -80,7 +80,6 @@ if t.TYPE_CHECKING:
     from .._types import DictStrAny
     from .._types import LiteralRuntime
     from .._types import P
-    from .._types import Ts
     from ..models.auto.factory import BaseAutoLLMClass
 
 
@@ -297,11 +296,6 @@ def in_docker() -> bool:
 
 T = t.TypeVar("T")
 K = t.TypeVar("K")
-
-
-def iter_key_tuples(dct: dict[K, tuple[tuple[T, *Ts]]]) -> t.Generator[tuple[K, tuple[T, *Ts]], None, None]:
-    for key, vals in dct.items():
-        yield from ((key, val) for val in vals)
 
 
 def resolve_filepath(path: str) -> str:

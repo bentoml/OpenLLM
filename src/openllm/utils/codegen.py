@@ -15,10 +15,12 @@
 from __future__ import annotations
 import functools
 import inspect
+import linecache
 import logging
 import string
 import types
 import typing as t
+from operator import itemgetter
 from pathlib import Path
 
 import orjson
@@ -29,18 +31,13 @@ if t.TYPE_CHECKING:
 
     import openllm
 
+    from .._types import AnyCallable
     from .._types import DictStrAny
     from .._types import ListStr
     from .._types import P
 
     PartialAny = functools.partial[t.Any]
-
-    from attr import _make_method
 else:
-    # NOTE: Using internal API from attr here, since we are actually
-    # allowing subclass of openllm.LLMConfig to become 'attrs'-ish
-    from attr._make import _make_method
-
     DictStrAny = dict
     ListStr = list
     PartialAny = functools.partial
@@ -188,6 +185,64 @@ def add_method_dunders(cls: type[t.Any], method_or_cls: _T, _overwrite_doc: str 
         pass
 
     return method_or_cls
+
+
+def _compile_and_eval(script: str, globs: DictStrAny, locs: t.Any = None, filename: str = ""):
+    """Exec the script with the given global (globs) and local (locs) variables."""
+    bytecode = compile(script, filename, "exec")
+    eval(bytecode, globs, locs)  # noqa: S307
+
+
+# ported from attrs
+def _make_method(name: str, script: str, filename: str, globs: DictStrAny) -> AnyCallable:
+    """Create the method with the script given and return the method object."""
+    locs: DictStrAny = {}
+
+    # In order of debuggers like PDB being able to step through the code,
+    # we add a fake linecache entry.
+    count = 1
+    base_filename = filename
+    while True:
+        linecache_tuple = (
+            len(script),
+            None,
+            script.splitlines(True),
+            filename,
+        )
+        old_val = linecache.cache.setdefault(filename, linecache_tuple)
+        if old_val == linecache_tuple:
+            break
+        else:
+            filename = f"{base_filename[:-1]}-{count}>"
+            count += 1
+
+    _compile_and_eval(script, globs, locs, filename)
+
+    return locs[name]
+
+
+def make_attr_tuple_class(cls_name: str, attr_names: t.Sequence[str]):
+    """Create a tuple subclass to hold class attributes.
+
+    The subclass is a bare tuple with properties for names.
+
+    class MyClassAttributes(tuple):
+        __slots__ = ()
+        x = property(itemgetter(0))
+    """
+    attr_class_name = f"{cls_name}Attributes"
+    attr_class_template = [
+        f"class {attr_class_name}(tuple):",
+        "    __slots__ = ()",
+    ]
+    if attr_names:
+        for i, attr_name in enumerate(attr_names):
+            attr_class_template.append(f"    {attr_name} = _attrs_property(_attrs_itemgetter({i}))")
+    else:
+        attr_class_template.append("    pass")
+    globs: DictStrAny = {"_attrs_itemgetter": itemgetter, "_attrs_property": property}
+    _compile_and_eval("\n".join(attr_class_template), globs)
+    return globs[attr_class_name]
 
 
 def generate_unique_filename(cls: type[t.Any], func_name: str):

@@ -47,12 +47,12 @@ from .utils import EnvVarMixin
 from .utils import LazyLoader
 from .utils import ReprMixin
 from .utils import bentoml_cattr
+from .utils import codegen
 from .utils import first_not_none
 from .utils import get_debug_mode
 from .utils import in_docker
 from .utils import is_peft_available
 from .utils import is_torch_available
-from .utils import iter_key_tuples
 from .utils import non_intrusive_setattr
 from .utils import normalize_attrs_to_model_tokenizer_pair
 from .utils import pkg
@@ -79,6 +79,7 @@ if t.TYPE_CHECKING:
     from bentoml._internal.runner.strategy import Strategy
 
     from ._types import AdaptersMapping
+    from ._types import AdaptersTuple
     from ._types import DictStrAny
     from ._types import LiteralRuntime
     from ._types import LLMInitAttrs
@@ -243,7 +244,7 @@ def resolve_peft_config_type(adapter_map: dict[str, str | None] | None):
         _peft_type: AdapterType = resolved_config["peft_type"].lower()
         if _peft_type not in resolved:
             resolved[_peft_type] = ()
-        resolved[_peft_type] += ((path_or_adapter_id, resolve_name, resolved_config),)
+        resolved[_peft_type] += (_AdaptersTuple((path_or_adapter_id, resolve_name, resolved_config)),)
     return resolved
 
 
@@ -434,6 +435,9 @@ class LLMInterface(ABC, t.Generic[M, T]):
             **attrs: t.Unpack[LLMInitAttrs],
         ) -> None:
             """Generated __attrs_init__ for openllm.LLM."""
+
+
+_AdaptersTuple: type[AdaptersTuple] = codegen.make_attr_tuple_class("AdaptersTuple", ["adapter_id", "name", "config"])
 
 
 @attr.define(slots=True, repr=False)
@@ -971,27 +975,28 @@ class LLM(LLMInterface[M, T], ReprMixin):
         # this is a temporary check to accept the first option name as 'default'
         # then we will raise Error when the optional_name is set to None in next iteration.
         _converted_first_none = False
-        for _adapter_type, (peft_id, adapter_name, resolved) in iter_key_tuples(self._adapters_mapping):
+        for _adapter_type, _adapters_tuples in self._adapters_mapping.items():
             default_config = self._default_ft_config(_adapter_type, inference_mode)
-            if not adapter_name and _converted_first_none:
-                raise ValueError(
-                    f"{self.__class__.__name__} doesn't know how to resolve adapter_name None mapping: {peft_id, resolved}"
+            for adapter in _adapters_tuples:
+                if not adapter.name and _converted_first_none:
+                    raise ValueError(
+                        f"{self.__class__.__name__} doesn't know how to resolve adapter_name None mapping: {adapter.adapter_id, adapter.config}"
+                    )
+                name = adapter.name
+                if name is None:
+                    _converted_first_none = True
+                    name = "default"
+                peft_config = (
+                    default_config.with_config(**adapter.config).to_peft_config()
+                    if name == "default"
+                    else FineTuneConfig(
+                        adapter_type=_adapter_type,
+                        adapter_config=adapter.config,
+                        inference_mode=inference_mode,
+                        llm_config_class=self.config_class,
+                    ).to_peft_config()
                 )
-            name = adapter_name
-            if name is None:
-                _converted_first_none = True
-                name = "default"
-            peft_config = (
-                default_config.with_config(**resolved).to_peft_config()
-                if adapter_name == "default"
-                else FineTuneConfig(
-                    adapter_type=_adapter_type,
-                    adapter_config=resolved,
-                    inference_mode=inference_mode,
-                    llm_config_class=self.config_class,
-                ).to_peft_config()
-            )
-            adapter_map[_adapter_type][name] = (peft_config, peft_id)
+                adapter_map[_adapter_type][name] = (peft_config, adapter.adapter_id)
 
         if self.__llm_adapter_map__ is None and use_cache:
             self.__llm_adapter_map__ = adapter_map
