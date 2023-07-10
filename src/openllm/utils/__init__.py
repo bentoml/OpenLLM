@@ -16,7 +16,7 @@
 User can import these function for convenience, but
 we won't ensure backward compatibility for these functions. So use with caution.
 """
-from __future__ import annotations as _annotations
+from __future__ import annotations
 import contextlib
 import functools
 import logging
