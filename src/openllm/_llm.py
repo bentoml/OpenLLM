@@ -67,8 +67,7 @@ if sys.version_info[:2] >= (3, 11):
     from typing import NotRequired
     from typing import overload
 else:
-    from typing import NotRequired
-
+    from typing_extensions import NotRequired
     from typing_extensions import overload
 
 if t.TYPE_CHECKING:
