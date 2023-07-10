@@ -17,7 +17,7 @@ import typing as t
 from collections import OrderedDict
 
 from .configuration_auto import CONFIG_MAPPING_NAMES
-from .factory import _BaseAutoLLMClass
+from .factory import BaseAutoLLMClass
 from .factory import _LazyAutoMapping
 
 
@@ -44,5 +44,5 @@ MODEL_MAPPING: dict[
 ] = _LazyAutoMapping(CONFIG_MAPPING_NAMES, MODEL_MAPPING_NAMES)
 
 
-class AutoLLM(_BaseAutoLLMClass):
+class AutoLLM(BaseAutoLLMClass):
     _model_mapping = MODEL_MAPPING

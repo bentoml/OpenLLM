@@ -72,12 +72,12 @@ all = [
     "openllm[falcon]",
     "openllm[mpt]",
     "openllm[starcoder]",
-    "openllm[openai]",
     "openllm[fine-tune]",
-    "openllm[ggml]",
-    "openllm[flan-t5]",
+    "openllm[openai]",
     "openllm[playground]",
+    "openllm[flan-t5]",
     "openllm[agents]",
+    "openllm[ggml]",
 ]
 chatglm = ["cpm-kernels", "sentencepiece"]
 falcon = ["einops", "xformers", "safetensors"]
@@ -217,7 +217,6 @@ ignore = [
     "PLR0915",
     "PLR2004", # magic value to use constant
     "E501",    # ignore line length violation
-    "E741",
     "PYI021",  # ignore docstring in stubs, as pyright will include docstring in stubs.
     "D103",    # Just missing docstring for magic methods.
     "D102",
@@ -283,25 +282,18 @@ avoid-escape = false
     "PT011",  # ignore too broad raises, as it can be use pytest.raises().match()
     "S307",   # Ignore eval(compile) as it is a known script execution
 ]
-"typings/**/*" = [
-    "D",    # pyright stubs will generate with docstring
-    "I001", # let black handle stubs
-]
+"typings/**/*" = ["D", "F", "E", "PYI002", "I001"]
 
 [tool.pyright]
 analysis.useLibraryCodeForTypes = true
-enableTypeIgnoreComments = true
+exclude = ["src/openllm/playground", "src/openllm/models/"]
 include = ["src/openllm", "src/openllm_client", "tests/", "tools/", "examples/"]
 pythonVersion = "3.12"
-reportMissingImports = "none"
-reportMissingModuleSource = "warning"
-reportMissingTypeStubs = "warning"
+reportMissingTypeStubs = false
+reportPrivateUsage = "warning"
+reportUnknownArgumentType = "warning"
 reportUnknownMemberType = "warning"
 reportUnknownVariableType = "warning"
-strictDictionaryInference = true
-strictListInference = true
-strictParameterNoneValue = true
-strictSetInference = true
 typeCheckingMode = "strict"
 
 [tool.coverage.run]

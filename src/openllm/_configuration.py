@@ -97,19 +97,17 @@ _T = t.TypeVar("_T")
 
 
 if t.TYPE_CHECKING:
+    import click
     import peft
-    from attr import _CountingAttr  # type: ignore
-    from attr import _make_init  # type: ignore
-    from attr import _transform_attrs  # type: ignore
+    from attr import _CountingAttr
+    from attr import _make_init
+    from attr import _transform_attrs
     from attr._compat import set_closure_cell
 
     import transformers
     from transformers.generation.beam_constraints import Constraint
 
-    from ._types import ClickFunctionWrapper
-    from ._types import F
-    from ._types import O_co
-    from ._types import P
+    from ._types import AnyCallable
 
     DictStrAny = dict[str, t.Any]
     ListStr = list[str]
@@ -146,10 +144,10 @@ config_merger = Merger(
 
 # case insensitive, but rename to conform with type
 class _PeftEnumMeta(enum.EnumMeta):
-    def __getitem__(self, __key: str | t.Any) -> PeftType:
+    def __getitem__(self, __key: str | t.Any) -> enum.Enum:
         if isinstance(__key, str):
             __key = inflection.underscore(__key).upper()
-        return super().__getitem__(__key)
+        return self._member_map_[__key]
 
 
 # vendorred from peft.utils.config.PeftType
@@ -163,11 +161,11 @@ class PeftType(enum.Enum, metaclass=_PeftEnumMeta):
     ADAPTION_PROMPT = "ADAPTION_PROMPT"
 
     @classmethod
-    def _missing_(cls, value: object) -> PeftType | None:
+    def _missing_(cls, value: object) -> enum.Enum | None:
         if isinstance(value, str):
             normalized = inflection.underscore(value).upper()
             if normalized in cls._member_map_:
-                return cls[normalized]
+                return cls._member_map_[normalized]
 
     @classmethod
     def supported(cls) -> set[str]:
@@ -175,6 +173,11 @@ class PeftType(enum.Enum, metaclass=_PeftEnumMeta):
 
     def to_str(self) -> str:
         return self.value
+
+    @staticmethod
+    def get(__key: str | t.Any) -> PeftType:
+        """type-safe getitem."""
+        return t.cast(PeftType, PeftType[__key])
 
 
 _PEFT_TASK_TYPE_TARGET_MAPPING = {"causal_lm": "CAUSAL_LM", "seq2seq_lm": "SEQ_2_SEQ_LM"}
@@ -192,9 +195,9 @@ def _adapter_converter(value: AdapterType | str | PeftType | None) -> PeftType:
         raise ValueError("'AdapterType' cannot be None.")
     if isinstance(value, PeftType):
         return value
-    if isinstance(value, str) and value not in PeftType.supported():
+    if value not in PeftType.supported():
         raise ValueError(f"Given '{value}' is not a supported adapter type.")
-    return PeftType[value]
+    return PeftType.get(value)
 
 
 @attr.define(slots=True)
@@ -1713,7 +1716,7 @@ class LLMConfig(_ConfigAttr):
         return self.model_construct_env(**llm_config_attrs), {k: v for k, v in attrs.items() if k not in key_to_remove}
 
     @overload
-    def to_generation_config(self, return_as_dict: t.Literal[False] = ...) -> transformers.GenerationConfig:
+    def to_generation_config(self, return_as_dict: t.Literal[False] = False) -> transformers.GenerationConfig:
         ...
 
     @overload
@@ -1725,19 +1728,7 @@ class LLMConfig(_ConfigAttr):
         return config.to_dict() if return_as_dict else config
 
     @classmethod
-    @overload
-    def to_click_options(
-        cls, f: t.Callable[..., openllm.LLMConfig]
-    ) -> F[P, ClickFunctionWrapper[..., openllm.LLMConfig]]:
-        ...
-
-    @classmethod
-    @overload
-    def to_click_options(cls, f: t.Callable[P, O_co]) -> F[P, ClickFunctionWrapper[P, O_co]]:
-        ...
-
-    @classmethod
-    def to_click_options(cls, f: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
+    def to_click_options(cls, f: AnyCallable) -> click.Command:
         """Convert current configuration to click options.
 
         This can be used as a decorator for click commands.

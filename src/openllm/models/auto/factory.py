@@ -54,10 +54,10 @@ else:
 logger = logging.getLogger(__name__)
 
 
-class _BaseAutoLLMClass:
+class BaseAutoLLMClass:
     _model_mapping: _LazyAutoMapping
 
-    def __init__(self, *args: t.Any, **attrs: t.Any):
+    def __init__(self, *args: t.Any, **attrs: t.Any):  # noqa
         raise EnvironmentError(
             f"Cannot instantiate {self.__class__.__name__} directly. "
             "Please use '{self.__class__.__name__}.Runner(model_name)' instead."
@@ -289,4 +289,4 @@ class _LazyAutoMapping(ConfigModelOrderedDict):
         self._extra_content[key] = value
 
 
-__all__ = ["_BaseAutoLLMClass", "_LazyAutoMapping"]
+__all__ = ["BaseAutoLLMClass", "_LazyAutoMapping"]

@@ -31,8 +31,8 @@ if t.TYPE_CHECKING:
     import openllm
     import transformers
 
-    from .._llm import _M
-    from .._llm import _T
+    from .._llm import M
+    from .._llm import T
     from .._types import ModelProtocol
     from .._types import TokenizerProtocol
 else:
@@ -73,7 +73,7 @@ def get(llm: openllm.LLM[t.Any, t.Any], auto_import: bool = False) -> bentoml.Mo
         raise
 
 
-def load_model(llm: openllm.LLM[_M, t.Any], *decls: t.Any, **attrs: t.Any) -> ModelProtocol[_M]:
+def load_model(llm: openllm.LLM[M, t.Any], *decls: t.Any, **attrs: t.Any) -> ModelProtocol[M]:
     """Load the model from BentoML store.
 
     By default, it will try to find check the model in the local store.
@@ -82,7 +82,7 @@ def load_model(llm: openllm.LLM[_M, t.Any], *decls: t.Any, **attrs: t.Any) -> Mo
     raise NotImplementedError("Currently work in progress.")
 
 
-def load_tokenizer(llm: openllm.LLM[t.Any, _T]) -> TokenizerProtocol[_T]:
+def load_tokenizer(llm: openllm.LLM[t.Any, T]) -> TokenizerProtocol[T]:
     """Load the tokenizer from BentoML store.
 
     By default, it will try to find the bentomodel whether it is in store..
@@ -110,7 +110,7 @@ def load_tokenizer(llm: openllm.LLM[t.Any, _T]) -> TokenizerProtocol[_T]:
                 trust_remote_code=llm.__llm_trust_remote_code__,
                 **tokenizer_attrs,
             )
-    return t.cast("TokenizerProtocol[_T]", tokenizer)
+    return t.cast("TokenizerProtocol[T]", tokenizer)
 
 
 def save_pretrained(llm: openllm.LLM[t.Any, t.Any], save_directory: str, **attrs: t.Any):

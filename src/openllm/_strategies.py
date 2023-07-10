@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 
 class AmdGpuResource(Resource[t.List[str]], resource_id="amd.com/gpu"):
     @classmethod
-    def from_spec(cls, spec: int | str | list[int | str]) -> list[str]:
+    def from_spec(cls, spec: t.Any) -> list[str]:
         if not isinstance(spec, (int, str, list)):
             raise TypeError("AMD GPU device IDs must be int, str or a list specifing the exact GPUs to use.")
 

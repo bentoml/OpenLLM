@@ -1,11 +1,12 @@
 # See https://github.com/RadeonOpenCompute/rocm_smi_lib/blob/master/python_smi_tools/rsmiBindings.py
 import ctypes
+from typing import Any
 from typing import Literal
 from typing import LiteralString
 
 class rocmsmi(ctypes.CDLL):
     @staticmethod
-    def rsmi_num_monitor_devices(num_devices: ctypes._CArgObject) -> LiteralString: ...
+    def rsmi_num_monitor_devices(num_devices: ctypes._CArgObject) -> Any: ...
 
 # Device ID
 dv_id: ctypes.c_uint64 = ...

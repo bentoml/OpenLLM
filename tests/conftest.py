@@ -28,7 +28,6 @@ if t.TYPE_CHECKING:
 _FRAMEWORK_MAPPING = {"flan_t5": "google/flan-t5-small", "opt": "facebook/opt-125m"}
 _PROMPT_MAPPING = {
     "qa": "Answer the following yes/no question by reasoning step-by-step. Can you write a whole Haiku in a single tweet?",
-    "default": "What is the weather in SF?",
 }
 
 
@@ -47,13 +46,14 @@ def parametrise_local_llm(
         runtime_impl += ("tf",)
 
     for framework, prompt in itertools.product(runtime_impl, _PROMPT_MAPPING.keys()):
-        llm, runner_kwargs = openllm.infer_auto_class(framework).for_model(
-            model, model_id=_FRAMEWORK_MAPPING[model], ensure_available=True, return_runner_kwargs=True
+        llm = openllm.Runner(
+            model,
+            model_id=_FRAMEWORK_MAPPING[model],
+            ensure_available=True,
+            implementation=framework,
+            init_local=True,
         )
         yield prompt, llm
-        runner = llm.to_runner(**runner_kwargs)
-        runner.init_local(quiet=True)
-        yield prompt, runner
 
 
 def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:

@@ -29,6 +29,20 @@ defaults:
   run:
     shell: bash --noprofile --norc -exo pipefail {0}
 jobs:
+  quality:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    name: quality-check
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Setup CI
+        uses: ./.github/actions/setup-repo
+        with:
+          python-version: ${{ env.STABLE_PYTHON_VERSION }}
+      - name: Run type check
+        run: hatch run typing
   tests:
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}
@@ -47,7 +61,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Run tests
-        run: hatch run full
+        run: hatch run tests:python
       - name: Disambiguate coverage filename
         run: mv .coverage ".coverage.${{ matrix.os }}.${{ matrix.python-version }}"
       - name: Upload coverage data
@@ -99,6 +113,7 @@ jobs:
     needs:
       - coverage
       - tests
+      - quality
     runs-on: ubuntu-latest
     steps:
       - name: Decide whether the needed jobs succeeded or failed

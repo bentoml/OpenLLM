@@ -62,8 +62,8 @@ class ModelNameFormatter(string.Formatter):
         super().__init__()
         self.model_name = model_name
 
-    def vformat(self, format_string: t.LiteralString) -> str:
-        return super().vformat(format_string, (), {self.model_keyword: self.model_name})
+    def vformat(self, format_string: str, *args: t.Any, **attrs: t.Any) -> t.LiteralString:
+        return t.cast("t.LiteralString", super().vformat(format_string, (), {self.model_keyword: self.model_name}))
 
     def can_format(self, value: str) -> bool:
         try:

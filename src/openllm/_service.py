@@ -134,7 +134,7 @@ async def hf_agent(request: Request) -> Response:
     except orjson.JSONDecodeError as err:
         raise openllm.exceptions.OpenLLMException(f"Invalid JSON input received: {err}") from None
 
-    stop = input_data.parameters.pop("stop", "\n")
+    stop = input_data.parameters.pop("stop", ["\n"])
     try:
         resp = await runner.generate_one.async_run(input_data.inputs, stop, **input_data.parameters)
         return JSONResponse(resp, status_code=200)
@@ -148,9 +148,11 @@ svc.mount_asgi_app(hf_app, path="/hf")
 
 
 async def list_adapter_v1(_: Request) -> Response:
-    res = runner.peft_adapters
-    if res["success"]:
-        res["result"] = {k: v.to_dict() for k, v in res["result"].items()}
+    res: dict[str, t.Any] = {}
+    if runner.peft_adapters["success"] is True:
+        res["result"] = {k: v.to_dict() for k, v in runner.peft_adapters["result"].items()}
+    res["success"] = runner.peft_adapters["success"]
+    res["error_msg"] = runner.peft_adapters["error_msg"]
     return JSONResponse(res, status_code=200)
 
 

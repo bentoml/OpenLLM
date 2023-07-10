@@ -19,10 +19,10 @@ import typing as t
 class PromptFormatter(string.Formatter):
     """This PromptFormatter is largely based on langchain's implementation."""
 
-    def vformat(self, format_string: str, args: t.Sequence[t.Any], kwargs: t.Mapping[str, t.Any]) -> str:
+    def vformat(self, format_string: str, args: t.Sequence[t.Any], kwargs: t.Mapping[str, t.Any]) -> t.LiteralString:
         if len(args) > 0:
             raise ValueError("Positional arguments are not supported")
-        return super().vformat(format_string, args, kwargs)
+        return t.cast("t.LiteralString", super().vformat(format_string, args, kwargs))
 
     def check_unused_args(
         self, used_args: set[int | str], args: t.Sequence[t.Any], kwargs: t.Mapping[str, t.Any]

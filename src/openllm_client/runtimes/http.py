@@ -36,9 +36,11 @@ logger = logging.getLogger(__name__)
 
 
 class HTTPClientMixin:
-    @property
-    def _metadata(self) -> DictStrAny:
-        ...
+    if t.TYPE_CHECKING:
+
+        @property
+        def _metadata(self) -> DictStrAny:
+            ...
 
     @property
     def model_name(self) -> str:

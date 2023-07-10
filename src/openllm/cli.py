@@ -95,9 +95,9 @@ from .utils import set_quiet_mode
 if t.TYPE_CHECKING:
     import torch
 
+    from ._types import AnyCallable
     from ._types import ClickFunctionWrapper
     from ._types import DictStrAny
-    from ._types import F
     from ._types import ListStr
     from ._types import LiteralRuntime
     from ._types import P
@@ -273,7 +273,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
     NUMBER_OF_COMMON_PARAMS = 4  # parameters in common_params + 1 faked group option header
 
     @staticmethod
-    def common_params(f: F[P, t.Any]) -> ClickFunctionWrapper[..., t.Any]:
+    def common_params(f: AnyCallable):
         """This is not supposed to be used with unprocessed click function.
 
         This should be used a the last currying from common_params -> usage_tracking -> exception_handling.
@@ -310,12 +310,10 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
 
             return f(*args, **attrs)
 
-        return t.cast("ClickFunctionWrapper[..., t.Any]", wrapper)
+        return wrapper
 
     @staticmethod
-    def usage_tracking(
-        func: ClickFunctionWrapper[..., t.Any], group: click.Group, **attrs: t.Any
-    ) -> ClickFunctionWrapper[..., t.Any]:
+    def usage_tracking(func: AnyCallable, group: click.Group, **attrs: t.Any) -> AnyCallable:
         """This is not supposed to be used with unprocessed click function.
 
         This should be used a the last currying from common_params -> usage_tracking -> exception_handling.
@@ -347,12 +345,10 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
                     analytics.track(event)
                     raise
 
-        return t.cast("ClickFunctionWrapper[..., t.Any]", wrapper)
+        return wrapper
 
     @staticmethod
-    def exception_handling(
-        func: ClickFunctionWrapper[..., t.Any], group: click.Group, **attrs: t.Any
-    ) -> ClickFunctionWrapper[..., t.Any]:
+    def exception_handling(func: AnyCallable, group: click.Group, **attrs: t.Any) -> ClickFunctionWrapper[..., t.Any]:
         """This is not supposed to be used with unprocessed click function.
 
         This should be used a the last currying from common_params -> usage_tracking -> exception_handling.
@@ -409,7 +405,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
         return super().list_commands(ctx)
 
     @override
-    def command(self, *args: t.Any, **attrs: t.Any) -> F[[t.Callable[P, t.Any]], click.Command]:
+    def command(self, *args: t.Any, **attrs: t.Any):
         """Override the default 'cli.command' with supports for aliases for given command, and it wraps the implementation with common parameters."""
         if "context_settings" not in attrs:
             attrs["context_settings"] = {}
@@ -417,7 +413,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
             attrs["context_settings"]["max_content_width"] = 120
         aliases = attrs.pop("aliases", None)
 
-        def wrapper(f: F[P, t.Any]) -> click.Command:
+        def wrapper(f: AnyCallable) -> click.Command:
             name = f.__name__.lower()
             if name.endswith("_command"):
                 name = name[:-8]
@@ -449,16 +445,13 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
 
             return cmd
 
-        # XXX: The current type coercion is not ideal, but we can really
-        # loosely define it
-        return t.cast("F[[t.Callable[..., t.Any]], click.Command]", wrapper)
+        return wrapper
 
 
 @click.group(cls=OpenLLMCommandGroup, context_settings=_CONTEXT_SETTINGS, name="openllm")
 @click.version_option(__version__, "--version", "-v")
 def cli():
-    """\b.
-
+    """\b
      ██████╗ ██████╗ ███████╗███╗   ██╗██╗     ██╗     ███╗   ███╗
     ██╔═══██╗██╔══██╗██╔════╝████╗  ██║██║     ██║     ████╗ ████║
     ██║   ██║██████╔╝█████╗  ██╔██╗ ██║██║     ██║     ██╔████╔██║
@@ -469,7 +462,7 @@ def cli():
     \b
     An open platform for operating large language models in production.
     Fine-tune, serve, deploy, and monitor any LLMs with ease.
-    """
+    """  # noqa: D205
 
 
 @cli.group(cls=OpenLLMCommandGroup, context_settings=_CONTEXT_SETTINGS, name="start", aliases=["start-http"])
@@ -516,9 +509,7 @@ def parse_serve_args(serve_grpc: bool):
         help=f"Related to serving the model [synonymous to `bentoml {'serve-http' if not serve_grpc else command }`]",
     )
 
-    def decorator(
-        f: t.Callable[t.Concatenate[int, str | None, P], openllm.LLMConfig]
-    ) -> ClickFunctionWrapper[P, openllm.LLMConfig]:
+    def decorator(f: t.Callable[t.Concatenate[int, str | None, P], openllm.LLMConfig]):
         serve_command = cli.commands[command]
         # The first variable is the argument bento
         # and the last three are shared default, which we don't need.
@@ -532,7 +523,7 @@ def parse_serve_args(serve_grpc: bool):
             # type can be determine from default value
             attrs.pop("type")
             param_decls = (*attrs.pop("opts"), *attrs.pop("secondary_opts"))
-            f = t.cast("WrappedServeFunction[P]", cog.optgroup.option(*param_decls, **attrs)(f))
+            f = cog.optgroup.option(*param_decls, **attrs)(f)
 
         return group(f)
 
@@ -543,9 +534,7 @@ _http_server_args = parse_serve_args(False)
 _grpc_server_args = parse_serve_args(True)
 
 
-def start_decorator(
-    llm_config: openllm.LLMConfig, serve_grpc: bool = False
-) -> t.Callable[[t.Callable[P, t.Any]], F[P, t.Any]]:
+def start_decorator(llm_config: openllm.LLMConfig, serve_grpc: bool = False):
     opts = [
         llm_config.to_click_options,
         _http_server_args if not serve_grpc else _grpc_server_args,
@@ -629,7 +618,7 @@ def start_decorator(
         click.option("--return-process", is_flag=True, default=False, help="Internal use only.", hidden=True),
     ]
 
-    def decorator(f: t.Callable[P, t.Any]) -> t.Callable[P, t.Any]:
+    def decorator(f: AnyCallable) -> AnyCallable:
         for opt in reversed(opts):
             f = opt(f)
         return f
@@ -1917,7 +1906,7 @@ def models_command(
         converted: list[str] = []
         for m in models:
             config = openllm.AutoConfig.for_model(m)
-            runtime_impl: tuple[LiteralRuntime, ...] = ()
+            runtime_impl: tuple[str, ...] = ()
             if config["model_name"] in openllm.MODEL_MAPPING_NAMES:
                 runtime_impl += ("pt",)
             if config["model_name"] in openllm.MODEL_FLAX_MAPPING_NAMES:
@@ -2096,8 +2085,6 @@ def parsing_instruction_callback(
     if isinstance(value, list):
         # we only parse --text foo bar -> --text foo and omit bar
         value = value[-1]
-    if not isinstance(value, str):
-        raise click.BadParameter(f"Invalid option format: {value}")
 
     key, *values = value.split("=")
     if not key.startswith("--"):
@@ -2308,7 +2295,7 @@ def playground(output_dir: str | None, port: int):
             continue
         _echo("Generating notebook for: " + module.name, fg="magenta")
         markdown_cell = nbformat.v4.new_markdown_cell(metadata[module.name]["description"])
-        f = jupytext.read(os.path.join(module.module_finder.path, module.name + ".py"))
+        f = jupytext.read(os.path.join(module.module_finder.path, module.name + ".py"))  # type: ignore
         f.cells.insert(0, markdown_cell)
         jupytext.write(f, os.path.join(output_dir, module.name + ".ipynb"), fmt="notebook")
     try:

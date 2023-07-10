@@ -17,6 +17,7 @@
 from __future__ import annotations
 import contextlib
 import logging
+import shutil
 import subprocess
 import typing as t
 
@@ -51,7 +52,6 @@ def build_container(
     bento: bentoml.Bento | str | bentoml.Tag,
     image_tag: str | None = None,
     cleanup: bool = False,
-    backend: t.LiteralString = "docker",
     **attrs: t.Any,
 ):
     if isinstance(bento, bentoml.Bento):
@@ -62,11 +62,15 @@ def build_container(
     if image_tag is None:
         image_tag = str(bento_tag)
 
+    executable = shutil.which("docker")
+    if not executable:
+        raise RuntimeError("docker executable not found")
+
     try:
         logger.info("Building container for %s", bento_tag)
         bentoml.container.build(
             bento_tag,
-            backend=backend,
+            backend="docker",
             image_tag=(image_tag,),
             progress="plain",
             **attrs,
@@ -75,7 +79,7 @@ def build_container(
     finally:
         if cleanup:
             logger.info("Deleting container %s", image_tag)
-            subprocess.check_output([backend, "rmi", image_tag])
+            subprocess.check_output([executable, "rmi", "-f", image_tag])
 
 
 @contextlib.contextmanager
@@ -85,22 +89,25 @@ def prepare(
     implementation: LiteralRuntime = "pt",
     deployment_mode: t.Literal["container", "local"] = "local",
     clean_context: contextlib.ExitStack | None = None,
+    cleanup: bool = False,
 ):
     if clean_context is None:
         clean_context = contextlib.ExitStack()
+        cleanup = True
 
-    llm = openllm.infer_auto_class(implementation).for_model(model, model_id=model_id)
+    llm = openllm.infer_auto_class(implementation).for_model(model, model_id=model_id, ensure_available=True)
     bento_tag = bentoml.Tag.from_taglike(f"{llm.llm_type}-service:{llm.tag.version}")
 
     if not bentoml.list(bento_tag):
-        bento = clean_context.enter_context(build_bento(model, model_id=model_id))
+        bento = clean_context.enter_context(build_bento(model, model_id=model_id, cleanup=cleanup))
     else:
         bento = bentoml.get(bento_tag)
 
     container_name = f"openllm-{model}-{llm.llm_type}".replace("-", "_")
 
     if deployment_mode == "container":
-        container_name = clean_context.enter_context(build_container(bento, image_tag=container_name))
+        container_name = clean_context.enter_context(build_container(bento, image_tag=container_name, cleanup=cleanup))
 
     yield container_name
-    clean_context.close()
+    if cleanup:
+        clean_context.close()

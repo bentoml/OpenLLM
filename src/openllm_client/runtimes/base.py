@@ -45,12 +45,6 @@ if t.TYPE_CHECKING:
         async def async_health(self) -> t.Any:
             ...
 
-        def call(self, name: str, inputs: t.Any, **attrs: t.Any) -> t.Any:
-            ...
-
-        async def acall(self, name: str, inputs: t.Any, **attrs: t.Any) -> t.Any:
-            ...
-
         def generate_v1(self, qa: openllm.GenerationInput) -> dict[str, t.Any]:
             ...
 
@@ -74,7 +68,7 @@ def in_async_context() -> bool:
 T = t.TypeVar("T")
 
 
-class ClientMixin(t.Generic[T]):
+class ClientMeta(t.Generic[T]):
     _api_version: str
     _client_class: type[bentoml.client.Client]
 
@@ -172,7 +166,7 @@ class ClientMixin(t.Generic[T]):
         ...
 
 
-class BaseClient(ClientMixin[T]):
+class BaseClient(ClientMeta[T]):
     def health(self) -> t.Any:
         raise NotImplementedError
 
@@ -246,7 +240,7 @@ class BaseClient(ClientMixin[T]):
         raise NotImplementedError
 
 
-class BaseAsyncClient(ClientMixin[T]):
+class BaseAsyncClient(ClientMeta[T]):
     async def health(self) -> t.Any:
         raise NotImplementedError
 
@@ -304,6 +298,10 @@ class BaseAsyncClient(ClientMixin[T]):
             raise RuntimeError(f"Unknown 'agent_type={agent_type}'")
 
     async def _run_hf_agent(self, *args: t.Any, **kwargs: t.Any) -> t.Any:
+        if not openllm.utils.is_transformers_supports_agent():
+            raise RuntimeError(
+                "This version of transformers does not support agent.run. Make sure to upgrade to transformers>4.30.0"
+            )
         if len(args) > 1:
             raise ValueError("'args' should only take one positional argument.")
         task = kwargs.pop("task", args[0])
@@ -317,7 +315,7 @@ class BaseAsyncClient(ClientMixin[T]):
 
         _hf_agent = self._hf_agent
 
-        prompt = _hf_agent.format_prompt(task)
+        prompt = t.cast(str, _hf_agent.format_prompt(task))
         stop = ["Task:"]
         async with httpx.AsyncClient(timeout=httpx.Timeout(self.timeout)) as client:
             response = await client.post(

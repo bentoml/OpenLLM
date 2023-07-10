@@ -35,9 +35,11 @@ logger = logging.getLogger(__name__)
 
 
 class GrpcClientMixin:
-    @property
-    def _metadata(self) -> Response:
-        ...
+    if t.TYPE_CHECKING:
+
+        @property
+        def _metadata(self) -> Response:
+            ...
 
     @property
     def model_name(self) -> str:

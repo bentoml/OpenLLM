@@ -47,8 +47,8 @@ from ..utils import LazyModule
 if t.TYPE_CHECKING:
     import bentoml
 
-    from .._llm import _M
-    from .._llm import _T
+    from .._llm import M
+    from .._llm import T
     from .._types import ModelProtocol
     from .._types import TokenizerProtocol
 
@@ -67,7 +67,7 @@ def import_model(
         raise ValueError(f"Unknown runtime: {llm.config['runtime']}")
 
 
-def get(llm: openllm.LLM[_M, _T], auto_import: bool = False) -> bentoml.Model:
+def get(llm: openllm.LLM[t.Any, t.Any], auto_import: bool = False) -> bentoml.Model:
     if llm.runtime == "transformers":
         return openllm.transformers.get(llm, auto_import=auto_import)
     elif llm.runtime == "ggml":
@@ -76,7 +76,7 @@ def get(llm: openllm.LLM[_M, _T], auto_import: bool = False) -> bentoml.Model:
         raise ValueError(f"Unknown runtime: {llm.config['runtime']}")
 
 
-def save_pretrained(llm: openllm.LLM[_M, _T], save_directory: str, **attrs: t.Any):
+def save_pretrained(llm: openllm.LLM[t.Any, t.Any], save_directory: str, **attrs: t.Any):
     if llm.runtime == "transformers":
         return openllm.transformers.save_pretrained(llm, save_directory, **attrs)
     elif llm.runtime == "ggml":
@@ -85,7 +85,7 @@ def save_pretrained(llm: openllm.LLM[_M, _T], save_directory: str, **attrs: t.An
         raise ValueError(f"Unknown runtime: {llm.config['runtime']}")
 
 
-def load_model(llm: openllm.LLM[_M, _T], *decls: t.Any, **attrs: t.Any) -> ModelProtocol[_M]:
+def load_model(llm: openllm.LLM[M, t.Any], *decls: t.Any, **attrs: t.Any) -> ModelProtocol[M]:
     if llm.runtime == "transformers":
         return openllm.transformers.load_model(llm, *decls, **attrs)
     elif llm.runtime == "ggml":
@@ -94,7 +94,7 @@ def load_model(llm: openllm.LLM[_M, _T], *decls: t.Any, **attrs: t.Any) -> Model
         raise ValueError(f"Unknown runtime: {llm.config['runtime']}")
 
 
-def load_tokenizer(llm: openllm.LLM[_M, _T]) -> TokenizerProtocol[_T]:
+def load_tokenizer(llm: openllm.LLM[t.Any, T]) -> TokenizerProtocol[T]:
     if llm.runtime == "transformers":
         return openllm.transformers.load_tokenizer(llm)
     elif llm.runtime == "ggml":

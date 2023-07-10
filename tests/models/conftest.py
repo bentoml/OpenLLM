@@ -115,7 +115,6 @@ def response_snapshot(snapshot: SnapshotAssertion):
 @attr.define(init=False)
 class _Handle(ABC):
     port: int
-    timeout: int
     deployment_mode: t.Literal["container", "local"]
 
     client: BaseAsyncClient[t.Any] = attr.field(init=False)
@@ -132,20 +131,18 @@ class _Handle(ABC):
     def status(self) -> bool:
         raise NotImplementedError
 
-    async def health(self, timeout: int | None = None):
-        if timeout is None:
-            timeout = self.timeout
-
+    async def health(self, timeout: int = 240):
         start_time = time.time()
         while time.time() - start_time < timeout:
             if not self.status():
                 raise RuntimeError(f"Failed to initialise {self.__class__.__name__}")
+            await self.client.health()
             try:
                 await self.client.query("sanity")
                 return
             except Exception:
                 time.sleep(1)
-        raise RuntimeError(f"Handle failed to initialise within {self.timeout} seconds.")
+        raise RuntimeError(f"Handle failed to initialise within {timeout} seconds.")
 
 
 @attr.define(init=False)
@@ -157,9 +154,8 @@ class LocalHandle(_Handle):
         process: subprocess.Popen[bytes],
         port: int,
         deployment_mode: t.Literal["container", "local"],
-        timeout: int = 60,
     ):
-        self.__attrs_init__(port, timeout, deployment_mode, process)
+        self.__attrs_init__(port, deployment_mode, process)
 
     def status(self) -> bool:
         return self.process.poll() is None
@@ -188,9 +184,8 @@ class DockerHandle(_Handle):
         container_name: str,
         port: int,
         deployment_mode: t.Literal["container", "local"],
-        timeout: int = 60,
     ):
-        self.__attrs_init__(port, timeout, deployment_mode, container_name, docker_client)
+        self.__attrs_init__(port, deployment_mode, container_name, docker_client)
 
     def status(self) -> bool:
         container = self.docker_client.containers.get(self.container_name)

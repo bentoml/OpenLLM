@@ -33,53 +33,21 @@ from click import types as click_types
 import openllm
 
 
-# NOTE: We need to do this so that overload can register
-# correct overloads to typing registry
-if sys.version_info[:2] >= (3, 11):
-    from typing import overload
-else:
-    from typing_extensions import overload
-
 if t.TYPE_CHECKING:
     from attr import _ValidatorType
 
-    from .._types import ClickFunctionWrapper
-    from .._types import F
-    from .._types import O_co
-    from .._types import P
+    from .._types import ListAny
 
 _T = t.TypeVar("_T")
 
 
-@overload
 def attrs_to_options(
     name: str,
     field: attr.Attribute[t.Any],
     model_name: str,
     typ: type[t.Any] | None = None,
     suffix_generation: bool = False,
-) -> F[..., F[..., openllm.LLMConfig]]:
-    ...
-
-
-@overload
-def attrs_to_options(  # type: ignore (overlapping overload)
-    name: str,
-    field: attr.Attribute[O_co],
-    model_name: str,
-    typ: type[t.Any] | None = None,
-    suffix_generation: bool = False,
-) -> F[..., F[P, O_co]]:
-    ...
-
-
-def attrs_to_options(
-    name: str,
-    field: attr.Attribute[t.Any],
-    model_name: str,
-    typ: type[t.Any] | None = None,
-    suffix_generation: bool = False,
-) -> t.Callable[..., ClickFunctionWrapper[..., t.Any]]:
+):
     # TODO: support parsing nested attrs class and Union
     envvar = field.metadata["env"]
     dasherized = inflection.dasherize(name)
@@ -87,6 +55,8 @@ def attrs_to_options(
 
     if typ in (None, attr.NOTHING):
         typ = field.type
+        if typ is None:
+            raise RuntimeError(f"Failed to parse type for {name}")
 
     full_option_name = f"--{dasherized}"
     if field.type is bool:
@@ -304,15 +274,16 @@ class EnumChoice(click.Choice):
             case_sensitive: Whether this choice should be case case_sensitive.
         """
         self.mapping = enum
-        self.internal_type = enum
-        super().__init__([e.name for e in self.mapping], case_sensitive)
+        self.internal_type = type(enum)
+        choices: ListAny = [e.name for e in enum.__class__]
+        super().__init__(choices, case_sensitive)
 
     def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> Enum:
         if isinstance(value, self.internal_type):
             return value
         result = super().convert(value, param, ctx)
         if isinstance(result, str):
-            result = self.mapping[result]
+            result = self.internal_type[result]
         return result
 
 

@@ -81,7 +81,7 @@ if t.TYPE_CHECKING:
     from .._types import LiteralRuntime
     from .._types import P
     from .._types import Ts
-    from ..models.auto.factory import _BaseAutoLLMClass
+    from ..models.auto.factory import BaseAutoLLMClass
 
 
 def set_debug_mode(enabled: bool):
@@ -104,11 +104,7 @@ def gpu_count() -> tuple[str, ...]:
 
     cuda_visible_devices = os.environ.get("CUDA_VISIBLE_DEVICES", None)
     if cuda_visible_devices is not None:
-        if "," in cuda_visible_devices:
-            available_gpu = tuple(int(i) for i in cuda_visible_devices.split(","))
-        else:
-            available_gpu = tuple(int(i) for i in cuda_visible_devices.split())
-        return available_gpu
+        return tuple(i for i in cuda_visible_devices.split(","))
 
     return tuple(NvidiaGpuResource.from_system())
 
@@ -211,7 +207,7 @@ def in_notebook() -> bool:
     try:
         from IPython.core.getipython import get_ipython
 
-        if "IPKernelApp" not in get_ipython().config:  # pragma: no cover
+        if "IPKernelApp" not in get_ipython().config:  # type: ignore
             return False
     except ImportError:
         return False
@@ -374,7 +370,7 @@ def infer_auto_class(implementation: t.Literal["flax"]) -> type[openllm.AutoFlax
     ...
 
 
-def infer_auto_class(implementation: LiteralRuntime) -> type[_BaseAutoLLMClass]:
+def infer_auto_class(implementation: LiteralRuntime) -> type[BaseAutoLLMClass]:
     if implementation == "tf":
         from ..models.auto import AutoTFLLM as auto
     elif implementation == "flax":

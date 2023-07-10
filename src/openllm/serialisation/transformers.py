@@ -29,6 +29,7 @@ from .constants import FRAMEWORK_TO_AUTOCLASS_MAPPING
 from .constants import MODEL_TO_AUTOCLASS_MAPPING
 from ..exceptions import OpenLLMException
 from ..utils import LazyLoader
+from ..utils import first_not_none
 from ..utils import generate_context
 from ..utils import generate_labels
 from ..utils import is_torch_available
@@ -42,11 +43,10 @@ if t.TYPE_CHECKING:
     import transformers
     from transformers.models.auto.auto_factory import _BaseAutoModelClass
 
-    from .._llm import _M
-    from .._llm import _T
+    from .._llm import M
+    from .._llm import T
     from .._types import DictStrAny
     from .._types import ModelProtocol
-    from .._types import P
     from .._types import TokenizerProtocol
 else:
     transformers = LazyLoader("transformers", globals(), "transformers")
@@ -215,7 +215,7 @@ def get(llm: openllm.LLM[t.Any, t.Any], auto_import: bool = False) -> bentoml.Mo
         raise
 
 
-def load_model(llm: openllm.LLM[_M, t.Any], *decls: t.Any, **attrs: t.Any) -> ModelProtocol[_M]:
+def load_model(llm: openllm.LLM[M, t.Any], *decls: t.Any, **attrs: t.Any) -> ModelProtocol[M]:
     """Load the model from BentoML store.
 
     By default, it will try to find check the model in the local store.
@@ -239,11 +239,11 @@ def load_model(llm: openllm.LLM[_M, t.Any], *decls: t.Any, **attrs: t.Any) -> Mo
         # BetterTransformer is currently only supported on PyTorch.
         from optimum.bettertransformer import BetterTransformer
 
-        model = BetterTransformer.transform(model)
-    return t.cast("ModelProtocol[_M]", model)
+        model = BetterTransformer.transform(model)  # type: ignore
+    return t.cast("ModelProtocol[M]", model)
 
 
-def load_tokenizer(llm: openllm.LLM[t.Any, _T]) -> TokenizerProtocol[_T]:
+def load_tokenizer(llm: openllm.LLM[t.Any, T]) -> TokenizerProtocol[T]:
     """Load the tokenizer from BentoML store.
 
     By default, it will try to find the bentomodel whether it is in store..
@@ -271,7 +271,7 @@ def load_tokenizer(llm: openllm.LLM[t.Any, _T]) -> TokenizerProtocol[_T]:
                 trust_remote_code=llm.__llm_trust_remote_code__,
                 **tokenizer_attrs,
             )
-    return t.cast("TokenizerProtocol[_T]", tokenizer)
+    return tokenizer
 
 
 def save_pretrained(
@@ -279,7 +279,7 @@ def save_pretrained(
     save_directory: str,
     is_main_process: bool = True,
     state_dict: DictStrAny | None = None,
-    save_function: t.Callable[P, None] | None = None,
+    save_function: t.Callable[..., None] | None = None,
     push_to_hub: bool = False,
     max_shard_size: int | str = "10GB",
     safe_serialization: bool = False,
@@ -287,8 +287,7 @@ def save_pretrained(
     **attrs: t.Any,
 ):
     """Light wrapper around ``transformers.PreTrainedTokenizer.save_pretrained`` and ``transformers.PreTrainedModel.save_pretrained``."""
-    if save_function is None:
-        save_function = torch.save
+    save_function = first_not_none(save_function, default=torch.save)
 
     model_save_attrs, tokenizer_save_attrs = normalize_attrs_to_model_tokenizer_pair(**attrs)
 

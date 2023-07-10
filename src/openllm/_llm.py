@@ -84,9 +84,7 @@ if t.TYPE_CHECKING:
     from ._types import LLMInitAttrs
     from ._types import LLMRunnable
     from ._types import LLMRunner
-    from ._types import ModelProtocol
     from ._types import PeftAdapterOutput
-    from ._types import TokenizerProtocol
     from ._types import TupleAny
     from .utils.representation import ReprArgs
 
@@ -151,13 +149,14 @@ def make_tag(
             tag = _store.list()[0].tag
             model_version = tag.version
             model_name = tag.name
-        elif model_version is None:
-            if not quiet:
-                logger.warning(
-                    "Given 'model_id=%s' is a path, and 'model_version' is not passed. OpenLLM will generate the version based on the last modified time of this given directory.",
-                    model_id,
-                )
-            model_version = generate_hash_from_file(model_id)
+        else:
+            if model_version is None:  # noqa: PLR5501
+                if not quiet:
+                    logger.warning(
+                        "Given 'model_id=%s' is a path, and 'model_version' is not passed. OpenLLM will generate the version based on the last modified time of this given directory.",
+                        model_id,
+                    )
+                model_version = generate_hash_from_file(model_id)
     else:
         config = t.cast(
             "transformers.PretrainedConfig",
@@ -250,9 +249,8 @@ def resolve_peft_config_type(adapter_map: dict[str, str | None] | None):
 
 _reserved_namespace = {"config_class", "model", "tokenizer", "import_kwargs"}
 
-
-_M = t.TypeVar("_M", bound="ModelProtocol[t.Any]")
-_T = t.TypeVar("_T", bound="TokenizerProtocol[t.Any]")
+M = t.TypeVar("M", bound="transformers.PreTrainedModel")
+T = t.TypeVar("T", bound="t.Union[transformers.PreTrainedTokenizerFast, transformers.PreTrainedTokenizer]")
 
 
 def _default_post_init(self: LLM[t.Any, t.Any]):
@@ -262,7 +260,7 @@ def _default_post_init(self: LLM[t.Any, t.Any]):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-class LLMInterface(ABC, t.Generic[_M, _T]):
+class LLMInterface(ABC, t.Generic[M, T]):
     """This defines the loose contract for all openllm.LLM implementations."""
 
     @property
@@ -352,14 +350,14 @@ class LLMInterface(ABC, t.Generic[_M, _T]):
         """
         raise NotImplementedError
 
-    def load_model(self, tag: bentoml.Tag, *args: t.Any, **attrs: t.Any) -> t.Any:
+    def load_model(self, tag: bentoml.Tag, *args: t.Any, **attrs: t.Any) -> M:
         """This function can be implemented to override the default load_model behaviour.
 
         See falcon for example implementation.
         """
         raise NotImplementedError
 
-    def load_tokenizer(self, tag: bentoml.Tag, **attrs: t.Any) -> t.Any:
+    def load_tokenizer(self, tag: bentoml.Tag, **attrs: t.Any) -> T:
         """This function can be implemented to override how to load the tokenizer.
 
         See falcon for example implementation.
@@ -399,9 +397,9 @@ class LLMInterface(ABC, t.Generic[_M, _T]):
     - `TFOPTForConditionalGeneration` -> `tf`
     - `FlaxOPTForConditionalGeneration` -> `flax`
     """
-    __llm_model__: _M | peft.PeftModel | None
+    __llm_model__: M | peft.PeftModel | None
     """A reference to the actual model. Instead of access this directly, you should use `model` property instead."""
-    __llm_tokenizer__: _T | None
+    __llm_tokenizer__: T | None
     """A reference to the actual tokenizer. Instead of access this directly, you should use `tokenizer` property instead."""
     __llm_bentomodel__: bentoml.Model | None
     """A reference to the bentomodel used for this LLM. Instead of access this directly, you should use `_bentomodel` property instead."""
@@ -410,10 +408,10 @@ class LLMInterface(ABC, t.Generic[_M, _T]):
 
     __llm_custom_import__: bool
     """Whether this LLM has a custom import_model"""
-    __llm_custom_load__: t.Callable[[t.Self, t.Any, t.Any], None] | None
-    """A callable that will be called after the model is loaded. This is set when 'load_model' is implemented"""
-    __llm_custom_tokenizer__: t.Callable[[t.Self, t.Any], None] | None
-    """A callable that will be called after the tokenizer is loaded. This is set when 'load_tokenizer' is implemented"""
+    __llm_custom_load__: bool
+    """A boolean to determine whether a custom 'load_model' is implemented"""
+    __llm_custom_tokenizer__: bool
+    """A boolean to determine whether a custom 'load_tokenizer' is implemented"""
     __llm_init_kwargs__: property | None
     """A check if 'import_kwargs' is implemented in subclass."""
 
@@ -439,7 +437,7 @@ class LLMInterface(ABC, t.Generic[_M, _T]):
 
 
 @attr.define(slots=True, repr=False)
-class LLM(LLMInterface[_M, _T], ReprMixin):
+class LLM(LLMInterface[M, T], ReprMixin):
     config: openllm.LLMConfig
     """The config instance to use for this LLM. This will be created based on config_class and available
     when initialising the LLM."""
@@ -480,14 +478,14 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
             raise RuntimeError("Missing required key 'config_class'. Make sure to define it within the LLM subclass.")
 
         _custom_import = True
-        if cls.import_model is LLMInterface[_M, _T].import_model:
+        if cls.import_model is LLMInterface[M, T].import_model:
             # using the default import model if no custom import is set
             _custom_import = False
             setattr(cls, "import_model", openllm.serialisation.import_model)
         else:
             import_func = getattr(cls, "import_model")
 
-            def _wrapped_import_model(self: LLM[_M, _T], *decls: t.Any, trust_remote_code: bool, **attrs: t.Any):
+            def _wrapped_import_model(self: LLM[M, T], *decls: t.Any, trust_remote_code: bool, **attrs: t.Any):
                 # wrapped around custom init to provide some meta compression
                 # for all decls and attrs
                 (model_decls, model_attrs), _ = self.llm_parameters
@@ -499,26 +497,22 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
 
             setattr(cls, "import_model", functools.update_wrapper(_wrapped_import_model, cls.import_model))
 
-        if cls.llm_post_init is LLMInterface[_M, _T].llm_post_init:
+        if cls.llm_post_init is LLMInterface[M, T].llm_post_init:
             # using the default post init if no custom post init is set
             wrapped_post_init = _default_post_init
         else:
             original_post_init = getattr(cls, "llm_post_init")
 
-            def wrapped_post_init(self: LLM[_M, _T]):
+            def wrapped_post_init(self: LLM[M, T]):
                 _default_post_init(self)
                 original_post_init(self)
 
         setattr(cls, "llm_post_init", wrapped_post_init)
 
         cls.__llm_custom_import__ = _custom_import
-        cls.__llm_custom_load__ = None if cls.load_model is LLMInterface[_M, _T].load_model else cls.load_model
-        cls.__llm_custom_tokenizer__ = (
-            None if cls.load_tokenizer is LLMInterface[_M, _T].load_tokenizer else cls.load_tokenizer
-        )
-        cls.__llm_init_kwargs__ = (
-            None if cls.import_kwargs is LLMInterface[_M, _T].import_kwargs else cls.import_kwargs
-        )
+        cls.__llm_custom_load__ = False if cls.load_model is LLMInterface[M, T].load_model else True
+        cls.__llm_custom_tokenizer__ = False if cls.load_tokenizer is LLMInterface[M, T].load_tokenizer else True
+        cls.__llm_init_kwargs__ = None if cls.import_kwargs is LLMInterface[M, T].import_kwargs else cls.import_kwargs
 
         for at in {"bentomodel", "model", "tokenizer", "adapter_map"}:
             setattr(cls, f"__llm_{at}__", None)
@@ -545,7 +539,7 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
             from optimum.bettertransformer import BetterTransformer
 
             self.__llm_model__ = t.cast(
-                _M,
+                M,
                 BetterTransformer.reverse(t.cast("transformers.PreTrainedModel", self.__llm_model__)),  # type: ignore
             )
 
@@ -566,7 +560,7 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
         adapter_map: dict[str, str | None] | None = None,
         quantization_config: transformers.BitsAndBytesConfig | None = None,
         **attrs: t.Any,
-    ) -> LLM[_M, _T]:
+    ) -> LLM[M, T]:
         """Instantiate a pretrained LLM.
 
         ``LLM.from_pretrained`` follows the same design principle as HuggingFace's `from_pretrained` method, plus the following:
@@ -932,7 +926,7 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
         return self.__llm_bentomodel__
 
     @property
-    def model(self) -> _M:
+    def model(self) -> M:
         """The model to use for this LLM. This shouldn't be set at runtime, rather let OpenLLM handle it."""
         # Run check for GPU
         if self.config["requires_gpu"] and len(openllm.utils.gpu_count()) < 1:
@@ -940,15 +934,15 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
 
         if self.__llm_model__ is None:
             self.__llm_model__ = t.cast(
-                _M, openllm.serialisation.load_model(self, *self._model_decls, **self._model_attrs)
+                M, openllm.serialisation.load_model(self, *self._model_decls, **self._model_attrs)
             )
-        return t.cast(_M, self.__llm_model__)
+        return t.cast(M, self.__llm_model__)
 
     @property
-    def tokenizer(self) -> _T:
+    def tokenizer(self) -> T:
         """The tokenizer to use for this LLM. This shouldn't be set at runtime, rather let OpenLLM handle it."""
         if self.__llm_tokenizer__ is None:
-            self.__llm_tokenizer__ = t.cast(_T, openllm.serialisation.load_tokenizer(self))
+            self.__llm_tokenizer__ = t.cast(T, openllm.serialisation.load_tokenizer(self))
         return self.__llm_tokenizer__
 
     def _default_ft_config(self, _adapter_type: AdapterType, inference_mode: bool) -> FineTuneConfig:
@@ -1004,7 +998,7 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
         return adapter_map
 
     @requires_dependencies("peft", extra="fine-tune")
-    def prepare_for_training(self, adapter_type: AdapterType = "lora", **attrs: t.Any) -> tuple[_M, _T]:
+    def prepare_for_training(self, adapter_type: AdapterType = "lora", **attrs: t.Any) -> tuple[peft.PeftModel, T]:
         if pkg.pkg_version_info("peft")[:2] >= (0, 4):
             from peft import prepare_model_for_kbit_training
         else:
@@ -1029,7 +1023,7 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
         adapter_type: AdapterType = "lora",
         load_adapters: t.Literal["all"] | list[str] | None = None,
         use_cache: bool = True,
-    ) -> peft.PeftModel | _M:
+    ) -> peft.PeftModel | M:
         """Apply given LoRA mapping to the model.
 
         Note that the base model can still be accessed via self.model.get_base_model().
@@ -1053,6 +1047,11 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
 
         self.__llm_model__ = self._wrap_default_peft_model(adapter_mapping, inference_mode=inference_mode)
 
+        if not isinstance(self.__llm_model__, peft.PeftModel):
+            # We hit this branch during inference
+            # TODO: load multiple adapters
+            return self.__llm_model__
+
         # now we loop through the rest with add_adapter
         if len(adapter_mapping) > 0:
             for adapter_name, (_peft_config, _) in adapter_mapping.items():
@@ -1073,9 +1072,12 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
 
         return self.__llm_model__
 
-    def _wrap_default_peft_model(
-        self, adapter_mapping: dict[str, tuple[peft.PeftConfig, str]], inference_mode: bool
-    ) -> peft.PeftModel:
+    def _wrap_default_peft_model(self, adapter_mapping: dict[str, tuple[peft.PeftConfig, str]], inference_mode: bool):
+        assert self.__llm_model__ is not None, "Error: Model is not loaded correctly"  # noqa: S101
+        if isinstance(self.__llm_model__, peft.PeftModel):
+            logger.warning("Model is already wrapped with peft. Skip wrapping with default peft model.")
+            return self.__llm_model__
+
         if "default" not in adapter_mapping:
             raise ValueError(
                 "There is no 'default' mapping. Please check the adapter mapping and report this bug to the OpenLLM team."
@@ -1094,7 +1096,7 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
             )
             model = peft.PeftModel(self.__llm_model__, default_config)
         else:
-            # this is not ideal to serialize like this, maybe for fine-tune we will only support 0.4.0
+            # XXX: this is not ideal to serialize like this, maybe for fine-tune we will only support 0.4.0
             # onwards. For now, keep this logic here.
             peft_class = peft.MODEL_TYPE_TO_PEFT_MODEL_MAPPING[default_config.task_type]
             if default_config.base_model_name_or_path:
@@ -1103,6 +1105,7 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
                     kwargs["config"] = default_config
                 else:
                     kwargs.update(dict(default_config.to_dict().items()))
+                # BUG: This hits during inference, need fixing
                 model = peft_class.from_pretrained(self.__llm_model__, peft_model_id, **kwargs)
             else:
                 # in this case, the given base_model_name_or_path is None. This will be hit during training
@@ -1110,7 +1113,7 @@ class LLM(LLMInterface[_M, _T], ReprMixin):
         return model
 
     # order of these fields matter here, make sure to sync it with
-    # openllm.models.auto.factory._BaseAutoLLMClass.for_model
+    # openllm.models.auto.factory.BaseAutoLLMClass.for_model
     def to_runner(
         self,
         models: list[bentoml.Model] | None = None,
@@ -1296,7 +1299,7 @@ class SetAdapterOutput(t.TypedDict):
 
 
 def llm_runnable_class(
-    self: openllm.LLM[_M, _T],
+    self: openllm.LLM[M, T],
     generate_sig: ModelSignature,
     generate_iterator_sig: ModelSignature,
 ) -> type[LLMRunnable]:
@@ -1370,7 +1373,7 @@ def llm_runnable_class(
     )
 
 
-def llm_runner_class(self: openllm.LLM[_M, _T]) -> type[LLMRunner]:
+def llm_runner_class(self: openllm.LLM[M, T]) -> type[LLMRunner]:
     def available_adapters(__self: LLMRunner) -> PeftAdapterOutput:
         if not is_peft_available():
             return {

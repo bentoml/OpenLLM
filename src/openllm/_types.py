@@ -31,13 +31,14 @@ from ._configuration import AdapterType
 
 if t.TYPE_CHECKING:
     import click
+    import peft
 
     import openllm
     import transformers
     from bentoml._internal.runner.runnable import RunnableMethod
     from bentoml._internal.runner.runner import RunnerMethod
 
-
+AnyCallable = t.Callable[..., t.Any]
 DictStrAny = dict[str, t.Any]
 ListAny = list[t.Any]
 ListStr = list[str]
@@ -90,7 +91,11 @@ class TokenizerProtocol(_StubsMixin[_MT], t.Protocol):
         ...
 
 
-PeftAdapterOutput = dict[t.Literal["success", "result", "error_msg"], bool | str | dict[t.Any, t.Any]]
+class PeftAdapterOutput(t.TypedDict):
+    success: bool
+    result: dict[str, peft.PeftConfig]
+    error_msg: str
+
 
 AdaptersMapping = dict[AdapterType, tuple[tuple[str, str | None, dict[str, t.Any]], ...]] | None
 
