@@ -1,4 +1,5 @@
 nightly-requirements.txt linguist-generated=true
 nightly-requirements-gpu.txt linguist-generated=true
 tests/models/__snapshots__/* linguist-generated=true
+typings/* linguist-generated=true
 * text=auto eol=lf
