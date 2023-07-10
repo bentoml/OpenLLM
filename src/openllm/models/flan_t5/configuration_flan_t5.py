@@ -46,8 +46,9 @@ DEFAULT_PROMPT_TEMPLATE = """Answer the following question:\nQuestion: {instruct
 
 
 class FlanT5Config(openllm.LLMConfig):
-    """FLAN-T5 was released in the paper [Scaling Instruction-Finetuned Language Models](https://arxiv.org/pdf/2210.11416.pdf)
-    - it is an enhanced version of T5 that has been finetuned in a mixture of tasks.
+    """FLAN-T5 was released in the paper [Scaling Instruction-Finetuned Language Models](https://arxiv.org/pdf/2210.11416.pdf).
+
+    It is an enhanced version of T5 that has been finetuned in a mixture of tasks.
 
     Refer to [FLAN-T5's page](https://huggingface.co/docs/transformers/model_doc/flan-t5) for more information.
     """

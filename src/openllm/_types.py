@@ -11,35 +11,43 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
-Types definition for OpenLLM.
+"""Types definition for OpenLLM.
 
 Note that this module SHOULD NOT BE IMPORTED DURING RUNTIME, as this serve only for typing purposes.
 It will raises a RuntimeError if this is imported eagerly.
 """
 from __future__ import annotations
-
 import typing as t
 
 
 if not t.TYPE_CHECKING:
     raise RuntimeError(f"{__name__} should not be imported during runtime")
 
-import click
+
 import bentoml
-import openllm
-import transformers
+
 from ._configuration import AdapterType
 
-from bentoml._internal.runner.runnable import RunnableMethod
-from bentoml._internal.runner.runner import RunnerMethod
 
+if t.TYPE_CHECKING:
+    import click
+    import peft
 
+    import openllm
+    import transformers
+    from bentoml._internal.runner.runnable import RunnableMethod
+    from bentoml._internal.runner.runner import RunnerMethod
+
+AnyCallable = t.Callable[..., t.Any]
 DictStrAny = dict[str, t.Any]
 ListAny = list[t.Any]
+ListStr = list[str]
 TupleAny = tuple[t.Any, ...]
 P = t.ParamSpec("P")
 O_co = t.TypeVar("O_co", covariant=True)
+LiteralRuntime: t.TypeAlias = t.Literal["pt", "tf", "flax"]
+T = t.TypeVar("T")
+Ts = t.TypeVarTuple("Ts")
 
 
 class ClickFunctionWrapper(t.Protocol[P, O_co]):
@@ -83,9 +91,19 @@ class TokenizerProtocol(_StubsMixin[_MT], t.Protocol):
         ...
 
 
-PeftAdapterOutput = dict[t.Literal["success", "result", "error_msg"], bool | str | dict[t.Any, t.Any]]
+class PeftAdapterOutput(t.TypedDict):
+    success: bool
+    result: dict[str, peft.PeftConfig]
+    error_msg: str
 
-AdaptersMapping = dict[AdapterType, tuple[tuple[str | None, str | None, dict[str, t.Any]], ...]] | None
+
+class AdaptersTuple(TupleAny):
+    adapter_id: str
+    name: str | None
+    config: DictStrAny
+
+
+AdaptersMapping = dict[AdapterType, tuple[AdaptersTuple, ...]] | None
 
 
 class LLMRunnable(bentoml.Runnable):

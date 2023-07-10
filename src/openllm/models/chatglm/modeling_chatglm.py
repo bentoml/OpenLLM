@@ -12,15 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from __future__ import annotations
-
 import typing as t
 
 import bentoml
 import openllm
 
+from ...utils import generate_labels
+
 
 if t.TYPE_CHECKING:
     import torch
+
     import transformers
 else:
     torch = openllm.utils.LazyLoader("torch", globals(), "torch")
@@ -34,15 +36,15 @@ class ChatGLM(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTrain
         self.device = torch.device("cuda")
 
     def import_model(self, *args: t.Any, trust_remote_code: bool = True, **attrs: t.Any) -> bentoml.Model:
-        (_, model_attrs), tokenizer_kwds = self.llm_parameters
-        attrs = {**model_attrs, **attrs}
+        _, tokenizer_attrs = self.llm_parameters
 
         return bentoml.transformers.save_model(
             self.tag,
             transformers.AutoModel.from_pretrained(self.model_id, trust_remote_code=trust_remote_code),
+            labels=generate_labels(self),
             custom_objects={
                 "tokenizer": transformers.AutoTokenizer.from_pretrained(
-                    self.model_id, trust_remote_code=trust_remote_code, **tokenizer_kwds
+                    self.model_id, trust_remote_code=trust_remote_code, **tokenizer_attrs
                 )
             },
         )
@@ -62,8 +64,8 @@ class ChatGLM(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTrain
 
         if use_default_prompt_template and chat_history is not None:
             for i, (old_query, response) in enumerate(chat_history):
-                prompt_text += f"[Round {i}]\n问：{old_query}\n答：{response}\n"
-            prompt_text += f"[Round {len(chat_history)}]\n问：{prompt}\n答："
+                prompt_text += f"[Round {i}]\n问：{old_query}\n答：{response}\n"  # noqa: RUF001
+            prompt_text += f"[Round {len(chat_history)}]\n问：{prompt}\n答："  # noqa: RUF001
         else:
             prompt_text = prompt
 

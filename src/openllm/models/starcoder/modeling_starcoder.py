@@ -12,12 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from __future__ import annotations
-
 import logging
 import typing as t
 
 import bentoml
 import openllm
+
+from ...utils import generate_labels
 
 
 if t.TYPE_CHECKING:
@@ -54,13 +55,12 @@ class StarCoder(openllm.LLM["transformers.GPTBigCodeForCausalLM", "transformers.
         return model_kwds, tokenizer_kwds
 
     def import_model(self, *args: t.Any, trust_remote_code: bool = False, **attrs: t.Any) -> bentoml.Model:
-        (_, model_attrs), tokenizer_kwds = self.llm_parameters
-        attrs = {**model_attrs, **attrs}
+        _, tokenizer_attrs = self.llm_parameters
 
         torch_dtype = attrs.pop("torch_dtype", torch.float16)
         device_map = attrs.pop("device_map", "auto")
 
-        tokenizer = transformers.AutoTokenizer.from_pretrained(self.model_id, **tokenizer_kwds)
+        tokenizer = transformers.AutoTokenizer.from_pretrained(self.model_id, **tokenizer_attrs)
         tokenizer.add_special_tokens(
             {
                 "additional_special_tokens": [EOD, FIM_PREFIX, FIM_MIDDLE, FIM_SUFFIX, FIM_PAD],
@@ -72,7 +72,12 @@ class StarCoder(openllm.LLM["transformers.GPTBigCodeForCausalLM", "transformers.
             self.model_id, torch_dtype=torch_dtype, device_map=device_map, **attrs
         )
         try:
-            return bentoml.transformers.save_model(self.tag, model, custom_objects={"tokenizer": tokenizer})
+            return bentoml.transformers.save_model(
+                self.tag,
+                model,
+                custom_objects={"tokenizer": tokenizer},
+                labels=generate_labels(self),
+            )
         finally:
             # NOTE: We need to free the cache after saving here so that we can load it back later on.
             torch.cuda.empty_cache()

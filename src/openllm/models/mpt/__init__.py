@@ -13,11 +13,11 @@
 # limitations under the License.
 
 from __future__ import annotations
-
 import typing as t
 
-from ...utils import is_torch_available, LazyModule
 from ...exceptions import MissingDependencyError
+from ...utils import LazyModule
+from ...utils import is_torch_available
 
 
 _import_structure = {

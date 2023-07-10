@@ -72,12 +72,12 @@ all = [
     "openllm[falcon]",
     "openllm[mpt]",
     "openllm[starcoder]",
-    "openllm[ggml]",
-    "openllm[playground]",
     "openllm[fine-tune]",
-    "openllm[agents]",
-    "openllm[flan-t5]",
     "openllm[openai]",
+    "openllm[playground]",
+    "openllm[flan-t5]",
+    "openllm[agents]",
+    "openllm[ggml]",
 ]
 chatglm = ["cpm-kernels", "sentencepiece"]
 falcon = ["einops", "xformers", "safetensors"]
@@ -155,7 +155,7 @@ verbose = 2
 whitelist-regex = ["test_.*"]
 
 [tool.pytest.ini_options]
-addopts = ["-rfEX", "-pno:warnings"]
+addopts = ["-rfEX", "-pno:warnings", "--snapshot-warn-unused"]
 python_files = ["test_*.py", "*_test.py"]
 testpaths = ["tests"]
 
@@ -183,62 +183,118 @@ line-length = 119
 target-version = ["py311"]
 
 [tool.ruff]
-exclude = ["tools"]
+exclude = ["tools", "src/openllm/playground"]
+extend-select = [
+    "B",    # flake8-bugbear
+    "I",    # isort
+    "G",    # flake8-logging-format
+    "D",    # pydocstyle
+    "W",    # pycodestyle
+    "Q",    # flake8-quotes
+    "FA",   # flake8-future-annotations
+    "S",    # flake8-bandit
+    "TCH",  # flake8-type-checking
+    "PLW",  # pylint-warning
+    "PLR",  # pylint-refactor
+    "PT",   # flake8-pytest-style
+    "PYI",  # flake8-pyi
+    "PERF", # perflint
+    "FLY",  # flynt
+    "RUF",  # Ruff-specific rules
+    "YTT",  # flake8-2020
+]
+fix = true
 ignore = [
-    # Allow non-abstract empty methods in abstract base classes
-    "B027",
-    # Allow boolean positional values in function calls, like `dict.get(... True)`
-    "FBT003",
-    # Ignore checks for possible passwords
-    "S105",
+    "B027",    # Allow non-abstract empty methods in abstract base classes
+    "FBT003",  # Allow boolean positional values in function calls, like `dict.get(... True)`
+    "S105",    # Ignore checks for possible passwords
     "S106",
     "S107",
-    # Ignore complexity
-    "C901",
+    "S603",    # ignore subprocess.call
     "PLR0911",
     "PLR0912",
     "PLR0913",
     "PLR0915",
-    "E501",
-    "E741",
+    "PLR2004", # magic value to use constant
+    "E501",    # ignore line length violation
+    "PYI021",  # ignore docstring in stubs, as pyright will include docstring in stubs.
+    "D103",    # Just missing docstring for magic methods.
+    "D102",
+    "D101",
+    "D100",
+    "TCH004",  # don't move runtime import out, just warn about it
+    "RUF012",  # mutable attributes to be used with ClassVar
+    "B905",    # zip warning about strict, only applicable for 3.10+
 ]
 line-length = 119
-target-version = "py311"
+target-version = "py312"
 unfixable = [
-    "F401", # Don't touch unused imports, just warn about it.
+    "F401",   # Don't touch unused imports, just warn about it.
+    "TCH004", # Don't touch import outside of TYPE_CHECKING block
 ]
+
+[tool.ruff.flake8-type-checking]
+exempt-modules = ["typing", "typing_extensions", "."]
+runtime-evaluated-base-classes = [
+    "pydantic.BaseModel",
+    "openllm._configuration.LLMConfig",
+    "openllm._configuration.GenerationConfig",
+    "openllm._configuration.ModelSettings",
+]
+runtime-evaluated-decorators = ["attrs.define", "attrs.frozen"]
 
 [tool.ruff.pydocstyle]
 convention = "google"
+
+[tool.ruff.pycodestyle]
+ignore-overlong-task-comments = true
 
 [tool.ruff.isort]
 force-single-line = true
 known-first-party = ["openllm", "bentoml", 'transformers']
 lines-after-imports = 2
+no-lines-before = ["future", "standard-library"]
+relative-imports-order = "closest-to-furthest"
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.flake8-quotes]
+avoid-escape = false
+
+[tool.ruff.extend-per-file-ignores]
 # Tests can use magic values, assertions, and relative imports
 "__init__.py" = ["E402", "F401", "F403", "F811"]
+"examples/**/*" = ["D"]
+"src/openllm/_llm.py" = ["B010", "B009"]
+"src/openllm/_strategies.py" = ["B904"]
 "src/openllm/_types.py" = ["E402"]
-"src/openllm/playground/**/*" = ["E402", "F401"]
-"tests/**/*" = ["PLR2004", "S101", "TID252"]
+"src/openllm/cli.py" = ["D301", "S101"]
+"src/openllm/models/**/*" = ["D106", "S101", "D104"]
+"src/openllm/playground/**/*" = ["E402", "F401", "PLR", "D"]
+"src/openllm/utils/dummy_*" = ["D107"]
+"src/openllm/utils/import_utils.py" = [
+    "PLW0603", # OK to ignore global access here
+    "D105",    # magic docstring
+]
+"src/openllm_client/runtimes/*" = ["D107"]
+"tests/**/*" = [
+    "S101",
+    "TID252",
+    "D",      # No docstring in tests
+    "PT011",  # ignore too broad raises, as it can be use pytest.raises().match()
+    "S307",   # Ignore eval(compile) as it is a known script execution
+]
+"typings/**/*" = ["D", "F", "E", "PYI002", "I001"]
 
 [tool.pyright]
 analysis.useLibraryCodeForTypes = true
-enableTypeIgnoreComments = true
-include = ["src/", "tests/", "tools/", "examples/"]
+exclude = ["src/openllm/playground", "src/openllm/models/"]
+include = ["src/openllm", "src/openllm_client", "tests/", "tools/", "examples/"]
 pythonVersion = "3.12"
-reportMissingImports = "none"
-reportMissingModuleSource = "warning"
-reportMissingTypeStubs = "warning"
+reportMissingTypeStubs = false
+reportPrivateUsage = "warning"
+reportUnknownArgumentType = "warning"
 reportUnknownMemberType = "warning"
 reportUnknownVariableType = "warning"
-strictDictionaryInference = true
-strictListInference = true
-strictParameterNoneValue = true
-strictSetInference = true
 typeCheckingMode = "strict"
-
 
 [tool.coverage.run]
 branch = true
@@ -246,7 +302,6 @@ omit = [
     "src/openllm/playground/",
     "src/openllm/__about__.py",
     "src/openllm/__main__.py",
-    "src/openllm/tests.py",
     "src/openllm/utils/dummy_*.py",
 ]
 source_pkgs = ["openllm"]
@@ -255,4 +310,14 @@ source_pkgs = ["openllm"]
 openllm = ["src/openllm", "*/openllm/src/openllm"]
 
 [tool.coverage.report]
-exclude_lines = ["no cov", "if __name__ == .__main__.:", "if t.TYPE_CHECKING:", "@overload", "# pragma: no cover"]
+exclude_lines = [
+    "no cov",
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "if t.TYPE_CHECKING:",
+    'if TYPE_CHECKING:',
+    'if typing.TYPE_CHECKING:',
+    '@overload',
+    '@typing.overload',
+    'raise NotImplementedError',
+]

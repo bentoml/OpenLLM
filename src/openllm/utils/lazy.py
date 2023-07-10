@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from __future__ import annotations
-
 import importlib
 import importlib.machinery
 import itertools
@@ -40,10 +39,9 @@ _reserved_namespace = {"__openllm_special__", "__openllm_migration__"}
 
 
 class LazyModule(types.ModuleType):
-    """
-    Module class that surfaces all objects but only performs associated imports when the objects are requested.
-    This is a direct port from transformers.utils.import_utils._LazyModule for
-    backwards compatibility with transformers < 4.18
+    """Module class that surfaces all objects but only performs associated imports when the objects are requested.
+
+    This is a direct port from transformers.utils.import_utils._LazyModule for backwards compatibility with transformers < 4.18.
 
     This is an extension a more powerful LazyLoader.
     """
@@ -56,8 +54,22 @@ class LazyModule(types.ModuleType):
         module_file: str,
         import_structure: dict[str, list[str]],
         module_spec: importlib.machinery.ModuleSpec | None = None,
+        doc: str | None = None,
         extra_objects: dict[str, t.Any] | None = None,
     ):
+        """Lazily load this module as an object.
+
+        It does instantiate a __all__ and __dir__ for IDE support
+
+        Args:
+            name: module name
+            module_file: the given file. Often default to 'globals()['__file__']'
+            import_structure: A dictionary of module and its corresponding attributes that can be loaded from given 'module'
+            module_spec: __spec__ of the lazily loaded module
+            doc: Optional docstring for this module.
+            extra_objects: Any additional objects that this module can also be accessed. Useful for additional metadata as well
+                           as any locals() functions
+        """
         super().__init__(name)
         self._modules = set(import_structure.keys())
         self._class_to_module: dict[str, str] = {}
@@ -70,24 +82,22 @@ class LazyModule(types.ModuleType):
         self.__file__ = module_file
         self.__spec__ = module_spec
         self.__path__ = [os.path.dirname(module_file)]
+        self.__doc__ = doc
         self._objects = _extra_objects
         self._name = name
         self._import_structure = import_structure
 
-    # Needed for autocompletion in an IDE
     def __dir__(self):
+        """Needed for autocompletion in an IDE."""
         result = t.cast("list[str]", super().__dir__())
         # The elements of self.__all__ that are submodules may or
         # may not be in the dir already, depending on whether
         # they have been accessed or not. So we only add the
         # elements of self.__all__ that are not already in the dir.
-        for attribute in self.__all__:
-            if attribute not in result:
-                result.append(attribute)
-        return result
+        return result + [i for i in self.__all__ if i not in result]
 
     def __getitem__(self, key: str) -> t.Any:
-        # currently, this is reserved to only internal uses and users shouldn't use this.
+        """This is reserved to only internal uses and users shouldn't use this."""
         if self._objects.get("__openllm_special__") is None:
             raise UsageNotAllowedError(f"'{self._name}' is not allowed to be used as a dict.")
         _special_mapping = self._objects.get("__openllm_special__", {})
@@ -101,6 +111,10 @@ class LazyModule(types.ModuleType):
             raise KeyError(f"Failed to lookup '{key}' in '{self._name}'") from e
 
     def __getattr__(self, name: str) -> t.Any:
+        """Equivocal __getattr__ implementation.
+
+        It checks from _objects > _modules and does it recursively.
+        """
         if name in _reserved_namespace:
             raise ForbiddenAttributeError(
                 f"'{name}' is a reserved namespace for {self._name} and should not be access nor modified."
@@ -111,6 +125,7 @@ class LazyModule(types.ModuleType):
                 warnings.warn(
                     f"'{name}' is deprecated and will be removed in future version. Make sure to use '{cur_value}' instead",
                     DeprecationWarning,
+                    stacklevel=3,
                 )
                 return getattr(self, cur_value)
         if name in self._objects:
@@ -136,4 +151,5 @@ class LazyModule(types.ModuleType):
             ) from e
 
     def __reduce__(self):
+        """This is to ensure any given module is pickle-able."""
         return (self.__class__, (self._name, self.__file__, self._import_structure))

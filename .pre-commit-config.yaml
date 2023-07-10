@@ -14,16 +14,16 @@
 
 ci:
   autoupdate_schedule: weekly
-  skip: [check-models-table-update, check-models-table-update, changelog-dry-run]
-  autofix_commit_msg: "ci: auto fixes from pre-commit.ci\nFor more information, see https://pre-commit.ci"
+  skip: [check-models-table-update, check-models-table-update, changelog-dry-run, typecheck]
+  autofix_commit_msg: "ci: auto fixes from pre-commit.ci\n\nFor more information, see https://pre-commit.ci"
   autoupdate_commit_msg: 'ci: pre-commit autoupdate [pre-commit.ci]'
 exclude: '.*\.(css|js|svg)$'
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: 'v0.0.275'
+    rev: 'v0.0.277'
     hooks:
       - id: ruff
-        args: [--fix, --exit-non-zero-on-fix, --show-fixes]
+        args: [--exit-non-zero-on-fix, --show-fixes]
   - repo: https://github.com/psf/black
     rev: 23.3.0
     hooks:
@@ -37,6 +37,13 @@ repos:
         args: [--config=pyproject.toml]
   - repo: local
     hooks:
+      - id: typecheck
+        name: type-check
+        entry: pyright src/openllm --level error
+        types: [python]
+        language: node
+        pass_filenames: false
+        additional_dependencies: ['pyright@1.1.316']
       - id: check-license-header
         name: check for license headers
         entry: ./tools/assert-license-headers
@@ -69,3 +76,10 @@ repos:
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
+        exclude: |
+          (?x)^(
+              tests/models/.*
+          )$
+      - id: check-yaml
+        args: ['--unsafe']
+      - id: check-toml

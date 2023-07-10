@@ -13,21 +13,21 @@
 # limitations under the License.
 
 from __future__ import annotations
-
 import logging
 import typing as t
 
 import openllm
 
-from ..._prompt import default_formatter
 from .configuration_gpt_neox import DEFAULT_PROMPT_TEMPLATE
+from ..._prompt import default_formatter
 
 
 if t.TYPE_CHECKING:
-    import bentoml
-    import transformers  # noqa
     import torch
     import torch.amp
+
+    import bentoml
+    import transformers
 else:
     transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
     torch = openllm.utils.LazyLoader("torch", globals(), "torch")
@@ -62,7 +62,7 @@ class GPTNeoX(openllm.LLM["transformers.GPTNeoXForCausalLM", "transformers.GPTNe
                 raise RuntimeError(
                     f"Missing variable '{e.args[0]}' (required: {template_variables}) in the prompt template. "
                     "Use 'use_default_prompt_template=False' to disable the default prompt template."
-                )
+                ) from None
         else:
             prompt_text = prompt
 

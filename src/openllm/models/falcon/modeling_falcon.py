@@ -13,19 +13,19 @@
 # limitations under the License.
 
 from __future__ import annotations
-
 import typing as t
 
-import bentoml
 import openllm
 
-from ..._prompt import default_formatter
 from .configuration_falcon import DEFAULT_PROMPT_TEMPLATE
+from ..._prompt import default_formatter
 
 
 if t.TYPE_CHECKING:
     import torch
     import torch.amp
+
+    import bentoml
     import transformers
 else:
     torch = openllm.utils.LazyLoader("torch", globals(), "torch")
@@ -81,7 +81,7 @@ class Falcon(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTraine
                 raise RuntimeError(
                     f"Missing variable '{e.args[0]}' (required: {template_variables}) in the prompt template. "
                     "Use 'use_default_prompt_template=False' to disable the default prompt template."
-                )
+                ) from None
         else:
             prompt_text = prompt
 

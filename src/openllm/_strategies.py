@@ -13,8 +13,6 @@
 # limitations under the License.
 
 from __future__ import annotations
-
-import functools
 import logging
 import math
 import os
@@ -23,19 +21,19 @@ import typing as t
 
 import psutil
 
-import bentoml
-import openllm
 from bentoml._internal.resource import Resource
 from bentoml._internal.resource import get_resource
 from bentoml._internal.resource import system_resources
 from bentoml._internal.runner.strategy import THREAD_ENVS
 from bentoml._internal.runner.strategy import Strategy
 
-from .utils import LazyType
+from .exceptions import OpenLLMException
 from .utils import ReprMixin
 
 
 if t.TYPE_CHECKING:
+    import bentoml
+
     ListIntStr = list[int | str]
 else:
     ListIntStr = list
@@ -43,28 +41,46 @@ else:
 logger = logging.getLogger(__name__)
 
 
-class AmdGpuResource(Resource[t.List[int]], resource_id="amd.com/gpu"):
+class AmdGpuResource(Resource[t.List[str]], resource_id="amd.com/gpu"):
     @classmethod
-    def from_spec(cls, spec: int | str | list[str | int]) -> list[int]:
-        if not isinstance(spec, (int, str)) and not LazyType(ListIntStr).isinstance(spec):
+    def from_spec(cls, spec: t.Any) -> list[str]:
+        if not isinstance(spec, (int, str, list)):
             raise TypeError("AMD GPU device IDs must be int, str or a list specifing the exact GPUs to use.")
+
         try:
             if isinstance(spec, int):
+                if spec == -1:
+                    return []
                 if spec < -1:
                     raise ValueError
-                return list(range(spec))
+                return [str(i) for i in range(spec)]
             elif isinstance(spec, str):
-                return cls.from_spec(int(spec))
+                try:
+                    return cls.from_spec(int(spec))
+                except ValueError:
+                    if spec.startswith("GPU"):
+                        return [spec]
+                    raise ValueError
             else:
-                return [int(x) for x in spec]
+                return [str(x) for x in spec]
         except ValueError:
-            raise openllm.exceptions.OpenLLMException(f"Invalid AMD GPU resource limit '{spec}'. ")
+            raise OpenLLMException(f"Invalid AMD GPU resource limit '{spec}'.")
 
-    @classmethod  # type: ignore (overload)
-    @functools.lru_cache(maxsize=1)
-    def from_system(cls) -> list[int]:
+    @classmethod
+    def from_system(cls) -> list[str]:
         """Retrieve AMD GPU from system, currently only supports on Linux.
-        This assumes that ROCm is setup correctly."""
+
+        This assumes that ROCm is setup correctly.
+        """
+        cuda_visible_devices = os.getenv("CUDA_VISIBLE_DEVICES")
+        if cuda_visible_devices in ("", "-1"):
+            return []
+        if cuda_visible_devices is not None:
+            cuda_visible_devices = cuda_visible_devices.split(",")
+            if "-1" in cuda_visible_devices:
+                cuda_visible_devices = cuda_visible_devices[: cuda_visible_devices.index("-1")]
+            return cuda_visible_devices
+
         if not psutil.LINUX:
             logger.debug("AMD GPU resource is only supported on Linux.")
             return []
@@ -84,7 +100,7 @@ class AmdGpuResource(Resource[t.List[int]], resource_id="amd.com/gpu"):
             num = c_uint32(0)
             ret = rocmsmi.rsmi_num_monitor_devices(byref(num))
             if ret == rsmi_status_t.RSMI_STATUS_SUCCESS:
-                return list(range(num.value))
+                return [str(i) for i in range(num.value)]
             return []
         except Exception as err:
             logger.debug("Failed to setup AMD GPU resource: %s", err)
@@ -93,18 +109,22 @@ class AmdGpuResource(Resource[t.List[int]], resource_id="amd.com/gpu"):
             sys.path.remove("/opt/rocm/libexec/rocm_smi")
 
     @classmethod
-    def validate(cls, val: list[int]):
-        if any(gpu_index < 0 for gpu_index in val):
-            raise openllm.exceptions.OpenLLMException(f"Negative GPU device in {val}.")
-        if any(gpu_index >= len(cls.from_system()) for gpu_index in val):
-            raise openllm.exceptions.OpenLLMException(
-                f"GPU device index in {val} is greater than the system available: {cls.from_system()}"
-            )
+    def validate(cls, val: list[str]):
+        for gpu_index_or_literal in val:
+            try:
+                idx = int(gpu_index_or_literal)
+            except ValueError:
+                raise OpenLLMException(f"Invalid AMD GPU device index: {val}")
+            if int(idx) < 0:
+                raise OpenLLMException(f"Negative GPU device in {val}.")
+            if int(idx) >= len(cls.from_system()):
+                raise OpenLLMException(
+                    f"GPU device index in {val} is greater than the system available: {cls.from_system()}"
+                )
 
 
 class CascadingResourceStrategy(Strategy, ReprMixin):
-    """This is rather an extension of bentoml._internal.runner.strategy.DefaultStrategy
-    where we check for NVIDIA GPU resource -> AMD GPU resource -> CPU resource.
+    """This is extends the default BentoML strategy where we check for NVIDIA GPU resource -> AMD GPU resource -> CPU resource.
 
     It also respect CUDA_VISIBLE_DEVICES for both AMD and NVIDIA GPU.
     See https://rocm.docs.amd.com/en/develop/understand/gpu_isolation.html#cuda-visible-devices
@@ -147,9 +167,9 @@ class CascadingResourceStrategy(Strategy, ReprMixin):
                 )
 
             if runnable_class.SUPPORTS_CPU_MULTI_THREADING:
-                if isinstance(workers_per_resource, float):
+                if isinstance(workers_per_resource, float) and workers_per_resource < 1.0:
                     raise ValueError("Fractional CPU multi threading support is not yet supported.")
-                return workers_per_resource
+                return int(workers_per_resource)
 
             return math.ceil(cpus) * workers_per_resource
 
@@ -167,11 +187,13 @@ class CascadingResourceStrategy(Strategy, ReprMixin):
         workers_per_resource: int | float,
         worker_index: int,
     ) -> dict[str, t.Any]:
-        """
+        """Get worker env for this given worker_index.
+
         Args:
-            runnable_class : The runnable class to be run.
-            resource_request : The resource request of the runnable.
-            worker_index : The index of the worker, start from 0.
+            runnable_class: The runnable class to be run.
+            resource_request: The resource request of the runnable.
+            workers_per_resource: # of workers per resource.
+            worker_index: The index of the worker, start from 0.
         """
         cuda_env = os.environ.get("CUDA_VISIBLE_DEVICES", None)
         disabled = cuda_env in ("", "-1")

@@ -13,11 +13,10 @@
 # limitations under the License.
 
 from __future__ import annotations
-
 import importlib
 import inspect
 import logging
-import types
+import sys
 import typing as t
 from collections import OrderedDict
 
@@ -30,13 +29,14 @@ from .configuration_auto import AutoConfig
 
 # NOTE: We need to do this so that overload can register
 # correct overloads to typing registry
-if hasattr(t, "get_overloads"):
+if sys.version_info[:2] >= (3, 11):
     from typing import overload
 else:
     from typing_extensions import overload
 
 
 if t.TYPE_CHECKING:
+    import types
     from collections import _odict_items
     from collections import _odict_keys
     from collections import _odict_values
@@ -54,10 +54,10 @@ else:
 logger = logging.getLogger(__name__)
 
 
-class _BaseAutoLLMClass:
+class BaseAutoLLMClass:
     _model_mapping: _LazyAutoMapping
 
-    def __init__(self, *args: t.Any, **attrs: t.Any):
+    def __init__(self, *args: t.Any, **attrs: t.Any):  # noqa
         raise EnvironmentError(
             f"Cannot instantiate {self.__class__.__name__} directly. "
             "Please use '{self.__class__.__name__}.Runner(model_name)' instead."
@@ -129,7 +129,7 @@ class _BaseAutoLLMClass:
             llm = model_class.from_pretrained(model_id, model_version=model_version, llm_config=llm_config, **attrs)
             if ensure_available:
                 logger.debug(
-                    "'ensure_available=True', Downloading '%s' with 'model_id=%s' to local model store.",
+                    "'ensure_available=True', OpenLLM will automatically import '%s' with 'model_id=%s' to local store if the entry does not exists.",
                     model,
                     llm.model_id,
                 )
@@ -144,8 +144,7 @@ class _BaseAutoLLMClass:
 
     @classmethod
     def create_runner(cls, model: str, model_id: str | None = None, **attrs: t.Any) -> LLMRunner:
-        """
-        Create a LLM Runner for the given model name.
+        """Create a LLM Runner for the given model name.
 
         Args:
             model: The model name to instantiate.
@@ -160,8 +159,7 @@ class _BaseAutoLLMClass:
 
     @classmethod
     def register(cls, config_class: type[openllm.LLMConfig], llm_class: type[openllm.LLM[t.Any, t.Any]]):
-        """
-        Register a new model for this class.
+        """Register a new model for this class.
 
         Args:
             config_class: The configuration corresponding to the model to register.
@@ -191,13 +189,14 @@ def getattribute_from_module(module: types.ModuleType, attr: t.Any) -> t.Any:
         try:
             return getattribute_from_module(openllm_module, attr)
         except ValueError:
-            raise ValueError(f"Could not find {attr} neither in {module} nor in {openllm_module}!")
+            raise ValueError(f"Could not find {attr} neither in {module} nor in {openllm_module}!") from None
     else:
         raise ValueError(f"Could not find {attr} in {openllm_module}!")
 
 
 class _LazyAutoMapping(ConfigModelOrderedDict):
-    """Based on transformers.models.auto.configuration_auto._LazyAutoMapping
+    """Based on transformers.models.auto.configuration_auto._LazyAutoMapping.
+
     This OrderedDict values() and keys() returns the list instead, so you don't
     have to do list(mapping.values()) to get the list of values.
     """
@@ -281,9 +280,7 @@ class _LazyAutoMapping(ConfigModelOrderedDict):
         return model_type in self._model_mapping
 
     def register(self, key: t.Any, value: t.Any):
-        """
-        Register a new model in this mapping.
-        """
+        """Register a new model in this mapping."""
         if hasattr(key, "__name__") and key.__name__ in self._reverse_config_mapping:
             model_type = self._reverse_config_mapping[key.__name__]
             if model_type in self._model_mapping.keys():
@@ -292,4 +289,4 @@ class _LazyAutoMapping(ConfigModelOrderedDict):
         self._extra_content[key] = value
 
 
-__all__ = ["_BaseAutoLLMClass", "_LazyAutoMapping"]
+__all__ = ["BaseAutoLLMClass", "_LazyAutoMapping"]

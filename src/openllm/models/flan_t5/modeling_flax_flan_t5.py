@@ -12,17 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from __future__ import annotations
-
 import typing as t
 
 import openllm
 
-from ..._prompt import default_formatter
 from .configuration_flan_t5 import DEFAULT_PROMPT_TEMPLATE
+from ..._prompt import default_formatter
 
 
 if t.TYPE_CHECKING:
-    import transformers  # noqa
+    import transformers  # noqa: F401
 
 
 class FlaxFlanT5(openllm.LLM["transformers.FlaxT5ForConditionalGeneration", "transformers.T5TokenizerFast"]):
@@ -54,7 +53,7 @@ class FlaxFlanT5(openllm.LLM["transformers.FlaxT5ForConditionalGeneration", "tra
                 raise RuntimeError(
                     f"Missing variable '{e.args[0]}' (required: {template_variables}) in the prompt template. "
                     "Use 'use_default_prompt_template=False' to disable the default prompt template."
-                )
+                ) from None
         else:
             prompt_text = prompt
 

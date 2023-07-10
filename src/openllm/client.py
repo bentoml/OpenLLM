@@ -11,8 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
-OpenLLM client.
+"""OpenLLM client.
 
 To start interact with the server, you can do the following:
 
@@ -21,7 +20,6 @@ To start interact with the server, you can do the following:
 >>> client.query("What is the meaning of life?")
 """
 from __future__ import annotations
-
 import importlib
 import itertools
 import typing as t

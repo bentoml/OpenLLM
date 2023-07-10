@@ -18,7 +18,7 @@ with open(os.path.join(ROOT, "README.md"), "r") as f:
 # NOTE: Currently, we only have one table in README, which is the Model readme.
 table = [r for r in readme if r.type == "html_block" and r.content.startswith("<td><a")]
 
-prev = os.environ.pop("OPENLLMDEVDEBUG", str(0))
+prev = os.environ.pop("OPENLLMDEVDEBUG", None)
 available = (
     subprocess.check_output(
         [sys.executable, "-m", "openllm", "models", "-o", "porcelain"],
@@ -28,7 +28,8 @@ available = (
     .count("\n")
     + 1
 )
-os.environ["OPENLLMDEVDEBUG"] = prev
+if prev:
+    os.environ["OPENLLMDEVDEBUG"] = prev
 
 on_table = len(table)  # NOTE: minus the header
 

@@ -13,16 +13,16 @@
 # limitations under the License.
 
 from __future__ import annotations
-
 import logging
 import typing as t
 
 import bentoml
 import openllm
 
-from ..._prompt import default_formatter
-from ...utils import is_triton_available
 from .configuration_mpt import DEFAULT_PROMPT_TEMPLATE
+from ..._prompt import default_formatter
+from ...utils import generate_labels
+from ...utils import is_triton_available
 
 
 if t.TYPE_CHECKING:
@@ -78,8 +78,7 @@ class MPT(openllm.LLM["transformers.PreTrainedModel", "transformers.GPTNeoXToken
         return model_kwds, tokenizer_kwds
 
     def import_model(self, *args: t.Any, trust_remote_code: bool = True, **attrs: t.Any) -> bentoml.Model:
-        (_, model_attrs), tokenizer_kwds = self.llm_parameters
-        attrs = {**model_attrs, **attrs}
+        _, tokenizer_attrs = self.llm_parameters
 
         torch_dtype = attrs.pop("torch_dtype", self.dtype)
         device_map = attrs.pop("device_map", None)
@@ -93,7 +92,7 @@ class MPT(openllm.LLM["transformers.PreTrainedModel", "transformers.GPTNeoXToken
             trust_remote_code=trust_remote_code,
         )
 
-        tokenizer = transformers.AutoTokenizer.from_pretrained(self.model_id, **tokenizer_kwds)
+        tokenizer = transformers.AutoTokenizer.from_pretrained(self.model_id, **tokenizer_attrs)
         if tokenizer.pad_token_id is None:
             logger.warning("pad_token_id is not set. Setting it to eos_token")
             tokenizer.pad_token = tokenizer.eos_token
@@ -107,7 +106,12 @@ class MPT(openllm.LLM["transformers.PreTrainedModel", "transformers.GPTNeoXToken
             **attrs,
         )
         try:
-            return bentoml.transformers.save_model(self.tag, model, custom_objects={"tokenizer": tokenizer})
+            return bentoml.transformers.save_model(
+                self.tag,
+                model,
+                custom_objects={"tokenizer": tokenizer},
+                labels=generate_labels(self),
+            )
         finally:
             torch.cuda.empty_cache()
 
@@ -169,7 +173,7 @@ class MPT(openllm.LLM["transformers.PreTrainedModel", "transformers.GPTNeoXToken
                 raise RuntimeError(
                     f"Missing variable '{e.args[0]}' (required: {template_variables}) in the prompt template. "
                     "Use 'use_default_prompt_template=False' to disable the default prompt template."
-                )
+                ) from None
         else:
             prompt_text = prompt
 

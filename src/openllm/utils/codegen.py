@@ -13,11 +13,14 @@
 # limitations under the License.
 
 from __future__ import annotations
-
+import functools
+import inspect
+import linecache
 import logging
-import os
 import string
+import types
 import typing as t
+from operator import itemgetter
 from pathlib import Path
 
 import orjson
@@ -28,17 +31,16 @@ if t.TYPE_CHECKING:
 
     import openllm
 
-    DictStrAny = dict[str, t.Any]
-    ListStr = list[str]
+    from .._types import AnyCallable
+    from .._types import DictStrAny
+    from .._types import ListStr
+    from .._types import P
 
-    from attr import _make_method
+    PartialAny = functools.partial[t.Any]
 else:
-    # NOTE: Using internal API from attr here, since we are actually
-    # allowing subclass of openllm.LLMConfig to become 'attrs'-ish
-    from attr._make import _make_method
-
     DictStrAny = dict
     ListStr = list
+    PartialAny = functools.partial
 
 _T = t.TypeVar("_T", bound=t.Callable[..., t.Any])
 
@@ -53,11 +55,12 @@ class ModelNameFormatter(string.Formatter):
     model_keyword: t.LiteralString = "__model_name__"
 
     def __init__(self, model_name: str):
+        """The formatter that extends model_name to be formatted the 'service.py'."""
         super().__init__()
         self.model_name = model_name
 
-    def vformat(self, format_string: str) -> str:
-        return super().vformat(format_string, (), {self.model_keyword: self.model_name})
+    def vformat(self, format_string: str, *args: t.Any, **attrs: t.Any) -> t.LiteralString:
+        return t.cast("t.LiteralString", super().vformat(format_string, (), {self.model_keyword: self.model_name}))
 
     def can_format(self, value: str) -> bool:
         try:
@@ -117,9 +120,7 @@ _sentinel = object()
 
 
 def has_own_attribute(cls: type[t.Any], attrib_name: t.Any):
-    """
-    Check whether *cls* defines *attrib_name* (and doesn't just inherit it).
-    """
+    """Check whether *cls* defines *attrib_name* (and doesn't just inherit it)."""
     attr = getattr(cls, attrib_name, _sentinel)
     if attr is _sentinel:
         return False
@@ -133,9 +134,7 @@ def has_own_attribute(cls: type[t.Any], attrib_name: t.Any):
 
 
 def get_annotations(cls: type[t.Any]) -> DictStrAny:
-    """
-    Get annotations for *cls*.
-    """
+    """Get annotations for *cls*."""
     if has_own_attribute(cls, "__annotations__"):
         return cls.__annotations__
 
@@ -151,8 +150,7 @@ _classvar_prefixes = (
 
 
 def is_class_var(annot: str | t.Any) -> bool:
-    """
-    Check whether *annot* is a typing.ClassVar.
+    """Check whether *annot* is a typing.ClassVar.
 
     The string comparison hack is used to avoid evaluating all string
     annotations which would put attrs-based classes at a performance
@@ -168,16 +166,14 @@ def is_class_var(annot: str | t.Any) -> bool:
 
 
 def add_method_dunders(cls: type[t.Any], method_or_cls: _T, _overwrite_doc: str | None = None) -> _T:
-    """
-    Add __module__ and __qualname__ to a *method* if possible.
-    """
+    """Add __module__ and __qualname__ to a *method* if possible."""
     try:
         method_or_cls.__module__ = cls.__module__
     except AttributeError:
         pass
 
     try:
-        method_or_cls.__qualname__ = ".".join((cls.__qualname__, method_or_cls.__name__))
+        method_or_cls.__qualname__ = f"{cls.__qualname__}.{method_or_cls.__name__}"
     except AttributeError:
         pass
 
@@ -189,6 +185,64 @@ def add_method_dunders(cls: type[t.Any], method_or_cls: _T, _overwrite_doc: str 
         pass
 
     return method_or_cls
+
+
+def _compile_and_eval(script: str, globs: DictStrAny, locs: t.Any = None, filename: str = ""):
+    """Exec the script with the given global (globs) and local (locs) variables."""
+    bytecode = compile(script, filename, "exec")
+    eval(bytecode, globs, locs)  # noqa: S307
+
+
+# ported from attrs
+def _make_method(name: str, script: str, filename: str, globs: DictStrAny) -> AnyCallable:
+    """Create the method with the script given and return the method object."""
+    locs: DictStrAny = {}
+
+    # In order of debuggers like PDB being able to step through the code,
+    # we add a fake linecache entry.
+    count = 1
+    base_filename = filename
+    while True:
+        linecache_tuple = (
+            len(script),
+            None,
+            script.splitlines(True),
+            filename,
+        )
+        old_val = linecache.cache.setdefault(filename, linecache_tuple)
+        if old_val == linecache_tuple:
+            break
+        else:
+            filename = f"{base_filename[:-1]}-{count}>"
+            count += 1
+
+    _compile_and_eval(script, globs, locs, filename)
+
+    return locs[name]
+
+
+def make_attr_tuple_class(cls_name: str, attr_names: t.Sequence[str]):
+    """Create a tuple subclass to hold class attributes.
+
+    The subclass is a bare tuple with properties for names.
+
+    class MyClassAttributes(tuple):
+        __slots__ = ()
+        x = property(itemgetter(0))
+    """
+    attr_class_name = f"{cls_name}Attributes"
+    attr_class_template = [
+        f"class {attr_class_name}(tuple):",
+        "    __slots__ = ()",
+    ]
+    if attr_names:
+        for i, attr_name in enumerate(attr_names):
+            attr_class_template.append(f"    {attr_name} = _attrs_property(_attrs_itemgetter({i}))")
+    else:
+        attr_class_template.append("    pass")
+    globs: DictStrAny = {"_attrs_itemgetter": itemgetter, "_attrs_property": property}
+    _compile_and_eval("\n".join(attr_class_template), globs)
+    return globs[attr_class_name]
 
 
 def generate_unique_filename(cls: type[t.Any], func_name: str):
@@ -203,7 +257,7 @@ def generate_function(
     globs: dict[str, t.Any],
     annotations: dict[str, t.Any] | None = None,
 ):
-    from . import DEBUG
+    from . import SHOW_CODEGEN
 
     script = "def %s(%s):\n    %s\n" % (
         func_name,
@@ -214,7 +268,7 @@ def generate_function(
     if annotations:
         meth.__annotations__ = annotations
 
-    if DEBUG and int(os.environ.get("OPENLLMDEVDEBUG", str(0))) > 3:
+    if SHOW_CODEGEN:
         logger.info("Generated script for %s:\n\n%s", typ, script)
 
     return meth
@@ -227,7 +281,8 @@ def make_env_transformer(
     default_callback: t.Callable[[str, t.Any], t.Any] | None = None,
     globs: DictStrAny | None = None,
 ):
-    from . import dantic, field_env_key
+    from . import dantic
+    from . import field_env_key
 
     def identity(_: str, x_value: t.Any) -> t.Any:
         return x_value
@@ -267,4 +322,36 @@ def make_env_transformer(
         args=("_", "fields"),
         globs=globs,
         annotations={"_": "type[LLMConfig]", "fields": fields_ann, "return": fields_ann},
+    )
+
+
+def gen_sdk(func: t.Callable[P, t.Any], name: str | None = None, **attrs: t.Any):
+    from .representation import ReprMixin
+
+    if name is None:
+        name = func.__name__.strip("_")
+
+    _signatures = inspect.signature(func).parameters
+
+    def _repr(self: ReprMixin) -> str:
+        return f"<generated function {name} {orjson.dumps(dict(self.__repr_args__()), option=orjson.OPT_NON_STR_KEYS | orjson.OPT_INDENT_2).decode()}>"
+
+    def _repr_args(self: ReprMixin) -> t.Iterator[t.Tuple[str, t.Any]]:
+        return ((k, _signatures[k].annotation) for k in self.__repr_keys__)
+
+    return functools.update_wrapper(
+        types.new_class(
+            name,
+            (PartialAny, ReprMixin),
+            exec_body=lambda ns: ns.update(
+                {
+                    "__repr_keys__": property(lambda _: [i for i in _signatures.keys() if not i.startswith("_")]),
+                    "__repr_args__": _repr_args,
+                    "__repr__": _repr,
+                    "__doc__": inspect.cleandoc(t.cast(str, func.__doc__)),
+                    "__module__": "openllm",
+                }
+            ),
+        )(func, **attrs),
+        func,
     )

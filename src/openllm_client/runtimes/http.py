@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from __future__ import annotations
-
 import logging
 import typing as t
 from urllib.parse import urlparse
@@ -26,52 +25,63 @@ from .base import BaseAsyncClient
 from .base import BaseClient
 
 
+if t.TYPE_CHECKING:
+    from openllm._types import DictStrAny
+    from openllm._types import LiteralRuntime
+else:
+    DictStrAny = dict
+
+
 logger = logging.getLogger(__name__)
 
 
 class HTTPClientMixin:
-    _metadata: dict[str, t.Any]
+    if t.TYPE_CHECKING:
+
+        @property
+        def _metadata(self) -> DictStrAny:
+            ...
 
     @property
     def model_name(self) -> str:
         try:
             return self._metadata["model_name"]
         except KeyError:
-            raise RuntimeError("Malformed service endpoint. (Possible malicious)")
+            raise RuntimeError("Malformed service endpoint. (Possible malicious)") from None
 
     @property
     def model_id(self) -> str:
         try:
             return self._metadata["model_name"]
         except KeyError:
-            raise RuntimeError("Malformed service endpoint. (Possible malicious)")
+            raise RuntimeError("Malformed service endpoint. (Possible malicious)") from None
 
     @property
-    def framework(self) -> t.Literal["pt", "flax", "tf"]:
+    def framework(self) -> LiteralRuntime:
         try:
             return self._metadata["framework"]
         except KeyError:
-            raise RuntimeError("Malformed service endpoint. (Possible malicious)")
+            raise RuntimeError("Malformed service endpoint. (Possible malicious)") from None
 
     @property
     def timeout(self) -> int:
         try:
             return self._metadata["timeout"]
         except KeyError:
-            raise RuntimeError("Malformed service endpoint. (Possible malicious)")
+            raise RuntimeError("Malformed service endpoint. (Possible malicious)") from None
 
     @property
     def configuration(self) -> dict[str, t.Any]:
         try:
             return orjson.loads(self._metadata["configuration"])
         except KeyError:
-            raise RuntimeError("Malformed service endpoint. (Possible malicious)")
+            raise RuntimeError("Malformed service endpoint. (Possible malicious)") from None
 
     def postprocess(self, result: dict[str, t.Any]) -> openllm.GenerationOutput:
         return openllm.GenerationOutput(**result)
 
 
-class HTTPClient(HTTPClientMixin, BaseClient):
+class HTTPClient(HTTPClientMixin, BaseClient[DictStrAny]):
     def __init__(self, address: str, timeout: int = 30):
         address = address if "://" in address else "http://" + address
         self._host, self._port = urlparse(address).netloc.split(":")
@@ -81,7 +91,7 @@ class HTTPClient(HTTPClientMixin, BaseClient):
         return self._cached.health()
 
 
-class AsyncHTTPClient(HTTPClientMixin, BaseAsyncClient):
+class AsyncHTTPClient(HTTPClientMixin, BaseAsyncClient[DictStrAny]):
     def __init__(self, address: str, timeout: int = 30):
         address = address if "://" in address else "http://" + address
         self._host, self._port = urlparse(address).netloc.split(":")

@@ -12,15 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from __future__ import annotations
-
 import logging
 import typing as t
 
 import openllm
 
-from ..._prompt import default_formatter
 from .configuration_stablelm import DEFAULT_PROMPT_TEMPLATE
 from .configuration_stablelm import SYSTEM_PROMPT
+from ..._prompt import default_formatter
 
 
 if t.TYPE_CHECKING:

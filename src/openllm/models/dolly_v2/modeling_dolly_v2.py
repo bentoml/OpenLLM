@@ -12,24 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from __future__ import annotations
-
 import logging
 import re
 import typing as t
 
-import bentoml
 import openllm
 
-from ...utils import normalize_attrs_to_model_tokenizer_pair
 from .configuration_dolly_v2 import DEFAULT_PROMPT_TEMPLATE
 from .configuration_dolly_v2 import END_KEY
 from .configuration_dolly_v2 import RESPONSE_KEY
 from .configuration_dolly_v2 import get_special_token_id
+from ...utils import normalize_attrs_to_model_tokenizer_pair
 
 
 if t.TYPE_CHECKING:
     import tensorflow as tf
     import torch
+
+    import bentoml
     import transformers
 else:
     tf = openllm.utils.LazyLoader("tf", globals(), "tensorflow")
@@ -75,14 +75,16 @@ def get_pipeline(
             top_k: int = 0,
             **kwargs: t.Any,
         ):
-            """Initialize the pipeline
+            """Initialize the pipeline.
+
             Args:
-                do_sample (bool, optional): Whether or not to use sampling. Defaults to True.
-                max_new_tokens (int, optional): Max new tokens after the prompt to generate. Defaults to 128.
-                top_p (float, optional): If set to float < 1, only the smallest set of most probable tokens with
-                    probabilities that add up to top_p or higher are kept for generation. Defaults to 0.92.
-                top_k (int, optional): The number of highest probability vocabulary tokens to keep for top-k-filtering.
-                    Defaults to 0.
+                do_sample: Whether or not to use sampling. Defaults to True.
+                max_new_tokens: Max new tokens after the prompt to generate. Defaults to 128.
+                top_p: If set to float < 1, only the smallest set of most probable tokens with
+                       probabilities that add up to top_p or higher are kept for generation. Defaults to 0.92.
+                top_k: The number of highest probability vocabulary tokens to keep for top-k-filtering. Defaults to 0.
+                *args: Additional positional arguments to be passed to ``transformers.Pipeline``.
+                **kwargs: Additional keyword arguments to be passed to ``transformers.Pipeline``.
             """
             super().__init__(
                 *args,
@@ -195,7 +197,7 @@ def get_pipeline(
                     try:
                         response_pos = sequence.index(response_key_token_id)
                     except ValueError:
-                        logger.warn(f"Could not find response key {response_key_token_id} in: {sequence}")
+                        logger.warning("Could not find response key %s in: %s", response_key_token_id, sequence)
                         response_pos = None
 
                     if response_pos:
@@ -228,7 +230,7 @@ def get_pipeline(
                         if m:
                             decoded = m.group(1).strip()
                         else:
-                            logger.warn(f"Failed to find response in:\n{fully_decoded}")
+                            logger.warning("Failed to find response in:\n%s", fully_decoded)
 
                 # If the full text is requested, then append the decoded text to the original instruction.
                 # This technically isn't the full text, as we format the instruction in the prompt the model has been

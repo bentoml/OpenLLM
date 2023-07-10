@@ -14,12 +14,13 @@
 
 """Generation utilities to be reused throughout."""
 from __future__ import annotations
-
 import typing as t
 
-import torch
-
 import transformers
+
+
+if t.TYPE_CHECKING:
+    import torch
 
 
 class StopSequenceCriteria(transformers.StoppingCriteria):
@@ -42,6 +43,6 @@ class StopSequenceCriteria(transformers.StoppingCriteria):
 
 
 class StopOnTokens(transformers.StoppingCriteria):
-    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> bool:
+    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs: t.Any) -> bool:
         stop_ids = {50278, 50279, 50277, 1, 0}
-        return input_ids[0][-1] in stop_ids
+        return t.cast(int, input_ids[0][-1]) in stop_ids
