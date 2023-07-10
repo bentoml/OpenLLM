@@ -1689,7 +1689,7 @@ def build_command(
     > NOTE: To run a container built from this Bento with GPU support, make sure
     > to have https://github.com/NVIDIA/nvidia-container-toolkit install locally.
     """
-    from bentoml_cli.cli import cli
+    from bentoml_cli.cli import cli as bentoml_cli
 
     from ._package import create_bento
 
@@ -1843,10 +1843,10 @@ def build_command(
 
     backend = os.getenv("BENTOML_CONTAINERIZE_BACKEND", "docker")
     _echo(f"\nBuilding {bento} into a LLMContainer using backend '{backend}'", fg="magenta")
-    args = ["--backend", backend]
+    args = [str(bento.tag), "--backend", backend]
     if get_debug_mode():
-        args.extend([str(bento.tag), "--opt", "progress=plain"])
-    cli.commands["containerize"].main(standalone_mode=False, args=args)
+        args.extend(["--opt", "progress=plain"])
+    bentoml_cli.commands["containerize"].main(standalone_mode=False, args=args)
     return str(bento.tag)
 
 
