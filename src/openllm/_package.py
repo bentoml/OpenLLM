@@ -53,6 +53,7 @@ if t.TYPE_CHECKING:
     from fs.base import FS
 
     import openllm
+    from bentoml._internal.bento import BentoStore
 
 logger = logging.getLogger(__name__)
 
@@ -244,6 +245,7 @@ def create_bento(
     extra_dependencies: tuple[str, ...] | None = None,
     build_ctx: str | None = None,
     runtime: t.Literal["ggml", "transformers"] = "transformers",
+    _bento_store: BentoStore = Provide[BentoMLContainer.bento_store],
     _model_store: ModelStore = Provide[BentoMLContainer.model_store],
 ) -> bentoml.Bento:
     framework_envvar = llm.config["env"]["framework_value"]
@@ -347,4 +349,4 @@ def create_bento(
 
     bento._fs.writetext(service_fs_path, script)
 
-    return bento.save()
+    return bento.save(bento_store=_bento_store, model_store=_model_store)
