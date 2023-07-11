@@ -230,6 +230,8 @@ def make_attr_tuple_class(cls_name: str, attr_names: t.Sequence[str]):
         __slots__ = ()
         x = property(itemgetter(0))
     """
+    from . import SHOW_CODEGEN
+
     attr_class_name = f"{cls_name}Attributes"
     attr_class_template = [
         f"class {attr_class_name}(tuple):",
@@ -241,7 +243,11 @@ def make_attr_tuple_class(cls_name: str, attr_names: t.Sequence[str]):
     else:
         attr_class_template.append("    pass")
     globs: DictStrAny = {"_attrs_itemgetter": itemgetter, "_attrs_property": property}
+    if SHOW_CODEGEN:
+        logger.info("Generated class for %s:\n\n%s", attr_class_name, "\n".join(attr_class_template))
+
     _compile_and_eval("\n".join(attr_class_template), globs)
+
     return globs[attr_class_name]
 
 

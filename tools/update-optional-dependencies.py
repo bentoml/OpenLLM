@@ -95,7 +95,7 @@ _NIGHTLY_MAPPING: dict[str, Dependencies] = {
 
 FINE_TUNE_DEPS = ["peft", "bitsandbytes", "datasets", "accelerate", "deepspeed", "trl"]
 FLAN_T5_DEPS = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
-MPT_DEPS = ["triton"]
+MPT_DEPS = ["triton", "einops"]
 OPENAI_DEPS = ["openai", "tiktoken"]
 AGENTS_DEPS = ["transformers[agents]>=4.30", "diffusers", "soundfile"]
 FALCON_DEPS = ["einops", "xformers", "safetensors"]
