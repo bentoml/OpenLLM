@@ -4,8 +4,7 @@
             [openllm.components.side-bar.views :as side-bar-views]
             [openllm.components.playground.views :as playground-views]
             [openllm.components.chat.views :as chat-views]
-            [openllm.components.chat.events :as chat-events]
-            [openllm.components.apis.views :as apis-views]))
+            [openllm.components.chat.events :as chat-events]))
 
 (defn tabs
   "The tabs at the top of the screen. The selected tab decides, which
@@ -30,8 +29,7 @@
   [screen-id]
   (case screen-id
     :playground [playground-views/playground-tab-contents]
-    :chat [chat-views/chat-tab-contents]
-    :apis [apis-views/apis-tab-contents]))
+    :chat [chat-views/chat-tab-contents]))
 
 (defn dashboard
   "The main dashboard component, which is rendered into the DOM. Called

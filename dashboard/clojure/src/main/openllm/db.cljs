@@ -9,8 +9,7 @@
    The subscription namespaces may read the respective data that is of
    interest to them.
    The event namespaces may be used to change (thus WRITE to the) app-db."
-  (:require [openllm.components.apis.data :as apis-data]
-            [cljs.spec.alpha :as s]))
+  (:require [cljs.spec.alpha :as s]))
 
 ;; Below is is a clojure.spec specification for the value in app-db. It is
 ;; like a Schema. See: http://clojure.org/guides/spec
@@ -37,7 +36,6 @@
 (s/def ::chat-history (s/coll-of (s/keys :req-un [::user ::text]) :kind vector?))
 (s/def ::prompt-layout string?)
 
-(s/def ::apis-data (s/map-of keyword? (s/keys :req-un [::input-value ::last-response])))
 (s/def ::selected-api keyword?)
 
 ;; ########################## MODEL CONFIG ##########################
@@ -101,7 +99,6 @@
                              ::chat-input-value
                              ::chat-history
                              ::prompt-layout
-                             ::apis-data
                              ::selected-api
                              ::model-config]))
 ;; ######################## AGGREGATE END ###########################
@@ -128,17 +125,6 @@
              ::penalty_alpha 0.0
              ::use_cache true))
 
-(defn get-default-apis-data
-  "Uses the data from `endpoints-data` to create the default apis-data map."
-  []
-  ;; classic reduce, so sexy <3
-  (reduce (fn [db {:keys [id]}]
-            (-> db
-                (assoc-in , [id :input-value] "")
-                (assoc-in , [id :last-response] "")))
-          {}
-          apis-data/endpoints-data))
-
 (def default-db
   "What gets put into app-db by default.
    See 'core.cljs' for `(dispatch-sync [:initialise-db])` and 'events.cljs'
@@ -153,8 +139,6 @@
    :chat-input-value ""
    :chat-history []
    :prompt-layout ""
-   :apis-data (get-default-apis-data)
-   :selected-api (:id (first apis-data/endpoints-data))
    :model-config standard-llm-config})
 
 
