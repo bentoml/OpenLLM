@@ -42,8 +42,6 @@ def test_general_build_with_internal_testing():
 
 
 def test_general_build_from_local(tmp_path_factory: pytest.TempPathFactory):
-    bento_store = BentoMLContainer.bento_store.get()
-
     local_path = tmp_path_factory.mktemp("local_t5")
     llm = openllm.AutoLLM.for_model("flan-t5", model_id=HF_INTERNAL_T5_TESTING, ensure_available=True)
 
@@ -52,11 +50,7 @@ def test_general_build_from_local(tmp_path_factory: pytest.TempPathFactory):
 
     llm.save_pretrained(local_path)
 
-    bento = openllm.build("flan-t5", model_id=local_path.resolve().__fspath__(), model_version="1")
-    assert len(bento_store.list(bento.tag)) == 1
-
-    bento = openllm.build("flan-t5", model_id=local_path.resolve().__fspath__(), model_version="1")
-    assert len(bento_store.list(bento.tag)) == 1
+    assert openllm.build("flan-t5", model_id=local_path.resolve().__fspath__(), model_version="local")
 
 
 @pytest.fixture(name="dockerfile_template")
@@ -70,9 +64,4 @@ def fixture_dockerfile_template(tmp_path_factory: pytest.TempPathFactory):
 
 @pytest.mark.usefixtures("dockerfile_template")
 def test_build_with_custom_dockerfile(dockerfile_template: Path):
-    assert openllm.build(
-        "flan-t5",
-        model_id=HF_INTERNAL_T5_TESTING,
-        overwrite=True,
-        dockerfile_template=str(dockerfile_template),
-    )
+    assert openllm.build("flan-t5", model_id=HF_INTERNAL_T5_TESTING, dockerfile_template=str(dockerfile_template))

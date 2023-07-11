@@ -1622,6 +1622,8 @@ class LLMConfig(_ConfigAttr):
             **attrs: The attributes to be added to the new class. This will override
                      any existing attributes with the same name.
         """
+        if not hasattr(cls, "__config__"):
+            raise ValueError("Cannot derivate a LLMConfig without __config__")
         _new_cfg = {k: v for k, v in attrs.items() if k in attr.fields_dict(_ModelSettingsAttr)}
         attrs = {k: v for k, v in attrs.items() if k not in _new_cfg}
         new_cls = types.new_class(

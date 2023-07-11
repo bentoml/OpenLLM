@@ -1403,50 +1403,6 @@ def _start(
     )
 
 
-@overload
-def _build(
-    model_name: str,
-    /,
-    *,
-    model_id: str | None = ...,
-    model_version: str | None = ...,
-    quantize: t.Literal["int8", "int4", "gptq"] | None = ...,
-    bettertransformer: bool | None = ...,
-    adapter_map: dict[str, str | None] | None = ...,
-    build_ctx: str | None = ...,
-    enable_features: tuple[str, ...] | None = ...,
-    workers_per_resource: int | float | None = ...,
-    runtime: t.Literal["ggml", "transformers"] = ...,
-    dockerfile_template: str | None = ...,
-    overwrite: bool = ...,
-    format: t.Literal["bento"] = "bento",
-    additional_args: list[str] | None = ...,
-) -> bentoml.Bento:
-    ...
-
-
-@overload
-def _build(
-    model_name: str,
-    /,
-    *,
-    model_id: str | None = ...,
-    model_version: str | None = ...,
-    quantize: t.Literal["int8", "int4", "gptq"] | None = ...,
-    bettertransformer: bool | None = ...,
-    adapter_map: dict[str, str | None] | None = ...,
-    build_ctx: str | None = ...,
-    enable_features: tuple[str, ...] | None = ...,
-    workers_per_resource: int | float | None = ...,
-    runtime: t.Literal["ggml", "transformers"] = ...,
-    dockerfile_template: str | None = ...,
-    overwrite: bool = ...,
-    format: t.Literal["container"] = ...,
-    additional_args: list[str] | None = ...,
-) -> str:
-    ...
-
-
 def _build(
     model_name: str,
     /,
@@ -1464,7 +1420,7 @@ def _build(
     overwrite: bool = False,
     format: t.Literal["bento", "container"] = "bento",
     additional_args: list[str] | None = None,
-) -> bentoml.Bento | str:
+) -> bentoml.Bento:
     """Package a LLM into a Bento.
 
     The LLM will be built into a BentoService with the following structure:
@@ -1689,8 +1645,6 @@ def build_command(
     > NOTE: To run a container built from this Bento with GPU support, make sure
     > to have https://github.com/NVIDIA/nvidia-container-toolkit install locally.
     """
-    from bentoml_cli.cli import cli as bentoml_cli
-
     from ._package import create_bento
 
     adapter_map: dict[str, str | None] | None = None
@@ -1834,16 +1788,15 @@ def build_command(
     else:
         _echo(bento.tag)
 
-    if format == "bento":
-        return bento
+    if format == "container":
+        backend = os.getenv("BENTOML_CONTAINERIZE_BACKEND", "docker")
+        _echo(f"Building {bento} into a LLMContainer using backend '{backend}'", fg="magenta")
+        if not bentoml.container.health(backend):
+            raise OpenLLMException(f"Failed to use backend {backend}")
 
-    backend = os.getenv("BENTOML_CONTAINERIZE_BACKEND", "docker")
-    _echo(f"\nBuilding {bento} into a LLMContainer using backend '{backend}'", fg="magenta")
-    args = [str(bento.tag), "--backend", backend]
-    if get_debug_mode():
-        args.extend(["--opt", "progress=plain"])
-    bentoml_cli.commands["containerize"].main(standalone_mode=False, args=args)
-    return str(bento.tag)
+        bentoml.container.build(str(bento.tag), backend=backend, features=("grpc",))
+
+    return bento
 
 
 @overload
