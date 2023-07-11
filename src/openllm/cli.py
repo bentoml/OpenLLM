@@ -1707,10 +1707,6 @@ def build_command(
             # we are just doing the parsing here.
             adapter_map[_adapter_id] = adapter_name[0] if len(adapter_name) > 0 else None
 
-    if output == "pretty":
-        if overwrite:
-            _echo(f"Overwriting existing Bento for {model_name}.", fg="yellow")
-
     if enable_features:
         enable_features = tuple(itertools.chain.from_iterable((s.split(",") for s in enable_features)))
 
