@@ -2055,9 +2055,7 @@ def models_command(
 def prune_command(yes: bool, model_store: ModelStore = Provide[BentoMLContainer.model_store]):
     """Remove all saved models locally."""
     available = [
-        m
-        for m in bentoml.models.list()
-        if 'framework' in m.info.labels and m.info.labels['framework'] == 'openllm'
+        m for m in bentoml.models.list() if "framework" in m.info.labels and m.info.labels["framework"] == "openllm"
     ]
 
     for model in available:
