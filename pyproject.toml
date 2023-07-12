@@ -1,3 +1,5 @@
+# NOTE: The following are managed by ./tools/dependencies.py
+# project.classifiers, project.dependencies, project.optional-dependencies
 [build-system]
 build-backend = "hatchling.build"
 requires = ["hatchling"]
@@ -29,18 +31,18 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
-# NOTE: The below is managed by ./tools/update-optional-dependencies.py
 dependencies = [
-    "bentoml[grpc,io]>=1.0.22",
-    "transformers[torch,tokenizers,accelerate]>=4.29.0",
-    "optimum",
-    "attrs>=23.1.0",
-    "cattrs>=23.1.0",
-    "orjson",
-    "inflection",
-    "tabulate[widechars]>=0.9.0",
-    "httpx",
-    "typing_extensions",
+    'bentoml[grpc,io]>=1.0.22',
+    'transformers[torch,tokenizers,accelerate]>=4.29.0',
+    'optimum',
+    'attrs>=23.1.0',
+    'cattrs>=23.1.0',
+    'orjson',
+    'inflection',
+    'tabulate[widechars]>=0.9.0',
+    'httpx',
+    'typing_extensions',
+    'cuda-python;platform_system!="Darwin"',
 ]
 description = 'OpenLLM: Operating LLMs in production'
 dynamic = ["version"]
@@ -62,9 +64,6 @@ license = "Apache-2.0"
 name = "openllm"
 readme = "README.md"
 requires-python = ">=3.8"
-
-# NOTE: Don't modify project.optional-dependencies
-# as it is managed by ./tools/update-optional-dependencies.py
 [project.optional-dependencies]
 agents = ["transformers[agents]>=4.30", "diffusers", "soundfile"]
 all = [
@@ -72,20 +71,27 @@ all = [
     "openllm[falcon]",
     "openllm[mpt]",
     "openllm[starcoder]",
-    "openllm[flan-t5]",
-    "openllm[fine-tune]",
     "openllm[agents]",
-    "openllm[playground]",
     "openllm[ggml]",
+    "openllm[agents]",
+    "openllm[ggml]",
+    "openllm[opt]",
+    "openllm[playground]",
+    "openllm[fine-tune]",
     "openllm[openai]",
+    "openllm[agents]",
+    "openllm[gptq]",
+    "openllm[flan-t5]",
 ]
 chatglm = ["cpm-kernels", "sentencepiece"]
 falcon = ["einops", "xformers", "safetensors"]
 fine-tune = ["peft", "bitsandbytes", "datasets", "accelerate", "deepspeed", "trl"]
 flan-t5 = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
 ggml = ["ctransformers"]
+gptq = ["auto-gptq", "triton"]
 mpt = ["triton", "einops"]
 openai = ["openai", "tiktoken"]
+opt = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
 playground = ["jupyter", "notebook", "ipython", "jupytext", "nbformat"]
 starcoder = ["bitsandbytes"]
 

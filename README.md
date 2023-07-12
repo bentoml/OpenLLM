@@ -266,7 +266,7 @@ pip install "openllm[mpt]"
 <td>
 
 ```bash
-pip install openllm
+pip install "openllm[opt]"
 ```
 
 </td>

@@ -1615,6 +1615,13 @@ start, start_grpc, build, import_model, list_models = (
     help="The output format for 'openllm build'. By default this will build a BentoLLM. 'container' is the shortcut of 'openllm build && bentoml containerize'.",
     hidden=not get_debug_mode(),
 )
+@click.option(
+    "--push",
+    default=False,
+    is_flag=True,
+    type=click.BOOL,
+    help="Whether to push the result bento to BentoCloud. Make sure to login with 'bentoml cloud login' first.",
+)
 @click.pass_context
 def build_command(
     ctx: click.Context,
@@ -1632,6 +1639,7 @@ def build_command(
     model_version: str | None,
     dockerfile_template: t.TextIO | None,
     format: t.Literal["bento", "container"],
+    push: bool,
     **attrs: t.Any,
 ):
     """Package a given models into a Bento.
@@ -1788,7 +1796,12 @@ def build_command(
     else:
         _echo(bento.tag)
 
-    if format == "container":
+    if format == "container" and push:
+        ctx.fail("'--format=container' and '--push' are mutually exclusive.")
+    if push:
+        client = BentoMLContainer.bentocloud_client.get()
+        client.push_bento(bento)
+    elif format == "container":
         backend = os.getenv("BENTOML_CONTAINERIZE_BACKEND", "docker")
         _echo(f"Building {bento} into a LLMContainer using backend '{backend}'", fg="magenta")
         if not bentoml.container.health(backend):

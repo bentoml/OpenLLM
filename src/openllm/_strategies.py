@@ -13,11 +13,15 @@
 # limitations under the License.
 
 from __future__ import annotations
+import functools
+import inspect
 import logging
 import math
 import os
 import sys
+import types
 import typing as t
+import warnings
 
 import psutil
 
@@ -27,62 +31,113 @@ from bentoml._internal.resource import system_resources
 from bentoml._internal.runner.strategy import THREAD_ENVS
 from bentoml._internal.runner.strategy import Strategy
 
-from .exceptions import OpenLLMException
+from .utils import LazyLoader
+from .utils import LazyType
 from .utils import ReprMixin
 
 
 if t.TYPE_CHECKING:
+    import torch
+
     import bentoml
 
     ListIntStr = list[int | str]
+
+    class DynResource(Resource[t.List[str]], resource_id=""):
+        resource_id: t.ClassVar[str]
+
 else:
+    DynResource = Resource[t.List[str]]
+    torch = LazyLoader("torch", globals(), "torch")
     ListIntStr = list
+
+# NOTE: We need to do this so that overload can register
+# correct overloads to typing registry
+if sys.version_info[:2] >= (3, 11):
+    from typing import overload
+else:
+    from typing_extensions import overload
 
 logger = logging.getLogger(__name__)
 
 
-class AmdGpuResource(Resource[t.List[str]], resource_id="amd.com/gpu"):
-    @classmethod
-    def from_spec(cls, spec: t.Any) -> list[str]:
-        if not isinstance(spec, (int, str, list)):
-            raise TypeError("AMD GPU device IDs must be int, str or a list specifing the exact GPUs to use.")
+def _strtoul(s: str) -> int:
+    """Return -1 or positive integer sequence string starts with,."""
+    if not s:
+        return -1
+    for idx, c in enumerate(s):
+        if not (c.isdigit() or (idx == 0 and c in "+-")):
+            break
+        if idx + 1 == len(s):
+            idx += 1  # noqa: PLW2901
+    return int(s[:idx]) if idx > 0 else -1  # type: ignore (idx will be set via enumerate)
 
-        try:
-            if isinstance(spec, int):
-                if spec == -1:
-                    return []
-                if spec < -1:
-                    raise ValueError
-                return [str(i) for i in range(spec)]
-            elif isinstance(spec, str):
-                try:
-                    return cls.from_spec(int(spec))
-                except ValueError:
-                    if spec.startswith("GPU"):
-                        return [spec]
-                    raise ValueError
-            else:
-                return [str(x) for x in spec]
-        except ValueError:
-            raise OpenLLMException(f"Invalid AMD GPU resource limit '{spec}'.")
 
-    @classmethod
-    def from_system(cls) -> list[str]:
-        """Retrieve AMD GPU from system, currently only supports on Linux.
-
-        This assumes that ROCm is setup correctly.
-        """
-        cuda_visible_devices = os.getenv("CUDA_VISIBLE_DEVICES")
-        if cuda_visible_devices in ("", "-1"):
+def _parse_list_with_prefix(lst: str, prefix: str) -> list[str]:
+    rcs: list[str] = []
+    for elem in lst.split(","):
+        # Repeated id results in empty set
+        if elem in rcs:
             return []
-        if cuda_visible_devices is not None:
-            cuda_visible_devices = cuda_visible_devices.split(",")
-            if "-1" in cuda_visible_devices:
-                cuda_visible_devices = cuda_visible_devices[: cuda_visible_devices.index("-1")]
-            return cuda_visible_devices
+        # Anything other but prefix is ignored
+        if not elem.startswith(prefix):
+            break
+        rcs.append(elem)
+    return rcs
 
+
+_STACK_LEVEL = 3
+
+
+@overload
+def _parse_visible_devices(default_var: str | None = ..., respect_env: t.Literal[True] = True) -> list[str] | None:
+    ...
+
+
+@overload
+def _parse_visible_devices(default_var: str = ..., respect_env: t.Literal[False] = False) -> list[str]:
+    ...
+
+
+def _parse_visible_devices(default_var: str | None = None, respect_env: bool = True) -> list[str] | None:
+    """CUDA_VISIBLE_DEVICES aware with default var for parsing spec."""
+    if respect_env:
+        spec = os.getenv("CUDA_VISIBLE_DEVICES", default_var)
+        if not spec:
+            return
+    else:
+        assert default_var is not None, "spec is required to be not None when parsing spec."  # noqa: S101
+        spec = default_var
+
+    if spec.startswith("GPU-"):
+        return _parse_list_with_prefix(spec, "GPU-")
+    if spec.startswith("MIG-"):
+        return _parse_list_with_prefix(spec, "MIG-")
+
+    # XXX: We to somehow handle cases such as '100m'
+    # CUDA_VISIBLE_DEVICES uses something like strtoul
+    # which makes `1gpu2,2ampere` is equivalent to `1,2`
+    rc: list[int] = []
+    for el in spec.split(","):
+        x = _strtoul(el.strip())
+        # Repeated ordinal results in empty set
+        if x in rc:
+            return []
+        # Negative value aborts the sequence
+        if x < 0:
+            break
+        rc.append(x)
+    return [str(i) for i in rc]
+
+
+def _from_system(cls: type[DynResource]) -> list[str]:
+    """Shared mixin implementation for OpenLLM's NVIDIA and AMD resource implementation.
+
+    It relies on torch.cuda implementation and in turns respect CUDA_VISIBLE_DEVICES.
+    """
+    if cls.resource_id == "amd.com/gpu":
         if not psutil.LINUX:
-            logger.debug("AMD GPU resource is only supported on Linux.")
+            warnings.warn("AMD GPUs is currently only supported on Linux.", stacklevel=_STACK_LEVEL)
             return []
 
         # ROCm does not currently have the rocm_smi wheel.
@@ -90,37 +145,169 @@ class AmdGpuResource(Resource[t.List[str]], resource_id="amd.com/gpu"):
         # we don't want to use CLI because parsing is a pain.
         sys.path.append("/opt/rocm/libexec/rocm_smi")
         try:
-            from ctypes import byref
-            from ctypes import c_uint32
-
             # refers to https://github.com/RadeonOpenCompute/rocm_smi_lib/blob/master/python_smi_tools/rsmiBindings.py
-            from rsmiBindings import rocmsmi
-            from rsmiBindings import rsmi_status_t
-
-            num = c_uint32(0)
-            ret = rocmsmi.rsmi_num_monitor_devices(byref(num))
-            if ret == rsmi_status_t.RSMI_STATUS_SUCCESS:
-                return [str(i) for i in range(num.value)]
-            return []
-        except Exception as err:
-            logger.debug("Failed to setup AMD GPU resource: %s", err)
+            from rsmiBindings import rocmsmi as rocmsmi
+        except (ModuleNotFoundError, ImportError):
+            # In this case the binary is not found, returning empty list
             return []
         finally:
             sys.path.remove("/opt/rocm/libexec/rocm_smi")
+    visible_devices = _parse_visible_devices()
+    if visible_devices is None:
+        return [str(i) for i in range(torch.cuda.device_count())] if torch.cuda.is_available() else []
+    return visible_devices
 
-    @classmethod
-    def validate(cls, val: list[str]):
-        for gpu_index_or_literal in val:
-            try:
-                idx = int(gpu_index_or_literal)
-            except ValueError:
-                raise OpenLLMException(f"Invalid AMD GPU device index: {val}")
-            if int(idx) < 0:
-                raise OpenLLMException(f"Negative GPU device in {val}.")
-            if int(idx) >= len(cls.from_system()):
-                raise OpenLLMException(
-                    f"GPU device index in {val} is greater than the system available: {cls.from_system()}"
-                )
+
+@overload
+def _from_spec(cls: type[DynResource], spec: int) -> list[str]:
+    ...
+
+
+@overload
+def _from_spec(cls: type[DynResource], spec: ListIntStr) -> list[str]:
+    ...
+
+
+@overload
+def _from_spec(cls: type[DynResource], spec: str) -> list[str]:
+    ...
+
+
+def _from_spec(cls: type[DynResource], spec: t.Any) -> list[str]:
+    """Shared mixin implementation for OpenLLM's NVIDIA and AMD resource implementation.
+
+    The parser behaves similar to how PyTorch handles CUDA_VISIBLE_DEVICES. This means within
+    BentoML's resource configuration, its behaviour is similar to CUDA_VISIBLE_DEVICES.
+    """
+    if isinstance(spec, int):
+        if spec in (-1, 0):
+            return []
+        if spec < -1:
+            raise ValueError("Spec cannot be < -1.")
+        return [str(i) for i in range(spec)]
+    elif isinstance(spec, str):
+        if not spec:
+            return []
+        if spec.isdigit():
+            spec = ",".join([str(i) for i in range(_strtoul(spec))])
+        return _parse_visible_devices(spec, respect_env=False)
+    elif LazyType(ListIntStr).isinstance(spec):
+        return [str(x) for x in spec]
+    else:
+        raise TypeError(
+            f"'{cls.__name__}.from_spec' only supports parsing spec of type int, str, or list, got '{type(spec)}' instead."
+        )
+
+
+@functools.lru_cache
+def _raw_uuid_nvml() -> list[str] | None:
+    """Return list of device UUID as reported by NVML or None if NVML discovery/initialization failed."""
+    try:
+        from cuda import cuda
+    except ImportError:
+        if sys.platform == "darwin":
+            raise RuntimeError("GPU is not available on Darwin system.") from None
+        raise RuntimeError(
+            "Failed to initialise CUDA runtime binding. Make sure that 'cuda-python' is setup correctly."
+        ) from None
+
+    from ctypes import CDLL
+    from ctypes import byref
+    from ctypes import c_void_p
+    from ctypes import create_string_buffer
+
+    nvml_h = CDLL("libnvidia-ml.so.1")
+    rc = nvml_h.nvmlInit()
+    if rc != 0:
+        warnings.warn("Can't initialize NVML", stacklevel=_STACK_LEVEL)
+        return
+    err, dev_count = cuda.cuDeviceGetCount()
+    if err != cuda.CUresult.CUDA_SUCCESS:
+        warnings.warn("Failed to get available device from system.", stacklevel=_STACK_LEVEL)
+        return
+    uuids: list[str] = []
+    for idx in range(dev_count):
+        dev_id = c_void_p()
+        rc = nvml_h.nvmlDeviceGetHandleByIndex_v2(idx, byref(dev_id))
+        if rc != 0:
+            warnings.warn(f"Failed to get device handle for {idx}", stacklevel=_STACK_LEVEL)
+            return
+        buf_len = 96
+        buf = create_string_buffer(buf_len)
+        rc = nvml_h.nvmlDeviceGetUUID(dev_id, buf, buf_len)
+        if rc != 0:
+            warnings.warn(f"Failed to get device UUID for {idx}", stacklevel=_STACK_LEVEL)
+            return
+        uuids.append(buf.raw.decode("ascii").strip("\0"))
+    del nvml_h
+    return uuids
+
+
+def _validate(cls: type[DynResource], val: list[t.Any]):
+    if cls.resource_id == "amd.com/gpu":
+        raise RuntimeError(
+            "AMD GPU validation is not yet supported. Make sure to call 'get_resource(..., validate=False)'"
+        )
+    if not all(isinstance(i, str) for i in val):
+        raise ValueError("Input list should be all string type.")
+
+    try:
+        from cuda import cuda
+    except ImportError:
+        if sys.platform == "darwin":
+            raise RuntimeError("GPU is not available on Darwin system.") from None
+        raise RuntimeError(
+            "Failed to initialise CUDA runtime binding. Make sure that 'cuda-python' is setup correctly."
+        ) from None
+    # correctly parse handle
+    for el in val:
+        if el.startswith("GPU-") or el.startswith("MIG-"):
+            uuids = _raw_uuid_nvml()
+            if uuids is None:
+                raise ValueError("Failed to parse available GPUs UUID")
+            if el not in uuids:
+                raise ValueError(f"Given UUID {el} is not found with available UUID (available: {uuids})")
+        elif el.isdigit():
+            err, _ = cuda.cuDeviceGet(int(el))
+            if err != cuda.CUresult.CUDA_SUCCESS:
+                raise ValueError(f"Failed to get device {el}")
+
+
+def _make_resource_class(name: str, resource_kind: str, docstring: str) -> type[DynResource]:
+    return types.new_class(
+        name,
+        (DynResource, ReprMixin),
+        {"resource_id": resource_kind},
+        lambda ns: ns.update(
+            {
+                "resource_id": resource_kind,
+                "from_spec": classmethod(_from_spec),
+                "from_system": classmethod(_from_system),
+                "validate": classmethod(_validate),
+                "__repr_keys__": property(lambda _: {"resource_id"}),
+                "__doc__": inspect.cleandoc(docstring),
+                "__module__": "openllm._strategies",
+            }
+        ),
+    )
+
+
+NvidiaGpuResource = _make_resource_class(
+    "NvidiaGpuResource",
+    "nvidia.com/gpu",
+    """NVIDIA GPU resource.
+
+    This is a modified version of internal's BentoML's NvidiaGpuResource
+    where it respects and parse CUDA_VISIBLE_DEVICES correctly.""",
+)
+AmdGpuResource = _make_resource_class(
+    "AmdGpuResource",
+    "amd.com/gpu",
+    """AMD GPU resource.
+
+    Since ROCm will respect CUDA_VISIBLE_DEVICES, the behaviour of from_spec, from_system are similar to
+    ``NvidiaGpuResource``. Currently ``validate`` is not yet supported.""",
+)
 
 
 class CascadingResourceStrategy(Strategy, ReprMixin):
@@ -147,15 +334,21 @@ class CascadingResourceStrategy(Strategy, ReprMixin):
         if resource_request is None:
             resource_request = system_resources()
 
-        # use nvidia gpu
-        nvidia_gpus = get_resource(resource_request, "nvidia.com/gpu")
-        if nvidia_gpus is not None and len(nvidia_gpus) > 0 and "nvidia.com/gpu" in runnable_class.SUPPORTED_RESOURCES:
-            return math.ceil(len(nvidia_gpus) * workers_per_resource)
+        def _get_gpu_count(typ: list[str] | None, kind: str):
+            if typ is not None and len(typ) > 0 and kind in runnable_class.SUPPORTED_RESOURCES:
+                return math.ceil(len(typ) * workers_per_resource)
 
-        # use amd gpu
-        amd_gpus = get_resource(resource_request, "amd.com/gpu")
-        if amd_gpus is not None and len(amd_gpus) > 0 and "amd.com/gpu" in runnable_class.SUPPORTED_RESOURCES:
-            return math.ceil(len(amd_gpus) * workers_per_resource)
+        # use NVIDIA
+        kind = "nvidia.com/gpu"
+        count = _get_gpu_count(get_resource(resource_request, kind), kind)
+        if count:
+            return count
+
+        # use AMD
+        kind = "amd.com/gpu"
+        count = _get_gpu_count(get_resource(resource_request, kind, validate=False), kind)
+        if count:
+            return count
 
         # use CPU
         cpus = get_resource(resource_request, "cpu")
@@ -203,36 +396,32 @@ class CascadingResourceStrategy(Strategy, ReprMixin):
         if resource_request is None:
             resource_request = system_resources()
 
-        # use nvidia gpu
-        nvidia_gpus = get_resource(resource_request, "nvidia.com/gpu")
-        if nvidia_gpus is not None and len(nvidia_gpus) > 0 and "nvidia.com/gpu" in runnable_class.SUPPORTED_RESOURCES:
-            dev = cls.transpile_workers_to_cuda_visible_devices(workers_per_resource, nvidia_gpus, worker_index)
+        # use NVIDIA
+        kind = "nvidia.com/gpu"
+        typ = get_resource(resource_request, kind)
+        if typ is not None and len(typ) > 0 and kind in runnable_class.SUPPORTED_RESOURCES:
             if disabled:
                 logger.debug("CUDA_VISIBLE_DEVICES is disabled, %s will not be using GPU.", worker_index)
                 environ["CUDA_VISIBLE_DEVICES"] = cuda_env
                 return environ
-            environ["CUDA_VISIBLE_DEVICES"] = dev
-            logger.info(
-                "Environ for worker %s: set CUDA_VISIBLE_DEVICES to %s",
-                worker_index,
-                dev,
+            environ["CUDA_VISIBLE_DEVICES"] = cls.transpile_workers_to_cuda_envvar(
+                workers_per_resource, typ, worker_index
             )
+            logger.debug("Environ for worker %s: %s", worker_index, environ)
             return environ
 
-        # use amd gpu
-        amd_gpus = get_resource(resource_request, "amd.com/gpu")
-        if amd_gpus is not None and len(amd_gpus) > 0 and "amd.com/gpu" in runnable_class.SUPPORTED_RESOURCES:
-            dev = cls.transpile_workers_to_cuda_visible_devices(workers_per_resource, amd_gpus, worker_index)
+        # use AMD
+        kind = "amd.com/gpu"
+        typ = get_resource(resource_request, kind, validate=False)
+        if typ is not None and len(typ) > 0 and kind in runnable_class.SUPPORTED_RESOURCES:
             if disabled:
                 logger.debug("CUDA_VISIBLE_DEVICES is disabled, %s will not be using GPU.", worker_index)
                 environ["CUDA_VISIBLE_DEVICES"] = cuda_env
                 return environ
-            environ["CUDA_VISIBLE_DEVICES"] = dev
-            logger.info(
-                "Environ for worker %s: set CUDA_VISIBLE_DEVICES to %s",
-                worker_index,
-                dev,
+            environ["CUDA_VISIBLE_DEVICES"] = cls.transpile_workers_to_cuda_envvar(
+                workers_per_resource, typ, worker_index
             )
+            logger.debug("Environ for worker %s: %s", worker_index, environ)
             return environ
 
         # use CPU
@@ -243,23 +432,16 @@ class CascadingResourceStrategy(Strategy, ReprMixin):
                 thread_count = math.ceil(cpus)
                 for thread_env in THREAD_ENVS:
                     environ[thread_env] = os.getenv(thread_env, str(thread_count))
-                logger.info(
-                    "Environ for worker %d: set CPU thread count to %d",
-                    worker_index,
-                    thread_count,
-                )
+                logger.debug("Environ for worker %s: %s", worker_index, environ)
                 return environ
-            else:
-                for thread_env in THREAD_ENVS:
-                    environ[thread_env] = os.getenv(thread_env, "1")
-                return environ
+            for thread_env in THREAD_ENVS:
+                environ[thread_env] = os.getenv(thread_env, "1")
+            return environ
 
         return environ
 
     @staticmethod
-    def transpile_workers_to_cuda_visible_devices(
-        workers_per_resource: float | int, gpus: list[str], worker_index: int
-    ) -> str:
+    def transpile_workers_to_cuda_envvar(workers_per_resource: float | int, gpus: list[str], worker_index: int) -> str:
         # Convert given workers_per_resource to correct CUDA_VISIBLE_DEVICES string.
         if isinstance(workers_per_resource, float):
             # NOTE: We hit this branch when workers_per_resource is set to
@@ -287,9 +469,9 @@ class CascadingResourceStrategy(Strategy, ReprMixin):
             dev = ",".join(assigned_gpu)
         else:
             idx = worker_index // workers_per_resource
-            if len(gpus) == idx:
+            if idx >= len(gpus):
                 raise ValueError(
                     f"Number of available GPU ({gpus}) preceeds the given workers_per_resource {workers_per_resource}"
                 )
-            dev = gpus[idx]
+            dev = str(gpus[idx])
         return dev

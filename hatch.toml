@@ -26,8 +26,8 @@ features = ['flan-t5']
 [envs.default.scripts]
 changelog = "towncrier build --version main --draft"
 quality = [
+    "./tools/dependencies.py",
     "./tools/update-readme.py",
-    "./tools/update-optional-dependencies.py",
     "./tools/update-config-stubs.py",
     "./tools/update-models-import.py",
     "- ./tools/add-license-headers .",

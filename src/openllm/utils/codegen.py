@@ -252,7 +252,7 @@ def make_attr_tuple_class(cls_name: str, attr_names: t.Sequence[str]):
 
 
 def generate_unique_filename(cls: type[t.Any], func_name: str):
-    return f"<{cls.__name__} generated {func_name} {cls.__module__}." f"{getattr(cls, '__qualname__', cls.__name__)}>"
+    return f"<{cls.__name__} generated {func_name} {cls.__module__}.{getattr(cls, '__qualname__', cls.__name__)}>"
 
 
 def generate_function(
@@ -332,6 +332,7 @@ def make_env_transformer(
 
 
 def gen_sdk(func: t.Callable[P, t.Any], name: str | None = None, **attrs: t.Any):
+    """Enhance function with nicer Repr."""
     from .representation import ReprMixin
 
     if name is None:

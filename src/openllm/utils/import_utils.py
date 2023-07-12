@@ -56,16 +56,17 @@ else:
 logger = logging.getLogger(__name__)
 
 OPTIONAL_DEPENDENCIES = {
+    "chatglm",
+    "falcon",
+    "mpt",
+    "starcoder",
     "fine-tune",
     "flan-t5",
-    "mpt",
-    "falcon",
-    "starcoder",
-    "chatglm",
-    "openai",
-    "agents",
-    "playground",
     "ggml",
+    "agents",
+    "openai",
+    "playground",
+    "gptq",
 }
 ENV_VARS_TRUE_VALUES = {"1", "ON", "YES", "TRUE"}
 ENV_VARS_TRUE_AND_AUTO_VALUES = ENV_VARS_TRUE_VALUES.union({"AUTO"})
@@ -100,6 +101,7 @@ _triton_available = _is_package_available("triton")
 _jupyter_available = _is_package_available("jupyter")
 _jupytext_available = _is_package_available("jupytext")
 _notebook_available = _is_package_available("notebook")
+_autogptq_available = _is_package_available("auto-gptq")
 
 
 def is_transformers_supports_kbit() -> bool:
@@ -144,6 +146,10 @@ def is_cpm_kernels_available():
 
 def is_bitsandbytes_available():
     return _bitsandbytes_available
+
+
+def is_autogptq_available():
+    return _autogptq_available
 
 
 def is_torch_available():
@@ -309,6 +315,11 @@ You can install it with pip: `pip install bitsandbytes`. Please note that you ma
 your runtime after installation.
 """
 
+AUTOGPTQ_IMPORT_ERROR = """{0} requires the auto-gptq library but it was not found in your environment.
+You can install it with pip: `pip install auto-gptq`. Please note that you may need to restart
+your runtime after installation.
+"""
+
 BACKENDS_MAPPING = BackendOrderredDict(
     [
         ("flax", (is_flax_available, FLAX_IMPORT_ERROR)),
@@ -320,6 +331,7 @@ BACKENDS_MAPPING = BackendOrderredDict(
         ("datasets", (is_datasets_available, DATASETS_IMPORT_ERROR)),
         ("peft", (is_peft_available, PEFT_IMPORT_ERROR)),
         ("bitsandbytes", (is_bitsandbytes_available, BITSANDBYTES_IMPORT_ERROR)),
+        ("auto-gptq", (is_autogptq_available, AUTOGPTQ_IMPORT_ERROR)),
     ]
 )
 
