@@ -45,11 +45,11 @@
 (reg-event-fx
  ::on-send-button-click
  []
- (fn [_ [_ prompt llm-config]]
+ (fn [{:keys [db]} [_ prompt llm-config]]
    (when (not (str/blank? prompt))
-     {:dispatch-n [[::api/v1-generate prompt llm-config {:on-success [::send-prompt-success]
+     {:dispatch-n [[::add-to-chat-history :user (:chat-input-value db)]
+                   [::api/v1-generate prompt llm-config {:on-success [::send-prompt-success]
                                                          :on-failure [::send-prompt-failure]}]
-                   [::add-to-chat-history :user prompt]
                    [::set-chat-input-value ""]]
       :dispatch-later [{:ms 20 :dispatch [::auto-scroll]}]})))
 

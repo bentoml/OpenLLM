@@ -22,7 +22,7 @@
   (let [chat-input-sub (rf/subscribe [::subs/chat-input-value])
         llm-config (rf/subscribe [::root-subs/model-config])
         on-change #(rf/dispatch [::events/set-chat-input-value (.. % -target -value)])
-        on-send-click #(rf/dispatch [::events/on-send-button-click @chat-input-sub @llm-config])]
+        on-send-click #(rf/dispatch [::events/on-send-button-click @(rf/subscribe [::subs/prompt]) @llm-config])]
     (fn chat-controls []
       [:form {:class "flex justify-end"}
        [:textarea {:class "py-1 h-20 w-[calc(100%_-_80px)] block"
