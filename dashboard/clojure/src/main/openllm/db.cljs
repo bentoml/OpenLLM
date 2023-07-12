@@ -36,8 +36,6 @@
 (s/def ::chat-history (s/coll-of (s/keys :req-un [::user ::text]) :kind vector?))
 (s/def ::prompt-layout string?)
 
-(s/def ::selected-api keyword?)
-
 ;; ########################## MODEL CONFIG ##########################
 (def parameter-min-max
   {::temperature [0.0 1.0]
@@ -99,7 +97,6 @@
                              ::chat-input-value
                              ::chat-history
                              ::prompt-layout
-                             ::selected-api
                              ::model-config]))
 ;; ######################## AGGREGATE END ###########################
 
