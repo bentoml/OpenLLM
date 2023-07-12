@@ -104,10 +104,10 @@
   []
   (let [side-bar-open? (rf/subscribe [::side-bar-subs/side-bar-open?])]
     (fn []
-      [:div
+      [:<>
        [prompt-layout-modal]
        [:div {:id "chat-history-container"
-              :class "overflow-y-scroll mt-6 h-[calc(100%_-_220px)] w-full no-scrollbar"
+              :class "overflow-y-scroll mt-6 h-[calc(100%_-_170px)] w-full no-scrollbar"
               :style {:scrollBehavior "smooth"}}
         [:div
          [chat-history]]]
