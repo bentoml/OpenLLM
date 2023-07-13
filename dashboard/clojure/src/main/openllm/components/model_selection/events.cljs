@@ -1,10 +1,16 @@
 (ns openllm.components.model-selection.events
-  (:require [re-frame.core :refer [reg-event-db]]))
+  (:require [openllm.components.model-selection.data :as data]
+            [re-frame.core :refer [reg-event-db]]))
 
 (reg-event-db
  ::set-model-type
- (fn [db [_ model-type]]
-   (assoc-in db [:selected-model :model-type] model-type)))
+ (fn [db [_ model-type]] 
+   (-> db
+       (assoc-in , [:selected-model :model-type] model-type)
+       (assoc-in , [:selected-model :model-id] (-> data/models
+                                                   (get , model-type)
+                                                   (get , :ids)
+                                                   (first ,))))))
 
 (reg-event-db
  ::set-model-id
