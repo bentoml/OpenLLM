@@ -16,12 +16,14 @@
                   :value @model-type
                   :on-change #(rf/dispatch [::events/set-model-type (-> % .-target .-value)])}
          (map (fn [type]
-                [:option {:value type} type])
+                [:option {:value type
+                          :key type} type])
               (keys data/models))]]
        [:label {:class "text-black"} "Model-ID"
         [:select {:class "w-full pl-3 pr-10 py-1"
                   :value @model-id
                   :on-change #(rf/dispatch [::events/set-model-id (-> % .-target .-value)])}
          (map (fn [id]
-                [:option {:value id} (str id)])
+                [:option {:value id
+                          :key id} (str id)])
               (get-in data/models [@model-type :ids]))]]])))
