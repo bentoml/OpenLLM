@@ -12,6 +12,12 @@
  (fn [db _]
    (:modal-open? db)))
 
+;; intended to be used as a parent subscription, not direct use
+(reg-sub
+ :selected-model
+ (fn [db _]
+   (:selected-model db)))
+
 (reg-sub
  ::model-config
  (fn [db _]

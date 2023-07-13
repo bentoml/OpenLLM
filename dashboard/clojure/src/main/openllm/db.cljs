@@ -27,6 +27,8 @@
 (s/def ::side-bar-open? boolean?)
 (s/def ::modal-open? (s/keys :req-un [::playground boolean?
                                       ::chat boolean?]))
+(s/def ::selected-model (s/keys :req-un [::model-type string?
+                                         ::model-id string?]))
 (s/def ::indexed-db js/Object)
 
 (s/def ::playground-input-value string?)
@@ -91,6 +93,7 @@
 (s/def ::db (s/keys :req-un [::screen-id
                              ::side-bar-open?
                              ::modal-open?
+                             ::selected-model
                              ::indexed-db
                              ::playground-input-value
                              ::playground-last-response
@@ -130,6 +133,8 @@
    :side-bar-open? true
    :modal-open? {:playground false
                  :chat false}
+   :selected-model {:model-type "chatglm"
+                    :model-id "google/chatglm-6b"}
    :indexed-db nil
    :playground-input-value ""
    :playground-last-response ""
