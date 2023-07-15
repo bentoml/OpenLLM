@@ -184,8 +184,10 @@ _NIGHTLY_MAPPING: dict[str, Dependencies] = {
     "triton": Dependencies.from_tuple("triton", "openai/triton", "main", None, "python", True),
 }
 
+_ALL_RUNTIME_DEPS = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
 FINE_TUNE_DEPS = ["peft", "bitsandbytes", "datasets", "accelerate", "deepspeed", "trl"]
-FLAN_T5_DEPS = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
+FLAN_T5_DEPS = _ALL_RUNTIME_DEPS
+OPT_DEPS = _ALL_RUNTIME_DEPS
 MPT_DEPS = ["triton", "einops"]
 OPENAI_DEPS = ["openai", "tiktoken"]
 AGENTS_DEPS = ["transformers[agents]>=4.30", "diffusers", "soundfile"]
@@ -195,6 +197,7 @@ CHATGLM_DEPS = ["cpm-kernels", "sentencepiece"]
 PLAYGROUND_DEPS = ["jupyter", "notebook", "ipython", "jupytext", "nbformat"]
 GGML_DEPS = ["ctransformers"]
 GPTQ_DEPS = ["auto-gptq", "triton"]
+VLLM_DEPS = ["vllm"]
 
 _base_requirements = {
     inflection.dasherize(name): config_cls.__openllm_requirements__

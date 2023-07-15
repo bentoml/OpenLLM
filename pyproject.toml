@@ -71,17 +71,15 @@ all = [
     "openllm[falcon]",
     "openllm[mpt]",
     "openllm[starcoder]",
-    "openllm[agents]",
-    "openllm[ggml]",
-    "openllm[agents]",
-    "openllm[ggml]",
     "openllm[opt]",
-    "openllm[playground]",
-    "openllm[fine-tune]",
-    "openllm[openai]",
-    "openllm[agents]",
-    "openllm[gptq]",
     "openllm[flan-t5]",
+    "openllm[fine-tune]",
+    "openllm[vllm]",
+    "openllm[agents]",
+    "openllm[ggml]",
+    "openllm[playground]",
+    "openllm[openai]",
+    "openllm[gptq]",
 ]
 chatglm = ["cpm-kernels", "sentencepiece"]
 falcon = ["einops", "xformers", "safetensors"]
@@ -94,6 +92,7 @@ openai = ["openai", "tiktoken"]
 opt = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
 playground = ["jupyter", "notebook", "ipython", "jupytext", "nbformat"]
 starcoder = ["bitsandbytes"]
+vllm = ["vllm"]
 
 [project.urls]
 Documentation = "https://github.com/bentoml/openllm#readme"
