@@ -57,8 +57,6 @@ jobs:
           python-version: ${{ env.STABLE_PYTHON_VERSION }}
       - name: Run type check
         run: hatch run typing
-      - if: failure()
-        run: echo "Not failing quality workflow."
   tests:
     runs-on: ${{ matrix.os }}
     if: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}
