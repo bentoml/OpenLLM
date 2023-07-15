@@ -25,6 +25,8 @@ on:
       tags:
         required: true
         type: string
+env:
+  HATCH_VERBOSE: 10
 defaults:
   run:
     shell: bash --noprofile --norc -exo pipefail {0}

@@ -24,6 +24,7 @@ env:
   OPENLLM_DO_NOT_TRACK: True
   PYTHONUNBUFFERED: '1'
   STABLE_PYTHON_VERSION: '3.11'
+  HATCH_VERBOSE: 10
 # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#defaultsrun
 defaults:
   run:
