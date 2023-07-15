@@ -99,11 +99,8 @@ def lenient_issubclass(cls: t.Any, class_or_tuple: type[t.Any] | tuple[type[t.An
 
 
 def gpu_count() -> tuple[str, ...]:
-    from bentoml._internal.resource import NvidiaGpuResource
-
-    cuda_visible_devices = os.environ.get("CUDA_VISIBLE_DEVICES", None)
-    if cuda_visible_devices is not None:
-        return tuple(i for i in cuda_visible_devices.split(","))
+    """Return available GPU under system. Currently only supports NVIDIA GPUs."""
+    from .._strategies import NvidiaGpuResource
 
     return tuple(NvidiaGpuResource.from_system())
 
@@ -417,6 +414,7 @@ _import_structure = {
         "is_jupytext_available",
         "is_notebook_available",
         "is_triton_available",
+        "is_autogptq_available",
         "require_backends",
     ],
 }
@@ -443,6 +441,7 @@ if t.TYPE_CHECKING:
     from .import_utils import OPTIONAL_DEPENDENCIES as OPTIONAL_DEPENDENCIES
     from .import_utils import DummyMetaclass as DummyMetaclass
     from .import_utils import EnvVarMixin as EnvVarMixin
+    from .import_utils import is_autogptq_available as is_autogptq_available
     from .import_utils import is_bitsandbytes_available as is_bitsandbytes_available
     from .import_utils import is_cpm_kernels_available as is_cpm_kernels_available
     from .import_utils import is_datasets_available as is_datasets_available

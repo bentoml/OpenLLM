@@ -773,7 +773,6 @@ def noop_command(
 def prerequisite_check(
     ctx: click.Context,
     llm_config: openllm.LLMConfig,
-    env: EnvVarMixin,
     gpu_available: tuple[str, ...],
     quantize: t.LiteralString | None,
     adapter_map: dict[str, str | None] | None,
@@ -784,9 +783,6 @@ def prerequisite_check(
     if quantize:
         if len(gpu_available) < 1:
             _echo(f"Quantization requires at least 1 GPU (got {len(gpu_available)})", fg="red")
-            ctx.exit(1)
-        if env.framework_value != "pt":
-            _echo("Quantization is currently only available for PyTorch models.", fg="red")
             ctx.exit(1)
 
     if adapter_map and not is_peft_available():
@@ -905,7 +901,7 @@ def start_bento(
             config["model_name"], bettertransformer=bettertransformer, quantize=quantize, runtime=runtime
         )
 
-        prerequisite_check(ctx, config, env, gpu_available, quantize, adapter_map, num_workers)
+        prerequisite_check(ctx, config, gpu_available, quantize, adapter_map, num_workers)
 
         # NOTE: This is to set current configuration
         start_env = os.environ.copy()
@@ -1037,7 +1033,7 @@ def start_model(
             config["model_name"], bettertransformer=bettertransformer, quantize=quantize, runtime=runtime
         )
 
-        prerequisite_check(ctx, config, env, gpu_available, quantize, adapter_map, num_workers)
+        prerequisite_check(ctx, config, gpu_available, quantize, adapter_map, num_workers)
 
         # NOTE: This is to set current configuration
         start_env = os.environ.copy()
@@ -1151,7 +1147,7 @@ def start_model(
 @output_option
 @quantize_option(click)
 @click.option("--machine", is_flag=True, default=False, hidden=True)
-@click.option("--implementation", type=click.Choice(["pt", "tf", "flax"]), default=None, hidden=True)
+@click.option("--implementation", type=click.Choice(["pt", "tf", "flax", "vllm"]), default=None, hidden=True)
 def download_models_command(
     model: str,
     model_id: str | None,
@@ -1193,7 +1189,7 @@ def download_models_command(
     > only use this option if you want the weight to be quantized by default. Note that OpenLLM also
     > support on-demand quantisation during initial startup.
     """
-    impl: t.Literal["pt", "tf", "flax"] = first_not_none(implementation, default=EnvVarMixin(model).framework_value)
+    impl: LiteralRuntime = first_not_none(implementation, default=EnvVarMixin(model).framework_value)
     llm = openllm.infer_auto_class(impl).for_model(
         model,
         model_id=model_id,
@@ -1263,7 +1259,7 @@ def _start(
     runtime: t.Literal["ggml", "transformers"] = ...,
     fast: bool = ...,
     adapter_map: dict[t.LiteralString, str | None] | None = ...,
-    framework: t.Literal["flax", "tf", "pt"] | None = ...,
+    framework: LiteralRuntime | None = ...,
     additional_args: ListStr | None = ...,
     _serve_grpc: bool = ...,
     __test__: t.Literal[False] = ...,
@@ -1284,7 +1280,7 @@ def _start(
     runtime: t.Literal["ggml", "transformers"] = ...,
     fast: bool = ...,
     adapter_map: dict[t.LiteralString, str | None] | None = ...,
-    framework: t.Literal["flax", "tf", "pt"] | None = ...,
+    framework: LiteralRuntime | None = ...,
     additional_args: ListStr | None = ...,
     _serve_grpc: bool = ...,
     __test__: t.Literal[True] = ...,
@@ -1304,7 +1300,7 @@ def _start(
     runtime: t.Literal["ggml", "transformers"] = "transformers",
     fast: bool = False,
     adapter_map: dict[t.LiteralString, str | None] | None = None,
-    framework: t.Literal["flax", "tf", "pt"] | None = None,
+    framework: LiteralRuntime | None = None,
     additional_args: ListStr | None = None,
     _serve_grpc: bool = False,
     __test__: bool = False,
@@ -1615,6 +1611,13 @@ start, start_grpc, build, import_model, list_models = (
     help="The output format for 'openllm build'. By default this will build a BentoLLM. 'container' is the shortcut of 'openllm build && bentoml containerize'.",
     hidden=not get_debug_mode(),
 )
+@click.option(
+    "--push",
+    default=False,
+    is_flag=True,
+    type=click.BOOL,
+    help="Whether to push the result bento to BentoCloud. Make sure to login with 'bentoml cloud login' first.",
+)
 @click.pass_context
 def build_command(
     ctx: click.Context,
@@ -1632,6 +1635,7 @@ def build_command(
     model_version: str | None,
     dockerfile_template: t.TextIO | None,
     format: t.Literal["bento", "container"],
+    push: bool,
     **attrs: t.Any,
 ):
     """Package a given models into a Bento.
@@ -1788,7 +1792,12 @@ def build_command(
     else:
         _echo(bento.tag)
 
-    if format == "container":
+    if format == "container" and push:
+        ctx.fail("'--format=container' and '--push' are mutually exclusive.")
+    if push:
+        client = BentoMLContainer.bentocloud_client.get()
+        client.push_bento(bento)
+    elif format == "container":
         backend = os.getenv("BENTOML_CONTAINERIZE_BACKEND", "docker")
         _echo(f"Building {bento} into a LLMContainer using backend '{backend}'", fg="magenta")
         if not bentoml.container.health(backend):

@@ -26,8 +26,8 @@ features = ['flan-t5']
 [envs.default.scripts]
 changelog = "towncrier build --version main --draft"
 quality = [
+    "./tools/dependencies.py",
     "./tools/update-readme.py",
-    "./tools/update-optional-dependencies.py",
     "./tools/update-config-stubs.py",
     "./tools/update-models-import.py",
     "- ./tools/add-license-headers .",
@@ -42,6 +42,7 @@ extra-dependencies = [
 ]
 [envs.tests.scripts]
 _run_script = "pytest --cov --cov-report={env:COVERAGE_REPORT:term-missing} --cov-config=pyproject.toml"
+distributed = "_run_script --reruns 5 --reruns-delay 3 --ignore tests/models -n 3 -r aR {args:tests}"
 models = "_run_script -r aR {args:tests/models}"
 python = "_run_script --reruns 5 --reruns-delay 3 --ignore tests/models -r aR {args:tests}"
 [envs.tests.overrides]

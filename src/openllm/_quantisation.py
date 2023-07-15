@@ -13,15 +13,26 @@
 # limitations under the License.
 from __future__ import annotations
 import logging
+import sys
 import typing as t
 
 from .utils import LazyLoader
+from .utils import is_autogptq_available
 from .utils import is_bitsandbytes_available
 from .utils import is_transformers_supports_kbit
 from .utils import pkg
 
 
+# NOTE: We need to do this so that overload can register
+# correct overloads to typing registry
+if sys.version_info[:2] >= (3, 11):
+    from typing import overload
+else:
+    from typing_extensions import overload
+
+
 if t.TYPE_CHECKING:
+    import auto_gptq as autogptq
     import torch
 
     import openllm
@@ -29,6 +40,7 @@ if t.TYPE_CHECKING:
 
     from ._types import DictStrAny
 else:
+    autogptq = LazyLoader("autogptq", globals(), "auto_gptq")
     torch = LazyLoader("torch", globals(), "torch")
     transformers = LazyLoader("transformers", globals(), "transformers")
 
@@ -37,14 +49,37 @@ logger = logging.getLogger(__name__)
 QuantiseMode = t.Literal["int8", "int4", "gptq"]
 
 
+@overload
+def infer_quantisation_config(
+    cls: type[openllm.LLM[t.Any, t.Any]], quantise: t.Literal["int8", "int4"], **attrs: t.Any
+) -> tuple[transformers.BitsAndBytesConfig, DictStrAny]:
+    ...
+
+
+@overload
+def infer_quantisation_config(
+    cls: type[openllm.LLM[t.Any, t.Any]], quantise: t.Literal["gptq"], **attrs: t.Any
+) -> tuple[autogptq.BaseQuantizeConfig, DictStrAny]:
+    ...
+
+
 def infer_quantisation_config(
     cls: type[openllm.LLM[t.Any, t.Any]], quantise: QuantiseMode, **attrs: t.Any
-) -> tuple[transformers.BitsAndBytesConfig | t.Any, DictStrAny]:
+) -> tuple[transformers.BitsAndBytesConfig | autogptq.BaseQuantizeConfig, DictStrAny]:
     # 8 bit configuration
     int8_threshold = attrs.pop("llm_int8_threshhold", 6.0)
     int8_enable_fp32_cpu_offload = attrs.pop("llm_int8_enable_fp32_cpu_offload", False)
     int8_skip_modules: list[str] | None = attrs.pop("llm_int8_skip_modules", None)
     int8_has_fp16_weight = attrs.pop("llm_int8_has_fp16_weight", False)
+
+    autogptq_attrs: DictStrAny = {
+        "bits": attrs.pop("gptq_bits", 4),
+        "group_size": attrs.pop("gptq_group_size", -1),
+        "damp_percent": attrs.pop("gptq_damp_percent", 0.01),
+        "desc_act": attrs.pop("gptq_desc_act", True),
+        "sym": attrs.pop("gptq_sym", True),
+        "true_sequential": attrs.pop("gptq_true_sequential", True),
+    }
 
     def create_int8_config(int8_skip_modules: list[str] | None):
         if int8_skip_modules is None:
@@ -94,8 +129,15 @@ def infer_quantisation_config(
             logger.warning("OpenLLM will fallback to 8-bit quantization.")
             quantisation_config = create_int8_config(int8_skip_modules)
     elif quantise == "gptq":
-        # TODO: support GPTQ loading quantization
-        raise NotImplementedError("GPTQ is not supported yet.")
+        if not is_autogptq_available():
+            logger.warning(
+                "'quantize=\"gptq\"' requires 'auto-gptq' to be installed (not available with local environment)."
+                " Make sure to have 'auto-gptq' available locally: 'pip install \"openllm[gptq]\"'. OpenLLM will fallback "
+                "to int8 with bitsandbytes."
+            )
+            quantisation_config = create_int8_config(int8_skip_modules)
+        else:
+            quantisation_config = autogptq.BaseQuantizeConfig(**autogptq_attrs)
     else:
         raise ValueError(f"'quantize' must be one of ['int8', 'int4', 'gptq'], got {quantise} instead.")
 

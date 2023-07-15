@@ -13,6 +13,7 @@ env:
   APP_NAME: openllm
   PYTHON_VERSION: '3.11'
   PYOXIDIZER_VERSION: '0.24.0'
+  HATCH_VERBOSE: 10
 jobs:
   python-artifacts:
     name: Build wheel and source distribution

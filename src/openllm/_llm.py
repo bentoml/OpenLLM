@@ -71,6 +71,7 @@ else:
     from typing_extensions import overload
 
 if t.TYPE_CHECKING:
+    import auto_gptq as autogptq
     import peft
     import torch
 
@@ -96,6 +97,8 @@ else:
     UserDictAny = collections.UserDict
     LLMRunnable = bentoml.Runnable
     LLMRunner = bentoml.Runner
+
+    autogptq = LazyLoader("autogptq", globals(), "auto_gptq")
     transformers = LazyLoader("transformers", globals(), "transformers")
     torch = LazyLoader("torch", globals(), "torch")
     peft = LazyLoader("peft", globals(), "peft")
@@ -445,7 +448,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
     """The config instance to use for this LLM. This will be created based on config_class and available
     when initialising the LLM."""
 
-    quantization_config: transformers.BitsAndBytesConfig | None
+    quantization_config: transformers.BitsAndBytesConfig | autogptq.BaseQuantizeConfig | None
     """Quantisation config for quantised model on the fly."""
 
     _model_id: str
@@ -549,6 +552,44 @@ class LLM(LLMInterface[M, T], ReprMixin):
         openllm.serialisation.save_pretrained(self, save_directory, **attrs)
 
     @classmethod
+    @overload
+    def from_pretrained(
+        cls,
+        model_id: str | None = ...,
+        model_version: str | None = ...,
+        llm_config: openllm.LLMConfig | None = ...,
+        *args: t.Any,
+        runtime: t.Literal["ggml", "transformers"] | None = ...,
+        quantize: t.Literal["int8", "int4"] = ...,
+        bettertransformer: str | bool | None = ...,
+        adapter_id: str | None = ...,
+        adapter_name: str | None = ...,
+        adapter_map: dict[str, str | None] | None = ...,
+        quantization_config: transformers.BitsAndBytesConfig | None = ...,
+        **attrs: t.Any,
+    ) -> LLM[M, T]:
+        ...
+
+    @classmethod
+    @overload
+    def from_pretrained(
+        cls,
+        model_id: str | None = ...,
+        model_version: str | None = ...,
+        llm_config: openllm.LLMConfig | None = ...,
+        *args: t.Any,
+        runtime: t.Literal["ggml", "transformers"] | None = ...,
+        quantize: t.Literal["gptq"] = ...,
+        bettertransformer: str | bool | None = ...,
+        adapter_id: str | None = ...,
+        adapter_name: str | None = ...,
+        adapter_map: dict[str, str | None] | None = ...,
+        quantization_config: autogptq.BaseQuantizeConfig | None = ...,
+        **attrs: t.Any,
+    ) -> LLM[M, T]:
+        ...
+
+    @classmethod
     def from_pretrained(
         cls,
         model_id: str | None = None,
@@ -561,7 +602,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
         adapter_id: str | None = None,
         adapter_name: str | None = None,
         adapter_map: dict[str, str | None] | None = None,
-        quantization_config: transformers.BitsAndBytesConfig | None = None,
+        quantization_config: transformers.BitsAndBytesConfig | autogptq.BaseQuantizeConfig | None = None,
         **attrs: t.Any,
     ) -> LLM[M, T]:
         """Instantiate a pretrained LLM.
@@ -576,6 +617,17 @@ class LLM(LLMInterface[M, T], ReprMixin):
         - bettertransformer: Apply FasterTransformer to given pretrained weight
 
         > Currently, the above two options are mutually exclusive.
+
+        #### Quantisation options
+
+        For customising options for quantisation config, ``openllm.LLM`` accepts all arbitrary arguments that is passed to ``transformers.BitsAndBytesConfig``
+        plus ``quantize`` value. For example, for ``int8`` quantisation, specify the following:
+        ```python
+        model = openllm.AutoLLM.from_pretrained("opt", quantize='int8', llm_int8_enable_fp32_cpu_offload=False)
+        ```
+
+        For all GPTQ-related options, it accepts all value prefixed with `gptq_*`. The parsed value then could be parsed
+        to ``auto_gptq.BaseQuantizeConfig``.
 
         ### Adapter options:
 
@@ -689,7 +741,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
         model_id: str,
         llm_config: openllm.LLMConfig,
         bettertransformer: bool | None,
-        quantization_config: transformers.BitsAndBytesConfig | None,
+        quantization_config: transformers.BitsAndBytesConfig | autogptq.BaseQuantizeConfig | None,
         _adapters_mapping: AdaptersMapping | None,
         _tag: bentoml.Tag,
         _quantize_method: t.Literal["int8", "int4", "gptq"] | None,
