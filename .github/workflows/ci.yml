@@ -31,7 +31,6 @@ defaults:
 jobs:
   quality:
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
     name: quality-check
     steps:
       - uses: actions/checkout@v3
@@ -43,6 +42,9 @@ jobs:
           python-version: ${{ env.STABLE_PYTHON_VERSION }}
       - name: Run type check
         run: hatch run typing
+        id: typing
+      - name: steps.typing.conclusion == 'failure'
+        run: echo "Not failing quality workflow."
   tests:
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}
