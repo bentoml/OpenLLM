@@ -368,6 +368,8 @@ def infer_auto_class(implementation: LiteralRuntime) -> type[BaseAutoLLMClass]:
         from ..models.auto import AutoFlaxLLM as auto
     elif implementation == "pt":
         from ..models.auto import AutoLLM as auto
+    elif implementation == "vllm":
+        from ..models.auto import AutoVLLM as auto
     else:
         raise RuntimeError(f"Unknown implementation: {implementation} (supported: 'pt', 'flax', 'tf')")
     return auto
@@ -404,6 +406,7 @@ _import_structure = {
         "is_einops_available",
         "is_flax_available",
         "is_tf_available",
+        "is_vllm_available",
         "is_torch_available",
         "is_bitsandbytes_available",
         "is_peft_available",
@@ -447,6 +450,7 @@ if t.TYPE_CHECKING:
     from .import_utils import is_datasets_available as is_datasets_available
     from .import_utils import is_einops_available as is_einops_available
     from .import_utils import is_flax_available as is_flax_available
+    from .import_utils import is_vllm_available as is_vllm_available
     from .import_utils import is_jupyter_available as is_jupyter_available
     from .import_utils import is_jupytext_available as is_jupytext_available
     from .import_utils import is_notebook_available as is_notebook_available

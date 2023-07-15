@@ -470,6 +470,8 @@ class LLM(LLMInterface[M, T], ReprMixin):
             return "flax", name[4:]
         elif name.startswith("TF"):
             return "tf", name[2:]
+        elif name.startswith("VLLM"):
+            return "vllm", name[4:]
         else:
             return "pt", name
 

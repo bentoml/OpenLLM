@@ -94,6 +94,7 @@ def _is_package_available(package: str) -> bool:
 _torch_available = importlib.util.find_spec("torch") is not None
 _tf_available = importlib.util.find_spec("tensorflow") is not None
 _flax_available = importlib.util.find_spec("jax") is not None and importlib.util.find_spec("flax") is not None
+_vllm_available = importlib.util.find_spec("vllm") is not None
 
 _peft_available = _is_package_available("peft")
 _einops_available = _is_package_available("einops")
@@ -153,6 +154,10 @@ def is_bitsandbytes_available():
 
 def is_autogptq_available():
     return _autogptq_available
+
+
+def is_vllm_available():
+    return _vllm_available
 
 
 def is_torch_available():
@@ -250,6 +255,38 @@ def requires_dependencies(
     return decorator
 
 
+VLLM_IMPORT_ERROR_WITH_PYTORCH = """\
+{0} requires the vLLM library but it was not found in your environment.
+However, we were able to find a PyTorch installation. PyTorch classes do not begin
+with "VLLM", but are otherwise identically named to our PyTorch classes.
+If you want to use PyTorch, please use those classes instead!
+
+If you really do want to use vLLM, please follow the instructions on the
+installation page https://github.com/vllm-project/vllm that match your environment.
+"""
+
+VLLM_IMPORT_ERROR_WITH_TF = """\
+{0} requires the vLLM library but it was not found in your environment.
+However, we were able to find a TensorFlow installation. TensorFlow classes begin
+with "TF", but are otherwise identically named to the PyTorch classes. This
+means that the TF equivalent of the class you tried to import would be "TF{0}".
+If you want to use TensorFlow, please use TF classes instead!
+
+If you really do want to use vLLM, please follow the instructions on the
+installation page https://github.com/vllm-project/vllm that match your environment.
+"""
+
+VLLM_IMPORT_ERROR_WITH_FLAX = """\
+{0} requires the vLLM library but it was not found in your environment.
+However, we were able to find a Flax installation. Flax classes begin
+with "Flax", but are otherwise identically named to the PyTorch classes. This
+means that the Flax equivalent of the class you tried to import would be "Flax{0}".
+If you want to use Flax, please use Flax classes instead!
+
+If you really do want to use vLLM, please follow the instructions on the
+installation page https://github.com/vllm-project/vllm that match your environment.
+"""
+
 PYTORCH_IMPORT_ERROR_WITH_TF = """\
 {0} requires the PyTorch library but it was not found in your environment.
 However, we were able to find a TensorFlow installation. TensorFlow classes begin
@@ -285,6 +322,11 @@ ones that match your environment. Please note that you may need to restart your 
 
 PYTORCH_IMPORT_ERROR = """{0} requires the PyTorch library but it was not found in your environment.
 Checkout the instructions on the installation page: https://pytorch.org/get-started/locally/ and follow the
+ones that match your environment. Please note that you may need to restart your runtime after installation.
+"""
+
+VLLM_IMPORT_ERROR = """{0} requires the vLLM library but it was not found in your environment.
+Checkout the instructions on the installation page: https://github.com/vllm-project/vllm
 ones that match your environment. Please note that you may need to restart your runtime after installation.
 """
 
@@ -328,6 +370,7 @@ BACKENDS_MAPPING = BackendOrderredDict(
         ("flax", (is_flax_available, FLAX_IMPORT_ERROR)),
         ("tf", (is_tf_available, TENSORFLOW_IMPORT_ERROR)),
         ("torch", (is_torch_available, PYTORCH_IMPORT_ERROR)),
+        ("vllm", (is_vllm_available, VLLM_IMPORT_ERROR)),
         ("cpm_kernels", (is_cpm_kernels_available, CPM_KERNELS_IMPORT_ERROR)),
         ("einops", (is_einops_available, EINOPS_IMPORT_ERROR)),
         ("triton", (is_triton_available, TRITON_IMPORT_ERROR)),
@@ -366,6 +409,16 @@ def require_backends(o: t.Any, backends: t.MutableSequence[str]):
     # Raise the inverse error for PyTorch users trying to load TF classes
     if "tf" in backends and "torch" not in backends and is_torch_available() and not is_tf_available():
         raise ImportError(TF_IMPORT_ERROR_WITH_PYTORCH.format(name))
+
+    if "vllm" in backends:
+        if "torch" not in backends and is_torch_available() and not is_vllm_available():
+            raise ImportError(VLLM_IMPORT_ERROR_WITH_PYTORCH.format(name))
+
+        if "tf" not in backends and is_tf_available() and not is_vllm_available():
+            raise ImportError(VLLM_IMPORT_ERROR_WITH_TF.format(name))
+
+        if "flax" not in backends and is_flax_available() and not is_vllm_available():
+            raise ImportError(VLLM_IMPORT_ERROR_WITH_FLAX.format(name))
 
     checks = (BACKENDS_MAPPING[backend] for backend in backends)
     failed = [msg.format(name) for available, msg in checks if not available()]

@@ -76,6 +76,7 @@ _import_structure = {
         "MODEL_MAPPING_NAMES",
         "MODEL_FLAX_MAPPING_NAMES",
         "MODEL_TF_MAPPING_NAMES",
+        "MODEL_VLLM_MAPPING_NAMES",
     ],
     "models.chatglm": ["ChatGLMConfig"],
     "models.baichuan": ["BaichuanConfig"],
@@ -146,6 +147,18 @@ else:
     _import_structure["models.auto"].extend(["AutoLLM", "MODEL_MAPPING"])
 
 try:
+    if not utils.is_vllm_available():
+        raise MissingDependencyError
+except MissingDependencyError:
+    from .utils import dummy_vllm_objects
+
+    _import_structure["utils.dummy_vllm_objects"] = [
+        name for name in dir(dummy_vllm_objects) if not name.startswith("_")
+    ]
+else:
+    _import_structure["models.auto"].extend(["AutoVLLM", "MODEL_VLLM_MAPPING"])
+
+try:
     if not utils.is_flax_available():
         raise MissingDependencyError
 except MissingDependencyError:
@@ -200,6 +213,7 @@ if t.TYPE_CHECKING:
     from .models.auto import MODEL_FLAX_MAPPING_NAMES as MODEL_FLAX_MAPPING_NAMES
     from .models.auto import MODEL_MAPPING_NAMES as MODEL_MAPPING_NAMES
     from .models.auto import MODEL_TF_MAPPING_NAMES as MODEL_TF_MAPPING_NAMES
+    from .models.auto import MODEL_VLLM_MAPPING_NAMES as MODEL_VLLM_MAPPING_NAMES
     from .models.auto import AutoConfig as AutoConfig
     from .models.baichuan import BaichuanConfig as BaichuanConfig
     from .models.chatglm import ChatGLMConfig as ChatGLMConfig
@@ -257,6 +271,15 @@ if t.TYPE_CHECKING:
         from .models.opt import OPT as OPT
         from .models.stablelm import StableLM as StableLM
         from .models.starcoder import StarCoder as StarCoder
+
+    try:
+        if not utils.is_vllm_available():
+            raise MissingDependencyError
+    except MissingDependencyError:
+        from .utils.dummy_vllm_objects import *
+    else:
+        from .models.auto import MODEL_VLLM_MAPPING as MODEL_VLLM_MAPPING
+        from .models.auto import AutoVLLM as AutoVLLM
 
     try:
         if not utils.is_flax_available():

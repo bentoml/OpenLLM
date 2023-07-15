@@ -169,6 +169,7 @@ _BASE_DEPENDENCIES = [
     Dependencies(name="tabulate", extensions=["widechars"], lower_constraint="0.9.0"),
     Dependencies(name="httpx"),
     Dependencies(name="typing_extensions"),
+    Dependencies(name="vllm"),
     Dependencies(name="cuda-python", platform=("Darwin", "ne")),
 ]
 
@@ -181,6 +182,7 @@ _NIGHTLY_MAPPING: dict[str, Dependencies] = {
     "bitsandbytes": Dependencies.from_tuple("bitsandbytes", "TimDettmers/bitsandbytes", "main", None),
     "trl": Dependencies.from_tuple("trl", "lvwerra/trl", "main", None),
     "triton": Dependencies.from_tuple("triton", "openai/triton", "main", None, "python", True),
+    "vllm": Dependencies.from_tuple("vllm", "vllm-project/vllm", "main", None),
 }
 
 _ALL_RUNTIME_DEPS = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
