@@ -361,6 +361,11 @@ def infer_auto_class(implementation: t.Literal["flax"]) -> type[openllm.AutoFlax
     ...
 
 
+@_overload
+def infer_auto_class(implementation: t.Literal["vllm"]) -> type[openllm.AutoVLLM]:
+    ...
+
+
 def infer_auto_class(implementation: LiteralRuntime) -> type[BaseAutoLLMClass]:
     if implementation == "tf":
         from ..models.auto import AutoTFLLM as auto
@@ -450,7 +455,6 @@ if t.TYPE_CHECKING:
     from .import_utils import is_datasets_available as is_datasets_available
     from .import_utils import is_einops_available as is_einops_available
     from .import_utils import is_flax_available as is_flax_available
-    from .import_utils import is_vllm_available as is_vllm_available
     from .import_utils import is_jupyter_available as is_jupyter_available
     from .import_utils import is_jupytext_available as is_jupytext_available
     from .import_utils import is_notebook_available as is_notebook_available
@@ -460,6 +464,7 @@ if t.TYPE_CHECKING:
     from .import_utils import is_transformers_supports_agent as is_transformers_supports_agent
     from .import_utils import is_transformers_supports_kbit as is_transformers_supports_kbit
     from .import_utils import is_triton_available as is_triton_available
+    from .import_utils import is_vllm_available as is_vllm_available
     from .import_utils import require_backends as require_backends
     from .import_utils import requires_dependencies as requires_dependencies
     from .representation import ReprMixin as ReprMixin

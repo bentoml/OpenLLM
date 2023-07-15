@@ -3,3 +3,4 @@
 -r nightly-requirements.txt
 -e .[all]
 triton @ git+https://github.com/openai/triton.git#subdirectory=python
+vllm @ git+https://github.com/vllm-project/vllm.git@main --no-build-isolation

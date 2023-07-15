@@ -1906,6 +1906,8 @@ def models_command(
                 runtime_impl += ("flax",)
             if config["model_name"] in openllm.MODEL_TF_MAPPING_NAMES:
                 runtime_impl += ("tf",)
+            if config["model_name"] in openllm.MODEL_VLLM_MAPPING_NAMES:
+                runtime_impl += ("vllm",)
             json_data[m] = {
                 "model_id": config["model_ids"],
                 "url": config["url"],

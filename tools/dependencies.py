@@ -113,6 +113,7 @@ class Dependencies:
     requires_gpu: bool = False
     lower_constraint: t.Optional[str] = None
     platform: t.Optional[t.Tuple[t.Literal["Linux", "Windows", "Darwin"], t.Literal["eq", "ne"]]] = None
+    build_isolation: bool = True
 
     def with_options(self, **kwargs: t.Any) -> Dependencies:
         return dataclasses.replace(self, **kwargs)
@@ -132,17 +133,19 @@ class Dependencies:
     def to_str(self) -> str:
         deps: list[str] = []
         if self.lower_constraint is not None:
-            deps.append(f"{self.name}{self.pypi_extensions}>={self.lower_constraint}")
+            dep = f"{self.name}{self.pypi_extensions}>={self.lower_constraint}"
         elif self.subdirectory is not None:
-            deps.append(
-                f"{self.name}{self.pypi_extensions} @ git+https://github.com/{self.git_repo_url}.git#subdirectory={self.subdirectory}"
-            )
+            dep = f"{self.name}{self.pypi_extensions} @ git+https://github.com/{self.git_repo_url}.git#subdirectory={self.subdirectory}"
+
         elif self.branch is not None:
-            deps.append(
-                f"{self.name}{self.pypi_extensions} @ git+https://github.com/{self.git_repo_url}.git@{self.branch}"
-            )
+            dep = f"{self.name}{self.pypi_extensions} @ git+https://github.com/{self.git_repo_url}.git@{self.branch}"
+
         else:
-            deps.append(f"{self.name}{self.pypi_extensions}")
+            dep = f"{self.name}{self.pypi_extensions}"
+
+        if not self.build_isolation:
+            dep += " --no-build-isolation"
+        deps.append(dep)
 
         if self.platform:
             deps.append(self.platform_restriction(*self.platform))
@@ -169,7 +172,6 @@ _BASE_DEPENDENCIES = [
     Dependencies(name="tabulate", extensions=["widechars"], lower_constraint="0.9.0"),
     Dependencies(name="httpx"),
     Dependencies(name="typing_extensions"),
-    Dependencies(name="vllm"),
     Dependencies(name="cuda-python", platform=("Darwin", "ne")),
 ]
 
@@ -182,7 +184,7 @@ _NIGHTLY_MAPPING: dict[str, Dependencies] = {
     "bitsandbytes": Dependencies.from_tuple("bitsandbytes", "TimDettmers/bitsandbytes", "main", None),
     "trl": Dependencies.from_tuple("trl", "lvwerra/trl", "main", None),
     "triton": Dependencies.from_tuple("triton", "openai/triton", "main", None, "python", True),
-    "vllm": Dependencies.from_tuple("vllm", "vllm-project/vllm", "main", None),
+    "vllm": Dependencies.from_tuple("vllm", "vllm-project/vllm", "main", None, None, True, None, None, False),
 }
 
 _ALL_RUNTIME_DEPS = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
