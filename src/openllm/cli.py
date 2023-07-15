@@ -1340,7 +1340,7 @@ def _start(
                   Possible quantisation strategies:
                   - int8: Quantize the model with 8bit (bitsandbytes required)
                   - int4: Quantize the model with 4bit (bitsandbytes required)
-                  - gptq: Quantize the model with GPTQ (autogptq required)
+                  - gptq: Quantize the model with GPTQ (auto-gptq required)
         bettertransformer: Convert given model to FastTransformer with PyTorch.
         runtime: The runtime to use for this LLM. By default, this is set to ``transformers``. In the future, this will include supports for GGML.
         fast: Enable fast mode. This will skip downloading models, and will raise errors if given model_id does not exists under local store.
@@ -1440,7 +1440,7 @@ def _build(
                   Possible quantisation strategies:
                   - int8: Quantize the model with 8bit (bitsandbytes required)
                   - int4: Quantize the model with 4bit (bitsandbytes required)
-                  - gptq: Quantize the model with GPTQ (autogptq required)
+                  - gptq: Quantize the model with GPTQ (auto-gptq required)
         bettertransformer: Convert given model to FastTransformer with PyTorch.
         adapter_map: The adapter mapping of LoRA to use for this LLM. It accepts a dictionary of ``{adapter_id: adapter_name}``.
         build_ctx: The build context to use for building BentoLLM. By default, it sets to current directory.
@@ -1552,7 +1552,7 @@ def _import_model(
                   Possible quantisation strategies:
                   - int8: Quantize the model with 8bit (bitsandbytes required)
                   - int4: Quantize the model with 4bit (bitsandbytes required)
-                  - gptq: Quantize the model with GPTQ (autogptq required)
+                  - gptq: Quantize the model with GPTQ (auto-gptq required)
         additional_args: Additional arguments to pass to ``openllm import``.
 
     Returns:

@@ -426,7 +426,7 @@ class LLMInterface(ABC, t.Generic[M, T]):
         def __attrs_init__(
             self,
             config: openllm.LLMConfig,
-            quantization_config: transformers.BitsAndBytesConfig | None,
+            quantization_config: transformers.BitsAndBytesConfig | autogptq.BaseQuantizeConfig | None,
             model_id: str,
             runtime: t.Literal["ggml", "transformers"],
             model_decls: TupleAny,
