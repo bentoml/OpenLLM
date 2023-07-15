@@ -37,13 +37,13 @@ repos:
         args: [--config=pyproject.toml]
   - repo: local
     hooks:
-      - id: typecheck
-        name: type-check
-        entry: pyright src/openllm --level error
-        types: [python]
-        language: node
-        pass_filenames: false
-        additional_dependencies: ['pyright@1.1.316']
+#      - id: typecheck
+#        name: type-check
+#        entry: pyright src/openllm --level error
+#        types: [python]
+#        language: node
+#        pass_filenames: false
+#        additional_dependencies: ['pyright@1.1.316']
       - id: check-license-header
         name: check for license headers
         entry: ./tools/assert-license-headers

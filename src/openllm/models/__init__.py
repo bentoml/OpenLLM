@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from . import auto as auto
+from . import baichuan as baichuan
 from . import chatglm as chatglm
 from . import dolly_v2 as dolly_v2
 from . import falcon as falcon

@@ -48,6 +48,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("opt", "OPTConfig"),
         ("stablelm", "StableLMConfig"),
         ("starcoder", "StarCoderConfig"),
+        ("baichuan", "BaichuanConfig"),
     ]
 )
 
