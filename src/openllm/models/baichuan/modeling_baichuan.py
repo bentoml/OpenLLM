@@ -27,7 +27,7 @@ else:
     transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
 
 
-class Baichuan(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTrainedTokenizerFast"]):
+class Baichuan(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTrainedTokenizerBase"]):
     __openllm_internal__ = True
 
     def llm_post_init(self):
