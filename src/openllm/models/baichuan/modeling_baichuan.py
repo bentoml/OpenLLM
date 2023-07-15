@@ -19,11 +19,12 @@ import openllm
 
 if t.TYPE_CHECKING:
     import torch
+    import torch.amp
 
-    import bentoml
     import transformers
 else:
     torch = openllm.utils.LazyLoader("torch", globals(), "torch")
+    torch.amp = openllm.utils.LazyLoader("torch.amp", globals(), "torch.amp")
     transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
 
 
@@ -32,16 +33,6 @@ class Baichuan(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTrai
 
     def llm_post_init(self):
         self.device = torch.device("cuda")
-
-    def load_model(self, tag: bentoml.Tag, *args: t.Any, **attrs: t.Any) -> t.Any:
-        trust_remote_code = attrs.pop("trust_remote_code", True)
-        return transformers.AutoModelForCausalLM.from_pretrained(
-            self.model_id, trust_remote_code=trust_remote_code, **attrs
-        )
-
-    def load_tokenizer(self, tag: bentoml.Tag, **attrs: t.Any) -> t.Any:
-        trust_remote_code = attrs.pop("trust_remote_code", True)
-        return transformers.AutoTokenizer.from_pretrained(self.model_id, trust_remote_code=trust_remote_code, **attrs)
 
     def sanitize_parameters(
         self,
@@ -67,7 +58,7 @@ class Baichuan(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTrai
 
     def generate(self, prompt: str, **attrs: t.Any) -> list[str]:
         inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
-        with torch.inference_mode():
+        with torch.inference_mode(), torch.amp.autocast("cuda", dtype=torch.float16):
             outputs = self.model.generate(
                 **inputs,
                 generation_config=self.config.model_construct_env(**attrs).to_generation_config(),
