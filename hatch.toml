@@ -35,6 +35,7 @@ quality = [
 ]
 setup = "pre-commit install"
 typing = "pre-commit run typecheck --all-files"
+watch-typing = "pyright {args:src/openllm} -w"
 [envs.tests]
 extra-dependencies = [
     # NOTE: interact with docker for container tests.

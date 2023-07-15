@@ -216,7 +216,12 @@ def _raw_uuid_nvml() -> list[str] | None:
     from ctypes import c_void_p
     from ctypes import create_string_buffer
 
-    nvml_h = CDLL("libnvidia-ml.so.1")
+    try:
+        nvml_h = CDLL("libnvidia-ml.so.1")
+    except OSError:
+        warnings.warn("Failed to find nvidia binding", stacklevel=_STACK_LEVEL)
+        return
+
     rc = nvml_h.nvmlInit()
     if rc != 0:
         warnings.warn("Can't initialize NVML", stacklevel=_STACK_LEVEL)

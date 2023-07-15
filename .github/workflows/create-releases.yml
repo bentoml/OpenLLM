@@ -29,7 +29,7 @@ defaults:
   run:
     shell: bash --noprofile --norc -exo pipefail {0}
 env:
-  HATCH_VERBOSE: 10
+  HATCH_VERBOSE: 2
 jobs:
   release:
     if: github.repository_owner == 'bentoml'

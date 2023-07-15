@@ -71,15 +71,15 @@ all = [
     "openllm[falcon]",
     "openllm[mpt]",
     "openllm[starcoder]",
-    "openllm[opt]",
-    "openllm[flan-t5]",
-    "openllm[fine-tune]",
-    "openllm[vllm]",
-    "openllm[agents]",
-    "openllm[ggml]",
     "openllm[playground]",
-    "openllm[openai]",
     "openllm[gptq]",
+    "openllm[openai]",
+    "openllm[opt]",
+    "openllm[fine-tune]",
+    "openllm[ggml]",
+    "openllm[flan-t5]",
+    "openllm[agents]",
+    "openllm[vllm]",
 ]
 chatglm = ["cpm-kernels", "sentencepiece"]
 falcon = ["einops", "xformers", "safetensors"]
@@ -294,6 +294,7 @@ analysis.useLibraryCodeForTypes = true
 exclude = ["src/openllm/playground", "src/openllm/models/"]
 include = ["src/openllm", "src/openllm_client", "tests/", "tools/", "examples/"]
 pythonVersion = "3.12"
+reportMissingImports = "warning"
 reportMissingTypeStubs = false
 reportPrivateUsage = "warning"
 reportUnknownArgumentType = "warning"

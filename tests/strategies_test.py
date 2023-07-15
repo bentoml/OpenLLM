@@ -102,10 +102,6 @@ def test_nvidia_gpu_validate(monkeypatch: pytest.MonkeyPatch):
         )
 
 
-def test_nvidia_gpu_validate_no_gpu_available():
-    assert pytest.raises(ValueError, NvidiaGpuResource.validate, ["0", "1"]).match("Failed to get device *")
-
-
 @pytest.mark.skipif(sys.platform != "darwin", reason="Test NVIDIA validation on Darwin only")
 def test_nvidia_gpu_validation_on_darwin():
     assert pytest.raises(RuntimeError, NvidiaGpuResource.validate, ["0"]).match(

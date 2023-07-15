@@ -59,6 +59,8 @@ OPTIONAL_DEPENDENCIES = {
     "chatglm",
     "falcon",
     "mpt",
+    "opt",
+    "vllm",
     "starcoder",
     "fine-tune",
     "flan-t5",
