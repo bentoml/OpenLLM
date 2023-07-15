@@ -16,6 +16,9 @@ import typing as t
 
 import openllm
 
+from .configuration_baichuan import DEFAULT_PROMPT_TEMPLATE
+from ..._prompt import default_formatter
+
 
 if t.TYPE_CHECKING:
     import torch
@@ -43,6 +46,23 @@ class Baichuan(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTrai
         use_default_prompt_template: bool = False,
         **attrs: t.Any,
     ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
+        if use_default_prompt_template:
+            template_variables = default_formatter.extract_template_variables(DEFAULT_PROMPT_TEMPLATE)
+            prompt_variables = {k: v for k, v in attrs.items() if k in template_variables}
+            if "instruction" in prompt_variables:
+                raise RuntimeError(
+                    "'instruction' should be passed as the first argument "
+                    "instead of kwargs when 'use_default_prompt_template=True'"
+                )
+            try:
+                prompt_text = DEFAULT_PROMPT_TEMPLATE.format(instruction=prompt, **prompt_variables)
+            except KeyError as e:
+                raise RuntimeError(
+                    f"Missing variable '{e.args[0]}' (required: {template_variables}) in the prompt template. "
+                    "Use 'use_default_prompt_template=False' to disable the default prompt template."
+                ) from None
+        else:
+            prompt_text = prompt
         # NOTE: The rest of attrs should be kwargs for GenerationConfig
         generate_kwargs = {
             "max_new_tokens": max_new_tokens,
@@ -51,7 +71,7 @@ class Baichuan(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTrai
             **attrs,
         }
 
-        return prompt, generate_kwargs, {}
+        return prompt_text, generate_kwargs, {}
 
     def postprocess_generate(self, prompt: str, generation_result: t.Sequence[str], **_: t.Any) -> str:
         return generation_result[0]
