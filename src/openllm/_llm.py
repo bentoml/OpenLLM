@@ -253,7 +253,10 @@ def resolve_peft_config_type(adapter_map: dict[str, str | None] | None):
 _reserved_namespace = {"config_class", "model", "tokenizer", "import_kwargs"}
 
 M = t.TypeVar("M", bound="transformers.PreTrainedModel")
-T = t.TypeVar("T", bound="t.Union[transformers.PreTrainedTokenizerFast, transformers.PreTrainedTokenizer]")
+T = t.TypeVar(
+    "T",
+    bound="t.Union[transformers.PreTrainedTokenizerFast, transformers.PreTrainedTokenizer, transformers.PreTrainedTokenizerBase]",
+)
 
 
 def _default_post_init(self: LLM[t.Any, t.Any]):
