@@ -139,3 +139,5 @@ outputs
 # PyOxidizer and binary related
 pyapp
 /target
+
+.pdm-python
