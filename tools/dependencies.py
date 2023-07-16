@@ -138,7 +138,8 @@ class Dependencies:
 
         elif self.branch is not None:
             dep = f"{self.name}{self.pypi_extensions} @ git+https://github.com/{self.git_repo_url}.git@{self.branch}"
-
+        elif self.branch and self.subdirectory:
+            dep = f"{self.name}{self.pypi_extensions} @ git+https://github.com/{self.git_repo_url}.git@{self.branch}#subdirectory={self.subdirectory}"
         else:
             dep = f"{self.name}{self.pypi_extensions}"
 

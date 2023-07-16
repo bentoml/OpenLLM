@@ -191,7 +191,8 @@ def import_model(
         metadata["_pretrained_class"] = model.__class__.__name__
         metadata["_framework"] = model.framework
 
-    metadata["_quantize"] = llm._quantize_method
+    if llm._quantize_method is not None:
+        metadata["_quantize"] = llm._quantize_method
 
     try:
         with bentoml.models.create(

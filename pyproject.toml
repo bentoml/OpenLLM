@@ -71,30 +71,30 @@ falcon = ["einops", "xformers"]
 mpt = ["triton", "einops"]
 starcoder = ["bitsandbytes"]
 baichuan = ["cpm-kernels", "sentencepiece"]
-vllm = ["vllm"]
-openai = ["openai", "tiktoken"]
 fine-tune = ["peft", "bitsandbytes", "datasets", "accelerate", "deepspeed", "trl"]
-flan-t5 = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
-gptq = ["auto-gptq[triton]"]
-playground = ["jupyter", "notebook", "ipython", "jupytext", "nbformat"]
-agents = ["transformers[agents]>=4.30", "diffusers", "soundfile"]
 ggml = ["ctransformers"]
+gptq = ["auto-gptq[triton]"]
+openai = ["openai", "tiktoken"]
+flan-t5 = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
+playground = ["jupyter", "notebook", "ipython", "jupytext", "nbformat"]
 opt = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
+agents = ["transformers[agents]>=4.30", "diffusers", "soundfile"]
+vllm = ["vllm"]
 all = [
     "openllm[chatglm]",
     "openllm[falcon]",
     "openllm[mpt]",
     "openllm[starcoder]",
     "openllm[baichuan]",
-    "openllm[vllm]",
-    "openllm[openai]",
     "openllm[fine-tune]",
-    "openllm[flan-t5]",
-    "openllm[gptq]",
-    "openllm[playground]",
-    "openllm[agents]",
     "openllm[ggml]",
+    "openllm[gptq]",
+    "openllm[openai]",
+    "openllm[flan-t5]",
+    "openllm[playground]",
     "openllm[opt]",
+    "openllm[agents]",
+    "openllm[vllm]",
 ]
 
 [project.urls]

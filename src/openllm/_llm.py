@@ -176,18 +176,6 @@ def make_tag(
                 f"Internal errors when parsing config for pretrained {model_id} ('commit_hash' not found)"
             )
 
-    if in_docker() and os.getenv("BENTO_PATH") is not None:
-        logger.debug("The model will be loaded as relative path within BentoContainer.")
-    else:
-        logger.debug(
-            "'model_id=%s' will use 'model_version=%s'. The full tag to be saved under model store: '%s-%s:%s'",
-            model_id,
-            model_version,
-            implementation,
-            model_name,
-            model_version,
-        )
-
     return bentoml.Tag.from_taglike(
         f"{model_name if in_docker() and os.getenv('BENTO_PATH') is not None else implementation + '-' + model_name}:{model_version}".strip()
     )

@@ -70,10 +70,7 @@ class MPT(openllm.LLM["transformers.PreTrainedModel", "transformers.GPTNeoXToken
 
     @property
     def import_kwargs(self) -> tuple[dict[str, t.Any], dict[str, t.Any]] | None:
-        model_kwds = {
-            "device_map": "auto" if torch.cuda.is_available() and torch.cuda.device_count() > 1 else None,
-            "torch_dtype": torch.bfloat16 if torch.cuda.is_available() else torch.float32,
-        }
+        model_kwds = {"torch_dtype": torch.bfloat16 if torch.cuda.is_available() else torch.float32}
         tokenizer_kwds = {"padding_side": "left"}
         return model_kwds, tokenizer_kwds
 
