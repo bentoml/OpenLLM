@@ -96,6 +96,7 @@ if t.TYPE_CHECKING:
     import torch
 
     from bentoml._internal.bento import BentoStore
+    from bentoml._internal.container import DefaultBuilder
 
     from ._types import AnyCallable
     from ._types import ClickFunctionWrapper
@@ -1877,12 +1878,14 @@ def build_command(
         client = BentoMLContainer.bentocloud_client.get()
         client.push_bento(bento)
     elif containerize:
-        backend = os.getenv("BENTOML_CONTAINERIZE_BACKEND", "docker")
+        backend = t.cast("DefaultBuilder", os.getenv("BENTOML_CONTAINERIZE_BACKEND", "docker"))
         _echo(f"Building {bento} into a LLMContainer using backend '{backend}'", fg="magenta")
-        if not bentoml.container.health(backend):
-            raise OpenLLMException(f"Failed to use backend {backend}")
+        try:
+            bentoml.container.health(backend)
+        except subprocess.CalledProcessError:
+            raise OpenLLMException(f"Failed to use backend {backend}") from None
 
-        bentoml.container.build(str(bento.tag), backend=backend, features=("grpc",))
+        bentoml.container.build(bento.tag, backend=backend, features=("grpc",))
 
     return bento
 
