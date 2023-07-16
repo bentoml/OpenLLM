@@ -25,9 +25,11 @@ from ..._prompt import default_formatter
 if t.TYPE_CHECKING:
     import transformers  # noqa
     import torch
+    import torch.amp
 else:
     transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
     torch = openllm.utils.LazyLoader("torch", globals(), "torch")
+    torch.amp = openllm.utils.LazyLoader("torch.amp", globals(), "torch.amp")
 
 
 logger = logging.getLogger(__name__)
@@ -42,10 +44,7 @@ class StableLM(openllm.LLM["transformers.GPTNeoXForCausalLM", "transformers.GPTN
 
     @property
     def import_kwargs(self):
-        model_kwds = {
-            "torch_dtype": torch.float16 if torch.cuda.is_available() else torch.float32,
-            "device_map": "auto" if torch.cuda.is_available() and torch.cuda.device_count() > 1 else None,
-        }
+        model_kwds = {"torch_dtype": torch.float16 if torch.cuda.is_available() else torch.float32}
         tokenizer_kwds: dict[str, t.Any] = {}
         return model_kwds, tokenizer_kwds
 
@@ -103,5 +102,9 @@ class StableLM(openllm.LLM["transformers.GPTNeoXForCausalLM", "transformers.GPTN
         inputs = t.cast("torch.Tensor", self.tokenizer(prompt, return_tensors="pt")).to(self.device)
 
         with torch.inference_mode():
-            tokens = self.model.generate(**inputs, **generation_kwargs)
-            return [self.tokenizer.decode(tokens[0], skip_special_tokens=True)]
+            if torch.cuda.is_available():
+                with torch.amp.autocast("cuda", torch.float16):
+                    tokens = self.model.generate(**inputs, **generation_kwargs)
+            else:
+                tokens = self.model.generate(**inputs, **generation_kwargs)
+        return [self.tokenizer.decode(tokens[0], skip_special_tokens=True)]
