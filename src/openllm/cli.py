@@ -1150,7 +1150,13 @@ def start_model(
 @quantize_option(click)
 @click.option("--machine", is_flag=True, default=False, hidden=True)
 @click.option("--implementation", type=click.Choice(["pt", "tf", "flax", "vllm"]), default=None, hidden=True)
-@click.option("--serialisation", "serialisation_format", type=click.Choice(["safetensors", "default"]), default='default', hidden=True)
+@click.option(
+    "--serialisation",
+    "serialisation_format",
+    type=click.Choice(["safetensors", "default"]),
+    default="default",
+    hidden=True,
+)
 def download_models_command(
     model: str,
     model_id: str | None,
@@ -1160,7 +1166,7 @@ def download_models_command(
     machine: bool,
     implementation: LiteralRuntime | None,
     quantize: t.Literal["int8", "int4", "gptq"] | None,
-    serialisation_format: t.Literal['safetensors', 'default'],
+    serialisation_format: t.Literal["safetensors", "default"],
 ):
     """Setup LLM interactively.
 
@@ -1202,7 +1208,7 @@ def download_models_command(
         return_runner_kwargs=False,
         quantize=quantize,
         ensure_available=False,
-        serialisation = serialisation_format
+        serialisation=serialisation_format,
     )
 
     _previously_saved = False
@@ -1533,7 +1539,7 @@ def _import_model(
     runtime: t.Literal["ggml", "transformers"] = "transformers",
     implementation: LiteralRuntime = "pt",
     quantize: t.Literal["int8", "int4", "gptq"] | None = None,
-    serialisation_format: t.Literal['default', 'safetensors'] = 'default',
+    serialisation_format: t.Literal["default", "safetensors"] = "default",
     additional_args: t.Sequence[str] | None = None,
 ) -> bentoml.Model:
     """Import a LLM into local store.
@@ -1564,7 +1570,16 @@ def _import_model(
     Returns:
         ``bentoml.Model``:BentoModel of the given LLM. This can be used to serve the LLM or can be pushed to BentoCloud.
     """
-    args = [model_name, "--runtime", runtime, "--implementation", implementation, "--machine", "--serialisation", serialisation_format]
+    args = [
+        model_name,
+        "--runtime",
+        runtime,
+        "--implementation",
+        implementation,
+        "--machine",
+        "--serialisation",
+        serialisation_format,
+    ]
     if model_id is not None:
         args.append(model_id)
     if model_version is not None:

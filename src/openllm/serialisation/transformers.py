@@ -31,15 +31,15 @@ from ..utils import LazyLoader
 from ..utils import first_not_none
 from ..utils import generate_context
 from ..utils import generate_labels
-from ..utils import is_torch_available
 from ..utils import is_autogptq_available
+from ..utils import is_torch_available
 from ..utils import normalize_attrs_to_model_tokenizer_pair
 
 
 if t.TYPE_CHECKING:
+    import auto_gptq as autogptq
     import torch
 
-    import auto_gptq as autogptq
     import openllm
     import transformers
     from transformers.models.auto.auto_factory import _BaseAutoModelClass
