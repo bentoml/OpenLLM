@@ -130,39 +130,50 @@ def _from_system(cls: type[DynResource]) -> list[str]:
 
     It relies on torch.cuda implementation and in turns respect CUDA_VISIBLE_DEVICES.
     """
-    if cls.resource_id == "amd.com/gpu":
-        if not psutil.LINUX:
-            warnings.warn("AMD GPUs is currently only supported on Linux.", stacklevel=_STACK_LEVEL)
-            return []
-
-        # ROCm does not currently have the rocm_smi wheel.
-        # So we need to use the ctypes bindings directly.
-        # we don't want to use CLI because parsing is a pain.
-        sys.path.append("/opt/rocm/libexec/rocm_smi")
-        try:
-            # refers to https://github.com/RadeonOpenCompute/rocm_smi_lib/blob/master/python_smi_tools/rsmiBindings.py
-            from rsmiBindings import rocmsmi as rocmsmi
-        except (ModuleNotFoundError, ImportError):
-            # In this case the binary is not found, returning empty list
-            return []
-        finally:
-            sys.path.remove("/opt/rocm/libexec/rocm_smi")
     visible_devices = _parse_visible_devices()
     if visible_devices is None:
-        try:
-            from cuda import cuda
+        if cls.resource_id == "amd.com/gpu":
+            if not psutil.LINUX:
+                warnings.warn("AMD GPUs is currently only supported on Linux.", stacklevel=_STACK_LEVEL)
+                return []
 
-            err, *_ = cuda.cuInit(0)
-            if err != cuda.CUresult.CUDA_SUCCESS:
-                logger.warning("Failed to initialise CUDA", stacklevel=_STACK_LEVEL)
+            # ROCm does not currently have the rocm_smi wheel.
+            # So we need to use the ctypes bindings directly.
+            # we don't want to use CLI because parsing is a pain.
+            sys.path.append("/opt/rocm/libexec/rocm_smi")
+            try:
+                from ctypes import byref
+                from ctypes import c_uint32
+
+                # refers to https://github.com/RadeonOpenCompute/rocm_smi_lib/blob/master/python_smi_tools/rsmiBindings.py
+                from rsmiBindings import rocmsmi
+                from rsmiBindings import rsmi_status_t
+
+                device_count = c_uint32(0)
+                ret = rocmsmi.rsmi_num_monitor_devices(byref(device_count))
+                if ret == rsmi_status_t.RSMI_STATUS_SUCCESS:
+                    return [str(i) for i in range(device_count.value)]
                 return []
-            err, device_count = cuda.cuDeviceGetCount()
-            if err != cuda.CUresult.CUDA_SUCCESS:
-                logger.warning("Failed to get available devices under system.", stacklevel=_STACK_LEVEL)
+            except (ModuleNotFoundError, ImportError):
+                # In this case the binary is not found, returning empty list
                 return []
-            return [str(i) for i in range(device_count)]
-        except ImportError:
-            return []
+            finally:
+                sys.path.remove("/opt/rocm/libexec/rocm_smi")
+        else:
+            try:
+                from cuda import cuda
+
+                err, *_ = cuda.cuInit(0)
+                if err != cuda.CUresult.CUDA_SUCCESS:
+                    logger.warning("Failed to initialise CUDA", stacklevel=_STACK_LEVEL)
+                    return []
+                err, device_count = cuda.cuDeviceGetCount()
+                if err != cuda.CUresult.CUDA_SUCCESS:
+                    logger.warning("Failed to get available devices under system.", stacklevel=_STACK_LEVEL)
+                    return []
+                return [str(i) for i in range(device_count)]
+            except ImportError:
+                return []
     return visible_devices
 
 
