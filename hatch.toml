@@ -9,7 +9,6 @@ dependencies = [
     # NOTE: Using under ./tools/update-readme.py
     "markdown-it-py",
 ]
-features = ['flan-t5', 'baichuan']
 [envs.default.scripts]
 changelog = "towncrier build --version main --draft"
 quality = [
@@ -41,7 +40,7 @@ dependencies = [
     "hypothesis",
     "syrupy",
 ]
-features = ['flan-t5']
+features = ['flan-t5', 'baichuan']
 skip-install = false
 template = 'tests'
 [envs.tests.scripts]
