@@ -95,6 +95,8 @@ from .utils import set_quiet_mode
 if t.TYPE_CHECKING:
     import torch
 
+    from bentoml._internal.bento import BentoStore
+
     from ._types import AnyCallable
     from ._types import ClickFunctionWrapper
     from ._types import DictStrAny
@@ -1399,6 +1401,7 @@ def _start(
     )
 
 
+@inject
 def _build(
     model_name: str,
     /,
@@ -1414,8 +1417,10 @@ def _build(
     runtime: t.Literal["ggml", "transformers"] = "transformers",
     dockerfile_template: str | None = None,
     overwrite: bool = False,
-    format: t.Literal["bento", "container"] = "bento",
+    push: bool = False,
+    containerize: bool = False,
     additional_args: list[str] | None = None,
+    bento_store: BentoStore = Provide[BentoMLContainer.bento_store],
 ) -> bentoml.Bento:
     """Package a LLM into a Bento.
 
@@ -1455,14 +1460,17 @@ def _build(
         dockerfile_template: The dockerfile template to use for building BentoLLM. See
                              https://docs.bentoml.com/en/latest/guides/containerization.html#dockerfile-template.
         overwrite: Whether to overwrite the existing BentoLLM. By default, this is set to ``False``.
-        format: The output format to build this LLM. By default it will build the BentoLLM. 'container' is equivalent of 'openllm build && bentoml containerize <bento_tag>'
+        push: Whether to push the result bento to BentoCloud. Make sure to login with 'bentoml cloud login' first.
+        containerize: Whether to containerize the Bento after building. '--containerize' is the shortcut of 'openllm build && bentoml containerize'.
+                      Note that 'containerize' and 'push' are mutually exclusive
         additional_args: Additional arguments to pass to ``openllm build``.
+        bento_store: Optional BentoStore for saving this BentoLLM. Default to the default BentoML local store.
 
     Returns:
         ``bentoml.Bento | str``: BentoLLM instance. This can be used to serve the LLM or can be pushed to BentoCloud.
                                  If 'format="container"', then it returns the default 'container_name:container_tag'
     """
-    args: ListStr = [model_name, "--runtime", runtime, "--format", format]
+    args: ListStr = [sys.executable, "-m", "openllm", "build", model_name, "--machine", "--runtime", runtime]
 
     if quantize and bettertransformer:
         raise OpenLLMException("'quantize' and 'bettertransformer' are currently mutually exclusive.")
@@ -1471,6 +1479,13 @@ def _build(
         args.extend(["--quantize", quantize])
     if bettertransformer:
         args.append("--bettertransformer")
+
+    if containerize and push:
+        raise OpenLLMException("'containerize' and 'push' are currently mutually exclusive.")
+    if push:
+        args.extend(["--push"])
+    if containerize:
+        args.extend(["--containerize"])
 
     if model_id:
         args.extend(["--model-id", model_id])
@@ -1491,7 +1506,19 @@ def _build(
     if additional_args:
         args.extend(additional_args)
 
-    return build_command.main(args=args, standalone_mode=False)
+    try:
+        output = subprocess.check_output(args, env=os.environ.copy(), cwd=build_ctx or os.getcwd())
+    except subprocess.CalledProcessError as e:
+        logger.error("Exception caught while building %s", model_name, exc_info=e)
+        if e.stderr:
+            raise OpenLLMException(e.stderr.decode("utf-8")) from None
+        raise OpenLLMException(str(e)) from None
+    # NOTE: This usually only concern BentoML devs.
+    pattern = r"^__tag__:[^:\n]+:[^:\n]+"
+    matched = re.search(pattern, output.decode("utf-8").strip(), re.MULTILINE)
+    assert matched is not None, f"Failed to find tag from output: {output}"
+    _, _, tag = matched.group(0).partition(":")
+    return bentoml.get(tag, _bento_store=bento_store)
 
 
 def _import_model(
@@ -1564,12 +1591,13 @@ start, start_grpc, build, import_model, list_models = (
 )
 @model_id_option(click)
 @output_option
+@click.option("--machine", is_flag=True, default=False, hidden=True)
 @click.option("--overwrite", is_flag=True, help="Overwrite existing Bento for given LLM if it already exists.")
 @workers_per_resource_option(click, build=True)
-@cog.optgroup.group(cls=cog.MutuallyExclusiveOptionGroup, name="Optimisation options.")
+@cog.optgroup.group(cls=cog.MutuallyExclusiveOptionGroup, name="Optimisation options")
 @quantize_option(cog.optgroup, build=True)
 @bettertransformer_option(cog.optgroup)
-@cog.optgroup.option(
+@click.option(
     "--runtime",
     type=click.Choice(["ggml", "transformers"]),
     default="transformers",
@@ -1604,14 +1632,15 @@ start, start_grpc, build, import_model, list_models = (
     type=click.File(),
     help="Optional custom dockerfile template to be used with this BentoLLM.",
 )
-@click.option(
-    "--format",
-    default="bento",
-    type=click.Choice(["bento", "container"]),
-    help="The output format for 'openllm build'. By default this will build a BentoLLM. 'container' is the shortcut of 'openllm build && bentoml containerize'.",
-    hidden=not get_debug_mode(),
+@cog.optgroup.group(cls=cog.MutuallyExclusiveOptionGroup, name="Utilities options")
+@cog.optgroup.option(
+    "--containerize",
+    default=False,
+    is_flag=True,
+    type=click.BOOL,
+    help="Whether to containerize the Bento after building. '--containerize' is the shortcut of 'openllm build && bentoml containerize'.",
 )
-@click.option(
+@cog.optgroup.option(
     "--push",
     default=False,
     is_flag=True,
@@ -1632,9 +1661,10 @@ def build_command(
     workers_per_resource: float | None,
     adapter_id: tuple[str, ...],
     build_ctx: str | None,
+    machine: bool,
     model_version: str | None,
     dockerfile_template: t.TextIO | None,
-    format: t.Literal["bento", "container"],
+    containerize: bool,
     push: bool,
     **attrs: t.Any,
 ):
@@ -1664,6 +1694,9 @@ def build_command(
             # We don't resolve full path here, leave it to build
             # we are just doing the parsing here.
             adapter_map[_adapter_id] = adapter_name[0] if len(adapter_name) > 0 else None
+
+    if machine:
+        output = "porcelain"
 
     if enable_features:
         enable_features = tuple(itertools.chain.from_iterable((s.split(",") for s in enable_features)))
@@ -1759,7 +1792,11 @@ def build_command(
         if current_adapter_map_envvar is not None:
             os.environ["OPENLLM_ADAPTER_MAP"] = current_adapter_map_envvar
 
-    if output == "pretty":
+    if machine:
+        # NOTE: We will prefix the tag with __tag__ and we can use regex to correctly
+        # get the tag from 'bentoml.bentos.build|build_bentofile'
+        _echo(f"__tag__:{bento.tag}", fg="white")
+    elif output == "pretty":
         if not get_quiet_mode():
             _echo("\n" + OPENLLM_FIGLET, fg="white")
             if not _previously_built:
@@ -1792,12 +1829,10 @@ def build_command(
     else:
         _echo(bento.tag)
 
-    if format == "container" and push:
-        ctx.fail("'--format=container' and '--push' are mutually exclusive.")
     if push:
         client = BentoMLContainer.bentocloud_client.get()
         client.push_bento(bento)
-    elif format == "container":
+    elif containerize:
         backend = os.getenv("BENTOML_CONTAINERIZE_BACKEND", "docker")
         _echo(f"Building {bento} into a LLMContainer using backend '{backend}'", fg="magenta")
         if not bentoml.container.health(backend):

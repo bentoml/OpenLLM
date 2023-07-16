@@ -89,7 +89,7 @@ def prepare(
     implementation: LiteralRuntime = "pt",
     deployment_mode: t.Literal["container", "local"] = "local",
     clean_context: contextlib.ExitStack | None = None,
-    cleanup: bool = False,
+    cleanup: bool = True,
 ):
     if clean_context is None:
         clean_context = contextlib.ExitStack()

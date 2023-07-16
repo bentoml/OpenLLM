@@ -147,6 +147,12 @@ Run snapshot testing for model outputs:
 hatch run tests:models
 ```
 
+To update the snapshot, do the following:
+
+```bash
+hatch run tests:snapshot-models
+```
+
 ## Releasing a New Version
 
 To release a new version, use `./tools/run-release-action`. It requires `gh`,

@@ -18,8 +18,6 @@ from __future__ import annotations
 
 import dataclasses
 import os
-import shutil
-import subprocess
 import typing as t
 
 import inflection
@@ -276,9 +274,6 @@ def main() -> int:
         )
         f.write("-r nightly-requirements.txt\n-e .[all]\n")
         f.writelines([f"{v.to_str()}\n" for v in _NIGHTLY_MAPPING.values() if v.requires_gpu])
-
-    if shutil.which("taplo"):
-        return subprocess.check_call(["taplo", "format", os.path.join(ROOT, "pyproject.toml")])
 
     return 0
 

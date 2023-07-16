@@ -17,6 +17,7 @@ These utilities will stay internal, and its API can be changed or updated withou
 """
 from __future__ import annotations
 import importlib.metadata
+import inspect
 import logging
 import os
 import typing as t
@@ -349,4 +350,8 @@ def create_bento(
 
     bento._fs.writetext(service_fs_path, script)
 
-    return bento.save(bento_store=_bento_store, model_store=_model_store)
+    signatures = inspect.signature(bento.save).parameters
+    if "model_store" in signatures:
+        return bento.save(bento_store=_bento_store, model_store=_model_store)
+    # backward arguments. `model_store` is added recently
+    return bento.save(bento_store=_bento_store)

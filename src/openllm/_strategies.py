@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from __future__ import annotations
-import functools
 import inspect
 import logging
 import math
@@ -31,14 +30,11 @@ from bentoml._internal.resource import system_resources
 from bentoml._internal.runner.strategy import THREAD_ENVS
 from bentoml._internal.runner.strategy import Strategy
 
-from .utils import LazyLoader
 from .utils import LazyType
 from .utils import ReprMixin
 
 
 if t.TYPE_CHECKING:
-    import torch
-
     import bentoml
 
     ListIntStr = list[int | str]
@@ -48,7 +44,6 @@ if t.TYPE_CHECKING:
 
 else:
     DynResource = Resource[t.List[str]]
-    torch = LazyLoader("torch", globals(), "torch")
     ListIntStr = list
 
 # NOTE: We need to do this so that overload can register
@@ -135,26 +130,50 @@ def _from_system(cls: type[DynResource]) -> list[str]:
 
     It relies on torch.cuda implementation and in turns respect CUDA_VISIBLE_DEVICES.
     """
-    if cls.resource_id == "amd.com/gpu":
-        if not psutil.LINUX:
-            warnings.warn("AMD GPUs is currently only supported on Linux.", stacklevel=_STACK_LEVEL)
-            return []
-
-        # ROCm does not currently have the rocm_smi wheel.
-        # So we need to use the ctypes bindings directly.
-        # we don't want to use CLI because parsing is a pain.
-        sys.path.append("/opt/rocm/libexec/rocm_smi")
-        try:
-            # refers to https://github.com/RadeonOpenCompute/rocm_smi_lib/blob/master/python_smi_tools/rsmiBindings.py
-            from rsmiBindings import rocmsmi as rocmsmi
-        except (ModuleNotFoundError, ImportError):
-            # In this case the binary is not found, returning empty list
-            return []
-        finally:
-            sys.path.remove("/opt/rocm/libexec/rocm_smi")
     visible_devices = _parse_visible_devices()
     if visible_devices is None:
-        return [str(i) for i in range(torch.cuda.device_count())] if torch.cuda.is_available() else []
+        if cls.resource_id == "amd.com/gpu":
+            if not psutil.LINUX:
+                warnings.warn("AMD GPUs is currently only supported on Linux.", stacklevel=_STACK_LEVEL)
+                return []
+
+            # ROCm does not currently have the rocm_smi wheel.
+            # So we need to use the ctypes bindings directly.
+            # we don't want to use CLI because parsing is a pain.
+            sys.path.append("/opt/rocm/libexec/rocm_smi")
+            try:
+                from ctypes import byref
+                from ctypes import c_uint32
+
+                # refers to https://github.com/RadeonOpenCompute/rocm_smi_lib/blob/master/python_smi_tools/rsmiBindings.py
+                from rsmiBindings import rocmsmi
+                from rsmiBindings import rsmi_status_t
+
+                device_count = c_uint32(0)
+                ret = rocmsmi.rsmi_num_monitor_devices(byref(device_count))
+                if ret == rsmi_status_t.RSMI_STATUS_SUCCESS:
+                    return [str(i) for i in range(device_count.value)]
+                return []
+            except (ModuleNotFoundError, ImportError):
+                # In this case the binary is not found, returning empty list
+                return []
+            finally:
+                sys.path.remove("/opt/rocm/libexec/rocm_smi")
+        else:
+            try:
+                from cuda import cuda
+
+                err, *_ = cuda.cuInit(0)
+                if err != cuda.CUresult.CUDA_SUCCESS:
+                    logger.warning("Failed to initialise CUDA", stacklevel=_STACK_LEVEL)
+                    return []
+                err, device_count = cuda.cuDeviceGetCount()
+                if err != cuda.CUresult.CUDA_SUCCESS:
+                    logger.warning("Failed to get available devices under system.", stacklevel=_STACK_LEVEL)
+                    return []
+                return [str(i) for i in range(device_count)]
+            except (ImportError, RuntimeError):
+                return []
     return visible_devices
 
 
@@ -199,26 +218,17 @@ def _from_spec(cls: type[DynResource], spec: t.Any) -> list[str]:
         )
 
 
-@functools.lru_cache
-def _raw_uuid_nvml() -> list[str] | None:
+def _raw_device_uuid_nvml() -> list[str] | None:
     """Return list of device UUID as reported by NVML or None if NVML discovery/initialization failed."""
-    try:
-        from cuda import cuda
-    except ImportError:
-        if sys.platform == "darwin":
-            raise RuntimeError("GPU is not available on Darwin system.") from None
-        raise RuntimeError(
-            "Failed to initialise CUDA runtime binding. Make sure that 'cuda-python' is setup correctly."
-        ) from None
-
     from ctypes import CDLL
     from ctypes import byref
+    from ctypes import c_int
     from ctypes import c_void_p
     from ctypes import create_string_buffer
 
     try:
         nvml_h = CDLL("libnvidia-ml.so.1")
-    except OSError:
+    except Exception:
         warnings.warn("Failed to find nvidia binding", stacklevel=_STACK_LEVEL)
         return
 
@@ -226,12 +236,13 @@ def _raw_uuid_nvml() -> list[str] | None:
     if rc != 0:
         warnings.warn("Can't initialize NVML", stacklevel=_STACK_LEVEL)
         return
-    err, dev_count = cuda.cuDeviceGetCount()
-    if err != cuda.CUresult.CUDA_SUCCESS:
+    dev_count = c_int(-1)
+    rc = nvml_h.nvmlDeviceGetCount_v2(byref(dev_count))
+    if rc != 0:
         warnings.warn("Failed to get available device from system.", stacklevel=_STACK_LEVEL)
         return
     uuids: list[str] = []
-    for idx in range(dev_count):
+    for idx in range(dev_count.value):
         dev_id = c_void_p()
         rc = nvml_h.nvmlDeviceGetHandleByIndex_v2(idx, byref(dev_id))
         if rc != 0:
@@ -267,7 +278,7 @@ def _validate(cls: type[DynResource], val: list[t.Any]):
     # correctly parse handle
     for el in val:
         if el.startswith("GPU-") or el.startswith("MIG-"):
-            uuids = _raw_uuid_nvml()
+            uuids = _raw_device_uuid_nvml()
             if uuids is None:
                 raise ValueError("Failed to parse available GPUs UUID")
             if el not in uuids:
