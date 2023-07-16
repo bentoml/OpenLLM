@@ -838,15 +838,8 @@ class LLM(LLMInterface[M, T], ReprMixin):
             attrs.update({"low_cpu_mem_usage": low_cpu_mem_usage, "quantization_config": quantization_config})
 
         model_kwds, tokenizer_kwds = {}, {}
-        if self.__llm_init_kwargs__:
-            # NOTE: recast here for type safety
-            model_kwds, tokenizer_kwds = t.cast("tuple[DictStrAny, DictStrAny]", self.__llm_init_kwargs__)
-            logger.debug(
-                '\'%s\' default kwargs for model: "%s", tokenizer: "%s"',
-                self.__class__.__name__,
-                model_kwds,
-                tokenizer_kwds,
-            )
+        if self.import_kwargs is not None:
+            model_kwds, tokenizer_kwds = self.import_kwargs
 
         # parsing tokenizer and model kwargs, as the hierachy is param pass > default
         normalized_model_kwds, normalized_tokenizer_kwds = normalize_attrs_to_model_tokenizer_pair(**attrs)

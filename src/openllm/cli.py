@@ -1041,13 +1041,9 @@ def start_model(
         start_env = os.environ.copy()
         start_env = parse_config_options(config, server_timeout, workers_per_resource, device, start_env)
 
-        serialisation = "default"
-        if quantize is not None and quantize == "gptq":
-            serialisation = "safetensors"
-
         if fast and not get_quiet_mode():
             _echo(
-                f"Fast mode is enabled. Make sure to download the model before 'start': 'openllm download {model_name}{'--model-id ' + model_id if model_id else ''}'",
+                f"Fast mode is enabled. Make sure the model is available in local store before 'start': 'openllm import {model_name}{'--model-id ' + model_id if model_id else ''}'",
                 fg="yellow",
             )
 
@@ -1072,7 +1068,7 @@ def start_model(
             bettertransformer=bettertransformer,
             adapter_map=adapter_map,
             runtime=runtime,
-            serialisation=serialisation,
+            serialisation="safetensors",
         )
 
         start_env.update(
