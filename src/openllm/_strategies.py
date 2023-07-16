@@ -172,7 +172,7 @@ def _from_system(cls: type[DynResource]) -> list[str]:
                     logger.warning("Failed to get available devices under system.", stacklevel=_STACK_LEVEL)
                     return []
                 return [str(i) for i in range(device_count)]
-            except ImportError:
+            except (ImportError, RuntimeError):
                 return []
     return visible_devices
 
