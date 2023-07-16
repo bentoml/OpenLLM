@@ -269,7 +269,11 @@ def _validate(cls: type[DynResource], val: list[t.Any]):
 
     try:
         from cuda import cuda
-    except ImportError:
+
+        err = cuda.cuInit(0)
+        if err != cuda.CUresult.CUDA_SUCCESS:
+            raise RuntimeError("Failed to initialise CUDA runtime binding.")
+    except (ImportError, RuntimeError):
         if sys.platform == "darwin":
             raise RuntimeError("GPU is not available on Darwin system.") from None
         raise RuntimeError(
