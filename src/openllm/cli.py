@@ -95,14 +95,14 @@ from .utils import set_quiet_mode
 if t.TYPE_CHECKING:
     import torch
 
+    from bentoml._internal.bento import BentoStore
+
     from ._types import AnyCallable
     from ._types import ClickFunctionWrapper
     from ._types import DictStrAny
     from ._types import ListStr
     from ._types import LiteralRuntime
     from ._types import P
-
-    from bentoml._internal.bento import BentoStore
 
     ServeCommand = t.Literal["serve", "serve-grpc"]
     OutputLiteral = t.Literal["json", "pretty", "porcelain"]
@@ -1420,7 +1420,7 @@ def _build(
     push: bool = False,
     containerize: bool = False,
     additional_args: list[str] | None = None,
-        bento_store: BentoStore = Provide[BentoMLContainer.bento_store],
+    bento_store: BentoStore = Provide[BentoMLContainer.bento_store],
 ) -> bentoml.Bento:
     """Package a LLM into a Bento.
 
@@ -1464,6 +1464,7 @@ def _build(
         containerize: Whether to containerize the Bento after building. '--containerize' is the shortcut of 'openllm build && bentoml containerize'.
                       Note that 'containerize' and 'push' are mutually exclusive
         additional_args: Additional arguments to pass to ``openllm build``.
+        bento_store: Optional BentoStore for saving this BentoLLM. Default to the default BentoML local store.
 
     Returns:
         ``bentoml.Bento | str``: BentoLLM instance. This can be used to serve the LLM or can be pushed to BentoCloud.
@@ -1484,7 +1485,7 @@ def _build(
     if push:
         args.extend(["--push"])
     if containerize:
-        args.extend(['--containerize'])
+        args.extend(["--containerize"])
 
     if model_id:
         args.extend(["--model-id", model_id])
@@ -1660,7 +1661,7 @@ def build_command(
     workers_per_resource: float | None,
     adapter_id: tuple[str, ...],
     build_ctx: str | None,
-        machine: bool,
+    machine: bool,
     model_version: str | None,
     dockerfile_template: t.TextIO | None,
     containerize: bool,

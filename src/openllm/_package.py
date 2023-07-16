@@ -17,9 +17,9 @@ These utilities will stay internal, and its API can be changed or updated withou
 """
 from __future__ import annotations
 import importlib.metadata
+import inspect
 import logging
 import os
-import inspect
 import typing as t
 from pathlib import Path
 

@@ -41,7 +41,6 @@ dependencies = [
     "hypothesis",
     "syrupy",
 ]
-detached = true
 features = ['flan-t5']
 [envs.tests.scripts]
 _run_script = "pytest --cov --cov-report={env:COVERAGE_REPORT:term-missing} --cov-config=pyproject.toml"

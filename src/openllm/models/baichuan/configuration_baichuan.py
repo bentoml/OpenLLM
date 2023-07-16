@@ -35,6 +35,7 @@ class BaichuanConfig(openllm.LLMConfig):
         "url": "https://github.com/baichuan-inc/Baichuan-7B",
         "requirements": ["cpm_kernels", "sentencepiece"],
         "default_id": "baichuan-inc/baichuan-7b",
+        "requirements": ["cpm_kernels", "sentencepiece"],
         "model_ids": [
             "baichuan-inc/baichuan-7b",
             "baichuan-inc/baichuan-13b-base",
