@@ -33,9 +33,9 @@ class BaichuanConfig(openllm.LLMConfig):
         "timeout": 3600000,
         "requires_gpu": True,
         "url": "https://github.com/baichuan-inc/Baichuan-7B",
-        "default_id": "baichuan-inc/Baichuan-7B",
+        "default_id": "baichuan-inc/baichuan-7b",
         "model_ids": [
-            "baichuan-inc/Baichuan-7B",
+            "baichuan-inc/baichuan-7b",
             "fireballoon/baichuan-vicuna-chinese-7b",
             "fireballoon/baichuan-vicuna-7b",
             "hiyouga/baichuan-7b-sft",

@@ -241,7 +241,12 @@ def load_model(llm: openllm.LLM[M, t.Any], *decls: t.Any, **attrs: t.Any) -> Mod
         model = llm.load_model(llm.tag, *decls, **hub_attrs, **attrs)
     else:
         model = infer_autoclass_from_llm_config(llm, config).from_pretrained(
-            llm._bentomodel.path, *decls, config=config, **hub_attrs, **attrs
+            llm._bentomodel.path,
+            *decls,
+            config=config,
+            trust_remote_code=llm.__llm_trust_remote_code__,
+            **hub_attrs,
+            **attrs,
         )
     if llm.bettertransformer and llm.__llm_implementation__ == "pt" and not isinstance(model, transformers.Pipeline):
         # BetterTransformer is currently only supported on PyTorch.
