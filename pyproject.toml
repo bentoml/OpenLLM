@@ -82,6 +82,7 @@ all = [
     "openllm[opt]",
     "openllm[vllm]",
 ]
+baichuan = ["cpm-kernels", "sentencepiece"]
 chatglm = ["cpm-kernels", "sentencepiece"]
 falcon = ["einops", "xformers"]
 fine-tune = ["peft", "bitsandbytes", "datasets", "accelerate", "deepspeed", "trl"]
