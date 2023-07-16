@@ -156,6 +156,7 @@ def import_model(
     safe_serialisation = llm._serialisation_format == "safetensors"
     metadata: DictStrAny = {"safe_serialisation": safe_serialisation}
     quantize_method = llm._quantize_method
+    signatures: DictStrAny = {}
     if quantize_method == "gptq":
         if not is_autogptq_available():
             raise OpenLLMException(
@@ -174,6 +175,7 @@ def import_model(
         )
         metadata["_pretrained_class"] = model.__class__.__name__
         metadata["_framework"] = model.model.framework
+        signatures["generate"] = {"batchable": False}
     else:
         model = t.cast(
             "transformers.PreTrainedModel",
@@ -198,8 +200,8 @@ def import_model(
             api_version="v1",
             context=generate_context(framework_name="openllm"),
             labels=generate_labels(llm),
+            signatures=signatures if signatures else make_default_signatures(model),
             options=ModelOptions(),
-            signatures=make_default_signatures(model),
             external_modules=[
                 importlib.import_module(model.__module__),
                 importlib.import_module(tokenizer.__module__),

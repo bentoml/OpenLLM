@@ -1041,6 +1041,10 @@ def start_model(
         start_env = os.environ.copy()
         start_env = parse_config_options(config, server_timeout, workers_per_resource, device, start_env)
 
+        serialisation = "default"
+        if quantize is not None and quantize == "gptq":
+            serialisation = "safetensors"
+
         if fast and not get_quiet_mode():
             _echo(
                 f"Fast mode is enabled. Make sure to download the model before 'start': 'openllm download {model_name}{'--model-id ' + model_id if model_id else ''}'",
@@ -1068,6 +1072,7 @@ def start_model(
             bettertransformer=bettertransformer,
             adapter_map=adapter_map,
             runtime=runtime,
+            serialisation=serialisation,
         )
 
         start_env.update(
@@ -1155,7 +1160,7 @@ def start_model(
     "serialisation_format",
     type=click.Choice(["safetensors", "default"]),
     default="default",
-    hidden=True,
+    help="Serialisation format to save the model in. Default to how `safe_serialization=False`",
 )
 def download_models_command(
     model: str,
@@ -1428,6 +1433,7 @@ def _build(
     overwrite: bool = False,
     push: bool = False,
     containerize: bool = False,
+    serialisation_format: t.Literal["safetensors", "default"] = "default",
     additional_args: list[str] | None = None,
     bento_store: BentoStore = Provide[BentoMLContainer.bento_store],
 ) -> bentoml.Bento:
@@ -1472,6 +1478,7 @@ def _build(
         push: Whether to push the result bento to BentoCloud. Make sure to login with 'bentoml cloud login' first.
         containerize: Whether to containerize the Bento after building. '--containerize' is the shortcut of 'openllm build && bentoml containerize'.
                       Note that 'containerize' and 'push' are mutually exclusive
+        serialisation_format: Serialisation for saving models. Default to `safe_serialization=False`
         additional_args: Additional arguments to pass to ``openllm build``.
         bento_store: Optional BentoStore for saving this BentoLLM. Default to the default BentoML local store.
 
@@ -1479,7 +1486,18 @@ def _build(
         ``bentoml.Bento | str``: BentoLLM instance. This can be used to serve the LLM or can be pushed to BentoCloud.
                                  If 'format="container"', then it returns the default 'container_name:container_tag'
     """
-    args: ListStr = [sys.executable, "-m", "openllm", "build", model_name, "--machine", "--runtime", runtime]
+    args: ListStr = [
+        sys.executable,
+        "-m",
+        "openllm",
+        "build",
+        model_name,
+        "--machine",
+        "--runtime",
+        runtime,
+        "--serialisation",
+        serialisation_format,
+    ]
 
     if quantize and bettertransformer:
         raise OpenLLMException("'quantize' and 'bettertransformer' are currently mutually exclusive.")
@@ -1653,6 +1671,13 @@ start, start_grpc, build, import_model, list_models = (
     type=click.File(),
     help="Optional custom dockerfile template to be used with this BentoLLM.",
 )
+@click.option(
+    "--serialisation",
+    "serialisation_format",
+    type=click.Choice(["safetensors", "default"]),
+    default="default",
+    help="Serialisation format to save the model in. Default to how `safe_serialization=False`",
+)
 @cog.optgroup.group(cls=cog.MutuallyExclusiveOptionGroup, name="Utilities options")
 @cog.optgroup.option(
     "--containerize",
@@ -1687,6 +1712,7 @@ def build_command(
     dockerfile_template: t.TextIO | None,
     containerize: bool,
     push: bool,
+    serialisation_format: t.Literal["safetensors", "default"],
     **attrs: t.Any,
 ):
     """Package a given models into a Bento.
@@ -1748,6 +1774,7 @@ def build_command(
             ensure_available=True,
             model_version=model_version,
             runtime=runtime,
+            serialisation=serialisation_format,
             **attrs,
         )
         os.environ["OPENLLM_MODEL_ID"] = str(llm.tag)

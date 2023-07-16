@@ -486,7 +486,6 @@ class LLM(LLMInterface[M, T], ReprMixin):
         if "__openllm_internal__" in cd:
             if "config_class" not in cd:
                 cls.config_class = config_class
-            logger.debug("Using config class %s for %s.", cls.config_class, cls.__name__)
         elif "config_class" not in cd:
             raise RuntimeError("Missing required key 'config_class'. Make sure to define it within the LLM subclass.")
 
@@ -686,13 +685,6 @@ class LLM(LLMInterface[M, T], ReprMixin):
             your quantization_config or use the 'quantize' argument."""
             )
         if quantization_config is None and quantize is not None:
-            logger.debug(
-                "'quantize' is not None. %s will use a default 'quantization_config' for %s. "
-                "If you want to customise the quantization config, make sure to pass your "
-                "own 'quantization_config'",
-                cls.__name__,
-                quantize,
-            )
             quantization_config, attrs = infer_quantisation_config(cls, quantize, **attrs)
 
         if quantize == "gptq":

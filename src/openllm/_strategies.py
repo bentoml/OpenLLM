@@ -270,7 +270,7 @@ def _validate(cls: type[DynResource], val: list[t.Any]):
     try:
         from cuda import cuda
 
-        err = cuda.cuInit(0)
+        err, *_ = cuda.cuInit(0)
         if err != cuda.CUresult.CUDA_SUCCESS:
             raise RuntimeError("Failed to initialise CUDA runtime binding.")
     except (ImportError, RuntimeError):

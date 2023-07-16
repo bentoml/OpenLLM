@@ -368,6 +368,28 @@ OPENLLM_FLAN_T5_FRAMEWORK=tf openllm start flan-t5
 > [Jax's installation](https://github.com/google/jax#pip-installation-gpu-cuda-installed-via-pip-easier)
 > to make sure that you have Jax support for the corresponding CUDA version.
 
+### Quantisation
+
+OpenLLM supports quantisation with
+[bitsandbytes](https://github.com/TimDettmers/bitsandbytes) and
+[GPTQ](https://arxiv.org/abs/2210.17323)
+
+```bash
+openllm start mpt --quantize int8
+```
+
+To run inference with `gptq`, simply pass `--quantize gptq`:
+
+```bash
+openllm start falcon --model-id TheBloke/falcon-40b-instruct-GPTQ --quantize gptq --device 0
+```
+
+> **Note**: to run GPTQ, make sure to install with
+> `pip install "openllm[gptq]"`. The weights of all supported models should be
+> quantized before serving. See
+> [GPTQ-for-LLaMa](https://github.com/qwopqwop200/GPTQ-for-LLaMa) for more
+> information on GPTQ quantisation.
+
 ### Fine-tuning support (Experimental)
 
 One can serve OpenLLM models with any PEFT-compatible layers with

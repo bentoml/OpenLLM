@@ -66,36 +66,36 @@ name = "openllm"
 readme = "README.md"
 requires-python = ">=3.8"
 [project.optional-dependencies]
+chatglm = ["cpm-kernels", "sentencepiece"]
+falcon = ["einops", "xformers"]
+mpt = ["triton", "einops"]
+starcoder = ["bitsandbytes"]
+baichuan = ["cpm-kernels", "sentencepiece"]
+vllm = ["vllm"]
+openai = ["openai", "tiktoken"]
+fine-tune = ["peft", "bitsandbytes", "datasets", "accelerate", "deepspeed", "trl"]
+flan-t5 = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
+gptq = ["auto-gptq[triton]"]
+playground = ["jupyter", "notebook", "ipython", "jupytext", "nbformat"]
 agents = ["transformers[agents]>=4.30", "diffusers", "soundfile"]
+ggml = ["ctransformers"]
+opt = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
 all = [
     "openllm[chatglm]",
     "openllm[falcon]",
     "openllm[mpt]",
     "openllm[starcoder]",
     "openllm[baichuan]",
-    "openllm[ggml]",
-    "openllm[opt]",
-    "openllm[gptq]",
-    "openllm[flan-t5]",
-    "openllm[agents]",
-    "openllm[playground]",
+    "openllm[vllm]",
     "openllm[openai]",
     "openllm[fine-tune]",
-    "openllm[vllm]",
+    "openllm[flan-t5]",
+    "openllm[gptq]",
+    "openllm[playground]",
+    "openllm[agents]",
+    "openllm[ggml]",
+    "openllm[opt]",
 ]
-baichuan = ["cpm-kernels", "sentencepiece"]
-chatglm = ["cpm-kernels", "sentencepiece"]
-falcon = ["einops", "xformers"]
-fine-tune = ["peft", "bitsandbytes", "datasets", "accelerate", "deepspeed", "trl"]
-flan-t5 = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
-ggml = ["ctransformers"]
-gptq = ["auto-gptq", "triton"]
-mpt = ["triton", "einops"]
-openai = ["openai", "tiktoken"]
-opt = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
-playground = ["jupyter", "notebook", "ipython", "jupytext", "nbformat"]
-starcoder = ["bitsandbytes"]
-vllm = ["vllm"]
 
 [project.urls]
 Documentation = "https://github.com/bentoml/openllm#readme"

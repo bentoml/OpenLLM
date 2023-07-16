@@ -113,7 +113,6 @@ class Dependencies:
     requires_gpu: bool = False
     lower_constraint: t.Optional[str] = None
     platform: t.Optional[t.Tuple[t.Literal["Linux", "Windows", "Darwin"], t.Literal["eq", "ne"]]] = None
-    build_isolation: bool = True
 
     def with_options(self, **kwargs: t.Any) -> Dependencies:
         return dataclasses.replace(self, **kwargs)
@@ -143,8 +142,6 @@ class Dependencies:
         else:
             dep = f"{self.name}{self.pypi_extensions}"
 
-        if not self.build_isolation:
-            dep += " --no-build-isolation"
         deps.append(dep)
 
         if self.platform:
@@ -183,8 +180,7 @@ _NIGHTLY_MAPPING: dict[str, Dependencies] = {
     "accelerate": Dependencies.from_tuple("accelerate", "huggingface/accelerate", "main", None),
     "bitsandbytes": Dependencies.from_tuple("bitsandbytes", "TimDettmers/bitsandbytes", "main", None),
     "trl": Dependencies.from_tuple("trl", "lvwerra/trl", "main", None),
-    "triton": Dependencies.from_tuple("triton", "openai/triton", "main", None, "python", True),
-    "vllm": Dependencies.from_tuple("vllm", "vllm-project/vllm", "main", None, None, True, None, None, False),
+    "vllm": Dependencies.from_tuple("vllm", "vllm-project/vllm", "main", None, None, True, None),
 }
 
 _ALL_RUNTIME_DEPS = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
@@ -200,7 +196,7 @@ CHATGLM_DEPS = ["cpm-kernels", "sentencepiece"]
 BAICHUAN_DEPS = ["cpm-kernels", "sentencepiece"]
 PLAYGROUND_DEPS = ["jupyter", "notebook", "ipython", "jupytext", "nbformat"]
 GGML_DEPS = ["ctransformers"]
-GPTQ_DEPS = ["auto-gptq", "triton"]
+GPTQ_DEPS = ["auto-gptq[triton]"]
 VLLM_DEPS = ["vllm"]
 
 _base_requirements = {

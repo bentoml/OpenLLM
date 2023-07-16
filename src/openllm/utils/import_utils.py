@@ -105,7 +105,7 @@ _triton_available = _is_package_available("triton")
 _jupyter_available = _is_package_available("jupyter")
 _jupytext_available = _is_package_available("jupytext")
 _notebook_available = _is_package_available("notebook")
-_autogptq_available = _is_package_available("auto-gptq")
+_autogptq_available = _is_package_available("auto_gptq")
 
 
 def is_transformers_supports_kbit() -> bool:
