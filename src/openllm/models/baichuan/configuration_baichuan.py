@@ -36,6 +36,8 @@ class BaichuanConfig(openllm.LLMConfig):
         "default_id": "baichuan-inc/baichuan-7b",
         "model_ids": [
             "baichuan-inc/baichuan-7b",
+            "baichuan-inc/baichuan-13b-base",
+            "baichuan-inc/baichuan-13b-chat",
             "fireballoon/baichuan-vicuna-chinese-7b",
             "fireballoon/baichuan-vicuna-7b",
             "hiyouga/baichuan-7b-sft",

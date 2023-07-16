@@ -336,6 +336,8 @@ pip install openllm
 <td>
 
 <ul><li><a href=https://huggingface.co/baichuan-inc/baichuan-7b><code>baichuan-inc/baichuan-7b</code></a></li>
+<li><a href=https://huggingface.co/baichuan-inc/baichuan-13b-base><code>baichuan-inc/baichuan-13b-base</code></a></li>
+<li><a href=https://huggingface.co/baichuan-inc/baichuan-13b-chat><code>baichuan-inc/baichuan-13b-chat</code></a></li>
 <li><a href=https://huggingface.co/fireballoon/baichuan-vicuna-chinese-7b><code>fireballoon/baichuan-vicuna-chinese-7b</code></a></li>
 <li><a href=https://huggingface.co/fireballoon/baichuan-vicuna-7b><code>fireballoon/baichuan-vicuna-7b</code></a></li>
 <li><a href=https://huggingface.co/hiyouga/baichuan-7b-sft><code>hiyouga/baichuan-7b-sft</code></a></li></ul>
