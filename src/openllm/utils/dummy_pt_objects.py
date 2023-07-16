@@ -68,4 +68,11 @@ class AutoLLM(metaclass=DummyMetaclass):
         require_backends(self, ["torch"])
 
 
+class Baichuan(metaclass=DummyMetaclass):
+    _backends = ["torch"]
+
+    def __init__(self, *args: t.Any, **attrs: t.Any):
+        require_backends(self, ["torch"])
+
+
 MODEL_MAPPING = None

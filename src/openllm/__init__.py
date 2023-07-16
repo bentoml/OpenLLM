@@ -78,6 +78,7 @@ _import_structure = {
         "MODEL_TF_MAPPING_NAMES",
     ],
     "models.chatglm": ["ChatGLMConfig"],
+    "models.baichuan": ["BaichuanConfig"],
     "models.dolly_v2": ["DollyV2Config"],
     "models.falcon": ["FalconConfig"],
     "models.flan_t5": ["FlanT5Config"],
@@ -139,6 +140,7 @@ else:
     _import_structure["models.dolly_v2"].extend(["DollyV2"])
     _import_structure["models.starcoder"].extend(["StarCoder"])
     _import_structure["models.stablelm"].extend(["StableLM"])
+    _import_structure["models.baichuan"].extend(["Baichuan"])
     _import_structure["models.opt"].extend(["OPT"])
     _import_structure["models.gpt_neox"].extend(["GPTNeoX"])
     _import_structure["models.auto"].extend(["AutoLLM", "MODEL_MAPPING"])
@@ -199,6 +201,7 @@ if t.TYPE_CHECKING:
     from .models.auto import MODEL_MAPPING_NAMES as MODEL_MAPPING_NAMES
     from .models.auto import MODEL_TF_MAPPING_NAMES as MODEL_TF_MAPPING_NAMES
     from .models.auto import AutoConfig as AutoConfig
+    from .models.baichuan import BaichuanConfig as BaichuanConfig
     from .models.chatglm import ChatGLMConfig as ChatGLMConfig
     from .models.dolly_v2 import DollyV2Config as DollyV2Config
     from .models.falcon import FalconConfig as FalconConfig
@@ -247,6 +250,7 @@ if t.TYPE_CHECKING:
     else:
         from .models.auto import MODEL_MAPPING as MODEL_MAPPING
         from .models.auto import AutoLLM as AutoLLM
+        from .models.baichuan import Baichuan as Baichuan
         from .models.dolly_v2 import DollyV2 as DollyV2
         from .models.flan_t5 import FlanT5 as FlanT5
         from .models.gpt_neox import GPTNeoX as GPTNeoX

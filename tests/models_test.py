@@ -30,3 +30,9 @@ def test_opt_implementation(prompt: str, llm: openllm.LLM[t.Any, t.Any]):
     assert llm(prompt)
 
     assert llm(prompt, temperature=0.9, top_k=8)
+
+
+def test_baichuan_implementation(prompt: str, llm: openllm.LLM[t.Any, t.Any]):
+    assert llm(prompt)
+
+    assert llm(prompt, temperature=0.95)

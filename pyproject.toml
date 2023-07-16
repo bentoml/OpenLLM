@@ -34,6 +34,7 @@ classifiers = [
 dependencies = [
     'bentoml[grpc,io]>=1.0.22',
     'transformers[torch,tokenizers,accelerate]>=4.29.0',
+    'safetensors',
     'optimum',
     'attrs>=23.1.0',
     'cattrs>=23.1.0',
@@ -72,17 +73,17 @@ all = [
     "openllm[mpt]",
     "openllm[starcoder]",
     "openllm[playground]",
-    "openllm[gptq]",
+    "openllm[agents]",
     "openllm[openai]",
-    "openllm[opt]",
     "openllm[fine-tune]",
     "openllm[ggml]",
     "openllm[flan-t5]",
-    "openllm[agents]",
+    "openllm[gptq]",
+    "openllm[opt]",
     "openllm[vllm]",
 ]
 chatglm = ["cpm-kernels", "sentencepiece"]
-falcon = ["einops", "xformers", "safetensors"]
+falcon = ["einops", "xformers"]
 fine-tune = ["peft", "bitsandbytes", "datasets", "accelerate", "deepspeed", "trl"]
 flan-t5 = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
 ggml = ["ctransformers"]

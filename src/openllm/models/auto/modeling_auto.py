@@ -36,6 +36,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("opt", "OPT"),
         ("stablelm", "StableLM"),
         ("starcoder", "StarCoder"),
+        ("baichuan", "Baichuan"),
     ]
 )
 

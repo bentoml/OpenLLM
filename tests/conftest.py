@@ -25,7 +25,11 @@ if t.TYPE_CHECKING:
     from openllm._types import LiteralRuntime
 
 
-_FRAMEWORK_MAPPING = {"flan_t5": "google/flan-t5-small", "opt": "facebook/opt-125m"}
+_FRAMEWORK_MAPPING = {
+    "flan_t5": "google/flan-t5-small",
+    "opt": "facebook/opt-125m",
+    "baichuan": "baichuan-inc/Baichuan-7B",
+}
 _PROMPT_MAPPING = {
     "qa": "Answer the following yes/no question by reasoning step-by-step. Can you write a whole Haiku in a single tweet?",
 }

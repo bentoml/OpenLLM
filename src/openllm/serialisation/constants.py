@@ -20,13 +20,3 @@ FRAMEWORK_TO_AUTOCLASS_MAPPING = {
     "tf": ("TFAutoModelForCausalLM", "TFAutoModelForSeq2SeqLM"),
     "flax": ("FlaxAutoModelForCausalLM", "FlaxAutoModelForSeq2SeqLM"),
 }
-
-# NOTE: This is a custom mapping for the autoclass to be used when loading as path
-# since will try to infer the auto class to load, we will need this mapping
-# in addition to FRAMEWORK_TO_AUTOCLASS_MAPPING for it to work properly.
-# The following model all have trust_remote_code sets to True
-MODEL_TO_AUTOCLASS_MAPPING = {
-    "falcon": {"pt": "AutoModelForCausalLM"},
-    "chatglm": {"pt": "AutoModel"},
-    "mpt": {"pt": "AutoModelForCausalLM"},
-}
