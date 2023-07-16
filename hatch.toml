@@ -42,6 +42,8 @@ dependencies = [
     "syrupy",
 ]
 features = ['flan-t5']
+skip-install = false
+template = 'tests'
 [envs.tests.scripts]
 _run_script = "pytest --cov --cov-report={env:COVERAGE_REPORT:term-missing} --cov-config=pyproject.toml"
 distributed = "_run_script --reruns 5 --reruns-delay 3 --ignore tests/models -n 3 -r aR {args:tests}"
