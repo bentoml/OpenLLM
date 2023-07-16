@@ -32,12 +32,14 @@ from ..utils import first_not_none
 from ..utils import generate_context
 from ..utils import generate_labels
 from ..utils import is_torch_available
+from ..utils import is_autogptq_available
 from ..utils import normalize_attrs_to_model_tokenizer_pair
 
 
 if t.TYPE_CHECKING:
     import torch
 
+    import auto_gptq as autogptq
     import openllm
     import transformers
     from transformers.models.auto.auto_factory import _BaseAutoModelClass
@@ -48,6 +50,7 @@ if t.TYPE_CHECKING:
     from .._types import ModelProtocol
     from .._types import TokenizerProtocol
 else:
+    autogptq = LazyLoader("autogptq", globals(), "auto_gptq")
     transformers = LazyLoader("transformers", globals(), "transformers")
     torch = LazyLoader("torch", globals(), "torch")
 
@@ -150,18 +153,43 @@ def import_model(
             **tokenizer_attrs,
         ),
     )
-
-    model = t.cast(
-        "transformers.PreTrainedModel",
-        infer_autoclass_from_llm_config(llm, config).from_pretrained(
+    safe_serialisation = llm._serialisation_format == "safetensors"
+    metadata: DictStrAny = {"safe_serialisation": safe_serialisation}
+    quantize_method = llm._quantize_method
+    if quantize_method == "gptq":
+        if not is_autogptq_available():
+            raise OpenLLMException(
+                "GPTQ quantisation requires 'auto-gptq' (Not found in local environment). Install it with 'pip install \"openllm[gptq]\"'"
+            )
+        if llm.config["model_type"] != "causal_lm":
+            raise OpenLLMException(f"GPTQ only support Causal LM (got {llm.__class__} of {llm.config['model_type']})")
+        model = autogptq.AutoGPTQForCausalLM.from_quantized(
             llm.model_id,
             *decls,
-            config=config,
+            quantize_config=t.cast("autogptq.BaseQuantizeConfig", llm.quantization_config),
             trust_remote_code=trust_remote_code,
+            use_safetensors=safe_serialisation,
             **hub_attrs,
             **attrs,
-        ),
-    )
+        )
+        metadata["_pretrained_class"] = model.__class__.__name__
+        metadata["_framework"] = model.model.framework
+    else:
+        model = t.cast(
+            "transformers.PreTrainedModel",
+            infer_autoclass_from_llm_config(llm, config).from_pretrained(
+                llm.model_id,
+                *decls,
+                config=config,
+                trust_remote_code=trust_remote_code,
+                **hub_attrs,
+                **attrs,
+            ),
+        )
+        metadata["_pretrained_class"] = model.__class__.__name__
+        metadata["_framework"] = model.framework
+
+    metadata["_quantize"] = llm._quantize_method
 
     try:
         with bentoml.models.create(
@@ -176,13 +204,14 @@ def import_model(
                 importlib.import_module(model.__module__),
                 importlib.import_module(tokenizer.__module__),
             ],
-            metadata={
-                "_pretrained_class": model.__class__.__name__,
-                "_framework": model.framework,
-            },
+            metadata=metadata,
         ) as bentomodel:
-            model.save_pretrained(bentomodel.path)
             tokenizer.save_pretrained(bentomodel.path)
+
+            if quantize_method == "gptq":
+                model.save_quantized(bentomodel.path, use_safetensors=safe_serialisation)
+            else:
+                model.save_pretrained(bentomodel.path, safe_serialization=safe_serialisation)
             return bentomodel
     finally:
         # NOTE: We need to free up the cache after importing the model
@@ -236,6 +265,32 @@ def load_model(llm: openllm.LLM[M, t.Any], *decls: t.Any, **attrs: t.Any) -> Mod
     (model_decls, model_attrs), _ = llm.llm_parameters
     decls = (*model_decls, *decls)
     attrs = {**model_attrs, **attrs}
+
+    metadata = llm._bentomodel.info.metadata
+    safe_serialization = first_not_none(
+        metadata.get("safe_serialisation", None),
+        attrs.pop("safe_serialization", None),
+        default=llm._serialisation_format == "safetensors",
+    )
+    if "_quantize" in metadata and metadata["_quantize"] == "gptq":
+        if not is_autogptq_available():
+            raise OpenLLMException(
+                "GPTQ quantisation requires 'auto-gptq' (Not found in local environment). Install it with 'pip install \"openllm[gptq]\"'"
+            )
+        if llm.config["model_type"] != "causal_lm":
+            raise OpenLLMException(f"GPTQ only support Causal LM (got {llm.__class__} of {llm.config['model_type']})")
+        return t.cast(
+            "ModelProtocol[M]",
+            autogptq.AutoGPTQForCausalLM.from_quantized(
+                llm._bentomodel.path,
+                *decls,
+                quantize_config=t.cast("autogptq.BaseQuantizeConfig", llm.quantization_config),
+                trust_remote_code=llm.__llm_trust_remote_code__,
+                use_safetensors=safe_serialization,
+                **hub_attrs,
+                **attrs,
+            ),
+        )
 
     if llm.__llm_custom_load__:
         model = llm.load_model(llm.tag, *decls, **hub_attrs, **attrs)
@@ -304,7 +359,16 @@ def save_pretrained(
 
     model_save_attrs, tokenizer_save_attrs = normalize_attrs_to_model_tokenizer_pair(**attrs)
 
-    if isinstance(llm.model, transformers.Pipeline):
+    safe_serialization = safe_serialization or llm._serialisation_format == "safetensors"
+    if llm._quantize_method == "gptq":
+        if not is_autogptq_available():
+            raise OpenLLMException(
+                "GPTQ quantisation requires 'auto-gptq' (Not found in local environment). Install it with 'pip install \"openllm[gptq]\"'"
+            )
+        if llm.config["model_type"] != "causal_lm":
+            raise OpenLLMException(f"GPTQ only support Causal LM (got {llm.__class__} of {llm.config['model_type']})")
+        llm.model.save_quantized(save_directory, use_safetensors=safe_serialization)
+    elif isinstance(llm.model, transformers.Pipeline):
         llm.model.save_pretrained(save_directory, safe_serialization=safe_serialization)
     else:
         llm.model.save_pretrained(

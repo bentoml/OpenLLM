@@ -165,3 +165,4 @@ class LLMInitAttrs(t.TypedDict):
     tag: bentoml.Tag
     adapters_mapping: AdaptersMapping
     model_version: str | None
+    serialisation_format: t.Literal["safetensors", "default"]

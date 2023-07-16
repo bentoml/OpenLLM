@@ -436,6 +436,7 @@ class LLMInterface(ABC, t.Generic[M, T]):
             adapters_mapping: AdaptersMapping,
             model_version: str | None,
             quantize_method: t.Literal["int8", "int4", "gptq"] | None,
+            serialisation_format: t.Literal["safetensors", "default"],
             /,
             **attrs: t.Unpack[LLMInitAttrs],
         ) -> None:
@@ -463,6 +464,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
     _adapters_mapping: AdaptersMapping
     _model_version: str
     _quantize_method: t.Literal["int8", "int4", "gptq"] | None
+    _serialisation_format: t.Literal["safetensors", "default"]
 
     @staticmethod
     def _infer_implementation_from_name(name: str) -> tuple[LiteralRuntime, str]:
@@ -571,6 +573,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
         adapter_name: str | None = ...,
         adapter_map: dict[str, str | None] | None = ...,
         quantization_config: transformers.BitsAndBytesConfig | None = ...,
+        serialisation: t.Literal["safetensors", "default"] = ...,
         **attrs: t.Any,
     ) -> LLM[M, T]:
         ...
@@ -590,6 +593,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
         adapter_name: str | None = ...,
         adapter_map: dict[str, str | None] | None = ...,
         quantization_config: autogptq.BaseQuantizeConfig | None = ...,
+        serialisation: t.Literal["safetensors", "default"] = ...,
         **attrs: t.Any,
     ) -> LLM[M, T]:
         ...
@@ -608,6 +612,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
         adapter_name: str | None = None,
         adapter_map: dict[str, str | None] | None = None,
         quantization_config: transformers.BitsAndBytesConfig | autogptq.BaseQuantizeConfig | None = None,
+        serialisation: t.Literal["safetensors", "default"] = "default",
         **attrs: t.Any,
     ) -> LLM[M, T]:
         """Instantiate a pretrained LLM.
@@ -657,6 +662,8 @@ class LLM(LLMInterface[M, T], ReprMixin):
                       include int8, int4 and gptq.
             runtime: Optional runtime to run this LLM. Default to 'transformers'. 'ggml' supports is working in progress.
             quantization_config: The quantization config (`transformers.BitsAndBytesConfig`) to use. Note that this is mutually exclusive with `quantize`
+            serialisation: Type of model format to save to local store. If set to 'safetensors', then OpenLLM will save model using safetensors.
+                           Default behaviour is similar to ``safe_serialization=False``.
             bettertransformer: Whether to use BetterTransformer with this model. Defaults to False.
             adapter_id: The [LoRA](https://arxiv.org/pdf/2106.09685.pdf) pretrained id or local path to use for this LLM. Defaults to None.
             adapter_name: The adapter name to use for this LLM. Defaults to None.
@@ -687,6 +694,10 @@ class LLM(LLMInterface[M, T], ReprMixin):
                 quantize,
             )
             quantization_config, attrs = infer_quantisation_config(cls, quantize, **attrs)
+
+        if quantize == "gptq":
+            # We will use safetensors for gptq
+            serialisation = "safetensors"
 
         # NOTE: Fine-tuning setup
         if adapter_map and adapter_id:
@@ -724,6 +735,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
             _runtime=runtime,
             _model_version=_tag.version,
             _tag=_tag,
+            _serialisation_format=serialisation,
             **attrs,
         )
 
@@ -752,6 +764,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
         _quantize_method: t.Literal["int8", "int4", "gptq"] | None,
         _runtime: t.Literal["ggml", "transformers"],
         _model_version: str,
+        _serialisation_format: t.Literal["safetensors", "default"],
         **attrs: t.Any,
     ):
         """Initialize the LLM with given pretrained model.
@@ -871,6 +884,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
             _adapters_mapping,
             _model_version,
             _quantize_method,
+            _serialisation_format,
         )
         # handle trust_remote_code
         self.__llm_trust_remote_code__ = self._model_attrs.pop("trust_remote_code", self.config["trust_remote_code"])
