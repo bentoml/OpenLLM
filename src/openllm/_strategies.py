@@ -211,7 +211,8 @@ def _raw_device_uuid_nvml() -> list[str] | None:
     """Return list of device UUID as reported by NVML or None if NVML discovery/initialization failed."""
     from ctypes import CDLL
     from ctypes import byref
-    from ctypes import c_void_p, c_int
+    from ctypes import c_int
+    from ctypes import c_void_p
     from ctypes import create_string_buffer
 
     try:
