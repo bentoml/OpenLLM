@@ -57,6 +57,7 @@ logger = logging.getLogger(__name__)
 
 OPTIONAL_DEPENDENCIES = {
     "chatglm",
+    "baichuan",
     "falcon",
     "mpt",
     "opt",

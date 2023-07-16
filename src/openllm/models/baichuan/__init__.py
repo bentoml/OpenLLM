@@ -17,6 +17,7 @@ import typing as t
 
 from ...exceptions import MissingDependencyError
 from ...utils import LazyModule
+from ...utils import is_cpm_kernels_available
 from ...utils import is_torch_available
 
 
@@ -25,7 +26,7 @@ _import_structure = {
 }
 
 try:
-    if not is_torch_available():
+    if not is_torch_available() or not is_cpm_kernels_available():
         raise MissingDependencyError
 except MissingDependencyError:
     pass
@@ -38,7 +39,7 @@ if t.TYPE_CHECKING:
     from .configuration_baichuan import BaichuanConfig as BaichuanConfig
 
     try:
-        if not is_torch_available():
+        if not is_torch_available() or not is_cpm_kernels_available():
             raise MissingDependencyError
     except MissingDependencyError:
         pass

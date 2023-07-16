@@ -101,6 +101,7 @@ except MissingDependencyError:
     ]
 else:
     _import_structure["models.chatglm"].extend(["ChatGLM"])
+    _import_structure["models.baichuan"].extend(["Baichuan"])
 
 
 try:
@@ -140,7 +141,6 @@ else:
     _import_structure["models.dolly_v2"].extend(["DollyV2"])
     _import_structure["models.starcoder"].extend(["StarCoder"])
     _import_structure["models.stablelm"].extend(["StableLM"])
-    _import_structure["models.baichuan"].extend(["Baichuan"])
     _import_structure["models.opt"].extend(["OPT"])
     _import_structure["models.gpt_neox"].extend(["GPTNeoX"])
     _import_structure["models.auto"].extend(["AutoLLM", "MODEL_MAPPING"])
@@ -222,6 +222,7 @@ if t.TYPE_CHECKING:
     except MissingDependencyError:
         from .utils.dummy_pt_and_cpm_kernels_objects import *
     else:
+        from .models.baichuan import Baichuan as Baichuan
         from .models.chatglm import ChatGLM as ChatGLM
 
     # NOTE: torch and einops
@@ -250,7 +251,6 @@ if t.TYPE_CHECKING:
     else:
         from .models.auto import MODEL_MAPPING as MODEL_MAPPING
         from .models.auto import AutoLLM as AutoLLM
-        from .models.baichuan import Baichuan as Baichuan
         from .models.dolly_v2 import DollyV2 as DollyV2
         from .models.flan_t5 import FlanT5 as FlanT5
         from .models.gpt_neox import GPTNeoX as GPTNeoX

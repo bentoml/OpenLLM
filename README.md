@@ -329,7 +329,7 @@ pip install "openllm[starcoder]"
 <td>
 
 ```bash
-pip install openllm
+pip install "openllm[baichuan]"
 ```
 
 </td>
