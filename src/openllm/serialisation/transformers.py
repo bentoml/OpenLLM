@@ -26,7 +26,6 @@ from bentoml._internal.models.model import CUSTOM_OBJECTS_FILENAME
 from bentoml._internal.models.model import ModelOptions
 
 from .constants import FRAMEWORK_TO_AUTOCLASS_MAPPING
-from .constants import MODEL_TO_AUTOCLASS_MAPPING
 from ..exceptions import OpenLLMException
 from ..utils import LazyLoader
 from ..utils import first_not_none
@@ -88,8 +87,17 @@ def process_transformers_config(
 def infer_autoclass_from_llm_config(
     llm: openllm.LLM[t.Any, t.Any], config: transformers.PretrainedConfig
 ) -> _BaseAutoModelClass:
-    if llm.config["model_name"] in MODEL_TO_AUTOCLASS_MAPPING:
-        return getattr(transformers, MODEL_TO_AUTOCLASS_MAPPING[llm.config["model_name"]][llm.__llm_implementation__])
+    if llm.config["trust_remote_code"]:
+        autoclass = "AutoModelForSeq2SeqLM" if llm.config["model_type"] == "seq2seq_lm" else "AutoModelForCausalLM"
+        if not hasattr(config, "auto_map"):
+            raise ValueError(
+                f"Invalid configuraiton for {llm.model_id}. ``trust_remote_code=True`` requires `transformers.PretrainedConfig` to contain a `auto_map` mapping"
+            )
+        # in case this model doesn't use the correct auto class for model type, for example like chatglm
+        # where it uses AutoModel instead of AutoModelForCausalLM. Then we fallback to AutoModel
+        if autoclass not in config.auto_map:
+            autoclass = "AutoModel"
+        return getattr(transformers, autoclass)
     else:
         if type(config) in transformers.MODEL_FOR_CAUSAL_LM_MAPPING:
             idx = 0
