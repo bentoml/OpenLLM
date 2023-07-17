@@ -31,7 +31,7 @@ jobs:
         with:
           ref: ${{ github.ref }}
           check-name: evergreen
-          wait-interval: 10
+          wait-interval: 90
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Enable auto-merge for Dependabot PRs
         run: gh pr merge --auto --squash ${{ github.event.pull_request.html_url }}
