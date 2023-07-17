@@ -97,7 +97,7 @@ jobs:
           name: python-artifacts
           path: dist
       - name: Push Python artifacts to PyPI
-        uses: pypa/gh-action-pypi-publish@v1.8.7
+        uses: pypa/gh-action-pypi-publish@v1.8.8
         with:
           skip-existing: true
   prepare-for-dev-cycle:
