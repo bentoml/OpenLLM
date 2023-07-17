@@ -32,7 +32,7 @@ defaults:
 jobs:
   quality:
     runs-on: ubuntu-latest
-    name: quality-check
+    name: code-quality
     steps:
       - uses: actions/checkout@v3
         with:
@@ -46,14 +46,14 @@ jobs:
       - if: failure()
         run: echo "Not failing quality workflow."
   tests:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     if: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: ['3.8', '3.11']
-    name: tests-${{ matrix.os }}-${{ matrix.python-version }}
+    name: tests (${{ matrix.python-version }}.${{ matrix.os }})
     steps:
       - uses: actions/checkout@v3
         with:
@@ -110,12 +110,34 @@ jobs:
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           path: coverage-report.md
+  cli-benchmark:
+    name: Check for CLI responsiveness
+    runs-on: ubuntu-latest
+    env:
+      HYPERFINE_VERSION: '1.12.0'
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Install hyperfine
+        run: |
+          wget https://github.com/sharkdp/hyperfine/releases/download/v${HYPERFINE_VERSION}/hyperfine_${HYPERFINE_VERSION}_amd64.deb
+          sudo dpkg -i hyperfine_${HYPERFINE_VERSION}_amd64.deb
+      - name: Setup CI
+        uses: ./.github/actions/setup-repo
+        with:
+          python-version: ${{ env.STABLE_PYTHON_VERSION }}
+      - name: Install self
+        run: pip install .
+      - name: Speed
+        run: hyperfine -m 100 --warmup 10 openllm
   evergreen: # https://github.com/marketplace/actions/alls-green#why
-    if: github.event_name == 'pull_request'
+    if: always()
     needs:
       - coverage
       - tests
       - quality
+      - cli-benchmark
     runs-on: ubuntu-latest
     steps:
       - name: Decide whether the needed jobs succeeded or failed
