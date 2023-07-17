@@ -27,6 +27,7 @@ jobs:
   python-artifacts:
     name: Build wheel and source distribution
     runs-on: ubuntu-latest
+    if: ${{ github.actor != 'dependabot[bot]' }}
     steps:
       - uses: actions/checkout@v3
         with:
