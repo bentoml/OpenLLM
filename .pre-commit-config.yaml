@@ -20,12 +20,12 @@ ci:
 exclude: '.*\.(css|js|svg)$'
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: 'v0.0.277'
+    rev: 'v0.0.278'
     hooks:
       - id: ruff
         args: [--exit-non-zero-on-fix, --show-fixes]
   - repo: https://github.com/psf/black
-    rev: 23.3.0
+    rev: 23.7.0
     hooks:
       - id: black-jupyter
   - repo: https://github.com/econchick/interrogate
