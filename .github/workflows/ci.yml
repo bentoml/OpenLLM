@@ -16,8 +16,22 @@ name: ci
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - 'bazel/**'
+      - 'typings/**'
+      - '*.md'
+      - 'changelog.d/**'
+      - 'assets/**'
   pull_request:
     branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - 'bazel/**'
+      - 'typings/**'
+      - '*.md'
+      - 'changelog.d/**'
+      - 'assets/**'
 env:
   LINES: 120
   COLUMNS: 120

@@ -3,6 +3,15 @@ name: binary-distribution
 on:
   workflow_call:
   workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - 'bazel/**'
+      - 'typings/**'
+      - '*.md'
+      - 'changelog.d/**'
+      - 'assets/**'
 defaults:
   run:
     shell: bash --noprofile --norc -exo pipefail {0}
