@@ -215,6 +215,8 @@ _base_requirements.update(
     {v: _locals[f"{inflection.underscore(v).upper()}_DEPS"] for v in openllm.utils.OPTIONAL_DEPENDENCIES}
 )
 
+_base_requirements = {k: v for k, v in sorted(_base_requirements.items())}
+
 fname = f"{os.path.basename(os.path.dirname(__file__))}/{os.path.basename(__file__)}"
 
 

@@ -84,6 +84,7 @@ _import_structure = {
     "models.falcon": ["FalconConfig"],
     "models.flan_t5": ["FlanT5Config"],
     "models.gpt_neox": ["GPTNeoXConfig"],
+    "models.llama": ["LlamaConfig"],
     "models.mpt": ["MPTConfig"],
     "models.opt": ["OPTConfig"],
     "models.stablelm": ["StableLMConfig"],
@@ -144,6 +145,7 @@ else:
     _import_structure["models.stablelm"].extend(["StableLM"])
     _import_structure["models.opt"].extend(["OPT"])
     _import_structure["models.gpt_neox"].extend(["GPTNeoX"])
+    _import_structure["models.llama"].extend(["Llama"])
     _import_structure["models.auto"].extend(["AutoLLM", "MODEL_MAPPING"])
 
 try:
@@ -221,6 +223,7 @@ if t.TYPE_CHECKING:
     from .models.falcon import FalconConfig as FalconConfig
     from .models.flan_t5 import FlanT5Config as FlanT5Config
     from .models.gpt_neox import GPTNeoXConfig as GPTNeoXConfig
+    from .models.llama import LlamaConfig as LlamaConfig
     from .models.mpt import MPTConfig as MPTConfig
     from .models.opt import OPTConfig as OPTConfig
     from .models.stablelm import StableLMConfig as StableLMConfig
@@ -268,6 +271,7 @@ if t.TYPE_CHECKING:
         from .models.dolly_v2 import DollyV2 as DollyV2
         from .models.flan_t5 import FlanT5 as FlanT5
         from .models.gpt_neox import GPTNeoX as GPTNeoX
+        from .models.llama import Llama as Llama
         from .models.opt import OPT as OPT
         from .models.stablelm import StableLM as StableLM
         from .models.starcoder import StarCoder as StarCoder

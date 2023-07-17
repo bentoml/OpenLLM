@@ -66,20 +66,7 @@ name = "openllm"
 readme = "README.md"
 requires-python = ">=3.8"
 [project.optional-dependencies]
-chatglm = ["cpm-kernels", "sentencepiece"]
-falcon = ["einops", "xformers"]
-mpt = ["triton", "einops"]
-starcoder = ["bitsandbytes"]
-baichuan = ["cpm-kernels", "sentencepiece"]
-fine-tune = ["peft", "bitsandbytes", "datasets", "accelerate", "deepspeed", "trl"]
-ggml = ["ctransformers"]
-gptq = ["auto-gptq[triton]"]
-openai = ["openai", "tiktoken"]
-flan-t5 = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
-playground = ["jupyter", "notebook", "ipython", "jupytext", "nbformat"]
-opt = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
 agents = ["transformers[agents]>=4.30", "diffusers", "soundfile"]
-vllm = ["vllm"]
 all = [
     "openllm[chatglm]",
     "openllm[falcon]",
@@ -96,25 +83,46 @@ all = [
     "openllm[agents]",
     "openllm[vllm]",
 ]
-
+baichuan = ["cpm-kernels", "sentencepiece"]
+chatglm = ["cpm-kernels", "sentencepiece"]
+falcon = ["einops", "xformers"]
+fine-tune = ["peft", "bitsandbytes", "datasets", "accelerate", "deepspeed", "trl"]
+flan-t5 = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
+ggml = ["ctransformers"]
+gptq = ["auto-gptq[triton]"]
+mpt = ["triton", "einops"]
+openai = ["openai", "tiktoken"]
+opt = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
+playground = ["jupyter", "notebook", "ipython", "jupytext", "nbformat"]
+starcoder = ["bitsandbytes"]
+vllm = ["vllm"]
 [project.urls]
+Blog = "https://modelserving.com"
+Discord = "https://l.bentoml.com/join-openllm-discord"
 Documentation = "https://github.com/bentoml/openllm#readme"
-Issues = "https://github.com/bentoml/openllm/issues"
-Source = "https://github.com/bentoml/openllm"
-
+GitHub = "https://github.com/bentoml/openllm"
+History = "https://github.com/bentoml/openllm/blob/main/CHANGELOG.md"
+Homepage = "https://bentoml.com"
+Slack = "https://l.bentoml.com/join-slack"
+Tracker = "https://github.com/bentoml/openllm/issues"
+Twitter = "https://twitter.com/bentomlai"
 [project.scripts]
 openllm = "openllm.cli:cli"
 
 [tool.hatch.version]
 path = "src/openllm/__about__.py"
-
 [tool.hatch.metadata]
 allow-direct-references = true
-
 [tool.hatch.build.targets.wheel]
 packages = ["src/openllm", "src/openllm_client"]
 [tool.hatch.build.targets.sdist]
-exclude = ["/.github", "/typings", "/examples", "/assets", "/changelog.d", "/tools"]
+exclude = ["/.github", "/typings", "/examples", "/assets", "/changelog.d", "/tools", ".git"]
+[tool.hatch.build.targets.wheel.hooks.mypyc]
+dependencies = ["hatch-mypyc>=0.14.1"]
+enable-by-default = false
+mypy-args = ["--no-warn-unused-ignores"]
+require-runtime-dependencies = true
+require-runtime-features = ["agents", "chatglm", "opt"]
 
 [tool.towncrier]
 directory = "changelog.d"
@@ -125,37 +133,28 @@ start_string = "<!-- towncrier release notes start -->\n"
 template = "changelog.d/template.md.jinja"
 title_format = ""
 underlines = ["", "", ""]
-
 [[tool.towncrier.section]]
 path = ""
-
 [[tool.towncrier.type]]
 directory = "breaking"
 name = "Backwards-incompatible Changes"
 showcontent = true
-
 [[tool.towncrier.type]]
 directory = "deprecation"
 name = "Deprecations"
 showcontent = true
-
 [[tool.towncrier.type]]
 directory = "change"
 name = "Changes"
 showcontent = true
-
 [[tool.towncrier.type]]
 directory = "feature"
 name = "Features"
 showcontent = true
-
 [[tool.towncrier.type]]
 directory = "fix"
 name = "Bug fix"
 showcontent = true
-
-[[tool.hatch.envs.all.matrix]]
-python = ["3.8", "3.9", "3.10", "3.11"]
 
 [tool.interrogate]
 fail-under = 100
@@ -240,7 +239,6 @@ unfixable = [
     "F401",   # Don't touch unused imports, just warn about it.
     "TCH004", # Don't touch import outside of TYPE_CHECKING block
 ]
-
 [tool.ruff.flake8-type-checking]
 exempt-modules = ["typing", "typing_extensions", "."]
 runtime-evaluated-base-classes = [
@@ -250,23 +248,18 @@ runtime-evaluated-base-classes = [
     "openllm._configuration.ModelSettings",
 ]
 runtime-evaluated-decorators = ["attrs.define", "attrs.frozen"]
-
 [tool.ruff.pydocstyle]
 convention = "google"
-
 [tool.ruff.pycodestyle]
 ignore-overlong-task-comments = true
-
 [tool.ruff.isort]
 force-single-line = true
 known-first-party = ["openllm", "bentoml", 'transformers']
 lines-after-imports = 2
 no-lines-before = ["future", "standard-library"]
 relative-imports-order = "closest-to-furthest"
-
 [tool.ruff.flake8-quotes]
 avoid-escape = false
-
 [tool.ruff.extend-per-file-ignores]
 # Tests can use magic values, assertions, and relative imports
 "__init__.py" = ["E402", "F401", "F403", "F811"]
@@ -294,7 +287,14 @@ avoid-escape = false
 
 [tool.pyright]
 analysis.useLibraryCodeForTypes = true
-exclude = ["src/openllm/playground", "src/openllm/models/"]
+exclude = [
+    "__pypackages__/*",
+    "src/openllm/playground/",
+    "src/openllm/__init__.py",
+    "src/openllm/__about__.py",
+    "src/openllm/__main__.py",
+    "src/openllm/utils/dummy_*.py",
+]
 include = ["src/openllm", "src/openllm_client", "tests/", "tools/", "examples/"]
 pythonVersion = "3.12"
 reportMissingImports = "warning"
@@ -305,19 +305,19 @@ reportUnknownMemberType = "warning"
 reportUnknownVariableType = "warning"
 typeCheckingMode = "strict"
 
+[tool.coverage.paths]
+openllm = ["src/openllm", "*/openllm/src/openllm"]
 [tool.coverage.run]
 branch = true
 omit = [
+    "__pypackages__/*",
     "src/openllm/playground/",
+    "src/openllm/__init__.py",
     "src/openllm/__about__.py",
     "src/openllm/__main__.py",
     "src/openllm/utils/dummy_*.py",
 ]
 source_pkgs = ["openllm"]
-
-[tool.coverage.paths]
-openllm = ["src/openllm", "*/openllm/src/openllm"]
-
 [tool.coverage.report]
 exclude_lines = [
     "no cov",
@@ -326,7 +326,35 @@ exclude_lines = [
     "if t.TYPE_CHECKING:",
     'if TYPE_CHECKING:',
     'if typing.TYPE_CHECKING:',
+    '@_overload',
     '@overload',
+    '@t.overload',
     '@typing.overload',
     'raise NotImplementedError',
 ]
+omit = [
+    "__pypackages__/*",
+    "src/openllm/playground/",
+    "src/openllm/__init__.py",
+    "src/openllm/__about__.py",
+    "src/openllm/__main__.py",
+    "src/openllm/utils/dummy_*.py",
+]
+precision = 2
+show_missing = true
+
+[tool.mypy]
+disallow_incomplete_defs = false
+disallow_untyped_defs = false
+follow_imports = "normal"
+ignore_missing_imports = true
+pretty = true
+show_column_numbers = true
+show_error_codes = true
+warn_no_return = false
+warn_unused_ignores = true
+[[tool.mypy.overrides]]
+disallow_incomplete_defs = true
+disallow_untyped_defs = true
+module = ["*.openllm_cli.*", "*.openllm.utils.*"]
+warn_no_return = true
