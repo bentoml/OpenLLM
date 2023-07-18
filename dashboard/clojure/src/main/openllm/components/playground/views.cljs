@@ -18,7 +18,7 @@
   []
   (let [value (rf/subscribe [::subs/playground-input-value])]
     (fn []
-      [:textarea {:class "pt-3 w-full h-64 block border"
+      [:textarea {:class "pt-3 w-full h-[calc(100%_-_135px)] block border"
                   :value @value
                   :on-change #(rf/dispatch [::events/set-prompt-input (.. % -target -value)])}])))
 
@@ -87,9 +87,9 @@
    called by the `tab-content` function residing in the `views` namespace
    directly."
   []
-  [:div {:class "mt-6 px-4"}
+  [:div {:class "mt-6 px-4 h-full"}
    [result-modal]
-   [:div {:class "mt-4"}
+   [:div {:class "mt-4 h-full"}
     [input-field]
     [input-field-controls]]
    [:div {:class "mt-6"}
