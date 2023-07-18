@@ -3,9 +3,23 @@
               [openllm.api.http :as api]
               [openllm.api.persistence :as persistence]
               [openllm.api.log4cljs.core :refer [log]]
-              [re-frame.core :refer [reg-event-db reg-event-fx]]
+              [re-frame.core :refer [reg-cofx reg-event-db reg-event-fx inject-cofx]]
               [clojure.string :as str]))
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;              Coeffects             ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(reg-cofx
+ ::chat-history-element
+ (fn [cofx _]
+   (let [element (js/document.getElementById "chat-history-container")]
+     (assoc cofx :chat-history-component element))))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;               Events               ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (reg-event-db
  ::set-chat-input-value
  [check-spec-interceptor]
@@ -57,7 +71,8 @@
  ::toggle-modal
  [check-spec-interceptor]
  (fn [db [_ _]]
-   (assoc-in db [:modal-open? :chat] (not (get-in db [:modal-open? :chat])))))
+   (let [new-value (not (get-in db [:modal-open? :chat]))]
+     (assoc-in db [:modal-open? :chat] new-value))))
 
 (reg-event-db
  ::set-prompt-layout
@@ -65,17 +80,14 @@
  (fn [db [_ layout]]
    (assoc db :prompt-layout layout)))
 
-(defn- auto-scroll!
-  "Scrolls the chat history to the bottom. Has side effects obviously."
-  []
-  (let [chat-history (js/document.getElementById "chat-history-container")]
-    (set! (.-scrollTop chat-history) (.-scrollHeight chat-history))))
-
 (reg-event-fx
  ::auto-scroll
- []
- (fn [_ _]
-   (auto-scroll!) {}))
+ [(inject-cofx ::chat-history-element)]
+ (fn [cofx _]
+   (let [chat-history-element (get cofx :chat-history-component)]
+     (set! (.-scrollTop chat-history-element)
+           (.-scrollHeight chat-history-element)))
+   {}))
 
 (reg-event-db
  ::clear-chat-history
