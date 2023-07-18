@@ -32,9 +32,10 @@
          [right-icon/keyboard-double-arrow-right]
          [left-icon/keyboard-double-arrow-left])])))
 
-(defn- clear-chat-history-button
-  "The clear chat history button. Only visible when the chat history is not empty
-   and we are in the chat history screen."
+(defn- context-icon-buttons
+  "Displays the icon buttons on the very right of the navigation bar. Some
+   of them are only displayed conditionally (e.g. if a certain screen is
+   active)."
   []
   (let [active-screen (rf/subscribe [:screen-id])
         chat-history-empty? (rf/subscribe [::subs/chat-history-empty?])]
@@ -73,6 +74,6 @@
                :start-icon (r/as-element [chat-icon/chat])} "Conversation"]]
      [:div {:class "w-full flex justify-end items-center"}
       [:div {:class "mr-8"}
-       [clear-chat-history-button]]
+       [context-icon-buttons]]
       [:div {:class "-mr-8"}
        [collapse-side-bar-button]]]]]])
