@@ -5,7 +5,5 @@
  {:app {:target :browser
         :output-dir "www/js"
         :asset-path "/js"
-        :modules
-        {:main
-         {:init-fn openllm.app/init}}
+        :modules {:main {:init-fn openllm.app/init}}
         :build-hooks [(openllm.build/generate-models-json)]}}}

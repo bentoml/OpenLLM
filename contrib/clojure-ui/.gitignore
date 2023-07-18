@@ -15,4 +15,4 @@
 /.nrepl-port
 **/output.calva-repl
 
-www/generated/**
+src/generated/models-data.json

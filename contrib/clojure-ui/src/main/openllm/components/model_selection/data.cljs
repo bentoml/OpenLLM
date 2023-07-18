@@ -1,4 +1,10 @@
-(ns openllm.components.model-selection.data)
+(ns openllm.components.model-selection.data
+  (:require-macros [openllm.build :refer [slurp MODELS_DATA_JSON_PATH_MACRO]]))
+
+(def models-data (-> "./src/generated/models-data.json"
+                     (slurp ,) ;; see `openllm.build/slurp` to see how this magic works
+                     (js/JSON.parse ,)
+                     (js->clj ,)))
 
 (def models
   {"chatglm" {:ids ["thudm/chatglm-6b"
