@@ -77,10 +77,11 @@
 (rf/reg-event-fx
  ::add-to-indexed-db-history
  [(rf/inject-cofx ::indexed-db)]
- (fn [cofx [_ user message]]
+ (fn [cofx [_ timestamp user message]]
    (let [indexed-db (:idb cofx)]
      (idb/os-add! {:db indexed-db :os-name (:name idb-table-info)}
-                  {:user user :text message}))))
+                  {:user user :text message
+                   :timestamp timestamp}))))
 
 ;; This event will override the chat history in the app-db with the data from
 ;; the IndexedDB database. It will be dispatched as a callback function to

@@ -29,18 +29,20 @@
 (reg-event-db
  ::add-to-app-db-history
  [check-spec-interceptor]
- (fn [db [_ user text]]
+ (fn [db [_ timestamp user text]]
    (assoc db :chat-history (conj (:chat-history db) {:user user
-                                                     :text text}))))
+                                                     :text text
+                                                     :timestamp timestamp}))))
 
 ;; Puts the received or sent message into the IndexedDB database aswell
 ;; as the app-db.
 (reg-event-fx
  ::add-to-chat-history
- []
- (fn [_ [_ user text]]
-   {:dispatch-n [[::add-to-app-db-history user text]
-                 [::persistence/add-to-indexed-db-history user text]]}))
+ [(inject-cofx :time-now)]
+ (fn [cofx [_ user text]]
+   (let [{:keys [time-now]} cofx]
+     {:dispatch-n [[::add-to-app-db-history time-now user text time-now]
+                   [::persistence/add-to-indexed-db-history time-now user text]]})))
 
 (reg-event-fx
  ::send-prompt-success

@@ -1,7 +1,7 @@
 (ns openllm.events
     (:require [cljs.spec.alpha :as s]
               [openllm.db :as db]
-              [re-frame.core :refer [after reg-event-db reg-event-fx]]))
+              [re-frame.core :refer [after reg-cofx reg-event-db reg-event-fx]]))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -18,6 +18,15 @@
   "The interceptor we will use to check the app-db after each event handler runs.
    It will check that the app-db is valid against the spec `::db`."
   (after (partial check-and-throw :openllm.db/db)))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;             Coeffects              ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(reg-cofx
+ :time-now
+ (fn [cofx _]
+   (assoc cofx :time-now (js/Date.))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
