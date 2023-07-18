@@ -14,14 +14,12 @@
        [:label {:class "text-black"} "Model-Type"
         (into [:select {:class "w-full pl-3 pr-10 py-1 mb-1"
                         :value @model-type
-                        :on-change #(rf/dispatch [::events/set-model-type (-> % .-target .-value)])}]
-              (map (fn [type]
-                     [:option {:value type} type])
-                   (keys data/models)))]
+                        :on-change #(rf/dispatch [::events/set-model-type (-> % .-target .-value keyword)])}]
+              (map #(do [:option {:value %} %])
+                   (data/model-types)))]
        [:label {:class "text-black"} "Model-ID"
         (into [:select {:class "w-full pl-3 pr-10 py-1"
                         :value @model-id
                         :on-change #(rf/dispatch [::events/set-model-id (-> % .-target .-value)])}]
-              (map (fn [id]
-                     [:option {:value id} (str id)])
-                   (get-in data/models [@model-type :ids])))]])))
+              (map #(do [:option {:value %} (str %)])
+                   (data/model-ids @model-type)))]])))

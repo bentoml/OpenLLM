@@ -27,7 +27,7 @@
 (s/def ::side-bar-open? boolean?)
 (s/def ::modal-open? (s/keys :req-un [::playground boolean?
                                       ::chat boolean?]))
-(s/def ::selected-model (s/keys :req-un [::model-type string?
+(s/def ::selected-model (s/keys :req-un [::model-type keyword?
                                          ::model-id string?]))
 
 (s/def ::playground-input-value string?)
@@ -131,7 +131,7 @@
    :side-bar-open? true
    :modal-open? {:playground false
                  :chat false}
-   :selected-model {:model-type "chatglm"
+   :selected-model {:model-type :chatglm
                     :model-id "google/chatglm-6b"}
    :playground-input-value ""
    :playground-last-response ""

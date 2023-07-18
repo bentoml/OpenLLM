@@ -7,9 +7,8 @@
  (fn [db [_ model-type]] 
    (-> db
        (assoc-in , [:selected-model :model-type] model-type)
-       (assoc-in , [:selected-model :model-id] (-> data/models
-                                                   (get , model-type)
-                                                   (get , :ids)
+       (assoc-in , [:selected-model :model-id] (-> model-type
+                                                   (data/model-ids ,) 
                                                    (first ,))))))
 
 (reg-event-db
