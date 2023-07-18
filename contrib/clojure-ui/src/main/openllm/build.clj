@@ -1,4 +1,10 @@
 (ns openllm.build
+  "This namespace contains build-time functions. These functions are run
+   at compile time and are used to generate files that are later used by
+   the application. For example, the `models-data.json` file is generated
+   here. This file is later used to populate the Model-ID and Model-Type
+   dropdowns with their respective entries.
+   See `src/main/openllm/components/model_selection/data.cljs` for an example usage."
   (:require [clojure.java.shell :refer [sh]])
   (:refer-clojure :exclude [slurp]))
 

@@ -3,7 +3,7 @@
   (:require [clojure.spec.alpha :as s]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;                Spec                ;;
+;;                Spec                ;;    TODO: -> db
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (s/def ::vec-of-runtimes? (s/coll-of
                            (s/and string?
@@ -26,7 +26,7 @@
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;             Slurp Data             ;;
+;;             Slurp Data             ;;    TODO: -> effect
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (def ^:const models-data (-> "./src/generated/models-data.json"
                              (slurp ,) ;; see `openllm.build/slurp` to see how this sorcery works
@@ -35,7 +35,7 @@
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;            Convenience             ;;
+;;            Convenience             ;;    TODO: -> subs
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn model-types []
   "Returns a list of all `model-types`."
