@@ -1,5 +1,6 @@
 (ns openllm.components.nav-bar.events
-  (:require [openllm.api.log4cljs.core :refer [log]]
+  (:require [openllm.util :as util]
+            [openllm.api.log4cljs.core :refer [log]]
             [clojure.string :as str]
             [re-frame.core :refer [reg-event-fx]]))
 
@@ -23,17 +24,6 @@
        "\n\n\n"
        "Response: " response))
 
-(defn- build-chat-export-contents
-  "Returns the contents of the chat export file."
-  [chat-history]
-  (let [mapping-fn (fn [current-entry]
-                     (str/join ": "
-                               [(name (:user current-entry))
-                                (:text current-entry)]))]
-    (str/join "\n"
-              (map mapping-fn
-                   chat-history))))
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;               Events               ;;
@@ -47,12 +37,12 @@
             :playground
             (let [input-value (get-in cofx [:db :playground-input-value])
                   response-value (get-in cofx [:db :playground-last-response])]
-            (start-download! "export-playground.txt"
-                             (build-playground-export-contents input-value
-                                                               response-value)))
+              (start-download! "export-playground.txt"
+                               (build-playground-export-contents input-value
+                                                                 response-value)))
             :chat
             (let [chat-history (get-in cofx [:db :chat-history])]
               (start-download! "export-chat.txt"
-                               (build-chat-export-contents chat-history)))
+                               (util/chat-history->string chat-history)))
             ;default
             (log :error "Export button clicked in unknown screen.")))}))

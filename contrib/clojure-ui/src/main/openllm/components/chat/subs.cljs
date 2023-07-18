@@ -1,5 +1,6 @@
 (ns openllm.components.chat.subs
-    (:require [re-frame.core :refer [reg-sub]]
+    (:require [openllm.util :as util]
+              [re-frame.core :refer [reg-sub]]
               [clojure.string :as str]))
 
 (reg-sub
@@ -29,10 +30,7 @@
  :<- [::chat-input-value]
  :<- [::chat-history]
  (fn [[prompt-layout chat-input-value chat-history] _]
-   (let [conversation (str/join (interpose "\n"
-                                           (map (fn [msg]
-                                                  (str (name (:user msg)) ": " (:text msg)))
-                                                chat-history)))]
+   (let [conversation (util/chat-history->string chat-history)]
      (str prompt-layout "\n"
           conversation "\n"
           "user: " chat-input-value "\n"
