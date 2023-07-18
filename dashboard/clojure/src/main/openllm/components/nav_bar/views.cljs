@@ -14,6 +14,7 @@
             [reagent-mui.material.button :refer [button]]
             [reagent-mui.material.icon-button :refer [icon-button]]
             [reagent-mui.material.typography :refer [typography]]
+            [reagent-mui.material.tooltip :refer [tooltip]]
             [reagent-mui.icons.keyboard-double-arrow-right :as right-icon]
             [reagent-mui.icons.keyboard-double-arrow-left :as left-icon]
             [reagent-mui.icons.delete-forever :as delete-icon]
@@ -26,11 +27,12 @@
   []
   (let [side-bar-open? (rf/subscribe [::side-bar-subs/side-bar-open?])]
     (fn []
-      [icon-button {:on-click #(rf/dispatch [::side-bar-events/toggle-side-bar])
-                    :color "inherit"}
-       (if @side-bar-open?
-         [right-icon/keyboard-double-arrow-right]
-         [left-icon/keyboard-double-arrow-left])])))
+      [tooltip {:title (str (if @side-bar-open? "Collapse" "Expand") " side bar")}
+       [icon-button {:on-click #(rf/dispatch [::side-bar-events/toggle-side-bar])
+                     :color "inherit"}
+        (if @side-bar-open?
+          [right-icon/keyboard-double-arrow-right]
+          [left-icon/keyboard-double-arrow-left])]])))
 
 (defn- context-icon-buttons
   "Displays the icon buttons on the very right of the navigation bar. Some
@@ -40,17 +42,19 @@
   (let [active-screen (rf/subscribe [:screen-id])
         chat-history-empty? (rf/subscribe [::subs/chat-history-empty?])]
     (fn []
-      [:<>
-       [icon-button {:on-click #(rf/dispatch [::events/export-button-clicked])
-                     :size "large"
-                     :color "inherit"}
-        [share-icon/ios-share]]
+      [:<> 
+       [tooltip {:title (str "Export " (if (= @active-screen :playground) "playground data" "chat history"))}
+        [icon-button {:on-click #(rf/dispatch [::events/export-button-clicked])
+                      :size "large"
+                      :color "inherit"}
+         [share-icon/ios-share]]]
        (when (and (= @active-screen :chat) (not @chat-history-empty?))
-         [icon-button {:on-click #(do (rf/dispatch [::chat-events/clear-chat-history])
-                                      (rf/dispatch [::persistence/clear-chat-history]))
-                       :size "large"
-                       :color "inherit"}
-          [delete-icon/delete-forever]])])))
+         [tooltip {:title "Clear chat history"}
+          [icon-button {:on-click #(do (rf/dispatch [::chat-events/clear-chat-history])
+                                       (rf/dispatch [::persistence/clear-chat-history]))
+                        :size "large"
+                        :color "inherit"}
+           [delete-icon/delete-forever]]])])))
 
 (defn nav-bar
   "Renders the navigation bar."

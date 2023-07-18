@@ -6,6 +6,7 @@
             [openllm.subs :as root-subs]
             [openllm.components.chat.views :as views]
             [openllm.api.components :as api-components]
+            [reagent-mui.material.tooltip :refer [tooltip]]
             [reagent-mui.material.icon-button :refer [icon-button]]
             [reagent-mui.material.button :refer [button]]
             [reagent-mui.material.modal :refer [modal]]
@@ -36,9 +37,10 @@
                    :id "chat-input"}]
        [:div {:class "grid grid-rows-2 ml-1.5"}
         [:div {:class "items-start"}
-         [icon-button {:on-click #(rf/dispatch [::events/toggle-modal])
-                       :color "primary"}
-          [ds-icon/design-services]]]
+         [tooltip {:title "Edit prompt layout"}
+          [icon-button {:on-click #(rf/dispatch [::events/toggle-modal])
+                        :color "primary"}
+           [ds-icon/design-services]]]]
         [button {:on-click on-send-click
                  :variant "outlined"
                  :end-icon (r/as-element [send-icon/send])
