@@ -74,7 +74,9 @@
                      [:div {:class (str "flex " alignment " items-end my-2 w-full")}
                       [:h3 {:class "font-bold text-lg mx-2"} display-user]
                       [:div {:class (str "p-2 rounded-xl border " (user->extra-bubble-style user))}
-                       [:p {:class (if (= user :model) "text-gray-700" "text-gray-950")} text]]]))
+                       [:p {:class (if (= user :model) "text-gray-700" "text-gray-950")
+                            :style {:white-space "pre-wrap"}}
+                        text]]]))
                  @history)))))
 
 (defn prompt-layout-modal

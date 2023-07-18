@@ -53,8 +53,7 @@
   (let [mapping-fn (fn [message] (-> message
                                      (dissoc , :id)
                                      (assoc , :user (keyword (:user message)))))]
-    (vec
-     (map mapping-fn chat-history))))
+    (vec (map mapping-fn chat-history))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
