@@ -41,11 +41,11 @@ __all__ = list(itertools.chain.from_iterable(_import_structure.values()))
 _module = "openllm_client"
 
 
-def __dir__():
+def __dir__() -> list[str]:
     return sorted(__all__)
 
 
-def __getattr__(name: str):
+def __getattr__(name: str) -> t.Any:
     if name in _import_structure:
         return importlib.import_module(f".{name}", _module)
     try:

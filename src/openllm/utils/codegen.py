@@ -59,8 +59,8 @@ class ModelNameFormatter(string.Formatter):
         super().__init__()
         self.model_name = model_name
 
-    def vformat(self, format_string: str, *args: t.Any, **attrs: t.Any) -> t.LiteralString:
-        return t.cast("t.LiteralString", super().vformat(format_string, (), {self.model_keyword: self.model_name}))
+    def vformat(self, format_string: str, *args: t.Any, **attrs: t.Any) -> t.Any:
+        return super().vformat(format_string, (), {self.model_keyword: self.model_name})
 
     def can_format(self, value: str) -> bool:
         try:
@@ -81,7 +81,7 @@ class ModelAdapterMapFormatter(ModelNameFormatter):
 _service_file = Path(__file__).parent.parent / "_service.py"
 
 
-def write_service(llm: openllm.LLM[t.Any, t.Any], adapter_map: dict[str, str | None] | None, llm_fs: FS):
+def write_service(llm: openllm.LLM[t.Any, t.Any], adapter_map: dict[str, str | None] | None, llm_fs: FS) -> None:
     from . import DEBUG
 
     model_name = llm.config["model_name"]
@@ -119,7 +119,7 @@ def write_service(llm: openllm.LLM[t.Any, t.Any], adapter_map: dict[str, str | N
 _sentinel = object()
 
 
-def has_own_attribute(cls: type[t.Any], attrib_name: t.Any):
+def has_own_attribute(cls: type[t.Any], attrib_name: t.Any) -> bool:
     """Check whether *cls* defines *attrib_name* (and doesn't just inherit it)."""
     attr = getattr(cls, attrib_name, _sentinel)
     if attr is _sentinel:
@@ -187,7 +187,7 @@ def add_method_dunders(cls: type[t.Any], method_or_cls: _T, _overwrite_doc: str 
     return method_or_cls
 
 
-def _compile_and_eval(script: str, globs: DictStrAny, locs: t.Any = None, filename: str = ""):
+def _compile_and_eval(script: str, globs: DictStrAny, locs: t.Any = None, filename: str = "") -> None:
     """Exec the script with the given global (globs) and local (locs) variables."""
     bytecode = compile(script, filename, "exec")
     eval(bytecode, globs, locs)  # noqa: S307
@@ -221,7 +221,7 @@ def _make_method(name: str, script: str, filename: str, globs: DictStrAny) -> An
     return locs[name]
 
 
-def make_attr_tuple_class(cls_name: str, attr_names: t.Sequence[str]):
+def make_attr_tuple_class(cls_name: str, attr_names: t.Sequence[str]) -> type[t.Any]:
     """Create a tuple subclass to hold class attributes.
 
     The subclass is a bare tuple with properties for names.
@@ -251,7 +251,7 @@ def make_attr_tuple_class(cls_name: str, attr_names: t.Sequence[str]):
     return globs[attr_class_name]
 
 
-def generate_unique_filename(cls: type[t.Any], func_name: str):
+def generate_unique_filename(cls: type[t.Any], func_name: str) -> str:
     return f"<{cls.__name__} generated {func_name} {cls.__module__}.{getattr(cls, '__qualname__', cls.__name__)}>"
 
 
@@ -262,7 +262,7 @@ def generate_function(
     args: tuple[str, ...] | None,
     globs: dict[str, t.Any],
     annotations: dict[str, t.Any] | None = None,
-):
+) -> AnyCallable:
     from . import SHOW_CODEGEN
 
     script = "def %s(%s):\n    %s\n" % (
@@ -286,7 +286,7 @@ def make_env_transformer(
     suffix: t.LiteralString | None = None,
     default_callback: t.Callable[[str, t.Any], t.Any] | None = None,
     globs: DictStrAny | None = None,
-):
+) -> AnyCallable:
     from . import dantic
     from . import field_env_key
 
@@ -346,6 +346,11 @@ def gen_sdk(func: t.Callable[P, t.Any], name: str | None = None, **attrs: t.Any)
     def _repr_args(self: ReprMixin) -> t.Iterator[t.Tuple[str, t.Any]]:
         return ((k, _signatures[k].annotation) for k in self.__repr_keys__)
 
+    if func.__doc__ is None:
+        doc = f"Generated SDK for {func.__name__}"
+    else:
+        doc = func.__doc__
+
     return functools.update_wrapper(
         types.new_class(
             name,
@@ -355,7 +360,7 @@ def gen_sdk(func: t.Callable[P, t.Any], name: str | None = None, **attrs: t.Any)
                     "__repr_keys__": property(lambda _: [i for i in _signatures.keys() if not i.startswith("_")]),
                     "__repr_args__": _repr_args,
                     "__repr__": _repr,
-                    "__doc__": inspect.cleandoc(t.cast(str, func.__doc__)),
+                    "__doc__": inspect.cleandoc(doc),
                     "__module__": "openllm",
                 }
             ),

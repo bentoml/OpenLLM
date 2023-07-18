@@ -14,7 +14,7 @@
 
 ci:
   autoupdate_schedule: weekly
-  skip: [check-models-table-update, check-models-table-update, changelog-dry-run, typecheck]
+  skip: [check-models-table-update, check-models-table-update, changelog-dry-run, pyright]
   autofix_commit_msg: "ci: auto fixes from pre-commit.ci\n\nFor more information, see https://pre-commit.ci"
   autoupdate_commit_msg: 'ci: pre-commit autoupdate [pre-commit.ci]'
 exclude: '.*\.(css|js|svg)$'
@@ -35,23 +35,22 @@ repos:
         types: [python]
         exclude: ^(docs|tools|tests)
         args: [--config=pyproject.toml]
-  # - repo: https://github.com/pre-commit/mirrors-mypy
-  #   rev: 'v1.4.1'
-  #   hooks:
-  #     - id: mypy
-  #       exclude: |
-  #         (?x)^(
-  #             examples/.*|
-  #             tools/.*|
-  #             tests/.*|
-  #             typings/.*|
-  #             src/openllm/playground/.*|
-  #             .github/.*
-  #         )$
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: 'v1.4.1'
+    hooks:
+      - id: mypy
+        exclude: |
+          (?x)^(
+              examples/.*|
+              tools/.*|
+              tests/.*|
+              src/openllm/playground/.*|
+              .github/.*
+          )$
   - repo: local
     hooks:
-      - id: typecheck
-        name: type-check
+      - id: pyright
+        name: pyright
         entry: ./tools/typings
         types: [python]
         language: node

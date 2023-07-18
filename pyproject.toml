@@ -270,7 +270,7 @@ ignore-overlong-task-comments = true
 [tool.ruff.isort]
 force-single-line = true
 known-first-party = ["openllm", "bentoml", 'transformers']
-lines-after-imports = 2
+lines-after-imports = 1
 no-lines-before = ["future", "standard-library"]
 relative-imports-order = "closest-to-furthest"
 [tool.ruff.flake8-quotes]
@@ -361,9 +361,8 @@ show_missing = true
 [tool.mypy]
 disable_error_code = ["attr-defined", "name-defined", "annotation-unchecked"]
 enable_error_code = ["redundant-expr"]
-exclude = ["examples/", "tools/", "src/openllm/playground", "typings/", "tests/"]
+exclude = ["examples/", "tools/", "src/openllm/playground", "tests/"]
 files = ["src/openllm", "src/openllm_client"]
-ignore_missing_imports = true
 mypy_path = "typings"
 pretty = true
 python_version = "3.11"
@@ -376,21 +375,19 @@ warn_unused_ignores = true
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
 module = [
-    "colorama.*",
-    "IPython.*",
     "numpy.*",
     "libtpu.*",
     "jaxlib.mlir.*",
-    "iree.*",
     "rich.*",
     "optax.*",
     "flax.*",
     "tensorflow.*",
+    "torch.*",
+    "transformers.*",
     "matplotlib.*",
     "jaxlib.*",
     "pytest.*",
 ]
-
 [[tool.mypy.overrides]]
 ignore_errors = true
-module = ["openllm.models"]
+module = ["openllm.models.*", "openllm._types", "bentoml.*", "click.*"]

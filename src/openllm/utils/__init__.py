@@ -56,7 +56,7 @@ try:
     from typing import GenericAlias as _TypingGenericAlias  # type: ignore
 except ImportError:
     # python < 3.9 does not have GenericAlias (list[int], tuple[str, ...] and so on)
-    _TypingGenericAlias = ()
+    _TypingGenericAlias = ()  # type: ignore
 
 if sys.version_info < (3, 10):
     _WithArgsTypes = (_TypingGenericAlias,)
@@ -369,16 +369,23 @@ def infer_auto_class(implementation: t.Literal["vllm"]) -> type[openllm.AutoVLLM
 
 def infer_auto_class(implementation: LiteralRuntime) -> type[BaseAutoLLMClass]:
     if implementation == "tf":
-        from ..models.auto import AutoTFLLM as auto
+        from ..models.auto import AutoTFLLM
+
+        return AutoTFLLM
     elif implementation == "flax":
-        from ..models.auto import AutoFlaxLLM as auto
+        from ..models.auto import AutoFlaxLLM
+
+        return AutoFlaxLLM
     elif implementation == "pt":
-        from ..models.auto import AutoLLM as auto
+        from ..models.auto import AutoLLM
+
+        return AutoLLM
     elif implementation == "vllm":
-        from ..models.auto import AutoVLLM as auto
+        from ..models.auto import AutoVLLM
+
+        return AutoVLLM
     else:
-        raise RuntimeError(f"Unknown implementation: {implementation} (supported: 'pt', 'flax', 'tf')")
-    return auto
+        raise RuntimeError(f"Unknown implementation: {implementation} (supported: 'pt', 'flax', 'tf', 'vllm')")
 
 
 # NOTE: The set marks contains a set of modules name

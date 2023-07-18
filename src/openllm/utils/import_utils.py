@@ -140,27 +140,27 @@ def is_peft_available() -> bool:
     return _peft_available
 
 
-def is_einops_available():
+def is_einops_available() -> bool:
     return _einops_available
 
 
-def is_cpm_kernels_available():
+def is_cpm_kernels_available() -> bool:
     return _cpm_kernel_available
 
 
-def is_bitsandbytes_available():
+def is_bitsandbytes_available() -> bool:
     return _bitsandbytes_available
 
 
-def is_autogptq_available():
+def is_autogptq_available() -> bool:
     return _autogptq_available
 
 
-def is_vllm_available():
+def is_vllm_available() -> bool:
     return _vllm_available
 
 
-def is_torch_available():
+def is_torch_available() -> bool:
     global _torch_available
     if USE_TORCH in ENV_VARS_TRUE_AND_AUTO_VALUES and USE_TF not in ENV_VARS_TRUE_VALUES:
         if _torch_available:
@@ -174,7 +174,7 @@ def is_torch_available():
     return _torch_available
 
 
-def is_tf_available():
+def is_tf_available() -> bool:
     global _tf_available
     if FORCE_TF_AVAILABLE in ENV_VARS_TRUE_VALUES:
         _tf_available = True
@@ -214,7 +214,7 @@ def is_tf_available():
     return _tf_available
 
 
-def is_flax_available():
+def is_flax_available() -> bool:
     global _flax_available
     if USE_JAX in ENV_VARS_TRUE_AND_AUTO_VALUES:
         if _flax_available:
@@ -396,7 +396,7 @@ class DummyMetaclass(ABCMeta):
         require_backends(cls, cls._backends)
 
 
-def require_backends(o: t.Any, backends: t.MutableSequence[str]):
+def require_backends(o: t.Any, backends: t.MutableSequence[str]) -> None:
     if not isinstance(backends, (list, tuple)):
         backends = list(backends)
 

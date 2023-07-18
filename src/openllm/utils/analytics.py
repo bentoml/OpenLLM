@@ -47,14 +47,14 @@ def do_not_track() -> bool:
 
 
 @_internal_usage.silent
-def track(event_properties: _internal_analytics.schemas.EventMeta):
+def track(event_properties: _internal_analytics.schemas.EventMeta) -> t.Any | None:
     if do_not_track():
-        return
+        return None
     _internal_analytics.track(event_properties)
 
 
 @contextlib.contextmanager
-def set_bentoml_tracking():
+def set_bentoml_tracking() -> t.Generator[None, None, None]:
     original_value = os.environ.pop(_internal_analytics.BENTOML_DO_NOT_TRACK, str(False))
     try:
         os.environ[_internal_analytics.BENTOML_DO_NOT_TRACK] = str(do_not_track())
@@ -87,7 +87,7 @@ class StartInitEvent(_internal_analytics.schemas.EventMeta):
 
 def track_start_init(
     llm_config: openllm.LLMConfig,
-):
+) -> t.Any | None:
     if do_not_track():
-        return
+        return None
     track(StartInitEvent.handler(llm_config))

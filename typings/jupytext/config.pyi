@@ -4,9 +4,8 @@ from traitlets import Enum
 from traitlets import Float
 from traitlets import Unicode
 from traitlets import Union
-from traitlets.config import Configurable
 
-class JupytextConfiguration(Configurable):
+class JupytextConfiguration:
     """Jupytext Configuration's options"""
 
     formats: Union = ...

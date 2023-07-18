@@ -293,7 +293,7 @@ class LLMInterface(ABC, t.Generic[M, T]):
         prompt: str,
         stop: list[str],
         **preprocess_generate_kwds: t.Any,
-    ) -> list[dict[t.Literal["generated_text"], str]]:
+    ) -> t.Sequence[dict[t.Literal["generated_text"], str]]:
         """The entrypoint for generating one prompt.
 
         This provides additional stop tokens for generating per token level.
@@ -327,7 +327,7 @@ class LLMInterface(ABC, t.Generic[M, T]):
         """
         return generation_result
 
-    def llm_post_init(self):
+    def llm_post_init(self) -> None:
         """This function can be implemented if you need to initialized any additional variables that doesn't concern OpenLLM internals."""
         pass
 
@@ -872,7 +872,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
             logger.debug("LoRA is visible for %s, disabling BetterTransformer", self)
             self.bettertransformer = False
 
-    def __setattr__(self, attr: str, value: t.Any):
+    def __setattr__(self, attr: str, value: t.Any) -> t.Any:
         if attr in _reserved_namespace:
             raise ForbiddenAttributeError(
                 f"{attr} should not be set during runtime "

@@ -93,16 +93,20 @@ else:
     from typing_extensions import dataclass_transform
     from typing_extensions import overload
 
+# NOTE: Using internal API from attr here, since we are actually
+# allowing subclass of openllm.LLMConfig to become 'attrs'-ish
+from attr._compat import set_closure_cell
+from attr._make import _CountingAttr
+from attr._make import _make_init
+from attr._make import _transform_attrs
+
+
 _T = t.TypeVar("_T")
 
 
 if t.TYPE_CHECKING:
     import click
     import peft
-    from attr import _CountingAttr
-    from attr import _make_init
-    from attr import _transform_attrs
-    from attr._compat import set_closure_cell
 
     import transformers
     from transformers.generation.beam_constraints import Constraint
@@ -118,12 +122,6 @@ else:
     ListStr = list
     DictStrAny = dict
     ItemgetterAny = itemgetter
-    # NOTE: Using internal API from attr here, since we are actually
-    # allowing subclass of openllm.LLMConfig to become 'attrs'-ish
-    from attr._compat import set_closure_cell
-    from attr._make import _CountingAttr
-    from attr._make import _make_init
-    from attr._make import _transform_attrs
 
     transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
     peft = openllm.utils.LazyLoader("peft", globals(), "peft")
