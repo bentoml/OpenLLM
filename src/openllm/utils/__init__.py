@@ -82,7 +82,6 @@ if t.TYPE_CHECKING:
     from .._types import DictStrAny
     from .._types import LiteralRuntime
     from .._types import P
-    from ..models.auto.factory import BaseAutoLLMClass
 
 
 def set_debug_mode(enabled: bool) -> None:
@@ -124,6 +123,9 @@ def field_env_key(model_name: str, key: str, suffix: str | t.Literal[""] | None 
 
 
 DEBUG = sys.flags.dev_mode or (not sys.flags.ignore_environment and bool(os.environ.get("OPENLLMDEVDEBUG")))
+
+# MYPY is like t.TYPE_CHECKING, but reserved for Mypy plugins
+MYPY = False
 
 SHOW_CODEGEN = DEBUG and int(os.environ.get("OPENLLMDEVDEBUG", str(0))) > 3
 
@@ -245,7 +247,7 @@ def compose(*funcs: AnyCallable) -> AnyCallable:
     [1.5, 2.0, 2.25, 2.4, 2.5, 2.571, 2.625, 2.667, 2.7]
     """
 
-    def compose_two(f1: AnyCallable, f2: t.Callable[P, t.Any]):
+    def compose_two(f1: AnyCallable, f2: t.Callable[P, t.Any]) -> t.Any:
         def _(*args: P.args, **kwargs: P.kwargs) -> t.Any:
             return f1(f2(*args, **kwargs))
 
@@ -271,7 +273,7 @@ def apply(transform: AnyCallable) -> t.Callable[[AnyCallable], AnyCallable]:
     ```
     """
 
-    def wrap(func: t.Callable[P, t.Any]):
+    def wrap(func: t.Callable[P, t.Any]) -> t.Any:
         return functools.wraps(func)(compose(transform, func))
 
     return wrap
@@ -279,7 +281,7 @@ def apply(transform: AnyCallable) -> t.Callable[[AnyCallable], AnyCallable]:
 
 @apply(bool)
 @suppress(FileNotFoundError)
-def _text_in_file(text: str, filename: Path):
+def _text_in_file(text: str, filename: Path) -> bool:
     return any(text in line for line in filename.open())
 
 
@@ -368,21 +370,23 @@ def infer_auto_class(implementation: t.Literal["vllm"]) -> type[openllm.AutoVLLM
     ...
 
 
-def infer_auto_class(implementation: LiteralRuntime) -> type[BaseAutoLLMClass]:
+def infer_auto_class(
+    implementation: LiteralRuntime,
+) -> type[openllm.AutoLLM] | type[openllm.AutoTFLLM] | type[openllm.AutoFlaxLLM] | type[openllm.AutoVLLM]:
     if implementation == "tf":
-        from ..models.auto import AutoTFLLM
+        from openllm import AutoTFLLM
 
         return AutoTFLLM
     elif implementation == "flax":
-        from ..models.auto import AutoFlaxLLM
+        from openllm import AutoFlaxLLM
 
         return AutoFlaxLLM
     elif implementation == "pt":
-        from ..models.auto import AutoLLM
+        from openllm import AutoLLM
 
         return AutoLLM
     elif implementation == "vllm":
-        from ..models.auto import AutoVLLM
+        from openllm import AutoVLLM
 
         return AutoVLLM
     else:

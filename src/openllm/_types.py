@@ -22,22 +22,25 @@ import typing as t
 
 if not t.TYPE_CHECKING:
     raise RuntimeError(f"{__name__} should not be imported during runtime")
+else:
+    pass
 
 
 import bentoml
+from bentoml._internal.types import ModelSignatureDict as ModelSignatureDict
 
 from ._configuration import AdapterType
 
 
 if t.TYPE_CHECKING:
-    import auto_gptq as autogptq
     import click
     import peft
+    import torch
 
     import openllm
-    import transformers
     from bentoml._internal.runner.runnable import RunnableMethod
     from bentoml._internal.runner.runner import RunnerMethod
+    from bentoml._internal.runner.strategy import Strategy
 
 AnyCallable = t.Callable[..., t.Any]
 DictStrAny = dict[str, t.Any]
@@ -104,7 +107,7 @@ class AdaptersTuple(TupleAny):
     config: DictStrAny
 
 
-AdaptersMapping = dict[AdapterType, tuple[AdaptersTuple, ...]] | None
+AdaptersMapping = dict[AdapterType, tuple[AdaptersTuple, ...]]
 
 
 class LLMRunnable(bentoml.Runnable):
@@ -115,8 +118,9 @@ class LLMRunnable(bentoml.Runnable):
 
     set_adapter: RunnableMethod[LLMRunnable, [str], dict[t.Literal["success", "error_msg"], bool | str]]
     __call__: RunnableMethod[LLMRunnable, [str], list[t.Any]]
+    embeddings: RunnableMethod[LLMRunnable, [str], torch.Tensor]
     generate: RunnableMethod[LLMRunnable, [str], list[t.Any]]
-    generate_one: RunnableMethod[LLMRunnable, [str, list[str]], list[dict[t.Literal["generated_text"], str]]]
+    generate_one: RunnableMethod[LLMRunnable, [str, list[str]], t.Sequence[dict[t.Literal["generated_text"], str]]]
     generate_iterator: RunnableMethod[LLMRunnable, [str], t.Generator[t.Any, None, None]]
 
 
@@ -129,9 +133,25 @@ class LLMRunner(bentoml.Runner):
     model: ModelProtocol[t.Any]
     config: openllm.LLMConfig
 
+    embeddings: RunnerMethod[LLMRunnable, [str], torch.Tensor]
     generate: RunnerMethod[LLMRunnable, [str], list[t.Any]]
-    generate_one: RunnerMethod[LLMRunnable, [str, list[str]], list[dict[t.Literal["generated_text"], str]]]
+    generate_one: RunnerMethod[LLMRunnable, [str, list[str]], t.Sequence[dict[t.Literal["generated_text"], str]]]
     generate_iterator: RunnerMethod[LLMRunnable, [str], t.Generator[t.Any, None, None]]
+
+    def __init__(
+        self,
+        runnable_class: type[LLMRunnable],
+        *,
+        runnable_init_params: dict[str, t.Any] | None = ...,
+        name: str | None = ...,
+        scheduling_strategy: type[Strategy] = ...,
+        models: list[bentoml.Model] | None = ...,
+        max_batch_size: int | None = ...,
+        max_latency_ms: int | None = ...,
+        method_configs: dict[str, dict[str, int]] | None = ...,
+        embedded: bool = False,
+    ) -> None:
+        ...
 
     def __call__(self, prompt: str, **attrs: t.Any) -> t.Any:
         ...
@@ -152,17 +172,3 @@ class LLMRunner(bentoml.Runner):
     @property
     def __repr_keys__(self) -> set[str]:
         ...
-
-
-class LLMInitAttrs(t.TypedDict):
-    config: openllm.LLMConfig
-    quantization_config: transformers.BitsAndBytesConfig | autogptq.BaseQuantizeConfig | None
-    model_id: str
-    runtime: t.Literal["ggml", "transformers"]
-    model_decls: TupleAny
-    model_attrs: DictStrAny
-    tokenizer_attrs: DictStrAny
-    tag: bentoml.Tag
-    adapters_mapping: AdaptersMapping
-    model_version: str | None
-    serialisation_format: t.Literal["safetensors", "default"]

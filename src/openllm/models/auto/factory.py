@@ -171,7 +171,7 @@ class BaseAutoLLMClass:
 
 def getattribute_from_module(module: types.ModuleType, attr: t.Any) -> t.Any:
     if attr is None:
-        return None
+        return
     if isinstance(attr, tuple):
         return tuple(getattribute_from_module(module, a) for a in attr)
     if hasattr(module, attr):

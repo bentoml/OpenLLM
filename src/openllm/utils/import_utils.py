@@ -470,6 +470,7 @@ class EnvVarMixin(ReprMixin):
     @overload
     def __getitem__(self, item: t.Literal["runtime_value"]) -> t.Literal["ggml", "transformers"]: ...
     # fmt: on
+
     def __getitem__(self, item: str | t.Any) -> t.Any:
         if hasattr(self, item):
             return getattr(self, item)
@@ -481,7 +482,7 @@ class EnvVarMixin(ReprMixin):
         bettertransformer: bool | None = None,
         quantize: t.LiteralString | None = None,
         runtime: t.Literal["ggml", "transformers"] = "transformers",
-    ):
+    ) -> t.Self:
         from . import codegen
         from .._configuration import field_env_key
 
@@ -537,5 +538,5 @@ class EnvVarMixin(ReprMixin):
         return getattr(self.module, f"START_{self.model_name.upper()}_COMMAND_DOCSTRING")
 
     @property
-    def module(self):
+    def module(self) -> _AnnotatedLazyLoader:
         return _AnnotatedLazyLoader(self.model_name, globals(), f"openllm.models.{self.model_name}")

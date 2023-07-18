@@ -356,7 +356,7 @@ def save_pretrained(
     safe_serialization: bool = False,
     variant: str | None = None,
     **attrs: t.Any,
-):
+) -> None:
     """Light wrapper around ``transformers.PreTrainedTokenizer.save_pretrained`` and ``transformers.PreTrainedModel.save_pretrained``."""
     save_function = first_not_none(save_function, default=torch.save)
 

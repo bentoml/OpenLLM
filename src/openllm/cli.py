@@ -264,7 +264,7 @@ _adapter_mapping_key = "adapter_map"
 
 def _id_callback(ctx: click.Context, _: click.Parameter, value: tuple[str, ...] | None) -> dict[str, str] | None:
     if not value:
-        return
+        return None
     if _adapter_mapping_key not in ctx.params:
         ctx.params[_adapter_mapping_key] = {}
     for v in value:
@@ -282,7 +282,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
     NUMBER_OF_COMMON_PARAMS = 4  # parameters in common_params + 1 faked group option header
 
     @staticmethod
-    def common_params(f: _AnyCallable):
+    def common_params(f: FC) -> t.Callable[[FC], FC]:
         """This is not supposed to be used with unprocessed click function.
 
         This should be used a the last currying from common_params -> usage_tracking -> exception_handling.
@@ -475,7 +475,7 @@ def cli() -> None:
 
 
 @cli.group(cls=OpenLLMCommandGroup, context_settings=_CONTEXT_SETTINGS, name="start", aliases=["start-http"])
-def start_command():
+def start_command() -> None:
     """Start any LLM as a REST server.
 
     \b
@@ -486,7 +486,7 @@ def start_command():
 
 
 @cli.group(cls=OpenLLMCommandGroup, context_settings=_CONTEXT_SETTINGS, name="start-grpc")
-def start_grpc_command():
+def start_grpc_command() -> None:
     """Start any LLM as a gRPC server.
 
     \b
@@ -1298,7 +1298,7 @@ def _start(
     framework: LiteralRuntime | None = ...,
     additional_args: ListStr | None = ...,
     _serve_grpc: bool = ...,
-    __test__: t.Literal[True] = ...,
+    __test__: t.Literal[True] = True,
 ) -> subprocess.Popen[bytes]:
     ...
 

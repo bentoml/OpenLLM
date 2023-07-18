@@ -31,7 +31,7 @@ _default_formatter = PromptFormatter()
 
 
 class PartialDict(DictStrStr):
-    def __missing__(self, key: str):
+    def __missing__(self, key: str) -> str:
         return "{" + key + "}"
 
 

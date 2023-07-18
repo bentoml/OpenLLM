@@ -34,7 +34,6 @@ if t.TYPE_CHECKING:
     from .._types import AnyCallable
     from .._types import DictStrAny
     from .._types import ListStr
-    from .._types import P
 
     PartialAny = functools.partial[t.Any]
 else:
@@ -331,7 +330,7 @@ def make_env_transformer(
     )
 
 
-def gen_sdk(func: t.Callable[P, t.Any], name: str | None = None, **attrs: t.Any):
+def gen_sdk(func: AnyCallable, name: str | None = None, **attrs: t.Any) -> AnyCallable:
     """Enhance function with nicer Repr."""
     from .representation import ReprMixin
 

@@ -273,26 +273,6 @@ avoid-escape = false
 ]
 "typings/**/*" = ["D", "F", "E", "PYI002", "I001"]
 
-[tool.pyright]
-analysis.useLibraryCodeForTypes = true
-exclude = [
-    "__pypackages__/*",
-    "src/openllm/playground/",
-    "src/openllm/__init__.py",
-    "src/openllm/__about__.py",
-    "src/openllm/__main__.py",
-    "src/openllm/utils/dummy_*.py",
-]
-include = ["src/openllm", "src/openllm_client", "tests/", "tools/", "examples/"]
-pythonVersion = "3.12"
-reportMissingImports = "warning"
-reportMissingTypeStubs = false
-reportPrivateUsage = "warning"
-reportUnknownArgumentType = "warning"
-reportUnknownMemberType = "warning"
-reportUnknownVariableType = "warning"
-typeCheckingMode = "strict"
-
 [tool.coverage.paths]
 openllm = ["src/openllm", "*/openllm/src/openllm"]
 [tool.coverage.run]
@@ -331,23 +311,54 @@ omit = [
 precision = 2
 show_missing = true
 
+[tool.pyright]
+analysis.useLibraryCodeForTypes = true
+exclude = [
+    "__pypackages__/*",
+    "src/openllm/playground/",
+    "src/openllm/__init__.py",
+    "src/openllm/__about__.py",
+    "src/openllm/__main__.py",
+    "src/openllm/utils/dummy_*.py",
+    "src/openllm/models/*",         # XXX: remove me later
+]
+include = ["src/openllm", "src/openllm_client", "tests/", "tools/", "examples/"]
+pythonVersion = "3.12"
+reportMissingImports = "warning"
+reportMissingTypeStubs = false
+reportPrivateUsage = "warning"
+reportUnknownArgumentType = "warning"
+reportUnknownMemberType = "warning"
+reportUnknownVariableType = "warning"
+typeCheckingMode = "strict"
+
 [tool.mypy]
 disable_error_code = ["attr-defined", "name-defined", "annotation-unchecked"]
 enable_error_code = ["redundant-expr"]
-exclude = ["examples/", "tools/", "src/openllm/playground", "tests/"]
+exclude = ["examples/", "tools/", "tests/", "src/openllm/playground/"]
 files = ["src/openllm", "src/openllm_client"]
 mypy_path = "typings"
 pretty = true
 python_version = "3.11"
 show_error_codes = true
 strict = true
-warn_no_return = false
 warn_return_any = false
 warn_unreachable = true
 warn_unused_ignores = true
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
-module = ["IPython.*", "numpy.*", "tensorflow.*", "torch.*", "pytest.*", "huggingface_hub.*", "click.*"]
+module = [
+    "IPython.*",
+    "numpy.*",
+    "tensorflow.*",
+    "torch.*",
+    "optimum.*",
+    "inflection.*",
+    "huggingface_hub.*",
+    "peft.*",
+    "auto_gptq.*",
+    "vllm.*",
+]
 [[tool.mypy.overrides]]
 ignore_errors = true
-module = ["openllm.models.*", "openllm._types"]
+module = ["openllm.models.*", "openllm._types", "openllm", "openllm.playground.*"]

@@ -67,6 +67,7 @@ import openllm
 
 from .exceptions import ForbiddenAttributeError
 from .utils import ENV_VARS_TRUE_VALUES
+from .utils import MYPY
 from .utils import LazyType
 from .utils import ReprMixin
 from .utils import bentoml_cattr
@@ -142,7 +143,7 @@ config_merger = Merger(
 
 # case insensitive, but rename to conform with type
 class _PeftEnumMeta(enum.EnumMeta):
-    def __getitem__(self, __key: str | t.Any) -> enum.Enum:
+    def __getitem__(self, __key: str | t.Any, /) -> t.Any:
         if isinstance(__key, str):
             __key = inflection.underscore(__key).upper()
         return self._member_map_[__key]
@@ -173,9 +174,9 @@ class PeftType(enum.Enum, metaclass=_PeftEnumMeta):
         return self.value
 
     @staticmethod
-    def get(__key: str | t.Any) -> PeftType:
+    def get(__key: str | t.Any, /) -> PeftType:
         """type-safe getitem."""
-        return t.cast(PeftType, PeftType[__key])
+        return PeftType[__key]
 
 
 _PEFT_TASK_TYPE_TARGET_MAPPING = {"causal_lm": "CAUSAL_LM", "seq2seq_lm": "SEQ_2_SEQ_LM"}
@@ -225,17 +226,13 @@ class FineTuneConfig:
     and customization
     """
 
-    if t.TYPE_CHECKING:
+    if t.TYPE_CHECKING and not MYPY:
         # The following type stubs makes __init__ aware of attrs
         # internal type converter.
         @overload
-        def __init__(self, *args: str | PeftType | dict[str, t.Any] | bool | type[LLMConfig]) -> None:
-            ...
-
-        @overload
         def __init__(
             self,
-            adapter_type: PeftType = ...,
+            adapter_type: AdapterType,
             adapter_config: dict[str, t.Any] = ...,
             inference_mode: bool = ...,
             llm_config_class: type[LLMConfig] = ...,
@@ -245,7 +242,7 @@ class FineTuneConfig:
         @overload
         def __init__(
             self,
-            adapter_type: AdapterType = ...,
+            adapter_type: PeftType,
             adapter_config: dict[str, t.Any] = ...,
             inference_mode: bool = ...,
             llm_config_class: type[LLMConfig] = ...,
@@ -253,7 +250,7 @@ class FineTuneConfig:
             ...
 
         # The below should be generated via attrs. Only here to conform with pyright strict checking.
-        def __init__(self, *args: t.Any, **kwargs: t.Any):
+        def __init__(self, *args: t.Any, **kwargs: t.Any) -> None:
             ...
 
     adapter_type: PeftType = dantic.Field(
@@ -598,7 +595,7 @@ class GenerationConfig(ReprMixin):
 
     if t.TYPE_CHECKING:
 
-        def __attrs_init__(self, *args: t.Any, **attrs: t.Any):
+        def __attrs_init__(self, *args: t.Any, **attrs: t.Any) -> None:
             ...
 
     def __init__(self, *, _internal: bool = False, **attrs: t.Any):
@@ -753,7 +750,7 @@ class _ModelSettingsAttr:
         # fmt: on
 
 
-def structure_settings(cl_: type[LLMConfig], cls: type[_ModelSettingsAttr]):
+def structure_settings(cl_: type[LLMConfig], cls: type[_ModelSettingsAttr]) -> _ModelSettingsAttr:
     if "generation_class" in cl_.__config__:
         raise ValueError(
             "'generation_class' shouldn't be defined in '__config__', rather defining "
@@ -822,7 +819,7 @@ def structure_settings(cl_: type[LLMConfig], cls: type[_ModelSettingsAttr]):
 bentoml_cattr.register_structure_hook(_ModelSettingsAttr, structure_settings)
 
 
-def _setattr_class(attr_name: str, value_var: t.Any):
+def _setattr_class(attr_name: str, value_var: t.Any) -> str:
     """Use the builtin setattr to set *attr_name* to *value_var*.
 
     We can't use the cached object.__setattr__ since we are setting
@@ -894,7 +891,7 @@ class _ConfigAttr:
         __config__: ModelSettings = Field(None)
         """Internal configuration for this LLM model. Each of the field in here will be populated
         and prefixed with __openllm_<value>__"""
-        GenerationConfig: type = Field(None)
+        GenerationConfig: object = Field(None)
         """Users can override this subclass of any given LLMConfig to provide GenerationConfig
         default value. For example:
 
@@ -920,12 +917,12 @@ class _ConfigAttr:
         """The accepted keys for this LLMConfig."""
         __openllm_extras__: DictStrAny = Field(None, init=False)
         """Extra metadata for this LLMConfig."""
-        __openllm_generation_class__: type[GenerationConfig] = Field(None)
+        __openllm_generation_class__: type[openllm._configuration.GenerationConfig] = Field(None)
         """The result generated GenerationConfig class for this LLMConfig. This will be used
         to create the generation_config argument that can be used throughout the lifecycle.
         This class will also be managed internally by OpenLLM."""
 
-        def __attrs_init__(self, *args: t.Any, **attrs: t.Any):
+        def __attrs_init__(self, *args: t.Any, **attrs: t.Any) -> None:
             """Generated __attrs_init__ for LLMConfig subclass that follows the attrs contract."""
 
         # NOTE: The following will be populated from __config__ and also
@@ -1119,7 +1116,7 @@ class _ConfigBuilder:
 
         return self.make_closure(self._cls)
 
-    def make_closure(self, cls: type):
+    def make_closure(self, cls: type[t.Any]) -> type[t.Any]:
         # The following is a fix for
         # <https://github.com/python-attrs/attrs/issues/102>.
         # If a method mentions `__class__` or uses the no-arg super(), the
@@ -1170,7 +1167,7 @@ class _ConfigBuilder:
         )
         return self
 
-    def add_repr(self):
+    def add_repr(self) -> t.Self:
         for key, fn in ReprMixin.__dict__.items():
             if key in ("__repr__", "__str__", "__repr_name__", "__repr_str__", "__repr_args__"):
                 self._cls_dict[key] = codegen.add_method_dunders(self._cls, fn)
@@ -1353,10 +1350,10 @@ class LLMConfig(_ConfigAttr):
             cls = attr.resolve_types(cls, globalns=globs)
         # the hint cache for easier access
         cls.__openllm_hints__ = {
-            f.name: f.type for ite in map(attr.fields, (cls, cls.__openllm_generation_class__)) for f in ite
+            f.name: f.type for ite in [attr.fields(cls), attr.fields(cls.__openllm_generation_class__)] for f in ite
         }
 
-    def __setattr__(self, attr: str, value: t.Any):
+    def __setattr__(self, attr: str, value: t.Any) -> None:
         if attr in _reserved_namespace:
             raise ForbiddenAttributeError(
                 f"{attr} should not be set during runtime "
@@ -1571,7 +1568,7 @@ class LLMConfig(_ConfigAttr):
             )
         return _object_getattribute.__get__(self)(item)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.__openllm_accepted_keys__) + len(self.__openllm_extras__)
 
     def keys(self) -> list[str]:
@@ -1594,10 +1591,10 @@ class LLMConfig(_ConfigAttr):
             + list(self.__openllm_extras__.items())
         )
 
-    def __iter__(self):
+    def __iter__(self) -> t.Iterable[str]:
         return iter(self.keys())
 
-    def __contains__(self, item: t.Any):
+    def __contains__(self, item: t.Any) -> bool:
         if item in self.__openllm_extras__:
             return True
         return item in self.__openllm_accepted_keys__
@@ -1647,7 +1644,7 @@ class LLMConfig(_ConfigAttr):
 
         return new_cls(**attrs)
 
-    def model_dump(self, flatten: bool = False, **_: t.Any):
+    def model_dump(self, flatten: bool = False, **_: t.Any) -> DictStrAny:
         dumped = bentoml_cattr.unstructure(self)
         generation_config = bentoml_cattr.unstructure(self.generation_config)
         if flatten:
@@ -1656,7 +1653,7 @@ class LLMConfig(_ConfigAttr):
             dumped["generation_config"] = generation_config
         return dumped
 
-    def model_dump_json(self, **kwargs: t.Any):
+    def model_dump_json(self, **kwargs: t.Any) -> bytes:
         return orjson.dumps(self.model_dump(**kwargs))
 
     @classmethod

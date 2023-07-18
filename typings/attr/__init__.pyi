@@ -51,9 +51,6 @@ _OnSetAttrArgType = Union[_OnSetAttrType, List[_OnSetAttrType], setters._NoOpTyp
 _FieldTransformer = Callable[[type, List[Attribute[Any]]], List[Attribute[Any]]]
 _ValidatorArgType = Union[_ValidatorType[_T], Sequence[_ValidatorType[_T]]]
 
-class ReprProtocol(Protocol):
-    def __call__(__self, self: Any) -> str: ...
-
 class AttrsInstance(AttrsInstance_, Protocol): ...
 
 _A = TypeVar("_A", bound=AttrsInstance)
@@ -107,7 +104,7 @@ class Attribute(Generic[_T]):
     alias: str | None
     def evolve(self, **changes: Any) -> Attribute[Any]: ...
     @classmethod
-    def from_counting_attr(cls, name: str, ca: _CountingAttr[_T], type: type[Any] | None = None) -> Attribute[_T]: ...
+    def from_counting_attr(cls, name: str, ca: _CountingAttr[_T], type: Type[Any] | None = None) -> Attribute[_T]: ...
 
 # NOTE: We had several choices for the annotation to use for type arg:
 # 1) Type[_T]
@@ -457,6 +454,15 @@ def frozen(
 def fields(cls: Type[AttrsInstance]) -> Any: ...
 def fields_dict(cls: Type[AttrsInstance]) -> Dict[str, Attribute[Any]]: ...
 def validate(inst: AttrsInstance) -> None: ...
+@overload
+def resolve_types(
+    cls: Type[_A],
+    globalns: Optional[Dict[str, Any]] = ...,
+    localns: Optional[Dict[str, Any]] = ...,
+    attribs: Optional[List[Attribute[Any]]] = ...,
+    include_extras: bool = ...,
+) -> Type[_A]: ...
+@overload
 def resolve_types(
     cls: _A,
     globalns: Optional[Dict[str, Any]] = ...,
@@ -533,9 +539,12 @@ s = attributes = attrs
 ib = attr = attrib
 dataclass = attrs  # Technically, partial(attrs, auto_attribs=True) ;)
 
+class ReprProtocol(Protocol):
+    def __call__(__self, self: Any) -> str: ...
+
 def _make_init(
     cls: type[AttrsInstance],
-    attrs: tuple[Attribute[Any]],
+    attrs: tuple[Attribute[Any], ...],
     pre_init: bool,
     post_init: bool,
     frozen: bool,
@@ -554,4 +563,4 @@ def _transform_attrs(
     kw_only: bool,
     collect_by_mro: bool,
     field_transformer: _FieldTransformer | None,
-) -> tuple[tuple[Attribute[Any], ...], tuple[Attribute[Any], ...], dict[Attribute[Any], type[Any]]]: ...
+) -> tuple[tuple[Attribute[_T], ...], tuple[Attribute[_T], ...], dict[Attribute[_T], type[Any]]]: ...

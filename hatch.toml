@@ -50,7 +50,7 @@ quality = [
     "pre-commit run --all-files",
 ]
 setup = "pre-commit install"
-typing = ["- pre-commit run mypy", "- pre-commit run pyright"]
+typing = ["- pre-commit run mypy {args:-a}", "- pre-commit run pyright {args:-a}"]
 watch-typing = "pyright {args:src/openllm} -w"
 [envs.tests]
 dependencies = [
