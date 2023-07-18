@@ -41,15 +41,3 @@
                  :response-format (ajax/text-response-format)
                  :on-success      on-success
                  :on-failure      on-failure}}))
-
-(reg-event-fx
- ::v1-generate-raw
- []
- (fn [_ [_ json & {:keys [on-success on-failure]}]]
-   {:http-xhrio {:method          :post
-                 :uri             (get-uri "/v1/generate")
-                 :params          json
-                 :format          (ajax/text-request-format)
-                 :response-format (ajax/text-response-format)
-                 :on-success      on-success
-                 :on-failure      on-failure}}))

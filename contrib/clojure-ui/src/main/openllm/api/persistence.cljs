@@ -112,6 +112,7 @@
   ;; sanitizing chat history demo
   (def chat-history [{:id 1 :user "model" :text "hi"}
                      {:id 2 :user "user" :text "hey"}])
+
   (chat-history->sanitized chat-history) ;; => [{:user :model, :text "hi"} {:user :user, :text "hey"}]
 
   ;; set the chat history in the app-db to the data from the indexed-db database
