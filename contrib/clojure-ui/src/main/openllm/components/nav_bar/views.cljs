@@ -4,7 +4,6 @@
             [openllm.components.nav-bar.subs :as subs]
             [openllm.components.nav-bar.events :as events]
             [openllm.components.side-bar.events :as side-bar-events]
-            [openllm.components.side-bar.subs :as side-bar-subs]
             [openllm.components.chat.events :as chat-events]
             [openllm.api.persistence :as persistence]
             [reagent-mui.icons.chat :as chat-icon]
@@ -14,9 +13,7 @@
             [reagent-mui.material.button :refer [button]]
             [reagent-mui.material.icon-button :refer [icon-button]]
             [reagent-mui.material.typography :refer [typography]]
-            [reagent-mui.material.tooltip :refer [tooltip]]
-            [reagent-mui.icons.keyboard-double-arrow-right :as right-icon]
-            [reagent-mui.icons.keyboard-double-arrow-left :as left-icon]
+            [reagent-mui.material.tooltip :refer [tooltip]] 
             [reagent-mui.icons.delete-forever :as delete-icon]
             [reagent-mui.icons.ios-share :as share-icon]
             [reagent-mui.icons.git-hub :as github-icon]
@@ -25,14 +22,13 @@
 (defn- collapse-side-bar-button
   "The collapse side bar button. Only visible when the side bar is open."
   []
-  (let [side-bar-open? (rf/subscribe [::side-bar-subs/side-bar-open?])]
+  (let [tooltip-text-collapse-sidebar (rf/subscribe [::subs/tooltip-text-collapse-sidebar])
+        collapse-icon (rf/subscribe [::subs/collapse-icon])]
     (fn []
-      [tooltip {:title (str (if @side-bar-open? "Collapse" "Expand") " side bar")}
+      [tooltip {:title @tooltip-text-collapse-sidebar}
        [icon-button {:on-click #(rf/dispatch [::side-bar-events/toggle-side-bar])
                      :color "inherit"}
-        (if @side-bar-open?
-          [right-icon/keyboard-double-arrow-right]
-          [left-icon/keyboard-double-arrow-left])]])))
+        @collapse-icon]])))
 
 (defn- context-icon-buttons
   "Displays the icon buttons on the very right of the navigation bar. Some
@@ -40,10 +36,11 @@
    active)."
   []
   (let [active-screen (rf/subscribe [:screen-id])
-        chat-history-empty? (rf/subscribe [::subs/chat-history-empty?])]
+        chat-history-empty? (rf/subscribe [::subs/chat-history-empty?])
+        tooltip-text-export (rf/subscribe [::subs/tooltip-text-export])]
     (fn []
       [:<> 
-       [tooltip {:title (str "Export " (if (= @active-screen :playground) "playground data" "chat history"))}
+       [tooltip {:title @tooltip-text-export}
         [icon-button {:on-click #(rf/dispatch [::events/export-button-clicked])
                       :size "large"
                       :color "inherit"}
