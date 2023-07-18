@@ -17,31 +17,39 @@
             [reagent-mui.icons.send :as send-icon]
             [reagent.core :as r]))
 
-(defn chat-controls
-  "The chat input field and the send button."
-  []
+(defn chat-input-field
+  "The chat input field."
+  [on-submit]
   (let [chat-input-sub (rf/subscribe [::subs/chat-input-value])
-        llm-config (rf/subscribe [::root-subs/model-config])
-        on-change #(rf/dispatch [::events/set-chat-input-value (.. % -target -value)])
-        on-send-click #(rf/dispatch [::events/on-send-button-click @(rf/subscribe [::subs/prompt]) @llm-config])]
+        on-change #(rf/dispatch [::events/set-chat-input-value (.. % -target -value)])]
+    (fn []
+      [:textarea {:class "py-1 h-20 w-[calc(100%_-_80px)] block"
+                  :style {:resize "none"}
+                  :placeholder "Type your message..."
+                  :value @chat-input-sub
+                  :on-change on-change
+                  :on-key-press (fn [e]
+                                  (when (and (= (.-charCode e) 13) (not (.-shiftKey e)))
+                                    (on-submit)))
+                  :id "chat-input"}])))
+
+(defn chat-controls
+  "Aggregates the chat input field and the send button as well as the
+   prompt layout button."
+  []
+  (let [llm-config (rf/subscribe [::root-subs/model-config])
+        submit-prompt (rf/subscribe [::subs/prompt])
+        on-submit-event #(rf/dispatch [::events/on-send-button-click @submit-prompt @llm-config])]
     (fn chat-controls []
       [:form {:class "flex justify-end"}
-       [:textarea {:class "py-1 h-20 w-[calc(100%_-_80px)] block"
-                   :style {:resize "none"}
-                   :placeholder "Type your message..."
-                   :value @chat-input-sub
-                   :on-change on-change
-                   :on-key-press (fn [e]
-                                   (when (and (= (.-charCode e) 13) (not (.-shiftKey e)))
-                                     (on-send-click)))
-                   :id "chat-input"}]
+       [chat-input-field on-submit-event]
        [:div {:class "grid grid-rows-2 ml-1.5"}
         [:div {:class "items-start"}
          [tooltip {:title "Edit prompt layout"}
           [icon-button {:on-click #(rf/dispatch [::events/toggle-modal])
                         :color "primary"}
            [ds-icon/design-services]]]]
-        [button {:on-click on-send-click
+        [button {:on-click on-submit-event
                  :variant "outlined"
                  :end-icon (r/as-element [send-icon/send])
                  :color "primary"} "Send"]]])))
@@ -73,33 +81,31 @@
   "The modal for editing the prompt layout."
   []
   (let [modal-open? (rf/subscribe [::subs/modal-open?])
-        prompt-layout (rf/subscribe [::subs/prompt-layout])
+        prompt-layout-value (rf/subscribe [::subs/prompt-layout])
         on-change #(rf/dispatch [::events/set-prompt-layout (.. % -target -value)])]
     (fn []
       [modal {:open @modal-open?
               :on-close #(rf/dispatch [::events/toggle-modal])}
-       [:div {:class "p-4"}
-        [:div
-         [box {:style {:position "absolute"
-                       :width 800,
-                       :top "50%"
-                       :left "50%"
-                       :transform "translate(-50%, -50%)"}}
-          [paper {:elevation 24
-                  :style {:padding "20px 30px"}}
-           [typography {:variant "h5"} "Prompt Layout"]
-           [:textarea {:class "pt-3 mt-1 w-full h-64 block border bg-gray-200"
-                       :value @prompt-layout
-                       :on-change on-change}]
-           [:div {:class "grid grid-cols-2"}
-            [:div {:class ""}
-             [api-components/file-upload
-              {:callback-event ::events/set-prompt-layout
-               :class "w-7/12 mt-3 py-2 px-4 rounded cursor-pointer bg-gray-600 text-white hover:bg-gray-700 file:bg-gray-900 file:hidden"}]]
-            [:div {:class "mt-4 flex justify-end space-x-2"}
-             [button {:type "button"
-                      :variant "outlined"
-                      :on-click #(rf/dispatch [::events/toggle-modal])} "Save"]]]]]]]])))
+       [box {:style {:position "absolute"
+                     :width 800,
+                     :top "50%"
+                     :left "50%"
+                     :transform "translate(-50%, -50%)"}}
+        [paper {:elevation 24
+                :style {:padding "20px 30px"}}
+         [typography {:variant "h5"} "Prompt Layout"]
+         [:textarea {:class "pt-3 mt-1 w-full h-64 block border bg-gray-200"
+                     :value @prompt-layout-value
+                     :on-change on-change}]
+         [:div {:class "grid grid-cols-2"}
+          [:div {:class ""}
+           [api-components/file-upload
+            {:callback-event ::events/set-prompt-layout
+             :class "w-7/12 mt-3 py-2 px-4 rounded cursor-pointer bg-gray-600 text-white hover:bg-gray-700 file:bg-gray-900 file:hidden"}]]
+          [:div {:class "mt-4 flex justify-end space-x-2"}
+           [button {:type "button"
+                    :variant "outlined"
+                    :on-click #(rf/dispatch [::events/toggle-modal])} "Save"]]]]]])))
 
 (defn chat-tab-contents
   "The component rendered if the chat tab is active."

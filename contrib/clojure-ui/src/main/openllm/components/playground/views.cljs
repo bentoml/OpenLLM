@@ -78,9 +78,11 @@
         [paper {:elevation 24
                 :style {:padding "20px 30px"}}
          [typography {:id "result-modal-title"
-                      :variant "h6"} "Response"]
+                      :variant "h6"}
+          "Response"]
          [typography {:id "result-modal-description"
-                      :variant "body1"} @last-response]]]])))
+                      :variant "body1"}
+          @last-response]]]])))
 
 (defn playground-tab-contents
   "This function aggregates all contents of the playground tab, and is
