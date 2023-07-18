@@ -3,6 +3,8 @@
 * [Node.js](https://nodejs.org/en/) (v18.16.1)
 * [npm](https://www.npmjs.com/) (v9.5.1)
 * [Clojure](https://clojure.org/guides/getting_started) (v1.10.3)
+* [OpenLLM](https://github.com/bentoml/OpenLLM) (latest)
+Note: **The `openllm` executable must be in your `PATH`!** Alternatively, you could hack the `contrib\clojure-ui\src\main\openllm\build.clj` file to use the absolute path to the `openllm` executable. This should probably be possible via environment variables in the future.
 
 ## Recommended
 * [Visual Studio Code](https://code.visualstudio.com/)

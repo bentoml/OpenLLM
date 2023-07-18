@@ -1,5 +1,5 @@
 (ns openllm.components.model-selection.data
-  (:require-macros [openllm.build :refer [slurp MODELS_DATA_JSON_PATH_MACRO]]))
+  (:require-macros [openllm.build :refer [slurp]]))
 
 (def models-data (-> "./src/generated/models-data.json"
                      (slurp ,) ;; see `openllm.build/slurp` to see how this magic works
