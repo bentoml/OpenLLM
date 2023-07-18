@@ -39,17 +39,17 @@
   []
   (let [llm-config (rf/subscribe [::root-subs/model-config])
         submit-prompt (rf/subscribe [::subs/prompt])
-        on-submit-event #(rf/dispatch [::events/on-send-button-click @submit-prompt @llm-config])]
+        on-submit-event [::events/on-send-button-click @submit-prompt @llm-config]]
     (fn chat-controls []
       [:form {:class "flex justify-end"}
-       [chat-input-field on-submit-event]
+       [chat-input-field #(rf/dispatch on-submit-event)]
        [:div {:class "grid grid-rows-2 ml-1.5"}
         [:div {:class "items-start"}
          [tooltip {:title "Edit prompt layout"}
           [icon-button {:on-click #(rf/dispatch [::events/toggle-modal])
                         :color "primary"}
            [ds-icon/design-services]]]]
-        [button {:on-click on-submit-event
+        [button {:on-click #(rf/dispatch on-submit-event)
                  :variant "outlined"
                  :end-icon (r/as-element [send-icon/send])
                  :color "primary"} "Send"]]])))

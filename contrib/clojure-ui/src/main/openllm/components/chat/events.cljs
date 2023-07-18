@@ -14,7 +14,7 @@
  ::chat-history-element
  (fn [cofx _]
    (let [element (js/document.getElementById "chat-history-container")]
-     (assoc cofx :chat-history-component element))))
+     (assoc cofx :chat-history-element element))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -62,12 +62,12 @@
  ::on-send-button-click
  []
  (fn [{:keys [db]} [_ prompt llm-config]]
-   (when (not (str/blank? prompt))
+   (when (not (str/blank? (get-in db [:chat-input-value])))
      {:dispatch-n [[::add-to-chat-history :user (:chat-input-value db)]
                    [::api/v1-generate prompt llm-config {:on-success [::send-prompt-success]
                                                          :on-failure [::send-prompt-failure]}]
                    [::set-chat-input-value ""]]
-      :dispatch-later [{:ms 20 :dispatch [::auto-scroll]}]})))
+      :dispatch-later [{:ms 10 :dispatch [::auto-scroll]}]})))
 
 (reg-event-db
  ::toggle-modal
@@ -86,10 +86,12 @@
  ::auto-scroll
  [(inject-cofx ::chat-history-element)]
  (fn [cofx _]
-   (let [chat-history-element (get cofx :chat-history-component)]
-     (set! (.-scrollTop chat-history-element)
-           (.-scrollHeight chat-history-element)))
-   {}))
+   (let [history-elem (get cofx :chat-history-element)] 
+     (if (some? history-elem)
+       (do (set! (.-scrollTop history-elem)
+                 (.-scrollHeight history-elem))
+           {})
+       {:dispatch-later [{:ms 10 :dispatch [::auto-scroll]}]}))))
 
 (reg-event-db
  ::clear-chat-history
