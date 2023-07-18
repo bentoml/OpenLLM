@@ -89,8 +89,7 @@
   []
   [:div {:class "mt-6 px-4 h-full"}
    [result-modal]
-   [:div {:class "mt-4 h-full"}
-    [input-field]
-    [input-field-controls]]
+   [input-field]
+   [input-field-controls]
    [:div {:class "mt-6"}
     [response-area]]])
