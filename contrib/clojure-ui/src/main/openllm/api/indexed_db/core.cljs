@@ -9,20 +9,32 @@
 
    If you stumble upon a parameter named `obj-store-fqn`, this is the fully
    qualified name of the object store. This name (or identifier rather)
-   must consist of a map with two keys: `:db` and `:os-name`. `:db` must
-   be a database object, which can be obtained via the `db-init-callback`
-   of the `initialize!` function. `:os-name` must be a string, which is
-   the name of the object store."
+   must consist of a map with two keys: `:db-name` and `:os-name`. `:db-name`
+   must be a string, which identifies the database. `:os-name` must be a
+   string, which is the name of the object store."
   (:require [openllm.api.log4cljs.core :refer [log]]))
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;             Private API            ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (def ^:private ^:const READ_WRITE "readwrite")
 (def ^:private ^:const READ_ONLY "readonly")
 
 (declare create-object-store!)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;             Private API            ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(def ^:private ^:const name->db
+  "This map will hold the database objects for each database name.
+   The database name is the key and the database object is the value.
+   This map is used to prevent the creation of multiple database objects
+   for the same database name. This is important, because the database
+   object is the only way to interact with the database.
+   
+   The lookup into this map is automatically done. While using an atom
+   adds state to the namespace, the performance and convinience gains
+   are worth it."
+  (atom {}))
+
 (defn- idb-error-callback
   "This function is called when an error occurs during an IndexedDB
    request.
@@ -40,7 +52,8 @@
    We consider this function semi-pure since there are no *notable*
    direct side effects."
   [obj-store-fqn mode]
-  (let [{:keys [db os-name]} obj-store-fqn
+  (let [{:keys [db-name os-name]} obj-store-fqn
+        db (get @name->db db-name)
         transaction (.transaction db #js [os-name] mode)]
     (set! (.-onerror transaction) idb-error-callback)
     (-> transaction
@@ -69,17 +82,18 @@
       (do (log :info (str "Received upgrade needed event, current version is " new-version ", old version is " old-version ". Calling user callback."))
           (user-callback old-version new-version))
       (do (log :info (str "Database and object store created. Current database version is " (.-version db) "."))
-          (create-object-store! {:db db :os-name (:name table-info)} table-info)))
+          (create-object-store! {:db-name db :os-name (:name table-info)} table-info)))
     nil))
 
 (defn- on-initialize-success!
   "This function is called as a callback when the database is initialized.
-   It will call the callback fn passed into `initialize!` by the user.
+   It will save the database object in our `name->db` atom for later use.
 
    Returns `nil`."
-  [user-callback e]
+  [db-name user-callback e]
   (let [db (.. e -target -result)]
-    (user-callback db)
+    (swap! name->db assoc db-name db)
+    (user-callback)
     (log :debug "Database initialized and callback function triggered." e))
   nil)
 
@@ -106,7 +120,8 @@
    Will return the object store object with an open transaction attached,
    so that it can be used right away."
   [obj-store-fqn table-info]
-  (let [{:keys [db os-name]} obj-store-fqn
+  (let [{:keys [db-name os-name]} obj-store-fqn
+        db (get @name->db db-name)
         object-store (.createObjectStore db os-name #js {:keyPath "id" :autoIncrement true})]
     (for [table-idx (:index table-info)]
       (.createIndex
@@ -220,11 +235,10 @@
 (defn initialize!
   "Initialize the indexed-db. This function should be called once
    when the application starts. The `db-init-callback` function will
-   be called when the database is initialized. It will be called with
-   the database as its only argument. You should save the database, as
-   it is required to build the fully qualified object store name
-   (`obj-store-fqn`, see docstring of this namespace for more information),
-   which you will need to interact with the database and object store.
+   be called when the database is initialized.
+   You should retain the db-name and os-name, as they are required to
+   interact with the database and object store. For more information see:
+   `obj-store-fqn` docstring of this namespace.
 
    The `table-info` parameter must be a map with the following structure:
     ```clojure
@@ -235,21 +249,26 @@
    The `:index` key is a vector of maps, each of which will describe one
    index (the equivalend of a field in a SQL table) of the object store.
 
-   Optionally you can pass an `on-upgrade` callback function, which will
-   be called when the database is upgraded to a new version. The
+   Optionally, you may pass a `success-callback` function, which will be
+   called when the database is initialized. The function will be called
+   with no arguments.
+
+   Also optionally, you can pass an `on-upgrade` callback function, which
+   will be called when the database is upgraded to a new version. The
    function will be called with the old version number as its first
    and the new version as it's second argument. If you do pass a function,
    it will be called *instead* of the default callback function. This
    means, that you will have to create the object store yourself!
    An example of how to do this:
    ```clojure
-   (create-object-store! {:db db :os-name store-name}
+   (create-object-store! {:db-name db-name :os-name store-name}
                          your-table-definition)
    ```
 
    Returns `nil`."
-  ([db-info table-info db-init-callback] (initialize! db-info table-info db-init-callback nil))
-  ([db-info table-info db-init-callback on-upgrade-db-version]
+  ([db-info table-info] (initialize! db-info table-info nil nil))
+  ([db-info table-info success-callback] (initialize! db-info table-info success-callback nil))
+  ([db-info table-info success-callback on-upgrade-db-version]
    (let [{:keys [db-name db-version]} db-info
          upgrade-callback! (partial on-upgrade-needed!
                                     table-info
@@ -259,7 +278,7 @@
                   db-name db-version)]
      (set! (.-onerror request) idb-error-callback)
      (set! (.-onupgradeneeded request) upgrade-callback!)
-     (set! (.-onsuccess request) (partial on-initialize-success! db-init-callback)))
+     (set! (.-onsuccess request) (partial on-initialize-success! db-name success-callback)))
    nil))
 
 
@@ -267,11 +286,11 @@
 ;;           Rich Comments            ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (comment
-  (def db-atom (atom nil)) ;; => [#object[cljs.core.Atom {:val #object[IDBDatabase [object IDBDatabase]]}]]
+  (def db-name "test-db") ;; => ["test-db"]
 
   (def obj-store-name "chat-history") ;; => ["chat-history"]
 
-  (def obj-store-fqn {:db @db-atom :os-name obj-store-name})
+  (def obj-store-fqn {:db-name db-name :os-name obj-store-name})
 
   (def test-messages [{:user :user :text "Hey"}
                       {:user :model :text "Hey, how are you?"}
@@ -288,7 +307,7 @@
                {:name "chat-history"
                 :index [{:name "user"
                          :unique false}]}
-               #(reset! db-atom %)) ;; => nil
+               nil) ;; => nil
 
 
   ;; add a single test message to the object store

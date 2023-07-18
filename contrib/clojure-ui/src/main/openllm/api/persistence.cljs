@@ -13,6 +13,9 @@
   {:name "chat-history"
    :index [{:name "user" :unique false}]})
 
+(def obj-store-fqn {:db-name (get idb-info :db-name)
+                    :os-name (get idb-table-info :name)})
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;              Functions             ;;
@@ -24,9 +27,8 @@
    This function also dispatches the `::sync-chat-history` event to
    populate the chat history in the app-db with the data from the
    IndexedDB database."
-  [idb]
+  []
   (log :debug "IndexedDB database initialized")
-  (rf/dispatch-sync [::set-indexed-db idb])
   (rf/dispatch [::sync-chat-history]))
 
 (defn init-idb
@@ -56,32 +58,17 @@
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;              Coeffects             ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(rf/reg-cofx
- ::indexed-db
- (fn [cofx _]
-   (assoc cofx :idb (get-in cofx [:db :indexed-db]))))
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;               Events               ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(rf/reg-event-db
- ::set-indexed-db
- (fn [db [_ idb]]
-   (assoc db :indexed-db idb)))
-
 ;; Adds a chat message to the IndexedDB database. Is dispatched when the user
 ;; sends or receives a message in the chat.
 (rf/reg-event-fx
  ::add-to-indexed-db-history
- [(rf/inject-cofx ::indexed-db)]
- (fn [cofx [_ timestamp user message]]
-   (let [indexed-db (:idb cofx)]
-     (idb/os-add! {:db indexed-db :os-name (:name idb-table-info)}
-                  {:user user :text message
-                   :timestamp timestamp}))))
+ []
+ (fn [_ [_ timestamp user message]]
+   (idb/os-add! obj-store-fqn
+                {:user user :text message
+                 :timestamp timestamp})))
 
 ;; This event will override the chat history in the app-db with the data from
 ;; the IndexedDB database. It will be dispatched as a callback function to
@@ -102,19 +89,17 @@
 ;; to the callback function of `idb/os-get-all`.
 (rf/reg-event-fx
  ::sync-chat-history
- [(rf/inject-cofx ::indexed-db)]
- (fn [cofx [_]]
-   (let [indexed-db (:idb cofx)
-         callback-fn (fn [result]
+ []
+ (fn [_ [_]]
+   (let [callback-fn (fn [result]
                        (rf/dispatch [::set-chat-history-app-db (js->clj result :keywordize-keys true)]))]
-     (idb/os-get-all {:db indexed-db :os-name (:name idb-table-info)} callback-fn))))
+     (idb/os-get-all obj-store-fqn callback-fn))))
 
 (rf/reg-event-fx
  ::clear-chat-history
- [(rf/inject-cofx ::indexed-db)]
- (fn [cofx [_]]
-   (let [indexed-db (:idb cofx)]
-     (idb/wipe-object-store! {:db indexed-db :os-name (:name idb-table-info)}))))
+ []
+ (fn [_ [_]]
+   (idb/wipe-object-store! obj-store-fqn)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

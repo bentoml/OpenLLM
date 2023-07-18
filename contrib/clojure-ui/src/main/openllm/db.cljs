@@ -29,7 +29,6 @@
                                       ::chat boolean?]))
 (s/def ::selected-model (s/keys :req-un [::model-type string?
                                          ::model-id string?]))
-(s/def ::indexed-db js/Object)
 
 (s/def ::playground-input-value string?)
 (s/def ::playground-last-response string?)
@@ -94,7 +93,6 @@
                              ::side-bar-open?
                              ::modal-open?
                              ::selected-model
-                             ::indexed-db
                              ::playground-input-value
                              ::playground-last-response
                              ::chat-input-value
@@ -135,7 +133,6 @@
                  :chat false}
    :selected-model {:model-type "chatglm"
                     :model-id "google/chatglm-6b"}
-   :indexed-db nil
    :playground-input-value ""
    :playground-last-response ""
    :chat-input-value ""
