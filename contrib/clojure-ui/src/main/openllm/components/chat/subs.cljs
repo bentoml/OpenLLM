@@ -1,28 +1,32 @@
 (ns openllm.components.chat.subs
-    (:require [openllm.util :as util]
-              [re-frame.core :refer [reg-sub]]
-              [clojure.string :as str]))
+  (:require [openllm.components.subs :as components-subs]
+            [openllm.util :as util]
+            [re-frame.core :refer [reg-sub]]
+            [clojure.string :as str]))
 
 (reg-sub
  ::chat-input-value
- (fn [db _]
-   (:chat-input-value db)))
+ :<- [::components-subs/chat-db]
+ (fn [chat-db _]
+   (:chat-input-value chat-db)))
 
 (reg-sub
  ::chat-history
- (fn [db _]
-   (:chat-history db)))
+ :<- [::components-subs/chat-db]
+ (fn [chat-db _]
+   (:chat-history chat-db)))
 
 (reg-sub
  ::modal-open?
- :<- [:modal-open?-map]
- (fn [modal-open?-map _]
-   (get modal-open?-map :chat)))
+ :<- [::components-subs/chat-db]
+ (fn [chat-db _]
+   (:layout-modal-open? chat-db)))
 
 (reg-sub
  ::prompt-layout
- (fn [db _]
-   (:prompt-layout db)))
+ :<- [::components-subs/chat-db]
+ (fn [chat-db _]
+   (:prompt-layout chat-db)))
 
 (reg-sub
  ::prompt

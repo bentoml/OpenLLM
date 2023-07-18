@@ -22,3 +22,8 @@
  ::model-config
  (fn [db _]
    (:model-config db)))
+
+(reg-sub
+ ::components-db
+ (fn [db _]
+   (:components-db db)))

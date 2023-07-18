@@ -1,5 +1,6 @@
 (ns openllm.components.chat.events
-    (:require [openllm.events :refer [check-spec-interceptor]]
+    (:require [openllm.components.chat.db :as db]
+              [openllm.events :refer [check-spec-interceptor]]
               [openllm.api.http :as api]
               [openllm.api.persistence :as persistence]
               [openllm.api.log4cljs.core :refer [log]]
@@ -24,15 +25,17 @@
  ::set-chat-input-value
  [check-spec-interceptor]
  (fn [db [_ new-value]]
-   (assoc db :chat-input-value new-value)))
+   (assoc-in db (db/key-seq :chat-input-value) new-value)))
 
 (reg-event-db
  ::add-to-app-db-history
  [check-spec-interceptor]
  (fn [db [_ timestamp user text]]
-   (assoc db :chat-history (conj (:chat-history db) {:user user
-                                                     :text text
-                                                     :timestamp timestamp}))))
+   (assoc-in db
+             (db/key-seq :chat-history)
+             (conj (get-in db (db/key-seq :chat-history)) {:user user
+                                                           :text text
+                                                           :timestamp timestamp}))))
 
 ;; Puts the received or sent message into the IndexedDB database aswell
 ;; as the app-db.
@@ -62,25 +65,26 @@
  ::on-send-button-click
  []
  (fn [{:keys [db]} [_ prompt llm-config]]
-   (when (not (str/blank? (get-in db [:chat-input-value])))
-     {:dispatch-n [[::add-to-chat-history :user (:chat-input-value db)]
+   (let [input-value (get-in db (db/key-seq :chat-input-value))]
+    (when (not (str/blank? input-value))
+     {:dispatch-n [[::add-to-chat-history :user input-value]
                    [::api/v1-generate prompt llm-config {:on-success [::send-prompt-success]
                                                          :on-failure [::send-prompt-failure]}]
                    [::set-chat-input-value ""]]
-      :dispatch-later [{:ms 10 :dispatch [::auto-scroll]}]})))
+      :dispatch-later [{:ms 10 :dispatch [::auto-scroll]}]}))))
 
 (reg-event-db
  ::toggle-modal
  [check-spec-interceptor]
  (fn [db [_ _]]
-   (let [new-value (not (get-in db [:modal-open? :chat]))]
-     (assoc-in db [:modal-open? :chat] new-value))))
+   (let [new-value (not (get-in db (db/key-seq :layout-modal-open?)))]
+     (assoc-in db (db/key-seq :layout-modal-open?) new-value))))
 
 (reg-event-db
  ::set-prompt-layout
  [check-spec-interceptor]
  (fn [db [_ layout]]
-   (assoc db :prompt-layout layout)))
+   (assoc-in db (db/key-seq :prompt-layout) layout)))
 
 (reg-event-fx
  ::auto-scroll
@@ -97,7 +101,7 @@
  ::clear-chat-history
  []
  (fn [db _]
-   (assoc db :chat-history [])))
+   (assoc-in db (db/key-seq :chat-history) [])))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

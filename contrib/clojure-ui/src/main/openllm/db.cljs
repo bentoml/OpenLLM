@@ -9,7 +9,8 @@
    The subscription namespaces may read the respective data that is of
    interest to them.
    The event namespaces may be used to change (thus WRITE to the) app-db."
-  (:require [cljs.spec.alpha :as s]))
+  (:require [openllm.components.db :as components-db]
+            [cljs.spec.alpha :as s]))
 
 ;; Below is is a clojure.spec specification for the value in app-db. It is
 ;; like a Schema. See: http://clojure.org/guides/spec
@@ -25,17 +26,12 @@
 
 (s/def ::screen-id keyword?)
 (s/def ::side-bar-open? boolean?)
-(s/def ::modal-open? (s/keys :req-un [::playground boolean?
-                                      ::chat boolean?]))
+(s/def ::modal-open? (s/keys :req-un [::playground boolean?]))
 (s/def ::selected-model (s/keys :req-un [::model-type keyword?
                                          ::model-id string?]))
 
 (s/def ::playground-input-value string?)
 (s/def ::playground-last-response string?)
-
-(s/def ::chat-input-value string?)
-(s/def ::chat-history (s/coll-of (s/keys :req-un [::user ::text]) :kind vector?))
-(s/def ::prompt-layout string?)
 
 ;; ########################## MODEL CONFIG ##########################
 (def parameter-min-max
@@ -89,16 +85,14 @@
 ;; ####################### MODEL CONFIG  END ########################
 
 ;; ########################### AGGREGATE ############################
-(s/def ::db (s/keys :req-un [::screen-id
-                             ::side-bar-open?
-                             ::modal-open?
-                             ::selected-model
-                             ::playground-input-value
-                             ::playground-last-response
-                             ::chat-input-value
-                             ::chat-history
-                             ::prompt-layout
-                             ::model-config]))
+(s/def ::db  (s/keys :req-un [::components-db/components-db
+                              ::screen-id
+                              ::side-bar-open?
+                              ::modal-open?
+                              ::selected-model
+                              ::playground-input-value
+                              ::playground-last-response
+                              ::model-config]))
 ;; ######################## AGGREGATE END ###########################
 
 (def standard-llm-config
@@ -127,17 +121,14 @@
   "What gets put into app-db by default.
    See 'core.cljs' for `(dispatch-sync [:initialise-db])` and 'events.cljs'
    for the registration of `:initialise-db` effect handler."
-  {:screen-id :playground
+  {:components-db components-db/initial-db
+   :screen-id :playground
    :side-bar-open? true
-   :modal-open? {:playground false
-                 :chat false}
+   :modal-open? {:playground false}
    :selected-model {:model-type :chatglm
                     :model-id "google/chatglm-6b"}
    :playground-input-value ""
    :playground-last-response ""
-   :chat-input-value ""
-   :chat-history []
-   :prompt-layout ""
    :model-config standard-llm-config})
 
 
@@ -145,6 +136,13 @@
 ;;           Rich Comments            ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (comment
+  ;; some examples on namespaced keywords
+  (= :components-db/components-db :openllm.components.db/components-db) ;; => false
+  (= ::components-db/components-db :openllm.components.db/components-db) ;; => true
+  (= ::components-db/components-db ::openllm.components.db/components-db) ;; => true
+  (= :components-db :openllm.components.db) ;; => false
+
+
   ;; check if default db complies with spec
   (s/valid? ::db default-db) ;; => true
 

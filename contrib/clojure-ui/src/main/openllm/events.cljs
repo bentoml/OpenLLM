@@ -17,7 +17,7 @@
 (def check-spec-interceptor
   "The interceptor we will use to check the app-db after each event handler runs.
    It will check that the app-db is valid against the spec `::db`."
-  (after (partial check-and-throw :openllm.db/db)))
+  (after (partial check-and-throw ::db/db)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
