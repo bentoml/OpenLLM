@@ -1,6 +1,10 @@
-from typing import Any, IO
-from nbformat.v4.rwbase import NotebookReader, NotebookWriter
+from typing import IO
+from typing import Any
+
 from nbformat import NotebookNode
+from nbformat.v4.rwbase import NotebookReader
+from nbformat.v4.rwbase import NotebookWriter
+
 from .config import JupytextConfiguration
 
 class NotSupportedNBFormatVersion(NotImplementedError):

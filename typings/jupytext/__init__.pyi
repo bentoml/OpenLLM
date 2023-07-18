@@ -1,6 +1,12 @@
-from .formats import NOTEBOOK_EXTENSIONS, get_format_implementation, guess_format
 from typing import Any
-from .jupytext import read, reads, write, writes
+
+from .formats import NOTEBOOK_EXTENSIONS
+from .formats import get_format_implementation
+from .formats import guess_format
+from .jupytext import read
+from .jupytext import reads
+from .jupytext import write
+from .jupytext import writes
 
 def load_jupyter_server_extension(app: Any) -> None: ...
 
