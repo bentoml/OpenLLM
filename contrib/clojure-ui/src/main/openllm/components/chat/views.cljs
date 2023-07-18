@@ -54,13 +54,30 @@
                  :end-icon (r/as-element [send-icon/send])
                  :color "primary"} "Send"]]])))
 
-(defn user->extra-bubble-style
+(defn user->bubble-style
   "Produces additional style attributes for a chatbubble contingent upon
    the provided user."
   [user]
-  (if (= user :model)
-     "bg-gray-50 mr-10 rounded-bl-none border-gray-200"
-     "bg-gray-300 ml-10 rounded-br-none border-gray-400"))
+  (str "p-2 rounded-xl border " (if (= user :model)
+                                  "bg-gray-50 mr-10 rounded-bl-none border-gray-200"
+                                  "bg-gray-300 ml-10 rounded-br-none border-gray-400")))
+
+(defn user->text-style
+  "Produces additional style attributes forthe text of a text message 
+   upon the provided user."
+  [user]
+  (str "whitespace-pre-wrap " (if (= user :model) "text-gray-700" "text-gray-950")))
+
+(defn chat-message-entry
+  "Displays a single chat message of the chat history."
+  [{:keys [user text]}]
+  (let [display-user (if (= user :model) "System" "You")
+        alignment (if (= user :model) "flex-row" "flex-row-reverse")]
+    [:div {:class (str "flex " alignment " items-end my-2 w-full")}
+     [:h3 {:class "font-bold text-lg mx-2"} display-user]
+     [:div {:class (user->bubble-style user)}
+      [:p {:class (user->text-style user)}
+       text]]]))
 
 (defn chat-history
   "The chat history."
@@ -68,16 +85,7 @@
   (let [history (rf/subscribe [::subs/chat-history])]
     (fn chat-history []
       (into [:div {:class "px-8 flex flex-col items-center"}]
-            (map (fn [{:keys [user text]}]
-                   (let [display-user (if (= user :model) "System" "You")
-                         alignment (if (= user :model) "flex-row" "flex-row-reverse")]
-                     [:div {:class (str "flex " alignment " items-end my-2 w-full")}
-                      [:h3 {:class "font-bold text-lg mx-2"} display-user]
-                      [:div {:class (str "p-2 rounded-xl border " (user->extra-bubble-style user))}
-                       [:p {:class (if (= user :model) "text-gray-700" "text-gray-950")
-                            :style {:white-space "pre-wrap"}}
-                        text]]]))
-                 @history)))))
+            (map chat-message-entry @history)))))
 
 (defn prompt-layout-modal
   "The modal for editing the prompt layout."
