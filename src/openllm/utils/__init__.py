@@ -78,13 +78,14 @@ else:
 if t.TYPE_CHECKING:
     import openllm
 
+    from .._types import AnyCallable
     from .._types import DictStrAny
     from .._types import LiteralRuntime
     from .._types import P
     from ..models.auto.factory import BaseAutoLLMClass
 
 
-def set_debug_mode(enabled: bool):
+def set_debug_mode(enabled: bool) -> None:
     # monkeypatch bentoml._internal.configuration.set_debug_mode to remove unused logs
     os.environ[_DEBUG_ENV_VAR] = str(enabled)
     os.environ[_GRPC_DEBUG_ENV_VAR] = "DEBUG" if enabled else "ERROR"
@@ -227,7 +228,7 @@ class suppress(contextlib.suppress, contextlib.ContextDecorator):
     """
 
 
-def compose(*funcs: t.Callable[..., t.Any]):
+def compose(*funcs: AnyCallable) -> AnyCallable:
     """Compose any number of unary functions into a single unary function.
 
     >>> import textwrap
@@ -244,7 +245,7 @@ def compose(*funcs: t.Callable[..., t.Any]):
     [1.5, 2.0, 2.25, 2.4, 2.5, 2.571, 2.625, 2.667, 2.7]
     """
 
-    def compose_two(f1: t.Callable[..., t.Any], f2: t.Callable[P, t.Any]):
+    def compose_two(f1: AnyCallable, f2: t.Callable[P, t.Any]):
         def _(*args: P.args, **kwargs: P.kwargs) -> t.Any:
             return f1(f2(*args, **kwargs))
 
@@ -253,7 +254,7 @@ def compose(*funcs: t.Callable[..., t.Any]):
     return functools.reduce(compose_two, funcs)
 
 
-def apply(transform: t.Callable[..., t.Any]):
+def apply(transform: AnyCallable) -> t.Callable[[AnyCallable], AnyCallable]:
     """Decorate a function with a transform function that is invoked on results returned from the decorated function.
 
     ```python

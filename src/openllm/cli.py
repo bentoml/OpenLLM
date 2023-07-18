@@ -502,13 +502,7 @@ def start_grpc_command():
 _IGNORED_OPTIONS = {"working_dir", "production", "protocol_version"}
 
 
-if t.TYPE_CHECKING:
-    WrappedServeFunction = ClickFunctionWrapper[t.Concatenate[int, str | None, P], openllm.LLMConfig]
-else:
-    WrappedServeFunction = t.Any
-
-
-def parse_serve_args(serve_grpc: bool):
+def parse_serve_args(serve_grpc: bool) -> t.Callable[[t.Callable[..., openllm.LLMConfig]], t.Callable[[FC], FC]]:
     """Parsing `bentoml serve|serve-grpc` click.Option to be parsed via `openllm start`."""
     from bentoml_cli.cli import cli
 
@@ -543,7 +537,9 @@ _http_server_args = parse_serve_args(False)
 _grpc_server_args = parse_serve_args(True)
 
 
-def start_decorator(llm_config: openllm.LLMConfig, serve_grpc: bool = False):
+def start_decorator(
+    llm_config: openllm.LLMConfig, serve_grpc: bool = False
+) -> t.Callable[[_AnyCallable], t.Callable[[FC], FC]]:
     opts = [
         llm_config.to_click_options,
         _http_server_args if not serve_grpc else _grpc_server_args,
@@ -856,10 +852,10 @@ def start_bento(
     @click.pass_context
     def start_cmd(
         ctx: click.Context,
-        server_timeout: int | None,
+        server_timeout: int,
         model_id: str | None,
-        workers_per_resource: t.LiteralString | float | None,
-        device: tuple[str, ...] | None,
+        workers_per_resource: t.LiteralString | float,
+        device: tuple[str, ...],
         quantize: t.Literal["int8", "int4", "gptq"] | None,
         bettertransformer: bool | None,
         runtime: t.Literal["ggml", "transformers"],
@@ -935,7 +931,7 @@ def start_bento(
         start_env["OPENLLM_ADAPTER_MAP"] = orjson.dumps(adapter_map).decode()
 
         if bettertransformer is not None:
-            start_env[env.bettertransformer] = bettertransformer
+            start_env[env.bettertransformer] = str(bettertransformer)
         if quantize is not None:
             start_env[env.quantize] = quantize
 
@@ -991,10 +987,10 @@ def start_model(
     @click.pass_context
     def start_cmd(
         ctx: click.Context,
-        server_timeout: int | None,
+        server_timeout: int,
         model_id: str | None,
-        workers_per_resource: str | float | None,
-        device: tuple[str, ...] | None,
+        workers_per_resource: t.LiteralString | float,
+        device: tuple[str, ...],
         quantize: t.Literal["int8", "int4", "gptq"] | None,
         bettertransformer: bool | None,
         runtime: t.Literal["ggml", "transformers"],

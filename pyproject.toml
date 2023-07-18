@@ -111,33 +111,6 @@ playground = ["jupyter", "notebook", "ipython", "jupytext", "nbformat"]
 starcoder = ["bitsandbytes"]
 vllm = ["vllm"]
 
-[tool.hatch.version]
-path = "src/openllm/__about__.py"
-[tool.hatch.metadata]
-allow-direct-references = true
-[tool.hatch.build.targets.wheel]
-packages = ["src/openllm", "src/openllm_client"]
-[tool.hatch.build.targets.sdist]
-exclude = ["/.github", "/typings", "/examples", "/assets", "/changelog.d", "/tools", ".git"]
-[tool.hatch.build.targets.wheel.hooks.mypyc]
-dependencies = [
-    "hatch-mypyc>=0.14.1",
-    "types-tabulate",
-    "types-Deprecated",
-    "types-PyYAML",
-    "types-decorator",
-    "types-protobuf",
-    "types-python-dateutil",
-    "types-requests",
-    "types-setuptools",
-    "types-six",
-    "types-ujson",
-]
-enable-by-default = false
-mypy-args = ["--no-warn-unused-ignores"]
-require-runtime-dependencies = true
-require-runtime-features = ["agents", "chatglm", "opt"]
-
 [tool.towncrier]
 directory = "changelog.d"
 filename = "CHANGELOG.md"
@@ -270,7 +243,7 @@ ignore-overlong-task-comments = true
 [tool.ruff.isort]
 force-single-line = true
 known-first-party = ["openllm", "bentoml", 'transformers']
-lines-after-imports = 1
+lines-after-imports = 2
 no-lines-before = ["future", "standard-library"]
 relative-imports-order = "closest-to-furthest"
 [tool.ruff.flake8-quotes]
@@ -298,7 +271,7 @@ avoid-escape = false
     "PT011",  # ignore too broad raises, as it can be use pytest.raises().match()
     "S307",   # Ignore eval(compile) as it is a known script execution
 ]
-"typings/**/*" = ["D", "F", "E", "PYI002"]
+"typings/**/*" = ["D", "F", "E", "PYI002", "I001"]
 
 [tool.pyright]
 analysis.useLibraryCodeForTypes = true
@@ -374,20 +347,7 @@ warn_unreachable = true
 warn_unused_ignores = true
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
-module = [
-    "numpy.*",
-    "libtpu.*",
-    "jaxlib.mlir.*",
-    "rich.*",
-    "optax.*",
-    "flax.*",
-    "tensorflow.*",
-    "torch.*",
-    "transformers.*",
-    "matplotlib.*",
-    "jaxlib.*",
-    "pytest.*",
-]
+module = ["IPython.*", "numpy.*", "tensorflow.*", "torch.*", "pytest.*", "huggingface_hub.*", "click.*"]
 [[tool.mypy.overrides]]
 ignore_errors = true
-module = ["openllm.models.*", "openllm._types", "bentoml.*", "click.*"]
+module = ["openllm.models.*", "openllm._types"]

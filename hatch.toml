@@ -1,3 +1,11 @@
+[version]
+path = "src/openllm/__about__.py"
+[metadata]
+allow-direct-references = true
+[build.targets.wheel]
+packages = ["src/openllm", "src/openllm_client"]
+[build.targets.sdist]
+exclude = ["/.github", "/typings", "/examples", "/assets", "/changelog.d", "/tools", ".git"]
 [envs.default]
 dependencies = [
     # NOTE: To run all hooks
@@ -19,7 +27,17 @@ dependencies = [
     "types-setuptools",
     "types-six",
     "types-ujson",
-
+    "pandas-stubs",
+    "types-Pillow",
+    "types-Pygments",
+    "types-appdirs",
+    "types-colorama",
+    "types-google-cloud-ndb",
+    "types-jsonschema",
+    "types-psutil",
+    "types-pywin32",
+    "types-tqdm",
+    "types-openpyxl",
 ]
 [envs.default.scripts]
 changelog = "towncrier build --version main --draft"
@@ -72,3 +90,32 @@ generate-summary = "python tools/generate-coverage.py"
 report-uncovered-html = "coverage html --skip-covered --skip-empty"
 report-xml = "coverage xml"
 write-summary-report = "python tools/write-coverage-report.py"
+[build.targets.wheel.hooks.mypyc]
+dependencies = [
+    "hatch-mypyc>=0.14.1",
+    "types-tabulate",
+    "types-Deprecated",
+    "types-PyYAML",
+    "types-decorator",
+    "types-protobuf",
+    "types-python-dateutil",
+    "types-requests",
+    "types-setuptools",
+    "types-six",
+    "types-ujson",
+    "pandas-stubs",
+    "types-Pillow",
+    "types-Pygments",
+    "types-appdirs",
+    "types-colorama",
+    "types-google-cloud-ndb",
+    "types-jsonschema",
+    "types-psutil",
+    "types-pywin32",
+    "types-tqdm",
+    "types-openpyxl",
+]
+enable-by-default = false
+mypy-args = ["--no-warn-unused-ignores"]
+require-runtime-dependencies = true
+require-runtime-features = ["agents", "chatglm", "opt"]

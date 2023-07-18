@@ -36,7 +36,10 @@ import openllm
 if t.TYPE_CHECKING:
     from attr import _ValidatorType
 
+    from .._types import AnyCallable
     from .._types import ListAny
+
+    FC = t.TypeVar("FC", bound=t.Union[AnyCallable, click.Command])
 
 _T = t.TypeVar("_T")
 
@@ -47,7 +50,7 @@ def attrs_to_options(
     model_name: str,
     typ: type[t.Any] | None = None,
     suffix_generation: bool = False,
-):
+) -> t.Callable[[FC], FC]:
     # TODO: support parsing nested attrs class and Union
     envvar = field.metadata["env"]
     dasherized = inflection.dasherize(name)
@@ -92,7 +95,7 @@ def env_converter(value: t.Any, env: str | None = None) -> t.Any:
 
 
 def Field(
-    default: t.Any = None,
+    default: _T = None,
     *,
     ge: int | float | None = None,
     le: int | float | None = None,
@@ -102,7 +105,7 @@ def Field(
     auto_default: bool = False,
     use_default_converter: bool = True,
     **attrs: t.Any,
-):
+) -> attr.Attribute[_T]:
     """A decorator that extends attr.field with additional arguments, which provides the same interface as pydantic's Field.
 
     By default, if both validator and ge are provided, then then ge will be

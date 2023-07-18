@@ -74,6 +74,7 @@ if t.TYPE_CHECKING:
     import auto_gptq as autogptq
     import peft
     import torch
+    import vllm
 
     import transformers
     from bentoml._internal.runner.strategy import Strategy
@@ -99,6 +100,7 @@ else:
     LLMRunner = bentoml.Runner
 
     autogptq = LazyLoader("autogptq", globals(), "auto_gptq")
+    vllm = LazyLoader("vllm", globals(), "vllm")
     transformers = LazyLoader("transformers", globals(), "transformers")
     torch = LazyLoader("torch", globals(), "torch")
     peft = LazyLoader("peft", globals(), "peft")
@@ -240,7 +242,10 @@ def resolve_peft_config_type(adapter_map: dict[str, str | None] | None):
 
 _reserved_namespace = {"config_class", "model", "tokenizer", "import_kwargs"}
 
-M = t.TypeVar("M", bound="transformers.PreTrainedModel")
+M = t.TypeVar(
+    "M",
+    bound="t.Union[transformers.PreTrainedModel, transformers.Pipeline, transformers.TFPreTrainedModel, transformers.FlaxPreTrainedModel, vllm.LLM]",
+)
 T = t.TypeVar(
     "T",
     bound="t.Union[transformers.PreTrainedTokenizerFast, transformers.PreTrainedTokenizer, transformers.PreTrainedTokenizerBase]",
