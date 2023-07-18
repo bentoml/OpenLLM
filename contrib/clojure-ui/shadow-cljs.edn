@@ -7,4 +7,5 @@
         :asset-path "/js"
         :modules
         {:main
-         {:init-fn openllm.app/init}}}}}
+         {:init-fn openllm.app/init}}
+        :build-hooks [(openllm.build/generate-models-json)]}}}
