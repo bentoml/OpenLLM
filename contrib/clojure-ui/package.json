@@ -25,7 +25,6 @@
     "@mui/x-date-pickers": "6.0.0",
     "@mui/icons-material": "5.11.16",
     "@mui/base": "5.0.0-alpha.120",
-    "@mui/styles": "5.11.12",
     "@tailwindcss/forms": "^0.5.3",
     "react-transition-group": "^4.4.5",
     "create-react-class": "15.7.0",
