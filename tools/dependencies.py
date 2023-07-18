@@ -112,6 +112,7 @@ class Dependencies:
     subdirectory: t.Optional[str] = None
     requires_gpu: bool = False
     lower_constraint: t.Optional[str] = None
+    upper_constraint: t.Optional[str] = None
     platform: t.Optional[t.Tuple[t.Literal["Linux", "Windows", "Darwin"], t.Literal["eq", "ne"]]] = None
 
     def with_options(self, **kwargs: t.Any) -> Dependencies:
@@ -119,7 +120,7 @@ class Dependencies:
 
     @property
     def has_constraint(self) -> bool:
-        return self.lower_constraint is not None
+        return self.lower_constraint is not None or self.upper_constraint is not None
 
     @property
     def pypi_extensions(self) -> str:
@@ -131,8 +132,12 @@ class Dependencies:
 
     def to_str(self) -> str:
         deps: list[str] = []
-        if self.lower_constraint is not None:
+        if self.lower_constraint is not None and self.upper_constraint is not None:
+            dep = f"{self.name}{self.pypi_extensions}>={self.lower_constraint},<{self.upper_constraint}"
+        elif self.lower_constraint is not None:
             dep = f"{self.name}{self.pypi_extensions}>={self.lower_constraint}"
+        elif self.upper_constraint is not None:
+            dep = f"{self.name}{self.pypi_extensions}<{self.upper_constraint}"
         elif self.subdirectory is not None:
             dep = f"{self.name}{self.pypi_extensions} @ git+https://github.com/{self.git_repo_url}.git#subdirectory={self.subdirectory}"
         elif self.branch is not None:
@@ -168,6 +173,7 @@ _BASE_DEPENDENCIES = [
     Dependencies(name="httpx"),
     Dependencies(name="typing_extensions"),
     Dependencies(name="cuda-python", platform=("Darwin", "ne")),
+    Dependencies(name="bitsandbytes", upper_constraint="0.40"),  # Currently only <0.40 works with CUDA 11.8
 ]
 
 _NIGHTLY_MAPPING: dict[str, Dependencies] = {

@@ -320,7 +320,6 @@ exclude = [
     "src/openllm/__about__.py",
     "src/openllm/__main__.py",
     "src/openllm/utils/dummy_*.py",
-    "src/openllm/models/*",         # XXX: remove me later
 ]
 include = ["src/openllm", "src/openllm_client", "tests/", "tools/", "examples/"]
 pythonVersion = "3.12"

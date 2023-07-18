@@ -32,7 +32,7 @@ class LlaMAConfig(openllm.LLMConfig):
         "model_name": "llama",
         "start_name": "llama",
         "url": "https://github.com/facebookresearch/llama",
-        "default_id": "decapoda-research/llama-7b-hf",
+        "default_id": "huggyllama/llama-7b",
         "model_ids": [
             "decapoda-research/llama-65b-hf",
             "decapoda-research/llama-30b-hf",
@@ -53,7 +53,7 @@ class LlaMAConfig(openllm.LLMConfig):
     }
 
     class GenerationConfig:
-        max_new_tokens: int = 32
+        max_new_tokens: int = 256
         temperature: float = 0.8
         top_p: float = 0.95
 

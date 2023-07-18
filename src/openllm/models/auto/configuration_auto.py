@@ -109,6 +109,7 @@ CONFIG_NAME_ALIASES: dict[str, str] = {
     "stable_lm": "stablelm",
     "star_coder": "starcoder",
     "gpt_neo_x": "gpt_neox",
+    "lla_ma": "llama",
 }
 
 

@@ -26,7 +26,6 @@ if t.TYPE_CHECKING:
     import torch
     import torch.amp
 
-    import bentoml
     import transformers
 else:
     transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
@@ -80,23 +79,16 @@ class LlaMA(openllm.LLM["transformers.LlamaForCausalLM", "transformers.LlamaToke
     def postprocess_generate(self, prompt: str, generation_result: list[str], **_: t.Any) -> str:
         return generation_result[0]
 
-    def load_model(self, tag: bentoml.Tag, *args: t.Any, **attrs: t.Any) -> t.Any:
-        model = transformers.AutoModelForCausalLM.from_pretrained(self._bentomodel.path, **attrs)
-        if self.config.use_half_precision:
-            model.half()
-        return model
-
     def generate(self, prompt: str, **attrs: t.Any) -> list[str]:
         from ..._generation import StopOnTokens
 
         generation_kwargs = {
             "do_sample": True,
             "generation_config": self.config.model_construct_env(**attrs).to_generation_config(),
-            "pad_token_id": self.tokenizer.eos_token_id,
             "stopping_criteria": transformers.StoppingCriteriaList([StopOnTokens()]),
         }
 
         inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
         with torch.inference_mode():
             gen_tokens = self.model.generate(inputs.input_ids, **generation_kwargs)
-            return self.tokenizer.batch_decode(gen_tokens)
+            return self.tokenizer.batch_decode(gen_tokens, skip_special_tokens=True, clean_up_tokenization_spaces=True)
