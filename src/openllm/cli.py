@@ -34,6 +34,7 @@ bentomodel = openllm.import_model("falcon", model_id='tiiuae/falcon-7b-instruct'
 """
 from __future__ import annotations
 import functools
+import importlib.machinery
 import importlib.util
 import inspect
 import itertools
@@ -98,7 +99,6 @@ if t.TYPE_CHECKING:
     from bentoml._internal.bento import BentoStore
     from bentoml._internal.container import DefaultBuilder
 
-    from ._types import AnyCallable
     from ._types import ClickFunctionWrapper
     from ._types import DictStrAny
     from ._types import ListStr
@@ -143,6 +143,10 @@ OPENLLM_FIGLET = """\
 """
 
 
+_AnyCallable = t.Callable[..., t.Any]
+FC = t.TypeVar("FC", bound=t.Union[_AnyCallable, click.Command])
+
+
 def parse_device_callback(
     ctx: click.Context, param: click.Parameter, value: tuple[tuple[str], ...] | None
 ) -> TupleStr | None:
@@ -169,7 +173,7 @@ def _echo(text: t.Any, fg: str = "green", _with_style: bool = True, **attrs: t.A
     call(text, **attrs)
 
 
-output_option = click.option(
+output_option: t.Callable[[FC], FC] = click.option(
     "-o",
     "--output",
     type=click.Choice(["json", "pretty", "porcelain"]),
@@ -181,7 +185,7 @@ output_option = click.option(
 )
 
 
-def model_id_option(factory: t.Any, model_env: EnvVarMixin | None = None):
+def model_id_option(factory: t.Any, model_env: EnvVarMixin | None = None) -> t.Callable[[FC], FC]:
     envvar = None
     if model_env is not None:
         envvar = model_env.model_id
@@ -195,7 +199,7 @@ def model_id_option(factory: t.Any, model_env: EnvVarMixin | None = None):
     )
 
 
-def workers_per_resource_option(factory: t.Any, build: bool = False):
+def workers_per_resource_option(factory: t.Any, build: bool = False) -> t.Callable[[FC], FC]:
     help_str = """Number of workers per resource assigned.
     See https://docs.bentoml.org/en/latest/guides/scheduling.html#resource-scheduling-strategy
     for more information. By default, this is set to 1.
@@ -214,7 +218,7 @@ def workers_per_resource_option(factory: t.Any, build: bool = False):
     return factory.option("--workers-per-resource", default=None, help=help_str, type=str, required=False)
 
 
-def quantize_option(factory: t.Any, build: bool = False, model_env: EnvVarMixin | None = None):
+def quantize_option(factory: t.Any, build: bool = False, model_env: EnvVarMixin | None = None) -> t.Callable[[FC], FC]:
     envvar = None
     if model_env is not None:
         envvar = model_env.quantize
@@ -237,7 +241,9 @@ def quantize_option(factory: t.Any, build: bool = False, model_env: EnvVarMixin 
     )
 
 
-def bettertransformer_option(factory: t.Any, build: bool = False, model_env: EnvVarMixin | None = None):
+def bettertransformer_option(
+    factory: t.Any, build: bool = False, model_env: EnvVarMixin | None = None
+) -> t.Callable[[FC], FC]:
     envvar = None
     if model_env is not None:
         envvar = model_env.bettertransformer
@@ -276,7 +282,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
     NUMBER_OF_COMMON_PARAMS = 4  # parameters in common_params + 1 faked group option header
 
     @staticmethod
-    def common_params(f: AnyCallable):
+    def common_params(f: _AnyCallable):
         """This is not supposed to be used with unprocessed click function.
 
         This should be used a the last currying from common_params -> usage_tracking -> exception_handling.
@@ -316,7 +322,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
         return wrapper
 
     @staticmethod
-    def usage_tracking(func: AnyCallable, group: click.Group, **attrs: t.Any) -> AnyCallable:
+    def usage_tracking(func: _AnyCallable, group: click.Group, **attrs: t.Any) -> _AnyCallable:
         """This is not supposed to be used with unprocessed click function.
 
         This should be used a the last currying from common_params -> usage_tracking -> exception_handling.
@@ -351,7 +357,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
         return wrapper
 
     @staticmethod
-    def exception_handling(func: AnyCallable, group: click.Group, **attrs: t.Any) -> ClickFunctionWrapper[..., t.Any]:
+    def exception_handling(func: _AnyCallable, group: click.Group, **attrs: t.Any) -> ClickFunctionWrapper[..., t.Any]:
         """This is not supposed to be used with unprocessed click function.
 
         This should be used a the last currying from common_params -> usage_tracking -> exception_handling.
@@ -416,7 +422,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
             attrs["context_settings"]["max_content_width"] = 120
         aliases = attrs.pop("aliases", None)
 
-        def wrapper(f: AnyCallable) -> click.Command:
+        def wrapper(f: _AnyCallable) -> click.Command:
             name = f.__name__.lower()
             if name.endswith("_command"):
                 name = name[:-8]
@@ -453,7 +459,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
 
 @click.group(cls=OpenLLMCommandGroup, context_settings=_CONTEXT_SETTINGS, name="openllm")
 @click.version_option(__version__, "--version", "-v")
-def cli():
+def cli() -> None:
     """\b
      ██████╗ ██████╗ ███████╗███╗   ██╗██╗     ██╗     ███╗   ███╗
     ██╔═══██╗██╔══██╗██╔════╝████╗  ██║██║     ██║     ████╗ ████║
@@ -621,7 +627,7 @@ def start_decorator(llm_config: openllm.LLMConfig, serve_grpc: bool = False):
         click.option("--return-process", is_flag=True, default=False, help="Internal use only.", hidden=True),
     ]
 
-    def decorator(f: AnyCallable) -> AnyCallable:
+    def decorator(f: _AnyCallable) -> _AnyCallable:
         for opt in reversed(opts):
             f = opt(f)
         return f
@@ -708,7 +714,7 @@ Available model_id(s): {llm_config['model_ids']} [default: {llm_config['default_
         )
 
 
-def start_bento_docstring(bento: bentoml.Bento, llm_config: openllm.LLMConfig, serve_grpc: bool):
+def start_bento_docstring(bento: bentoml.Bento, llm_config: openllm.LLMConfig, serve_grpc: bool) -> str:
     environ = parse_config_options(llm_config, llm_config["timeout"], llm_config["workers_per_resource"], None, {})
 
     serve_cmd_envvar = {
@@ -822,7 +828,7 @@ def start_bento(
     llm_config: openllm.LLMConfig,
     serve_grpc: bool,
     **command_attrs: t.Any,
-):
+) -> click.Command:
     gpu_available = gpu_count()
     if llm_config["requires_gpu"] and len(gpu_available) < 1:
         return noop_command(
@@ -967,7 +973,7 @@ def start_model(
     llm_config: openllm.LLMConfig,
     serve_grpc: bool,
     **command_attrs: t.Any,
-):
+) -> click.Command:
     gpu_available = gpu_count()
     if llm_config["requires_gpu"] and len(gpu_available) < 1:
         # NOTE: The model requires GPU, therefore we will return a dummy command
@@ -1083,7 +1089,7 @@ def start_model(
         )
 
         if bettertransformer is not None:
-            start_env[env.bettertransformer] = bettertransformer
+            start_env[env.bettertransformer] = str(bettertransformer)
         if quantize is not None:
             start_env[env.quantize] = quantize
 
@@ -1169,7 +1175,7 @@ def download_models_command(
     implementation: LiteralRuntime | None,
     quantize: t.Literal["int8", "int4", "gptq"] | None,
     serialisation_format: t.Literal["safetensors", "default"],
-):
+) -> bentoml.Tag:
     """Setup LLM interactively.
 
     It accepts two positional arguments: `model_name` and `model_id`. The first name determine
@@ -1275,7 +1281,7 @@ def _start(
     framework: LiteralRuntime | None = ...,
     additional_args: ListStr | None = ...,
     _serve_grpc: bool = ...,
-    __test__: t.Literal[False] = ...,
+    __test__: t.Literal[False] = False,
 ) -> openllm.LLMConfig:
     ...
 
@@ -1540,7 +1546,7 @@ def _build(
     # NOTE: This usually only concern BentoML devs.
     pattern = r"^__tag__:[^:\n]+:[^:\n]+"
     matched = re.search(pattern, output.decode("utf-8").strip(), re.MULTILINE)
-    assert matched is not None, f"Failed to find tag from output: {output}"
+    assert matched is not None, f"Failed to find tag from output: {output!s}"
     _, _, tag = matched.group(0).partition(":")
     return bentoml.get(tag, _bento_store=bento_store)
 
@@ -1711,7 +1717,7 @@ def build_command(
     push: bool,
     serialisation_format: t.Literal["safetensors", "default"],
     **attrs: t.Any,
-):
+) -> bentoml.Bento:
     """Package a given models into a Bento.
 
     \b
@@ -1940,7 +1946,7 @@ def models_command(
         failed_initialized: list[tuple[str, Exception]] = []
 
         json_data: dict[
-            str, dict[t.Literal["model_id", "url", "installation", "cpu", "gpu", "runtime_impl"], t.Any]
+            str, dict[t.Literal["model_id", "url", "installation", "cpu", "gpu", "runtime_impl"], t.Any] | t.Any
         ] = {}
 
         converted: list[str] = []
@@ -1969,8 +1975,8 @@ def models_command(
             if DEBUG:
                 try:
                     openllm.AutoLLM.for_model(m, llm_config=config)
-                except Exception as err:
-                    failed_initialized.append((m, err))
+                except Exception as e:
+                    failed_initialized.append((m, e))
 
         ids_in_local_store = None
         if show_available:
@@ -1978,11 +1984,10 @@ def models_command(
             ids_in_local_store = {k: v for k, v in ids_in_local_store.items() if v}
 
         if machine:
-            dumped: DictStrAny = json_data
             if show_available:
                 assert ids_in_local_store
-                dumped["local"] = [bentoml_cattr.unstructure(i.tag) for m in ids_in_local_store.values() for i in m]
-            return dumped
+                json_data["local"] = [bentoml_cattr.unstructure(i.tag) for m in ids_in_local_store.values() for i in m]
+            return json_data
         elif output == "pretty":
             import tabulate
 
@@ -2075,13 +2080,12 @@ def models_command(
                     )
                 _echo(formatted_table, fg="white")
         else:
-            dumped: DictStrAny = json_data
             if show_available:
                 assert ids_in_local_store
-                dumped["local"] = [bentoml_cattr.unstructure(i.tag) for m in ids_in_local_store.values() for i in m]
+                json_data["local"] = [bentoml_cattr.unstructure(i.tag) for m in ids_in_local_store.values() for i in m]
             _echo(
                 orjson.dumps(
-                    dumped,
+                    json_data,
                     option=orjson.OPT_INDENT_2,
                 ).decode(),
                 fg="white",
@@ -2098,7 +2102,7 @@ def models_command(
     help="Skip confirmation when deleting a specific model",
 )
 @inject
-def prune_command(yes: bool, model_store: ModelStore = Provide[BentoMLContainer.model_store]):
+def prune_command(yes: bool, model_store: ModelStore = Provide[BentoMLContainer.model_store]) -> None:
     """Remove all saved models locally."""
     available = [
         m for m in bentoml.models.list() if "framework" in m.info.labels and m.info.labels["framework"] == "openllm"
@@ -2137,7 +2141,7 @@ def parsing_instruction_callback(
         raise click.BadParameter(f"Invalid option format: {value}")
 
 
-def shared_client_options(f: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
+def shared_client_options(f: FC) -> FC:
     options = [
         click.option(
             "--endpoint",
@@ -2189,7 +2193,7 @@ def instruct(
     task: str,
     _memoized: DictStrAny,
     **attrs: t.Any,
-):
+) -> str:
     """Instruct agents interactively for given tasks, from a terminal.
 
     \b
@@ -2230,13 +2234,15 @@ def instruct(
     "--server-type", type=click.Choice(["grpc", "http"]), help="Server type", default="http", show_default=True
 )
 @click.argument("prompt", type=click.STRING)
+@click.pass_context
 def query(
+    ctx: click.Context,
     prompt: str,
     endpoint: str,
     timeout: int,
     server_type: t.Literal["http", "grpc"],
     output: OutputLiteral,
-):
+) -> None:
     """Ask a LLM interactively, from a terminal.
 
     \b
@@ -2271,6 +2277,8 @@ def query(
     else:
         _echo(res["responses"], fg="white")
 
+    ctx.exit(0)
+
 
 def load_notebook_metadata() -> DictStrAny:
     with open(os.path.join(os.path.dirname(openllm.playground.__file__), "_meta.yml"), "r") as f:
@@ -2290,7 +2298,8 @@ def load_notebook_metadata() -> DictStrAny:
     default=8888,
     help="Default port for Jupyter server",
 )
-def playground(output_dir: str | None, port: int):
+@click.pass_context
+def playground(ctx: click.Context, output_dir: str | None, port: int) -> None:
     """OpenLLM Playground.
 
     A collections of notebooks to explore the capabilities of OpenLLM.
@@ -2332,9 +2341,11 @@ def playground(output_dir: str | None, port: int):
                 "File already exists" if not module.ispkg else f"{module.name} is a module",
             )
             continue
+        if not isinstance(module.module_finder, importlib.machinery.FileFinder):
+            continue
         _echo("Generating notebook for: " + module.name, fg="magenta")
         markdown_cell = nbformat.v4.new_markdown_cell(metadata[module.name]["description"])
-        f = jupytext.read(os.path.join(module.module_finder.path, module.name + ".py"))  # type: ignore
+        f = jupytext.read(os.path.join(module.module_finder.path, module.name + ".py"))
         f.cells.insert(0, markdown_cell)
         jupytext.write(f, os.path.join(output_dir, module.name + ".ipynb"), fmt="notebook")
     try:
@@ -2359,6 +2370,7 @@ def playground(output_dir: str | None, port: int):
         _echo("\nShutting down Jupyter server...", fg="yellow")
         if _temp_dir:
             _echo("Note: You can access the generated notebooks in: " + output_dir, fg="blue")
+    ctx.exit(0)
 
 
 if psutil.WINDOWS:

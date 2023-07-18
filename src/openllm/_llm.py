@@ -406,8 +406,6 @@ class LLMInterface(ABC, t.Generic[M, T]):
     """A boolean to determine whether a custom 'load_model' is implemented"""
     __llm_custom_tokenizer__: bool
     """A boolean to determine whether a custom 'load_tokenizer' is implemented"""
-    __llm_init_kwargs__: property | None
-    """A check if 'import_kwargs' is implemented in subclass."""
 
     if t.TYPE_CHECKING:
 
@@ -465,7 +463,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
         else:
             return "pt", name
 
-    def __init_subclass__(cls):
+    def __init_subclass__(cls: type[t.Self]) -> None:
         cd = cls.__dict__
         implementation, config_class_name = cls._infer_implementation_from_name(cls.__name__)
         cls.__llm_implementation__ = implementation
@@ -512,7 +510,6 @@ class LLM(LLMInterface[M, T], ReprMixin):
         cls.__llm_custom_import__ = _custom_import
         cls.__llm_custom_load__ = False if cls.load_model is LLMInterface[M, T].load_model else True
         cls.__llm_custom_tokenizer__ = False if cls.load_tokenizer is LLMInterface[M, T].load_tokenizer else True
-        cls.__llm_init_kwargs__ = None if cls.import_kwargs is LLMInterface[M, T].import_kwargs else cls.import_kwargs
 
         for at in {"bentomodel", "model", "tokenizer", "adapter_map"}:
             setattr(cls, f"__llm_{at}__", None)
@@ -540,7 +537,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
 
             self.__llm_model__ = t.cast(
                 M,
-                BetterTransformer.reverse(t.cast("transformers.PreTrainedModel", self.__llm_model__)),  # type: ignore
+                BetterTransformer.reverse(t.cast("transformers.PreTrainedModel", self.__llm_model__)),
             )
 
         openllm.serialisation.save_pretrained(self, save_directory, **attrs)

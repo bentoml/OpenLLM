@@ -24,26 +24,25 @@ from ..._prompt import default_formatter
 
 if t.TYPE_CHECKING:
     import torch
-    import torch.amp
+    import vllm
 
     import bentoml
     import transformers
 else:
     transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
     torch = openllm.utils.LazyLoader("torch", globals(), "torch")
-    torch.amp = openllm.utils.LazyLoader("torch.amp", globals(), "torch.amp")
+    vllm = openllm.utils.LazyLoader("vllm", globals(), "vllm")
 
 
 logger = logging.getLogger(__name__)
 
 
-class LlaMA(openllm.LLM["transformers.LlamaForCausalLM", "transformers.LlamaTokenizer"]):
+class VLLMLlaMA(openllm.LLM["vllm.LLM", "transformers.LlamaTokenizer"]):
     __openllm_internal__ = True
 
     def sanitize_parameters(
         self,
         prompt: str,
-        top_p: float | None = None,
         temperature: float | None = None,
         max_new_tokens: int | None = None,
         use_default_prompt_template: bool = True,
@@ -67,7 +66,7 @@ class LlaMA(openllm.LLM["transformers.LlamaForCausalLM", "transformers.LlamaToke
         else:
             prompt_text = prompt
 
-        generation_config = {"max_new_tokens": max_new_tokens, "temperature": temperature, "top_p": top_p}
+        generation_config = {"max_new_tokens": max_new_tokens, "temperature": temperature}
 
         return prompt_text, generation_config, {}
 

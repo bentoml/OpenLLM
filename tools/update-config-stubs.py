@@ -137,7 +137,7 @@ def main() -> int:
                 " " * 4 + line
                 for line in [
                     "@overload\n" if "overload" in dir(_imported) else "@t.overload\n",
-                    f'def __getitem__(self, item: t.Literal["{keys}"] = ...) -> {transformed.get(keys, process_annotations(ForwardRef.__forward_arg__))}: ...\n',
+                    f'def __getitem__(self, item: t.Literal["{keys}"]) -> {transformed.get(keys, process_annotations(ForwardRef.__forward_arg__))}: ...\n',
                 ]
             ]
         )
@@ -147,9 +147,9 @@ def main() -> int:
             " " * 4 + line
             for line in [
                 "@overload\n" if "overload" in dir(_imported) else "@t.overload\n",
-                'def __getitem__(self, item: t.Literal["generation_class"] = ...) -> t.Type[GenerationConfig]: ...\n',
+                'def __getitem__(self, item: t.Literal["generation_class"]) -> t.Type[GenerationConfig]: ...\n',
                 "@overload\n" if "overload" in dir(_imported) else "@t.overload\n",
-                'def __getitem__(self, item: t.Literal["extras"] = ...) -> t.Dict[str, t.Any]: ...\n',
+                'def __getitem__(self, item: t.Literal["extras"]) -> t.Dict[str, t.Any]: ...\n',
             ]
         ]
     )
@@ -159,7 +159,7 @@ def main() -> int:
                 " " * 4 + line
                 for line in [
                     "@overload\n" if "overload" in dir(_imported) else "@t.overload\n",
-                    f'def __getitem__(self, item: t.Literal["{keys}"] = ...) -> {type_pep563}: ...\n',
+                    f'def __getitem__(self, item: t.Literal["{keys}"]) -> {type_pep563}: ...\n',
                 ]
             ]
         )
@@ -170,7 +170,7 @@ def main() -> int:
                 " " * 4 + line
                 for line in [
                     "@overload\n" if "overload" in dir(_imported) else "@t.overload\n",
-                    f'def __getitem__(self, item: t.Literal["{keys.lower()}"] = ...) -> dict[str, t.Any]: ...\n',
+                    f'def __getitem__(self, item: t.Literal["{keys.lower()}"]) -> dict[str, t.Any]: ...\n',
                 ]
             ]
         )

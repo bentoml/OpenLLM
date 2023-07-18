@@ -44,6 +44,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("falcon", "FalconConfig"),
         ("flan_t5", "FlanT5Config"),
         ("gpt_neox", "GPTNeoXConfig"),
+        ("llama", "LlaMAConfig"),
         ("mpt", "MPTConfig"),
         ("opt", "OPTConfig"),
         ("stablelm", "StableLMConfig"),

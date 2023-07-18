@@ -62,7 +62,8 @@ if sys.version_info < (3, 10):
     _WithArgsTypes = (_TypingGenericAlias,)
 else:
     _WithArgsTypes: t.Any = (
-        t._GenericAlias,  # type: ignore (_GenericAlias is the actual GenericAlias implementation)
+        #  _GenericAlias is the actual GenericAlias implementation
+        t._GenericAlias,  # type: ignore
         types.GenericAlias,
         types.UnionType,
     )
@@ -395,7 +396,7 @@ _extras: dict[str, t.Any] = {
 
 _extras["__openllm_migration__"] = {"ModelEnv": "EnvVarMixin"}
 
-_import_structure = {
+_import_structure: dict[str, list[str]] = {
     "analytics": [],
     "codegen": [],
     "dantic": [],

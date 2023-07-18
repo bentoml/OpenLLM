@@ -236,6 +236,38 @@ pip install openllm
 </tr>
 <tr>
 
+<td><a href=https://github.com/facebookresearch/llama>llama</a></td>
+<td>✅</td>
+<td>✅</td>
+<td>
+
+```bash
+pip install openllm
+```
+
+</td>
+<td>
+
+<ul><li><a href=https://huggingface.co/decapoda-research/llama-65b-hf><code>decapoda-research/llama-65b-hf</code></a></li>
+<li><a href=https://huggingface.co/decapoda-research/llama-30b-hf><code>decapoda-research/llama-30b-hf</code></a></li>
+<li><a href=https://huggingface.co/decapoda-research/llama-13b-hf><code>decapoda-research/llama-13b-hf</code></a></li>
+<li><a href=https://huggingface.co/decapoda-research/llama-7b-hf-int8><code>decapoda-research/llama-7b-hf-int8</code></a></li>
+<li><a href=https://huggingface.co/decapoda-research/llama-7b-hf><code>decapoda-research/llama-7b-hf</code></a></li>
+<li><a href=https://huggingface.co/openlm-research/open_llama_7b_v2><code>openlm-research/open_llama_7b_v2</code></a></li>
+<li><a href=https://huggingface.co/openlm-research/open_llama_3b_v2><code>openlm-research/open_llama_3b_v2</code></a></li>
+<li><a href=https://huggingface.co/openlm-research/open_llama_13b><code>openlm-research/open_llama_13b</code></a></li>
+<li><a href=https://huggingface.co/openlm-research/open_llama_7b><code>openlm-research/open_llama_7b</code></a></li>
+<li><a href=https://huggingface.co/openlm-research/open_llama_3b><code>openlm-research/open_llama_3b</code></a></li>
+<li><a href=https://huggingface.co/huggyllama/llama-65b><code>huggyllama/llama-65b</code></a></li>
+<li><a href=https://huggingface.co/huggyllama/llama-30b><code>huggyllama/llama-30b</code></a></li>
+<li><a href=https://huggingface.co/huggyllama/llama-13b><code>huggyllama/llama-13b</code></a></li>
+<li><a href=https://huggingface.co/huggyllama/llama-7b><code>huggyllama/llama-7b</code></a></li>
+<li><a href=https://huggingface.co/syzymon/long_llama_3b><code>syzymon/long_llama_3b</code></a></li></ul>
+
+</td>
+</tr>
+<tr>
+
 <td><a href=https://huggingface.co/mosaicml>mpt</a></td>
 <td>✅</td>
 <td>✅</td>

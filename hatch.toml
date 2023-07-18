@@ -8,6 +8,18 @@ dependencies = [
     "tomlkit",
     # NOTE: Using under ./tools/update-readme.py
     "markdown-it-py",
+    # NOTE: the below includes types for mypy
+    "types-tabulate",
+    "types-Deprecated",
+    "types-PyYAML",
+    "types-decorator",
+    "types-protobuf",
+    "types-python-dateutil",
+    "types-requests",
+    "types-setuptools",
+    "types-six",
+    "types-ujson",
+
 ]
 [envs.default.scripts]
 changelog = "towncrier build --version main --draft"

@@ -13,17 +13,12 @@
 # limitations under the License.
 
 from __future__ import annotations
-import typing as t
 from collections import OrderedDict
 
 from .configuration_auto import CONFIG_MAPPING_NAMES
 from .factory import BaseAutoLLMClass
 from .factory import _LazyAutoMapping
 
-
-if t.TYPE_CHECKING:
-    import openllm
-    import transformers
 
 MODEL_MAPPING_NAMES = OrderedDict(
     [
@@ -32,6 +27,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("falcon", "Falcon"),
         ("flan_t5", "FlanT5"),
         ("gpt_neox", "GPTNeoX"),
+        ("llama", "LlaMA"),
         ("mpt", "MPT"),
         ("opt", "OPT"),
         ("stablelm", "StableLM"),
@@ -40,9 +36,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
     ]
 )
 
-MODEL_MAPPING: dict[
-    type[openllm.LLMConfig], type[openllm.LLM[transformers.PreTrainedModel, transformers.PreTrainedTokenizerFast]]
-] = _LazyAutoMapping(CONFIG_MAPPING_NAMES, MODEL_MAPPING_NAMES)
+MODEL_MAPPING = _LazyAutoMapping(CONFIG_MAPPING_NAMES, MODEL_MAPPING_NAMES)
 
 
 class AutoLLM(BaseAutoLLMClass):

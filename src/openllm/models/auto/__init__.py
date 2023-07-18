@@ -26,7 +26,7 @@ from ...utils import is_torch_available
 from ...utils import is_vllm_available
 
 
-_import_structure = {
+_import_structure: dict[str, list[str]] = {
     "configuration_auto": ["AutoConfig", "CONFIG_MAPPING", "CONFIG_MAPPING_NAMES"],
     "modeling_auto": ["MODEL_MAPPING_NAMES"],
     "modeling_flax_auto": ["MODEL_FLAX_MAPPING_NAMES"],

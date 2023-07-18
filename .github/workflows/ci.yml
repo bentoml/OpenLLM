@@ -55,8 +55,9 @@ jobs:
         uses: ./.github/actions/setup-repo
         with:
           python-version: ${{ env.STABLE_PYTHON_VERSION }}
-      - name: Run type check
-        run: hatch run typing
+      - uses: pre-commit/action@v3.0.0
+        with:
+          extra_args: --all-files --verbose
   tests:
     runs-on: ${{ matrix.os }}
     if: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}

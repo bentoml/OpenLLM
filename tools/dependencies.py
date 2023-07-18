@@ -135,11 +135,8 @@ class Dependencies:
             dep = f"{self.name}{self.pypi_extensions}>={self.lower_constraint}"
         elif self.subdirectory is not None:
             dep = f"{self.name}{self.pypi_extensions} @ git+https://github.com/{self.git_repo_url}.git#subdirectory={self.subdirectory}"
-
         elif self.branch is not None:
             dep = f"{self.name}{self.pypi_extensions} @ git+https://github.com/{self.git_repo_url}.git@{self.branch}"
-        elif self.branch and self.subdirectory:
-            dep = f"{self.name}{self.pypi_extensions} @ git+https://github.com/{self.git_repo_url}.git@{self.branch}#subdirectory={self.subdirectory}"
         else:
             dep = f"{self.name}{self.pypi_extensions}"
 
@@ -244,12 +241,30 @@ def create_classifiers() -> Array:
 
 
 def create_optional_table() -> Table:
-    table = tomlkit.table()
-    table.update(_base_requirements)
-
     all_array = tomlkit.array()
-    all_array.extend([f"openllm[{k}]" for k in table.keys()])
-    table.add("all", all_array.multiline(True))
+    all_array.extend([f"openllm[{k}]" for k in _base_requirements])
+
+    table = tomlkit.table(is_super_table=True)
+    _base_requirements.update({"all": all_array.multiline(True)})
+    table.update({k: v for k, v in sorted(_base_requirements.items())})
+    table.add(tomlkit.nl())
+
+    return table
+
+
+def create_url_table() -> Table:
+    table = tomlkit.table()
+    _urls = {
+        "Blog": "https://modelserving.com",
+        "Discord": "https://l.bentoml.com/join-openllm-discord",
+        "Documentation": "https://github.com/bentoml/openllm#readme",
+        "GitHub": "https://github.com/bentoml/openllm",
+        "History": "https://github.com/bentoml/openllm/blob/main/CHANGELOG.md",
+        "Homepage": "https://bentoml.com",
+        "Tracker": "https://github.com/bentoml/openllm/issues",
+        "Twitter": "https://twitter.com/bentomlai",
+    }
+    table.update({k: v for k, v in sorted(_urls.items())})
     return table
 
 
@@ -257,13 +272,15 @@ def main() -> int:
     with open(os.path.join(ROOT, "pyproject.toml"), "r") as f:
         pyproject = tomlkit.parse(f.read())
 
-    t.cast("Table", pyproject["project"]).update(
-        {
-            "classifiers": create_classifiers(),
-            "optional-dependencies": create_optional_table(),
-            "dependencies": tomlkit.array(f"{[v.to_str() for v in _BASE_DEPENDENCIES]}").multiline(True),
-        }
-    )
+    dependencies_array = tomlkit.array()
+    dependencies_array.extend([v.to_str() for v in _BASE_DEPENDENCIES])
+
+    pyproject["project"]["urls"] = create_url_table()
+    pyproject["project"]["classifiers"] = create_classifiers()
+    pyproject["project"]["optional-dependencies"] = create_optional_table()
+    pyproject["project"]["scripts"] = {"openllm": "openllm.cli:cli"}
+    pyproject["project"]["dependencies"] = dependencies_array.multiline(True)
+
     with open(os.path.join(ROOT, "pyproject.toml"), "w") as f:
         f.write(tomlkit.dumps(pyproject))
 

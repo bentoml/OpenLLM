@@ -57,7 +57,7 @@ else:
     )
 
 
-_import_structure = {
+_import_structure: dict[str, list[str]] = {
     "_llm": ["LLM", "Runner", "LLMRunner", "LLMRunnable"],
     "_configuration": ["LLMConfig"],
     "exceptions": [],
@@ -145,7 +145,7 @@ else:
     _import_structure["models.stablelm"].extend(["StableLM"])
     _import_structure["models.opt"].extend(["OPT"])
     _import_structure["models.gpt_neox"].extend(["GPTNeoX"])
-    _import_structure["models.llama"].extend(["Llama"])
+    _import_structure["models.llama"].extend(["LlaMA"])
     _import_structure["models.auto"].extend(["AutoLLM", "MODEL_MAPPING"])
 
 try:
@@ -158,6 +158,7 @@ except MissingDependencyError:
         name for name in dir(dummy_vllm_objects) if not name.startswith("_")
     ]
 else:
+    _import_structure["models.llama"].extend(["VLLMLlaMA"])
     _import_structure["models.auto"].extend(["AutoVLLM", "MODEL_VLLM_MAPPING"])
 
 try:
@@ -223,7 +224,7 @@ if t.TYPE_CHECKING:
     from .models.falcon import FalconConfig as FalconConfig
     from .models.flan_t5 import FlanT5Config as FlanT5Config
     from .models.gpt_neox import GPTNeoXConfig as GPTNeoXConfig
-    from .models.llama import LlamaConfig as LlamaConfig
+    from .models.llama import LlaMAConfig as LlaMAConfig
     from .models.mpt import MPTConfig as MPTConfig
     from .models.opt import OPTConfig as OPTConfig
     from .models.stablelm import StableLMConfig as StableLMConfig
@@ -271,7 +272,7 @@ if t.TYPE_CHECKING:
         from .models.dolly_v2 import DollyV2 as DollyV2
         from .models.flan_t5 import FlanT5 as FlanT5
         from .models.gpt_neox import GPTNeoX as GPTNeoX
-        from .models.llama import Llama as Llama
+        from .models.llama import LlaMA as LlaMA
         from .models.opt import OPT as OPT
         from .models.stablelm import StableLM as StableLM
         from .models.starcoder import StarCoder as StarCoder
@@ -284,6 +285,7 @@ if t.TYPE_CHECKING:
     else:
         from .models.auto import MODEL_VLLM_MAPPING as MODEL_VLLM_MAPPING
         from .models.auto import AutoVLLM as AutoVLLM
+        from .models.llama import VLLMLlaMA as VLLMLlaMA
 
     try:
         if not utils.is_flax_available():
@@ -321,6 +323,6 @@ else:
             # The below is a special mapping that allows openllm to be used as a dictionary.
             # This is purely for convenience sake, and should not be used in performance critcal
             # code. This is also not considered as a public API.
-            "__openllm_special__": {"flax": "AutoFlaxLLM", "tf": "AutoTFLLM", "pt": "AutoLLM"},
+            "__openllm_special__": {"flax": "AutoFlaxLLM", "tf": "AutoTFLLM", "pt": "AutoLLM", "vllm": "AutoVLLM"},
         },
     )

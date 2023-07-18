@@ -25,7 +25,7 @@ import itertools
 import typing as t
 
 
-_import_structure = {
+_import_structure: dict[str, list[str]] = {
     "runtimes.grpc": ["AsyncGrpcClient", "GrpcClient"],
     "runtimes.http": ["AsyncHTTPClient", "HTTPClient"],
 }
@@ -36,7 +36,7 @@ if t.TYPE_CHECKING:
     from openllm_client import GrpcClient as GrpcClient
     from openllm_client import HTTPClient as HTTPClient
 
-__all__ = list(itertools.chain.from_iterable(_import_structure.values()))  # type: ignore
+__all__ = list(itertools.chain.from_iterable(_import_structure.values()))
 
 _module = "openllm_client"
 

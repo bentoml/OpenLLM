@@ -20,7 +20,7 @@ from ...utils import LazyModule
 from ...utils import is_torch_available
 
 
-_import_structure = {
+_import_structure: dict[str, list[str]] = {
     "configuration_falcon": ["FalconConfig", "START_FALCON_COMMAND_DOCSTRING", "DEFAULT_PROMPT_TEMPLATE"],
 }
 
