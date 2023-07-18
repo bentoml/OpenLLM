@@ -1,7 +1,7 @@
 (ns openllm.events
     (:require [cljs.spec.alpha :as s]
               [openllm.db :as db]
-              [re-frame.core :refer [after reg-event-db]]))
+              [re-frame.core :refer [after reg-event-db reg-event-fx]]))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -34,6 +34,12 @@
  [check-spec-interceptor]
  (fn [db [_ new-screen-id]]
    (assoc db :screen-id new-screen-id)))
+
+(reg-event-fx
+ ::open-link-in-new-tab
+ (fn [_ [_ url]]
+   (js/window.open url "_blank") ;; hitchu with da side fx's *new wave uptempo kick*
+   {}))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

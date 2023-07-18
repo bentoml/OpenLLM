@@ -1,5 +1,6 @@
 (ns openllm.components.nav-bar.views
   (:require [re-frame.core :as rf]
+            [openllm.events :as root-events]
             [openllm.components.nav-bar.subs :as subs]
             [openllm.components.nav-bar.events :as events]
             [openllm.components.side-bar.events :as side-bar-events]
@@ -17,6 +18,7 @@
             [reagent-mui.icons.keyboard-double-arrow-left :as left-icon]
             [reagent-mui.icons.delete-forever :as delete-icon]
             [reagent-mui.icons.ios-share :as share-icon]
+            [reagent-mui.icons.git-hub :as github-icon]
             [reagent.core :as r]))
 
 (defn- collapse-side-bar-button
@@ -56,6 +58,9 @@
    [app-bar {:position "static"
              :color "primary"}
     [toolbar {:variant "dense"}
+     [icon-button {:on-click #(rf/dispatch [::root-events/open-link-in-new-tab "https://github.com/bentoml/OpenLLM"])
+                   :color "inherit"}
+      [github-icon/git-hub]]
      [typography {:variant "h6"} "OpenLLM"]
      [:div {:class "ml-10"}
       [button {:on-click #(rf/dispatch [:set-screen-id :playground])
