@@ -61,8 +61,7 @@
 (defn parameter-list-entry
   "Renders a single parameter in the sidebar's parameter list."
   [[id {:keys [value name]}]]
-  [:div {:class "flex flex-col px-2 py-1"
-         :key (str id)}
+  [:div {:class "flex flex-col px-2 py-1"}
    [:label {:class "flex w-fit text-xs"}
     name
     (when (contains? db/parameter-min-max id)
@@ -81,8 +80,7 @@
   (let [model-config (rf/subscribe [::subs/human-readable-config])]
     (fn parameter-list
       []
-      (into [:div
-             (map parameter-list-entry @model-config)]))))
+      (into [:<>] (map parameter-list-entry @model-config)))))
 
 
 (defn side-bar-with-mui-collapse
