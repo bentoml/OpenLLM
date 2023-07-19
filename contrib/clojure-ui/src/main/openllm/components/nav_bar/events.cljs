@@ -1,7 +1,6 @@
 (ns openllm.components.nav-bar.events
   (:require [openllm.util :as util]
             [openllm.api.log4cljs.core :refer [log]]
-            [clojure.string :as str]
             [re-frame.core :refer [reg-event-fx]]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
