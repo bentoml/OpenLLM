@@ -84,7 +84,7 @@ _import_structure: dict[str, list[str]] = {
     "models.falcon": ["FalconConfig"],
     "models.flan_t5": ["FlanT5Config"],
     "models.gpt_neox": ["GPTNeoXConfig"],
-    "models.llama": ["LlamaConfig"],
+    "models.llama": ["LlaMAConfig"],
     "models.mpt": ["MPTConfig"],
     "models.opt": ["OPTConfig"],
     "models.stablelm": ["StableLMConfig"],

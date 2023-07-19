@@ -1171,7 +1171,7 @@ def download_models_command(
     implementation: LiteralRuntime | None,
     quantize: t.Literal["int8", "int4", "gptq"] | None,
     serialisation_format: t.Literal["safetensors", "default"],
-) -> bentoml.Tag:
+) -> bentoml.Model:
     """Setup LLM interactively.
 
     It accepts two positional arguments: `model_name` and `model_id`. The first name determine
@@ -1221,35 +1221,38 @@ def download_models_command(
         _previously_saved = True
     except bentoml.exceptions.NotFound:
         if not machine and output == "pretty":
-            _echo(
-                f"'{model}' with 'model_id={model_id}' does not exists in local store. Saving to store...",
-                fg="yellow",
-                nl=True,
-            )
+            msg = f"'{model}' does not exists in local store. Saving..."
+            if model_id is not None:
+                msg = f"'{model}' with 'model_id={model_id}' does not exists in local store. Saving..."
+            _echo(msg, fg="yellow", nl=True)
 
         _ref = llm.import_model(trust_remote_code=llm.__llm_trust_remote_code__)
 
-    if not machine:
-        if output == "pretty":
-            if _previously_saved:
-                _echo(
-                    f"{model} with 'model_id={model_id}' is already setup for framework '{impl}': {_ref.tag!s}",
-                    nl=True,
-                    fg="yellow",
-                )
-            else:
-                _echo(f"Saved model: {_ref.tag}")
-        elif output == "json":
+        if impl == "pt" and is_torch_available() and torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
+    if machine:
+        # NOTE: We will prefix the tag with __tag__ and we can use regex to correctly
+        # get the tag from 'bentoml.bentos.build|build_bentofile'
+        _echo(f"__tag__:{_ref.tag}", fg="white")
+    elif output == "pretty":
+        if _previously_saved:
             _echo(
-                orjson.dumps(
-                    {"previously_setup": _previously_saved, "framework": impl, "tag": str(_ref.tag)},
-                    option=orjson.OPT_INDENT_2,
-                ).decode()
+                f"{model} with 'model_id={model_id}' is already setup for framework '{impl}': {_ref.tag!s}",
+                nl=True,
+                fg="yellow",
             )
         else:
-            _echo(_ref.tag)
-    if is_torch_available() and torch.cuda.is_available():
-        torch.cuda.empty_cache()
+            _echo(f"Saved model: {_ref.tag}")
+    elif output == "json":
+        _echo(
+            orjson.dumps(
+                {"previously_setup": _previously_saved, "framework": impl, "tag": str(_ref.tag)},
+                option=orjson.OPT_INDENT_2,
+            ).decode()
+        )
+    else:
+        _echo(_ref.tag)
 
     return _ref
 
@@ -1414,6 +1417,15 @@ def _start(
     )
 
 
+def _tag_parsing(output: bytes) -> str:
+    # NOTE: This usually only concern BentoML devs.
+    pattern = r"^__tag__:[^:\n]+:[^:\n]+"
+    matched = re.search(pattern, output.decode("utf-8").strip(), re.MULTILINE)
+    assert matched is not None, f"Failed to find tag from output: {output!s}"
+    _, _, tag = matched.group(0).partition(":")
+    return tag
+
+
 @inject
 def _build(
     model_name: str,
@@ -1539,12 +1551,8 @@ def _build(
         if e.stderr:
             raise OpenLLMException(e.stderr.decode("utf-8")) from None
         raise OpenLLMException(str(e)) from None
-    # NOTE: This usually only concern BentoML devs.
-    pattern = r"^__tag__:[^:\n]+:[^:\n]+"
-    matched = re.search(pattern, output.decode("utf-8").strip(), re.MULTILINE)
-    assert matched is not None, f"Failed to find tag from output: {output!s}"
-    _, _, tag = matched.group(0).partition(":")
-    return bentoml.get(tag, _bento_store=bento_store)
+
+    return bentoml.get(_tag_parsing(output), _bento_store=bento_store)
 
 
 def _import_model(

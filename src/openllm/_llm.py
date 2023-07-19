@@ -454,6 +454,8 @@ class LLM(LLMInterface[M, T], ReprMixin):
     _quantize_method: t.Literal["int8", "int4", "gptq"] | None
     _serialisation_format: t.Literal["safetensors", "default"]
 
+    tokenizer_cls: t.ClassVar[str | None] = None
+
     @staticmethod
     def _infer_implementation_from_name(name: str) -> tuple[LiteralRuntime, str]:
         if name.startswith("Flax"):
@@ -955,7 +957,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
 
         The equivalent for ``openllm.Runner`` is ``openllm.Runner.download_model``.
         """
-        additional_args = ["--machine"]
+        additional_args: list[str] = []
         if not get_debug_mode():
             additional_args.append("--quiet")
         return openllm.import_model(
@@ -965,6 +967,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
             runtime=self.runtime,
             implementation=self.__llm_implementation__,
             quantize=self._quantize_method,
+            serialisation_format=self._serialisation_format,
             additional_args=additional_args,
         )
 
@@ -1309,7 +1312,7 @@ def Runner(
 
     @svc.on_startup
     def download():
-        runner.llm.ensure_model_id_exists()
+        runner.download_modeljk()
     ...
     ```
 

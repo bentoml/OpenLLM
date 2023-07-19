@@ -93,6 +93,7 @@ _value_docstring = {
         By default, it is set to 1.
         """,
     "fine_tune_strategies": """The fine-tune strategies for this given LLM.""",
+    "tokenizer_class": """Optional tokenizer class for this given LLM. See LlaMA for example.""",
 }
 
 

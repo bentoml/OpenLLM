@@ -50,6 +50,7 @@ class LlaMAConfig(openllm.LLMConfig):
             "huggyllama/llama-7b",
             "syzymon/long_llama_3b",  # NOTE: use ``openllm.LongLLaMA`` to load this variant. Otherwise it will be limited to context length of 2048
         ],
+        "tokenizer_class": "LlamaTokenizerFast",
     }
 
     class GenerationConfig:

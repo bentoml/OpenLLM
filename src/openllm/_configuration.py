@@ -671,6 +671,9 @@ class ModelSettings(t.TypedDict, total=False):
     # the target generation_config class to be used.
     fine_tune_strategies: t.Tuple[t.Dict[str, t.Any], ...]
 
+    # tokenizer_class is the custom tokenizer class for this given LLM
+    tokenizer_class: t.Optional[str]
+
 
 _transformed_type: dict[str, type[t.Any]] = {"fine_tune_strategies": t.Dict[AdapterType, FineTuneConfig]}
 
@@ -715,6 +718,7 @@ class _ModelSettingsAttr:
                     model_type="causal_lm",
                     trust_remote_code=False,
                     requirements=None,
+                    tokenizer_class=None,
                     timeout=int(36e6),
                     service_name="",
                     workers_per_resource=1,
@@ -745,6 +749,7 @@ class _ModelSettingsAttr:
         timeout: int
         workers_per_resource: t.Union[int, float]
         fine_tune_strategies: t.Dict[AdapterType, FineTuneConfig]
+        tokenizer_class: t.Optional[str]
         # update-config-stubs.py: attrs stop
 
         # fmt: on
@@ -994,6 +999,8 @@ class _ConfigAttr:
         """
         __openllm_fine_tune_strategies__: t.Dict[AdapterType, FineTuneConfig] = Field(None)
         """The fine-tune strategies for this given LLM."""
+        __openllm_tokenizer_class__: t.Optional[str] = Field(None)
+        """Optional tokenizer class for this given LLM. See LlaMA for example."""
         # update-config-stubs.py: special stop
 
         # fmt: on
@@ -1433,6 +1440,8 @@ class LLMConfig(_ConfigAttr):
     def __getitem__(self, item: t.Literal["workers_per_resource"]) -> t.Union[int, float]: ...
     @overload
     def __getitem__(self, item: t.Literal["fine_tune_strategies"]) -> t.Dict[AdapterType, FineTuneConfig]: ...
+    @overload
+    def __getitem__(self, item: t.Literal["tokenizer_class"]) -> t.Optional[str]: ...
     @overload
     def __getitem__(self, item: t.Literal["generation_class"]) -> t.Type[GenerationConfig]: ...
     @overload

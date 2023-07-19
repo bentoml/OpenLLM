@@ -41,7 +41,7 @@ if t.TYPE_CHECKING:
     import torch
 
     import openllm
-    import transformers
+    import transformers as _transformers
     from transformers.models.auto.auto_factory import _BaseAutoModelClass
 
     from .._llm import M
@@ -51,15 +51,15 @@ if t.TYPE_CHECKING:
     from .._types import TokenizerProtocol
 else:
     autogptq = LazyLoader("autogptq", globals(), "auto_gptq")
-    transformers = LazyLoader("transformers", globals(), "transformers")
+    _transformers = LazyLoader("_transformers", globals(), "transformers")
     torch = LazyLoader("torch", globals(), "torch")
 
 
 def process_transformers_config(
     model_id: str, trust_remote_code: bool, **attrs: t.Any
-) -> tuple[transformers.PretrainedConfig, dict[str, t.Any], dict[str, t.Any]]:
+) -> tuple[_transformers.PretrainedConfig, dict[str, t.Any], dict[str, t.Any]]:
     """Process transformers config and return PretrainedConfig with hub_kwargs and the rest of kwargs."""
-    config: transformers.PretrainedConfig = attrs.pop("config", None)
+    config: _transformers.PretrainedConfig | None = attrs.pop("config", None)
 
     # this logic below is synonymous to handling `from_pretrained` attrs.
     hub_kwds_names = [
@@ -74,21 +74,33 @@ def process_transformers_config(
         "use_auth_token",
     ]
     hub_attrs = {k: attrs.pop(k) for k in hub_kwds_names if k in attrs}
-    if not isinstance(config, transformers.PretrainedConfig):
+    if not isinstance(config, _transformers.PretrainedConfig):
         copied_attrs = copy.deepcopy(attrs)
         if copied_attrs.get("torch_dtype", None) == "auto":
             copied_attrs.pop("torch_dtype")
         config, attrs = t.cast(
-            "tuple[transformers.PretrainedConfig, dict[str, t.Any]]",
-            transformers.AutoConfig.from_pretrained(
+            "tuple[_transformers.PretrainedConfig, dict[str, t.Any]]",
+            _transformers.AutoConfig.from_pretrained(
                 model_id, return_unused_kwargs=True, trust_remote_code=trust_remote_code, **hub_attrs, **copied_attrs
             ),
         )
     return config, hub_attrs, attrs
 
 
+def infer_tokenizers_class_for_llm(__llm: openllm.LLM[t.Any, T]) -> TokenizerProtocol[T]:
+    tokenizer_class = __llm.config["tokenizer_class"]
+    if tokenizer_class is None:
+        tokenizer_class = "AutoTokenizer"
+    __cls = getattr(_transformers, tokenizer_class)
+    if __cls is None:
+        raise ValueError(
+            f"{tokenizer_class} is not a valid Tokenizer class from 'transformers.' Set '{__llm}.__config__[\"trust_remote_code\"] = True' and try again."
+        )
+    return __cls
+
+
 def infer_autoclass_from_llm_config(
-    llm: openllm.LLM[t.Any, t.Any], config: transformers.PretrainedConfig
+    llm: openllm.LLM[t.Any, t.Any], config: _transformers.PretrainedConfig
 ) -> _BaseAutoModelClass:
     if llm.config["trust_remote_code"]:
         autoclass = "AutoModelForSeq2SeqLM" if llm.config["model_type"] == "seq2seq_lm" else "AutoModelForCausalLM"
@@ -100,16 +112,16 @@ def infer_autoclass_from_llm_config(
         # where it uses AutoModel instead of AutoModelForCausalLM. Then we fallback to AutoModel
         if autoclass not in config.auto_map:
             autoclass = "AutoModel"
-        return getattr(transformers, autoclass)
+        return getattr(_transformers, autoclass)
     else:
-        if type(config) in transformers.MODEL_FOR_CAUSAL_LM_MAPPING:
+        if type(config) in _transformers.MODEL_FOR_CAUSAL_LM_MAPPING:
             idx = 0
-        elif type(config) in transformers.MODEL_FOR_SEQ_TO_SEQ_CAUSAL_LM_MAPPING:
+        elif type(config) in _transformers.MODEL_FOR_SEQ_TO_SEQ_CAUSAL_LM_MAPPING:
             idx = 1
         else:
             raise OpenLLMException(f"Model type {type(config)} is not supported yet.")
 
-        return getattr(transformers, FRAMEWORK_TO_AUTOCLASS_MAPPING[llm.__llm_implementation__][idx])
+        return getattr(_transformers, FRAMEWORK_TO_AUTOCLASS_MAPPING[llm.__llm_implementation__][idx])
 
 
 def import_model(
@@ -143,16 +155,6 @@ def import_model(
     decls = (*model_decls, *decls)
     attrs = {**model_attrs, **attrs}
 
-    tokenizer = t.cast(
-        "transformers.PreTrainedTokenizer",
-        transformers.AutoTokenizer.from_pretrained(
-            llm.model_id,
-            config=config,
-            trust_remote_code=trust_remote_code,
-            **hub_attrs,
-            **tokenizer_attrs,
-        ),
-    )
     safe_serialisation = llm._serialisation_format == "safetensors"
     metadata: DictStrAny = {"safe_serialisation": safe_serialisation}
     quantize_method = llm._quantize_method
@@ -178,7 +180,7 @@ def import_model(
         signatures["generate"] = {"batchable": False}
     else:
         model = t.cast(
-            "transformers.PreTrainedModel",
+            "_transformers.PreTrainedModel",
             infer_autoclass_from_llm_config(llm, config).from_pretrained(
                 llm.model_id,
                 *decls,
@@ -194,6 +196,17 @@ def import_model(
     if llm._quantize_method is not None:
         metadata["_quantize"] = llm._quantize_method
 
+    _tokenizer = infer_tokenizers_class_for_llm(llm).from_pretrained(
+        llm.model_id,
+        trust_remote_code=trust_remote_code,
+        **hub_attrs,
+        **tokenizer_attrs,
+    )
+
+    external_modules = None
+    if trust_remote_code:
+        external_modules = [importlib.import_module(model.__module__), importlib.import_module(_tokenizer.__module__)]
+
     try:
         with bentoml.models.create(
             llm.tag,
@@ -203,13 +216,10 @@ def import_model(
             labels=generate_labels(llm),
             signatures=signatures if signatures else make_default_signatures(model),
             options=ModelOptions(),
-            external_modules=[
-                importlib.import_module(model.__module__),
-                importlib.import_module(tokenizer.__module__),
-            ],
+            external_modules=external_modules,
             metadata=metadata,
         ) as bentomodel:
-            tokenizer.save_pretrained(bentomodel.path)
+            _tokenizer.save_pretrained(bentomodel.path)
 
             if quantize_method == "gptq":
                 model.save_quantized(bentomodel.path, use_safetensors=safe_serialisation)
@@ -306,7 +316,7 @@ def load_model(llm: openllm.LLM[M, t.Any], *decls: t.Any, **attrs: t.Any) -> Mod
             **hub_attrs,
             **attrs,
         )
-    if llm.bettertransformer and llm.__llm_implementation__ == "pt" and not isinstance(model, transformers.Pipeline):
+    if llm.bettertransformer and llm.__llm_implementation__ == "pt" and not isinstance(model, _transformers.Pipeline):
         # BetterTransformer is currently only supported on PyTorch.
         from optimum.bettertransformer import BetterTransformer
 
@@ -337,7 +347,7 @@ def load_tokenizer(llm: openllm.LLM[t.Any, T]) -> TokenizerProtocol[T]:
                         For example: bentoml.transformers.save_model(..., custom_objects={'tokenizer': tokenizer}))"
                     ) from None
         else:
-            tokenizer = transformers.AutoTokenizer.from_pretrained(
+            tokenizer = infer_tokenizers_class_for_llm(llm).from_pretrained(
                 bentomodel_fs.getsyspath("/"),
                 trust_remote_code=llm.__llm_trust_remote_code__,
                 **tokenizer_attrs,
@@ -371,7 +381,7 @@ def save_pretrained(
         if llm.config["model_type"] != "causal_lm":
             raise OpenLLMException(f"GPTQ only support Causal LM (got {llm.__class__} of {llm.config['model_type']})")
         llm.model.save_quantized(save_directory, use_safetensors=safe_serialization)
-    elif isinstance(llm.model, transformers.Pipeline):
+    elif isinstance(llm.model, _transformers.Pipeline):
         llm.model.save_pretrained(save_directory, safe_serialization=safe_serialization)
     else:
         llm.model.save_pretrained(
