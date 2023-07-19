@@ -17,21 +17,27 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                Spec                ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(def parameter-constraints
-  "A map with parameter id's as keys and a vector of min and max values
-   respectively as values."
-  {:temperature [0.0 1.0]
-   :top_k [0 100]
-   :top_p [0.1 1.0]
-   :typical_p [0.1 1.0]
-   :epsilon_cutoff [0.0 1.0]
-   :eta_cutoff [0.0 1.0]
-   :diversity_penalty [0.0 5.0]
-   :repetition_penalty [0.0 5.0]
-   :encoder_repetition_penalty [0.0 5.0]
-   :length_penalty [0.0 5.0]
-   :num_beams [0 10]
-   :penalty_alpha [0.0 10.0]})
+(def parameter-meta-data
+  "A map with parameter id's as keys and some metadata for easier rendering." 
+   {:temperature                  {:display-type :slider   :type-pred float?    :val-constraint [0.0 1.0]}
+    :top_k                        {:display-type :slider   :type-pred int?      :val-constraint [0 100]}
+    :top_p                        {:display-type :slider   :type-pred float?    :val-constraint [0.1 1.0]}
+    :typical_p                    {:display-type :slider   :type-pred float?    :val-constraint [0.1 1.0]}
+    :epsilon_cutoff               {:display-type :slider   :type-pred float?    :val-constraint [0.0 1.0]}
+    :eta_cutoff                   {:display-type :slider   :type-pred float?    :val-constraint [0.0 1.0]}
+    :diversity_penalty            {:display-type :slider   :type-pred float?    :val-constraint [0.0 5.0]}
+    :repetition_penalty           {:display-type :slider   :type-pred float?    :val-constraint [0.0 5.0]}
+    :encoder_repetition_penalty   {:display-type :slider   :type-pred float?    :val-constraint [0.0 5.0]}
+    :length_penalty               {:display-type :slider   :type-pred float?    :val-constraint [0.0 5.0]}
+    :num_beams                    {:display-type :field    :type-pred int?      :val-constraint [0 10]}
+    :penalty_alpha                {:display-type :slider   :type-pred float?    :val-constraint [0.0 10.0]}
+    :max_new_tokens               {:display-type :field    :type-pred int?      :val-constraint [0 ##Inf]}
+    :min_length                   {:display-type :field    :type-pred int?      :val-constraint [0 ##Inf]}
+    :min_new_tokens               {:display-type :field    :type-pred int?      :val-constraint [0 ##Inf]}
+    :early_stopping               {:display-type :binary   :type-pred boolean?  :val-constraint [true false]}
+    :max_time                     {:display-type :field    :type-pred float?    :val-constraint [0.0 ##Inf]}
+    :num_beam_groups              {:display-type :field    :type-pred int?      :val-constraint [0 ##Inf]}
+    :use_cache                    {:display-type :binary   :type-pred boolean?  :val-constraint [true false]}})
 
 (defn get-validate-range-predicate
   "Returns a predicate that checks if the value is within the range of the
@@ -39,7 +45,7 @@
    The predicate is a function that takes a value and returns true if the value
    is within the range of the parameter and false otherwise."
   [keyword type-predicate]
-  (let [param (keyword parameter-constraints)]
+  (let [param (get-in parameter-meta-data [keyword :val-constraint])]
     (s/and type-predicate
            #(<= (first param) % (second param)))))
 
