@@ -261,21 +261,13 @@ pip install "openllm[llama]"
 <li><a href=https://huggingface.co/meta-llama/llama-2-70b-hf><code>meta-llama/llama-2-70b-hf</code></a></li>
 <li><a href=https://huggingface.co/meta-llama/llama-2-13b-hf><code>meta-llama/llama-2-13b-hf</code></a></li>
 <li><a href=https://huggingface.co/meta-llama/llama-2-7b-hf><code>meta-llama/llama-2-7b-hf</code></a></li>
-<li><a href=https://huggingface.co/decapoda-research/llama-65b-hf><code>decapoda-research/llama-65b-hf</code></a></li>
-<li><a href=https://huggingface.co/decapoda-research/llama-30b-hf><code>decapoda-research/llama-30b-hf</code></a></li>
-<li><a href=https://huggingface.co/decapoda-research/llama-13b-hf><code>decapoda-research/llama-13b-hf</code></a></li>
-<li><a href=https://huggingface.co/decapoda-research/llama-7b-hf-int8><code>decapoda-research/llama-7b-hf-int8</code></a></li>
-<li><a href=https://huggingface.co/decapoda-research/llama-7b-hf><code>decapoda-research/llama-7b-hf</code></a></li>
 <li><a href=https://huggingface.co/openlm-research/open_llama_7b_v2><code>openlm-research/open_llama_7b_v2</code></a></li>
 <li><a href=https://huggingface.co/openlm-research/open_llama_3b_v2><code>openlm-research/open_llama_3b_v2</code></a></li>
 <li><a href=https://huggingface.co/openlm-research/open_llama_13b><code>openlm-research/open_llama_13b</code></a></li>
-<li><a href=https://huggingface.co/openlm-research/open_llama_7b><code>openlm-research/open_llama_7b</code></a></li>
-<li><a href=https://huggingface.co/openlm-research/open_llama_3b><code>openlm-research/open_llama_3b</code></a></li>
 <li><a href=https://huggingface.co/huggyllama/llama-65b><code>huggyllama/llama-65b</code></a></li>
 <li><a href=https://huggingface.co/huggyllama/llama-30b><code>huggyllama/llama-30b</code></a></li>
 <li><a href=https://huggingface.co/huggyllama/llama-13b><code>huggyllama/llama-13b</code></a></li>
-<li><a href=https://huggingface.co/huggyllama/llama-7b><code>huggyllama/llama-7b</code></a></li>
-<li><a href=https://huggingface.co/syzymon/long_llama_3b><code>syzymon/long_llama_3b</code></a></li></ul>
+<li><a href=https://huggingface.co/huggyllama/llama-7b><code>huggyllama/llama-7b</code></a></li></ul>
 
 </td>
 </tr>
