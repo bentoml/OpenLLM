@@ -27,8 +27,8 @@
 (reg-sub
  ::model-config
  :<- [::side-bar-subs/model-params-db]
- (fn [side-bar-db _]
-   side-bar-db))
+ (fn [model-params-db _]
+   model-params-db))
 
 (reg-sub
  ::human-readable-config

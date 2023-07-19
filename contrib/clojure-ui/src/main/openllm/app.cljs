@@ -33,13 +33,13 @@
    [styles/theme-provider (styles/create-theme openllm-theme)
     [views/dashboard]]])
 
+(defonce root (rdom/create-root (js/document.getElementById "app")))
 (defn ^:dev/after-load start
   "Starts the app by rendering the app component into the DOM. This
    function is the root rendering function, and is called by the
    `init` function right after the databases are initialized."
   []
-  (let [root (rdom/create-root (js/document.getElementById "app"))]
-    (rdom/render root [app])))
+  (rdom/render root [app]))
 
 (defn init
   "This init function is called exactly once when the page loads.
