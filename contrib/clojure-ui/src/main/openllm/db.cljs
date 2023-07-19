@@ -27,8 +27,6 @@
 (s/def ::screen-id keyword?)
 (s/def ::side-bar-open? boolean?)
 (s/def ::modal-open? (s/keys :req-un [::playground boolean?]))
-(s/def ::selected-model (s/keys :req-un [::model-type keyword?
-                                         ::model-id string?]))
 
 (s/def ::playground-input-value string?)
 (s/def ::playground-last-response string?)
@@ -89,7 +87,6 @@
                               ::screen-id
                               ::side-bar-open?
                               ::modal-open?
-                              ::selected-model
                               ::playground-input-value
                               ::playground-last-response
                               ::model-config]))
@@ -121,12 +118,10 @@
   "What gets put into app-db by default.
    See 'core.cljs' for `(dispatch-sync [:initialise-db])` and 'events.cljs'
    for the registration of `:initialise-db` effect handler."
-  {:components-db components-db/initial-db
+  {:components-db (components-db/initial-db)
    :screen-id :playground
    :side-bar-open? true
    :modal-open? {:playground false}
-   :selected-model {:model-type :chatglm
-                    :model-id "google/chatglm-6b"}
    :playground-input-value ""
    :playground-last-response ""
    :model-config standard-llm-config})
