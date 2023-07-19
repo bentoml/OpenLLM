@@ -33,10 +33,21 @@ from click import types as click_types
 import openllm
 
 
+# NOTE: We need to do this so that overload can register
+# correct overloads to typing registry
+if sys.version_info[:2] >= (3, 11):
+    from typing import overload
+else:
+    from typing_extensions import overload
+
+
 if t.TYPE_CHECKING:
     from attr import _ValidatorType
 
+    from .._types import AnyCallable
     from .._types import ListAny
+
+    FC = t.TypeVar("FC", bound=t.Union[AnyCallable, click.Command])
 
 _T = t.TypeVar("_T")
 
@@ -47,7 +58,8 @@ def attrs_to_options(
     model_name: str,
     typ: type[t.Any] | None = None,
     suffix_generation: bool = False,
-):
+    suffix_sampling: bool = False,
+) -> t.Callable[[FC], FC]:
     # TODO: support parsing nested attrs class and Union
     envvar = field.metadata["env"]
     dasherized = inflection.dasherize(name)
@@ -63,6 +75,8 @@ def attrs_to_options(
         full_option_name += f"/--no-{dasherized}"
     if suffix_generation:
         identifier = f"{model_name}_generation_{underscored}"
+    elif suffix_sampling:
+        identifier = f"{model_name}_sampling_{underscored}"
     else:
         identifier = f"{model_name}_{underscored}"
 
@@ -91,6 +105,51 @@ def env_converter(value: t.Any, env: str | None = None) -> t.Any:
     return value
 
 
+_B = t.TypeVar("_B")
+_ConverterType = t.Callable[[_B], _T]
+
+
+# NOTE: case 1, when given default is a type, and converter exists, then the correct type will be the one from converter
+@overload
+def Field(
+    default: _B,
+    *,
+    use_default_converter: t.Literal[False] = False,
+    converter: _ConverterType[_B, t.Any] = ...,
+    **attrs: t.Any,
+) -> t.Any:
+    ...
+
+
+# NOTE: case 2, for stubs, we set the default value None, and thus respect class var type setter
+@overload
+def Field(default: None, **attrs: t.Any) -> t.Any:
+    ...
+
+
+# NOTE: case 3, we only specify description as helpers
+@overload
+def Field(*, description: str | None = ..., **attrs: t.Any) -> t.Any:
+    ...
+
+
+# NOTE: case 4, we only specify description as helpers, and default type, then correctly set _T
+@overload
+def Field(
+    default: _T,
+    *,
+    ge: int | float | None = None,
+    le: int | float | None = None,
+    validator: _ValidatorType[_T] | None = None,
+    description: str | None = None,
+    env: str | None = None,
+    auto_default: bool = False,
+    use_default_converter: bool = True,
+    **attrs: t.Any,
+) -> _T:
+    ...
+
+
 def Field(
     default: t.Any = None,
     *,
@@ -102,7 +161,7 @@ def Field(
     auto_default: bool = False,
     use_default_converter: bool = True,
     **attrs: t.Any,
-):
+) -> t.Any:
     """A decorator that extends attr.field with additional arguments, which provides the same interface as pydantic's Field.
 
     By default, if both validator and ge are provided, then then ge will be
@@ -252,7 +311,6 @@ class ModuleType(ParamType):
                 return getattr(module, class_name)
             except AttributeError:
                 raise ImportError(f"Module '{module_name}' does not define a '{class_name}' variable.") from None
-        return None
 
     def convert(self, value: str | t.Any, param: click.Parameter | None, ctx: click.Context | None) -> t.Any:
         try:

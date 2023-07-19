@@ -33,7 +33,8 @@ class BaichuanConfig(openllm.LLMConfig):
         "timeout": 3600000,
         "requires_gpu": True,
         "url": "https://github.com/baichuan-inc/Baichuan-7B",
-        "requirements": ["cpm_kernels", "sentencepiece"],
+        "requirements": ["cpm-kernels", "sentencepiece"],
+        "architecture": "BaiChuanForCausalLM",
         "default_id": "baichuan-inc/baichuan-7b",
         "model_ids": [
             "baichuan-inc/baichuan-7b",

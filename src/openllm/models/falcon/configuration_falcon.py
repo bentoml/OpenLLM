@@ -30,7 +30,8 @@ class FalconConfig(openllm.LLMConfig):
         "requires_gpu": True,
         "timeout": int(36e6),
         "url": "https://falconllm.tii.ae/",
-        "requirements": ["einops", "xformers", "safetensors"],
+        "requirements": ["einops", "xformers"],
+        "architecture": "FalconForCausalLM",
         "default_id": "tiiuae/falcon-7b",
         "model_ids": [
             "tiiuae/falcon-7b",

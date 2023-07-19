@@ -14,7 +14,7 @@
 
 ci:
   autoupdate_schedule: weekly
-  skip: [check-models-table-update, check-models-table-update, changelog-dry-run, typecheck]
+  skip: [check-models-table-update, check-models-table-update, changelog-dry-run, pyright, mypy]
   autofix_commit_msg: "ci: auto fixes from pre-commit.ci\n\nFor more information, see https://pre-commit.ci"
   autoupdate_commit_msg: 'ci: pre-commit autoupdate [pre-commit.ci]'
 exclude: '.*\.(css|js|svg)$'
@@ -37,9 +37,26 @@ repos:
         args: [--config=pyproject.toml]
   - repo: local
     hooks:
-      - id: typecheck
-        name: type-check
-        entry: ./tools/typings
+      - id: mypy
+        name: mypy
+        entry: ./tools/mypy
+        'types_or': [python, pyi]
+        language: python
+        pass_filenames: false
+        verbose: true
+        exclude: |
+          (?x)^(
+              examples/.*|
+              tools/.*|
+              tests/.*|
+              src/openllm/playground/.*|
+              src/openllm/models/.*|
+              .github/.*
+          )$
+        additional_dependencies: ["mypy==1.4.1", "types-tabulate", "types-Deprecated", "types-PyYAML", "types-decorator", "types-protobuf", "types-python-dateutil", "types-requests", "types-setuptools", "types-six", "types-ujson", "pandas-stubs", "types-Pillow", "types-Pygments", "types-appdirs", "types-colorama", "types-google-cloud-ndb", "types-jsonschema", "types-psutil", "types-pywin32", "types-tqdm", "types-openpyxl"]
+      - id: pyright
+        name: pyright
+        entry: ./tools/pyright
         types: [python]
         language: node
         pass_filenames: false

@@ -25,7 +25,7 @@ from openllm.utils import bentoml_cattr
 
 
 if t.TYPE_CHECKING:
-    DictStrAny = dict[str, t.Any]
+    from ._types import DictStrAny
 else:
     DictStrAny = dict
 
@@ -94,3 +94,9 @@ class MetadataOutput:
     model_name: str
     framework: str
     configuration: str
+
+
+@attr.frozen(slots=True)
+class EmbeddingsOutput:
+    embeddings: t.List[float]
+    num_tokens: int

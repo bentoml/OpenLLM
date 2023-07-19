@@ -43,6 +43,7 @@ from .exceptions import ForbiddenAttributeError
 from .exceptions import GpuNotAvailableError
 from .utils import DEBUG
 from .utils import ENV_VARS_TRUE_VALUES
+from .utils import MYPY
 from .utils import EnvVarMixin
 from .utils import LazyLoader
 from .utils import ReprMixin
@@ -74,17 +75,20 @@ if t.TYPE_CHECKING:
     import auto_gptq as autogptq
     import peft
     import torch
+    import vllm
 
     import transformers
     from bentoml._internal.runner.strategy import Strategy
 
+    from ._configuration import PeftType
     from ._types import AdaptersMapping
     from ._types import AdaptersTuple
     from ._types import DictStrAny
     from ._types import LiteralRuntime
-    from ._types import LLMInitAttrs
+    from ._types import LLMEmbeddings
     from ._types import LLMRunnable
     from ._types import LLMRunner
+    from ._types import ModelSignatureDict as _ModelSignatureDict
     from ._types import PeftAdapterOutput
     from ._types import TupleAny
     from .utils.representation import ReprArgs
@@ -97,8 +101,10 @@ else:
     UserDictAny = collections.UserDict
     LLMRunnable = bentoml.Runnable
     LLMRunner = bentoml.Runner
+    LLMEmbeddings = dict
 
     autogptq = LazyLoader("autogptq", globals(), "auto_gptq")
+    vllm = LazyLoader("vllm", globals(), "vllm")
     transformers = LazyLoader("transformers", globals(), "transformers")
     torch = LazyLoader("torch", globals(), "torch")
     peft = LazyLoader("peft", globals(), "peft")
@@ -176,18 +182,6 @@ def make_tag(
                 f"Internal errors when parsing config for pretrained {model_id} ('commit_hash' not found)"
             )
 
-    if in_docker() and os.getenv("BENTO_PATH") is not None:
-        logger.debug("The model will be loaded as relative path within BentoContainer.")
-    else:
-        logger.debug(
-            "'model_id=%s' will use 'model_version=%s'. The full tag to be saved under model store: '%s-%s:%s'",
-            model_id,
-            model_version,
-            implementation,
-            model_name,
-            model_version,
-        )
-
     return bentoml.Tag.from_taglike(
         f"{model_name if in_docker() and os.getenv('BENTO_PATH') is not None else implementation + '-' + model_name}:{model_version}".strip()
     )
@@ -213,7 +207,7 @@ def generate_hash_from_file(f: str, algorithm: t.Literal["md5", "sha1"] = "sha1"
 PEFT_CONFIG_NAME = "adapter_config.json"
 
 
-def resolve_peft_config_type(adapter_map: dict[str, str | None] | None):
+def resolve_peft_config_type(adapter_map: dict[str, str | None]) -> AdaptersMapping:
     """Resolve the type of the PeftConfig given the adapter_map.
 
     This is similar to how PeftConfig resolve its config type.
@@ -221,9 +215,6 @@ def resolve_peft_config_type(adapter_map: dict[str, str | None] | None):
     Args:
         adapter_map: The given mapping from either SDK or CLI. See CLI docs for more information.
     """
-    if adapter_map is None:
-        return
-
     resolved: AdaptersMapping = {}
     _has_set_default = False
     for path_or_adapter_id, name in adapter_map.items():
@@ -252,14 +243,17 @@ def resolve_peft_config_type(adapter_map: dict[str, str | None] | None):
 
 _reserved_namespace = {"config_class", "model", "tokenizer", "import_kwargs"}
 
-M = t.TypeVar("M", bound="transformers.PreTrainedModel")
+M = t.TypeVar(
+    "M",
+    bound="t.Union[transformers.PreTrainedModel, transformers.Pipeline, transformers.TFPreTrainedModel, transformers.FlaxPreTrainedModel, vllm.LLM]",
+)
 T = t.TypeVar(
     "T",
     bound="t.Union[transformers.PreTrainedTokenizerFast, transformers.PreTrainedTokenizer, transformers.PreTrainedTokenizerBase]",
 )
 
 
-def _default_post_init(self: LLM[t.Any, t.Any]):
+def _default_post_init(self: LLM[t.Any, t.Any]) -> None:
     self.device = None
 
     if self.__llm_implementation__ == "pt" and is_torch_available():
@@ -279,9 +273,8 @@ class LLMInterface(ABC, t.Generic[M, T]):
         Returns:
             Optional tuple of model kwargs and tokenizer kwargs
         """
-        return
 
-    def embeddings(self, prompt: str) -> torch.Tensor:
+    def embeddings(self, prompts: list[str]) -> LLMEmbeddings:
         """The implementation for generating text embeddings from given prompt.
 
         It takes the prompt and output the embeddings for this given LLM.
@@ -305,7 +298,7 @@ class LLMInterface(ABC, t.Generic[M, T]):
         prompt: str,
         stop: list[str],
         **preprocess_generate_kwds: t.Any,
-    ) -> list[dict[t.Literal["generated_text"], str]]:
+    ) -> t.Sequence[dict[t.Literal["generated_text"], str]]:
         """The entrypoint for generating one prompt.
 
         This provides additional stop tokens for generating per token level.
@@ -339,7 +332,7 @@ class LLMInterface(ABC, t.Generic[M, T]):
         """
         return generation_result
 
-    def llm_post_init(self):
+    def llm_post_init(self) -> None:
         """This function can be implemented if you need to initialized any additional variables that doesn't concern OpenLLM internals."""
         pass
 
@@ -384,7 +377,7 @@ class LLMInterface(ABC, t.Generic[M, T]):
     > **Note** that if LoRA is enabled, bettertransformer will be disabled.
     """
 
-    device: torch.device | str | int | None
+    device: torch.device
     """The device to be used for this LLM. If the implementation is 'pt', then it will be torch.device, else string."""
 
     # NOTE: The following will be populated by __init_subclass__, note that these should be immutable.
@@ -418,26 +411,24 @@ class LLMInterface(ABC, t.Generic[M, T]):
     """A boolean to determine whether a custom 'load_model' is implemented"""
     __llm_custom_tokenizer__: bool
     """A boolean to determine whether a custom 'load_tokenizer' is implemented"""
-    __llm_init_kwargs__: property | None
-    """A check if 'import_kwargs' is implemented in subclass."""
 
-    if t.TYPE_CHECKING:
+    if t.TYPE_CHECKING and not MYPY:
 
         def __attrs_init__(
             self,
             config: openllm.LLMConfig,
-            quantization_config: transformers.BitsAndBytesConfig | None,
+            quantization_config: transformers.BitsAndBytesConfig | autogptq.BaseQuantizeConfig | None,
             model_id: str,
             runtime: t.Literal["ggml", "transformers"],
             model_decls: TupleAny,
             model_attrs: DictStrAny,
             tokenizer_attrs: DictStrAny,
             tag: bentoml.Tag,
-            adapters_mapping: AdaptersMapping,
+            adapters_mapping: AdaptersMapping | None,
             model_version: str | None,
             quantize_method: t.Literal["int8", "int4", "gptq"] | None,
-            /,
-            **attrs: t.Unpack[LLMInitAttrs],
+            serialisation_format: t.Literal["safetensors", "legacy"],
+            **attrs: t.Any,
         ) -> None:
             """Generated __attrs_init__ for openllm.LLM."""
 
@@ -445,7 +436,7 @@ class LLMInterface(ABC, t.Generic[M, T]):
 _AdaptersTuple: type[AdaptersTuple] = codegen.make_attr_tuple_class("AdaptersTuple", ["adapter_id", "name", "config"])
 
 
-@attr.define(slots=True, repr=False)
+@attr.define(slots=True, repr=False, init=False)
 class LLM(LLMInterface[M, T], ReprMixin):
     config: openllm.LLMConfig
     """The config instance to use for this LLM. This will be created based on config_class and available
@@ -460,9 +451,12 @@ class LLM(LLMInterface[M, T], ReprMixin):
     _model_attrs: DictStrAny
     _tokenizer_attrs: DictStrAny
     _tag: bentoml.Tag
-    _adapters_mapping: AdaptersMapping
+    _adapters_mapping: AdaptersMapping | None
     _model_version: str
     _quantize_method: t.Literal["int8", "int4", "gptq"] | None
+    _serialisation_format: t.Literal["safetensors", "legacy"]
+
+    tokenizer_cls: t.ClassVar[str | None] = None
 
     @staticmethod
     def _infer_implementation_from_name(name: str) -> tuple[LiteralRuntime, str]:
@@ -470,10 +464,12 @@ class LLM(LLMInterface[M, T], ReprMixin):
             return "flax", name[4:]
         elif name.startswith("TF"):
             return "tf", name[2:]
+        elif name.startswith("VLLM"):
+            return "vllm", name[4:]
         else:
             return "pt", name
 
-    def __init_subclass__(cls):
+    def __init_subclass__(cls: type[openllm.LLM[M, T]]) -> None:
         cd = cls.__dict__
         implementation, config_class_name = cls._infer_implementation_from_name(cls.__name__)
         cls.__llm_implementation__ = implementation
@@ -482,7 +478,6 @@ class LLM(LLMInterface[M, T], ReprMixin):
         if "__openllm_internal__" in cd:
             if "config_class" not in cd:
                 cls.config_class = config_class
-            logger.debug("Using config class %s for %s.", cls.config_class, cls.__name__)
         elif "config_class" not in cd:
             raise RuntimeError("Missing required key 'config_class'. Make sure to define it within the LLM subclass.")
 
@@ -494,7 +489,9 @@ class LLM(LLMInterface[M, T], ReprMixin):
         else:
             import_func = getattr(cls, "import_model")
 
-            def _wrapped_import_model(self: LLM[M, T], *decls: t.Any, trust_remote_code: bool, **attrs: t.Any):
+            def _wrapped_import_model(
+                self: LLM[M, T], *decls: t.Any, trust_remote_code: bool, **attrs: t.Any
+            ) -> bentoml.Model:
                 # wrapped around custom init to provide some meta compression
                 # for all decls and attrs
                 (model_decls, model_attrs), _ = self.llm_parameters
@@ -512,7 +509,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
         else:
             original_post_init = getattr(cls, "llm_post_init")
 
-            def wrapped_post_init(self: LLM[M, T]):
+            def wrapped_post_init(self: LLM[M, T]) -> None:
                 _default_post_init(self)
                 original_post_init(self)
 
@@ -521,7 +518,6 @@ class LLM(LLMInterface[M, T], ReprMixin):
         cls.__llm_custom_import__ = _custom_import
         cls.__llm_custom_load__ = False if cls.load_model is LLMInterface[M, T].load_model else True
         cls.__llm_custom_tokenizer__ = False if cls.load_tokenizer is LLMInterface[M, T].load_tokenizer else True
-        cls.__llm_init_kwargs__ = None if cls.import_kwargs is LLMInterface[M, T].import_kwargs else cls.import_kwargs
 
         for at in {"bentomodel", "model", "tokenizer", "adapter_map"}:
             setattr(cls, f"__llm_{at}__", None)
@@ -544,12 +540,12 @@ class LLM(LLMInterface[M, T], ReprMixin):
     def save_pretrained(self, save_directory: str | Path, **attrs: t.Any) -> None:
         if isinstance(save_directory, Path):
             save_directory = str(save_directory)
-        if self.__llm_model__ is not None and self.bettertransformer:
+        if self.__llm_model__ is not None and self.bettertransformer and self.__llm_implementation__ == "pt":
             from optimum.bettertransformer import BetterTransformer
 
             self.__llm_model__ = t.cast(
                 M,
-                BetterTransformer.reverse(t.cast("transformers.PreTrainedModel", self.__llm_model__)),  # type: ignore
+                BetterTransformer.reverse(t.cast("transformers.PreTrainedModel", self.__llm_model__)),
             )
 
         openllm.serialisation.save_pretrained(self, save_directory, **attrs)
@@ -569,6 +565,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
         adapter_name: str | None = ...,
         adapter_map: dict[str, str | None] | None = ...,
         quantization_config: transformers.BitsAndBytesConfig | None = ...,
+        serialisation: t.Literal["safetensors", "legacy"] = ...,
         **attrs: t.Any,
     ) -> LLM[M, T]:
         ...
@@ -588,6 +585,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
         adapter_name: str | None = ...,
         adapter_map: dict[str, str | None] | None = ...,
         quantization_config: autogptq.BaseQuantizeConfig | None = ...,
+        serialisation: t.Literal["safetensors", "legacy"] = ...,
         **attrs: t.Any,
     ) -> LLM[M, T]:
         ...
@@ -606,6 +604,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
         adapter_name: str | None = None,
         adapter_map: dict[str, str | None] | None = None,
         quantization_config: transformers.BitsAndBytesConfig | autogptq.BaseQuantizeConfig | None = None,
+        serialisation: t.Literal["safetensors", "legacy"] = "safetensors",
         **attrs: t.Any,
     ) -> LLM[M, T]:
         """Instantiate a pretrained LLM.
@@ -654,7 +653,9 @@ class LLM(LLMInterface[M, T], ReprMixin):
             quantize: The quantization to use for this LLM. Defaults to None. Possible values
                       include int8, int4 and gptq.
             runtime: Optional runtime to run this LLM. Default to 'transformers'. 'ggml' supports is working in progress.
-            quantization_config: The quantization config (`transformers.BitsAndBytesConfig`) to use. Note that this is mutually exclusive with `quantize`
+            quantization_config: The quantization config (`transformers.BitsAndBytesConfig` | `autogtpq.BaseQuantizeConfig`) to use. Note that this is mutually exclusive with `quantize`
+            serialisation: Type of model format to save to local store. If set to 'safetensors', then OpenLLM will save model using safetensors.
+                           Default behaviour is similar to ``safe_serialization=False``.
             bettertransformer: Whether to use BetterTransformer with this model. Defaults to False.
             adapter_id: The [LoRA](https://arxiv.org/pdf/2106.09685.pdf) pretrained id or local path to use for this LLM. Defaults to None.
             adapter_name: The adapter name to use for this LLM. Defaults to None.
@@ -677,14 +678,11 @@ class LLM(LLMInterface[M, T], ReprMixin):
             your quantization_config or use the 'quantize' argument."""
             )
         if quantization_config is None and quantize is not None:
-            logger.debug(
-                "'quantize' is not None. %s will use a default 'quantization_config' for %s. "
-                "If you want to customise the quantization config, make sure to pass your "
-                "own 'quantization_config'",
-                cls.__name__,
-                quantize,
-            )
             quantization_config, attrs = infer_quantisation_config(cls, quantize, **attrs)
+
+        if quantize == "gptq":
+            # We will use safetensors for gptq
+            serialisation = "safetensors"
 
         # NOTE: Fine-tuning setup
         if adapter_map and adapter_id:
@@ -718,10 +716,11 @@ class LLM(LLMInterface[M, T], ReprMixin):
             bettertransformer=str(bettertransformer).upper() in ENV_VARS_TRUE_VALUES,
             quantization_config=quantization_config,
             _quantize_method=quantize,
-            _adapters_mapping=resolve_peft_config_type(adapter_map),
+            _adapters_mapping=resolve_peft_config_type(adapter_map) if adapter_map is not None else None,
             _runtime=runtime,
             _model_version=_tag.version,
             _tag=_tag,
+            _serialisation_format=serialisation,
             **attrs,
         )
 
@@ -750,6 +749,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
         _quantize_method: t.Literal["int8", "int4", "gptq"] | None,
         _runtime: t.Literal["ggml", "transformers"],
         _model_version: str,
+        _serialisation_format: t.Literal["safetensors", "legacy"],
         **attrs: t.Any,
     ):
         """Initialize the LLM with given pretrained model.
@@ -842,16 +842,10 @@ class LLM(LLMInterface[M, T], ReprMixin):
         if self.__llm_implementation__ == "pt":
             attrs.update({"low_cpu_mem_usage": low_cpu_mem_usage, "quantization_config": quantization_config})
 
-        model_kwds, tokenizer_kwds = {}, {}
-        if self.__llm_init_kwargs__:
-            # NOTE: recast here for type safety
-            model_kwds, tokenizer_kwds = t.cast("tuple[DictStrAny, DictStrAny]", self.__llm_init_kwargs__)
-            logger.debug(
-                '\'%s\' default kwargs for model: "%s", tokenizer: "%s"',
-                self.__class__.__name__,
-                model_kwds,
-                tokenizer_kwds,
-            )
+        model_kwds: dict[str, t.Any] = {}
+        tokenizer_kwds: dict[str, t.Any] = {}
+        if self.import_kwargs is not None:
+            model_kwds, tokenizer_kwds = self.import_kwargs
 
         # parsing tokenizer and model kwargs, as the hierachy is param pass > default
         normalized_model_kwds, normalized_tokenizer_kwds = normalize_attrs_to_model_tokenizer_pair(**attrs)
@@ -869,6 +863,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
             _adapters_mapping,
             _model_version,
             _quantize_method,
+            _serialisation_format,
         )
         # handle trust_remote_code
         self.__llm_trust_remote_code__ = self._model_attrs.pop("trust_remote_code", self.config["trust_remote_code"])
@@ -886,7 +881,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
             logger.debug("LoRA is visible for %s, disabling BetterTransformer", self)
             self.bettertransformer = False
 
-    def __setattr__(self, attr: str, value: t.Any):
+    def __setattr__(self, attr: str, value: t.Any) -> None:
         if attr in _reserved_namespace:
             raise ForbiddenAttributeError(
                 f"{attr} should not be set during runtime "
@@ -897,11 +892,11 @@ class LLM(LLMInterface[M, T], ReprMixin):
         super().__setattr__(attr, value)
 
     @property
-    def adapters_mapping(self) -> AdaptersMapping:
+    def adapters_mapping(self) -> AdaptersMapping | None:
         return self._adapters_mapping
 
     @adapters_mapping.setter
-    def adapters_mapping(self, value: AdaptersMapping):
+    def adapters_mapping(self, value: AdaptersMapping) -> None:
         self._adapters_mapping = value
 
     @property
@@ -964,7 +959,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
 
         The equivalent for ``openllm.Runner`` is ``openllm.Runner.download_model``.
         """
-        additional_args = ["--machine"]
+        additional_args: list[str] = []
         if not get_debug_mode():
             additional_args.append("--quiet")
         return openllm.import_model(
@@ -974,6 +969,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
             runtime=self.runtime,
             implementation=self.__llm_implementation__,
             quantize=self._quantize_method,
+            serialisation_format=self._serialisation_format,
             additional_args=additional_args,
         )
 
@@ -1006,7 +1002,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
     def _default_ft_config(self, _adapter_type: AdapterType, inference_mode: bool) -> FineTuneConfig:
         strategy = first_not_none(
             self.config["fine_tune_strategies"].get(_adapter_type),
-            default=FineTuneConfig(adapter_type=_adapter_type, llm_config_class=self.config_class),
+            default=FineTuneConfig(adapter_type=t.cast("PeftType", _adapter_type), llm_config_class=self.config_class),
         )
         return strategy.eval() if inference_mode else strategy.train()
 
@@ -1044,7 +1040,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
                     default_config.with_config(**adapter.config).to_peft_config()
                     if name == "default"
                     else FineTuneConfig(
-                        adapter_type=_adapter_type,
+                        adapter_type=t.cast("PeftType", _adapter_type),
                         adapter_config=adapter.config,
                         inference_mode=inference_mode,
                         llm_config_class=self.config_class,
@@ -1065,7 +1061,13 @@ class LLM(LLMInterface[M, T], ReprMixin):
 
         peft_config = (
             self.config["fine_tune_strategies"]
-            .get(adapter_type, FineTuneConfig(adapter_type=adapter_type, llm_config_class=self.config_class))
+            .get(
+                adapter_type,
+                FineTuneConfig(
+                    adapter_type=t.cast("PeftType", adapter_type),
+                    llm_config_class=self.config_class,
+                ),
+            )
             .train()
             .with_config(**attrs)
             .to_peft_config()
@@ -1131,7 +1133,10 @@ class LLM(LLMInterface[M, T], ReprMixin):
 
         return self.__llm_model__
 
-    def _wrap_default_peft_model(self, adapter_mapping: dict[str, tuple[peft.PeftConfig, str]], inference_mode: bool):
+    # XXX: Until peft publish py.typed PR, we will need to set the wrapper to t.Any (not ideal since we ducking the actual Peft class here.)
+    def _wrap_default_peft_model(
+        self, adapter_mapping: dict[str, tuple[peft.PeftConfig, str]], inference_mode: bool
+    ) -> t.Any:
         assert self.__llm_model__ is not None, "Error: Model is not loaded correctly"  # noqa: S101
         if isinstance(self.__llm_model__, peft.PeftModel):
             logger.warning("Model is already wrapped with peft. Skip wrapping with default peft model.")
@@ -1212,12 +1217,15 @@ class LLM(LLMInterface[M, T], ReprMixin):
 
             scheduling_strategy = CascadingResourceStrategy
 
-        generate_sig = ModelSignature.from_dict(ModelSignatureDict(batchable=False))
-        generate_iterator_sig = ModelSignature.from_dict(ModelSignatureDict(batchable=True))
+        generate_sig = ModelSignature.from_dict(t.cast("_ModelSignatureDict", ModelSignatureDict(batchable=False)))
+        embeddings_sig = ModelSignature.from_dict(t.cast("_ModelSignatureDict", ModelSignatureDict(batchable=False)))
+        generate_iterator_sig = ModelSignature.from_dict(
+            t.cast("_ModelSignatureDict", ModelSignatureDict(batchable=True))
+        )
 
         # NOTE: returning the two langchain API's to the runner
         return llm_runner_class(self)(
-            llm_runnable_class(self, generate_sig, generate_iterator_sig),
+            llm_runnable_class(self, embeddings_sig, generate_sig, generate_iterator_sig),
             name=self.runner_name,
             embedded=False,
             models=models,
@@ -1225,6 +1233,8 @@ class LLM(LLMInterface[M, T], ReprMixin):
             max_latency_ms=max_latency_ms,
             method_configs=bentoml_cattr.unstructure(
                 {
+                    "embeddings": embeddings_sig,
+                    "__call__": generate_sig,
                     "generate": generate_sig,
                     "generate_one": generate_sig,
                     "generate_iterator": generate_iterator_sig,
@@ -1304,8 +1314,7 @@ def Runner(
 
     @svc.on_startup
     def download():
-        runner.llm.ensure_model_id_exists()
-    ...
+        runner.download_model()
     ```
 
     if `init_local=True` (For development workflow), it will also enable `ensure_available`.
@@ -1329,11 +1338,17 @@ def Runner(
                 "bettertransformer": llm_config["env"]["bettertransformer_value"],
                 "quantize": llm_config["env"]["quantize_value"],
                 "runtime": llm_config["env"]["runtime_value"],
+                "serialisation": first_not_none(
+                    os.getenv("OPENLLM_SERIALIZATION"), attrs.get("serialisation"), default="safetensors"
+                ),
             }
         )
 
-    if implementation is None:
-        implementation = EnvVarMixin(model_name)["framework_value"]
+    default_implementation = llm_config["default_implementation"] if llm_config is not None else "pt"
+
+    implementation = first_not_none(
+        implementation, default=EnvVarMixin(model_name, default_implementation)["framework_value"]
+    )
 
     runner = openllm.infer_auto_class(implementation).create_runner(
         model_name,
@@ -1359,6 +1374,7 @@ class SetAdapterOutput(t.TypedDict):
 
 def llm_runnable_class(
     self: openllm.LLM[M, T],
+    embeddings_sig: ModelSignature,
     generate_sig: ModelSignature,
     generate_iterator_sig: ModelSignature,
 ) -> type[LLMRunnable]:
@@ -1376,7 +1392,7 @@ def llm_runnable_class(
                 self.apply_adapter(inference_mode=True, load_adapters="all")
 
         @bentoml.Runnable.method(batchable=False)
-        def set_adapter(__self, adapter_name: str) -> SetAdapterOutput:
+        def set_adapter(__self: _Runnable, adapter_name: str) -> SetAdapterOutput:
             success = False
             message = None
             if not is_peft_available():
@@ -1398,22 +1414,28 @@ def llm_runnable_class(
                     message=f"Adapter {adapter_name} not found. Available adapters: {list(t.cast('peft.PeftModel', __self.model).peft_config)}",
                 )
 
+        @bentoml.Runnable.method(**method_signature(embeddings_sig))
+        def embeddings(__self: _Runnable, prompt: str | list[str]) -> LLMEmbeddings:
+            if isinstance(prompt, str):
+                prompt = [prompt]
+            return self.embeddings(prompt)
+
         @bentoml.Runnable.method(**method_signature(generate_sig))
-        def __call__(__self, prompt: str, **attrs: t.Any) -> list[t.Any]:
+        def __call__(__self: _Runnable, prompt: str, **attrs: t.Any) -> list[t.Any]:
             return self.generate(prompt, **attrs)
 
         @bentoml.Runnable.method(**method_signature(generate_sig))
-        def generate(__self, prompt: str, **attrs: t.Any) -> list[t.Any]:
+        def generate(__self: _Runnable, prompt: str, **attrs: t.Any) -> list[t.Any]:
             return self.generate(prompt, **attrs)
 
         @bentoml.Runnable.method(**method_signature(generate_sig))
         def generate_one(
-            __self, prompt: str, stop: list[str], **attrs: t.Any
-        ) -> list[dict[t.Literal["generated_text"], str]]:
+            __self: _Runnable, prompt: str, stop: list[str], **attrs: t.Any
+        ) -> t.Sequence[dict[t.Literal["generated_text"], str]]:
             return self.generate_one(prompt, stop, **attrs)
 
         @bentoml.Runnable.method(**method_signature(generate_iterator_sig))
-        def generate_iterator(__self, prompt: str, **attrs: t.Any) -> t.Generator[t.Any, None, None]:
+        def generate_iterator(__self: _Runnable, prompt: str, **attrs: t.Any) -> t.Generator[t.Any, None, None]:
             yield self.generate_iterator(prompt, **attrs)
 
     return types.new_class(
@@ -1465,6 +1487,19 @@ def llm_runner_class(self: openllm.LLM[M, T]) -> type[LLMRunner]:
         generated_result = __self.generate.run(prompt, **generate_kwargs)
         return self.postprocess_generate(prompt, generated_result, **postprocess_kwargs)
 
+    def _wrapped_embeddings_run(__self: LLMRunner, prompt: str | list[str]) -> LLMEmbeddings:
+        """``llm.embed`` is a light wrapper around runner.embeedings.run().
+
+        Usage:
+        ```python
+        runner = openllm.Runner('llama', implementation='pt')
+        runner.embed("What is the meaning of life?")
+        ```
+        """
+        if isinstance(prompt, str):
+            prompt = [prompt]
+        return __self.embeddings.run(prompt)
+
     def _wrapped_repr_keys(_: LLMRunner) -> set[str]:
         return {"config", "llm_type", "runner_methods", "runtime", "llm_tag"}
 
@@ -1494,6 +1529,7 @@ def llm_runner_class(self: openllm.LLM[M, T]) -> type[LLMRunner]:
                 "peft_adapters": property(fget=available_adapters),
                 "download_model": self.ensure_model_id_exists,
                 "__call__": _wrapped_generate_run,
+                "embed": _wrapped_embeddings_run,
                 "__module__": self.__module__,
                 "__doc__": self.config["env"].start_docstring,
                 "__repr__": ReprMixin.__repr__,

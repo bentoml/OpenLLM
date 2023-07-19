@@ -113,5 +113,5 @@ def load_tokenizer(llm: openllm.LLM[t.Any, T]) -> TokenizerProtocol[T]:
     return t.cast("TokenizerProtocol[T]", tokenizer)
 
 
-def save_pretrained(llm: openllm.LLM[t.Any, t.Any], save_directory: str, **attrs: t.Any):
+def save_pretrained(llm: openllm.LLM[t.Any, t.Any], save_directory: str, **attrs: t.Any) -> None:
     raise NotImplementedError("Currently work in progress.")

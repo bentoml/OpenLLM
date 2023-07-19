@@ -25,6 +25,7 @@ import inflection
 import openllm
 
 from .configuration_auto import AutoConfig
+from ...utils import ReprMixin
 
 
 # NOTE: We need to do this so that overload can register
@@ -128,11 +129,6 @@ class BaseAutoLLMClass:
             model_class = cls._model_mapping[type(llm_config)]
             llm = model_class.from_pretrained(model_id, model_version=model_version, llm_config=llm_config, **attrs)
             if ensure_available:
-                logger.debug(
-                    "'ensure_available=True', OpenLLM will automatically import '%s' with 'model_id=%s' to local store if the entry does not exists.",
-                    model,
-                    llm.model_id,
-                )
                 llm.ensure_model_id_exists()
             if not return_runner_kwargs:
                 return llm
@@ -176,7 +172,7 @@ class BaseAutoLLMClass:
 
 def getattribute_from_module(module: types.ModuleType, attr: t.Any) -> t.Any:
     if attr is None:
-        return None
+        return
     if isinstance(attr, tuple):
         return tuple(getattribute_from_module(module, a) for a in attr)
     if hasattr(module, attr):
@@ -194,7 +190,7 @@ def getattribute_from_module(module: types.ModuleType, attr: t.Any) -> t.Any:
         raise ValueError(f"Could not find {attr} in {openllm_module}!")
 
 
-class _LazyAutoMapping(ConfigModelOrderedDict):
+class _LazyAutoMapping(ConfigModelOrderedDict, ReprMixin):
     """Based on transformers.models.auto.configuration_auto._LazyAutoMapping.
 
     This OrderedDict values() and keys() returns the list instead, so you don't
@@ -245,6 +241,20 @@ class _LazyAutoMapping(ConfigModelOrderedDict):
             if key in self._model_mapping.keys()
         ]
         return t.cast(ConfigModelKeysView, mapping_keys + list(self._extra_content.keys()))
+
+    @property
+    def __repr_keys__(self) -> set[str]:
+        return set(self._config_mapping.keys())
+
+    def __repr__(self) -> str:
+        return ReprMixin.__repr__(self)
+
+    def __repr_args__(self) -> t.Generator[tuple[str, tuple[str, str]], t.Any, t.Any]:
+        yield from (
+            (key, (value, self._model_mapping[key]))
+            for key, value in self._config_mapping.items()
+            if key in self._model_mapping
+        )
 
     def __bool__(self):
         return bool(self.keys())

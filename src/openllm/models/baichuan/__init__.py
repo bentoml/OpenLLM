@@ -21,7 +21,7 @@ from ...utils import is_cpm_kernels_available
 from ...utils import is_torch_available
 
 
-_import_structure = {
+_import_structure: dict[str, list[str]] = {
     "configuration_baichuan": ["BaichuanConfig", "START_BAICHUAN_COMMAND_DOCSTRING", "DEFAULT_PROMPT_TEMPLATE"],
 }
 

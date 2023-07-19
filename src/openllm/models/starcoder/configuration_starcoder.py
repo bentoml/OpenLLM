@@ -30,6 +30,7 @@ class StarCoderConfig(openllm.LLMConfig):
         "name_type": "lowercase",
         "requires_gpu": True,
         "url": "https://github.com/bigcode-project/starcoder",
+        "architecture": "GPTBigCodeForCausalLM",
         "requirements": ["bitsandbytes"],
         "workers_per_resource": 0.5,
         "default_id": "bigcode/starcoder",

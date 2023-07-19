@@ -112,6 +112,7 @@ class Dependencies:
     subdirectory: t.Optional[str] = None
     requires_gpu: bool = False
     lower_constraint: t.Optional[str] = None
+    upper_constraint: t.Optional[str] = None
     platform: t.Optional[t.Tuple[t.Literal["Linux", "Windows", "Darwin"], t.Literal["eq", "ne"]]] = None
 
     def with_options(self, **kwargs: t.Any) -> Dependencies:
@@ -119,7 +120,7 @@ class Dependencies:
 
     @property
     def has_constraint(self) -> bool:
-        return self.lower_constraint is not None
+        return self.lower_constraint is not None or self.upper_constraint is not None
 
     @property
     def pypi_extensions(self) -> str:
@@ -131,18 +132,20 @@ class Dependencies:
 
     def to_str(self) -> str:
         deps: list[str] = []
-        if self.lower_constraint is not None:
-            deps.append(f"{self.name}{self.pypi_extensions}>={self.lower_constraint}")
+        if self.lower_constraint is not None and self.upper_constraint is not None:
+            dep = f"{self.name}{self.pypi_extensions}>={self.lower_constraint},<{self.upper_constraint}"
+        elif self.lower_constraint is not None:
+            dep = f"{self.name}{self.pypi_extensions}>={self.lower_constraint}"
+        elif self.upper_constraint is not None:
+            dep = f"{self.name}{self.pypi_extensions}<{self.upper_constraint}"
         elif self.subdirectory is not None:
-            deps.append(
-                f"{self.name}{self.pypi_extensions} @ git+https://github.com/{self.git_repo_url}.git#subdirectory={self.subdirectory}"
-            )
+            dep = f"{self.name}{self.pypi_extensions} @ git+https://github.com/{self.git_repo_url}.git#subdirectory={self.subdirectory}"
         elif self.branch is not None:
-            deps.append(
-                f"{self.name}{self.pypi_extensions} @ git+https://github.com/{self.git_repo_url}.git@{self.branch}"
-            )
+            dep = f"{self.name}{self.pypi_extensions} @ git+https://github.com/{self.git_repo_url}.git@{self.branch}"
         else:
-            deps.append(f"{self.name}{self.pypi_extensions}")
+            dep = f"{self.name}{self.pypi_extensions}"
+
+        deps.append(dep)
 
         if self.platform:
             deps.append(self.platform_restriction(*self.platform))
@@ -158,7 +161,7 @@ _BENTOML_EXT = ["grpc", "io"]
 _TRANSFORMERS_EXT = ["torch", "tokenizers", "accelerate"]
 
 _BASE_DEPENDENCIES = [
-    Dependencies(name="bentoml", extensions=_BENTOML_EXT, lower_constraint="1.0.22"),
+    Dependencies(name="bentoml", extensions=_BENTOML_EXT, lower_constraint="1.0.24"),
     Dependencies(name="transformers", extensions=_TRANSFORMERS_EXT, lower_constraint="4.29.0"),
     Dependencies(name="safetensors"),
     Dependencies(name="optimum"),
@@ -170,6 +173,7 @@ _BASE_DEPENDENCIES = [
     Dependencies(name="httpx"),
     Dependencies(name="typing_extensions"),
     Dependencies(name="cuda-python", platform=("Darwin", "ne")),
+    Dependencies(name="bitsandbytes", upper_constraint="0.40"),  # Currently only <0.40 works with CUDA 11.8
 ]
 
 _NIGHTLY_MAPPING: dict[str, Dependencies] = {
@@ -180,24 +184,19 @@ _NIGHTLY_MAPPING: dict[str, Dependencies] = {
     "accelerate": Dependencies.from_tuple("accelerate", "huggingface/accelerate", "main", None),
     "bitsandbytes": Dependencies.from_tuple("bitsandbytes", "TimDettmers/bitsandbytes", "main", None),
     "trl": Dependencies.from_tuple("trl", "lvwerra/trl", "main", None),
-    "triton": Dependencies.from_tuple("triton", "openai/triton", "main", None, "python", True),
+    "vllm": Dependencies.from_tuple("vllm", "vllm-project/vllm", "main", None, None, True, None),
 }
 
 _ALL_RUNTIME_DEPS = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
 FINE_TUNE_DEPS = ["peft", "bitsandbytes", "datasets", "accelerate", "deepspeed", "trl"]
 FLAN_T5_DEPS = _ALL_RUNTIME_DEPS
 OPT_DEPS = _ALL_RUNTIME_DEPS
-MPT_DEPS = ["triton", "einops"]
 OPENAI_DEPS = ["openai", "tiktoken"]
 AGENTS_DEPS = ["transformers[agents]>=4.30", "diffusers", "soundfile"]
-FALCON_DEPS = ["einops", "xformers"]
-STARCODER_DEPS = ["bitsandbytes"]
-CHATGLM_DEPS = ["cpm-kernels", "sentencepiece"]
-BAICHUAN_DEPS = ["cpm-kernels", "sentencepiece"]
 PLAYGROUND_DEPS = ["jupyter", "notebook", "ipython", "jupytext", "nbformat"]
 GGML_DEPS = ["ctransformers"]
-GPTQ_DEPS = ["auto-gptq", "triton"]
-VLLM_DEPS = ["vllm"]
+GPTQ_DEPS = ["auto-gptq[triton]"]
+VLLM_DEPS = ["vllm", "ray"]
 
 _base_requirements = {
     inflection.dasherize(name): config_cls.__openllm_requirements__
@@ -211,8 +210,10 @@ _locals = locals().copy()
 # NOTE: update this table when adding new external dependencies
 # sync with openllm.utils.OPTIONAL_DEPENDENCIES
 _base_requirements.update(
-    {v: _locals[f"{inflection.underscore(v).upper()}_DEPS"] for v in openllm.utils.OPTIONAL_DEPENDENCIES}
+    {v: _locals.get(f"{inflection.underscore(v).upper()}_DEPS") for v in openllm.utils.OPTIONAL_DEPENDENCIES}
 )
+
+_base_requirements = {k: v for k, v in sorted(_base_requirements.items())}
 
 fname = f"{os.path.basename(os.path.dirname(__file__))}/{os.path.basename(__file__)}"
 
@@ -241,12 +242,30 @@ def create_classifiers() -> Array:
 
 
 def create_optional_table() -> Table:
-    table = tomlkit.table()
-    table.update(_base_requirements)
-
     all_array = tomlkit.array()
-    all_array.extend([f"openllm[{k}]" for k in table.keys()])
-    table.add("all", all_array.multiline(True))
+    all_array.extend([f"openllm[{k}]" for k in _base_requirements])
+
+    table = tomlkit.table(is_super_table=True)
+    _base_requirements.update({"all": all_array.multiline(True)})
+    table.update({k: v for k, v in sorted(_base_requirements.items())})
+    table.add(tomlkit.nl())
+
+    return table
+
+
+def create_url_table() -> Table:
+    table = tomlkit.table()
+    _urls = {
+        "Blog": "https://modelserving.com",
+        "Discord": "https://l.bentoml.com/join-openllm-discord",
+        "Documentation": "https://github.com/bentoml/openllm#readme",
+        "GitHub": "https://github.com/bentoml/openllm",
+        "History": "https://github.com/bentoml/openllm/blob/main/CHANGELOG.md",
+        "Homepage": "https://bentoml.com",
+        "Tracker": "https://github.com/bentoml/openllm/issues",
+        "Twitter": "https://twitter.com/bentomlai",
+    }
+    table.update({k: v for k, v in sorted(_urls.items())})
     return table
 
 
@@ -254,13 +273,15 @@ def main() -> int:
     with open(os.path.join(ROOT, "pyproject.toml"), "r") as f:
         pyproject = tomlkit.parse(f.read())
 
-    t.cast("Table", pyproject["project"]).update(
-        {
-            "classifiers": create_classifiers(),
-            "optional-dependencies": create_optional_table(),
-            "dependencies": tomlkit.array(f"{[v.to_str() for v in _BASE_DEPENDENCIES]}").multiline(True),
-        }
-    )
+    dependencies_array = tomlkit.array()
+    dependencies_array.extend([v.to_str() for v in _BASE_DEPENDENCIES])
+
+    pyproject["project"]["urls"] = create_url_table()
+    pyproject["project"]["classifiers"] = create_classifiers()
+    pyproject["project"]["optional-dependencies"] = create_optional_table()
+    pyproject["project"]["scripts"] = {"openllm": "openllm.cli:cli"}
+    pyproject["project"]["dependencies"] = dependencies_array.multiline(True)
+
     with open(os.path.join(ROOT, "pyproject.toml"), "w") as f:
         f.write(tomlkit.dumps(pyproject))
 

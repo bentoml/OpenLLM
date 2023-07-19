@@ -2,4 +2,4 @@
 # For Jax, Flax, Tensorflow, PyTorch CUDA support, please refers to their official installation for your specific setup.
 -r nightly-requirements.txt
 -e .[all]
-triton @ git+https://github.com/openai/triton.git#subdirectory=python
+vllm @ git+https://github.com/vllm-project/vllm.git@main

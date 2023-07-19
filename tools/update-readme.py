@@ -39,8 +39,11 @@ def main() -> int:
         readme = f.readlines()
 
     start_index, stop_index = readme.index(START_COMMENT), readme.index(END_COMMENT)
-    formatted: dict[t.Literal["Model", "CPU", "GPU", "URL", "Installation", "Model Ids"], list[str | list[str]]] = {
+    formatted: dict[
+        t.Literal["Model", "Architecture", "CPU", "GPU", "URL", "Installation", "Model Ids"], list[str | list[str]]
+    ] = {
         "Model": [],
+        "Architecture": [],
         "URL": [],
         "CPU": [],
         "GPU": [],
@@ -51,6 +54,7 @@ def main() -> int:
     for name, config_cls in openllm.CONFIG_MAPPING.items():
         dashed = inflection.dasherize(name)
         formatted["Model"].append(dashed)
+        formatted["Architecture"].append(config_cls.__openllm_architecture__)
         formatted["URL"].append(config_cls.__openllm_url__)
         formatted["GPU"].append("✅")
         formatted["CPU"].append("✅" if not config_cls.__openllm_requires_gpu__ else "❌")
@@ -70,13 +74,23 @@ def main() -> int:
     meta.extend([f"<th>{header}</th>\n" for header in formatted.keys() if header not in ("URL",)])
     meta += ["</tr>\n"]
     # NOTE: rows
-    for name, url, cpu, gpu, installation, model_ids in t.cast(
-        t.Iterable[t.Tuple[str, str, str, str, str, t.List[str]]], zip(*formatted.values())
+    for name, architecture, url, cpu, gpu, installation, model_ids in t.cast(
+        t.Iterable[t.Tuple[str, str, str, str, str, str, t.List[str]]], zip(*formatted.values())
     ):
         meta += "<tr>\n"
+        # configure architecture URL
+        cfg_cls = openllm.CONFIG_MAPPING[name]
+        if cfg_cls.__openllm_trust_remote_code__:
+            arch = f"<td><a href={url}><code>{architecture}</code></a></td>\n"
+        else:
+            model_name = {"dolly_v2": "gpt_neox", "stablelm": "gpt_neox", "starcoder": "gpt_bigcode"}.get(
+                cfg_cls.__openllm_model_name__, cfg_cls.__openllm_model_name__
+            )
+            arch = f"<td><a href=https://huggingface.co/docs/transformers/main/model_doc/{model_name}#transformers.{architecture}><code>{architecture}</code></a></td>\n"
         meta.extend(
             [
                 f"\n<td><a href={url}>{name}</a></td>\n",
+                arch,
                 f"<td>{cpu}</td>\n",
                 f"<td>{gpu}</td>\n",
                 f"<td>\n\n{installation}\n\n</td>\n",

@@ -87,7 +87,7 @@ class LazyModule(types.ModuleType):
         self._name = name
         self._import_structure = import_structure
 
-    def __dir__(self):
+    def __dir__(self) -> list[str]:
         """Needed for autocompletion in an IDE."""
         result = t.cast("list[str]", super().__dir__())
         # The elements of self.__all__ that are submodules may or
@@ -141,7 +141,7 @@ class LazyModule(types.ModuleType):
         setattr(self, name, value)
         return value
 
-    def _get_module(self, module_name: str):
+    def _get_module(self, module_name: str) -> types.ModuleType:
         try:
             return importlib.import_module("." + module_name, self.__name__)
         except Exception as e:
@@ -150,6 +150,6 @@ class LazyModule(types.ModuleType):
                 f" traceback):\n{e}"
             ) from e
 
-    def __reduce__(self):
+    def __reduce__(self) -> tuple[type[LazyModule], tuple[str, str | None, dict[str, list[str]]]]:
         """This is to ensure any given module is pickle-able."""
         return (self.__class__, (self._name, self.__file__, self._import_structure))

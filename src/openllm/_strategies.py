@@ -60,12 +60,14 @@ def _strtoul(s: str) -> int:
     """Return -1 or positive integer sequence string starts with,."""
     if not s:
         return -1
+    idx = 0
     for idx, c in enumerate(s):
         if not (c.isdigit() or (idx == 0 and c in "+-")):
             break
         if idx + 1 == len(s):
             idx += 1  # noqa: PLW2901
-    return int(s[:idx]) if idx > 0 else -1  # type: ignore (idx will be set via enumerate)
+    # NOTE: idx will be set via enumerate
+    return int(s[:idx]) if idx > 0 else -1
 
 
 def _parse_list_with_prefix(lst: str, prefix: str) -> list[str]:
@@ -167,11 +169,8 @@ def _from_system(cls: type[DynResource]) -> list[str]:
                 if err != cuda.CUresult.CUDA_SUCCESS:
                     logger.warning("Failed to initialise CUDA", stacklevel=_STACK_LEVEL)
                     return []
-                err, device_count = cuda.cuDeviceGetCount()
-                if err != cuda.CUresult.CUDA_SUCCESS:
-                    logger.warning("Failed to get available devices under system.", stacklevel=_STACK_LEVEL)
-                    return []
-                return [str(i) for i in range(device_count)]
+                _, dev = cuda.cuDeviceGetCount()
+                return [str(i) for i in range(dev)]
             except (ImportError, RuntimeError):
                 return []
     return visible_devices
@@ -269,7 +268,11 @@ def _validate(cls: type[DynResource], val: list[t.Any]):
 
     try:
         from cuda import cuda
-    except ImportError:
+
+        err, *_ = cuda.cuInit(0)
+        if err != cuda.CUresult.CUDA_SUCCESS:
+            raise RuntimeError("Failed to initialise CUDA runtime binding.")
+    except (ImportError, RuntimeError):
         if sys.platform == "darwin":
             raise RuntimeError("GPU is not available on Darwin system.") from None
         raise RuntimeError(

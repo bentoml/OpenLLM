@@ -37,7 +37,8 @@ class ChatGLMConfig(openllm.LLMConfig):
         "timeout": 3600000,
         "requires_gpu": True,
         "url": "https://github.com/THUDM/ChatGLM-6B",
-        "requirements": ["cpm_kernels", "sentencepiece"],
+        "requirements": ["cpm-kernels", "sentencepiece"],
+        "architecture": "ChatGLMForConditionalGeneration",
         "default_id": "thudm/chatglm-6b",
         "model_ids": [
             "thudm/chatglm-6b",

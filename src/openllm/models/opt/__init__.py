@@ -22,7 +22,7 @@ from ...utils import is_tf_available
 from ...utils import is_torch_available
 
 
-_import_structure = {
+_import_structure: dict[str, list[str]] = {
     "configuration_opt": ["OPTConfig", "START_OPT_COMMAND_DOCSTRING", "DEFAULT_PROMPT_TEMPLATE"],
 }
 

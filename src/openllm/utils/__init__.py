@@ -56,13 +56,14 @@ try:
     from typing import GenericAlias as _TypingGenericAlias  # type: ignore
 except ImportError:
     # python < 3.9 does not have GenericAlias (list[int], tuple[str, ...] and so on)
-    _TypingGenericAlias = ()
+    _TypingGenericAlias = ()  # type: ignore
 
 if sys.version_info < (3, 10):
     _WithArgsTypes = (_TypingGenericAlias,)
 else:
     _WithArgsTypes: t.Any = (
-        t._GenericAlias,  # type: ignore (_GenericAlias is the actual GenericAlias implementation)
+        #  _GenericAlias is the actual GenericAlias implementation
+        t._GenericAlias,  # type: ignore
         types.GenericAlias,
         types.UnionType,
     )
@@ -77,13 +78,13 @@ else:
 if t.TYPE_CHECKING:
     import openllm
 
+    from .._types import AnyCallable
     from .._types import DictStrAny
     from .._types import LiteralRuntime
     from .._types import P
-    from ..models.auto.factory import BaseAutoLLMClass
 
 
-def set_debug_mode(enabled: bool):
+def set_debug_mode(enabled: bool) -> None:
     # monkeypatch bentoml._internal.configuration.set_debug_mode to remove unused logs
     os.environ[_DEBUG_ENV_VAR] = str(enabled)
     os.environ[_GRPC_DEBUG_ENV_VAR] = "DEBUG" if enabled else "ERROR"
@@ -122,6 +123,9 @@ def field_env_key(model_name: str, key: str, suffix: str | t.Literal[""] | None 
 
 
 DEBUG = sys.flags.dev_mode or (not sys.flags.ignore_environment and bool(os.environ.get("OPENLLMDEVDEBUG")))
+
+# MYPY is like t.TYPE_CHECKING, but reserved for Mypy plugins
+MYPY = False
 
 SHOW_CODEGEN = DEBUG and int(os.environ.get("OPENLLMDEVDEBUG", str(0))) > 3
 
@@ -226,7 +230,7 @@ class suppress(contextlib.suppress, contextlib.ContextDecorator):
     """
 
 
-def compose(*funcs: t.Callable[..., t.Any]):
+def compose(*funcs: AnyCallable) -> AnyCallable:
     """Compose any number of unary functions into a single unary function.
 
     >>> import textwrap
@@ -243,7 +247,7 @@ def compose(*funcs: t.Callable[..., t.Any]):
     [1.5, 2.0, 2.25, 2.4, 2.5, 2.571, 2.625, 2.667, 2.7]
     """
 
-    def compose_two(f1: t.Callable[..., t.Any], f2: t.Callable[P, t.Any]):
+    def compose_two(f1: AnyCallable, f2: t.Callable[P, t.Any]) -> t.Any:
         def _(*args: P.args, **kwargs: P.kwargs) -> t.Any:
             return f1(f2(*args, **kwargs))
 
@@ -252,7 +256,7 @@ def compose(*funcs: t.Callable[..., t.Any]):
     return functools.reduce(compose_two, funcs)
 
 
-def apply(transform: t.Callable[..., t.Any]):
+def apply(transform: AnyCallable) -> t.Callable[[AnyCallable], AnyCallable]:
     """Decorate a function with a transform function that is invoked on results returned from the decorated function.
 
     ```python
@@ -269,7 +273,7 @@ def apply(transform: t.Callable[..., t.Any]):
     ```
     """
 
-    def wrap(func: t.Callable[P, t.Any]):
+    def wrap(func: t.Callable[P, t.Any]) -> t.Any:
         return functools.wraps(func)(compose(transform, func))
 
     return wrap
@@ -277,7 +281,7 @@ def apply(transform: t.Callable[..., t.Any]):
 
 @apply(bool)
 @suppress(FileNotFoundError)
-def _text_in_file(text: str, filename: Path):
+def _text_in_file(text: str, filename: Path) -> bool:
     return any(text in line for line in filename.open())
 
 
@@ -331,7 +335,13 @@ def generate_context(framework_name: str) -> _ModelContext:
 
 
 def generate_labels(llm: openllm.LLM[t.Any, t.Any]) -> DictStrAny:
-    return {"runtime": llm.runtime, "framework": "openllm"}
+    return {
+        "runtime": llm.runtime,
+        "framework": "openllm",
+        "model_name": llm.config["model_name"],
+        "architecture": llm.config["architecture"],
+        "serialisation_format": llm._serialisation_format,
+    }
 
 
 _TOKENIZER_PREFIX = "_tokenizer_"
@@ -361,16 +371,32 @@ def infer_auto_class(implementation: t.Literal["flax"]) -> type[openllm.AutoFlax
     ...
 
 
-def infer_auto_class(implementation: LiteralRuntime) -> type[BaseAutoLLMClass]:
+@_overload
+def infer_auto_class(implementation: t.Literal["vllm"]) -> type[openllm.AutoVLLM]:
+    ...
+
+
+def infer_auto_class(
+    implementation: LiteralRuntime,
+) -> type[openllm.AutoLLM] | type[openllm.AutoTFLLM] | type[openllm.AutoFlaxLLM] | type[openllm.AutoVLLM]:
     if implementation == "tf":
-        from ..models.auto import AutoTFLLM as auto
+        from openllm import AutoTFLLM
+
+        return AutoTFLLM
     elif implementation == "flax":
-        from ..models.auto import AutoFlaxLLM as auto
+        from openllm import AutoFlaxLLM
+
+        return AutoFlaxLLM
     elif implementation == "pt":
-        from ..models.auto import AutoLLM as auto
+        from openllm import AutoLLM
+
+        return AutoLLM
+    elif implementation == "vllm":
+        from openllm import AutoVLLM
+
+        return AutoVLLM
     else:
-        raise RuntimeError(f"Unknown implementation: {implementation} (supported: 'pt', 'flax', 'tf')")
-    return auto
+        raise RuntimeError(f"Unknown implementation: {implementation} (supported: 'pt', 'flax', 'tf', 'vllm')")
 
 
 # NOTE: The set marks contains a set of modules name
@@ -388,7 +414,7 @@ _extras: dict[str, t.Any] = {
 
 _extras["__openllm_migration__"] = {"ModelEnv": "EnvVarMixin"}
 
-_import_structure = {
+_import_structure: dict[str, list[str]] = {
     "analytics": [],
     "codegen": [],
     "dantic": [],
@@ -404,6 +430,7 @@ _import_structure = {
         "is_einops_available",
         "is_flax_available",
         "is_tf_available",
+        "is_vllm_available",
         "is_torch_available",
         "is_bitsandbytes_available",
         "is_peft_available",
@@ -456,6 +483,7 @@ if t.TYPE_CHECKING:
     from .import_utils import is_transformers_supports_agent as is_transformers_supports_agent
     from .import_utils import is_transformers_supports_kbit as is_transformers_supports_kbit
     from .import_utils import is_triton_available as is_triton_available
+    from .import_utils import is_vllm_available as is_vllm_available
     from .import_utils import require_backends as require_backends
     from .import_utils import requires_dependencies as requires_dependencies
     from .representation import ReprMixin as ReprMixin

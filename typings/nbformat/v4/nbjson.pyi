@@ -1,6 +1,9 @@
 import json
+from typing import Any
+from typing import Dict
 
 from _typeshed import Incomplete
+from nbformat import NotebookNode
 from nbformat.notebooknode import from_dict as from_dict
 
 from .rwbase import NotebookReader as NotebookReader
@@ -10,14 +13,14 @@ from .rwbase import split_lines as split_lines
 from .rwbase import strip_transient as strip_transient
 
 class BytesEncoder(json.JSONEncoder):
-    def default(self, obj): ...
+    def default(self, obj: Any) -> Any: ...
 
 class JSONReader(NotebookReader):
-    def reads(self, s, **kwargs): ...
-    def to_notebook(self, d, **kwargs): ...
+    def reads(self, s: str, **kwargs: Any) -> NotebookNode: ...
+    def to_notebook(self, d: Dict[str, Any], **kwargs: Any) -> NotebookNode: ...
 
 class JSONWriter(NotebookWriter):
-    def writes(self, nb, **kwargs): ...
+    def writes(self, nb: NotebookNote, **kwargs: Any) -> None: ...
 
 reads: Incomplete
 read: Incomplete

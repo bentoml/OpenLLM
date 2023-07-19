@@ -126,6 +126,7 @@ dependencies can be installed with the instructions below:
 <table align='center'>
 <tr>
 <th>Model</th>
+<th>Architecture</th>
 <th>CPU</th>
 <th>GPU</th>
 <th>Installation</th>
@@ -134,6 +135,7 @@ dependencies can be installed with the instructions below:
 <tr>
 
 <td><a href=https://github.com/THUDM/ChatGLM-6B>chatglm</a></td>
+<td><a href=https://github.com/THUDM/ChatGLM-6B><code>ChatGLMForConditionalGeneration</code></a></td>
 <td>❌</td>
 <td>✅</td>
 <td>
@@ -156,6 +158,7 @@ pip install "openllm[chatglm]"
 <tr>
 
 <td><a href=https://github.com/databrickslabs/dolly>dolly-v2</a></td>
+<td><a href=https://huggingface.co/docs/transformers/main/model_doc/gpt_neox#transformers.GPTNeoXForCausalLM><code>GPTNeoXForCausalLM</code></a></td>
 <td>✅</td>
 <td>✅</td>
 <td>
@@ -176,6 +179,7 @@ pip install openllm
 <tr>
 
 <td><a href=https://falconllm.tii.ae/>falcon</a></td>
+<td><a href=https://falconllm.tii.ae/><code>FalconForCausalLM</code></a></td>
 <td>❌</td>
 <td>✅</td>
 <td>
@@ -197,6 +201,7 @@ pip install "openllm[falcon]"
 <tr>
 
 <td><a href=https://huggingface.co/docs/transformers/model_doc/flan-t5>flan-t5</a></td>
+<td><a href=https://huggingface.co/docs/transformers/main/model_doc/flan_t5#transformers.T5ForConditionalGeneration><code>T5ForConditionalGeneration</code></a></td>
 <td>✅</td>
 <td>✅</td>
 <td>
@@ -219,6 +224,7 @@ pip install "openllm[flan-t5]"
 <tr>
 
 <td><a href=https://github.com/EleutherAI/gpt-neox>gpt-neox</a></td>
+<td><a href=https://huggingface.co/docs/transformers/main/model_doc/gpt_neox#transformers.GPTNeoXForCausalLM><code>GPTNeoXForCausalLM</code></a></td>
 <td>❌</td>
 <td>✅</td>
 <td>
@@ -236,7 +242,47 @@ pip install openllm
 </tr>
 <tr>
 
+<td><a href=https://github.com/facebookresearch/llama>llama</a></td>
+<td><a href=https://huggingface.co/docs/transformers/main/model_doc/llama#transformers.LlamaForCausalLM><code>LlamaForCausalLM</code></a></td>
+<td>✅</td>
+<td>✅</td>
+<td>
+
+```bash
+pip install "openllm[llama]"
+```
+
+</td>
+<td>
+
+<ul><li><a href=https://huggingface.co/meta-llama/llama-2-70b-chat-hf><code>meta-llama/llama-2-70b-chat-hf</code></a></li>
+<li><a href=https://huggingface.co/meta-llama/llama-2-13b-chat-hf><code>meta-llama/llama-2-13b-chat-hf</code></a></li>
+<li><a href=https://huggingface.co/meta-llama/llama-2-7b-chat-hf><code>meta-llama/llama-2-7b-chat-hf</code></a></li>
+<li><a href=https://huggingface.co/meta-llama/llama-2-70b-hf><code>meta-llama/llama-2-70b-hf</code></a></li>
+<li><a href=https://huggingface.co/meta-llama/llama-2-13b-hf><code>meta-llama/llama-2-13b-hf</code></a></li>
+<li><a href=https://huggingface.co/meta-llama/llama-2-7b-hf><code>meta-llama/llama-2-7b-hf</code></a></li>
+<li><a href=https://huggingface.co/decapoda-research/llama-65b-hf><code>decapoda-research/llama-65b-hf</code></a></li>
+<li><a href=https://huggingface.co/decapoda-research/llama-30b-hf><code>decapoda-research/llama-30b-hf</code></a></li>
+<li><a href=https://huggingface.co/decapoda-research/llama-13b-hf><code>decapoda-research/llama-13b-hf</code></a></li>
+<li><a href=https://huggingface.co/decapoda-research/llama-7b-hf-int8><code>decapoda-research/llama-7b-hf-int8</code></a></li>
+<li><a href=https://huggingface.co/decapoda-research/llama-7b-hf><code>decapoda-research/llama-7b-hf</code></a></li>
+<li><a href=https://huggingface.co/openlm-research/open_llama_7b_v2><code>openlm-research/open_llama_7b_v2</code></a></li>
+<li><a href=https://huggingface.co/openlm-research/open_llama_3b_v2><code>openlm-research/open_llama_3b_v2</code></a></li>
+<li><a href=https://huggingface.co/openlm-research/open_llama_13b><code>openlm-research/open_llama_13b</code></a></li>
+<li><a href=https://huggingface.co/openlm-research/open_llama_7b><code>openlm-research/open_llama_7b</code></a></li>
+<li><a href=https://huggingface.co/openlm-research/open_llama_3b><code>openlm-research/open_llama_3b</code></a></li>
+<li><a href=https://huggingface.co/huggyllama/llama-65b><code>huggyllama/llama-65b</code></a></li>
+<li><a href=https://huggingface.co/huggyllama/llama-30b><code>huggyllama/llama-30b</code></a></li>
+<li><a href=https://huggingface.co/huggyllama/llama-13b><code>huggyllama/llama-13b</code></a></li>
+<li><a href=https://huggingface.co/huggyllama/llama-7b><code>huggyllama/llama-7b</code></a></li>
+<li><a href=https://huggingface.co/syzymon/long_llama_3b><code>syzymon/long_llama_3b</code></a></li></ul>
+
+</td>
+</tr>
+<tr>
+
 <td><a href=https://huggingface.co/mosaicml>mpt</a></td>
+<td><a href=https://huggingface.co/mosaicml><code>MPTForCausalLM</code></a></td>
 <td>✅</td>
 <td>✅</td>
 <td>
@@ -261,6 +307,7 @@ pip install "openllm[mpt]"
 <tr>
 
 <td><a href=https://huggingface.co/docs/transformers/model_doc/opt>opt</a></td>
+<td><a href=https://huggingface.co/docs/transformers/main/model_doc/opt#transformers.MPTForCausalLM><code>MPTForCausalLM</code></a></td>
 <td>✅</td>
 <td>✅</td>
 <td>
@@ -284,6 +331,7 @@ pip install "openllm[opt]"
 <tr>
 
 <td><a href=https://github.com/Stability-AI/StableLM>stablelm</a></td>
+<td><a href=https://huggingface.co/docs/transformers/main/model_doc/gpt_neox#transformers.GPTNeoXForCausalLM><code>GPTNeoXForCausalLM</code></a></td>
 <td>✅</td>
 <td>✅</td>
 <td>
@@ -305,6 +353,7 @@ pip install openllm
 <tr>
 
 <td><a href=https://github.com/bigcode-project/starcoder>starcoder</a></td>
+<td><a href=https://huggingface.co/docs/transformers/main/model_doc/gpt_bigcode#transformers.GPTBigCodeForCausalLM><code>GPTBigCodeForCausalLM</code></a></td>
 <td>❌</td>
 <td>✅</td>
 <td>
@@ -324,6 +373,7 @@ pip install "openllm[starcoder]"
 <tr>
 
 <td><a href=https://github.com/baichuan-inc/Baichuan-7B>baichuan</a></td>
+<td><a href=https://github.com/baichuan-inc/Baichuan-7B><code>BaiChuanForCausalLM</code></a></td>
 <td>❌</td>
 <td>✅</td>
 <td>
@@ -367,6 +417,28 @@ OPENLLM_FLAN_T5_FRAMEWORK=tf openllm start flan-t5
 > **Note** For GPU support on Flax, refers to
 > [Jax's installation](https://github.com/google/jax#pip-installation-gpu-cuda-installed-via-pip-easier)
 > to make sure that you have Jax support for the corresponding CUDA version.
+
+### Quantisation
+
+OpenLLM supports quantisation with
+[bitsandbytes](https://github.com/TimDettmers/bitsandbytes) and
+[GPTQ](https://arxiv.org/abs/2210.17323)
+
+```bash
+openllm start mpt --quantize int8
+```
+
+To run inference with `gptq`, simply pass `--quantize gptq`:
+
+```bash
+openllm start falcon --model-id TheBloke/falcon-40b-instruct-GPTQ --quantize gptq --device 0
+```
+
+> **Note**: to run GPTQ, make sure to install with
+> `pip install "openllm[gptq]"`. The weights of all supported models should be
+> quantized before serving. See
+> [GPTQ-for-LLaMa](https://github.com/qwopqwop200/GPTQ-for-LLaMa) for more
+> information on GPTQ quantisation.
 
 ### Fine-tuning support (Experimental)
 
