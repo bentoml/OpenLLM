@@ -1,17 +1,17 @@
-(ns openllm.components.model-selection.subs
-    (:require [openllm.components.model-selection.db :as db]
-              [openllm.components.subs :as components-subs]
+(ns openllm.components.side-bar.model-selection.subs
+    (:require [openllm.components.side-bar.model-selection.db :as db]
+              [openllm.components.side-bar.subs :as side-bar-subs]
               [re-frame.core :refer [reg-sub]]))
 
 (reg-sub
  ::selected-model
- :<- [::components-subs/model-selection-db]
+ :<- [::side-bar-subs/model-selection-db]
  (fn [model-selection-db _]
    (:selected-model model-selection-db)))
 
 (reg-sub
  ::all-models-data
- :<- [::components-subs/model-selection-db]
+ :<- [::side-bar-subs/model-selection-db]
  (fn [model-selection-db _]
    (:all-models model-selection-db)))
 

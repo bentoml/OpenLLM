@@ -40,7 +40,7 @@
   "Aggregates the chat input field and the send button as well as the
    prompt layout button."
   []
-  (let [llm-config (rf/subscribe [::root-subs/model-config])
+  (let [llm-config (rf/subscribe [::side-bar-subs/model-config])
         submit-prompt (rf/subscribe [::subs/prompt])
         on-submit-event [::events/on-send-button-click @submit-prompt @llm-config]]
     (fn chat-controls []

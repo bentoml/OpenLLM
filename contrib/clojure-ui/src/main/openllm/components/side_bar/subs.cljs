@@ -32,6 +32,12 @@
    (:side-bar-open? side-bar-db)))
 
 (reg-sub
+ ::model-selection-db
+ :<- [::components-subs/side-bar-db]
+ (fn [side-bar-db _]
+   (:model-selection-db side-bar-db)))
+
+(reg-sub
  ::model-config
  :<- [::components-subs/side-bar-db]
  (fn [side-bar-db _]

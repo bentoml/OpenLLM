@@ -3,7 +3,8 @@
    mostly revolves around the model parameters.
    The path to this branch can be expressed as:
    *root -> components -> side-bar*"
-   (:require [cljs.spec.alpha :as s]))
+   (:require [openllm.components.side-bar.model-selection.db :as model-selection-db]
+             [cljs.spec.alpha :as s]))
 
 (defn key-seq
   "Returns the key sequence to access the side-bar-db This is useful for
@@ -76,6 +77,7 @@
                                     ::use_cache]))
 
 (s/def ::side-bar-db (s/keys :req-un [::side-bar-open?
+                                      ::model-selection-db/model-selection-db
                                       ::model-config]))
 
 (def initial-model-config
@@ -104,6 +106,7 @@
   "Initial values for this branch of the app-db."
   []
   {:side-bar-open? true
+   :model-selection-db (model-selection-db/initial-db)
    :model-config initial-model-config})
 
 

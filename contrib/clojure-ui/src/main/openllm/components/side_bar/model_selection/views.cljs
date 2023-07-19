@@ -1,6 +1,6 @@
-(ns openllm.components.model-selection.views
-  (:require [openllm.components.model-selection.subs :as subs]
-            [openllm.components.model-selection.events :as events]
+(ns openllm.components.side-bar.model-selection.views
+  (:require [openllm.components.side-bar.model-selection.subs :as subs]
+            [openllm.components.side-bar.model-selection.events :as events]
             [re-frame.core :as rf]))
 
 (defn model-selection

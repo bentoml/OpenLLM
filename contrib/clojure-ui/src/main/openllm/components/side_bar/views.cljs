@@ -1,7 +1,7 @@
 (ns openllm.components.side-bar.views
   (:require [re-frame.core :as rf]
             [openllm.components.side-bar.db :as db]
-            [openllm.components.model-selection.views :as model-selection-view]
+            [openllm.components.side-bar.model-selection.views :as model-selection-view]
             [openllm.components.side-bar.subs :as subs]
             [openllm.components.side-bar.events :as events]
             [openllm.components.common.views :as ui]

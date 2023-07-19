@@ -3,7 +3,7 @@
             [openllm.components.playground.subs :as subs]
             [openllm.api.components :as api-components]
             [openllm.components.common.views :as ui]
-            [openllm.subs :as root-subs]
+            [openllm.components.side-bar.subs :as side-bar-subs]
             [re-frame.core :as rf]
             [reagent-mui.material.button :refer [button]]
             [reagent-mui.material.modal :refer [modal]]
@@ -28,7 +28,7 @@
    prompt."
   []
   (let [input-value (rf/subscribe [::subs/playground-input-value])
-        llm-config (rf/subscribe [::root-subs/model-config])]
+        llm-config (rf/subscribe [::side-bar-subs/model-config])]
     (fn []
       [:div {:class "grid grid-cols-2"}
        [:div

@@ -1,9 +1,9 @@
-(ns openllm.components.model-selection.db
+(ns openllm.components.side-bar.model-selection.db
   "The branch of the `app-db` that saves data related to the model-selection view.
    This includes the current model selection, as well as the data for all available
    models.
    The path to this branch can be expressed as:
-   *root -> components -> model-selection*"
+   *root -> components -> side-bar -> model-selection*"
   (:require [re-frame.core :as rf]
             [clojure.spec.alpha :as s]))
 
@@ -13,11 +13,9 @@
    used to access a sub-key of the model-selection-db
    Returns the key sequence to access the model-selection-db"
   [& more-keys]
-  (into [:components-db :model-selection-db] more-keys))
+  (into [:components-db :side-bar-db :model-selection-db] more-keys))
 
 (def loading-text "Loading...")
-
-(declare get-all-models)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
