@@ -57,7 +57,7 @@ jobs:
           git_user_signingkey: true
           git_commit_gpgsign: true
           git_tag_gpgsign: true
-          git_push_gpgsign: true
+          git_push_gpgsign: false
       - name: Install jq and curl
         run: sudo apt-get install -y jq curl
       - name: Create a release
@@ -66,11 +66,7 @@ jobs:
           GIT_AUTHOR_EMAIL: ${{ steps.import-gpg.outputs.email }}
           GIT_COMMITTER_NAME: ${{ steps.import-gpg.outputs.name }}
           GIT_COMMITTER_EMAIL: ${{ steps.import-gpg.outputs.email }}
-        run: |
-          git config --global http.postBuffer 524288000
-          git config --global user.name "${{ steps.import-gpg.outputs.name }}"
-          git config --global user.email "${{ steps.import-gpg.outputs.email }}"
-          ./.github/actions/release.sh --release ${{ inputs.release_type }}
+        run: ./.github/actions/release.sh --release ${{ inputs.release_type }}
       - name: Set project version
         id: version
         run: |-
