@@ -64,10 +64,10 @@
              :color "primary"}
     [toolbar {:variant "dense"}
      [icon-button {:on-click #(rf/dispatch [::root-events/open-link-in-new-tab "https://github.com/bentoml/OpenLLM"])
-                   :color "inherit"}
+                   :color "inherit"
+                   :size "small"}
       [github-icon/git-hub]]
-     [typography {:variant "h6"} "OpenLLM"]
-     [:div {:class "ml-10"}
+     [:div {:class "ml-[calc(50%-_180px)]"}
       [button {:on-click #(rf/dispatch [:set-screen-id :playground])
                :color "inherit"
                :start-icon (r/as-element [brush-icon/brush])} "Playground"]]

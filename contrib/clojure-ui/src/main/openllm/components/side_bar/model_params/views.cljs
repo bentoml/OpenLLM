@@ -8,7 +8,6 @@
 (defn num-type?
   "Returns true if the parameter is a number, false otherwise."
   [id]
-  (print (str id))
   (or (str/includes? (str id) "num")
       (= id :top_k)))
 

@@ -1,16 +1,15 @@
 (ns openllm.components.side-bar.model-params.db
-  "The branch of the `app-db` that saves data related to the model-selection view.
-   This includes the current model selection, as well as the data for all available
-   models.
+  "The branch of the `app-db` that saves data related to the model-params-db view.
+   This includes all the configuration parameters for the models.
    The path to this branch can be expressed as:
    *root -> components -> side-bar -> model-params*"
   (:require [clojure.spec.alpha :as s]))
 
 (defn key-seq
-  "Returns the key sequence to access the model-selection-db This is useful for
+  "Returns the key sequence to access the model-params-db This is useful for
    `assoc-in` and `get-in`. The `more-keys` argument is optional and can be
-   used to access a sub-key of the model-selection-db
-   Returns the key sequence to access the model-selection-db"
+   used to access a sub-key of the model-params-db
+   Returns the key sequence to access the model-params-db"
   [& more-keys]
   (into [:components-db :side-bar-db :model-params-db] more-keys))
 
