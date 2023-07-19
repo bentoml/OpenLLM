@@ -1,6 +1,6 @@
 (ns openllm.components.side-bar.subs
-  (:require [openllm.db :as db]
-            [openllm.subs :as root-subs]
+  (:require [openllm.components.subs :as components-subs]
+            [openllm.components.side-bar.db :as db]
             [re-frame.core :refer [reg-sub]]))
 
 (def parameter-id->human-readable
@@ -26,12 +26,19 @@
 
 (reg-sub
  ::side-bar-open?
- (fn [db _]
-   (:side-bar-open? db)))
+ :<- [::components-subs/side-bar-db]
+ (fn [side-bar-db _]
+   (:side-bar-open? side-bar-db)))
+
+(reg-sub
+ ::model-config
+ :<- [::components-subs/side-bar-db]
+ (fn [side-bar-db _]
+   (:model-config side-bar-db)))
 
 (reg-sub
  ::human-readable-config
- :<- [::root-subs/model-config]
+ :<- [::model-config]
  (fn [model-config _]
    (vec (map (fn [[k v]]
                [k {:name (parameter-id->human-readable k)

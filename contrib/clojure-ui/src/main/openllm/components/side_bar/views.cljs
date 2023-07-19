@@ -1,6 +1,6 @@
 (ns openllm.components.side-bar.views
   (:require [re-frame.core :as rf]
-            [openllm.db :as db]
+            [openllm.components.side-bar.db :as db]
             [openllm.components.model-selection.views :as model-selection-view]
             [openllm.components.side-bar.subs :as subs]
             [openllm.components.side-bar.events :as events]
@@ -81,7 +81,6 @@
     (fn parameter-list
       []
       (into [:<>] (map parameter-list-entry @model-config)))))
-
 
 (defn side-bar-with-mui-collapse
   "The sidebar wrapped with a Material UI Collapse component."

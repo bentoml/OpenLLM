@@ -8,6 +8,7 @@
             [openllm.components.model-selection.db :as model-selection-db]
             [openllm.components.nav-bar.db :as nav-bar-db]
             [openllm.components.playground.db :as playground-db]
+            [openllm.components.side-bar.db :as side-bar-db]
             [clojure.spec.alpha :as s]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -16,15 +17,17 @@
 (s/def ::components-db (s/keys :req-un [::chat-db/chat-db
                                         ::model-selection-db/model-selection-db
                                         ::nav-bar-db/nav-bar-db
-                                        ::playground-db/playground-db]))
+                                        ::playground-db/playground-db
+                                        ::side-bar-db/side-bar-db]))
 
 (defn initial-db
   []
   {:chat-db (chat-db/initial-db)
    :model-selection-db (model-selection-db/initial-db)
    :nav-bar-db (nav-bar-db/initial-db)
-   :playground-db (playground-db/initial-db)})
+   :playground-db (playground-db/initial-db)
+   :side-bar-db (side-bar-db/initial-db)})
 
 (comment
   ;; check if initial-db is valid
-  (s/valid? ::db (initial-db)))
+  (s/valid? ::components-db (initial-db)))
