@@ -9,9 +9,3 @@
  (fn [db _]
    (let [new-value (not (get-in db (db/key-seq :side-bar-open?)))]
      (assoc-in db (db/key-seq :side-bar-open?) new-value))))
-
-(reg-event-db
- ::set-model-config-parameter
- [check-spec-interceptor]
- (fn [db [_ parameter value]]
-   (assoc-in db (db/key-seq :model-config parameter) value)))

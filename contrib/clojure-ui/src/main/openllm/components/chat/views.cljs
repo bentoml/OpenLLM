@@ -3,7 +3,7 @@
             [openllm.components.chat.events :as events]
             [openllm.components.chat.subs :as subs]
             [openllm.components.side-bar.subs :as side-bar-subs]
-            [openllm.subs :as root-subs]
+            [openllm.components.side-bar.model-params.subs :as model-params-subs]
             [openllm.components.chat.views :as views]
             [openllm.api.components :as api-components]
             [reagent-mui.material.tooltip :refer [tooltip]]
@@ -40,7 +40,7 @@
   "Aggregates the chat input field and the send button as well as the
    prompt layout button."
   []
-  (let [llm-config (rf/subscribe [::side-bar-subs/model-config])
+  (let [llm-config (rf/subscribe [::model-params-subs/model-config])
         submit-prompt (rf/subscribe [::subs/prompt])
         on-submit-event [::events/on-send-button-click @submit-prompt @llm-config]]
     (fn chat-controls []

@@ -3,7 +3,7 @@
             [openllm.components.playground.subs :as subs]
             [openllm.api.components :as api-components]
             [openllm.components.common.views :as ui]
-            [openllm.components.side-bar.subs :as side-bar-subs]
+            [openllm.components.side-bar.model-params.subs :as model-params-subs]
             [re-frame.core :as rf]
             [reagent-mui.material.button :refer [button]]
             [reagent-mui.material.modal :refer [modal]]
@@ -22,13 +22,12 @@
                   :value @value
                   :on-change #(rf/dispatch [::events/set-prompt-input (.. % -target -value)])}])))
 
-
 (defn input-field-controls
   "Control buttons for the input field, where the user enters his/her
    prompt."
   []
   (let [input-value (rf/subscribe [::subs/playground-input-value])
-        llm-config (rf/subscribe [::side-bar-subs/model-config])]
+        llm-config (rf/subscribe [::model-params-subs/model-config])]
     (fn []
       [:div {:class "grid grid-cols-2"}
        [:div
