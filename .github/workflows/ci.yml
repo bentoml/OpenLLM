@@ -55,6 +55,8 @@ jobs:
         uses: ./.github/actions/setup-repo
         with:
           python-version: ${{ env.STABLE_PYTHON_VERSION }}
+      - name: Install OpenLLM
+        run: pip install -e .
       - uses: pre-commit/action@v3.0.0
         with:
           extra_args: --all-files --verbose
