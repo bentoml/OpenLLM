@@ -5,6 +5,7 @@
 
 (reg-event-db
  ::toggle-side-bar
+ [check-spec-interceptor]
  (fn [db _]
    (let [new-value (not (get-in db (db/key-seq :side-bar-open?)))]
      (assoc-in db (db/key-seq :side-bar-open?) new-value))))

@@ -34,7 +34,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (reg-event-db
  :initialise-db
- [check-spec-interceptor] ;; why? to force people to update the spec :D
+ [check-spec-interceptor]
  (fn [_ _]
    db/default-db))
 

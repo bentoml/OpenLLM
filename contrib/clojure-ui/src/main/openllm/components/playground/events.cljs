@@ -28,14 +28,14 @@
 
 (reg-event-fx
  ::on-send-button-click
- []
+ [check-spec-interceptor]
  (fn [_ [_ prompt llm-config]]
    {:dispatch [::api/v1-generate prompt llm-config {:on-success [::send-prompt-success]
                                                     :on-failure [::send-prompt-failure]}]}))
 
 (reg-event-db
  ::toggle-modal
- []
+ [check-spec-interceptor]
  (fn [db _]
    (let [new-value (not (get-in db (db/key-seq :response-modal-open?)))]
      (assoc-in db (db/key-seq :response-modal-open?) new-value))))

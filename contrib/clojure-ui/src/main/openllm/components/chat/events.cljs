@@ -99,7 +99,7 @@
 
 (reg-event-db
  ::clear-chat-history
- []
+ [check-spec-interceptor]
  (fn [db _]
    (assoc-in db (db/key-seq :chat-history) [])))
 
