@@ -17,9 +17,9 @@
   {:palette {:primary   {:main (:black colors/common)
                          :light (get colors/grey 800)
                          :dark (get colors/deep-purple 900)}
-             :secondary {:main (get colors/deep-purple 700)
-                         :light (get colors/deep-purple 400)
-                         :dark (get colors/deep-purple 900)}
+             :secondary {:main (:white colors/common)
+                         :light (get colors/grey 200)
+                         :dark (get colors/grey 800)}
              :error     colors/red}})
 
 

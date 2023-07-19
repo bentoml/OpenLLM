@@ -75,7 +75,7 @@
         :actions [{:label "Close"
                    :on-click #(rf/dispatch [::events/toggle-modal])}]}
        [box {:style {:position "absolute"
-                     :width 400,
+                     :width 800,
                      :top "50%"
                      :left "50%"
                      :transform "translate(-50%, -50%)"}}
@@ -93,7 +93,7 @@
    called by the `tab-content` function residing in the `views` namespace
    directly."
   []
-  [:div {:class "mt-6 px-4 h-full"}
+  [:div {:class "mt-6 pr-3 pb-px h-full"}
    [response-modal]
    [input-field]
    [input-field-controls]

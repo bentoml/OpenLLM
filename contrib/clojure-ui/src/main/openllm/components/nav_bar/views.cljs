@@ -16,6 +16,9 @@
             [reagent-mui.icons.delete-forever :as delete-icon]
             [reagent-mui.icons.ios-share :as share-icon]
             [reagent-mui.icons.git-hub :as github-icon]
+            [reagent-mui.material.tabs :refer [tabs]]
+            [reagent-mui.material.tab :refer [tab]]
+            [reagent-mui.material.box :refer [box]]
             [reagent.core :as r]))
 
 (defn- collapse-side-bar-button
@@ -61,22 +64,44 @@
   [:div {:class "w-full static"}
    [app-bar {:position "static"
              :color "primary"}
-    [toolbar {:variant "dense"}
+    [toolbar {:variant "dense"
+              :style {:height "48px"}}
      [icon-button {:on-click #(rf/dispatch [::root-events/open-link-in-new-tab "https://github.com/bentoml/OpenLLM"])
-                   :color "inherit"
+                   :color "secondary"
                    :size "small"}
       [github-icon/git-hub]]
-     [:div {:class "ml-[calc(50%-_180px)]"}
-      [button {:on-click #(rf/dispatch [:set-screen-id :playground])
-               :color "inherit"
-               :start-icon (r/as-element [brush-icon/brush])} "Playground"]]
-     [:div {:class "ml-3 pl-3 border-l border-gray-800"}
-      [button {:on-click #(do (rf/dispatch-sync [:set-screen-id :chat])
-                              (rf/dispatch [::chat-events/auto-scroll]))
-               :color "inherit"
-               :start-icon (r/as-element [chat-icon/chat])} "Conversation"]]
+     [:div {:class "ml-[calc(50%-_100px)"}
+      (let [screen-id @(rf/subscribe [:screen-id])]
+        [tabs {:value (if (= :chat screen-id) 1 0)
+               :text-color "inherit"
+               :indicator-color "secondary"
+               :centered true
+               :style {:height "56px"
+                       :margin-top "-11px"
+                       :margin-left "100px"}}
+         [tab {:label "Playground"
+               :id "playground-tab"
+               :icon (r/as-element [brush-icon/brush])
+               :icon-position "start"
+               :on-click #(rf/dispatch-sync [:set-screen-id :playground])}]
+         [tab {:label "Conversation"
+               :id "chat-tab"
+               :icon (r/as-element [chat-icon/chat])
+               :icon-position "end"
+               :on-click #(do (rf/dispatch-sync [:set-screen-id :chat])
+                              (rf/dispatch [::chat-events/auto-scroll]))}]])]
      [:div {:class "w-full flex justify-end items-center"}
       [:div {:class "mr-8"}
        [context-icon-buttons]]
       [:div {:class "-mr-8"}
        [collapse-side-bar-button]]]]]])
+
+
+;; [button {:on-click #(rf/dispatch [:set-screen-id :playground])
+;;           :color "inherit"
+;;           :start-icon (r/as-element [brush-icon/brush])} "Playground"]]
+;; [:div {:class "ml-3 pl-3 border-l border-gray-800"}
+;;  [button {:on-click #(do (rf/dispatch-sync [:set-screen-id :chat])
+;;                          (rf/dispatch [::chat-events/auto-scroll]))
+;;           :color "inherit"
+;;           :start-icon (r/as-element [chat-icon/chat])} "Conversation"]]
