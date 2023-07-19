@@ -20,6 +20,8 @@ import inflection
 
 import openllm
 
+from ...utils import ReprMixin
+
 
 if t.TYPE_CHECKING:
     import types
@@ -54,16 +56,18 @@ CONFIG_MAPPING_NAMES = OrderedDict(
 )
 
 
-class _LazyConfigMapping(ConfigOrderedDict):
+class _LazyConfigMapping(ConfigOrderedDict, ReprMixin):
     def __init__(self, mapping: OrderedDict[t.LiteralString, t.LiteralString]):
         self._mapping = mapping
         self._extra_content: dict[str, t.Any] = {}
         self._modules: dict[str, types.ModuleType] = {}
 
-    def __getitem__(self, key: str):
+    def __getitem__(self, key: str) -> t.Any:
         if key in self._extra_content:
             return self._extra_content[key]
         if key not in self._mapping:
+            if inflection.underscore(key) in self._mapping:
+                return self.__getitem__(inflection.underscore(key))
             raise KeyError(key)
         value = self._mapping[key]
         module_name = inflection.underscore(key)
@@ -75,6 +79,16 @@ class _LazyConfigMapping(ConfigOrderedDict):
         # Some of the mappings have entries model_type -> config of another model type. In that case we try to grab the
         # object at the top level.
         return getattr(openllm, value)
+
+    @property
+    def __repr_keys__(self) -> set[str]:
+        return set(self._mapping.keys())
+
+    def __repr__(self) -> str:
+        return ReprMixin.__repr__(self)
+
+    def __repr_args__(self) -> t.Generator[tuple[str, t.Any], t.Any, t.Any]:
+        yield from self._mapping.items()
 
     def keys(self):
         return t.cast(ConfigKeysView, list(self._mapping.keys()) + list(self._extra_content.keys()))

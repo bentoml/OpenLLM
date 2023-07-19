@@ -37,7 +37,7 @@ else:
 logger = logging.getLogger(__name__)
 
 
-class VLLMLlaMA(openllm.LLM["vllm.LLM", "transformers.LlamaTokenizer"]):
+class VLLMLlaMA(openllm.LLM["vllm.LLM", "transformers.LlamaTokenizerFast"]):
     __openllm_internal__ = True
 
     def sanitize_parameters(

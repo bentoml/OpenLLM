@@ -41,7 +41,8 @@ class MPTConfig(openllm.LLMConfig):
         "url": "https://huggingface.co/mosaicml",
         "default_id": "mosaicml/mpt-7b-instruct",
         "timeout": int(36e6),
-        "requirements": ["triton"],
+        "requirements": ["triton", "einops"],
+        "architecture": "MPTForCausalLM",
         "model_ids": [
             "mosaicml/mpt-7b",
             "mosaicml/mpt-7b-instruct",

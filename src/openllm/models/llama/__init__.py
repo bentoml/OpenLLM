@@ -26,20 +26,20 @@ _import_structure: dict[str, list[str]] = {
 }
 
 try:
-    if not is_torch_available():
-        raise MissingDependencyError
-except MissingDependencyError:
-    pass
-else:
-    _import_structure["modeling_llama"] = ["LlaMA"]
-
-try:
     if not is_vllm_available():
         raise MissingDependencyError
 except MissingDependencyError:
     pass
 else:
     _import_structure["modeling_vllm_llama"] = ["VLLMLlaMA"]
+
+try:
+    if not is_torch_available():
+        raise MissingDependencyError
+except MissingDependencyError:
+    pass
+else:
+    _import_structure["modeling_llama"] = ["LlaMA"]
 
 
 if t.TYPE_CHECKING:
@@ -48,20 +48,20 @@ if t.TYPE_CHECKING:
     from .configuration_llama import LlaMAConfig as LlaMAConfig
 
     try:
-        if not is_torch_available():
-            raise MissingDependencyError
-    except MissingDependencyError:
-        pass
-    else:
-        from .modeling_llama import LlaMA as LlaMA
-
-    try:
         if not is_vllm_available():
             raise MissingDependencyError
     except MissingDependencyError:
         pass
     else:
         from .modeling_vllm_llama import VLLMLlaMA as VLLMLlaMA
+
+    try:
+        if not is_torch_available():
+            raise MissingDependencyError
+    except MissingDependencyError:
+        pass
+    else:
+        from .modeling_llama import LlaMA as LlaMA
 else:
     import sys
 

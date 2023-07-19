@@ -58,6 +58,7 @@ def attrs_to_options(
     model_name: str,
     typ: type[t.Any] | None = None,
     suffix_generation: bool = False,
+    suffix_sampling: bool = False,
 ) -> t.Callable[[FC], FC]:
     # TODO: support parsing nested attrs class and Union
     envvar = field.metadata["env"]
@@ -74,6 +75,8 @@ def attrs_to_options(
         full_option_name += f"/--no-{dasherized}"
     if suffix_generation:
         identifier = f"{model_name}_generation_{underscored}"
+    elif suffix_sampling:
+        identifier = f"{model_name}_sampling_{underscored}"
     else:
         identifier = f"{model_name}_{underscored}"
 

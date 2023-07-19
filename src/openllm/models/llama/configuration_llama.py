@@ -22,7 +22,9 @@ class LlaMAConfig(openllm.LLMConfig):
 
     It is a collection of foundation language models ranging from 7B to 65B parameters.
 
-    Note that all variants of LlaMA including fine-tuning, quantisation format are all supported with ``openllm.Llama``.
+    LlaMA also include support for the recent propsed [LlaMA-2](https://ai.meta.com/research/publications/llama-2-open-foundation-and-fine-tuned-chat-models/)
+
+    Note that all variants of LlaMA including fine-tuning, quantisation format are all supported with ``openllm.LlaMA``.
 
     Refer to [LlaMA's model card](https://huggingface.co/docs/transformers/main/model_doc/llama)
     for more information.
@@ -33,7 +35,16 @@ class LlaMAConfig(openllm.LLMConfig):
         "start_name": "llama",
         "url": "https://github.com/facebookresearch/llama",
         "default_id": "huggyllama/llama-7b",
+        "default_implementation": "pt",  # XXX: needs vLLM implementation
+        "architecture": "LlamaForCausalLM",
+        "requirements": ["openllm[vllm]", "fairscale", "sentencepiece"],
         "model_ids": [
+            "meta-llama/llama-2-70b-chat-hf",
+            "meta-llama/llama-2-13b-chat-hf",
+            "meta-llama/llama-2-7b-chat-hf",
+            "meta-llama/llama-2-70b-hf",
+            "meta-llama/llama-2-13b-hf",
+            "meta-llama/llama-2-7b-hf",
             "decapoda-research/llama-65b-hf",
             "decapoda-research/llama-30b-hf",
             "decapoda-research/llama-13b-hf",
@@ -58,6 +69,10 @@ class LlaMAConfig(openllm.LLMConfig):
         temperature: float = 0.8
         top_p: float = 0.95
 
+    class SamplingParams:
+        best_of: int = 1
+        presence_penalty: float = 0.5
+
 
 START_LLAMA_COMMAND_DOCSTRING = """\
 Run a LLMServer for LlaMA model.
@@ -68,7 +83,11 @@ Run a LLMServer for LlaMA model.
 \b
 ## Usage
 
-Currently, LlaMA only supports PyTorch. Make sure ``torch`` is available in your system.
+By default, this model will use [vLLM](https://github.com/vllm-project/vllm) for inference.
+This model will also supports PyTorch.
+
+\b
+- To use PyTorch, set the environment variable ``OPENLLM_LLAMA_FRAMEWORK="pt"``
 
 \b
 LlaMA Runner will use decapoda-research/llama-7b-hf as the default model. To change to any other LlaMA
@@ -77,6 +96,12 @@ or provide `--model-id` flag when running ``openllm start llama``:
 
 \b
 $ openllm start llama --model-id 'openlm-research/open_llama_7b_v2'
+
+\b
+OpenLLM also supports running LlaMA-2 and its fine-tune and variants. To import the LlaMA weights, one can use the following:
+
+\b
+$ CONVERTER=hf-llama2 openllm import llama /path/to/llama-2
 """
 
 

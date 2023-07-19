@@ -61,10 +61,11 @@ _import_structure: dict[str, list[str]] = {
     "_llm": ["LLM", "Runner", "LLMRunner", "LLMRunnable"],
     "_configuration": ["LLMConfig"],
     "exceptions": [],
-    "_schema": ["GenerationInput", "GenerationOutput", "MetadataOutput"],
+    "_schema": ["GenerationInput", "GenerationOutput", "MetadataOutput", "EmbeddingsOutput"],
     "utils": ["infer_auto_class"],
     "models": [],
     "client": [],
+    "bundle": [],
     "playground": [],
     "testing": [],
     "serialisation": ["ggml", "transformers"],
@@ -190,6 +191,7 @@ else:
 
 # declaration for OpenLLM-related modules
 if t.TYPE_CHECKING:
+    from . import bundle as bundle
     from . import cli as cli
     from . import client as client
     from . import exceptions as exceptions
@@ -204,6 +206,7 @@ if t.TYPE_CHECKING:
     from ._llm import LLMRunnable as LLMRunnable
     from ._llm import LLMRunner as LLMRunner
     from ._llm import Runner as Runner
+    from ._schema import EmbeddingsOutput as EmbeddingsOutput
     from ._schema import GenerationInput as GenerationInput
     from ._schema import GenerationOutput as GenerationOutput
     from ._schema import MetadataOutput as MetadataOutput

@@ -11,26 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""OCI-related utilities for OpenLLM.
 
-from __future__ import annotations
-
-
-FRAMEWORK_TO_AUTOCLASS_MAPPING = {
-    "pt": ("AutoModelForCausalLM", "AutoModelForSeq2SeqLM"),
-    "tf": ("TFAutoModelForCausalLM", "TFAutoModelForSeq2SeqLM"),
-    "flax": ("FlaxAutoModelForCausalLM", "FlaxAutoModelForSeq2SeqLM"),
-}
-
-
-# this logic below is synonymous to handling `from_pretrained` attrs.
-HUB_ATTRS = [
-    "cache_dir",
-    "code_revision",
-    "force_download",
-    "local_files_only",
-    "proxies",
-    "resume_download",
-    "revision",
-    "subfolder",
-    "use_auth_token",
-]
+## TODO
+- generate compatible Sagemaker container
+- build custom kernels and CUDA 11.8
+- compose vLLM for PagedAttention
+"""

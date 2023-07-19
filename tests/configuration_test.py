@@ -47,11 +47,25 @@ else:
 
 
 def test_missing_default():
-    with pytest.raises(ValueError, match="Either 'default_id' or 'model_ids'*"):
-        make_llm_config("MissingDefaultId", {"name_type": "lowercase", "requirements": ["bentoml"]})
-
-    with pytest.raises(ValueError, match="Either 'default_id' or 'model_ids'*"):
-        make_llm_config("MissingModelId", {"default_id": "huggingface/t5-tiny-testing", "requirements": ["bentoml"]})
+    assert pytest.raises(
+        ValueError, make_llm_config, "MissingDefaultId", {"name_type": "lowercase", "requirements": ["bentoml"]}
+    ).match("Missing required fields *")
+    assert pytest.raises(
+        ValueError,
+        make_llm_config,
+        "MissingModelId",
+        {"default_id": "huggingface/t5-tiny-testing", "requirements": ["bentoml"]},
+    ).match("Missing required fields *")
+    assert pytest.raises(
+        ValueError,
+        make_llm_config,
+        "MissingArchitecture",
+        {
+            "default_id": "huggingface/t5-tiny-testing",
+            "model_ids": ["huggingface/t5-tiny-testing"],
+            "requirements": ["bentoml"],
+        },
+    ).match("Missing required fields *")
 
 
 def test_forbidden_access():

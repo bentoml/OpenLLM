@@ -41,6 +41,7 @@ import typing as t
 
 import openllm
 
+from .constants import HUB_ATTRS
 from ..utils import LazyModule
 
 
@@ -86,6 +87,9 @@ def save_pretrained(llm: openllm.LLM[t.Any, t.Any], save_directory: str, **attrs
 
 
 def load_model(llm: openllm.LLM[M, t.Any], *decls: t.Any, **attrs: t.Any) -> ModelProtocol[M]:
+    if llm.__llm_custom_load__:
+        hub_attrs = {k: attrs.pop(k) for k in HUB_ATTRS if k in attrs}
+        return llm.load_model(llm.tag, *decls, **hub_attrs, **attrs)
     if llm.runtime == "transformers":
         return openllm.transformers.load_model(llm, *decls, **attrs)
     elif llm.runtime == "ggml":
@@ -95,7 +99,10 @@ def load_model(llm: openllm.LLM[M, t.Any], *decls: t.Any, **attrs: t.Any) -> Mod
 
 
 def load_tokenizer(llm: openllm.LLM[t.Any, T]) -> TokenizerProtocol[T]:
-    if llm.runtime == "transformers":
+    if llm.__llm_custom_tokenizer__:
+        (_, _), tokenizer_attrs = llm.llm_parameters
+        return llm.load_tokenizer(llm.tag, **tokenizer_attrs)
+    elif llm.runtime == "transformers":
         return openllm.transformers.load_tokenizer(llm)
     elif llm.runtime == "ggml":
         return openllm.ggml.load_tokenizer(llm)

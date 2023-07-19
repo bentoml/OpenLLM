@@ -34,6 +34,7 @@ class StableLMConfig(openllm.LLMConfig):
     __config__ = {
         "name_type": "lowercase",
         "url": "https://github.com/Stability-AI/StableLM",
+        "architecture": "GPTNeoXForCausalLM",
         "default_id": "stabilityai/stablelm-tuned-alpha-3b",
         "model_ids": [
             "stabilityai/stablelm-tuned-alpha-3b",

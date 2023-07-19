@@ -33,10 +33,12 @@ def model_settings(draw: st.DrawFn):
     kwargs: dict[str, t.Any] = {
         "default_id": st.text(min_size=1),
         "model_ids": st.lists(st.text(), min_size=1),
+        "architecture": st.text(min_size=1),
         "url": st.text(),
         "requires_gpu": st.booleans(),
         "trust_remote_code": st.booleans(),
         "requirements": st.none() | st.lists(st.text(), min_size=1),
+        "default_implementation": st.sampled_from(["vllm", "pt", "tf", "flax"]),
         "model_type": st.sampled_from(["causal_lm", "seq2seq_lm"]),
         "runtime": st.sampled_from(["transformers", "ggml"]),
         "name_type": st.sampled_from(["dasherize", "lowercase"]),

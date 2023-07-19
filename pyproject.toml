@@ -32,7 +32,7 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dependencies = [
-    "bentoml[grpc,io]>=1.0.22",
+    "bentoml[grpc,io]>=1.0.24",
     "transformers[torch,tokenizers,accelerate]>=4.29.0",
     "safetensors",
     "optimum",
@@ -91,6 +91,7 @@ all = [
     "openllm[flan-t5]",
     "openllm[ggml]",
     "openllm[gptq]",
+    "openllm[llama]",
     "openllm[mpt]",
     "openllm[openai]",
     "openllm[opt]",
@@ -105,12 +106,13 @@ fine-tune = ["peft", "bitsandbytes", "datasets", "accelerate", "deepspeed", "trl
 flan-t5 = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
 ggml = ["ctransformers"]
 gptq = ["auto-gptq[triton]"]
+llama = ["openllm[vllm]", "fairscale", "sentencepiece"]
 mpt = ["triton", "einops"]
 openai = ["openai", "tiktoken"]
 opt = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
 playground = ["jupyter", "notebook", "ipython", "jupytext", "nbformat"]
 starcoder = ["bitsandbytes"]
-vllm = ["vllm"]
+vllm = ["vllm", "ray"]
 
 [tool.towncrier]
 directory = "changelog.d"

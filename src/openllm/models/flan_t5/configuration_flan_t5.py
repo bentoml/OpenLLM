@@ -56,6 +56,7 @@ class FlanT5Config(openllm.LLMConfig):
     __config__ = {
         "url": "https://huggingface.co/docs/transformers/model_doc/flan-t5",
         "default_id": "google/flan-t5-large",
+        "architecture": "T5ForConditionalGeneration",
         "model_ids": [
             "google/flan-t5-small",
             "google/flan-t5-base",

@@ -37,6 +37,7 @@ class GPTNeoXConfig(openllm.LLMConfig):
         "model_name": "gpt_neox",
         "start_name": "gpt-neox",
         "requires_gpu": True,
+        "architecture": "GPTNeoXForCausalLM",
         "url": "https://github.com/EleutherAI/gpt-neox",
         "default_id": "eleutherai/gpt-neox-20b",
         "model_ids": ["eleutherai/gpt-neox-20b"],

@@ -20,6 +20,7 @@ import os
 from pathlib import Path
 
 import openllm
+from openllm._configuration import SamplingParams
 from openllm._configuration import GenerationConfig
 from openllm._configuration import ModelSettings
 from openllm._configuration import PeftType
@@ -61,6 +62,16 @@ _value_docstring = {
 
         This field is required when defining under '__config__'.
         """,
+    "architecture": """The model architecture that is supported by this LLM. Note that any model weights within this architecture generation can
+    always be run and supported by this LLM.
+
+        For example:
+            For GPT-NeoX implementation, it is based on GptNeoXForCausalLM, which supports dolly-v2, stablelm:
+
+            ```bash
+            openllm start gpt-neox --model-id stabilityai/stablelm-tuned-alpha-3b
+            ```""",
+    "default_implementation": """The default runtime to run this LLM. By default, it will be PyTorch (pt) for most models. For some models, such as LlaMA, it will use `vllm` or `flax`.""",
     "url": """The resolved url for this LLMConfig.""",
     "requires_gpu": """Determines if this model is only available on GPU. By default it supports GPU and fallback to CPU.""",
     "trust_remote_code": """Whether to always trust remote code""",
@@ -96,9 +107,13 @@ _value_docstring = {
     "tokenizer_class": """Optional tokenizer class for this given LLM. See LlaMA for example.""",
 }
 
+_transformed = {
+    "fine_tune_strategies": "t.Dict[AdapterType, FineTuneConfig]",
+    "default_implementation": 't.Literal["pt", "tf", "flax", "vllm"]',
+}
+
 
 def main() -> int:
-    transformed = {"fine_tune_strategies": "t.Dict[AdapterType, FineTuneConfig]"}
     with _TARGET_FILE.open("r") as f:
         processed = f.readlines()
 
@@ -114,7 +129,7 @@ def main() -> int:
     special_attrs_lines: list[str] = []
     for keys, ForwardRef in openllm.utils.codegen.get_annotations(ModelSettings).items():
         special_attrs_lines.append(
-            f"{' ' * 8}{keys}: {transformed.get(keys, process_annotations(ForwardRef.__forward_arg__))}\n"
+            f"{' ' * 8}{keys}: {_transformed.get(keys, process_annotations(ForwardRef.__forward_arg__))}\n"
         )
 
     # NOTE: inline stubs for _ConfigAttr type stubs
@@ -124,7 +139,7 @@ def main() -> int:
             [
                 " " * 8 + line
                 for line in [
-                    f"__openllm_{keys}__: {transformed.get(keys, process_annotations(ForwardRef.__forward_arg__))} = Field(None)\n",
+                    f"__openllm_{keys}__: {_transformed.get(keys, process_annotations(ForwardRef.__forward_arg__))} = Field(None)\n",
                     f'"""{_value_docstring[keys]}"""\n',
                 ]
             ]
@@ -132,29 +147,35 @@ def main() -> int:
 
     # NOTE: inline runtime __getitem__ overload process
     lines: list[str] = []
+    lines.append(" " * 4 + "# NOTE: ModelSettings arguments\n")
     for keys, ForwardRef in openllm.utils.codegen.get_annotations(ModelSettings).items():
         lines.extend(
             [
                 " " * 4 + line
                 for line in [
                     "@overload\n" if "overload" in dir(_imported) else "@t.overload\n",
-                    f'def __getitem__(self, item: t.Literal["{keys}"]) -> {transformed.get(keys, process_annotations(ForwardRef.__forward_arg__))}: ...\n',
+                    f'def __getitem__(self, item: t.Literal["{keys}"]) -> {_transformed.get(keys, process_annotations(ForwardRef.__forward_arg__))}: ...\n',
                 ]
             ]
         )
-    # special case variables: generation_class, extras
+    # special case variables: generation_class, extras, sampling_class
+    lines.append(" " * 4 + "# NOTE: generation_class, sampling_class and extras arguments\n")
     lines.extend(
         [
             " " * 4 + line
             for line in [
                 "@overload\n" if "overload" in dir(_imported) else "@t.overload\n",
-                'def __getitem__(self, item: t.Literal["generation_class"]) -> t.Type[GenerationConfig]: ...\n',
+                'def __getitem__(self, item: t.Literal["generation_class"]) -> t.Type[openllm._configuration.GenerationConfig]: ...\n',
+                "@overload\n" if "overload" in dir(_imported) else "@t.overload\n",
+                'def __getitem__(self, item: t.Literal["sampling_class"]) -> t.Type[openllm._configuration.SamplingParams]: ...\n',
                 "@overload\n" if "overload" in dir(_imported) else "@t.overload\n",
                 'def __getitem__(self, item: t.Literal["extras"]) -> t.Dict[str, t.Any]: ...\n',
             ]
         ]
     )
-    for keys, type_pep563 in openllm.utils.codegen.get_annotations(GenerationConfig).items():
+    lines.append(" " * 4 + "# NOTE: GenerationConfig arguments\n")
+    generation_config_anns = openllm.utils.codegen.get_annotations(GenerationConfig)
+    for keys, type_pep563 in generation_config_anns.items():
         lines.extend(
             [
                 " " * 4 + line
@@ -164,7 +185,20 @@ def main() -> int:
                 ]
             ]
         )
+    lines.append(" " * 4 + "# NOTE: SamplingParams arguments\n")
+    for keys, type_pep563 in openllm.utils.codegen.get_annotations(SamplingParams).items():
+        if keys not in generation_config_anns:
+            lines.extend(
+                [
+                    " " * 4 + line
+                    for line in [
+                        "@overload\n" if "overload" in dir(_imported) else "@t.overload\n",
+                        f'def __getitem__(self, item: t.Literal["{keys}"]) -> {type_pep563}: ...\n',
+                    ]
+                ]
+            )
 
+    lines.append(" " * 4 + "# NOTE: PeftType arguments\n")
     for keys in PeftType._member_names_:
         lines.extend(
             [

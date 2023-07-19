@@ -22,14 +22,15 @@ import typing as t
 
 if not t.TYPE_CHECKING:
     raise RuntimeError(f"{__name__} should not be imported during runtime")
-else:
-    pass
 
+
+import attr
 
 import bentoml
 from bentoml._internal.types import ModelSignatureDict as ModelSignatureDict
 
 from ._configuration import AdapterType
+from ._configuration import LiteralRuntime as LiteralRuntime
 
 
 if t.TYPE_CHECKING:
@@ -42,6 +43,7 @@ if t.TYPE_CHECKING:
     from bentoml._internal.runner.runner import RunnerMethod
     from bentoml._internal.runner.strategy import Strategy
 
+
 AnyCallable = t.Callable[..., t.Any]
 DictStrAny = dict[str, t.Any]
 ListAny = list[t.Any]
@@ -49,9 +51,9 @@ ListStr = list[str]
 TupleAny = tuple[t.Any, ...]
 P = t.ParamSpec("P")
 O_co = t.TypeVar("O_co", covariant=True)
-LiteralRuntime: t.TypeAlias = t.Literal["pt", "tf", "flax", "vllm"]
 T = t.TypeVar("T")
 Ts = t.TypeVarTuple("Ts")
+At = t.TypeVar("At", bound=attr.AttrsInstance)
 
 
 class ClickFunctionWrapper(t.Protocol[P, O_co]):
@@ -101,6 +103,11 @@ class PeftAdapterOutput(t.TypedDict):
     error_msg: str
 
 
+class LLMEmbeddings(t.TypedDict):
+    embeddings: torch.Tensor
+    num_tokens: int
+
+
 class AdaptersTuple(TupleAny):
     adapter_id: str
     name: str | None
@@ -118,7 +125,7 @@ class LLMRunnable(bentoml.Runnable):
 
     set_adapter: RunnableMethod[LLMRunnable, [str], dict[t.Literal["success", "error_msg"], bool | str]]
     __call__: RunnableMethod[LLMRunnable, [str], list[t.Any]]
-    embeddings: RunnableMethod[LLMRunnable, [str], torch.Tensor]
+    embeddings: RunnableMethod[LLMRunnable, [list[str]], LLMEmbeddings]
     generate: RunnableMethod[LLMRunnable, [str], list[t.Any]]
     generate_one: RunnableMethod[LLMRunnable, [str, list[str]], t.Sequence[dict[t.Literal["generated_text"], str]]]
     generate_iterator: RunnableMethod[LLMRunnable, [str], t.Generator[t.Any, None, None]]
@@ -133,7 +140,7 @@ class LLMRunner(bentoml.Runner):
     model: ModelProtocol[t.Any]
     config: openllm.LLMConfig
 
-    embeddings: RunnerMethod[LLMRunnable, [str], torch.Tensor]
+    embeddings: RunnerMethod[LLMRunnable, [list[str]], LLMEmbeddings]
     generate: RunnerMethod[LLMRunnable, [str], list[t.Any]]
     generate_one: RunnerMethod[LLMRunnable, [str, list[str]], t.Sequence[dict[t.Literal["generated_text"], str]]]
     generate_iterator: RunnerMethod[LLMRunnable, [str], t.Generator[t.Any, None, None]]
@@ -154,6 +161,9 @@ class LLMRunner(bentoml.Runner):
         ...
 
     def __call__(self, prompt: str, **attrs: t.Any) -> t.Any:
+        ...
+
+    def embed(self, prompt: str | list[str]) -> LLMEmbeddings:
         ...
 
     def run(self, prompt: str, **attrs: t.Any) -> t.Any:

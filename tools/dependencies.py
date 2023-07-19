@@ -161,7 +161,7 @@ _BENTOML_EXT = ["grpc", "io"]
 _TRANSFORMERS_EXT = ["torch", "tokenizers", "accelerate"]
 
 _BASE_DEPENDENCIES = [
-    Dependencies(name="bentoml", extensions=_BENTOML_EXT, lower_constraint="1.0.22"),
+    Dependencies(name="bentoml", extensions=_BENTOML_EXT, lower_constraint="1.0.24"),
     Dependencies(name="transformers", extensions=_TRANSFORMERS_EXT, lower_constraint="4.29.0"),
     Dependencies(name="safetensors"),
     Dependencies(name="optimum"),
@@ -191,17 +191,12 @@ _ALL_RUNTIME_DEPS = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
 FINE_TUNE_DEPS = ["peft", "bitsandbytes", "datasets", "accelerate", "deepspeed", "trl"]
 FLAN_T5_DEPS = _ALL_RUNTIME_DEPS
 OPT_DEPS = _ALL_RUNTIME_DEPS
-MPT_DEPS = ["triton", "einops"]
 OPENAI_DEPS = ["openai", "tiktoken"]
 AGENTS_DEPS = ["transformers[agents]>=4.30", "diffusers", "soundfile"]
-FALCON_DEPS = ["einops", "xformers"]
-STARCODER_DEPS = ["bitsandbytes"]
-CHATGLM_DEPS = ["cpm-kernels", "sentencepiece"]
-BAICHUAN_DEPS = ["cpm-kernels", "sentencepiece"]
 PLAYGROUND_DEPS = ["jupyter", "notebook", "ipython", "jupytext", "nbformat"]
 GGML_DEPS = ["ctransformers"]
 GPTQ_DEPS = ["auto-gptq[triton]"]
-VLLM_DEPS = ["vllm"]
+VLLM_DEPS = ["vllm", "ray"]
 
 _base_requirements = {
     inflection.dasherize(name): config_cls.__openllm_requirements__
@@ -215,7 +210,7 @@ _locals = locals().copy()
 # NOTE: update this table when adding new external dependencies
 # sync with openllm.utils.OPTIONAL_DEPENDENCIES
 _base_requirements.update(
-    {v: _locals[f"{inflection.underscore(v).upper()}_DEPS"] for v in openllm.utils.OPTIONAL_DEPENDENCIES}
+    {v: _locals.get(f"{inflection.underscore(v).upper()}_DEPS") for v in openllm.utils.OPTIONAL_DEPENDENCIES}
 )
 
 _base_requirements = {k: v for k, v in sorted(_base_requirements.items())}

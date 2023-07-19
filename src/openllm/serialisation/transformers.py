@@ -26,6 +26,7 @@ from bentoml._internal.models.model import CUSTOM_OBJECTS_FILENAME
 from bentoml._internal.models.model import ModelOptions
 
 from .constants import FRAMEWORK_TO_AUTOCLASS_MAPPING
+from .constants import HUB_ATTRS
 from ..exceptions import OpenLLMException
 from ..utils import LazyLoader
 from ..utils import first_not_none
@@ -62,18 +63,7 @@ def process_transformers_config(
     config: _transformers.PretrainedConfig | None = attrs.pop("config", None)
 
     # this logic below is synonymous to handling `from_pretrained` attrs.
-    hub_kwds_names = [
-        "cache_dir",
-        "code_revision",
-        "force_download",
-        "local_files_only",
-        "proxies",
-        "resume_download",
-        "revision",
-        "subfolder",
-        "use_auth_token",
-    ]
-    hub_attrs = {k: attrs.pop(k) for k in hub_kwds_names if k in attrs}
+    hub_attrs = {k: attrs.pop(k) for k in HUB_ATTRS if k in attrs}
     if not isinstance(config, _transformers.PretrainedConfig):
         copied_attrs = copy.deepcopy(attrs)
         if copied_attrs.get("torch_dtype", None) == "auto":
@@ -202,6 +192,8 @@ def import_model(
         **hub_attrs,
         **tokenizer_attrs,
     )
+    if _tokenizer.pad_token is None:
+        _tokenizer.pad_token = _tokenizer.eos_token
 
     external_modules = None
     if trust_remote_code:
@@ -281,7 +273,7 @@ def load_model(llm: openllm.LLM[M, t.Any], *decls: t.Any, **attrs: t.Any) -> Mod
 
     metadata = llm._bentomodel.info.metadata
     safe_serialization = first_not_none(
-        metadata.get("safe_serialisation", None),
+        t.cast(t.Optional[bool], metadata.get("safe_serialisation", None)),
         attrs.pop("safe_serialization", None),
         default=llm._serialisation_format == "safetensors",
     )
@@ -305,17 +297,14 @@ def load_model(llm: openllm.LLM[M, t.Any], *decls: t.Any, **attrs: t.Any) -> Mod
             ),
         )
 
-    if llm.__llm_custom_load__:
-        model = llm.load_model(llm.tag, *decls, **hub_attrs, **attrs)
-    else:
-        model = infer_autoclass_from_llm_config(llm, config).from_pretrained(
-            llm._bentomodel.path,
-            *decls,
-            config=config,
-            trust_remote_code=llm.__llm_trust_remote_code__,
-            **hub_attrs,
-            **attrs,
-        )
+    model = infer_autoclass_from_llm_config(llm, config).from_pretrained(
+        llm._bentomodel.path,
+        *decls,
+        config=config,
+        trust_remote_code=llm.__llm_trust_remote_code__,
+        **hub_attrs,
+        **attrs,
+    )
     if llm.bettertransformer and llm.__llm_implementation__ == "pt" and not isinstance(model, _transformers.Pipeline):
         # BetterTransformer is currently only supported on PyTorch.
         from optimum.bettertransformer import BetterTransformer
@@ -331,27 +320,28 @@ def load_tokenizer(llm: openllm.LLM[t.Any, T]) -> TokenizerProtocol[T]:
     If model is not found, it will raises a ``bentoml.exceptions.NotFound``.
     """
     (_, _), tokenizer_attrs = llm.llm_parameters
-    if llm.__llm_custom_tokenizer__:
-        tokenizer = llm.load_tokenizer(llm.tag, **tokenizer_attrs)
+    bentomodel_fs = llm._bentomodel._fs
+    if bentomodel_fs.isfile(CUSTOM_OBJECTS_FILENAME):
+        with bentomodel_fs.open(CUSTOM_OBJECTS_FILENAME, "rb") as cofile:
+            try:
+                tokenizer = cloudpickle.load(t.cast("t.IO[bytes]", cofile))["tokenizer"]
+            except KeyError:
+                # This could happen if users implement their own import_model
+                raise OpenLLMException(
+                    "Model does not have tokenizer. Make sure to save \
+                    the tokenizer within the model via 'custom_objects'.\
+                    For example: bentoml.transformers.save_model(..., custom_objects={'tokenizer': tokenizer}))"
+                ) from None
     else:
-        bentomodel_fs = llm._bentomodel._fs
-        if bentomodel_fs.isfile(CUSTOM_OBJECTS_FILENAME):
-            with bentomodel_fs.open(CUSTOM_OBJECTS_FILENAME, "rb") as cofile:
-                try:
-                    tokenizer = cloudpickle.load(t.cast("t.IO[bytes]", cofile))["tokenizer"]
-                except KeyError:
-                    # This could happen if users implement their own import_model
-                    raise OpenLLMException(
-                        "Model does not have tokenizer. Make sure to save \
-                        the tokenizer within the model via 'custom_objects'.\
-                        For example: bentoml.transformers.save_model(..., custom_objects={'tokenizer': tokenizer}))"
-                    ) from None
-        else:
-            tokenizer = infer_tokenizers_class_for_llm(llm).from_pretrained(
-                bentomodel_fs.getsyspath("/"),
-                trust_remote_code=llm.__llm_trust_remote_code__,
-                **tokenizer_attrs,
-            )
+        tokenizer = infer_tokenizers_class_for_llm(llm).from_pretrained(
+            bentomodel_fs.getsyspath("/"),
+            trust_remote_code=llm.__llm_trust_remote_code__,
+            **tokenizer_attrs,
+        )
+
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+
     return tokenizer
 
 

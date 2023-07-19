@@ -232,7 +232,9 @@ def quantize_option(factory: t.Any, build: bool = False, model_env: EnvVarMixin 
     NOTE: Quantization is only available for PyTorch models.
     """
     return factory.option(
+        "--quantise",
         "--quantize",
+        "quantize",
         type=click.Choice(["int8", "int4", "gptq"]),
         default=None,
         help=help_str,
@@ -259,10 +261,24 @@ def bettertransformer_option(
     )
 
 
+def serialisation_option(factory: t.Any) -> t.Callable[[FC], FC]:
+    return factory.option(
+        "--serialisation",
+        "--serialization",
+        "serialisation_format",
+        type=click.Choice(["safetensors", "legacy"]),
+        default="safetensors",
+        help="Serialisation format to save the model in. Default is safetensors, which is similar to `safe_serialization=True`. If the weight is not yet supported my safetensors, make sure to pass in '--serialisation legacy'",
+        show_default=True,
+        show_envvar=True,
+        envvar="OPENLLM_SERIALIZATION",
+    )
+
+
 _adapter_mapping_key = "adapter_map"
 
 
-def _id_callback(ctx: click.Context, _: click.Parameter, value: tuple[str, ...] | None) -> dict[str, str] | None:
+def _id_callback(ctx: click.Context, _: click.Parameter, value: tuple[str, ...] | None) -> None:
     if not value:
         return None
     if _adapter_mapping_key not in ctx.params:
@@ -276,6 +292,7 @@ def _id_callback(ctx: click.Context, _: click.Parameter, value: tuple[str, ...] 
         except FileNotFoundError:
             pass
         ctx.params[_adapter_mapping_key][adapter_id] = adapter_name[0] if len(adapter_name) > 0 else None
+    return None
 
 
 class OpenLLMCommandGroup(BentoMLCommandGroup):
@@ -569,9 +586,15 @@ def start_decorator(
 
     - bettertransformer: Convert given model to FastTransformer
 
-    The following are currently being worked on:
-
     - GPTQ: [paper](https://arxiv.org/abs/2210.17323)
+
+    It also include serialisation format strategies for faster loading and importing time
+
+    - safetensors: Using safetensors instead of pickling (safetensors required) [default]
+
+    - legacy: using default torch load behaviour.
+
+    The following are currently being worked on:
 
     - DeepSpeed Inference: [link](https://www.deepspeed.ai/inference/)
 
@@ -594,6 +617,7 @@ def start_decorator(
         ),
         quantize_option(cog.optgroup, model_env=llm_config["env"]),
         bettertransformer_option(cog.optgroup, model_env=llm_config["env"]),
+        serialisation_option(cog.optgroup),
         cog.optgroup.group(
             "Fine-tuning related options",
             help="""\
@@ -601,7 +625,7 @@ def start_decorator(
 
     - `--adapter-id /path/to/adapter` (local adapter)
 
- j   - `--adapter-id remote/adapter` (remote adapter from HuggingFace Hub)
+    - `--adapter-id remote/adapter` (remote adapter from HuggingFace Hub)
 
     - `--adapter-id remote/adapter:eng_lora` (two previous adapter options with the given adapter_name)
 
@@ -705,7 +729,18 @@ def start_command_factory(
 {llm_config['env'].start_docstring}
 
 \b
-Available model_id(s): {llm_config['model_ids']} [default: {llm_config['default_id']}]
+Note: ``{llm_config['start_name']}`` can also be run with any other models available on HuggingFace
+or fine-tuned variants as long as it belongs to the architecture generation ``{llm_config['architecture']}`` (trust_remote_code={llm_config['trust_remote_code']}). For example:
+
+\b
+Start [Fastchat-T5](https://huggingface.co/lmsys/fastchat-t5-3b-v1.0) with ``openllm start flan-t5``:
+$ openllm start flan-t5 --model-id lmsys/fastchat-t5-3b-v1.0
+
+\b
+Available official model_id(s): [default: {llm_config['default_id']}]
+
+\b
+{orjson.dumps(llm_config['model_ids'], option=orjson.OPT_INDENT_2).decode()}
 """,
         )
 
@@ -862,6 +897,7 @@ def start_bento(
         fast: bool,
         adapter_id: str | None,
         return_process: bool,
+        serialisation_format: t.Literal["safetensors", "legacy"],
         **attrs: t.Any,
     ) -> openllm.LLMConfig | subprocess.Popen[bytes]:
         if model_id is not None:
@@ -903,7 +939,11 @@ def start_bento(
 
         # Create a new model env to work with the envvar during CLI invocation
         env = EnvVarMixin(
-            config["model_name"], bettertransformer=bettertransformer, quantize=quantize, runtime=runtime
+            config["model_name"],
+            config["default_implementation"],
+            bettertransformer=bettertransformer,
+            quantize=quantize,
+            runtime=runtime,
         )
 
         prerequisite_check(ctx, config, gpu_available, quantize, adapter_map, num_workers)
@@ -923,6 +963,7 @@ def start_bento(
                 "BENTOML_DEBUG": str(get_debug_mode()),
                 "BENTOML_HOME": os.environ.get("BENTOML_HOME", BentoMLContainer.bentoml_home.get()),
                 "OPENLLM_MODEL_ID": model.path,
+                "OPENLLM_SERIALIZATION": serialisation_format,
             }
         )
 
@@ -941,21 +982,28 @@ def start_bento(
             server = bentoml.HTTPServer(bento, **server_attrs)
         analytics.track_start_init(config)
 
-        server.start(env=start_env, text=True)
-        process = server.process
-        assert process
+        if not get_debug_mode():
+            server.start(env=start_env, text=True)
+            process = server.process
+            if process is None:
+                raise click.ClickException("Failed to start the server.")
 
-        if return_process:
-            return process
+            if return_process:
+                return process
 
-        try:
-            assert process.stdout
-            with process:
-                for line in iter(process.stdout.readline, b""):
-                    _echo(line.strip(), fg="white")
-        except Exception as err:
-            _echo(f"Error caught while starting LLM Server:\n{err}", fg="red")
-            raise
+            try:
+                assert process.stdout
+                with process:
+                    for line in iter(process.stdout.readline, b""):
+                        _echo(line.strip(), fg="white")
+            except Exception as err:
+                _echo(f"Error caught while running LLM Server: \n{err}", fg="red")
+                raise
+        else:
+            try:
+                server.start(env=start_env, text=True, blocking=True)
+            except Exception as err:
+                _echo(f"Error caught while running LLM Server:\n{err}", fg="red")
 
         # NOTE: Return the configuration for telemetry purposes.
         return config
@@ -995,6 +1043,7 @@ def start_model(
         bettertransformer: bool | None,
         runtime: t.Literal["ggml", "transformers"],
         fast: bool,
+        serialisation_format: t.Literal["safetensors", "legacy"],
         adapter_id: str | None,
         return_process: bool,
         **attrs: t.Any,
@@ -1035,7 +1084,11 @@ def start_model(
 
         # Create a new model env to work with the envvar during CLI invocation
         env = EnvVarMixin(
-            config["model_name"], bettertransformer=bettertransformer, quantize=quantize, runtime=runtime
+            config["model_name"],
+            config["default_implementation"],
+            bettertransformer=bettertransformer,
+            quantize=quantize,
+            runtime=runtime,
         )
 
         prerequisite_check(ctx, config, gpu_available, quantize, adapter_map, num_workers)
@@ -1055,6 +1108,7 @@ def start_model(
                 env.framework: env.framework_value,
                 "BENTOML_DEBUG": str(get_debug_mode()),
                 "BENTOML_HOME": os.environ.get("BENTOML_HOME", BentoMLContainer.bentoml_home.get()),
+                "OPENLLM_SERIALIZATION": serialisation_format,
             }
         )
 
@@ -1071,7 +1125,7 @@ def start_model(
             bettertransformer=bettertransformer,
             adapter_map=adapter_map,
             runtime=runtime,
-            serialisation="safetensors",
+            serialisation=serialisation_format,
         )
 
         start_env.update(
@@ -1095,22 +1149,7 @@ def start_model(
             server = bentoml.HTTPServer("_service.py:svc", **server_attrs)
         analytics.track_start_init(llm.config)
 
-        server.start(env=start_env, text=True)
-        process = server.process
-        assert process
-
-        if return_process:
-            return process
-
-        try:
-            assert process.stdout
-            with process:
-                for line in iter(process.stdout.readline, b""):
-                    _echo(line.strip(), fg="white")
-        except Exception as err:
-            _echo(f"Error caught while starting LLM Server:\n{err}", fg="red")
-            raise
-        finally:
+        def next_step(model_name: str, adapter_map: DictStrAny | None):
             cmd_name = f"openllm build {model_name}"
             if adapter_map is not None:
                 cmd_name += " " + " ".join(
@@ -1126,6 +1165,37 @@ def start_model(
                 fg="blue",
             )
 
+        if not get_debug_mode():
+            server.start(env=start_env, text=True)
+            process = server.process
+            if process is None:
+                raise click.ClickException("Failed to start the server.")
+
+            if return_process:
+                return process
+
+            try:
+                assert process.stdout
+                with process:
+                    for line in iter(process.stdout.readline, b""):
+                        _echo(line.strip(), fg="white")
+            except Exception as err:
+                _echo(f"Error caught while running LLM Server: \n{err}", fg="red")
+                raise
+            except KeyboardInterrupt:
+                next_step(model_name, adapter_map)
+            else:
+                next_step(model_name, adapter_map)
+        else:
+            try:
+                server.start(env=start_env, text=True, blocking=True)
+            except KeyboardInterrupt:
+                next_step(model_name, adapter_map)
+            except Exception as err:
+                _echo(f"Error caught while running LLM Server:\n{err}", fg="red")
+            else:
+                next_step(model_name, adapter_map)
+
         # NOTE: Return the configuration for telemetry purposes.
         return config
 
@@ -1137,7 +1207,14 @@ def start_model(
     "model",
     type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING.keys()]),
 )
-@click.argument("model_id", type=click.STRING, default=None, metavar="model_id", required=False)
+@click.argument(
+    "model_id",
+    type=click.STRING,
+    default=None,
+    metavar="Optional[REMOTE_REPO/MODEL_ID | /path/to/local/model]",
+    required=False,
+)
+@click.argument("converter", envvar="CONVERTER", type=click.STRING, default=None, required=False, metavar=None)
 @click.option(
     "--model-version",
     type=click.STRING,
@@ -1154,23 +1231,18 @@ def start_model(
 @quantize_option(click)
 @click.option("--machine", is_flag=True, default=False, hidden=True)
 @click.option("--implementation", type=click.Choice(["pt", "tf", "flax", "vllm"]), default=None, hidden=True)
-@click.option(
-    "--serialisation",
-    "serialisation_format",
-    type=click.Choice(["safetensors", "default"]),
-    default="default",
-    help="Serialisation format to save the model in. Default to how `safe_serialization=False`",
-)
+@serialisation_option(click)
 def download_models_command(
     model: str,
     model_id: str | None,
+    converter: str | None,
     model_version: str | None,
     output: OutputLiteral,
     runtime: t.Literal["ggml", "transformers"],
     machine: bool,
     implementation: LiteralRuntime | None,
     quantize: t.Literal["int8", "int4", "gptq"] | None,
-    serialisation_format: t.Literal["safetensors", "default"],
+    serialisation_format: t.Literal["safetensors", "legacy"],
 ) -> bentoml.Model:
     """Setup LLM interactively.
 
@@ -1202,10 +1274,35 @@ def download_models_command(
     > If ``quantize`` is passed, the model weights will be saved as quantized weights. You should
     > only use this option if you want the weight to be quantized by default. Note that OpenLLM also
     > support on-demand quantisation during initial startup.
+
+    \b
+    ## Conversion strategies [EXPERIMENTAL]
+
+    \b
+    Some models will include built-in conversion strategies for specific weights format.
+    It will be determined via the `CONVERTER` environment variable. Note that this envvar should only be use provisionally as it is not RECOMMENDED to export this
+    and save to a ``.env`` file.
+
+    The conversion strategies will have the following format and will be determined per architecture implementation:
+    <base_format>-<target_format>
+
+    \b
+    For example: the below convert LlaMA-2 model format to hf:
+
+    \b
+    ```bash
+    $ CONVERTER=llama2-hf openllm import llama /path/to/llama-2
+    ```
+
+    > **Note**: This behaviour will override ``--runtime``. Therefore make sure that the LLM contains correct conversion strategies to both GGML and HF.
     """
-    impl: LiteralRuntime = first_not_none(implementation, default=EnvVarMixin(model).framework_value)
+    llm_config = openllm.AutoConfig.for_model(model)
+    impl: LiteralRuntime = first_not_none(
+        implementation, default=EnvVarMixin(model, llm_config["default_implementation"]).framework_value
+    )
     llm = openllm.infer_auto_class(impl).for_model(
         model,
+        llm_config=llm_config,
         model_id=model_id,
         model_version=model_version,
         runtime=runtime,
@@ -1365,7 +1462,8 @@ def _start(
         additional_args: Additional arguments to pass to ``openllm start``.
     """
     if isinstance(model_name, str):
-        _ModelEnv = EnvVarMixin(model_name)
+        llm_config = openllm.AutoConfig.for_model(model_name)
+        _ModelEnv = EnvVarMixin(model_name, llm_config["default_implementation"])
         if framework is None:
             framework = _ModelEnv.framework_value
         os.environ[_ModelEnv.framework] = framework
@@ -1444,7 +1542,7 @@ def _build(
     overwrite: bool = False,
     push: bool = False,
     containerize: bool = False,
-    serialisation_format: t.Literal["safetensors", "default"] = "default",
+    serialisation_format: t.Literal["safetensors", "legacy"] = "safetensors",
     additional_args: list[str] | None = None,
     bento_store: BentoStore = Provide[BentoMLContainer.bento_store],
 ) -> bentoml.Bento:
@@ -1489,7 +1587,7 @@ def _build(
         push: Whether to push the result bento to BentoCloud. Make sure to login with 'bentoml cloud login' first.
         containerize: Whether to containerize the Bento after building. '--containerize' is the shortcut of 'openllm build && bentoml containerize'.
                       Note that 'containerize' and 'push' are mutually exclusive
-        serialisation_format: Serialisation for saving models. Default to `safe_serialization=False`
+        serialisation_format: Serialisation for saving models. Default to 'safetensors', which is equivalent to `safe_serialization=True`
         additional_args: Additional arguments to pass to ``openllm build``.
         bento_store: Optional BentoStore for saving this BentoLLM. Default to the default BentoML local store.
 
@@ -1564,7 +1662,7 @@ def _import_model(
     runtime: t.Literal["ggml", "transformers"] = "transformers",
     implementation: LiteralRuntime = "pt",
     quantize: t.Literal["int8", "int4", "gptq"] | None = None,
-    serialisation_format: t.Literal["default", "safetensors"] = "default",
+    serialisation_format: t.Literal["legacy", "safetensors"] = "safetensors",
     additional_args: t.Sequence[str] | None = None,
 ) -> bentoml.Model:
     """Import a LLM into local store.
@@ -1678,13 +1776,7 @@ start, start_grpc, build, import_model, list_models = (
     type=click.File(),
     help="Optional custom dockerfile template to be used with this BentoLLM.",
 )
-@click.option(
-    "--serialisation",
-    "serialisation_format",
-    type=click.Choice(["safetensors", "default"]),
-    default="default",
-    help="Serialisation format to save the model in. Default to how `safe_serialization=False`",
-)
+@serialisation_option(click)
 @cog.optgroup.group(cls=cog.MutuallyExclusiveOptionGroup, name="Utilities options")
 @cog.optgroup.option(
     "--containerize",
@@ -1719,7 +1811,7 @@ def build_command(
     dockerfile_template: t.TextIO | None,
     containerize: bool,
     push: bool,
-    serialisation_format: t.Literal["safetensors", "default"],
+    serialisation_format: t.Literal["safetensors", "legacy"],
     **attrs: t.Any,
 ) -> bentoml.Bento:
     """Package a given models into a Bento.
@@ -1733,8 +1825,6 @@ def build_command(
     > NOTE: To run a container built from this Bento with GPU support, make sure
     > to have https://github.com/NVIDIA/nvidia-container-toolkit install locally.
     """
-    from ._package import create_bento
-
     adapter_map: dict[str, str | None] | None = None
 
     if adapter_id:
@@ -1759,6 +1849,7 @@ def build_command(
     current_model_envvar = os.environ.pop("OPENLLM_MODEL", None)
     current_model_id_envvar = os.environ.pop("OPENLLM_MODEL_ID", None)
     current_adapter_map_envvar = os.environ.pop("OPENLLM_ADAPTER_MAP", None)
+    current_serialisation_envvar = os.environ.pop("OPENLLM_SERIALIZATION", None)
 
     llm_config = openllm.AutoConfig.for_model(model_name)
 
@@ -1768,6 +1859,7 @@ def build_command(
         os.environ[llm_config["env"].runtime] = runtime
         os.environ["OPENLLM_MODEL"] = inflection.underscore(model_name)
         os.environ["OPENLLM_ADAPTER_MAP"] = orjson.dumps(adapter_map).decode()
+        os.environ["OPENLLM_SERIALIZATION"] = serialisation_format
 
         framework_envvar = llm_config["env"].framework_value
         llm = openllm.infer_auto_class(framework_envvar).for_model(
@@ -1804,7 +1896,7 @@ def build_command(
                     if output == "pretty":
                         _echo(f"Overwriting existing Bento {bento_tag}", fg="yellow")
                     bentoml.delete(bento_tag)
-                    bento = create_bento(
+                    bento = openllm.bundle.create_bento(
                         bento_tag,
                         llm_fs,
                         llm,
@@ -1819,7 +1911,7 @@ def build_command(
                     )
                 _previously_built = True
             except bentoml.exceptions.NotFound:
-                bento = create_bento(
+                bento = openllm.bundle.create_bento(
                     bento_tag,
                     llm_fs,
                     llm,
@@ -1836,9 +1928,10 @@ def build_command(
         logger.error("\nException caught during building LLM %s: \n", model_name, exc_info=e)
         raise
     else:
-        del os.environ["OPENLLM_MODEL"]
-        del os.environ["OPENLLM_MODEL_ID"]
-        del os.environ["OPENLLM_ADAPTER_MAP"]
+        os.environ.pop("OPENLLM_MODEL", None)
+        os.environ.pop("OPENLLM_MODEL_ID", None)
+        os.environ.pop("OPENLLM_ADAPTER_MAP", None)
+        os.environ.pop("OPENLLM_SERIALIZATION", None)
         # restore original OPENLLM_MODEL envvar if set.
         if current_model_envvar is not None:
             os.environ["OPENLLM_MODEL"] = current_model_envvar
@@ -1846,6 +1939,8 @@ def build_command(
             os.environ["OPENLLM_MODEL_ID"] = current_model_id_envvar
         if current_adapter_map_envvar is not None:
             os.environ["OPENLLM_ADAPTER_MAP"] = current_adapter_map_envvar
+        if current_serialisation_envvar is not None:
+            os.environ["OPENLLM_SERIALIZATION"] = current_serialisation_envvar
 
     if machine:
         # NOTE: We will prefix the tag with __tag__ and we can use regex to correctly
@@ -1950,7 +2045,9 @@ def models_command(
         failed_initialized: list[tuple[str, Exception]] = []
 
         json_data: dict[
-            str, dict[t.Literal["model_id", "url", "installation", "cpu", "gpu", "runtime_impl"], t.Any] | t.Any
+            str,
+            dict[t.Literal["architecture", "model_id", "url", "installation", "cpu", "gpu", "runtime_impl"], t.Any]
+            | t.Any,
         ] = {}
 
         converted: list[str] = []
@@ -1966,6 +2063,7 @@ def models_command(
             if config["model_name"] in openllm.MODEL_VLLM_MAPPING_NAMES:
                 runtime_impl += ("vllm",)
             json_data[m] = {
+                "architecture": config["architecture"],
                 "model_id": config["model_ids"],
                 "url": config["url"],
                 "cpu": not config["requires_gpu"],
@@ -1982,9 +2080,19 @@ def models_command(
                 except Exception as e:
                     failed_initialized.append((m, e))
 
-        ids_in_local_store = None
+        ids_in_local_store: DictStrAny | None = None
         if show_available:
-            ids_in_local_store = {k: [i for i in bentoml.models.list() if k in i.tag.name] for k in json_data.keys()}
+            ids_in_local_store = {
+                k: [
+                    i
+                    for i in bentoml.models.list()
+                    if "framework" in i.info.labels
+                    and i.info.labels["framework"] == "openllm"
+                    and "model_name" in i.info.labels
+                    and i.info.labels["model_name"] == k
+                ]
+                for k in json_data.keys()
+            }
             ids_in_local_store = {k: v for k, v in ids_in_local_store.items() if v}
 
         if machine:
@@ -1997,10 +2105,11 @@ def models_command(
 
             tabulate.PRESERVE_WHITESPACE = True
 
-            # llm, url, model_id, installation, cpu, gpu, runtime_impl
+            # llm, architecture, url, model_id, installation, cpu, gpu, runtime_impl
             data: list[
                 str
                 | tuple[
+                    str,
                     str,
                     str,
                     list[str],
@@ -2015,6 +2124,7 @@ def models_command(
                     [
                         (
                             m,
+                            v["architecture"],
                             v["url"],
                             v["model_id"],
                             v["installation"],
@@ -2025,13 +2135,14 @@ def models_command(
                     ]
                 )
             column_widths = [
+                int(COLUMNS / 12),
+                int(COLUMNS / 12),
                 int(COLUMNS / 6),
-                int(COLUMNS / 3),
                 int(COLUMNS / 4),
-                int(COLUMNS / 6),
-                int(COLUMNS / 6),
-                int(COLUMNS / 6),
-                int(COLUMNS / 9),
+                int(COLUMNS / 4),
+                int(COLUMNS / 12),
+                int(COLUMNS / 12),
+                int(COLUMNS / 12),
             ]
 
             if len(data) == 0 and len(failed_initialized) > 0:
@@ -2044,7 +2155,7 @@ def models_command(
             table = tabulate.tabulate(
                 data,
                 tablefmt="fancy_grid",
-                headers=["LLM", "URL", "Models Id", "Installation", "CPU", "GPU", "Runtime"],
+                headers=["LLM", "Architecture", "URL", "Models Id", "Installation", "CPU", "GPU", "Runtime"],
                 maxcolwidths=column_widths,
             )
 
@@ -2068,7 +2179,7 @@ def models_command(
                     ctx.exit(0)
 
                 _available = [[k + "\n\n" * len(v), [str(i.tag) for i in v]] for k, v in ids_in_local_store.items()]
-                column_widths = [int(COLUMNS / 6), int(COLUMNS / 2)]
+                column_widths = [int(COLUMNS / 2), int(COLUMNS / 2)]
                 table = tabulate.tabulate(
                     _available,
                     tablefmt="fancy_grid",

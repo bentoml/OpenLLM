@@ -19,18 +19,19 @@ import typing as t
 import openllm
 
 from .configuration_llama import DEFAULT_PROMPT_TEMPLATE
+from ..._llm import LLMEmbeddings
 from ..._prompt import default_formatter
 
 
 if t.TYPE_CHECKING:
     import torch
-    import torch.amp
+    import torch.nn.functional as F
 
     import transformers
 else:
     transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
     torch = openllm.utils.LazyLoader("torch", globals(), "torch")
-    torch.amp = openllm.utils.LazyLoader("torch.amp", globals(), "torch.amp")
+    F = openllm.utils.LazyLoader("F", globals(), "torch.nn.functional")
 
 
 logger = logging.getLogger(__name__)
@@ -38,6 +39,9 @@ logger = logging.getLogger(__name__)
 
 class LlaMA(openllm.LLM["transformers.LlamaForCausalLM", "transformers.LlamaTokenizerFast"]):
     __openllm_internal__ = True
+
+    def llm_post_init(self):
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     def sanitize_parameters(
         self,
@@ -92,3 +96,21 @@ class LlaMA(openllm.LLM["transformers.LlamaForCausalLM", "transformers.LlamaToke
         with torch.inference_mode():
             gen_tokens = self.model.generate(inputs.input_ids, **generation_kwargs)
             return self.tokenizer.batch_decode(gen_tokens, skip_special_tokens=True, clean_up_tokenization_spaces=True)
+
+    def embeddings(self, prompts: list[str]) -> LLMEmbeddings:
+        encoding = self.tokenizer(prompts, padding=True, return_tensors="pt").to(self.device)
+        input_ids = encoding["input_ids"]
+        attention_mask = encoding["attention_mask"]
+        with torch.inference_mode():
+            model_outputs = self.model(input_ids=input_ids, attention_mask=attention_mask, output_hidden_states=True)
+            data = model_outputs.hidden_states[-1]
+            mask = attention_mask.unsqueeze(-1).expand(data.size()).float()
+            masked_embeddings = data * mask
+            sum_embeddings = torch.sum(masked_embeddings, dim=1)
+            seq_length = torch.sum(mask, dim=1)
+            embedding = sum_embeddings / seq_length
+            normalized_embeddings = F.normalize(embedding, p=2, dim=1)
+        return {
+            "embeddings": normalized_embeddings,
+            "num_tokens": torch.sum(attention_mask).item(),
+        }

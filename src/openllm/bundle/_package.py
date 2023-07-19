@@ -11,10 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Build-related utilities. Some of these utilities are mainly used for 'openllm.build'.
-
-These utilities will stay internal, and its API can be changed or updated without backward-compatibility.
-"""
 from __future__ import annotations
 import importlib.metadata
 import inspect
@@ -39,15 +35,15 @@ from bentoml._internal.configuration import get_debug_mode
 from bentoml._internal.configuration.containers import BentoMLContainer
 from bentoml._internal.models.model import ModelStore
 
-from .exceptions import OpenLLMException
-from .utils import DEBUG
-from .utils import EnvVarMixin
-from .utils import codegen
-from .utils import is_flax_available
-from .utils import is_tf_available
-from .utils import is_torch_available
-from .utils import pkg
-from .utils import resolve_user_filepath
+from ..exceptions import OpenLLMException
+from ..utils import DEBUG
+from ..utils import EnvVarMixin
+from ..utils import codegen
+from ..utils import is_flax_available
+from ..utils import is_tf_available
+from ..utils import is_torch_available
+from ..utils import pkg
+from ..utils import resolve_user_filepath
 
 
 if t.TYPE_CHECKING:
@@ -191,6 +187,7 @@ def construct_docker_options(
     adapter_map: dict[str, str | None] | None,
     dockerfile_template: str | None,
     runtime: t.Literal["ggml", "transformers"],
+    serialisation_format: t.Literal["safetensors", "legacy"],
 ) -> DockerOptions:
     _bentoml_config_options = os.environ.pop("BENTOML_CONFIG_OPTIONS", "")
     _bentoml_config_options_opts = [
@@ -205,6 +202,7 @@ def construct_docker_options(
         env.framework: env.framework_value,
         env.config: f"'{llm.config.model_dump_json().decode()}'",
         "OPENLLM_MODEL": llm.config["model_name"],
+        "OPENLLM_SERIALIZATION": serialisation_format,
         "OPENLLM_ADAPTER_MAP": f"'{orjson.dumps(adapter_map).decode()}'",
         "BENTOML_DEBUG": str(get_debug_mode()),
         "BENTOML_CONFIG_OPTIONS": f"'{_bentoml_config_options}'",
@@ -226,7 +224,7 @@ def construct_docker_options(
     env_dict[_env.runtime] = _env.runtime_value
 
     return DockerOptions(
-        cuda_version="12.0",
+        cuda_version="11.8.0",
         env=env_dict,
         system_packages=["git"],
         dockerfile_template=dockerfile_template,
@@ -246,6 +244,7 @@ def create_bento(
     extra_dependencies: tuple[str, ...] | None = None,
     build_ctx: str | None = None,
     runtime: t.Literal["ggml", "transformers"] = "transformers",
+    serialisation_format: t.Literal["safetensors", "legacy"] = "safetensors",
     _bento_store: BentoStore = Provide[BentoMLContainer.bento_store],
     _model_store: ModelStore = Provide[BentoMLContainer.model_store],
 ) -> bentoml.Bento:
@@ -304,6 +303,7 @@ def create_bento(
             adapter_map,
             dockerfile_template,
             runtime,
+            serialisation_format,
         ),
     )
 

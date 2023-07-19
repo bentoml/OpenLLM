@@ -85,6 +85,7 @@ if t.TYPE_CHECKING:
     from ._types import AdaptersTuple
     from ._types import DictStrAny
     from ._types import LiteralRuntime
+    from ._types import LLMEmbeddings
     from ._types import LLMRunnable
     from ._types import LLMRunner
     from ._types import ModelSignatureDict as _ModelSignatureDict
@@ -100,6 +101,7 @@ else:
     UserDictAny = collections.UserDict
     LLMRunnable = bentoml.Runnable
     LLMRunner = bentoml.Runner
+    LLMEmbeddings = dict
 
     autogptq = LazyLoader("autogptq", globals(), "auto_gptq")
     vllm = LazyLoader("vllm", globals(), "vllm")
@@ -272,7 +274,7 @@ class LLMInterface(ABC, t.Generic[M, T]):
             Optional tuple of model kwargs and tokenizer kwargs
         """
 
-    def embeddings(self, prompt: str) -> torch.Tensor:
+    def embeddings(self, prompts: list[str]) -> LLMEmbeddings:
         """The implementation for generating text embeddings from given prompt.
 
         It takes the prompt and output the embeddings for this given LLM.
@@ -375,7 +377,7 @@ class LLMInterface(ABC, t.Generic[M, T]):
     > **Note** that if LoRA is enabled, bettertransformer will be disabled.
     """
 
-    device: torch.device | str | int | None
+    device: torch.device
     """The device to be used for this LLM. If the implementation is 'pt', then it will be torch.device, else string."""
 
     # NOTE: The following will be populated by __init_subclass__, note that these should be immutable.
@@ -425,7 +427,7 @@ class LLMInterface(ABC, t.Generic[M, T]):
             adapters_mapping: AdaptersMapping | None,
             model_version: str | None,
             quantize_method: t.Literal["int8", "int4", "gptq"] | None,
-            serialisation_format: t.Literal["safetensors", "default"],
+            serialisation_format: t.Literal["safetensors", "legacy"],
             **attrs: t.Any,
         ) -> None:
             """Generated __attrs_init__ for openllm.LLM."""
@@ -452,7 +454,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
     _adapters_mapping: AdaptersMapping | None
     _model_version: str
     _quantize_method: t.Literal["int8", "int4", "gptq"] | None
-    _serialisation_format: t.Literal["safetensors", "default"]
+    _serialisation_format: t.Literal["safetensors", "legacy"]
 
     tokenizer_cls: t.ClassVar[str | None] = None
 
@@ -563,7 +565,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
         adapter_name: str | None = ...,
         adapter_map: dict[str, str | None] | None = ...,
         quantization_config: transformers.BitsAndBytesConfig | None = ...,
-        serialisation: t.Literal["safetensors", "default"] = ...,
+        serialisation: t.Literal["safetensors", "legacy"] = ...,
         **attrs: t.Any,
     ) -> LLM[M, T]:
         ...
@@ -583,7 +585,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
         adapter_name: str | None = ...,
         adapter_map: dict[str, str | None] | None = ...,
         quantization_config: autogptq.BaseQuantizeConfig | None = ...,
-        serialisation: t.Literal["safetensors", "default"] = ...,
+        serialisation: t.Literal["safetensors", "legacy"] = ...,
         **attrs: t.Any,
     ) -> LLM[M, T]:
         ...
@@ -602,7 +604,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
         adapter_name: str | None = None,
         adapter_map: dict[str, str | None] | None = None,
         quantization_config: transformers.BitsAndBytesConfig | autogptq.BaseQuantizeConfig | None = None,
-        serialisation: t.Literal["safetensors", "default"] = "default",
+        serialisation: t.Literal["safetensors", "legacy"] = "safetensors",
         **attrs: t.Any,
     ) -> LLM[M, T]:
         """Instantiate a pretrained LLM.
@@ -651,7 +653,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
             quantize: The quantization to use for this LLM. Defaults to None. Possible values
                       include int8, int4 and gptq.
             runtime: Optional runtime to run this LLM. Default to 'transformers'. 'ggml' supports is working in progress.
-            quantization_config: The quantization config (`transformers.BitsAndBytesConfig`) to use. Note that this is mutually exclusive with `quantize`
+            quantization_config: The quantization config (`transformers.BitsAndBytesConfig` | `autogtpq.BaseQuantizeConfig`) to use. Note that this is mutually exclusive with `quantize`
             serialisation: Type of model format to save to local store. If set to 'safetensors', then OpenLLM will save model using safetensors.
                            Default behaviour is similar to ``safe_serialization=False``.
             bettertransformer: Whether to use BetterTransformer with this model. Defaults to False.
@@ -747,7 +749,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
         _quantize_method: t.Literal["int8", "int4", "gptq"] | None,
         _runtime: t.Literal["ggml", "transformers"],
         _model_version: str,
-        _serialisation_format: t.Literal["safetensors", "default"],
+        _serialisation_format: t.Literal["safetensors", "legacy"],
         **attrs: t.Any,
     ):
         """Initialize the LLM with given pretrained model.
@@ -1312,8 +1314,7 @@ def Runner(
 
     @svc.on_startup
     def download():
-        runner.download_modeljk()
-    ...
+        runner.download_model()
     ```
 
     if `init_local=True` (For development workflow), it will also enable `ensure_available`.
@@ -1337,11 +1338,17 @@ def Runner(
                 "bettertransformer": llm_config["env"]["bettertransformer_value"],
                 "quantize": llm_config["env"]["quantize_value"],
                 "runtime": llm_config["env"]["runtime_value"],
+                "serialisation": first_not_none(
+                    os.getenv("OPENLLM_SERIALIZATION"), attrs.get("serialisation"), default="safetensors"
+                ),
             }
         )
 
-    if implementation is None:
-        implementation = EnvVarMixin(model_name)["framework_value"]
+    default_implementation = llm_config["default_implementation"] if llm_config is not None else "pt"
+
+    implementation = first_not_none(
+        implementation, default=EnvVarMixin(model_name, default_implementation)["framework_value"]
+    )
 
     runner = openllm.infer_auto_class(implementation).create_runner(
         model_name,
@@ -1408,7 +1415,9 @@ def llm_runnable_class(
                 )
 
         @bentoml.Runnable.method(**method_signature(embeddings_sig))
-        def embeddings(__self: _Runnable, prompt: str) -> torch.Tensor:
+        def embeddings(__self: _Runnable, prompt: str | list[str]) -> LLMEmbeddings:
+            if isinstance(prompt, str):
+                prompt = [prompt]
             return self.embeddings(prompt)
 
         @bentoml.Runnable.method(**method_signature(generate_sig))
@@ -1478,6 +1487,19 @@ def llm_runner_class(self: openllm.LLM[M, T]) -> type[LLMRunner]:
         generated_result = __self.generate.run(prompt, **generate_kwargs)
         return self.postprocess_generate(prompt, generated_result, **postprocess_kwargs)
 
+    def _wrapped_embeddings_run(__self: LLMRunner, prompt: str | list[str]) -> LLMEmbeddings:
+        """``llm.embed`` is a light wrapper around runner.embeedings.run().
+
+        Usage:
+        ```python
+        runner = openllm.Runner('llama', implementation='pt')
+        runner.embed("What is the meaning of life?")
+        ```
+        """
+        if isinstance(prompt, str):
+            prompt = [prompt]
+        return __self.embeddings.run(prompt)
+
     def _wrapped_repr_keys(_: LLMRunner) -> set[str]:
         return {"config", "llm_type", "runner_methods", "runtime", "llm_tag"}
 
@@ -1507,6 +1529,7 @@ def llm_runner_class(self: openllm.LLM[M, T]) -> type[LLMRunner]:
                 "peft_adapters": property(fget=available_adapters),
                 "download_model": self.ensure_model_id_exists,
                 "__call__": _wrapped_generate_run,
+                "embed": _wrapped_embeddings_run,
                 "__module__": self.__module__,
                 "__doc__": self.config["env"].start_docstring,
                 "__repr__": ReprMixin.__repr__,

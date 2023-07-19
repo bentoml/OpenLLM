@@ -335,7 +335,13 @@ def generate_context(framework_name: str) -> _ModelContext:
 
 
 def generate_labels(llm: openllm.LLM[t.Any, t.Any]) -> DictStrAny:
-    return {"runtime": llm.runtime, "framework": "openllm"}
+    return {
+        "runtime": llm.runtime,
+        "framework": "openllm",
+        "model_name": llm.config["model_name"],
+        "architecture": llm.config["architecture"],
+        "serialisation_format": llm._serialisation_format,
+    }
 
 
 _TOKENIZER_PREFIX = "_tokenizer_"

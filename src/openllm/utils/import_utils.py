@@ -56,15 +56,10 @@ else:
 logger = logging.getLogger(__name__)
 
 OPTIONAL_DEPENDENCIES = {
-    "chatglm",
-    "baichuan",
-    "falcon",
-    "mpt",
     "opt",
-    "vllm",
-    "starcoder",
-    "fine-tune",
     "flan-t5",
+    "vllm",
+    "fine-tune",
     "ggml",
     "agents",
     "openai",
@@ -479,6 +474,7 @@ class EnvVarMixin(ReprMixin):
     def __new__(
         cls,
         model_name: str,
+        implementation: LiteralRuntime = "pt",
         bettertransformer: bool | None = None,
         quantize: t.LiteralString | None = None,
         runtime: t.Literal["ggml", "transformers"] = "transformers",
@@ -498,7 +494,7 @@ class EnvVarMixin(ReprMixin):
 
         # gen properties env value
         attributes_with_values = {
-            "framework": (str, "pt"),
+            "framework": (str, implementation),
             "quantize": (str, quantize),
             "bettertransformer": (bool, bettertransformer),
             "model_id": (str, None),
@@ -506,7 +502,7 @@ class EnvVarMixin(ReprMixin):
         }
         globs: dict[str, t.Any] = {
             "__bool_vars_value": ENV_VARS_TRUE_VALUES,
-            "__env_get": os.environ.get,
+            "__env_get": os.getenv,
             "self": res,
         }
 

@@ -25,6 +25,7 @@ import inflection
 import openllm
 
 from .configuration_auto import AutoConfig
+from ...utils import ReprMixin
 
 
 # NOTE: We need to do this so that overload can register
@@ -189,7 +190,7 @@ def getattribute_from_module(module: types.ModuleType, attr: t.Any) -> t.Any:
         raise ValueError(f"Could not find {attr} in {openllm_module}!")
 
 
-class _LazyAutoMapping(ConfigModelOrderedDict):
+class _LazyAutoMapping(ConfigModelOrderedDict, ReprMixin):
     """Based on transformers.models.auto.configuration_auto._LazyAutoMapping.
 
     This OrderedDict values() and keys() returns the list instead, so you don't
@@ -240,6 +241,20 @@ class _LazyAutoMapping(ConfigModelOrderedDict):
             if key in self._model_mapping.keys()
         ]
         return t.cast(ConfigModelKeysView, mapping_keys + list(self._extra_content.keys()))
+
+    @property
+    def __repr_keys__(self) -> set[str]:
+        return set(self._config_mapping.keys())
+
+    def __repr__(self) -> str:
+        return ReprMixin.__repr__(self)
+
+    def __repr_args__(self) -> t.Generator[tuple[str, tuple[str, str]], t.Any, t.Any]:
+        yield from (
+            (key, (value, self._model_mapping[key]))
+            for key, value in self._config_mapping.items()
+            if key in self._model_mapping
+        )
 
     def __bool__(self):
         return bool(self.keys())
