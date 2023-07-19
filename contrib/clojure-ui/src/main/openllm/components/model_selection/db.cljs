@@ -50,3 +50,11 @@
   {:all-models loading-text ;; will be overwritten by the event dispatched above
    :selected-model {:model-type :chatglm
                     :model-id "thudm/chatglm"}})
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;           Rich Comments            ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(comment
+  ;; check if initial-db is valid
+  (s/valid? ::model-selection-db (initial-db)))

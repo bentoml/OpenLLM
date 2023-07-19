@@ -1,8 +1,7 @@
 (ns openllm.components.chat.subs
   (:require [openllm.components.subs :as components-subs]
             [openllm.util :as util]
-            [re-frame.core :refer [reg-sub]]
-            [clojure.string :as str]))
+            [re-frame.core :refer [reg-sub]]))
 
 (reg-sub
  ::chat-input-value

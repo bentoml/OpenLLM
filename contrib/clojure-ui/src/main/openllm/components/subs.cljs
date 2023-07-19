@@ -13,3 +13,15 @@
  :<- [::root-subs/components-db]
  (fn [components-db _]
    (:model-selection-db components-db)))
+
+(reg-sub
+ ::nav-bar-db
+ :<- [::root-subs/components-db]
+ (fn [components-db _]
+   (:nav-bar-db components-db)))
+
+(reg-sub
+  ::playground-db
+  :<- [::root-subs/components-db]
+  (fn [components-db _]
+    (:playground-db components-db)))

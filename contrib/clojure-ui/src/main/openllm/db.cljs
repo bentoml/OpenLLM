@@ -26,10 +26,6 @@
 
 (s/def ::screen-id keyword?)
 (s/def ::side-bar-open? boolean?)
-(s/def ::modal-open? (s/keys :req-un [::playground boolean?]))
-
-(s/def ::playground-input-value string?)
-(s/def ::playground-last-response string?)
 
 ;; ########################## MODEL CONFIG ##########################
 (def parameter-min-max
@@ -86,9 +82,6 @@
 (s/def ::db  (s/keys :req-un [::components-db/components-db
                               ::screen-id
                               ::side-bar-open?
-                              ::modal-open?
-                              ::playground-input-value
-                              ::playground-last-response
                               ::model-config]))
 ;; ######################## AGGREGATE END ###########################
 
@@ -121,9 +114,6 @@
   {:components-db (components-db/initial-db)
    :screen-id :playground
    :side-bar-open? true
-   :modal-open? {:playground false}
-   :playground-input-value ""
-   :playground-last-response ""
    :model-config standard-llm-config})
 
 

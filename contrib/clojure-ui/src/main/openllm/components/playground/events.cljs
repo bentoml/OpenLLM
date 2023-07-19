@@ -1,5 +1,6 @@
 (ns openllm.components.playground.events
-  (:require [openllm.events :refer [check-spec-interceptor]]
+  (:require [openllm.components.playground.db :as db]
+            [openllm.events :refer [check-spec-interceptor]]
             [re-frame.core :as rf :refer [reg-event-db reg-event-fx]]
             [openllm.api.http :as api]
             [openllm.api.log4cljs.core :refer [log]]))
@@ -8,13 +9,13 @@
  ::set-prompt-input
  [check-spec-interceptor]
  (fn [db [_ value]]
-   (assoc db :playground-input-value value)))
+   (assoc-in db (db/key-seq :playground-input-value) value)))
 
 (reg-event-fx
  ::send-prompt-success
  [check-spec-interceptor]
  (fn [db [_ response]]
-   {:db (assoc db :playground-last-response (first (:responses response)))
+   {:db (assoc-in db (db/key-seq :playground-last-response) (first (:responses response)))
     :dispatch [::toggle-modal]}))
 
 (reg-event-fx
@@ -22,7 +23,7 @@
  [check-spec-interceptor]
  (fn [{:keys [db]} [_ e]]
    (log :error "Failed to send prompt" e)
-   {:db (assoc db :playground-last-response "Sorry, something went wrong.")
+   {:db (assoc-in db (db/key-seq :playground-last-response) "Sorry, something went wrong.")
     :dispatch [::toggle-modal]}))
 
 (reg-event-fx
@@ -36,7 +37,9 @@
  ::toggle-modal
  []
  (fn [db _]
-   (assoc-in db [:modal-open? :playground] (not (get-in db [:modal-open? :playground])))))
+   (let [new-value (not (get-in db (db/key-seq :response-modal-open?)))]
+     (assoc-in db (db/key-seq :response-modal-open?) new-value))))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;           Rich Comments            ;;

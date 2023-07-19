@@ -1,18 +1,21 @@
 (ns openllm.components.playground.subs
-    (:require [re-frame.core :refer [reg-sub]]))
+  (:require [openllm.components.subs :as components-subs]
+            [re-frame.core :refer [reg-sub]]))
 
 (reg-sub
  ::playground-input-value
- (fn [db _]
-   (:playground-input-value db)))
+ :<- [::components-subs/playground-db]
+ (fn [playground-db _]
+   (:playground-input-value playground-db)))
 
 (reg-sub
  ::last-response
- (fn [db _]
-   (:playground-last-response db)))
+ :<- [::components-subs/playground-db]
+ (fn [playground-db _]
+   (:playground-last-response playground-db)))
 
 (reg-sub
- ::modal-open?
- :<- [:modal-open?-map]
- (fn [map _]
-   (:playground (or map {}))))
+ ::response-modal-open?
+ :<- [::components-subs/playground-db]
+ (fn [playground-db _]
+   (:response-modal-open? playground-db)))

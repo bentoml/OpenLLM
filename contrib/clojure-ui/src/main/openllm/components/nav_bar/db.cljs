@@ -19,6 +19,10 @@
   []
   {})
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;           Rich Comments            ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (comment
   ;; check if initial-db is valid
   (s/valid? ::nav-bar-db (initial-db))

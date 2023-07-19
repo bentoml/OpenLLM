@@ -57,17 +57,17 @@
                    :value @last-response
                    :disabled true}]])))
 
-(defn- result-modal
+(defn- response-modal
   "The modal that is shown to display server response in the playground view."
   []
-  (let [modal-open? (rf/subscribe [::subs/modal-open?])
+  (let [modal-open? (rf/subscribe [::subs/response-modal-open?])
         last-response (rf/subscribe [::subs/last-response])]
     (fn []
       [modal
        {:open @modal-open?
         :on-close #(rf/dispatch [::events/toggle-modal])
-        :aria-labelledby "result-modal-title"
-        :aria-describedby "result-modal-description"
+        :aria-labelledby "response-modal-title"
+        :aria-describedby "response-modal-description"
         :actions [{:label "Close"
                    :on-click #(rf/dispatch [::events/toggle-modal])}]}
        [box {:style {:position "absolute"
@@ -77,10 +77,10 @@
                      :transform "translate(-50%, -50%)"}}
         [paper {:elevation 24
                 :style {:padding "20px 30px"}}
-         [typography {:id "result-modal-title"
+         [typography {:id "response-modal-title"
                       :variant "h6"}
           "Response"]
-         [typography {:id "result-modal-description"
+         [typography {:id "response-modal-description"
                       :variant "body1"}
           @last-response]]]])))
 
@@ -90,7 +90,7 @@
    directly."
   []
   [:div {:class "mt-6 px-4 h-full"}
-   [result-modal]
+   [response-modal]
    [input-field]
    [input-field-controls]
    [:div {:class "mt-6"}

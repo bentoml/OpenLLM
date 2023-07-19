@@ -32,6 +32,9 @@
    :prompt-layout ""
    :layout-modal-open? false})
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;           Rich Comments            ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (comment
   ;; check if initial-db is valid
   (s/valid? ::chat-db (initial-db)))
