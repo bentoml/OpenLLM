@@ -21,6 +21,7 @@
                                         ::side-bar-db/side-bar-db]))
 
 (defn initial-db
+  "Initial values for this branch of the app-db."
   []
   {:chat-db (chat-db/initial-db)
    :model-selection-db (model-selection-db/initial-db)

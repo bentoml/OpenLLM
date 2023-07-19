@@ -7,6 +7,10 @@
   (:require [cljs.spec.alpha :as s]))
 
 (defn key-seq
+  "Returns the key sequence to access the chat-db. This is useful for
+   `assoc-in` and `get-in`. The `more-keys` argument is optional and can be
+   used to access a sub-key of the chat-db.
+   Returns the key sequence to access the chat-db."
   [& more-keys]
   (into [:components-db :chat-db] more-keys))
 
@@ -26,6 +30,7 @@
                                   ::prompt-layout]))
 
 (defn initial-db
+  "Initial values for this branch of the app-db."
   []
   {:chat-input-value ""
    :chat-history []

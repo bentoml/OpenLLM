@@ -6,10 +6,16 @@
    (:require [cljs.spec.alpha :as s]))
 
 (defn key-seq
+  "Returns the key sequence to access the side-bar-db This is useful for
+   `assoc-in` and `get-in`. The `more-keys` argument is optional and can be
+   used to access a sub-key of the side-bar-db
+   Returns the key sequence to access the side-bar-db"
   [& more-keys]
   (into [:components-db :side-bar-db] more-keys))
 
-(def parameter-min-max
+(def parameter-constraints
+  "A map with parameter id's as keys and a vector of min and max values
+   respectively as values."
   {::temperature [0.0 1.0]
    ::top_k [0 100]
    ::top_p [0.1 1.0]
@@ -23,8 +29,13 @@
    ::num_beams [0 10]
    ::penalty_alpha [0.0 10.0]})
 
-(defn get-validate-range-predicate [keyword type-predicate]
-  (let [param (keyword parameter-min-max)]
+(defn get-validate-range-predicate
+  "Returns a predicate that checks if the value is within the range of the
+   parameter. The parameter is specified by the `type-predicate` argument.
+   The predicate is a function that takes a value and returns true if the value
+   is within the range of the parameter and false otherwise."
+  [keyword type-predicate]
+  (let [param (keyword parameter-constraints)]
     (s/and type-predicate
            #(<= (first param) % (second param)))))
 
@@ -90,6 +101,7 @@
              ::use_cache true))
 
 (defn initial-db
+  "Initial values for this branch of the app-db."
   []
   {:side-bar-open? true
    :model-config initial-model-config})

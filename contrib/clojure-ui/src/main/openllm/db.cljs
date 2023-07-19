@@ -1,14 +1,18 @@
 (ns openllm.db
-  "This namespace acts as app-db for the application. This namespace
-   and the backing data structure should be the only part of the application
-   that has state and is mutable.
-   Other parts of the application should stay as pure as possible.
+  "This namespace acts as the root app-db for the application. The `db` namespaces
+   define the structure of the `app-db`. They each define a schema for the
+   respective branch of the `app-db`. The `db` namespaces should only be used by
+   the `events` and `subs` namespaces.
+   The `clojure.spec` schema is checked against the `app-db` after each event
+   handler has run. This is done by the `events` namespaces with the help of the
+   `check-spec-interceptor` from the `openllm.events` namespace.
+   
+   Please note that each `db` namespace has an `initial-db` function which
+   returns the initial value for each branch of the `app-db`.
 
-   Do not directly interact with this namespace! Use the 'subs'
-   (subscriptions) and events namespaces for this.
-   The subscription namespaces may read the respective data that is of
-   interest to them.
-   The event namespaces may be used to change (thus WRITE to the) app-db."
+   Furthermore be aware that the `app-db` is immutable. This means that you cannot
+   change the `app-db` directly. Instead you have to dispatch an event which will
+   then change the `app-db` as a whole."
   (:require [openllm.components.db :as components-db]
             [cljs.spec.alpha :as s]))
 
@@ -29,8 +33,8 @@
                               ::screen-id]))
 
 (def default-db
-  "What gets put into app-db by default.
-   See 'core.cljs' for `(dispatch-sync [:initialise-db])` and 'events.cljs'
+  "What gets put into app-db by default. This is the very root of the `app-db`.
+   See `core.cljs` for `(dispatch-sync [:initialise-db])` and 'events.cljs'
    for the registration of `:initialise-db` effect handler."
   {:components-db (components-db/initial-db)
    :screen-id :playground})

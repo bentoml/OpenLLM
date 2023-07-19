@@ -4,6 +4,7 @@
             [re-frame.core :refer [reg-sub]]))
 
 (def parameter-id->human-readable
+  "Maps paramter ids to human readable names."
   {::db/temperature "Temperature"
    ::db/top_k "Top K"
    ::db/top_p "Top P"

@@ -6,8 +6,12 @@
   (:require [cljs.spec.alpha :as s]))
 
 (defn key-seq
+  "Returns the key sequence to access the nav-bar-db This is useful for
+   `assoc-in` and `get-in`. The `more-keys` argument is optional and can be
+   used to access a sub-key of the nav-bar-db
+   Returns the key sequence to access the nav-bar-db"
   [& more-keys]
-  (into [:components-db :chat-db] more-keys))
+  (into [:components-db :nav-bar-db] more-keys))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -16,6 +20,7 @@
 (s/def ::nav-bar-db #(and (map? %) (empty? %)))
 
 (defn initial-db
+  "Initial values for this branch of the app-db."
   []
   {})
 

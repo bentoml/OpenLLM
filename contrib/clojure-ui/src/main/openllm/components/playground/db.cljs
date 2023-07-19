@@ -6,6 +6,10 @@
   (:require [cljs.spec.alpha :as s]))
 
 (defn key-seq
+  "Returns the key sequence to access the playground-db This is useful for
+   `assoc-in` and `get-in`. The `more-keys` argument is optional and can be
+   used to access a sub-key of the playground-db
+   Returns the key sequence to access the playground-db"
   [& more-keys]
   (into [:components-db :playground-db] more-keys))
 
@@ -22,6 +26,7 @@
                                         ::response-modal-open?]))
 
 (defn initial-db
+  "Initial values for this branch of the app-db."
   []
   {:playground-input-value ""
    :playground-last-response ""

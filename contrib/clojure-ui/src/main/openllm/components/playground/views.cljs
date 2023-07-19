@@ -46,8 +46,11 @@
                  :on-click #(rf/dispatch [::events/on-send-button-click @input-value @llm-config])} "Send"]]])))
 
 (defn response-area
-  "The latest response retrieved from the backend will be displayed in
-   this component."
+  "The latest response retrieved from the backend will be displayed in this
+   component.
+   By default this is not visible, but it will be shown once the user has
+   resized the input field. After that, resizing the browser window will no
+   longer scale the input field."
   []
   (let [last-response (rf/subscribe [::subs/last-response])]
     (fn []
@@ -58,7 +61,9 @@
                    :disabled true}]])))
 
 (defn- response-modal
-  "The modal that is shown to display server response in the playground view."
+  "The modal that is shown to display server response in the playground view.
+   It is opened and closed by the `::toggle-modal` event. The modal is closed
+   by clicking the close button or somewhere outside of the modal."
   []
   (let [modal-open? (rf/subscribe [::subs/response-modal-open?])
         last-response (rf/subscribe [::subs/last-response])]

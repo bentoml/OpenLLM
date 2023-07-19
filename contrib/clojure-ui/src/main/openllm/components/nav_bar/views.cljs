@@ -20,7 +20,8 @@
             [reagent.core :as r]))
 
 (defn- collapse-side-bar-button
-  "The collapse side bar button. Only visible when the side bar is open."
+  "The collapse side bar button. It changes its icon depending on whether
+   the side bar is collapsed or not."
   []
   (let [tooltip-text-collapse-sidebar (rf/subscribe [::subs/tooltip-text-collapse-sidebar])
         collapse-icon (rf/subscribe [::subs/collapse-icon])]
@@ -54,7 +55,9 @@
            [delete-icon/delete-forever]]])])))
 
 (defn nav-bar
-  "Renders the navigation bar."
+  "Renders the navigation bar. The navigation bar is always visible and contains the
+   navigation buttons and the context dependent icon buttons. There are also small
+   buttons that will open socials in a new tab."
   []
   [:div {:class "w-full static"}
    [app-bar {:position "static"

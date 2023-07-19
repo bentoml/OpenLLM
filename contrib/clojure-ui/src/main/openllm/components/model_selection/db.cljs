@@ -8,6 +8,10 @@
             [clojure.spec.alpha :as s]))
 
 (defn key-seq
+  "Returns the key sequence to access the model-selection-db This is useful for
+   `assoc-in` and `get-in`. The `more-keys` argument is optional and can be
+   used to access a sub-key of the model-selection-db
+   Returns the key sequence to access the model-selection-db"
   [& more-keys]
   (into [:components-db :model-selection-db] more-keys))
 
@@ -45,6 +49,9 @@
                                              ::selected-model]))       ;; the spec of the model-selection-db
 
 (defn initial-db
+  "Initial values for this branch of the app-db.
+   Triggers the loading of the model data by dispatching the `:slurp-model-data-json`
+   event." 
   []
   (rf/dispatch [:slurp-model-data-json])
   {:all-models loading-text ;; will be overwritten by the event dispatched above

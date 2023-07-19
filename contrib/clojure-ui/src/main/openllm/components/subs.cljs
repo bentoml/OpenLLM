@@ -1,4 +1,8 @@
 (ns openllm.components.subs
+  "The subscriptions from this namespace are used to access the components'
+   db branches.
+   Every subscription in this namespace is an extractor (layer 2) of the
+   `app-db`."
   (:require [openllm.subs :as root-subs]
             [re-frame.core :refer [reg-sub]]))
 

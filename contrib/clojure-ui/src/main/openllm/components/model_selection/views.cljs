@@ -4,7 +4,9 @@
             [re-frame.core :as rf]))
 
 (defn model-selection
-  "The dropdowns selecting the model."
+  "The dropdowns selecting the model. The `model-type` dropdown is populated
+   with the available `model-types`, the `model-id` dropdown is populated with
+   the available `model-ids` for the currently selected `model-type`."
   []
   (let [model-type (rf/subscribe [::subs/selected-model-type])
         model-id (rf/subscribe [::subs/selected-model-id])

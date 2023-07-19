@@ -14,9 +14,10 @@
   (or (str/includes? (str id) "num") (= id ::db/top_k)))
 
 (defn parameter-slider
-  "Renders a slider with an input field next to it."
+  "Renders a slider with an input field next to it. The num-type logic needs to be
+   revamped big time xx"
   [id value]
-  (let [min-max (id db/parameter-min-max)
+  (let [min-max (id db/parameter-constraints)
         on-change #(rf/dispatch [::events/set-model-config-parameter id (if (num-type? id)
                                                                             (parse-long (.. % -target -value))
                                                                             (parse-double (.. % -target -value)))])]
@@ -30,7 +31,8 @@
               :on-change on-change}]]))
 
 (defn parameter-small-input
-  "Renders a small input field, used in combination with the sliders."
+  "Renders a small input field, used in combination with the sliders. The num-type logic
+   needs to be revamped big time xx"
   [id value]
   (let [on-change #(rf/dispatch [::events/set-model-config-parameter id (if (num-type? id)
                                                                           (parse-long (.. % -target -value))
@@ -59,23 +61,25 @@
             :on-change #(rf/dispatch [::events/set-model-config-parameter id (.. % -target -value)])}]])
 
 (defn parameter-list-entry
-  "Renders a single parameter in the sidebar's parameter list."
+  "Renders a single parameter in the sidebar's parameter list. Used as a mapping function
+   on the collection of all parameters."
   [[id {:keys [value name]}]]
   [:div {:class "flex flex-col px-2 py-1"}
    [:label {:class "flex w-fit text-xs"}
     name
-    (when (contains? db/parameter-min-max id)
+    (when (contains? db/parameter-constraints id)
       [parameter-small-input id value])
     (when (boolean? value)
       [parameter-checkbox id value])
-    (when (and (not (contains? db/parameter-min-max id)) (not (boolean? value)))
+    (when (and (not (contains? db/parameter-constraints id)) (not (boolean? value)))
       [parameter-number id value])]
-   (when (contains? db/parameter-min-max id)
+   (when (contains? db/parameter-constraints id)
      [:div {:class "mt-0.5"} [parameter-slider id value]])
    [:hr {:class "mt-1.5 border-1 border-gray-100"}]])
 
 (defn parameter-list
-  "Renders the parameters in the sidebar."
+  "Renders the parameters in the sidebar. The parameters are retrieved from the
+   `human-readable-config` subscription."
   []
   (let [model-config (rf/subscribe [::subs/human-readable-config])]
     (fn parameter-list
@@ -83,7 +87,8 @@
       (into [:<>] (map parameter-list-entry @model-config)))))
 
 (defn side-bar-with-mui-collapse
-  "The sidebar wrapped with a Material UI Collapse component."
+  "The sidebar wrapped with a Material UI Collapse component. The collapse
+   component is used to animate the sidebar when it is opened or closed."
   []
   (let [side-bar-open? (rf/subscribe [::subs/side-bar-open?])]
     (fn []
@@ -99,7 +104,8 @@
           [parameter-list]]]]])))
 
 (defn side-bar
-  "The render function of the toolbar on the very left of the screen"
+  "The render function of the toolbar on the very right of the screen. Contains the
+   model selection dropdowns and the parameter list."
   []
   [:div {:class "hidden lg:flex lg:flex-shrink-0"}
    [side-bar-with-mui-collapse]])

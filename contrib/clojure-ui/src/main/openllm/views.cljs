@@ -1,4 +1,13 @@
 (ns openllm.views
+  "This is the root views namespace, while the first DOM/hiccup is created in
+   the `openllm.app` namespace, this namespace is the first to be pure and
+   only create hiccup/DOM, derived from data :)
+   The `openllm.app` namespace dealt with the initialisation of the `app-db`,
+   created the root DOM/hiccup node and handeled the material-ui theming.
+   
+   From this point onward all the views are pure and only depend on the `app-db`,
+   which is queried by subscriptions and the single source of truth for the
+   entire application."
   (:require [re-frame.core :as rf]
             [openllm.components.nav-bar.views :as nav-bar-views]
             [openllm.components.side-bar.views :as side-bar-views]

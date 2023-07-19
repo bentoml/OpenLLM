@@ -18,7 +18,10 @@
             [reagent.core :as r]))
 
 (defn chat-input-field
-  "The chat input field."
+  "The chat input field. The `on-submit` callback is called when the user
+   presses the enter key without pressing the shift key.
+   The same event is also dispatched in the `chat-controls` function, if
+   the user clicks the send button."
   [on-submit]
   (let [chat-input-sub (rf/subscribe [::subs/chat-input-value])
         on-change #(rf/dispatch [::events/set-chat-input-value (.. % -target -value)])]
@@ -56,7 +59,8 @@
 
 (defn user->bubble-style
   "Produces additional style attributes for a chatbubble contingent upon
-   the provided user."
+   the provided user.
+   This can be done a lot smarter, but it works for now."
   [user]
   (str "p-2 rounded-xl border " (if (= user :model)
                                   "bg-gray-50 mr-10 rounded-bl-none border-gray-200"
@@ -64,12 +68,15 @@
 
 (defn user->text-style
   "Produces additional style attributes forthe text of a text message 
-   upon the provided user."
+   upon the provided user.
+   This can be done a lot smarter, but it works for now."
   [user]
   (str "whitespace-pre-wrap " (if (= user :model) "text-gray-700" "text-gray-950")))
 
 (defn chat-message-entry
-  "Displays a single chat message of the chat history."
+  "Displays a single chat message of the chat history.
+   Will be used as a mapping function in the `chat-history` function. The collection
+   being mapped is the entire chat history."
   [{:keys [user text]}]
   (let [display-user (if (= user :model) "System" "You")
         alignment (if (= user :model) "flex-row" "flex-row-reverse")]
@@ -80,7 +87,8 @@
        text]]]))
 
 (defn chat-history
-  "The chat history."
+  "The chat history. Transforms the chat history into DOM/hiccup elements by
+   mapping the `chat-message-entry` function over the chat history."
   []
   (let [history (rf/subscribe [::subs/chat-history])]
     (fn chat-history []
@@ -88,7 +96,9 @@
             (map chat-message-entry @history)))))
 
 (defn prompt-layout-modal
-  "The modal for editing the prompt layout."
+  "The modal for editing the prompt layout. The modal is opened by the
+   `toggle-modal` event and closed by the `toggle-modal` event. The modal
+   is closed by clicking the save button or somewhere outside of the modal."
   []
   (let [modal-open? (rf/subscribe [::subs/modal-open?])
         prompt-layout-value (rf/subscribe [::subs/prompt-layout])
@@ -118,7 +128,8 @@
                     :on-click #(rf/dispatch [::events/toggle-modal])} "Save"]]]]]])))
 
 (defn chat-tab-contents
-  "The component rendered if the chat tab is active."
+  "The component rendered if the chat tab is active. It contains the chat
+   history, the chat input field and the chat controls."
   []
   (let [side-bar-open? (rf/subscribe [::side-bar-subs/side-bar-open?])]
     (fn []
