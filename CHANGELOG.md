@@ -18,6 +18,74 @@ This changelog is managed by towncrier and is compiled at release time.
 
 <!-- towncrier release notes start -->
 
+## [0.2.0](https://github.com/bentoml/openllm/tree/v0.2.0)
+
+### Features
+
+- Added support for GPTNeoX models. All variants of GPTNeoX, including Dolly-V2
+  and StableLM can now also use `openllm start gpt-neox`
+
+  `openllm models -o json` nows return CPU and GPU field. `openllm models` now
+  show table that mimics the one from README.md
+
+  Added scripts to automatically add models import to `__init__.py`
+
+  `--workers-per-resource` now accepts the following strategies:
+
+  - `round_robin`: Similar behaviour when setting `--workers-per-resource 1`. This
+    is useful for smaller models.
+  - `conserved`: This will determine the number of available GPU resources, and
+    only assign one worker for the LLMRunner with all available GPU resources. For
+    example, if ther are 4 GPUs available, then `conserved` is equivalent to
+    `--workers-per-resource 0.25`.
+  [#106](https://github.com/bentoml/openllm/issues/106)
+- Added support for [Baichuan](https://github.com/baichuan-inc/Baichuan-7B) model
+  generation, contributed by @hetaoBackend
+
+  Fixes how we handle model loader auto class for trust_remote_code in
+  transformers
+  [#115](https://github.com/bentoml/openllm/issues/115)
+
+
+### Bug fix
+
+- Fixes relative model_id handling for running LLM within the container.
+
+  Added support for building container directly with `openllm build`. Users now
+  can do `openllm build --format=container`:
+
+  ```bash
+  openllm build flan-t5 --format=container
+  ```
+
+  This is equivalent to:
+
+  ```bash
+  openllm build flan-t5 && bentoml containerize google-flan-t5-large-service
+  ```
+
+  Added Snapshot testing and more robust edge cases for model testing
+
+  General improvement in `openllm.LLM.import_model` where it will parse santised
+  parameters automatically.
+
+  Fixes `openllm start <bento>` to use correct `model_id`, ignoring `--model-id`
+  (The correct behaviour)
+
+  Fixes `--workers-per-resource conserved` to respect `--device`
+
+  Added initial interface for `LLM.embeddings`
+  [#107](https://github.com/bentoml/openllm/issues/107)
+- Fixes resources to correctly follows CUDA_VISIBLE_DEVICES spec
+
+  OpenLLM now contains a standalone parser that mimic `torch.cuda` parser for set
+  GPU devices. This parser will be used to parse both AMD and NVIDIA GPUs.
+
+  `openllm` should now be able to parse `GPU-` and `MIG-` UUID from both
+  configuration or spec.
+  [#114](https://github.com/bentoml/openllm/issues/114)
+
+
 ## [0.1.20](https://github.com/bentoml/openllm/tree/v0.1.20)
 
 ### Features
