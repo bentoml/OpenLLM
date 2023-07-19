@@ -2069,9 +2069,9 @@ def models_command(
                 "cpu": not config["requires_gpu"],
                 "gpu": True,
                 "runtime_impl": runtime_impl,
-                "installation": "pip install openllm"
-                if m not in openllm.utils.OPTIONAL_DEPENDENCIES
-                else f'pip install "openllm[{m}]"',
+                "installation": f'pip install "openllm[{m}]"'
+                if m in openllm.utils.OPTIONAL_DEPENDENCIES or config["requirements"]
+                else "pip install openllm",
             }
             converted.extend([normalise_model_name(i) for i in config["model_ids"]])
             if DEBUG:
@@ -2136,10 +2136,10 @@ def models_command(
                 )
             column_widths = [
                 int(COLUMNS / 12),
-                int(COLUMNS / 12),
                 int(COLUMNS / 6),
-                int(COLUMNS / 4),
-                int(COLUMNS / 4),
+                int(COLUMNS / 6),
+                int(COLUMNS / 6),
+                int(COLUMNS / 6),
                 int(COLUMNS / 12),
                 int(COLUMNS / 12),
                 int(COLUMNS / 12),
