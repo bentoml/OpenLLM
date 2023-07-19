@@ -23,12 +23,14 @@ if t.TYPE_CHECKING:
     import openllm
 
 
+@pytest.mark.skipif(os.getenv("GITHUB_ACTIONS") is not None, "Model is too large for CI")
 def test_flan_t5_implementation(prompt: str, llm: openllm.LLM[t.Any, t.Any]):
     assert llm(prompt)
 
     assert llm(prompt, temperature=0.8, top_p=0.23)
 
 
+@pytest.mark.skipif(os.getenv("GITHUB_ACTIONS") is not None, "Model is too large for CI")
 def test_opt_implementation(prompt: str, llm: openllm.LLM[t.Any, t.Any]):
     assert llm(prompt)
 

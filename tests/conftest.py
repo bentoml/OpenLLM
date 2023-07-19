@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 import itertools
+import os
 import typing as t
 
 import pytest
@@ -61,10 +62,11 @@ def parametrise_local_llm(
 
 
 def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
-    if "prompt" in metafunc.fixturenames and "llm" in metafunc.fixturenames:
-        metafunc.parametrize(
-            "prompt,llm", [(p, llm) for p, llm in parametrise_local_llm(metafunc.function.__name__[5:-15])]
-        )
+    if os.getenv("GITHUB_ACTIONS") is None:
+        if "prompt" in metafunc.fixturenames and "llm" in metafunc.fixturenames:
+            metafunc.parametrize(
+                "prompt,llm", [(p, llm) for p, llm in parametrise_local_llm(metafunc.function.__name__[5:-15])]
+            )
 
 
 def pytest_sessionfinish(session: pytest.Session, exitstatus: int):
