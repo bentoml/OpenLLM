@@ -188,6 +188,7 @@ jobs:
     runs-on: windows-2022
     env:
       VERSION: ${{ needs.binaries.outputs.version }}
+    if: ${{ github.event_name != 'pull_request' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
