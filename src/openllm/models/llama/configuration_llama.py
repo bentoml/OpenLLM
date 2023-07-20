@@ -132,8 +132,8 @@ _PROMPT_MAPPING = {
 }
 
 
-def _get_propmt(model_type: t.Literal["v1", "v2"]) -> str:
+def _get_prompt(model_type: t.Literal["v1", "v2"]) -> str:
     return _PROMPT_MAPPING[model_type]
 
 
-DEFAULT_PROMPT_TEMPLATE = _get_propmt
+DEFAULT_PROMPT_TEMPLATE = _get_prompt
