@@ -79,7 +79,6 @@ jobs:
     name: Create binary/wheels distribution
     uses: bentoml/OpenLLM/.github/workflows/binary-releases.yml@main
   publish-python:
-    if: github.repository_owner == 'bentoml' && github.event_name == 'push'
     needs:
       - binary-distribution
     runs-on: ubuntu-latest
@@ -97,7 +96,6 @@ jobs:
         with:
           skip-existing: true
   prepare-for-dev-cycle:
-    if: github.repository_owner == 'bentoml'
     needs:
       - release
       - publish-python
