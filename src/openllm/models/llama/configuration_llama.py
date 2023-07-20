@@ -42,7 +42,7 @@ class LlaMAConfig(openllm.LLMConfig):
         "default_id": "huggyllama/llama-7b",
         "default_implementation": "pt",  # XXX: needs vLLM implementation
         "architecture": "LlamaForCausalLM",
-        "requirements": ["openllm[vllm]", "fairscale", "sentencepiece"],
+        "requirements": ["fairscale", "sentencepiece"],
         "model_ids": [
             "meta-llama/llama-2-70b-chat-hf",
             "meta-llama/llama-2-13b-chat-hf",
