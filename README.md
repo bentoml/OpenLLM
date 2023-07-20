@@ -129,8 +129,8 @@ dependencies can be installed with the instructions below:
 <th>Architecture</th>
 <th>CPU</th>
 <th>GPU</th>
-<th>Installation</th>
 <th>Model Ids</th>
+<th>Installation</th>
 </tr>
 <tr>
 
@@ -140,18 +140,18 @@ dependencies can be installed with the instructions below:
 <td>✅</td>
 <td>
 
-```bash
-pip install "openllm[chatglm]"
-```
-
-</td>
-<td>
-
 <ul><li><a href=https://huggingface.co/thudm/chatglm-6b><code>thudm/chatglm-6b</code></a></li>
 <li><a href=https://huggingface.co/thudm/chatglm-6b-int8><code>thudm/chatglm-6b-int8</code></a></li>
 <li><a href=https://huggingface.co/thudm/chatglm-6b-int4><code>thudm/chatglm-6b-int4</code></a></li>
 <li><a href=https://huggingface.co/thudm/chatglm2-6b><code>thudm/chatglm2-6b</code></a></li>
 <li><a href=https://huggingface.co/thudm/chatglm2-6b-int4><code>thudm/chatglm2-6b-int4</code></a></li></ul>
+
+</td>
+<td>
+
+```bash
+pip install "openllm[chatglm]"
+```
 
 </td>
 </tr>
@@ -163,16 +163,16 @@ pip install "openllm[chatglm]"
 <td>✅</td>
 <td>
 
-```bash
-pip install openllm
-```
+<ul><li><a href=https://huggingface.co/databricks/dolly-v2-3b><code>databricks/dolly-v2-3b</code></a></li>
+<li><a href=https://huggingface.co/databricks/dolly-v2-7b><code>databricks/dolly-v2-7b</code></a></li>
+<li><a href=https://huggingface.co/databricks/dolly-v2-12b><code>databricks/dolly-v2-12b</code></a></li></ul>
 
 </td>
 <td>
 
-<ul><li><a href=https://huggingface.co/databricks/dolly-v2-3b><code>databricks/dolly-v2-3b</code></a></li>
-<li><a href=https://huggingface.co/databricks/dolly-v2-7b><code>databricks/dolly-v2-7b</code></a></li>
-<li><a href=https://huggingface.co/databricks/dolly-v2-12b><code>databricks/dolly-v2-12b</code></a></li></ul>
+```bash
+pip install openllm
+```
 
 </td>
 </tr>
@@ -184,33 +184,26 @@ pip install openllm
 <td>✅</td>
 <td>
 
-```bash
-pip install "openllm[falcon]"
-```
-
-</td>
-<td>
-
 <ul><li><a href=https://huggingface.co/tiiuae/falcon-7b><code>tiiuae/falcon-7b</code></a></li>
 <li><a href=https://huggingface.co/tiiuae/falcon-40b><code>tiiuae/falcon-40b</code></a></li>
 <li><a href=https://huggingface.co/tiiuae/falcon-7b-instruct><code>tiiuae/falcon-7b-instruct</code></a></li>
 <li><a href=https://huggingface.co/tiiuae/falcon-40b-instruct><code>tiiuae/falcon-40b-instruct</code></a></li></ul>
 
 </td>
+<td>
+
+```bash
+pip install "openllm[falcon]"
+```
+
+</td>
 </tr>
 <tr>
 
 <td><a href=https://huggingface.co/docs/transformers/model_doc/flan-t5>flan-t5</a></td>
-<td><a href=https://huggingface.co/docs/transformers/main/model_doc/flan_t5#transformers.T5ForConditionalGeneration><code>T5ForConditionalGeneration</code></a></td>
+<td><a href=https://huggingface.co/docs/transformers/main/model_doc/t5#transformers.T5ForConditionalGeneration><code>T5ForConditionalGeneration</code></a></td>
 <td>✅</td>
 <td>✅</td>
-<td>
-
-```bash
-pip install "openllm[flan-t5]"
-```
-
-</td>
 <td>
 
 <ul><li><a href=https://huggingface.co/google/flan-t5-small><code>google/flan-t5-small</code></a></li>
@@ -218,6 +211,13 @@ pip install "openllm[flan-t5]"
 <li><a href=https://huggingface.co/google/flan-t5-large><code>google/flan-t5-large</code></a></li>
 <li><a href=https://huggingface.co/google/flan-t5-xl><code>google/flan-t5-xl</code></a></li>
 <li><a href=https://huggingface.co/google/flan-t5-xxl><code>google/flan-t5-xxl</code></a></li></ul>
+
+</td>
+<td>
+
+```bash
+pip install "openllm[flan-t5]"
+```
 
 </td>
 </tr>
@@ -229,14 +229,14 @@ pip install "openllm[flan-t5]"
 <td>✅</td>
 <td>
 
-```bash
-pip install openllm
-```
+<ul><li><a href=https://huggingface.co/eleutherai/gpt-neox-20b><code>eleutherai/gpt-neox-20b</code></a></li></ul>
 
 </td>
 <td>
 
-<ul><li><a href=https://huggingface.co/eleutherai/gpt-neox-20b><code>eleutherai/gpt-neox-20b</code></a></li></ul>
+```bash
+pip install openllm
+```
 
 </td>
 </tr>
@@ -246,13 +246,6 @@ pip install openllm
 <td><a href=https://huggingface.co/docs/transformers/main/model_doc/llama#transformers.LlamaForCausalLM><code>LlamaForCausalLM</code></a></td>
 <td>✅</td>
 <td>✅</td>
-<td>
-
-```bash
-pip install "openllm[llama]"
-```
-
-</td>
 <td>
 
 <ul><li><a href=https://huggingface.co/meta-llama/llama-2-70b-chat-hf><code>meta-llama/llama-2-70b-chat-hf</code></a></li>
@@ -270,6 +263,13 @@ pip install "openllm[llama]"
 <li><a href=https://huggingface.co/huggyllama/llama-7b><code>huggyllama/llama-7b</code></a></li></ul>
 
 </td>
+<td>
+
+```bash
+pip install "openllm[llama]"
+```
+
+</td>
 </tr>
 <tr>
 
@@ -277,13 +277,6 @@ pip install "openllm[llama]"
 <td><a href=https://huggingface.co/mosaicml><code>MPTForCausalLM</code></a></td>
 <td>✅</td>
 <td>✅</td>
-<td>
-
-```bash
-pip install "openllm[mpt]"
-```
-
-</td>
 <td>
 
 <ul><li><a href=https://huggingface.co/mosaicml/mpt-7b><code>mosaicml/mpt-7b</code></a></li>
@@ -295,6 +288,13 @@ pip install "openllm[mpt]"
 <li><a href=https://huggingface.co/mosaicml/mpt-30b-chat><code>mosaicml/mpt-30b-chat</code></a></li></ul>
 
 </td>
+<td>
+
+```bash
+pip install "openllm[mpt]"
+```
+
+</td>
 </tr>
 <tr>
 
@@ -304,19 +304,19 @@ pip install "openllm[mpt]"
 <td>✅</td>
 <td>
 
-```bash
-pip install "openllm[opt]"
-```
-
-</td>
-<td>
-
 <ul><li><a href=https://huggingface.co/facebook/opt-125m><code>facebook/opt-125m</code></a></li>
 <li><a href=https://huggingface.co/facebook/opt-350m><code>facebook/opt-350m</code></a></li>
 <li><a href=https://huggingface.co/facebook/opt-1.3b><code>facebook/opt-1.3b</code></a></li>
 <li><a href=https://huggingface.co/facebook/opt-2.7b><code>facebook/opt-2.7b</code></a></li>
 <li><a href=https://huggingface.co/facebook/opt-6.7b><code>facebook/opt-6.7b</code></a></li>
 <li><a href=https://huggingface.co/facebook/opt-66b><code>facebook/opt-66b</code></a></li></ul>
+
+</td>
+<td>
+
+```bash
+pip install "openllm[opt]"
+```
 
 </td>
 </tr>
@@ -328,17 +328,17 @@ pip install "openllm[opt]"
 <td>✅</td>
 <td>
 
-```bash
-pip install openllm
-```
-
-</td>
-<td>
-
 <ul><li><a href=https://huggingface.co/stabilityai/stablelm-tuned-alpha-3b><code>stabilityai/stablelm-tuned-alpha-3b</code></a></li>
 <li><a href=https://huggingface.co/stabilityai/stablelm-tuned-alpha-7b><code>stabilityai/stablelm-tuned-alpha-7b</code></a></li>
 <li><a href=https://huggingface.co/stabilityai/stablelm-base-alpha-3b><code>stabilityai/stablelm-base-alpha-3b</code></a></li>
 <li><a href=https://huggingface.co/stabilityai/stablelm-base-alpha-7b><code>stabilityai/stablelm-base-alpha-7b</code></a></li></ul>
+
+</td>
+<td>
+
+```bash
+pip install openllm
+```
 
 </td>
 </tr>
@@ -350,15 +350,15 @@ pip install openllm
 <td>✅</td>
 <td>
 
-```bash
-pip install "openllm[starcoder]"
-```
+<ul><li><a href=https://huggingface.co/bigcode/starcoder><code>bigcode/starcoder</code></a></li>
+<li><a href=https://huggingface.co/bigcode/starcoderbase><code>bigcode/starcoderbase</code></a></li></ul>
 
 </td>
 <td>
 
-<ul><li><a href=https://huggingface.co/bigcode/starcoder><code>bigcode/starcoder</code></a></li>
-<li><a href=https://huggingface.co/bigcode/starcoderbase><code>bigcode/starcoderbase</code></a></li></ul>
+```bash
+pip install "openllm[starcoder]"
+```
 
 </td>
 </tr>
@@ -370,19 +370,19 @@ pip install "openllm[starcoder]"
 <td>✅</td>
 <td>
 
-```bash
-pip install "openllm[baichuan]"
-```
-
-</td>
-<td>
-
 <ul><li><a href=https://huggingface.co/baichuan-inc/baichuan-7b><code>baichuan-inc/baichuan-7b</code></a></li>
 <li><a href=https://huggingface.co/baichuan-inc/baichuan-13b-base><code>baichuan-inc/baichuan-13b-base</code></a></li>
 <li><a href=https://huggingface.co/baichuan-inc/baichuan-13b-chat><code>baichuan-inc/baichuan-13b-chat</code></a></li>
 <li><a href=https://huggingface.co/fireballoon/baichuan-vicuna-chinese-7b><code>fireballoon/baichuan-vicuna-chinese-7b</code></a></li>
 <li><a href=https://huggingface.co/fireballoon/baichuan-vicuna-7b><code>fireballoon/baichuan-vicuna-7b</code></a></li>
 <li><a href=https://huggingface.co/hiyouga/baichuan-7b-sft><code>hiyouga/baichuan-7b-sft</code></a></li></ul>
+
+</td>
+<td>
+
+```bash
+pip install "openllm[baichuan]"
+```
 
 </td>
 </tr>

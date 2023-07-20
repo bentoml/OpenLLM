@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from __future__ import annotations
+import typing as t
 
 import openllm
 
@@ -29,6 +30,10 @@ class LlaMAConfig(openllm.LLMConfig):
     Refer to [LlaMA's model card](https://huggingface.co/docs/transformers/main/model_doc/llama)
     for more information.
     """
+
+    use_llama2_prompt: bool = openllm.LLMConfig.Field(
+        True, description="Whether to use the prompt format for LlaMA 2. Disable this when working with LlaMA 1."
+    )
 
     __config__ = {
         "model_name": "llama",
@@ -58,8 +63,9 @@ class LlaMAConfig(openllm.LLMConfig):
 
     class GenerationConfig:
         max_new_tokens: int = 256
-        temperature: float = 0.8
+        temperature: float = 0.45
         top_p: float = 0.95
+        top_k: int = 12
 
     class SamplingParams:
         best_of: int = 1
@@ -96,5 +102,38 @@ OpenLLM also supports running LlaMA-2 and its fine-tune and variants. To import 
 $ CONVERTER=hf-llama2 openllm import llama /path/to/llama-2
 """
 
+SYSTEM_MESSAGE = """
+You are a helpful, respectful and honest assistant. Always answer as helpfully as possible, while being safe.  Your answers should not include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that your responses are socially unbiased and positive in nature.
 
-DEFAULT_PROMPT_TEMPLATE = """{instruction}"""
+If a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information.
+"""
+
+SINST_KEY = "[INST]"
+EINST_KEY = "[/INST]"
+SYS_KEY = "<<SYS>>"
+EOS_TOKEN = "</s>"
+BOS_TOKEN = "<s>"
+
+# TODO: support history
+_v2_prompt = """{start_key} {sys_key}\n{system_message}\n{sys_key}\n\n{instruction}\n{end_key} """.format(
+    start_key=SINST_KEY,
+    sys_key=SYS_KEY,
+    system_message=SYSTEM_MESSAGE,
+    instruction="{instruction}",
+    end_key=EINST_KEY,
+)
+
+# XXX: implement me
+_v1_prompt = """{instruction}"""
+
+_PROMPT_MAPPING = {
+    "v1": _v1_prompt,
+    "v2": _v2_prompt,
+}
+
+
+def _get_prompt(model_type: t.Literal["v1", "v2"]) -> str:
+    return _PROMPT_MAPPING[model_type]
+
+
+DEFAULT_PROMPT_TEMPLATE = _get_prompt

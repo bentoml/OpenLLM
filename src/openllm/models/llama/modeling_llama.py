@@ -46,14 +46,17 @@ class LlaMA(openllm.LLM["transformers.LlamaForCausalLM", "transformers.LlamaToke
     def sanitize_parameters(
         self,
         prompt: str,
+        top_k: int | None = None,
         top_p: float | None = None,
         temperature: float | None = None,
         max_new_tokens: int | None = None,
         use_default_prompt_template: bool = True,
+        use_llama2_prompt: bool = True,
         **attrs: t.Any,
     ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
         if use_default_prompt_template:
-            template_variables = default_formatter.extract_template_variables(DEFAULT_PROMPT_TEMPLATE)
+            _PROMPT = DEFAULT_PROMPT_TEMPLATE("v2" if use_llama2_prompt else "v1")
+            template_variables = default_formatter.extract_template_variables(_PROMPT)
             prompt_variables = {k: v for k, v in attrs.items() if k in template_variables}
             if "instruction" in prompt_variables:
                 raise RuntimeError(
@@ -61,7 +64,7 @@ class LlaMA(openllm.LLM["transformers.LlamaForCausalLM", "transformers.LlamaToke
                     "instead of kwargs when 'use_default_prompt_template=True'"
                 )
             try:
-                prompt_text = DEFAULT_PROMPT_TEMPLATE.format(instruction=prompt, **prompt_variables)
+                prompt_text = _PROMPT.format(instruction=prompt, **prompt_variables)
             except KeyError as e:
                 raise RuntimeError(
                     f"Missing variable '{e.args[0]}' (required: {template_variables}) in the prompt template. "
@@ -70,7 +73,12 @@ class LlaMA(openllm.LLM["transformers.LlamaForCausalLM", "transformers.LlamaToke
         else:
             prompt_text = prompt
 
-        generation_config = {"max_new_tokens": max_new_tokens, "temperature": temperature, "top_p": top_p}
+        generation_config = {
+            "max_new_tokens": max_new_tokens,
+            "temperature": temperature,
+            "top_p": top_p,
+            "top_k": top_k,
+        }
 
         return prompt_text, generation_config, {}
 
@@ -87,14 +95,13 @@ class LlaMA(openllm.LLM["transformers.LlamaForCausalLM", "transformers.LlamaToke
         from ..._generation import StopOnTokens
 
         generation_kwargs = {
-            "do_sample": True,
             "generation_config": self.config.model_construct_env(**attrs).to_generation_config(),
             "stopping_criteria": transformers.StoppingCriteriaList([StopOnTokens()]),
         }
 
         inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
         with torch.inference_mode():
-            gen_tokens = self.model.generate(inputs.input_ids, **generation_kwargs)
+            gen_tokens = self.model.generate(**inputs, **generation_kwargs)
             return self.tokenizer.batch_decode(gen_tokens, skip_special_tokens=True, clean_up_tokenization_spaces=True)
 
     def embeddings(self, prompts: list[str]) -> LLMEmbeddings:
