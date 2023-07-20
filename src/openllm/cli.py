@@ -201,6 +201,15 @@ def model_id_option(factory: t.Any, model_env: EnvVarMixin | None = None) -> t.C
     )
 
 
+def model_version_option(factory: t.Any) -> t.Callable[[FC], FC]:
+    return factory.option(
+        "--model-version",
+        type=click.STRING,
+        default=None,
+        help="Optional model version to save for this model. It will be inferred automatically from model-id.",
+    )
+
+
 def workers_per_resource_option(factory: t.Any, build: bool = False) -> t.Callable[[FC], FC]:
     help_str = """Number of workers per resource assigned.
     See https://docs.bentoml.org/en/latest/guides/scheduling.html#resource-scheduling-strategy
@@ -600,6 +609,7 @@ def start_decorator(
         ),
         workers_per_resource_option(cog.optgroup),
         model_id_option(cog.optgroup, model_env=llm_config["env"]),
+        model_version_option(cog.optgroup),
         cog.optgroup.option(
             "--fast",
             is_flag=True,
@@ -922,6 +932,7 @@ def start_bento(
         ctx: click.Context,
         server_timeout: int,
         model_id: str | None,
+        model_version: str | None,
         workers_per_resource: t.LiteralString | float,
         device: tuple[str, ...],
         quantize: t.Literal["int8", "int4", "gptq"] | None,
@@ -1070,6 +1081,7 @@ def start_model(
         ctx: click.Context,
         server_timeout: int,
         model_id: str | None,
+        model_version: str | None,
         workers_per_resource: t.LiteralString | float,
         device: tuple[str, ...],
         quantize: t.Literal["int8", "int4", "gptq"] | None,
@@ -1157,6 +1169,7 @@ def start_model(
         llm = openllm.infer_auto_class(env.framework_value).for_model(
             model_name,
             model_id=model_id,
+            model_version=model_version,
             llm_config=config,
             ensure_available=not fast,
             return_runner_kwargs=False,
@@ -1254,12 +1267,7 @@ def start_model(
     required=False,
 )
 @click.argument("converter", envvar="CONVERTER", type=click.STRING, default=None, required=False, metavar=None)
-@click.option(
-    "--model-version",
-    type=click.STRING,
-    default=None,
-    help="Optional model version to save for this model. It will be inferred automatically from model-id.",
-)
+@model_version_option(click)
 @click.option(
     "--runtime",
     type=click.Choice(["ggml", "transformers"]),
@@ -1803,12 +1811,7 @@ start, start_grpc, build, import_model, list_models = (
     metavar="[PATH | [remote/][adapter_name:]adapter_id][, ...]",
 )
 @click.option("--build-ctx", default=".", help="Build context. This is required if --adapter-id uses relative path")
-@click.option(
-    "--model-version",
-    default=None,
-    type=click.STRING,
-    help="Model version provided for this 'model-id' if it is a custom path.",
-)
+@model_version_option(click)
 @click.option(
     "--dockerfile-template",
     default=None,

@@ -736,16 +736,21 @@ class LLM(LLMInterface[M, T], ReprMixin):
 
     @classmethod
     def _infer_tag_from_model_id(cls, model_id: str, model_version: str | None) -> bentoml.Tag:
+        # XXX: Fix me later, if the model is a valid tag, then we return it directly
+        # instead of creating a new tag from the model_id. this branch will be hit during `openllm build`
         try:
-            return bentoml.Tag.from_taglike(model_id)
+            return bentoml.models.get(model_id).tag
         except (ValueError, bentoml.exceptions.BentoMLException):
-            return make_tag(
-                model_id,
-                model_version=model_version,
-                trust_remote_code=cls.config_class.__openllm_trust_remote_code__,
-                implementation=cls.__llm_implementation__,
-                quiet=True,
-            )
+            try:
+                return bentoml.Tag.from_taglike(model_id)
+            except (ValueError, bentoml.exceptions.BentoMLException):
+                return make_tag(
+                    model_id,
+                    model_version=model_version,
+                    trust_remote_code=cls.config_class.__openllm_trust_remote_code__,
+                    implementation=cls.__llm_implementation__,
+                    quiet=True,
+                )
 
     def __init__(
         self,

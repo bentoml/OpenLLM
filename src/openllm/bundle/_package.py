@@ -175,7 +175,7 @@ def construct_python_options(
     if built_wheels is not None:
         wheels.append(llm_fs.getsyspath(f"/{built_wheels.split('/')[-1]}"))
 
-    return PythonOptions(packages=packages, wheels=wheels, lock_packages=True)
+    return PythonOptions(packages=packages, wheels=wheels, lock_packages=False)
 
 
 def construct_docker_options(
