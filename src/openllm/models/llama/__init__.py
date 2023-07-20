@@ -22,7 +22,12 @@ from ...utils import is_vllm_available
 
 
 _import_structure: dict[str, list[str]] = {
-    "configuration_llama": ["LlaMAConfig", "START_LLAMA_COMMAND_DOCSTRING", "DEFAULT_PROMPT_TEMPLATE"],
+    "configuration_llama": [
+        "LlaMAConfig",
+        "START_LLAMA_COMMAND_DOCSTRING",
+        "DEFAULT_PROMPT_TEMPLATE",
+        "PROMPT_MAPPING",
+    ],
 }
 
 try:
@@ -44,6 +49,7 @@ else:
 
 if t.TYPE_CHECKING:
     from .configuration_llama import DEFAULT_PROMPT_TEMPLATE as DEFAULT_PROMPT_TEMPLATE
+    from .configuration_llama import PROMPT_MAPPING as PROMPT_MAPPING
     from .configuration_llama import START_LLAMA_COMMAND_DOCSTRING as START_LLAMA_COMMAND_DOCSTRING
     from .configuration_llama import LlaMAConfig as LlaMAConfig
 

@@ -45,9 +45,11 @@ if t.TYPE_CHECKING:
     BackendOrderredDict = OrderedDict[str, tuple[t.Callable[[], bool], str]]
     from .._types import LiteralRuntime
     from .._types import P
+    from .._types import T
 
-    class _AnnotatedLazyLoader(LazyLoader):
-        DEFAULT_PROMPT_TEMPLATE: t.LiteralString | None | t.Callable[..., t.LiteralString]
+    class _AnnotatedLazyLoader(LazyLoader, t.Generic[T]):
+        DEFAULT_PROMPT_TEMPLATE: t.LiteralString | None | t.Callable[[T], t.LiteralString]
+        PROMPT_MAPPING: dict[T, t.LiteralString] | None
 
 else:
     _AnnotatedLazyLoader = LazyLoader
@@ -534,5 +536,5 @@ class EnvVarMixin(ReprMixin):
         return getattr(self.module, f"START_{self.model_name.upper()}_COMMAND_DOCSTRING")
 
     @property
-    def module(self) -> _AnnotatedLazyLoader:
+    def module(self) -> _AnnotatedLazyLoader[t.LiteralString]:
         return _AnnotatedLazyLoader(self.model_name, globals(), f"openllm.models.{self.model_name}")

@@ -127,7 +127,7 @@ _default_prompt = """{instruction}"""
 # TODO: XXX implement me
 _chat_prompt = """{instruction}"""
 
-_PROMPT_MAPPING = {
+PROMPT_MAPPING = {
     "default": _default_prompt,
     "instruct": _instruct_prompt,
     "storywriter": _default_prompt,
@@ -136,7 +136,7 @@ _PROMPT_MAPPING = {
 
 
 def _get_prompt(model_type: str) -> str:
-    return _PROMPT_MAPPING[model_type]
+    return PROMPT_MAPPING[model_type]
 
 
 DEFAULT_PROMPT_TEMPLATE = _get_prompt
