@@ -51,7 +51,6 @@ from .utils import bentoml_cattr
 from .utils import codegen
 from .utils import first_not_none
 from .utils import get_debug_mode
-from .utils import get_quiet_mode
 from .utils import in_docker
 from .utils import is_peft_available
 from .utils import is_torch_available
@@ -674,7 +673,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
 
         model_id, *maybe_revision = model_id.rsplit(":")
         if len(maybe_revision) > 0:
-            if model_version is not None and not get_quiet_mode():
+            if model_version is not None:
                 logger.warning(
                     "revision is specified within 'model_id' (%s), which will override the 'model_version=%s'",
                     maybe_revision[0],
