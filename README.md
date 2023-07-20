@@ -201,7 +201,7 @@ pip install "openllm[falcon]"
 <tr>
 
 <td><a href=https://huggingface.co/docs/transformers/model_doc/flan-t5>flan-t5</a></td>
-<td><a href=https://huggingface.co/docs/transformers/main/model_doc/flan_t5#transformers.T5ForConditionalGeneration><code>T5ForConditionalGeneration</code></a></td>
+<td><a href=https://huggingface.co/docs/transformers/main/model_doc/t5#transformers.T5ForConditionalGeneration><code>T5ForConditionalGeneration</code></a></td>
 <td>✅</td>
 <td>✅</td>
 <td>

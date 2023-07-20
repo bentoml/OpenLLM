@@ -83,9 +83,12 @@ def main() -> int:
         if cfg_cls.__openllm_trust_remote_code__:
             arch = f"<td><a href={url}><code>{architecture}</code></a></td>\n"
         else:
-            model_name = {"dolly_v2": "gpt_neox", "stablelm": "gpt_neox", "starcoder": "gpt_bigcode"}.get(
-                cfg_cls.__openllm_model_name__, cfg_cls.__openllm_model_name__
-            )
+            model_name = {
+                "dolly_v2": "gpt_neox",
+                "stablelm": "gpt_neox",
+                "starcoder": "gpt_bigcode",
+                "flan_t5": "t5",
+            }.get(cfg_cls.__openllm_model_name__, cfg_cls.__openllm_model_name__)
             arch = f"<td><a href=https://huggingface.co/docs/transformers/main/model_doc/{model_name}#transformers.{architecture}><code>{architecture}</code></a></td>\n"
         meta.extend(
             [

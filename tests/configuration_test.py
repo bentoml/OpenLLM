@@ -52,15 +52,11 @@ else:
     sys.version_info[:2] == (3, 11), reason="TypedDict in 3.11 behaves differently, so we need to fix this"
 )
 def test_missing_default():
-    assert pytest.raises(
-        ValueError, make_llm_config("MissingDefaultId", {"name_type": "lowercase", "requirements": ["bentoml"]})
-    ).match("Missing required fields *")
-    assert pytest.raises(
-        ValueError,
-        make_llm_config("MissingModelId", {"default_id": "huggingface/t5-tiny-testing", "requirements": ["bentoml"]}),
-    ).match("Missing required fields *")
-    assert pytest.raises(
-        ValueError,
+    with pytest.raises(ValueError, match="Missing required fields *"):
+        make_llm_config("MissingDefaultId", {"name_type": "lowercase", "requirements": ["bentoml"]})
+    with pytest.raises(ValueError, match="Missing required fields *"):
+        make_llm_config("MissingModelId", {"default_id": "huggingface/t5-tiny-testing", "requirements": ["bentoml"]})
+    with pytest.raises(ValueError, match="Missing required fields *"):
         make_llm_config(
             "MissingArchitecture",
             {
@@ -68,8 +64,7 @@ def test_missing_default():
                 "model_ids": ["huggingface/t5-tiny-testing"],
                 "requirements": ["bentoml"],
             },
-        ),
-    ).match("Missing required fields *")
+        )
 
 
 def test_forbidden_access():
