@@ -47,8 +47,8 @@ def main() -> int:
         "URL": [],
         "CPU": [],
         "GPU": [],
-        "Installation": [],
         "Model Ids": [],
+        "Installation": [],
     }
     max_install_len_div = 0
     for name, config_cls in openllm.CONFIG_MAPPING.items():
@@ -74,8 +74,8 @@ def main() -> int:
     meta.extend([f"<th>{header}</th>\n" for header in formatted.keys() if header not in ("URL",)])
     meta += ["</tr>\n"]
     # NOTE: rows
-    for name, architecture, url, cpu, gpu, installation, model_ids in t.cast(
-        t.Iterable[t.Tuple[str, str, str, str, str, str, t.List[str]]], zip(*formatted.values())
+    for name, architecture, url, cpu, gpu, model_ids, installation in t.cast(
+        t.Iterable[t.Tuple[str, str, str, str, str, t.List[str], str]], zip(*formatted.values())
     ):
         meta += "<tr>\n"
         # configure architecture URL
@@ -87,6 +87,10 @@ def main() -> int:
                 cfg_cls.__openllm_model_name__, cfg_cls.__openllm_model_name__
             )
             arch = f"<td><a href=https://huggingface.co/docs/transformers/main/model_doc/{model_name}#transformers.{architecture}><code>{architecture}</code></a></td>\n"
+        format_with_links: list[str] = []
+        for lid in model_ids:
+            format_with_links.append(f"<li><a href=https://huggingface.co/{lid}><code>{lid}</code></a></li>")
+        meta.append("<td>\n\n<ul>" + "\n".join(format_with_links) + "</ul>\n\n</td>\n")
         meta.extend(
             [
                 f"\n<td><a href={url}>{name}</a></td>\n",
@@ -96,10 +100,6 @@ def main() -> int:
                 f"<td>\n\n{installation}\n\n</td>\n",
             ]
         )
-        format_with_links: list[str] = []
-        for lid in model_ids:
-            format_with_links.append(f"<li><a href=https://huggingface.co/{lid}><code>{lid}</code></a></li>")
-        meta.append("<td>\n\n<ul>" + "\n".join(format_with_links) + "</ul>\n\n</td>\n")
         meta += "</tr>\n"
     meta.extend(["</table>\n", "\n"])
 
