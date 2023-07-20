@@ -133,6 +133,11 @@ dependencies can be installed with the instructions below:
 <th>Installation</th>
 </tr>
 <tr>
+
+<td><a href=https://github.com/THUDM/ChatGLM-6B>chatglm</a></td>
+<td><a href=https://github.com/THUDM/ChatGLM-6B><code>ChatGLMForConditionalGeneration</code></a></td>
+<td>❌</td>
+<td>✅</td>
 <td>
 
 <ul><li><a href=https://huggingface.co/thudm/chatglm-6b><code>thudm/chatglm-6b</code></a></li>
@@ -142,11 +147,6 @@ dependencies can be installed with the instructions below:
 <li><a href=https://huggingface.co/thudm/chatglm2-6b-int4><code>thudm/chatglm2-6b-int4</code></a></li></ul>
 
 </td>
-
-<td><a href=https://github.com/THUDM/ChatGLM-6B>chatglm</a></td>
-<td><a href=https://github.com/THUDM/ChatGLM-6B><code>ChatGLMForConditionalGeneration</code></a></td>
-<td>❌</td>
-<td>✅</td>
 <td>
 
 ```bash
@@ -156,6 +156,11 @@ pip install "openllm[chatglm]"
 </td>
 </tr>
 <tr>
+
+<td><a href=https://github.com/databrickslabs/dolly>dolly-v2</a></td>
+<td><a href=https://huggingface.co/docs/transformers/main/model_doc/gpt_neox#transformers.GPTNeoXForCausalLM><code>GPTNeoXForCausalLM</code></a></td>
+<td>✅</td>
+<td>✅</td>
 <td>
 
 <ul><li><a href=https://huggingface.co/databricks/dolly-v2-3b><code>databricks/dolly-v2-3b</code></a></li>
@@ -163,11 +168,6 @@ pip install "openllm[chatglm]"
 <li><a href=https://huggingface.co/databricks/dolly-v2-12b><code>databricks/dolly-v2-12b</code></a></li></ul>
 
 </td>
-
-<td><a href=https://github.com/databrickslabs/dolly>dolly-v2</a></td>
-<td><a href=https://huggingface.co/docs/transformers/main/model_doc/gpt_neox#transformers.GPTNeoXForCausalLM><code>GPTNeoXForCausalLM</code></a></td>
-<td>✅</td>
-<td>✅</td>
 <td>
 
 ```bash
@@ -177,6 +177,11 @@ pip install openllm
 </td>
 </tr>
 <tr>
+
+<td><a href=https://falconllm.tii.ae/>falcon</a></td>
+<td><a href=https://falconllm.tii.ae/><code>FalconForCausalLM</code></a></td>
+<td>❌</td>
+<td>✅</td>
 <td>
 
 <ul><li><a href=https://huggingface.co/tiiuae/falcon-7b><code>tiiuae/falcon-7b</code></a></li>
@@ -185,11 +190,6 @@ pip install openllm
 <li><a href=https://huggingface.co/tiiuae/falcon-40b-instruct><code>tiiuae/falcon-40b-instruct</code></a></li></ul>
 
 </td>
-
-<td><a href=https://falconllm.tii.ae/>falcon</a></td>
-<td><a href=https://falconllm.tii.ae/><code>FalconForCausalLM</code></a></td>
-<td>❌</td>
-<td>✅</td>
 <td>
 
 ```bash
@@ -199,6 +199,11 @@ pip install "openllm[falcon]"
 </td>
 </tr>
 <tr>
+
+<td><a href=https://huggingface.co/docs/transformers/model_doc/flan-t5>flan-t5</a></td>
+<td><a href=https://huggingface.co/docs/transformers/main/model_doc/flan_t5#transformers.T5ForConditionalGeneration><code>T5ForConditionalGeneration</code></a></td>
+<td>✅</td>
+<td>✅</td>
 <td>
 
 <ul><li><a href=https://huggingface.co/google/flan-t5-small><code>google/flan-t5-small</code></a></li>
@@ -208,11 +213,6 @@ pip install "openllm[falcon]"
 <li><a href=https://huggingface.co/google/flan-t5-xxl><code>google/flan-t5-xxl</code></a></li></ul>
 
 </td>
-
-<td><a href=https://huggingface.co/docs/transformers/model_doc/flan-t5>flan-t5</a></td>
-<td><a href=https://huggingface.co/docs/transformers/main/model_doc/flan_t5#transformers.T5ForConditionalGeneration><code>T5ForConditionalGeneration</code></a></td>
-<td>✅</td>
-<td>✅</td>
 <td>
 
 ```bash
@@ -222,16 +222,16 @@ pip install "openllm[flan-t5]"
 </td>
 </tr>
 <tr>
-<td>
-
-<ul><li><a href=https://huggingface.co/eleutherai/gpt-neox-20b><code>eleutherai/gpt-neox-20b</code></a></li></ul>
-
-</td>
 
 <td><a href=https://github.com/EleutherAI/gpt-neox>gpt-neox</a></td>
 <td><a href=https://huggingface.co/docs/transformers/main/model_doc/gpt_neox#transformers.GPTNeoXForCausalLM><code>GPTNeoXForCausalLM</code></a></td>
 <td>❌</td>
 <td>✅</td>
+<td>
+
+<ul><li><a href=https://huggingface.co/eleutherai/gpt-neox-20b><code>eleutherai/gpt-neox-20b</code></a></li></ul>
+
+</td>
 <td>
 
 ```bash
@@ -241,6 +241,11 @@ pip install openllm
 </td>
 </tr>
 <tr>
+
+<td><a href=https://github.com/facebookresearch/llama>llama</a></td>
+<td><a href=https://huggingface.co/docs/transformers/main/model_doc/llama#transformers.LlamaForCausalLM><code>LlamaForCausalLM</code></a></td>
+<td>✅</td>
+<td>✅</td>
 <td>
 
 <ul><li><a href=https://huggingface.co/meta-llama/llama-2-70b-chat-hf><code>meta-llama/llama-2-70b-chat-hf</code></a></li>
@@ -258,11 +263,6 @@ pip install openllm
 <li><a href=https://huggingface.co/huggyllama/llama-7b><code>huggyllama/llama-7b</code></a></li></ul>
 
 </td>
-
-<td><a href=https://github.com/facebookresearch/llama>llama</a></td>
-<td><a href=https://huggingface.co/docs/transformers/main/model_doc/llama#transformers.LlamaForCausalLM><code>LlamaForCausalLM</code></a></td>
-<td>✅</td>
-<td>✅</td>
 <td>
 
 ```bash
@@ -272,6 +272,11 @@ pip install "openllm[llama]"
 </td>
 </tr>
 <tr>
+
+<td><a href=https://huggingface.co/mosaicml>mpt</a></td>
+<td><a href=https://huggingface.co/mosaicml><code>MPTForCausalLM</code></a></td>
+<td>✅</td>
+<td>✅</td>
 <td>
 
 <ul><li><a href=https://huggingface.co/mosaicml/mpt-7b><code>mosaicml/mpt-7b</code></a></li>
@@ -283,11 +288,6 @@ pip install "openllm[llama]"
 <li><a href=https://huggingface.co/mosaicml/mpt-30b-chat><code>mosaicml/mpt-30b-chat</code></a></li></ul>
 
 </td>
-
-<td><a href=https://huggingface.co/mosaicml>mpt</a></td>
-<td><a href=https://huggingface.co/mosaicml><code>MPTForCausalLM</code></a></td>
-<td>✅</td>
-<td>✅</td>
 <td>
 
 ```bash
@@ -297,6 +297,11 @@ pip install "openllm[mpt]"
 </td>
 </tr>
 <tr>
+
+<td><a href=https://huggingface.co/docs/transformers/model_doc/opt>opt</a></td>
+<td><a href=https://huggingface.co/docs/transformers/main/model_doc/opt#transformers.MPTForCausalLM><code>MPTForCausalLM</code></a></td>
+<td>✅</td>
+<td>✅</td>
 <td>
 
 <ul><li><a href=https://huggingface.co/facebook/opt-125m><code>facebook/opt-125m</code></a></li>
@@ -307,11 +312,6 @@ pip install "openllm[mpt]"
 <li><a href=https://huggingface.co/facebook/opt-66b><code>facebook/opt-66b</code></a></li></ul>
 
 </td>
-
-<td><a href=https://huggingface.co/docs/transformers/model_doc/opt>opt</a></td>
-<td><a href=https://huggingface.co/docs/transformers/main/model_doc/opt#transformers.MPTForCausalLM><code>MPTForCausalLM</code></a></td>
-<td>✅</td>
-<td>✅</td>
 <td>
 
 ```bash
@@ -321,6 +321,11 @@ pip install "openllm[opt]"
 </td>
 </tr>
 <tr>
+
+<td><a href=https://github.com/Stability-AI/StableLM>stablelm</a></td>
+<td><a href=https://huggingface.co/docs/transformers/main/model_doc/gpt_neox#transformers.GPTNeoXForCausalLM><code>GPTNeoXForCausalLM</code></a></td>
+<td>✅</td>
+<td>✅</td>
 <td>
 
 <ul><li><a href=https://huggingface.co/stabilityai/stablelm-tuned-alpha-3b><code>stabilityai/stablelm-tuned-alpha-3b</code></a></li>
@@ -329,11 +334,6 @@ pip install "openllm[opt]"
 <li><a href=https://huggingface.co/stabilityai/stablelm-base-alpha-7b><code>stabilityai/stablelm-base-alpha-7b</code></a></li></ul>
 
 </td>
-
-<td><a href=https://github.com/Stability-AI/StableLM>stablelm</a></td>
-<td><a href=https://huggingface.co/docs/transformers/main/model_doc/gpt_neox#transformers.GPTNeoXForCausalLM><code>GPTNeoXForCausalLM</code></a></td>
-<td>✅</td>
-<td>✅</td>
 <td>
 
 ```bash
@@ -343,17 +343,17 @@ pip install openllm
 </td>
 </tr>
 <tr>
+
+<td><a href=https://github.com/bigcode-project/starcoder>starcoder</a></td>
+<td><a href=https://huggingface.co/docs/transformers/main/model_doc/gpt_bigcode#transformers.GPTBigCodeForCausalLM><code>GPTBigCodeForCausalLM</code></a></td>
+<td>❌</td>
+<td>✅</td>
 <td>
 
 <ul><li><a href=https://huggingface.co/bigcode/starcoder><code>bigcode/starcoder</code></a></li>
 <li><a href=https://huggingface.co/bigcode/starcoderbase><code>bigcode/starcoderbase</code></a></li></ul>
 
 </td>
-
-<td><a href=https://github.com/bigcode-project/starcoder>starcoder</a></td>
-<td><a href=https://huggingface.co/docs/transformers/main/model_doc/gpt_bigcode#transformers.GPTBigCodeForCausalLM><code>GPTBigCodeForCausalLM</code></a></td>
-<td>❌</td>
-<td>✅</td>
 <td>
 
 ```bash
@@ -363,6 +363,11 @@ pip install "openllm[starcoder]"
 </td>
 </tr>
 <tr>
+
+<td><a href=https://github.com/baichuan-inc/Baichuan-7B>baichuan</a></td>
+<td><a href=https://github.com/baichuan-inc/Baichuan-7B><code>BaiChuanForCausalLM</code></a></td>
+<td>❌</td>
+<td>✅</td>
 <td>
 
 <ul><li><a href=https://huggingface.co/baichuan-inc/baichuan-7b><code>baichuan-inc/baichuan-7b</code></a></li>
@@ -373,11 +378,6 @@ pip install "openllm[starcoder]"
 <li><a href=https://huggingface.co/hiyouga/baichuan-7b-sft><code>hiyouga/baichuan-7b-sft</code></a></li></ul>
 
 </td>
-
-<td><a href=https://github.com/baichuan-inc/Baichuan-7B>baichuan</a></td>
-<td><a href=https://github.com/baichuan-inc/Baichuan-7B><code>BaiChuanForCausalLM</code></a></td>
-<td>❌</td>
-<td>✅</td>
 <td>
 
 ```bash
