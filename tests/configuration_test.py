@@ -74,6 +74,7 @@ def test_forbidden_access():
         {
             "default_id": "huggingface/t5-tiny-testing",
             "model_ids": ["huggingface/t5-tiny-testing", "bentoml/t5-tiny-testing"],
+            "architecture": "PreTrainedModel",
             "requirements": ["bentoml"],
         },
     )
@@ -89,6 +90,12 @@ def test_forbidden_access():
         cl_.__getattribute__,
         cl_(),
         "GenerationConfig",
+    )
+    assert pytest.raises(
+        openllm.exceptions.ForbiddenAttributeError,
+        cl_.__getattribute__,
+        cl_(),
+        "SamplingParams",
     )
 
     assert openllm.utils.lenient_issubclass(cl_.__openllm_generation_class__, GenerationConfig)
