@@ -161,7 +161,7 @@ _BENTOML_EXT = ["grpc", "io"]
 _TRANSFORMERS_EXT = ["torch", "tokenizers", "accelerate"]
 
 _BASE_DEPENDENCIES = [
-    Dependencies(name="bentoml", extensions=_BENTOML_EXT, lower_constraint="1.0.24"),
+    Dependencies(name="bentoml", extensions=_BENTOML_EXT, lower_constraint="1.0.25"),
     Dependencies(name="transformers", extensions=_TRANSFORMERS_EXT, lower_constraint="4.29.0"),
     Dependencies(name="safetensors"),
     Dependencies(name="optimum"),

@@ -49,6 +49,7 @@ import time
 import traceback
 import typing as t
 
+import attr
 import click
 import click_option_group as cog
 import fs
@@ -296,8 +297,16 @@ def _id_callback(ctx: click.Context, _: click.Parameter, value: tuple[str, ...] 
     return None
 
 
+@attr.define
+class CliContext:
+    cloud_context: str | None = attr.field(default=None, converter=attr.converters.default_if_none("default"))
+
+    def with_options(self, **attrs: t.Any) -> t.Self:
+        return attr.evolve(self, **attrs)
+
+
 class OpenLLMCommandGroup(BentoMLCommandGroup):
-    NUMBER_OF_COMMON_PARAMS = 4  # parameters in common_params + 1 faked group option header
+    NUMBER_OF_COMMON_PARAMS = 5  # parameters in common_params + 1 faked group option header
 
     @staticmethod
     def common_params(f: FC) -> t.Callable[[FC], FC]:
@@ -310,12 +319,18 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
         from bentoml._internal.configuration import DEBUG_ENV_VAR
         from bentoml._internal.configuration import QUIET_ENV_VAR
 
-        @cog.optgroup.group("Miscellaneous options")
+        @cog.optgroup.group("Global options")
         @cog.optgroup.option(
             "-q", "--quiet", envvar=QUIET_ENV_VAR, is_flag=True, default=False, help="Suppress all output."
         )
         @cog.optgroup.option(
-            "--debug", "--verbose", envvar=DEBUG_ENV_VAR, is_flag=True, default=False, help="Print out debug logs."
+            "--debug",
+            "--verbose",
+            "debug",
+            envvar=DEBUG_ENV_VAR,
+            is_flag=True,
+            default=False,
+            help="Print out debug logs.",
         )
         @cog.optgroup.option(
             "--do-not-track",
@@ -324,8 +339,19 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
             envvar=analytics.OPENLLM_DO_NOT_TRACK,
             help="Do not send usage info",
         )
+        @cog.optgroup.option(
+            "--context",
+            "cloud_context",
+            type=click.STRING,
+            default=None,
+            help="BentoCloud context name.",
+        )
+        @click.pass_context
         @functools.wraps(f)
-        def wrapper(quiet: bool, debug: bool, *args: P.args, **attrs: P.kwargs) -> t.Any:
+        def wrapper(
+            ctx: click.Context, quiet: bool, debug: bool, cloud_context: str | None, *args: P.args, **attrs: P.kwargs
+        ) -> t.Any:
+            ctx.obj = CliContext(cloud_context=cloud_context)
             if quiet:
                 set_quiet_mode(True)
                 if debug:
@@ -533,8 +559,12 @@ def parse_serve_args(serve_grpc: bool) -> t.Callable[[t.Callable[..., openllm.LL
     def decorator(f: t.Callable[t.Concatenate[int, str | None, P], openllm.LLMConfig]):
         serve_command = cli.commands[command]
         # The first variable is the argument bento
-        # and the last three are shared default, which we don't need.
-        serve_options = [p for p in serve_command.params[1:-3] if p.name not in _IGNORED_OPTIONS]
+        # The last five is from BentoMLCommandGroup.NUMBER_OF_COMMON_PARAMS
+        serve_options = [
+            p
+            for p in serve_command.params[1 : -BentoMLCommandGroup.NUMBER_OF_COMMON_PARAMS]
+            if p.name not in _IGNORED_OPTIONS
+        ]
         for options in reversed(serve_options):
             attrs = options.to_info_dict()
             # we don't need param_type_name, since it should all be options
@@ -731,10 +761,12 @@ def start_command_factory(
 
 \b
 Note: ``{llm_config['start_name']}`` can also be run with any other models available on HuggingFace
-or fine-tuned variants as long as it belongs to the architecture generation ``{llm_config['architecture']}`` (trust_remote_code={llm_config['trust_remote_code']}). For example:
+or fine-tuned variants as long as it belongs to the architecture generation ``{llm_config['architecture']}`` (trust_remote_code={llm_config['trust_remote_code']}).
 
 \b
-Start [Fastchat-T5](https://huggingface.co/lmsys/fastchat-t5-3b-v1.0) with ``openllm start flan-t5``:
+For example: One can start [Fastchat-T5](https://huggingface.co/lmsys/fastchat-t5-3b-v1.0) with ``openllm start flan-t5``:
+
+\b
 $ openllm start flan-t5 --model-id lmsys/fastchat-t5-3b-v1.0
 
 \b
@@ -1988,7 +2020,7 @@ def build_command(
 
     if push:
         client = BentoMLContainer.bentocloud_client.get()
-        client.push_bento(bento)
+        client.push_bento(bento, context=t.cast(CliContext, ctx.obj).cloud_context)
     elif containerize:
         backend = t.cast("DefaultBuilder", os.getenv("BENTOML_CONTAINERIZE_BACKEND", "docker"))
         _echo(f"Building {bento} into a LLMContainer using backend '{backend}'", fg="magenta")
@@ -2216,6 +2248,11 @@ def models_command(
 
 
 @cli.command()
+@click.argument(
+    "model_name",
+    type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING.keys()]),
+    required=False,
+)
 @click.option(
     "-y",
     "--yes",
@@ -2224,11 +2261,23 @@ def models_command(
     help="Skip confirmation when deleting a specific model",
 )
 @inject
-def prune_command(yes: bool, model_store: ModelStore = Provide[BentoMLContainer.model_store]) -> None:
-    """Remove all saved models locally."""
+def prune_command(
+    model_name: str | None, yes: bool, model_store: ModelStore = Provide[BentoMLContainer.model_store]
+) -> None:
+    """Remove all saved models locally.
+
+    \b
+    If a model type is passed, then only prune models for that given model type.
+    """
     available = [
         m for m in bentoml.models.list() if "framework" in m.info.labels and m.info.labels["framework"] == "openllm"
     ]
+    if model_name is not None:
+        available = [
+            m
+            for m in available
+            if "model_name" in m.info.labels and m.info.labels["model_name"] == inflection.underscore(model_name)
+        ]
 
     for model in available:
         if yes:
@@ -2403,12 +2452,12 @@ def query(
     ctx.exit(0)
 
 
-@cli.group()
-def utils():
+@cli.group(name="utils")
+def utils_command() -> None:
     """Utilities Subcommand group."""
 
 
-@utils.command()
+@utils_command.command()
 @click.argument(
     "model_name", type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING.keys()])
 )

@@ -24,26 +24,23 @@ import warnings
 
 import psutil
 
-from bentoml._internal.resource import Resource
+import bentoml
 from bentoml._internal.resource import get_resource
 from bentoml._internal.resource import system_resources
 from bentoml._internal.runner.strategy import THREAD_ENVS
-from bentoml._internal.runner.strategy import Strategy
 
 from .utils import LazyType
 from .utils import ReprMixin
 
 
 if t.TYPE_CHECKING:
-    import bentoml
-
     ListIntStr = list[int | str]
 
-    class DynResource(Resource[t.List[str]], resource_id=""):
+    class DynResource(bentoml.Resource[t.List[str]], resource_id=""):
         resource_id: t.ClassVar[str]
 
 else:
-    DynResource = Resource[t.List[str]]
+    DynResource = bentoml.Resource[t.List[str]]
     ListIntStr = list
 
 # NOTE: We need to do this so that overload can register
@@ -329,7 +326,7 @@ AmdGpuResource = _make_resource_class(
 )
 
 
-class CascadingResourceStrategy(Strategy, ReprMixin):
+class CascadingResourceStrategy(bentoml.Strategy, ReprMixin):
     """This is extends the default BentoML strategy where we check for NVIDIA GPU resource -> AMD GPU resource -> CPU resource.
 
     It also respect CUDA_VISIBLE_DEVICES for both AMD and NVIDIA GPU.
