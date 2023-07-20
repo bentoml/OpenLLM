@@ -13,12 +13,11 @@
 # limitations under the License.
 
 from __future__ import annotations
+import os
 import sys
 import typing as t
 
 import pytest
-
-import openllm
 
 
 if t.TYPE_CHECKING:
@@ -85,7 +84,7 @@ def test_nvidia_gpu_parse_literal(monkeypatch: pytest.MonkeyPatch):
         mcls.delenv("CUDA_VISIBLE_DEVICES")
 
 
-@pytest.mark.skipif(openllm.utils.gpu_count() < 0, reason="skip GPUs test on CPUs")
+@pytest.mark.skipif(os.getenv("GITHUB_ACTIONS") is not None, reason="skip GPUs test on CI")
 def test_nvidia_gpu_validate(monkeypatch: pytest.MonkeyPatch):
     with monkeypatch.context() as mcls:
         # to make this tests works with system that has GPU
