@@ -73,7 +73,6 @@ from .exceptions import OpenLLMException
 from .utils import DEBUG
 from .utils import ENV_VARS_TRUE_VALUES
 from .utils import EnvVarMixin
-from .utils import LazyLoader
 from .utils import LazyType
 from .utils import analytics
 from .utils import bentoml_cattr
@@ -88,7 +87,6 @@ from .utils import is_jupyter_available
 from .utils import is_jupytext_available
 from .utils import is_notebook_available
 from .utils import is_peft_available
-from .utils import is_torch_available
 from .utils import is_transformers_supports_agent
 from .utils import resolve_user_filepath
 from .utils import set_debug_mode
@@ -96,8 +94,6 @@ from .utils import set_quiet_mode
 
 
 if t.TYPE_CHECKING:
-    import torch
-
     from bentoml._internal.bento import BentoStore
     from bentoml._internal.container import DefaultBuilder
 
@@ -113,7 +109,6 @@ if t.TYPE_CHECKING:
     TupleStr = tuple[str, ...]
 else:
     TupleStr = tuple
-    torch = LazyLoader("torch", globals(), "torch")
 
 
 # NOTE: We need to do this so that overload can register
@@ -1372,9 +1367,6 @@ def download_models_command(
 
         _ref = llm.import_model(trust_remote_code=llm.__llm_trust_remote_code__)
 
-        if impl == "pt" and is_torch_available() and torch.cuda.is_available():
-            torch.cuda.empty_cache()
-
     if machine:
         # NOTE: We will prefix the tag with __tag__ and we can use regex to correctly
         # get the tag from 'bentoml.bentos.build|build_bentofile'
@@ -2467,16 +2459,18 @@ def utils_command() -> None:
 @click.argument("prompt", type=click.STRING)
 @output_option
 @click.option("--format", type=click.STRING, default=None)
-def get_prompt(model_name: str, prompt: str, format: str | None, output: OutputLiteral):
+def get_prompt(model_name: str, prompt: str, format: str | None, output: OutputLiteral) -> None:
     """Get the default prompt used by OpenLLM."""
     try:
         module = openllm.utils.EnvVarMixin(model_name).module
         template = module.DEFAULT_PROMPT_TEMPLATE
         if callable(template):
             if format is None:
+                if not hasattr(module, "PROMPT_MAPPING") or module.PROMPT_MAPPING is None:
+                    raise RuntimeError("Failed to find prompt mapping while DEFAULT_PROMPT_TEMPLATE is a function.")
                 raise click.BadOptionUsage(
                     "format",
-                    f"{model_name} prompt requires passing '--format' (available format: {module.PROMPT_MAPPING})",
+                    f"{model_name} prompt requires passing '--format' (available format: {list(module.PROMPT_MAPPING)})",
                 )
             _prompt = template(format)
         else:

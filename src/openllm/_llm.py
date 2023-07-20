@@ -694,7 +694,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
             # We will use safetensors for gptq
             serialisation = "safetensors"
 
-        # NOTE: Fine-tuning setup
+        # NOTE: LoRA adapter setup
         if adapter_map and adapter_id:
             raise ValueError(
                 """'adapter_map' and 'adapter_id' are mutually exclusive. Either provide a
@@ -857,8 +857,8 @@ class LLM(LLMInterface[M, T], ReprMixin):
         if self.__llm_implementation__ == "pt":
             attrs.update({"low_cpu_mem_usage": low_cpu_mem_usage, "quantization_config": quantization_config})
 
-        model_kwds: dict[str, t.Any] = {}
-        tokenizer_kwds: dict[str, t.Any] = {}
+        model_kwds: DictStrAny = {}
+        tokenizer_kwds: DictStrAny = {}
         if self.import_kwargs is not None:
             model_kwds, tokenizer_kwds = self.import_kwargs
 
@@ -1068,7 +1068,12 @@ class LLM(LLMInterface[M, T], ReprMixin):
         return adapter_map
 
     @requires_dependencies("peft", extra="fine-tune")
-    def prepare_for_training(self, adapter_type: AdapterType = "lora", **attrs: t.Any) -> tuple[peft.PeftModel, T]:
+    def prepare_for_training(
+        self,
+        adapter_type: AdapterType = "lora",
+        use_gradient_checkpointing: bool = True,
+        **attrs: t.Any,
+    ) -> tuple[peft.PeftModel, T]:
         if pkg.pkg_version_info("peft")[:2] >= (0, 4):
             from peft import prepare_model_for_kbit_training
         else:
@@ -1087,7 +1092,13 @@ class LLM(LLMInterface[M, T], ReprMixin):
             .with_config(**attrs)
             .to_peft_config()
         )
-        wrapped_peft = peft.get_peft_model(prepare_model_for_kbit_training(self.model), peft_config)
+        wrapped_peft = peft.get_peft_model(
+            prepare_model_for_kbit_training(
+                self.model,
+                use_gradient_checkpointing=use_gradient_checkpointing,
+            ),
+            peft_config,
+        )
         if DEBUG:
             wrapped_peft.print_trainable_parameters()
         return wrapped_peft, self.tokenizer

@@ -12,20 +12,15 @@ import openllm
 import transformers
 
 
+# Make sure to have at least one GPU to run this script
+
 openllm.utils.configure_logging()
 
 logger = logging.getLogger(__name__)
 
-if len(openllm.utils.gpu_count()) < 1:
-    raise RuntimeError("This script can only be run with system that GPU is available.")
+# On notebook, make sure to install the following
+# ! pip install -U openllm[fine-tune] @ git+https://github.com/bentoml/OpenLLM.git
 
-_deps = ["trl", '"openllm[fine-tune]"']
-
-if openllm.utils.DEBUG:
-    logger.info("Installing dependencies to run this script: %s", _deps)
-
-    if os.system(f"pip install -U {' '.join(_deps)}") != 0:
-        raise SystemExit(1)
 
 from datasets import load_dataset
 from trl import SFTTrainer
@@ -113,4 +108,4 @@ for name, module in trainer.model.named_modules():
 
 trainer.train()
 
-model.save_pretrained(os.path.join(training_args.output_dir, "lora"))
+trainer.model.save_pretrained(os.path.join(training_args.output_dir, "lora"))
