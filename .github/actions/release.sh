@@ -64,6 +64,10 @@ release_package() {
 
     jq --arg release_version "${version}" '.version = $release_version' < package.json > package.json.tmp && mv package.json.tmp package.json
 
+    if [[ $release == 'patch' ]]; then
+        hatch version "${version}"
+    fi
+
     towncrier build --yes --version "${version}"
     git add CHANGELOG.md changelog.d src/openllm/__about__.py package.json
     git commit -S -sm "infra: prepare for release ${version} [generated]"
