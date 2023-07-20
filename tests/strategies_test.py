@@ -18,6 +18,8 @@ import typing as t
 
 import pytest
 
+import openllm
+
 
 if t.TYPE_CHECKING:
     from _pytest.monkeypatch import MonkeyPatch
@@ -83,6 +85,7 @@ def test_nvidia_gpu_parse_literal(monkeypatch: pytest.MonkeyPatch):
         mcls.delenv("CUDA_VISIBLE_DEVICES")
 
 
+@pytest.mark.skipif(openllm.utils.gpu_count() < 0, reason="skip GPUs test on CPUs")
 def test_nvidia_gpu_validate(monkeypatch: pytest.MonkeyPatch):
     with monkeypatch.context() as mcls:
         # to make this tests works with system that has GPU

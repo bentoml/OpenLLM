@@ -170,7 +170,11 @@ def test_struct_envvar():
     ):
 
         class EnvLLM(openllm.LLMConfig):
-            __config__ = {"default_id": "asdfasdf", "model_ids": ["asdf", "asdfasdfads"]}
+            __config__ = {
+                "default_id": "asdfasdf",
+                "model_ids": ["asdf", "asdfasdfads"],
+                "architecture": "PreTrainedModel",
+            }
             field1: int = 2
 
             class GenerationConfig:
@@ -187,7 +191,11 @@ def test_struct_envvar():
 
 def test_struct_provided_fields():
     class EnvLLM(openllm.LLMConfig):
-        __config__ = {"default_id": "asdfasdf", "model_ids": ["asdf", "asdfasdfads"]}
+        __config__ = {
+            "default_id": "asdfasdf",
+            "model_ids": ["asdf", "asdfasdfads"],
+            "architecture": "PreTrainedModel",
+        }
         field1: int = 2
 
         class GenerationConfig:
@@ -204,7 +212,7 @@ def test_struct_envvar_with_overwrite_provided_env(monkeypatch: pytest.MonkeyPat
         mk.setenv(field_env_key("overwrite_with_env_available", "temperature", suffix="generation"), str(0.2))
         sent = make_llm_config(
             "OverwriteWithEnvAvailable",
-            {"default_id": "asdfasdf", "model_ids": ["asdf", "asdfasdfads"]},
+            {"default_id": "asdfasdf", "model_ids": ["asdf", "asdfasdfads"], "architecture": "PreTrainedModel"},
             fields=(("field1", "float", 3.0),),
         ).model_construct_env(field1=20.0, temperature=0.4)
         assert sent.generation_config.temperature == 0.4

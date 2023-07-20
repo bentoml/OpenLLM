@@ -6,4 +6,4 @@
     exit 1
 )
 
-pyright src/openllm --level error 2> /dev/null || exit 0
+pyright "$@" --level error 2> /dev/null || exit 0
