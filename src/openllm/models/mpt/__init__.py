@@ -21,7 +21,7 @@ from ...utils import is_torch_available
 
 
 _import_structure: dict[str, list[str]] = {
-    "configuration_mpt": ["MPTConfig", "START_MPT_COMMAND_DOCSTRING", "DEFAULT_PROMPT_TEMPLATE"],
+    "configuration_mpt": ["MPTConfig", "START_MPT_COMMAND_DOCSTRING", "DEFAULT_PROMPT_TEMPLATE", "PROMPT_MAPPING"],
 }
 
 try:
@@ -35,6 +35,7 @@ else:
 
 if t.TYPE_CHECKING:
     from .configuration_mpt import DEFAULT_PROMPT_TEMPLATE as DEFAULT_PROMPT_TEMPLATE
+    from .configuration_mpt import PROMPT_MAPPING as PROMPT_MAPPING
     from .configuration_mpt import START_MPT_COMMAND_DOCSTRING as START_MPT_COMMAND_DOCSTRING
     from .configuration_mpt import MPTConfig as MPTConfig
 

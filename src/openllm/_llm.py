@@ -51,6 +51,7 @@ from .utils import bentoml_cattr
 from .utils import codegen
 from .utils import first_not_none
 from .utils import get_debug_mode
+from .utils import get_quiet_mode
 from .utils import in_docker
 from .utils import is_peft_available
 from .utils import is_torch_available
@@ -183,7 +184,7 @@ def make_tag(
             )
 
     return bentoml.Tag.from_taglike(
-        f"{model_name if in_docker() and os.getenv('BENTO_PATH') is not None else implementation + '-' + model_name}:{model_version}".strip()
+        f"{model_name if in_docker() and os.getenv('BENTO_PATH') is not None else implementation + '-' + model_name}:{model_version}".strip().lower()
     )
 
 
@@ -671,6 +672,16 @@ class LLM(LLMInterface[M, T], ReprMixin):
         if runtime is None:
             runtime = cfg_cls.__openllm_runtime__
 
+        model_id, *maybe_revision = model_id.rsplit(":")
+        if len(maybe_revision) > 0:
+            if model_version is not None and not get_quiet_mode():
+                logger.warning(
+                    "revision is specified within 'model_id' (%s), which will override the 'model_version=%s'",
+                    maybe_revision[0],
+                    model_version,
+                )
+            model_version = maybe_revision[0]
+
         # quantization setup
         if quantization_config and quantize:
             raise ValueError(
@@ -728,7 +739,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
     def _infer_tag_from_model_id(cls, model_id: str, model_version: str | None) -> bentoml.Tag:
         try:
             return bentoml.Tag.from_taglike(model_id)
-        except ValueError:
+        except (ValueError, bentoml.exceptions.BentoMLException):
             return make_tag(
                 model_id,
                 model_version=model_version,

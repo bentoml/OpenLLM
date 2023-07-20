@@ -126,14 +126,14 @@ _v2_prompt = """{start_key} {sys_key}\n{system_message}\n{sys_key}\n\n{instructi
 # XXX: implement me
 _v1_prompt = """{instruction}"""
 
-_PROMPT_MAPPING = {
+PROMPT_MAPPING = {
     "v1": _v1_prompt,
     "v2": _v2_prompt,
 }
 
 
 def _get_prompt(model_type: t.Literal["v1", "v2"]) -> str:
-    return _PROMPT_MAPPING[model_type]
+    return PROMPT_MAPPING[model_type]
 
 
 DEFAULT_PROMPT_TEMPLATE = _get_prompt

@@ -70,6 +70,7 @@ from bentoml._internal.models.model import ModelStore
 from .__about__ import __version__
 from .exceptions import OpenLLMException
 from .utils import DEBUG
+from .utils import ENV_VARS_TRUE_VALUES
 from .utils import EnvVarMixin
 from .utils import LazyLoader
 from .utils import LazyType
@@ -173,7 +174,7 @@ def _echo(text: t.Any, fg: str = "green", _with_style: bool = True, **attrs: t.A
     call(text, **attrs)
 
 
-output_option: t.Callable[[FC], FC] = click.option(
+output_option: t.Callable[[_AnyCallable], _AnyCallable] = click.option(
     "-o",
     "--output",
     type=click.Choice(["json", "pretty", "porcelain"]),
@@ -1048,6 +1049,12 @@ def start_model(
         return_process: bool,
         **attrs: t.Any,
     ) -> openllm.LLMConfig | subprocess.Popen[bytes]:
+        if serialisation_format == "safetensors" and quantize is not None:
+            if os.getenv("OPENLLM_SERIALIZATION_WARNING", str(True)).upper() in ENV_VARS_TRUE_VALUES:
+                _echo(
+                    f"'--quantize={quantize}' might not work with 'safetensors' serialisation format. Use with caution!. To silence this warning, set \"OPENLLM_SERIALIZATION_WARNING=True\"\nNote: You can always fallback to '--serialisation legacy' when running quantisation.",
+                    fg="yellow",
+                )
         adapter_map: dict[str, str | None] | None = attrs.pop(_adapter_mapping_key, None)
 
         config, server_attrs = llm_config.model_validate_click(**attrs)
@@ -2373,26 +2380,67 @@ def query(
         else openllm.client.GrpcClient(endpoint, timeout=timeout)
     )
 
-    input_fg = "yellow"
+    input_fg = "magenta"
     generated_fg = "cyan"
 
     if output != "porcelain":
         _echo("Input prompt: ", nl=False, fg="white")
-        _echo(f"{prompt}", fg="magenta", nl=False)
+        _echo(f"{prompt}", fg=input_fg, nl=False)
 
     res = client.query(prompt, return_raw_response=True)
 
     if output == "pretty":
-        formatted = client.llm.postprocess_generate(prompt, res["responses"])
+        full_formatted = client.llm.postprocess_generate(prompt, res["responses"])
+        response = full_formatted[len(prompt) + 1 :]
         _echo("\n\n==Responses==\n", fg="white")
         _echo(f"{prompt} ", fg=input_fg, nl=False)
-        _echo(formatted, fg=generated_fg)
+        _echo(response, fg=generated_fg)
     elif output == "json":
         _echo(orjson.dumps(res, option=orjson.OPT_INDENT_2).decode(), fg="white")
     else:
         _echo(res["responses"], fg="white")
 
     ctx.exit(0)
+
+
+@cli.group()
+def utils():
+    """Utilities Subcommand group."""
+
+
+@utils.command()
+@click.argument(
+    "model_name", type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING.keys()])
+)
+@click.argument("prompt", type=click.STRING)
+@output_option
+@click.option("--format", type=click.STRING, default=None)
+def get_prompt(model_name: str, prompt: str, format: str | None, output: OutputLiteral):
+    """Get the default prompt used by OpenLLM."""
+    try:
+        module = openllm.utils.EnvVarMixin(model_name).module
+        template = module.DEFAULT_PROMPT_TEMPLATE
+        if callable(template):
+            if format is None:
+                raise click.BadOptionUsage(
+                    "format",
+                    f"{model_name} prompt requires passing '--format' (available format: {module.PROMPT_MAPPING})",
+                )
+            _prompt = template(format)
+        else:
+            _prompt = template
+
+        fully_formatted = _prompt.format(instruction=prompt)
+
+        if output == "porcelain":
+            _echo(f'__prompt__:"{fully_formatted}"', fg="white")
+        elif output == "json":
+            _echo(orjson.dumps({"prompt": fully_formatted}, option=orjson.OPT_INDENT_2).decode(), fg="white")
+        else:
+            _echo(f"== Prompt for {model_name} ==\n", fg="magenta")
+            _echo(fully_formatted, fg="white")
+    except AttributeError:
+        raise click.ClickException(f"{model_name} does not have default prompt template.") from None
 
 
 def load_notebook_metadata() -> DictStrAny:
