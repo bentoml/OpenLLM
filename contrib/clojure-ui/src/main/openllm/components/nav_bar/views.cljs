@@ -74,20 +74,12 @@
       (let [screen-id @(rf/subscribe [:screen-id])]
         [tabs {:value (if (= :chat screen-id) 1 0)
                :text-color "inherit"
-               :indicator-color "secondary"
-               :centered true
-               :style {:height "56px"
-                       :margin-top "-11px"
-                       :margin-left "100px"}}
+               :centered true}
          [tab {:label "Playground"
                :id "playground-tab"
-               :icon (r/as-element [brush-icon/brush])
-               :icon-position "start"
                :on-click #(rf/dispatch-sync [:set-screen-id :playground])}]
-         [tab {:label "Conversation"
+         [tab {:label "Chat"
                :id "chat-tab"
-               :icon (r/as-element [chat-icon/chat])
-               :icon-position "end"
                :on-click #(do (rf/dispatch-sync [:set-screen-id :chat])
                               (rf/dispatch [::chat-events/auto-scroll]))}]])]
      [:div {:class "w-full flex justify-end items-center"}
