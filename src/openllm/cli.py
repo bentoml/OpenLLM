@@ -2472,6 +2472,11 @@ def get_prompt(model_name: str, prompt: str, format: str | None, output: OutputL
                     "format",
                     f"{model_name} prompt requires passing '--format' (available format: {list(module.PROMPT_MAPPING)})",
                 )
+            if format not in module.PROMPT_MAPPING:
+                raise click.BadOptionUsage(
+                    "format",
+                    f"Given format {format} is not valid for {model_name} (available format: {list(module.PROMPT_MAPPING)})",
+                )
             _prompt = template(format)
         else:
             _prompt = template
@@ -2479,7 +2484,7 @@ def get_prompt(model_name: str, prompt: str, format: str | None, output: OutputL
         fully_formatted = _prompt.format(instruction=prompt)
 
         if output == "porcelain":
-            _echo(f'__prompt__:"{fully_formatted}"', fg="white")
+            _echo(repr(fully_formatted), fg="white")
         elif output == "json":
             _echo(orjson.dumps({"prompt": fully_formatted}, option=orjson.OPT_INDENT_2).decode(), fg="white")
         else:
