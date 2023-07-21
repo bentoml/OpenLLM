@@ -83,7 +83,6 @@ jobs:
       - binary-distribution
     runs-on: ubuntu-latest
     permissions:
-      contents: write
       id-token: write
     steps:
       - name: Download Python artifacts
@@ -91,11 +90,8 @@ jobs:
         with:
           name: python-artifacts
           path: dist
-      - name: Push Python artifacts to PyPI
-        uses: pypa/gh-action-pypi-publish@v1.8.8
-        with:
-          skip-existing: true
-          password: ${{ secrets.PYPI_API_TOKEN }}
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
   prepare-for-dev-cycle:
     needs:
       - release

@@ -17,18 +17,9 @@ set -o errexit -o nounset -o pipefail
 
 TAG="$1"
 
-semver_regex='^[1-9][0-9]*\.[1-9][0-9]*\.[1-9][0-9]*$'
-
 # Check if an argument is provided
 if [ $# -eq 0 ]; then
     echo "No argument provided."
-    exit 1
-fi
-
-if [[ $TAG =~ $semver_regex ]]; then
-    echo "Valid semver: $TAG"
-else
-    echo "Invalid semver: $TAG"
     exit 1
 fi
 
@@ -48,7 +39,7 @@ pip install --upgrade openllm==${TAG}
 
 All available models: \`\`\`python -m openllm.models\`\`\`
 
-To start a LLM: \`\`\`python -m openllm start dolly-v2\`\`\`
+To start a LLM: \`\`\`python -m openllm start opt\`\`\`
 
 Find more information about this release in the [CHANGELOG.md](https://github.com/bentoml/OpenLLM/blob/main/CHANGELOG.md)
 
