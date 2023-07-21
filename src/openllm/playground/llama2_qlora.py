@@ -164,7 +164,7 @@ class TrainingArguments:
     gradient_checkpointing: bool = dataclasses.field(default=True)
     bf16: bool = dataclasses.field(default=torch.cuda.get_device_capability()[0] == 8)
     learning_rate: float = dataclasses.field(default=5e-5)
-    epochs: int = dataclasses.field(default=3)
+    num_train_epochs: int = dataclasses.field(default=3)
     logging_steps: int = dataclasses.field(default=1)
     logging_strategy: str = dataclasses.field(default="steps")
     output_dir: str = dataclasses.field(default=os.path.join(os.getcwd(), "outputs", "llama"))
