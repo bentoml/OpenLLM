@@ -162,7 +162,7 @@ class TrainingArguments:
     learning_rate: float = dataclasses.field(default=5e-5)
     num_train_epochs: int = dataclasses.field(default=3)
     logging_steps: int = dataclasses.field(default=1)
-    logging_strategy: str = dataclasses.field(default="steps")
+    report_to: str = dataclasses.field(default="none")
     output_dir: str = dataclasses.field(default=os.path.join(os.getcwd(), "outputs", "llama"))
     save_strategy: str = dataclasses.field(default="no")
 
