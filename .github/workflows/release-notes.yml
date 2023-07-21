@@ -76,7 +76,6 @@ jobs:
             archives/*
             installers/*
   bump-dev:
-    if: github.repository_owner == 'bentoml'
     needs: [gen-release-notes]
     runs-on: ubuntu-latest
     permissions:
@@ -99,7 +98,6 @@ jobs:
           git_user_signingkey: true
           git_commit_gpgsign: true
           git_tag_gpgsign: true
-          git_push_gpgsign: false
       - name: Install jq and curl
         run: sudo apt-get install -y jq curl
       - name: Bump version to dev
@@ -109,13 +107,11 @@ jobs:
           GIT_COMMITTER_NAME: ${{ steps.import-gpg.outputs.name }}
           GIT_COMMITTER_EMAIL: ${{ steps.import-gpg.outputs.email }}
         run: |
-          git config --global user.name "${{ steps.import-gpg.outputs.name }}"
-          git config --global user.email "${{ steps.import-gpg.outputs.email }}"
           git pull --autostash --no-edit --gpg-sign --ff origin main
 
           echo "Bumping version to dev..." && hatch version patch && hatch version dev
 
           jq --arg release_version "$(hatch version)" '.version = $release_version' < package.json > package.json.tmp && mv package.json.tmp package.json
 
-          git add src/openllm/__about__.py package.json && git commit -S -sm "infra: bump to dev version of $(hatch version) [generated]"
+          git add src/openllm/__about__.py package.json && git commit -S -sm "infra: bump to dev version of $(hatch version) [generated] [skip ci]"
           git push origin HEAD:main
