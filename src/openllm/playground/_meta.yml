@@ -40,7 +40,7 @@ falcon_tuned:
     It is trained using OpenAssistant's Guanaco [dataset](https://huggingface.co/datasets/timdettmers/openassistant-guanaco)
 
     It requires at least one GPU to be available, so make sure to have it.
-llama_qlora:
+llama2_qlora:
   description: |
     ## Fine tuning LlaMA 2
     This script demonstrate how one can fine tune Falcon using LoRA with [trl](https://github.com/lvwerra/trl)
