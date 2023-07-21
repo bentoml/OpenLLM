@@ -250,7 +250,7 @@ def create_bento(
     _model_store: ModelStore = Provide[BentoMLContainer.model_store],
 ) -> bentoml.Bento:
     framework_envvar = llm.config["env"]["framework_value"]
-    labels = {"model_ids": llm.identifying_params["model_ids"]}
+    labels = dict(llm.identifying_params)
     labels.update({"_type": llm.llm_type, "_framework": framework_envvar, "start_name": llm.config["start_name"]})
 
     if adapter_map:
