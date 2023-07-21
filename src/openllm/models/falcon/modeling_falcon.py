@@ -23,13 +23,11 @@ from ..._prompt import default_formatter
 
 if t.TYPE_CHECKING:
     import torch
-    import torch.amp
 
     import bentoml
     import transformers
 else:
     torch = openllm.utils.LazyLoader("torch", globals(), "torch")
-    torch.amp = openllm.utils.LazyLoader("torch.amp", globals(), "torch.amp")
     transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
 
 
@@ -101,7 +99,7 @@ class Falcon(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTraine
     def generate(self, prompt: str, **attrs: t.Any) -> list[str]:
         eos_token_id = attrs.pop("eos_token_id", self.tokenizer.eos_token_id)
         inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
-        with torch.inference_mode(), torch.amp.autocast("cuda", dtype=torch.float16):
+        with torch.inference_mode(), torch.autocast("cuda", dtype=torch.float16):
             outputs = self.model.generate(
                 input_ids=inputs["input_ids"],
                 attention_mask=inputs["attention_mask"],

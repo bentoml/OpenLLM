@@ -24,14 +24,12 @@ from ..._prompt import default_formatter
 
 if t.TYPE_CHECKING:
     import torch
-    import torch.amp
 
     import bentoml
     import transformers
 else:
     transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
     torch = openllm.utils.LazyLoader("torch", globals(), "torch")
-    torch.amp = openllm.utils.LazyLoader("torch.amp", globals(), "torch.amp")
 
 
 logger = logging.getLogger(__name__)

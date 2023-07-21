@@ -27,14 +27,12 @@ from ...utils import is_triton_available
 
 if t.TYPE_CHECKING:
     import torch
-    import torch.amp
 
     import transformers
 
     from .configuration_mpt import MPTPromptType
 else:
     torch = openllm.utils.LazyLoader("torch", globals(), "torch")
-    torch.amp = openllm.utils.LazyLoader("torch.amp", globals(), "torch.amp")
     transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
 
 logger = logging.getLogger(__name__)
@@ -189,9 +187,6 @@ class MPT(openllm.LLM["transformers.PreTrainedModel", "transformers.GPTNeoXToken
 
         inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
 
-        if torch.cuda.is_available():
-            self.model.cuda()
-
         attrs = {
             "do_sample": False if llm_config["temperature"] == 0 else True,
             "eos_token_id": self.tokenizer.eos_token_id,
@@ -201,7 +196,7 @@ class MPT(openllm.LLM["transformers.PreTrainedModel", "transformers.GPTNeoXToken
 
         with torch.inference_mode():
             if torch.cuda.is_available():
-                with torch.amp.autocast("cuda", torch.float16):
+                with torch.autocast("cuda", torch.float16):
                     generated_tensors = self.model.generate(**inputs, **attrs)
             else:
                 generated_tensors = self.model.generate(**inputs, **attrs)

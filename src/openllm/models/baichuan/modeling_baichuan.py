@@ -22,12 +22,10 @@ from ..._prompt import default_formatter
 
 if t.TYPE_CHECKING:
     import torch
-    import torch.amp
 
     import transformers
 else:
     torch = openllm.utils.LazyLoader("torch", globals(), "torch")
-    torch.amp = openllm.utils.LazyLoader("torch.amp", globals(), "torch.amp")
     transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
 
 
@@ -78,7 +76,7 @@ class Baichuan(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTrai
 
     def generate(self, prompt: str, **attrs: t.Any) -> list[str]:
         inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
-        with torch.inference_mode(), torch.amp.autocast("cuda", dtype=torch.float16):
+        with torch.inference_mode(), torch.autocast("cuda", dtype=torch.float16):
             outputs = self.model.generate(
                 **inputs,
                 generation_config=self.config.model_construct_env(**attrs).to_generation_config(),

@@ -102,7 +102,7 @@ all = [
 baichuan = ["cpm-kernels", "sentencepiece"]
 chatglm = ["cpm-kernels", "sentencepiece"]
 falcon = ["einops", "xformers"]
-fine-tune = ["peft", "bitsandbytes", "datasets", "accelerate", "deepspeed", "trl"]
+fine-tune = ["peft>=0.4.0", "bitsandbytes", "datasets", "accelerate", "deepspeed", "trl"]
 flan-t5 = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
 ggml = ["ctransformers"]
 gptq = ["auto-gptq[triton]"]

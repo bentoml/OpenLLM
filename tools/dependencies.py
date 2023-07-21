@@ -188,7 +188,7 @@ _NIGHTLY_MAPPING: dict[str, Dependencies] = {
 }
 
 _ALL_RUNTIME_DEPS = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
-FINE_TUNE_DEPS = ["peft", "bitsandbytes", "datasets", "accelerate", "deepspeed", "trl"]
+FINE_TUNE_DEPS = ["peft>=0.4.0", "bitsandbytes", "datasets", "accelerate", "deepspeed", "trl"]
 FLAN_T5_DEPS = _ALL_RUNTIME_DEPS
 OPT_DEPS = _ALL_RUNTIME_DEPS
 OPENAI_DEPS = ["openai", "tiktoken"]

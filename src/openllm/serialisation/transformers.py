@@ -146,8 +146,13 @@ def import_model(
     attrs = {**model_attrs, **attrs}
 
     safe_serialisation = llm._serialisation_format == "safetensors"
-    metadata: DictStrAny = {"safe_serialisation": safe_serialisation}
     quantize_method = llm._quantize_method
+
+    metadata: DictStrAny = {
+        "safe_serialisation": safe_serialisation,
+        "_quantize": quantize_method if quantize_method is not None else False,
+    }
+
     signatures: DictStrAny = {}
     if quantize_method == "gptq":
         if not is_autogptq_available():
@@ -183,9 +188,6 @@ def import_model(
         metadata["_pretrained_class"] = model.__class__.__name__
         metadata["_framework"] = model.framework
 
-    if llm._quantize_method is not None:
-        metadata["_quantize"] = llm._quantize_method
-
     _tokenizer = infer_tokenizers_class_for_llm(llm).from_pretrained(
         llm.model_id,
         trust_remote_code=trust_remote_code,
@@ -194,10 +196,6 @@ def import_model(
     )
     if _tokenizer.pad_token is None:
         _tokenizer.pad_token = _tokenizer.eos_token
-
-    external_modules = None
-    if trust_remote_code:
-        external_modules = [importlib.import_module(model.__module__), importlib.import_module(_tokenizer.__module__)]
 
     try:
         with bentoml.models.create(
@@ -208,7 +206,12 @@ def import_model(
             labels=generate_labels(llm),
             signatures=signatures if signatures else make_default_signatures(model),
             options=ModelOptions(),
-            external_modules=external_modules,
+            external_modules=[
+                importlib.import_module(model.__module__),
+                importlib.import_module(_tokenizer.__module__),
+            ]
+            if trust_remote_code
+            else None,
             metadata=metadata,
         ) as bentomodel:
             _tokenizer.save_pretrained(bentomodel.path)
@@ -264,13 +267,11 @@ def load_model(llm: openllm.LLM[M, t.Any], *decls: t.Any, **attrs: t.Any) -> Mod
     If model is not found, it will raises a ``bentoml.exceptions.NotFound``.
     """
     config, hub_attrs, attrs = process_transformers_config(llm.model_id, llm.__llm_trust_remote_code__, **attrs)
-
     # NOTE: get the base args and attrs, then
     # allow override via import_model
     (model_decls, model_attrs), _ = llm.llm_parameters
     decls = (*model_decls, *decls)
     attrs = {**model_attrs, **attrs}
-
     metadata = llm._bentomodel.info.metadata
     safe_serialization = first_not_none(
         t.cast(t.Optional[bool], metadata.get("safe_serialisation", None)),
@@ -296,7 +297,6 @@ def load_model(llm: openllm.LLM[M, t.Any], *decls: t.Any, **attrs: t.Any) -> Mod
                 **attrs,
             ),
         )
-
     model = infer_autoclass_from_llm_config(llm, config).from_pretrained(
         llm._bentomodel.path,
         *decls,
@@ -305,6 +305,19 @@ def load_model(llm: openllm.LLM[M, t.Any], *decls: t.Any, **attrs: t.Any) -> Mod
         **hub_attrs,
         **attrs,
     )
+    # NOTE: we only cast and load the model if it is not already quantized and setup correctly
+    loaded_in_kbit = (
+        getattr(model, "is_loaded_in_8bit", False)
+        or getattr(model, "is_loaded_in_4bit", False)
+        or getattr(model, "is_quantized", False)
+    )
+    if torch.cuda.is_available() and torch.cuda.device_count() == 1 and not loaded_in_kbit:
+        try:
+            model = model.to("cuda")
+        except torch.cuda.OutOfMemoryError as err:
+            raise RuntimeError(
+                f"Failed to fit {llm.config['model_name']} with model_id '{llm.model_id}' to CUDA.\nNote: You can try out '--quantize int8' for dynamic quantization."
+            ) from err
     if llm.bettertransformer and llm.__llm_implementation__ == "pt" and not isinstance(model, _transformers.Pipeline):
         # BetterTransformer is currently only supported on PyTorch.
         from optimum.bettertransformer import BetterTransformer

@@ -39,7 +39,7 @@ from ..exceptions import OpenLLMException
 from ..utils import DEBUG
 from ..utils import EnvVarMixin
 from ..utils import codegen
-from ..utils import gpu_count
+from ..utils import device_count
 from ..utils import is_flax_available
 from ..utils import is_tf_available
 from ..utils import is_torch_available
@@ -260,11 +260,7 @@ def create_bento(
         if workers_per_resource == "round_robin":
             workers_per_resource = 1.0
         elif workers_per_resource == "conserved":
-            available_gpu = gpu_count()
-            if len(available_gpu) != 0:
-                workers_per_resource = float(1 / len(available_gpu))
-            else:
-                workers_per_resource = 1.0
+            workers_per_resource = 1.0 if device_count() == 0 else float(1 / device_count())
         else:
             try:
                 workers_per_resource = float(workers_per_resource)

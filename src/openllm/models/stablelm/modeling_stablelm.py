@@ -25,11 +25,9 @@ from ..._prompt import default_formatter
 if t.TYPE_CHECKING:
     import transformers  # noqa
     import torch
-    import torch.amp
 else:
     transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
     torch = openllm.utils.LazyLoader("torch", globals(), "torch")
-    torch.amp = openllm.utils.LazyLoader("torch.amp", globals(), "torch.amp")
 
 
 logger = logging.getLogger(__name__)
@@ -96,14 +94,11 @@ class StableLM(openllm.LLM["transformers.GPTNeoXForCausalLM", "transformers.GPTN
             "stopping_criteria": transformers.StoppingCriteriaList([StopOnTokens()]),
         }
 
-        if torch.cuda.is_available():
-            self.model.cuda()
-
-        inputs = t.cast("torch.Tensor", self.tokenizer(prompt, return_tensors="pt")).to(self.device)
+        inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
 
         with torch.inference_mode():
             if torch.cuda.is_available():
-                with torch.amp.autocast("cuda", torch.float16):
+                with torch.autocast("cuda", torch.float16):
                     tokens = self.model.generate(**inputs, **generation_kwargs)
             else:
                 tokens = self.model.generate(**inputs, **generation_kwargs)

@@ -99,13 +99,9 @@ class ChatGLM(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTrain
     def generate(self, prompt: str, **attrs: t.Any) -> tuple[str, list[tuple[str, str]]]:
         with torch.inference_mode():
             self.model.eval()
-
             # Only use half precision if the model is not yet quantized
             if self.config.use_half_precision:
                 self.model.half()
-
-            self.model.cuda()
-
             return self.model.chat(
                 self.tokenizer,
                 prompt,

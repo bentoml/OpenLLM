@@ -99,11 +99,16 @@ def lenient_issubclass(cls: t.Any, class_or_tuple: type[t.Any] | tuple[type[t.An
         raise
 
 
-def gpu_count() -> tuple[str, ...]:
+def available_devices() -> tuple[str, ...]:
     """Return available GPU under system. Currently only supports NVIDIA GPUs."""
     from .._strategies import NvidiaGpuResource
 
     return tuple(NvidiaGpuResource.from_system())
+
+
+@functools.lru_cache(maxsize=1)
+def device_count() -> int:
+    return len(available_devices())
 
 
 # equivocal setattr to save one lookup per assignment

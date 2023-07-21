@@ -50,7 +50,6 @@ from .utils import ReprMixin
 from .utils import bentoml_cattr
 from .utils import codegen
 from .utils import first_not_none
-from .utils import get_debug_mode
 from .utils import in_docker
 from .utils import is_peft_available
 from .utils import is_torch_available
@@ -974,9 +973,6 @@ class LLM(LLMInterface[M, T], ReprMixin):
 
         The equivalent for ``openllm.Runner`` is ``openllm.Runner.download_model``.
         """
-        additional_args: list[str] = []
-        if not get_debug_mode():
-            additional_args.append("--quiet")
         return openllm.import_model(
             self.config["start_name"],
             model_id=self.model_id,
@@ -985,7 +981,6 @@ class LLM(LLMInterface[M, T], ReprMixin):
             implementation=self.__llm_implementation__,
             quantize=self._quantize_method,
             serialisation_format=self._serialisation_format,
-            additional_args=additional_args,
         )
 
     @property
@@ -998,7 +993,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
     def model(self) -> M:
         """The model to use for this LLM. This shouldn't be set at runtime, rather let OpenLLM handle it."""
         # Run check for GPU
-        if self.config["requires_gpu"] and len(openllm.utils.gpu_count()) < 1:
+        if self.config["requires_gpu"] and openllm.utils.device_count() < 1:
             raise GpuNotAvailableError(f"{self} only supports running with GPU (None available).") from None
 
         if self.__llm_model__ is None:

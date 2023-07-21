@@ -257,8 +257,7 @@ def _container_handle(
     if quantize is not None:
         env[envvar.quantize] = quantize
 
-    available = openllm.utils.gpu_count()
-    gpus = len(available) if len(available) > 0 else -1
+    gpus = openllm.utils.device_count() or -1
     devs = [docker.types.DeviceRequest(count=gpus, capabilities=[["gpu"]])] if gpus > 0 else None
 
     container = client.containers.run(

@@ -56,7 +56,6 @@ import fs
 import fs.errors
 import inflection
 import orjson
-import psutil
 import yaml
 from bentoml_cli.utils import BentoMLCommandGroup
 from bentoml_cli.utils import opt_callback
@@ -73,20 +72,23 @@ from .exceptions import OpenLLMException
 from .utils import DEBUG
 from .utils import ENV_VARS_TRUE_VALUES
 from .utils import EnvVarMixin
+from .utils import LazyLoader
 from .utils import LazyType
 from .utils import analytics
+from .utils import available_devices
 from .utils import bentoml_cattr
 from .utils import codegen
 from .utils import configure_logging
 from .utils import dantic
+from .utils import device_count
 from .utils import first_not_none
 from .utils import get_debug_mode
 from .utils import get_quiet_mode
-from .utils import gpu_count
 from .utils import is_jupyter_available
 from .utils import is_jupytext_available
 from .utils import is_notebook_available
 from .utils import is_peft_available
+from .utils import is_torch_available
 from .utils import is_transformers_supports_agent
 from .utils import resolve_user_filepath
 from .utils import set_debug_mode
@@ -94,6 +96,10 @@ from .utils import set_quiet_mode
 
 
 if t.TYPE_CHECKING:
+    import jupytext
+    import nbformat
+    import torch
+
     from bentoml._internal.bento import BentoStore
     from bentoml._internal.container import DefaultBuilder
 
@@ -109,6 +115,9 @@ if t.TYPE_CHECKING:
     TupleStr = tuple[str, ...]
 else:
     TupleStr = tuple
+    torch = LazyLoader("torch", globals(), "torch")
+    jupytext = LazyLoader("jupytext", globals(), "jupytext")
+    nbformat = LazyLoader("nbformat", globals(), "nbformat")
 
 
 # NOTE: We need to do this so that overload can register
@@ -157,7 +166,7 @@ def parse_device_callback(
 
     # NOTE: --device all is a special case
     if len(el) == 1 and el[0] == "all":
-        return tuple(map(str, gpu_count()))
+        return tuple(map(str, available_devices()))
 
     return el
 
@@ -851,16 +860,13 @@ def noop_command(
 def prerequisite_check(
     ctx: click.Context,
     llm_config: openllm.LLMConfig,
-    gpu_available: tuple[str, ...],
     quantize: t.LiteralString | None,
     adapter_map: dict[str, str | None] | None,
     num_workers: int,
 ) -> None:
-    if get_debug_mode():
-        _echo("Running prerequisite check.", fg="magenta")
     if quantize:
-        if len(gpu_available) < 1:
-            _echo(f"Quantization requires at least 1 GPU (got {len(gpu_available)})", fg="red")
+        if device_count() < 1:
+            _echo("Quantization requires at least 1 GPU (got None)", fg="red")
             ctx.exit(1)
 
     if adapter_map and not is_peft_available():
@@ -879,11 +885,11 @@ def prerequisite_check(
                 fg="yellow",
             )
 
-    if num_workers > 1 and len(gpu_available) < num_workers:
+    if num_workers > 1 and device_count() < num_workers:
         raise click.BadOptionUsage(
             "workers_per_resource",
             f"# of workers is infered to {num_workers} GPUs per runner worker, while there are only"
-            f"'{gpu_available}' for inference. (Tip: Try again using '--workers-per-resource={1/len(gpu_available)}')",
+            f"'{device_count()}' for inference. (Tip: Try again using '--workers-per-resource={1/device_count()}')",
             ctx=ctx,
         )
 
@@ -898,8 +904,7 @@ def start_bento(
     serve_grpc: bool,
     **command_attrs: t.Any,
 ) -> click.Command:
-    gpu_available = gpu_count()
-    if llm_config["requires_gpu"] and len(gpu_available) < 1:
+    if llm_config["requires_gpu"] and device_count() < 1:
         return noop_command(
             group, llm_config, f"No GPU available, while {bento!r} requires GPU to run.", **command_attrs
         )
@@ -960,14 +965,8 @@ def start_bento(
             if workers_per_resource == "round_robin":
                 workers_per_resource = 1.0
             elif workers_per_resource == "conserved":
-                if device:
-                    available_gpu = device
-                else:
-                    available_gpu = gpu_count()
-                if len(available_gpu) != 0:
-                    workers_per_resource = float(1 / len(available_gpu))
-                else:
-                    workers_per_resource = 1.0
+                available_gpu = device if device else available_devices()
+                workers_per_resource = 1.0 if len(available_gpu) == 0 else float(1 / len(available_gpu))
             else:
                 try:
                     workers_per_resource = float(workers_per_resource)
@@ -985,7 +984,7 @@ def start_bento(
             runtime=runtime,
         )
 
-        prerequisite_check(ctx, config, gpu_available, quantize, adapter_map, num_workers)
+        prerequisite_check(ctx, config, quantize, adapter_map, num_workers)
 
         # NOTE: This is to set current configuration
         start_env = os.environ.copy()
@@ -999,7 +998,7 @@ def start_bento(
                 env.framework: env.framework_value,
                 env.config: config.model_dump_json().decode(),
                 env.runtime: env.runtime_value,
-                "BENTOML_DEBUG": str(get_debug_mode()),
+                "BENTOML_DEBUG": str(not get_quiet_mode()),
                 "BENTOML_HOME": os.environ.get("BENTOML_HOME", BentoMLContainer.bentoml_home.get()),
                 "OPENLLM_MODEL_ID": model.path,
                 "OPENLLM_SERIALIZATION": serialisation_format,
@@ -1021,23 +1020,12 @@ def start_bento(
             server = bentoml.HTTPServer(bento, **server_attrs)
         analytics.track_start_init(config)
 
-        if not get_debug_mode():
+        if return_process:
             server.start(env=start_env, text=True)
             process = server.process
             if process is None:
                 raise click.ClickException("Failed to start the server.")
-
-            if return_process:
-                return process
-
-            try:
-                assert process.stdout
-                with process:
-                    for line in iter(process.stdout.readline, b""):
-                        _echo(line.strip(), fg="white")
-            except Exception as err:
-                _echo(f"Error caught while running LLM Server: \n{err}", fg="red")
-                raise
+            return process
         else:
             try:
                 server.start(env=start_env, text=True, blocking=True)
@@ -1057,8 +1045,7 @@ def start_model(
     serve_grpc: bool,
     **command_attrs: t.Any,
 ) -> click.Command:
-    gpu_available = gpu_count()
-    if llm_config["requires_gpu"] and len(gpu_available) < 1:
+    if llm_config["requires_gpu"] and device_count() < 1:
         # NOTE: The model requires GPU, therefore we will return a dummy command
         command_attrs.update(
             {
@@ -1112,14 +1099,8 @@ def start_model(
             if workers_per_resource == "round_robin":
                 workers_per_resource = 1.0
             elif workers_per_resource == "conserved":
-                if device:
-                    available_gpu = device
-                else:
-                    available_gpu = gpu_count()
-                if len(available_gpu) != 0:
-                    workers_per_resource = float(1 / len(available_gpu))
-                else:
-                    workers_per_resource = 1.0
+                available_gpu = device if device else available_devices()
+                workers_per_resource = 1.0 if len(available_gpu) == 0 else float(1 / len(available_gpu))
             else:
                 try:
                     workers_per_resource = float(workers_per_resource)
@@ -1137,7 +1118,7 @@ def start_model(
             runtime=runtime,
         )
 
-        prerequisite_check(ctx, config, gpu_available, quantize, adapter_map, num_workers)
+        prerequisite_check(ctx, config, quantize, adapter_map, num_workers)
 
         # NOTE: This is to set current configuration
         start_env = os.environ.copy()
@@ -1152,7 +1133,7 @@ def start_model(
         start_env.update(
             {
                 env.framework: env.framework_value,
-                "BENTOML_DEBUG": str(get_debug_mode()),
+                "BENTOML_DEBUG": str(not get_quiet_mode()),
                 "BENTOML_HOME": os.environ.get("BENTOML_HOME", BentoMLContainer.bentoml_home.get()),
                 "OPENLLM_SERIALIZATION": serialisation_format,
             }
@@ -1212,27 +1193,12 @@ def start_model(
                 fg="blue",
             )
 
-        if not get_debug_mode():
+        if return_process:
             server.start(env=start_env, text=True)
             process = server.process
             if process is None:
                 raise click.ClickException("Failed to start the server.")
-
-            if return_process:
-                return process
-
-            try:
-                assert process.stdout
-                with process:
-                    for line in iter(process.stdout.readline, b""):
-                        _echo(line.strip(), fg="white")
-            except Exception as err:
-                _echo(f"Error caught while running LLM Server: \n{err}", fg="red")
-                raise
-            except KeyboardInterrupt:
-                next_step(model_name, adapter_map)
-            else:
-                next_step(model_name, adapter_map)
+            return process
         else:
             try:
                 server.start(env=start_env, text=True, blocking=True)
@@ -1366,6 +1332,9 @@ def download_models_command(
             _echo(msg, fg="yellow", nl=True)
 
         _ref = llm.import_model(trust_remote_code=llm.__llm_trust_remote_code__)
+
+        if impl == "pt" and is_torch_available() and torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
     if machine:
         # NOTE: We will prefix the tag with __tag__ and we can use regex to correctly
@@ -1998,10 +1967,7 @@ def build_command(
                 + "* Push to BentoCloud with 'bentoml push':\n"
                 + f"    $ bentoml push {bento.tag}\n\n"
                 + "* Containerize your Bento with 'bentoml containerize':\n"
-                + f"    $ bentoml containerize {bento.tag}"
-                + " --opt progress=plain"
-                if get_debug_mode()
-                else ""
+                + f"    $ bentoml containerize {bento.tag} --opt progress=plain"
                 + "\n\n"
                 + "    Tip: To enable additional BentoML features for 'containerize', "
                 + "use '--enable-features=FEATURE[,FEATURE]' "
@@ -2212,22 +2178,14 @@ def models_command(
                     _echo("No models available locally.")
                     ctx.exit(0)
 
-                _available = [[k + "\n\n" * len(v), [str(i.tag) for i in v]] for k, v in ids_in_local_store.items()]
-                column_widths = [int(COLUMNS / 2), int(COLUMNS / 2)]
-                table = tabulate.tabulate(
-                    _available,
-                    tablefmt="fancy_grid",
-                    headers=["Model Id", "Models"],
-                    maxcolwidths=column_widths,
+                _echo("The following are available in local store:", fg="magenta")
+                _echo(
+                    orjson.dumps(
+                        {k: [str(i.tag) for i in val] for k, val in ids_in_local_store.items()},
+                        option=orjson.OPT_INDENT_2,
+                    ).decode(),
+                    fg="white",
                 )
-                _echo("The following models are available in local store:\n", fg="magenta")
-
-                formatted_table = ""
-                for line in table.split("\n"):
-                    formatted_table += (
-                        "".join(f"{cell:{width}}" for cell, width in zip(line.split("\t"), column_widths)) + "\n"
-                    )
-                _echo(formatted_table, fg="white")
         else:
             if show_available:
                 assert ids_in_local_store
@@ -2453,6 +2411,20 @@ def utils_command() -> None:
 
 
 @utils_command.command()
+@click.pass_context
+def list_bentos(ctx: click.Context):
+    """List available bentos built by OpenLLM."""
+    _local_bentos = {str(i.tag): i.info.labels["start_name"] for i in bentoml.list() if "start_name" in i.info.labels}
+    mapping = {
+        k: [tag for tag, name in _local_bentos.items() if name == k]
+        for k in tuple(inflection.dasherize(key) for key in openllm.CONFIG_MAPPING.keys())
+    }
+    mapping = {k: v for k, v in mapping.items() if v}
+    _echo(orjson.dumps(mapping, option=orjson.OPT_INDENT_2).decode(), fg="white")
+    ctx.exit(0)
+
+
+@utils_command.command()
 @click.argument(
     "model_name", type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING.keys()])
 )
@@ -2534,10 +2506,6 @@ def playground(ctx: click.Context, output_dir: str | None, port: int) -> None:
         raise RuntimeError(
             "Playground requires 'jupyter', 'jupytext', and 'notebook'. Install it with 'pip install \"openllm[playground]\"'"
         )
-
-    import jupytext
-    import nbformat
-
     metadata = load_notebook_metadata()
     _temp_dir = False
     if output_dir is None:
@@ -2585,10 +2553,6 @@ def playground(ctx: click.Context, output_dir: str | None, port: int) -> None:
         if _temp_dir:
             _echo("Note: You can access the generated notebooks in: " + output_dir, fg="blue")
     ctx.exit(0)
-
-
-if psutil.WINDOWS:
-    sys.stdout.reconfigure(encoding="utf-8")  # type: ignore
 
 
 if __name__ == "__main__":

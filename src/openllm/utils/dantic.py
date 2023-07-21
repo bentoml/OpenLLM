@@ -526,9 +526,9 @@ class CudaValueType(ParamType):
             param: The parameter that is requesting completion.
             incomplete: Value being completed. May be empty.
         """
-        from ..utils import gpu_count
+        from ..utils import available_devices
 
-        mapping = incomplete.split(self.envvar_list_splitter) if incomplete else gpu_count()
+        mapping = incomplete.split(self.envvar_list_splitter) if incomplete else available_devices()
 
         return [sc.CompletionItem(str(i), help=f"CUDA device index {i}") for i in mapping]
 
