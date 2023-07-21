@@ -59,6 +59,15 @@ class LlaMAConfig(openllm.LLMConfig):
             "huggyllama/llama-7b",
         ],
         "tokenizer_class": "LlamaTokenizerFast",
+        "fine_tune_strategies": (
+            {
+                "adapter_type": "lora",
+                "r": 64,
+                "lora_alpha": 16,
+                "lora_dropout": 0.1,
+                "bias": "none",
+            },
+        ),
     }
 
     class GenerationConfig:

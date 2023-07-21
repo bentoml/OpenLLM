@@ -330,7 +330,7 @@ def make_env_transformer(
     )
 
 
-def gen_sdk(func: AnyCallable, name: str | None = None, **attrs: t.Any) -> AnyCallable:
+def gen_sdk(func: AnyCallable, name: str | None = None, **attrs: t.Any):
     """Enhance function with nicer Repr."""
     from .representation import ReprMixin
 

@@ -15,5 +15,6 @@ addlicense -v -l apache -c 'BentoML Team. All rights reserved.' \
     -ignore .github/workflows/binary-releases.yml \
     -ignore src/openllm/playground/features.py \
     -ignore src/openllm/playground/opt_tuned.py \
+    -ignore src/openllm/playground/llama2_qlora.py \
     -ignore src/openllm/playground/falcon_tuned.py \
     "$@"
