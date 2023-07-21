@@ -18,6 +18,20 @@ This changelog is managed by towncrier and is compiled at release time.
 
 <!-- towncrier release notes start -->
 
+## [0.2.5](https://github.com/bentoml/openllm/tree/v0.2.5)
+
+### Features
+
+- Added support for sending arguments via CLI.
+
+  ```python
+  openllm query --endpoint localhost:3000 "What is the difference between noun and pronoun?" --sampling-params temperature 0.84
+  ```
+
+  Fixed llama2 qlora training script to save unquantized weights
+  [#130](https://github.com/bentoml/openllm/issues/130)
+
+
 ## [0.2.4](https://github.com/bentoml/openllm/tree/v0.2.4)
 No significant changes.
 
