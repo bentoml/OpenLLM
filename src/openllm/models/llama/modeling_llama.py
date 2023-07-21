@@ -43,12 +43,6 @@ class LlaMA(openllm.LLM["transformers.LlamaForCausalLM", "transformers.LlamaToke
     def llm_post_init(self):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    @property
-    def import_kwargs(self):
-        model_kwds = {"device_map": "auto" if torch.cuda.device_count() > 1 else None}
-        tokenizer_kwds: dict[str, t.Any] = {}
-        return model_kwds, tokenizer_kwds
-
     def sanitize_parameters(
         self,
         prompt: str,

@@ -360,7 +360,7 @@ class LiteralChoice(EnumChoice):
         super(EnumChoice, self).__init__(list(self.mapping.keys()), case_sensitive)
 
 
-def allows_multiple(field_type: type) -> bool:
+def allows_multiple(field_type: type[t.Any]) -> bool:
     """Checks whether the current type allows for multiple arguments to be provided as input or not.
 
     For containers, it exploits click's support for lists and such to use the same option multiple times
