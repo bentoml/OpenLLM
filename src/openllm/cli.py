@@ -76,7 +76,6 @@ from .utils import LazyLoader
 from .utils import LazyType
 from .utils import analytics
 from .utils import available_devices
-from .utils import bentoml_cattr
 from .utils import codegen
 from .utils import configure_logging
 from .utils import dantic
@@ -179,16 +178,22 @@ def _echo(text: t.Any, fg: str = "green", _with_style: bool = True, **attrs: t.A
     call(text, **attrs)
 
 
-output_option: t.Callable[[_AnyCallable], _AnyCallable] = click.option(
-    "-o",
-    "--output",
-    type=click.Choice(["json", "pretty", "porcelain"]),
-    default="pretty",
-    help="Showing output type.",
-    show_default=True,
-    envvar="OPENLLM_OUTPUT",
-    show_envvar=True,
-)
+def output_option(f: t.Callable[[FC], FC], *, factory: t.Any = click) -> t.Callable[[FC], FC]:
+    return factory.option(
+        "-o",
+        "--output",
+        "output",
+        type=click.Choice(["json", "pretty", "porcelain"]),
+        default="pretty",
+        help="Showing output type.",
+        show_default=True,
+        envvar="OPENLLM_OUTPUT",
+        show_envvar=True,
+    )(f)
+
+
+def machine_option(factory: t.Any) -> t.Callable[[FC], FC]:
+    return factory.option("--machine", is_flag=True, default=False, hidden=True)
 
 
 def model_id_option(factory: t.Any, model_env: EnvVarMixin | None = None) -> t.Callable[[FC], FC]:
@@ -1237,7 +1242,7 @@ def start_model(
 )
 @output_option
 @quantize_option(click)
-@click.option("--machine", is_flag=True, default=False, hidden=True)
+@machine_option(click)
 @click.option("--implementation", type=click.Choice(["pt", "tf", "flax", "vllm"]), default=None, hidden=True)
 @serialisation_option(click)
 def download_models_command(
@@ -1743,7 +1748,7 @@ start, start_grpc, build, import_model, list_models = (
 )
 @model_id_option(click)
 @output_option
-@click.option("--machine", is_flag=True, default=False, hidden=True)
+@machine_option(click)
 @click.option("--overwrite", is_flag=True, help="Overwrite existing Bento for given LLM if it already exists.")
 @workers_per_resource_option(click, build=True)
 @cog.optgroup.group(cls=cog.MutuallyExclusiveOptionGroup, name="Optimisation options")
@@ -2017,7 +2022,7 @@ def models_command(
     default=False,
     help="Show available models in local store (mutually exclusive with '-o porcelain').",
 )
-@click.option("--machine", is_flag=True, default=False, hidden=True)
+@machine_option(click)
 @click.pass_context
 def models_command(
     ctx: click.Context, output: OutputLiteral, show_available: bool, machine: bool
@@ -2081,6 +2086,7 @@ def models_command(
                     failed_initialized.append((m, e))
 
         ids_in_local_store: DictStrAny | None = None
+        local_models: DictStrAny | None = None
         if show_available:
             ids_in_local_store = {
                 k: [
@@ -2094,11 +2100,13 @@ def models_command(
                 for k in json_data.keys()
             }
             ids_in_local_store = {k: v for k, v in ids_in_local_store.items() if v}
+            local_models = {k: [str(i.tag) for i in val] for k, val in ids_in_local_store.items()}
 
         if machine:
             if show_available:
                 assert ids_in_local_store
-                json_data["local"] = [bentoml_cattr.unstructure(i.tag) for m in ids_in_local_store.values() for i in m]
+                assert local_models
+                json_data["local"] = local_models
             return json_data
         elif output == "pretty":
             import tabulate
@@ -2174,6 +2182,7 @@ def models_command(
 
             if show_available:
                 assert ids_in_local_store is not None
+                assert local_models
                 if len(ids_in_local_store) == 0:
                     _echo("No models available locally.")
                     ctx.exit(0)
@@ -2181,7 +2190,7 @@ def models_command(
                 _echo("The following are available in local store:", fg="magenta")
                 _echo(
                     orjson.dumps(
-                        {k: [str(i.tag) for i in val] for k, val in ids_in_local_store.items()},
+                        local_models,
                         option=orjson.OPT_INDENT_2,
                     ).decode(),
                     fg="white",
@@ -2189,7 +2198,8 @@ def models_command(
         else:
             if show_available:
                 assert ids_in_local_store
-                json_data["local"] = [bentoml_cattr.unstructure(i.tag) for m in ids_in_local_store.values() for i in m]
+                assert local_models
+                json_data["local"] = local_models
             _echo(
                 orjson.dumps(
                     json_data,
@@ -2265,7 +2275,7 @@ def parsing_instruction_callback(
         raise click.BadParameter(f"Invalid option format: {value}")
 
 
-def shared_client_options(f: FC) -> FC:
+def shared_client_options(f: t.Callable[[FC], FC]) -> t.Callable[[FC], FC]:
     options = [
         click.option(
             "--endpoint",
@@ -2358,6 +2368,14 @@ def instruct(
     "--server-type", type=click.Choice(["grpc", "http"]), help="Server type", default="http", show_default=True
 )
 @click.argument("prompt", type=click.STRING)
+@click.option(
+    "--sampling-params",
+    help="Define query options. (format: ``--opt temperature=0.8 --opt=top_k:12)",
+    required=False,
+    multiple=True,
+    callback=opt_callback,
+    metavar="ARG=VALUE[,ARG=VALUE]",
+)
 @click.pass_context
 def query(
     ctx: click.Context,
@@ -2366,6 +2384,8 @@ def query(
     timeout: int,
     server_type: t.Literal["http", "grpc"],
     output: OutputLiteral,
+    _memoized: DictStrAny,
+    **attrs: t.Any,
 ) -> None:
     """Ask a LLM interactively, from a terminal.
 
@@ -2374,6 +2394,7 @@ def query(
     $ openllm query --endpoint http://12.323.2.1:3000 "What is the meaning of life?"
     ```
     """
+    _memoized = {k: orjson.loads(v[0]) for k, v in _memoized.items() if v}
     if server_type == "grpc":
         endpoint = re.sub(r"http://", "", endpoint)
     client = (
@@ -2386,10 +2407,10 @@ def query(
     generated_fg = "cyan"
 
     if output != "porcelain":
-        _echo("Input prompt: ", nl=False, fg="white")
-        _echo(f"{prompt}", fg=input_fg, nl=False)
+        _echo("==Input==\n", fg="white")
+        _echo(f"{prompt}", fg=input_fg)
 
-    res = client.query(prompt, return_raw_response=True)
+    res = client.query(prompt, return_raw_response=True, **_memoized)
 
     if output == "pretty":
         full_formatted = client.llm.postprocess_generate(prompt, res["responses"])
@@ -2424,6 +2445,20 @@ def list_bentos(ctx: click.Context):
     ctx.exit(0)
 
 
+@overload
+def get_prompt(
+    model_name: str, prompt: str, format: str | None, output: OutputLiteral, machine: t.Literal[True] = True
+) -> str:
+    ...
+
+
+@overload
+def get_prompt(
+    model_name: str, prompt: str, format: str | None, output: OutputLiteral, machine: t.Literal[False] = ...
+) -> None:
+    ...
+
+
 @utils_command.command()
 @click.argument(
     "model_name", type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING.keys()])
@@ -2431,11 +2466,15 @@ def list_bentos(ctx: click.Context):
 @click.argument("prompt", type=click.STRING)
 @output_option
 @click.option("--format", type=click.STRING, default=None)
-def get_prompt(model_name: str, prompt: str, format: str | None, output: OutputLiteral) -> None:
+@machine_option(click)
+def get_prompt(model_name: str, prompt: str, format: str | None, output: OutputLiteral, machine: bool) -> str | None:
     """Get the default prompt used by OpenLLM."""
+    module = openllm.utils.EnvVarMixin(model_name).module
     try:
-        module = openllm.utils.EnvVarMixin(model_name).module
-        template = module.DEFAULT_PROMPT_TEMPLATE
+        template = getattr(module, "DEFAULT_PROMPT_TEMPLATE", None)
+        prompt_mapping = getattr(module, "PROMPT_MAPPING", None)
+        if template is None:
+            raise click.BadArgumentUsage(f"model {model_name} does not have a default prompt template") from None
         if callable(template):
             if format is None:
                 if not hasattr(module, "PROMPT_MAPPING") or module.PROMPT_MAPPING is None:
@@ -2444,18 +2483,26 @@ def get_prompt(model_name: str, prompt: str, format: str | None, output: OutputL
                     "format",
                     f"{model_name} prompt requires passing '--format' (available format: {list(module.PROMPT_MAPPING)})",
                 )
-            if format not in module.PROMPT_MAPPING:
+            if prompt_mapping is None:
+                raise click.BadArgumentUsage(
+                    f"Failed to fine prompt mapping while the default prompt for {model_name} is a callable."
+                ) from None
+            if format not in prompt_mapping:
                 raise click.BadOptionUsage(
                     "format",
-                    f"Given format {format} is not valid for {model_name} (available format: {list(module.PROMPT_MAPPING)})",
+                    f"Given format {format} is not valid for {model_name} (available format: {list(prompt_mapping)})",
                 )
             _prompt = template(format)
         else:
             _prompt = template
 
+        # XXX: FIX ME, currently doesn't work with all different context variable
+        # will need a --opt parser for this
         fully_formatted = _prompt.format(instruction=prompt)
 
-        if output == "porcelain":
+        if machine:
+            return repr(fully_formatted)
+        elif output == "porcelain":
             _echo(repr(fully_formatted), fg="white")
         elif output == "json":
             _echo(orjson.dumps({"prompt": fully_formatted}, option=orjson.OPT_INDENT_2).decode(), fg="white")
@@ -2463,7 +2510,7 @@ def get_prompt(model_name: str, prompt: str, format: str | None, output: OutputL
             _echo(f"== Prompt for {model_name} ==\n", fg="magenta")
             _echo(fully_formatted, fg="white")
     except AttributeError:
-        raise click.ClickException(f"{model_name} does not have default prompt template.") from None
+        raise click.ClickException(f"Failed to determine a default prompt template for {model_name}.") from None
 
 
 def load_notebook_metadata() -> DictStrAny:

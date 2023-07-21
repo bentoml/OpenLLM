@@ -48,10 +48,6 @@ DEFAULT_MODEL_ID = "meta-llama/Llama-2-7b-hf"
 DATASET_NAME = "databricks/databricks-dolly-15k"
 
 
-# import the model first hand
-openllm.import_model("llama", model_id=DEFAULT_MODEL_ID)
-
-
 def format_dolly(sample):
     instruction = f"### Instruction\n{sample['instruction']}"
     context = f"### Context\n{sample['context']}" if len(sample["context"]) > 0 else None
@@ -187,6 +183,10 @@ else:
     model_args, training_args = t.cast(
         t.Tuple[ModelArguments, TrainingArguments], parser.parse_args_into_dataclasses()
     )
+
+
+# import the model first hand
+openllm.import_model("llama", model_id=model_args.model_id)
 
 
 def train_loop(model_args: ModelArguments, training_args: TrainingArguments):
