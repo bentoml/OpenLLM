@@ -95,6 +95,7 @@ jobs:
         uses: pypa/gh-action-pypi-publish@v1.8.8
         with:
           skip-existing: true
+          password: ${{ secrets.PYPI_API_TOKEN }}
   prepare-for-dev-cycle:
     needs:
       - release
