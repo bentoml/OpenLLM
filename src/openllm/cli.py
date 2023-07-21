@@ -2498,7 +2498,7 @@ def load_notebook_metadata() -> DictStrAny:
 
 
 @cli.command()
-@click.argument("output-dir", default=".")
+@click.argument("output-dir", default=None, required=False)
 @click.option(
     "--port",
     envvar="JUPYTER_PORT",
