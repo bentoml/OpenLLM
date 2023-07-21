@@ -1,6 +1,6 @@
 {
   "name": "openllm",
-  "version": "0.2.3",
+  "version": "0.2.4.dev0",
   "description": "OpenLLM: Your one stop-and-go solution for serving Large Language Model",
   "repository": "git@github.com:llmsys/OpenLLM.git",
   "author": "Aaron Pham <29749331+aarnphm@users.noreply.github.com>",
