@@ -58,7 +58,6 @@ from .utils import is_peft_available
 from .utils import is_torch_available
 from .utils import non_intrusive_setattr
 from .utils import normalize_attrs_to_model_tokenizer_pair
-from .utils import pkg
 from .utils import requires_dependencies
 from .utils import resolve_filepath
 from .utils import validate_is_path
@@ -1144,10 +1143,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
         use_gradient_checkpointing: bool = True,
         **attrs: t.Any,
     ) -> tuple[peft.PeftModel, T]:
-        if pkg.pkg_version_info("peft")[:2] >= (0, 4):
-            from peft import prepare_model_for_kbit_training
-        else:
-            from peft import prepare_model_for_int8_training as prepare_model_for_kbit_training
+        from peft import prepare_model_for_kbit_training
 
         peft_config = (
             self.config["fine_tune_strategies"]

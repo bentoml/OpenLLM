@@ -166,6 +166,10 @@ def import_model(
         metadata["_framework"] = model.model.framework
         signatures["generate"] = {"batchable": False}
     else:
+        if "quantization_config" in attrs and getattr(attrs["quantization_config"], "load_in_4bit", False):
+            # this model might be called with --quantize int4, therefore we need to pop this out
+            # since saving int4 is not yet supported
+            attrs.pop("quantization_config")
         model = t.cast(
             "_transformers.PreTrainedModel",
             infer_autoclass_from_llm_config(llm, config).from_pretrained(

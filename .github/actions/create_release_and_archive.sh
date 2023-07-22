@@ -37,7 +37,7 @@ pip install --upgrade openllm==${TAG}
 
 ## Usage
 
-All available models: \`\`\`python -m openllm.models\`\`\`
+All available models: \`\`\`openllm models\`\`\`
 
 To start a LLM: \`\`\`python -m openllm start opt\`\`\`
 
