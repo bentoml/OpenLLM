@@ -80,7 +80,6 @@ if t.TYPE_CHECKING:
     import vllm
 
     import transformers
-    from bentoml._internal.runner.strategy import Strategy
 
     from ._configuration import PeftType
     from ._types import AdaptersMapping
@@ -1278,7 +1277,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
         models: list[bentoml.Model] | None = None,
         max_batch_size: int | None = None,
         max_latency_ms: int | None = None,
-        scheduling_strategy: type[Strategy] | None = None,
+        scheduling_strategy: type[bentoml.Strategy] | None = None,
     ) -> LLMRunner:
         """Convert this LLM into a Runner.
 
@@ -1366,6 +1365,7 @@ def Runner(
     model_name: str,
     *,
     model_id: str | None = None,
+    model_version: str | None = ...,
     init_local: t.Literal[False, True] = ...,
     **attrs: t.Any,
 ) -> LLMRunner:
@@ -1377,12 +1377,46 @@ def Runner(
     model_name: str,
     *,
     model_id: str = ...,
+    model_version: str | None = ...,
     models: list[bentoml.Model] | None = ...,
     max_batch_size: int | None = ...,
     max_latency_ms: int | None = ...,
     method_configs: dict[str, ModelSignatureDict | ModelSignature] | None = ...,
     embedded: t.Literal[True, False] = ...,
-    scheduling_strategy: type[Strategy] | None = ...,
+    scheduling_strategy: type[bentoml.Strategy] | None = ...,
+    **attrs: t.Any,
+) -> LLMRunner:
+    ...
+
+
+@overload
+def Runner(
+    model_name: str,
+    *,
+    ensure_available: bool | None = None,
+    init_local: bool = ...,
+    implementation: LiteralRuntime | None = None,
+    llm_config: openllm.LLMConfig | None = None,
+    **attrs: t.Any,
+) -> LLMRunner:
+    ...
+
+
+@overload
+def Runner(
+    model_name: str,
+    *args: t.Any,
+    model_id: str | None = ...,
+    model_version: str | None = ...,
+    llm_config: openllm.LLMConfig | None = ...,
+    runtime: t.Literal["ggml", "transformers"] | None = ...,
+    quantize: t.Literal["int8", "int4", "gptq"] | None = ...,
+    bettertransformer: str | bool | None = ...,
+    adapter_id: str | None = ...,
+    adapter_name: str | None = ...,
+    adapter_map: dict[str, str | None] | None = ...,
+    quantization_config: transformers.BitsAndBytesConfig | autogptq.BaseQuantizeConfig | None = None,
+    serialisation: t.Literal["safetensors", "legacy"] = ...,
     **attrs: t.Any,
 ) -> LLMRunner:
     ...
