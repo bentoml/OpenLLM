@@ -24,7 +24,6 @@ from ..._prompt import default_formatter
 if t.TYPE_CHECKING:
     import torch
 
-    import bentoml
     import transformers
 else:
     torch = openllm.utils.LazyLoader("torch", globals(), "torch")
@@ -39,21 +38,6 @@ class Falcon(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTraine
         model_kwds = {"torch_dtype": torch.bfloat16, "device_map": "auto" if torch.cuda.is_available() else None}
         tokenizer_kwds: dict[str, t.Any] = {}
         return model_kwds, tokenizer_kwds
-
-    def llm_post_init(self):
-        self.device = torch.device("cuda")
-
-    def load_model(self, tag: bentoml.Tag, *args: t.Any, **attrs: t.Any) -> t.Any:
-        trust_remote_code = attrs.pop("trust_remote_code", True)
-        return transformers.AutoModelForCausalLM.from_pretrained(
-            openllm.serialisation.get(self).path, trust_remote_code=trust_remote_code, **attrs
-        )
-
-    def load_tokenizer(self, tag: bentoml.Tag, **attrs: t.Any) -> t.Any:
-        trust_remote_code = attrs.pop("trust_remote_code", True)
-        return transformers.AutoTokenizer.from_pretrained(
-            openllm.serialisation.get(self).path, trust_remote_code=trust_remote_code, **attrs
-        )
 
     def sanitize_parameters(
         self,

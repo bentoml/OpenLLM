@@ -37,7 +37,6 @@ class StableLM(openllm.LLM["transformers.GPTNeoXForCausalLM", "transformers.GPTN
     __openllm_internal__ = True
 
     def llm_post_init(self):
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.bettertransformer = True if not torch.cuda.is_available() else False
 
     @property

@@ -63,7 +63,6 @@ class MPT(openllm.LLM["transformers.PreTrainedModel", "transformers.GPTNeoXToken
     __openllm_internal__ = True
 
     def llm_post_init(self):
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.dtype = torch.bfloat16 if torch.cuda.is_available() else torch.float32
 
     @property
@@ -110,12 +109,12 @@ class MPT(openllm.LLM["transformers.PreTrainedModel", "transformers.GPTNeoXToken
         finally:
             torch.cuda.empty_cache()
 
-    def load_model(self, tag: bentoml.Tag, *args: t.Any, **attrs: t.Any) -> transformers.PreTrainedModel:
+    def load_model(self, *args: t.Any, **attrs: t.Any) -> transformers.PreTrainedModel:
         torch_dtype = attrs.pop("torch_dtype", self.dtype)
         device_map = attrs.pop("device_map", None)
         trust_remote_code = attrs.pop("trust_remote_code", True)
 
-        _ref = bentoml.transformers.get(tag)
+        _ref = bentoml.transformers.get(self.tag)
         config = get_mpt_config(
             _ref.path,
             self.config.max_sequence_length,

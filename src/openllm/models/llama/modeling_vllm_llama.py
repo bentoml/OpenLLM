@@ -26,7 +26,6 @@ if t.TYPE_CHECKING:
     import torch
     import vllm
 
-    import bentoml
     import transformers
 else:
     transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
@@ -79,8 +78,8 @@ class VLLMLlaMA(openllm.LLM["vllm.LLM", "transformers.LlamaTokenizerFast"]):
     def postprocess_generate(self, prompt: str, generation_result: list[str], **_: t.Any) -> str:
         return generation_result[0]
 
-    def load_model(self, tag: bentoml.Tag, *args: t.Any, **attrs: t.Any) -> t.Any:
-        model = transformers.AutoModelForCausalLM.from_pretrained(self._bentomodel.path, **attrs)
+    def load_model(self, *args: t.Any, **attrs: t.Any) -> t.Any:
+        model = transformers.AutoModelForCausalLM.from_pretrained(self._bentomodel.path, *args, **attrs)
         if self.config.use_half_precision:
             model.half()
         return model

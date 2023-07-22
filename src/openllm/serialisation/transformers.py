@@ -18,11 +18,8 @@ import copy
 import importlib
 import typing as t
 
-import cloudpickle
-
 import bentoml
 from bentoml._internal.frameworks.transformers import make_default_signatures
-from bentoml._internal.models.model import CUSTOM_OBJECTS_FILENAME
 from bentoml._internal.models.model import ModelOptions
 
 from .constants import FRAMEWORK_TO_AUTOCLASS_MAPPING
@@ -48,8 +45,6 @@ if t.TYPE_CHECKING:
     from .._llm import M
     from .._llm import T
     from .._types import DictStrAny
-    from .._types import ModelProtocol
-    from .._types import TokenizerProtocol
 else:
     autogptq = LazyLoader("autogptq", globals(), "auto_gptq")
     _transformers = LazyLoader("_transformers", globals(), "transformers")
@@ -77,7 +72,7 @@ def process_transformers_config(
     return config, hub_attrs, attrs
 
 
-def infer_tokenizers_class_for_llm(__llm: openllm.LLM[t.Any, T]) -> TokenizerProtocol[T]:
+def infer_tokenizers_class_for_llm(__llm: openllm.LLM[t.Any, T]) -> T:
     tokenizer_class = __llm.config["tokenizer_class"]
     if tokenizer_class is None:
         tokenizer_class = "AutoTokenizer"
@@ -138,21 +133,18 @@ def import_model(
         **attrs: Kwargs to be passed into AutoModelForSeq2SeqLM or AutoModelForCausalLM (+ TF, Flax variants).
     """
     config, hub_attrs, attrs = process_transformers_config(llm.model_id, trust_remote_code, **attrs)
-
-    # NOTE: get the base args and attrs, then
-    # allow override via import_model
-    (model_decls, model_attrs), tokenizer_attrs = llm.llm_parameters
-    decls = (*model_decls, *decls)
-    attrs = {**model_attrs, **attrs}
-
-    safe_serialisation = llm._serialisation_format == "safetensors"
+    _, tokenizer_attrs = llm.llm_parameters
     quantize_method = llm._quantize_method
-
+    safe_serialisation = first_not_none(
+        attrs.get("safe_serialization"), default=llm._serialisation_format == "safetensors"
+    )
+    if llm.__llm_implementation__ == "vllm":
+        # Disable safe serialization with vLLM
+        safe_serialisation = False
     metadata: DictStrAny = {
         "safe_serialisation": safe_serialisation,
         "_quantize": quantize_method if quantize_method is not None else False,
     }
-
     signatures: DictStrAny = {}
     if quantize_method == "gptq":
         if not is_autogptq_available():
@@ -260,18 +252,13 @@ def get(llm: openllm.LLM[t.Any, t.Any], auto_import: bool = False) -> bentoml.Mo
         raise
 
 
-def load_model(llm: openllm.LLM[M, t.Any], *decls: t.Any, **attrs: t.Any) -> ModelProtocol[M]:
+def load_model(llm: openllm.LLM[M, t.Any], *decls: t.Any, **attrs: t.Any) -> M:
     """Load the model from BentoML store.
 
     By default, it will try to find check the model in the local store.
     If model is not found, it will raises a ``bentoml.exceptions.NotFound``.
     """
     config, hub_attrs, attrs = process_transformers_config(llm.model_id, llm.__llm_trust_remote_code__, **attrs)
-    # NOTE: get the base args and attrs, then
-    # allow override via import_model
-    (model_decls, model_attrs), _ = llm.llm_parameters
-    decls = (*model_decls, *decls)
-    attrs = {**model_attrs, **attrs}
     metadata = llm._bentomodel.info.metadata
     safe_serialization = first_not_none(
         t.cast(t.Optional[bool], metadata.get("safe_serialisation", None)),
@@ -285,17 +272,14 @@ def load_model(llm: openllm.LLM[M, t.Any], *decls: t.Any, **attrs: t.Any) -> Mod
             )
         if llm.config["model_type"] != "causal_lm":
             raise OpenLLMException(f"GPTQ only support Causal LM (got {llm.__class__} of {llm.config['model_type']})")
-        return t.cast(
-            "ModelProtocol[M]",
-            autogptq.AutoGPTQForCausalLM.from_quantized(
-                llm._bentomodel.path,
-                *decls,
-                quantize_config=t.cast("autogptq.BaseQuantizeConfig", llm.quantization_config),
-                trust_remote_code=llm.__llm_trust_remote_code__,
-                use_safetensors=safe_serialization,
-                **hub_attrs,
-                **attrs,
-            ),
+        return autogptq.AutoGPTQForCausalLM.from_quantized(
+            llm._bentomodel.path,
+            *decls,
+            quantize_config=t.cast("autogptq.BaseQuantizeConfig", llm.quantization_config),
+            trust_remote_code=llm.__llm_trust_remote_code__,
+            use_safetensors=safe_serialization,
+            **hub_attrs,
+            **attrs,
         )
     model = infer_autoclass_from_llm_config(llm, config).from_pretrained(
         llm._bentomodel.path,
@@ -316,46 +300,14 @@ def load_model(llm: openllm.LLM[M, t.Any], *decls: t.Any, **attrs: t.Any) -> Mod
             model = model.to("cuda")
         except torch.cuda.OutOfMemoryError as err:
             raise RuntimeError(
-                f"Failed to fit {llm.config['model_name']} with model_id '{llm.model_id}' to CUDA.\nNote: You can try out '--quantize int8' for dynamic quantization."
+                f"Failed to fit {llm.config['model_name']} with model_id '{llm.model_id}' to CUDA.\nNote: You can try out '--quantize int8 | int4' for dynamic quantization."
             ) from err
     if llm.bettertransformer and llm.__llm_implementation__ == "pt" and not isinstance(model, _transformers.Pipeline):
         # BetterTransformer is currently only supported on PyTorch.
         from optimum.bettertransformer import BetterTransformer
 
         model = BetterTransformer.transform(model)  # type: ignore
-    return t.cast("ModelProtocol[M]", model)
-
-
-def load_tokenizer(llm: openllm.LLM[t.Any, T]) -> TokenizerProtocol[T]:
-    """Load the tokenizer from BentoML store.
-
-    By default, it will try to find the bentomodel whether it is in store..
-    If model is not found, it will raises a ``bentoml.exceptions.NotFound``.
-    """
-    (_, _), tokenizer_attrs = llm.llm_parameters
-    bentomodel_fs = llm._bentomodel._fs
-    if bentomodel_fs.isfile(CUSTOM_OBJECTS_FILENAME):
-        with bentomodel_fs.open(CUSTOM_OBJECTS_FILENAME, "rb") as cofile:
-            try:
-                tokenizer = cloudpickle.load(t.cast("t.IO[bytes]", cofile))["tokenizer"]
-            except KeyError:
-                # This could happen if users implement their own import_model
-                raise OpenLLMException(
-                    "Model does not have tokenizer. Make sure to save \
-                    the tokenizer within the model via 'custom_objects'.\
-                    For example: bentoml.transformers.save_model(..., custom_objects={'tokenizer': tokenizer}))"
-                ) from None
-    else:
-        tokenizer = infer_tokenizers_class_for_llm(llm).from_pretrained(
-            bentomodel_fs.getsyspath("/"),
-            trust_remote_code=llm.__llm_trust_remote_code__,
-            **tokenizer_attrs,
-        )
-
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
-
-    return tokenizer
+    return t.cast("M", model)
 
 
 def save_pretrained(
