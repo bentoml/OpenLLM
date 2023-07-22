@@ -1013,7 +1013,7 @@ def _make_assignment_script(
     }
     annotations: DictStrAny = {"return": None}
 
-    lines: ListStr = ["_getattr = _cached_getattribute_get(_cached_attribute)"]
+    lines: ListStr = []
     for attr_name, field in attr.fields_dict(attributes.__class__).items():
         arg_name = field.metadata.get("target", f"__{_prefix}_{inflection.underscore(attr_name)}__")
         args.append(f"{attr_name}=getattr(_cached_attribute, '{attr_name}')")
