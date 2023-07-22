@@ -150,6 +150,8 @@ def make_tag(
         A tuple of ``bentoml.Tag`` and a dict of unused kwargs.
     """
     model_name = normalise_model_name(model_id)
+    if os.getenv("OPENLLM_USE_LOCAL_LATEST", str(False)).upper() in ENV_VARS_TRUE_VALUES:
+        return bentoml.models.get(f"{implementation}-{model_name}").tag
 
     if validate_is_path(model_id):
         model_id = resolve_filepath(model_id)
