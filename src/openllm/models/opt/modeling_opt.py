@@ -39,7 +39,6 @@ class OPT(openllm.LLM["transformers.OPTForCausalLM", "transformers.GPT2Tokenizer
     __openllm_internal__ = True
 
     def llm_post_init(self):
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.dtype = torch.float16 if torch.cuda.is_available() else torch.float32
 
     @property
@@ -75,13 +74,10 @@ class OPT(openllm.LLM["transformers.OPTForCausalLM", "transformers.GPT2Tokenizer
             labels=generate_labels(self),
         )
 
-    def load_model(self, tag: bentoml.Tag, *args: t.Any, **attrs: t.Any) -> transformers.OPTForCausalLM:
+    def load_model(self, *args: t.Any, **attrs: t.Any) -> transformers.OPTForCausalLM:
         torch_dtype = attrs.pop("torch_dtype", self.dtype)
-        trust_remote_code = attrs.pop("trust_remote_code", False)
-
-        _ref = bentoml.transformers.get(tag)
         model: transformers.OPTForCausalLM = transformers.AutoModelForCausalLM.from_pretrained(
-            _ref.path, trust_remote_code=trust_remote_code, torch_dtype=torch_dtype, **attrs
+            bentoml.transformers.get(self.tag).path, *args, torch_dtype=torch_dtype, **attrs
         )
         return model
 

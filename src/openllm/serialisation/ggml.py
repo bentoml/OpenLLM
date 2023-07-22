@@ -82,34 +82,30 @@ def load_model(llm: openllm.LLM[M, t.Any], *decls: t.Any, **attrs: t.Any) -> Mod
     raise NotImplementedError("Currently work in progress.")
 
 
-def load_tokenizer(llm: openllm.LLM[t.Any, T]) -> TokenizerProtocol[T]:
+def load_tokenizer(llm: openllm.LLM[t.Any, T], **tokenizer_attrs: t.Any) -> TokenizerProtocol[T]:
     """Load the tokenizer from BentoML store.
 
     By default, it will try to find the bentomodel whether it is in store..
     If model is not found, it will raises a ``bentoml.exceptions.NotFound``.
     """
-    (_, _), tokenizer_attrs = llm.llm_parameters
-    if llm.__llm_custom_tokenizer__:
-        tokenizer = llm.load_tokenizer(llm.tag, **tokenizer_attrs)
+    bentomodel_fs = llm._bentomodel._fs
+    if bentomodel_fs.isfile(CUSTOM_OBJECTS_FILENAME):
+        with bentomodel_fs.open(CUSTOM_OBJECTS_FILENAME, "rb") as cofile:
+            try:
+                tokenizer = cloudpickle.load(t.cast("t.IO[bytes]", cofile))["tokenizer"]
+            except KeyError:
+                # This could happen if users implement their own import_model
+                raise OpenLLMException(
+                    "Model does not have tokenizer. Make sure to save \
+                    the tokenizer within the model via 'custom_objects'.\
+                    For example: bentoml.transformers.save_model(..., custom_objects={'tokenizer': tokenizer}))"
+                ) from None
     else:
-        bentomodel_fs = llm._bentomodel._fs
-        if bentomodel_fs.isfile(CUSTOM_OBJECTS_FILENAME):
-            with bentomodel_fs.open(CUSTOM_OBJECTS_FILENAME, "rb") as cofile:
-                try:
-                    tokenizer = cloudpickle.load(t.cast("t.IO[bytes]", cofile))["tokenizer"]
-                except KeyError:
-                    # This could happen if users implement their own import_model
-                    raise OpenLLMException(
-                        "Model does not have tokenizer. Make sure to save \
-                        the tokenizer within the model via 'custom_objects'.\
-                        For example: bentoml.transformers.save_model(..., custom_objects={'tokenizer': tokenizer}))"
-                    ) from None
-        else:
-            tokenizer = transformers.AutoTokenizer.from_pretrained(
-                bentomodel_fs.getsyspath("/"),
-                trust_remote_code=llm.__llm_trust_remote_code__,
-                **tokenizer_attrs,
-            )
+        tokenizer = transformers.AutoTokenizer.from_pretrained(
+            bentomodel_fs.getsyspath("/"),
+            trust_remote_code=llm.__llm_trust_remote_code__,
+            **tokenizer_attrs,
+        )
     return t.cast("TokenizerProtocol[T]", tokenizer)
 
 

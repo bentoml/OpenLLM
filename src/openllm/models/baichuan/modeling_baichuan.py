@@ -32,9 +32,6 @@ else:
 class Baichuan(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTrainedTokenizerBase"]):
     __openllm_internal__ = True
 
-    def llm_post_init(self):
-        self.device = torch.device("cuda")
-
     def sanitize_parameters(
         self,
         prompt: str,

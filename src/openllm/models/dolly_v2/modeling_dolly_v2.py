@@ -22,14 +22,12 @@ from .configuration_dolly_v2 import DEFAULT_PROMPT_TEMPLATE
 from .configuration_dolly_v2 import END_KEY
 from .configuration_dolly_v2 import RESPONSE_KEY
 from .configuration_dolly_v2 import get_special_token_id
-from ...utils import normalize_attrs_to_model_tokenizer_pair
 
 
 if t.TYPE_CHECKING:
     import tensorflow as tf
     import torch
 
-    import bentoml
     import transformers
 else:
     tf = openllm.utils.LazyLoader("tf", globals(), "tensorflow")
@@ -261,18 +259,10 @@ class DollyV2(openllm.LLM["transformers.Pipeline", "transformers.PreTrainedToken
         tokenizer_kwds = {"padding_side": "left"}
         return model_kwds, tokenizer_kwds
 
-    def llm_post_init(self):
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    def load_model(self, tag: bentoml.Tag, *args: t.Any, **attrs: t.Any) -> transformers.Pipeline:
-        (_, model_attrs), tokenizer_attrs = self.llm_parameters
-        normalized_model_attrs, normalized_tokenizer_attrs = normalize_attrs_to_model_tokenizer_pair(**attrs)
-        attrs = {**model_attrs, **normalized_model_attrs}
-        tokenizer_attrs = {**tokenizer_attrs, **normalized_tokenizer_attrs}
-        _ref = openllm.serialisation.get(self)
+    def load_model(self, *args: t.Any, **attrs: t.Any) -> transformers.Pipeline:
         return get_pipeline(
-            model=transformers.AutoModelForCausalLM.from_pretrained(_ref.path, **attrs),
-            tokenizer=transformers.AutoTokenizer.from_pretrained(_ref.path, **tokenizer_attrs),
+            model=transformers.AutoModelForCausalLM.from_pretrained(self._bentomodel.path, *args, **attrs),
+            tokenizer=self.tokenizer,
             _init=True,
             return_full_text=self.config.return_full_text,
         )

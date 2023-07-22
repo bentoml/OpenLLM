@@ -31,9 +31,6 @@ else:
 class FlanT5(openllm.LLM["transformers.T5ForConditionalGeneration", "transformers.T5TokenizerFast"]):
     __openllm_internal__ = True
 
-    def llm_post_init(self):
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
     def sanitize_parameters(
         self,
         prompt: str,

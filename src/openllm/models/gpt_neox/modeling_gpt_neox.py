@@ -25,7 +25,6 @@ from ..._prompt import default_formatter
 if t.TYPE_CHECKING:
     import torch
 
-    import bentoml
     import transformers
 else:
     transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
@@ -77,8 +76,8 @@ class GPTNeoX(openllm.LLM["transformers.GPTNeoXForCausalLM", "transformers.GPTNe
     def postprocess_generate(self, prompt: str, generation_result: list[str], **_: t.Any) -> str:
         return generation_result[0]
 
-    def load_model(self, tag: bentoml.Tag, *args: t.Any, **attrs: t.Any) -> t.Any:
-        model = transformers.AutoModelForCausalLM.from_pretrained(self._bentomodel.path, **attrs)
+    def load_model(self, *args: t.Any, **attrs: t.Any) -> transformers.GPTNeoXForCausalLM:
+        model = transformers.AutoModelForCausalLM.from_pretrained(self._bentomodel.path, *args, **attrs)
         if self.config.use_half_precision:
             model.half()
         return model

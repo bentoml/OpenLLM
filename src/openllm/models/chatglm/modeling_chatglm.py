@@ -32,9 +32,6 @@ else:
 class ChatGLM(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTrainedTokenizerFast"]):
     __openllm_internal__ = True
 
-    def llm_post_init(self):
-        self.device = torch.device("cuda")
-
     def import_model(self, *args: t.Any, trust_remote_code: bool = True, **attrs: t.Any) -> bentoml.Model:
         _, tokenizer_attrs = self.llm_parameters
 

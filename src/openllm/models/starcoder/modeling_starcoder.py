@@ -42,9 +42,6 @@ FIM_INDICATOR = "<FILL_HERE>"
 class StarCoder(openllm.LLM["transformers.GPTBigCodeForCausalLM", "transformers.GPT2TokenizerFast"]):
     __openllm_internal__ = True
 
-    def llm_post_init(self):
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
     @property
     def import_kwargs(self):
         model_kwds = {
