@@ -18,6 +18,17 @@ This changelog is managed by towncrier and is compiled at release time.
 
 <!-- towncrier release notes start -->
 
+## [0.2.6](https://github.com/bentoml/openllm/tree/v0.2.6)
+
+### Backwards-incompatible Changes
+
+- Updated signature for `load_model` and `load_tokenizer` not to allow tag.
+  Tag can be accessed via `llm.tag`, or if using `openllm.serialisation` or `bentoml.transformers` then you can use `self._bentomodel`
+
+  Updated serialisation shared logics to reduce callstack for saving three calltrace.
+  [#132](https://github.com/bentoml/openllm/issues/132)
+
+
 ## [0.2.5](https://github.com/bentoml/openllm/tree/v0.2.5)
 
 ### Features
