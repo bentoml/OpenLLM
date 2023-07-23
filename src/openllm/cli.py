@@ -1243,7 +1243,12 @@ def start_model(
 @output_option
 @quantize_option(click)
 @machine_option(click)
-@click.option("--implementation", type=click.Choice(["pt", "tf", "flax", "vllm"]), default=None, hidden=True)
+@click.option(
+    "--implementation",
+    type=click.Choice(["pt", "tf", "flax", "vllm"]),
+    default=None,
+    help="The implementation for saving this LLM.",
+)
 @serialisation_option(click)
 def download_models_command(
     model: str,

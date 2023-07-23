@@ -39,6 +39,4 @@ class GPTNeoX(openllm.LLM["transformers.GPTNeoXForCausalLM", "transformers.GPTNe
         if self.config.use_half_precision: model.half()
         return model
     def generate(self, prompt: str, **attrs: t.Any) -> list[str]:
-        from ..._generation import StopOnTokens
-        generation_kwargs = {"do_sample": True, "generation_config": self.config.model_construct_env(**attrs).to_generation_config(), "pad_token_id": self.tokenizer.eos_token_id, "stopping_criteria": transformers.StoppingCriteriaList([StopOnTokens()])}
-        with torch.inference_mode(): return self.tokenizer.batch_decode(self.model.generate(self.tokenizer(prompt, return_tensors="pt").to(self.device).input_ids, **generation_kwargs))
+        with torch.inference_mode(): return self.tokenizer.batch_decode(self.model.generate(self.tokenizer(prompt, return_tensors="pt").to(self.device).input_ids, do_sample=True, generation_config=self.config.model_construct_env(**attrs).to_generation_config(), pad_token_id=self.tokenizer.eos_token_id, stopping_criteria=transformers.StoppingCriteriaList([openllm.StopOnTokens()])))

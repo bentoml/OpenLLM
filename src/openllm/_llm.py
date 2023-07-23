@@ -41,7 +41,6 @@ from ._configuration import AdapterType
 from ._configuration import FineTuneConfig
 from ._configuration import _object_getattribute
 from ._configuration import _setattr_class
-from ._quantisation import infer_quantisation_config
 from .exceptions import ForbiddenAttributeError
 from .exceptions import GpuNotAvailableError
 from .utils import DEBUG
@@ -378,7 +377,6 @@ class LLMInterface(ABC, t.Generic[M, T]):
     # NOTE: All fields below are attributes that can be accessed by users.
     config_class: type[openllm.LLMConfig]
     """The config class to use for this LLM. If you are creating a custom LLM, you must specify this class."""
-
     bettertransformer: bool
     """Whether to load this LLM with FasterTransformer enabled. The order of loading is:
 
@@ -388,8 +386,7 @@ class LLMInterface(ABC, t.Generic[M, T]):
 
     > **Note** that if LoRA is enabled, bettertransformer will be disabled.
     """
-
-    device: torch.device
+    device: "torch.device"
     """The device to be used for this LLM. If the implementation is 'pt', then it will be torch.device, else string."""
 
     # NOTE: The following will be populated by __init_subclass__, note that these should be immutable.
@@ -418,7 +415,6 @@ class LLMInterface(ABC, t.Generic[M, T]):
     """A reference to the bentomodel used for this LLM. Instead of access this directly, you should use `_bentomodel` property instead."""
     __llm_adapter_map__: dict[AdapterType, dict[str | t.Literal["default"], tuple[peft.PeftConfig, str]]] | None
     """A reference to the the cached LoRA adapter mapping."""
-
     __llm_supports_embeddings__: bool
     """A boolean to determine whether models does implement ``LLM.embeddings``."""
     __llm_supports_generate__: bool
@@ -616,10 +612,8 @@ class LLM(LLMInterface[M, T], ReprMixin):
     config: openllm.LLMConfig
     """The config instance to use for this LLM. This will be created based on config_class and available
     when initialising the LLM."""
-
     quantization_config: transformers.BitsAndBytesConfig | autogptq.BaseQuantizeConfig | None
     """Quantisation config for quantised model on the fly."""
-
     _model_id: str
     _runtime: t.Literal["ggml", "transformers"]
     _model_decls: TupleAny
@@ -630,8 +624,6 @@ class LLM(LLMInterface[M, T], ReprMixin):
     _model_version: str
     _quantize_method: t.Literal["int8", "int4", "gptq"] | None
     _serialisation_format: t.Literal["safetensors", "legacy"]
-
-    tokenizer_cls: t.ClassVar[str | None] = None
 
     @staticmethod
     def _infer_implementation_from_name(name: str) -> tuple[LiteralRuntime, str]:
@@ -655,6 +647,29 @@ class LLM(LLMInterface[M, T], ReprMixin):
         elif "config_class" not in cd:
             raise RuntimeError("Missing required key 'config_class'. Make sure to define it within the LLM subclass.")
         _make_assignment_script(cls)(cls)
+
+    # fmt: off
+    @overload
+    def __getitem__(self, item: t.Literal["trust_remote_code"]) -> bool: ...
+    @overload
+    def __getitem__(self, item: t.Literal["implementation"]) -> LiteralRuntime: ...
+    @overload
+    def __getitem__(self, item: t.Literal["model"]) -> M | None: ...
+    @overload
+    def __getitem__(self, item: t.Literal["tokenizer"]) -> T | None: ...
+    @overload
+    def __getitem__(self, item: t.Literal["bentomodel"]) -> bentoml.Model | None: ...
+    @overload
+    def __getitem__(self, item: t.Literal["adapter_map"]) -> dict[AdapterType, dict[str | t.Literal["default"], tuple[peft.PeftConfig, str]]] | None: ...
+    @overload
+    def __getitem__(self, item: t.Literal["supports_embeddings"]) -> bool: ...
+    @overload
+    def __getitem__(self, item: t.Literal["supports_generate"]) -> bool: ...
+    @overload
+    def __getitem__(self, item: t.Literal["supports_generate_one"]) -> bool: ...
+    @overload
+    def __getitem__(self, item: t.Literal["supports_generate_iterator"]) -> bool: ...
+    # fmt: on
 
     def __getitem__(self, item: t.LiteralString | t.Any) -> t.Any:
         if item is None:
@@ -804,11 +819,13 @@ class LLM(LLMInterface[M, T], ReprMixin):
             your quantization_config or use the 'quantize' argument."""
             )
         if quantization_config is None and quantize is not None:
-            quantization_config, attrs = infer_quantisation_config(cls, quantize, **attrs)
+            quantization_config, attrs = openllm.infer_quantisation_config(cls, quantize, **attrs)
 
         if quantize == "gptq":
             # We will use safetensors for gptq
             serialisation = "safetensors"
+        elif cls.__llm_implementation__ == "vllm":
+            serialisation = "legacy"
 
         # NOTE: LoRA adapter setup
         if adapter_map and adapter_id:
@@ -1516,7 +1533,7 @@ def Runner(
 
     default_implementation = llm_config["default_implementation"] if llm_config is not None else "pt"
 
-    implementation = first_not_none(
+    implementation: LiteralRuntime = first_not_none(
         implementation, default=EnvVarMixin(model_name, default_implementation)["framework_value"]
     )
 
@@ -1705,8 +1722,8 @@ def llm_runner_class(self: openllm.LLM[M, T]) -> type[LLMRunner]:
                 "__repr__": ReprMixin.__repr__,
                 "__repr_keys__": property(_wrapped_repr_keys),
                 "__repr_args__": _wrapped_repr_args,
-                "supports_embeddings": self["supports-embeddings"],
-                "supports_hf_agent": self["supports-generate-one"],
+                "supports_embeddings": self["supports_embeddings"],
+                "supports_hf_agent": self["supports_generate_one"],
                 "has_adapters": self._adapters_mapping is not None,
             }
         ),

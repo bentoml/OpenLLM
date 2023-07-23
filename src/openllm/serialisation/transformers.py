@@ -329,6 +329,9 @@ def save_pretrained(
     save_function = first_not_none(save_function, default=torch.save)
     model_save_attrs, tokenizer_save_attrs = normalize_attrs_to_model_tokenizer_pair(**attrs)
     safe_serialization = safe_serialization or llm._serialisation_format == "safetensors"
+    if llm.__llm_implementation__ == "vllm":
+        # NOTE: disable safetensors for vllm
+        safe_serialization = False
     if llm._quantize_method == "gptq":
         if not is_autogptq_available():
             raise OpenLLMException(

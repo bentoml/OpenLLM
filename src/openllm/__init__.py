@@ -60,8 +60,10 @@ else:
 _import_structure: dict[str, list[str]] = {
     "_llm": ["LLM", "Runner", "LLMRunner", "LLMRunnable"],
     "_configuration": ["LLMConfig"],
-    "exceptions": [],
     "_schema": ["GenerationInput", "GenerationOutput", "MetadataOutput", "EmbeddingsOutput"],
+    "_generation": ["StopSequenceCriteria", "StopOnTokens"],
+    "_quantisation": ["infer_quantisation_config"],
+    "exceptions": [],
     "utils": ["infer_auto_class"],
     "models": [],
     "client": [],
@@ -202,10 +204,13 @@ if t.TYPE_CHECKING:
 
     # Specific types import
     from ._configuration import LLMConfig as LLMConfig
+    from ._generation import StopOnTokens as StopOnTokens
+    from ._generation import StopSequenceCriteria as StopSequenceCriteria
     from ._llm import LLM as LLM
     from ._llm import LLMRunnable as LLMRunnable
     from ._llm import LLMRunner as LLMRunner
     from ._llm import Runner as Runner
+    from ._quantisation import infer_quantisation_config as infer_quantisation_config
     from ._schema import EmbeddingsOutput as EmbeddingsOutput
     from ._schema import GenerationInput as GenerationInput
     from ._schema import GenerationOutput as GenerationOutput

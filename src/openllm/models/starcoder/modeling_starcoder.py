@@ -55,10 +55,9 @@ class StarCoder(openllm.LLM["transformers.GPTBigCodeForCausalLM", "transformers.
             # return (skip_special_tokens=False, clean_up_tokenization_spaces=False))
             return self.tokenizer.batch_decode(result_tensor[0], skip_special_tokens=True, clean_up_tokenization_spaces=True)
     def generate_one(self, prompt: str, stop: list[str], **preprocess_generate_kwds: t.Any) -> list[dict[t.Literal["generated_text"], str]]:
-        from ..._generation import StopSequenceCriteria
         max_new_tokens, encoded_inputs = preprocess_generate_kwds.pop("max_new_tokens", 200), self.tokenizer(prompt, return_tensors="pt").to(self.device)
         src_len, stopping_criteria = encoded_inputs["input_ids"].shape[1], preprocess_generate_kwds.pop("stopping_criteria", transformers.StoppingCriteriaList([]))
-        stopping_criteria.append(StopSequenceCriteria(stop, self.tokenizer))
+        stopping_criteria.append(openllm.StopSequenceCriteria(stop, self.tokenizer))
         result = self.tokenizer.decode(self.model.generate(encoded_inputs["input_ids"], max_new_tokens=max_new_tokens, stopping_criteria=stopping_criteria)[0].tolist()[src_len:])
         # Inference API returns the stop sequence
         for stop_seq in stop:
