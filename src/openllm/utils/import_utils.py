@@ -440,7 +440,7 @@ class EnvVarMixin(ReprMixin):
 
         framework_value: LiteralRuntime
         quantize_value: str | None
-        bettertransformer_value: bool
+        bettertransformer_value: bool | None
         model_id_value: str | None
         runtime_value: t.Literal["ggml", "transformers"]
 
@@ -478,6 +478,7 @@ class EnvVarMixin(ReprMixin):
         cls,
         model_name: str,
         implementation: LiteralRuntime = "pt",
+        model_id: str | None = None,
         bettertransformer: bool | None = None,
         quantize: t.LiteralString | None = None,
         runtime: t.Literal["ggml", "transformers"] = "transformers",
@@ -500,7 +501,7 @@ class EnvVarMixin(ReprMixin):
             "framework": (str, implementation),
             "quantize": (str, quantize),
             "bettertransformer": (bool, bettertransformer),
-            "model_id": (str, None),
+            "model_id": (str, model_id),
             "runtime": (str, runtime),
         }
         globs: dict[str, t.Any] = {

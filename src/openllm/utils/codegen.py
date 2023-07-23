@@ -46,7 +46,6 @@ _T = t.TypeVar("_T", bound=t.Callable[..., t.Any])
 logger = logging.getLogger(__name__)
 
 OPENLLM_MODEL_NAME = "# openllm: model name"
-OPENLLM_MODEL_ID = "# openllm: model id"
 OPENLLM_MODEL_ADAPTER_MAP = "# openllm: model adapter map"
 
 

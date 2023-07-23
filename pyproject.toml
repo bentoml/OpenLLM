@@ -156,32 +156,6 @@ addopts = ["-rfEX", "-pno:warnings", "--snapshot-warn-unused"]
 python_files = ["test_*.py", "*_test.py"]
 testpaths = ["tests"]
 
-[tool.black]
-extend-exclude = '''
-(
-  /(
-      \.eggs
-    | \.git
-    | \.tox
-    | \.venv
-    | _build
-    | .build
-    | bazel-*
-    | build
-    | venv
-    | lib
-    | dist
-    | tools
-  )/
-  | src/openllm/__about__.py
-  | src/openllm/models
-  | src/openllm/_types.py
-  | src/openllm/_service.py
-)
-'''
-line-length = 119
-target-version = ["py38", "py39", "py310", "py311"]
-
 [tool.ruff]
 extend-exclude = ["tools", "src/openllm/playground", "src/openllm/models", "src/openllm/_types.py"]
 extend-include = ["*.ipynb"]
@@ -227,6 +201,7 @@ ignore = [
     "RUF012",  # mutable attributes to be used with ClassVar
     "B905",    # zip warning about strict, only applicable for 3.10+
     "D105",    # magic docstring
+    "E701",    # multiple statement on single line
 ]
 line-length = 119
 target-version = "py312"
@@ -260,7 +235,7 @@ avoid-escape = false
 # Tests can use magic values, assertions, and relative imports
 "__init__.py" = ["E402", "F401", "F403", "F811"]
 "examples/**/*" = ["D"]
-"src/openllm/_service.py" = ["E701", "I001", "E401"]
+"src/openllm/_service.py" = ["I001", "E401"]
 "src/openllm/cli.py" = ["D301", "S101"]
 "src/openllm/utils/dummy_*" = ["D107"]
 "src/openllm/utils/import_utils.py" = ["PLW0603"]

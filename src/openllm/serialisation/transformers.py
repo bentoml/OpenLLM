@@ -256,19 +256,14 @@ def get(llm: openllm.LLM[t.Any, t.Any], auto_import: bool = False) -> bentoml.Mo
         raise
 
 
+
 def load_model(llm: openllm.LLM[M, t.Any], *decls: t.Any, **attrs: t.Any) -> M:
     """Load the model from BentoML store.
 
     By default, it will try to find check the model in the local store.
     If model is not found, it will raises a ``bentoml.exceptions.NotFound``.
     """
-    try:
-        # in case model_id is a available tag, then we return the path
-        path = bentoml.models.get(llm.model_id)
-    except bentoml.exceptions.NotFound:
-        # revert back to the normal case where model_id are either custom path or prebuilt id from hf.
-        path = llm.model_id
-    config, hub_attrs, attrs = process_transformers_config(path, llm.__llm_trust_remote_code__, **attrs)
+    config, hub_attrs, attrs = process_transformers_config(llm.model_id, llm.__llm_trust_remote_code__, **attrs)
     metadata = llm._bentomodel.info.metadata
     safe_serialization = first_not_none(
         t.cast(t.Optional[bool], metadata.get("safe_serialisation", None)),
@@ -310,7 +305,7 @@ def load_model(llm: openllm.LLM[M, t.Any], *decls: t.Any, **attrs: t.Any) -> M:
             model = model.to("cuda")
         except torch.cuda.OutOfMemoryError as err:
             raise RuntimeError(
-                f"Failed to convert {llm.config['model_name']} with model_id '{path}' to CUDA.\nNote: You can try out '--quantize int8 | int4' for dynamic quantization."
+                f"Failed to convert {llm.config['model_name']} with model_id '{llm.model_id}' to CUDA.\nNote: You can try out '--quantize int8 | int4' for dynamic quantization."
             ) from err
     if llm.bettertransformer and llm.__llm_implementation__ == "pt" and not isinstance(model, _transformers.Pipeline):
         # BetterTransformer is currently only supported on PyTorch.

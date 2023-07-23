@@ -269,24 +269,20 @@ def _validate(cls: type[DynResource], val: list[t.Any]):
         err, *_ = cuda.cuInit(0)
         if err != cuda.CUresult.CUDA_SUCCESS:
             raise RuntimeError("Failed to initialise CUDA runtime binding.")
+        # correctly parse handle
+        for el in val:
+            if el.startswith("GPU-") or el.startswith("MIG-"):
+                uuids = _raw_device_uuid_nvml()
+                if uuids is None:
+                    raise ValueError("Failed to parse available GPUs UUID")
+                if el not in uuids:
+                    raise ValueError(f"Given UUID {el} is not found with available UUID (available: {uuids})")
+            elif el.isdigit():
+                err, _ = cuda.cuDeviceGet(int(el))
+                if err != cuda.CUresult.CUDA_SUCCESS:
+                    raise ValueError(f"Failed to get device {el}")
     except (ImportError, RuntimeError):
-        if sys.platform == "darwin":
-            raise RuntimeError("GPU is not available on Darwin system.") from None
-        raise RuntimeError(
-            "Failed to initialise CUDA runtime binding. Make sure that 'cuda-python' is setup correctly."
-        ) from None
-    # correctly parse handle
-    for el in val:
-        if el.startswith("GPU-") or el.startswith("MIG-"):
-            uuids = _raw_device_uuid_nvml()
-            if uuids is None:
-                raise ValueError("Failed to parse available GPUs UUID")
-            if el not in uuids:
-                raise ValueError(f"Given UUID {el} is not found with available UUID (available: {uuids})")
-        elif el.isdigit():
-            err, _ = cuda.cuDeviceGet(int(el))
-            if err != cuda.CUresult.CUDA_SUCCESS:
-                raise ValueError(f"Failed to get device {el}")
+        pass
 
 
 def _make_resource_class(name: str, resource_kind: str, docstring: str) -> type[DynResource]:

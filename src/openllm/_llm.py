@@ -32,10 +32,12 @@ import attr
 import inflection
 import orjson
 from huggingface_hub import hf_hub_download
+from simple_di import Provide
+from simple_di import inject
 
 import bentoml
 import openllm
-from bentoml._internal.models import ModelStore
+from bentoml._internal.configuration.containers import BentoMLContainer
 from bentoml._internal.models.model import ModelSignature
 
 from ._configuration import AdapterType
@@ -79,6 +81,7 @@ if t.TYPE_CHECKING:
     import vllm
 
     import transformers
+    from bentoml._internal.models import ModelStore
 
     from ._configuration import PeftType
     from ._types import AdaptersMapping
@@ -123,69 +126,6 @@ class ModelSignatureDict(t.TypedDict, total=False):
 
 def normalise_model_name(name: str) -> str:
     return os.path.basename(resolve_filepath(name)) if validate_is_path(name) else re.sub("[^a-zA-Z0-9]+", "-", name)
-
-
-def make_tag(
-    model_id: str,
-    model_version: str | None = None,
-    trust_remote_code: bool = False,
-    implementation: LiteralRuntime = "pt",
-    quiet: bool = False,
-) -> bentoml.Tag:
-    """Generate a ``bentoml.Tag`` from a given transformers model name.
-
-    Note that this depends on your model to have a config class available.
-
-    Args:
-        model_id: The transformers model name or path to load the model from.
-        model_version: Optional model version to be saved with this tag. Default to None.
-                       If model_id is a custom path, then the version would be the hash of the last modified
-                       time from given ``model_id``.
-        trust_remote_code: Whether to trust the remote code. Defaults to False.
-        model_version: Optional model version to be saved with this tag.
-        implementation: Given implementation for said LLM. One of t.Literal['pt', 'tf', 'flax']
-        quiet: Whether to show warning logs. Default to 'False'
-
-    Returns:
-        A tuple of ``bentoml.Tag`` and a dict of unused kwargs.
-    """
-    model_name = normalise_model_name(model_id)
-    if validate_is_path(model_id):
-        model_id = resolve_filepath(model_id)
-        # special cases, if it is the model store, then we return the tags
-        # this will happens within the container, where we use the relative path
-        if in_docker() and os.getenv("BENTO_PATH") is not None:
-            _store = ModelStore(Path(model_id).parent.parent)
-            tag = _store.list()[0].tag
-            model_version = tag.version
-            model_name = tag.name
-        else:
-            if not quiet and model_version is None:
-                logger.warning(
-                    "Given 'model_id=%s' is a path, and 'model_version' is not passed. OpenLLM will generate the version based on the last modified time of this given directory.",
-                    model_id,
-                )
-            model_version = first_not_none(model_version, default=generate_hash_from_file(model_id))
-    else:
-        config = t.cast(
-            "transformers.PretrainedConfig",
-            transformers.AutoConfig.from_pretrained(
-                model_id,
-                trust_remote_code=trust_remote_code,
-                revision=first_not_none(model_version, default="main"),
-            ),
-        )
-
-        model_version = getattr(config, "_commit_hash", None)
-        if model_version is None:
-            raise ValueError(
-                f"Internal errors when parsing config for pretrained {model_id} ('commit_hash' not found)"
-            )
-
-    return bentoml.Tag.from_taglike(
-        f"{model_name if in_docker() and os.getenv('BENTO_PATH') is not None else implementation + '-' + model_name}:{model_version}".strip().lower()
-    )
-
 
 @functools.lru_cache(maxsize=128)
 def generate_hash_from_file(f: str, algorithm: t.Literal["md5", "sha1"] = "sha1") -> str:
@@ -659,28 +599,17 @@ class LLM(LLMInterface[M, T], ReprMixin):
         cls.__llm_implementation__ = implementation
         config_class = openllm.AutoConfig.infer_class_from_name(config_class_name)
         if "__openllm_internal__" in cd:
-            if "config_class" not in cd:
-                cls.config_class = config_class
-        elif "config_class" not in cd:
-            raise RuntimeError("Missing required key 'config_class'. Make sure to define it within the LLM subclass.")
+            if "config_class" not in cd: cls.config_class = config_class
+        elif "config_class" not in cd: raise RuntimeError("Missing required key 'config_class'. Make sure to define it within the LLM subclass.")
         _make_assignment_script(cls)(cls)
 
         if implementation == "vllm":
-
-            def vllm_postprocess_generate(
-                self: LLM[M, T], prompt: str, generation_result: list[dict[str, t.Any]], **_: t.Any
-            ) -> str:
-                return generation_result[0]["outputs"][0]["text"]
-
+            def vllm_postprocess_generate(self: LLM[M, T], prompt: str, generation_result: list[dict[str, t.Any]], **_: t.Any) -> str: return generation_result[0]["outputs"][0]["text"]
             def vllm_generate(self: LLM[M, T], prompt: str, **attrs: t.Any) -> list[dict[str, t.Any]]:
-                self.model.add_request(
-                    str(uuid.uuid4().hex), prompt, self.config.model_construct_env(**attrs).to_sampling_config()
-                )
+                self.model.add_request(str(uuid.uuid4().hex), prompt, self.config.model_construct_env(**attrs).to_sampling_config())
                 outputs: list[vllm.RequestOutput] = []
-                while self.model.has_unfinished_requests():
-                    outputs.extend([r for r in self.model.step() if r.finished])
+                while self.model.has_unfinished_requests(): outputs.extend([r for r in self.model.step() if r.finished])
                 return [openllm.unmarshal_vllm_outputs(i) for i in outputs]
-
             cls.postprocess_generate = vllm_postprocess_generate
             cls.generate = vllm_generate
 
@@ -833,64 +762,31 @@ class LLM(LLMInterface[M, T], ReprMixin):
             **attrs: The kwargs to be passed to the model.
         """
         cfg_cls = cls.config_class
-        model_id = first_not_none(
-            model_id, cfg_cls.__openllm_env__["model_id_value"], default=cfg_cls.__openllm_default_id__
-        )
+        model_id = t.cast("t.LiteralString", first_not_none(model_id, cfg_cls.__openllm_env__["model_id_value"], default=cfg_cls.__openllm_default_id__))
+        if validate_is_path(model_id): model_id = resolve_filepath(model_id)
         runtime = first_not_none(runtime, default=cfg_cls.__openllm_runtime__)
 
-        model_id, *maybe_revision = model_id.rsplit(":")
-        if len(maybe_revision) > 0:
-            if model_version is not None:
-                logger.warning(
-                    "revision is specified within 'model_id' (%s), which will override the 'model_version=%s'",
-                    maybe_revision[0],
-                    model_version,
-                )
-            model_version = maybe_revision[0]
-
         # quantization setup
-        if quantization_config and quantize:
-            raise ValueError(
-                """'quantization_config' and 'quantize' are mutually exclusive. Either customise
-            your quantization_config or use the 'quantize' argument."""
-            )
-        if quantization_config is None and quantize is not None:
-            quantization_config, attrs = openllm.infer_quantisation_config(cls, quantize, **attrs)
-
-        if quantize == "gptq":
-            # We will use safetensors for gptq
-            serialisation = "safetensors"
-        elif cls.__llm_implementation__ == "vllm":
-            serialisation = "legacy"
+        if quantization_config and quantize: raise ValueError("'quantization_config' and 'quantize' are mutually exclusive. Either customise your quantization_config or use the 'quantize' argument.")
+        if quantization_config is None and quantize is not None: quantization_config, attrs = openllm.infer_quantisation_config(cls, quantize, **attrs)
+        # We will use safetensors for gptq
+        if quantize == "gptq": serialisation = "safetensors"
+        # We will use legacy format for vllm
+        elif cls.__llm_implementation__ == "vllm": serialisation = "legacy"
 
         # NOTE: LoRA adapter setup
-        if adapter_map and adapter_id:
-            raise ValueError(
-                """'adapter_map' and 'adapter_id' are mutually exclusive. Either provide a
-                'adapter_map' ({adapter_id: adapter_name | None, ...}) or use
-                the combination of adapter_id/adapter_name arguments.
-                """
-            )
-        if adapter_map is None and adapter_id is not None:
-            adapter_map = {adapter_id: adapter_name}
-
-        if adapter_map is not None and not is_peft_available():
-            raise RuntimeError(
-                "LoRA adapter requires 'peft' to be installed. Make sure to install OpenLLM with 'pip install \"openllm[fine-tune]\"'"
-            )
+        if adapter_map and adapter_id: raise ValueError("'adapter_map' and 'adapter_id' are mutually exclusive. Either provide a 'adapter_map' ({adapter_id: adapter_name | None, ...}) or use the combination of adapter_id/adapter_name arguments. ")
+        if adapter_map is None and adapter_id is not None: adapter_map = {adapter_id: adapter_name}
+        if adapter_map is not None and not is_peft_available(): raise RuntimeError("LoRA adapter requires 'peft' to be installed. Make sure to install OpenLLM with 'pip install \"openllm[fine-tune]\"'")
+        if adapter_map: logger.debug("OpenLLM will apply the following adapters layers: %s", list(adapter_map))
 
         if llm_config is None:
             llm_config = cls.config_class.model_construct_env(**attrs)
             # The rests of the kwargs that is not used by the config class should be stored into __openllm_extras__.
             attrs = llm_config["extras"]
 
-        _tag = cls._infer_tag_from_model_id(model_id, model_version)
-        if _tag.version is None:
-            raise RuntimeError("Failed to resolve model version.")
-
-        if os.getenv("OPENLLM_START_FROM_BENTO", str(False)).upper() in ENV_VARS_TRUE_VALUES:
-            model_id = bentoml.models.get(_tag).path
-        breakpoint()
+        _tag = cls.generate_tag(model_id, model_version)
+        if _tag.version is None: raise RuntimeError("Failed to resolve model version.")
 
         return cls(
             *args,
@@ -908,27 +804,32 @@ class LLM(LLMInterface[M, T], ReprMixin):
         )
 
     @classmethod
-    def _infer_tag_from_model_id(cls, model_id: str, model_version: str | None) -> bentoml.Tag:
-        if os.getenv("OPENLLM_USE_LOCAL_LATEST", str(False)).upper() in ENV_VARS_TRUE_VALUES:
-            return bentoml.models.get(
-                f"{cls.__llm_implementation__}-{normalise_model_name(model_id)}:{'latest' if model_version is None else model_version}".lower().strip()
-            ).tag
-        # XXX: Fix me later, if the model is a valid tag, then we return it directly
-        # instead of creating a new tag from the model_id. this branch will be hit during `openllm build`
-        if os.getenv("OPENLLM_START_FROM_BENTO", str(False)).upper() in ENV_VARS_TRUE_VALUES:
-            return bentoml.models.get(
-                f'{normalise_model_name(model_id).lower()}:{"latest" if model_version is None else model_version}'
-            ).tag
-        try:
-            return bentoml.Tag.from_taglike(model_id.lower())
-        except (ValueError, bentoml.exceptions.BentoMLException):
-            return make_tag(
-                model_id,
-                model_version=model_version,
-                trust_remote_code=cls.config_class.__openllm_trust_remote_code__,
-                implementation=cls.__llm_implementation__,
-                quiet=True,
-            )
+    @functools.lru_cache
+    @inject
+    def generate_tag(cls, model_id: str, model_version: str | None, _model_store: ModelStore = Provide[BentoMLContainer.model_store]) -> bentoml.Tag:
+        """Generate a compliant bentoml tag from model_id.
+
+        If model_id is a pretrained_id from HF, then it will have the following format: <framework>-<normalise_model_id>:revision
+        If model_id contains the revision itself, then it will be <framework>-<normalise_model_id>:revision
+        If model_id is a path, then it will be <framework>-<basename_of_path>-<generated_sha1>
+        """
+        if in_docker() and os.getenv("BENTO_PATH") is not None:
+            # this case, we are within a docker container, and the model_id will be the model alias
+            return _model_store.get(model_id).tag
+        model_name = normalise_model_name(model_id)
+        model_id, *maybe_revision = model_id.rsplit(":")
+        if len(maybe_revision) > 0:
+            if model_version is not None: logger.warning("revision is specified within 'model_id' (%s), and 'model_version=%s' will be ignored.", maybe_revision[0], model_version)
+            return bentoml.Tag.from_taglike(f"{cls.__llm_implementation__}-{model_name}:{maybe_revision[0]}")
+
+        tag_name = f"{cls.__llm_implementation__}-{model_name}".lower().strip()
+        if os.getenv("OPENLLM_USE_LOCAL_LATEST", str(False)).upper() in ENV_VARS_TRUE_VALUES: return bentoml.models.get(f"{tag_name}{':'+model_version if model_version is not None else ''}").tag
+
+        if validate_is_path(model_id): model_id, model_version = resolve_filepath(model_id), first_not_none(model_version, default=generate_hash_from_file(model_id))
+        else:
+            model_version = getattr(transformers.AutoConfig.from_pretrained(model_id, trust_remote_code=cls.config_class.__openllm_trust_remote_code__, revision=first_not_none(model_version, default="main")), "_commit_hash", None)
+            if model_version is None: raise ValueError(f"Internal errors when parsing config for pretrained {model_id} ('commit_hash' not found)")
+        return bentoml.Tag.from_taglike(f"{tag_name}:{model_version}")
 
     def __init__(
         self,
@@ -1064,15 +965,10 @@ class LLM(LLMInterface[M, T], ReprMixin):
         self.llm_post_init()
 
         # we set it here so that we allow subclass to overwrite bettertransformer in llm_post_init
-        if bettertransformer is True:
-            logger.debug("Using %r with BetterTransformer", self)
-            self.bettertransformer = bettertransformer
-        else:
-            non_intrusive_setattr(self, "bettertransformer", self.config["bettertransformer"])
+        if bettertransformer is True: self.bettertransformer = bettertransformer
+        else: non_intrusive_setattr(self, "bettertransformer", self.config["bettertransformer"])
         # If lora is passed, the disable bettertransformer
-        if _adapters_mapping and self.bettertransformer is True:
-            logger.debug("LoRA is visible for %s, disabling BetterTransformer", self)
-            self.bettertransformer = False
+        if _adapters_mapping and self.bettertransformer is True: self.bettertransformer = False
 
     def __setattr__(self, attr: str, value: t.Any) -> None:
         if attr in _reserved_namespace:
@@ -1508,7 +1404,7 @@ def Runner(
 @overload
 def Runner(
     model_name: str,
-    *args: t.Any,
+    *,
     model_id: str | None = ...,
     model_version: str | None = ...,
     llm_config: openllm.LLMConfig | None = ...,
@@ -1567,6 +1463,7 @@ def Runner(
     if llm_config is not None:
         attrs.update(
             {
+                "model_id": llm_config["env"]["model_id"],
                 "bettertransformer": llm_config["env"]["bettertransformer_value"],
                 "quantize": llm_config["env"]["quantize_value"],
                 "runtime": llm_config["env"]["runtime_value"],
@@ -1577,10 +1474,7 @@ def Runner(
         )
 
     default_implementation = llm_config["default_implementation"] if llm_config is not None else "pt"
-
-    implementation: LiteralRuntime = first_not_none(
-        implementation, default=EnvVarMixin(model_name, default_implementation)["framework_value"]
-    )
+    implementation = first_not_none(implementation, default=EnvVarMixin(model_name, default_implementation)["framework_value"])
 
     runner = openllm.infer_auto_class(implementation).create_runner(
         model_name,

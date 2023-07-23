@@ -882,7 +882,7 @@ class _ModelSettingsAttr:
                     tokenizer_class=None,
                     timeout=int(36e6),
                     service_name="",
-                    workers_per_resource=1,
+                    workers_per_resource=1.,
                     runtime="transformers",
                 ),
             )
@@ -1523,16 +1523,12 @@ class LLMConfig(_ConfigAttr):
             logger.warning("LLMConfig subclass should end with 'Config'. Updating to %sConfig", cls.__name__)
             cls.__name__ = f"{cls.__name__}Config"
 
-        if not hasattr(cls, "__config__"):
-            raise RuntimeError("Given LLMConfig must have '__config__' that is not None defined.")
+        if not hasattr(cls, "__config__"): raise RuntimeError("Given LLMConfig must have '__config__' that is not None defined.")
 
         # auto assignment attributes generated from __config__ after create the new slot class.
         _make_assignment_script(cls, bentoml_cattr.structure(cls, _ModelSettingsAttr))(cls)
-
-        cls.__openllm_generation_class__ = cls._make_subclass(
-            "GenerationConfig", GenerationConfig, suffix_env="generation"
-        )
-        cls.__openllm_sampling_class__ = cls._make_subclass("SamplingParams", SamplingParams, suffix_env="sampling")
+        cls.__openllm_generation_class__ = cls._make_subclass("GenerationConfig", openllm._configuration.GenerationConfig, suffix_env="generation")
+        cls.__openllm_sampling_class__ = cls._make_subclass("SamplingParams", openllm._configuration.SamplingParams, suffix_env="sampling")
 
         # process a fields under cls.__dict__ and auto convert them with dantic.Field
         # this is similar logic to attr._make._transform_attrs
@@ -1543,30 +1539,20 @@ class LLMConfig(_ConfigAttr):
         these: dict[str, _CountingAttr[t.Any]] = {}
         annotated_names: set[str] = set()
         for attr_name, typ in anns.items():
-            if codegen.is_class_var(typ):
-                continue
+            if codegen.is_class_var(typ): continue
             annotated_names.add(attr_name)
             val = cd.get(attr_name, attr.NOTHING)
             if not LazyType["_CountingAttr[t.Any]"](_CountingAttr).isinstance(val):
-                if val is attr.NOTHING:
-                    val = cls.Field(env=field_env_key(cls.__openllm_model_name__, attr_name))
-                else:
-                    val = cls.Field(default=val, env=field_env_key(cls.__openllm_model_name__, attr_name))
+                if val is attr.NOTHING: val = cls.Field(env=field_env_key(cls.__openllm_model_name__, attr_name))
+                else: val = cls.Field(default=val, env=field_env_key(cls.__openllm_model_name__, attr_name))
             these[attr_name] = val
         unannotated = ca_names - annotated_names
         if len(unannotated) > 0:
             missing_annotated = sorted(unannotated, key=lambda n: t.cast("_CountingAttr[t.Any]", cd.get(n)).counter)
-            raise openllm.exceptions.MissingAnnotationAttributeError(
-                f"The following field doesn't have a type annotation: {missing_annotated}"
-            )
+            raise openllm.exceptions.MissingAnnotationAttributeError(f"The following field doesn't have a type annotation: {missing_annotated}")
         # We need to set the accepted key before generation_config
         # as generation_config is a special field that users shouldn't pass.
-        cls.__openllm_accepted_keys__ = (
-            set(these.keys())
-            | {a.name for a in attr.fields(cls.__openllm_generation_class__)}
-            | {a.name for a in attr.fields(cls.__openllm_sampling_class__)}
-        )
-
+        cls.__openllm_accepted_keys__ = set(these.keys()) | {a.name for a in attr.fields(cls.__openllm_generation_class__)} | {a.name for a in attr.fields(cls.__openllm_sampling_class__)}
         cls = _ConfigBuilder(cls, these).add_attrs_init().add_repr().build_class()
 
         # Finally, resolve the types
