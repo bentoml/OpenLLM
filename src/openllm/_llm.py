@@ -46,7 +46,6 @@ from .exceptions import GpuNotAvailableError
 from .utils import DEBUG
 from .utils import ENV_VARS_TRUE_VALUES
 from .utils import MYPY
-from .utils import SHOW_CODEGEN
 from .utils import EnvVarMixin
 from .utils import LazyLoader
 from .utils import ReprMixin
@@ -366,6 +365,15 @@ class LLMInterface(ABC, t.Generic[M, T]):
         """
         raise NotImplementedError
 
+    def save_pretrained(self, save_directory: str | Path, **attrs: t.Any) -> None:
+        """This function defines how this model can be saved to local store.
+
+        This will be called during ``import_model``. By default, it will use ``openllm.serialisation.save_pretrained``.
+        Additionally, the function signature are similar to ``transformers.PreTrainedModel.save_pretrained``
+        This is useful during fine tuning.
+        """
+        raise NotImplementedError
+
     # NOTE: All fields below are attributes that can be accessed by users.
     config_class: type[openllm.LLMConfig]
     """The config class to use for this LLM. If you are creating a custom LLM, you must specify this class."""
@@ -450,6 +458,10 @@ if t.TYPE_CHECKING:
         def __call__(self, llm: LLM[M, T]) -> T:
             ...
 
+    class _save_pretrained_wrapper(t.Generic[M, T]):
+        def __call__(self, llm: LLM[M, T], save_directory: str | Path, **attrs: t.Any) -> None:
+            ...
+
 
 def _wrapped_import_model(f: _import_model_wrapper[bentoml.Model, M, T]):
     @functools.wraps(f)
@@ -499,35 +511,46 @@ def _wrapped_llm_post_init(f: _llm_post_init_wrapper[M, T]) -> t.Callable[[LLM[M
     return wrapper
 
 
+def _wrapped_save_pretrained(f: _save_pretrained_wrapper[M, T]):
+    @functools.wraps(f)
+    def wrapper(self: LLM[M, T], save_directory: str | Path, **attrs: t.Any) -> None:
+        if isinstance(save_directory, Path):
+            save_directory = str(save_directory)
+        if self.__llm_model__ is not None and self.bettertransformer and self.__llm_implementation__ == "pt":
+            from optimum.bettertransformer import BetterTransformer
+
+            self.__llm_model__ = t.cast(
+                M,
+                BetterTransformer.reverse(t.cast("transformers.PreTrainedModel", self.__llm_model__)),
+            )
+        f(self, save_directory, **attrs)
+
+    return wrapper
+
+
 def _make_assignment_script(cls: type[LLM[M, T]]) -> t.Callable[[type[LLM[M, T]]], None]:
     attributes = {
         "import_model": _wrapped_import_model,
         "load_model": _wrapped_load_model,
         "load_tokenizer": _wrapped_load_tokenizer,
         "llm_post_init": _wrapped_llm_post_init,
+        "save_pretrained": _wrapped_save_pretrained,
     }
     args: ListStr = []
     anns: DictStrAny = {}
     lines: ListStr = []
-    globs: DictStrAny = {
-        "cls": cls,
-        "_cached_attribute": attributes,
-        "_cached_getattribute_get": _object_getattribute.__get__,
-        "LLMInterface": LLMInterface,
-        "openllm": openllm,
-    }
+    globs: DictStrAny = {"cls": cls, "_cached_LLMInterface_get": _object_getattribute.__get__(LLMInterface)}
     # function initialisation
     for func, impl in attributes.items():
-        globs[f"__wrapped_{func}"] = impl
         impl_name = f"__wrapped_{func}"
+        globs.update({f"__serialisation_{func}": getattr(openllm.serialisation, func, None), impl_name: impl})
         cached_func_name = f"_cached_{cls.__name__}_func"
         if func == "llm_post_init":
-            func_call = f"_impl_{cls.__name__}_{func}={impl_name}"
+            func_call = f"_impl_{cls.__name__}_{func}={cached_func_name}"
         else:
-            func_call = f"_impl_{cls.__name__}_{func}={cached_func_name} if {cached_func_name} is not _cached_LLMInterface_getattr('{func}') else openllm.serialisation.{func}"
+            func_call = f"_impl_{cls.__name__}_{func}={cached_func_name} if {cached_func_name} is not _cached_LLMInterface_get('{func}') else __serialisation_{func}"
         lines.extend(
             [
-                "_cached_LLMInterface_getattr=_cached_getattribute_get(LLMInterface)",
                 f"{cached_func_name}=cls.{func}",
                 func_call,
                 _setattr_class(func, f"{impl_name}(_impl_{cls.__name__}_{func})"),
@@ -539,9 +562,6 @@ def _make_assignment_script(cls: type[LLM[M, T]]) -> t.Callable[[type[LLM[M, T]]
     for v in {"bentomodel", "model", "tokenizer", "adapter_map"}:
         lines.append(_setattr_class(f"__llm_{v}__", None))
         anns[f"__llm_{v}__"] = interface_anns.get("__llm_{v}__")
-
-    if SHOW_CODEGEN:
-        logger.info("Generated script for %s:\n\n%s", cls.__name__, "\n".join(lines))
 
     return codegen.generate_function(cls, "__assign_attr", lines, args=("cls", *args), globs=globs, annotations=anns)
 
@@ -609,19 +629,6 @@ class LLM(LLMInterface[M, T], ReprMixin):
             """
             )
             setattr(cls, fn, original_fn)
-
-    # The following is the similar interface to HuggingFace pretrained protocol.
-    def save_pretrained(self, save_directory: str | Path, **attrs: t.Any) -> None:
-        if isinstance(save_directory, Path):
-            save_directory = str(save_directory)
-        if self.__llm_model__ is not None and self.bettertransformer and self.__llm_implementation__ == "pt":
-            from optimum.bettertransformer import BetterTransformer
-
-            self.__llm_model__ = t.cast(
-                M,
-                BetterTransformer.reverse(t.cast("transformers.PreTrainedModel", self.__llm_model__)),
-            )
-        openllm.serialisation.save_pretrained(self, save_directory, **attrs)
 
     @classmethod
     @overload
@@ -737,12 +744,10 @@ class LLM(LLMInterface[M, T], ReprMixin):
             **attrs: The kwargs to be passed to the model.
         """
         cfg_cls = cls.config_class
-        if model_id is None:
-            model_id = first_not_none(
-                cfg_cls.__openllm_env__["model_id_value"], default=cfg_cls.__openllm_default_id__
-            )
-        if runtime is None:
-            runtime = cfg_cls.__openllm_runtime__
+        model_id = first_not_none(
+            model_id, cfg_cls.__openllm_env__["model_id_value"], default=cfg_cls.__openllm_default_id__
+        )
+        runtime = first_not_none(runtime, default=cfg_cls.__openllm_runtime__)
 
         model_id, *maybe_revision = model_id.rsplit(":")
         if len(maybe_revision) > 0:
@@ -812,10 +817,10 @@ class LLM(LLMInterface[M, T], ReprMixin):
         # XXX: Fix me later, if the model is a valid tag, then we return it directly
         # instead of creating a new tag from the model_id. this branch will be hit during `openllm build`
         try:
-            return bentoml.models.get(model_id).tag
+            return bentoml.models.get(model_id.lower()).tag
         except (ValueError, bentoml.exceptions.BentoMLException):
             try:
-                return bentoml.Tag.from_taglike(model_id)
+                return bentoml.Tag.from_taglike(model_id.lower())
             except (ValueError, bentoml.exceptions.BentoMLException):
                 return make_tag(
                     model_id,
