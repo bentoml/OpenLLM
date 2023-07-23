@@ -33,7 +33,7 @@ class OPTConfig(openllm.LLMConfig):
         "trust_remote_code": False,
         "url": "https://huggingface.co/docs/transformers/model_doc/opt",
         "default_id": "facebook/opt-1.3b",
-        "architecture": "MPTForCausalLM",
+        "architecture": "OPTForCausalLM",
         "model_ids": [
             "facebook/opt-125m",
             "facebook/opt-350m",
