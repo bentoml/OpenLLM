@@ -2070,13 +2070,12 @@ def models_command(
             json_data[m] = {
                 "architecture": config["architecture"],
                 "model_id": config["model_ids"],
-                "url": config["url"],
                 "cpu": not config["requires_gpu"],
                 "gpu": True,
                 "runtime_impl": runtime_impl,
-                "installation": f'pip install "openllm[{m}]"'
+                "installation": f'"openllm[{m}]"'
                 if m in openllm.utils.OPTIONAL_DEPENDENCIES or config["requirements"]
-                else "pip install openllm",
+                else "openllm",
             }
             converted.extend([normalise_model_name(i) for i in config["model_ids"]])
             if DEBUG:
@@ -2119,7 +2118,6 @@ def models_command(
                 | tuple[
                     str,
                     str,
-                    str,
                     list[str],
                     str,
                     t.LiteralString,
@@ -2133,7 +2131,6 @@ def models_command(
                         (
                             m,
                             v["architecture"],
-                            v["url"],
                             v["model_id"],
                             v["installation"],
                             "❌" if not v["cpu"] else "✅",
@@ -2145,12 +2142,11 @@ def models_command(
             column_widths = [
                 int(COLUMNS / 12),
                 int(COLUMNS / 6),
-                int(COLUMNS / 6),
-                int(COLUMNS / 6),
-                int(COLUMNS / 6),
+                int(COLUMNS / 4),
                 int(COLUMNS / 12),
                 int(COLUMNS / 12),
                 int(COLUMNS / 12),
+                int(COLUMNS / 4),
             ]
 
             if len(data) == 0 and len(failed_initialized) > 0:
@@ -2163,16 +2159,10 @@ def models_command(
             table = tabulate.tabulate(
                 data,
                 tablefmt="fancy_grid",
-                headers=["LLM", "Architecture", "URL", "Models Id", "Installation", "CPU", "GPU", "Runtime"],
+                headers=["LLM", "Architecture", "Models Id", "pip install", "CPU", "GPU", "Runtime"],
                 maxcolwidths=column_widths,
             )
-
-            formatted_table = ""
-            for line in table.split("\n"):
-                formatted_table += (
-                    "".join(f"{cell:{width}}" for cell, width in zip(line.split("\t"), column_widths)) + "\n"
-                )
-            _echo(formatted_table, fg="white")
+            _echo(table, fg="white")
 
             if DEBUG and len(failed_initialized) > 0:
                 _echo("\nThe following models are supported but failed to initialize:\n")
