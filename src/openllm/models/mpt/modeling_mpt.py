@@ -78,6 +78,7 @@ class MPT(openllm.LLM["transformers.PreTrainedModel", "transformers.GPTNeoXToken
         attrs = {"do_sample": False if llm_config["temperature"] == 0 else True, "eos_token_id": self.tokenizer.eos_token_id, "pad_token_id": self.tokenizer.pad_token_id, "generation_config": llm_config.to_generation_config()}
         with torch.inference_mode():
             if torch.cuda.is_available():
-                with torch.autocast("cuda", torch.float16): generated_tensors = self.model.generate(**inputs, **attrs)
+                with torch.autocast("cuda", torch.float16):
+                    generated_tensors = self.model.generate(**inputs, **attrs)
             else: generated_tensors = self.model.generate(**inputs, **attrs)
         return self.tokenizer.batch_decode(generated_tensors, skip_special_tokens=True)

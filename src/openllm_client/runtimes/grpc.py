@@ -80,6 +80,20 @@ class GrpcClientMixin:
         except KeyError:
             raise RuntimeError("Malformed service endpoint. (Possible malicious)") from None
 
+    @property
+    def supports_embeddings(self) -> bool:
+        try:
+            return self._metadata.json.struct_value.fields["supports_embeddings"].bool_value
+        except KeyError:
+            raise RuntimeError("Malformed service endpoint. (Possible malicious)") from None
+
+    @property
+    def supports_hf_agent(self) -> bool:
+        try:
+            return self._metadata.json.struct_value.fields["supports_hf_agent"].bool_value
+        except KeyError:
+            raise RuntimeError("Malformed service endpoint. (Possible malicious)") from None
+
     def postprocess(self, result: Response | dict[str, t.Any]) -> openllm.GenerationOutput:
         if isinstance(result, dict):
             return openllm.GenerationOutput(**result)

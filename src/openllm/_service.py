@@ -109,6 +109,8 @@ def metadata_v1(_: str) -> openllm.MetadataOutput:
         model_name=llm_config["model_name"],
         framework=llm_config["env"]["framework_value"],
         configuration=llm_config.model_dump_json().decode(),
+        supports_embeddings=runner.supports_embeddings,
+        supports_hf_agent=runner.supports_hf_agent,
     )
 
 

@@ -34,6 +34,7 @@ bentomodel = openllm.import_model("falcon", model_id='tiiuae/falcon-7b-instruct'
 """
 from __future__ import annotations
 import functools
+import http.client
 import importlib.machinery
 import importlib.util
 import inspect
@@ -2337,6 +2338,11 @@ def instruct(
     ```
     """
     client = openllm.client.HTTPClient(endpoint, timeout=timeout)
+
+    try:
+        client.call("metadata")
+    except http.client.BadStatusLine:
+        raise click.ClickException(f"{endpoint} is neither a HTTP server nor reachable.") from None
 
     if agent == "hf":
         if not is_transformers_supports_agent():
