@@ -181,8 +181,8 @@ line-length = 119
 target-version = ["py38", "py39", "py310", "py311"]
 
 [tool.ruff]
-exclude = ["tools", "src/openllm/playground"]
-extend-include = ["*.py", "*.pyi", "**/pyproject.toml", "*.ipynb"]
+extend-exclude = ["tools", "src/openllm/playground", "src/openllm/models", "src/openllm/_types.py"]
+extend-include = ["*.ipynb"]
 extend-select = [
     "B",    # flake8-bugbear
     "I",    # isort
@@ -224,6 +224,7 @@ ignore = [
     "TCH004",  # don't move runtime import out, just warn about it
     "RUF012",  # mutable attributes to be used with ClassVar
     "B905",    # zip warning about strict, only applicable for 3.10+
+    "D105",    # magic docstring
 ]
 line-length = 119
 target-version = "py312"
@@ -257,17 +258,9 @@ avoid-escape = false
 # Tests can use magic values, assertions, and relative imports
 "__init__.py" = ["E402", "F401", "F403", "F811"]
 "examples/**/*" = ["D"]
-"src/openllm/_llm.py" = ["B010", "B009"]
-"src/openllm/_strategies.py" = ["B904"]
-"src/openllm/_types.py" = ["E402"]
 "src/openllm/cli.py" = ["D301", "S101"]
-"src/openllm/models/**/*" = ["D106", "S101", "D104", "E701", "I", "E401"]
-"src/openllm/playground/**/*" = ["E402", "F401", "PLR", "D"]
 "src/openllm/utils/dummy_*" = ["D107"]
-"src/openllm/utils/import_utils.py" = [
-    "PLW0603", # OK to ignore global access here
-    "D105",    # magic docstring
-]
+"src/openllm/utils/import_utils.py" = ["PLW0603"]
 "src/openllm_client/runtimes/*" = ["D107"]
 "tests/**/*" = [
     "S101",
