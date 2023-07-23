@@ -26,6 +26,7 @@ from .constants import FRAMEWORK_TO_AUTOCLASS_MAPPING
 from .constants import HUB_ATTRS
 from ..exceptions import OpenLLMException
 from ..utils import LazyLoader
+from ..utils import device_count
 from ..utils import first_not_none
 from ..utils import generate_context
 from ..utils import generate_labels
@@ -298,7 +299,7 @@ def load_model(llm: openllm.LLM[M, t.Any], *decls: t.Any, **attrs: t.Any) -> M:
         or getattr(model, "is_loaded_in_4bit", False)
         or getattr(model, "is_quantized", False)
     )
-    if torch.cuda.is_available() and not loaded_in_kbit:
+    if torch.cuda.is_available() and device_count() == 1 and not loaded_in_kbit:
         try:
             model = model.to("cuda")
         except torch.cuda.OutOfMemoryError as err:

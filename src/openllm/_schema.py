@@ -19,15 +19,21 @@ import typing as t
 import attr
 import inflection
 
-import openllm
-from openllm._configuration import GenerationConfig
-from openllm.utils import bentoml_cattr
+from ._configuration import GenerationConfig
+from ._configuration import LLMConfig
+from .utils import LazyLoader
+from .utils import LazyType
+from .utils import bentoml_cattr
+from .utils import requires_dependencies
 
 
 if t.TYPE_CHECKING:
+    import vllm
+
     from ._types import DictStrAny
 else:
     DictStrAny = dict
+    vllm = LazyLoader("vllm", globals(), "vllm")
 
 
 @attr.frozen(slots=True)
@@ -35,16 +41,14 @@ class GenerationInput:
     prompt: str
     """The prompt to be sent to system."""
 
-    llm_config: openllm.LLMConfig
+    llm_config: LLMConfig
     """A mapping of given LLM configuration values for given system."""
 
     @staticmethod
-    def convert_llm_config(
-        data: dict[str, t.Any] | openllm.LLMConfig, cls: type[openllm.LLMConfig] | None = None
-    ) -> openllm.LLMConfig:
-        if isinstance(data, openllm.LLMConfig):
+    def convert_llm_config(data: dict[str, t.Any] | LLMConfig, cls: type[LLMConfig] | None = None) -> LLMConfig:
+        if isinstance(data, LLMConfig):
             return data
-        elif openllm.utils.LazyType(DictStrAny).isinstance(data):
+        elif LazyType(DictStrAny).isinstance(data):
             if cls is None:
                 raise ValueError("'cls' must pass if given data is a dictionary.")
             return cls(**data)
@@ -53,7 +57,9 @@ class GenerationInput:
 
     @classmethod
     def for_model(cls, model_name: str, **attrs: t.Any) -> type[GenerationInput]:
-        llm_config = openllm.AutoConfig.for_model(model_name, **attrs)
+        from .models.auto import AutoConfig
+
+        llm_config = AutoConfig.for_model(model_name, **attrs)
         return attr.make_class(
             inflection.camelize(llm_config["model_name"]) + "GenerationInput",
             attrs={
@@ -102,3 +108,24 @@ class MetadataOutput:
 class EmbeddingsOutput:
     embeddings: t.List[float]
     num_tokens: int
+
+
+@requires_dependencies("vllm", extra="vllm")
+def unmarshal_vllm_outputs(request_output: vllm.RequestOutput) -> DictStrAny:
+    return dict(
+        request_id=request_output.request_id,
+        prompt=request_output.prompt,
+        finished=request_output.finished,
+        prompt_token_ids=request_output.prompt_token_ids,
+        outputs=[
+            dict(
+                index=it.index,
+                text=it.text,
+                token_ids=it.token_ids,
+                cumulative_logprob=it.cumulative_logprob,
+                logprobs=it.logprobs,
+                finish_reason=it.finish_reason,
+            )
+            for it in request_output.outputs
+        ],
+    )

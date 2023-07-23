@@ -79,7 +79,7 @@ class BaseAutoLLMClass:
             return llm, to_runner_attrs
         raise ValueError(f"Unrecognized configuration class {llm_config.__class__} for this kind of AutoLLM: {cls.__name__}.\nLLM type should be one of {', '.join(c.__name__ for c in cls._model_mapping.keys())}.")
     @classmethod
-    def create_runner(cls, model: str, model_id: str | None = None, **attrs: t.Any) -> LLMRunner:
+    def create_runner(cls, model: str, model_id: str | None = None, **attrs: t.Any) -> LLMRunner[t.Any, t.Any]:
         """Create a LLM Runner for the given model name.
 
         Args:

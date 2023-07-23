@@ -38,7 +38,7 @@ _PROMPT_MAPPING = {
 
 def parametrise_local_llm(
     model: str,
-) -> t.Generator[tuple[str, openllm.LLMRunner | openllm.LLM[t.Any, t.Any]], None, None]:
+) -> t.Generator[tuple[str, openllm.LLMRunner[t.Any, t.Any] | openllm.LLM[t.Any, t.Any]], None, None]:
     if model not in _FRAMEWORK_MAPPING:
         pytest.skip(f"'{model}' is not yet supported in framework testing.")
 

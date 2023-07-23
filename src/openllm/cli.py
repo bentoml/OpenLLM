@@ -2402,27 +2402,19 @@ def query(
         if server_type == "http"
         else openllm.client.GrpcClient(endpoint, timeout=timeout)
     )
-
-    input_fg = "magenta"
-    generated_fg = "cyan"
-
+    input_fg, generated_fg = "magenta", "cyan"
     if output != "porcelain":
         _echo("==Input==\n", fg="white")
         _echo(f"{prompt}", fg=input_fg)
-
     res = client.query(prompt, return_raw_response=True, **_memoized)
-
     if output == "pretty":
-        full_formatted = client.llm.postprocess_generate(prompt, res["responses"])
-        response = full_formatted[len(prompt) + 1 :]
+        response = client.llm.postprocess_generate(prompt, res["responses"])
         _echo("\n\n==Responses==\n", fg="white")
-        _echo(f"{prompt} ", fg=input_fg, nl=False)
         _echo(response, fg=generated_fg)
     elif output == "json":
         _echo(orjson.dumps(res, option=orjson.OPT_INDENT_2).decode(), fg="white")
     else:
         _echo(res["responses"], fg="white")
-
     ctx.exit(0)
 
 

@@ -23,6 +23,7 @@ import re
 import sys
 import types
 import typing as t
+import uuid
 from abc import ABC
 from abc import abstractmethod
 from pathlib import Path
@@ -247,7 +248,7 @@ _reserved_namespace = {"config_class", "model", "tokenizer", "import_kwargs"}
 
 M = t.TypeVar(
     "M",
-    bound="t.Union[transformers.PreTrainedModel, transformers.Pipeline, transformers.TFPreTrainedModel, transformers.FlaxPreTrainedModel, vllm.LLM, peft.PeftModel, autogptq.modeling.BaseGPTQForCausalLM]",
+    bound="t.Union[transformers.PreTrainedModel, transformers.Pipeline, transformers.TFPreTrainedModel, transformers.FlaxPreTrainedModel, vllm.LLMEngine, vllm.AsyncLLMEngine, peft.PeftModel, autogptq.modeling.BaseGPTQForCausalLM]",
 )
 T = t.TypeVar(
     "T",
@@ -485,15 +486,34 @@ def _wrapped_import_model(f: _import_model_wrapper[bentoml.Model, M, T]):
     return wrapper
 
 
+_DEFAULT_TOKENIZER = "hf-internal-testing/llama-tokenizer"
+
+
+@requires_dependencies("vllm", extra="vllm")
+def get_engine_args(llm: openllm.LLM[M, T], tokenizer: str = _DEFAULT_TOKENIZER) -> vllm.EngineArgs:
+    return vllm.EngineArgs(
+        model=llm._bentomodel.path,
+        tokenizer=tokenizer,
+        tokenizer_mode="auto",
+        tensor_parallel_size=1,
+        dtype="auto",
+        worker_use_ray=False,
+    )
+
+
 def _wrapped_load_model(f: _load_model_wrapper[M, T]):
     @functools.wraps(f)
-    def wrapper(self: LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M:
-        # wrapped around custom init to provide some meta compression
-        # for all decls and attrs
-        (model_decls, model_attrs), _ = self.llm_parameters
-        decls = (*model_decls, *decls)
-        attrs = {**model_attrs, **attrs}
-        return f(self, *decls, **attrs)
+    def wrapper(self: LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M | vllm.LLMEngine:
+        # wrapped around custom init to provide some meta compression for all decls and attrs
+        # and add general vllm.LLMEngine for any vllm implementation.
+        if self.__llm_implementation__ == "vllm":
+            # TODO: Do some more processing with token_id once we support token streaming
+            return vllm.LLMEngine.from_engine_args(get_engine_args(self))
+        else:
+            (model_decls, model_attrs), _ = self.llm_parameters
+            decls = (*model_decls, *decls)
+            attrs = {**model_attrs, **attrs}
+            return f(self, *decls, **attrs)
 
     return wrapper
 
@@ -647,6 +667,25 @@ class LLM(LLMInterface[M, T], ReprMixin):
         elif "config_class" not in cd:
             raise RuntimeError("Missing required key 'config_class'. Make sure to define it within the LLM subclass.")
         _make_assignment_script(cls)(cls)
+
+        if implementation == "vllm":
+
+            def vllm_postprocess_generate(
+                self: LLM[M, T], prompt: str, generation_result: list[dict[str, t.Any]], **_: t.Any
+            ) -> str:
+                return generation_result[0]["outputs"][0]["text"]
+
+            def vllm_generate(self: LLM[M, T], prompt: str, **attrs: t.Any) -> list[dict[str, t.Any]]:
+                self.model.add_request(
+                    str(uuid.uuid4().hex), prompt, self.config.model_construct_env(**attrs).to_sampling_config()
+                )
+                outputs: list[vllm.RequestOutput] = []
+                while self.model.has_unfinished_requests():
+                    outputs.extend([r for r in self.model.step() if r.finished])
+                return [openllm.unmarshal_vllm_outputs(i) for i in outputs]
+
+            cls.postprocess_generate = vllm_postprocess_generate
+            cls.generate = vllm_generate
 
     # fmt: off
     @overload
@@ -1336,7 +1375,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
         max_batch_size: int | None = None,
         max_latency_ms: int | None = None,
         scheduling_strategy: type[bentoml.Strategy] | None = None,
-    ) -> LLMRunner:
+    ) -> LLMRunner[M, T]:
         """Convert this LLM into a Runner.
 
         Args:
@@ -1426,7 +1465,7 @@ def Runner(
     model_version: str | None = ...,
     init_local: t.Literal[False, True] = ...,
     **attrs: t.Any,
-) -> LLMRunner:
+) -> LLMRunner[t.Any, t.Any]:
     ...
 
 
@@ -1443,7 +1482,7 @@ def Runner(
     embedded: t.Literal[True, False] = ...,
     scheduling_strategy: type[bentoml.Strategy] | None = ...,
     **attrs: t.Any,
-) -> LLMRunner:
+) -> LLMRunner[t.Any, t.Any]:
     ...
 
 
@@ -1456,7 +1495,7 @@ def Runner(
     implementation: LiteralRuntime | None = None,
     llm_config: openllm.LLMConfig | None = None,
     **attrs: t.Any,
-) -> LLMRunner:
+) -> LLMRunner[t.Any, t.Any]:
     ...
 
 
@@ -1476,7 +1515,7 @@ def Runner(
     quantization_config: transformers.BitsAndBytesConfig | autogptq.BaseQuantizeConfig | None = None,
     serialisation: t.Literal["safetensors", "legacy"] = ...,
     **attrs: t.Any,
-) -> LLMRunner:
+) -> LLMRunner[t.Any, t.Any]:
     ...
 
 
@@ -1487,7 +1526,7 @@ def Runner(
     implementation: LiteralRuntime | None = None,
     llm_config: openllm.LLMConfig | None = None,
     **attrs: t.Any,
-) -> LLMRunner:
+) -> LLMRunner[t.Any, t.Any]:
     """Create a Runner for given LLM. For a list of currently supported LLM, check out 'openllm models'.
 
     The behaviour of ensure_available that is synonymous to `AutoLLM.for_model` depends on `init_local`.
@@ -1564,7 +1603,7 @@ def llm_runnable_class(
     embeddings_sig: ModelSignature,
     generate_sig: ModelSignature,
     generate_iterator_sig: ModelSignature,
-) -> type[LLMRunnable]:
+) -> type[LLMRunnable[M, T]]:
     class _Runnable(bentoml.Runnable):
         SUPPORTED_RESOURCES = ("nvidia.com/gpu", "amd.com/gpu", "cpu")
         SUPPORTS_CPU_MULTI_THREADING = True
@@ -1641,8 +1680,8 @@ def llm_runnable_class(
     )
 
 
-def llm_runner_class(self: openllm.LLM[M, T]) -> type[LLMRunner]:
-    def available_adapters(__self: LLMRunner) -> PeftAdapterOutput:
+def llm_runner_class(self: openllm.LLM[M, T]) -> type[LLMRunner[M, T]]:
+    def available_adapters(__self: LLMRunner[M, T]) -> PeftAdapterOutput:
         if not is_peft_available():
             return {
                 "success": False,
@@ -1659,7 +1698,7 @@ def llm_runner_class(self: openllm.LLM[M, T]) -> type[LLMRunner]:
             return {"success": False, "result": {}, "error_msg": "Model is not a PeftModel"}
         return {"success": True, "result": __self.model.peft_config, "error_msg": ""}
 
-    def _wrapped_generate_run(__self: LLMRunner, prompt: str, **kwargs: t.Any) -> t.Any:
+    def _wrapped_generate_run(__self: LLMRunner[M, T], prompt: str, **kwargs: t.Any) -> t.Any:
         """Wrapper for runner.generate.run() to handle the prompt and postprocessing.
 
         This will be used for LangChain API.
@@ -1674,7 +1713,7 @@ def llm_runner_class(self: openllm.LLM[M, T]) -> type[LLMRunner]:
         generated_result = __self.generate.run(prompt, **generate_kwargs)
         return self.postprocess_generate(prompt, generated_result, **postprocess_kwargs)
 
-    def _wrapped_embeddings_run(__self: LLMRunner, prompt: str | list[str]) -> LLMEmbeddings:
+    def _wrapped_embeddings_run(__self: LLMRunner[M, T], prompt: str | list[str]) -> LLMEmbeddings:
         """``llm.embed`` is a light wrapper around runner.embeedings.run().
 
         Usage:
@@ -1687,10 +1726,10 @@ def llm_runner_class(self: openllm.LLM[M, T]) -> type[LLMRunner]:
             prompt = [prompt]
         return __self.embeddings.run(prompt)
 
-    def _wrapped_repr_keys(_: LLMRunner) -> set[str]:
+    def _wrapped_repr_keys(_: LLMRunner[M, T]) -> set[str]:
         return {"config", "llm_type", "runner_methods", "runtime", "llm_tag"}
 
-    def _wrapped_repr_args(__self: LLMRunner) -> ReprArgs:
+    def _wrapped_repr_args(__self: LLMRunner[M, T]) -> ReprArgs:
         yield "runner_methods", {
             method.name: {
                 "batchable": method.config.batchable,
@@ -1713,6 +1752,7 @@ def llm_runner_class(self: openllm.LLM[M, T]) -> type[LLMRunner]:
                 "llm_tag": self.tag,
                 "llm": self,  # NOTE: self reference to LLM
                 "config": self.config,
+                "implementation": self.__llm_implementation__,
                 "peft_adapters": property(fget=available_adapters),
                 "download_model": self.ensure_model_id_exists,
                 "__call__": _wrapped_generate_run,

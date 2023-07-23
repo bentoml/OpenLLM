@@ -175,6 +175,8 @@ extend-exclude = '''
   )/
   | src/openllm/__about__.py
   | src/openllm/models
+  | src/openllm/_types.py
+  | src/openllm/_service.py
 )
 '''
 line-length = 119
@@ -258,6 +260,7 @@ avoid-escape = false
 # Tests can use magic values, assertions, and relative imports
 "__init__.py" = ["E402", "F401", "F403", "F811"]
 "examples/**/*" = ["D"]
+"src/openllm/_service.py" = ["E701", "I001", "E401"]
 "src/openllm/cli.py" = ["D301", "S101"]
 "src/openllm/utils/dummy_*" = ["D107"]
 "src/openllm/utils/import_utils.py" = ["PLW0603"]
