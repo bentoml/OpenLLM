@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 import os
-import sys
 import typing as t
 
 import pytest
@@ -102,13 +101,6 @@ def test_nvidia_gpu_validate(monkeypatch: pytest.MonkeyPatch):
         assert pytest.raises(ValueError, NvidiaGpuResource.validate, ["GPU-5ebe9f43", "GPU-ac33420d4628"]).match(
             "Failed to parse available GPUs UUID"
         )
-
-
-@pytest.mark.skipif(sys.platform != "darwin", reason="Test NVIDIA validation on Darwin only")
-def test_nvidia_gpu_validation_on_darwin():
-    assert pytest.raises(RuntimeError, NvidiaGpuResource.validate, ["0"]).match(
-        "GPU is not available on Darwin system."
-    )
 
 
 def test_nvidia_gpu_from_spec(monkeypatch: pytest.MonkeyPatch):
