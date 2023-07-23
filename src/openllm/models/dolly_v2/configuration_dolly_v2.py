@@ -13,14 +13,8 @@
 # limitations under the License.
 from __future__ import annotations
 import typing as t
-
 import openllm
-
-
-if t.TYPE_CHECKING:
-    from transformers import PreTrainedTokenizer
-
-
+if t.TYPE_CHECKING: import transformers
 class DollyV2Config(openllm.LLMConfig):
     """Databricks` Dolly is an instruction-following large language model trained on the Databricks machine learning platform that is licensed for commercial use.
 
@@ -33,7 +27,6 @@ class DollyV2Config(openllm.LLMConfig):
 
     Refer to [Databricks's Dolly page](https://github.com/databrickslabs/dolly) for more information.
     """
-
     __config__ = {
         "timeout": 3600000,
         "url": "https://github.com/databrickslabs/dolly",
@@ -41,19 +34,15 @@ class DollyV2Config(openllm.LLMConfig):
         "default_id": "databricks/dolly-v2-3b",
         "model_ids": ["databricks/dolly-v2-3b", "databricks/dolly-v2-7b", "databricks/dolly-v2-12b"],
     }
-
     return_full_text: bool = openllm.LLMConfig.Field(
         False, description="Whether to return the full prompt to the users."
     )
-
     class GenerationConfig:
         temperature: float = 0.9
         top_p: float = 0.92
         top_k: int = 5
         max_new_tokens: int = 256
         eos_token_id: int = 50277  # NOTE: from get_special_token_id(self.tokenizer, END_KEY)
-
-
 START_DOLLY_V2_COMMAND_DOCSTRING = """\
 Run a LLMServer for dolly-v2 model.
 
@@ -73,14 +62,10 @@ or provide `--model-id` flag when running ``openllm start dolly-v2``:
 \b
 $ openllm start dolly-v2 --model-id databricks/dolly-v2-7b
 """
-
 INSTRUCTION_KEY = "### Instruction:"
 RESPONSE_KEY = "### Response:"
 END_KEY = "### End"
-INTRO_BLURB = (
-    "Below is an instruction that describes a task. Write a response that appropriately completes the request."
-)
-
+INTRO_BLURB = "Below is an instruction that describes a task. Write a response that appropriately completes the request."
 # NOTE: This is the prompt that is used for generating responses using an already
 # trained model.  It ends with the response key, where the job of the model is to provide
 # the completion that follows it (i.e. the response itself).
@@ -88,15 +73,8 @@ DEFAULT_PROMPT_TEMPLATE = """{intro}
 {instruction_key}
 {instruction}
 {response_key}
-""".format(
-    intro=INTRO_BLURB,
-    instruction_key=INSTRUCTION_KEY,
-    instruction="{instruction}",
-    response_key=RESPONSE_KEY,
-)
-
-
-def get_special_token_id(tokenizer: PreTrainedTokenizer, key: str) -> int:
+""".format(intro=INTRO_BLURB, instruction_key=INSTRUCTION_KEY, instruction="{instruction}", response_key=RESPONSE_KEY)
+def get_special_token_id(tokenizer: transformers.PreTrainedTokenizer, key: str) -> int:
     """Gets the token ID for a given string that has been added to the tokenizer as a special token.
 
     When training, we configure the tokenizer so that the sequences like "### Instruction:" and "### End" are
@@ -113,6 +91,5 @@ def get_special_token_id(tokenizer: PreTrainedTokenizer, key: str) -> int:
         int: the token ID for the given key.
     """
     token_ids = tokenizer.encode(key)
-    if len(token_ids) > 1:
-        raise ValueError(f"Expected only a single token for '{key}' but found {token_ids}")
+    if len(token_ids) > 1: raise ValueError(f"Expected only a single token for '{key}' but found {token_ids}")
     return token_ids[0]

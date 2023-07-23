@@ -299,7 +299,7 @@ pip install "openllm[mpt]"
 <tr>
 
 <td><a href=https://huggingface.co/docs/transformers/model_doc/opt>opt</a></td>
-<td><a href=https://huggingface.co/docs/transformers/main/model_doc/opt#transformers.MPTForCausalLM><code>MPTForCausalLM</code></a></td>
+<td><a href=https://huggingface.co/docs/transformers/main/model_doc/opt#transformers.OPTForCausalLM><code>OPTForCausalLM</code></a></td>
 <td>✅</td>
 <td>✅</td>
 <td>

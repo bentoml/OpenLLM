@@ -47,7 +47,6 @@ quality = [
     "./tools/update-config-stubs.py",
     "./tools/update-models-import.py",
     "- ./tools/add-license-headers .",
-    "pre-commit run --all-files",
 ]
 setup = "pre-commit install"
 typing = ["- pre-commit run mypy {args:-a}", "- pre-commit run pyright {args:-a}"]

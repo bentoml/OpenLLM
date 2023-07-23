@@ -163,13 +163,12 @@ def make_tag(
             model_version = tag.version
             model_name = tag.name
         else:
-            if model_version is None:  # noqa: PLR5501
-                if not quiet:
-                    logger.warning(
-                        "Given 'model_id=%s' is a path, and 'model_version' is not passed. OpenLLM will generate the version based on the last modified time of this given directory.",
-                        model_id,
-                    )
-                model_version = generate_hash_from_file(model_id)
+            if not quiet and model_version is None:
+                logger.warning(
+                    "Given 'model_id=%s' is a path, and 'model_version' is not passed. OpenLLM will generate the version based on the last modified time of this given directory.",
+                    model_id,
+                )
+            model_version = first_not_none(model_version, default=generate_hash_from_file(model_id))
     else:
         config = t.cast(
             "transformers.PretrainedConfig",

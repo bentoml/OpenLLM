@@ -157,7 +157,7 @@ python_files = ["test_*.py", "*_test.py"]
 testpaths = ["tests"]
 
 [tool.black]
-exclude = '''
+extend-exclude = '''
 (
   /(
       \.eggs
@@ -174,6 +174,7 @@ exclude = '''
     | tools
   )/
   | src/openllm/__about__.py
+  | src/openllm/models
 )
 '''
 line-length = 119
@@ -229,6 +230,7 @@ target-version = "py312"
 unfixable = [
     "F401",   # Don't touch unused imports, just warn about it.
     "TCH004", # Don't touch import outside of TYPE_CHECKING block
+    "RUF100", # unused noqa, just warn about it
 ]
 [tool.ruff.flake8-type-checking]
 exempt-modules = ["typing", "typing_extensions", "."]
@@ -259,7 +261,7 @@ avoid-escape = false
 "src/openllm/_strategies.py" = ["B904"]
 "src/openllm/_types.py" = ["E402"]
 "src/openllm/cli.py" = ["D301", "S101"]
-"src/openllm/models/**/*" = ["D106", "S101", "D104"]
+"src/openllm/models/**/*" = ["D106", "S101", "D104", "E701", "I", "E401"]
 "src/openllm/playground/**/*" = ["E402", "F401", "PLR", "D"]
 "src/openllm/utils/dummy_*" = ["D107"]
 "src/openllm/utils/import_utils.py" = [

@@ -298,12 +298,12 @@ def load_model(llm: openllm.LLM[M, t.Any], *decls: t.Any, **attrs: t.Any) -> M:
         or getattr(model, "is_loaded_in_4bit", False)
         or getattr(model, "is_quantized", False)
     )
-    if torch.cuda.is_available() and torch.cuda.device_count() == 1 and not loaded_in_kbit:
+    if torch.cuda.is_available() and not loaded_in_kbit:
         try:
             model = model.to("cuda")
         except torch.cuda.OutOfMemoryError as err:
             raise RuntimeError(
-                f"Failed to fit {llm.config['model_name']} with model_id '{llm.model_id}' to CUDA.\nNote: You can try out '--quantize int8 | int4' for dynamic quantization."
+                f"Failed to convert {llm.config['model_name']} with model_id '{llm.model_id}' to CUDA.\nNote: You can try out '--quantize int8 | int4' for dynamic quantization."
             ) from err
     if llm.bettertransformer and llm.__llm_implementation__ == "pt" and not isinstance(model, _transformers.Pipeline):
         # BetterTransformer is currently only supported on PyTorch.
@@ -320,7 +320,7 @@ def save_pretrained(
     state_dict: DictStrAny | None = None,
     save_function: t.Callable[..., None] | None = None,
     push_to_hub: bool = False,
-    max_shard_size: int | str = "10GB",
+    max_shard_size: int | str = "2GB",
     safe_serialization: bool = False,
     variant: str | None = None,
     **attrs: t.Any,

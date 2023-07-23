@@ -11,13 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 from __future__ import annotations
 import typing as t
-
 import openllm
-
-
 class LlaMAConfig(openllm.LLMConfig):
     """LLaMA model was proposed in [LLaMA: Open and Efficient Foundation Language Models](https://arxiv.org/abs/2302.13971) by Hugo Touvron, Thibaut Lavril, Gautier Izacard, Xavier Martinet, Marie-Anne Lachaux, Timothée Lacroix, Baptiste Rozière, Naman Goyal, Eric Hambro, Faisal Azhar, Aurelien Rodriguez, Armand Joulin, Edouard Grave, Guillaume Lample.
 
@@ -30,11 +26,7 @@ class LlaMAConfig(openllm.LLMConfig):
     Refer to [LlaMA's model card](https://huggingface.co/docs/transformers/main/model_doc/llama)
     for more information.
     """
-
-    use_llama2_prompt: bool = openllm.LLMConfig.Field(
-        True, description="Whether to use the prompt format for LlaMA 2. Disable this when working with LlaMA 1."
-    )
-
+    use_llama2_prompt: bool = openllm.LLMConfig.Field(True, description="Whether to use the prompt format for LlaMA 2. Disable this when working with LlaMA 1.")
     __config__ = {
         "model_name": "llama",
         "start_name": "llama",
@@ -69,18 +61,14 @@ class LlaMAConfig(openllm.LLMConfig):
             },
         ),
     }
-
     class GenerationConfig:
         max_new_tokens: int = 256
         temperature: float = 0.45
         top_p: float = 0.95
         top_k: int = 12
-
     class SamplingParams:
         best_of: int = 1
         presence_penalty: float = 0.5
-
-
 START_LLAMA_COMMAND_DOCSTRING = """\
 Run a LLMServer for LlaMA model.
 
@@ -110,39 +98,14 @@ OpenLLM also supports running LlaMA-2 and its fine-tune and variants. To import 
 \b
 $ CONVERTER=hf-llama2 openllm import llama /path/to/llama-2
 """
-
 SYSTEM_MESSAGE = """
 You are a helpful, respectful and honest assistant. Always answer as helpfully as possible, while being safe.  Your answers should not include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that your responses are socially unbiased and positive in nature.
 
 If a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information.
 """
-
-SINST_KEY = "[INST]"
-EINST_KEY = "[/INST]"
-SYS_KEY = "<<SYS>>"
-EOS_TOKEN = "</s>"
-BOS_TOKEN = "<s>"
-
-# TODO: support history
-_v2_prompt = """{start_key} {sys_key}\n{system_message}\n{sys_key}\n\n{instruction}\n{end_key} """.format(
-    start_key=SINST_KEY,
-    sys_key=SYS_KEY,
-    system_message=SYSTEM_MESSAGE,
-    instruction="{instruction}",
-    end_key=EINST_KEY,
-)
-
-# XXX: implement me
-_v1_prompt = """{instruction}"""
-
-PROMPT_MAPPING = {
-    "v1": _v1_prompt,
-    "v2": _v2_prompt,
-}
-
-
-def _get_prompt(model_type: t.Literal["v1", "v2"]) -> str:
-    return PROMPT_MAPPING[model_type]
-
-
+SINST_KEY, EINST_KEY, SYS_KEY, EOS_TOKEN, BOS_TOKEN = "[INST]", "[/INST]", "<<SYS>>", "</s>", "<s>"
+# TODO: support history and v1 prompt implementation
+_v1_prompt, _v2_prompt = """{instruction}""", """{start_key} {sys_key}\n{system_message}\n{sys_key}\n\n{instruction}\n{end_key} """.format(start_key=SINST_KEY, sys_key=SYS_KEY, system_message=SYSTEM_MESSAGE, instruction="{instruction}", end_key=EINST_KEY)
+PROMPT_MAPPING = {"v1": _v1_prompt, "v2": _v2_prompt}
+def _get_prompt(model_type: t.Literal["v1", "v2"]) -> str: return PROMPT_MAPPING[model_type]
 DEFAULT_PROMPT_TEMPLATE = _get_prompt

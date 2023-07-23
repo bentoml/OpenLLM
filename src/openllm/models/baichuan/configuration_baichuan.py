@@ -12,10 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from __future__ import annotations
-
 import openllm
-
-
 class BaichuanConfig(openllm.LLMConfig):
     """Baichuan-7B is an open-source, large-scale pre-trained language model developed by Baichuan Intelligent Technology.
 
@@ -26,7 +23,6 @@ class BaichuanConfig(openllm.LLMConfig):
     and English benchmarks (C-Eval, MMLU, etc).
     Refer to [Baichuan-7B's GitHub page](https://github.com/baichuan-inc/Baichuan-7B) for more information.
     """
-
     __config__ = {
         "name_type": "lowercase",
         "trust_remote_code": True,
@@ -45,13 +41,10 @@ class BaichuanConfig(openllm.LLMConfig):
             "hiyouga/baichuan-7b-sft",
         ],
     }
-
     class GenerationConfig:
         max_new_tokens: int = 2048
         top_p: float = 0.7
         temperature: float = 0.95
-
-
 START_BAICHUAN_COMMAND_DOCSTRING = """\
 Run a LLMServer for Baichuan model.
 
@@ -71,5 +64,4 @@ or provide `--model-id` flag when running ``openllm start baichuan``:
 \b
 $ openllm start baichuan --model-id='fireballoon/baichuan-vicuna-chinese-7b'
 """
-
 DEFAULT_PROMPT_TEMPLATE = """{instruction}"""
