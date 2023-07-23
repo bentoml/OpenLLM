@@ -2,6 +2,7 @@ from typing import Any
 from typing import Dict
 from typing import List
 from typing import Tuple
+from typing import TypeAlias
 from typing import Union
 
 from .strategy.core import StrategyList
@@ -9,7 +10,7 @@ from .strategy.dict import DictStrategies
 from .strategy.list import ListStrategies
 from .strategy.set import SetStrategies
 
-ConfigDictType = Dict[str, Any]
+ConfigDictType: TypeAlias = Dict[str, Any]
 
 class Merger:
     PROVIDED_TYPE_STRATEGIES: Dict[type, Union[ListStrategies, DictStrategies, SetStrategies]] = ...

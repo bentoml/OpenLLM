@@ -12,6 +12,7 @@ from typing import Protocol
 from typing import Sequence
 from typing import Tuple
 from typing import Type
+from typing import TypeAlias
 from typing import TypeGuard
 from typing import TypeVar
 from typing import Union
@@ -40,16 +41,16 @@ __copyright__: str
 _T = TypeVar("_T")
 _C = TypeVar("_C", bound=type)
 _P = ParamSpec("_P")
-_EqOrderType = Union[bool, Callable[[Any], Any]]
-_ValidatorType = Callable[[Any, Attribute[_T], _T], Any]
-_ConverterType = Callable[[Any], Any]
-_FilterType = Callable[[Attribute[_T], _T], bool]
-_ReprType = Callable[[Any], str]
-_ReprArgType = Union[bool, _ReprType]
-_OnSetAttrType = Callable[[Any, Attribute[Any], Any], Any]
-_OnSetAttrArgType = Union[_OnSetAttrType, List[_OnSetAttrType], setters._NoOpType]
-_FieldTransformer = Callable[[type, List[Attribute[Any]]], List[Attribute[Any]]]
-_ValidatorArgType = Union[_ValidatorType[_T], Sequence[_ValidatorType[_T]]]
+_EqOrderType: TypeAlias = Union[bool, Callable[[Any], Any]]
+_ValidatorType: TypeAlias = Callable[[Any, Attribute[_T], _T], Any]
+_ConverterType: TypeAlias = Callable[[Any], Any]
+_FilterType: TypeAlias = Callable[[Attribute[_T], _T], bool]
+_ReprType: TypeAlias = Callable[[Any], str]
+_ReprArgType: TypeAlias = Union[bool, _ReprType]
+_OnSetAttrType: TypeAlias = Callable[[Any, Attribute[Any], Any], Any]
+_OnSetAttrArgType: TypeAlias = Union[_OnSetAttrType, List[_OnSetAttrType], setters._NoOpType]
+_FieldTransformer: TypeAlias = Callable[[type, List[Attribute[Any]]], List[Attribute[Any]]]
+_ValidatorArgType: TypeAlias = Union[_ValidatorType[_T], Sequence[_ValidatorType[_T]]]
 
 class AttrsInstance(AttrsInstance_, Protocol): ...
 
@@ -535,8 +536,10 @@ def get_run_validators() -> bool: ...
 
 # aliases --
 
-s = attributes = attrs
-ib = attr = attrib
+s = attrs
+attributes = attrs
+ib = attrib
+attr = attrib
 dataclass = attrs  # Technically, partial(attrs, auto_attribs=True) ;)
 
 class ReprProtocol(Protocol):

@@ -1,6 +1,6 @@
+from collections.abc import Generator
 from typing import Any
 from typing import Dict
-from collections.abc import Generator
 
 from _typeshed import Incomplete
 

@@ -1,4 +1,5 @@
 from typing import Any
+
 from _typeshed import Incomplete
 
 class JupytextFormatError(ValueError): ...
