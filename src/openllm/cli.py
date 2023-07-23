@@ -54,6 +54,7 @@ import attr
 import click
 import click_option_group as cog
 import fs
+import fs.copy
 import fs.errors
 import inflection
 import orjson
@@ -919,16 +920,17 @@ def start_bento(
     # Now we have to format the model_id accordingly based on the model_fs
     model_type = bento.info.labels["_type"]
     model_framework = bento.info.labels["_framework"]
+    model_tag = f"{model_framework}-{model_type}"
     # the models should have the type
     try:
         model_store = ModelStore(bento._fs.opendir("models"))
-        model = model_store.get(f"{model_framework}-{model_type}")
     except fs.errors.ResourceNotFound:
         # new behaviour with BentoML models
-        _model_store = BentoMLContainer.model_store.get()
-        model = _model_store.get(f"{model_framework}-{model_type}")
+        model_store = BentoMLContainer.model_store.get()
+    try:
+        model = model_store.get(model_tag)
     except bentoml.exceptions.NotFound:
-        raise OpenLLMException(f"Failed to find models for {llm_config['start_name']}") from None
+        raise OpenLLMException(f"Failed to find model {model_tag} for {llm_config['start_name']}") from None
 
     @group.command(**command_attrs)
     @start_decorator(llm_config, serve_grpc=serve_grpc)
@@ -951,8 +953,6 @@ def start_bento(
     ) -> openllm.LLMConfig | subprocess.Popen[bytes]:
         if model_id is not None:
             _echo("'model_id' has no effect when starting a BentoLLM", fg="yellow")
-
-        adapter_map: dict[str, str | None] | None = attrs.pop(_adapter_mapping_key, None)
 
         config, server_attrs = llm_config.model_validate_click(**attrs)
         server_timeout = first_not_none(server_timeout, default=config["timeout"])
@@ -989,12 +989,11 @@ def start_bento(
             runtime=runtime,
         )
 
-        prerequisite_check(ctx, config, quantize, adapter_map, num_workers)
+        prerequisite_check(ctx, config, quantize, None, num_workers)
 
         # NOTE: This is to set current configuration
         start_env = os.environ.copy()
         start_env = parse_config_options(config, server_timeout, workers_per_resource, device, start_env)
-
         if fast:
             _echo(f"Fast mode has no effects when 'start' {bento.tag!s}", fg="yellow")
 
@@ -1007,12 +1006,14 @@ def start_bento(
                 "BENTOML_HOME": os.environ.get("BENTOML_HOME", BentoMLContainer.bentoml_home.get()),
                 "OPENLLM_MODEL_ID": model.path,
                 "OPENLLM_SERIALIZATION": serialisation_format,
+                "OPENLLM_START_FROM_BENTO": str(True),
             }
         )
-
-        if adapter_map:
-            _echo(f"OpenLLM will convert '{bento.tag!s}' to use provided adapters layers: {list(adapter_map)}")
-        start_env["OPENLLM_ADAPTER_MAP"] = orjson.dumps(adapter_map).decode()
+        adapter_map: dict[str, str | None] | None = attrs.pop(_adapter_mapping_key, None)
+        if adapter_map is not None:
+            _echo(
+                "--adapter-id will be ignored when starting a bento. It will be using the adapters available within the Bento if specified."
+            )
 
         if bettertransformer is not None:
             start_env[env.bettertransformer] = str(bettertransformer)
@@ -1781,7 +1782,7 @@ start, start_grpc, build, import_model, list_models = (
     multiple=True,
     metavar="[PATH | [remote/][adapter_name:]adapter_id][, ...]",
 )
-@click.option("--build-ctx", default=".", help="Build context. This is required if --adapter-id uses relative path")
+@click.option("--build-ctx", default=None, help="Build context. This is required if --adapter-id uses relative path")
 @model_version_option(click)
 @click.option(
     "--dockerfile-template",
@@ -1838,20 +1839,6 @@ def build_command(
     > NOTE: To run a container built from this Bento with GPU support, make sure
     > to have https://github.com/NVIDIA/nvidia-container-toolkit install locally.
     """
-    adapter_map: dict[str, str | None] | None = None
-
-    if adapter_id:
-        if not build_ctx:
-            _echo("'build_ctx' must not be None when '--adapter-id' is passsed.", fg="red")
-            ctx.exit(1)
-
-        adapter_map = {}
-        for v in adapter_id:
-            _adapter_id, *adapter_name = v.rsplit(":", maxsplit=1)
-            # We don't resolve full path here, leave it to build
-            # we are just doing the parsing here.
-            adapter_map[_adapter_id] = adapter_name[0] if len(adapter_name) > 0 else None
-
     if machine:
         output = "porcelain"
 
@@ -1871,7 +1858,6 @@ def build_command(
     try:
         os.environ[llm_config["env"].runtime] = runtime
         os.environ["OPENLLM_MODEL"] = inflection.underscore(model_name)
-        os.environ["OPENLLM_ADAPTER_MAP"] = orjson.dumps(adapter_map).decode()
         os.environ["OPENLLM_SERIALIZATION"] = serialisation_format
 
         framework_envvar = llm_config["env"].framework_value
@@ -1880,7 +1866,6 @@ def build_command(
             model_id=model_id,
             llm_config=llm_config,
             quantize=quantize,
-            adapter_map=adapter_map,
             bettertransformer=bettertransformer,
             return_runner_kwargs=False,
             ensure_available=True,
@@ -1902,6 +1887,29 @@ def build_command(
                     llm_fs.writetext("Dockerfile.template", dockerfile_template.read())
                 dockerfile_template_path = llm_fs.getsyspath("/Dockerfile.template")
 
+            adapter_map: dict[str, str | None] | None = None
+            if adapter_id:
+                if not build_ctx:
+                    _echo("'build_ctx' is required when '--adapter-id' is passsed.", fg="red")
+                    ctx.exit(1)
+                adapter_map = {}
+                for v in adapter_id:
+                    _adapter_id, *adapter_name = v.rsplit(":", maxsplit=1)
+                    name = adapter_name[0] if len(adapter_name) > 0 else None
+                    try:
+                        resolve_user_filepath(_adapter_id, build_ctx)
+                        src_folder_name = os.path.basename(_adapter_id)
+                        src_fs = fs.open_fs(build_ctx)
+                        llm_fs.makedir(src_folder_name, recreate=True)
+                        fs.copy.copy_dir(src_fs, _adapter_id, llm_fs, src_folder_name)
+                        adapter_map[src_folder_name] = name
+                    except FileNotFoundError:
+                        # this is the remote adapter, then just added back
+                        # note that there is a drawback here. If the path of the local adapter
+                        # path have the same name as the remote, then we currently don't support
+                        # that edge case.
+                        adapter_map[_adapter_id] = name
+                os.environ["OPENLLM_ADAPTER_MAP"] = orjson.dumps(adapter_map).decode()
             bento_tag = bentoml.Tag.from_taglike(f"{llm.llm_type}-service:{llm.tag.version}")
             try:
                 bento = bentoml.get(bento_tag)
@@ -1938,8 +1946,7 @@ def build_command(
                     runtime=runtime,
                 )
     except Exception as e:
-        logger.error("\nException caught during building LLM %s: \n", model_name, exc_info=e)
-        raise
+        raise e from None
     else:
         os.environ.pop("OPENLLM_MODEL", None)
         os.environ.pop("OPENLLM_MODEL_ID", None)

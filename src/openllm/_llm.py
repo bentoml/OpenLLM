@@ -150,9 +150,6 @@ def make_tag(
         A tuple of ``bentoml.Tag`` and a dict of unused kwargs.
     """
     model_name = normalise_model_name(model_id)
-    if os.getenv("OPENLLM_USE_LOCAL_LATEST", str(False)).upper() in ENV_VARS_TRUE_VALUES:
-        return bentoml.models.get(f"{implementation}-{model_name}").tag
-
     if validate_is_path(model_id):
         model_id = resolve_filepath(model_id)
         # special cases, if it is the model store, then we return the tags
@@ -891,6 +888,10 @@ class LLM(LLMInterface[M, T], ReprMixin):
         if _tag.version is None:
             raise RuntimeError("Failed to resolve model version.")
 
+        if os.getenv("OPENLLM_START_FROM_BENTO", str(False)).upper() in ENV_VARS_TRUE_VALUES:
+            model_id = bentoml.models.get(_tag).path
+        breakpoint()
+
         return cls(
             *args,
             model_id=model_id,
@@ -908,21 +909,26 @@ class LLM(LLMInterface[M, T], ReprMixin):
 
     @classmethod
     def _infer_tag_from_model_id(cls, model_id: str, model_version: str | None) -> bentoml.Tag:
+        if os.getenv("OPENLLM_USE_LOCAL_LATEST", str(False)).upper() in ENV_VARS_TRUE_VALUES:
+            return bentoml.models.get(
+                f"{cls.__llm_implementation__}-{normalise_model_name(model_id)}:{'latest' if model_version is None else model_version}".lower().strip()
+            ).tag
         # XXX: Fix me later, if the model is a valid tag, then we return it directly
         # instead of creating a new tag from the model_id. this branch will be hit during `openllm build`
+        if os.getenv("OPENLLM_START_FROM_BENTO", str(False)).upper() in ENV_VARS_TRUE_VALUES:
+            return bentoml.models.get(
+                f'{normalise_model_name(model_id).lower()}:{"latest" if model_version is None else model_version}'
+            ).tag
         try:
-            return bentoml.models.get(model_id.lower()).tag
+            return bentoml.Tag.from_taglike(model_id.lower())
         except (ValueError, bentoml.exceptions.BentoMLException):
-            try:
-                return bentoml.Tag.from_taglike(model_id.lower())
-            except (ValueError, bentoml.exceptions.BentoMLException):
-                return make_tag(
-                    model_id,
-                    model_version=model_version,
-                    trust_remote_code=cls.config_class.__openllm_trust_remote_code__,
-                    implementation=cls.__llm_implementation__,
-                    quiet=True,
-                )
+            return make_tag(
+                model_id,
+                model_version=model_version,
+                trust_remote_code=cls.config_class.__openllm_trust_remote_code__,
+                implementation=cls.__llm_implementation__,
+                quiet=True,
+            )
 
     def __init__(
         self,

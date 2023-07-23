@@ -30,6 +30,7 @@ from simple_di import inject
 import bentoml
 from bentoml._internal.bento.build_config import BentoBuildConfig
 from bentoml._internal.bento.build_config import DockerOptions
+from bentoml._internal.bento.build_config import ModelSpec
 from bentoml._internal.bento.build_config import PythonOptions
 from bentoml._internal.configuration import get_debug_mode
 from bentoml._internal.configuration.containers import BentoMLContainer
@@ -44,7 +45,6 @@ from ..utils import is_flax_available
 from ..utils import is_tf_available
 from ..utils import is_torch_available
 from ..utils import pkg
-from ..utils import resolve_user_filepath
 
 
 if t.TYPE_CHECKING:
@@ -229,6 +229,7 @@ def construct_docker_options(
         env=env_dict,
         system_packages=["git"],
         dockerfile_template=dockerfile_template,
+        python_version="3.9",
     )
 
 
@@ -252,6 +253,7 @@ def create_bento(
     framework_envvar = llm.config["env"]["framework_value"]
     labels = dict(llm.identifying_params)
     labels.update({"_type": llm.llm_type, "_framework": framework_envvar, "start_name": llm.config["start_name"]})
+    labels["base_name_or_path"] = llm.model_id
 
     if adapter_map:
         labels.update(adapter_map)
@@ -270,27 +272,6 @@ def create_bento(
                 ) from None
 
     logger.info("Building Bento for '%s'", llm.config["start_name"])
-
-    if adapter_map is not None:
-        if build_ctx is None:
-            raise ValueError("build_ctx is required when 'adapter_map' is not None")
-        updated_mapping: dict[str, str | None] = {}
-        for adapter_id, name in adapter_map.items():
-            try:
-                resolve_user_filepath(adapter_id, build_ctx)
-                src_folder_name = os.path.basename(adapter_id)
-                src_fs = fs.open_fs(build_ctx)
-                llm_fs.makedir(src_folder_name, recreate=True)
-                fs.copy.copy_dir(src_fs, adapter_id, llm_fs, src_folder_name)
-                updated_mapping[src_folder_name] = name
-            except FileNotFoundError:
-                # this is the remote adapter, then just added back
-                # note that there is a drawback here. If the path of the local adapter
-                # path have the same name as the remote, then we currently don't support
-                # that edge case.
-                updated_mapping[adapter_id] = name
-        adapter_map = updated_mapping
-
     # add service.py definition to this temporary folder
     codegen.write_service(llm, adapter_map, llm_fs)
 
@@ -319,6 +300,7 @@ def create_bento(
             runtime,
             serialisation_format,
         ),
+        models=[ModelSpec.from_item({"tag": str(llm.tag), "alias": llm.tag.name})],
     )
 
     bento = bentoml.Bento.create(

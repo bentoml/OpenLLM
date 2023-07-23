@@ -440,7 +440,8 @@ class EnvVarMixin(ReprMixin):
 
         framework_value: LiteralRuntime
         quantize_value: str | None
-        bettertransformer_value: str | None
+        bettertransformer_value: bool
+        model_id_value: str | None
         runtime_value: t.Literal["ggml", "transformers"]
 
     # fmt: off
@@ -463,7 +464,7 @@ class EnvVarMixin(ReprMixin):
     @overload
     def __getitem__(self, item: t.Literal["model_id_value"]) -> str | None: ...
     @overload
-    def __getitem__(self, item: t.Literal["bettertransformer_value"]) -> str | None: ...
+    def __getitem__(self, item: t.Literal["bettertransformer_value"]) -> bool: ...
     @overload
     def __getitem__(self, item: t.Literal["runtime_value"]) -> t.Literal["ggml", "transformers"]: ...
     # fmt: on
