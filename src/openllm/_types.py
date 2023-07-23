@@ -145,6 +145,10 @@ class LLMRunner(bentoml.Runner):
     generate_one: RunnerMethod[LLMRunnable, [str, list[str]], t.Sequence[dict[t.Literal["generated_text"], str]]]
     generate_iterator: RunnerMethod[LLMRunnable, [str], t.Generator[t.Any, None, None]]
 
+    supports_embeddings: bool
+    supports_hf_agent: bool
+    has_adapters: bool
+
     def __init__(
         self,
         runnable_class: type[LLMRunnable],

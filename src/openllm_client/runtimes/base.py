@@ -90,6 +90,10 @@ class ClientMeta(t.Generic[T]):
 
     @property
     def _hf_agent(self) -> transformers.HfAgent:
+        if not self.llm["supports-generate-one"]:
+            raise openllm.exceptions.OpenLLMException(
+                f"{self.model_name} ({self.framework}) does not support running HF agent."
+            )
         if self.__agent__ is None:
             if not openllm.utils.is_transformers_supports_agent():
                 raise RuntimeError(

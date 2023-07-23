@@ -326,8 +326,8 @@ def save_pretrained(
     **attrs: t.Any,
 ) -> None:
     """Light wrapper around ``transformers.PreTrainedTokenizer.save_pretrained`` and ``transformers.PreTrainedModel.save_pretrained``."""
-    model = first_not_none(model, default=llm.__llm_model__)
-    tokenizer = first_not_none(tokenizer, default=llm.__llm_tokenizer__)
+    model = first_not_none(model, default=llm.model)
+    tokenizer = first_not_none(tokenizer, default=llm.tokenizer)
     save_function = first_not_none(save_function, default=torch.save)
     model_save_attrs, tokenizer_save_attrs = normalize_attrs_to_model_tokenizer_pair(**attrs)
     safe_serialization = safe_serialization or llm._serialisation_format == "safetensors"
