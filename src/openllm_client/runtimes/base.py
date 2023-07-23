@@ -90,6 +90,10 @@ class ClientMeta(t.Generic[T]):
 
     @property
     def _hf_agent(self) -> transformers.HfAgent:
+        if not self.supports_hf_agent:
+            raise openllm.exceptions.OpenLLMException(
+                f"{self.model_name} ({self.framework}) does not support running HF agent."
+            )
         if self.__agent__ is None:
             if not openllm.utils.is_transformers_supports_agent():
                 raise RuntimeError(
@@ -128,6 +132,16 @@ class ClientMeta(t.Generic[T]):
     @property
     @abstractmethod
     def configuration(self) -> dict[str, t.Any]:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def supports_embeddings(self) -> bool:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def supports_hf_agent(self) -> bool:
         raise NotImplementedError
 
     @property

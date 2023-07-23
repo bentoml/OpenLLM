@@ -28,6 +28,7 @@ from abc import abstractmethod
 from pathlib import Path
 
 import attr
+import inflection
 import orjson
 from huggingface_hub import hf_hub_download
 
@@ -82,6 +83,7 @@ if t.TYPE_CHECKING:
     from ._configuration import PeftType
     from ._types import AdaptersMapping
     from ._types import AdaptersTuple
+    from ._types import AnyCallable
     from ._types import DictStrAny
     from ._types import ListStr
     from ._types import LiteralRuntime
@@ -161,13 +163,12 @@ def make_tag(
             model_version = tag.version
             model_name = tag.name
         else:
-            if model_version is None:  # noqa: PLR5501
-                if not quiet:
-                    logger.warning(
-                        "Given 'model_id=%s' is a path, and 'model_version' is not passed. OpenLLM will generate the version based on the last modified time of this given directory.",
-                        model_id,
-                    )
-                model_version = generate_hash_from_file(model_id)
+            if not quiet and model_version is None:
+                logger.warning(
+                    "Given 'model_id=%s' is a path, and 'model_version' is not passed. OpenLLM will generate the version based on the last modified time of this given directory.",
+                    model_id,
+                )
+            model_version = first_not_none(model_version, default=generate_hash_from_file(model_id))
     else:
         config = t.cast(
             "transformers.PretrainedConfig",
@@ -418,6 +419,15 @@ class LLMInterface(ABC, t.Generic[M, T]):
     __llm_adapter_map__: dict[AdapterType, dict[str | t.Literal["default"], tuple[peft.PeftConfig, str]]] | None
     """A reference to the the cached LoRA adapter mapping."""
 
+    __llm_supports_embeddings__: bool
+    """A boolean to determine whether models does implement ``LLM.embeddings``."""
+    __llm_supports_generate__: bool
+    """A boolean to determine whether models does implement ``LLM.generate``."""
+    __llm_supports_generate_one__: bool
+    """A boolean to determine whether models does implement ``LLM.generate_one``."""
+    __llm_supports_generate_iterator__: bool
+    """A boolean to determine whether models does implement ``LLM.generate_iterator``."""
+
     if t.TYPE_CHECKING and not MYPY:
 
         def __attrs_init__(
@@ -528,6 +538,21 @@ def _wrapped_save_pretrained(f: _save_pretrained_wrapper[M, T]):
     return wrapper
 
 
+def _update_docstring(cls: LLM[M, T], fn: str) -> AnyCallable:
+    # update docstring for given entrypoint
+    original_fn = getattr(cls, fn, getattr(LLMInterface, fn))
+    original_fn.__doc__ = (
+        original_fn.__doc__
+        or f"""\
+    {cls.__name__}'s implementation for {fn}.
+
+    Note that if LoRA is enabled (via either SDK or CLI), `self.model` will become a `peft.PeftModel`
+    The original model can then be accessed with 'self.model.get_base_model()'.
+    """
+    )
+    setattr(cls, fn, original_fn)
+
+
 def _make_assignment_script(cls: type[LLM[M, T]]) -> t.Callable[[type[LLM[M, T]]], None]:
     attributes = {
         "import_model": _wrapped_import_model,
@@ -539,7 +564,11 @@ def _make_assignment_script(cls: type[LLM[M, T]]) -> t.Callable[[type[LLM[M, T]]
     args: ListStr = []
     anns: DictStrAny = {}
     lines: ListStr = []
-    globs: DictStrAny = {"cls": cls, "_cached_LLMInterface_get": _object_getattribute.__get__(LLMInterface)}
+    globs: DictStrAny = {
+        "cls": cls,
+        "_cached_LLMInterface_get": _object_getattribute.__get__(LLMInterface),
+        "__gen_docstring": _update_docstring,
+    }
     # function initialisation
     for func, impl in attributes.items():
         impl_name = f"__wrapped_{func}"
@@ -561,9 +590,22 @@ def _make_assignment_script(cls: type[LLM[M, T]]) -> t.Callable[[type[LLM[M, T]]
     interface_anns = codegen.get_annotations(LLMInterface)
     for v in {"bentomodel", "model", "tokenizer", "adapter_map"}:
         lines.append(_setattr_class(f"__llm_{v}__", None))
-        anns[f"__llm_{v}__"] = interface_anns.get("__llm_{v}__")
+        anns[f"__llm_{v}__"] = interface_anns.get(f"__llm_{v}__")
 
-    return codegen.generate_function(cls, "__assign_attr", lines, args=("cls", *args), globs=globs, annotations=anns)
+    # boolean to determine whether LLM has defined an implementation for a function
+    for fn in {"generate", "generate_one", "generate_iterator", "embeddings"}:
+        key = f"__llm_supports_{fn}__"
+        lines.extend(
+            [
+                _setattr_class(key, f"cls.{fn} is not _cached_LLMInterface_get('{fn}')"),
+                f"__gen_docstring(cls, '{fn}')",
+            ]
+        )
+        anns[key] = interface_anns.get(key)
+
+    return codegen.generate_function(
+        cls, "__assign_llm_attr", lines, args=("cls", *args), globs=globs, annotations=anns
+    )
 
 
 _AdaptersTuple: type[AdaptersTuple] = codegen.make_attr_tuple_class("AdaptersTuple", ["adapter_id", "name", "config"])
@@ -607,28 +649,24 @@ class LLM(LLMInterface[M, T], ReprMixin):
         implementation, config_class_name = cls._infer_implementation_from_name(cls.__name__)
         cls.__llm_implementation__ = implementation
         config_class = openllm.AutoConfig.infer_class_from_name(config_class_name)
-
         if "__openllm_internal__" in cd:
             if "config_class" not in cd:
                 cls.config_class = config_class
         elif "config_class" not in cd:
             raise RuntimeError("Missing required key 'config_class'. Make sure to define it within the LLM subclass.")
-
         _make_assignment_script(cls)(cls)
 
-        # update docstring for given entrypoint
-        for fn in {"generate", "generate_one", "generate_iterator"}:
-            original_fn = getattr(cls, fn, getattr(LLMInterface, fn))
-            original_fn.__doc__ = (
-                original_fn.__doc__
-                or f"""\
-            '{fn}' implementation {cls.__name__}.
-
-            Note that if LoRA is enabled (via either SDK or CLI), `self.model` will become a `peft.PeftModel`
-            The original can then be accessed with 'self.model.get_base_model()'.
-            """
-            )
-            setattr(cls, fn, original_fn)
+    def __getitem__(self, item: t.LiteralString | t.Any) -> t.Any:
+        if item is None:
+            raise TypeError(f"{self} doesn't understand how to index None.")
+        item = inflection.underscore(item)
+        internal_attributes = f"__llm_{item}__"
+        if hasattr(self, internal_attributes):
+            return getattr(self, internal_attributes)
+        elif hasattr(self, item):
+            return getattr(self, item)
+        else:
+            raise KeyError(item)
 
     @classmethod
     @overload
@@ -1667,6 +1705,9 @@ def llm_runner_class(self: openllm.LLM[M, T]) -> type[LLMRunner]:
                 "__repr__": ReprMixin.__repr__,
                 "__repr_keys__": property(_wrapped_repr_keys),
                 "__repr_args__": _wrapped_repr_args,
+                "supports_embeddings": self["supports-embeddings"],
+                "supports_hf_agent": self["supports-generate-one"],
+                "has_adapters": self._adapters_mapping is not None,
             }
         ),
     )

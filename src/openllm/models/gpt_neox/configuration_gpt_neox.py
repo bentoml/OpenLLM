@@ -11,12 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 from __future__ import annotations
-
 import openllm
-
-
 class GPTNeoXConfig(openllm.LLMConfig):
     """GPTNeoX is an autoregressive language model trained on the Pile, whose weights will be made freely and openly available to the public through a permissive license.
 
@@ -32,7 +28,6 @@ class GPTNeoXConfig(openllm.LLMConfig):
     Refer to [GPTNeoX's model card](https://huggingface.co/docs/transformers/model_doc/gpt_neox)
     for more information.
     """
-
     __config__ = {
         "model_name": "gpt_neox",
         "start_name": "gpt-neox",
@@ -42,14 +37,10 @@ class GPTNeoXConfig(openllm.LLMConfig):
         "default_id": "eleutherai/gpt-neox-20b",
         "model_ids": ["eleutherai/gpt-neox-20b"],
     }
-
     use_half_precision: bool = openllm.LLMConfig.Field(True, description="Whether to use half precision for model.")
-
     class GenerationConfig:
         temperature: float = 0.9
         max_new_tokens: int = 100
-
-
 START_GPT_NEOX_COMMAND_DOCSTRING = """\
 Run a LLMServer for GPTNeoX model.
 
@@ -69,6 +60,4 @@ or provide `--model-id` flag when running ``openllm start gpt-neox``:
 \b
 $ openllm start gpt-neox --model-id 'stabilityai/stablelm-tuned-alpha-3b'
 """
-
-
 DEFAULT_PROMPT_TEMPLATE = """{instruction}"""

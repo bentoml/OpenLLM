@@ -193,6 +193,10 @@ def import_model(
     if _tokenizer.pad_token is None:
         _tokenizer.pad_token = _tokenizer.eos_token
 
+    # NOTE: quick hack to set the loaded into llm object
+    object.__setattr__(llm, "__llm_model__", model)
+    object.__setattr__(llm, "__llm_tokenizer__", _tokenizer)
+
     try:
         with bentoml.models.create(
             llm.tag,
@@ -210,9 +214,7 @@ def import_model(
             else None,
             metadata=metadata,
         ) as bentomodel:
-            save_pretrained(
-                llm, bentomodel.path, model=model, tokenizer=_tokenizer, safe_serialization=safe_serialisation
-            )
+            save_pretrained(llm, bentomodel.path, safe_serialization=safe_serialisation)
             return bentomodel
     finally:
         # NOTE: We need to free up the cache after importing the model
@@ -296,12 +298,12 @@ def load_model(llm: openllm.LLM[M, t.Any], *decls: t.Any, **attrs: t.Any) -> M:
         or getattr(model, "is_loaded_in_4bit", False)
         or getattr(model, "is_quantized", False)
     )
-    if torch.cuda.is_available() and torch.cuda.device_count() == 1 and not loaded_in_kbit:
+    if torch.cuda.is_available() and not loaded_in_kbit:
         try:
             model = model.to("cuda")
         except torch.cuda.OutOfMemoryError as err:
             raise RuntimeError(
-                f"Failed to fit {llm.config['model_name']} with model_id '{llm.model_id}' to CUDA.\nNote: You can try out '--quantize int8 | int4' for dynamic quantization."
+                f"Failed to convert {llm.config['model_name']} with model_id '{llm.model_id}' to CUDA.\nNote: You can try out '--quantize int8 | int4' for dynamic quantization."
             ) from err
     if llm.bettertransformer and llm.__llm_implementation__ == "pt" and not isinstance(model, _transformers.Pipeline):
         # BetterTransformer is currently only supported on PyTorch.
@@ -314,27 +316,19 @@ def load_model(llm: openllm.LLM[M, t.Any], *decls: t.Any, **attrs: t.Any) -> M:
 def save_pretrained(
     llm: openllm.LLM[M, T],
     save_directory: str,
-    model: M | None = None,
-    tokenizer: T | None = None,
     is_main_process: bool = True,
     state_dict: DictStrAny | None = None,
     save_function: t.Callable[..., None] | None = None,
     push_to_hub: bool = False,
-    max_shard_size: int | str = "10GB",
+    max_shard_size: int | str = "2GB",
     safe_serialization: bool = False,
     variant: str | None = None,
     **attrs: t.Any,
 ) -> None:
     """Light wrapper around ``transformers.PreTrainedTokenizer.save_pretrained`` and ``transformers.PreTrainedModel.save_pretrained``."""
-    model = first_not_none(model, default=llm.__llm_model__)
-    tokenizer = first_not_none(tokenizer, default=llm.__llm_tokenizer__)
     save_function = first_not_none(save_function, default=torch.save)
     model_save_attrs, tokenizer_save_attrs = normalize_attrs_to_model_tokenizer_pair(**attrs)
     safe_serialization = safe_serialization or llm._serialisation_format == "safetensors"
-
-    if model is None or tokenizer is None:
-        raise RuntimeError("Failed to find loaded model or tokenizer to save to local store.")
-
     if llm._quantize_method == "gptq":
         if not is_autogptq_available():
             raise OpenLLMException(
@@ -342,11 +336,11 @@ def save_pretrained(
             )
         if llm.config["model_type"] != "causal_lm":
             raise OpenLLMException(f"GPTQ only support Causal LM (got {llm.__class__} of {llm.config['model_type']})")
-        model.save_quantized(save_directory, use_safetensors=safe_serialization)
-    elif isinstance(model, _transformers.Pipeline):
-        model.save_pretrained(save_directory, safe_serialization=safe_serialization)
+        llm.model.save_quantized(save_directory, use_safetensors=safe_serialization)
+    elif isinstance(llm.model, _transformers.Pipeline):
+        llm.model.save_pretrained(save_directory, safe_serialization=safe_serialization)
     else:
-        model.save_pretrained(
+        llm.model.save_pretrained(
             save_directory,
             is_main_process=is_main_process,
             state_dict=state_dict,
@@ -357,4 +351,4 @@ def save_pretrained(
             variant=variant,
             **model_save_attrs,
         )
-    tokenizer.save_pretrained(save_directory, push_to_hub=push_to_hub, **tokenizer_save_attrs)
+    llm.tokenizer.save_pretrained(save_directory, push_to_hub=push_to_hub, **tokenizer_save_attrs)

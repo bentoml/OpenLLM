@@ -34,6 +34,7 @@ bentomodel = openllm.import_model("falcon", model_id='tiiuae/falcon-7b-instruct'
 """
 from __future__ import annotations
 import functools
+import http.client
 import importlib.machinery
 import importlib.util
 import inspect
@@ -470,9 +471,8 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
         return super().get_command(ctx, cmd_name)
 
     def list_commands(self, ctx: click.Context) -> list[str]:
-        if ctx.command.name == "start" or ctx.command.name == "start-grpc":
+        if ctx.command.name in {"start", "start-grpc"}:
             return list(openllm.CONFIG_MAPPING.keys())
-
         return super().list_commands(ctx)
 
     @override
@@ -883,7 +883,7 @@ def prerequisite_check(
 
     requirements = llm_config["requirements"]
     if requirements is not None and len(requirements) > 0:
-        missing_requirements = [i for i in requirements if importlib.util.find_spec(i) is None]
+        missing_requirements = [i for i in requirements if importlib.util.find_spec(inflection.underscore(i)) is None]
         if len(missing_requirements) > 0:
             _echo(
                 f"Make sure to have the following dependencies available: {missing_requirements}",
@@ -2338,6 +2338,11 @@ def instruct(
     ```
     """
     client = openllm.client.HTTPClient(endpoint, timeout=timeout)
+
+    try:
+        client.call("metadata")
+    except http.client.BadStatusLine:
+        raise click.ClickException(f"{endpoint} is neither a HTTP server nor reachable.") from None
 
     if agent == "hf":
         if not is_transformers_supports_agent():

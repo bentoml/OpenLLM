@@ -15,7 +15,7 @@ import click
 
 _R = TypeVar("_R")
 _T = TypeVar("_T")
-AnyCallable = Callable[..., Any]
+AnyCallable: TypeAlias = Callable[..., Any]
 Decorator: TypeAlias = Callable[[_T], _T]
 _FC = TypeVar("_FC", bound=Union[AnyCallable, click.Command])
 

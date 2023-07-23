@@ -77,6 +77,20 @@ class HTTPClientMixin:
         except KeyError:
             raise RuntimeError("Malformed service endpoint. (Possible malicious)") from None
 
+    @property
+    def supports_embeddings(self) -> bool:
+        try:
+            return self._metadata.get("supports_embeddings", False)
+        except KeyError:
+            raise RuntimeError("Malformed service endpoint. (Possible malicious)") from None
+
+    @property
+    def supports_hf_agent(self) -> bool:
+        try:
+            return self._metadata.get("supports_hf_agent", False)
+        except KeyError:
+            raise RuntimeError("Malformed service endpoint. (Possible malicious)") from None
+
     def postprocess(self, result: dict[str, t.Any]) -> openllm.GenerationOutput:
         return openllm.GenerationOutput(**result)
 

@@ -94,6 +94,8 @@ class MetadataOutput:
     model_name: str
     framework: str
     configuration: str
+    supports_embeddings: bool
+    supports_hf_agent: bool
 
 
 @attr.frozen(slots=True)

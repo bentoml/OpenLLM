@@ -1,8 +1,9 @@
 from typing import Any
 from typing import Callable
 from typing import Optional
+from typing import TypeAlias
 
-_CompareWithType = Callable[[Any, Any], bool]
+_CompareWithType: TypeAlias = Callable[[Any, Any], bool]
 
 def cmp_using(
     eq: Optional[_CompareWithType] = ...,
