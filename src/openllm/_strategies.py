@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from __future__ import annotations
+import functools
 import inspect
 import logging
 import math
@@ -35,7 +36,6 @@ from .utils import ReprMixin
 
 if t.TYPE_CHECKING:
     ListIntStr = list[int | str]
-
     class DynResource(bentoml.Resource[t.List[str]], resource_id=""):
         resource_id: t.ClassVar[str]
 
@@ -52,17 +52,13 @@ else:
 
 logger = logging.getLogger(__name__)
 
-
 def _strtoul(s: str) -> int:
     """Return -1 or positive integer sequence string starts with,."""
-    if not s:
-        return -1
+    if not s: return -1
     idx = 0
     for idx, c in enumerate(s):
-        if not (c.isdigit() or (idx == 0 and c in "+-")):
-            break
-        if idx + 1 == len(s):
-            idx += 1  # noqa: PLW2901
+        if not (c.isdigit() or (idx == 0 and c in "+-")): break
+        if idx + 1 == len(s): idx += 1  # noqa: PLW2901
     # NOTE: idx will be set via enumerate
     return int(s[:idx]) if idx > 0 else -1
 
@@ -71,42 +67,30 @@ def _parse_list_with_prefix(lst: str, prefix: str) -> list[str]:
     rcs: list[str] = []
     for elem in lst.split(","):
         # Repeated id results in empty set
-        if elem in rcs:
-            return []
+        if elem in rcs: return []
         # Anything other but prefix is ignored
-        if not elem.startswith(prefix):
-            break
+        if not elem.startswith(prefix): break
         rcs.append(elem)
     return rcs
 
 
 _STACK_LEVEL = 3
 
-
 @overload
-def _parse_visible_devices(default_var: str | None = ..., respect_env: t.Literal[True] = True) -> list[str] | None:
-    ...
-
-
+def _parse_visible_devices(default_var: str | None = ..., respect_env: t.Literal[True] = True) -> list[str] | None: ...
 @overload
-def _parse_visible_devices(default_var: str = ..., respect_env: t.Literal[False] = False) -> list[str]:
-    ...
-
-
+def _parse_visible_devices(default_var: str = ..., respect_env: t.Literal[False] = False) -> list[str]: ...
 def _parse_visible_devices(default_var: str | None = None, respect_env: bool = True) -> list[str] | None:
     """CUDA_VISIBLE_DEVICES aware with default var for parsing spec."""
     if respect_env:
         spec = os.getenv("CUDA_VISIBLE_DEVICES", default_var)
-        if not spec:
-            return
+        if not spec: return
     else:
         assert default_var is not None, "spec is required to be not None when parsing spec."  # noqa: S101
         spec = default_var
 
-    if spec.startswith("GPU-"):
-        return _parse_list_with_prefix(spec, "GPU-")
-    if spec.startswith("MIG-"):
-        return _parse_list_with_prefix(spec, "MIG-")
+    if spec.startswith("GPU-"): return _parse_list_with_prefix(spec, "GPU-")
+    if spec.startswith("MIG-"): return _parse_list_with_prefix(spec, "MIG-")
 
     # XXX: We to somehow handle cases such as '100m'
     # CUDA_VISIBLE_DEVICES uses something like strtoul
@@ -115,11 +99,9 @@ def _parse_visible_devices(default_var: str | None = None, respect_env: bool = T
     for el in spec.split(","):
         x = _strtoul(el.strip())
         # Repeated ordinal results in empty set
-        if x in rc:
-            return []
+        if x in rc: return []
         # Negative value aborts the sequence
-        if x < 0:
-            break
+        if x < 0: break
         rc.append(x)
     return [str(i) for i in rc]
 
@@ -150,44 +132,30 @@ def _from_system(cls: type[DynResource]) -> list[str]:
 
                 device_count = c_uint32(0)
                 ret = rocmsmi.rsmi_num_monitor_devices(byref(device_count))
-                if ret == rsmi_status_t.RSMI_STATUS_SUCCESS:
-                    return [str(i) for i in range(device_count.value)]
+                if ret == rsmi_status_t.RSMI_STATUS_SUCCESS: return [str(i) for i in range(device_count.value)]
                 return []
-            except (ModuleNotFoundError, ImportError):
-                # In this case the binary is not found, returning empty list
-                return []
-            finally:
-                sys.path.remove("/opt/rocm/libexec/rocm_smi")
+            # In this case the binary is not found, returning empty list
+            except (ModuleNotFoundError, ImportError): return []
+            finally: sys.path.remove("/opt/rocm/libexec/rocm_smi")
         else:
             try:
                 from cuda import cuda
-
                 err, *_ = cuda.cuInit(0)
                 if err != cuda.CUresult.CUDA_SUCCESS:
                     logger.warning("Failed to initialise CUDA", stacklevel=_STACK_LEVEL)
                     return []
                 _, dev = cuda.cuDeviceGetCount()
                 return [str(i) for i in range(dev)]
-            except (ImportError, RuntimeError):
-                return []
+            except (ImportError, RuntimeError): return []
     return visible_devices
 
 
 @overload
-def _from_spec(cls: type[DynResource], spec: int) -> list[str]:
-    ...
-
-
+def _from_spec(cls: type[DynResource], spec: int) -> list[str]: ...
 @overload
-def _from_spec(cls: type[DynResource], spec: ListIntStr) -> list[str]:
-    ...
-
-
+def _from_spec(cls: type[DynResource], spec: ListIntStr) -> list[str]: ...
 @overload
-def _from_spec(cls: type[DynResource], spec: str) -> list[str]:
-    ...
-
-
+def _from_spec(cls: type[DynResource], spec: str) -> list[str]: ...
 def _from_spec(cls: type[DynResource], spec: t.Any) -> list[str]:
     """Shared mixin implementation for OpenLLM's NVIDIA and AMD resource implementation.
 
@@ -195,23 +163,15 @@ def _from_spec(cls: type[DynResource], spec: t.Any) -> list[str]:
     BentoML's resource configuration, its behaviour is similar to CUDA_VISIBLE_DEVICES.
     """
     if isinstance(spec, int):
-        if spec in (-1, 0):
-            return []
-        if spec < -1:
-            raise ValueError("Spec cannot be < -1.")
+        if spec in (-1, 0): return []
+        if spec < -1: raise ValueError("Spec cannot be < -1.")
         return [str(i) for i in range(spec)]
     elif isinstance(spec, str):
-        if not spec:
-            return []
-        if spec.isdigit():
-            spec = ",".join([str(i) for i in range(_strtoul(spec))])
+        if not spec: return []
+        if spec.isdigit(): spec = ",".join([str(i) for i in range(_strtoul(spec))])
         return _parse_visible_devices(spec, respect_env=False)
-    elif LazyType(ListIntStr).isinstance(spec):
-        return [str(x) for x in spec]
-    else:
-        raise TypeError(
-            f"'{cls.__name__}.from_spec' only supports parsing spec of type int, str, or list, got '{type(spec)}' instead."
-        )
+    elif LazyType(ListIntStr).isinstance(spec): return [str(x) for x in spec]
+    else: raise TypeError(f"'{cls.__name__}.from_spec' only supports parsing spec of type int, str, or list, got '{type(spec)}' instead.")
 
 
 def _raw_device_uuid_nvml() -> list[str] | None:
@@ -222,8 +182,7 @@ def _raw_device_uuid_nvml() -> list[str] | None:
     from ctypes import c_void_p
     from ctypes import create_string_buffer
 
-    try:
-        nvml_h = CDLL("libnvidia-ml.so.1")
+    try: nvml_h = CDLL("libnvidia-ml.so.1")
     except Exception:
         warnings.warn("Failed to find nvidia binding", stacklevel=_STACK_LEVEL)
         return
@@ -257,11 +216,8 @@ def _raw_device_uuid_nvml() -> list[str] | None:
 
 def _validate(cls: type[DynResource], val: list[t.Any]):
     if cls.resource_id == "amd.com/gpu":
-        raise RuntimeError(
-            "AMD GPU validation is not yet supported. Make sure to call 'get_resource(..., validate=False)'"
-        )
-    if not all(isinstance(i, str) for i in val):
-        raise ValueError("Input list should be all string type.")
+        raise RuntimeError("AMD GPU validation is not yet supported. Make sure to call 'get_resource(..., validate=False)'")
+    if not all(isinstance(i, str) for i in val): raise ValueError("Input list should be all string type.")
 
     try:
         from cuda import cuda
@@ -273,14 +229,11 @@ def _validate(cls: type[DynResource], val: list[t.Any]):
         for el in val:
             if el.startswith("GPU-") or el.startswith("MIG-"):
                 uuids = _raw_device_uuid_nvml()
-                if uuids is None:
-                    raise ValueError("Failed to parse available GPUs UUID")
-                if el not in uuids:
-                    raise ValueError(f"Given UUID {el} is not found with available UUID (available: {uuids})")
+                if uuids is None: raise ValueError("Failed to parse available GPUs UUID")
+                if el not in uuids: raise ValueError(f"Given UUID {el} is not found with available UUID (available: {uuids})")
             elif el.isdigit():
                 err, _ = cuda.cuDeviceGet(int(el))
-                if err != cuda.CUresult.CUDA_SUCCESS:
-                    raise ValueError(f"Failed to get device {el}")
+                if err != cuda.CUresult.CUDA_SUCCESS: raise ValueError(f"Failed to get device {el}")
     except (ImportError, RuntimeError):
         pass
 
@@ -303,10 +256,14 @@ def _make_resource_class(name: str, resource_kind: str, docstring: str) -> type[
         ),
     )
 
+_TPU_RESOURCE = "cloud-tpus.google.com/v2"
+_AMD_GPU_RESOURCE = "amd.com/gpu"
+_NVIDIA_GPU_RESOURCE = "nvidia.com/gpu"
+_CPU_RESOURCE = "cpu"
 
 NvidiaGpuResource = _make_resource_class(
     "NvidiaGpuResource",
-    "nvidia.com/gpu",
+    _NVIDIA_GPU_RESOURCE,
     """NVIDIA GPU resource.
 
     This is a modified version of internal's BentoML's NvidiaGpuResource
@@ -314,12 +271,35 @@ NvidiaGpuResource = _make_resource_class(
 )
 AmdGpuResource = _make_resource_class(
     "AmdGpuResource",
-    "amd.com/gpu",
+    _AMD_GPU_RESOURCE,
     """AMD GPU resource.
 
     Since ROCm will respect CUDA_VISIBLE_DEVICES, the behaviour of from_spec, from_system are similar to
     ``NvidiaGpuResource``. Currently ``validate`` is not yet supported.""",
 )
+
+LiteralResourceSpec = t.Literal["cloud-tpus.google.com/v2", "amd.com/gpu", "nvidia.com/gpu", "cpu"]
+
+# convenient mapping
+def resource_spec(name: t.Literal["tpu", "amd", "nvidia", "cpu"]) ->  LiteralResourceSpec:
+    if name == "tpu": return _TPU_RESOURCE
+    elif name == "amd": return _AMD_GPU_RESOURCE
+    elif name == "nvidia": return _NVIDIA_GPU_RESOURCE
+    elif name == "cpu": return _CPU_RESOURCE
+    else: raise ValueError("Unknown alias. Accepted: ['tpu', 'amd', 'nvidia', 'cpu']")
+@functools.lru_cache
+def available_resource_spec() -> tuple[LiteralResourceSpec, ...]:
+    """This is a utility function helps to determine the available resources from given running system.
+
+    It will first check for TPUs -> AMD GPUS -> NVIDIA GPUS -> CPUs.
+
+    TODO: Supports TPUs
+    """
+    available = ()
+    if len(AmdGpuResource.from_system()) > 0: available += (_AMD_GPU_RESOURCE,)
+    if len(NvidiaGpuResource.from_system()) > 0: available += (_NVIDIA_GPU_RESOURCE,)
+    available += (_CPU_RESOURCE,)
+    return t.cast(t.Tuple[LiteralResourceSpec, ...], available)
 
 
 class CascadingResourceStrategy(bentoml.Strategy, ReprMixin):

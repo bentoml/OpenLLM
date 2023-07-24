@@ -155,7 +155,6 @@ def construct_docker_options(
     dockerfile_template: str | None,
     runtime: t.Literal["ggml", "transformers"],
     serialisation_format: t.Literal["safetensors", "legacy"],
-    llm_spec: ModelSpec
 ) -> DockerOptions:
     _bentoml_config_options = os.environ.pop("BENTOML_CONFIG_OPTIONS", "")
     _bentoml_config_options_opts = [
@@ -166,7 +165,6 @@ def construct_docker_options(
     _bentoml_config_options += " " if _bentoml_config_options else "" + " ".join(_bentoml_config_options_opts)
     env: EnvVarMixin = llm.config["env"]
 
-    if not llm_spec.alias: raise ValueError("ModelSpec needs to specify an alias")
     env_dict = {
         env.framework: env.framework_value,
         env.config: f"'{llm.config.model_dump_json().decode()}'",
@@ -175,7 +173,7 @@ def construct_docker_options(
         "OPENLLM_ADAPTER_MAP": f"'{orjson.dumps(adapter_map).decode()}'",
         "BENTOML_DEBUG": str(get_debug_mode()),
         "BENTOML_CONFIG_OPTIONS": f"'{_bentoml_config_options}'",
-        env.model_id: llm_spec.alias,
+        env.model_id: f"/home/bentoml/bento/models/{llm.tag.path()}",  # This is the default BENTO_PATH var
     }
 
     if adapter_map: env_dict["BITSANDBYTES_NOWELCOME"] = os.environ.get("BITSANDBYTES_NOWELCOME", "1")
@@ -238,7 +236,7 @@ def create_bento(
         include=list(llm_fs.walk.files()),
         exclude=["/venv", "/.venv", "__pycache__/", "*.py[cod]", "*$py.class"],
         python=construct_python_options(llm, llm_fs, dockerfile_template is None, extra_dependencies, adapter_map),
-        docker=construct_docker_options(llm, llm_fs, workers_per_resource, quantize, bettertransformer, adapter_map, dockerfile_template, runtime, serialisation_format, llm_spec),
+        docker=construct_docker_options(llm, llm_fs, workers_per_resource, quantize, bettertransformer, adapter_map, dockerfile_template, runtime, serialisation_format),
         models=[llm_spec],
     )
 

@@ -117,39 +117,16 @@ def Field(
     use_default_converter: t.Literal[False] = False,
     converter: _ConverterType[_B, t.Any] = ...,
     **attrs: t.Any,
-) -> t.Any:
-    ...
-
-
-# NOTE: case 2, for stubs, we set the default value None, and thus respect class var type setter
+) -> t.Any: ...
+# NOTE: case 2, specifically for boolean, probably need to report to upstream python typing
 @overload
-def Field(default: None, **attrs: t.Any) -> t.Any:
-    ...
-
-
-# NOTE: case 3, we only specify description as helpers
+def Field(default: t.Literal[True, False], description: str = ...) -> bool: ...
+# NOTE: case 3, set the default to the correct type of the classvar setter
 @overload
-def Field(*, description: str | None = ..., **attrs: t.Any) -> t.Any:
-    ...
-
-
-# NOTE: case 4, we only specify description as helpers, and default type, then correctly set _T
+def Field(default: _T | None, **attrs: t.Any) -> _T: ...
+# NOTE: case 4, we only specify description as helpers
 @overload
-def Field(
-    default: _T,
-    *,
-    ge: int | float | None = None,
-    le: int | float | None = None,
-    validator: _ValidatorType[_T] | None = None,
-    description: str | None = None,
-    env: str | None = None,
-    auto_default: bool = False,
-    use_default_converter: bool = True,
-    **attrs: t.Any,
-) -> _T:
-    ...
-
-
+def Field(*, description: str | None = ..., **attrs: t.Any) -> t.Any: ...
 def Field(
     default: t.Any = None,
     *,

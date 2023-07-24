@@ -26,6 +26,7 @@ from .constants import FRAMEWORK_TO_AUTOCLASS_MAPPING
 from .constants import HUB_ATTRS
 from ..exceptions import OpenLLMException
 from ..utils import LazyLoader
+from ..utils import LazyType
 from ..utils import device_count
 from ..utils import first_not_none
 from ..utils import generate_context
@@ -38,6 +39,7 @@ from ..utils import normalize_attrs_to_model_tokenizer_pair
 if t.TYPE_CHECKING:
     import auto_gptq as autogptq
     import torch
+    import vllm
 
     import openllm
     import transformers as _transformers
@@ -47,10 +49,12 @@ if t.TYPE_CHECKING:
     from .._llm import T
     from .._types import DictStrAny
 else:
+    vllm = LazyLoader("vllm", globals(), "vllm")
     autogptq = LazyLoader("autogptq", globals(), "auto_gptq")
     _transformers = LazyLoader("_transformers", globals(), "transformers")
     torch = LazyLoader("torch", globals(), "torch")
 
+_object_setattr = object.__setattr__
 
 def process_transformers_config(
     model_id: str, trust_remote_code: bool, **attrs: t.Any
@@ -149,11 +153,8 @@ def import_model(
     signatures: DictStrAny = {}
     if quantize_method == "gptq":
         if not is_autogptq_available():
-            raise OpenLLMException(
-                "GPTQ quantisation requires 'auto-gptq' (Not found in local environment). Install it with 'pip install \"openllm[gptq]\"'"
-            )
-        if llm.config["model_type"] != "causal_lm":
-            raise OpenLLMException(f"GPTQ only support Causal LM (got {llm.__class__} of {llm.config['model_type']})")
+            raise OpenLLMException("GPTQ quantisation requires 'auto-gptq' (Not found in local environment). Install it with 'pip install \"openllm[gptq]\"'")
+        if llm.config["model_type"] != "causal_lm": raise OpenLLMException(f"GPTQ only support Causal LM (got {llm.__class__} of {llm.config['model_type']})")
         model = autogptq.AutoGPTQForCausalLM.from_quantized(
             llm.model_id,
             *decls,
@@ -163,27 +164,21 @@ def import_model(
             **hub_attrs,
             **attrs,
         )
-        metadata["_pretrained_class"] = model.__class__.__name__
-        metadata["_framework"] = model.model.framework
+        metadata.update({"_pretrained_class": model.__class__.__name__, "_framework": model.model.framework})
         signatures["generate"] = {"batchable": False}
     else:
-        if "quantization_config" in attrs and getattr(attrs["quantization_config"], "load_in_4bit", False):
-            # this model might be called with --quantize int4, therefore we need to pop this out
-            # since saving int4 is not yet supported
-            attrs.pop("quantization_config")
-        model = t.cast(
-            "_transformers.PreTrainedModel",
-            infer_autoclass_from_llm_config(llm, config).from_pretrained(
-                llm.model_id,
-                *decls,
-                config=config,
-                trust_remote_code=trust_remote_code,
-                **hub_attrs,
-                **attrs,
-            ),
+        # this model might be called with --quantize int4, therefore we need to pop this out
+        # since saving int4 is not yet supported
+        if "quantization_config" in attrs and getattr(attrs["quantization_config"], "load_in_4bit", False): attrs.pop("quantization_config")
+        model = infer_autoclass_from_llm_config(llm, config).from_pretrained(
+            llm.model_id,
+            *decls,
+            config=config,
+            trust_remote_code=trust_remote_code,
+            **hub_attrs,
+            **attrs,
         )
-        metadata["_pretrained_class"] = model.__class__.__name__
-        metadata["_framework"] = model.framework
+        metadata.update({"_pretrained_class": model.__class__.__name__, "_framework": model.framework})
 
     _tokenizer = infer_tokenizers_class_for_llm(llm).from_pretrained(
         llm.model_id,
@@ -191,12 +186,12 @@ def import_model(
         **hub_attrs,
         **tokenizer_attrs,
     )
-    if _tokenizer.pad_token is None:
-        _tokenizer.pad_token = _tokenizer.eos_token
+    if _tokenizer.pad_token is None: _tokenizer.pad_token = _tokenizer.eos_token
 
-    # NOTE: quick hack to set the loaded into llm object
-    object.__setattr__(llm, "__llm_model__", model)
-    object.__setattr__(llm, "__llm_tokenizer__", _tokenizer)
+    # NOTE: quick hack to set the loaded into llm object to use with save_pretrained
+    # to avoid recursive call when the model is not yet available in local store
+    _object_setattr(llm, "__llm_model__", model)
+    _object_setattr(llm, "__llm_tokenizer__", _tokenizer)
 
     try:
         with bentoml.models.create(
@@ -207,12 +202,7 @@ def import_model(
             labels=generate_labels(llm),
             signatures=signatures if signatures else make_default_signatures(model),
             options=ModelOptions(),
-            external_modules=[
-                importlib.import_module(model.__module__),
-                importlib.import_module(_tokenizer.__module__),
-            ]
-            if trust_remote_code
-            else None,
+            external_modules=[importlib.import_module(model.__module__), importlib.import_module(_tokenizer.__module__)] if trust_remote_code else None,
             metadata=metadata,
         ) as bentomodel:
             save_pretrained(llm, bentomodel.path, safe_serialization=safe_serialisation)
@@ -264,19 +254,10 @@ def load_model(llm: openllm.LLM[M, t.Any], *decls: t.Any, **attrs: t.Any) -> M:
     If model is not found, it will raises a ``bentoml.exceptions.NotFound``.
     """
     config, hub_attrs, attrs = process_transformers_config(llm.model_id, llm.__llm_trust_remote_code__, **attrs)
-    metadata = llm._bentomodel.info.metadata
-    safe_serialization = first_not_none(
-        t.cast(t.Optional[bool], metadata.get("safe_serialisation", None)),
-        attrs.pop("safe_serialization", None),
-        default=llm._serialisation_format == "safetensors",
-    )
-    if "_quantize" in metadata and metadata["_quantize"] == "gptq":
-        if not is_autogptq_available():
-            raise OpenLLMException(
-                "GPTQ quantisation requires 'auto-gptq' (Not found in local environment). Install it with 'pip install \"openllm[gptq]\"'"
-            )
-        if llm.config["model_type"] != "causal_lm":
-            raise OpenLLMException(f"GPTQ only support Causal LM (got {llm.__class__} of {llm.config['model_type']})")
+    safe_serialization = first_not_none(t.cast(t.Optional[bool], llm._bentomodel.info.metadata.get("safe_serialisation", None)), attrs.pop("safe_serialization", None), default=llm._serialisation_format == "safetensors")
+    if "_quantize" in llm._bentomodel.info.metadata and llm._bentomodel.info.metadata["_quantize"] == "gptq":
+        if not is_autogptq_available(): raise OpenLLMException("GPTQ quantisation requires 'auto-gptq' (Not found in local environment). Install it with 'pip install \"openllm[gptq]\"'")
+        if llm.config["model_type"] != "causal_lm": raise OpenLLMException(f"GPTQ only support Causal LM (got {llm.__class__} of {llm.config['model_type']})")
         return autogptq.AutoGPTQForCausalLM.from_quantized(
             llm._bentomodel.path,
             *decls,
@@ -286,6 +267,7 @@ def load_model(llm: openllm.LLM[M, t.Any], *decls: t.Any, **attrs: t.Any) -> M:
             **hub_attrs,
             **attrs,
         )
+
     model = infer_autoclass_from_llm_config(llm, config).from_pretrained(
         llm._bentomodel.path,
         *decls,
@@ -295,23 +277,14 @@ def load_model(llm: openllm.LLM[M, t.Any], *decls: t.Any, **attrs: t.Any) -> M:
         **attrs,
     )
     # NOTE: we only cast and load the model if it is not already quantized and setup correctly
-    loaded_in_kbit = (
-        getattr(model, "is_loaded_in_8bit", False)
-        or getattr(model, "is_loaded_in_4bit", False)
-        or getattr(model, "is_quantized", False)
-    )
+    loaded_in_kbit = getattr(model, "is_loaded_in_8bit", False) or getattr(model, "is_loaded_in_4bit", False) or getattr(model, "is_quantized", False)
     if torch.cuda.is_available() and device_count() == 1 and not loaded_in_kbit:
-        try:
-            model = model.to("cuda")
-        except torch.cuda.OutOfMemoryError as err:
-            raise RuntimeError(
-                f"Failed to convert {llm.config['model_name']} with model_id '{llm.model_id}' to CUDA.\nNote: You can try out '--quantize int8 | int4' for dynamic quantization."
-            ) from err
+        try: model = model.to("cuda")
+        except torch.cuda.OutOfMemoryError as err: raise RuntimeError(f"Failed to convert {llm.config['model_name']} with model_id '{llm.model_id}' to CUDA.\nNote: You can try out '--quantize int8 | int4' for dynamic quantization.") from err
     if llm.bettertransformer and llm.__llm_implementation__ == "pt" and not isinstance(model, _transformers.Pipeline):
         # BetterTransformer is currently only supported on PyTorch.
         from optimum.bettertransformer import BetterTransformer
-
-        model = BetterTransformer.transform(model)  # type: ignore
+        model = BetterTransformer.transform(model)
     return t.cast("M", model)
 
 
@@ -331,19 +304,14 @@ def save_pretrained(
     save_function = first_not_none(save_function, default=torch.save)
     model_save_attrs, tokenizer_save_attrs = normalize_attrs_to_model_tokenizer_pair(**attrs)
     safe_serialization = safe_serialization or llm._serialisation_format == "safetensors"
-    if llm.__llm_implementation__ == "vllm":
-        # NOTE: disable safetensors for vllm
-        safe_serialization = False
+    # NOTE: disable safetensors for vllm
+    if llm.__llm_implementation__ == "vllm": safe_serialization = False
     if llm._quantize_method == "gptq":
-        if not is_autogptq_available():
-            raise OpenLLMException(
-                "GPTQ quantisation requires 'auto-gptq' (Not found in local environment). Install it with 'pip install \"openllm[gptq]\"'"
-            )
-        if llm.config["model_type"] != "causal_lm":
-            raise OpenLLMException(f"GPTQ only support Causal LM (got {llm.__class__} of {llm.config['model_type']})")
+        if not is_autogptq_available(): raise OpenLLMException("GPTQ quantisation requires 'auto-gptq' (Not found in local environment). Install it with 'pip install \"openllm[gptq]\"'")
+        if llm.config["model_type"] != "causal_lm": raise OpenLLMException(f"GPTQ only support Causal LM (got {llm.__class__} of {llm.config['model_type']})")
         llm.model.save_quantized(save_directory, use_safetensors=safe_serialization)
-    elif isinstance(llm.model, _transformers.Pipeline):
-        llm.model.save_pretrained(save_directory, safe_serialization=safe_serialization)
+    elif LazyType["vllm.LLMEngine"]("vllm.LLMEngine").isinstance(llm.model): raise RuntimeError("vllm.LLMEngine cannot be serialisation directly. This happens when 'save_pretrained' is called directly after `openllm.AutoVLLM` is initialized.")
+    elif isinstance(llm.model, _transformers.Pipeline): llm.model.save_pretrained(save_directory, safe_serialization=safe_serialization)
     else:
         llm.model.save_pretrained(
             save_directory,
@@ -354,6 +322,6 @@ def save_pretrained(
             max_shard_size=max_shard_size,
             safe_serialization=safe_serialization,
             variant=variant,
-            **model_save_attrs,
+            **model_save_attrs
         )
     llm.tokenizer.save_pretrained(save_directory, push_to_hub=push_to_hub, **tokenizer_save_attrs)

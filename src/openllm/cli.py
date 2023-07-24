@@ -67,6 +67,7 @@ from simple_di import inject
 import bentoml
 import openllm
 from bentoml._internal.configuration.containers import BentoMLContainer
+from bentoml._internal.models.model import ModelStore
 
 from .__about__ import __version__
 from .exceptions import OpenLLMException
@@ -102,7 +103,6 @@ if t.TYPE_CHECKING:
 
     from bentoml._internal.bento import BentoStore
     from bentoml._internal.container import DefaultBuilder
-    from bentoml._internal.models.model import ModelStore
 
     from ._types import ClickFunctionWrapper
     from ._types import DictStrAny
@@ -511,7 +511,7 @@ def parse_serve_args(serve_grpc: bool) -> t.Callable[[t.Callable[..., openllm.LL
         help=f"Related to serving the model [synonymous to `bentoml {'serve-http' if not serve_grpc else command }`]",
     )
 
-    def decorator(f: t.Callable[t.Concatenate[int, str | None, P], openllm.LLMConfig]):
+    def decorator(f: t.Callable[t.Concatenate[int, str | None, P], openllm.LLMConfig]) -> t.Callable[[FC], FC]:
         serve_command = cli.commands[command]
         # The first variable is the argument bento
         # The last five is from BentoMLCommandGroup.NUMBER_OF_COMMON_PARAMS
@@ -666,14 +666,8 @@ Available official model_id(s): [default: {llm_config['default_id']}]
 
     if llm_config["requires_gpu"] and device_count() < 1:
         # NOTE: The model requires GPU, therefore we will return a dummy command
-        command_attrs.update(
-            {
-                "short_help": "(Disabled because there is no GPU available)",
-                "help": f"""{model} is currently not available to run on your
-                local machine because it requires GPU for inference.""",
-            }
-        )
-        return noop_command(group, llm_config, "No GPU available, therefore this command is disabled", **command_attrs)
+        command_attrs.update({"short_help": "(Disabled because there is no GPU available)", "help": f"""{model} is currently not available to run on your local machine because it requires GPU for inference."""})
+        return noop_command(llm_config, _serve_grpc, **command_attrs)
 
 
     @group.command(**command_attrs)
@@ -720,7 +714,7 @@ Available official model_id(s): [default: {llm_config['default_id']}]
             else: wpr = float(wpr)
 
         # Create a new model env to work with the envvar during CLI invocation
-        env = EnvVarMixin(config["model_name"], config["default_implementation"], model_id=model_id, bettertransformer=bettertransformer, quantize=quantize, runtime=runtime)
+        env = EnvVarMixin(config["model_name"], config.default_implementation(), model_id=model_id, bettertransformer=bettertransformer, quantize=quantize, runtime=runtime)
         prerequisite_check(ctx, config, quantize, adapter_map, int(1 / wpr))
 
         # NOTE: This is to set current configuration
@@ -784,16 +778,15 @@ Available official model_id(s): [default: {llm_config['default_id']}]
     return start_cmd
 
 
-def noop_command(group: click.Group, llm_config: openllm.LLMConfig, reason: str, **command_attrs: t.Any) -> click.Command:
+def noop_command(llm_config: openllm.LLMConfig, _serve_grpc: bool, **command_attrs: t.Any) -> click.Command:
     context_settings = command_attrs.pop("context_settings", {})
-    context_settings["ignore_unknown_options"] = True
-    context_settings["allow_extra_args"] = True
+    context_settings.update({"ignore_unknown_options": True, "allow_extra_args": True})
     command_attrs["context_settings"] = context_settings
-
+    group = start_command if not _serve_grpc else start_grpc_command
     # NOTE: The model requires GPU, therefore we will return a dummy command
     @group.command(**command_attrs)
     def noop(**_: t.Any) -> openllm.LLMConfig:
-        _echo(reason, fg="red")
+        _echo("No GPU available, therefore this command is disabled", fg="red")
         analytics.track_start_init(llm_config)
         return llm_config
 
@@ -932,7 +925,7 @@ def download_models_command(
     > **Note**: This behaviour will override ``--runtime``. Therefore make sure that the LLM contains correct conversion strategies to both GGML and HF.
     """
     llm_config = openllm.AutoConfig.for_model(model)
-    env = EnvVarMixin(model, llm_config["default_implementation"], model_id=model_id, runtime=runtime, quantize=quantize)
+    env = EnvVarMixin(model, llm_config.default_implementation(), model_id=model_id, runtime=runtime, quantize=quantize)
     impl: LiteralRuntime = first_not_none(implementation, default=env.framework_value)
     llm = openllm.infer_auto_class(impl).for_model(
         model,
@@ -1073,7 +1066,7 @@ def _start(
         additional_args: Additional arguments to pass to ``openllm start``.
     """
     llm_config = openllm.AutoConfig.for_model(model_name)
-    _ModelEnv = EnvVarMixin(model_name, first_not_none(framework, default=llm_config["default_implementation"]), model_id=model_id, bettertransformer=bettertransformer, quantize=quantize, runtime=runtime)
+    _ModelEnv = EnvVarMixin(model_name, first_not_none(framework, default=llm_config.default_implementation()), model_id=model_id, bettertransformer=bettertransformer, quantize=quantize, runtime=runtime)
     os.environ[_ModelEnv.framework] = _ModelEnv.framework_value
 
     args: ListStr = ["--runtime", runtime]
@@ -1342,30 +1335,13 @@ start, start_grpc, build, import_model, list_models = (
     multiple=True,
     metavar="[PATH | [remote/][adapter_name:]adapter_id][, ...]",
 )
-@click.option("--build-ctx", default=None, help="Build context. This is required if --adapter-id uses relative path")
+@click.option("--build-ctx", help="Build context. This is required if --adapter-id uses relative path", default=".")
 @model_version_option(click)
-@click.option(
-    "--dockerfile-template",
-    default=None,
-    type=click.File(),
-    help="Optional custom dockerfile template to be used with this BentoLLM.",
-)
+@click.option("--dockerfile-template", default=None, type=click.File(), help="Optional custom dockerfile template to be used with this BentoLLM.")
 @serialisation_option(click)
 @cog.optgroup.group(cls=cog.MutuallyExclusiveOptionGroup, name="Utilities options")
-@cog.optgroup.option(
-    "--containerize",
-    default=False,
-    is_flag=True,
-    type=click.BOOL,
-    help="Whether to containerize the Bento after building. '--containerize' is the shortcut of 'openllm build && bentoml containerize'.",
-)
-@cog.optgroup.option(
-    "--push",
-    default=False,
-    is_flag=True,
-    type=click.BOOL,
-    help="Whether to push the result bento to BentoCloud. Make sure to login with 'bentoml cloud login' first.",
-)
+@cog.optgroup.option("--containerize", default=False, is_flag=True, type=click.BOOL, help="Whether to containerize the Bento after building. '--containerize' is the shortcut of 'openllm build && bentoml containerize'.")
+@cog.optgroup.option("--push", default=False, is_flag=True, type=click.BOOL, help="Whether to push the result bento to BentoCloud. Make sure to login with 'bentoml cloud login' first.")
 @click.pass_context
 def build_command(
     ctx: click.Context,
@@ -1375,7 +1351,7 @@ def build_command(
     output: OutputLiteral,
     runtime: t.Literal["ggml", "transformers"],
     quantize: t.Literal["int8", "int4", "gptq"] | None,
-    enable_features: tuple[str] | None,
+    enable_features: tuple[str, ...] | None,
     bettertransformer: bool | None,
     workers_per_resource: float | None,
     adapter_id: tuple[str, ...],
@@ -1405,7 +1381,7 @@ def build_command(
     _previously_built = False
 
     llm_config = openllm.AutoConfig.for_model(model_name)
-    env = EnvVarMixin(model_name, llm_config["default_implementation"], model_id=model_id, quantize=quantize, bettertransformer=bettertransformer, runtime=runtime)
+    env = EnvVarMixin(model_name, llm_config.default_implementation(), model_id=model_id, quantize=quantize, bettertransformer=bettertransformer, runtime=runtime)
 
     # NOTE: We set this environment variable so that our service.py logic won't raise RuntimeError
     # during build. This is a current limitation of bentoml build where we actually import the service.py into sys.path
@@ -1667,46 +1643,28 @@ def models_command(ctx: click.Context, output: OutputLiteral, show_available: bo
 
 
 @cli.command()
-@click.argument(
-    "model_name",
-    type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING.keys()]),
-    required=False,
-)
-@click.option(
-    "-y",
-    "--yes",
-    "--assume-yes",
-    is_flag=True,
-    help="Skip confirmation when deleting a specific model",
-)
+@click.argument("model_name", type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING.keys()]), required=False)
+@click.option("-y", "--yes", "--assume-yes", is_flag=True, help="Skip confirmation when deleting a specific model")
+@click.option("--include-bentos/--no-include-bentos", is_flag=True, default=False, help="Whether to also include pruning bentos.")
 @inject
-def prune_command(
-    model_name: str | None, yes: bool, model_store: ModelStore = Provide[BentoMLContainer.model_store]
-) -> None:
-    """Remove all saved models locally.
+def prune_command(model_name: str | None, yes: bool, include_bentos: bool, model_store: ModelStore = Provide[BentoMLContainer.model_store], bento_store: BentoStore = Provide[BentoMLContainer.bento_store]) -> None:
+    """Remove all saved models, (and optionally bentos) built with OpenLLM locally.
 
     \b
     If a model type is passed, then only prune models for that given model type.
     """
-    available = [
-        m for m in bentoml.models.list() if "framework" in m.info.labels and m.info.labels["framework"] == "openllm"
-    ]
-    if model_name is not None:
-        available = [
-            m
-            for m in available
-            if "model_name" in m.info.labels and m.info.labels["model_name"] == inflection.underscore(model_name)
-        ]
+    available: list[tuple[bentoml.Model | bentoml.Bento, ModelStore | BentoStore]]= [(m, model_store) for m in bentoml.models.list() if "framework" in m.info.labels and m.info.labels["framework"] == "openllm"]
+    if model_name is not None: available = [(m, store) for m, store in available if "model_name" in m.info.labels and m.info.labels["model_name"] == inflection.underscore(model_name)]
+    if include_bentos:
+        if model_name is not None: available += [(b, bento_store) for b in bentoml.bentos.list() if "start_name" in b.info.labels and b.info.labels["start_name"] == inflection.underscore(model_name)]
+        else: available += [(b, bento_store) for b in bentoml.bentos.list() if "_type" in b.info.labels and "_framework" in b.info.labels]
 
-    for model in available:
-        if yes:
-            delete_confirmed = True
-        else:
-            delete_confirmed = click.confirm(f"delete model {model.tag}?")
-
+    for store_item, store in available:
+        if yes: delete_confirmed = True
+        else: delete_confirmed = click.confirm(f"delete {'model' if isinstance(store, ModelStore) else 'bento'} {store_item.tag}?")
         if delete_confirmed:
-            model_store.delete(model.tag)
-            click.echo(f"{model} deleted.")
+            store.delete(store_item.tag)
+            _echo(f"{store_item} deleted from {'model' if isinstance(store, ModelStore) else 'bento'} store.", fg="yellow")
 
 
 def parsing_instruction_callback(
