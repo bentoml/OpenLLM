@@ -44,7 +44,7 @@ dependencies = [
     "httpx",
     "typing_extensions",
     "cuda-python;platform_system!=\"Darwin\"",
-    "bitsandbytes<0.40",
+    "bitsandbytes<0.42",
 ]
 description = 'OpenLLM: Operating LLMs in production'
 dynamic = ["version"]
