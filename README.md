@@ -22,7 +22,7 @@ With OpenLLM, you can run inference with any open-source large-language models,
 deploy to the cloud or on-premises, and build powerful AI apps.
 
 🚂 **State-of-the-art LLMs**: built-in supports a wide range of open-source LLMs
-and model runtime, including StableLM, Falcon, Dolly, Flan-T5, ChatGLM,
+and model runtime, including Llama 2， StableLM, Falcon, Dolly, Flan-T5, ChatGLM,
 StarCoder and more.
 
 🔥 **Flexible APIs**: serve LLMs over RESTful API or gRPC with one command,
@@ -90,9 +90,9 @@ model. In a different terminal window or a Jupyter Notebook, create a client to
 start interacting with the model:
 
 ```python
->>> import openllm
->>> client = openllm.client.HTTPClient('http://localhost:3000')
->>> client.query('Explain to me the difference between "further" and "farther"')
+import openllm
+client = openllm.client.HTTPClient('http://localhost:3000')
+client.query('Explain to me the difference between "further" and "farther"')
 ```
 
 You can also use the `openllm query` command to query the model from the
@@ -485,8 +485,9 @@ to see how you can do it yourself.
 
 OpenLLM is not just a standalone product; it's a building block designed to
 integrate with other powerful tools easily. We currently offer integration with
-[BentoML](https://github.com/bentoml/BentoML) and
-[LangChain](https://github.com/hwchase17/langchain).
+[BentoML](https://github.com/bentoml/BentoML),
+[LangChain](https://github.com/hwchase17/langchain),
+and [Transformers Agents](https://huggingface.co/docs/transformers/transformers_agents).
 
 ### BentoML
 
@@ -515,41 +516,6 @@ async def prompt(input_text: str) -> str:
     return answer
 ```
 
-### Hugging Face Agents
-
-OpenLLM seamlessly integrates with Hugging Face Agents.
-
-> **Warning** The HuggingFace Agent is still at experimental stage. It is
-> recommended to OpenLLM with `pip install -r nightly-requirements.txt` to get
-> the latest API update for HuggingFace agent.
-
-```python
-import transformers
-
-agent = transformers.HfAgent("http://localhost:3000/hf/agent")  # URL that runs the OpenLLM server
-
-agent.run("Is the following `text` positive or negative?", text="I don't like how this models is generate inputs")
-```
-
-> **Note** Only `starcoder` is currently supported with Agent integration. The
-> example above was also ran with four T4s on EC2 `g4dn.12xlarge`
-
-If you want to use OpenLLM client to ask questions to the running agent, you can
-also do so:
-
-```python
-import openllm
-
-client = openllm.client.HTTPClient("http://localhost:3000")
-
-client.ask_agent(
-    task="Is the following `text` positive or negative?",
-    text="What are you thinking about?",
-)
-```
-
-![Gif showing Agent integration](/assets/agent.gif)
-<br/>
 
 ### [LangChain](https://python.langchain.com/docs/ecosystem/integrations/openllm)
 
@@ -595,6 +561,45 @@ def chat(input_text: str):
 > **Note** You can find out more examples under the
 > [examples](https://github.com/bentoml/OpenLLM/tree/main/examples) folder.
 
+
+### Transformers Agents
+
+OpenLLM seamlessly integrates with [Transformers Agents](https://huggingface.co/docs/transformers/transformers_agents).
+
+
+> **Warning** The Transformers Agent is still at an experimental stage. It is
+> recommended to install OpenLLM with `pip install -r nightly-requirements.txt` to get
+> the latest API update for HuggingFace agent.
+
+```python
+import transformers
+
+agent = transformers.HfAgent("http://localhost:3000/hf/agent")  # URL that runs the OpenLLM server
+
+agent.run("Is the following `text` positive or negative?", text="I don't like how this models is generate inputs")
+```
+
+> **Note** Only `starcoder` is currently supported with Agent integration. The
+> example above was also ran with four T4s on EC2 `g4dn.12xlarge`
+
+If you want to use OpenLLM client to ask questions to the running agent, you can
+also do so:
+
+```python
+import openllm
+
+client = openllm.client.HTTPClient("http://localhost:3000")
+
+client.ask_agent(
+    task="Is the following `text` positive or negative?",
+    text="What are you thinking about?",
+)
+```
+
+![Gif showing Agent integration](/assets/agent.gif)
+<br/>
+
+
 ## 🚀 Deploying to Production
 
 There are several ways to deploy your LLMs:
@@ -618,11 +623,15 @@ There are several ways to deploy your LLMs:
    ```bash
    bentoml containerize <name:version>
    ```
+   This generates a OCI-compatible docker image that can be deployed anywhere docker runs.
+   For best scalability and reliability of your LLM service in production, we recommend deploy
+   with BentoCloud。
+
 
 ### ☁️ BentoCloud
 
-Deploy your LLMs using [BentoCloud](https://www.bentoml.com/bento-cloud/), the
-production-ready platform for managing and deploying machine learning models.
+Deploy OpenLLM with [BentoCloud](https://www.bentoml.com/bento-cloud/), the
+the serverless cloud for shipping and scaling AI applications.
 
 1. **Create a BentoCloud account:** [sign up here](https://bentoml.com/cloud)
    for early access
@@ -654,8 +663,26 @@ production-ready platform for managing and deploying machine learning models.
    `bentoml deployment create` command following the
    [deployment instructions](https://docs.bentoml.com/en/latest/reference/cli.html#bentoml-deployment-create).
 
-Explore other options for deploying and hosting online ML services at
-[BentoML's Documentation](https://docs.bentoml.com/en/latest/concepts/deploy.html).
+
+
+## 👥 Community
+
+Engage with like-minded individuals passionate about LLMs, AI, and more on our
+[Discord](https://l.bentoml.com/join-openllm-discord)!
+
+OpenLLM is actively maintained by the BentoML team. Feel free to reach out and
+join us in our pursuit to make LLMs more accessible and easy to use 👉
+[Join our Slack community!](https://l.bentoml.com/join-slack)
+
+## 🎁 Contributing
+
+We welcome contributions! If you're interested in enhancing OpenLLM's
+capabilities or have any questions, don't hesitate to reach out in our
+[discord channel](https://l.bentoml.com/join-openllm-discord).
+
+Checkout our
+[Developer Guide](https://github.com/bentoml/OpenLLM/blob/main/DEVELOPMENT.md)
+if you wish to contribute to OpenLLM's codebase.
 
 ## 🍇 Telemetry
 
@@ -676,25 +703,6 @@ Or by setting the environment variable `OPENLLM_DO_NOT_TRACK=True`:
 ```bash
 export OPENLLM_DO_NOT_TRACK=True
 ```
-
-## 👥 Community
-
-Engage with like-minded individuals passionate about LLMs, AI, and more on our
-[Discord](https://l.bentoml.com/join-openllm-discord)!
-
-OpenLLM is actively maintained by the BentoML team. Feel free to reach out and
-join us in our pursuit to make LLMs more accessible and easy to use 👉
-[Join our Slack community!](https://l.bentoml.com/join-slack)
-
-## 🎁 Contributing
-
-We welcome contributions! If you're interested in enhancing OpenLLM's
-capabilities or have any questions, don't hesitate to reach out in our
-[discord channel](https://l.bentoml.com/join-openllm-discord).
-
-Checkout our
-[Developer Guide](https://github.com/bentoml/OpenLLM/blob/main/DEVELOPMENT.md)
-if you wish to contribute to OpenLLM's codebase.
 
 ## 📔 Citation
 
