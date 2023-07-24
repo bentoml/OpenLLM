@@ -35,6 +35,7 @@ jobs:
       - name: Setup CI
         uses: ./.github/actions/setup-repo
       - name: Pull latest change
+        if: ${{ github.event_name != 'pull_request' }}
         run: git pull --autostash --no-edit --gpg-sign --ff origin main
       - name: Install build frontend
         run: python -m pip install --upgrade build
@@ -95,6 +96,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Pull latest change
+        if: ${{ github.event_name != 'pull_request' }}
         run: git pull --autostash --no-edit --gpg-sign --ff origin main
       - name: Fetch PyApp
         run: >-

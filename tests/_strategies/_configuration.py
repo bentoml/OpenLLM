@@ -38,7 +38,7 @@ def model_settings(draw: st.DrawFn):
         "requires_gpu": st.booleans(),
         "trust_remote_code": st.booleans(),
         "requirements": st.none() | st.lists(st.text(), min_size=1),
-        "default_implementation": st.dictionaries(["cpu", "nvidia.com/gpu"], ["vllm", "pt", "tf", "flax"]),
+        "default_implementation": st.dictionaries(st.sampled_from(["cpu", "nvidia.com/gpu"]), st.sampled_from(["vllm", "pt", "tf", "flax"])),
         "model_type": st.sampled_from(["causal_lm", "seq2seq_lm"]),
         "runtime": st.sampled_from(["transformers", "ggml"]),
         "name_type": st.sampled_from(["dasherize", "lowercase"]),

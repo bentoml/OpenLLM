@@ -72,36 +72,27 @@ jobs:
           version="$(hatch version)"
           echo "version=$version" >> $GITHUB_OUTPUT
           echo "$version"
-  binary-distribution:
-    if: github.repository_owner == 'bentoml'
-    needs: release
-    name: Create binary/wheels distribution
-    uses: bentoml/OpenLLM/.github/workflows/binary-releases.yml@main
   publish-python:
     needs:
-      - binary-distribution
+      - release
     runs-on: ubuntu-latest
     permissions:
       id-token: write
     steps:
-      - name: Download Python artifacts
-        uses: actions/download-artifact@v3
+      - uses: actions/checkout@v3
         with:
-          name: python-artifacts
-          path: dist
+          ref: 'v${{ needs.release.outputs.version }}'
+      - name: Setup CI
+        uses: ./.github/actions/setup-repo
+      - name: Install build frontend
+        run: python -m pip install --upgrade build
+      - name: Build
+        run: python -m build
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-  release-notes:
-    needs:
-      - release
-      - publish-python
-      - binary-distribution
-    name: Create release notes and setup for next cycle
-    uses: bentoml/OpenLLM/.github/workflows/release-notes.yml@main
-    with:
-      tags: ${{ needs.release.outputs.version }}
   prepare-next-dev-cycle:
     needs:
+      - publish-python
       - binary-distribution
     runs-on: ubuntu-latest
     permissions:
@@ -139,3 +130,17 @@ jobs:
           jq --arg release_version "$(hatch version)" '.version = $release_version' < package.json > package.json.tmp && mv package.json.tmp package.json
           git add src/openllm/__about__.py package.json && git commit -S -sm "infra: bump to dev version of $(hatch version) [generated] [skip ci]"
           git push origin HEAD:main
+  binary-distribution:
+    if: github.repository_owner == 'bentoml'
+    needs: release
+    name: Create binary/wheels distribution
+    uses: bentoml/OpenLLM/.github/workflows/binary-releases.yml@main
+  release-notes:
+    needs:
+      - release
+      - publish-python
+      - binary-distribution
+    name: Create release notes and setup for next cycle
+    uses: bentoml/OpenLLM/.github/workflows/release-notes.yml@main
+    with:
+      tags: ${{ needs.release.outputs.version }}
