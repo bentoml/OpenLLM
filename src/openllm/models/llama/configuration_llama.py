@@ -32,7 +32,7 @@ class LlaMAConfig(openllm.LLMConfig):
         "start_name": "llama",
         "url": "https://github.com/facebookresearch/llama",
         "default_id": "huggyllama/llama-7b",
-        "default_implementation": "pt",  # XXX: needs vLLM implementation
+        "default_implementation": {"cpu": "pt", "nvidia.com/gpu": "pt"},
         "architecture": "LlamaForCausalLM",
         "requirements": ["fairscale", "sentencepiece"],
         "model_ids": [

@@ -171,6 +171,7 @@ _BASE_DEPENDENCIES = [
     Dependencies(name="inflection"),
     Dependencies(name="tabulate", extensions=["widechars"], lower_constraint="0.9.0"),
     Dependencies(name="httpx"),
+    Dependencies(name="click", lower_constraint="8.1.6"),
     Dependencies(name="typing_extensions"),
     Dependencies(name="cuda-python", platform=("Darwin", "ne")),
     Dependencies(name="bitsandbytes", upper_constraint="0.40"),  # Currently only <0.40 works with CUDA 11.8
@@ -257,7 +258,7 @@ def create_url_table() -> Table:
     table = tomlkit.table()
     _urls = {
         "Blog": "https://modelserving.com",
-        "Discord": "https://l.bentoml.com/join-openllm-discord",
+        "Chat": "https://discord.gg/openllm",
         "Documentation": "https://github.com/bentoml/openllm#readme",
         "GitHub": "https://github.com/bentoml/openllm",
         "History": "https://github.com/bentoml/openllm/blob/main/CHANGELOG.md",

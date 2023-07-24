@@ -16,28 +16,6 @@ dependencies = [
     "tomlkit",
     # NOTE: Using under ./tools/update-readme.py
     "markdown-it-py",
-    # NOTE: the below includes types for mypy
-    "types-tabulate",
-    "types-Deprecated",
-    "types-PyYAML",
-    "types-decorator",
-    "types-protobuf",
-    "types-python-dateutil",
-    "types-requests",
-    "types-setuptools",
-    "types-six",
-    "types-ujson",
-    "pandas-stubs",
-    "types-Pillow",
-    "types-Pygments",
-    "types-appdirs",
-    "types-colorama",
-    "types-google-cloud-ndb",
-    "types-jsonschema",
-    "types-psutil",
-    "types-pywin32",
-    "types-tqdm",
-    "types-openpyxl",
 ]
 [envs.default.scripts]
 changelog = "towncrier build --version main --draft"
@@ -91,30 +69,7 @@ report-uncovered-html = "coverage html --skip-covered --skip-empty"
 report-xml = "coverage xml"
 write-summary-report = "python tools/write-coverage-report.py"
 [build.targets.wheel.hooks.mypyc]
-dependencies = [
-    "hatch-mypyc>=0.14.1",
-    "types-tabulate",
-    "types-Deprecated",
-    "types-PyYAML",
-    "types-decorator",
-    "types-protobuf",
-    "types-python-dateutil",
-    "types-requests",
-    "types-setuptools",
-    "types-six",
-    "types-ujson",
-    "pandas-stubs",
-    "types-Pillow",
-    "types-Pygments",
-    "types-appdirs",
-    "types-colorama",
-    "types-google-cloud-ndb",
-    "types-jsonschema",
-    "types-psutil",
-    "types-pywin32",
-    "types-tqdm",
-    "types-openpyxl",
-]
+dependencies = ["hatch-mypyc>=0.14.1"]
 enable-by-default = false
 mypy-args = ["--no-warn-unused-ignores"]
 require-runtime-dependencies = true

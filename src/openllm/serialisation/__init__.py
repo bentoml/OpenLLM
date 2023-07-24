@@ -55,7 +55,6 @@ if t.TYPE_CHECKING:
 
     from .._llm import M
     from .._llm import T
-    from .._types import ModelProtocol
 else:
     transformers = LazyLoader("transformers", globals(), "transformers")
 
@@ -92,7 +91,7 @@ def save_pretrained(llm: openllm.LLM[t.Any, t.Any], save_directory: str, **attrs
         raise ValueError(f"Unknown runtime: {llm.config['runtime']}")
 
 
-def load_model(llm: openllm.LLM[M, t.Any], *decls: t.Any, **attrs: t.Any) -> ModelProtocol[M]:
+def load_model(llm: openllm.LLM[M, t.Any], *decls: t.Any, **attrs: t.Any) -> M:
     if llm.runtime == "transformers":
         return openllm.transformers.load_model(llm, *decls, **attrs)
     elif llm.runtime == "ggml":

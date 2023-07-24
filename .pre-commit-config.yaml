@@ -24,12 +24,6 @@ repos:
     hooks:
       - id: ruff
         args: [--exit-non-zero-on-fix, --show-fixes]
-  - repo: https://github.com/psf/black
-    rev: 23.7.0
-    hooks:
-      - id: black-jupyter
-        args: [--config=pyproject.toml]
-        exclude: (?x)^(src/openllm/models/.*)$
   - repo: https://github.com/econchick/interrogate
     rev: 1.5.0
     hooks:
@@ -54,7 +48,7 @@ repos:
               src/openllm/playground/.*|
               .github/.*
           )$
-        additional_dependencies: ["mypy==1.4.1", "types-tabulate", "types-Deprecated", "types-PyYAML", "types-decorator", "types-protobuf", "types-python-dateutil", "types-requests", "types-setuptools", "types-six", "types-ujson", "pandas-stubs", "types-Pillow", "types-Pygments", "types-appdirs", "types-colorama", "types-google-cloud-ndb", "types-jsonschema", "types-psutil", "types-pywin32", "types-tqdm", "types-openpyxl"]
+        additional_dependencies: ["mypy==1.4.1"]
       - id: pyright
         name: pyright
         entry: ./tools/pyright

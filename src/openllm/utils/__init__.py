@@ -27,8 +27,6 @@ import types
 import typing as t
 from pathlib import Path
 
-from circus.exc import ConflictError
-
 from bentoml._internal.configuration import DEBUG_ENV_VAR as _DEBUG_ENV_VAR
 from bentoml._internal.configuration import GRPC_DEBUG_ENV_VAR as _GRPC_DEBUG_ENV_VAR
 from bentoml._internal.configuration import get_debug_mode
@@ -58,15 +56,10 @@ except ImportError:
     # python < 3.9 does not have GenericAlias (list[int], tuple[str, ...] and so on)
     _TypingGenericAlias = ()  # type: ignore
 
-if sys.version_info < (3, 10):
-    _WithArgsTypes = (_TypingGenericAlias,)
+if sys.version_info < (3, 10): _WithArgsTypes = (_TypingGenericAlias,)
 else:
-    _WithArgsTypes: t.Any = (
-        #  _GenericAlias is the actual GenericAlias implementation
-        t._GenericAlias,  # type: ignore
-        types.GenericAlias,
-        types.UnionType,
-    )
+    #  _GenericAlias is the actual GenericAlias implementation
+    _WithArgsTypes: t.Any = (t._GenericAlias, types.GenericAlias, types.UnionType)  # type: ignore
 
 # NOTE: We need to do this so that overload can register
 # correct overloads to typing registry
@@ -91,74 +84,60 @@ def set_debug_mode(enabled: bool) -> None:
 
 
 def lenient_issubclass(cls: t.Any, class_or_tuple: type[t.Any] | tuple[type[t.Any], ...] | None) -> bool:
-    try:
-        return isinstance(cls, type) and issubclass(cls, class_or_tuple)  # type: ignore[arg-type]
+    try: return isinstance(cls, type) and issubclass(cls, class_or_tuple)  # type: ignore[arg-type]
     except TypeError:
-        if isinstance(cls, _WithArgsTypes):
-            return False
+        if isinstance(cls, _WithArgsTypes): return False
         raise
 
 
 def available_devices() -> tuple[str, ...]:
     """Return available GPU under system. Currently only supports NVIDIA GPUs."""
     from .._strategies import NvidiaGpuResource
-
     return tuple(NvidiaGpuResource.from_system())
 
 
 @functools.lru_cache(maxsize=1)
-def device_count() -> int:
-    return len(available_devices())
-
+def device_count() -> int: return len(available_devices())
 
 # equivocal setattr to save one lookup per assignment
 _object_setattr = object.__setattr__
 
-
 def non_intrusive_setattr(obj: t.Any, name: str, value: t.Any) -> None:
     """This makes sure that we don't overwrite any existing attributes on the object."""
     _setattr = functools.partial(setattr, obj) if isinstance(obj, type) else _object_setattr.__get__(obj)
+    if not hasattr(obj, name): _setattr(name, value)
 
-    if not hasattr(obj, name):
-        _setattr(name, value)
+def field_env_key(model_name: str, key: str, suffix: str | t.Literal[""] | None = None) -> str: return "_".join(filter(None, map(str.upper, ["OPENLLM", model_name, suffix.strip("_") if suffix else "", key])))
 
-
-def field_env_key(model_name: str, key: str, suffix: str | t.Literal[""] | None = None) -> str:
-    return "_".join(filter(None, map(str.upper, ["OPENLLM", model_name, suffix.strip("_") if suffix else "", key])))
-
-
+# Special debug flag controled via OPENLLMDEVDEBUG
 DEBUG = sys.flags.dev_mode or (not sys.flags.ignore_environment and bool(os.environ.get("OPENLLMDEVDEBUG")))
-
 # MYPY is like t.TYPE_CHECKING, but reserved for Mypy plugins
 MYPY = False
-
 SHOW_CODEGEN = DEBUG and int(os.environ.get("OPENLLMDEVDEBUG", str(0))) > 3
 
 
 class _ExceptionFilter(logging.Filter):
     def __init__(self, exclude_exceptions: list[type[Exception]] | None = None, **kwargs: t.Any):
-        if exclude_exceptions is None:
-            exclude_exceptions = [ConflictError]
-        else:
-            exclude_exceptions.append(ConflictError)
-
+        from circus.exc import ConflictError
+        if exclude_exceptions is None: exclude_exceptions = [ConflictError]
+        else: exclude_exceptions.append(ConflictError)
         super(_ExceptionFilter, self).__init__(**kwargs)
         self.EXCLUDE_EXCEPTIONS = exclude_exceptions
-
     def filter(self, record: logging.LogRecord) -> bool:
         if record.exc_info:
             etype, _, _ = record.exc_info
             if etype is not None:
                 for exc in self.EXCLUDE_EXCEPTIONS:
-                    if issubclass(etype, exc):
-                        return False
+                    if issubclass(etype, exc): return False
         return True
 
+class InfoFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool: return logging.INFO <= record.levelno < logging.WARNING
 
 _LOGGING_CONFIG: DictStrAny = {
     "version": 1,
     "disable_existing_loggers": True,
-    "filters": {"excfilter": {"()": _ExceptionFilter}},
+    "filters": {"excfilter": {"()": _ExceptionFilter}, "infofilter": {"()": InfoFilter}},
     "handlers": {
         "bentomlhandler": {
             "class": "logging.StreamHandler",
@@ -211,18 +190,13 @@ def configure_logging() -> None:
 def in_notebook() -> bool:
     try:
         from IPython.core.getipython import get_ipython
-
-        if "IPKernelApp" not in get_ipython().config:  # type: ignore
-            return False
-    except ImportError:
-        return False
-    except AttributeError:
-        return False
+        if "IPKernelApp" not in get_ipython().config: return False
+    except ImportError: return False
+    except AttributeError: return False
     return True
 
 
-_dockerenv = Path("/.dockerenv")
-_cgroup = Path("/proc/self/cgroup")
+_dockerenv, _cgroup = Path("/.dockerenv"), Path("/proc/self/cgroup")
 
 
 class suppress(contextlib.suppress, contextlib.ContextDecorator):
@@ -253,9 +227,7 @@ def compose(*funcs: AnyCallable) -> AnyCallable:
     """
 
     def compose_two(f1: AnyCallable, f2: t.Callable[P, t.Any]) -> t.Any:
-        def _(*args: P.args, **kwargs: P.kwargs) -> t.Any:
-            return f1(f2(*args, **kwargs))
-
+        def _(*args: P.args, **kwargs: P.kwargs) -> t.Any: return f1(f2(*args, **kwargs))
         return _
 
     return functools.reduce(compose_two, funcs)
@@ -277,17 +249,13 @@ def apply(transform: AnyCallable) -> t.Callable[[AnyCallable], AnyCallable]:
     # 'doc for get_numbers'
     ```
     """
-
-    def wrap(func: t.Callable[P, t.Any]) -> t.Any:
-        return functools.wraps(func)(compose(transform, func))
-
+    def wrap(func: t.Callable[P, t.Any]) -> t.Any: return functools.wraps(func)(compose(transform, func))
     return wrap
 
 
 @apply(bool)
 @suppress(FileNotFoundError)
-def _text_in_file(text: str, filename: Path) -> bool:
-    return any(text in line for line in filename.open())
+def _text_in_file(text: str, filename: Path) -> bool: return any(text in line for line in filename.open())
 
 
 def in_docker() -> bool:
@@ -306,15 +274,10 @@ K = t.TypeVar("K")
 
 def resolve_filepath(path: str) -> str:
     """Resolve a file path to an absolute path, expand user and environment variables."""
-    try:
-        return resolve_user_filepath(path, None)
-    except FileNotFoundError:
-        return path
+    try: return resolve_user_filepath(path, None)
+    except FileNotFoundError: return path
 
-
-def validate_is_path(maybe_path: str) -> bool:
-    return os.path.exists(os.path.dirname(resolve_filepath(maybe_path)))
-
+def validate_is_path(maybe_path: str) -> bool: return os.path.exists(os.path.dirname(resolve_filepath(maybe_path)))
 
 def generate_context(framework_name: str) -> _ModelContext:
     from .import_utils import is_flax_available
@@ -322,22 +285,12 @@ def generate_context(framework_name: str) -> _ModelContext:
     from .import_utils import is_torch_available
 
     framework_versions = {"transformers": pkg.get_pkg_version("transformers")}
-    if is_torch_available():
-        framework_versions["torch"] = pkg.get_pkg_version("torch")
+    if is_torch_available(): framework_versions["torch"] = pkg.get_pkg_version("torch")
     if is_tf_available():
         from bentoml._internal.frameworks.utils.tensorflow import get_tf_version
-
         framework_versions["tensorflow"] = get_tf_version()
-    if is_flax_available():
-        framework_versions.update(
-            {
-                "flax": pkg.get_pkg_version("flax"),
-                "jax": pkg.get_pkg_version("jax"),
-                "jaxlib": pkg.get_pkg_version("jaxlib"),
-            }
-        )
+    if is_flax_available(): framework_versions.update({"flax": pkg.get_pkg_version("flax"), "jax": pkg.get_pkg_version("jax"), "jaxlib": pkg.get_pkg_version("jaxlib")})
     return _ModelContext(framework_name=framework_name, framework_versions=framework_versions)
-
 
 def generate_labels(llm: openllm.LLM[t.Any, t.Any]) -> DictStrAny:
     return {
@@ -348,60 +301,36 @@ def generate_labels(llm: openllm.LLM[t.Any, t.Any]) -> DictStrAny:
         "serialisation_format": llm._serialisation_format,
     }
 
-
 _TOKENIZER_PREFIX = "_tokenizer_"
-
-
 def normalize_attrs_to_model_tokenizer_pair(**attrs: t.Any) -> tuple[DictStrAny, DictStrAny]:
     """Normalize the given attrs to a model and tokenizer kwargs accordingly."""
     tokenizer_attrs = {k[len(_TOKENIZER_PREFIX) :]: v for k, v in attrs.items() if k.startswith(_TOKENIZER_PREFIX)}
     for k in tuple(attrs.keys()):
-        if k.startswith(_TOKENIZER_PREFIX):
-            del attrs[k]
+        if k.startswith(_TOKENIZER_PREFIX): del attrs[k]
     return attrs, tokenizer_attrs
 
-
 @_overload
-def infer_auto_class(implementation: t.Literal["pt"]) -> type[openllm.AutoLLM]:
-    ...
-
-
+def infer_auto_class(implementation: t.Literal["pt"]) -> type[openllm.AutoLLM]: ...
 @_overload
-def infer_auto_class(implementation: t.Literal["tf"]) -> type[openllm.AutoTFLLM]:
-    ...
-
-
+def infer_auto_class(implementation: t.Literal["tf"]) -> type[openllm.AutoTFLLM]: ...
 @_overload
-def infer_auto_class(implementation: t.Literal["flax"]) -> type[openllm.AutoFlaxLLM]:
-    ...
-
-
+def infer_auto_class(implementation: t.Literal["flax"]) -> type[openllm.AutoFlaxLLM]: ...
 @_overload
-def infer_auto_class(implementation: t.Literal["vllm"]) -> type[openllm.AutoVLLM]:
-    ...
-
-
-def infer_auto_class(
-    implementation: LiteralRuntime,
-) -> type[openllm.AutoLLM] | type[openllm.AutoTFLLM] | type[openllm.AutoFlaxLLM] | type[openllm.AutoVLLM]:
+def infer_auto_class(implementation: t.Literal["vllm"]) -> type[openllm.AutoVLLM]: ...
+def infer_auto_class(implementation: LiteralRuntime) -> type[openllm.AutoLLM] | type[openllm.AutoTFLLM] | type[openllm.AutoFlaxLLM] | type[openllm.AutoVLLM]:
     if implementation == "tf":
         from openllm import AutoTFLLM
-
         return AutoTFLLM
     elif implementation == "flax":
         from openllm import AutoFlaxLLM
-
         return AutoFlaxLLM
     elif implementation == "pt":
         from openllm import AutoLLM
-
         return AutoLLM
     elif implementation == "vllm":
         from openllm import AutoVLLM
-
         return AutoVLLM
-    else:
-        raise RuntimeError(f"Unknown implementation: {implementation} (supported: 'pt', 'flax', 'tf', 'vllm')")
+    else: raise RuntimeError(f"Unknown implementation: {implementation} (supported: 'pt', 'flax', 'tf', 'vllm')")
 
 
 # NOTE: The set marks contains a set of modules name

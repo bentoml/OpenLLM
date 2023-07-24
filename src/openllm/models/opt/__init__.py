@@ -19,6 +19,7 @@ from ...utils import LazyModule
 from ...utils import is_flax_available
 from ...utils import is_tf_available
 from ...utils import is_torch_available
+from ...utils import is_vllm_available
 _import_structure: dict[str, list[str]] = {"configuration_opt": ["OPTConfig", "START_OPT_COMMAND_DOCSTRING", "DEFAULT_PROMPT_TEMPLATE"]}
 try:
     if not is_torch_available(): raise MissingDependencyError
@@ -28,6 +29,10 @@ try:
     if not is_flax_available(): raise MissingDependencyError
 except MissingDependencyError: pass
 else: _import_structure["modeling_flax_opt"] = ["FlaxOPT"]
+try:
+    if not is_vllm_available(): raise MissingDependencyError
+except MissingDependencyError: pass
+else: _import_structure["modeling_vllm_opt"] = ["VLLMOPT"]
 try:
     if not is_tf_available(): raise MissingDependencyError
 except MissingDependencyError: pass
@@ -44,6 +49,10 @@ if t.TYPE_CHECKING:
         if not is_flax_available(): raise MissingDependencyError
     except MissingDependencyError: pass
     else: from .modeling_flax_opt import FlaxOPT as FlaxOPT
+    try:
+        if not is_vllm_available(): raise MissingDependencyError
+    except MissingDependencyError: pass
+    else: from .modeling_vllm_opt  import VLLMOPT as VLLMOPT
     try:
         if not is_tf_available(): raise MissingDependencyError
     except MissingDependencyError: pass

@@ -60,7 +60,7 @@ else:
 _import_structure: dict[str, list[str]] = {
     "_llm": ["LLM", "Runner", "LLMRunner", "LLMRunnable"],
     "_configuration": ["LLMConfig"],
-    "_schema": ["GenerationInput", "GenerationOutput", "MetadataOutput", "EmbeddingsOutput"],
+    "_schema": ["GenerationInput", "GenerationOutput", "MetadataOutput", "EmbeddingsOutput", "unmarshal_vllm_outputs"],
     "_generation": ["StopSequenceCriteria", "StopOnTokens"],
     "_quantisation": ["infer_quantisation_config"],
     "exceptions": [],
@@ -215,6 +215,7 @@ if t.TYPE_CHECKING:
     from ._schema import GenerationInput as GenerationInput
     from ._schema import GenerationOutput as GenerationOutput
     from ._schema import MetadataOutput as MetadataOutput
+    from ._schema import unmarshal_vllm_outputs as unmarshal_vllm_outputs
     from .cli import build as build
     from .cli import import_model as import_model
     from .cli import list_models as list_models

@@ -35,9 +35,7 @@ START_ATTRS_COMMENT = f"# {os.path.basename(__file__)}: attrs start\n"
 END_ATTRS_COMMENT = f"# {os.path.basename(__file__)}: attrs stop\n"
 
 _TARGET_FILE = Path(__file__).parent.parent / "src" / "openllm" / "_configuration.py"
-
 _imported = importlib.import_module(ModelSettings.__module__)
-
 
 def process_annotations(annotations: str) -> str:
     if "NotRequired" in annotations:
@@ -46,7 +44,6 @@ def process_annotations(annotations: str) -> str:
         return annotations[len("Required[") : -1]
     else:
         return annotations
-
 
 _value_docstring = {
     "default_id": """Return the default model to use when using 'openllm start <model_id>'.
@@ -62,8 +59,9 @@ _value_docstring = {
 
         This field is required when defining under '__config__'.
         """,
-    "architecture": """The model architecture that is supported by this LLM. Note that any model weights within this architecture generation can
-    always be run and supported by this LLM.
+    "architecture": """The model architecture that is supported by this LLM.
+
+        Note that any model weights within this architecture generation can always be run and supported by this LLM.
 
         For example:
             For GPT-NeoX implementation, it is based on GptNeoXForCausalLM, which supports dolly-v2, stablelm:
@@ -71,22 +69,21 @@ _value_docstring = {
             ```bash
             openllm start gpt-neox --model-id stabilityai/stablelm-tuned-alpha-3b
             ```""",
-    "default_implementation": """The default runtime to run this LLM. By default, it will be PyTorch (pt) for most models. For some models, such as LlaMA, it will use `vllm` or `flax`.""",
+    "default_implementation": """The default runtime to run this LLM. By default, it will be PyTorch (pt) for most models. For some models, such as LlaMA, it will use `vllm` or `flax`.
+
+    It is a dictionary of key as the accelerator spec in k8s ('cpu', 'nvidia.com/gpu', 'amd.com/gpu', 'cloud-tpus.google.com/v2', ...) and the values as supported OpenLLM Runtime ('flax', 'tf', 'pt', 'vllm')
+    """,
     "url": """The resolved url for this LLMConfig.""",
     "requires_gpu": """Determines if this model is only available on GPU. By default it supports GPU and fallback to CPU.""",
     "trust_remote_code": """Whether to always trust remote code""",
     "service_name": """Generated service name for this LLMConfig. By default, it is 'generated_{model_name}_service.py'""",
     "requirements": """The default PyPI requirements needed to run this given LLM. By default, we will depend on
         bentoml, torch, transformers.""",
-    "bettertransformer": """Whether to use BetterTransformer for this given LLM. This depends per model
-        architecture. By default, we will use BetterTransformer for T5 and StableLM models,
-        and set to False for every other models.
-        """,
+    "bettertransformer": """Whether to use BetterTransformer for this given LLM. This depends per model architecture. By default, we will use BetterTransformer for T5 and StableLM models, and set to False for every other models.""",
     "model_type": """The model type for this given LLM. By default, it should be causal language modeling.
         Currently supported 'causal_lm' or 'seq2seq_lm'
         """,
-    "runtime": """The runtime to use for this model. Possible values are `transformers` or `ggml`. See
-        LlaMA for more information.""",
+    "runtime": """The runtime to use for this model. Possible values are `transformers` or `ggml`. See LlaMA for more information.""",
     "name_type": """The default name typed for this model. "dasherize" will convert the name to lowercase and
         replace spaces with dashes. "lowercase" will convert the name to lowercase. If this is not set, then both
         `model_name` and `start_name` must be specified.""",
@@ -107,10 +104,7 @@ _value_docstring = {
     "tokenizer_class": """Optional tokenizer class for this given LLM. See LlaMA for example.""",
 }
 
-_transformed = {
-    "fine_tune_strategies": "t.Dict[AdapterType, FineTuneConfig]",
-    "default_implementation": 't.Literal["pt", "tf", "flax", "vllm"]',
-}
+_transformed = {"fine_tune_strategies": "t.Dict[AdapterType, FineTuneConfig]"}
 
 
 def main() -> int:
@@ -118,19 +112,12 @@ def main() -> int:
         processed = f.readlines()
 
     start_idx, end_idx = processed.index(" " * 4 + START_COMMENT), processed.index(" " * 4 + END_COMMENT)
-    start_stub_idx, end_stub_idx = processed.index(" " * 8 + START_SPECIAL_COMMENT), processed.index(
-        " " * 8 + END_SPECIAL_COMMENT
-    )
-    start_attrs_idx, end_attrs_idx = processed.index(" " * 8 + START_ATTRS_COMMENT), processed.index(
-        " " * 8 + END_ATTRS_COMMENT
-    )
+    start_stub_idx, end_stub_idx = processed.index(" " * 8 + START_SPECIAL_COMMENT), processed.index(" " * 8 + END_SPECIAL_COMMENT)
+    start_attrs_idx, end_attrs_idx = processed.index(" " * 8 + START_ATTRS_COMMENT), processed.index(" " * 8 + END_ATTRS_COMMENT)
 
     # NOTE: inline stubs __config__ attrs representation
     special_attrs_lines: list[str] = []
-    for keys, ForwardRef in openllm.utils.codegen.get_annotations(ModelSettings).items():
-        special_attrs_lines.append(
-            f"{' ' * 8}{keys}: {_transformed.get(keys, process_annotations(ForwardRef.__forward_arg__))}\n"
-        )
+    for keys, ForwardRef in openllm.utils.codegen.get_annotations(ModelSettings).items(): special_attrs_lines.append(f"{' ' * 8}{keys}: {_transformed.get(keys, process_annotations(ForwardRef.__forward_arg__))}\n")
 
     # NOTE: inline stubs for _ConfigAttr type stubs
     config_attr_lines: list[str] = []
@@ -210,26 +197,8 @@ def main() -> int:
             ]
         )
 
-    processed = (
-        processed[:start_attrs_idx]
-        + [" " * 8 + START_ATTRS_COMMENT]
-        + special_attrs_lines
-        + [" " * 8 + END_ATTRS_COMMENT]
-        + processed[end_attrs_idx + 1 : start_stub_idx]
-        + [" " * 8 + START_SPECIAL_COMMENT]
-        + config_attr_lines
-        + [" " * 8 + END_SPECIAL_COMMENT]
-        + processed[end_stub_idx + 1 : start_idx]
-        + [" " * 4 + START_COMMENT]
-        + lines
-        + [" " * 4 + END_COMMENT]
-        + processed[end_idx + 1 :]
-    )
-    with _TARGET_FILE.open("w") as f:
-        f.writelines(processed)
-
+    processed = processed[:start_attrs_idx] + [" " * 8 + START_ATTRS_COMMENT] + special_attrs_lines + [" " * 8 + END_ATTRS_COMMENT] + processed[end_attrs_idx + 1 : start_stub_idx] + [" " * 8 + START_SPECIAL_COMMENT] + config_attr_lines + [" " * 8 + END_SPECIAL_COMMENT] + processed[end_stub_idx + 1 : start_idx] + [" " * 4 + START_COMMENT] + lines + [" " * 4 + END_COMMENT] + processed[end_idx + 1 :]
+    with _TARGET_FILE.open("w") as f: f.writelines(processed)
     return 0
 
-
-if __name__ == "__main__":
-    raise SystemExit(main())
+if __name__ == "__main__": raise SystemExit(main())
