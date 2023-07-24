@@ -174,7 +174,7 @@ _BASE_DEPENDENCIES = [
     Dependencies(name="click", lower_constraint="8.1.6"),
     Dependencies(name="typing_extensions"),
     Dependencies(name="cuda-python", platform=("Darwin", "ne")),
-    Dependencies(name="bitsandbytes", upper_constraint="0.40"),  # Currently only <0.40 works with CUDA 11.8
+    Dependencies(name="bitsandbytes", upper_constraint="0.42"),  # 0.41  works with CUDA 11.8
 ]
 
 _NIGHTLY_MAPPING: dict[str, Dependencies] = {
