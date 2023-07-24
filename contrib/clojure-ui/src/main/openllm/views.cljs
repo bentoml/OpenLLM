@@ -35,7 +35,7 @@
     (fn []
       [:<>
        [nav-bar-views/nav-bar]
-       [:div {:class "h-[calc(100vh-5rem)] flex bg-white"}
+       [:div {:class "h-[calc(100vh-3rem)] flex bg-white"}
         [:div {:class "flex flex-col flex-1 w-screen"}
          [:main {:class "flex-1 relative z-0 overflow-hidden focus:outline-none" :tabIndex "0"}
           [:div {:class "mt-2 pr-0.5 pl-4 w-full h-full"}

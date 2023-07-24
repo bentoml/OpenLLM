@@ -6,20 +6,15 @@
             [openllm.components.side-bar.events :as side-bar-events]
             [openllm.components.chat.events :as chat-events]
             [openllm.api.persistence :as persistence]
-            [reagent-mui.icons.chat :as chat-icon]
-            [reagent-mui.icons.brush :as brush-icon]
             [reagent-mui.material.app-bar :refer [app-bar]]
             [reagent-mui.material.toolbar :refer [toolbar]]
-            [reagent-mui.material.button :refer [button]]
             [reagent-mui.material.icon-button :refer [icon-button]]
             [reagent-mui.material.tooltip :refer [tooltip]]
             [reagent-mui.icons.delete-forever :as delete-icon]
             [reagent-mui.icons.ios-share :as share-icon]
             [reagent-mui.icons.git-hub :as github-icon]
             [reagent-mui.material.tabs :refer [tabs]]
-            [reagent-mui.material.tab :refer [tab]]
-            [reagent-mui.material.box :refer [box]]
-            [reagent.core :as r]))
+            [reagent-mui.material.tab :refer [tab]]))
 
 (defn- collapse-side-bar-button
   "The collapse side bar button. It changes its icon depending on whether
@@ -85,7 +80,7 @@
      [:div {:class "w-full flex justify-end items-center"}
       [:div {:class "mr-8"}
        [context-icon-buttons]]
-      [:div {:class "-mr-8"}
+      [:div {:class "-mr-6"}
        [collapse-side-bar-button]]]]]])
 
 

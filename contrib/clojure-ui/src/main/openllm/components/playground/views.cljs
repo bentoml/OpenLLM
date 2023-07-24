@@ -93,7 +93,7 @@
    called by the `tab-content` function residing in the `views` namespace
    directly."
   []
-  [:div {:class "mt-6 pr-3 pb-px h-full"}
+  [:div {:class "mt-6 pb-3.5 pr-3 h-full"}
    [response-modal]
    [input-field]
    [input-field-controls]
