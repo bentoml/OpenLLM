@@ -42,6 +42,7 @@ dependencies = [
     "inflection",
     "tabulate[widechars]>=0.9.0",
     "httpx",
+    "click>=8.1.6",
     "typing_extensions",
     "cuda-python;platform_system!=\"Darwin\"",
     "bitsandbytes<0.40",
@@ -72,7 +73,7 @@ openllm = "openllm.cli:cli"
 
 [project.urls]
 Blog = "https://modelserving.com"
-Discord = "https://l.bentoml.com/join-openllm-discord"
+Chat = "https://discord.gg/openllm"
 Documentation = "https://github.com/bentoml/openllm#readme"
 GitHub = "https://github.com/bentoml/openllm"
 History = "https://github.com/bentoml/openllm/blob/main/CHANGELOG.md"
@@ -308,10 +309,12 @@ reportUnknownVariableType = "warning"
 typeCheckingMode = "strict"
 
 [tool.mypy]
+# TODO: remove all of the disable to ensure strict type
 disable_error_code = ["attr-defined", "name-defined", "annotation-unchecked"]
 enable_error_code = ["redundant-expr"]
 exclude = ["examples/", "tools/", "tests/", "src/openllm/playground/"]
 files = ["src/openllm", "src/openllm_client"]
+local_partial_types = true
 mypy_path = "typings"
 pretty = true
 python_version = "3.11"
