@@ -18,7 +18,7 @@
   []
   (let [value (rf/subscribe [::subs/playground-input-value])]
     (fn []
-      [:textarea {:class "pt-3 w-full h-[calc(100%_-_135px)] block border"
+      [:textarea {:class "pt-3 w-full h-[calc(100%_-_74px)] block border"
                   :value @value
                   :on-change #(rf/dispatch [::events/set-prompt-input (.. % -target -value)])}])))
 
