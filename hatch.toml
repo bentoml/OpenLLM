@@ -1,5 +1,11 @@
 [version]
-path = "src/openllm/__about__.py"
+fallback-version = "0.0.0"
+source = "vcs"
+[build.hooks.vcs]
+version-file = "src/openllm/_version.py"
+[version.raw-options]
+git_describe_command = ["git", "describe", "--dirty", "--tags", "--long", "--first-parent"]
+local_scheme = "no-local-version"
 [metadata]
 allow-direct-references = true
 [build.targets.wheel]

@@ -2,7 +2,7 @@
 # project.classifiers, project.dependencies, project.optional-dependencies, project.urls
 [build-system]
 build-backend = "hatchling.build"
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs", "hatch-fancy-pypi-readme"]
 
 [project]
 authors = [{ name = "Aaron Pham", email = "aarnphm@bentoml.com" }]
@@ -48,7 +48,7 @@ dependencies = [
     "bitsandbytes<0.42",
 ]
 description = 'OpenLLM: Operating LLMs in production'
-dynamic = ["version"]
+dynamic = ["version", "readme"]
 keywords = [
     "MLOps",
     "AI",
@@ -65,7 +65,6 @@ keywords = [
 ]
 license = "Apache-2.0"
 name = "openllm"
-readme = "README.md"
 requires-python = ">=3.8"
 
 [project.scripts]
@@ -258,7 +257,6 @@ omit = [
     "__pypackages__/*",
     "src/openllm/playground/",
     "src/openllm/__init__.py",
-    "src/openllm/__about__.py",
     "src/openllm/__main__.py",
     "src/openllm/utils/dummy_*.py",
 ]
@@ -281,7 +279,6 @@ omit = [
     "__pypackages__/*",
     "src/openllm/playground/",
     "src/openllm/__init__.py",
-    "src/openllm/__about__.py",
     "src/openllm/__main__.py",
     "src/openllm/utils/dummy_*.py",
 ]
@@ -294,7 +291,6 @@ exclude = [
     "__pypackages__/*",
     "src/openllm/playground/",
     "src/openllm/__init__.py",
-    "src/openllm/__about__.py",
     "src/openllm/__main__.py",
     "src/openllm/utils/dummy_*.py",
 ]

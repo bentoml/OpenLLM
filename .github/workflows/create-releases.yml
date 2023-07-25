@@ -90,8 +90,11 @@ jobs:
         run: python -m build
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          print-hash: true
   prepare-next-dev-cycle:
     needs:
+      - release
       - publish-python
       - binary-distribution
     runs-on: ubuntu-latest
@@ -126,9 +129,19 @@ jobs:
           GIT_COMMITTER_EMAIL: ${{ steps.import-gpg-key.outputs.email }}
         run: |
           git pull --autostash --no-edit --gpg-sign --ff origin main
-          echo "Bumping version to dev..." && hatch version patch && hatch version dev
-          jq --arg release_version "$(hatch version)" '.version = $release_version' < package.json > package.json.tmp && mv package.json.tmp package.json
-          git add src/openllm/__about__.py package.json && git commit -S -sm "infra: bump to dev version of $(hatch version) [generated] [skip ci]"
+          SEMVER="${{ needs.release.outputs.version }}"
+          OLD_IFS=$IFS
+          IFS='.'
+          read -ra VERSION_BITS <<< "$SEMVER"
+          IFS=$OLD_IFS
+          VNUM1=${VERSION_BITS[0]}
+          VNUM2=${VERSION_BITS[1]}
+          VNUM3=${VERSION_BITS[2]}
+          VNUM3=$((VNUM3+1))
+          DEV_VERSION="$VNUM1.$VNUM2.$VNUM3.dev0"
+          echo "Bumping version to ${DEV_VERSION}..."
+          jq --arg release_version "${DEV_VERSION}" '.version = $release_version' < package.json > package.json.tmp && mv package.json.tmp package.json
+          git add package.json && git commit -S -sm "infra: bump to dev version of ${DEV_VERSION} [generated] [skip ci]"
           git push origin HEAD:main
   binary-distribution:
     if: github.repository_owner == 'bentoml'
@@ -136,6 +149,7 @@ jobs:
     name: Create binary/wheels distribution
     uses: bentoml/OpenLLM/.github/workflows/binary-releases.yml@main
   release-notes:
+    if: github.repository_owner == 'bentoml'
     needs:
       - release
       - publish-python
