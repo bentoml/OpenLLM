@@ -157,7 +157,13 @@ python_files = ["test_*.py", "*_test.py"]
 testpaths = ["tests"]
 
 [tool.ruff]
-extend-exclude = ["tools", "src/openllm/playground", "src/openllm/models", "src/openllm/_types.py"]
+extend-exclude = [
+    "tools",
+    "src/openllm/playground",
+    "src/openllm/models",
+    "src/openllm/_types.py",
+    "src/openllm/_version.py",
+]
 extend-include = ["*.ipynb"]
 extend-select = [
     "B",    # flake8-bugbear
@@ -255,6 +261,7 @@ openllm = ["src/openllm", "*/openllm/src/openllm"]
 branch = true
 omit = [
     "__pypackages__/*",
+    "src/openllm/_version.py",
     "src/openllm/playground/",
     "src/openllm/__init__.py",
     "src/openllm/__main__.py",
@@ -269,14 +276,21 @@ exclude_lines = [
     "if t.TYPE_CHECKING:",
     'if TYPE_CHECKING:',
     'if typing.TYPE_CHECKING:',
+    'if t.TYPE_CHECKING and not MYPY:',
+    'if DEBUG:',
+    'if utils.DEBUG',
+    'if openllm.utils.DEBUG',
     '@_overload',
     '@overload',
     '@t.overload',
     '@typing.overload',
     'raise NotImplementedError',
+    'raise NotImplemented',
+    'except MissingDependencyError:',
 ]
 omit = [
     "__pypackages__/*",
+    "src/openllm/_version.py",
     "src/openllm/playground/",
     "src/openllm/__init__.py",
     "src/openllm/__main__.py",
