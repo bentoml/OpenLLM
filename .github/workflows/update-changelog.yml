@@ -45,9 +45,11 @@ jobs:
       - name: Create comment
         uses: peter-evans/create-or-update-comment@v3
         with:
-          issue-number: ${{ github.event.client_payload.pull_request.number }}
+          token: ${{ secrets.OPENLLM_PAT }}
+          issue-number: ${{ github.event.pull_request.number }}
           body: |
-            CI running here: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            Running CI jobs can be found here: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          reactions: rocket,+1,hooray
       - name: Update CHANGELOG.md to include unreleased notes
         env:
           GIT_AUTHOR_NAME: ${{ steps.import-gpg.outputs.name }}
