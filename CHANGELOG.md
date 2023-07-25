@@ -18,6 +18,45 @@ This changelog is managed by towncrier and is compiled at release time.
 
 <!-- towncrier release notes start -->
 
+## [0.2.10](https://github.com/bentoml/openllm/tree/v0.2.10)
+
+### Features
+
+- Added installing with git-archival support
+
+  ```bash
+  pip install "https://github.com/bentoml/openllm/archive/main.tar.gz"
+  ```
+  [#143](https://github.com/bentoml/openllm/issues/143)
+- Users now can call ``client.embed`` to get the embeddings from the running LLMServer
+
+      ```python
+      client = openllm.client.HTTPClient("http://localhost:3000")
+
+      client.embed("Hello World")
+      client.embed(["Hello", "World"])
+      ```
+
+  > **Note:** The ``client.embed`` is currently only implemnted for ``openllm.client.HTTPClient`` and ``openllm.client.AsyncHTTPClient``
+
+  Users can also query embeddings directly from the CLI, via ``openllm embed``:
+
+      ```bash
+      $ openllm embed --endpoint localhost:3000 "Hello World" "My name is Susan"
+
+      [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]
+      ```
+  [#146](https://github.com/bentoml/openllm/issues/146)
+
+
+### Bug fix
+
+- Fixes model location while running within BentoContainer correctly
+
+  This makes sure that the tags and model path are inferred correctly, based on BENTO_PATH and /.dockerenv
+  [#141](https://github.com/bentoml/openllm/issues/141)
+
+
 ## [0.2.9](https://github.com/bentoml/openllm/tree/v0.2.9)
 No significant changes.
 
