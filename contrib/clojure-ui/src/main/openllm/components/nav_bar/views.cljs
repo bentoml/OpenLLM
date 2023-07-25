@@ -60,11 +60,7 @@
    [app-bar {:position "static"
              :color "primary"}
     [toolbar {:variant "dense"
-              :style {:height "48px"}}
-     [icon-button {:on-click #(rf/dispatch [::root-events/open-link-in-new-tab "https://github.com/bentoml/OpenLLM"])
-                   :color "secondary"
-                   :size "small"}
-      [github-icon/git-hub]]
+              :style {:height "48px"}} 
      [:div {:class "ml-[calc(50%-_100px)"}
       (let [screen-id @(rf/subscribe [:screen-id])]
         [tabs {:value (if (= :chat screen-id) 1 0)
@@ -80,5 +76,10 @@
      [:div {:class "w-full flex justify-end items-center"}
       #_[:div {:class "mr-8"}
        [context-icon-buttons]]
+      [:div {:class "mr-16"}
+       [icon-button {:on-click #(rf/dispatch [::root-events/open-link-in-new-tab "https://github.com/bentoml/OpenLLM"])
+                     :color "secondary"
+                     :size "small"}
+        [github-icon/git-hub]]]
       [:div {:class "-mr-6"}
        [collapse-side-bar-button]]]]]])
