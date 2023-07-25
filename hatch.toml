@@ -5,36 +5,37 @@ content-type = "text/markdown"
 text = """
 <p align="center">
   <a href="https://github.com/bentoml/openllm">
-    <img src="https://raw.githubusercontent.com/bentoml/openllm/main/assets/main-banner.png" width="35%" alt="Banner for OpenLLM" />
+    <img src="https://raw.githubusercontent.com/bentoml/openllm/main/assets/main-banner.png" alt="Banner for OpenLLM" />
   </a>
 </p>
 
 """
 [[metadata.hooks.fancy-pypi-readme.fragments]]
+end-before = "\n<!-- hatch-fancy-pypi-readme intro stop -->\n"
 path = "README.md"
-end-before = "\n<!-- hatch-fancy-pypi-readme intro stop -->"
+start-after = "<!-- hatch-fancy-pypi-readme intro start -->\n"
 [[metadata.hooks.fancy-pypi-readme.fragments]]
 text = """
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/bentoml/openllm/main/assets/output.gif" width="35%" alt="Gif showing OpenLLM Intro" />
+  <img src="https://raw.githubusercontent.com/bentoml/openllm/main/assets/output.gif" alt="Gif showing OpenLLM Intro" />
 </p>
 """
 [[metadata.hooks.fancy-pypi-readme.fragments]]
+end-before = "\n<!-- hatch-fancy-pypi-readme interim stop -->\n"
 path = "README.md"
 start-after = "<!-- hatch-fancy-pypi-readme interim start -->\n"
-end-before = "\n<!-- hatch-fancy-pypi-readme interim stop -->"
 [[metadata.hooks.fancy-pypi-readme.fragments]]
 text = """
-
 <p align="center">
-  <img src="https://raw.githubusercontent.com/bentoml/openllm/main/assets/agent.gif" width="35%" alt="Gif showing Agent integration" />
+  <img src="https://raw.githubusercontent.com/bentoml/openllm/main/assets/agent.gif" alt="Gif showing Agent integration" />
 </p>
 """
 [[metadata.hooks.fancy-pypi-readme.fragments]]
+end-before = "\n<!-- hatch-fancy-pypi-readme meta stop -->"
 path = "README.md"
 start-after = "<!-- hatch-fancy-pypi-readme meta start -->\n"
-[[tool.hatch.metadata.hooks.fancy-pypi-readme.fragments]]
+[[metadata.hooks.fancy-pypi-readme.fragments]]
 text = """
 
 ## Release Information
@@ -43,7 +44,7 @@ text = """
 [[tool.hatch.metadata.hooks.fancy-pypi-readme.fragments]]
 path = "CHANGELOG.md"
 pattern = "\n(###.+?\n)## "
-[[tool.hatch.metadata.hooks.fancy-pypi-readme.fragments]]
+[[metadata.hooks.fancy-pypi-readme.fragments]]
 text = """
 
 ---
