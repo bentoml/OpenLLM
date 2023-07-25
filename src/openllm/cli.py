@@ -77,6 +77,7 @@ from .utils import LazyLoader
 from .utils import LazyType
 from .utils import analytics
 from .utils import available_devices
+from .utils import bentoml_cattr
 from .utils import codegen
 from .utils import configure_logging
 from .utils import dantic
@@ -1571,6 +1572,38 @@ def instruct(endpoint: str, timeout: int, agent: t.LiteralString, output: Output
         return result
     else: raise click.BadOptionUsage("agent", f"Unknown agent type {agent}")
 
+@overload
+def embed(ctx: click.Context, text: tuple[str, ...], endpoint: str, timeout: int, output: OutputLiteral, machine: t.Literal[True] = True) -> openllm.EmbeddingsOutput: ...
+@overload
+def embed(ctx: click.Context, text: tuple[str, ...], endpoint: str, timeout: int, output: OutputLiteral, machine: t.Literal[False] = False) -> None: ...
+@cli.command()
+@shared_client_options
+@click.option("--server-type", type=click.Choice(["grpc", "http"]), help="Server type", default="http", show_default=True)
+@click.argument("text", type=click.STRING, nargs=-1)
+@machine_option(click)
+@click.pass_context
+def embed(ctx: click.Context, text: tuple[str, ...], endpoint: str, timeout: int, server_type: t.Literal["http", "grpc"], output: OutputLiteral, machine: bool) -> openllm.EmbeddingsOutput | None:
+    """Get embeddings interactively, from a terminal.
+
+    \b
+    ```bash
+    $ openllm embed --endpoint http://12.323.2.1:3000 "What is the meaning of life?" "How many stars are there in the sky?"
+    ```
+    """
+    client = openllm.client.HTTPClient(endpoint, timeout=timeout) if server_type == "http" else openllm.client.GrpcClient(endpoint, timeout=timeout)
+    try:
+        gen_embed = client.embed(list(text))
+    except ValueError:
+        raise click.ClickException(f"Endpoint {endpoint} does not support embeddings.") from None
+    if machine: return gen_embed
+    elif output == "pretty":
+        _echo("Generated embeddings:", fg="magenta")
+        _echo(gen_embed.embeddings, fg="white")
+        _echo("\nNumber of tokens:", fg="magenta")
+        _echo(gen_embed.num_tokens, fg="white")
+    elif output == "json": _echo(orjson.dumps(bentoml_cattr.unstructure(gen_embed), option=orjson.OPT_INDENT_2).decode(), fg="white")
+    else: _echo(gen_embed.embeddings, fg="white")
+    ctx.exit(0)
 
 @cli.command()
 @shared_client_options
