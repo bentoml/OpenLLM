@@ -78,7 +78,7 @@
                :on-click #(do (rf/dispatch-sync [:set-screen-id :chat])
                               (rf/dispatch [::chat-events/auto-scroll]))}]])]
      [:div {:class "w-full flex justify-end items-center"}
-      [:div {:class "mr-8"}
+      #_[:div {:class "mr-8"}
        [context-icon-buttons]]
       [:div {:class "-mr-6"}
        [collapse-side-bar-button]]]]]])
