@@ -52,4 +52,4 @@ jobs:
         run: |
           towncrier build --version main --keep
           git commit -S -a -sm "ci: update CHANGELOG.md to include unreleased news fragment [generated] [skip ci]"
-          git push
+          git push origin HEAD:${GITHUB_REF}
