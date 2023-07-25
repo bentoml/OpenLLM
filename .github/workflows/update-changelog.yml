@@ -58,5 +58,5 @@ jobs:
           GIT_COMMITTER_EMAIL: ${{ steps.import-gpg.outputs.email }}
         run: |
           towncrier build --version main --keep
-          git commit -am "[update-changelog-command] update CHANGELOG.md to include unreleased news fragmen [skip ci]"
+          git commit -S -a -sm "ci: update CHANGELOG.md to include unreleased news fragment [generated] [skip ci]"
           git push origin HEAD
