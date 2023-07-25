@@ -59,12 +59,7 @@ else:
     transformers = LazyLoader("transformers", globals(), "transformers")
 
 
-def import_model(
-    llm: openllm.LLM[t.Any, t.Any],
-    *decls: t.Any,
-    trust_remote_code: bool,
-    **attrs: t.Any,
-) -> bentoml.Model:
+def import_model(llm: openllm.LLM[M, T], *decls: t.Any, trust_remote_code: bool, **attrs: t.Any) -> bentoml.Model:
     if llm.runtime == "transformers":
         return openllm.transformers.import_model(llm, *decls, trust_remote_code=trust_remote_code, **attrs)
     elif llm.runtime == "ggml":
@@ -73,7 +68,7 @@ def import_model(
         raise ValueError(f"Unknown runtime: {llm.config['runtime']}")
 
 
-def get(llm: openllm.LLM[t.Any, t.Any], auto_import: bool = False) -> bentoml.Model:
+def get(llm: openllm.LLM[M, T], auto_import: bool = False) -> bentoml.Model:
     if llm.runtime == "transformers":
         return openllm.transformers.get(llm, auto_import=auto_import)
     elif llm.runtime == "ggml":
@@ -82,7 +77,7 @@ def get(llm: openllm.LLM[t.Any, t.Any], auto_import: bool = False) -> bentoml.Mo
         raise ValueError(f"Unknown runtime: {llm.config['runtime']}")
 
 
-def save_pretrained(llm: openllm.LLM[t.Any, t.Any], save_directory: str, **attrs: t.Any) -> None:
+def save_pretrained(llm: openllm.LLM[M, T], save_directory: str, **attrs: t.Any) -> None:
     if llm.runtime == "transformers":
         return openllm.transformers.save_pretrained(llm, save_directory, **attrs)
     elif llm.runtime == "ggml":
@@ -91,7 +86,7 @@ def save_pretrained(llm: openllm.LLM[t.Any, t.Any], save_directory: str, **attrs
         raise ValueError(f"Unknown runtime: {llm.config['runtime']}")
 
 
-def load_model(llm: openllm.LLM[M, t.Any], *decls: t.Any, **attrs: t.Any) -> M:
+def load_model(llm: openllm.LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M:
     if llm.runtime == "transformers":
         return openllm.transformers.load_model(llm, *decls, **attrs)
     elif llm.runtime == "ggml":

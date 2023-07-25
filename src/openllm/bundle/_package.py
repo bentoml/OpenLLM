@@ -23,7 +23,6 @@ import fs
 import fs.copy
 import fs.errors
 import orjson
-from packaging.version import Version
 from simple_di import Provide
 from simple_di import inject
 
@@ -76,23 +75,13 @@ def build_editable(path: str) -> str | None:
             return builder.build("wheel", path, config_settings={"--global-option": "--quiet"})
     raise RuntimeError("Custom OpenLLM build is currently not supported. Please install OpenLLM from PyPI or built it from Git source.")
 
-
-def handle_package_version(package: str, has_dockerfile_template: bool, lower_bound: bool = True):
-    version = Version(pkg.get_pkg_version(package))
-    if version.is_devrelease:
-        if has_dockerfile_template: logger.warning("Installed %s has version %s as a dev release. This means you have a custom build of %s with %s. Make sure to use custom dockerfile templates (--dockerfile-template) to setup %s correctly. See https://docs.bentoml.com/en/latest/guides/containerization.html#dockerfile-template for more information.", package, version, package, "CUDA support" if "cu" in str(version) else "more features", package)
-        return package
-    return f"{package}>={importlib.metadata.version(package)}" if lower_bound else package
-
-
 def construct_python_options(
     llm: openllm.LLM[t.Any, t.Any],
     llm_fs: FS,
-    has_dockerfile_template: bool,
     extra_dependencies: tuple[str, ...] | None = None,
     adapter_map: dict[str, str | None] | None = None,
 ) -> PythonOptions:
-    packages = ["openllm"]
+    packages = ["openllm", "scipy"]  # apparently bnb misses this one
     if adapter_map is not None: packages += ["openllm[fine-tune]"]
     # NOTE: add openllm to the default dependencies
     # if users has openllm custom built wheels, it will still respect
@@ -102,14 +91,13 @@ def construct_python_options(
 
     req = llm.config["requirements"]
     if req is not None: packages.extend(req)
-
     if str(os.environ.get("BENTOML_BUNDLE_LOCAL_BUILD", False)).lower() == "false": packages.append(f"bentoml>={'.'.join([str(i) for i in pkg.pkg_version_info('bentoml')])}")
 
-    env: EnvVarMixin = llm.config["env"]
+    env = llm.config["env"]
     framework_envvar = env["framework_value"]
     if framework_envvar == "flax":
         if not is_flax_available(): raise ValueError(f"Flax is not available, while {env.framework} is set to 'flax'")
-        packages.extend([handle_package_version("flax", has_dockerfile_template), handle_package_version("jax", has_dockerfile_template), handle_package_version("jaxlib", has_dockerfile_template)])
+        packages.extend([importlib.metadata.version("flax"), importlib.metadata.version("jax"), importlib.metadata.version("jaxlib")])
     elif framework_envvar == "tf":
         if not is_tf_available(): raise ValueError(f"TensorFlow is not available, while {env.framework} is set to 'tf'")
         candidates = (
@@ -127,7 +115,7 @@ def construct_python_options(
         # For the metadata, we have to look for both tensorflow and tensorflow-cpu
         for candidate in candidates:
             try:
-                pkgver = handle_package_version(candidate, has_dockerfile_template)
+                pkgver = importlib.metadata.version(candidate)
                 if pkgver == candidate: packages.extend(["tensorflow"])
                 else:
                     _tf_version = importlib.metadata.version(candidate)
@@ -136,14 +124,12 @@ def construct_python_options(
             except importlib.metadata.PackageNotFoundError: pass
     else:
         if not is_torch_available(): raise ValueError("PyTorch is not available. Make sure to have it locally installed.")
-        packages.extend([handle_package_version("torch", has_dockerfile_template)])
+        packages.extend([importlib.metadata.version("torch")])
 
     wheels: list[str] = []
     built_wheels = build_editable(llm_fs.getsyspath("/"))
     if built_wheels is not None: wheels.append(llm_fs.getsyspath(f"/{built_wheels.split('/')[-1]}"))
-
-    return PythonOptions(packages=packages, wheels=wheels, lock_packages=False)
-
+    return PythonOptions(packages=packages, wheels=wheels, lock_packages=False, extra_index_url=["https://download.pytorch.org/whl/cu118"])
 
 def construct_docker_options(
     llm: openllm.LLM[t.Any, t.Any],
@@ -164,7 +150,6 @@ def construct_docker_options(
     ]
     _bentoml_config_options += " " if _bentoml_config_options else "" + " ".join(_bentoml_config_options_opts)
     env: EnvVarMixin = llm.config["env"]
-
     env_dict = {
         env.framework: env.framework_value,
         env.config: f"'{llm.config.model_dump_json().decode()}'",
@@ -175,7 +160,6 @@ def construct_docker_options(
         "BENTOML_CONFIG_OPTIONS": f"'{_bentoml_config_options}'",
         env.model_id: f"/home/bentoml/bento/models/{llm.tag.path()}",  # This is the default BENTO_PATH var
     }
-
     if adapter_map: env_dict["BITSANDBYTES_NOWELCOME"] = os.environ.get("BITSANDBYTES_NOWELCOME", "1")
 
     # We need to handle None separately here, as env from subprocess doesn't accept None value.
@@ -184,7 +168,6 @@ def construct_docker_options(
     if _env.bettertransformer_value is not None: env_dict[_env.bettertransformer] = str(_env.bettertransformer_value)
     if _env.quantize_value is not None: env_dict[_env.quantize] = _env.quantize_value
     env_dict[_env.runtime] = _env.runtime_value
-
     return DockerOptions(
         cuda_version="11.8.0",
         env=env_dict,
@@ -192,7 +175,6 @@ def construct_docker_options(
         dockerfile_template=dockerfile_template,
         python_version="3.9",
     )
-
 
 @inject
 def create_bento(
@@ -235,7 +217,7 @@ def create_bento(
         description=f"OpenLLM service for {llm.config['start_name']}",
         include=list(llm_fs.walk.files()),
         exclude=["/venv", "/.venv", "__pycache__/", "*.py[cod]", "*$py.class"],
-        python=construct_python_options(llm, llm_fs, dockerfile_template is None, extra_dependencies, adapter_map),
+        python=construct_python_options(llm, llm_fs, extra_dependencies, adapter_map),
         docker=construct_docker_options(llm, llm_fs, workers_per_resource, quantize, bettertransformer, adapter_map, dockerfile_template, runtime, serialisation_format),
         models=[llm_spec],
     )
