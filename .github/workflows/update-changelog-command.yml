@@ -6,12 +6,12 @@ on:
 jobs:
   update-changelog-main:
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      checks: write
+    if: ${{ github.event.issue.pull_request }} && github.repository_owner == 'bentoml'
     steps:
       - uses: actions/checkout@v3
-        with:
-          token: ${{ secrets.OPENLLM_PAT }}
-          repository: ${{ github.event.client_payload.pull_request.head.repo.full_name }}
-          ref: ${{ github.event.client_payload.pull_request.head.ref }}
       - name: Setup CI
         uses: ./.github/actions/setup-repo
         with:
@@ -26,6 +26,12 @@ jobs:
           git_user_signingkey: true
           git_commit_gpgsign: true
           git_tag_gpgsign: true
+      - name: Create comment
+        uses: peter-evans/create-or-update-comment@v3
+        with:
+          issue-number: ${{ github.event.client_payload.pull_request.number }}
+          body: |
+            CI running here: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       - name: Update CHANGELOG.md to include unreleased notes
         env:
           GIT_AUTHOR_NAME: ${{ steps.import-gpg.outputs.name }}
