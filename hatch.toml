@@ -1,5 +1,63 @@
+[metadata.hooks.fancy-pypi-readme]
+content-type = "text/markdown"
+# PyPI doesn't support the <picture> tag.
+[[metadata.hooks.fancy-pypi-readme.fragments]]
+text = """
+<p align="center">
+  <a href="https://github.com/bentoml/openllm">
+    <img src="https://raw.githubusercontent.com/bentoml/openllm/main/assets/main-banner.png" width="35%" alt="Banner for OpenLLM" />
+  </a>
+</p>
+
+"""
+[[metadata.hooks.fancy-pypi-readme.fragments]]
+path = "README.md"
+end-before = "\n<!-- hatch-fancy-pypi-readme intro stop -->"
+[[metadata.hooks.fancy-pypi-readme.fragments]]
+text = """
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/bentoml/openllm/main/assets/output.gif" width="35%" alt="Gif showing OpenLLM Intro" />
+</p>
+"""
+[[metadata.hooks.fancy-pypi-readme.fragments]]
+path = "README.md"
+start-after = "<!-- hatch-fancy-pypi-readme interim start -->\n"
+end-before = "\n<!-- hatch-fancy-pypi-readme interim stop -->"
+[[metadata.hooks.fancy-pypi-readme.fragments]]
+text = """
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/bentoml/openllm/main/assets/agent.gif" width="35%" alt="Gif showing Agent integration" />
+</p>
+"""
+[[metadata.hooks.fancy-pypi-readme.fragments]]
+path = "README.md"
+start-after = "<!-- hatch-fancy-pypi-readme meta start -->\n"
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.fragments]]
+text = """
+
+## Release Information
+
+"""
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.fragments]]
+path = "CHANGELOG.md"
+pattern = "\n(###.+?\n)## "
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.fragments]]
+text = """
+
+---
+
+[Click me for full changelog](https://github.com/bentoml/openllm/blob/main/CHANGELOG.md)
+"""
 [version]
-path = "src/openllm/__about__.py"
+fallback-version = "0.0.0"
+source = "vcs"
+[build.hooks.vcs]
+version-file = "src/openllm/_version.py"
+[version.raw-options]
+git_describe_command = ["git", "describe", "--dirty", "--tags", "--long", "--first-parent"]
+local_scheme = "no-local-version"
 [metadata]
 allow-direct-references = true
 [build.targets.wheel]
@@ -16,6 +74,8 @@ dependencies = [
     "tomlkit",
     # NOTE: Using under ./tools/update-readme.py
     "markdown-it-py",
+    # NOTE: For fancy PyPI readme
+    "hatch-fancy-pypi-readme",
 ]
 [envs.default.scripts]
 changelog = "towncrier build --version main --draft"

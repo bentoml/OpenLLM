@@ -69,7 +69,6 @@ import openllm
 from bentoml._internal.configuration.containers import BentoMLContainer
 from bentoml._internal.models.model import ModelStore
 
-from .__about__ import __version__
 from .exceptions import OpenLLMException
 from .utils import DEBUG
 from .utils import ENV_VARS_TRUE_VALUES
@@ -403,7 +402,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
         return wrapper
 
 @click.group(cls=OpenLLMCommandGroup, context_settings=_CONTEXT_SETTINGS, name="openllm")
-@click.version_option(__version__, "--version", "-v")
+@click.version_option(None, "--version", "-v")
 def cli() -> None:
     """\b
      ██████╗ ██████╗ ███████╗███╗   ██╗██╗     ██╗     ███╗   ███╗

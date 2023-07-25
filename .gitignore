@@ -141,3 +141,4 @@ pyapp
 /target
 
 .pdm-python
+/src/openllm/_version.py
