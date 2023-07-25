@@ -1594,14 +1594,14 @@ def embed(ctx: click.Context, text: tuple[str, ...], endpoint: str, timeout: int
     """
     client = openllm.client.HTTPClient(endpoint, timeout=timeout) if server_type == "http" else openllm.client.GrpcClient(endpoint, timeout=timeout)
     try:
-        gen_embed = client.embed(list(text))
+        gen_embed = client.embed(text)
     except ValueError:
         raise click.ClickException(f"Endpoint {endpoint} does not support embeddings.") from None
     if machine: return gen_embed
     elif output == "pretty":
-        _echo("Generated embeddings:", fg="magenta")
+        _echo("Generated embeddings: ", fg="magenta", nl=False)
         _echo(gen_embed.embeddings, fg="white")
-        _echo("\nNumber of tokens:", fg="magenta")
+        _echo("\nNumber of tokens: ", fg="magenta", nl=False)
         _echo(gen_embed.num_tokens, fg="white")
     elif output == "json": _echo(orjson.dumps(bentoml_cattr.unstructure(gen_embed), option=orjson.OPT_INDENT_2).decode(), fg="white")
     else: _echo(gen_embed.embeddings, fg="white")

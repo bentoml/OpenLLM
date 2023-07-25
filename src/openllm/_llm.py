@@ -1109,25 +1109,15 @@ def llm_runnable_class(self: openllm.LLM[M, T], embeddings_sig: ModelSignature, 
                 return SetAdapterOutput(success=success, message=f"Adapter {adapter_name} not found. Available adapters: {list(t.cast('peft.PeftModel', __self.model).peft_config)}")
 
         @bentoml.Runnable.method(**method_signature(embeddings_sig))
-        def embeddings(__self: _Runnable, prompt: str | list[str]) -> LLMEmbeddings:
-            if isinstance(prompt, str): prompt = [prompt]
-            return self.embeddings(prompt)
-
+        def embeddings(__self: _Runnable, prompt: str | list[str]) -> LLMEmbeddings: return self.embeddings([prompt] if isinstance(prompt, str) else prompt)
         @bentoml.Runnable.method(**method_signature(generate_sig))
-        def __call__(__self: _Runnable, prompt: str, **attrs: t.Any) -> list[t.Any]:
-            return self.generate(prompt, **attrs)
-
+        def __call__(__self: _Runnable, prompt: str, **attrs: t.Any) -> list[t.Any]: return self.generate(prompt, **attrs)
         @bentoml.Runnable.method(**method_signature(generate_sig))
-        def generate(__self: _Runnable, prompt: str, **attrs: t.Any) -> list[t.Any]:
-            return self.generate(prompt, **attrs)
-
+        def generate(__self: _Runnable, prompt: str, **attrs: t.Any) -> list[t.Any]: return self.generate(prompt, **attrs)
         @bentoml.Runnable.method(**method_signature(generate_sig))
-        def generate_one(__self: _Runnable, prompt: str, stop: list[str], **attrs: t.Any) -> t.Sequence[dict[t.Literal["generated_text"], str]]:
-            return self.generate_one(prompt, stop, **attrs)
-
+        def generate_one(__self: _Runnable, prompt: str, stop: list[str], **attrs: t.Any) -> t.Sequence[dict[t.Literal["generated_text"], str]]: return self.generate_one(prompt, stop, **attrs)
         @bentoml.Runnable.method(**method_signature(generate_iterator_sig))
-        def generate_iterator(__self: _Runnable, prompt: str, **attrs: t.Any) -> t.Generator[t.Any, None, None]:
-            yield self.generate_iterator(prompt, **attrs)
+        def generate_iterator(__self: _Runnable, prompt: str, **attrs: t.Any) -> t.Generator[t.Any, None, None]: yield self.generate_iterator(prompt, **attrs)
 
     return types.new_class(
         self.__class__.__name__ + "Runnable",

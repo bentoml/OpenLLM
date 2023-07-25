@@ -130,7 +130,7 @@ class ClientMeta(t.Generic[T]):
 class BaseClient(ClientMeta[T]):
     def health(self) -> t.Any: raise NotImplementedError
     def chat(self, prompt: str, history: list[str], **attrs: t.Any) -> str: raise NotImplementedError
-    def embed(self, prompt: list[str] | str) -> openllm.EmbeddingsOutput: raise NotImplementedError
+    def embed(self, prompt: t.Sequence[str] | str) -> openllm.EmbeddingsOutput: raise NotImplementedError
 
     @overload
     def query(self, prompt: str, *, return_raw_response: t.Literal[False] = ..., **attrs: t.Any) -> str: ...
@@ -172,7 +172,7 @@ class BaseClient(ClientMeta[T]):
 class BaseAsyncClient(ClientMeta[T]):
     async def health(self) -> t.Any: raise NotImplementedError
     async def chat(self, prompt: str, history: list[str], **attrs: t.Any) -> str: raise NotImplementedError
-    async def embed(self, prompt: list[str] | str) -> t.Sequence[float]: raise NotImplementedError
+    async def embed(self, prompt: t.Sequence[str] | str) -> t.Sequence[float]: raise NotImplementedError
 
     @overload
     async def query(self, prompt: str, *, return_attrs: t.Literal[True] = True, return_raw_response: bool | None = ..., **attrs: t.Any) -> openllm.GenerationOutput: ...

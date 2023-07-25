@@ -79,12 +79,13 @@ class HTTPClient(HTTPClientMixin, BaseClient[DictStrAny]):
         self._host, self._port = urlparse(address).netloc.split(":")
         super().__init__(address, timeout)
     def health(self) -> t.Any: return self._cached.health()
-    def embed(self, prompt: list[str] | str) -> openllm.EmbeddingsOutput:
+    def embed(self, prompt: t.Sequence[str] | str) -> openllm.EmbeddingsOutput:
         if not self.supports_embeddings:
             raise ValueError("This model does not support embeddings.")
         if isinstance(prompt, str): prompt = [prompt]
-        if in_async_context(): result = httpx.post(urljoin(self._address, f"/{self._api_version}/embeddings"), json=orjson.dumps(prompt).decode(), timeout=self.timeout)
-        else: result = self.call("embeddings", orjson.dumps(prompt).decode())
+        if in_async_context(): result = httpx.post(urljoin(self._address, f"/{self._api_version}/embeddings"), json=list(prompt), timeout=self.timeout)
+        else: result = self.call("embeddings", list(prompt))
+        breakpoint()
         return openllm.EmbeddingsOutput(**result)
 
 class AsyncHTTPClient(HTTPClientMixin, BaseAsyncClient[DictStrAny]):
@@ -97,5 +98,5 @@ class AsyncHTTPClient(HTTPClientMixin, BaseAsyncClient[DictStrAny]):
         if not self.supports_embeddings:
             raise ValueError("This model does not support embeddings.")
         if isinstance(prompt, str): prompt = [prompt]
-        res = await self.acall("embeddings", orjson.dumps(prompt).decode())
+        res = await self.acall("embeddings", list(prompt))
         return openllm.EmbeddingsOutput(**res)
