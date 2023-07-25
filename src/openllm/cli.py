@@ -1281,12 +1281,11 @@ def build_command(
                         llm_fs.makedir(src_folder_name, recreate=True)
                         fs.copy.copy_dir(src_fs, _adapter_id, llm_fs, src_folder_name)
                         adapter_map[src_folder_name] = name
-                    except FileNotFoundError:
-                        # this is the remote adapter, then just added back
-                        # note that there is a drawback here. If the path of the local adapter
-                        # path have the same name as the remote, then we currently don't support
-                        # that edge case.
-                        adapter_map[_adapter_id] = name
+                    # this is the remote adapter, then just added back
+                    # note that there is a drawback here. If the path of the local adapter
+                    # path have the same name as the remote, then we currently don't support
+                    # that edge case.
+                    except FileNotFoundError: adapter_map[_adapter_id] = name
                 os.environ["OPENLLM_ADAPTER_MAP"] = orjson.dumps(adapter_map).decode()
             bento_tag = bentoml.Tag.from_taglike(f"{llm.llm_type}-service:{llm.tag.version}".lower().strip())
             try:
@@ -1332,8 +1331,6 @@ def build_command(
             elif not overwrite: _echo(f"'{model_name}' already has a Bento built [{bento}]. To overwrite it pass '--overwrite'.", fg="yellow")
             _echo(
                 "📖 Next steps:\n\n"
-                + "* Serving BentoLLM locally with 'openllm start':\n"
-                + f"    $ openllm start {bento.tag}\n\n"
                 + "* Push to BentoCloud with 'bentoml push':\n"
                 + f"    $ bentoml push {bento.tag}\n\n"
                 + "* Containerize your Bento with 'bentoml containerize':\n"
@@ -1350,10 +1347,9 @@ def build_command(
     if push: BentoMLContainer.bentocloud_client.get().push_bento(bento, context=t.cast(CliContext, ctx.obj).cloud_context)
     elif containerize:
         backend = t.cast("DefaultBuilder", os.getenv("BENTOML_CONTAINERIZE_BACKEND", "docker"))
-        _echo(f"Building {bento} into a LLMContainer using backend '{backend}'", fg="magenta")
         try: bentoml.container.health(backend)
         except subprocess.CalledProcessError: raise OpenLLMException(f"Failed to use backend {backend}") from None
-        bentoml.container.build(bento.tag, backend=backend, features=("grpc",))
+        bentoml.container.build(bento.tag, backend=backend, features=("grpc","io"))
     return bento
 
 
