@@ -30,6 +30,7 @@ from bentoml._internal.resource import get_resource
 from bentoml._internal.resource import system_resources
 from bentoml._internal.runner.strategy import THREAD_ENVS
 
+from .utils import DEBUG
 from .utils import LazyType
 from .utils import ReprMixin
 
@@ -115,7 +116,7 @@ def _from_system(cls: type[DynResource]) -> list[str]:
     if visible_devices is None:
         if cls.resource_id == "amd.com/gpu":
             if not psutil.LINUX:
-                warnings.warn("AMD GPUs is currently only supported on Linux.", stacklevel=_STACK_LEVEL)
+                if DEBUG: warnings.warn("AMD GPUs is currently only supported on Linux.", stacklevel=_STACK_LEVEL)
                 return []
 
             # ROCm does not currently have the rocm_smi wheel.
