@@ -69,9 +69,9 @@ jobs:
       - name: Set project version
         id: version
         run: |-
-          version="$(hatch version)"
+          version="$(git describe --tags "$(git rev-list --tags --max-count=1)")"
+          echo "Release version: $version"
           echo "version=$version" >> $GITHUB_OUTPUT
-          echo "$version"
   publish-python:
     needs:
       - release
@@ -81,7 +81,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          ref: 'v${{ needs.release.outputs.version }}'
+          ref: '${{ needs.release.outputs.version }}'
       - name: Setup CI
         uses: ./.github/actions/setup-repo
       - name: Install build frontend
@@ -130,6 +130,7 @@ jobs:
         run: |
           git pull --autostash --no-edit --gpg-sign --ff origin main
           SEMVER="${{ needs.release.outputs.version }}"
+          SEMVER="${SEMVER#v}"
           OLD_IFS=$IFS
           IFS='.'
           read -ra VERSION_BITS <<< "$SEMVER"

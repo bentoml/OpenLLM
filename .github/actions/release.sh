@@ -86,14 +86,14 @@ VNUM2=${VERSION_BITS[1]}
 VNUM3=${VERSION_BITS[2]}
 
 if [[ $release == 'major' ]]; then
-    VNUM1=$((VNUM1+1))
+    VNUM1=$((VNUM1 + 1))
     VNUM2=0
     VNUM3=0
 elif [[ $release == 'minor' ]]; then
-    VNUM2=$((VNUM2+1))
+    VNUM2=$((VNUM2 + 1))
     VNUM3=0
 else
-    VNUM3=$((VNUM3+1))
+    VNUM3=$((VNUM3 + 1))
 fi
 
 echo "Commit count: $(git rev-list --count HEAD)"

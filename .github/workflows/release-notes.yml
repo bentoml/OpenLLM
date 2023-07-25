@@ -70,7 +70,7 @@ jobs:
           generate_release_notes: true
           body_path: release_notes.txt
           fail_on_unmatched_files: true
-          tag_name: 'v${{ inputs.tags }}'
+          tag_name: '${{ inputs.tags }}'
           files: |-
             dist/*
             archives/*

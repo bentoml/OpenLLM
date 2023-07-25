@@ -15,7 +15,7 @@
 
 set -o errexit -o nounset -o pipefail
 
-TAG="$1"
+TAG="${1#v}"
 
 # Check if an argument is provided
 if [ $# -eq 0 ]; then
