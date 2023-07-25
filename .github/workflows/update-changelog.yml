@@ -1,4 +1,4 @@
-name: slash-command-dispatch
+name: update-changelog
 on:
   issue_comment:
     types: [created, edited]
@@ -9,7 +9,6 @@ jobs:
       pull-requests: write
     if: ${{ github.event.issue.pull_request }} && github.repository_owner == 'bentoml'
     steps:
-      - uses: actions/checkout@v3
       - name: Slash command setup
         uses: peter-evans/slash-command-dispatch@v3
         with:
