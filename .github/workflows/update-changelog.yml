@@ -2,11 +2,11 @@ name: update-changelog-command
 on:
   repository_dispatch:
     types: [update-changelog-command]
+  workflow_dispatch:
 jobs:
   update-changelog-main:
     runs-on: ubuntu-latest
     steps:
-      # Checkout the pull request branch
       - uses: actions/checkout@v3
         with:
           token: ${{ secrets.OPENLLM_PAT }}

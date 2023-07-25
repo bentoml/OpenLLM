@@ -1,0 +1,27 @@
+name: slash-command-dispatch
+on:
+  issue_comment:
+    # Type "edited" added here for test purposes. Where possible, avoid
+    # using to prevent processing unnecessary events.
+    types: [created, edited]
+jobs:
+  slash-command-dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Slash command setup
+        id: scd
+        uses: peter-evans/slash-command-dispatch@v3
+        with:
+          token: ${{ secrets.OPENLLM_PAT }}
+          commands: |
+            update-changelog
+          permission: write
+          dispatch-type: workflow
+      - name: Edit comment with error message
+        if: steps.scd.outputs.error-message
+        uses: peter-evans/create-or-update-comment@v2
+        with:
+          comment-id: ${{ github.event.comment.id }}
+          body: |
+            > ${{ steps.scd.outputs.error-message }}
