@@ -40,7 +40,6 @@ class HTTPClientMixin:
     if t.TYPE_CHECKING:
         @property
         def _metadata(self) -> DictStrAny: ...
-
     @property
     def model_name(self) -> str:
         try: return self._metadata["model_name"]
@@ -72,7 +71,6 @@ class HTTPClientMixin:
     def postprocess(self, result: dict[str, t.Any]) -> openllm.GenerationOutput:
         return openllm.GenerationOutput(**result)
 
-
 class HTTPClient(HTTPClientMixin, BaseClient[DictStrAny]):
     def __init__(self, address: str, timeout: int = 30):
         address = address if "://" in address else "http://" + address
@@ -85,7 +83,6 @@ class HTTPClient(HTTPClientMixin, BaseClient[DictStrAny]):
         if isinstance(prompt, str): prompt = [prompt]
         if in_async_context(): result = httpx.post(urljoin(self._address, f"/{self._api_version}/embeddings"), json=list(prompt), timeout=self.timeout)
         else: result = self.call("embeddings", list(prompt))
-        breakpoint()
         return openllm.EmbeddingsOutput(**result)
 
 class AsyncHTTPClient(HTTPClientMixin, BaseAsyncClient[DictStrAny]):
