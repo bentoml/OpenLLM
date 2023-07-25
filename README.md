@@ -11,6 +11,9 @@
     </a><a href="https://l.bentoml.com/join-openllm-discord">
         <img src="https://badgen.net/badge/icon/OpenLLM/7289da?icon=discord&label=Join%20Us" alt="Discord" />
     </a><br>
+    </a><a href="https://github.com/pypa/hatch">
+        <img src="https://img.shields.io/badge/%F0%9F%A5%9A-Hatch-4051b5.svg" alt="Hatch" />
+    </a><br>
     <p>An open platform for operating large language models (LLMs) in production.</br>
     Fine-tune, serve, deploy, and monitor any LLMs with ease.</p>
     <i></i>
@@ -39,10 +42,14 @@ Images or deploy as serverless endpoint via
 🤖️ **Bring your own LLM**: Fine-tune any LLM to suit your needs with
 `LLM.tuning()`. (Coming soon)
 
+<!-- hatch-fancy-pypi-readme intro stop -->
+
 ![Gif showing OpenLLM Intro](/assets/output.gif)
 <br/>
 
-## 🏃‍ Getting Started
+<!-- hatch-fancy-pypi-readme interim start -->
+
+## 🏃 Getting Started
 
 To use OpenLLM, you need to have Python 3.8 (or newer) and `pip` installed on
 your system. We highly recommend using a Virtual Environment to prevent package
@@ -105,12 +112,17 @@ openllm query 'Explain to me the difference between "further" and "farther"'
 
 Visit `http://localhost:3000/docs.json` for OpenLLM's API specification.
 
+OpenLLM seamlessly supports many models and different variants of models.
 Users can also specify different variants of the model to be served, by
 providing the `--model-id` argument, e.g.:
 
 ```bash
 openllm start flan-t5 --model-id google/flan-t5-large
 ```
+
+> **Note** that `openllm` also supports all variants of fine-tuning weights, custom model path
+> as well as quantized weights for any of the supported models as long as it can be loaded with
+> the model architecture. Refer to [supported models](https://github.com/bentoml/OpenLLM/tree/main#-supported-models) section for models' architecture.
 
 Use the `openllm models` command to see the list of models and their variants
 supported in OpenLLM.
@@ -127,8 +139,6 @@ dependencies can be installed with the instructions below:
 <tr>
 <th>Model</th>
 <th>Architecture</th>
-<th>CPU</th>
-<th>GPU</th>
 <th>Model Ids</th>
 <th>Installation</th>
 </tr>
@@ -136,8 +146,6 @@ dependencies can be installed with the instructions below:
 
 <td><a href=https://github.com/THUDM/ChatGLM-6B>chatglm</a></td>
 <td><a href=https://github.com/THUDM/ChatGLM-6B><code>ChatGLMForConditionalGeneration</code></a></td>
-<td>❌</td>
-<td>✅</td>
 <td>
 
 <ul><li><a href=https://huggingface.co/thudm/chatglm-6b><code>thudm/chatglm-6b</code></a></li>
@@ -159,8 +167,6 @@ pip install "openllm[chatglm]"
 
 <td><a href=https://github.com/databrickslabs/dolly>dolly-v2</a></td>
 <td><a href=https://huggingface.co/docs/transformers/main/model_doc/gpt_neox#transformers.GPTNeoXForCausalLM><code>GPTNeoXForCausalLM</code></a></td>
-<td>✅</td>
-<td>✅</td>
 <td>
 
 <ul><li><a href=https://huggingface.co/databricks/dolly-v2-3b><code>databricks/dolly-v2-3b</code></a></li>
@@ -180,8 +186,6 @@ pip install openllm
 
 <td><a href=https://falconllm.tii.ae/>falcon</a></td>
 <td><a href=https://falconllm.tii.ae/><code>FalconForCausalLM</code></a></td>
-<td>❌</td>
-<td>✅</td>
 <td>
 
 <ul><li><a href=https://huggingface.co/tiiuae/falcon-7b><code>tiiuae/falcon-7b</code></a></li>
@@ -202,8 +206,6 @@ pip install "openllm[falcon]"
 
 <td><a href=https://huggingface.co/docs/transformers/model_doc/flan-t5>flan-t5</a></td>
 <td><a href=https://huggingface.co/docs/transformers/main/model_doc/t5#transformers.T5ForConditionalGeneration><code>T5ForConditionalGeneration</code></a></td>
-<td>✅</td>
-<td>✅</td>
 <td>
 
 <ul><li><a href=https://huggingface.co/google/flan-t5-small><code>google/flan-t5-small</code></a></li>
@@ -225,8 +227,6 @@ pip install "openllm[flan-t5]"
 
 <td><a href=https://github.com/EleutherAI/gpt-neox>gpt-neox</a></td>
 <td><a href=https://huggingface.co/docs/transformers/main/model_doc/gpt_neox#transformers.GPTNeoXForCausalLM><code>GPTNeoXForCausalLM</code></a></td>
-<td>❌</td>
-<td>✅</td>
 <td>
 
 <ul><li><a href=https://huggingface.co/eleutherai/gpt-neox-20b><code>eleutherai/gpt-neox-20b</code></a></li></ul>
@@ -244,8 +244,6 @@ pip install openllm
 
 <td><a href=https://github.com/facebookresearch/llama>llama</a></td>
 <td><a href=https://huggingface.co/docs/transformers/main/model_doc/llama#transformers.LlamaForCausalLM><code>LlamaForCausalLM</code></a></td>
-<td>✅</td>
-<td>✅</td>
 <td>
 
 <ul><li><a href=https://huggingface.co/meta-llama/llama-2-70b-chat-hf><code>meta-llama/llama-2-70b-chat-hf</code></a></li>
@@ -275,8 +273,6 @@ pip install "openllm[llama]"
 
 <td><a href=https://huggingface.co/mosaicml>mpt</a></td>
 <td><a href=https://huggingface.co/mosaicml><code>MPTForCausalLM</code></a></td>
-<td>✅</td>
-<td>✅</td>
 <td>
 
 <ul><li><a href=https://huggingface.co/mosaicml/mpt-7b><code>mosaicml/mpt-7b</code></a></li>
@@ -300,8 +296,6 @@ pip install "openllm[mpt]"
 
 <td><a href=https://huggingface.co/docs/transformers/model_doc/opt>opt</a></td>
 <td><a href=https://huggingface.co/docs/transformers/main/model_doc/opt#transformers.OPTForCausalLM><code>OPTForCausalLM</code></a></td>
-<td>✅</td>
-<td>✅</td>
 <td>
 
 <ul><li><a href=https://huggingface.co/facebook/opt-125m><code>facebook/opt-125m</code></a></li>
@@ -324,8 +318,6 @@ pip install "openllm[opt]"
 
 <td><a href=https://github.com/Stability-AI/StableLM>stablelm</a></td>
 <td><a href=https://huggingface.co/docs/transformers/main/model_doc/gpt_neox#transformers.GPTNeoXForCausalLM><code>GPTNeoXForCausalLM</code></a></td>
-<td>✅</td>
-<td>✅</td>
 <td>
 
 <ul><li><a href=https://huggingface.co/stabilityai/stablelm-tuned-alpha-3b><code>stabilityai/stablelm-tuned-alpha-3b</code></a></li>
@@ -346,8 +338,6 @@ pip install openllm
 
 <td><a href=https://github.com/bigcode-project/starcoder>starcoder</a></td>
 <td><a href=https://huggingface.co/docs/transformers/main/model_doc/gpt_bigcode#transformers.GPTBigCodeForCausalLM><code>GPTBigCodeForCausalLM</code></a></td>
-<td>❌</td>
-<td>✅</td>
 <td>
 
 <ul><li><a href=https://huggingface.co/bigcode/starcoder><code>bigcode/starcoder</code></a></li>
@@ -366,8 +356,6 @@ pip install "openllm[starcoder]"
 
 <td><a href=https://github.com/baichuan-inc/Baichuan-7B>baichuan</a></td>
 <td><a href=https://github.com/baichuan-inc/Baichuan-7B><code>BaiChuanForCausalLM</code></a></td>
-<td>❌</td>
-<td>✅</td>
 <td>
 
 <ul><li><a href=https://huggingface.co/baichuan-inc/baichuan-7b><code>baichuan-inc/baichuan-7b</code></a></li>
@@ -596,9 +584,12 @@ client.ask_agent(
 )
 ```
 
+<!-- hatch-fancy-pypi-readme interim stop -->
+
 ![Gif showing Agent integration](/assets/agent.gif)
 <br/>
 
+<!-- hatch-fancy-pypi-readme meta start -->
 
 ## 🚀 Deploying to Production
 
@@ -662,7 +653,6 @@ the serverless cloud for shipping and scaling AI applications.
 5. **Deploying a Bento**: Deploy your LLMs to BentoCloud with a single
    `bentoml deployment create` command following the
    [deployment instructions](https://docs.bentoml.com/en/latest/reference/cli.html#bentoml-deployment-create).
-
 
 
 ## 👥 Community
