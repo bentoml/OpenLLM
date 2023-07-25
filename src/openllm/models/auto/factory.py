@@ -77,7 +77,7 @@ class BaseAutoLLMClass:
             if ensure_available: llm.ensure_model_id_exists()
             if not return_runner_kwargs: return llm
             return llm, to_runner_attrs
-        raise ValueError(f"Unrecognized configuration class {llm_config.__class__} for this kind of AutoLLM: {cls.__name__}.\nLLM type should be one of {', '.join(c.__name__ for c in cls._model_mapping.keys())}.")
+        raise ValueError(f"Unrecognized configuration class {llm_config.__class__} for this kind of AutoLLM: {cls.__name__}.\nConfiguration class should be one of {', '.join(c.__name__ for c in cls._model_mapping.keys())}.")
     @classmethod
     def create_runner(cls, model: str, model_id: str | None = None, **attrs: t.Any) -> LLMRunner[t.Any, t.Any]:
         """Create a LLM Runner for the given model name.

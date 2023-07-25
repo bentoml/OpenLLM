@@ -174,10 +174,7 @@ M = t.TypeVar("M", bound="t.Union[transformers.PreTrainedModel, transformers.Pip
 T = t.TypeVar("T", bound="t.Union[transformers.PreTrainedTokenizerFast, transformers.PreTrainedTokenizer, transformers.PreTrainedTokenizerBase]")
 
 def _default_post_init(self: LLM[t.Any, t.Any]) -> None:
-    self.device = None
-
-    if self.__llm_implementation__ == "pt" and is_torch_available():
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if self.__llm_implementation__ == "pt" and is_torch_available(): self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class LLMInterface(ABC, t.Generic[M, T]):
     """This defines the loose contract for all openllm.LLM implementations."""
