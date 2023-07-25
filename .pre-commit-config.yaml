@@ -14,7 +14,7 @@
 
 ci:
   autoupdate_schedule: weekly
-  skip: [check-models-table-update, check-models-table-update, changelog-dry-run, pyright, mypy]
+  skip: [check-models-table-update, check-models-table-update, changelog-dry-run, pyright, mypy, towncrier]
   autofix_commit_msg: "ci: auto fixes from pre-commit.ci\n\nFor more information, see https://pre-commit.ci"
   autoupdate_commit_msg: 'ci: pre-commit autoupdate [pre-commit.ci]'
 exclude: '.*\.(css|js|svg)$'
@@ -36,10 +36,10 @@ repos:
       - id: mypy
         name: mypy
         entry: ./tools/mypy
+        verbose: true
         'types_or': [python, pyi]
         language: python
         pass_filenames: false
-        verbose: true
         exclude: |
           (?x)^(
               examples/.*|
@@ -52,11 +52,11 @@ repos:
       - id: pyright
         name: pyright
         entry: ./tools/pyright
+        verbose: true
         types: [python]
         language: node
         pass_filenames: false
         additional_dependencies: ['pyright@1.1.317']
-        verbose: true
       - id: check-license-header
         name: check for license headers
         entry: ./tools/assert-license-headers

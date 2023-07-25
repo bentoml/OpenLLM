@@ -79,12 +79,6 @@ jobs:
         uses: ./.github/actions/setup-repo
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Create tests comment
-        uses: peter-evans/create-or-update-comment@v3
-        with:
-          issue-number: ${{ github.event.pull_request.number }}
-          body: |
-            ⚙️ CI jobs can be found [here](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
       - name: Run tests
         run: hatch run tests:python
       - name: Disambiguate coverage filename
