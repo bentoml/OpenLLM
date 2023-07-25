@@ -30,7 +30,7 @@ With OpenLLM, you can run inference with any open-source large-language models,
 deploy to the cloud or on-premises, and build powerful AI apps.
 
 🚂 **State-of-the-art LLMs**: built-in supports a wide range of open-source LLMs
-and model runtime, including Llama 2， StableLM, Falcon, Dolly, Flan-T5, ChatGLM,
+and model runtime, including Llama 2，StableLM, Falcon, Dolly, Flan-T5, ChatGLM,
 StarCoder and more.
 
 🔥 **Flexible APIs**: serve LLMs over RESTful API or gRPC with one command,
