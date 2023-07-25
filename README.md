@@ -1,5 +1,7 @@
 ![Banner for OpenLLM](/assets/main-banner.png)
 
+<!-- hatch-fancy-pypi-readme intro start -->
+
 <div align="center">
     <h1 align="center">🦾 OpenLLM</h1>
     <a href="https://pypi.org/project/openllm">
@@ -50,6 +52,7 @@ Images or deploy as serverless endpoint via
 <!-- hatch-fancy-pypi-readme intro stop -->
 
 ![Gif showing OpenLLM Intro](/assets/output.gif)
+
 <br/>
 
 <!-- hatch-fancy-pypi-readme interim start -->
@@ -751,3 +754,5 @@ url = {https://github.com/bentoml/OpenLLM},
 year = {2023}
 }
 ```
+
+<!-- hatch-fancy-pypi-readme meta stop -->
