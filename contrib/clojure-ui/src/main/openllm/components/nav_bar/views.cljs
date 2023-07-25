@@ -82,13 +82,3 @@
        [context-icon-buttons]]
       [:div {:class "-mr-6"}
        [collapse-side-bar-button]]]]]])
-
-
-;; [button {:on-click #(rf/dispatch [:set-screen-id :playground])
-;;           :color "inherit"
-;;           :start-icon (r/as-element [brush-icon/brush])} "Playground"]]
-;; [:div {:class "ml-3 pl-3 border-l border-gray-800"}
-;;  [button {:on-click #(do (rf/dispatch-sync [:set-screen-id :chat])
-;;                          (rf/dispatch [::chat-events/auto-scroll]))
-;;           :color "inherit"
-;;           :start-icon (r/as-element [chat-icon/chat])} "Conversation"]]
