@@ -465,7 +465,7 @@ openllm build opt --model-id facebook/opt-6.7b --adapter-id ...
 ```
 
 > **Note**: We will gradually roll out support for fine-tuning all models.
-> Currently, only OPT has fully adapters support.
+> The following models contain fine-tuning support: OPT, Falcon, LlaMA.
 
 ### Integrating a New Model
 
