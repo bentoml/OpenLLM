@@ -117,7 +117,7 @@ openllm query 'Explain to me the difference between "further" and "farther"'
 
 Visit `http://localhost:3000/docs.json` for OpenLLM's API specification.
 
-OpenLLM seamlessly supports many models and different variants of models.
+OpenLLM seamlessly supports many models and their variants.
 Users can also specify different variants of the model to be served, by
 providing the `--model-id` argument, e.g.:
 
