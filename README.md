@@ -474,6 +474,43 @@ LLMs into the ecosystem. Check out
 [Adding a New Model Guide](https://github.com/bentoml/OpenLLM/blob/main/ADDING_NEW_MODEL.md)
 to see how you can do it yourself.
 
+### Embeddings
+
+OpenLLM tentatively provides embeddings endpoint for supported models.
+This can be accessed via `/v1/embeddings`.
+
+To use via CLI, simply call ``openllm embed``:
+
+```bash
+openllm embed --endpoint http://localhost:3000 "I like to eat apples" -o json
+{
+  "embeddings": [
+    0.006569798570126295,
+    -0.031249752268195152,
+    -0.008072729222476482,
+    0.00847396720200777,
+    -0.005293501541018486,
+    ...<many embeddings>...
+    -0.002078012563288212,
+    -0.00676426338031888,
+    -0.002022686880081892
+  ],
+  "num_tokens": 9
+}
+```
+
+To invoke this endpoints, use ``client.embed`` from the Python SDK:
+
+```python
+import openllm
+
+client = openllm.client.HTTPClient("http://localhost:3000")
+
+client.embed("I like to eat apples")
+```
+
+> **Note**: Currently, only LlaMA models and variants support embeddings.
+
 ## ⚙️ Integrations
 
 OpenLLM is not just a standalone product; it's a building block designed to

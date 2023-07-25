@@ -43,6 +43,7 @@ import logging
 import os
 import pkgutil
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -58,6 +59,7 @@ import fs.copy
 import fs.errors
 import inflection
 import orjson
+import psutil
 import yaml
 from bentoml_cli.utils import BentoMLCommandGroup
 from bentoml_cli.utils import opt_callback
@@ -1649,17 +1651,25 @@ def list_bentos(ctx: click.Context):
     _echo(orjson.dumps(mapping, option=orjson.OPT_INDENT_2).decode(), fg="white")
     ctx.exit(0)
 
+@overload
+def dive_bentos(ctx: click.Context, bento: str, machine: t.Literal[True] = True, _bento_store: BentoStore = ...) -> str: ...
+@overload
+def dive_bentos(ctx: click.Context, bento: str, machine: t.Literal[False] = False, _bento_store: BentoStore = ...) -> None: ...
 @utils_command.command()
 @click.argument("bento", type=str)
+@machine_option(click)
 @click.pass_context
 @inject
-def dive_bentos(ctx: click.Context, bento: str, _bento_store: BentoStore = Provide[BentoMLContainer.bento_store]) -> None:
+def dive_bentos(ctx: click.Context, bento: str, machine: bool, _bento_store: BentoStore = Provide[BentoMLContainer.bento_store]) -> str | None:
     """Dive into a BentoLLM. This is synonymous to cd $(b get <bento>:<tag> -o path)."""
     try: bentomodel = _bento_store.get(bento)
     except bentoml.exceptions.NotFound: ctx.fail(f"Bento {bento} not found. Make sure to call `openllm build first`")
     if "bundler" not in  bentomodel.info.labels or bentomodel.info.labels["bundler"] != "openllm.bundle": ctx.fail(f"Bento is either too old or not built with OpenLLM. Make sure to use ``openllm build {bentomodel.info.labels['start_name']}`` for correctness.")
+    if machine: return bentomodel.path
     # copy and paste this into a new shell
-    _echo(f"cd $(python -m bentoml get {bentomodel.tag!s} -o path)", fg="white")
+    if psutil.WINDOWS: subprocess.check_output([shutil.which("dir") or "dir"], cwd=bentomodel.path)
+    else:subprocess.check_output([shutil.which("ls") or "ls", "-R"], cwd=bentomodel.path)
+    ctx.exit(0)
 
 @overload
 def get_prompt(model_name: str, prompt: str, format: str | None, output: OutputLiteral, machine: t.Literal[True] = True) -> str: ...
