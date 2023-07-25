@@ -32,8 +32,6 @@ on:
       - '*.md'
       - 'changelog.d/**'
       - 'assets/**'
-  repository_dispatch:
-    types: [update-changelog-command]
 env:
   LINES: 120
   COLUMNS: 120
@@ -149,45 +147,6 @@ jobs:
         run: pip install .
       - name: Speed
         run: hyperfine -m 100 --warmup 10 openllm
-  update-changelog:
-    runs-on: ubuntu-latest
-    permissions:
-      pull-requests: write
-      checks: write
-    if: |
-      github.event_name == 'repository_dispatch' && github.event_name == 'pull_request'
-    steps:
-      - uses: actions/checkout@v3
-      - name: Setup CI
-        uses: ./.github/actions/setup-repo
-        with:
-          python-version: '3.11'
-      - name: Import bot's GPG key for signing commits
-        id: import-gpg
-        uses: crazy-max/ghaction-import-gpg@v5
-        with:
-          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
-          passphrase: ${{ secrets.GPG_PASSPHRASE }}
-          git_config_global: true
-          git_user_signingkey: true
-          git_commit_gpgsign: true
-          git_tag_gpgsign: true
-      - name: Create comment
-        uses: peter-evans/create-or-update-comment@v3
-        with:
-          issue-number: ${{ github.event.client_payload.pull_request.number }}
-          body: |
-            CI running here: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-      - name: Update CHANGELOG.md to include unreleased notes
-        env:
-          GIT_AUTHOR_NAME: ${{ steps.import-gpg.outputs.name }}
-          GIT_AUTHOR_EMAIL: ${{ steps.import-gpg.outputs.email }}
-          GIT_COMMITTER_NAME: ${{ steps.import-gpg.outputs.name }}
-          GIT_COMMITTER_EMAIL: ${{ steps.import-gpg.outputs.email }}
-        run: |
-          towncrier build --version main --keep
-          git commit -am "[update-changelog-command] update CHANGELOG.md to include unreleased news fragmen [skip ci]"
-          git push
   evergreen: # https://github.com/marketplace/actions/alls-green#why
     if: always()
     needs:
