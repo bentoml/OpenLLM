@@ -153,6 +153,11 @@ To update the snapshot, do the following:
 hatch run tests:snapshot-models
 ```
 
+## Working with Git
+
+To filter out most of the generated commits for infrastructure, use ``--invert-grep`` in conjunction with ``--grep``
+to filter out all commits with regex `"[generated]"`
+
 ## Releasing a New Version
 
 To release a new version, use `./tools/run-release-action`. It requires `gh`,
