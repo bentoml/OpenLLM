@@ -98,7 +98,6 @@ from .utils import resolve_user_filepath
 from .utils import set_debug_mode
 from .utils import set_quiet_mode
 
-
 if t.TYPE_CHECKING:
     import jupytext
     import nbformat
@@ -848,9 +847,7 @@ def import_command(
             _echo(msg, fg="yellow", nl=True)
         _ref = openllm.serialisation.get(llm, auto_import=True)
         if impl == "pt" and is_torch_available() and torch.cuda.is_available(): torch.cuda.empty_cache()
-    # NOTE: We will prefix the tag with __tag__ and we can use regex to correctly
-    # get the tag from 'bentoml.bentos.build|build_bentofile'
-    if machine: _echo(f"__tag__:{_ref.tag}", fg="white")
+    if machine: return _ref
     elif output == "pretty":
         if _previously_saved: _echo(f"{model} with 'model_id={model_id}' is already setup for framework '{impl}': {_ref.tag!s}", nl=True, fg="yellow")
         else: _echo(f"Saved model: {_ref.tag}")
@@ -984,15 +981,6 @@ def _start(
 
     return start_command_factory(model_name, _context_settings=_CONTEXT_SETTINGS, _serve_grpc=_serve_grpc).main( args=args if len(args) > 0 else None, standalone_mode=False)
 
-
-def _tag_parsing(output: bytes) -> str:
-    # NOTE: This usually only concern BentoML devs.
-    pattern = r"^__tag__:[^:\n]+:[^:\n]+"
-    matched = re.search(pattern, output.decode("utf-8").strip(), re.MULTILINE)
-    assert matched is not None, f"Failed to find tag from output: {output!s}"
-    return matched.group(0).partition(":")[-1]
-
-
 @inject
 def _build(
     model_name: str,
@@ -1098,7 +1086,10 @@ def _build(
         logger.error("Exception caught while building %s", model_name, exc_info=e)
         if e.stderr: raise OpenLLMException(e.stderr.decode("utf-8")) from None
         raise OpenLLMException(str(e)) from None
-    return bentoml.get(_tag_parsing(output), _bento_store=bento_store)
+    pattern = r"^__tag__:[^:\n]+:[^:\n]+"
+    matched = re.search(pattern, output.decode("utf-8").strip(), re.MULTILINE)
+    assert matched is not None, f"Failed to find tag from output: {output!s}"
+    return bentoml.get(matched.group(0).partition(":")[-1], _bento_store=bento_store)
 
 def _import_model(
     model_name: str,

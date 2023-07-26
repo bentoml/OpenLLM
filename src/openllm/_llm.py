@@ -370,7 +370,8 @@ def _wrapped_import_model(f: _import_model_wrapper[bentoml.Model, M, T]):
 _DEFAULT_TOKENIZER = "hf-internal-testing/llama-tokenizer"
 
 @requires_dependencies("vllm", extra="vllm")
-def get_engine_args(llm: LLM[M, T], tokenizer: str = _DEFAULT_TOKENIZER) -> vllm.EngineArgs: return vllm.EngineArgs(model=llm._bentomodel.path, tokenizer=tokenizer, tokenizer_mode="auto", tensor_parallel_size=1, dtype="auto", worker_use_ray=False)
+def get_engine_args(llm: LLM[M, T], tokenizer: str = _DEFAULT_TOKENIZER) -> vllm.EngineArgs:
+    return vllm.EngineArgs(model=llm._bentomodel.path, tokenizer=tokenizer, tokenizer_mode="auto", tensor_parallel_size=1 if device_count() < 2 else device_count(), dtype="auto", worker_use_ray=False)
 def _wrapped_load_model(f: _load_model_wrapper[M, T]):
     @functools.wraps(f)
     def wrapper(self: LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M | vllm.LLMEngine:
@@ -379,8 +380,7 @@ def _wrapped_load_model(f: _load_model_wrapper[M, T]):
         if self.__llm_implementation__ == "vllm":
             # TODO: Do some more processing with token_id once we support token streaming
             tokenizer_id = self._bentomodel.path if self.tokenizer_id == "local" else self.tokenizer_id
-            engine = vllm.LLMEngine.from_engine_args(get_engine_args(self, tokenizer=tokenizer_id))
-            return engine
+            return vllm.LLMEngine.from_engine_args(get_engine_args(self, tokenizer=tokenizer_id))
         else:
             (model_decls, model_attrs), _ = self.llm_parameters
             return f(self, *(*model_decls, *decls), **{**model_attrs, **attrs})

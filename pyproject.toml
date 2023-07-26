@@ -44,6 +44,7 @@ dependencies = [
     "httpx",
     "click>=8.1.6",
     "typing_extensions",
+    "docker",
     "cuda-python;platform_system!=\"Darwin\"",
     "bitsandbytes<0.42",
 ]

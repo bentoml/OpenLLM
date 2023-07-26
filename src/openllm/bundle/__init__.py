@@ -22,7 +22,6 @@ import typing as t
 
 from ..utils import LazyModule
 
-
 if t.TYPE_CHECKING:
     import openllm
 

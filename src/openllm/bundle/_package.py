@@ -43,7 +43,6 @@ from ..utils import is_tf_available
 from ..utils import is_torch_available
 from ..utils import pkg
 
-
 if t.TYPE_CHECKING:
     from fs.base import FS
 

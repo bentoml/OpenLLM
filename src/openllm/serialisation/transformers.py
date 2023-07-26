@@ -35,7 +35,6 @@ from ..utils import is_autogptq_available
 from ..utils import is_torch_available
 from ..utils import normalize_attrs_to_model_tokenizer_pair
 
-
 if t.TYPE_CHECKING:
     import auto_gptq as autogptq
     import torch
@@ -242,13 +241,12 @@ def save_pretrained(
     state_dict: DictStrAny | None = None,
     save_function: t.Callable[..., None] | None = None,
     push_to_hub: bool = False,
-    max_shard_size: int | str = "2GB",
+    max_shard_size: int | str = "10GB",
     safe_serialization: bool = False,
     variant: str | None = None,
     **attrs: t.Any,
 ) -> None:
     """Light wrapper around ``transformers.PreTrainedTokenizer.save_pretrained`` and ``transformers.PreTrainedModel.save_pretrained``."""
-    if llm["implementation"] == "vllm": max_shard_size = "10GB"
     save_function = first_not_none(save_function, default=torch.save)
     model_save_attrs, tokenizer_save_attrs = normalize_attrs_to_model_tokenizer_pair(**attrs)
     safe_serialization = safe_serialization or llm._serialisation_format == "safetensors"
