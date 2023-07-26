@@ -77,8 +77,8 @@
                :on-click #(do (rf/dispatch-sync [:set-screen-id :chat])
                               (rf/dispatch [::chat-events/auto-scroll]))}]])]
      [:div {:class "w-full flex justify-end items-center"}
-      #_[:div {:class "mr-8"}
-       [context-icon-buttons]]
+      ;;[:div {:class "mr-8"}
+      ;; [context-icon-buttons]]
       [:div {:class "mr-16"}
        [icon-button {:on-click #(rf/dispatch [::root-events/open-link-in-new-tab "https://github.com/bentoml/OpenLLM"])
                      :color "secondary"
