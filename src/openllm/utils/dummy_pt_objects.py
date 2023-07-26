@@ -18,7 +18,6 @@ import typing as t
 from ..utils import DummyMetaclass
 from ..utils import require_backends
 
-
 class FlanT5(metaclass=DummyMetaclass):
     _backends = ["torch"]
 
@@ -61,7 +60,7 @@ class StableLM(metaclass=DummyMetaclass):
         require_backends(self, ["torch"])
 
 
-class LlaMA(metaclass=DummyMetaclass):
+class Llama(metaclass=DummyMetaclass):
     _backends = ["torch"]
 
     def __init__(self, *args: t.Any, **attrs: t.Any):

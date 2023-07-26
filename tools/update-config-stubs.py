@@ -69,7 +69,7 @@ _value_docstring = {
             ```bash
             openllm start gpt-neox --model-id stabilityai/stablelm-tuned-alpha-3b
             ```""",
-    "default_implementation": """The default runtime to run this LLM. By default, it will be PyTorch (pt) for most models. For some models, such as LlaMA, it will use `vllm` or `flax`.
+    "default_implementation": """The default runtime to run this LLM. By default, it will be PyTorch (pt) for most models. For some models, such as Llama, it will use `vllm` or `flax`.
 
     It is a dictionary of key as the accelerator spec in k8s ('cpu', 'nvidia.com/gpu', 'amd.com/gpu', 'cloud-tpus.google.com/v2', ...) and the values as supported OpenLLM Runtime ('flax', 'tf', 'pt', 'vllm')
     """,
@@ -83,7 +83,7 @@ _value_docstring = {
     "model_type": """The model type for this given LLM. By default, it should be causal language modeling.
         Currently supported 'causal_lm' or 'seq2seq_lm'
         """,
-    "runtime": """The runtime to use for this model. Possible values are `transformers` or `ggml`. See LlaMA for more information.""",
+    "runtime": """The runtime to use for this model. Possible values are `transformers` or `ggml`. See Llama for more information.""",
     "name_type": """The default name typed for this model. "dasherize" will convert the name to lowercase and
         replace spaces with dashes. "lowercase" will convert the name to lowercase. If this is not set, then both
         `model_name` and `start_name` must be specified.""",
@@ -101,7 +101,7 @@ _value_docstring = {
         By default, it is set to 1.
         """,
     "fine_tune_strategies": """The fine-tune strategies for this given LLM.""",
-    "tokenizer_class": """Optional tokenizer class for this given LLM. See LlaMA for example.""",
+    "tokenizer_class": """Optional tokenizer class for this given LLM. See Llama for example.""",
 }
 
 _transformed = {"fine_tune_strategies": "t.Dict[AdapterType, FineTuneConfig]"}

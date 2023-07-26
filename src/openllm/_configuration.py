@@ -84,7 +84,6 @@ from .utils import non_intrusive_setattr
 from .utils import requires_dependencies
 from .utils.import_utils import BACKENDS_MAPPING
 
-
 # NOTE: We need to do check overload import
 # so that it can register
 # correct overloads to typing registry
@@ -105,7 +104,6 @@ from attr._compat import set_closure_cell
 from attr._make import _CountingAttr
 from attr._make import _make_init
 from attr._make import _transform_attrs
-
 
 _T = t.TypeVar("_T")
 
@@ -1071,7 +1069,7 @@ class _ConfigAttr:
             openllm start gpt-neox --model-id stabilityai/stablelm-tuned-alpha-3b
             ```"""
         __openllm_default_implementation__: t.Dict[LiteralResourceSpec, LiteralRuntime] = Field(None)
-        """The default runtime to run this LLM. By default, it will be PyTorch (pt) for most models. For some models, such as LlaMA, it will use `vllm` or `flax`.
+        """The default runtime to run this LLM. By default, it will be PyTorch (pt) for most models. For some models, such as Llama, it will use `vllm` or `flax`.
 
     It is a dictionary of key as the accelerator spec in k8s ('cpu', 'nvidia.com/gpu', 'amd.com/gpu', 'cloud-tpus.google.com/v2', ...) and the values as supported OpenLLM Runtime ('flax', 'tf', 'pt', 'vllm')
     """
@@ -1093,7 +1091,7 @@ class _ConfigAttr:
         Currently supported 'causal_lm' or 'seq2seq_lm'
         """
         __openllm_runtime__: t.Literal["transformers", "ggml"] = Field(None)
-        """The runtime to use for this model. Possible values are `transformers` or `ggml`. See LlaMA for more information."""
+        """The runtime to use for this model. Possible values are `transformers` or `ggml`. See Llama for more information."""
         __openllm_name_type__: t.Optional[t.Literal["dasherize", "lowercase"]] = Field(None)
         """The default name typed for this model. "dasherize" will convert the name to lowercase and
         replace spaces with dashes. "lowercase" will convert the name to lowercase. If this is not set, then both
@@ -1119,7 +1117,7 @@ class _ConfigAttr:
         __openllm_fine_tune_strategies__: t.Dict[AdapterType, FineTuneConfig] = Field(None)
         """The fine-tune strategies for this given LLM."""
         __openllm_tokenizer_class__: t.Optional[str] = Field(None)
-        """Optional tokenizer class for this given LLM. See LlaMA for example."""
+        """Optional tokenizer class for this given LLM. See Llama for example."""
         # update-config-stubs.py: special stop
 
 

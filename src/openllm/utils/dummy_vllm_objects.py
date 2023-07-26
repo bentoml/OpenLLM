@@ -18,8 +18,7 @@ import typing as t
 from ..utils import DummyMetaclass
 from ..utils import require_backends
 
-
-class VLLMLlaMA(metaclass=DummyMetaclass):
+class VLLMLlama(metaclass=DummyMetaclass):
     _backends = ["vllm"]
 
     def __init__(self, *args: t.Any, **attrs: t.Any):

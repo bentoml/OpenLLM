@@ -36,19 +36,15 @@ from bentoml._internal.configuration import get_quiet_mode
 from bentoml._internal.configuration import set_quiet_mode
 from bentoml._internal.log import configure_server_logging
 from bentoml._internal.models.model import ModelContext as _ModelContext
-from bentoml._internal.types import LazyType
-from bentoml._internal.utils import LazyLoader
-from bentoml._internal.utils import bentoml_cattr
-from bentoml._internal.utils import cached_contextmanager
-from bentoml._internal.utils import copy_file_to_fs_folder
-from bentoml._internal.utils import first_not_none
-from bentoml._internal.utils import pkg
-from bentoml._internal.utils import reserve_free_port
-from bentoml._internal.utils import resolve_user_filepath
-from bentoml._internal.utils import validate_or_create_dir
+from bentoml._internal.types import LazyType as LazyType
+from bentoml._internal.utils import LazyLoader as LazyLoader
+from bentoml._internal.utils import bentoml_cattr as bentoml_cattr
+from bentoml._internal.utils import first_not_none as first_not_none
+from bentoml._internal.utils import pkg as pkg
+from bentoml._internal.utils import reserve_free_port as reserve_free_port
+from bentoml._internal.utils import resolve_user_filepath as resolve_user_filepath
 
 from .lazy import LazyModule
-
 
 logger = logging.getLogger(__name__)
 
@@ -76,14 +72,11 @@ if t.TYPE_CHECKING:
     from .._types import AnyCallable
     from .._types import DictStrAny
     from .._types import LiteralRuntime
-    from .._types import P
-
 
 def set_debug_mode(enabled: bool) -> None:
     # monkeypatch bentoml._internal.configuration.set_debug_mode to remove unused logs
     os.environ[_DEBUG_ENV_VAR] = str(enabled)
     os.environ[_GRPC_DEBUG_ENV_VAR] = "DEBUG" if enabled else "ERROR"
-
 
 def lenient_issubclass(cls: t.Any, class_or_tuple: type[t.Any] | tuple[type[t.Any], ...] | None) -> bool:
     try: return isinstance(cls, type) and issubclass(cls, class_or_tuple)  # type: ignore[arg-type]
@@ -91,12 +84,10 @@ def lenient_issubclass(cls: t.Any, class_or_tuple: type[t.Any] | tuple[type[t.An
         if isinstance(cls, _WithArgsTypes): return False
         raise
 
-
 def available_devices() -> tuple[str, ...]:
     """Return available GPU under system. Currently only supports NVIDIA GPUs."""
     from .._strategies import NvidiaGpuResource
     return tuple(NvidiaGpuResource.from_system())
-
 
 @functools.lru_cache(maxsize=1)
 def device_count() -> int: return len(available_devices())
@@ -206,7 +197,6 @@ class suppress(contextlib.suppress, contextlib.ContextDecorator):
     >>> key_error()
     """
 
-
 def compose(*funcs: AnyCallable) -> AnyCallable:
     """Compose any number of unary functions into a single unary function.
 
@@ -258,8 +248,7 @@ def in_docker() -> bool:
     """
     return _dockerenv.exists() or _text_in_file("docker", _cgroup)
 
-T = t.TypeVar("T")
-K = t.TypeVar("K")
+T, K = t.TypeVar("T"), t.TypeVar("K")
 
 def resolve_filepath(path: str) -> str:
     """Resolve a file path to an absolute path, expand user and environment variables."""
@@ -375,11 +364,9 @@ if t.TYPE_CHECKING:
     from . import LazyType as LazyType
     from . import analytics as analytics
     from . import bentoml_cattr as bentoml_cattr
-    from . import cached_contextmanager as cached_contextmanager
     from . import codegen as codegen
     from . import configure_logging as configure_logging
     from . import configure_server_logging as configure_server_logging
-    from . import copy_file_to_fs_folder as copy_file_to_fs_folder
     from . import dantic as dantic
     from . import first_not_none as first_not_none
     from . import reserve_free_port as reserve_free_port
@@ -390,7 +377,6 @@ if t.TYPE_CHECKING:
     from .import_utils import ENV_VARS_TRUE_VALUES as ENV_VARS_TRUE_VALUES
     from .import_utils import OPTIONAL_DEPENDENCIES as OPTIONAL_DEPENDENCIES
     from .import_utils import DummyMetaclass as DummyMetaclass
-    from .import_utils import EnvVarMixin as EnvVarMixin
     from .import_utils import is_autogptq_available as is_autogptq_available
     from .import_utils import is_bitsandbytes_available as is_bitsandbytes_available
     from .import_utils import is_cpm_kernels_available as is_cpm_kernels_available
@@ -410,13 +396,4 @@ if t.TYPE_CHECKING:
     from .import_utils import require_backends as require_backends
     from .import_utils import requires_dependencies as requires_dependencies
     from .representation import ReprMixin as ReprMixin
-else:
-    import sys
-
-    sys.modules[__name__] = LazyModule(
-        __name__,
-        globals()["__file__"],
-        _import_structure,
-        module_spec=__spec__,
-        extra_objects=_extras,
-    )
+else: sys.modules[__name__] = LazyModule(__name__, globals()["__file__"], _import_structure, module_spec=__spec__, extra_objects=_extras)

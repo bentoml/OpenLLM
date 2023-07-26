@@ -14,22 +14,21 @@
 from __future__ import annotations
 import typing as t
 import openllm
-class LlaMAConfig(openllm.LLMConfig):
+class LlamaConfig(openllm.LLMConfig):
     """LLaMA model was proposed in [LLaMA: Open and Efficient Foundation Language Models](https://arxiv.org/abs/2302.13971) by Hugo Touvron, Thibaut Lavril, Gautier Izacard, Xavier Martinet, Marie-Anne Lachaux, Timothée Lacroix, Baptiste Rozière, Naman Goyal, Eric Hambro, Faisal Azhar, Aurelien Rodriguez, Armand Joulin, Edouard Grave, Guillaume Lample.
 
     It is a collection of foundation language models ranging from 7B to 65B parameters.
 
-    LlaMA also include support for the recent propsed [LlaMA-2](https://ai.meta.com/research/publications/llama-2-open-foundation-and-fine-tuned-chat-models/)
+    Llama also include support for the recent propsed [Llama-2](https://ai.meta.com/research/publications/llama-2-open-foundation-and-fine-tuned-chat-models/)
 
-    Note that all variants of LlaMA including fine-tuning, quantisation format are all supported with ``openllm.LlaMA``.
+    Note that all variants of Llama including fine-tuning, quantisation format are all supported with ``openllm.Llama``.
 
-    Refer to [LlaMA's model card](https://huggingface.co/docs/transformers/main/model_doc/llama)
+    Refer to [Llama's model card](https://huggingface.co/docs/transformers/main/model_doc/llama)
     for more information.
     """
-    use_llama2_prompt: bool = openllm.LLMConfig.Field(True, description="Whether to use the prompt format for LlaMA 2. Disable this when working with LlaMA 1.")
+    use_llama2_prompt: bool = openllm.LLMConfig.Field(True, description="Whether to use the prompt format for Llama 2. Disable this when working with Llama 1.")
     __config__ = {
-        "model_name": "llama",
-        "start_name": "llama",
+        "name_type": "lowercase",
         "url": "https://github.com/facebookresearch/llama",
         "default_id": "huggyllama/llama-7b",
         "default_implementation": {"cpu": "pt", "nvidia.com/gpu": "pt"},
@@ -76,10 +75,10 @@ class LlaMAConfig(openllm.LLMConfig):
         best_of: int = 1
         presence_penalty: float = 0.5
 START_LLAMA_COMMAND_DOCSTRING = """\
-Run a LLMServer for LlaMA model.
+Run a LLMServer for Llama model.
 
 \b
-> See more information about LlaMA at [LlaMA's model card](https://huggingface.co/docs/transformers/main/model_doc/llama
+> See more information about Llama at [Llama's model card](https://huggingface.co/docs/transformers/main/model_doc/llama
 
 \b
 ## Usage
@@ -91,15 +90,15 @@ This model will also supports PyTorch.
 - To use PyTorch, set the environment variable ``OPENLLM_LLAMA_FRAMEWORK="pt"``
 
 \b
-LlaMA Runner will use decapoda-research/llama-7b-hf as the default model. To change to any other LlaMA
-saved pretrained, or a fine-tune LlaMA, provide ``OPENLLM_LLAMA_MODEL_ID='openlm-research/open_llama_7b_v2'``
+Llama Runner will use decapoda-research/llama-7b-hf as the default model. To change to any other Llama
+saved pretrained, or a fine-tune Llama, provide ``OPENLLM_LLAMA_MODEL_ID='openlm-research/open_llama_7b_v2'``
 or provide `--model-id` flag when running ``openllm start llama``:
 
 \b
 $ openllm start llama --model-id 'openlm-research/open_llama_7b_v2'
 
 \b
-OpenLLM also supports running LlaMA-2 and its fine-tune and variants. To import the LlaMA weights, one can use the following:
+OpenLLM also supports running Llama-2 and its fine-tune and variants. To import the Llama weights, one can use the following:
 
 \b
 $ CONVERTER=hf-llama2 openllm import llama /path/to/llama-2

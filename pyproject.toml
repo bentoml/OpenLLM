@@ -232,7 +232,7 @@ ignore-overlong-task-comments = true
 [tool.ruff.isort]
 force-single-line = true
 known-first-party = ["openllm", "bentoml", 'transformers']
-lines-after-imports = 2
+lines-after-imports = 1
 no-lines-before = ["future", "standard-library"]
 relative-imports-order = "closest-to-furthest"
 [tool.ruff.flake8-quotes]
@@ -253,7 +253,7 @@ avoid-escape = false
     "PT011",  # ignore too broad raises, as it can be use pytest.raises().match()
     "S307",   # Ignore eval(compile) as it is a known script execution
 ]
-"typings/**/*" = ["D", "F", "E", "PYI002", "I001"]
+"typings/**/*" = ["D", "F", "E", "PYI002"]
 
 [tool.coverage.paths]
 openllm = ["src/openllm", "*/openllm/src/openllm"]
@@ -307,8 +307,12 @@ exclude = [
     "src/openllm/__init__.py",
     "src/openllm/__main__.py",
     "src/openllm/utils/dummy_*.py",
+    "src/openllm/models",
+    "tools",
+    "examples",
+    "tests",
 ]
-include = ["src/openllm", "src/openllm_client", "tests/", "tools/", "examples/"]
+include = ["src/openllm", "src/openllm_client"]
 pythonVersion = "3.12"
 reportMissingImports = "warning"
 reportMissingTypeStubs = false
@@ -319,7 +323,8 @@ reportUnknownVariableType = "warning"
 typeCheckingMode = "strict"
 
 [tool.mypy]
-exclude = ["src/openllm/playground/"]
+# TODO: Enable model for strict type checking
+exclude = ["src/openllm/playground/", "src/openllm/utils/dummy_*.py", "src/openllm/models"]
 files = ["src/openllm", "src/openllm_client"]
 local_partial_types = true
 mypy_path = "typings"
@@ -346,4 +351,4 @@ module = [
 ]
 [[tool.mypy.overrides]]
 ignore_errors = true
-module = ["openllm.models.*", "openllm._types", "openllm", "openllm.playground.*"]
+module = ["openllm.models.*", "openllm._types", "openllm.playground.*"]

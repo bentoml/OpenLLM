@@ -18,7 +18,7 @@ from .factory import BaseAutoLLMClass
 from .factory import _LazyAutoMapping
 MODEL_VLLM_MAPPING_NAMES = OrderedDict(
     [
-        ("llama", "VLLMLlaMA"),
+        ("llama", "VLLMLlama"),
         ("opt", "VLLMOPT")
     ]
 )

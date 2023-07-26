@@ -24,7 +24,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("falcon", "Falcon"),
         ("flan_t5", "FlanT5"),
         ("gpt_neox", "GPTNeoX"),
-        ("llama", "LlaMA"),
+        ("llama", "Llama"),
         ("mpt", "MPT"),
         ("opt", "OPT"),
         ("stablelm", "StableLM"),

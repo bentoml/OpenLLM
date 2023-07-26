@@ -98,7 +98,6 @@ AdaptersMapping = dict[AdapterType, tuple[AdaptersTuple, ...]]
 class LLMRunnable(bentoml.Runnable, t.Generic[_M, _T]):
     SUPPORTED_RESOURCES = ("amd.com/gpu", "nvidia.com/gpu", "cpu")
     SUPPORTS_CPU_MULTI_THREADING = True
-    model: t.Any
     __call__: RunnableMethod[LLMRunnable[_M, _T], [str], list[t.Any]]
     set_adapter: RunnableMethod[LLMRunnable[_M, _T], [str], dict[t.Literal["success", "error_msg"], bool | str]]
     embeddings: RunnableMethod[LLMRunnable[_M, _T], [list[str]], LLMEmbeddings]
@@ -113,7 +112,6 @@ class LLMRunner(bentoml.Runner, t.Generic[_M, _T]):
     llm_type: str
     identifying_params: dict[str, t.Any]
     llm: openllm.LLM[_M, _T]
-    model: _M
     config: openllm.LLMConfig
     implementation: LiteralRuntime
     supports_embeddings: bool
