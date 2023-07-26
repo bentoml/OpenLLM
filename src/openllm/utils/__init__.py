@@ -27,6 +27,8 @@ import types
 import typing as t
 from pathlib import Path
 
+from circus.exc import ConflictError
+
 from bentoml._internal.configuration import DEBUG_ENV_VAR as _DEBUG_ENV_VAR
 from bentoml._internal.configuration import GRPC_DEBUG_ENV_VAR as _GRPC_DEBUG_ENV_VAR
 from bentoml._internal.configuration import get_debug_mode
@@ -115,16 +117,16 @@ DEBUG = sys.flags.dev_mode or (not sys.flags.ignore_environment and bool(os.envi
 MYPY = False
 SHOW_CODEGEN = DEBUG and int(os.environ.get("OPENLLMDEVDEBUG", str(0))) > 3
 
-
-class _ExceptionFilter(logging.Filter):
+class ExceptionFilter(logging.Filter):
     def __init__(self, exclude_exceptions: list[type[Exception]] | None = None, **kwargs: t.Any):
-        from circus.exc import ConflictError
+        """A filter of all exception."""
         if exclude_exceptions is None: exclude_exceptions = [ConflictError]
-        else: exclude_exceptions.append(ConflictError)
-        super(_ExceptionFilter, self).__init__(**kwargs)
+        if ConflictError not in exclude_exceptions: exclude_exceptions.append(ConflictError)
+        super(ExceptionFilter, self).__init__(**kwargs)
         self.EXCLUDE_EXCEPTIONS = exclude_exceptions
     def filter(self, record: logging.LogRecord) -> bool:
         if record.exc_info:
+            print(record.exc_info)
             etype, _, _ = record.exc_info
             if etype is not None:
                 for exc in self.EXCLUDE_EXCEPTIONS:
@@ -137,11 +139,11 @@ class InfoFilter(logging.Filter):
 _LOGGING_CONFIG: DictStrAny = {
     "version": 1,
     "disable_existing_loggers": True,
-    "filters": {"excfilter": {"()": _ExceptionFilter}, "infofilter": {"()": InfoFilter}},
+    "filters": {"excfilter": {"()": "openllm.utils.ExceptionFilter"}, "infofilter": {"()": "openllm.utils.InfoFilter"}},
     "handlers": {
         "bentomlhandler": {
             "class": "logging.StreamHandler",
-            "filters": ["excfilter"],
+            "filters": ["excfilter", "infofilter"],
             "stream": "ext://sys.stdout",
         },
         "defaulthandler": {
@@ -164,7 +166,6 @@ _LOGGING_CONFIG: DictStrAny = {
     "root": {"level": logging.WARNING},
 }
 
-
 def configure_logging() -> None:
     """Configure logging for OpenLLM.
 
@@ -185,7 +186,6 @@ def configure_logging() -> None:
 
     logging.config.dictConfig(_LOGGING_CONFIG)
 
-
 @functools.lru_cache(maxsize=1)
 def in_notebook() -> bool:
     try:
@@ -195,9 +195,7 @@ def in_notebook() -> bool:
     except AttributeError: return False
     return True
 
-
 _dockerenv, _cgroup = Path("/.dockerenv"), Path("/proc/self/cgroup")
-
 
 class suppress(contextlib.suppress, contextlib.ContextDecorator):
     """A version of contextlib.suppress with decorator support.
@@ -225,13 +223,8 @@ def compose(*funcs: AnyCallable) -> AnyCallable:
     >>> [f(3*x, x+1) for x in range(1,10)]
     [1.5, 2.0, 2.25, 2.4, 2.5, 2.571, 2.625, 2.667, 2.7]
     """
-
-    def compose_two(f1: AnyCallable, f2: t.Callable[P, t.Any]) -> t.Any:
-        def _(*args: P.args, **kwargs: P.kwargs) -> t.Any: return f1(f2(*args, **kwargs))
-        return _
-
+    def compose_two(f1: AnyCallable, f2: AnyCallable) -> AnyCallable: return lambda *args, **kwargs: f1(f2(*args, **kwargs))
     return functools.reduce(compose_two, funcs)
-
 
 def apply(transform: AnyCallable) -> t.Callable[[AnyCallable], AnyCallable]:
     """Decorate a function with a transform function that is invoked on results returned from the decorated function.
@@ -249,9 +242,7 @@ def apply(transform: AnyCallable) -> t.Callable[[AnyCallable], AnyCallable]:
     # 'doc for get_numbers'
     ```
     """
-    def wrap(func: t.Callable[P, t.Any]) -> t.Any: return functools.wraps(func)(compose(transform, func))
-    return wrap
-
+    return lambda func: functools.wraps(func)(compose(transform, func))
 
 @apply(bool)
 @suppress(FileNotFoundError)
@@ -267,10 +258,8 @@ def in_docker() -> bool:
     """
     return _dockerenv.exists() or _text_in_file("docker", _cgroup)
 
-
 T = t.TypeVar("T")
 K = t.TypeVar("K")
-
 
 def resolve_filepath(path: str) -> str:
     """Resolve a file path to an absolute path, expand user and environment variables."""

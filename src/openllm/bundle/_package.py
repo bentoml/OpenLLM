@@ -156,6 +156,7 @@ def construct_docker_options(
         "OPENLLM_MODEL": llm.config["model_name"],
         "OPENLLM_SERIALIZATION": serialisation_format,
         "OPENLLM_ADAPTER_MAP": f"'{orjson.dumps(adapter_map).decode()}'",
+        "OPENLLM_FAST": str(True),
         "BENTOML_DEBUG": str(get_debug_mode()),
         "BENTOML_CONFIG_OPTIONS": f"'{_bentoml_config_options}'",
         env.model_id: f"/home/bentoml/bento/models/{llm.tag.path()}",  # This is the default BENTO_PATH var

@@ -80,6 +80,7 @@ dependencies = [
 ]
 [envs.default.scripts]
 changelog = "towncrier build --version main --draft"
+inplace-changelog = "towncrier build --verision main --keep"
 quality = [
     "./tools/dependencies.py",
     "./tools/update-readme.py",
@@ -90,7 +91,6 @@ quality = [
 ]
 setup = "pre-commit install"
 typing = ["- pre-commit run mypy {args:-a}", "- pre-commit run pyright {args:-a}"]
-watch-typing = "pyright {args:src/openllm} -w"
 [envs.tests]
 dependencies = [
     # NOTE: interact with docker for container tests.

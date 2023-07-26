@@ -36,7 +36,6 @@ from huggingface_hub import hf_hub_download
 
 import bentoml
 import openllm
-from bentoml._internal.models.model import CUSTOM_OBJECTS_FILENAME
 from bentoml._internal.models.model import ModelSignature
 
 from ._configuration import AdapterType
@@ -375,7 +374,6 @@ def _wrapped_load_model(f: _load_model_wrapper[M, T]):
             # TODO: Do some more processing with token_id once we support token streaming
             tokenizer_id = self._bentomodel.path if self.tokenizer_id == "local" else self.tokenizer_id
             engine = vllm.LLMEngine.from_engine_args(get_engine_args(self, tokenizer=tokenizer_id))
-            if self._bentomodel._fs.isfile(CUSTOM_OBJECTS_FILENAME): engine.tokenizer = self.tokenizer
             return engine
         else:
             (model_decls, model_attrs), _ = self.llm_parameters

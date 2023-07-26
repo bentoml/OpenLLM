@@ -81,6 +81,7 @@ from .utils import analytics
 from .utils import available_devices
 from .utils import bentoml_cattr
 from .utils import codegen
+from .utils import compose
 from .utils import configure_logging
 from .utils import dantic
 from .utils import device_count
@@ -170,18 +171,20 @@ def _echo(text: t.Any, fg: str = "green", _with_style: bool = True, **attrs: t.A
         call = click.secho
     call(text, **attrs)
 
-def output_option(f: _AnyCallable, *, factory: t.Any = click) -> t.Callable[[FC], FC]:
-    return factory.option(
+def output_option(f: _AnyCallable | None = None, *, factory: t.Any = click, default_value: t.Literal["json", "pretty", "porcelain"] = "pretty") -> t.Callable[[FC], FC]:
+    opt = factory.option(
         "-o",
         "--output",
         "output",
         type=click.Choice(["json", "pretty", "porcelain"]),
-        default="pretty",
+        default=default_value,
         help="Showing output type.",
         show_default=True,
         envvar="OPENLLM_OUTPUT",
         show_envvar=True,
-    )(f)
+    )
+    if f is None: return opt
+    return opt(f)
 
 def machine_option(factory: t.Any) -> t.Callable[[FC], FC]:
     return factory.option("--machine", is_flag=True, default=False, hidden=True)
@@ -484,7 +487,7 @@ def start_decorator(llm_config: openllm.LLMConfig, serve_grpc: bool = False) -> 
         model_version_option(cog.optgroup),
         cog.optgroup.option("--server-timeout", type=int, default=None, help="Server timeout in seconds"),
         workers_per_resource_option(cog.optgroup),
-        cog.optgroup.option("--fast", is_flag=True, default=False, help="Bypass auto model checks and setup. This option is ahead-of-serving time."),
+        cog.optgroup.option("--fast", is_flag=True, default=False, help="Bypass auto model checks and setup. This option is ahead-of-serving time.", envvar="OPENLLM_FAST"),
         cog.optgroup.group(
             "LLM Optimization Options",
             help="""\
@@ -624,6 +627,7 @@ Available official model_id(s): [default: {llm_config['default_id']}]
         return_process: bool,
         **attrs: t.Any,
     ) -> openllm.LLMConfig | subprocess.Popen[bytes]:
+        fast = str(fast).upper() in ENV_VARS_TRUE_VALUES
         if serialisation_format == "safetensors" and quantize is not None and os.getenv("OPENLLM_SERIALIZATION_WARNING", str(True)).upper() in ENV_VARS_TRUE_VALUES:
             _echo(f"'--quantize={quantize}' might not work with 'safetensors' serialisation format. Use with caution!. To silence this warning, set \"OPENLLM_SERIALIZATION_WARNING=False\"\nNote: You can always fallback to '--serialisation legacy' when running quantisation.", fg="yellow")
         adapter_map: dict[str, str | None] | None = attrs.pop(_adapter_mapping_key, None)
@@ -957,6 +961,7 @@ def _start(
         framework: The framework to use for this LLM. By default, this is set to ``pt``.
         additional_args: Additional arguments to pass to ``openllm start``.
     """
+    fast = os.getenv("OPENLLM_FAST", str(fast)).upper() in ENV_VARS_TRUE_VALUES
     llm_config = openllm.AutoConfig.for_model(model_name)
     _ModelEnv = EnvVarMixin(model_name, first_not_none(framework, default=llm_config.default_implementation()), model_id=model_id, bettertransformer=bettertransformer, quantize=quantize, runtime=runtime)
     os.environ[_ModelEnv.framework] = _ModelEnv.framework_value
@@ -1526,7 +1531,7 @@ def parsing_instruction_callback(
         raise click.BadParameter(f"Invalid option format: {value}")
 
 
-def shared_client_options(f: _AnyCallable) -> t.Callable[[FC], FC]:
+def shared_client_options(f: _AnyCallable | None = None, output_value: t.Literal["json", "porcelain", "pretty"] = "pretty") -> t.Callable[[FC], FC]:
     options = [
         click.option(
             "--endpoint",
@@ -1536,10 +1541,10 @@ def shared_client_options(f: _AnyCallable) -> t.Callable[[FC], FC]:
             default="http://localhost:3000",
         ),
         click.option("--timeout", type=click.INT, default=30, help="Default server timeout", show_default=True),
-        output_option,
+        output_option(default_value=output_value),
     ]
-    for opt in reversed(options):
-        f = opt(f)
+    if f is None: return compose(*options)
+    for opt in reversed(options): f = opt(f)
     return f
 
 
@@ -1579,7 +1584,7 @@ def embed(ctx: click.Context, text: tuple[str, ...], endpoint: str, timeout: int
 @overload
 def embed(ctx: click.Context, text: tuple[str, ...], endpoint: str, timeout: int, output: OutputLiteral, machine: t.Literal[False] = False) -> None: ...
 @cli.command()
-@shared_client_options
+@shared_client_options(output_value="json")
 @click.option("--server-type", type=click.Choice(["grpc", "http"]), help="Server type", default="http", show_default=True)
 @click.argument("text", type=click.STRING, nargs=-1)
 @machine_option(click)

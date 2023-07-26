@@ -37,7 +37,7 @@ repos:
       - id: mypy
         name: mypy
         entry: ./tools/mypy
-        'types_or': [python, pyi]
+        types: [python]
         language: python
         pass_filenames: false
         verbose: true

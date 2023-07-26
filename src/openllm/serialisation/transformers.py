@@ -248,6 +248,7 @@ def save_pretrained(
     **attrs: t.Any,
 ) -> None:
     """Light wrapper around ``transformers.PreTrainedTokenizer.save_pretrained`` and ``transformers.PreTrainedModel.save_pretrained``."""
+    if llm["implementation"] == "vllm": max_shard_size = "10GB"
     save_function = first_not_none(save_function, default=torch.save)
     model_save_attrs, tokenizer_save_attrs = normalize_attrs_to_model_tokenizer_pair(**attrs)
     safe_serialization = safe_serialization or llm._serialisation_format == "safetensors"
