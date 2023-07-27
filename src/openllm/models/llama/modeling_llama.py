@@ -46,4 +46,4 @@ class LlaMA(openllm.LLM["transformers.LlamaForCausalLM", "transformers.LlamaToke
             mask = attention_mask.unsqueeze(-1).expand(data.size()).float()
             masked_embeddings = data * mask
             sum_embeddings, seq_length = torch.sum(masked_embeddings, dim=1), torch.sum(mask, dim=1)
-        return LLMEmbeddings(embeddings=F.normalize(sum_embeddings / seq_length, p=2, dim=1), num_tokens=torch.sum(attention_mask).item())
+        return LLMEmbeddings(embeddings=F.normalize(sum_embeddings / seq_length, p=2, dim=1).tolist(), num_tokens=torch.sum(attention_mask).item())
