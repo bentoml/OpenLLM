@@ -2,8 +2,14 @@
   (:require [openllm.components.side-bar.model-params.db :as db]
             [openllm.components.side-bar.model-params.subs :as subs] 
             [openllm.components.side-bar.model-params.events :as events]
+            [reagent-mui.material.accordion :refer [accordion]]
+            [reagent-mui.material.accordion-details :refer [accordion-details]]
+            [reagent-mui.material.accordion-summary :refer [accordion-summary]]
+            [reagent-mui.material.typography :refer [typography]]
+            [reagent-mui.icons.expand-more :refer [expand-more]]
             [clojure.string :as str]
-            [re-frame.core :as rf]))
+            [re-frame.core :as rf]
+            [reagent.core :as r]))
 
 (defn parameter-slider
   "Renders a slider with an input field next to it. The num-type logic needs to be
@@ -73,6 +79,16 @@
   "Renders the parameters in the sidebar. The parameters are retrieved from the
    `human-readable-config` subscription."
   []
-  (let [model-config (rf/subscribe [::subs/human-readable-config])]
+  (let [model-config (rf/subscribe [::subs/human-readable-config])
+        basic-params (filterv (fn [[id _]] (not (get-in db/parameter-meta-data [id :advanced-opt]))) @model-config)
+        advanced-params (filterv (fn [[id _]] (get-in db/parameter-meta-data [id :advanced-opt])) @model-config)]
     (fn []
-      (into [:<>] (map parameter-list-entry @model-config)))))
+      [:<>
+       (into [:<>] (map parameter-list-entry basic-params))
+       [:div {:class "mt-2 -mx-1.75"}
+        [accordion {:square true
+                    :class "w-full"}
+         [accordion-summary {:expand-icon (r/as-element [expand-more])}
+          [typography "Advanced"]]
+         [accordion-details {:class "mt-2 -mx-3"}
+          (into [:<>] (map parameter-list-entry advanced-params))]]]])))
