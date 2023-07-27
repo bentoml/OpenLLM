@@ -17,6 +17,7 @@ ci:
   skip: [check-models-table-update, check-models-table-update, changelog-dry-run, pyright, mypy]
   autofix_commit_msg: "ci: auto fixes from pre-commit.ci\n\nFor more information, see https://pre-commit.ci"
   autoupdate_commit_msg: 'ci: pre-commit autoupdate [pre-commit.ci]'
+  autofix_prs: false
 exclude: '.*\.(css|js|svg)$'
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
