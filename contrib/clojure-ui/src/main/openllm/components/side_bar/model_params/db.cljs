@@ -19,25 +19,25 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (def parameter-meta-data
   "A map with parameter id's as keys and some metadata for easier rendering." 
-   {:temperature                  {:display-type :slider   :type-pred float?    :val-constraint [0.0 1.0]}
-    :top_k                        {:display-type :slider   :type-pred int?      :val-constraint [0 100]}
-    :top_p                        {:display-type :slider   :type-pred float?    :val-constraint [0.1 1.0]}
-    :typical_p                    {:display-type :slider   :type-pred float?    :val-constraint [0.1 1.0]}
-    :epsilon_cutoff               {:display-type :slider   :type-pred float?    :val-constraint [0.0 1.0]}
-    :eta_cutoff                   {:display-type :slider   :type-pred float?    :val-constraint [0.0 1.0]}
-    :diversity_penalty            {:display-type :slider   :type-pred float?    :val-constraint [0.0 5.0]}
-    :repetition_penalty           {:display-type :slider   :type-pred float?    :val-constraint [0.0 5.0]}
-    :encoder_repetition_penalty   {:display-type :slider   :type-pred float?    :val-constraint [0.0 5.0]}
-    :length_penalty               {:display-type :slider   :type-pred float?    :val-constraint [0.0 5.0]}
-    :num_beams                    {:display-type :field    :type-pred int?      :val-constraint [0 10]}
-    :penalty_alpha                {:display-type :slider   :type-pred float?    :val-constraint [0.0 10.0]}
-    :max_new_tokens               {:display-type :field    :type-pred int?      :val-constraint [0 ##Inf]}
-    :min_length                   {:display-type :field    :type-pred int?      :val-constraint [0 ##Inf]}
-    :min_new_tokens               {:display-type :field    :type-pred int?      :val-constraint [0 ##Inf]}
-    :early_stopping               {:display-type :binary   :type-pred boolean?  :val-constraint [true false]}
-    :max_time                     {:display-type :field    :type-pred float?    :val-constraint [0.0 ##Inf]}
-    :num_beam_groups              {:display-type :field    :type-pred int?      :val-constraint [0 ##Inf]}
-    :use_cache                    {:display-type :binary   :type-pred boolean?  :val-constraint [true false]}})
+   {:temperature                  {:display-type :slider   :type-pred float?   :advanced-opt false :val-constraint [0.0 1.0]}
+    :top_k                        {:display-type :slider   :type-pred int?     :advanced-opt false :val-constraint [0 100]}
+    :top_p                        {:display-type :slider   :type-pred float?   :advanced-opt false :val-constraint [0.1 1.0]}
+    :typical_p                    {:display-type :slider   :type-pred float?   :advanced-opt false :val-constraint [0.1 1.0]}
+    :epsilon_cutoff               {:display-type :slider   :type-pred float?   :advanced-opt true  :val-constraint [0.0 1.0]}
+    :eta_cutoff                   {:display-type :slider   :type-pred float?   :advanced-opt true  :val-constraint [0.0 1.0]}
+    :diversity_penalty            {:display-type :slider   :type-pred float?   :advanced-opt true  :val-constraint [0.0 5.0]}
+    :repetition_penalty           {:display-type :slider   :type-pred float?   :advanced-opt true  :val-constraint [0.0 5.0]}
+    :encoder_repetition_penalty   {:display-type :slider   :type-pred float?   :advanced-opt true  :val-constraint [0.0 5.0]}
+    :length_penalty               {:display-type :slider   :type-pred float?   :advanced-opt true  :val-constraint [0.0 5.0]}
+    :num_beams                    {:display-type :field    :type-pred int?     :advanced-opt true  :val-constraint [0 10]}
+    :penalty_alpha                {:display-type :slider   :type-pred float?   :advanced-opt true  :val-constraint [0.0 10.0]}
+    :max_new_tokens               {:display-type :field    :type-pred int?     :advanced-opt true  :val-constraint [0 ##Inf]}
+    :min_length                   {:display-type :field    :type-pred int?     :advanced-opt true  :val-constraint [0 ##Inf]}
+    :min_new_tokens               {:display-type :field    :type-pred int?     :advanced-opt true  :val-constraint [0 ##Inf]}
+    :early_stopping               {:display-type :binary   :type-pred boolean? :advanced-opt true  :val-constraint [true false]}
+    :max_time                     {:display-type :field    :type-pred float?   :advanced-opt true  :val-constraint [0.0 ##Inf]}
+    :num_beam_groups              {:display-type :field    :type-pred int?     :advanced-opt true  :val-constraint [0 ##Inf]}
+    :use_cache                    {:display-type :binary   :type-pred boolean? :advanced-opt true  :val-constraint [true false]}})
 
 (defn get-validate-range-predicate
   "Returns a predicate that checks if the value is within the range of the
