@@ -254,12 +254,18 @@ pip install openllm
 <td><a href=https://huggingface.co/docs/transformers/main/model_doc/llama#transformers.LlamaForCausalLM><code>LlamaForCausalLM</code></a></td>
 <td>
 
-<ul><li><a href=https://huggingface.co/meta-llama/llama-2-70b-chat-hf><code>meta-llama/llama-2-70b-chat-hf</code></a></li>
-<li><a href=https://huggingface.co/meta-llama/llama-2-13b-chat-hf><code>meta-llama/llama-2-13b-chat-hf</code></a></li>
-<li><a href=https://huggingface.co/meta-llama/llama-2-7b-chat-hf><code>meta-llama/llama-2-7b-chat-hf</code></a></li>
-<li><a href=https://huggingface.co/meta-llama/llama-2-70b-hf><code>meta-llama/llama-2-70b-hf</code></a></li>
-<li><a href=https://huggingface.co/meta-llama/llama-2-13b-hf><code>meta-llama/llama-2-13b-hf</code></a></li>
-<li><a href=https://huggingface.co/meta-llama/llama-2-7b-hf><code>meta-llama/llama-2-7b-hf</code></a></li>
+<ul><li><a href=https://huggingface.co/meta-llama/Llama-2-70b-chat-hf><code>meta-llama/Llama-2-70b-chat-hf</code></a></li>
+<li><a href=https://huggingface.co/meta-llama/Llama-2-13b-chat-hf><code>meta-llama/Llama-2-13b-chat-hf</code></a></li>
+<li><a href=https://huggingface.co/meta-llama/Llama-2-7b-chat-hf><code>meta-llama/Llama-2-7b-chat-hf</code></a></li>
+<li><a href=https://huggingface.co/meta-llama/Llama-2-70b-hf><code>meta-llama/Llama-2-70b-hf</code></a></li>
+<li><a href=https://huggingface.co/meta-llama/Llama-2-13b-hf><code>meta-llama/Llama-2-13b-hf</code></a></li>
+<li><a href=https://huggingface.co/meta-llama/Llama-2-7b-hf><code>meta-llama/Llama-2-7b-hf</code></a></li>
+<li><a href=https://huggingface.co/NousResearch/llama-2-70b-chat-hf><code>NousResearch/llama-2-70b-chat-hf</code></a></li>
+<li><a href=https://huggingface.co/NousResearch/llama-2-13b-chat-hf><code>NousResearch/llama-2-13b-chat-hf</code></a></li>
+<li><a href=https://huggingface.co/NousResearch/llama-2-7b-chat-hf><code>NousResearch/llama-2-7b-chat-hf</code></a></li>
+<li><a href=https://huggingface.co/NousResearch/llama-2-70b-hf><code>NousResearch/llama-2-70b-hf</code></a></li>
+<li><a href=https://huggingface.co/NousResearch/llama-2-13b-hf><code>NousResearch/llama-2-13b-hf</code></a></li>
+<li><a href=https://huggingface.co/NousResearch/llama-2-7b-hf><code>NousResearch/llama-2-7b-hf</code></a></li>
 <li><a href=https://huggingface.co/openlm-research/open_llama_7b_v2><code>openlm-research/open_llama_7b_v2</code></a></li>
 <li><a href=https://huggingface.co/openlm-research/open_llama_3b_v2><code>openlm-research/open_llama_3b_v2</code></a></li>
 <li><a href=https://huggingface.co/openlm-research/open_llama_13b><code>openlm-research/open_llama_13b</code></a></li>
