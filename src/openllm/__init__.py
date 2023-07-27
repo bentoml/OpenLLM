@@ -59,7 +59,7 @@ _import_structure: dict[str, list[str]] = {
     "playground": [],
     "testing": [],
     "serialisation": ["ggml", "transformers"],
-    "cli": ["start", "start_grpc", "build", "import_model", "list_models"],
+    "cli.entrypoint": ["start", "start_grpc", "build", "import_model", "list_models"],
     # NOTE: models
     "models.auto": ["AutoConfig", "CONFIG_MAPPING", "MODEL_MAPPING_NAMES", "MODEL_FLAX_MAPPING_NAMES", "MODEL_TF_MAPPING_NAMES", "MODEL_VLLM_MAPPING_NAMES", ],
     "models.chatglm": ["ChatGLMConfig"],
@@ -170,11 +170,11 @@ if t.TYPE_CHECKING:
     from ._schema import GenerationOutput as GenerationOutput
     from ._schema import MetadataOutput as MetadataOutput
     from ._schema import unmarshal_vllm_outputs as unmarshal_vllm_outputs
-    from .cli import build as build
-    from .cli import import_model as import_model
-    from .cli import list_models as list_models
-    from .cli import start as start
-    from .cli import start_grpc as start_grpc
+    from .cli.entrypoint import build as build
+    from .cli.entrypoint import import_model as import_model
+    from .cli.entrypoint import list_models as list_models
+    from .cli.entrypoint import start as start
+    from .cli.entrypoint import start_grpc as start_grpc
     from .models.auto import CONFIG_MAPPING as CONFIG_MAPPING
     from .models.auto import MODEL_FLAX_MAPPING_NAMES as MODEL_FLAX_MAPPING_NAMES
     from .models.auto import MODEL_MAPPING_NAMES as MODEL_MAPPING_NAMES

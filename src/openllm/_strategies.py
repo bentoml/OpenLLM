@@ -34,7 +34,6 @@ from .utils import DEBUG
 from .utils import LazyType
 from .utils import ReprMixin
 
-
 if t.TYPE_CHECKING:
     ListIntStr = list[int | str]
     class DynResource(bentoml.Resource[t.List[str]], resource_id=""):
@@ -87,7 +86,7 @@ def _parse_visible_devices(default_var: str | None = None, respect_env: bool = T
         spec = os.getenv("CUDA_VISIBLE_DEVICES", default_var)
         if not spec: return
     else:
-        assert default_var is not None, "spec is required to be not None when parsing spec."  # noqa: S101
+        if default_var is None: raise ValueError("spec is required to be not None when parsing spec.")
         spec = default_var
 
     if spec.startswith("GPU-"): return _parse_list_with_prefix(spec, "GPU-")

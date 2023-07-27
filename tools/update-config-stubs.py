@@ -197,7 +197,7 @@ def main() -> int:
             ]
         )
 
-    processed = processed[:start_attrs_idx] + [" " * 8 + START_ATTRS_COMMENT] + special_attrs_lines + [" " * 8 + END_ATTRS_COMMENT] + processed[end_attrs_idx + 1 : start_stub_idx] + [" " * 8 + START_SPECIAL_COMMENT] + config_attr_lines + [" " * 8 + END_SPECIAL_COMMENT] + processed[end_stub_idx + 1 : start_idx] + [" " * 4 + START_COMMENT] + lines + [" " * 4 + END_COMMENT] + processed[end_idx + 1 :]
+    processed = processed[:start_attrs_idx] + [" " * 8 + START_ATTRS_COMMENT, *special_attrs_lines, " " * 8 + END_ATTRS_COMMENT] + processed[end_attrs_idx + 1 : start_stub_idx] + [" " * 8 + START_SPECIAL_COMMENT, *config_attr_lines, " " * 8 + END_SPECIAL_COMMENT] + processed[end_stub_idx + 1 : start_idx] + [" " * 4 + START_COMMENT, *lines, " " * 4 + END_COMMENT] + processed[end_idx + 1 :]
     with _TARGET_FILE.open("w") as f: f.writelines(processed)
     return 0
 

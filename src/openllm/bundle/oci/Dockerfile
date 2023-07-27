@@ -30,14 +30,13 @@ ENV PATH /opt/conda/bin:$PATH
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN --mount=type=cache,target=/var/lib/apt \
-    --mount=type=cache,target=/var/cache/apt \
-    apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         build-essential \
         ca-certificates \
         ccache \
         curl \
-        git
+        git && \
+        rm -rf /var/lib/apt/lists/*
 
 # Install conda
 # translating Docker's TARGETPLATFORM into mamba arches
@@ -69,15 +68,13 @@ EOT
 # CUDA kernels builder image
 FROM pytorch-install as kernel-builder
 
-RUN --mount=type=cache,target=/var/lib/apt \
-    --mount=type=cache,target=/var/cache/apt \
-    apt-get update && apt-get install -y --no-install-recommends \
-        ninja-build
+RUN apt-get update && apt-get install -y --no-install-recommends ninja-build && \
+    rm -rf /var/lib/apt/lists/*
 
 RUN /opt/conda/bin/conda install -c "nvidia/label/cuda-11.8.0"  cuda==11.8 && \
     /opt/conda/bin/conda clean -ya
 
-# Build vllm CUDA kernels
+# NOTE: Build vllm CUDA kernels
 FROM kernel-builder as vllm-builder
 
 ENV COMMIT_HASH 58a072be15a4e36bee006d1c9a962e527819cf18
@@ -91,8 +88,23 @@ git fetch && git checkout ${COMMIT_HASH}
 python setup.py build
 EOT
 
+# NOTE: Build flash-attention-2 CUDA kernels
+FROM kernel-builder as flash-attn-v2-builder
+
+ENV COMMIT_HASH 4c98d0b41f38ee638a979064856ae06fc1aec8b6
+ARG COMMIT_HASH=${COMMIT_HASH}
+
+WORKDIR /usr/src
+
+RUN <<EOT
+pip install packaging
+git clone https://github.com/Dao-AILab/flash-attention.git flash-attention-v2 && cd flash-attention-v2
+git fetch && git checkout ${COMMIT_HASH}
+python setup.py build
+EOT
+
 # base image
-FROM nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu20.04 as base-container
+FROM nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04 as base-container
 
 # Conda env
 ENV PATH=/opt/conda/bin:$PATH \
@@ -100,15 +112,28 @@ ENV PATH=/opt/conda/bin:$PATH \
 
 WORKDIR /usr/src
 
-RUN --mount=type=cache,target=/var/lib/apt \
-    --mount=type=cache,target=/var/cache/apt \
-    apt-get update && apt-get install -y --no-install-recommends \
-        libssl-dev \
-        ca-certificates \
-        make
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libssl-dev ca-certificates make && \
+    rm -rf /var/lib/apt/lists/*
 
 # Copy conda with PyTorch installed
 COPY --from=pytorch-install /opt/conda /opt/conda
 
-# copy build artefacts for vllm
+# Copy build artefacts for vllm
 COPY --from=vllm-builder /usr/src/vllm/build/lib.linux-x86_64-cpython-39 /opt/conda/lib/python3.9/site-packages
+
+# Copy build artefacts for flash-attention-v2
+COPY --from=flash-attn-v2-builder /usr/src/flash-attention-v2/build/lib.linux-x86_64-cpython-39 /opt/conda/lib/python3.9/site-packages
+
+# Install required dependencies
+COPY src src
+COPY hatch.toml README.md CHANGELOG.md pyproject.toml ./
+
+# Install all required dependencies
+RUN pip install  "ray==2.6.0" "jax[cuda11_local]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html ".[opt,fine-tune,llama,gptq,falcon,chatglm]" -v --no-cache-dir
+
+FROM base-container
+
+ENTRYPOINT ["python3", "-m", "openllm"]

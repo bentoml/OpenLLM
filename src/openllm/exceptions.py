@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import bentoml
 
-
 class OpenLLMException(bentoml.exceptions.BentoMLException):
     """Base class for all OpenLLM exceptions. This extends BentoMLException."""
 
@@ -40,6 +39,8 @@ class MissingAnnotationAttributeError(OpenLLMException):
 class MissingDependencyError(BaseException):
     """Raised when a dependency is missing."""
 
+class Error(BaseException):
+    """To be used instead of naked raise."""
 
 class FineTuneStrategyNotSupportedError(OpenLLMException):
     """Raised when a fine-tune strategy is not supported for given LLM."""

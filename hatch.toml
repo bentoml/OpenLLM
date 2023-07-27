@@ -80,7 +80,7 @@ dependencies = [
 ]
 [envs.default.scripts]
 changelog = "towncrier build --version main --draft"
-inplace-changelog = "towncrier build --verision main --keep"
+inplace-changelog = "towncrier build --version main --keep"
 quality = [
     "./tools/dependencies.py",
     "./tools/update-readme.py",

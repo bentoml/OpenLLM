@@ -15,7 +15,6 @@
 from __future__ import annotations
 import collections
 import functools
-import hashlib
 import inspect
 import logging
 import os
@@ -48,6 +47,7 @@ from ._quantisation import infer_quantisation_config
 from ._schema import unmarshal_vllm_outputs
 from .exceptions import ForbiddenAttributeError
 from .exceptions import GpuNotAvailableError
+from .exceptions import OpenLLMException
 from .models.auto import AutoConfig
 from .utils import DEBUG
 from .utils import ENV_VARS_TRUE_VALUES
@@ -55,10 +55,12 @@ from .utils import MYPY
 from .utils import EnvVarMixin
 from .utils import LazyLoader
 from .utils import ReprMixin
+from .utils import apply
 from .utils import bentoml_cattr
 from .utils import codegen
 from .utils import device_count
 from .utils import first_not_none
+from .utils import generate_hash_from_file
 from .utils import in_docker
 from .utils import infer_auto_class
 from .utils import is_peft_available
@@ -126,20 +128,6 @@ class ModelSignatureDict(t.TypedDict, total=False):
     output_spec: NotRequired[t.Any]
 
 def normalise_model_name(name: str) -> str: return os.path.basename(resolve_filepath(name)) if validate_is_path(name) else re.sub("[^a-zA-Z0-9]+", "-", name)
-
-@functools.lru_cache(maxsize=128)
-def generate_hash_from_file(f: str, algorithm: t.Literal["md5", "sha1"] = "sha1") -> str:
-    """Generate a hash from given file's modification time.
-
-    Args:
-        f: The file to generate the hash from.
-        algorithm: The hashing algorithm to use. Defaults to 'sha1' (similar to how Git generate its commit hash.)
-
-    Returns:
-        The generated hash.
-    """
-    return getattr(hashlib, algorithm)(str(os.path.getmtime(resolve_filepath(f))).encode()).hexdigest()
-
 
 # the below is similar to peft.utils.other.CONFIG_NAME
 PEFT_CONFIG_NAME = "adapter_config.json"
@@ -406,8 +394,7 @@ def _wrapped_save_pretrained(f: _save_pretrained_wrapper[M, T]):
     def wrapper(self: LLM[M, T], save_directory: str | Path, **attrs: t.Any) -> None:
         if isinstance(save_directory, Path): save_directory = str(save_directory)
         if self.__llm_model__ is not None and self.bettertransformer and self.__llm_implementation__ == "pt":
-            from optimum.bettertransformer import BetterTransformer
-            self.__llm_model__ = t.cast(M, BetterTransformer.reverse(t.cast("transformers.PreTrainedModel", self.__llm_model__)))
+            self.__llm_model__ = t.cast("transformers.PreTrainedModel", self.__llm_model__).reverse_bettertransformer()
         f(self, save_directory, **attrs)
     return wrapper
 
@@ -654,8 +641,11 @@ class LLM(LLMInterface[M, T], ReprMixin):
             # The rests of the kwargs that is not used by the config class should be stored into __openllm_extras__.
             attrs = llm_config["extras"]
 
-        _tag = cls.generate_tag(model_id, model_version)
-        if _tag.version is None: raise RuntimeError("Failed to resolve model version.")
+        try:
+            _tag = cls.generate_tag(model_id, model_version)
+            if _tag.version is None: raise ValueError(f"Failed to resolve the correct model version for {cfg_cls.__openllm_start_name__}")
+        except Exception as err:
+            raise OpenLLMException(f"Failed to generate a valid tag for {cfg_cls.__openllm_start_name__} with 'model_id={model_id}' (lookup to see its traceback):\n{err}") from err
 
         return cls(
             *args,
@@ -673,30 +663,42 @@ class LLM(LLMInterface[M, T], ReprMixin):
         )
     @classmethod
     @functools.lru_cache
-    def generate_tag(cls, model_id: str, model_version: str | None) -> bentoml.Tag:
-        """Generate a compliant bentoml tag from model_id.
+    @apply(str.lower)
+    def _generate_tag_str(cls, model_id: str, model_version: str | None) -> str:
+        """Generate a compliant ``bentoml.Tag`` from model_id.
 
-        If model_id is a pretrained_id from HF, then it will have the following format: <framework>-<normalise_model_id>:revision
-        If model_id contains the revision itself, then it will be <framework>-<normalise_model_id>:revision
-        If model_id is a path, then it will be <framework>-<basename_of_path>-<generated_sha1>
+        If model_id is a pretrained_id from HF, then it will have the following format: <framework>-<normalise_model_id>:<revision>
+        If model_id contains the revision itself, then the same format above
+        If model_id is a path, then it will be <framework>-<basename_of_path>:<generated_sha1> if model_version is not passesd, otherwise <framework>-<basename_of_path>:<model_version>
+
+        **Note** here that the generated SHA1 for path cases is that it will be based on last modified time.
+
+        Args:
+            model_id: Model id for this given LLM. It can be pretrained weights URL, custom path.
+            model_version: Specific revision for this model_id or custom version.
+
+        Returns:
+            ``str``: Generated tag format that can be parsed by ``bentoml.Tag``
         """
         # specific branch for running in docker, this is very hacky, needs change upstream
-        if in_docker() and os.getenv("BENTO_PATH") is not None: return bentoml.Tag.from_taglike(":".join(fs.path.parts(model_id)[-2:]))
+        if in_docker() and os.getenv("BENTO_PATH") is not None: return ":".join(fs.path.parts(model_id)[-2:])
 
         model_name = normalise_model_name(model_id)
         model_id, *maybe_revision = model_id.rsplit(":")
         if len(maybe_revision) > 0:
             if model_version is not None: logger.warning("revision is specified within 'model_id' (%s), and 'model_version=%s' will be ignored.", maybe_revision[0], model_version)
-            return bentoml.Tag.from_taglike(f"{cls.__llm_implementation__}-{model_name}:{maybe_revision[0]}")
+            return f"{cls.__llm_implementation__}-{model_name}:{maybe_revision[0]}"
 
-        tag_name = f"{cls.__llm_implementation__}-{model_name}".lower().strip()
-        if os.getenv("OPENLLM_USE_LOCAL_LATEST", str(False)).upper() in ENV_VARS_TRUE_VALUES: return bentoml.models.get(f"{tag_name}{':'+model_version if model_version is not None else ''}").tag
-
+        tag_name = f"{cls.__llm_implementation__}-{model_name}"
+        if os.getenv("OPENLLM_USE_LOCAL_LATEST", str(False)).upper() in ENV_VARS_TRUE_VALUES: return bentoml_cattr.unstructure(bentoml.models.get(f"{tag_name}{':'+model_version if model_version is not None else ''}").tag)
         if validate_is_path(model_id): model_id, model_version = resolve_filepath(model_id), first_not_none(model_version, default=generate_hash_from_file(model_id))
         else:
-            model_version = getattr(transformers.AutoConfig.from_pretrained(model_id, trust_remote_code=cls.config_class.__openllm_trust_remote_code__, revision=first_not_none(model_version, default="main")), "_commit_hash", None)
-            if model_version is None: raise ValueError(f"Internal errors when parsing config for pretrained {model_id} ('commit_hash' not found)")
-        return bentoml.Tag.from_taglike(f"{tag_name}:{model_version}")
+            _config = transformers.AutoConfig.from_pretrained(model_id, trust_remote_code=cls.config_class.__openllm_trust_remote_code__, revision=first_not_none(model_version, default="main"))
+            model_version = getattr(_config, "_commit_hash", None)
+            if model_version is None: raise ValueError(f"Internal errors when parsing config for pretrained '{model_id}' ('commit_hash' not found)")
+        return f"{tag_name}:{model_version}"
+    @classmethod
+    def generate_tag(cls, *param_decls: t.Any, **attrs: t.Any) -> bentoml.Tag: return bentoml.Tag.from_taglike(cls._generate_tag_str(*param_decls, **attrs))
     def __init__(
         self,
         *args: t.Any,
@@ -898,8 +900,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
 
         Note that the base model can still be accessed via self.model.get_base_model().
         """
-        assert self.__llm_model__ is not None  # noqa: S101
-
+        if self.__llm_model__ is None: raise ValueError("Error: Model is not loaded correctly")
         # early out if _adapters_mapping is empty or it is already wrapped with peft.
         if not self._adapters_mapping: return self.__llm_model__
         if isinstance(self.__llm_model__, peft.PeftModel): return self.__llm_model__
@@ -924,7 +925,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
 
         return self.__llm_model__
     def _wrap_default_peft_model(self, adapter_mapping: dict[str, tuple[peft.PeftConfig, str]], inference_mode: bool):
-        assert self.__llm_model__ is not None, "Error: Model is not loaded correctly"  # noqa: S101
+        if self.__llm_model__ is None: raise ValueError("Error: Model is not loaded correctly")
         if isinstance(self.__llm_model__, peft.PeftModel): return self.__llm_model__
 
         if "default" not in adapter_mapping: raise ValueError("There is no 'default' mapping. Please check the adapter mapping and report this bug to the OpenLLM team.")
@@ -1089,18 +1090,16 @@ def llm_runnable_class(self: LLM[M, T], embeddings_sig: ModelSignature, generate
             # NOTE: The side effect of this line
             # is that it will load the imported model during
             # runner startup. So don't remove it!!
-            assert self.model  # noqa: S101
+            if not self.model: raise RuntimeError("Failed to load the model correctly (See traceback above)")
             if self.adapters_mapping is not None:
                 logger.info("Applying LoRA to %s...", self.runner_name)
                 self.apply_adapter(inference_mode=True, load_adapters="all")
-
         @requires_dependencies("peft", extra="fine-tune")
         def set_adapter(__self: _Runnable, adapter_name: str):
             if self.__llm_adapter_map__ is None: raise ValueError("No adapters available for current running server.")
             elif not isinstance(self.model, peft.PeftModel): raise RuntimeError("Model is not a PeftModel")
             if adapter_name != "default": self.model.set_adapter(adapter_name)
             logger.info("Successfully apply LoRA layer %s", adapter_name)
-
         @bentoml.Runnable.method(**method_signature(embeddings_sig))
         def embeddings(__self: _Runnable, prompt: str | list[str]) -> LLMEmbeddings: return self.embeddings([prompt] if isinstance(prompt, str) else prompt)
         @bentoml.Runnable.method(**method_signature(generate_sig))

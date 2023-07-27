@@ -88,7 +88,7 @@ jobs:
       CARGO: cargo
       CARGO_BUILD_TARGET: ${{ matrix.job.target }}
       PYAPP_REPO: pyapp
-      PYAPP_VERSION: '0.8.0'
+      PYAPP_VERSION: '0.10.1'
       PYAPP_PIP_EXTERNAL: 'true'
     steps:
       - name: Checkout code
@@ -150,9 +150,10 @@ jobs:
 
           if [[ "$version" != "$old_version" ]]; then
             cd dist/app
-            old_binary="$(ls)"
-            binary="${old_binary/$old_version/$version}"
-            mv "$old_binary" "$binary"
+            find . -type f -iname "openllm-*" | while read -r file; do
+              binary=$(echo "$file" | sed 's/dev//')
+              mv "$file" "$binary"
+            done
           fi
 
           echo "version=$version" >> $GITHUB_OUTPUT
@@ -161,15 +162,15 @@ jobs:
         run: |-
           mkdir packaging
           cd dist/app
-
-          binary="$(ls)"
-
-          if [[ "$binary" =~ -pc-windows- ]]; then
-            7z a "../../packaging/${binary:0:-4}.zip" "$binary"
+          find . -type f -iname "openllm-*" | while read -r file; do
+          if [[ "$file" =~ -pc-windows- ]]; then
+            7z a "../../packaging/${file:0:-4}.zip" "$file"
           else
-            chmod +x "$binary"
-            tar -czf "../../packaging/$binary.tar.gz" "$binary"
+            binary="${file/dev/}"
+            chmod +x "$file"
+            tar -czf "../../packaging/$binary.tar.gz" "$file"
           fi
+          done
       - name: Upload staged archive
         if: runner.os != 'Linux'
         uses: actions/upload-artifact@v3

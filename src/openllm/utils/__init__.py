@@ -19,6 +19,7 @@ we won't ensure backward compatibility for these functions. So use with caution.
 from __future__ import annotations
 import contextlib
 import functools
+import hashlib
 import logging
 import logging.config
 import os
@@ -29,10 +30,11 @@ from pathlib import Path
 
 from circus.exc import ConflictError
 
-from bentoml._internal.configuration import DEBUG_ENV_VAR as _DEBUG_ENV_VAR
+from bentoml._internal.configuration import DEBUG_ENV_VAR as DEBUG_ENV_VAR
 from bentoml._internal.configuration import GRPC_DEBUG_ENV_VAR as _GRPC_DEBUG_ENV_VAR
-from bentoml._internal.configuration import get_debug_mode
-from bentoml._internal.configuration import get_quiet_mode
+from bentoml._internal.configuration import QUIET_ENV_VAR as QUIET_ENV_VAR
+from bentoml._internal.configuration import get_debug_mode as _get_debug_mode
+from bentoml._internal.configuration import get_quiet_mode as _get_quiet_mode
 from bentoml._internal.configuration import set_quiet_mode
 from bentoml._internal.log import configure_server_logging
 from bentoml._internal.models.model import ModelContext as _ModelContext
@@ -73,9 +75,12 @@ if t.TYPE_CHECKING:
     from .._types import DictStrAny
     from .._types import LiteralRuntime
 
-def set_debug_mode(enabled: bool) -> None:
+DEV_DEBUG_VAR = "OPENLLMDEVDEBUG"
+
+def set_debug_mode(enabled: bool, level: int = 1) -> None:
     # monkeypatch bentoml._internal.configuration.set_debug_mode to remove unused logs
-    os.environ[_DEBUG_ENV_VAR] = str(enabled)
+    if enabled: os.environ[DEV_DEBUG_VAR] = str(level)
+    os.environ[DEBUG_ENV_VAR] = str(enabled)
     os.environ[_GRPC_DEBUG_ENV_VAR] = "DEBUG" if enabled else "ERROR"
 
 def lenient_issubclass(cls: t.Any, class_or_tuple: type[t.Any] | tuple[type[t.Any], ...] | None) -> bool:
@@ -88,6 +93,19 @@ def available_devices() -> tuple[str, ...]:
     """Return available GPU under system. Currently only supports NVIDIA GPUs."""
     from .._strategies import NvidiaGpuResource
     return tuple(NvidiaGpuResource.from_system())
+
+@functools.lru_cache(maxsize=128)
+def generate_hash_from_file(f: str, algorithm: t.Literal["md5", "sha1"] = "sha1") -> str:
+    """Generate a hash from given file's modification time.
+
+    Args:
+        f: The file to generate the hash from.
+        algorithm: The hashing algorithm to use. Defaults to 'sha1' (similar to how Git generate its commit hash.)
+
+    Returns:
+        The generated hash.
+    """
+    return getattr(hashlib, algorithm)(str(os.path.getmtime(resolve_filepath(f))).encode()).hexdigest()
 
 @functools.lru_cache(maxsize=1)
 def device_count() -> int: return len(available_devices())
@@ -103,10 +121,13 @@ def non_intrusive_setattr(obj: t.Any, name: str, value: t.Any) -> None:
 def field_env_key(model_name: str, key: str, suffix: str | t.Literal[""] | None = None) -> str: return "_".join(filter(None, map(str.upper, ["OPENLLM", model_name, suffix.strip("_") if suffix else "", key])))
 
 # Special debug flag controled via OPENLLMDEVDEBUG
-DEBUG = sys.flags.dev_mode or (not sys.flags.ignore_environment and bool(os.environ.get("OPENLLMDEVDEBUG")))
+DEBUG = sys.flags.dev_mode or (not sys.flags.ignore_environment and bool(os.getenv(DEV_DEBUG_VAR)))
 # MYPY is like t.TYPE_CHECKING, but reserved for Mypy plugins
 MYPY = False
 SHOW_CODEGEN = DEBUG and int(os.environ.get("OPENLLMDEVDEBUG", str(0))) > 3
+
+def get_debug_mode() -> bool: return DEBUG or _get_debug_mode()
+def get_quiet_mode() -> bool: return not DEBUG and _get_quiet_mode()
 
 class ExceptionFilter(logging.Filter):
     def __init__(self, exclude_exceptions: list[type[Exception]] | None = None, **kwargs: t.Any):
@@ -117,7 +138,6 @@ class ExceptionFilter(logging.Filter):
         self.EXCLUDE_EXCEPTIONS = exclude_exceptions
     def filter(self, record: logging.LogRecord) -> bool:
         if record.exc_info:
-            print(record.exc_info)
             etype, _, _ = record.exc_info
             if etype is not None:
                 for exc in self.EXCLUDE_EXCEPTIONS:
@@ -250,9 +270,9 @@ def in_docker() -> bool:
 
 T, K = t.TypeVar("T"), t.TypeVar("K")
 
-def resolve_filepath(path: str) -> str:
+def resolve_filepath(path: str, ctx: str | None = None) -> str:
     """Resolve a file path to an absolute path, expand user and environment variables."""
-    try: return resolve_user_filepath(path, None)
+    try: return resolve_user_filepath(path, ctx)
     except FileNotFoundError: return path
 
 def validate_is_path(maybe_path: str) -> bool: return os.path.exists(os.path.dirname(resolve_filepath(maybe_path)))
@@ -370,7 +390,6 @@ if t.TYPE_CHECKING:
     from . import dantic as dantic
     from . import first_not_none as first_not_none
     from . import reserve_free_port as reserve_free_port
-    from . import set_debug_mode as set_debug_mode
     from . import set_quiet_mode as set_quiet_mode
     from . import validate_is_path as validate_is_path
     from . import validate_or_create_dir as validate_or_create_dir

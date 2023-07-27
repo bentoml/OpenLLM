@@ -1,0 +1,54 @@
+name: update-changelog
+on:
+  pull_request:
+    types: [closed]
+    paths:
+      - changelog.d/**
+# https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#defaultsrun
+defaults:
+  run:
+    shell: bash --noprofile --norc -exo pipefail {0}
+concurrency:
+  group: update-changelog-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+env:
+  BRANCH_NAME: ci/update-changelog
+  GIT_AUTHOR_NAME: ${{ github.repository_owner }}
+  GIT_AUTHOR_EMAIL: ${{ github.repository_owner }}@users.noreply.github.com
+jobs:
+  changelog:
+    if: github.repository_owner == 'bentoml'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Setup CI
+        uses: ./.github/actions/setup-repo
+        with:
+          python-version: '3.11'
+      - name: Import bot's GPG key for signing commits
+        id: import-gpg
+        uses: crazy-max/ghaction-import-gpg@v5
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+          git_config_global: true
+          git_user_signingkey: true
+          git_commit_gpgsign: true
+          git_tag_gpgsign: true
+      - name: Install jq and curl
+        run: sudo apt-get install -y jq curl
+      - name: Run update changelog to main
+        run: hatch run inplace-changelog
+      - name: Create a PR
+        uses: peter-evans/create-pull-request@v4
+        with:
+          title: "infra: update unreleased changelog [generated] [skip ci]"
+          commit-message: "chore: running 'hatch run inplace-changelog'"
+          branch-suffix: timestamp
+          signoff: true
+          delete-branch: true
+          reviewers: aarnphm
+          author: ${{ env.GIT_AUTHOR_NAME }} <${{ env.GIT_AUTHOR_EMAIL }}>
+          branch: ${{ env.BRANCH_NAME }}

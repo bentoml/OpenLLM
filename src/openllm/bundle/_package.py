@@ -123,7 +123,7 @@ def construct_python_options(
             except importlib.metadata.PackageNotFoundError: pass
     else:
         if not is_torch_available(): raise ValueError("PyTorch is not available. Make sure to have it locally installed.")
-        packages.extend([importlib.metadata.version("torch")])
+        packages.extend([f'torch>={importlib.metadata.version("torch")}'])
 
     wheels: list[str] = []
     built_wheels = build_editable(llm_fs.getsyspath("/"))

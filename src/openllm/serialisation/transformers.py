@@ -16,6 +16,7 @@
 from __future__ import annotations
 import copy
 import importlib
+import inspect
 import typing as t
 
 import bentoml
@@ -153,19 +154,15 @@ def import_model(llm: openllm.LLM[M, T], *decls: t.Any, trust_remote_code: bool,
     # to avoid recursive call when the model is not yet available in local store
     _object_setattr(llm, "__llm_model__", model)
     _object_setattr(llm, "__llm_tokenizer__", _tokenizer)
+    create_kwargs = dict(
+        module="openllm.serialisation.transformers", api_version="v1", context=generate_context(framework_name="openllm"), labels=generate_labels(llm), metadata=metadata,
+        signatures=signatures if signatures else make_default_signatures(model), options=ModelOptions(),
+        external_modules=[importlib.import_module(model.__module__), importlib.import_module(_tokenizer.__module__)] if trust_remote_code else None,
+    )
+    if "use_tempfs" in inspect.signature(bentoml.models.create).parameters: create_kwargs["use_tempfs"] = False
 
     try:
-        with bentoml.models.create(
-            llm.tag,
-            module="openllm.serialisation.transformers",
-            api_version="v1",
-            context=generate_context(framework_name="openllm"),
-            labels=generate_labels(llm),
-            signatures=signatures if signatures else make_default_signatures(model),
-            options=ModelOptions(),
-            external_modules=[importlib.import_module(model.__module__), importlib.import_module(_tokenizer.__module__)] if trust_remote_code else None,
-            metadata=metadata,
-        ) as bentomodel:
+        with bentoml.models.create(llm.tag, **create_kwargs) as bentomodel:
             save_pretrained(llm, bentomodel.path, safe_serialization=safe_serialisation)
             return bentomodel
     finally:
@@ -228,10 +225,8 @@ def load_model(llm: openllm.LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M:
     if torch.cuda.is_available() and device_count() == 1 and not loaded_in_kbit:
         try: model = model.to("cuda")
         except torch.cuda.OutOfMemoryError as err: raise RuntimeError(f"Failed to convert {llm.config['model_name']} with model_id '{llm.model_id}' to CUDA.\nNote: You can try out '--quantize int8 | int4' for dynamic quantization.") from err
-    if llm.bettertransformer and llm.__llm_implementation__ == "pt" and not isinstance(model, _transformers.Pipeline):
-        # BetterTransformer is currently only supported on PyTorch.
-        from optimum.bettertransformer import BetterTransformer
-        model = BetterTransformer.transform(model)
+    # BetterTransformer is currently only supported on PyTorch.
+    if llm.bettertransformer and isinstance(model, _transformers.PreTrainedModel): model = model.to_bettertransformer()
     return t.cast("M", model)
 
 def save_pretrained(
