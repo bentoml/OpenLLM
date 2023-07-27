@@ -79,16 +79,16 @@
   "Renders the parameters in the sidebar. The parameters are retrieved from the
    `human-readable-config` subscription."
   []
-  (let [model-config (rf/subscribe [::subs/human-readable-config])
-        basic-params (filterv (fn [[id _]] (not (get-in db/parameter-meta-data [id :advanced-opt]))) @model-config)
-        advanced-params (filterv (fn [[id _]] (get-in db/parameter-meta-data [id :advanced-opt])) @model-config)]
+  (let [model-config (rf/subscribe [::subs/human-readable-config])]
     (fn []
-      [:<>
-       (into [:<>] (map parameter-list-entry basic-params))
-       [:div {:class "mt-2 -mx-1.75"}
-        [accordion {:square true
-                    :class "w-full"}
-         [accordion-summary {:expand-icon (r/as-element [expand-more])}
-          [typography "Advanced"]]
-         [accordion-details {:class "mt-2 -mx-3"}
-          (into [:<>] (map parameter-list-entry advanced-params))]]]])))
+      (let [basic-params (filterv (fn [[id _]] (not (get-in db/parameter-meta-data [id :advanced-opt]))) @model-config)
+            advanced-params (filterv (fn [[id _]] (get-in db/parameter-meta-data [id :advanced-opt])) @model-config)]
+        [:<>
+         (into [:<>] (map parameter-list-entry basic-params))
+         [:div {:class "mt-2 -mx-1.75"}
+          [accordion {:square true
+                      :class "w-full"}
+           [accordion-summary {:expand-icon (r/as-element [expand-more])}
+            [typography "Advanced"]]
+           [accordion-details {:class "mt-2 -mx-3"}
+            (into [:<>] (map parameter-list-entry advanced-params))]]]]))))
