@@ -64,11 +64,10 @@
              :color "primary"}
     [toolbar {:variant "dense"
               :style {:height "48px"}} 
-     [:div {:class "ml-[calc(50%-_100px)"}
+     [:div
       (let [screen-id @(rf/subscribe [:screen-id])]
         [tabs {:value (if (= :chat screen-id) 1 0)
-               :text-color "inherit"
-               :centered true}
+               :text-color "inherit"}
          [tab {:label "Playground"
                :id "playground-tab"
                :on-click #(rf/dispatch-sync [:set-screen-id :playground])}]
