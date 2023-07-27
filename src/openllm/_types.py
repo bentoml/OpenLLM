@@ -82,7 +82,7 @@ class PeftAdapterOutput(t.TypedDict):
 
 
 class LLMEmbeddings(t.TypedDict):
-    embeddings: torch.Tensor
+    embeddings: t.List[t.List[float]]
     num_tokens: int
 
 

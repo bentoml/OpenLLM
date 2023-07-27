@@ -518,7 +518,7 @@ client = openllm.client.HTTPClient("http://localhost:3000")
 client.embed("I like to eat apples")
 ```
 
-> **Note**: Currently, only LlaMA models and variants support embeddings.
+> **Note**: Currently, the following model framily supports embeddings: Llama, T5 (Flan-T5, FastChat, etc.), ChatGLM
 
 ## ⚙️ Integrations
 

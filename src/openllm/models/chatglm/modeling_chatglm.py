@@ -14,12 +14,10 @@
 from __future__ import annotations
 import typing as t
 import openllm
+from ..._llm import LLMEmbeddings
 if t.TYPE_CHECKING:
-    import torch
-    import transformers
-else:
-    torch = openllm.utils.LazyLoader("torch", globals(), "torch")
-    transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
+    import torch, transformers, torch.nn.functional as F
+else: torch, transformers, F = openllm.utils.LazyLoader("torch", globals(), "torch"), openllm.utils.LazyLoader("transformers", globals(), "transformers"), openllm.utils.LazyLoader("F", globals(), "torch.nn.functional")
 class ChatGLM(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTrainedTokenizerFast"]):
     __openllm_internal__ = True
     def sanitize_parameters(self, prompt: str, max_new_tokens: int | None = None, num_beams: int | None = None, top_p: float | None = None, temperature: float | None = None, chat_history: list[str] | None = None, use_default_prompt_template: bool = False, **attrs: t.Any) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
@@ -44,3 +42,14 @@ class ChatGLM(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTrain
             # Only use half precision if the model is not yet quantized
             if self.config.use_half_precision: self.model.half()
             return self.model.chat(self.tokenizer, prompt, generation_config=self.config.model_construct_env(**attrs).to_generation_config())
+    def embeddings(self, prompts: list[str]) -> LLMEmbeddings:
+        embeddings: list[list[float]] = []
+        num_tokens = 0
+        for prompt in prompts:
+            input_ids = self.tokenizer.encode(prompt, return_tensors='pt').to(self.device)
+            with torch.inference_mode():
+                outputs = self.model(input_ids, output_hidden_states=True)
+                data = F.normalize(torch.mean(outputs.hidden_states[-1].transpose(0, 1), dim=0), p=2, dim=0)
+                embeddings.append(data.tolist())
+                num_tokens += len(input_ids[0])
+        return LLMEmbeddings(embeddings=embeddings, num_tokens=num_tokens)
