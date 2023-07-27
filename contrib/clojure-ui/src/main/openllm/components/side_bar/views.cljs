@@ -15,7 +15,7 @@
       [collapse {:in @side-bar-open?
                  :orientation "horizontal"
                  :class "flex flex-col h-full w-80"}
-       [:div {:class "flex flex-col w-80 h-full border-l border-gray-200 pt-0.5 pb-4 bg-gray-50"}
+       [:div {:class "flex flex-col w-80 h-full border-l border-gray-200 pt-0.5 pb-4"}
         [model-selection-views/model-selection]
         [:hr {:class "mb-2 border-1 border-gray-200"}]
         [ui/headline "Parameters"]

@@ -8,10 +8,11 @@
  ::set-model-config-parameter
  [check-spec-interceptor]
  (fn [db [_ parameter value]]
-   (let [type-pred (get-in db/parameter-meta-data [parameter :type-pred])
+   (let [type-pred (get-in db/parameter-meta-data [parameter :type-pred]) 
+         value (or value 0)
          parsed-value (if (= type-pred float?)
                         (parse-double value)
-                        (if (= type-pred int?)
+                        (if (and (= type-pred int?) (not (int? value)))
                           (parse-long value)
                           value))]
      (assoc-in db (db/key-seq parameter) parsed-value))))

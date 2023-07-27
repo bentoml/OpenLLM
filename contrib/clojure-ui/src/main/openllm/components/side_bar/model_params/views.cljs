@@ -2,6 +2,7 @@
   (:require [openllm.components.side-bar.model-params.db :as db]
             [openllm.components.side-bar.model-params.subs :as subs] 
             [openllm.components.side-bar.model-params.events :as events]
+            [reagent-mui.material.input :refer [input]]
             [reagent-mui.material.accordion :refer [accordion]]
             [reagent-mui.material.accordion-details :refer [accordion-details]]
             [reagent-mui.material.accordion-summary :refer [accordion-summary]]
@@ -33,8 +34,10 @@
   [id value]
   (let [on-change #(rf/dispatch [::events/set-model-config-parameter id (.. % -target -value)])
         num-type? (= int? (get-in db/parameter-meta-data [id :type-pred]))]
-    [:input {:type "number"
-             :class "display-none absolute right-5 w-12 px-0 py-0 pr-0.5 text-xs text-center"
+     [input {:type "number"
+             :class "w-10 text-center border"
+             :input-props {:style {:text-align "center"
+                                   :height "12px"}}
              :step (if num-type? 1 0.01)
              :value value
              :on-change on-change}]))
@@ -50,11 +53,10 @@
 (defn parameter-number
   "Renders a number input field."
   [id value]
-  [:div {:class "absolute right-5 -mt-0.5"}
-   [:input {:type "text"
-            :class "px-1 py-0 text-xs rounded w-16"
-            :value value
-            :on-change #(rf/dispatch [::events/set-model-config-parameter id (parse-long (.. % -target -value))])}]])
+  [input {:type "number"
+          :class "w-16 border"
+          :value value
+          :on-change #(rf/dispatch [::events/set-model-config-parameter id (parse-long (.. % -target -value))])}])
 
 (defn parameter-list-entry
   "Renders a single parameter in the sidebar's parameter list. Used as a mapping function
@@ -62,7 +64,7 @@
   [[id {:keys [value name]}]]
   (let [display-type (get-in db/parameter-meta-data [id :display-type])]
     [:div {:class "flex flex-col px-2 py-1"}
-     [:label {:class "flex w-fit text-xs"}
+     [:label {:class "flex w-full text-xs justify-between"}
       name
       (when (= :slider display-type)
         [parameter-small-input id value])
