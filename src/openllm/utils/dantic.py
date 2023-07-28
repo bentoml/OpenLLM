@@ -30,26 +30,14 @@ from click import ParamType
 from click import shell_completion as sc
 from click import types as click_types
 
-import openllm
-
-
-# NOTE: We need to do this so that overload can register
-# correct overloads to typing registry
-if sys.version_info[:2] >= (3, 11):
-    from typing import overload
-else:
-    from typing_extensions import overload
-
-
 if t.TYPE_CHECKING:
     from attr import _ValidatorType
 
-    from .._types import AnyCallable
     from .._types import ListAny
 
-    FC = t.TypeVar("FC", bound=t.Union[AnyCallable, click.Command])
-
 _T = t.TypeVar("_T")
+AnyCallable = t.Callable[..., t.Any]
+FC = t.TypeVar("FC", bound=t.Union[AnyCallable, click.Command])
 
 
 def attrs_to_options(
@@ -67,18 +55,13 @@ def attrs_to_options(
 
     if typ in (None, attr.NOTHING):
         typ = field.type
-        if typ is None:
-            raise RuntimeError(f"Failed to parse type for {name}")
+        if typ is None: raise RuntimeError(f"Failed to parse type for {name}")
 
     full_option_name = f"--{dasherized}"
-    if field.type is bool:
-        full_option_name += f"/--no-{dasherized}"
-    if suffix_generation:
-        identifier = f"{model_name}_generation_{underscored}"
-    elif suffix_sampling:
-        identifier = f"{model_name}_sampling_{underscored}"
-    else:
-        identifier = f"{model_name}_{underscored}"
+    if field.type is bool: full_option_name += f"/--no-{dasherized}"
+    if suffix_generation: identifier = f"{model_name}_generation_{underscored}"
+    elif suffix_sampling: identifier = f"{model_name}_sampling_{underscored}"
+    else: identifier = f"{model_name}_{underscored}"
 
     return cog.optgroup.option(
         identifier,
@@ -87,7 +70,7 @@ def attrs_to_options(
         required=field.default is attr.NOTHING,
         default=field.default if field.default not in (attr.NOTHING, None) else None,
         show_default=True,
-        multiple=allows_multiple(typ),
+        multiple=allows_multiple(typ) if typ else False,
         help=field.metadata.get("description", "(No description provided)"),
         show_envvar=True,
         envvar=envvar,
@@ -105,28 +88,6 @@ def env_converter(value: t.Any, env: str | None = None) -> t.Any:
     return value
 
 
-_B = t.TypeVar("_B")
-_ConverterType = t.Callable[[_B], _T]
-
-
-# NOTE: case 1, when given default is a type, and converter exists, then the correct type will be the one from converter
-@overload
-def Field(
-    default: _B,
-    *,
-    use_default_converter: t.Literal[False] = False,
-    converter: _ConverterType[_B, t.Any] = ...,
-    **attrs: t.Any,
-) -> t.Any: ...
-# NOTE: case 2, specifically for boolean, probably need to report to upstream python typing
-@overload
-def Field(default: t.Literal[True, False], description: str = ...) -> bool: ...
-# NOTE: case 3, set the default to the correct type of the classvar setter
-@overload
-def Field(default: _T | None, **attrs: t.Any) -> _T: ...
-# NOTE: case 4, we only specify description as helpers
-@overload
-def Field(*, description: str | None = ..., **attrs: t.Any) -> t.Any: ...
 def Field(
     default: t.Any = None,
     *,
@@ -330,11 +291,10 @@ class LiteralChoice(EnumChoice):
         # expect every literal value to belong to the same primitive type
         values = list(value.__args__)
         item_type = type(values[0])
-        if not all(isinstance(v, item_type) for v in values):
-            raise ValueError(f"Field {value} contains items of different types.")
+        if not all(isinstance(v, item_type) for v in values): raise ValueError(f"Field {value} contains items of different types.")
+        _mapping = {str(v): v for v in values}
+        super(EnumChoice, self).__init__(list(_mapping), case_sensitive)
         self.internal_type = item_type
-        self.mapping = {str(v): v for v in values}
-        super(EnumChoice, self).__init__(list(self.mapping.keys()), case_sensitive)
 
 
 def allows_multiple(field_type: type[t.Any]) -> bool:
@@ -373,13 +333,12 @@ def is_mapping(field_type: type) -> bool:
         bool: true when the field is a dict-like object, false otherwise.
     """
     # Early out for standard containers.
-    if openllm.utils.lenient_issubclass(field_type, t.Mapping):
-        return True
+    from . import lenient_issubclass
+    if lenient_issubclass(field_type, t.Mapping): return True
     # for everything else or when the typing is more complex, check its origin
     origin = t.get_origin(field_type)
-    if origin is None:
-        return False
-    return openllm.utils.lenient_issubclass(origin, t.Mapping)
+    if origin is None: return False
+    return lenient_issubclass(origin, t.Mapping)
 
 
 def is_container(field_type: type) -> bool:
@@ -392,16 +351,14 @@ def is_container(field_type: type) -> bool:
         bool: true if a container, false otherwise
     """
     # do not consider strings or byte arrays as containers
-    if field_type in (str, bytes):
-        return False
+    if field_type in (str, bytes): return False
     # Early out for standard containers: list, tuple, range
-    if openllm.utils.lenient_issubclass(field_type, t.Container):
-        return True
+    from . import lenient_issubclass
+    if lenient_issubclass(field_type, t.Container): return True
     origin = t.get_origin(field_type)
     # Early out for non-typing objects
-    if origin is None:
-        return False
-    return openllm.utils.lenient_issubclass(origin, t.Container)
+    if origin is None: return False
+    return lenient_issubclass(origin, t.Container)
 
 
 def parse_container_args(field_type: type[t.Any]) -> ParamType | tuple[ParamType]:
@@ -443,14 +400,12 @@ def parse_single_arg(arg: type) -> ParamType:
     Returns:
         ParamType: click-compatible type
     """
+    from . import lenient_issubclass
     # When we don't know the type, we choose 'str'
-    if arg is t.Any:
-        return click_types.convert_type(str)
+    if arg is t.Any: return click_types.convert_type(str)
     # For containers and nested models, we use JSON
-    if is_container(arg):
-        return JsonType()
-    if openllm.utils.lenient_issubclass(arg, bytes):
-        return BytesType()
+    if is_container(arg): return JsonType()
+    if lenient_issubclass(arg, bytes): return BytesType()
     return click_types.convert_type(arg)
 
 
@@ -541,15 +496,13 @@ class JsonType(ParamType):
         """Support JSON type for click.ParamType.
 
         Args:
-        should_load: Whether to load the JSON. Default to True. If False, the value won't be converted.
+            should_load: Whether to load the JSON. Default to True. If False, the value won't be converted.
         """
         super().__init__()
         self.should_load = should_load
 
     def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> t.Any:
-        if openllm.utils.LazyType[t.Mapping[str, str]](t.Mapping).isinstance(value) or not self.should_load:
-            return value
-        try:
-            return orjson.loads(value)
-        except orjson.JSONDecodeError as exc:
-            self.fail(f"'{value}' is not a valid JSON string ({exc!s})", param, ctx)
+        from . import LazyType
+        if LazyType[t.Mapping[str, str]](t.Mapping[str, str]).isinstance(value) or not self.should_load: return value
+        try: return orjson.loads(value)
+        except orjson.JSONDecodeError as exc: self.fail(f"'{value}' is not a valid JSON string ({exc!s})", param, ctx)

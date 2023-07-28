@@ -77,6 +77,11 @@ dependencies = [
     "markdown-it-py",
     # NOTE: For fancy PyPI readme
     "hatch-fancy-pypi-readme",
+    # The below sync with mypyc deps and pre-commit mypy
+    "types-psutil",
+    "types-tabulate",
+    "types-PyYAML",
+    "types-protobuf",
 ]
 [envs.default.scripts]
 changelog = "towncrier build --version main --draft"
@@ -130,7 +135,17 @@ report-uncovered-html = "coverage html --skip-covered --skip-empty"
 report-xml = "coverage xml"
 write-summary-report = "python tools/write-coverage-report.py"
 [build.targets.wheel.hooks.mypyc]
-dependencies = ["hatch-mypyc>=0.14.1"]
+dependencies = [
+    "hatch-mypyc>=0.14.1",
+    "click>=8.1.6",
+    "peft",
+    "git+https://github.com/bentoml/BentoML.git@main",
+    "git+https://github.com/huggingface/transformers.git@main",
+    "types-psutil",
+    "types-tabulate",
+    "types-PyYAML",
+    "types-protobuf",
+]
 enable-by-default = false
 mypy-args = ["--no-warn-unused-ignores"]
 require-runtime-dependencies = true

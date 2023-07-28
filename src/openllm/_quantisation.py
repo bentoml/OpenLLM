@@ -22,7 +22,6 @@ from .utils import is_bitsandbytes_available
 from .utils import is_transformers_supports_kbit
 from .utils import pkg
 
-
 # NOTE: We need to do this so that overload can register
 # correct overloads to typing registry
 if sys.version_info[:2] >= (3, 11):
@@ -81,7 +80,7 @@ def infer_quantisation_config(
         "true_sequential": attrs.pop("gptq_true_sequential", True),
     }
 
-    def create_int8_config(int8_skip_modules: list[str] | None):
+    def create_int8_config(int8_skip_modules: list[str] | None) -> transformers.BitsAndBytesConfig:
         if int8_skip_modules is None:
             int8_skip_modules = []
         if "lm_head" not in int8_skip_modules and cls.config_class.__openllm_model_type__ == "causal_lm":

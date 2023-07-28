@@ -29,7 +29,6 @@ import attr
 from ..exceptions import ForbiddenAttributeError
 from ..exceptions import OpenLLMException
 
-
 class UsageNotAllowedError(OpenLLMException):
     """Raised when LazyModule.__getitem__ is forbidden."""
 class MissingAttributesError(OpenLLMException):
@@ -68,22 +67,20 @@ class VersionInfo:
         v = s.split(".")
         if len(v) == 3: v.append("final")
         return cls(major=int(v[0]), minor=int(v[1]), micro=int(v[2]), releaselevel=v[3])
-    def _ensure_tuple(self, other: VersionInfo | tuple[t.Any, ...]) -> tuple[tuple[int, int, int, str], tuple[int, int, int, str]]:
+    def _ensure_tuple(self, other: VersionInfo) -> tuple[tuple[int, int, int, str], tuple[int, int, int, str]]:
         """Ensure *other* is a tuple of a valid length.
 
         Returns a possibly transformed *other* and ourselves as a tuple of
         the same length as *other*.
         """
-        if self.__class__ is other.__class__: other = attr.astuple(other)
-        if not isinstance(other, tuple): raise NotImplementedError
-        if not (1 <= len(other) <= 4): raise NotImplementedError
-        return attr.astuple(self)[: len(other)], other
-
+        cmp = attr.astuple(other) if self.__class__ is other.__class__ else other
+        if not isinstance(cmp, tuple): raise NotImplementedError
+        if not (1 <= len(cmp) <= 4): raise NotImplementedError
+        return t.cast(t.Tuple[int, int, int, str], attr.astuple(self)[: len(cmp)]), t.cast(t.Tuple[int, int, int, str], cmp)
     def __eq__(self, other: t.Any) -> bool:
         try: us, them = self._ensure_tuple(other)
         except NotImplementedError: return NotImplemented
         return us == them
-
     def __lt__(self, other: t.Any) -> bool:
         try: us, them = self._ensure_tuple(other)
         except NotImplementedError: return NotImplemented

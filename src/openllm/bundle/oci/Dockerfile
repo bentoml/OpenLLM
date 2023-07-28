@@ -77,7 +77,7 @@ RUN /opt/conda/bin/conda install -c "nvidia/label/cuda-11.8.0"  cuda==11.8 && \
 # NOTE: Build vllm CUDA kernels
 FROM kernel-builder as vllm-builder
 
-ENV COMMIT_HASH 58a072be15a4e36bee006d1c9a962e527819cf18
+ENV COMMIT_HASH c0d00f5be6d3ed390534dd909c82b639baf2d359
 ARG COMMIT_HASH=${COMMIT_HASH}
 
 WORKDIR /usr/src

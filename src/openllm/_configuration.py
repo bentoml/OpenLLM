@@ -171,6 +171,7 @@ class PeftType(str, enum.Enum, metaclass=_PeftEnumMeta):
         if isinstance(value, str):
             normalized = inflection.underscore(value).upper()
             if normalized in cls._member_map_: return cls._member_map_[normalized]
+        return None
     @classmethod
     def supported(cls) -> set[str]: return {inflection.underscore(v.value) for v in cls}
     def to_str(self) -> str: return self.value
@@ -1856,9 +1857,7 @@ class LLMConfig(_ConfigAttr):
     @classmethod
     def peft_task_type(cls) -> str: return _PEFT_TASK_TYPE_TARGET_MAPPING[cls.__openllm_model_type__]
     @classmethod
-    def default_implementation(cls) -> LiteralRuntime:
-        env_implementation = cls.__openllm_env__["framework_value"]
-        return env_implementation if env_implementation is not None else get_default_implementation(cls.__openllm_default_implementation__)
+    def default_implementation(cls) -> LiteralRuntime: return first_not_none(cls.__openllm_env__["framework_value"], default=get_default_implementation(cls.__openllm_default_implementation__))
 
 
 bentoml_cattr.register_unstructure_hook_factory(

@@ -11,11 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 from __future__ import annotations
 import asyncio
 import logging
-import sys
 import typing as t
 from abc import abstractmethod
 from http import HTTPStatus
@@ -26,16 +24,9 @@ import httpx
 import bentoml
 import openllm
 
-
-# NOTE: We need to do this so that overload can register
-# correct overloads to typing registry
-if sys.version_info[:2] >= (3, 11):
-    from typing import overload
-else:
-    from typing_extensions import overload
-
 if t.TYPE_CHECKING:
     import transformers
+    from openllm._types import DictStrAny
     from openllm._types import LiteralRuntime
     class AnnotatedClient(bentoml.client.Client):
         def health(self, *args: t.Any, **attrs: t.Any) -> t.Any: ...
@@ -119,7 +110,7 @@ class ClientMeta(t.Generic[T]):
             self.__client__ = t.cast("AnnotatedClient", self._client_class.from_url(self._address))
         return self.__client__
 
-    def prepare(self, prompt: str, **attrs: t.Any):
+    def prepare(self, prompt: str, **attrs: t.Any) -> tuple[bool, str, DictStrAny, DictStrAny]:
         return_raw_response = attrs.pop("return_raw_response", False)
         return return_raw_response, *self.llm.sanitize_parameters(prompt, **attrs)
     @abstractmethod
@@ -131,13 +122,6 @@ class BaseClient(ClientMeta[T]):
     def health(self) -> t.Any: raise NotImplementedError
     def chat(self, prompt: str, history: list[str], **attrs: t.Any) -> str: raise NotImplementedError
     def embed(self, prompt: t.Sequence[str] | str) -> openllm.EmbeddingsOutput: raise NotImplementedError
-
-    @overload
-    def query(self, prompt: str, *, return_raw_response: t.Literal[False] = ..., **attrs: t.Any) -> str: ...
-    @overload
-    def query(self, prompt: str, *, return_raw_response: t.Literal[True] = ..., **attrs: t.Any) -> dict[str, t.Any]: ...
-    @overload
-    def query(self, prompt: str, *, return_attrs: t.Literal[True] = True, **attrs: t.Any) -> openllm.GenerationOutput: ...
     def query(self, prompt: str, **attrs: t.Any) -> openllm.GenerationOutput | dict[str, t.Any] | str:
         # NOTE: We set use_default_prompt_template to False for now.
         use_default_prompt_template = attrs.pop("use_default_prompt_template", False)
@@ -152,7 +136,6 @@ class BaseClient(ClientMeta[T]):
         if return_raw_response: return openllm.utils.bentoml_cattr.unstructure(r)
         return self.llm.postprocess_generate(prompt, r.responses, **postprocess_kwargs)
     def predict(self, prompt: str, **attrs: t.Any) -> t.Any: return self.query(prompt, **attrs)
-
     def ask_agent(self, task: str, *, return_code: bool = False, remote: bool = False, agent_type: t.LiteralString = "hf", **attrs: t.Any) -> t.Any:
         if agent_type == "hf": return self._run_hf_agent(task, return_code=return_code, remote=remote, **attrs)
         else: raise RuntimeError(f"Unknown 'agent_type={agent_type}'")
@@ -172,14 +155,7 @@ class BaseClient(ClientMeta[T]):
 class BaseAsyncClient(ClientMeta[T]):
     async def health(self) -> t.Any: raise NotImplementedError
     async def chat(self, prompt: str, history: list[str], **attrs: t.Any) -> str: raise NotImplementedError
-    async def embed(self, prompt: t.Sequence[str] | str) -> t.Sequence[float]: raise NotImplementedError
-
-    @overload
-    async def query(self, prompt: str, *, return_attrs: t.Literal[True] = True, return_raw_response: bool | None = ..., **attrs: t.Any) -> openllm.GenerationOutput: ...
-    @overload
-    async def query(self, prompt: str, *, return_raw_response: t.Literal[False] = ..., **attrs: t.Any) -> str: ...
-    @overload
-    async def query(self, prompt: str, *, return_raw_response: t.Literal[True] = ..., **attrs: t.Any) -> dict[str, t.Any]: ...
+    async def embed(self, prompt: t.Sequence[str] | str) -> openllm.EmbeddingsOutput: raise NotImplementedError
     async def query(self, prompt: str, **attrs: t.Any) -> dict[str, t.Any] | str | openllm.GenerationOutput:
         # NOTE: We set use_default_prompt_template to False for now.
         use_default_prompt_template = attrs.pop("use_default_prompt_template", False)

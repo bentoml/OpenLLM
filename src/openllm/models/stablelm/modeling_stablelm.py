@@ -17,7 +17,7 @@ import typing as t
 import openllm
 from .configuration_stablelm import DEFAULT_PROMPT_TEMPLATE
 from .configuration_stablelm import SYSTEM_PROMPT
-from ..._prompt import default_formatter
+from ..._prompt import process_prompt
 if t.TYPE_CHECKING: import transformers, torch
 else: transformers, torch = openllm.utils.LazyLoader("transformers", globals(), "transformers"), openllm.utils.LazyLoader("torch", globals(), "torch")
 logger = logging.getLogger(__name__)
@@ -28,10 +28,8 @@ class StableLM(openllm.LLM["transformers.GPTNeoXForCausalLM", "transformers.GPTN
     def import_kwargs(self) -> tuple[dict[str, t.Any], dict[str, t.Any]]: return {"torch_dtype": torch.float16 if torch.cuda.is_available() else torch.float32}, {}
     def sanitize_parameters(self, prompt: str, temperature: float | None = None, max_new_tokens: int | None = None, top_k: int | None = None, top_p: float | None = None, use_default_prompt_template: bool = False, **attrs: t.Any) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
         if "tuned" in self._model_id and use_default_prompt_template:
-            prompt_variables = {k: v for k, v in attrs.items() if k in default_formatter.extract_template_variables(DEFAULT_PROMPT_TEMPLATE)}
-            if "instruction" in prompt_variables: raise RuntimeError("'instruction' should be passed as the first argument instead of kwargs when 'use_default_prompt_template=True'")
-            system_prompt = prompt_variables.pop("system_prompt", SYSTEM_PROMPT)
-            prompt_text = DEFAULT_PROMPT_TEMPLATE.format(instruction=prompt, system_prompt=system_prompt)
+            system_prompt = attrs.pop("system_prompt", SYSTEM_PROMPT)
+            prompt_text = process_prompt(prompt, DEFAULT_PROMPT_TEMPLATE, use_default_prompt_template, system_prompt=system_prompt, **attrs)
         else: prompt_text = prompt
         return prompt_text, {"max_new_tokens": max_new_tokens, "temperature": temperature, "top_k": top_k, "top_p": top_p}, {}
     def postprocess_generate(self, prompt: str, generation_result: list[str], **_: t.Any) -> str: return generation_result[0]

@@ -34,11 +34,13 @@ from ..utils import generate_context
 from ..utils import generate_labels
 from ..utils import is_autogptq_available
 from ..utils import is_torch_available
+from ..utils import lenient_issubclass
 from ..utils import normalize_attrs_to_model_tokenizer_pair
 
 if t.TYPE_CHECKING:
     import auto_gptq as autogptq
     import torch
+    import torch.cuda
     import vllm
 
     import openllm
@@ -53,6 +55,7 @@ else:
     autogptq = LazyLoader("autogptq", globals(), "auto_gptq")
     _transformers = LazyLoader("_transformers", globals(), "transformers")
     torch = LazyLoader("torch", globals(), "torch")
+    torch.cuda = LazyLoader("torch.cuda", globals(), "torch.cuda")
 
 _object_setattr = object.__setattr__
 
@@ -65,7 +68,7 @@ def process_transformers_config(model_id: str, trust_remote_code: bool, **attrs:
         copied_attrs = copy.deepcopy(attrs)
         if copied_attrs.get("torch_dtype", None) == "auto": copied_attrs.pop("torch_dtype")
         config, attrs = _transformers.AutoConfig.from_pretrained(model_id, return_unused_kwargs=True, trust_remote_code=trust_remote_code, **hub_attrs, **copied_attrs)
-    return t.cast("_transformers.PretrainedConfig", config), hub_attrs, t.cast("dict[str, t.Any]", attrs)
+    return t.cast("_transformers.PretrainedConfig", config), hub_attrs, attrs
 
 def infer_tokenizers_class_for_llm(__llm: openllm.LLM[t.Any, T]) -> T:
     tokenizer_class = __llm.config["tokenizer_class"]
@@ -154,7 +157,7 @@ def import_model(llm: openllm.LLM[M, T], *decls: t.Any, trust_remote_code: bool,
     # to avoid recursive call when the model is not yet available in local store
     _object_setattr(llm, "__llm_model__", model)
     _object_setattr(llm, "__llm_tokenizer__", _tokenizer)
-    create_kwargs = dict(
+    create_kwargs: DictStrAny= dict(
         module="openllm.serialisation.transformers", api_version="v1", context=generate_context(framework_name="openllm"), labels=generate_labels(llm), metadata=metadata,
         signatures=signatures if signatures else make_default_signatures(model), options=ModelOptions(),
         external_modules=[importlib.import_module(model.__module__), importlib.import_module(_tokenizer.__module__)] if trust_remote_code else None,
@@ -250,11 +253,13 @@ def save_pretrained(
     if llm._quantize_method == "gptq":
         if not is_autogptq_available(): raise OpenLLMException("GPTQ quantisation requires 'auto-gptq' (Not found in local environment). Install it with 'pip install \"openllm[gptq]\"'")
         if llm.config["model_type"] != "causal_lm": raise OpenLLMException(f"GPTQ only support Causal LM (got {llm.__class__} of {llm.config['model_type']})")
-        llm.model.save_quantized(save_directory, use_safetensors=safe_serialization)
+        if not lenient_issubclass(llm.model, autogptq.modeling.BaseGPTQForCausalLM): raise ValueError(f"Model is not a BaseGPTQForCausalLM (type: {type(llm.model)})")
+        t.cast("autogptq.modeling.BaseGPTQForCausalLM", llm.model).save_quantized(save_directory, use_safetensors=safe_serialization)
     elif LazyType["vllm.LLMEngine"]("vllm.LLMEngine").isinstance(llm.model): raise RuntimeError("vllm.LLMEngine cannot be serialisation directly. This happens when 'save_pretrained' is called directly after `openllm.AutoVLLM` is initialized.")
     elif isinstance(llm.model, _transformers.Pipeline): llm.model.save_pretrained(save_directory, safe_serialization=safe_serialization)
     else:
-        llm.model.save_pretrained(
+        # We can safely cast here since it will be the PreTrainedModel protocol.
+        t.cast("_transformers.PreTrainedModel", llm.model).save_pretrained(
             save_directory,
             is_main_process=is_main_process,
             state_dict=state_dict,

@@ -35,8 +35,7 @@ from bentoml._internal.configuration import GRPC_DEBUG_ENV_VAR as _GRPC_DEBUG_EN
 from bentoml._internal.configuration import QUIET_ENV_VAR as QUIET_ENV_VAR
 from bentoml._internal.configuration import get_debug_mode as _get_debug_mode
 from bentoml._internal.configuration import get_quiet_mode as _get_quiet_mode
-from bentoml._internal.configuration import set_quiet_mode
-from bentoml._internal.log import configure_server_logging
+from bentoml._internal.configuration import set_quiet_mode as set_quiet_mode
 from bentoml._internal.models.model import ModelContext as _ModelContext
 from bentoml._internal.types import LazyType as LazyType
 from bentoml._internal.utils import LazyLoader as LazyLoader
@@ -386,13 +385,11 @@ if t.TYPE_CHECKING:
     from . import bentoml_cattr as bentoml_cattr
     from . import codegen as codegen
     from . import configure_logging as configure_logging
-    from . import configure_server_logging as configure_server_logging
     from . import dantic as dantic
     from . import first_not_none as first_not_none
     from . import reserve_free_port as reserve_free_port
     from . import set_quiet_mode as set_quiet_mode
     from . import validate_is_path as validate_is_path
-    from . import validate_or_create_dir as validate_or_create_dir
     from .import_utils import ENV_VARS_TRUE_VALUES as ENV_VARS_TRUE_VALUES
     from .import_utils import OPTIONAL_DEPENDENCIES as OPTIONAL_DEPENDENCIES
     from .import_utils import DummyMetaclass as DummyMetaclass

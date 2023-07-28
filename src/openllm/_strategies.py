@@ -79,12 +79,12 @@ _STACK_LEVEL = 3
 @overload
 def _parse_visible_devices(default_var: str | None = ..., respect_env: t.Literal[True] = True) -> list[str] | None: ...
 @overload
-def _parse_visible_devices(default_var: str = ..., respect_env: t.Literal[False] = False) -> list[str]: ...
+def _parse_visible_devices(default_var: str = ..., respect_env: t.Literal[False] = ...) -> list[str]: ...
 def _parse_visible_devices(default_var: str | None = None, respect_env: bool = True) -> list[str] | None:
     """CUDA_VISIBLE_DEVICES aware with default var for parsing spec."""
     if respect_env:
         spec = os.getenv("CUDA_VISIBLE_DEVICES", default_var)
-        if not spec: return
+        if not spec: return None
     else:
         if default_var is None: raise ValueError("spec is required to be not None when parsing spec.")
         spec = default_var
@@ -140,13 +140,10 @@ def _from_system(cls: type[DynResource]) -> list[str]:
         else:
             try:
                 from cuda import cuda
-                err, *_ = cuda.cuInit(0)
-                if err != cuda.CUresult.CUDA_SUCCESS:
-                    logger.warning("Failed to initialise CUDA", stacklevel=_STACK_LEVEL)
-                    return []
+                cuda.cuInit(0)
                 _, dev = cuda.cuDeviceGetCount()
                 return [str(i) for i in range(dev)]
-            except (ImportError, RuntimeError): return []
+            except (ImportError, RuntimeError, AttributeError): return []
     return visible_devices
 
 
@@ -185,36 +182,36 @@ def _raw_device_uuid_nvml() -> list[str] | None:
     try: nvml_h = CDLL("libnvidia-ml.so.1")
     except Exception:
         warnings.warn("Failed to find nvidia binding", stacklevel=_STACK_LEVEL)
-        return
+        return None
 
     rc = nvml_h.nvmlInit()
     if rc != 0:
         warnings.warn("Can't initialize NVML", stacklevel=_STACK_LEVEL)
-        return
+        return None
     dev_count = c_int(-1)
     rc = nvml_h.nvmlDeviceGetCount_v2(byref(dev_count))
     if rc != 0:
         warnings.warn("Failed to get available device from system.", stacklevel=_STACK_LEVEL)
-        return
+        return None
     uuids: list[str] = []
     for idx in range(dev_count.value):
         dev_id = c_void_p()
         rc = nvml_h.nvmlDeviceGetHandleByIndex_v2(idx, byref(dev_id))
         if rc != 0:
             warnings.warn(f"Failed to get device handle for {idx}", stacklevel=_STACK_LEVEL)
-            return
+            return None
         buf_len = 96
         buf = create_string_buffer(buf_len)
         rc = nvml_h.nvmlDeviceGetUUID(dev_id, buf, buf_len)
         if rc != 0:
             warnings.warn(f"Failed to get device UUID for {idx}", stacklevel=_STACK_LEVEL)
-            return
+            return None
         uuids.append(buf.raw.decode("ascii").strip("\0"))
     del nvml_h
     return uuids
 
 
-def _validate(cls: type[DynResource], val: list[t.Any]):
+def _validate(cls: type[DynResource], val: list[t.Any]) -> None:
     if cls.resource_id == "amd.com/gpu":
         raise RuntimeError("AMD GPU validation is not yet supported. Make sure to call 'get_resource(..., validate=False)'")
     if not all(isinstance(i, str) for i in val): raise ValueError("Input list should be all string type.")
@@ -256,10 +253,11 @@ def _make_resource_class(name: str, resource_kind: str, docstring: str) -> type[
         ),
     )
 
-_TPU_RESOURCE = "cloud-tpus.google.com/v2"
-_AMD_GPU_RESOURCE = "amd.com/gpu"
-_NVIDIA_GPU_RESOURCE = "nvidia.com/gpu"
-_CPU_RESOURCE = "cpu"
+# NOTE: we need to hint these t.Literal since mypy is to dumb to infer this as literal :facepalm:
+_TPU_RESOURCE: t.Literal["cloud-tpus.google.com/v2"] = "cloud-tpus.google.com/v2"
+_AMD_GPU_RESOURCE: t.Literal["amd.com/gpu"] = "amd.com/gpu"
+_NVIDIA_GPU_RESOURCE: t.Literal["nvidia.com/gpu"] = "nvidia.com/gpu"
+_CPU_RESOURCE: t.Literal["cpu"] = "cpu"
 
 NvidiaGpuResource = _make_resource_class(
     "NvidiaGpuResource",
@@ -311,67 +309,38 @@ class CascadingResourceStrategy(bentoml.Strategy, ReprMixin):
 
     TODO: Support CloudTPUResource
     """
-
-    @property
-    def __repr_keys__(self) -> set[str]:
-        return set()
-
     @classmethod
-    def get_worker_count(
-        cls,
-        runnable_class: type[bentoml.Runnable],
-        resource_request: dict[str, t.Any] | None,
-        workers_per_resource: int | float,
-    ) -> int:
-        if resource_request is None:
-            resource_request = system_resources()
+    def get_worker_count(cls, runnable_class: type[bentoml.Runnable], resource_request: dict[str, t.Any] | None, workers_per_resource: int | float) -> int:
+        if resource_request is None: resource_request = system_resources()
 
-        def _get_gpu_count(typ: list[str] | None, kind: str):
-            if typ is not None and len(typ) > 0 and kind in runnable_class.SUPPORTED_RESOURCES:
-                return math.ceil(len(typ) * workers_per_resource)
+        def _get_gpu_count(typ: list[str] | None, kind: str) -> int | None:
+            if typ is not None and len(typ) > 0 and kind in runnable_class.SUPPORTED_RESOURCES: return math.ceil(len(typ) * workers_per_resource)
 
         # use NVIDIA
         kind = "nvidia.com/gpu"
         count = _get_gpu_count(get_resource(resource_request, kind), kind)
-        if count:
-            return count
+        if count: return count
 
         # use AMD
         kind = "amd.com/gpu"
         count = _get_gpu_count(get_resource(resource_request, kind, validate=False), kind)
-        if count:
-            return count
+        if count: return count
 
         # use CPU
         cpus = get_resource(resource_request, "cpu")
         if cpus is not None and cpus > 0:
-            if "cpu" not in runnable_class.SUPPORTED_RESOURCES:
-                logger.warning(
-                    "No known supported resource available for %s, falling back to using CPU.",
-                    runnable_class,
-                )
+            if "cpu" not in runnable_class.SUPPORTED_RESOURCES: logger.warning("No known supported resource available for %s, falling back to using CPU.", runnable_class)
 
             if runnable_class.SUPPORTS_CPU_MULTI_THREADING:
-                if isinstance(workers_per_resource, float) and workers_per_resource < 1.0:
-                    raise ValueError("Fractional CPU multi threading support is not yet supported.")
+                if isinstance(workers_per_resource, float) and workers_per_resource < 1.0: raise ValueError("Fractional CPU multi threading support is not yet supported.")
                 return int(workers_per_resource)
 
             return math.ceil(cpus) * workers_per_resource
 
         # this should not be reached by user since we always read system resource as default
-        raise ValueError(
-            f"No known supported resource available for {runnable_class}. Please check your resource request. "
-            "Leaving it blank will allow BentoML to use system resources."
-        )
-
+        raise ValueError(f"No known supported resource available for {runnable_class}. Please check your resource request. Leaving it blank will allow BentoML to use system resources.")
     @classmethod
-    def get_worker_env(
-        cls,
-        runnable_class: type[bentoml.Runnable],
-        resource_request: dict[str, t.Any] | None,
-        workers_per_resource: int | float,
-        worker_index: int,
-    ) -> dict[str, t.Any]:
+    def get_worker_env(cls, runnable_class: type[bentoml.Runnable], resource_request: dict[str, t.Any] | None, workers_per_resource: int | float, worker_index: int) -> dict[str, t.Any]:
         """Get worker env for this given worker_index.
 
         Args:
@@ -385,8 +354,7 @@ class CascadingResourceStrategy(bentoml.Strategy, ReprMixin):
 
         environ: dict[str, t.Any] = {}
 
-        if resource_request is None:
-            resource_request = system_resources()
+        if resource_request is None: resource_request = system_resources()
 
         # use NVIDIA
         kind = "nvidia.com/gpu"
@@ -396,9 +364,7 @@ class CascadingResourceStrategy(bentoml.Strategy, ReprMixin):
                 logger.debug("CUDA_VISIBLE_DEVICES is disabled, %s will not be using GPU.", worker_index)
                 environ["CUDA_VISIBLE_DEVICES"] = cuda_env
                 return environ
-            environ["CUDA_VISIBLE_DEVICES"] = cls.transpile_workers_to_cuda_envvar(
-                workers_per_resource, typ, worker_index
-            )
+            environ["CUDA_VISIBLE_DEVICES"] = cls.transpile_workers_to_cuda_envvar(workers_per_resource, typ, worker_index)
             logger.debug("Environ for worker %s: %s", worker_index, environ)
             return environ
 
@@ -410,9 +376,7 @@ class CascadingResourceStrategy(bentoml.Strategy, ReprMixin):
                 logger.debug("CUDA_VISIBLE_DEVICES is disabled, %s will not be using GPU.", worker_index)
                 environ["CUDA_VISIBLE_DEVICES"] = cuda_env
                 return environ
-            environ["CUDA_VISIBLE_DEVICES"] = cls.transpile_workers_to_cuda_envvar(
-                workers_per_resource, typ, worker_index
-            )
+            environ["CUDA_VISIBLE_DEVICES"] = cls.transpile_workers_to_cuda_envvar(workers_per_resource, typ, worker_index)
             logger.debug("Environ for worker %s: %s", worker_index, environ)
             return environ
 
@@ -422,12 +386,10 @@ class CascadingResourceStrategy(bentoml.Strategy, ReprMixin):
             environ["CUDA_VISIBLE_DEVICES"] = "-1"  # disable gpu
             if runnable_class.SUPPORTS_CPU_MULTI_THREADING:
                 thread_count = math.ceil(cpus)
-                for thread_env in THREAD_ENVS:
-                    environ[thread_env] = os.getenv(thread_env, str(thread_count))
+                for thread_env in THREAD_ENVS: environ[thread_env] = os.getenv(thread_env, str(thread_count))
                 logger.debug("Environ for worker %s: %s", worker_index, environ)
                 return environ
-            for thread_env in THREAD_ENVS:
-                environ[thread_env] = os.getenv(thread_env, "1")
+            for thread_env in THREAD_ENVS: environ[thread_env] = os.getenv(thread_env, "1")
             return environ
 
         return environ
@@ -439,31 +401,17 @@ class CascadingResourceStrategy(bentoml.Strategy, ReprMixin):
             # NOTE: We hit this branch when workers_per_resource is set to
             # float, for example 0.5 or 0.25
             if workers_per_resource > 1:
-                raise ValueError(
-                    "Currently, the default strategy doesn't support workers_per_resource > 1. It is recommended that one should implement a custom strategy in this case."
-                )
+                raise ValueError("Currently, the default strategy doesn't support workers_per_resource > 1. It is recommended that one should implement a custom strategy in this case.")
             # We are round the assigned resource here. This means if workers_per_resource=.4
             # then it will round down to 2. If workers_per_source=0.6, then it will also round up to 2.
             assigned_resource_per_worker = round(1 / workers_per_resource)
             if len(gpus) < assigned_resource_per_worker:
-                logger.warning(
-                    "Failed to allocate %s GPUs for %s (number of available GPUs < assigned workers per resource [%s])",
-                    gpus,
-                    worker_index,
-                    assigned_resource_per_worker,
-                )
-                raise IndexError(
-                    f"There aren't enough assigned GPU(s) for given worker id '{worker_index}' [required: {assigned_resource_per_worker}]."
-                )
-            assigned_gpu = gpus[
-                assigned_resource_per_worker * worker_index : assigned_resource_per_worker * (worker_index + 1)
-            ]
+                logger.warning("Failed to allocate %s GPUs for %s (number of available GPUs < assigned workers per resource [%s])", gpus, worker_index, assigned_resource_per_worker)
+                raise IndexError(f"There aren't enough assigned GPU(s) for given worker id '{worker_index}' [required: {assigned_resource_per_worker}].")
+            assigned_gpu = gpus[assigned_resource_per_worker * worker_index : assigned_resource_per_worker * (worker_index + 1) ]
             dev = ",".join(assigned_gpu)
         else:
             idx = worker_index // workers_per_resource
-            if idx >= len(gpus):
-                raise ValueError(
-                    f"Number of available GPU ({gpus}) preceeds the given workers_per_resource {workers_per_resource}"
-                )
+            if idx >= len(gpus): raise ValueError(f"Number of available GPU ({gpus}) preceeds the given workers_per_resource {workers_per_resource}")
             dev = str(gpus[idx])
         return dev

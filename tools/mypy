@@ -6,4 +6,4 @@
     exit 1
 )
 
-mypy --config pyproject.toml --ignore-missing-imports || exit 0
+mypy --config pyproject.toml || exit 0

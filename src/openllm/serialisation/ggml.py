@@ -22,12 +22,12 @@ import bentoml
 
 from ..exceptions import OpenLLMException
 
-
 if t.TYPE_CHECKING:
     import openllm
 
     from .._llm import M
 
+_conversion_strategy = {"pt": "ggml"}
 
 def import_model(
     llm: openllm.LLM[t.Any, t.Any],

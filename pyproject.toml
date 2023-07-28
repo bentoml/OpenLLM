@@ -72,8 +72,10 @@ requires-python = ">=3.8"
 openllm = "openllm.cli.entrypoint:cli"
 openllm-build-base-container = "openllm.cli.ext.build_base_container:cli"
 openllm-dive-bentos = "openllm.cli.ext.dive_bentos:cli"
+openllm-get-containerfile = "openllm.cli.ext.get_containerfile:cli"
 openllm-get-prompt = "openllm.cli.ext.get_prompt:cli"
 openllm-list-bentos = "openllm.cli.ext.list_bentos:cli"
+openllm-list-models = "openllm.cli.ext.list_models:cli"
 
 [project.urls]
 Blog = "https://modelserving.com"
@@ -353,6 +355,13 @@ module = [
     "peft.*",
     "auto_gptq.*",
     "vllm.*",
+    "orjson.*",
+    "git.*",
+    "httpx.*",
+    "cloudpickle.*",
+    "circus.*",
+    "grpc_health.*",
+    "transformers.*",
 ]
 [[tool.mypy.overrides]]
 ignore_errors = true

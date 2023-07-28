@@ -20,8 +20,7 @@ from __future__ import annotations
 import typing as t
 
 
-if not t.TYPE_CHECKING:
-    raise RuntimeError(f"{__name__} should not be imported during runtime")
+if not t.TYPE_CHECKING: raise RuntimeError(f"{__name__} should not be imported during runtime")
 
 
 import attr
@@ -34,9 +33,7 @@ from ._configuration import LiteralRuntime as LiteralRuntime
 
 
 if t.TYPE_CHECKING:
-    import click
     import peft
-    import torch
 
     import openllm
     from openllm._llm import M as _M
@@ -56,23 +53,6 @@ O_co = t.TypeVar("O_co", covariant=True)
 T = t.TypeVar("T")
 Ts = t.TypeVarTuple("Ts")
 At = t.TypeVar("At", bound=attr.AttrsInstance)
-
-
-class ClickFunctionWrapper(t.Protocol[P, O_co]):
-    __name__: str
-    __click_params__: list[click.Option]
-
-    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> O_co:
-        ...
-
-
-# F is a t.Callable[P, O_co] with compatible to ClickFunctionWrapper
-class F(t.Generic[P, O_co]):
-    __name__: str
-    __click_params__: list[click.Option]
-
-    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> O_co:
-        ...
 
 
 class PeftAdapterOutput(t.TypedDict):

@@ -14,7 +14,6 @@ import click
 
 from ._core import _FC
 from ._core import AnyCallable
-from ._core import Decorator
 from ._core import OptionGroup
 
 class OptionStackItem(NamedTuple):
@@ -61,6 +60,6 @@ class _OptGroup:
         cls: Optional[Type[_GrpType]] = None,
         **attrs: Any,
     ) -> Union[click.Command, Callable[[AnyCallable], click.Command]]: ...
-    def option(self, *param_decls: Any, **attrs: Any) -> Decorator[_FC]: ...
+    def option(self, *param_decls: Any, **attrs: Any) -> Callable[[_FC], _FC]: ...
 
 optgroup: _OptGroup = ...

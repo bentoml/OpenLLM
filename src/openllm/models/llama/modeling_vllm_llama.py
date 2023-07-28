@@ -16,18 +16,11 @@ import logging
 import typing as t
 import openllm
 from .configuration_llama import DEFAULT_PROMPT_TEMPLATE
-from ..._prompt import default_formatter
+from ..._prompt import process_prompt
 if t.TYPE_CHECKING: import vllm, transformers
 logger = logging.getLogger(__name__)
 class VLLMLlama(openllm.LLM["vllm.LLMEngine", "transformers.LlamaTokenizerFast"]):
     __openllm_internal__ = True
     def sanitize_parameters(self, prompt: str, top_k: int | None = None, top_p: float | None = None, temperature: float | None = None, max_new_tokens: int | None = None, use_default_prompt_template: bool = False, use_llama2_prompt: bool = True, **attrs: t.Any) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
-        if use_default_prompt_template:
-            _PROMPT = DEFAULT_PROMPT_TEMPLATE("v2" if use_llama2_prompt else "v1")
-            template_variables = default_formatter.extract_template_variables(_PROMPT)
-            prompt_variables = {k: v for k, v in attrs.items() if k in template_variables}
-            if "instruction" in prompt_variables: raise RuntimeError("'instruction' should be passed as the first argument instead of kwargs when 'use_default_prompt_template=True'")
-            try: prompt_text = _PROMPT.format(instruction=prompt, **prompt_variables)
-            except KeyError as e: raise RuntimeError(f"Missing variable '{e.args[0]}' (required: {template_variables}) in the prompt template. Use 'use_default_prompt_template=False' to disable the default prompt template.") from None
-        else: prompt_text = prompt
-        return prompt_text, {"max_new_tokens": max_new_tokens, "temperature": temperature, "top_p": top_p, "top_k": top_k}, {}
+        _template = DEFAULT_PROMPT_TEMPLATE("v2" if use_llama2_prompt else "v1") if use_default_prompt_template else None
+        return process_prompt(prompt, _template, use_default_prompt_template, **attrs), {"max_new_tokens": max_new_tokens, "temperature": temperature, "top_p": top_p, "top_k": top_k}, {}

@@ -15,8 +15,7 @@ from __future__ import annotations
 import typing as t
 import openllm
 from ..._llm import LLMEmbeddings
-if t.TYPE_CHECKING:
-    import torch, transformers, torch.nn.functional as F
+if t.TYPE_CHECKING: import torch, transformers, torch.nn.functional as F
 else: torch, transformers, F = openllm.utils.LazyLoader("torch", globals(), "torch"), openllm.utils.LazyLoader("transformers", globals(), "transformers"), openllm.utils.LazyLoader("F", globals(), "torch.nn.functional")
 class ChatGLM(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTrainedTokenizerFast"]):
     __openllm_internal__ = True

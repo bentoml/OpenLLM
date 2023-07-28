@@ -343,7 +343,9 @@ if t.TYPE_CHECKING:
     class _save_pretrained_wrapper(t.Generic[M, T]):
         def __call__(self, llm: LLM[M, T], save_directory: str | Path, **attrs: t.Any) -> None: ...
 
-def _wrapped_import_model(f: _import_model_wrapper[bentoml.Model, M, T]):
+_object_setattr = object.__setattr__
+
+def _wrapped_import_model(f: _import_model_wrapper[bentoml.Model, M, T]) -> t.Callable[[LLM[M, T]], bentoml.Model]:
     @functools.wraps(f)
     def wrapper(self: LLM[M, T], *decls: t.Any, trust_remote_code: bool | None = None, **attrs: t.Any) -> bentoml.Model:
         trust_remote_code = first_not_none(trust_remote_code, default=self.__llm_trust_remote_code__)
@@ -360,7 +362,7 @@ _DEFAULT_TOKENIZER = "hf-internal-testing/llama-tokenizer"
 @requires_dependencies("vllm", extra="vllm")
 def get_engine_args(llm: LLM[M, T], tokenizer: str = _DEFAULT_TOKENIZER) -> vllm.EngineArgs:
     return vllm.EngineArgs(model=llm._bentomodel.path, tokenizer=tokenizer, tokenizer_mode="auto", tensor_parallel_size=1 if device_count() < 2 else device_count(), dtype="auto", worker_use_ray=False)
-def _wrapped_load_model(f: _load_model_wrapper[M, T]):
+def _wrapped_load_model(f: _load_model_wrapper[M, T]) -> t.Callable[[LLM[M, T]], M | vllm.LLMEngine]:
     @functools.wraps(f)
     def wrapper(self: LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M | vllm.LLMEngine:
         # wrapped around custom init to provide some meta compression for all decls and attrs
@@ -374,7 +376,7 @@ def _wrapped_load_model(f: _load_model_wrapper[M, T]):
             return f(self, *(*model_decls, *decls), **{**model_attrs, **attrs})
     return wrapper
 
-def _wrapped_load_tokenizer(f: _load_tokenizer_wrapper[M, T]):
+def _wrapped_load_tokenizer(f: _load_tokenizer_wrapper[M, T]) -> t.Callable[[LLM[M, T]], T]:
     @functools.wraps(f)
     def wrapper(self: LLM[M, T], **tokenizer_attrs: t.Any) -> T:
         _, model_tokenizer_attrs = self.llm_parameters
@@ -384,17 +386,17 @@ def _wrapped_load_tokenizer(f: _load_tokenizer_wrapper[M, T]):
 
 def _wrapped_llm_post_init(f: _llm_post_init_wrapper[M, T]) -> t.Callable[[LLM[M, T]], None]:
     @functools.wraps(f)
-    def wrapper(self: LLM[M, T]):
+    def wrapper(self: LLM[M, T]) -> None:
         _default_post_init(self)
         f(self)
     return wrapper
 
-def _wrapped_save_pretrained(f: _save_pretrained_wrapper[M, T]):
+def _wrapped_save_pretrained(f: _save_pretrained_wrapper[M, T]) -> t.Callable[[LLM[M, T], str | Path], None]:
     @functools.wraps(f)
     def wrapper(self: LLM[M, T], save_directory: str | Path, **attrs: t.Any) -> None:
         if isinstance(save_directory, Path): save_directory = str(save_directory)
-        if self.__llm_model__ is not None and self.bettertransformer and self.__llm_implementation__ == "pt":
-            self.__llm_model__ = t.cast("transformers.PreTrainedModel", self.__llm_model__).reverse_bettertransformer()
+        if self.__llm_model__ is None: raise RuntimeError("Cannot 'save_pretrained' with unload model instance.")
+        if self.bettertransformer and self.__llm_implementation__ == "pt": _object_setattr(self, "__llm_model__", t.cast("transformers.PreTrainedModel", self.__llm_model__).reverse_bettertransformer())
         f(self, save_directory, **attrs)
     return wrapper
 
@@ -505,8 +507,8 @@ class LLM(LLMInterface[M, T], ReprMixin):
                 self.model.add_request(request_id=str(uuid.uuid4().hex), prompt=prompt, sampling_params=self.config.model_construct_env(**attrs).to_sampling_config())
                 while self.model.has_unfinished_requests(): outputs.extend([r for r in self.model.step() if r.finished])
                 return [unmarshal_vllm_outputs(i) for i in outputs]
-            cls.postprocess_generate = vllm_postprocess_generate
-            cls.generate = vllm_generate
+            _object_setattr(cls, "postprocess_generate", vllm_postprocess_generate)
+            _object_setattr(cls, "generate", vllm_generate)
     # fmt: off
     @overload
     def __getitem__(self, item: t.Literal["trust_remote_code"]) -> bool: ...
@@ -616,11 +618,9 @@ class LLM(LLMInterface[M, T], ReprMixin):
             **attrs: The kwargs to be passed to the model.
         """
         cfg_cls = cls.config_class
-        model_id = t.cast("t.LiteralString", first_not_none(model_id, cfg_cls.__openllm_env__["model_id_value"], default=cfg_cls.__openllm_default_id__))
+        model_id = first_not_none(model_id, cfg_cls.__openllm_env__["model_id_value"], default=cfg_cls.__openllm_default_id__)
         if validate_is_path(model_id): model_id = resolve_filepath(model_id)
-        runtime = first_not_none(runtime, default=cfg_cls.__openllm_runtime__)
         quantize = first_not_none(quantize, cfg_cls.__openllm_env__["quantize_value"], default=None)
-        bettertransformer = first_not_none(bettertransformer, cfg_cls.__openllm_env__["bettertransformer_value"], default=None)
 
         # quantization setup
         if quantization_config and quantize: raise ValueError("'quantization_config' and 'quantize' are mutually exclusive. Either customise your quantization_config or use the 'quantize' argument.")
@@ -651,11 +651,11 @@ class LLM(LLMInterface[M, T], ReprMixin):
             *args,
             model_id=model_id,
             llm_config=llm_config,
-            bettertransformer=str(bettertransformer).upper() in ENV_VARS_TRUE_VALUES,
             quantization_config=quantization_config,
+            bettertransformer=str(first_not_none(bettertransformer, cfg_cls.__openllm_env__["bettertransformer_value"], default=None)).upper() in ENV_VARS_TRUE_VALUES,
+            _runtime=first_not_none(runtime, cfg_cls.__openllm_env__["runtime_value"], default=cfg_cls.__openllm_runtime__),
             _quantize_method=quantize,
             _adapters_mapping=resolve_peft_config_type(adapter_map) if adapter_map is not None else None,
-            _runtime=runtime,
             _model_version=_tag.version,
             _tag=_tag,
             _serialisation_format=serialisation,
@@ -801,7 +801,8 @@ class LLM(LLMInterface[M, T], ReprMixin):
         # this is helpful on system with low memory to avoid OOM
         low_cpu_mem_usage = attrs.pop("low_cpu_mem_usage", True)
         if self.__llm_implementation__ == "pt": attrs.update({"low_cpu_mem_usage": low_cpu_mem_usage, "quantization_config": quantization_config})
-        model_kwds, tokenizer_kwds = {}, {}
+        model_kwds: DictStrAny = {}
+        tokenizer_kwds: DictStrAny = {}
         if self.import_kwargs is not None: model_kwds, tokenizer_kwds = self.import_kwargs
         # parsing tokenizer and model kwargs, as the hierachy is param pass > default
         normalized_model_kwds, normalized_tokenizer_kwds = normalize_attrs_to_model_tokenizer_pair(**attrs)
@@ -895,7 +896,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
         if DEBUG: wrapped_peft.print_trainable_parameters()
         return wrapped_peft, self.tokenizer
     @requires_dependencies("peft", extra="fine-tune")
-    def apply_adapter(self, inference_mode: bool = True, adapter_type: AdapterType = "lora", load_adapters: t.Literal["all"] | list[str] | None = None, use_cache: bool = True) -> peft.PeftModel | M:
+    def apply_adapter(self, inference_mode: bool = True, adapter_type: AdapterType = "lora", load_adapters: t.Literal["all"] | list[str] | None = None, use_cache: bool = True) -> M:
         """Apply given LoRA mapping to the model.
 
         Note that the base model can still be accessed via self.model.get_base_model().
@@ -924,9 +925,10 @@ class LLM(LLMInterface[M, T], ReprMixin):
                     self.__llm_model__.load_adapter(_peft_model_id, adapter_name=adapter_name, is_trainable=not inference_mode, **dict(_peft_config.to_dict()))
 
         return self.__llm_model__
-    def _wrap_default_peft_model(self, adapter_mapping: dict[str, tuple[peft.PeftConfig, str]], inference_mode: bool):
+    def _wrap_default_peft_model(self, adapter_mapping: dict[str, tuple[peft.PeftConfig, str]], inference_mode: bool) -> M:
         if self.__llm_model__ is None: raise ValueError("Error: Model is not loaded correctly")
         if isinstance(self.__llm_model__, peft.PeftModel): return self.__llm_model__
+        if not isinstance(self.__llm_model__, transformers.PreTrainedModel): raise ValueError("Loading LoRA layers currently only runs on PyTorch models.")
 
         if "default" not in adapter_mapping: raise ValueError("There is no 'default' mapping. Please check the adapter mapping and report this bug to the OpenLLM team.")
         default_config, peft_model_id = adapter_mapping.pop("default")
@@ -1095,7 +1097,7 @@ def llm_runnable_class(self: LLM[M, T], embeddings_sig: ModelSignature, generate
                 logger.info("Applying LoRA to %s...", self.runner_name)
                 self.apply_adapter(inference_mode=True, load_adapters="all")
         @requires_dependencies("peft", extra="fine-tune")
-        def set_adapter(__self: _Runnable, adapter_name: str):
+        def set_adapter(__self: _Runnable, adapter_name: str) -> None:
             if self.__llm_adapter_map__ is None: raise ValueError("No adapters available for current running server.")
             elif not isinstance(self.model, peft.PeftModel): raise RuntimeError("Model is not a PeftModel")
             if adapter_name != "default": self.model.set_adapter(adapter_name)

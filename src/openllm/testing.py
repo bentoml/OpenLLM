@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Tests utilities for OpenLLM."""
 
 from __future__ import annotations
@@ -23,7 +22,6 @@ import typing as t
 
 import bentoml
 import openllm
-
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +36,7 @@ def build_bento(
     quantize: t.Literal["int4", "int8", "gptq"] | None = None,
     runtime: t.Literal["ggml", "transformers"] = "transformers",
     cleanup: bool = False,
-):
+) -> t.Iterator[bentoml.Bento]:
     logger.info("Building BentoML for %s", model)
     bento = openllm.build(model, model_id=model_id, quantize=quantize, runtime=runtime)
     yield bento
@@ -53,14 +51,10 @@ def build_container(
     image_tag: str | None = None,
     cleanup: bool = False,
     **attrs: t.Any,
-):
-    if isinstance(bento, bentoml.Bento):
-        bento_tag = bento.tag
-    else:
-        bento_tag = bentoml.Tag.from_taglike(bento)
-
-    if image_tag is None:
-        image_tag = str(bento_tag)
+) -> t.Iterator[str]:
+    if isinstance(bento, bentoml.Bento): bento_tag = bento.tag
+    else: bento_tag = bentoml.Tag.from_taglike(bento)
+    if image_tag is None: image_tag = str(bento_tag)
 
     executable = shutil.which("docker")
     if not executable:
@@ -90,7 +84,7 @@ def prepare(
     deployment_mode: t.Literal["container", "local"] = "local",
     clean_context: contextlib.ExitStack | None = None,
     cleanup: bool = True,
-):
+) -> t.Iterator[str]:
     if clean_context is None:
         clean_context = contextlib.ExitStack()
         cleanup = True
@@ -98,16 +92,11 @@ def prepare(
     llm = openllm.infer_auto_class(implementation).for_model(model, model_id=model_id, ensure_available=True)
     bento_tag = bentoml.Tag.from_taglike(f"{llm.llm_type}-service:{llm.tag.version}")
 
-    if not bentoml.list(bento_tag):
-        bento = clean_context.enter_context(build_bento(model, model_id=model_id, cleanup=cleanup))
-    else:
-        bento = bentoml.get(bento_tag)
+    if not bentoml.list(bento_tag): bento = clean_context.enter_context(build_bento(model, model_id=model_id, cleanup=cleanup))
+    else: bento = bentoml.get(bento_tag)
 
     container_name = f"openllm-{model}-{llm.llm_type}".replace("-", "_")
 
-    if deployment_mode == "container":
-        container_name = clean_context.enter_context(build_container(bento, image_tag=container_name, cleanup=cleanup))
-
+    if deployment_mode == "container": container_name = clean_context.enter_context(build_container(bento, image_tag=container_name, cleanup=cleanup))
     yield container_name
-    if cleanup:
-        clean_context.close()
+    if cleanup: clean_context.close()

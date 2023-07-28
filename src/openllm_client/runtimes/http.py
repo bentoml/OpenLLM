@@ -27,7 +27,6 @@ from .base import BaseAsyncClient
 from .base import BaseClient
 from .base import in_async_context
 
-
 if t.TYPE_CHECKING:
     from openllm._types import DictStrAny
     from openllm._types import LiteralRuntime
@@ -91,7 +90,7 @@ class AsyncHTTPClient(HTTPClientMixin, BaseAsyncClient[DictStrAny]):
         self._host, self._port = urlparse(address).netloc.split(":")
         super().__init__(address, timeout)
     async def health(self) -> t.Any: return await self._cached.async_health()
-    async def embed(self, prompt: list[str] | str) -> openllm.EmbeddingsOutput:
+    async def embed(self, prompt: t.Sequence[str] | str) -> openllm.EmbeddingsOutput:
         if not self.supports_embeddings:
             raise ValueError("This model does not support embeddings.")
         if isinstance(prompt, str): prompt = [prompt]

@@ -26,7 +26,6 @@ from .utils import LazyType
 from .utils import bentoml_cattr
 from .utils import requires_dependencies
 
-
 if t.TYPE_CHECKING:
     import vllm
 
@@ -106,7 +105,7 @@ class MetadataOutput:
 
 @attr.frozen(slots=True)
 class EmbeddingsOutput:
-    embeddings: t.List[float]
+    embeddings: t.List[t.List[float]]
     num_tokens: int
 
 

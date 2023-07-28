@@ -18,6 +18,8 @@ import typing as t
 from ..utils import DummyMetaclass
 from ..utils import require_backends
 
+if t.TYPE_CHECKING:
+    from ..models.auto.factory import _LazyAutoMapping
 
 class FlaxFlanT5(metaclass=DummyMetaclass):
     _backends = ["flax"]
@@ -40,4 +42,4 @@ class AutoFlaxLLM(metaclass=DummyMetaclass):
         require_backends(self, ["flax"])
 
 
-MODEL_FLAX_MAPPING = None
+MODEL_FLAX_MAPPING = t.cast("_LazyAutoMapping", None)
