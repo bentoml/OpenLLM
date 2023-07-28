@@ -18,6 +18,14 @@ This changelog is managed by towncrier and is compiled at release time.
 
 <!-- towncrier release notes start -->
 
+## [0.2.11](https://github.com/bentoml/openllm/tree/v0.2.11)
+
+### Features
+
+- Added embeddings support for T5 and ChatGLM
+  [#153](https://github.com/bentoml/openllm/issues/153)
+
+
 ## [0.2.10](https://github.com/bentoml/openllm/tree/v0.2.10)
 
 ### Features
