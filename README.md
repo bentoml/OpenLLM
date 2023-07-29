@@ -508,7 +508,7 @@ openllm embed --endpoint http://localhost:3000 "I like to eat apples" -o json
 }
 ```
 
-To invoke this endpoints, use ``client.embed`` from the Python SDK:
+To invoke this endpoint, use ``client.embed`` from the Python SDK:
 
 ```python
 import openllm
@@ -619,7 +619,7 @@ agent.run("Is the following `text` positive or negative?", text="I don't like ho
 ```
 
 > **Note** Only `starcoder` is currently supported with Agent integration. The
-> example above was also ran with four T4s on EC2 `g4dn.12xlarge`
+> example above was also run with four T4s on EC2 `g4dn.12xlarge`
 
 If you want to use OpenLLM client to ask questions to the running agent, you can
 also do so:
@@ -672,7 +672,7 @@ There are several ways to deploy your LLMs:
 
 ### ☁️ BentoCloud
 
-Deploy OpenLLM with [BentoCloud](https://www.bentoml.com/bento-cloud/), the
+Deploy OpenLLM with [BentoCloud](https://www.bentoml.com/bento-cloud/), 
 the serverless cloud for shipping and scaling AI applications.
 
 1. **Create a BentoCloud account:** [sign up here](https://bentoml.com/cloud)
