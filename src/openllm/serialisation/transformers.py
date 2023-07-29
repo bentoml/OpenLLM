@@ -61,14 +61,14 @@ _object_setattr = object.__setattr__
 
 def process_transformers_config(model_id: str, trust_remote_code: bool, **attrs: t.Any) -> tuple[_transformers.PretrainedConfig, dict[str, t.Any], dict[str, t.Any]]:
     """Process transformers config and return PretrainedConfig with hub_kwargs and the rest of kwargs."""
-    config: _transformers.PretrainedConfig | None = attrs.pop("config", None)
+    config = attrs.pop("config", None)
     # this logic below is synonymous to handling `from_pretrained` attrs.
     hub_attrs = {k: attrs.pop(k) for k in HUB_ATTRS if k in attrs}
     if not isinstance(config, _transformers.PretrainedConfig):
         copied_attrs = copy.deepcopy(attrs)
         if copied_attrs.get("torch_dtype", None) == "auto": copied_attrs.pop("torch_dtype")
         config, attrs = _transformers.AutoConfig.from_pretrained(model_id, return_unused_kwargs=True, trust_remote_code=trust_remote_code, **hub_attrs, **copied_attrs)
-    return t.cast("_transformers.PretrainedConfig", config), hub_attrs, attrs
+    return config, hub_attrs, attrs
 
 def infer_tokenizers_class_for_llm(__llm: openllm.LLM[t.Any, T]) -> T:
     tokenizer_class = __llm.config["tokenizer_class"]
@@ -140,6 +140,7 @@ def import_model(llm: openllm.LLM[M, T], *decls: t.Any, trust_remote_code: bool,
             *decls,
             config=config,
             trust_remote_code=trust_remote_code,
+            use_safetensors=safe_serialisation,
             **hub_attrs,
             **attrs,
         )
