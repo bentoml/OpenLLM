@@ -119,6 +119,9 @@ jobs:
             ${{ secrets.ECR_DOCKER_REGISTRY }}/openllm
           tags: |
             type=raw,value=sha-${{ env.GITHUB_SHA_SHORT }}
+          labels: |
+            maintainer=aarnphm
+            org.opencontainers.image.source="https://github.com/bentoml/OpenLLM"
       - name: Extract metadata tags and labels for main, release or tag
         if: github.event_name != 'pull_request'
         id: meta
@@ -134,6 +137,9 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
             type=raw,value=sha-${{ env.GITHUB_SHA_SHORT }}
+          labels: |
+            maintainer=aarnphm
+            org.opencontainers.image.source="https://github.com/bentoml/OpenLLM"
       - name: Build and push Docker image
         id: build-and-push
         uses: docker/build-push-action@v4
