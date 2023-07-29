@@ -1,3 +1,17 @@
+# Copyright 2023 BentoML Team. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 import importlib.util
 import os
@@ -189,24 +203,12 @@ Available official model_id(s): [default: {llm_config['default_id']}]
             }
         )
         if env.model_id_value: start_env[env.model_id] = str(env.model_id_value)
-
-        llm = infer_auto_class(env.framework_value).for_model(
-            model,
-            model_id=env.model_id_value,
-            model_version=model_version,
-            llm_config=config,
-            ensure_available=not fast,
-            return_runner_kwargs=False,
-            quantize=env.quantize_value,
-            bettertransformer=env.bettertransformer_value,
-            adapter_map=adapter_map,
-            runtime=env.runtime_value,
-            serialisation=serialisation_format,
-        )
-        start_env.update({env.config: llm.config.model_dump_json().decode(), env.model_id: llm.model_id})
         # NOTE: quantize and bettertransformer value is already assigned within env
         if bettertransformer is not None: start_env[env.bettertransformer] = str(env.bettertransformer_value)
         if quantize is not None: start_env[env.quantize] = str(env.quantize_value)
+
+        llm = infer_auto_class(env.framework_value).for_model(model, model_version=model_version, llm_config=config, ensure_available=not fast, adapter_map=adapter_map, serialisation=serialisation_format)
+        start_env.update({env.config: llm.config.model_dump_json().decode(), env.model_id: llm.model_id})
 
         server = bentoml.GrpcServer("_service.py:svc", **server_attrs) if _serve_grpc else bentoml.HTTPServer("_service.py:svc", **server_attrs)
         analytics.track_start_init(llm.config)

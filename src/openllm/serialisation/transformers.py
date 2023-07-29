@@ -186,14 +186,14 @@ def get(llm: openllm.LLM[M, T], auto_import: bool = False) -> bentoml.Model:
     try:
         model = bentoml.models.get(llm.tag)
         # compat with bentoml.transformers.get
-        if model.info.module not in ("openllm.serialisation.transformers", "bentoml.transformers", "bentoml._internal.frameworks.transformers", __name__):
+        if model.info.module not in ("openllm.serialisation.transformers", __name__):
             raise bentoml.exceptions.NotFound(f"Model {model.tag} was saved with module {model.info.module}, not loading with 'openllm.serialisation.transformers'.")
         if "runtime" in model.info.labels and model.info.labels["runtime"] != llm.runtime:
             raise OpenLLMException(f"Model {model.tag} was saved with runtime {model.info.labels['runtime']}, not loading with {llm.runtime}.")
         return model
-    except bentoml.exceptions.NotFound:
+    except bentoml.exceptions.NotFound as err:
         if auto_import: return import_model(llm, trust_remote_code=llm.__llm_trust_remote_code__)
-        raise
+        raise err from None
 
 def load_model(llm: openllm.LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M:
     """Load the model from BentoML store.

@@ -413,17 +413,7 @@ def import_command(
     llm_config = AutoConfig.for_model(model_name)
     env = EnvVarMixin(model_name, llm_config.default_implementation(), model_id=model_id, runtime=runtime, quantize=quantize)
     impl: LiteralRuntime = first_not_none(implementation, default=env.framework_value)
-    llm = infer_auto_class(impl).for_model(
-        model_name,
-        llm_config=llm_config,
-        model_id=env.model_id_value,
-        model_version=model_version,
-        runtime=env.runtime_value,
-        quantize=env.quantize_value,
-        return_runner_kwargs=False,
-        ensure_available=False,
-        serialisation=serialisation_format,
-    )
+    llm = infer_auto_class(impl).for_model(model_name, llm_config=llm_config, model_version=model_version, ensure_available=False, serialisation=serialisation_format)
     _previously_saved = False
     try:
         _ref = serialisation.get(llm)
@@ -772,24 +762,13 @@ def build_command(
     # NOTE: We set this environment variable so that our service.py logic won't raise RuntimeError
     # during build. This is a current limitation of bentoml build where we actually import the service.py into sys.path
     try:
-        os.environ["OPENLLM_MODEL"] = inflection.underscore(model_name)
-        os.environ[env.runtime] = env.runtime_value
-        os.environ["OPENLLM_SERIALIZATION"] = serialisation_format
+        os.environ.update({"OPENLLM_MODEL": inflection.underscore(model_name), env.runtime: str(env.runtime_value), "OPENLLM_SERIALIZATION": serialisation_format})
+        if env.model_id_value: os.environ[env.model_id] = str(env.model_id_value)
+        if env.quantize_value: os.environ[env.quantize] = str(env.quantize_value)
+        if env.bettertransformer_value: os.environ[env.bettertransformer] = str(env.bettertransformer_value)
+        breakpoint()
 
-        llm = infer_auto_class(env.framework_value).for_model(
-            model_name,
-            model_id=env.model_id_value,
-            llm_config=llm_config,
-            quantize=env.quantize_value,
-            bettertransformer=env.bettertransformer_value,
-            return_runner_kwargs=False,
-            ensure_available=not fast,
-            model_version=model_version,
-            runtime=env.runtime_value,
-            serialisation=serialisation_format,
-            **attrs,
-        )
-        os.environ[env.model_id] = str(llm.tag)
+        llm = infer_auto_class(env.framework_value).for_model(model_name, llm_config=llm_config, ensure_available=not fast, model_version=model_version, serialisation=serialisation_format, **attrs)
 
         labels = dict(llm.identifying_params)
         labels.update({"_type": llm.llm_type, "_framework": env.framework_value})
