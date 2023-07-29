@@ -672,7 +672,7 @@ There are several ways to deploy your LLMs:
 
 ### ☁️ BentoCloud
 
-Deploy OpenLLM with [BentoCloud](https://www.bentoml.com/bento-cloud/), 
+Deploy OpenLLM with [BentoCloud](https://www.bentoml.com/bento-cloud/),
 the serverless cloud for shipping and scaling AI applications.
 
 1. **Create a BentoCloud account:** [sign up here](https://bentoml.com/cloud)
