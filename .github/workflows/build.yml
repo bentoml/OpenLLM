@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       AWS_REGION: us-east-1
-      EC2_INSTANCE_TYPE: g5.12xlarge
+      EC2_INSTANCE_TYPE: g5.4xlarge
       EC2_AMI_ID: ami-056ee318652ac9ba8
       EC2_SUBNET_ID: subnet-0ab465d02a31d4b8b,subnet-0dfdfc180fc6ba2b7,subnet-0d6874e208ab9382d,subnet-0b5fe0452d46e8742,subnet-0cb393231a8cd3847,subnet-00e3c53b4ebce82ec
       EC2_SECURITY_GROUP: sg-0d501f5fd7baa7144
@@ -49,7 +49,7 @@ jobs:
           ec2-instance-type: ${{ env.EC2_INSTANCE_TYPE }}
           subnet-id: ${{ env.EC2_SUBNET_ID }}
           security-group-id: ${{ env.EC2_SECURITY_GROUP }}
-          aws-resource-tags: |
+          aws-resource-tags: >
             [
               {"Key": "Name", "Value": "ec2-openllm-github-runner"},
               {"Key": "Repository", "Value": "${{ github.repository }}"}
