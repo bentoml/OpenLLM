@@ -18,7 +18,6 @@ import typing as t
 
 import pytest
 
-
 if t.TYPE_CHECKING:
     import openllm
 

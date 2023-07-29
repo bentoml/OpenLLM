@@ -18,7 +18,6 @@ import typing as t
 from ..utils import DummyMetaclass
 from ..utils import require_backends
 
-
 class Falcon(metaclass=DummyMetaclass):
     _backends = ["torch", "einops"]
 

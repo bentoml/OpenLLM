@@ -18,7 +18,6 @@ import pytest
 
 import openllm
 
-
 if t.TYPE_CHECKING:
     import contextlib
 

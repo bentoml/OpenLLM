@@ -24,7 +24,6 @@ import openllm
 from .base import BaseAsyncClient
 from .base import BaseClient
 
-
 if t.TYPE_CHECKING:
     from grpc_health.v1 import health_pb2
 

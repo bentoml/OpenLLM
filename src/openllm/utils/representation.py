@@ -19,7 +19,6 @@ from abc import abstractmethod
 import attr
 import orjson
 
-
 if t.TYPE_CHECKING:
     ReprArgs: t.TypeAlias = t.Iterable[tuple[str | None, t.Any]]
 

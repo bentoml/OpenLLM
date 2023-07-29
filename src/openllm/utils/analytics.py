@@ -29,7 +29,6 @@ import attr
 import openllm
 from bentoml._internal.utils import analytics as _internal_analytics
 
-
 if t.TYPE_CHECKING:
     from .._types import P
     from .._types import T

@@ -18,7 +18,6 @@ import typing as t
 from ..utils import DummyMetaclass
 from ..utils import require_backends
 
-
 class ChatGLM(metaclass=DummyMetaclass):
     _backends = ["torch", "cpm_kernels"]
 

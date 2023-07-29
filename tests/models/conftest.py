@@ -34,7 +34,6 @@ from syrupy.extensions.json import JSONSnapshotExtension
 import openllm
 from openllm._llm import normalise_model_name
 
-
 logger = logging.getLogger(__name__)
 
 if t.TYPE_CHECKING:

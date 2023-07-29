@@ -21,7 +21,6 @@ import pytest
 
 import openllm
 
-
 if t.TYPE_CHECKING:
     from openllm._types import LiteralRuntime
 

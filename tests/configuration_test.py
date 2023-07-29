@@ -38,7 +38,6 @@ from openllm._configuration import field_env_key
 from ._strategies._configuration import make_llm_config
 from ._strategies._configuration import model_settings
 
-
 logger = logging.getLogger(__name__)
 
 if t.TYPE_CHECKING:
