@@ -66,11 +66,12 @@
     [:div {:class "flex flex-col px-2 py-1"}
      [:label {:class "flex w-full text-xs justify-between"}
       name
-      (when (= :slider display-type)
-        [parameter-small-input id value])
-      (when (= :binary display-type)
-        [parameter-checkbox id value])
-      (when (= :field display-type)
+      (condp = display-type
+        :slider
+        [parameter-small-input id value]
+        :binary
+        [parameter-checkbox id value]
+        :field
         [parameter-number id value])]
      (when (= :slider display-type)
        [:div {:class "mt-0.5"}
