@@ -20,8 +20,7 @@ import shutil
 import subprocess
 import typing as t
 
-from git.exc import InvalidGitRepositoryError
-from git.repo import Repo
+import git.cmd
 
 import bentoml
 
@@ -29,60 +28,48 @@ from ...exceptions import Error
 from ...exceptions import OpenLLMException
 from ...utils import apply
 from ...utils import device_count
-from ...utils import generate_hash_from_file
 from ...utils import get_debug_mode
 from ...utils import pkg
-
-if t.TYPE_CHECKING:
-    from ..._types import P
 
 _BUILDER = bentoml.container.get_backend("buildx")
 ROOT_DIR = pathlib.Path(__file__).parent.parent.parent
 
-LiteralContainerRegistry = t.Literal["docker", "gh", "quay"]
+# TODO: support quay
+LiteralContainerRegistry = t.Literal["docker", "gh", "ecr"]
+LiteralContainerVersionStrategy = t.Literal["release", "nightly", "latest"]
 
-_CONTAINER_REGISTRY: dict[LiteralContainerRegistry, str] = {"docker": "docker.io", "gh": "ghcr.io", "quay":"quay.io"}
+# XXX: This registry will be hard code for now for easier to maintain
+# but in the future, we can infer based on git repo and everything to make it more options for users
+# to build the base image. For now, all of the base image will be <registry>/bentoml/openllm:...
+# NOTE: The ECR registry is the public one and currently only @bentoml team has access to push it.
+_CONTAINER_REGISTRY: dict[LiteralContainerRegistry, str] = {"docker": "docker.io/bentoml/openllm", "gh": "ghcr.io/bentoml/openllm",
+                                                            "ecr": "public.ecr.aws/y5w8i4y6/bentoml/openllm"}
+
+_URI = "https://github.com/bentoml/openllm.git"
 
 _module_location = pkg.source_locations("openllm")
 
-_R = t.TypeVar("_R")
-
-def validate_correct_module_path(f: t.Callable[P, _R]) -> t.Callable[P, _R]:
-    @functools.wraps(f)
-    def inner(*args: P.args, **kwargs: P.kwargs) -> _R:
-        if _module_location is None: raise RuntimeError("Failed to locate openllm installation. You either have a broken installation or something went wrong. Make sure to report back to the OpenLLM team.")
-        return f(*args, **kwargs)
-    return inner
-
 @functools.lru_cache
 @apply(str.lower)
-@validate_correct_module_path
-def get_base_container_name(local: bool) -> str:
-    # this branch is already checked by decorator, hence it is here to make type checker happy
-    def resolve_container_name() -> str:
-        if t.TYPE_CHECKING: assert _module_location is not None
-        return "pypi-openllm" if "site-packages" in _module_location else "openllm"
-    if local: return resolve_container_name()
-    try:
-        repo = Repo(_module_location, search_parent_directories=True)
-        url = repo.remotes.origin.url.rstrip(".git")
-        is_http_url = url.startswith("https://")
-        parts = url.split("/") if is_http_url else url.split(":")
-        return f"{parts[-2]}/{parts[-1]}" if is_http_url else parts[-1]
-    except InvalidGitRepositoryError: return resolve_container_name()
+def get_base_container_name(reg: LiteralContainerRegistry) -> str: return _CONTAINER_REGISTRY[reg]
+
+@functools.lru_cache(maxsize=1)
+def _git() -> git.cmd.Git: return git.cmd.Git(_URI)
 
 @functools.lru_cache
-def get_registry_mapping() -> dict[LiteralContainerRegistry, str]: return {alias: f"{reg}/{get_base_container_name(False)}" for alias, reg in _CONTAINER_REGISTRY.items()}
+def _nightly_ref() -> tuple[str, str]: return _git().ls_remote(_URI, "main", heads=True).split()
 
-@validate_correct_module_path
-def get_base_container_tag() -> str:
-    # To work with bare setup
-    try: return Repo(_module_location, search_parent_directories=True).head.commit.hexsha
-    # in this case, not a repo, then just generate GIT_SHA-like hash
-    # from the root directory of openllm from this file
-    except InvalidGitRepositoryError: return generate_hash_from_file(ROOT_DIR.resolve().__fspath__())
+@functools.lru_cache
+def _stable_ref() -> tuple[str, str]: return max([item.split() for item in _git().ls_remote(_URI, refs=True, tags=True).split("\n")],
+                                                  key = lambda tag: tuple(int(k) for k in tag[-1].replace("refs/tags/v", "").split(".")))
 
-def build_container(registries: LiteralContainerRegistry | t.Sequence[LiteralContainerRegistry] | None = None, push: bool = False, machine: bool = False) -> dict[str | LiteralContainerRegistry, str]:
+def get_base_container_tag(strategy: LiteralContainerVersionStrategy) -> str:
+    if strategy == "release": return _stable_ref()[-1].replace("refs/tags/v", "")  # for stable, we can also use latest, but discouraged
+    elif strategy == "latest": return "latest"
+    elif strategy == "nightly": return f"sha-{_nightly_ref()[0][:7]}"  # we prefixed with sha-<git_rev_short> (giv_rev[:7])
+    else: raise ValueError(f"Unknown strategy '{strategy}'. Valid strategies are 'release', 'nightly', and 'latest'")
+
+def build_container(registries: LiteralContainerRegistry | t.Sequence[LiteralContainerRegistry] | None = None, version_strategy: LiteralContainerVersionStrategy = "release", push: bool = False, machine: bool = False) -> dict[str | LiteralContainerRegistry, str]:
     try:
         if not _BUILDER.health(): raise Error
     except (Error, subprocess.CalledProcessError): raise RuntimeError("Building base container requires BuildKit (via Buildx) to be installed. See https://docs.docker.com/build/buildx/install/ for instalation instruction.") from None
@@ -92,11 +79,10 @@ def build_container(registries: LiteralContainerRegistry | t.Sequence[LiteralCon
     pyproject_path = pathlib.Path(_module_location).parent.parent / "pyproject.toml"
     if not pyproject_path.exists(): raise ValueError("This utility can only be run within OpenLLM git repository. Clone it first with 'git clone https://github.com/bentoml/OpenLLM.git'")
     tags: dict[str | LiteralContainerRegistry, str]
-    if not registries: tags = {alias: f"{name}:{get_base_container_tag()}" for alias, name in get_registry_mapping().items()}  # Default loop through all registry item
+    if not registries: tags = {alias: f"{value}:{get_base_container_tag(version_strategy)}" for alias, value in _CONTAINER_REGISTRY.items()}  # default to all registries with latest tag strategy
     else:
-        if isinstance(registries, str): registries = [registries]
-        else: registries = list(registries)
-        tags = {name: f"{get_registry_mapping()[name]}:{get_base_container_tag()}" for name in registries}
+        registries = [registries] if isinstance(registries, str) else list(registries)
+        tags = {name: f"{_CONTAINER_REGISTRY[name]}:{get_base_container_tag(version_strategy)}" for name in registries}
     try:
         outputs = _BUILDER.build(file=pathlib.Path(__file__).parent.joinpath("Dockerfile").resolve().__fspath__(), context_path=pyproject_path.parent.__fspath__(), tag=tuple(tags.values()),
                                  push=push, progress="plain" if get_debug_mode() else "auto", quiet=machine)
@@ -104,17 +90,13 @@ def build_container(registries: LiteralContainerRegistry | t.Sequence[LiteralCon
     except Exception as err: raise OpenLLMException(f"Failed to containerize base container images (Scroll up to see error above, or set OPENLLMDEVDEBUG=True for more traceback):\n{err}") from err
     return tags
 
-@functools.lru_cache
-def _supported_registries() -> list[str]: return list(_CONTAINER_REGISTRY)
-
 if t.TYPE_CHECKING:
     CONTAINER_NAMES: dict[LiteralContainerRegistry, str]
     supported_registries: list[str]
-
 __all__ = ["CONTAINER_NAMES", "get_base_container_tag", "build_container", "get_base_container_name", "supported_registries"]
 def __dir__() -> list[str]: return sorted(__all__)
 def __getattr__(name: str) -> t.Any:
-    if name == "supported_registries": return _supported_registries()
-    elif name == "CONTAINER_NAMES": return get_registry_mapping()
+    if name == "supported_registries": return functools.lru_cache(1)(lambda _: list(_CONTAINER_REGISTRY))()
+    elif name == "CONTAINER_NAMES": return _CONTAINER_REGISTRY
     elif name in __all__: return importlib.import_module("." + name, __name__)
     else: raise AttributeError(f"{name} does not exists under {__name__}")
