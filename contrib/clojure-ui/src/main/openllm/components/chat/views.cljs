@@ -55,7 +55,8 @@
         [button {:on-click #(rf/dispatch on-submit-event)
                  :variant "outlined"
                  :end-icon (r/as-element [send-icon/send])
-                 :color "primary"} "Send"]]])))
+                 :color "primary"}
+         "Send"]]])))
 
 (defn user->bubble-style
   "Produces additional style attributes for a chatbubble contingent upon
@@ -140,8 +141,4 @@
               :style {:scrollBehavior "smooth"}}
         [:div
          [chat-history]]]
-       [:div {:class (str "bottom-1 fixed w-[calc(100%_-_200px)] mb-2"
-                          (if @side-bar-open?
-                            " w-[calc(100%_-_350px)]"
-                            " w-[calc(100%_-_30px)]"))}
-        [chat-controls]]])))
+       [chat-controls]])))
