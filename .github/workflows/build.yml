@@ -120,7 +120,6 @@ jobs:
           tags: |
             type=raw,value=sha-${{ env.GITHUB_SHA_SHORT }}
           labels: |
-            maintainer=aarnphm
             org.opencontainers.image.source="https://github.com/bentoml/OpenLLM"
       - name: Extract metadata tags and labels for main, release or tag
         if: github.event_name != 'pull_request'
@@ -153,8 +152,9 @@ jobs:
             DOCKER_LABEL=sha-${{ env.GITHUB_SHA_SHORT }}
           tags: ${{ steps.meta.outputs.tags || steps.meta-pr.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels || steps.meta-pr.outputs.labels }}
-          cache-from: type=registry,ref=public.ecr.aws/y5w8i4y6/bentoml/openllm:cache,mode=min
-          cache-to: type=registry,ref=public.ecr.aws/y5w8i4y6/bentoml/openllm:cache,mode=min
+          cache-from: type=registry,ref=public.ecr.aws/y5w8i4y6/bentoml/openllm:cache
+          # @aarnphm: max is fine here, since we didn't do any custom code yet, so it is ok to cache every layer for optimal build time
+          cache-to: type=registry,ref=public.ecr.aws/y5w8i4y6/bentoml/openllm:cache,mode=max,compression=zstd
       - name: Sign the released image
         if: ${{ github.event_name != 'pull_request' }}
         run: echo "${{ steps.meta.outputs.tags }}" | xargs -I {} cosign sign {}@${{ steps.meta.build-and-push.outputs.digest }}
