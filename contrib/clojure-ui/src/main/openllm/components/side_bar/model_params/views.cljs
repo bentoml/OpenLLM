@@ -63,20 +63,21 @@
    on the collection of all parameters."
   [[id {:keys [value name]}]]
   (let [display-type (get-in db/parameter-meta-data [id :display-type])]
-    [:div {:class "flex flex-col px-2 py-1"}
-     [:label {:class "flex w-full text-xs justify-between"}
-      name
-      (condp = display-type
-        :slider
-        [parameter-small-input id value]
-        :binary
-        [parameter-checkbox id value]
-        :field
-        [parameter-number id value])]
-     (when (= :slider display-type)
-       [:div {:class "mt-0.5"}
-        [parameter-slider id value]])
-     [:hr {:class "mt-1.5 border-1 border-gray-100"}]]))
+    [:<>
+     [:div {:class "flex flex-col px-2 py-1"}
+      [:label {:class "flex w-full text-xs justify-between"}
+       name
+       (condp = display-type
+         :slider
+         [parameter-small-input id value]
+         :binary
+         [parameter-checkbox id value]
+         :field
+         [parameter-number id value])]
+      (when (= :slider display-type)
+        [:div {:class "mt-0.5"}
+         [parameter-slider id value]])]
+     [:hr {:class "mt-1.5 border-1 border-gray-100 last:border-0 last:mt-0 last:-mb-1.5"}]]))
 
 (defn parameter-list
   "Renders the parameters in the sidebar. The parameters are retrieved from the
@@ -90,7 +91,9 @@
          (into [:<>] (map parameter-list-entry basic-params))
          [:div {:class "mt-2 -mx-1.75"}
           [accordion {:square true
-                      :class "w-full"}
+                      :class "w-full"
+                      :elevation 0
+                      :style {:background-color "#fafafa"}}
            [accordion-summary {:expand-icon (r/as-element [expand-more])}
             [typography "Advanced"]]
            [accordion-details {:class "mt-2 -mx-3"}
