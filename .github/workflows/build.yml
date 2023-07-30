@@ -41,7 +41,7 @@ jobs:
     env:
       AWS_REGION: us-east-1
       EC2_INSTANCE_TYPE: g5.4xlarge
-      EC2_AMI_ID: ami-056ee318652ac9ba8
+      EC2_AMI_ID: ami-072d35d3d1fc9d1ba
       EC2_SUBNET_ID: subnet-09b01d10c0b11f854,subnet-0b9e44f3670e52e54,subnet-077ea4d4db750626d,subnet-07682c8838746518f,subnet-0b6b4c93aa4c8fad1,subnet-018fa3a287ebd13f5
       EC2_SECURITY_GROUP: sg-08f1ded4b9211de26
     outputs:
