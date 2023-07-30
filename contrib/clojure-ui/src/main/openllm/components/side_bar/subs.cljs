@@ -33,5 +33,5 @@
  :<- [::side-bar-open?]
  (fn [side-bar-open? _]
    (if side-bar-open?
-     [right-icon/keyboard-double-arrow-right]
-     [left-icon/keyboard-double-arrow-left])))
+     [right-icon/keyboard-double-arrow-right {:style {:font-size "18px"}}]
+     [left-icon/keyboard-double-arrow-left {:style {:font-size "18px"}}])))

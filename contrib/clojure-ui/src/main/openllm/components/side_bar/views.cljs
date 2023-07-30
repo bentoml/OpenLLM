@@ -16,17 +16,18 @@
   (let [tooltip-text-collapse-sidebar (rf/subscribe [::subs/tooltip-text-collapse-sidebar])
         collapse-icon (rf/subscribe [::subs/collapse-icon])]
     (fn []
-      [:div {:class "-ml-6"}
+      [:div {:class "-ml-4"}
        [tooltip {:title @tooltip-text-collapse-sidebar}
         [button {:on-click #(rf/dispatch [::events/toggle-side-bar])
-                 :color "inherit"
-                 :class "h-5"
-                 :style {:max-width "24px"
-                         :min-width "24px"
-                         :background-color "#e3e3e3"
+                 :color "secondary"
+                 :class "h-4"
+                 :style {:max-width "16px"
+                         :min-width "16px"
+                         :background-color "black"
                          :border-radius "8px 0px 0px 8px"
-                         :margin-top "-5px"}}
-         @collapse-icon]]])))
+                         :margin-top "-2px"}}
+         [:div {:class "-mr-1 -mt-px"}
+          @collapse-icon]]]])))
 
 (defn side-bar-with-mui-collapse
   "The sidebar wrapped with a Material UI Collapse component. The collapse
