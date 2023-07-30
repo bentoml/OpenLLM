@@ -37,6 +37,7 @@
      [input {:type "number"
              :class "w-10 text-center border"
              :input-props {:style {:text-align "center"
+                                   :background-color "#ffffff"
                                    :height "12px"}}
              :step (if num-type? 1 0.01)
              :value value
@@ -56,6 +57,9 @@
   [input {:type "number"
           :class "w-16 border"
           :value value
+          :input-props {:style {:padding "2px"
+                                :background-color "#ffffff"
+                                :height "24px"}}
           :on-change #(rf/dispatch [::events/set-model-config-parameter id (parse-long (.. % -target -value))])}])
 
 (defn parameter-list-entry
@@ -64,9 +68,9 @@
   [[id {:keys [value name]}]]
   (let [display-type (get-in db/parameter-meta-data [id :display-type])]
     [:<>
-     [:div {:class "flex flex-col px-2 py-1"}
+     [:div {:class "flex flex-col px-2 pt-1"}
       [:label {:class "flex w-full text-xs justify-between"}
-       name
+       [:div {:class "self-center"} name]
        (condp = display-type
          :slider
          [parameter-small-input id value]
@@ -75,9 +79,9 @@
          :field
          [parameter-number id value])]
       (when (= :slider display-type)
-        [:div {:class "mt-0.5"}
+        [:div {:class "mb-0.5"}
          [parameter-slider id value]])]
-     [:hr {:class "mt-1.5 border-1 border-gray-100 last:border-0 last:mt-0 last:-mb-1.5"}]]))
+     [:hr {:class "mt-1 border-1 border-gray-100 last:border-0 last:mt-0 last:-mb-1.5"}]]))
 
 (defn parameter-list
   "Renders the parameters in the sidebar. The parameters are retrieved from the
@@ -96,5 +100,5 @@
                       :style {:background-color "#fafafa"}}
            [accordion-summary {:expand-icon (r/as-element [expand-more])}
             [typography "Advanced"]]
-           [accordion-details {:class "mt-2 -mx-3"}
+           [accordion-details {:class "-mt-1.5 -mx-3"}
             (into [:<>] (map parameter-list-entry advanced-params))]]]]))))
