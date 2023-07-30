@@ -157,10 +157,10 @@ jobs:
           labels: ${{ steps.meta.outputs.labels || steps.meta-pr.outputs.labels }}
           # TODO: Once https://github.com/aws/containers-roadmap/issues/876 is supported with OCI 1.1
           # then move back to saving cache within the public repo. For now we will save the cache manifest within our internal S3 buckets.
-          cache-from: type=s3,region=${{ env.AWS_REGION }},bucket=openllm,name=y5w8i4y6,secret_access_key=${{ secrets.AWS_SECRET_ACCESS_KEY }},access_key_id=${{ secrets.AWS_ACCESS_KEY_ID }}
+          cache-from: type=s3,region=${{ env.AWS_REGION }},bucket=openllm,name=y5w8i4y6
           # @aarnphm: max is fine here, since we didn't do any custom code yet, so it is ok to cache every layer for optimal build time
           # We also ignore-error for now, just upload anything to the blob storage
-          cache-to: type=s3,region=${{ env.AWS_REGION }},bucket=openllm,name=y5w8i4y6,secret_access_key=${{ secrets.AWS_SECRET_ACCESS_KEY }},access_key_id=${{ secrets.AWS_ACCESS_KEY_ID }},mode=max,compression=zstd,ignore-error=true
+          cache-to: type=s3,region=${{ env.AWS_REGION }},bucket=openllm,name=y5w8i4y6,mode=max,compression=zstd,ignore-error=true
       - name: Sign the released image
         if: ${{ github.event_name != 'pull_request' }}
         run: echo "${{ steps.meta.outputs.tags }}" | xargs -I {} cosign sign {}@${{ steps.meta.build-and-push.outputs.digest }}
