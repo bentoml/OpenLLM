@@ -33,13 +33,13 @@ env:
   COLUMNS: 120
   OPENLLM_DO_NOT_TRACK: True
   PYTHONUNBUFFERED: '1'
+  AWS_REGION: us-east-1
 jobs:
   start-runner:
     name: Start self-hosted EC2 runner
     runs-on: ubuntu-latest
     if: github.repository_owner == 'bentoml'
     env:
-      AWS_REGION: us-east-1
       EC2_INSTANCE_TYPE: g5.4xlarge
       EC2_AMI_ID: ami-0fc9d48803f691665
       EC2_SUBNET_ID: subnet-0b3855a7ae3b07ac8,subnet-06586208490ad6f54,subnet-0d14c8383821410f5
@@ -103,16 +103,18 @@ jobs:
       - name: Login to ECR
         uses: docker/login-action@v2.1.0
         with:
-          registry: ${{ secrets.ECR_DOCKER_REGISTRY }}
-          username: ${{ secrets.ECR_DOCKER_USERNAME }}
-          password: ${{ secrets.ECR_DOCKER_PASSWORD }}
+          registry: public.ecr.aws
+          username: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          password: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        env:
+          AWS_REGION: ${{ env.AWS_REGION }}
       - name: Extract metadata tags and labels on PRs
         if: github.event_name == 'pull_request'
         id: meta-pr
         uses: docker/metadata-action@v4.6.0
         with:
           images: |
-            ${{ secrets.ECR_DOCKER_REGISTRY }}/openllm
+            public.ecr.aws/y5w8i4y6/bentoml/openllm
           tags: |
             type=raw,value=sha-${{ env.GITHUB_SHA_SHORT }}
           labels: |
@@ -126,7 +128,7 @@ jobs:
           flavor: |
             latest=auto
           images: |
-            ${{ secrets.ECR_DOCKER_REGISTRY }}/openllm
+            public.ecr.aws/y5w8i4y6/bentoml/openllm
             ghcr.io/bentoml/openllm
           tags: |
             type=semver,pattern={{version}}
@@ -149,8 +151,8 @@ jobs:
             DOCKER_LABEL=sha-${{ env.GITHUB_SHA_SHORT }}
           tags: ${{ steps.meta.outputs.tags || steps.meta-pr.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels || steps.meta-pr.outputs.labels }}
-          cache-from: type=registry,ref=${{ secrets.ECR_DOCKER_REGISTRY }}/openllm:cache,mode=min
-          cache-to: type=registry,ref=${{ secrets.ECR_DOCKER_REGISTRY }}/openllm:cache,mode=min
+          cache-from: type=registry,ref=public.ecr.aws/y5w8i4y6/bentoml/openllm:cache,mode=min
+          cache-to: type=registry,ref=public.ecr.aws/y5w8i4y6/bentoml/openllm:cache,mode=min
       - name: Sign the released image
         if: ${{ github.event_name != 'pull_request' }}
         run: echo "${{ steps.meta.outputs.tags }}" | xargs -I {} cosign sign {}@${{ steps.meta.build-and-push.outputs.digest }}
@@ -195,9 +197,10 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
       - name: Stop EC2 runner
-        uses: philschmid/philschmid-ec2-github-runner@main
+        uses: aarnphm/ec2-github-runner@main
         with:
           mode: stop
           github-token: ${{ secrets.OPENLLM_PAT }}
+          ec2-region: ${{ env.AWS_REGION }}
           label: ${{ needs.start-runner.outputs.label }}
           ec2-instance-id: ${{ needs.start-runner.outputs.ec2-instance-id }}
