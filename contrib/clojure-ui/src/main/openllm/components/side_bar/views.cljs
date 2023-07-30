@@ -3,8 +3,30 @@
             [openllm.components.side-bar.model-selection.views :as model-selection-views]
             [openllm.components.side-bar.model-params.views :as model-params-views]
             [openllm.components.side-bar.subs :as subs]
+            [openllm.components.side-bar.events :as events]
             [openllm.components.common.views :as ui]
+            [reagent-mui.material.button :refer [button]]
+            [reagent-mui.material.tooltip :refer [tooltip]]
             [reagent-mui.material.collapse :refer [collapse]]))
+
+(defn- collapse-side-bar-button
+  "The collapse side bar button. It changes its icon depending on whether
+   the side bar is collapsed or not."
+  []
+  (let [tooltip-text-collapse-sidebar (rf/subscribe [::subs/tooltip-text-collapse-sidebar])
+        collapse-icon (rf/subscribe [::subs/collapse-icon])]
+    (fn []
+      [:div {:class "-ml-6"}
+       [tooltip {:title @tooltip-text-collapse-sidebar}
+        [button {:on-click #(rf/dispatch [::events/toggle-side-bar])
+                 :color "inherit"
+                 :class "h-5"
+                 :style {:max-width "24px"
+                         :min-width "24px"
+                         :background-color "#e3e3e3"
+                         :border-radius "8px 0px 0px 8px"
+                         :margin-top "-5px"}}
+         @collapse-icon]]])))
 
 (defn side-bar-with-mui-collapse
   "The sidebar wrapped with a Material UI Collapse component. The collapse
@@ -14,7 +36,7 @@
     (fn []
       [collapse {:in @side-bar-open?
                  :orientation "horizontal"
-                 :class "flex flex-col h-full w-80"}
+                 :class "flex flex-col w-80"}
        [:div {:class "flex flex-col w-80 h-full border-l border-gray-200 pt-0.5 pb-4"}
         [model-selection-views/model-selection]
         [:hr {:class "mb-2 border-1 border-gray-200"}]
@@ -27,5 +49,7 @@
   "The render function of the toolbar on the very right of the screen. Contains the
    model selection dropdowns and the parameter list."
   []
-  [:div {:class "hidden lg:flex lg:flex-shrink-0"}
-   [side-bar-with-mui-collapse]])
+  [:<>
+   [collapse-side-bar-button]
+   [:div {:class "hidden lg:flex lg:flex-shrink-0"}
+    [side-bar-with-mui-collapse]]])
