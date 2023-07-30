@@ -44,9 +44,9 @@
         submit-prompt (rf/subscribe [::subs/prompt])
         on-submit-event [::events/on-send-button-click @submit-prompt @llm-config]]
     (fn chat-controls []
-      [:form {:class "flex justify-end"}
+      [:form {:class "flex justify-end mr-2.5"}
        [chat-input-field #(rf/dispatch on-submit-event)]
-       [:div {:class "grid grid-rows-2 ml-1.5"}
+       [:div {:class "grid grid-rows-2 ml-1.5 mr-0.5"}
         [:div {:class "items-start"}
          [tooltip {:title "Edit prompt layout"}
           [icon-button {:on-click #(rf/dispatch [::events/toggle-modal])
@@ -55,6 +55,7 @@
         [button {:on-click #(rf/dispatch on-submit-event)
                  :variant "outlined"
                  :end-icon (r/as-element [send-icon/send])
+                 :style {:width "96px"}
                  :color "primary"}
          "Send"]]])))
 
@@ -137,7 +138,7 @@
       [:<>
        [prompt-layout-modal]
        [:div {:id "chat-history-container"
-              :class "overflow-y-scroll mt-6 h-[calc(100%_-_170px)] w-full no-scrollbar"
+              :class "overflow-y-scroll mt-6 h-[calc(100%_-_116px)] w-full no-scrollbar"
               :style {:scrollBehavior "smooth"}}
         [:div
          [chat-history]]]

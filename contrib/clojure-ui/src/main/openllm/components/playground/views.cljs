@@ -42,6 +42,7 @@
         [button {:type "button"
                  :variant "outlined"
                  :end-icon (r/as-element [send-icon/send])
+                 :style {:width "96px"}
                  :on-click #(rf/dispatch [::events/on-send-button-click @input-value @llm-config])} "Send"]]])))
 
 (defn response-area
