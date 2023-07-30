@@ -60,6 +60,7 @@ jobs:
         with:
           mode: start
           github-token: ${{ secrets.OPENLLM_PAT }}
+          ec2-region: ${{ env.AWS_REGION }}
           ec2-image-id: ${{ env.EC2_AMI_ID }}
           ec2-instance-type: ${{ env.EC2_INSTANCE_TYPE }}
           subnet-id: ${{ env.EC2_SUBNET_ID }}
