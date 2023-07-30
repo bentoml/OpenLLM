@@ -84,7 +84,7 @@
   []
   (let [model-config (rf/subscribe [::subs/human-readable-config])]
     (fn []
-      (let [basic-params (filterv (fn [[id _]] (not (get-in db/parameter-meta-data [id :advanced-opt]))) @model-config)
+      (let [basic-params (filterv (fn [[id _]] (not (get-in db/parameter-meta-data [id :advanced-opt]))) @model-config) ;; TODO: views shouldn't make such heave calculations
             advanced-params (filterv (fn [[id _]] (get-in db/parameter-meta-data [id :advanced-opt])) @model-config)]
         [:<>
          (into [:<>] (map parameter-list-entry basic-params))

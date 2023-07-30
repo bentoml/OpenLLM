@@ -119,15 +119,11 @@
          [:textarea {:class "pt-3 mt-1 w-full h-64 block border bg-gray-200"
                      :value @prompt-layout-value
                      :on-change on-change}]
-         [:div {:class "grid grid-cols-2"}
-          [:div {:class ""}
-           [api-components/file-upload
-            {:callback-event ::events/set-prompt-layout
-             :class "w-7/12 mt-3 py-2 px-4 rounded cursor-pointer bg-gray-600 text-white hover:bg-gray-700 file:bg-gray-900 file:hidden"}]]
-          [:div {:class "mt-4 flex justify-end space-x-2"}
-           [button {:type "button"
-                    :variant "outlined"
-                    :on-click #(rf/dispatch [::events/toggle-modal])} "Save"]]]]]])))
+         [:div {:class "mt-4 flex justify-end space-x-2"}
+          [api-components/file-upload-button {:callback-event ::events/set-prompt-layout}]
+          [button {:type "button"
+                   :variant "outlined"
+                   :on-click #(rf/dispatch [::events/toggle-modal])} "Save"]]]]])))
 
 (defn chat-tab-contents
   "The component rendered if the chat tab is active. It contains the chat

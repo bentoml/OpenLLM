@@ -10,6 +10,7 @@
             [reagent-mui.material.box :refer [box]]
             [reagent-mui.material.paper :refer [paper]]
             [reagent-mui.material.typography :refer [typography]]
+            [reagent-mui.material.tooltip :refer [tooltip]]
             [reagent-mui.icons.send :as send-icon]
             [reagent.core :as r]))
 
@@ -22,6 +23,13 @@
                   :value @value
                   :on-change #(rf/dispatch [::events/set-prompt-input (.. % -target -value)])}])))
 
+(defn- upload-button
+  "The little button to upload a file to be used as prompt."
+  []
+  [tooltip {:title "Upload file to use as prompt"}
+   [:div
+    [api-components/file-upload-button {:callback-event ::events/set-prompt-input}]]])
+
 (defn input-field-controls
   "Control buttons for the input field, where the user enters his/her
    prompt."
@@ -29,21 +37,16 @@
   (let [input-value (rf/subscribe [::subs/playground-input-value])
         llm-config (rf/subscribe [::model-params-subs/model-config])]
     (fn []
-      [:div {:class "grid grid-cols-2"}
-       [:div
-        [api-components/file-upload
-         {:callback-event ::events/set-prompt-input
-          :class (str "w-7/12 mt-3 rounded cursor-pointer bg-gray-600 text-white hover:bg-gray-700 file:bg-gray-900 "
-                      "file:cursor-pointer file:border-0 file:hover:bg-gray-950 file:mr-4 file:py-2 file:px-4 file:text-white")}]]
-       [:div {:class "mt-3 flex justify-end space-x-2"}
-        [button {:type "button"
-                 :variant "outlined"
-                 :on-click #(rf/dispatch [::events/set-prompt-input ""])} "Clear"]
-        [button {:type "button"
-                 :variant "outlined"
-                 :end-icon (r/as-element [send-icon/send])
-                 :style {:width "96px"}
-                 :on-click #(rf/dispatch [::events/on-send-button-click @input-value @llm-config])} "Send"]]])))
+      [:div {:class "mt-3 flex justify-end space-x-2"}
+       [upload-button]
+       [button {:type "button"
+                :variant "outlined"
+                :on-click #(rf/dispatch [::events/set-prompt-input ""])} "Clear"]
+       [button {:type "button"
+                :variant "outlined"
+                :end-icon (r/as-element [send-icon/send])
+                :style {:width "96px"}
+                :on-click #(rf/dispatch [::events/on-send-button-click @input-value @llm-config])} "Send"]])))
 
 (defn response-area
   "The latest response retrieved from the backend will be displayed in this

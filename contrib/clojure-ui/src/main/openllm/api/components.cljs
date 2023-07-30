@@ -1,11 +1,12 @@
 (ns openllm.api.components
-  (:require [re-frame.core :as rf]
+  (:require [reagent-mui.icons.file-upload :refer [file-upload]]
+            [reagent-mui.material.icon-button :refer [icon-button]]
+            [re-frame.core :as rf]
             [reagent.core :as r]))
 
-(defn file-upload
+(defn file-upload-button
   "The file upload reagent custom component."
-  [{:keys [callback-event class]
-    :or {class "w-full mt-3 shadow-sm rounded-md focus:z-10 file:bg-transparent file:border-0 file:bg-gray-800 file:mr-4 file:py-2 file:px-4 bg-gray-600 text-white hover:bg-gray-700 file:text-white"}}]
+  [{:keys [callback-event]}]
   (let [file-reader (js/FileReader.)]
     (r/create-class
      {:component-did-mount
@@ -16,8 +17,8 @@
                                (rf/dispatch [callback-event content])))))
       :render
       (fn []
-        [:input {:type "file"
-                 :class class
-                 :on-change (fn [evt]
-                              (let [file (-> evt .-target .-files (aget 0))]
-                                (.readAsText file-reader file)))}])})))
+        [icon-button {:color "inherit"
+                      :on-change (fn [evt]
+                                   (let [file (-> evt .-target .-files (aget 0))]
+                                     (.readAsText file-reader file)))}
+         (r/as-element [file-upload])])})))
