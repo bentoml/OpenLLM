@@ -66,17 +66,16 @@
      [:div {:class "w-full flex justify-end items-center"}
       ;;[:div {:class "mr-8"}
       ;; [context-icon-buttons]]
-      [:div {:class "mr-16"}
-       [icon-button {:on-click #(rf/dispatch [::root-events/open-link-in-new-tab "https://github.com/bentoml/OpenLLM"])
-                     :color "secondary"
-                     :size "small"}
-        [github-icon/git-hub]]
-       [icon-button {:on-click #(rf/dispatch [::root-events/open-link-in-new-tab "https://l.bentoml.com/join-openllm-discord"])
-                     :color "primary"
-                     :size "small"}
-        [svg-icon
-         [:circle {:cx 12
-                   :cy 12
-                   :r 12
-                   :fill "#fff"}]
-         [:path {:d discord-icon-d}]]]]]]]])
+      [icon-button {:on-click #(rf/dispatch [::root-events/open-link-in-new-tab "https://github.com/bentoml/OpenLLM"])
+                    :color "secondary"
+                    :size "small"}
+       [github-icon/git-hub]]
+      [icon-button {:on-click #(rf/dispatch [::root-events/open-link-in-new-tab "https://l.bentoml.com/join-openllm-discord"])
+                    :color "primary"
+                    :size "small"}
+       [svg-icon
+        [:circle {:cx 12
+                  :cy 12
+                  :r 12
+                  :fill "#fff"}]
+        [:path {:d discord-icon-d}]]]]]]])
