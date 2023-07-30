@@ -176,8 +176,6 @@ def construct_docker_options(
     if _env.bettertransformer_value is not None: env_dict[_env.bettertransformer] = str(_env.bettertransformer_value)
     if _env.quantize_value is not None: env_dict[_env.quantize] = _env.quantize_value
     env_dict[_env.runtime] = _env.runtime_value
-    if container_registry is None:
-        return DockerOptions(cuda_version="11.8.0", env=env_dict, system_packages=["git"], dockerfile_template=dockerfile_template, python_version="3.9")
     container_name = oci.CONTAINER_NAMES[container_registry] if not custom_registry else container_registry
     return DockerOptions(base_image=f"{container_name}:{container_version}",env=env_dict, dockerfile_template=dockerfile_template)
 
