@@ -64,7 +64,6 @@ jobs:
           ec2-instance-type: ${{ env.EC2_INSTANCE_TYPE }}
           subnet-id: ${{ env.EC2_SUBNET_ID }}
           security-group-id: ${{ env.EC2_SECURITY_GROUP }}
-          runner-home-dir: /home/ubuntu/actions-runner
   build-and-push-image:
     concurrency:
       group: ${{ github.workflow }}-${{ github.job }}-${{ github.head_ref || github.run_id }}
