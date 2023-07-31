@@ -41,6 +41,8 @@ All available models: \`\`\`openllm models\`\`\`
 
 To start a LLM: \`\`\`python -m openllm start opt\`\`\`
 
+To run OpenLLM within a container environment (requires GPUs): \`\`\`docker run --gpus all -it --entrypoint=/bin/bash -P ghcr.io/bentoml/openllm:${TAG} openllm --help\`\`\`
+
 Find more information about this release in the [CHANGELOG.md](https://github.com/bentoml/OpenLLM/blob/main/CHANGELOG.md)
 
 EOF
