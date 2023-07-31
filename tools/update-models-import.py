@@ -23,9 +23,9 @@ _TARGET_FILE = Path(__file__).parent.parent / "src" / "openllm" / "models" / "__
 def comment_generator(comment_type: str, action: t.Literal["start", "stop"] = "start", indentation: int = 0) -> str: return " " * indentation + f"# {os.path.basename(__file__)}: {action} {comment_type}\n"
 
 START_MODULE_COMMENT, STOP_MODULE_COMMENT = comment_generator("module"), comment_generator("module", "stop")
-START_TYPES_COMMENT, STOP_TYPES_COMMENT = comment_generator("types", indentation=4), comment_generator("types", "stop", indentation=4)
+START_TYPES_COMMENT, STOP_TYPES_COMMENT = comment_generator("types", indentation=4), comment_generator("types", "stop", indentation=2)
 
-@openllm.utils.apply(lambda v: sorted([" " * 4 + _ for _ in v], key=lambda k: k.split()[-1]))
+@openllm.utils.apply(lambda v: sorted([" " * 2 + _ for _ in v], key=lambda k: k.split()[-1]))
 def create_stubs_import() -> list[str]: return [f"from . import {p.name} as {p.name}\n" for p in _TARGET_FILE.parent.glob("*/") if p.name not in {"__pycache__", "__init__.py", ".DS_Store"}]
 def create_module_import() -> str: return f"_MODELS: set[str] = {{{', '.join(sorted([repr(p.name) for p in _TARGET_FILE.parent.glob('*/') if p.name not in ['__pycache__', '__init__.py', '.DS_Store']]))}}}\n"
 

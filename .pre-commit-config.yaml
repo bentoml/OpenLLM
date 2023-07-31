@@ -32,6 +32,12 @@ repos:
         types: [python]
         exclude: ^(docs|tools|tests)
         args: [--config=pyproject.toml]
+  - repo: https://github.com/google/yapf
+    rev: v0.40.1
+    hooks:
+      - id: yapf
+        types: [python]
+        args: [--parallel, --recursive]
   - repo: local
     hooks:
       - id: mypy

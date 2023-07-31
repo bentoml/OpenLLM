@@ -22,16 +22,5 @@ FRAMEWORK_TO_AUTOCLASS_MAPPING = {
     "flax": ("FlaxAutoModelForCausalLM", "FlaxAutoModelForSeq2SeqLM"),
 }
 
-
 # this logic below is synonymous to handling `from_pretrained` attrs.
-HUB_ATTRS = [
-    "cache_dir",
-    "code_revision",
-    "force_download",
-    "local_files_only",
-    "proxies",
-    "resume_download",
-    "revision",
-    "subfolder",
-    "use_auth_token",
-]
+HUB_ATTRS = ["cache_dir", "code_revision", "force_download", "local_files_only", "proxies", "resume_download", "revision", "subfolder", "use_auth_token",]

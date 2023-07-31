@@ -26,7 +26,7 @@ from openllm._configuration import ModelSettings
 from openllm._configuration import PeftType
 
 
-# currently we are assuming the indentatio level is 4 for comments
+# currently we are assuming the indentatio level is 2 for comments
 START_COMMENT = f"# {os.path.basename(__file__)}: start\n"
 END_COMMENT = f"# {os.path.basename(__file__)}: stop\n"
 START_SPECIAL_COMMENT = f"# {os.path.basename(__file__)}: special start\n"
@@ -71,7 +71,7 @@ _value_docstring = {
             ```""",
     "default_implementation": """The default runtime to run this LLM. By default, it will be PyTorch (pt) for most models. For some models, such as Llama, it will use `vllm` or `flax`.
 
-    It is a dictionary of key as the accelerator spec in k8s ('cpu', 'nvidia.com/gpu', 'amd.com/gpu', 'cloud-tpus.google.com/v2', ...) and the values as supported OpenLLM Runtime ('flax', 'tf', 'pt', 'vllm')
+    It is a dictionary of key as the accelerator spec in k4s ('cpu', 'nvidia.com/gpu', 'amd.com/gpu', 'cloud-tpus.google.com/v2', ...) and the values as supported OpenLLM Runtime ('flax', 'tf', 'pt', 'vllm')
     """,
     "url": """The resolved url for this LLMConfig.""",
     "requires_gpu": """Determines if this model is only available on GPU. By default it supports GPU and fallback to CPU.""",
@@ -111,20 +111,20 @@ def main() -> int:
     with _TARGET_FILE.open("r") as f:
         processed = f.readlines()
 
-    start_idx, end_idx = processed.index(" " * 4 + START_COMMENT), processed.index(" " * 4 + END_COMMENT)
-    start_stub_idx, end_stub_idx = processed.index(" " * 8 + START_SPECIAL_COMMENT), processed.index(" " * 8 + END_SPECIAL_COMMENT)
-    start_attrs_idx, end_attrs_idx = processed.index(" " * 8 + START_ATTRS_COMMENT), processed.index(" " * 8 + END_ATTRS_COMMENT)
+    start_idx, end_idx = processed.index(" " * 2 + START_COMMENT), processed.index(" " * 2 + END_COMMENT)
+    start_stub_idx, end_stub_idx = processed.index(" " * 4 + START_SPECIAL_COMMENT), processed.index(" " * 4 + END_SPECIAL_COMMENT)
+    start_attrs_idx, end_attrs_idx = processed.index(" " * 4 + START_ATTRS_COMMENT), processed.index(" " * 4 + END_ATTRS_COMMENT)
 
     # NOTE: inline stubs __config__ attrs representation
     special_attrs_lines: list[str] = []
-    for keys, ForwardRef in openllm.utils.codegen.get_annotations(ModelSettings).items(): special_attrs_lines.append(f"{' ' * 8}{keys}: {_transformed.get(keys, process_annotations(ForwardRef.__forward_arg__))}\n")
+    for keys, ForwardRef in openllm.utils.codegen.get_annotations(ModelSettings).items(): special_attrs_lines.append(f"{' ' * 4}{keys}: {_transformed.get(keys, process_annotations(ForwardRef.__forward_arg__))}\n")
 
     # NOTE: inline stubs for _ConfigAttr type stubs
     config_attr_lines: list[str] = []
     for keys, ForwardRef in openllm.utils.codegen.get_annotations(ModelSettings).items():
         config_attr_lines.extend(
             [
-                " " * 8 + line
+                " " * 4 + line
                 for line in [
                     f"__openllm_{keys}__: {_transformed.get(keys, process_annotations(ForwardRef.__forward_arg__))} = Field(None)\n",
                     f'"""{_value_docstring[keys]}"""\n',
@@ -134,11 +134,11 @@ def main() -> int:
 
     # NOTE: inline runtime __getitem__ overload process
     lines: list[str] = []
-    lines.append(" " * 4 + "# NOTE: ModelSettings arguments\n")
+    lines.append(" " * 2 + "# NOTE: ModelSettings arguments\n")
     for keys, ForwardRef in openllm.utils.codegen.get_annotations(ModelSettings).items():
         lines.extend(
             [
-                " " * 4 + line
+                " " * 2 + line
                 for line in [
                     "@overload\n" if "overload" in dir(_imported) else "@t.overload\n",
                     f'def __getitem__(self, item: t.Literal["{keys}"]) -> {_transformed.get(keys, process_annotations(ForwardRef.__forward_arg__))}: ...\n',
@@ -146,10 +146,10 @@ def main() -> int:
             ]
         )
     # special case variables: generation_class, extras, sampling_class
-    lines.append(" " * 4 + "# NOTE: generation_class, sampling_class and extras arguments\n")
+    lines.append(" " * 2 + "# NOTE: generation_class, sampling_class and extras arguments\n")
     lines.extend(
         [
-            " " * 4 + line
+            " " * 2 + line
             for line in [
                 "@overload\n" if "overload" in dir(_imported) else "@t.overload\n",
                 'def __getitem__(self, item: t.Literal["generation_class"]) -> t.Type[openllm._configuration.GenerationConfig]: ...\n',
@@ -160,24 +160,24 @@ def main() -> int:
             ]
         ]
     )
-    lines.append(" " * 4 + "# NOTE: GenerationConfig arguments\n")
+    lines.append(" " * 2 + "# NOTE: GenerationConfig arguments\n")
     generation_config_anns = openllm.utils.codegen.get_annotations(GenerationConfig)
     for keys, type_pep563 in generation_config_anns.items():
         lines.extend(
             [
-                " " * 4 + line
+                " " * 2 + line
                 for line in [
                     "@overload\n" if "overload" in dir(_imported) else "@t.overload\n",
                     f'def __getitem__(self, item: t.Literal["{keys}"]) -> {type_pep563}: ...\n',
                 ]
             ]
         )
-    lines.append(" " * 4 + "# NOTE: SamplingParams arguments\n")
+    lines.append(" " * 2 + "# NOTE: SamplingParams arguments\n")
     for keys, type_pep563 in openllm.utils.codegen.get_annotations(SamplingParams).items():
         if keys not in generation_config_anns:
             lines.extend(
                 [
-                    " " * 4 + line
+                    " " * 2 + line
                     for line in [
                         "@overload\n" if "overload" in dir(_imported) else "@t.overload\n",
                         f'def __getitem__(self, item: t.Literal["{keys}"]) -> {type_pep563}: ...\n',
@@ -185,11 +185,11 @@ def main() -> int:
                 ]
             )
 
-    lines.append(" " * 4 + "# NOTE: PeftType arguments\n")
+    lines.append(" " * 2 + "# NOTE: PeftType arguments\n")
     for keys in PeftType._member_names_:
         lines.extend(
             [
-                " " * 4 + line
+                " " * 2 + line
                 for line in [
                     "@overload\n" if "overload" in dir(_imported) else "@t.overload\n",
                     f'def __getitem__(self, item: t.Literal["{keys.lower()}"]) -> dict[str, t.Any]: ...\n',
@@ -197,7 +197,7 @@ def main() -> int:
             ]
         )
 
-    processed = processed[:start_attrs_idx] + [" " * 8 + START_ATTRS_COMMENT, *special_attrs_lines, " " * 8 + END_ATTRS_COMMENT] + processed[end_attrs_idx + 1 : start_stub_idx] + [" " * 8 + START_SPECIAL_COMMENT, *config_attr_lines, " " * 8 + END_SPECIAL_COMMENT] + processed[end_stub_idx + 1 : start_idx] + [" " * 4 + START_COMMENT, *lines, " " * 4 + END_COMMENT] + processed[end_idx + 1 :]
+    processed = processed[:start_attrs_idx] + [" " * 4 + START_ATTRS_COMMENT, *special_attrs_lines, " " * 4 + END_ATTRS_COMMENT] + processed[end_attrs_idx + 1 : start_stub_idx] + [" " * 4 + START_SPECIAL_COMMENT, *config_attr_lines, " " * 4 + END_SPECIAL_COMMENT] + processed[end_stub_idx + 1 : start_idx] + [" " * 2 + START_COMMENT, *lines, " " * 2 + END_COMMENT] + processed[end_idx + 1 :]
     with _TARGET_FILE.open("w") as f: f.writelines(processed)
     return 0
 

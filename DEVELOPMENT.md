@@ -155,8 +155,13 @@ hatch run tests:snapshot-models
 
 ## Working with Git
 
-To filter out most of the generated commits for infrastructure, use ``--invert-grep`` in conjunction with ``--grep``
-to filter out all commits with regex `"[generated]"`
+To filter out most of the generated commits for infrastructure, use
+`--invert-grep` in conjunction with `--grep` to filter out all commits with
+regex `"[generated]"`
+
+## Style
+
+See [STYLE.md](STYLE.md) for our style guide.
 
 ## Releasing a New Version
 
