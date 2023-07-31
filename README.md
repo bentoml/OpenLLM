@@ -6,20 +6,21 @@
     <h1 align="center">🦾 OpenLLM</h1>
     <a href="https://pypi.org/project/openllm">
         <img src="https://img.shields.io/pypi/v/openllm.svg?logo=pypi&label=PyPI&logoColor=gold" alt="pypi_status" />
-    </a><a href="https://github.com/bentoml/OpenLLM/actions/workflows/ci.yml">
-        <img src="https://github.com/bentoml/OpenLLM/actions/workflows/ci.yml/badge.svg?branch=main" alt="ci" />
     </a><a href="https://twitter.com/bentomlai">
         <img src="https://badgen.net/badge/icon/@bentomlai/1DA1F2?icon=twitter&label=Follow%20Us" alt="Twitter" />
     </a><a href="https://l.bentoml.com/join-openllm-discord">
         <img src="https://badgen.net/badge/icon/OpenLLM/7289da?icon=discord&label=Join%20Us" alt="Discord" />
-    </a><a href="https://pypi.org/project/openllm">
+    </a><a href="https://github.com/bentoml/OpenLLM/actions/workflows/ci.yml">
+        <img src="https://github.com/bentoml/OpenLLM/actions/workflows/ci.yml/badge.svg?branch=main" alt="ci" />
+    </a><a href="https://results.pre-commit.ci/latest/github/bentoml/OpenLLM/main">
+        <img src="https://results.pre-commit.ci/badge/github/bentoml/OpenLLM/main.svg" alt="pre-commit.ci status" />
+    </a><br>
+    <a href="https://pypi.org/project/openllm">
         <img src="https://img.shields.io/pypi/pyversions/openllm.svg?logo=python&label=Python&logoColor=gold" alt="python_version" />
     </a><a href="https://github.com/pypa/hatch">
         <img src="https://img.shields.io/badge/%F0%9F%A5%9A-Hatch-4051b5.svg" alt="Hatch" />
     </a><a href="https://github.com/astral-sh/ruff">
         <img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/charliermarsh/ruff/main/assets/badge/v2.json" alt="Ruff" />
-    </a><a href="https://results.pre-commit.ci/latest/github/bentoml/OpenLLM/main">
-        <img src="https://results.pre-commit.ci/badge/github/bentoml/OpenLLM/main.svg" alt="pre-commit.ci status" />
     </a><a href="https://github.com/python/mypy">
         <img src="https://img.shields.io/badge/types-mypy-blue.svg" alt="types - mypy" />
     </a><a href="https://github.com/microsoft/pyright">
