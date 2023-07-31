@@ -15,7 +15,7 @@
         all-model-ids (rf/subscribe [::subs/all-model-ids])]
     (fn []
       [:div {:class "px-5 mb-3 mt-1"}
-       [:label {:class "text-black"} "Model-Type" 
+       [:label {:class "text-black"} "Model-Type"
         (into [select {:class "w-full h-8 mb-1"
                        :value @model-type
                        :disabled true

@@ -29,7 +29,7 @@
    This map is used to prevent the creation of multiple database objects
    for the same database name. This is important, because the database
    object is the only way to interact with the database.
-   
+
    The lookup into this map is automatically done. While using an atom
    adds state to the namespace, the performance and convinience gains
    are worth it."

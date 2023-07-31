@@ -52,7 +52,7 @@
 
 (reg-event-fx
  ::open-link-in-new-tab
- (fn [_ [_ url]] 
+ (fn [_ [_ url]]
    {:fx (js/window.open url "_blank")})) ;; hitchu with da side fx's *new wave uptempo kick*
 
 

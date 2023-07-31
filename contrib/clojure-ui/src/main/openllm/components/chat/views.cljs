@@ -13,7 +13,7 @@
             [reagent-mui.material.modal :refer [modal]]
             [reagent-mui.material.box :refer [box]]
             [reagent-mui.material.paper :refer [paper]]
-            [reagent-mui.material.typography :refer [typography]] 
+            [reagent-mui.material.typography :refer [typography]]
             [reagent-mui.icons.design-services :as ds-icon]
             [reagent-mui.icons.send :as send-icon]
             [reagent.core :as r]))
@@ -77,7 +77,7 @@
                                   "bg-gray-300 ml-10 rounded-br-none border-gray-400")))
 
 (defn user->text-style
-  "Produces additional style attributes forthe text of a text message 
+  "Produces additional style attributes forthe text of a text message
    upon the provided user.
    This can be done a lot smarter, but it works for now."
   [user]

@@ -2,7 +2,7 @@
   (:require [openllm.components.side-bar.model-selection.db :as db]
             [openllm.events :refer [check-spec-interceptor]]
             [re-frame.core :refer [reg-event-db reg-event-fx reg-cofx inject-cofx]]
-            [openllm.api.http :as api] 
+            [openllm.api.http :as api]
             [openllm.api.log4cljs.core :refer [log]]
             [clojure.string :as str])
   (:require-macros [openllm.build :refer [slurp]]))

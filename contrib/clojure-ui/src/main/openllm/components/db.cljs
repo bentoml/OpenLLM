@@ -4,7 +4,7 @@
    branches; I do not think that there will be any actual fields in this namespace.
    The path to this branch can be expressed as:
    *root -> components*"
-  (:require [openllm.components.chat.db :as chat-db] 
+  (:require [openllm.components.chat.db :as chat-db]
             [openllm.components.nav-bar.db :as nav-bar-db]
             [openllm.components.playground.db :as playground-db]
             [openllm.components.side-bar.db :as side-bar-db]

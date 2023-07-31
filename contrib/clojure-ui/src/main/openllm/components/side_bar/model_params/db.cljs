@@ -18,7 +18,7 @@
 ;;                Spec                ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (def parameter-meta-data
-  "A map with parameter id's as keys and some metadata for easier rendering." 
+  "A map with parameter id's as keys and some metadata for easier rendering."
    {:temperature                  {:display-type :slider   :type-pred float?   :advanced-opt false :val-constraint [0.0 1.0]}
     :top_k                        {:display-type :slider   :type-pred int?     :advanced-opt false :val-constraint [0 100]}
     :top_p                        {:display-type :slider   :type-pred float?   :advanced-opt false :val-constraint [0.1 1.0]}

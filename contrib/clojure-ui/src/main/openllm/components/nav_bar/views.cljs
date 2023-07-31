@@ -51,7 +51,7 @@
    [app-bar {:position "static"
              :color "primary"}
     [toolbar {:variant "dense"
-              :style {:height "48px"}} 
+              :style {:height "48px"}}
      [:div
       (let [screen-id @(rf/subscribe [:screen-id])]
         [tabs {:value (if (= :chat screen-id) 1 0)

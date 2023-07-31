@@ -6,7 +6,7 @@
    The `clojure.spec` schema is checked against the `app-db` after each event
    handler has run. This is done by the `events` namespaces with the help of the
    `check-spec-interceptor` from the `openllm.events` namespace.
-   
+
    Please note that each `db` namespace has an `initial-db` function which
    returns the initial value for each branch of the `app-db`.
 

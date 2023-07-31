@@ -49,7 +49,7 @@
 (defn initial-db
   "Initial values for this branch of the app-db.
    Triggers the loading of the model data by dispatching the `:slurp-model-data-json`
-   event." 
+   event."
   []
   (rf/dispatch [:slurp-model-data-json])
   (rf/dispatch [:fetch-metadata-endpoint])

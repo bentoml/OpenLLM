@@ -90,7 +90,7 @@
  ::auto-scroll
  [(inject-cofx ::chat-history-element)]
  (fn [cofx _]
-   (let [history-elem (get cofx :chat-history-element)] 
+   (let [history-elem (get cofx :chat-history-element)]
      (if (some? history-elem)
        (do (set! (.-scrollTop history-elem)
                  (.-scrollHeight history-elem))

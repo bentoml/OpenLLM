@@ -50,5 +50,5 @@
   []
   (enable-console-print!) ;; so that print writes to `console.log`
   (rf/dispatch-sync [:initialise-db])
-  (persistence/init-idb) 
+  (persistence/init-idb)
   (start))

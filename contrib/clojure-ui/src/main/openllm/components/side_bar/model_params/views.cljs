@@ -1,6 +1,6 @@
 (ns openllm.components.side-bar.model-params.views
   (:require [openllm.components.side-bar.model-params.db :as db]
-            [openllm.components.side-bar.model-params.subs :as subs] 
+            [openllm.components.side-bar.model-params.subs :as subs]
             [openllm.components.side-bar.model-params.events :as events]
             [reagent-mui.material.input :refer [input]]
             [reagent-mui.material.accordion :refer [accordion]]

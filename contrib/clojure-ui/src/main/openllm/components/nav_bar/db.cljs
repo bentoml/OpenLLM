@@ -31,6 +31,6 @@
 (comment
   ;; check if initial-db is valid
   (s/valid? ::nav-bar-db (initial-db))
-  
+
   ;; check if the map is allowed to have keys
   (s/valid? ::nav-bar-db {:foo "bar"}))
