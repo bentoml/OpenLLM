@@ -30,7 +30,7 @@ if t.TYPE_CHECKING:
 # The following warnings from bitsandbytes, and probably not that important for users to see
 warnings.filterwarnings("ignore", message="MatMul8bitLt: inputs will be cast from torch.float32 to float16 during quantization")
 warnings.filterwarnings("ignore", message="MatMul8bitLt: inputs will be cast from torch.bfloat16 to float16 during quantization")
-warnings.filterwarnings("ignore", message="The installed version of bitsandbytes was compiled without GPU support. 8-bit optimizers and GPU quantization are unavailable.")
+warnings.filterwarnings("ignore", message="The installed version of bitsandbytes was compiled without GPU support.")
 model = os.environ.get("OPENLLM_MODEL", "{__model_name__}")  # openllm: model name
 adapter_map = os.environ.get("OPENLLM_ADAPTER_MAP", """{__model_adapter_map__}""")  # openllm: model adapter map
 llm_config = openllm.AutoConfig.for_model(model)
