@@ -34,12 +34,13 @@
  (fn [all-models-data _]
    (keys all-models-data)))
 
-;; Returns a list of all `model-ids` for the current `model-type`.
+;; Returns a list of all `model-ids` for all `model-types`.
 (reg-sub
  ::all-model-ids
- :<- [::selected-model-type]
  :<- [::all-models-data]
- (fn [[selected-model-type all-models-data] _]
-   (get-in all-models-data
-           [selected-model-type :model_id]
-           [db/loading-text])))
+ (fn [all-models-data _]
+   (->> all-models-data
+        (mapv (fn [[_ model-type]]
+                (:model_id model-type)) ,)
+        (apply concat ,)
+        (vec ,))))

@@ -2,8 +2,9 @@
   (:require [openllm.components.side-bar.model-selection.db :as db]
             [openllm.events :refer [check-spec-interceptor]]
             [re-frame.core :refer [reg-event-db reg-event-fx reg-cofx inject-cofx]]
-            [openllm.api.http :as api]
-            [openllm.api.log4cljs.core :refer [log]])
+            [openllm.api.http :as api] 
+            [openllm.api.log4cljs.core :refer [log]]
+            [clojure.string :as str])
   (:require-macros [openllm.build :refer [slurp]]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -65,7 +66,10 @@
  ::received-metadata
  [check-spec-interceptor]
  (fn [_ [_ metadata]]
-   (let [model-type (keyword (:model_name metadata))
+   (let [model-type (-> metadata
+                        (:model_name ,)
+                        (str/replace , "_" "-")
+                        (keyword ,))
          model-id (:model_id metadata)]
      {:dispatch-n [[::set-model-type model-type]
                    [::set-model-id model-id]]})))
