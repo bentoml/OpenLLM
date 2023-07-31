@@ -139,3 +139,6 @@ outputs
 # PyOxidizer and binary related
 pyapp
 /target
+
+.pdm-python
+/src/openllm/_version.py

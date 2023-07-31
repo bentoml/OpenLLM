@@ -2,9 +2,10 @@ from typing import Any
 from typing import Callable
 from typing import List
 from typing import Optional
+from typing import TypeAlias
 from typing import Union
 
-_StringOrFunction = Union[str, Callable[..., Any]]
+_StringOrFunction: TypeAlias = Union[str, Callable[..., Any]]
 STRATEGY_END: object = ...
 
 class StrategyList:

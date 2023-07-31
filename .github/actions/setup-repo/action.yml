@@ -31,10 +31,6 @@ runs:
       with:
         python-version: ${{ inputs.python-version }}
         architecture: ${{ inputs.architecture }}
-    - name: Setup node
-      uses: actions/setup-node@v3
-      with:
-        node-version: '17'
     - name: Get cache key prefix
       id: get-cache-key-prefix
       shell: bash
@@ -54,10 +50,5 @@ runs:
     - name: Install dependencies
       shell: bash
       run: pip install hatch towncrier
-    - name: Install pyright
-      shell: bash
-      run: npm install -g npm@^7 pyright
-    - name: Setup bufbuild/buf
-      uses: bufbuild/buf-setup-action@v1.20.0
-      with:
-        github_token: ${{ github.token }}
+    - name: Inject slug/short variables
+      uses: rlespinasse/github-slug-action@v4.4.1

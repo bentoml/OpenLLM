@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+# Check if mypy is installed, otherwise exit 1
+[[ -x "$(command -v mypy)" ]] || (
+    echo "mypy not found"
+    exit 1
+)
+
+mypy --config pyproject.toml || exit 0

@@ -1,10 +1,10 @@
 from typing import Any
 
-from ..merger import Merger
 from .core import StrategyList
+from ..merger import Merger
 
 class SetStrategies(StrategyList):
-    NAME = ...
+    NAME: str | None = ...
 
     @staticmethod
     def strategy_union(config: Any, path: str, base: StrategyList, nxt: StrategyList) -> StrategyList: ...

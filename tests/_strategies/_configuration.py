@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from __future__ import annotations
-
 import logging
 import typing as t
 
@@ -21,7 +20,6 @@ from hypothesis import strategies as st
 
 import openllm
 from openllm._configuration import ModelSettings
-
 
 logger = logging.getLogger(__name__)
 
@@ -34,10 +32,12 @@ def model_settings(draw: st.DrawFn):
     kwargs: dict[str, t.Any] = {
         "default_id": st.text(min_size=1),
         "model_ids": st.lists(st.text(), min_size=1),
+        "architecture": st.text(min_size=1),
         "url": st.text(),
         "requires_gpu": st.booleans(),
         "trust_remote_code": st.booleans(),
         "requirements": st.none() | st.lists(st.text(), min_size=1),
+        "default_implementation": st.dictionaries(st.sampled_from(["cpu", "nvidia.com/gpu"]), st.sampled_from(["vllm", "pt", "tf", "flax"])),
         "model_type": st.sampled_from(["causal_lm", "seq2seq_lm"]),
         "runtime": st.sampled_from(["transformers", "ggml"]),
         "name_type": st.sampled_from(["dasherize", "lowercase"]),
@@ -62,11 +62,11 @@ def make_llm_config(
     lines.append(f'    __config__ = {{ {", ".join(_config_args)} }}')
     if fields is not None:
         for field, type_, default in fields:
-            lines.append(f"    {field}: {type_} = openllm.LLMConfig.Field({repr(default)})")
+            lines.append(f"    {field}: {type_} = openllm.LLMConfig.Field({default!r})")
     if generation_fields is not None:
         generation_lines = ["class GenerationConfig:"]
         for field, default in generation_fields:
-            generation_lines.append(f"    {field} = {repr(default)}")
+            generation_lines.append(f"    {field} = {default!r}")
         lines.extend(("    " + line for line in generation_lines))
 
     script = "\n".join(lines)

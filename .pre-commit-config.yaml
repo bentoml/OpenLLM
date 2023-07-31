@@ -14,20 +14,17 @@
 
 ci:
   autoupdate_schedule: weekly
-  skip: [check-models-table-update, check-models-table-update, changelog-dry-run]
-  autofix_commit_msg: "ci: auto fixes from pre-commit.ci\nFor more information, see https://pre-commit.ci"
+  skip: [check-models-table-update, check-models-table-update, changelog-dry-run, pyright, mypy]
+  autofix_commit_msg: "ci: auto fixes from pre-commit.ci\n\nFor more information, see https://pre-commit.ci"
   autoupdate_commit_msg: 'ci: pre-commit autoupdate [pre-commit.ci]'
+  autofix_prs: false
 exclude: '.*\.(css|js|svg)$'
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: 'v0.0.275'
+    rev: 'v0.0.280'
     hooks:
       - id: ruff
-        args: [--fix, --exit-non-zero-on-fix, --show-fixes]
-  - repo: https://github.com/psf/black
-    rev: 23.3.0
-    hooks:
-      - id: black-jupyter
+        args: [--exit-non-zero-on-fix, --show-fixes]
   - repo: https://github.com/econchick/interrogate
     rev: 1.5.0
     hooks:
@@ -37,6 +34,39 @@ repos:
         args: [--config=pyproject.toml]
   - repo: local
     hooks:
+      - id: mypy
+        name: mypy
+        entry: ./tools/mypy
+        types: [python]
+        language: python
+        pass_filenames: false
+        verbose: true
+        exclude: |
+          (?x)^(
+              examples/.*|
+              tools/.*|
+              tests/.*|
+              src/openllm/playground/.*|
+              .github/.*
+          )$
+        additional_dependencies:
+          - mypy==1.4.1
+          - click>=8.1.6
+          - peft
+          - git+https://github.com/bentoml/BentoML.git@main
+          - git+https://github.com/huggingface/transformers.git@main
+          - types-psutil
+          - types-tabulate
+          - types-PyYAML
+          - types-protobuf
+      - id: pyright
+        name: pyright
+        entry: ./tools/pyright
+        types: [python]
+        language: node
+        pass_filenames: false
+        additional_dependencies: ['pyright@1.1.317']
+        verbose: true
       - id: check-license-header
         name: check for license headers
         entry: ./tools/assert-license-headers
@@ -69,3 +99,10 @@ repos:
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
+        exclude: |
+          (?x)^(
+              tests/models/.*
+          )$
+      - id: check-yaml
+        args: ['--unsafe']
+      - id: check-toml

@@ -14,19 +14,24 @@
 
 from __future__ import annotations
 
-
 FRAMEWORK_TO_AUTOCLASS_MAPPING = {
     "pt": ("AutoModelForCausalLM", "AutoModelForSeq2SeqLM"),
+    # NOTE: vllm will use PyTorch implementation of transformers for serialisation
+    "vllm": ("AutoModelForCausalLM", "AutoModelForSeq2SeqLM"),
     "tf": ("TFAutoModelForCausalLM", "TFAutoModelForSeq2SeqLM"),
     "flax": ("FlaxAutoModelForCausalLM", "FlaxAutoModelForSeq2SeqLM"),
 }
 
-# NOTE: This is a custom mapping for the autoclass to be used when loading as path
-# since will try to infer the auto class to load, we will need this mapping
-# in addition to FRAMEWORK_TO_AUTOCLASS_MAPPING for it to work properly.
-# The following model all have trust_remote_code sets to True
-MODEL_TO_AUTOCLASS_MAPPING = {
-    "falcon": {"pt": "AutoModelForCausalLM"},
-    "chatglm": {"pt": "AutoModel"},
-    "mpt": {"pt": "AutoModelForCausalLM"},
-}
+
+# this logic below is synonymous to handling `from_pretrained` attrs.
+HUB_ATTRS = [
+    "cache_dir",
+    "code_revision",
+    "force_download",
+    "local_files_only",
+    "proxies",
+    "resume_download",
+    "revision",
+    "subfolder",
+    "use_auth_token",
+]

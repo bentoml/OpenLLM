@@ -11,8 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
-CLI entrypoint for OpenLLM.
+"""CLI entrypoint for OpenLLM.
 
 Usage:
     openllm --help
@@ -21,6 +20,5 @@ To start any OpenLLM model:
     openllm start <model_name> --options ...
 """
 if __name__ == "__main__":
-    from openllm.cli import cli
-
+    from openllm.cli.entrypoint import cli
     cli()

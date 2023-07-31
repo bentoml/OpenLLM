@@ -11,16 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 from __future__ import annotations
-
 import openllm
-
-
 class OPTConfig(openllm.LLMConfig):
-    """OPT was first introduced in [Open Pre-trained Transformer Language Models](https://arxiv.org/abs/2205.01068)
-    and first released in [metaseq's repository](https://github.com/facebookresearch/metaseq)
-    on May 3rd 2022 by Meta AI.
+    """OPT was first introduced in [Open Pre-trained Transformer Language Models](https://arxiv.org/abs/2205.01068) and first released in [metaseq's repository](https://github.com/facebookresearch/metaseq) on May 3rd 2022 by Meta AI.
 
     OPT was predominantly pretrained with English text, but a small amount of non-English data is still present
     within the training corpus via CommonCrawl. The model was pretrained using a causal language modeling (CLM)
@@ -29,12 +23,12 @@ class OPTConfig(openllm.LLMConfig):
 
     Refer to [OPT's HuggingFace page](https://huggingface.co/docs/transformers/model_doc/opt) for more information.
     """
-
     __config__ = {
         "name_type": "lowercase",
         "trust_remote_code": False,
         "url": "https://huggingface.co/docs/transformers/model_doc/opt",
         "default_id": "facebook/opt-1.3b",
+        "architecture": "OPTForCausalLM",
         "model_ids": [
             "facebook/opt-125m",
             "facebook/opt-350m",
@@ -54,20 +48,12 @@ class OPTConfig(openllm.LLMConfig):
             },
         ),
     }
-
-    format_outputs: bool = openllm.LLMConfig.Field(
-        False,
-        description="""Whether to format the outputs. This
-    can be used when num_return_sequences > 1.""",
-    )
-
+    format_outputs: bool = openllm.LLMConfig.Field(False, description="""Whether to format the outputs. This can be used when num_return_sequences > 1.""")
     class GenerationConfig:
         top_k: int = 15
         temperature: float = 0.75
         max_new_tokens: int = 1024
         num_return_sequences: int = 1
-
-
 START_OPT_COMMAND_DOCSTRING = """\
 Run a LLMServer for OPT model.
 
@@ -86,12 +72,11 @@ By default, this model will use the PyTorch model for inference. However, this m
 - To use Tensorflow, set the environment variable ``OPENLLM_OPT_FRAMEWORK="tf"``
 
 \b
-OPT Runner will use facebook/opt-2.7b as the default model. To change any to any other OPT
+OPT Runner will use facebook/opt-2.7b as the default model. To change to any other OPT
 saved pretrained, or a fine-tune OPT, provide ``OPENLLM_OPT_MODEL_ID='facebook/opt-6.7b'``
 or provide `--model-id` flag when running ``openllm start opt``:
 
 \b
 $ openllm start opt --model-id facebook/opt-6.7b
 """
-
 DEFAULT_PROMPT_TEMPLATE = """{instruction}"""

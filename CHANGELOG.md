@@ -18,6 +18,191 @@ This changelog is managed by towncrier and is compiled at release time.
 
 <!-- towncrier release notes start -->
 
+## [0.2.11](https://github.com/bentoml/openllm/tree/v0.2.11)
+
+### Features
+
+- Added embeddings support for T5 and ChatGLM
+  [#153](https://github.com/bentoml/openllm/issues/153)
+
+
+## [0.2.10](https://github.com/bentoml/openllm/tree/v0.2.10)
+
+### Features
+
+- Added installing with git-archival support
+
+  ```bash
+  pip install "https://github.com/bentoml/openllm/archive/main.tar.gz"
+  ```
+  [#143](https://github.com/bentoml/openllm/issues/143)
+- Users now can call ``client.embed`` to get the embeddings from the running LLMServer
+
+      ```python
+      client = openllm.client.HTTPClient("http://localhost:3000")
+
+      client.embed("Hello World")
+      client.embed(["Hello", "World"])
+      ```
+
+  > **Note:** The ``client.embed`` is currently only implemnted for ``openllm.client.HTTPClient`` and ``openllm.client.AsyncHTTPClient``
+
+  Users can also query embeddings directly from the CLI, via ``openllm embed``:
+
+      ```bash
+      $ openllm embed --endpoint localhost:3000 "Hello World" "My name is Susan"
+
+      [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]
+      ```
+  [#146](https://github.com/bentoml/openllm/issues/146)
+
+
+### Bug fix
+
+- Fixes model location while running within BentoContainer correctly
+
+  This makes sure that the tags and model path are inferred correctly, based on BENTO_PATH and /.dockerenv
+  [#141](https://github.com/bentoml/openllm/issues/141)
+
+
+## [0.2.9](https://github.com/bentoml/openllm/tree/v0.2.9)
+No significant changes.
+
+
+## [0.2.8](https://github.com/bentoml/openllm/tree/v0.2.8)
+
+### Features
+
+- APIs for LLMService are now provisional based on the capabilities of the LLM.
+
+  The following APIs are considered provisional:
+
+  - `/v1/embeddings`: This will be available if the LLM supports embeddings (i.e: ``LLM.embeddings`` is implemented. Example model are ``llama``)
+  - `/hf/agent`: This will be available if LLM supports running HF agents (i.e: ``LLM.generate_one`` is implemented. Example model are ``starcoder``, ``falcon``.)
+  - `POST /v1/adapters` and `GET /v1/adapters`: This will be available if the server is running with LoRA weights
+
+  ``openllm.LLMRunner`` now include three additional boolean:
+  - `runner.supports_embeddings`: Whether this runner supports embeddings
+  - `runner.supports_hf_agent`: Whether this runner support HF agents
+  - `runner.has_adapters`: Whether this runner is loaded with LoRA adapters.
+
+  Optimized ``openllm.models``'s bytecode performance
+  [#133](https://github.com/bentoml/openllm/issues/133)
+
+
+## [0.2.7](https://github.com/bentoml/openllm/tree/v0.2.7)
+No significant changes.
+
+
+## [0.2.6](https://github.com/bentoml/openllm/tree/v0.2.6)
+
+### Backwards-incompatible Changes
+
+- Updated signature for `load_model` and `load_tokenizer` not to allow tag.
+  Tag can be accessed via `llm.tag`, or if using `openllm.serialisation` or `bentoml.transformers` then you can use `self._bentomodel`
+
+  Updated serialisation shared logics to reduce callstack for saving three calltrace.
+  [#132](https://github.com/bentoml/openllm/issues/132)
+
+
+## [0.2.5](https://github.com/bentoml/openllm/tree/v0.2.5)
+
+### Features
+
+- Added support for sending arguments via CLI.
+
+  ```python
+  openllm query --endpoint localhost:3000 "What is the difference between noun and pronoun?" --sampling-params temperature 0.84
+  ```
+
+  Fixed llama2 qlora training script to save unquantized weights
+  [#130](https://github.com/bentoml/openllm/issues/130)
+
+
+## [0.2.4](https://github.com/bentoml/openllm/tree/v0.2.4)
+No significant changes.
+
+
+## [0.2.3](https://github.com/bentoml/openllm/tree/v0.2.3)
+No significant changes.
+
+
+## [0.2.2](https://github.com/bentoml/openllm/tree/v0.2.2)
+No significant changes.
+
+
+## [0.2.1](https://github.com/bentoml/openllm/tree/v0.2.1)
+No significant changes.
+
+
+## [0.2.0](https://github.com/bentoml/openllm/tree/v0.2.0)
+
+### Features
+
+- Added support for GPTNeoX models. All variants of GPTNeoX, including Dolly-V2
+  and StableLM can now also use `openllm start gpt-neox`
+
+  `openllm models -o json` nows return CPU and GPU field. `openllm models` now
+  show table that mimics the one from README.md
+
+  Added scripts to automatically add models import to `__init__.py`
+
+  `--workers-per-resource` now accepts the following strategies:
+
+  - `round_robin`: Similar behaviour when setting `--workers-per-resource 1`. This
+    is useful for smaller models.
+  - `conserved`: This will determine the number of available GPU resources, and
+    only assign one worker for the LLMRunner with all available GPU resources. For
+    example, if ther are 4 GPUs available, then `conserved` is equivalent to
+    `--workers-per-resource 0.25`.
+  [#106](https://github.com/bentoml/openllm/issues/106)
+- Added support for [Baichuan](https://github.com/baichuan-inc/Baichuan-7B) model
+  generation, contributed by @hetaoBackend
+
+  Fixes how we handle model loader auto class for trust_remote_code in
+  transformers
+  [#115](https://github.com/bentoml/openllm/issues/115)
+
+
+### Bug fix
+
+- Fixes relative model_id handling for running LLM within the container.
+
+  Added support for building container directly with `openllm build`. Users now
+  can do `openllm build --format=container`:
+
+  ```bash
+  openllm build flan-t5 --format=container
+  ```
+
+  This is equivalent to:
+
+  ```bash
+  openllm build flan-t5 && bentoml containerize google-flan-t5-large-service
+  ```
+
+  Added Snapshot testing and more robust edge cases for model testing
+
+  General improvement in `openllm.LLM.import_model` where it will parse santised
+  parameters automatically.
+
+  Fixes `openllm start <bento>` to use correct `model_id`, ignoring `--model-id`
+  (The correct behaviour)
+
+  Fixes `--workers-per-resource conserved` to respect `--device`
+
+  Added initial interface for `LLM.embeddings`
+  [#107](https://github.com/bentoml/openllm/issues/107)
+- Fixes resources to correctly follows CUDA_VISIBLE_DEVICES spec
+
+  OpenLLM now contains a standalone parser that mimic `torch.cuda` parser for set
+  GPU devices. This parser will be used to parse both AMD and NVIDIA GPUs.
+
+  `openllm` should now be able to parse `GPU-` and `MIG-` UUID from both
+  configuration or spec.
+  [#114](https://github.com/bentoml/openllm/issues/114)
+
+
 ## [0.1.20](https://github.com/bentoml/openllm/tree/v0.1.20)
 
 ### Features

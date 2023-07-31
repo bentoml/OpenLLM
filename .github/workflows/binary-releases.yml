@@ -3,6 +3,15 @@ name: binary-distribution
 on:
   workflow_call:
   workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - 'bazel/**'
+      - 'typings/**'
+      - '*.md'
+      - 'changelog.d/**'
+      - 'assets/**'
 defaults:
   run:
     shell: bash --noprofile --norc -exo pipefail {0}
@@ -13,10 +22,12 @@ env:
   APP_NAME: openllm
   PYTHON_VERSION: '3.11'
   PYOXIDIZER_VERSION: '0.24.0'
+  HATCH_VERBOSE: 2
 jobs:
   python-artifacts:
     name: Build wheel and source distribution
     runs-on: ubuntu-latest
+    if: ${{ github.actor != 'dependabot[bot]' }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -24,6 +35,7 @@ jobs:
       - name: Setup CI
         uses: ./.github/actions/setup-repo
       - name: Pull latest change
+        if: ${{ github.event_name != 'pull_request' }}
         run: git pull --autostash --no-edit --gpg-sign --ff origin main
       - name: Install build frontend
         run: python -m pip install --upgrade build
@@ -76,7 +88,7 @@ jobs:
       CARGO: cargo
       CARGO_BUILD_TARGET: ${{ matrix.job.target }}
       PYAPP_REPO: pyapp
-      PYAPP_VERSION: '0.8.0'
+      PYAPP_VERSION: '0.10.1'
       PYAPP_PIP_EXTERNAL: 'true'
     steps:
       - name: Checkout code
@@ -84,6 +96,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Pull latest change
+        if: ${{ github.event_name != 'pull_request' }}
         run: git pull --autostash --no-edit --gpg-sign --ff origin main
       - name: Fetch PyApp
         run: >-
@@ -137,9 +150,10 @@ jobs:
 
           if [[ "$version" != "$old_version" ]]; then
             cd dist/app
-            old_binary="$(ls)"
-            binary="${old_binary/$old_version/$version}"
-            mv "$old_binary" "$binary"
+            find . -type f -iname "openllm-*" | while read -r file; do
+              binary=$(echo "$file" | sed 's/dev//')
+              mv "$file" "$binary"
+            done
           fi
 
           echo "version=$version" >> $GITHUB_OUTPUT
@@ -148,15 +162,15 @@ jobs:
         run: |-
           mkdir packaging
           cd dist/app
-
-          binary="$(ls)"
-
-          if [[ "$binary" =~ -pc-windows- ]]; then
-            7z a "../../packaging/${binary:0:-4}.zip" "$binary"
+          find . -type f -iname "openllm-*" | while read -r file; do
+          if [[ "$file" =~ -pc-windows- ]]; then
+            7z a "../../packaging/${file:0:-4}.zip" "$file"
           else
-            chmod +x "$binary"
-            tar -czf "../../packaging/$binary.tar.gz" "$binary"
+            binary="${file/dev/}"
+            chmod +x "$file"
+            tar -czf "../../packaging/$binary.tar.gz" "$file"
           fi
+          done
       - name: Upload staged archive
         if: runner.os != 'Linux'
         uses: actions/upload-artifact@v3
@@ -177,6 +191,7 @@ jobs:
     runs-on: windows-2022
     env:
       VERSION: ${{ needs.binaries.outputs.version }}
+    if: ${{ github.event_name != 'pull_request' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -228,81 +243,3 @@ jobs:
         with:
           name: installers
           path: installers/*
-  macos-packaging:
-    name: Build macOS installer
-    if: ${{ false }} # XXX: eh disable installer for MacOS for now, needs more investigation
-    needs: binaries
-    runs-on: macos-12
-    env:
-      VERSION: ${{ needs.binaries.outputs.version }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      - name: Pull latest change
-        run: git pull --autostash --no-edit --gpg-sign --ff origin main
-      - name: Set up Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-      - name: Install PyOxidizer ${{ env.PYOXIDIZER_VERSION }}
-        run: pip install pyoxidizer==${{ env.PYOXIDIZER_VERSION }}
-      - name: Install create-dmg
-        run: brew install create-dmg
-      - name: Download staged binaries
-        uses: actions/download-artifact@v3
-        with:
-          name: staged-${{ runner.os }}
-          path: archives
-      - name: Extract staged binaries
-        run: |-
-          mkdir bin
-          for f in archives/*; do
-            tar -xzf "$f" -C bin
-          done
-      - name: Archive binaries
-        run: |-
-          rm archives/*
-          cd bin
-
-          for f in *; do
-            tar -czf "../archives/$f.tar.gz" "$f"
-          done
-      # bin/<APP_NAME>-<VERSION>-<TARGET> -> targets/<TARGET>/<APP_NAME>
-      - name: Prepare binaries
-        run: |-
-          mkdir targets
-          for f in bin/*; do
-            if [[ "$f" =~ ${{ env.VERSION }}-(.+)$ ]]; then
-              target="${BASH_REMATCH[1]}"
-              mkdir "targets/$target"
-              mv "$f" "targets/$target/${{ env.APP_NAME }}"
-            fi
-          done
-      - name: Build app bundle
-        run: >-
-          pyoxidizer build macos_app_bundle --release --var version ${{ env.VERSION }}
-      - name: Stage app bundle
-        id: stage
-        run: |-
-          mkdir staged
-          mv build/*/release/*/*.app staged
-          app_bundle="$(ls staged)"
-          app_name="${app_bundle:0:${#app_bundle}-4}"
-
-          echo "app-bundle=$app_bundle" >> "$GITHUB_OUTPUT"
-          echo "app-name=$app_name-${{ env.VERSION }}.dmg" >> "$GITHUB_OUTPUT"
-          echo "dmg-file=$app_name-${{ env.VERSION }}.dmg" >> "$GITHUB_OUTPUT"
-      - name: Create DMG
-        run: >-
-          create-dmg --volname "${{ steps.stage.outputs.app-name }}" --hide-extension "${{ steps.stage.outputs.app-bundle }}" --window-pos 200 120 --window-size 800 400 --icon-size 100 --app-drop-link 600 185 "${{ steps.stage.outputs.dmg-file }}" staged
-      - name: Upload binaries
-        uses: actions/upload-artifact@v3
-        with:
-          name: standalone
-          path: archives/*
-          if-no-files-found: error
-      - name: Upload installer
-        uses: actions/upload-artifact@v3
-        with:
-          name: installers
-          path: ${{ steps.stage.outputs.dmg-file }}

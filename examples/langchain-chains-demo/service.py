@@ -13,9 +13,6 @@
 # limitations under the License.
 
 from __future__ import annotations
-
-import subprocess
-import sys
 import typing as t
 
 from langchain.chains import LLMChain
@@ -27,7 +24,6 @@ import bentoml
 from bentoml.io import JSON
 from bentoml.io import Text
 
-
 class Query(BaseModel):
     industry: str
     product_name: str
@@ -36,11 +32,9 @@ class Query(BaseModel):
 
 
 def gen_llm(model_name: str, model_id: str | None = None) -> OpenLLM:
-    args = [sys.executable, "-m", "openllm", "download", model_name]
-    if model_id:
-        args += ["--model-id", model_id]
-    subprocess.check_output(args)
-    return OpenLLM(model_name=model_name, model_id=model_id, embedded=False)
+    lc_llm = OpenLLM(model_name=model_name, model_id=model_id, embedded=False)
+    lc_llm.runner.download_model()
+    return lc_llm
 
 
 llm = gen_llm("dolly-v2", model_id="databricks/dolly-v2-7b")

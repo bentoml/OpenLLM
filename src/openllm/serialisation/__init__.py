@@ -37,23 +37,28 @@ llm.save_pretrained("./path/to/local-dolly")
 """
 
 from __future__ import annotations
-
-from ..utils import LazyModule
 import typing as t
+
+import cloudpickle
+
 import openllm
+from bentoml._internal.models.model import CUSTOM_OBJECTS_FILENAME
+
+from ..exceptions import OpenLLMException
+from ..utils import LazyLoader
+from ..utils import LazyModule
 
 if t.TYPE_CHECKING:
     import bentoml
-    from .._types import ModelProtocol, TokenizerProtocol
-    from .transformers import _M, _T
+    import transformers
+
+    from .._llm import M
+    from .._llm import T
+else:
+    transformers = LazyLoader("transformers", globals(), "transformers")
 
 
-def import_model(
-    llm: openllm.LLM[t.Any, t.Any],
-    *decls: t.Any,
-    trust_remote_code: bool,
-    **attrs: t.Any,
-) -> bentoml.Model:
+def import_model(llm: openllm.LLM[M, T], *decls: t.Any, trust_remote_code: bool, **attrs: t.Any) -> bentoml.Model:
     if llm.runtime == "transformers":
         return openllm.transformers.import_model(llm, *decls, trust_remote_code=trust_remote_code, **attrs)
     elif llm.runtime == "ggml":
@@ -62,7 +67,7 @@ def import_model(
         raise ValueError(f"Unknown runtime: {llm.config['runtime']}")
 
 
-def get(llm: openllm.LLM[t.Any, t.Any], auto_import: bool = False) -> bentoml.Model:
+def get(llm: openllm.LLM[M, T], auto_import: bool = False) -> bentoml.Model:
     if llm.runtime == "transformers":
         return openllm.transformers.get(llm, auto_import=auto_import)
     elif llm.runtime == "ggml":
@@ -71,7 +76,7 @@ def get(llm: openllm.LLM[t.Any, t.Any], auto_import: bool = False) -> bentoml.Mo
         raise ValueError(f"Unknown runtime: {llm.config['runtime']}")
 
 
-def save_pretrained(llm: openllm.LLM[t.Any, t.Any], save_directory: str, **attrs: t.Any):
+def save_pretrained(llm: openllm.LLM[M, T], save_directory: str, **attrs: t.Any) -> None:
     if llm.runtime == "transformers":
         return openllm.transformers.save_pretrained(llm, save_directory, **attrs)
     elif llm.runtime == "ggml":
@@ -80,7 +85,7 @@ def save_pretrained(llm: openllm.LLM[t.Any, t.Any], save_directory: str, **attrs
         raise ValueError(f"Unknown runtime: {llm.config['runtime']}")
 
 
-def load_model(llm: openllm.LLM[_M, t.Any], *decls: t.Any, **attrs: t.Any) -> ModelProtocol[_M]:
+def load_model(llm: openllm.LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M:
     if llm.runtime == "transformers":
         return openllm.transformers.load_model(llm, *decls, **attrs)
     elif llm.runtime == "ggml":
@@ -89,13 +94,37 @@ def load_model(llm: openllm.LLM[_M, t.Any], *decls: t.Any, **attrs: t.Any) -> Mo
         raise ValueError(f"Unknown runtime: {llm.config['runtime']}")
 
 
-def load_tokenizer(llm: openllm.LLM[t.Any, _T]) -> TokenizerProtocol[_T]:
-    if llm.runtime == "transformers":
-        return openllm.transformers.load_tokenizer(llm)
-    elif llm.runtime == "ggml":
-        return openllm.ggml.load_tokenizer(llm)
+def load_tokenizer(llm: openllm.LLM[t.Any, T], **tokenizer_attrs: t.Any) -> T:
+    """Load the tokenizer from BentoML store.
+
+    By default, it will try to find the bentomodel whether it is in store..
+    If model is not found, it will raises a ``bentoml.exceptions.NotFound``.
+    """
+    from .transformers import infer_tokenizers_class_for_llm
+
+    bentomodel_fs = llm._bentomodel._fs
+    if bentomodel_fs.isfile(CUSTOM_OBJECTS_FILENAME):
+        with bentomodel_fs.open(CUSTOM_OBJECTS_FILENAME, "rb") as cofile:
+            try:
+                tokenizer = cloudpickle.load(t.cast("t.IO[bytes]", cofile))["tokenizer"]
+            except KeyError:
+                # This could happen if users implement their own import_model
+                raise OpenLLMException(
+                    "Model does not have tokenizer. Make sure to save \
+                    the tokenizer within the model via 'custom_objects'.\
+                    For example: bentoml.transformers.save_model(..., custom_objects={'tokenizer': tokenizer}))"
+                ) from None
     else:
-        raise ValueError(f"Unknown runtime: {llm.config['runtime']}")
+        tokenizer = infer_tokenizers_class_for_llm(llm).from_pretrained(
+            bentomodel_fs.getsyspath("/"),
+            trust_remote_code=llm.__llm_trust_remote_code__,
+            **tokenizer_attrs,
+        )
+
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+
+    return tokenizer
 
 
 _extras = {
@@ -109,11 +138,6 @@ _extras = {
 _import_structure: dict[str, list[str]] = {"ggml": [], "transformers": []}
 
 if t.TYPE_CHECKING:
-    from . import import_model as import_model
-    from . import get as get
-    from . import save_pretrained as save_pretrained
-    from . import load_model as load_model
-    from . import load_tokenizer as load_tokenizer
     from . import ggml as ggml
     from . import transformers as transformers
 else:

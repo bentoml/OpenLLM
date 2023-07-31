@@ -11,40 +11,23 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 from __future__ import annotations
-
+import sys
 import typing as t
-
-from ...utils import is_torch_available, LazyModule
 from ...exceptions import MissingDependencyError
-
-
-_import_structure = {
-    "configuration_stablelm": ["StableLMConfig", "START_STABLELM_COMMAND_DOCSTRING", "DEFAULT_PROMPT_TEMPLATE"],
-}
-
+from ...utils import LazyModule
+from ...utils import is_torch_available
+_import_structure: dict[str, list[str]] = {"configuration_stablelm": ["StableLMConfig", "START_STABLELM_COMMAND_DOCSTRING", "DEFAULT_PROMPT_TEMPLATE"]}
 try:
-    if not is_torch_available():
-        raise MissingDependencyError
-except MissingDependencyError:
-    pass
-else:
-    _import_structure["modeling_stablelm"] = ["StableLM"]
-
+    if not is_torch_available(): raise MissingDependencyError
+except MissingDependencyError: pass
+else: _import_structure["modeling_stablelm"] = ["StableLM"]
 if t.TYPE_CHECKING:
     from .configuration_stablelm import DEFAULT_PROMPT_TEMPLATE as DEFAULT_PROMPT_TEMPLATE
     from .configuration_stablelm import START_STABLELM_COMMAND_DOCSTRING as START_STABLELM_COMMAND_DOCSTRING
     from .configuration_stablelm import StableLMConfig as StableLMConfig
-
     try:
-        if not is_torch_available():
-            raise MissingDependencyError
-    except MissingDependencyError:
-        pass
-    else:
-        from .modeling_stablelm import StableLM as StableLM
-else:
-    import sys
-
-    sys.modules[__name__] = LazyModule(__name__, globals()["__file__"], _import_structure, module_spec=__spec__)
+        if not is_torch_available(): raise MissingDependencyError
+    except MissingDependencyError: pass
+    else: from .modeling_stablelm import StableLM as StableLM
+else: sys.modules[__name__] = LazyModule(__name__, globals()["__file__"], _import_structure, module_spec=__spec__)

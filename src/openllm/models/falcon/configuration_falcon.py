@@ -12,25 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from __future__ import annotations
-
 import openllm
-
-
 class FalconConfig(openllm.LLMConfig):
-    """Falcon-7B is a 7B parameters causal decoder-only model built by
-    TII and trained on 1,500B tokens of [RefinedWeb](https://huggingface.co/datasets/tiiuae/falcon-refinedweb)
-    enhanced with curated corpora. It is made available under the TII Falcon LLM License.
+    """Falcon-7B is a 7B parameters causal decoder-only model built by TII and trained on 1,500B tokens of [RefinedWeb](https://huggingface.co/datasets/tiiuae/falcon-refinedweb) enhanced with curated corpora.
+
+    It is made available under the TII Falcon LLM License.
 
     Refer to [Falcon's HuggingFace page](https://huggingface.co/tiiuae/falcon-7b) for more information.
     """
-
     __config__ = {
         "name_type": "lowercase",
         "trust_remote_code": True,
         "requires_gpu": True,
         "timeout": int(36e6),
         "url": "https://falconllm.tii.ae/",
-        "requirements": ["einops", "xformers", "safetensors"],
+        "requirements": ["einops", "xformers"],
+        "architecture": "FalconForCausalLM",
         "default_id": "tiiuae/falcon-7b",
         "model_ids": [
             "tiiuae/falcon-7b",
@@ -49,15 +46,12 @@ class FalconConfig(openllm.LLMConfig):
             },
         ),
     }
-
     class GenerationConfig:
         max_new_tokens: int = 200
         top_k: int = 10
         num_return_sequences: int = 1
         num_beams: int = 4
         early_stopping: bool = True
-
-
 START_FALCON_COMMAND_DOCSTRING = """\
 Run a LLMServer for FalconLM model.
 
@@ -70,14 +64,13 @@ Run a LLMServer for FalconLM model.
 Currently, FalconLM only supports PyTorch. Make sure ``torch`` is available in your system.
 
 \b
-FalconLM Runner will use tiiuae/falcon-7b as the default model. To change any to any other FalconLM
+FalconLM Runner will use tiiuae/falcon-7b as the default model. To change to any other FalconLM
 saved pretrained, or a fine-tune FalconLM, provide ``OPENLLM_FALCON_MODEL_ID='tiiuae/falcon-7b-instruct'``
 or provide `--model-id` flag when running ``openllm start falcon``:
 
 \b
 $ openllm start falcon --model-id tiiuae/falcon-7b-instruct
 """
-
 DEFAULT_PROMPT_TEMPLATE = """{context}
 {user_name}: {instruction}
 {agent}:

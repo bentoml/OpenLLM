@@ -100,28 +100,25 @@ After setting up your environment, here's how you can start contributing:
 3. Run all formatter and linter with `hatch`:
 
    ```bash
-   hatch run fmt
+   hatch run quality
    ```
 4. Write tests that verify your feature or fix (see
    [Writing Tests](#writing-tests) below).
 5. Run all tests to ensure your changes haven't broken anything:
 
    ```bash
-   hatch run full
+   hatch run tests:python
    ```
-
 6. Commit your changes:
 
    ```bash
    git commit -m "Add my feature"
    ```
-
 7. Push your changes to your fork:
 
    ```bash
    git push origin feature/my-feature
    ```
-
 8. Submit a Pull Request on GitHub.
 
 ## Using a custom fork
@@ -141,8 +138,25 @@ directory and their filenames start with `test_`.
 Run all tests with:
 
 ```bash
-hatch run full
+hatch run tests:python
 ```
+
+Run snapshot testing for model outputs:
+
+```bash
+hatch run tests:models
+```
+
+To update the snapshot, do the following:
+
+```bash
+hatch run tests:snapshot-models
+```
+
+## Working with Git
+
+To filter out most of the generated commits for infrastructure, use ``--invert-grep`` in conjunction with ``--grep``
+to filter out all commits with regex `"[generated]"`
 
 ## Releasing a New Version
 

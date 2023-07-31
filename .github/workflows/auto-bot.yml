@@ -30,8 +30,8 @@ jobs:
         uses: lewagon/wait-on-check-action@v1.3.1
         with:
           ref: ${{ github.ref }}
-          check-name: check
-          wait-interval: 10
+          check-name: evergreen
+          wait-interval: 90
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Enable auto-merge for Dependabot PRs
         run: gh pr merge --auto --squash ${{ github.event.pull_request.html_url }}

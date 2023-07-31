@@ -1,0 +1,33 @@
+{
+  "configuration": {
+    "generation_config": {
+      "diversity_penalty": 0.0,
+      "early_stopping": false,
+      "encoder_no_repeat_ngram_size": 0,
+      "encoder_repetition_penalty": 1.0,
+      "epsilon_cutoff": 0.0,
+      "eta_cutoff": 0.0,
+      "length_penalty": 1.0,
+      "max_new_tokens": 10,
+      "min_length": 0,
+      "no_repeat_ngram_size": 0,
+      "num_beam_groups": 1,
+      "num_beams": 1,
+      "num_return_sequences": 1,
+      "output_attentions": false,
+      "output_hidden_states": false,
+      "output_scores": false,
+      "remove_invalid_values": false,
+      "renormalize_logits": false,
+      "repetition_penalty": 1.0,
+      "temperature": 0.9,
+      "top_k": 50,
+      "top_p": 0.9,
+      "typical_p": 1.0,
+      "use_cache": true
+    }
+  },
+  "responses": [
+    "life is a state"
+  ]
+}
