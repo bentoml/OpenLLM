@@ -40,6 +40,10 @@
         @apply appearance-none text-gray-700 border-gray-300 shadow-sm focus:ring-gray-500 focus:border-gray-500;
     }
 
+    input[type='text'] {
+        @apply appearance-none text-gray-700 border-gray-300 shadow-sm focus:ring-gray-500 focus:border-gray-500;
+    }
+
     input[type='number']::-webkit-outer-spin-button,
     input[type='number']::-webkit-inner-spin-button,
     input[type='number'] {

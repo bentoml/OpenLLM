@@ -7,6 +7,11 @@
    (:screen-id db)))
 
 (reg-sub
+ :api-base-url
+ (fn [db _]
+   (:api-base-url db)))
+
+(reg-sub
  ::components-db
  (fn [db _]
    (:components-db db)))

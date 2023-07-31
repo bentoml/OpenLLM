@@ -32,15 +32,19 @@
  ::all-model-types
  :<- [::all-models-data]
  (fn [all-models-data _]
-   (keys all-models-data)))
+   (-> all-models-data
+       (keys ,)
+       (conj , db/loading-text))))
 
 ;; Returns a list of all `model-ids` for all `model-types`.
 (reg-sub
  ::all-model-ids
  :<- [::all-models-data]
  (fn [all-models-data _]
-   (->> all-models-data
-        (mapv (fn [[_ model-type]]
-                (:model_id model-type)) ,)
-        (apply concat ,)
-        (vec ,))))
+   (conj
+    (->> all-models-data
+         (mapv (fn [[_ model-type]]
+                 (:model_id model-type)) ,)
+         (apply concat ,)
+         (vec ,))
+    db/loading-text)))

@@ -44,6 +44,12 @@
  (fn [db [_ new-screen-id]]
    (assoc db :screen-id new-screen-id)))
 
+(reg-event-db
+ :set-api-base-url
+ [check-spec-interceptor]
+ (fn [db [_ new-api-base-url]]
+   (assoc db :api-base-url new-api-base-url)))
+
 (reg-event-fx
  ::open-link-in-new-tab
  (fn [_ [_ url]] 

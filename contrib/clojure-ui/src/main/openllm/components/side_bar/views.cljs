@@ -5,7 +5,9 @@
             [openllm.components.side-bar.subs :as subs]
             [openllm.components.side-bar.events :as events]
             [openllm.components.common.views :as ui]
+            [reagent-mui.material.typography :refer [typography]]
             [reagent-mui.material.button :refer [button]]
+            [reagent-mui.material.input :refer [input]]
             [reagent-mui.material.tooltip :refer [tooltip]]
             [reagent-mui.material.collapse :refer [collapse]]))
 
@@ -29,6 +31,19 @@
          [:div {:class "-mr-1 -mt-px"}
           @collapse-icon]]]])))
 
+(defn- base-url-selection
+  "Section of the sidebar, where you select the base-url of the API."
+  []
+  (let [base-url (rf/subscribe [:api-base-url])]
+    (fn []
+      [:div {:class "h-12 w-full px-5"}
+       [typography {:variant "title"
+                    :class "text-black mb-1"}
+        "API Base-URL"]
+       [input {:class "w-full h-8.5 mb-1 border"
+               :value @base-url
+               :on-change #(rf/dispatch [:set-api-base-url (-> % .-target .-value)])}]])))
+
 (defn side-bar-with-mui-collapse
   "The sidebar wrapped with a Material UI Collapse component. The collapse
    component is used to animate the sidebar when it is opened or closed."
@@ -44,7 +59,9 @@
         [ui/headline "Parameters" 2]
         [:div {:class "my-0 h-0 flex-1 flex flex-col overflow-y-auto scrollbar"}
          [:div {:class "px-3 mt-0 relative inline-block text-left"}
-          [model-params-views/parameter-list]]]]])))
+          [model-params-views/parameter-list]]]
+        [:hr {:class "mb-2 border-1 border-gray-200"}]
+        [base-url-selection]]])))
 
 (defn side-bar
   "The render function of the toolbar on the very right of the screen. Contains the

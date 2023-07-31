@@ -29,15 +29,18 @@
 ;; None of this is strictly necessary. It could be omitted. But we (the
 ;; re-frame people) find it good practice.
 (s/def ::screen-id keyword?)
+(s/def ::api-base-url string?)
 (s/def ::db  (s/keys :req-un [::components-db/components-db
-                              ::screen-id]))
+                              ::screen-id
+                              ::api-base-url]))
 
 (def default-db
   "What gets put into app-db by default. This is the very root of the `app-db`.
    See `core.cljs` for `(dispatch-sync [:initialise-db])` and 'events.cljs'
    for the registration of `:initialise-db` effect handler."
   {:components-db (components-db/initial-db)
-   :screen-id :playground})
+   :screen-id :playground
+   :api-base-url "http://localhost:3000"})
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
