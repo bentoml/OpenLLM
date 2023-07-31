@@ -20,6 +20,11 @@ on:
       - "main"
     tags:
       - "v*"
+    paths:
+      - ".github/workflows/build.yaml"
+      - "src/openllm/bundle/oci/Dockerfile"
+      - "src/openllm/**"
+      - "src/openllm_client/**"
   pull_request:
     branches:
       - "main"
@@ -166,6 +171,8 @@ jobs:
           cache-to: type=s3,region=${{ env.AWS_REGION }},bucket=openllm-cache,name=y5w8i4y6,mode=max,compression=zstd,ignore-error=true
       - name: Sign the released image
         if: ${{ github.event_name != 'pull_request' }}
+        env:
+          COSIGN_EXPERIMENTAL: "true"
         run: echo "${{ steps.meta.outputs.tags }}" | xargs -I {} cosign sign {}@${{ steps.meta.build-and-push.outputs.digest }}
       - name: Run Trivy in GitHub SBOM mode and submit results to Dependency Graph
         uses: aquasecurity/trivy-action@master

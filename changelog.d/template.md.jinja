@@ -1,10 +1,10 @@
 {%- if versiondata["version"] == "main" -%}
 ## Changes for the Upcoming Release
 
-:::{warning}
-These changes reflect the current [development progress](https://github.com/bentoml/openllm/tree/main) and have **not** been part of a official PyPI release yet.
-To try out the latest change, one can do: `pip install -U git+https://github.com/bentoml/openllm.git@main`
-:::
+> **Warning**: These changes reflect the current [development progress](https://github.com/bentoml/openllm/tree/main)
+> and have **not** been part of a official PyPI release yet.
+> To try out the latest change, one can do: `pip install -U git+https://github.com/bentoml/openllm.git@main`
+
 {% else -%}
 ## [{{ versiondata["version"] }}](https://github.com/bentoml/openllm/tree/v{{ versiondata["version"] }})
 {%- endif %}
