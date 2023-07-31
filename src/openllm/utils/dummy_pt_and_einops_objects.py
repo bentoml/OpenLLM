@@ -19,7 +19,7 @@ from ..utils import DummyMetaclass
 from ..utils import require_backends
 
 class Falcon(metaclass=DummyMetaclass):
-    _backends = ["torch", "einops"]
+  _backends = ["torch", "einops"]
 
-    def __init__(self, *args: t.Any, **attrs: t.Any):
-        require_backends(self, ["torch", "einops"])
+  def __init__(self, *args: t.Any, **attrs: t.Any):
+    require_backends(self, ["torch", "einops"])

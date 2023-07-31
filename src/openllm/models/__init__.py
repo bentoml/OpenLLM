@@ -23,20 +23,21 @@ _MODELS: set[str] = {'auto', 'baichuan', 'chatglm', 'dolly_v2', 'falcon', 'flan_
 # fmt: on
 
 if t.TYPE_CHECKING:
-    # fmt: off
-    # update-models-import.py: start types
-    from . import auto as auto
-    from . import baichuan as baichuan
-    from . import chatglm as chatglm
-    from . import dolly_v2 as dolly_v2
-    from . import falcon as falcon
-    from . import flan_t5 as flan_t5
-    from . import gpt_neox as gpt_neox
-    from . import llama as llama
-    from . import mpt as mpt
-    from . import opt as opt
-    from . import stablelm as stablelm
-    from . import starcoder as starcoder
-    # update-models-import.py: stop types
-    # fmt: on
-else: sys.modules[__name__] = LazyModule(__name__, globals()["__file__"], {k: [] for k in _MODELS}, module_spec=__spec__)
+  # fmt: off
+  # update-models-import.py: start types
+  from . import auto as auto
+  from . import baichuan as baichuan
+  from . import chatglm as chatglm
+  from . import dolly_v2 as dolly_v2
+  from . import falcon as falcon
+  from . import flan_t5 as flan_t5
+  from . import gpt_neox as gpt_neox
+  from . import llama as llama
+  from . import mpt as mpt
+  from . import opt as opt
+  from . import stablelm as stablelm
+  from . import starcoder as starcoder
+  # update-models-import.py: stop types
+  # fmt: on
+else:
+  sys.modules[__name__] = LazyModule(__name__, globals()["__file__"], {k: [] for k in _MODELS}, module_spec=__spec__)

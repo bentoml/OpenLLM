@@ -19,7 +19,7 @@ from ..utils import DummyMetaclass
 from ..utils import require_backends
 
 class MPT(metaclass=DummyMetaclass):
-    _backends = ["torch", "triton"]
+  _backends = ["torch", "triton"]
 
-    def __init__(self, *args: t.Any, **attrs: t.Any):
-        require_backends(self, ["torch"])
+  def __init__(self, *args: t.Any, **attrs: t.Any):
+    require_backends(self, ["torch"])

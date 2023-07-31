@@ -18,62 +18,54 @@ from ..utils import DummyMetaclass
 from ..utils import require_backends
 
 if t.TYPE_CHECKING:
-    from ..models.auto.factory import _LazyAutoMapping
+  from ..models.auto.factory import _LazyAutoMapping
 
 class FlanT5(metaclass=DummyMetaclass):
-    _backends = ["torch"]
+  _backends = ["torch"]
 
-    def __init__(self, *args: t.Any, **attrs: t.Any):
-        require_backends(self, ["torch"])
-
+  def __init__(self, *args: t.Any, **attrs: t.Any):
+    require_backends(self, ["torch"])
 
 class OPT(metaclass=DummyMetaclass):
-    _backends = ["torch"]
+  _backends = ["torch"]
 
-    def __init__(self, *args: t.Any, **attrs: t.Any):
-        require_backends(self, ["torch"])
-
+  def __init__(self, *args: t.Any, **attrs: t.Any):
+    require_backends(self, ["torch"])
 
 class GPTNeoX(metaclass=DummyMetaclass):
-    _backends = ["torch"]
+  _backends = ["torch"]
 
-    def __init__(self, *args: t.Any, **attrs: t.Any):
-        require_backends(self, ["torch"])
-
+  def __init__(self, *args: t.Any, **attrs: t.Any):
+    require_backends(self, ["torch"])
 
 class DollyV2(metaclass=DummyMetaclass):
-    _backends = ["torch"]
+  _backends = ["torch"]
 
-    def __init__(self, *args: t.Any, **attrs: t.Any):
-        require_backends(self, ["torch"])
-
+  def __init__(self, *args: t.Any, **attrs: t.Any):
+    require_backends(self, ["torch"])
 
 class StarCoder(metaclass=DummyMetaclass):
-    _backends = ["torch"]
+  _backends = ["torch"]
 
-    def __init__(self, *args: t.Any, **attrs: t.Any):
-        require_backends(self, ["torch"])
-
+  def __init__(self, *args: t.Any, **attrs: t.Any):
+    require_backends(self, ["torch"])
 
 class StableLM(metaclass=DummyMetaclass):
-    _backends = ["torch"]
+  _backends = ["torch"]
 
-    def __init__(self, *args: t.Any, **attrs: t.Any):
-        require_backends(self, ["torch"])
-
+  def __init__(self, *args: t.Any, **attrs: t.Any):
+    require_backends(self, ["torch"])
 
 class Llama(metaclass=DummyMetaclass):
-    _backends = ["torch"]
+  _backends = ["torch"]
 
-    def __init__(self, *args: t.Any, **attrs: t.Any):
-        require_backends(self, ["torch"])
-
+  def __init__(self, *args: t.Any, **attrs: t.Any):
+    require_backends(self, ["torch"])
 
 class AutoLLM(metaclass=DummyMetaclass):
-    _backends = ["torch"]
+  _backends = ["torch"]
 
-    def __init__(self, *args: t.Any, **attrs: t.Any):
-        require_backends(self, ["torch"])
-
+  def __init__(self, *args: t.Any, **attrs: t.Any):
+    require_backends(self, ["torch"])
 
 MODEL_MAPPING = t.cast("_LazyAutoMapping", None)

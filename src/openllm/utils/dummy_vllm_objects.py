@@ -18,26 +18,24 @@ from ..utils import DummyMetaclass
 from ..utils import require_backends
 
 if t.TYPE_CHECKING:
-    from ..models.auto.factory import _LazyAutoMapping
+  from ..models.auto.factory import _LazyAutoMapping
 
 class VLLMLlama(metaclass=DummyMetaclass):
-    _backends = ["vllm"]
+  _backends = ["vllm"]
 
-    def __init__(self, *args: t.Any, **attrs: t.Any):
-        require_backends(self, ["vllm"])
+  def __init__(self, *args: t.Any, **attrs: t.Any):
+    require_backends(self, ["vllm"])
 
 class VLLMOPT(metaclass=DummyMetaclass):
-    _backends = ["vllm"]
+  _backends = ["vllm"]
 
-    def __init__(self, *args: t.Any, **attrs: t.Any):
-        require_backends(self, ["vllm"])
-
+  def __init__(self, *args: t.Any, **attrs: t.Any):
+    require_backends(self, ["vllm"])
 
 class AutoVLLM(metaclass=DummyMetaclass):
-    _backends = ["vllm"]
+  _backends = ["vllm"]
 
-    def __init__(self, *args: t.Any, **attrs: t.Any):
-        require_backends(self, ["vllm"])
+  def __init__(self, *args: t.Any, **attrs: t.Any):
+    require_backends(self, ["vllm"])
 
-
-MODEL_VLLM_MAPPING  = t.cast("_LazyAutoMapping", None)
+MODEL_VLLM_MAPPING = t.cast("_LazyAutoMapping", None)

@@ -8,32 +8,23 @@ import sys
 
 from markdown_it import MarkdownIt
 
-
 md = MarkdownIt()
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 with open(os.path.join(ROOT, "README.md"), "r") as f:
-    readme = md.parse(f.read())
+  readme = md.parse(f.read())
 
 # NOTE: Currently, we only have one table in README, which is the Model readme.
 table = [r for r in readme if r.type == "html_block" and r.content.startswith("<td><a")]
 
 prev = os.environ.pop("OPENLLMDEVDEBUG", None)
-available = (
-    subprocess.check_output(
-        [sys.executable, "-m", "openllm", "models", "-o", "porcelain"],
-    )
-    .strip()
-    .decode("utf-8")
-    .count("\n")
-    + 1
-)
+available = (subprocess.check_output([sys.executable, "-m", "openllm", "models", "-o", "porcelain"],).strip().decode("utf-8").count("\n") + 1)
 if prev:
-    os.environ["OPENLLMDEVDEBUG"] = prev
+  os.environ["OPENLLMDEVDEBUG"] = prev
 
 on_table = len(table)  # NOTE: minus the header
 
 if available - on_table != 0:
-    print("README.md is out of date! Make sure to run ./tools/update-readme.py")
-    raise SystemExit(1)
+  print("README.md is out of date! Make sure to run ./tools/update-readme.py")
+  raise SystemExit(1)
 raise SystemExit(0)
