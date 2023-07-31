@@ -6,7 +6,7 @@
  :aliases
  {:dev
   {:extra-deps
-   {thheller/shadow-cljs        {:mvn/version "2.23.3"}
+   {thheller/shadow-cljs        {:mvn/version "2.25.2"}
     reagent/reagent             {:mvn/version "1.2.0"}
     re-frame/re-frame           {:mvn/version "1.3.0"}
     day8.re-frame/http-fx       {:mvn/version "0.2.4"}
