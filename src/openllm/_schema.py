@@ -91,6 +91,11 @@ class GenerationOutput:
     def unmarshaled(self) -> dict[str, t.Any]:
         return bentoml_cattr.unstructure(self)
 
+    def __getitem__(self, key: str) -> t.Any:
+        if hasattr(self, key): return getattr(self, key)
+        elif key in self.configuration: return self.configuration[key]
+        else: raise KeyError(key)
+
 
 @attr.frozen(slots=True)
 class MetadataOutput:

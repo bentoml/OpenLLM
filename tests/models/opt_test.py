@@ -52,7 +52,7 @@ async def opt_125m(opt_125m_handle: _Handle):
 @pytest.mark.asyncio()
 async def test_opt_125m(opt_125m: t.Awaitable[openllm.client.AsyncHTTPClient], response_snapshot: ResponseComparator):
     client = await opt_125m
-    response = await client.query("What is Deep learning?", max_new_tokens=20, return_attrs=True)
+    response = await client.query("What is Deep learning?", max_new_tokens=20, return_response="attrs")
 
     assert response.configuration["generation_config"]["max_new_tokens"] == 20
     assert response == response_snapshot

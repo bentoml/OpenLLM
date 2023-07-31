@@ -53,7 +53,7 @@ async def flan_t5(flan_t5_handle: _Handle):
 @pytest.mark.asyncio()
 async def test_flan_t5(flan_t5: t.Awaitable[openllm.client.AsyncHTTPClient], response_snapshot: ResponseComparator):
     client = await flan_t5
-    response = await client.query("What is the meaning of life?", max_new_tokens=10, top_p=0.9, return_attrs=True)
+    response = await client.query("What is the meaning of life?", max_new_tokens=10, top_p=0.9, return_response="attrs")
 
     assert response.configuration["generation_config"]["max_new_tokens"] == 10
     assert response == response_snapshot

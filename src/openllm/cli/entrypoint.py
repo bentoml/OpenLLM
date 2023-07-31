@@ -1127,7 +1127,7 @@ def query_command(ctx: click.Context, /, prompt: str, endpoint: str, timeout: in
     if output != "porcelain":
         termui.echo("==Input==\n", fg="white")
         termui.echo(f"{prompt}", fg=input_fg)
-    res = client.query(prompt, return_raw_response=True, **{**client.configuration, **_memoized})
+    res = client.query(prompt, return_response="raw", **{**client.configuration, **_memoized})
     if output == "pretty":
         response = client.llm.postprocess_generate(prompt, res["responses"])
         termui.echo("\n\n==Responses==\n", fg="white")
