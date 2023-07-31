@@ -69,7 +69,6 @@ from bentoml._internal.configuration.containers import BentoMLContainer
 from bentoml._internal.models.model import ModelStore
 
 from . import termui
-from ._factory import CUSTOM_REGISTRY_KEY
 from ._factory import FC
 from ._factory import LiteralOutput
 from ._factory import _AnyCallable
@@ -118,7 +117,6 @@ from ..utils import is_jupytext_available
 from ..utils import is_notebook_available
 from ..utils import is_torch_available
 from ..utils import is_transformers_supports_agent
-from ..utils import pkg
 from ..utils import resolve_user_filepath
 from ..utils import set_debug_mode
 from ..utils import set_quiet_mode
@@ -138,6 +136,7 @@ if t.TYPE_CHECKING:
     from .._types import LiteralRuntime
     from .._types import P
     from ..bundle.oci import LiteralContainerRegistry
+    from ..bundle.oci import LiteralContainerVersionStrategy
 else: torch, jupytext, nbformat = LazyLoader("torch", globals(), "torch"), LazyLoader("jupytext", globals(), "jupytext"), LazyLoader("nbformat", globals(), "nbformat")
 
 # NOTE: We need to do this so that overload can register
@@ -146,11 +145,6 @@ if sys.version_info[:2] >= (3, 11):
     from typing import overload
 else:
     from typing_extensions import overload
-
-if sys.version_info[:2] >= (3, 12):
-    from typing import override
-else:
-    from typing_extensions import override
 
 logger = logging.getLogger(__name__)
 
@@ -171,6 +165,7 @@ class GlobalOptions:
     def with_options(self, **attrs: t.Any) -> t.Self: return attr.evolve(self, **attrs)
 
 CmdType = t.TypeVar("CmdType", bound=click.Command)
+GrpType = t.TypeVar("GrpType", bound=click.Group)
 
 _object_setattr = object.__setattr__
 
@@ -258,10 +253,12 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
     # variant: name omitted, cls _must_ be a keyword argument, @command(cmd=CommandCls, ...)
     @overload
     def command(self, name: None = None, *, cls: type[CmdType], **attrs: t.Any) -> t.Callable[[_AnyCallable], CmdType]: ...
+    # variant: name omitted, only provide keyword arguments, @command(context_settings={})
+    @overload
+    def command(self, *, cls: type[CmdType], **attrs: t.Any) -> t.Callable[[_AnyCallable], CmdType]: ...
     # variant: with optional string name, no cls argument provided.
     @overload
     def command(self, name: t.Optional[str] = ..., cls: None = None, **attrs: t.Any) -> t.Callable[[_AnyCallable], click.Command]: ...
-    @override
     def command(self, name: str | None | _AnyCallable = None, cls: type[CmdType] | None = None, *args: t.Any, **attrs: t.Any) -> click.Command | t.Callable[[_AnyCallable], click.Command | CmdType]:
         """Override the default 'cli.command' with supports for aliases for given command, and it wraps the implementation with common parameters."""
         if "context_settings" not in attrs: attrs["context_settings"] = {}
@@ -295,6 +292,22 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
                 self._aliases.update({alias: cmd.name for alias in aliases})
             return cmd
         return decorator
+
+    if t.TYPE_CHECKING:
+        # variant: no call, directly as decorator for a function.
+        @overload
+        def group(self, name: _AnyCallable) -> click.Group:...
+        # variant: with positional name and with positional or keyword cls argument:
+        # @group(namearg, GroupCls, ...) or @group(namearg, cls=GroupCls, ...)
+        @overload
+        def group(self, name: str | None, cls: type[GrpType], **attrs: t.Any) -> t.Callable[[_AnyCallable], GrpType]: ...
+        # variant: name omitted, cls _must_ be a keyword argument, @group(cmd=GroupCls, ...)
+        @overload
+        def group(self, name: None = None, *, cls: t.Type[GrpType], **attrs: t.Any) -> t.Callable[[_AnyCallable], GrpType]: ...
+        # variant: with optional string name, no cls argument provided.
+        @overload
+        def group(self, name: str | None = ..., cls: None = None, **attrs: t.Any) -> t.Callable[[_AnyCallable], click.Group]: ...
+        def group(self, *args: t.Any, **kwargs: t.Any) -> t.Callable[[_AnyCallable], click.Group]: ...
 
 @click.group(cls=OpenLLMCommandGroup, context_settings=termui.CONTEXT_SETTINGS, name="openllm")
 @click.version_option(None, "--version", "-v")
@@ -528,7 +541,7 @@ def _build(
     dockerfile_template: str | None = None,
     overwrite: bool = False,
     container_registry: LiteralContainerRegistry | None = None,
-    container_version: str | None = None,
+    container_version_strategy: LiteralContainerVersionStrategy | None = None,
     push: bool = False,
     containerize: bool = False,
     serialisation_format: t.Literal["safetensors", "legacy"] = "safetensors",
@@ -576,8 +589,8 @@ def _build(
         push: Whether to push the result bento to BentoCloud. Make sure to login with 'bentoml cloud login' first.
         containerize: Whether to containerize the Bento after building. '--containerize' is the shortcut of 'openllm build && bentoml containerize'.
                       Note that 'containerize' and 'push' are mutually exclusive
-        container_registry: Container registry to choose the base OpenLLM container image to build from.
-        container_version: Optional container version to use for containerization. Default to the latest stable release of OpenLLM.
+        container_registry: Container registry to choose the base OpenLLM container image to build from. Default to ECR.
+        container_version_strategy: The container version strategy. Default to the latest release of OpenLLM.
         serialisation_format: Serialisation for saving models. Default to 'safetensors', which is equivalent to `safe_serialization=True`
         additional_args: Additional arguments to pass to ``openllm build``.
         bento_store: Optional BentoStore for saving this BentoLLM. Default to the default BentoML local store.
@@ -612,8 +625,9 @@ def _build(
     if adapter_map: args.extend([f"--adapter-id={k}{':'+v if v is not None else ''}" for k, v in adapter_map.items()])
     if model_version: args.extend(["--model-version", model_version])
     if dockerfile_template: args.extend(["--dockerfile-template", dockerfile_template])
-    if container_registry: args.extend(["--container-registry", container_registry,
-                                        "--container-version", container_version if container_version is not None else ".".join([str(i) for i in pkg.pkg_version_info("openllm")])])
+    if container_registry is None: container_registry = "ecr"
+    if container_version_strategy is None: container_version_strategy = "release"
+    args.extend(["--container-registry", container_registry, "--container-version-strategy", container_version_strategy])
     if additional_args: args.extend(additional_args)
 
     try: output = subprocess.check_output(args, env=os.environ.copy(), cwd=build_ctx or os.getcwd())
@@ -709,7 +723,7 @@ start, start_grpc, build, import_model, list_models = codegen.gen_sdk(_start, _s
 @click.option("--dockerfile-template", default=None, type=click.File(), help="Optional custom dockerfile template to be used with this BentoLLM.")
 @serialisation_option
 @container_registry_option
-@click.option("--container-version", default=".".join([str(i) for i in pkg.pkg_version_info("openllm")]), help="Default container version for the image from '--container-registry'")
+@click.option("--container-version-strategy", type=click.Choice(["release", "latest", "nightly"]), default="release", help="Default container version strategy for the image from '--container-registry'")
 @fast_option
 @cog.optgroup.group(cls=cog.MutuallyExclusiveOptionGroup, name="Utilities options")
 @cog.optgroup.option("--containerize", default=False, is_flag=True, type=click.BOOL, help="Whether to containerize the Bento after building. '--containerize' is the shortcut of 'openllm build && bentoml containerize'.")
@@ -735,8 +749,8 @@ def build_command(
     push: bool,
     serialisation_format: t.Literal["safetensors", "legacy"],
     fast: bool,
-    container_registry: LiteralContainerRegistry | None,
-    container_version: str,
+    container_registry: LiteralContainerRegistry,
+    container_version_strategy: LiteralContainerVersionStrategy,
     **attrs: t.Any,
 ) -> bentoml.Bento:
     """Package a given models into a Bento.
@@ -750,7 +764,6 @@ def build_command(
     > NOTE: To run a container built from this Bento with GPU support, make sure
     > to have https://github.com/NVIDIA/nvidia-container-toolkit install locally.
     """
-    custom_registry = attrs.pop(CUSTOM_REGISTRY_KEY, False)
     if machine: output = "porcelain"
     if enable_features: enable_features = tuple(itertools.chain.from_iterable((s.split(",") for s in enable_features)))
 
@@ -766,7 +779,6 @@ def build_command(
         if env.model_id_value: os.environ[env.model_id] = str(env.model_id_value)
         if env.quantize_value: os.environ[env.quantize] = str(env.quantize_value)
         if env.bettertransformer_value: os.environ[env.bettertransformer] = str(env.bettertransformer_value)
-        breakpoint()
 
         llm = infer_auto_class(env.framework_value).for_model(model_name, llm_config=llm_config, ensure_available=not fast, model_version=model_version, serialisation=serialisation_format, **attrs)
 
@@ -821,8 +833,7 @@ def build_command(
                     dockerfile_template=dockerfile_template_path,
                     runtime=runtime,
                     container_registry=container_registry,
-                    container_version=container_version,
-                    custom_registry=custom_registry,
+                    container_version_strategy=container_version_strategy,
                 )
     except Exception as err: raise err from None
 

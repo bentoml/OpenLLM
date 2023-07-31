@@ -52,6 +52,7 @@ if t.TYPE_CHECKING:
     from bentoml._internal.models.model import ModelStore
 
     from .oci import LiteralContainerRegistry
+    from .oci import LiteralContainerVersionStrategy
 
 logger = logging.getLogger(__name__)
 
@@ -143,9 +144,8 @@ def construct_docker_options(
     dockerfile_template: str | None,
     runtime: t.Literal["ggml", "transformers"],
     serialisation_format: t.Literal["safetensors", "legacy"],
-    container_registry: LiteralContainerRegistry | None,
-    container_version: str,
-    custom_registry: bool
+    container_registry: LiteralContainerRegistry,
+    container_version_strategy: LiteralContainerVersionStrategy,
 ) -> DockerOptions:
     _bentoml_config_options = os.environ.pop("BENTOML_CONFIG_OPTIONS", "")
     _bentoml_config_options_opts = [
@@ -176,8 +176,7 @@ def construct_docker_options(
     if _env.bettertransformer_value is not None: env_dict[_env.bettertransformer] = str(_env.bettertransformer_value)
     if _env.quantize_value is not None: env_dict[_env.quantize] = _env.quantize_value
     env_dict[_env.runtime] = _env.runtime_value
-    container_name = oci.CONTAINER_NAMES[container_registry] if not custom_registry else container_registry
-    return DockerOptions(base_image=f"{container_name}:{container_version}",env=env_dict, dockerfile_template=dockerfile_template)
+    return DockerOptions(base_image=f"{oci.CONTAINER_NAMES[container_registry]}:{oci.get_base_container_tag(container_version_strategy)}",env=env_dict, dockerfile_template=dockerfile_template)
 
 @inject
 def create_bento(
@@ -192,9 +191,8 @@ def create_bento(
     extra_dependencies: tuple[str, ...] | None = None,
     runtime: t.Literal["ggml", "transformers"] = "transformers",
     serialisation_format: t.Literal["safetensors", "legacy"] = "safetensors",
-    container_registry: LiteralContainerRegistry | None = None,
-    container_version: str = "latest",
-    custom_registry: bool = False,
+    container_registry: LiteralContainerRegistry = "ecr",
+    container_version_strategy: LiteralContainerVersionStrategy = "release",
     _bento_store: BentoStore = Provide[BentoMLContainer.bento_store],
     _model_store: ModelStore = Provide[BentoMLContainer.model_store],
 ) -> bentoml.Bento:
@@ -223,7 +221,7 @@ def create_bento(
         include=list(llm_fs.walk.files()),
         exclude=["/venv", "/.venv", "__pycache__/", "*.py[cod]", "*$py.class"],
         python=construct_python_options(llm, llm_fs, extra_dependencies, adapter_map),
-        docker=construct_docker_options(llm, llm_fs, workers_per_resource, quantize, bettertransformer, adapter_map, dockerfile_template, runtime, serialisation_format, container_registry, container_version, custom_registry),
+        docker=construct_docker_options(llm, llm_fs, workers_per_resource, quantize, bettertransformer, adapter_map, dockerfile_template, runtime, serialisation_format, container_registry, container_version_strategy),
         models=[llm_spec],
     )
 

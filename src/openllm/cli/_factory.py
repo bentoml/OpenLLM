@@ -430,20 +430,18 @@ def serialisation_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Cal
                                                                                                                    **Note** that GGML format is working in progress.
                                                                                                                    """, **attrs
                                                                                                                    )(f)
-def container_registry_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]: return cli_option("--container-registry", "container_registry", type=str, default=None, show_default=True, show_envvar=True, envvar="OPENLLM_CONTAINER_REGISTRY",
+def container_registry_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]: return cli_option("--container-registry", "container_registry", type=str, default="ecr", show_default=True, show_envvar=True, envvar="OPENLLM_CONTAINER_REGISTRY",
                                                                                                                         callback=container_registry_callback,
                                                                                                                         help="""The default container registry to get the base image for building BentoLLM.
 
-                                                                                                                        Currently, it supports 'quay.io', 'ghcr.io', 'docker.io'
-
-                                                                                                                        ``--container-registry`` will also support the following syntax: ``--container-registry internal.private.bentoml.tech:custom``. This will use the image available at
-                                                                                                                        a custom/private container registry
+                                                                                                                        Currently, it supports 'ecr', 'ghcr.io', 'docker.io'
 
                                                                                                                         \b
                                                                                                                         **Note** that in order to build the base image, you will need a GPUs to compile custom kernel. See ``openllm ext build-base-container`` for more information.
                                                                                                                         """)(f)
 
 _wpr_strategies = {"round_robin", "conserved"}
+
 def workers_per_resource_callback(ctx: click.Context, param: click.Parameter, value: str | None) -> str | None:
     if value is None: return value
     value = inflection.underscore(value)
@@ -453,13 +451,7 @@ def workers_per_resource_callback(ctx: click.Context, param: click.Parameter, va
         except ValueError: raise click.BadParameter(f"'workers_per_resource' only accept '{_wpr_strategies}' as possible strategies, otherwise pass in float.", ctx, param) from None
         else: return value
 
-CUSTOM_REGISTRY_KEY = "_custom_registry"
 def container_registry_callback(ctx: click.Context, param: click.Parameter, value: str | None) -> str | None:
     if value is None: return value
-    reg, _, maybe_custom = value.partition(":")
-    if maybe_custom and maybe_custom.strip() == "custom":
-        ctx.params[CUSTOM_REGISTRY_KEY] = True
-        return reg  # custom path, return immediately
-    ctx.params[CUSTOM_REGISTRY_KEY] = False
-    if reg not in bundle.supported_registries: raise click.BadParameter(f"Value must be one of {bundle.supported_registries}", ctx, param)
-    return reg
+    if value not in bundle.supported_registries: raise click.BadParameter(f"Value must be one of {bundle.supported_registries}", ctx, param)
+    return value
