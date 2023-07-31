@@ -83,9 +83,9 @@ _If you have any suggestions, feel free to give it on our discord server!_
   everything for `if`, `def` or a `return` within one line, then there's no need
   to break it into multiple line:
 
-```python
-def foo(x): return rotate_cv(x) if x > 0 else -x
-```
+  ```python
+  def foo(x): return rotate_cv(x) if x > 0 else -x
+  ```
 
 - imports should be grouped by their types, and each import should be designated
   on its own line.
