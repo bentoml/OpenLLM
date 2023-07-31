@@ -52,9 +52,10 @@
    event." 
   []
   (rf/dispatch [:slurp-model-data-json])
+  (rf/dispatch [:fetch-metadata-endpoint])
   {:all-models loading-text ;; will be overwritten by the event dispatched above
-   :selected-model {:model-type :chatglm
-                    :model-id "thudm/chatglm"}})
+   :selected-model {:model-type loading-text
+                    :model-id loading-text}})
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

@@ -1,17 +1,16 @@
 (ns openllm.app
-    (:require [openllm.api.persistence :as persistence]
-              [reagent.dom.client :as rdom]
-              [openllm.views :as views]
-              [re-frame.core :as rf]
-              [reagent-mui.styles :as styles]
-              [reagent-mui.colors :as colors]
-              [reagent-mui.material.css-baseline :refer [css-baseline]]
-
-              ;; the following are only required to make the compiler load the namespaces
-              [day8.re-frame.http-fx]
-              [openllm.events]
-              [openllm.subs]
-              [openllm.api.http]))
+  (:require [openllm.api.persistence :as persistence]
+            [reagent.dom.client :as rdom]
+            [openllm.views :as views]
+            [re-frame.core :as rf]
+            [reagent-mui.styles :as styles]
+            [reagent-mui.colors :as colors]
+            [reagent-mui.material.css-baseline :refer [css-baseline]]
+            ;; the following are only required to make the compiler load the namespaces
+            [day8.re-frame.http-fx]
+            [openllm.events]
+            [openllm.subs]
+            [openllm.api.http]))
 
 (def openllm-theme
   {:palette {:primary   {:main (:black colors/common)
@@ -51,5 +50,5 @@
   []
   (enable-console-print!) ;; so that print writes to `console.log`
   (rf/dispatch-sync [:initialise-db])
-  (persistence/init-idb)
+  (persistence/init-idb) 
   (start))

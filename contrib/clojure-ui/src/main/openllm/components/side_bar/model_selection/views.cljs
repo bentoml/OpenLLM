@@ -17,12 +17,14 @@
        [:label {:class "text-black"} "Model-Type"
         (into [:select {:class "w-full pl-3 pr-10 py-1 mb-1"
                         :value @model-type
-                        :on-change #(rf/dispatch [::events/set-model-type (-> % .-target .-value keyword)])}]
+                        :disabled true
+                        :read-only true}]
               (map #(do [:option {:value %} %])
                    @all-model-types))]
        [:label {:class "text-black"} "Model-ID"
         (into [:select {:class "w-full pl-3 pr-10 py-1"
                         :value @model-id
-                        :on-change #(rf/dispatch [::events/set-model-id (-> % .-target .-value)])}]
+                        :disabled true
+                        :read-only true}]
               (map #(do [:option {:value %} (str %)])
                    @all-model-ids))]])))

@@ -1,8 +1,9 @@
 (ns openllm.components.side-bar.model-selection.events
   (:require [openllm.components.side-bar.model-selection.db :as db]
             [openllm.events :refer [check-spec-interceptor]]
-            [openllm.api.log4cljs.core :refer [log]]
-            [re-frame.core :refer [reg-event-db reg-event-fx reg-cofx inject-cofx]])
+            [re-frame.core :refer [reg-event-db reg-event-fx reg-cofx inject-cofx]]
+            [openllm.api.http :as api]
+            [openllm.api.log4cljs.core :refer [log]])
   (:require-macros [openllm.build :refer [slurp]]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -29,12 +30,8 @@
 (reg-event-db
  ::set-model-type
  [check-spec-interceptor]
- (fn [db [_ model-type]] 
-   (let [ks (partial db/key-seq :selected-model)
-         all-model-ids (get-in db (db/key-seq :all-models model-type :model_id))]
-     (-> db
-         (assoc-in , (ks :model-type) model-type)
-         (assoc-in , (ks :model-id) (first all-model-ids))))))
+ (fn [db [_ model-type]]
+   (assoc-in db (db/key-seq :selected-model :model-type) model-type)))
 
 (reg-event-db
  ::set-model-id
@@ -57,3 +54,26 @@
             (assoc-in db (db/key-seq :all-models) model-data-json-parsed)
             (do (log :warn "Attempted to slurp and parse model data json, but the db already contained data:" all-models)
                 db)))}))
+
+(reg-event-fx
+ ::log-error
+ []
+ (fn [_ [_ error]]
+   {:fx (log :error "Error fetching model data:" error)}))
+
+(reg-event-fx
+ ::received-metadata
+ [check-spec-interceptor]
+ (fn [_ [_ metadata]]
+   (let [model-type (keyword (:model_name metadata))
+         model-id (:model_id metadata)]
+     {:dispatch-n [[::set-model-type model-type]
+                   [::set-model-id model-id]]})))
+
+(reg-event-fx
+ :fetch-metadata-endpoint
+ []
+ (fn [_ _]
+   {:dispatch [::api/v1-metadata ""
+               {:on-success [::received-metadata]
+                :on-failure [::log-error]}]}))

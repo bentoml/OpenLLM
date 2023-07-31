@@ -33,11 +33,11 @@
 (reg-event-fx
  ::v1-metadata
  []
- (fn [_ [_ json {:keys [on-success on-failure]}]]
+ (fn [_ [_ json & {:keys [on-success on-failure]}]]
    {:http-xhrio {:method          :post
                  :uri             (get-uri "/v1/metadata")
-                 :params           json
-                 :format          (ajax/text-request-format)
-                 :response-format (ajax/text-response-format)
+                 :params          json
+                 :format          (ajax/json-request-format)
+                 :response-format (ajax/json-response-format {:keywords? true})
                  :on-success      on-success
                  :on-failure      on-failure}}))
