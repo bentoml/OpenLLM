@@ -20,6 +20,11 @@ on:
       - "main"
     tags:
       - "v*"
+    paths:
+      - ".github/workflows/build.yaml"
+      - "src/openllm/bundle/oci/Dockerfile"
+      - "src/openllm/**"
+      - "src/openllm_client/**"
   pull_request:
     branches:
       - "main"
