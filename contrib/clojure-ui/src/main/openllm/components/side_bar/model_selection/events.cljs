@@ -59,7 +59,7 @@
  ::log-error
  []
  (fn [_ [_ error]]
-   {:fx (log :error "Error fetching model data:" error)}))
+   {:fx [(log :error "Error while fetching metadata:" error)]}))
 
 (reg-event-fx
  ::received-metadata
