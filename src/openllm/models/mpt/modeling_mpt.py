@@ -66,15 +66,7 @@ class MPT(openllm.LLM["transformers.PreTrainedModel", "transformers.GPTNeoXToken
     model.tie_weights()
     return model
 
-  def sanitize_parameters(self,
-                          prompt: str,
-                          max_new_tokens: int | None = None,
-                          temperature: float | None = None,
-                          top_p: float | None = None,
-                          prompt_type: MPTPromptType | None = None,
-                          use_default_prompt_template: bool = True,
-                          **attrs: t.Any,
-                          ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
+  def sanitize_parameters(self, prompt: str, max_new_tokens: int | None = None, temperature: float | None = None, top_p: float | None = None, prompt_type: MPTPromptType | None = None, use_default_prompt_template: bool = True, **attrs: t.Any,) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
     _template = None
     if use_default_prompt_template:
       if prompt_type is None:

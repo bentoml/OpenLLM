@@ -155,42 +155,9 @@ class InfoFilter(logging.Filter):
     return logging.INFO <= record.levelno < logging.WARNING
 
 _LOGGING_CONFIG: DictStrAny = {
-    "version": 1,
-    "disable_existing_loggers": True,
-    "filters": {
-        "excfilter": {
-            "()": "openllm.utils.ExceptionFilter"
-        },
-        "infofilter": {
-            "()": "openllm.utils.InfoFilter"
-        }
-    },
-    "handlers": {
-        "bentomlhandler": {
-            "class": "logging.StreamHandler",
-            "filters": ["excfilter", "infofilter"],
-            "stream": "ext://sys.stdout",
-        },
-        "defaulthandler": {
-            "class": "logging.StreamHandler",
-            "level": logging.WARNING,
-        },
-    },
-    "loggers": {
-        "bentoml": {
-            "handlers": ["bentomlhandler", "defaulthandler"],
-            "level": logging.INFO,
-            "propagate": False,
-        },
-        "openllm": {
-            "handlers": ["bentomlhandler", "defaulthandler"],
-            "level": logging.INFO,
-            "propagate": False,
-        },
-    },
-    "root": {
-        "level": logging.WARNING
-    },
+    "version": 1, "disable_existing_loggers": True, "filters": {"excfilter": {"()": "openllm.utils.ExceptionFilter"}, "infofilter": {"()": "openllm.utils.InfoFilter"}}, "handlers": {
+        "bentomlhandler": {"class": "logging.StreamHandler", "filters": ["excfilter", "infofilter"], "stream": "ext://sys.stdout",}, "defaulthandler": {"class": "logging.StreamHandler", "level": logging.WARNING,},
+    }, "loggers": {"bentoml": {"handlers": ["bentomlhandler", "defaulthandler"], "level": logging.INFO, "propagate": False,}, "openllm": {"handlers": ["bentomlhandler", "defaulthandler"], "level": logging.INFO, "propagate": False,},}, "root": {"level": logging.WARNING},
 }
 
 def configure_logging() -> None:
@@ -369,15 +336,9 @@ _extras: dict[str, t.Any] = {k: v for k, v in locals().items() if k in _whitelis
 _extras["__openllm_migration__"] = {"ModelEnv": "EnvVarMixin"}
 
 _import_structure: dict[str, list[str]] = {
-    "analytics": [],
-    "codegen": [],
-    "dantic": [],
-    "representation": ["ReprMixin"],
-    "lazy": ["LazyModule"],
-    "import_utils": [
-        "OPTIONAL_DEPENDENCIES", "ENV_VARS_TRUE_VALUES", "DummyMetaclass", "EnvVarMixin", "requires_dependencies", "is_cpm_kernels_available", "is_einops_available", "is_flax_available", "is_tf_available", "is_vllm_available", "is_torch_available",
-        "is_bitsandbytes_available", "is_peft_available", "is_datasets_available", "is_transformers_supports_kbit", "is_transformers_supports_agent", "is_jupyter_available", "is_jupytext_available", "is_notebook_available", "is_triton_available",
-        "is_autogptq_available", "require_backends",
+    "analytics": [], "codegen": [], "dantic": [], "representation": ["ReprMixin"], "lazy": ["LazyModule"], "import_utils": [
+        "OPTIONAL_DEPENDENCIES", "ENV_VARS_TRUE_VALUES", "DummyMetaclass", "EnvVarMixin", "requires_dependencies", "is_cpm_kernels_available", "is_einops_available", "is_flax_available", "is_tf_available", "is_vllm_available", "is_torch_available", "is_bitsandbytes_available", "is_peft_available", "is_datasets_available", "is_transformers_supports_kbit",
+        "is_transformers_supports_agent", "is_jupyter_available", "is_jupytext_available", "is_notebook_available", "is_triton_available", "is_autogptq_available", "require_backends",
     ],
 }
 

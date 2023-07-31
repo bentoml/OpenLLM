@@ -18,5 +18,4 @@ from hypothesis import settings
 
 settings.register_profile("CI", settings(suppress_health_check=[HealthCheck.too_slow]), deadline=None)
 
-if "CI" in os.environ:
-    settings.load_profile("CI")
+if "CI" in os.environ: settings.load_profile("CI")

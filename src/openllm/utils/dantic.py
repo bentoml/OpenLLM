@@ -55,18 +55,7 @@ def attrs_to_options(name: str, field: attr.Attribute[t.Any], model_name: str, t
   elif suffix_sampling: identifier = f"{model_name}_sampling_{underscored}"
   else: identifier = f"{model_name}_{underscored}"
 
-  return cog.optgroup.option(
-      identifier,
-      full_option_name,
-      type=parse_type(typ),
-      required=field.default is attr.NOTHING,
-      default=field.default if field.default not in (attr.NOTHING, None) else None,
-      show_default=True,
-      multiple=allows_multiple(typ) if typ else False,
-      help=field.metadata.get("description", "(No description provided)"),
-      show_envvar=True,
-      envvar=envvar,
-  )
+  return cog.optgroup.option(identifier, full_option_name, type=parse_type(typ), required=field.default is attr.NOTHING, default=field.default if field.default not in (attr.NOTHING, None) else None, show_default=True, multiple=allows_multiple(typ) if typ else False, help=field.metadata.get("description", "(No description provided)"), show_envvar=True, envvar=envvar,)
 
 def env_converter(value: t.Any, env: str | None = None) -> t.Any:
   if env is not None:
@@ -78,18 +67,7 @@ def env_converter(value: t.Any, env: str | None = None) -> t.Any:
         raise RuntimeError(f"Failed to parse ({value!r}) from '{env}': {err}") from None
   return value
 
-def Field(
-    default: t.Any = None,
-    *,
-    ge: int | float | None = None,
-    le: int | float | None = None,
-    validator: _ValidatorType[_T] | None = None,
-    description: str | None = None,
-    env: str | None = None,
-    auto_default: bool = False,
-    use_default_converter: bool = True,
-    **attrs: t.Any,
-) -> t.Any:
+def Field(default: t.Any = None, *, ge: int | float | None = None, le: int | float | None = None, validator: _ValidatorType[_T] | None = None, description: str | None = None, env: str | None = None, auto_default: bool = False, use_default_converter: bool = True, **attrs: t.Any,) -> t.Any:
   """A decorator that extends attr.field with additional arguments, which provides the same interface as pydantic's Field.
 
   By default, if both validator and ge are provided, then then ge will be

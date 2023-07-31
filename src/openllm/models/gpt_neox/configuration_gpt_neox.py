@@ -29,15 +29,7 @@ class GPTNeoXConfig(openllm.LLMConfig):
     Refer to [GPTNeoX's model card](https://huggingface.co/docs/transformers/model_doc/gpt_neox)
     for more information.
     """
-  __config__ = {
-      "model_name": "gpt_neox",
-      "start_name": "gpt-neox",
-      "requires_gpu": True,
-      "architecture": "GPTNeoXForCausalLM",
-      "url": "https://github.com/EleutherAI/gpt-neox",
-      "default_id": "eleutherai/gpt-neox-20b",
-      "model_ids": ["eleutherai/gpt-neox-20b"],
-  }
+  __config__ = {"model_name": "gpt_neox", "start_name": "gpt-neox", "requires_gpu": True, "architecture": "GPTNeoXForCausalLM", "url": "https://github.com/EleutherAI/gpt-neox", "default_id": "eleutherai/gpt-neox-20b", "model_ids": ["eleutherai/gpt-neox-20b"],}
   use_half_precision: bool = openllm.LLMConfig.Field(True, description="Whether to use half precision for model.")
 
   class GenerationConfig:

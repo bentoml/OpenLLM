@@ -23,16 +23,6 @@ logger = logging.getLogger(__name__)
 class VLLMLlama(openllm.LLM["vllm.LLMEngine", "transformers.LlamaTokenizerFast"]):
   __openllm_internal__ = True
 
-  def sanitize_parameters(
-      self,
-      prompt: str,
-      top_k: int | None = None,
-      top_p: float | None = None,
-      temperature: float | None = None,
-      max_new_tokens: int | None = None,
-      use_default_prompt_template: bool = False,
-      use_llama2_prompt: bool = True,
-      **attrs: t.Any
-  ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
+  def sanitize_parameters(self, prompt: str, top_k: int | None = None, top_p: float | None = None, temperature: float | None = None, max_new_tokens: int | None = None, use_default_prompt_template: bool = False, use_llama2_prompt: bool = True, **attrs: t.Any) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
     _template = DEFAULT_PROMPT_TEMPLATE("v2" if use_llama2_prompt else "v1") if use_default_prompt_template else None
     return process_prompt(prompt, _template, use_default_prompt_template, **attrs), {"max_new_tokens": max_new_tokens, "temperature": temperature, "top_p": top_p, "top_k": top_k}, {}

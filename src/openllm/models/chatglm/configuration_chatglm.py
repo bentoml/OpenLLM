@@ -29,14 +29,7 @@ class ChatGLMConfig(openllm.LLMConfig):
     Refer to [ChatGLM's GitHub page](https://github.com/THUDM/ChatGLM-6B) for more information.
     """
   __config__ = {
-      "name_type": "lowercase",
-      "trust_remote_code": True,
-      "timeout": 3600000,
-      "requires_gpu": True,
-      "url": "https://github.com/THUDM/ChatGLM-6B",
-      "requirements": ["cpm-kernels", "sentencepiece"],
-      "architecture": "ChatGLMForConditionalGeneration",
-      "default_id": "thudm/chatglm-6b",
+      "name_type": "lowercase", "trust_remote_code": True, "timeout": 3600000, "requires_gpu": True, "url": "https://github.com/THUDM/ChatGLM-6B", "requirements": ["cpm-kernels", "sentencepiece"], "architecture": "ChatGLMForConditionalGeneration", "default_id": "thudm/chatglm-6b",
       "model_ids": ["thudm/chatglm-6b", "thudm/chatglm-6b-int8", "thudm/chatglm-6b-int4", "thudm/chatglm2-6b", "thudm/chatglm2-6b-int4",],
   }
   retain_history: bool = openllm.LLMConfig.Field(False, description="""Whether to retain history given to the model.

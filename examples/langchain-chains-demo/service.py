@@ -25,23 +25,20 @@ from bentoml.io import JSON
 from bentoml.io import Text
 
 class Query(BaseModel):
-    industry: str
-    product_name: str
-    keywords: t.List[str]
-    llm_config: t.Dict[str, t.Any]
-
+  industry: str
+  product_name: str
+  keywords: t.List[str]
+  llm_config: t.Dict[str, t.Any]
 
 def gen_llm(model_name: str, model_id: str | None = None) -> OpenLLM:
-    lc_llm = OpenLLM(model_name=model_name, model_id=model_id, embedded=False)
-    lc_llm.runner.download_model()
-    return lc_llm
-
+  lc_llm = OpenLLM(model_name=model_name, model_id=model_id, embedded=False)
+  lc_llm.runner.download_model()
+  return lc_llm
 
 llm = gen_llm("dolly-v2", model_id="databricks/dolly-v2-7b")
 
 prompt = PromptTemplate(
-    input_variables=["industry", "product_name", "keywords"],
-    template="""
+    input_variables=["industry", "product_name", "keywords"], template="""
 You are a Facebook Ads Copywriter with a strong background in persuasive
 writing and marketing. You craft compelling copy that appeals to the target
 audience's emotions and needs, peruading them to take action or make a
@@ -59,22 +56,12 @@ chain = LLMChain(llm=llm, prompt=prompt)
 
 svc = bentoml.Service("fb-ads-copy", runners=[llm.runner])
 
-
 @svc.on_startup
 def download(_: bentoml.Context):
-    llm.runner.download_model()
+  llm.runner.download_model()
 
-
-SAMPLE_INPUT = Query(
-    industry="SAAS",
-    product_name="BentoML",
-    keywords=["open source", "developer tool", "AI application platform", "serverless", "cost-efficient"],
-    llm_config=llm.runner.config.model_dump(),
-)
-
+SAMPLE_INPUT = Query(industry="SAAS", product_name="BentoML", keywords=["open source", "developer tool", "AI application platform", "serverless", "cost-efficient"], llm_config=llm.runner.config.model_dump(),)
 
 @svc.api(input=JSON.from_sample(sample=SAMPLE_INPUT), output=Text())
 def generate(query: Query):
-    return chain.run(
-        {"industry": query.industry, "product_name": query.product_name, "keywords": ", ".join(query.keywords)}
-    )
+  return chain.run({"industry": query.industry, "product_name": query.product_name, "keywords": ", ".join(query.keywords)})

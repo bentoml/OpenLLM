@@ -21,17 +21,7 @@ else: torch, transformers, F = openllm.utils.LazyLoader("torch", globals(), "tor
 class ChatGLM(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTrainedTokenizerFast"]):
   __openllm_internal__ = True
 
-  def sanitize_parameters(
-      self,
-      prompt: str,
-      max_new_tokens: int | None = None,
-      num_beams: int | None = None,
-      top_p: float | None = None,
-      temperature: float | None = None,
-      chat_history: list[str] | None = None,
-      use_default_prompt_template: bool = False,
-      **attrs: t.Any
-  ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
+  def sanitize_parameters(self, prompt: str, max_new_tokens: int | None = None, num_beams: int | None = None, top_p: float | None = None, temperature: float | None = None, chat_history: list[str] | None = None, use_default_prompt_template: bool = False, **attrs: t.Any) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
     prompt_text = ""
     if use_default_prompt_template and chat_history is not None:
       for i, (old_query, response) in enumerate(chat_history):

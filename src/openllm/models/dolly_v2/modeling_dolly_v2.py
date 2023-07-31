@@ -73,9 +73,7 @@ def get_pipeline(model: transformers.PreTrainedModel, tokenizer: transformers.Pr
       input_ids, attention_mask = model_inputs["input_ids"], model_inputs.get("attention_mask", None)
       if input_ids.shape[1] == 0: input_ids, attention_mask, in_b = None, None, 1
       else: in_b = input_ids.shape[0]
-      generated_sequence = self.model.generate(
-          input_ids=input_ids.to(self.model.device) if input_ids is not None else None, attention_mask=attention_mask.to(self.model.device) if attention_mask is not None else None, pad_token_id=self.tokenizer.pad_token_id, **generate_kwargs
-      )
+      generated_sequence = self.model.generate(input_ids=input_ids.to(self.model.device) if input_ids is not None else None, attention_mask=attention_mask.to(self.model.device) if attention_mask is not None else None, pad_token_id=self.tokenizer.pad_token_id, **generate_kwargs)
       out_b = generated_sequence.shape[0]
       if self.framework == "pt": generated_sequence = generated_sequence.reshape(in_b, out_b // in_b, *generated_sequence.shape[1:])
       elif self.framework == "tf": generated_sequence = tf.reshape(generated_sequence, (in_b, out_b // in_b, *generated_sequence.shape[1:]))
@@ -143,14 +141,7 @@ class DollyV2(openllm.LLM["transformers.Pipeline", "transformers.PreTrainedToken
   def load_model(self, *args: t.Any, **attrs: t.Any) -> transformers.Pipeline:
     return get_pipeline(model=transformers.AutoModelForCausalLM.from_pretrained(self._bentomodel.path, *args, **attrs), tokenizer=self.tokenizer, _init=True, return_full_text=self.config.return_full_text)
 
-  def sanitize_parameters(self,
-                          prompt: str,
-                          max_new_tokens: int | None = None,
-                          temperature: float | None = None,
-                          top_k: int | None = None,
-                          top_p: float | None = None,
-                          use_default_prompt_template: bool = True,
-                          **attrs: t.Any) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
+  def sanitize_parameters(self, prompt: str, max_new_tokens: int | None = None, temperature: float | None = None, top_k: int | None = None, top_p: float | None = None, use_default_prompt_template: bool = True, **attrs: t.Any) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
     return process_prompt(prompt, DEFAULT_PROMPT_TEMPLATE, use_default_prompt_template, **attrs), {"max_new_tokens": max_new_tokens, "top_k": top_k, "top_p": top_p, "temperature": temperature, **attrs}, {}
 
   def postprocess_generate(self, prompt: str, generation_result: list[dict[t.Literal["generated_text"], str]], **_: t.Any) -> str:

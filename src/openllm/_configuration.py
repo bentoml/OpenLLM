@@ -209,25 +209,18 @@ class FineTuneConfig:
   """
 
   if t.TYPE_CHECKING and not MYPY:
-    # The following type stubs makes __init__ aware of attrs
-    # internal type converter.
+    # fmt: off
+    # The following type stubs makes __init__ aware of attrs internal type converter.
     @overload
-    def __init__(self, adapter_type: AdapterType = ..., adapter_config: dict[str, t.Any] = ..., inference_mode: bool = ..., llm_config_class: type[LLMConfig] = ...) -> None:
-      ...
-
+    def __init__(self, adapter_type: AdapterType = ..., adapter_config: dict[str, t.Any] = ..., inference_mode: bool = ..., llm_config_class: type[LLMConfig] = ...) -> None: ...
     @overload
-    def __init__(self, adapter_type: PeftType = ..., adapter_config: dict[str, t.Any] = ..., inference_mode: bool = ..., llm_config_class: type[LLMConfig] = ...) -> None:
-      ...
-
+    def __init__(self, adapter_type: PeftType = ..., adapter_config: dict[str, t.Any] = ..., inference_mode: bool = ..., llm_config_class: type[LLMConfig] = ...) -> None: ...
     # The below should be generated via attrs. Only here to conform with pyright strict checking.
-    def __init__(self, *args: t.Any, **kwargs: t.Any) -> None:
-      ...
+    def __init__(self, *args: t.Any, **kwargs: t.Any) -> None: ...
+    # fmt: on
 
   adapter_type: PeftType = dantic.Field("lora", description=f"The type of adapter to use for fine-tuning. Available supported methods: {PeftType.supported()}, default to 'lora'", use_default_converter=False, converter=_adapter_converter)
-  adapter_config: t.Dict[str, t.Any] = dantic.Field(
-      None, description="The configuration for the adapter. The content of the dict depends on the adapter type.",
-      validator=attr.validators.optional(attr.validators.instance_of(dict)), converter=attr.converters.default_if_none(factory=dict), use_default_converter=False
-  )
+  adapter_config: t.Dict[str, t.Any] = dantic.Field(None, description="The configuration for the adapter. The content of the dict depends on the adapter type.", validator=attr.validators.optional(attr.validators.instance_of(dict)), converter=attr.converters.default_if_none(factory=dict), use_default_converter=False)
   inference_mode: bool = dantic.Field(False, description="Whether to use this Adapter for inference", use_default_converter=False)
   llm_config_class: type[LLMConfig] = dantic.Field(None, description="The reference class to openllm.LLMConfig", use_default_converter=False)
 
@@ -279,8 +272,7 @@ class GenerationConfig(ReprMixin):
         input prompt + `min_new_tokens`. Its effect is overridden by `min_new_tokens`, if also set.""")
   min_new_tokens: int = dantic.Field(description="The minimum numbers of tokens to generate, ignoring the number of tokens in the prompt.")
   early_stopping: bool = dantic.Field(
-      False,
-      description="""Controls the stopping condition for beam-based methods, like beam-search. It accepts the
+      False, description="""Controls the stopping condition for beam-based methods, like beam-search. It accepts the
         following values: `True`, where the generation stops as soon as there are `num_beams` complete candidates;
         `False`, where an heuristic is applied and the generation stops when is it very unlikely to find
         better candidates; `"never"`, where the beam search procedure only stops when there
@@ -305,8 +297,7 @@ class GenerationConfig(ReprMixin):
   top_p: float = dantic.Field(1.0, description="""If set to float < 1, only the smallest set of most probable tokens with
         probabilities that add up to `top_p` or higher are kept for generation.""")
   typical_p: float = dantic.Field(
-      1.0,
-      description="""Local typicality measures how similar the conditional probability of predicting a target
+      1.0, description="""Local typicality measures how similar the conditional probability of predicting a target
         token next is to the expected conditional probability of predicting a random token next, given the
         partial text already generated. If set to float < 1, the smallest set of the most locally typical
         tokens with probabilities that add up to `typical_p` or higher are kept for generation. See [this
@@ -314,8 +305,7 @@ class GenerationConfig(ReprMixin):
     """,
   )
   epsilon_cutoff: float = dantic.Field(
-      0.0,
-      description="""\
+      0.0, description="""\
         If set to float strictly between 0 and 1, only tokens with a conditional probability greater than
         `epsilon_cutoff` will be sampled. In the paper, suggested values range from 3e-4 to 9e-4, depending on the
         size of the model. See [Truncation Sampling as Language Model Desmoothing](https://arxiv.org/abs/2210.15191)
@@ -323,8 +313,7 @@ class GenerationConfig(ReprMixin):
     """,
   )
   eta_cutoff: float = dantic.Field(
-      0.0,
-      description="""Eta sampling is a hybrid of locally typical sampling and epsilon sampling.
+      0.0, description="""Eta sampling is a hybrid of locally typical sampling and epsilon sampling.
         If set to float strictly between 0 and 1, a token is only considered if it is greater than
         either `eta_cutoff` or `sqrt(eta_cutoff) * exp(-entropy(softmax(next_token_logits)))`. The latter term is
         intuitively the expected next token probability, scaled by `sqrt(eta_cutoff)`. In the paper, suggested
@@ -332,28 +321,23 @@ class GenerationConfig(ReprMixin):
         See [Truncation Sampling as Language Model Desmoothing](https://arxiv.org/abs/2210.15191) for more details.
     """,
   )
-  diversity_penalty: float = dantic.Field(
-      0.0, description="""This value is subtracted from a beam's score if it generates a token same
+  diversity_penalty: float = dantic.Field(0.0, description="""This value is subtracted from a beam's score if it generates a token same
         as any beam from other group at a particular time. Note that `diversity_penalty` is only effective if `group beam search` is enabled.
-    """,
-  )
+    """,)
   repetition_penalty: float = dantic.Field(1.0, description="""The parameter for repetition penalty. 1.0 means no penalty. See [this paper](https://arxiv.org/pdf/1909.05858.pdf) for more details.""")
   encoder_repetition_penalty: float = dantic.Field(1.0, description="""The paramater for encoder_repetition_penalty. An exponential penalty on sequences that are not in the original input. 1.0 means no penalty.""")
   length_penalty: float = dantic.Field(
-      1.0,
-      description="""Exponential penalty to the length that is used with beam-based generation. It is applied
+      1.0, description="""Exponential penalty to the length that is used with beam-based generation. It is applied
         as an exponent to the sequence length, which in turn is used to divide the score of the sequence. Since
         the score is the log likelihood of the sequence (i.e. negative), `length_penalty` > 0.0 promotes longer
         sequences, while `length_penalty` < 0.0 encourages shorter sequences.
     """,
   )
   no_repeat_ngram_size: int = dantic.Field(0, description="If set to int > 0, all ngrams of that size can only occur once.")
-  bad_words_ids: t.List[t.List[int]] = dantic.Field(
-      description="""List of token ids that are not allowed to be generated. In order to get the token ids
+  bad_words_ids: t.List[t.List[int]] = dantic.Field(description="""List of token ids that are not allowed to be generated. In order to get the token ids
         of the words that should not appear in the generated text, use
         `tokenizer(bad_words, add_prefix_space=True, add_special_tokens=False).input_ids`.
-        """,
-  )
+        """,)
 
   # NOTE: t.Union is not yet supported on CLI, but the environment variable should already be available.
   force_words_ids: t.Union[t.List[t.List[int]], t.List[t.List[t.List[int]]]] = dantic.Field(
@@ -364,47 +348,37 @@ class GenerationConfig(ReprMixin):
         can allow different forms of each word.
         """,
   )
-  renormalize_logits: bool = dantic.Field(
-      False,
-      description="""Whether to renormalize the logits after applying all the logits processors or warpers
+  renormalize_logits: bool = dantic.Field(False, description="""Whether to renormalize the logits after applying all the logits processors or warpers
         (including the custom ones). It's highly recommended to set this flag to `True` as the search
         algorithms suppose the score logits are normalized but some logit processors or warpers break the normalization.
-    """,
-  )
-  constraints: t.List[Constraint] = dantic.Field(
-        description="""Custom constraints that can be added to the generation to ensure that the output
+    """,)
+  constraints: t.List[Constraint] = dantic.Field(description="""Custom constraints that can be added to the generation to ensure that the output
         will contain the use of certain tokens as defined by ``Constraint`` objects, in the most sensible way possible.
         """)
-  forced_bos_token_id: int = dantic.Field(
-      description="""The id of the token to force as the first generated token after the
+  forced_bos_token_id: int = dantic.Field(description="""The id of the token to force as the first generated token after the
         ``decoder_start_token_id``. Useful for multilingual models like
         [mBART](https://huggingface.co/docs/transformers/model_doc/mbart) where the first generated token needs
         to be the target language token.
-    """,
-  )
+    """,)
   forced_eos_token_id: t.Union[int, t.List[int]] = dantic.Field(description="""The id of the token to force as the last generated token when `max_length` is reached.
         Optionally, use a list to set multiple *end-of-sequence* tokens.""")
   remove_invalid_values: bool = dantic.Field(False, description="""Whether to remove possible *nan* and *inf* outputs of the model to prevent the
         generation method to crash. Note that using `remove_invalid_values` can slow down generation.""")
-  exponential_decay_length_penalty: t.Tuple[int, float] = dantic.Field(
-      description="""This tuple adds an exponentially increasing length penalty, after a certain amount of tokens
+  exponential_decay_length_penalty: t.Tuple[
+      int, float] = dantic.Field(description="""This tuple adds an exponentially increasing length penalty, after a certain amount of tokens
         have been generated. The tuple shall consist of: `(start_index, decay_factor)` where `start_index`
         indicates where penalty starts and `decay_factor` represents the factor of exponential decay
-    """,
-  )
+    """,)
   suppress_tokens: t.List[int] = dantic.Field(description="""A list of tokens that will be suppressed at generation. The `SupressTokens` logit
         processor will set their log probs to `-inf` so that they are not sampled.
     """)
-  begin_suppress_tokens: t.List[
-      int] = dantic.Field(description="""A list of tokens that will be suppressed at the beginning of the generation. The
+  begin_suppress_tokens: t.List[int] = dantic.Field(description="""A list of tokens that will be suppressed at the beginning of the generation. The
         `SupressBeginTokens` logit processor will set their log probs to `-inf` so that they are not sampled.
         """)
-  forced_decoder_ids: t.List[t.List[int]] = dantic.Field(
-      description="""A list of pairs of integers which indicates a mapping from generation indices to token indices
+  forced_decoder_ids: t.List[t.List[int]] = dantic.Field(description="""A list of pairs of integers which indicates a mapping from generation indices to token indices
         that will be forced before sampling. For example, `[[1, 123]]` means the second generated token will always
         be a token of index 123.
-        """,
-  )
+        """,)
 
   # NOTE: Parameters that define the output variables of `generate`
   num_return_sequences: int = dantic.Field(1, description="The number of independently computed returned sequences for each element in the batch.")
@@ -428,19 +402,19 @@ class GenerationConfig(ReprMixin):
   def __init__(self, *, _internal: bool = False, **attrs: t.Any):
     if not _internal: raise RuntimeError("GenerationConfig is not meant to be used directly, but you can access this via a LLMConfig.generation_config")
     self.__attrs_init__(**attrs)
+
   def __getitem__(self, item: str) -> t.Any:
     if hasattr(self, item): return getattr(self, item)
     raise KeyError(f"'{self.__class__.__name__}' has no attribute {item}.")
+
   @property
-  def __repr_keys__(self) -> set[str]: return {i.name for i in attr.fields(self.__class__)}
+  def __repr_keys__(self) -> set[str]:
+    return {i.name for i in attr.fields(self.__class__)}
 
 bentoml_cattr.register_unstructure_hook_factory(
-    lambda cls: attr.has(cls) and lenient_issubclass(cls, GenerationConfig), lambda cls: make_dict_unstructure_fn(
-        cls, bentoml_cattr,
-        # The below is the default, put here for strict annotations
-        _cattrs_omit_if_default=False, _cattrs_use_linecache=True, **{k: override(omit=True) for k, v in attr.fields_dict(cls).items() if v.default in (None, attr.NOTHING)},
-    ),
-)
+    lambda cls: attr.has(cls) and lenient_issubclass(cls, GenerationConfig),
+    lambda cls: make_dict_unstructure_fn(cls, bentoml_cattr, _cattrs_omit_if_default=False, _cattrs_use_linecache=True,
+                                         **{k: override(omit=True) for k, v in attr.fields_dict(cls).items() if v.default in (None, attr.NOTHING)}))
 
 @attr.frozen(slots=True, repr=False, init=False)
 class SamplingParams(ReprMixin):
@@ -453,31 +427,24 @@ class SamplingParams(ReprMixin):
   - max_tokens -> max_new_tokens
   """
   n: int = dantic.Field(1, description="Number of output sequences to return for the given prompt.")
-  best_of: int = dantic.Field(
-      None,
-      description="""\
+  best_of: int = dantic.Field(None, description="""\
     Number of output sequences that are generated from the prompt.
     From these `best_of` sequences, the top `n` sequences are returned.
     `best_of` must be greater than or equal to `n`. This is treated as
     the beam width when `use_beam_search` is True. By default, `best_of`
     is set to `n`.
-    """,
-  )
-  presence_penalty: float = dantic.Field(
-      0.0, description="""Float that penalizes new tokens based on whether they
+    """,)
+  presence_penalty: float = dantic.Field(0.0, description="""Float that penalizes new tokens based on whether they
     appear in the generated text so far. Values > 0 encourage the model
     to use new tokens, while values < 0 encourage the model to repeat
     tokens.
-    """,
-  )
-  frequency_penalty: float = dantic.Field(
-      0.0, description="""\
+    """,)
+  frequency_penalty: float = dantic.Field(0.0, description="""\
     Float that penalizes new tokens based on their
     frequency in the generated text so far. Values > 0 encourage the
     model to use new tokens, while values < 0 encourage the model to
     repeat tokens.
-    """,
-  )
+    """,)
   use_beam_search: bool = dantic.Field(False, description="Whether to use beam search instead of sampling.")
   stop: t.List[str] = dantic.Field(None, description="List of strings that stop the generation when they are generated. The returned output will not contain the stop strings.")
   ignore_eos: bool = dantic.Field(False, description="Whether to ignore the EOS token and continue generating tokens after the EOS token is generated.")
@@ -499,12 +466,12 @@ class SamplingParams(ReprMixin):
     _object_setattr(self, "top_k", attrs.pop("top_k", -1))
     _object_setattr(self, "top_p", attrs.pop("top_p", 1.0))
     self.__attrs_init__(**attrs)
-
   def __getitem__(self, item: str) -> t.Any:
     if hasattr(self, item): return getattr(self, item)
     raise KeyError(f"'{self.__class__.__name__}' has no attribute {item}.")
   @property
   def __repr_keys__(self) -> set[str]: return {i.name for i in attr.fields(self.__class__)}
+
   @classmethod
   def from_generation_config(cls, generation_config: GenerationConfig, **attrs: t.Any) -> t.Self:
     """The main entrypoint for creating a SamplingParams from ``openllm.LLMConfig``."""
@@ -521,12 +488,9 @@ class SamplingParams(ReprMixin):
   def to_vllm(self) -> vllm.SamplingParams: return vllm.SamplingParams(max_tokens=self.max_tokens, temperature=self.temperature, top_k=self.top_k, top_p=self.top_p, **bentoml_cattr.unstructure(self))
 
 bentoml_cattr.register_unstructure_hook_factory(
-    lambda cls: attr.has(cls) and lenient_issubclass(cls, SamplingParams), lambda cls: make_dict_unstructure_fn(
-        cls, bentoml_cattr,
-        # The below is the default, put here for strict annotations
-        _cattrs_omit_if_default=False, _cattrs_use_linecache=True, **{k: override(omit=True) for k, v in attr.fields_dict(cls).items() if v.default in (None, attr.NOTHING)},
-    ),
-)
+    lambda cls: attr.has(cls) and lenient_issubclass(cls, SamplingParams),
+    lambda cls: make_dict_unstructure_fn(cls, bentoml_cattr, _cattrs_omit_if_default=False, _cattrs_use_linecache=True,
+                                         **{k: override(omit=True) for k, v in attr.fields_dict(cls).items() if v.default in (None, attr.NOTHING)}))
 bentoml_cattr.register_structure_hook_factory(lambda cls: attr.has(cls) and lenient_issubclass(cls, SamplingParams), lambda cls: make_dict_structure_fn(cls, bentoml_cattr, _cattrs_forbid_extra_keys=True, max_new_tokens=override(rename="max_tokens")))
 
 # cached it here to save one lookup per assignment
@@ -580,14 +544,10 @@ class ModelSettings(t.TypedDict, total=False):
 _transformed_type: DictStrAny = {"fine_tune_strategies": t.Dict[AdapterType, FineTuneConfig], "default_implementation": t.Dict[LiteralResourceSpec, LiteralRuntime]}
 
 @attr.define(
-    slots=True,
-    field_transformer=lambda _, __: [
-        attr.Attribute.from_counting_attr(
-            k, dantic.Field(kw_only=False if t.get_origin(ann) is not Required else True, auto_default=True, use_default_converter=False, type=_transformed_type.get(k, ann), metadata={"target": f"__openllm_{k}__"}, description=f"ModelSettings field for {k}."),
-        ) for k, ann in t.get_type_hints(ModelSettings).items()
-    ],
-    frozen=False,
-)
+    frozen=False, slots=True, field_transformer=lambda _, __: [
+        attr.Attribute.from_counting_attr(k, dantic.Field(kw_only=False if t.get_origin(ann) is not Required else True, auto_default=True, use_default_converter=False,
+                                                          type=_transformed_type.get(k, ann), metadata={"target": f"__openllm_{k}__"}, description=f"ModelSettings field for {k}.")) for k, ann in t.get_type_hints(ModelSettings).items()
+    ])
 class _ModelSettingsAttr:
   """Internal attrs representation of ModelSettings."""
   def __getitem__(self, key: str) -> t.Any:
@@ -597,31 +557,9 @@ class _ModelSettingsAttr:
 
   @classmethod
   def default(cls) -> _ModelSettingsAttr:
-    return cls(
-        **t.cast(
-            DictStrAny,
-            ModelSettings(
-                default_id="__default__",
-                model_ids=["__default__"],
-                architecture="PreTrainedModel",
-                default_implementation={
-                    "cpu": "pt",
-                    "nvidia.com/gpu": "pt"
-                },
-                name_type="dasherize",
-                requires_gpu=False,
-                url="",
-                model_type="causal_lm",
-                trust_remote_code=False,
-                requirements=None,
-                tokenizer_class=None,
-                timeout=int(36e6),
-                service_name="",
-                workers_per_resource=1.,
-                runtime="transformers",
-            ),
-        )
-    )
+    return cls(**t.cast(DictStrAny, ModelSettings(default_id="__default__", model_ids=["__default__"], architecture="PreTrainedModel", default_implementation={"cpu": "pt", "nvidia.com/gpu": "pt"},
+                                                  name_type="dasherize", requires_gpu=False, url="", model_type="causal_lm", trust_remote_code=False, requirements=None, tokenizer_class=None, timeout=int(36e6),
+                                                  service_name="", workers_per_resource=1., runtime="transformers")))
 
   # NOTE: The below are dynamically generated by the field_transformer
   if t.TYPE_CHECKING:
@@ -838,7 +776,7 @@ class _ConfigAttr:
     __openllm_default_implementation__: t.Dict[LiteralResourceSpec, LiteralRuntime] = Field(None)
     """The default runtime to run this LLM. By default, it will be PyTorch (pt) for most models. For some models, such as Llama, it will use `vllm` or `flax`.
 
-    It is a dictionary of key as the accelerator spec in k8s ('cpu', 'nvidia.com/gpu', 'amd.com/gpu', 'cloud-tpus.google.com/v2', ...) and the values as supported OpenLLM Runtime ('flax', 'tf', 'pt', 'vllm')
+    It is a dictionary of key as the accelerator spec in k4s ('cpu', 'nvidia.com/gpu', 'amd.com/gpu', 'cloud-tpus.google.com/v2', ...) and the values as supported OpenLLM Runtime ('flax', 'tf', 'pt', 'vllm')
     """
     __openllm_url__: str = Field(None)
     """The resolved url for this LLMConfig."""
@@ -906,7 +844,7 @@ class _ConfigBuilder:
 
   def __init__(self, cls: type[LLMConfig], these: dict[str, _CountingAttr[t.Any]], auto_attribs: bool = False, kw_only: bool = False, collect_by_mro: bool = True):
     attrs, base_attrs, base_attr_map = _transform_attrs(cls, these, auto_attribs, kw_only, collect_by_mro, field_transformer=codegen.make_env_transformer(cls, cls.__openllm_model_name__))
-    self._cls,self._model_name,self._cls_dict,self._attrs,self._base_names,self._base_attr_map = cls, cls.__openllm_model_name__, dict(cls.__dict__), attrs, {a.name for a in base_attrs}, base_attr_map
+    self._cls, self._model_name, self._cls_dict, self._attrs, self._base_names, self._base_attr_map = cls, cls.__openllm_model_name__, dict(cls.__dict__), attrs, {a.name for a in base_attrs}, base_attr_map
     self._attr_names = tuple(a.name for a in attrs)
     self._has_pre_init = bool(getattr(cls, "__attrs_pre_init__", False))
     self._has_post_init = bool(getattr(cls, "__attrs_post_init__", False))
@@ -986,15 +924,7 @@ class _ConfigBuilder:
     return llm_config_transform(cls)
 
   def add_attrs_init(self) -> t.Self:
-    self._cls_dict["__attrs_init__"] = codegen.add_method_dunders(
-        self._cls, _make_init(self._cls, self._attrs, self._has_pre_init, self._has_post_init, False,  # frozen
-                              True,  # slots
-                              False,  # cache_hash
-                              self._base_attr_map, False,  # This is not an exception
-                              None,  # no on_setattr
-                              True,
-                              ),
-    )
+    self._cls_dict["__attrs_init__"] = codegen.add_method_dunders(self._cls, _make_init(self._cls, self._attrs, self._has_pre_init, self._has_post_init, False, True, False, self._base_attr_map, False, None, True))
     return self
   def add_repr(self) -> t.Self:
     for key, fn in ReprMixin.__dict__.items():
@@ -1095,21 +1025,10 @@ class LLMConfig(_ConfigAttr):
   @classmethod
   def _make_subclass(cls, class_attr: str, base: type[At], globs: dict[str, t.Any] | None = None, suffix_env: t.LiteralString | None = None) -> type[At]:
     camel_name = cls.__name__.replace("Config", "")
-
     klass = attr.make_class(
-        f"{camel_name}{class_attr}", [],
-        bases=(base,),
-        slots=True,
-        weakref_slot=True,
-        frozen=True,
-        repr=False,
-        init=False,
-        collect_by_mro=True,
-        field_transformer=codegen.make_env_transformer(
-            cls, cls.__openllm_model_name__, suffix=suffix_env, default_callback=lambda field_name, field_default: getattr(getattr(cls, class_attr), field_name, field_default) if codegen.has_own_attribute(cls, class_attr) else field_default, globs=globs,
-        ),
-    )
-
+        f"{camel_name}{class_attr}", [], bases=(base,), slots=True, weakref_slot=True, frozen=True, repr=False, init=False, collect_by_mro=True,
+        field_transformer=codegen.make_env_transformer(cls, cls.__openllm_model_name__, suffix=suffix_env, globs=globs,
+                                                       default_callback=lambda field_name, field_default: getattr(getattr(cls, class_attr), field_name, field_default) if codegen.has_own_attribute(cls, class_attr) else field_default))
     # For pickling to work, the __module__ variable needs to be set to the
     # frame where the class is created. This respect the module that is created from cls
     try: klass.__module__ = cls.__module__
@@ -1396,12 +1315,8 @@ class LLMConfig(_ConfigAttr):
     return _object_getattribute.__get__(self)(item)
   def __len__(self) -> int: return len(self.__openllm_accepted_keys__) + len(self.__openllm_extras__)
   def keys(self) -> list[str]: return list(self.__openllm_accepted_keys__) + list(self.__openllm_extras__)
-  def values(self) -> list[t.Any]: return ([getattr(self, k.name) for k in attr.fields(self.__class__)] + [getattr(self.generation_config, k.name)
-                                                                            for k in attr.fields(self.__openllm_generation_class__)] + [getattr(self.sampling_config, k.name)
-                                                                                                                                        for k in attr.fields(self.__openllm_sampling_class__)] + list(self.__openllm_extras__.values()))
-  def items(self) -> list[tuple[str, t.Any]]: return ([(k.name, getattr(self, k.name)) for k in attr.fields(self.__class__)] + [(k.name, getattr(self.generation_config, k.name))
-                                                                                      for k in attr.fields(self.__openllm_generation_class__)] + [(k.name, getattr(self.sampling_config, k.name))
-                                                                                                                                                  for k in attr.fields(self.__openllm_sampling_class__)] + list(self.__openllm_extras__.items()))
+  def values(self) -> list[t.Any]: return ([getattr(self, k.name) for k in attr.fields(self.__class__)] + [getattr(self.generation_config, k.name) for k in attr.fields(self.__openllm_generation_class__)] + [getattr(self.sampling_config, k.name) for k in attr.fields(self.__openllm_sampling_class__)] + list(self.__openllm_extras__.values()))
+  def items(self) -> list[tuple[str, t.Any]]: return ([(k.name, getattr(self, k.name)) for k in attr.fields(self.__class__)] + [(k.name, getattr(self.generation_config, k.name)) for k in attr.fields(self.__openllm_generation_class__)] + [(k.name, getattr(self.sampling_config, k.name)) for k in attr.fields(self.__openllm_sampling_class__)] + list(self.__openllm_extras__.items()))
   def __iter__(self) -> t.Iterable[str]: return iter(self.keys())
   def __contains__(self, item: t.Any) -> bool:
     if item in self.__openllm_extras__: return True
@@ -1429,12 +1344,9 @@ class LLMConfig(_ConfigAttr):
       raise ValueError("Cannot derivate a LLMConfig without __config__")
     _new_cfg = {k: v for k, v in attrs.items() if k in attr.fields_dict(_ModelSettingsAttr)}
     attrs = {k: v for k, v in attrs.items() if k not in _new_cfg}
-    new_cls = types.new_class(
-        name or f"{cls.__name__.replace('Config', '')}DerivateConfig", (cls,), {}, lambda ns: ns.update({
-            "__config__": config_merger.merge(copy.deepcopy(cls.__dict__["__config__"]), _new_cfg),
-            "__base_config__": cls,  # keep a reference for easy access
-        }),
-    )
+    new_cls = types.new_class(name or f"{cls.__name__.replace('Config', '')}DerivateConfig", (cls,), {}, lambda ns: ns.update({
+        "__config__": config_merger.merge(copy.deepcopy(cls.__dict__["__config__"]), _new_cfg), "__base_config__": cls,  # keep a reference for easy access
+    }))
 
     # For pickling to work, the __module__ variable needs to be set to the
     # frame where the class is created.  Bypass this step in environments where
@@ -1498,18 +1410,14 @@ class LLMConfig(_ConfigAttr):
     return self.model_construct_env(**llm_config_attrs), {k: v for k, v in attrs.items() if k not in key_to_remove}
 
   @overload
-  def to_generation_config(self, return_as_dict: t.Literal[False] = False) -> transformers.GenerationConfig:
-    ...
+  def to_generation_config(self, return_as_dict: t.Literal[False] = False) -> transformers.GenerationConfig: ...
   @overload
-  def to_generation_config(self, return_as_dict: t.Literal[True] = ...) -> DictStrAny:
-    ...
+  def to_generation_config(self, return_as_dict: t.Literal[True] = ...) -> DictStrAny: ...
   def to_generation_config(self, return_as_dict: bool = False) -> transformers.GenerationConfig | DictStrAny:
     config = transformers.GenerationConfig(**bentoml_cattr.unstructure(self.generation_config))
     return config.to_dict() if return_as_dict else config
   @requires_dependencies("vllm", extra="vllm")
-  def to_sampling_config(self) -> vllm.SamplingParams:
-    return self.sampling_config.to_vllm()
-
+  def to_sampling_config(self) -> vllm.SamplingParams: return self.sampling_config.to_vllm()
   @classmethod
   def to_click_options(cls, f: AnyCallable) -> click.Command:
     """Convert current configuration to click options.

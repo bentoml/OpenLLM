@@ -168,19 +168,7 @@ class LazyModule(types.ModuleType):
     It also contains a special case for all of the metadata information, such as __version__ and __version_info__.
     """
     if name in _reserved_namespace: raise ForbiddenAttributeError(f"'{name}' is a reserved namespace for {self._name} and should not be access nor modified.")
-    dunder_to_metadata = {
-        "__title__": "Name",
-        "__copyright__": "",
-        "__version__": "version",
-        "__version_info__": "version",
-        "__description__": "summary",
-        "__uri__": "",
-        "__url__": "",
-        "__author__": "",
-        "__email__": "",
-        "__license__": "license",
-        "__homepage__": "",
-    }
+    dunder_to_metadata = {"__title__": "Name", "__copyright__": "", "__version__": "version", "__version_info__": "version", "__description__": "summary", "__uri__": "", "__url__": "", "__author__": "", "__email__": "", "__license__": "license", "__homepage__": "",}
     if name in dunder_to_metadata:
       if name not in {"__version_info__", "__copyright__", "__version__"}:
         warnings.warn(f"Accessing '{self._name}.{name}' is deprecated. Please consider using 'importlib.metadata' directly to query for openllm packaging metadata.", DeprecationWarning, stacklevel=2)

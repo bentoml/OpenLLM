@@ -78,9 +78,11 @@ _STACK_LEVEL = 3
 @overload
 def _parse_visible_devices(default_var: str | None = ..., respect_env: t.Literal[True] = True) -> list[str] | None:
   ...
+
 @overload
 def _parse_visible_devices(default_var: str = ..., respect_env: t.Literal[False] = ...) -> list[str]:
   ...
+
 def _parse_visible_devices(default_var: str | None = None, respect_env: bool = True) -> list[str] | None:
   """CUDA_VISIBLE_DEVICES aware with default var for parsing spec."""
   if respect_env:
@@ -152,12 +154,15 @@ def _from_system(cls: type[DynResource]) -> list[str]:
 @overload
 def _from_spec(cls: type[DynResource], spec: int) -> list[str]:
   ...
+
 @overload
 def _from_spec(cls: type[DynResource], spec: ListIntStr) -> list[str]:
   ...
+
 @overload
 def _from_spec(cls: type[DynResource], spec: str) -> list[str]:
   ...
+
 def _from_spec(cls: type[DynResource], spec: t.Any) -> list[str]:
   """Shared mixin implementation for OpenLLM's NVIDIA and AMD resource implementation.
 
@@ -172,8 +177,10 @@ def _from_spec(cls: type[DynResource], spec: t.Any) -> list[str]:
     if not spec: return []
     if spec.isdigit(): spec = ",".join([str(i) for i in range(_strtoul(spec))])
     return _parse_visible_devices(spec, respect_env=False)
-  elif LazyType(ListIntStr).isinstance(spec): return [str(x) for x in spec]
-  else: raise TypeError(f"'{cls.__name__}.from_spec' only supports parsing spec of type int, str, or list, got '{type(spec)}' instead.")
+  elif LazyType(ListIntStr).isinstance(spec):
+    return [str(x) for x in spec]
+  else:
+    raise TypeError(f"'{cls.__name__}.from_spec' only supports parsing spec of type int, str, or list, got '{type(spec)}' instead.")
 
 def _raw_device_uuid_nvml() -> list[str] | None:
   """Return list of device UUID as reported by NVML or None if NVML discovery/initialization failed."""
@@ -190,19 +197,27 @@ def _raw_device_uuid_nvml() -> list[str] | None:
     return None
 
   rc = nvml_h.nvmlInit()
-  if rc != 0: warnings.warn("Can't initialize NVML", stacklevel=_STACK_LEVEL); return None
+  if rc != 0:
+    warnings.warn("Can't initialize NVML", stacklevel=_STACK_LEVEL)
+    return None
   dev_count = c_int(-1)
   rc = nvml_h.nvmlDeviceGetCount_v2(byref(dev_count))
-  if rc != 0: warnings.warn("Failed to get available device from system.", stacklevel=_STACK_LEVEL); return None
+  if rc != 0:
+    warnings.warn("Failed to get available device from system.", stacklevel=_STACK_LEVEL)
+    return None
   uuids: list[str] = []
   for idx in range(dev_count.value):
     dev_id = c_void_p()
     rc = nvml_h.nvmlDeviceGetHandleByIndex_v2(idx, byref(dev_id))
-    if rc != 0: warnings.warn(f"Failed to get device handle for {idx}", stacklevel=_STACK_LEVEL); return None
+    if rc != 0:
+      warnings.warn(f"Failed to get device handle for {idx}", stacklevel=_STACK_LEVEL)
+      return None
     buf_len = 96
     buf = create_string_buffer(buf_len)
     rc = nvml_h.nvmlDeviceGetUUID(dev_id, buf, buf_len)
-    if rc != 0: warnings.warn(f"Failed to get device UUID for {idx}", stacklevel=_STACK_LEVEL); return None
+    if rc != 0:
+      warnings.warn(f"Failed to get device UUID for {idx}", stacklevel=_STACK_LEVEL)
+      return None
     uuids.append(buf.raw.decode("ascii").strip("\0"))
   del nvml_h
   return uuids
@@ -232,15 +247,7 @@ def _validate(cls: type[DynResource], val: list[t.Any]) -> None:
 
 def _make_resource_class(name: str, resource_kind: str, docstring: str) -> type[DynResource]:
   return types.new_class(
-      name, (DynResource, ReprMixin), {"resource_id": resource_kind}, lambda ns: ns.update({
-          "resource_id": resource_kind,
-          "from_spec": classmethod(_from_spec),
-          "from_system": classmethod(_from_system),
-          "validate": classmethod(_validate),
-          "__repr_keys__": property(lambda _: {"resource_id"}),
-          "__doc__": inspect.cleandoc(docstring),
-          "__module__": "openllm._strategies",
-      }),
+      name, (DynResource, ReprMixin), {"resource_id": resource_kind}, lambda ns: ns.update({"resource_id": resource_kind, "from_spec": classmethod(_from_spec), "from_system": classmethod(_from_system), "validate": classmethod(_validate), "__repr_keys__": property(lambda _: {"resource_id"}), "__doc__": inspect.cleandoc(docstring), "__module__": "openllm._strategies",}),
   )
 
 # NOTE: we need to hint these t.Literal since mypy is to dumb to infer this as literal :facepalm:
@@ -253,12 +260,10 @@ NvidiaGpuResource = _make_resource_class("NvidiaGpuResource", _NVIDIA_GPU_RESOUR
 
     This is a modified version of internal's BentoML's NvidiaGpuResource
     where it respects and parse CUDA_VISIBLE_DEVICES correctly.""",)
-AmdGpuResource = _make_resource_class(
-    "AmdGpuResource", _AMD_GPU_RESOURCE, """AMD GPU resource.
+AmdGpuResource = _make_resource_class("AmdGpuResource", _AMD_GPU_RESOURCE, """AMD GPU resource.
 
     Since ROCm will respect CUDA_VISIBLE_DEVICES, the behaviour of from_spec, from_system are similar to
-    ``NvidiaGpuResource``. Currently ``validate`` is not yet supported.""",
-)
+    ``NvidiaGpuResource``. Currently ``validate`` is not yet supported.""",)
 
 LiteralResourceSpec = t.Literal["cloud-tpus.google.com/v2", "amd.com/gpu", "nvidia.com/gpu", "cpu"]
 
@@ -269,6 +274,7 @@ def resource_spec(name: t.Literal["tpu", "amd", "nvidia", "cpu"]) -> LiteralReso
   elif name == "nvidia": return _NVIDIA_GPU_RESOURCE
   elif name == "cpu": return _CPU_RESOURCE
   else: raise ValueError("Unknown alias. Accepted: ['tpu', 'amd', 'nvidia', 'cpu']")
+
 @functools.lru_cache
 def available_resource_spec() -> tuple[LiteralResourceSpec, ...]:
   """This is a utility function helps to determine the available resources from given running system.
@@ -295,8 +301,10 @@ class CascadingResourceStrategy(bentoml.Strategy, ReprMixin):
   @classmethod
   def get_worker_count(cls, runnable_class: type[bentoml.Runnable], resource_request: dict[str, t.Any] | None, workers_per_resource: int | float) -> int:
     if resource_request is None: resource_request = system_resources()
+
     def _get_gpu_count(typ: list[str] | None, kind: str) -> int | None:
       if typ is not None and len(typ) > 0 and kind in runnable_class.SUPPORTED_RESOURCES: return math.ceil(len(typ) * workers_per_resource)
+
     # use NVIDIA
     kind = "nvidia.com/gpu"
     count = _get_gpu_count(get_resource(resource_request, kind), kind)
@@ -317,6 +325,7 @@ class CascadingResourceStrategy(bentoml.Strategy, ReprMixin):
 
     # this should not be reached by user since we always read system resource as default
     raise ValueError(f"No known supported resource available for {runnable_class}. Please check your resource request. Leaving it blank will allow BentoML to use system resources.")
+
   @classmethod
   def get_worker_env(cls, runnable_class: type[bentoml.Runnable], resource_request: dict[str, t.Any] | None, workers_per_resource: int | float, worker_index: int) -> dict[str, t.Any]:
     """Get worker env for this given worker_index.
@@ -368,6 +377,7 @@ class CascadingResourceStrategy(bentoml.Strategy, ReprMixin):
         environ[thread_env] = os.getenv(thread_env, "1")
       return environ
     return environ
+
   @staticmethod
   def transpile_workers_to_cuda_envvar(workers_per_resource: float | int, gpus: list[str], worker_index: int) -> str:
     # Convert given workers_per_resource to correct CUDA_VISIBLE_DEVICES string.

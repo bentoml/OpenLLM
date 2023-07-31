@@ -71,10 +71,7 @@ def get_base_container_tag(strategy: LiteralContainerVersionStrategy) -> str:
   elif strategy == "nightly": return f"sha-{_nightly_ref()[0][:7]}"  # we prefixed with sha-<git_rev_short> (giv_rev[:7])
   else: raise ValueError(f"Unknown strategy '{strategy}'. Valid strategies are 'release', 'nightly', and 'latest'")
 
-def build_container(registries: LiteralContainerRegistry | t.Sequence[LiteralContainerRegistry] | None = None,
-                    version_strategy: LiteralContainerVersionStrategy = "release",
-                    push: bool = False,
-                    machine: bool = False) -> dict[str | LiteralContainerRegistry, str]:
+def build_container(registries: LiteralContainerRegistry | t.Sequence[LiteralContainerRegistry] | None = None, version_strategy: LiteralContainerVersionStrategy = "release", push: bool = False, machine: bool = False) -> dict[str | LiteralContainerRegistry, str]:
   """This is a utility function for building base container for OpenLLM. It will build the base container for all registries if ``None`` is passed.
 
   Note that this is useful for debugging or for any users who wish to integrate vertically with OpenLLM. For most users, you should be able to get the image either from GitHub Container Registry or our public ECR registry.
@@ -94,9 +91,7 @@ def build_container(registries: LiteralContainerRegistry | t.Sequence[LiteralCon
     registries = [registries] if isinstance(registries, str) else list(registries)
     tags = {name: f"{_CONTAINER_REGISTRY[name]}:{get_base_container_tag(version_strategy)}" for name in registries}
   try:
-    outputs = _BUILDER.build(
-        file=pathlib.Path(__file__).parent.joinpath("Dockerfile").resolve().__fspath__(), context_path=pyproject_path.parent.__fspath__(), tag=tuple(tags.values()), push=push, progress="plain" if get_debug_mode() else "auto", quiet=machine
-    )
+    outputs = _BUILDER.build(file=pathlib.Path(__file__).parent.joinpath("Dockerfile").resolve().__fspath__(), context_path=pyproject_path.parent.__fspath__(), tag=tuple(tags.values()), push=push, progress="plain" if get_debug_mode() else "auto", quiet=machine)
     if machine and outputs is not None: tags["image_sha"] = outputs.decode("utf-8").strip()
   except Exception as err:
     raise OpenLLMException(f"Failed to containerize base container images (Scroll up to see error above, or set OPENLLMDEVDEBUG=True for more traceback):\n{err}") from err

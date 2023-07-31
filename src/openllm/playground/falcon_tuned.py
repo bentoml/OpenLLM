@@ -56,23 +56,13 @@ if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
 else:
   model_args, training_args = t.cast(t.Tuple[ModelArguments, TrainingArguments], parser.parse_args_into_dataclasses())
 
-model, tokenizer = openllm.AutoLLM.for_model("falcon", model_id=model_args.model_id, quantize="int4", bnb_4bit_quant_type="nf4", bnb_4bit_compute_dtype=torch.float16, ensure_available=True,
-                                             ).prepare_for_training(adapter_type="lora", lora_alpha=16, lora_dropout=0.1, r=16, bias="none", target_modules=["query_key_value", "dense", "dense_h_to_4h", "dense_4h_to_h",],
-                                                                    )
+model, tokenizer = openllm.AutoLLM.for_model("falcon", model_id=model_args.model_id, quantize="int4", bnb_4bit_quant_type="nf4", bnb_4bit_compute_dtype=torch.float16, ensure_available=True,).prepare_for_training(adapter_type="lora", lora_alpha=16, lora_dropout=0.1, r=16, bias="none", target_modules=["query_key_value", "dense", "dense_h_to_4h", "dense_4h_to_h",],)
 model.config.use_cache = False
 tokenizer.pad_token = tokenizer.eos_token
 
 dataset = load_dataset(DATASET_NAME, split="train")
 
-trainer = SFTTrainer(
-    model=model,
-    train_dataset=dataset,
-    dataset_text_field="text",
-    max_seq_length=model_args.max_sequence_length,
-    tokenizer=tokenizer,
-    args=dataclasses.replace(transformers.TrainingArguments(training_args.output_dir), **dataclasses.asdict(training_args),
-                             ),
-)
+trainer = SFTTrainer(model=model, train_dataset=dataset, dataset_text_field="text", max_seq_length=model_args.max_sequence_length, tokenizer=tokenizer, args=dataclasses.replace(transformers.TrainingArguments(training_args.output_dir), **dataclasses.asdict(training_args),),)
 
 # upcast layernorm in float32 for more stable training
 for name, module in trainer.model.named_modules():

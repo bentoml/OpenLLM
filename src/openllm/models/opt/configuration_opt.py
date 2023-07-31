@@ -25,20 +25,8 @@ class OPTConfig(openllm.LLMConfig):
     Refer to [OPT's HuggingFace page](https://huggingface.co/docs/transformers/model_doc/opt) for more information.
     """
   __config__ = {
-      "name_type": "lowercase",
-      "trust_remote_code": False,
-      "url": "https://huggingface.co/docs/transformers/model_doc/opt",
-      "default_id": "facebook/opt-1.3b",
-      "architecture": "OPTForCausalLM",
-      "model_ids": ["facebook/opt-125m", "facebook/opt-350m", "facebook/opt-1.3b", "facebook/opt-2.7b", "facebook/opt-6.7b", "facebook/opt-66b",],
-      "fine_tune_strategies": ({
-          "adapter_type": "lora",
-          "r": 16,
-          "lora_alpha": 32,
-          "target_modules": ["q_proj", "v_proj"],
-          "lora_dropout": 0.05,
-          "bias": "none",
-      },),
+      "name_type": "lowercase", "trust_remote_code": False, "url": "https://huggingface.co/docs/transformers/model_doc/opt", "default_id": "facebook/opt-1.3b", "architecture": "OPTForCausalLM", "model_ids": ["facebook/opt-125m", "facebook/opt-350m", "facebook/opt-1.3b", "facebook/opt-2.7b", "facebook/opt-6.7b", "facebook/opt-66b",],
+      "fine_tune_strategies": ({"adapter_type": "lora", "r": 16, "lora_alpha": 32, "target_modules": ["q_proj", "v_proj"], "lora_dropout": 0.05, "bias": "none",},),
   }
   format_outputs: bool = openllm.LLMConfig.Field(False, description="""Whether to format the outputs. This can be used when num_return_sequences > 1.""")
 

@@ -138,14 +138,8 @@ def import_model(llm: openllm.LLM[M, T], *decls: t.Any, trust_remote_code: bool,
   _object_setattr(llm, "__llm_model__", model)
   _object_setattr(llm, "__llm_tokenizer__", _tokenizer)
   create_kwargs: DictStrAny = dict(
-      module="openllm.serialisation.transformers",
-      api_version="v1",
-      context=generate_context(framework_name="openllm"),
-      labels=generate_labels(llm),
-      metadata=metadata,
-      signatures=signatures if signatures else make_default_signatures(model),
-      options=ModelOptions(),
-      external_modules=[importlib.import_module(model.__module__), importlib.import_module(_tokenizer.__module__)] if trust_remote_code else None,
+      module="openllm.serialisation.transformers", api_version="v1", context=generate_context(framework_name="openllm"), labels=generate_labels(llm), metadata=metadata, signatures=signatures if signatures else make_default_signatures(model), options=ModelOptions(), external_modules=[importlib.import_module(model.__module__),
+                                                                                                                                                                                                                                                                                            importlib.import_module(_tokenizer.__module__)] if trust_remote_code else None,
   )
   if "use_tempfs" in inspect.signature(bentoml.models.create).parameters: create_kwargs["use_tempfs"] = False
 
@@ -190,9 +184,7 @@ def load_model(llm: openllm.LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M:
   if "_quantize" in llm._bentomodel.info.metadata and llm._bentomodel.info.metadata["_quantize"] == "gptq":
     if not is_autogptq_available(): raise OpenLLMException("GPTQ quantisation requires 'auto-gptq' (Not found in local environment). Install it with 'pip install \"openllm[gptq]\"'")
     if llm.config["model_type"] != "causal_lm": raise OpenLLMException(f"GPTQ only support Causal LM (got {llm.__class__} of {llm.config['model_type']})")
-    return autogptq.AutoGPTQForCausalLM.from_quantized(
-        llm._bentomodel.path, *decls, quantize_config=t.cast("autogptq.BaseQuantizeConfig", llm.quantization_config), trust_remote_code=llm.__llm_trust_remote_code__, use_safetensors=safe_serialization, **hub_attrs, **attrs,
-    )
+    return autogptq.AutoGPTQForCausalLM.from_quantized(llm._bentomodel.path, *decls, quantize_config=t.cast("autogptq.BaseQuantizeConfig", llm.quantization_config), trust_remote_code=llm.__llm_trust_remote_code__, use_safetensors=safe_serialization, **hub_attrs, **attrs,)
 
   model = infer_autoclass_from_llm_config(llm, config).from_pretrained(llm._bentomodel.path, *decls, config=config, trust_remote_code=llm.__llm_trust_remote_code__, **hub_attrs, **attrs,)
   # NOTE: we only cast and load the model if it is not already quantized and setup correctly
@@ -206,18 +198,7 @@ def load_model(llm: openllm.LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M:
   if llm.bettertransformer and isinstance(model, _transformers.PreTrainedModel): model = model.to_bettertransformer()
   return t.cast("M", model)
 
-def save_pretrained(
-    llm: openllm.LLM[M, T],
-    save_directory: str,
-    is_main_process: bool = True,
-    state_dict: DictStrAny | None = None,
-    save_function: t.Callable[..., None] | None = None,
-    push_to_hub: bool = False,
-    max_shard_size: int | str = "10GB",
-    safe_serialization: bool = False,
-    variant: str | None = None,
-    **attrs: t.Any,
-) -> None:
+def save_pretrained(llm: openllm.LLM[M, T], save_directory: str, is_main_process: bool = True, state_dict: DictStrAny | None = None, save_function: t.Callable[..., None] | None = None, push_to_hub: bool = False, max_shard_size: int | str = "10GB", safe_serialization: bool = False, variant: str | None = None, **attrs: t.Any,) -> None:
   """Light wrapper around ``transformers.PreTrainedTokenizer.save_pretrained`` and ``transformers.PreTrainedModel.save_pretrained``."""
   save_function = first_not_none(save_function, default=torch.save)
   model_save_attrs, tokenizer_save_attrs = normalize_attrs_to_model_tokenizer_pair(**attrs)
@@ -235,7 +216,5 @@ def save_pretrained(
     llm.model.save_pretrained(save_directory, safe_serialization=safe_serialization)
   else:
     # We can safely cast here since it will be the PreTrainedModel protocol.
-    t.cast("_transformers.PreTrainedModel", llm.model).save_pretrained(
-        save_directory, is_main_process=is_main_process, state_dict=state_dict, save_function=save_function, push_to_hub=push_to_hub, max_shard_size=max_shard_size, safe_serialization=safe_serialization, variant=variant, **model_save_attrs
-    )
+    t.cast("_transformers.PreTrainedModel", llm.model).save_pretrained(save_directory, is_main_process=is_main_process, state_dict=state_dict, save_function=save_function, push_to_hub=push_to_hub, max_shard_size=max_shard_size, safe_serialization=safe_serialization, variant=variant, **model_save_attrs)
   llm.tokenizer.save_pretrained(save_directory, push_to_hub=push_to_hub, **tokenizer_save_attrs)

@@ -28,9 +28,7 @@ if t.TYPE_CHECKING:
   from openllm.bundle.oci import LiteralContainerVersionStrategy
 
 @click.command(
-    "build_base_container",
-    context_settings=termui.CONTEXT_SETTINGS,
-    help="""Base image builder for BentoLLM.
+    "build_base_container", context_settings=termui.CONTEXT_SETTINGS, help="""Base image builder for BentoLLM.
 
                 By default, the base image will include custom kernels (PagedAttention via vllm, FlashAttention-v2, etc.) built with CUDA 11.8, Python 3.9 on Ubuntu22.04.
 

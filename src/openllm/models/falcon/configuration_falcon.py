@@ -22,23 +22,8 @@ class FalconConfig(openllm.LLMConfig):
     Refer to [Falcon's HuggingFace page](https://huggingface.co/tiiuae/falcon-7b) for more information.
     """
   __config__ = {
-      "name_type": "lowercase",
-      "trust_remote_code": True,
-      "requires_gpu": True,
-      "timeout": int(36e6),
-      "url": "https://falconllm.tii.ae/",
-      "requirements": ["einops", "xformers"],
-      "architecture": "FalconForCausalLM",
-      "default_id": "tiiuae/falcon-7b",
-      "model_ids": ["tiiuae/falcon-7b", "tiiuae/falcon-40b", "tiiuae/falcon-7b-instruct", "tiiuae/falcon-40b-instruct",],
-      "fine_tune_strategies": ({
-          "adapter_type": "lora",
-          "r": 64,
-          "lora_alpha": 16,
-          "lora_dropout": 0.1,
-          "bias": "none",
-          "target_modules": ["query_key_value", "dense", "dense_h_to_4h", "dense_4h_to_h"],
-      },),
+      "name_type": "lowercase", "trust_remote_code": True, "requires_gpu": True, "timeout": int(36e6), "url": "https://falconllm.tii.ae/", "requirements": ["einops", "xformers"], "architecture": "FalconForCausalLM", "default_id": "tiiuae/falcon-7b", "model_ids": ["tiiuae/falcon-7b", "tiiuae/falcon-40b", "tiiuae/falcon-7b-instruct", "tiiuae/falcon-40b-instruct",],
+      "fine_tune_strategies": ({"adapter_type": "lora", "r": 64, "lora_alpha": 16, "lora_dropout": 0.1, "bias": "none", "target_modules": ["query_key_value", "dense", "dense_h_to_4h", "dense_4h_to_h"],},),
   }
 
   class GenerationConfig:

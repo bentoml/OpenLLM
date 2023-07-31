@@ -45,33 +45,11 @@ else:
   warnings.filterwarnings("ignore", message="The installed version of bitsandbytes was compiled without GPU support. 8-bit optimizers and GPU quantization are unavailable.")
 
 _import_structure: dict[str, list[str]] = {
-    "_llm": ["LLM", "Runner", "LLMRunner", "LLMRunnable"],
-    "_configuration": ["LLMConfig"],
-    "_schema": ["GenerationInput", "GenerationOutput", "MetadataOutput", "EmbeddingsOutput", "unmarshal_vllm_outputs"],
-    "_generation": ["StopSequenceCriteria", "StopOnTokens"],
-    "_quantisation": ["infer_quantisation_config"],
-    "exceptions": [],
-    "utils": ["infer_auto_class"],
-    "models": [],
-    "client": [],
-    "bundle": [],
-    "playground": [],
-    "testing": [],
-    "serialisation": ["ggml", "transformers"],
-    "cli.entrypoint": ["start", "start_grpc", "build", "import_model", "list_models"],
+    "_llm": ["LLM", "Runner", "LLMRunner", "LLMRunnable"], "_configuration": ["LLMConfig"], "_schema": ["GenerationInput", "GenerationOutput", "MetadataOutput", "EmbeddingsOutput", "unmarshal_vllm_outputs"], "_generation": ["StopSequenceCriteria", "StopOnTokens"], "_quantisation": ["infer_quantisation_config"], "exceptions": [], "utils": ["infer_auto_class"], "models": [],
+    "client": [], "bundle": [], "playground": [], "testing": [], "serialisation": ["ggml", "transformers"], "cli.entrypoint": ["start", "start_grpc", "build", "import_model", "list_models"],
     # NOTE: models
-    "models.auto": ["AutoConfig", "CONFIG_MAPPING", "MODEL_MAPPING_NAMES", "MODEL_FLAX_MAPPING_NAMES", "MODEL_TF_MAPPING_NAMES", "MODEL_VLLM_MAPPING_NAMES"],
-    "models.chatglm": ["ChatGLMConfig"],
-    "models.baichuan": ["BaichuanConfig"],
-    "models.dolly_v2": ["DollyV2Config"],
-    "models.falcon": ["FalconConfig"],
-    "models.flan_t5": ["FlanT5Config"],
-    "models.gpt_neox": ["GPTNeoXConfig"],
-    "models.llama": ["LlamaConfig"],
-    "models.mpt": ["MPTConfig"],
-    "models.opt": ["OPTConfig"],
-    "models.stablelm": ["StableLMConfig"],
-    "models.starcoder": ["StarCoderConfig"],
+    "models.auto": ["AutoConfig", "CONFIG_MAPPING", "MODEL_MAPPING_NAMES", "MODEL_FLAX_MAPPING_NAMES", "MODEL_TF_MAPPING_NAMES", "MODEL_VLLM_MAPPING_NAMES"], "models.chatglm": ["ChatGLMConfig"], "models.baichuan": ["BaichuanConfig"], "models.dolly_v2": ["DollyV2Config"], "models.falcon": ["FalconConfig"], "models.flan_t5": ["FlanT5Config"], "models.gpt_neox": ["GPTNeoXConfig"],
+    "models.llama": ["LlamaConfig"], "models.mpt": ["MPTConfig"], "models.opt": ["OPTConfig"], "models.stablelm": ["StableLMConfig"], "models.starcoder": ["StarCoderConfig"],
 }
 
 # NOTE: torch and cpm_kernels
@@ -261,19 +239,10 @@ if t.TYPE_CHECKING:
 else:
   sys.modules[__name__] = utils.LazyModule(
       __name__,
-      globals()["__file__"],
-      _import_structure,
-      module_spec=__spec__,
-      doc=__doc__,
-      extra_objects={
+      globals()["__file__"], _import_structure, module_spec=__spec__, doc=__doc__, extra_objects={
           # The below is a special mapping that allows openllm to be used as a dictionary.
           # This is purely for convenience sake, and should not be used in performance critcal
           # code. This is also not considered as a public API.
-          "__openllm_special__": {
-              "flax": "AutoFlaxLLM",
-              "tf": "AutoTFLLM",
-              "pt": "AutoLLM",
-              "vllm": "AutoVLLM"
-          },
+          "__openllm_special__": {"flax": "AutoFlaxLLM", "tf": "AutoTFLLM", "pt": "AutoLLM", "vllm": "AutoVLLM"},
       }
   )

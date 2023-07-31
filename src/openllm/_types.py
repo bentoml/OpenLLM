@@ -93,17 +93,7 @@ class LLMRunner(bentoml.Runner, t.Generic[_M, _T]):
   generate_iterator: RunnerMethod[LLMRunnable[_M, _T], [str], t.Generator[t.Any, None, None]]
 
   def __init__(
-      self,
-      runnable_class: type[LLMRunnable[_M, _T]],
-      *,
-      runnable_init_params: dict[str, t.Any] | None = ...,
-      name: str | None = ...,
-      scheduling_strategy: type[Strategy] = ...,
-      models: list[bentoml.Model] | None = ...,
-      max_batch_size: int | None = ...,
-      max_latency_ms: int | None = ...,
-      method_configs: dict[str, dict[str, int]] | None = ...,
-      embedded: bool = False,
+      self, runnable_class: type[LLMRunnable[_M, _T]], *, runnable_init_params: dict[str, t.Any] | None = ..., name: str | None = ..., scheduling_strategy: type[Strategy] = ..., models: list[bentoml.Model] | None = ..., max_batch_size: int | None = ..., max_latency_ms: int | None = ..., method_configs: dict[str, dict[str, int]] | None = ..., embedded: bool = False,
   ) -> None:
     ...
 

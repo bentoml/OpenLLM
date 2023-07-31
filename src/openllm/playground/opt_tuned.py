@@ -26,13 +26,7 @@ if t.TYPE_CHECKING:
 DEFAULT_MODEL_ID = "facebook/opt-6.7b"
 
 def load_trainer(model: PeftModel, tokenizer: transformers.GPT2TokenizerFast, dataset_dict: t.Any, training_args: TrainingArguments,):
-  return transformers.Trainer(
-      model=model,
-      train_dataset=dataset_dict["train"],
-      args=dataclasses.replace(transformers.TrainingArguments(training_args.output_dir), **dataclasses.asdict(training_args),
-                               ),
-      data_collator=transformers.DataCollatorForLanguageModeling(tokenizer, mlm=False),
-  )
+  return transformers.Trainer(model=model, train_dataset=dataset_dict["train"], args=dataclasses.replace(transformers.TrainingArguments(training_args.output_dir), **dataclasses.asdict(training_args),), data_collator=transformers.DataCollatorForLanguageModeling(tokenizer, mlm=False),)
 
 @dataclasses.dataclass
 class TrainingArguments:

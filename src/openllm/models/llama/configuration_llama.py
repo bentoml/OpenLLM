@@ -29,28 +29,10 @@ class LlamaConfig(openllm.LLMConfig):
     """
   use_llama2_prompt: bool = openllm.LLMConfig.Field(True, description="Whether to use the prompt format for Llama 2. Disable this when working with Llama 1.")
   __config__ = {
-      "name_type": "lowercase",
-      "url": "https://github.com/facebookresearch/llama",
-      "default_id": "huggyllama/llama-7b",
-      "default_implementation": {
-          "cpu": "pt",
-          "nvidia.com/gpu": "pt"
-      },
-      "architecture": "LlamaForCausalLM",
-      "requirements": ["fairscale", "sentencepiece"],
-      "model_ids": [
-          "meta-llama/Llama-2-70b-chat-hf", "meta-llama/Llama-2-13b-chat-hf", "meta-llama/Llama-2-7b-chat-hf", "meta-llama/Llama-2-70b-hf", "meta-llama/Llama-2-13b-hf", "meta-llama/Llama-2-7b-hf", "NousResearch/llama-2-70b-chat-hf",
-          "NousResearch/llama-2-13b-chat-hf", "NousResearch/llama-2-7b-chat-hf", "NousResearch/llama-2-70b-hf", "NousResearch/llama-2-13b-hf", "NousResearch/llama-2-7b-hf", "openlm-research/open_llama_7b_v2", "openlm-research/open_llama_3b_v2",
-          "openlm-research/open_llama_13b", "huggyllama/llama-65b", "huggyllama/llama-30b", "huggyllama/llama-13b", "huggyllama/llama-7b",
-      ],
-      "tokenizer_class": "LlamaTokenizerFast",
-      "fine_tune_strategies": ({
-          "adapter_type": "lora",
-          "r": 64,
-          "lora_alpha": 16,
-          "lora_dropout": 0.1,
-          "bias": "none",
-      },),
+      "name_type": "lowercase", "url": "https://github.com/facebookresearch/llama", "default_id": "huggyllama/llama-7b", "default_implementation": {"cpu": "pt", "nvidia.com/gpu": "pt"}, "architecture": "LlamaForCausalLM", "requirements": ["fairscale", "sentencepiece"], "model_ids": [
+          "meta-llama/Llama-2-70b-chat-hf", "meta-llama/Llama-2-13b-chat-hf", "meta-llama/Llama-2-7b-chat-hf", "meta-llama/Llama-2-70b-hf", "meta-llama/Llama-2-13b-hf", "meta-llama/Llama-2-7b-hf", "NousResearch/llama-2-70b-chat-hf", "NousResearch/llama-2-13b-chat-hf", "NousResearch/llama-2-7b-chat-hf", "NousResearch/llama-2-70b-hf", "NousResearch/llama-2-13b-hf",
+          "NousResearch/llama-2-7b-hf", "openlm-research/open_llama_7b_v2", "openlm-research/open_llama_3b_v2", "openlm-research/open_llama_13b", "huggyllama/llama-65b", "huggyllama/llama-30b", "huggyllama/llama-13b", "huggyllama/llama-7b",
+      ], "tokenizer_class": "LlamaTokenizerFast", "fine_tune_strategies": ({"adapter_type": "lora", "r": 64, "lora_alpha": 16, "lora_dropout": 0.1, "bias": "none",},),
   }
 
   class GenerationConfig:
@@ -102,7 +84,6 @@ SINST_KEY, EINST_KEY, SYS_KEY, EOS_TOKEN, BOS_TOKEN = "[INST]", "[/INST]", "<<SY
 _v1_prompt, _v2_prompt = """{instruction}""", """{start_key} {sys_key}\n{system_message}\n{sys_key}\n\n{instruction}\n{end_key} """.format(start_key=SINST_KEY, sys_key=SYS_KEY, system_message=SYSTEM_MESSAGE, instruction="{instruction}", end_key=EINST_KEY)
 PROMPT_MAPPING = {"v1": _v1_prompt, "v2": _v2_prompt}
 
-def _get_prompt(model_type: t.Literal["v1", "v2"]) -> str:
-  return PROMPT_MAPPING[model_type]
+def _get_prompt(model_type: t.Literal["v1", "v2"]) -> str: return PROMPT_MAPPING[model_type]
 
 DEFAULT_PROMPT_TEMPLATE = _get_prompt

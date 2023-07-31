@@ -227,8 +227,8 @@ def make_env_transformer(cls: type[openllm.LLMConfig], model_name: str, suffix: 
   globs.update({"__populate_env": dantic.env_converter, "__default_callback": default_callback, "__field_env": field_env_key, "__suffix": suffix or "", "__model_name": model_name,})
 
   lines: ListStr = [
-      "__env = lambda field_name: __field_env(__model_name, field_name, __suffix)", "return [", "    f.evolve(", "        default=__populate_env(__default_callback(f.name, f.default), __env(f.name)),", "        metadata={",
-      "            'env': f.metadata.get('env', __env(f.name)),", "            'description': f.metadata.get('description', '(not provided)'),", "        },", "    )", "    for f in fields", "]",
+      "__env = lambda field_name: __field_env(__model_name, field_name, __suffix)", "return [", "    f.evolve(", "        default=__populate_env(__default_callback(f.name, f.default), __env(f.name)),", "        metadata={", "            'env': f.metadata.get('env', __env(f.name)),", "            'description': f.metadata.get('description', '(not provided)'),", "        },",
+      "    )", "    for f in fields", "]",
   ]
   fields_ann = "list[attr.Attribute[t.Any]]"
 
@@ -249,18 +249,4 @@ def gen_sdk(func: _T, name: str | None = None, **attrs: t.Any) -> _T:
 
   if func.__doc__ is None: doc = f"Generated SDK for {func.__name__}"
   else: doc = func.__doc__
-  return t.cast(
-      _T,
-      functools.update_wrapper(
-          types.new_class(
-              name, (PartialAny, ReprMixin),
-              exec_body=lambda ns: ns.update({
-                  "__repr_keys__": property(lambda _: [i for i in _signatures.keys() if not i.startswith("_")]),
-                  "__repr_args__": _repr_args,
-                  "__repr__": _repr,
-                  "__doc__": inspect.cleandoc(doc),
-                  "__module__": "openllm",
-              }),
-          )(func, **attrs), func,
-      )
-  )
+  return t.cast(_T, functools.update_wrapper(types.new_class(name, (PartialAny, ReprMixin), exec_body=lambda ns: ns.update({"__repr_keys__": property(lambda _: [i for i in _signatures.keys() if not i.startswith("_")]), "__repr_args__": _repr_args, "__repr__": _repr, "__doc__": inspect.cleandoc(doc), "__module__": "openllm",}),)(func, **attrs), func,))

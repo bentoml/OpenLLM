@@ -28,13 +28,7 @@ class StableLMConfig(openllm.LLMConfig):
     and [StableLM-base's model card](https://huggingface.co/stabilityai/stablelm-base-alpha-7b)
     for more information.
     """
-  __config__ = {
-      "name_type": "lowercase",
-      "url": "https://github.com/Stability-AI/StableLM",
-      "architecture": "GPTNeoXForCausalLM",
-      "default_id": "stabilityai/stablelm-tuned-alpha-3b",
-      "model_ids": ["stabilityai/stablelm-tuned-alpha-3b", "stabilityai/stablelm-tuned-alpha-7b", "stabilityai/stablelm-base-alpha-3b", "stabilityai/stablelm-base-alpha-7b",],
-  }
+  __config__ = {"name_type": "lowercase", "url": "https://github.com/Stability-AI/StableLM", "architecture": "GPTNeoXForCausalLM", "default_id": "stabilityai/stablelm-tuned-alpha-3b", "model_ids": ["stabilityai/stablelm-tuned-alpha-3b", "stabilityai/stablelm-tuned-alpha-7b", "stabilityai/stablelm-base-alpha-3b", "stabilityai/stablelm-base-alpha-7b",],}
 
   class GenerationConfig:
     temperature: float = 0.9

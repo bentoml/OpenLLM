@@ -27,19 +27,11 @@ class MPTConfig(openllm.LLMConfig):
     for more details on specific models.
     """
   __config__ = {
-      "name_type": "lowercase",
-      "trust_remote_code": True,
-      "url": "https://huggingface.co/mosaicml",
-      "default_id": "mosaicml/mpt-7b-instruct",
-      "timeout": int(36e6),
-      "requirements": ["triton", "einops"],
-      "architecture": "MPTForCausalLM",
+      "name_type": "lowercase", "trust_remote_code": True, "url": "https://huggingface.co/mosaicml", "default_id": "mosaicml/mpt-7b-instruct", "timeout": int(36e6), "requirements": ["triton", "einops"], "architecture": "MPTForCausalLM",
       "model_ids": ["mosaicml/mpt-7b", "mosaicml/mpt-7b-instruct", "mosaicml/mpt-7b-chat", "mosaicml/mpt-7b-storywriter", "mosaicml/mpt-30b", "mosaicml/mpt-30b-instruct", "mosaicml/mpt-30b-chat",],
   }
   prompt_type: MPTPromptType = openllm.LLMConfig.Field('"default"', description="""Given prompt type for running MPT. Default will be inferred from model name if pretrained.""")
-  max_sequence_length: int = openllm.LLMConfig.Field(
-      2048, description="Max sequence length to run MPT with. Note that MPT is trained ith sequence length of 2048, but with [ALiBi](https://arxiv.org/abs/2108.12409) it can set up to 4096 (for 7b models) and 16384 (for 30b models)"
-  )
+  max_sequence_length: int = openllm.LLMConfig.Field(2048, description="Max sequence length to run MPT with. Note that MPT is trained ith sequence length of 2048, but with [ALiBi](https://arxiv.org/abs/2108.12409) it can set up to 4096 (for 7b models) and 16384 (for 30b models)")
 
   class GenerationConfig:
     max_new_tokens: int = 128

@@ -21,13 +21,7 @@ from ...utils import is_tf_available
 from ...utils import is_torch_available
 from ...utils import is_vllm_available
 
-_import_structure: dict[str, list[str]] = {
-    "configuration_auto": ["AutoConfig", "CONFIG_MAPPING", "CONFIG_MAPPING_NAMES"],
-    "modeling_auto": ["MODEL_MAPPING_NAMES"],
-    "modeling_flax_auto": ["MODEL_FLAX_MAPPING_NAMES"],
-    "modeling_tf_auto": ["MODEL_TF_MAPPING_NAMES"],
-    "modeling_vllm_auto": ["MODEL_VLLM_MAPPING_NAMES"],
-}
+_import_structure: dict[str, list[str]] = {"configuration_auto": ["AutoConfig", "CONFIG_MAPPING", "CONFIG_MAPPING_NAMES"], "modeling_auto": ["MODEL_MAPPING_NAMES"], "modeling_flax_auto": ["MODEL_FLAX_MAPPING_NAMES"], "modeling_tf_auto": ["MODEL_TF_MAPPING_NAMES"], "modeling_vllm_auto": ["MODEL_VLLM_MAPPING_NAMES"],}
 try:
   if not is_torch_available(): raise openllm.exceptions.MissingDependencyError
 except openllm.exceptions.MissingDependencyError:

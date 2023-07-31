@@ -46,12 +46,12 @@ logger = logging.getLogger(__name__)
 
 QuantiseMode = t.Literal["int8", "int4", "gptq"]
 
+# fmt: off
 @overload
-def infer_quantisation_config(cls: type[openllm.LLM[t.Any, t.Any]], quantise: t.Literal["int8", "int4"], **attrs: t.Any) -> tuple[transformers.BitsAndBytesConfig, DictStrAny]:
-  ...
+def infer_quantisation_config(cls: type[openllm.LLM[t.Any, t.Any]], quantise: t.Literal["int8", "int4"], **attrs: t.Any) -> tuple[transformers.BitsAndBytesConfig, DictStrAny]: ...
 @overload
-def infer_quantisation_config(cls: type[openllm.LLM[t.Any, t.Any]], quantise: t.Literal["gptq"], **attrs: t.Any) -> tuple[autogptq.BaseQuantizeConfig, DictStrAny]:
-  ...
+def infer_quantisation_config(cls: type[openllm.LLM[t.Any, t.Any]], quantise: t.Literal["gptq"], **attrs: t.Any) -> tuple[autogptq.BaseQuantizeConfig, DictStrAny]: ...
+# fmt: on
 def infer_quantisation_config(cls: type[openllm.LLM[t.Any, t.Any]], quantise: QuantiseMode, **attrs: t.Any) -> tuple[transformers.BitsAndBytesConfig | autogptq.BaseQuantizeConfig, DictStrAny]:
   # 8 bit configuration
   int8_threshold = attrs.pop("llm_int8_threshhold", 6.0)
@@ -59,14 +59,7 @@ def infer_quantisation_config(cls: type[openllm.LLM[t.Any, t.Any]], quantise: Qu
   int8_skip_modules: list[str] | None = attrs.pop("llm_int8_skip_modules", None)
   int8_has_fp16_weight = attrs.pop("llm_int8_has_fp16_weight", False)
 
-  autogptq_attrs: DictStrAny = {
-      "bits": attrs.pop("gptq_bits", 4),
-      "group_size": attrs.pop("gptq_group_size", -1),
-      "damp_percent": attrs.pop("gptq_damp_percent", 0.01),
-      "desc_act": attrs.pop("gptq_desc_act", True),
-      "sym": attrs.pop("gptq_sym", True),
-      "true_sequential": attrs.pop("gptq_true_sequential", True),
-  }
+  autogptq_attrs: DictStrAny = {"bits": attrs.pop("gptq_bits", 4), "group_size": attrs.pop("gptq_group_size", -1), "damp_percent": attrs.pop("gptq_damp_percent", 0.01), "desc_act": attrs.pop("gptq_desc_act", True), "sym": attrs.pop("gptq_sym", True), "true_sequential": attrs.pop("gptq_true_sequential", True),}
 
   def create_int8_config(int8_skip_modules: list[str] | None) -> transformers.BitsAndBytesConfig:
     if int8_skip_modules is None: int8_skip_modules = []
@@ -98,12 +91,12 @@ def infer_quantisation_config(cls: type[openllm.LLM[t.Any, t.Any]], quantise: Qu
       quantisation_config = create_int8_config(int8_skip_modules)
   elif quantise == "gptq":
     if not is_autogptq_available():
-      logger.warning(
-          "'quantize=\"gptq\"' requires 'auto-gptq' to be installed (not available with local environment)."
-          " Make sure to have 'auto-gptq' available locally: 'pip install \"openllm[gptq]\"'. OpenLLM will fallback "
-          "to int8 with bitsandbytes."
-      )
+      logger.warning("'quantize=\"gptq\"' requires 'auto-gptq' to be installed (not available with local environment)."
+                      " Make sure to have 'auto-gptq' available locally: 'pip install \"openllm[gptq]\"'. OpenLLM will fallback "
+                      "to int8 with bitsandbytes.")
       quantisation_config = create_int8_config(int8_skip_modules)
-    else: quantisation_config = autogptq.BaseQuantizeConfig(**autogptq_attrs)
-  else: raise ValueError(f"'quantize' must be one of ['int8', 'int4', 'gptq'], got {quantise} instead.")
+    else:
+      quantisation_config = autogptq.BaseQuantizeConfig(**autogptq_attrs)
+  else:
+    raise ValueError(f"'quantize' must be one of ['int8', 'int4', 'gptq'], got {quantise} instead.")
   return quantisation_config, attrs

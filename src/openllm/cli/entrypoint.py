@@ -266,19 +266,23 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
   @overload
   def command(self, name: _AnyCallable) -> click.Command:
     ...
+
   # variant: with positional name and with positional or keyword cls argument:
   # @command(namearg, CommandCls, ...) or @command(namearg, cls=CommandCls, ...)
   @overload
   def command(self, name: str | None, cls: type[CmdType], **attrs: t.Any) -> t.Callable[[_AnyCallable], CmdType]:
     ...
+
   # variant: name omitted, cls _must_ be a keyword argument, @command(cmd=CommandCls, ...)
   @overload
   def command(self, name: None = None, *, cls: type[CmdType], **attrs: t.Any) -> t.Callable[[_AnyCallable], CmdType]:
     ...
+
   # variant: name omitted, only provide keyword arguments, @command(context_settings={})
   @overload
   def command(self, *, cls: type[CmdType], **attrs: t.Any) -> t.Callable[[_AnyCallable], CmdType]:
     ...
+
   # variant: with optional string name, no cls argument provided.
   @overload
   def command(self, name: t.Optional[str] = ..., cls: None = None, **attrs: t.Any) -> t.Callable[[_AnyCallable], click.Command]:
@@ -325,15 +329,18 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
     @overload
     def group(self, name: _AnyCallable) -> click.Group:
       ...
+
     # variant: with positional name and with positional or keyword cls argument:
     # @group(namearg, GroupCls, ...) or @group(namearg, cls=GroupCls, ...)
     @overload
     def group(self, name: str | None, cls: type[GrpType], **attrs: t.Any) -> t.Callable[[_AnyCallable], GrpType]:
       ...
+
     # variant: name omitted, cls _must_ be a keyword argument, @group(cmd=GroupCls, ...)
     @overload
     def group(self, name: None = None, *, cls: t.Type[GrpType], **attrs: t.Any) -> t.Callable[[_AnyCallable], GrpType]:
       ...
+
     # variant: with optional string name, no cls argument provided.
     @overload
     def group(self, name: str | None = ..., cls: None = None, **attrs: t.Any) -> t.Callable[[_AnyCallable], click.Group]:
@@ -378,14 +385,7 @@ def start_grpc_command() -> None:
   ```
   """
 
-_start_mapping = {
-    "start": {
-        key: start_command_factory(start_command, key, _context_settings=termui.CONTEXT_SETTINGS) for key in CONFIG_MAPPING
-    },
-    "start-grpc": {
-        key: start_command_factory(start_grpc_command, key, _context_settings=termui.CONTEXT_SETTINGS, _serve_grpc=True) for key in CONFIG_MAPPING
-    }
-}
+_start_mapping = {"start": {key: start_command_factory(start_command, key, _context_settings=termui.CONTEXT_SETTINGS) for key in CONFIG_MAPPING}, "start-grpc": {key: start_command_factory(start_grpc_command, key, _context_settings=termui.CONTEXT_SETTINGS, _serve_grpc=True) for key in CONFIG_MAPPING}}
 
 @cli.command(name="import", aliases=["download"])
 @model_name_argument
@@ -398,10 +398,7 @@ _start_mapping = {
 @machine_option
 @click.option("--implementation", type=click.Choice(["pt", "tf", "flax", "vllm"]), default=None, help="The implementation for saving this LLM.")
 @serialisation_option
-def import_command(
-    model_name: str, model_id: str | None, converter: str | None, model_version: str | None, output: LiteralOutput, runtime: t.Literal["ggml", "transformers"], machine: bool, implementation: LiteralRuntime | None,
-    quantize: t.Literal["int8", "int4", "gptq"] | None, serialisation_format: t.Literal["safetensors", "legacy"],
-) -> bentoml.Model:
+def import_command(model_name: str, model_id: str | None, converter: str | None, model_version: str | None, output: LiteralOutput, runtime: t.Literal["ggml", "transformers"], machine: bool, implementation: LiteralRuntime | None, quantize: t.Literal["int8", "int4", "gptq"] | None, serialisation_format: t.Literal["safetensors", "legacy"],) -> bentoml.Model:
   """Setup LLM interactively.
 
   It accepts two positional arguments: `model_name` and `model_id`. The first name determine
@@ -477,23 +474,8 @@ def import_command(
   return _ref
 
 def _start(
-    model_name: str,
-    /,
-    *,
-    model_id: str | None = None,
-    timeout: int = 30,
-    workers_per_resource: t.Literal["conserved", "round_robin"] | float | None = None,
-    device: tuple[str, ...] | t.Literal["all"] | None = None,
-    quantize: t.Literal["int8", "int4", "gptq"] | None = None,
-    bettertransformer: bool | None = None,
-    runtime: t.Literal["ggml", "transformers"] = "transformers",
-    fast: bool = False,
-    adapter_map: dict[t.LiteralString, str | None] | None = None,
-    framework: LiteralRuntime | None = None,
-    additional_args: ListStr | None = None,
-    _serve_grpc: bool = False,
-    __test__: bool = False,
-    **_: t.Any,
+    model_name: str, /, *, model_id: str | None = None, timeout: int = 30, workers_per_resource: t.Literal["conserved", "round_robin"] | float | None = None, device: tuple[str, ...] | t.Literal["all"] | None = None, quantize: t.Literal["int8", "int4", "gptq"] | None = None, bettertransformer: bool | None = None, runtime: t.Literal["ggml", "transformers"] = "transformers",
+    fast: bool = False, adapter_map: dict[t.LiteralString, str | None] | None = None, framework: LiteralRuntime | None = None, additional_args: ListStr | None = None, _serve_grpc: bool = False, __test__: bool = False, **_: t.Any,
 ) -> LLMConfig | subprocess.Popen[bytes]:
   """Python API to start a LLM server. These provides one-to-one mapping to CLI arguments.
 
@@ -558,27 +540,9 @@ def _start(
 
 @inject
 def _build(
-    model_name: str,
-    /,
-    *,
-    model_id: str | None = None,
-    model_version: str | None = None,
-    quantize: t.Literal["int8", "int4", "gptq"] | None = None,
-    bettertransformer: bool | None = None,
-    adapter_map: dict[str, str | None] | None = None,
-    build_ctx: str | None = None,
-    enable_features: tuple[str, ...] | None = None,
-    workers_per_resource: int | float | None = None,
-    runtime: t.Literal["ggml", "transformers"] = "transformers",
-    dockerfile_template: str | None = None,
-    overwrite: bool = False,
-    container_registry: LiteralContainerRegistry | None = None,
-    container_version_strategy: LiteralContainerVersionStrategy | None = None,
-    push: bool = False,
-    containerize: bool = False,
-    serialisation_format: t.Literal["safetensors", "legacy"] = "safetensors",
-    additional_args: list[str] | None = None,
-    bento_store: BentoStore = Provide[BentoMLContainer.bento_store],
+    model_name: str, /, *, model_id: str | None = None, model_version: str | None = None, quantize: t.Literal["int8", "int4", "gptq"] | None = None, bettertransformer: bool | None = None, adapter_map: dict[str, str | None] | None = None, build_ctx: str | None = None, enable_features: tuple[str, ...] | None = None, workers_per_resource: int | float | None = None, runtime: t.Literal[
+        "ggml", "transformers"] = "transformers", dockerfile_template: str | None = None, overwrite: bool = False, container_registry: LiteralContainerRegistry | None = None, container_version_strategy: LiteralContainerVersionStrategy | None = None, push: bool = False, containerize: bool = False, serialisation_format: t.Literal["safetensors", "legacy"] = "safetensors",
+    additional_args: list[str] | None = None, bento_store: BentoStore = Provide[BentoMLContainer.bento_store],
 ) -> bentoml.Bento:
   """Package a LLM into a Bento.
 
@@ -663,16 +627,7 @@ def _build(
   return bentoml.get(matched.group(0).partition(":")[-1], _bento_store=bento_store)
 
 def _import_model(
-    model_name: str,
-    /,
-    *,
-    model_id: str | None = None,
-    model_version: str | None = None,
-    runtime: t.Literal["ggml", "transformers"] = "transformers",
-    implementation: LiteralRuntime = "pt",
-    quantize: t.Literal["int8", "int4", "gptq"] | None = None,
-    serialisation_format: t.Literal["legacy", "safetensors"] = "safetensors",
-    additional_args: t.Sequence[str] | None = None,
+    model_name: str, /, *, model_id: str | None = None, model_version: str | None = None, runtime: t.Literal["ggml", "transformers"] = "transformers", implementation: LiteralRuntime = "pt", quantize: t.Literal["int8", "int4", "gptq"] | None = None, serialisation_format: t.Literal["legacy", "safetensors"] = "safetensors", additional_args: t.Sequence[str] | None = None,
 ) -> bentoml.Model:
   """Import a LLM into local store.
 
@@ -740,9 +695,8 @@ start, start_grpc, build, import_model, list_models = codegen.gen_sdk(_start, _s
 @cog.optgroup.option("--push", default=False, is_flag=True, type=click.BOOL, help="Whether to push the result bento to BentoCloud. Make sure to login with 'bentoml cloud login' first.")
 @click.pass_context
 def build_command(
-    ctx: click.Context, /, model_name: str, model_id: str | None, overwrite: bool, output: LiteralOutput, runtime: t.Literal["ggml", "transformers"], quantize: t.Literal["int8", "int4", "gptq"] | None, enable_features: tuple[str, ...] | None,
-    bettertransformer: bool | None, workers_per_resource: float | None, adapter_id: tuple[str, ...], build_ctx: str | None, machine: bool, model_version: str | None, dockerfile_template: t.TextIO | None, containerize: bool, push: bool,
-    serialisation_format: t.Literal["safetensors", "legacy"], fast: bool, container_registry: LiteralContainerRegistry, container_version_strategy: LiteralContainerVersionStrategy, **attrs: t.Any,
+    ctx: click.Context, /, model_name: str, model_id: str | None, overwrite: bool, output: LiteralOutput, runtime: t.Literal["ggml", "transformers"], quantize: t.Literal["int8", "int4", "gptq"] | None, enable_features: tuple[str, ...] | None, bettertransformer: bool | None, workers_per_resource: float | None, adapter_id: tuple[str, ...], build_ctx: str | None, machine: bool,
+    model_version: str | None, dockerfile_template: t.TextIO | None, containerize: bool, push: bool, serialisation_format: t.Literal["safetensors", "legacy"], fast: bool, container_registry: LiteralContainerRegistry, container_version_strategy: LiteralContainerVersionStrategy, **attrs: t.Any,
 ) -> bentoml.Bento:
   """Package a given models into a Bento.
 
@@ -814,20 +768,7 @@ def build_command(
           raise bentoml.exceptions.NotFound(f"Rebuilding existing Bento {bento_tag}") from None
         _previously_built = True
       except bentoml.exceptions.NotFound:
-        bento = bundle.create_bento(
-            bento_tag,
-            llm_fs,
-            llm,
-            workers_per_resource=workers_per_resource,
-            adapter_map=adapter_map,
-            quantize=quantize,
-            bettertransformer=bettertransformer,
-            extra_dependencies=enable_features,
-            dockerfile_template=dockerfile_template_path,
-            runtime=runtime,
-            container_registry=container_registry,
-            container_version_strategy=container_version_strategy,
-        )
+        bento = bundle.create_bento(bento_tag, llm_fs, llm, workers_per_resource=workers_per_resource, adapter_map=adapter_map, quantize=quantize, bettertransformer=bettertransformer, extra_dependencies=enable_features, dockerfile_template=dockerfile_template_path, runtime=runtime, container_registry=container_registry, container_version_strategy=container_version_strategy,)
   except Exception as err:
     raise err from None
 
@@ -838,9 +779,8 @@ def build_command(
       if not _previously_built: termui.echo(f"Successfully built {bento}.", fg="green")
       elif not overwrite: termui.echo(f"'{model_name}' already has a Bento built [{bento}]. To overwrite it pass '--overwrite'.", fg="yellow")
       termui.echo(
-          "📖 Next steps:\n\n" + "* Push to BentoCloud with 'bentoml push':\n" + f"    $ bentoml push {bento.tag}\n\n" + "* Containerize your Bento with 'bentoml containerize':\n" + f"    $ bentoml containerize {bento.tag} --opt progress=plain" + "\n\n" +
-          "    Tip: To enable additional BentoML features for 'containerize', " + "use '--enable-features=FEATURE[,FEATURE]' " + "[see 'bentoml containerize -h' for more advanced usage]\n",
-          fg="blue",
+          "📖 Next steps:\n\n" + "* Push to BentoCloud with 'bentoml push':\n" + f"    $ bentoml push {bento.tag}\n\n" + "* Containerize your Bento with 'bentoml containerize':\n" + f"    $ bentoml containerize {bento.tag} --opt progress=plain" + "\n\n" + "    Tip: To enable additional BentoML features for 'containerize', " + "use '--enable-features=FEATURE[,FEATURE]' " +
+          "[see 'bentoml containerize -h' for more advanced usage]\n", fg="blue",
       )
   elif output == "json":
     termui.echo(orjson.dumps(bento.info.to_dict(), option=orjson.OPT_INDENT_2).decode())
@@ -894,14 +834,7 @@ def models_command(ctx: click.Context, output: LiteralOutput, show_available: bo
       if config["model_name"] in MODEL_FLAX_MAPPING_NAMES: runtime_impl += ("flax",)
       if config["model_name"] in MODEL_TF_MAPPING_NAMES: runtime_impl += ("tf",)
       if config["model_name"] in MODEL_VLLM_MAPPING_NAMES: runtime_impl += ("vllm",)
-      json_data[m] = {
-          "architecture": config["architecture"],
-          "model_id": config["model_ids"],
-          "cpu": not config["requires_gpu"],
-          "gpu": True,
-          "runtime_impl": runtime_impl,
-          "installation": f'"openllm[{m}]"' if m in OPTIONAL_DEPENDENCIES or config["requirements"] else "openllm",
-      }
+      json_data[m] = {"architecture": config["architecture"], "model_id": config["model_ids"], "cpu": not config["requires_gpu"], "gpu": True, "runtime_impl": runtime_impl, "installation": f'"openllm[{m}]"' if m in OPTIONAL_DEPENDENCIES or config["requirements"] else "openllm",}
       converted.extend([normalise_model_name(i) for i in config["model_ids"]])
       if DEBUG:
         try:
@@ -999,12 +932,7 @@ def parsing_instruction_callback(ctx: click.Context, param: click.Parameter, val
     raise click.BadParameter(f"Invalid option format: {value}")
 
 def shared_client_options(f: _AnyCallable | None = None, output_value: t.Literal["json", "porcelain", "pretty"] = "pretty") -> t.Callable[[FC], FC]:
-  options = [
-      click.option("--endpoint", type=click.STRING, help="OpenLLM Server endpoint, i.e: http://localhost:3000", envvar="OPENLLM_ENDPOINT", default="http://localhost:3000",
-                   ),
-      click.option("--timeout", type=click.INT, default=30, help="Default server timeout", show_default=True),
-      output_option(default_value=output_value),
-  ]
+  options = [click.option("--endpoint", type=click.STRING, help="OpenLLM Server endpoint, i.e: http://localhost:3000", envvar="OPENLLM_ENDPOINT", default="http://localhost:3000",), click.option("--timeout", type=click.INT, default=30, help="Default server timeout", show_default=True), output_option(default_value=output_value),]
   return compose(*options)(f) if f is not None else compose(*options)
 
 @cli.command()
@@ -1178,6 +1106,6 @@ class Extensions(click.MultiCommand):
 
 @cli.group(cls=Extensions, name="ext", aliases=["utils"])
 def ext_command() -> None:
-    """Extension for OpenLLM CLI."""
+  """Extension for OpenLLM CLI."""
 
 if __name__ == "__main__": cli()
