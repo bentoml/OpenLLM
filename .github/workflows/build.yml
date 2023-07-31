@@ -105,12 +105,12 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Login to ECR
+      - name: Login to public ECR
         uses: docker/login-action@v2.1.0
         with:
           registry: public.ecr.aws
-          username: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          password: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          username: ${{ secrets.AWS_PROD_ACCESS_KEY_ID }}
+          password: ${{ secrets.AWS_PROD_SECRET_ACCESS_KEY }}
         env:
           AWS_REGION: ${{ env.AWS_REGION }}
       - name: Extract metadata tags and labels on PRs
@@ -119,7 +119,7 @@ jobs:
         uses: docker/metadata-action@v4.6.0
         with:
           images: |
-            public.ecr.aws/y5w8i4y6/bentoml/openllm
+            public.ecr.aws/t6s3l6q1/bentoml/openllm
           tags: |
             type=raw,value=sha-${{ env.GITHUB_SHA_SHORT }}
           labels: |
@@ -132,7 +132,7 @@ jobs:
           flavor: |
             latest=auto
           images: |
-            public.ecr.aws/y5w8i4y6/bentoml/openllm
+            public.ecr.aws/t6s3l6q1/bentoml/openllm
             ghcr.io/bentoml/openllm
           tags: |
             type=semver,pattern={{version}}
@@ -145,6 +145,9 @@ jobs:
       - name: Build and push Docker image
         id: build-and-push
         uses: docker/build-push-action@v4
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_PROD_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_PROD_SECRET_ACCESS_KEY }}
         with:
           context: .
           file: src/openllm/bundle/oci/Dockerfile
@@ -157,10 +160,10 @@ jobs:
           labels: ${{ steps.meta.outputs.labels || steps.meta-pr.outputs.labels }}
           # TODO: Once https://github.com/aws/containers-roadmap/issues/876 is supported with OCI 1.1
           # then move back to saving cache within the public repo. For now we will save the cache manifest within our internal S3 buckets.
-          cache-from: type=s3,region=${{ env.AWS_REGION }},bucket=openllm,name=y5w8i4y6
+          cache-from: type=s3,region=${{ env.AWS_REGION }},bucket=openllm-cache,name=t6s3l6q1
           # @aarnphm: max is fine here, since we didn't do any custom code yet, so it is ok to cache every layer for optimal build time
           # We also ignore-error for now, just upload anything to the blob storage
-          cache-to: type=s3,region=${{ env.AWS_REGION }},bucket=openllm,name=y5w8i4y6,mode=max,compression=zstd,ignore-error=true
+          cache-to: type=s3,region=${{ env.AWS_REGION }},bucket=openllm-cache,name=t6s3l6q1,mode=max,compression=zstd,ignore-error=true
       - name: Sign the released image
         if: ${{ github.event_name != 'pull_request' }}
         run: echo "${{ steps.meta.outputs.tags }}" | xargs -I {} cosign sign {}@${{ steps.meta.build-and-push.outputs.digest }}

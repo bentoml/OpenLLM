@@ -43,7 +43,7 @@ LiteralContainerVersionStrategy = t.Literal["release", "nightly", "latest"]
 # to build the base image. For now, all of the base image will be <registry>/bentoml/openllm:...
 # NOTE: The ECR registry is the public one and currently only @bentoml team has access to push it.
 _CONTAINER_REGISTRY: dict[LiteralContainerRegistry, str] = {"docker": "docker.io/bentoml/openllm", "gh": "ghcr.io/bentoml/openllm",
-                                                            "ecr": "public.ecr.aws/y5w8i4y6/bentoml/openllm"}
+                                                            "ecr": "public.ecr.aws/t6s3l6q1/bentoml/openllm"}
 
 _URI = "https://github.com/bentoml/openllm.git"
 
