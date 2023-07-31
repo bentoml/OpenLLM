@@ -41,7 +41,7 @@
        [:div {:class "flex flex-col w-80 h-full border-l border-gray-200 pt-0.5 pb-4"}
         [model-selection-views/model-selection]
         [:hr {:class "mb-2 border-1 border-gray-200"}]
-        [ui/headline "Parameters"]
+        [ui/headline "Parameters" 2]
         [:div {:class "my-0 h-0 flex-1 flex flex-col overflow-y-auto scrollbar"}
          [:div {:class "px-3 mt-0 relative inline-block text-left"}
           [model-params-views/parameter-list]]]]])))

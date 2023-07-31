@@ -2,17 +2,18 @@
   (:require [re-frame.core :as rf]
             [openllm.components.chat.events :as events]
             [openllm.components.chat.subs :as subs]
-            [openllm.components.side-bar.subs :as side-bar-subs]
             [openllm.components.side-bar.model-params.subs :as model-params-subs]
             [openllm.components.chat.views :as views]
             [openllm.api.components :as api-components]
+            [openllm.api.persistence :as persistence]
             [reagent-mui.material.tooltip :refer [tooltip]]
             [reagent-mui.material.icon-button :refer [icon-button]]
+            [reagent-mui.icons.delete-forever :as delete-icon]
             [reagent-mui.material.button :refer [button]]
             [reagent-mui.material.modal :refer [modal]]
             [reagent-mui.material.box :refer [box]]
             [reagent-mui.material.paper :refer [paper]]
-            [reagent-mui.material.typography :refer [typography]]
+            [reagent-mui.material.typography :refer [typography]] 
             [reagent-mui.icons.design-services :as ds-icon]
             [reagent-mui.icons.send :as send-icon]
             [reagent.core :as r]))
@@ -47,11 +48,18 @@
       [:form {:class "flex justify-end mr-2.5"}
        [chat-input-field #(rf/dispatch on-submit-event)]
        [:div {:class "grid grid-rows-2 ml-1.5 mr-0.5"}
-        [:div {:class "items-start"}
+        [:div {:class "justify-between flex items-center"}
          [tooltip {:title "Edit prompt layout"}
           [icon-button {:on-click #(rf/dispatch [::events/toggle-modal])
-                        :color "primary"}
-           [ds-icon/design-services]]]]
+                        :color "primary"
+                        :size "medium"}
+           [ds-icon/design-services]]]
+         [tooltip {:title "Clear chat history"}
+          [icon-button {:on-click #(do (rf/dispatch [::events/clear-chat-history])
+                                       (rf/dispatch [::persistence/clear-chat-history]))
+                        :size "medium"
+                        :color "error"}
+           [delete-icon/delete-forever]]]]
         [button {:on-click #(rf/dispatch on-submit-event)
                  :variant "outlined"
                  :end-icon (r/as-element [send-icon/send])
@@ -129,13 +137,11 @@
   "The component rendered if the chat tab is active. It contains the chat
    history, the chat input field and the chat controls."
   []
-  (let [side-bar-open? (rf/subscribe [::side-bar-subs/side-bar-open?])]
-    (fn []
-      [:<>
-       [prompt-layout-modal]
-       [:div {:id "chat-history-container"
-              :class "overflow-y-scroll mt-6 h-[calc(100%_-_116px)] w-full no-scrollbar"
-              :style {:scrollBehavior "smooth"}}
-        [:div
-         [chat-history]]]
-       [chat-controls]])))
+  [:<>
+   [prompt-layout-modal]
+   [:div {:id "chat-history-container"
+          :class "overflow-y-scroll mt-6 h-[calc(100%_-_116px)] w-full no-scrollbar"
+          :style {:scrollBehavior "smooth"}}
+    [:div
+     [chat-history]]]
+   [chat-controls]])

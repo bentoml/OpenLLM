@@ -28,7 +28,7 @@
         chat-history-empty? (rf/subscribe [::subs/chat-history-empty?])
         tooltip-text-export (rf/subscribe [::subs/tooltip-text-export])]
     (fn []
-      [:<> 
+      [:<>
        [tooltip {:title @tooltip-text-export}
         [icon-button {:on-click #(rf/dispatch [::events/export-button-clicked])
                       :size "large"
