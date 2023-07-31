@@ -17,8 +17,14 @@
                                (rf/dispatch [callback-event content])))))
       :render
       (fn []
-        [icon-button {:color "inherit"
-                      :on-change (fn [evt]
-                                   (let [file (-> evt .-target .-files (aget 0))]
-                                     (.readAsText file-reader file)))}
-         (r/as-element [file-upload])])})))
+        [:<>
+         [:input {:type "file"
+                  :style {:display "none"}
+                  :id "file-upload"
+                  :on-change (fn [evt]
+                               (let [file (-> evt .-target .-files (aget 0))]
+                                 (.readAsText file-reader file)))}]
+         [icon-button {:on-click #(-> (.querySelector js/document "#file-upload")
+                                      .click)
+                       :color "primary"}
+          (r/as-element [file-upload])]])})))
