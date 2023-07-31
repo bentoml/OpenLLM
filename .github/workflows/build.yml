@@ -42,8 +42,8 @@ jobs:
     env:
       EC2_INSTANCE_TYPE: g5.12xlarge
       EC2_AMI_ID: ami-0fc9d48803f691665
-      EC2_SUBNET_ID: subnet-004504c44a7b8a79b,subnet-0ccfdb590e4e61bdb,subnet-07fcdee7d86842284,subnet-0996ba5eb6c90cb16,subnet-0a4fbd86456a2b403,subnet-0091c45543d4968b3,subnet-098b3caae8b4cd7a6,subnet-049dac030beb7dfbc,subnet-069cdd7b5d8522b46
-      EC2_SECURITY_GROUP: sg-0a9e94fd766ae0342
+      EC2_SUBNET_ID: subnet-0b8594551a479fa5a,subnet-0ab34c1a4b9767270,subnet-092522933dbe59a76
+      EC2_SECURITY_GROUP: sg-0932f55a620d3c5be
     outputs:
       label: ${{ steps.start-ec2-runner.outputs.label }}
       ec2-instance-id: ${{ steps.start-ec2-runner.outputs.ec2-instance-id }}
