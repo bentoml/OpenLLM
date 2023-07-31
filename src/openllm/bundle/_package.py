@@ -31,18 +31,18 @@ from bentoml._internal.bento.build_config import BentoBuildConfig
 from bentoml._internal.bento.build_config import DockerOptions
 from bentoml._internal.bento.build_config import ModelSpec
 from bentoml._internal.bento.build_config import PythonOptions
-from bentoml._internal.configuration import get_debug_mode
 from bentoml._internal.configuration.containers import BentoMLContainer
 
+from . import oci
 from ..utils import DEBUG
 from ..utils import EnvVarMixin
 from ..utils import codegen
 from ..utils import device_count
+from ..utils import get_debug_mode
 from ..utils import is_flax_available
 from ..utils import is_tf_available
 from ..utils import is_torch_available
 from ..utils import pkg
-
 
 if t.TYPE_CHECKING:
     from fs.base import FS
@@ -51,6 +51,9 @@ if t.TYPE_CHECKING:
     from bentoml._internal.bento import BentoStore
     from bentoml._internal.models.model import ModelStore
 
+    from .oci import LiteralContainerRegistry
+    from .oci import LiteralContainerVersionStrategy
+
 logger = logging.getLogger(__name__)
 
 OPENLLM_DEV_BUILD = "OPENLLM_DEV_BUILD"
@@ -58,7 +61,7 @@ OPENLLM_DEV_BUILD = "OPENLLM_DEV_BUILD"
 
 def build_editable(path: str) -> str | None:
     """Build OpenLLM if the OPENLLM_DEV_BUILD environment variable is set."""
-    if str(os.environ.get(OPENLLM_DEV_BUILD, False)).lower() != "true": return
+    if str(os.environ.get(OPENLLM_DEV_BUILD, False)).lower() != "true": return None
     # We need to build the package in editable mode, so that we can import it
     from build import ProjectBuilder
     from build.env import IsolatedEnvBuilder
@@ -141,6 +144,8 @@ def construct_docker_options(
     dockerfile_template: str | None,
     runtime: t.Literal["ggml", "transformers"],
     serialisation_format: t.Literal["safetensors", "legacy"],
+    container_registry: LiteralContainerRegistry,
+    container_version_strategy: LiteralContainerVersionStrategy,
 ) -> DockerOptions:
     _bentoml_config_options = os.environ.pop("BENTOML_CONFIG_OPTIONS", "")
     _bentoml_config_options_opts = [
@@ -156,7 +161,10 @@ def construct_docker_options(
         "OPENLLM_MODEL": llm.config["model_name"],
         "OPENLLM_SERIALIZATION": serialisation_format,
         "OPENLLM_ADAPTER_MAP": f"'{orjson.dumps(adapter_map).decode()}'",
-        "BENTOML_DEBUG": str(get_debug_mode()),
+        "OPENLLM_FAST": str(True),
+        "BENTOML_DEBUG": str(True),
+        "BENTOML_QUIET": str(False),
+        "OPENLLMDEVDEBUG": str(get_debug_mode()),
         "BENTOML_CONFIG_OPTIONS": f"'{_bentoml_config_options}'",
         env.model_id: f"/home/bentoml/bento/models/{llm.tag.path()}",  # This is the default BENTO_PATH var
     }
@@ -168,13 +176,7 @@ def construct_docker_options(
     if _env.bettertransformer_value is not None: env_dict[_env.bettertransformer] = str(_env.bettertransformer_value)
     if _env.quantize_value is not None: env_dict[_env.quantize] = _env.quantize_value
     env_dict[_env.runtime] = _env.runtime_value
-    return DockerOptions(
-        cuda_version="11.8.0",
-        env=env_dict,
-        system_packages=["git"],
-        dockerfile_template=dockerfile_template,
-        python_version="3.9",
-    )
+    return DockerOptions(base_image=f"{oci.CONTAINER_NAMES[container_registry]}:{oci.get_base_container_tag(container_version_strategy)}",env=env_dict, dockerfile_template=dockerfile_template)
 
 @inject
 def create_bento(
@@ -187,9 +189,10 @@ def create_bento(
     dockerfile_template: str | None,
     adapter_map: dict[str, str | None] | None = None,
     extra_dependencies: tuple[str, ...] | None = None,
-    build_ctx: str | None = None,
     runtime: t.Literal["ggml", "transformers"] = "transformers",
     serialisation_format: t.Literal["safetensors", "legacy"] = "safetensors",
+    container_registry: LiteralContainerRegistry = "ecr",
+    container_version_strategy: LiteralContainerVersionStrategy = "release",
     _bento_store: BentoStore = Provide[BentoMLContainer.bento_store],
     _model_store: ModelStore = Provide[BentoMLContainer.model_store],
 ) -> bentoml.Bento:
@@ -218,7 +221,7 @@ def create_bento(
         include=list(llm_fs.walk.files()),
         exclude=["/venv", "/.venv", "__pycache__/", "*.py[cod]", "*$py.class"],
         python=construct_python_options(llm, llm_fs, extra_dependencies, adapter_map),
-        docker=construct_docker_options(llm, llm_fs, workers_per_resource, quantize, bettertransformer, adapter_map, dockerfile_template, runtime, serialisation_format),
+        docker=construct_docker_options(llm, llm_fs, workers_per_resource, quantize, bettertransformer, adapter_map, dockerfile_template, runtime, serialisation_format, container_registry, container_version_strategy),
         models=[llm_spec],
     )
 

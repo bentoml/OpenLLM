@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 from __future__ import annotations
 import asyncio
 import logging
@@ -26,7 +25,6 @@ import httpx
 import bentoml
 import openllm
 
-
 # NOTE: We need to do this so that overload can register
 # correct overloads to typing registry
 if sys.version_info[:2] >= (3, 11):
@@ -36,6 +34,7 @@ else:
 
 if t.TYPE_CHECKING:
     import transformers
+    from openllm._types import DictStrAny
     from openllm._types import LiteralRuntime
     class AnnotatedClient(bentoml.client.Client):
         def health(self, *args: t.Any, **attrs: t.Any) -> t.Any: ...
@@ -43,7 +42,7 @@ if t.TYPE_CHECKING:
         def generate_v1(self, qa: openllm.GenerationInput) -> dict[str, t.Any]: ...
         def metadata_v1(self) -> dict[str, t.Any]: ...
         def embeddings_v1(self) -> t.Sequence[float]: ...
-else: transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
+else: transformers, DictStrAny = openllm.utils.LazyLoader("transformers", globals(), "transformers"), dict
 
 logger = logging.getLogger(__name__)
 
@@ -118,10 +117,6 @@ class ClientMeta(t.Generic[T]):
             self._client_class.wait_until_server_ready(self._host, int(self._port), timeout=self._timeout)
             self.__client__ = t.cast("AnnotatedClient", self._client_class.from_url(self._address))
         return self.__client__
-
-    def prepare(self, prompt: str, **attrs: t.Any):
-        return_raw_response = attrs.pop("return_raw_response", False)
-        return return_raw_response, *self.llm.sanitize_parameters(prompt, **attrs)
     @abstractmethod
     def postprocess(self, result: t.Any) -> openllm.GenerationOutput: ...
     @abstractmethod
@@ -131,28 +126,39 @@ class BaseClient(ClientMeta[T]):
     def health(self) -> t.Any: raise NotImplementedError
     def chat(self, prompt: str, history: list[str], **attrs: t.Any) -> str: raise NotImplementedError
     def embed(self, prompt: t.Sequence[str] | str) -> openllm.EmbeddingsOutput: raise NotImplementedError
-
     @overload
-    def query(self, prompt: str, *, return_raw_response: t.Literal[False] = ..., **attrs: t.Any) -> str: ...
+    def query(self, prompt: str, *, return_response: t.Literal["processed"], **attrs: t.Any) -> str: ...
     @overload
-    def query(self, prompt: str, *, return_raw_response: t.Literal[True] = ..., **attrs: t.Any) -> dict[str, t.Any]: ...
+    def query(self, prompt: str, *, return_response: t.Literal["raw"], **attrs: t.Any) -> DictStrAny: ...
     @overload
-    def query(self, prompt: str, *, return_attrs: t.Literal[True] = True, **attrs: t.Any) -> openllm.GenerationOutput: ...
-    def query(self, prompt: str, **attrs: t.Any) -> openllm.GenerationOutput | dict[str, t.Any] | str:
-        # NOTE: We set use_default_prompt_template to False for now.
+    def query(self, prompt: str, *, return_response: t.Literal["attrs"], **attrs: t.Any) -> openllm.GenerationOutput: ...
+    def query(self, prompt: str, return_response: t.Literal["attrs", "raw", "processed"] = "processed", **attrs: t.Any) -> openllm.GenerationOutput | DictStrAny | str:
+        return_raw_response = attrs.pop("return_raw_response", None)
+        if return_raw_response is not None:
+            logger.warning("'return_raw_response' is now deprecated. Please use 'return_response=\"raw\"' instead.")
+            if return_raw_response is True: return_response = "raw"
+        return_attrs = attrs.pop("return_attrs", None)
+        if return_attrs is not None:
+            logger.warning("'return_attrs' is now deprecated. Please use 'return_response=\"attrs\"' instead.")
+            if return_attrs is True: return_response = "attrs"
         use_default_prompt_template = attrs.pop("use_default_prompt_template", False)
-        return_attrs = attrs.pop("return_attrs", False)
-        return_raw_response, prompt, generate_kwargs, postprocess_kwargs = self.prepare(prompt, use_default_prompt_template=use_default_prompt_template, **attrs)
+        prompt, generate_kwargs, postprocess_kwargs = self.llm.sanitize_parameters(prompt, use_default_prompt_template=use_default_prompt_template, **attrs)
+
         inputs = openllm.GenerationInput(prompt=prompt, llm_config=self.config.model_construct_env(**generate_kwargs))
         if in_async_context(): result = httpx.post(urljoin(self._address, f"/{self._api_version}/generate"), json=inputs.model_dump(), timeout=self.timeout).json()
         else: result = self.call("generate", inputs.model_dump())
         r = self.postprocess(result)
-
-        if return_attrs: return r
-        if return_raw_response: return openllm.utils.bentoml_cattr.unstructure(r)
-        return self.llm.postprocess_generate(prompt, r.responses, **postprocess_kwargs)
-    def predict(self, prompt: str, **attrs: t.Any) -> t.Any: return self.query(prompt, **attrs)
-
+        if return_response == "attrs": return r
+        elif return_response == "raw": return openllm.utils.bentoml_cattr.unstructure(r)
+        else: return self.llm.postprocess_generate(prompt, r.responses, **postprocess_kwargs)
+    # NOTE: Scikit interface
+    @overload
+    def predict(self, prompt: str, *, return_response: t.Literal["processed"], **attrs: t.Any) -> str: ...
+    @overload
+    def predict(self, prompt: str, *, return_response: t.Literal["raw"], **attrs: t.Any) -> DictStrAny: ...
+    @overload
+    def predict(self, prompt: str, *, return_response: t.Literal["attrs"], **attrs: t.Any) -> openllm.GenerationOutput: ...
+    def predict(self, prompt: str, **attrs: t.Any) -> openllm.GenerationOutput | DictStrAny | str: return t.cast(t.Union[openllm.GenerationOutput, DictStrAny, str], self.query(prompt, **attrs))
     def ask_agent(self, task: str, *, return_code: bool = False, remote: bool = False, agent_type: t.LiteralString = "hf", **attrs: t.Any) -> t.Any:
         if agent_type == "hf": return self._run_hf_agent(task, return_code=return_code, remote=remote, **attrs)
         else: raise RuntimeError(f"Unknown 'agent_type={agent_type}'")
@@ -166,40 +172,50 @@ class BaseClient(ClientMeta[T]):
         except Exception as err:
             logger.error("Exception caught while sending instruction to HF agent: %s", err, exc_info=err)
             logger.info("Tip: LLMServer at '%s' might not support single generation yet.", self._address)
-    # NOTE: Scikit interface
 
 
 class BaseAsyncClient(ClientMeta[T]):
     async def health(self) -> t.Any: raise NotImplementedError
     async def chat(self, prompt: str, history: list[str], **attrs: t.Any) -> str: raise NotImplementedError
-    async def embed(self, prompt: t.Sequence[str] | str) -> t.Sequence[float]: raise NotImplementedError
-
+    async def embed(self, prompt: t.Sequence[str] | str) -> openllm.EmbeddingsOutput: raise NotImplementedError
     @overload
-    async def query(self, prompt: str, *, return_attrs: t.Literal[True] = True, return_raw_response: bool | None = ..., **attrs: t.Any) -> openllm.GenerationOutput: ...
+    async def query(self, prompt: str, *, return_response: t.Literal["processed"], **attrs: t.Any) -> str: ...
     @overload
-    async def query(self, prompt: str, *, return_raw_response: t.Literal[False] = ..., **attrs: t.Any) -> str: ...
+    async def query(self, prompt: str, *, return_response: t.Literal["raw"], **attrs: t.Any) -> DictStrAny: ...
     @overload
-    async def query(self, prompt: str, *, return_raw_response: t.Literal[True] = ..., **attrs: t.Any) -> dict[str, t.Any]: ...
-    async def query(self, prompt: str, **attrs: t.Any) -> dict[str, t.Any] | str | openllm.GenerationOutput:
-        # NOTE: We set use_default_prompt_template to False for now.
+    async def query(self, prompt: str, *, return_response: t.Literal["attrs"], **attrs: t.Any) -> openllm.GenerationOutput: ...
+    async def query(self, prompt: str, return_response: t.Literal["attrs", "raw", "processed"] = "processed", **attrs: t.Any) -> openllm.GenerationOutput | DictStrAny | str:
+        return_raw_response = attrs.pop("return_raw_response", None)
+        if return_raw_response is not None:
+            logger.warning("'return_raw_response' is now deprecated. Please use 'return_response=\"raw\"' instead.")
+            if return_raw_response is True: return_response = "raw"
+        return_attrs = attrs.pop("return_attrs", None)
+        if return_attrs is not None:
+            logger.warning("'return_attrs' is now deprecated. Please use 'return_response=\"attrs\"' instead.")
+            if return_attrs is True: return_response = "attrs"
         use_default_prompt_template = attrs.pop("use_default_prompt_template", False)
-        return_attrs = attrs.pop("return_attrs", False)
-        return_raw_response, prompt, generate_kwargs, postprocess_kwargs = self.prepare(
-            prompt, use_default_prompt_template=use_default_prompt_template, **attrs
-        )
+        prompt, generate_kwargs, postprocess_kwargs = self.llm.sanitize_parameters(prompt, use_default_prompt_template=use_default_prompt_template, **attrs)
+
         inputs = openllm.GenerationInput(prompt=prompt, llm_config=self.config.model_construct_env(**generate_kwargs))
         res = await self.acall("generate", inputs.model_dump())
         r = self.postprocess(res)
 
-        if return_attrs: return r
-        if return_raw_response: return openllm.utils.bentoml_cattr.unstructure(r)
-        return self.llm.postprocess_generate(prompt, r.responses, **postprocess_kwargs)
+        if return_response == "attrs": return r
+        elif return_response == "raw": return openllm.utils.bentoml_cattr.unstructure(r)
+        else: return self.llm.postprocess_generate(prompt, r.responses, **postprocess_kwargs)
+    # NOTE: Scikit interface
+    @overload
+    async def predict(self, prompt: str, *, return_response: t.Literal["processed"], **attrs: t.Any) -> str: ...
+    @overload
+    async def predict(self, prompt: str, *, return_response: t.Literal["raw"], **attrs: t.Any) -> DictStrAny: ...
+    @overload
+    async def predict(self, prompt: str, *, return_response: t.Literal["attrs"], **attrs: t.Any) -> openllm.GenerationOutput: ...
+    async def predict(self, prompt: str, **attrs: t.Any) -> openllm.GenerationOutput | DictStrAny | str: return t.cast(t.Union[openllm.GenerationOutput, DictStrAny, str], await self.query(prompt, **attrs))
 
     async def ask_agent(self, task: str, *, return_code: bool = False, remote: bool = False, agent_type: t.LiteralString = "hf", **attrs: t.Any) -> t.Any:
         """Async version of agent.run."""
         if agent_type == "hf": return await self._run_hf_agent(task, return_code=return_code, remote=remote, **attrs)
         else: raise RuntimeError(f"Unknown 'agent_type={agent_type}'")
-
     async def _run_hf_agent(self, *args: t.Any, **kwargs: t.Any) -> t.Any:
         if not openllm.utils.is_transformers_supports_agent(): raise RuntimeError("This version of transformers does not support agent.run. Make sure to upgrade to transformers>4.30.0")
         if len(args) > 1: raise ValueError("'args' should only take one positional argument.")
@@ -249,6 +265,3 @@ class BaseAsyncClient(ClientMeta[T]):
         else:
             tool_code = get_tool_creation_code(code, _hf_agent.toolbox, remote=remote)
             return f"{tool_code}\n{code}"
-
-    # NOTE: Scikit interface
-    async def predict(self, prompt: str, **attrs: t.Any) -> t.Any: return await self.query(prompt, **attrs)

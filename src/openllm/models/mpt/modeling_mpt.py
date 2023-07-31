@@ -18,7 +18,7 @@ import typing as t
 import bentoml
 import openllm
 from .configuration_mpt import DEFAULT_PROMPT_TEMPLATE, MPTPromptType
-from ..._prompt import default_formatter
+from ..._prompt import process_prompt
 from ...utils import generate_labels, is_triton_available
 if t.TYPE_CHECKING: import transformers, torch
 else: transformers, torch = openllm.utils.LazyLoader("transformers", globals(), "transformers"), openllm.utils.LazyLoader("torch", globals(), "torch")
@@ -55,22 +55,16 @@ class MPT(openllm.LLM["transformers.PreTrainedModel", "transformers.GPTNeoXToken
         model = transformers.AutoModelForCausalLM.from_pretrained(self._bentomodel.path, config=config, trust_remote_code=trust_remote_code, torch_dtype=torch_dtype, device_map=device_map, **attrs)
         model.tie_weights()
         return model
-    def sanitize_parameters( self, prompt: str, max_new_tokens: int | None = None, temperature: float | None = None, top_p: float | None = None, prompt_type: MPTPromptType | None = None, use_default_prompt_template: bool = True, **attrs: t.Any,) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
+    def sanitize_parameters(self, prompt: str, max_new_tokens: int | None = None, temperature: float | None = None, top_p: float | None = None, prompt_type: MPTPromptType | None = None, use_default_prompt_template: bool = True, **attrs: t.Any,) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
+        _template = None
         if use_default_prompt_template:
             if prompt_type is None:
                 if "instruct" in self.model_id: prompt_type = "instruct"
                 elif "storywriter" in self.model_id: prompt_type = "storywriter"
                 elif "chat" in self.model_id: prompt_type = "chat"
                 else: prompt_type = "default"
-            _PROMPT = DEFAULT_PROMPT_TEMPLATE(prompt_type)
-            template_variables = default_formatter.extract_template_variables(_PROMPT)
-            prompt_variables = {k: v for k, v in attrs.items() if k in template_variables}
-            if "instruction" in prompt_variables: raise RuntimeError("'instruction' should be passed as the first argument instead of kwargs when 'use_default_prompt_template=True'")
-            try: prompt_text = _PROMPT.format(instruction=prompt, **prompt_variables)
-            except KeyError as e: raise RuntimeError(f"Missing variable '{e.args[0]}' (required: {template_variables}) in the prompt template. Use 'use_default_prompt_template=False' to disable the default prompt template.") from None
-        else: prompt_text = prompt
-        generation_config = {"max_new_tokens": max_new_tokens, "temperature": temperature, "top_p": top_p}
-        return prompt_text, generation_config, {}
+            _template = DEFAULT_PROMPT_TEMPLATE(prompt_type)
+        return process_prompt(prompt, _template, use_default_prompt_template), {"max_new_tokens": max_new_tokens, "temperature": temperature, "top_p": top_p}, {}
     def postprocess_generate(self, prompt: str, generation_result: t.Sequence[str], **attrs: t.Any) -> str: return generation_result[0]
     def generate(self, prompt: str, **attrs: t.Any) -> list[str]:
         llm_config = self.config.model_construct_env(**attrs)

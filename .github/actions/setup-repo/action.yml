@@ -50,3 +50,5 @@ runs:
     - name: Install dependencies
       shell: bash
       run: pip install hatch towncrier
+    - name: Inject slug/short variables
+      uses: rlespinasse/github-slug-action@v4.4.1

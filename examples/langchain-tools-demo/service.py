@@ -20,7 +20,6 @@ from langchain.llms import OpenLLM
 import bentoml
 from bentoml.io import Text
 
-
 SAMPLE_INPUT = "What is the weather in San Francisco?"
 
 llm = OpenLLM(

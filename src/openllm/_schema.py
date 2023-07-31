@@ -26,7 +26,6 @@ from .utils import LazyType
 from .utils import bentoml_cattr
 from .utils import requires_dependencies
 
-
 if t.TYPE_CHECKING:
     import vllm
 
@@ -92,6 +91,11 @@ class GenerationOutput:
     def unmarshaled(self) -> dict[str, t.Any]:
         return bentoml_cattr.unstructure(self)
 
+    def __getitem__(self, key: str) -> t.Any:
+        if hasattr(self, key): return getattr(self, key)
+        elif key in self.configuration: return self.configuration[key]
+        else: raise KeyError(key)
+
 
 @attr.frozen(slots=True)
 class MetadataOutput:
@@ -106,7 +110,7 @@ class MetadataOutput:
 
 @attr.frozen(slots=True)
 class EmbeddingsOutput:
-    embeddings: t.List[float]
+    embeddings: t.List[t.List[float]]
     num_tokens: int
 
 

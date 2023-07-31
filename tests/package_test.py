@@ -22,7 +22,6 @@ import pytest
 import openllm
 from bentoml._internal.configuration.containers import BentoMLContainer
 
-
 if t.TYPE_CHECKING:
     from pathlib import Path
 

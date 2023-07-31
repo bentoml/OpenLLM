@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import openllm
 
-
 def test_import_client():
     assert len(openllm.client.__all__) == 4
     assert all(

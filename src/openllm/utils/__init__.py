@@ -19,6 +19,7 @@ we won't ensure backward compatibility for these functions. So use with caution.
 from __future__ import annotations
 import contextlib
 import functools
+import hashlib
 import logging
 import logging.config
 import os
@@ -27,26 +28,24 @@ import types
 import typing as t
 from pathlib import Path
 
-from bentoml._internal.configuration import DEBUG_ENV_VAR as _DEBUG_ENV_VAR
+from circus.exc import ConflictError
+
+from bentoml._internal.configuration import DEBUG_ENV_VAR as DEBUG_ENV_VAR
 from bentoml._internal.configuration import GRPC_DEBUG_ENV_VAR as _GRPC_DEBUG_ENV_VAR
-from bentoml._internal.configuration import get_debug_mode
-from bentoml._internal.configuration import get_quiet_mode
-from bentoml._internal.configuration import set_quiet_mode
-from bentoml._internal.log import configure_server_logging
+from bentoml._internal.configuration import QUIET_ENV_VAR as QUIET_ENV_VAR
+from bentoml._internal.configuration import get_debug_mode as _get_debug_mode
+from bentoml._internal.configuration import get_quiet_mode as _get_quiet_mode
+from bentoml._internal.configuration import set_quiet_mode as set_quiet_mode
 from bentoml._internal.models.model import ModelContext as _ModelContext
-from bentoml._internal.types import LazyType
-from bentoml._internal.utils import LazyLoader
-from bentoml._internal.utils import bentoml_cattr
-from bentoml._internal.utils import cached_contextmanager
-from bentoml._internal.utils import copy_file_to_fs_folder
-from bentoml._internal.utils import first_not_none
-from bentoml._internal.utils import pkg
-from bentoml._internal.utils import reserve_free_port
-from bentoml._internal.utils import resolve_user_filepath
-from bentoml._internal.utils import validate_or_create_dir
+from bentoml._internal.types import LazyType as LazyType
+from bentoml._internal.utils import LazyLoader as LazyLoader
+from bentoml._internal.utils import bentoml_cattr as bentoml_cattr
+from bentoml._internal.utils import first_not_none as first_not_none
+from bentoml._internal.utils import pkg as pkg
+from bentoml._internal.utils import reserve_free_port as reserve_free_port
+from bentoml._internal.utils import resolve_user_filepath as resolve_user_filepath
 
 from .lazy import LazyModule
-
 
 logger = logging.getLogger(__name__)
 
@@ -74,14 +73,14 @@ if t.TYPE_CHECKING:
     from .._types import AnyCallable
     from .._types import DictStrAny
     from .._types import LiteralRuntime
-    from .._types import P
 
+DEV_DEBUG_VAR = "OPENLLMDEVDEBUG"
 
-def set_debug_mode(enabled: bool) -> None:
+def set_debug_mode(enabled: bool, level: int = 1) -> None:
     # monkeypatch bentoml._internal.configuration.set_debug_mode to remove unused logs
-    os.environ[_DEBUG_ENV_VAR] = str(enabled)
+    if enabled: os.environ[DEV_DEBUG_VAR] = str(level)
+    os.environ[DEBUG_ENV_VAR] = str(enabled)
     os.environ[_GRPC_DEBUG_ENV_VAR] = "DEBUG" if enabled else "ERROR"
-
 
 def lenient_issubclass(cls: t.Any, class_or_tuple: type[t.Any] | tuple[type[t.Any], ...] | None) -> bool:
     try: return isinstance(cls, type) and issubclass(cls, class_or_tuple)  # type: ignore[arg-type]
@@ -89,12 +88,23 @@ def lenient_issubclass(cls: t.Any, class_or_tuple: type[t.Any] | tuple[type[t.An
         if isinstance(cls, _WithArgsTypes): return False
         raise
 
-
 def available_devices() -> tuple[str, ...]:
     """Return available GPU under system. Currently only supports NVIDIA GPUs."""
     from .._strategies import NvidiaGpuResource
     return tuple(NvidiaGpuResource.from_system())
 
+@functools.lru_cache(maxsize=128)
+def generate_hash_from_file(f: str, algorithm: t.Literal["md5", "sha1"] = "sha1") -> str:
+    """Generate a hash from given file's modification time.
+
+    Args:
+        f: The file to generate the hash from.
+        algorithm: The hashing algorithm to use. Defaults to 'sha1' (similar to how Git generate its commit hash.)
+
+    Returns:
+        The generated hash.
+    """
+    return getattr(hashlib, algorithm)(str(os.path.getmtime(resolve_filepath(f))).encode()).hexdigest()
 
 @functools.lru_cache(maxsize=1)
 def device_count() -> int: return len(available_devices())
@@ -110,18 +120,20 @@ def non_intrusive_setattr(obj: t.Any, name: str, value: t.Any) -> None:
 def field_env_key(model_name: str, key: str, suffix: str | t.Literal[""] | None = None) -> str: return "_".join(filter(None, map(str.upper, ["OPENLLM", model_name, suffix.strip("_") if suffix else "", key])))
 
 # Special debug flag controled via OPENLLMDEVDEBUG
-DEBUG = sys.flags.dev_mode or (not sys.flags.ignore_environment and bool(os.environ.get("OPENLLMDEVDEBUG")))
+DEBUG = sys.flags.dev_mode or (not sys.flags.ignore_environment and bool(os.getenv(DEV_DEBUG_VAR)))
 # MYPY is like t.TYPE_CHECKING, but reserved for Mypy plugins
 MYPY = False
 SHOW_CODEGEN = DEBUG and int(os.environ.get("OPENLLMDEVDEBUG", str(0))) > 3
 
+def get_debug_mode() -> bool: return DEBUG or _get_debug_mode()
+def get_quiet_mode() -> bool: return not DEBUG and _get_quiet_mode()
 
-class _ExceptionFilter(logging.Filter):
+class ExceptionFilter(logging.Filter):
     def __init__(self, exclude_exceptions: list[type[Exception]] | None = None, **kwargs: t.Any):
-        from circus.exc import ConflictError
+        """A filter of all exception."""
         if exclude_exceptions is None: exclude_exceptions = [ConflictError]
-        else: exclude_exceptions.append(ConflictError)
-        super(_ExceptionFilter, self).__init__(**kwargs)
+        if ConflictError not in exclude_exceptions: exclude_exceptions.append(ConflictError)
+        super(ExceptionFilter, self).__init__(**kwargs)
         self.EXCLUDE_EXCEPTIONS = exclude_exceptions
     def filter(self, record: logging.LogRecord) -> bool:
         if record.exc_info:
@@ -137,11 +149,11 @@ class InfoFilter(logging.Filter):
 _LOGGING_CONFIG: DictStrAny = {
     "version": 1,
     "disable_existing_loggers": True,
-    "filters": {"excfilter": {"()": _ExceptionFilter}, "infofilter": {"()": InfoFilter}},
+    "filters": {"excfilter": {"()": "openllm.utils.ExceptionFilter"}, "infofilter": {"()": "openllm.utils.InfoFilter"}},
     "handlers": {
         "bentomlhandler": {
             "class": "logging.StreamHandler",
-            "filters": ["excfilter"],
+            "filters": ["excfilter", "infofilter"],
             "stream": "ext://sys.stdout",
         },
         "defaulthandler": {
@@ -164,7 +176,6 @@ _LOGGING_CONFIG: DictStrAny = {
     "root": {"level": logging.WARNING},
 }
 
-
 def configure_logging() -> None:
     """Configure logging for OpenLLM.
 
@@ -185,7 +196,6 @@ def configure_logging() -> None:
 
     logging.config.dictConfig(_LOGGING_CONFIG)
 
-
 @functools.lru_cache(maxsize=1)
 def in_notebook() -> bool:
     try:
@@ -195,9 +205,7 @@ def in_notebook() -> bool:
     except AttributeError: return False
     return True
 
-
 _dockerenv, _cgroup = Path("/.dockerenv"), Path("/proc/self/cgroup")
-
 
 class suppress(contextlib.suppress, contextlib.ContextDecorator):
     """A version of contextlib.suppress with decorator support.
@@ -207,7 +215,6 @@ class suppress(contextlib.suppress, contextlib.ContextDecorator):
     ...     {}['']
     >>> key_error()
     """
-
 
 def compose(*funcs: AnyCallable) -> AnyCallable:
     """Compose any number of unary functions into a single unary function.
@@ -225,13 +232,8 @@ def compose(*funcs: AnyCallable) -> AnyCallable:
     >>> [f(3*x, x+1) for x in range(1,10)]
     [1.5, 2.0, 2.25, 2.4, 2.5, 2.571, 2.625, 2.667, 2.7]
     """
-
-    def compose_two(f1: AnyCallable, f2: t.Callable[P, t.Any]) -> t.Any:
-        def _(*args: P.args, **kwargs: P.kwargs) -> t.Any: return f1(f2(*args, **kwargs))
-        return _
-
+    def compose_two(f1: AnyCallable, f2: AnyCallable) -> AnyCallable: return lambda *args, **kwargs: f1(f2(*args, **kwargs))
     return functools.reduce(compose_two, funcs)
-
 
 def apply(transform: AnyCallable) -> t.Callable[[AnyCallable], AnyCallable]:
     """Decorate a function with a transform function that is invoked on results returned from the decorated function.
@@ -249,9 +251,7 @@ def apply(transform: AnyCallable) -> t.Callable[[AnyCallable], AnyCallable]:
     # 'doc for get_numbers'
     ```
     """
-    def wrap(func: t.Callable[P, t.Any]) -> t.Any: return functools.wraps(func)(compose(transform, func))
-    return wrap
-
+    return lambda func: functools.wraps(func)(compose(transform, func))
 
 @apply(bool)
 @suppress(FileNotFoundError)
@@ -267,14 +267,11 @@ def in_docker() -> bool:
     """
     return _dockerenv.exists() or _text_in_file("docker", _cgroup)
 
+T, K = t.TypeVar("T"), t.TypeVar("K")
 
-T = t.TypeVar("T")
-K = t.TypeVar("K")
-
-
-def resolve_filepath(path: str) -> str:
+def resolve_filepath(path: str, ctx: str | None = None) -> str:
     """Resolve a file path to an absolute path, expand user and environment variables."""
-    try: return resolve_user_filepath(path, None)
+    try: return resolve_user_filepath(path, ctx)
     except FileNotFoundError: return path
 
 def validate_is_path(maybe_path: str) -> bool: return os.path.exists(os.path.dirname(resolve_filepath(maybe_path)))
@@ -386,18 +383,13 @@ if t.TYPE_CHECKING:
     from . import LazyType as LazyType
     from . import analytics as analytics
     from . import bentoml_cattr as bentoml_cattr
-    from . import cached_contextmanager as cached_contextmanager
     from . import codegen as codegen
     from . import configure_logging as configure_logging
-    from . import configure_server_logging as configure_server_logging
-    from . import copy_file_to_fs_folder as copy_file_to_fs_folder
     from . import dantic as dantic
     from . import first_not_none as first_not_none
     from . import reserve_free_port as reserve_free_port
-    from . import set_debug_mode as set_debug_mode
     from . import set_quiet_mode as set_quiet_mode
     from . import validate_is_path as validate_is_path
-    from . import validate_or_create_dir as validate_or_create_dir
     from .import_utils import ENV_VARS_TRUE_VALUES as ENV_VARS_TRUE_VALUES
     from .import_utils import OPTIONAL_DEPENDENCIES as OPTIONAL_DEPENDENCIES
     from .import_utils import DummyMetaclass as DummyMetaclass
@@ -421,13 +413,4 @@ if t.TYPE_CHECKING:
     from .import_utils import require_backends as require_backends
     from .import_utils import requires_dependencies as requires_dependencies
     from .representation import ReprMixin as ReprMixin
-else:
-    import sys
-
-    sys.modules[__name__] = LazyModule(
-        __name__,
-        globals()["__file__"],
-        _import_structure,
-        module_spec=__spec__,
-        extra_objects=_extras,
-    )
+else: sys.modules[__name__] = LazyModule(__name__, globals()["__file__"], _import_structure, module_spec=__spec__, extra_objects=_extras)

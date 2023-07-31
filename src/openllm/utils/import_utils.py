@@ -33,7 +33,6 @@ from bentoml._internal.utils import pkg
 
 from .representation import ReprMixin
 
-
 # NOTE: We need to do this so that overload can register
 # correct overloads to typing registry
 if sys.version_info[:2] >= (3, 11):
@@ -179,7 +178,7 @@ def requires_dependencies(package: str | list[str], *, extra: str | list[str] | 
     if isinstance(package, str): package = [package]
     if isinstance(extra, str): extra = [extra]
 
-    def decorator(func: t.Callable[P, t.Any]):
+    def decorator(func: t.Callable[P, t.Any]) -> t.Callable[P, t.Any]:
         @functools.wraps(func)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> t.Any:
             for p in package:
@@ -366,7 +365,7 @@ class EnvVarMixin(ReprMixin):
         runtime: t.Literal["ggml", "transformers"]
 
         framework_value: LiteralRuntime
-        quantize_value: str | None
+        quantize_value: t.Literal["int8", "int4", "gptq"] | None
         bettertransformer_value: bool | None
         model_id_value: str | None
         runtime_value: t.Literal["ggml", "transformers"]
@@ -387,7 +386,7 @@ class EnvVarMixin(ReprMixin):
     @overload
     def __getitem__(self, item: t.Literal["framework_value"]) -> LiteralRuntime: ...
     @overload
-    def __getitem__(self, item: t.Literal["quantize_value"]) -> str | None: ...
+    def __getitem__(self, item: t.Literal["quantize_value"]) -> t.Literal["int8", "int4", "gptq"] | None: ...
     @overload
     def __getitem__(self, item: t.Literal["model_id_value"]) -> str | None: ...
     @overload

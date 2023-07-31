@@ -15,17 +15,11 @@ from __future__ import annotations
 import importlib
 import inspect
 import logging
-import sys
 import typing as t
 from collections import OrderedDict
 import inflection
 import openllm
-from .configuration_auto import AutoConfig
 from ...utils import ReprMixin
-# NOTE: We need to do this so that overload can register
-# correct overloads to typing registry
-if sys.version_info[:2] >= (3, 11): from typing import overload
-else: from typing_extensions import overload
 if t.TYPE_CHECKING:
     import types
     from ..._llm import LLMRunner
@@ -41,43 +35,18 @@ logger = logging.getLogger(__name__)
 class BaseAutoLLMClass:
     _model_mapping: _LazyAutoMapping
     def __init__(self, *args: t.Any, **attrs: t.Any): raise EnvironmentError(f"Cannot instantiate {self.__class__.__name__} directly. Please use '{self.__class__.__name__}.Runner(model_name)' instead.")
-    @overload
     @classmethod
-    def for_model(cls, model: str, model_id: str | None = None, model_version: str | None = None, return_runner_kwargs: t.Literal[False] = False, llm_config: openllm.LLMConfig | None = ..., ensure_available: t.Literal[False, True] = ..., **attrs: t.Any) -> openllm.LLM[t.Any, t.Any]: ...
-    @overload
-    @classmethod
-    def for_model(cls, model: str, model_id: str | None = None, model_version: str | None = None, return_runner_kwargs: t.Literal[True] = ..., llm_config: openllm.LLMConfig | None = ..., ensure_available: t.Literal[False, True] = ..., **attrs: t.Any) -> tuple[openllm.LLM[t.Any, t.Any], dict[str, t.Any]]: ...
-    @classmethod
-    def for_model(cls, model: str, model_id: str | None = None, model_version: str | None = None, return_runner_kwargs: bool = False, llm_config: openllm.LLMConfig | None = None, ensure_available: bool = False, **attrs: t.Any) -> openllm.LLM[t.Any, t.Any] | tuple[openllm.LLM[t.Any, t.Any], dict[str, t.Any]]:
+    def for_model(cls, model: str, /, model_id: str | None = None, model_version: str | None = None, llm_config: openllm.LLMConfig | None = None, ensure_available: bool = False, **attrs: t.Any) -> openllm.LLM[t.Any, t.Any]:
         """The lower level API for creating a LLM instance.
 
         ```python
         >>> import openllm
         >>> llm = openllm.AutoLLM.for_model("flan-t5")
         ```
-
-        To return the runner kwargs instead of the LLM instance, set `return_runner_kwargs=True`:
-        ```python
-        >>> import openllm_module
-        >>> llm, runner_kwargs = openllm.AutoLLM.for_model("flan-t5", return_runner_kwargs=True)
-        >>> runner = llm.to_runner(**runner_kwargs)
-        ```
         """
-        runner_kwargs_name = set(inspect.signature(openllm.LLM[t.Any, t.Any].to_runner).parameters)
-        to_runner_attrs = {k: v for k, v in attrs.items() if k in runner_kwargs_name}
-        attrs = {k: v for k, v in attrs.items() if k not in to_runner_attrs}
-        if not isinstance(llm_config, openllm.LLMConfig):
-            # The rest of kwargs is now passed to config
-            llm_config = AutoConfig.for_model(model, **attrs)
-            attrs = llm_config.__openllm_extras__
-        # the rest of attrs will be saved to __openllm_extras__
-        if type(llm_config) in cls._model_mapping.keys():
-            model_class = cls._model_mapping[type(llm_config)]
-            llm = model_class.from_pretrained(model_id, model_version=model_version, llm_config=llm_config, **attrs)
-            if ensure_available: llm.ensure_model_id_exists()
-            if not return_runner_kwargs: return llm
-            return llm, to_runner_attrs
-        raise ValueError(f"Unrecognized configuration class {llm_config.__class__} for this kind of AutoLLM: {cls.__name__}.\nLLM type should be one of {', '.join(c.__name__ for c in cls._model_mapping.keys())}.")
+        llm = cls.infer_class_from_name(model).from_pretrained(model_id, model_version=model_version, llm_config=llm_config, **attrs)
+        if ensure_available: llm.ensure_model_id_exists()
+        return llm
     @classmethod
     def create_runner(cls, model: str, model_id: str | None = None, **attrs: t.Any) -> LLMRunner[t.Any, t.Any]:
         """Create a LLM Runner for the given model name.
@@ -90,8 +59,10 @@ class BaseAutoLLMClass:
         Returns:
             A LLM instance.
         """
-        llm, runner_attrs = cls.for_model(model, model_id, return_runner_kwargs=True, **attrs)
-        return llm.to_runner(**runner_attrs)
+        runner_kwargs_name = set(inspect.signature(openllm.LLM[t.Any, t.Any].to_runner).parameters)
+        runner_attrs = {k: v for k, v in attrs.items() if k in runner_kwargs_name}
+        for k in runner_attrs: del attrs[k]
+        return cls.for_model(model, model_id=model_id, **attrs).to_runner(**runner_attrs)
     @classmethod
     def register(cls, config_class: type[openllm.LLMConfig], llm_class: type[openllm.LLM[t.Any, t.Any]]):
         """Register a new model for this class.
@@ -100,19 +71,23 @@ class BaseAutoLLMClass:
             config_class: The configuration corresponding to the model to register.
             llm_class: The runnable to register.
         """
-        if hasattr(llm_class, "config_class") and llm_class.config_class is not config_class: raise ValueError("The model class you are passing has a `config_class` attribute that is not consistent with the config class you passed (model has {llm_class.config_class} and you passed {config_class}. Fix one of those so they match!")
+        if hasattr(llm_class, "config_class") and llm_class.config_class is not config_class: raise ValueError(f"The model class you are passing has a `config_class` attribute that is not consistent with the config class you passed (model has {llm_class.config_class} and you passed {config_class}. Fix one of those so they match!")
         cls._model_mapping.register(config_class, llm_class)
+    @classmethod
+    def infer_class_from_name(cls, name: str) -> type[openllm.LLM[t.Any, t.Any]]:
+        config_class = openllm.AutoConfig.infer_class_from_name(name)
+        if config_class in cls._model_mapping: return cls._model_mapping[config_class]
+        raise ValueError(f"Unrecognized configuration class ({config_class}) for {name}. Model name should be one of {', '.join(openllm.CONFIG_MAPPING.keys())} (Registered configuration class: {', '.join([i.__name__ for i in cls._model_mapping.keys()])}).")
 def getattribute_from_module(module: types.ModuleType, attr: t.Any) -> t.Any:
     if attr is None: return
     if isinstance(attr, tuple): return tuple(getattribute_from_module(module, a) for a in attr)
     if hasattr(module, attr): return getattr(module, attr)
-    # Some of the mappings have entries model_type -> object of another model type. In that case we try to grab the
-    # object at the top level.
+    # Some of the mappings have entries model_type -> object of another model type. In that case we try to grab the object at the top level.
     openllm_module = importlib.import_module("openllm")
     if module != openllm_module:
         try: return getattribute_from_module(openllm_module, attr)
         except ValueError: raise ValueError(f"Could not find {attr} neither in {module} nor in {openllm_module}!") from None
-    else: raise ValueError(f"Could not find {attr} in {openllm_module}!")
+    raise ValueError(f"Could not find {attr} in {openllm_module}!")
 class _LazyAutoMapping(ConfigModelOrderedDict, ReprMixin):
     """Based on transformers.models.auto.configuration_auto._LazyAutoMapping.
 

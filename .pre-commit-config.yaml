@@ -37,7 +37,7 @@ repos:
       - id: mypy
         name: mypy
         entry: ./tools/mypy
-        'types_or': [python, pyi]
+        types: [python]
         language: python
         pass_filenames: false
         verbose: true
@@ -49,7 +49,16 @@ repos:
               src/openllm/playground/.*|
               .github/.*
           )$
-        additional_dependencies: ["mypy==1.4.1"]
+        additional_dependencies:
+          - mypy==1.4.1
+          - click>=8.1.6
+          - peft
+          - git+https://github.com/bentoml/BentoML.git@main
+          - git+https://github.com/huggingface/transformers.git@main
+          - types-psutil
+          - types-tabulate
+          - types-PyYAML
+          - types-protobuf
       - id: pyright
         name: pyright
         entry: ./tools/pyright

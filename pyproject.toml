@@ -44,6 +44,7 @@ dependencies = [
     "httpx",
     "click>=8.1.6",
     "typing_extensions",
+    "GitPython",
     "cuda-python;platform_system!=\"Darwin\"",
     "bitsandbytes<0.42",
 ]
@@ -68,7 +69,13 @@ name = "openllm"
 requires-python = ">=3.8"
 
 [project.scripts]
-openllm = "openllm.cli:cli"
+openllm = "openllm.cli.entrypoint:cli"
+openllm-build-base-container = "openllm.cli.ext.build_base_container:cli"
+openllm-dive-bentos = "openllm.cli.ext.dive_bentos:cli"
+openllm-get-containerfile = "openllm.cli.ext.get_containerfile:cli"
+openllm-get-prompt = "openllm.cli.ext.get_prompt:cli"
+openllm-list-bentos = "openllm.cli.ext.list_bentos:cli"
+openllm-list-models = "openllm.cli.ext.list_models:cli"
 
 [project.urls]
 Blog = "https://modelserving.com"
@@ -102,7 +109,7 @@ all = [
 baichuan = ["cpm-kernels", "sentencepiece"]
 chatglm = ["cpm-kernels", "sentencepiece"]
 falcon = ["einops", "xformers"]
-fine-tune = ["peft>=0.4.0", "bitsandbytes", "datasets", "accelerate", "deepspeed", "trl"]
+fine-tune = ["peft>=0.4.0", "bitsandbytes", "datasets", "accelerate", "trl"]
 flan-t5 = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
 ggml = ["ctransformers"]
 gptq = ["auto-gptq[triton]"]
@@ -232,7 +239,7 @@ ignore-overlong-task-comments = true
 [tool.ruff.isort]
 force-single-line = true
 known-first-party = ["openllm", "bentoml", 'transformers']
-lines-after-imports = 2
+lines-after-imports = 1
 no-lines-before = ["future", "standard-library"]
 relative-imports-order = "closest-to-furthest"
 [tool.ruff.flake8-quotes]
@@ -242,7 +249,7 @@ avoid-escape = false
 "__init__.py" = ["E402", "F401", "F403", "F811"]
 "examples/**/*" = ["D"]
 "src/openllm/_service.py" = ["I001", "E401"]
-"src/openllm/cli.py" = ["D301", "S101"]
+"src/openllm/cli/entrypoint.py" = ["D301"]
 "src/openllm/utils/dummy_*" = ["D107"]
 "src/openllm/utils/import_utils.py" = ["PLW0603"]
 "src/openllm_client/runtimes/*" = ["D107"]
@@ -253,7 +260,7 @@ avoid-escape = false
     "PT011",  # ignore too broad raises, as it can be use pytest.raises().match()
     "S307",   # Ignore eval(compile) as it is a known script execution
 ]
-"typings/**/*" = ["D", "F", "E", "PYI002", "I001"]
+"typings/**/*" = ["D", "F", "E", "PYI002"]
 
 [tool.coverage.paths]
 openllm = ["src/openllm", "*/openllm/src/openllm"]
@@ -307,8 +314,12 @@ exclude = [
     "src/openllm/__init__.py",
     "src/openllm/__main__.py",
     "src/openllm/utils/dummy_*.py",
+    "src/openllm/models",
+    "tools",
+    "examples",
+    "tests",
 ]
-include = ["src/openllm", "src/openllm_client", "tests/", "tools/", "examples/"]
+include = ["src/openllm", "src/openllm_client"]
 pythonVersion = "3.12"
 reportMissingImports = "warning"
 reportMissingTypeStubs = false
@@ -319,7 +330,8 @@ reportUnknownVariableType = "warning"
 typeCheckingMode = "strict"
 
 [tool.mypy]
-exclude = ["src/openllm/playground/"]
+# TODO: Enable model for strict type checking
+exclude = ["src/openllm/playground/", "src/openllm/utils/dummy_*.py", "src/openllm/models"]
 files = ["src/openllm", "src/openllm_client"]
 local_partial_types = true
 mypy_path = "typings"
@@ -343,7 +355,14 @@ module = [
     "peft.*",
     "auto_gptq.*",
     "vllm.*",
+    "orjson.*",
+    "git.*",
+    "httpx.*",
+    "cloudpickle.*",
+    "circus.*",
+    "grpc_health.*",
+    "transformers.*",
 ]
 [[tool.mypy.overrides]]
 ignore_errors = true
-module = ["openllm.models.*", "openllm._types", "openllm", "openllm.playground.*"]
+module = ["openllm.models.*", "openllm._types", "openllm.playground.*"]

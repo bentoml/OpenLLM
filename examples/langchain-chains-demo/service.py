@@ -24,7 +24,6 @@ import bentoml
 from bentoml.io import JSON
 from bentoml.io import Text
 
-
 class Query(BaseModel):
     industry: str
     product_name: str

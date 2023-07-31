@@ -1,9 +1,0 @@
-# Build vllm CUDA kernels
-FROM kernel-builder as vllm-builder
-
-WORKDIR /usr/src
-
-COPY server/Makefile-vllm Makefile
-
-# Build specific version of vllm
-RUN make build-vllm

@@ -25,7 +25,6 @@ from pathlib import Path
 
 import orjson
 
-
 if t.TYPE_CHECKING:
     from fs.base import FS
 
@@ -293,9 +292,8 @@ def make_env_transformer(
         annotations={"_": "type[LLMConfig]", "fields": fields_ann, "return": fields_ann},
     )
 
-
-def gen_sdk(func: AnyCallable, name: str | None = None, **attrs: t.Any):
-    """Enhance function with nicer Repr."""
+def gen_sdk(func: _T, name: str | None = None, **attrs: t.Any) -> _T:
+    """Enhance sdk with nice repr that plays well with your brain."""
     from .representation import ReprMixin
 
     if name is None: name = func.__name__.strip("_")
@@ -304,7 +302,7 @@ def gen_sdk(func: AnyCallable, name: str | None = None, **attrs: t.Any):
     def _repr_args(self: ReprMixin) -> t.Iterator[t.Tuple[str, t.Any]]: return ((k, _signatures[k].annotation) for k in self.__repr_keys__)
     if func.__doc__ is None: doc = f"Generated SDK for {func.__name__}"
     else: doc = func.__doc__
-    return functools.update_wrapper(
+    return t.cast(_T, functools.update_wrapper(
         types.new_class(
             name,
             (PartialAny, ReprMixin),
@@ -319,4 +317,4 @@ def gen_sdk(func: AnyCallable, name: str | None = None, **attrs: t.Any):
             ),
         )(func, **attrs),
         func,
-    )
+    ))

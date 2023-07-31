@@ -11,13 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 from __future__ import annotations
 import typing as t
 
 from ..utils import DummyMetaclass
 from ..utils import require_backends
 
+if t.TYPE_CHECKING:
+    from ..models.auto.factory import _LazyAutoMapping
 
 class TFFlanT5(metaclass=DummyMetaclass):
     _backends = ["tf"]
@@ -40,4 +41,4 @@ class AutoTFLLM(metaclass=DummyMetaclass):
         require_backends(self, ["tf"])
 
 
-MODEL_TF_MAPPING = None
+MODEL_TF_MAPPING = t.cast("_LazyAutoMapping", None)

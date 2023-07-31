@@ -20,20 +20,16 @@ from .configuration_dolly_v2 import DEFAULT_PROMPT_TEMPLATE
 from .configuration_dolly_v2 import END_KEY
 from .configuration_dolly_v2 import RESPONSE_KEY
 from .configuration_dolly_v2 import get_special_token_id
-if t.TYPE_CHECKING:
-    import torch
-    import transformers
-    import tensorflow as tf
-else:
-    tf = openllm.utils.LazyLoader("tf", globals(), "tensorflow")
-    torch = openllm.utils.LazyLoader("torch", globals(), "torch")
-    transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
+from ..._prompt import process_prompt
+if t.TYPE_CHECKING: import torch, transformers, tensorflow as tf
+else: torch, transformers, tf = openllm.utils.LazyLoader("torch", globals(), "torch"), openllm.utils.LazyLoader("transformers", globals(), "transformers"), openllm.utils.LazyLoader("tf", globals(), "tensorflow")
 logger = logging.getLogger(__name__)
 @t.overload
 def get_pipeline(model: transformers.PreTrainedModel, tokenizer: transformers.PreTrainedTokenizer, _init: t.Literal[True] = True, **attrs: t.Any) -> transformers.Pipeline: ...
 @t.overload
 def get_pipeline(model: transformers.PreTrainedModel, tokenizer: transformers.PreTrainedTokenizer, _init: t.Literal[False] = ..., **attrs: t.Any) -> type[transformers.Pipeline]: ...
 def get_pipeline(model: transformers.PreTrainedModel, tokenizer: transformers.PreTrainedTokenizer, _init: bool = False, **attrs: t.Any) -> type[transformers.Pipeline] | transformers.Pipeline:
+    # Lazy loading the pipeline. See databricks' implementation on HuggingFace for more information.
     class InstructionTextGenerationPipeline(transformers.Pipeline):
         def __init__(self, *args: t.Any, do_sample: bool = True, max_new_tokens: int = 256, top_p: float = 0.92, top_k: int = 0, **kwargs: t.Any): super().__init__(*args, model=model, tokenizer=tokenizer, do_sample=do_sample, max_new_tokens=max_new_tokens, top_p=top_p, top_k=top_k, **kwargs)
         def _sanitize_parameters(self, return_full_text: bool | None = None, **generate_kwargs: t.Any):
@@ -73,7 +69,6 @@ def get_pipeline(model: transformers.PreTrainedModel, tokenizer: transformers.Pr
             elif self.framework == "tf": generated_sequence = tf.reshape(generated_sequence, (in_b, out_b // in_b, *generated_sequence.shape[1:]))
             instruction_text = model_inputs.pop("instruction_text")
             return {"generated_sequence": generated_sequence, "input_ids": input_ids, "instruction_text": instruction_text}
-
         def postprocess(self, model_outputs: dict[str, t.Any], response_key_token_id: int, end_key_token_id: int, return_full_text: bool = False):
             if t.TYPE_CHECKING: assert self.tokenizer is not None
             generated_sequence, instruction_text = model_outputs["generated_sequence"][0], model_outputs["instruction_text"]
@@ -125,7 +120,7 @@ class DollyV2(openllm.LLM["transformers.Pipeline", "transformers.PreTrainedToken
     @property
     def import_kwargs(self): return {"device_map": "auto" if torch.cuda.is_available() else None, "torch_dtype": torch.bfloat16}, {"padding_side": "left"}
     def load_model(self, *args: t.Any, **attrs: t.Any) -> transformers.Pipeline: return get_pipeline(model=transformers.AutoModelForCausalLM.from_pretrained(self._bentomodel.path, *args, **attrs), tokenizer=self.tokenizer, _init=True, return_full_text=self.config.return_full_text)
-    def sanitize_parameters(self, prompt: str, max_new_tokens: int | None = None, temperature: float | None = None, top_k: int | None = None, top_p: float | None = None, **attrs: t.Any) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]: return prompt, {"max_new_tokens": max_new_tokens, "top_k": top_k, "top_p": top_p, "temperature": temperature, **attrs}, {}
+    def sanitize_parameters(self, prompt: str, max_new_tokens: int | None = None, temperature: float | None = None, top_k: int | None = None, top_p: float | None = None, use_default_prompt_template: bool = True, **attrs: t.Any) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]: return process_prompt(prompt, DEFAULT_PROMPT_TEMPLATE, use_default_prompt_template, **attrs), {"max_new_tokens": max_new_tokens, "top_k": top_k, "top_p": top_p, "temperature": temperature, **attrs}, {}
     def postprocess_generate(self, prompt: str, generation_result: list[dict[t.Literal["generated_text"], str]], **_: t.Any) -> str: return generation_result[0]["generated_text"]
     def generate(self, prompt: str, **attrs: t.Any) -> list[dict[t.Literal["generated_text"], str]]:
         llm_config = self.config.model_construct_env(**attrs)

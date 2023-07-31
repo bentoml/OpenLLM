@@ -17,19 +17,11 @@ import logging
 import typing as t
 import openllm
 from .configuration_opt import DEFAULT_PROMPT_TEMPLATE
-from ..._prompt import default_formatter
+from ..._prompt import process_prompt
 if t.TYPE_CHECKING:
     import vllm, transformers
 logger = logging.getLogger(__name__)
 class VLLMOPT(openllm.LLM["vllm.LLMEngine", "transformers.GPT2Tokenizer"]):
     __openllm_internal__ = True
     tokenizer_id = "local"
-    def sanitize_parameters(self, prompt: str, max_new_tokens: int | None = None, temperature: float | None = None, top_k: int | None = None, num_return_sequences: int | None = None, use_default_prompt_template: bool = True, **attrs: t.Any) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
-        if use_default_prompt_template:
-            template_variables = default_formatter.extract_template_variables(DEFAULT_PROMPT_TEMPLATE)
-            prompt_variables = {k: v for k, v in attrs.items() if k in template_variables}
-            if "instruction" in prompt_variables: raise RuntimeError("'instruction' should be passed as the first argument instead of kwargs when 'use_default_prompt_template=True'")
-            try: prompt_text = DEFAULT_PROMPT_TEMPLATE.format(instruction=prompt, **prompt_variables)
-            except KeyError as e: raise RuntimeError(f"Missing variable '{e.args[0]}' (required: {template_variables}) in the prompt template. Use 'use_default_prompt_template=False' to disable the default prompt template.") from None
-        else: prompt_text = prompt
-        return prompt_text, {"max_new_tokens": max_new_tokens, "temperature": temperature, "top_k": top_k, "num_return_sequences": num_return_sequences}, {}
+    def sanitize_parameters(self, prompt: str, max_new_tokens: int | None = None, temperature: float | None = None, top_k: int | None = None, num_return_sequences: int | None = None, use_default_prompt_template: bool = True, **attrs: t.Any) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]: return process_prompt(prompt, DEFAULT_PROMPT_TEMPLATE, use_default_prompt_template, **attrs), {"max_new_tokens": max_new_tokens, "temperature": temperature, "top_k": top_k, "num_return_sequences": num_return_sequences}, {}

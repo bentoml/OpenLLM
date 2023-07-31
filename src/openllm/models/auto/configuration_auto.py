@@ -35,7 +35,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("falcon", "FalconConfig"),
         ("flan_t5", "FlanT5Config"),
         ("gpt_neox", "GPTNeoXConfig"),
-        ("llama", "LlaMAConfig"),
+        ("llama", "LlamaConfig"),
         ("mpt", "MPTConfig"),
         ("opt", "OPTConfig"),
         ("stablelm", "StableLMConfig"),
@@ -78,7 +78,6 @@ CONFIG_NAME_ALIASES: dict[str, str] = {
     "stable_lm": "stablelm",
     "star_coder": "starcoder",
     "gpt_neo_x": "gpt_neox",
-    "lla_ma": "llama",
 }
 class AutoConfig:
     def __init__(self, *_: t.Any, **__: t.Any): raise EnvironmentError("Cannot instantiate AutoConfig directly. Please use `AutoConfig.for_model(model_name)` instead.")
