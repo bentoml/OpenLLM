@@ -6,20 +6,25 @@
     <h1 align="center">🦾 OpenLLM</h1>
     <a href="https://pypi.org/project/openllm">
         <img src="https://img.shields.io/pypi/v/openllm.svg?logo=pypi&label=PyPI&logoColor=gold" alt="pypi_status" />
-    </a><a href="https://github.com/bentoml/OpenLLM/actions/workflows/ci.yml">
-        <img src="https://github.com/bentoml/OpenLLM/actions/workflows/ci.yml/badge.svg?branch=main" alt="ci" />
     </a><a href="https://twitter.com/bentomlai">
         <img src="https://badgen.net/badge/icon/@bentomlai/1DA1F2?icon=twitter&label=Follow%20Us" alt="Twitter" />
     </a><a href="https://l.bentoml.com/join-openllm-discord">
         <img src="https://badgen.net/badge/icon/OpenLLM/7289da?icon=discord&label=Join%20Us" alt="Discord" />
+    </a><a href="https://github.com/bentoml/OpenLLM/actions/workflows/ci.yml">
+        <img src="https://github.com/bentoml/OpenLLM/actions/workflows/ci.yml/badge.svg?branch=main" alt="ci" />
+    </a><a href="https://results.pre-commit.ci/latest/github/bentoml/OpenLLM/main">
+        <img src="https://results.pre-commit.ci/badge/github/bentoml/OpenLLM/main.svg" alt="pre-commit.ci status" />
     </a><br>
-    </a><a href="https://pypi.org/project/openllm">
+    <a href="https://pypi.org/project/openllm">
         <img src="https://img.shields.io/pypi/pyversions/openllm.svg?logo=python&label=Python&logoColor=gold" alt="python_version" />
     </a><a href="https://github.com/pypa/hatch">
         <img src="https://img.shields.io/badge/%F0%9F%A5%9A-Hatch-4051b5.svg" alt="Hatch" />
-    </a><br>
     </a><a href="https://github.com/astral-sh/ruff">
         <img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/charliermarsh/ruff/main/assets/badge/v2.json" alt="Ruff" />
+    </a><a href="https://github.com/python/mypy">
+        <img src="https://img.shields.io/badge/types-mypy-blue.svg" alt="types - mypy" />
+    </a><a href="https://github.com/microsoft/pyright">
+        <img src="https://img.shields.io/badge/types-pyright-yellow.svg" alt="types - pyright" />
     </a><br>
     <p>An open platform for operating large language models (LLMs) in production.</br>
     Fine-tune, serve, deploy, and monitor any LLMs with ease.</p>
@@ -120,17 +125,19 @@ openllm query 'Explain to me the difference between "further" and "farther"'
 
 Visit `http://localhost:3000/docs.json` for OpenLLM's API specification.
 
-OpenLLM seamlessly supports many models and their variants.
-Users can also specify different variants of the model to be served, by
-providing the `--model-id` argument, e.g.:
+OpenLLM seamlessly supports many models and their variants. Users can also
+specify different variants of the model to be served, by providing the
+`--model-id` argument, e.g.:
 
 ```bash
 openllm start flan-t5 --model-id google/flan-t5-large
 ```
 
-> **Note** that `openllm` also supports all variants of fine-tuning weights, custom model path
-> as well as quantized weights for any of the supported models as long as it can be loaded with
-> the model architecture. Refer to [supported models](https://github.com/bentoml/OpenLLM/tree/main#-supported-models) section for models' architecture.
+> **Note** that `openllm` also supports all variants of fine-tuning weights,
+> custom model path as well as quantized weights for any of the supported models
+> as long as it can be loaded with the model architecture. Refer to
+> [supported models](https://github.com/bentoml/OpenLLM/tree/main#-supported-models)
+> section for models' architecture.
 
 Use the `openllm models` command to see the list of models and their variants
 supported in OpenLLM.
@@ -473,8 +480,8 @@ To include this into the Bento, one can also provide a `--adapter-id` into
 openllm build opt --model-id facebook/opt-6.7b --adapter-id ...
 ```
 
-> **Note**: We will gradually roll out support for fine-tuning all models.
-> The following models contain fine-tuning support: OPT, Falcon, LlaMA.
+> **Note**: We will gradually roll out support for fine-tuning all models. The
+> following models contain fine-tuning support: OPT, Falcon, LlaMA.
 
 ### Integrating a New Model
 
@@ -485,10 +492,10 @@ to see how you can do it yourself.
 
 ### Embeddings
 
-OpenLLM tentatively provides embeddings endpoint for supported models.
-This can be accessed via `/v1/embeddings`.
+OpenLLM tentatively provides embeddings endpoint for supported models. This can
+be accessed via `/v1/embeddings`.
 
-To use via CLI, simply call ``openllm embed``:
+To use via CLI, simply call `openllm embed`:
 
 ```bash
 openllm embed --endpoint http://localhost:3000 "I like to eat apples" -o json
@@ -508,7 +515,7 @@ openllm embed --endpoint http://localhost:3000 "I like to eat apples" -o json
 }
 ```
 
-To invoke this endpoint, use ``client.embed`` from the Python SDK:
+To invoke this endpoint, use `client.embed` from the Python SDK:
 
 ```python
 import openllm
@@ -518,15 +525,16 @@ client = openllm.client.HTTPClient("http://localhost:3000")
 client.embed("I like to eat apples")
 ```
 
-> **Note**: Currently, the following model framily supports embeddings: Llama, T5 (Flan-T5, FastChat, etc.), ChatGLM
+> **Note**: Currently, the following model framily supports embeddings: Llama,
+> T5 (Flan-T5, FastChat, etc.), ChatGLM
 
 ## ⚙️ Integrations
 
 OpenLLM is not just a standalone product; it's a building block designed to
 integrate with other powerful tools easily. We currently offer integration with
 [BentoML](https://github.com/bentoml/BentoML),
-[LangChain](https://github.com/hwchase17/langchain),
-and [Transformers Agents](https://huggingface.co/docs/transformers/transformers_agents).
+[LangChain](https://github.com/hwchase17/langchain), and
+[Transformers Agents](https://huggingface.co/docs/transformers/transformers_agents).
 
 ### BentoML
 
@@ -554,7 +562,6 @@ async def prompt(input_text: str) -> str:
     answer = await llm_runner.generate(input_text)
     return answer
 ```
-
 
 ### [LangChain](https://python.langchain.com/docs/ecosystem/integrations/openllm)
 
@@ -600,15 +607,14 @@ def chat(input_text: str):
 > **Note** You can find out more examples under the
 > [examples](https://github.com/bentoml/OpenLLM/tree/main/examples) folder.
 
-
 ### Transformers Agents
 
-OpenLLM seamlessly integrates with [Transformers Agents](https://huggingface.co/docs/transformers/transformers_agents).
-
+OpenLLM seamlessly integrates with
+[Transformers Agents](https://huggingface.co/docs/transformers/transformers_agents).
 
 > **Warning** The Transformers Agent is still at an experimental stage. It is
-> recommended to install OpenLLM with `pip install -r nightly-requirements.txt` to get
-> the latest API update for HuggingFace agent.
+> recommended to install OpenLLM with `pip install -r nightly-requirements.txt`
+> to get the latest API update for HuggingFace agent.
 
 ```python
 import transformers
@@ -665,15 +671,14 @@ There are several ways to deploy your LLMs:
    ```bash
    bentoml containerize <name:version>
    ```
-   This generates a OCI-compatible docker image that can be deployed anywhere docker runs.
-   For best scalability and reliability of your LLM service in production, we recommend deploy
-   with BentoCloud。
-
+   This generates a OCI-compatible docker image that can be deployed anywhere
+   docker runs. For best scalability and reliability of your LLM service in
+   production, we recommend deploy with BentoCloud。
 
 ### ☁️ BentoCloud
 
-Deploy OpenLLM with [BentoCloud](https://www.bentoml.com/bento-cloud/),
-the serverless cloud for shipping and scaling AI applications.
+Deploy OpenLLM with [BentoCloud](https://www.bentoml.com/bento-cloud/), the
+serverless cloud for shipping and scaling AI applications.
 
 1. **Create a BentoCloud account:** [sign up here](https://bentoml.com/cloud)
    for early access
@@ -704,7 +709,6 @@ the serverless cloud for shipping and scaling AI applications.
 5. **Deploying a Bento**: Deploy your LLMs to BentoCloud with a single
    `bentoml deployment create` command following the
    [deployment instructions](https://docs.bentoml.com/en/latest/reference/cli.html#bentoml-deployment-create).
-
 
 ## 👥 Community
 
