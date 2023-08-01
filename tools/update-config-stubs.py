@@ -53,7 +53,7 @@ _value_docstring = {
 
         For example:
             For FLAN-T5 impl, this would be ["google/flan-t5-small", "google/flan-t5-base",
-                                             "google/flan-t5-large", "google/flan-t5-xl", "google/flan-t5-xxl"]
+                                            "google/flan-t5-large", "google/flan-t5-xl", "google/flan-t5-xxl"]
 
         This field is required when defining under '__config__'.
         """, "architecture": """The model architecture that is supported by this LLM.
