@@ -38,7 +38,6 @@ from ..utils import DEBUG
 from ..utils import EnvVarMixin
 from ..utils import codegen
 from ..utils import device_count
-from ..utils import get_debug_mode
 from ..utils import is_flax_available
 from ..utils import is_tf_available
 from ..utils import is_torch_available
@@ -130,8 +129,9 @@ def construct_docker_options(
   _bentoml_config_options += " " if _bentoml_config_options else "" + " ".join(_bentoml_config_options_opts)
   env: EnvVarMixin = llm.config["env"]
   env_dict = {
-      env.framework: env.framework_value, env.config: f"'{llm.config.model_dump_json().decode()}'", "OPENLLM_MODEL": llm.config["model_name"], "OPENLLM_SERIALIZATION": serialisation_format, "OPENLLM_ADAPTER_MAP": f"'{orjson.dumps(adapter_map).decode()}'", "OPENLLM_FAST": str(True), "BENTOML_DEBUG": str(True), "BENTOML_QUIET": str(False), "OPENLLMDEVDEBUG": str(get_debug_mode()),
-      "BENTOML_CONFIG_OPTIONS": f"'{_bentoml_config_options}'", env.model_id: f"/home/bentoml/bento/models/{llm.tag.path()}",  # This is the default BENTO_PATH var
+      env.framework: env.framework_value, env.config: f"'{llm.config.model_dump_json().decode()}'", "OPENLLM_MODEL": llm.config["model_name"], "OPENLLM_SERIALIZATION": serialisation_format,
+      "OPENLLM_ADAPTER_MAP": f"'{orjson.dumps(adapter_map).decode()}'", "OPENLLM_FAST": str(True), "BENTOML_DEBUG": str(True), "BENTOML_QUIET": str(False), "BENTOML_CONFIG_OPTIONS": f"'{_bentoml_config_options}'",
+    env.model_id: f"/home/bentoml/bento/models/{llm.tag.path()}",  # This is the default BENTO_PATH var
   }
   if adapter_map: env_dict["BITSANDBYTES_NOWELCOME"] = os.environ.get("BITSANDBYTES_NOWELCOME", "1")
 
