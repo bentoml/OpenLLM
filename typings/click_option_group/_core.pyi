@@ -13,8 +13,6 @@ from typing import Union
 
 import click
 
-_R = TypeVar("_R")
-_T = TypeVar("_T")
 AnyCallable: TypeAlias = Callable[..., Any]
 _FC = TypeVar("_FC", bound=Union[AnyCallable, click.Command])
 
