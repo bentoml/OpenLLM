@@ -21,7 +21,7 @@ ci:
 exclude: '.*\.(css|js|svg)$'
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: 'v0.0.280'
+    rev: 'v0.0.281'
     hooks:
       - id: ruff
         args: [--exit-non-zero-on-fix, --show-fixes]
@@ -33,7 +33,7 @@ repos:
         exclude: ^(docs|tools|tests)
         args: [--config=pyproject.toml]
   - repo: https://github.com/google/yapf
-    rev: v0.40.1
+    rev: v0.40.0
     hooks:
       - id: yapf
         types: [python]
