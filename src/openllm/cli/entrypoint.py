@@ -721,9 +721,9 @@ def build_command(
   # during build. This is a current limitation of bentoml build where we actually import the service.py into sys.path
   try:
     os.environ.update({"OPENLLM_MODEL": inflection.underscore(model_name), env.runtime: str(env.runtime_value), "OPENLLM_SERIALIZATION": serialisation_format})
-    if env.model_id_value: os.environ[env.model_id] = str(env.model_id_value)
-    if env.quantize_value: os.environ[env.quantize] = str(env.quantize_value)
-    if env.bettertransformer_value: os.environ[env.bettertransformer] = str(env.bettertransformer_value)
+    os.environ[env.model_id] = str(env.model_id_value)
+    os.environ[env.quantize] = str(env.quantize_value)
+    os.environ[env.bettertransformer] = str(env.bettertransformer_value)
 
     llm = infer_auto_class(env.framework_value).for_model(model_name, llm_config=llm_config, ensure_available=not fast, model_version=model_version, serialisation=serialisation_format, **attrs)
 

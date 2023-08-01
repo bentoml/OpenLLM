@@ -106,7 +106,7 @@ def __dir__() -> list[str]:
   return sorted(__all__)
 
 def __getattr__(name: str) -> t.Any:
-  if name == "supported_registries": return functools.lru_cache(1)(lambda _: list(_CONTAINER_REGISTRY))()
+  if name == "supported_registries": return functools.lru_cache(1)(lambda: list(_CONTAINER_REGISTRY))()
   elif name == "CONTAINER_NAMES": return _CONTAINER_REGISTRY
   elif name in __all__: return importlib.import_module("." + name, __name__)
   else: raise AttributeError(f"{name} does not exists under {__name__}")

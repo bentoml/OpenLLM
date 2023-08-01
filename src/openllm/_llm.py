@@ -585,10 +585,10 @@ class LLM(LLMInterface[M, T], ReprMixin):
         **attrs: The kwargs to be passed to the model.
     """
     cfg_cls = cls.config_class
-    model_id = first_not_none(model_id, cfg_cls.__openllm_env__["model_id_value"], cfg_cls.__openllm_default_id__)
+    model_id = first_not_none(model_id, os.getenv(cfg_cls.__openllm_env__["model_id"]), cfg_cls.__openllm_default_id__)
     if model_id is None: raise RuntimeError("Failed to resolve a valid model_id.")
     if validate_is_path(model_id): model_id = resolve_filepath(model_id)
-    quantize = first_not_none(quantize, cfg_cls.__openllm_env__["quantize_value"], default=None)
+    quantize = first_not_none(quantize, t.cast(t.Optional[t.Literal["int8", "int4", "gptq"]], os.getenv(cfg_cls.__openllm_env__["quantize"])), default=None)
 
     # quantization setup
     if quantization_config and quantize: raise ValueError("'quantization_config' and 'quantize' are mutually exclusive. Either customise your quantization_config or use the 'quantize' argument.")
@@ -613,7 +613,9 @@ class LLM(LLMInterface[M, T], ReprMixin):
     except Exception as err: raise OpenLLMException(f"Failed to generate a valid tag for {cfg_cls.__openllm_start_name__} with 'model_id={model_id}' (lookup to see its traceback):\n{err}") from err
 
     return cls(
-        *args, model_id=model_id, llm_config=llm_config, quantization_config=quantization_config, bettertransformer=str(first_not_none(bettertransformer, cfg_cls.__openllm_env__["bettertransformer_value"], default=None)).upper() in ENV_VARS_TRUE_VALUES, _runtime=first_not_none(runtime, cfg_cls.__openllm_env__["runtime_value"], default=cfg_cls.__openllm_runtime__),
+        *args, model_id=model_id, llm_config=llm_config, quantization_config=quantization_config,
+        bettertransformer=str(first_not_none(bettertransformer, os.getenv(cfg_cls.__openllm_env__["bettertransformer"]), default=None)).upper() in ENV_VARS_TRUE_VALUES,
+        _runtime=first_not_none(runtime, t.cast(t.Optional[t.Literal["ggml", "transformers"]], os.getenv(cfg_cls.__openllm_env__["runtime"])), default=cfg_cls.__openllm_runtime__),
         _adapters_mapping=resolve_peft_config_type(adapter_map) if adapter_map is not None else None, _quantize_method=quantize, _model_version=_tag.version, _tag=_tag, _serialisation_format=serialisation, **attrs
     )
 

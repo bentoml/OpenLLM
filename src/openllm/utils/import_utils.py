@@ -340,24 +340,13 @@ def require_backends(o: t.Any, backends: t.MutableSequence[str]) -> None:
 
 class EnvVarMixin(ReprMixin):
   model_name: str
-
-  @property
-  def __repr_keys__(self) -> set[str]:
-    return {"config", "model_id", "quantize", "framework", "bettertransformer", "runtime"}
-
   if t.TYPE_CHECKING:
     config: str
     model_id: str
     quantize: str
     framework: str
     bettertransformer: str
-    runtime: t.Literal["ggml", "transformers"]
-
-    framework_value: LiteralRuntime
-    quantize_value: t.Literal["int8", "int4", "gptq"] | None
-    bettertransformer_value: bool | None
-    model_id_value: str | None
-    runtime_value: t.Literal["ggml", "transformers"]
+    runtime: str
 
   # fmt: off
   @overload
@@ -383,40 +372,33 @@ class EnvVarMixin(ReprMixin):
   @overload
   def __getitem__(self, item: t.Literal["runtime_value"]) -> t.Literal["ggml", "transformers"]: ...
   # fmt: on
-
   def __getitem__(self, item: str | t.Any) -> t.Any:
     if hasattr(self, item): return getattr(self, item)
     raise KeyError(f"Key {item} not found in {self}")
-
-  def __new__(cls, model_name: str, implementation: LiteralRuntime = "pt", model_id: str | None = None, bettertransformer: bool | None = None, quantize: t.LiteralString | None = None, runtime: t.Literal["ggml", "transformers"] = "transformers",) -> t.Self:
-    from . import codegen
+  def __init__(self, model_name: str, implementation: LiteralRuntime = "pt", model_id: str | None = None, bettertransformer: bool | None = None, quantize: t.LiteralString | None = None,
+               runtime: t.Literal["ggml", "transformers"] = "transformers") -> None:
+    """EnvVarMixin is a mixin class that returns the value extracted from environment variables."""
     from .._configuration import field_env_key
-    model_name = inflection.underscore(model_name)
-
-    res = super().__new__(cls)
-    res.model_name = model_name
-
-    # gen properties env key
-    for att in {"config", "model_id", "quantize", "framework", "bettertransformer", "runtime"}:
-      setattr(res, att, field_env_key(model_name, att.upper()))
-
-    # gen properties env value
-    attributes_with_values = {"framework": (str, implementation), "quantize": (str, quantize), "bettertransformer": (bool, bettertransformer), "model_id": (str, model_id), "runtime": (str, runtime),}
-    globs: dict[str, t.Any] = {"__bool_vars_value": ENV_VARS_TRUE_VALUES, "__env_get": os.getenv, "self": res}
-
-    for attribute, (default_type, default_value) in attributes_with_values.items():
-      lines: list[str] = []
-      if default_type is bool: lines.append(f"return str(__env_get(self['{attribute}'], str(__env_default)).upper() in __bool_vars_value)")
-      else: lines.append(f"return __env_get(self['{attribute}'], __env_default)")
-
-      setattr(res, f"{attribute}_value", codegen.generate_function(cls, "_env_get_" + attribute, lines, ("__env_default",), globs)(default_value))
-
-    return res
-
+    self.model_name = inflection.underscore(model_name)
+    self._implementation = implementation
+    self._model_id = model_id
+    self._bettertransformer = bettertransformer
+    self._quantize = quantize
+    self._runtime = runtime
+    for att in {"config", "model_id", "quantize", "framework", "bettertransformer", "runtime"}: setattr(self, att, field_env_key(self.model_name, att.upper()))
   @property
-  def start_docstring(self) -> str:
-    return getattr(self.module, f"START_{self.model_name.upper()}_COMMAND_DOCSTRING")
-
+  def __repr_keys__(self) -> set[str]: return {"config", "model_id", "quantize", "framework", "bettertransformer", "runtime"}
   @property
-  def module(self) -> _AnnotatedLazyLoader[t.LiteralString]:
-    return _AnnotatedLazyLoader(self.model_name, globals(), f"openllm.models.{self.model_name}")
+  def quantize_value(self) -> t.Literal["int8", "int4", "gptq"] | None: return t.cast(t.Optional[t.Literal["int8", "int4", "gptq"]], os.getenv(self["quantize"], self._quantize))
+  @property
+  def framework_value(self) -> LiteralRuntime: return t.cast(t.Literal["pt", "tf", "flax", "vllm"], os.getenv(self["framework"], self._implementation))
+  @property
+  def bettertransformer_value(self) -> bool: return os.getenv(self["bettertransformer"], str(self._bettertransformer)).upper() in ENV_VARS_TRUE_VALUES
+  @property
+  def model_id_value(self) -> str | None: return os.getenv(self["model_id"], self._model_id)
+  @property
+  def runtime_value(self) -> t.Literal["ggml", "transformers"]: return t.cast(t.Literal["ggml", "transformers"], os.getenv(self["runtime"], self._runtime))
+  @property
+  def start_docstring(self) -> str: return getattr(self.module, f"START_{self.model_name.upper()}_COMMAND_DOCSTRING")
+  @property
+  def module(self) -> _AnnotatedLazyLoader[t.LiteralString]: return _AnnotatedLazyLoader(self.model_name, globals(), f"openllm.models.{self.model_name}")
