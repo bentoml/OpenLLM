@@ -20,16 +20,21 @@ import shutil
 import subprocess
 import typing as t
 
-import git.cmd
-
 import bentoml
 
 from ...exceptions import Error
 from ...exceptions import OpenLLMException
+from ...utils import LazyLoader
 from ...utils import apply
 from ...utils import device_count
 from ...utils import get_debug_mode
 from ...utils import pkg
+
+if t.TYPE_CHECKING:
+  import git.cmd
+else:
+  git = LazyLoader("git", globals(), "git")
+  git.cmd = LazyLoader("git.cmd", globals(), "git.cmd")
 
 _BUILDER = bentoml.container.get_backend("buildx")
 ROOT_DIR = pathlib.Path(__file__).parent.parent.parent
@@ -50,20 +55,15 @@ _module_location = pkg.source_locations("openllm")
 
 @functools.lru_cache
 @apply(str.lower)
-def get_base_container_name(reg: LiteralContainerRegistry) -> str:
-  return _CONTAINER_REGISTRY[reg]
+def get_base_container_name(reg: LiteralContainerRegistry) -> str: return _CONTAINER_REGISTRY[reg]
 
-@functools.lru_cache(maxsize=1)
-def _git() -> git.cmd.Git:
-  return git.cmd.Git(_URI)
+def _git() -> git.cmd.Git: return git.cmd.Git(_URI)
 
 @functools.lru_cache
-def _nightly_ref() -> tuple[str, str]:
-  return _git().ls_remote(_URI, "main", heads=True).split()
+def _nightly_ref() -> tuple[str, str]: return _git().ls_remote(_URI, "main", heads=True).split()
 
 @functools.lru_cache
-def _stable_ref() -> tuple[str, str]:
-  return max([item.split() for item in _git().ls_remote(_URI, refs=True, tags=True).split("\n")], key=lambda tag: tuple(int(k) for k in tag[-1].replace("refs/tags/v", "").split(".")))
+def _stable_ref() -> tuple[str, str]: return max([item.split() for item in _git().ls_remote(_URI, refs=True, tags=True).split("\n")], key=lambda tag: tuple(int(k) for k in tag[-1].replace("refs/tags/v", "").split(".")))
 
 def get_base_container_tag(strategy: LiteralContainerVersionStrategy) -> str:
   if strategy == "release": return _stable_ref()[-1].replace("refs/tags/v", "")  # for stable, we can also use latest, but discouraged

@@ -120,7 +120,7 @@ class LazyModule(types.ModuleType):
         module_spec: __spec__ of the lazily loaded module
         doc: Optional docstring for this module.
         extra_objects: Any additional objects that this module can also be accessed. Useful for additional metadata as well
-                       as any locals() functions
+                      as any locals() functions
     """
     super().__init__(name)
     self._modules = set(import_structure.keys())

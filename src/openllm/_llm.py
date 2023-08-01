@@ -344,7 +344,8 @@ _object_setattr = object.__setattr__
 def _wrapped_import_model(f: _import_model_wrapper[bentoml.Model, M, T]) -> t.Callable[[LLM[M, T]], bentoml.Model]:
   @functools.wraps(f)
   def wrapper(self: LLM[M, T], *decls: t.Any, trust_remote_code: bool | None = None, **attrs: t.Any) -> bentoml.Model:
-    trust_remote_code: bool = first_not_none(trust_remote_code, default=self.__llm_trust_remote_code__)
+    trust_remote_code = first_not_none(trust_remote_code, default=self.__llm_trust_remote_code__)
+    if t.TYPE_CHECKING: assert trust_remote_code is not None  # NOTE: Mypy is too stupid to understand that the default type of trust_remote_code is bool in L347
     (model_decls, model_attrs), _ = self.llm_parameters
     decls = (*model_decls, *decls)
     attrs = {**model_attrs, **attrs}
@@ -567,8 +568,8 @@ class LLM(LLMInterface[M, T], ReprMixin):
         model_name: Optional model name to be saved with this LLM. Default to None. It will be inferred automatically from model_id.
                     If model_id is a custom path, it will be the basename of the given path.
         model_version: Optional version for this given model id. Default to None. This is useful for saving from custom path.
-                       If set to None, the version will either be the git hash from given pretrained model, or the hash inferred
-                       from last modified time of the given directory.
+                      If set to None, the version will either be the git hash from given pretrained model, or the hash inferred
+                      from last modified time of the given directory.
         llm_config: The config to use for this LLM. Defaults to None. If not passed, OpenLLM
                     will use `config_class` to construct default configuration.
         quantize: The quantization to use for this LLM. Defaults to None. Possible values
@@ -576,7 +577,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
         runtime: Optional runtime to run this LLM. Default to 'transformers'. 'ggml' supports is working in progress.
         quantization_config: The quantization config (`transformers.BitsAndBytesConfig` | `autogtpq.BaseQuantizeConfig`) to use. Note that this is mutually exclusive with `quantize`
         serialisation: Type of model format to save to local store. If set to 'safetensors', then OpenLLM will save model using safetensors.
-                       Default behaviour is similar to ``safe_serialization=False``.
+                      Default behaviour is similar to ``safe_serialization=False``.
         bettertransformer: Whether to use BetterTransformer with this model. Defaults to False.
         adapter_id: The [LoRA](https://arxiv.org/pdf/2106.09685.pdf) pretrained id or local path to use for this LLM. Defaults to None.
         adapter_name: The adapter name to use for this LLM. Defaults to None.

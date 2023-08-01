@@ -346,8 +346,7 @@ def fast_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC
       "--fast/--no-fast", show_default=True, default=False, envvar="OPENLLM_USE_LOCAL_LATEST", show_envvar=True, help="""Whether to skip checking if models is already in store.
 
                                                                                                           This is useful if you already downloaded or setup the model beforehand.
-                                                                                                          """, **attrs
-  )(f)
+                                                                                                          """, **attrs)(f)
 
 def machine_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option("--machine", is_flag=True, default=False, hidden=True, **attrs)(f)
@@ -379,8 +378,7 @@ def quantize_option(f: _AnyCallable | None = None, *, build: bool = False, model
           """
                                                                                                                                                                             **Note** that this will set the mode for serving within deployment.""" if build else ""
       ) + """
-                                                                                                                                                                            **Note** that quantization are currently only available in *PyTorch* models.""", **attrs
-  )(f)
+                                                                                                                                                                            **Note** that quantization are currently only available in *PyTorch* models.""", **attrs)(f)
 
 def workers_per_resource_option(f: _AnyCallable | None = None, *, build: bool = False, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option(
@@ -399,8 +397,7 @@ def workers_per_resource_option(f: _AnyCallable | None = None, *, build: bool = 
                                                                                                                                                   **Note**: The workers value passed into 'build' will determine how the LLM can
                                                                                                                                                   be provisioned in Kubernetes as well as in standalone container. This will
                                                                                                                                                   ensure it has the same effect with 'openllm start --workers ...'""" if build else ""
-      ), **attrs
-  )(f)
+      ), **attrs)(f)
 
 def bettertransformer_option(f: _AnyCallable | None = None, *, build: bool = False, model_env: EnvVarMixin | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option(
@@ -411,23 +408,22 @@ def serialisation_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Cal
   return cli_option(
       "--serialisation", "--serialization", "serialisation_format", type=click.Choice(["safetensors", "legacy"]), default="safetensors", show_default=True, show_envvar=True, envvar="OPENLLM_SERIALIZATION", help="""Serialisation format for save/load LLM.
 
-                                                                                                                   Currently the following strategies are supported:
+                                                                                                                  Currently the following strategies are supported:
 
-                                                                                                                   - ``safetensors``: This will use safetensors format, which is synonymous to
+                                                                                                                  - ``safetensors``: This will use safetensors format, which is synonymous to
 
-                                                                                                                               \b
-                                                                                                                               ``safe_serialization=True``.
+                                                                                                                              \b
+                                                                                                                              ``safe_serialization=True``.
 
-                                                                                                                               \b
-                                                                                                                               **Note** that this format might not work for every cases, and
-                                                                                                                               you can always fallback to ``legacy`` if needed.
+                                                                                                                              \b
+                                                                                                                              **Note** that this format might not work for every cases, and
+                                                                                                                              you can always fallback to ``legacy`` if needed.
 
-                                                                                                                   - ``legacy``: This will use PyTorch serialisation format, often as ``.bin`` files.
-                                                                                                                                   This should be used if the model doesn't yet support safetensors.
+                                                                                                                  - ``legacy``: This will use PyTorch serialisation format, often as ``.bin`` files.
+                                                                                                                                  This should be used if the model doesn't yet support safetensors.
 
-                                                                                                                   **Note** that GGML format is working in progress.
-                                                                                                                   """, **attrs
-  )(f)
+                                                                                                                  **Note** that GGML format is working in progress.
+                                                                                                                  """, **attrs)(f)
 
 def container_registry_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option(
@@ -437,8 +433,7 @@ def container_registry_option(f: _AnyCallable | None = None, **attrs: t.Any) -> 
 
                                                                                                                         \b
                                                                                                                         **Note** that in order to build the base image, you will need a GPUs to compile custom kernel. See ``openllm ext build-base-container`` for more information.
-                                                                                                                        """
-  )(f)
+                                                                                                                        """)(f)
 
 _wpr_strategies = {"round_robin", "conserved"}
 

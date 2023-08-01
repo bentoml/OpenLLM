@@ -162,7 +162,7 @@ ServeCommand = t.Literal["serve", "serve-grpc"]
 
 @attr.define
 class GlobalOptions:
-  cloud_context: str | None = attr.field(default=None, converter=attr.converters.default_if_none("default"))
+  cloud_context: str | None = attr.field(default=None)
 
   def with_options(self, **attrs: t.Any) -> t.Self:
     return attr.evolve(self, **attrs)
@@ -223,7 +223,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
           analytics.track(event)
           raise
 
-    return wrapper
+    return t.cast("t.Callable[t.Concatenate[bool, P], t.Any]", wrapper)
 
   @staticmethod
   def exception_handling(func: t.Callable[P, t.Any], group: click.Group, **attrs: t.Any) -> t.Callable[P, t.Any]:
