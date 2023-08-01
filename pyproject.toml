@@ -217,6 +217,7 @@ ignore = [
     "D105",    # magic docstring
     "E701",    # multiple statement on single line
 ]
+tab-size = 2
 line-length = 119
 target-version = "py312"
 unfixable = [

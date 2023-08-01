@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 name: ci
 on:
   push:
@@ -101,10 +100,25 @@ jobs:
         uses: ./.github/actions/setup-repo
         with:
           python-version: ${{ env.STABLE_PYTHON_VERSION }}
+      - name: Wait for models tests to succeed
+        uses: lewagon/wait-on-check-action@v1.3.1
+        with:
+          ref: ${{ github.ref }}
+          check-name: stop-test-runner
+          wait-interval: 120
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Download coverage data
         uses: actions/download-artifact@v3
         with:
           name: coverage-data
+      - name: Download atomic coverage data
+        uses: actions/download-artifact@v3
+        with:
+          name: coverage-atomic-model-data
+      - name: Download snapshot coverage data
+        uses: actions/download-artifact@v3
+        with:
+          name: coverage-snapshot-model-data
       - name: Combine coverage data
         run: hatch run coverage:combine
       - name: Export coverage reports

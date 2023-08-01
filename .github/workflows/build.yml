@@ -192,7 +192,6 @@ jobs:
         if: ${{ github.event_name != 'pull_request' }}
         with:
           sarif_file: 'trivy-results.sarif'
-  # TODO: Add snapshot tests here.
   stop-runner:
     name: Stop self-hosted EC2 runner
     needs:

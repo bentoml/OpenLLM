@@ -21,7 +21,7 @@ class FlanT5Config(openllm.LLMConfig):
 
     Refer to [FLAN-T5's page](https://huggingface.co/docs/transformers/model_doc/flan-t5) for more information.
     """
-  __config__ = {"url": "https://huggingface.co/docs/transformers/model_doc/flan-t5", "default_id": "google/flan-t5-large", "architecture": "T5ForConditionalGeneration", "model_ids": ["google/flan-t5-small", "google/flan-t5-base", "google/flan-t5-large", "google/flan-t5-xl", "google/flan-t5-xxl",], "model_type": "seq2seq_lm",}
+  __config__ = {"url": "https://huggingface.co/docs/transformers/model_doc/flan-t5", "default_id": "google/flan-t5-large", "architecture": "T5ForConditionalGeneration", "model_ids": ["google/flan-t5-small", "google/flan-t5-base", "google/flan-t5-large", "google/flan-t5-xl", "google/flan-t5-xxl",], "model_type": "seq2seq_lm"}
 
   class GenerationConfig:
     temperature: float = 0.9

@@ -1,0 +1,150 @@
+name: Testing models support
+on:
+  workflow_dispatch:
+  workflow_call:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/model-tests.yml"
+      - "src/openllm/models/**"
+      - "src/openllm/utils/**"
+      - "src/openllm/exceptions.py"
+      - "src/openllm/_llm.py"
+      - "src/openllm/_configuration.py"
+      - "src/openllm/_stategies.py"
+      - "src/openllm/_generation.py"
+      - "tests/models/**"
+      - "tests/models_test.py"
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/model-tests.yml"
+      - "src/openllm/models/**"
+      - "src/openllm/utils/**"
+      - "src/openllm/exceptions.py"
+      - "src/openllm/_llm.py"
+      - "src/openllm/_configuration.py"
+      - "src/openllm/_stategies.py"
+      - "src/openllm/_generation.py"
+      - "tests/models/**"
+      - "tests/models_test.py"
+env:
+  LINES: 120
+  COLUMNS: 120
+  OPENLLM_DO_NOT_TRACK: True
+  PYTHONUNBUFFERED: '1'
+  STABLE_PYTHON_VERSION: '3.11'
+  HATCH_VERBOSE: 2
+  AWS_REGION: us-west-2
+jobs:
+  start-test-runner:
+    name: Start self-hosted EC2 runner
+    runs-on: ubuntu-latest
+    if: github.repository_owner == 'bentoml'
+    env:
+      EC2_INSTANCE_TYPE: g5.12xlarge
+      EC2_AMI_ID: ami-06f5effbc5d3c958d
+      EC2_SUBNET_ID: subnet-0eb38d1bf36b5c5e0,subnet-03fcff6e255dbb552,subnet-02412f1ea6606c1d3
+      EC2_SECURITY_GROUP: sg-0720c628950a59116
+    outputs:
+      label: ${{ steps.start-ec2-runner.outputs.label }}
+      ec2-instance-id: ${{ steps.start-ec2-runner.outputs.ec2-instance-id }}
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Start EC2 Runner
+        id: start-ec2-runner
+        uses: aarnphm/ec2-github-runner@main
+        with:
+          mode: start
+          github-token: ${{ secrets.OPENLLM_PAT }}
+          ec2-region: ${{ env.AWS_REGION }}
+          ec2-image-id: ${{ env.EC2_AMI_ID }}
+          ec2-instance-type: ${{ env.EC2_INSTANCE_TYPE }}
+          subnet-id: ${{ env.EC2_SUBNET_ID }}
+          security-group-id: ${{ env.EC2_SECURITY_GROUP }}
+  atomic-tests:
+    name: Running unit tests for supported model
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.job }}-${{ github.head_ref || github.run_id }}
+      cancel-in-progress: true
+    needs: start-test-runner
+    runs-on: ${{ needs.start-test-runner.outputs.label }} # run the job on the newly created runner
+    steps:
+      - name: Inject slug/short variables
+        uses: rlespinasse/github-slug-action@v4.4.1
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Setup CI
+        uses: ./.github/actions/setup-repo
+        with:
+          python-version: 3.8
+      - name: Running additional dependencies
+        run: hatch run -e tests pip install ".[mpt,starcoder,llama]"
+      - name: Running model tests
+        run: hatch run tests:atomic-models
+      - name: Disambiguate coverage filename
+        run: mv .coverage ".coverage.ubuntu-latest.3.8.atomic-models"
+      - name: Upload coverage data
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-atomic-model-data
+          path: .coverage.*
+  snapshot-tests:
+    name: Running snapshot tests for supported model
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.job }}-${{ github.head_ref || github.run_id }}
+      cancel-in-progress: true
+    needs: start-test-runner
+    runs-on: ${{ needs.start-test-runner.outputs.label }} # run the job on the newly created runner
+    steps:
+      - name: Inject slug/short variables
+        uses: rlespinasse/github-slug-action@v4.4.1
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Setup CI
+        uses: ./.github/actions/setup-repo
+        with:
+          python-version: 3.8
+      - name: Running additional dependencies
+        run: hatch run -e tests pip install ".[mpt,starcoder,llama]"
+      - name: Running model tests
+        run: hatch run tests:models
+      - name: Disambiguate coverage filename
+        run: mv .coverage ".coverage.ubuntu-latest.3.8.snapshot-models"
+      - name: Upload coverage data
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-snapshot-model-data
+          path: .coverage.*
+  stop-test-runner:
+    name: Stop self-hosted EC2 runner
+    needs:
+      - start-test-runner
+      - atomic-tests
+      - snapshot-tests
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: us-west-2
+    if: ${{ always() }} # required to stop the runner even if the error happened in the previous jobs
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Stop EC2 runner
+        uses: aarnphm/ec2-github-runner@main
+        with:
+          mode: stop
+          github-token: ${{ secrets.OPENLLM_PAT }}
+          ec2-region: ${{ env.AWS_REGION }}
+          label: ${{ needs.start-runner.outputs.label }}
+          ec2-instance-id: ${{ needs.start-runner.outputs.ec2-instance-id }}
