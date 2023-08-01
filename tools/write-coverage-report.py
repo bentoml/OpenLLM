@@ -25,7 +25,7 @@ PRECISION = Decimal(".01")
 
 ROOT = Path(__file__).resolve().parent.parent
 
-def main():
+def main() -> int:
   coverage_summary = ROOT / "coverage-summary.json"
 
   coverage_data = orjson.loads(coverage_summary.read_text(encoding="utf-8"))
@@ -39,8 +39,7 @@ def main():
 
     rate = Decimal(statements_covered) / Decimal(statements) * 100
     rate = rate.quantize(PRECISION, rounding=ROUND_DOWN)
-    lines.append(f"{package} | {100 if rate == 100 else rate}% ({statements_covered} / {statements})\n"  # noqa: PLR2004
-                 )
+    lines.append(f"{package} | {100 if rate == 100 else rate}% ({statements_covered} / {statements})\n")
 
   total_statements_covered = total_data["statements_covered"]
   total_statements = total_data["statements"]

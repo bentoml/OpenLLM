@@ -414,7 +414,7 @@ class GenerationConfig(ReprMixin):
 bentoml_cattr.register_unstructure_hook_factory(
     lambda cls: attr.has(cls) and lenient_issubclass(cls, GenerationConfig),
     lambda cls: make_dict_unstructure_fn(cls, bentoml_cattr, _cattrs_omit_if_default=False, _cattrs_use_linecache=True,
-                                         **{k: override(omit=True) for k, v in attr.fields_dict(cls).items() if v.default in (None, attr.NOTHING)}))
+                                        **{k: override(omit=True) for k, v in attr.fields_dict(cls).items() if v.default in (None, attr.NOTHING)}))
 
 @attr.frozen(slots=True, repr=False, init=False)
 class SamplingParams(ReprMixin):
@@ -450,7 +450,7 @@ class SamplingParams(ReprMixin):
   ignore_eos: bool = dantic.Field(False, description="Whether to ignore the EOS token and continue generating tokens after the EOS token is generated.")
   logprobs: int = dantic.Field(None, description="Number of log probabilities to return per output token.")
 
-  if t.TYPE_CHECKING and not MYPY:
+  if t.TYPE_CHECKING:
     max_tokens: int
     temperature: float
     top_k: int
@@ -490,7 +490,7 @@ class SamplingParams(ReprMixin):
 bentoml_cattr.register_unstructure_hook_factory(
     lambda cls: attr.has(cls) and lenient_issubclass(cls, SamplingParams),
     lambda cls: make_dict_unstructure_fn(cls, bentoml_cattr, _cattrs_omit_if_default=False, _cattrs_use_linecache=True,
-                                         **{k: override(omit=True) for k, v in attr.fields_dict(cls).items() if v.default in (None, attr.NOTHING)}))
+                                        **{k: override(omit=True) for k, v in attr.fields_dict(cls).items() if v.default in (None, attr.NOTHING)}))
 bentoml_cattr.register_structure_hook_factory(lambda cls: attr.has(cls) and lenient_issubclass(cls, SamplingParams), lambda cls: make_dict_structure_fn(cls, bentoml_cattr, _cattrs_forbid_extra_keys=True, max_new_tokens=override(rename="max_tokens")))
 
 # cached it here to save one lookup per assignment
@@ -758,7 +758,7 @@ class _ConfigAttr:
 
         For example:
             For FLAN-T5 impl, this would be ["google/flan-t5-small", "google/flan-t5-base",
-                                             "google/flan-t5-large", "google/flan-t5-xl", "google/flan-t5-xxl"]
+                                            "google/flan-t5-large", "google/flan-t5-xl", "google/flan-t5-xxl"]
 
         This field is required when defining under '__config__'.
         """
@@ -1028,7 +1028,7 @@ class LLMConfig(_ConfigAttr):
     klass = attr.make_class(
         f"{camel_name}{class_attr}", [], bases=(base,), slots=True, weakref_slot=True, frozen=True, repr=False, init=False, collect_by_mro=True,
         field_transformer=codegen.make_env_transformer(cls, cls.__openllm_model_name__, suffix=suffix_env, globs=globs,
-                                                       default_callback=lambda field_name, field_default: getattr(getattr(cls, class_attr), field_name, field_default) if codegen.has_own_attribute(cls, class_attr) else field_default))
+                                                      default_callback=lambda field_name, field_default: getattr(getattr(cls, class_attr), field_name, field_default) if codegen.has_own_attribute(cls, class_attr) else field_default))
     # For pickling to work, the __module__ variable needs to be set to the
     # frame where the class is created. This respect the module that is created from cls
     try: klass.__module__ = cls.__module__
@@ -1338,7 +1338,7 @@ class LLMConfig(_ConfigAttr):
     Args:
         name: The name of the new class.
         **attrs: The attributes to be added to the new class. This will override
-                 any existing attributes with the same name.
+                any existing attributes with the same name.
     """
     if not hasattr(cls, "__config__"):
       raise ValueError("Cannot derivate a LLMConfig without __config__")

@@ -76,11 +76,11 @@ def _parse_list_with_prefix(lst: str, prefix: str) -> list[str]:
 _STACK_LEVEL = 3
 
 @overload
-def _parse_visible_devices(default_var: str | None = ..., respect_env: t.Literal[True] = True) -> list[str] | None:
+def _parse_visible_devices(default_var: str | None = ..., *, respect_env: t.Literal[True]) -> list[str] | None:
   ...
 
 @overload
-def _parse_visible_devices(default_var: str = ..., respect_env: t.Literal[False] = ...) -> list[str]:
+def _parse_visible_devices(default_var: str = ..., *, respect_env: t.Literal[False]) -> list[str]:
   ...
 
 def _parse_visible_devices(default_var: str | None = None, respect_env: bool = True) -> list[str] | None:

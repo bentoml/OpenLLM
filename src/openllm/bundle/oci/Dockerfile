@@ -131,6 +131,14 @@ COPY --from=flash-attn-v2-builder /usr/src/flash-attention-v2/build/lib.linux-x8
 COPY src src
 COPY hatch.toml README.md CHANGELOG.md pyproject.toml ./
 
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        build-essential \
+        ca-certificates \
+        ccache \
+        curl \
+        git && \
+        rm -rf /var/lib/apt/lists/*
+
 # Install all required dependencies
 RUN pip install  "ray==2.6.0" "jax[cuda11_local]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html ".[opt,fine-tune,llama,gptq,falcon,chatglm]" -v --no-cache-dir
 

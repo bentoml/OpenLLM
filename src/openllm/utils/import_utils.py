@@ -376,7 +376,7 @@ class EnvVarMixin(ReprMixin):
     if hasattr(self, item): return getattr(self, item)
     raise KeyError(f"Key {item} not found in {self}")
   def __init__(self, model_name: str, implementation: LiteralRuntime = "pt", model_id: str | None = None, bettertransformer: bool | None = None, quantize: t.LiteralString | None = None,
-               runtime: t.Literal["ggml", "transformers"] = "transformers") -> None:
+              runtime: t.Literal["ggml", "transformers"] = "transformers") -> None:
     """EnvVarMixin is a mixin class that returns the value extracted from environment variables."""
     from .._configuration import field_env_key
     self.model_name = inflection.underscore(model_name)

@@ -33,8 +33,10 @@ if t.TYPE_CHECKING:
   import peft
 
   import openllm
-  from openllm._llm import M as _M
-  from openllm._llm import T as _T
+  from .utils.lazy import VersionInfo
+  from .bundle.oci import LiteralContainerVersionStrategy
+  from ._llm import M as _M
+  from ._llm import T as _T
   from bentoml._internal.runner.runnable import RunnableMethod
   from bentoml._internal.runner.runner import RunnerMethod
   from bentoml._internal.runner.strategy import Strategy
@@ -63,6 +65,11 @@ class AdaptersTuple(TupleAny):
   adapter_id: str
   name: str | None
   config: DictStrAny
+
+class RefTuple(TupleAny):
+  git_hash: str
+  version: VersionInfo
+  strategy: LiteralContainerVersionStrategy
 
 AdaptersMapping = dict[AdapterType, tuple[AdaptersTuple, ...]]
 
