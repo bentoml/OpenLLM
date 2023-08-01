@@ -675,6 +675,7 @@ start, start_grpc, build, import_model, list_models = codegen.gen_sdk(_start, _s
 @model_id_option
 @output_option
 @machine_option
+@click.option("--bento-version", type=str, default=None, help="Optional bento version for this BentoLLM. Default is the the model revision.")
 @click.option("--overwrite", is_flag=True, help="Overwrite existing Bento for given LLM if it already exists.")
 @workers_per_resource_option(factory=click, build=True)
 @cog.optgroup.group(cls=cog.MutuallyExclusiveOptionGroup, name="Optimisation options")
@@ -695,7 +696,8 @@ start, start_grpc, build, import_model, list_models = codegen.gen_sdk(_start, _s
 @cog.optgroup.option("--push", default=False, is_flag=True, type=click.BOOL, help="Whether to push the result bento to BentoCloud. Make sure to login with 'bentoml cloud login' first.")
 @click.pass_context
 def build_command(
-    ctx: click.Context, /, model_name: str, model_id: str | None, overwrite: bool, output: LiteralOutput, runtime: t.Literal["ggml", "transformers"], quantize: t.Literal["int8", "int4", "gptq"] | None, enable_features: tuple[str, ...] | None, bettertransformer: bool | None, workers_per_resource: float | None, adapter_id: tuple[str, ...], build_ctx: str | None, machine: bool,
+    ctx: click.Context, /, model_name: str, model_id: str | None, bento_version: str | None, overwrite: bool, output: LiteralOutput, runtime: t.Literal["ggml", "transformers"], quantize: t.Literal["int8", "int4", "gptq"] | None, enable_features: tuple[str, ...] | None,
+    bettertransformer: bool | None, workers_per_resource: float | None, adapter_id: tuple[str, ...], build_ctx: str | None, machine: bool,
     model_version: str | None, dockerfile_template: t.TextIO | None, containerize: bool, push: bool, serialisation_format: t.Literal["safetensors", "legacy"], fast: bool, container_registry: LiteralContainerRegistry, container_version_strategy: LiteralContainerVersionStrategy, **attrs: t.Any,
 ) -> bentoml.Bento:
   """Package a given models into a Bento.
@@ -759,7 +761,9 @@ def build_command(
           except FileNotFoundError:
             adapter_map[_adapter_id] = name
         os.environ["OPENLLM_ADAPTER_MAP"] = orjson.dumps(adapter_map).decode()
-      bento_tag = bentoml.Tag.from_taglike(f"{llm.llm_type}-service:{llm.tag.version}".lower().strip())
+
+      _bento_version = first_not_none(bento_version, default=llm.tag.version)
+      bento_tag = bentoml.Tag.from_taglike(f"{llm.llm_type}-service:{_bento_version}".lower().strip())
       try:
         bento = bentoml.get(bento_tag)
         if overwrite:
@@ -787,7 +791,7 @@ def build_command(
   else:
     termui.echo(bento.tag)
 
-  if push: BentoMLContainer.bentocloud_client.get().push_bento(bento, context=t.cast(GlobalOptions, ctx.obj).cloud_context)
+  if push: BentoMLContainer.bentocloud_client.get().push_bento(bento, context=t.cast(GlobalOptions, ctx.obj).cloud_context, force=True)
   elif containerize:
     backend = t.cast("DefaultBuilder", os.getenv("BENTOML_CONTAINERIZE_BACKEND", "docker"))
     try:
