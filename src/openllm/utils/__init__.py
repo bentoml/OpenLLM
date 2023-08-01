@@ -46,6 +46,7 @@ from bentoml._internal.utils import reserve_free_port as reserve_free_port
 from bentoml._internal.utils import resolve_user_filepath as resolve_user_filepath
 
 from .lazy import LazyModule
+from .lazy import VersionInfo as VersionInfo
 
 logger = logging.getLogger(__name__)
 

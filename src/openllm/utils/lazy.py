@@ -36,7 +36,7 @@ class MissingAttributesError(OpenLLMException):
   """Raised when given keys is not available in LazyModule special mapping."""
 
 @functools.total_ordering
-@attr.attrs(eq=False, order=False, slots=True, frozen=True)
+@attr.attrs(eq=False, order=False, slots=True, frozen=True, repr=False)
 class VersionInfo:
   """A version object that can be compared to tuple of length 1--4.
 
@@ -95,6 +95,8 @@ class VersionInfo:
     # Since alphabetically "dev0" < "final" < "post1" < "post2", we don't
     # have to do anything special with releaselevel for now.
     return us < them
+
+  def __repr__(self) -> str: return "{0}.{1}.{2}".format(*attr.astuple(self)[:3])
 
 _sentinel, _reserved_namespace = object(), {"__openllm_special__", "__openllm_migration__"}
 

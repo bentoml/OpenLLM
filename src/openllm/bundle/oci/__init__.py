@@ -15,33 +15,42 @@
 from __future__ import annotations
 import functools
 import importlib
+import logging
 import pathlib
 import shutil
 import subprocess
 import typing as t
+
+import attr
 
 import bentoml
 
 from ...exceptions import Error
 from ...exceptions import OpenLLMException
 from ...utils import LazyLoader
+from ...utils import VersionInfo
 from ...utils import apply
 from ...utils import device_count
 from ...utils import get_debug_mode
 from ...utils import pkg
+from ...utils.codegen import make_attr_tuple_class
 
 if t.TYPE_CHECKING:
   import git.cmd
+
+  from ..._types import RefTuple
 else:
   git = LazyLoader("git", globals(), "git")
   git.cmd = LazyLoader("git.cmd", globals(), "git.cmd")
+
+logger = logging.getLogger(__name__)
 
 _BUILDER = bentoml.container.get_backend("buildx")
 ROOT_DIR = pathlib.Path(__file__).parent.parent.parent
 
 # TODO: support quay
 LiteralContainerRegistry = t.Literal["docker", "gh", "ecr"]
-LiteralContainerVersionStrategy = t.Literal["release", "nightly", "latest"]
+LiteralContainerVersionStrategy = t.Literal["release", "nightly", "latest", "custom"]
 
 # XXX: This registry will be hard code for now for easier to maintain
 # but in the future, we can infer based on git repo and everything to make it more options for users
@@ -49,6 +58,7 @@ LiteralContainerVersionStrategy = t.Literal["release", "nightly", "latest"]
 # NOTE: The ECR registry is the public one and currently only @bentoml team has access to push it.
 _CONTAINER_REGISTRY: dict[LiteralContainerRegistry, str] = {"docker": "docker.io/bentoml/openllm", "gh": "ghcr.io/bentoml/openllm", "ecr": "public.ecr.aws/y5w8i4y6/bentoml/openllm"}
 
+# TODO: support custom fork. Currently it only support openllm main.
 _URI = "https://github.com/bentoml/openllm.git"
 
 _module_location = pkg.source_locations("openllm")
@@ -57,19 +67,59 @@ _module_location = pkg.source_locations("openllm")
 @apply(str.lower)
 def get_base_container_name(reg: LiteralContainerRegistry) -> str: return _CONTAINER_REGISTRY[reg]
 
-def _git() -> git.cmd.Git: return git.cmd.Git(_URI)
+def _convert_version_from_string(s: str) -> VersionInfo: return VersionInfo.from_version_string(s)
 
-@functools.lru_cache
-def _nightly_ref() -> tuple[str, str]: return _git().ls_remote(_URI, "main", heads=True).split()
+class VersionNotSupported(OpenLLMException):
+  """Raised when the stable release is too low that it doesn't include OpenLLM base container."""
 
-@functools.lru_cache
-def _stable_ref() -> tuple[str, str]: return max([item.split() for item in _git().ls_remote(_URI, refs=True, tags=True).split("\n")], key=lambda tag: tuple(int(k) for k in tag[-1].replace("refs/tags/v", "").split(".")))
+_RefTuple: type[RefTuple] = make_attr_tuple_class("_RefTuple", ["git_hash", "version", "strategy"])
 
-def get_base_container_tag(strategy: LiteralContainerVersionStrategy) -> str:
-  if strategy == "release": return _stable_ref()[-1].replace("refs/tags/v", "")  # for stable, we can also use latest, but discouraged
-  elif strategy == "latest": return "latest"
-  elif strategy == "nightly": return f"sha-{_nightly_ref()[0][:7]}"  # we prefixed with sha-<git_rev_short> (giv_rev[:7])
-  else: raise ValueError(f"Unknown strategy '{strategy}'. Valid strategies are 'release', 'nightly', and 'latest'")
+@attr.attrs(eq=False, order=False, slots=True, frozen=True)
+class Ref:
+  """TODO: Support offline mode.
+
+  Maybe we need to save git hash when building the Bento.
+  """
+  git_hash: str = attr.field()
+  version: VersionInfo = attr.field(converter=_convert_version_from_string)
+  strategy: LiteralContainerVersionStrategy = attr.field()
+  _git: git.cmd.Git = git.cmd.Git(_URI)  # TODO: support offline mode
+
+  @classmethod
+  def _nightly_ref(cls) -> RefTuple: return _RefTuple((*cls._git.ls_remote(_URI, "main", heads=True).split(), "nightly"))
+  @classmethod
+  def _release_ref(cls, version_str: str | None = None) -> RefTuple:
+    _use_base_strategy = version_str is None
+    if version_str is None:
+      # NOTE: This strategy will only support openllm>0.2.12
+      version: tuple[str, str] = tuple(max([item.split() for item in cls._git.ls_remote(_URI, refs=True, tags=True).split("\n")], key=lambda tag: tuple(int(k) for k in tag[-1].replace("refs/tags/v", "").split("."))))
+      version_str = version[-1].replace("refs/tags/v", "")
+      version = (version[0], version_str)
+    else:
+      version = ("", version_str)
+    if t.TYPE_CHECKING: assert version_str # NOTE: Mypy cannot infer the correct type here. We have handle the cases where version_str is None in L86
+    if VersionInfo.from_version_string(version_str) < (0, 2, 12): raise VersionNotSupported(f"Version {version_str} doesn't support OpenLLM base container. Consider using 'nightly' or upgrade 'openllm>=0.2.12'")
+    return _RefTuple((*version, "release" if not _use_base_strategy else "custom"))
+  @classmethod
+  def from_strategy(cls, strategy_or_version: t.Literal["release", "nightly"] | str | None = None) -> Ref:
+    if strategy_or_version is None or strategy_or_version == "release":
+      logger.debug("Using default strategy 'release' for resolving base image version.")
+      return cls(*cls._release_ref())
+    elif strategy_or_version == "latest": return cls("latest", "0.0.0", "latest")
+    elif strategy_or_version == "nightly":
+      _ref = cls._nightly_ref()
+      return cls(_ref[0], "0.0.0", _ref[-1])
+    else:
+      logger.warning("Using custom %s. Make sure that it is at lease 0.2.12 for base container support.", strategy_or_version)
+      return cls(*cls._release_ref(version_str=strategy_or_version))
+  @property
+  def tag(self) -> str:
+    if self.strategy == "latest": return "latest"
+    elif self.strategy == "nightly": return f"sha-{self.git_hash[:7]}"
+    else: return repr(self.version)
+
+@functools.lru_cache(maxsize=256)
+def get_base_container_tag(strategy: LiteralContainerVersionStrategy | None = None) -> str: return Ref.from_strategy(strategy).tag
 
 def build_container(registries: LiteralContainerRegistry | t.Sequence[LiteralContainerRegistry] | None = None, version_strategy: LiteralContainerVersionStrategy = "release", push: bool = False, machine: bool = False) -> dict[str | LiteralContainerRegistry, str]:
   """This is a utility function for building base container for OpenLLM. It will build the base container for all registries if ``None`` is passed.
