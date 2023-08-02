@@ -99,7 +99,7 @@ class Ref:
       version = ("", version_str)
     if t.TYPE_CHECKING: assert version_str # NOTE: Mypy cannot infer the correct type here. We have handle the cases where version_str is None in L86
     if VersionInfo.from_version_string(version_str) < (0, 2, 12): raise VersionNotSupported(f"Version {version_str} doesn't support OpenLLM base container. Consider using 'nightly' or upgrade 'openllm>=0.2.12'")
-    return _RefTuple((*version, "release" if not _use_base_strategy else "custom"))
+    return _RefTuple((*version, "release" if _use_base_strategy else "custom"))
   @classmethod
   def from_strategy(cls, strategy_or_version: t.Literal["release", "nightly"] | str | None = None) -> Ref:
     if strategy_or_version is None or strategy_or_version == "release":
