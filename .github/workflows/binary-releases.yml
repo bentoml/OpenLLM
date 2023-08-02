@@ -150,7 +150,7 @@ jobs:
 
           if [[ "$version" != "$old_version" ]]; then
             cd dist/app
-            find . -type f -iname "openllm-*" | while read -r file; do
+            find . -type f -iname "openllm-$version*" | while read -r file; do
               binary=$(echo "$file" | sed 's/dev//')
               mv "$file" "$binary"
             done
@@ -162,7 +162,7 @@ jobs:
         run: |-
           mkdir packaging
           cd dist/app
-          find . -type f -iname "openllm-*" | while read -r file; do
+          find . -type f -iname "openllm-${{ env.VERSION }}-*" | while read -r file; do
           if [[ "$file" =~ -pc-windows- ]]; then
             7z a "../../packaging/${file:0:-4}.zip" "$file"
           else
