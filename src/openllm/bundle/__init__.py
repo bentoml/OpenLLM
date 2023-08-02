@@ -22,7 +22,7 @@ import typing as t
 from . import oci as oci
 from ..utils import LazyModule
 
-_import_structure: dict[str, list[str]] = {"_package": ["create_bento", "build_editable", "construct_python_options", "construct_docker_options"], "oci": oci.__all__,}
+_import_structure: dict[str, list[str]] = {"_package": ["create_bento", "build_editable", "construct_python_options", "construct_docker_options"], "oci": oci.__all__}
 
 if t.TYPE_CHECKING:
   from . import _package as _package
@@ -31,6 +31,7 @@ if t.TYPE_CHECKING:
   from ._package import construct_python_options as construct_python_options
   from ._package import create_bento as create_bento
   from .oci import CONTAINER_NAMES as CONTAINER_NAMES
+  from .oci import RefResolver as RefResolver
   from .oci import build_container as build_container
   from .oci import get_base_container_name as get_base_container_name
   from .oci import get_base_container_tag as get_base_container_tag

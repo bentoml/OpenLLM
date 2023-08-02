@@ -25,8 +25,7 @@ import openllm
 from .. import termui
 from ..._prompt import process_prompt
 
-if t.TYPE_CHECKING:
-  from ..entrypoint import LiteralOutput
+LiteralOutput = t.Literal["json", "pretty", "porcelain"]
 
 @click.command("get_prompt", context_settings=termui.CONTEXT_SETTINGS)
 @click.argument("model_name", type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING.keys()]))
