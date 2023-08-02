@@ -239,7 +239,8 @@ convention = "google"
 ignore-overlong-task-comments = true
 [tool.ruff.isort]
 force-single-line = true
-known-first-party = ["openllm", "bentoml", 'transformers']
+known-first-party = ["openllm", "bentoml"]
+known-third-party = ["transformers", "click", "huggingface_hub"]
 lines-after-imports = 1
 no-lines-before = ["future", "standard-library"]
 relative-imports-order = "closest-to-furthest"

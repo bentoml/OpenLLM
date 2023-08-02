@@ -17,12 +17,12 @@ import typing as t
 import bentoml
 import openllm
 from ...utils import generate_labels
+from .configuration_starcoder import FIM_PREFIX, FIM_MIDDLE, FIM_SUFFIX, FIM_PAD, EOD, FIM_INDICATOR
 if t.TYPE_CHECKING:
   import torch, transformers
 else:
   torch, transformers = openllm.utils.LazyLoader("torch", globals(), "torch"), openllm.utils.LazyLoader("transformers", globals(), "transformers")
 logger = logging.getLogger(__name__)
-FIM_PREFIX, FIM_MIDDLE, FIM_SUFFIX, FIM_PAD, EOD, FIM_INDICATOR = "<fim-prefix>", "<fim-middle>", "<fim-suffix>", "<fim-pad>", "<|endoftext|>", "<FILL_HERE>"
 
 class StarCoder(openllm.LLM["transformers.GPTBigCodeForCausalLM", "transformers.GPT2TokenizerFast"]):
   __openllm_internal__ = True

@@ -54,3 +54,4 @@ or provide `--model-id` flag when running ``openllm start starcoder``:
 $ openllm start starcoder --model-id 'bigcode/starcoder'
 """
 DEFAULT_PROMPT_TEMPLATE = """{instruction}"""
+FIM_PREFIX, FIM_MIDDLE, FIM_SUFFIX, FIM_PAD, EOD, FIM_INDICATOR = "<fim-prefix>", "<fim-middle>", "<fim-suffix>", "<fim-pad>", "<|endoftext|>", "<FILL_HERE>"

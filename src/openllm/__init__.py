@@ -1,3 +1,4 @@
+# type: ignore
 # Copyright 2023 BentoML Team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -99,7 +100,9 @@ except MissingDependencyError:
   from .utils import dummy_vllm_objects
   _import_structure["utils.dummy_vllm_objects"] = [name for name in dir(dummy_vllm_objects) if not name.startswith("_")]
 else:
+  _import_structure["models.baichuan"].extend(["VLLMBaichuan"])
   _import_structure["models.llama"].extend(["VLLMLlama"])
+  _import_structure["models.opt"].extend(["VLLMOPT"])
   _import_structure["models.auto"].extend(["AutoVLLM", "MODEL_VLLM_MAPPING"])
 
 try:
@@ -215,8 +218,14 @@ if t.TYPE_CHECKING:
   else:
     from .models.auto import MODEL_VLLM_MAPPING as MODEL_VLLM_MAPPING
     from .models.auto import AutoVLLM as AutoVLLM
+    from .models.baichuan import VLLMBaichuan as VLLMBaichuan
+    from .models.dolly_v2 import VLLMDollyV2 as VLLMDollyV2
+    from .models.gpt_neox import VLLMGPTNeoX as VLLMGPTNeoX
     from .models.llama import VLLMLlama as VLLMLlama
+    from .models.mpt import VLLMMPT as VLLMMPT
     from .models.opt import VLLMOPT as VLLMOPT
+    from .models.stablelm import VLLMStableLM as VLLMStableLM
+    from .models.starcoder import VLLMStarCoder as VLLMStarCoder
   try:
     if not utils.is_flax_available(): raise MissingDependencyError
   except MissingDependencyError:
