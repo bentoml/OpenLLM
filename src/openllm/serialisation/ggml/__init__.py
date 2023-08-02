@@ -25,11 +25,12 @@ from ..exceptions import OpenLLMException
 if t.TYPE_CHECKING:
   import openllm
 
-  from .._llm import M
+  from ..._llm import M
 
 _conversion_strategy = {"pt": "ggml"}
 
 def import_model(llm: openllm.LLM[t.Any, t.Any], *decls: t.Any, trust_remote_code: bool = True, **attrs: t.Any,) -> bentoml.Model:
+  if llm.runtime != "ggml": raise OpenLLMException(f"Model {llm.tag} was saved with runtime {llm.runtime}, not loading with ggml.")
   raise NotImplementedError("Currently work in progress.")
 
 def get(llm: openllm.LLM[t.Any, t.Any], auto_import: bool = False) -> bentoml.Model:
@@ -58,6 +59,7 @@ def load_model(llm: openllm.LLM[M, t.Any], *decls: t.Any, **attrs: t.Any) -> M:
   By default, it will try to find check the model in the local store.
   If model is not found, it will raises a ``bentoml.exceptions.NotFound``.
   """
+  if llm.runtime != "ggml": raise OpenLLMException(f"Model {llm.tag} was saved with runtime {llm.runtime}, not loading with ggml.")
   raise NotImplementedError("Currently work in progress.")
 
 def save_pretrained(llm: openllm.LLM[t.Any, t.Any], save_directory: str, **attrs: t.Any) -> None:
