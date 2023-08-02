@@ -210,18 +210,18 @@ jobs:
           path: archives
       - name: Extract staged binaries
         run: |-
-          mkdir bin
+          mkdir -p bin
           for f in archives/*; do
             7z e "$f" -obin
           done
       # bin/<APP_NAME>-<VERSION>-<TARGET>.exe -> targets/<TARGET>/<APP_NAME>.exe
       - name: Prepare binaries
         run: |-
-          mkdir targets
+          mkdir -p targets
           for f in bin/*; do
-            if [[ "$f" =~ ${{ env.VERSION }}-(.+).exe$ ]]; then
+            if [[ "$f" =~ openllm-${{ env.VERSION }}-(.+).exe$ ]]; then
               target="${BASH_REMATCH[1]}"
-              mkdir "targets/$target"
+              mkdir -p "targets/$target"
               mv "$f" "targets/$target/${{ env.APP_NAME }}.exe"
             fi
           done

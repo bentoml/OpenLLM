@@ -130,9 +130,8 @@ def construct_docker_options(
   env: EnvVarMixin = llm.config["env"]
   env_dict = {
       env.framework: env.framework_value, env.config: f"'{llm.config.model_dump_json().decode()}'", "OPENLLM_MODEL": llm.config["model_name"], "OPENLLM_SERIALIZATION": serialisation_format,
-      "OPENLLM_ADAPTER_MAP": f"'{orjson.dumps(adapter_map).decode()}'", "OPENLLM_FAST": str(True), "BENTOML_DEBUG": str(True), "BENTOML_QUIET": str(False), "BENTOML_CONFIG_OPTIONS": f"'{_bentoml_config_options}'",
-    env.model_id: f"/home/bentoml/bento/models/{llm.tag.path()}",  # This is the default BENTO_PATH var
-  }
+      "OPENLLM_ADAPTER_MAP": f"'{orjson.dumps(adapter_map).decode()}'", "BENTOML_DEBUG": str(True), "BENTOML_QUIET": str(False), "BENTOML_CONFIG_OPTIONS": f"'{_bentoml_config_options}'",
+      "OPENLLM_USE_LOCAL_LATEST": str(True), env.model_id: f"/home/bentoml/bento/models/{llm.tag.path()}"}
   if adapter_map: env_dict["BITSANDBYTES_NOWELCOME"] = os.environ.get("BITSANDBYTES_NOWELCOME", "1")
 
   # We need to handle None separately here, as env from subprocess doesn't accept None value.
