@@ -32,6 +32,42 @@ class VLLMOPT(metaclass=DummyMetaclass):
   def __init__(self, *args: t.Any, **attrs: t.Any):
     require_backends(self, ["vllm"])
 
+class VLLMBaichuan(metaclass=DummyMetaclass):
+  _backends = ["vllm"]
+
+  def __init__(self, *args: t.Any, **attrs: t.Any):
+    require_backends(self, ["vllm"])
+
+class VLLMDollyV2(metaclass=DummyMetaclass):
+  _backends = ["vllm"]
+
+  def __init__(self, *args: t.Any, **attrs: t.Any):
+    require_backends(self, ["vllm"])
+
+class VLLMGPTNeoX(metaclass=DummyMetaclass):
+  _backends = ["vllm"]
+
+  def __init__(self, *args: t.Any, **attrs: t.Any):
+    require_backends(self, ["vllm"])
+
+class VLLMMPT(metaclass=DummyMetaclass):
+  _backends = ["vllm"]
+
+  def __init__(self, *args: t.Any, **attrs: t.Any):
+    require_backends(self, ["vllm"])
+
+class VLLMStableLM(metaclass=DummyMetaclass):
+  _backends = ["vllm"]
+
+  def __init__(self, *args: t.Any, **attrs: t.Any):
+    require_backends(self, ["vllm"])
+
+class VLLMStarCoder(metaclass=DummyMetaclass):
+  _backends = ["vllm"]
+
+  def __init__(self, *args: t.Any, **attrs: t.Any):
+    require_backends(self, ["vllm"])
+
 class AutoVLLM(metaclass=DummyMetaclass):
   _backends = ["vllm"]
 

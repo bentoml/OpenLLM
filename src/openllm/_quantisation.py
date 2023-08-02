@@ -32,9 +32,9 @@ else:
 if t.TYPE_CHECKING:
   import auto_gptq as autogptq
   import torch
+  import transformers
 
   import openllm
-  import transformers
 
   from ._types import DictStrAny
 else:

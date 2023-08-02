@@ -16,7 +16,6 @@
 from __future__ import annotations
 import copy
 import importlib
-import inspect
 import typing as t
 
 import bentoml
@@ -40,11 +39,11 @@ if t.TYPE_CHECKING:
   import auto_gptq as autogptq
   import torch
   import torch.nn
+  import transformers as _transformers
   import vllm
+  from transformers.models.auto.auto_factory import _BaseAutoModelClass
 
   import openllm
-  import transformers as _transformers
-  from transformers.models.auto.auto_factory import _BaseAutoModelClass
 
   from .._llm import M
   from .._llm import T
@@ -139,14 +138,12 @@ def import_model(llm: openllm.LLM[M, T], *decls: t.Any, trust_remote_code: bool,
   # to avoid recursive call when the model is not yet available in local store
   _object_setattr(llm, "__llm_model__", model)
   _object_setattr(llm, "__llm_tokenizer__", _tokenizer)
-  create_kwargs: DictStrAny = dict(
-      module="openllm.serialisation.transformers", api_version="v1", context=generate_context(framework_name="openllm"), labels=generate_labels(llm), metadata=metadata, signatures=signatures if signatures else make_default_signatures(model), options=ModelOptions(), external_modules=[importlib.import_module(model.__module__),
-                                                                                                                                                                                                                                                                                            importlib.import_module(_tokenizer.__module__)] if trust_remote_code else None,
-  )
-  if "use_tempfs" in inspect.signature(bentoml.models.create).parameters: create_kwargs["use_tempfs"] = False
 
   try:
-    with bentoml.models.create(llm.tag, **create_kwargs) as bentomodel:
+    with bentoml.models.create(llm.tag, signatures=signatures if signatures else make_default_signatures(model),
+                              external_modules=[importlib.import_module(model.__module__), importlib.import_module(_tokenizer.__module__)] if trust_remote_code else None,
+                              module="openllm.serialisation.transformers", api_version="v1", context=generate_context(framework_name="openllm"), labels=generate_labels(llm),
+                              metadata=metadata, options=ModelOptions()) as bentomodel:
       save_pretrained(llm, bentomodel.path, safe_serialization=safe_serialisation)
       return bentomodel
   finally:
