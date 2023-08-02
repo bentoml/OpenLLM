@@ -522,8 +522,8 @@ class LLM(LLMInterface[M, T], ReprMixin):
                     will use `config_class` to construct default configuration.
         quantize: The quantization to use for this LLM. Defaults to None. Possible values
                   include int8, int4 and gptq.
-        runtime: Optional runtime to run this LLM. Default to 'transformers'. 'ggml' supports is working in progress.
-        quantization_config: The quantization config (`transformers.BitsAndBytesConfig` | `autogtpq.BaseQuantizeConfig`) to use. Note that this is mutually exclusive with `quantize`
+        runtime: Optional runtime to run this LLM. Default to 'transformers'. If GGML is specified, then we will do model conversion from given implementation to ggml format.
+        quantization_config: The quantization config (`transformers.BitsAndBytesConfig | autogtpq.BaseQuantizeConfig`) to use. Note that this is mutually exclusive with `quantize`
         serialisation: Type of model format to save to local store. If set to 'safetensors', then OpenLLM will save model using safetensors.
                       Default behaviour is similar to ``safe_serialization=False``.
         bettertransformer: Whether to use BetterTransformer with this model. Defaults to False.
