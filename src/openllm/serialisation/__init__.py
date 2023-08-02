@@ -49,8 +49,9 @@ from ..utils import LazyLoader
 from ..utils import LazyModule
 
 if t.TYPE_CHECKING:
-  import bentoml
   import transformers
+
+  import bentoml
 
   from .._llm import M
   from .._llm import T

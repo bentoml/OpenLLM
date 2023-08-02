@@ -84,9 +84,8 @@ if t.TYPE_CHECKING:
   import auto_gptq as autogptq
   import peft
   import torch
-  import vllm
-
   import transformers
+  import vllm
 
   from ._configuration import PeftType
   from ._types import AdaptersMapping

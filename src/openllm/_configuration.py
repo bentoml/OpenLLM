@@ -112,9 +112,8 @@ LiteralRuntime = t.Literal["pt", "tf", "flax", "vllm"]
 if t.TYPE_CHECKING:
   import click
   import peft
-  import vllm
-
   import transformers
+  import vllm
   from transformers.generation.beam_constraints import Constraint
 
   from ._types import AnyCallable

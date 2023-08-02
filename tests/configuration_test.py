@@ -24,12 +24,12 @@ from unittest import mock
 
 import attr
 import pytest
+import transformers
 from hypothesis import assume
 from hypothesis import given
 from hypothesis import strategies as st
 
 import openllm
-import transformers
 from openllm._configuration import GenerationConfig
 from openllm._configuration import ModelSettings
 from openllm._configuration import field_env_key
