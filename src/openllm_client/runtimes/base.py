@@ -24,6 +24,7 @@ import httpx
 
 import bentoml
 import openllm
+from bentoml._internal.client import Client
 
 # NOTE: We need to do this so that overload can register
 # correct overloads to typing registry
@@ -40,7 +41,7 @@ if t.TYPE_CHECKING:
   from openllm._types import DictStrAny
   from openllm._types import LiteralRuntime
 
-  class AnnotatedClient(bentoml.client.Client, t.Generic[T]):
+  class AnnotatedClient(Client, t.Generic[T]):
     def health(self, *args: t.Any, **attrs: t.Any) -> t.Any:
       ...
 
@@ -56,8 +57,9 @@ if t.TYPE_CHECKING:
     def embeddings_v1(self) -> t.Sequence[float]:
       ...
 else:
-  AnnotatedClient = bentoml.client.CLient
-  transformers, DictStrAny = openllm.utils.LazyLoader("transformers", globals(), "transformers"), dict
+  AnnotatedClient = Client
+  transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
+  DictStrAny = dict
 
 logger = logging.getLogger(__name__)
 
