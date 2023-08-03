@@ -38,11 +38,13 @@ from ...utils.codegen import make_attr_tuple_class
 
 if t.TYPE_CHECKING:
   import git.cmd
+  from git.repo.base import Repo
 
   from ..._types import RefTuple
 else:
   git = LazyLoader("git", globals(), "git")
   git.cmd = LazyLoader("git.cmd", globals(), "git.cmd")
+  Repo = LazyLoader("Repo", globals(), "git.repo.base.Repo")
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +97,7 @@ class RefResolver:
     # NOTE: this is a bit expensive, but it is ok since we only run this during build
     with tempfile.TemporaryDirectory(prefix="openllm-bare-") as tempdir:
       cls._git.clone(_URI, tempdir, bare=True)
-      return next(it.hexsha for it in git.Repo(tempdir).iter_commits("main", max_count=20) if "[skip ci]" not in str(it.summary))
+      return next(it.hexsha for it in Repo(tempdir).iter_commits("main", max_count=20) if "[skip ci]" not in str(it.summary))
 
   @classmethod
   def _nightly_ref(cls) -> RefTuple:

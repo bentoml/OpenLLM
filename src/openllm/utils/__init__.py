@@ -74,6 +74,8 @@ if t.TYPE_CHECKING:
   from .._types import AnyCallable
   from .._types import DictStrAny
   from .._types import LiteralRuntime
+else:
+  DictStrAny = dict
 
 DEV_DEBUG_VAR = "OPENLLMDEVDEBUG"
 
@@ -127,7 +129,7 @@ def field_env_key(model_name: str, key: str, suffix: str | t.Literal[""] | None 
 DEBUG: bool = sys.flags.dev_mode or (not sys.flags.ignore_environment and bool(os.environ.get(DEV_DEBUG_VAR)))
 # MYPY is like t.TYPE_CHECKING, but reserved for Mypy plugins
 MYPY = False
-SHOW_CODEGEN = DEBUG and int(os.environ.get("OPENLLMDEVDEBUG", str(0))) > 3
+SHOW_CODEGEN: bool = DEBUG and int(os.environ.get("OPENLLMDEVDEBUG", str(0))) > 3
 
 def get_debug_mode() -> bool:
   return DEBUG or _get_debug_mode()
@@ -185,12 +187,13 @@ def configure_logging() -> None:
 def in_notebook() -> bool:
   try:
     from IPython.core.getipython import get_ipython
-    if "IPKernelApp" not in get_ipython().config: return False
+    if t.TYPE_CHECKING:
+      from IPython.core.interactiveshell import InteractiveShell
+    return "IPKernelApp" in t.cast(DictStrAny, t.cast(t.Callable[[], "InteractiveShell"], get_ipython)().config)
   except ImportError:
     return False
   except AttributeError:
     return False
-  return True
 
 _dockerenv, _cgroup = Path("/.dockerenv"), Path("/proc/self/cgroup")
 

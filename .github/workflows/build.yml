@@ -66,6 +66,7 @@ jobs:
           subnet-id: ${{ env.EC2_SUBNET_ID }}
           security-group-id: ${{ env.EC2_SECURITY_GROUP }}
   build-and-push-image:
+    name: Build and push OpenLLM base image
     concurrency:
       group: ${{ github.workflow }}-${{ github.job }}-${{ github.head_ref || github.run_id }}
       cancel-in-progress: true

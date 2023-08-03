@@ -22,13 +22,15 @@ import inflection
 from ..utils import get_debug_mode
 from ..utils import get_quiet_mode
 
+if t.TYPE_CHECKING:
+  from .._types import DictStrAny
+
 def echo(text: t.Any, fg: str = "green", _with_style: bool = True, **attrs: t.Any) -> None:
   attrs["fg"] = fg if not get_debug_mode() else None
-  call = t.cast(t.Callable[..., None], click.echo if not _with_style else click.secho)
-  if not get_quiet_mode(): call(text, **attrs)
+  if not get_quiet_mode(): t.cast(t.Callable[..., None], click.echo if not _with_style else click.secho)(text, **attrs)
 
 COLUMNS: int = int(os.environ.get("COLUMNS", str(120)))
 
-CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"], "max_content_width": COLUMNS, "token_normalize_func": inflection.underscore}
+CONTEXT_SETTINGS: DictStrAny = {"help_option_names": ["-h", "--help"], "max_content_width": COLUMNS, "token_normalize_func": inflection.underscore}
 
 __all__ = ["echo", "COLUMNS", "CONTEXT_SETTINGS"]

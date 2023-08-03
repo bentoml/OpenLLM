@@ -135,7 +135,7 @@ combine = "coverage combine {args}"
 generate-summary = "python tools/generate-coverage.py"
 report-uncovered-html = "coverage html --skip-covered --skip-empty"
 report-xml = "coverage xml"
-write-summary-report = "python tools/write-coverage-report.py"
+write-summary-report = "hython tools/write-coverage-report.py"
 [build.targets.wheel.hooks.mypyc]
 dependencies = [
     "hatch-mypyc>=0.14.1",
@@ -144,12 +144,6 @@ dependencies = [
     "click==8.1.3",
     "peft",
     "bentoml==1.1.1",
-    "ray",
-    "jaxlib",
-    "flax",
-    "jax",
-    "pydantic",
-    "fastapi",
     "transformers>=4.31.0",
     "pandas-stubs",
     "types-psutil",
@@ -160,19 +154,30 @@ dependencies = [
 enable-by-default = false
 exclude = [
     # models does not need to compile, as it relies on the framework implementation
-    "/src/openllm/models/**",
+    "src/openllm/models/**",
+    "src/openllm/utils/dummy_*.py",
     # playground is not considered as part of the library
-    "/src/openllm/playground/**",
+    "src/openllm/playground/**",
     # Only used during type runtime, no need to compile
-    "/src/openllm/_types.py",
+    "src/openllm/_types.py",
     # Compiled module cannot be run directly
-    "/src/openllm/__main__.py",
+    "src/openllm/__main__.py",
+    "src/openllm/cli/entrypoint.py",
+    "src/openllm/cli/ext/**",
 ]
+# NOTE: This is consistent with pyproject.toml
 mypy-args = [
+    "--pretty",
+    "--strict",
+    "--python-version=3.11",
+    "--ignore-missing-imports",
+    "--no-warn-return-any",
+    "--warn-unreachable",
+    "--no-warn-no-return",
     "--no-warn-unused-ignores",
     "--enable-incomplete-feature=Unpack",
     "--enable-incomplete-feature=TypeVarTuple",
 ]
-options = { debug_level = "0", strip_asserts = true }
+options = { verbose = true, strip_asserts = true, debug_level = "2" }
 require-runtime-dependencies = true
 require-runtime-features = ["agents", "chatglm", "opt", "fine-tune"]

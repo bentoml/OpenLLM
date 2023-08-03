@@ -107,7 +107,7 @@ class HTTPClient(HTTPClientMixin, BaseClient[DictStrAny]):
     if not self.supports_embeddings:
       raise ValueError("This model does not support embeddings.")
     if isinstance(prompt, str): prompt = [prompt]
-    if in_async_context(): result = httpx.post(urljoin(self._address, f"/{self._api_version}/embeddings"), json=list(prompt), timeout=self.timeout)
+    if in_async_context(): result = httpx.post(urljoin(self._address, f"/{self._api_version}/embeddings"), json=list(prompt), timeout=self.timeout).json()
     else: result = self.call("embeddings", list(prompt))
     return openllm.EmbeddingsOutput(**result)
 

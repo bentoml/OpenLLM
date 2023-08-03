@@ -311,6 +311,7 @@ class CascadingResourceStrategy(bentoml.Strategy, ReprMixin):
 
     def _get_gpu_count(typ: list[str] | None, kind: str) -> int | None:
       if typ is not None and len(typ) > 0 and kind in runnable_class.SUPPORTED_RESOURCES: return math.ceil(len(typ) * workers_per_resource)
+      return None
 
     # use NVIDIA
     kind = "nvidia.com/gpu"

@@ -532,7 +532,7 @@ client.embed("I like to eat apples")
 ```
 
 > [!NOTE]
-> Currently, the following model framily supports embeddings: Llama, T5 (Flan-T5, FastChat, etc.), ChatGLM
+> Currently, the following model family supports embeddings: Llama, T5 (Flan-T5, FastChat, etc.), ChatGLM
 
 ## ⚙️ Integrations
 

@@ -175,10 +175,7 @@ class PeftType(str, enum.Enum, metaclass=_PeftEnumMeta):
 
 _PEFT_TASK_TYPE_TARGET_MAPPING = {"causal_lm": "CAUSAL_LM", "seq2seq_lm": "SEQ_2_SEQ_LM"}
 
-if t.TYPE_CHECKING:
-  AdapterType = t.Literal["lora", "adalora", "adaption_prompt", "prefix_tuning", "p_tuning", "prompt_tuning"]
-else:
-  AdapterType = str
+AdapterType = t.Literal["lora", "adalora", "adaption_prompt", "prefix_tuning", "p_tuning", "prompt_tuning", "ia3"]
 
 _object_setattr = object.__setattr__
 
@@ -1329,12 +1326,11 @@ class LLMConfig(_ConfigAttr):
     item = inflection.underscore(item)
     if item in _reserved_namespace: raise ForbiddenAttributeError(f"'{item}' is a reserved namespace for {self.__class__} and should not be access nor modified.")
     internal_attributes = f"__openllm_{item}__"
-
     if hasattr(self, internal_attributes): return getattr(self, internal_attributes)
     elif hasattr(self, item): return getattr(self, item)
     elif hasattr(self.__openllm_generation_class__, item): return getattr(self.generation_config, item)
     elif hasattr(self.__openllm_sampling_class__, item): return getattr(self.sampling_config, item)
-    elif item in self.__class__.__openllm_fine_tune_strategies__: return self.__class__.__openllm_fine_tune_strategies__[item]
+    elif item in self.__class__.__openllm_fine_tune_strategies__: return self.__class__.__openllm_fine_tune_strategies__[t.cast(AdapterType, item)]
     elif item in self.__openllm_extras__: return self.__openllm_extras__[item]
     else: raise KeyError(item)
 

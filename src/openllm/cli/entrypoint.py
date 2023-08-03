@@ -42,6 +42,7 @@ import itertools
 import logging
 import os
 import pkgutil
+import platform
 import re
 import subprocess
 import sys
@@ -49,6 +50,7 @@ import tempfile
 import time
 import traceback
 import typing as t
+from pathlib import Path
 
 import attr
 import click
@@ -143,13 +145,6 @@ if t.TYPE_CHECKING:
 else:
   torch, jupytext, nbformat = LazyLoader("torch", globals(), "torch"), LazyLoader("jupytext", globals(), "jupytext"), LazyLoader("nbformat", globals(), "nbformat")
 
-# NOTE: We need to do this so that overload can register
-# correct overloads to typing registry
-if sys.version_info[:2] >= (3, 11):
-  from typing import overload
-else:
-  from typing_extensions import overload
-
 logger = logging.getLogger(__name__)
 
 OPENLLM_FIGLET = """\
@@ -174,13 +169,15 @@ GrpType = t.TypeVar("GrpType", bound=click.Group)
 
 _object_setattr = object.__setattr__
 
+COMPILED = Path(__file__).parent.parent.joinpath("__init__.py").suffix in (".pyd", ".so")
+
 class OpenLLMCommandGroup(BentoMLCommandGroup):
   NUMBER_OF_COMMON_PARAMS = 5  # parameters in common_params + 1 faked group option header
 
   @staticmethod
   def common_params(f: t.Callable[P, t.Any]) -> t.Callable[[FC], FC]:
     # The following logics is similar to one of BentoMLCommandGroup
-    @cog.optgroup.group("Global options")
+    @cog.optgroup.group(name="Global options", help="Shared globals options for all OpenLLM CLI.")
     @cog.optgroup.option("-q", "--quiet", envvar=QUIET_ENV_VAR, is_flag=True, default=False, help="Suppress all output.", show_envvar=True)
     @cog.optgroup.option("--debug", "--verbose", "debug", envvar=DEBUG_ENV_VAR, is_flag=True, default=False, help="Print out debug logs.", show_envvar=True)
     @cog.optgroup.option("--do-not-track", is_flag=True, default=False, envvar=analytics.OPENLLM_DO_NOT_TRACK, help="Do not send usage info", show_envvar=True)
@@ -296,33 +293,8 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
 
     return decorator
 
-  if t.TYPE_CHECKING:
-    # variant: no call, directly as decorator for a function.
-    @overload
-    def group(self, name: _AnyCallable) -> click.Group:
-      ...
-
-    # variant: name omitted, cls _must_ be a keyword argument, @group(cmd=GroupCls, ...)
-    @overload
-    def group(self, name: None = None, *, cls: t.Type[GrpType], **attrs: t.Any) -> t.Callable[[_AnyCallable], GrpType]:
-      ...
-
-    # variant: with positional name and with positional or keyword cls argument:
-    # @group(namearg, GroupCls, ...) or @group(namearg, cls=GroupCls, ...)
-    @overload
-    def group(self, name: str | None, cls: type[GrpType], **attrs: t.Any) -> t.Callable[[_AnyCallable], GrpType]:
-      ...
-
-    # variant: with optional string name, no cls argument provided.
-    @overload
-    def group(self, name: str | None = ..., cls: None = None, **attrs: t.Any) -> t.Callable[[_AnyCallable], click.Group]:
-      ...
-
-    def group(self, *args: t.Any, **kwargs: t.Any) -> t.Callable[[_AnyCallable], click.Group]:
-      ...
-
 @click.group(cls=OpenLLMCommandGroup, context_settings=termui.CONTEXT_SETTINGS, name="openllm")
-@click.version_option(None, "--version", "-v")
+@click.version_option(None, "--version", "-v", message=f"%(prog)s, %(version)s (compiled: {'yes' if COMPILED else 'no'})\nPython ({platform.python_implementation()}) {platform.python_version()}")
 def cli() -> None:
   """\b
    ██████╗ ██████╗ ███████╗███╗   ██╗██╗     ██╗     ███╗   ███╗

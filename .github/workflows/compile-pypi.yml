@@ -1,0 +1,103 @@
+# Copyright 2023 BentoML Team. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Compile PyPI package
+on:
+  workflow_dispatch:
+    inputs:
+      tags:
+        description: 'Tag for releases'
+        required: true
+        type: string
+  workflow_call:
+    inputs:
+      tags:
+        required: true
+        type: string
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+env:
+  LINES: 120
+  COLUMNS: 120
+  HATCH_VERBOSE: 2
+jobs:
+  pure-wheels-sdist:
+    name: Building pure wheels and sdist
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: '${{ inputs.tags }}'
+          token: ${{ secrets.OPENLLM_PAT }}
+      - name: Setup CI
+        uses: ./.github/actions/setup-repo
+      - name: Build
+        run: hatch build
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: python-artefacts
+          path: dist/*
+          if-no-files-found: error
+  mypyc:
+    name: Building compiled mypyc wheels (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            name: linux-x86_64
+          - os: windows-latest
+            name: windows-amd64
+          - os: macos-latest
+            name: macos-x86_64
+            macos-arch: "x86_64"
+          - os: macos-latest
+            name: macos-arm64
+            macos-arch: "arm64"
+          - os: macos-latest
+            name: macos-universal2
+            macos-arch: "universal2"
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: '${{ inputs.tags }}'
+          token: ${{ secrets.OPENLLM_PAT }}
+      - name: Setup CI
+        uses: ./.github/actions/setup-repo
+      - name: Build wheels via cibuildwheel
+        uses: pypa/cibuildwheel@v2.14.1
+        env:
+          CIBW_ARCHS_MACOS: "${{ matrix.macos-arch }}"
+      - name: Upload wheels as workflow artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.name }}-mypyc-wheels
+          path: ./wheelhouse/*.whl
+  sucess-build: # https://github.com/marketplace/actions/alls-green#why
+    if: always()
+    needs:
+      - pure-wheels-sdist
+      - mypyc
+    runs-on: ubuntu-latest
+    steps:
+      - name: Decide whether the needed jobs succeeded or failed
+        uses: re-actors/alls-green@release/v1
+        with:
+          jobs: ${{ toJSON(needs) }}

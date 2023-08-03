@@ -47,6 +47,7 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
+          token: ${{ secrets.OPENLLM_PAT }}
       - name: Setup CI
         uses: ./.github/actions/setup-repo
         with:
@@ -76,9 +77,17 @@ jobs:
           version="$(git describe --tags "$(git rev-list --tags --max-count=1)")"
           echo "Release version: $version"
           echo "version=$version" >> $GITHUB_OUTPUT
-  publish-python:
+  compile-pypi:
+    if: github.repository_owner == 'bentoml'
     needs:
       - release
+    name: Compile PyPI distribution for OpenLLM
+    uses: bentoml/OpenLLM/.github/workflows/compile-pypi.yml@main
+    with:
+      tags: ${{ needs.release.outputs.version }}
+  publish-python:
+    needs:
+      - compile-pypi
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -86,6 +95,7 @@ jobs:
       - uses: actions/checkout@v3
         with:
           ref: '${{ needs.release.outputs.version }}'
+          token: ${{ secrets.OPENLLM_PAT }}
       - name: Setup CI
         uses: ./.github/actions/setup-repo
       - name: Install build frontend

@@ -32,29 +32,31 @@ if sys.version_info[:2] >= (3, 11):
 else:
   from typing_extensions import overload
 
+T = t.TypeVar("T")
+
 if t.TYPE_CHECKING:
   import transformers
 
   from openllm._types import DictStrAny
   from openllm._types import LiteralRuntime
 
-  class AnnotatedClient(bentoml.client.Client):
+  class AnnotatedClient(bentoml.client.Client, t.Generic[T]):
     def health(self, *args: t.Any, **attrs: t.Any) -> t.Any:
       ...
 
     async def async_health(self) -> t.Any:
       ...
 
-    def generate_v1(self, qa: openllm.GenerationInput) -> dict[str, t.Any]:
+    def generate_v1(self, qa: openllm.GenerationInput) -> T:
       ...
 
-    def metadata_v1(self) -> dict[str, t.Any]:
+    def metadata_v1(self) -> T:
       ...
 
     def embeddings_v1(self) -> t.Sequence[float]:
       ...
 else:
-
+  AnnotatedClient = bentoml.client.CLient
   transformers, DictStrAny = openllm.utils.LazyLoader("transformers", globals(), "transformers"), dict
 
 logger = logging.getLogger(__name__)
@@ -66,15 +68,13 @@ def in_async_context() -> bool:
   except RuntimeError:
     return False
 
-T = t.TypeVar("T")
-
 class ClientMeta(t.Generic[T]):
   _api_version: str
   _client_class: type[bentoml.client.Client]
   _host: str
   _port: str
 
-  __client__: AnnotatedClient | None = None
+  __client__: AnnotatedClient[T] | None = None
   __agent__: transformers.HfAgent | None = None
   __llm__: openllm.LLM[t.Any, t.Any] | None = None
 
@@ -144,17 +144,17 @@ class ClientMeta(t.Generic[T]):
   def config(self) -> openllm.LLMConfig:
     return self.llm.config
 
-  def call(self, name: str, *args: t.Any, **attrs: t.Any) -> t.Any:
+  def call(self, name: str, *args: t.Any, **attrs: t.Any) -> T:
     return self._cached.call(f"{name}_{self._api_version}", *args, **attrs)
 
-  async def acall(self, name: str, *args: t.Any, **attrs: t.Any) -> t.Any:
+  async def acall(self, name: str, *args: t.Any, **attrs: t.Any) -> T:
     return await self._cached.async_call(f"{name}_{self._api_version}", *args, **attrs)
 
   @property
-  def _cached(self) -> AnnotatedClient:
+  def _cached(self) -> AnnotatedClient[T]:
     if self.__client__ is None:
       self._client_class.wait_until_server_ready(self._host, int(self._port), timeout=self._timeout)
-      self.__client__ = t.cast("AnnotatedClient", self._client_class.from_url(self._address))
+      self.__client__ = t.cast("AnnotatedClient[T]", self._client_class.from_url(self._address))
     return self.__client__
 
   @abstractmethod
