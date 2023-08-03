@@ -109,7 +109,7 @@ jobs:
         env:
           CIBW_BUILD: cp${{ matrix.python }}-*
           CIBW_ARCHS_MACOS: "${{ matrix.macos_arch }}"
-          MYPYPATH: ${{ github.workspace }}/typings
+          MYPYPATH: /project/typings
       - name: Upload wheels as workflow artifacts
         uses: actions/upload-artifact@v3
         with:
