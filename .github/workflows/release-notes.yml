@@ -61,7 +61,7 @@ jobs:
       - name: Download standalone MacOS
         uses: actions/download-artifact@v3
         with:
-          name: staged-MacOS
+          name: staged-macOS
           path: archives
       - name: Download installers
         uses: actions/download-artifact@v3
