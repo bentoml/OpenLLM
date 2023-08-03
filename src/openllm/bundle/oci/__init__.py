@@ -25,26 +25,17 @@ import typing as t
 import attr
 
 import bentoml
-
-from ...exceptions import Error
-from ...exceptions import OpenLLMException
-from ...utils import LazyLoader
-from ...utils import VersionInfo
-from ...utils import apply
-from ...utils import device_count
-from ...utils import get_debug_mode
-from ...utils import pkg
-from ...utils.codegen import make_attr_tuple_class
+import openllm
 
 if t.TYPE_CHECKING:
   import git.cmd
   from git.repo.base import Repo
 
-  from ..._types import RefTuple
+  from openllm._types import RefTuple
 else:
-  git = LazyLoader("git", globals(), "git")
-  git.cmd = LazyLoader("git.cmd", globals(), "git.cmd")
-  Repo = LazyLoader("Repo", globals(), "git.repo.base.Repo")
+  git = openllm.utils.LazyLoader("git", globals(), "git")
+  git.cmd = openllm.utils.LazyLoader("git.cmd", globals(), "git.cmd")
+  Repo = openllm.utils.LazyLoader("Repo", globals(), "git.repo.base.Repo")
 
 logger = logging.getLogger(__name__)
 
@@ -64,20 +55,20 @@ _CONTAINER_REGISTRY: dict[LiteralContainerRegistry, str] = {"docker": "docker.io
 # TODO: support custom fork. Currently it only support openllm main.
 _URI = "https://github.com/bentoml/openllm.git"
 
-_module_location = pkg.source_locations("openllm")
+_module_location = openllm.utils.pkg.source_locations("openllm")
 
 @functools.lru_cache
-@apply(str.lower)
+@openllm.utils.apply(str.lower)
 def get_base_container_name(reg: LiteralContainerRegistry) -> str:
   return _CONTAINER_REGISTRY[reg]
 
-def _convert_version_from_string(s: str) -> VersionInfo:
-  return VersionInfo.from_version_string(s)
+def _convert_version_from_string(s: str) -> openllm.utils.VersionInfo:
+  return openllm.utils.VersionInfo.from_version_string(s)
 
-class VersionNotSupported(OpenLLMException):
+class VersionNotSupported(openllm.exceptions.OpenLLMException):
   """Raised when the stable release is too low that it doesn't include OpenLLM base container."""
 
-_RefTuple: type[RefTuple] = make_attr_tuple_class("_RefTuple", ["git_hash", "version", "strategy"])
+_RefTuple: type[RefTuple] = openllm.utils.codegen.make_attr_tuple_class("_RefTuple", ["git_hash", "version", "strategy"])
 
 @attr.attrs(eq=False, order=False, slots=True, frozen=True)
 class RefResolver:
@@ -86,7 +77,7 @@ class RefResolver:
   Maybe we need to save git hash when building the Bento.
   """
   git_hash: str = attr.field()
-  version: VersionInfo = attr.field(converter=_convert_version_from_string)
+  version: openllm.utils.VersionInfo = attr.field(converter=_convert_version_from_string)
   strategy: LiteralContainerVersionStrategy = attr.field()
   _git: git.cmd.Git = git.cmd.Git(_URI)  # TODO: support offline mode
 
@@ -114,7 +105,7 @@ class RefResolver:
     else:
       version = ("", version_str)
     if t.TYPE_CHECKING: assert version_str  # NOTE: Mypy cannot infer the correct type here. We have handle the cases where version_str is None in L86
-    if VersionInfo.from_version_string(version_str) < (0, 2, 12): raise VersionNotSupported(f"Version {version_str} doesn't support OpenLLM base container. Consider using 'nightly' or upgrade 'openllm>=0.2.12'")
+    if openllm.utils.VersionInfo.from_version_string(version_str) < (0, 2, 12): raise VersionNotSupported(f"Version {version_str} doesn't support OpenLLM base container. Consider using 'nightly' or upgrade 'openllm>=0.2.12'")
     return _RefTuple((*version, "release" if _use_base_strategy else "custom"))
 
   @classmethod
@@ -148,10 +139,10 @@ def build_container(registries: LiteralContainerRegistry | t.Sequence[LiteralCon
   Note that this is useful for debugging or for any users who wish to integrate vertically with OpenLLM. For most users, you should be able to get the image either from GitHub Container Registry or our public ECR registry.
   """
   try:
-    if not _BUILDER.health(): raise Error
-  except (Error, subprocess.CalledProcessError):
+    if not _BUILDER.health(): raise openllm.exceptions.Error
+  except (openllm.exceptions.Error, subprocess.CalledProcessError):
     raise RuntimeError("Building base container requires BuildKit (via Buildx) to be installed. See https://docs.docker.com/build/buildx/install/ for instalation instruction.") from None
-  if device_count() == 0: raise RuntimeError("Building base container requires GPUs (None available)")
+  if openllm.utils.device_count() == 0: raise RuntimeError("Building base container requires GPUs (None available)")
   if not shutil.which("nvidia-container-runtime"): raise RuntimeError("NVIDIA Container Toolkit is required to compile CUDA kernel in container.")
   if not _module_location: raise RuntimeError("Failed to determine source location of 'openllm'. (Possible broken installation)")
   pyproject_path = pathlib.Path(_module_location).parent.parent / "pyproject.toml"
@@ -162,10 +153,10 @@ def build_container(registries: LiteralContainerRegistry | t.Sequence[LiteralCon
     registries = [registries] if isinstance(registries, str) else list(registries)
     tags = {name: f"{_CONTAINER_REGISTRY[name]}:{get_base_container_tag(version_strategy)}" for name in registries}
   try:
-    outputs = _BUILDER.build(file=pathlib.Path(__file__).parent.joinpath("Dockerfile").resolve().__fspath__(), context_path=pyproject_path.parent.__fspath__(), tag=tuple(tags.values()), push=push, progress="plain" if get_debug_mode() else "auto", quiet=machine)
+    outputs = _BUILDER.build(file=pathlib.Path(__file__).parent.joinpath("Dockerfile").resolve().__fspath__(), context_path=pyproject_path.parent.__fspath__(), tag=tuple(tags.values()), push=push, progress="plain" if openllm.utils.get_debug_mode() else "auto", quiet=machine)
     if machine and outputs is not None: tags["image_sha"] = outputs.decode("utf-8").strip()
   except Exception as err:
-    raise OpenLLMException(f"Failed to containerize base container images (Scroll up to see error above, or set OPENLLMDEVDEBUG=True for more traceback):\n{err}") from err
+    raise openllm.exceptions.OpenLLMException(f"Failed to containerize base container images (Scroll up to see error above, or set OPENLLMDEVDEBUG=True for more traceback):\n{err}") from err
   return tags
 
 if t.TYPE_CHECKING:

@@ -19,15 +19,14 @@ import typing as t
 import click
 import inflection
 
-from ..utils import get_debug_mode
-from ..utils import get_quiet_mode
+import openllm
 
 if t.TYPE_CHECKING:
   from .._types import DictStrAny
 
 def echo(text: t.Any, fg: str = "green", _with_style: bool = True, **attrs: t.Any) -> None:
-  attrs["fg"] = fg if not get_debug_mode() else None
-  if not get_quiet_mode(): t.cast(t.Callable[..., None], click.echo if not _with_style else click.secho)(text, **attrs)
+  attrs["fg"] = fg if not openllm.utils.get_debug_mode() else None
+  if not openllm.utils.get_quiet_mode(): t.cast(t.Callable[..., None], click.echo if not _with_style else click.secho)(text, **attrs)
 
 COLUMNS: int = int(os.environ.get("COLUMNS", str(120)))
 
