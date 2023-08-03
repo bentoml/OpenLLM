@@ -15,10 +15,11 @@
 name: Build and push OpenLLM base container
 on:
   workflow_dispatch:
-  workflow_call:
   push:
     branches:
       - "main"
+    tags:
+      - "*"
   pull_request:
     branches:
       - "main"

@@ -96,16 +96,10 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           print-hash: true
-  build-release-images:
-    if: github.repository_owner == 'bentoml'
-    needs: release
-    name: Build release container images for OpenLLM
-    uses: bentoml/OpenLLM/.github/workflows/build.yml@main
   prepare-next-dev-cycle:
     needs:
       - release
       - publish-python
-      - build-release-images
       - binary-distribution
     runs-on: ubuntu-latest
     permissions:
@@ -164,7 +158,6 @@ jobs:
     needs:
       - release
       - publish-python
-      - build-release-images
       - binary-distribution
     name: Create release notes and setup for next cycle
     uses: bentoml/OpenLLM/.github/workflows/release-notes.yml@main
