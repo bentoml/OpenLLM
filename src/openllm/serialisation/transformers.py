@@ -140,10 +140,10 @@ def import_model(llm: openllm.LLM[M, T], *decls: t.Any, trust_remote_code: bool,
   _object_setattr(llm, "__llm_tokenizer__", _tokenizer)
 
   try:
-    with bentoml.models.create(llm.tag, signatures=signatures if signatures else make_default_signatures(model),
-                              external_modules=[importlib.import_module(model.__module__), importlib.import_module(_tokenizer.__module__)] if trust_remote_code else None,
-                              module="openllm.serialisation.transformers", api_version="v1", context=generate_context(framework_name="openllm"), labels=generate_labels(llm),
-                              metadata=metadata, options=ModelOptions()) as bentomodel:
+    with bentoml.models.create(
+        llm.tag, signatures=signatures if signatures else make_default_signatures(model), external_modules=[importlib.import_module(model.__module__), importlib.import_module(_tokenizer.__module__)]
+        if trust_remote_code else None, module="openllm.serialisation.transformers", api_version="v1", context=generate_context(framework_name="openllm"), labels=generate_labels(llm), metadata=metadata, options=ModelOptions()
+    ) as bentomodel:
       save_pretrained(llm, bentomodel.path, safe_serialization=safe_serialisation)
       return bentomodel
   finally:
@@ -191,8 +191,8 @@ def load_model(llm: openllm.LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M:
   if llm.bettertransformer and isinstance(model, _transformers.PreTrainedModel): model = model.to_bettertransformer()
   return t.cast("M", model)
 
-def save_pretrained(llm: openllm.LLM[M, T], save_directory: str, is_main_process: bool = True, state_dict: DictStrAny | None = None, save_function: t.Callable[..., None] | None = None, push_to_hub: bool = False, max_shard_size: int | str = "10GB", safe_serialization: bool = False, variant: str | None = None, **attrs: t.Any,) -> None:
-  save_function = first_not_none(save_function, default=torch.save)
+def save_pretrained(llm: openllm.LLM[M, T], save_directory: str, is_main_process: bool = True, state_dict: DictStrAny | None = None, save_function: t.Any | None = None, push_to_hub: bool = False, max_shard_size: int | str = "10GB", safe_serialization: bool = False, variant: str | None = None, **attrs: t.Any,) -> None:
+  save_function = t.cast(t.Callable[..., None], first_not_none(save_function, default=torch.save))
   model_save_attrs, tokenizer_save_attrs = normalize_attrs_to_model_tokenizer_pair(**attrs)
   safe_serialization = safe_serialization or llm._serialisation_format == "safetensors"
   # NOTE: disable safetensors for vllm

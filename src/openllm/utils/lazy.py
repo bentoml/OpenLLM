@@ -35,6 +35,8 @@ class UsageNotAllowedError(OpenLLMException):
 class MissingAttributesError(OpenLLMException):
   """Raised when given keys is not available in LazyModule special mapping."""
 
+__all__ = ["VersionInfo", "LazyModule"]
+
 @functools.total_ordering
 @attr.attrs(eq=False, order=False, slots=True, frozen=True, repr=False)
 class VersionInfo:
@@ -96,7 +98,8 @@ class VersionInfo:
     # have to do anything special with releaselevel for now.
     return us < them
 
-  def __repr__(self) -> str: return "{0}.{1}.{2}".format(*attr.astuple(self)[:3])
+  def __repr__(self) -> str:
+    return "{0}.{1}.{2}".format(*attr.astuple(self)[:3])
 
 _sentinel, _reserved_namespace = object(), {"__openllm_special__", "__openllm_migration__"}
 

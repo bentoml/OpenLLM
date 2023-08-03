@@ -33,13 +33,16 @@ from click import types as click_types
 if t.TYPE_CHECKING:
   from attr import _ValidatorType
 
+  from .._types import DictStrAny
   from .._types import ListAny
+else:
+  DictStrAny = dict
 
 _T = t.TypeVar("_T")
 AnyCallable = t.Callable[..., t.Any]
 FC = t.TypeVar("FC", bound=t.Union[AnyCallable, click.Command])
 
-def attrs_to_options(name: str, field: attr.Attribute[t.Any], model_name: str, typ: type[t.Any] | None = None, suffix_generation: bool = False, suffix_sampling: bool = False,) -> t.Callable[[FC], FC]:
+def attrs_to_options(name: str, field: attr.Attribute[t.Any], model_name: str, typ: t.Any | None = None, suffix_generation: bool = False, suffix_sampling: bool = False,) -> t.Callable[[FC], FC]:
   # TODO: support parsing nested attrs class and Union
   envvar = field.metadata["env"]
   dasherized = inflection.dasherize(name)
@@ -131,7 +134,7 @@ def Field(default: t.Any = None, *, ge: int | float | None = None, le: int | flo
 
   return attr.field(metadata=metadata, validator=_validator, converter=converter, **attrs)
 
-def parse_type(field_type: t.Any) -> ParamType | tuple[ParamType]:
+def parse_type(field_type: t.Any) -> ParamType | tuple[ParamType, ...]:
   """Transforms the pydantic field's type into a click-compatible type.
 
   Args:
@@ -319,7 +322,7 @@ def is_container(field_type: type) -> bool:
   if origin is None: return False
   return lenient_issubclass(origin, t.Container)
 
-def parse_container_args(field_type: type[t.Any]) -> ParamType | tuple[ParamType]:
+def parse_container_args(field_type: type[t.Any]) -> ParamType | tuple[ParamType, ...]:
   """Parses the arguments inside a container type (lists, tuples and so on).
 
   Args:
@@ -336,10 +339,8 @@ def parse_container_args(field_type: type[t.Any]) -> ParamType | tuple[ParamType
   if len(args) == 0:
     return click_types.convert_type(str)
   # Early out for homogenous containers: Tuple[int], List[str]
-  if len(args) == 1:
-    return parse_single_arg(args[0])
-  # Early out for homogenous tuples of indefinite length: Tuple[int, ...]
-  if len(args) == 2 and args[1] is Ellipsis:
+  # or homogenous tuples of indefinite length: Tuple[int, ...]
+  if len(args) == 1 or (len(args) == 2 and args[1] is Ellipsis):
     return parse_single_arg(args[0])
   # Then deal with fixed-length containers: Tuple[str, int, int]
   return tuple(parse_single_arg(arg) for arg in args)
@@ -455,7 +456,7 @@ class JsonType(ParamType):
 
   def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> t.Any:
     from . import LazyType
-    if LazyType[t.Mapping[str, str]](t.Mapping[str, str]).isinstance(value) or not self.should_load: return value
+    if LazyType(DictStrAny).isinstance(value) or not self.should_load: return value
     try:
       return orjson.loads(value)
     except orjson.JSONDecodeError as exc:

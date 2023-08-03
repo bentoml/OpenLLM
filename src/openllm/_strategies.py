@@ -75,10 +75,17 @@ def _parse_list_with_prefix(lst: str, prefix: str) -> list[str]:
 
 _STACK_LEVEL = 3
 
+# variant: default callback
 @overload
-def _parse_visible_devices(default_var: str | None = ..., *, respect_env: t.Literal[True]) -> list[str] | None:
+def _parse_visible_devices() -> list[str] | None:
   ...
 
+# variant: specify None, and respect_env
+@overload
+def _parse_visible_devices(default_var: None, *, respect_env: t.Literal[True]) -> list[str] | None:
+  ...
+
+# variant: default var is something other than None
 @overload
 def _parse_visible_devices(default_var: str = ..., *, respect_env: t.Literal[False]) -> list[str]:
   ...
@@ -283,11 +290,11 @@ def available_resource_spec() -> tuple[LiteralResourceSpec, ...]:
 
   TODO: Supports TPUs
   """
-  available = ()
-  if len(AmdGpuResource.from_system()) > 0: available += (_AMD_GPU_RESOURCE,)
-  if len(NvidiaGpuResource.from_system()) > 0: available += (_NVIDIA_GPU_RESOURCE,)
-  available += (_CPU_RESOURCE,)
-  return t.cast(t.Tuple[LiteralResourceSpec, ...], available)
+  available: list[LiteralResourceSpec] = []
+  if len(AmdGpuResource.from_system()) > 0: available.append(_AMD_GPU_RESOURCE)
+  if len(NvidiaGpuResource.from_system()) > 0: available.append(_NVIDIA_GPU_RESOURCE)
+  available.append(_CPU_RESOURCE)
+  return tuple(available)
 
 class CascadingResourceStrategy(bentoml.Strategy, ReprMixin):
   """This is extends the default BentoML strategy where we check for NVIDIA GPU resource -> AMD GPU resource -> CPU resource.

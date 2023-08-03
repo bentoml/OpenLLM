@@ -84,7 +84,7 @@ class ClientMeta(t.Generic[T]):
 
   def __init_subclass__(cls, *, client_type: t.Literal["http", "grpc"] = "http", api_version: str = "v1"):
     """Initialise subclass for HTTP and gRPC client type."""
-    cls._client_class = bentoml.client.HTTPClient if client_type == "http" else bentoml.client.GrpcClient
+    cls._client_class = t.cast(t.Type[bentoml.client.Client], bentoml.client.HTTPClient if client_type == "http" else bentoml.client.GrpcClient)
     cls._api_version = api_version
 
   @property

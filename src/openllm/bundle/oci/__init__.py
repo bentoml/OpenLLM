@@ -66,9 +66,11 @@ _module_location = pkg.source_locations("openllm")
 
 @functools.lru_cache
 @apply(str.lower)
-def get_base_container_name(reg: LiteralContainerRegistry) -> str: return _CONTAINER_REGISTRY[reg]
+def get_base_container_name(reg: LiteralContainerRegistry) -> str:
+  return _CONTAINER_REGISTRY[reg]
 
-def _convert_version_from_string(s: str) -> VersionInfo: return VersionInfo.from_version_string(s)
+def _convert_version_from_string(s: str) -> VersionInfo:
+  return VersionInfo.from_version_string(s)
 
 class VersionNotSupported(OpenLLMException):
   """Raised when the stable release is too low that it doesn't include OpenLLM base container."""
@@ -94,33 +96,39 @@ class RefResolver:
     with tempfile.TemporaryDirectory(prefix="openllm-bare-") as tempdir:
       cls._git.clone(_URI, tempdir, bare=True)
       return next(it.hexsha for it in git.Repo(tempdir).iter_commits("main", max_count=20) if "[skip ci]" not in str(it.summary))
+
   @classmethod
-  def _nightly_ref(cls) -> RefTuple: return _RefTuple((cls.nightly_resolver(), "refs/heads/main", "nightly"))
+  def _nightly_ref(cls) -> RefTuple:
+    return _RefTuple((cls.nightly_resolver(), "refs/heads/main", "nightly"))
+
   @classmethod
   def _release_ref(cls, version_str: str | None = None) -> RefTuple:
     _use_base_strategy = version_str is None
     if version_str is None:
       # NOTE: This strategy will only support openllm>0.2.12
-      version: tuple[str, str] = tuple(max([item.split() for item in cls._git.ls_remote(_URI, refs=True, tags=True).split("\n")], key=lambda tag: tuple(int(k) for k in tag[-1].replace("refs/tags/v", "").split("."))))
+      version = t.cast("tuple[str, str]", tuple(max((item.split() for item in cls._git.ls_remote(_URI, refs=True, tags=True).split("\n")), key=lambda tag: tuple(int(k) for k in t.cast("tuple[str, str]", tag)[-1].replace("refs/tags/v", "").split(".")))))
       version_str = version[-1].replace("refs/tags/v", "")
       version = (version[0], version_str)
     else:
       version = ("", version_str)
-    if t.TYPE_CHECKING: assert version_str # NOTE: Mypy cannot infer the correct type here. We have handle the cases where version_str is None in L86
+    if t.TYPE_CHECKING: assert version_str  # NOTE: Mypy cannot infer the correct type here. We have handle the cases where version_str is None in L86
     if VersionInfo.from_version_string(version_str) < (0, 2, 12): raise VersionNotSupported(f"Version {version_str} doesn't support OpenLLM base container. Consider using 'nightly' or upgrade 'openllm>=0.2.12'")
     return _RefTuple((*version, "release" if _use_base_strategy else "custom"))
+
   @classmethod
   def from_strategy(cls, strategy_or_version: t.Literal["release", "nightly"] | str | None = None) -> RefResolver:
     if strategy_or_version is None or strategy_or_version == "release":
       logger.debug("Using default strategy 'release' for resolving base image version.")
       return cls(*cls._release_ref())
-    elif strategy_or_version == "latest": return cls("latest", "0.0.0", "latest")
+    elif strategy_or_version == "latest":
+      return cls("latest", "0.0.0", "latest")
     elif strategy_or_version == "nightly":
       _ref = cls._nightly_ref()
       return cls(_ref[0], "0.0.0", _ref[-1])
     else:
       logger.warning("Using custom %s. Make sure that it is at lease 0.2.12 for base container support.", strategy_or_version)
       return cls(*cls._release_ref(version_str=strategy_or_version))
+
   @property
   def tag(self) -> str:
     # NOTE: latest tag can also be nightly, but discouraged to use it. For nightly refer to use sha-<git_hash_short>
@@ -129,7 +137,8 @@ class RefResolver:
     else: return repr(self.version)
 
 @functools.lru_cache(maxsize=256)
-def get_base_container_tag(strategy: LiteralContainerVersionStrategy | None = None) -> str: return RefResolver.from_strategy(strategy).tag
+def get_base_container_tag(strategy: LiteralContainerVersionStrategy | None = None) -> str:
+  return RefResolver.from_strategy(strategy).tag
 
 def build_container(registries: LiteralContainerRegistry | t.Sequence[LiteralContainerRegistry] | None = None, version_strategy: LiteralContainerVersionStrategy = "release", push: bool = False, machine: bool = False) -> dict[str | LiteralContainerRegistry, str]:
   """This is a utility function for building base container for OpenLLM. It will build the base container for all registries if ``None`` is passed.
@@ -163,7 +172,8 @@ if t.TYPE_CHECKING:
 
 __all__ = ["CONTAINER_NAMES", "get_base_container_tag", "build_container", "get_base_container_name", "supported_registries", "RefResolver"]
 
-def __dir__() -> list[str]: return sorted(__all__)
+def __dir__() -> list[str]:
+  return sorted(__all__)
 
 def __getattr__(name: str) -> t.Any:
   if name == "supported_registries": return functools.lru_cache(1)(lambda: list(_CONTAINER_REGISTRY))()

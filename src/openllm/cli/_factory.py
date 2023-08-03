@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from __future__ import annotations
+import functools
 import importlib.util
 import os
 import typing as t
@@ -320,18 +321,25 @@ def parse_serve_args(serve_grpc: bool) -> t.Callable[[t.Callable[..., LLMConfig]
 
 _http_server_args, _grpc_server_args = parse_serve_args(False), parse_serve_args(True)
 
-def cli_option(*param_decls: t.Any, **attrs: t.Any) -> t.Callable[[FC | None], FC]:
-  """General ``@click.option`` with some sauce.
+def _click_factory_type(*param_decls: t.Any, **attrs: t.Any) -> t.Callable[[FC | None], FC]:
+  """General ``@click`` decorator with some sauce.
 
-  This decorator extends the default ``@click.option`` plus a factory option to use which type of option, for example: [click, click_option_group.optgroup]
+  This decorator extends the default ``@click.option`` plus a factory option and factory attr to
+  provide type-safe click.option or click.argument wrapper for all compatible factory.
   """
-  attrs.setdefault("help", "General option for OpenLLM CLI.")
   factory = attrs.pop("factory", click)
+  factory_attr = attrs.pop("attr", "option")
+  if factory_attr != "argument": attrs.setdefault("help", "General option for OpenLLM CLI.")
 
   def decorator(f: FC | None) -> FC:
-    return t.cast(FC, factory.option(*param_decls, **attrs)(f) if f is not None else factory.option(*param_decls, **attrs))
+    callback = getattr(factory, factory_attr, None)
+    if callback is None: raise ValueError(f"Factory {factory} has no attribute {factory_attr}.")
+    return t.cast(FC, callback(*param_decls, **attrs)(f) if f is not None else callback(*param_decls, **attrs))
 
   return decorator
+
+cli_option = functools.partial(_click_factory_type, attr="option")
+cli_argument = functools.partial(_click_factory_type, attr="argument")
 
 def output_option(f: _AnyCallable | None = None, *, default_value: LiteralOutput = "pretty", **attrs: t.Any) -> t.Callable[[FC], FC]:
   output = ["json", "pretty", "porcelain"]
@@ -346,7 +354,8 @@ def fast_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC
       "--fast/--no-fast", show_default=True, default=False, envvar="OPENLLM_USE_LOCAL_LATEST", show_envvar=True, help="""Whether to skip checking if models is already in store.
 
                                                                                                           This is useful if you already downloaded or setup the model beforehand.
-                                                                                                          """, **attrs)(f)
+                                                                                                          """, **attrs
+  )(f)
 
 def machine_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option("--machine", is_flag=True, default=False, hidden=True, **attrs)(f)
@@ -358,8 +367,7 @@ def model_version_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Cal
   return cli_option("--model-version", type=click.STRING, default=None, help="Optional model version to save for this model. It will be inferred automatically from model-id.", **attrs)(f)
 
 def model_name_argument(f: _AnyCallable | None = None, required: bool = True) -> t.Callable[[FC], FC]:
-  arg = click.argument("model_name", type=click.Choice([inflection.dasherize(name) for name in CONFIG_MAPPING]), required=required)
-  return arg(f) if f is not None else arg
+  return cli_argument("model_name", type=click.Choice([inflection.dasherize(name) for name in CONFIG_MAPPING]), required=required)(f)
 
 def quantize_option(f: _AnyCallable | None = None, *, build: bool = False, model_env: EnvVarMixin | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option(
@@ -378,7 +386,8 @@ def quantize_option(f: _AnyCallable | None = None, *, build: bool = False, model
           """
                                                                                                                                                                             > [!NOTE] that this will set the mode for serving within deployment.""" if build else ""
       ) + """
-                                                                                                                                                                            > [!NOTE] that quantization are currently only available in *PyTorch* models.""", **attrs)(f)
+                                                                                                                                                                            > [!NOTE] that quantization are currently only available in *PyTorch* models.""", **attrs
+  )(f)
 
 def workers_per_resource_option(f: _AnyCallable | None = None, *, build: bool = False, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option(
@@ -397,7 +406,8 @@ def workers_per_resource_option(f: _AnyCallable | None = None, *, build: bool = 
                                                                                                                                                   > [!NOTE] The workers value passed into 'build' will determine how the LLM can
                                                                                                                                                   > be provisioned in Kubernetes as well as in standalone container. This will
                                                                                                                                                   > ensure it has the same effect with 'openllm start --workers ...'""" if build else ""
-      ), **attrs)(f)
+      ), **attrs
+  )(f)
 
 def bettertransformer_option(f: _AnyCallable | None = None, *, build: bool = False, model_env: EnvVarMixin | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option(
@@ -423,7 +433,8 @@ def serialisation_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Cal
                                                                                                                                   This should be used if the model doesn't yet support safetensors.
 
                                                                                                                   > [!NOTE] that GGML format is working in progress.
-                                                                                                                  """, **attrs)(f)
+                                                                                                                  """, **attrs
+  )(f)
 
 def container_registry_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option(
@@ -433,7 +444,8 @@ def container_registry_option(f: _AnyCallable | None = None, **attrs: t.Any) -> 
 
                                                                                                                         \b
                                                                                                                         > [!NOTE] that in order to build the base image, you will need a GPUs to compile custom kernel. See ``openllm ext build-base-container`` for more information.
-                                                                                                                        """)(f)
+                                                                                                                        """
+  )(f)
 
 _wpr_strategies = {"round_robin", "conserved"}
 
