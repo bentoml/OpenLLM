@@ -1,0 +1,3 @@
+import torch
+
+def rotary_embedding_neox(arg0: torch.Tensor, arg1: torch.Tensor, arg2: torch.Tensor, arg3: int, arg4: torch.Tensor) -> None: ...

@@ -1,0 +1,9 @@
+from _typeshed import Incomplete
+from transformers import AutoModelForCausalLM as AutoModelForCausalLM
+from transformers import AutoTokenizer as AutoTokenizer
+
+class Perplexity:
+    def __init__(self, model, tokenizer, dataset_path: str = ..., dataset_name: Incomplete | None = ..., split: str = ..., text_column: str = ...) -> None: ...
+    @staticmethod
+    def softmax(logits): ...
+    def calculate_perplexity(self, n_ctx: int = ..., n_batch: int = ...): ...
