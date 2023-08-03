@@ -35,6 +35,6 @@
  :<- [::model-config]
  (fn [model-config _]
    (vec (map (fn [[k v]]
-               [k {:name (parameter-id->human-readable k)
+               [k {:name k ;;(parameter-id->human-readable k)
                    :value v}])
              model-config))))

@@ -39,7 +39,7 @@
       [:div {:class "h-12 w-full px-5"}
        [typography {:variant "title"
                     :class "text-black mb-1"}
-        "API Base-URL"]
+        "LLM Endpoint"]
        [input {:class "w-full h-8.5 mb-1 border"
                :value @base-url
                :on-change #(rf/dispatch [:set-api-base-url (-> % .-target .-value)])}]])))
