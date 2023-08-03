@@ -29,7 +29,6 @@
     (fn []
       [:textarea {:class "py-1 h-10 w-[calc(100%_-_195px)] block self-end"
                   :style {:resize "none"}
-                  :placeholder "Type your message..."
                   :value @chat-input-sub
                   :on-change on-change
                   :on-key-press (fn [e]
@@ -139,7 +138,7 @@
   []
   [:<>
    [prompt-layout-modal]
-   [paper {:class "mr-3.5 mt-6 h-[calc(100%_-_75px)]"
+   [paper {:class "mr-3.5 mt-6 h-[calc(100%_-_78px)]"
            :square true}
     [:div {:id "chat-history-container"
            :class "overflow-y-scroll w-full h-full no-scrollbar"
