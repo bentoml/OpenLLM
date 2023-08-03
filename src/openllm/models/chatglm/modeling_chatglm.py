@@ -37,7 +37,7 @@ class ChatGLM(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTrain
   def postprocess_generate(self, prompt: str, generation_result: tuple[str, list[tuple[str, str]]], *, chat_history: list[tuple[str, str]] | None = None, **attrs: t.Any):
     generated, history = generation_result
     if self.config.retain_history:
-      assert chat_history is not None, "'retain_history' is True while there is no history provided."
+      if chat_history is None: raise ValueError("'retain_history' is True while there is no history provided.")
       chat_history.extend(history)
     return generated
 

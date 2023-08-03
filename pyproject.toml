@@ -384,6 +384,7 @@ pretty = true
 python_version = "3.11"
 show_error_codes = true
 strict = true
+warn_no_return = false
 warn_return_any = false
 warn_unreachable = true
 warn_unused_ignores = true
@@ -398,8 +399,6 @@ module = [
     "inflection.*",
     "huggingface_hub.*",
     "peft.*",
-    "auto_gptq.*",
-    "vllm.*",
     "orjson.*",
     "git.*",
     "httpx.*",
