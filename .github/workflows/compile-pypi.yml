@@ -100,6 +100,7 @@ jobs:
   check-download-artefacts:
     name: dry-run for downloading artefacts
     if: github.event_name == 'pull_request'
+    needs: [pure-wheels-sdist, mypyc]
     runs-on: ubuntu-latest
     steps:
       # NOTE: Keep this section in sync with compile-pypi.yml
