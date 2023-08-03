@@ -80,6 +80,7 @@ from ._factory import model_id_option
 from ._factory import model_name_argument
 from ._factory import model_version_option
 from ._factory import output_option
+from ._factory import parse_device_callback
 from ._factory import quantize_option
 from ._factory import serialisation_option
 from ._factory import start_command_factory
@@ -108,6 +109,7 @@ from ..utils import bentoml_cattr
 from ..utils import codegen
 from ..utils import compose
 from ..utils import configure_logging
+from ..utils import dantic
 from ..utils import first_not_none
 from ..utils import get_debug_mode
 from ..utils import get_quiet_mode
@@ -678,6 +680,7 @@ start, start_grpc, build, import_model, list_models = codegen.gen_sdk(_start, _s
 @click.option("--bento-version", type=str, default=None, help="Optional bento version for this BentoLLM. Default is the the model revision.")
 @click.option("--overwrite", is_flag=True, help="Overwrite existing Bento for given LLM if it already exists.")
 @workers_per_resource_option(factory=click, build=True)
+@click.option("--device", type=dantic.CUDA, multiple=True, envvar="CUDA_VISIBLE_DEVICES", callback=parse_device_callback, help="Set the device", show_envvar=True)
 @cog.optgroup.group(cls=cog.MutuallyExclusiveOptionGroup, name="Optimisation options")
 @quantize_option(factory=cog.optgroup, build=True)
 @bettertransformer_option(factory=cog.optgroup)
@@ -697,7 +700,7 @@ start, start_grpc, build, import_model, list_models = codegen.gen_sdk(_start, _s
 @click.pass_context
 def build_command(
     ctx: click.Context, /, model_name: str, model_id: str | None, bento_version: str | None, overwrite: bool, output: LiteralOutput, runtime: t.Literal["ggml", "transformers"], quantize: t.Literal["int8", "int4", "gptq"] | None, enable_features: tuple[str, ...] | None,
-    bettertransformer: bool | None, workers_per_resource: float | None, adapter_id: tuple[str, ...], build_ctx: str | None, machine: bool,
+    bettertransformer: bool | None, workers_per_resource: float | None, adapter_id: tuple[str, ...], build_ctx: str | None, machine: bool, device: tuple[str, ...],
     model_version: str | None, dockerfile_template: t.TextIO | None, containerize: bool, push: bool, serialisation_format: t.Literal["safetensors", "legacy"], fast: bool, container_registry: LiteralContainerRegistry, container_version_strategy: LiteralContainerVersionStrategy, **attrs: t.Any,
 ) -> bentoml.Bento:
   """Package a given models into a Bento.
@@ -772,7 +775,10 @@ def build_command(
           raise bentoml.exceptions.NotFound(f"Rebuilding existing Bento {bento_tag}") from None
         _previously_built = True
       except bentoml.exceptions.NotFound:
-        bento = bundle.create_bento(bento_tag, llm_fs, llm, workers_per_resource=workers_per_resource, adapter_map=adapter_map, quantize=quantize, bettertransformer=bettertransformer, extra_dependencies=enable_features, dockerfile_template=dockerfile_template_path, runtime=runtime, container_registry=container_registry, container_version_strategy=container_version_strategy,)
+        bento = bundle.create_bento(bento_tag, llm_fs, llm, workers_per_resource=workers_per_resource, device=device,
+                                    adapter_map=adapter_map, quantize=quantize, bettertransformer=bettertransformer,
+                                    extra_dependencies=enable_features, dockerfile_template=dockerfile_template_path,
+                                    runtime=runtime, container_registry=container_registry, container_version_strategy=container_version_strategy)
   except Exception as err:
     raise err from None
 
