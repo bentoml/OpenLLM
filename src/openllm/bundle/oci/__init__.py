@@ -70,6 +70,13 @@ class VersionNotSupported(openllm.exceptions.OpenLLMException):
 
 _RefTuple: type[RefTuple] = openllm.utils.codegen.make_attr_tuple_class("_RefTuple", ["git_hash", "version", "strategy"])
 
+def nightly_resolver(cls: type[RefResolver]) -> str:
+  # Will do a clone bare to tempdir, and return the latest commit hash that we build the base image
+  # NOTE: this is a bit expensive, but it is ok since we only run this during build
+  with tempfile.TemporaryDirectory(prefix="openllm-bare-") as tempdir:
+    cls._git.clone(_URI, tempdir, bare=True)
+    return next(it.hexsha for it in Repo(tempdir).iter_commits("main", max_count=20) if "[skip ci]" not in str(it.summary))
+
 @attr.attrs(eq=False, order=False, slots=True, frozen=True)
 class RefResolver:
   """TODO: Support offline mode.
@@ -82,17 +89,8 @@ class RefResolver:
   _git: git.cmd.Git = git.cmd.Git(_URI)  # TODO: support offline mode
 
   @classmethod
-  @functools.lru_cache
-  def nightly_resolver(cls) -> str:
-    # Will do a clone bare to tempdir, and return the latest commit hash that we build the base image
-    # NOTE: this is a bit expensive, but it is ok since we only run this during build
-    with tempfile.TemporaryDirectory(prefix="openllm-bare-") as tempdir:
-      cls._git.clone(_URI, tempdir, bare=True)
-      return next(it.hexsha for it in Repo(tempdir).iter_commits("main", max_count=20) if "[skip ci]" not in str(it.summary))
-
-  @classmethod
   def _nightly_ref(cls) -> RefTuple:
-    return _RefTuple((cls.nightly_resolver(), "refs/heads/main", "nightly"))
+    return _RefTuple((nightly_resolver(cls), "refs/heads/main", "nightly"))
 
   @classmethod
   def _release_ref(cls, version_str: str | None = None) -> RefTuple:
