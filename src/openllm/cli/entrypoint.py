@@ -332,15 +332,15 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
     def group(self, name: _AnyCallable) -> click.Group:
       ...
 
+    # variant: name omitted, cls _must_ be a keyword argument, @group(cmd=GroupCls, ...)
+    @overload
+    def group(self, name: None = None, *, cls: t.Type[GrpType], **attrs: t.Any) -> t.Callable[[_AnyCallable], GrpType]:
+      ...
+
     # variant: with positional name and with positional or keyword cls argument:
     # @group(namearg, GroupCls, ...) or @group(namearg, cls=GroupCls, ...)
     @overload
     def group(self, name: str | None, cls: type[GrpType], **attrs: t.Any) -> t.Callable[[_AnyCallable], GrpType]:
-      ...
-
-    # variant: name omitted, cls _must_ be a keyword argument, @group(cmd=GroupCls, ...)
-    @overload
-    def group(self, name: None = None, *, cls: t.Type[GrpType], **attrs: t.Any) -> t.Callable[[_AnyCallable], GrpType]:
       ...
 
     # variant: with optional string name, no cls argument provided.
@@ -451,7 +451,7 @@ def import_command(model_name: str, model_id: str | None, converter: str | None,
   $ CONVERTER=llama2-hf openllm import llama /path/to/llama-2
   ```
 
-  > **Note**: This behaviour will override ``--runtime``. Therefore make sure that the LLM contains correct conversion strategies to both GGML and HF.
+  > [!WARNING] This behaviour will override ``--runtime``. Therefore make sure that the LLM contains correct conversion strategies to both GGML and HF.
   """
   llm_config = AutoConfig.for_model(model_name)
   env = EnvVarMixin(model_name, llm_config.default_implementation(), model_id=model_id, runtime=runtime, quantize=quantize)
@@ -484,41 +484,39 @@ def _start(
   For all additional arguments, pass it as string to ``additional_args``. For example, if you want to
   pass ``--port 5001``, you can pass ``additional_args=["--port", "5001"]``
 
-  > **Note**: This will create a blocking process, so if you use this API, you can create a running sub thread
+  > [!NOTE] This will create a blocking process, so if you use this API, you can create a running sub thread
   > to start the server instead of blocking the main thread.
 
   ``openllm.start`` will invoke ``click.Command`` under the hood, so it behaves exactly the same as the CLI interaction.
 
-  > **Note**: ``quantize`` and ``bettertransformer`` are mutually exclusive.
+  > [!NOTE] ``quantize`` and ``bettertransformer`` are mutually exclusive.
 
   Args:
-  model_name: The model name to start this LLM
-  model_id: Optional model id for this given LLM
-  timeout: The server timeout
-  workers_per_resource: Number of workers per resource assigned.
-  See https://docs.bentoml.org/en/latest/guides/scheduling.html#resource-scheduling-strategy
-  for more information. By default, this is set to 1.
+      model_name: The model name to start this LLM
+      model_id: Optional model id for this given LLM
+      timeout: The server timeout
+      workers_per_resource: Number of workers per resource assigned.
+                            See [resource scheduling](https://docs.bentoml.org/en/latest/guides/scheduling.html#resource-scheduling-strategy)
+                            for more information. By default, this is set to 1.
 
-  > **Note**: ``--workers-per-resource`` will also accept the following strategies:
-
-  > - ``round_robin``: Similar behaviour when setting ``--workers-per-resource 1``. This is useful for smaller models.
-
-  > - ``conserved``: Thjis will determine the number of available GPU resources, and only assign
-  one worker for the LLMRunner. For example, if ther are 4 GPUs available, then ``conserved`` is
-  equivalent to ``--workers-per-resource 0.25``.
-  device: Assign GPU devices (if available) to this LLM. By default, this is set to ``None``. It also accepts 'all'
-  argument to assign all available GPUs to this LLM.
-  quantize: Quantize the model weights. This is only applicable for PyTorch models.
-  Possible quantisation strategies:
-  - int8: Quantize the model with 8bit (bitsandbytes required)
-  - int4: Quantize the model with 4bit (bitsandbytes required)
-  - gptq: Quantize the model with GPTQ (auto-gptq required)
-  bettertransformer: Convert given model to FastTransformer with PyTorch.
-  runtime: The runtime to use for this LLM. By default, this is set to ``transformers``. In the future, this will include supports for GGML.
-  fast: Enable fast mode. This will skip downloading models, and will raise errors if given model_id does not exists under local store.
-  adapter_map: The adapter mapping of LoRA to use for this LLM. It accepts a dictionary of ``{adapter_id: adapter_name}``.
-  framework: The framework to use for this LLM. By default, this is set to ``pt``.
-  additional_args: Additional arguments to pass to ``openllm start``.
+                            > [!NOTE] ``--workers-per-resource`` will also accept the following strategies:
+                            > - ``round_robin``: Similar behaviour when setting ``--workers-per-resource 1``. This is useful for smaller models.
+                            > - ``conserved``: This will determine the number of available GPU resources, and only assign
+                            >                  one worker for the LLMRunner. For example, if ther are 4 GPUs available, then ``conserved`` is
+                            >                  equivalent to ``--workers-per-resource 0.25``.
+      device: Assign GPU devices (if available) to this LLM. By default, this is set to ``None``. It also accepts 'all'
+      argument to assign all available GPUs to this LLM.
+      quantize: Quantize the model weights. This is only applicable for PyTorch models.
+                Possible quantisation strategies:
+                - int8: Quantize the model with 8bit (bitsandbytes required)
+                - int4: Quantize the model with 4bit (bitsandbytes required)
+                - gptq: Quantize the model with GPTQ (auto-gptq required)
+      bettertransformer: Convert given model to FastTransformer with PyTorch.
+      runtime: The runtime to use for this LLM. By default, this is set to ``transformers``. In the future, this will include supports for GGML.
+      fast: Enable fast mode. This will skip downloading models, and will raise errors if given model_id does not exists under local store.
+      adapter_map: The adapter mapping of LoRA to use for this LLM. It accepts a dictionary of ``{adapter_id: adapter_name}``.
+      framework: The framework to use for this LLM. By default, this is set to ``pt``.
+      additional_args: Additional arguments to pass to ``openllm start``.
   """
   fast = os.getenv("OPENLLM_FAST", str(fast)).upper() in ENV_VARS_TRUE_VALUES
   llm_config = AutoConfig.for_model(model_name)
@@ -554,48 +552,45 @@ def _build(
 
   ``openllm.build`` will invoke ``click.Command`` under the hood, so it behaves exactly the same as ``openllm build`` CLI.
 
-  > **Note**: ``quantize`` and ``bettertransformer`` are mutually exclusive.
+  > [!NOTE] ``quantize`` and ``bettertransformer`` are mutually exclusive.
 
   Args:
-  model_name: The model name to start this LLM
-  model_id: Optional model id for this given LLM
-  model_version: Optional model version for this given LLM
-  quantize: Quantize the model weights. This is only applicable for PyTorch models.
-  Possible quantisation strategies:
-  - int8: Quantize the model with 8bit (bitsandbytes required)
-  - int4: Quantize the model with 4bit (bitsandbytes required)
-  - gptq: Quantize the model with GPTQ (auto-gptq required)
-  bettertransformer: Convert given model to FastTransformer with PyTorch.
-  adapter_map: The adapter mapping of LoRA to use for this LLM. It accepts a dictionary of ``{adapter_id: adapter_name}``.
-  build_ctx: The build context to use for building BentoLLM. By default, it sets to current directory.
-  enable_features: Additional OpenLLM features to be included with this BentoLLM.
-  workers_per_resource: Number of workers per resource assigned.
-  See https://docs.bentoml.org/en/latest/guides/scheduling.html#resource-scheduling-strategy
-  for more information. By default, this is set to 1.
+      model_name: The model name to start this LLM
+      model_id: Optional model id for this given LLM
+      model_version: Optional model version for this given LLM
+      quantize: Quantize the model weights. This is only applicable for PyTorch models.
+                Possible quantisation strategies:
+                - int8: Quantize the model with 8bit (bitsandbytes required)
+                - int4: Quantize the model with 4bit (bitsandbytes required)
+                - gptq: Quantize the model with GPTQ (auto-gptq required)
+      bettertransformer: Convert given model to FastTransformer with PyTorch.
+      adapter_map: The adapter mapping of LoRA to use for this LLM. It accepts a dictionary of ``{adapter_id: adapter_name}``.
+      build_ctx: The build context to use for building BentoLLM. By default, it sets to current directory.
+      enable_features: Additional OpenLLM features to be included with this BentoLLM.
+      workers_per_resource: Number of workers per resource assigned.
+                            See [resource scheduling](https://docs.bentoml.org/en/latest/guides/scheduling.html#resource-scheduling-strategy)
+                            for more information. By default, this is set to 1.
 
-  > **Note**: ``--workers-per-resource`` will also accept the following strategies:
-
-  > - ``round_robin``: Similar behaviour when setting ``--workers-per-resource 1``. This is useful for smaller models.
-
-  > - ``conserved``: This will determine the number of available GPU resources, and only assign
-  one worker for the LLMRunner. For example, if ther are 4 GPUs available, then ``conserved`` is
-  equivalent to ``--workers-per-resource 0.25``.
-  runtime: The runtime to use for this LLM. By default, this is set to ``transformers``. In the future, this will include supports for GGML.
-  dockerfile_template: The dockerfile template to use for building BentoLLM. See
-  https://docs.bentoml.com/en/latest/guides/containerization.html#dockerfile-template.
-  overwrite: Whether to overwrite the existing BentoLLM. By default, this is set to ``False``.
-  push: Whether to push the result bento to BentoCloud. Make sure to login with 'bentoml cloud login' first.
-  containerize: Whether to containerize the Bento after building. '--containerize' is the shortcut of 'openllm build && bentoml containerize'.
-  Note that 'containerize' and 'push' are mutually exclusive
-  container_registry: Container registry to choose the base OpenLLM container image to build from. Default to ECR.
-  container_version_strategy: The container version strategy. Default to the latest release of OpenLLM.
-  serialisation_format: Serialisation for saving models. Default to 'safetensors', which is equivalent to `safe_serialization=True`
-  additional_args: Additional arguments to pass to ``openllm build``.
-  bento_store: Optional BentoStore for saving this BentoLLM. Default to the default BentoML local store.
+                            > [!NOTE] ``--workers-per-resource`` will also accept the following strategies:
+                            > - ``round_robin``: Similar behaviour when setting ``--workers-per-resource 1``. This is useful for smaller models.
+                            > - ``conserved``: This will determine the number of available GPU resources, and only assign
+                            >                  one worker for the LLMRunner. For example, if ther are 4 GPUs available, then ``conserved`` is
+                            >                  equivalent to ``--workers-per-resource 0.25``.
+      runtime: The runtime to use for this LLM. By default, this is set to ``transformers``. In the future, this will include supports for GGML.
+      dockerfile_template: The dockerfile template to use for building BentoLLM. See https://docs.bentoml.com/en/latest/guides/containerization.html#dockerfile-template.
+      overwrite: Whether to overwrite the existing BentoLLM. By default, this is set to ``False``.
+      push: Whether to push the result bento to BentoCloud. Make sure to login with 'bentoml cloud login' first.
+      containerize: Whether to containerize the Bento after building. '--containerize' is the shortcut of 'openllm build && bentoml containerize'.
+                    Note that 'containerize' and 'push' are mutually exclusive
+                    container_registry: Container registry to choose the base OpenLLM container image to build from. Default to ECR.
+      container_registry: Container registry to choose the base OpenLLM container image to build from. Default to ECR.
+      container_version_strategy: The container version strategy. Default to the latest release of OpenLLM.
+      serialisation_format: Serialisation for saving models. Default to 'safetensors', which is equivalent to `safe_serialization=True`
+      additional_args: Additional arguments to pass to ``openllm build``.
+      bento_store: Optional BentoStore for saving this BentoLLM. Default to the default BentoML local store.
 
   Returns:
-  ``bentoml.Bento | str``: BentoLLM instance. This can be used to serve the LLM or can be pushed to BentoCloud.
-  If 'format="container"', then it returns the default 'container_name:container_tag'
+      ``bentoml.Bento | str``: BentoLLM instance. This can be used to serve the LLM or can be pushed to BentoCloud.
   """
   args: ListStr = [sys.executable, "-m", "openllm", "build", model_name, "--machine", "--runtime", runtime, "--serialisation", serialisation_format,]
   if quantize and bettertransformer: raise OpenLLMException("'quantize' and 'bettertransformer' are currently mutually exclusive.")
@@ -633,31 +628,33 @@ def _import_model(
 ) -> bentoml.Model:
   """Import a LLM into local store.
 
-  > **Note**: If ``quantize`` is passed, the model weights will be saved as quantized weights. You should
+  > [!NOTE]
+  > If ``quantize`` is passed, the model weights will be saved as quantized weights. You should
   > only use this option if you want the weight to be quantized by default. Note that OpenLLM also
   > support on-demand quantisation during initial startup.
 
   ``openllm.download`` will invoke ``click.Command`` under the hood, so it behaves exactly the same as the CLI ``openllm import``.
 
-  > **Note**: ``openllm.start`` will automatically invoke ``openllm.download`` under the hood.
+  > [!NOTE]
+  > ``openllm.start`` will automatically invoke ``openllm.download`` under the hood.
 
   Args:
-  model_name: The model name to start this LLM
-  model_id: Optional model id for this given LLM
-  model_version: Optional model version for this given LLM
-  runtime: The runtime to use for this LLM. By default, this is set to ``transformers``. In the future, this will include supports for GGML.
-  implementation: The implementation to use for this LLM. By default, this is set to ``pt``.
-  quantize: Quantize the model weights. This is only applicable for PyTorch models.
-  Possible quantisation strategies:
-  - int8: Quantize the model with 8bit (bitsandbytes required)
-  - int4: Quantize the model with 4bit (bitsandbytes required)
-  - gptq: Quantize the model with GPTQ (auto-gptq required)
-  serialisation_format: Type of model format to save to local store. If set to 'safetensors', then OpenLLM will save model using safetensors.
-  Default behaviour is similar to ``safe_serialization=False``.
-  additional_args: Additional arguments to pass to ``openllm import``.
+      model_name: The model name to start this LLM
+      model_id: Optional model id for this given LLM
+      model_version: Optional model version for this given LLM
+      runtime: The runtime to use for this LLM. By default, this is set to ``transformers``. In the future, this will include supports for GGML.
+      implementation: The implementation to use for this LLM. By default, this is set to ``pt``.
+      quantize: Quantize the model weights. This is only applicable for PyTorch models.
+                Possible quantisation strategies:
+                - int8: Quantize the model with 8bit (bitsandbytes required)
+                - int4: Quantize the model with 4bit (bitsandbytes required)
+                - gptq: Quantize the model with GPTQ (auto-gptq required)
+      serialisation_format: Type of model format to save to local store. If set to 'safetensors', then OpenLLM will save model using safetensors.
+      Default behaviour is similar to ``safe_serialization=False``.
+      additional_args: Additional arguments to pass to ``openllm import``.
 
   Returns:
-  ``bentoml.Model``:BentoModel of the given LLM. This can be used to serve the LLM or can be pushed to BentoCloud.
+      ``bentoml.Model``:BentoModel of the given LLM. This can be used to serve the LLM or can be pushed to BentoCloud.
   """
   args = [model_name, "--runtime", runtime, "--implementation", implementation, "--machine", "--serialisation", serialisation_format,]
   if model_id is not None: args.append(model_id)

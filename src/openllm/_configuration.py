@@ -1423,8 +1423,8 @@ class LLMConfig(_ConfigAttr):
 
     This can be used as a decorator for click commands.
 
-    > **Note**: that the identifier for all LLMConfig will be prefixed with '<model_name>_*', and the generation config
-    will be prefixed with '<model_name>_generation_*'.
+    > [!NOTE]
+    > The identifier for all LLMConfig will be prefixed with '<model_name>_*', and the generation config will be prefixed with '<model_name>_generation_*'.
     """
     for name, field in attr.fields_dict(cls.__openllm_generation_class__).items():
       ty = cls.__openllm_hints__.get(name)

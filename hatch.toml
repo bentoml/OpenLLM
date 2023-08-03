@@ -11,7 +11,7 @@ text = """
 
 """
 [[metadata.hooks.fancy-pypi-readme.fragments]]
-end-before = "\n<!-- hatch-fancy-pypi-readme intro stop -->\n"
+end-before = "\n<!-- hatch-fancy-pypi-readme intro stop -->"
 path = "README.md"
 start-after = "<!-- hatch-fancy-pypi-readme intro start -->\n"
 [[metadata.hooks.fancy-pypi-readme.fragments]]
@@ -22,11 +22,12 @@ text = """
 </p>
 """
 [[metadata.hooks.fancy-pypi-readme.fragments]]
-end-before = "\n<!-- hatch-fancy-pypi-readme interim stop -->\n"
+end-before = "\n<!-- hatch-fancy-pypi-readme interim stop -->"
 path = "README.md"
 start-after = "<!-- hatch-fancy-pypi-readme interim start -->\n"
 [[metadata.hooks.fancy-pypi-readme.fragments]]
 text = """
+
 <p align="center">
   <img src="https://raw.githubusercontent.com/bentoml/openllm/main/assets/agent.gif" alt="Gif showing Agent integration" />
 </p>
@@ -43,6 +44,7 @@ text = """
 """
 [[tool.hatch.metadata.hooks.fancy-pypi-readme.fragments]]
 path = "CHANGELOG.md"
+start-after = "<!-- towncrier release notes start -->"
 pattern = "\n(###.+?\n)## "
 [[metadata.hooks.fancy-pypi-readme.fragments]]
 text = """

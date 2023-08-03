@@ -373,12 +373,12 @@ def quantize_option(f: _AnyCallable | None = None, *, build: bool = False, model
 
                                                                                                                                                                             - ``gptq``: ``GPTQ`` [quantization](https://arxiv.org/abs/2210.17323)
 
-                                                                                                                                                                            **Note** that the model can also be served with quantized weights.
+                                                                                                                                                                            > [!NOTE] that the model can also be served with quantized weights.
                                                                                                                                                                             """ + (
           """
-                                                                                                                                                                            **Note** that this will set the mode for serving within deployment.""" if build else ""
+                                                                                                                                                                            > [!NOTE] that this will set the mode for serving within deployment.""" if build else ""
       ) + """
-                                                                                                                                                                            **Note** that quantization are currently only available in *PyTorch* models.""", **attrs)(f)
+                                                                                                                                                                            > [!NOTE] that quantization are currently only available in *PyTorch* models.""", **attrs)(f)
 
 def workers_per_resource_option(f: _AnyCallable | None = None, *, build: bool = False, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option(
@@ -387,16 +387,16 @@ def workers_per_resource_option(f: _AnyCallable | None = None, *, build: bool = 
                                                                                                                                                   See https://docs.bentoml.org/en/latest/guides/scheduling.html#resource-scheduling-strategy
                                                                                                                                                   for more information. By default, this is set to 1.
 
-                                                                                                                                                  **Note**: ``--workers-per-resource`` will also accept the following strategies:
+                                                                                                                                                  > [!NOTE] ``--workers-per-resource`` will also accept the following strategies:
 
                                                                                                                                                   - ``round_robin``: Similar behaviour when setting ``--workers-per-resource 1``. This is useful for smaller models.
 
                                                                                                                                                   - ``conserved``: This will determine the number of available GPU resources, and only assign one worker for the LLMRunner. For example, if ther are 4 GPUs available, then ``conserved`` is equivalent to ``--workers-per-resource 0.25``.
                                                                                                                                                   """ + (
           """\n
-                                                                                                                                                  **Note**: The workers value passed into 'build' will determine how the LLM can
-                                                                                                                                                  be provisioned in Kubernetes as well as in standalone container. This will
-                                                                                                                                                  ensure it has the same effect with 'openllm start --workers ...'""" if build else ""
+                                                                                                                                                  > [!NOTE] The workers value passed into 'build' will determine how the LLM can
+                                                                                                                                                  > be provisioned in Kubernetes as well as in standalone container. This will
+                                                                                                                                                  > ensure it has the same effect with 'openllm start --workers ...'""" if build else ""
       ), **attrs)(f)
 
 def bettertransformer_option(f: _AnyCallable | None = None, *, build: bool = False, model_env: EnvVarMixin | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
@@ -416,13 +416,13 @@ def serialisation_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Cal
                                                                                                                               ``safe_serialization=True``.
 
                                                                                                                               \b
-                                                                                                                              **Note** that this format might not work for every cases, and
+                                                                                                                              > [!NOTE] that this format might not work for every cases, and
                                                                                                                               you can always fallback to ``legacy`` if needed.
 
                                                                                                                   - ``legacy``: This will use PyTorch serialisation format, often as ``.bin`` files.
                                                                                                                                   This should be used if the model doesn't yet support safetensors.
 
-                                                                                                                  **Note** that GGML format is working in progress.
+                                                                                                                  > [!NOTE] that GGML format is working in progress.
                                                                                                                   """, **attrs)(f)
 
 def container_registry_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
@@ -432,7 +432,7 @@ def container_registry_option(f: _AnyCallable | None = None, **attrs: t.Any) -> 
                                                                                                                         Currently, it supports 'ecr', 'ghcr.io', 'docker.io'
 
                                                                                                                         \b
-                                                                                                                        **Note** that in order to build the base image, you will need a GPUs to compile custom kernel. See ``openllm ext build-base-container`` for more information.
+                                                                                                                        > [!NOTE] that in order to build the base image, you will need a GPUs to compile custom kernel. See ``openllm ext build-base-container`` for more information.
                                                                                                                         """)(f)
 
 _wpr_strategies = {"round_robin", "conserved"}

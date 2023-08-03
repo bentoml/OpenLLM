@@ -135,7 +135,8 @@ specify different variants of the model to be served, by providing the
 openllm start flan-t5 --model-id google/flan-t5-large
 ```
 
-> **Note** that `openllm` also supports all variants of fine-tuning weights,
+> [!NOTE]
+> `openllm` also supports all variants of fine-tuning weights,
 > custom model path as well as quantized weights for any of the supported models
 > as long as it can be loaded with the model architecture. Refer to
 > [supported models](https://github.com/bentoml/OpenLLM/tree/main#-supported-models)
@@ -417,7 +418,8 @@ For example, if you want to use the Tensorflow (`tf`) implementation for the
 OPENLLM_FLAN_T5_FRAMEWORK=tf openllm start flan-t5
 ```
 
-> **Note** For GPU support on Flax, refers to
+> [!NOTE]
+> For GPU support on Flax, refers to
 > [Jax's installation](https://github.com/google/jax#pip-installation-gpu-cuda-installed-via-pip-easier)
 > to make sure that you have Jax support for the corresponding CUDA version.
 
@@ -437,7 +439,8 @@ To run inference with `gptq`, simply pass `--quantize gptq`:
 openllm start falcon --model-id TheBloke/falcon-40b-instruct-GPTQ --quantize gptq --device 0
 ```
 
-> **Note**: to run GPTQ, make sure to install with
+> [!NOTE]
+> In order to run GPTQ, make sure to install with
 > `pip install "openllm[gptq]"`. The weights of all supported models should be
 > quantized before serving. See
 > [GPTQ-for-LLaMa](https://github.com/qwopqwop200/GPTQ-for-LLaMa) for more
@@ -482,7 +485,8 @@ To include this into the Bento, one can also provide a `--adapter-id` into
 openllm build opt --model-id facebook/opt-6.7b --adapter-id ...
 ```
 
-> **Note**: We will gradually roll out support for fine-tuning all models. The
+> [!NOTE]
+> We will gradually roll out support for fine-tuning all models. The
 > following models contain fine-tuning support: OPT, Falcon, LlaMA.
 
 ### Integrating a New Model
@@ -527,8 +531,8 @@ client = openllm.client.HTTPClient("http://localhost:3000")
 client.embed("I like to eat apples")
 ```
 
-> **Note**: Currently, the following model framily supports embeddings: Llama,
-> T5 (Flan-T5, FastChat, etc.), ChatGLM
+> [!NOTE]
+> Currently, the following model framily supports embeddings: Llama, T5 (Flan-T5, FastChat, etc.), ChatGLM
 
 ## ⚙️ Integrations
 
@@ -606,7 +610,8 @@ def chat(input_text: str):
     return agent.run(input_text)
 ```
 
-> **Note** You can find out more examples under the
+> [!NOTE]
+> You can find out more examples under the
 > [examples](https://github.com/bentoml/OpenLLM/tree/main/examples) folder.
 
 ### Transformers Agents
@@ -614,7 +619,8 @@ def chat(input_text: str):
 OpenLLM seamlessly integrates with
 [Transformers Agents](https://huggingface.co/docs/transformers/transformers_agents).
 
-> **Warning** The Transformers Agent is still at an experimental stage. It is
+> [!WARNING]
+> The Transformers Agent is still at an experimental stage. It is
 > recommended to install OpenLLM with `pip install -r nightly-requirements.txt`
 > to get the latest API update for HuggingFace agent.
 
@@ -626,7 +632,8 @@ agent = transformers.HfAgent("http://localhost:3000/hf/agent")  # URL that runs 
 agent.run("Is the following `text` positive or negative?", text="I don't like how this models is generate inputs")
 ```
 
-> **Note** Only `starcoder` is currently supported with Agent integration. The
+> [!IMPORTANT]
+> Only `starcoder` is currently supported with Agent integration. The
 > example above was also run with four T4s on EC2 `g4dn.12xlarge`
 
 If you want to use OpenLLM client to ask questions to the running agent, you can
@@ -646,6 +653,7 @@ client.ask_agent(
 <!-- hatch-fancy-pypi-readme interim stop -->
 
 ![Gif showing Agent integration](/assets/agent.gif)
+
 <br/>
 
 <!-- hatch-fancy-pypi-readme meta start -->
@@ -691,7 +699,8 @@ serverless cloud for shipping and scaling AI applications.
    bentoml cloud login --api-token <your-api-token> --endpoint <bento-cloud-endpoint>
    ```
 
-> **Note**: Replace `<your-api-token>` and `<bento-cloud-endpoint>` with your
+> [!NOTE]
+> Replace `<your-api-token>` and `<bento-cloud-endpoint>` with your
 > specific API token and the BentoCloud endpoint respectively.
 
 3. **Bulding a Bento**: With OpenLLM, you can easily build a Bento for a
