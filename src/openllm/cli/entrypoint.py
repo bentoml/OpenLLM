@@ -455,15 +455,15 @@ def import_command(model_name: str, model_id: str | None, converter: str | None,
   """
   llm_config = AutoConfig.for_model(model_name)
   env = EnvVarMixin(model_name, llm_config.default_implementation(), model_id=model_id, runtime=runtime, quantize=quantize)
-  impl: LiteralRuntime = first_not_none(implementation, default=env.framework_value)
-  llm = infer_auto_class(impl).for_model(model_name, llm_config=llm_config, model_version=model_version, ensure_available=False, serialisation=serialisation_format)
+  impl: LiteralRuntime = first_not_none(implementation, default=env["framework_value"])
+  llm = infer_auto_class(impl).for_model(model_name, model_id=env["model_id_value"], llm_config=llm_config, model_version=model_version, ensure_available=False, serialisation=serialisation_format)
   _previously_saved = False
   try:
     _ref = serialisation.get(llm)
     _previously_saved = True
   except bentoml.exceptions.NotFound:
     if not machine and output == "pretty":
-      msg = f"'{model_name}' {'with model_id='+ model_id if model_id is not None else ''} does not exists in local store. Saving to BENTOML_HOME{' (path=' + os.getenv('BENTOML_HOME', BentoMLContainer.bentoml_home.get()) + ')' if get_debug_mode() else ''}..."
+      msg = f"'{model_name}' {'with model_id='+ model_id if model_id is not None else ''} does not exists in local store. Saving to BENTOML_HOME{' (path=' + os.environ.get('BENTOML_HOME', BentoMLContainer.bentoml_home.get()) + ')' if get_debug_mode() else ''}..."
       termui.echo(msg, fg="yellow", nl=True)
     _ref = serialisation.get(llm, auto_import=True)
     if impl == "pt" and is_torch_available() and torch.cuda.is_available(): torch.cuda.empty_cache()
@@ -518,16 +518,16 @@ def _start(
       framework: The framework to use for this LLM. By default, this is set to ``pt``.
       additional_args: Additional arguments to pass to ``openllm start``.
   """
-  fast = os.getenv("OPENLLM_FAST", str(fast)).upper() in ENV_VARS_TRUE_VALUES
+  fast = os.environ.get("OPENLLM_FAST", str(fast)).upper() in ENV_VARS_TRUE_VALUES
   llm_config = AutoConfig.for_model(model_name)
   _ModelEnv = EnvVarMixin(model_name, first_not_none(framework, default=llm_config.default_implementation()), model_id=model_id, bettertransformer=bettertransformer, quantize=quantize, runtime=runtime)
-  os.environ[_ModelEnv.framework] = _ModelEnv.framework_value
+  os.environ[_ModelEnv.framework] = _ModelEnv["framework_value"]
 
   args: ListStr = ["--runtime", runtime]
   if model_id: args.extend(["--model-id", model_id])
   if timeout: args.extend(["--server-timeout", str(timeout)])
   if workers_per_resource: args.extend(["--workers-per-resource", str(workers_per_resource) if not isinstance(workers_per_resource, str) else workers_per_resource])
-  if device and not os.getenv("CUDA_VISIBLE_DEVICES"): args.extend(["--device", ",".join(device)])
+  if device and not os.environ.get("CUDA_VISIBLE_DEVICES"): args.extend(["--device", ",".join(device)])
   if quantize and bettertransformer: raise OpenLLMException("'quantize' and 'bettertransformer' are currently mutually exclusive.")
   if quantize: args.extend(["--quantize", str(quantize)])
   elif bettertransformer: args.append("--bettertransformer")
@@ -722,15 +722,15 @@ def build_command(
   # NOTE: We set this environment variable so that our service.py logic won't raise RuntimeError
   # during build. This is a current limitation of bentoml build where we actually import the service.py into sys.path
   try:
-    os.environ.update({"OPENLLM_MODEL": inflection.underscore(model_name), env.runtime: str(env.runtime_value), "OPENLLM_SERIALIZATION": serialisation_format})
-    os.environ[env.model_id] = str(env.model_id_value)
-    os.environ[env.quantize] = str(env.quantize_value)
-    os.environ[env.bettertransformer] = str(env.bettertransformer_value)
+    os.environ.update({"OPENLLM_MODEL": inflection.underscore(model_name), env.runtime: str(env["runtime_value"]), "OPENLLM_SERIALIZATION": serialisation_format})
+    os.environ[env.model_id] = str(env["model_id_value"])
+    os.environ[env.quantize] = str(env["quantize_value"])
+    os.environ[env.bettertransformer] = str(env["bettertransformer_value"])
 
-    llm = infer_auto_class(env.framework_value).for_model(model_name, llm_config=llm_config, ensure_available=not fast, model_version=model_version, serialisation=serialisation_format, **attrs)
+    llm = infer_auto_class(env["framework_value"]).for_model(model_name, model_id=env["model_id_value"], llm_config=llm_config, ensure_available=not fast, model_version=model_version, serialisation=serialisation_format, **attrs)
 
     labels = dict(llm.identifying_params)
-    labels.update({"_type": llm.llm_type, "_framework": env.framework_value})
+    labels.update({"_type": llm.llm_type, "_framework": env["framework_value"]})
     workers_per_resource = first_not_none(workers_per_resource, default=llm_config["workers_per_resource"])
 
     with fs.open_fs(f"temp://llm_{llm_config['model_name']}") as llm_fs:
@@ -796,7 +796,7 @@ def build_command(
 
   if push: BentoMLContainer.bentocloud_client.get().push_bento(bento, context=t.cast(GlobalOptions, ctx.obj).cloud_context, force=True)
   elif containerize:
-    backend = t.cast("DefaultBuilder", os.getenv("BENTOML_CONTAINERIZE_BACKEND", "docker"))
+    backend = t.cast("DefaultBuilder", os.environ.get("BENTOML_CONTAINERIZE_BACKEND", "docker"))
     try:
       bentoml.container.health(backend)
     except subprocess.CalledProcessError:

@@ -124,7 +124,7 @@ def field_env_key(model_name: str, key: str, suffix: str | t.Literal[""] | None 
   return "_".join(filter(None, map(str.upper, ["OPENLLM", model_name, suffix.strip("_") if suffix else "", key])))
 
 # Special debug flag controled via OPENLLMDEVDEBUG
-DEBUG = sys.flags.dev_mode or (not sys.flags.ignore_environment and bool(os.getenv(DEV_DEBUG_VAR)))
+DEBUG: bool = sys.flags.dev_mode or (not sys.flags.ignore_environment and bool(os.environ.get(DEV_DEBUG_VAR)))
 # MYPY is like t.TYPE_CHECKING, but reserved for Mypy plugins
 MYPY = False
 SHOW_CODEGEN = DEBUG and int(os.environ.get("OPENLLMDEVDEBUG", str(0))) > 3

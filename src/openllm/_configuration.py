@@ -622,7 +622,7 @@ def structure_settings(cl_: type[LLMConfig], cls: type[_ModelSettingsAttr]) -> _
   _final_value_dct["env"] = env
 
   # bettertransformer support
-  if _settings_attr["bettertransformer"] is None: _final_value_dct["bettertransformer"] = str(env.bettertransformer_value).upper() in ENV_VARS_TRUE_VALUES
+  if _settings_attr["bettertransformer"] is None: _final_value_dct["bettertransformer"] = str(env["bettertransformer_value"]).upper() in ENV_VARS_TRUE_VALUES
   # if requires_gpu is True, then disable BetterTransformer for quantization.
   if _settings_attr["requires_gpu"]: _final_value_dct["bettertransformer"] = False
   _final_value_dct["service_name"] = f"generated_{model_name}_service.py"
@@ -1485,4 +1485,6 @@ def structure_llm_config(data: DictStrAny, cls: type[LLMConfig]) -> LLMConfig:
 
 bentoml_cattr.register_structure_hook_func(lambda cls: lenient_issubclass(cls, LLMConfig), structure_llm_config)
 
-openllm_home = os.path.expanduser(os.getenv("OPENLLM_HOME", os.path.join(os.getenv("XDG_CACHE_HOME", os.path.join(os.path.expanduser("~"), ".cache")), "openllm")))
+openllm_home = os.path.expanduser(os.environ.get("OPENLLM_HOME", os.path.join(os.environ.get("XDG_CACHE_HOME", os.path.join(os.path.expanduser("~"), ".cache")), "openllm")))
+
+__all__ = ["LLMConfig", "field_env_key"]
