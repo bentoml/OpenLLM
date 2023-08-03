@@ -42,7 +42,7 @@ dependencies = [
     "inflection",
     "tabulate[widechars]>=0.9.0",
     "httpx",
-    "click>=8.1.6",
+    "click>=8.1.3",
     "typing_extensions",
     "GitPython",
     "cuda-python;platform_system!=\"Darwin\"",

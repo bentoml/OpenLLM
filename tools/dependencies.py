@@ -134,7 +134,7 @@ _BASE_DEPENDENCIES = [
     Dependencies(name="inflection"),
     Dependencies(name="tabulate", extensions=["widechars"], lower_constraint="0.9.0"),
     Dependencies(name="httpx"),
-    Dependencies(name="click", lower_constraint="8.1.6"),
+    Dependencies(name="click", lower_constraint="8.1.3"),
     Dependencies(name="typing_extensions"),
     Dependencies(name="GitPython"),
     Dependencies(name="cuda-python", platform=("Darwin", "ne")),
