@@ -121,6 +121,30 @@ playground = ["jupyter", "notebook", "ipython", "jupytext", "nbformat"]
 starcoder = ["bitsandbytes"]
 vllm = ["vllm", "ray"]
 
+[tool.cibuildwheel]
+build-verbosity = 1
+# So the following enviuronment will be targeted for compiled wheels:
+# - Python: CPython 3.8+ only
+# - Architecture (64-bit only): amd64 / x86_64, universal2, and arm64
+# - OS: Linux (no musl), Windows, and macOS
+build = "cp3*-*"
+skip = ["*-manylinux_i686", "*-musllinux_*", "*-win32", "pp-*"]
+
+[tool.cibuildwheel.environment]
+HATCH_BUILD_HOOKS_ENABLE = "1"
+MYPYC_DEBUG_LEVEL = "1"
+MYPYC_OPT_LEVEL = "3"
+
+[tool.cibuildwheel.linux]
+before-build = ["yum install -y clang gcc"]
+
+[tool.cibuildwheel.linux.environment]
+HATCH_BUILD_HOOKS_ENABLE = "1"
+MYPYC_DEBUG_LEVEL = "1"
+MYPYC_OPT_LEVEL = "3"
+# Use clang to compile successfully on Linux.
+CC = "clang"
+
 [tool.towncrier]
 directory = "changelog.d"
 filename = "CHANGELOG.md"

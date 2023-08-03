@@ -51,7 +51,7 @@ jobs:
       - name: Download Python artifacts
         uses: actions/download-artifact@v3
         with:
-          name: python-artifacts
+          name: python-artefacts
           path: dist
       - name: Download binaries
         uses: actions/download-artifact@v3
