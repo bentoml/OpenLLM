@@ -70,7 +70,7 @@
     [:<>
      [:div {:class "flex flex-col px-2 pt-1"}
       [:label {:class "flex w-full text-xs justify-between"}
-       [:div {:class "self-center"} name]
+       [:code {:class "self-center"} name]
        (condp = display-type
          :slider
          [parameter-small-input id value]
