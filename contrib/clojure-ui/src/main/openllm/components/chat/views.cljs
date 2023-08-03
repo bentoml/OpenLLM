@@ -27,7 +27,7 @@
   (let [chat-input-sub (rf/subscribe [::subs/chat-input-value])
         on-change #(rf/dispatch [::events/set-chat-input-value (.. % -target -value)])]
     (fn []
-      [:textarea {:class "py-1 h-20 w-[calc(100%_-_80px)] block"
+      [:textarea {:class "py-1 h-10 w-[calc(100%_-_195px)] block self-end"
                   :style {:resize "none"}
                   :placeholder "Type your message..."
                   :value @chat-input-sub
@@ -45,25 +45,25 @@
         submit-prompt (rf/subscribe [::subs/prompt])
         on-submit-event [::events/on-send-button-click @submit-prompt @llm-config]]
     (fn chat-controls []
-      [:form {:class "flex justify-end mr-2.5"}
+      [:form {:class "flex mr-2.5 mt-2"}
        [chat-input-field #(rf/dispatch on-submit-event)]
-       [:div {:class "grid grid-rows-2 ml-1.5 mr-0.5"}
-        [:div {:class "justify-between flex items-center"}
-         [tooltip {:title "Edit prompt layout"}
-          [icon-button {:on-click #(rf/dispatch [::events/toggle-modal])
-                        :color "primary"
-                        :size "medium"}
-           [ds-icon/design-services]]]
-         [tooltip {:title "Clear chat history"}
-          [icon-button {:on-click #(do (rf/dispatch [::events/clear-chat-history])
-                                       (rf/dispatch [::persistence/clear-chat-history]))
-                        :size "medium"
-                        :color "error"}
-           [delete-icon/delete-forever]]]]
+       [:div {:class "ml-1.5 mr-0.5"} 
+        [tooltip {:title "Edit prompt layout"}
+         [icon-button {:on-click #(rf/dispatch [::events/toggle-modal])
+                       :color "primary"
+                       :size "medium"}
+          [ds-icon/design-services]]]
+        [tooltip {:title "Clear chat history"}
+         [icon-button {:on-click #(do (rf/dispatch [::events/clear-chat-history])
+                                      (rf/dispatch [::persistence/clear-chat-history]))
+                       :size "medium"
+                       :color "primary"}
+          [delete-icon/delete-forever]]]
         [button {:on-click #(rf/dispatch on-submit-event)
                  :variant "outlined"
                  :end-icon (r/as-element [send-icon/send])
-                 :style {:width "96px"}
+                 :style {:width "96px"
+                         :margin-left "8px"}
                  :color "primary"}
          "Send"]]])))
 
@@ -139,9 +139,10 @@
   []
   [:<>
    [prompt-layout-modal]
-   [:div {:id "chat-history-container"
-          :class "overflow-y-scroll mt-6 h-[calc(100%_-_116px)] w-full no-scrollbar"
-          :style {:scrollBehavior "smooth"}}
-    [:div
+   [paper {:class "mr-3.5 mt-6 h-[calc(100%_-_75px)]"
+           :square true}
+    [:div {:id "chat-history-container"
+           :class "overflow-y-scroll w-full h-full no-scrollbar"
+           :style {:scrollBehavior "smooth"}}
      [chat-history]]]
    [chat-controls]])

@@ -19,7 +19,7 @@
   []
   (let [value (rf/subscribe [::subs/playground-input-value])]
     (fn []
-      [:textarea {:class "pt-3 w-full h-[calc(100%_-_74px)] block border resize-none"
+      [:textarea {:class "pt-3 w-full h-[calc(100%_-_64px)] block border resize-none"
                   :value @value
                   :on-change #(rf/dispatch [::events/set-prompt-input (.. % -target -value)])}])))
 
@@ -37,7 +37,7 @@
   (let [input-value (rf/subscribe [::subs/playground-input-value])
         llm-config (rf/subscribe [::model-params-subs/model-config])]
     (fn []
-      [:div {:class "mt-3 flex justify-end space-x-2"}
+      [:div {:class "mt-2.5 flex justify-end space-x-2 h-9"}
        [upload-button]
        [button {:type "button"
                 :variant "outlined"
