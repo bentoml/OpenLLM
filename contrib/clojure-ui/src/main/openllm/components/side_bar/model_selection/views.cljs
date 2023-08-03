@@ -15,17 +15,15 @@
         all-model-ids (rf/subscribe [::subs/all-model-ids])]
     (fn []
       [:div {:class "px-5 mb-3 mt-1"}
-       [:label {:class "text-black"} "Model-Type"
+       [:label {:class "text-black"} "Model"
         (into [select {:class "w-full h-8 mb-1"
                        :value @model-type
-                       :disabled true
                        :read-only true}]
               (map #(do [:option {:value %} %])
                    @all-model-types))]
-       [:label {:class "text-black"} "Model-ID"
+       [:label {:class "text-black"} "Model ID"
         (into [select {:class "w-full h-8"
                        :value @model-id
-                       :disabled true
                        :read-only true}]
               (map #(do [:option {:value %} (str %)])
                    @all-model-ids))]])))
