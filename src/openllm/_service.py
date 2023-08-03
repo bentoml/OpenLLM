@@ -20,7 +20,7 @@ This will ensure that 'bentoml serve llm-bento' will work accordingly.
 The generation code lives under utils/codegen.py
 """
 from __future__ import annotations
-import os, typing as t, warnings, attr, orjson, bentoml, openllm
+import os, typing as t, warnings, orjson, bentoml, openllm
 from starlette.applications import Starlette
 from starlette.responses import JSONResponse
 from starlette.routing import Route
@@ -68,15 +68,10 @@ if runner.supports_embeddings:
 
 if runner.supports_hf_agent and openllm.utils.is_transformers_supports_agent():
 
-  @attr.define
-  class HfAgentInput:
-    inputs: str
-    parameters: t.Dict[str, t.Any]
-
   async def hf_agent(request: Request) -> Response:
     json_str = await request.body()
     try:
-      input_data = openllm.utils.bentoml_cattr.structure(orjson.loads(json_str), HfAgentInput)
+      input_data = openllm.utils.bentoml_cattr.structure(orjson.loads(json_str), openllm.HfAgentInput)
     except orjson.JSONDecodeError as err:
       raise openllm.exceptions.OpenLLMException(f"Invalid JSON input received: {err}") from None
     stop = input_data.parameters.pop("stop", ["\n"])

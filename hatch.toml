@@ -158,6 +158,8 @@ exclude = [
     "src/openllm/utils/dummy_*.py",
     # playground is not considered as part of the library
     "src/openllm/playground/**",
+    # ignore _service.py as bentoml service is not yet compiled-able
+    "src/openllm/_service.py",
     # Only used during type runtime, no need to compile
     "src/openllm/_types.py",
     # Compiled module cannot be run directly
