@@ -1,9 +1,0 @@
-import logging
-
-from _typeshed import Incomplete
-
-class NewLineFormatter(logging.Formatter):
-    def __init__(self, fmt, datefmt: Incomplete | None = ...) -> None: ...
-    def format(self, record): ...
-
-def init_logger(name: str): ...

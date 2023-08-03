@@ -399,6 +399,8 @@ module = [
     "inflection.*",
     "huggingface_hub.*",
     "peft.*",
+    "auto_gptq.*",
+    "vllm.*",
     "orjson.*",
     "git.*",
     "httpx.*",
