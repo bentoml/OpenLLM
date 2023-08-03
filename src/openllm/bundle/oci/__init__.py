@@ -92,8 +92,8 @@ class RefResolver:
     # Will do a clone bare to tempdir, and return the latest commit hash that we build the base image
     # NOTE: this is a bit expensive, but it is ok since we only run this during build
     with tempfile.TemporaryDirectory(prefix="openllm-bare-") as tempdir:
-      cls._git.clone(_URI, tempdir, bare=True, depth=1)
-      return next(it.hexsha for it in git.Repo(tempdir).iter_commits("main", max_count=10) if "[skip ci]" not in str(it.summary))
+      cls._git.clone(_URI, tempdir, bare=True)
+      return next(it.hexsha for it in git.Repo(tempdir).iter_commits("main", max_count=20) if "[skip ci]" not in str(it.summary))
   @classmethod
   def _nightly_ref(cls) -> RefTuple: return _RefTuple((cls.nightly_resolver(), "refs/heads/main", "nightly"))
   @classmethod
