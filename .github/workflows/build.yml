@@ -39,7 +39,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.repository_owner == 'bentoml'
     env:
-      EC2_INSTANCE_TYPE: g5.12xlarge
+      EC2_INSTANCE_TYPE: g4dn.12xlarge
       EC2_AMI_ID: ami-0fc9d48803f691665
       EC2_SUBNET_ID: subnet-01e191856710e5205,subnet-0f23c41d786013d15,subnet-0ec43be52d7ca5619,subnet-0f3cfaf555c0fe5d7,subnet-06caca1b04878bf17,subnet-03c02763156f1c011
       EC2_SECURITY_GROUP: sg-0b84a8e57c4524eb9
