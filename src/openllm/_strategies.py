@@ -86,7 +86,7 @@ def _parse_visible_devices(default_var: str = ..., *, respect_env: t.Literal[Fal
 def _parse_visible_devices(default_var: str | None = None, respect_env: bool = True) -> list[str] | None:
   """CUDA_VISIBLE_DEVICES aware with default var for parsing spec."""
   if respect_env:
-    spec = os.getenv("CUDA_VISIBLE_DEVICES", default_var)
+    spec = os.environ.get("CUDA_VISIBLE_DEVICES", default_var)
     if not spec: return None
   else:
     if default_var is None: raise ValueError("spec is required to be not None when parsing spec.")
@@ -370,11 +370,11 @@ class CascadingResourceStrategy(bentoml.Strategy, ReprMixin):
       if runnable_class.SUPPORTS_CPU_MULTI_THREADING:
         thread_count = math.ceil(cpus)
         for thread_env in THREAD_ENVS:
-          environ[thread_env] = os.getenv(thread_env, str(thread_count))
+          environ[thread_env] = os.environ.get(thread_env, str(thread_count))
         logger.debug("Environ for worker %s: %s", worker_index, environ)
         return environ
       for thread_env in THREAD_ENVS:
-        environ[thread_env] = os.getenv(thread_env, "1")
+        environ[thread_env] = os.environ.get(thread_env, "1")
       return environ
     return environ
 

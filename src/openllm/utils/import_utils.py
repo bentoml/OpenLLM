@@ -373,10 +373,11 @@ class EnvVarMixin(ReprMixin):
   def __getitem__(self, item: t.Literal["runtime_value"]) -> t.Literal["ggml", "transformers"]: ...
   # fmt: on
   def __getitem__(self, item: str | t.Any) -> t.Any:
-    if hasattr(self, item): return getattr(self, item)
+    if item.endswith("_value") and hasattr(self, f"_{item}"): return object.__getattribute__(self, f"_{item}")()
+    elif hasattr(self, item): return getattr(self, item)
     raise KeyError(f"Key {item} not found in {self}")
-  def __init__(self, model_name: str, implementation: LiteralRuntime = "pt", model_id: str | None = None, bettertransformer: bool | None = None, quantize: t.LiteralString | None = None,
-              runtime: t.Literal["ggml", "transformers"] = "transformers") -> None:
+
+  def __init__(self, model_name: str, implementation: LiteralRuntime = "pt", model_id: str | None = None, bettertransformer: bool | None = None, quantize: t.LiteralString | None = None, runtime: t.Literal["ggml", "transformers"] = "transformers") -> None:
     """EnvVarMixin is a mixin class that returns the value extracted from environment variables."""
     from .._configuration import field_env_key
     self.model_name = inflection.underscore(model_name)
@@ -385,20 +386,37 @@ class EnvVarMixin(ReprMixin):
     self._bettertransformer = bettertransformer
     self._quantize = quantize
     self._runtime = runtime
-    for att in {"config", "model_id", "quantize", "framework", "bettertransformer", "runtime"}: setattr(self, att, field_env_key(self.model_name, att.upper()))
+    for att in {"config", "model_id", "quantize", "framework", "bettertransformer", "runtime"}:
+      setattr(self, att, field_env_key(self.model_name, att.upper()))
+
   @property
-  def __repr_keys__(self) -> set[str]: return {"config", "model_id", "quantize", "framework", "bettertransformer", "runtime"}
+  def __repr_keys__(self) -> set[str]:
+    return {"config", "model_id", "quantize", "framework", "bettertransformer", "runtime"}
+
+  def _quantize_value(self) -> t.Literal["int8", "int4", "gptq"] | None:
+    from . import first_not_none
+    return t.cast(t.Optional[t.Literal["int8", "int4", "gptq"]], first_not_none(os.environ.get(self["quantize"]), default=self._quantize))
+
+  def _framework_value(self) -> LiteralRuntime:
+    from . import first_not_none
+    return t.cast(t.Literal["pt", "tf", "flax", "vllm"], first_not_none(os.environ.get(self["framework"]), default=self._implementation))
+
+  def _bettertransformer_value(self) -> bool:
+    from . import first_not_none
+    return t.cast(bool, first_not_none(os.environ.get(self["bettertransformer"], str(False)).upper() in ENV_VARS_TRUE_VALUES, default=self._bettertransformer))
+
+  def _model_id_value(self) -> str | None:
+    from . import first_not_none
+    return first_not_none(os.environ.get(self["model_id"]), default=self._model_id)
+
+  def _runtime_value(self) -> t.Literal["ggml", "transformers"]:
+    from . import first_not_none
+    return t.cast(t.Literal["ggml", "transformers"], first_not_none(os.environ.get(self["runtime"]), default=self._runtime))
+
   @property
-  def quantize_value(self) -> t.Literal["int8", "int4", "gptq"] | None: return t.cast(t.Optional[t.Literal["int8", "int4", "gptq"]], os.getenv(self["quantize"], self._quantize))
+  def start_docstring(self) -> str:
+    return getattr(self.module, f"START_{self.model_name.upper()}_COMMAND_DOCSTRING")
+
   @property
-  def framework_value(self) -> LiteralRuntime: return t.cast(t.Literal["pt", "tf", "flax", "vllm"], os.getenv(self["framework"], self._implementation))
-  @property
-  def bettertransformer_value(self) -> bool: return os.getenv(self["bettertransformer"], str(self._bettertransformer)).upper() in ENV_VARS_TRUE_VALUES
-  @property
-  def model_id_value(self) -> str | None: return os.getenv(self["model_id"], self._model_id)
-  @property
-  def runtime_value(self) -> t.Literal["ggml", "transformers"]: return t.cast(t.Literal["ggml", "transformers"], os.getenv(self["runtime"], self._runtime))
-  @property
-  def start_docstring(self) -> str: return getattr(self.module, f"START_{self.model_name.upper()}_COMMAND_DOCSTRING")
-  @property
-  def module(self) -> _AnnotatedLazyLoader[t.LiteralString]: return _AnnotatedLazyLoader(self.model_name, globals(), f"openllm.models.{self.model_name}")
+  def module(self) -> _AnnotatedLazyLoader[t.LiteralString]:
+    return _AnnotatedLazyLoader(self.model_name, globals(), f"openllm.models.{self.model_name}")

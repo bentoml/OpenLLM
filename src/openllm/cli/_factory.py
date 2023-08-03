@@ -138,7 +138,7 @@ Available official model_id(s): [default: {llm_config['default_id']}]
       serialisation_format: t.Literal["safetensors", "legacy"], adapter_id: str | None, return_process: bool, **attrs: t.Any,
   ) -> LLMConfig | subprocess.Popen[bytes]:
     fast = str(fast).upper() in ENV_VARS_TRUE_VALUES
-    if serialisation_format == "safetensors" and quantize is not None and os.getenv("OPENLLM_SERIALIZATION_WARNING", str(True)).upper() in ENV_VARS_TRUE_VALUES:
+    if serialisation_format == "safetensors" and quantize is not None and os.environ.get("OPENLLM_SERIALIZATION_WARNING", str(True)).upper() in ENV_VARS_TRUE_VALUES:
       termui.echo(f"'--quantize={quantize}' might not work with 'safetensors' serialisation format. Use with caution!. To silence this warning, set \"OPENLLM_SERIALIZATION_WARNING=False\"\nNote: You can always fallback to '--serialisation legacy' when running quantisation.", fg="yellow")
     adapter_map: dict[str, str | None] | None = attrs.pop(_adapter_mapping_key, None)
     config, server_attrs = llm_config.model_validate_click(**attrs)
@@ -173,14 +173,14 @@ Available official model_id(s): [default: {llm_config['default_id']}]
     start_env = parse_config_options(config, server_timeout, wpr, device, start_env)
     if fast: termui.echo(f"Fast mode is enabled. Make sure the model is available in local store before 'start': 'openllm import {model}{' --model-id ' + model_id if model_id else ''}'", fg="yellow")
 
-    start_env.update({"OPENLLM_MODEL": model, "BENTOML_DEBUG": str(get_debug_mode()), "BENTOML_HOME": os.getenv("BENTOML_HOME", BentoMLContainer.bentoml_home.get()), "OPENLLM_ADAPTER_MAP": orjson.dumps(adapter_map).decode(), "OPENLLM_SERIALIZATION": serialisation_format, env.runtime: env.runtime_value, env.framework: env.framework_value})
-    if env.model_id_value: start_env[env.model_id] = str(env.model_id_value)
+    start_env.update({"OPENLLM_MODEL": model, "BENTOML_DEBUG": str(get_debug_mode()), "BENTOML_HOME": os.environ.get("BENTOML_HOME", BentoMLContainer.bentoml_home.get()), "OPENLLM_ADAPTER_MAP": orjson.dumps(adapter_map).decode(), "OPENLLM_SERIALIZATION": serialisation_format, env.runtime: env["runtime_value"], env.framework: env["framework_value"]})
+    start_env[env.model_id] = str(env["model_id_value"])
     # NOTE: quantize and bettertransformer value is already assigned within env
-    if bettertransformer is not None: start_env[env.bettertransformer] = str(env.bettertransformer_value)
-    if quantize is not None: start_env[env.quantize] = str(env.quantize_value)
+    if bettertransformer is not None: start_env[env.bettertransformer] = str(env["bettertransformer_value"])
+    if quantize is not None: start_env[env.quantize] = str(t.cast(str, env["quantize_value"]))
 
-    llm = infer_auto_class(env.framework_value).for_model(model, model_version=model_version, llm_config=config, ensure_available=not fast, adapter_map=adapter_map, serialisation=serialisation_format)
-    start_env.update({env.config: llm.config.model_dump_json().decode(), env.model_id: llm.model_id})
+    llm = infer_auto_class(env["framework_value"]).for_model(model, model_id=start_env[env.model_id], model_version=model_version, llm_config=config, ensure_available=not fast, adapter_map=adapter_map, serialisation=serialisation_format)
+    start_env.update({env.config: llm.config.model_dump_json().decode()})
 
     server = bentoml.GrpcServer("_service.py:svc", **server_attrs) if _serve_grpc else bentoml.HTTPServer("_service.py:svc", **server_attrs)
     analytics.track_start_init(llm.config)

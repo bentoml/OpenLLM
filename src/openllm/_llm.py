@@ -419,6 +419,11 @@ def _make_assignment_script(cls: type[LLM[M, T]]) -> t.Callable[[type[LLM[M, T]]
     else: func_call = f"_impl_{cls.__name__}_{func}={cached_func_name} if {cached_func_name} is not _cached_LLMInterface_get('{func}') else __serialisation_{func}"
     lines.extend([f"{cached_func_name}=cls.{func}", func_call, _setattr_class(func, f"{impl_name}(_impl_{cls.__name__}_{func})"),])
 
+  # assign vllm specific implementation
+  if cls.__llm_implementation__ == "vllm":
+    globs.update({"_vllm_generate": vllm_generate, "_vllm_postprocess_generate": vllm_postprocess_generate})
+    lines.extend([_setattr_class(it, f"_vllm_{it}") for it in {"generate", "postprocess_generate"}])
+
   # cached attribute initialisation
   interface_anns = codegen.get_annotations(LLMInterface)
   for v in {"bentomodel", "model", "tokenizer", "adapter_map"}:
@@ -431,6 +436,17 @@ def _make_assignment_script(cls: type[LLM[M, T]]) -> t.Callable[[type[LLM[M, T]]
     lines.extend([_setattr_class(key, f"cls.{fn} is not _cached_LLMInterface_get('{fn}')"), f"__gen_docstring(cls, '{fn}')",])
     anns[key] = interface_anns.get(key)
   return codegen.generate_function(cls, "__assign_llm_attr", lines, args=("cls", *args), globs=globs, annotations=anns)
+
+def vllm_postprocess_generate(self: LLM["vllm.LLMEngine", T], prompt: str, generation_result: list[dict[str, t.Any]], **_: t.Any) -> str:
+  return generation_result[0]["outputs"][0]["text"]
+
+def vllm_generate(self: LLM["vllm.LLMEngine", T], prompt: str, **attrs: t.Any) -> list[dict[str, t.Any]]:
+  outputs: list[vllm.RequestOutput] = []
+  # TODO: support prompt_token_ids
+  self.model.add_request(request_id=str(uuid.uuid4().hex), prompt=prompt, sampling_params=self.config.model_construct_env(**attrs).to_sampling_config())
+  while self.model.has_unfinished_requests():
+    outputs.extend([r for r in self.model.step() if r.finished])
+  return [unmarshal_vllm_outputs(i) for i in outputs]
 
 _AdaptersTuple: type[AdaptersTuple] = codegen.make_attr_tuple_class("AdaptersTuple", ["adapter_id", "name", "config"])
 
@@ -469,19 +485,6 @@ class LLM(LLMInterface[M, T], ReprMixin):
     elif "config_class" not in cd: raise RuntimeError("Missing required key 'config_class'. Make sure to define it within the LLM subclass.")
     _make_assignment_script(cls)(cls)
     if "tokenizer_id" not in cd and cls.__llm_implementation__ == "vllm": cls.tokenizer_id = _DEFAULT_TOKENIZER
-
-    if implementation == "vllm":
-      def vllm_postprocess_generate(self: LLM["vllm.LLMEngine", T], prompt: str, generation_result: list[dict[str, t.Any]], **_: t.Any) -> str: return generation_result[0]["outputs"][0]["text"]
-      def vllm_generate(self: LLM["vllm.LLMEngine", T], prompt: str, **attrs: t.Any) -> list[dict[str, t.Any]]:
-        outputs: list[vllm.RequestOutput] = []
-        # TODO: support prompt_token_ids
-        self.model.add_request(request_id=str(uuid.uuid4().hex), prompt=prompt, sampling_params=self.config.model_construct_env(**attrs).to_sampling_config())
-        while self.model.has_unfinished_requests():
-          outputs.extend([r for r in self.model.step() if r.finished])
-        return [unmarshal_vllm_outputs(i) for i in outputs]
-
-      _object_setattr(cls, "postprocess_generate", vllm_postprocess_generate)
-      _object_setattr(cls, "generate", vllm_generate)
 
   # fmt: off
   @overload
@@ -586,10 +589,10 @@ class LLM(LLMInterface[M, T], ReprMixin):
         **attrs: The kwargs to be passed to the model.
     """
     cfg_cls = cls.config_class
-    model_id = first_not_none(model_id, os.getenv(cfg_cls.__openllm_env__["model_id"]), cfg_cls.__openllm_default_id__)
+    model_id = first_not_none(model_id, os.environ.get(cfg_cls.__openllm_env__["model_id"]), cfg_cls.__openllm_default_id__)
     if model_id is None: raise RuntimeError("Failed to resolve a valid model_id.")
     if validate_is_path(model_id): model_id = resolve_filepath(model_id)
-    quantize = first_not_none(quantize, t.cast(t.Optional[t.Literal["int8", "int4", "gptq"]], os.getenv(cfg_cls.__openllm_env__["quantize"])), default=None)
+    quantize = first_not_none(quantize, t.cast(t.Optional[t.Literal["int8", "int4", "gptq"]], os.environ.get(cfg_cls.__openllm_env__["quantize"])), default=None)
 
     # quantization setup
     if quantization_config and quantize: raise ValueError("'quantization_config' and 'quantize' are mutually exclusive. Either customise your quantization_config or use the 'quantize' argument.")
@@ -614,10 +617,9 @@ class LLM(LLMInterface[M, T], ReprMixin):
     except Exception as err: raise OpenLLMException(f"Failed to generate a valid tag for {cfg_cls.__openllm_start_name__} with 'model_id={model_id}' (lookup to see its traceback):\n{err}") from err
 
     return cls(
-        *args, model_id=model_id, llm_config=llm_config, quantization_config=quantization_config,
-        bettertransformer=str(first_not_none(bettertransformer, os.getenv(cfg_cls.__openllm_env__["bettertransformer"]), default=None)).upper() in ENV_VARS_TRUE_VALUES,
-        _runtime=first_not_none(runtime, t.cast(t.Optional[t.Literal["ggml", "transformers"]], os.getenv(cfg_cls.__openllm_env__["runtime"])), default=cfg_cls.__openllm_runtime__),
-        _adapters_mapping=resolve_peft_config_type(adapter_map) if adapter_map is not None else None, _quantize_method=quantize, _model_version=_tag.version, _tag=_tag, _serialisation_format=serialisation, **attrs
+        *args, model_id=model_id, llm_config=llm_config, quantization_config=quantization_config, bettertransformer=str(first_not_none(bettertransformer, os.environ.get(cfg_cls.__openllm_env__["bettertransformer"]), default=None)).upper() in ENV_VARS_TRUE_VALUES,
+        _runtime=first_not_none(runtime, t.cast(t.Optional[t.Literal["ggml", "transformers"]], os.environ.get(cfg_cls.__openllm_env__["runtime"])), default=cfg_cls.__openllm_runtime__), _adapters_mapping=resolve_peft_config_type(adapter_map)
+        if adapter_map is not None else None, _quantize_method=quantize, _model_version=_tag.version, _tag=_tag, _serialisation_format=serialisation, **attrs
     )
 
   @classmethod
@@ -640,7 +642,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
         ``str``: Generated tag format that can be parsed by ``bentoml.Tag``
     """
     # specific branch for running in docker, this is very hacky, needs change upstream
-    if in_docker() and os.getenv("BENTO_PATH") is not None: return ":".join(fs.path.parts(model_id)[-2:])
+    if in_docker() and os.environ.get("BENTO_PATH") is not None: return ":".join(fs.path.parts(model_id)[-2:])
 
     model_name = normalise_model_name(model_id)
     model_id, *maybe_revision = model_id.rsplit(":")
@@ -649,7 +651,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
       return f"{cls.__llm_implementation__}-{model_name}:{maybe_revision[0]}"
 
     tag_name = f"{cls.__llm_implementation__}-{model_name}"
-    if os.getenv("OPENLLM_USE_LOCAL_LATEST", str(False)).upper() in ENV_VARS_TRUE_VALUES: return bentoml_cattr.unstructure(bentoml.models.get(f"{tag_name}{':'+model_version if model_version is not None else ''}").tag)
+    if os.environ.get("OPENLLM_USE_LOCAL_LATEST", str(False)).upper() in ENV_VARS_TRUE_VALUES: return bentoml_cattr.unstructure(bentoml.models.get(f"{tag_name}{':'+model_version if model_version is not None else ''}").tag)
     if validate_is_path(model_id): model_id, model_version = resolve_filepath(model_id), first_not_none(model_version, default=generate_hash_from_file(model_id))
     else:
       _config = transformers.AutoConfig.from_pretrained(model_id, trust_remote_code=cls.config_class.__openllm_trust_remote_code__, revision=first_not_none(model_version, default="main"))
@@ -1015,8 +1017,7 @@ def Runner(model_name: str, ensure_available: bool | None = None, init_local: bo
     behaviour
   """
   if llm_config is not None:
-    attrs.update({"model_id": llm_config["env"]["model_id_value"], "bettertransformer": llm_config["env"]["bettertransformer_value"], "quantize": llm_config["env"]["quantize_value"], "runtime": llm_config["env"]["runtime_value"],
-                  "serialisation": first_not_none(os.getenv("OPENLLM_SERIALIZATION"), attrs.get("serialisation"), default="safetensors")})
+    attrs.update({"model_id": llm_config["env"]["model_id_value"], "bettertransformer": llm_config["env"]["bettertransformer_value"], "quantize": llm_config["env"]["quantize_value"], "runtime": llm_config["env"]["runtime_value"], "serialisation": first_not_none(os.environ.get("OPENLLM_SERIALIZATION"), attrs.get("serialisation"), default="safetensors")})
 
   default_implementation = llm_config.default_implementation() if llm_config is not None else "pt"
   implementation = first_not_none(implementation, default=EnvVarMixin(model_name, default_implementation)["framework_value"])
