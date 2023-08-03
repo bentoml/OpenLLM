@@ -115,7 +115,7 @@ RUN <<EOT
 pip install packaging
 git clone https://github.com/PanQiWei/AutoGPTQ.git && cd AutoGPTQ
 git fetch && git checkout ${COMMIT_HASH}
-python setup.py build
+TORCH_CUDA_ARCH_LIST="7.5;8.0;8.6+PTX;8.9;9.0" python setup.py build
 EOT
 
 # base image
