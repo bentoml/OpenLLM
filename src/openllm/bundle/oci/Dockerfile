@@ -103,6 +103,21 @@ git fetch && git checkout ${COMMIT_HASH}
 python setup.py build
 EOT
 
+# NOTE: Build auto-gptq CUDA kernels
+FROM kernel-builder as auto-gptq-builder
+
+ENV COMMIT_HASH a7167b108c438f570938f0ced46a52fe515f4a59
+ARG COMMIT_HASH=${COMMIT_HASH}
+
+WORKDIR /usr/src
+
+RUN <<EOT
+pip install packaging
+git clone https://github.com/PanQiWei/AutoGPTQ.git && cd AutoGPTQ
+git fetch && git checkout ${COMMIT_HASH}
+python setup.py build
+EOT
+
 # base image
 FROM nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04 as base-container
 
@@ -127,6 +142,9 @@ COPY --from=vllm-builder /usr/src/vllm/build/lib.linux-x86_64-cpython-39 /opt/co
 # Copy build artefacts for flash-attention-v2
 COPY --from=flash-attn-v2-builder /usr/src/flash-attention-v2/build/lib.linux-x86_64-cpython-39 /opt/conda/lib/python3.9/site-packages
 
+# Copy build artefacts for auto-gptq
+COPY --from=auto-gptq-builder /usr/src/AutoGPTQ/build/lib.linux-x86_64-cpython-39 /opt/conda/lib/python3.9/site-packages
+
 # Install required dependencies
 COPY src src
 COPY hatch.toml README.md CHANGELOG.md pyproject.toml ./
@@ -140,7 +158,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
         rm -rf /var/lib/apt/lists/*
 
 # Install all required dependencies
-RUN pip install  "ray==2.6.0" "jax[cuda11_local]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html ".[opt,fine-tune,llama,gptq,falcon,chatglm]" -v --no-cache-dir
+RUN pip install  "ray==2.6.0" "jax[cuda11_local]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html ".[opt,mpt,fine-tune,llama,falcon,chatglm]" -v --no-cache-dir
 
 FROM base-container
 
