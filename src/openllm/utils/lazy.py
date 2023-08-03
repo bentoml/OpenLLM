@@ -28,12 +28,6 @@ import attr
 
 import openllm
 
-class UsageNotAllowedError(openllm.exceptions.OpenLLMException):
-  """Raised when LazyModule.__getitem__ is forbidden."""
-
-class MissingAttributesError(openllm.exceptions.OpenLLMException):
-  """Raised when given keys is not available in LazyModule special mapping."""
-
 __all__ = ["VersionInfo", "LazyModule"]
 
 @functools.total_ordering
@@ -154,11 +148,11 @@ class LazyModule(types.ModuleType):
 
   def __getitem__(self, key: str) -> t.Any:
     """This is reserved to only internal uses and users shouldn't use this."""
-    if self._objects.get("__openllm_special__") is None: raise UsageNotAllowedError(f"'{self._name}' is not allowed to be used as a dict.")
+    if self._objects.get("__openllm_special__") is None: raise openllm.exceptions.OpenLLMException(f"'{self._name}' is not allowed to be used as a dict.")
     _special_mapping = self._objects.get("__openllm_special__", {})
     try:
       if key in _special_mapping: return getattr(self, _special_mapping.__getitem__(key))
-      raise MissingAttributesError(f"Requested '{key}' is not available in given mapping.")
+      raise openllm.exceptions.OpenLLMException(f"Requested '{key}' is not available in given mapping.")
     except AttributeError as e:
       raise KeyError(f"'{self._name}' has no attribute {_special_mapping[key]}") from e
     except Exception as e:
