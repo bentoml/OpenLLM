@@ -18,6 +18,19 @@ This changelog is managed by towncrier and is compiled at release time.
 
 <!-- towncrier release notes start -->
 
+## [0.2.14](https://github.com/bentoml/openllm/tree/v0.2.14)
+
+### Bug fix
+
+- Fixes a bug with `EnvVarMixin` where it didn't respect environment variable for specific fields
+
+  This inherently provide a confusing behaviour with `--model-id`. This is now has been addressed with main
+
+  The base docker will now also include a installation of xformers from source, locked at a given hash, since the latest release of xformers
+  are too old and would fail with vLLM when running within the k8s
+  [#181](https://github.com/bentoml/openllm/issues/181)
+
+
 ## [0.2.13](https://github.com/bentoml/openllm/tree/v0.2.13)
 No significant changes.
 
