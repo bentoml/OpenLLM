@@ -159,7 +159,7 @@ Available official model_id(s): [default: {llm_config['default_id']}]
     if fast: termui.echo(f"Fast mode is enabled. Make sure the model is available in local store before 'start': 'openllm import {model}{' --model-id ' + model_id if model_id else ''}'", fg="yellow")
 
     start_env.update({"OPENLLM_MODEL": model, "BENTOML_DEBUG": str(openllm.utils.get_debug_mode()), "BENTOML_HOME": os.environ.get("BENTOML_HOME", BentoMLContainer.bentoml_home.get()), "OPENLLM_ADAPTER_MAP": orjson.dumps(adapter_map).decode(), "OPENLLM_SERIALIZATION": serialisation_format, env.runtime: env["runtime_value"], env.framework: env["framework_value"]})
-    start_env[env.model_id] = str(env["model_id_value"])
+    if env["model_id_value"]: start_env[env.model_id] = str(env["model_id_value"])
     # NOTE: quantize and bettertransformer value is already assigned within env
     if bettertransformer is not None: start_env[env.bettertransformer] = str(env["bettertransformer_value"])
     if quantize is not None: start_env[env.quantize] = str(t.cast(str, env["quantize_value"]))
