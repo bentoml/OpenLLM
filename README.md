@@ -576,10 +576,14 @@ To quickly start a local LLM with `langchain`, simply do the following:
 ```python
 from langchain.llms import OpenLLM
 
-llm = OpenLLM(model_name="dolly-v2", model_id='databricks/dolly-v2-7b', device_map='auto')
+llm = OpenLLM(model_name="llama", model_id='meta-llama/Llama-2-7b-hf')
 
 llm("What is the difference between a duck and a goose? And why there are so many Goose in Canada?")
 ```
+
+> [!IMPORTANT]
+> By default, OpenLLM use `safetensors` format for saving models. If the model doesn't support safetensors,
+> make sure to pass `serialisation="legacy"` to use the legacy PyTorch bin format.
 
 `langchain.llms.OpenLLM` has the capability to interact with remote OpenLLM
 Server. Given there is an OpenLLM server deployed elsewhere, you can connect to
@@ -599,6 +603,7 @@ llm = OpenLLM(
     model_name='flan-t5',
     model_id='google/flan-t5-large',
     embedded=False,
+    serialisation="legacy"
 )
 tools = load_tools(["serpapi", "llm-math"], llm=llm)
 agent = initialize_agent(
