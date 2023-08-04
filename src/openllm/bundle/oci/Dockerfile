@@ -160,7 +160,7 @@ COPY --from=flash-attn-v2-builder /usr/src/flash-attention-v2/build/lib.linux-x8
 COPY --from=auto-gptq-builder /usr/src/AutoGPTQ/build/lib.linux-x86_64-cpython-39 /opt/conda/lib/python3.9/site-packages
 
 # Copy build artefacts for xformers
-COPY --from=auto-gptq-builder /usr/src/xformers/build/lib.linux-x86_64-cpython-39 /opt/conda/lib/python3.9/site-packages
+COPY --from=xformers-builder /usr/src/xformers/build/lib.linux-x86_64-cpython-39 /opt/conda/lib/python3.9/site-packages
 
 # Install required dependencies
 COPY src src
