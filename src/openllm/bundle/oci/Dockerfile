@@ -129,6 +129,7 @@ WORKDIR /usr/src
 RUN <<EOT
 git clone https://github.com/facebookresearch/xformers.git && cd xformers
 git fetch && git checkout ${COMMIT_HASH}
+git submodule update --init --recursive
 TORCH_CUDA_ARCH_LIST="7.5;8.0;8.6+PTX;8.9;9.0" python setup.py build
 EOT
 
