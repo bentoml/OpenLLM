@@ -24,15 +24,18 @@ repos:
     rev: 'v0.0.281'
     hooks:
       - id: ruff
+        verbose: true
         args: [--exit-non-zero-on-fix, --show-fixes]
-  -   repo: https://github.com/editorconfig-checker/editorconfig-checker.python
-      rev: '2.7.2'
-      hooks:
+  - repo: https://github.com/editorconfig-checker/editorconfig-checker.python
+    rev: '2.7.2'
+    hooks:
       - id: editorconfig-checker
+        verbose: true
   - repo: https://github.com/econchick/interrogate
     rev: 1.5.0
     hooks:
       - id: interrogate
+        verbose: true
         types: [python]
         exclude: ^(docs|tools|tests)
         args: [--config=pyproject.toml]
@@ -40,16 +43,13 @@ repos:
     rev: v0.40.0
     hooks:
       - id: yapf
+        verbose: true
         types: [python]
-        args: [--parallel, --recursive]
-  - repo: local
+        args: [--parallel, --recursive, -i]
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.4.1
     hooks:
       - id: mypy
-        name: mypy
-        entry: ./tools/mypy
-        types: [python]
-        language: python
-        pass_filenames: false
         verbose: true
         exclude: |
           (?x)^(
@@ -60,15 +60,17 @@ repos:
               .github/.*
           )$
         additional_dependencies:
-          - mypy==1.4.1
-          - click>=8.1.6
+          - click==8.1.3
           - peft
-          - git+https://github.com/bentoml/BentoML.git@main
-          - git+https://github.com/huggingface/transformers.git@main
+          - bentoml==1.1.1
+          - transformers>=4.31.0
+          - pandas-stubs
           - types-psutil
           - types-tabulate
           - types-PyYAML
           - types-protobuf
+  - repo: local
+    hooks:
       - id: pyright
         name: pyright
         entry: ./tools/pyright
@@ -81,6 +83,7 @@ repos:
         name: check for license headers
         entry: ./tools/assert-license-headers
         language: script
+        verbose: true
         exclude_types:
           - 'markdown'
           - 'toml'
@@ -98,6 +101,7 @@ repos:
         name: check if table in README.md is up-to-date
         entry: ./tools/assert-model-table-latest
         language: script
+        verbose: true
         files: README.md
       - id: changelog-dry-run
         name: Running changelog dry-run
@@ -108,7 +112,9 @@ repos:
     rev: v4.4.0
     hooks:
       - id: trailing-whitespace
+        verbose: true
       - id: end-of-file-fixer
+        verbose: true
         exclude: |
           (?x)^(
               tests/models/.*

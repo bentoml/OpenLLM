@@ -27,6 +27,7 @@ from simple_di import Provide
 from simple_di import inject
 
 import bentoml
+import openllm
 from bentoml._internal.bento.build_config import BentoBuildConfig
 from bentoml._internal.bento.build_config import DockerOptions
 from bentoml._internal.bento.build_config import ModelSpec
@@ -34,19 +35,10 @@ from bentoml._internal.bento.build_config import PythonOptions
 from bentoml._internal.configuration.containers import BentoMLContainer
 
 from . import oci
-from ..utils import DEBUG
-from ..utils import EnvVarMixin
-from ..utils import codegen
-from ..utils import device_count
-from ..utils import is_flax_available
-from ..utils import is_tf_available
-from ..utils import is_torch_available
-from ..utils import pkg
 
 if t.TYPE_CHECKING:
   from fs.base import FS
 
-  import openllm
   from bentoml._internal.bento import BentoStore
   from bentoml._internal.models.model import ModelStore
 
@@ -63,7 +55,7 @@ def build_editable(path: str) -> str | None:
   # We need to build the package in editable mode, so that we can import it
   from build import ProjectBuilder
   from build.env import IsolatedEnvBuilder
-  module_location = pkg.source_locations("openllm")
+  module_location = openllm.utils.pkg.source_locations("openllm")
   if not module_location: raise RuntimeError("Could not find the source location of OpenLLM. Make sure to unset OPENLLM_DEV_BUILD if you are developing OpenLLM.")
   pyproject_path = Path(module_location).parent.parent / "pyproject.toml"
   if os.path.isfile(pyproject_path.__fspath__()):
@@ -87,15 +79,15 @@ def construct_python_options(llm: openllm.LLM[t.Any, t.Any], llm_fs: FS, extra_d
 
   req = llm.config["requirements"]
   if req is not None: packages.extend(req)
-  if str(os.environ.get("BENTOML_BUNDLE_LOCAL_BUILD", False)).lower() == "false": packages.append(f"bentoml>={'.'.join([str(i) for i in pkg.pkg_version_info('bentoml')])}")
+  if str(os.environ.get("BENTOML_BUNDLE_LOCAL_BUILD", False)).lower() == "false": packages.append(f"bentoml>={'.'.join([str(i) for i in openllm.utils.pkg.pkg_version_info('bentoml')])}")
 
   env = llm.config["env"]
   framework_envvar = env["framework_value"]
   if framework_envvar == "flax":
-    if not is_flax_available(): raise ValueError(f"Flax is not available, while {env.framework} is set to 'flax'")
+    if not openllm.utils.is_flax_available(): raise ValueError(f"Flax is not available, while {env.framework} is set to 'flax'")
     packages.extend([importlib.metadata.version("flax"), importlib.metadata.version("jax"), importlib.metadata.version("jaxlib")])
   elif framework_envvar == "tf":
-    if not is_tf_available(): raise ValueError(f"TensorFlow is not available, while {env.framework} is set to 'tf'")
+    if not openllm.utils.is_tf_available(): raise ValueError(f"TensorFlow is not available, while {env.framework} is set to 'tf'")
     candidates = ("tensorflow", "tensorflow-cpu", "tensorflow-gpu", "tf-nightly", "tf-nightly-cpu", "tf-nightly-gpu", "intel-tensorflow", "intel-tensorflow-avx512", "tensorflow-rocm", "tensorflow-macos",)
     # For the metadata, we have to look for both tensorflow and tensorflow-cpu
     for candidate in candidates:
@@ -109,7 +101,7 @@ def construct_python_options(llm: openllm.LLM[t.Any, t.Any], llm_fs: FS, extra_d
       except importlib.metadata.PackageNotFoundError:
         pass
   else:
-    if not is_torch_available(): raise ValueError("PyTorch is not available. Make sure to have it locally installed.")
+    if not openllm.utils.is_torch_available(): raise ValueError("PyTorch is not available. Make sure to have it locally installed.")
     packages.extend([f'torch>={importlib.metadata.version("torch")}'])
 
   wheels: list[str] = []
@@ -118,30 +110,26 @@ def construct_python_options(llm: openllm.LLM[t.Any, t.Any], llm_fs: FS, extra_d
   return PythonOptions(packages=packages, wheels=wheels, lock_packages=False, extra_index_url=["https://download.pytorch.org/whl/cu118"])
 
 def construct_docker_options(
-  llm: openllm.LLM[t.Any, t.Any], _: FS, workers_per_resource: int | float, quantize: t.LiteralString | None, bettertransformer: bool | None, device: tuple[str, ...] | None,
-  adapter_map: dict[str, str | None] | None, dockerfile_template: str | None, runtime: t.Literal["ggml", "transformers"], serialisation_format: t.Literal["safetensors", "legacy"], container_registry: LiteralContainerRegistry,
-  container_version_strategy: LiteralContainerVersionStrategy,
+    llm: openllm.LLM[t.Any, t.Any], _: FS, workers_per_resource: int | float, quantize: t.LiteralString | None, bettertransformer: bool | None, device: tuple[str, ...] | None, adapter_map: dict[str, str | None] | None, dockerfile_template: str | None, runtime: t.Literal["ggml", "transformers"], serialisation_format: t.Literal["safetensors", "legacy"],
+    container_registry: LiteralContainerRegistry, container_version_strategy: LiteralContainerVersionStrategy,
 ) -> DockerOptions:
   _bentoml_config_options = os.environ.pop("BENTOML_CONFIG_OPTIONS", "")
   _bentoml_config_options_opts = [
-      "tracing.sample_rate=1.0",
-      f'runners."llm-{llm.config["start_name"]}-runner".traffic.timeout={llm.config["timeout"]}',
-      f'api_server.traffic.timeout={llm.config["timeout"]}',
-      f'runners."llm-{llm.config["start_name"]}-runner".traffic.timeout={llm.config["timeout"]}', f'runners."llm-{llm.config["start_name"]}-runner".workers_per_resource={workers_per_resource}',
+      "tracing.sample_rate=1.0", f'runners."llm-{llm.config["start_name"]}-runner".traffic.timeout={llm.config["timeout"]}', f'api_server.traffic.timeout={llm.config["timeout"]}', f'runners."llm-{llm.config["start_name"]}-runner".traffic.timeout={llm.config["timeout"]}', f'runners."llm-{llm.config["start_name"]}-runner".workers_per_resource={workers_per_resource}',
   ]
   if device:
     if len(device) > 1: _bentoml_config_options_opts.extend([f'runners."llm-{llm.config["start_name"]}-runner".resources."nvidia.com/gpu"[{idx}]={dev}' for idx, dev in enumerate(device)])
     else: _bentoml_config_options_opts.append(f'runners."llm-{llm.config["start_name"]}-runner".resources."nvidia.com/gpu"=[{device[0]}]')
   _bentoml_config_options += " " if _bentoml_config_options else "" + " ".join(_bentoml_config_options_opts)
-  env: EnvVarMixin = llm.config["env"]
+  env: openllm.utils.EnvVarMixin = llm.config["env"]
   env_dict = {
-      env.framework: env["framework_value"], env.config: f"'{llm.config.model_dump_json().decode()}'", "OPENLLM_MODEL": llm.config["model_name"], "OPENLLM_SERIALIZATION": serialisation_format, "OPENLLM_ADAPTER_MAP": f"'{orjson.dumps(adapter_map).decode()}'", "BENTOML_DEBUG": str(True), "BENTOML_QUIET": str(False), "BENTOML_CONFIG_OPTIONS": f"'{_bentoml_config_options}'",
-      env.model_id: f"/home/bentoml/bento/models/{llm.tag.path()}"
+      env.framework: env["framework_value"], env.config: f"'{llm.config.model_dump_json().decode()}'", "OPENLLM_MODEL": llm.config["model_name"], "OPENLLM_SERIALIZATION": serialisation_format, "OPENLLM_ADAPTER_MAP": f"'{orjson.dumps(adapter_map).decode()}'", "BENTOML_openllm.utils.DEBUG": str(True), "BENTOML_QUIET": str(False),
+      "BENTOML_CONFIG_OPTIONS": f"'{_bentoml_config_options}'", env.model_id: f"/home/bentoml/bento/models/{llm.tag.path()}"
   }
   if adapter_map: env_dict["BITSANDBYTES_NOWELCOME"] = os.environ.get("BITSANDBYTES_NOWELCOME", "1")
 
   # We need to handle None separately here, as env from subprocess doesn't accept None value.
-  _env = EnvVarMixin(llm.config["model_name"], bettertransformer=bettertransformer, quantize=quantize, runtime=runtime)
+  _env = openllm.utils.EnvVarMixin(llm.config["model_name"], bettertransformer=bettertransformer, quantize=quantize, runtime=runtime)
 
   env_dict[_env.bettertransformer] = str(_env["bettertransformer_value"])
   if _env["quantize_value"] is not None: env_dict[_env.quantize] = t.cast(str, _env["quantize_value"])
@@ -150,9 +138,8 @@ def construct_docker_options(
 
 @inject
 def create_bento(
-    bento_tag: bentoml.Tag, llm_fs: FS, llm: openllm.LLM[t.Any, t.Any], workers_per_resource: str | int | float, quantize: t.LiteralString | None, bettertransformer: bool | None, device: tuple[str, ...] | None,
-    dockerfile_template: str | None, adapter_map: dict[str, str | None] | None = None, extra_dependencies: tuple[str, ...] | None = None, runtime: t.Literal["ggml", "transformers"] = "transformers",
-    serialisation_format: t.Literal["safetensors", "legacy"] = "safetensors", container_registry: LiteralContainerRegistry = "ecr", container_version_strategy: LiteralContainerVersionStrategy = "release", _bento_store: BentoStore = Provide[BentoMLContainer.bento_store], _model_store: ModelStore = Provide[BentoMLContainer.model_store],
+    bento_tag: bentoml.Tag, llm_fs: FS, llm: openllm.LLM[t.Any, t.Any], workers_per_resource: str | int | float, quantize: t.LiteralString | None, bettertransformer: bool | None, device: tuple[str, ...] | None, dockerfile_template: str | None, adapter_map: dict[str, str | None] | None = None, extra_dependencies: tuple[str, ...] | None = None, runtime: t.Literal[
+        "ggml", "transformers"] = "transformers", serialisation_format: t.Literal["safetensors", "legacy"] = "safetensors", container_registry: LiteralContainerRegistry = "ecr", container_version_strategy: LiteralContainerVersionStrategy = "release", _bento_store: BentoStore = Provide[BentoMLContainer.bento_store], _model_store: ModelStore = Provide[BentoMLContainer.model_store],
 ) -> bentoml.Bento:
   framework_envvar = llm.config["env"]["framework_value"]
   labels = dict(llm.identifying_params)
@@ -160,7 +147,7 @@ def create_bento(
   if adapter_map: labels.update(adapter_map)
   if isinstance(workers_per_resource, str):
     if workers_per_resource == "round_robin": workers_per_resource = 1.0
-    elif workers_per_resource == "conserved": workers_per_resource = 1.0 if device_count() == 0 else float(1 / device_count())
+    elif workers_per_resource == "conserved": workers_per_resource = 1.0 if openllm.utils.device_count() == 0 else float(1 / openllm.utils.device_count())
     else:
       try:
         workers_per_resource = float(workers_per_resource)
@@ -171,13 +158,13 @@ def create_bento(
 
   logger.info("Building Bento for '%s'", llm.config["start_name"])
   # add service.py definition to this temporary folder
-  codegen.write_service(llm, adapter_map, llm_fs)
+  openllm.utils.codegen.write_service(llm, adapter_map, llm_fs)
 
   llm_spec = ModelSpec.from_item({"tag": str(llm.tag), "alias": llm.tag.name})
   build_config = BentoBuildConfig(
-      service=f"{llm.config['service_name']}:svc", name=bento_tag.name, labels=labels, description=f"OpenLLM service for {llm.config['start_name']}", include=list(llm_fs.walk.files()), exclude=["/venv", "/.venv", "__pycache__/", "*.py[cod]", "*$py.class"],
-      python=construct_python_options(llm, llm_fs, extra_dependencies, adapter_map), models=[llm_spec],
-      docker=construct_docker_options(llm, llm_fs, workers_per_resource, quantize, bettertransformer, device, adapter_map, dockerfile_template, runtime, serialisation_format, container_registry, container_version_strategy))
+      service=f"{llm.config['service_name']}:svc", name=bento_tag.name, labels=labels, description=f"OpenLLM service for {llm.config['start_name']}", include=list(llm_fs.walk.files()), exclude=["/venv", "/.venv", "__pycache__/", "*.py[cod]", "*$py.class"], python=construct_python_options(llm, llm_fs, extra_dependencies, adapter_map), models=[llm_spec],
+      docker=construct_docker_options(llm, llm_fs, workers_per_resource, quantize, bettertransformer, device, adapter_map, dockerfile_template, runtime, serialisation_format, container_registry, container_version_strategy)
+  )
 
   bento = bentoml.Bento.create(build_config=build_config, version=bento_tag.version, build_ctx=llm_fs.getsyspath("/"))
   # NOTE: the model_id_path here are only used for setting this environment variable within the container
@@ -191,7 +178,7 @@ def create_bento(
     if "__bento_name__" in it: service_contents[service_contents.index(it)] = it.format(__bento_name__=str(bento.tag))
 
   script = "".join(service_contents)
-  if DEBUG: logger.info("Generated script:\n%s", script)
+  if openllm.utils.DEBUG: logger.info("Generated script:\n%s", script)
 
   bento._fs.writetext(service_fs_path, script)
   if "model_store" in inspect.signature(bento.save).parameters: return bento.save(bento_store=_bento_store, model_store=_model_store)

@@ -19,12 +19,9 @@ from __future__ import annotations
 import typing as t
 
 import bentoml
-
-from ..exceptions import OpenLLMException
+import openllm
 
 if t.TYPE_CHECKING:
-  import openllm
-
   from .._llm import M
 
 _conversion_strategy = {"pt": "ggml"}
@@ -45,7 +42,7 @@ def get(llm: openllm.LLM[t.Any, t.Any], auto_import: bool = False) -> bentoml.Mo
     if model.info.module not in ("openllm.serialisation.ggml", __name__):
       raise bentoml.exceptions.NotFound(f"Model {model.tag} was saved with module {model.info.module}, not loading with 'openllm.serialisation.transformers'.")
     if "runtime" in model.info.labels and model.info.labels["runtime"] != llm.runtime:
-      raise OpenLLMException(f"Model {model.tag} was saved with runtime {model.info.labels['runtime']}, not loading with {llm.runtime}.")
+      raise openllm.exceptions.OpenLLMException(f"Model {model.tag} was saved with runtime {model.info.labels['runtime']}, not loading with {llm.runtime}.")
     return model
   except bentoml.exceptions.NotFound:
     if auto_import:

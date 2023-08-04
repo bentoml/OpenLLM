@@ -26,14 +26,9 @@ import warnings
 
 import attr
 
-from ..exceptions import ForbiddenAttributeError
-from ..exceptions import OpenLLMException
+import openllm
 
-class UsageNotAllowedError(OpenLLMException):
-  """Raised when LazyModule.__getitem__ is forbidden."""
-
-class MissingAttributesError(OpenLLMException):
-  """Raised when given keys is not available in LazyModule special mapping."""
+__all__ = ["VersionInfo", "LazyModule"]
 
 @functools.total_ordering
 @attr.attrs(eq=False, order=False, slots=True, frozen=True, repr=False)
@@ -96,7 +91,8 @@ class VersionInfo:
     # have to do anything special with releaselevel for now.
     return us < them
 
-  def __repr__(self) -> str: return "{0}.{1}.{2}".format(*attr.astuple(self)[:3])
+  def __repr__(self) -> str:
+    return "{0}.{1}.{2}".format(*attr.astuple(self)[:3])
 
 _sentinel, _reserved_namespace = object(), {"__openllm_special__", "__openllm_migration__"}
 
@@ -152,11 +148,11 @@ class LazyModule(types.ModuleType):
 
   def __getitem__(self, key: str) -> t.Any:
     """This is reserved to only internal uses and users shouldn't use this."""
-    if self._objects.get("__openllm_special__") is None: raise UsageNotAllowedError(f"'{self._name}' is not allowed to be used as a dict.")
+    if self._objects.get("__openllm_special__") is None: raise openllm.exceptions.OpenLLMException(f"'{self._name}' is not allowed to be used as a dict.")
     _special_mapping = self._objects.get("__openllm_special__", {})
     try:
       if key in _special_mapping: return getattr(self, _special_mapping.__getitem__(key))
-      raise MissingAttributesError(f"Requested '{key}' is not available in given mapping.")
+      raise openllm.exceptions.OpenLLMException(f"Requested '{key}' is not available in given mapping.")
     except AttributeError as e:
       raise KeyError(f"'{self._name}' has no attribute {_special_mapping[key]}") from e
     except Exception as e:
@@ -169,7 +165,7 @@ class LazyModule(types.ModuleType):
 
     It also contains a special case for all of the metadata information, such as __version__ and __version_info__.
     """
-    if name in _reserved_namespace: raise ForbiddenAttributeError(f"'{name}' is a reserved namespace for {self._name} and should not be access nor modified.")
+    if name in _reserved_namespace: raise openllm.exceptions.ForbiddenAttributeError(f"'{name}' is a reserved namespace for {self._name} and should not be access nor modified.")
     dunder_to_metadata = {"__title__": "Name", "__copyright__": "", "__version__": "version", "__version_info__": "version", "__description__": "summary", "__uri__": "", "__url__": "", "__author__": "", "__email__": "", "__license__": "license", "__homepage__": "",}
     if name in dunder_to_metadata:
       if name not in {"__version_info__", "__copyright__", "__version__"}:

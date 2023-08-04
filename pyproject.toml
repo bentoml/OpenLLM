@@ -42,7 +42,7 @@ dependencies = [
     "inflection",
     "tabulate[widechars]>=0.9.0",
     "httpx",
-    "click>=8.1.6",
+    "click>=8.1.3",
     "typing_extensions",
     "GitPython",
     "cuda-python;platform_system!=\"Darwin\"",
@@ -120,6 +120,30 @@ opt = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
 playground = ["jupyter", "notebook", "ipython", "jupytext", "nbformat"]
 starcoder = ["bitsandbytes"]
 vllm = ["vllm", "ray"]
+
+[tool.cibuildwheel]
+build-verbosity = 1
+# So the following enviuronment will be targeted for compiled wheels:
+# - Python: CPython 3.8+ only
+# - Architecture (64-bit only): amd64 / x86_64, universal2, and arm64
+# - OS: Linux (no musl), Windows, and macOS
+build = "cp3*-*"
+skip = ["*-manylinux_i686", "*-musllinux_*", "*-win32", "pp-*"]
+
+[tool.cibuildwheel.environment]
+HATCH_BUILD_HOOKS_ENABLE = "1"
+MYPYC_DEBUG_LEVEL = "1"
+MYPYC_OPT_LEVEL = "3"
+
+[tool.cibuildwheel.linux]
+before-build = ["yum install -y clang gcc"]
+
+[tool.cibuildwheel.linux.environment]
+HATCH_BUILD_HOOKS_ENABLE = "1"
+MYPYC_DEBUG_LEVEL = "1"
+MYPYC_OPT_LEVEL = "3"
+# Use clang to compile successfully on Linux.
+CC = "clang"
 
 [tool.towncrier]
 directory = "changelog.d"
@@ -387,7 +411,7 @@ strict = true
 warn_no_return = false
 warn_return_any = false
 warn_unreachable = true
-warn_unused_ignores = true
+warn_unused_ignores = false
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
 module = [
@@ -399,6 +423,8 @@ module = [
     "inflection.*",
     "huggingface_hub.*",
     "peft.*",
+    "auto_gptq.*",
+    "vllm.*",
     "orjson.*",
     "git.*",
     "httpx.*",

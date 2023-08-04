@@ -24,7 +24,7 @@ import importlib
 import itertools
 import typing as t
 
-_import_structure: dict[str, list[str]] = {"runtimes.grpc": ["AsyncGrpcClient", "GrpcClient"], "runtimes.http": ["AsyncHTTPClient", "HTTPClient"],}
+_import_structure: dict[str, list[str]] = {"runtimes.grpc": ["AsyncGrpcClient", "GrpcClient"], "runtimes.http": ["AsyncHTTPClient", "HTTPClient"]}
 
 if t.TYPE_CHECKING:
   from openllm_client import AsyncGrpcClient as AsyncGrpcClient

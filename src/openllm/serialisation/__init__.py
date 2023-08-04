@@ -35,8 +35,8 @@ llm = openllm.AutoLLM.for_model("dolly-v2", runtime='ggml')
 llm.save_pretrained("./path/to/local-dolly")
 ```
 """
-
 from __future__ import annotations
+import sys
 import typing as t
 
 import cloudpickle
@@ -44,19 +44,11 @@ import cloudpickle
 import openllm
 from bentoml._internal.models.model import CUSTOM_OBJECTS_FILENAME
 
-from ..exceptions import OpenLLMException
-from ..utils import LazyLoader
-from ..utils import LazyModule
-
 if t.TYPE_CHECKING:
-  import transformers
-
   import bentoml
 
   from .._llm import M
   from .._llm import T
-else:
-  transformers = LazyLoader("transformers", globals(), "transformers")
 
 def import_model(llm: openllm.LLM[M, T], *decls: t.Any, trust_remote_code: bool, **attrs: t.Any) -> bentoml.Model:
   if llm.runtime == "transformers":
@@ -105,7 +97,7 @@ def load_tokenizer(llm: openllm.LLM[t.Any, T], **tokenizer_attrs: t.Any) -> T:
         tokenizer = cloudpickle.load(t.cast("t.IO[bytes]", cofile))["tokenizer"]
       except KeyError:
         # This could happen if users implement their own import_model
-        raise OpenLLMException("Model does not have tokenizer. Make sure to save \
+        raise openllm.exceptions.OpenLLMException("Model does not have tokenizer. Make sure to save \
                     the tokenizer within the model via 'custom_objects'.\
                     For example: bentoml.transformers.save_model(..., custom_objects={'tokenizer': tokenizer}))") from None
   else:
@@ -124,6 +116,4 @@ if t.TYPE_CHECKING:
   from . import ggml as ggml
   from . import transformers as transformers
 else:
-  import sys
-
-  sys.modules[__name__] = LazyModule(__name__, globals()["__file__"], _import_structure, module_spec=__spec__, extra_objects=_extras,)
+  sys.modules[__name__] = openllm.utils.LazyModule(__name__, globals()["__file__"], _import_structure, module_spec=__spec__, extra_objects=_extras,)

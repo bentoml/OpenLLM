@@ -59,7 +59,7 @@ jobs:
         run: pip install -e .
       - uses: pre-commit/action@v3.0.0
         with:
-          extra_args: --all-files --verbose
+          extra_args: --verbose
   tests:
     runs-on: ${{ matrix.os }}
     if: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}

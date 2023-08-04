@@ -84,6 +84,7 @@ SINST_KEY, EINST_KEY, SYS_KEY, EOS_TOKEN, BOS_TOKEN = "[INST]", "[/INST]", "<<SY
 _v1_prompt, _v2_prompt = """{instruction}""", """{start_key} {sys_key}\n{system_message}\n{sys_key}\n\n{instruction}\n{end_key} """.format(start_key=SINST_KEY, sys_key=SYS_KEY, system_message=SYSTEM_MESSAGE, instruction="{instruction}", end_key=EINST_KEY)
 PROMPT_MAPPING = {"v1": _v1_prompt, "v2": _v2_prompt}
 
-def _get_prompt(model_type: t.Literal["v1", "v2"]) -> str: return PROMPT_MAPPING[model_type]
+def _get_prompt(model_type: t.Literal["v1", "v2"]) -> str:
+  return PROMPT_MAPPING[model_type]
 
 DEFAULT_PROMPT_TEMPLATE = _get_prompt

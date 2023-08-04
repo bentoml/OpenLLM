@@ -31,7 +31,7 @@ class _OptGroup:
     def __init__(self) -> None: ...
     def __call__(
         self,
-        name: Optional[str] = ...,
+        name: str,
         *,
         help: Optional[str] = None,
         cls: Optional[Type[_GrpType]] = None,
@@ -40,15 +40,23 @@ class _OptGroup:
     @overload
     def group(
         self,
-        name: Optional[str],
+        name: str,
+        *,
         cls: type[_GrpType],
         **attrs: Any,
     ) -> Callable[[AnyCallable], click.Command]: ...
     @overload
     def group(
         self,
-        name: str = ...,
-        cls: None = None,
+        name: str,
+        cls: None,
+        **attrs: Any,
+    ) -> Callable[[AnyCallable], click.Command]: ...
+    @overload
+    def group(
+        self,
+        *,
+        name: str,
         **attrs: Any,
     ) -> Callable[[AnyCallable], click.Command]: ...
     @overload

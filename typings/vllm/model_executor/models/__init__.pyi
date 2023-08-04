@@ -1,9 +1,0 @@
-from vllm.model_executor.models.baichuan import BaiChuanForCausalLM as BaiChuanForCausalLM
-from vllm.model_executor.models.bloom import BloomForCausalLM as BloomForCausalLM
-from vllm.model_executor.models.gpt2 import GPT2LMHeadModel as GPT2LMHeadModel
-from vllm.model_executor.models.gpt_bigcode import GPTBigCodeForCausalLM as GPTBigCodeForCausalLM
-from vllm.model_executor.models.gpt_j import GPTJForCausalLM as GPTJForCausalLM
-from vllm.model_executor.models.gpt_neox import GPTNeoXForCausalLM as GPTNeoXForCausalLM
-from vllm.model_executor.models.llama import LlamaForCausalLM as LlamaForCausalLM
-from vllm.model_executor.models.mpt import MPTForCausalLM as MPTForCausalLM
-from vllm.model_executor.models.opt import OPTForCausalLM as OPTForCausalLM

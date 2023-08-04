@@ -30,12 +30,15 @@ class Llama(openllm.LLM["transformers.LlamaForCausalLM", "transformers.LlamaToke
     return process_prompt(prompt, _template, use_default_prompt_template, **attrs), {"max_new_tokens": max_new_tokens, "temperature": temperature, "top_p": top_p, "top_k": top_k}, {}
 
   @property
-  def import_kwargs(self) -> tuple[dict[str, t.Any], dict[str, t.Any]]: return {"device_map": "auto" if torch.cuda.device_count() > 1 else None}, {}
+  def import_kwargs(self) -> tuple[dict[str, t.Any], dict[str, t.Any]]:
+    return {"device_map": "auto" if torch.cuda.device_count() > 1 else None}, {}
 
-  def postprocess_generate(self, prompt: str, generation_result: list[str], **_: t.Any) -> str: return generation_result[0]
+  def postprocess_generate(self, prompt: str, generation_result: list[str], **_: t.Any) -> str:
+    return generation_result[0]
 
   def generate(self, prompt: str, **attrs: t.Any) -> list[str]:
-    with torch.inference_mode(): return self.tokenizer.batch_decode(self.model.generate(**self.tokenizer(prompt, return_tensors="pt").to(self.device), generation_config=self.config.model_construct_env(**attrs).to_generation_config(), stopping_criteria=transformers.StoppingCriteriaList([openllm.StopOnTokens()])), skip_special_tokens=True, clean_up_tokenization_spaces=True)
+    with torch.inference_mode():
+      return self.tokenizer.batch_decode(self.model.generate(**self.tokenizer(prompt, return_tensors="pt").to(self.device), generation_config=self.config.model_construct_env(**attrs).to_generation_config(), stopping_criteria=transformers.StoppingCriteriaList([openllm.StopOnTokens()])), skip_special_tokens=True, clean_up_tokenization_spaces=True)
 
   def embeddings(self, prompts: list[str]) -> LLMEmbeddings:
     encoding = self.tokenizer(prompts, padding=True, return_tensors="pt").to(self.device)

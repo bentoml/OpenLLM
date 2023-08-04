@@ -1,4 +1,3 @@
-# type: ignore
 # Copyright 2023 BentoML Team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -46,8 +45,8 @@ else:
   warnings.filterwarnings("ignore", message="The installed version of bitsandbytes was compiled without GPU support.")
 
 _import_structure: dict[str, list[str]] = {
-    "_llm": ["LLM", "Runner", "LLMRunner", "LLMRunnable"], "_configuration": ["LLMConfig"], "_schema": ["GenerationInput", "GenerationOutput", "MetadataOutput", "EmbeddingsOutput", "unmarshal_vllm_outputs"], "_generation": ["StopSequenceCriteria", "StopOnTokens"], "_quantisation": ["infer_quantisation_config"], "exceptions": [], "utils": ["infer_auto_class"], "models": [],
-    "client": [], "bundle": [], "playground": [], "testing": [], "serialisation": ["ggml", "transformers"], "cli.entrypoint": ["start", "start_grpc", "build", "import_model", "list_models"],
+    "_llm": ["LLM", "Runner", "LLMRunner", "LLMRunnable"], "_configuration": ["LLMConfig"], "_schema": ["GenerationInput", "GenerationOutput", "MetadataOutput", "EmbeddingsOutput", "unmarshal_vllm_outputs", "HfAgentInput"], "_generation": ["StopSequenceCriteria", "StopOnTokens"], "_quantisation": ["infer_quantisation_config"], "exceptions": [], "utils": ["infer_auto_class"],
+    "models": [], "client": [], "bundle": [], "playground": [], "testing": [], "serialisation": ["ggml", "transformers"], "cli.entrypoint": ["start", "start_grpc", "build", "import_model", "list_models"],
     # NOTE: models
     "models.auto": ["AutoConfig", "CONFIG_MAPPING", "MODEL_MAPPING_NAMES", "MODEL_FLAX_MAPPING_NAMES", "MODEL_TF_MAPPING_NAMES", "MODEL_VLLM_MAPPING_NAMES"], "models.chatglm": ["ChatGLMConfig"], "models.baichuan": ["BaichuanConfig"], "models.dolly_v2": ["DollyV2Config"], "models.falcon": ["FalconConfig"], "models.flan_t5": ["FlanT5Config"], "models.gpt_neox": ["GPTNeoXConfig"],
     "models.llama": ["LlamaConfig"], "models.mpt": ["MPTConfig"], "models.opt": ["OPTConfig"], "models.stablelm": ["StableLMConfig"], "models.starcoder": ["StarCoderConfig"],
@@ -148,6 +147,7 @@ if t.TYPE_CHECKING:
   from ._schema import EmbeddingsOutput as EmbeddingsOutput
   from ._schema import GenerationInput as GenerationInput
   from ._schema import GenerationOutput as GenerationOutput
+  from ._schema import HfAgentInput as HfAgentInput
   from ._schema import MetadataOutput as MetadataOutput
   from ._schema import unmarshal_vllm_outputs as unmarshal_vllm_outputs
   from .cli.entrypoint import build as build
@@ -156,95 +156,64 @@ if t.TYPE_CHECKING:
   from .cli.entrypoint import start as start
   from .cli.entrypoint import start_grpc as start_grpc
   from .models.auto import CONFIG_MAPPING as CONFIG_MAPPING
+
+  # Flax imports
+  from .models.auto import MODEL_FLAX_MAPPING as MODEL_FLAX_MAPPING
   from .models.auto import MODEL_FLAX_MAPPING_NAMES as MODEL_FLAX_MAPPING_NAMES
+  from .models.auto import MODEL_MAPPING as MODEL_MAPPING
   from .models.auto import MODEL_MAPPING_NAMES as MODEL_MAPPING_NAMES
+
+  # Tensorflow imports
+  from .models.auto import MODEL_TF_MAPPING as MODEL_TF_MAPPING
   from .models.auto import MODEL_TF_MAPPING_NAMES as MODEL_TF_MAPPING_NAMES
+
+  # vLLM imports
+  from .models.auto import MODEL_VLLM_MAPPING as MODEL_VLLM_MAPPING
   from .models.auto import MODEL_VLLM_MAPPING_NAMES as MODEL_VLLM_MAPPING_NAMES
   from .models.auto import AutoConfig as AutoConfig
+  from .models.auto import AutoFlaxLLM as AutoFlaxLLM
+  from .models.auto import AutoLLM as AutoLLM
+  from .models.auto import AutoTFLLM as AutoTFLLM
+  from .models.auto import AutoVLLM as AutoVLLM
+
+  # PyTorch imports
+  from .models.baichuan import Baichuan as Baichuan
   from .models.baichuan import BaichuanConfig as BaichuanConfig
+  from .models.baichuan import VLLMBaichuan as VLLMBaichuan
+  from .models.chatglm import ChatGLM as ChatGLM
   from .models.chatglm import ChatGLMConfig as ChatGLMConfig
+  from .models.dolly_v2 import DollyV2 as DollyV2
   from .models.dolly_v2 import DollyV2Config as DollyV2Config
+  from .models.dolly_v2 import VLLMDollyV2 as VLLMDollyV2
+  from .models.falcon import Falcon as Falcon
   from .models.falcon import FalconConfig as FalconConfig
+  from .models.flan_t5 import FlanT5 as FlanT5
   from .models.flan_t5 import FlanT5Config as FlanT5Config
+  from .models.flan_t5 import FlaxFlanT5 as FlaxFlanT5
+  from .models.flan_t5 import TFFlanT5 as TFFlanT5
+  from .models.gpt_neox import GPTNeoX as GPTNeoX
   from .models.gpt_neox import GPTNeoXConfig as GPTNeoXConfig
+  from .models.gpt_neox import VLLMGPTNeoX as VLLMGPTNeoX
+  from .models.llama import Llama as Llama
   from .models.llama import LlamaConfig as LlamaConfig
+  from .models.llama import VLLMLlama as VLLMLlama
+  from .models.mpt import MPT as MPT
+  from .models.mpt import VLLMMPT as VLLMMPT
   from .models.mpt import MPTConfig as MPTConfig
+  from .models.opt import OPT as OPT
+  from .models.opt import TFOPT as TFOPT
+  from .models.opt import VLLMOPT as VLLMOPT
+  from .models.opt import FlaxOPT as FlaxOPT
   from .models.opt import OPTConfig as OPTConfig
+  from .models.stablelm import StableLM as StableLM
   from .models.stablelm import StableLMConfig as StableLMConfig
+  from .models.stablelm import VLLMStableLM as VLLMStableLM
+  from .models.starcoder import StarCoder as StarCoder
   from .models.starcoder import StarCoderConfig as StarCoderConfig
+  from .models.starcoder import VLLMStarCoder as VLLMStarCoder
   from .serialisation import ggml as ggml
   from .serialisation import transformers as transformers
   from .utils import infer_auto_class as infer_auto_class
-  # NOTE: torch and cpm_kernels
-  try:
-    if not (utils.is_torch_available() and utils.is_cpm_kernels_available()): raise MissingDependencyError
-  except MissingDependencyError:
-    from .utils.dummy_pt_and_cpm_kernels_objects import *
-  else:
-    from .models.baichuan import Baichuan as Baichuan
-    from .models.chatglm import ChatGLM as ChatGLM
-  # NOTE: torch and einops
-  try:
-    if not (utils.is_torch_available() and utils.is_einops_available()): raise MissingDependencyError
-  except MissingDependencyError:
-    from .utils.dummy_pt_and_einops_objects import *
-  else:
-    from .models.falcon import Falcon as Falcon
-  # NOTE: torch and triton
-  try:
-    if not (utils.is_torch_available() and utils.is_triton_available()): raise MissingDependencyError
-  except MissingDependencyError:
-    from .utils.dummy_pt_and_triton_objects import *
-  else:
-    from .models.mpt import MPT as MPT
-  try:
-    if not utils.is_torch_available(): raise MissingDependencyError
-  except MissingDependencyError:
-    from .utils.dummy_pt_objects import *
-  else:
-    from .models.auto import MODEL_MAPPING as MODEL_MAPPING
-    from .models.auto import AutoLLM as AutoLLM
-    from .models.dolly_v2 import DollyV2 as DollyV2
-    from .models.flan_t5 import FlanT5 as FlanT5
-    from .models.gpt_neox import GPTNeoX as GPTNeoX
-    from .models.llama import Llama as Llama
-    from .models.opt import OPT as OPT
-    from .models.stablelm import StableLM as StableLM
-    from .models.starcoder import StarCoder as StarCoder
-  try:
-    if not utils.is_vllm_available(): raise MissingDependencyError
-  except MissingDependencyError:
-    from .utils.dummy_vllm_objects import *
-  else:
-    from .models.auto import MODEL_VLLM_MAPPING as MODEL_VLLM_MAPPING
-    from .models.auto import AutoVLLM as AutoVLLM
-    from .models.baichuan import VLLMBaichuan as VLLMBaichuan
-    from .models.dolly_v2 import VLLMDollyV2 as VLLMDollyV2
-    from .models.gpt_neox import VLLMGPTNeoX as VLLMGPTNeoX
-    from .models.llama import VLLMLlama as VLLMLlama
-    from .models.mpt import VLLMMPT as VLLMMPT
-    from .models.opt import VLLMOPT as VLLMOPT
-    from .models.stablelm import VLLMStableLM as VLLMStableLM
-    from .models.starcoder import VLLMStarCoder as VLLMStarCoder
-  try:
-    if not utils.is_flax_available(): raise MissingDependencyError
-  except MissingDependencyError:
-    from .utils.dummy_flax_objects import *
-  else:
-    from .models.auto import MODEL_FLAX_MAPPING as MODEL_FLAX_MAPPING
-    from .models.auto import AutoFlaxLLM as AutoFlaxLLM
-    from .models.flan_t5 import FlaxFlanT5 as FlaxFlanT5
-    from .models.opt import FlaxOPT as FlaxOPT
-  try:
-    if not utils.is_tf_available(): raise MissingDependencyError
-  except MissingDependencyError:
-    from .utils.dummy_tf_objects import *
-  else:
-    from .models.auto import MODEL_TF_MAPPING as MODEL_TF_MAPPING
-    from .models.auto import AutoTFLLM as AutoTFLLM
-    from .models.flan_t5 import TFFlanT5 as TFFlanT5
-    from .models.opt import TFOPT as TFOPT
-
 else:
   sys.modules[__name__] = utils.LazyModule(
       __name__,

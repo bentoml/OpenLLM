@@ -28,9 +28,10 @@ if t.TYPE_CHECKING:
   from grpc_health.v1 import health_pb2
 
   from bentoml.grpc.v1.service_pb2 import Response
-  from openllm._types import LiteralRuntime
 
 logger = logging.getLogger(__name__)
+
+LiteralRuntime = t.Literal["pt", "tf", "flax", "vllm"]
 
 class GrpcClientMixin:
   if t.TYPE_CHECKING:
@@ -49,9 +50,8 @@ class GrpcClientMixin:
   @property
   def framework(self) -> LiteralRuntime:
     try:
-      value = self._metadata.json.struct_value.fields["framework"].string_value
-      if value not in ("pt", "flax", "tf"):
-        raise KeyError
+      value = t.cast(LiteralRuntime, self._metadata.json.struct_value.fields["framework"].string_value)
+      if value not in ("pt", "flax", "tf", "vllm"): raise KeyError
       return value
     except KeyError:
       raise RuntimeError("Malformed service endpoint. (Possible malicious)") from None

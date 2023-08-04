@@ -51,6 +51,7 @@ QuantiseMode = t.Literal["int8", "int4", "gptq"]
 def infer_quantisation_config(cls: type[openllm.LLM[t.Any, t.Any]], quantise: t.Literal["int8", "int4"], **attrs: t.Any) -> tuple[transformers.BitsAndBytesConfig, DictStrAny]: ...
 @overload
 def infer_quantisation_config(cls: type[openllm.LLM[t.Any, t.Any]], quantise: t.Literal["gptq"], **attrs: t.Any) -> tuple[autogptq.BaseQuantizeConfig, DictStrAny]: ...
+
 # fmt: on
 def infer_quantisation_config(cls: type[openllm.LLM[t.Any, t.Any]], quantise: QuantiseMode, **attrs: t.Any) -> tuple[transformers.BitsAndBytesConfig | autogptq.BaseQuantizeConfig, DictStrAny]:
   # 8 bit configuration

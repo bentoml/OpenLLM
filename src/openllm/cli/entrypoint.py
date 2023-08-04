@@ -42,6 +42,7 @@ import itertools
 import logging
 import os
 import pkgutil
+import platform
 import re
 import subprocess
 import sys
@@ -49,6 +50,7 @@ import tempfile
 import time
 import traceback
 import typing as t
+from pathlib import Path
 
 import attr
 import click
@@ -127,6 +129,7 @@ if t.TYPE_CHECKING:
   import jupytext
   import nbformat
   import torch
+  from openllm_client.runtimes.base import BaseClient
 
   from bentoml._internal.bento import BentoStore
   from bentoml._internal.container import DefaultBuilder
@@ -141,13 +144,6 @@ if t.TYPE_CHECKING:
   from ..bundle.oci import LiteralContainerVersionStrategy
 else:
   torch, jupytext, nbformat = LazyLoader("torch", globals(), "torch"), LazyLoader("jupytext", globals(), "jupytext"), LazyLoader("nbformat", globals(), "nbformat")
-
-# NOTE: We need to do this so that overload can register
-# correct overloads to typing registry
-if sys.version_info[:2] >= (3, 11):
-  from typing import overload
-else:
-  from typing_extensions import overload
 
 logger = logging.getLogger(__name__)
 
@@ -169,10 +165,11 @@ class GlobalOptions:
   def with_options(self, **attrs: t.Any) -> t.Self:
     return attr.evolve(self, **attrs)
 
-CmdType = t.TypeVar("CmdType", bound=click.Command)
 GrpType = t.TypeVar("GrpType", bound=click.Group)
 
 _object_setattr = object.__setattr__
+
+COMPILED = Path(__file__).parent.parent.joinpath("__init__.py").suffix in (".pyd", ".so")
 
 class OpenLLMCommandGroup(BentoMLCommandGroup):
   NUMBER_OF_COMMON_PARAMS = 5  # parameters in common_params + 1 faked group option header
@@ -180,7 +177,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
   @staticmethod
   def common_params(f: t.Callable[P, t.Any]) -> t.Callable[[FC], FC]:
     # The following logics is similar to one of BentoMLCommandGroup
-    @cog.optgroup.group("Global options")
+    @cog.optgroup.group(name="Global options", help="Shared globals options for all OpenLLM CLI.")
     @cog.optgroup.option("-q", "--quiet", envvar=QUIET_ENV_VAR, is_flag=True, default=False, help="Suppress all output.", show_envvar=True)
     @cog.optgroup.option("--debug", "--verbose", "debug", envvar=DEBUG_ENV_VAR, is_flag=True, default=False, help="Print out debug logs.", show_envvar=True)
     @cog.optgroup.option("--do-not-track", is_flag=True, default=False, envvar=analytics.OPENLLM_DO_NOT_TRACK, help="Do not send usage info", show_envvar=True)
@@ -261,62 +258,32 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
     if ctx.command.name in {"start", "start-grpc"}: return list(CONFIG_MAPPING.keys())
     return super().list_commands(ctx)
 
-  # NOTE: The following overload are ported from click to make sure
-  # cli.command is correctly typed. See https://github.com/pallets/click/blob/main/src/click/decorators.py#L136
-  #
-  # variant: no call, directly as decorator for a function.
-  @overload
-  def command(self, name: _AnyCallable) -> click.Command:
-    ...
-
-  # variant: with positional name and with positional or keyword cls argument:
-  # @command(namearg, CommandCls, ...) or @command(namearg, cls=CommandCls, ...)
-  @overload
-  def command(self, name: str | None, cls: type[CmdType], **attrs: t.Any) -> t.Callable[[_AnyCallable], CmdType]:
-    ...
-
-  # variant: name omitted, cls _must_ be a keyword argument, @command(cmd=CommandCls, ...)
-  @overload
-  def command(self, name: None = None, *, cls: type[CmdType], **attrs: t.Any) -> t.Callable[[_AnyCallable], CmdType]:
-    ...
-
-  # variant: name omitted, only provide keyword arguments, @command(context_settings={})
-  @overload
-  def command(self, *, cls: type[CmdType], **attrs: t.Any) -> t.Callable[[_AnyCallable], CmdType]:
-    ...
-
-  # variant: with optional string name, no cls argument provided.
-  @overload
-  def command(self, name: t.Optional[str] = ..., cls: None = None, **attrs: t.Any) -> t.Callable[[_AnyCallable], click.Command]:
-    ...
-
-  def command(self, name: str | None | _AnyCallable = None, cls: type[CmdType] | None = None, *args: t.Any, **attrs: t.Any) -> click.Command | t.Callable[[_AnyCallable], click.Command | CmdType]:
+  def command(self, *args: t.Any, **kwargs: t.Any) -> t.Callable[[t.Callable[..., t.Any]], click.Command]:  # type: ignore[override] # XXX: fix decorator on BentoMLCommandGroup
     """Override the default 'cli.command' with supports for aliases for given command, and it wraps the implementation with common parameters."""
-    if "context_settings" not in attrs: attrs["context_settings"] = {}
-    if "max_content_width" not in attrs["context_settings"]: attrs["context_settings"]["max_content_width"] = 120
-    aliases = attrs.pop("aliases", None)
+    if "context_settings" not in kwargs: kwargs["context_settings"] = {}
+    if "max_content_width" not in kwargs["context_settings"]: kwargs["context_settings"]["max_content_width"] = 120
+    aliases = kwargs.pop("aliases", None)
 
     def decorator(f: _AnyCallable) -> click.Command:
       name = f.__name__.lower()
       if name.endswith("_command"): name = name[:-8]
       name = name.replace("_", "-")
-      attrs.setdefault("cls", cls)
-      attrs.setdefault("help", inspect.getdoc(f))
-      attrs.setdefault("name", name)
+      kwargs.setdefault("help", inspect.getdoc(f))
+      kwargs.setdefault("name", name)
 
       # Wrap implementation withc common parameters
-      wrapped = self.common_params(f)
+      shared_opts = self.common_params(f)
       # Wrap into OpenLLM tracking
-      wrapped = self.usage_tracking(wrapped, self, **attrs)
+      tracking = self.usage_tracking(shared_opts, self, **kwargs)
       # Wrap into exception handling
-      wrapped = self.exception_handling(wrapped, self, **attrs)
+      wrapped = self.exception_handling(tracking, self, **kwargs)
 
       # move common parameters to end of the parameters list
       _memo = getattr(wrapped, "__click_params__", None)
       if _memo is None: raise RuntimeError("Click command not register correctly.")
       _object_setattr(wrapped, "__click_params__", _memo[-self.NUMBER_OF_COMMON_PARAMS:] + _memo[:-self.NUMBER_OF_COMMON_PARAMS])
       # NOTE: we need to call super of super to avoid conflict with BentoMLCommandGroup command setup
-      cmd = super(BentoMLCommandGroup, self).command(*args, **attrs)(wrapped)
+      cmd = super(BentoMLCommandGroup, self).command(*args, **kwargs)(wrapped)
       # NOTE: add aliases to a given commands if it is specified.
       if aliases is not None:
         if not cmd.name: raise ValueError("name is required when aliases are available.")
@@ -326,33 +293,8 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
 
     return decorator
 
-  if t.TYPE_CHECKING:
-    # variant: no call, directly as decorator for a function.
-    @overload
-    def group(self, name: _AnyCallable) -> click.Group:
-      ...
-
-    # variant: name omitted, cls _must_ be a keyword argument, @group(cmd=GroupCls, ...)
-    @overload
-    def group(self, name: None = None, *, cls: t.Type[GrpType], **attrs: t.Any) -> t.Callable[[_AnyCallable], GrpType]:
-      ...
-
-    # variant: with positional name and with positional or keyword cls argument:
-    # @group(namearg, GroupCls, ...) or @group(namearg, cls=GroupCls, ...)
-    @overload
-    def group(self, name: str | None, cls: type[GrpType], **attrs: t.Any) -> t.Callable[[_AnyCallable], GrpType]:
-      ...
-
-    # variant: with optional string name, no cls argument provided.
-    @overload
-    def group(self, name: str | None = ..., cls: None = None, **attrs: t.Any) -> t.Callable[[_AnyCallable], click.Group]:
-      ...
-
-    def group(self, *args: t.Any, **kwargs: t.Any) -> t.Callable[[_AnyCallable], click.Group]:
-      ...
-
 @click.group(cls=OpenLLMCommandGroup, context_settings=termui.CONTEXT_SETTINGS, name="openllm")
-@click.version_option(None, "--version", "-v")
+@click.version_option(None, "--version", "-v", message=f"%(prog)s, %(version)s (compiled: {'yes' if COMPILED else 'no'})\nPython ({platform.python_implementation()}) {platform.python_version()}")
 def cli() -> None:
   """\b
    ██████╗ ██████╗ ███████╗███╗   ██╗██╗     ██╗     ███╗   ███╗
@@ -696,9 +638,8 @@ start, start_grpc, build, import_model, list_models = codegen.gen_sdk(_start, _s
 @cog.optgroup.option("--push", default=False, is_flag=True, type=click.BOOL, help="Whether to push the result bento to BentoCloud. Make sure to login with 'bentoml cloud login' first.")
 @click.pass_context
 def build_command(
-    ctx: click.Context, /, model_name: str, model_id: str | None, bento_version: str | None, overwrite: bool, output: LiteralOutput, runtime: t.Literal["ggml", "transformers"], quantize: t.Literal["int8", "int4", "gptq"] | None, enable_features: tuple[str, ...] | None,
-    bettertransformer: bool | None, workers_per_resource: float | None, adapter_id: tuple[str, ...], build_ctx: str | None, machine: bool, device: tuple[str, ...],
-    model_version: str | None, dockerfile_template: t.TextIO | None, containerize: bool, push: bool, serialisation_format: t.Literal["safetensors", "legacy"], fast: bool, container_registry: LiteralContainerRegistry, container_version_strategy: LiteralContainerVersionStrategy, **attrs: t.Any,
+    ctx: click.Context, /, model_name: str, model_id: str | None, bento_version: str | None, overwrite: bool, output: LiteralOutput, runtime: t.Literal["ggml", "transformers"], quantize: t.Literal["int8", "int4", "gptq"] | None, enable_features: tuple[str, ...] | None, bettertransformer: bool | None, workers_per_resource: float | None, adapter_id: tuple[str, ...],
+    build_ctx: str | None, machine: bool, device: tuple[str, ...], model_version: str | None, dockerfile_template: t.TextIO | None, containerize: bool, push: bool, serialisation_format: t.Literal["safetensors", "legacy"], fast: bool, container_registry: LiteralContainerRegistry, container_version_strategy: LiteralContainerVersionStrategy, **attrs: t.Any,
 ) -> bentoml.Bento:
   """Package a given models into a Bento.
 
@@ -772,10 +713,9 @@ def build_command(
           raise bentoml.exceptions.NotFound(f"Rebuilding existing Bento {bento_tag}") from None
         _previously_built = True
       except bentoml.exceptions.NotFound:
-        bento = bundle.create_bento(bento_tag, llm_fs, llm, workers_per_resource=workers_per_resource, device=device,
-                                    adapter_map=adapter_map, quantize=quantize, bettertransformer=bettertransformer,
-                                    extra_dependencies=enable_features, dockerfile_template=dockerfile_template_path,
-                                    runtime=runtime, container_registry=container_registry, container_version_strategy=container_version_strategy)
+        bento = bundle.create_bento(
+            bento_tag, llm_fs, llm, workers_per_resource=workers_per_resource, device=device, adapter_map=adapter_map, quantize=quantize, bettertransformer=bettertransformer, extra_dependencies=enable_features, dockerfile_template=dockerfile_template_path, runtime=runtime, container_registry=container_registry, container_version_strategy=container_version_strategy
+        )
   except Exception as err:
     raise err from None
 
@@ -991,7 +931,7 @@ def embed_command(ctx: click.Context, text: tuple[str, ...], endpoint: str, time
   $ openllm embed --endpoint http://12.323.2.1:3000 "What is the meaning of life?" "How many stars are there in the sky?"
   ```
   """
-  client = openllm_client.HTTPClient(endpoint, timeout=timeout) if server_type == "http" else openllm_client.GrpcClient(endpoint, timeout=timeout)
+  client = t.cast("BaseClient[t.Any]", openllm_client.HTTPClient(endpoint, timeout=timeout) if server_type == "http" else openllm_client.GrpcClient(endpoint, timeout=timeout))
   try:
     gen_embed = client.embed(text)
   except ValueError:
@@ -1024,7 +964,7 @@ def query_command(ctx: click.Context, /, prompt: str, endpoint: str, timeout: in
   """
   _memoized = {k: orjson.loads(v[0]) for k, v in _memoized.items() if v}
   if server_type == "grpc": endpoint = re.sub(r"http://", "", endpoint)
-  client = openllm_client.HTTPClient(endpoint, timeout=timeout) if server_type == "http" else openllm_client.GrpcClient(endpoint, timeout=timeout)
+  client = t.cast("BaseClient[t.Any]", openllm_client.HTTPClient(endpoint, timeout=timeout) if server_type == "http" else openllm_client.GrpcClient(endpoint, timeout=timeout))
   input_fg, generated_fg = "magenta", "cyan"
   if output != "porcelain":
     termui.echo("==Input==\n", fg="white")
