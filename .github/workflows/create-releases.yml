@@ -128,6 +128,7 @@ jobs:
           print-hash: true
   prepare-next-dev-cycle:
     needs:
+      - release
       - publish-python
       - binary-distribution
     runs-on: ubuntu-latest
@@ -185,6 +186,7 @@ jobs:
   release-notes:
     if: github.repository_owner == 'bentoml'
     needs:
+      - release
       - publish-python
       - binary-distribution
     name: Create release notes and setup for next cycle
