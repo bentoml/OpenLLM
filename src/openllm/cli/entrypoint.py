@@ -405,7 +405,7 @@ def import_command(model_name: str, model_id: str | None, converter: str | None,
     _previously_saved = True
   except bentoml.exceptions.NotFound:
     if not machine and output == "pretty":
-      msg = f"'{model_name}' {'with model_id='+ model_id if model_id is not None else ''} does not exists in local store. Saving to BENTOML_HOME{' (path=' + os.environ.get('BENTOML_HOME', BentoMLContainer.bentoml_home.get()) + ')' if get_debug_mode() else ''}..."
+      msg = f"'{model_name}' {'with model_id='+ model_id if model_id is not None else ''} does not exists in local store for implementation {llm.__llm_implementation__}. Saving to BENTOML_HOME{' (path=' + os.environ.get('BENTOML_HOME', BentoMLContainer.bentoml_home.get()) + ')' if get_debug_mode() else ''}..."
       termui.echo(msg, fg="yellow", nl=True)
     _ref = serialisation.get(llm, auto_import=True)
     if impl == "pt" and is_torch_available() and torch.cuda.is_available(): torch.cuda.empty_cache()

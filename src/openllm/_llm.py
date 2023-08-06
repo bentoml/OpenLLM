@@ -328,7 +328,7 @@ class LLMInterface(ABC, t.Generic[M, T]):
 
     def __attrs_init__(
         self, config: LLMConfig, quantization_config: transformers.BitsAndBytesConfig | autogptq.BaseQuantizeConfig | None, model_id: str, runtime: t.Literal["ggml", "transformers"], model_decls: TupleAny, model_attrs: DictStrAny, tokenizer_attrs: DictStrAny, tag: bentoml.Tag, adapters_mapping: AdaptersMapping | None, model_version: str | None,
-        quantize_method: t.Literal["int8", "int4", "gptq"] | None, serialisation_format: t.Literal["safetensors", "legacy"], **attrs: t.Any,
+        quantize_method: t.Literal["int8", "int4", "gptq"] | None, serialisation_format: t.Literal["safetensors", "legacy"], _local: bool, **attrs: t.Any,
     ) -> None:
       """Generated __attrs_init__ for openllm.LLM."""
 
@@ -490,6 +490,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
   _model_version: str
   _quantize_method: t.Literal["int8", "int4", "gptq"] | None
   _serialisation_format: t.Literal["safetensors", "legacy"]
+  _local: bool
 
   @staticmethod
   def _infer_implementation_from_name(name: str) -> tuple[LiteralRuntime, str]:
@@ -614,7 +615,8 @@ class LLM(LLMInterface[M, T], ReprMixin):
     cfg_cls = cls.config_class
     model_id = first_not_none(model_id, os.environ.get(cfg_cls.__openllm_env__["model_id"]), cfg_cls.__openllm_default_id__)
     if model_id is None: raise RuntimeError("Failed to resolve a valid model_id.")
-    if validate_is_path(model_id): model_id = resolve_filepath(model_id)
+    _local = False
+    if validate_is_path(model_id): model_id, _local = resolve_filepath(model_id), True
     quantize = first_not_none(quantize, t.cast(t.Optional[t.Literal["int8", "int4", "gptq"]], os.environ.get(cfg_cls.__openllm_env__["quantize"])), default=None)
 
     # quantization setup
@@ -641,13 +643,11 @@ class LLM(LLMInterface[M, T], ReprMixin):
       raise OpenLLMException(f"Failed to generate a valid tag for {cfg_cls.__openllm_start_name__} with 'model_id={model_id}' (lookup to see its traceback):\n{err}") from err
 
     return cls(
-        *args, model_id=model_id, llm_config=llm_config, quantization_config=quantization_config, bettertransformer=str(first_not_none(bettertransformer, os.environ.get(cfg_cls.__openllm_env__["bettertransformer"]), default=None)).upper() in ENV_VARS_TRUE_VALUES,
-        _runtime=first_not_none(runtime, t.cast(t.Optional[t.Literal["ggml", "transformers"]], os.environ.get(cfg_cls.__openllm_env__["runtime"])), default=cfg_cls.__openllm_runtime__), _adapters_mapping=resolve_peft_config_type(adapter_map)
-        if adapter_map is not None else None, _quantize_method=quantize, _model_version=_tag.version, _tag=_tag, _serialisation_format=serialisation, **attrs
+        *args, model_id=model_id, llm_config=llm_config, quantization_config=quantization_config, _quantize_method=quantize, _model_version=_tag.version, _tag=_tag, _serialisation_format=serialisation, _local=_local, bettertransformer=str(first_not_none(bettertransformer, os.environ.get(cfg_cls.__openllm_env__["bettertransformer"]), default=None)).upper() in ENV_VARS_TRUE_VALUES,
+        _runtime=first_not_none(runtime, t.cast(t.Optional[t.Literal["ggml", "transformers"]], os.environ.get(cfg_cls.__openllm_env__["runtime"])), default=cfg_cls.__openllm_runtime__), _adapters_mapping=resolve_peft_config_type(adapter_map) if adapter_map is not None else None, **attrs
     )
 
   @classmethod
-  @functools.lru_cache
   @apply(str.lower)
   def _generate_tag_str(cls, model_id: str, model_version: str | None) -> str:
     """Generate a compliant ``bentoml.Tag`` from model_id.
@@ -678,8 +678,8 @@ class LLM(LLMInterface[M, T], ReprMixin):
     if os.environ.get("OPENLLM_USE_LOCAL_LATEST", str(False)).upper() in ENV_VARS_TRUE_VALUES: return bentoml_cattr.unstructure(bentoml.models.get(f"{tag_name}{':'+model_version if model_version is not None else ''}").tag)
     if validate_is_path(model_id): model_id, model_version = resolve_filepath(model_id), first_not_none(model_version, default=generate_hash_from_file(model_id))
     else:
-      _config = transformers.AutoConfig.from_pretrained(model_id, trust_remote_code=cls.config_class.__openllm_trust_remote_code__, revision=first_not_none(model_version, default="main"))
-      model_version = getattr(_config, "_commit_hash", None)
+      from .serialisation.transformers._helpers import process_config
+      model_version = getattr(process_config(model_id, trust_remote_code=cls.config_class.__openllm_trust_remote_code__, revision=first_not_none(model_version, default="main"))[0], "_commit_hash", None)
       if model_version is None: raise ValueError(f"Internal errors when parsing config for pretrained '{model_id}' ('commit_hash' not found)")
     return f"{tag_name}:{model_version}"
 
@@ -689,7 +689,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
 
   def __init__(
       self, *args: t.Any, model_id: str, llm_config: LLMConfig, bettertransformer: bool | None, quantization_config: transformers.BitsAndBytesConfig | autogptq.BaseQuantizeConfig | None, _adapters_mapping: AdaptersMapping | None, _tag: bentoml.Tag, _quantize_method: t.Literal["int8", "int4", "gptq"] | None, _runtime: t.Literal["ggml", "transformers"], _model_version: str,
-      _serialisation_format: t.Literal["safetensors", "legacy"], **attrs: t.Any,
+      _serialisation_format: t.Literal["safetensors", "legacy"], _local: bool, **attrs: t.Any,
   ):
     """Initialize the LLM with given pretrained model.
 
@@ -727,7 +727,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
             ),
             custom_objects={
                 "tokenizer": transformers.AutoTokenizer.from_pretrained(
-                    self.model_id, padding_size="left", **tokenizer_attrs
+                    self.model_id, padding_side="left", **tokenizer_attrs
                 )
             },
         )
@@ -739,7 +739,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
 
     ```python
     dolly_v2_runner = openllm.Runner(
-        "dolly-v2", _tokenizer_padding_size="left", torch_dtype=torch.bfloat16, device_map="cuda"
+        "dolly-v2", _tokenizer_padding_side="left", torch_dtype=torch.bfloat16, device_map="cuda"
     )
     ```
 
@@ -781,10 +781,14 @@ class LLM(LLMInterface[M, T], ReprMixin):
     model_kwds: DictStrAny = {}
     tokenizer_kwds: DictStrAny = {}
     if self.import_kwargs is not None: model_kwds, tokenizer_kwds = self.import_kwargs
+    # set default tokenizer kwargs
+    tokenizer_kwds.update({"padding_side": "left", "truncation_side": "left"})
+
     # parsing tokenizer and model kwargs, as the hierachy is param pass > default
     normalized_model_kwds, normalized_tokenizer_kwds = normalize_attrs_to_model_tokenizer_pair(**attrs)
     # NOTE: Save the args and kwargs for latter load
-    self.__attrs_init__(llm_config, quantization_config, model_id, _runtime, args, {**model_kwds, **normalized_model_kwds}, {**tokenizer_kwds, **normalized_tokenizer_kwds}, _tag, _adapters_mapping, _model_version, _quantize_method, _serialisation_format)
+    self.__attrs_init__(llm_config, quantization_config, model_id, _runtime, args, {**model_kwds, **normalized_model_kwds}, {**tokenizer_kwds, **normalized_tokenizer_kwds}, _tag, _adapters_mapping, _model_version, _quantize_method, _serialisation_format, _local)
+
     # handle trust_remote_code
     self.__llm_trust_remote_code__ = self._model_attrs.pop("trust_remote_code", self.config["trust_remote_code"])
 

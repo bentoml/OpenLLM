@@ -29,7 +29,7 @@ class StarCoder(openllm.LLM["transformers.GPTBigCodeForCausalLM", "transformers.
 
   @property
   def import_kwargs(self) -> tuple[dict[str, t.Any], dict[str, t.Any]]:
-    return {"device_map": "auto" if torch.cuda.is_available() and torch.cuda.device_count() > 1 else None, "torch_dtype": torch.float16 if torch.cuda.is_available() else torch.float32}, {"padding_side": "left"}
+    return {"device_map": "auto" if torch.cuda.is_available() and torch.cuda.device_count() > 1 else None, "torch_dtype": torch.float16 if torch.cuda.is_available() else torch.float32}, {}
 
   def import_model(self, *args: t.Any, trust_remote_code: bool = False, **attrs: t.Any) -> bentoml.Model:
     torch_dtype, device_map = attrs.pop("torch_dtype", torch.float16), attrs.pop("device_map", "auto")

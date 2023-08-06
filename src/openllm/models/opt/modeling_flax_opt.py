@@ -26,10 +26,6 @@ logger = logging.getLogger(__name__)
 class FlaxOPT(openllm.LLM["transformers.TFOPTForCausalLM", "transformers.GPT2Tokenizer"]):
   __openllm_internal__ = True
 
-  @property
-  def import_kwargs(self) -> tuple[dict[str, t.Any], dict[str, t.Any]]:
-    return {}, {"padding_side": "left", "truncation_side": "left"}
-
   def import_model(self, *args: t.Any, trust_remote_code: bool = False, **attrs: t.Any) -> bentoml.Model:
     config, tokenizer = transformers.AutoConfig.from_pretrained(self.model_id), transformers.AutoTokenizer.from_pretrained(self.model_id, **self.llm_parameters[-1])
     tokenizer.pad_token_id = config.pad_token_id

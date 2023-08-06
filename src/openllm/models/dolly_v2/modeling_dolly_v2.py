@@ -135,7 +135,7 @@ class DollyV2(openllm.LLM["transformers.Pipeline", "transformers.PreTrainedToken
 
   @property
   def import_kwargs(self):
-    return {"device_map": "auto" if torch.cuda.is_available() else None, "torch_dtype": torch.bfloat16}, {"padding_side": "left"}
+    return {"device_map": "auto" if torch.cuda.is_available() else None, "torch_dtype": torch.bfloat16}, {}
 
   def load_model(self, *args: t.Any, **attrs: t.Any) -> transformers.Pipeline:
     return get_pipeline(model=transformers.AutoModelForCausalLM.from_pretrained(self._bentomodel.path, *args, **attrs), tokenizer=self.tokenizer, _init=True, return_full_text=self.config.return_full_text)

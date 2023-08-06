@@ -40,6 +40,7 @@ from bentoml._internal.models.model import ModelContext as _ModelContext
 from bentoml._internal.types import LazyType as LazyType
 from bentoml._internal.utils import LazyLoader as LazyLoader
 from bentoml._internal.utils import bentoml_cattr as bentoml_cattr
+from bentoml._internal.utils import calc_dir_size as calc_dir_size
 from bentoml._internal.utils import first_not_none as first_not_none
 from bentoml._internal.utils import pkg as pkg
 from bentoml._internal.utils import reserve_free_port as reserve_free_port

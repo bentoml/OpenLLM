@@ -14,74 +14,53 @@
 """Serialisation related implementation for Transformers-based implementation."""
 
 from __future__ import annotations
-import copy
 import importlib
+import logging
 import typing as t
+
+from huggingface_hub import snapshot_download
+from simple_di import Provide
+from simple_di import inject
 
 import bentoml
 import openllm
-from bentoml._internal.frameworks.transformers import make_default_signatures
+from bentoml._internal.configuration.containers import BentoMLContainer
 from bentoml._internal.models.model import ModelOptions
 
-from .constants import FRAMEWORK_TO_AUTOCLASS_MAPPING
-from .constants import HUB_ATTRS
+from ._helpers import check_unintialised_params
+from ._helpers import infer_autoclass_from_llm
+from ._helpers import infer_tokenizers_from_llm
+from ._helpers import make_model_signatures
+from ._helpers import process_config
+from ._helpers import update_model
+from .weights import HfIgnore
 
 if t.TYPE_CHECKING:
+  import types
+
   import auto_gptq as autogptq
   import torch
   import torch.nn
-  import transformers as _transformers
+  import transformers
   import vllm
-  from transformers.models.auto.auto_factory import _BaseAutoModelClass
 
-  from .._llm import M
-  from .._llm import T
-  from .._types import DictStrAny
+  from bentoml._internal.models import ModelStore
+
+  from ..._llm import M
+  from ..._llm import T
+  from ..._types import DictStrAny
 else:
   vllm = openllm.utils.LazyLoader("vllm", globals(), "vllm")
   autogptq = openllm.utils.LazyLoader("autogptq", globals(), "auto_gptq")
-  _transformers = openllm.utils.LazyLoader("_transformers", globals(), "transformers")
+  transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
   torch = openllm.utils.LazyLoader("torch", globals(), "torch")
 
-_object_setattr = object.__setattr__
+logger = logging.getLogger(__name__)
 
-def process_transformers_config(model_id: str, trust_remote_code: bool, **attrs: t.Any) -> tuple[_transformers.PretrainedConfig, dict[str, t.Any], dict[str, t.Any]]:
-  """Process transformers config and return PretrainedConfig with hub_kwargs and the rest of kwargs."""
-  config = attrs.pop("config", None)
-  # this logic below is synonymous to handling `from_pretrained` attrs.
-  hub_attrs = {k: attrs.pop(k) for k in HUB_ATTRS if k in attrs}
-  if not isinstance(config, _transformers.PretrainedConfig):
-    copied_attrs = copy.deepcopy(attrs)
-    if copied_attrs.get("torch_dtype", None) == "auto": copied_attrs.pop("torch_dtype")
-    config, attrs = _transformers.AutoConfig.from_pretrained(model_id, return_unused_kwargs=True, trust_remote_code=trust_remote_code, **hub_attrs, **copied_attrs)
-  return config, hub_attrs, attrs
+__all__ = ["import_model", "get", "load_model", "save_pretrained"]
 
-def infer_tokenizers_class_for_llm(__llm: openllm.LLM[t.Any, T]) -> T:
-  tokenizer_class = __llm.config["tokenizer_class"]
-  if tokenizer_class is None: tokenizer_class = "AutoTokenizer"
-  __cls = getattr(_transformers, tokenizer_class)
-  if __cls is None: raise ValueError(f"{tokenizer_class} is not a valid Tokenizer class from 'transformers.' Set '{__llm}.__config__[\"trust_remote_code\"] = True' and try again.")
-  return __cls
-
-def infer_autoclass_from_llm_config(llm: openllm.LLM[M, T], config: _transformers.PretrainedConfig) -> _BaseAutoModelClass:
-  if llm.config["trust_remote_code"]:
-    autoclass = "AutoModelForSeq2SeqLM" if llm.config["model_type"] == "seq2seq_lm" else "AutoModelForCausalLM"
-    if not hasattr(config, "auto_map"): raise ValueError(f"Invalid configuraiton for {llm.model_id}. ``trust_remote_code=True`` requires `transformers.PretrainedConfig` to contain a `auto_map` mapping")
-    # in case this model doesn't use the correct auto class for model type, for example like chatglm
-    # where it uses AutoModel instead of AutoModelForCausalLM. Then we fallback to AutoModel
-    if autoclass not in config.auto_map: autoclass = "AutoModel"
-    return getattr(_transformers, autoclass)
-  else:
-    if type(config) in _transformers.MODEL_FOR_CAUSAL_LM_MAPPING: idx = 0
-    elif type(config) in _transformers.MODEL_FOR_SEQ_TO_SEQ_CAUSAL_LM_MAPPING: idx = 1
-    else: raise openllm.exceptions.OpenLLMException(f"Model type {type(config)} is not supported yet.")
-    return getattr(_transformers, FRAMEWORK_TO_AUTOCLASS_MAPPING[llm.__llm_implementation__][idx])
-
-def check_initialized(model: torch.nn.Module) -> None:
-  unintialized = [n for n, param in model.named_parameters() if param.data.device == torch.device("meta")]
-  if len(unintialized) > 0: raise RuntimeError(f"Found the following unintialized parameters in {model}: {unintialized}")
-
-def import_model(llm: openllm.LLM[M, T], *decls: t.Any, trust_remote_code: bool, **attrs: t.Any) -> bentoml.Model:
+@inject
+def import_model(llm: openllm.LLM[M, T], *decls: t.Any, trust_remote_code: bool, _model_store: ModelStore = Provide[BentoMLContainer.model_store], **attrs: t.Any) -> bentoml.Model:
   """Auto detect model type from given model_id and import it to bentoml's model store.
 
   For all kwargs, it will be parsed into `transformers.AutoConfig.from_pretrained` first,
@@ -99,47 +78,72 @@ def import_model(llm: openllm.LLM[M, T], *decls: t.Any, trust_remote_code: bool,
   *decls: Args to be passed into AutoModelForSeq2SeqLM or AutoModelForCausalLM (+ TF, Flax variants).
   **attrs: Kwargs to be passed into AutoModelForSeq2SeqLM or AutoModelForCausalLM (+ TF, Flax variants).
   """
-  config, hub_attrs, attrs = process_transformers_config(llm.model_id, trust_remote_code, **attrs)
+  config, hub_attrs, attrs = process_config(llm.model_id, trust_remote_code, **attrs)
   _, tokenizer_attrs = llm.llm_parameters
   quantize_method = llm._quantize_method
   safe_serialisation = openllm.utils.first_not_none(attrs.get("safe_serialization"), default=llm._serialisation_format == "safetensors")
   # Disable safe serialization with vLLM
   if llm.__llm_implementation__ == "vllm": safe_serialisation = False
-  metadata: DictStrAny = {"safe_serialisation": safe_serialisation, "_quantize": quantize_method if quantize_method is not None else False}
+  metadata: DictStrAny = {"safe_serialisation": safe_serialisation, "_quantize": quantize_method is not None and quantize_method}
   signatures: DictStrAny = {}
+
   if quantize_method == "gptq":
     if not openllm.utils.is_autogptq_available(): raise openllm.exceptions.OpenLLMException("GPTQ quantisation requires 'auto-gptq' (Not found in local environment). Install it with 'pip install \"openllm[gptq]\"'")
     if llm.config["model_type"] != "causal_lm": raise openllm.exceptions.OpenLLMException(f"GPTQ only support Causal LM (got {llm.__class__} of {llm.config['model_type']})")
-    model = autogptq.AutoGPTQForCausalLM.from_quantized(llm.model_id, *decls, quantize_config=t.cast("autogptq.BaseQuantizeConfig", llm.quantization_config), trust_remote_code=trust_remote_code, use_safetensors=safe_serialisation, **hub_attrs, **attrs,)
-    metadata.update({"_pretrained_class": model.__class__.__name__, "_framework": model.model.framework})
     signatures["generate"] = {"batchable": False}
   else:
     # this model might be called with --quantize int4, therefore we need to pop this out
     # since saving int4 is not yet supported
     if "quantization_config" in attrs and getattr(attrs["quantization_config"], "load_in_4bit", False): attrs.pop("quantization_config")
-    model = infer_autoclass_from_llm_config(llm, config).from_pretrained(llm.model_id, *decls, config=config, trust_remote_code=trust_remote_code, use_safetensors=safe_serialisation, **hub_attrs, **attrs,)
-    metadata.update({"_pretrained_class": model.__class__.__name__, "_framework": model.framework})
+    if llm.__llm_implementation__ != "flax": attrs["use_safetensors"] = safe_serialisation
+    metadata["_framework"] = "pt" if llm.__llm_implementation__ == "vllm" else llm.__llm_implementation__
 
-  _tokenizer = infer_tokenizers_class_for_llm(llm).from_pretrained(llm.model_id, trust_remote_code=trust_remote_code, **hub_attrs, **tokenizer_attrs,)
-  if _tokenizer.pad_token is None: _tokenizer.pad_token = _tokenizer.eos_token
+  tokenizer = infer_tokenizers_from_llm(llm).from_pretrained(llm.model_id, trust_remote_code=trust_remote_code, **hub_attrs, **tokenizer_attrs)
+  if tokenizer.pad_token is None: tokenizer.pad_token = tokenizer.eos_token
 
-  # NOTE: quick hack to set the loaded into llm object to use with save_pretrained
-  # to avoid recursive call when the model is not yet available in local store
-  _object_setattr(llm, "__llm_model__", model)
-  _object_setattr(llm, "__llm_tokenizer__", _tokenizer)
+  external_modules: list[types.ModuleType] = [importlib.import_module(tokenizer.__module__)]
+  imported_modules: list[types.ModuleType] = []
+  bentomodel = bentoml.Model.create(llm.tag, module="openllm.serialisation.transformers", api_version="v1", options=ModelOptions(), context=openllm.utils.generate_context(framework_name="openllm"), labels=openllm.utils.generate_labels(llm), signatures=signatures if signatures else make_model_signatures(llm))
+  with openllm.utils.analytics.set_bentoml_tracking():
+    try:
+      bentomodel.enter_cloudpickle_context(external_modules, imported_modules)
+      tokenizer.save_pretrained(bentomodel.path)
+      if quantize_method == "gptq":
+        if not openllm.utils.is_autogptq_available(): raise openllm.exceptions.OpenLLMException("GPTQ quantisation requires 'auto-gptq' (Not found in local environment). Install it with 'pip install \"openllm[gptq]\"'")
+        if llm.config["model_type"] != "causal_lm": raise openllm.exceptions.OpenLLMException(f"GPTQ only support Causal LM (got {llm.__class__} of {llm.config['model_type']})")
+        logger.debug("Saving model with GPTQ quantisation will require loading model into memory.")
+        model = autogptq.AutoGPTQForCausalLM.from_quantized(llm.model_id, *decls, quantize_config=t.cast("autogptq.BaseQuantizeConfig", llm.quantization_config), trust_remote_code=trust_remote_code, use_safetensors=safe_serialisation, **hub_attrs, **attrs,)
+        update_model(bentomodel, metadata={"_pretrained_class": model.__class__.__name__, "_framework": model.model.framework})
+        model.save_quantized(bentomodel.path, use_safetensors=safe_serialisation)
+      else:
+        architectures = getattr(config, "architectures", [])
+        if not architectures:
+          raise RuntimeError("Failed to determine the architecture for this model. Make sure the `config.json` is valid and can be loaded with `transformers.AutoConfig`")
+        architecture = architectures[0]
+        update_model(bentomodel, metadata={"_pretrained_class": architecture})
+        if llm._local:
+          # possible local path
+          logger.debug("Model will be loaded into memory to save to target store as it is from local path.")
+          model = infer_autoclass_from_llm(llm, config).from_pretrained(llm.model_id, *decls, config=config, trust_remote_code=trust_remote_code, **hub_attrs, **attrs)
+          # for trust_remote_code to work
+          bentomodel.enter_cloudpickle_context([importlib.import_module(model.__module__)], imported_modules)
+          model.save_pretrained(bentomodel.path, max_shard_size="5GB", safe_serialization=safe_serialisation)
+        else:
+          # we will clone the all tings into the bentomodel path without loading model into memory
+          snapshot_download(llm.model_id, local_dir=bentomodel.path, local_dir_use_symlinks=False, ignore_patterns=HfIgnore.ignore_patterns(llm))
+    except Exception:
+      raise
+    else:
+      bentomodel.flush()  # type: ignore[no-untyped-call]
+      bentomodel.save(_model_store)
+      openllm.utils.analytics.track(openllm.utils.analytics.ModelSaveEvent(module=bentomodel.info.module, model_size_in_kb=openllm.utils.calc_dir_size(bentomodel.path) / 1024))
+    finally:
+      bentomodel.exit_cloudpickle_context(imported_modules)
+      # NOTE: We need to free up the cache after importing the model
+      # in the case where users first run openllm start without the model available locally.
+      if openllm.utils.is_torch_available() and torch.cuda.is_available(): torch.cuda.empty_cache()
 
-  try:
-    with bentoml.models.create(
-        llm.tag, signatures=signatures if signatures else make_default_signatures(model), external_modules=[importlib.import_module(model.__module__), importlib.import_module(_tokenizer.__module__)]
-        if trust_remote_code else None, module="openllm.serialisation.transformers", api_version="v1", context=openllm.utils.generate_context(framework_name="openllm"), labels=openllm.utils.generate_labels(llm), metadata=metadata, options=ModelOptions()
-    ) as bentomodel:
-      save_pretrained(llm, bentomodel.path, safe_serialization=safe_serialisation)
-      return bentomodel
-  finally:
-    # NOTE: We need to free up the cache after importing the model
-    # in the case where users first run openllm start without the model
-    # available locally.
-    if openllm.utils.is_torch_available() and torch.cuda.is_available(): torch.cuda.empty_cache()
+    return bentomodel
 
 def get(llm: openllm.LLM[M, T], auto_import: bool = False) -> bentoml.Model:
   """Return an instance of ``bentoml.Model`` from given LLM instance.
@@ -151,7 +155,6 @@ def get(llm: openllm.LLM[M, T], auto_import: bool = False) -> bentoml.Model:
   """
   try:
     model = bentoml.models.get(llm.tag)
-    # compat with bentoml.transformers.get
     if model.info.module not in ("openllm.serialisation.transformers", __name__):
       raise bentoml.exceptions.NotFound(f"Model {model.tag} was saved with module {model.info.module}, not loading with 'openllm.serialisation.transformers'.")
     if "runtime" in model.info.labels and model.info.labels["runtime"] != llm.runtime:
@@ -167,17 +170,20 @@ def load_model(llm: openllm.LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M:
   By default, it will try to find check the model in the local store.
   If model is not found, it will raises a ``bentoml.exceptions.NotFound``.
   """
-  config, hub_attrs, attrs = process_transformers_config(llm.model_id, llm.__llm_trust_remote_code__, **attrs)
+  config, hub_attrs, attrs = process_config(llm.model_id, llm.__llm_trust_remote_code__, **attrs)
   safe_serialization = openllm.utils.first_not_none(t.cast(t.Optional[bool], llm._bentomodel.info.metadata.get("safe_serialisation", None)), attrs.pop("safe_serialization", None), default=llm._serialisation_format == "safetensors")
   if "_quantize" in llm._bentomodel.info.metadata and llm._bentomodel.info.metadata["_quantize"] == "gptq":
     if not openllm.utils.is_autogptq_available(): raise openllm.exceptions.OpenLLMException("GPTQ quantisation requires 'auto-gptq' (Not found in local environment). Install it with 'pip install \"openllm[gptq]\"'")
     if llm.config["model_type"] != "causal_lm": raise openllm.exceptions.OpenLLMException(f"GPTQ only support Causal LM (got {llm.__class__} of {llm.config['model_type']})")
     return autogptq.AutoGPTQForCausalLM.from_quantized(llm._bentomodel.path, *decls, quantize_config=t.cast("autogptq.BaseQuantizeConfig", llm.quantization_config), trust_remote_code=llm.__llm_trust_remote_code__, use_safetensors=safe_serialization, **hub_attrs, **attrs)
 
-  model = infer_autoclass_from_llm_config(llm, config).from_pretrained(llm._bentomodel.path, *decls, config=config, trust_remote_code=llm.__llm_trust_remote_code__, **hub_attrs, **attrs).eval()
-  if llm.__llm_implementation__ in {"pt", "vllm"}: check_initialized(model)
+  device_map = attrs.pop("device_map", "auto" if torch.cuda.is_available() and torch.cuda.device_count() > 1 else None)
+  model = infer_autoclass_from_llm(llm, config).from_pretrained(llm._bentomodel.path, *decls, config=config, trust_remote_code=llm.__llm_trust_remote_code__, device_map=device_map, **hub_attrs, **attrs).eval()
+  if llm.__llm_implementation__ in {"pt", "vllm"}: check_unintialised_params(model)
+  # If OOM, then it is probably you don't have enough VRAM to run this model.
+  if torch.cuda.is_available() and torch.cuda.device_count() == 1: model = model.cuda()
   # BetterTransformer is currently only supported on PyTorch.
-  if llm.bettertransformer and isinstance(model, _transformers.PreTrainedModel): model = model.to_bettertransformer()
+  if llm.bettertransformer and isinstance(model, transformers.PreTrainedModel): model = model.to_bettertransformer()
   return t.cast("M", model)
 
 def save_pretrained(llm: openllm.LLM[M, T], save_directory: str, is_main_process: bool = True, state_dict: DictStrAny | None = None, save_function: t.Any | None = None, push_to_hub: bool = False, max_shard_size: int | str = "10GB", safe_serialization: bool = False, variant: str | None = None, **attrs: t.Any,) -> None:
@@ -193,9 +199,9 @@ def save_pretrained(llm: openllm.LLM[M, T], save_directory: str, is_main_process
     t.cast("autogptq.modeling.BaseGPTQForCausalLM", llm.model).save_quantized(save_directory, use_safetensors=safe_serialization)
   elif openllm.utils.LazyType["vllm.LLMEngine"]("vllm.LLMEngine").isinstance(llm.model):
     raise RuntimeError("vllm.LLMEngine cannot be serialisation directly. This happens when 'save_pretrained' is called directly after `openllm.AutoVLLM` is initialized.")
-  elif isinstance(llm.model, _transformers.Pipeline):
+  elif isinstance(llm.model, transformers.Pipeline):
     llm.model.save_pretrained(save_directory, safe_serialization=safe_serialization)
   else:
     # We can safely cast here since it will be the PreTrainedModel protocol.
-    t.cast("_transformers.PreTrainedModel", llm.model).save_pretrained(save_directory, is_main_process=is_main_process, state_dict=state_dict, save_function=save_function, push_to_hub=push_to_hub, max_shard_size=max_shard_size, safe_serialization=safe_serialization, variant=variant, **model_save_attrs)
+    t.cast("transformers.PreTrainedModel", llm.model).save_pretrained(save_directory, is_main_process=is_main_process, state_dict=state_dict, save_function=save_function, push_to_hub=push_to_hub, max_shard_size=max_shard_size, safe_serialization=safe_serialization, variant=variant, **model_save_attrs)
   llm.tokenizer.save_pretrained(save_directory, push_to_hub=push_to_hub, **tokenizer_save_attrs)
