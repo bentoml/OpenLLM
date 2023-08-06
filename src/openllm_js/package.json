@@ -1,6 +1,6 @@
 {
   "name": "openllm",
-  "version": "0.0.2",
+  "version": "0.2.17.dev0",
   "description": "TS/JS binding for OpenLLM",
   "type": "module",
   "repository": "git@github.com:bentoml/OpenLLM.git",
