@@ -41,7 +41,7 @@ class MPT(openllm.LLM["transformers.PreTrainedModel", "transformers.GPTNeoXToken
 
   @property
   def import_kwargs(self) -> tuple[dict[str, t.Any], dict[str, t.Any]]:
-    return {"torch_dtype": torch.bfloat16 if torch.cuda.is_available() else torch.float32}, {"padding_side": "left"}
+    return {"device_map": "auto" if torch.cuda.is_available() and torch.cuda.device_count() > 1 else None, "torch_dtype": torch.bfloat16 if torch.cuda.is_available() else torch.float32}, {}
 
   def import_model(self, *args: t.Any, trust_remote_code: bool = True, **attrs: t.Any) -> bentoml.Model:
     _, tokenizer_attrs = self.llm_parameters

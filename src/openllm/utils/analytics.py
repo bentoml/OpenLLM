@@ -92,6 +92,11 @@ class EventMeta:
     return event_name
 
 @attr.define
+class ModelSaveEvent(EventMeta):
+  module: str
+  model_size_in_kb: float
+
+@attr.define
 class OpenllmCliEvent(EventMeta):
   cmd_group: str
   cmd_name: str
