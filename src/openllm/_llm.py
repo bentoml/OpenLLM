@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 from __future__ import annotations
 import collections
 import functools
@@ -20,6 +19,7 @@ import logging
 import os
 import re
 import sys
+import traceback
 import types
 import typing as t
 import uuid
@@ -380,9 +380,12 @@ def _wrapped_load_model(f: _load_model_wrapper[M, T]) -> t.Callable[[LLM[M, T]],
   @functools.wraps(f)
   def wrapper(self: LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M | vllm.LLMEngine:
     if self.__llm_implementation__ == "vllm":
-      # TODO: Do some more processing with token_id once we support token streaming
-      tokenizer_id = self._bentomodel.path if self.tokenizer_id == "local" else self.tokenizer_id
-      return vllm.LLMEngine.from_engine_args(get_engine_args(self, tokenizer=tokenizer_id))
+      try:
+        # TODO: Do some more processing with token_id once we support token streaming
+        return vllm.LLMEngine.from_engine_args(get_engine_args(self, tokenizer=self._bentomodel.path if self.tokenizer_id == "local" else self.tokenizer_id))
+      except Exception as err:
+        traceback.print_exc()
+        raise OpenLLMException(f"Failed to initialise vLLMEngine due to the following error:\n{err}") from None
     else:
       (model_decls, model_attrs), _ = self.llm_parameters
       return f(self, *(*model_decls, *decls), **{**model_attrs, **attrs})
