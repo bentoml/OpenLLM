@@ -115,8 +115,8 @@ def main() -> int:
   lines.append(" "*2 + "# NOTE: generation_class, sampling_class and extras arguments\n")
   lines.extend([
       " "*2 + line for line in [
-          "@overload\n" if "overload" in dir(_imported) else "@t.overload\n", 'def __getitem__(self, item: t.Literal["generation_class"]) -> t.Type[openllm._configuration.GenerationConfig]: ...\n', "@overload\n"
-          if "overload" in dir(_imported) else "@t.overload\n", 'def __getitem__(self, item: t.Literal["sampling_class"]) -> t.Type[openllm._configuration.SamplingParams]: ...\n', "@overload\n" if "overload" in dir(_imported) else "@t.overload\n", 'def __getitem__(self, item: t.Literal["extras"]) -> t.Dict[str, t.Any]: ...\n',
+          "@overload\n" if "overload" in dir(_imported) else "@t.overload\n", 'def __getitem__(self, item: t.Literal["generation_class"]) -> t.Type[openllm.GenerationConfig]: ...\n', "@overload\n" if "overload" in dir(_imported) else "@t.overload\n", 'def __getitem__(self, item: t.Literal["sampling_class"]) -> t.Type[openllm.SamplingParams]: ...\n', "@overload\n"
+          if "overload" in dir(_imported) else "@t.overload\n", 'def __getitem__(self, item: t.Literal["extras"]) -> t.Dict[str, t.Any]: ...\n',
       ]
   ])
   lines.append(" "*2 + "# NOTE: GenerationConfig arguments\n")

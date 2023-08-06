@@ -1190,4 +1190,4 @@ def llm_runner_class(self: LLM[M, T]) -> type[LLMRunner[M, T]]:
       }),
   )
 
-__all__ = ["LLMRunner", "LLMRunnable", "Runner", "LLM", "llm_runner_class", "llm_runnable_class"]
+__all__ = ["LLMRunner", "LLMRunnable", "Runner", "LLM", "llm_runner_class", "llm_runnable_class", "LLMEmbeddings"]

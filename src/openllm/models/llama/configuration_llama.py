@@ -27,7 +27,7 @@ class LlamaConfig(openllm.LLMConfig):
     Refer to [Llama's model card](https://huggingface.co/docs/transformers/main/model_doc/llama)
     for more information.
     """
-  use_llama2_prompt: bool = openllm.LLMConfig.Field(True, description="Whether to use the prompt format for Llama 2. Disable this when working with Llama 1.")
+  use_llama2_prompt: bool = openllm.LLMConfig.Field(False, description="Whether to use the prompt format for Llama 2. Disable this when working with Llama 1.")
   __config__ = {
       "name_type": "lowercase", "url": "https://github.com/facebookresearch/llama", "default_id": "huggyllama/llama-7b", "default_implementation": {"cpu": "pt", "nvidia.com/gpu": "pt"}, "architecture": "LlamaForCausalLM", "requirements": ["fairscale", "sentencepiece"], "model_ids": [
           "meta-llama/Llama-2-70b-chat-hf", "meta-llama/Llama-2-13b-chat-hf", "meta-llama/Llama-2-7b-chat-hf", "meta-llama/Llama-2-70b-hf", "meta-llama/Llama-2-13b-hf", "meta-llama/Llama-2-7b-hf", "NousResearch/llama-2-70b-chat-hf", "NousResearch/llama-2-13b-chat-hf", "NousResearch/llama-2-7b-chat-hf", "NousResearch/llama-2-70b-hf", "NousResearch/llama-2-13b-hf",
@@ -37,7 +37,7 @@ class LlamaConfig(openllm.LLMConfig):
 
   class GenerationConfig:
     max_new_tokens: int = 256
-    temperature: float = 0.45
+    temperature: float = 0.8
     top_p: float = 0.95
     top_k: int = 12
 

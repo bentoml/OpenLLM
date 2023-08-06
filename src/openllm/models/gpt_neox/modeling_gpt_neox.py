@@ -37,8 +37,10 @@ class GPTNeoX(openllm.LLM["transformers.GPTNeoXForCausalLM", "transformers.GPTNe
   def load_model(self, *args: t.Any, **attrs: t.Any) -> transformers.GPTNeoXForCausalLM:
     model = transformers.AutoModelForCausalLM.from_pretrained(self._bentomodel.path, *args, **attrs)
     if self.config.use_half_precision: model.half()
+    if torch.cuda.is_available() and torch.cuda.device_count() == 1: model = model.to("cuda")
     return model
 
   def generate(self, prompt: str, **attrs: t.Any) -> list[str]:
     with torch.inference_mode():
-      return self.tokenizer.batch_decode(self.model.generate(self.tokenizer(prompt, return_tensors="pt").to(self.device).input_ids, do_sample=True, generation_config=self.config.model_construct_env(**attrs).to_generation_config(), pad_token_id=self.tokenizer.eos_token_id, stopping_criteria=transformers.StoppingCriteriaList([openllm.StopOnTokens()])))
+      tokenized = self.tokenizer(prompt, return_tensors="pt").to(self.device)
+      return self.tokenizer.batch_decode(self.model.generate(tokenized.input_ids, do_sample=True, generation_config=self.config.model_construct_env(**attrs).to_generation_config(), pad_token_id=self.tokenizer.eos_token_id, stopping_criteria=openllm.StoppingCriteriaList([openllm.StopOnTokens()])))

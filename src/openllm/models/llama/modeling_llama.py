@@ -16,7 +16,6 @@ import logging
 import typing as t
 import openllm
 from .configuration_llama import DEFAULT_PROMPT_TEMPLATE
-from ..._llm import LLMEmbeddings
 from ..._prompt import process_prompt
 if t.TYPE_CHECKING: import torch, transformers, torch.nn.functional as F
 else: torch, transformers, F = openllm.utils.LazyLoader("torch", globals(), "torch"), openllm.utils.LazyLoader("transformers", globals(), "transformers"), openllm.utils.LazyLoader("F", globals(), "torch.nn.functional")
@@ -34,9 +33,9 @@ class Llama(openllm.LLM["transformers.LlamaForCausalLM", "transformers.LlamaToke
 
   def generate(self, prompt: str, **attrs: t.Any) -> list[str]:
     with torch.inference_mode():
-      return self.tokenizer.batch_decode(self.model.generate(**self.tokenizer(prompt, return_tensors="pt").to(self.device), generation_config=self.config.model_construct_env(**attrs).to_generation_config(), stopping_criteria=transformers.StoppingCriteriaList([openllm.StopOnTokens()])), skip_special_tokens=True, clean_up_tokenization_spaces=True)
+      return self.tokenizer.batch_decode(self.model.generate(**self.tokenizer(prompt, return_tensors="pt").to(self.device), generation_config=self.config.model_construct_env(**attrs).to_generation_config(), do_sample=True, stopping_criteria=openllm.StoppingCriteriaList([openllm.StopOnTokens()])), skip_special_tokens=True, clean_up_tokenization_spaces=True)
 
-  def embeddings(self, prompts: list[str]) -> LLMEmbeddings:
+  def embeddings(self, prompts: list[str]) -> openllm.LLMEmbeddings:
     encoding = self.tokenizer(prompts, padding=True, return_tensors="pt").to(self.device)
     input_ids, attention_mask = encoding["input_ids"], encoding["attention_mask"]
     with torch.inference_mode():

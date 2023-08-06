@@ -37,7 +37,6 @@ llm.save_pretrained("./path/to/local-dolly")
 """
 from __future__ import annotations
 import importlib
-import inspect
 import itertools
 import typing as t
 
@@ -75,7 +74,7 @@ def load_tokenizer(llm: openllm.LLM[t.Any, T], **tokenizer_attrs: t.Any) -> T:
                                                   " the tokenizer within the model via 'custom_objects'."
                                                   " For example: \"bentoml.transformers.save_model(..., custom_objects={'tokenizer': tokenizer})\"") from None
   else:
-    tokenizer = infer_tokenizers_from_llm(llm).from_pretrained(bentomodel_fs.getsyspath("/"), trust_remote_code=llm.__llm_trust_remote_code__, **tokenizer_attrs,)
+    tokenizer = infer_tokenizers_from_llm(llm).from_pretrained(bentomodel_fs.getsyspath("/"), trust_remote_code=llm.__llm_trust_remote_code__, **tokenizer_attrs)
 
   if tokenizer.pad_token_id is None:
     if config.pad_token_id is not None:
