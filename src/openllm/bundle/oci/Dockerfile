@@ -118,21 +118,6 @@ git fetch && git checkout ${COMMIT_HASH}
 TORCH_CUDA_ARCH_LIST="7.5;8.0;8.6+PTX;8.9;9.0" python setup.py build
 EOT
 
-# NOTE: Build xformers from source since the latest xformers are too old
-# FROM kernel-builder as xformers-builder
-#
-# ENV COMMIT_HASH 2d3a2217c263419243b70c53f725213d1c386b0f
-# ARG COMMIT_HASH=${COMMIT_HASH}
-#
-# WORKDIR /usr/src
-#
-# RUN <<EOT
-# git clone https://github.com/facebookresearch/xformers.git && cd xformers
-# git fetch && git checkout ${COMMIT_HASH}
-# git submodule update --init --recursive
-# TORCH_CUDA_ARCH_LIST="7.5;8.0;8.6+PTX;8.9;9.0" python setup.py build
-# EOT
-
 # base image
 FROM nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04 as base-container
 
@@ -160,9 +145,6 @@ COPY --from=flash-attn-v2-builder /usr/src/flash-attention-v2/build/lib.linux-x8
 # Copy build artefacts for auto-gptq
 COPY --from=auto-gptq-builder /usr/src/AutoGPTQ/build/lib.linux-x86_64-cpython-39 /opt/conda/lib/python3.9/site-packages
 
-# Copy build artefacts for xformers
-# COPY --from=xformers-builder /usr/src/xformers/build/lib.linux-x86_64-cpython-39 /opt/conda/lib/python3.9/site-packages
-
 # Install required dependencies
 COPY src src
 COPY hatch.toml README.md CHANGELOG.md pyproject.toml ./
@@ -176,7 +158,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
         rm -rf /var/lib/apt/lists/*
 
 # Install all required dependencies
-RUN pip install  "ray==2.6.0" "einops" "jax[cuda11_local]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html ".[opt,mpt,fine-tune,llama,chatglm]" -v --no-cache-dir
+RUN pip install  "ray==2.6.0" "einops" "jax[cuda11_local]" "torch>=2.0.1" xformers -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html ".[opt,mpt,fine-tune,llama,chatglm]" -v
 
 FROM base-container
 
