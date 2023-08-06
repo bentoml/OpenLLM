@@ -168,9 +168,6 @@ _reserved_namespace = {"config_class", "model", "tokenizer", "import_kwargs"}
 M = t.TypeVar("M", bound="t.Union[transformers.PreTrainedModel, transformers.Pipeline, transformers.TFPreTrainedModel, transformers.FlaxPreTrainedModel, vllm.LLMEngine, vllm.AsyncLLMEngine, peft.PeftModel, autogptq.modeling.BaseGPTQForCausalLM]")
 T = t.TypeVar("T", bound="t.Union[transformers.PreTrainedTokenizerFast, transformers.PreTrainedTokenizer, transformers.PreTrainedTokenizerBase]")
 
-def _default_post_init(self: LLM[t.Any, t.Any]) -> None:
-  if self.__llm_implementation__ == "pt" and is_torch_available(): self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
 class LLMInterface(ABC, t.Generic[M, T]):
   """This defines the loose contract for all openllm.LLM implementations."""
   @property
@@ -402,7 +399,7 @@ def _wrapped_load_tokenizer(f: _load_tokenizer_wrapper[M, T]) -> t.Callable[[LLM
 def _wrapped_llm_post_init(f: _llm_post_init_wrapper[M, T]) -> t.Callable[[LLM[M, T]], None]:
   @functools.wraps(f)
   def wrapper(self: LLM[M, T]) -> None:
-    _default_post_init(self)
+    if self.__llm_implementation__ == "pt" and is_torch_available(): self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     f(self)
 
   return wrapper
