@@ -172,6 +172,9 @@ To release a new version, use `./tools/run-release-action`. It requires `gh`,
 ./tools/run-release-action --release <major|minor|patch>
 ```
 
+Once the tag is release, run [the release for base container](https://github.com/bentoml/OpenLLM/actions/workflows/build.yml)
+to the latest release tag.
+
 > Note that currently this workflow can only be run by the BentoML team.
 
 ## Changelog
