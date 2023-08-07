@@ -44,7 +44,7 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: python-artifacts
+          name: binary-artefacts
           path: dist/*
           if-no-files-found: error
   binaries:
@@ -129,7 +129,7 @@ jobs:
         if: ${{ !startsWith(github.event.ref, 'refs/tags') }}
         uses: actions/download-artifact@v3
         with:
-          name: python-artifacts
+          name: binary-artefacts
           path: dist
       - name: Configure embedded project
         if: ${{ !startsWith(github.event.ref, 'refs/tags') }}

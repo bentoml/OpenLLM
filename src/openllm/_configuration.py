@@ -133,7 +133,7 @@ else:
   transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
   peft = openllm.utils.LazyLoader("peft", globals(), "peft")
 
-__all__ = ["LLMConfig"]
+__all__ = ["LLMConfig", "GenerationConfig", "SamplingParams"]
 
 logger = logging.getLogger(__name__)
 config_merger = Merger([(DictStrAny, "merge")], ["override"], ["override"])
@@ -1193,9 +1193,9 @@ class LLMConfig(_ConfigAttr):
   def __getitem__(self, item: t.Literal["tokenizer_class"]) -> t.Optional[str]: ...
   # NOTE: generation_class, sampling_class and extras arguments
   @overload
-  def __getitem__(self, item: t.Literal["generation_class"]) -> t.Type[openllm._configuration.GenerationConfig]: ...
+  def __getitem__(self, item: t.Literal["generation_class"]) -> t.Type[openllm.GenerationConfig]: ...
   @overload
-  def __getitem__(self, item: t.Literal["sampling_class"]) -> t.Type[openllm._configuration.SamplingParams]: ...
+  def __getitem__(self, item: t.Literal["sampling_class"]) -> t.Type[openllm.SamplingParams]: ...
   @overload
   def __getitem__(self, item: t.Literal["extras"]) -> t.Dict[str, t.Any]: ...
   # NOTE: GenerationConfig arguments

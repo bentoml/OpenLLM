@@ -158,7 +158,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
         rm -rf /var/lib/apt/lists/*
 
 # Install all required dependencies
-RUN pip install  "ray==2.6.0" "einops" "jax[cuda11_local]" "torch>=2.0.1" xformers -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html ".[opt,mpt,fine-tune,llama,chatglm]" -v
+RUN --mount=type=cache,target=/root/.cache/pip pip install  "ray==2.6.0" "einops" "jax[cuda11_local]" "torch>=2.0.1" xformers -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html ".[opt,mpt,fine-tune,llama,chatglm]" -v --no-cache-dir
 
 FROM base-container
 
