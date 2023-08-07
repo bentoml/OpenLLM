@@ -79,6 +79,8 @@ dependencies = [
     "markdown-it-py",
     # NOTE: For fancy PyPI readme
     "hatch-fancy-pypi-readme",
+    # NOTE: For working with shell pipe
+    "plumbum",
     # The below sync with mypyc deps and pre-commit mypy
     "types-psutil",
     "types-tabulate",

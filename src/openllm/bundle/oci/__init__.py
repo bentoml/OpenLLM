@@ -19,8 +19,10 @@ import logging
 import pathlib
 import shutil
 import subprocess
-import tempfile
 import typing as t
+from datetime import datetime
+from datetime import timedelta
+from datetime import timezone
 
 import attr
 
@@ -28,14 +30,12 @@ import bentoml
 import openllm
 
 if t.TYPE_CHECKING:
-  import git.cmd
-  from git.repo.base import Repo
+  from ghapi import all
 
+  from openllm._types import DictStrAny
   from openllm._types import RefTuple
 else:
-  git = openllm.utils.LazyLoader("git", globals(), "git")
-  git.cmd = openllm.utils.LazyLoader("git.cmd", globals(), "git.cmd")
-  Repo = openllm.utils.LazyLoader("Repo", globals(), "git.repo.base.Repo")
+  all = openllm.utils.LazyLoader("all", globals(), "ghapi.all")
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +53,8 @@ LiteralContainerVersionStrategy = t.Literal["release", "nightly", "latest", "cus
 _CONTAINER_REGISTRY: dict[LiteralContainerRegistry, str] = {"docker": "docker.io/bentoml/openllm", "gh": "ghcr.io/bentoml/openllm", "ecr": "public.ecr.aws/y5w8i4y6/bentoml/openllm"}
 
 # TODO: support custom fork. Currently it only support openllm main.
-_URI = "https://github.com/bentoml/openllm.git"
+_OWNER = "bentoml"
+_REPO = "openllm"
 
 _module_location = openllm.utils.pkg.source_locations("openllm")
 
@@ -65,6 +66,9 @@ def get_base_container_name(reg: LiteralContainerRegistry) -> str:
 def _convert_version_from_string(s: str) -> openllm.utils.VersionInfo:
   return openllm.utils.VersionInfo.from_version_string(s)
 
+def _commit_time_range(r: int = 5) -> str:
+  return (datetime.now(timezone.utc) - timedelta(days=r)).strftime("%Y-%m-%dT%H:%M:%SZ")
+
 class VersionNotSupported(openllm.exceptions.OpenLLMException):
   """Raised when the stable release is too low that it doesn't include OpenLLM base container."""
 
@@ -73,9 +77,8 @@ _RefTuple: type[RefTuple] = openllm.utils.codegen.make_attr_tuple_class("_RefTup
 def nightly_resolver(cls: type[RefResolver]) -> str:
   # Will do a clone bare to tempdir, and return the latest commit hash that we build the base image
   # NOTE: this is a bit expensive, but it is ok since we only run this during build
-  with tempfile.TemporaryDirectory(prefix="openllm-bare-") as tempdir:
-    cls._git.clone(_URI, tempdir, bare=True)
-    return next(it.hexsha for it in Repo(tempdir).iter_commits("main", max_count=20) if "[skip ci]" not in str(it.summary))
+  commits = t.cast("list[DictStrAny]", cls._ghapi.repos.list_commits(since=_commit_time_range()))
+  return next(it["sha"] for it in commits if "[skip ci]" not in it["commit"]["message"])
 
 @attr.attrs(eq=False, order=False, slots=True, frozen=True)
 class RefResolver:
@@ -86,7 +89,7 @@ class RefResolver:
   git_hash: str = attr.field()
   version: openllm.utils.VersionInfo = attr.field(converter=_convert_version_from_string)
   strategy: LiteralContainerVersionStrategy = attr.field()
-  _git: git.cmd.Git = git.cmd.Git(_URI)  # TODO: support offline mode
+  _ghapi: all.GhApi = all.GhApi(owner=_OWNER, repo=_REPO)  # TODO: support offline mode
 
   @classmethod
   def _nightly_ref(cls) -> RefTuple:
@@ -97,9 +100,9 @@ class RefResolver:
     _use_base_strategy = version_str is None
     if version_str is None:
       # NOTE: This strategy will only support openllm>0.2.12
-      version = t.cast("tuple[str, str]", tuple(max((item.split() for item in cls._git.ls_remote(_URI, refs=True, tags=True).split("\n")), key=lambda tag: tuple(int(k) for k in t.cast("tuple[str, str]", tag)[-1].replace("refs/tags/v", "").split(".")))))
-      version_str = version[-1].replace("refs/tags/v", "")
-      version = (version[0], version_str)
+      meta: DictStrAny = cls._ghapi.repos.get_latest_release()
+      version_str = meta["name"].lstrip("v")
+      version: tuple[str, str | None] = (cls._ghapi.git.get_ref(ref=f"tags/{meta['name']}")["object"]["sha"], version_str)
     else:
       version = ("", version_str)
     if t.TYPE_CHECKING: assert version_str  # NOTE: Mypy cannot infer the correct type here. We have handle the cases where version_str is None in L86
@@ -107,6 +110,7 @@ class RefResolver:
     return _RefTuple((*version, "release" if _use_base_strategy else "custom"))
 
   @classmethod
+  @functools.lru_cache(maxsize=64)
   def from_strategy(cls, strategy_or_version: t.Literal["release", "nightly"] | str | None = None) -> RefResolver:
     if strategy_or_version is None or strategy_or_version == "release":
       logger.debug("Using default strategy 'release' for resolving base image version.")
