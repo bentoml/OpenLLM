@@ -18,6 +18,25 @@ This changelog is managed by towncrier and is compiled at release time.
 
 <!-- towncrier release notes start -->
 
+## [0.2.17](https://github.com/bentoml/openllm/tree/v0.2.17)
+
+### Changes
+
+- Updated loading logics for PyTorch and vLLM where it will check for initialized parameters after placing to correct devices
+
+  Added xformers to base container for requirements on vLLM-based container
+  [#185](https://github.com/bentoml/openllm/issues/185)
+
+
+### Features
+
+- Importing models now won't load into memory if it is a remote ID. Note that for GPTQ and local model the behaviour is unchanged.
+
+  Fixes that when there is one GPU, we ensure to call `to('cuda')` to place the model onto the memory. Note that the GPU must have
+  enough VRAM to offload this model onto the GPU.
+  [#183](https://github.com/bentoml/openllm/issues/183)
+
+
 ## [0.2.16](https://github.com/bentoml/openllm/tree/v0.2.16)
 No significant changes.
 
