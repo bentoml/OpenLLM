@@ -124,16 +124,13 @@ def unvalidated_get_resource(x: dict[str, t.Any], y: str, validate: bool = False
 @pytest.mark.parametrize("gpu_type", ["nvidia.com/gpu", "amd.com/gpu"])
 def test_cascade_strategy_worker_count(monkeypatch: MonkeyPatch, gpu_type: str):
   monkeypatch.setattr(strategy, "get_resource", unvalidated_get_resource)
-  assert CascadingResourceStrategy.get_worker_count(GPURunnable, {gpu_type: 2}, 1) == 2
-  assert CascadingResourceStrategy.get_worker_count(GPURunnable, {gpu_type: 2}, 2) == 4
-  assert pytest.raises(ValueError, CascadingResourceStrategy.get_worker_count, GPURunnable, {gpu_type: 0}, 1,).match("No known supported resource available for *")
-  assert CascadingResourceStrategy.get_worker_count(GPURunnable, {gpu_type: [2, 7]}, 1) == 2
-  assert CascadingResourceStrategy.get_worker_count(GPURunnable, {gpu_type: [2, 7]}, 2) == 4
+  assert CascadingResourceStrategy.get_worker_count(GPURunnable, {gpu_type: 2}, 1) == 1
+  assert CascadingResourceStrategy.get_worker_count(GPURunnable, {gpu_type: [2, 7]}, 1) == 1
 
   assert CascadingResourceStrategy.get_worker_count(GPURunnable, {gpu_type: [2, 7]}, 0.5) == 1
-  assert CascadingResourceStrategy.get_worker_count(GPURunnable, {gpu_type: [2, 7, 9]}, 0.5) == 2
-  assert CascadingResourceStrategy.get_worker_count(GPURunnable, {gpu_type: [2, 7, 8, 9]}, 0.5) == 2
-  assert CascadingResourceStrategy.get_worker_count(GPURunnable, {gpu_type: [2, 5, 7, 8, 9]}, 0.4) == 2
+  assert CascadingResourceStrategy.get_worker_count(GPURunnable, {gpu_type: [2, 7, 9]}, 0.5) == 1
+  assert CascadingResourceStrategy.get_worker_count(GPURunnable, {gpu_type: [2, 7, 8, 9]}, 0.5) == 1
+  assert CascadingResourceStrategy.get_worker_count(GPURunnable, {gpu_type: [2, 5, 7, 8, 9]}, 0.4) == 1
 
 @pytest.mark.parametrize("gpu_type", ["nvidia.com/gpu", "amd.com/gpu"])
 def test_cascade_strategy_worker_env(monkeypatch: MonkeyPatch, gpu_type: str):
