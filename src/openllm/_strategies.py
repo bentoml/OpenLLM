@@ -266,11 +266,11 @@ _CPU_RESOURCE: t.Literal["cpu"] = "cpu"
 NvidiaGpuResource = _make_resource_class("NvidiaGpuResource", _NVIDIA_GPU_RESOURCE, """NVIDIA GPU resource.
 
     This is a modified version of internal's BentoML's NvidiaGpuResource
-    where it respects and parse CUDA_VISIBLE_DEVICES correctly.""",)
+    where it respects and parse CUDA_VISIBLE_DEVICES correctly.""")
 AmdGpuResource = _make_resource_class("AmdGpuResource", _AMD_GPU_RESOURCE, """AMD GPU resource.
 
     Since ROCm will respect CUDA_VISIBLE_DEVICES, the behaviour of from_spec, from_system are similar to
-    ``NvidiaGpuResource``. Currently ``validate`` is not yet supported.""",)
+    ``NvidiaGpuResource``. Currently ``validate`` is not yet supported.""")
 
 LiteralResourceSpec = t.Literal["cloud-tpus.google.com/v2", "amd.com/gpu", "nvidia.com/gpu", "cpu"]
 
@@ -308,19 +308,14 @@ class CascadingResourceStrategy(bentoml.Strategy, ReprMixin):
   @classmethod
   def get_worker_count(cls, runnable_class: type[bentoml.Runnable], resource_request: dict[str, t.Any] | None, workers_per_resource: int | float) -> int:
     if resource_request is None: resource_request = system_resources()
-
-    def _get_gpu_count(typ: list[str] | None, kind: str) -> int | None:
-      if typ is not None and len(typ) > 0 and kind in runnable_class.SUPPORTED_RESOURCES: return math.ceil(len(typ) * workers_per_resource)
-      return None
-
     # use NVIDIA
     kind = "nvidia.com/gpu"
-    count = _get_gpu_count(get_resource(resource_request, kind), kind)
-    if count: return count
+    nvidia_req = get_resource(resource_request, kind)
+    if nvidia_req is not None: return 1
     # use AMD
     kind = "amd.com/gpu"
-    count = _get_gpu_count(get_resource(resource_request, kind, validate=False), kind)
-    if count: return count
+    amd_req = get_resource(resource_request, kind, validate=False)
+    if amd_req is not None: return 1
     # use CPU
     cpus = get_resource(resource_request, "cpu")
     if cpus is not None and cpus > 0:
@@ -339,10 +334,10 @@ class CascadingResourceStrategy(bentoml.Strategy, ReprMixin):
     """Get worker env for this given worker_index.
 
     Args:
-    runnable_class: The runnable class to be run.
-    resource_request: The resource request of the runnable.
-    workers_per_resource: # of workers per resource.
-    worker_index: The index of the worker, start from 0.
+      runnable_class: The runnable class to be run.
+      resource_request: The resource request of the runnable.
+      workers_per_resource: # of workers per resource.
+      worker_index: The index of the worker, start from 0.
     """
     cuda_env = os.environ.get("CUDA_VISIBLE_DEVICES", None)
     disabled = cuda_env in ("", "-1")
