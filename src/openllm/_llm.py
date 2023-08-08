@@ -861,6 +861,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
   @property
   def model(self) -> M:
     # Run check for GPU
+    if DEBUG: traceback.print_stack()
     if self.config["requires_gpu"] and device_count() < 1: raise GpuNotAvailableError(f"{self} only supports running with GPU (None available).") from None
     # NOTE: the signature of load_model here is the wrapper under _wrapped_load_model
     if self.__llm_model__ is None: self.__llm_model__ = self.load_model(*self._model_decls, **self._model_attrs)
