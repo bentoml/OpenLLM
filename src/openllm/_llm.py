@@ -62,7 +62,6 @@ from .utils import codegen
 from .utils import device_count
 from .utils import first_not_none
 from .utils import generate_hash_from_file
-from .utils import in_docker
 from .utils import infer_auto_class
 from .utils import is_peft_available
 from .utils import is_torch_available
@@ -665,8 +664,9 @@ class LLM(LLMInterface[M, T], ReprMixin):
     Returns:
         ``str``: Generated tag format that can be parsed by ``bentoml.Tag``
     """
-    # specific branch for running in docker, this is very hacky, needs change upstream
-    if in_docker() and os.environ.get("BENTO_PATH") is not None: return ":".join(fs.path.parts(model_id)[-2:])
+    # specific branch for running in docker or kubernetes, this is very hacky,
+    # and probably need a better way to support custom path
+    if os.environ.get("BENTO_PATH") is not None: return ":".join(fs.path.parts(model_id)[-2:])
 
     model_name = normalise_model_name(model_id)
     model_id, *maybe_revision = model_id.rsplit(":")
@@ -989,8 +989,8 @@ class LLM(LLMInterface[M, T], ReprMixin):
 
     try:
       models.append(self._bentomodel)
-    except bentoml.exceptions.NotFound:
-      models.append(serialisation.get(self, auto_import=True))
+    except bentoml.exceptions.NotFound as err:
+      raise RuntimeError(f"Failed to locate {self._bentomodel}:{err}") from None
 
     if scheduling_strategy is None:
       from ._strategies import CascadingResourceStrategy
