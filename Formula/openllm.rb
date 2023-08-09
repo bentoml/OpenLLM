@@ -11,17 +11,17 @@ class Openllm < Formula
   sha256 "8a3f3a0e8e700f512b45996b7cfbbf0146004a5583ccb8d4645689859d39c04d"
 
   on_linux do
-    url "https://github.com/bentoml/OpenLLM/releases/download/openllm-0.2.17-x86_64-unknown-linux-musl.tar.gz"
-    sha256 "0019dfc4b32d63c1392aa264aed2253c1e0c2fb09216f8e2cc269bbfb8bb49b5"
+    url "https://github.com/bentoml/OpenLLM/releases/download/v0.2.17/openllm-0.2.17-x86_64-unknown-linux-musl.tar.gz"
+    sha256 "8a880662312476793a062f8d6c5d025469848ed8970029c3a06d95a62259e1cc"
   end
   on_macos do
     on_arm do
-      url "https://github.com/bentoml/OpenLLM/releases/download/openllm-0.2.17-aarch64-apple-darwin.tar.gz"
-      sha256 "0019dfc4b32d63c1392aa264aed2253c1e0c2fb09216f8e2cc269bbfb8bb49b5"
+      url "https://github.com/bentoml/OpenLLM/releases/download/v0.2.17/openllm-0.2.17-aarch64-apple-darwin.tar.gz"
+      sha256 "ae31cffc349e8e164814e888a5e708e5fe177d91cbf77c9190ad007c02614925"
     end
     on_intel do
-      url "https://github.com/bentoml/OpenLLM/releases/download/openllm-0.2.17-x86_64-apple-darwin.tar.gz"
-      sha256 "0019dfc4b32d63c1392aa264aed2253c1e0c2fb09216f8e2cc269bbfb8bb49b5"
+      url "https://github.com/bentoml/OpenLLM/releases/download/v0.2.17/openllm-0.2.17-x86_64-apple-darwin.tar.gz"
+      sha256 "364a01450b77960a96aecdbd27953b2c60c9fd5ada477ec70c97497c52fcb70d"
     end
   end
 
