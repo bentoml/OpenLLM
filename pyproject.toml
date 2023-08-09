@@ -468,7 +468,7 @@ dependencies = [
 ]
 enable-by-default = false
 exclude = ["src/openllm/__main__.py"]
-include = ["src/openllm/__init__.py", "src/openllm/client.py", "src/openllm/exceptions.py"]
+include = ["src/openllm/client.py", "src/openllm/exceptions.py"]
 # NOTE: This is consistent with pyproject.toml
 mypy-args = [
     "--pretty",
