@@ -42,7 +42,7 @@ text = """
 ## Release Information
 
 """
-[[tool.hatch.metadata.hooks.fancy-pypi-readme.fragments]]
+[[metadata.hooks.fancy-pypi-readme.fragments]]
 path = "CHANGELOG.md"
 pattern = "\n(###.+?\n)## "
 start-after = "<!-- towncrier release notes start -->"
@@ -53,20 +53,6 @@ text = """
 
 [Click me for full changelog](https://github.com/bentoml/openllm/blob/main/CHANGELOG.md)
 """
-[version]
-fallback-version = "0.0.0"
-source = "vcs"
-[build.hooks.vcs]
-version-file = "src/openllm/_version.py"
-[version.raw-options]
-git_describe_command = ["git", "describe", "--dirty", "--tags", "--long", "--first-parent"]
-local_scheme = "no-local-version"
-[metadata]
-allow-direct-references = true
-[build.targets.wheel]
-packages = ["src/openllm", "src/openllm_client"]
-[build.targets.sdist]
-exclude = ["/.github", "/typings", "/examples", "/assets", "/changelog.d", "/tools", ".git"]
 [envs.default]
 dependencies = [
     # NOTE: To run all hooks
@@ -139,50 +125,3 @@ generate-summary = "python tools/generate-coverage.py"
 report-uncovered-html = "coverage html --skip-covered --skip-empty"
 report-xml = "coverage xml"
 write-summary-report = "python tools/write-coverage-report.py"
-[build.targets.wheel.hooks.mypyc]
-dependencies = [
-    "hatch-mypyc>=0.14.1",
-    "mypy==1.4.1",
-    # avoid https://github.com/pallets/click/issues/2558
-    "click==8.1.3",
-    "peft",
-    "bentoml==1.1.1",
-    "transformers>=4.31.0",
-    "pandas-stubs",
-    "types-psutil",
-    "types-tabulate",
-    "types-PyYAML",
-    "types-protobuf",
-]
-enable-by-default = false
-exclude = [
-    # models does not need to compile, as it relies on the framework implementation
-    "src/openllm/models/**",
-    "src/openllm/utils/dummy_*.py",
-    # playground is not considered as part of the library
-    "src/openllm/playground/**",
-    # ignore _service.py as bentoml service is not yet compiled-able
-    "src/openllm/_service.py",
-    # Only used during type runtime, no need to compile
-    "src/openllm/_types.py",
-    # Compiled module cannot be run directly
-    "src/openllm/__main__.py",
-    "src/openllm/cli/entrypoint.py",
-    "src/openllm/cli/extension/**",
-]
-# NOTE: This is consistent with pyproject.toml
-mypy-args = [
-    "--pretty",
-    "--strict",
-    "--python-version=3.11",
-    "--ignore-missing-imports",
-    "--no-warn-return-any",
-    "--warn-unreachable",
-    "--no-warn-no-return",
-    "--no-warn-unused-ignores",
-    "--enable-incomplete-feature=Unpack",
-    "--enable-incomplete-feature=TypeVarTuple",
-]
-options = { verbose = true, strip_asserts = true, debug_level = "2" }
-require-runtime-dependencies = true
-require-runtime-features = ["agents", "chatglm", "opt", "fine-tune"]

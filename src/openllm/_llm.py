@@ -328,28 +328,27 @@ class LLMInterface(ABC, t.Generic[M, T]):
     ) -> None:
       """Generated __attrs_init__ for openllm.LLM."""
 
-if t.TYPE_CHECKING:
-  _R = t.TypeVar("_R")
+_R = t.TypeVar("_R", covariant=True)
 
-  class _import_model_wrapper(t.Generic[_R, M, T]):
-    def __call__(self, llm: LLM[M, T], *decls: t.Any, trust_remote_code: bool, **attrs: t.Any) -> _R:
-      ...
+class _import_model_wrapper(t.Generic[_R, M, T], t.Protocol):
+  def __call__(self, llm: LLM[M, T], *decls: t.Any, trust_remote_code: bool, **attrs: t.Any) -> _R:
+    ...
 
-  class _load_model_wrapper(t.Generic[M, T]):
-    def __call__(self, llm: LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M:
-      ...
+class _load_model_wrapper(t.Generic[M, T], t.Protocol):
+  def __call__(self, llm: LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M:
+    ...
 
-  class _load_tokenizer_wrapper(t.Generic[M, T]):
-    def __call__(self, llm: LLM[M, T], **attrs: t.Any) -> T:
-      ...
+class _load_tokenizer_wrapper(t.Generic[M, T], t.Protocol):
+  def __call__(self, llm: LLM[M, T], **attrs: t.Any) -> T:
+    ...
 
-  class _llm_post_init_wrapper(t.Generic[M, T]):
-    def __call__(self, llm: LLM[M, T]) -> T:
-      ...
+class _llm_post_init_wrapper(t.Generic[M, T], t.Protocol):
+  def __call__(self, llm: LLM[M, T]) -> T:
+    ...
 
-  class _save_pretrained_wrapper(t.Generic[M, T]):
-    def __call__(self, llm: LLM[M, T], save_directory: str | Path, **attrs: t.Any) -> None:
-      ...
+class _save_pretrained_wrapper(t.Generic[M, T], t.Protocol):
+  def __call__(self, llm: LLM[M, T], save_directory: str | Path, **attrs: t.Any) -> None:
+    ...
 
 _object_setattr = object.__setattr__
 
@@ -358,11 +357,10 @@ def _wrapped_import_model(f: _import_model_wrapper[bentoml.Model, M, T]) -> t.Ca
   @functools.wraps(f)
   def wrapper(self: LLM[M, T], *decls: t.Any, trust_remote_code: bool | None = None, **attrs: t.Any) -> bentoml.Model:
     trust_remote_code = first_not_none(trust_remote_code, default=self.__llm_trust_remote_code__)
-    if t.TYPE_CHECKING: assert trust_remote_code is not None  # NOTE: Mypy is too stupid to understand that the default type of trust_remote_code is bool in L347
     (model_decls, model_attrs), _ = self.llm_parameters
     decls = (*model_decls, *decls)
     attrs = {**model_attrs, **attrs}
-    return f(self, *decls, trust_remote_code=trust_remote_code, **attrs)
+    return f(self, *decls, trust_remote_code=t.cast(bool, trust_remote_code), **attrs)
 
   return wrapper
 
@@ -612,10 +610,9 @@ class LLM(LLMInterface[M, T], ReprMixin):
         **attrs: The kwargs to be passed to the model.
     """
     cfg_cls = cls.config_class
-    model_id = first_not_none(model_id, os.environ.get(cfg_cls.__openllm_env__["model_id"]), cfg_cls.__openllm_default_id__)
-    if model_id is None: raise RuntimeError("Failed to resolve a valid model_id.")
     _local = False
-    if validate_is_path(model_id): model_id, _local = resolve_filepath(model_id), True
+    _model_id: str = t.cast(str, first_not_none(model_id, os.environ.get(cfg_cls.__openllm_env__["model_id"]), default=cfg_cls.__openllm_default_id__))
+    if validate_is_path(_model_id): _model_id, _local = resolve_filepath(_model_id), True
     quantize = first_not_none(quantize, t.cast(t.Optional[t.Literal["int8", "int4", "gptq"]], os.environ.get(cfg_cls.__openllm_env__["quantize"])), default=None)
 
     # quantization setup
@@ -636,13 +633,13 @@ class LLM(LLMInterface[M, T], ReprMixin):
       attrs = llm_config["extras"]
 
     try:
-      _tag = cls.generate_tag(model_id, model_version)
+      _tag = cls.generate_tag(_model_id, model_version)
       if _tag.version is None: raise ValueError(f"Failed to resolve the correct model version for {cfg_cls.__openllm_start_name__}")
     except Exception as err:
-      raise OpenLLMException(f"Failed to generate a valid tag for {cfg_cls.__openllm_start_name__} with 'model_id={model_id}' (lookup to see its traceback):\n{err}") from err
+      raise OpenLLMException(f"Failed to generate a valid tag for {cfg_cls.__openllm_start_name__} with 'model_id={_model_id}' (lookup to see its traceback):\n{err}") from err
 
     return cls(
-        *args, model_id=model_id, llm_config=llm_config, quantization_config=quantization_config, _quantize_method=quantize, _model_version=_tag.version, _tag=_tag, _serialisation_format=serialisation, _local=_local, bettertransformer=str(first_not_none(bettertransformer, os.environ.get(cfg_cls.__openllm_env__["bettertransformer"]), default=None)).upper() in ENV_VARS_TRUE_VALUES,
+        *args, model_id=_model_id, llm_config=llm_config, quantization_config=quantization_config, _quantize_method=quantize, _model_version=_tag.version, _tag=_tag, _serialisation_format=serialisation, _local=_local, bettertransformer=str(first_not_none(bettertransformer, os.environ.get(cfg_cls.__openllm_env__["bettertransformer"]), default=None)).upper() in ENV_VARS_TRUE_VALUES,
         _runtime=first_not_none(runtime, t.cast(t.Optional[t.Literal["ggml", "transformers"]], os.environ.get(cfg_cls.__openllm_env__["runtime"])), default=cfg_cls.__openllm_runtime__), _adapters_mapping=resolve_peft_config_type(adapter_map) if adapter_map is not None else None, **attrs
     )
 

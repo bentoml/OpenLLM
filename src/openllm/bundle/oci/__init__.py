@@ -25,6 +25,7 @@ from datetime import timedelta
 from datetime import timezone
 
 import attr
+import orjson
 
 import bentoml
 import openllm
@@ -75,10 +76,16 @@ class VersionNotSupported(openllm.exceptions.OpenLLMException):
 _RefTuple: type[RefTuple] = openllm.utils.codegen.make_attr_tuple_class("_RefTuple", ["git_hash", "version", "strategy"])
 
 def nightly_resolver(cls: type[RefResolver]) -> str:
-  # Will do a clone bare to tempdir, and return the latest commit hash that we build the base image
-  # NOTE: this is a bit expensive, but it is ok since we only run this during build
-  commits = t.cast("list[DictStrAny]", cls._ghapi.repos.list_commits(since=_commit_time_range()))
-  return next(it["sha"] for it in commits if "[skip ci]" not in it["commit"]["message"])
+  # NOTE: all openllm container will have sha-<git_hash[:7]>
+  # This will use docker to run skopeo to determine the correct latest tag that is available
+  # If docker is not found, then fallback to previous behaviour. Which the container might not exists.
+  docker_bin = shutil.which("docker")
+  if docker_bin is None:
+    logger.warning("To get the correct available nightly container, make sure to have docker available. Fallback to previous behaviour for determine nightly hash (container might not exists due to the lack of GPU machine at a time. See https://github.com/bentoml/OpenLLM/pkgs/container/openllm for available image.)")
+    commits = t.cast("list[DictStrAny]", cls._ghapi.repos.list_commits(since=_commit_time_range()))
+    return next(f'sha-{it["sha"][:7]}' for it in commits if "[skip ci]" not in it["commit"]["message"])
+  # now is the correct behaviour
+  return orjson.loads(subprocess.check_output([docker_bin, "run", "--rm", "-it", "quay.io/skopeo/stable:latest", "list-tags", "docker://ghcr.io/bentoml/openllm"]).decode().strip())["Tags"][-2]
 
 @attr.attrs(eq=False, order=False, slots=True, frozen=True)
 class RefResolver:
@@ -105,8 +112,7 @@ class RefResolver:
       version: tuple[str, str | None] = (cls._ghapi.git.get_ref(ref=f"tags/{meta['name']}")["object"]["sha"], version_str)
     else:
       version = ("", version_str)
-    if t.TYPE_CHECKING: assert version_str  # NOTE: Mypy cannot infer the correct type here. We have handle the cases where version_str is None in L86
-    if openllm.utils.VersionInfo.from_version_string(version_str) < (0, 2, 12): raise VersionNotSupported(f"Version {version_str} doesn't support OpenLLM base container. Consider using 'nightly' or upgrade 'openllm>=0.2.12'")
+    if openllm.utils.VersionInfo.from_version_string(t.cast(str, version_str)) < (0, 2, 12): raise VersionNotSupported(f"Version {version_str} doesn't support OpenLLM base container. Consider using 'nightly' or upgrade 'openllm>=0.2.12'")
     return _RefTuple((*version, "release" if _use_base_strategy else "custom"))
 
   @classmethod
@@ -128,7 +134,7 @@ class RefResolver:
   def tag(self) -> str:
     # NOTE: latest tag can also be nightly, but discouraged to use it. For nightly refer to use sha-<git_hash_short>
     if self.strategy == "latest": return "latest"
-    elif self.strategy == "nightly": return f"sha-{self.git_hash[:7]}"
+    elif self.strategy == "nightly": return self.git_hash
     else: return repr(self.version)
 
 @functools.lru_cache(maxsize=256)

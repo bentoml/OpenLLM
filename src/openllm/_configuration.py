@@ -254,14 +254,14 @@ class FineTuneConfig:
     """A loose codegen to create default subclass for given adapter config type."""
     _new_default = {"adapter_type": PeftType[adapter_type], "adapter_config": attrs, "llm_config_class": llm_config_class}
 
-    def transformers(_: type[t.Any], fields: list[attr.Attribute[t.Any]]) -> list[attr.Attribute[t.Any]]:
+    def field_transformers(_: type[t.Any], fields: list[attr.Attribute[t.Any]]) -> list[attr.Attribute[t.Any]]:
       transformed: list[attr.Attribute[t.Any]] = []
       for f in fields:
         if f.name in _new_default: transformed.append(f.evolve(default=_new_default[f.name]))
         else: transformed.append(f)
       return transformed
 
-    klass = attr.make_class(f"{inflection.camelize(adapter_type)}{llm_config_class.__name__}", [], bases=(cls,), slots=True, weakref_slot=True, frozen=True, repr=True, collect_by_mro=True, field_transformer=transformers)
+    klass = attr.make_class(f"{inflection.camelize(adapter_type)}{llm_config_class.__name__}", [], bases=(cls,), slots=True, weakref_slot=True, frozen=True, repr=True, collect_by_mro=True, field_transformer=field_transformers)
     if docs is not None: klass.__doc__ = docs
     return klass
 

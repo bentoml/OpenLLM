@@ -37,7 +37,7 @@ from .utils import ReprMixin
 if t.TYPE_CHECKING:
   ListIntStr = list[int | str]
 
-  class DynResource(bentoml.Resource[t.List[str]], resource_id=""):
+  class DynResource(bentoml.Resource[t.List[str]], resource_id=""):  # type: ignore[call-arg]
     resource_id: t.ClassVar[str]
 
 else:
@@ -254,7 +254,7 @@ def _validate(cls: type[DynResource], val: list[t.Any]) -> None:
 
 def _make_resource_class(name: str, resource_kind: str, docstring: str) -> type[DynResource]:
   return types.new_class(
-      name, (DynResource, ReprMixin), {"resource_id": resource_kind}, lambda ns: ns.update({"resource_id": resource_kind, "from_spec": classmethod(_from_spec), "from_system": classmethod(_from_system), "validate": classmethod(_validate), "__repr_keys__": property(lambda _: {"resource_id"}), "__doc__": inspect.cleandoc(docstring), "__module__": "openllm._strategies",}),
+      name, (DynResource, ReprMixin), {"resource_id": resource_kind}, lambda ns: ns.update({"resource_id": resource_kind, "from_spec": classmethod(_from_spec), "from_system": classmethod(_from_system), "validate": classmethod(_validate), "__repr_keys__": property(lambda _: {"resource_id"}), "__doc__": inspect.cleandoc(docstring), "__module__": "openllm._strategies"}),
   )
 
 # NOTE: we need to hint these t.Literal since mypy is to dumb to infer this as literal :facepalm:

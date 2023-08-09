@@ -243,8 +243,8 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
     return wrapper
 
   def get_command(self, ctx: click.Context, cmd_name: str) -> click.Command | None:
-    if cmd_name in t.cast("Extensions", ext_command).list_commands(ctx):
-      return t.cast("Extensions", ext_command).get_command(ctx, cmd_name)
+    if cmd_name in t.cast("Extensions", extension_command).list_commands(ctx):
+      return t.cast("Extensions", extension_command).get_command(ctx, cmd_name)
     cmd_name = self.resolve_alias(cmd_name)
     if ctx.command.name in _start_mapping:
       try:
@@ -261,7 +261,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
 
   def list_commands(self, ctx: click.Context) -> list[str]:
     if ctx.command.name in {"start", "start-grpc"}: return list(CONFIG_MAPPING.keys())
-    return super().list_commands(ctx) + t.cast("Extensions", ext_command).list_commands(ctx)
+    return super().list_commands(ctx) + t.cast("Extensions", extension_command).list_commands(ctx)
 
   def command(self, *args: t.Any, **kwargs: t.Any) -> t.Callable[[t.Callable[..., t.Any]], click.Command]:  # type: ignore[override] # XXX: fix decorator on BentoMLCommandGroup
     """Override the default 'cli.command' with supports for aliases for given command, and it wraps the implementation with common parameters."""
@@ -303,34 +303,30 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
     from gettext import gettext as _
     commands: list[tuple[str, click.Command]] = []
     extensions: list[tuple[str, click.Command]] = []
+    _cached_extensions: list[str] = t.cast("Extensions", extension_command).list_commands(ctx)
     for subcommand in self.list_commands(ctx):
       cmd = self.get_command(ctx, subcommand)
       if cmd is None or cmd.hidden: continue
-      if subcommand in t.cast("Extensions", ext_command).list_commands(ctx):
+      if subcommand in _cached_extensions:
         extensions.append((subcommand, cmd))
       else:
         commands.append((subcommand, cmd))
-      # allow for 3 times the default spacing
+    # allow for 3 times the default spacing
     if len(commands):
       limit = formatter.width - 6 - max(len(cmd[0]) for cmd in commands)
       rows = []
-
       for subcommand, cmd in commands:
         help = cmd.get_short_help_str(limit)
         rows.append((subcommand, help))
-
       if rows:
         with formatter.section(_("Commands")):
           formatter.write_dl(rows)
-
     if len(extensions):
       limit = formatter.width - 6 - max(len(cmd[0]) for cmd in extensions)
       rows = []
-
       for subcommand, cmd in extensions:
         help = cmd.get_short_help_str(limit)
         rows.append((inflection.dasherize(subcommand), help))
-
       if rows:
         with formatter.section(_("Extensions")):
           formatter.write_dl(rows)
@@ -1023,8 +1019,8 @@ def query_command(ctx: click.Context, /, prompt: str, endpoint: str, timeout: in
     termui.echo(res["responses"], fg="white")
   ctx.exit(0)
 
-@cli.group(cls=Extensions, name="extension", hidden=True)
-def ext_command() -> None:
+@cli.group(cls=Extensions, hidden=True, name="extension")
+def extension_command() -> None:
   """Extension for OpenLLM CLI."""
 
 if __name__ == "__main__": cli()

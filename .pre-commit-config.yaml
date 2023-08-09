@@ -57,7 +57,8 @@ repos:
               tools/.*|
               tests/.*|
               src/openllm/playground/.*|
-              .github/.*
+              .github/.*|
+              loc.py
           )$
         additional_dependencies:
           - click==8.1.3
