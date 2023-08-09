@@ -16,14 +16,11 @@ import sys
 import typing as t
 from ..utils import LazyModule
 
-# fmt: off
 # update-models-import.py: start module
 _MODELS: set[str] = {'auto', 'baichuan', 'chatglm', 'dolly_v2', 'falcon', 'flan_t5', 'gpt_neox', 'llama', 'mpt', 'opt', 'stablelm', 'starcoder'}
 # update-models-import.py: stop module
-# fmt: on
 
 if t.TYPE_CHECKING:
-  # fmt: off
   # update-models-import.py: start types
   from . import auto as auto
   from . import baichuan as baichuan
@@ -38,6 +35,5 @@ if t.TYPE_CHECKING:
   from . import stablelm as stablelm
   from . import starcoder as starcoder
   # update-models-import.py: stop types
-  # fmt: on
 else:
   sys.modules[__name__] = LazyModule(__name__, globals()["__file__"], {k: [] for k in _MODELS}, module_spec=__spec__)

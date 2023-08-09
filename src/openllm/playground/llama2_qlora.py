@@ -103,7 +103,6 @@ def prepare_datasets(tokenizer, dataset_name=DATASET_NAME):
   print(f"Total number of samples: {len(lm_dataset)}")
   return lm_dataset
 
-@openllm.utils.requires_dependencies("peft", extra="fine-tune")
 def prepare_for_int4_training(model_id: str, model_version: str | None = None, gradient_checkpointing: bool = True, bf16: bool = True,) -> tuple[peft.PeftModel, transformers.LlamaTokenizerFast]:
   from peft.tuners.lora import LoraLayer
 

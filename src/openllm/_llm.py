@@ -34,10 +34,9 @@ import orjson
 from huggingface_hub import hf_hub_download
 
 import bentoml
+import openllm
 from bentoml._internal.models.model import ModelSignature
 
-from . import import_model
-from . import serialisation
 from ._configuration import AdapterType
 from ._configuration import FineTuneConfig
 from ._configuration import LiteralRuntime
@@ -67,7 +66,6 @@ from .utils import is_peft_available
 from .utils import is_torch_available
 from .utils import non_intrusive_setattr
 from .utils import normalize_attrs_to_model_tokenizer_pair
-from .utils import requires_dependencies
 from .utils import resolve_filepath
 from .utils import validate_is_path
 
@@ -321,34 +319,21 @@ class LLMInterface(ABC, t.Generic[M, T]):
   __llm_supports_generate_iterator__: bool
   """A boolean to determine whether models does implement ``LLM.generate_iterator``."""
   if t.TYPE_CHECKING and not MYPY:
-
-    def __attrs_init__(
-        self, config: LLMConfig, quantization_config: transformers.BitsAndBytesConfig | autogptq.BaseQuantizeConfig | None, model_id: str, runtime: t.Literal["ggml", "transformers"], model_decls: TupleAny, model_attrs: DictStrAny, tokenizer_attrs: DictStrAny, tag: bentoml.Tag, adapters_mapping: AdaptersMapping | None, model_version: str | None,
-        quantize_method: t.Literal["int8", "int4", "gptq"] | None, serialisation_format: t.Literal["safetensors", "legacy"], _local: bool, **attrs: t.Any,
-    ) -> None:
+    def __attrs_init__(self, config: LLMConfig, quantization_config: transformers.BitsAndBytesConfig | autogptq.BaseQuantizeConfig | None, model_id: str, runtime: t.Literal["ggml", "transformers"], model_decls: TupleAny, model_attrs: DictStrAny, tokenizer_attrs: DictStrAny, tag: bentoml.Tag, adapters_mapping: AdaptersMapping | None, model_version: str | None, quantize_method: t.Literal["int8", "int4", "gptq"] | None, serialisation_format: t.Literal["safetensors", "legacy"], _local: bool, **attrs: t.Any) -> None:
       """Generated __attrs_init__ for openllm.LLM."""
 
 _R = t.TypeVar("_R", covariant=True)
 
 class _import_model_wrapper(t.Generic[_R, M, T], t.Protocol):
-  def __call__(self, llm: LLM[M, T], *decls: t.Any, trust_remote_code: bool, **attrs: t.Any) -> _R:
-    ...
-
+  def __call__(self, llm: LLM[M, T], *decls: t.Any, trust_remote_code: bool, **attrs: t.Any) -> _R: ...
 class _load_model_wrapper(t.Generic[M, T], t.Protocol):
-  def __call__(self, llm: LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M:
-    ...
-
+  def __call__(self, llm: LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M: ...
 class _load_tokenizer_wrapper(t.Generic[M, T], t.Protocol):
-  def __call__(self, llm: LLM[M, T], **attrs: t.Any) -> T:
-    ...
-
+  def __call__(self, llm: LLM[M, T], **attrs: t.Any) -> T: ...
 class _llm_post_init_wrapper(t.Generic[M, T], t.Protocol):
-  def __call__(self, llm: LLM[M, T]) -> T:
-    ...
-
+  def __call__(self, llm: LLM[M, T]) -> T: ...
 class _save_pretrained_wrapper(t.Generic[M, T], t.Protocol):
-  def __call__(self, llm: LLM[M, T], save_directory: str | Path, **attrs: t.Any) -> None:
-    ...
+  def __call__(self, llm: LLM[M, T], save_directory: str | Path, **attrs: t.Any) -> None: ...
 
 _object_setattr = object.__setattr__
 
@@ -361,36 +346,29 @@ def _wrapped_import_model(f: _import_model_wrapper[bentoml.Model, M, T]) -> t.Ca
     decls = (*model_decls, *decls)
     attrs = {**model_attrs, **attrs}
     return f(self, *decls, trust_remote_code=t.cast(bool, trust_remote_code), **attrs)
-
   return wrapper
 
 _DEFAULT_TOKENIZER = "hf-internal-testing/llama-tokenizer"
 
-@requires_dependencies("vllm", extra="vllm")
-def get_engine_args(llm: LLM[M, T], tokenizer: str = _DEFAULT_TOKENIZER) -> vllm.EngineArgs:
-  return vllm.EngineArgs(model=llm._bentomodel.path, tokenizer=tokenizer, tokenizer_mode="auto", tensor_parallel_size=1 if device_count() < 2 else device_count(), dtype="auto", worker_use_ray=False)
+def get_engine_args(llm: LLM[M, T], tokenizer: str = _DEFAULT_TOKENIZER) -> vllm.EngineArgs: return vllm.EngineArgs(model=llm._bentomodel.path, tokenizer=tokenizer, tokenizer_mode="auto", tensor_parallel_size=1 if device_count() < 2 else device_count(), dtype="auto", worker_use_ray=False)
 
 def _wrapped_load_model(f: _load_model_wrapper[M, T]) -> t.Callable[[LLM[M, T]], M | vllm.LLMEngine]:
   @functools.wraps(f)
   def wrapper(self: LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M | vllm.LLMEngine:
     if self.__llm_implementation__ == "vllm":
-      try:
-        # TODO: Do some more processing with token_id once we support token streaming
-        return vllm.LLMEngine.from_engine_args(get_engine_args(self, tokenizer=self._bentomodel.path if self.tokenizer_id == "local" else self.tokenizer_id))
+      # TODO: Do some more processing with token_id once we support token streaming
+      try: return vllm.LLMEngine.from_engine_args(get_engine_args(self, tokenizer=self._bentomodel.path if self.tokenizer_id == "local" else self.tokenizer_id))
       except Exception as err:
         traceback.print_exc()
         raise OpenLLMException(f"Failed to initialise vLLMEngine due to the following error:\n{err}") from None
     else:
       (model_decls, model_attrs), _ = self.llm_parameters
       return f(self, *(*model_decls, *decls), **{**model_attrs, **attrs})
-
   return wrapper
 
 def _wrapped_load_tokenizer(f: _load_tokenizer_wrapper[M, T]) -> t.Callable[[LLM[M, T]], T]:
   @functools.wraps(f)
-  def wrapper(self: LLM[M, T], **tokenizer_attrs: t.Any) -> T:
-    return f(self, **{**self.llm_parameters[-1], **tokenizer_attrs})
-
+  def wrapper(self: LLM[M, T], **tokenizer_attrs: t.Any) -> T: return f(self, **{**self.llm_parameters[-1], **tokenizer_attrs})
   return wrapper
 
 def _wrapped_llm_post_init(f: _llm_post_init_wrapper[M, T]) -> t.Callable[[LLM[M, T]], None]:
@@ -398,7 +376,6 @@ def _wrapped_llm_post_init(f: _llm_post_init_wrapper[M, T]) -> t.Callable[[LLM[M
   def wrapper(self: LLM[M, T]) -> None:
     if self.__llm_implementation__ == "pt" and is_torch_available(): self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     f(self)
-
   return wrapper
 
 def _wrapped_save_pretrained(f: _save_pretrained_wrapper[M, T]) -> t.Callable[[LLM[M, T], str | Path], None]:
@@ -408,7 +385,6 @@ def _wrapped_save_pretrained(f: _save_pretrained_wrapper[M, T]) -> t.Callable[[L
     if self.__llm_model__ is None: raise RuntimeError("Cannot 'save_pretrained' with unload model instance.")
     if self.bettertransformer and self.__llm_implementation__ == "pt": _object_setattr(self, "__llm_model__", t.cast("transformers.PreTrainedModel", self.__llm_model__).reverse_bettertransformer())
     f(self, save_directory, **attrs)
-
   return wrapper
 
 def _update_docstring(cls: LLM[M, T], fn: str) -> AnyCallable:
@@ -432,7 +408,7 @@ def _make_assignment_script(cls: type[LLM[M, T]]) -> t.Callable[[type[LLM[M, T]]
   # function initialisation
   for func, impl in attributes.items():
     impl_name = f"__wrapped_{func}"
-    globs.update({f"__serialisation_{func}": getattr(serialisation, func, None), impl_name: impl})
+    globs.update({f"__serialisation_{func}": getattr(openllm.serialisation, func, None), impl_name: impl})
     cached_func_name = f"_cached_{cls.__name__}_func"
     if func == "llm_post_init": func_call = f"_impl_{cls.__name__}_{func}={cached_func_name}"
     else: func_call = f"_impl_{cls.__name__}_{func}={cached_func_name} if {cached_func_name} is not _cached_LLMInterface_get('{func}') else __serialisation_{func}"
@@ -848,11 +824,12 @@ class LLM(LLMInterface[M, T], ReprMixin):
 
   # ensure_model_id_exists can be called to save the model to local store
   def ensure_model_id_exists(self) -> bentoml.Model:
+    from . import import_model
     return import_model(self.config["start_name"], model_id=self.model_id, model_version=self._model_version, runtime=self.runtime, implementation=self.__llm_implementation__, quantize=self._quantize_method, serialisation_format=self._serialisation_format)
 
   @property
   def _bentomodel(self) -> bentoml.Model:
-    if self.__llm_bentomodel__ is None: self.__llm_bentomodel__ = serialisation.get(self)
+    if self.__llm_bentomodel__ is None: self.__llm_bentomodel__ = openllm.serialisation.get(self)
     return self.__llm_bentomodel__
 
   @property
@@ -903,7 +880,6 @@ class LLM(LLMInterface[M, T], ReprMixin):
     if self.__llm_adapter_map__ is None and use_cache: self.__llm_adapter_map__ = adapter_map
     return adapter_map
 
-  @requires_dependencies("peft", extra="fine-tune")
   def prepare_for_training(self, adapter_type: AdapterType = "lora", use_gradient_checkpointing: bool = True, **attrs: t.Any) -> tuple[peft.PeftModel, T]:
     from peft import prepare_model_for_kbit_training
     peft_config = self.config["fine_tune_strategies"].get(adapter_type, FineTuneConfig(adapter_type=t.cast("PeftType", adapter_type), llm_config_class=self.config_class)).train().with_config(**attrs).to_peft_config()
@@ -911,7 +887,6 @@ class LLM(LLMInterface[M, T], ReprMixin):
     if DEBUG: wrapped_peft.print_trainable_parameters()
     return wrapped_peft, self.tokenizer
 
-  @requires_dependencies("peft", extra="fine-tune")
   def apply_adapter(self, inference_mode: bool = True, adapter_type: AdapterType = "lora", load_adapters: t.Literal["all"] | list[str] | None = None, use_cache: bool = True) -> M:
     """Apply given LoRA mapping to the model. Note that the base model can still be accessed via self.model.get_base_model()."""
     if self.__llm_model__ is None: raise ValueError("Error: Model is not loaded correctly")
@@ -1105,7 +1080,6 @@ def llm_runnable_class(self: LLM[M, T], embeddings_sig: ModelSignature, generate
         logger.info("Applying LoRA to %s...", self.runner_name)
         self.apply_adapter(inference_mode=True, load_adapters="all")
 
-    @requires_dependencies("peft", extra="fine-tune")
     def set_adapter(__self: _Runnable, adapter_name: str) -> None:
       if self.__llm_adapter_map__ is None: raise ValueError("No adapters available for current running server.")
       elif not isinstance(self.model, peft.PeftModel): raise RuntimeError("Model is not a PeftModel")

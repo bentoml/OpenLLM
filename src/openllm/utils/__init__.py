@@ -95,7 +95,7 @@ def lenient_issubclass(cls: t.Any, class_or_tuple: type[t.Any] | tuple[type[t.An
 
 def available_devices() -> tuple[str, ...]:
   """Return available GPU under system. Currently only supports NVIDIA GPUs."""
-  from .._strategies import NvidiaGpuResource
+  from openllm._strategies import NvidiaGpuResource
   return tuple(NvidiaGpuResource.from_system())
 
 @functools.lru_cache(maxsize=128)
@@ -112,8 +112,7 @@ def generate_hash_from_file(f: str, algorithm: t.Literal["md5", "sha1"] = "sha1"
   return getattr(hashlib, algorithm)(str(os.path.getmtime(resolve_filepath(f))).encode()).hexdigest()
 
 @functools.lru_cache(maxsize=1)
-def device_count() -> int:
-  return len(available_devices())
+def device_count() -> int: return len(available_devices())
 
 # equivocal setattr to save one lookup per assignment
 _object_setattr = object.__setattr__
@@ -123,8 +122,7 @@ def non_intrusive_setattr(obj: t.Any, name: str, value: t.Any) -> None:
   _setattr = functools.partial(setattr, obj) if isinstance(obj, type) else _object_setattr.__get__(obj)
   if not hasattr(obj, name): _setattr(name, value)
 
-def field_env_key(model_name: str, key: str, suffix: str | t.Literal[""] | None = None) -> str:
-  return "_".join(filter(None, map(str.upper, ["OPENLLM", model_name, suffix.strip("_") if suffix else "", key])))
+def field_env_key(model_name: str, key: str, suffix: str | t.Literal[""] | None = None) -> str: return "_".join(filter(None, map(str.upper, ["OPENLLM", model_name, suffix.strip("_") if suffix else "", key])))
 
 # Special debug flag controled via OPENLLMDEVDEBUG
 DEBUG: bool = sys.flags.dev_mode or (not sys.flags.ignore_environment and bool(os.environ.get(DEV_DEBUG_VAR)))
@@ -132,11 +130,8 @@ DEBUG: bool = sys.flags.dev_mode or (not sys.flags.ignore_environment and bool(o
 MYPY = False
 SHOW_CODEGEN: bool = DEBUG and int(os.environ.get("OPENLLMDEVDEBUG", str(0))) > 3
 
-def get_debug_mode() -> bool:
-  return DEBUG or _get_debug_mode()
-
-def get_quiet_mode() -> bool:
-  return not DEBUG and _get_quiet_mode()
+def get_debug_mode() -> bool: return DEBUG or _get_debug_mode()
+def get_quiet_mode() -> bool: return not DEBUG and _get_quiet_mode()
 
 class ExceptionFilter(logging.Filter):
   def __init__(self, exclude_exceptions: list[type[Exception]] | None = None, **kwargs: t.Any):
@@ -155,13 +150,14 @@ class ExceptionFilter(logging.Filter):
     return True
 
 class InfoFilter(logging.Filter):
-  def filter(self, record: logging.LogRecord) -> bool:
-    return logging.INFO <= record.levelno < logging.WARNING
+  def filter(self, record: logging.LogRecord) -> bool: return logging.INFO <= record.levelno < logging.WARNING
 
 _LOGGING_CONFIG: DictStrAny = {
-    "version": 1, "disable_existing_loggers": True, "filters": {"excfilter": {"()": "openllm.utils.ExceptionFilter"}, "infofilter": {"()": "openllm.utils.InfoFilter"}}, "handlers": {
-        "bentomlhandler": {"class": "logging.StreamHandler", "filters": ["excfilter", "infofilter"], "stream": "ext://sys.stdout",}, "defaulthandler": {"class": "logging.StreamHandler", "level": logging.WARNING,},
-    }, "loggers": {"bentoml": {"handlers": ["bentomlhandler", "defaulthandler"], "level": logging.INFO, "propagate": False,}, "openllm": {"handlers": ["bentomlhandler", "defaulthandler"], "level": logging.INFO, "propagate": False,},}, "root": {"level": logging.WARNING},
+    "version": 1, "disable_existing_loggers": True,
+    "filters": {"excfilter": {"()": "openllm.utils.ExceptionFilter"}, "infofilter": {"()": "openllm.utils.InfoFilter"}},
+    "handlers": {"bentomlhandler": {"class": "logging.StreamHandler", "filters": ["excfilter", "infofilter"], "stream": "ext://sys.stdout"}, "defaulthandler": {"class": "logging.StreamHandler", "level": logging.WARNING}},
+    "loggers": {"bentoml": {"handlers": ["bentomlhandler", "defaulthandler"], "level": logging.INFO, "propagate": False}, "openllm": {"handlers": ["bentomlhandler", "defaulthandler"], "level": logging.INFO, "propagate": False,}},
+    "root": {"level": logging.WARNING},
 }
 
 def configure_logging() -> None:
@@ -191,10 +187,7 @@ def in_notebook() -> bool:
     if t.TYPE_CHECKING:
       from IPython.core.interactiveshell import InteractiveShell
     return "IPKernelApp" in t.cast(DictStrAny, t.cast(t.Callable[[], "InteractiveShell"], get_ipython)().config)
-  except ImportError:
-    return False
-  except AttributeError:
-    return False
+  except (ImportError, AttributeError): return False
 
 _dockerenv, _cgroup = Path("/.dockerenv"), Path("/proc/self/cgroup")
 
@@ -264,13 +257,10 @@ T, K = t.TypeVar("T"), t.TypeVar("K")
 
 def resolve_filepath(path: str, ctx: str | None = None) -> str:
   """Resolve a file path to an absolute path, expand user and environment variables."""
-  try:
-    return resolve_user_filepath(path, ctx)
-  except FileNotFoundError:
-    return path
+  try: return resolve_user_filepath(path, ctx)
+  except FileNotFoundError: return path
 
-def validate_is_path(maybe_path: str) -> bool:
-  return os.path.exists(os.path.dirname(resolve_filepath(maybe_path)))
+def validate_is_path(maybe_path: str) -> bool: return os.path.exists(os.path.dirname(resolve_filepath(maybe_path)))
 
 def generate_context(framework_name: str) -> _ModelContext:
   from .import_utils import is_flax_available
@@ -285,8 +275,7 @@ def generate_context(framework_name: str) -> _ModelContext:
   if is_flax_available(): framework_versions.update({"flax": pkg.get_pkg_version("flax"), "jax": pkg.get_pkg_version("jax"), "jaxlib": pkg.get_pkg_version("jaxlib")})
   return _ModelContext(framework_name=framework_name, framework_versions=framework_versions)
 
-def generate_labels(llm: openllm.LLM[t.Any, t.Any]) -> DictStrAny:
-  return {"runtime": llm.runtime, "framework": "openllm", "model_name": llm.config["model_name"], "architecture": llm.config["architecture"], "serialisation_format": llm._serialisation_format,}
+def generate_labels(llm: openllm.LLM[t.Any, t.Any]) -> DictStrAny: return {"runtime": llm.runtime, "framework": "openllm", "model_name": llm.config["model_name"], "architecture": llm.config["architecture"], "serialisation_format": llm._serialisation_format}
 
 _TOKENIZER_PREFIX = "_tokenizer_"
 
@@ -298,21 +287,13 @@ def normalize_attrs_to_model_tokenizer_pair(**attrs: t.Any) -> tuple[DictStrAny,
   return attrs, tokenizer_attrs
 
 @_overload
-def infer_auto_class(implementation: t.Literal["pt"]) -> type[openllm.AutoLLM]:
-  ...
-
+def infer_auto_class(implementation: t.Literal["pt"]) -> type[openllm.AutoLLM]: ...
 @_overload
-def infer_auto_class(implementation: t.Literal["tf"]) -> type[openllm.AutoTFLLM]:
-  ...
-
+def infer_auto_class(implementation: t.Literal["tf"]) -> type[openllm.AutoTFLLM]: ...
 @_overload
-def infer_auto_class(implementation: t.Literal["flax"]) -> type[openllm.AutoFlaxLLM]:
-  ...
-
+def infer_auto_class(implementation: t.Literal["flax"]) -> type[openllm.AutoFlaxLLM]: ...
 @_overload
-def infer_auto_class(implementation: t.Literal["vllm"]) -> type[openllm.AutoVLLM]:
-  ...
-
+def infer_auto_class(implementation: t.Literal["vllm"]) -> type[openllm.AutoVLLM]: ...
 def infer_auto_class(implementation: LiteralRuntime) -> type[openllm.AutoLLM] | type[openllm.AutoTFLLM] | type[openllm.AutoFlaxLLM] | type[openllm.AutoVLLM]:
   if implementation == "tf":
     from openllm import AutoTFLLM
@@ -326,8 +307,7 @@ def infer_auto_class(implementation: LiteralRuntime) -> type[openllm.AutoLLM] | 
   elif implementation == "vllm":
     from openllm import AutoVLLM
     return AutoVLLM
-  else:
-    raise RuntimeError(f"Unknown implementation: {implementation} (supported: 'pt', 'flax', 'tf', 'vllm')")
+  else: raise RuntimeError(f"Unknown implementation: {implementation} (supported: 'pt', 'flax', 'tf', 'vllm')")
 
 # NOTE: The set marks contains a set of modules name
 # that are available above and are whitelisted
@@ -337,14 +317,11 @@ _whitelist_modules = {"pkg"}
 # XXX: define all classes, functions import above this line
 # since _extras will be the locals() import from this file.
 _extras: dict[str, t.Any] = {k: v for k, v in locals().items() if k in _whitelist_modules or (not isinstance(v, types.ModuleType) and not k.startswith("_"))}
-
 _extras["__openllm_migration__"] = {"ModelEnv": "EnvVarMixin"}
 
 _import_structure: dict[str, list[str]] = {
-    "analytics": [], "codegen": [], "dantic": [], "representation": ["ReprMixin"], "lazy": ["LazyModule"], "import_utils": [
-        "OPTIONAL_DEPENDENCIES", "ENV_VARS_TRUE_VALUES", "DummyMetaclass", "EnvVarMixin", "requires_dependencies", "is_cpm_kernels_available", "is_einops_available", "is_flax_available", "is_tf_available", "is_vllm_available", "is_torch_available", "is_bitsandbytes_available", "is_peft_available", "is_datasets_available", "is_transformers_supports_kbit",
-        "is_transformers_supports_agent", "is_jupyter_available", "is_jupytext_available", "is_notebook_available", "is_triton_available", "is_autogptq_available", "require_backends",
-    ],
+    "analytics": [], "codegen": [], "dantic": [], "representation": ["ReprMixin"], "lazy": ["LazyModule"],
+    "import_utils": ["OPTIONAL_DEPENDENCIES", "ENV_VARS_TRUE_VALUES", "DummyMetaclass", "EnvVarMixin", "is_cpm_kernels_available", "is_einops_available", "is_flax_available", "is_tf_available", "is_vllm_available", "is_torch_available", "is_bitsandbytes_available", "is_peft_available", "is_datasets_available", "is_transformers_supports_kbit", "is_transformers_supports_agent", "is_jupyter_available", "is_jupytext_available", "is_notebook_available", "is_triton_available", "is_autogptq_available", "require_backends"],
 }
 
 if t.TYPE_CHECKING:
@@ -381,7 +358,5 @@ if t.TYPE_CHECKING:
   from .import_utils import is_triton_available as is_triton_available
   from .import_utils import is_vllm_available as is_vllm_available
   from .import_utils import require_backends as require_backends
-  from .import_utils import requires_dependencies as requires_dependencies
   from .representation import ReprMixin as ReprMixin
-else:
-  sys.modules[__name__] = LazyModule(__name__, globals()["__file__"], _import_structure, module_spec=__spec__, extra_objects=_extras)
+else: sys.modules[__name__] = LazyModule(__name__, globals()["__file__"], _import_structure, module_spec=__spec__, extra_objects=_extras)

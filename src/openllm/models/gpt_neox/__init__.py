@@ -30,7 +30,7 @@ try:
 except MissingDependencyError:
   pass
 else:
-  _import_structure["modeling_vllm_gpt_neox"] = ["GPTNeoX"]
+  _import_structure["modeling_vllm_gpt_neox"] = ["VLLMGPTNeoX"]
 if t.TYPE_CHECKING:
   from .configuration_gpt_neox import DEFAULT_PROMPT_TEMPLATE as DEFAULT_PROMPT_TEMPLATE
   from .configuration_gpt_neox import START_GPT_NEOX_COMMAND_DOCSTRING as START_GPT_NEOX_COMMAND_DOCSTRING

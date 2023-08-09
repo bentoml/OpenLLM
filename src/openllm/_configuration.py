@@ -53,7 +53,6 @@ import os
 import sys
 import types
 import typing as t
-from operator import itemgetter
 
 import attr
 import click_option_group as cog
@@ -81,7 +80,6 @@ from .utils import field_env_key
 from .utils import first_not_none
 from .utils import lenient_issubclass
 from .utils import non_intrusive_setattr
-from .utils import requires_dependencies
 from .utils.import_utils import BACKENDS_MAPPING
 
 # NOTE: We need to do check overload import
@@ -121,13 +119,10 @@ if t.TYPE_CHECKING:
 
   DictStrAny = dict[str, t.Any]
   ListStr = list[str]
-  ItemgetterAny = itemgetter[t.Any]
-  FieldTransformers = t.Callable[[_T, list[attr.Attribute[t.Any]]], list[attr.Attribute[t.Any]]]
 else:
   Constraint = t.Any
   ListStr = list
   DictStrAny = dict
-  ItemgetterAny = itemgetter
 
   vllm = openllm.utils.LazyLoader("vllm", globals(), "vllm")
   transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
@@ -180,7 +175,7 @@ def _adapter_converter(value: AdapterType | str | PeftType | None) -> PeftType:
   if value not in PeftType.supported(): raise ValueError(f"Given '{value}' is not a supported adapter type.")
   return PeftType.get(value)
 
-@attr.define(slots=True)
+@attr.define(slots=True, init=True)
 class FineTuneConfig:
   """FineTuneConfig defines a default value for fine-tuning this any given LLM.
 
@@ -220,7 +215,6 @@ class FineTuneConfig:
   inference_mode: bool = dantic.Field(False, description="Whether to use this Adapter for inference", use_default_converter=False)
   llm_config_class: type[LLMConfig] = dantic.Field(None, description="The reference class to openllm.LLMConfig", use_default_converter=False)
 
-  @requires_dependencies("peft", extra="fine-tune")
   def to_peft_config(self) -> peft.PeftConfig:
     adapter_config = self.adapter_config.copy()
     # no need for peft_type since it is internally managed by OpenLLM and PEFT
@@ -241,22 +235,6 @@ class FineTuneConfig:
     adapter_type, inference_mode = attrs.pop("adapter_type", self.adapter_type), attrs.get("inference_mode", self.inference_mode)
     if "llm_config_class" in attrs: raise ForbiddenAttributeError("'llm_config_class' should not be passed when using 'with_config'.")
     return attr.evolve(self, adapter_type=adapter_type, inference_mode=inference_mode, adapter_config=config_merger.merge(self.adapter_config, attrs))
-
-  @classmethod
-  def make_adapter_config_class(cls, adapter_type: AdapterType, llm_config_class: type[LLMConfig], /, *, docs: str | None = None, **attrs: t.Any) -> type[FineTuneConfig]:
-    """A loose codegen to create default subclass for given adapter config type."""
-    _new_default = {"adapter_type": PeftType[adapter_type], "adapter_config": attrs, "llm_config_class": llm_config_class}
-
-    def field_transformers(_: type[t.Any], fields: list[attr.Attribute[t.Any]]) -> list[attr.Attribute[t.Any]]:
-      transformed: list[attr.Attribute[t.Any]] = []
-      for f in fields:
-        if f.name in _new_default: transformed.append(f.evolve(default=_new_default[f.name]))
-        else: transformed.append(f)
-      return transformed
-
-    klass = attr.make_class(f"{inflection.camelize(adapter_type)}{llm_config_class.__name__}", [], bases=(cls,), slots=True, weakref_slot=True, frozen=True, repr=True, collect_by_mro=True, field_transformer=field_transformers)
-    if docs is not None: klass.__doc__ = docs
-    return klass
 
 @attr.frozen(slots=True, repr=False, init=False)
 class GenerationConfig(ReprMixin):
@@ -363,10 +341,10 @@ class SamplingParams(ReprMixin):
   def __getitem__(self, item: str) -> t.Any:
     if hasattr(self, item): return getattr(self, item)
     raise KeyError(f"'{self.__class__.__name__}' has no attribute {item}.")
-
   @property
   def __repr_keys__(self) -> set[str]: return {i.name for i in attr.fields(self.__class__)}
 
+  def to_vllm(self) -> vllm.SamplingParams: return vllm.SamplingParams(max_tokens=self.max_tokens, temperature=self.temperature, top_k=self.top_k, top_p=self.top_p, **bentoml_cattr.unstructure(self))
   @classmethod
   def from_generation_config(cls, generation_config: GenerationConfig, **attrs: t.Any) -> t.Self:
     """The main entrypoint for creating a SamplingParams from ``openllm.LLMConfig``."""
@@ -379,9 +357,6 @@ class SamplingParams(ReprMixin):
     top_p = first_not_none(attrs.pop("top_p", None), default=generation_config["top_p"])
     max_tokens = first_not_none(attrs.pop("max_tokens", None), attrs.pop("max_new_tokens", None), default=generation_config["max_new_tokens"])
     return cls(_internal=True, temperature=temperature, top_k=top_k, top_p=top_p, max_tokens=max_tokens, **attrs)
-
-  @requires_dependencies("vllm", extra="vllm")
-  def to_vllm(self) -> vllm.SamplingParams: return vllm.SamplingParams(max_tokens=self.max_tokens, temperature=self.temperature, top_k=self.top_k, top_p=self.top_p, **bentoml_cattr.unstructure(self))
 
 bentoml_cattr.register_unstructure_hook_factory(lambda cls: attr.has(cls) and lenient_issubclass(cls, SamplingParams), lambda cls: make_dict_unstructure_fn(cls, bentoml_cattr, _cattrs_omit_if_default=False, _cattrs_use_linecache=True, **{k: override(omit=True) for k, v in attr.fields_dict(cls).items() if v.default in (None, attr.NOTHING)}))
 bentoml_cattr.register_structure_hook_factory(lambda cls: attr.has(cls) and lenient_issubclass(cls, SamplingParams), lambda cls: make_dict_structure_fn(cls, bentoml_cattr, _cattrs_forbid_extra_keys=True, max_new_tokens=override(rename="max_tokens")))
@@ -521,8 +496,7 @@ def structure_settings(cl_: type[LLMConfig], cls: type[_ModelSettingsAttr]) -> _
       _adapter_type: AdapterType | None = _possible_ft_config.pop("adapter_type", None)
       if _adapter_type is None: raise RuntimeError("'adapter_type' is required under config definition (currently missing)'.")
       _llm_config_class = _possible_ft_config.pop("llm_config_class", cl_)
-      _doc = _possible_ft_config.pop("docs", f"Default {inflection.camelize(_adapter_type)}Config for {model_name}")
-      _converted[_adapter_type] = codegen.add_method_dunders(cl_, FineTuneConfig.make_adapter_config_class(_adapter_type, _llm_config_class, docs=_doc, **_possible_ft_config))()
+      _converted[_adapter_type] = FineTuneConfig(PeftType[_adapter_type], _possible_ft_config, False, _llm_config_class)
   _final_value_dct["fine_tune_strategies"] = _converted
   return attr.evolve(_settings_attr, **_final_value_dct)
 
@@ -736,7 +710,8 @@ class _ConfigBuilder:
     > create a new class after constructing all __dict__. This has to do
     > with recursive called within __init_subclass__
     """
-    cd = {k: v for k, v in self._cls_dict.items() if k not in (*tuple(self._attr_names), "__dict__", "__weakref__")}
+    filtered = (*self._attr_names, "__dict__", "__weakref__")
+    cd = {k: v for k, v in self._cls_dict.items() if k not in filtered}
     # Traverse the MRO to collect existing slots
     # and check for an existing __weakref__.
     weakref_inherited = False
@@ -897,17 +872,7 @@ class LLMConfig(_ConfigAttr):
   Future work:
   - Support pydantic-core as validation backend.
   """
-  @classmethod
-  def _make_subclass(cls, class_attr: str, base: type[At], globs: dict[str, t.Any] | None = None, suffix_env: t.LiteralString | None = None) -> type[At]:
-    camel_name = cls.__name__.replace("Config", "")
-    klass = attr.make_class(f"{camel_name}{class_attr}", [], bases=(base,), slots=True, weakref_slot=True, frozen=True, repr=False, init=False, collect_by_mro=True, field_transformer=codegen.make_env_transformer(cls, cls.__openllm_model_name__, suffix=suffix_env, globs=globs, default_callback=lambda field_name, field_default: getattr(getattr(cls, class_attr), field_name, field_default) if codegen.has_own_attribute(cls, class_attr) else field_default))
-    # For pickling to work, the __module__ variable needs to be set to the
-    # frame where the class is created. This respect the module that is created from cls
-    try: klass.__module__ = cls.__module__
-    except (AttributeError, ValueError): pass
-    return t.cast("type[At]", klass)
-
-  def __init_subclass__(cls: type[LLMConfig]):
+  def __init_subclass__(cls, **_: t.Any):
     """The purpose of this ``__init_subclass__`` is to offer pydantic UX while adhering to attrs contract.
 
     This means we will construct all fields and metadata and hack into
@@ -924,8 +889,16 @@ class LLMConfig(_ConfigAttr):
 
     # auto assignment attributes generated from __config__ after create the new slot class.
     _make_assignment_script(cls, bentoml_cattr.structure(cls, _ModelSettingsAttr))(cls)
-    cls.__openllm_generation_class__ = cls._make_subclass("GenerationConfig", openllm._configuration.GenerationConfig, suffix_env="generation")
-    cls.__openllm_sampling_class__ = cls._make_subclass("SamplingParams", openllm._configuration.SamplingParams, suffix_env="sampling")
+    def _make_subclass(class_attr: str, base: type[At], globs: dict[str, t.Any] | None = None, suffix_env: t.LiteralString | None = None) -> type[At]:
+      camel_name = cls.__name__.replace("Config", "")
+      klass = attr.make_class(f"{camel_name}{class_attr}", [], bases=(base,), slots=True, weakref_slot=True, frozen=True, repr=False, init=False, collect_by_mro=True, field_transformer=codegen.make_env_transformer(cls, cls.__openllm_model_name__, suffix=suffix_env, globs=globs, default_callback=lambda field_name, field_default: getattr(getattr(cls, class_attr), field_name, field_default) if codegen.has_own_attribute(cls, class_attr) else field_default))
+      # For pickling to work, the __module__ variable needs to be set to the
+      # frame where the class is created. This respect the module that is created from cls
+      try: klass.__module__ = cls.__module__
+      except (AttributeError, ValueError): pass
+      return t.cast("type[At]", klass)
+    cls.__openllm_generation_class__ = _make_subclass("GenerationConfig", GenerationConfig, suffix_env="generation")
+    cls.__openllm_sampling_class__ = _make_subclass("SamplingParams", SamplingParams, suffix_env="sampling")
 
     # process a fields under cls.__dict__ and auto convert them with dantic.Field
     # this is similar logic to attr._make._transform_attrs
@@ -1282,8 +1255,6 @@ class LLMConfig(_ConfigAttr):
   def to_generation_config(self, return_as_dict: bool = False) -> transformers.GenerationConfig | DictStrAny:
     config = transformers.GenerationConfig(**bentoml_cattr.unstructure(self.generation_config))
     return config.to_dict() if return_as_dict else config
-
-  @requires_dependencies("vllm", extra="vllm")
   def to_sampling_config(self) -> vllm.SamplingParams: return self.sampling_config.to_vllm()
 
   @classmethod

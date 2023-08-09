@@ -13,7 +13,6 @@
 # limitations under the License.
 """Some imports utils are vendorred from transformers/utils/import_utils.py for performance reasons."""
 from __future__ import annotations
-import functools
 import importlib
 import importlib.metadata
 import importlib.util
@@ -42,16 +41,9 @@ else:
 if t.TYPE_CHECKING:
   BackendOrderredDict = OrderedDict[str, tuple[t.Callable[[], bool], str]]
   from .._types import LiteralRuntime
-  from .._types import P
-  from .._types import T
-
-  class _AnnotatedLazyLoader(LazyLoader, t.Generic[T]):
-    DEFAULT_PROMPT_TEMPLATE: t.LiteralString | None | t.Callable[[T], t.LiteralString]
-    PROMPT_MAPPING: dict[T, t.LiteralString] | None
-
 else:
-  _AnnotatedLazyLoader = LazyLoader
   BackendOrderredDict = OrderedDict
+
 
 logger = logging.getLogger(__name__)
 
@@ -66,10 +58,8 @@ FORCE_TF_AVAILABLE = os.environ.get("FORCE_TF_AVAILABLE", "AUTO").upper()
 def _is_package_available(package: str) -> bool:
   _package_available = importlib.util.find_spec(package) is not None
   if _package_available:
-    try:
-      importlib.metadata.version(package)
-    except importlib.metadata.PackageNotFoundError:
-      _package_available = False
+    try: importlib.metadata.version(package)
+    except importlib.metadata.PackageNotFoundError: _package_available = False
   return _package_available
 
 _torch_available = importlib.util.find_spec("torch") is not None
@@ -87,58 +77,29 @@ _jupytext_available = _is_package_available("jupytext")
 _notebook_available = _is_package_available("notebook")
 _autogptq_available = _is_package_available("auto_gptq")
 
-def is_transformers_supports_kbit() -> bool:
-  return pkg.pkg_version_info("transformers")[:2] >= (4, 30)
-
-def is_transformers_supports_agent() -> bool:
-  return pkg.pkg_version_info("transformers")[:2] >= (4, 29)
-
-def is_jupyter_available() -> bool:
-  return _jupyter_available
-
-def is_jupytext_available() -> bool:
-  return _jupytext_available
-
-def is_notebook_available() -> bool:
-  return _notebook_available
-
-def is_triton_available() -> bool:
-  return _triton_available
-
-def is_datasets_available() -> bool:
-  return _datasets_available
-
-def is_peft_available() -> bool:
-  return _peft_available
-
-def is_einops_available() -> bool:
-  return _einops_available
-
-def is_cpm_kernels_available() -> bool:
-  return _cpm_kernel_available
-
-def is_bitsandbytes_available() -> bool:
-  return _bitsandbytes_available
-
-def is_autogptq_available() -> bool:
-  return _autogptq_available
-
-def is_vllm_available() -> bool:
-  return _vllm_available
-
+def is_transformers_supports_kbit() -> bool: return pkg.pkg_version_info("transformers")[:2] >= (4, 30)
+def is_transformers_supports_agent() -> bool: return pkg.pkg_version_info("transformers")[:2] >= (4, 29)
+def is_jupyter_available() -> bool: return _jupyter_available
+def is_jupytext_available() -> bool: return _jupytext_available
+def is_notebook_available() -> bool: return _notebook_available
+def is_triton_available() -> bool: return _triton_available
+def is_datasets_available() -> bool: return _datasets_available
+def is_peft_available() -> bool: return _peft_available
+def is_einops_available() -> bool: return _einops_available
+def is_cpm_kernels_available() -> bool: return _cpm_kernel_available
+def is_bitsandbytes_available() -> bool: return _bitsandbytes_available
+def is_autogptq_available() -> bool: return _autogptq_available
+def is_vllm_available() -> bool: return _vllm_available
 def is_torch_available() -> bool:
   global _torch_available
   if USE_TORCH in ENV_VARS_TRUE_AND_AUTO_VALUES and USE_TF not in ENV_VARS_TRUE_VALUES:
     if _torch_available:
-      try:
-        importlib.metadata.version("torch")
-      except importlib.metadata.PackageNotFoundError:
-        _torch_available = False
+      try: importlib.metadata.version("torch")
+      except importlib.metadata.PackageNotFoundError: _torch_available = False
   else:
     logger.info("Disabling PyTorch because USE_TF is set")
     _torch_available = False
   return _torch_available
-
 def is_tf_available() -> bool:
   global _tf_available
   if FORCE_TF_AVAILABLE in ENV_VARS_TRUE_VALUES: _tf_available = True
@@ -153,8 +114,7 @@ def is_tf_available() -> bool:
           try:
             _tf_version = importlib.metadata.version(_pkg)
             break
-          except importlib.metadata.PackageNotFoundError:
-            pass
+          except importlib.metadata.PackageNotFoundError: pass
         _tf_available = _tf_version is not None
       if _tf_available:
         if _tf_version and version.parse(_tf_version) < version.parse("2"):
@@ -164,7 +124,6 @@ def is_tf_available() -> bool:
       logger.info("Disabling Tensorflow because USE_TORCH is set")
       _tf_available = False
   return _tf_available
-
 def is_flax_available() -> bool:
   global _flax_available
   if USE_JAX in ENV_VARS_TRUE_AND_AUTO_VALUES:
@@ -172,30 +131,10 @@ def is_flax_available() -> bool:
       try:
         importlib.metadata.version("jax")
         importlib.metadata.version("flax")
-      except importlib.metadata.PackageNotFoundError:
-        _flax_available = False
+      except importlib.metadata.PackageNotFoundError: _flax_available = False
   else:
     _flax_available = False
   return _flax_available
-
-_locals = locals().copy()
-
-def requires_dependencies(package: str | list[str], *, extra: str | list[str] | None = None) -> t.Callable[[t.Callable[P, t.Any]], t.Callable[P, t.Any]]:
-  if isinstance(package, str): package = [package]
-  if isinstance(extra, str): extra = [extra]
-
-  def decorator(func: t.Callable[P, t.Any]) -> t.Callable[P, t.Any]:
-    @functools.wraps(func)
-    def wrapper(*args: P.args, **kwargs: P.kwargs) -> t.Any:
-      for p in package:
-        cached_check: t.Callable[[], bool] | None = _locals.get(f"is_{p}_available", None)
-        if not ((cached_check is not None and cached_check()) or _is_package_available(p)):
-          raise ImportError(f"{func.__name__} requires '{p}' to be available locally (Currently missing). Make sure to have {p} to be installed: 'pip install \"{p if not extra else 'openllm['+', '.join(extra)+']'}\"'")
-      return func(*args, **kwargs)
-
-    return wrapper
-
-  return decorator
 
 VLLM_IMPORT_ERROR_WITH_PYTORCH = """\
 {0} requires the vLLM library but it was not found in your environment.
@@ -348,7 +287,6 @@ class EnvVarMixin(ReprMixin):
     bettertransformer: str
     runtime: str
 
-  # fmt: off
   @overload
   def __getitem__(self, item: t.Literal["config"]) -> str: ...
   @overload
@@ -371,7 +309,6 @@ class EnvVarMixin(ReprMixin):
   def __getitem__(self, item: t.Literal["bettertransformer_value"]) -> bool: ...
   @overload
   def __getitem__(self, item: t.Literal["runtime_value"]) -> t.Literal["ggml", "transformers"]: ...
-  # fmt: on
   def __getitem__(self, item: str | t.Any) -> t.Any:
     if item.endswith("_value") and hasattr(self, f"_{item}"): return object.__getattribute__(self, f"_{item}")()
     elif hasattr(self, item): return getattr(self, item)
@@ -389,34 +326,25 @@ class EnvVarMixin(ReprMixin):
     for att in {"config", "model_id", "quantize", "framework", "bettertransformer", "runtime"}:
       setattr(self, att, field_env_key(self.model_name, att.upper()))
 
-  @property
-  def __repr_keys__(self) -> set[str]:
-    return {"config", "model_id", "quantize", "framework", "bettertransformer", "runtime"}
-
   def _quantize_value(self) -> t.Literal["int8", "int4", "gptq"] | None:
     from . import first_not_none
     return t.cast(t.Optional[t.Literal["int8", "int4", "gptq"]], first_not_none(os.environ.get(self["quantize"]), default=self._quantize))
-
   def _framework_value(self) -> LiteralRuntime:
     from . import first_not_none
     return t.cast(t.Literal["pt", "tf", "flax", "vllm"], first_not_none(os.environ.get(self["framework"]), default=self._implementation))
-
   def _bettertransformer_value(self) -> bool:
     from . import first_not_none
     return t.cast(bool, first_not_none(os.environ.get(self["bettertransformer"], str(False)).upper() in ENV_VARS_TRUE_VALUES, default=self._bettertransformer))
-
   def _model_id_value(self) -> str | None:
     from . import first_not_none
     return first_not_none(os.environ.get(self["model_id"]), default=self._model_id)
-
   def _runtime_value(self) -> t.Literal["ggml", "transformers"]:
     from . import first_not_none
     return t.cast(t.Literal["ggml", "transformers"], first_not_none(os.environ.get(self["runtime"]), default=self._runtime))
 
   @property
-  def start_docstring(self) -> str:
-    return getattr(self.module, f"START_{self.model_name.upper()}_COMMAND_DOCSTRING")
-
+  def __repr_keys__(self) -> set[str]: return {"config", "model_id", "quantize", "framework", "bettertransformer", "runtime"}
   @property
-  def module(self) -> _AnnotatedLazyLoader[t.LiteralString]:
-    return _AnnotatedLazyLoader(self.model_name, globals(), f"openllm.models.{self.model_name}")
+  def start_docstring(self) -> str: return getattr(self.module, f"START_{self.model_name.upper()}_COMMAND_DOCSTRING")
+  @property
+  def module(self) -> LazyLoader: return LazyLoader(self.model_name, globals(), f"openllm.models.{self.model_name}")

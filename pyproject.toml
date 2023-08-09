@@ -191,6 +191,7 @@ testpaths = ["tests"]
 [tool.ruff]
 extend-exclude = [
     "tools",
+    "examples",
     "src/openllm/playground",
     "src/openllm/models",
     "src/openllm/_types.py",
@@ -265,7 +266,7 @@ ignore-overlong-task-comments = true
 [tool.ruff.isort]
 force-single-line = true
 known-first-party = ["openllm", "bentoml"]
-known-third-party = ["transformers", "click", "huggingface_hub"]
+known-third-party = ["transformers", "click", "huggingface_hub", "torch", "vllm", "auto_gptq"]
 lines-after-imports = 1
 no-lines-before = ["future", "standard-library"]
 relative-imports-order = "closest-to-furthest"
@@ -273,8 +274,7 @@ relative-imports-order = "closest-to-furthest"
 avoid-escape = false
 [tool.ruff.extend-per-file-ignores]
 # Tests can use magic values, assertions, and relative imports
-"__init__.py" = ["E402", "F401", "F403", "F811"]
-"examples/**/*" = ["D"]
+"__init__.py" = ["E402", "F401", "F403", "F811", "I001"]
 "src/openllm/_service.py" = ["I001", "E401"]
 "src/openllm/cli/entrypoint.py" = ["D301"]
 "src/openllm/utils/dummy_*" = ["D107"]
@@ -448,7 +448,7 @@ local_scheme = "no-local-version"
 [tool.hatch.metadata]
 allow-direct-references = true
 [tool.hatch.build.targets.wheel]
-only-include = ["src"]
+files = ["src/openllm", "src/openllm_client"]
 sources = ["src"]
 [tool.hatch.build.targets.sdist]
 exclude = ["/.github", "/typings", "/examples", "/assets", "/changelog.d", "/tools", ".git"]
@@ -467,16 +467,41 @@ dependencies = [
     "types-protobuf",
 ]
 enable-by-default = false
-exclude = ["src/openllm/__main__.py"]
-include = ["src/openllm/client.py", "src/openllm/exceptions.py"]
+exclude = [
+    "src/openllm_client/**",
+    "src/openllm/bundle/**",
+    "src/openllm/serialisation/**",
+    "src/openllm/utils/**",
+    "src/openllm/cli/**",
+    "src/openllm/__main__.py",
+    "src/openllm/_types.py",
+    "src/openllm/_generation.py",
+    "src/openllm/_service.py",
+    "src/openllm/_configuration.py",
+    "src/openllm/_quantisation.py",
+    "src/openllm/_llm.py",
+    "src/openllm/playground/**",
+    "src/openllm/models/**",
+]
+include = [
+    "src/openllm/__init__.py",
+    "src/openllm/_prompt.py",
+    "src/openllm/_schema.py",
+    "src/openllm/_quantisation.py",
+    "src/openllm/_strategies.py",
+    "src/openllm/client.py",
+    "src/openllm/exceptions.py",
+    "src/openllm/testing.py",
+]
 # NOTE: This is consistent with pyproject.toml
 mypy-args = [
     "--pretty",
     "--strict",
     # this is because all transient library doesn't have types
     "--allow-subclassing-any",
-    "--python-version=3.11",
+    "--check-untyped-defs",
     "--follow-imports=skip",
+    "--python-version=3.11",
     "--ignore-missing-imports",
     "--no-warn-return-any",
     "--warn-unreachable",
@@ -484,8 +509,7 @@ mypy-args = [
     "--no-warn-unused-ignores",
     "--exclude='/src\\/openllm\\/models\\/**'",
     "--exclude='/src\\/openllm\\/playground\\/**'",
-    "--exclude='/src\\/openllm\\/cli\\/**'",
     "--exclude='/src\\/openllm\\/_types\\.py$'",
 ]
-options = { verbose = true, debug_level = "2" }
+options = { verbose = true, debug_level = "2", opt_level = "3" }
 require-runtime-dependencies = true

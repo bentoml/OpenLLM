@@ -102,6 +102,8 @@ class LazyModule(types.ModuleType):
   This is a direct port from transformers.utils.import_utils._LazyModule for backwards compatibility with transformers < 4.18.
 
   This is an extension a more powerful LazyLoader.
+
+  TODO: Write a mypy_extensions since LazyModule is currently not mypyc-compatible.
   """
 
   # Very heavily inspired by optuna.integration._IntegrationModule

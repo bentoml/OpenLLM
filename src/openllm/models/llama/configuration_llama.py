@@ -36,9 +36,9 @@ class LlamaConfig(openllm.LLMConfig):
   }
 
   class GenerationConfig:
-    max_new_tokens: int = 256
-    temperature: float = 0.8
-    top_p: float = 0.95
+    max_new_tokens: int = 128
+    temperature: float = 0.6
+    top_p: float = 0.9
     top_k: int = 12
 
   class SamplingParams:

@@ -81,6 +81,7 @@ quality = [
     "./tools/update-readme.py",
     "./tools/update-config-stubs.py",
     "./tools/update-models-import.py",
+    "./tools/update-init-import.py",
     "- ./tools/add-license-headers .",
     "- ./tools/update-brew-tap.py",
     "pre-commit run --all-files",

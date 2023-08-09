@@ -46,7 +46,6 @@ import sys
 import time
 import traceback
 import typing as t
-from pathlib import Path
 
 import attr
 import click
@@ -62,6 +61,7 @@ from simple_di import Provide
 from simple_di import inject
 
 import bentoml
+import openllm
 from bentoml._internal.configuration.containers import BentoMLContainer
 from bentoml._internal.models.model import ModelStore
 
@@ -95,14 +95,12 @@ from ..models.auto import AutoConfig
 from ..models.auto import AutoLLM
 from ..utils import DEBUG
 from ..utils import DEBUG_ENV_VAR
-from ..utils import ENV_VARS_TRUE_VALUES
 from ..utils import OPTIONAL_DEPENDENCIES
 from ..utils import QUIET_ENV_VAR
 from ..utils import EnvVarMixin
 from ..utils import LazyLoader
 from ..utils import analytics
 from ..utils import bentoml_cattr
-from ..utils import codegen
 from ..utils import compose
 from ..utils import configure_logging
 from ..utils import dantic
@@ -123,10 +121,8 @@ if t.TYPE_CHECKING:
   from bentoml._internal.bento import BentoStore
   from bentoml._internal.container import DefaultBuilder
 
-  from .._configuration import LLMConfig
   from .._schema import EmbeddingsOutput
   from .._types import DictStrAny
-  from .._types import ListStr
   from .._types import LiteralRuntime
   from .._types import P
   from ..bundle.oci import LiteralContainerRegistry
@@ -158,20 +154,13 @@ GrpType = t.TypeVar("GrpType", bound=click.Group)
 
 _object_setattr = object.__setattr__
 
-COMPILED = Path(__file__).parent.parent.joinpath("__init__.py").suffix in (".pyd", ".so")
-
 _EXT_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "extension"))
 
 class Extensions(click.MultiCommand):
-  def list_commands(self, ctx: click.Context) -> list[str]:
-    return sorted([filename[:-3] for filename in os.listdir(_EXT_FOLDER) if filename.endswith(".py") and not filename.startswith("__")])
-
+  def list_commands(self, ctx: click.Context) -> list[str]: return sorted([filename[:-3] for filename in os.listdir(_EXT_FOLDER) if filename.endswith(".py") and not filename.startswith("__")])
   def get_command(self, ctx: click.Context, cmd_name: str) -> click.Command | None:
-    try:
-      mod = __import__(f"openllm.cli.extension.{cmd_name}", None, None, ["cli"])
-    except ImportError:
-      if DEBUG: logger.debug("Failed to find 'cli' object for %s", cmd_name)
-      return None
+    try: mod = __import__(f"openllm.cli.extension.{cmd_name}", None, None, ["cli"])
+    except ImportError: return None
     return mod.cli
 
 class OpenLLMCommandGroup(BentoMLCommandGroup):
@@ -195,7 +184,6 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
       elif debug: set_debug_mode(True)
       configure_logging()
       return f(*args, **attrs)
-
     return wrapper
 
   @staticmethod
@@ -205,8 +193,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
     @functools.wraps(func)
     def wrapper(do_not_track: bool, *args: P.args, **attrs: P.kwargs) -> t.Any:
       if do_not_track:
-        with analytics.set_bentoml_tracking():
-          return func(*args, **attrs)
+        with analytics.set_bentoml_tracking(): return func(*args, **attrs)
       start_time = time.time_ns()
       with analytics.set_bentoml_tracking():
         if group.name is None: raise ValueError("group.name should not be None")
@@ -224,22 +211,16 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
           event.return_code = 2 if isinstance(e, KeyboardInterrupt) else 1
           analytics.track(event)
           raise
-
     return t.cast("t.Callable[t.Concatenate[bool, P], t.Any]", wrapper)
 
   @staticmethod
   def exception_handling(func: t.Callable[P, t.Any], group: click.Group, **attrs: t.Any) -> t.Callable[P, t.Any]:
     command_name = attrs.get("name", func.__name__)
-
     @functools.wraps(func)
     def wrapper(*args: P.args, **attrs: P.kwargs) -> t.Any:
-      try:
-        return func(*args, **attrs)
-      except OpenLLMException as err:
-        raise click.ClickException(click.style(f"[{group.name}] '{command_name}' failed: " + err.message, fg="red")) from err
-      except KeyboardInterrupt:
-        pass
-
+      try: return func(*args, **attrs)
+      except OpenLLMException as err: raise click.ClickException(click.style(f"[{group.name}] '{command_name}' failed: " + err.message, fg="red")) from err
+      except KeyboardInterrupt: pass
     return wrapper
 
   def get_command(self, ctx: click.Context, cmd_name: str) -> click.Command | None:
@@ -247,15 +228,13 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
       return t.cast("Extensions", extension_command).get_command(ctx, cmd_name)
     cmd_name = self.resolve_alias(cmd_name)
     if ctx.command.name in _start_mapping:
-      try:
-        return _start_mapping[ctx.command.name][cmd_name]
+      try: return _start_mapping[ctx.command.name][cmd_name]
       except KeyError:
         # TODO: support start from a bento
         try:
           bentoml.get(cmd_name)
           raise click.ClickException(f"'openllm start {cmd_name}' is currently disabled for the time being. Please let us know if you need this feature by opening an issue on GitHub.")
-        except bentoml.exceptions.NotFound:
-          pass
+        except bentoml.exceptions.NotFound: pass
         raise click.BadArgumentUsage(f"{cmd_name} is not a valid model identifier supported by OpenLLM.") from None
     return super().get_command(ctx, cmd_name)
 
@@ -275,13 +254,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
       name = name.replace("_", "-")
       kwargs.setdefault("help", inspect.getdoc(f))
       kwargs.setdefault("name", name)
-
-      # Wrap implementation withc common parameters
-      shared_opts = self.common_params(f)
-      # Wrap into OpenLLM tracking
-      tracking = self.usage_tracking(shared_opts, self, **kwargs)
-      # Wrap into exception handling
-      wrapped = self.exception_handling(tracking, self, **kwargs)
+      wrapped = self.exception_handling(self.usage_tracking(self.common_params(f), self, **kwargs), self, **kwargs)
 
       # move common parameters to end of the parameters list
       _memo = getattr(wrapped, "__click_params__", None)
@@ -332,7 +305,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
           formatter.write_dl(rows)
 
 @click.group(cls=OpenLLMCommandGroup, context_settings=termui.CONTEXT_SETTINGS, name="openllm")
-@click.version_option(None, "--version", "-v", message=f"%(prog)s, %(version)s (compiled: {'yes' if COMPILED else 'no'})\nPython ({platform.python_implementation()}) {platform.python_version()}")
+@click.version_option(None, "--version", "-v", message=f"%(prog)s, %(version)s (compiled: {'yes' if openllm.COMPILED else 'no'})\nPython ({platform.python_implementation()}) {platform.python_version()}")
 def cli() -> None:
   """\b
    ██████╗ ██████╗ ███████╗███╗   ██╗██╗     ██╗     ███╗   ███╗
@@ -454,200 +427,6 @@ def import_command(model_name: str, model_id: str | None, converter: str | None,
   elif output == "json": termui.echo(orjson.dumps({"previously_setup": _previously_saved, "framework": impl, "tag": str(_ref.tag)}, option=orjson.OPT_INDENT_2).decode())
   else: termui.echo(_ref.tag)
   return _ref
-
-def _start(
-    model_name: str, /, *, model_id: str | None = None, timeout: int = 30, workers_per_resource: t.Literal["conserved", "round_robin"] | float | None = None, device: tuple[str, ...] | t.Literal["all"] | None = None, quantize: t.Literal["int8", "int4", "gptq"] | None = None, bettertransformer: bool | None = None, runtime: t.Literal["ggml", "transformers"] = "transformers",
-    fast: bool = False, adapter_map: dict[t.LiteralString, str | None] | None = None, framework: LiteralRuntime | None = None, additional_args: ListStr | None = None, _serve_grpc: bool = False, __test__: bool = False, **_: t.Any,
-) -> LLMConfig | subprocess.Popen[bytes]:
-  """Python API to start a LLM server. These provides one-to-one mapping to CLI arguments.
-
-  For all additional arguments, pass it as string to ``additional_args``. For example, if you want to
-  pass ``--port 5001``, you can pass ``additional_args=["--port", "5001"]``
-
-  > [!NOTE] This will create a blocking process, so if you use this API, you can create a running sub thread
-  > to start the server instead of blocking the main thread.
-
-  ``openllm.start`` will invoke ``click.Command`` under the hood, so it behaves exactly the same as the CLI interaction.
-
-  > [!NOTE] ``quantize`` and ``bettertransformer`` are mutually exclusive.
-
-  Args:
-      model_name: The model name to start this LLM
-      model_id: Optional model id for this given LLM
-      timeout: The server timeout
-      workers_per_resource: Number of workers per resource assigned.
-                            See [resource scheduling](https://docs.bentoml.org/en/latest/guides/scheduling.html#resource-scheduling-strategy)
-                            for more information. By default, this is set to 1.
-
-                            > [!NOTE] ``--workers-per-resource`` will also accept the following strategies:
-                            > - ``round_robin``: Similar behaviour when setting ``--workers-per-resource 1``. This is useful for smaller models.
-                            > - ``conserved``: This will determine the number of available GPU resources, and only assign
-                            >                  one worker for the LLMRunner. For example, if ther are 4 GPUs available, then ``conserved`` is
-                            >                  equivalent to ``--workers-per-resource 0.25``.
-      device: Assign GPU devices (if available) to this LLM. By default, this is set to ``None``. It also accepts 'all'
-      argument to assign all available GPUs to this LLM.
-      quantize: Quantize the model weights. This is only applicable for PyTorch models.
-                Possible quantisation strategies:
-                - int8: Quantize the model with 8bit (bitsandbytes required)
-                - int4: Quantize the model with 4bit (bitsandbytes required)
-                - gptq: Quantize the model with GPTQ (auto-gptq required)
-      bettertransformer: Convert given model to FastTransformer with PyTorch.
-      runtime: The runtime to use for this LLM. By default, this is set to ``transformers``. In the future, this will include supports for GGML.
-      fast: Enable fast mode. This will skip downloading models, and will raise errors if given model_id does not exists under local store.
-      adapter_map: The adapter mapping of LoRA to use for this LLM. It accepts a dictionary of ``{adapter_id: adapter_name}``.
-      framework: The framework to use for this LLM. By default, this is set to ``pt``.
-      additional_args: Additional arguments to pass to ``openllm start``.
-  """
-  fast = os.environ.get("OPENLLM_FAST", str(fast)).upper() in ENV_VARS_TRUE_VALUES
-  llm_config = AutoConfig.for_model(model_name)
-  _ModelEnv = EnvVarMixin(model_name, first_not_none(framework, default=llm_config.default_implementation()), model_id=model_id, bettertransformer=bettertransformer, quantize=quantize, runtime=runtime)
-  os.environ[_ModelEnv.framework] = _ModelEnv["framework_value"]
-
-  args: ListStr = ["--runtime", runtime]
-  if model_id: args.extend(["--model-id", model_id])
-  if timeout: args.extend(["--server-timeout", str(timeout)])
-  if workers_per_resource: args.extend(["--workers-per-resource", str(workers_per_resource) if not isinstance(workers_per_resource, str) else workers_per_resource])
-  if device and not os.environ.get("CUDA_VISIBLE_DEVICES"): args.extend(["--device", ",".join(device)])
-  if quantize and bettertransformer: raise OpenLLMException("'quantize' and 'bettertransformer' are currently mutually exclusive.")
-  if quantize: args.extend(["--quantize", str(quantize)])
-  elif bettertransformer: args.append("--bettertransformer")
-  if fast: args.append("--fast")
-  if adapter_map: args.extend(list(itertools.chain.from_iterable([["--adapter-id", f"{k}{':'+v if v else ''}"] for k, v in adapter_map.items()])))
-  if additional_args: args.extend(additional_args)
-  if __test__: args.append("--return-process")
-
-  return start_command_factory(start_command if not _serve_grpc else start_grpc_command, model_name, _context_settings=termui.CONTEXT_SETTINGS, _serve_grpc=_serve_grpc).main(args=args if len(args) > 0 else None, standalone_mode=False)
-
-@inject
-def _build(
-    model_name: str, /, *, model_id: str | None = None, model_version: str | None = None, quantize: t.Literal["int8", "int4", "gptq"] | None = None, bettertransformer: bool | None = None, adapter_map: dict[str, str | None] | None = None, build_ctx: str | None = None, enable_features: tuple[str, ...] | None = None, workers_per_resource: int | float | None = None, runtime: t.Literal[
-        "ggml", "transformers"] = "transformers", dockerfile_template: str | None = None, overwrite: bool = False, container_registry: LiteralContainerRegistry | None = None, container_version_strategy: LiteralContainerVersionStrategy | None = None, push: bool = False, containerize: bool = False, serialisation_format: t.Literal["safetensors", "legacy"] = "safetensors",
-    additional_args: list[str] | None = None, bento_store: BentoStore = Provide[BentoMLContainer.bento_store],
-) -> bentoml.Bento:
-  """Package a LLM into a Bento.
-
-  The LLM will be built into a BentoService with the following structure:
-  if ``quantize`` is passed, it will instruct the model to be quantized dynamically during serving time.
-  if ``bettertransformer`` is passed, it will instruct the model to apply FasterTransformer during serving time.
-
-  ``openllm.build`` will invoke ``click.Command`` under the hood, so it behaves exactly the same as ``openllm build`` CLI.
-
-  > [!NOTE] ``quantize`` and ``bettertransformer`` are mutually exclusive.
-
-  Args:
-      model_name: The model name to start this LLM
-      model_id: Optional model id for this given LLM
-      model_version: Optional model version for this given LLM
-      quantize: Quantize the model weights. This is only applicable for PyTorch models.
-                Possible quantisation strategies:
-                - int8: Quantize the model with 8bit (bitsandbytes required)
-                - int4: Quantize the model with 4bit (bitsandbytes required)
-                - gptq: Quantize the model with GPTQ (auto-gptq required)
-      bettertransformer: Convert given model to FastTransformer with PyTorch.
-      adapter_map: The adapter mapping of LoRA to use for this LLM. It accepts a dictionary of ``{adapter_id: adapter_name}``.
-      build_ctx: The build context to use for building BentoLLM. By default, it sets to current directory.
-      enable_features: Additional OpenLLM features to be included with this BentoLLM.
-      workers_per_resource: Number of workers per resource assigned.
-                            See [resource scheduling](https://docs.bentoml.org/en/latest/guides/scheduling.html#resource-scheduling-strategy)
-                            for more information. By default, this is set to 1.
-
-                            > [!NOTE] ``--workers-per-resource`` will also accept the following strategies:
-                            > - ``round_robin``: Similar behaviour when setting ``--workers-per-resource 1``. This is useful for smaller models.
-                            > - ``conserved``: This will determine the number of available GPU resources, and only assign
-                            >                  one worker for the LLMRunner. For example, if ther are 4 GPUs available, then ``conserved`` is
-                            >                  equivalent to ``--workers-per-resource 0.25``.
-      runtime: The runtime to use for this LLM. By default, this is set to ``transformers``. In the future, this will include supports for GGML.
-      dockerfile_template: The dockerfile template to use for building BentoLLM. See https://docs.bentoml.com/en/latest/guides/containerization.html#dockerfile-template.
-      overwrite: Whether to overwrite the existing BentoLLM. By default, this is set to ``False``.
-      push: Whether to push the result bento to BentoCloud. Make sure to login with 'bentoml cloud login' first.
-      containerize: Whether to containerize the Bento after building. '--containerize' is the shortcut of 'openllm build && bentoml containerize'.
-                    Note that 'containerize' and 'push' are mutually exclusive
-                    container_registry: Container registry to choose the base OpenLLM container image to build from. Default to ECR.
-      container_registry: Container registry to choose the base OpenLLM container image to build from. Default to ECR.
-      container_version_strategy: The container version strategy. Default to the latest release of OpenLLM.
-      serialisation_format: Serialisation for saving models. Default to 'safetensors', which is equivalent to `safe_serialization=True`
-      additional_args: Additional arguments to pass to ``openllm build``.
-      bento_store: Optional BentoStore for saving this BentoLLM. Default to the default BentoML local store.
-
-  Returns:
-      ``bentoml.Bento | str``: BentoLLM instance. This can be used to serve the LLM or can be pushed to BentoCloud.
-  """
-  args: ListStr = [sys.executable, "-m", "openllm", "build", model_name, "--machine", "--runtime", runtime, "--serialisation", serialisation_format,]
-  if quantize and bettertransformer: raise OpenLLMException("'quantize' and 'bettertransformer' are currently mutually exclusive.")
-  if quantize: args.extend(["--quantize", quantize])
-  if bettertransformer: args.append("--bettertransformer")
-  if containerize and push: raise OpenLLMException("'containerize' and 'push' are currently mutually exclusive.")
-  if push: args.extend(["--push"])
-  if containerize: args.extend(["--containerize"])
-  if model_id: args.extend(["--model-id", model_id])
-  if build_ctx: args.extend(["--build-ctx", build_ctx])
-  if enable_features: args.extend([f"--enable-features={f}" for f in enable_features])
-  if workers_per_resource: args.extend(["--workers-per-resource", str(workers_per_resource)])
-  if overwrite: args.append("--overwrite")
-  if adapter_map: args.extend([f"--adapter-id={k}{':'+v if v is not None else ''}" for k, v in adapter_map.items()])
-  if model_version: args.extend(["--model-version", model_version])
-  if dockerfile_template: args.extend(["--dockerfile-template", dockerfile_template])
-  if container_registry is None: container_registry = "ecr"
-  if container_version_strategy is None: container_version_strategy = "release"
-  args.extend(["--container-registry", container_registry, "--container-version-strategy", container_version_strategy])
-  if additional_args: args.extend(additional_args)
-
-  try:
-    output = subprocess.check_output(args, env=os.environ.copy(), cwd=build_ctx or os.getcwd())
-  except subprocess.CalledProcessError as e:
-    logger.error("Exception caught while building %s", model_name, exc_info=e)
-    if e.stderr: raise OpenLLMException(e.stderr.decode("utf-8")) from None
-    raise OpenLLMException(str(e)) from None
-  pattern = r"^__tag__:[^:\n]+:[^:\n]+"
-  matched = re.search(pattern, output.decode("utf-8").strip(), re.MULTILINE)
-  if matched is None: raise ValueError(f"Failed to find tag from output: {output!s}")
-  return bentoml.get(matched.group(0).partition(":")[-1], _bento_store=bento_store)
-
-def _import_model(
-    model_name: str, /, *, model_id: str | None = None, model_version: str | None = None, runtime: t.Literal["ggml", "transformers"] = "transformers", implementation: LiteralRuntime = "pt", quantize: t.Literal["int8", "int4", "gptq"] | None = None, serialisation_format: t.Literal["legacy", "safetensors"] = "safetensors", additional_args: t.Sequence[str] | None = None,
-) -> bentoml.Model:
-  """Import a LLM into local store.
-
-  > [!NOTE]
-  > If ``quantize`` is passed, the model weights will be saved as quantized weights. You should
-  > only use this option if you want the weight to be quantized by default. Note that OpenLLM also
-  > support on-demand quantisation during initial startup.
-
-  ``openllm.download`` will invoke ``click.Command`` under the hood, so it behaves exactly the same as the CLI ``openllm import``.
-
-  > [!NOTE]
-  > ``openllm.start`` will automatically invoke ``openllm.download`` under the hood.
-
-  Args:
-      model_name: The model name to start this LLM
-      model_id: Optional model id for this given LLM
-      model_version: Optional model version for this given LLM
-      runtime: The runtime to use for this LLM. By default, this is set to ``transformers``. In the future, this will include supports for GGML.
-      implementation: The implementation to use for this LLM. By default, this is set to ``pt``.
-      quantize: Quantize the model weights. This is only applicable for PyTorch models.
-                Possible quantisation strategies:
-                - int8: Quantize the model with 8bit (bitsandbytes required)
-                - int4: Quantize the model with 4bit (bitsandbytes required)
-                - gptq: Quantize the model with GPTQ (auto-gptq required)
-      serialisation_format: Type of model format to save to local store. If set to 'safetensors', then OpenLLM will save model using safetensors.
-      Default behaviour is similar to ``safe_serialization=False``.
-      additional_args: Additional arguments to pass to ``openllm import``.
-
-  Returns:
-      ``bentoml.Model``:BentoModel of the given LLM. This can be used to serve the LLM or can be pushed to BentoCloud.
-  """
-  args = [model_name, "--runtime", runtime, "--implementation", implementation, "--machine", "--serialisation", serialisation_format,]
-  if model_id is not None: args.append(model_id)
-  if model_version is not None: args.extend(["--model-version", str(model_version)])
-  if additional_args is not None: args.extend(additional_args)
-  if quantize is not None: args.extend(["--quantize", quantize])
-  return import_command.main(args=args, standalone_mode=False)
-
-def _list_models() -> DictStrAny:
-  """List all available models within the local store."""
-  return models_command.main(args=["-o", "json", "--show-available", "--machine"], standalone_mode=False)
-
-start, start_grpc, build, import_model, list_models = codegen.gen_sdk(_start, _serve_grpc=False), codegen.gen_sdk(_start, _serve_grpc=True), codegen.gen_sdk(_build), codegen.gen_sdk(_import_model), codegen.gen_sdk(_list_models)
 
 @cli.command(context_settings={"token_normalize_func": inflection.underscore})
 @model_name_argument
