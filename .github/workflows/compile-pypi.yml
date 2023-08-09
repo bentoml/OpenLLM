@@ -94,7 +94,6 @@ jobs:
         with:
           fetch-depth: 0
           ref: '${{ inputs.tags }}'
-          token: ${{ secrets.OPENLLM_PAT }}
       - name: Setup CI
         uses: ./.github/actions/setup-repo
         with:
