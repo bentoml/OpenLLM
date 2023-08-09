@@ -2,7 +2,7 @@
 # Please refers to the original template file Formula/openllm.rb.j2
 # vim: set ft=ruby:
 class Openllm < Formula
-  desc "Operating LLMs in production"
+  desc "OpenLLM: Operating LLMs in production"
   homepage "https://github.com/bentoml/OpenLLM"
   version "0.2.17"
   license "Apache-2.0"
