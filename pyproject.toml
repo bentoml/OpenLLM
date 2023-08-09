@@ -70,12 +70,13 @@ requires-python = ">=3.8"
 
 [project.scripts]
 openllm = "openllm.cli.entrypoint:cli"
-openllm-build-base-container = "openllm.cli.ext.build_base_container:cli"
-openllm-dive-bentos = "openllm.cli.ext.dive_bentos:cli"
-openllm-get-containerfile = "openllm.cli.ext.get_containerfile:cli"
-openllm-get-prompt = "openllm.cli.ext.get_prompt:cli"
-openllm-list-bentos = "openllm.cli.ext.list_bentos:cli"
-openllm-list-models = "openllm.cli.ext.list_models:cli"
+openllm-build-base-container = "openllm.cli.extension.build_base_container:cli"
+openllm-dive-bentos = "openllm.cli.extension.dive_bentos:cli"
+openllm-get-containerfile = "openllm.cli.extension.get_containerfile:cli"
+openllm-get-prompt = "openllm.cli.extension.get_prompt:cli"
+openllm-list-bentos = "openllm.cli.extension.list_bentos:cli"
+openllm-list-models = "openllm.cli.extension.list_models:cli"
+openllm-playground = "openllm.cli.extension.playground:cli"
 
 [project.urls]
 Blog = "https://modelserving.com"

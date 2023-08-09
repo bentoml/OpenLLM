@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""CLI utilities for OpenLLM.
+"""OpenLLM CLI interface.
 
 This module also contains the SDK to call ``start`` and ``build`` from SDK
 
@@ -35,18 +35,14 @@ bentomodel = openllm.import_model("falcon", model_id='tiiuae/falcon-7b-instruct'
 from __future__ import annotations
 import functools
 import http.client
-import importlib.machinery
-import importlib.util
 import inspect
 import itertools
 import logging
 import os
-import pkgutil
 import platform
 import re
 import subprocess
 import sys
-import tempfile
 import time
 import traceback
 import typing as t
@@ -60,7 +56,6 @@ import fs.copy
 import fs.errors
 import inflection
 import orjson
-import yaml
 from bentoml_cli.utils import BentoMLCommandGroup
 from bentoml_cli.utils import opt_callback
 from simple_di import Provide
@@ -89,7 +84,6 @@ from ._factory import start_command_factory
 from ._factory import workers_per_resource_option
 from .. import bundle
 from .. import client as openllm_client
-from .. import playground
 from .. import serialisation
 from ..exceptions import OpenLLMException
 from ..models.auto import CONFIG_MAPPING
@@ -116,9 +110,6 @@ from ..utils import first_not_none
 from ..utils import get_debug_mode
 from ..utils import get_quiet_mode
 from ..utils import infer_auto_class
-from ..utils import is_jupyter_available
-from ..utils import is_jupytext_available
-from ..utils import is_notebook_available
 from ..utils import is_torch_available
 from ..utils import is_transformers_supports_agent
 from ..utils import resolve_user_filepath
@@ -126,8 +117,6 @@ from ..utils import set_debug_mode
 from ..utils import set_quiet_mode
 
 if t.TYPE_CHECKING:
-  import jupytext
-  import nbformat
   import torch
   from openllm_client.runtimes.base import BaseClient
 
@@ -170,6 +159,20 @@ GrpType = t.TypeVar("GrpType", bound=click.Group)
 _object_setattr = object.__setattr__
 
 COMPILED = Path(__file__).parent.parent.joinpath("__init__.py").suffix in (".pyd", ".so")
+
+_EXT_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "extension"))
+
+class Extensions(click.MultiCommand):
+  def list_commands(self, ctx: click.Context) -> list[str]:
+    return sorted([filename[:-3] for filename in os.listdir(_EXT_FOLDER) if filename.endswith(".py") and not filename.startswith("__")])
+
+  def get_command(self, ctx: click.Context, cmd_name: str) -> click.Command | None:
+    try:
+      mod = __import__(f"openllm.cli.extension.{cmd_name}", None, None, ["cli"])
+    except ImportError:
+      if DEBUG: logger.debug("Failed to find 'cli' object for %s", cmd_name)
+      return None
+    return mod.cli
 
 class OpenLLMCommandGroup(BentoMLCommandGroup):
   NUMBER_OF_COMMON_PARAMS = 5  # parameters in common_params + 1 faked group option header
@@ -240,6 +243,8 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
     return wrapper
 
   def get_command(self, ctx: click.Context, cmd_name: str) -> click.Command | None:
+    if cmd_name in t.cast("Extensions", ext_command).list_commands(ctx):
+      return t.cast("Extensions", ext_command).get_command(ctx, cmd_name)
     cmd_name = self.resolve_alias(cmd_name)
     if ctx.command.name in _start_mapping:
       try:
@@ -256,7 +261,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
 
   def list_commands(self, ctx: click.Context) -> list[str]:
     if ctx.command.name in {"start", "start-grpc"}: return list(CONFIG_MAPPING.keys())
-    return super().list_commands(ctx)
+    return super().list_commands(ctx) + t.cast("Extensions", ext_command).list_commands(ctx)
 
   def command(self, *args: t.Any, **kwargs: t.Any) -> t.Callable[[t.Callable[..., t.Any]], click.Command]:  # type: ignore[override] # XXX: fix decorator on BentoMLCommandGroup
     """Override the default 'cli.command' with supports for aliases for given command, and it wraps the implementation with common parameters."""
@@ -292,6 +297,43 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
       return cmd
 
     return decorator
+
+  def format_commands(self, ctx: click.Context, formatter: click.HelpFormatter) -> None:
+    """Additional format methods that include extensions as well as the default cli command."""
+    from gettext import gettext as _
+    commands: list[tuple[str, click.Command]] = []
+    extensions: list[tuple[str, click.Command]] = []
+    for subcommand in self.list_commands(ctx):
+      cmd = self.get_command(ctx, subcommand)
+      if cmd is None or cmd.hidden: continue
+      if subcommand in t.cast("Extensions", ext_command).list_commands(ctx):
+        extensions.append((subcommand, cmd))
+      else:
+        commands.append((subcommand, cmd))
+      # allow for 3 times the default spacing
+    if len(commands):
+      limit = formatter.width - 6 - max(len(cmd[0]) for cmd in commands)
+      rows = []
+
+      for subcommand, cmd in commands:
+        help = cmd.get_short_help_str(limit)
+        rows.append((subcommand, help))
+
+      if rows:
+        with formatter.section(_("Commands")):
+          formatter.write_dl(rows)
+
+    if len(extensions):
+      limit = formatter.width - 6 - max(len(cmd[0]) for cmd in extensions)
+      rows = []
+
+      for subcommand, cmd in extensions:
+        help = cmd.get_short_help_str(limit)
+        rows.append((inflection.dasherize(subcommand), help))
+
+      if rows:
+        with formatter.section(_("Extensions")):
+          formatter.write_dl(rows)
 
 @click.group(cls=OpenLLMCommandGroup, context_settings=termui.CONTEXT_SETTINGS, name="openllm")
 @click.version_option(None, "--version", "-v", message=f"%(prog)s, %(version)s (compiled: {'yes' if COMPILED else 'no'})\nPython ({platform.python_implementation()}) {platform.python_version()}")
@@ -816,7 +858,7 @@ def models_command(ctx: click.Context, output: LiteralOutput, show_available: bo
           termui.echo(traceback.print_exception(err, limit=3), fg="red")
         sys.exit(1)
 
-      table = tabulate.tabulate(data, tablefmt="fancy_grid", headers=["LLM", "Architecture", "Models Id", "pip install", "CPU", "GPU", "Runtime"], maxcolwidths=column_widths,)
+      table = tabulate.tabulate(data, tablefmt="fancy_grid", headers=["LLM", "Architecture", "Models Id", "pip install", "CPU", "GPU", "Runtime"], maxcolwidths=column_widths)
       termui.echo(table, fg="white")
 
       if DEBUG and len(failed_initialized) > 0:
@@ -981,78 +1023,7 @@ def query_command(ctx: click.Context, /, prompt: str, endpoint: str, timeout: in
     termui.echo(res["responses"], fg="white")
   ctx.exit(0)
 
-def load_notebook_metadata() -> DictStrAny:
-  with open(os.path.join(os.path.dirname(playground.__file__), "_meta.yml"), "r") as f:
-    content = yaml.safe_load(f)
-  if not all("description" in k for k in content.values()): raise ValueError("Invalid metadata file. All entries must have a 'description' key.")
-  return content
-
-@cli.command()
-@click.argument("output-dir", default=None, required=False)
-@click.option("--port", envvar="JUPYTER_PORT", show_envvar=True, show_default=True, default=8888, help="Default port for Jupyter server")
-@click.pass_context
-def playground_command(ctx: click.Context, output_dir: str | None, port: int) -> None:
-  """OpenLLM Playground.
-
-  A collections of notebooks to explore the capabilities of OpenLLM.
-  This includes notebooks for fine-tuning, inference, and more.
-
-  All of the script available in the playground can also be run directly as a Python script:
-  For example:
-
-  \b
-  ```bash
-  python -m openllm.playground.falcon_tuned --help
-  ```
-
-  \b
-  > Note: This command requires Jupyter to be installed. Install it with 'pip install "openllm[playground]"'
-  """
-  if not is_jupyter_available() or not is_jupytext_available() or not is_notebook_available():
-    raise RuntimeError("Playground requires 'jupyter', 'jupytext', and 'notebook'. Install it with 'pip install \"openllm[playground]\"'")
-  metadata = load_notebook_metadata()
-  _temp_dir = False
-  if output_dir is None:
-    _temp_dir = True
-    output_dir = tempfile.mkdtemp(prefix="openllm-playground-")
-  else:
-    os.makedirs(os.path.abspath(os.path.expandvars(os.path.expanduser(output_dir))), exist_ok=True)
-
-  termui.echo("The playground notebooks will be saved to: " + os.path.abspath(output_dir), fg="blue")
-  for module in pkgutil.iter_modules(playground.__path__):
-    if module.ispkg or os.path.exists(os.path.join(output_dir, module.name + ".ipynb")):
-      logger.debug("Skipping: %s (%s)", module.name, "File already exists" if not module.ispkg else f"{module.name} is a module")
-      continue
-    if not isinstance(module.module_finder, importlib.machinery.FileFinder): continue
-    termui.echo("Generating notebook for: " + module.name, fg="magenta")
-    markdown_cell = nbformat.v4.new_markdown_cell(metadata[module.name]["description"])
-    f = jupytext.read(os.path.join(module.module_finder.path, module.name + ".py"))
-    f.cells.insert(0, markdown_cell)
-    jupytext.write(f, os.path.join(output_dir, module.name + ".ipynb"), fmt="notebook")
-  try:
-    subprocess.check_output([sys.executable, "-m", "jupyter", "notebook", "--notebook-dir", output_dir, "--port", str(port), "--no-browser", "--debug"])
-  except subprocess.CalledProcessError as e:
-    termui.echo(e.output, fg="red")
-    raise click.ClickException(f"Failed to start a jupyter server:\n{e}") from None
-  except KeyboardInterrupt:
-    termui.echo("\nShutting down Jupyter server...", fg="yellow")
-    if _temp_dir: termui.echo("Note: You can access the generated notebooks in: " + output_dir, fg="blue")
-  ctx.exit(0)
-
-_EXT_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "ext"))
-
-class Extensions(click.MultiCommand):
-  def list_commands(self, ctx: click.Context) -> list[str]:
-    return sorted([filename[:-3] for filename in os.listdir(_EXT_FOLDER) if filename.endswith(".py") and not filename.startswith("__")])
-
-  def get_command(self, ctx: click.Context, cmd_name: str) -> click.Command | None:
-    try:
-      mod = __import__(f"openllm.cli.ext.{cmd_name}", None, None, ["cli"])
-    except ImportError:
-      return None
-    return mod.cli
-
-@cli.group(cls=Extensions, name="ext", aliases=["utils"])
+@cli.group(cls=Extensions, name="extension", hidden=True)
 def ext_command() -> None:
   """Extension for OpenLLM CLI."""
 

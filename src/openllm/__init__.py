@@ -38,11 +38,12 @@ if utils.DEBUG:
 else:
   # configuration for bitsandbytes before import
   os.environ["BITSANDBYTES_NOWELCOME"] = os.environ.get("BITSANDBYTES_NOWELCOME", "1")
-  # The following warnings from bitsandbytes, and probably not that important
-  # for users to see when DEBUG is False
+  # NOTE: The following warnings from bitsandbytes, and probably not that important for users to see when DEBUG is False
   warnings.filterwarnings("ignore", message="MatMul8bitLt: inputs will be cast from torch.float32 to float16 during quantization")
   warnings.filterwarnings("ignore", message="MatMul8bitLt: inputs will be cast from torch.bfloat16 to float16 during quantization")
   warnings.filterwarnings("ignore", message="The installed version of bitsandbytes was compiled without GPU support.")
+  # NOTE: ignore the following warning from ghapi as it is not important for users
+  warnings.filterwarnings("ignore", message="Neither GITHUB_TOKEN nor GITHUB_JWT_TOKEN found: running as unauthenticated")
 
 _import_structure: dict[str, list[str]] = {
     "_llm": ["LLM", "Runner", "LLMRunner", "LLMRunnable", "LLMEmbeddings"], "_configuration": ["LLMConfig", "GenerationConfig", "SamplingParams"], "_schema": ["GenerationInput", "GenerationOutput", "MetadataOutput", "EmbeddingsOutput", "unmarshal_vllm_outputs", "HfAgentInput"], "_generation": [

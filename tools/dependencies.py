@@ -212,7 +212,7 @@ def create_url_table() -> Table:
 def build_cli_extensions() -> Table:
   table = tomlkit.table()
   ext: dict[str, str] = {"openllm": "openllm.cli.entrypoint:cli"}
-  ext.update({f"openllm-{inflection.dasherize(ke)}": f"openllm.cli.ext.{ke}:cli" for ke in sorted([fname[:-3] for fname in os.listdir(os.path.abspath(os.path.join(ROOT, "src", "openllm", "cli", "ext"))) if fname.endswith(".py") and not fname.startswith("__")])})
+  ext.update({f"openllm-{inflection.dasherize(ke)}": f"openllm.cli.extension.{ke}:cli" for ke in sorted([fname[:-3] for fname in os.listdir(os.path.abspath(os.path.join(ROOT, "src", "openllm", "cli", "extension"))) if fname.endswith(".py") and not fname.startswith("__")])})
   table.update(ext)
   return table
 

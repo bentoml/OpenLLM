@@ -96,6 +96,7 @@ quality = [
     "./tools/update-config-stubs.py",
     "./tools/update-models-import.py",
     "- ./tools/add-license-headers .",
+    "- ./tools/update-brew-tap.py",
     "pre-commit run --all-files",
 ]
 setup = "pre-commit install"
@@ -167,7 +168,7 @@ exclude = [
     # Compiled module cannot be run directly
     "src/openllm/__main__.py",
     "src/openllm/cli/entrypoint.py",
-    "src/openllm/cli/ext/**",
+    "src/openllm/cli/extension/**",
 ]
 # NOTE: This is consistent with pyproject.toml
 mypy-args = [
