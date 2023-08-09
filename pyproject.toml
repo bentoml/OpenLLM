@@ -2,7 +2,7 @@
 # project.classifiers, project.dependencies, project.optional-dependencies, project.urls
 [build-system]
 build-backend = "hatchling.build"
-requires = ["hatchling", "hatch-vcs", "hatch-fancy-pypi-readme"]
+requires = ["hatchling", "hatch-vcs", "hatch-fancy-pypi-readme", "hatch-mypyc==0.16.0"]
 
 [project]
 authors = [{ name = "Aaron Pham", email = "aarnphm@bentoml.com" }]
@@ -274,7 +274,7 @@ relative-imports-order = "closest-to-furthest"
 avoid-escape = false
 [tool.ruff.extend-per-file-ignores]
 # Tests can use magic values, assertions, and relative imports
-"__init__.py" = ["E402", "F401", "F403", "F811", "I001"]
+"__init__.py" = ["E402", "F401", "F403", "F811", "I001", "F405"]
 "src/openllm/_service.py" = ["I001", "E401"]
 "src/openllm/cli/entrypoint.py" = ["D301"]
 "src/openllm/utils/dummy_*" = ["D107"]

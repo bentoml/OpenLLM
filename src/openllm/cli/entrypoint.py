@@ -467,8 +467,14 @@ def build_command(
   ```
 
   \b
-  > NOTE: To run a container built from this Bento with GPU support, make sure
+  > [!NOTE]
+  > To run a container built from this Bento with GPU support, make sure
   > to have https://github.com/NVIDIA/nvidia-container-toolkit install locally.
+
+  \b
+  > [!IMPORTANT]
+  > To build the bento with compiled OpenLLM, make sure to prepend HATCH_BUILD_HOOKS_ENABLE=1. Make sure that the deployment
+  > target also use the same Python version and architecture as build machine.
   """
   if machine: output = "porcelain"
   if enable_features: enable_features = tuple(itertools.chain.from_iterable((s.split(",") for s in enable_features)))
