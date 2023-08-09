@@ -18,6 +18,27 @@ This changelog is managed by towncrier and is compiled at release time.
 
 <!-- towncrier release notes start -->
 
+## [0.2.18](https://github.com/bentoml/openllm/tree/v0.2.18)
+
+### Changes
+
+- Runners server now will always spawn one instance regardless of the configuration of workers-per-resource
+
+  i.e: If CUDA_VISIBLE_DEVICES=0,1,2 and `--workers-per-resource=0.5`, then runners will only use `0,1` index
+  [#189](https://github.com/bentoml/openllm/issues/189)
+
+
+### Features
+
+- OpenLLM now can also be installed via brew tap:
+  ```bash
+  brew tap bentoml/openllm https://github.com/bentoml/openllm
+
+  brew install openllm
+  ```
+  [#190](https://github.com/bentoml/openllm/issues/190)
+
+
 ## [0.2.17](https://github.com/bentoml/openllm/tree/v0.2.17)
 
 ### Changes
