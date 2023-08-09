@@ -159,6 +159,18 @@ To filter out most of the generated commits for infrastructure, use
 `--invert-grep` in conjunction with `--grep` to filter out all commits with
 regex `"[generated]"`
 
+## Building compiled module
+
+You can run the following to test the behaviour of the compiled module:
+
+```bash
+hatch run compile
+```
+
+> [!IMPORTANT]
+> This will compiled some performance sensitive modules with mypyc. The compiled `.so` or `.pyd` can be found
+> under `/src/openllm`. If you run into any issue, run `hatch run recompile`
+
 ## Style
 
 See [STYLE.md](STYLE.md) for our style guide.

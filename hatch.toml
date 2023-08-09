@@ -75,6 +75,7 @@ dependencies = [
 ]
 [envs.default.scripts]
 changelog = "towncrier build --version main --draft"
+compile = "bash ./compile.sh"
 inplace-changelog = "towncrier build --version main --keep"
 quality = [
     "./tools/dependencies.py",
@@ -86,6 +87,7 @@ quality = [
     "- ./tools/update-brew-tap.py",
     "pre-commit run --all-files",
 ]
+recompile = ["bash ./clean.sh", "bash ./compile.sh"]
 setup = "pre-commit install"
 typing = ["- pre-commit run mypy {args:-a}", "- pre-commit run pyright {args:-a}"]
 [envs.tests]
