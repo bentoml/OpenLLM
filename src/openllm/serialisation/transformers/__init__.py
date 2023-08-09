@@ -184,7 +184,7 @@ def load_model(llm: openllm.LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M:
   if llm.__llm_implementation__ in {"pt", "vllm"}: check_unintialised_params(model)
   return t.cast("M", model)
 
-def save_pretrained(llm: openllm.LLM[M, T], save_directory: str, is_main_process: bool = True, state_dict: DictStrAny | None = None, save_function: t.Any | None = None, push_to_hub: bool = False, max_shard_size: int | str = "10GB", safe_serialization: bool = False, variant: str | None = None, **attrs: t.Any,) -> None:
+def save_pretrained(llm: openllm.LLM[M, T], save_directory: str, is_main_process: bool = True, state_dict: DictStrAny | None = None, save_function: t.Any | None = None, push_to_hub: bool = False, max_shard_size: int | str = "10GB", safe_serialization: bool = False, variant: str | None = None, **attrs: t.Any) -> None:
   save_function = t.cast(t.Callable[..., None], openllm.utils.first_not_none(save_function, default=torch.save))
   model_save_attrs, tokenizer_save_attrs = openllm.utils.normalize_attrs_to_model_tokenizer_pair(**attrs)
   safe_serialization = safe_serialization or llm._serialisation_format == "safetensors"

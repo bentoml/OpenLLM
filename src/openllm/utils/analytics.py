@@ -22,6 +22,7 @@ import importlib.metadata
 import logging
 import os
 import re
+import sys
 import typing as t
 
 import attr
@@ -29,9 +30,13 @@ import attr
 import openllm
 from bentoml._internal.utils import analytics as _internal_analytics
 
-if t.TYPE_CHECKING:
-  from .._types import P
-  from .._types import T
+if sys.version_info[:2] >= (3, 10):
+  from typing import ParamSpec
+else:
+  from typing_extensions import ParamSpec
+
+P = ParamSpec("P")
+T = t.TypeVar("T")
 
 logger = logging.getLogger(__name__)
 
@@ -41,34 +46,24 @@ OPENLLM_DO_NOT_TRACK = "OPENLLM_DO_NOT_TRACK"
 DO_NOT_TRACK = os.environ.get(OPENLLM_DO_NOT_TRACK, str(False)).upper()
 
 @functools.lru_cache(maxsize=1)
-def do_not_track() -> bool:
-  return DO_NOT_TRACK in openllm.utils.ENV_VARS_TRUE_VALUES
-
+def do_not_track() -> bool: return DO_NOT_TRACK in openllm.utils.ENV_VARS_TRUE_VALUES
 @functools.lru_cache(maxsize=1)
-def _usage_event_debugging() -> bool:
-  # For BentoML developers only - debug and print event payload if turned on
-  return os.environ.get("__BENTOML_DEBUG_USAGE", str(False)).lower() == "true"
+def _usage_event_debugging() -> bool: return os.environ.get("__BENTOML_DEBUG_USAGE", str(False)).lower() == "true"
 
 def silent(func: t.Callable[P, T]) -> t.Callable[P, T]:
   @functools.wraps(func)
   def wrapper(*args: P.args, **kwargs: P.kwargs) -> t.Any:
-    try:
-      return func(*args, **kwargs)
+    try: return func(*args, **kwargs)
     except Exception as err:
       if _usage_event_debugging():
-        if openllm.utils.get_debug_mode():
-          logger.error("Tracking Error: %s", err, stack_info=True, stacklevel=3)
-        else:
-          logger.info("Tracking Error: %s", err)
-      else:
-        logger.debug("Tracking Error: %s", err)
-
+        if openllm.utils.get_debug_mode(): logger.error("Tracking Error: %s", err, stack_info=True, stacklevel=3)
+        else: logger.info("Tracking Error: %s", err)
+      else: logger.debug("Tracking Error: %s", err)
   return wrapper
 
 @silent
 def track(event_properties: attr.AttrsInstance) -> None:
-  if do_not_track():
-    return
+  if do_not_track(): return
   _internal_analytics.track(t.cast("_internal_analytics.schemas.EventMeta", event_properties))
 
 @contextlib.contextmanager
@@ -77,8 +72,7 @@ def set_bentoml_tracking() -> t.Generator[None, None, None]:
   try:
     os.environ[_internal_analytics.BENTOML_DO_NOT_TRACK] = str(do_not_track())
     yield
-  finally:
-    os.environ[_internal_analytics.BENTOML_DO_NOT_TRACK] = original_value
+  finally: os.environ[_internal_analytics.BENTOML_DO_NOT_TRACK] = original_value
 
 class EventMeta:
   @property
@@ -87,8 +81,7 @@ class EventMeta:
     event_name = re.sub(r"(?<!^)(?=[A-Z])", "_", self.__class__.__name__).lower()
     # remove "_event" suffix
     suffix_to_remove = "_event"
-    if event_name.endswith(suffix_to_remove):
-      event_name = event_name[:-len(suffix_to_remove)]
+    if event_name.endswith(suffix_to_remove): event_name = event_name[:-len(suffix_to_remove)]
     return event_name
 
 @attr.define
@@ -111,12 +104,9 @@ class OpenllmCliEvent(EventMeta):
 class StartInitEvent(EventMeta):
   model_name: str
   llm_config: t.Dict[str, t.Any] = attr.field(default=None)
-
   @staticmethod
-  def handler(llm_config: openllm.LLMConfig) -> StartInitEvent:
-    return StartInitEvent(model_name=llm_config["model_name"], llm_config=llm_config.model_dump())
+  def handler(llm_config: openllm.LLMConfig) -> StartInitEvent: return StartInitEvent(model_name=llm_config["model_name"], llm_config=llm_config.model_dump())
 
 def track_start_init(llm_config: openllm.LLMConfig) -> None:
-  if do_not_track():
-    return
+  if do_not_track(): return
   track(StartInitEvent.handler(llm_config))

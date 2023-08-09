@@ -31,18 +31,13 @@ from bentoml._internal.resource import system_resources
 from bentoml._internal.runner.strategy import THREAD_ENVS
 
 from .utils import DEBUG
-from .utils import LazyType
 from .utils import ReprMixin
 
-if t.TYPE_CHECKING:
-  ListIntStr = list[int | str]
+class DynResource(t.Protocol):
+  resource_id: t.ClassVar[str]
 
-  class DynResource(bentoml.Resource[t.List[str]], resource_id=""):
-    resource_id: t.ClassVar[str]
-
-else:
-  DynResource = bentoml.Resource[t.List[str]]
-  ListIntStr = list
+  @classmethod
+  def from_system(cls) -> t.Sequence[t.Any]: ...
 
 # NOTE: We need to do this so that overload can register
 # correct overloads to typing registry
@@ -75,21 +70,13 @@ def _parse_list_with_prefix(lst: str, prefix: str) -> list[str]:
 
 _STACK_LEVEL = 3
 
-# variant: default callback
-@overload
-def _parse_visible_devices() -> list[str] | None:
-  ...
 
-# variant: specify None, and respect_env
-@overload
-def _parse_visible_devices(default_var: None, *, respect_env: t.Literal[True]) -> list[str] | None:
-  ...
-
-# variant: default var is something other than None
-@overload
-def _parse_visible_devices(default_var: str = ..., *, respect_env: t.Literal[False]) -> list[str]:
-  ...
-
+@overload  # variant: default callback
+def _parse_visible_devices() -> list[str] | None: ...
+@overload  # variant: specify None, and respect_env
+def _parse_visible_devices(default_var: None, *, respect_env: t.Literal[True]) -> list[str] | None: ...
+@overload  # variant: default var is something other than None
+def _parse_visible_devices(default_var: str = ..., *, respect_env: t.Literal[False]) -> list[str]: ...
 def _parse_visible_devices(default_var: str | None = None, respect_env: bool = True) -> list[str] | None:
   """CUDA_VISIBLE_DEVICES aware with default var for parsing spec."""
   if respect_env:
@@ -101,8 +88,7 @@ def _parse_visible_devices(default_var: str | None = None, respect_env: bool = T
 
   if spec.startswith("GPU-"): return _parse_list_with_prefix(spec, "GPU-")
   if spec.startswith("MIG-"): return _parse_list_with_prefix(spec, "MIG-")
-
-  # XXX: We to somehow handle cases such as '100m'
+  # XXX: We need to somehow handle cases such as '100m'
   # CUDA_VISIBLE_DEVICES uses something like strtoul
   # which makes `1gpu2,2ampere` is equivalent to `1,2`
   rc: list[int] = []
@@ -116,17 +102,12 @@ def _parse_visible_devices(default_var: str | None = None, respect_env: bool = T
   return [str(i) for i in rc]
 
 def _from_system(cls: type[DynResource]) -> list[str]:
-  """Shared mixin implementation for OpenLLM's NVIDIA and AMD resource implementation.
-
-  It relies on torch.cuda implementation and in turns respect CUDA_VISIBLE_DEVICES.
-  """
   visible_devices = _parse_visible_devices()
   if visible_devices is None:
     if cls.resource_id == "amd.com/gpu":
       if not psutil.LINUX:
         if DEBUG: warnings.warn("AMD GPUs is currently only supported on Linux.", stacklevel=_STACK_LEVEL)
         return []
-
       # ROCm does not currently have the rocm_smi wheel.
       # So we need to use the ctypes bindings directly.
       # we don't want to use CLI because parsing is a pain.
@@ -159,23 +140,12 @@ def _from_system(cls: type[DynResource]) -> list[str]:
   return visible_devices
 
 @overload
-def _from_spec(cls: type[DynResource], spec: int) -> list[str]:
-  ...
-
+def _from_spec(cls: type[DynResource], spec: int) -> list[str]: ...
 @overload
-def _from_spec(cls: type[DynResource], spec: ListIntStr) -> list[str]:
-  ...
-
+def _from_spec(cls: type[DynResource], spec: list[int | str]) -> list[str]: ...
 @overload
-def _from_spec(cls: type[DynResource], spec: str) -> list[str]:
-  ...
-
+def _from_spec(cls: type[DynResource], spec: str) -> list[str]: ...
 def _from_spec(cls: type[DynResource], spec: t.Any) -> list[str]:
-  """Shared mixin implementation for OpenLLM's NVIDIA and AMD resource implementation.
-
-  The parser behaves similar to how PyTorch handles CUDA_VISIBLE_DEVICES. This means within
-  BentoML's resource configuration, its behaviour is similar to CUDA_VISIBLE_DEVICES.
-  """
   if isinstance(spec, int):
     if spec in (-1, 0): return []
     if spec < -1: raise ValueError("Spec cannot be < -1.")
@@ -184,21 +154,17 @@ def _from_spec(cls: type[DynResource], spec: t.Any) -> list[str]:
     if not spec: return []
     if spec.isdigit(): spec = ",".join([str(i) for i in range(_strtoul(spec))])
     return _parse_visible_devices(spec, respect_env=False)
-  elif LazyType(ListIntStr).isinstance(spec):
-    return [str(x) for x in spec]
-  else:
-    raise TypeError(f"'{cls.__name__}.from_spec' only supports parsing spec of type int, str, or list, got '{type(spec)}' instead.")
+  elif isinstance(spec, list): return [str(x) for x in spec]
+  else: raise TypeError(f"'{cls.__name__}.from_spec' only supports parsing spec of type int, str, or list, got '{type(spec)}' instead.")
 
 def _raw_device_uuid_nvml() -> list[str] | None:
-  """Return list of device UUID as reported by NVML or None if NVML discovery/initialization failed."""
   from ctypes import CDLL
   from ctypes import byref
   from ctypes import c_int
   from ctypes import c_void_p
   from ctypes import create_string_buffer
 
-  try:
-    nvml_h = CDLL("libnvidia-ml.so.1")
+  try: nvml_h = CDLL("libnvidia-ml.so.1")
   except Exception:
     warnings.warn("Failed to find nvidia binding", stacklevel=_STACK_LEVEL)
     return None
@@ -254,7 +220,7 @@ def _validate(cls: type[DynResource], val: list[t.Any]) -> None:
 
 def _make_resource_class(name: str, resource_kind: str, docstring: str) -> type[DynResource]:
   return types.new_class(
-      name, (DynResource, ReprMixin), {"resource_id": resource_kind}, lambda ns: ns.update({"resource_id": resource_kind, "from_spec": classmethod(_from_spec), "from_system": classmethod(_from_system), "validate": classmethod(_validate), "__repr_keys__": property(lambda _: {"resource_id"}), "__doc__": inspect.cleandoc(docstring), "__module__": "openllm._strategies",}),
+    name, (bentoml.Resource[t.List[str]], ReprMixin), {"resource_id": resource_kind}, lambda ns: ns.update({"resource_id": resource_kind, "from_spec": classmethod(_from_spec), "from_system": classmethod(_from_system), "validate": classmethod(_validate), "__repr_keys__": property(lambda _: {"resource_id"}), "__doc__": inspect.cleandoc(docstring), "__module__": "openllm._strategies"}),
   )
 
 # NOTE: we need to hint these t.Literal since mypy is to dumb to infer this as literal :facepalm:

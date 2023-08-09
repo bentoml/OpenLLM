@@ -94,7 +94,7 @@ class VersionInfo:
   def __repr__(self) -> str:
     return "{0}.{1}.{2}".format(*attr.astuple(self)[:3])
 
-_sentinel, _reserved_namespace = object(), {"__openllm_special__", "__openllm_migration__"}
+_sentinel, _reserved_namespace = object(), {"__openllm_migration__"}
 
 class LazyModule(types.ModuleType):
   """Module class that surfaces all objects but only performs associated imports when the objects are requested.
@@ -102,6 +102,8 @@ class LazyModule(types.ModuleType):
   This is a direct port from transformers.utils.import_utils._LazyModule for backwards compatibility with transformers < 4.18.
 
   This is an extension a more powerful LazyLoader.
+
+  TODO: Write a mypy_extensions since LazyModule is currently not mypyc-compatible.
   """
 
   # Very heavily inspired by optuna.integration._IntegrationModule
@@ -145,18 +147,6 @@ class LazyModule(types.ModuleType):
     # they have been accessed or not. So we only add the
     # elements of self.__all__ that are not already in the dir.
     return result + [i for i in self.__all__ if i not in result]
-
-  def __getitem__(self, key: str) -> t.Any:
-    """This is reserved to only internal uses and users shouldn't use this."""
-    if self._objects.get("__openllm_special__") is None: raise openllm.exceptions.OpenLLMException(f"'{self._name}' is not allowed to be used as a dict.")
-    _special_mapping = self._objects.get("__openllm_special__", {})
-    try:
-      if key in _special_mapping: return getattr(self, _special_mapping.__getitem__(key))
-      raise openllm.exceptions.OpenLLMException(f"Requested '{key}' is not available in given mapping.")
-    except AttributeError as e:
-      raise KeyError(f"'{self._name}' has no attribute {_special_mapping[key]}") from e
-    except Exception as e:
-      raise KeyError(f"Failed to lookup '{key}' in '{self._name}'") from e
 
   def __getattr__(self, name: str) -> t.Any:
     """Equivocal __getattr__ implementation.

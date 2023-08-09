@@ -46,13 +46,9 @@ class StopSequenceCriteria(StoppingCriteria):
   def __init__(self, stop_sequences: str | list[str], tokenizer: transformers.PreTrainedTokenizer | transformers.PreTrainedTokenizerBase | transformers.PreTrainedTokenizerFast):
     if isinstance(stop_sequences, str): stop_sequences = [stop_sequences]
     self.stop_sequences, self.tokenizer = stop_sequences, tokenizer
-
-  def __call__(self, input_ids: torch.Tensor, scores: t.Any, **_: t.Any) -> bool:
-    return any(self.tokenizer.decode(input_ids.tolist()[0]).endswith(stop_sequence) for stop_sequence in self.stop_sequences)
-
+  def __call__(self, input_ids: torch.Tensor, scores: t.Any, **_: t.Any) -> bool: return any(self.tokenizer.decode(input_ids.tolist()[0]).endswith(stop_sequence) for stop_sequence in self.stop_sequences)
 class StopOnTokens(StoppingCriteria):
-  def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **_: t.Any) -> bool:
-    return t.cast(int, input_ids[0][-1]) in {50278, 50279, 50277, 1, 0}
+  def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **_: t.Any) -> bool: return t.cast(int, input_ids[0][-1]) in {50278, 50279, 50277, 1, 0}
 
 def prepare_logits_processor(config: openllm.LLMConfig) -> LogitsProcessorList:
   generation_config = config.generation_config

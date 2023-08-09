@@ -23,10 +23,10 @@ import typing as t
 import bentoml
 import openllm
 
-logger = logging.getLogger(__name__)
-
 if t.TYPE_CHECKING:
-  from ._types import LiteralRuntime
+  from ._configuration import LiteralRuntime
+
+logger = logging.getLogger(__name__)
 
 @contextlib.contextmanager
 def build_bento(model: str, model_id: str | None = None, quantize: t.Literal["int4", "int8", "gptq"] | None = None, runtime: t.Literal["ggml", "transformers"] = "transformers", cleanup: bool = False,) -> t.Iterator[bentoml.Bento]:
@@ -42,10 +42,8 @@ def build_container(bento: bentoml.Bento | str | bentoml.Tag, image_tag: str | N
   if isinstance(bento, bentoml.Bento): bento_tag = bento.tag
   else: bento_tag = bentoml.Tag.from_taglike(bento)
   if image_tag is None: image_tag = str(bento_tag)
-
   executable = shutil.which("docker")
-  if not executable:
-    raise RuntimeError("docker executable not found")
+  if not executable: raise RuntimeError("docker executable not found")
 
   try:
     logger.info("Building container for %s", bento_tag)
@@ -69,7 +67,6 @@ def prepare(model: str, model_id: str | None = None, implementation: LiteralRunt
   else: bento = bentoml.get(bento_tag)
 
   container_name = f"openllm-{model}-{llm.llm_type}".replace("-", "_")
-
   if deployment_mode == "container": container_name = clean_context.enter_context(build_container(bento, image_tag=container_name, cleanup=cleanup))
   yield container_name
   if cleanup: clean_context.close()

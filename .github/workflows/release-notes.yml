@@ -53,6 +53,22 @@ jobs:
         with:
           name: python-artefacts
           path: dist
+      - name: Download Linux x86_64 compiled artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: linux-x86_64-mypyc-wheels
+      - name: Download MacOS x86_64 compiled artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: macos-x86_64-mypyc-wheels
+      - name: Download MacOS arm64 compiled artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: macos-arm64-mypyc-wheels
+      - name: Download MacOS universal2 compiled artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: macos-universal2-mypyc-wheels
       - name: Download binaries
         uses: actions/download-artifact@v3
         with:

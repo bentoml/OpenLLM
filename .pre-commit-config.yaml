@@ -14,7 +14,7 @@
 
 ci:
   autoupdate_schedule: weekly
-  skip: [check-models-table-update, check-models-table-update, changelog-dry-run, pyright, mypy]
+  skip: [check-models-table-update, check-models-table-update, changelog-dry-run, pyright, yapf, mypy]
   autofix_commit_msg: "ci: auto fixes from pre-commit.ci\n\nFor more information, see https://pre-commit.ci"
   autoupdate_commit_msg: 'ci: pre-commit autoupdate [pre-commit.ci]'
   autofix_prs: false
@@ -39,13 +39,6 @@ repos:
         types: [python]
         exclude: ^(docs|tools|tests)
         args: [--config=pyproject.toml]
-  - repo: https://github.com/google/yapf
-    rev: v0.40.0
-    hooks:
-      - id: yapf
-        verbose: true
-        types: [python]
-        args: [--parallel, --recursive, -i]
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.4.1
     hooks:
@@ -57,7 +50,8 @@ repos:
               tools/.*|
               tests/.*|
               src/openllm/playground/.*|
-              .github/.*
+              .github/.*|
+              loc.py
           )$
         additional_dependencies:
           - click==8.1.3
@@ -85,6 +79,14 @@ repos:
       - id: check-toml
   - repo: local
     hooks:
+      - id: yapf
+        verbose: true
+        name: yapf
+        entry: ./tools/yapf
+        types: [python]
+        language: python
+        pass_filenames: false
+        additional_dependencies: ['yapf==0.40.0']
       - id: check-license-header
         name: check for license headers
         entry: ./tools/assert-license-headers
