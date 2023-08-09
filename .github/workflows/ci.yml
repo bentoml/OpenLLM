@@ -151,12 +151,12 @@ jobs:
     name: Running dry-run tests for brew
     runs-on: macos-latest
     steps:
-      name: Install tap and dry-run
-      run: |
-        brew tap bentoml/openllm https://github.com/bentoml/openllm
-        brew install openllm
-        openllm --help
-        openllm models --show-available
+      - name: Install tap and dry-run
+        run: |
+          brew tap bentoml/openllm https://github.com/bentoml/openllm
+          brew install openllm
+          openllm --help
+          openllm models --show-available
   evergreen: # https://github.com/marketplace/actions/alls-green#why
     if: always()
     needs:
