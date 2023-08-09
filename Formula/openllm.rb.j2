@@ -2,10 +2,10 @@
 # Please refers to the original template file {{ __template_file__ }}
 # vim: set ft=ruby:
 class Openllm < Formula
-  desc {{ description }}
-  homepage {{ html_url }}
+  desc "{{ description }}"
+  homepage "{{ html_url }}"
   version "{{ __tag__|replace('v', '') }}"
-  license {{ license["spdx_id"] }}
+  license "{{ license["spdx_id"] }}"
   head "{{ html_url }}, branch: {{ default_branch }}"
   url "{{ determine_release_url(svn_url, __tag__, 'archive') }}"
   sha256 "{{ shadict['archive'] }}"
