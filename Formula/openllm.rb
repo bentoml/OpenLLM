@@ -26,7 +26,17 @@ class Openllm < Formula
   end
 
   def install
-    bin.install "openllm"
+    on_linux do
+      bin.install "openllm-0.2.17-x86_64-unknown-linux-musl" => "openllm"
+    end
+  on_macos do
+    on_arm do
+      bin.install "openllm-0.2.17-aarch64-apple-darwin" => "openllm"
+    end
+    on_intel do
+      bin.install "openllm-0.2.17-x86_64-apple-darwin" => "openllm"
+    end
+  end
     ohai "To get started, run: 'openllm --help'"
     ohai "To see supported models, run: 'openllm models'"
   end

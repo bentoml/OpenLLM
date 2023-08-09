@@ -26,7 +26,17 @@ class Openllm < Formula
   end
 
   def install
-    bin.install "openllm"
+    on_linux do
+      bin.install "openllm-{{ __tag__|replace('v', '') }}-{{ __gz_extension__['linux_intel'] }}" => "openllm"
+    end
+  on_macos do
+    on_arm do
+      bin.install "openllm-{{ __tag__|replace('v', '') }}-{{ __gz_extension__['macos_arm'] }}" => "openllm"
+    end
+    on_intel do
+      bin.install "openllm-{{ __tag__|replace('v', '') }}-{{ __gz_extension__['macos_intel'] }}" => "openllm"
+    end
+  end
     ohai "To get started, run: 'openllm --help'"
     ohai "To see supported models, run: 'openllm models'"
   end
