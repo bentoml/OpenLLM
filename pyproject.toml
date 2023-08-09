@@ -127,7 +127,7 @@ build-verbosity = 1
 # So the following enviuronment will be targeted for compiled wheels:
 # - Python: CPython 3.8+ only
 # - Architecture (64-bit only): amd64 / x86_64, universal2, and arm64
-# - OS: Linux (no musl), Windows, and macOS
+# - OS: Linux (no musl), and macOS
 build = "cp3*-*"
 skip = ["*-manylinux_i686", "*-musllinux_*", "*-win32", "pp-*"]
 
@@ -302,7 +302,7 @@ BLANK_LINE_BEFORE_CLASS_DOCSTRING = false
 BLANK_LINE_BEFORE_MODULE_DOCSTRING = false
 BLANK_LINE_BEFORE_NESTED_CLASS_OR_DEF = false
 COALESCE_BRACKETS = true
-COLUMN_LIMIT = 384
+COLUMN_LIMIT = 768
 CONTINUATION_ALIGN_STYLE = "VALIGN-RIGHT"
 DEDENT_CLOSING_BRACKETS = true
 DISABLE_ENDING_COMMA_HEURISTIC = true
@@ -467,7 +467,7 @@ dependencies = [
     "types-protobuf",
 ]
 enable-by-default = false
-exclude = ["src/openllm/models/**", "src/openllm/playground/**", "src/openllm/_types.py"]
+exclude = ["src/openllm/__main__.py"]
 include = ["src/openllm/__init__.py", "src/openllm/client.py", "src/openllm/exceptions.py"]
 # NOTE: This is consistent with pyproject.toml
 mypy-args = [
@@ -475,7 +475,6 @@ mypy-args = [
     "--strict",
     # this is because all transient library doesn't have types
     "--allow-subclassing-any",
-    "--show-traceback",
     "--python-version=3.11",
     "--follow-imports=skip",
     "--ignore-missing-imports",
@@ -483,12 +482,10 @@ mypy-args = [
     "--warn-unreachable",
     "--no-warn-no-return",
     "--no-warn-unused-ignores",
-    "--enable-incomplete-feature=Unpack",
-    "--enable-incomplete-feature=TypeVarTuple",
     "--exclude='/src\\/openllm\\/models\\/**'",
     "--exclude='/src\\/openllm\\/playground\\/**'",
     "--exclude='/src\\/openllm\\/cli\\/**'",
+    "--exclude='/src\\/openllm\\/_types\\.py$'",
 ]
-options = { verbose = true, strip_asserts = true, debug_level = "2" }
+options = { verbose = true, debug_level = "2" }
 require-runtime-dependencies = true
-require-runtime-features = ["agents", "chatglm", "opt", "fine-tune"]

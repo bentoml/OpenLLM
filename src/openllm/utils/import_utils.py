@@ -178,9 +178,9 @@ def is_flax_available() -> bool:
     _flax_available = False
   return _flax_available
 
-def requires_dependencies(package: str | list[str], *, extra: str | list[str] | None = None) -> t.Callable[[t.Callable[P, t.Any]], t.Callable[P, t.Any]]:
-  import openllm.utils
+_locals = locals().copy()
 
+def requires_dependencies(package: str | list[str], *, extra: str | list[str] | None = None) -> t.Callable[[t.Callable[P, t.Any]], t.Callable[P, t.Any]]:
   if isinstance(package, str): package = [package]
   if isinstance(extra, str): extra = [extra]
 
@@ -188,7 +188,7 @@ def requires_dependencies(package: str | list[str], *, extra: str | list[str] | 
     @functools.wraps(func)
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> t.Any:
       for p in package:
-        cached_check: t.Callable[[], bool] | None = getattr(openllm.utils, f"is_{p}_available", None)
+        cached_check: t.Callable[[], bool] | None = _locals.get(f"is_{p}_available", None)
         if not ((cached_check is not None and cached_check()) or _is_package_available(p)):
           raise ImportError(f"{func.__name__} requires '{p}' to be available locally (Currently missing). Make sure to have {p} to be installed: 'pip install \"{p if not extra else 'openllm['+', '.join(extra)+']'}\"'")
       return func(*args, **kwargs)

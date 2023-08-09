@@ -74,10 +74,6 @@ jobs:
           - os: ubuntu-latest
             name: linux-x86_64
             python: 311
-          # NOTE: windows amd64
-          - os: windows-latest
-            name: windows-amd64
-            python: 311
           # NOTE: darwin amd64
           - os: macos-latest
             name: macos-x86_64
@@ -130,10 +126,6 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: linux-x86_64-mypyc-wheels
-      - name: Download Windows x86_64 compiled artifacts
-        uses: actions/download-artifact@v3
-        with:
-          name: windows-amd64-mypyc-wheels
       - name: Download MacOS x86_64 compiled artifacts
         uses: actions/download-artifact@v3
         with:

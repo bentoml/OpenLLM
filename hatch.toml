@@ -85,6 +85,7 @@ quality = [
     "- ./tools/update-brew-tap.py",
     "pre-commit run --all-files",
 ]
+rmso = ["rm src/**/*.so"]
 setup = "pre-commit install"
 typing = ["- pre-commit run mypy {args:-a}", "- pre-commit run pyright {args:-a}"]
 [envs.tests]
