@@ -69,16 +69,22 @@ repos:
           - types-tabulate
           - types-PyYAML
           - types-protobuf
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: trailing-whitespace
+        verbose: true
+      - id: end-of-file-fixer
+        verbose: true
+        exclude: |
+          (?x)^(
+              tests/models/.*
+          )$
+      - id: check-yaml
+        args: ['--unsafe']
+      - id: check-toml
   - repo: local
     hooks:
-      - id: pyright
-        name: pyright
-        entry: ./tools/pyright
-        types: [python]
-        language: node
-        pass_filenames: false
-        additional_dependencies: ['pyright@1.1.317']
-        verbose: true
       - id: check-license-header
         name: check for license headers
         entry: ./tools/assert-license-headers
@@ -108,17 +114,11 @@ repos:
         entry: hatch run changelog
         language: system
         files: CHANGELOG.md
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
-    hooks:
-      - id: trailing-whitespace
+      - id: pyright
+        name: pyright
+        entry: ./tools/pyright
+        types: [python]
+        language: node
+        pass_filenames: false
+        additional_dependencies: ['pyright@1.1.317']
         verbose: true
-      - id: end-of-file-fixer
-        verbose: true
-        exclude: |
-          (?x)^(
-              tests/models/.*
-          )$
-      - id: check-yaml
-        args: ['--unsafe']
-      - id: check-toml
