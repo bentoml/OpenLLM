@@ -861,10 +861,17 @@ class LLM(LLMInterface[M, T], ReprMixin):
   @property
   def model(self) -> M:
     # Run check for GPU
-    if DEBUG: traceback.print_stack()
     if self.config["requires_gpu"] and device_count() < 1: raise GpuNotAvailableError(f"{self} only supports running with GPU (None available).") from None
     # NOTE: the signature of load_model here is the wrapper under _wrapped_load_model
-    if self.__llm_model__ is None: self.__llm_model__ = self.load_model(*self._model_decls, **self._model_attrs)
+    if self.__llm_model__ is None:
+      model = self.load_model(*self._model_decls, **self._model_attrs)
+      # If OOM, then it is probably you don't have enough VRAM to run this model.
+      if self.__llm_implementation__ == "pt" and is_torch_available() and torch.cuda.is_available() and torch.cuda.device_count() == 1:
+        try:
+          model = model.to("cuda")
+        except Exception as err:
+          raise OpenLLMException(f"Failed to load {self} into GPU: {err}\nTip: If you run into OOM issue, maybe try different offload strategy. See https://huggingface.co/docs/transformers/v4.31.0/en/main_classes/quantization#offload-between-cpu-and-gpu for more information.") from err
+      self.__llm_model__ = model
     return self.__llm_model__
 
   @property

@@ -37,7 +37,6 @@ class GPTNeoX(openllm.LLM["transformers.GPTNeoXForCausalLM", "transformers.GPTNe
   def load_model(self, *args: t.Any, **attrs: t.Any) -> transformers.GPTNeoXForCausalLM:
     model = transformers.AutoModelForCausalLM.from_pretrained(self._bentomodel.path, *args, **attrs)
     if self.config.use_half_precision: model.half()
-    if torch.cuda.is_available() and torch.cuda.device_count() == 1: model = model.to("cuda")
     return model
 
   def generate(self, prompt: str, **attrs: t.Any) -> list[str]:

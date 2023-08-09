@@ -179,8 +179,6 @@ def load_model(llm: openllm.LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M:
 
   device_map = attrs.pop("device_map", "auto" if torch.cuda.is_available() and torch.cuda.device_count() > 1 else None)
   model = infer_autoclass_from_llm(llm, config).from_pretrained(llm._bentomodel.path, *decls, config=config, trust_remote_code=llm.__llm_trust_remote_code__, device_map=device_map, **hub_attrs, **attrs).eval()
-  # If OOM, then it is probably you don't have enough VRAM to run this model.
-  if torch.cuda.is_available() and torch.cuda.device_count() == 1: model = model.cuda()
   # BetterTransformer is currently only supported on PyTorch.
   if llm.bettertransformer and isinstance(model, transformers.PreTrainedModel): model = model.to_bettertransformer()
   if llm.__llm_implementation__ in {"pt", "vllm"}: check_unintialised_params(model)

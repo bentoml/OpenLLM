@@ -26,16 +26,9 @@ logger = logging.getLogger(__name__)
 class OPT(openllm.LLM["transformers.OPTForCausalLM", "transformers.GPT2Tokenizer"]):
   __openllm_internal__ = True
 
-  def llm_post_init(self):
-    self.dtype = torch.float16 if torch.cuda.is_available() else torch.float32
-
   @property
   def import_kwargs(self) -> tuple[dict[str, t.Any], dict[str, t.Any]]:
-    return {"device_map": "auto" if torch.cuda.is_available() and torch.cuda.device_count() > 1 else None, "torch_dtype": torch.float16 if torch.cuda.is_available() else torch.float32}, {}
-
-  def load_model(self, *args: t.Any, **attrs: t.Any) -> transformers.OPTForCausalLM:
-    torch_dtype = attrs.pop("torch_dtype", self.dtype)
-    return transformers.AutoModelForCausalLM.from_pretrained(self._bentomodel.path, *args, torch_dtype=torch_dtype, **attrs)
+    return {"torch_dtype": torch.float16 if torch.cuda.is_available() else torch.float32}, {}
 
   def sanitize_parameters(self, prompt: str, max_new_tokens: int | None = None, temperature: float | None = None, top_k: int | None = None, num_return_sequences: int | None = None, use_default_prompt_template: bool = False, **attrs: t.Any) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
     return process_prompt(prompt, DEFAULT_PROMPT_TEMPLATE, use_default_prompt_template, **attrs), {"max_new_tokens": max_new_tokens, "temperature": temperature, "top_k": top_k, "num_return_sequences": num_return_sequences}, {}
