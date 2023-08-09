@@ -46,7 +46,7 @@
     (fn chat-controls []
       [:form {:class "flex mr-2.5 mt-2"}
        [chat-input-field #(rf/dispatch on-submit-event)]
-       [:div {:class "ml-1.5 mr-0.5"} 
+       [:div {:class "ml-1.5 mr-0.5"}
         [tooltip {:title "Edit prompt layout"}
          [icon-button {:on-click #(rf/dispatch [::events/toggle-modal])
                        :color "primary"
