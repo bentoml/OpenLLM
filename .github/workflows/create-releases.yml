@@ -106,22 +106,22 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: linux-x86_64-mypyc-wheels
-          working-directory: dist
+          path: dist
       - name: Download MacOS x86_64 compiled artifacts
         uses: actions/download-artifact@v3
         with:
           name: macos-x86_64-mypyc-wheels
-          working-directory: dist
+          path: dist
       - name: Download MacOS arm64 compiled artifacts
         uses: actions/download-artifact@v3
         with:
           name: macos-arm64-mypyc-wheels
-          working-directory: dist
+          path: dist
       - name: Download MacOS universal2 compiled artifacts
         uses: actions/download-artifact@v3
         with:
           name: macos-universal2-mypyc-wheels
-          working-directory: dist
+          path: dist
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
@@ -198,6 +198,7 @@ jobs:
       tags: ${{ needs.release.outputs.version }}
   bump-homebrew-tap:
     needs:
+      - release-notes
       - prepare-next-dev-cycle
       - release
     runs-on: ubuntu-latest
@@ -208,8 +209,10 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - name: Setup python
-        uses: actions/setup-python@v4
+      - name: Setup CI
+        uses: ./.github/actions/setup-repo
+        with:
+          python-version: '3.11'
       - name: Install jq and curl
         run: sudo apt-get install -y jq curl
       - name: Import bot's GPG key for signing commits
