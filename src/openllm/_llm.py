@@ -840,11 +840,13 @@ class LLM(LLMInterface[M, T], ReprMixin):
     if self.__llm_model__ is None:
       model = self.load_model(*self._model_decls, **self._model_attrs)
       # If OOM, then it is probably you don't have enough VRAM to run this model.
-      if self.__llm_implementation__ == "pt" and is_torch_available() and torch.cuda.is_available() and torch.cuda.device_count() == 1:
-        try:
-          model = model.to("cuda")
-        except Exception as err:
-          raise OpenLLMException(f"Failed to load {self} into GPU: {err}\nTip: If you run into OOM issue, maybe try different offload strategy. See https://huggingface.co/docs/transformers/v4.31.0/en/main_classes/quantization#offload-between-cpu-and-gpu for more information.") from err
+      if self.__llm_implementation__ == "pt" and is_torch_available():
+        loaded_in_kbit = getattr(model, "is_loaded_in_8bit", False) or getattr(model, "is_loaded_in_4bit", False) or getattr(model, "is_quantized", False)
+        if torch.cuda.is_available() and torch.cuda.device_count() == 1 and not loaded_in_kbit:
+          try:
+            model = model.to("cuda")
+          except Exception as err:
+            raise OpenLLMException(f"Failed to load {self} into GPU: {err}\nTip: If you run into OOM issue, maybe try different offload strategy. See https://huggingface.co/docs/transformers/v4.31.0/en/main_classes/quantization#offload-between-cpu-and-gpu for more information.") from err
       self.__llm_model__ = model
     return self.__llm_model__
 

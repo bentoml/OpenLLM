@@ -40,9 +40,9 @@ svc = bentoml.Service(name=f"llm-{llm_config['start_name']}-service", runners=[r
 @svc.api(route="/v1/generate", input=bentoml.io.JSON.from_sample({"prompt": "", "llm_config": llm_config.model_dump(flatten=True)}),  # type: ignore[arg-type] # XXX: remove once JSON supports Attrs class
           output=bentoml.io.JSON.from_sample({"responses": [], "configuration": llm_config.model_dump(flatten=True)}))
 async def generate_v1(input_dict: dict[str, t.Any]) -> openllm.GenerationOutput:
-  qa_inputs = openllm.GenerationInput.for_model(model)(**input_dict)
+  qa_inputs = openllm.GenerationInput.from_llm_config(llm_config)(**input_dict)
   config = qa_inputs.llm_config.model_dump()
-  responses = await runner.generate.async_run(qa_inputs.prompt, **config)
+  responses = await runner.generate.async_run(qa_inputs.prompt, **{"adapter_name": qa_inputs.adapter_name, **config})
   return openllm.GenerationOutput(responses=responses, configuration=config)
 
 @svc.api(

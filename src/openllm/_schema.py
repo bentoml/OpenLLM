@@ -19,6 +19,8 @@ import typing as t
 import attr
 import inflection
 
+import openllm
+
 from ._configuration import GenerationConfig
 from ._configuration import LLMConfig
 from .utils import bentoml_cattr
@@ -30,19 +32,18 @@ if t.TYPE_CHECKING:
 class GenerationInput:
   prompt: str
   llm_config: LLMConfig
-  def model_dump(self) -> dict[str, t.Any]: return {"prompt": self.prompt, "llm_config": self.llm_config.model_dump(flatten=True)}
+  adapter_name: str | None = attr.field(default=None)
+  def model_dump(self) -> dict[str, t.Any]: return {"prompt": self.prompt, "llm_config": self.llm_config.model_dump(flatten=True), "adapter_name": self.adapter_name}
   @staticmethod
   def convert_llm_config(data: dict[str, t.Any] | LLMConfig, cls: type[LLMConfig] | None = None) -> LLMConfig:
     if isinstance(data, LLMConfig): return data
-    elif isinstance(data, dict):
+    else:
       if cls is None: raise ValueError("'cls' must pass if given data is a dictionary.")
       return cls(**data)
-    else: raise RuntimeError(f"Type {type(data)} is not yet supported.")
   @classmethod
-  def for_model(cls, model_name: str, **attrs: t.Any) -> type[GenerationInput]:
-    from .models.auto import AutoConfig
-    llm_config = AutoConfig.for_model(model_name, **attrs)
-    return attr.make_class(inflection.camelize(llm_config["model_name"]) + "GenerationInput", attrs={"prompt": attr.field(type=str), "llm_config": attr.field(type=llm_config.__class__, default=llm_config, converter=functools.partial(cls.convert_llm_config, cls=llm_config.__class__))})
+  def for_model(cls, model_name: str, **attrs: t.Any) -> type[GenerationInput]: return cls.from_llm_config(openllm.AutoConfig.for_model(model_name, **attrs))
+  @classmethod
+  def from_llm_config(cls, llm_config: openllm.LLMConfig) -> type[GenerationInput]: return attr.make_class(inflection.camelize(llm_config["model_name"]) + "GenerationInput", attrs={"prompt": attr.field(type=str), "llm_config": attr.field(type=llm_config.__class__, default=llm_config, converter=functools.partial(cls.convert_llm_config, cls=llm_config.__class__)), "adapter_name": attr.field(default=None, type=str)})
 
 @attr.frozen(slots=True)
 class GenerationOutput:
