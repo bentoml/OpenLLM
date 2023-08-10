@@ -1,10 +1,22 @@
 {
   "name": "openllm",
-  "version": "0.2.17.dev0",
+  "version": "0.2.21.dev0",
   "description": "NodeJS library for OpenLLM",
   "type": "module",
-  "repository": {"url": "git@github.com:bentoml/OpenLLM.git", "type": "git"},
-  "keywords": ["openllm", "llm", "llmops", "llama", "transformers", "gptq", "mha", "flash_attention"],
+  "repository": {
+    "url": "git@github.com:bentoml/OpenLLM.git",
+    "type": "git"
+  },
+  "keywords": [
+    "openllm",
+    "llm",
+    "llmops",
+    "llama",
+    "transformers",
+    "gptq",
+    "mha",
+    "flash_attention"
+  ],
   "author": "Aaron Pham <29749331+aarnphm@users.noreply.github.com>",
   "license": "Apache 2.0"
 }
