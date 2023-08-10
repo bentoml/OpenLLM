@@ -125,22 +125,22 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: linux-x86_64-mypyc-wheels
-          working-directory: dist
+          path: dist
       - name: Download MacOS x86_64 compiled artifacts
         uses: actions/download-artifact@v3
         with:
           name: macos-x86_64-mypyc-wheels
-          working-directory: dist
+          path: dist
       - name: Download MacOS arm64 compiled artifacts
         uses: actions/download-artifact@v3
         with:
           name: macos-arm64-mypyc-wheels
-          working-directory: dist
+          path: dist
       - name: Download MacOS universal2 compiled artifacts
         uses: actions/download-artifact@v3
         with:
           name: macos-universal2-mypyc-wheels
-          working-directory: dist
+          path: dist
       - name: dry ls
         run: ls -rthlaR
   sucess-build: # https://github.com/marketplace/actions/alls-green#why
