@@ -448,6 +448,7 @@ local_scheme = "no-local-version"
 [tool.hatch.metadata]
 allow-direct-references = true
 [tool.hatch.build.targets.wheel]
+exclude = ["/src/openllm-node"]
 only-include = ["src"]
 sources = ["src"]
 [tool.hatch.build.targets.sdist]

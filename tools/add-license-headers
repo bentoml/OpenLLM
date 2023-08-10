@@ -13,7 +13,7 @@ fi
 
 addlicense -v -l apache -c 'BentoML Team. All rights reserved.' \
     -ignore .github/workflows/binary-releases.yml \
-    -ignore src/openllm/playground/** \
+    -ignore /src/openllm/playground/** \
     -ignore tools/** \
     -ignore compile.sh \
     -ignore clean.sh \

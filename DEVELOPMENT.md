@@ -73,9 +73,9 @@ Here's a high-level overview of our project structure:
 openllm/
 ├── examples                 # Usage demonstration scripts
 ├── src
-│   ├── openllm              # Core OpenLLM library
-│   ├── openllm_client       # OpenLLM Python Client code
-│   └── openllm_js           # OpenLLM JavaScript Client code
+│   ├── openllm              # openllm core
+│   ├── openllm_client       # openllm python client
+│   └── openllm-node         # openllm nodejs library
 ├── tests                    # Automated Tests
 ├── tools                    # Utilities Script
 ├── typings                  # Typing Checking Utilities Module and Classes

@@ -21,28 +21,25 @@ To start interact with the server, you can do the following:
 """
 from __future__ import annotations
 import importlib
-import itertools
 import typing as t
 
-_import_structure: dict[str, list[str]] = {"runtimes.grpc": ["AsyncGrpcClient", "GrpcClient"], "runtimes.http": ["AsyncHTTPClient", "HTTPClient"]}
+_import_structure: dict[str, list[str]] = {"runtimes.grpc": ["AsyncGrpcClient", "GrpcClient"], "runtimes.http": ["AsyncHTTPClient", "HTTPClient"], "runtimes.base": ["BaseClient", "BaseAsyncClient"]}
 
 if t.TYPE_CHECKING:
-  from openllm_client import AsyncGrpcClient as AsyncGrpcClient
-  from openllm_client import AsyncHTTPClient as AsyncHTTPClient
-  from openllm_client import GrpcClient as GrpcClient
-  from openllm_client import HTTPClient as HTTPClient
+  from openllm_client.runtimes import AsyncGrpcClient as AsyncGrpcClient
+  from openllm_client.runtimes import AsyncHTTPClient as AsyncHTTPClient
+  from openllm_client.runtimes import BaseAsyncClient as BaseAsyncClient
+  from openllm_client.runtimes import BaseClient as BaseClient
+  from openllm_client.runtimes import GrpcClient as GrpcClient
+  from openllm_client.runtimes import HTTPClient as HTTPClient
 
 _module = "openllm_client"
 
-__all__ = list(itertools.chain.from_iterable(_import_structure.values()))
-
-def __dir__() -> list[str]:
-  return sorted(__all__)
-
+def __dir__() -> list[str]: return sorted(__all__)
 def __getattr__(name: str) -> t.Any:
   if name in _import_structure: return importlib.import_module(f".{name}", _module)
-  try:
-    module = next(module for module, attrs in _import_structure.items() if name in attrs)
-  except StopIteration:
-    raise AttributeError(f"module {_module} has no attribute {name}") from None
+  try: module = next(module for module, attrs in _import_structure.items() if name in attrs)
+  except StopIteration: raise AttributeError(f"module {_module} has no attribute {name}") from None
   return getattr(importlib.import_module(f".{module}", _module), name)
+# NOTE: Make sure to always keep this line at the bottom of the file. The update will be managed via tools/update-init-import.py
+__all__=["AsyncGrpcClient","GrpcClient","AsyncHTTPClient","HTTPClient","BaseClient","BaseAsyncClient"]
