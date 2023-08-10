@@ -4,37 +4,37 @@
 class Openllm < Formula
   desc "OpenLLM: Operating LLMs in production"
   homepage "https://github.com/bentoml/OpenLLM"
-  version "0.2.17"
+  version "0.2.18"
   license "Apache-2.0"
   head "https://github.com/bentoml/OpenLLM, branch: main"
-  url "https://github.com/bentoml/OpenLLM/archive/v0.2.17.tar.gz"
-  sha256 "8a3f3a0e8e700f512b45996b7cfbbf0146004a5583ccb8d4645689859d39c04d"
+  url "https://github.com/bentoml/OpenLLM/archive/v0.2.18.tar.gz"
+  sha256 "1a32d01d9e81ebd99222fb9700cea993f66a36846c300c855be3be849b89f60e"
 
   on_linux do
-    url "https://github.com/bentoml/OpenLLM/releases/download/v0.2.17/openllm-0.2.17-x86_64-unknown-linux-musl.tar.gz"
-    sha256 "8a880662312476793a062f8d6c5d025469848ed8970029c3a06d95a62259e1cc"
+    url "https://github.com/bentoml/OpenLLM/releases/download/v0.2.18/openllm-0.2.18-x86_64-unknown-linux-musl.tar.gz"
+    sha256 "e31c937a4cccda0f6ce5658e7b57cc683fa31062c352b6baef27b9a70ec49c0c"
   end
   on_macos do
     on_arm do
-      url "https://github.com/bentoml/OpenLLM/releases/download/v0.2.17/openllm-0.2.17-aarch64-apple-darwin.tar.gz"
-      sha256 "ae31cffc349e8e164814e888a5e708e5fe177d91cbf77c9190ad007c02614925"
+      url "https://github.com/bentoml/OpenLLM/releases/download/v0.2.18/openllm-0.2.18-aarch64-apple-darwin.tar.gz"
+      sha256 "7a645ab4ea894eb5f8cdde5aba3ec20b3286ed80544ca852503b8b78920cbd58"
     end
     on_intel do
-      url "https://github.com/bentoml/OpenLLM/releases/download/v0.2.17/openllm-0.2.17-x86_64-apple-darwin.tar.gz"
-      sha256 "364a01450b77960a96aecdbd27953b2c60c9fd5ada477ec70c97497c52fcb70d"
+      url "https://github.com/bentoml/OpenLLM/releases/download/v0.2.18/openllm-0.2.18-x86_64-apple-darwin.tar.gz"
+      sha256 "5b41cd88410a3225bd0739bb8d0a8c76c56168c35ad2fd504a0136b7eecfd6d4"
     end
   end
 
   def install
     on_linux do
-      bin.install "openllm-0.2.17-x86_64-unknown-linux-musl" => "openllm"
+      bin.install "openllm-0.2.18-x86_64-unknown-linux-musl" => "openllm"
     end
   on_macos do
     on_arm do
-      bin.install "openllm-0.2.17-aarch64-apple-darwin" => "openllm"
+      bin.install "openllm-0.2.18-aarch64-apple-darwin" => "openllm"
     end
     on_intel do
-      bin.install "openllm-0.2.17-x86_64-apple-darwin" => "openllm"
+      bin.install "openllm-0.2.18-x86_64-apple-darwin" => "openllm"
     end
   end
     ohai "To get started, run: 'openllm --help'"
