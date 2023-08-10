@@ -236,6 +236,7 @@ jobs:
           git pull --autostash --no-edit --gpg-sign --ff origin main
           SEMVER="${{ needs.release.outputs.version }}"
           SEMVER="${SEMVER#v}"
+          pip install fs jinja2 ghapi plumbum
           ./tools/update-brew-tap.py
           git add Formula && git commit -S -sm "infra: bump to homebrew tap release to ${SEMVER} [generated] [skip ci]"
           git push origin HEAD:main
