@@ -448,7 +448,7 @@ local_scheme = "no-local-version"
 [tool.hatch.metadata]
 allow-direct-references = true
 [tool.hatch.build.targets.wheel]
-files = ["src/openllm", "src/openllm_client"]
+only-include = ["src"]
 sources = ["src"]
 [tool.hatch.build.targets.sdist]
 exclude = ["/.github", "/typings", "/examples", "/assets", "/changelog.d", "/tools", ".git"]
@@ -468,7 +468,6 @@ dependencies = [
 ]
 enable-by-default = false
 exclude = [
-    "src/openllm_client/**",
     "src/openllm/bundle/**",
     "src/openllm/serialisation/**",
     "src/openllm/utils/**",
