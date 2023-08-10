@@ -92,24 +92,24 @@ from .utils import infer_auto_class as infer_auto_class
 # NOTE: torch and cpm_kernels
 try:
   if not (utils.is_torch_available() and utils.is_cpm_kernels_available()): raise exceptions.MissingDependencyError
-except exceptions.MissingDependencyError: from .utils.dummy_pt_and_cpm_kernels_objects import *
+except exceptions.MissingDependencyError: from openllm.utils.dummy_pt_and_cpm_kernels_objects import *
 else:
   from .models.baichuan import Baichuan as Baichuan
   from .models.chatglm import ChatGLM as ChatGLM
 
 try:
   if not (utils.is_torch_available() and utils.is_einops_available()): raise exceptions.MissingDependencyError
-except exceptions.MissingDependencyError: from .utils.dummy_pt_and_einops_objects import *
+except exceptions.MissingDependencyError: from openllm.utils.dummy_pt_and_einops_objects import *
 else: from .models.falcon import Falcon as Falcon
 
 try:
   if not (utils.is_torch_available() and utils.is_triton_available()): raise exceptions.MissingDependencyError
-except exceptions.MissingDependencyError: from .utils.dummy_pt_and_triton_objects import *
+except exceptions.MissingDependencyError: from openllm.utils.dummy_pt_and_triton_objects import *
 else: from .models.mpt import MPT as MPT
 
 try:
   if not utils.is_torch_available(): raise exceptions.MissingDependencyError
-except exceptions.MissingDependencyError: from .utils.dummy_pt_objects import *
+except exceptions.MissingDependencyError: from openllm.utils.dummy_pt_objects import *
 else:
   from .models.auto import MODEL_MAPPING as MODEL_MAPPING
   from .models.auto import AutoLLM as AutoLLM
@@ -123,7 +123,7 @@ else:
 
 try:
   if not utils.is_vllm_available(): raise exceptions.MissingDependencyError
-except exceptions.MissingDependencyError: from .utils.dummy_vllm_objects import *
+except exceptions.MissingDependencyError: from openllm.utils.dummy_vllm_objects import *
 else:
   from .models.auto import MODEL_VLLM_MAPPING as MODEL_VLLM_MAPPING
   from .models.auto import AutoVLLM as AutoVLLM
@@ -133,7 +133,7 @@ else:
 
 try:
   if not utils.is_flax_available(): raise exceptions.MissingDependencyError
-except exceptions.MissingDependencyError: from .utils.dummy_flax_objects import *
+except exceptions.MissingDependencyError: from openllm.utils.dummy_flax_objects import *
 else:
   from .models.auto import MODEL_FLAX_MAPPING as MODEL_FLAX_MAPPING
   from .models.auto import AutoFlaxLLM as AutoFlaxLLM
@@ -142,7 +142,7 @@ else:
 
 try:
   if not utils.is_tf_available(): raise exceptions.MissingDependencyError
-except exceptions.MissingDependencyError: from .utils.dummy_tf_objects import *
+except exceptions.MissingDependencyError: from openllm.utils.dummy_tf_objects import *
 else:
   from .models.auto import MODEL_TF_MAPPING as MODEL_TF_MAPPING
   from .models.auto import AutoTFLLM as AutoTFLLM
