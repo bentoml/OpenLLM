@@ -18,6 +18,20 @@ This changelog is managed by towncrier and is compiled at release time.
 
 <!-- towncrier release notes start -->
 
+## [0.2.21](https://github.com/bentoml/openllm/tree/v0.2.21)
+
+### Changes
+
+- Added lazy eval for compiled modules, which should speed up overall import time
+  [#200](https://github.com/bentoml/openllm/issues/200)
+
+
+### Bug fix
+
+- Fixes compiled wheels ignoring client libraries
+  [#197](https://github.com/bentoml/openllm/issues/197)
+
+
 ## [0.2.20](https://github.com/bentoml/openllm/tree/v0.2.20)
 No significant changes.
 

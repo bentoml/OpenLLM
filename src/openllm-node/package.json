@@ -1,6 +1,6 @@
 {
   "name": "openllm",
-  "version": "0.2.21.dev0",
+  "version": "0.2.21",
   "description": "NodeJS library for OpenLLM",
   "type": "module",
   "repository": {
