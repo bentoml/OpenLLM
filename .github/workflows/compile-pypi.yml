@@ -1,4 +1,4 @@
-name: Compile PyPI package
+name: PyPI package
 on:
   workflow_dispatch:
     inputs:
@@ -32,7 +32,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   pure-wheels-sdist:
-    name: Building pure wheels and sdist
+    name: Pure wheels and sdist distribution
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -50,7 +50,7 @@ jobs:
           path: dist/*
           if-no-files-found: error
   mypyc:
-    name: Building compiled mypyc wheels (cp${{ matrix.python }}-${{ matrix.name }})
+    name: Compiled mypyc wheels (cp${{ matrix.python }}-${{ matrix.name }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
