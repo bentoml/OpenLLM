@@ -1,5 +1,5 @@
+# mypy: disable-error-code="name-defined,misc"
 """Serialisation related implementation for Transformers-based implementation."""
-
 from __future__ import annotations
 import importlib
 import logging
@@ -12,6 +12,7 @@ import bentoml
 import openllm
 from bentoml._internal.configuration.containers import BentoMLContainer
 from bentoml._internal.models.model import ModelOptions
+from openllm.serialisation.transformers.weights import HfIgnore
 
 from ._helpers import (
   check_unintialised_params,
@@ -21,26 +22,20 @@ from ._helpers import (
   process_config,
   update_model,
 )
-from .weights import HfIgnore
 
 if t.TYPE_CHECKING:
   import types
 
-  import auto_gptq as autogptq
-  import torch
   import torch.nn
-  import transformers
-  import vllm
 
   from bentoml._internal.models import ModelStore
+  from openllm._llm import M, T
+  from openllm._types import DictStrAny
 
-  from ..._llm import M, T
-  from ..._types import DictStrAny
-else:
-  vllm = openllm.utils.LazyLoader("vllm", globals(), "vllm")
-  autogptq = openllm.utils.LazyLoader("autogptq", globals(), "auto_gptq")
-  transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
-  torch = openllm.utils.LazyLoader("torch", globals(), "torch")
+vllm = openllm.utils.LazyLoader("vllm", globals(), "vllm")
+autogptq = openllm.utils.LazyLoader("autogptq", globals(), "auto_gptq")
+transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
+torch = openllm.utils.LazyLoader("torch", globals(), "torch")
 
 logger = logging.getLogger(__name__)
 

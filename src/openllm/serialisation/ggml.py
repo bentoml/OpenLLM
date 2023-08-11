@@ -9,7 +9,7 @@ import bentoml
 import openllm
 
 if t.TYPE_CHECKING:
-  from .._llm import M
+  from openllm._llm import M
 
 _conversion_strategy = {"pt": "ggml"}
 

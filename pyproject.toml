@@ -280,9 +280,9 @@ required-imports = ["from __future__ import annotations"]
 avoid-escape = false
 [tool.ruff.extend-per-file-ignores]
 "src/openllm/_service.py" = ["I001", "E401"]
-"src/openllm/utils/__init__.py" = ["I001"]
 "src/openllm/cli/entrypoint.py" = ["D301"]
 "src/openllm/models/**" = ["I001", "E", "D", "F"]
+"src/openllm/utils/__init__.py" = ["I001"]
 "src/openllm/utils/import_utils.py" = ["PLW0603"]
 "src/openllm_client/runtimes/*" = ["D107"]
 "tests/**/*" = [
@@ -477,26 +477,28 @@ dependencies = [
 ]
 enable-by-default = false
 exclude = [
-    "src/openllm/models/**",  # no reason to compile model since framework is already written in C++
+    # no reason to compile model since framework is already written in C++
+    "src/openllm/models/**",
     "src/openllm/bundle/**",
-    "src/openllm/serialisation/**",
     "src/openllm/cli/**",
     "src/openllm/playground/**",
     "src/openllm/__main__.py",
     "src/openllm/_types.py",
     "src/openllm/_llm.py",
-    "src/openllm/_generation.py",
     "src/openllm/_service.py",
     "src/openllm/_configuration.py",
-    "src/openllm/_quantisation.py",
-    "src/openllm/utils/analytics.py", # not performance sensitive
+    # can't compile serialisation for transformers since it will raise segfault
+    "src/openllm/serialisation/transformers",
+    "src/openllm/utils/analytics.py",
 ]
 include = [
+    "src/openllm/serialisation",
     "src/openllm/utils/__init__.py",
     "src/openllm/__init__.py",
     "src/openllm/_prompt.py",
     "src/openllm/_schema.py",
     "src/openllm/_quantisation.py",
+    "src/openllm/_generation.py",
     "src/openllm/_strategies.py",
     "src/openllm/client.py",
     "src/openllm/exceptions.py",
