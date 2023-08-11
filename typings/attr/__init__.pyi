@@ -1,4 +1,5 @@
 import enum
+import sys
 from typing import (
     Any,
     Callable,
@@ -17,9 +18,13 @@ from typing import (
     TypeGuard,
     TypeVar,
     Union,
-    dataclass_transform,
     overload,
 )
+
+if sys.version_info[:2] >= (3, 11):
+  from typing import dataclass_transform
+else:
+  from typing_extensions import dataclass_transform
 
 from . import (
     converters as converters,
@@ -534,12 +539,10 @@ def assoc(inst: _T, **changes: Any) -> _T: ...
 def evolve(inst: _T, **changes: Any) -> _T: ...
 
 # _config --
-
 def set_run_validators(run: bool) -> None: ...
 def get_run_validators() -> bool: ...
 
 # aliases --
-
 s = attrs
 attributes = attrs
 ib = attrib
@@ -547,8 +550,7 @@ attr = attrib
 dataclass = attrs  # Technically, partial(attrs, auto_attribs=True) ;)
 
 class ReprProtocol(Protocol):
-    def __call__(__self, self: Any) -> str: ...
-
+  def __call__(__self, self: Any) -> str: ...
 def _make_init(
     cls: type[AttrsInstance],
     attrs: tuple[Attribute[Any], ...],
