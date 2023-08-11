@@ -124,7 +124,7 @@ vllm = ["vllm", "ray"]
 
 [tool.cibuildwheel]
 build-verbosity = 1
-# So the following enviuronment will be targeted for compiled wheels:
+# So the following environment will be targeted for compiled wheels:
 # - Python: CPython 3.8+ only
 # - Architecture (64-bit only): amd64 / x86_64, universal2, and arm64
 # - OS: Linux (no musl), and macOS
@@ -135,6 +135,9 @@ skip = ["*-manylinux_i686", "*-musllinux_*", "*-win32", "pp-*"]
 HATCH_BUILD_HOOKS_ENABLE = "1"
 MYPYC_DEBUG_LEVEL = "1"
 MYPYC_OPT_LEVEL = "3"
+
+[tool.cibuildwheel.macos.environment]
+MACOSX_DEPLOYMENT_TARGET = "11.0"
 
 [tool.cibuildwheel.linux]
 before-build = ["yum install -y clang gcc"]
