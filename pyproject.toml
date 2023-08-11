@@ -125,11 +125,11 @@ vllm = ["vllm", "ray"]
 [tool.cibuildwheel]
 build-verbosity = 1
 # So the following environment will be targeted for compiled wheels:
-# - Python: CPython 3.8+ only
+# - Python: CPython 3.8-3.11
 # - Architecture (64-bit only): amd64 / x86_64, universal2, and arm64
 # - OS: Linux (no musl), and macOS
 build = "cp3*-*"
-skip = ["*-manylinux_i686", "*-musllinux_*", "*-win32", "pp-*"]
+skip = ["*-manylinux_i686", "*-musllinux_*", "*-win32", "pp-*", "cp312-*"]
 
 [tool.cibuildwheel.environment]
 HATCH_BUILD_HOOKS_ENABLE = "1"
