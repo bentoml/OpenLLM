@@ -1,19 +1,22 @@
 from __future__ import annotations
-import typing as t
+import sys, typing as t
+
 import openllm
+
 if t.TYPE_CHECKING: MPTPromptType = t.Literal["default", "instruct", "chat", "storywriter"]
 else: MPTPromptType = str
 
 class MPTConfig(openllm.LLMConfig):
   """MPT is a decoder-style transformer pretrained from scratch on English text and code.
 
-    This model was trained by [MosaicML](https://www.mosaicml.com/).
+  This model was trained by [MosaicML](https://www.mosaicml.com/).
 
-    ``openllm.MPT`` encapsulate a family of MPT variants that is publicly available
-    on HuggingFace. Refers [HuggingFace's MosaicML page](https://huggingface.co/mosaicml)
-    for more details on specific models.
-    """
-  __config__ = {"name_type": "lowercase", "trust_remote_code": True, "url": "https://huggingface.co/mosaicml", "default_id": "mosaicml/mpt-7b-instruct", "timeout": int(36e6), "requirements": ["triton", "einops"], "architecture": "MPTForCausalLM", "model_ids": ["mosaicml/mpt-7b", "mosaicml/mpt-7b-instruct", "mosaicml/mpt-7b-chat", "mosaicml/mpt-7b-storywriter", "mosaicml/mpt-30b", "mosaicml/mpt-30b-instruct", "mosaicml/mpt-30b-chat"]}
+  ``openllm.MPT`` encapsulate a family of MPT variants that is publicly available
+  on HuggingFace. Refers [HuggingFace's MosaicML page](https://huggingface.co/mosaicml)
+  for more details on specific models.
+  """
+  __config__ = {"name_type": "lowercase", "trust_remote_code": True, "url": "https://huggingface.co/mosaicml", "timeout": int(36e6), "requirements": ["triton", "einops"], "architecture": "MPTForCausalLM",
+                "default_id": "mosaicml/mpt-7b-instruct", "model_ids": ["mosaicml/mpt-7b", "mosaicml/mpt-7b-instruct", "mosaicml/mpt-7b-chat", "mosaicml/mpt-7b-storywriter", "mosaicml/mpt-30b", "mosaicml/mpt-30b-instruct", "mosaicml/mpt-30b-chat"]}
   prompt_type: MPTPromptType = openllm.LLMConfig.Field('"default"', description="Given prompt type for running MPT. Default will be inferred from model name if pretrained.")
   max_sequence_length: int = openllm.LLMConfig.Field(2048, description="Max sequence length to run MPT with. Note that MPT is trained ith sequence length of 2048, but with [ALiBi](https://arxiv.org/abs/2108.12409) it can set up to 4096 (for 7b models) and 16384 (for 30b models)")
   class GenerationConfig:

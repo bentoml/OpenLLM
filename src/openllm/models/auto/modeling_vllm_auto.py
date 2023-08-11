@@ -1,8 +1,8 @@
 from __future__ import annotations
 from collections import OrderedDict
+
 from .configuration_auto import CONFIG_MAPPING_NAMES
-from .factory import BaseAutoLLMClass
-from .factory import _LazyAutoMapping
+from .factory import BaseAutoLLMClass, _LazyAutoMapping
 
 MODEL_VLLM_MAPPING_NAMES = OrderedDict([("baichuan", "VLLMBaichuan"), ("dolly_v2", "VLLMDollyV2"), ("gpt_neox", "VLLMGPTNeoX"), ("mpt", "VLLMMPT"), ("opt", "VLLMOPT"), ("stablelm", "VLLMStableLM"), ("starcoder", "VLLMStarCoder"), ("llama", "VLLMLlama")])
 MODEL_VLLM_MAPPING = _LazyAutoMapping(CONFIG_MAPPING_NAMES, MODEL_VLLM_MAPPING_NAMES)

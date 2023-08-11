@@ -13,20 +13,25 @@ import attr
 import bentoml
 from bentoml._internal.types import ModelSignatureDict as ModelSignatureDict
 
-from ._configuration import AdapterType
-from ._configuration import LiteralRuntime as LiteralRuntime
+from ._configuration import (
+  AdapterType,
+  LiteralRuntime as LiteralRuntime,
+)
 
 if t.TYPE_CHECKING:
   import peft
 
   import openllm
-  from .utils.lazy import VersionInfo
-  from .bundle.oci import LiteralContainerVersionStrategy
-  from ._llm import M as _M
-  from ._llm import T as _T
   from bentoml._internal.runner.runnable import RunnableMethod
   from bentoml._internal.runner.runner import RunnerMethod
   from bentoml._internal.runner.strategy import Strategy
+
+  from ._llm import (
+    M as _M,
+    T as _T,
+  )
+  from .bundle.oci import LiteralContainerVersionStrategy
+  from .utils.lazy import VersionInfo
 
 AnyCallable = t.Callable[..., t.Any]
 DictStrAny = dict[str, t.Any]

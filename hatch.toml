@@ -81,7 +81,7 @@ check-stubs = [
     "./tools/update-init-import.py",
     "update-dummy",
 ]
-compile = "bash ./compile.sh"
+compile = "bash ./compile.sh {args}"
 update-dummy = ["- ./tools/update-dummy.py", "./tools/update-dummy.py"]
 inplace-changelog = "towncrier build --version main --keep"
 quality = [
@@ -112,9 +112,9 @@ dependencies = [
     "hypothesis",
     "syrupy",
 ]
-features = ['flan-t5', 'baichuan']
+features = ["flan-t5", "baichuan"]
 skip-install = false
-template = 'tests'
+template = "tests"
 [envs.tests.scripts]
 _run_script = "pytest --cov --cov-report={env:COVERAGE_REPORT:term-missing} --cov-config=pyproject.toml -vv"
 distributed = "_run_script --reruns 5 --reruns-delay 3 --ignore tests/models -n 3 -r aR {args:tests}"

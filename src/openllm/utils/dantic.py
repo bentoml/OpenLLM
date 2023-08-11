@@ -1,5 +1,4 @@
-"""A shim provides usable transition from pydantic to attrs."""
-
+"""An interface provides the best of pydantic and attrs."""
 from __future__ import annotations
 import functools
 import importlib
@@ -21,10 +20,6 @@ from click import (
 
 if t.TYPE_CHECKING:
   from attr import _ValidatorType
-
-  from .._types import DictStrAny, ListAny
-else:
-  DictStrAny = dict
 
 _T = t.TypeVar("_T")
 AnyCallable = t.Callable[..., t.Any]
@@ -82,39 +77,27 @@ def Field(default: t.Any = None, *, ge: int | float | None = None, le: int | flo
   **attrs: The rest of the arguments are passed to attr.field
   """
   metadata = attrs.pop("metadata", {})
-  if description is None:
-    description = "(No description provided)"
+  if description is None: description = "(No description provided)"
   metadata["description"] = description
-  if env is not None:
-    metadata["env"] = env
+  if env is not None: metadata["env"] = env
   piped: list[_ValidatorType[t.Any]] = []
 
   converter = attrs.pop("converter", None)
-  if use_default_converter:
-    converter = functools.partial(env_converter, env=env)
+  if use_default_converter: converter = functools.partial(env_converter, env=env)
 
-  if ge is not None:
-    piped.append(attr.validators.ge(ge))
-  if le is not None:
-    piped.append(attr.validators.le(le))
-  if validator is not None:
-    piped.append(validator)
+  if ge is not None: piped.append(attr.validators.ge(ge))
+  if le is not None: piped.append(attr.validators.le(le))
+  if validator is not None: piped.append(validator)
 
-  if len(piped) == 0:
-    _validator = None
-  elif len(piped) == 1:
-    _validator = piped[0]
-  else:
-    _validator = attr.validators.and_(*piped)
+  if len(piped) == 0: _validator = None
+  elif len(piped) == 1: _validator = piped[0]
+  else: _validator = attr.validators.and_(*piped)
 
   factory = attrs.pop("factory", None)
-  if factory is not None and default is not None:
-    raise RuntimeError("'factory' and 'default' are mutually exclusive.")
+  if factory is not None and default is not None: raise RuntimeError("'factory' and 'default' are mutually exclusive.")
   # NOTE: the behaviour of this is we will respect factory over the default
-  if factory is not None:
-    attrs["factory"] = factory
-  else:
-    attrs["default"] = default
+  if factory is not None: attrs["factory"] = factory
+  else: attrs["default"] = default
 
   kw_only = attrs.pop("kw_only", False)
   if auto_default and kw_only:
@@ -142,18 +125,14 @@ def parse_type(field_type: t.Any) -> ParamType | tuple[ParamType, ...]:
   if is_literal(field_type):
     return LiteralChoice(value=field_type, case_sensitive=True)
   # modules, classes, functions
-  if is_typing(field_type):
-    return ModuleType()
+  if is_typing(field_type): return ModuleType()
   # entire dictionaries:
   # using a Dict, convert in advance
-  if is_mapping(field_type):
-    return JsonType()
+  if is_mapping(field_type): return JsonType()
   # list, List[p], Tuple[p], Set[p] and so on
-  if is_container(field_type):
-    return parse_container_args(field_type)
+  if is_container(field_type): return parse_container_args(field_type)
   # bytes are not natively supported by click
-  if lenient_issubclass(field_type, bytes):
-    return BytesType()
+  if lenient_issubclass(field_type, bytes): return BytesType()
   # return the current type: it should be a primitive
   return field_type
 
@@ -167,10 +146,8 @@ def is_typing(field_type: type) -> bool:
   bool: true if the type is itself a type
   """
   raw = t.get_origin(field_type)
-  if raw is None:
-    return False
-  if raw is type or raw is t.Type:
-    return True
+  if raw is None: return False
+  if raw is type or raw is t.Type: return True
   return False
 
 def is_literal(field_type: type) -> bool:
@@ -193,25 +170,19 @@ class ModuleType(ParamType):
 
   def _import_object(self, value: str) -> t.Any:
     module_name, class_name = value.rsplit(".", maxsplit=1)
-    if not all(s.isidentifier() for s in module_name.split(".")):
-      raise ValueError(f"'{value}' is not a valid module name")
-    if not class_name.isidentifier():
-      raise ValueError(f"Variable '{class_name}' is not a valid identifier")
+    if not all(s.isidentifier() for s in module_name.split(".")): raise ValueError(f"'{value}' is not a valid module name")
+    if not class_name.isidentifier(): raise ValueError(f"Variable '{class_name}' is not a valid identifier")
 
     module = importlib.import_module(module_name)
     if class_name:
-      try:
-        return getattr(module, class_name)
-      except AttributeError:
-        raise ImportError(f"Module '{module_name}' does not define a '{class_name}' variable.") from None
+      try: return getattr(module, class_name)
+      except AttributeError: raise ImportError(f"Module '{module_name}' does not define a '{class_name}' variable.") from None
 
   def convert(self, value: str | t.Any, param: click.Parameter | None, ctx: click.Context | None) -> t.Any:
     try:
-      if isinstance(value, str):
-        return self._import_object(value)
+      if isinstance(value, str): return self._import_object(value)
       return value
-    except Exception as exc:
-      self.fail(f"'{value}' is not a valid object ({type(exc)}: {exc!s})", param, ctx)
+    except Exception as exc: self.fail(f"'{value}' is not a valid object ({type(exc)}: {exc!s})", param, ctx)
 
 class EnumChoice(click.Choice):
   name = "enum"
@@ -225,7 +196,7 @@ class EnumChoice(click.Choice):
     """
     self.mapping = enum
     self.internal_type = type(enum)
-    choices: ListAny = [e.name for e in enum.__class__]
+    choices: list[t.Any] = [e.name for e in enum.__class__]
     super().__init__(choices, case_sensitive)
 
   def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> Enum:
@@ -356,28 +327,19 @@ def parse_single_arg(arg: type) -> ParamType:
 
 class BytesType(ParamType):
   name = "bytes"
-
   def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> t.Any:
-    if isinstance(value, bytes):
-      return value
-    try:
-      return str.encode(value)
-    except Exception as exc:
-      self.fail(f"'{value}' is not a valid string ({exc!s})", param, ctx)
+    if isinstance(value, bytes): return value
+    try: return str.encode(value)
+    except Exception as exc: self.fail(f"'{value}' is not a valid string ({exc!s})", param, ctx)
 
 CYGWIN = sys.platform.startswith("cygwin")
 WIN = sys.platform.startswith("win")
 if sys.platform.startswith("win") and WIN:
-
   def _get_argv_encoding() -> str:
     import locale
-
     return locale.getpreferredencoding()
-
 else:
-
-  def _get_argv_encoding() -> str:
-    return getattr(sys.stdin, "encoding", None) or sys.getfilesystemencoding()
+  def _get_argv_encoding() -> str: return getattr(sys.stdin, "encoding", None) or sys.getfilesystemencoding()
 
 class CudaValueType(ParamType):
   name = "cuda"
@@ -390,7 +352,6 @@ class CudaValueType(ParamType):
     if "-1" in var:
       return var[:var.index("-1")]
     return var
-
   def shell_complete(self, ctx: click.Context, param: click.Parameter, incomplete: str) -> list[sc.CompletionItem]:
     """Return a list of :class:`~click.shell_completion.CompletionItem` objects for the incomplete value.
 
@@ -401,38 +362,27 @@ class CudaValueType(ParamType):
     param: The parameter that is requesting completion.
     incomplete: Value being completed. May be empty.
     """
-    from ..utils import available_devices
-
+    from openllm.utils import available_devices
     mapping = incomplete.split(self.envvar_list_splitter) if incomplete else available_devices()
-
     return [sc.CompletionItem(str(i), help=f"CUDA device index {i}") for i in mapping]
-
   def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> t.Any:
     if isinstance(value, bytes):
       enc = _get_argv_encoding()
-      try:
-        value = value.decode(enc)
+      try: value = value.decode(enc)
       except UnicodeError:
         fs_enc = sys.getfilesystemencoding()
         if fs_enc != enc:
-          try:
-            value = value.decode(fs_enc)
-          except UnicodeError:
-            value = value.decode("utf-8", "replace")
-        else:
-          value = value.decode("utf-8", "replace")
-
+          try: value = value.decode(fs_enc)
+          except UnicodeError: value = value.decode("utf-8", "replace")
+        else: value = value.decode("utf-8", "replace")
     return tuple(self.typ(x, param, ctx) for x in value.split(","))
 
-  def __repr__(self) -> str:
-    """CUDA is a click.STRING extension."""
-    return "STRING"
+  def __repr__(self) -> str: return "STRING"
 
 CUDA = CudaValueType()
 
 class JsonType(ParamType):
   name = "json"
-
   def __init__(self, should_load: bool = True) -> None:
     """Support JSON type for click.ParamType.
 
@@ -441,11 +391,7 @@ class JsonType(ParamType):
     """
     super().__init__()
     self.should_load = should_load
-
   def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> t.Any:
-    from . import LazyType
-    if LazyType(DictStrAny).isinstance(value) or not self.should_load: return value
-    try:
-      return orjson.loads(value)
-    except orjson.JSONDecodeError as exc:
-      self.fail(f"'{value}' is not a valid JSON string ({exc!s})", param, ctx)
+    if isinstance(value, dict) or not self.should_load: return value
+    try: return orjson.loads(value)
+    except orjson.JSONDecodeError as exc: self.fail(f"'{value}' is not a valid JSON string ({exc!s})", param, ctx)

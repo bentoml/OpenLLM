@@ -1,15 +1,11 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-
 import importlib
 import os
 from pathlib import Path
 
 import openllm
-from openllm._configuration import SamplingParams
-from openllm._configuration import GenerationConfig
-from openllm._configuration import ModelSettings
-from openllm._configuration import PeftType
+from openllm._configuration import GenerationConfig, ModelSettings, PeftType, SamplingParams
 
 # currently we are assuming the indentatio level is 2 for comments
 START_COMMENT = f"# {os.path.basename(__file__)}: start\n"

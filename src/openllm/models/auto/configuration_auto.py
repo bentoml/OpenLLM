@@ -1,9 +1,12 @@
 from __future__ import annotations
 import typing as t
 from collections import OrderedDict
+
 import inflection
+
 import openllm
 from openllm.utils import ReprMixin
+
 if t.TYPE_CHECKING:
   import types
   from collections import _odict_items, _odict_keys, _odict_values
@@ -11,13 +14,11 @@ if t.TYPE_CHECKING:
   ConfigKeysView = _odict_keys[str, type[openllm.LLMConfig]]
   ConfigValuesView = _odict_values[str, type[openllm.LLMConfig]]
   ConfigItemsView = _odict_items[str, type[openllm.LLMConfig]]
-else:
-  ConfigKeysView = ConfigValuesView = ConfigItemsView = t.Any
-  ConfigOrderedDict = OrderedDict
+
 # NOTE: This is the entrypoint when adding new model config
 CONFIG_MAPPING_NAMES = OrderedDict([("chatglm", "ChatGLMConfig"), ("dolly_v2", "DollyV2Config"), ("falcon", "FalconConfig"), ("flan_t5", "FlanT5Config"), ("gpt_neox", "GPTNeoXConfig"), ("llama", "LlamaConfig"), ("mpt", "MPTConfig"), ("opt", "OPTConfig"), ("stablelm", "StableLMConfig"), ("starcoder", "StarCoderConfig"), ("baichuan", "BaichuanConfig")])
 
-class _LazyConfigMapping(ConfigOrderedDict, ReprMixin):
+class _LazyConfigMapping(OrderedDict, ReprMixin):  # type: ignore[type-arg]
   def __init__(self, mapping: OrderedDict[t.LiteralString, t.LiteralString]):
     self._mapping = mapping
     self._extra_content: dict[str, t.Any] = {}
@@ -36,12 +37,12 @@ class _LazyConfigMapping(ConfigOrderedDict, ReprMixin):
   def __repr_keys__(self) -> set[str]: return set(self._mapping.keys())
   def __repr__(self) -> str: return ReprMixin.__repr__(self)
   def __repr_args__(self) -> t.Generator[tuple[str, t.Any], t.Any, t.Any]: yield from self._mapping.items()
-  def keys(self): return t.cast(ConfigKeysView, list(self._mapping.keys()) + list(self._extra_content.keys()))
-  def values(self): return t.cast(ConfigValuesView, [self[k] for k in self._mapping.keys()] + list(self._extra_content.values()))
-  def items(self): return t.cast(ConfigItemsView, [(k, self[k]) for k in self._mapping.keys()] + list(self._extra_content.items()))
-  def __iter__(self): return iter(list(self._mapping.keys()) + list(self._extra_content.keys()))
-  def __contains__(self, item: t.Any): return item in self._mapping or item in self._extra_content
-  def register(self, key: str, value: t.Any):
+  def keys(self) -> ConfigKeysView: return t.cast("ConfigKeysView", list(self._mapping.keys()) + list(self._extra_content.keys()))
+  def values(self) -> ConfigValuesView: return t.cast("ConfigValuesView", [self[k] for k in self._mapping.keys()] + list(self._extra_content.values()))
+  def items(self) -> ConfigItemsView: return t.cast("ConfigItemsView", [(k, self[k]) for k in self._mapping.keys()] + list(self._extra_content.items()))
+  def __iter__(self) -> t.Iterator[str]: return iter(list(self._mapping.keys()) + list(self._extra_content.keys()))
+  def __contains__(self, item: t.Any) -> bool: return item in self._mapping or item in self._extra_content
+  def register(self, key: str, value: t.Any) -> None:
     if key in self._mapping.keys(): raise ValueError(f"'{key}' is already used by a OpenLLM config, pick another name.")
     self._extra_content[key] = value
 

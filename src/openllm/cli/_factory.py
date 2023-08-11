@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 import functools
 import importlib.util
@@ -136,7 +135,7 @@ Available official model_id(s): [default: {llm_config['default_id']}]
       wpr = float(wpr)
 
     # Create a new model env to work with the envvar during CLI invocation
-    env = openllm.utils.EnvVarMixin(config["model_name"], config.default_implementation(), model_id=model_id, bettertransformer=bettertransformer, quantize=quantize, runtime=runtime)
+    env = openllm.utils.EnvVarMixin(config["model_name"], config.default_implementation(), model_id=model_id or config["default_id"], bettertransformer=bettertransformer, quantize=quantize, runtime=runtime)
     prerequisite_check(ctx, config, quantize, adapter_map, int(1 / wpr))
 
     # NOTE: This is to set current configuration

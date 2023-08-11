@@ -2,7 +2,6 @@
 # To update this, run ./tools/update-dummy.py
 from __future__ import annotations
 import typing as _t
-from openllm.models.auto.factory import _LazyAutoMapping
 from openllm.utils import DummyMetaclass as _DummyMetaclass, require_backends as _require_backends
 class FlaxFlanT5(metaclass=_DummyMetaclass):
   _backends=["flax"]
@@ -13,5 +12,5 @@ class FlaxOPT(metaclass=_DummyMetaclass):
 class AutoFlaxLLM(metaclass=_DummyMetaclass):
   _backends=["flax"]
   def __init__(self,*param_decls:_t.Any,**attrs: _t.Any):_require_backends(self,["flax"])
-MODEL_FLAX_MAPPING_NAMES=_t.cast(_LazyAutoMapping, None)
+MODEL_FLAX_MAPPING_NAMES:_t.Any=None
 __all__:list[str]=["MODEL_FLAX_MAPPING_NAMES","AutoFlaxLLM","FlaxFlanT5","FlaxOPT"]

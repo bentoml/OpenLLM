@@ -2,11 +2,13 @@
 from __future__ import annotations
 import os
 import typing as t
-from collections import OrderedDict
+from pathlib import Path
 
 import openllm
-from pathlib import Path
 from openllm._configuration import LiteralRuntime
+
+if t.TYPE_CHECKING:
+  from collections import OrderedDict
 
 _ROOT = Path(__file__).parent.parent
 config_requirements = {k:[_.replace("-", "_") for _ in v.__openllm_requirements__] if v.__openllm_requirements__ else None for k,v in openllm.CONFIG_MAPPING.items()}
@@ -14,7 +16,7 @@ _dependencies: dict[LiteralRuntime,str] = {k:v for k,v in zip(LiteralRuntime.__a
 _auto: dict[str,str] = {k:v for k,v in zip(LiteralRuntime.__args__, ("AutoLLM", "AutoTFLLM", "AutoFlaxLLM", "AutoVLLM"))}
 
 def get_target_dummy_file(framework: LiteralRuntime) -> Path: return _ROOT.joinpath("src","openllm","utils",f"dummy_{framework}_objects.py")
-def mapping_names(framework: LiteralRuntime): return "MODEL_MAPPING_NAMES" if framework == 'pt' else f"MODEL_{framework.upper()}_MAPPING_NAMES"
+def mapping_names(framework: LiteralRuntime): return "MODEL_MAPPING_NAMES" if framework == "pt" else f"MODEL_{framework.upper()}_MAPPING_NAMES"
 def get_mapping(framework: LiteralRuntime) -> OrderedDict[t.Any, t.Any]: return getattr(openllm.models.auto, mapping_names(framework))
 
 def make_class_stub(model_name: str, framework: LiteralRuntime, indentation: int = 2, auto: bool = False) -> list[str]:
@@ -29,7 +31,6 @@ def write_stub(framework: LiteralRuntime, _path: str) -> list[str]:
           f"# To update this, run ./{_path}",
           "from __future__ import annotations",
           "import typing as _t",
-          "from openllm.models.auto.factory import _LazyAutoMapping",
           "from openllm.utils import DummyMetaclass as _DummyMetaclass, require_backends as _require_backends",
           ]
   base.extend([v for it in [make_class_stub(k, framework) for k in get_mapping(framework)] for v in it])
@@ -37,13 +38,13 @@ def write_stub(framework: LiteralRuntime, _path: str) -> list[str]:
   base.extend(make_class_stub("__default__", framework, auto=True))
   # mapping and export
   _imports = [f'"{v}"' for v in get_mapping(framework).values()]
-  base += [f"{mapping_names(framework)}=_t.cast(_LazyAutoMapping, None)", f"__all__:list[str]=[\"{mapping_names(framework)}\",\"{_auto[framework]}\",{','.join(_imports)}]\n"]
+  base += [f"{mapping_names(framework)}:_t.Any=None", f"__all__:list[str]=[\"{mapping_names(framework)}\",\"{_auto[framework]}\",{','.join(_imports)}]\n"]
   return base
 
 def main() -> int:
   _path = os.path.join(os.path.basename(os.path.dirname(__file__)), os.path.basename(__file__))
   for framework in _dependencies:
-    with get_target_dummy_file(framework).open('w') as f: f.write('\n'.join(write_stub(framework, _path)))
+    with get_target_dummy_file(framework).open("w") as f: f.write("\n".join(write_stub(framework, _path)))
   return 0
 
 if __name__ == "__main__": raise SystemExit(main())

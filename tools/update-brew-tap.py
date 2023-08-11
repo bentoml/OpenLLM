@@ -1,18 +1,19 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import typing as t
-
 import os
+import typing as t
+from pathlib import Path
+
 import fs
+from ghapi.all import GhApi
 from jinja2 import Environment
 from jinja2.loaders import FileSystemLoader
-from ghapi.all import GhApi
-from pathlib import Path
-from plumbum.cmd import curl, shasum, cut
+from plumbum.cmd import curl, cut, shasum
 
 if t.TYPE_CHECKING:
-  from openllm._types import DictStrAny
   from plumbum.commands.base import Pipeline
+
+  from openllm._types import DictStrAny
 
 # get git root from this file
 ROOT = Path(__file__).parent.parent
@@ -23,7 +24,7 @@ _REPO = "openllm"
 _gz_strategies: dict[t.Literal["macos_arm", "macos_intel", "linux_intel"], str] = {"macos_arm": "aarch64-apple-darwin", "macos_intel": "x86_64-apple-darwin", "linux_intel": "x86_64-unknown-linux-musl"}
 
 def determine_release_url(svn_url: str, tag: str, target: t.Literal["macos_arm", "macos_intel", "linux_intel", "archive"]) -> str:
-  if target == 'archive': return f"{svn_url}/archive/{tag}.tar.gz"
+  if target == "archive": return f"{svn_url}/archive/{tag}.tar.gz"
   return f"{svn_url}/releases/download/{tag}/openllm-{tag.replace('v', '')}-{_gz_strategies[target]}.tar.gz"
 
 # curl -sSL <svn_url>/archive/refs/tags/<tag>.tar.gz | shasum -a256 | cut -d'' -f1
@@ -36,7 +37,7 @@ def main() -> int:
   release_tag = api.repos.get_latest_release().name
 
   shadict: DictStrAny = {k: get_release_hash_command(determine_release_url(_info.svn_url, release_tag, k), release_tag)().strip() for k in _gz_strategies}
-  shadict['archive'] = get_release_hash_command(determine_release_url(_info.svn_url, release_tag, "archive"), release_tag)().strip()
+  shadict["archive"] = get_release_hash_command(determine_release_url(_info.svn_url, release_tag, "archive"), release_tag)().strip()
 
   ENVIRONMENT = Environment(extensions=["jinja2.ext.do", "jinja2.ext.loopcontrols", "jinja2.ext.debug"], trim_blocks=True, lstrip_blocks=True, loader=FileSystemLoader((ROOT / "Formula").__fspath__(), followlinks=True))
   template_file = "openllm.rb.j2"

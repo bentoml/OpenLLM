@@ -7,9 +7,7 @@ import pathlib
 import shutil
 import subprocess
 import typing as t
-from datetime import datetime
-from datetime import timedelta
-from datetime import timezone
+from datetime import datetime, timedelta, timezone
 
 import attr
 import orjson
@@ -20,8 +18,7 @@ import openllm
 if t.TYPE_CHECKING:
   from ghapi import all
 
-  from openllm._types import DictStrAny
-  from openllm._types import RefTuple
+  from openllm._types import DictStrAny, RefTuple
 else:
   all = openllm.utils.LazyLoader("all", globals(), "ghapi.all")
 

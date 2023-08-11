@@ -6,20 +6,21 @@ import logging
 import typing as t
 
 from huggingface_hub import snapshot_download
-from simple_di import Provide
-from simple_di import inject
+from simple_di import Provide, inject
 
 import bentoml
 import openllm
 from bentoml._internal.configuration.containers import BentoMLContainer
 from bentoml._internal.models.model import ModelOptions
 
-from ._helpers import check_unintialised_params
-from ._helpers import infer_autoclass_from_llm
-from ._helpers import infer_tokenizers_from_llm
-from ._helpers import make_model_signatures
-from ._helpers import process_config
-from ._helpers import update_model
+from ._helpers import (
+  check_unintialised_params,
+  infer_autoclass_from_llm,
+  infer_tokenizers_from_llm,
+  make_model_signatures,
+  process_config,
+  update_model,
+)
 from .weights import HfIgnore
 
 if t.TYPE_CHECKING:
@@ -33,8 +34,7 @@ if t.TYPE_CHECKING:
 
   from bentoml._internal.models import ModelStore
 
-  from ..._llm import M
-  from ..._llm import T
+  from ..._llm import M, T
   from ..._types import DictStrAny
 else:
   vllm = openllm.utils.LazyLoader("vllm", globals(), "vllm")

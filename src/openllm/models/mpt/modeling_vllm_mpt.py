@@ -14,18 +14,20 @@
 from __future__ import annotations
 import logging
 import typing as t
+
 import openllm
+from openllm._prompt import process_prompt
+
 from .configuration_mpt import DEFAULT_PROMPT_TEMPLATE, MPTPromptType
-from ..._prompt import process_prompt
+
 if t.TYPE_CHECKING:
-  import vllm, transformers
+  import transformers
+  import vllm
 
 logger = logging.getLogger(__name__)
-
 class VLLMMPT(openllm.LLM["vllm.LLMEngine", "transformers.GPTNeoXTokenizerFast"]):
   __openllm_internal__ = True
   tokenizer_id = "local"
-
   def sanitize_parameters(self, prompt: str, max_new_tokens: int | None = None, temperature: float | None = None, top_p: float | None = None, prompt_type: MPTPromptType | None = None, use_default_prompt_template: bool = True, **attrs: t.Any,) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
     _template = None
     if use_default_prompt_template:

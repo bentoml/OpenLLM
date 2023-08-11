@@ -193,7 +193,7 @@ extend-exclude = [
     "tools",
     "examples",
     "src/openllm/playground",
-    "src/openllm/models",
+    "src/openllm/__init__.py",
     "src/openllm/_types.py",
     "src/openllm/_version.py",
     "src/openllm/utils/dummy_*.py",
@@ -279,11 +279,10 @@ required-imports = ["from __future__ import annotations"]
 [tool.ruff.flake8-quotes]
 avoid-escape = false
 [tool.ruff.extend-per-file-ignores]
-# Tests can use magic values, assertions, and relative imports
-"__init__.py" = ["E402", "F401", "F403", "F811", "I001", "F405"]
 "src/openllm/_service.py" = ["I001", "E401"]
+"src/openllm/utils/__init__.py" = ["I001"]
 "src/openllm/cli/entrypoint.py" = ["D301"]
-"src/openllm/utils/dummy_*" = ["D107"]
+"src/openllm/models/**" = ["I001", "E", "D", "F"]
 "src/openllm/utils/import_utils.py" = ["PLW0603"]
 "src/openllm_client/runtimes/*" = ["D107"]
 "tests/**/*" = [
@@ -293,7 +292,7 @@ avoid-escape = false
     "PT011",  # ignore too broad raises, as it can be use pytest.raises().match()
     "S307",   # Ignore eval(compile) as it is a known script execution
 ]
-"typings/**/*" = ["D", "F", "E", "PYI002"]
+"typings/**" = ["D", "F", "E"]
 
 [tool.yapf]
 ALIGN_CLOSING_BRACKET_WITH_VISUAL_INDENT = true
@@ -478,21 +477,22 @@ dependencies = [
 ]
 enable-by-default = false
 exclude = [
+    "src/openllm/models/**",  # no reason to compile model since framework is already written in C++
     "src/openllm/bundle/**",
     "src/openllm/serialisation/**",
-    "src/openllm/utils/**",
     "src/openllm/cli/**",
+    "src/openllm/playground/**",
     "src/openllm/__main__.py",
     "src/openllm/_types.py",
+    "src/openllm/_llm.py",
     "src/openllm/_generation.py",
     "src/openllm/_service.py",
     "src/openllm/_configuration.py",
     "src/openllm/_quantisation.py",
-    "src/openllm/_llm.py",
-    "src/openllm/playground/**",
-    "src/openllm/models/**",
+    "src/openllm/utils/analytics.py", # not performance sensitive
 ]
 include = [
+    "src/openllm/utils/__init__.py",
     "src/openllm/__init__.py",
     "src/openllm/_prompt.py",
     "src/openllm/_schema.py",
@@ -516,7 +516,6 @@ mypy-args = [
     "--warn-unreachable",
     "--no-warn-no-return",
     "--no-warn-unused-ignores",
-    "--exclude='/src\\/openllm\\/models\\/**'",
     "--exclude='/src\\/openllm\\/playground\\/**'",
     "--exclude='/src\\/openllm\\/_types\\.py$'",
 ]

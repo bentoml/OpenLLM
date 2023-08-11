@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-
-from decimal import ROUND_DOWN
-from decimal import Decimal
+from decimal import ROUND_DOWN, Decimal
 from pathlib import Path
 
 import orjson
