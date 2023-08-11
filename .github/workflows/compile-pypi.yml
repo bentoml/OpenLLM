@@ -50,7 +50,7 @@ jobs:
           path: dist/*
           if-no-files-found: error
   mypyc:
-    name: Compiled mypyc wheels (cp${{ matrix.python }}-${{ matrix.name }})
+    name: Compiled mypyc wheels (${{ matrix.name }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
