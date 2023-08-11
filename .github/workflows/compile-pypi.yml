@@ -82,6 +82,7 @@ jobs:
       - name: Build wheels via cibuildwheel
         uses: pypa/cibuildwheel@v2.15.0
         env:
+          CIBW_BEFORE_BUILD_MACOS: "rustup target add aarch64-apple-darwin"
           CIBW_ARCHS_MACOS: "${{ matrix.macos_arch }}"
           MYPYPATH: /project/typings
       - name: Upload wheels as workflow artifacts
