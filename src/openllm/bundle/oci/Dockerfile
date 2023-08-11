@@ -106,7 +106,7 @@ EOT
 # NOTE: Build auto-gptq CUDA kernels
 FROM kernel-builder as auto-gptq-builder
 
-ENV COMMIT_HASH a7167b108c438f570938f0ced46a52fe515f4a59
+ENV COMMIT_HASH 18326851213568df3c5bbbb1169fe51c7f7d6c60
 ARG COMMIT_HASH=${COMMIT_HASH}
 
 WORKDIR /usr/src
