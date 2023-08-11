@@ -100,7 +100,7 @@ jobs:
         with:
           python-version: 3.9
       - name: Build wheels via cibuildwheel
-        uses: pypa/cibuildwheel@v2.14.1
+        uses: pypa/cibuildwheel@v2.15.0
         env:
           CIBW_BUILD: cp${{ matrix.python }}-*
           CIBW_ARCHS_MACOS: "${{ matrix.macos_arch }}"
