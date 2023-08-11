@@ -22,9 +22,7 @@ import openllm
 if t.TYPE_CHECKING:
   import contextlib
 
-  from .conftest import HandleProtocol
-  from .conftest import ResponseComparator
-  from .conftest import _Handle
+  from .conftest import HandleProtocol, ResponseComparator, _Handle
 
 model = "flan_t5"
 model_id = "google/flan-t5-small"

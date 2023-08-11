@@ -196,6 +196,8 @@ extend-exclude = [
     "src/openllm/models",
     "src/openllm/_types.py",
     "src/openllm/_version.py",
+    "src/openllm/utils/dummy_*.py",
+    "src/openllm/models/__init__.py",
 ]
 extend-include = ["*.ipynb"]
 extend-select = [
@@ -264,12 +266,16 @@ convention = "google"
 [tool.ruff.pycodestyle]
 ignore-overlong-task-comments = true
 [tool.ruff.isort]
-force-single-line = true
+combine-as-imports = true
+force-single-line = false
+force-wrap-aliases = true
 known-first-party = ["openllm", "bentoml"]
 known-third-party = ["transformers", "click", "huggingface_hub", "torch", "vllm", "auto_gptq"]
 lines-after-imports = 1
+lines-between-types = 0
 no-lines-before = ["future", "standard-library"]
 relative-imports-order = "closest-to-furthest"
+required-imports = ["from __future__ import annotations"]
 [tool.ruff.flake8-quotes]
 avoid-escape = false
 [tool.ruff.extend-per-file-ignores]
@@ -351,6 +357,7 @@ exclude_lines = [
     "pragma: no cover",
     "if __name__ == .__main__.:",
     "if t.TYPE_CHECKING:",
+    "if _t.TYPE_CHECKING:",
     'if TYPE_CHECKING:',
     'if typing.TYPE_CHECKING:',
     'if t.TYPE_CHECKING and not MYPY:',
@@ -397,6 +404,8 @@ reportPrivateUsage = "warning"
 reportUnknownArgumentType = "warning"
 reportUnknownMemberType = "warning"
 reportUnknownVariableType = "warning"
+reportUnsupportedDunderAll = "warning"
+reportWildcardImportFromLibrary = "warning"
 typeCheckingMode = "strict"
 
 [tool.mypy]

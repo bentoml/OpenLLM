@@ -75,19 +75,23 @@ dependencies = [
 ]
 [envs.default.scripts]
 changelog = "towncrier build --version main --draft"
+check-stubs = [
+    "./tools/update-config-stubs.py",
+    "./tools/update-models-import.py",
+    "./tools/update-init-import.py",
+    "update-dummy",
+]
 compile = "bash ./compile.sh"
+update-dummy = ["- ./tools/update-dummy.py", "./tools/update-dummy.py"]
 inplace-changelog = "towncrier build --version main --keep"
 quality = [
     "./tools/dependencies.py",
     "./tools/update-readme.py",
-    "./tools/update-config-stubs.py",
-    "./tools/update-models-import.py",
-    "./tools/update-init-import.py",
-    "- ./tools/add-license-headers .",
     "- ./tools/update-brew-tap.py",
+    "check-stubs",
     "pre-commit run --all-files",
 ]
-recompile = ["bash ./clean.sh", "bash ./compile.sh"]
+recompile = ["bash ./clean.sh", "compile"]
 setup = "pre-commit install"
 typing = ["- pre-commit run mypy {args:-a}", "- pre-commit run pyright {args:-a}"]
 [envs.tests]

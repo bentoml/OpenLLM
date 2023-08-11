@@ -1,9 +1,4 @@
-from typing import Any
-from typing import Callable
-from typing import List
-from typing import Optional
-from typing import TypeAlias
-from typing import Union
+from typing import Any, Callable, List, Optional, TypeAlias, Union
 
 _StringOrFunction: TypeAlias = Union[str, Callable[..., Any]]
 STRATEGY_END: object = ...

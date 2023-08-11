@@ -1,9 +1,4 @@
-from typing import Any
-from typing import Dict
-from typing import List
-from typing import Tuple
-from typing import TypeAlias
-from typing import Union
+from typing import Any, Dict, List, Tuple, TypeAlias, Union
 
 from .strategy.core import StrategyList
 from .strategy.dict import DictStrategies

@@ -1,4 +1,6 @@
-from . import _CountingAttr as _CountingAttr
-from . import _make_init as _make_init
-from . import _make_repr as _make_repr
-from . import _transform_attrs as _transform_attrs
+from . import (
+    _CountingAttr as _CountingAttr,
+    _make_init as _make_init,
+    _make_repr as _make_repr,
+    _transform_attrs as _transform_attrs,
+)

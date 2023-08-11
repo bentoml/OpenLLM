@@ -1,16 +1,3 @@
-# Copyright 2023 BentoML Team. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
 from __future__ import annotations
 import itertools
@@ -21,8 +8,7 @@ import subprocess
 import sys
 import typing as t
 
-from simple_di import Provide
-from simple_di import inject
+from simple_di import Provide, inject
 
 import bentoml
 import openllm
@@ -34,10 +20,8 @@ from ._factory import start_command_factory
 
 if t.TYPE_CHECKING:
   from bentoml._internal.bento import BentoStore
-  from openllm._configuration import LiteralRuntime
-  from openllm._configuration import LLMConfig
-  from openllm.bundle.oci import LiteralContainerRegistry
-  from openllm.bundle.oci import LiteralContainerVersionStrategy
+  from openllm._configuration import LiteralRuntime, LLMConfig
+  from openllm.bundle.oci import LiteralContainerRegistry, LiteralContainerVersionStrategy
 
 logger = logging.getLogger(__name__)
 
@@ -84,8 +68,7 @@ def _start(
       framework: The framework to use for this LLM. By default, this is set to ``pt``.
       additional_args: Additional arguments to pass to ``openllm start``.
   """
-  from .entrypoint import start_command
-  from .entrypoint import start_grpc_command
+  from .entrypoint import start_command, start_grpc_command
   fast = os.environ.get("OPENLLM_FAST", str(fast)).upper() in openllm.utils.ENV_VARS_TRUE_VALUES
   llm_config = openllm.AutoConfig.for_model(model_name)
   _ModelEnv = openllm.utils.EnvVarMixin(model_name, openllm.utils.first_not_none(framework, default=llm_config.default_implementation()), model_id=model_id, bettertransformer=bettertransformer, quantize=quantize, runtime=runtime)

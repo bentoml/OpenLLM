@@ -1,16 +1,3 @@
-# Copyright 2023 BentoML Team. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 from __future__ import annotations
 import openllm
 
@@ -28,10 +15,7 @@ class ChatGLMConfig(openllm.LLMConfig):
 
     Refer to [ChatGLM's GitHub page](https://github.com/THUDM/ChatGLM-6B) for more information.
     """
-  __config__ = {
-      "name_type": "lowercase", "trust_remote_code": True, "timeout": 3600000, "requires_gpu": True, "url": "https://github.com/THUDM/ChatGLM-6B", "requirements": ["cpm-kernels", "sentencepiece"], "architecture": "ChatGLMForConditionalGeneration", "default_id": "thudm/chatglm-6b",
-      "model_ids": ["thudm/chatglm-6b", "thudm/chatglm-6b-int8", "thudm/chatglm-6b-int4", "thudm/chatglm2-6b", "thudm/chatglm2-6b-int4",],
-  }
+  __config__ = {"name_type": "lowercase", "trust_remote_code": True, "timeout": 3600000, "requires_gpu": True, "url": "https://github.com/THUDM/ChatGLM-6B", "requirements": ["cpm-kernels", "sentencepiece"], "architecture": "ChatGLMForConditionalGeneration", "default_id": "thudm/chatglm-6b", "model_ids": ["thudm/chatglm-6b", "thudm/chatglm-6b-int8", "thudm/chatglm-6b-int4", "thudm/chatglm2-6b", "thudm/chatglm2-6b-int4"]}
   retain_history: bool = openllm.LLMConfig.Field(False, description="""Whether to retain history given to the model.
         If set to True, then the model will retain given history.""",)
   use_half_precision: bool = openllm.LLMConfig.Field(True, description="Whether to use half precision for model.")

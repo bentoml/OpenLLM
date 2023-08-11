@@ -1,16 +1,3 @@
-# Copyright 2023 BentoML Team. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 """Utilities function for OpenLLM.
 
 User can import these function for convenience, but
@@ -51,23 +38,16 @@ from .lazy import VersionInfo as VersionInfo
 
 logger = logging.getLogger(__name__)
 
-try:
-  from typing import GenericAlias as _TypingGenericAlias  # type: ignore
-except ImportError:
-  # python < 3.9 does not have GenericAlias (list[int], tuple[str, ...] and so on)
-  _TypingGenericAlias = ()  # type: ignore
+try: from typing import GenericAlias as _TypingGenericAlias  # type: ignore
+except ImportError: _TypingGenericAlias = ()  # type: ignore # python < 3.9 does not have GenericAlias (list[int], tuple[str, ...] and so on)
 
 if sys.version_info < (3, 10): _WithArgsTypes = (_TypingGenericAlias,)
-else:
-  #  _GenericAlias is the actual GenericAlias implementation
-  _WithArgsTypes: t.Any = (t._GenericAlias, types.GenericAlias, types.UnionType)  # type: ignore
+else: _WithArgsTypes: t.Any = (t._GenericAlias, types.GenericAlias, types.UnionType)  # type: ignore #  _GenericAlias is the actual GenericAlias implementation
 
 # NOTE: We need to do this so that overload can register
 # correct overloads to typing registry
-if sys.version_info[:2] >= (3, 11):
-  from typing import overload as _overload
-else:
-  from typing_extensions import overload as _overload
+if sys.version_info[:2] >= (3, 11): from typing import overload as _overload
+else: from typing_extensions import overload as _overload
 
 if t.TYPE_CHECKING:
   import openllm

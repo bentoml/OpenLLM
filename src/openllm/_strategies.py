@@ -1,16 +1,3 @@
-# Copyright 2023 BentoML Team. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
 from __future__ import annotations
 import functools
@@ -26,12 +13,10 @@ import warnings
 import psutil
 
 import bentoml
-from bentoml._internal.resource import get_resource
-from bentoml._internal.resource import system_resources
+from bentoml._internal.resource import get_resource, system_resources
 from bentoml._internal.runner.strategy import THREAD_ENVS
 
-from .utils import DEBUG
-from .utils import ReprMixin
+from .utils import DEBUG, ReprMixin
 
 class DynResource(t.Protocol):
   resource_id: t.ClassVar[str]
@@ -113,12 +98,10 @@ def _from_system(cls: type[DynResource]) -> list[str]:
       # we don't want to use CLI because parsing is a pain.
       sys.path.append("/opt/rocm/libexec/rocm_smi")
       try:
-        from ctypes import byref
-        from ctypes import c_uint32
+        from ctypes import byref, c_uint32
 
         # refers to https://github.com/RadeonOpenCompute/rocm_smi_lib/blob/master/python_smi_tools/rsmiBindings.py
-        from rsmiBindings import rocmsmi
-        from rsmiBindings import rsmi_status_t
+        from rsmiBindings import rocmsmi, rsmi_status_t
 
         device_count = c_uint32(0)
         ret = rocmsmi.rsmi_num_monitor_devices(byref(device_count))
@@ -158,11 +141,7 @@ def _from_spec(cls: type[DynResource], spec: t.Any) -> list[str]:
   else: raise TypeError(f"'{cls.__name__}.from_spec' only supports parsing spec of type int, str, or list, got '{type(spec)}' instead.")
 
 def _raw_device_uuid_nvml() -> list[str] | None:
-  from ctypes import CDLL
-  from ctypes import byref
-  from ctypes import c_int
-  from ctypes import c_void_p
-  from ctypes import create_string_buffer
+  from ctypes import CDLL, byref, c_int, c_void_p, create_string_buffer
 
   try: nvml_h = CDLL("libnvidia-ml.so.1")
   except Exception:

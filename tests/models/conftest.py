@@ -20,8 +20,7 @@ import logging
 import sys
 import time
 import typing as t
-from abc import ABC
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 
 import attr
 import docker
@@ -41,14 +40,10 @@ if t.TYPE_CHECKING:
 
   from openllm_client.runtimes.base import BaseAsyncClient
   from syrupy.assertion import SnapshotAssertion
-  from syrupy.types import PropertyFilter
-  from syrupy.types import PropertyMatcher
-  from syrupy.types import SerializableData
-  from syrupy.types import SerializedData
+  from syrupy.types import PropertyFilter, PropertyMatcher, SerializableData, SerializedData
 
   from openllm._configuration import GenerationConfig
-  from openllm._types import DictStrAny
-  from openllm._types import ListAny
+  from openllm._types import DictStrAny, ListAny
 
 else:
   DictStrAny = dict

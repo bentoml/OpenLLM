@@ -1,16 +1,3 @@
-# Copyright 2023 BentoML Team. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 """A shim provides usable transition from pydantic to attrs."""
 
 from __future__ import annotations
@@ -26,15 +13,16 @@ import click
 import click_option_group as cog
 import inflection
 import orjson
-from click import ParamType
-from click import shell_completion as sc
-from click import types as click_types
+from click import (
+  ParamType,
+  shell_completion as sc,
+  types as click_types,
+)
 
 if t.TYPE_CHECKING:
   from attr import _ValidatorType
 
-  from .._types import DictStrAny
-  from .._types import ListAny
+  from .._types import DictStrAny, ListAny
 else:
   DictStrAny = dict
 

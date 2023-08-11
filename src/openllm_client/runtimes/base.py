@@ -1,16 +1,3 @@
-# Copyright 2023 BentoML Team. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 from __future__ import annotations
 import asyncio
 import logging
@@ -38,8 +25,7 @@ T = t.TypeVar("T")
 if t.TYPE_CHECKING:
   import transformers
 
-  from openllm._types import DictStrAny
-  from openllm._types import LiteralRuntime
+  from openllm._types import DictStrAny, LiteralRuntime
 
   class AnnotatedClient(Client, t.Generic[T]):
     def health(self, *args: t.Any, **attrs: t.Any) -> t.Any:
@@ -310,9 +296,7 @@ class BaseAsyncClient(ClientMeta[T]):
     return_code = kwargs.pop("return_code", False)
     remote = kwargs.pop("remote", False)
 
-    from transformers.tools.agents import clean_code_for_run
-    from transformers.tools.agents import get_tool_creation_code
-    from transformers.tools.agents import resolve_tools
+    from transformers.tools.agents import clean_code_for_run, get_tool_creation_code, resolve_tools
     from transformers.tools.python_interpreter import evaluate
 
     _hf_agent = self._hf_agent

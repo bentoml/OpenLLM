@@ -1,16 +1,3 @@
-# Copyright 2023 BentoML Team. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
 from __future__ import annotations
 import functools
@@ -108,7 +95,7 @@ class LazyModule(types.ModuleType):
 
   # Very heavily inspired by optuna.integration._IntegrationModule
   # https://github.com/optuna/optuna/blob/master/optuna/integration/__init__.py
-  def __init__(self, name: str, module_file: str, import_structure: dict[str, list[str]], module_spec: importlib.machinery.ModuleSpec | None = None, doc: str | None = None, extra_objects: dict[str, t.Any] | None = None,):
+  def __init__(self, name: str, module_file: str, import_structure: dict[str, list[str]], module_spec: importlib.machinery.ModuleSpec | None = None, doc: str | None = None, extra_objects: dict[str, t.Any] | None = None):
     """Lazily load this module as an object.
 
     It does instantiate a __all__ and __dir__ for IDE support
@@ -181,13 +168,8 @@ class LazyModule(types.ModuleType):
     else: raise AttributeError(f"module {self.__name__} has no attribute {name}")
     setattr(self, name, value)
     return value
-
   def _get_module(self, module_name: str) -> types.ModuleType:
-    try:
-      return importlib.import_module("." + module_name, self.__name__)
-    except Exception as e:
-      raise RuntimeError(f"Failed to import {self.__name__}.{module_name} because of the following error (look up to see its traceback):\n{e}") from e
-
-  def __reduce__(self) -> tuple[type[LazyModule], tuple[str, str | None, dict[str, list[str]]]]:
-    """This is to ensure any given module is pickle-able."""
-    return (self.__class__, (self._name, self.__file__, self._import_structure))
+    try: return importlib.import_module("." + module_name, self.__name__)
+    except Exception as e: raise RuntimeError(f"Failed to import {self.__name__}.{module_name} because of the following error (look up to see its traceback):\n{e}") from e
+  # make sure this module is picklable
+  def __reduce__(self) -> tuple[type[LazyModule], tuple[str, str | None, dict[str, list[str]]]]: return (self.__class__, (self._name, self.__file__, self._import_structure))

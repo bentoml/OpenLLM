@@ -1,16 +1,3 @@
-# Copyright 2023 BentoML Team. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
 from __future__ import annotations
 import functools
@@ -30,9 +17,7 @@ if t.TYPE_CHECKING:
 
   import openllm
 
-  from .._types import AnyCallable
-  from .._types import DictStrAny
-  from .._types import ListStr
+  from .._types import AnyCallable, DictStrAny, ListStr
 
   PartialAny = functools.partial[t.Any]
 else:
@@ -179,8 +164,7 @@ def generate_function(typ: type[t.Any], func_name: str, lines: list[str] | None,
   return meth
 
 def make_env_transformer(cls: type[openllm.LLMConfig], model_name: str, suffix: t.LiteralString | None = None, default_callback: t.Callable[[str, t.Any], t.Any] | None = None, globs: DictStrAny | None = None,) -> AnyCallable:
-  from . import dantic
-  from . import field_env_key
+  from . import dantic, field_env_key
 
   def identity(_: str, x_value: t.Any) -> t.Any: return x_value
   default_callback = identity if default_callback is None else default_callback

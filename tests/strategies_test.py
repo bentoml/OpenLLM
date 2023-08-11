@@ -24,8 +24,7 @@ if t.TYPE_CHECKING:
 import bentoml
 from bentoml._internal.resource import get_resource
 from openllm import _strategies as strategy
-from openllm._strategies import CascadingResourceStrategy
-from openllm._strategies import NvidiaGpuResource
+from openllm._strategies import CascadingResourceStrategy, NvidiaGpuResource
 
 def test_nvidia_gpu_resource_from_env(monkeypatch: pytest.MonkeyPatch):
   with monkeypatch.context() as mcls:

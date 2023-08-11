@@ -2,9 +2,7 @@
 
 Can probably be replaced by types.SimpleNamespace from Python 3.3
 """
-from typing import Any
-from typing import Dict
-from typing import Self
+from typing import Any, Dict, Self
 
 class Struct(Dict[str, Any]):
     _allownew: bool = True
