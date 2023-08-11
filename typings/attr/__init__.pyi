@@ -9,22 +9,19 @@ from typing import (
     Literal,
     Mapping,
     Optional,
-    ParamSpec,
     Protocol,
     Sequence,
     Tuple,
     Type,
-    TypeAlias,
-    TypeGuard,
     TypeVar,
     Union,
     overload,
 )
 
 if sys.version_info[:2] >= (3, 11):
-  from typing import dataclass_transform
+  from typing import ParamSpec, TypeAlias, TypeGuard, dataclass_transform
 else:
-  from typing_extensions import dataclass_transform
+  from typing_extensions import ParamSpec, TypeAlias, TypeGuard, dataclass_transform
 
 from . import (
     converters as converters,

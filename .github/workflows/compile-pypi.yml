@@ -56,55 +56,20 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # NOTE: ubuntu x86
           - os: ubuntu-latest
             name: linux-x86_64
-            python: 311
-          - os: ubuntu-latest
-            name: linux-x86_64
-            python: 310
-          - os: ubuntu-latest
-            name: linux-x86_64
-            python: 39
           # NOTE: darwin amd64
           - os: macos-latest
             name: macos-x86_64
             macos_arch: "x86_64"
-            python: 311
-          - os: macos-latest
-            name: macos-x86_64
-            macos_arch: "x86_64"
-            python: 310
-          - os: macos-latest
-            name: macos-x86_64
-            macos_arch: "x86_64"
-            python: 39
           # NOTE: darwin arm64
           - os: macos-latest
             name: macos-arm64
             macos_arch: "arm64"
-            python: 311
-          - os: macos-latest
-            name: macos-arm64
-            macos_arch: "arm64"
-            python: 310
-          - os: macos-latest
-            name: macos-arm64
-            macos_arch: "arm64"
-            python: 39
           # NOTE: darwin universal2
           - os: macos-latest
             name: macos-universal2
             macos_arch: "universal2"
-            python: 311
-          - os: macos-latest
-            name: macos-universal2
-            macos_arch: "universal2"
-            python: 310
-          - os: macos-latest
-            name: macos-universal2
-            macos_arch: "universal2"
-            python: 39
     steps:
       - uses: actions/checkout@v3
         with:
@@ -117,7 +82,6 @@ jobs:
       - name: Build wheels via cibuildwheel
         uses: pypa/cibuildwheel@v2.15.0
         env:
-          CIBW_BUILD: cp${{ matrix.python }}-*
           CIBW_ARCHS_MACOS: "${{ matrix.macos_arch }}"
           MYPYPATH: /project/typings
       - name: Upload wheels as workflow artifacts
