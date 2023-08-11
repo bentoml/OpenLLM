@@ -13,7 +13,6 @@ on:
       - ".github/workflows/build.yaml"
       - "src/openllm/bundle/oci/Dockerfile"
       - "src/openllm/**"
-      - "src/openllm_client/**"
 env:
   LINES: 120
   COLUMNS: 120

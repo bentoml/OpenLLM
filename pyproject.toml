@@ -284,7 +284,7 @@ avoid-escape = false
 "src/openllm/models/**" = ["I001", "E", "D", "F"]
 "src/openllm/utils/__init__.py" = ["I001"]
 "src/openllm/utils/import_utils.py" = ["PLW0603"]
-"src/openllm_client/runtimes/*" = ["D107"]
+"src/openllm/client/runtimes/*" = ["D107"]
 "tests/**/*" = [
     "S101",
     "TID252",
@@ -395,7 +395,7 @@ exclude = [
     "examples",
     "tests",
 ]
-include = ["src/openllm", "src/openllm_client"]
+include = ["src/openllm"]
 pythonVersion = "3.12"
 reportMissingImports = "warning"
 reportMissingTypeStubs = false
@@ -411,7 +411,7 @@ typeCheckingMode = "strict"
 # TODO: Enable model for strict type checking
 exclude = ["src/openllm/playground/", "src/openllm/utils/dummy_*.py", "src/openllm/models"]
 local_partial_types = true
-modules = ["openllm", "openllm_client"]
+modules = ["openllm"]
 mypy_path = "typings"
 pretty = true
 python_version = "3.11"
@@ -500,7 +500,6 @@ include = [
     "src/openllm/_quantisation.py",
     "src/openllm/_generation.py",
     "src/openllm/_strategies.py",
-    "src/openllm/client.py",
     "src/openllm/exceptions.py",
     "src/openllm/testing.py",
 ]

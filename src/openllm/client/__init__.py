@@ -6,11 +6,11 @@ OpenLLM server. It is used to send requests to the server, and receive responses
 """
 from __future__ import annotations
 
-from .runtimes.grpc import (
+from .runtimes import (
     AsyncGrpcClient as AsyncGrpcClient,
-    GrpcClient as GrpcClient,
-)
-from .runtimes.http import (
     AsyncHTTPClient as AsyncHTTPClient,
+    BaseAsyncClient as BaseAsyncClient,
+    BaseClient as BaseClient,
+    GrpcClient as GrpcClient,
     HTTPClient as HTTPClient,
 )

@@ -74,7 +74,6 @@ openllm/
 ├── examples                 # Usage demonstration scripts
 ├── src
 │   ├── openllm              # openllm core
-│   ├── openllm_client       # openllm python client
 │   └── openllm-node         # openllm nodejs library
 ├── tests                    # Automated Tests
 ├── tools                    # Utilities Script

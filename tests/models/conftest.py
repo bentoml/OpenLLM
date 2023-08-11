@@ -38,12 +38,12 @@ logger = logging.getLogger(__name__)
 if t.TYPE_CHECKING:
   import subprocess
 
-  from openllm_client.runtimes.base import BaseAsyncClient
   from syrupy.assertion import SnapshotAssertion
   from syrupy.types import PropertyFilter, PropertyMatcher, SerializableData, SerializedData
 
   from openllm._configuration import GenerationConfig
   from openllm._types import DictStrAny, ListAny
+  from openllm.client import BaseAsyncClient
 
 else:
   DictStrAny = dict

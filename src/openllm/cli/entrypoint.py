@@ -69,11 +69,7 @@ from ._factory import (
   start_command_factory,
   workers_per_resource_option,
 )
-from .. import (
-  bundle,
-  client as openllm_client,
-  serialisation,
-)
+from .. import bundle, serialisation
 from ..exceptions import OpenLLMException
 from ..models.auto import (
   CONFIG_MAPPING,
@@ -109,10 +105,10 @@ from ..utils import (
 
 if t.TYPE_CHECKING:
   import torch
-  from openllm_client.runtimes.base import BaseClient
 
   from bentoml._internal.bento import BentoStore
   from bentoml._internal.container import DefaultBuilder
+  from openllm.client import BaseClient
 
   from .._schema import EmbeddingsOutput
   from .._types import DictStrAny, LiteralRuntime, P
@@ -713,7 +709,7 @@ def instruct_command(endpoint: str, timeout: int, agent: t.LiteralString, output
         --text "¡Este es un API muy agradable!"
   ```
   """
-  client = openllm_client.HTTPClient(endpoint, timeout=timeout)
+  client = openllm.client.HTTPClient(endpoint, timeout=timeout)
 
   try:
     client.call("metadata")
@@ -745,7 +741,7 @@ def embed_command(ctx: click.Context, text: tuple[str, ...], endpoint: str, time
   $ openllm embed --endpoint http://12.323.2.1:3000 "What is the meaning of life?" "How many stars are there in the sky?"
   ```
   """
-  client = t.cast("BaseClient[t.Any]", openllm_client.HTTPClient(endpoint, timeout=timeout) if server_type == "http" else openllm_client.GrpcClient(endpoint, timeout=timeout))
+  client = t.cast("BaseClient[t.Any]", openllm.client.HTTPClient(endpoint, timeout=timeout) if server_type == "http" else openllm.client.GrpcClient(endpoint, timeout=timeout))
   try:
     gen_embed = client.embed(text)
   except ValueError:
@@ -778,7 +774,7 @@ def query_command(ctx: click.Context, /, prompt: str, endpoint: str, timeout: in
   """
   _memoized = {k: orjson.loads(v[0]) for k, v in _memoized.items() if v}
   if server_type == "grpc": endpoint = re.sub(r"http://", "", endpoint)
-  client = t.cast("BaseClient[t.Any]", openllm_client.HTTPClient(endpoint, timeout=timeout) if server_type == "http" else openllm_client.GrpcClient(endpoint, timeout=timeout))
+  client = t.cast("BaseClient[t.Any]", openllm.client.HTTPClient(endpoint, timeout=timeout) if server_type == "http" else openllm.client.GrpcClient(endpoint, timeout=timeout))
   input_fg, generated_fg = "magenta", "cyan"
   if output != "porcelain":
     termui.echo("==Input==\n", fg="white")
