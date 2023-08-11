@@ -136,9 +136,6 @@ HATCH_BUILD_HOOKS_ENABLE = "1"
 MYPYC_DEBUG_LEVEL = "1"
 MYPYC_OPT_LEVEL = "3"
 
-[tool.cibuildwheel.macos.environment]
-MACOSX_DEPLOYMENT_TARGET = "11.0"
-
 [tool.cibuildwheel.linux]
 before-build = ["yum install -y clang gcc"]
 

@@ -266,20 +266,17 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
     for subcommand in self.list_commands(ctx):
       cmd = self.get_command(ctx, subcommand)
       if cmd is None or cmd.hidden: continue
-      if subcommand in _cached_extensions:
-        extensions.append((subcommand, cmd))
-      else:
-        commands.append((subcommand, cmd))
+      if subcommand in _cached_extensions: extensions.append((subcommand, cmd))
+      else: commands.append((subcommand, cmd))
     # allow for 3 times the default spacing
     if len(commands):
       limit = formatter.width - 6 - max(len(cmd[0]) for cmd in commands)
-      rows = []
+      rows: list[tuple[str, str]]= []
       for subcommand, cmd in commands:
         help = cmd.get_short_help_str(limit)
         rows.append((subcommand, help))
       if rows:
-        with formatter.section(_("Commands")):
-          formatter.write_dl(rows)
+        with formatter.section(_("Commands")): formatter.write_dl(rows)
     if len(extensions):
       limit = formatter.width - 6 - max(len(cmd[0]) for cmd in extensions)
       rows = []
@@ -287,8 +284,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
         help = cmd.get_short_help_str(limit)
         rows.append((inflection.dasherize(subcommand), help))
       if rows:
-        with formatter.section(_("Extensions")):
-          formatter.write_dl(rows)
+        with formatter.section(_("Extensions")): formatter.write_dl(rows)
 
 @click.group(cls=OpenLLMCommandGroup, context_settings=termui.CONTEXT_SETTINGS, name="openllm")
 @click.version_option(None, "--version", "-v", message=f"%(prog)s, %(version)s (compiled: {'yes' if openllm.COMPILED else 'no'})\nPython ({platform.python_implementation()}) {platform.python_version()}")
