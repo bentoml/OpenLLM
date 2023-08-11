@@ -82,7 +82,6 @@ jobs:
       - name: Build wheels via cibuildwheel
         uses: pypa/cibuildwheel@v2.15.0
         env:
-          CIBW_ENVIRONMENT_MACOS: "PIP_ONLY_BINARY=safetensors"
           CIBW_ARCHS_MACOS: "${{ matrix.macos_arch }}"
           MYPYPATH: /project/typings
       - name: Upload wheels as workflow artifacts
