@@ -1,28 +1,16 @@
-# Copyright 2023 BentoML Team. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 from __future__ import annotations
+
 import openllm
 
 class FlanT5Config(openllm.LLMConfig):
   """FLAN-T5 was released in the paper [Scaling Instruction-Finetuned Language Models](https://arxiv.org/pdf/2210.11416.pdf).
 
-    It is an enhanced version of T5 that has been finetuned in a mixture of tasks.
+  It is an enhanced version of T5 that has been finetuned in a mixture of tasks.
 
-    Refer to [FLAN-T5's page](https://huggingface.co/docs/transformers/model_doc/flan-t5) for more information.
-    """
-  __config__ = {"url": "https://huggingface.co/docs/transformers/model_doc/flan-t5", "default_id": "google/flan-t5-large", "architecture": "T5ForConditionalGeneration", "model_ids": ["google/flan-t5-small", "google/flan-t5-base", "google/flan-t5-large", "google/flan-t5-xl", "google/flan-t5-xxl",], "model_type": "seq2seq_lm",}
-
+  Refer to [FLAN-T5's page](https://huggingface.co/docs/transformers/model_doc/flan-t5) for more information.
+  """
+  __config__ = {"url": "https://huggingface.co/docs/transformers/model_doc/flan-t5", "architecture": "T5ForConditionalGeneration", "model_type": "seq2seq_lm",
+                "default_id": "google/flan-t5-large", "model_ids": ["google/flan-t5-small", "google/flan-t5-base", "google/flan-t5-large", "google/flan-t5-xl", "google/flan-t5-xxl",]}
   class GenerationConfig:
     temperature: float = 0.9
     max_new_tokens: int = 2048

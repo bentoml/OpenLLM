@@ -1,20 +1,8 @@
-from typing import Any
-from typing import Callable
-from typing import Dict
-from typing import List
-from typing import NamedTuple
-from typing import Optional
-from typing import Tuple
-from typing import Type
-from typing import TypeVar
-from typing import Union
-from typing import overload
+from typing import Any, Callable, Dict, List, NamedTuple, Optional, Tuple, Type, TypeVar, Union, overload
 
 import click
 
-from ._core import _FC
-from ._core import AnyCallable
-from ._core import OptionGroup
+from ._core import _FC, AnyCallable, OptionGroup
 
 class OptionStackItem(NamedTuple):
     param_decls: Tuple[str, ...]

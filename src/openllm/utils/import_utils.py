@@ -1,16 +1,3 @@
-# Copyright 2023 BentoML Team. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 """Some imports utils are vendorred from transformers/utils/import_utils.py for performance reasons."""
 from __future__ import annotations
 import importlib
@@ -26,8 +13,7 @@ from collections import OrderedDict
 import inflection
 from packaging import version
 
-from bentoml._internal.utils import LazyLoader
-from bentoml._internal.utils import pkg
+from bentoml._internal.utils import LazyLoader, pkg
 
 from .representation import ReprMixin
 
@@ -44,9 +30,7 @@ if t.TYPE_CHECKING:
 else:
   BackendOrderredDict = OrderedDict
 
-
 logger = logging.getLogger(__name__)
-
 OPTIONAL_DEPENDENCIES = {"opt", "flan-t5", "vllm", "fine-tune", "ggml", "agents", "openai", "playground", "gptq",}
 ENV_VARS_TRUE_VALUES = {"1", "ON", "YES", "TRUE"}
 ENV_VARS_TRUE_AND_AUTO_VALUES = ENV_VARS_TRUE_VALUES.union({"AUTO"})
@@ -76,6 +60,9 @@ _jupyter_available = _is_package_available("jupyter")
 _jupytext_available = _is_package_available("jupytext")
 _notebook_available = _is_package_available("notebook")
 _autogptq_available = _is_package_available("auto_gptq")
+_sentencepiece_available = _is_package_available("sentencepiece")
+_xformers_available = _is_package_available("xformers")
+_fairscale_available = _is_package_available("fairscale")
 
 def is_transformers_supports_kbit() -> bool: return pkg.pkg_version_info("transformers")[:2] >= (4, 30)
 def is_transformers_supports_agent() -> bool: return pkg.pkg_version_info("transformers")[:2] >= (4, 29)
@@ -90,6 +77,9 @@ def is_cpm_kernels_available() -> bool: return _cpm_kernel_available
 def is_bitsandbytes_available() -> bool: return _bitsandbytes_available
 def is_autogptq_available() -> bool: return _autogptq_available
 def is_vllm_available() -> bool: return _vllm_available
+def is_sentencepiece_available() -> bool: return _sentencepiece_available
+def is_xformers_available() -> bool: return _xformers_available
+def is_fairscale_available() -> bool: return _fairscale_available
 def is_torch_available() -> bool:
   global _torch_available
   if USE_TORCH in ENV_VARS_TRUE_AND_AUTO_VALUES and USE_TF not in ENV_VARS_TRUE_VALUES:
@@ -145,7 +135,6 @@ If you want to use PyTorch, please use those classes instead!
 If you really do want to use vLLM, please follow the instructions on the
 installation page https://github.com/vllm-project/vllm that match your environment.
 """
-
 VLLM_IMPORT_ERROR_WITH_TF = """\
 {0} requires the vLLM library but it was not found in your environment.
 However, we were able to find a TensorFlow installation. TensorFlow classes begin
@@ -156,7 +145,6 @@ If you want to use TensorFlow, please use TF classes instead!
 If you really do want to use vLLM, please follow the instructions on the
 installation page https://github.com/vllm-project/vllm that match your environment.
 """
-
 VLLM_IMPORT_ERROR_WITH_FLAX = """\
 {0} requires the vLLM library but it was not found in your environment.
 However, we were able to find a Flax installation. Flax classes begin
@@ -167,7 +155,6 @@ If you want to use Flax, please use Flax classes instead!
 If you really do want to use vLLM, please follow the instructions on the
 installation page https://github.com/vllm-project/vllm that match your environment.
 """
-
 PYTORCH_IMPORT_ERROR_WITH_TF = """\
 {0} requires the PyTorch library but it was not found in your environment.
 However, we were able to find a TensorFlow installation. TensorFlow classes begin
@@ -179,7 +166,6 @@ If you really do want to use PyTorch please go to
 https://pytorch.org/get-started/locally/ and follow the instructions that
 match your environment.
 """
-
 TF_IMPORT_ERROR_WITH_PYTORCH = """\
 {0} requires the TensorFlow library but it was not found in your environment.
 However, we were able to find a PyTorch installation. PyTorch classes do not begin
@@ -189,73 +175,73 @@ If you want to use PyTorch, please use those classes instead!
 If you really do want to use TensorFlow, please follow the instructions on the
 installation page https://www.tensorflow.org/install that match your environment.
 """
-
 TENSORFLOW_IMPORT_ERROR = """{0} requires the TensorFlow library but it was not found in your environment.
 Checkout the instructions on the installation page: https://www.tensorflow.org/install and follow the
 ones that match your environment. Please note that you may need to restart your runtime after installation.
 """
-
 FLAX_IMPORT_ERROR = """{0} requires the FLAX library but it was not found in your environment.
 Checkout the instructions on the installation page: https://github.com/google/flax and follow the
 ones that match your environment. Please note that you may need to restart your runtime after installation.
 """
-
 PYTORCH_IMPORT_ERROR = """{0} requires the PyTorch library but it was not found in your environment.
 Checkout the instructions on the installation page: https://pytorch.org/get-started/locally/ and follow the
 ones that match your environment. Please note that you may need to restart your runtime after installation.
 """
-
 VLLM_IMPORT_ERROR = """{0} requires the vLLM library but it was not found in your environment.
 Checkout the instructions on the installation page: https://github.com/vllm-project/vllm
 ones that match your environment. Please note that you may need to restart your runtime after installation.
 """
-
 CPM_KERNELS_IMPORT_ERROR = """{0} requires the cpm_kernels library but it was not found in your environment.
 You can install it with pip: `pip install cpm_kernels`. Please note that you may need to restart your
 runtime after installation.
 """
-
 EINOPS_IMPORT_ERROR = """{0} requires the einops library but it was not found in your environment.
 You can install it with pip: `pip install einops`. Please note that you may need to restart
 your runtime after installation.
 """
-
 TRITON_IMPORT_ERROR = """{0} requires the triton library but it was not found in your environment.
 You can install it with pip: 'pip install \"git+https://github.com/openai/triton.git#egg=triton&subdirectory=python\"'.
 Please note that you may need to restart your runtime after installation.
 """
-
 DATASETS_IMPORT_ERROR = """{0} requires the datasets library but it was not found in your environment.
 You can install it with pip: `pip install datasets`. Please note that you may need to restart
 your runtime after installation.
 """
-
 PEFT_IMPORT_ERROR = """{0} requires the peft library but it was not found in your environment.
 You can install it with pip: `pip install peft`. Please note that you may need to restart
 your runtime after installation.
 """
-
 BITSANDBYTES_IMPORT_ERROR = """{0} requires the bitsandbytes library but it was not found in your environment.
 You can install it with pip: `pip install bitsandbytes`. Please note that you may need to restart
 your runtime after installation.
 """
-
 AUTOGPTQ_IMPORT_ERROR = """{0} requires the auto-gptq library but it was not found in your environment.
 You can install it with pip: `pip install auto-gptq`. Please note that you may need to restart
 your runtime after installation.
 """
+SENTENCEPIECE_IMPORT_ERROR = """{0} requires the sentencepiece library but it was not found in your environment.
+You can install it with pip: `pip install sentencepiece`. Please note that you may need to restart
+your runtime after installation.
+"""
+XFORMERS_IMPORT_ERROR = """{0} requires the xformers library but it was not found in your environment.
+You can install it with pip: `pip install xformers`. Please note that you may need to restart
+your runtime after installation.
+"""
+FAIRSCALE_IMPORT_ERROR = """{0} requires the fairscale library but it was not found in your environment.
+You can install it with pip: `pip install fairscale`. Please note that you may need to restart
+your runtime after installation.
+"""
 
 BACKENDS_MAPPING = BackendOrderredDict([("flax", (is_flax_available, FLAX_IMPORT_ERROR)), ("tf", (is_tf_available, TENSORFLOW_IMPORT_ERROR)), ("torch", (is_torch_available, PYTORCH_IMPORT_ERROR)), ("vllm", (is_vllm_available, VLLM_IMPORT_ERROR)), ("cpm_kernels", (is_cpm_kernels_available, CPM_KERNELS_IMPORT_ERROR)), ("einops", (is_einops_available, EINOPS_IMPORT_ERROR)),
-                                        ("triton", (is_triton_available, TRITON_IMPORT_ERROR)), ("datasets", (is_datasets_available, DATASETS_IMPORT_ERROR)), ("peft", (is_peft_available, PEFT_IMPORT_ERROR)), ("bitsandbytes", (is_bitsandbytes_available, BITSANDBYTES_IMPORT_ERROR)), ("auto-gptq", (is_autogptq_available, AUTOGPTQ_IMPORT_ERROR)),])
+                                        ("triton", (is_triton_available, TRITON_IMPORT_ERROR)), ("datasets", (is_datasets_available, DATASETS_IMPORT_ERROR)), ("peft", (is_peft_available, PEFT_IMPORT_ERROR)), ("bitsandbytes", (is_bitsandbytes_available, BITSANDBYTES_IMPORT_ERROR)), ("auto-gptq", (is_autogptq_available, AUTOGPTQ_IMPORT_ERROR)), ("sentencepiece", (is_sentencepiece_available, SENTENCEPIECE_IMPORT_ERROR)),
+                                        ("xformers", (is_xformers_available, XFORMERS_IMPORT_ERROR)), ("fairscale", (is_fairscale_available, FAIRSCALE_IMPORT_ERROR))])
 
 class DummyMetaclass(ABCMeta):
   """Metaclass for dummy object.
 
   It will raises ImportError generated by ``require_backends`` if users try to access attributes from given class.
   """
-
   _backends: t.List[str]
-
   def __getattribute__(cls, key: str) -> t.Any:
     if key.startswith("_"): return super().__getattribute__(key)
     require_backends(cls, cls._backends)
@@ -272,7 +258,6 @@ def require_backends(o: t.Any, backends: t.MutableSequence[str]) -> None:
     if "torch" not in backends and is_torch_available() and not is_vllm_available(): raise ImportError(VLLM_IMPORT_ERROR_WITH_PYTORCH.format(name))
     if "tf" not in backends and is_tf_available() and not is_vllm_available(): raise ImportError(VLLM_IMPORT_ERROR_WITH_TF.format(name))
     if "flax" not in backends and is_flax_available() and not is_vllm_available(): raise ImportError(VLLM_IMPORT_ERROR_WITH_FLAX.format(name))
-
   checks = (BACKENDS_MAPPING[backend] for backend in backends)
   failed = [msg.format(name) for available, msg in checks if not available()]
   if failed: raise ImportError("".join(failed))
@@ -286,7 +271,6 @@ class EnvVarMixin(ReprMixin):
     framework: str
     bettertransformer: str
     runtime: str
-
   @overload
   def __getitem__(self, item: t.Literal["config"]) -> str: ...
   @overload
@@ -313,7 +297,6 @@ class EnvVarMixin(ReprMixin):
     if item.endswith("_value") and hasattr(self, f"_{item}"): return object.__getattribute__(self, f"_{item}")()
     elif hasattr(self, item): return getattr(self, item)
     raise KeyError(f"Key {item} not found in {self}")
-
   def __init__(self, model_name: str, implementation: LiteralRuntime = "pt", model_id: str | None = None, bettertransformer: bool | None = None, quantize: t.LiteralString | None = None, runtime: t.Literal["ggml", "transformers"] = "transformers") -> None:
     """EnvVarMixin is a mixin class that returns the value extracted from environment variables."""
     from .._configuration import field_env_key
@@ -323,9 +306,7 @@ class EnvVarMixin(ReprMixin):
     self._bettertransformer = bettertransformer
     self._quantize = quantize
     self._runtime = runtime
-    for att in {"config", "model_id", "quantize", "framework", "bettertransformer", "runtime"}:
-      setattr(self, att, field_env_key(self.model_name, att.upper()))
-
+    for att in {"config", "model_id", "quantize", "framework", "bettertransformer", "runtime"}: setattr(self, att, field_env_key(self.model_name, att.upper()))
   def _quantize_value(self) -> t.Literal["int8", "int4", "gptq"] | None:
     from . import first_not_none
     return t.cast(t.Optional[t.Literal["int8", "int4", "gptq"]], first_not_none(os.environ.get(self["quantize"]), default=self._quantize))
@@ -341,7 +322,6 @@ class EnvVarMixin(ReprMixin):
   def _runtime_value(self) -> t.Literal["ggml", "transformers"]:
     from . import first_not_none
     return t.cast(t.Literal["ggml", "transformers"], first_not_none(os.environ.get(self["runtime"]), default=self._runtime))
-
   @property
   def __repr_keys__(self) -> set[str]: return {"config", "model_id", "quantize", "framework", "bettertransformer", "runtime"}
   @property

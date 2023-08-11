@@ -1,16 +1,3 @@
-# Copyright 2023 BentoML Team. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 """OpenLLM CLI interface.
 
 This module also contains the SDK to call ``start`` and ``build`` from SDK
@@ -55,10 +42,8 @@ import fs.copy
 import fs.errors
 import inflection
 import orjson
-from bentoml_cli.utils import BentoMLCommandGroup
-from bentoml_cli.utils import opt_callback
-from simple_di import Provide
-from simple_di import inject
+from bentoml_cli.utils import BentoMLCommandGroup, opt_callback
+from simple_di import Provide, inject
 
 import bentoml
 import openllm
@@ -66,53 +51,61 @@ from bentoml._internal.configuration.containers import BentoMLContainer
 from bentoml._internal.models.model import ModelStore
 
 from . import termui
-from ._factory import FC
-from ._factory import LiteralOutput
-from ._factory import _AnyCallable
-from ._factory import bettertransformer_option
-from ._factory import container_registry_option
-from ._factory import fast_option
-from ._factory import machine_option
-from ._factory import model_id_option
-from ._factory import model_name_argument
-from ._factory import model_version_option
-from ._factory import output_option
-from ._factory import parse_device_callback
-from ._factory import quantize_option
-from ._factory import serialisation_option
-from ._factory import start_command_factory
-from ._factory import workers_per_resource_option
-from .. import bundle
-from .. import client as openllm_client
-from .. import serialisation
+from ._factory import (
+  FC,
+  LiteralOutput,
+  _AnyCallable,
+  bettertransformer_option,
+  container_registry_option,
+  fast_option,
+  machine_option,
+  model_id_option,
+  model_name_argument,
+  model_version_option,
+  output_option,
+  parse_device_callback,
+  quantize_option,
+  serialisation_option,
+  start_command_factory,
+  workers_per_resource_option,
+)
+from .. import (
+  bundle,
+  client as openllm_client,
+  serialisation,
+)
 from ..exceptions import OpenLLMException
-from ..models.auto import CONFIG_MAPPING
-from ..models.auto import MODEL_FLAX_MAPPING_NAMES
-from ..models.auto import MODEL_MAPPING_NAMES
-from ..models.auto import MODEL_TF_MAPPING_NAMES
-from ..models.auto import MODEL_VLLM_MAPPING_NAMES
-from ..models.auto import AutoConfig
-from ..models.auto import AutoLLM
-from ..utils import DEBUG
-from ..utils import DEBUG_ENV_VAR
-from ..utils import OPTIONAL_DEPENDENCIES
-from ..utils import QUIET_ENV_VAR
-from ..utils import EnvVarMixin
-from ..utils import LazyLoader
-from ..utils import analytics
-from ..utils import bentoml_cattr
-from ..utils import compose
-from ..utils import configure_logging
-from ..utils import dantic
-from ..utils import first_not_none
-from ..utils import get_debug_mode
-from ..utils import get_quiet_mode
-from ..utils import infer_auto_class
-from ..utils import is_torch_available
-from ..utils import is_transformers_supports_agent
-from ..utils import resolve_user_filepath
-from ..utils import set_debug_mode
-from ..utils import set_quiet_mode
+from ..models.auto import (
+  CONFIG_MAPPING,
+  MODEL_FLAX_MAPPING_NAMES,
+  MODEL_MAPPING_NAMES,
+  MODEL_TF_MAPPING_NAMES,
+  MODEL_VLLM_MAPPING_NAMES,
+  AutoConfig,
+  AutoLLM,
+)
+from ..utils import (
+  DEBUG,
+  DEBUG_ENV_VAR,
+  OPTIONAL_DEPENDENCIES,
+  QUIET_ENV_VAR,
+  EnvVarMixin,
+  LazyLoader,
+  analytics,
+  bentoml_cattr,
+  compose,
+  configure_logging,
+  dantic,
+  first_not_none,
+  get_debug_mode,
+  get_quiet_mode,
+  infer_auto_class,
+  is_torch_available,
+  is_transformers_supports_agent,
+  resolve_user_filepath,
+  set_debug_mode,
+  set_quiet_mode,
+)
 
 if t.TYPE_CHECKING:
   import torch
@@ -122,11 +115,8 @@ if t.TYPE_CHECKING:
   from bentoml._internal.container import DefaultBuilder
 
   from .._schema import EmbeddingsOutput
-  from .._types import DictStrAny
-  from .._types import LiteralRuntime
-  from .._types import P
-  from ..bundle.oci import LiteralContainerRegistry
-  from ..bundle.oci import LiteralContainerVersionStrategy
+  from .._types import DictStrAny, LiteralRuntime, P
+  from ..bundle.oci import LiteralContainerRegistry, LiteralContainerVersionStrategy
 else:
   torch, jupytext, nbformat = LazyLoader("torch", globals(), "torch"), LazyLoader("jupytext", globals(), "jupytext"), LazyLoader("nbformat", globals(), "nbformat")
 

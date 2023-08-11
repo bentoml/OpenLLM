@@ -1,16 +1,3 @@
-# Copyright 2023 BentoML Team. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 """Configuration utilities for OpenLLM. All model configuration will inherit from ``openllm.LLMConfig``.
 
 Highlight feature: Each fields in ``openllm.LLMConfig`` will also automatically generate a environment
@@ -58,50 +45,40 @@ import attr
 import click_option_group as cog
 import inflection
 import orjson
-from cattr.gen import make_dict_structure_fn
-from cattr.gen import make_dict_unstructure_fn
-from cattr.gen import override
+from cattr.gen import make_dict_structure_fn, make_dict_unstructure_fn, override
 from deepmerge.merger import Merger
 
 import openllm
 
-from ._strategies import LiteralResourceSpec
-from ._strategies import available_resource_spec
-from ._strategies import resource_spec
+from ._strategies import LiteralResourceSpec, available_resource_spec, resource_spec
 from .exceptions import ForbiddenAttributeError
-from .utils import ENV_VARS_TRUE_VALUES
-from .utils import MYPY
-from .utils import LazyType
-from .utils import ReprMixin
-from .utils import bentoml_cattr
-from .utils import codegen
-from .utils import dantic
-from .utils import field_env_key
-from .utils import first_not_none
-from .utils import lenient_issubclass
-from .utils import non_intrusive_setattr
+from .utils import (
+  ENV_VARS_TRUE_VALUES,
+  MYPY,
+  LazyType,
+  ReprMixin,
+  bentoml_cattr,
+  codegen,
+  dantic,
+  field_env_key,
+  first_not_none,
+  lenient_issubclass,
+  non_intrusive_setattr,
+)
 from .utils.import_utils import BACKENDS_MAPPING
 
 # NOTE: We need to do check overload import
 # so that it can register
 # correct overloads to typing registry
 if sys.version_info[:2] >= (3, 11):
-  from typing import NotRequired
-  from typing import Required
-  from typing import dataclass_transform
-  from typing import overload
+  from typing import NotRequired, Required, dataclass_transform, overload
 else:
-  from typing_extensions import NotRequired
-  from typing_extensions import Required
-  from typing_extensions import dataclass_transform
-  from typing_extensions import overload
+  from typing_extensions import NotRequired, Required, dataclass_transform, overload
 
 # NOTE: Using internal API from attr here, since we are actually
 # allowing subclass of openllm.LLMConfig to become 'attrs'-ish
 from attr._compat import set_closure_cell
-from attr._make import _CountingAttr
-from attr._make import _make_init
-from attr._make import _transform_attrs
+from attr._make import _CountingAttr, _make_init, _transform_attrs
 
 _T = t.TypeVar("_T")
 
@@ -114,8 +91,7 @@ if t.TYPE_CHECKING:
   import vllm
   from transformers.generation.beam_constraints import Constraint
 
-  from ._types import AnyCallable
-  from ._types import At
+  from ._types import AnyCallable, At
 
   DictStrAny = dict[str, t.Any]
   ListStr = list[str]

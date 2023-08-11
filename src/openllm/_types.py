@@ -1,16 +1,3 @@
-# Copyright 2023 BentoML Team. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 """Types definition for OpenLLM.
 
 Note that this module SHOULD NOT BE IMPORTED DURING RUNTIME, as this serve only for typing purposes.
@@ -26,20 +13,25 @@ import attr
 import bentoml
 from bentoml._internal.types import ModelSignatureDict as ModelSignatureDict
 
-from ._configuration import AdapterType
-from ._configuration import LiteralRuntime as LiteralRuntime
+from ._configuration import (
+  AdapterType,
+  LiteralRuntime as LiteralRuntime,
+)
 
 if t.TYPE_CHECKING:
   import peft
 
   import openllm
-  from .utils.lazy import VersionInfo
-  from .bundle.oci import LiteralContainerVersionStrategy
-  from ._llm import M as _M
-  from ._llm import T as _T
   from bentoml._internal.runner.runnable import RunnableMethod
   from bentoml._internal.runner.runner import RunnerMethod
   from bentoml._internal.runner.strategy import Strategy
+
+  from ._llm import (
+    M as _M,
+    T as _T,
+  )
+  from .bundle.oci import LiteralContainerVersionStrategy
+  from .utils.lazy import VersionInfo
 
 AnyCallable = t.Callable[..., t.Any]
 DictStrAny = dict[str, t.Any]

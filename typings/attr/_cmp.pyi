@@ -1,7 +1,4 @@
-from typing import Any
-from typing import Callable
-from typing import Optional
-from typing import TypeAlias
+from typing import Any, Callable, Optional, TypeAlias
 
 _CompareWithType: TypeAlias = Callable[[Any, Any], bool]
 

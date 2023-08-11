@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-
 import dataclasses
 import os
 import typing as t
@@ -11,8 +10,7 @@ import tomlkit
 import openllm
 
 if t.TYPE_CHECKING:
-  from tomlkit.items import Array
-  from tomlkit.items import Table
+  from tomlkit.items import Array, Table
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 

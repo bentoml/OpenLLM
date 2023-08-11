@@ -2,9 +2,11 @@ from typing import Any
 
 from _typeshed import Incomplete
 
-from .nbbase import NotebookNode as NotebookNode
-from .nbbase import nbformat as nbformat
-from .nbbase import nbformat_minor as nbformat_minor
+from .nbbase import (
+    NotebookNode as NotebookNode,
+    nbformat as nbformat,
+    nbformat_minor as nbformat_minor,
+)
 
 def upgrade(nb: NotebookNode, from_version: Incomplete | None = ..., from_minor: Incomplete | None = ...) -> Any: ...
 def upgrade_cell(cell: NotebookNode) -> Any: ...

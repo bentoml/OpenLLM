@@ -1,59 +1,41 @@
-# Copyright 2023 BentoML Team. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# mypy: disable-error-code="name-defined,misc"
 """Serialisation related implementation for Transformers-based implementation."""
-
 from __future__ import annotations
 import importlib
 import logging
 import typing as t
 
 from huggingface_hub import snapshot_download
-from simple_di import Provide
-from simple_di import inject
+from simple_di import Provide, inject
 
 import bentoml
 import openllm
 from bentoml._internal.configuration.containers import BentoMLContainer
 from bentoml._internal.models.model import ModelOptions
+from openllm.serialisation.transformers.weights import HfIgnore
 
-from ._helpers import check_unintialised_params
-from ._helpers import infer_autoclass_from_llm
-from ._helpers import infer_tokenizers_from_llm
-from ._helpers import make_model_signatures
-from ._helpers import process_config
-from ._helpers import update_model
-from .weights import HfIgnore
+from ._helpers import (
+  check_unintialised_params,
+  infer_autoclass_from_llm,
+  infer_tokenizers_from_llm,
+  make_model_signatures,
+  process_config,
+  update_model,
+)
 
 if t.TYPE_CHECKING:
   import types
 
-  import auto_gptq as autogptq
-  import torch
   import torch.nn
-  import transformers
-  import vllm
 
   from bentoml._internal.models import ModelStore
+  from openllm._llm import M, T
+  from openllm._types import DictStrAny
 
-  from ..._llm import M
-  from ..._llm import T
-  from ..._types import DictStrAny
-else:
-  vllm = openllm.utils.LazyLoader("vllm", globals(), "vllm")
-  autogptq = openllm.utils.LazyLoader("autogptq", globals(), "auto_gptq")
-  transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
-  torch = openllm.utils.LazyLoader("torch", globals(), "torch")
+vllm = openllm.utils.LazyLoader("vllm", globals(), "vllm")
+autogptq = openllm.utils.LazyLoader("autogptq", globals(), "auto_gptq")
+transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
+torch = openllm.utils.LazyLoader("torch", globals(), "torch")
 
 logger = logging.getLogger(__name__)
 

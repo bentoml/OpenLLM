@@ -17,5 +17,5 @@ from __future__ import annotations
 import openllm
 
 def test_import_client():
-  assert len(openllm.client.__all__) == 4
-  assert all(hasattr(openllm.client, attr) for attr in ("AsyncGrpcClient", "GrpcClient", "AsyncHTTPClient", "HTTPClient"))
+  assert len(openllm.client.__all__) == 6
+  assert all(hasattr(openllm.client, attr) for attr in ("AsyncGrpcClient", "GrpcClient", "AsyncHTTPClient", "HTTPClient", "BaseClient", "BaseAsyncClient"))

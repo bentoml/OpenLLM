@@ -193,9 +193,11 @@ extend-exclude = [
     "tools",
     "examples",
     "src/openllm/playground",
-    "src/openllm/models",
+    "src/openllm/__init__.py",
     "src/openllm/_types.py",
     "src/openllm/_version.py",
+    "src/openllm/utils/dummy_*.py",
+    "src/openllm/models/__init__.py",
 ]
 extend-include = ["*.ipynb"]
 extend-select = [
@@ -264,20 +266,23 @@ convention = "google"
 [tool.ruff.pycodestyle]
 ignore-overlong-task-comments = true
 [tool.ruff.isort]
-force-single-line = true
+combine-as-imports = true
+force-single-line = false
+force-wrap-aliases = true
 known-first-party = ["openllm", "bentoml"]
 known-third-party = ["transformers", "click", "huggingface_hub", "torch", "vllm", "auto_gptq"]
 lines-after-imports = 1
+lines-between-types = 0
 no-lines-before = ["future", "standard-library"]
 relative-imports-order = "closest-to-furthest"
+required-imports = ["from __future__ import annotations"]
 [tool.ruff.flake8-quotes]
 avoid-escape = false
 [tool.ruff.extend-per-file-ignores]
-# Tests can use magic values, assertions, and relative imports
-"__init__.py" = ["E402", "F401", "F403", "F811", "I001", "F405"]
 "src/openllm/_service.py" = ["I001", "E401"]
 "src/openllm/cli/entrypoint.py" = ["D301"]
-"src/openllm/utils/dummy_*" = ["D107"]
+"src/openllm/models/**" = ["I001", "E", "D", "F"]
+"src/openllm/utils/__init__.py" = ["I001"]
 "src/openllm/utils/import_utils.py" = ["PLW0603"]
 "src/openllm_client/runtimes/*" = ["D107"]
 "tests/**/*" = [
@@ -287,7 +292,7 @@ avoid-escape = false
     "PT011",  # ignore too broad raises, as it can be use pytest.raises().match()
     "S307",   # Ignore eval(compile) as it is a known script execution
 ]
-"typings/**/*" = ["D", "F", "E", "PYI002"]
+"typings/**" = ["D", "F", "E", "PYI002"]
 
 [tool.yapf]
 ALIGN_CLOSING_BRACKET_WITH_VISUAL_INDENT = true
@@ -351,6 +356,7 @@ exclude_lines = [
     "pragma: no cover",
     "if __name__ == .__main__.:",
     "if t.TYPE_CHECKING:",
+    "if _t.TYPE_CHECKING:",
     'if TYPE_CHECKING:',
     'if typing.TYPE_CHECKING:',
     'if t.TYPE_CHECKING and not MYPY:',
@@ -397,6 +403,8 @@ reportPrivateUsage = "warning"
 reportUnknownArgumentType = "warning"
 reportUnknownMemberType = "warning"
 reportUnknownVariableType = "warning"
+reportUnsupportedDunderAll = "warning"
+reportWildcardImportFromLibrary = "warning"
 typeCheckingMode = "strict"
 
 [tool.mypy]
@@ -469,25 +477,28 @@ dependencies = [
 ]
 enable-by-default = false
 exclude = [
+    # no reason to compile model since framework is already written in C++
+    "src/openllm/models/**",
     "src/openllm/bundle/**",
-    "src/openllm/serialisation/**",
-    "src/openllm/utils/**",
     "src/openllm/cli/**",
+    "src/openllm/playground/**",
     "src/openllm/__main__.py",
     "src/openllm/_types.py",
-    "src/openllm/_generation.py",
+    "src/openllm/_llm.py",
     "src/openllm/_service.py",
     "src/openllm/_configuration.py",
-    "src/openllm/_quantisation.py",
-    "src/openllm/_llm.py",
-    "src/openllm/playground/**",
-    "src/openllm/models/**",
+    # can't compile serialisation for transformers since it will raise segfault
+    "src/openllm/serialisation/transformers",
+    "src/openllm/utils/analytics.py",
 ]
 include = [
+    "src/openllm/serialisation",
+    "src/openllm/utils/__init__.py",
     "src/openllm/__init__.py",
     "src/openllm/_prompt.py",
     "src/openllm/_schema.py",
     "src/openllm/_quantisation.py",
+    "src/openllm/_generation.py",
     "src/openllm/_strategies.py",
     "src/openllm/client.py",
     "src/openllm/exceptions.py",
@@ -507,7 +518,6 @@ mypy-args = [
     "--warn-unreachable",
     "--no-warn-no-return",
     "--no-warn-unused-ignores",
-    "--exclude='/src\\/openllm\\/models\\/**'",
     "--exclude='/src\\/openllm\\/playground\\/**'",
     "--exclude='/src\\/openllm\\/_types\\.py$'",
 ]

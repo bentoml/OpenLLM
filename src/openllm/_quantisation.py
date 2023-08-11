@@ -1,27 +1,10 @@
 # mypy: disable-error-code="name-defined"
-# Copyright 2023 BentoML Team. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 from __future__ import annotations
 import logging
 import sys
 import typing as t
 
-from .utils import LazyLoader
-from .utils import is_autogptq_available
-from .utils import is_bitsandbytes_available
-from .utils import is_transformers_supports_kbit
-from .utils import pkg
+from .utils import LazyLoader, is_autogptq_available, is_bitsandbytes_available, is_transformers_supports_kbit, pkg
 
 # NOTE: We need to do this so that overload can register
 # correct overloads to typing registry
@@ -71,7 +54,7 @@ def infer_quantisation_config(cls: type[LLM[t.Any, t.Any]], quantise: QuantiseMo
   if not is_bitsandbytes_available(): raise RuntimeError("Quantization requires bitsandbytes to be installed. Make sure to install OpenLLM with 'pip install \"openllm[fine-tune]\"'")
   if quantise == "int8": quantisation_config = create_int8_config(int8_skip_modules)
   elif quantise == "int4":
-    if is_transformers_supports_kbit(): quantisation_config = transformers.BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_compute_dtype=int4_compute_dtype, bnb_4bit_quant_type=int4_quant_type, bnb_4bit_use_double_quant=int4_use_double_quant,)
+    if is_transformers_supports_kbit(): quantisation_config = transformers.BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_compute_dtype=int4_compute_dtype, bnb_4bit_quant_type=int4_quant_type, bnb_4bit_use_double_quant=int4_use_double_quant)
     else:
       logger.warning("'quantize' is set to int4, while the current transformers version %s does not support k-bit quantization. k-bit quantization is supported since transformers 4.30, therefore make sure to install the latest version of transformers either via PyPI or from git source: 'pip install git+https://github.com/huggingface/transformers'. Fallback to int8 quantisation.", pkg.pkg_version_info("transformers"))
       quantisation_config = create_int8_config(int8_skip_modules)

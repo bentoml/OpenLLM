@@ -1,6 +1,4 @@
-from typing import Any
-from typing import ClassVar
-from typing import Protocol
+from typing import Any, ClassVar, Protocol
 
 # MYPY is a special constant in mypy which works the same way as `TYPE_CHECKING`.
 MYPY: bool = False

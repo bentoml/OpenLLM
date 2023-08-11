@@ -1,16 +1,3 @@
-# Copyright 2023 BentoML Team. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 from __future__ import annotations
 import importlib.metadata
 import inspect
@@ -23,15 +10,11 @@ import fs
 import fs.copy
 import fs.errors
 import orjson
-from simple_di import Provide
-from simple_di import inject
+from simple_di import Provide, inject
 
 import bentoml
 import openllm
-from bentoml._internal.bento.build_config import BentoBuildConfig
-from bentoml._internal.bento.build_config import DockerOptions
-from bentoml._internal.bento.build_config import ModelSpec
-from bentoml._internal.bento.build_config import PythonOptions
+from bentoml._internal.bento.build_config import BentoBuildConfig, DockerOptions, ModelSpec, PythonOptions
 from bentoml._internal.configuration.containers import BentoMLContainer
 
 from . import oci
@@ -42,8 +25,7 @@ if t.TYPE_CHECKING:
   from bentoml._internal.bento import BentoStore
   from bentoml._internal.models.model import ModelStore
 
-  from .oci import LiteralContainerRegistry
-  from .oci import LiteralContainerVersionStrategy
+  from .oci import LiteralContainerRegistry, LiteralContainerVersionStrategy
 
 logger = logging.getLogger(__name__)
 

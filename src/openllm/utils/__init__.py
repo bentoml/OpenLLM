@@ -1,16 +1,3 @@
-# Copyright 2023 BentoML Team. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 """Utilities function for OpenLLM.
 
 User can import these function for convenience, but
@@ -30,53 +17,44 @@ from pathlib import Path
 
 from circus.exc import ConflictError
 
-from bentoml._internal.configuration import DEBUG_ENV_VAR as DEBUG_ENV_VAR
-from bentoml._internal.configuration import GRPC_DEBUG_ENV_VAR as _GRPC_DEBUG_ENV_VAR
-from bentoml._internal.configuration import QUIET_ENV_VAR as QUIET_ENV_VAR
-from bentoml._internal.configuration import get_debug_mode as _get_debug_mode
-from bentoml._internal.configuration import get_quiet_mode as _get_quiet_mode
-from bentoml._internal.configuration import set_quiet_mode as set_quiet_mode
+from bentoml._internal.configuration import (
+  DEBUG_ENV_VAR as DEBUG_ENV_VAR,
+  GRPC_DEBUG_ENV_VAR as _GRPC_DEBUG_ENV_VAR,
+  QUIET_ENV_VAR as QUIET_ENV_VAR,
+  get_debug_mode as _get_debug_mode,
+  get_quiet_mode as _get_quiet_mode,
+  set_quiet_mode as set_quiet_mode,
+)
 from bentoml._internal.models.model import ModelContext as _ModelContext
 from bentoml._internal.types import LazyType as LazyType
-from bentoml._internal.utils import LazyLoader as LazyLoader
-from bentoml._internal.utils import bentoml_cattr as bentoml_cattr
-from bentoml._internal.utils import calc_dir_size as calc_dir_size
-from bentoml._internal.utils import first_not_none as first_not_none
-from bentoml._internal.utils import pkg as pkg
-from bentoml._internal.utils import reserve_free_port as reserve_free_port
-from bentoml._internal.utils import resolve_user_filepath as resolve_user_filepath
-
-from .lazy import LazyModule as LazyModule
-from .lazy import VersionInfo as VersionInfo
+from bentoml._internal.utils import (
+  LazyLoader as LazyLoader,
+  bentoml_cattr as bentoml_cattr,
+  calc_dir_size as calc_dir_size,
+  first_not_none as first_not_none,
+  pkg as pkg,
+  reserve_free_port as reserve_free_port,
+  resolve_user_filepath as resolve_user_filepath,
+)
+from openllm.utils.lazy import (
+  LazyModule as LazyModule,
+  VersionInfo as VersionInfo,
+)
 
 logger = logging.getLogger(__name__)
 
-try:
-  from typing import GenericAlias as _TypingGenericAlias  # type: ignore
-except ImportError:
-  # python < 3.9 does not have GenericAlias (list[int], tuple[str, ...] and so on)
-  _TypingGenericAlias = ()  # type: ignore
-
+try: from typing import GenericAlias as _TypingGenericAlias  # type: ignore
+except ImportError: _TypingGenericAlias = ()  # type: ignore # python < 3.9 does not have GenericAlias (list[int], tuple[str, ...] and so on)
 if sys.version_info < (3, 10): _WithArgsTypes = (_TypingGenericAlias,)
-else:
-  #  _GenericAlias is the actual GenericAlias implementation
-  _WithArgsTypes: t.Any = (t._GenericAlias, types.GenericAlias, types.UnionType)  # type: ignore
-
+else: _WithArgsTypes: t.Any = (t._GenericAlias, types.GenericAlias, types.UnionType)  # type: ignore #  _GenericAlias is the actual GenericAlias implementation
 # NOTE: We need to do this so that overload can register
 # correct overloads to typing registry
-if sys.version_info[:2] >= (3, 11):
-  from typing import overload as _overload
-else:
-  from typing_extensions import overload as _overload
-
+if sys.version_info[:2] >= (3, 11): from typing import overload as _overload
+else: from typing_extensions import overload as _overload
 if t.TYPE_CHECKING:
   import openllm
 
-  from .._types import AnyCallable
-  from .._types import DictStrAny
-  from .._types import LiteralRuntime
-else:
-  DictStrAny = dict
+  from .._types import AnyCallable, LiteralRuntime
 
 DEV_DEBUG_VAR = "OPENLLMDEVDEBUG"
 
@@ -152,7 +130,7 @@ class ExceptionFilter(logging.Filter):
 class InfoFilter(logging.Filter):
   def filter(self, record: logging.LogRecord) -> bool: return logging.INFO <= record.levelno < logging.WARNING
 
-_LOGGING_CONFIG: DictStrAny = {
+_LOGGING_CONFIG: dict[str, t.Any] = {
     "version": 1, "disable_existing_loggers": True,
     "filters": {"excfilter": {"()": "openllm.utils.ExceptionFilter"}, "infofilter": {"()": "openllm.utils.InfoFilter"}},
     "handlers": {"bentomlhandler": {"class": "logging.StreamHandler", "filters": ["excfilter", "infofilter"], "stream": "ext://sys.stdout"}, "defaulthandler": {"class": "logging.StreamHandler", "level": logging.WARNING}},
@@ -186,7 +164,7 @@ def in_notebook() -> bool:
     from IPython.core.getipython import get_ipython
     if t.TYPE_CHECKING:
       from IPython.core.interactiveshell import InteractiveShell
-    return "IPKernelApp" in t.cast(DictStrAny, t.cast(t.Callable[[], "InteractiveShell"], get_ipython)().config)
+    return "IPKernelApp" in t.cast("dict[str, t.Any]", t.cast(t.Callable[[], "InteractiveShell"], get_ipython)().config)
   except (ImportError, AttributeError): return False
 
 _dockerenv, _cgroup = Path("/.dockerenv"), Path("/proc/self/cgroup")
@@ -263,23 +241,20 @@ def resolve_filepath(path: str, ctx: str | None = None) -> str:
 def validate_is_path(maybe_path: str) -> bool: return os.path.exists(os.path.dirname(resolve_filepath(maybe_path)))
 
 def generate_context(framework_name: str) -> _ModelContext:
-  from .import_utils import is_flax_available
-  from .import_utils import is_tf_available
-  from .import_utils import is_torch_available
-
+  import openllm
   framework_versions = {"transformers": pkg.get_pkg_version("transformers")}
-  if is_torch_available(): framework_versions["torch"] = pkg.get_pkg_version("torch")
-  if is_tf_available():
+  if openllm.utils.is_torch_available(): framework_versions["torch"] = pkg.get_pkg_version("torch")
+  if openllm.utils.is_tf_available():
     from bentoml._internal.frameworks.utils.tensorflow import get_tf_version
     framework_versions["tensorflow"] = get_tf_version()
-  if is_flax_available(): framework_versions.update({"flax": pkg.get_pkg_version("flax"), "jax": pkg.get_pkg_version("jax"), "jaxlib": pkg.get_pkg_version("jaxlib")})
+  if openllm.utils.is_flax_available(): framework_versions.update({"flax": pkg.get_pkg_version("flax"), "jax": pkg.get_pkg_version("jax"), "jaxlib": pkg.get_pkg_version("jaxlib")})
   return _ModelContext(framework_name=framework_name, framework_versions=framework_versions)
 
-def generate_labels(llm: openllm.LLM[t.Any, t.Any]) -> DictStrAny: return {"runtime": llm.runtime, "framework": "openllm", "model_name": llm.config["model_name"], "architecture": llm.config["architecture"], "serialisation_format": llm._serialisation_format}
+def generate_labels(llm: openllm.LLM[t.Any, t.Any]) -> dict[str, t.Any]: return {"runtime": llm.runtime, "framework": "openllm", "model_name": llm.config["model_name"], "architecture": llm.config["architecture"], "serialisation_format": llm._serialisation_format}
 
 _TOKENIZER_PREFIX = "_tokenizer_"
 
-def normalize_attrs_to_model_tokenizer_pair(**attrs: t.Any) -> tuple[DictStrAny, DictStrAny]:
+def normalize_attrs_to_model_tokenizer_pair(**attrs: t.Any) -> tuple[dict[str, t.Any], dict[str, t.Any]]:
   """Normalize the given attrs to a model and tokenizer kwargs accordingly."""
   tokenizer_attrs = {k[len(_TOKENIZER_PREFIX):]: v for k, v in attrs.items() if k.startswith(_TOKENIZER_PREFIX)}
   for k in tuple(attrs.keys()):
@@ -295,18 +270,11 @@ def infer_auto_class(implementation: t.Literal["flax"]) -> type[openllm.AutoFlax
 @_overload
 def infer_auto_class(implementation: t.Literal["vllm"]) -> type[openllm.AutoVLLM]: ...
 def infer_auto_class(implementation: LiteralRuntime) -> type[openllm.AutoLLM] | type[openllm.AutoTFLLM] | type[openllm.AutoFlaxLLM] | type[openllm.AutoVLLM]:
-  if implementation == "tf":
-    from openllm import AutoTFLLM
-    return AutoTFLLM
-  elif implementation == "flax":
-    from openllm import AutoFlaxLLM
-    return AutoFlaxLLM
-  elif implementation == "pt":
-    from openllm import AutoLLM
-    return AutoLLM
-  elif implementation == "vllm":
-    from openllm import AutoVLLM
-    return AutoVLLM
+  import openllm
+  if implementation == "tf": return openllm.AutoTFLLM
+  elif implementation == "flax": return openllm.AutoFlaxLLM
+  elif implementation == "pt": return openllm.AutoLLM
+  elif implementation == "vllm": return openllm.AutoVLLM
   else: raise RuntimeError(f"Unknown implementation: {implementation} (supported: 'pt', 'flax', 'tf', 'vllm')")
 
 # NOTE: The set marks contains a set of modules name
@@ -318,45 +286,53 @@ _whitelist_modules = {"pkg"}
 # since _extras will be the locals() import from this file.
 _extras: dict[str, t.Any] = {k: v for k, v in locals().items() if k in _whitelist_modules or (not isinstance(v, types.ModuleType) and not k.startswith("_"))}
 _extras["__openllm_migration__"] = {"ModelEnv": "EnvVarMixin"}
-
 _import_structure: dict[str, list[str]] = {
-    "analytics": [], "codegen": [], "dantic": [], "representation": ["ReprMixin"], "lazy": ["LazyModule"],
-    "import_utils": ["OPTIONAL_DEPENDENCIES", "ENV_VARS_TRUE_VALUES", "DummyMetaclass", "EnvVarMixin", "is_cpm_kernels_available", "is_einops_available", "is_flax_available", "is_tf_available", "is_vllm_available", "is_torch_available", "is_bitsandbytes_available", "is_peft_available", "is_datasets_available", "is_transformers_supports_kbit", "is_transformers_supports_agent", "is_jupyter_available", "is_jupytext_available", "is_notebook_available", "is_triton_available", "is_autogptq_available", "require_backends"],
-}
+  "analytics": [], "codegen": [], "dantic": [], "dummy_flax_objects": [], "dummy_pt_objects": [], "dummy_tf_objects": [], "dummy_vllm_objects": [], "representation": ["ReprMixin"], "lazy": ["LazyModule"],
+  "import_utils": ["OPTIONAL_DEPENDENCIES", "ENV_VARS_TRUE_VALUES", "DummyMetaclass", "EnvVarMixin", "require_backends",
+                  "is_cpm_kernels_available", "is_einops_available", "is_flax_available", "is_tf_available", "is_vllm_available", "is_torch_available", "is_bitsandbytes_available", "is_peft_available", "is_datasets_available",
+                  "is_transformers_supports_kbit", "is_transformers_supports_agent", "is_jupyter_available", "is_jupytext_available", "is_notebook_available", "is_triton_available", "is_autogptq_available", "is_sentencepiece_available",
+                  "is_xformers_available", "is_fairscale_available"]}
 
 if t.TYPE_CHECKING:
   # NOTE: The following exports useful utils from bentoml
-  from . import LazyLoader as LazyLoader
-  from . import LazyType as LazyType
-  from . import analytics as analytics
-  from . import bentoml_cattr as bentoml_cattr
-  from . import codegen as codegen
-  from . import configure_logging as configure_logging
-  from . import dantic as dantic
-  from . import first_not_none as first_not_none
-  from . import reserve_free_port as reserve_free_port
-  from . import set_quiet_mode as set_quiet_mode
-  from . import validate_is_path as validate_is_path
-  from .import_utils import ENV_VARS_TRUE_VALUES as ENV_VARS_TRUE_VALUES
-  from .import_utils import OPTIONAL_DEPENDENCIES as OPTIONAL_DEPENDENCIES
-  from .import_utils import DummyMetaclass as DummyMetaclass
-  from .import_utils import EnvVarMixin as EnvVarMixin
-  from .import_utils import is_autogptq_available as is_autogptq_available
-  from .import_utils import is_bitsandbytes_available as is_bitsandbytes_available
-  from .import_utils import is_cpm_kernels_available as is_cpm_kernels_available
-  from .import_utils import is_datasets_available as is_datasets_available
-  from .import_utils import is_einops_available as is_einops_available
-  from .import_utils import is_flax_available as is_flax_available
-  from .import_utils import is_jupyter_available as is_jupyter_available
-  from .import_utils import is_jupytext_available as is_jupytext_available
-  from .import_utils import is_notebook_available as is_notebook_available
-  from .import_utils import is_peft_available as is_peft_available
-  from .import_utils import is_tf_available as is_tf_available
-  from .import_utils import is_torch_available as is_torch_available
-  from .import_utils import is_transformers_supports_agent as is_transformers_supports_agent
-  from .import_utils import is_transformers_supports_kbit as is_transformers_supports_kbit
-  from .import_utils import is_triton_available as is_triton_available
-  from .import_utils import is_vllm_available as is_vllm_available
-  from .import_utils import require_backends as require_backends
+  from . import (
+    analytics as analytics,
+    codegen as codegen,
+    dantic as dantic,
+    dummy_flax_objects as dummy_flax_objects,
+    dummy_pt_objects as dummy_pt_objects,
+    dummy_tf_objects as dummy_tf_objects,
+    dummy_vllm_objects as dummy_vllm_objects,
+  )
+  from .import_utils import (
+    ENV_VARS_TRUE_VALUES as ENV_VARS_TRUE_VALUES,
+    OPTIONAL_DEPENDENCIES as OPTIONAL_DEPENDENCIES,
+    DummyMetaclass as DummyMetaclass,
+    EnvVarMixin as EnvVarMixin,
+    is_autogptq_available as is_autogptq_available,
+    is_bitsandbytes_available as is_bitsandbytes_available,
+    is_cpm_kernels_available as is_cpm_kernels_available,
+    is_datasets_available as is_datasets_available,
+    is_einops_available as is_einops_available,
+    is_fairscale_available as is_fairscale_available,
+    is_flax_available as is_flax_available,
+    is_jupyter_available as is_jupyter_available,
+    is_jupytext_available as is_jupytext_available,
+    is_notebook_available as is_notebook_available,
+    is_peft_available as is_peft_available,
+    is_sentencepiece_available as is_sentencepiece_available,
+    is_tf_available as is_tf_available,
+    is_torch_available as is_torch_available,
+    is_transformers_supports_agent as is_transformers_supports_agent,
+    is_transformers_supports_kbit as is_transformers_supports_kbit,
+    is_triton_available as is_triton_available,
+    is_vllm_available as is_vllm_available,
+    is_xformers_available as is_xformers_available,
+    require_backends as require_backends,
+  )
   from .representation import ReprMixin as ReprMixin
-else: sys.modules[__name__] = LazyModule(__name__, globals()["__file__"], _import_structure, module_spec=__spec__, extra_objects=_extras)
+
+__lazy = LazyModule(__name__, globals()["__file__"], _import_structure, extra_objects=_extras)
+__all__ = __lazy.__all__
+__dir__ = __lazy.__dir__
+__getattr__ = __lazy.__getattr__

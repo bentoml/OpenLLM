@@ -25,17 +25,16 @@ from unittest import mock
 import attr
 import pytest
 import transformers
-from hypothesis import assume
-from hypothesis import given
-from hypothesis import strategies as st
+from hypothesis import (
+  assume,
+  given,
+  strategies as st,
+)
 
 import openllm
-from openllm._configuration import GenerationConfig
-from openllm._configuration import ModelSettings
-from openllm._configuration import field_env_key
+from openllm._configuration import GenerationConfig, ModelSettings, field_env_key
 
-from ._strategies._configuration import make_llm_config
-from ._strategies._configuration import model_settings
+from ._strategies._configuration import make_llm_config, model_settings
 
 logger = logging.getLogger(__name__)
 

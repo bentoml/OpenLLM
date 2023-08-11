@@ -1,35 +1,18 @@
-# Copyright 2023 BentoML Team. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
 from __future__ import annotations
 import logging
 import typing as t
-from urllib.parse import urljoin
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 
 import httpx
 import orjson
 
 import openllm
 
-from .base import BaseAsyncClient
-from .base import BaseClient
-from .base import in_async_context
+from .base import BaseAsyncClient, BaseClient, in_async_context
 
 if t.TYPE_CHECKING:
-  from openllm._types import DictStrAny
-  from openllm._types import LiteralRuntime
+  from openllm._types import DictStrAny, LiteralRuntime
 else:
   DictStrAny = dict
 

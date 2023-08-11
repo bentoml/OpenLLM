@@ -1,16 +1,3 @@
-# Copyright 2023 BentoML Team. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 from __future__ import annotations
 import collections
 import functools
@@ -23,8 +10,7 @@ import traceback
 import types
 import typing as t
 import uuid
-from abc import ABC
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from pathlib import Path
 
 import attr
@@ -37,46 +23,46 @@ import bentoml
 import openllm
 from bentoml._internal.models.model import ModelSignature
 
-from ._configuration import AdapterType
-from ._configuration import FineTuneConfig
-from ._configuration import LiteralRuntime
-from ._configuration import LLMConfig
-from ._configuration import _object_getattribute
-from ._configuration import _setattr_class
+from ._configuration import (
+  AdapterType,
+  FineTuneConfig,
+  LiteralRuntime,
+  LLMConfig,
+  _object_getattribute,
+  _setattr_class,
+)
 from ._quantisation import infer_quantisation_config
 from ._schema import unmarshal_vllm_outputs
-from .exceptions import ForbiddenAttributeError
-from .exceptions import GpuNotAvailableError
-from .exceptions import OpenLLMException
+from .exceptions import ForbiddenAttributeError, GpuNotAvailableError, OpenLLMException
 from .models.auto import AutoConfig
-from .utils import DEBUG
-from .utils import ENV_VARS_TRUE_VALUES
-from .utils import MYPY
-from .utils import EnvVarMixin
-from .utils import LazyLoader
-from .utils import ReprMixin
-from .utils import apply
-from .utils import bentoml_cattr
-from .utils import codegen
-from .utils import device_count
-from .utils import first_not_none
-from .utils import generate_hash_from_file
-from .utils import infer_auto_class
-from .utils import is_peft_available
-from .utils import is_torch_available
-from .utils import non_intrusive_setattr
-from .utils import normalize_attrs_to_model_tokenizer_pair
-from .utils import resolve_filepath
-from .utils import validate_is_path
+from .utils import (
+  DEBUG,
+  ENV_VARS_TRUE_VALUES,
+  MYPY,
+  EnvVarMixin,
+  LazyLoader,
+  ReprMixin,
+  apply,
+  bentoml_cattr,
+  codegen,
+  device_count,
+  first_not_none,
+  generate_hash_from_file,
+  infer_auto_class,
+  is_peft_available,
+  is_torch_available,
+  non_intrusive_setattr,
+  normalize_attrs_to_model_tokenizer_pair,
+  resolve_filepath,
+  validate_is_path,
+)
 
 # NOTE: We need to do this so that overload can register
 # correct overloads to typing registry
 if sys.version_info[:2] >= (3, 11):
-  from typing import NotRequired
-  from typing import overload
+  from typing import NotRequired, overload
 else:
-  from typing_extensions import NotRequired
-  from typing_extensions import overload
+  from typing_extensions import NotRequired, overload
 
 if t.TYPE_CHECKING:
   import auto_gptq as autogptq
@@ -86,17 +72,19 @@ if t.TYPE_CHECKING:
   import vllm
 
   from ._configuration import PeftType
-  from ._types import AdaptersMapping
-  from ._types import AdaptersTuple
-  from ._types import AnyCallable
-  from ._types import DictStrAny
-  from ._types import ListStr
-  from ._types import LLMEmbeddings
-  from ._types import LLMRunnable
-  from ._types import LLMRunner
-  from ._types import ModelSignatureDict as _ModelSignatureDict
-  from ._types import PeftAdapterOutput
-  from ._types import TupleAny
+  from ._types import (
+    AdaptersMapping,
+    AdaptersTuple,
+    AnyCallable,
+    DictStrAny,
+    ListStr,
+    LLMEmbeddings,
+    LLMRunnable,
+    LLMRunner,
+    ModelSignatureDict as _ModelSignatureDict,
+    PeftAdapterOutput,
+    TupleAny,
+  )
   from .utils.representation import ReprArgs
 
   UserDictAny = collections.UserDict[str, t.Any]

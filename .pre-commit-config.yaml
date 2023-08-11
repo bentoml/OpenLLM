@@ -14,7 +14,7 @@
 
 ci:
   autoupdate_schedule: weekly
-  skip: [check-models-table-update, check-models-table-update, changelog-dry-run, pyright, yapf, mypy]
+  skip: [check-models-table-update, changelog-dry-run, pyright, yapf, mypy]
   autofix_commit_msg: "ci: auto fixes from pre-commit.ci\n\nFor more information, see https://pre-commit.ci"
   autoupdate_commit_msg: 'ci: pre-commit autoupdate [pre-commit.ci]'
   autofix_prs: false
@@ -51,7 +51,7 @@ repos:
               tests/.*|
               src/openllm/playground/.*|
               .github/.*|
-              loc.py
+              cz.py
           )$
         additional_dependencies:
           - click==8.1.3
@@ -87,24 +87,6 @@ repos:
         language: python
         pass_filenames: false
         additional_dependencies: ['yapf==0.40.0']
-      - id: check-license-header
-        name: check for license headers
-        entry: ./tools/assert-license-headers
-        language: script
-        verbose: true
-        exclude_types:
-          - 'markdown'
-          - 'toml'
-          - 'json'
-          - 'text'
-        exclude: |
-          (?x)^(
-              tools/.*|
-              assets/.*|
-              changelog.d/.*|
-              typings/.*|
-              .github/.*
-          )$
       - id: check-models-table-update
         name: check if table in README.md is up-to-date
         entry: ./tools/assert-model-table-latest
