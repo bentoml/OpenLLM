@@ -520,10 +520,11 @@ def build_command(
         _previously_built = True
       except bentoml.exceptions.NotFound:
         bento = bundle.create_bento(
-            bento_tag, llm_fs, llm, workers_per_resource=workers_per_resource, device=device, adapter_map=adapter_map, quantize=quantize, bettertransformer=bettertransformer, extra_dependencies=enable_features, dockerfile_template=dockerfile_template_path, runtime=runtime, container_registry=container_registry, container_version_strategy=container_version_strategy
+            bento_tag, llm_fs, llm, workers_per_resource=workers_per_resource, adapter_map=adapter_map,
+            quantize=quantize, bettertransformer=bettertransformer, extra_dependencies=enable_features, dockerfile_template=dockerfile_template_path, runtime=runtime,
+            container_registry=container_registry, container_version_strategy=container_version_strategy
         )
-  except Exception as err:
-    raise err from None
+  except Exception as err: raise err from None
 
   if machine: termui.echo(f"__tag__:{bento.tag}", fg="white")
   elif output == "pretty":
@@ -531,26 +532,17 @@ def build_command(
       termui.echo("\n" + OPENLLM_FIGLET, fg="white")
       if not _previously_built: termui.echo(f"Successfully built {bento}.", fg="green")
       elif not overwrite: termui.echo(f"'{model_name}' already has a Bento built [{bento}]. To overwrite it pass '--overwrite'.", fg="yellow")
-      termui.echo(
-          "📖 Next steps:\n\n" + "* Push to BentoCloud with 'bentoml push':\n" + f"    $ bentoml push {bento.tag}\n\n" + "* Containerize your Bento with 'bentoml containerize':\n" + f"    $ bentoml containerize {bento.tag} --opt progress=plain" + "\n\n" + "    Tip: To enable additional BentoML features for 'containerize', " + "use '--enable-features=FEATURE[,FEATURE]' " +
-          "[see 'bentoml containerize -h' for more advanced usage]\n", fg="blue",
-      )
-  elif output == "json":
-    termui.echo(orjson.dumps(bento.info.to_dict(), option=orjson.OPT_INDENT_2).decode())
-  else:
-    termui.echo(bento.tag)
+      termui.echo("📖 Next steps:\n\n" + f"* Push to BentoCloud with 'bentoml push':\n\t$ bentoml push {bento.tag}\n\n" + f"* Containerize your Bento with 'bentoml containerize':\n\t$ bentoml containerize {bento.tag} --opt progress=plain\n\n" + "\tTip: To enable additional BentoML features for 'containerize', use '--enable-features=FEATURE[,FEATURE]' [see 'bentoml containerize -h' for more advanced usage]\n", fg="blue",)
+  elif output == "json": termui.echo(orjson.dumps(bento.info.to_dict(), option=orjson.OPT_INDENT_2).decode())
+  else: termui.echo(bento.tag)
 
   if push: BentoMLContainer.bentocloud_client.get().push_bento(bento, context=t.cast(GlobalOptions, ctx.obj).cloud_context, force=force_push)
   elif containerize:
     backend = t.cast("DefaultBuilder", os.environ.get("BENTOML_CONTAINERIZE_BACKEND", "docker"))
-    try:
-      bentoml.container.health(backend)
-    except subprocess.CalledProcessError:
-      raise OpenLLMException(f"Failed to use backend {backend}") from None
-    try:
-      bentoml.container.build(bento.tag, backend=backend, features=("grpc", "io"))
-    except Exception as err:
-      raise OpenLLMException(f"Exception caught while containerizing '{bento.tag!s}':\n{err}") from err
+    try: bentoml.container.health(backend)
+    except subprocess.CalledProcessError: raise OpenLLMException(f"Failed to use backend {backend}") from None
+    try: bentoml.container.build(bento.tag, backend=backend, features=("grpc", "io"))
+    except Exception as err: raise OpenLLMException(f"Exception caught while containerizing '{bento.tag!s}':\n{err}") from err
   return bento
 
 @cli.command()

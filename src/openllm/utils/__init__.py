@@ -4,19 +4,9 @@ User can import these function for convenience, but
 we won't ensure backward compatibility for these functions. So use with caution.
 """
 from __future__ import annotations
-import contextlib
-import functools
-import hashlib
-import logging
-import logging.config
-import os
-import sys
-import types
-import typing as t
+import contextlib, functools, hashlib, logging, logging.config, os, sys, types, typing as t, openllm
 from pathlib import Path
-
 from circus.exc import ConflictError
-
 from bentoml._internal.configuration import (
   DEBUG_ENV_VAR as DEBUG_ENV_VAR,
   GRPC_DEBUG_ENV_VAR as _GRPC_DEBUG_ENV_VAR,
@@ -52,8 +42,6 @@ else: _WithArgsTypes: t.Any = (t._GenericAlias, types.GenericAlias, types.UnionT
 if sys.version_info[:2] >= (3, 11): from typing import overload as _overload
 else: from typing_extensions import overload as _overload
 if t.TYPE_CHECKING:
-  import openllm
-
   from .._types import AnyCallable, LiteralRuntime
 
 DEV_DEBUG_VAR = "OPENLLMDEVDEBUG"
@@ -241,7 +229,6 @@ def resolve_filepath(path: str, ctx: str | None = None) -> str:
 def validate_is_path(maybe_path: str) -> bool: return os.path.exists(os.path.dirname(resolve_filepath(maybe_path)))
 
 def generate_context(framework_name: str) -> _ModelContext:
-  import openllm
   framework_versions = {"transformers": pkg.get_pkg_version("transformers")}
   if openllm.utils.is_torch_available(): framework_versions["torch"] = pkg.get_pkg_version("torch")
   if openllm.utils.is_tf_available():

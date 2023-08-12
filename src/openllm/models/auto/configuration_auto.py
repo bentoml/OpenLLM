@@ -18,7 +18,7 @@ if t.TYPE_CHECKING:
 # NOTE: This is the entrypoint when adding new model config
 CONFIG_MAPPING_NAMES = OrderedDict([("chatglm", "ChatGLMConfig"), ("dolly_v2", "DollyV2Config"), ("falcon", "FalconConfig"), ("flan_t5", "FlanT5Config"), ("gpt_neox", "GPTNeoXConfig"), ("llama", "LlamaConfig"), ("mpt", "MPTConfig"), ("opt", "OPTConfig"), ("stablelm", "StableLMConfig"), ("starcoder", "StarCoderConfig"), ("baichuan", "BaichuanConfig")])
 
-class _LazyConfigMapping(OrderedDict, ReprMixin):  # type: ignore[type-arg]
+class _LazyConfigMapping(OrderedDict, ReprMixin):
   def __init__(self, mapping: OrderedDict[t.LiteralString, t.LiteralString]):
     self._mapping = mapping
     self._extra_content: dict[str, t.Any] = {}

@@ -1,22 +1,14 @@
 from __future__ import annotations
-import functools
-import inspect
-import linecache
-import logging
-import string
-import types
-import typing as t
+import functools, inspect, linecache, os, logging, string, types, typing as t
 from operator import itemgetter
 from pathlib import Path
-
 import orjson
 
 if t.TYPE_CHECKING:
   from fs.base import FS
 
   import openllm
-
-  from .._types import AnyCallable, DictStrAny, ListStr
+  from openllm._types import AnyCallable, DictStrAny, ListStr
   PartialAny = functools.partial[t.Any]
 
 _T = t.TypeVar("_T", bound=t.Callable[..., t.Any])
@@ -40,7 +32,7 @@ class ModelIdFormatter(ModelNameFormatter):
 class ModelAdapterMapFormatter(ModelNameFormatter):
   model_keyword: t.LiteralString = "__model_adapter_map__"
 
-_service_file = Path(__file__).parent.parent / "_service.py"
+_service_file = Path(os.path.abspath("__file__")).parent.parent/"_service.py"
 def write_service(llm: openllm.LLM[t.Any, t.Any], adapter_map: dict[str, str | None] | None, llm_fs: FS) -> None:
   from . import DEBUG
 
@@ -119,7 +111,7 @@ def make_attr_tuple_class(cls_name: str, attr_names: t.Sequence[str]) -> type[t.
   return globs[attr_class_name]
 
 def generate_unique_filename(cls: type[t.Any], func_name: str) -> str: return f"<{cls.__name__} generated {func_name} {cls.__module__}.{getattr(cls, '__qualname__', cls.__name__)}>"
-def generate_function(typ: type[t.Any], func_name: str, lines: list[str] | None, args: tuple[str, ...] | None, globs: dict[str, t.Any], annotations: dict[str, t.Any] | None = None,) -> AnyCallable:
+def generate_function(typ: type[t.Any], func_name: str, lines: list[str] | None, args: tuple[str, ...] | None, globs: dict[str, t.Any], annotations: dict[str, t.Any] | None = None) -> AnyCallable:
   from . import SHOW_CODEGEN
 
   script = "def %s(%s):\n    %s\n" % (func_name, ", ".join(args) if args is not None else "", "\n    ".join(lines) if lines else "pass")

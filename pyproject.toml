@@ -233,7 +233,9 @@ ignore = [
     "PLR0915",
     "PLR2004", # magic value to use constant
     "E501",    # ignore line length violation
+    "E401",    # ignore multiple line import
     "E702",
+    "I001",    # unsorted imports
     "PYI021",  # ignore docstring in stubs, as pyright will include docstring in stubs.
     "D103",    # Just missing docstring for magic methods.
     "D102",
@@ -279,12 +281,11 @@ required-imports = ["from __future__ import annotations"]
 [tool.ruff.flake8-quotes]
 avoid-escape = false
 [tool.ruff.extend-per-file-ignores]
-"src/openllm/_service.py" = ["I001", "E401"]
+"src/openllm/_service.py" = ["E401"]
 "src/openllm/cli/entrypoint.py" = ["D301"]
-"src/openllm/models/**" = ["I001", "E", "D", "F"]
-"src/openllm/utils/__init__.py" = ["I001"]
-"src/openllm/utils/import_utils.py" = ["PLW0603"]
 "src/openllm/client/runtimes/*" = ["D107"]
+"src/openllm/models/**" = ["E", "D", "F"]
+"src/openllm/utils/import_utils.py" = ["PLW0603"]
 "tests/**/*" = [
     "S101",
     "TID252",
@@ -437,7 +438,7 @@ module = [
     "httpx.*",
     "cloudpickle.*",
     "circus.*",
-    "grpc_health.*",
+    "grpc_health.v1.*",
     "transformers.*",
     "ghapi.*",
 ]
@@ -478,20 +479,24 @@ dependencies = [
 enable-by-default = false
 exclude = [
     # no reason to compile model since framework is already written in C++
-    "src/openllm/models/**",
-    "src/openllm/bundle/**",
-    "src/openllm/cli/**",
-    "src/openllm/playground/**",
+    "src/openllm/models",
+    # No need to compile CLI since I'm going to rewrite in Rust soon
+    "src/openllm/cli",
+    # no reason to compile playground since it's not used in production
+    "src/openllm/playground",
     "src/openllm/__main__.py",
     "src/openllm/_types.py",
     "src/openllm/_llm.py",
-    "src/openllm/_service.py",
     "src/openllm/_configuration.py",
+    # bento service is not mypyc-compatible since we do dynamic signature generation
+    "src/openllm/_service.py",
     # can't compile serialisation for transformers since it will raise segfault
+    # also no need to compile since most of the modules within transformers are already written in C++ or Rust
     "src/openllm/serialisation/transformers",
-    "src/openllm/utils/analytics.py",
 ]
 include = [
+    "src/openllm/client",
+    "src/openllm/bundle",
     "src/openllm/serialisation",
     "src/openllm/utils/__init__.py",
     "src/openllm/__init__.py",
@@ -505,12 +510,10 @@ include = [
 ]
 # NOTE: This is consistent with pyproject.toml
 mypy-args = [
-    "--pretty",
     "--strict",
     # this is because all transient library doesn't have types
     "--allow-subclassing-any",
     "--check-untyped-defs",
-    "--follow-imports=skip",
     "--python-version=3.11",
     "--ignore-missing-imports",
     "--no-warn-return-any",

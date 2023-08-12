@@ -1,19 +1,6 @@
 from __future__ import annotations
-import functools
-import importlib
-import importlib.machinery
-import importlib.metadata
-import importlib.util
-import itertools
-import os
-import time
-import types
-import typing as t
-import warnings
-
-import attr
-
-import openllm
+import functools, importlib, importlib.machinery, importlib.metadata, importlib.util, itertools, os, time, types, warnings, typing as t
+import attr, openllm
 
 __all__ = ["VersionInfo", "LazyModule"]
 # vendorred from attrs
@@ -68,7 +55,7 @@ class LazyModule(types.ModuleType):
     for key, values in import_structure.items():
       for value in values: self._class_to_module[value] = key
     # Needed for autocompletion in an IDE
-    self.__all__ = list(import_structure.keys()) + list(itertools.chain(*import_structure.values()))
+    self.__all__: list[str] = list(import_structure.keys()) + list(itertools.chain(*import_structure.values()))
     self.__file__ = module_file
     self.__spec__ = module_spec or importlib.util.find_spec(name)
     self.__path__ = [os.path.dirname(module_file)]

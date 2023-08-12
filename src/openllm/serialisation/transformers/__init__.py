@@ -1,4 +1,3 @@
-# mypy: disable-error-code="name-defined,misc"
 """Serialisation related implementation for Transformers-based implementation."""
 from __future__ import annotations
 import importlib
@@ -26,16 +25,17 @@ from ._helpers import (
 if t.TYPE_CHECKING:
   import types
 
+  import vllm, auto_gptq as autogptq, transformers ,torch
   import torch.nn
 
   from bentoml._internal.models import ModelStore
   from openllm._llm import M, T
   from openllm._types import DictStrAny
-
-vllm = openllm.utils.LazyLoader("vllm", globals(), "vllm")
-autogptq = openllm.utils.LazyLoader("autogptq", globals(), "auto_gptq")
-transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
-torch = openllm.utils.LazyLoader("torch", globals(), "torch")
+else:
+  vllm = openllm.utils.LazyLoader("vllm", globals(), "vllm")
+  autogptq = openllm.utils.LazyLoader("autogptq", globals(), "auto_gptq")
+  transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
+  torch = openllm.utils.LazyLoader("torch", globals(), "torch")
 
 logger = logging.getLogger(__name__)
 

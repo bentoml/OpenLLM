@@ -1,30 +1,18 @@
 from __future__ import annotations
-import functools
-import importlib.util
-import os
-import typing as t
+import functools, importlib.util, os, typing as t
 
-import click
-import click_option_group as cog
-import inflection
-import orjson
+import click, click_option_group as cog, inflection, orjson, bentoml, openllm
 from bentoml_cli.utils import BentoMLCommandGroup
 from click.shell_completion import CompletionItem
-
-import bentoml
-import openllm
 from bentoml._internal.configuration.containers import BentoMLContainer
 
 from . import termui
 
 if t.TYPE_CHECKING:
   import subprocess
-
-  from .._configuration import LLMConfig
-  from .._types import DictStrAny, P
+  from openllm._configuration import LLMConfig
+  from openllm._types import DictStrAny, P
   TupleStr = tuple[str, ...]
-else:
-  TupleStr = tuple
 
 LiteralOutput = t.Literal["json", "pretty", "porcelain"]
 
@@ -51,10 +39,8 @@ def _id_callback(ctx: click.Context, _: click.Parameter, value: tuple[str, ...] 
     adapter_id, *adapter_name = v.rsplit(":", maxsplit=1)
     # try to resolve the full path if users pass in relative,
     # currently only support one level of resolve path with current directory
-    try:
-      adapter_id = openllm.utils.resolve_user_filepath(adapter_id, os.getcwd())
-    except FileNotFoundError:
-      pass
+    try: adapter_id = openllm.utils.resolve_user_filepath(adapter_id, os.getcwd())
+    except FileNotFoundError: pass
     ctx.params[_adapter_mapping_key][adapter_id] = adapter_name[0] if len(adapter_name) > 0 else None
   return None
 
@@ -152,7 +138,7 @@ Available official model_id(s): [default: {llm_config['default_id']}]
     llm = openllm.utils.infer_auto_class(env["framework_value"]).for_model(model, model_id=start_env[env.model_id], model_version=model_version, llm_config=config, ensure_available=not fast, adapter_map=adapter_map, serialisation=serialisation_format)
     start_env.update({env.config: llm.config.model_dump_json().decode()})
 
-    server = bentoml.GrpcServer("_service.py:svc", **server_attrs) if _serve_grpc else bentoml.HTTPServer("_service.py:svc", **server_attrs)
+    server = bentoml.GrpcServer("_service:svc", **server_attrs) if _serve_grpc else bentoml.HTTPServer("_service:svc", **server_attrs)
     openllm.utils.analytics.track_start_init(llm.config)
 
     def next_step(model_name: str, adapter_map: DictStrAny | None) -> None:
@@ -251,7 +237,7 @@ def start_decorator(llm_config: LLMConfig, serve_grpc: bool = False) -> t.Callab
 
 def parse_device_callback(ctx: click.Context, param: click.Parameter, value: tuple[tuple[str], ...] | None) -> TupleStr | None:
   if value is None: return value
-  if not openllm.utils.LazyType(TupleStr).isinstance(value): ctx.fail(f"{param} only accept multiple values, not {type(value)} (value: {value})")
+  if not isinstance(value, tuple): ctx.fail(f"{param} only accept multiple values, not {type(value)} (value: {value})")
   el: TupleStr = tuple(i for k in value for i in k)
   # NOTE: --device all is a special case
   if len(el) == 1 and el[0] == "all": return tuple(map(str, openllm.utils.available_devices()))
@@ -285,7 +271,6 @@ def parse_serve_args(serve_grpc: bool) -> t.Callable[[t.Callable[..., LLMConfig]
       param_decls = (*attrs.pop("opts"), *attrs.pop("secondary_opts"))
       f = cog.optgroup.option(*param_decls, **attrs)(f)
     return group(f)
-
   return decorator
 
 _http_server_args, _grpc_server_args = parse_serve_args(False), parse_serve_args(True)
@@ -299,12 +284,10 @@ def _click_factory_type(*param_decls: t.Any, **attrs: t.Any) -> t.Callable[[FC |
   factory = attrs.pop("factory", click)
   factory_attr = attrs.pop("attr", "option")
   if factory_attr != "argument": attrs.setdefault("help", "General option for OpenLLM CLI.")
-
   def decorator(f: FC | None) -> FC:
     callback = getattr(factory, factory_attr, None)
     if callback is None: raise ValueError(f"Factory {factory} has no attribute {factory_attr}.")
     return t.cast(FC, callback(*param_decls, **attrs)(f) if f is not None else callback(*param_decls, **attrs))
-
   return decorator
 
 cli_option = functools.partial(_click_factory_type, attr="option")
@@ -312,12 +295,8 @@ cli_argument = functools.partial(_click_factory_type, attr="argument")
 
 def output_option(f: _AnyCallable | None = None, *, default_value: LiteralOutput = "pretty", **attrs: t.Any) -> t.Callable[[FC], FC]:
   output = ["json", "pretty", "porcelain"]
-
-  def complete_output_var(ctx: click.Context, param: click.Parameter, incomplete: str) -> list[CompletionItem]:
-    return [CompletionItem(it) for it in output]
-
+  def complete_output_var(ctx: click.Context, param: click.Parameter, incomplete: str) -> list[CompletionItem]: return [CompletionItem(it) for it in output]
   return cli_option("-o", "--output", "output", type=click.Choice(output), default=default_value, help="Showing output type.", show_default=True, envvar="OPENLLM_OUTPUT", show_envvar=True, shell_complete=complete_output_var, **attrs)(f)
-
 def fast_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option(
       "--fast/--no-fast", show_default=True, default=False, envvar="OPENLLM_USE_LOCAL_LATEST", show_envvar=True, help="""Whether to skip checking if models is already in store.
@@ -325,18 +304,10 @@ def fast_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC
                                                                                                           This is useful if you already downloaded or setup the model beforehand.
                                                                                                           """, **attrs
   )(f)
-
-def machine_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
-  return cli_option("--machine", is_flag=True, default=False, hidden=True, **attrs)(f)
-
-def model_id_option(f: _AnyCallable | None = None, *, model_env: openllm.utils.EnvVarMixin | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
-  return cli_option("--model-id", type=click.STRING, default=None, envvar=model_env.model_id if model_env is not None else None, show_envvar=model_env is not None, help="Optional model_id name or path for (fine-tune) weight.", **attrs)(f)
-
-def model_version_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
-  return cli_option("--model-version", type=click.STRING, default=None, help="Optional model version to save for this model. It will be inferred automatically from model-id.", **attrs)(f)
-
-def model_name_argument(f: _AnyCallable | None = None, required: bool = True) -> t.Callable[[FC], FC]:
-  return cli_argument("model_name", type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING]), required=required)(f)
+def machine_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]: return cli_option("--machine", is_flag=True, default=False, hidden=True, **attrs)(f)
+def model_id_option(f: _AnyCallable | None = None, *, model_env: openllm.utils.EnvVarMixin | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]: return cli_option("--model-id", type=click.STRING, default=None, envvar=model_env.model_id if model_env is not None else None, show_envvar=model_env is not None, help="Optional model_id name or path for (fine-tune) weight.", **attrs)(f)
+def model_version_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]: return cli_option("--model-version", type=click.STRING, default=None, help="Optional model version to save for this model. It will be inferred automatically from model-id.", **attrs)(f)
+def model_name_argument(f: _AnyCallable | None = None, required: bool = True) -> t.Callable[[FC], FC]: return cli_argument("model_name", type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING]), required=required)(f)
 
 def quantize_option(f: _AnyCallable | None = None, *, build: bool = False, model_env: openllm.utils.EnvVarMixin | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option(
@@ -423,10 +394,8 @@ def workers_per_resource_callback(ctx: click.Context, param: click.Parameter, va
   value = inflection.underscore(value)
   if value in _wpr_strategies: return value
   else:
-    try:
-      float(value)  # type: ignore[arg-type]
-    except ValueError:
-      raise click.BadParameter(f"'workers_per_resource' only accept '{_wpr_strategies}' as possible strategies, otherwise pass in float.", ctx, param) from None
+    try: float(t.cast(str, value))
+    except ValueError: raise click.BadParameter(f"'workers_per_resource' only accept '{_wpr_strategies}' as possible strategies, otherwise pass in float.", ctx, param) from None
     else:
       return value
 

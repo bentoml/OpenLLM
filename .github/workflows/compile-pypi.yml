@@ -1,4 +1,4 @@
-name: PyPI package
+name: Compile PyPI package
 on:
   workflow_dispatch:
     inputs:
