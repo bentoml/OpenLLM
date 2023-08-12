@@ -3,10 +3,8 @@
 These utilities will stay internal, and its API can be changed or updated without backward-compatibility.
 """
 from __future__ import annotations
-import sys
-import typing as t
-
-import openllm
+import os, typing as t
+from openllm.utils import LazyModule
 
 _import_structure: dict[str, list[str]] = {"_package": ["create_bento", "build_editable", "construct_python_options", "construct_docker_options"], "oci": ["CONTAINER_NAMES", "get_base_container_tag", "build_container", "get_base_container_name", "supported_registries", "RefResolver"]}
 
@@ -29,5 +27,8 @@ if t.TYPE_CHECKING:
     get_base_container_tag as get_base_container_tag,
     supported_registries as supported_registries,
   )
-else:
-  sys.modules[__name__] = openllm.utils.LazyModule(__name__, globals()["__file__"], _import_structure, module_spec=__spec__)
+
+__lazy=LazyModule(__name__, os.path.abspath("__file__"), _import_structure)
+__all__=__lazy.__all__
+__dir__=__lazy.__dir__
+__getattr__=__lazy.__getattr__

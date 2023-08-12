@@ -1,7 +1,5 @@
 from __future__ import annotations
-import sys, typing as t
-
-import openllm
+import typing as t, openllm
 
 class LlamaConfig(openllm.LLMConfig):
   """LLaMA model was proposed in [LLaMA: Open and Efficient Foundation Language Models](https://arxiv.org/abs/2302.13971) by Hugo Touvron, Thibaut Lavril, Gautier Izacard, Xavier Martinet, Marie-Anne Lachaux, Timothée Lacroix, Baptiste Rozière, Naman Goyal, Eric Hambro, Faisal Azhar, Aurelien Rodriguez, Armand Joulin, Edouard Grave, Guillaume Lample.

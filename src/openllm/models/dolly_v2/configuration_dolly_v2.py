@@ -1,8 +1,5 @@
 from __future__ import annotations
-import sys, typing as t
-
-import openllm
-
+import typing as t, openllm
 if t.TYPE_CHECKING: import transformers
 
 class DollyV2Config(openllm.LLMConfig):

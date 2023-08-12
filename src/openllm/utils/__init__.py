@@ -4,19 +4,9 @@ User can import these function for convenience, but
 we won't ensure backward compatibility for these functions. So use with caution.
 """
 from __future__ import annotations
-import contextlib
-import functools
-import hashlib
-import logging
-import logging.config
-import os
-import sys
-import types
-import typing as t
+import contextlib, functools, hashlib, logging, logging.config, os, sys, types, typing as t, openllm
 from pathlib import Path
-
 from circus.exc import ConflictError
-
 from bentoml._internal.configuration import (
   DEBUG_ENV_VAR as DEBUG_ENV_VAR,
   GRPC_DEBUG_ENV_VAR as _GRPC_DEBUG_ENV_VAR,
@@ -41,20 +31,14 @@ from openllm.utils.lazy import (
   VersionInfo as VersionInfo,
 )
 
-logger = logging.getLogger(__name__)
+if t.TYPE_CHECKING:
+  from openllm._typing_compat import AnyCallable, LiteralRuntime
 
+logger = logging.getLogger(__name__)
 try: from typing import GenericAlias as _TypingGenericAlias  # type: ignore
 except ImportError: _TypingGenericAlias = ()  # type: ignore # python < 3.9 does not have GenericAlias (list[int], tuple[str, ...] and so on)
 if sys.version_info < (3, 10): _WithArgsTypes = (_TypingGenericAlias,)
 else: _WithArgsTypes: t.Any = (t._GenericAlias, types.GenericAlias, types.UnionType)  # type: ignore #  _GenericAlias is the actual GenericAlias implementation
-# NOTE: We need to do this so that overload can register
-# correct overloads to typing registry
-if sys.version_info[:2] >= (3, 11): from typing import overload as _overload
-else: from typing_extensions import overload as _overload
-if t.TYPE_CHECKING:
-  import openllm
-
-  from .._types import AnyCallable, LiteralRuntime
 
 DEV_DEBUG_VAR = "OPENLLMDEVDEBUG"
 
@@ -194,9 +178,7 @@ def compose(*funcs: AnyCallable) -> AnyCallable:
   >>> [f(3*x, x+1) for x in range(1,10)]
   [1.5, 2.0, 2.25, 2.4, 2.5, 2.571, 2.625, 2.667, 2.7]
   """
-  def compose_two(f1: AnyCallable, f2: AnyCallable) -> AnyCallable:
-    return lambda *args, **kwargs: f1(f2(*args, **kwargs))
-
+  def compose_two(f1: AnyCallable, f2: AnyCallable) -> AnyCallable: return lambda *args, **kwargs: f1(f2(*args, **kwargs))
   return functools.reduce(compose_two, funcs)
 
 def apply(transform: AnyCallable) -> t.Callable[[AnyCallable], AnyCallable]:
@@ -241,7 +223,6 @@ def resolve_filepath(path: str, ctx: str | None = None) -> str:
 def validate_is_path(maybe_path: str) -> bool: return os.path.exists(os.path.dirname(resolve_filepath(maybe_path)))
 
 def generate_context(framework_name: str) -> _ModelContext:
-  import openllm
   framework_versions = {"transformers": pkg.get_pkg_version("transformers")}
   if openllm.utils.is_torch_available(): framework_versions["torch"] = pkg.get_pkg_version("torch")
   if openllm.utils.is_tf_available():
@@ -261,14 +242,6 @@ def normalize_attrs_to_model_tokenizer_pair(**attrs: t.Any) -> tuple[dict[str, t
     if k.startswith(_TOKENIZER_PREFIX): del attrs[k]
   return attrs, tokenizer_attrs
 
-@_overload
-def infer_auto_class(implementation: t.Literal["pt"]) -> type[openllm.AutoLLM]: ...
-@_overload
-def infer_auto_class(implementation: t.Literal["tf"]) -> type[openllm.AutoTFLLM]: ...
-@_overload
-def infer_auto_class(implementation: t.Literal["flax"]) -> type[openllm.AutoFlaxLLM]: ...
-@_overload
-def infer_auto_class(implementation: t.Literal["vllm"]) -> type[openllm.AutoVLLM]: ...
 def infer_auto_class(implementation: LiteralRuntime) -> type[openllm.AutoLLM] | type[openllm.AutoTFLLM] | type[openllm.AutoFlaxLLM] | type[openllm.AutoVLLM]:
   import openllm
   if implementation == "tf": return openllm.AutoTFLLM

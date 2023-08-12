@@ -1,17 +1,11 @@
 from __future__ import annotations
-import logging
-import typing as t
-
-import bentoml
-import openllm
+import logging, typing as t, bentoml, openllm
 from openllm.utils import generate_labels
-
 from .configuration_starcoder import EOD, FIM_INDICATOR, FIM_MIDDLE, FIM_PAD, FIM_PREFIX, FIM_SUFFIX
-
 if t.TYPE_CHECKING: import torch, transformers
 else: torch, transformers = openllm.utils.LazyLoader("torch", globals(), "torch"), openllm.utils.LazyLoader("transformers", globals(), "transformers")
-logger = logging.getLogger(__name__)
 
+logger = logging.getLogger(__name__)
 class StarCoder(openllm.LLM["transformers.GPTBigCodeForCausalLM", "transformers.GPT2TokenizerFast"]):
   __openllm_internal__ = True
   @property
@@ -33,7 +27,6 @@ class StarCoder(openllm.LLM["transformers.GPTBigCodeForCausalLM", "transformers.
     # XXX: This value for pad_token_id is currently a hack, need more investigate why the
     # default starcoder doesn't include the same value as santacoder EOD
     return prompt_text, {"temperature": temperature, "top_p": top_p, "max_new_tokens": max_new_tokens, "repetition_penalty": repetition_penalty, "pad_token_id": 49152, **attrs}, {}
-
   def postprocess_generate(self, prompt: str, generation_result: t.Sequence[str], **_: t.Any) -> str: return generation_result[0]
   def generate(self, prompt: str, **attrs: t.Any) -> list[str]:
     with torch.inference_mode():

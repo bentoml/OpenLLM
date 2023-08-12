@@ -1,19 +1,6 @@
 from __future__ import annotations
-import functools
-import importlib
-import importlib.machinery
-import importlib.metadata
-import importlib.util
-import itertools
-import os
-import time
-import types
-import typing as t
-import warnings
-
-import attr
-
-import openllm
+import functools, importlib, importlib.machinery, importlib.metadata, importlib.util, itertools, os, time, types, warnings, typing as t
+import attr, openllm
 
 __all__ = ["VersionInfo", "LazyModule"]
 # vendorred from attrs
@@ -68,7 +55,7 @@ class LazyModule(types.ModuleType):
     for key, values in import_structure.items():
       for value in values: self._class_to_module[value] = key
     # Needed for autocompletion in an IDE
-    self.__all__ = list(import_structure.keys()) + list(itertools.chain(*import_structure.values()))
+    self.__all__: list[str] = list(import_structure.keys()) + list(itertools.chain(*import_structure.values()))
     self.__file__ = module_file
     self.__spec__ = module_spec or importlib.util.find_spec(name)
     self.__path__ = [os.path.dirname(module_file)]
@@ -93,7 +80,7 @@ class LazyModule(types.ModuleType):
     if name in dunder_to_metadata:
       if name not in {"__version_info__", "__copyright__", "__version__"}: warnings.warn(f"Accessing '{self._name}.{name}' is deprecated. Please consider using 'importlib.metadata' directly to query for openllm packaging metadata.", DeprecationWarning, stacklevel=2)
       meta = importlib.metadata.metadata("openllm")
-      project_url = dict(url.split(", ") for url in meta.get_all("Project-URL"))
+      project_url = dict(url.split(", ") for url in t.cast(t.List[str], meta.get_all("Project-URL")))
       if name == "__license__": return "Apache-2.0"
       elif name == "__copyright__": return f"Copyright (c) 2023-{time.strftime('%Y')}, Aaron Pham et al."
       elif name in ("__uri__", "__url__"): return project_url["GitHub"]

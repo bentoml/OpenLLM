@@ -32,7 +32,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   pure-wheels-sdist:
-    name: Building pure wheels and sdist
+    name: Pure wheels and sdist distribution
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -50,31 +50,26 @@ jobs:
           path: dist/*
           if-no-files-found: error
   mypyc:
-    name: Building compiled mypyc wheels (${{ matrix.name }})
+    name: Compiled mypyc wheels (${{ matrix.name }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          # NOTE: ubuntu x86
           - os: ubuntu-latest
             name: linux-x86_64
-            python: 311
           # NOTE: darwin amd64
           - os: macos-latest
             name: macos-x86_64
             macos_arch: "x86_64"
-            python: 311
           # NOTE: darwin arm64
           - os: macos-latest
             name: macos-arm64
             macos_arch: "arm64"
-            python: 311
           # NOTE: darwin universal2
           - os: macos-latest
             name: macos-universal2
             macos_arch: "universal2"
-            python: 311
     steps:
       - uses: actions/checkout@v3
         with:
@@ -85,9 +80,9 @@ jobs:
         with:
           python-version: 3.9
       - name: Build wheels via cibuildwheel
-        uses: pypa/cibuildwheel@v2.14.1
+        uses: pypa/cibuildwheel@v2.15.0
         env:
-          CIBW_BUILD: cp${{ matrix.python }}-*
+          CIBW_BEFORE_BUILD_MACOS: "rustup target add aarch64-apple-darwin"
           CIBW_ARCHS_MACOS: "${{ matrix.macos_arch }}"
           MYPYPATH: /project/typings
       - name: Upload wheels as workflow artifacts

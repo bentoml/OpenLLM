@@ -1,22 +1,14 @@
 from __future__ import annotations
-import functools
-import inspect
-import linecache
-import logging
-import string
-import types
-import typing as t
+import functools, inspect, linecache, os, logging, string, types, typing as t
 from operator import itemgetter
 from pathlib import Path
-
 import orjson
 
 if t.TYPE_CHECKING:
   from fs.base import FS
 
   import openllm
-
-  from .._types import AnyCallable, DictStrAny, ListStr
+  from openllm._typing_compat import LiteralString, AnyCallable, DictStrAny, ListStr
   PartialAny = functools.partial[t.Any]
 
 _T = t.TypeVar("_T", bound=t.Callable[..., t.Any])
@@ -24,7 +16,7 @@ logger = logging.getLogger(__name__)
 OPENLLM_MODEL_NAME = "# openllm: model name"
 OPENLLM_MODEL_ADAPTER_MAP = "# openllm: model adapter map"
 class ModelNameFormatter(string.Formatter):
-  model_keyword: t.LiteralString = "__model_name__"
+  model_keyword: LiteralString = "__model_name__"
   def __init__(self, model_name: str):
     """The formatter that extends model_name to be formatted the 'service.py'."""
     super().__init__()
@@ -36,14 +28,13 @@ class ModelNameFormatter(string.Formatter):
       return True
     except ValueError: return False
 class ModelIdFormatter(ModelNameFormatter):
-  model_keyword: t.LiteralString = "__model_id__"
+  model_keyword: LiteralString = "__model_id__"
 class ModelAdapterMapFormatter(ModelNameFormatter):
-  model_keyword: t.LiteralString = "__model_adapter_map__"
+  model_keyword: LiteralString = "__model_adapter_map__"
 
-_service_file = Path(__file__).parent.parent / "_service.py"
+_service_file = Path(os.path.abspath("__file__")).parent.parent/"_service.py"
 def write_service(llm: openllm.LLM[t.Any, t.Any], adapter_map: dict[str, str | None] | None, llm_fs: FS) -> None:
-  from . import DEBUG
-
+  from openllm.utils import DEBUG
   model_name = llm.config["model_name"]
   logger.debug("Generating service file for %s at %s (dir=%s)", model_name, llm.config["service_name"], llm_fs.getsyspath("/"))
   with open(_service_file.__fspath__(), "r") as f: src_contents = f.readlines()
@@ -119,33 +110,26 @@ def make_attr_tuple_class(cls_name: str, attr_names: t.Sequence[str]) -> type[t.
   return globs[attr_class_name]
 
 def generate_unique_filename(cls: type[t.Any], func_name: str) -> str: return f"<{cls.__name__} generated {func_name} {cls.__module__}.{getattr(cls, '__qualname__', cls.__name__)}>"
-def generate_function(typ: type[t.Any], func_name: str, lines: list[str] | None, args: tuple[str, ...] | None, globs: dict[str, t.Any], annotations: dict[str, t.Any] | None = None,) -> AnyCallable:
-  from . import SHOW_CODEGEN
-
+def generate_function(typ: type[t.Any], func_name: str, lines: list[str] | None, args: tuple[str, ...] | None, globs: dict[str, t.Any], annotations: dict[str, t.Any] | None = None) -> AnyCallable:
+  from openllm.utils import SHOW_CODEGEN
   script = "def %s(%s):\n    %s\n" % (func_name, ", ".join(args) if args is not None else "", "\n    ".join(lines) if lines else "pass")
   meth = _make_method(func_name, script, generate_unique_filename(typ, func_name), globs)
   if annotations: meth.__annotations__ = annotations
   if SHOW_CODEGEN: logger.info("Generated script for %s:\n\n%s", typ, script)
   return meth
 
-def make_env_transformer(cls: type[openllm.LLMConfig], model_name: str, suffix: t.LiteralString | None = None, default_callback: t.Callable[[str, t.Any], t.Any] | None = None, globs: DictStrAny | None = None,) -> AnyCallable:
-  from . import dantic, field_env_key
-
+def make_env_transformer(cls: type[openllm.LLMConfig], model_name: str, suffix: LiteralString | None = None, default_callback: t.Callable[[str, t.Any], t.Any] | None = None, globs: DictStrAny | None = None,) -> AnyCallable:
+  from openllm.utils import dantic, field_env_key
   def identity(_: str, x_value: t.Any) -> t.Any: return x_value
   default_callback = identity if default_callback is None else default_callback
-
   globs = {} if globs is None else globs
   globs.update({"__populate_env": dantic.env_converter, "__default_callback": default_callback, "__field_env": field_env_key, "__suffix": suffix or "", "__model_name": model_name,})
-
   lines: ListStr = ["__env = lambda field_name: __field_env(__model_name, field_name, __suffix)", "return [", "    f.evolve(", "        default=__populate_env(__default_callback(f.name, f.default), __env(f.name)),", "        metadata={", "            'env': f.metadata.get('env', __env(f.name)),", "            'description': f.metadata.get('description', '(not provided)'),", "        },", "    )", "    for f in fields", "]"]
   fields_ann = "list[attr.Attribute[t.Any]]"
-
   return generate_function(cls, "__auto_env", lines, args=("_", "fields"), globs=globs, annotations={"_": "type[LLMConfig]", "fields": fields_ann, "return": fields_ann})
-
 def gen_sdk(func: _T, name: str | None = None, **attrs: t.Any) -> _T:
   """Enhance sdk with nice repr that plays well with your brain."""
-  from .representation import ReprMixin
-
+  from openllm.utils import ReprMixin
   if name is None: name = func.__name__.strip("_")
   _signatures = inspect.signature(func).parameters
   def _repr(self: ReprMixin) -> str: return f"<generated function {name} {orjson.dumps(dict(self.__repr_args__()), option=orjson.OPT_NON_STR_KEYS | orjson.OPT_INDENT_2).decode()}>"
@@ -153,3 +137,5 @@ def gen_sdk(func: _T, name: str | None = None, **attrs: t.Any) -> _T:
   if func.__doc__ is None: doc = f"Generated SDK for {func.__name__}"
   else: doc = func.__doc__
   return t.cast(_T, functools.update_wrapper(types.new_class(name, (t.cast("PartialAny", functools.partial), ReprMixin), exec_body=lambda ns: ns.update({"__repr_keys__": property(lambda _: [i for i in _signatures.keys() if not i.startswith("_")]), "__repr_args__": _repr_args, "__repr__": _repr, "__doc__": inspect.cleandoc(doc), "__module__": "openllm",}),)(func, **attrs), func,))
+
+__all__ = ["gen_sdk", "make_attr_tuple_class", "make_env_transformer", "generate_unique_filename", "generate_function", "OPENLLM_MODEL_NAME", "OPENLLM_MODEL_ADAPTER_MAP"]

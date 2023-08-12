@@ -1,38 +1,17 @@
-
 from __future__ import annotations
-import functools
-import inspect
-import logging
-import math
-import os
-import sys
-import types
-import typing as t
-import warnings
-
-import psutil
-
-import bentoml
+import functools, inspect, logging, math, os, sys, types, typing as t, warnings, psutil, bentoml
 from bentoml._internal.resource import get_resource, system_resources
 from bentoml._internal.runner.strategy import THREAD_ENVS
-
 from .utils import DEBUG, ReprMixin
+if sys.version_info[:2] >= (3, 11): from typing import overload
+else: from typing_extensions import overload
 
 class DynResource(t.Protocol):
   resource_id: t.ClassVar[str]
-
   @classmethod
   def from_system(cls) -> t.Sequence[t.Any]: ...
 
-# NOTE: We need to do this so that overload can register
-# correct overloads to typing registry
-if sys.version_info[:2] >= (3, 11):
-  from typing import overload
-else:
-  from typing_extensions import overload
-
 logger = logging.getLogger(__name__)
-
 def _strtoul(s: str) -> int:
   """Return -1 or positive integer sequence string starts with,."""
   if not s: return -1

@@ -1,4 +1,5 @@
 import enum
+import sys
 from typing import (
     Any,
     Callable,
@@ -8,18 +9,19 @@ from typing import (
     Literal,
     Mapping,
     Optional,
-    ParamSpec,
     Protocol,
     Sequence,
     Tuple,
     Type,
-    TypeAlias,
-    TypeGuard,
     TypeVar,
     Union,
-    dataclass_transform,
     overload,
 )
+
+if sys.version_info[:2] >= (3, 11):
+  from typing import ParamSpec, TypeAlias, TypeGuard, dataclass_transform
+else:
+  from typing_extensions import ParamSpec, TypeAlias, TypeGuard, dataclass_transform
 
 from . import (
     converters as converters,
@@ -72,9 +74,9 @@ def Factory(factory: Callable[[Any], _T], takes_self: Literal[True]) -> _T: ...
 @overload
 def Factory(factory: Callable[[], _T], takes_self: Literal[False]) -> _T: ...
 
-class _CountingAttr(Generic[_T]):
+class _CountingAttr:
     counter: int
-    _default: _T
+    _default: Any
     repr: _ReprArgType
     cmp: _EqOrderType
     eq: _EqOrderType
@@ -85,8 +87,8 @@ class _CountingAttr(Generic[_T]):
     init: bool
     converter: _ConverterType | None
     metadata: dict[Any, Any]
-    _validator: _ValidatorType[_T] | None
-    type: type[_T] | None
+    _validator: _ValidatorType[Any] | None
+    type: type[Any] | None
     kw_only: bool
     on_setattr: _OnSetAttrType
     alias: str | None
@@ -109,7 +111,7 @@ class Attribute(Generic[_T]):
     alias: str | None
     def evolve(self, **changes: Any) -> Attribute[Any]: ...
     @classmethod
-    def from_counting_attr(cls, name: str, ca: _CountingAttr[_T], type: Type[Any] | None = None) -> Attribute[_T]: ...
+    def from_counting_attr(cls, name: str, ca: _CountingAttr, type: Type[Any] | None = None) -> Attribute[_T]: ...
 
 # NOTE: We had several choices for the annotation to use for type arg:
 # 1) Type[_T]
@@ -534,12 +536,10 @@ def assoc(inst: _T, **changes: Any) -> _T: ...
 def evolve(inst: _T, **changes: Any) -> _T: ...
 
 # _config --
-
 def set_run_validators(run: bool) -> None: ...
 def get_run_validators() -> bool: ...
 
 # aliases --
-
 s = attrs
 attributes = attrs
 ib = attrib
@@ -547,8 +547,7 @@ attr = attrib
 dataclass = attrs  # Technically, partial(attrs, auto_attribs=True) ;)
 
 class ReprProtocol(Protocol):
-    def __call__(__self, self: Any) -> str: ...
-
+  def __call__(__self, self: Any) -> str: ...
 def _make_init(
     cls: type[AttrsInstance],
     attrs: tuple[Attribute[Any], ...],
@@ -565,9 +564,9 @@ def _make_init(
 def _make_repr(attrs: tuple[Attribute[Any]], ns: str | None, cls: AttrsInstance) -> ReprProtocol: ...
 def _transform_attrs(
     cls: type[AttrsInstance],
-    these: dict[str, _CountingAttr[_T]] | None,
+    these: dict[str, _CountingAttr] | None,
     auto_attribs: bool,
     kw_only: bool,
     collect_by_mro: bool,
     field_transformer: _FieldTransformer | None,
-) -> tuple[tuple[Attribute[_T], ...], tuple[Attribute[_T], ...], dict[Attribute[_T], type[Any]]]: ...
+) -> tuple[tuple[Attribute[Any], ...], tuple[Attribute[Any], ...], dict[Attribute[Any], type[Any]]]: ...

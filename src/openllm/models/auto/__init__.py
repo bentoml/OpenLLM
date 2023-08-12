@@ -1,6 +1,5 @@
 from __future__ import annotations
-import sys, typing as t
-
+import typing as t, os
 import openllm
 from openllm.utils import LazyModule, is_flax_available, is_tf_available, is_torch_available, is_vllm_available
 
@@ -40,4 +39,7 @@ else:
   _import_structure["modeling_tf_auto"].extend(["AutoTFLLM", "MODEL_TF_MAPPING"])
   if t.TYPE_CHECKING: from .modeling_tf_auto import MODEL_TF_MAPPING as MODEL_TF_MAPPING, AutoTFLLM as AutoTFLLM
 
-sys.modules[__name__] = LazyModule(__name__, globals()["__file__"], _import_structure)
+__lazy=LazyModule(__name__, os.path.abspath("__file__"), _import_structure)
+__all__=__lazy.__all__
+__dir__=__lazy.__dir__
+__getattr__=__lazy.__getattr__

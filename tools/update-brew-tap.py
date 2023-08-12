@@ -1,19 +1,13 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import os
-import typing as t
+import os, typing as t, fs
 from pathlib import Path
-
-import fs
 from ghapi.all import GhApi
 from jinja2 import Environment
 from jinja2.loaders import FileSystemLoader
 from plumbum.cmd import curl, cut, shasum
 
-if t.TYPE_CHECKING:
-  from plumbum.commands.base import Pipeline
-
-  from openllm._types import DictStrAny
+if t.TYPE_CHECKING: from plumbum.commands.base import Pipeline
 
 # get git root from this file
 ROOT = Path(__file__).parent.parent
@@ -36,7 +30,7 @@ def main() -> int:
   _info = api.repos.get()
   release_tag = api.repos.get_latest_release().name
 
-  shadict: DictStrAny = {k: get_release_hash_command(determine_release_url(_info.svn_url, release_tag, k), release_tag)().strip() for k in _gz_strategies}
+  shadict: dict[str, t.Any] = {k: get_release_hash_command(determine_release_url(_info.svn_url, release_tag, k), release_tag)().strip() for k in _gz_strategies}
   shadict["archive"] = get_release_hash_command(determine_release_url(_info.svn_url, release_tag, "archive"), release_tag)().strip()
 
   ENVIRONMENT = Environment(extensions=["jinja2.ext.do", "jinja2.ext.loopcontrols", "jinja2.ext.debug"], trim_blocks=True, lstrip_blocks=True, loader=FileSystemLoader((ROOT / "Formula").__fspath__(), followlinks=True))

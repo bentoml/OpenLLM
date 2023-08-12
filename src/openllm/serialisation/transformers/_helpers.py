@@ -1,25 +1,14 @@
-
 from __future__ import annotations
-import copy
-import typing as t
-
-import openllm
+import copy, typing as t, openllm
 from bentoml._internal.models.model import ModelInfo, ModelSignature
 from openllm.serialisation.constants import FRAMEWORK_TO_AUTOCLASS_MAPPING, HUB_ATTRS
 
 if t.TYPE_CHECKING:
-  import torch
-  import transformers
+  import torch, transformers, bentoml
   from transformers.models.auto.auto_factory import _BaseAutoModelClass
-
-  import bentoml
   from bentoml._internal.models.model import ModelSignaturesType
-
-  from ..._llm import M, T
-  from ..._types import DictStrAny
-else:
-  transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
-  torch = openllm.utils.LazyLoader("torch", globals(), "torch")
+  from openllm._typing_compat import DictStrAny, M, T
+else: transformers, torch = openllm.utils.LazyLoader("transformers", globals(), "transformers"), openllm.utils.LazyLoader("torch", globals(), "torch")
 
 _object_setattr = object.__setattr__
 

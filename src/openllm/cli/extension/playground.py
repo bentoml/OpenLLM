@@ -1,26 +1,13 @@
-
 from __future__ import annotations
-import importlib.machinery
-import logging
-import os
-import pkgutil
-import subprocess
-import sys
-import tempfile
-import typing as t
-
-import click
-import yaml
-
-from .. import termui
-from ... import playground
-from ...utils import is_jupyter_available, is_jupytext_available, is_notebook_available
+import importlib.machinery, logging, os, pkgutil, subprocess, sys, tempfile, typing as t
+import click, yaml
+from openllm.cli import termui
+from openllm import playground
+from openllm.utils import is_jupyter_available, is_jupytext_available, is_notebook_available
 
 if t.TYPE_CHECKING:
-  import jupytext
-  import nbformat
-
-  from openllm._types import DictStrAny
+  import jupytext, nbformat
+  from openllm._typing_compat import DictStrAny
 
 logger = logging.getLogger(__name__)
 

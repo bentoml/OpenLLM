@@ -3,33 +3,17 @@
 Users can disable this with OPENLLM_DO_NOT_TRACK envvar.
 """
 from __future__ import annotations
-import contextlib
-import functools
-import importlib.metadata
-import logging
-import os
-import re
-import sys
-import typing as t
-
-import attr
-
-import openllm
+import contextlib, functools, logging, os, re, typing as t, importlib.metadata
+import attr, openllm
 from bentoml._internal.utils import analytics as _internal_analytics
-
-if sys.version_info[:2] >= (3, 10):
-  from typing import ParamSpec
-else:
-  from typing_extensions import ParamSpec
+from openllm._typing_compat import ParamSpec
 
 P = ParamSpec("P")
 T = t.TypeVar("T")
-
 logger = logging.getLogger(__name__)
 
 # This variable is a proxy that will control BENTOML_DO_NOT_TRACK
 OPENLLM_DO_NOT_TRACK = "OPENLLM_DO_NOT_TRACK"
-
 DO_NOT_TRACK = os.environ.get(OPENLLM_DO_NOT_TRACK, str(False)).upper()
 
 @functools.lru_cache(maxsize=1)
@@ -75,18 +59,15 @@ class EventMeta:
 class ModelSaveEvent(EventMeta):
   module: str
   model_size_in_kb: float
-
 @attr.define
 class OpenllmCliEvent(EventMeta):
   cmd_group: str
   cmd_name: str
   openllm_version: str = importlib.metadata.version("openllm")
-
   # NOTE: reserved for the do_not_track logics
   duration_in_ms: t.Any = attr.field(default=None)
   error_type: str = attr.field(default=None)
   return_code: int = attr.field(default=None)
-
 @attr.define
 class StartInitEvent(EventMeta):
   model_name: str

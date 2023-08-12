@@ -1,19 +1,12 @@
-# mypy: disable-error-code="name-defined,misc"
 """Serialisation related implementation for Transformers-based implementation."""
 from __future__ import annotations
-import importlib
-import logging
-import typing as t
-
+import importlib, logging, typing as t
+import bentoml, openllm
 from huggingface_hub import snapshot_download
 from simple_di import Provide, inject
-
-import bentoml
-import openllm
 from bentoml._internal.configuration.containers import BentoMLContainer
 from bentoml._internal.models.model import ModelOptions
-from openllm.serialisation.transformers.weights import HfIgnore
-
+from .weights import HfIgnore
 from ._helpers import (
   check_unintialised_params,
   infer_autoclass_from_llm,
@@ -26,16 +19,16 @@ from ._helpers import (
 if t.TYPE_CHECKING:
   import types
 
+  import vllm, auto_gptq as autogptq, transformers ,torch
   import torch.nn
 
   from bentoml._internal.models import ModelStore
-  from openllm._llm import M, T
-  from openllm._types import DictStrAny
-
-vllm = openllm.utils.LazyLoader("vllm", globals(), "vllm")
-autogptq = openllm.utils.LazyLoader("autogptq", globals(), "auto_gptq")
-transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
-torch = openllm.utils.LazyLoader("torch", globals(), "torch")
+  from openllm._typing_compat import DictStrAny, M, T
+else:
+  vllm = openllm.utils.LazyLoader("vllm", globals(), "vllm")
+  autogptq = openllm.utils.LazyLoader("autogptq", globals(), "auto_gptq")
+  transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
+  torch = openllm.utils.LazyLoader("torch", globals(), "torch")
 
 logger = logging.getLogger(__name__)
 

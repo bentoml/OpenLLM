@@ -1,53 +1,19 @@
-# Copyright 2023 BentoML Team. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 from __future__ import annotations
-import asyncio
-import contextlib
-import functools
-import logging
-import sys
-import time
-import typing as t
+import asyncio, contextlib, functools, logging, sys, time, typing as t
 from abc import ABC, abstractmethod
-
-import attr
-import docker
-import docker.errors
-import docker.types
-import orjson
-import pytest
+import attr, docker, docker.errors, docker.types, orjson, pytest, openllm
 from syrupy.extensions.json import JSONSnapshotExtension
-
-import openllm
 from openllm._llm import normalise_model_name
+from openllm._typing_compat import DictStrAny, ListAny
 
 logger = logging.getLogger(__name__)
 
 if t.TYPE_CHECKING:
   import subprocess
-
   from syrupy.assertion import SnapshotAssertion
   from syrupy.types import PropertyFilter, PropertyMatcher, SerializableData, SerializedData
-
   from openllm._configuration import GenerationConfig
-  from openllm._types import DictStrAny, ListAny
   from openllm.client import BaseAsyncClient
-
-else:
-  DictStrAny = dict
-  ListAny = list
 
 class ResponseComparator(JSONSnapshotExtension):
   def serialize(self, data: SerializableData, *, exclude: PropertyFilter | None = None, matcher: PropertyMatcher | None = None,) -> SerializedData:

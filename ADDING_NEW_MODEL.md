@@ -19,7 +19,7 @@ All the relevant code for incorporating a new model resides within
       `src/openllm/models/{model_name}/__init__.py`
 - [ ] Adjust the entrypoints for files at `src/openllm/models/auto/*`
 - [ ] Modify the main `__init__.py`: `src/openllm/models/__init__.py`
-- [ ] Run the following script to update dummy objects: `hatch run update-dummy`
+- [ ] Run the following to update stubs: `hatch run check-stubs`
 
 For a working example, check out any pre-implemented model.
 

@@ -1,12 +1,18 @@
-"""The actual client implementation.
+"""OpenLLM Python client.
 
-Use ``openllm.client`` instead.
-This holds the implementation of the client, which is used to communicate with the
-OpenLLM server. It is used to send requests to the server, and receive responses.
+```python
+client = openllm.client.HTTPClient("http://localhost:8080")
+client.query("What is the difference between gather and scatter?")
+```
+
+If the server has embedding supports, use it via `client.embed`:
+```python
+client.embed("What is the difference between gather and scatter?")
+```
 """
 from __future__ import annotations
 
-from .runtimes import (
+from openllm.client.runtimes import (
     AsyncGrpcClient as AsyncGrpcClient,
     AsyncHTTPClient as AsyncHTTPClient,
     BaseAsyncClient as BaseAsyncClient,

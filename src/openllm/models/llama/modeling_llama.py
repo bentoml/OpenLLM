@@ -1,18 +1,15 @@
 from __future__ import annotations
-import logging
-import typing as t
-
-import openllm
+import logging, typing as t, openllm
 from openllm._prompt import process_prompt
-
 from .configuration_llama import DEFAULT_PROMPT_TEMPLATE
-
 if t.TYPE_CHECKING: import torch, transformers, torch.nn.functional as F
 else: torch, transformers, F = openllm.utils.LazyLoader("torch", globals(), "torch"), openllm.utils.LazyLoader("transformers", globals(), "transformers"), openllm.utils.LazyLoader("F", globals(), "torch.nn.functional")
-logger = logging.getLogger(__name__)
 
+logger = logging.getLogger(__name__)
 class Llama(openllm.LLM["transformers.LlamaForCausalLM", "transformers.LlamaTokenizerFast"]):
   __openllm_internal__ = True
+  @property
+  def import_kwargs(self) -> tuple[dict[str, t.Any], dict[str, t.Any]]: return {"torch_dtype": torch.float16 if torch.cuda.is_available() else torch.float32}, {}
   def sanitize_parameters(self, prompt: str, top_k: int | None = None, top_p: float | None = None, temperature: float | None = None, max_new_tokens: int | None = None, use_default_prompt_template: bool = False, use_llama2_prompt: bool = True, **attrs: t.Any) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]: return process_prompt(prompt, DEFAULT_PROMPT_TEMPLATE("v2" if use_llama2_prompt else "v1") if use_default_prompt_template else None, use_default_prompt_template, **attrs), {"max_new_tokens": max_new_tokens, "temperature": temperature, "top_p": top_p, "top_k": top_k}, {}
   def postprocess_generate(self, prompt: str, generation_result: list[str], **_: t.Any) -> str: return generation_result[0]
   def generate(self, prompt: str, **attrs: t.Any) -> list[str]:
@@ -25,4 +22,4 @@ class Llama(openllm.LLM["transformers.LlamaForCausalLM", "transformers.LlamaToke
       mask = attention_mask.unsqueeze(-1).expand(data.size()).float()
       masked_embeddings = data * mask
       sum_embeddings, seq_length = torch.sum(masked_embeddings, dim=1), torch.sum(mask, dim=1)
-    return openllm.LLMEmbeddings(embeddings=F.normalize(sum_embeddings / seq_length, p=2, dim=1).tolist(), num_tokens=torch.sum(attention_mask).item())
+    return openllm.LLMEmbeddings(embeddings=F.normalize(sum_embeddings / seq_length, p=2, dim=1).tolist(), num_tokens=int(torch.sum(attention_mask).item()))

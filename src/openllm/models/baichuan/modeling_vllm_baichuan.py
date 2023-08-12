@@ -1,15 +1,9 @@
 from __future__ import annotations
-import logging
-import typing as t
-
-import openllm
+import typing as t, openllm
 from openllm._prompt import process_prompt
-
 from .configuration_baichuan import DEFAULT_PROMPT_TEMPLATE
-
 if t.TYPE_CHECKING: import vllm, transformers
 
-logger = logging.getLogger(__name__)
 class VLLMBaichuan(openllm.LLM["vllm.LLMEngine", "transformers.PreTrainedTokenizerBase"]):
   __openllm_internal__ = True
   tokenizer_id = "local"

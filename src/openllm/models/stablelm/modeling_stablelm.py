@@ -1,10 +1,6 @@
 from __future__ import annotations
-import logging
-import typing as t
-
-import openllm
+import logging, typing as t, openllm
 from openllm._prompt import process_prompt
-
 from .configuration_stablelm import DEFAULT_PROMPT_TEMPLATE, SYSTEM_PROMPT
 
 if t.TYPE_CHECKING: import transformers, torch

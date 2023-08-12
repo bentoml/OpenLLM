@@ -20,36 +20,12 @@ bentomodel = openllm.import_model("falcon", model_id='tiiuae/falcon-7b-instruct'
 ```
 """
 from __future__ import annotations
-import functools
-import http.client
-import inspect
-import itertools
-import logging
-import os
-import platform
-import re
-import subprocess
-import sys
-import time
-import traceback
-import typing as t
-
-import attr
-import click
-import click_option_group as cog
-import fs
-import fs.copy
-import fs.errors
-import inflection
-import orjson
+import functools, http.client, inspect, itertools, logging, os, platform, re, subprocess, sys, time, traceback, typing as t
+import attr, click, click_option_group as cog, fs, fs.copy, fs.errors, inflection, orjson, bentoml, openllm
 from bentoml_cli.utils import BentoMLCommandGroup, opt_callback
 from simple_di import Provide, inject
-
-import bentoml
-import openllm
 from bentoml._internal.configuration.containers import BentoMLContainer
 from bentoml._internal.models.model import ModelStore
-
 from . import termui
 from ._factory import (
   FC,
@@ -69,9 +45,9 @@ from ._factory import (
   start_command_factory,
   workers_per_resource_option,
 )
-from .. import bundle, serialisation
-from ..exceptions import OpenLLMException
-from ..models.auto import (
+from openllm import bundle, serialisation
+from openllm.exceptions import OpenLLMException
+from openllm.models.auto import (
   CONFIG_MAPPING,
   MODEL_FLAX_MAPPING_NAMES,
   MODEL_MAPPING_NAMES,
@@ -80,7 +56,8 @@ from ..models.auto import (
   AutoConfig,
   AutoLLM,
 )
-from ..utils import (
+from openllm._typing_compat import DictStrAny, ParamSpec, Concatenate, LiteralString, Self, LiteralRuntime
+from openllm.utils import (
   DEBUG,
   DEBUG_ENV_VAR,
   OPTIONAL_DEPENDENCIES,
@@ -105,19 +82,15 @@ from ..utils import (
 
 if t.TYPE_CHECKING:
   import torch
-
   from bentoml._internal.bento import BentoStore
   from bentoml._internal.container import DefaultBuilder
   from openllm.client import BaseClient
+  from openllm._schema import EmbeddingsOutput
+  from openllm.bundle.oci import LiteralContainerRegistry, LiteralContainerVersionStrategy
+else: torch = LazyLoader("torch", globals(), "torch")
 
-  from .._schema import EmbeddingsOutput
-  from .._types import DictStrAny, LiteralRuntime, P
-  from ..bundle.oci import LiteralContainerRegistry, LiteralContainerVersionStrategy
-else:
-  torch, jupytext, nbformat = LazyLoader("torch", globals(), "torch"), LazyLoader("jupytext", globals(), "jupytext"), LazyLoader("nbformat", globals(), "nbformat")
-
+P = ParamSpec("P")
 logger = logging.getLogger(__name__)
-
 OPENLLM_FIGLET = """\
  ██████╗ ██████╗ ███████╗███╗   ██╗██╗     ██╗     ███╗   ███╗
 ██╔═══██╗██╔══██╗██╔════╝████╗  ██║██║     ██║     ████╗ ████║
@@ -132,9 +105,7 @@ ServeCommand = t.Literal["serve", "serve-grpc"]
 @attr.define
 class GlobalOptions:
   cloud_context: str | None = attr.field(default=None)
-
-  def with_options(self, **attrs: t.Any) -> t.Self:
-    return attr.evolve(self, **attrs)
+  def with_options(self, **attrs: t.Any) -> Self: return attr.evolve(self, **attrs)
 
 GrpType = t.TypeVar("GrpType", bound=click.Group)
 
@@ -173,7 +144,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
     return wrapper
 
   @staticmethod
-  def usage_tracking(func: t.Callable[P, t.Any], group: click.Group, **attrs: t.Any) -> t.Callable[t.Concatenate[bool, P], t.Any]:
+  def usage_tracking(func: t.Callable[P, t.Any], group: click.Group, **attrs: t.Any) -> t.Callable[Concatenate[bool, P], t.Any]:
     command_name = attrs.get("name", func.__name__)
 
     @functools.wraps(func)
@@ -197,7 +168,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
           event.return_code = 2 if isinstance(e, KeyboardInterrupt) else 1
           analytics.track(event)
           raise
-    return t.cast("t.Callable[t.Concatenate[bool, P], t.Any]", wrapper)
+    return t.cast(t.Callable[Concatenate[bool, P], t.Any], wrapper)
 
   @staticmethod
   def exception_handling(func: t.Callable[P, t.Any], group: click.Group, **attrs: t.Any) -> t.Callable[P, t.Any]:
@@ -266,20 +237,17 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
     for subcommand in self.list_commands(ctx):
       cmd = self.get_command(ctx, subcommand)
       if cmd is None or cmd.hidden: continue
-      if subcommand in _cached_extensions:
-        extensions.append((subcommand, cmd))
-      else:
-        commands.append((subcommand, cmd))
+      if subcommand in _cached_extensions: extensions.append((subcommand, cmd))
+      else: commands.append((subcommand, cmd))
     # allow for 3 times the default spacing
     if len(commands):
       limit = formatter.width - 6 - max(len(cmd[0]) for cmd in commands)
-      rows = []
+      rows: list[tuple[str, str]]= []
       for subcommand, cmd in commands:
         help = cmd.get_short_help_str(limit)
         rows.append((subcommand, help))
       if rows:
-        with formatter.section(_("Commands")):
-          formatter.write_dl(rows)
+        with formatter.section(_("Commands")): formatter.write_dl(rows)
     if len(extensions):
       limit = formatter.width - 6 - max(len(cmd[0]) for cmd in extensions)
       rows = []
@@ -287,8 +255,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
         help = cmd.get_short_help_str(limit)
         rows.append((inflection.dasherize(subcommand), help))
       if rows:
-        with formatter.section(_("Extensions")):
-          formatter.write_dl(rows)
+        with formatter.section(_("Extensions")): formatter.write_dl(rows)
 
 @click.group(cls=OpenLLMCommandGroup, context_settings=termui.CONTEXT_SETTINGS, name="openllm")
 @click.version_option(None, "--version", "-v", message=f"%(prog)s, %(version)s (compiled: {'yes' if openllm.COMPILED else 'no'})\nPython ({platform.python_implementation()}) {platform.python_version()}")
@@ -524,10 +491,11 @@ def build_command(
         _previously_built = True
       except bentoml.exceptions.NotFound:
         bento = bundle.create_bento(
-            bento_tag, llm_fs, llm, workers_per_resource=workers_per_resource, device=device, adapter_map=adapter_map, quantize=quantize, bettertransformer=bettertransformer, extra_dependencies=enable_features, dockerfile_template=dockerfile_template_path, runtime=runtime, container_registry=container_registry, container_version_strategy=container_version_strategy
+            bento_tag, llm_fs, llm, workers_per_resource=workers_per_resource, adapter_map=adapter_map,
+            quantize=quantize, bettertransformer=bettertransformer, extra_dependencies=enable_features, dockerfile_template=dockerfile_template_path, runtime=runtime,
+            container_registry=container_registry, container_version_strategy=container_version_strategy
         )
-  except Exception as err:
-    raise err from None
+  except Exception as err: raise err from None
 
   if machine: termui.echo(f"__tag__:{bento.tag}", fg="white")
   elif output == "pretty":
@@ -535,26 +503,17 @@ def build_command(
       termui.echo("\n" + OPENLLM_FIGLET, fg="white")
       if not _previously_built: termui.echo(f"Successfully built {bento}.", fg="green")
       elif not overwrite: termui.echo(f"'{model_name}' already has a Bento built [{bento}]. To overwrite it pass '--overwrite'.", fg="yellow")
-      termui.echo(
-          "📖 Next steps:\n\n" + "* Push to BentoCloud with 'bentoml push':\n" + f"    $ bentoml push {bento.tag}\n\n" + "* Containerize your Bento with 'bentoml containerize':\n" + f"    $ bentoml containerize {bento.tag} --opt progress=plain" + "\n\n" + "    Tip: To enable additional BentoML features for 'containerize', " + "use '--enable-features=FEATURE[,FEATURE]' " +
-          "[see 'bentoml containerize -h' for more advanced usage]\n", fg="blue",
-      )
-  elif output == "json":
-    termui.echo(orjson.dumps(bento.info.to_dict(), option=orjson.OPT_INDENT_2).decode())
-  else:
-    termui.echo(bento.tag)
+      termui.echo("📖 Next steps:\n\n" + f"* Push to BentoCloud with 'bentoml push':\n\t$ bentoml push {bento.tag}\n\n" + f"* Containerize your Bento with 'bentoml containerize':\n\t$ bentoml containerize {bento.tag} --opt progress=plain\n\n" + "\tTip: To enable additional BentoML features for 'containerize', use '--enable-features=FEATURE[,FEATURE]' [see 'bentoml containerize -h' for more advanced usage]\n", fg="blue",)
+  elif output == "json": termui.echo(orjson.dumps(bento.info.to_dict(), option=orjson.OPT_INDENT_2).decode())
+  else: termui.echo(bento.tag)
 
   if push: BentoMLContainer.bentocloud_client.get().push_bento(bento, context=t.cast(GlobalOptions, ctx.obj).cloud_context, force=force_push)
   elif containerize:
     backend = t.cast("DefaultBuilder", os.environ.get("BENTOML_CONTAINERIZE_BACKEND", "docker"))
-    try:
-      bentoml.container.health(backend)
-    except subprocess.CalledProcessError:
-      raise OpenLLMException(f"Failed to use backend {backend}") from None
-    try:
-      bentoml.container.build(bento.tag, backend=backend, features=("grpc", "io"))
-    except Exception as err:
-      raise OpenLLMException(f"Exception caught while containerizing '{bento.tag!s}':\n{err}") from err
+    try: bentoml.container.health(backend)
+    except subprocess.CalledProcessError: raise OpenLLMException(f"Failed to use backend {backend}") from None
+    try: bentoml.container.build(bento.tag, backend=backend, features=("grpc", "io"))
+    except Exception as err: raise OpenLLMException(f"Exception caught while containerizing '{bento.tag!s}':\n{err}") from err
   return bento
 
 @cli.command()
@@ -613,7 +572,7 @@ def models_command(ctx: click.Context, output: LiteralOutput, show_available: bo
 
       tabulate.PRESERVE_WHITESPACE = True
       # llm, architecture, url, model_id, installation, cpu, gpu, runtime_impl
-      data: list[str | tuple[str, str, list[str], str, t.LiteralString, t.LiteralString, tuple[LiteralRuntime, ...]]] = []
+      data: list[str | tuple[str, str, list[str], str, LiteralString, LiteralString, tuple[LiteralRuntime, ...]]] = []
       for m, v in json_data.items():
         data.extend([(m, v["architecture"], v["model_id"], v["installation"], "❌" if not v["cpu"] else "✅", "✅", v["runtime_impl"],)])
       column_widths = [int(termui.COLUMNS / 12), int(termui.COLUMNS / 6), int(termui.COLUMNS / 4), int(termui.COLUMNS / 12), int(termui.COLUMNS / 12), int(termui.COLUMNS / 12), int(termui.COLUMNS / 4),]
@@ -622,7 +581,7 @@ def models_command(ctx: click.Context, output: LiteralOutput, show_available: bo
         termui.echo("Exception found while parsing models:\n", fg="yellow")
         for m, err in failed_initialized:
           termui.echo(f"- {m}: ", fg="yellow", nl=False)
-          termui.echo(traceback.print_exception(err, limit=3), fg="red")
+          termui.echo(traceback.print_exception(None, err, None, limit=5), fg="red")  # type: ignore[func-returns-value]
         sys.exit(1)
 
       table = tabulate.tabulate(data, tablefmt="fancy_grid", headers=["LLM", "Architecture", "Models Id", "pip install", "CPU", "GPU", "Runtime"], maxcolwidths=column_widths)
@@ -699,7 +658,7 @@ def shared_client_options(f: _AnyCallable | None = None, output_value: t.Literal
 @click.option("--remote", is_flag=True, default=False, help="Whether or not to use remote tools (inference endpoints) instead of local ones.", show_default=True)
 @click.option("--opt", help="Define prompt options. "
               "(format: ``--opt text='I love this' --opt audio:./path/to/audio  --opt image:/path/to/file``)", required=False, multiple=True, callback=opt_callback, metavar="ARG=VALUE[,ARG=VALUE]")
-def instruct_command(endpoint: str, timeout: int, agent: t.LiteralString, output: LiteralOutput, remote: bool, task: str, _memoized: DictStrAny, **attrs: t.Any) -> str:
+def instruct_command(endpoint: str, timeout: int, agent: LiteralString, output: LiteralOutput, remote: bool, task: str, _memoized: DictStrAny, **attrs: t.Any) -> str:
   """Instruct agents interactively for given tasks, from a terminal.
 
   \b

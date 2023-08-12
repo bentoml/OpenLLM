@@ -1,8 +1,7 @@
-"""A dict subclass that supports attribute style access.
-
-Can probably be replaced by types.SimpleNamespace from Python 3.3
-"""
-from typing import Any, Dict, Self
+import sys
+from typing import Any, Dict
+if sys.version_info[:2] >= (3,11): from typing import Self
+else: from typing_extensions import Self
 
 class Struct(Dict[str, Any]):
     _allownew: bool = True

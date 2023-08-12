@@ -1,8 +1,5 @@
 from __future__ import annotations
-import sys, typing as t
-
-import openllm
-
+import typing as t, openllm
 if t.TYPE_CHECKING: import torch, transformers, torch.nn.functional as F
 else: torch, transformers, F = openllm.utils.LazyLoader("torch", globals(), "torch"), openllm.utils.LazyLoader("transformers", globals(), "transformers"), openllm.utils.LazyLoader("F", globals(), "torch.nn.functional")
 

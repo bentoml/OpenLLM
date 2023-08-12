@@ -1,18 +1,13 @@
 from __future__ import annotations
-import logging
-import typing as t
-
-import bentoml
-import openllm
+import logging, typing as t, bentoml, openllm
 from openllm._prompt import process_prompt
 from openllm.utils import generate_labels, is_triton_available
-
 from .configuration_mpt import DEFAULT_PROMPT_TEMPLATE, MPTPromptType
 
 if t.TYPE_CHECKING: import transformers, torch
 else: transformers, torch = openllm.utils.LazyLoader("transformers", globals(), "transformers"), openllm.utils.LazyLoader("torch", globals(), "torch")
-logger = logging.getLogger(__name__)
 
+logger = logging.getLogger(__name__)
 def get_mpt_config(model_id_or_path: str, max_sequence_length: int, device: torch.device | str | int | None, device_map: str | None = None, trust_remote_code: bool = True) -> transformers.PretrainedConfig:
   config = transformers.AutoConfig.from_pretrained(model_id_or_path, trust_remote_code=trust_remote_code)
   if hasattr(config, "init_device") and device_map is None and isinstance(device, (str, torch.device)): config.init_device = str(device)
@@ -62,7 +57,7 @@ class MPT(openllm.LLM["transformers.PreTrainedModel", "transformers.GPTNeoXToken
     attrs = {"do_sample": False if llm_config["temperature"] == 0 else True, "eos_token_id": self.tokenizer.eos_token_id, "pad_token_id": self.tokenizer.pad_token_id, "generation_config": llm_config.to_generation_config()}
     with torch.inference_mode():
       if torch.cuda.is_available():
-        with torch.autocast("cuda", torch.float16):
+        with torch.autocast("cuda", torch.float16):  # type: ignore[attr-defined]
           generated_tensors = self.model.generate(**inputs, **attrs)
       else: generated_tensors = self.model.generate(**inputs, **attrs)
     return self.tokenizer.batch_decode(generated_tensors, skip_special_tokens=True)

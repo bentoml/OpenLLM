@@ -44,6 +44,7 @@ dependencies = [
     "httpx",
     "click>=8.1.3",
     "typing_extensions",
+    "mypy_extensions",
     "ghapi",
     "cuda-python;platform_system!=\"Darwin\"",
     "bitsandbytes<0.42",
@@ -124,12 +125,12 @@ vllm = ["vllm", "ray"]
 
 [tool.cibuildwheel]
 build-verbosity = 1
-# So the following enviuronment will be targeted for compiled wheels:
-# - Python: CPython 3.8+ only
+# So the following environment will be targeted for compiled wheels:
+# - Python: CPython 3.8-3.11
 # - Architecture (64-bit only): amd64 / x86_64, universal2, and arm64
 # - OS: Linux (no musl), and macOS
 build = "cp3*-*"
-skip = ["*-manylinux_i686", "*-musllinux_*", "*-win32", "pp-*"]
+skip = ["*-manylinux_i686", "*-musllinux_*", "*-win32", "pp-*", "cp312-*"]
 
 [tool.cibuildwheel.environment]
 HATCH_BUILD_HOOKS_ENABLE = "1"
@@ -183,6 +184,9 @@ fail-under = 100
 verbose = 2
 whitelist-regex = ["test_.*"]
 
+[tool.check-wheel-contents]
+toplevel = ["openllm"]
+
 [tool.pytest.ini_options]
 addopts = ["-rfEX", "-pno:warnings", "--snapshot-warn-unused"]
 python_files = ["test_*.py", "*_test.py"]
@@ -194,7 +198,6 @@ extend-exclude = [
     "examples",
     "src/openllm/playground",
     "src/openllm/__init__.py",
-    "src/openllm/_types.py",
     "src/openllm/_version.py",
     "src/openllm/utils/dummy_*.py",
     "src/openllm/models/__init__.py",
@@ -233,7 +236,9 @@ ignore = [
     "PLR0915",
     "PLR2004", # magic value to use constant
     "E501",    # ignore line length violation
+    "E401",    # ignore multiple line import
     "E702",
+    "I001",    # unsorted imports
     "PYI021",  # ignore docstring in stubs, as pyright will include docstring in stubs.
     "D103",    # Just missing docstring for magic methods.
     "D102",
@@ -245,13 +250,10 @@ ignore = [
     "D105",    # magic docstring
     "E701",    # multiple statement on single line
 ]
-line-length = 119
-target-version = "py312"
-unfixable = [
-    "F401",   # Don't touch unused imports, just warn about it.
-    "TCH004", # Don't touch import outside of TYPE_CHECKING block
-    "RUF100", # unused noqa, just warn about it
-]
+line-length = 768
+target-version = "py38"
+typing-modules = ["openllm._typing_compat"]
+unfixable = ["TCH004"]
 [tool.ruff.flake8-type-checking]
 exempt-modules = ["typing", "typing_extensions", "."]
 runtime-evaluated-base-classes = [
@@ -260,7 +262,7 @@ runtime-evaluated-base-classes = [
     "openllm._configuration.GenerationConfig",
     "openllm._configuration.ModelSettings",
 ]
-runtime-evaluated-decorators = ["attrs.define", "attrs.frozen"]
+runtime-evaluated-decorators = ["attrs.define", "attrs.frozen", "trait"]
 [tool.ruff.pydocstyle]
 convention = "google"
 [tool.ruff.pycodestyle]
@@ -271,7 +273,7 @@ force-single-line = false
 force-wrap-aliases = true
 known-first-party = ["openllm", "bentoml"]
 known-third-party = ["transformers", "click", "huggingface_hub", "torch", "vllm", "auto_gptq"]
-lines-after-imports = 1
+lines-after-imports = 0
 lines-between-types = 0
 no-lines-before = ["future", "standard-library"]
 relative-imports-order = "closest-to-furthest"
@@ -279,12 +281,11 @@ required-imports = ["from __future__ import annotations"]
 [tool.ruff.flake8-quotes]
 avoid-escape = false
 [tool.ruff.extend-per-file-ignores]
-"src/openllm/_service.py" = ["I001", "E401"]
+"src/openllm/_service.py" = ["E401"]
 "src/openllm/cli/entrypoint.py" = ["D301"]
-"src/openllm/models/**" = ["I001", "E", "D", "F"]
-"src/openllm/utils/__init__.py" = ["I001"]
-"src/openllm/utils/import_utils.py" = ["PLW0603"]
 "src/openllm/client/runtimes/*" = ["D107"]
+"src/openllm/models/**" = ["E", "D", "F"]
+"src/openllm/utils/import_utils.py" = ["PLW0603"]
 "tests/**/*" = [
     "S101",
     "TID252",
@@ -348,6 +349,7 @@ omit = [
     "src/openllm/__init__.py",
     "src/openllm/__main__.py",
     "src/openllm/utils/dummy_*.py",
+    "src/openllm/_typing_compat.py",
 ]
 source_pkgs = ["openllm"]
 [tool.coverage.report]
@@ -378,6 +380,7 @@ omit = [
     "src/openllm/__init__.py",
     "src/openllm/__main__.py",
     "src/openllm/utils/dummy_*.py",
+    "src/openllm/_typing_compat.py",
 ]
 precision = 2
 show_missing = true
@@ -387,16 +390,17 @@ analysis.useLibraryCodeForTypes = true
 exclude = [
     "__pypackages__/*",
     "src/openllm/playground/",
+    "src/openllm/models/",
     "src/openllm/__init__.py",
     "src/openllm/__main__.py",
     "src/openllm/utils/dummy_*.py",
-    "src/openllm/models",
+    "src/openllm/_typing_compat.py",
     "tools",
     "examples",
     "tests",
 ]
 include = ["src/openllm"]
-pythonVersion = "3.12"
+pythonVersion = "3.8"
 reportMissingImports = "warning"
 reportMissingTypeStubs = false
 reportPrivateUsage = "warning"
@@ -408,13 +412,16 @@ reportWildcardImportFromLibrary = "warning"
 typeCheckingMode = "strict"
 
 [tool.mypy]
-# TODO: Enable model for strict type checking
-exclude = ["src/openllm/playground/", "src/openllm/utils/dummy_*.py", "src/openllm/models"]
-local_partial_types = true
+exclude = [
+    "src/openllm/playground/",
+    "src/openllm/utils/dummy_*.py",
+    "src/openllm/models",
+    "src/openllm/_typing_compat.py",
+]
 modules = ["openllm"]
 mypy_path = "typings"
 pretty = true
-python_version = "3.11"
+python_version = "3.8"
 show_error_codes = true
 warn_no_return = false
 warn_return_any = false
@@ -430,6 +437,7 @@ module = [
     "optimum.*",
     "inflection.*",
     "huggingface_hub.*",
+    "click_option_group.*",
     "peft.*",
     "auto_gptq.*",
     "vllm.*",
@@ -437,13 +445,13 @@ module = [
     "httpx.*",
     "cloudpickle.*",
     "circus.*",
-    "grpc_health.*",
+    "grpc_health.v1.*",
     "transformers.*",
     "ghapi.*",
 ]
 [[tool.mypy.overrides]]
 ignore_errors = true
-module = ["openllm.models.*", "openllm._types", "openllm.playground.*"]
+module = ["openllm.models.*", "openllm.playground.*", "openllm._typing_compat"]
 
 [tool.hatch.version]
 fallback-version = "0.0.0"
@@ -476,24 +484,12 @@ dependencies = [
     "types-protobuf",
 ]
 enable-by-default = false
-exclude = [
-    # no reason to compile model since framework is already written in C++
-    "src/openllm/models/**",
-    "src/openllm/bundle/**",
-    "src/openllm/cli/**",
-    "src/openllm/playground/**",
-    "src/openllm/__main__.py",
-    "src/openllm/_types.py",
-    "src/openllm/_llm.py",
-    "src/openllm/_service.py",
-    "src/openllm/_configuration.py",
-    # can't compile serialisation for transformers since it will raise segfault
-    "src/openllm/serialisation/transformers",
-    "src/openllm/utils/analytics.py",
-]
 include = [
-    "src/openllm/serialisation",
+    "src/openllm/bundle",
+    "src/openllm/models/__init__.py",
+    "src/openllm/models/auto/__init__.py",
     "src/openllm/utils/__init__.py",
+    "src/openllm/utils/codegen.py",
     "src/openllm/__init__.py",
     "src/openllm/_prompt.py",
     "src/openllm/_schema.py",
@@ -505,20 +501,18 @@ include = [
 ]
 # NOTE: This is consistent with pyproject.toml
 mypy-args = [
-    "--pretty",
     "--strict",
     # this is because all transient library doesn't have types
     "--allow-subclassing-any",
-    "--check-untyped-defs",
     "--follow-imports=skip",
-    "--python-version=3.11",
+    "--check-untyped-defs",
     "--ignore-missing-imports",
     "--no-warn-return-any",
     "--warn-unreachable",
     "--no-warn-no-return",
     "--no-warn-unused-ignores",
     "--exclude='/src\\/openllm\\/playground\\/**'",
-    "--exclude='/src\\/openllm\\/_types\\.py$'",
+    "--exclude='/src\\/openllm\\/_typing_compat\\.py$'",
 ]
-options = { verbose = true, debug_level = "2", opt_level = "3" }
+options = { verbose = true, strip_asserts = true, debug_level = "2", opt_level = "3", include_runtime_files = true }
 require-runtime-dependencies = true
