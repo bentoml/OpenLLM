@@ -1,24 +1,14 @@
-
 from __future__ import annotations
-import itertools
-import logging
-import os
-import re
-import subprocess
-import sys
-import typing as t
-
+import itertools, logging, os, re, subprocess, sys, typing as t
+import bentoml, openllm
 from simple_di import Provide, inject
-
-import bentoml
-import openllm
 from bentoml._internal.configuration.containers import BentoMLContainer
 from openllm.exceptions import OpenLLMException
-
 from . import termui
 from ._factory import start_command_factory
 
 if t.TYPE_CHECKING:
+  from openllm._typing_compat import LiteralString
   from bentoml._internal.bento import BentoStore
   from openllm._configuration import LiteralRuntime, LLMConfig
   from openllm.bundle.oci import LiteralContainerRegistry, LiteralContainerVersionStrategy
@@ -27,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 def _start(
     model_name: str, /, *, model_id: str | None = None, timeout: int = 30, workers_per_resource: t.Literal["conserved", "round_robin"] | float | None = None, device: tuple[str, ...] | t.Literal["all"] | None = None, quantize: t.Literal["int8", "int4", "gptq"] | None = None, bettertransformer: bool | None = None, runtime: t.Literal["ggml", "transformers"] = "transformers",
-    fast: bool = False, adapter_map: dict[t.LiteralString, str | None] | None = None, framework: LiteralRuntime | None = None, additional_args: list[str] | None = None, _serve_grpc: bool = False, __test__: bool = False, **_: t.Any,
+    fast: bool = False, adapter_map: dict[LiteralString, str | None] | None = None, framework: LiteralRuntime | None = None, additional_args: list[str] | None = None, _serve_grpc: bool = False, __test__: bool = False, **_: t.Any,
 ) -> LLMConfig | subprocess.Popen[bytes]:
   """Python API to start a LLM server. These provides one-to-one mapping to CLI arguments.
 

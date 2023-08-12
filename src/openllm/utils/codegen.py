@@ -8,7 +8,7 @@ if t.TYPE_CHECKING:
   from fs.base import FS
 
   import openllm
-  from openllm._types import AnyCallable, DictStrAny, ListStr
+  from openllm._typing_compat import LiteralString, AnyCallable, DictStrAny, ListStr
   PartialAny = functools.partial[t.Any]
 
 _T = t.TypeVar("_T", bound=t.Callable[..., t.Any])
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 OPENLLM_MODEL_NAME = "# openllm: model name"
 OPENLLM_MODEL_ADAPTER_MAP = "# openllm: model adapter map"
 class ModelNameFormatter(string.Formatter):
-  model_keyword: t.LiteralString = "__model_name__"
+  model_keyword: LiteralString = "__model_name__"
   def __init__(self, model_name: str):
     """The formatter that extends model_name to be formatted the 'service.py'."""
     super().__init__()
@@ -28,9 +28,9 @@ class ModelNameFormatter(string.Formatter):
       return True
     except ValueError: return False
 class ModelIdFormatter(ModelNameFormatter):
-  model_keyword: t.LiteralString = "__model_id__"
+  model_keyword: LiteralString = "__model_id__"
 class ModelAdapterMapFormatter(ModelNameFormatter):
-  model_keyword: t.LiteralString = "__model_adapter_map__"
+  model_keyword: LiteralString = "__model_adapter_map__"
 
 _service_file = Path(os.path.abspath("__file__")).parent.parent/"_service.py"
 def write_service(llm: openllm.LLM[t.Any, t.Any], adapter_map: dict[str, str | None] | None, llm_fs: FS) -> None:
@@ -120,7 +120,7 @@ def generate_function(typ: type[t.Any], func_name: str, lines: list[str] | None,
   if SHOW_CODEGEN: logger.info("Generated script for %s:\n\n%s", typ, script)
   return meth
 
-def make_env_transformer(cls: type[openllm.LLMConfig], model_name: str, suffix: t.LiteralString | None = None, default_callback: t.Callable[[str, t.Any], t.Any] | None = None, globs: DictStrAny | None = None,) -> AnyCallable:
+def make_env_transformer(cls: type[openllm.LLMConfig], model_name: str, suffix: LiteralString | None = None, default_callback: t.Callable[[str, t.Any], t.Any] | None = None, globs: DictStrAny | None = None,) -> AnyCallable:
   from . import dantic, field_env_key
 
   def identity(_: str, x_value: t.Any) -> t.Any: return x_value

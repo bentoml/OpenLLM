@@ -1,26 +1,9 @@
 from __future__ import annotations
-import collections
-import functools
-import inspect
-import logging
-import os
-import re
-import sys
-import traceback
-import types
-import typing as t
-import uuid
+import collections, functools, inspect, logging, os, re, traceback, types, typing as t, uuid
 from abc import ABC, abstractmethod
 from pathlib import Path
-
-import attr
-import fs.path
-import inflection
-import orjson
+import attr, fs.path, inflection, orjson, bentoml, openllm
 from huggingface_hub import hf_hub_download
-
-import bentoml
-import openllm
 from bentoml._internal.models.model import ModelSignature
 
 from ._configuration import (
@@ -57,45 +40,30 @@ from .utils import (
   validate_is_path,
 )
 
-# NOTE: We need to do this so that overload can register
-# correct overloads to typing registry
-if sys.version_info[:2] >= (3, 11):
-  from typing import NotRequired, overload
-else:
-  from typing_extensions import NotRequired, overload
+from ._typing_compat import (
+  AdaptersMapping,
+  AdaptersTuple,
+  AnyCallable,
+  DictStrAny,
+  ListStr,
+  LLMEmbeddings,
+  LLMRunnable,
+  LLMRunner,
+  ModelSignatureDict as _ModelSignatureDict,
+  PeftAdapterOutput,
+  TupleAny,
+  NotRequired, overload, M, T
+)
 
 if t.TYPE_CHECKING:
-  import auto_gptq as autogptq
-  import peft
-  import torch
-  import transformers
-  import vllm
-
+  import auto_gptq as autogptq, peft, torch, transformers, vllm
   from ._configuration import PeftType
-  from ._types import (
-    AdaptersMapping,
-    AdaptersTuple,
-    AnyCallable,
-    DictStrAny,
-    ListStr,
-    LLMEmbeddings,
-    LLMRunnable,
-    LLMRunner,
-    ModelSignatureDict as _ModelSignatureDict,
-    PeftAdapterOutput,
-    TupleAny,
-  )
   from .utils.representation import ReprArgs
 
   UserDictAny = collections.UserDict[str, t.Any]
   ResolvedAdaptersMapping = dict[AdapterType, dict[str | t.Literal["default"], tuple[peft.PeftConfig, str]]]
 else:
-  DictStrAny = dict
-  TupleAny = tuple
   UserDictAny = collections.UserDict
-  LLMRunnable = bentoml.Runnable
-  LLMRunner = bentoml.Runner
-  LLMEmbeddings = dict
 
   autogptq = LazyLoader("autogptq", globals(), "auto_gptq")
   vllm = LazyLoader("vllm", globals(), "vllm")
@@ -104,7 +72,6 @@ else:
   peft = LazyLoader("peft", globals(), "peft")
 
 logger = logging.getLogger(__name__)
-
 class ModelSignatureDict(t.TypedDict, total=False):
   batchable: bool
   batch_dim: t.Union[t.Tuple[int, int], int]
@@ -149,9 +116,6 @@ def resolve_peft_config_type(adapter_map: dict[str, str | None]) -> AdaptersMapp
   return resolved
 
 _reserved_namespace = {"config_class", "model", "tokenizer", "import_kwargs"}
-
-M = t.TypeVar("M", bound="t.Union[transformers.PreTrainedModel, transformers.Pipeline, transformers.TFPreTrainedModel, transformers.FlaxPreTrainedModel, vllm.LLMEngine, vllm.AsyncLLMEngine, peft.PeftModel, autogptq.modeling.BaseGPTQForCausalLM]")
-T = t.TypeVar("T", bound="t.Union[transformers.PreTrainedTokenizerFast, transformers.PreTrainedTokenizer, transformers.PreTrainedTokenizerBase]")
 
 class LLMInterface(ABC, t.Generic[M, T]):
   """This defines the loose contract for all openllm.LLM implementations."""

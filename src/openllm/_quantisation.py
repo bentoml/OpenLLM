@@ -1,18 +1,9 @@
 # mypy: disable-error-code="name-defined"
 from __future__ import annotations
-import logging
-import sys
-import typing as t
-
+import logging, sys, typing as t
 from .utils import LazyLoader, is_autogptq_available, is_bitsandbytes_available, is_transformers_supports_kbit, pkg
-
-# NOTE: We need to do this so that overload can register
-# correct overloads to typing registry
-if sys.version_info[:2] >= (3, 11):
-  from typing import overload
-else:
-  from typing_extensions import overload
-
+if sys.version_info[:2] >= (3, 11): from typing import overload
+else: from typing_extensions import overload
 if t.TYPE_CHECKING:
   from ._llm import LLM
   from ._types import DictStrAny

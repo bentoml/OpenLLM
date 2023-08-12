@@ -1,7 +1,5 @@
 from __future__ import annotations
-import sys
-import typing as t
-
+import sys, typing as t
 from openllm.exceptions import MissingDependencyError
 from openllm.utils import LazyModule, is_torch_available, is_vllm_available
 

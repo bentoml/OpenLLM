@@ -1,26 +1,13 @@
 """OCI-related utilities for OpenLLM. This module is considered to be internal and API are subjected to change."""
 from __future__ import annotations
-import functools
-import importlib
-import logging
-import os
-import pathlib
-import shutil
-import subprocess
-import typing as t
+import functools, importlib, logging, os, pathlib, shutil, subprocess, typing as t
 from datetime import datetime, timedelta, timezone
-
-import attr
-import orjson
-
-import bentoml
-import openllm
+import attr, orjson, bentoml, openllm
 from openllm.utils.lazy import VersionInfo
 
 if t.TYPE_CHECKING:
   from ghapi import all
-
-  from openllm._types import DictStrAny, RefTuple
+  from openllm._typing_compat import RefTuple
 
 all = openllm.utils.LazyLoader("all", globals(), "ghapi.all")  # noqa: F811
 
@@ -64,7 +51,7 @@ def nightly_resolver(cls: type[RefResolver]) -> str:
   docker_bin = shutil.which("docker")
   if docker_bin is None:
     logger.warning("To get the correct available nightly container, make sure to have docker available. Fallback to previous behaviour for determine nightly hash (container might not exists due to the lack of GPU machine at a time. See https://github.com/bentoml/OpenLLM/pkgs/container/openllm for available image.)")
-    commits = t.cast("list[DictStrAny]", cls._ghapi.repos.list_commits(since=_commit_time_range()))
+    commits = t.cast("list[dict[str, t.Any]]", cls._ghapi.repos.list_commits(since=_commit_time_range()))
     return next(f'sha-{it["sha"][:7]}' for it in commits if "[skip ci]" not in it["commit"]["message"])
   # now is the correct behaviour
   return orjson.loads(subprocess.check_output([docker_bin, "run", "--rm", "-it", "quay.io/skopeo/stable:latest", "list-tags", "docker://ghcr.io/bentoml/openllm"]).decode().strip())["Tags"][-2]
@@ -82,7 +69,7 @@ class RefResolver:
     _use_base_strategy = version_str is None
     if version_str is None:
       # NOTE: This strategy will only support openllm>0.2.12
-      meta: DictStrAny = cls._ghapi.repos.get_latest_release()
+      meta: dict[str, t.Any] = cls._ghapi.repos.get_latest_release()
       version_str = meta["name"].lstrip("v")
       version: tuple[str, str | None] = (cls._ghapi.git.get_ref(ref=f"tags/{meta['name']}")["object"]["sha"], version_str)
     else: version = ("", version_str)

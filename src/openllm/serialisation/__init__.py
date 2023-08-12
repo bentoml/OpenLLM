@@ -23,17 +23,12 @@ llm.save_pretrained("./path/to/local-dolly")
 ```
 """
 from __future__ import annotations
-import importlib
-import typing as t
-
-import cloudpickle
-import fs
-
-import openllm
+import importlib, typing as t
+import cloudpickle, fs, openllm
 from bentoml._internal.models.model import CUSTOM_OBJECTS_FILENAME
 
 if t.TYPE_CHECKING:
-  from openllm._llm import T
+  from openllm._typing_compat import T
 
   from . import (
     constants as constants,

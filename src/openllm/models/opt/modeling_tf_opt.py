@@ -1,18 +1,12 @@
 from __future__ import annotations
-import logging
-import typing as t
-
-import bentoml
-import openllm
+import logging, typing as t, bentoml, openllm
 from openllm._prompt import process_prompt
 from openllm.utils import generate_labels
-
 from .configuration_opt import DEFAULT_PROMPT_TEMPLATE
-
 if t.TYPE_CHECKING: import transformers
 else: transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
-logger = logging.getLogger(__name__)
 
+logger = logging.getLogger(__name__)
 class TFOPT(openllm.LLM["transformers.TFOPTForCausalLM", "transformers.GPT2Tokenizer"]):
   __openllm_internal__ = True
   def import_model(self, *args: t.Any, trust_remote_code: bool = False, **attrs: t.Any) -> bentoml.Model:

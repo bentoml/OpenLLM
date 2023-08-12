@@ -30,19 +30,13 @@ from openllm.utils.lazy import (
   LazyModule as LazyModule,
   VersionInfo as VersionInfo,
 )
+from openllm._typing_compat import overload as _overload, AnyCallable, LiteralRuntime
 
 logger = logging.getLogger(__name__)
-
 try: from typing import GenericAlias as _TypingGenericAlias  # type: ignore
 except ImportError: _TypingGenericAlias = ()  # type: ignore # python < 3.9 does not have GenericAlias (list[int], tuple[str, ...] and so on)
 if sys.version_info < (3, 10): _WithArgsTypes = (_TypingGenericAlias,)
 else: _WithArgsTypes: t.Any = (t._GenericAlias, types.GenericAlias, types.UnionType)  # type: ignore #  _GenericAlias is the actual GenericAlias implementation
-# NOTE: We need to do this so that overload can register
-# correct overloads to typing registry
-if sys.version_info[:2] >= (3, 11): from typing import overload as _overload
-else: from typing_extensions import overload as _overload
-if t.TYPE_CHECKING:
-  from .._types import AnyCallable, LiteralRuntime
 
 DEV_DEBUG_VAR = "OPENLLMDEVDEBUG"
 

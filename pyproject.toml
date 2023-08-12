@@ -194,7 +194,6 @@ extend-exclude = [
     "examples",
     "src/openllm/playground",
     "src/openllm/__init__.py",
-    "src/openllm/_types.py",
     "src/openllm/_version.py",
     "src/openllm/utils/dummy_*.py",
     "src/openllm/models/__init__.py",
@@ -249,11 +248,8 @@ ignore = [
 ]
 line-length = 119
 target-version = "py312"
-unfixable = [
-    "F401",   # Don't touch unused imports, just warn about it.
-    "TCH004", # Don't touch import outside of TYPE_CHECKING block
-    "RUF100", # unused noqa, just warn about it
-]
+typing-modules = ["openllm._typing_compat"]
+unfixable = ["TCH004"]
 [tool.ruff.flake8-type-checking]
 exempt-modules = ["typing", "typing_extensions", "."]
 runtime-evaluated-base-classes = [
@@ -262,7 +258,7 @@ runtime-evaluated-base-classes = [
     "openllm._configuration.GenerationConfig",
     "openllm._configuration.ModelSettings",
 ]
-runtime-evaluated-decorators = ["attrs.define", "attrs.frozen"]
+runtime-evaluated-decorators = ["attrs.define", "attrs.frozen", "trait"]
 [tool.ruff.pydocstyle]
 convention = "google"
 [tool.ruff.pycodestyle]
@@ -411,7 +407,6 @@ typeCheckingMode = "strict"
 [tool.mypy]
 # TODO: Enable model for strict type checking
 exclude = ["src/openllm/playground/", "src/openllm/utils/dummy_*.py", "src/openllm/models"]
-local_partial_types = true
 modules = ["openllm"]
 mypy_path = "typings"
 pretty = true
@@ -444,7 +439,7 @@ module = [
 ]
 [[tool.mypy.overrides]]
 ignore_errors = true
-module = ["openllm.models.*", "openllm._types", "openllm.playground.*"]
+module = ["openllm.models.*", "openllm.playground.*"]
 
 [tool.hatch.version]
 fallback-version = "0.0.0"
@@ -484,8 +479,9 @@ exclude = [
     "src/openllm/cli",
     # no reason to compile playground since it's not used in production
     "src/openllm/playground",
+    # Probably because native classes doesn't understand nested __init_subclass__
+    "src/openllm/client",
     "src/openllm/__main__.py",
-    "src/openllm/_types.py",
     "src/openllm/_llm.py",
     "src/openllm/_configuration.py",
     # bento service is not mypyc-compatible since we do dynamic signature generation
@@ -495,7 +491,6 @@ exclude = [
     "src/openllm/serialisation/transformers",
 ]
 include = [
-    "src/openllm/client",
     "src/openllm/bundle",
     "src/openllm/serialisation",
     "src/openllm/utils/__init__.py",
@@ -521,7 +516,6 @@ mypy-args = [
     "--no-warn-no-return",
     "--no-warn-unused-ignores",
     "--exclude='/src\\/openllm\\/playground\\/**'",
-    "--exclude='/src\\/openllm\\/_types\\.py$'",
 ]
 options = { verbose = true, debug_level = "2", opt_level = "3" }
 require-runtime-dependencies = true

@@ -1,9 +1,6 @@
 from __future__ import annotations
-import sys, typing as t
-
-import openllm
+import typing as t, openllm
 from openllm._prompt import process_prompt
-
 from .configuration_baichuan import DEFAULT_PROMPT_TEMPLATE
 
 if t.TYPE_CHECKING: import torch, transformers

@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 import openllm
 
 class FlanT5Config(openllm.LLMConfig):

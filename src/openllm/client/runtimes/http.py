@@ -1,22 +1,11 @@
 from __future__ import annotations
-import logging
-import typing as t
+import logging, typing as t
 from urllib.parse import urljoin, urlparse
-
-import httpx
-import orjson
-
-import openllm
-
+import httpx, orjson, openllm
 from .base import BaseAsyncClient, BaseClient, in_async_context
-
-if t.TYPE_CHECKING:
-  from openllm._types import DictStrAny, LiteralRuntime
-else:
-  DictStrAny = dict
+from openllm._typing_compat import DictStrAny, LiteralRuntime
 
 logger = logging.getLogger(__name__)
-
 def process_address(self: AsyncHTTPClient | HTTPClient, address: str) -> None:
   address = address if "://" in address else "http://" + address
   parsed = urlparse(address)

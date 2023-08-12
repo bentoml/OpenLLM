@@ -2,15 +2,13 @@ from __future__ import annotations
 import typing as t
 from collections import OrderedDict
 
-import inflection
-
-import openllm
+import inflection, openllm
 from openllm.utils import ReprMixin
 
 if t.TYPE_CHECKING:
   import types
+  from openllm._typing_compat import LiteralString
   from collections import _odict_items, _odict_keys, _odict_values
-  ConfigOrderedDict = OrderedDict[str, type[openllm.LLMConfig]]
   ConfigKeysView = _odict_keys[str, type[openllm.LLMConfig]]
   ConfigValuesView = _odict_values[str, type[openllm.LLMConfig]]
   ConfigItemsView = _odict_items[str, type[openllm.LLMConfig]]
@@ -18,8 +16,8 @@ if t.TYPE_CHECKING:
 # NOTE: This is the entrypoint when adding new model config
 CONFIG_MAPPING_NAMES = OrderedDict([("chatglm", "ChatGLMConfig"), ("dolly_v2", "DollyV2Config"), ("falcon", "FalconConfig"), ("flan_t5", "FlanT5Config"), ("gpt_neox", "GPTNeoXConfig"), ("llama", "LlamaConfig"), ("mpt", "MPTConfig"), ("opt", "OPTConfig"), ("stablelm", "StableLMConfig"), ("starcoder", "StarCoderConfig"), ("baichuan", "BaichuanConfig")])
 
-class _LazyConfigMapping(OrderedDict, ReprMixin):
-  def __init__(self, mapping: OrderedDict[t.LiteralString, t.LiteralString]):
+class _LazyConfigMapping(OrderedDict[str, t.Type[openllm.LLMConfig]], ReprMixin):
+  def __init__(self, mapping: OrderedDict[LiteralString, LiteralString]):
     self._mapping = mapping
     self._extra_content: dict[str, t.Any] = {}
     self._modules: dict[str, types.ModuleType] = {}

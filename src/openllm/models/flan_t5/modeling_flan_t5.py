@@ -1,11 +1,7 @@
 from __future__ import annotations
-import sys, typing as t
-
-import openllm
+import typing as t, openllm
 from openllm._prompt import process_prompt
-
 from .configuration_flan_t5 import DEFAULT_PROMPT_TEMPLATE
-
 if t.TYPE_CHECKING: import torch, transformers, torch.nn.functional as F
 else: torch, transformers, F = openllm.utils.LazyLoader("torch", globals(), "torch"), openllm.utils.LazyLoader("transformers", globals(), "transformers"), openllm.utils.LazyLoader("F", globals(), "torch.nn.functional")
 

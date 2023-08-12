@@ -3,9 +3,9 @@ import typing as t
 from abc import abstractmethod
 import attr, orjson
 from openllm import utils
+if t.TYPE_CHECKING: from openllm._typing_compat import TypeAlias
 
-ReprArgs: t.TypeAlias = t.Generator[tuple[str | None, t.Any], None, None]
-
+ReprArgs: TypeAlias = t.Generator[t.Tuple[str, t.Any], None, None]
 class ReprMixin:
   @property
   @abstractmethod

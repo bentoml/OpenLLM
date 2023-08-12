@@ -1,11 +1,16 @@
+import sys
 from typing import (
     Any,
     Callable as CallableType,
     Dict,
     Tuple,
-    TypeAlias,
     Union,
 )
+if sys.version_info[:2] >= (3, 10):
+  from typing import TypeAlias
+else:
+  from typing_extensions import TypeAlias
+
 
 from _typeshed import Incomplete
 

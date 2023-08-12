@@ -1,18 +1,11 @@
 from __future__ import annotations
-import asyncio
-import logging
-import typing as t
-
-import orjson
-
-import openllm
-from openllm._configuration import LiteralRuntime
-
+import asyncio, logging, typing as t
+import orjson, openllm
+from openllm._typing_compat import LiteralRuntime
 from .base import BaseAsyncClient, BaseClient
 
 if t.TYPE_CHECKING:
   from grpc_health.v1 import health_pb2
-
   from bentoml.grpc.v1.service_pb2 import Response
 
 logger = logging.getLogger(__name__)

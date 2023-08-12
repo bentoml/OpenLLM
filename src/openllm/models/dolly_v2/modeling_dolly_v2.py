@@ -1,9 +1,5 @@
 from __future__ import annotations
-import logging
-import re
-import typing as t
-
-import openllm
+import logging, re, typing as t, openllm
 from openllm._prompt import process_prompt
 
 from .configuration_dolly_v2 import DEFAULT_PROMPT_TEMPLATE, END_KEY, RESPONSE_KEY, get_special_token_id

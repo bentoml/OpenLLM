@@ -1,12 +1,7 @@
 from __future__ import annotations
-import logging
-import typing as t
-
-import openllm
+import logging, typing as t, openllm
 from openllm._prompt import process_prompt
-
 from .configuration_dolly_v2 import DEFAULT_PROMPT_TEMPLATE
-
 if t.TYPE_CHECKING: import vllm, transformers
 
 logger = logging.getLogger(__name__)

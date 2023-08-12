@@ -1,14 +1,11 @@
 """Serialisation related implementation for Transformers-based implementation."""
 from __future__ import annotations
-import importlib
-import logging
-import typing as t
+import importlib, logging, typing as t
 
 from huggingface_hub import snapshot_download
 from simple_di import Provide, inject
 
-import bentoml
-import openllm
+import bentoml, openllm
 from bentoml._internal.configuration.containers import BentoMLContainer
 from bentoml._internal.models.model import ModelOptions
 from openllm.serialisation.transformers.weights import HfIgnore
@@ -30,7 +27,7 @@ if t.TYPE_CHECKING:
 
   from bentoml._internal.models import ModelStore
   from openllm._llm import M, T
-  from openllm._types import DictStrAny
+  from openllm._typing_compat import DictStrAny
 else:
   vllm = openllm.utils.LazyLoader("vllm", globals(), "vllm")
   autogptq = openllm.utils.LazyLoader("autogptq", globals(), "auto_gptq")

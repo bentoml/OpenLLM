@@ -1,13 +1,7 @@
-
 from __future__ import annotations
-import logging
-import typing as t
-
-import openllm
+import typing as t, openllm, logging
 from openllm._prompt import process_prompt
-
 from .configuration_gpt_neox import DEFAULT_PROMPT_TEMPLATE
-
 if t.TYPE_CHECKING: import vllm, transformers
 
 logger = logging.getLogger(__name__)

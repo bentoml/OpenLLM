@@ -1,14 +1,8 @@
 from __future__ import annotations
-import logging
-import typing as t
-
-import bentoml
-import openllm
+import logging, typing as t, bentoml, openllm
 from openllm._prompt import process_prompt
 from openllm.utils import generate_labels
-
 from .configuration_opt import DEFAULT_PROMPT_TEMPLATE
-
 if t.TYPE_CHECKING: import transformers
 else: transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
 

@@ -1,17 +1,9 @@
-"""Generation utilities to be reused throughout."""
 from __future__ import annotations
-import typing as t
-
-import transformers
-
-if t.TYPE_CHECKING:
-  import torch
-
-  import openllm
+import typing as t, transformers
+if t.TYPE_CHECKING: import torch, openllm
 
 LogitsProcessorList = transformers.LogitsProcessorList
 StoppingCriteriaList = transformers.StoppingCriteriaList
-
 class StopSequenceCriteria(transformers.StoppingCriteria):
   def __init__(self, stop_sequences: str | list[str], tokenizer: transformers.PreTrainedTokenizer | transformers.PreTrainedTokenizerBase | transformers.PreTrainedTokenizerFast):
     if isinstance(stop_sequences, str): stop_sequences = [stop_sequences]

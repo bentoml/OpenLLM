@@ -1,34 +1,19 @@
+# mypy: disable-error-code="name-defined"
 from __future__ import annotations
-import asyncio
-import logging
-import sys
-import typing as t
+import asyncio, logging, typing as t
+import bentoml, bentoml.client, openllm, httpx
 from abc import abstractmethod
 from http import HTTPStatus
 from urllib.parse import urljoin
-
-import httpx
-
-import bentoml
-import bentoml.client
-import openllm
-
-# NOTE: We need to do this so that overload can register
-# correct overloads to typing registry
-if sys.version_info[:2] >= (3, 11):
-  from typing import overload
-else:
-  from typing_extensions import overload
+from openllm._typing_compat import overload, LiteralString
 
 T = t.TypeVar("T")
 T_co = t.TypeVar("T_co", covariant=True)
 
 if t.TYPE_CHECKING:
   import transformers
-
-  from openllm._types import DictStrAny, LiteralRuntime
-else:
-  transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
+  from openllm._typing_compat import DictStrAny, LiteralRuntime
+transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")  # noqa: F811
 
 class AnnotatedClient(t.Protocol[T_co]):
   server_url: str
@@ -41,6 +26,10 @@ class AnnotatedClient(t.Protocol[T_co]):
   def embeddings_v1(self) -> t.Sequence[float]: ...
   def call(self, name: str, *args: t.Any, **attrs: t.Any) -> T_co: ...
   async def async_call(self, name: str, *args: t.Any, **attrs: t.Any) -> T_co: ...
+  @staticmethod
+  def wait_until_server_ready(host: str, port: int, timeout: float = 30, **kwargs: t.Any) -> None: ...
+  @staticmethod
+  def from_url(server_url: str) -> AnnotatedClient[t.Any]: ...
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +41,7 @@ def in_async_context() -> bool:
 
 class ClientMeta(t.Generic[T]):
   _api_version: str
-  _client_class: type[bentoml.client.Client]
+  _client_type: t.Literal["GrpcClient", "HTTPClient"]
   _host: str
   _port: str
 
@@ -61,7 +50,7 @@ class ClientMeta(t.Generic[T]):
   __llm__: openllm.LLM[t.Any, t.Any] | None = None
 
   def __init__(self, address: str, timeout: int = 30): self._address,self._timeout = address,timeout
-  def __init_subclass__(cls, *, client_type: t.Literal["http", "grpc"] = "http", api_version: str = "v1"): cls._client_class, cls._api_version = t.cast(t.Type[bentoml.client.Client], bentoml.client.HTTPClient if client_type == "http" else bentoml.client.GrpcClient), api_version
+  def __init_subclass__(cls, *, client_type: t.Literal["http", "grpc"] = "http", api_version: str = "v1"): cls._client_type, cls._api_version = "HTTPClient" if client_type == "http" else "GrpcClient", api_version
   @property
   def _hf_agent(self) -> transformers.HfAgent:
     if not self.supports_hf_agent: raise openllm.exceptions.OpenLLMException(f"{self.model_name} ({self.framework}) does not support running HF agent.")
@@ -71,7 +60,6 @@ class ClientMeta(t.Generic[T]):
     return self.__agent__
   @property
   def _metadata(self) -> T: return httpx.post(urljoin(self._address, f"/{self._api_version}/metadata")).json() if in_async_context() else self.call("metadata")
-
   @property
   @abstractmethod
   def model_name(self) -> str: raise NotImplementedError
@@ -110,9 +98,10 @@ class ClientMeta(t.Generic[T]):
   async def acall(self, name: str, *args: t.Any, **attrs: t.Any) -> T: return await self._cached.async_call(f"{name}_{self._api_version}", *args, **attrs)
   @property
   def _cached(self) -> AnnotatedClient[T]:
+    client_class = t.cast(AnnotatedClient[T], getattr(bentoml.client, self._client_type))
     if self.__client__ is None:
-      self._client_class.wait_until_server_ready(self._host, int(self._port), timeout=self._timeout)
-      self.__client__ = t.cast(AnnotatedClient[T], self._client_class.from_url(self._address))
+      client_class.wait_until_server_ready(self._host, int(self._port), timeout=self._timeout)
+      self.__client__ = client_class.from_url(self._address)
     return self.__client__
 
 class BaseClient(ClientMeta[T]):
@@ -154,7 +143,7 @@ class BaseClient(ClientMeta[T]):
   def predict(self, prompt: str, *, return_response: t.Literal["attrs"], **attrs: t.Any) -> openllm.GenerationOutput: ...
   def predict(self, prompt: str, **attrs: t.Any) -> openllm.GenerationOutput | DictStrAny | str: return t.cast(t.Union[openllm.GenerationOutput, DictStrAny, str], self.query(prompt, **attrs))
 
-  def ask_agent(self, task: str, *, return_code: bool = False, remote: bool = False, agent_type: t.LiteralString = "hf", **attrs: t.Any) -> t.Any:
+  def ask_agent(self, task: str, *, return_code: bool = False, remote: bool = False, agent_type: LiteralString = "hf", **attrs: t.Any) -> t.Any:
     if agent_type == "hf": return self._run_hf_agent(task, return_code=return_code, remote=remote, **attrs)
     else: raise RuntimeError(f"Unknown 'agent_type={agent_type}'")
 
@@ -206,12 +195,10 @@ class BaseAsyncClient(ClientMeta[T]):
   @overload
   async def predict(self, prompt: str, *, return_response: t.Literal["attrs"], **attrs: t.Any) -> openllm.GenerationOutput: ...
   async def predict(self, prompt: str, **attrs: t.Any) -> openllm.GenerationOutput | DictStrAny | str: return t.cast(t.Union[openllm.GenerationOutput, DictStrAny, str], await self.query(prompt, **attrs))
-
-  async def ask_agent(self, task: str, *, return_code: bool = False, remote: bool = False, agent_type: t.LiteralString = "hf", **attrs: t.Any) -> t.Any:
+  async def ask_agent(self, task: str, *, return_code: bool = False, remote: bool = False, agent_type: LiteralString = "hf", **attrs: t.Any) -> t.Any:
     """Async version of agent.run."""
     if agent_type == "hf": return await self._run_hf_agent(task, return_code=return_code, remote=remote, **attrs)
     else: raise RuntimeError(f"Unknown 'agent_type={agent_type}'")
-
   async def _run_hf_agent(self, *args: t.Any, **kwargs: t.Any) -> t.Any:
     if not openllm.utils.is_transformers_supports_agent(): raise RuntimeError("This version of transformers does not support agent.run. Make sure to upgrade to transformers>4.30.0")
     if len(args) > 1: raise ValueError("'args' should only take one positional argument.")
@@ -240,9 +227,7 @@ class BaseAsyncClient(ClientMeta[T]):
 
     # the below have the same logic as agent.run API
     explanation, code = clean_code_for_run(result)
-
     _hf_agent.log(f"==Explanation from the agent==\n{explanation}")
-
     _hf_agent.log(f"\n\n==Code generated by the agent==\n{code}")
     if not return_code:
       _hf_agent.log("\n\n==Result==")

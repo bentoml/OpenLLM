@@ -12,7 +12,7 @@ client.embed("What is the difference between gather and scatter?")
 """
 from __future__ import annotations
 
-from .runtimes import (
+from openllm.client.runtimes import (
     AsyncGrpcClient as AsyncGrpcClient,
     AsyncHTTPClient as AsyncHTTPClient,
     BaseAsyncClient as BaseAsyncClient,

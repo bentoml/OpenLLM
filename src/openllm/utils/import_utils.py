@@ -1,24 +1,16 @@
 """Some imports utils are vendorred from transformers/utils/import_utils.py for performance reasons."""
 from __future__ import annotations
-import importlib, importlib.metadata, importlib.util, logging, os, sys, abc, typing as t
+import importlib, importlib.metadata, importlib.util, logging, os, abc, typing as t
 from collections import OrderedDict
 import inflection, packaging.version
 from bentoml._internal.utils import LazyLoader, pkg
+from openllm._typing_compat import overload, LiteralString
 
 from .representation import ReprMixin
 
-# NOTE: We need to do this so that overload can register
-# correct overloads to typing registry
-if sys.version_info[:2] >= (3, 11):
-  from typing import overload
-else:
-  from typing_extensions import overload
-
 if t.TYPE_CHECKING:
-  BackendOrderedDict = OrderedDict[str, tuple[t.Callable[[], bool], str]]
-  from .._types import LiteralRuntime
-else:
-  BackendOrderedDict = OrderedDict
+  BackendOrderedDict = OrderedDict[str, t.Tuple[t.Callable[[], bool], str]]
+  from openllm._typing_compat import LiteralRuntime
 
 logger = logging.getLogger(__name__)
 OPTIONAL_DEPENDENCIES = {"opt", "flan-t5", "vllm", "fine-tune", "ggml", "agents", "openai", "playground", "gptq",}
@@ -287,7 +279,7 @@ class EnvVarMixin(ReprMixin):
     if item.endswith("_value") and hasattr(self, f"_{item}"): return object.__getattribute__(self, f"_{item}")()
     elif hasattr(self, item): return getattr(self, item)
     raise KeyError(f"Key {item} not found in {self}")
-  def __init__(self, model_name: str, implementation: LiteralRuntime = "pt", model_id: str | None = None, bettertransformer: bool | None = None, quantize: t.LiteralString | None = None, runtime: t.Literal["ggml", "transformers"] = "transformers") -> None:
+  def __init__(self, model_name: str, implementation: LiteralRuntime = "pt", model_id: str | None = None, bettertransformer: bool | None = None, quantize: LiteralString | None = None, runtime: t.Literal["ggml", "transformers"] = "transformers") -> None:
     """EnvVarMixin is a mixin class that returns the value extracted from environment variables."""
     from openllm._configuration import field_env_key
     self.model_name = inflection.underscore(model_name)

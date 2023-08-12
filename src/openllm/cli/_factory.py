@@ -1,19 +1,18 @@
 from __future__ import annotations
 import functools, importlib.util, os, typing as t
-
 import click, click_option_group as cog, inflection, orjson, bentoml, openllm
 from bentoml_cli.utils import BentoMLCommandGroup
 from click.shell_completion import CompletionItem
 from bentoml._internal.configuration.containers import BentoMLContainer
-
+from openllm._typing_compat import LiteralString, DictStrAny, ParamSpec
 from . import termui
 
 if t.TYPE_CHECKING:
   import subprocess
   from openllm._configuration import LLMConfig
-  from openllm._types import DictStrAny, P
   TupleStr = tuple[str, ...]
 
+P = ParamSpec("P")
 LiteralOutput = t.Literal["json", "pretty", "porcelain"]
 
 _AnyCallable = t.Callable[..., t.Any]
@@ -90,7 +89,7 @@ Available official model_id(s): [default: {llm_config['default_id']}]
   @start_decorator(llm_config, serve_grpc=_serve_grpc)
   @click.pass_context
   def start_cmd(
-      ctx: click.Context, /, server_timeout: int, model_id: str | None, model_version: str | None, workers_per_resource: t.Literal["conserved", "round_robin"] | t.LiteralString, device: tuple[str, ...], quantize: t.Literal["int8", "int4", "gptq"] | None, bettertransformer: bool | None, runtime: t.Literal["ggml", "transformers"], fast: bool,
+      ctx: click.Context, /, server_timeout: int, model_id: str | None, model_version: str | None, workers_per_resource: t.Literal["conserved", "round_robin"] | LiteralString, device: tuple[str, ...], quantize: t.Literal["int8", "int4", "gptq"] | None, bettertransformer: bool | None, runtime: t.Literal["ggml", "transformers"], fast: bool,
       serialisation_format: t.Literal["safetensors", "legacy"], adapter_id: str | None, return_process: bool, **attrs: t.Any,
   ) -> LLMConfig | subprocess.Popen[bytes]:
     fast = str(fast).upper() in openllm.utils.ENV_VARS_TRUE_VALUES
@@ -178,7 +177,7 @@ def noop_command(group: click.Group, llm_config: LLMConfig, _serve_grpc: bool, *
 
   return noop
 
-def prerequisite_check(ctx: click.Context, llm_config: LLMConfig, quantize: t.LiteralString | None, adapter_map: dict[str, str | None] | None, num_workers: int) -> None:
+def prerequisite_check(ctx: click.Context, llm_config: LLMConfig, quantize: LiteralString | None, adapter_map: dict[str, str | None] | None, num_workers: int) -> None:
   if adapter_map and not openllm.utils.is_peft_available(): ctx.fail("Using adapter requires 'peft' to be available. Make sure to install with 'pip install \"openllm[fine-tune]\"'")
   if quantize and llm_config.default_implementation() == "vllm": ctx.fail(f"Quantization is not yet supported with vLLM. Set '{llm_config['env']['framework']}=\"pt\"' to run with quantization.")
   requirements = llm_config["requirements"]

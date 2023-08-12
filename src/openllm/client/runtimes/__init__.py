@@ -1,15 +1,15 @@
 """Client that supports REST/gRPC protocol to interact with a LLMServer."""
 from __future__ import annotations
 
-from .base import (
+from openllm.client.runtimes.base import (
     BaseAsyncClient as BaseAsyncClient,
     BaseClient as BaseClient,
 )
-from .grpc import (
+from openllm.client.runtimes.grpc import (
     AsyncGrpcClient as AsyncGrpcClient,
     GrpcClient as GrpcClient,
 )
-from .http import (
+from openllm.client.runtimes.http import (
     AsyncHTTPClient as AsyncHTTPClient,
     HTTPClient as HTTPClient,
 )

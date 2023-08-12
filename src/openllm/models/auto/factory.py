@@ -1,23 +1,15 @@
 from __future__ import annotations
-import importlib
-import inspect
-import logging
-import typing as t
+import importlib, inspect, logging, typing as t
 from collections import OrderedDict
-
-import inflection
-
-import openllm
+import inflection, openllm
 from openllm.utils import ReprMixin
+from openllm._typing_compat import LiteralString, M, T, LLMRunner
 
 if t.TYPE_CHECKING:
   import types
   from collections import _odict_items, _odict_keys, _odict_values
 
   from _typeshed import SupportsIter
-
-  from ..._llm import LLMRunner
-  ConfigModelOrderedDict = OrderedDict[type[openllm.LLMConfig], type[openllm.LLM[t.Any, t.Any]]]
   ConfigModelKeysView = _odict_keys[type[openllm.LLMConfig], type[openllm.LLM[t.Any, t.Any]]]
   ConfigModelValuesView = _odict_values[type[openllm.LLMConfig], type[openllm.LLM[t.Any, t.Any]]]
   ConfigModelItemsView = _odict_items[type[openllm.LLMConfig], type[openllm.LLM[t.Any, t.Any]]]
@@ -83,13 +75,13 @@ def getattribute_from_module(module: types.ModuleType, attr: t.Any) -> t.Any:
     except ValueError: raise ValueError(f"Could not find {attr} neither in {module} nor in {openllm_module}!") from None
   raise ValueError(f"Could not find {attr} in {openllm_module}!")
 
-class _LazyAutoMapping(OrderedDict, ReprMixin):  # type: ignore[type-arg]
+class _LazyAutoMapping(OrderedDict[t.Type[openllm.LLMConfig], t.Type[openllm.LLM[M, T]]], ReprMixin):
   """Based on transformers.models.auto.configuration_auto._LazyAutoMapping.
 
   This OrderedDict values() and keys() returns the list instead, so you don't
   have to do list(mapping.values()) to get the list of values.
   """
-  def __init__(self, config_mapping: OrderedDict[t.LiteralString, t.LiteralString], model_mapping: OrderedDict[t.LiteralString, t.LiteralString]):
+  def __init__(self, config_mapping: OrderedDict[LiteralString, LiteralString], model_mapping: OrderedDict[LiteralString, LiteralString]):
     self._config_mapping = config_mapping
     self._reverse_config_mapping = {v: k for k, v in config_mapping.items()}
     self._model_mapping = model_mapping

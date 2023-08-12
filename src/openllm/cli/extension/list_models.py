@@ -1,20 +1,11 @@
-
 from __future__ import annotations
-import typing as t
-
-import click
-import inflection
-import orjson
-
-import bentoml
-import openllm
+import typing as t, bentoml, openllm, orjson, inflection ,click
 from bentoml._internal.utils import human_readable_size
 
-from .. import termui
-from .._factory import LiteralOutput, model_name_argument, output_option
+from openllm.cli import termui
+from openllm.cli._factory import LiteralOutput, model_name_argument, output_option
 
-if t.TYPE_CHECKING:
-  from ..._types import DictStrAny
+if t.TYPE_CHECKING: from openllm._typing_compat import DictStrAny
 
 @click.command("list_models", context_settings=termui.CONTEXT_SETTINGS)
 @model_name_argument(required=False)

@@ -20,36 +20,12 @@ bentomodel = openllm.import_model("falcon", model_id='tiiuae/falcon-7b-instruct'
 ```
 """
 from __future__ import annotations
-import functools
-import http.client
-import inspect
-import itertools
-import logging
-import os
-import platform
-import re
-import subprocess
-import sys
-import time
-import traceback
-import typing as t
-
-import attr
-import click
-import click_option_group as cog
-import fs
-import fs.copy
-import fs.errors
-import inflection
-import orjson
+import functools, http.client, inspect, itertools, logging, os, platform, re, subprocess, sys, time, traceback, typing as t
+import attr, click, click_option_group as cog, fs, fs.copy, fs.errors, inflection, orjson, bentoml, openllm
 from bentoml_cli.utils import BentoMLCommandGroup, opt_callback
 from simple_di import Provide, inject
-
-import bentoml
-import openllm
 from bentoml._internal.configuration.containers import BentoMLContainer
 from bentoml._internal.models.model import ModelStore
-
 from . import termui
 from ._factory import (
   FC,
@@ -69,9 +45,9 @@ from ._factory import (
   start_command_factory,
   workers_per_resource_option,
 )
-from .. import bundle, serialisation
-from ..exceptions import OpenLLMException
-from ..models.auto import (
+from openllm import bundle, serialisation
+from openllm.exceptions import OpenLLMException
+from openllm.models.auto import (
   CONFIG_MAPPING,
   MODEL_FLAX_MAPPING_NAMES,
   MODEL_MAPPING_NAMES,
@@ -80,7 +56,8 @@ from ..models.auto import (
   AutoConfig,
   AutoLLM,
 )
-from ..utils import (
+from openllm._typing_compat import DictStrAny, ParamSpec
+from openllm.utils import (
   DEBUG,
   DEBUG_ENV_VAR,
   OPTIONAL_DEPENDENCIES,
@@ -105,19 +82,17 @@ from ..utils import (
 
 if t.TYPE_CHECKING:
   import torch
-
   from bentoml._internal.bento import BentoStore
   from bentoml._internal.container import DefaultBuilder
   from openllm.client import BaseClient
+  from openllm._schema import EmbeddingsOutput
+  from openllm._configuration import LiteralRuntime
+  from openllm.bundle.oci import LiteralContainerRegistry, LiteralContainerVersionStrategy
+  from openllm._typing_compat import LiteralString, Self
+else: torch, jupytext, nbformat = LazyLoader("torch", globals(), "torch"), LazyLoader("jupytext", globals(), "jupytext"), LazyLoader("nbformat", globals(), "nbformat")
 
-  from .._schema import EmbeddingsOutput
-  from .._types import DictStrAny, LiteralRuntime, P
-  from ..bundle.oci import LiteralContainerRegistry, LiteralContainerVersionStrategy
-else:
-  torch, jupytext, nbformat = LazyLoader("torch", globals(), "torch"), LazyLoader("jupytext", globals(), "jupytext"), LazyLoader("nbformat", globals(), "nbformat")
-
+P = ParamSpec("P")
 logger = logging.getLogger(__name__)
-
 OPENLLM_FIGLET = """\
  ██████╗ ██████╗ ███████╗███╗   ██╗██╗     ██╗     ███╗   ███╗
 ██╔═══██╗██╔══██╗██╔════╝████╗  ██║██║     ██║     ████╗ ████║
@@ -132,9 +107,7 @@ ServeCommand = t.Literal["serve", "serve-grpc"]
 @attr.define
 class GlobalOptions:
   cloud_context: str | None = attr.field(default=None)
-
-  def with_options(self, **attrs: t.Any) -> t.Self:
-    return attr.evolve(self, **attrs)
+  def with_options(self, **attrs: t.Any) -> Self: return attr.evolve(self, **attrs)
 
 GrpType = t.TypeVar("GrpType", bound=click.Group)
 
@@ -601,7 +574,7 @@ def models_command(ctx: click.Context, output: LiteralOutput, show_available: bo
 
       tabulate.PRESERVE_WHITESPACE = True
       # llm, architecture, url, model_id, installation, cpu, gpu, runtime_impl
-      data: list[str | tuple[str, str, list[str], str, t.LiteralString, t.LiteralString, tuple[LiteralRuntime, ...]]] = []
+      data: list[str | tuple[str, str, list[str], str, LiteralString, LiteralString, tuple[LiteralRuntime, ...]]] = []
       for m, v in json_data.items():
         data.extend([(m, v["architecture"], v["model_id"], v["installation"], "❌" if not v["cpu"] else "✅", "✅", v["runtime_impl"],)])
       column_widths = [int(termui.COLUMNS / 12), int(termui.COLUMNS / 6), int(termui.COLUMNS / 4), int(termui.COLUMNS / 12), int(termui.COLUMNS / 12), int(termui.COLUMNS / 12), int(termui.COLUMNS / 4),]
@@ -687,7 +660,7 @@ def shared_client_options(f: _AnyCallable | None = None, output_value: t.Literal
 @click.option("--remote", is_flag=True, default=False, help="Whether or not to use remote tools (inference endpoints) instead of local ones.", show_default=True)
 @click.option("--opt", help="Define prompt options. "
               "(format: ``--opt text='I love this' --opt audio:./path/to/audio  --opt image:/path/to/file``)", required=False, multiple=True, callback=opt_callback, metavar="ARG=VALUE[,ARG=VALUE]")
-def instruct_command(endpoint: str, timeout: int, agent: t.LiteralString, output: LiteralOutput, remote: bool, task: str, _memoized: DictStrAny, **attrs: t.Any) -> str:
+def instruct_command(endpoint: str, timeout: int, agent: LiteralString, output: LiteralOutput, remote: bool, task: str, _memoized: DictStrAny, **attrs: t.Any) -> str:
   """Instruct agents interactively for given tasks, from a terminal.
 
   \b
