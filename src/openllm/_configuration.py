@@ -702,7 +702,7 @@ class _ConfigBuilder:
       if not closure_cells: continue  # Catch None or the empty list.
       for cell in closure_cells:
         try: match = cell.cell_contents is self._cls
-        except ValueError: pass  # ValueError: Cell is empty
+        except ValueError: pass  # ValueError: Cell is empty  # noqa: PERF203 # it is ok here since we need to traverse the MRO
         else:
           if match: set_closure_cell(cell, cls)
 

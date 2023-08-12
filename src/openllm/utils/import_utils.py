@@ -86,7 +86,7 @@ def is_tf_available() -> bool:
           try:
             _tf_version = importlib.metadata.version(_pkg)
             break
-          except importlib.metadata.PackageNotFoundError: pass
+          except importlib.metadata.PackageNotFoundError: pass  # noqa: PERF203 # Ok to ignore here since we actually need to check for all possible tensorflow distribution.
         _tf_available = _tf_version is not None
       if _tf_available:
         if _tf_version and packaging.version.parse(_tf_version) < packaging.version.parse("2"):

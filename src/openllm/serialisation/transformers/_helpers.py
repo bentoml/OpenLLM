@@ -7,8 +7,7 @@ if t.TYPE_CHECKING:
   import torch, transformers, bentoml
   from transformers.models.auto.auto_factory import _BaseAutoModelClass
   from bentoml._internal.models.model import ModelSignaturesType
-  from openllm._llm import M, T
-  from openllm._typing_compat import DictStrAny
+  from openllm._typing_compat import DictStrAny, M, T
 else: transformers, torch = openllm.utils.LazyLoader("transformers", globals(), "transformers"), openllm.utils.LazyLoader("torch", globals(), "torch")
 
 _object_setattr = object.__setattr__

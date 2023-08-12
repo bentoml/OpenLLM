@@ -8,6 +8,6 @@ if t.TYPE_CHECKING:
   from collections import OrderedDict
 
 MODEL_FLAX_MAPPING_NAMES = OrderedDict([("flan_t5", "FlaxFlanT5"), ("opt", "FlaxOPT")])
-MODEL_FLAX_MAPPING: OrderedDict[t.Type[openllm.LLMConfig], t.Type[openllm.LLM["transformers.FlaxPreTrainedModel", "transformers.PreTrainedTokenizer"]]] = _LazyAutoMapping(CONFIG_MAPPING_NAMES, MODEL_FLAX_MAPPING_NAMES)
+MODEL_FLAX_MAPPING: _LazyAutoMapping[t.Type[openllm.LLMConfig], t.Type[openllm.LLM["transformers.FlaxPreTrainedModel", "transformers.PreTrainedTokenizer"]]] = _LazyAutoMapping(CONFIG_MAPPING_NAMES, MODEL_FLAX_MAPPING_NAMES)
 class AutoFlaxLLM(BaseAutoLLMClass):
   _model_mapping = MODEL_FLAX_MAPPING

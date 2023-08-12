@@ -57,24 +57,37 @@ if _t.TYPE_CHECKING:
   from openllm.utils import infer_auto_class as infer_auto_class
 
 try:
+  if not (utils.is_torch_available() and utils.is_cpm_kernels_available()): raise exceptions.MissingDependencyError
+except exceptions.MissingDependencyError:
+  _import_structure["utils.dummy_pt_objects"] = ["ChatGLM", "Baichuan"]
+else:
+  _import_structure["models.chatglm"].extend(["ChatGLM"])
+  _import_structure["models.baichuan"].extend(["Baichuan"])
+  if _t.TYPE_CHECKING:
+    from .models.baichuan import Baichuan as Baichuan
+    from .models.chatglm import ChatGLM as ChatGLM
+try:
+  if not (utils.is_torch_available() and utils.is_triton_available()): raise exceptions.MissingDependencyError
+except exceptions.MissingDependencyError:
+  if "utils.dummy_pt_objects" in _import_structure: _import_structure["utils.dummy_pt_objects"].extend(["MPT"])
+  else: _import_structure["utils.dummy_pt_objects"] = ["MPT"]
+else:
+  _import_structure["models.mpt"].extend(["MPT"])
+  if _t.TYPE_CHECKING: from .models.mpt import MPT as MPT
+try:
+  if not (utils.is_torch_available() and utils.is_einops_available()): raise exceptions.MissingDependencyError
+except exceptions.MissingDependencyError:
+  if "utils.dummy_pt_objects" in _import_structure: _import_structure["utils.dummy_pt_objects"].extend(["Falcon"])
+  else: _import_structure["utils.dummy_pt_objects"] = ["Falcon"]
+else:
+  _import_structure["models.falcon"].extend(["Falcon"])
+  if _t.TYPE_CHECKING: from .models.falcon import Falcon as Falcon
+
+try:
   if not utils.is_torch_available(): raise exceptions.MissingDependencyError
 except exceptions.MissingDependencyError:
-  _import_structure["utils.dummy_pt_objects"] = utils.dummy_pt_objects.__all__
+  _import_structure["utils.dummy_pt_objects"] = [name for name in dir(utils.dummy_pt_objects) if not name.startswith("_") and name not in ("ChatGLM", "Baichuan", "MPT", "Falcon", "annotations")]
 else:
-  if utils.is_cpm_kernels_available():
-    _import_structure["models.chatglm"].extend(["ChatGLM"])
-    _import_structure["models.baichuan"].extend(["Baichuan"])
-    if _t.TYPE_CHECKING:
-      from .models.baichuan import Baichuan as Baichuan
-      from .models.chatglm import ChatGLM as ChatGLM
-  if utils.is_einops_available():
-    _import_structure["models.falcon"].extend(["Falcon"])
-    if _t.TYPE_CHECKING:
-      from .models.falcon import Falcon as Falcon
-    if utils.is_triton_available():
-      _import_structure["models.mpt"].extend(["MPT"])
-      if _t.TYPE_CHECKING:
-        from .models.mpt import MPT as MPT
   _import_structure["models.flan_t5"].extend(["FlanT5"])
   _import_structure["models.dolly_v2"].extend(["DollyV2"])
   _import_structure["models.starcoder"].extend(["StarCoder"])
@@ -95,7 +108,7 @@ else:
 try:
   if not utils.is_vllm_available(): raise exceptions.MissingDependencyError
 except exceptions.MissingDependencyError:
-  _import_structure["utils.dummy_vllm_objects"] = utils.dummy_vllm_objects.__all__
+  _import_structure["utils.dummy_vllm_objects"] = [name for name in dir(utils.dummy_vllm_objects) if not name.startswith("_") and name not in ("annotations",)]
 else:
   _import_structure["models.baichuan"].extend(["VLLMBaichuan"])
   _import_structure["models.llama"].extend(["VLLMLlama"])
@@ -119,7 +132,7 @@ else:
 try:
   if not utils.is_flax_available(): raise exceptions.MissingDependencyError
 except exceptions.MissingDependencyError:
-  _import_structure["utils.dummy_flax_objects"] = utils.dummy_flax_objects.__all__
+  _import_structure["utils.dummy_flax_objects"] = [name for name in dir(utils.dummy_flax_objects) if not name.startswith("_") and name not in ("annotations",)]
 else:
   _import_structure["models.flan_t5"].extend(["FlaxFlanT5"])
   _import_structure["models.opt"].extend(["FlaxOPT"])
@@ -131,7 +144,7 @@ else:
 try:
   if not utils.is_tf_available(): raise exceptions.MissingDependencyError
 except exceptions.MissingDependencyError:
-  _import_structure["utils.dummy_tf_objects"] = utils.dummy_tf_objects.__all__
+  _import_structure["utils.dummy_tf_objects"] = [name for name in dir(utils.dummy_tf_objects) if not name.startswith("_") and name not in ("annotations",)]
 else:
   _import_structure["models.flan_t5"].extend(["TFFlanT5"])
   _import_structure["models.opt"].extend(["TFOPT"])

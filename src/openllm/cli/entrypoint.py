@@ -581,7 +581,7 @@ def models_command(ctx: click.Context, output: LiteralOutput, show_available: bo
         termui.echo("Exception found while parsing models:\n", fg="yellow")
         for m, err in failed_initialized:
           termui.echo(f"- {m}: ", fg="yellow", nl=False)
-          termui.echo(traceback.print_exception(err, limit=5), fg="red")
+          termui.echo(traceback.print_exception(None, err, None, limit=5), fg="red")  # type: ignore[func-returns-value]
         sys.exit(1)
 
       table = tabulate.tabulate(data, tablefmt="fancy_grid", headers=["LLM", "Architecture", "Models Id", "pip install", "CPU", "GPU", "Runtime"], maxcolwidths=column_widths)
