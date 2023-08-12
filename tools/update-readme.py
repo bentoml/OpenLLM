@@ -1,20 +1,14 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import os
+import os, inflection, tomlkit, openllm
 import typing as t
-
-import inflection
-import tomlkit
-
-import openllm
 
 START_COMMENT = f"<!-- {os.path.basename(__file__)}: start -->\n"
 END_COMMENT = f"<!-- {os.path.basename(__file__)}: stop -->\n"
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
 def main() -> int:
-  with open(os.path.join(ROOT, "pyproject.toml"), "r") as f:
+  with open(os.path.join(ROOT, "openllm-python", "pyproject.toml"), "r") as f:
     deps = tomlkit.parse(f.read()).value["project"]["optional-dependencies"]
   with open(os.path.join(ROOT, "README.md"), "r") as f:
     readme = f.readlines()

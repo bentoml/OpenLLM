@@ -8,10 +8,10 @@ from lxml import etree
 
 ROOT = Path(__file__).resolve().parent.parent
 
-PACKAGES = {"src/openllm/": "openllm"}
+PACKAGES = {"openllm-python/src/openllm/": "openllm"}
 
 def main() -> int:
-  coverage_report = ROOT / "coverage.xml"
+  coverage_report = ROOT/"coverage.xml"
   root = etree.fromstring(coverage_report.read_text())
 
   raw_package_data: defaultdict[str, dict[str, int]] = defaultdict(lambda: {"hits": 0, "misses": 0})
@@ -27,10 +27,8 @@ def main() -> int:
         raise ValueError(message)
 
       for line in module.find("lines"):
-        if line.attrib["hits"] == "1":
-          data["hits"] += 1
-        else:
-          data["misses"] += 1
+        if line.attrib["hits"] == "1": data["hits"] += 1
+        else: data["misses"] += 1
 
   total_statements_covered = 0
   total_statements = 0
@@ -40,14 +38,11 @@ def main() -> int:
     statements = statements_covered + data["misses"]
     total_statements_covered += statements_covered
     total_statements += statements
-
     coverage_data[package_name] = {"statements_covered": statements_covered, "statements": statements}
   coverage_data["total"] = {"statements_covered": total_statements_covered, "statements": total_statements}
 
-  coverage_summary = ROOT / "coverage-summary.json"
+  coverage_summary = ROOT/"coverage-summary.json"
   coverage_summary.write_text(orjson.dumps(coverage_data, option=orjson.OPT_INDENT_2).decode(), encoding="utf-8")
-
   return 0
 
-if __name__ == "__main__":
-  raise SystemExit(main())
+if __name__ == "__main__": raise SystemExit(main())

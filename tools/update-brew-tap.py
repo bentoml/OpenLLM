@@ -35,7 +35,7 @@ def main() -> int:
 
   ENVIRONMENT = Environment(extensions=["jinja2.ext.do", "jinja2.ext.loopcontrols", "jinja2.ext.debug"], trim_blocks=True, lstrip_blocks=True, loader=FileSystemLoader((ROOT / "Formula").__fspath__(), followlinks=True))
   template_file = "openllm.rb.j2"
-  with (ROOT / "Formula" / "openllm.rb").open("w") as f:
+  with (ROOT/"Formula"/"openllm.rb").open("w") as f:
     f.write(ENVIRONMENT.get_template(template_file, globals={"determine_release_url": determine_release_url}).render(shadict=shadict, __tag__=release_tag, __cmd__=fs.path.join(os.path.basename(os.path.dirname(__file__)), os.path.basename(__file__)), __template_file__=fs.path.join("Formula", template_file), __gz_extension__=_gz_strategies, **_info))
     f.write("\n")
   return 0

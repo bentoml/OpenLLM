@@ -1,21 +1,17 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import os
-import typing as t
+import os, typing as t, openllm
 from pathlib import Path
-
-import openllm
 from openllm._configuration import LiteralRuntime
 
-if t.TYPE_CHECKING:
-  from collections import OrderedDict
+if t.TYPE_CHECKING: from collections import OrderedDict
 
 _ROOT = Path(__file__).parent.parent
 config_requirements = {k:[_.replace("-", "_") for _ in v.__openllm_requirements__] if v.__openllm_requirements__ else None for k,v in openllm.CONFIG_MAPPING.items()}
 _dependencies: dict[LiteralRuntime,str] = {k:v for k,v in zip(LiteralRuntime.__args__, ("torch", "tensorflow", "flax", "vllm"))}
 _auto: dict[str,str] = {k:v for k,v in zip(LiteralRuntime.__args__, ("AutoLLM", "AutoTFLLM", "AutoFlaxLLM", "AutoVLLM"))}
 
-def get_target_dummy_file(framework: LiteralRuntime) -> Path: return _ROOT.joinpath("src","openllm","utils",f"dummy_{framework}_objects.py")
+def get_target_dummy_file(framework: LiteralRuntime) -> Path: return _ROOT/"openllm-python"/"src"/"openllm"/"utils"/f"dummy_{framework}_objects.py"
 def mapping_names(framework: LiteralRuntime): return "MODEL_MAPPING_NAMES" if framework == "pt" else f"MODEL_{framework.upper()}_MAPPING_NAMES"
 def get_mapping(framework: LiteralRuntime) -> OrderedDict[t.Any, t.Any]: return getattr(openllm.models.auto, mapping_names(framework))
 

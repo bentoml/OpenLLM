@@ -1,40 +1,28 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import dataclasses
-import os
-import typing as t
-
-import inflection
-import tomlkit
-
-import openllm
-
-if t.TYPE_CHECKING:
-  from tomlkit.items import Array, Table
+import dataclasses, os, typing as t
+import inflection, tomlkit, openllm
+from ghapi.all import GhApi
+if t.TYPE_CHECKING: from tomlkit.items import Array, Table
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_OWNER = "bentoml"
+_REPO = "openllm"
 
 @dataclasses.dataclass(frozen=True)
 class Classifier:
   identifier: t.Dict[str, str] = dataclasses.field(default_factory=lambda: {"status": "Development Status", "environment": "Environment", "license": "License", "topic": "Topic", "os": "Operating System", "audience": "Intended Audience", "typing": "Typing", "language": "Programming Language",})
-
   joiner: str = " :: "
-
   @staticmethod
-  def status() -> dict[int, str]:
-    return {v: status for v, status in zip(range(1, 8), ["1 - Planning", "2 - Pre-Alpha", "3 - Alpha", "4 - Beta", "5 - Production/Stable", "6 - Mature", "7 - Inactive",],)}
-
+  def status() -> dict[int, str]: return {v: status for v, status in zip(range(1, 8), ["1 - Planning", "2 - Pre-Alpha", "3 - Alpha", "4 - Beta", "5 - Production/Stable", "6 - Mature", "7 - Inactive",],)}
   @staticmethod
-  def apache() -> str:
-    return Classifier.create_classifier("license", "OSI Approved", "Apache Software License")
-
+  def apache() -> str: return Classifier.create_classifier("license", "OSI Approved", "Apache Software License")
   @staticmethod
   def create_classifier(identifier: str, *decls: t.Any) -> str:
     cls_ = Classifier()
     if identifier not in cls_.identifier:
       raise ValueError(f"{identifier} is not yet supported (supported alias: {Classifier.identifier})")
     return cls_.joiner.join([cls_.identifier[identifier], *decls])
-
   @staticmethod
   def create_python_classifier(implementation: list[str] | None = None, supported_version: list[str] | None = None) -> list[str]:
     if supported_version is None:
@@ -46,10 +34,8 @@ class Classifier:
     base.extend([Classifier.create_classifier("language", "Python", version) for version in supported_version])
     base.extend([Classifier.create_classifier("language", "Python", "Implementation", impl) for impl in implementation])
     return base
-
   @staticmethod
-  def create_status_classifier(level: int) -> str:
-    return Classifier.create_classifier("status", Classifier.status()[level])
+  def create_status_classifier(level: int) -> str: return Classifier.create_classifier("status", Classifier.status()[level])
 
 @dataclasses.dataclass(frozen=True)
 class Dependencies:
@@ -63,46 +49,26 @@ class Dependencies:
   upper_constraint: t.Optional[str] = None
   platform: t.Optional[t.Tuple[t.Literal["Linux", "Windows", "Darwin"], t.Literal["eq", "ne"]]] = None
 
-  def with_options(self, **kwargs: t.Any) -> Dependencies:
-    return dataclasses.replace(self, **kwargs)
-
+  def with_options(self, **kwargs: t.Any) -> Dependencies: return dataclasses.replace(self, **kwargs)
   @property
-  def has_constraint(self) -> bool:
-    return self.lower_constraint is not None or self.upper_constraint is not None
-
+  def has_constraint(self) -> bool: return self.lower_constraint is not None or self.upper_constraint is not None
   @property
-  def pypi_extensions(self) -> str:
-    return "" if self.extensions is None else f"[{','.join(self.extensions)}]"
-
+  def pypi_extensions(self) -> str: return "" if self.extensions is None else f"[{','.join(self.extensions)}]"
   @staticmethod
-  def platform_restriction(platform: t.LiteralString, op: t.Literal["eq", "ne"] = "eq") -> str:
-    return f'platform_system{"==" if op == "eq" else "!="}"{platform}"'
-
+  def platform_restriction(platform: t.LiteralString, op: t.Literal["eq", "ne"] = "eq") -> str: return f'platform_system{"==" if op == "eq" else "!="}"{platform}"'
   def to_str(self) -> str:
     deps: list[str] = []
-    if self.lower_constraint is not None and self.upper_constraint is not None:
-      dep = f"{self.name}{self.pypi_extensions}>={self.lower_constraint},<{self.upper_constraint}"
-    elif self.lower_constraint is not None:
-      dep = f"{self.name}{self.pypi_extensions}>={self.lower_constraint}"
-    elif self.upper_constraint is not None:
-      dep = f"{self.name}{self.pypi_extensions}<{self.upper_constraint}"
-    elif self.subdirectory is not None:
-      dep = f"{self.name}{self.pypi_extensions} @ git+https://github.com/{self.git_repo_url}.git#subdirectory={self.subdirectory}"
-    elif self.branch is not None:
-      dep = f"{self.name}{self.pypi_extensions} @ git+https://github.com/{self.git_repo_url}.git@{self.branch}"
-    else:
-      dep = f"{self.name}{self.pypi_extensions}"
-
+    if self.lower_constraint is not None and self.upper_constraint is not None: dep = f"{self.name}{self.pypi_extensions}>={self.lower_constraint},<{self.upper_constraint}"
+    elif self.lower_constraint is not None: dep = f"{self.name}{self.pypi_extensions}>={self.lower_constraint}"
+    elif self.upper_constraint is not None: dep = f"{self.name}{self.pypi_extensions}<{self.upper_constraint}"
+    elif self.subdirectory is not None: dep = f"{self.name}{self.pypi_extensions} @ git+https://github.com/{self.git_repo_url}.git#subdirectory={self.subdirectory}"
+    elif self.branch is not None: dep = f"{self.name}{self.pypi_extensions} @ git+https://github.com/{self.git_repo_url}.git@{self.branch}"
+    else: dep = f"{self.name}{self.pypi_extensions}"
     deps.append(dep)
-
-    if self.platform:
-      deps.append(self.platform_restriction(*self.platform))
-
+    if self.platform: deps.append(self.platform_restriction(*self.platform))
     return ";".join(deps)
-
   @classmethod
-  def from_tuple(cls, *decls: t.Any) -> Dependencies:
-    return cls(*decls)
+  def from_tuple(cls, *decls: t.Any) -> Dependencies: return cls(*decls)
 
 _BENTOML_EXT = ["grpc", "io"]
 _TRANSFORMERS_EXT = ["torch", "tokenizers", "accelerate"]
@@ -202,31 +168,27 @@ def build_cli_extensions() -> Table:
   return table
 
 def main() -> int:
-  with open(os.path.join(ROOT, "pyproject.toml"), "r") as f:
-    pyproject = tomlkit.parse(f.read())
+  api = GhApi(owner=_OWNER, repo=_REPO, authenticate=False)
+  _info = api.repos.get()
+  with open(os.path.join(ROOT, "openllm-python", "pyproject.toml"), "r") as f: pyproject = tomlkit.parse(f.read())
 
   dependencies_array = tomlkit.array()
   dependencies_array.extend([v.to_str() for v in _BASE_DEPENDENCIES])
+  keywords_array = tomlkit.array()
+  keywords_array.extend([inflection.humanize(i.replace("-", " ")) for i in _info.topics])
 
   pyproject["project"]["urls"] = create_url_table()
   pyproject["project"]["scripts"] = build_cli_extensions()
   pyproject["project"]["classifiers"] = create_classifiers()
   pyproject["project"]["optional-dependencies"] = create_optional_table()
   pyproject["project"]["dependencies"] = dependencies_array.multiline(True)
+  pyproject["project"]["description"] = f"{_info.name}: {_info.description}"
+  pyproject["project"]["keywords"] = keywords_array.multiline(True)
+  pyproject["project"]["license"] = _info.license.spdx_id
+  pyproject["project"]["name"] = _info.name.lower()
+  pyproject["project"]["requires-python"] = ">3.8"
 
-  with open(os.path.join(ROOT, "pyproject.toml"), "w") as f:
-    f.write(tomlkit.dumps(pyproject))
-
-  with open(os.path.join(ROOT, "nightly-requirements.txt"), "w") as f:
-    f.write(f"# This file is generated by `{fname}`. DO NOT EDIT\n-e .[playground,flan-t5]\n")
-    f.writelines([f"{v.to_str()}\n" for v in _NIGHTLY_MAPPING.values() if not v.requires_gpu])
-  with open(os.path.join(ROOT, "nightly-requirements-gpu.txt"), "w") as f:
-    f.write(f"# This file is generated by `{fname}`. # DO NOT EDIT\n")
-    f.write("# For Jax, Flax, Tensorflow, PyTorch CUDA support, please refers to their official installation for your specific setup.\n")
-    f.write("-r nightly-requirements.txt\n-e .[all]\n")
-    f.writelines([f"{v.to_str()}\n" for v in _NIGHTLY_MAPPING.values() if v.requires_gpu])
-
+  with open(os.path.join(ROOT, "openllm-python", "pyproject.toml"), "w") as f: f.write(tomlkit.dumps(pyproject))
   return 0
 
-if __name__ == "__main__":
-  raise SystemExit(main())
+if __name__ == "__main__": raise SystemExit(main())

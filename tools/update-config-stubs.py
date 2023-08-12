@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import importlib
-import os
+import importlib, os, openllm
 from pathlib import Path
-
-import openllm
 from openllm._configuration import GenerationConfig, ModelSettings, PeftType, SamplingParams
 
 # currently we are assuming the indentatio level is 2 for comments
@@ -15,7 +12,7 @@ END_SPECIAL_COMMENT = f"# {os.path.basename(__file__)}: special stop\n"
 START_ATTRS_COMMENT = f"# {os.path.basename(__file__)}: attrs start\n"
 END_ATTRS_COMMENT = f"# {os.path.basename(__file__)}: attrs stop\n"
 
-_TARGET_FILE = Path(__file__).parent.parent/"src"/"openllm"/"_configuration.py"
+_TARGET_FILE = Path(__file__).parent.parent/"openllm-python"/"src"/"openllm"/"_configuration.py"
 _imported = importlib.import_module(ModelSettings.__module__)
 
 def process_annotations(annotations: str) -> str:
@@ -94,12 +91,10 @@ def main() -> int:
   # NOTE: inline stubs __config__ attrs representation
   special_attrs_lines: list[str] = []
   for keys, ForwardRef in openllm.utils.codegen.get_annotations(ModelSettings).items(): special_attrs_lines.append(f"{' ' * 4}{keys}: {_transformed.get(keys, process_annotations(ForwardRef.__forward_arg__))}\n")
-
   # NOTE: inline stubs for _ConfigAttr type stubs
   config_attr_lines: list[str] = []
   for keys, ForwardRef in openllm.utils.codegen.get_annotations(ModelSettings).items():
     config_attr_lines.extend([" "*4 + line for line in [f"__openllm_{keys}__: {_transformed.get(keys, process_annotations(ForwardRef.__forward_arg__))} = Field(None)\n", f'"""{_value_docstring[keys]}"""\n',]])
-
   # NOTE: inline runtime __getitem__ overload process
   lines: list[str] = []
   lines.append(" "*2 + "# NOTE: ModelSettings arguments\n")
@@ -118,7 +113,6 @@ def main() -> int:
   lines.append(" "*2 + "# NOTE: SamplingParams arguments\n")
   for keys, type_pep563 in openllm.utils.codegen.get_annotations(SamplingParams).items():
     if keys not in generation_config_anns: lines.extend([" "*2 + line for line in ["@overload\n" if "overload" in dir(_imported) else "@t.overload\n", f'def __getitem__(self, item: t.Literal["{keys}"]) -> {type_pep563}: ...\n',]])
-
   lines.append(" "*2 + "# NOTE: PeftType arguments\n")
   for keys in PeftType._member_names_: lines.extend([" "*2 + line for line in ["@overload\n" if "overload" in dir(_imported) else "@t.overload\n", f'def __getitem__(self, item: t.Literal["{keys.lower()}"]) -> dict[str, t.Any]: ...\n',]])
 
