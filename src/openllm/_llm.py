@@ -1,5 +1,5 @@
 from __future__ import annotations
-import collections, functools, inspect, logging, os, re, traceback, types, typing as t, uuid
+import functools, inspect, logging, os, re, traceback, types, typing as t, uuid
 from abc import ABC, abstractmethod
 from pathlib import Path
 import attr, fs.path, inflection, orjson, bentoml, openllm
@@ -7,9 +7,7 @@ from huggingface_hub import hf_hub_download
 from bentoml._internal.models.model import ModelSignature
 
 from ._configuration import (
-  AdapterType,
   FineTuneConfig,
-  LiteralRuntime,
   LLMConfig,
   _object_getattribute,
   _setattr_class,
@@ -44,6 +42,8 @@ from ._typing_compat import (
   AdaptersMapping,
   AdaptersTuple,
   AnyCallable,
+  AdapterType,
+  LiteralRuntime,
   DictStrAny,
   ListStr,
   LLMEmbeddings,
@@ -52,24 +52,21 @@ from ._typing_compat import (
   ModelSignatureDict as _ModelSignatureDict,
   PeftAdapterOutput,
   TupleAny,
-  NotRequired, overload, M, T
+  NotRequired, overload, M, T, LiteralString
 )
 
 if t.TYPE_CHECKING:
   import auto_gptq as autogptq, peft, torch, transformers, vllm
   from ._configuration import PeftType
   from .utils.representation import ReprArgs
-
-  UserDictAny = collections.UserDict[str, t.Any]
-  ResolvedAdaptersMapping = dict[AdapterType, dict[str | t.Literal["default"], tuple[peft.PeftConfig, str]]]
 else:
-  UserDictAny = collections.UserDict
-
   autogptq = LazyLoader("autogptq", globals(), "auto_gptq")
   vllm = LazyLoader("vllm", globals(), "vllm")
   transformers = LazyLoader("transformers", globals(), "transformers")
   torch = LazyLoader("torch", globals(), "torch")
   peft = LazyLoader("peft", globals(), "peft")
+
+ResolvedAdaptersMapping = t.Dict[AdapterType, t.Dict[t.Union[str, t.Literal["default"]], t.Tuple[peft.PeftConfig, str]]]
 
 logger = logging.getLogger(__name__)
 class ModelSignatureDict(t.TypedDict, total=False):
@@ -221,7 +218,7 @@ class LLMInterface(ABC, t.Generic[M, T]):
     raise NotImplementedError
 
   # NOTE: All fields below are attributes that can be accessed by users.
-  config_class: type[LLMConfig]
+  config_class: t.Type[LLMConfig]
   """The config class to use for this LLM. If you are creating a custom LLM, you must specify this class."""
   bettertransformer: bool
   """Whether to load this LLM with FasterTransformer enabled. The order of loading is:
@@ -234,7 +231,7 @@ class LLMInterface(ABC, t.Generic[M, T]):
     """
   device: "torch.device"
   """The device to be used for this LLM. If the implementation is 'pt', then it will be torch.device, else string."""
-  tokenizer_id: t.LiteralString | t.Literal["local"]
+  tokenizer_id: t.Union[t.Literal["local"], LiteralString]
   """optional tokenizer_id for loading with vLLM if the model supports vLLM."""
   # NOTE: The following will be populated by __init_subclass__, note that these should be immutable.
   __llm_trust_remote_code__: bool
@@ -254,13 +251,13 @@ class LLMInterface(ABC, t.Generic[M, T]):
 
     An additional naming for all VLLM backend: VLLMLlama -> `vllm`
     """
-  __llm_model__: M | None
+  __llm_model__: t.Optional[M]
   """A reference to the actual model. Instead of access this directly, you should use `model` property instead."""
-  __llm_tokenizer__: T | None
+  __llm_tokenizer__: t.Optional[T]
   """A reference to the actual tokenizer. Instead of access this directly, you should use `tokenizer` property instead."""
-  __llm_bentomodel__: bentoml.Model | None
+  __llm_bentomodel__: t.Optional[bentoml.Model]
   """A reference to the bentomodel used for this LLM. Instead of access this directly, you should use `_bentomodel` property instead."""
-  __llm_adapter_map__: dict[AdapterType, dict[str | t.Literal["default"], tuple[peft.PeftConfig, str]]] | None
+  __llm_adapter_map__: t.Optional[ResolvedAdaptersMapping]
   """A reference to the the cached LoRA adapter mapping."""
   __llm_supports_embeddings__: bool
   """A boolean to determine whether models does implement ``LLM.embeddings``."""
@@ -271,11 +268,10 @@ class LLMInterface(ABC, t.Generic[M, T]):
   __llm_supports_generate_iterator__: bool
   """A boolean to determine whether models does implement ``LLM.generate_iterator``."""
   if t.TYPE_CHECKING and not MYPY:
-    def __attrs_init__(self, config: LLMConfig, quantization_config: transformers.BitsAndBytesConfig | autogptq.BaseQuantizeConfig | None, model_id: str, runtime: t.Literal["ggml", "transformers"], model_decls: TupleAny, model_attrs: DictStrAny, tokenizer_attrs: DictStrAny, tag: bentoml.Tag, adapters_mapping: AdaptersMapping | None, model_version: str | None, quantize_method: t.Literal["int8", "int4", "gptq"] | None, serialisation_format: t.Literal["safetensors", "legacy"], _local: bool, **attrs: t.Any) -> None:
+    def __attrs_init__(self, config: LLMConfig, quantization_config: t.Optional[t.Union[transformers.BitsAndBytesConfig, autogptq.BaseQuantizeConfig]], model_id: str, runtime: t.Literal["ggml", "transformers"], model_decls: TupleAny, model_attrs: DictStrAny, tokenizer_attrs: DictStrAny, tag: bentoml.Tag, adapters_mapping: t.Optional[AdaptersMapping], model_version: t.Optional[str], quantize_method: t.Optional[t.Literal["int8", "int4", "gptq"]], serialisation_format: t.Literal["safetensors", "legacy"], _local: bool, **attrs: t.Any) -> None:
       """Generated __attrs_init__ for openllm.LLM."""
 
 _R = t.TypeVar("_R", covariant=True)
-
 class _import_model_wrapper(t.Generic[_R, M, T], t.Protocol):
   def __call__(self, llm: LLM[M, T], *decls: t.Any, trust_remote_code: bool, **attrs: t.Any) -> _R: ...
 class _load_model_wrapper(t.Generic[M, T], t.Protocol):
@@ -456,7 +452,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
   def __getitem__(self, item: t.Literal["supports_generate_one"]) -> bool: ...
   @overload
   def __getitem__(self, item: t.Literal["supports_generate_iterator"]) -> bool: ...
-  def __getitem__(self, item: t.LiteralString | t.Any) -> t.Any:
+  def __getitem__(self, item: t.Union[LiteralString, t.Any]) -> t.Any:
     if item is None: raise TypeError(f"{self} doesn't understand how to index None.")
     item = inflection.underscore(item)
     internal_attributes = f"__llm_{item}__"
@@ -853,7 +849,6 @@ class LLM(LLMInterface[M, T], ReprMixin):
     adapter_mapping = _mapping[adapter_type]
 
     self.__llm_model__ = self._wrap_default_peft_model(adapter_mapping, inference_mode=inference_mode)
-
     # now we loop through the rest with add_adapter
     if len(adapter_mapping) > 0:
       for adapter_name, (_peft_config, _) in adapter_mapping.items():
@@ -1072,11 +1067,10 @@ def llm_runnable_class(self: LLM[M, T], embeddings_sig: ModelSignature, generate
 
 def llm_runner_class(self: LLM[M, T]) -> type[LLMRunner[M, T]]:
   def available_adapters(_: LLMRunner[M, T]) -> PeftAdapterOutput:
-    if not is_peft_available(): return {"success": False, "result": {}, "error_msg": "peft is not available. Make sure to install: 'pip install \"openllm[fine-tune]\"'"}
-    if self.__llm_adapter_map__ is None: return {"success": False, "result": {}, "error_msg": "No adapters available for current running server."}
-    if not isinstance(self.model, peft.PeftModel): return {"success": False, "result": {}, "error_msg": "Model is not a PeftModel"}
-    return {"success": True, "result": self.model.peft_config, "error_msg": ""}
-
+    if not is_peft_available(): return PeftAdapterOutput(success=False, result={}, error_msg="peft is not available. Make sure to install: 'pip install \"openllm[fine-tune]\"'")
+    if self.__llm_adapter_map__ is None: return PeftAdapterOutput(success=False, result={}, error_msg="No adapters available for current running server.")
+    if not isinstance(self.model, peft.PeftModel): return PeftAdapterOutput(success=False, result={}, error_msg="Model is not a PeftModel")
+    return PeftAdapterOutput(success=True, result=self.model.peft_config, error_msg="")
   def _wrapped_generate_run(__self: LLMRunner[M, T], prompt: str, **kwargs: t.Any) -> t.Any:
     """Wrapper for runner.generate.run() to handle the prompt and postprocessing.
 

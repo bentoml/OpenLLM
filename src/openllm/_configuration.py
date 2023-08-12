@@ -629,7 +629,7 @@ class _ConfigBuilder:
 
   __slots__ = ("_cls", "_cls_dict", "_attr_names", "_attrs", "_model_name", "_base_attr_map", "_base_names", "_has_pre_init", "_has_post_init")
 
-  def __init__(self, cls: type[LLMConfig], these: dict[str, _CountingAttr[t.Any]], auto_attribs: bool = False, kw_only: bool = False, collect_by_mro: bool = True):
+  def __init__(self, cls: type[LLMConfig], these: dict[str, _CountingAttr], auto_attribs: bool = False, kw_only: bool = False, collect_by_mro: bool = True):
     attrs, base_attrs, base_attr_map = _transform_attrs(cls, these, auto_attribs, kw_only, collect_by_mro, field_transformer=codegen.make_env_transformer(cls, cls.__openllm_model_name__))
     self._cls, self._model_name, self._cls_dict, self._attrs, self._base_names, self._base_attr_map = cls, cls.__openllm_model_name__, dict(cls.__dict__), attrs, {a.name for a in base_attrs}, base_attr_map
     self._attr_names = tuple(a.name for a in attrs)
@@ -842,7 +842,7 @@ class LLMConfig(_ConfigAttr):
     anns = codegen.get_annotations(cls)
     # _CountingAttr is the underlying representation of attr.field
     ca_names = {name for name, attr in cd.items() if isinstance(attr, _CountingAttr)}
-    these: dict[str, _CountingAttr[t.Any]] = {}
+    these: dict[str, _CountingAttr] = {}
     annotated_names: set[str] = set()
     for attr_name, typ in anns.items():
       if codegen.is_class_var(typ): continue
@@ -854,7 +854,7 @@ class LLMConfig(_ConfigAttr):
       these[attr_name] = val
     unannotated = ca_names - annotated_names
     if len(unannotated) > 0:
-      missing_annotated = sorted(unannotated, key=lambda n: t.cast("_CountingAttr[t.Any]", cd.get(n)).counter)
+      missing_annotated = sorted(unannotated, key=lambda n: t.cast("_CountingAttr", cd.get(n)).counter)
       raise openllm.exceptions.MissingAnnotationAttributeError(f"The following field doesn't have a type annotation: {missing_annotated}")
     # We need to set the accepted key before generation_config
     # as generation_config is a special field that users shouldn't pass.

@@ -31,9 +31,9 @@ else:
   from typing_extensions import NotRequired as NotRequired, Required as Required, dataclass_transform as dataclass_transform
 
 if sys.version_info[:2] >= (3,10):
-  from typing import TypeAlias as TypeAlias, ParamSpec as ParamSpec
+  from typing import TypeAlias as TypeAlias, ParamSpec as ParamSpec, Concatenate as Concatenate
 else:
-  from typing_extensions import TypeAlias as TypeAlias, ParamSpec as ParamSpec
+  from typing_extensions import TypeAlias as TypeAlias, ParamSpec as ParamSpec, Concatenate as Concatenate
 
 if sys.version_info[:2] >= (3,9):
   from typing import TypedDict as TypedDict
@@ -54,7 +54,7 @@ class AdaptersTuple(TupleAny):
   name: t.Optional[str]
   config: DictStrAny
 
-AdaptersMapping = t.Dict[AdapterType, tuple[AdaptersTuple, ...]]
+AdaptersMapping = t.Dict[AdapterType, t.Tuple[AdaptersTuple, ...]]
 
 class RefTuple(TupleAny):
   git_hash: str

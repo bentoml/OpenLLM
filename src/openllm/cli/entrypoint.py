@@ -56,7 +56,7 @@ from openllm.models.auto import (
   AutoConfig,
   AutoLLM,
 )
-from openllm._typing_compat import DictStrAny, ParamSpec
+from openllm._typing_compat import DictStrAny, ParamSpec, Concatenate, LiteralString, Self, LiteralRuntime
 from openllm.utils import (
   DEBUG,
   DEBUG_ENV_VAR,
@@ -86,10 +86,8 @@ if t.TYPE_CHECKING:
   from bentoml._internal.container import DefaultBuilder
   from openllm.client import BaseClient
   from openllm._schema import EmbeddingsOutput
-  from openllm._configuration import LiteralRuntime
   from openllm.bundle.oci import LiteralContainerRegistry, LiteralContainerVersionStrategy
-  from openllm._typing_compat import LiteralString, Self
-else: torch, jupytext, nbformat = LazyLoader("torch", globals(), "torch"), LazyLoader("jupytext", globals(), "jupytext"), LazyLoader("nbformat", globals(), "nbformat")
+else: torch = LazyLoader("torch", globals(), "torch")
 
 P = ParamSpec("P")
 logger = logging.getLogger(__name__)
@@ -146,7 +144,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
     return wrapper
 
   @staticmethod
-  def usage_tracking(func: t.Callable[P, t.Any], group: click.Group, **attrs: t.Any) -> t.Callable[t.Concatenate[bool, P], t.Any]:
+  def usage_tracking(func: t.Callable[P, t.Any], group: click.Group, **attrs: t.Any) -> t.Callable[Concatenate[bool, P], t.Any]:
     command_name = attrs.get("name", func.__name__)
 
     @functools.wraps(func)
@@ -170,7 +168,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
           event.return_code = 2 if isinstance(e, KeyboardInterrupt) else 1
           analytics.track(event)
           raise
-    return t.cast("t.Callable[t.Concatenate[bool, P], t.Any]", wrapper)
+    return t.cast(t.Callable[Concatenate[bool, P], t.Any], wrapper)
 
   @staticmethod
   def exception_handling(func: t.Callable[P, t.Any], group: click.Group, **attrs: t.Any) -> t.Callable[P, t.Any]:
@@ -583,7 +581,7 @@ def models_command(ctx: click.Context, output: LiteralOutput, show_available: bo
         termui.echo("Exception found while parsing models:\n", fg="yellow")
         for m, err in failed_initialized:
           termui.echo(f"- {m}: ", fg="yellow", nl=False)
-          termui.echo(traceback.print_exception(err, limit=3), fg="red")
+          termui.echo(traceback.print_exception(err, limit=5), fg="red")
         sys.exit(1)
 
       table = tabulate.tabulate(data, tablefmt="fancy_grid", headers=["LLM", "Architecture", "Models Id", "pip install", "CPU", "GPU", "Runtime"], maxcolwidths=column_widths)

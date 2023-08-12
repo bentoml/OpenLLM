@@ -345,6 +345,7 @@ omit = [
     "src/openllm/__init__.py",
     "src/openllm/__main__.py",
     "src/openllm/utils/dummy_*.py",
+    "src/openllm/_typing_compat.py",
 ]
 source_pkgs = ["openllm"]
 [tool.coverage.report]
@@ -375,6 +376,7 @@ omit = [
     "src/openllm/__init__.py",
     "src/openllm/__main__.py",
     "src/openllm/utils/dummy_*.py",
+    "src/openllm/_typing_compat.py",
 ]
 precision = 2
 show_missing = true
@@ -384,10 +386,11 @@ analysis.useLibraryCodeForTypes = true
 exclude = [
     "__pypackages__/*",
     "src/openllm/playground/",
+    "src/openllm/models/",
     "src/openllm/__init__.py",
     "src/openllm/__main__.py",
     "src/openllm/utils/dummy_*.py",
-    "src/openllm/models",
+    "src/openllm/_typing_compat.py",
     "tools",
     "examples",
     "tests",
@@ -406,7 +409,7 @@ typeCheckingMode = "strict"
 
 [tool.mypy]
 # TODO: Enable model for strict type checking
-exclude = ["src/openllm/playground/", "src/openllm/utils/dummy_*.py", "src/openllm/models"]
+exclude = ["src/openllm/playground/", "src/openllm/utils/dummy_*.py", "src/openllm/models", "src/openllm/_typing_compat.py"]
 modules = ["openllm"]
 mypy_path = "typings"
 pretty = true
@@ -439,7 +442,7 @@ module = [
 ]
 [[tool.mypy.overrides]]
 ignore_errors = true
-module = ["openllm.models.*", "openllm.playground.*"]
+module = ["openllm.models.*", "openllm.playground.*", "openllm._typing_compat"]
 
 [tool.hatch.version]
 fallback-version = "0.0.0"
@@ -481,6 +484,7 @@ exclude = [
     "src/openllm/playground",
     # Probably because native classes doesn't understand nested __init_subclass__
     "src/openllm/client",
+    "src/openllm/serialisation",
     "src/openllm/__main__.py",
     "src/openllm/_llm.py",
     "src/openllm/_configuration.py",
@@ -492,7 +496,6 @@ exclude = [
 ]
 include = [
     "src/openllm/bundle",
-    "src/openllm/serialisation",
     "src/openllm/utils/__init__.py",
     "src/openllm/__init__.py",
     "src/openllm/_prompt.py",

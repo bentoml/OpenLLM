@@ -1,6 +1,7 @@
 from __future__ import annotations
 import typing as t, openllm
 from openllm._prompt import process_prompt
+from .configuration_flan_t5 import DEFAULT_PROMPT_TEMPLATE
 if t.TYPE_CHECKING: import transformers
 
 class TFFlanT5(openllm.LLM["transformers.TFT5ForConditionalGeneration", "transformers.T5TokenizerFast"]):

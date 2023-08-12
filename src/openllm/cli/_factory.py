@@ -4,13 +4,12 @@ import click, click_option_group as cog, inflection, orjson, bentoml, openllm
 from bentoml_cli.utils import BentoMLCommandGroup
 from click.shell_completion import CompletionItem
 from bentoml._internal.configuration.containers import BentoMLContainer
-from openllm._typing_compat import LiteralString, DictStrAny, ParamSpec
+from openllm._typing_compat import LiteralString, DictStrAny, ParamSpec, Concatenate
 from . import termui
 
 if t.TYPE_CHECKING:
   import subprocess
   from openllm._configuration import LLMConfig
-  TupleStr = tuple[str, ...]
 
 P = ParamSpec("P")
 LiteralOutput = t.Literal["json", "pretty", "porcelain"]
@@ -18,7 +17,7 @@ LiteralOutput = t.Literal["json", "pretty", "porcelain"]
 _AnyCallable = t.Callable[..., t.Any]
 FC = t.TypeVar("FC", bound=t.Union[_AnyCallable, click.Command])
 
-def parse_config_options(config: LLMConfig, server_timeout: int, workers_per_resource: float, device: tuple[str, ...] | None, environ: DictStrAny,) -> DictStrAny:
+def parse_config_options(config: LLMConfig, server_timeout: int, workers_per_resource: float, device: t.Tuple[str, ...] | None, environ: DictStrAny,) -> DictStrAny:
   # TODO: Support amd.com/gpu on k8s
   _bentoml_config_options_env = environ.pop("BENTOML_CONFIG_OPTIONS", "")
   _bentoml_config_options_opts = ["tracing.sample_rate=1.0", f"api_server.traffic.timeout={server_timeout}", f'runners."llm-{config["start_name"]}-runner".traffic.timeout={config["timeout"]}', f'runners."llm-{config["start_name"]}-runner".workers_per_resource={workers_per_resource}']
@@ -31,7 +30,7 @@ def parse_config_options(config: LLMConfig, server_timeout: int, workers_per_res
 
 _adapter_mapping_key = "adapter_map"
 
-def _id_callback(ctx: click.Context, _: click.Parameter, value: tuple[str, ...] | None) -> None:
+def _id_callback(ctx: click.Context, _: click.Parameter, value: t.Tuple[str, ...] | None) -> None:
   if not value: return None
   if _adapter_mapping_key not in ctx.params: ctx.params[_adapter_mapping_key] = {}
   for v in value:
@@ -89,7 +88,7 @@ Available official model_id(s): [default: {llm_config['default_id']}]
   @start_decorator(llm_config, serve_grpc=_serve_grpc)
   @click.pass_context
   def start_cmd(
-      ctx: click.Context, /, server_timeout: int, model_id: str | None, model_version: str | None, workers_per_resource: t.Literal["conserved", "round_robin"] | LiteralString, device: tuple[str, ...], quantize: t.Literal["int8", "int4", "gptq"] | None, bettertransformer: bool | None, runtime: t.Literal["ggml", "transformers"], fast: bool,
+      ctx: click.Context, /, server_timeout: int, model_id: str | None, model_version: str | None, workers_per_resource: t.Literal["conserved", "round_robin"] | LiteralString, device: t.Tuple[str, ...], quantize: t.Literal["int8", "int4", "gptq"] | None, bettertransformer: bool | None, runtime: t.Literal["ggml", "transformers"], fast: bool,
       serialisation_format: t.Literal["safetensors", "legacy"], adapter_id: str | None, return_process: bool, **attrs: t.Any,
   ) -> LLMConfig | subprocess.Popen[bytes]:
     fast = str(fast).upper() in openllm.utils.ENV_VARS_TRUE_VALUES
@@ -234,10 +233,10 @@ def start_decorator(llm_config: LLMConfig, serve_grpc: bool = False) -> t.Callab
       ]
   )(fn)
 
-def parse_device_callback(ctx: click.Context, param: click.Parameter, value: tuple[tuple[str], ...] | None) -> TupleStr | None:
+def parse_device_callback(ctx: click.Context, param: click.Parameter, value: tuple[tuple[str], ...] | None) -> t.Tuple[str, ...] | None:
   if value is None: return value
   if not isinstance(value, tuple): ctx.fail(f"{param} only accept multiple values, not {type(value)} (value: {value})")
-  el: TupleStr = tuple(i for k in value for i in k)
+  el: t.Tuple[str, ...] = tuple(i for k in value for i in k)
   # NOTE: --device all is a special case
   if len(el) == 1 and el[0] == "all": return tuple(map(str, openllm.utils.available_devices()))
   return el
@@ -254,7 +253,7 @@ def parse_serve_args(serve_grpc: bool) -> t.Callable[[t.Callable[..., LLMConfig]
   command = "serve" if not serve_grpc else "serve-grpc"
   group = cog.optgroup.group(f"Start a {'HTTP' if not serve_grpc else 'gRPC'} server options", help=f"Related to serving the model [synonymous to `bentoml {'serve-http' if not serve_grpc else command }`]",)
 
-  def decorator(f: t.Callable[t.Concatenate[int, str | None, P], LLMConfig]) -> t.Callable[[FC], FC]:
+  def decorator(f: t.Callable[Concatenate[int, t.Optional[str], P], LLMConfig]) -> t.Callable[[FC], FC]:
     serve_command = cli.commands[command]
     # The first variable is the argument bento
     # The last five is from BentoMLCommandGroup.NUMBER_OF_COMMON_PARAMS
@@ -393,7 +392,7 @@ def workers_per_resource_callback(ctx: click.Context, param: click.Parameter, va
   value = inflection.underscore(value)
   if value in _wpr_strategies: return value
   else:
-    try: float(t.cast(str, value))
+    try: float(value)  # type: ignore[arg-type]
     except ValueError: raise click.BadParameter(f"'workers_per_resource' only accept '{_wpr_strategies}' as possible strategies, otherwise pass in float.", ctx, param) from None
     else:
       return value

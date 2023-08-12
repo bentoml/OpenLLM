@@ -17,7 +17,7 @@ if t.TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 class BaseAutoLLMClass:
-  _model_mapping: _LazyAutoMapping
+  _model_mapping: _LazyAutoMapping[t.Any, t.Any]
   def __init__(self, *args: t.Any, **attrs: t.Any): raise EnvironmentError(f"Cannot instantiate {self.__class__.__name__} directly. Please use '{self.__class__.__name__}.Runner(model_name)' instead.")
   @classmethod
   def for_model(cls, model: str, /, model_id: str | None = None, model_version: str | None = None, llm_config: openllm.LLMConfig | None = None, ensure_available: bool = False, **attrs: t.Any) -> openllm.LLM[t.Any, t.Any]:
