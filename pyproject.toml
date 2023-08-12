@@ -249,8 +249,8 @@ ignore = [
     "D105",    # magic docstring
     "E701",    # multiple statement on single line
 ]
-line-length = 119
-target-version = "py38"
+line-length = 768
+target-version = "py311"
 typing-modules = ["openllm._typing_compat"]
 unfixable = ["TCH004"]
 [tool.ruff.flake8-type-checking]
@@ -272,7 +272,7 @@ force-single-line = false
 force-wrap-aliases = true
 known-first-party = ["openllm", "bentoml"]
 known-third-party = ["transformers", "click", "huggingface_hub", "torch", "vllm", "auto_gptq"]
-lines-after-imports = 1
+lines-after-imports = 0
 lines-between-types = 0
 no-lines-before = ["future", "standard-library"]
 relative-imports-order = "closest-to-furthest"
@@ -399,7 +399,7 @@ exclude = [
     "tests",
 ]
 include = ["src/openllm"]
-pythonVersion = "3.8"
+pythonVersion = "3.11"
 reportMissingImports = "warning"
 reportMissingTypeStubs = false
 reportPrivateUsage = "warning"
@@ -411,12 +411,16 @@ reportWildcardImportFromLibrary = "warning"
 typeCheckingMode = "strict"
 
 [tool.mypy]
-# TODO: Enable model for strict type checking
-exclude = ["src/openllm/playground/", "src/openllm/utils/dummy_*.py", "src/openllm/models", "src/openllm/_typing_compat.py"]
+exclude = [
+    "src/openllm/playground/",
+    "src/openllm/utils/dummy_*.py",
+    "src/openllm/models",
+    "src/openllm/_typing_compat.py",
+]
 modules = ["openllm"]
 mypy_path = "typings"
 pretty = true
-python_version = "3.8"
+python_version = "3.11"
 show_error_codes = true
 warn_no_return = false
 warn_return_any = false
@@ -514,8 +518,8 @@ mypy-args = [
     "--strict",
     # this is because all transient library doesn't have types
     "--allow-subclassing-any",
+    "--follow-imports=skip",
     "--check-untyped-defs",
-    "--python-version=3.8",
     "--ignore-missing-imports",
     "--no-warn-return-any",
     "--warn-unreachable",
@@ -524,5 +528,5 @@ mypy-args = [
     "--exclude='/src\\/openllm\\/playground\\/**'",
     "--exclude='/src\\/openllm\\/_typing_compat\\.py$'",
 ]
-options = { verbose = true, debug_level = "2", opt_level = "3" }
+options = { verbose = true, strip_asserts = true, debug_level = "2", opt_level = "3", include_runtime_files = true }
 require-runtime-dependencies = true

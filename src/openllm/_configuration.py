@@ -1,3 +1,4 @@
+# mypy: disable-error-code="attr-defined,no-untyped-call,type-var,operator,arg-type"
 """Configuration utilities for OpenLLM. All model configuration will inherit from ``openllm.LLMConfig``.
 
 Highlight feature: Each fields in ``openllm.LLMConfig`` will also automatically generate a environment
@@ -702,7 +703,7 @@ class _ConfigBuilder:
       if not closure_cells: continue  # Catch None or the empty list.
       for cell in closure_cells:
         try: match = cell.cell_contents is self._cls
-        except ValueError: pass  # ValueError: Cell is empty  # noqa: PERF203 # it is ok here since we need to traverse the MRO
+        except ValueError: pass  # ValueError: Cell is empty  # it is ok here since we need to traverse the MRO
         else:
           if match: set_closure_cell(cell, cls)
 
@@ -1218,7 +1219,7 @@ class LLMConfig(_ConfigAttr):
 
     total_keys = set(attr.fields_dict(cls.__openllm_generation_class__)) | set(attr.fields_dict(cls.__openllm_sampling_class__))
 
-    if len(cls.__openllm_accepted_keys__.difference(total_keys)) == 0: return f
+    if len(cls.__openllm_accepted_keys__.difference(total_keys)) == 0: return t.cast("click.Command", f)
     # We pop out 'generation_config' as it is a attribute that we don't need to expose to CLI.
     for name, field in attr.fields_dict(cls).items():
       ty = cls.__openllm_hints__.get(name)

@@ -293,7 +293,7 @@ def _wrapped_import_model(f: _import_model_wrapper[bentoml.Model, M, T]) -> t.Ca
     (model_decls, model_attrs), _ = self.llm_parameters
     decls = (*model_decls, *decls)
     attrs = {**model_attrs, **attrs}
-    return f(self, *decls, trust_remote_code=t.cast(bool, trust_remote_code), **attrs)
+    return f(self, *decls, trust_remote_code=trust_remote_code, **attrs)
   return wrapper
 
 _DEFAULT_TOKENIZER = "hf-internal-testing/llama-tokenizer"
@@ -535,7 +535,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
     """
     cfg_cls = cls.config_class
     _local = False
-    _model_id: str = t.cast(str, first_not_none(model_id, os.environ.get(cfg_cls.__openllm_env__["model_id"]), default=cfg_cls.__openllm_default_id__))
+    _model_id: str = first_not_none(model_id, os.environ.get(cfg_cls.__openllm_env__["model_id"]), default=cfg_cls.__openllm_default_id__)
     if validate_is_path(_model_id): _model_id, _local = resolve_filepath(_model_id), True
     quantize = first_not_none(quantize, t.cast(t.Optional[t.Literal["int8", "int4", "gptq"]], os.environ.get(cfg_cls.__openllm_env__["quantize"])), default=None)
 

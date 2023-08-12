@@ -30,7 +30,9 @@ from openllm.utils.lazy import (
   LazyModule as LazyModule,
   VersionInfo as VersionInfo,
 )
-from openllm._typing_compat import overload as _overload, AnyCallable, LiteralRuntime
+
+if t.TYPE_CHECKING:
+  from openllm._typing_compat import AnyCallable, LiteralRuntime
 
 logger = logging.getLogger(__name__)
 try: from typing import GenericAlias as _TypingGenericAlias  # type: ignore
@@ -242,14 +244,6 @@ def normalize_attrs_to_model_tokenizer_pair(**attrs: t.Any) -> tuple[dict[str, t
     if k.startswith(_TOKENIZER_PREFIX): del attrs[k]
   return attrs, tokenizer_attrs
 
-@_overload
-def infer_auto_class(implementation: t.Literal["pt"]) -> type[openllm.AutoLLM]: ...
-@_overload
-def infer_auto_class(implementation: t.Literal["tf"]) -> type[openllm.AutoTFLLM]: ...
-@_overload
-def infer_auto_class(implementation: t.Literal["flax"]) -> type[openllm.AutoFlaxLLM]: ...
-@_overload
-def infer_auto_class(implementation: t.Literal["vllm"]) -> type[openllm.AutoVLLM]: ...
 def infer_auto_class(implementation: LiteralRuntime) -> type[openllm.AutoLLM] | type[openllm.AutoTFLLM] | type[openllm.AutoFlaxLLM] | type[openllm.AutoVLLM]:
   import openllm
   if implementation == "tf": return openllm.AutoTFLLM

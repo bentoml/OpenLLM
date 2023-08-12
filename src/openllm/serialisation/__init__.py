@@ -26,16 +26,17 @@ from __future__ import annotations
 import importlib, typing as t
 import cloudpickle, fs, openllm
 from bentoml._internal.models.model import CUSTOM_OBJECTS_FILENAME
+from openllm._typing_compat import M, T, ParamSpec, Concatenate
 
 if t.TYPE_CHECKING:
-  from openllm._typing_compat import T
-
+  import bentoml
   from . import (
     constants as constants,
     ggml as ggml,
     transformers as transformers,
   )
 
+P = ParamSpec("P")
 def load_tokenizer(llm: openllm.LLM[t.Any, T], **tokenizer_attrs: t.Any) -> T:
   """Load the tokenizer from BentoML store.
 
@@ -62,9 +63,8 @@ def load_tokenizer(llm: openllm.LLM[t.Any, T], **tokenizer_attrs: t.Any) -> T:
   return tokenizer
 
 _extras = ["get", "import_model", "save_pretrained", "load_model"]
-
-def _make_dispatch_function(fn: str) -> t.Callable[..., t.Any]:
-  def caller(llm: openllm.LLM[t.Any, t.Any], *args: t.Any, **kwargs: t.Any) -> t.Any:
+def _make_dispatch_function(fn: str) -> t.Callable[Concatenate[openllm.LLM[t.Any, t.Any], P], t.Any]:
+  def caller(llm: openllm.LLM[t.Any, t.Any], *args: P.args, **kwargs: P.kwargs) -> t.Any:
     """Generic function dispatch to correct serialisation submodules based on LLM runtime.
 
     > [!NOTE] See 'openllm.serialisation.transformers' if 'llm.runtime="transformers"'
@@ -72,11 +72,15 @@ def _make_dispatch_function(fn: str) -> t.Callable[..., t.Any]:
     > [!NOTE] See 'openllm.serialisation.ggml' if 'llm.runtime="ggml"'
     """
     return getattr(importlib.import_module(f".{llm.runtime}", __name__), fn)(llm, *args, **kwargs)
-
   return caller
 
-_import_structure: dict[str, list[str]] = {"ggml": [], "transformers": [], "constants": []}
+if t.TYPE_CHECKING:
+  def get(llm: openllm.LLM[M, T], *args: t.Any, **kwargs: t.Any) -> bentoml.Model: ...
+  def import_model(llm: openllm.LLM[M, T], *args: t.Any, **kwargs: t.Any) -> bentoml.Model: ...
+  def save_pretrained(llm: openllm.LLM[M, T], *args: t.Any, **kwargs: t.Any) -> None: ...
+  def load_model(llm: openllm.LLM[M, T], *args: t.Any, **kwargs: t.Any) -> M: ...
 
+_import_structure: dict[str, list[str]] = {"ggml": [], "transformers": [], "constants": []}
 __all__ = ["ggml", "transformers", "constants", "load_tokenizer", *_extras]
 def __dir__() -> list[str]: return sorted(__all__)
 def __getattr__(name: str) -> t.Any:
