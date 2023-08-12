@@ -178,9 +178,7 @@ def compose(*funcs: AnyCallable) -> AnyCallable:
   >>> [f(3*x, x+1) for x in range(1,10)]
   [1.5, 2.0, 2.25, 2.4, 2.5, 2.571, 2.625, 2.667, 2.7]
   """
-  def compose_two(f1: AnyCallable, f2: AnyCallable) -> AnyCallable:
-    return lambda *args, **kwargs: f1(f2(*args, **kwargs))
-
+  def compose_two(f1: AnyCallable, f2: AnyCallable) -> AnyCallable: return lambda *args, **kwargs: f1(f2(*args, **kwargs))
   return functools.reduce(compose_two, funcs)
 
 def apply(transform: AnyCallable) -> t.Callable[[AnyCallable], AnyCallable]:

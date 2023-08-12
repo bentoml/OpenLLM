@@ -1,3 +1,4 @@
+# mypy: disable-error-code="misc"
 from __future__ import annotations
 import importlib.metadata, inspect, logging, os, typing as t
 from pathlib import Path

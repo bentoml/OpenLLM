@@ -185,8 +185,8 @@ def prerequisite_check(ctx: click.Context, llm_config: LLMConfig, quantize: Lite
     if len(missing_requirements) > 0: termui.echo(f"Make sure to have the following dependencies available: {missing_requirements}", fg="yellow")
 
 def start_decorator(llm_config: LLMConfig, serve_grpc: bool = False) -> t.Callable[[FC], t.Callable[[FC], FC]]:
-  return lambda fn: openllm.utils.compose(
-      *[
+  def wrapper(fn: FC) -> t.Callable[[FC], FC]:
+    composed = openllm.utils.compose(
           llm_config.to_click_options, _http_server_args if not serve_grpc else _grpc_server_args,
           cog.optgroup.group("General LLM Options", help=f"The following options are related to running '{llm_config['start_name']}' LLM Server."),
           model_id_option(factory=cog.optgroup, model_env=llm_config["env"]),
@@ -230,8 +230,9 @@ def start_decorator(llm_config: LLMConfig, serve_grpc: bool = False) -> t.Callab
           ),
           cog.optgroup.option("--adapter-id", default=None, help="Optional name or path for given LoRA adapter" + f" to wrap '{llm_config['model_name']}'", multiple=True, callback=_id_callback, metavar="[PATH | [remote/][adapter_name:]adapter_id][, ...]"),
           click.option("--return-process", is_flag=True, default=False, help="Internal use only.", hidden=True),
-      ]
-  )(fn)
+    )
+    return composed(fn)
+  return wrapper
 
 def parse_device_callback(ctx: click.Context, param: click.Parameter, value: tuple[tuple[str], ...] | None) -> t.Tuple[str, ...] | None:
   if value is None: return value
