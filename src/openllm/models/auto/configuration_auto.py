@@ -1,3 +1,4 @@
+# mypy: disable-error-code="type-arg"
 from __future__ import annotations
 import typing as t
 from collections import OrderedDict
@@ -16,7 +17,7 @@ if t.TYPE_CHECKING:
 # NOTE: This is the entrypoint when adding new model config
 CONFIG_MAPPING_NAMES = OrderedDict([("chatglm", "ChatGLMConfig"), ("dolly_v2", "DollyV2Config"), ("falcon", "FalconConfig"), ("flan_t5", "FlanT5Config"), ("gpt_neox", "GPTNeoXConfig"), ("llama", "LlamaConfig"), ("mpt", "MPTConfig"), ("opt", "OPTConfig"), ("stablelm", "StableLMConfig"), ("starcoder", "StarCoderConfig"), ("baichuan", "BaichuanConfig")])
 
-class _LazyConfigMapping(OrderedDict[str, t.Type[openllm.LLMConfig]], ReprMixin):
+class _LazyConfigMapping(OrderedDict, ReprMixin):
   def __init__(self, mapping: OrderedDict[LiteralString, LiteralString]):
     self._mapping = mapping
     self._extra_content: dict[str, t.Any] = {}

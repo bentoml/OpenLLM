@@ -3,11 +3,10 @@
 Users can disable this with OPENLLM_DO_NOT_TRACK envvar.
 """
 from __future__ import annotations
-import contextlib, functools, logging, os, re, sys, typing as t, importlib.metadata
+import contextlib, functools, logging, os, re, typing as t, importlib.metadata
 import attr, openllm
 from bentoml._internal.utils import analytics as _internal_analytics
-if sys.version_info[:2] >= (3, 10): from typing import ParamSpec
-else: from typing_extensions import ParamSpec
+from openllm._typing_compat import ParamSpec
 
 P = ParamSpec("P")
 T = t.TypeVar("T")

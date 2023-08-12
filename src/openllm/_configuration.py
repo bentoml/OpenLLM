@@ -1,4 +1,4 @@
-# mypy: disable-error-code="attr-defined,no-untyped-call,type-var,operator,arg-type"
+# mypy: disable-error-code="attr-defined,no-untyped-call,type-var,operator,arg-type,no-redef"
 """Configuration utilities for OpenLLM. All model configuration will inherit from ``openllm.LLMConfig``.
 
 Highlight feature: Each fields in ``openllm.LLMConfig`` will also automatically generate a environment
@@ -39,7 +39,7 @@ import attr, click_option_group as cog, inflection, orjson, openllm
 from cattr.gen import make_dict_structure_fn, make_dict_unstructure_fn, override
 from deepmerge.merger import Merger
 from ._strategies import LiteralResourceSpec, available_resource_spec, resource_spec
-from ._typing_compat import LiteralString, NotRequired, Required, dataclass_transform, overload, AdapterType, LiteralRuntime
+from ._typing_compat import LiteralString, NotRequired, Required, overload, AdapterType, LiteralRuntime
 from .exceptions import ForbiddenAttributeError
 from .utils import (
   ENV_VARS_TRUE_VALUES,
@@ -51,7 +51,6 @@ from .utils import (
   field_env_key,
   first_not_none,
   lenient_issubclass,
-  non_intrusive_setattr,
 )
 from .utils.import_utils import BACKENDS_MAPPING
 # NOTE: Using internal API from attr here, since we are actually allowing subclass of openllm.LLMConfig to become 'attrs'-ish
@@ -458,11 +457,6 @@ def _make_assignment_script(cls: type[LLMConfig], attributes: attr.AttrsInstance
 
 _reserved_namespace = {"__config__", "GenerationConfig", "SamplingParams"}
 
-@dataclass_transform(kw_only_default=True, order_default=True, field_specifiers=(attr.field, dantic.Field))
-def llm_config_transform(cls: type[LLMConfig]) -> type[LLMConfig]:
-  non_intrusive_setattr(cls, "__dataclass_transform__", {"order_default": True, "kw_only_default": True, "field_specifiers": (attr.field, dantic.Field)})
-  return cls
-
 @attr.define(slots=True)
 class _ConfigAttr:
   Field = dantic.Field
@@ -703,11 +697,10 @@ class _ConfigBuilder:
       if not closure_cells: continue  # Catch None or the empty list.
       for cell in closure_cells:
         try: match = cell.cell_contents is self._cls
-        except ValueError: pass  # ValueError: Cell is empty  # it is ok here since we need to traverse the MRO
+        except ValueError: pass  # noqa: PERF203 # ValueError: Cell is empty
         else:
           if match: set_closure_cell(cell, cls)
-
-    return llm_config_transform(cls)
+    return cls
 
   def add_attrs_init(self) -> Self:
     self._cls_dict["__attrs_init__"] = codegen.add_method_dunders(self._cls, _make_init(self._cls, self._attrs, self._has_pre_init, self._has_post_init, False, True, False, self._base_attr_map, False, None, True))

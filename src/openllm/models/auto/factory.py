@@ -1,11 +1,12 @@
+# mypy: disable-error-code="type-arg"
 from __future__ import annotations
 import importlib, inspect, logging, typing as t
 from collections import OrderedDict
 import inflection, openllm
 from openllm.utils import ReprMixin
-from openllm._typing_compat import LiteralString, M, T, LLMRunner
 
 if t.TYPE_CHECKING:
+  from openllm._typing_compat import LiteralString, LLMRunner
   import types
   from collections import _odict_items, _odict_keys, _odict_values
 
@@ -17,7 +18,7 @@ if t.TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 class BaseAutoLLMClass:
-  _model_mapping: _LazyAutoMapping[t.Any, t.Any]
+  _model_mapping: t.ClassVar[_LazyAutoMapping]
   def __init__(self, *args: t.Any, **attrs: t.Any): raise EnvironmentError(f"Cannot instantiate {self.__class__.__name__} directly. Please use '{self.__class__.__name__}.Runner(model_name)' instead.")
   @classmethod
   def for_model(cls, model: str, /, model_id: str | None = None, model_version: str | None = None, llm_config: openllm.LLMConfig | None = None, ensure_available: bool = False, **attrs: t.Any) -> openllm.LLM[t.Any, t.Any]:
@@ -75,7 +76,7 @@ def getattribute_from_module(module: types.ModuleType, attr: t.Any) -> t.Any:
     except ValueError: raise ValueError(f"Could not find {attr} neither in {module} nor in {openllm_module}!") from None
   raise ValueError(f"Could not find {attr} in {openllm_module}!")
 
-class _LazyAutoMapping(OrderedDict[t.Type[openllm.LLMConfig], t.Type[openllm.LLM[M, T]]], ReprMixin):
+class _LazyAutoMapping(OrderedDict, ReprMixin):
   """Based on transformers.models.auto.configuration_auto._LazyAutoMapping.
 
   This OrderedDict values() and keys() returns the list instead, so you don't
