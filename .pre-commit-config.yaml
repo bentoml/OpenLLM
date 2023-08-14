@@ -21,7 +21,7 @@ ci:
 exclude: '.*\.(css|js|svg)$'
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: 'v0.0.282'
+    rev: 'v0.0.284'
     hooks:
       - id: ruff
         verbose: true
@@ -40,7 +40,7 @@ repos:
         exclude: ^(docs|tools|tests)
         args: [--config=pyproject.toml]
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.4.1
+    rev: v1.5.0
     hooks:
       - id: mypy
         verbose: true
