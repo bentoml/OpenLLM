@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import os, subprocess, sys
+import os, sys
 from markdown_it import MarkdownIt
 
 md = MarkdownIt()

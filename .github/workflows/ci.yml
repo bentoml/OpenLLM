@@ -23,7 +23,6 @@ env:
   COLUMNS: 120
   OPENLLM_DO_NOT_TRACK: True
   PYTHONUNBUFFERED: '1'
-  STABLE_PYTHON_VERSION: '3.11'
   HATCH_VERBOSE: 2
 # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#defaultsrun
 defaults:
@@ -40,7 +39,7 @@ jobs:
       - name: Setup CI
         uses: ./.github/actions/setup-repo
         with:
-          python-version: ${{ env.STABLE_PYTHON_VERSION }}
+          python-version-file: .python-version-default
       - name: Install OpenLLM
         run: pip install -e ./openllm-python
       - uses: pre-commit/action@646c83fcd040023954eafda54b4db0192ce70507 # ratchet:pre-commit/action@v3.0.0
@@ -87,7 +86,7 @@ jobs:
       - name: Setup CI
         uses: ./.github/actions/setup-repo
         with:
-          python-version: ${{ env.STABLE_PYTHON_VERSION }}
+          python-version-file: .python-version-default
       - name: Download coverage data
         uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
         with:
@@ -129,7 +128,7 @@ jobs:
       - name: Setup CI
         uses: ./.github/actions/setup-repo
         with:
-          python-version: ${{ env.STABLE_PYTHON_VERSION }}
+          python-version-file: .python-version-default
       - name: Install self
         run: pip install ./openllm-python
       - name: Speed

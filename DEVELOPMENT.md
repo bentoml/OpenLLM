@@ -22,6 +22,12 @@ out to us if you have any question!
 
 Before you can start developing, you'll need to set up your environment:
 
+> [!IMPORTANT]
+> We recommend using the Python version from `.python-version-default` file within the project root
+> to avoid any version mismatch. You can use [pyenv](https://github.com/pyenv/pyenv) to manage your python version.
+> Note that `hatch run setup` will symlink the python version from `.python-version-default` to `.python-version` in the project root.
+> Therefore any tools that understand `.python-version` will use the correct Python version.
+
 1. Ensure you have [Git](https://git-scm.com/), and
    [Python3.8+](https://www.python.org/downloads/) installed.
 2. Fork the OpenLLM repository from GitHub.

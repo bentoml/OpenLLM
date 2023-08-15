@@ -90,7 +90,7 @@ quality = [
     "- pre-commit run --all-files",
 ]
 recompile = ["bash ./clean.sh", "compile"]
-setup = "pre-commit install"
+setup = ["pre-commit install", "- ln -s .python-version-default .python-version"]
 tool = ["quality", "recompile -nx"]
 typing = ["- pre-commit run mypy {args:-a}", "- pre-commit run pyright {args:-a}"]
 update-dummy = ["- ./tools/update-dummy.py", "./tools/update-dummy.py"]
