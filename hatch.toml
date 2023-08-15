@@ -5,7 +5,7 @@ content-type = "text/markdown"
 text = """
 <p align="center">
   <a href="https://github.com/bentoml/openllm">
-    <img src="https://raw.githubusercontent.com/bentoml/openllm/main/assets/main-banner.png" alt="Banner for OpenLLM" />
+    <img src="https://raw.githubusercontent.com/bentoml/openllm/main/.github/assets/main-banner.png" alt="Banner for OpenLLM" />
   </a>
 </p>
 
@@ -18,7 +18,7 @@ start-after = "<!-- hatch-fancy-pypi-readme intro start -->\n"
 text = """
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/bentoml/openllm/main/assets/output.gif" alt="Gif showing OpenLLM Intro" />
+  <img src="https://raw.githubusercontent.com/bentoml/openllm/main/.github/assets/output.gif" alt="Gif showing OpenLLM Intro" />
 </p>
 """
 [[metadata.hooks.fancy-pypi-readme.fragments]]
@@ -29,7 +29,7 @@ start-after = "<!-- hatch-fancy-pypi-readme interim start -->\n"
 text = """
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/bentoml/openllm/main/assets/agent.gif" alt="Gif showing Agent integration" />
+  <img src="https://raw.githubusercontent.com/bentoml/openllm/main/.github/assets/agent.gif" alt="Gif showing Agent integration" />
 </p>
 """
 [[metadata.hooks.fancy-pypi-readme.fragments]]
@@ -55,6 +55,7 @@ text = """
 """
 [envs.default]
 dependencies = [
+    "openllm[opt,chatglm,fine-tune] @ {root:uri}/openllm-python",
     # NOTE: To run all hooks
     "pre-commit",
     # NOTE: towncrier for changelog
@@ -73,6 +74,9 @@ dependencies = [
     "types-PyYAML",
     "types-protobuf",
 ]
+pre-install-commands = [
+    "pip install -e ./openllm-python", #
+]
 [envs.default.scripts]
 changelog = "towncrier build --version main --draft"
 check-stubs = ["./tools/update-config-stubs.py", "./tools/update-models-import.py", "update-dummy"]
@@ -86,12 +90,13 @@ quality = [
     "- pre-commit run --all-files",
 ]
 recompile = ["bash ./clean.sh", "compile"]
-setup = "pre-commit install"
+setup = ["pre-commit install", "- ln -s .python-version-default .python-version"]
 tool = ["quality", "recompile -nx"]
 typing = ["- pre-commit run mypy {args:-a}", "- pre-commit run pyright {args:-a}"]
 update-dummy = ["- ./tools/update-dummy.py", "./tools/update-dummy.py"]
 [envs.tests]
 dependencies = [
+    "openllm[opt,chatglm,fine-tune] @ {root:uri}/openllm-python",
     # NOTE: interact with docker for container tests.
     "docker",
     # NOTE: Tests strategies with Hypothesis and pytest, and snapshot testing with syrupy
@@ -108,15 +113,14 @@ dependencies = [
     "hypothesis",
     "syrupy",
 ]
-features = ["flan-t5", "baichuan"]
 skip-install = false
 template = "tests"
 [envs.tests.scripts]
 _run_script = "pytest --cov --cov-report={env:COVERAGE_REPORT:term-missing} --cov-config=pyproject.toml -vv"
-distributed = "_run_script --reruns 5 --reruns-delay 3 --ignore tests/models -n 3 -r aR {args:tests}"
-models = "_run_script -s {args:tests/models}"
-python = "_run_script --reruns 5 --reruns-delay 3 --ignore tests/models -r aR {args:tests}"
-snapshot-models = "_run_script -s --snapshot-update {args:tests/models}"
+distributed = "_run_script --reruns 5 --reruns-delay 3 --ignore openllm-python/tests/models -n 3 -r aR {args:openllm-python/tests}"
+models = "_run_script -s {args:openllm-python/tests/models}"
+python = "_run_script --reruns 5 --reruns-delay 3 --ignore openllm-python/tests/models -r aR {args:openllm-python/tests}"
+snapshot-models = "_run_script -s --snapshot-update {args:openllm-python/tests/models}"
 [envs.tests.overrides]
 env.GITHUB_ACTIONS.env-vars = "COVERAGE_REPORT="
 [envs.coverage]
@@ -125,6 +129,6 @@ detached = true
 [envs.coverage.scripts]
 combine = "coverage combine {args}"
 generate-summary = "python tools/generate-coverage.py"
-report-uncovered-html = "coverage html --skip-covered --skip-empty"
-report-xml = "coverage xml"
+report-uncovered-html = "coverage html --skip-covered --skip-empty {args}"
+report-xml = "coverage xml {args}"
 write-summary-report = "python tools/write-coverage-report.py"

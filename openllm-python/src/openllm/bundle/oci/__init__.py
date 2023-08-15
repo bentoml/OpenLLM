@@ -8,7 +8,7 @@ from openllm.utils.lazy import VersionInfo
 
 if t.TYPE_CHECKING:
   from ghapi import all
-  from openllm._typing_compat import RefTuple
+  from openllm._typing_compat import RefTuple, LiteralString
 
 all = openllm.utils.LazyLoader("all", globals(), "ghapi.all")  # noqa: F811
 
@@ -78,7 +78,7 @@ class RefResolver:
     return _RefTuple((*version, "release" if _use_base_strategy else "custom"))
   @classmethod
   @functools.lru_cache(maxsize=64)
-  def from_strategy(cls, strategy_or_version: t.Literal["release", "nightly"] | str | None = None) -> RefResolver:
+  def from_strategy(cls, strategy_or_version: t.Literal["release", "nightly"] | LiteralString | None = None) -> RefResolver:
     # using default strategy
     if strategy_or_version is None or strategy_or_version == "release": return cls(*cls._release_ref())
     elif strategy_or_version == "latest": return cls("latest", "0.0.0", "latest")

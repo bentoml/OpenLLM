@@ -155,7 +155,7 @@ else:
     from .models.opt import TFOPT as TFOPT
 
 # NOTE: update this to sys.modules[__name__] once mypy_extensions can recognize __spec__
-__lazy = utils.LazyModule(__name__, globals()["__file__"], _import_structure, extra_objects={"COMPILED": COMPILED})
+__lazy = utils.LazyModule(__name__, _os.path.abspath("__file__"), _import_structure, extra_objects={"COMPILED": COMPILED})
 __all__ = __lazy.__all__
 __dir__ = __lazy.__dir__
 __getattr__ = __lazy.__getattr__

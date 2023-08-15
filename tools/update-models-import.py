@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-_TARGET_FILE = Path(__file__).parent.parent/"src"/"openllm"/"models"/"__init__.py"
+_TARGET_FILE = Path(__file__).parent.parent/"openllm-python"/"src"/"openllm"/"models"/"__init__.py"
 
 def create_module_import() -> str:
   r = [f'"{p.name}"' for p in _TARGET_FILE.parent.glob('*/') if p.name not in ['__pycache__', '__init__.py', '.DS_Store']]

@@ -13,7 +13,7 @@ runs:
   using: composite
   steps:
     - name: Setup python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@61a6322f88396a6271a6ee3565807d608ecaddd1 # ratchet:actions/setup-python@v4
       with:
         python-version: ${{ inputs.python-version }}
         architecture: ${{ inputs.architecture }}
@@ -26,7 +26,7 @@ runs:
       shell: bash
       run: echo "dir=$(pip cache dir)" >> $GITHUB_OUTPUT
     - name: Cache pip dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # ratchet:actions/cache@v3
       id: cache-pip
       with:
         path: ${{ steps.pip-cache-dir.outputs.dir }}
@@ -37,4 +37,4 @@ runs:
       shell: bash
       run: pip install hatch towncrier
     - name: Inject slug/short variables
-      uses: rlespinasse/github-slug-action@v4.4.1
+      uses: rlespinasse/github-slug-action@102b1a064a9b145e56556e22b18b19c624538d94 # ratchet:rlespinasse/github-slug-action@v4.4.1
