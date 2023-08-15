@@ -51,10 +51,10 @@ Please refer to your browsers documentation on how to enable source maps. For Ch
 # Production Build
 Run the following commands to build the production version of the dashboard:
 ```bash
-cd dashboard/clojure
+cd contrib/clojure
 npm install
 npm run release
 ```
-The compiled files will be located in the `dashboard/clojure/www` directory. You can open the `index.html` file in your browser to view the dashboard.
+The compiled files will be located in the `contrib/clojure/public` directory. You can open the `index.html` file in your browser to view the dashboard.
 
-TODO: Add a way to bundle the dashboard into a executable of some kind, which starts a webserver with the contents of th `www` directory.
+TODO: Add a way to bundle the dashboard into a executable of some kind, which starts a webserver with the contents of th `contrib/clojure/public` directory.

@@ -1,5 +1,5 @@
-**/www/js/**
-**/www/css/**
+**/public/js/**
+**/public/css/**
 /.clj-kondo
 /.lsp
 /*.iml
