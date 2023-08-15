@@ -1,5 +1,6 @@
-# Prerequisites
-## Required
+# OpenLLM ClojureScript UI
+
+## Prerequisites
 * [Node.js](https://nodejs.org/en/) (v18.16.1)
 * [npm](https://www.npmjs.com/) (v9.5.1)
 * [Clojure](https://clojure.org/guides/getting_started) (v1.10.3)

@@ -1,4 +1,9 @@
 {
+  "name": "openllm-clojure-ui",
+  "version": "0.2.24",
+  "description": "openLLM: Operating LLMs in production",
+  "repository": "git@github.com:bentoml/OpenLLM.git",
+  "author": "Leon Ikinger (GutZuFusss) <leon.ikinger@googlemail.com>",
   "scripts": {
     "shadow:watch": "shadow-cljs watch app",
     "shadow:release": "shadow-cljs release app",
