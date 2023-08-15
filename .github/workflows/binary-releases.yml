@@ -22,7 +22,6 @@ concurrency:
   cancel-in-progress: true
 env:
   APP_NAME: openllm
-  PYTHON_VERSION: '3.11'
   PYOXIDIZER_VERSION: '0.24.0'
   HATCH_VERBOSE: 2
 jobs:
@@ -104,10 +103,10 @@ jobs:
       - name: Fetch PyApp
         run: >-
           mkdir $PYAPP_REPO && curl -L https://github.com/ofek/pyapp/releases/download/v$PYAPP_VERSION/source.tar.gz | tar --strip-components=1 -xzf - -C $PYAPP_REPO
-      - name: Set up Python ${{ env.PYTHON_VERSION }}
+      - name: Set up Python
         uses: actions/setup-python@61a6322f88396a6271a6ee3565807d608ecaddd1 # ratchet:actions/setup-python@v4
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version-file: .python-version-default
       - name: Install Hatch
         run: pip install -U hatch
       - name: Install Rust toolchain
@@ -198,10 +197,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # ratchet:actions/checkout@v3
-      - name: Set up Python ${{ env.PYTHON_VERSION }}
+      - name: Set up Python
         uses: actions/setup-python@61a6322f88396a6271a6ee3565807d608ecaddd1 # ratchet:actions/setup-python@v4
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version-file: .python-version-default
       - name: Pull latest change
         run: git pull --autostash --no-edit --gpg-sign --ff origin main
       - name: Install PyOxidizer ${{ env.PYOXIDIZER_VERSION }}

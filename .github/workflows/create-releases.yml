@@ -129,6 +129,8 @@ jobs:
           fetch-depth: 0
       - name: Setup python
         uses: actions/setup-python@61a6322f88396a6271a6ee3565807d608ecaddd1 # ratchet:actions/setup-python@v4
+        with:
+          python-version-file: .python-version-default
       - name: Install dependencies
         run: pip install hatch towncrier
       - name: Install jq and curl

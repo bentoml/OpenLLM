@@ -44,7 +44,7 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
       - name: Start EC2 Runner
         id: start-ec2-runner
-        uses: aarnphm/ec2-github-runner@af796d217e24ecbbc5a2c49e780cd90616e2b962 # ratchet:aarnphm/ec2-github-runner@main
+        uses: aarnphm/ec2-github-runner@main # ratchet:exclude
         with:
           mode: start
           github-token: ${{ secrets.OPENLLM_PAT }}
