@@ -1,5 +1,4 @@
-from typing import Any
-from typing import TextIO
+from typing import Any, TextIO
 
 from nbformat.notebooknode import NotebookNode
 

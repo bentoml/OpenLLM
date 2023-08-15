@@ -22,6 +22,12 @@ out to us if you have any question!
 
 Before you can start developing, you'll need to set up your environment:
 
+> [!IMPORTANT]
+> We recommend using the Python version from `.python-version-default` file within the project root
+> to avoid any version mismatch. You can use [pyenv](https://github.com/pyenv/pyenv) to manage your python version.
+> Note that `hatch run setup` will symlink the python version from `.python-version-default` to `.python-version` in the project root.
+> Therefore any tools that understand `.python-version` will use the correct Python version.
+
 1. Ensure you have [Git](https://git-scm.com/), and
    [Python3.8+](https://www.python.org/downloads/) installed.
 2. Fork the OpenLLM repository from GitHub.
@@ -65,25 +71,31 @@ Before you can start developing, you'll need to set up your environment:
    This will automatically enter a virtual environment and update the relevant
    dependencies.
 
+> [!NOTE]
+> If you want to install editable, make sure to install it from `openllm-python` folder
+
 ## Project Structure
 
 Here's a high-level overview of our project structure:
 
-```
+```prolog
 openllm/
-├── examples                 # Usage demonstration scripts
-├── src
-│   ├── openllm              # Core OpenLLM library
-│   ├── openllm_client       # OpenLLM Python Client code
-│   └── openllm_js           # OpenLLM JavaScript Client code
-├── tests                    # Automated Tests
-├── tools                    # Utilities Script
-├── typings                  # Typing Checking Utilities Module and Classes
-├── DEVELOPMENT.md           # The project's Developer Guide
-├── LICENSE                  # Use terms and conditions
-├── package.json             # Node.js or JavaScript dependencies
-├── pyproject.toml           # Python Project Specification File (PEP 518)
-└── README.md                # The project's README file
+├── ADDING_NEW_MODEL.md  # How to add a new model
+├── CHANGELOG.md         # Generated changelog
+├── CITATION.cff         # Citation File Format
+├── DEVELOPMENT.md       # The project's Developer Guide
+├── Formula              # Homebrew Formula
+├── LICENSE.md           # Use terms and conditions
+├── README.md            # The project's README file
+├── STYLE.md             # The project's Style Guide
+├── cz.py                # code-golf commitizen
+├── examples             # Usage demonstration scripts
+├── openllm-node         # openll node library
+├── openllm-python       # openllm python library
+│   └── src
+│       └── openllm      # openllm core implementation
+├── pyproject.toml       # Python Project Specification File (PEP 518)
+└── tools                # Utilities Script
 ```
 
 ## Development Workflow
@@ -159,9 +171,33 @@ To filter out most of the generated commits for infrastructure, use
 `--invert-grep` in conjunction with `--grep` to filter out all commits with
 regex `"[generated]"`
 
+## Building compiled module
+
+You can run the following to test the behaviour of the compiled module:
+
+```bash
+hatch run compile
+```
+
+> [!IMPORTANT]
+> This will compiled some performance sensitive modules with mypyc.
+> The compiled `.so` or `.pyd` can be found
+> under `/openllm-python/src/openllm`. If you run into any issue, run `hatch run recompile`
+
 ## Style
 
 See [STYLE.md](STYLE.md) for our style guide.
+
+## Working with OpenLLM's CI/CD
+
+After you change or update any CI related under `.github`, run `./tools/lock-actions` to lock the action version.
+
+## Install from git archive install
+
+```bash
+pip install 'https://github.com/bentoml/OpenLLM/archive/main.tar.gz#subdirectory=openllm-python'
+```
+
 
 ## Releasing a New Version
 
@@ -171,6 +207,9 @@ To release a new version, use `./tools/run-release-action`. It requires `gh`,
 ```bash
 ./tools/run-release-action --release <major|minor|patch>
 ```
+
+Once the tag is release, run [the release for base container](https://github.com/bentoml/OpenLLM/actions/workflows/build.yml)
+to the latest release tag.
 
 > Note that currently this workflow can only be run by the BentoML team.
 

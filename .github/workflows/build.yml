@@ -1,38 +1,27 @@
-# Copyright 2023 BentoML Team. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 name: Build and push OpenLLM base container
 on:
   workflow_dispatch:
-  workflow_call:
   push:
     branches:
       - "main"
+    tags:
+      - "*"
   pull_request:
     branches:
       - "main"
     paths:
       - ".github/workflows/build.yaml"
-      - "src/openllm/bundle/oci/Dockerfile"
-      - "src/openllm/**"
-      - "src/openllm_client/**"
+      - "openllm-python/src/openllm/bundle/oci/Dockerfile"
+      - "openllm-python/src/openllm/**"
 env:
   LINES: 120
   COLUMNS: 120
   OPENLLM_DO_NOT_TRACK: True
   PYTHONUNBUFFERED: '1'
-  AWS_REGION: us-east-1
+  AWS_REGION: us-west-2
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
 jobs:
   start-runner:
     name: Start self-hosted EC2 runner
@@ -40,22 +29,22 @@ jobs:
     if: github.repository_owner == 'bentoml'
     env:
       EC2_INSTANCE_TYPE: g5.12xlarge
-      EC2_AMI_ID: ami-0fc9d48803f691665
-      EC2_SUBNET_ID: subnet-01e191856710e5205,subnet-0f23c41d786013d15,subnet-0ec43be52d7ca5619,subnet-0f3cfaf555c0fe5d7,subnet-06caca1b04878bf17,subnet-03c02763156f1c011
-      EC2_SECURITY_GROUP: sg-0b84a8e57c4524eb9
+      EC2_AMI_ID: ami-089dafe9af191a0fd
+      EC2_SUBNET_ID: subnet-0ca63188fe98788c1,subnet-05997205433b249d0,subnet-07ef5d3e974275fed,subnet-0161ef0151089bb0b
+      EC2_SECURITY_GROUP: sg-051366641bf2b8049
     outputs:
       label: ${{ steps.start-ec2-runner.outputs.label }}
       ec2-instance-id: ${{ steps.start-ec2-runner.outputs.ec2-instance-id }}
     steps:
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@5fd3084fc36e372ff1fff382a39b10d03659f355 # ratchet:aws-actions/configure-aws-credentials@v2
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-access-key-id: ${{ secrets.AWS_PROD_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_PROD_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
       - name: Start EC2 Runner
         id: start-ec2-runner
-        uses: aarnphm/ec2-github-runner@main
+        uses: aarnphm/ec2-github-runner@main # ratchet:exclude
         with:
           mode: start
           github-token: ${{ secrets.OPENLLM_PAT }}
@@ -65,6 +54,7 @@ jobs:
           subnet-id: ${{ env.EC2_SUBNET_ID }}
           security-group-id: ${{ env.EC2_SECURITY_GROUP }}
   build-and-push-image:
+    name: Build and push OpenLLM base image
     concurrency:
       group: ${{ github.workflow }}-${{ github.job }}-${{ github.head_ref || github.run_id }}
       cancel-in-progress: true
@@ -78,15 +68,15 @@ jobs:
       id-token: write
       security-events: write
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # ratchet:actions/checkout@v3
         with:
           fetch-depth: 1
       - name: Inject slug/short variables
-        uses: rlespinasse/github-slug-action@v4.4.1
+        uses: rlespinasse/github-slug-action@102b1a064a9b145e56556e22b18b19c624538d94 # ratchet:rlespinasse/github-slug-action@v4.4.1
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2.2.0
+        uses: docker/setup-qemu-action@2b82ce82d56a2a04d2637cd93a637ae1b359c0a7 # ratchet:docker/setup-qemu-action@v2.2.0
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2.9.1
+        uses: docker/setup-buildx-action@4c0219f9ac95b02789c1075625400b2acbff50b1 # ratchet:docker/setup-buildx-action@v2.9.1
         with:
           install: true
           driver-opts: |
@@ -94,28 +84,28 @@ jobs:
             network=host
       - name: Install cosign
         if: github.event_name != 'pull_request'
-        uses: sigstore/cosign-installer@v3.1.1
+        uses: sigstore/cosign-installer@6e04d228eb30da1757ee4e1dd75a0ec73a653e06 # ratchet:sigstore/cosign-installer@v3.1.1
         with:
           cosign-release: 'v2.1.1'
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v2.2.0
+        uses: docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc # ratchet:docker/login-action@v2.2.0
         if: github.event_name != 'pull_request'
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Login to public ECR
-        uses: docker/login-action@v2.2.0
+        uses: docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc # ratchet:docker/login-action@v2.2.0
         with:
           registry: public.ecr.aws
           username: ${{ secrets.AWS_ACCESS_KEY_ID }}
           password: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         env:
-          AWS_REGION: ${{ env.AWS_REGION }}
+          AWS_REGION: us-east-1
       - name: Extract metadata tags and labels on PRs
         if: github.event_name == 'pull_request'
         id: meta-pr
-        uses: docker/metadata-action@v4.6.0
+        uses: docker/metadata-action@818d4b7b91585d195f67373fd9cb0332e31a7175 # ratchet:docker/metadata-action@v4.6.0
         with:
           images: |
             public.ecr.aws/y5w8i4y6/bentoml/openllm
@@ -126,7 +116,7 @@ jobs:
       - name: Extract metadata tags and labels for main, release or tag
         if: github.event_name != 'pull_request'
         id: meta
-        uses: docker/metadata-action@v4.6.0
+        uses: docker/metadata-action@818d4b7b91585d195f67373fd9cb0332e31a7175 # ratchet:docker/metadata-action@v4.6.0
         with:
           flavor: |
             latest=auto
@@ -143,13 +133,13 @@ jobs:
             org.opencontainers.image.source="https://github.com/bentoml/OpenLLM"
       - name: Build and push Docker image
         id: build-and-push
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@2eb1c1961a95fc15694676618e422e8ba1d63825 # ratchet:docker/build-push-action@v4
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_PROD_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_PROD_SECRET_ACCESS_KEY }}
         with:
           context: .
-          file: src/openllm/bundle/oci/Dockerfile
+          file: openllm-python/src/openllm/bundle/oci/Dockerfile
           push: true
           platforms: 'linux/amd64'
           build-args: |
@@ -159,17 +149,18 @@ jobs:
           labels: ${{ steps.meta.outputs.labels || steps.meta-pr.outputs.labels }}
           # TODO: Once https://github.com/aws/containers-roadmap/issues/876 is supported with OCI 1.1
           # then move back to saving cache within the public repo. For now we will save the cache manifest within our internal S3 buckets.
-          cache-from: type=s3,region=${{ env.AWS_REGION }},bucket=openllm-cache,name=y5w8i4y6
+          # NOTE: the region of the S3 on prod is us-east-1, where the EC2 machine is at us-west-2
+          cache-from: type=s3,region=us-east-1,bucket=openllm-cache,name=y5w8i4y6
           # @aarnphm: max is fine here, since we didn't do any custom code yet, so it is ok to cache every layer for optimal build time
           # We also ignore-error for now, just upload anything to the blob storage
-          cache-to: type=s3,region=${{ env.AWS_REGION }},bucket=openllm-cache,name=y5w8i4y6,mode=max,compression=zstd,ignore-error=true
+          cache-to: type=s3,region=us-east-1,bucket=openllm-cache,name=y5w8i4y6,mode=max,compression=zstd,ignore-error=true
       - name: Sign the released image
         if: ${{ github.event_name != 'pull_request' }}
         env:
           COSIGN_EXPERIMENTAL: "true"
         run: echo "${{ steps.meta.outputs.tags }}" | xargs -I {} cosign sign --yes {}@${{ steps.build-and-push.outputs.digest }}
       - name: Run Trivy in GitHub SBOM mode and submit results to Dependency Graph
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@559eb1224e654a86c844a795e6702a0742c60c72 # ratchet:aquasecurity/trivy-action@master
         if: ${{ github.event_name != 'pull_request' }}
         with:
           image-ref: 'ghcr.io/bentoml/openllm:sha-${{ env.GITHUB_SHA_SHORT }}'
@@ -178,7 +169,7 @@ jobs:
           github-pat: ${{ secrets.GITHUB_TOKEN }}
           scanners: 'vuln'
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@559eb1224e654a86c844a795e6702a0742c60c72 # ratchet:aquasecurity/trivy-action@master
         if: ${{ github.event_name != 'pull_request' }}
         with:
           image-ref: 'ghcr.io/bentoml/openllm:sha-${{ env.GITHUB_SHA_SHORT }}'
@@ -187,7 +178,7 @@ jobs:
           severity: 'CRITICAL'
           scanners: 'vuln'
       - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@a09933a12a80f87b87005513f0abb1494c27a716 # ratchet:github/codeql-action/upload-sarif@v2
         if: ${{ github.event_name != 'pull_request' }}
         with:
           sarif_file: 'trivy-results.sarif'
@@ -198,18 +189,16 @@ jobs:
       - start-runner
       - build-and-push-image
     runs-on: ubuntu-latest
-    env:
-      AWS_REGION: us-east-1
     if: ${{ always() }} # required to stop the runner even if the error happened in the previous jobs
     steps:
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@5fd3084fc36e372ff1fff382a39b10d03659f355 # ratchet:aws-actions/configure-aws-credentials@v2
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-access-key-id: ${{ secrets.AWS_PROD_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_PROD_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
       - name: Stop EC2 runner
-        uses: aarnphm/ec2-github-runner@main
+        uses: aarnphm/ec2-github-runner@af796d217e24ecbbc5a2c49e780cd90616e2b962 # ratchet:aarnphm/ec2-github-runner@main
         with:
           mode: stop
           github-token: ${{ secrets.OPENLLM_PAT }}

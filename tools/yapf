@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+# Check if yapf is installed, otherwise exit 1
+[[ -x "$(command -v yapf)" ]] || (
+    echo "yapf not found"
+    exit 1
+)
+
+yapf -pdrm 2> /dev/null || exit 0

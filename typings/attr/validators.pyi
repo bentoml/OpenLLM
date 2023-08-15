@@ -1,22 +1,23 @@
-from typing import Any
-from typing import AnyStr
-from typing import Callable
-from typing import Container
-from typing import ContextManager
-from typing import Iterable
-from typing import List
-from typing import Mapping
-from typing import Match
-from typing import Optional
-from typing import Pattern
-from typing import Tuple
-from typing import Type
-from typing import TypeVar
-from typing import Union
-from typing import overload
+from typing import (
+    Any,
+    AnyStr,
+    Callable,
+    Container,
+    ContextManager,
+    Iterable,
+    List,
+    Mapping,
+    Match,
+    Optional,
+    Pattern,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+    overload,
+)
 
-from . import _ValidatorArgType
-from . import _ValidatorType
+from . import _ValidatorArgType, _ValidatorType
 
 _T = TypeVar("_T")
 _T1 = TypeVar("_T1")

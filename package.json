@@ -1,15 +1,15 @@
 {
   "name": "openllm",
-  "version": "0.2.13.dev0",
-  "description": "OpenLLM: Your one stop-and-go solution for serving Large Language Model",
-  "repository": "git@github.com:llmsys/OpenLLM.git",
+  "version": "0.2.23.dev0",
+  "description": "OpenLLM: Operating LLMs in production",
+  "repository": "git@github.com:bentoml/OpenLLM.git",
   "author": "Aaron Pham <29749331+aarnphm@users.noreply.github.com>",
   "license": "Apache 2.0",
   "engines": {
     "node": ">=16"
   },
   "workspaces": [
-    "src/openllm_js"
+    "openllm-node"
   ],
   "private": true,
   "devDependencies": {

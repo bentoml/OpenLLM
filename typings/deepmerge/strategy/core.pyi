@@ -1,9 +1,10 @@
-from typing import Any
-from typing import Callable
-from typing import List
-from typing import Optional
-from typing import TypeAlias
-from typing import Union
+import sys
+from typing import Any, Callable, List, Optional, Union
+if sys.version_info[:2] >= (3, 10):
+  from typing import TypeAlias
+else:
+  from typing_extensions import TypeAlias
+
 
 _StringOrFunction: TypeAlias = Union[str, Callable[..., Any]]
 STRATEGY_END: object = ...

@@ -18,6 +18,97 @@ This changelog is managed by towncrier and is compiled at release time.
 
 <!-- towncrier release notes start -->
 
+## [0.2.22](https://github.com/bentoml/openllm/tree/v0.2.22)
+No significant changes.
+
+
+## [0.2.21](https://github.com/bentoml/openllm/tree/v0.2.21)
+
+### Changes
+
+- Added lazy eval for compiled modules, which should speed up overall import time
+  [#200](https://github.com/bentoml/openllm/issues/200)
+
+
+### Bug fix
+
+- Fixes compiled wheels ignoring client libraries
+  [#197](https://github.com/bentoml/openllm/issues/197)
+
+
+## [0.2.20](https://github.com/bentoml/openllm/tree/v0.2.20)
+No significant changes.
+
+
+## [0.2.19](https://github.com/bentoml/openllm/tree/v0.2.19)
+No significant changes.
+
+
+## [0.2.18](https://github.com/bentoml/openllm/tree/v0.2.18)
+
+### Changes
+
+- Runners server now will always spawn one instance regardless of the configuration of workers-per-resource
+
+  i.e: If CUDA_VISIBLE_DEVICES=0,1,2 and `--workers-per-resource=0.5`, then runners will only use `0,1` index
+  [#189](https://github.com/bentoml/openllm/issues/189)
+
+
+### Features
+
+- OpenLLM now can also be installed via brew tap:
+  ```bash
+  brew tap bentoml/openllm https://github.com/bentoml/openllm
+
+  brew install openllm
+  ```
+  [#190](https://github.com/bentoml/openllm/issues/190)
+
+
+## [0.2.17](https://github.com/bentoml/openllm/tree/v0.2.17)
+
+### Changes
+
+- Updated loading logics for PyTorch and vLLM where it will check for initialized parameters after placing to correct devices
+
+  Added xformers to base container for requirements on vLLM-based container
+  [#185](https://github.com/bentoml/openllm/issues/185)
+
+
+### Features
+
+- Importing models now won't load into memory if it is a remote ID. Note that for GPTQ and local model the behaviour is unchanged.
+
+  Fixes that when there is one GPU, we ensure to call `to('cuda')` to place the model onto the memory. Note that the GPU must have
+  enough VRAM to offload this model onto the GPU.
+  [#183](https://github.com/bentoml/openllm/issues/183)
+
+
+## [0.2.16](https://github.com/bentoml/openllm/tree/v0.2.16)
+No significant changes.
+
+
+## [0.2.15](https://github.com/bentoml/openllm/tree/v0.2.15)
+No significant changes.
+
+
+## [0.2.14](https://github.com/bentoml/openllm/tree/v0.2.14)
+
+### Bug fix
+
+- Fixes a bug with `EnvVarMixin` where it didn't respect environment variable for specific fields
+
+  This inherently provide a confusing behaviour with `--model-id`. This is now has been addressed with main
+
+  The base docker will now also include a installation of xformers from source, locked at a given hash, since the latest release of xformers
+  are too old and would fail with vLLM when running within the k8s
+  [#181](https://github.com/bentoml/openllm/issues/181)
+
+
+## [0.2.13](https://github.com/bentoml/openllm/tree/v0.2.13)
+No significant changes.
+
+
 ## [0.2.12](https://github.com/bentoml/openllm/tree/v0.2.12)
 
 ### Features

@@ -1,24 +1,7 @@
 #!/usr/bin/env python3
-# Copyright 2023 BentoML Team. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 from __future__ import annotations
-
-from decimal import ROUND_DOWN
-from decimal import Decimal
+from decimal import ROUND_DOWN, Decimal
 from pathlib import Path
-
 import orjson
 
 PRECISION = Decimal(".01")
@@ -26,7 +9,7 @@ PRECISION = Decimal(".01")
 ROOT = Path(__file__).resolve().parent.parent
 
 def main() -> int:
-  coverage_summary = ROOT / "coverage-summary.json"
+  coverage_summary = ROOT/"coverage-summary.json"
 
   coverage_data = orjson.loads(coverage_summary.read_text(encoding="utf-8"))
   total_data = coverage_data.pop("total")
@@ -48,13 +31,10 @@ def main() -> int:
   color = "ok" if float(total_rate) >= 95 else "critical"
   lines.insert(0, f"![Code Coverage](https://img.shields.io/badge/coverage-{total_rate}%25-{color}?style=flat)\n")
 
-  lines.append(f"**Summary** | {100 if total_rate == 100 else total_rate}% "
-                f"({total_statements_covered} / {total_statements})\n")
+  lines.append(f"**Summary** | {100 if total_rate == 100 else total_rate}% ({total_statements_covered} / {total_statements})\n")
 
-  coverage_report = ROOT / "coverage-report.md"
-  with coverage_report.open("w", encoding="utf-8") as f:
-    f.write("".join(lines))
+  coverage_report = ROOT/"coverage-report.md"
+  with coverage_report.open("w", encoding="utf-8") as f: f.write("".join(lines))
   return 0
 
-if __name__ == "__main__":
-  raise SystemExit(main())
+if __name__ == "__main__": raise SystemExit(main())
