@@ -1,4 +1,3 @@
-# NOTE: PEP517 is manged via ./tools/dependencies.py
 [build-system]
 build-backend = "hatchling.build"
 requires = [
