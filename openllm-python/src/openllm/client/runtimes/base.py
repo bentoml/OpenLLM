@@ -13,7 +13,7 @@ T_co = t.TypeVar("T_co", covariant=True)
 if t.TYPE_CHECKING:
   import transformers
   from openllm._typing_compat import DictStrAny, LiteralRuntime
-transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")  # noqa: F811
+else: transformers = openllm.utils.LazyLoader("transformers", globals(), "transformers")
 
 class AnnotatedClient(t.Protocol[T_co]):
   server_url: str
