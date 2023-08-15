@@ -146,8 +146,8 @@ COPY --from=flash-attn-v2-builder /usr/src/flash-attention-v2/build/lib.linux-x8
 COPY --from=auto-gptq-builder /usr/src/AutoGPTQ/build/lib.linux-x86_64-cpython-39 /opt/conda/lib/python3.9/site-packages
 
 # Install required dependencies
-COPY src src
-COPY hatch.toml README.md CHANGELOG.md pyproject.toml ./
+COPY openllm-python/src src
+COPY hatch.toml README.md CHANGELOG.md openllm-python/pyproject.toml ./
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         build-essential \
@@ -158,7 +158,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
         rm -rf /var/lib/apt/lists/*
 
 # Install all required dependencies
-RUN --mount=type=cache,target=/root/.cache/pip pip install  "ray==2.6.0" "einops" "jax[cuda11_local]" "torch>=2.0.1" xformers -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html ".[opt,mpt,fine-tune,llama,chatglm]" -v --no-cache-dir
+RUN --mount=type=cache,target=/root/.cache/pip pip install "ray==2.6.0" "einops" "jax[cuda11_local]" "torch>=2.0.1" xformers -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html ".[opt,mpt,fine-tune,llama,chatglm]" -v --no-cache-dir
 
 FROM base-container
 

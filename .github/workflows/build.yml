@@ -138,7 +138,7 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_PROD_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_PROD_SECRET_ACCESS_KEY }}
         with:
-          context: openllm-python
+          context: .
           file: openllm-python/src/openllm/bundle/oci/Dockerfile
           push: true
           platforms: 'linux/amd64'

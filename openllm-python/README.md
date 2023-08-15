@@ -1,4 +1,4 @@
-![Banner for OpenLLM](/assets/main-banner.png)
+![Banner for OpenLLM](/.github/assets/main-banner.png)
 
 <!-- hatch-fancy-pypi-readme intro start -->
 
@@ -58,7 +58,7 @@ Images or deploy as serverless endpoint via
 
 <!-- hatch-fancy-pypi-readme intro stop -->
 
-![Gif showing OpenLLM Intro](/assets/output.gif)
+![Gif showing OpenLLM Intro](/.github/assets/output.gif)
 
 <br/>
 
@@ -136,9 +136,9 @@ openllm start flan-t5 --model-id google/flan-t5-large
 ```
 
 > [!NOTE]
-> `openllm` also supports all variants of fine-tuning weights,
-> custom model path as well as quantized weights for any of the supported models
-> as long as it can be loaded with the model architecture. Refer to
+> `openllm` also supports all variants of fine-tuning weights, custom
+> model path as well as quantized weights for any of the supported models as
+> long as it can be loaded with the model architecture. Refer to
 > [supported models](https://github.com/bentoml/OpenLLM/tree/main#-supported-models)
 > section for models' architecture.
 
@@ -532,7 +532,8 @@ client.embed("I like to eat apples")
 ```
 
 > [!NOTE]
-> Currently, the following model family supports embeddings: Llama, T5 (Flan-T5, FastChat, etc.), ChatGLM
+> Currently, the following model family supports embeddings: Llama, T5
+> (Flan-T5, FastChat, etc.), ChatGLM
 
 ## ⚙️ Integrations
 
@@ -582,8 +583,9 @@ llm("What is the difference between a duck and a goose? And why there are so man
 ```
 
 > [!IMPORTANT]
-> By default, OpenLLM use `safetensors` format for saving models. If the model doesn't support safetensors,
-> make sure to pass `serialisation="legacy"` to use the legacy PyTorch bin format.
+> By default, OpenLLM use `safetensors` format for saving models.
+> If the model doesn't support safetensors, make sure to pass
+> `serialisation="legacy"` to use the legacy PyTorch bin format.
 
 `langchain.llms.OpenLLM` has the capability to interact with remote OpenLLM
 Server. Given there is an OpenLLM server deployed elsewhere, you can connect to
@@ -638,8 +640,8 @@ agent.run("Is the following `text` positive or negative?", text="I don't like ho
 ```
 
 > [!IMPORTANT]
-> Only `starcoder` is currently supported with Agent integration. The
-> example above was also run with four T4s on EC2 `g4dn.12xlarge`
+> Only `starcoder` is currently supported with Agent integration.
+> The example above was also run with four T4s on EC2 `g4dn.12xlarge`
 
 If you want to use OpenLLM client to ask questions to the running agent, you can
 also do so:
@@ -657,7 +659,7 @@ client.ask_agent(
 
 <!-- hatch-fancy-pypi-readme interim stop -->
 
-![Gif showing Agent integration](/assets/agent.gif)
+![Gif showing Agent integration](/.github/assets/agent.gif)
 
 <br/>
 
@@ -751,7 +753,7 @@ OpenLLM collects usage data to enhance user experience and improve the product.
 We only report OpenLLM's internal API calls and ensure maximum privacy by
 excluding sensitive information. We will never collect user code, model data, or
 stack traces. For usage tracking, check out the
-[code](./src/openllm/utils/analytics.py).
+[code](https://github.com/bentoml/OpenLLM/blob/main/openllm-python/src/openllm/utils/analytics.py).
 
 You can opt out of usage tracking by using the `--do-not-track` CLI option:
 

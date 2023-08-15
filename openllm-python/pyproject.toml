@@ -157,7 +157,7 @@ only-include = ["src/openllm"]
 sources = ["src"]
 dev-mode-dirs = ["."]
 [tool.hatch.build.targets.sdist]
-exclude = ["/tests", "/typings"]
+exclude = ["/.git_archival.txt"]
 [tool.hatch.build.targets.wheel.hooks.mypyc]
 dependencies = [
     "hatch-mypyc==0.16.0",
