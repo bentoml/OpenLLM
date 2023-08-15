@@ -37,7 +37,7 @@ repos:
       - id: interrogate
         verbose: true
         types: [python]
-        exclude: ^(docs|tools|tests)
+        exclude: ^(docs|tools|openllm-python/tests)
         args: [--config=pyproject.toml]
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.5.0
@@ -49,7 +49,7 @@ repos:
               examples/.*|
               tools/.*|
               tests/.*|
-              src/openllm/playground/.*|
+              openllm-python/src/openllm/playground/.*|
               .github/.*|
               cz.py |
               hatch_build.py
@@ -73,7 +73,7 @@ repos:
         verbose: true
         exclude: |
           (?x)^(
-              tests/models/.*
+              openllm-python/tests/models/.*
           )$
       - id: check-yaml
         args: ['--unsafe']

@@ -9,5 +9,5 @@ charset = utf-8
 indent_style = space
 indent_size = 2
 
-[src/openllm/cli/entrypoint.py]
+[openllm-python/src/openllm/cli/entrypoint.py]
 indent_size = unset

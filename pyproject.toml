@@ -9,8 +9,8 @@ requires = [
 ]
 [project]
 authors = [
-    {name = "Aaron Pham",email = "aarnphm@bentoml.com"},
-    {name = "BentoML Team",email = "contact@bentoml.com"},
+    { name = "Aaron Pham", email = "aarnphm@bentoml.com" },
+    { name = "BentoML Team", email = "contact@bentoml.com" },
 ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -199,7 +199,6 @@ extend-select = [
     "PLW",  # pylint-warning
     "PLR",  # pylint-refactor
     "PT",   # flake8-pytest-style
-    "PYI",  # flake8-pyi
     "PERF", # perflint
     "FLY",  # flynt
     "RUF",  # Ruff-specific rules
@@ -222,7 +221,6 @@ ignore = [
     "E401",    # ignore multiple line import
     "E702",
     "I001",    # unsorted imports
-    "PYI021",  # ignore docstring in stubs, as pyright will include docstring in stubs.
     "D103",    # Just missing docstring for magic methods.
     "D102",
     "D101",
@@ -276,14 +274,9 @@ avoid-escape = false
 "openllm-python/src/openllm/client/runtimes/*" = ["D107"]
 "openllm-python/src/openllm/models/**" = ["E", "D", "F"]
 "openllm-python/src/openllm/utils/import_utils.py" = ["PLW0603"]
-"openllm-python/tests/**/*" = [
-    "S101",
-    "TID252",
-    "D",      # No docstring in tests
-    "PT011",  # ignore too broad raises, as it can be use pytest.raises().match()
-    "S307",   # Ignore eval(compile) as it is a known script execution
-]
-"typings/**" = ["D", "F", "E", "PYI002"]
+"openllm-python/src/openllm/_configuration.py" = ["F811"]
+"openllm-python/tests/**/*" = ["S101", "TID252", "D", "PT011", "S307"]
+"typings/**" = ["D", "F", "E"]
 
 [tool.yapf]
 ALIGN_CLOSING_BRACKET_WITH_VISUAL_INDENT = true
@@ -380,6 +373,9 @@ omit = [
 precision = 2
 show_missing = true
 
+# NOTE: The following strict type checker we are using:
+# - mypy: for both runtime and static type checking (since we compile the wheels )
+# - pyright: for static type checking only, as we want to use newer type feature
 [tool.pyright]
 analysis.useLibraryCodeForTypes = true
 exclude = [
@@ -395,7 +391,7 @@ exclude = [
     "examples",
 ]
 include = ["openllm-python/src/openllm"]
-pythonVersion = "3.8"
+pythonVersion = "3.12"
 reportMissingImports = "warning"
 reportMissingTypeStubs = false
 reportPrivateUsage = "warning"
@@ -410,9 +406,9 @@ typeCheckingMode = "strict"
 exclude = [
     "examples",
     "tools",
+    "cz.py",
     "openllm-python/tests",
     "openllm-python/src/openllm/playground",
-    "cz.py",
     "openllm-python/src/openllm/utils/dummy_*.py",
     "openllm-python/src/openllm/models",
     "openllm-python/src/openllm/_typing_compat.py",

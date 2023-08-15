@@ -66,7 +66,7 @@ else:
   torch = LazyLoader("torch", globals(), "torch")
   peft = LazyLoader("peft", globals(), "peft")
 
-ResolvedAdaptersMapping = t.Dict[AdapterType, t.Dict[t.Union[str, t.Literal["default"]], t.Tuple["peft.PeftConfig", str]]]
+ResolvedAdaptersMapping = t.Dict[AdapterType, t.Dict[str, t.Tuple["peft.PeftConfig", str]]]
 
 logger = logging.getLogger(__name__)
 class ModelSignatureDict(t.TypedDict, total=False):
