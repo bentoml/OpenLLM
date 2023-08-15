@@ -242,7 +242,7 @@ text = """
 end-before = "\n<!-- hatch-fancy-pypi-readme meta stop -->"
 path = "README.md"
 start-after = "<!-- hatch-fancy-pypi-readme meta start -->\n"
-[[metadata.hooks.fancy-pypi-readme.fragments]]
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.fragments]]
 text = """
 
 ## Release Information
