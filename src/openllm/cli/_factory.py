@@ -1,67 +1,23 @@
-# Copyright 2023 BentoML Team. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 from __future__ import annotations
-import importlib.util
-import os
-import typing as t
-
-import click
-import click_option_group as cog
-import inflection
-import orjson
+import functools, importlib.util, os, typing as t
+import click, click_option_group as cog, inflection, orjson, bentoml, openllm
 from bentoml_cli.utils import BentoMLCommandGroup
 from click.shell_completion import CompletionItem
-
-import bentoml
 from bentoml._internal.configuration.containers import BentoMLContainer
-
+from openllm._typing_compat import LiteralString, DictStrAny, ParamSpec, Concatenate
 from . import termui
-from .. import bundle
-from ..models.auto import CONFIG_MAPPING
-from ..models.auto import AutoConfig
-from ..utils import ENV_VARS_TRUE_VALUES
-from ..utils import EnvVarMixin
-from ..utils import LazyType
-from ..utils import analytics
-from ..utils import available_devices
-from ..utils import compose
-from ..utils import dantic
-from ..utils import device_count
-from ..utils import first_not_none
-from ..utils import get_debug_mode
-from ..utils import get_quiet_mode
-from ..utils import infer_auto_class
-from ..utils import is_peft_available
-from ..utils import resolve_user_filepath
 
 if t.TYPE_CHECKING:
   import subprocess
+  from openllm._configuration import LLMConfig
 
-  from .._configuration import LLMConfig
-  from .._types import DictStrAny
-  from .._types import P
-  TupleStr = tuple[str, ...]
-else:
-  TupleStr = tuple
-
+P = ParamSpec("P")
 LiteralOutput = t.Literal["json", "pretty", "porcelain"]
 
 _AnyCallable = t.Callable[..., t.Any]
 FC = t.TypeVar("FC", bound=t.Union[_AnyCallable, click.Command])
 
-def parse_config_options(config: LLMConfig, server_timeout: int, workers_per_resource: float, device: tuple[str, ...] | None, environ: DictStrAny,) -> DictStrAny:
+def parse_config_options(config: LLMConfig, server_timeout: int, workers_per_resource: float, device: t.Tuple[str, ...] | None, environ: DictStrAny,) -> DictStrAny:
   # TODO: Support amd.com/gpu on k8s
   _bentoml_config_options_env = environ.pop("BENTOML_CONFIG_OPTIONS", "")
   _bentoml_config_options_opts = ["tracing.sample_rate=1.0", f"api_server.traffic.timeout={server_timeout}", f'runners."llm-{config["start_name"]}-runner".traffic.timeout={config["timeout"]}', f'runners."llm-{config["start_name"]}-runner".workers_per_resource={workers_per_resource}']
@@ -74,17 +30,15 @@ def parse_config_options(config: LLMConfig, server_timeout: int, workers_per_res
 
 _adapter_mapping_key = "adapter_map"
 
-def _id_callback(ctx: click.Context, _: click.Parameter, value: tuple[str, ...] | None) -> None:
+def _id_callback(ctx: click.Context, _: click.Parameter, value: t.Tuple[str, ...] | None) -> None:
   if not value: return None
   if _adapter_mapping_key not in ctx.params: ctx.params[_adapter_mapping_key] = {}
   for v in value:
     adapter_id, *adapter_name = v.rsplit(":", maxsplit=1)
     # try to resolve the full path if users pass in relative,
     # currently only support one level of resolve path with current directory
-    try:
-      adapter_id = resolve_user_filepath(adapter_id, os.getcwd())
-    except FileNotFoundError:
-      pass
+    try: adapter_id = openllm.utils.resolve_user_filepath(adapter_id, os.getcwd())
+    except FileNotFoundError: pass
     ctx.params[_adapter_mapping_key][adapter_id] = adapter_name[0] if len(adapter_name) > 0 else None
   return None
 
@@ -101,7 +55,7 @@ def start_command_factory(group: click.Group, model: str, _context_settings: Dic
   Note that the internal commands will return the llm_config and a boolean determine
   whether the server is run with GPU or not.
   """
-  llm_config = AutoConfig.for_model(model)
+  llm_config = openllm.AutoConfig.for_model(model)
 
   command_attrs: DictStrAny = dict(
       name=llm_config["model_name"], context_settings=_context_settings or termui.CONTEXT_SETTINGS, short_help=f"Start a LLMServer for '{model}'", aliases=[llm_config["start_name"]] if llm_config["name_type"] == "dasherize" else None, help=f"""\
@@ -125,7 +79,7 @@ Available official model_id(s): [default: {llm_config['default_id']}]
 """,
   )
 
-  if llm_config["requires_gpu"] and device_count() < 1:
+  if llm_config["requires_gpu"] and openllm.utils.device_count() < 1:
     # NOTE: The model requires GPU, therefore we will return a dummy command
     command_attrs.update({"short_help": "(Disabled because there is no GPU available)", "help": f"""{model} is currently not available to run on your local machine because it requires GPU for inference."""})
     return noop_command(group, llm_config, _serve_grpc, **command_attrs)
@@ -134,30 +88,30 @@ Available official model_id(s): [default: {llm_config['default_id']}]
   @start_decorator(llm_config, serve_grpc=_serve_grpc)
   @click.pass_context
   def start_cmd(
-      ctx: click.Context, /, server_timeout: int, model_id: str | None, model_version: str | None, workers_per_resource: t.Literal["conserved", "round_robin"] | t.LiteralString, device: tuple[str, ...], quantize: t.Literal["int8", "int4", "gptq"] | None, bettertransformer: bool | None, runtime: t.Literal["ggml", "transformers"], fast: bool,
+      ctx: click.Context, /, server_timeout: int, model_id: str | None, model_version: str | None, workers_per_resource: t.Literal["conserved", "round_robin"] | LiteralString, device: t.Tuple[str, ...], quantize: t.Literal["int8", "int4", "gptq"] | None, bettertransformer: bool | None, runtime: t.Literal["ggml", "transformers"], fast: bool,
       serialisation_format: t.Literal["safetensors", "legacy"], adapter_id: str | None, return_process: bool, **attrs: t.Any,
   ) -> LLMConfig | subprocess.Popen[bytes]:
-    fast = str(fast).upper() in ENV_VARS_TRUE_VALUES
-    if serialisation_format == "safetensors" and quantize is not None and os.getenv("OPENLLM_SERIALIZATION_WARNING", str(True)).upper() in ENV_VARS_TRUE_VALUES:
+    fast = str(fast).upper() in openllm.utils.ENV_VARS_TRUE_VALUES
+    if serialisation_format == "safetensors" and quantize is not None and os.environ.get("OPENLLM_SERIALIZATION_WARNING", str(True)).upper() in openllm.utils.ENV_VARS_TRUE_VALUES:
       termui.echo(f"'--quantize={quantize}' might not work with 'safetensors' serialisation format. Use with caution!. To silence this warning, set \"OPENLLM_SERIALIZATION_WARNING=False\"\nNote: You can always fallback to '--serialisation legacy' when running quantisation.", fg="yellow")
     adapter_map: dict[str, str | None] | None = attrs.pop(_adapter_mapping_key, None)
     config, server_attrs = llm_config.model_validate_click(**attrs)
-    server_timeout = first_not_none(server_timeout, default=config["timeout"])
+    server_timeout = openllm.utils.first_not_none(server_timeout, default=config["timeout"])
     server_attrs.update({"working_dir": os.path.dirname(os.path.dirname(__file__)), "timeout": server_timeout})
     if _serve_grpc: server_attrs["grpc_protocol_version"] = "v1"
     # NOTE: currently, theres no development args in bentoml.Server. To be fixed upstream.
     development = server_attrs.pop("development")
     server_attrs.setdefault("production", not development)
-    wpr = first_not_none(workers_per_resource, default=config["workers_per_resource"])
+    wpr = openllm.utils.first_not_none(workers_per_resource, default=config["workers_per_resource"])
 
     if isinstance(wpr, str):
       if wpr == "round_robin": wpr = 1.0
       elif wpr == "conserved":
-        if device and device_count() == 0:
+        if device and openllm.utils.device_count() == 0:
           termui.echo("--device will have no effect as there is no GPUs available", fg="yellow")
           wpr = 1.0
         else:
-          available_gpu = len(device) if device else device_count()
+          available_gpu = len(device) if device else openllm.utils.device_count()
           wpr = 1.0 if available_gpu == 0 else float(1 / available_gpu)
       else:
         wpr = float(wpr)
@@ -165,7 +119,7 @@ Available official model_id(s): [default: {llm_config['default_id']}]
       wpr = float(wpr)
 
     # Create a new model env to work with the envvar during CLI invocation
-    env = EnvVarMixin(config["model_name"], config.default_implementation(), model_id=model_id, bettertransformer=bettertransformer, quantize=quantize, runtime=runtime)
+    env = openllm.utils.EnvVarMixin(config["model_name"], config.default_implementation(), model_id=model_id or config["default_id"], bettertransformer=bettertransformer, quantize=quantize, runtime=runtime)
     prerequisite_check(ctx, config, quantize, adapter_map, int(1 / wpr))
 
     # NOTE: This is to set current configuration
@@ -173,22 +127,22 @@ Available official model_id(s): [default: {llm_config['default_id']}]
     start_env = parse_config_options(config, server_timeout, wpr, device, start_env)
     if fast: termui.echo(f"Fast mode is enabled. Make sure the model is available in local store before 'start': 'openllm import {model}{' --model-id ' + model_id if model_id else ''}'", fg="yellow")
 
-    start_env.update({"OPENLLM_MODEL": model, "BENTOML_DEBUG": str(get_debug_mode()), "BENTOML_HOME": os.getenv("BENTOML_HOME", BentoMLContainer.bentoml_home.get()), "OPENLLM_ADAPTER_MAP": orjson.dumps(adapter_map).decode(), "OPENLLM_SERIALIZATION": serialisation_format, env.runtime: env.runtime_value, env.framework: env.framework_value,})
-    if env.model_id_value: start_env[env.model_id] = str(env.model_id_value)
+    start_env.update({"OPENLLM_MODEL": model, "BENTOML_DEBUG": str(openllm.utils.get_debug_mode()), "BENTOML_HOME": os.environ.get("BENTOML_HOME", BentoMLContainer.bentoml_home.get()), "OPENLLM_ADAPTER_MAP": orjson.dumps(adapter_map).decode(), "OPENLLM_SERIALIZATION": serialisation_format, env.runtime: env["runtime_value"], env.framework: env["framework_value"]})
+    if env["model_id_value"]: start_env[env.model_id] = str(env["model_id_value"])
     # NOTE: quantize and bettertransformer value is already assigned within env
-    if bettertransformer is not None: start_env[env.bettertransformer] = str(env.bettertransformer_value)
-    if quantize is not None: start_env[env.quantize] = str(env.quantize_value)
+    if bettertransformer is not None: start_env[env.bettertransformer] = str(env["bettertransformer_value"])
+    if quantize is not None: start_env[env.quantize] = str(t.cast(str, env["quantize_value"]))
 
-    llm = infer_auto_class(env.framework_value).for_model(model, model_version=model_version, llm_config=config, ensure_available=not fast, adapter_map=adapter_map, serialisation=serialisation_format)
-    start_env.update({env.config: llm.config.model_dump_json().decode(), env.model_id: llm.model_id})
+    llm = openllm.utils.infer_auto_class(env["framework_value"]).for_model(model, model_id=start_env[env.model_id], model_version=model_version, llm_config=config, ensure_available=not fast, adapter_map=adapter_map, serialisation=serialisation_format)
+    start_env.update({env.config: llm.config.model_dump_json().decode()})
 
-    server = bentoml.GrpcServer("_service.py:svc", **server_attrs) if _serve_grpc else bentoml.HTTPServer("_service.py:svc", **server_attrs)
-    analytics.track_start_init(llm.config)
+    server = bentoml.GrpcServer("_service:svc", **server_attrs) if _serve_grpc else bentoml.HTTPServer("_service:svc", **server_attrs)
+    openllm.utils.analytics.track_start_init(llm.config)
 
     def next_step(model_name: str, adapter_map: DictStrAny | None) -> None:
       cmd_name = f"openllm build {model_name}"
       if adapter_map is not None: cmd_name += " " + " ".join([f"--adapter-id {s}" for s in [f"{p}:{name}" if name not in (None, "default") else p for p, name in adapter_map.items()]])
-      if not get_quiet_mode(): termui.echo(f"\n🚀 Next step: run '{cmd_name}' to create a Bento for {model_name}", fg="blue")
+      if not openllm.utils.get_quiet_mode(): termui.echo(f"\n🚀 Next step: run '{cmd_name}' to create a Bento for {model_name}", fg="blue")
 
     if return_process:
       server.start(env=start_env, text=True)
@@ -217,22 +171,22 @@ def noop_command(group: click.Group, llm_config: LLMConfig, _serve_grpc: bool, *
   @group.command(**command_attrs)
   def noop(**_: t.Any) -> LLMConfig:
     termui.echo("No GPU available, therefore this command is disabled", fg="red")
-    analytics.track_start_init(llm_config)
+    openllm.utils.analytics.track_start_init(llm_config)
     return llm_config
 
   return noop
 
-def prerequisite_check(ctx: click.Context, llm_config: LLMConfig, quantize: t.LiteralString | None, adapter_map: dict[str, str | None] | None, num_workers: int) -> None:
-  if adapter_map and not is_peft_available(): ctx.fail("Using adapter requires 'peft' to be available. Make sure to install with 'pip install \"openllm[fine-tune]\"'")
-  if quantize and llm_config.default_implementation() == "vllm": ctx.fail(f"Quantization is not yet supported with vLLM. Set '{llm_config.env['framework']}=\"pt\"' to run with quantization.")
+def prerequisite_check(ctx: click.Context, llm_config: LLMConfig, quantize: LiteralString | None, adapter_map: dict[str, str | None] | None, num_workers: int) -> None:
+  if adapter_map and not openllm.utils.is_peft_available(): ctx.fail("Using adapter requires 'peft' to be available. Make sure to install with 'pip install \"openllm[fine-tune]\"'")
+  if quantize and llm_config.default_implementation() == "vllm": ctx.fail(f"Quantization is not yet supported with vLLM. Set '{llm_config['env']['framework']}=\"pt\"' to run with quantization.")
   requirements = llm_config["requirements"]
   if requirements is not None and len(requirements) > 0:
     missing_requirements = [i for i in requirements if importlib.util.find_spec(inflection.underscore(i)) is None]
     if len(missing_requirements) > 0: termui.echo(f"Make sure to have the following dependencies available: {missing_requirements}", fg="yellow")
 
 def start_decorator(llm_config: LLMConfig, serve_grpc: bool = False) -> t.Callable[[FC], t.Callable[[FC], FC]]:
-  return lambda fn: compose(
-      *[
+  def wrapper(fn: FC) -> t.Callable[[FC], FC]:
+    composed = openllm.utils.compose(
           llm_config.to_click_options, _http_server_args if not serve_grpc else _grpc_server_args,
           cog.optgroup.group("General LLM Options", help=f"The following options are related to running '{llm_config['start_name']}' LLM Server."),
           model_id_option(factory=cog.optgroup, model_env=llm_config["env"]),
@@ -252,7 +206,7 @@ def start_decorator(llm_config: LLMConfig, serve_grpc: bool = False) -> t.Callab
             - GGML: Fast inference on [bare metal](https://github.com/ggerganov/ggml)
             """,
           ),
-          cog.optgroup.option("--device", type=dantic.CUDA, multiple=True, envvar="CUDA_VISIBLE_DEVICES", callback=parse_device_callback, help=f"Assign GPU devices (if available) for {llm_config['model_name']}.", show_envvar=True),
+          cog.optgroup.option("--device", type=openllm.utils.dantic.CUDA, multiple=True, envvar="CUDA_VISIBLE_DEVICES", callback=parse_device_callback, help=f"Assign GPU devices (if available) for {llm_config['model_name']}.", show_envvar=True),
           cog.optgroup.option("--runtime", type=click.Choice(["ggml", "transformers"]), default="transformers", help="The runtime to use for the given model. Default is transformers."),
           quantize_option(factory=cog.optgroup, model_env=llm_config["env"]),
           bettertransformer_option(factory=cog.optgroup, model_env=llm_config["env"]),
@@ -276,15 +230,16 @@ def start_decorator(llm_config: LLMConfig, serve_grpc: bool = False) -> t.Callab
           ),
           cog.optgroup.option("--adapter-id", default=None, help="Optional name or path for given LoRA adapter" + f" to wrap '{llm_config['model_name']}'", multiple=True, callback=_id_callback, metavar="[PATH | [remote/][adapter_name:]adapter_id][, ...]"),
           click.option("--return-process", is_flag=True, default=False, help="Internal use only.", hidden=True),
-      ]
-  )(fn)
+    )
+    return composed(fn)
+  return wrapper
 
-def parse_device_callback(ctx: click.Context, param: click.Parameter, value: tuple[tuple[str], ...] | None) -> TupleStr | None:
+def parse_device_callback(ctx: click.Context, param: click.Parameter, value: tuple[tuple[str], ...] | None) -> t.Tuple[str, ...] | None:
   if value is None: return value
-  if not LazyType(TupleStr).isinstance(value): ctx.fail(f"{param} only accept multiple values, not {type(value)} (value: {value})")
-  el: TupleStr = tuple(i for k in value for i in k)
+  if not isinstance(value, tuple): ctx.fail(f"{param} only accept multiple values, not {type(value)} (value: {value})")
+  el: t.Tuple[str, ...] = tuple(i for k in value for i in k)
   # NOTE: --device all is a special case
-  if len(el) == 1 and el[0] == "all": return tuple(map(str, available_devices()))
+  if len(el) == 1 and el[0] == "all": return tuple(map(str, openllm.utils.available_devices()))
   return el
 
 # NOTE: A list of bentoml option that is not needed for parsing.
@@ -299,7 +254,7 @@ def parse_serve_args(serve_grpc: bool) -> t.Callable[[t.Callable[..., LLMConfig]
   command = "serve" if not serve_grpc else "serve-grpc"
   group = cog.optgroup.group(f"Start a {'HTTP' if not serve_grpc else 'gRPC'} server options", help=f"Related to serving the model [synonymous to `bentoml {'serve-http' if not serve_grpc else command }`]",)
 
-  def decorator(f: t.Callable[t.Concatenate[int, str | None, P], LLMConfig]) -> t.Callable[[FC], FC]:
+  def decorator(f: t.Callable[Concatenate[int, t.Optional[str], P], LLMConfig]) -> t.Callable[[FC], FC]:
     serve_command = cli.commands[command]
     # The first variable is the argument bento
     # The last five is from BentoMLCommandGroup.NUMBER_OF_COMMON_PARAMS
@@ -315,53 +270,45 @@ def parse_serve_args(serve_grpc: bool) -> t.Callable[[t.Callable[..., LLMConfig]
       param_decls = (*attrs.pop("opts"), *attrs.pop("secondary_opts"))
       f = cog.optgroup.option(*param_decls, **attrs)(f)
     return group(f)
-
   return decorator
 
 _http_server_args, _grpc_server_args = parse_serve_args(False), parse_serve_args(True)
 
-def cli_option(*param_decls: t.Any, **attrs: t.Any) -> t.Callable[[FC | None], FC]:
-  """General ``@click.option`` with some sauce.
+def _click_factory_type(*param_decls: t.Any, **attrs: t.Any) -> t.Callable[[FC | None], FC]:
+  """General ``@click`` decorator with some sauce.
 
-  This decorator extends the default ``@click.option`` plus a factory option to use which type of option, for example: [click, click_option_group.optgroup]
+  This decorator extends the default ``@click.option`` plus a factory option and factory attr to
+  provide type-safe click.option or click.argument wrapper for all compatible factory.
   """
-  attrs.setdefault("help", "General option for OpenLLM CLI.")
   factory = attrs.pop("factory", click)
-
+  factory_attr = attrs.pop("attr", "option")
+  if factory_attr != "argument": attrs.setdefault("help", "General option for OpenLLM CLI.")
   def decorator(f: FC | None) -> FC:
-    return t.cast(FC, factory.option(*param_decls, **attrs)(f) if f is not None else factory.option(*param_decls, **attrs))
-
+    callback = getattr(factory, factory_attr, None)
+    if callback is None: raise ValueError(f"Factory {factory} has no attribute {factory_attr}.")
+    return t.cast(FC, callback(*param_decls, **attrs)(f) if f is not None else callback(*param_decls, **attrs))
   return decorator
+
+cli_option = functools.partial(_click_factory_type, attr="option")
+cli_argument = functools.partial(_click_factory_type, attr="argument")
 
 def output_option(f: _AnyCallable | None = None, *, default_value: LiteralOutput = "pretty", **attrs: t.Any) -> t.Callable[[FC], FC]:
   output = ["json", "pretty", "porcelain"]
-
-  def complete_output_var(ctx: click.Context, param: click.Parameter, incomplete: str) -> list[CompletionItem]:
-    return [CompletionItem(it) for it in output]
-
+  def complete_output_var(ctx: click.Context, param: click.Parameter, incomplete: str) -> list[CompletionItem]: return [CompletionItem(it) for it in output]
   return cli_option("-o", "--output", "output", type=click.Choice(output), default=default_value, help="Showing output type.", show_default=True, envvar="OPENLLM_OUTPUT", show_envvar=True, shell_complete=complete_output_var, **attrs)(f)
-
 def fast_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option(
       "--fast/--no-fast", show_default=True, default=False, envvar="OPENLLM_USE_LOCAL_LATEST", show_envvar=True, help="""Whether to skip checking if models is already in store.
 
                                                                                                           This is useful if you already downloaded or setup the model beforehand.
-                                                                                                          """, **attrs)(f)
+                                                                                                          """, **attrs
+  )(f)
+def machine_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]: return cli_option("--machine", is_flag=True, default=False, hidden=True, **attrs)(f)
+def model_id_option(f: _AnyCallable | None = None, *, model_env: openllm.utils.EnvVarMixin | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]: return cli_option("--model-id", type=click.STRING, default=None, envvar=model_env.model_id if model_env is not None else None, show_envvar=model_env is not None, help="Optional model_id name or path for (fine-tune) weight.", **attrs)(f)
+def model_version_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]: return cli_option("--model-version", type=click.STRING, default=None, help="Optional model version to save for this model. It will be inferred automatically from model-id.", **attrs)(f)
+def model_name_argument(f: _AnyCallable | None = None, required: bool = True) -> t.Callable[[FC], FC]: return cli_argument("model_name", type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING]), required=required)(f)
 
-def machine_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
-  return cli_option("--machine", is_flag=True, default=False, hidden=True, **attrs)(f)
-
-def model_id_option(f: _AnyCallable | None = None, *, model_env: EnvVarMixin | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
-  return cli_option("--model-id", type=click.STRING, default=None, envvar=model_env.model_id if model_env is not None else None, show_envvar=model_env is not None, help="Optional model_id name or path for (fine-tune) weight.", **attrs)(f)
-
-def model_version_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
-  return cli_option("--model-version", type=click.STRING, default=None, help="Optional model version to save for this model. It will be inferred automatically from model-id.", **attrs)(f)
-
-def model_name_argument(f: _AnyCallable | None = None, required: bool = True) -> t.Callable[[FC], FC]:
-  arg = click.argument("model_name", type=click.Choice([inflection.dasherize(name) for name in CONFIG_MAPPING]), required=required)
-  return arg(f) if f is not None else arg
-
-def quantize_option(f: _AnyCallable | None = None, *, build: bool = False, model_env: EnvVarMixin | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
+def quantize_option(f: _AnyCallable | None = None, *, build: bool = False, model_env: openllm.utils.EnvVarMixin | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option(
       "--quantise", "--quantize", "quantize", type=click.Choice(["int8", "int4", "gptq"]), default=None, envvar=model_env.quantize if model_env is not None else None, show_envvar=model_env is not None, help="""Dynamic quantization for running this LLM.
 
@@ -373,12 +320,13 @@ def quantize_option(f: _AnyCallable | None = None, *, build: bool = False, model
 
                                                                                                                                                                             - ``gptq``: ``GPTQ`` [quantization](https://arxiv.org/abs/2210.17323)
 
-                                                                                                                                                                            **Note** that the model can also be served with quantized weights.
+                                                                                                                                                                            > [!NOTE] that the model can also be served with quantized weights.
                                                                                                                                                                             """ + (
           """
-                                                                                                                                                                            **Note** that this will set the mode for serving within deployment.""" if build else ""
+                                                                                                                                                                            > [!NOTE] that this will set the mode for serving within deployment.""" if build else ""
       ) + """
-                                                                                                                                                                            **Note** that quantization are currently only available in *PyTorch* models.""", **attrs)(f)
+                                                                                                                                                                            > [!NOTE] that quantization are currently only available in *PyTorch* models.""", **attrs
+  )(f)
 
 def workers_per_resource_option(f: _AnyCallable | None = None, *, build: bool = False, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option(
@@ -387,19 +335,20 @@ def workers_per_resource_option(f: _AnyCallable | None = None, *, build: bool = 
                                                                                                                                                   See https://docs.bentoml.org/en/latest/guides/scheduling.html#resource-scheduling-strategy
                                                                                                                                                   for more information. By default, this is set to 1.
 
-                                                                                                                                                  **Note**: ``--workers-per-resource`` will also accept the following strategies:
+                                                                                                                                                  > [!NOTE] ``--workers-per-resource`` will also accept the following strategies:
 
                                                                                                                                                   - ``round_robin``: Similar behaviour when setting ``--workers-per-resource 1``. This is useful for smaller models.
 
                                                                                                                                                   - ``conserved``: This will determine the number of available GPU resources, and only assign one worker for the LLMRunner. For example, if ther are 4 GPUs available, then ``conserved`` is equivalent to ``--workers-per-resource 0.25``.
                                                                                                                                                   """ + (
           """\n
-                                                                                                                                                  **Note**: The workers value passed into 'build' will determine how the LLM can
-                                                                                                                                                  be provisioned in Kubernetes as well as in standalone container. This will
-                                                                                                                                                  ensure it has the same effect with 'openllm start --workers ...'""" if build else ""
-      ), **attrs)(f)
+                                                                                                                                                  > [!NOTE] The workers value passed into 'build' will determine how the LLM can
+                                                                                                                                                  > be provisioned in Kubernetes as well as in standalone container. This will
+                                                                                                                                                  > ensure it has the same effect with 'openllm start --workers ...'""" if build else ""
+      ), **attrs
+  )(f)
 
-def bettertransformer_option(f: _AnyCallable | None = None, *, build: bool = False, model_env: EnvVarMixin | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
+def bettertransformer_option(f: _AnyCallable | None = None, *, build: bool = False, model_env: openllm.utils.EnvVarMixin | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option(
       "--bettertransformer", is_flag=True, default=None, envvar=model_env.bettertransformer if model_env is not None else None, show_envvar=model_env is not None, help="Apply FasterTransformer wrapper to serve model. This will applies during serving time." if not build else "Set default environment variable whether to serve this model with FasterTransformer in build time.", **attrs
   )(f)
@@ -416,14 +365,15 @@ def serialisation_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Cal
                                                                                                                               ``safe_serialization=True``.
 
                                                                                                                               \b
-                                                                                                                              **Note** that this format might not work for every cases, and
+                                                                                                                              > [!NOTE] that this format might not work for every cases, and
                                                                                                                               you can always fallback to ``legacy`` if needed.
 
                                                                                                                   - ``legacy``: This will use PyTorch serialisation format, often as ``.bin`` files.
                                                                                                                                   This should be used if the model doesn't yet support safetensors.
 
-                                                                                                                  **Note** that GGML format is working in progress.
-                                                                                                                  """, **attrs)(f)
+                                                                                                                  > [!NOTE] that GGML format is working in progress.
+                                                                                                                  """, **attrs
+  )(f)
 
 def container_registry_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option(
@@ -432,8 +382,9 @@ def container_registry_option(f: _AnyCallable | None = None, **attrs: t.Any) -> 
                                                                                                                         Currently, it supports 'ecr', 'ghcr.io', 'docker.io'
 
                                                                                                                         \b
-                                                                                                                        **Note** that in order to build the base image, you will need a GPUs to compile custom kernel. See ``openllm ext build-base-container`` for more information.
-                                                                                                                        """)(f)
+                                                                                                                        > [!NOTE] that in order to build the base image, you will need a GPUs to compile custom kernel. See ``openllm ext build-base-container`` for more information.
+                                                                                                                        """
+  )(f)
 
 _wpr_strategies = {"round_robin", "conserved"}
 
@@ -442,14 +393,12 @@ def workers_per_resource_callback(ctx: click.Context, param: click.Parameter, va
   value = inflection.underscore(value)
   if value in _wpr_strategies: return value
   else:
-    try:
-      float(value)  # type: ignore[arg-type]
-    except ValueError:
-      raise click.BadParameter(f"'workers_per_resource' only accept '{_wpr_strategies}' as possible strategies, otherwise pass in float.", ctx, param) from None
+    try: float(value)  # type: ignore[arg-type]
+    except ValueError: raise click.BadParameter(f"'workers_per_resource' only accept '{_wpr_strategies}' as possible strategies, otherwise pass in float.", ctx, param) from None
     else:
       return value
 
 def container_registry_callback(ctx: click.Context, param: click.Parameter, value: str | None) -> str | None:
   if value is None: return value
-  if value not in bundle.supported_registries: raise click.BadParameter(f"Value must be one of {bundle.supported_registries}", ctx, param)
+  if value not in openllm.bundle.supported_registries: raise click.BadParameter(f"Value must be one of {openllm.bundle.supported_registries}", ctx, param)
   return value

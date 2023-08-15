@@ -1,17 +1,3 @@
-# Copyright 2023 BentoML Team. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 name: release-notes
 on:
   workflow_dispatch:
@@ -51,7 +37,27 @@ jobs:
       - name: Download Python artifacts
         uses: actions/download-artifact@v3
         with:
-          name: python-artifacts
+          name: python-artefacts
+          path: dist
+      - name: Download Linux x86_64 compiled artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: linux-x86_64-mypyc-wheels
+          path: dist
+      - name: Download MacOS x86_64 compiled artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: macos-x86_64-mypyc-wheels
+          path: dist
+      - name: Download MacOS arm64 compiled artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: macos-arm64-mypyc-wheels
+          path: dist
+      - name: Download MacOS universal2 compiled artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: macos-universal2-mypyc-wheels
           path: dist
       - name: Download binaries
         uses: actions/download-artifact@v3
@@ -61,7 +67,7 @@ jobs:
       - name: Download standalone MacOS
         uses: actions/download-artifact@v3
         with:
-          name: staged-MacOS
+          name: staged-macOS
           path: archives
       - name: Download installers
         uses: actions/download-artifact@v3

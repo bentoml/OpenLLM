@@ -5,10 +5,11 @@ import os
 import sys
 import typing as t
 
-# import openllm here for OPENLLMDEVDEBUG
-import openllm
 import torch
 import transformers
+
+# import openllm here for OPENLLMDEVDEBUG
+import openllm
 
 if t.TYPE_CHECKING:
   import peft
@@ -22,12 +23,12 @@ logger = logging.getLogger(__name__)
 # On notebook, make sure to install the following
 # ! pip install -U openllm[fine-tune] @ git+https://github.com/bentoml/OpenLLM.git
 
+from functools import partial
+from itertools import chain
+from random import randint, randrange
+
 import bitsandbytes as bnb
 from datasets import load_dataset
-from random import randint
-from itertools import chain
-from functools import partial
-from random import randrange
 
 # COPIED FROM https://github.com/artidoro/qlora/blob/main/qlora.py
 def find_all_linear_names(model):
@@ -70,7 +71,7 @@ def chunk(sample, chunk_length=2048):
   concatenated_examples = {k: list(chain(*sample[k])) for k in sample.keys()}
   concatenated_examples = {k: remainder[k] + concatenated_examples[k] for k in concatenated_examples.keys()}
   # get total number of tokens for batch
-  batch_total_length = len(concatenated_examples[list(sample.keys())[0]])
+  batch_total_length = len(concatenated_examples[next(iter(sample.keys()))])
 
   # get max number of chunks for batch
   if batch_total_length >= chunk_length:
@@ -103,7 +104,6 @@ def prepare_datasets(tokenizer, dataset_name=DATASET_NAME):
   print(f"Total number of samples: {len(lm_dataset)}")
   return lm_dataset
 
-@openllm.utils.requires_dependencies("peft", extra="fine-tune")
 def prepare_for_int4_training(model_id: str, model_version: str | None = None, gradient_checkpointing: bool = True, bf16: bool = True,) -> tuple[peft.PeftModel, transformers.LlamaTokenizerFast]:
   from peft.tuners.lora import LoraLayer
 

@@ -2,7 +2,7 @@
 # project.classifiers, project.dependencies, project.optional-dependencies, project.urls
 [build-system]
 build-backend = "hatchling.build"
-requires = ["hatchling", "hatch-vcs", "hatch-fancy-pypi-readme"]
+requires = ["hatchling", "hatch-vcs", "hatch-fancy-pypi-readme", "hatch-mypyc==0.16.0"]
 
 [project]
 authors = [{ name = "Aaron Pham", email = "aarnphm@bentoml.com" }]
@@ -42,9 +42,10 @@ dependencies = [
     "inflection",
     "tabulate[widechars]>=0.9.0",
     "httpx",
-    "click>=8.1.6",
+    "click>=8.1.3",
     "typing_extensions",
-    "GitPython",
+    "mypy_extensions",
+    "ghapi",
     "cuda-python;platform_system!=\"Darwin\"",
     "bitsandbytes<0.42",
 ]
@@ -70,12 +71,13 @@ requires-python = ">=3.8"
 
 [project.scripts]
 openllm = "openllm.cli.entrypoint:cli"
-openllm-build-base-container = "openllm.cli.ext.build_base_container:cli"
-openllm-dive-bentos = "openllm.cli.ext.dive_bentos:cli"
-openllm-get-containerfile = "openllm.cli.ext.get_containerfile:cli"
-openllm-get-prompt = "openllm.cli.ext.get_prompt:cli"
-openllm-list-bentos = "openllm.cli.ext.list_bentos:cli"
-openllm-list-models = "openllm.cli.ext.list_models:cli"
+openllm-build-base-container = "openllm.cli.extension.build_base_container:cli"
+openllm-dive-bentos = "openllm.cli.extension.dive_bentos:cli"
+openllm-get-containerfile = "openllm.cli.extension.get_containerfile:cli"
+openllm-get-prompt = "openllm.cli.extension.get_prompt:cli"
+openllm-list-bentos = "openllm.cli.extension.list_bentos:cli"
+openllm-list-models = "openllm.cli.extension.list_models:cli"
+openllm-playground = "openllm.cli.extension.playground:cli"
 
 [project.urls]
 Blog = "https://modelserving.com"
@@ -121,6 +123,30 @@ playground = ["jupyter", "notebook", "ipython", "jupytext", "nbformat"]
 starcoder = ["bitsandbytes"]
 vllm = ["vllm", "ray"]
 
+[tool.cibuildwheel]
+build-verbosity = 1
+# So the following environment will be targeted for compiled wheels:
+# - Python: CPython 3.8-3.11
+# - Architecture (64-bit only): amd64 / x86_64, universal2, and arm64
+# - OS: Linux (no musl), and macOS
+build = "cp3*-*"
+skip = ["*-manylinux_i686", "*-musllinux_*", "*-win32", "pp-*", "cp312-*"]
+
+[tool.cibuildwheel.environment]
+HATCH_BUILD_HOOKS_ENABLE = "1"
+MYPYC_DEBUG_LEVEL = "1"
+MYPYC_OPT_LEVEL = "3"
+
+[tool.cibuildwheel.linux]
+before-build = ["yum install -y clang gcc"]
+
+[tool.cibuildwheel.linux.environment]
+HATCH_BUILD_HOOKS_ENABLE = "1"
+MYPYC_DEBUG_LEVEL = "1"
+MYPYC_OPT_LEVEL = "3"
+# Use clang to compile successfully on Linux.
+CC = "clang"
+
 [tool.towncrier]
 directory = "changelog.d"
 filename = "CHANGELOG.md"
@@ -158,6 +184,9 @@ fail-under = 100
 verbose = 2
 whitelist-regex = ["test_.*"]
 
+[tool.check-wheel-contents]
+toplevel = ["openllm"]
+
 [tool.pytest.ini_options]
 addopts = ["-rfEX", "-pno:warnings", "--snapshot-warn-unused"]
 python_files = ["test_*.py", "*_test.py"]
@@ -166,10 +195,12 @@ testpaths = ["tests"]
 [tool.ruff]
 extend-exclude = [
     "tools",
+    "examples",
     "src/openllm/playground",
-    "src/openllm/models",
-    "src/openllm/_types.py",
+    "src/openllm/__init__.py",
     "src/openllm/_version.py",
+    "src/openllm/utils/dummy_*.py",
+    "src/openllm/models/__init__.py",
 ]
 extend-include = ["*.ipynb"]
 extend-select = [
@@ -185,7 +216,6 @@ extend-select = [
     "PLW",  # pylint-warning
     "PLR",  # pylint-refactor
     "PT",   # flake8-pytest-style
-    "PYI",  # flake8-pyi
     "PERF", # perflint
     "FLY",  # flynt
     "RUF",  # Ruff-specific rules
@@ -205,8 +235,9 @@ ignore = [
     "PLR0915",
     "PLR2004", # magic value to use constant
     "E501",    # ignore line length violation
+    "E401",    # ignore multiple line import
     "E702",
-    "PYI021",  # ignore docstring in stubs, as pyright will include docstring in stubs.
+    "I001",    # unsorted imports
     "D103",    # Just missing docstring for magic methods.
     "D102",
     "D101",
@@ -217,13 +248,10 @@ ignore = [
     "D105",    # magic docstring
     "E701",    # multiple statement on single line
 ]
-line-length = 119
-target-version = "py312"
-unfixable = [
-    "F401",   # Don't touch unused imports, just warn about it.
-    "TCH004", # Don't touch import outside of TYPE_CHECKING block
-    "RUF100", # unused noqa, just warn about it
-]
+line-length = 768
+target-version = "py38"
+typing-modules = ["openllm._typing_compat"]
+unfixable = ["TCH004"]
 [tool.ruff.flake8-type-checking]
 exempt-modules = ["typing", "typing_extensions", "."]
 runtime-evaluated-base-classes = [
@@ -232,28 +260,30 @@ runtime-evaluated-base-classes = [
     "openllm._configuration.GenerationConfig",
     "openllm._configuration.ModelSettings",
 ]
-runtime-evaluated-decorators = ["attrs.define", "attrs.frozen"]
+runtime-evaluated-decorators = ["attrs.define", "attrs.frozen", "trait"]
 [tool.ruff.pydocstyle]
 convention = "google"
 [tool.ruff.pycodestyle]
 ignore-overlong-task-comments = true
 [tool.ruff.isort]
-force-single-line = true
-known-first-party = ["openllm", "bentoml", 'transformers']
-lines-after-imports = 1
+combine-as-imports = true
+force-single-line = false
+force-wrap-aliases = true
+known-first-party = ["openllm", "bentoml"]
+known-third-party = ["transformers", "click", "huggingface_hub", "torch", "vllm", "auto_gptq"]
+lines-after-imports = 0
+lines-between-types = 0
 no-lines-before = ["future", "standard-library"]
 relative-imports-order = "closest-to-furthest"
+required-imports = ["from __future__ import annotations"]
 [tool.ruff.flake8-quotes]
 avoid-escape = false
 [tool.ruff.extend-per-file-ignores]
-# Tests can use magic values, assertions, and relative imports
-"__init__.py" = ["E402", "F401", "F403", "F811"]
-"examples/**/*" = ["D"]
-"src/openllm/_service.py" = ["I001", "E401"]
+"src/openllm/_service.py" = ["E401"]
 "src/openllm/cli/entrypoint.py" = ["D301"]
-"src/openllm/utils/dummy_*" = ["D107"]
+"src/openllm/client/runtimes/*" = ["D107"]
+"src/openllm/models/**" = ["E", "D", "F"]
 "src/openllm/utils/import_utils.py" = ["PLW0603"]
-"src/openllm_client/runtimes/*" = ["D107"]
 "tests/**/*" = [
     "S101",
     "TID252",
@@ -261,7 +291,7 @@ avoid-escape = false
     "PT011",  # ignore too broad raises, as it can be use pytest.raises().match()
     "S307",   # Ignore eval(compile) as it is a known script execution
 ]
-"typings/**/*" = ["D", "F", "E", "PYI002"]
+"typings/**" = ["D", "F", "E"]
 
 [tool.yapf]
 ALIGN_CLOSING_BRACKET_WITH_VISUAL_INDENT = true
@@ -276,7 +306,7 @@ BLANK_LINE_BEFORE_CLASS_DOCSTRING = false
 BLANK_LINE_BEFORE_MODULE_DOCSTRING = false
 BLANK_LINE_BEFORE_NESTED_CLASS_OR_DEF = false
 COALESCE_BRACKETS = true
-COLUMN_LIMIT = 384
+COLUMN_LIMIT = 768
 CONTINUATION_ALIGN_STYLE = "VALIGN-RIGHT"
 DEDENT_CLOSING_BRACKETS = true
 DISABLE_ENDING_COMMA_HEURISTIC = true
@@ -317,6 +347,7 @@ omit = [
     "src/openllm/__init__.py",
     "src/openllm/__main__.py",
     "src/openllm/utils/dummy_*.py",
+    "src/openllm/_typing_compat.py",
 ]
 source_pkgs = ["openllm"]
 [tool.coverage.report]
@@ -325,6 +356,7 @@ exclude_lines = [
     "pragma: no cover",
     "if __name__ == .__main__.:",
     "if t.TYPE_CHECKING:",
+    "if _t.TYPE_CHECKING:",
     'if TYPE_CHECKING:',
     'if typing.TYPE_CHECKING:',
     'if t.TYPE_CHECKING and not MYPY:',
@@ -346,6 +378,7 @@ omit = [
     "src/openllm/__init__.py",
     "src/openllm/__main__.py",
     "src/openllm/utils/dummy_*.py",
+    "src/openllm/_typing_compat.py",
 ]
 precision = 2
 show_missing = true
@@ -355,37 +388,43 @@ analysis.useLibraryCodeForTypes = true
 exclude = [
     "__pypackages__/*",
     "src/openllm/playground/",
+    "src/openllm/models/",
     "src/openllm/__init__.py",
     "src/openllm/__main__.py",
     "src/openllm/utils/dummy_*.py",
-    "src/openllm/models",
+    "src/openllm/_typing_compat.py",
     "tools",
     "examples",
     "tests",
 ]
-include = ["src/openllm", "src/openllm_client"]
-pythonVersion = "3.12"
+include = ["src/openllm"]
+pythonVersion = "3.8"
 reportMissingImports = "warning"
 reportMissingTypeStubs = false
 reportPrivateUsage = "warning"
 reportUnknownArgumentType = "warning"
 reportUnknownMemberType = "warning"
 reportUnknownVariableType = "warning"
+reportUnsupportedDunderAll = "warning"
+reportWildcardImportFromLibrary = "warning"
 typeCheckingMode = "strict"
 
 [tool.mypy]
-# TODO: Enable model for strict type checking
-exclude = ["src/openllm/playground/", "src/openllm/utils/dummy_*.py", "src/openllm/models"]
-files = ["src/openllm", "src/openllm_client"]
-local_partial_types = true
+exclude = [
+    "src/openllm/playground/",
+    "src/openllm/utils/dummy_*.py",
+    "src/openllm/models",
+    "src/openllm/_typing_compat.py",
+]
+modules = ["openllm"]
 mypy_path = "typings"
 pretty = true
-python_version = "3.11"
+python_version = "3.8"
 show_error_codes = true
-strict = true
+warn_no_return = false
 warn_return_any = false
 warn_unreachable = true
-warn_unused_ignores = true
+warn_unused_ignores = false
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
 module = [
@@ -396,17 +435,82 @@ module = [
     "optimum.*",
     "inflection.*",
     "huggingface_hub.*",
+    "click_option_group.*",
     "peft.*",
     "auto_gptq.*",
     "vllm.*",
     "orjson.*",
-    "git.*",
     "httpx.*",
     "cloudpickle.*",
     "circus.*",
-    "grpc_health.*",
+    "grpc_health.v1.*",
     "transformers.*",
+    "ghapi.*",
 ]
 [[tool.mypy.overrides]]
 ignore_errors = true
-module = ["openllm.models.*", "openllm._types", "openllm.playground.*"]
+module = ["openllm.models.*", "openllm.playground.*", "openllm._typing_compat"]
+
+[tool.hatch.version]
+fallback-version = "0.0.0"
+source = "vcs"
+[tool.hatch.build.hooks.vcs]
+version-file = "src/openllm/_version.py"
+[tool.hatch.version.raw-options]
+git_describe_command = ["git", "describe", "--dirty", "--tags", "--long", "--first-parent"]
+local_scheme = "no-local-version"
+[tool.hatch.metadata]
+allow-direct-references = true
+[tool.hatch.build.targets.wheel]
+exclude = ["/src/openllm-node"]
+only-include = ["src"]
+sources = ["src"]
+[tool.hatch.build.targets.sdist]
+exclude = ["/.github", "/typings", "/examples", "/assets", "/changelog.d", "/tools", ".git"]
+[tool.hatch.build.targets.wheel.hooks.mypyc]
+dependencies = [
+    "hatch-mypyc==0.16.0",
+    "mypy==1.4.1",
+    # avoid https://github.com/pallets/click/issues/2558
+    "click==8.1.3",
+    "bentoml==1.1.1",
+    "transformers>=4.31.0",
+    "pandas-stubs",
+    "types-psutil",
+    "types-tabulate",
+    "types-PyYAML",
+    "types-protobuf",
+]
+enable-by-default = false
+include = [
+    "src/openllm/bundle",
+    "src/openllm/models/__init__.py",
+    "src/openllm/models/auto/__init__.py",
+    "src/openllm/utils/__init__.py",
+    "src/openllm/utils/codegen.py",
+    "src/openllm/__init__.py",
+    "src/openllm/_prompt.py",
+    "src/openllm/_schema.py",
+    "src/openllm/_quantisation.py",
+    "src/openllm/_generation.py",
+    "src/openllm/_strategies.py",
+    "src/openllm/exceptions.py",
+    "src/openllm/testing.py",
+]
+# NOTE: This is consistent with pyproject.toml
+mypy-args = [
+    "--strict",
+    # this is because all transient library doesn't have types
+    "--allow-subclassing-any",
+    "--follow-imports=skip",
+    "--check-untyped-defs",
+    "--ignore-missing-imports",
+    "--no-warn-return-any",
+    "--warn-unreachable",
+    "--no-warn-no-return",
+    "--no-warn-unused-ignores",
+    "--exclude='/src\\/openllm\\/playground\\/**'",
+    "--exclude='/src\\/openllm\\/_typing_compat\\.py$'",
+]
+options = { verbose = true, strip_asserts = true, debug_level = "2", opt_level = "3", include_runtime_files = true }
+require-runtime-dependencies = true

@@ -1,0 +1,140 @@
+name: Compile PyPI package
+on:
+  workflow_dispatch:
+    inputs:
+      tags:
+        description: 'Tag for releases'
+        required: true
+        type: string
+  workflow_call:
+    inputs:
+      tags:
+        required: true
+        type: string
+    outputs:
+      sucess:
+        description: "Whether the build is successful or not"
+        value: ${{ jobs.sucess-build.outputs.success }}
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+env:
+  LINES: 120
+  COLUMNS: 120
+  HATCH_VERBOSE: 2
+  CIBW_BUILD_FRONTEND: build
+  CIBW_ENVIRONMENT_PASS_LINUX: >
+    HATCH_BUILD_HOOKS_ENABLE
+    MYPYPATH
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+jobs:
+  pure-wheels-sdist:
+    name: Pure wheels and sdist distribution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: '${{ inputs.tags }}'
+      - name: Setup CI
+        uses: ./.github/actions/setup-repo
+      - name: Build
+        run: hatch build
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: python-artefacts
+          path: dist/*
+          if-no-files-found: error
+  mypyc:
+    name: Compiled mypyc wheels (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            name: linux-x86_64
+          # NOTE: darwin amd64
+          - os: macos-latest
+            name: macos-x86_64
+            macos_arch: "x86_64"
+          # NOTE: darwin arm64
+          - os: macos-latest
+            name: macos-arm64
+            macos_arch: "arm64"
+          # NOTE: darwin universal2
+          - os: macos-latest
+            name: macos-universal2
+            macos_arch: "universal2"
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: '${{ inputs.tags }}'
+      - name: Setup CI
+        uses: ./.github/actions/setup-repo
+        with:
+          python-version: 3.9
+      - name: Build wheels via cibuildwheel
+        uses: pypa/cibuildwheel@v2.15.0
+        env:
+          CIBW_BEFORE_BUILD_MACOS: "rustup target add aarch64-apple-darwin"
+          CIBW_ARCHS_MACOS: "${{ matrix.macos_arch }}"
+          MYPYPATH: /project/typings
+      - name: Upload wheels as workflow artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.name }}-mypyc-wheels
+          path: ./wheelhouse/*.whl
+  check-download-artefacts:
+    name: dry-run for downloading artefacts
+    if: github.event_name == 'pull_request'
+    needs: [pure-wheels-sdist, mypyc]
+    runs-on: ubuntu-latest
+    steps:
+      # NOTE: Keep this section in sync with compile-pypi.yml
+      - name: Download Python artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: python-artefacts
+          path: dist
+      - name: Download Linux x86_64 compiled artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: linux-x86_64-mypyc-wheels
+          path: dist
+      - name: Download MacOS x86_64 compiled artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: macos-x86_64-mypyc-wheels
+          path: dist
+      - name: Download MacOS arm64 compiled artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: macos-arm64-mypyc-wheels
+          path: dist
+      - name: Download MacOS universal2 compiled artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: macos-universal2-mypyc-wheels
+          path: dist
+      - name: dry ls
+        run: ls -rthlaR
+  sucess-build: # https://github.com/marketplace/actions/alls-green#why
+    if: always()
+    needs:
+      - pure-wheels-sdist
+      - mypyc
+    runs-on: ubuntu-latest
+    outputs:
+      success: ${{ steps.everygreen.outputs.success }}
+    steps:
+      - name: Decide whether the needed jobs succeeded or failed
+        uses: re-actors/alls-green@release/v1
+        id: evergreen
+        with:
+          jobs: ${{ toJSON(needs) }}

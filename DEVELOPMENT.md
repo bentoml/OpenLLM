@@ -73,9 +73,8 @@ Here's a high-level overview of our project structure:
 openllm/
 ├── examples                 # Usage demonstration scripts
 ├── src
-│   ├── openllm              # Core OpenLLM library
-│   ├── openllm_client       # OpenLLM Python Client code
-│   └── openllm_js           # OpenLLM JavaScript Client code
+│   ├── openllm              # openllm core
+│   └── openllm-node         # openllm nodejs library
 ├── tests                    # Automated Tests
 ├── tools                    # Utilities Script
 ├── typings                  # Typing Checking Utilities Module and Classes
@@ -159,6 +158,18 @@ To filter out most of the generated commits for infrastructure, use
 `--invert-grep` in conjunction with `--grep` to filter out all commits with
 regex `"[generated]"`
 
+## Building compiled module
+
+You can run the following to test the behaviour of the compiled module:
+
+```bash
+hatch run compile
+```
+
+> [!IMPORTANT]
+> This will compiled some performance sensitive modules with mypyc. The compiled `.so` or `.pyd` can be found
+> under `/src/openllm`. If you run into any issue, run `hatch run recompile`
+
 ## Style
 
 See [STYLE.md](STYLE.md) for our style guide.
@@ -171,6 +182,9 @@ To release a new version, use `./tools/run-release-action`. It requires `gh`,
 ```bash
 ./tools/run-release-action --release <major|minor|patch>
 ```
+
+Once the tag is release, run [the release for base container](https://github.com/bentoml/OpenLLM/actions/workflows/build.yml)
+to the latest release tag.
 
 > Note that currently this workflow can only be run by the BentoML team.
 

@@ -5,9 +5,10 @@ import os
 import sys
 import typing as t
 
+import transformers
+
 # import openllm here for OPENLLMDEVDEBUG
 import openllm
-import transformers
 
 # Make sure to have at least one GPU to run this script
 

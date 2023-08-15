@@ -1,20 +1,5 @@
 #!/usr/bin/env python3
-# Copyright 2023 BentoML Team. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 from __future__ import annotations
-
 import dataclasses
 import os
 import typing as t
@@ -25,8 +10,7 @@ import tomlkit
 import openllm
 
 if t.TYPE_CHECKING:
-  from tomlkit.items import Array
-  from tomlkit.items import Table
+  from tomlkit.items import Array, Table
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -134,9 +118,10 @@ _BASE_DEPENDENCIES = [
     Dependencies(name="inflection"),
     Dependencies(name="tabulate", extensions=["widechars"], lower_constraint="0.9.0"),
     Dependencies(name="httpx"),
-    Dependencies(name="click", lower_constraint="8.1.6"),
+    Dependencies(name="click", lower_constraint="8.1.3"),
     Dependencies(name="typing_extensions"),
-    Dependencies(name="GitPython"),
+    Dependencies(name="mypy_extensions"),  # for mypyc compilation
+    Dependencies(name="ghapi"),
     Dependencies(name="cuda-python", platform=("Darwin", "ne")),
     Dependencies(name="bitsandbytes", upper_constraint="0.42"),  # 0.41  works with CUDA 11.8
 ]
@@ -212,7 +197,7 @@ def create_url_table() -> Table:
 def build_cli_extensions() -> Table:
   table = tomlkit.table()
   ext: dict[str, str] = {"openllm": "openllm.cli.entrypoint:cli"}
-  ext.update({f"openllm-{inflection.dasherize(ke)}": f"openllm.cli.ext.{ke}:cli" for ke in sorted([fname[:-3] for fname in os.listdir(os.path.abspath(os.path.join(ROOT, "src", "openllm", "cli", "ext"))) if fname.endswith(".py") and not fname.startswith("__")])})
+  ext.update({f"openllm-{inflection.dasherize(ke)}": f"openllm.cli.extension.{ke}:cli" for ke in sorted([fname[:-3] for fname in os.listdir(os.path.abspath(os.path.join(ROOT, "src", "openllm", "cli", "extension"))) if fname.endswith(".py") and not fname.startswith("__")])})
   table.update(ext)
   return table
 

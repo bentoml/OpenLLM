@@ -1,6 +1,4 @@
-from typing import List
-from typing import Literal
-from typing import Tuple
+from typing import List, Literal, Tuple
 
 from .merger import Merger
 

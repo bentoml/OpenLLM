@@ -87,12 +87,11 @@ _If you have any suggestions, feel free to give it on our discord server!_
   def foo(x): return rotate_cv(x) if x > 0 else -x
   ```
 
-- imports should be grouped by their types, and each import should be designated
-  on its own line.
+- imports should be grouped by their types: standard library, third-party, and local
 
   ```python
-  import os
-  import sys
+  import os, sys
+  import orjson, bentoml
   ```
   This is partially to make it easier to work with merge-conflicts, and easier
   for IDE to navigate context definition.
