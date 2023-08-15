@@ -338,7 +338,7 @@ _extras["__openllm_migration__"] = {"ModelEnv": "EnvVarMixin"}
 
 _import_structure: dict[str, list[str]] = {
     "analytics": [], "codegen": [], "dantic": [], "representation": ["ReprMixin"], "lazy": ["LazyModule"], "import_utils": [
-        "OPTIONAL_DEPENDENCIES", "ENV_VARS_TRUE_VALUES", "DummyMetaclass", "EnvVarMixin", "requires_dependencies", "is_cpm_kernels_available", "is_einops_available", "is_flax_available", "is_tf_available", "is_vllm_available", "is_torch_available", "is_bitsandbytes_available", "is_peft_available", "is_datasets_available", "is_transformers_supports_kbit",
+        "OPTIONAL_DEPENDENCIES", "ENV_VARS_TRUE_VALUES", "DummyMetaclass", "EnvVarMixin", "requires_dependencies", "is_cpm_kernels_available", "is_einops_available", "is_flax_available", "is_tf_available", "is_vllm_available", "is_torch_available", "is_bitsandbytes_available", "is_peft_available", "is_datasets_available", "is_transformers_supports_kbit", "is_ctransformers_available"
         "is_transformers_supports_agent", "is_jupyter_available", "is_jupytext_available", "is_notebook_available", "is_triton_available", "is_autogptq_available", "require_backends",
     ],
 }
@@ -376,6 +376,7 @@ if t.TYPE_CHECKING:
   from .import_utils import is_transformers_supports_kbit as is_transformers_supports_kbit
   from .import_utils import is_triton_available as is_triton_available
   from .import_utils import is_vllm_available as is_vllm_available
+  from .import_utils import is_ctransformers_available as is_ctransformers_available
   from .import_utils import require_backends as require_backends
   from .import_utils import requires_dependencies as requires_dependencies
   from .representation import ReprMixin as ReprMixin

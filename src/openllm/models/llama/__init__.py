@@ -18,6 +18,7 @@ from ...exceptions import MissingDependencyError
 from ...utils import LazyModule
 from ...utils import is_torch_available
 from ...utils import is_vllm_available
+from ...utils import is_ctransformers_available
 
 _import_structure: dict[str, list[str]] = {"configuration_llama": ["LlamaConfig", "START_LLAMA_COMMAND_DOCSTRING", "DEFAULT_PROMPT_TEMPLATE", "PROMPT_MAPPING"]}
 try:
@@ -32,6 +33,12 @@ except MissingDependencyError:
   pass
 else:
   _import_structure["modeling_llama"] = ["Llama"]
+try:
+  if not is_ctransformers_available(): raise MissingDependencyError
+except MissingDependencyError:
+  pass
+else:
+  _import_structure["modelling_ggml_llama"] = ["GGMLLlama"]
 if t.TYPE_CHECKING:
   from .configuration_llama import DEFAULT_PROMPT_TEMPLATE as DEFAULT_PROMPT_TEMPLATE
   from .configuration_llama import PROMPT_MAPPING as PROMPT_MAPPING
@@ -49,5 +56,11 @@ if t.TYPE_CHECKING:
     pass
   else:
     from .modeling_llama import Llama as Llama
+  try:
+    if not is_ctransformers_available(): raise MissingDependencyError
+  except MissingDependencyError:
+    pass
+  else:
+    from .modelling_ggml_llama import GGMLLlama as GGMLLlama
 else:
   sys.modules[__name__] = LazyModule(__name__, globals()["__file__"], _import_structure, module_spec=__spec__)

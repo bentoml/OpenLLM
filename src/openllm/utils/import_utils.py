@@ -76,6 +76,7 @@ _torch_available = importlib.util.find_spec("torch") is not None
 _tf_available = importlib.util.find_spec("tensorflow") is not None
 _flax_available = importlib.util.find_spec("jax") is not None and importlib.util.find_spec("flax") is not None
 _vllm_available = importlib.util.find_spec("vllm") is not None
+_ctransformers_available = importlib.util.find_spec("ctransformers") is not None
 _peft_available = _is_package_available("peft")
 _einops_available = _is_package_available("einops")
 _cpm_kernel_available = _is_package_available("cpm_kernels")
@@ -177,6 +178,10 @@ def is_flax_available() -> bool:
   else:
     _flax_available = False
   return _flax_available
+
+# depedency check for ctransformers
+def is_ctransformers_available() -> bool:
+  return _ctransformers_available
 
 def requires_dependencies(package: str | list[str], *, extra: str | list[str] | None = None) -> t.Callable[[t.Callable[P, t.Any]], t.Callable[P, t.Any]]:
   import openllm.utils
@@ -306,8 +311,13 @@ You can install it with pip: `pip install auto-gptq`. Please note that you may n
 your runtime after installation.
 """
 
+CTRANSFORMERS_IMPORT_ERROR = """{0} requires ctransformers library but it was not found in your environment.
+You can install it with pip: `pip install ctransformers`. Please note that you may need to restart your
+runtime after installation.
+"""
+
 BACKENDS_MAPPING = BackendOrderredDict([("flax", (is_flax_available, FLAX_IMPORT_ERROR)), ("tf", (is_tf_available, TENSORFLOW_IMPORT_ERROR)), ("torch", (is_torch_available, PYTORCH_IMPORT_ERROR)), ("vllm", (is_vllm_available, VLLM_IMPORT_ERROR)), ("cpm_kernels", (is_cpm_kernels_available, CPM_KERNELS_IMPORT_ERROR)), ("einops", (is_einops_available, EINOPS_IMPORT_ERROR)),
-                                        ("triton", (is_triton_available, TRITON_IMPORT_ERROR)), ("datasets", (is_datasets_available, DATASETS_IMPORT_ERROR)), ("peft", (is_peft_available, PEFT_IMPORT_ERROR)), ("bitsandbytes", (is_bitsandbytes_available, BITSANDBYTES_IMPORT_ERROR)), ("auto-gptq", (is_autogptq_available, AUTOGPTQ_IMPORT_ERROR)),])
+                                        ("triton", (is_triton_available, TRITON_IMPORT_ERROR)), ("datasets", (is_datasets_available, DATASETS_IMPORT_ERROR)), ("peft", (is_peft_available, PEFT_IMPORT_ERROR)), ("bitsandbytes", (is_bitsandbytes_available, BITSANDBYTES_IMPORT_ERROR)), ("auto-gptq", (is_autogptq_available, AUTOGPTQ_IMPORT_ERROR)),("ctransformers", (is_ctransformers_available, CTRANSFORMERS_IMPORT_ERROR))])
 
 class DummyMetaclass(ABCMeta):
   """Metaclass for dummy object.
@@ -334,6 +344,8 @@ def require_backends(o: t.Any, backends: t.MutableSequence[str]) -> None:
     if "tf" not in backends and is_tf_available() and not is_vllm_available(): raise ImportError(VLLM_IMPORT_ERROR_WITH_TF.format(name))
     if "flax" not in backends and is_flax_available() and not is_vllm_available(): raise ImportError(VLLM_IMPORT_ERROR_WITH_FLAX.format(name))
 
+  # Not sure, but do we need to see the backend mapping here?
+  
   checks = (BACKENDS_MAPPING[backend] for backend in backends)
   failed = [msg.format(name) for available, msg in checks if not available()]
   if failed: raise ImportError("".join(failed))
