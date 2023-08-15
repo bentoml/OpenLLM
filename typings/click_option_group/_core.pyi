@@ -1,20 +1,10 @@
-from typing import Any
-from typing import Callable
-from typing import Dict
-from typing import List
-from typing import Mapping
-from typing import Optional
-from typing import Sequence
-from typing import Set
-from typing import Tuple
-from typing import TypeAlias
-from typing import TypeVar
-from typing import Union
+import sys, click
+from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Set, Tuple, TypeVar, Union
+if sys.version_info[:2] >= (3, 10):
+  from typing import TypeAlias
+else:
+  from typing_extensions import TypeAlias
 
-import click
-
-_R = TypeVar("_R")
-_T = TypeVar("_T")
 AnyCallable: TypeAlias = Callable[..., Any]
 _FC = TypeVar("_FC", bound=Union[AnyCallable, click.Command])
 

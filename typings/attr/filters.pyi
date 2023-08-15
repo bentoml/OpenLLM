@@ -1,8 +1,6 @@
-from typing import Any
-from typing import Union
+from typing import Any, Union
 
-from . import Attribute
-from . import _FilterType
+from . import Attribute, _FilterType
 
 def include(*what: Union[type, str, Attribute[Any]]) -> _FilterType[Any]: ...
 def exclude(*what: Union[type, str, Attribute[Any]]) -> _FilterType[Any]: ...

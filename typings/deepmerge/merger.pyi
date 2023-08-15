@@ -1,10 +1,9 @@
-from typing import Any
-from typing import Dict
-from typing import List
-from typing import Tuple
-from typing import TypeAlias
-from typing import Union
-
+import sys
+from typing import Any, Dict, List, Tuple, Union
+if sys.version_info[:2] >= (3, 10):
+  from typing import TypeAlias
+else:
+  from typing_extensions import TypeAlias
 from .strategy.core import StrategyList
 from .strategy.dict import DictStrategies
 from .strategy.list import ListStrategies

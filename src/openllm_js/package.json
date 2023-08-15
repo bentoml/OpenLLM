@@ -1,9 +1,0 @@
-{
-  "name": "openllm",
-  "version": "0.0.2",
-  "description": "TS/JS binding for OpenLLM",
-  "type": "module",
-  "repository": "git@github.com:bentoml/OpenLLM.git",
-  "author": "Aaron Pham <29749331+aarnphm@users.noreply.github.com>",
-  "license": "Apache 2.0"
-}

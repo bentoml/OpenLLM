@@ -1,10 +1,8 @@
-from typing import IO
-from typing import Any
+from typing import IO, Any
 
 from _typeshed import Incomplete
 from nbformat import NotebookNode
-from nbformat.v4.rwbase import NotebookReader
-from nbformat.v4.rwbase import NotebookWriter
+from nbformat.v4.rwbase import NotebookReader, NotebookWriter
 
 from .config import JupytextConfiguration
 

@@ -6,12 +6,14 @@ on:
   pull_request:
     branches: [main]
     paths-ignore:
+      - '*.md'
       - 'docs/**'
       - 'bazel/**'
       - 'typings/**'
-      - '*.md'
       - 'changelog.d/**'
       - 'assets/**'
+      - 'openllm-node/**'
+      - 'Formula/**'
 defaults:
   run:
     shell: bash --noprofile --norc -exo pipefail {0}
@@ -20,7 +22,6 @@ concurrency:
   cancel-in-progress: true
 env:
   APP_NAME: openllm
-  PYTHON_VERSION: '3.11'
   PYOXIDIZER_VERSION: '0.24.0'
   HATCH_VERBOSE: 2
 jobs:
@@ -29,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.actor != 'dependabot[bot]' }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # ratchet:actions/checkout@v3
         with:
           fetch-depth: 0
       - name: Setup CI
@@ -40,12 +41,12 @@ jobs:
       - name: Install build frontend
         run: python -m pip install --upgrade build
       - name: Build
-        run: python -m build
+        run: python -m build -sw openllm-python/
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # ratchet:actions/upload-artifact@v3
         with:
-          name: python-artifacts
-          path: dist/*
+          name: binary-artefacts
+          path: openllm-python/dist/*
           if-no-files-found: error
   binaries:
     name: ${{ matrix.job.target }} (${{ matrix.job.os }})
@@ -92,7 +93,7 @@ jobs:
       PYAPP_PIP_EXTERNAL: 'true'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # ratchet:actions/checkout@v3
         with:
           fetch-depth: 0
       - name: Pull latest change
@@ -101,19 +102,19 @@ jobs:
       - name: Fetch PyApp
         run: >-
           mkdir $PYAPP_REPO && curl -L https://github.com/ofek/pyapp/releases/download/v$PYAPP_VERSION/source.tar.gz | tar --strip-components=1 -xzf - -C $PYAPP_REPO
-      - name: Set up Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v4
+      - name: Set up Python
+        uses: actions/setup-python@61a6322f88396a6271a6ee3565807d608ecaddd1 # ratchet:actions/setup-python@v4
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version-file: .python-version-default
       - name: Install Hatch
         run: pip install -U hatch
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@00b49be78f40fba4e87296b2ead62868750bdd83 # ratchet:dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.job.target }}
       - name: Set up cross compiling
         if: matrix.job.cross
-        uses: taiki-e/install-action@v2
+        uses: taiki-e/install-action@5265bea15b0d6367d8e293f306c880f1d0271190 # ratchet:taiki-e/install-action@v2
         with:
           tool: cross
       - name: Configure cross compiling
@@ -127,9 +128,9 @@ jobs:
           fi
       - name: Download Python artifacts
         if: ${{ !startsWith(github.event.ref, 'refs/tags') }}
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
         with:
-          name: python-artifacts
+          name: binary-artefacts
           path: dist
       - name: Configure embedded project
         if: ${{ !startsWith(github.event.ref, 'refs/tags') }}
@@ -173,14 +174,14 @@ jobs:
           done
       - name: Upload staged archive
         if: runner.os != 'Linux'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # ratchet:actions/upload-artifact@v3
         with:
           name: staged-${{ runner.os }}
           path: packaging/*
           if-no-files-found: error
       - name: Upload archive
         if: runner.os == 'Linux'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # ratchet:actions/upload-artifact@v3
         with:
           name: standalone
           path: packaging/*
@@ -194,34 +195,34 @@ jobs:
     if: ${{ github.event_name != 'pull_request' }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
-      - name: Set up Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v4
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # ratchet:actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@61a6322f88396a6271a6ee3565807d608ecaddd1 # ratchet:actions/setup-python@v4
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version-file: .python-version-default
       - name: Pull latest change
         run: git pull --autostash --no-edit --gpg-sign --ff origin main
       - name: Install PyOxidizer ${{ env.PYOXIDIZER_VERSION }}
         run: pip install pyoxidizer==${{ env.PYOXIDIZER_VERSION }}
       - name: Download staged binaries
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
         with:
           name: staged-${{ runner.os }}
           path: archives
       - name: Extract staged binaries
         run: |-
-          mkdir bin
+          mkdir -p bin
           for f in archives/*; do
             7z e "$f" -obin
           done
       # bin/<APP_NAME>-<VERSION>-<TARGET>.exe -> targets/<TARGET>/<APP_NAME>.exe
       - name: Prepare binaries
         run: |-
-          mkdir targets
+          mkdir -p targets
           for f in bin/*; do
-            if [[ "$f" =~ ${{ env.VERSION }}-(.+).exe$ ]]; then
+            if [[ "$f" =~ openllm-${{ env.VERSION }}-(.+).exe$ ]]; then
               target="${BASH_REMATCH[1]}"
-              mkdir "targets/$target"
+              mkdir -p "targets/$target"
               mv "$f" "targets/$target/${{ env.APP_NAME }}.exe"
             fi
           done
@@ -233,13 +234,13 @@ jobs:
           mkdir installers
           mv build/*/release/*/*.{exe,msi} installers
       - name: Upload binaries
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # ratchet:actions/upload-artifact@v3
         with:
           name: standalone
           path: archives/*
           if-no-files-found: error
       - name: Upload installers
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # ratchet:actions/upload-artifact@v3
         with:
           name: installers
           path: installers/*

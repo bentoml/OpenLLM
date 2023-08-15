@@ -19,8 +19,7 @@ All the relevant code for incorporating a new model resides within
       `src/openllm/models/{model_name}/__init__.py`
 - [ ] Adjust the entrypoints for files at `src/openllm/models/auto/*`
 - [ ] Modify the main `__init__.py`: `src/openllm/models/__init__.py`
-- [ ] Develop or adjust dummy objects for dependencies, a task exclusive to the
-      `utils` directory: `src/openllm/utils/*`
+- [ ] Run the following to update stubs: `hatch run check-stubs`
 
 For a working example, check out any pre-implemented model.
 
@@ -58,12 +57,6 @@ the `auto` folder files. There are four entrypoint files:
 - `modeling_auto.py`: Registers a model's PyTorch implementation
 - `modeling_tf_auto.py`: Registers a model's TensorFlow implementation
 - `modeling_flax_auto.py`: Registers a model's Flax implementation
-
-### Dummy Objects
-
-In the `src/openllm/utils` directory, dummy objects are created for each model
-and runtime implementation. These specify the dependencies required for each
-model.
 
 ### Updating README.md
 

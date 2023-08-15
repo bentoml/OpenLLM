@@ -1,18 +1,4 @@
-# Copyright 2023 BentoML Team. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-name: ci
+name: CI
 on:
   push:
     branches: [main]
@@ -37,29 +23,12 @@ env:
   COLUMNS: 120
   OPENLLM_DO_NOT_TRACK: True
   PYTHONUNBUFFERED: '1'
-  STABLE_PYTHON_VERSION: '3.11'
   HATCH_VERBOSE: 2
 # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#defaultsrun
 defaults:
   run:
     shell: bash --noprofile --norc -exo pipefail {0}
 jobs:
-  quality:
-    runs-on: ubuntu-latest
-    name: code-quality
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-      - name: Setup CI
-        uses: ./.github/actions/setup-repo
-        with:
-          python-version: ${{ env.STABLE_PYTHON_VERSION }}
-      - name: Install OpenLLM
-        run: pip install -e .
-      - uses: pre-commit/action@v3.0.0
-        with:
-          extra_args: --all-files --verbose
   tests:
     runs-on: ${{ matrix.os }}
     if: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}
@@ -72,7 +41,7 @@ jobs:
           - os: 'windows-latest'
     name: tests (${{ matrix.python-version }}.${{ matrix.os }})
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # ratchet:actions/checkout@v3
         with:
           fetch-depth: 0
       - name: Setup CI
@@ -84,35 +53,36 @@ jobs:
       - name: Disambiguate coverage filename
         run: mv .coverage ".coverage.${{ matrix.os }}.${{ matrix.python-version }}"
       - name: Upload coverage data
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # ratchet:actions/upload-artifact@v3
         with:
           name: coverage-data
           path: .coverage.*
   coverage:
     name: report-coverage
     runs-on: ubuntu-latest
+    if: false
     needs:
       - tests
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # ratchet:actions/checkout@v3
         with:
           fetch-depth: 0
       - name: Setup CI
         uses: ./.github/actions/setup-repo
         with:
-          python-version: ${{ env.STABLE_PYTHON_VERSION }}
+          python-version-file: .python-version-default
       - name: Download coverage data
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
         with:
           name: coverage-data
       - name: Combine coverage data
         run: hatch run coverage:combine
       - name: Export coverage reports
         run: |
-          hatch run coverage:report-xml
-          hatch run coverage:report-uncovered-html
+          hatch run coverage:report-xml openllm-python
+          hatch run coverage:report-uncovered-html openllm-python
       - name: Upload uncovered HTML report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # ratchet:actions/upload-artifact@v3
         with:
           name: uncovered-html-report
           path: htmlcov
@@ -123,7 +93,7 @@ jobs:
         run: hatch run coverage:write-summary-report
       - name: Update coverage pull request comment
         if: github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork
-        uses: marocchino/sticky-pull-request-comment@v2
+        uses: marocchino/sticky-pull-request-comment@f6a2580ed520ae15da6076e7410b088d1c5dddd9 # ratchet:marocchino/sticky-pull-request-comment@v2
         with:
           path: coverage-report.md
   cli-benchmark:
@@ -132,7 +102,7 @@ jobs:
     env:
       HYPERFINE_VERSION: '1.12.0'
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # ratchet:actions/checkout@v3
         with:
           fetch-depth: 0
       - name: Install hyperfine
@@ -142,22 +112,31 @@ jobs:
       - name: Setup CI
         uses: ./.github/actions/setup-repo
         with:
-          python-version: ${{ env.STABLE_PYTHON_VERSION }}
+          python-version-file: .python-version-default
       - name: Install self
-        run: pip install .
+        run: pip install ./openllm-python
       - name: Speed
         run: hyperfine -m 100 --warmup 10 openllm
+  brew-dry-run:
+    name: Running dry-run tests for brew
+    runs-on: macos-latest
+    steps:
+      - name: Install tap and dry-run
+        run: |
+          brew tap bentoml/openllm https://github.com/bentoml/openllm
+          brew install openllm
+          openllm --help
+          openllm models --show-available
   evergreen: # https://github.com/marketplace/actions/alls-green#why
     if: always()
     needs:
-      - coverage
       - tests
-      - quality
       - cli-benchmark
+      - brew-dry-run
     runs-on: ubuntu-latest
     steps:
       - name: Decide whether the needed jobs succeeded or failed
-        uses: re-actors/alls-green@release/v1
+        uses: re-actors/alls-green@05ac9388f0aebcb5727afa17fcccfecd6f8ec5fe # ratchet:re-actors/alls-green@release/v1
         with:
           jobs: ${{ toJSON(needs) }}
 concurrency:

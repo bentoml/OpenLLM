@@ -18,6 +18,155 @@ This changelog is managed by towncrier and is compiled at release time.
 
 <!-- towncrier release notes start -->
 
+## [0.2.24](https://github.com/bentoml/openllm/tree/v0.2.24)
+No significant changes.
+
+
+## [0.2.23](https://github.com/bentoml/openllm/tree/v0.2.23)
+
+### Features
+
+- Added all compiled wheels for all supported Python version for Linux and MacOS
+  [#201](https://github.com/bentoml/openllm/issues/201)
+
+
+## [0.2.22](https://github.com/bentoml/openllm/tree/v0.2.22)
+No significant changes.
+
+
+## [0.2.21](https://github.com/bentoml/openllm/tree/v0.2.21)
+
+### Changes
+
+- Added lazy eval for compiled modules, which should speed up overall import time
+  [#200](https://github.com/bentoml/openllm/issues/200)
+
+
+### Bug fix
+
+- Fixes compiled wheels ignoring client libraries
+  [#197](https://github.com/bentoml/openllm/issues/197)
+
+
+## [0.2.20](https://github.com/bentoml/openllm/tree/v0.2.20)
+No significant changes.
+
+
+## [0.2.19](https://github.com/bentoml/openllm/tree/v0.2.19)
+No significant changes.
+
+
+## [0.2.18](https://github.com/bentoml/openllm/tree/v0.2.18)
+
+### Changes
+
+- Runners server now will always spawn one instance regardless of the configuration of workers-per-resource
+
+  i.e: If CUDA_VISIBLE_DEVICES=0,1,2 and `--workers-per-resource=0.5`, then runners will only use `0,1` index
+  [#189](https://github.com/bentoml/openllm/issues/189)
+
+
+### Features
+
+- OpenLLM now can also be installed via brew tap:
+  ```bash
+  brew tap bentoml/openllm https://github.com/bentoml/openllm
+
+  brew install openllm
+  ```
+  [#190](https://github.com/bentoml/openllm/issues/190)
+
+
+## [0.2.17](https://github.com/bentoml/openllm/tree/v0.2.17)
+
+### Changes
+
+- Updated loading logics for PyTorch and vLLM where it will check for initialized parameters after placing to correct devices
+
+  Added xformers to base container for requirements on vLLM-based container
+  [#185](https://github.com/bentoml/openllm/issues/185)
+
+
+### Features
+
+- Importing models now won't load into memory if it is a remote ID. Note that for GPTQ and local model the behaviour is unchanged.
+
+  Fixes that when there is one GPU, we ensure to call `to('cuda')` to place the model onto the memory. Note that the GPU must have
+  enough VRAM to offload this model onto the GPU.
+  [#183](https://github.com/bentoml/openllm/issues/183)
+
+
+## [0.2.16](https://github.com/bentoml/openllm/tree/v0.2.16)
+No significant changes.
+
+
+## [0.2.15](https://github.com/bentoml/openllm/tree/v0.2.15)
+No significant changes.
+
+
+## [0.2.14](https://github.com/bentoml/openllm/tree/v0.2.14)
+
+### Bug fix
+
+- Fixes a bug with `EnvVarMixin` where it didn't respect environment variable for specific fields
+
+  This inherently provide a confusing behaviour with `--model-id`. This is now has been addressed with main
+
+  The base docker will now also include a installation of xformers from source, locked at a given hash, since the latest release of xformers
+  are too old and would fail with vLLM when running within the k8s
+  [#181](https://github.com/bentoml/openllm/issues/181)
+
+
+## [0.2.13](https://github.com/bentoml/openllm/tree/v0.2.13)
+No significant changes.
+
+
+## [0.2.12](https://github.com/bentoml/openllm/tree/v0.2.12)
+
+### Features
+
+- Added support for base container with OpenLLM. The base container will contains all necessary requirements
+  to run OpenLLM. Currently it does included compiled version of FlashAttention v2, vLLM, AutoGPTQ and triton.
+
+  This will now be the base image for all future BentoLLM. The image will also be published to public GHCR.
+
+  To extend and use this image into your bento, simply specify ``base_image`` under ``bentofile.yaml``:
+
+  ```yaml
+  docker:
+    base_image: ghcr.io/bentoml/openllm:<hash>
+  ```
+
+  The release strategy would include:
+  - versioning of ``ghcr.io/bentoml/openllm:sha-<sha1>`` for every commit to main, ``ghcr.io/bentoml/openllm:0.2.11`` for specific release version
+  - alias ``latest`` will be managed with docker/build-push-action (discouraged)
+
+  Note that all these images include compiled kernels that has been tested on Ampere GPUs with CUDA 11.8.
+
+  To quickly run the image, do the following:
+
+  ```bash
+  docker run --rm --gpus all -it -v /home/ubuntu/.local/share/bentoml:/tmp/bentoml -e BENTOML_HOME=/tmp/bentoml \
+              -e OPENLLM_USE_LOCAL_LATEST=True -e OPENLLM_LLAMA_FRAMEWORK=vllm ghcr.io/bentoml/openllm:2b5e96f90ad314f54e07b5b31e386e7d688d9bb2 start llama --model-id meta-llama/Llama-2-7b-chat-hf --workers-per-resource conserved --debug`
+  ```
+
+  In conjunction with this, OpenLLM now also have a set of small CLI utilities via ``openllm ext`` for ease-of-use
+
+  General fixes around codebase bytecode optimization
+
+  Fixes logs output to filter correct level based on ``--debug`` and ``--quiet``
+
+  ``openllm build`` now will default run model check locally. To skip it pass in ``--fast`` (before this is the default behaviour, but ``--no-fast`` as default makes more sense here as ``openllm build`` should also be able to run standalone)
+
+  All ``LlaMA`` namespace has been renamed to ``Llama`` (internal change and shouldn't affect end users)
+
+  ``openllm.AutoModel.for_model`` now will always return the instance. Runner kwargs will be handled via create_runner
+  [#142](https://github.com/bentoml/openllm/issues/142)
+- All OpenLLM base container now are scanned for security vulnerabilities using
+  trivy (both SBOM mode and CVE)
+  [#169](https://github.com/bentoml/openllm/issues/169)
+
+
 ## [0.2.11](https://github.com/bentoml/openllm/tree/v0.2.11)
 
 ### Features

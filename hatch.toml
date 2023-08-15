@@ -1,72 +1,6 @@
-[metadata.hooks.fancy-pypi-readme]
-content-type = "text/markdown"
-# PyPI doesn't support the <picture> tag.
-[[metadata.hooks.fancy-pypi-readme.fragments]]
-text = """
-<p align="center">
-  <a href="https://github.com/bentoml/openllm">
-    <img src="https://raw.githubusercontent.com/bentoml/openllm/main/assets/main-banner.png" alt="Banner for OpenLLM" />
-  </a>
-</p>
-
-"""
-[[metadata.hooks.fancy-pypi-readme.fragments]]
-end-before = "\n<!-- hatch-fancy-pypi-readme intro stop -->\n"
-path = "README.md"
-start-after = "<!-- hatch-fancy-pypi-readme intro start -->\n"
-[[metadata.hooks.fancy-pypi-readme.fragments]]
-text = """
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/bentoml/openllm/main/assets/output.gif" alt="Gif showing OpenLLM Intro" />
-</p>
-"""
-[[metadata.hooks.fancy-pypi-readme.fragments]]
-end-before = "\n<!-- hatch-fancy-pypi-readme interim stop -->\n"
-path = "README.md"
-start-after = "<!-- hatch-fancy-pypi-readme interim start -->\n"
-[[metadata.hooks.fancy-pypi-readme.fragments]]
-text = """
-<p align="center">
-  <img src="https://raw.githubusercontent.com/bentoml/openllm/main/assets/agent.gif" alt="Gif showing Agent integration" />
-</p>
-"""
-[[metadata.hooks.fancy-pypi-readme.fragments]]
-end-before = "\n<!-- hatch-fancy-pypi-readme meta stop -->"
-path = "README.md"
-start-after = "<!-- hatch-fancy-pypi-readme meta start -->\n"
-[[metadata.hooks.fancy-pypi-readme.fragments]]
-text = """
-
-## Release Information
-
-"""
-[[tool.hatch.metadata.hooks.fancy-pypi-readme.fragments]]
-path = "CHANGELOG.md"
-pattern = "\n(###.+?\n)## "
-[[metadata.hooks.fancy-pypi-readme.fragments]]
-text = """
-
----
-
-[Click me for full changelog](https://github.com/bentoml/openllm/blob/main/CHANGELOG.md)
-"""
-[version]
-fallback-version = "0.0.0"
-source = "vcs"
-[build.hooks.vcs]
-version-file = "src/openllm/_version.py"
-[version.raw-options]
-git_describe_command = ["git", "describe", "--dirty", "--tags", "--long", "--first-parent"]
-local_scheme = "no-local-version"
-[metadata]
-allow-direct-references = true
-[build.targets.wheel]
-packages = ["src/openllm", "src/openllm_client"]
-[build.targets.sdist]
-exclude = ["/.github", "/typings", "/examples", "/assets", "/changelog.d", "/tools", ".git"]
 [envs.default]
 dependencies = [
+    "openllm[opt,chatglm,fine-tune] @ {root:uri}/openllm-python",
     # NOTE: To run all hooks
     "pre-commit",
     # NOTE: towncrier for changelog
@@ -77,30 +11,37 @@ dependencies = [
     "markdown-it-py",
     # NOTE: For fancy PyPI readme
     "hatch-fancy-pypi-readme",
+    # NOTE: For working with shell pipe
+    "plumbum",
     # The below sync with mypyc deps and pre-commit mypy
     "types-psutil",
     "types-tabulate",
     "types-PyYAML",
     "types-protobuf",
 ]
+pre-install-commands = [
+    "pip install -e ./openllm-python", #
+]
 [envs.default.scripts]
 changelog = "towncrier build --version main --draft"
+check-stubs = ["./tools/update-config-stubs.py", "./tools/update-models-import.py", "update-dummy"]
+compile = "bash ./compile.sh {args}"
 inplace-changelog = "towncrier build --version main --keep"
 quality = [
     "./tools/dependencies.py",
     "./tools/update-readme.py",
-    "./tools/update-config-stubs.py",
-    "./tools/update-models-import.py",
-    "- ./tools/add-license-headers .",
-    "pre-commit run --all-files",
+    "- ./tools/update-brew-tap.py",
+    "check-stubs",
+    "- pre-commit run --all-files",
 ]
-setup = "pre-commit install"
+recompile = ["bash ./clean.sh", "compile"]
+setup = ["pre-commit install", "- ln -s .python-version-default .python-version"]
+tool = ["quality", "recompile -nx"]
 typing = ["- pre-commit run mypy {args:-a}", "- pre-commit run pyright {args:-a}"]
-[envs.ui]
-[envs.ui.scripts]
-clojure = "cd dashboard/clojure && npm install && npm run dev"
+update-dummy = ["- ./tools/update-dummy.py", "./tools/update-dummy.py"]
 [envs.tests]
 dependencies = [
+    "openllm[opt,chatglm,fine-tune] @ {root:uri}/openllm-python",
     # NOTE: interact with docker for container tests.
     "docker",
     # NOTE: Tests strategies with Hypothesis and pytest, and snapshot testing with syrupy
@@ -117,15 +58,14 @@ dependencies = [
     "hypothesis",
     "syrupy",
 ]
-features = ['flan-t5', 'baichuan']
 skip-install = false
-template = 'tests'
+template = "tests"
 [envs.tests.scripts]
 _run_script = "pytest --cov --cov-report={env:COVERAGE_REPORT:term-missing} --cov-config=pyproject.toml -vv"
-distributed = "_run_script --reruns 5 --reruns-delay 3 --ignore tests/models -n 3 -r aR {args:tests}"
-models = "_run_script -s {args:tests/models}"
-python = "_run_script --reruns 5 --reruns-delay 3 --ignore tests/models -r aR {args:tests}"
-snapshot-models = "_run_script -s --snapshot-update {args:tests/models}"
+distributed = "_run_script --reruns 5 --reruns-delay 3 --ignore openllm-python/tests/models -n 3 -r aR {args:openllm-python/tests}"
+models = "_run_script -s {args:openllm-python/tests/models}"
+python = "_run_script --reruns 5 --reruns-delay 3 --ignore openllm-python/tests/models -r aR {args:openllm-python/tests}"
+snapshot-models = "_run_script -s --snapshot-update {args:openllm-python/tests/models}"
 [envs.tests.overrides]
 env.GITHUB_ACTIONS.env-vars = "COVERAGE_REPORT="
 [envs.coverage]
@@ -134,22 +74,9 @@ detached = true
 [envs.coverage.scripts]
 combine = "coverage combine {args}"
 generate-summary = "python tools/generate-coverage.py"
-report-uncovered-html = "coverage html --skip-covered --skip-empty"
-report-xml = "coverage xml"
+report-uncovered-html = "coverage html --skip-covered --skip-empty {args}"
+report-xml = "coverage xml {args}"
 write-summary-report = "python tools/write-coverage-report.py"
-[build.targets.wheel.hooks.mypyc]
-dependencies = [
-    "hatch-mypyc>=0.14.1",
-    "click>=8.1.6",
-    "peft",
-    "git+https://github.com/bentoml/BentoML.git@main",
-    "git+https://github.com/huggingface/transformers.git@main",
-    "types-psutil",
-    "types-tabulate",
-    "types-PyYAML",
-    "types-protobuf",
-]
-enable-by-default = false
-mypy-args = ["--no-warn-unused-ignores"]
-require-runtime-dependencies = true
-require-runtime-features = ["agents", "chatglm", "opt"]
+[envs.ui]
+[envs.ui.scripts]
+clojure = ["cd dashboard/clojure && npm install", "npm run dev"]
