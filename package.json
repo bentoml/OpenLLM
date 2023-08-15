@@ -1,6 +1,6 @@
 {
   "name": "openllm",
-  "version": "0.2.23.dev0",
+  "version": "0.2.23",
   "description": "OpenLLM: Operating LLMs in production",
   "repository": "git@github.com:bentoml/OpenLLM.git",
   "author": "Aaron Pham <29749331+aarnphm@users.noreply.github.com>",

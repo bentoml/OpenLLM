@@ -18,6 +18,14 @@ This changelog is managed by towncrier and is compiled at release time.
 
 <!-- towncrier release notes start -->
 
+## [0.2.23](https://github.com/bentoml/openllm/tree/v0.2.23)
+
+### Features
+
+- Added all compiled wheels for all supported Python version for Linux and MacOS
+  [#201](https://github.com/bentoml/openllm/issues/201)
+
+
 ## [0.2.22](https://github.com/bentoml/openllm/tree/v0.2.22)
 No significant changes.
 
