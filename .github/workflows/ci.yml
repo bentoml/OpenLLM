@@ -42,7 +42,7 @@ jobs:
         with:
           python-version: ${{ env.STABLE_PYTHON_VERSION }}
       - name: Install OpenLLM
-        run: pip install -e .
+        run: pip install -e ./openllm-python
       - uses: pre-commit/action@v3.0.0
         with:
           extra_args: --verbose
@@ -79,6 +79,9 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - tests
+    defaults:
+      run:
+        working-directory: ./openllm-python
     steps:
       - uses: actions/checkout@v3
         with:

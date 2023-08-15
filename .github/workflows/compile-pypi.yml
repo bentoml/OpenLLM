@@ -63,15 +63,15 @@ jobs:
           - os: ubuntu-latest
             name: linux-x86_64
           # NOTE: darwin amd64
-          - os: macos-latest
+          - os: macos-13
             name: macos-x86_64
             macos_arch: "x86_64"
           # NOTE: darwin arm64
-          - os: macos-latest
+          - os: macos-13
             name: macos-arm64
             macos_arch: "arm64"
           # NOTE: darwin universal2
-          - os: macos-latest
+          - os: macos-13
             name: macos-universal2
             macos_arch: "universal2"
     steps:
@@ -82,7 +82,7 @@ jobs:
       - name: Setup CI
         uses: ./.github/actions/setup-repo
         with:
-          python-version: 3.9
+          python-version: 3.8
       - name: Build wheels via cibuildwheel
         uses: pypa/cibuildwheel@v2.15.0
         with:
@@ -92,6 +92,7 @@ jobs:
           CIBW_BEFORE_BUILD_MACOS: "rustup target add aarch64-apple-darwin"
           CIBW_ARCHS_MACOS: "${{ matrix.macos_arch }}"
           MYPYPATH: /project/typings
+          MACOSX_DEPLOYMENT_TARGET: 11.0
       - name: Upload wheels as workflow artifacts
         uses: actions/upload-artifact@v3
         with:
