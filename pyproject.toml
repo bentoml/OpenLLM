@@ -369,11 +369,15 @@ exclude = [
     "openllm-python/src/openllm/utils/dummy_*.py",
     "openllm-python/src/openllm/_typing_compat.py",
     "openllm-python/tests",
+    "cz.py",
+    "hatch_build.py",
     "tools",
     "examples",
+    "typings",
 ]
-include = ["openllm-python/src/openllm"]
+executionEnvironments = [{ root = "openllm-python/src" }]
 pythonVersion = "3.12"
+enableExperimentalFeatures = true
 reportMissingImports = "warning"
 reportMissingTypeStubs = false
 reportPrivateUsage = "warning"
