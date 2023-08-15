@@ -165,7 +165,7 @@ jobs:
           name: macos-universal2-mypyc-wheels
           path: dist
       - name: Publish nightly wheels to test.pypi.org
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@b7f401de30cb6434a1e19f805ff006643653240e # ratchet:pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/simple/
   sucess-build: # https://github.com/marketplace/actions/alls-green#why
