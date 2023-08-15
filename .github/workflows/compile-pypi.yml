@@ -83,8 +83,6 @@ jobs:
         uses: ./.github/actions/setup-repo
         with:
           python-version: 3.9
-      - name: Check working directory
-        run: pwd || exit 1
       - name: Build wheels via cibuildwheel
         uses: pypa/cibuildwheel@v2.15.0
         with:

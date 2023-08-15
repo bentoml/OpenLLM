@@ -130,7 +130,7 @@ jobs:
         with:
           python-version: ${{ env.STABLE_PYTHON_VERSION }}
       - name: Install self
-        run: pip install .
+        run: pip install ./openllm-python
       - name: Speed
         run: hyperfine -m 100 --warmup 10 openllm
   brew-dry-run:
