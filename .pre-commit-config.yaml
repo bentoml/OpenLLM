@@ -14,7 +14,7 @@
 
 ci:
   autoupdate_schedule: weekly
-  skip: [check-models-table-update, changelog-dry-run, pyright, yapf, mypy]
+  skip: [check-models-table-update, changelog-dry-run, pyright, yapf, mypy, sync-readme]
   autofix_commit_msg: "ci: auto fixes from pre-commit.ci\n\nFor more information, see https://pre-commit.ci"
   autoupdate_commit_msg: 'ci: pre-commit autoupdate [pre-commit.ci]'
   autofix_prs: false
@@ -50,6 +50,7 @@ repos:
               tools/.*|
               tests/.*|
               openllm-python/src/openllm/playground/.*|
+              openllm-python/tests/.*|
               .github/.*|
               cz.py |
               hatch_build.py
@@ -91,6 +92,12 @@ repos:
       - id: check-models-table-update
         name: check if table in README.md is up-to-date
         entry: ./tools/assert-model-table-latest
+        language: script
+        verbose: true
+        files: README.md
+      - id: sync-readme
+        name: sync readme with python core library
+        entry: ./tools/sync-readme
         language: script
         verbose: true
         files: README.md

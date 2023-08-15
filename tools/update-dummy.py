@@ -5,18 +5,19 @@ from pathlib import Path
 _ROOT = Path(__file__).parent.parent
 
 sys.path.insert(0, (_ROOT/"openllm-python"/"src").__fspath__())
-
 from openllm._configuration import LiteralRuntime
+from openllm.models import auto
+from openllm import CONFIG_MAPPING
 
 if t.TYPE_CHECKING: from collections import OrderedDict
 
-config_requirements = {k:[_.replace("-", "_") for _ in v.__openllm_requirements__] if v.__openllm_requirements__ else None for k,v in openllm.CONFIG_MAPPING.items()}
+config_requirements = {k:[_.replace("-", "_") for _ in v.__openllm_requirements__] if v.__openllm_requirements__ else None for k,v in CONFIG_MAPPING.items()}
 _dependencies: dict[LiteralRuntime,str] = {k:v for k,v in zip(LiteralRuntime.__args__, ("torch", "tensorflow", "flax", "vllm"))}
 _auto: dict[str,str] = {k:v for k,v in zip(LiteralRuntime.__args__, ("AutoLLM", "AutoTFLLM", "AutoFlaxLLM", "AutoVLLM"))}
 
 def get_target_dummy_file(framework: LiteralRuntime) -> Path: return _ROOT/"openllm-python"/"src"/"openllm"/"utils"/f"dummy_{framework}_objects.py"
 def mapping_names(framework: LiteralRuntime): return "MODEL_MAPPING_NAMES" if framework == "pt" else f"MODEL_{framework.upper()}_MAPPING_NAMES"
-def get_mapping(framework: LiteralRuntime) -> OrderedDict[t.Any, t.Any]: return getattr(openllm.models.auto, mapping_names(framework))
+def get_mapping(framework: LiteralRuntime) -> OrderedDict[t.Any, t.Any]: return getattr(auto, mapping_names(framework))
 
 def make_class_stub(model_name: str, framework: LiteralRuntime, indentation: int = 2, auto: bool = False) -> list[str]:
   _dep_list: list[str] = [f'"{v}"' for v in [_dependencies[framework], *(t.cast(t.List[str], config_requirements[model_name]) if model_name != "__default__" and config_requirements[model_name] else [])]]
