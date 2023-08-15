@@ -68,7 +68,7 @@ jobs:
     needs:
       - release
     name: Compile PyPI distribution for OpenLLM
-    uses: bentoml/OpenLLM/.github/workflows/compile-pypi.yml@2d33100d729008e322209b090f9dcbb40840b5f4 # ratchet:bentoml/OpenLLM/.github/workflows/compile-pypi.yml@main
+    uses: bentoml/OpenLLM/.github/workflows/compile-pypi.yml@cd872ef631cfb18fff624d14274240d2729ad18e # ratchet:bentoml/OpenLLM/.github/workflows/compile-pypi.yml@main
     with:
       tags: ${{ needs.release.outputs.version }}
   publish-python:
@@ -173,7 +173,7 @@ jobs:
     if: github.repository_owner == 'bentoml'
     needs: compile-pypi
     name: Create binary/wheels distribution
-    uses: bentoml/OpenLLM/.github/workflows/binary-releases.yml@2d33100d729008e322209b090f9dcbb40840b5f4 # ratchet:bentoml/OpenLLM/.github/workflows/binary-releases.yml@main
+    uses: bentoml/OpenLLM/.github/workflows/binary-releases.yml@cd872ef631cfb18fff624d14274240d2729ad18e # ratchet:bentoml/OpenLLM/.github/workflows/binary-releases.yml@main
   release-notes:
     if: github.repository_owner == 'bentoml'
     needs:
@@ -181,7 +181,7 @@ jobs:
       - publish-python
       - binary-distribution
     name: Create release notes and setup for next cycle
-    uses: bentoml/OpenLLM/.github/workflows/release-notes.yml@2d33100d729008e322209b090f9dcbb40840b5f4 # ratchet:bentoml/OpenLLM/.github/workflows/release-notes.yml@main
+    uses: bentoml/OpenLLM/.github/workflows/release-notes.yml@cd872ef631cfb18fff624d14274240d2729ad18e # ratchet:bentoml/OpenLLM/.github/workflows/release-notes.yml@main
     with:
       tags: ${{ needs.release.outputs.version }}
   bump-homebrew-tap:
