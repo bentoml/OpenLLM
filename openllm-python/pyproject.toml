@@ -155,7 +155,6 @@ allow-direct-references = true
 [tool.hatch.build.targets.wheel]
 only-include = ["src/openllm"]
 sources = ["src"]
-dev-mode-dirs = ["."]
 [tool.hatch.build.targets.sdist]
 exclude = ["/.git_archival.txt"]
 [tool.hatch.build.targets.wheel.hooks.mypyc]
