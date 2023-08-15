@@ -43,15 +43,19 @@ jobs:
         uses: ./.github/actions/setup-repo
       - name: Build
         run: hatch build
+        working-directory: openllm-python
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
           name: python-artefacts
-          path: dist/*
+          path: openllm-python/dist/*
           if-no-files-found: error
   mypyc:
     name: Compiled mypyc wheels (${{ matrix.name }})
     runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: ./openllm-python
     strategy:
       fail-fast: false
       matrix:
@@ -79,6 +83,8 @@ jobs:
         uses: ./.github/actions/setup-repo
         with:
           python-version: 3.9
+      - name: Check working directory
+        run: pwd || exit 1
       - name: Build wheels via cibuildwheel
         uses: pypa/cibuildwheel@v2.15.0
         env:

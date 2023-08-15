@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import importlib, os, openllm
+import importlib, os, sys
 from pathlib import Path
-from openllm._configuration import GenerationConfig, ModelSettings, PeftType, SamplingParams
 
 # currently we are assuming the indentatio level is 2 for comments
 START_COMMENT = f"# {os.path.basename(__file__)}: start\n"
@@ -12,7 +11,12 @@ END_SPECIAL_COMMENT = f"# {os.path.basename(__file__)}: special stop\n"
 START_ATTRS_COMMENT = f"# {os.path.basename(__file__)}: attrs start\n"
 END_ATTRS_COMMENT = f"# {os.path.basename(__file__)}: attrs stop\n"
 
-_TARGET_FILE = Path(__file__).parent.parent/"openllm-python"/"src"/"openllm"/"_configuration.py"
+ROOT = Path(__file__).parent.parent
+
+_TARGET_FILE = ROOT/"openllm-python"/"src"/"openllm"/"_configuration.py"
+
+sys.path.insert(0, (ROOT/"openllm-python"/"src").__fspath__())
+from openllm._configuration import GenerationConfig, ModelSettings, PeftType, SamplingParams
 _imported = importlib.import_module(ModelSettings.__module__)
 
 def process_annotations(annotations: str) -> str:

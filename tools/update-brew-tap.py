@@ -22,8 +22,7 @@ def determine_release_url(svn_url: str, tag: str, target: t.Literal["macos_arm",
   return f"{svn_url}/releases/download/{tag}/openllm-{tag.replace('v', '')}-{_gz_strategies[target]}.tar.gz"
 
 # curl -sSL <svn_url>/archive/refs/tags/<tag>.tar.gz | shasum -a256 | cut -d'' -f1
-def get_release_hash_command(svn_url: str, tag: str) -> Pipeline:
-  return curl["-sSL", svn_url] | shasum["-a256"] | cut["-d", " ", "-f1"]
+def get_release_hash_command(svn_url: str, tag: str) -> Pipeline: return curl["-sSL", svn_url] | shasum["-a256"] | cut["-d", " ", "-f1"]
 
 def main() -> int:
   api = GhApi(owner=_OWNER, repo=_REPO, authenticate=False)

@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import os, typing as t, openllm
+import os, typing as t, sys
 from pathlib import Path
+_ROOT = Path(__file__).parent.parent
+
+sys.path.insert(0, (_ROOT/"openllm-python"/"src").__fspath__())
+
 from openllm._configuration import LiteralRuntime
 
 if t.TYPE_CHECKING: from collections import OrderedDict
 
-_ROOT = Path(__file__).parent.parent
 config_requirements = {k:[_.replace("-", "_") for _ in v.__openllm_requirements__] if v.__openllm_requirements__ else None for k,v in openllm.CONFIG_MAPPING.items()}
 _dependencies: dict[LiteralRuntime,str] = {k:v for k,v in zip(LiteralRuntime.__args__, ("torch", "tensorflow", "flax", "vllm"))}
 _auto: dict[str,str] = {k:v for k,v in zip(LiteralRuntime.__args__, ("AutoLLM", "AutoTFLLM", "AutoFlaxLLM", "AutoVLLM"))}

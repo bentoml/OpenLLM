@@ -167,8 +167,9 @@ hatch run compile
 ```
 
 > [!IMPORTANT]
-> This will compiled some performance sensitive modules with mypyc. The compiled `.so` or `.pyd` can be found
-> under `/src/openllm`. If you run into any issue, run `hatch run recompile`
+> This will compiled some performance sensitive modules with mypyc.
+> The compiled `.so` or `.pyd` can be found
+> under `/openllm-python/src/openllm`. If you run into any issue, run `hatch run recompile`
 
 ## Style
 

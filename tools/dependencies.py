@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import dataclasses, os, typing as t
-import inflection, tomlkit, openllm
+import dataclasses, os, typing as t, sys
+import inflection, tomlkit
 from ghapi.all import GhApi
 if t.TYPE_CHECKING: from tomlkit.items import Array, Table
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-_OWNER = "bentoml"
-_REPO = "openllm"
+sys.path.insert(0, os.path.join(ROOT, "openllm-python", "src"))
+
+import openllm
+
+_OWNER, _REPO = "bentoml", "openllm"
 
 @dataclasses.dataclass(frozen=True)
 class Classifier:
@@ -25,10 +28,8 @@ class Classifier:
     return cls_.joiner.join([cls_.identifier[identifier], *decls])
   @staticmethod
   def create_python_classifier(implementation: list[str] | None = None, supported_version: list[str] | None = None) -> list[str]:
-    if supported_version is None:
-      supported_version = ["3.8", "3.9", "3.10", "3.11", "3.12"]
-    if implementation is None:
-      implementation = ["CPython", "PyPy"]
+    if supported_version is None: supported_version = ["3.8", "3.9", "3.10", "3.11", "3.12"]
+    if implementation is None: implementation = ["CPython", "PyPy"]
     base = [Classifier.create_classifier("language", "Python"), Classifier.create_classifier("language", "Python", "3"),]
     base.append(Classifier.create_classifier("language", "Python", "3", "Only"))
     base.extend([Classifier.create_classifier("language", "Python", version) for version in supported_version])
@@ -48,7 +49,6 @@ class Dependencies:
   lower_constraint: t.Optional[str] = None
   upper_constraint: t.Optional[str] = None
   platform: t.Optional[t.Tuple[t.Literal["Linux", "Windows", "Darwin"], t.Literal["eq", "ne"]]] = None
-
   def with_options(self, **kwargs: t.Any) -> Dependencies: return dataclasses.replace(self, **kwargs)
   @property
   def has_constraint(self) -> bool: return self.lower_constraint is not None or self.upper_constraint is not None
@@ -91,11 +91,6 @@ _BASE_DEPENDENCIES = [
     Dependencies(name="cuda-python", platform=("Darwin", "ne")),
     Dependencies(name="bitsandbytes", upper_constraint="0.42"),  # 0.41  works with CUDA 11.8
 ]
-
-_NIGHTLY_MAPPING: dict[str, Dependencies] = {
-    "bentoml": Dependencies.from_tuple("bentoml", "bentoml/bentoml", "main", _BENTOML_EXT), "peft": Dependencies.from_tuple("peft", "huggingface/peft", "main", None), "transformers": Dependencies.from_tuple("transformers", "huggingface/transformers", "main", _TRANSFORMERS_EXT), "optimum": Dependencies.from_tuple("optimum", "huggingface/optimum", "main", None),
-    "accelerate": Dependencies.from_tuple("accelerate", "huggingface/accelerate", "main", None), "bitsandbytes": Dependencies.from_tuple("bitsandbytes", "TimDettmers/bitsandbytes", "main", None), "trl": Dependencies.from_tuple("trl", "lvwerra/trl", "main", None), "vllm": Dependencies.from_tuple("vllm", "vllm-project/vllm", "main", None, None, True, None),
-}
 
 _ALL_RUNTIME_DEPS = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
 FINE_TUNE_DEPS = ["peft>=0.4.0", "bitsandbytes", "datasets", "accelerate", "trl"]
@@ -151,19 +146,59 @@ def create_optional_table() -> Table:
 
   return table
 
-def create_url_table() -> Table:
+def create_url_table(_info: t.Any) -> Table:
   table = tomlkit.table()
   _urls = {
-      "Blog": "https://modelserving.com", "Chat": "https://discord.gg/openllm", "Documentation": "https://github.com/bentoml/openllm#readme", "GitHub": "https://github.com/bentoml/openllm", "History": "https://github.com/bentoml/openllm/blob/main/CHANGELOG.md", "Homepage": "https://bentoml.com", "Tracker": "https://github.com/bentoml/openllm/issues",
+      "Blog": "https://modelserving.com", "Chat": "https://discord.gg/openllm", "Documentation": "https://github.com/bentoml/openllm#readme",
+      "GitHub": _info.html_url,
+      "History": f"{_info.html_url}/blob/main/CHANGELOG.md",
+      "Homepage": _info.homepage,
+      "Tracker": f"{_info.html_url}/issues",
       "Twitter": "https://twitter.com/bentomlai",
   }
   table.update({k: v for k, v in sorted(_urls.items())})
   return table
 
+def build_system() -> Table:
+  table = tomlkit.table()
+  table.add("build-backend", "hatchling.build")
+  requires_array = tomlkit.array()
+  requires_array.extend(["hatchling==1.18.0", "hatch-vcs==0.3.0", "hatch-fancy-pypi-readme==23.1.0", "hatch-mypyc==0.16.0"])
+  table.add("requires", requires_array.multiline(True))
+  return table
+
+def authors() -> Array:
+  arr = tomlkit.array()
+  arr.append(dict(name="Aaron Pham", email="aarnphm@bentoml.com"))
+  arr.append(dict(name="BentoML Team", email="contact@bentoml.com"))
+  return arr.multiline(True)
+
+def keywords() -> Array:
+  arr = tomlkit.array()
+  arr.extend([
+    "MLOps",
+    "AI",
+    "BentoML",
+    "Model Serving",
+    "Model Deployment",
+    "LLMOps",
+    "Falcon",
+    "Vicuna",
+    "Llama 2",
+    "Fine tuning",
+    "Serverless",
+    "Large Language Model",
+    "Generative AI",
+    "StableLM",
+    "Alpaca",
+    "PyTorch",
+    "Transformers"])
+  return arr
+
 def build_cli_extensions() -> Table:
   table = tomlkit.table()
   ext: dict[str, str] = {"openllm": "openllm.cli.entrypoint:cli"}
-  ext.update({f"openllm-{inflection.dasherize(ke)}": f"openllm.cli.extension.{ke}:cli" for ke in sorted([fname[:-3] for fname in os.listdir(os.path.abspath(os.path.join(ROOT, "src", "openllm", "cli", "extension"))) if fname.endswith(".py") and not fname.startswith("__")])})
+  ext.update({f"openllm-{inflection.dasherize(ke)}": f"openllm.cli.extension.{ke}:cli" for ke in sorted([fname[:-3] for fname in os.listdir(os.path.abspath(os.path.join(ROOT, "openllm-python", "src", "openllm", "cli", "extension"))) if fname.endswith(".py") and not fname.startswith("__")])})
   table.update(ext)
   return table
 
@@ -174,19 +209,24 @@ def main() -> int:
 
   dependencies_array = tomlkit.array()
   dependencies_array.extend([v.to_str() for v in _BASE_DEPENDENCIES])
-  keywords_array = tomlkit.array()
-  keywords_array.extend([inflection.humanize(i.replace("-", " ")) for i in _info.topics])
+  # dynamic field
+  dyn_arr = tomlkit.array()
+  dyn_arr.extend(["version", "readme"])
 
-  pyproject["project"]["urls"] = create_url_table()
-  pyproject["project"]["scripts"] = build_cli_extensions()
+  pyproject["build-system"] = build_system()
+  pyproject["project"]["authors"] = authors()
   pyproject["project"]["classifiers"] = create_classifiers()
-  pyproject["project"]["optional-dependencies"] = create_optional_table()
   pyproject["project"]["dependencies"] = dependencies_array.multiline(True)
   pyproject["project"]["description"] = f"{_info.name}: {_info.description}"
-  pyproject["project"]["keywords"] = keywords_array.multiline(True)
+  pyproject["project"]["dynamic"] = dyn_arr
+  pyproject["project"]["keywords"] = keywords().multiline(True)
   pyproject["project"]["license"] = _info.license.spdx_id
-  pyproject["project"]["name"] = _info.name.lower()
-  pyproject["project"]["requires-python"] = ">3.8"
+  pyproject["project"]["name"] = f"{_info.name.lower()}"
+  pyproject["project"]["requires-python"] = ">=3.8"
+
+  pyproject["project"]["urls"] = create_url_table(_info)
+  pyproject["project"]["scripts"] = build_cli_extensions()
+  pyproject["project"]["optional-dependencies"] = create_optional_table()
 
   with open(os.path.join(ROOT, "openllm-python", "pyproject.toml"), "w") as f: f.write(tomlkit.dumps(pyproject))
   return 0

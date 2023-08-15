@@ -51,7 +51,8 @@ repos:
               tests/.*|
               src/openllm/playground/.*|
               .github/.*|
-              cz.py
+              cz.py |
+              hatch_build.py
           )$
         additional_dependencies:
           - click==8.1.3
