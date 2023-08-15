@@ -34,7 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     name: code-quality
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # ratchet:actions/checkout@v3
         with:
           fetch-depth: 0
       - name: Setup CI
@@ -42,8 +42,8 @@ jobs:
         with:
           python-version: ${{ env.STABLE_PYTHON_VERSION }}
       - name: Install OpenLLM
-        run: pip install -e .
-      - uses: pre-commit/action@v3.0.0
+        run: pip install -e ./openllm-python
+      - uses: pre-commit/action@646c83fcd040023954eafda54b4db0192ce70507 # ratchet:pre-commit/action@v3.0.0
         with:
           extra_args: --verbose
   tests:
@@ -58,7 +58,7 @@ jobs:
           - os: 'windows-latest'
     name: tests (${{ matrix.python-version }}.${{ matrix.os }})
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # ratchet:actions/checkout@v3
         with:
           fetch-depth: 0
       - name: Setup CI
@@ -70,17 +70,18 @@ jobs:
       - name: Disambiguate coverage filename
         run: mv .coverage ".coverage.${{ matrix.os }}.${{ matrix.python-version }}"
       - name: Upload coverage data
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # ratchet:actions/upload-artifact@v3
         with:
           name: coverage-data
           path: .coverage.*
   coverage:
     name: report-coverage
     runs-on: ubuntu-latest
+    if: false
     needs:
       - tests
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # ratchet:actions/checkout@v3
         with:
           fetch-depth: 0
       - name: Setup CI
@@ -88,17 +89,17 @@ jobs:
         with:
           python-version: ${{ env.STABLE_PYTHON_VERSION }}
       - name: Download coverage data
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
         with:
           name: coverage-data
       - name: Combine coverage data
         run: hatch run coverage:combine
       - name: Export coverage reports
         run: |
-          hatch run coverage:report-xml
-          hatch run coverage:report-uncovered-html
+          hatch run coverage:report-xml openllm-python
+          hatch run coverage:report-uncovered-html openllm-python
       - name: Upload uncovered HTML report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # ratchet:actions/upload-artifact@v3
         with:
           name: uncovered-html-report
           path: htmlcov
@@ -109,7 +110,7 @@ jobs:
         run: hatch run coverage:write-summary-report
       - name: Update coverage pull request comment
         if: github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork
-        uses: marocchino/sticky-pull-request-comment@v2
+        uses: marocchino/sticky-pull-request-comment@f6a2580ed520ae15da6076e7410b088d1c5dddd9 # ratchet:marocchino/sticky-pull-request-comment@v2
         with:
           path: coverage-report.md
   cli-benchmark:
@@ -118,7 +119,7 @@ jobs:
     env:
       HYPERFINE_VERSION: '1.12.0'
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # ratchet:actions/checkout@v3
         with:
           fetch-depth: 0
       - name: Install hyperfine
@@ -130,7 +131,7 @@ jobs:
         with:
           python-version: ${{ env.STABLE_PYTHON_VERSION }}
       - name: Install self
-        run: pip install .
+        run: pip install ./openllm-python
       - name: Speed
         run: hyperfine -m 100 --warmup 10 openllm
   brew-dry-run:
@@ -146,7 +147,6 @@ jobs:
   evergreen: # https://github.com/marketplace/actions/alls-green#why
     if: always()
     needs:
-      - coverage
       - tests
       - quality
       - cli-benchmark
@@ -154,7 +154,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Decide whether the needed jobs succeeded or failed
-        uses: re-actors/alls-green@release/v1
+        uses: re-actors/alls-green@05ac9388f0aebcb5727afa17fcccfecd6f8ec5fe # ratchet:re-actors/alls-green@release/v1
         with:
           jobs: ${{ toJSON(needs) }}
 concurrency:

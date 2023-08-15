@@ -1082,7 +1082,7 @@ class LLMConfig(_ConfigAttr):
   def keys(self) -> list[str]: return list(self.__openllm_accepted_keys__) + list(self.__openllm_extras__)
   def values(self) -> list[t.Any]: return ([getattr(self, k.name) for k in attr.fields(self.__class__)] + [getattr(self.generation_config, k.name) for k in attr.fields(self.__openllm_generation_class__)] + [getattr(self.sampling_config, k.name) for k in attr.fields(self.__openllm_sampling_class__)] + list(self.__openllm_extras__.values()))
   def items(self) -> list[tuple[str, t.Any]]: return ([(k.name, getattr(self, k.name)) for k in attr.fields(self.__class__)] + [(k.name, getattr(self.generation_config, k.name)) for k in attr.fields(self.__openllm_generation_class__)] + [(k.name, getattr(self.sampling_config, k.name)) for k in attr.fields(self.__openllm_sampling_class__)] + list(self.__openllm_extras__.items()))
-  def __iter__(self) -> t.Iterable[str]: return iter(self.keys())
+  def __iter__(self) -> t.Iterator[str]: return iter(self.keys())
   def __contains__(self, item: t.Any) -> bool:
     if item in self.__openllm_extras__: return True
     return item in self.__openllm_accepted_keys__
@@ -1230,7 +1230,7 @@ class LLMConfig(_ConfigAttr):
 
 bentoml_cattr.register_unstructure_hook_factory(lambda cls: lenient_issubclass(cls, LLMConfig), lambda cls: make_dict_unstructure_fn(cls, bentoml_cattr, _cattrs_omit_if_default=False, _cattrs_use_linecache=True))
 
-def structure_llm_config(data: DictStrAny, cls: type[LLMConfig]) -> LLMConfig:
+def structure_llm_config(data: t.Any, cls: type[LLMConfig]) -> LLMConfig:
   """Structure a dictionary to a LLMConfig object.
 
   Essentially, if the given dictionary contains a 'generation_config' key, then we will
@@ -1240,7 +1240,6 @@ def structure_llm_config(data: DictStrAny, cls: type[LLMConfig]) -> LLMConfig:
   parse the remaining keys into LLMConfig.generation_config
   """
   if not isinstance(data, dict): raise RuntimeError(f"Expected a dictionary, but got {type(data)}")
-
   cls_attrs = {k: v for k, v in data.items() if k in cls.__openllm_accepted_keys__}
   generation_cls_fields = attr.fields_dict(cls.__openllm_generation_class__)
   if "generation_config" in data:

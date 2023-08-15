@@ -26,7 +26,7 @@ from __future__ import annotations
 import importlib, typing as t
 import cloudpickle, fs, openllm
 from bentoml._internal.models.model import CUSTOM_OBJECTS_FILENAME
-from openllm._typing_compat import M, T, ParamSpec, Concatenate
+from openllm._typing_compat import M, T, ParamSpec
 
 if t.TYPE_CHECKING:
   import bentoml
@@ -62,9 +62,12 @@ def load_tokenizer(llm: openllm.LLM[t.Any, T], **tokenizer_attrs: t.Any) -> T:
     else: tokenizer.add_special_tokens({"pad_token": "[PAD]"})
   return tokenizer
 
+class _Caller(t.Protocol[P]):
+  def __call__(self, llm: openllm.LLM[M, T], *args: P.args, **kwargs: P.kwargs) -> t.Any: ...
+
 _extras = ["get", "import_model", "save_pretrained", "load_model"]
-def _make_dispatch_function(fn: str) -> t.Callable[Concatenate[openllm.LLM[t.Any, t.Any], P], t.Any]:
-  def caller(llm: openllm.LLM[t.Any, t.Any], *args: P.args, **kwargs: P.kwargs) -> t.Any:
+def _make_dispatch_function(fn: str) -> _Caller[P]:
+  def caller(llm: openllm.LLM[M, T], *args: P.args, **kwargs: P.kwargs) -> t.Any:
     """Generic function dispatch to correct serialisation submodules based on LLM runtime.
 
     > [!NOTE] See 'openllm.serialisation.transformers' if 'llm.runtime="transformers"'

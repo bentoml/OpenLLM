@@ -230,7 +230,11 @@ class CascadingResourceStrategy(bentoml.Strategy, ReprMixin):
   TODO: Support CloudTPUResource
   """
   @classmethod
-  def get_worker_count(cls, runnable_class: type[bentoml.Runnable], resource_request: dict[str, t.Any] | None, workers_per_resource: int | float) -> int:
+  def get_worker_count(cls, runnable_class: type[bentoml.Runnable], resource_request: dict[str, t.Any] | None, workers_per_resource: float) -> int:
+    """Return the number of workers to be used for the given runnable class.
+
+    Note that for all available GPU, the number of workers will always be 1.
+    """
     if resource_request is None: resource_request = system_resources()
     # use NVIDIA
     kind = "nvidia.com/gpu"

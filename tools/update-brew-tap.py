@@ -22,8 +22,7 @@ def determine_release_url(svn_url: str, tag: str, target: t.Literal["macos_arm",
   return f"{svn_url}/releases/download/{tag}/openllm-{tag.replace('v', '')}-{_gz_strategies[target]}.tar.gz"
 
 # curl -sSL <svn_url>/archive/refs/tags/<tag>.tar.gz | shasum -a256 | cut -d'' -f1
-def get_release_hash_command(svn_url: str, tag: str) -> Pipeline:
-  return curl["-sSL", svn_url] | shasum["-a256"] | cut["-d", " ", "-f1"]
+def get_release_hash_command(svn_url: str, tag: str) -> Pipeline: return curl["-sSL", svn_url] | shasum["-a256"] | cut["-d", " ", "-f1"]
 
 def main() -> int:
   api = GhApi(owner=_OWNER, repo=_REPO, authenticate=False)
@@ -35,7 +34,7 @@ def main() -> int:
 
   ENVIRONMENT = Environment(extensions=["jinja2.ext.do", "jinja2.ext.loopcontrols", "jinja2.ext.debug"], trim_blocks=True, lstrip_blocks=True, loader=FileSystemLoader((ROOT / "Formula").__fspath__(), followlinks=True))
   template_file = "openllm.rb.j2"
-  with (ROOT / "Formula" / "openllm.rb").open("w") as f:
+  with (ROOT/"Formula"/"openllm.rb").open("w") as f:
     f.write(ENVIRONMENT.get_template(template_file, globals={"determine_release_url": determine_release_url}).render(shadict=shadict, __tag__=release_tag, __cmd__=fs.path.join(os.path.basename(os.path.dirname(__file__)), os.path.basename(__file__)), __template_file__=fs.path.join("Formula", template_file), __gz_extension__=_gz_strategies, **_info))
     f.write("\n")
   return 0

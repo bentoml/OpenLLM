@@ -65,24 +65,31 @@ Before you can start developing, you'll need to set up your environment:
    This will automatically enter a virtual environment and update the relevant
    dependencies.
 
+> [!NOTE]
+> If you want to install editable, make sure to install it from `openllm-python` folder
+
 ## Project Structure
 
 Here's a high-level overview of our project structure:
 
-```
+```prolog
 openllm/
-├── examples                 # Usage demonstration scripts
-├── src
-│   ├── openllm              # openllm core
-│   └── openllm-node         # openllm nodejs library
-├── tests                    # Automated Tests
-├── tools                    # Utilities Script
-├── typings                  # Typing Checking Utilities Module and Classes
-├── DEVELOPMENT.md           # The project's Developer Guide
-├── LICENSE                  # Use terms and conditions
-├── package.json             # Node.js or JavaScript dependencies
-├── pyproject.toml           # Python Project Specification File (PEP 518)
-└── README.md                # The project's README file
+├── ADDING_NEW_MODEL.md  # How to add a new model
+├── CHANGELOG.md         # Generated changelog
+├── CITATION.cff         # Citation File Format
+├── DEVELOPMENT.md       # The project's Developer Guide
+├── Formula              # Homebrew Formula
+├── LICENSE.md           # Use terms and conditions
+├── README.md            # The project's README file
+├── STYLE.md             # The project's Style Guide
+├── cz.py                # code-golf commitizen
+├── examples             # Usage demonstration scripts
+├── openllm-node         # openll node library
+├── openllm-python       # openllm python library
+│   └── src
+│       └── openllm      # openllm core implementation
+├── pyproject.toml       # Python Project Specification File (PEP 518)
+└── tools                # Utilities Script
 ```
 
 ## Development Workflow
@@ -167,12 +174,24 @@ hatch run compile
 ```
 
 > [!IMPORTANT]
-> This will compiled some performance sensitive modules with mypyc. The compiled `.so` or `.pyd` can be found
-> under `/src/openllm`. If you run into any issue, run `hatch run recompile`
+> This will compiled some performance sensitive modules with mypyc.
+> The compiled `.so` or `.pyd` can be found
+> under `/openllm-python/src/openllm`. If you run into any issue, run `hatch run recompile`
 
 ## Style
 
 See [STYLE.md](STYLE.md) for our style guide.
+
+## Working with OpenLLM's CI/CD
+
+After you change or update any CI related under `.github`, run `./tools/lock-actions` to lock the action version.
+
+## Install from git archive install
+
+```bash
+pip install 'https://github.com/bentoml/OpenLLM/archive/main.tar.gz#subdirectory=openllm-python'
+```
+
 
 ## Releasing a New Version
 

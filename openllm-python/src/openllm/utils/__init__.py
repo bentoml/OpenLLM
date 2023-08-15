@@ -84,7 +84,7 @@ def non_intrusive_setattr(obj: t.Any, name: str, value: t.Any) -> None:
   _setattr = functools.partial(setattr, obj) if isinstance(obj, type) else _object_setattr.__get__(obj)
   if not hasattr(obj, name): _setattr(name, value)
 
-def field_env_key(model_name: str, key: str, suffix: str | t.Literal[""] | None = None) -> str: return "_".join(filter(None, map(str.upper, ["OPENLLM", model_name, suffix.strip("_") if suffix else "", key])))
+def field_env_key(model_name: str, key: str, suffix: str | None = None) -> str: return "_".join(filter(None, map(str.upper, ["OPENLLM", model_name, suffix.strip("_") if suffix else "", key])))
 
 # Special debug flag controled via OPENLLMDEVDEBUG
 DEBUG: bool = sys.flags.dev_mode or (not sys.flags.ignore_environment and bool(os.environ.get(DEV_DEBUG_VAR)))
@@ -242,7 +242,7 @@ def normalize_attrs_to_model_tokenizer_pair(**attrs: t.Any) -> tuple[dict[str, t
     if k.startswith(_TOKENIZER_PREFIX): del attrs[k]
   return attrs, tokenizer_attrs
 
-def infer_auto_class(implementation: LiteralRuntime) -> type[openllm.AutoLLM] | type[openllm.AutoTFLLM] | type[openllm.AutoFlaxLLM] | type[openllm.AutoVLLM]:
+def infer_auto_class(implementation: LiteralRuntime) -> type[openllm.AutoLLM | openllm.AutoTFLLM | openllm.AutoFlaxLLM | openllm.AutoVLLM]:
   import openllm
   if implementation == "tf": return openllm.AutoTFLLM
   elif implementation == "flax": return openllm.AutoFlaxLLM

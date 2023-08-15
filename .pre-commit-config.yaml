@@ -14,7 +14,7 @@
 
 ci:
   autoupdate_schedule: weekly
-  skip: [check-models-table-update, changelog-dry-run, pyright, yapf, mypy]
+  skip: [check-models-table-update, changelog-dry-run, pyright, yapf, mypy, sync-readme]
   autofix_commit_msg: "ci: auto fixes from pre-commit.ci\n\nFor more information, see https://pre-commit.ci"
   autoupdate_commit_msg: 'ci: pre-commit autoupdate [pre-commit.ci]'
   autofix_prs: false
@@ -37,7 +37,7 @@ repos:
       - id: interrogate
         verbose: true
         types: [python]
-        exclude: ^(docs|tools|tests)
+        exclude: ^(docs|tools|openllm-python/tests)
         args: [--config=pyproject.toml]
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.5.0
@@ -49,9 +49,11 @@ repos:
               examples/.*|
               tools/.*|
               tests/.*|
-              src/openllm/playground/.*|
+              openllm-python/src/openllm/playground/.*|
+              openllm-python/tests/.*|
               .github/.*|
-              cz.py
+              cz.py |
+              hatch_build.py
           )$
         additional_dependencies:
           - click==8.1.3
@@ -72,7 +74,7 @@ repos:
         verbose: true
         exclude: |
           (?x)^(
-              tests/models/.*
+              openllm-python/tests/models/.*
           )$
       - id: check-yaml
         args: ['--unsafe']
@@ -90,6 +92,12 @@ repos:
       - id: check-models-table-update
         name: check if table in README.md is up-to-date
         entry: ./tools/assert-model-table-latest
+        language: script
+        verbose: true
+        files: README.md
+      - id: sync-readme
+        name: sync readme with python core library
+        entry: ./tools/sync-readme
         language: script
         verbose: true
         files: README.md

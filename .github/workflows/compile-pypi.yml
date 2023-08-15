@@ -35,7 +35,7 @@ jobs:
     name: Pure wheels and sdist distribution
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # ratchet:actions/checkout@v3
         with:
           fetch-depth: 0
           ref: '${{ inputs.tags }}'
@@ -43,15 +43,19 @@ jobs:
         uses: ./.github/actions/setup-repo
       - name: Build
         run: hatch build
+        working-directory: openllm-python
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # ratchet:actions/upload-artifact@v3
         with:
           name: python-artefacts
-          path: dist/*
+          path: openllm-python/dist/*
           if-no-files-found: error
   mypyc:
     name: Compiled mypyc wheels (${{ matrix.name }})
     runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: ./openllm-python
     strategy:
       fail-fast: false
       matrix:
@@ -71,22 +75,26 @@ jobs:
             name: macos-universal2
             macos_arch: "universal2"
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # ratchet:actions/checkout@v3
         with:
           fetch-depth: 0
           ref: '${{ inputs.tags }}'
       - name: Setup CI
         uses: ./.github/actions/setup-repo
         with:
-          python-version: 3.9
+          python-version: 3.8
       - name: Build wheels via cibuildwheel
-        uses: pypa/cibuildwheel@v2.15.0
+        uses: pypa/cibuildwheel@39a63b5912f086dd459cf6fcb13dcdd3fe3bc24d # ratchet:pypa/cibuildwheel@v2.15.0
+        with:
+          package-dir: openllm-python
+          config-file: pyproject.toml
         env:
+          CIBW_PRERELEASE_PYTHONS: True
           CIBW_BEFORE_BUILD_MACOS: "rustup target add aarch64-apple-darwin"
           CIBW_ARCHS_MACOS: "${{ matrix.macos_arch }}"
           MYPYPATH: /project/typings
       - name: Upload wheels as workflow artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # ratchet:actions/upload-artifact@v3
         with:
           name: ${{ matrix.name }}-mypyc-wheels
           path: ./wheelhouse/*.whl
@@ -98,27 +106,27 @@ jobs:
     steps:
       # NOTE: Keep this section in sync with compile-pypi.yml
       - name: Download Python artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
         with:
           name: python-artefacts
           path: dist
       - name: Download Linux x86_64 compiled artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
         with:
           name: linux-x86_64-mypyc-wheels
           path: dist
       - name: Download MacOS x86_64 compiled artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
         with:
           name: macos-x86_64-mypyc-wheels
           path: dist
       - name: Download MacOS arm64 compiled artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
         with:
           name: macos-arm64-mypyc-wheels
           path: dist
       - name: Download MacOS universal2 compiled artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
         with:
           name: macos-universal2-mypyc-wheels
           path: dist
@@ -134,7 +142,7 @@ jobs:
       success: ${{ steps.everygreen.outputs.success }}
     steps:
       - name: Decide whether the needed jobs succeeded or failed
-        uses: re-actors/alls-green@release/v1
+        uses: re-actors/alls-green@05ac9388f0aebcb5727afa17fcccfecd6f8ec5fe # ratchet:re-actors/alls-green@release/v1
         id: evergreen
         with:
           jobs: ${{ toJSON(needs) }}

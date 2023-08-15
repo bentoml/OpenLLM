@@ -21,7 +21,7 @@ class VersionInfo:
     if not isinstance(cmp, tuple): raise NotImplementedError
     if not (1 <= len(cmp) <= 4): raise NotImplementedError
     return t.cast(t.Tuple[int, int, int, str], attr.astuple(self)[:len(cmp)]), t.cast(t.Tuple[int, int, int, str], cmp)
-  def __eq__(self, other: object) -> bool:
+  def __eq__(self, other: t.Any) -> bool:
     try: us, them = self._ensure_tuple(other)
     except NotImplementedError: return NotImplemented
     return us == them
