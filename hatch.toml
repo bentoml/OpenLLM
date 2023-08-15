@@ -129,6 +129,6 @@ detached = true
 [envs.coverage.scripts]
 combine = "coverage combine {args}"
 generate-summary = "python tools/generate-coverage.py"
-report-uncovered-html = "coverage html --skip-covered --skip-empty"
-report-xml = "coverage xml"
+report-uncovered-html = "coverage html --skip-covered --skip-empty {args}"
+report-xml = "coverage xml {args}"
 write-summary-report = "python tools/write-coverage-report.py"
