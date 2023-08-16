@@ -6,6 +6,8 @@
     <h1 align="center">🦾 OpenLLM</h1>
     <a href="https://pypi.org/project/openllm">
         <img src="https://img.shields.io/pypi/v/openllm.svg?logo=pypi&label=PyPI&logoColor=gold" alt="pypi_status" />
+    </a><a href="https://test.pypi.org/project/openllm/">
+        <img src="https://img.shields.io/badge/Nightly-PyPI?logo=pypi&label=PyPI&color=gray&link=https%3A%2F%2Ftest.pypi.org%2Fproject%2Fopenllm%2F" alt="test_pypi_status" />
     </a><a href="https://twitter.com/bentomlai">
         <img src="https://badgen.net/badge/icon/@bentomlai/1DA1F2?icon=twitter&label=Follow%20Us" alt="Twitter" />
     </a><a href="https://l.bentoml.com/join-openllm-discord">
