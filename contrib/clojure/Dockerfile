@@ -6,9 +6,10 @@ LABEL org.opencontainers.image.authors="Leon Ikinger (GutZuFusss) <leon.ikinger@
 LABEL org.opencontainers.image.licenses="Apache-2.0"
 
 RUN --mount=type=cache,target=/var/cache/apk \
-    apk add --update openjdk17 curl git npm bash \
+    apk add --update --no-cache openjdk17 curl git npm bash python3 py3-pip \
     && rm -rf /var/cache/apk/*
 RUN curl -fsSL https://github.com/clojure/brew-install/releases/latest/download/posix-install.sh | bash -
+RUN --mount=type=cache,target=/root/.cache/pip pip install --no-cache-dir openllm
 
 WORKDIR /usr/src
 

@@ -94,7 +94,7 @@ jobs:
           cache-from: type=s3,region=us-east-1,bucket=openllm-ui,name=clojure
           # @aarnphm: max is fine here, since we didn't do any custom code yet, so it is ok to cache every layer for optimal build time
           # We also ignore-error for now, just upload anything to the blob storage
-          cache-to: type=s3,region=us-east-1,bucket=openllm-ui,name=clojure,mode=max,compression=zstd,ignore-error=true
+          cache-to: type=s3,region=us-east-1,bucket=openllm-ui,name=clojure,mode=min,compression=zstd,ignore-error=true
       - name: Sign the released image
         if: ${{ github.event_name != 'pull_request' }}
         env:
