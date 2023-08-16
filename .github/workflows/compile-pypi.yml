@@ -167,7 +167,7 @@ jobs:
       - name: Publish nightly wheels to test.pypi.org
         uses: pypa/gh-action-pypi-publish@b7f401de30cb6434a1e19f805ff006643653240e # ratchet:pypa/gh-action-pypi-publish@release/v1
         with:
-          repository-url: https://test.pypi.org/simple/
+          repository-url: https://test.pypi.org/legacy/
   sucess-push: # https://github.com/marketplace/actions/alls-green#why
     if: github.event_name == 'push'
     needs: [push-nightly, pure-wheels-sdist, mypyc]
