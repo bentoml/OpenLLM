@@ -76,9 +76,6 @@ jobs:
       - name: Build and push Clojure UI image
         id: build-and-push
         uses: docker/build-push-action@2eb1c1961a95fc15694676618e422e8ba1d63825 # ratchet:docker/build-push-action@v4
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_PROD_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_PROD_SECRET_ACCESS_KEY }}
         with:
           context: contrib/clojure
           file: contrib/clojure/Dockerfile
@@ -88,13 +85,6 @@ jobs:
             DOCKER_LABEL=sha-${{ env.GITHUB_SHA_SHORT }}
           tags: ${{ steps.meta.outputs.tags || steps.meta-pr.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels || steps.meta-pr.outputs.labels }}
-          # TODO: Once https://github.com/aws/containers-roadmap/issues/876 is supported with OCI 1.1
-          # then move back to saving cache within the public repo. For now we will save the cache manifest within our internal S3 buckets.
-          # NOTE: the region of the S3 on prod is us-east-1, where the EC2 machine is at us-west-2
-          cache-from: type=s3,region=us-east-1,bucket=openllm-ui,name=clojure
-          # @aarnphm: max is fine here, since we didn't do any custom code yet, so it is ok to cache every layer for optimal build time
-          # We also ignore-error for now, just upload anything to the blob storage
-          cache-to: type=s3,region=us-east-1,bucket=openllm-ui,name=clojure,mode=min,compression=zstd,ignore-error=true
       - name: Sign the released image
         if: ${{ github.event_name != 'pull_request' }}
         env:
