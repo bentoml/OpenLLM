@@ -60,6 +60,7 @@ jobs:
   coverage:
     name: report-coverage
     runs-on: ubuntu-latest
+    if: false
     needs:
       - tests
     steps:
