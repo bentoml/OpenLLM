@@ -14,3 +14,4 @@
 /.shadow-cljs
 /.nrepl-port
 **/output.calva-repl
+/src/generated/**.json

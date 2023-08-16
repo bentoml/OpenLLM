@@ -52,7 +52,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.UI_GITHUB_TOKEN }}
       - name: Extract metadata tags and labels on PRs
         if: github.event_name == 'pull_request'
         id: meta-pr
@@ -96,7 +96,7 @@ jobs:
           image-ref: 'ghcr.io/bentoml/openllm-ui-clojure:sha-${{ env.GITHUB_SHA_SHORT }}'
           format: 'github'
           output: 'dependency-results.sbom.json'
-          github-pat: ${{ secrets.GITHUB_TOKEN }}
+          github-pat: ${{ secrets.UI_GITHUB_TOKEN }}
           scanners: 'vuln'
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@559eb1224e654a86c844a795e6702a0742c60c72 # ratchet:aquasecurity/trivy-action@master
