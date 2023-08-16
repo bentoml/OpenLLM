@@ -1,9 +1,18 @@
-# OpenLLM ClojureScript UI
+<div align="center">
+    <h1 align="center">OpenLLM ClojureScript UI</h1>
+    <p>Built using <a href="http://reagent-project.github.io/">reagent</a>, <a href="https://github.com/day8/re-frame">reframe</a>, <a href="https://tailwindcss.com/">Tailwind CSS</a>, and <a href="https://shadow-cljs.github.io/docs/UsersGuide.html">shadow-cljs</a></br></p>
+    <i></i>
+</div>
 
-This is the ClojureScript UI for OpenLLM. It is built using [reagent](http://reagent-project.github.io/), [reframe](https://github.com/day8/re-frame), [Tailwind CSS](https://tailwindcss.com/), and [shadow-cljs](https://shadow-cljs.github.io/docs/UsersGuide.html)
 
-We distribute the UI via the docker image `ghcr.io/bentoml/openllm-ui-clojure:sha-<git-sha>`.
+<img width="2880" alt="Screenshot 2023-08-16 at 03 34 34" src="https://github.com/bentoml/OpenLLM/assets/29749331/e0204483-7dc5-4694-be86-6ab554e7f992">
 
+<br/>
+
+ ## Installation
+ 
+ The recommended way to run this UI is via the docker container:
+ 
 ```bash
 docker run --rm -p 8420:80 ghcr.io/bentoml/openllm-ui-clojure:0.2.25
 ```
@@ -12,7 +21,7 @@ docker run --rm -p 8420:80 ghcr.io/bentoml/openllm-ui-clojure:0.2.25
 > Currently, the LLMServer must be also running to use with the UI.
 > Start any model server with `openllm start --cors`. For more information, see `openllm start -h`
 
-## Developement Build
+## Development Build
 
 > [!IMPORTANT]
 > Make sure to have [Node.js](https://nodejs.org/en/) (v18.16.1)
