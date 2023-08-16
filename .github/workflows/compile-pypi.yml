@@ -134,7 +134,7 @@ jobs:
   push-nightly:
     name: Push nightly wheels
     if: >-
-      !github.event.repository.fork && (github.event_name == 'push' && startsWith(github.ref, 'refs/main')
+      !github.event.repository.fork && (github.event_name == 'push' && startsWith(github.ref, 'refs/main'))
     runs-on: ubuntu-latest
     permissions:
       id-token: write
