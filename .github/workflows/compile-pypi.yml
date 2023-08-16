@@ -17,8 +17,24 @@ on:
         value: ${{ jobs.sucess-build.outputs.success }}
   push:
     branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - 'bazel/**'
+      - 'typings/**'
+      - '*.md'
+      - 'changelog.d/**'
+      - 'assets/**'
+      - 'contrib/clojure/**'
   pull_request:
     branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - 'bazel/**'
+      - 'typings/**'
+      - '*.md'
+      - 'changelog.d/**'
+      - 'assets/**'
+      - 'contrib/clojure/**'
 env:
   LINES: 120
   COLUMNS: 120

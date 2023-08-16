@@ -14,6 +14,7 @@ on:
       - 'assets/**'
       - 'openllm-node/**'
       - 'Formula/**'
+      - 'contrib/clojure/**'
 defaults:
   run:
     shell: bash --noprofile --norc -exo pipefail {0}
