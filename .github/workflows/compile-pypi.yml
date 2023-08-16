@@ -137,6 +137,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       id-token: write
+    needs: [pure-wheels-sdist, mypyc]
     steps:
       - name: Download Python artifacts
         uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
@@ -169,9 +170,7 @@ jobs:
           repository-url: https://test.pypi.org/simple/
   sucess-build: # https://github.com/marketplace/actions/alls-green#why
     if: always()
-    needs:
-      - pure-wheels-sdist
-      - mypyc
+    needs: [pure-wheels-sdist, mypyc]
     runs-on: ubuntu-latest
     outputs:
       success: ${{ steps.everygreen.outputs.success }}
