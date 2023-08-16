@@ -69,14 +69,6 @@ History = "https://github.com/bentoml/OpenLLM/blob/main/CHANGELOG.md"
 Homepage = "https://bentoml.com"
 Tracker = "https://github.com/bentoml/OpenLLM/issues"
 Twitter = "https://twitter.com/bentomlai"
-
-[tool.hatch.build]
-exclude = ["*"]
-dev-mode-dirs = ["openllm-python"]
-[tool.hatch.build.sources]
-"openllm-python/src/openllm" = "openllm"
-[tool.hatch.metadata.hooks.custom]
-
 [tool.hatch.version]
 fallback-version = "0.0.0"
 source = "vcs"
@@ -309,7 +301,7 @@ python_files = ["test_*.py", "*_test.py"]
 testpaths = ["openllm-python/tests"]
 
 [tool.coverage.paths]
-openllm = ["src/openllm", "*/openllm/src/openllm"]
+openllm = ["openllm-python/src/openllm", "*/openllm-python/src/openllm"]
 [tool.coverage.run]
 branch = true
 omit = [

@@ -19,9 +19,6 @@ dependencies = [
     "types-PyYAML",
     "types-protobuf",
 ]
-pre-install-commands = [
-    "pip install -e ./openllm-python", #
-]
 [envs.default.scripts]
 changelog = "towncrier build --version main --draft"
 check-stubs = [
