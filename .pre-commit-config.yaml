@@ -78,7 +78,7 @@ repos:
         additional_dependencies: ['yapf==0.40.0']
       - id: check-models-table-update
         name: check if table in README.md is up-to-date
-        entry: ./tools/assert-model-table-latest
+        entry: ./tools/assert-model-table-latest.py
         language: script
         verbose: true
         files: README.md

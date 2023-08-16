@@ -31,6 +31,7 @@ quality = [
     "./tools/dependencies.py",
     "./tools/update-readme.py",
     "- ./tools/update-brew-tap.py",
+    "bash ./tools/sync-readme.sh",
     "check-stubs",
     "- pre-commit run --all-files",
 ]
@@ -79,4 +80,7 @@ report-xml = "coverage xml {args}"
 write-summary-report = "python tools/write-coverage-report.py"
 [envs.ui]
 [envs.ui.scripts]
-clojure = ["cd dashboard/clojure && npm install", "npm run dev"]
+clojure = ["bash tools/run-clojure-ui.sh"]
+[envs.ci]
+[envs.ci.scripts]
+lock = ["bash tools/lock-actions", "pushd contrib/clojure && pnpm i --frozen-lockfile"]
