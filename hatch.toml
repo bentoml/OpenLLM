@@ -24,20 +24,32 @@ pre-install-commands = [
 ]
 [envs.default.scripts]
 changelog = "towncrier build --version main --draft"
-check-stubs = ["./tools/update-config-stubs.py", "./tools/update-models-import.py", "update-dummy"]
+check-stubs = [
+    "./tools/update-config-stubs.py",
+    "./tools/update-models-import.py",
+    "update-dummy",
+]
 compile = "bash ./compile.sh {args}"
 inplace-changelog = "towncrier build --version main --keep"
 quality = [
     "./tools/dependencies.py",
     "./tools/update-readme.py",
     "- ./tools/update-brew-tap.py",
+    "bash ./tools/sync-readme.sh",
     "check-stubs",
     "- pre-commit run --all-files",
 ]
 recompile = ["bash ./clean.sh", "compile"]
-setup = ["pre-commit install", "- ln -s .python-version-default .python-version"]
+setup = [
+    "pre-commit install",
+    "- ln -s .python-version-default .python-version",
+    "curl -fsSL https://raw.githubusercontent.com/clj-kondo/clj-kondo/master/script/install-clj-kondo | bash -",
+]
 tool = ["quality", "recompile -nx"]
-typing = ["- pre-commit run mypy {args:-a}", "- pre-commit run pyright {args:-a}"]
+typing = [
+    "- pre-commit run mypy {args:-a}",
+    "- pre-commit run pyright {args:-a}",
+]
 update-dummy = ["- ./tools/update-dummy.py", "./tools/update-dummy.py"]
 [envs.tests]
 dependencies = [
@@ -77,3 +89,13 @@ generate-summary = "python tools/generate-coverage.py"
 report-uncovered-html = "coverage html --skip-covered --skip-empty {args}"
 report-xml = "coverage xml {args}"
 write-summary-report = "python tools/write-coverage-report.py"
+[envs.ui]
+[envs.ui.scripts]
+server = """BENTOML_CONFIG_OPTIONS='api_server.http.cors.enabled=true api_server.http.cors.access_control_allow_origins="*" api_server.http.cors.access_control_allow_methods[0]="GET" api_server.http.cors.access_control_allow_methods[1]="OPTIONS" api_server.http.cors.access_control_allow_methods[2]="POST" api_server.http.cors.access_control_allow_methods[3]="HEAD" api_server.http.cors.access_control_allow_methods[4]="PUT"' openllm start {args:flan-t5} --working-dir {root:uri} --debug"""
+clojure = ["bash tools/run-clojure-ui.sh"]
+[envs.ci]
+[envs.ci.scripts]
+lock = [
+    "bash tools/lock-actions",
+    "pushd contrib/clojure && pnpm i --frozen-lockfile",
+]

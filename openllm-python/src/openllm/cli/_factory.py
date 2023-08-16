@@ -1,8 +1,9 @@
 from __future__ import annotations
-import functools, importlib.util, os, typing as t
+import functools, importlib.util, os, typing as t, logging
 import click, click_option_group as cog, inflection, orjson, bentoml, openllm
 from bentoml_cli.utils import BentoMLCommandGroup
 from click.shell_completion import CompletionItem
+from openllm.utils import DEBUG
 from bentoml._internal.configuration.containers import BentoMLContainer
 from openllm._typing_compat import LiteralString, DictStrAny, ParamSpec, Concatenate
 from . import termui
@@ -11,21 +12,27 @@ if t.TYPE_CHECKING:
   import subprocess
   from openllm._configuration import LLMConfig
 
+logger = logging.getLogger(__name__)
+
 P = ParamSpec("P")
 LiteralOutput = t.Literal["json", "pretty", "porcelain"]
 
 _AnyCallable = t.Callable[..., t.Any]
 FC = t.TypeVar("FC", bound=t.Union[_AnyCallable, click.Command])
 
-def parse_config_options(config: LLMConfig, server_timeout: int, workers_per_resource: float, device: t.Tuple[str, ...] | None, environ: DictStrAny,) -> DictStrAny:
+def parse_config_options(config: LLMConfig, server_timeout: int, workers_per_resource: float, device: t.Tuple[str, ...] | None, cors: bool, environ: DictStrAny) -> DictStrAny:
   # TODO: Support amd.com/gpu on k8s
   _bentoml_config_options_env = environ.pop("BENTOML_CONFIG_OPTIONS", "")
   _bentoml_config_options_opts = ["tracing.sample_rate=1.0", f"api_server.traffic.timeout={server_timeout}", f'runners."llm-{config["start_name"]}-runner".traffic.timeout={config["timeout"]}', f'runners."llm-{config["start_name"]}-runner".workers_per_resource={workers_per_resource}']
   if device:
     if len(device) > 1: _bentoml_config_options_opts.extend([f'runners."llm-{config["start_name"]}-runner".resources."nvidia.com/gpu"[{idx}]={dev}' for idx, dev in enumerate(device)])
     else: _bentoml_config_options_opts.append(f'runners."llm-{config["start_name"]}-runner".resources."nvidia.com/gpu"=[{device[0]}]')
+  if cors:
+    _bentoml_config_options_opts.extend(["api_server.http.cors.enabled=true", 'api_server.http.cors.access_control_allow_origins="*"'])
+    _bentoml_config_options_opts.extend([f'api_server.http.cors.access_control_allow_methods[{idx}]="{it}"' for idx, it in enumerate(["GET", "OPTIONS", "POST", "HEAD", "PUT"])])
   _bentoml_config_options_env += " " if _bentoml_config_options_env else "" + " ".join(_bentoml_config_options_opts)
   environ["BENTOML_CONFIG_OPTIONS"] = _bentoml_config_options_env
+  if DEBUG: logger.debug("Setting BENTOML_CONFIG_OPTIONS=%s", _bentoml_config_options_env)
   return environ
 
 _adapter_mapping_key = "adapter_map"
@@ -89,7 +96,7 @@ Available official model_id(s): [default: {llm_config['default_id']}]
   @click.pass_context
   def start_cmd(
       ctx: click.Context, /, server_timeout: int, model_id: str | None, model_version: str | None, workers_per_resource: t.Literal["conserved", "round_robin"] | LiteralString, device: t.Tuple[str, ...], quantize: t.Literal["int8", "int4", "gptq"] | None, bettertransformer: bool | None, runtime: t.Literal["ggml", "transformers"], fast: bool,
-      serialisation_format: t.Literal["safetensors", "legacy"], adapter_id: str | None, return_process: bool, **attrs: t.Any,
+      serialisation_format: t.Literal["safetensors", "legacy"], cors: bool, adapter_id: str | None, return_process: bool, **attrs: t.Any,
   ) -> LLMConfig | subprocess.Popen[bytes]:
     fast = str(fast).upper() in openllm.utils.ENV_VARS_TRUE_VALUES
     if serialisation_format == "safetensors" and quantize is not None and os.environ.get("OPENLLM_SERIALIZATION_WARNING", str(True)).upper() in openllm.utils.ENV_VARS_TRUE_VALUES:
@@ -124,7 +131,7 @@ Available official model_id(s): [default: {llm_config['default_id']}]
 
     # NOTE: This is to set current configuration
     start_env = os.environ.copy()
-    start_env = parse_config_options(config, server_timeout, wpr, device, start_env)
+    start_env = parse_config_options(config, server_timeout, wpr, device, cors, start_env)
     if fast: termui.echo(f"Fast mode is enabled. Make sure the model is available in local store before 'start': 'openllm import {model}{' --model-id ' + model_id if model_id else ''}'", fg="yellow")
 
     start_env.update({"OPENLLM_MODEL": model, "BENTOML_DEBUG": str(openllm.utils.get_debug_mode()), "BENTOML_HOME": os.environ.get("BENTOML_HOME", BentoMLContainer.bentoml_home.get()), "OPENLLM_ADAPTER_MAP": orjson.dumps(adapter_map).decode(), "OPENLLM_SERIALIZATION": serialisation_format, env.runtime: env["runtime_value"], env.framework: env["framework_value"]})
@@ -193,6 +200,7 @@ def start_decorator(llm_config: LLMConfig, serve_grpc: bool = False) -> t.Callab
           model_version_option(factory=cog.optgroup),
           cog.optgroup.option("--server-timeout", type=int, default=None, help="Server timeout in seconds"),
           workers_per_resource_option(factory=cog.optgroup),
+          cors_option(factory=cog.optgroup),
           fast_option(factory=cog.optgroup),
           cog.optgroup.group(
               "LLM Optimization Options", help="""Optimization related options.
@@ -303,11 +311,11 @@ def fast_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC
                                                                                                           This is useful if you already downloaded or setup the model beforehand.
                                                                                                           """, **attrs
   )(f)
+def cors_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]: return cli_option("--cors/--no-cors", show_default=True, default=False, envvar="OPENLLM_CORS", show_envvar=True, help="Enable CORS for the server.", **attrs)(f)
 def machine_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]: return cli_option("--machine", is_flag=True, default=False, hidden=True, **attrs)(f)
 def model_id_option(f: _AnyCallable | None = None, *, model_env: openllm.utils.EnvVarMixin | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]: return cli_option("--model-id", type=click.STRING, default=None, envvar=model_env.model_id if model_env is not None else None, show_envvar=model_env is not None, help="Optional model_id name or path for (fine-tune) weight.", **attrs)(f)
 def model_version_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]: return cli_option("--model-version", type=click.STRING, default=None, help="Optional model version to save for this model. It will be inferred automatically from model-id.", **attrs)(f)
 def model_name_argument(f: _AnyCallable | None = None, required: bool = True) -> t.Callable[[FC], FC]: return cli_argument("model_name", type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING]), required=required)(f)
-
 def quantize_option(f: _AnyCallable | None = None, *, build: bool = False, model_env: openllm.utils.EnvVarMixin | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option(
       "--quantise", "--quantize", "quantize", type=click.Choice(["int8", "int4", "gptq"]), default=None, envvar=model_env.quantize if model_env is not None else None, show_envvar=model_env is not None, help="""Dynamic quantization for running this LLM.
@@ -327,7 +335,6 @@ def quantize_option(f: _AnyCallable | None = None, *, build: bool = False, model
       ) + """
                                                                                                                                                                             > [!NOTE] that quantization are currently only available in *PyTorch* models.""", **attrs
   )(f)
-
 def workers_per_resource_option(f: _AnyCallable | None = None, *, build: bool = False, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option(
       "--workers-per-resource", default=None, callback=workers_per_resource_callback, type=str, required=False, help="""Number of workers per resource assigned.
@@ -347,12 +354,10 @@ def workers_per_resource_option(f: _AnyCallable | None = None, *, build: bool = 
                                                                                                                                                   > ensure it has the same effect with 'openllm start --workers ...'""" if build else ""
       ), **attrs
   )(f)
-
 def bettertransformer_option(f: _AnyCallable | None = None, *, build: bool = False, model_env: openllm.utils.EnvVarMixin | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option(
       "--bettertransformer", is_flag=True, default=None, envvar=model_env.bettertransformer if model_env is not None else None, show_envvar=model_env is not None, help="Apply FasterTransformer wrapper to serve model. This will applies during serving time." if not build else "Set default environment variable whether to serve this model with FasterTransformer in build time.", **attrs
   )(f)
-
 def serialisation_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option(
       "--serialisation", "--serialization", "serialisation_format", type=click.Choice(["safetensors", "legacy"]), default="safetensors", show_default=True, show_envvar=True, envvar="OPENLLM_SERIALIZATION", help="""Serialisation format for save/load LLM.
@@ -374,7 +379,6 @@ def serialisation_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Cal
                                                                                                                   > [!NOTE] that GGML format is working in progress.
                                                                                                                   """, **attrs
   )(f)
-
 def container_registry_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option(
       "--container-registry", "container_registry", type=str, default="ecr", show_default=True, show_envvar=True, envvar="OPENLLM_CONTAINER_REGISTRY", callback=container_registry_callback, help="""The default container registry to get the base image for building BentoLLM.
@@ -383,7 +387,7 @@ def container_registry_option(f: _AnyCallable | None = None, **attrs: t.Any) -> 
 
                                                                                                                         \b
                                                                                                                         > [!NOTE] that in order to build the base image, you will need a GPUs to compile custom kernel. See ``openllm ext build-base-container`` for more information.
-                                                                                                                        """
+                                                                                                                        """, **attrs
   )(f)
 
 _wpr_strategies = {"round_robin", "conserved"}

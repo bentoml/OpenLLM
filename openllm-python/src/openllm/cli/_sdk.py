@@ -15,7 +15,8 @@ if t.TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-def _start(model_name: str, /, *, model_id: str | None = None, timeout: int = 30, workers_per_resource: t.Literal["conserved", "round_robin"] | float | None = None, device: tuple[str, ...] | t.Literal["all"] | None = None, quantize: t.Literal["int8", "int4", "gptq"] | None = None, bettertransformer: bool | None = None, runtime: t.Literal["ggml", "transformers"] = "transformers", fast: bool = False, adapter_map: dict[LiteralString, str | None] | None = None, framework: LiteralRuntime | None = None, additional_args: list[str] | None = None, _serve_grpc: bool = False, __test__: bool = False, **_: t.Any) -> LLMConfig | subprocess.Popen[bytes]:
+def _start(model_name: str, /, *, model_id: str | None = None, timeout: int = 30, workers_per_resource: t.Literal["conserved", "round_robin"] | float | None = None, device: tuple[str, ...] | t.Literal["all"] | None = None, quantize: t.Literal["int8", "int4", "gptq"] | None = None, bettertransformer: bool | None = None, runtime: t.Literal["ggml", "transformers"] = "transformers",
+            adapter_map: dict[LiteralString, str | None] | None = None, framework: LiteralRuntime | None = None, additional_args: list[str] | None = None, cors: bool = False, _serve_grpc: bool = False, __test__: bool = False, **_: t.Any) -> LLMConfig | subprocess.Popen[bytes]:
   """Python API to start a LLM server. These provides one-to-one mapping to CLI arguments.
 
   For all additional arguments, pass it as string to ``additional_args``. For example, if you want to
@@ -50,13 +51,12 @@ def _start(model_name: str, /, *, model_id: str | None = None, timeout: int = 30
                 - gptq: Quantize the model with GPTQ (auto-gptq required)
       bettertransformer: Convert given model to FastTransformer with PyTorch.
       runtime: The runtime to use for this LLM. By default, this is set to ``transformers``. In the future, this will include supports for GGML.
-      fast: Enable fast mode. This will skip downloading models, and will raise errors if given model_id does not exists under local store.
+      cors: Whether to enable CORS for this LLM. By default, this is set to ``False``.
       adapter_map: The adapter mapping of LoRA to use for this LLM. It accepts a dictionary of ``{adapter_id: adapter_name}``.
       framework: The framework to use for this LLM. By default, this is set to ``pt``.
       additional_args: Additional arguments to pass to ``openllm start``.
   """
   from .entrypoint import start_command, start_grpc_command
-  fast = os.environ.get("OPENLLM_FAST", str(fast)).upper() in openllm.utils.ENV_VARS_TRUE_VALUES
   llm_config = openllm.AutoConfig.for_model(model_name)
   _ModelEnv = openllm.utils.EnvVarMixin(model_name, openllm.utils.first_not_none(framework, default=llm_config.default_implementation()), model_id=model_id, bettertransformer=bettertransformer, quantize=quantize, runtime=runtime)
   os.environ[_ModelEnv.framework] = _ModelEnv["framework_value"]
@@ -69,7 +69,7 @@ def _start(model_name: str, /, *, model_id: str | None = None, timeout: int = 30
   if quantize and bettertransformer: raise OpenLLMException("'quantize' and 'bettertransformer' are currently mutually exclusive.")
   if quantize: args.extend(["--quantize", str(quantize)])
   elif bettertransformer: args.append("--bettertransformer")
-  if fast: args.append("--fast")
+  if cors: args.append("--cors")
   if adapter_map: args.extend(list(itertools.chain.from_iterable([["--adapter-id", f"{k}{':'+v if v else ''}"] for k, v in adapter_map.items()])))
   if additional_args: args.extend(additional_args)
   if __test__: args.append("--return-process")

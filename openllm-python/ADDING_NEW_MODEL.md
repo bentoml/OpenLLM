@@ -8,8 +8,8 @@ environment by referring to our
 ## Procedure
 
 All the relevant code for incorporating a new model resides within
-`src/openllm/models`. Start by creating a new folder named after your
-`model_name` in snake_case. Here's your roadmap:
+[`src/openllm/models`](./src/openllm/models/) `model_name` in snake_case.
+Here's your roadmap:
 
 - [ ] Generate model configuration file:
       `src/openllm/models/{model_name}/configuration_{model_name}.py`
@@ -17,15 +17,13 @@ All the relevant code for incorporating a new model resides within
       `src/openllm/models/{model_name}/modeling_{runtime}_{model_name}.py`
 - [ ] Create module's `__init__.py`:
       `src/openllm/models/{model_name}/__init__.py`
-- [ ] Adjust the entrypoints for files at `src/openllm/models/auto/*`
+- [ ] Adjust the entrypoints for files at `src/openllm/models/auto/*` If it is a
+      new runtime, then add it a `src/openllm/models/auto/modeling_{runtime}_auto.py`.
+      See the other auto runtime for example.
 - [ ] Modify the main `__init__.py`: `src/openllm/models/__init__.py`
 - [ ] Run the following to update stubs: `hatch run check-stubs`
 
-For a working example, check out any pre-implemented model.
-
-> We are developing a CLI command and helper script to generate these files,
-> which would further streamline the process. Until then, manual creation is
-> necessary.
+For a working example, check out any existing model.
 
 ### Model Configuration
 

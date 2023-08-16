@@ -493,7 +493,7 @@ openllm build opt --model-id facebook/opt-6.7b --adapter-id ...
 
 OpenLLM encourages contributions by welcoming users to incorporate their custom
 LLMs into the ecosystem. Check out
-[Adding a New Model Guide](https://github.com/bentoml/OpenLLM/blob/main/ADDING_NEW_MODEL.md)
+[Adding a New Model Guide](https://github.com/bentoml/OpenLLM/blob/main/openllm-python/ADDING_NEW_MODEL.md)
 to see how you can do it yourself.
 
 ### Embeddings
@@ -534,6 +534,15 @@ client.embed("I like to eat apples")
 > [!NOTE]
 > Currently, the following model family supports embeddings: Llama, T5
 > (Flan-T5, FastChat, etc.), ChatGLM
+
+### Playground and Chat UI
+
+The following UIs are currently available for OpenLLM:
+
+| UI                                                                                | Owner                                         | Type                 | Progress |
+|-----------------------------------------------------------------------------------|-----------------------------------------------|----------------------|----------|
+| [Clojure](https://github.com/bentoml/OpenLLM/blob/main/contrib/clojure/README.md) | [@ GutZuFusss](https://github.com/GutZuFusss) | Community-maintained | 🔧       |
+| TS                                                                                | BentoML Team                                  |                      | 🚧       |
 
 ## ⚙️ Integrations
 

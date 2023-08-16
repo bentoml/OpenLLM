@@ -169,7 +169,10 @@ jobs:
           pushd openllm-node &>/dev/null
           jq --arg release_version "${DEV_VERSION}" '.version = $release_version' < package.json > package.json.tmp && mv package.json.tmp package.json
           popd &>/dev/null
-          git add package.json openllm-node/package.json && git commit -S -sm "infra: bump to dev version of ${DEV_VERSION} [generated] [skip ci]"
+          pushd contrib/clojure &>/dev/null
+          jq --arg release_version "${version}" '.version = $release_version' < package.json > package.json.tmp && mv package.json.tmp package.json
+          popd &>/dev/null
+          git add package.json openllm-node/package.json contrib/clojure/package.json && git commit -S -sm "infra: bump to dev version of ${DEV_VERSION} [generated] [skip ci]"
           git push origin HEAD:main
   binary-distribution:
     if: github.repository_owner == 'bentoml'
