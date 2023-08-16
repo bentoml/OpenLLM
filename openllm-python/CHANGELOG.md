@@ -18,6 +18,26 @@ This changelog is managed by towncrier and is compiled at release time.
 
 <!-- towncrier release notes start -->
 
+## [0.2.25](https://github.com/bentoml/openllm/tree/v0.2.25)
+
+### Features
+
+- OpenLLM now include a community-maintained ClojureScript UI, Thanks @GutZuFusss
+
+  See [this README.md](/contrib/clojure/README.md) for more information
+
+  OpenLLM will also include a `--cors` to enable start with cors enabled.
+  [#89](https://github.com/bentoml/openllm/issues/89)
+- Nightly wheels now can be installed via `test.pypi.org`:
+
+  ```bash
+  pip install -i https://test.pypi.org/simple/ openllm
+  ```
+  [#215](https://github.com/bentoml/openllm/issues/215)
+- Running vLLM with Falcon is now supported
+  [#223](https://github.com/bentoml/openllm/issues/223)
+
+
 ## [0.2.24](https://github.com/bentoml/openllm/tree/v0.2.24)
 No significant changes.
 
