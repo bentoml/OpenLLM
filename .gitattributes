@@ -7,11 +7,11 @@ openllm-python/tests/models/__snapshots__/* linguist-generated=true
 openllm-python/src/openllm/utils/dummy_*.py linguist-generated=true
 openllm-python/src/openllm/models/__init__.py linguist-generated=true
 openllm-python/README.md linguist-generated=true
+openllm-python/CHANGELOG.md linguist-generated=true
 
 # Others
 typings/**/*.pyi linguist-generated=true
 Formula/openllm.rb linguist-generated=true
-
 
 * text=auto eol=lf
 # Needed for setuptools-scm-git-archive

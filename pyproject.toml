@@ -36,7 +36,7 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
-description = "OpenLLM: Operating LLMs in production"
+description = "OpenLLM monorepo"
 dynamic = ["version", "readme", "dependencies"]
 keywords = [
     "MLOps",
@@ -58,7 +58,7 @@ keywords = [
     "Transformers",
 ]
 license = "Apache-2.0"
-name = "openllm"
+name = "openllm-monorepo"
 requires-python = ">=3.8"
 [project.urls]
 Blog = "https://modelserving.com"
