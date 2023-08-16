@@ -10,9 +10,9 @@
 <br/>
 
  ## Installation
- 
+
  The recommended way to run this UI is via the docker container:
- 
+
 ```bash
 docker run --rm -p 8420:80 ghcr.io/bentoml/openllm-ui-clojure:0.2.25
 ```
