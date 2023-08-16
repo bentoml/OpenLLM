@@ -10,10 +10,7 @@ docker run --rm -p 8420:80 ghcr.io/bentoml/openllm-ui-clojure:0.2.25
 
 > [!NOTE]
 > Currently, the LLMServer must be also running to use with the UI.
-> Start any model server with `openllm start`. For more information, see `openllm start -h`
-
-
-
+> Start any model server with `openllm start --cors`. For more information, see `openllm start -h`
 
 ## Developement Build
 

@@ -1,5 +1,6 @@
 # Clojure UI
 contrib/clojure/pnpm-lock.yaml linguist-generated=true
+contrib/clojure/src/generated/** linguist-generated=true
 
 # Python core
 openllm-python/tests/models/__snapshots__/* linguist-generated=true
