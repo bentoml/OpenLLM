@@ -6,6 +6,10 @@ on:
       - "main"
     tags:
       - "*"
+    paths:
+      - ".github/workflows/build.yaml"
+      - "openllm-python/src/openllm/bundle/oci/Dockerfile"
+      - "openllm-python/src/openllm/**"
   pull_request:
     branches:
       - "main"
