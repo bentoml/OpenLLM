@@ -9,6 +9,9 @@ class VLLMBaichuan(metaclass=_DummyMetaclass):
 class VLLMDollyV2(metaclass=_DummyMetaclass):
   _backends=["vllm"]
   def __init__(self,*param_decls:_t.Any,**attrs: _t.Any):_require_backends(self,["vllm"])
+class VLLMFalcon(metaclass=_DummyMetaclass):
+  _backends=["vllm","einops","xformers"]
+  def __init__(self,*param_decls:_t.Any,**attrs: _t.Any):_require_backends(self,["vllm","einops","xformers"])
 class VLLMGPTNeoX(metaclass=_DummyMetaclass):
   _backends=["vllm"]
   def __init__(self,*param_decls:_t.Any,**attrs: _t.Any):_require_backends(self,["vllm"])
@@ -31,4 +34,4 @@ class AutoVLLM(metaclass=_DummyMetaclass):
   _backends=["vllm"]
   def __init__(self,*param_decls:_t.Any,**attrs: _t.Any):_require_backends(self,["vllm"])
 MODEL_VLLM_MAPPING_NAMES:_t.Any=None
-__all__:list[str]=["MODEL_VLLM_MAPPING_NAMES","AutoVLLM","VLLMBaichuan","VLLMDollyV2","VLLMGPTNeoX","VLLMMPT","VLLMOPT","VLLMStableLM","VLLMStarCoder","VLLMLlama"]
+__all__:list[str]=["MODEL_VLLM_MAPPING_NAMES","AutoVLLM","VLLMBaichuan","VLLMDollyV2","VLLMFalcon","VLLMGPTNeoX","VLLMMPT","VLLMOPT","VLLMStableLM","VLLMStarCoder","VLLMLlama"]

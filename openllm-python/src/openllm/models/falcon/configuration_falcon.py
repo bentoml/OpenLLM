@@ -27,7 +27,9 @@ Run a LLMServer for FalconLM model.
 \b
 ## Usage
 
-Currently, FalconLM only supports PyTorch. Make sure ``torch`` is available in your system.
+By default, this model will use the PyTorch model for inference. However, this model also support vLLM.
+
+Note that if you use vLLM, a NVIDIA GPU is required.
 
 \b
 FalconLM Runner will use tiiuae/falcon-7b as the default model. To change to any other FalconLM

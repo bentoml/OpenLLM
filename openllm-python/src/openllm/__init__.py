@@ -114,6 +114,7 @@ else:
   _import_structure["models.llama"].extend(["VLLMLlama"])
   _import_structure["models.opt"].extend(["VLLMOPT"])
   _import_structure["models.dolly_v2"].extend(["VLLMDollyV2"])
+  _import_structure["models.falcon"].extend(["VLLMFalcon"])
   _import_structure["models.gpt_neox"].extend(["VLLMGPTNeoX"])
   _import_structure["models.mpt"].extend(["VLLMMPT"])
   _import_structure["models.stablelm"].extend(["VLLMStableLM"])
@@ -124,6 +125,7 @@ else:
     from .models.baichuan import VLLMBaichuan as VLLMBaichuan
     from .models.dolly_v2 import VLLMDollyV2 as VLLMDollyV2
     from .models.gpt_neox import VLLMGPTNeoX as VLLMGPTNeoX
+    from .models.falcon import VLLMFalcon as VLLMFalcon
     from .models.llama import VLLMLlama as VLLMLlama
     from .models.mpt import VLLMMPT as VLLMMPT
     from .models.opt import VLLMOPT as VLLMOPT
