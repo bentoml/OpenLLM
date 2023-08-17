@@ -21,6 +21,7 @@ defaults:
     shell: bash --noprofile --norc -exo pipefail {0}
 env:
   OPENLLM_OPT_MODEL_ID: facebook/opt-125m
+  BENTOML_HOME: ${{ github.workspace }}/bentoml
 jobs:
   build-and-push-embedding-bento:
     name: Build embedding container
