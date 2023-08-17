@@ -2,13 +2,18 @@ name: Build Clojure UI
 on:
   workflow_dispatch:
   push:
+    branches: [main]
+    tags:
+      - "*"
     paths:
       - 'contrib/clojure/**'
+      - ".github/workflows/clojure-frontend.yml"
   pull_request:
     types: [labeled, opened, synchronize, reopened]
     branches: [main]
     paths:
       - 'contrib/clojure/**'
+      - ".github/workflows/clojure-frontend.yml"
 # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#defaultsrun
 defaults:
   run:
@@ -104,6 +109,7 @@ jobs:
         with:
           context: contrib/clojure
           file: contrib/clojure/Dockerfile
+          platforms: linux/amd64,linux/arm64
           push: true
           build-args: |
             GIT_SHA=${{ env.GITHUB_SHA }}
