@@ -92,8 +92,26 @@ jobs:
         id: bento-tag
         run: |
           pip install -e ${{ github.workspace }}/openllm-python
-          openllm build opt --container-registry gh --container-version-strategy latest --serialisation legacy --bento-version sha-${{ env.GITHUB_SHA_SHORT }} --machine
-          bento_tag=$(python -c "import openllm;print(str(openllm.build('opt',bento_version='sha-${{ env.GITHUB_SHA_SHORT }}',container_registry='gh',serialisation_format='legacy',container_version_strategy='latest').tag))")
+          openllm build opt --serialisation legacy --bento-version sha-${{ env.GITHUB_SHA_SHORT }} --machine --dockerfile-template - <<EOF
+            {% extends "python_debian.j2" %}
+            {% block SETUP_BENTO_BASE_IMAGE %}
+            FROM python:3.11-slim as base-container
+
+            ENV LANG=C.UTF-8
+            ENV LC_ALL=C.UTF-8
+            ENV PYTHONIOENCODING=UTF-8
+            ENV PYTHONUNBUFFERED=1
+
+            USER root
+            ENV DEBIAN_FRONTEND=noninteractive
+            RUN rm -f /etc/apt/apt.conf.d/docker-clean; echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
+            {% call common.RUN(__enable_buildkit__) -%} {{ common.mount_cache(__lib_apt__) }} {{ common.mount_cache(__cache_apt__) }} {% endcall -%} set -eux && \
+                apt-get update -y && \
+                apt-get install -q -y --no-install-recommends --allow-remove-essential \
+                    ca-certificates gnupg2 bash build-essential {% if __options__system_packages is not none %}{{ __options__system_packages | join(' ') }}{% endif -%}
+            {% endblock %}
+          EOF
+          bento_tag=$(python -c "import openllm;print(str(openllm.build('opt',bento_version='sha-${{ env.GITHUB_SHA_SHORT }}',serialisation_format='legacy').tag))")
           echo "tag=$bento_tag" >> $GITHUB_OUTPUT
       - name: Build and push Embedding Bento
         id: build-and-push
