@@ -18,6 +18,21 @@ This changelog is managed by towncrier and is compiled at release time.
 
 <!-- towncrier release notes start -->
 
+## [0.2.26](https://github.com/bentoml/openllm/tree/v0.2.26)
+
+### Features
+
+- Added a generic embedding implementation largely based on https://github.com/bentoml/sentence-embedding-bento
+  For all unsupported models.
+  [#227](https://github.com/bentoml/openllm/issues/227)
+
+
+### Bug fix
+
+- Fixes correct directory for building standalone installer
+  [#228](https://github.com/bentoml/openllm/issues/228)
+
+
 ## [0.2.25](https://github.com/bentoml/openllm/tree/v0.2.25)
 
 ### Features
