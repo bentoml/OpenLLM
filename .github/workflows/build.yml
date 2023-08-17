@@ -6,17 +6,8 @@ on:
       - "main"
     tags:
       - "*"
-    paths:
-      - ".github/workflows/build.yaml"
-      - "openllm-python/src/openllm/bundle/oci/Dockerfile"
-      - "openllm-python/src/openllm/**"
   pull_request:
-    branches:
-      - "main"
-    paths:
-      - ".github/workflows/build.yaml"
-      - "openllm-python/src/openllm/bundle/oci/Dockerfile"
-      - "openllm-python/src/openllm/**"
+    types: [labeled, opened, synchronize, reopened]
 env:
   LINES: 120
   COLUMNS: 120
@@ -27,10 +18,35 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
 jobs:
+  get_commit_message:
+    name: Get commit message
+    runs-on: ubuntu-latest
+    if: "github.repository == 'bentoml/OpenLLM'" # Don't run on fork repository
+    outputs:
+      message: ${{ steps.commit_message.outputs.message }}
+    steps:
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # ratchet:actions/checkout@v3
+        # Gets the correct commit message for pull request
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Get commit message
+        id: commit_message
+        run: |
+          set -xe
+          COMMIT_MSG=$(git log --no-merges -1 --oneline)
+          echo "message=$COMMIT_MSG" >> $GITHUB_OUTPUT
+          echo github.ref ${{ github.ref }}
   start-runner:
     name: Start self-hosted EC2 runner
     runs-on: ubuntu-latest
-    if: github.repository_owner == 'bentoml'
+    needs: get_commit_message
+    if: >-
+      contains(needs.get_commit_message.outputs.message, '[ec2 build]') ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' &&
+      contains(github.event.pull_request.labels.*.name, '00 - EC2 Build')) ||
+      (github.event_name == 'push' &&
+      startsWith(github.ref, 'refs/tags/v') && ( ! endsWith(github.ref, 'dev0')))
     env:
       EC2_INSTANCE_TYPE: g5.12xlarge
       EC2_AMI_ID: ami-089dafe9af191a0fd
@@ -192,8 +208,15 @@ jobs:
     needs:
       - start-runner
       - build-and-push-image
+      - get_commit_message
     runs-on: ubuntu-latest
-    if: ${{ always() }} # required to stop the runner even if the error happened in the previous jobs
+    if: >-
+      (contains(needs.get_commit_message.outputs.message, '[ec2 build]') ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' &&
+      contains(github.event.pull_request.labels.*.name, '00 - EC2 Build')) ||
+      (github.event_name == 'push' &&
+      startsWith(github.ref, 'refs/tags/v') && ( ! endsWith(github.ref, 'dev0')))) && always()
     steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@5fd3084fc36e372ff1fff382a39b10d03659f355 # ratchet:aws-actions/configure-aws-credentials@v2
