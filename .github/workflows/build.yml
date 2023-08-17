@@ -41,7 +41,12 @@ jobs:
     runs-on: ubuntu-latest
     needs: get_commit_message
     if: >-
-      contains(needs.get_commit_message.outputs.message, '[ec2 build]') || github.event_name == "workflow_dispatch" || (github.event_name == "pull_request" && contains(github.event.pull_request.labels.*.name, '00 - EC2 Build')) || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v'))
+      contains(needs.get_commit_message.outputs.message, '[ec2 build]') ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' &&
+      contains(github.event.pull_request.labels.*.name, '00 - EC2 Build')) ||
+      (github.event_name == 'push' &&
+      startsWith(github.ref, 'refs/tags/v') && ( ! endsWith(github.ref, 'dev0')))
     env:
       EC2_INSTANCE_TYPE: g5.12xlarge
       EC2_AMI_ID: ami-089dafe9af191a0fd
