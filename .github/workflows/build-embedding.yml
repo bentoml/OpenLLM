@@ -85,7 +85,7 @@ jobs:
       - name: Build OPT Bento with base embeddings
         id: bento-tag
         run: |
-          pip install ./openllm-python
+          pip install ${{ github.workspace }}/openllm-python -vv
           bento_tag=$(openllm build opt --container-registry gh --container-version-strategy latest --serialisation legacy --bento-version sha-${{ env.GITHUB_SHA_SHORT }} --machine)
           bento_tag=${bento_tag##__tag__:}
           echo "tag=$bento_tag" >> $GITHUB_OUTPUT

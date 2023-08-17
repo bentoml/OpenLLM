@@ -1,4 +1,3 @@
-# mypy: disable-error-code="arg-type,misc,call-arg,type-arg,valid-type,assignment"
 from __future__ import annotations
 import os, warnings, orjson, bentoml, openllm, typing as t
 from starlette.applications import Starlette

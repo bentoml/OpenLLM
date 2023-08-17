@@ -195,7 +195,6 @@ mypy-args = [
   "--strict",
   # this is because all transient library doesn't have types
   "--allow-subclassing-any",
-  "--follow-imports=skip",
   "--check-untyped-defs",
   "--ignore-missing-imports",
   "--no-warn-return-any",
@@ -204,6 +203,7 @@ mypy-args = [
   "--no-warn-unused-ignores",
   "--exclude='/src\\/openllm\\/playground\\/**'",
   "--exclude='/src\\/openllm\\/_typing_compat\\.py$'",
+  "--exclude='/src\\/openllm\\/_service.py\\.py$'",
 ]
 options = { verbose = true, strip_asserts = true, debug_level = "2", opt_level = "3", include_runtime_files = true }
 require-runtime-dependencies = true

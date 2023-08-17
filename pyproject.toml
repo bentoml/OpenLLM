@@ -390,6 +390,7 @@ exclude = [
   "openllm-python/src/openllm/utils/dummy_*.py",
   "openllm-python/src/openllm/models",
   "openllm-python/src/openllm/_typing_compat.py",
+  "openllm-python/src/openllm/_service.py",
 ]
 modules = ["openllm"]
 mypy_path = "typings"
