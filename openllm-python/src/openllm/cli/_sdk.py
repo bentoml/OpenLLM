@@ -77,7 +77,7 @@ def _start(model_name: str, /, *, model_id: str | None = None, timeout: int = 30
   return start_command_factory(start_command if not _serve_grpc else start_grpc_command, model_name, _context_settings=termui.CONTEXT_SETTINGS, _serve_grpc=_serve_grpc).main(args=args if len(args) > 0 else None, standalone_mode=False)
 
 @inject
-def _build(model_name: str, /, *, model_id: str | None = None, model_version: str | None = None, quantize: t.Literal["int8", "int4", "gptq"] | None = None, bettertransformer: bool | None = None, adapter_map: dict[str, str | None] | None = None, build_ctx: str | None = None, enable_features: tuple[str, ...] | None = None, workers_per_resource: float | None = None, runtime: t.Literal["ggml", "transformers"] = "transformers", dockerfile_template: str | None = None, overwrite: bool = False, container_registry: LiteralContainerRegistry | None = None, container_version_strategy: LiteralContainerVersionStrategy | None = None, push: bool = False, containerize: bool = False, serialisation_format: t.Literal["safetensors", "legacy"] = "safetensors", additional_args: list[str] | None = None, bento_store: BentoStore = Provide[BentoMLContainer.bento_store]) -> bentoml.Bento:
+def _build(model_name: str, /, *, model_id: str | None = None, model_version: str | None = None, bento_version: str | None = None, quantize: t.Literal["int8", "int4", "gptq"] | None = None, bettertransformer: bool | None = None, adapter_map: dict[str, str | None] | None = None, build_ctx: str | None = None, enable_features: tuple[str, ...] | None = None, workers_per_resource: float | None = None, runtime: t.Literal["ggml", "transformers"] = "transformers", dockerfile_template: str | None = None, overwrite: bool = False, container_registry: LiteralContainerRegistry | None = None, container_version_strategy: LiteralContainerVersionStrategy | None = None, push: bool = False, containerize: bool = False, serialisation_format: t.Literal["safetensors", "legacy"] = "safetensors", additional_args: list[str] | None = None, bento_store: BentoStore = Provide[BentoMLContainer.bento_store]) -> bentoml.Bento:
   """Package a LLM into a Bento.
 
   The LLM will be built into a BentoService with the following structure:
@@ -92,6 +92,7 @@ def _build(model_name: str, /, *, model_id: str | None = None, model_version: st
       model_name: The model name to start this LLM
       model_id: Optional model id for this given LLM
       model_version: Optional model version for this given LLM
+      bento_version: Optional bento veresion for this given BentoLLM
       quantize: Quantize the model weights. This is only applicable for PyTorch models.
                 Possible quantisation strategies:
                 - int8: Quantize the model with 8bit (bitsandbytes required)
@@ -126,7 +127,7 @@ def _build(model_name: str, /, *, model_id: str | None = None, model_version: st
   Returns:
       ``bentoml.Bento | str``: BentoLLM instance. This can be used to serve the LLM or can be pushed to BentoCloud.
   """
-  args: list[str] = [sys.executable, "-m", "openllm", "build", model_name, "--machine", "--runtime", runtime, "--serialisation", serialisation_format,]
+  args: list[str] = [sys.executable, "-m", "openllm", "build", model_name, "--machine", "--runtime", runtime, "--serialisation", serialisation_format]
   if quantize and bettertransformer: raise OpenLLMException("'quantize' and 'bettertransformer' are currently mutually exclusive.")
   if quantize: args.extend(["--quantize", quantize])
   if bettertransformer: args.append("--bettertransformer")
@@ -140,6 +141,7 @@ def _build(model_name: str, /, *, model_id: str | None = None, model_version: st
   if overwrite: args.append("--overwrite")
   if adapter_map: args.extend([f"--adapter-id={k}{':'+v if v is not None else ''}" for k, v in adapter_map.items()])
   if model_version: args.extend(["--model-version", model_version])
+  if bento_version: args.extend(["--bento-version", bento_version])
   if dockerfile_template: args.extend(["--dockerfile-template", dockerfile_template])
   if container_registry is None: container_registry = "ecr"
   if container_version_strategy is None: container_version_strategy = "release"
