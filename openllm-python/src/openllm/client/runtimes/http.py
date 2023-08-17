@@ -20,7 +20,6 @@ class HTTPClient(BaseClient[DictStrAny]):
 
   def health(self) -> t.Any: return self._cached.health()
   def embed(self, prompt: t.Sequence[str] | str) -> openllm.EmbeddingsOutput:
-    if not self.supports_embeddings: raise ValueError("This model does not support embeddings.")
     if isinstance(prompt, str): prompt = [prompt]
     result = httpx.post(urljoin(self._address, f"/{self._api_version}/embeddings"), json=list(prompt), timeout=self.timeout).json() if in_async_context() else self.call("embeddings", list(prompt))
     return openllm.EmbeddingsOutput(**result)
@@ -62,7 +61,6 @@ class AsyncHTTPClient(BaseAsyncClient[DictStrAny]):
 
   async def health(self) -> t.Any: return await self._cached.async_health()
   async def embed(self, prompt: t.Sequence[str] | str) -> openllm.EmbeddingsOutput:
-    if not self.supports_embeddings: raise ValueError("This model does not support embeddings.")
     if isinstance(prompt, str): prompt = [prompt]
     res = await self.acall("embeddings", list(prompt))
     return openllm.EmbeddingsOutput(**res)

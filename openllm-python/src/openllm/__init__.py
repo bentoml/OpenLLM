@@ -28,7 +28,9 @@ else:
   _warnings.filterwarnings("ignore", message="Neither GITHUB_TOKEN nor GITHUB_JWT_TOKEN found: running as unauthenticated")
 
 _import_structure: dict[str, list[str]] = {
-    "exceptions": [], "models": [], "client": [], "bundle": [], "playground": [], "testing": [], "utils": ["infer_auto_class"], "serialisation": ["ggml", "transformers"], "cli._sdk": ["start", "start_grpc", "build", "import_model", "list_models"], "_llm": ["LLM", "Runner", "LLMRunner", "LLMRunnable", "LLMEmbeddings"], "_configuration": ["LLMConfig", "GenerationConfig", "SamplingParams"], "_generation": ["StopSequenceCriteria", "StopOnTokens", "LogitsProcessorList", "StoppingCriteriaList", "prepare_logits_processor"], "_quantisation": ["infer_quantisation_config"], "_schema": ["GenerationInput", "GenerationOutput", "MetadataOutput", "EmbeddingsOutput", "unmarshal_vllm_outputs", "HfAgentInput"],
+    "exceptions": [], "models": [], "client": [], "bundle": [], "playground": [], "testing": [], "utils": ["infer_auto_class"], "serialisation": ["ggml", "transformers"], "cli._sdk": ["start", "start_grpc", "build", "import_model", "list_models"],
+    "_llm": ["LLM", "Runner", "LLMRunner", "LLMRunnable", "LLMEmbeddings"], "_configuration": ["LLMConfig", "GenerationConfig", "SamplingParams"], "_generation": ["StopSequenceCriteria", "StopOnTokens", "LogitsProcessorList", "StoppingCriteriaList", "prepare_logits_processor"],
+    "_quantisation": ["infer_quantisation_config"], "_schema": ["GenerationInput", "GenerationOutput", "MetadataOutput", "EmbeddingsOutput", "unmarshal_vllm_outputs", "HfAgentInput"], "_embeddings": ["GenericEmbeddingRunnable"], "_strategies": ["CascadingResourceStrategy", "get_resource"],
     "models.auto": ["AutoConfig", "CONFIG_MAPPING", "MODEL_MAPPING_NAMES", "MODEL_FLAX_MAPPING_NAMES", "MODEL_TF_MAPPING_NAMES", "MODEL_VLLM_MAPPING_NAMES"], "models.chatglm": ["ChatGLMConfig"], "models.baichuan": ["BaichuanConfig"], "models.dolly_v2": ["DollyV2Config"], "models.falcon": ["FalconConfig"], "models.flan_t5": ["FlanT5Config"], "models.gpt_neox": ["GPTNeoXConfig"], "models.llama": ["LlamaConfig"], "models.mpt": ["MPTConfig"], "models.opt": ["OPTConfig"], "models.stablelm": ["StableLMConfig"], "models.starcoder": ["StarCoderConfig"]
 }
 COMPILED = _Path(__file__).suffix in (".pyd", ".so")
@@ -40,6 +42,8 @@ if _t.TYPE_CHECKING:
   from ._llm import LLM as LLM, LLMEmbeddings as LLMEmbeddings, LLMRunnable as LLMRunnable, LLMRunner as LLMRunner, Runner as Runner
   from ._quantisation import infer_quantisation_config as infer_quantisation_config
   from ._schema import EmbeddingsOutput as EmbeddingsOutput, GenerationInput as GenerationInput, GenerationOutput as GenerationOutput, HfAgentInput as HfAgentInput, MetadataOutput as MetadataOutput, unmarshal_vllm_outputs as unmarshal_vllm_outputs
+  from ._embeddings import GenericEmbeddingRunnable as GenericEmbeddingRunnable
+  from ._strategies import CascadingResourceStrategy as CascadingResourceStrategy, get_resource as get_resource
   from .cli._sdk import build as build, import_model as import_model, list_models as list_models, start as start, start_grpc as start_grpc
   from .models.auto import CONFIG_MAPPING as CONFIG_MAPPING, MODEL_FLAX_MAPPING_NAMES as MODEL_FLAX_MAPPING_NAMES, MODEL_MAPPING_NAMES as MODEL_MAPPING_NAMES, MODEL_TF_MAPPING_NAMES as MODEL_TF_MAPPING_NAMES, MODEL_VLLM_MAPPING_NAMES as MODEL_VLLM_MAPPING_NAMES, AutoConfig as AutoConfig
   from .models.baichuan import BaichuanConfig as BaichuanConfig
@@ -54,7 +58,7 @@ if _t.TYPE_CHECKING:
   from .models.stablelm import StableLMConfig as StableLMConfig
   from .models.starcoder import StarCoderConfig as StarCoderConfig
   from .serialisation import ggml as ggml, transformers as transformers
-  from openllm.utils import infer_auto_class as infer_auto_class
+  from .utils import infer_auto_class as infer_auto_class
 
 try:
   if not (utils.is_torch_available() and utils.is_cpm_kernels_available()): raise exceptions.MissingDependencyError

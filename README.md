@@ -500,7 +500,7 @@ to see how you can do it yourself.
 
 ### Embeddings
 
-OpenLLM tentatively provides embeddings endpoint for supported models. This can
+OpenLLM provides embeddings endpoint for embeddings calculation. This can
 be accessed via `/v1/embeddings`.
 
 To use via CLI, simply call `openllm embed`:
@@ -534,8 +534,10 @@ client.embed("I like to eat apples")
 ```
 
 > [!NOTE]
-> Currently, the following model family supports embeddings: Llama, T5
-> (Flan-T5, FastChat, etc.), ChatGLM
+> Currently, the following model family supports embeddings calculation: Llama, T5 (Flan-T5, FastChat, etc.), ChatGLM
+> For the remaining LLM that doesn't have specific embedding implementation,
+> we will use a generic [BertModel](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2)
+> for embeddings generation. The implementation is largely based on [`bentoml/sentence-embedding-bento`](https://github.com/bentoml/sentence-embedding-bento)
 
 ### Playground and Chat UI
 
@@ -543,7 +545,7 @@ The following UIs are currently available for OpenLLM:
 
 | UI                                                                                | Owner                                         | Type                 | Progress |
 |-----------------------------------------------------------------------------------|-----------------------------------------------|----------------------|----------|
-| [Clojure](https://github.com/bentoml/OpenLLM/blob/main/contrib/clojure/README.md) | [@ GutZuFusss](https://github.com/GutZuFusss) | Community-maintained | 🔧       |
+| [Clojure](https://github.com/bentoml/OpenLLM/blob/main/contrib/clojure/README.md) | [@GutZuFusss](https://github.com/GutZuFusss)  | Community-maintained | 🔧       |
 | TS                                                                                | BentoML Team                                  |                      | 🚧       |
 
 ## ⚙️ Integrations

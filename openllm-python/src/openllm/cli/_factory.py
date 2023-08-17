@@ -27,6 +27,7 @@ def parse_config_options(config: LLMConfig, server_timeout: int, workers_per_res
   if device:
     if len(device) > 1: _bentoml_config_options_opts.extend([f'runners."llm-{config["start_name"]}-runner".resources."nvidia.com/gpu"[{idx}]={dev}' for idx, dev in enumerate(device)])
     else: _bentoml_config_options_opts.append(f'runners."llm-{config["start_name"]}-runner".resources."nvidia.com/gpu"=[{device[0]}]')
+  _bentoml_config_options_opts.append(f'runners."llm-generic-embedding".resources.cpu={openllm.get_resource({"cpu":"system"},"cpu")}')
   if cors:
     _bentoml_config_options_opts.extend(["api_server.http.cors.enabled=true", 'api_server.http.cors.access_control_allow_origins="*"'])
     _bentoml_config_options_opts.extend([f'api_server.http.cors.access_control_allow_methods[{idx}]="{it}"' for idx, it in enumerate(["GET", "OPTIONS", "POST", "HEAD", "PUT"])])
