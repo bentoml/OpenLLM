@@ -34,8 +34,9 @@ jobs:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # ratchet:actions/checkout@v3
         with:
           fetch-depth: 0
-      - name: Setup CI
-        uses: ./.github/actions/setup-repo
+      - uses: bentoml/setup-bentoml-action@59beefe94e2e8f8ebbedf555fc86bd5d1ae0a708 # ratchet:bentoml/setup-bentoml-action@v1
+        with:
+          bentoml-version: 'main'
       - name: Pull latest change
         if: ${{ github.event_name != 'pull_request' }}
         run: git pull --autostash --no-edit --gpg-sign --ff origin main

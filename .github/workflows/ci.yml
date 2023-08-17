@@ -46,9 +46,9 @@ jobs:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # ratchet:actions/checkout@v3
         with:
           fetch-depth: 0
-      - name: Setup CI
-        uses: ./.github/actions/setup-repo
+      - uses: bentoml/setup-bentoml-action@59beefe94e2e8f8ebbedf555fc86bd5d1ae0a708 # ratchet:bentoml/setup-bentoml-action@v1
         with:
+          bentoml-version: 'main'
           python-version: ${{ matrix.python-version }}
       - name: Run tests
         run: hatch run tests:python
@@ -69,9 +69,9 @@ jobs:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # ratchet:actions/checkout@v3
         with:
           fetch-depth: 0
-      - name: Setup CI
-        uses: ./.github/actions/setup-repo
+      - uses: bentoml/setup-bentoml-action@59beefe94e2e8f8ebbedf555fc86bd5d1ae0a708 # ratchet:bentoml/setup-bentoml-action@v1
         with:
+          bentoml-version: 'main'
           python-version-file: .python-version-default
       - name: Download coverage data
         uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
@@ -111,9 +111,9 @@ jobs:
         run: |
           wget https://github.com/sharkdp/hyperfine/releases/download/v${HYPERFINE_VERSION}/hyperfine_${HYPERFINE_VERSION}_amd64.deb
           sudo dpkg -i hyperfine_${HYPERFINE_VERSION}_amd64.deb
-      - name: Setup CI
-        uses: ./.github/actions/setup-repo
+      - uses: bentoml/setup-bentoml-action@59beefe94e2e8f8ebbedf555fc86bd5d1ae0a708 # ratchet:bentoml/setup-bentoml-action@v1
         with:
+          bentoml-version: 'main'
           python-version-file: .python-version-default
       - name: Install self
         run: pip install ./openllm-python
