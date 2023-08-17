@@ -1,61 +1,61 @@
 [build-system]
 build-backend = "hatchling.build"
 requires = [
-    "hatchling==1.18.0",
-    "hatch-vcs==0.3.0",
-    "hatch-fancy-pypi-readme==23.1.0",
-    "hatch-mypyc==0.16.0",
+  "hatchling==1.18.0",
+  "hatch-vcs==0.3.0",
+  "hatch-fancy-pypi-readme==23.1.0",
+  "hatch-mypyc==0.16.0",
 ]
 [project]
 authors = [
-    { name = "Aaron Pham", email = "aarnphm@bentoml.com" },
-    { name = "BentoML Team", email = "contact@bentoml.com" },
+  { name = "Aaron Pham", email = "aarnphm@bentoml.com" },
+  { name = "BentoML Team", email = "contact@bentoml.com" },
 ]
 classifiers = [
-    "Development Status :: 5 - Production/Stable",
-    "Environment :: GPU :: NVIDIA CUDA",
-    "Environment :: GPU :: NVIDIA CUDA :: 12",
-    "Environment :: GPU :: NVIDIA CUDA :: 11.8",
-    "Environment :: GPU :: NVIDIA CUDA :: 11.7",
-    "License :: OSI Approved :: Apache Software License",
-    "Topic :: Scientific/Engineering :: Artificial Intelligence",
-    "Topic :: Software Development :: Libraries",
-    "Operating System :: OS Independent",
-    "Intended Audience :: Developers",
-    "Intended Audience :: Science/Research",
-    "Intended Audience :: System Administrators",
-    "Typing :: Typed",
-    "Programming Language :: Python",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: Implementation :: CPython",
-    "Programming Language :: Python :: Implementation :: PyPy",
+  "Development Status :: 5 - Production/Stable",
+  "Environment :: GPU :: NVIDIA CUDA",
+  "Environment :: GPU :: NVIDIA CUDA :: 12",
+  "Environment :: GPU :: NVIDIA CUDA :: 11.8",
+  "Environment :: GPU :: NVIDIA CUDA :: 11.7",
+  "License :: OSI Approved :: Apache Software License",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Topic :: Software Development :: Libraries",
+  "Operating System :: OS Independent",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Science/Research",
+  "Intended Audience :: System Administrators",
+  "Typing :: Typed",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
 ]
 description = "OpenLLM monorepo"
 dynamic = ["version", "readme", "dependencies"]
 keywords = [
-    "MLOps",
-    "AI",
-    "BentoML",
-    "Model Serving",
-    "Model Deployment",
-    "LLMOps",
-    "Falcon",
-    "Vicuna",
-    "Llama 2",
-    "Fine tuning",
-    "Serverless",
-    "Large Language Model",
-    "Generative AI",
-    "StableLM",
-    "Alpaca",
-    "PyTorch",
-    "Transformers",
+  "MLOps",
+  "AI",
+  "BentoML",
+  "Model Serving",
+  "Model Deployment",
+  "LLMOps",
+  "Falcon",
+  "Vicuna",
+  "Llama 2",
+  "Fine tuning",
+  "Serverless",
+  "Large Language Model",
+  "Generative AI",
+  "StableLM",
+  "Alpaca",
+  "PyTorch",
+  "Transformers",
 ]
 license = "Apache-2.0"
 name = "openllm-monorepo"
@@ -74,12 +74,12 @@ fallback-version = "0.0.0"
 source = "vcs"
 [tool.hatch.version.raw-options]
 git_describe_command = [
-    "git",
-    "describe",
-    "--dirty",
-    "--tags",
-    "--long",
-    "--first-parent",
+  "git",
+  "describe",
+  "--dirty",
+  "--tags",
+  "--long",
+  "--first-parent",
 ]
 local_scheme = "no-local-version"
 [tool.hatch.metadata]
@@ -151,59 +151,59 @@ toplevel = ["openllm"]
 
 [tool.ruff]
 extend-exclude = [
-    "tools",
-    "examples",
-    "openllm-python/src/openllm/playground",
-    "openllm-python/src/openllm/__init__.py",
-    "openllm-python/src/openllm/_version.py",
-    "openllm-python/src/openllm/utils/dummy_*.py",
-    "openllm-python/src/openllm/models/__init__.py",
+  "tools",
+  "examples",
+  "openllm-python/src/openllm/playground",
+  "openllm-python/src/openllm/__init__.py",
+  "openllm-python/src/openllm/_version.py",
+  "openllm-python/src/openllm/utils/dummy_*.py",
+  "openllm-python/src/openllm/models/__init__.py",
 ]
 extend-include = ["*.ipynb"]
 extend-select = [
-    "B",    # flake8-bugbear
-    "I",    # isort
-    "G",    # flake8-logging-format
-    "D",    # pydocstyle
-    "W",    # pycodestyle
-    "Q",    # flake8-quotes
-    "FA",   # flake8-future-annotations
-    "S",    # flake8-bandit
-    "TCH",  # flake8-type-checking
-    "PLW",  # pylint-warning
-    "PLR",  # pylint-refactor
-    "PT",   # flake8-pytest-style
-    "PERF", # perflint
-    "FLY",  # flynt
-    "RUF",  # Ruff-specific rules
-    "YTT",  # flake8-2020
+  "B",    # flake8-bugbear
+  "I",    # isort
+  "G",    # flake8-logging-format
+  "D",    # pydocstyle
+  "W",    # pycodestyle
+  "Q",    # flake8-quotes
+  "FA",   # flake8-future-annotations
+  "S",    # flake8-bandit
+  "TCH",  # flake8-type-checking
+  "PLW",  # pylint-warning
+  "PLR",  # pylint-refactor
+  "PT",   # flake8-pytest-style
+  "PERF", # perflint
+  "FLY",  # flynt
+  "RUF",  # Ruff-specific rules
+  "YTT",  # flake8-2020
 ]
 fix = true
 ignore = [
-    "B027",    # Allow non-abstract empty methods in abstract base classes
-    "FBT003",  # Allow boolean positional values in function calls, like `dict.get(... True)`
-    "S105",    # Ignore checks for possible passwords
-    "S106",
-    "S107",
-    "S603",    # ignore subprocess.call
-    "PLR0911",
-    "PLR0912",
-    "PLR0913",
-    "PLR0915",
-    "PLR2004", # magic value to use constant
-    "E501",    # ignore line length violation
-    "E401",    # ignore multiple line import
-    "E702",
-    "I001",    # unsorted imports
-    "D103",    # Just missing docstring for magic methods.
-    "D102",
-    "D101",
-    "D100",
-    "TCH004",  # don't move runtime import out, just warn about it
-    "RUF012",  # mutable attributes to be used with ClassVar
-    "B905",    # zip warning about strict, only applicable for 3.10+
-    "D105",    # magic docstring
-    "E701",    # multiple statement on single line
+  "B027",    # Allow non-abstract empty methods in abstract base classes
+  "FBT003",  # Allow boolean positional values in function calls, like `dict.get(... True)`
+  "S105",    # Ignore checks for possible passwords
+  "S106",
+  "S107",
+  "S603",    # ignore subprocess.call
+  "PLR0911",
+  "PLR0912",
+  "PLR0913",
+  "PLR0915",
+  "PLR2004", # magic value to use constant
+  "E501",    # ignore line length violation
+  "E401",    # ignore multiple line import
+  "E702",
+  "I001",    # unsorted imports
+  "D103",    # Just missing docstring for magic methods.
+  "D102",
+  "D101",
+  "D100",
+  "TCH004",  # don't move runtime import out, just warn about it
+  "RUF012",  # mutable attributes to be used with ClassVar
+  "B905",    # zip warning about strict, only applicable for 3.10+
+  "D105",    # magic docstring
+  "E701",    # multiple statement on single line
 ]
 line-length = 768
 target-version = "py38"
@@ -212,10 +212,10 @@ unfixable = ["TCH004"]
 [tool.ruff.flake8-type-checking]
 exempt-modules = ["typing", "typing_extensions", "openllm._typing_compat"]
 runtime-evaluated-base-classes = [
-    "pydantic.BaseModel",
-    "openllm._configuration.LLMConfig",
-    "openllm._configuration.GenerationConfig",
-    "openllm._configuration.ModelSettings",
+  "pydantic.BaseModel",
+  "openllm._configuration.LLMConfig",
+  "openllm._configuration.GenerationConfig",
+  "openllm._configuration.ModelSettings",
 ]
 runtime-evaluated-decorators = ["attrs.define", "attrs.frozen", "trait"]
 [tool.ruff.pydocstyle]
@@ -228,12 +228,12 @@ force-single-line = false
 force-wrap-aliases = true
 known-first-party = ["openllm", "bentoml"]
 known-third-party = [
-    "transformers",
-    "click",
-    "huggingface_hub",
-    "torch",
-    "vllm",
-    "auto_gptq",
+  "transformers",
+  "click",
+  "huggingface_hub",
+  "torch",
+  "vllm",
+  "auto_gptq",
 ]
 lines-after-imports = 0
 lines-between-types = 0
@@ -305,44 +305,44 @@ openllm = ["openllm-python/src/openllm", "*/openllm-python/src/openllm"]
 [tool.coverage.run]
 branch = true
 omit = [
-    "__pypackages__/*",
-    "openllm-python/src/openllm/_version.py",
-    "openllm-python/src/openllm/playground/",
-    "openllm-python/src/openllm/__init__.py",
-    "openllm-python/src/openllm/__main__.py",
-    "openllm-python/src/openllm/utils/dummy_*.py",
-    "openllm-python/src/openllm/_typing_compat.py",
+  "__pypackages__/*",
+  "openllm-python/src/openllm/_version.py",
+  "openllm-python/src/openllm/playground/",
+  "openllm-python/src/openllm/__init__.py",
+  "openllm-python/src/openllm/__main__.py",
+  "openllm-python/src/openllm/utils/dummy_*.py",
+  "openllm-python/src/openllm/_typing_compat.py",
 ]
 source_pkgs = ["openllm"]
 [tool.coverage.report]
 exclude_lines = [
-    "no cov",
-    "pragma: no cover",
-    "if __name__ == .__main__.:",
-    "if t.TYPE_CHECKING:",
-    "if _t.TYPE_CHECKING:",
-    'if TYPE_CHECKING:',
-    'if typing.TYPE_CHECKING:',
-    'if t.TYPE_CHECKING and not MYPY:',
-    'if DEBUG:',
-    'if utils.DEBUG',
-    'if openllm.utils.DEBUG',
-    '@_overload',
-    '@overload',
-    '@t.overload',
-    '@typing.overload',
-    'raise NotImplementedError',
-    'raise NotImplemented',
-    'except MissingDependencyError:',
+  "no cov",
+  "pragma: no cover",
+  "if __name__ == .__main__.:",
+  "if t.TYPE_CHECKING:",
+  "if _t.TYPE_CHECKING:",
+  'if TYPE_CHECKING:',
+  'if typing.TYPE_CHECKING:',
+  'if t.TYPE_CHECKING and not MYPY:',
+  'if DEBUG:',
+  'if utils.DEBUG',
+  'if openllm.utils.DEBUG',
+  '@_overload',
+  '@overload',
+  '@t.overload',
+  '@typing.overload',
+  'raise NotImplementedError',
+  'raise NotImplemented',
+  'except MissingDependencyError:',
 ]
 omit = [
-    "__pypackages__/*",
-    "openllm-python/src/openllm/_version.py",
-    "openllm-python/src/openllm/playground/",
-    "openllm-python/src/openllm/__init__.py",
-    "openllm-python/src/openllm/__main__.py",
-    "openllm-python/src/openllm/utils/dummy_*.py",
-    "openllm-python/src/openllm/_typing_compat.py",
+  "__pypackages__/*",
+  "openllm-python/src/openllm/_version.py",
+  "openllm-python/src/openllm/playground/",
+  "openllm-python/src/openllm/__init__.py",
+  "openllm-python/src/openllm/__main__.py",
+  "openllm-python/src/openllm/utils/dummy_*.py",
+  "openllm-python/src/openllm/_typing_compat.py",
 ]
 precision = 2
 show_missing = true
@@ -353,19 +353,19 @@ show_missing = true
 [tool.pyright]
 analysis.useLibraryCodeForTypes = true
 exclude = [
-    "__pypackages__/*",
-    "openllm-python/src/openllm/playground/",
-    "openllm-python/src/openllm/models/",
-    "openllm-python/src/openllm/__init__.py",
-    "openllm-python/src/openllm/__main__.py",
-    "openllm-python/src/openllm/utils/dummy_*.py",
-    "openllm-python/src/openllm/_typing_compat.py",
-    "openllm-python/tests",
-    "cz.py",
-    "hatch_build.py",
-    "tools",
-    "examples",
-    "typings",
+  "__pypackages__/*",
+  "openllm-python/src/openllm/playground/",
+  "openllm-python/src/openllm/models/",
+  "openllm-python/src/openllm/__init__.py",
+  "openllm-python/src/openllm/__main__.py",
+  "openllm-python/src/openllm/utils/dummy_*.py",
+  "openllm-python/src/openllm/_typing_compat.py",
+  "openllm-python/tests",
+  "cz.py",
+  "hatch_build.py",
+  "tools",
+  "examples",
+  "typings",
 ]
 executionEnvironments = [{ root = "openllm-python/src" }]
 pythonVersion = "3.12"
@@ -382,14 +382,14 @@ typeCheckingMode = "strict"
 
 [tool.mypy]
 exclude = [
-    "examples",
-    "tools",
-    "cz.py",
-    "openllm-python/tests",
-    "openllm-python/src/openllm/playground",
-    "openllm-python/src/openllm/utils/dummy_*.py",
-    "openllm-python/src/openllm/models",
-    "openllm-python/src/openllm/_typing_compat.py",
+  "examples",
+  "tools",
+  "cz.py",
+  "openllm-python/tests",
+  "openllm-python/src/openllm/playground",
+  "openllm-python/src/openllm/utils/dummy_*.py",
+  "openllm-python/src/openllm/models",
+  "openllm-python/src/openllm/_typing_compat.py",
 ]
 modules = ["openllm"]
 mypy_path = "typings"
@@ -404,24 +404,24 @@ warn_unused_ignores = false
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
 module = [
-    "IPython.*",
-    "numpy.*",
-    "tensorflow.*",
-    "torch.*",
-    "optimum.*",
-    "inflection.*",
-    "huggingface_hub.*",
-    "click_option_group.*",
-    "peft.*",
-    "auto_gptq.*",
-    "vllm.*",
-    "orjson.*",
-    "httpx.*",
-    "cloudpickle.*",
-    "circus.*",
-    "grpc_health.v1.*",
-    "transformers.*",
-    "ghapi.*",
+  "IPython.*",
+  "numpy.*",
+  "tensorflow.*",
+  "torch.*",
+  "optimum.*",
+  "inflection.*",
+  "huggingface_hub.*",
+  "click_option_group.*",
+  "peft.*",
+  "auto_gptq.*",
+  "vllm.*",
+  "orjson.*",
+  "httpx.*",
+  "cloudpickle.*",
+  "circus.*",
+  "grpc_health.v1.*",
+  "transformers.*",
+  "ghapi.*",
 ]
 [[tool.mypy.overrides]]
 ignore_errors = true

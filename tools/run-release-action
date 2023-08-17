@@ -96,14 +96,14 @@ while true; do
     sleep 10
 done
 
-sleep 5
-echo "Building OpenLLM container for ${RELEASE_TAG}..."
-gh workflow run build.yml -R bentoml/openllm -r "${RELEASE_TAG}"
-
-sleep 5
-echo "Building OpenLLM embedding container for ${RELEASE_TAG}..."
-gh workflow run build-embedding.yml -R bentoml/openllm -r "${RELEASE_TAG}"
-
-sleep 5
-echo "Building Clojure UI (community-maintained) for ${RELEASE_TAG}..."
-gh workflow run clojure-frontend.yml -R bentoml/openllm -r "${RELEASE_TAG}"
+# sleep 5
+# echo "Building OpenLLM container for ${RELEASE_TAG}..."
+# gh workflow run build.yml -R bentoml/openllm -r "${RELEASE_TAG}"
+#
+# sleep 5
+# echo "Building OpenLLM embedding container for ${RELEASE_TAG}..."
+# gh workflow run build-embedding.yml -R bentoml/openllm -r "${RELEASE_TAG}"
+#
+# sleep 5
+# echo "Building Clojure UI (community-maintained) for ${RELEASE_TAG}..."
+# gh workflow run clojure-frontend.yml -R bentoml/openllm -r "${RELEASE_TAG}"

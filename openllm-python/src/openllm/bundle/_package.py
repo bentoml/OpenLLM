@@ -125,8 +125,7 @@ def create_bento(bento_tag: bentoml.Tag, llm_fs: FS, llm: openllm.LLM[t.Any, t.A
   )
 
   bento = bentoml.Bento.create(build_config=build_config, version=bento_tag.version, build_ctx=llm_fs.getsyspath("/"))
-  # NOTE: the model_id_path here are only used for setting this environment variable within the container
-  # built with for BentoLLM.
+  # NOTE: the model_id_path here are only used for setting this environment variable within the container built with for BentoLLM.
   service_fs_path = fs.path.join("src", llm.config["service_name"])
   service_path = bento._fs.getsyspath(service_fs_path)
   with open(service_path, "r") as f:
