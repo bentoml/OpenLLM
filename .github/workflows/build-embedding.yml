@@ -90,7 +90,7 @@ jobs:
         run: |
           pip install ${{ github.workspace }}/openllm-python
           openllm build opt --container-registry gh --container-version-strategy latest --serialisation legacy --bento-version sha-${{ env.GITHUB_SHA_SHORT }} --machine
-          bento_tag=$(python -c "import openllm;print(str(openllm.build('opt',bento_version='sha-${{ env.GITHUB_SHA_SHORT }}',container_registry='gh',serialisation_format='legacy',container_version_strategy='latest')))")
+          bento_tag=$(python -c "import openllm;print(str(openllm.build('opt',bento_version='sha-${{ env.GITHUB_SHA_SHORT }}',container_registry='gh',serialisation_format='legacy',container_version_strategy='latest').tag))")
           echo "tag=$bento_tag" >> $GITHUB_OUTPUT
       - name: Build and push Embedding Bento
         id: build-and-push
