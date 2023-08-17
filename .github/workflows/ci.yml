@@ -1,4 +1,4 @@
-name: CI
+name: Continuous Integration
 on:
   push:
     branches: [main]
@@ -95,7 +95,7 @@ jobs:
         run: hatch run coverage:write-summary-report
       - name: Update coverage pull request comment
         if: github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork
-        uses: marocchino/sticky-pull-request-comment@f6a2580ed520ae15da6076e7410b088d1c5dddd9 # ratchet:marocchino/sticky-pull-request-comment@v2
+        uses: marocchino/sticky-pull-request-comment@efaaab3fd41a9c3de579aba759d2552635e590fd # ratchet:marocchino/sticky-pull-request-comment@v2
         with:
           path: coverage-report.md
   cli-benchmark:
