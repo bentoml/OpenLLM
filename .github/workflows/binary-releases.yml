@@ -126,6 +126,9 @@ jobs:
             os: macos-12
           - target: x86_64-apple-darwin
             os: macos-12
+        exclude:
+          - target: x86_64-pc-windows-msvc
+          - target: i686-pc-windows-msvc
     outputs:
       version: ${{ steps.version.outputs.version }}
     env:
@@ -235,7 +238,7 @@ jobs:
     runs-on: windows-2022
     env:
       VERSION: ${{ needs.binaries.outputs.version }}
-    if: ${{ github.event_name != 'pull_request' }}
+    if: false # ${{ github.event_name != 'pull_request' }}
     defaults:
       run:
         working-directory: openllm-python
