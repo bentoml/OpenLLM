@@ -95,7 +95,7 @@ jobs:
           echo "tag=$bento_tag" >> $GITHUB_OUTPUT
       - name: Build and push Embedding Bento
         id: build-and-push
-        uses: bentoml/containerize-push-action@e6f765b9546058d913f7e553f516187214aebbf1 # ratchet:bentoml/containerize-push-action@v1
+        uses: bentoml/containerize-push-action@main # ratchet:exclude
         with:
           bento-tag: ${{ steps.bento-tags.outputs.tag }}
           platforms: linux/amd64,linux/arm64
