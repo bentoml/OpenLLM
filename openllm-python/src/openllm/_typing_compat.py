@@ -20,7 +20,7 @@ ListStr = t.List[str]
 TupleAny = t.Tuple[t.Any, ...]
 At = t.TypeVar("At", bound=attr.AttrsInstance)
 
-LiteralRuntime = t.Literal["pt", "tf", "flax", "vllm"]
+LiteralRuntime = t.Literal["pt", "tf", "flax", "vllm", "ggml"]
 AdapterType = t.Literal["lora", "adalora", "adaption_prompt", "prefix_tuning", "p_tuning", "prompt_tuning", "ia3"]
 
 if sys.version_info[:2] >= (3,11):

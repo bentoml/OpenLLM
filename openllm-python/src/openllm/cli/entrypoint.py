@@ -52,7 +52,7 @@ from openllm.models.auto import (
   MODEL_FLAX_MAPPING_NAMES,
   MODEL_MAPPING_NAMES,
   MODEL_TF_MAPPING_NAMES,
-  MODEL_VLLM_MAPPING_NAMES,
+  MODEL_VLLM_MAPPING_NAMES, MODEL_GGML_MAPPING_NAMES,
   AutoConfig,
   AutoLLM,
 )
@@ -550,6 +550,7 @@ def models_command(ctx: click.Context, output: LiteralOutput, show_available: bo
       if config["model_name"] in MODEL_FLAX_MAPPING_NAMES: runtime_impl += ("flax",)
       if config["model_name"] in MODEL_TF_MAPPING_NAMES: runtime_impl += ("tf",)
       if config["model_name"] in MODEL_VLLM_MAPPING_NAMES: runtime_impl += ("vllm",)
+      if config["model_name"] in MODEL_GGML_MAPPING_NAMES: runtime_impl += ("ggml",)
       json_data[m] = {"architecture": config["architecture"], "model_id": config["model_ids"], "cpu": not config["requires_gpu"], "gpu": True, "runtime_impl": runtime_impl, "installation": f'"openllm[{m}]"' if m in OPTIONAL_DEPENDENCIES or config["requirements"] else "openllm",}
       converted.extend([normalise_model_name(i) for i in config["model_ids"]])
       if DEBUG:

@@ -29,7 +29,7 @@ else:
 
 _import_structure: dict[str, list[str]] = {
     "exceptions": [], "models": [], "client": [], "bundle": [], "playground": [], "testing": [], "utils": ["infer_auto_class"], "serialisation": ["ggml", "transformers"], "cli._sdk": ["start", "start_grpc", "build", "import_model", "list_models"], "_llm": ["LLM", "Runner", "LLMRunner", "LLMRunnable", "LLMEmbeddings"], "_configuration": ["LLMConfig", "GenerationConfig", "SamplingParams"], "_generation": ["StopSequenceCriteria", "StopOnTokens", "LogitsProcessorList", "StoppingCriteriaList", "prepare_logits_processor"], "_quantisation": ["infer_quantisation_config"], "_schema": ["GenerationInput", "GenerationOutput", "MetadataOutput", "EmbeddingsOutput", "unmarshal_vllm_outputs", "HfAgentInput"],
-    "models.auto": ["AutoConfig", "CONFIG_MAPPING", "MODEL_MAPPING_NAMES", "MODEL_FLAX_MAPPING_NAMES", "MODEL_TF_MAPPING_NAMES", "MODEL_VLLM_MAPPING_NAMES"], "models.chatglm": ["ChatGLMConfig"], "models.baichuan": ["BaichuanConfig"], "models.dolly_v2": ["DollyV2Config"], "models.falcon": ["FalconConfig"], "models.flan_t5": ["FlanT5Config"], "models.gpt_neox": ["GPTNeoXConfig"], "models.llama": ["LlamaConfig"], "models.mpt": ["MPTConfig"], "models.opt": ["OPTConfig"], "models.stablelm": ["StableLMConfig"], "models.starcoder": ["StarCoderConfig"]
+    "models.auto": ["AutoConfig", "CONFIG_MAPPING", "MODEL_MAPPING_NAMES", "MODEL_FLAX_MAPPING_NAMES", "MODEL_TF_MAPPING_NAMES", "MODEL_VLLM_MAPPING_NAMES", "MODEL_GGML_MAPPING_NAMES"], "models.chatglm": ["ChatGLMConfig"], "models.baichuan": ["BaichuanConfig"], "models.dolly_v2": ["DollyV2Config"], "models.falcon": ["FalconConfig"], "models.flan_t5": ["FlanT5Config"], "models.gpt_neox": ["GPTNeoXConfig"], "models.llama": ["LlamaConfig"], "models.mpt": ["MPTConfig"], "models.opt": ["OPTConfig"], "models.stablelm": ["StableLMConfig"], "models.starcoder": ["StarCoderConfig"]
 }
 COMPILED = _Path(__file__).suffix in (".pyd", ".so")
 
@@ -41,7 +41,7 @@ if _t.TYPE_CHECKING:
   from ._quantisation import infer_quantisation_config as infer_quantisation_config
   from ._schema import EmbeddingsOutput as EmbeddingsOutput, GenerationInput as GenerationInput, GenerationOutput as GenerationOutput, HfAgentInput as HfAgentInput, MetadataOutput as MetadataOutput, unmarshal_vllm_outputs as unmarshal_vllm_outputs
   from .cli._sdk import build as build, import_model as import_model, list_models as list_models, start as start, start_grpc as start_grpc
-  from .models.auto import CONFIG_MAPPING as CONFIG_MAPPING, MODEL_FLAX_MAPPING_NAMES as MODEL_FLAX_MAPPING_NAMES, MODEL_MAPPING_NAMES as MODEL_MAPPING_NAMES, MODEL_TF_MAPPING_NAMES as MODEL_TF_MAPPING_NAMES, MODEL_VLLM_MAPPING_NAMES as MODEL_VLLM_MAPPING_NAMES, AutoConfig as AutoConfig
+  from .models.auto import CONFIG_MAPPING as CONFIG_MAPPING, MODEL_FLAX_MAPPING_NAMES as MODEL_FLAX_MAPPING_NAMES, MODEL_MAPPING_NAMES as MODEL_MAPPING_NAMES, MODEL_TF_MAPPING_NAMES as MODEL_TF_MAPPING_NAMES, MODEL_VLLM_MAPPING_NAMES as MODEL_VLLM_MAPPING_NAMES, MODEL_GGML_MAPPING_NAMES as MODEL_GGML_MAPPING_NAMES, AutoConfig as AutoConfig
   from .models.baichuan import BaichuanConfig as BaichuanConfig
   from .models.chatglm import ChatGLMConfig as ChatGLMConfig
   from .models.dolly_v2 import DollyV2Config as DollyV2Config
@@ -155,6 +155,16 @@ else:
     from .models.auto import MODEL_TF_MAPPING as MODEL_TF_MAPPING, AutoTFLLM as AutoTFLLM
     from .models.flan_t5 import TFFlanT5 as TFFlanT5
     from .models.opt import TFOPT as TFOPT
+try:
+  if not utils.is_ctransformers_available(): raise exceptions.MissingDependencyError
+except exceptions.MissingDependencyError:
+  _import_structure["utils.dummy_ggml_objects"] = [name for name in dir(utils.dummy_ggml_objects) if not name.startswith("_") and name not in ("annotations",)]
+else:
+  _import_structure["models.llama"].extend(["GGMLLlama"])
+  _import_structure["models.auto"].extend(["AutoGGML", "MODEL_GGML_MAPPING"])
+  if _t.TYPE_CHECKING:
+    from .models.auto import MODEL_GGML_MAPPING as MODEL_GGML_MAPPING, AutoGGML as AutoGGML
+    from .models.llama import GGMLLlama as GGMLLlama
 
 # NOTE: update this to sys.modules[__name__] once mypy_extensions can recognize __spec__
 __lazy = utils.LazyModule(__name__, _os.path.abspath("__file__"), _import_structure, extra_objects={"COMPILED": COMPILED})

@@ -242,12 +242,13 @@ def normalize_attrs_to_model_tokenizer_pair(**attrs: t.Any) -> tuple[dict[str, t
     if k.startswith(_TOKENIZER_PREFIX): del attrs[k]
   return attrs, tokenizer_attrs
 
-def infer_auto_class(implementation: LiteralRuntime) -> type[openllm.AutoLLM | openllm.AutoTFLLM | openllm.AutoFlaxLLM | openllm.AutoVLLM]:
+def infer_auto_class(implementation: LiteralRuntime) -> type[openllm.AutoLLM | openllm.AutoTFLLM | openllm.AutoFlaxLLM | openllm.AutoVLLM | openllm.AutoGGML]:
   import openllm
   if implementation == "tf": return openllm.AutoTFLLM
   elif implementation == "flax": return openllm.AutoFlaxLLM
   elif implementation == "pt": return openllm.AutoLLM
   elif implementation == "vllm": return openllm.AutoVLLM
+  elif implementation == "ggml": return openllm.AutoGGML
   else: raise RuntimeError(f"Unknown implementation: {implementation} (supported: 'pt', 'flax', 'tf', 'vllm')")
 
 # NOTE: The set marks contains a set of modules name
@@ -260,7 +261,7 @@ _whitelist_modules = {"pkg"}
 _extras: dict[str, t.Any] = {k: v for k, v in locals().items() if k in _whitelist_modules or (not isinstance(v, types.ModuleType) and not k.startswith("_"))}
 _extras["__openllm_migration__"] = {"ModelEnv": "EnvVarMixin"}
 _import_structure: dict[str, list[str]] = {
-  "analytics": [], "codegen": [], "dantic": [], "dummy_flax_objects": [], "dummy_pt_objects": [], "dummy_tf_objects": [], "dummy_vllm_objects": [], "representation": ["ReprMixin"], "lazy": ["LazyModule"],
+  "analytics": [], "codegen": [], "dantic": [], "dummy_flax_objects": [], "dummy_pt_objects": [], "dummy_tf_objects": [], "dummy_vllm_objects": [], "dummy_ggml_objects": [], "representation": ["ReprMixin"], "lazy": ["LazyModule"],
   "import_utils": ["OPTIONAL_DEPENDENCIES", "ENV_VARS_TRUE_VALUES", "DummyMetaclass", "EnvVarMixin", "require_backends",
                   "is_cpm_kernels_available", "is_einops_available", "is_flax_available", "is_tf_available", "is_vllm_available", "is_torch_available", "is_bitsandbytes_available", "is_peft_available", "is_datasets_available",
                   "is_transformers_supports_kbit", "is_transformers_supports_agent", "is_jupyter_available", "is_jupytext_available", "is_notebook_available", "is_triton_available", "is_autogptq_available", "is_sentencepiece_available",
@@ -276,6 +277,7 @@ if t.TYPE_CHECKING:
     dummy_pt_objects as dummy_pt_objects,
     dummy_tf_objects as dummy_tf_objects,
     dummy_vllm_objects as dummy_vllm_objects,
+    dummy_ggml_objects as dummy_ggml_objects,
   )
   from .import_utils import (
     ENV_VARS_TRUE_VALUES as ENV_VARS_TRUE_VALUES,

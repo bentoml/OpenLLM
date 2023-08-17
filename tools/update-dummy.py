@@ -12,8 +12,8 @@ from openllm import CONFIG_MAPPING
 if t.TYPE_CHECKING: from collections import OrderedDict
 
 config_requirements = {k:[_.replace("-", "_") for _ in v.__openllm_requirements__] if v.__openllm_requirements__ else None for k,v in CONFIG_MAPPING.items()}
-_dependencies: dict[LiteralRuntime,str] = {k:v for k,v in zip(LiteralRuntime.__args__, ("torch", "tensorflow", "flax", "vllm"))}
-_auto: dict[str,str] = {k:v for k,v in zip(LiteralRuntime.__args__, ("AutoLLM", "AutoTFLLM", "AutoFlaxLLM", "AutoVLLM"))}
+_dependencies: dict[LiteralRuntime,str] = {k:v for k,v in zip(LiteralRuntime.__args__, ("torch", "tensorflow", "flax", "vllm", "ctransformers"))}
+_auto: dict[str,str] = {k:v for k,v in zip(LiteralRuntime.__args__, ("AutoLLM", "AutoTFLLM", "AutoFlaxLLM", "AutoVLLM", "AutoGGML"))}
 
 def get_target_dummy_file(framework: LiteralRuntime) -> Path: return _ROOT/"openllm-python"/"src"/"openllm"/"utils"/f"dummy_{framework}_objects.py"
 def mapping_names(framework: LiteralRuntime): return "MODEL_MAPPING_NAMES" if framework == "pt" else f"MODEL_{framework.upper()}_MAPPING_NAMES"
