@@ -177,6 +177,7 @@ dependencies = [
   "types-protobuf",
 ]
 enable-by-default = false
+exclude = ["src/openllm/_service.py", "src/openllm/_typing_compat.py"]
 include = [
   "src/openllm/models/__init__.py",
   "src/openllm/models/auto/__init__.py",
@@ -194,6 +195,7 @@ include = [
 mypy-args = [
   "--strict",
   # this is because all transient library doesn't have types
+  "--follow-imports=skip",
   "--allow-subclassing-any",
   "--check-untyped-defs",
   "--ignore-missing-imports",
@@ -203,7 +205,6 @@ mypy-args = [
   "--no-warn-unused-ignores",
   "--exclude='/src\\/openllm\\/playground\\/**'",
   "--exclude='/src\\/openllm\\/_typing_compat\\.py$'",
-  "--exclude='/src\\/openllm\\/_service.py\\.py$'",
 ]
 options = { verbose = true, strip_asserts = true, debug_level = "2", opt_level = "3", include_runtime_files = true }
 require-runtime-dependencies = true
