@@ -1,9 +1,20 @@
 # modified workflow from ofek/hatch, big kudos to them.
-name: binary-distribution
+name: Standalone build
 on:
   workflow_call:
   workflow_dispatch:
   push:
+    branches: [main]
+    paths-ignore:
+      - '*.md'
+      - 'docs/**'
+      - 'bazel/**'
+      - 'typings/**'
+      - 'changelog.d/**'
+      - 'assets/**'
+      - 'openllm-node/**'
+      - 'Formula/**'
+      - 'contrib/clojure/**'
   pull_request:
     branches: [main]
     paths-ignore:
