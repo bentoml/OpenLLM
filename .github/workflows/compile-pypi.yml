@@ -55,7 +55,7 @@ jobs:
         with:
           fetch-depth: 0
           ref: '${{ inputs.tags }}'
-      - uses: bentoml/setup-bentoml-action@f578df3568e99d8b914538cd2085eabd3f6e2d0b # ratchet:bentoml/setup-bentoml-action@v1
+      - uses: bentoml/setup-bentoml-action@59beefe94e2e8f8ebbedf555fc86bd5d1ae0a708 # ratchet:bentoml/setup-bentoml-action@v1
         with:
           bentoml-version: 'main'
           python-version-file: .python-version-default
@@ -97,7 +97,7 @@ jobs:
         with:
           fetch-depth: 0
           ref: '${{ inputs.tags }}'
-      - uses: bentoml/setup-bentoml-action@f578df3568e99d8b914538cd2085eabd3f6e2d0b # ratchet:bentoml/setup-bentoml-action@v1
+      - uses: bentoml/setup-bentoml-action@59beefe94e2e8f8ebbedf555fc86bd5d1ae0a708 # ratchet:bentoml/setup-bentoml-action@v1
         with:
           bentoml-version: 'main'
           python-version: '3.8'
