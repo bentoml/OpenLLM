@@ -97,7 +97,7 @@ jobs:
         id: build-and-push
         uses: bentoml/containerize-push-action@main # ratchet:exclude
         with:
-          bento-tag: ${{ steps.bento-tags.outputs.tag }}
+          bento-tag: ${{ steps.bento-tag.outputs.tag }}
           platforms: linux/amd64,linux/arm64
           push: true
           build-args: |

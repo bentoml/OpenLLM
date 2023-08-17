@@ -15,8 +15,8 @@ model = os.environ.get("OPENLLM_MODEL", "{__model_name__}")  # openllm: model na
 adapter_map = os.environ.get("OPENLLM_ADAPTER_MAP", """{__model_adapter_map__}""")  # openllm: model adapter map
 llm_config = openllm.AutoConfig.for_model(model)
 runner = openllm.Runner(model, llm_config=llm_config, ensure_available=False, adapter_map=orjson.loads(adapter_map))
-generic_embedding_runner = bentoml.Runner(openllm.GenericEmbeddingRunnable, name="llm-generic-embedding", max_batch_size=32, max_latency_ms=300)
-runners: t.List[bentoml.Runner] = [runner]
+generic_embedding_runner = bentoml.Runner(openllm.GenericEmbeddingRunnable, name="llm-generic-embedding", scheduling_strategy=openllm.CascadingResourceStrategy, max_batch_size=32, max_latency_ms=300)
+runners: t.Sequence[bentoml.Runner] = [runner]
 if not runner.supports_embeddings: runners.append(generic_embedding_runner)
 svc = bentoml.Service(name=f"llm-{llm_config['start_name']}-service", runners=runners)
 
