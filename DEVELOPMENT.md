@@ -192,6 +192,8 @@ See [STYLE.md](STYLE.md) for our style guide.
 
 After you change or update any CI related under `.github`, run `bash tools/lock-actions.sh` to lock the action version.
 
+See This [README.md](/.github/README.md) for more information on OpenLLM's CI/CD workflow.
+
 ## UI
 
 See [ClojureScript UI's README.md](/contrib/clojure/README.md) for more information.
