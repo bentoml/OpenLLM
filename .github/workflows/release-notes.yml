@@ -28,10 +28,10 @@ jobs:
         with:
           fetch-depth: 0
           ref: '${{ inputs.tags }}'
-      - name: Setup CI
-        uses: ./.github/actions/setup-repo
+      - uses: bentoml/setup-bentoml-action@f578df3568e99d8b914538cd2085eabd3f6e2d0b # ratchet:bentoml/setup-bentoml-action@v1
         with:
-          python-version: '3.11'
+          bentoml-version: 'main'
+          python-version-file: .python-version-default
       - name: Create release notes
         run: ./.github/actions/create_release_and_archive.sh ${{ inputs.tags }}
       - name: Download Python artifacts

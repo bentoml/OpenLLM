@@ -34,10 +34,10 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.OPENLLM_PAT }}
-      - name: Setup CI
-        uses: ./.github/actions/setup-repo
+      - uses: bentoml/setup-bentoml-action@f578df3568e99d8b914538cd2085eabd3f6e2d0b # ratchet:bentoml/setup-bentoml-action@v1
         with:
-          python-version: '3.11'
+          bentoml-version: 'main'
+          python-version-file: .python-version-default
       - name: Import bot's GPG key for signing commits
         id: import-gpg
         uses: crazy-max/ghaction-import-gpg@72b6676b71ab476b77e676928516f6982eef7a41 # ratchet:crazy-max/ghaction-import-gpg@v5
@@ -202,10 +202,10 @@ jobs:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # ratchet:actions/checkout@v3
         with:
           fetch-depth: 0
-      - name: Setup CI
-        uses: ./.github/actions/setup-repo
+      - uses: bentoml/setup-bentoml-action@f578df3568e99d8b914538cd2085eabd3f6e2d0b # ratchet:bentoml/setup-bentoml-action@v1
         with:
-          python-version: '3.11'
+          bentoml-version: 'main'
+          python-version-file: .python-version-default
       - name: Install jq and curl
         run: sudo apt-get install -y jq curl
       - name: Import bot's GPG key for signing commits

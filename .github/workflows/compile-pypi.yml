@@ -41,8 +41,8 @@ env:
   HATCH_VERBOSE: 2
   CIBW_BUILD_FRONTEND: build
   CIBW_ENVIRONMENT_PASS_LINUX: >
-    HATCH_BUILD_HOOKS_ENABLE
-    MYPYPATH
+    HATCH_BUILD_HOOKS_ENABLE MYPYPATH
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
@@ -55,8 +55,10 @@ jobs:
         with:
           fetch-depth: 0
           ref: '${{ inputs.tags }}'
-      - name: Setup CI
-        uses: ./.github/actions/setup-repo
+      - uses: bentoml/setup-bentoml-action@f578df3568e99d8b914538cd2085eabd3f6e2d0b # ratchet:bentoml/setup-bentoml-action@v1
+        with:
+          bentoml-version: 'main'
+          python-version-file: .python-version-default
       - name: Build
         run: hatch build
         working-directory: openllm-python
@@ -95,10 +97,10 @@ jobs:
         with:
           fetch-depth: 0
           ref: '${{ inputs.tags }}'
-      - name: Setup CI
-        uses: ./.github/actions/setup-repo
+      - uses: bentoml/setup-bentoml-action@f578df3568e99d8b914538cd2085eabd3f6e2d0b # ratchet:bentoml/setup-bentoml-action@v1
         with:
-          python-version: 3.8
+          bentoml-version: 'main'
+          python-version: '3.8'
       - name: Build wheels via cibuildwheel
         uses: pypa/cibuildwheel@39a63b5912f086dd459cf6fcb13dcdd3fe3bc24d # ratchet:pypa/cibuildwheel@v2.15.0
         with:
