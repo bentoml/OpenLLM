@@ -3,6 +3,7 @@ name: binary-distribution
 on:
   workflow_call:
   workflow_dispatch:
+  push:
   pull_request:
     branches: [main]
     paths-ignore:
@@ -26,10 +27,30 @@ env:
   PYOXIDIZER_VERSION: '0.24.0'
   HATCH_VERBOSE: 2
 jobs:
+  get_commit_message:
+    name: Get commit message
+    runs-on: ubuntu-latest
+    if: "github.repository == 'bentoml/OpenLLM'" # Don't run on fork repository
+    outputs:
+      message: ${{ steps.commit_message.outputs.message }}
+    steps:
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # ratchet:actions/checkout@v3
+        # Gets the correct commit message for pull request
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Get commit message
+        id: commit_message
+        run: |
+          set -xe
+          COMMIT_MSG=$(git log --no-merges -1 --oneline)
+          echo "message=$COMMIT_MSG" >> $GITHUB_OUTPUT
+          echo github.ref ${{ github.ref }}
   python-artifacts:
     name: Build wheel and source distribution
     runs-on: ubuntu-latest
-    if: ${{ github.actor != 'dependabot[bot]' }}
+    needs: get_commit_message
+    if: >-
+      contains(needs.get_commit_message.outputs.message, '[binary build]') || github.event_name == "workflow_dispatch" || github.event_name == "workflow_call" || (github.event_name == "pull_request" && contains(github.event.pull_request.labels.*.name, '03 - Standalone Build')) || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && ( ! endsWith(github.ref, 'dev0')))
     steps:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # ratchet:actions/checkout@v3
         with:

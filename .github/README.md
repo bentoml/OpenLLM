@@ -28,10 +28,10 @@ The folder structure of this are as follow:
     └── release-notes.yml     # Generate release notes
 ```
 
-### Self-hosted EC2 runners
-
 > [!IMPORTANT]
-> This job will only be available for running within the BentoML repository.
+> All of the following jobs will and should only be run within the BentoML organisation and this repository.
+
+### Self-hosted EC2 runners
 
 The workflow for self-hosted EC2 runners is located in [build.yml](/.github/workflows/build.yml).
 This workflow is currently used for building OpenLLM base images that contains all compiled kernels
@@ -53,9 +53,6 @@ There are a few ways to trigger this workflow:
 
 ### Clojure UI (Community-maintained)
 
-> [!IMPORTANT]
-> This job will only be available for running within the BentoML repository.
-
 The workflow for Clojure UI is located in [clojure-frontend.yml](/.github/workflows/clojure-frontend.yml).
 This workflow is currently used for building the Clojure UI and published to GitHub Container Registry (`ghcr.io/bentoml/openllm-ui-clojure`).
 
@@ -64,3 +61,15 @@ There are a few ways to trigger this workflow:
 - This workflow will only trigger when there is a new `tag`
 
 - On commit that contains `[clojure-ui build]` or Pull request with tag `01 - Clojure Build`
+
+### Wheel compilation
+
+The workflow for wheel compilation is located in [compile-pypi.yml](/.github/workflows/compile-pypi.yml).
+
+To speed up CI, opt in to the following label `02 - Wheel Build` on pull request or add `[wheel build]` to commit message.
+
+### Binary releases
+
+The workflow for binary releases is located in [binary-releases.yml](/.github/workflows/binary-releases.yml).
+
+To speed up CI, opt in to the following label `03 - Standalone Build` on pull request or add `[binary build]` to commit message.

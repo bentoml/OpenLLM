@@ -11,4 +11,4 @@ cd "$GIT_ROOT" || exit 1
     exit 1
 )
 
-find "${GIT_ROOT}/.github/workflows" -type f -iname '*.yml' -exec docker run -it --rm -v "${PWD}":"${PWD}" -w "${PWD}" -e RATCHET_EXP_KEEP_NEWLINES=true ghcr.io/sethvargo/ratchet:0.4.0 pin {} \;
+RATCHET_EXP_KEEP_NEWLINES=true find "${GIT_ROOT}/.github/workflows" -type f -iname '*.yml' -exec docker run -it --rm -v "${PWD}":"${PWD}" -w "${PWD}" -e RATCHET_EXP_KEEP_NEWLINES=true ghcr.io/sethvargo/ratchet:0.4.0 pin {} \;
