@@ -54,6 +54,9 @@ jobs:
     name: ${{ matrix.job.target }} (${{ matrix.job.os }})
     needs:
       - python-artifacts
+    defaults:
+      run:
+        working-directory: openllm-python
     runs-on: ${{ matrix.job.os }}
     strategy:
       fail-fast: false
@@ -133,7 +136,7 @@ jobs:
         uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
         with:
           name: binary-artefacts
-          path: dist
+          path: openllm-python/dist
       - name: Configure embedded project
         if: ${{ !startsWith(github.event.ref, 'refs/tags') }}
         run: |-
@@ -179,14 +182,14 @@ jobs:
         uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # ratchet:actions/upload-artifact@v3
         with:
           name: staged-${{ runner.os }}
-          path: packaging/*
+          path: openllm-python/packaging/*
           if-no-files-found: error
       - name: Upload archive
         if: runner.os == 'Linux'
         uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # ratchet:actions/upload-artifact@v3
         with:
           name: standalone
-          path: packaging/*
+          path: openllm-python/packaging/*
           if-no-files-found: error
   windows-packaging:
     name: Build Windows installers
@@ -195,6 +198,9 @@ jobs:
     env:
       VERSION: ${{ needs.binaries.outputs.version }}
     if: ${{ github.event_name != 'pull_request' }}
+    defaults:
+      run:
+        working-directory: openllm-python
     steps:
       - name: Checkout code
         uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # ratchet:actions/checkout@v3
@@ -210,7 +216,7 @@ jobs:
         uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
         with:
           name: staged-${{ runner.os }}
-          path: archives
+          path: openllm-python/archives
       - name: Extract staged binaries
         run: |-
           mkdir -p bin
@@ -239,10 +245,10 @@ jobs:
         uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # ratchet:actions/upload-artifact@v3
         with:
           name: standalone
-          path: archives/*
+          path: openllm-python/archives/*
           if-no-files-found: error
       - name: Upload installers
         uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # ratchet:actions/upload-artifact@v3
         with:
           name: installers
-          path: installers/*
+          path: openllm-python/installers/*
