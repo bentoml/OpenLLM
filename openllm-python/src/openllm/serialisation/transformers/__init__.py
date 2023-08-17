@@ -106,8 +106,7 @@ def import_model(llm: openllm.LLM[M, T], *decls: t.Any, trust_remote_code: bool,
         else:
           # we will clone the all tings into the bentomodel path without loading model into memory
           snapshot_download(llm.model_id, local_dir=bentomodel.path, local_dir_use_symlinks=False, ignore_patterns=HfIgnore.ignore_patterns(llm))
-    except Exception:
-      raise
+    except Exception: raise
     else:
       bentomodel.flush()  # type: ignore[no-untyped-call]
       bentomodel.save(_model_store)
@@ -117,7 +116,6 @@ def import_model(llm: openllm.LLM[M, T], *decls: t.Any, trust_remote_code: bool,
       # NOTE: We need to free up the cache after importing the model
       # in the case where users first run openllm start without the model available locally.
       if openllm.utils.is_torch_available() and torch.cuda.is_available(): torch.cuda.empty_cache()
-
     return bentomodel
 
 def get(llm: openllm.LLM[M, T], auto_import: bool = False) -> bentoml.Model:
