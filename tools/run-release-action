@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -ex -o pipefail
+set -e -o pipefail
 
 # Function to print script usage
 print_usage() {
@@ -87,6 +87,8 @@ echo '{"release_type": "'"$release"'"}' | gh workflow run create-releases.yml --
 
 sleep 20
 
+set -x
+
 echo "Waiting for new tags to be released from 'create-releases.yml'"
 while true; do
     git pull --autostash --no-edit --gpg-sign --ff origin main
@@ -96,14 +98,14 @@ while true; do
     sleep 10
 done
 
-# sleep 5
-# echo "Building OpenLLM container for ${RELEASE_TAG}..."
-# gh workflow run build.yml -R bentoml/openllm -r "${RELEASE_TAG}"
-#
-# sleep 5
-# echo "Building OpenLLM embedding container for ${RELEASE_TAG}..."
-# gh workflow run build-embedding.yml -R bentoml/openllm -r "${RELEASE_TAG}"
-#
-# sleep 5
-# echo "Building Clojure UI (community-maintained) for ${RELEASE_TAG}..."
-# gh workflow run clojure-frontend.yml -R bentoml/openllm -r "${RELEASE_TAG}"
+sleep 5
+echo "Building OpenLLM container for ${RELEASE_TAG}..."
+gh workflow run build.yml -R bentoml/openllm -r "${RELEASE_TAG}"
+
+sleep 5
+echo "Building OpenLLM embedding container for ${RELEASE_TAG}..."
+gh workflow run build-embedding.yml -R bentoml/openllm -r "${RELEASE_TAG}"
+
+sleep 5
+echo "Building Clojure UI (community-maintained) for ${RELEASE_TAG}..."
+gh workflow run clojure-frontend.yml -R bentoml/openllm -r "${RELEASE_TAG}"
