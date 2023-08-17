@@ -22,6 +22,8 @@ defaults:
 env:
   OPENLLM_OPT_MODEL_ID: facebook/opt-125m
   BENTOML_HOME: ${{ github.workspace }}/bentoml
+  OPENLLM_DEV_BUILD: True
+  OPENLLM_DO_NOT_TRACK: True
 jobs:
   build-and-push-embedding-bento:
     name: Build embedding container
@@ -98,7 +100,7 @@ jobs:
         uses: bentoml/containerize-push-action@main # ratchet:exclude
         with:
           bento-tag: ${{ steps.bento-tag.outputs.tag }}
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           push: true
           build-args: |
             GIT_SHA=${{ env.GITHUB_SHA }}
