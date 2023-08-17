@@ -54,6 +54,9 @@ jobs:
     name: ${{ matrix.job.target }} (${{ matrix.job.os }})
     needs:
       - python-artifacts
+    defaults:
+      run:
+        working-directory: ./openllm-python
     runs-on: ${{ matrix.job.os }}
     strategy:
       fail-fast: false
@@ -195,6 +198,9 @@ jobs:
     env:
       VERSION: ${{ needs.binaries.outputs.version }}
     if: ${{ github.event_name != 'pull_request' }}
+    defaults:
+      run:
+        working-directory: ./openllm-python
     steps:
       - name: Checkout code
         uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # ratchet:actions/checkout@v3
