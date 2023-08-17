@@ -1,22 +1,8 @@
 # syntax=docker/dockerfile-upstream:master
-# Copyright 2023 BentoML Team. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 # Adapted from: https://github.com/pytorch/pytorch/blob/master/Dockerfile
 FROM debian:bullseye-slim as pytorch-install
 
-ARG PYTORCH_VERSION=2.0.0
+ARG PYTORCH_VERSION=2.0.1
 ARG PYTHON_VERSION=3.9
 ARG CUDA_VERSION=11.8
 ARG MAMBA_VERSION=23.1.0-1
@@ -77,7 +63,7 @@ RUN /opt/conda/bin/conda install -c "nvidia/label/cuda-11.8.0"  cuda==11.8 && \
 # NOTE: Build vllm CUDA kernels
 FROM kernel-builder as vllm-builder
 
-ENV COMMIT_HASH e8ddc08ec85495e5faca31bdf9129e0bf59a4fac
+ENV COMMIT_HASH d1744376ae9fdbfa6a2dc763e1c67309e138fa3d
 ARG COMMIT_HASH=${COMMIT_HASH}
 
 WORKDIR /usr/src
@@ -158,7 +144,9 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
         rm -rf /var/lib/apt/lists/*
 
 # Install all required dependencies
-RUN --mount=type=cache,target=/root/.cache/pip pip install "ray==2.6.0" "einops" "jax[cuda11_local]" "torch>=2.0.1" xformers -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html ".[opt,mpt,fine-tune,llama,chatglm]" -v --no-cache-dir
+RUN --mount=type=cache,target=/root/.cache/pip \
+  pip install --extra-index-url "https://download.pytorch.org/whl/cu118" -v --no-cache-dir \
+    "ray==2.6.0" "einops" "torch>=2.0.1+cu118" xformers "jax[cuda11_local]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html ".[opt,mpt,fine-tune,llama,chatglm]"
 
 FROM base-container
 

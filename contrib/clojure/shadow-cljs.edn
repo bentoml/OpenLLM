@@ -1,0 +1,9 @@
+{:deps {:aliases [:dev]}
+ :dev-http {8420 "public"}
+
+ :builds
+ {:app {:target :browser
+        :output-dir "public/js"
+        :asset-path "/js"
+        :modules {:main {:init-fn openllm.app/init}}
+        :build-hooks [(openllm.build/generate-models-json)]}}}

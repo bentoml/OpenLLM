@@ -1,8 +1,20 @@
 # modified workflow from ofek/hatch, big kudos to them.
-name: binary-distribution
+name: Standalone build
 on:
   workflow_call:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '*.md'
+      - 'docs/**'
+      - 'bazel/**'
+      - 'typings/**'
+      - 'changelog.d/**'
+      - 'assets/**'
+      - 'openllm-node/**'
+      - 'Formula/**'
+      - 'contrib/clojure/**'
   pull_request:
     branches: [main]
     paths-ignore:
@@ -14,6 +26,7 @@ on:
       - 'assets/**'
       - 'openllm-node/**'
       - 'Formula/**'
+      - 'contrib/clojure/**'
 defaults:
   run:
     shell: bash --noprofile --norc -exo pipefail {0}
@@ -25,24 +38,50 @@ env:
   PYOXIDIZER_VERSION: '0.24.0'
   HATCH_VERBOSE: 2
 jobs:
+  get_commit_message:
+    name: Get commit message
+    runs-on: ubuntu-latest
+    if: "github.repository == 'bentoml/OpenLLM'" # Don't run on fork repository
+    outputs:
+      message: ${{ steps.commit_message.outputs.message }}
+    steps:
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # ratchet:actions/checkout@v3
+        # Gets the correct commit message for pull request
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Get commit message
+        id: commit_message
+        run: |
+          set -xe
+          COMMIT_MSG=$(git log --no-merges -1 --oneline)
+          echo "message=$COMMIT_MSG" >> $GITHUB_OUTPUT
+          echo github.ref ${{ github.ref }}
   python-artifacts:
     name: Build wheel and source distribution
     runs-on: ubuntu-latest
-    if: ${{ github.actor != 'dependabot[bot]' }}
+    needs: get_commit_message
+    if: >-
+      contains(needs.get_commit_message.outputs.message, '[binary build]') ||
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'workflow_call' ||
+      (github.event_name == 'pull_request' &&
+      contains(github.event.pull_request.labels.*.name, '03 - Standalone Build')) ||
+      (github.event_name == 'push' &&
+      startsWith(github.ref, 'refs/tags/v') && ( ! endsWith(github.ref, 'dev0')))
     steps:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # ratchet:actions/checkout@v3
         with:
           fetch-depth: 0
-      - name: Setup CI
-        uses: ./.github/actions/setup-repo
+      - uses: bentoml/setup-bentoml-action@59beefe94e2e8f8ebbedf555fc86bd5d1ae0a708 # ratchet:bentoml/setup-bentoml-action@v1
+        with:
+          bentoml-version: 'main'
       - name: Pull latest change
         if: ${{ github.event_name != 'pull_request' }}
         run: git pull --autostash --no-edit --gpg-sign --ff origin main
       - name: Install build frontend
         run: python -m pip install --upgrade build
       - name: Build
-        run: python -m build
-        working-directory: ./openllm-python
+        run: python -m build -sw openllm-python/
       - name: Upload artifacts
         uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # ratchet:actions/upload-artifact@v3
         with:
@@ -53,6 +92,9 @@ jobs:
     name: ${{ matrix.job.target }} (${{ matrix.job.os }})
     needs:
       - python-artifacts
+    defaults:
+      run:
+        working-directory: openllm-python
     runs-on: ${{ matrix.job.os }}
     strategy:
       fail-fast: false
@@ -75,10 +117,10 @@ jobs:
             os: ubuntu-22.04
             cross: true
           # Windows
-          - target: x86_64-pc-windows-msvc
-            os: windows-2022
-          - target: i686-pc-windows-msvc
-            os: windows-2022
+          # - target: x86_64-pc-windows-msvc
+          #   os: windows-2022
+          # - target: i686-pc-windows-msvc
+          #   os: windows-2022
           # macOS
           - target: aarch64-apple-darwin
             os: macos-12
@@ -132,7 +174,7 @@ jobs:
         uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
         with:
           name: binary-artefacts
-          path: dist
+          path: openllm-python/dist
       - name: Configure embedded project
         if: ${{ !startsWith(github.event.ref, 'refs/tags') }}
         run: |-
@@ -178,22 +220,25 @@ jobs:
         uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # ratchet:actions/upload-artifact@v3
         with:
           name: staged-${{ runner.os }}
-          path: packaging/*
+          path: openllm-python/packaging/*
           if-no-files-found: error
       - name: Upload archive
         if: runner.os == 'Linux'
         uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # ratchet:actions/upload-artifact@v3
         with:
           name: standalone
-          path: packaging/*
+          path: openllm-python/packaging/*
           if-no-files-found: error
   windows-packaging:
     name: Build Windows installers
     needs: binaries
+    if: false # ${{ github.event_name != 'pull_request' }}
     runs-on: windows-2022
     env:
       VERSION: ${{ needs.binaries.outputs.version }}
-    if: ${{ github.event_name != 'pull_request' }}
+    defaults:
+      run:
+        working-directory: openllm-python
     steps:
       - name: Checkout code
         uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # ratchet:actions/checkout@v3
@@ -209,7 +254,7 @@ jobs:
         uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
         with:
           name: staged-${{ runner.os }}
-          path: archives
+          path: openllm-python/archives
       - name: Extract staged binaries
         run: |-
           mkdir -p bin
@@ -238,10 +283,10 @@ jobs:
         uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # ratchet:actions/upload-artifact@v3
         with:
           name: standalone
-          path: archives/*
+          path: openllm-python/archives/*
           if-no-files-found: error
       - name: Upload installers
         uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # ratchet:actions/upload-artifact@v3
         with:
           name: installers
-          path: installers/*
+          path: openllm-python/installers/*

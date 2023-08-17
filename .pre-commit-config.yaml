@@ -1,6 +1,6 @@
 ci:
   autoupdate_schedule: weekly
-  skip: [check-models-table-update, changelog-dry-run, pyright, yapf, mypy, sync-readme]
+  skip: [check-models-table-update, changelog-dry-run, pyright, yapf, mypy, sync-readme, clj-kondo]
   autofix_commit_msg: "ci: auto fixes from pre-commit.ci\n\nFor more information, see https://pre-commit.ci"
   autoupdate_commit_msg: 'ci: pre-commit autoupdate [pre-commit.ci]'
 default_language_version:
@@ -19,7 +19,7 @@ repos:
       - id: editorconfig-checker
         verbose: true
   - repo: https://github.com/econchick/interrogate
-    rev: 1.5.0
+    rev: 1e74611fc5296b0572b6bb11b480d43242c4ec49
     hooks:
       - id: interrogate
         verbose: true
@@ -52,6 +52,11 @@ repos:
           - types-tabulate
           - types-PyYAML
           - types-protobuf
+  - repo: https://github.com/vincentjames501/pre-commit-clojure
+    rev: v2.0.3
+    hooks:
+      - id: clj-kondo
+        verbose: true
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.4.0
     hooks:
@@ -78,13 +83,13 @@ repos:
         additional_dependencies: ['yapf==0.40.0']
       - id: check-models-table-update
         name: check if table in README.md is up-to-date
-        entry: ./tools/assert-model-table-latest
+        entry: ./tools/assert-model-table-latest.py
         language: script
         verbose: true
         files: README.md
       - id: sync-readme
         name: sync readme with python core library
-        entry: ./tools/sync-readme
+        entry: ./tools/sync-readme.sh
         language: script
         verbose: true
         files: README.md

@@ -28,10 +28,10 @@ jobs:
         with:
           fetch-depth: 0
           ref: '${{ inputs.tags }}'
-      - name: Setup CI
-        uses: ./.github/actions/setup-repo
+      - uses: bentoml/setup-bentoml-action@59beefe94e2e8f8ebbedf555fc86bd5d1ae0a708 # ratchet:bentoml/setup-bentoml-action@v1
         with:
-          python-version: '3.11'
+          bentoml-version: 'main'
+          python-version-file: .python-version-default
       - name: Create release notes
         run: ./.github/actions/create_release_and_archive.sh ${{ inputs.tags }}
       - name: Download Python artifacts
@@ -69,11 +69,12 @@ jobs:
         with:
           name: staged-macOS
           path: archives
-      - name: Download installers
-        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
-        with:
-          name: installers
-          path: installers
+      # TODO: Uncomment me when I decided to bring back Windows support
+      # - name: Download installers
+      #   uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
+      #   with:
+      #     name: installers
+      #     path: installers
       - name: Create release
         uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # ratchet:softprops/action-gh-release@v1
         with:
@@ -82,7 +83,7 @@ jobs:
           body_path: release_notes.txt
           fail_on_unmatched_files: true
           tag_name: '${{ inputs.tags }}'
+          # TODO: add instasllers/* once windows support is back
           files: |-
             dist/*
             archives/*
-            installers/*

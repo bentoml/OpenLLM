@@ -6,6 +6,7 @@ on:
 jobs:
   cleanup:
     runs-on: ubuntu-latest
+    if: "github.repository == 'bentoml/OpenLLM'" # Don't run on fork repository
     steps:
       - name: Check out code
         uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # ratchet:actions/checkout@v3

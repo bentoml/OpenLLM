@@ -190,14 +190,19 @@ See [STYLE.md](STYLE.md) for our style guide.
 
 ## Working with OpenLLM's CI/CD
 
-After you change or update any CI related under `.github`, run `./tools/lock-actions` to lock the action version.
+After you change or update any CI related under `.github`, run `bash tools/lock-actions.sh` to lock the action version.
+
+See This [README.md](/.github/README.md) for more information on OpenLLM's CI/CD workflow.
+
+## UI
+
+See [ClojureScript UI's README.md](/contrib/clojure/README.md) for more information.
 
 ## Install from git archive install
 
 ```bash
 pip install 'https://github.com/bentoml/OpenLLM/archive/main.tar.gz#subdirectory=openllm-python'
 ```
-
 
 ## Releasing a New Version
 

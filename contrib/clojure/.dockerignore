@@ -1,0 +1,7 @@
+/.clj-kondo
+/.lsp
+/*.iml
+/.cpcache
+/.vscode
+/.idea
+node_modules/

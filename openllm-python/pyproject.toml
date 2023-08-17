@@ -155,9 +155,13 @@ allow-direct-references = true
 [tool.hatch.build.targets.wheel]
 only-include = ["src/openllm"]
 sources = ["src"]
-dev-mode-dirs = ["."]
 [tool.hatch.build.targets.sdist]
-exclude = ["/.git_archival.txt"]
+exclude = [
+    "/.git_archival.txt",
+    "tests",
+    "/.python-version-default",
+    "ADDING_NEW_MODEL.md",
+]
 [tool.hatch.build.targets.wheel.hooks.mypyc]
 dependencies = [
     "hatch-mypyc==0.16.0",
@@ -205,3 +209,58 @@ mypy-args = [
 ]
 options = { verbose = true, strip_asserts = true, debug_level = "2", opt_level = "3", include_runtime_files = true }
 require-runtime-dependencies = true
+[tool.hatch.metadata.hooks.fancy-pypi-readme]
+content-type = "text/markdown"
+# PyPI doesn't support the <picture> tag.
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.fragments]]
+text = """
+<p align="center">
+  <a href="https://github.com/bentoml/openllm">
+    <img src="https://raw.githubusercontent.com/bentoml/openllm/main/.github/assets/main-banner.png" alt="Banner for OpenLLM" />
+  </a>
+</p>
+
+"""
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.fragments]]
+end-before = "\n<!-- hatch-fancy-pypi-readme intro stop -->"
+path = "README.md"
+start-after = "<!-- hatch-fancy-pypi-readme intro start -->\n"
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.fragments]]
+text = """
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/bentoml/openllm/main/.github/assets/output.gif" alt="Gif showing OpenLLM Intro" />
+</p>
+"""
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.fragments]]
+end-before = "\n<!-- hatch-fancy-pypi-readme interim stop -->"
+path = "README.md"
+start-after = "<!-- hatch-fancy-pypi-readme interim start -->\n"
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.fragments]]
+text = """
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/bentoml/openllm/main/.github/assets/agent.gif" alt="Gif showing Agent integration" />
+</p>
+"""
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.fragments]]
+end-before = "\n<!-- hatch-fancy-pypi-readme meta stop -->"
+path = "README.md"
+start-after = "<!-- hatch-fancy-pypi-readme meta start -->\n"
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.fragments]]
+text = """
+
+## Release Information
+
+"""
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.fragments]]
+path = "CHANGELOG.md"
+pattern = "\n(###.+?\n)## "
+start-after = "<!-- towncrier release notes start -->"
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.fragments]]
+text = """
+
+---
+
+[Click me for full changelog](https://github.com/bentoml/openllm/blob/main/CHANGELOG.md)
+"""

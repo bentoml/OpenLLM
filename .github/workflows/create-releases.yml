@@ -34,10 +34,10 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.OPENLLM_PAT }}
-      - name: Setup CI
-        uses: ./.github/actions/setup-repo
+      - uses: bentoml/setup-bentoml-action@59beefe94e2e8f8ebbedf555fc86bd5d1ae0a708 # ratchet:bentoml/setup-bentoml-action@v1
         with:
-          python-version: '3.11'
+          bentoml-version: 'main'
+          python-version-file: .python-version-default
       - name: Import bot's GPG key for signing commits
         id: import-gpg
         uses: crazy-max/ghaction-import-gpg@72b6676b71ab476b77e676928516f6982eef7a41 # ratchet:crazy-max/ghaction-import-gpg@v5
@@ -169,7 +169,10 @@ jobs:
           pushd openllm-node &>/dev/null
           jq --arg release_version "${DEV_VERSION}" '.version = $release_version' < package.json > package.json.tmp && mv package.json.tmp package.json
           popd &>/dev/null
-          git add package.json openllm-node/package.json && git commit -S -sm "infra: bump to dev version of ${DEV_VERSION} [generated] [skip ci]"
+          pushd contrib/clojure &>/dev/null
+          jq --arg release_version "${version}" '.version = $release_version' < package.json > package.json.tmp && mv package.json.tmp package.json
+          popd &>/dev/null
+          git add package.json openllm-node/package.json contrib/clojure/package.json && git commit -S -sm "infra: bump to dev version of ${DEV_VERSION} [generated] [skip ci]"
           git push origin HEAD:main
   binary-distribution:
     if: github.repository_owner == 'bentoml'
@@ -199,10 +202,10 @@ jobs:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # ratchet:actions/checkout@v3
         with:
           fetch-depth: 0
-      - name: Setup CI
-        uses: ./.github/actions/setup-repo
+      - uses: bentoml/setup-bentoml-action@59beefe94e2e8f8ebbedf555fc86bd5d1ae0a708 # ratchet:bentoml/setup-bentoml-action@v1
         with:
-          python-version: '3.11'
+          bentoml-version: 'main'
+          python-version-file: .python-version-default
       - name: Install jq and curl
         run: sudo apt-get install -y jq curl
       - name: Import bot's GPG key for signing commits
