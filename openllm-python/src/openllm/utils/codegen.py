@@ -32,7 +32,7 @@ class ModelIdFormatter(ModelNameFormatter):
 class ModelAdapterMapFormatter(ModelNameFormatter):
   model_keyword: LiteralString = "__model_adapter_map__"
 
-_service_file = Path(os.path.abspath("__file__")).parent.parent/"_service.py"
+_service_file = Path(os.path.abspath(__file__)).parent.parent/"_service.py"
 def write_service(llm: openllm.LLM[t.Any, t.Any], adapter_map: dict[str, str | None] | None, llm_fs: FS) -> None:
   from openllm.utils import DEBUG
   model_name = llm.config["model_name"]

@@ -7,11 +7,9 @@ LABEL org.opencontainers.image.licenses="Apache-2.0"
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN --mount=type=cache,target=/var/cache/apt \
-    --mount=type=cache,target=/var/lib/apt \
-  apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential openjdk-17-jdk curl git npm bash python3 python3-pip gcc python3-dev \
-  && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/*
 RUN curl -fsSL https://github.com/clojure/brew-install/releases/latest/download/posix-install.sh | bash -
 RUN pip3 install openllm
 

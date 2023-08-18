@@ -55,21 +55,57 @@ else
     exit 1
 fi
 
+#get highest tags across all branches, not just the current branch
+version="$(git describe --tags "$(git rev-list --tags --max-count=1)")"
+VERSION="${version#v}"
+# Save the current value of IFS to restore it later
+OLD_IFS=$IFS
+IFS='.'
+# split into array
+read -ra VERSION_BITS <<< "$VERSION"
+# Restore the original value of IFS
+IFS=$OLD_IFS
+VNUM1=${VERSION_BITS[0]}
+VNUM2=${VERSION_BITS[1]}
+VNUM3=${VERSION_BITS[2]}
+
+if [[ $release == 'major' ]]; then
+    VNUM1=$((VNUM1 + 1))
+    VNUM2=0
+    VNUM3=0
+elif [[ $release == 'minor' ]]; then
+    VNUM2=$((VNUM2 + 1))
+    VNUM3=0
+else
+    VNUM3=$((VNUM3 + 1))
+fi
+#create new tag
+RELEASE_TAG="v$VNUM1.$VNUM2.$VNUM3"
+
 echo "Running release actions (create-releases.yml)..."
 echo '{"release_type": "'"$release"'"}' | gh workflow run create-releases.yml --repo bentoml/openllm --json
 
-sleep 10
+sleep 20
 
-echo "Getting 'create-releases.yml' workflow id..."
-WORKFLOW_ID=$(gh run list -w release --repo bentoml/openllm -L 1 --json databaseId | jq '.[]| .databaseId')
+set -x
 
-echo "Waiting for workflow create-releases.yml to complete..."
+echo "Waiting for new tags to be released from 'create-releases.yml'"
 while true; do
-    STATUS=$(gh run view "$WORKFLOW_ID" --json status --jq '.status')
-    if [[ "${STATUS}" == "completed" ]]; then
+    git pull --autostash --no-edit --gpg-sign --ff origin main
+    if git ls-remote -t --exit-code origin "refs/tags/${RELEASE_TAG}" &> /dev/null; then
         break
     fi
     sleep 10
 done
 
-sleep 10
+sleep 5
+echo "Building OpenLLM container for ${RELEASE_TAG}..."
+gh workflow run build.yml -R bentoml/openllm -r "${RELEASE_TAG}"
+
+sleep 5
+echo "Building OpenLLM embedding container for ${RELEASE_TAG}..."
+gh workflow run build-embedding.yml -R bentoml/openllm -r "${RELEASE_TAG}"
+
+sleep 5
+echo "Building Clojure UI (community-maintained) for ${RELEASE_TAG}..."
+gh workflow run clojure-frontend.yml -R bentoml/openllm -r "${RELEASE_TAG}"

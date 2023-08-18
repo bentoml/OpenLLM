@@ -78,16 +78,15 @@ def construct_python_options(llm: openllm.LLM[t.Any, t.Any], llm_fs: FS, extra_d
   return PythonOptions(packages=packages, wheels=wheels, lock_packages=False, extra_index_url=["https://download.pytorch.org/whl/cu118"])
 
 def construct_docker_options(llm: openllm.LLM[t.Any, t.Any], _: FS, workers_per_resource: float, quantize: LiteralString | None, bettertransformer: bool | None, adapter_map: dict[str, str | None] | None, dockerfile_template: str | None, runtime: t.Literal["ggml", "transformers"], serialisation_format: t.Literal["safetensors", "legacy"], container_registry: LiteralContainerRegistry, container_version_strategy: LiteralContainerVersionStrategy) -> DockerOptions:
-  _bentoml_config_options = os.environ.pop("BENTOML_CONFIG_OPTIONS", "")
-  _bentoml_config_options_opts = ["tracing.sample_rate=1.0", f'runners."llm-{llm.config["start_name"]}-runner".traffic.timeout={llm.config["timeout"]}', f'api_server.traffic.timeout={llm.config["timeout"]}', f'runners."llm-{llm.config["start_name"]}-runner".traffic.timeout={llm.config["timeout"]}', f'runners."llm-{llm.config["start_name"]}-runner".workers_per_resource={workers_per_resource}']
-  _bentoml_config_options += " " if _bentoml_config_options else "" + " ".join(_bentoml_config_options_opts)
+  from openllm.cli._factory import parse_config_options
+  environ = parse_config_options(llm.config, llm.config["timeout"], workers_per_resource, None, True, os.environ.copy())
   env: openllm.utils.EnvVarMixin = llm.config["env"]
   if env["framework_value"] == "vllm": serialisation_format = "legacy"
   env_dict = {
       env.framework: env["framework_value"], env.config: f"'{llm.config.model_dump_json().decode()}'",
       env.model_id: f"/home/bentoml/bento/models/{llm.tag.path()}",
       "OPENLLM_MODEL": llm.config["model_name"], "OPENLLM_SERIALIZATION": serialisation_format,
-      "OPENLLM_ADAPTER_MAP": f"'{orjson.dumps(adapter_map).decode()}'", "BENTOML_DEBUG": str(True), "BENTOML_QUIET": str(False), "BENTOML_CONFIG_OPTIONS": f"'{_bentoml_config_options}'",
+      "OPENLLM_ADAPTER_MAP": f"'{orjson.dumps(adapter_map).decode()}'", "BENTOML_DEBUG": str(True), "BENTOML_QUIET": str(False), "BENTOML_CONFIG_OPTIONS": f"'{environ['BENTOML_CONFIG_OPTIONS']}'",
   }
   if adapter_map: env_dict["BITSANDBYTES_NOWELCOME"] = os.environ.get("BITSANDBYTES_NOWELCOME", "1")
 
@@ -125,8 +124,7 @@ def create_bento(bento_tag: bentoml.Tag, llm_fs: FS, llm: openllm.LLM[t.Any, t.A
   )
 
   bento = bentoml.Bento.create(build_config=build_config, version=bento_tag.version, build_ctx=llm_fs.getsyspath("/"))
-  # NOTE: the model_id_path here are only used for setting this environment variable within the container
-  # built with for BentoLLM.
+  # NOTE: the model_id_path here are only used for setting this environment variable within the container built with for BentoLLM.
   service_fs_path = fs.path.join("src", llm.config["service_name"])
   service_path = bento._fs.getsyspath(service_fs_path)
   with open(service_path, "r") as f:

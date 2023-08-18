@@ -330,3 +330,5 @@ class CascadingResourceStrategy(bentoml.Strategy, ReprMixin):
       if idx >= len(gpus): raise ValueError(f"Number of available GPU ({gpus}) preceeds the given workers_per_resource {workers_per_resource}")
       dev = str(gpus[idx])
     return dev
+
+__all__=["CascadingResourceStrategy", "get_resource"]

@@ -926,7 +926,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
       scheduling_strategy = CascadingResourceStrategy
 
     generate_sig = ModelSignature.from_dict(t.cast("_ModelSignatureDict", ModelSignatureDict(batchable=False)))
-    embeddings_sig = ModelSignature.from_dict(t.cast("_ModelSignatureDict", ModelSignatureDict(batchable=False)))
+    embeddings_sig = ModelSignature.from_dict(t.cast("_ModelSignatureDict", ModelSignatureDict(batchable=True, batch_dim=0)))
     generate_iterator_sig = ModelSignature.from_dict(t.cast("_ModelSignatureDict", ModelSignatureDict(batchable=True)))
 
     # NOTE: returning the two langchain API's to the runner
@@ -1036,8 +1036,8 @@ def llm_runnable_class(self: LLM[M, T], embeddings_sig: ModelSignature, generate
       logger.info("Successfully apply LoRA layer %s", adapter_name)
 
     @bentoml.Runnable.method(**method_signature(embeddings_sig))
-    def embeddings(__self: _Runnable, prompt: str | list[str]) -> LLMEmbeddings:
-      return self.embeddings([prompt] if isinstance(prompt, str) else prompt)
+    def embeddings(__self: _Runnable, prompt: str | list[str]) -> t.Sequence[LLMEmbeddings]:
+      return [self.embeddings([prompt] if isinstance(prompt, str) else prompt)]
 
     @bentoml.Runnable.method(**method_signature(generate_sig))
     def __call__(__self: _Runnable, prompt: str, **attrs: t.Any) -> list[t.Any]:
