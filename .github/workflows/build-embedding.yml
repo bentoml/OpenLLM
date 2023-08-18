@@ -24,13 +24,34 @@ env:
   BENTOML_HOME: ${{ github.workspace }}/bentoml
   OPENLLM_DEV_BUILD: True
   OPENLLM_DO_NOT_TRACK: True
+concurrency:
+  group: ${{ github.workflow }}-${{ github.job }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
 jobs:
+  get_commit_message:
+    name: Get commit message
+    runs-on: ubuntu-latest
+    if: "github.repository == 'bentoml/OpenLLM'" # Don't run on fork repository
+    outputs:
+      message: ${{ steps.commit_message.outputs.message }}
+    steps:
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # ratchet:actions/checkout@v3
+        # Gets the correct commit message for pull request
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Get commit message
+        id: commit_message
+        run: |
+          set -xe
+          COMMIT_MSG=$(git log --no-merges -1 --oneline)
+          echo "message=$COMMIT_MSG" >> $GITHUB_OUTPUT
+          echo github.ref ${{ github.ref }}
   build-and-push-embedding-bento:
     name: Build embedding container
     runs-on: ubuntu-latest
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.job }}-${{ github.head_ref || github.run_id }}
-      cancel-in-progress: true
+    needs: get_commit_message
+    if: >-
+      contains(needs.get_commit_message.outputs.message, '[ec2 build]') || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, '00 - EC2 Build')) || (github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/heads/main')))
     permissions:
       contents: write
       packages: write
