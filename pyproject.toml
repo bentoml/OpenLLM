@@ -133,6 +133,10 @@ directory = "change"
 name = "Changes"
 showcontent = true
 [[tool.towncrier.type]]
+directory = "refactor"
+name = "Refactor"
+showcontent = true
+[[tool.towncrier.type]]
 directory = "feature"
 name = "Features"
 showcontent = true
