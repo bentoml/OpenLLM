@@ -161,7 +161,6 @@ extend-exclude = [
 ]
 extend-include = ["*.ipynb"]
 extend-select = [
-  "B",    # flake8-bugbear
   "I",    # isort
   "G",    # flake8-logging-format
   "D",    # pydocstyle
@@ -180,7 +179,6 @@ extend-select = [
 ]
 fix = true
 ignore = [
-  "B027",    # Allow non-abstract empty methods in abstract base classes
   "FBT003",  # Allow boolean positional values in function calls, like `dict.get(... True)`
   "S105",    # Ignore checks for possible passwords
   "S106",
@@ -201,7 +199,6 @@ ignore = [
   "D100",
   "TCH004",  # don't move runtime import out, just warn about it
   "RUF012",  # mutable attributes to be used with ClassVar
-  "B905",    # zip warning about strict, only applicable for 3.10+
   "D105",    # magic docstring
   "E701",    # multiple statement on single line
 ]

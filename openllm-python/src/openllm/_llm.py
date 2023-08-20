@@ -605,8 +605,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
     return f"{tag_name}:{model_version}"
 
   @classmethod
-  def generate_tag(cls, *param_decls: t.Any, **attrs: t.Any) -> bentoml.Tag:
-    return bentoml.Tag.from_taglike(cls._generate_tag_str(*param_decls, **attrs))
+  def generate_tag(cls, *param_decls: t.Any, **attrs: t.Any) -> bentoml.Tag: return bentoml.Tag.from_taglike(cls._generate_tag_str(*param_decls, **attrs))
 
   def __init__(
       self, *args: t.Any, model_id: str, llm_config: LLMConfig, bettertransformer: bool | None, quantization_config: transformers.BitsAndBytesConfig | autogptq.BaseQuantizeConfig | None, _adapters_mapping: AdaptersMapping | None, _tag: bentoml.Tag, _quantize_method: t.Literal["int8", "int4", "gptq"] | None, _runtime: t.Literal["ggml", "transformers"], _model_version: str,
@@ -892,10 +891,8 @@ class LLM(LLMInterface[M, T], ReprMixin):
     """
     models = models if models is not None else []
 
-    try:
-      models.append(self._bentomodel)
-    except bentoml.exceptions.NotFound as err:
-      raise RuntimeError(f"Failed to locate {self._bentomodel}:{err}") from None
+    try: models.append(self._bentomodel)
+    except bentoml.exceptions.NotFound as err: raise RuntimeError(f"Failed to locate {self._bentomodel}:{err}") from None
 
     if scheduling_strategy is None:
       from ._strategies import CascadingResourceStrategy
@@ -912,7 +909,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
     )
 
   # NOTE: Scikit API
-  def predict(self, prompt: str, **attrs: t.Any) -> t.Any: return self.__call__(prompt, **attrs)
+  def predict(self, prompt: str, **attrs: t.Any) -> t.Any: return self(prompt, **attrs)
   def __call__(self, prompt: str, **attrs: t.Any) -> t.Any:
     """Returns the generation result and format the result.
 
@@ -930,15 +927,23 @@ class LLM(LLMInterface[M, T], ReprMixin):
     prompt, generate_kwargs, postprocess_kwargs = self.sanitize_parameters(prompt, **attrs)
     return self.postprocess_generate(prompt, self.generate(prompt, **generate_kwargs), **postprocess_kwargs)
 
-  def generate_iterator(self, prompt: str, /,
-                        *, context_length: int | None = None, echo: bool = True, judge_sent_end: bool = False, stream_interval: int = 2, **attrs: t.Any) -> t.Iterator[t.Any]:
-    # modified from fastchat's generate_stream
-    from ._generation import prepare_logits_processor, get_context_length, is_sentence_complete, is_partial_stop
+  def generate(self, prompt: str, **attrs: t.Any) -> t.Any:
+    # TODO: support different generation strategies, similar to self.model.generate
+    for it in self.generate_iterator(prompt, **attrs): pass
+    return it
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+  def postprocess_generate(self, prompt: str, generation_result: t.Any, **attrs: t.Any) -> str:
+    if isinstance(generation_result, dict): return generation_result["text"]
+    return generation_result
+
+  def generate_iterator(self, prompt: str, /,
+                        *, context_length: int | None = None, echo: bool = True, stream_interval: int = 2, stop: str | t.Iterable[str] | None = None, stop_token_ids: list[int] | None = None, **attrs: t.Any) -> t.Iterator[t.Any]:
+    # NOTE: encoder-decoder models will need to implement their own generate_iterator for now
+    # inspired from fastchat's generate_stream_func
+    from ._generation import prepare_logits_processor, get_context_length, is_partial_stop
+
     len_prompt = len(prompt)
-    stop = attrs.get("stop", None)
-    stop_token_ids: list[int] = attrs.get("stop_token_ids", None) or []
+    if stop_token_ids is None: stop_token_ids = []
     stop_token_ids.append(self.tokenizer.eos_token_id)
 
     logits_processor = prepare_logits_processor(self.config)
@@ -946,59 +951,27 @@ class LLM(LLMInterface[M, T], ReprMixin):
     input_ids = self.tokenizer(prompt).input_ids
 
     if context_length is None: context_length = get_context_length(self.model.config)
-    max_src_len = context_length if self.model.config.is_encoder_decoder else context_length - self.config["max_new_tokens"] - 1
+    max_src_len = context_length - self.config["max_new_tokens"] - 1
 
     input_ids = input_ids[-max_src_len:]
     output_ids = list(input_ids)
     input_echo_len = len(input_ids)
 
-    if self.model.config.is_encoder_decoder:
-      encoder_output = self.model.encoder(input_ids=torch.as_tensor([input_ids], device=device))[0]
-      start_ids = torch.as_tensor([[self.model.generation_config.decoder_start_token_id]], dtype=torch.int64, device=device)
-
-    past_key_values = out = None
-    sent_interrupt = False
+    past_key_values = out = token = None
     for i in range(self.config["max_new_tokens"]):
       if i == 0:  # prefill
-        if self.model.config.is_encoder_decoder:
-          out = self.model.decoder(input_ids=start_ids, encoder_hidden_states=encoder_output, use_cache=True)
-          logits = self.model.lm_head(out[0])
-        else:
-          out = self.model(torch.as_tensor([input_ids], device=device), use_cache=True)
-          logits = out.logits
-        past_key_values = out.past_key_values
+        out = self.model(torch.as_tensor([input_ids], device=self.device), use_cache=True)
       else:  # decoding
-        if self.model.config.is_encoder_decoder:
-          # token will be calculated in prefill step, since this is decoding
-          out = self.model.decoder(input_ids=torch.as_tensor([[token] if not sent_interrupt else output_ids], device=device),  # noqa: F821
-              encoder_hidden_states=encoder_output,
-              use_cache=True,
-              past_key_values=past_key_values if not sent_interrupt else None,
-          )
-          sent_interrupt = False
-          logits = self.model.lm_head(out[0])
-        else:
-          out = self.model(
-            input_ids=torch.as_tensor([[token] if not sent_interrupt else output_ids], device=device),  # noqa: F821
-              use_cache=True,
-              past_key_values=past_key_values if not sent_interrupt else None,
-          )
-          sent_interrupt = False
-          logits = out.logits
-        past_key_values = out.past_key_values
+        out = self.model(input_ids=torch.as_tensor([[token]], device=self.device), use_cache=True, past_key_values=past_key_values) # type: ignore[has-type]
+      logits = out.logits
+      past_key_values = out.past_key_values
 
       last_token_logits = logits_processor(torch.as_tensor([output_ids], device=logits.device) if self.config["repetition_penalty"] > 1.0 else None, logits[:, -1, :])[0] if logits_processor else logits[0, -1, :]
       # Switch to CPU by avoiding some bugs in mps backend.
-      # if device == "mps": last_token_logits = last_token_logits.float().to("cpu")
+      if self.device.type == "mps": last_token_logits = last_token_logits.float().to("cpu")
 
-      if self.config["temperature"] < 1e-5 or self.config["top_p"] < 1e-8:  # greedy
-        _, indices = torch.topk(last_token_logits, 2)
-        tokens = [int(index) for index in indices.tolist()]
-      else:
-        probs = torch.softmax(last_token_logits, dim=-1)
-        indices = torch.multinomial(probs, num_samples=2)
-        tokens = [int(token) for token in indices.tolist()]
-      token = tokens[0]
+      if self.config["temperature"] < 1e-5 or self.config["top_p"] < 1e-8: token = int(torch.argmax(last_token_logits))  # greedy
+      else: token = int(torch.multinomial(torch.softmax(last_token_logits, dim=-1), num_samples=1))
       output_ids.append(token)
 
       if token in stop_token_ids: stopped = True
@@ -1008,61 +981,35 @@ class LLM(LLMInterface[M, T], ReprMixin):
       if i % stream_interval == 0 or i == self.config["max_new_tokens"] - 1 or stopped:
         tmp_output_ids = output_ids if echo else output_ids[input_echo_len:]
         rfind_start = len_prompt if echo else 0
-        output = self.tokenizer.decode(
-            tmp_output_ids,
-            skip_special_tokens=True,
-            spaces_between_special_tokens=False,
-            clean_up_tokenization_spaces=True,
-        )
-        # TODO: For the issue of incomplete sentences interrupting output, apply a patch and others can also modify it to a more elegant way
-        if judge_sent_end and stopped and not is_sentence_complete(output):
-          if len(tokens) > 1:
-            token = tokens[1]
-            output_ids[-1] = token
-          else:
-            output_ids.pop()
-          stopped = False
-          sent_interrupt = True
+        output = self.tokenizer.decode(tmp_output_ids, skip_special_tokens=True, spaces_between_special_tokens=False, clean_up_tokenization_spaces=True)
 
         partially_stopped = False
         if stop:
           if isinstance(stop, str):
             pos = output.rfind(stop, rfind_start)
-            if pos != -1:
-              output = output[:pos]
-              stopped = True
-            else:
-              partially_stopped = is_partial_stop(output, stop)
+            if pos != -1: output, stopped = output[:pos], True
+            else: partially_stopped = is_partial_stop(output, stop)
           elif isinstance(stop, t.Iterable):
             for each_stop in stop:
               pos = output.rfind(each_stop, rfind_start)
               if pos != -1:
-                output = output[:pos]
-                stopped = True
+                output, stopped = output[:pos], True
                 break
               else:
                 partially_stopped = is_partial_stop(output, each_stop)
                 if partially_stopped: break
           else: raise ValueError("Invalid stop field type.")
 
-          # Prevent yielding partial stop sequence
-          if not partially_stopped:
-            yield {
-                "text": output,
-                "usage": {"prompt_tokens": input_echo_len, "completion_tokens": i, "total_tokens": input_echo_len + i},
-                "finish_reason": None,
-            }
+        # Prevent yielding partial stop sequence
+        if not partially_stopped:
+          yield {"text": output, "usage": {"prompt_tokens": input_echo_len, "completion_tokens": i, "total_tokens": input_echo_len + i}, "finish_reason": None}
       if stopped: break
 
     # Finish stream event, which contains finish reason
     if i == self.config["max_new_tokens"] - 1: finish_reason = "length"
     elif stopped: finish_reason = "stop"
     else: finish_reason = None
-    yield {
-        "text": output,
-        "usage": {"prompt_tokens": input_echo_len, "completion_tokens": i, "total_tokens": input_echo_len + i},
-        "finish_reason": finish_reason,
-    }
+    yield {"text": output, "usage": {"prompt_tokens": input_echo_len, "completion_tokens": i, "total_tokens": input_echo_len + i}, "finish_reason": finish_reason}
 
     # Clean
     del past_key_values, out
@@ -1158,19 +1105,18 @@ def llm_runnable_class(self: LLM[M, T], embeddings_sig: ModelSignature, generate
       if adapter_name is not None: __self.set_adapter(adapter_name)
       return self.generate_one(prompt, stop, **attrs)
     @bentoml.Runnable.method(**method_signature(generate_iterator_sig))
-    def generate_iterator(__self: _Runnable, prompt: str, **attrs: t.Any) -> t.Generator[str, None, None]:
+    def generate_iterator(__self: _Runnable, prompt: str, **attrs: t.Any) -> t.Generator[str, None, str]:
       adapter_name = attrs.pop("adapter_name", None)
       if adapter_name is not None: __self.set_adapter(adapter_name)
-      # pre = 0
-      for outputs in self.generate_iterator(prompt, judge_sent_end=False, **attrs):
-        yield outputs["text"]
-      #   output_text = outputs["text"]
-      #   output_text = output_text.strip().split(" ")
-      #   now = len(output_text) - 1
-      #   if now > pre:
-      #     yield " ".join(output_text[pre:now])
-      #     pre = now
-      # yield " ".join(output_text[pre:])
+      pre = 0
+      for outputs in self.generate_iterator(prompt, **attrs):
+        output_text = outputs["text"].strip().split(" ")
+        now = len(output_text) - 1
+        if now > pre:
+          yield " ".join(output_text[pre:now])
+          pre = now
+      yield " ".join(output_text[pre:])
+      return " ".join(output_text)
 
   return types.new_class(self.__class__.__name__ + "Runnable", (_Runnable,), {}, lambda ns: ns.update({"SUPPORTED_RESOURCES": ("nvidia.com/gpu", "amd.com/gpu") if self.config["requires_gpu"] else ("nvidia.com/gpu", "amd.com/gpu", "cpu"), "__module__": self.__module__, "__doc__": self.config["env"].start_docstring}))
 
