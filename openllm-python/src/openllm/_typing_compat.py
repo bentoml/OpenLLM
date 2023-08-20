@@ -69,7 +69,7 @@ class LLMRunnable(bentoml.Runnable, t.Generic[M, T]):
   embeddings: RunnableMethod[LLMRunnable[M, T], [list[str]], LLMEmbeddings]
   generate: RunnableMethod[LLMRunnable[M, T], [str], list[t.Any]]
   generate_one: RunnableMethod[LLMRunnable[M, T], [str, list[str]], t.Sequence[dict[t.Literal["generated_text"], str]]]
-  generate_iterator: RunnableMethod[LLMRunnable[M, T], [str], t.Generator[t.Any, None, None]]
+  generate_iterator: RunnableMethod[LLMRunnable[M, T], [str], t.Generator[str, None, str]]
 
 class LLMRunner(bentoml.Runner, t.Generic[M, T]):
   __doc__: str
@@ -85,7 +85,7 @@ class LLMRunner(bentoml.Runner, t.Generic[M, T]):
   embeddings: RunnerMethod[LLMRunnable[M, T], [list[str]], t.Sequence[LLMEmbeddings]]
   generate: RunnerMethod[LLMRunnable[M, T], [str], list[t.Any]]
   generate_one: RunnerMethod[LLMRunnable[M, T], [str, list[str]], t.Sequence[dict[t.Literal["generated_text"], str]]]
-  generate_iterator: RunnerMethod[LLMRunnable[M, T], [str], t.Generator[t.Any, None, None]]
+  generate_iterator: RunnerMethod[LLMRunnable[M, T], [str], t.Generator[str, None, str]]
   def __init__(self, runnable_class: type[LLMRunnable[M, T]], *, runnable_init_params: dict[str, t.Any] | None = ..., name: str | None = ..., scheduling_strategy: type[Strategy] = ..., models: list[bentoml.Model] | None = ..., max_batch_size: int | None = ..., max_latency_ms: int | None = ..., method_configs: dict[str, dict[str, int]] | None = ..., embedded: bool = False,) -> None: ...
   def __call__(self, prompt: str, **attrs: t.Any) -> t.Any: ...
   @abc.abstractmethod

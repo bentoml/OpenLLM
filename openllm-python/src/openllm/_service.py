@@ -19,13 +19,19 @@ generic_embedding_runner = bentoml.Runner(openllm.GenericEmbeddingRunnable, name
 runners: t.Sequence[bentoml.Runner] = [runner]
 if not runner.supports_embeddings: runners.append(generic_embedding_runner)
 svc = bentoml.Service(name=f"llm-{llm_config['start_name']}-service", runners=runners)
+_JsonInput=bentoml.io.JSON.from_sample({"prompt": "", "llm_config": llm_config.model_dump(flatten=True), "adapter_name": ""})
 
-@svc.api(route="/v1/generate", input=bentoml.io.JSON.from_sample({"prompt": "", "llm_config": llm_config.model_dump(flatten=True)}), output=bentoml.io.JSON.from_sample({"responses": [], "configuration": llm_config.model_dump(flatten=True)}))
+@svc.api(route="/v1/generate", input=_JsonInput, output=bentoml.io.JSON.from_sample({"responses": [], "configuration": llm_config.model_dump(flatten=True)}))
 async def generate_v1(input_dict: dict[str, t.Any]) -> openllm.GenerationOutput:
   qa_inputs = openllm.GenerationInput.from_llm_config(llm_config)(**input_dict)
   config = qa_inputs.llm_config.model_dump()
   responses = await runner.generate.async_run(qa_inputs.prompt, **{"adapter_name": qa_inputs.adapter_name, **config})
   return openllm.GenerationOutput(responses=responses, configuration=config)
+
+@svc.api(route="/v1/generate_stream", input=_JsonInput,output=bentoml.io.Text(content_type="text/event_stream"))
+async def generate_stream_v1(input_dict: dict[str, t.Any]) -> t.AsyncGenerator[str, None]:
+  qa_inputs = openllm.GenerationInput.from_llm_config(llm_config)(**input_dict)
+  return runner.generate_iterator.async_stream(qa_inputs.prompt, adapter_name=qa_inputs.adapter_name, **qa_inputs.llm_config.model_dump())
 
 @svc.api(route="/v1/metadata", input=bentoml.io.Text(), output=bentoml.io.JSON.from_sample({"model_id": runner.llm.model_id, "timeout": 3600, "model_name": llm_config["model_name"], "framework": "pt", "configuration": "", "supports_embeddings": runner.supports_embeddings, "supports_hf_agent": runner.supports_hf_agent}))
 def metadata_v1(_: str) -> openllm.MetadataOutput:
