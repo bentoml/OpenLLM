@@ -1,0 +1,38 @@
+[package]
+name = "openllm-client"
+version = "0.2.26"
+edition = "2021"
+description = "OpenLLM Client: Interacting with any OpenLLM HTTP/gRPC Service (BentoML included)"
+authors = ["Aaron Pham <aarnphm@bentoml.com>", "BentoML Team <contact@bentoml.com>"]
+readme = "README.md"
+homepage = "https://bentoml.com"
+repository = "https://github.com/bentoml/OpenLLM"
+license = "Apache-2.0"
+categories = ["web-programming::http-client", "model-serving", "mlops"]
+keywords = [
+  "MLOps",
+  "AI",
+  "BentoML",
+  "Model Serving",
+  "Model Deployment",
+  "LLMOps",
+  "Falcon",
+  "Vicuna",
+  "Llama 2",
+  "Fine tuning",
+  "Serverless",
+  "Large Language Model",
+  "Generative AI",
+  "StableLM",
+  "Alpaca",
+  "PyTorch",
+  "Transformers",
+]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "openllm_client"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = "0.19.2"

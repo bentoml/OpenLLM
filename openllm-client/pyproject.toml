@@ -1,0 +1,67 @@
+[build-system]
+requires = ['maturin>=1,<2', 'typing-extensions>=4.6.0,!=4.7.0']
+build-backend = 'maturin'
+
+[project]
+authors = [
+  { name = "Aaron Pham", email = "aarnphm@bentoml.com" },
+  { name = "BentoML Team", email = "contact@bentoml.com" },
+]
+dynamic = ['readme', 'version']
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: GPU :: NVIDIA CUDA",
+  "Environment :: GPU :: NVIDIA CUDA :: 12",
+  "Environment :: GPU :: NVIDIA CUDA :: 11.8",
+  "Environment :: GPU :: NVIDIA CUDA :: 11.7",
+  "License :: OSI Approved :: Apache Software License",
+  "Topic :: Scientific/Engineering",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Topic :: Software Development :: Libraries",
+  "Operating System :: OS Independent",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Science/Research",
+  "Intended Audience :: System Administrators",
+  "Typing :: Typed",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Rust",
+]
+description = "OpenLLM Client: Interacting with OpenLLM HTTP/gRPC server, or any BentoML server, in Rust."
+keywords = [
+  "MLOps",
+  "AI",
+  "BentoML",
+  "Model Serving",
+  "Model Deployment",
+  "LLMOps",
+  "Falcon",
+  "Vicuna",
+  "Llama 2",
+  "Fine tuning",
+  "Serverless",
+  "Large Language Model",
+  "Generative AI",
+  "StableLM",
+  "Alpaca",
+  "PyTorch",
+  "Transformers",
+]
+dependencies = ["typing_extensions>=4.6.0,!=4.7.0"]
+license = "Apache-2.0"
+name = "openllm-client"
+requires-python = ">=3.8"
+[project.urls]
+Blog = "https://modelserving.com"
+Chat = "https://discord.gg/openllm"
+Documentation = "https://github.com/bentoml/OpenLLM/blob/main/openllm-client/README.md"
+GitHub = "https://github.com/bentoml/OpenLLM/blob/main/openllm-client"
+History = "https://github.com/bentoml/OpenLLM/blob/main/CHANGELOG.md"
+Homepage = "https://bentoml.com"
+Tracker = "https://github.com/bentoml/OpenLLM/issues"
+Twitter = "https://twitter.com/bentomlai"
