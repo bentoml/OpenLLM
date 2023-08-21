@@ -68,7 +68,7 @@ def construct_python_options(llm: openllm.LLM[t.Any, t.Any], llm_fs: FS, extra_d
           _tf_version = importlib.metadata.version(candidate)
           packages.extend([f"tensorflow>={_tf_version}"])
         break
-      except importlib.metadata.PackageNotFoundError: pass  # noqa: PERF203 # Ok to ignore here since we actually need to check for all possible tensorflow distribution.
+      except importlib.metadata.PackageNotFoundError: pass  # Ok to ignore here since we actually need to check for all possible tensorflow distribution.
   else:
     if not openllm.utils.is_torch_available(): raise ValueError("PyTorch is not available. Make sure to have it locally installed.")
     packages.extend([f'torch>={importlib.metadata.version("torch")}'])
