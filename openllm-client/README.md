@@ -69,10 +69,13 @@ client.query('Explain to me the difference between "further" and "farther"')
 
 <br/>
 
+## Development
+
+See [this doc](./DESIGN.md) for more details on the design and development of this crate.
+
 ## 📔 Citation
 
-If you use OpenLLM in your research, we provide a [citation](./CITATION.cff) to
-use:
+If you use OpenLLM in your research, we provide a [citation](../CITATION.cff) to use:
 
 ```bibtex
 @software{Pham_OpenLLM_Operating_LLMs_2023,
