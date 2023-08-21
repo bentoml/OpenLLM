@@ -8,7 +8,7 @@ default_language_version:
 exclude: '.*\.(css|js|svg)$'
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: 'v0.0.284'
+    rev: 'v0.0.285'
     hooks:
       - id: ruff
         verbose: true
@@ -19,7 +19,7 @@ repos:
       - id: editorconfig-checker
         verbose: true
   - repo: https://github.com/econchick/interrogate
-    rev: 1e74611fc5296b0572b6bb11b480d43242c4ec49
+    rev: 1.5.0
     hooks:
       - id: interrogate
         verbose: true
@@ -27,7 +27,7 @@ repos:
         exclude: ^(docs|tools|openllm-python/tests)
         args: [--config=pyproject.toml]
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.5.0
+    rev: v1.5.1
     hooks:
       - id: mypy
         verbose: true
