@@ -927,10 +927,10 @@ class LLM(LLMInterface[M, T], ReprMixin):
     prompt, generate_kwargs, postprocess_kwargs = self.sanitize_parameters(prompt, **attrs)
     return self.postprocess_generate(prompt, self.generate(prompt, **generate_kwargs), **postprocess_kwargs)
 
-  def generate(self, prompt: str, **attrs: t.Any) -> t.Any:
+  def generate(self, prompt: str, **attrs: t.Any) -> t.List[t.Any]:
     # TODO: support different generation strategies, similar to self.model.generate
     for it in self.generate_iterator(prompt, **attrs): pass
-    return it
+    return [it]
 
   def postprocess_generate(self, prompt: str, generation_result: t.Any, **attrs: t.Any) -> str:
     if isinstance(generation_result, dict): return generation_result["text"]
