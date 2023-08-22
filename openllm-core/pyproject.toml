@@ -130,8 +130,6 @@ enable-by-default = false
 exclude = ["src/openllm_core/_typing_compat.py"]
 include = [
   "src/openllm_core/utils/__init__.py",
-  "src/openllm_core/utils/dantic.py",
-  "src/openllm_core/utils/codegen.py",
   "src/openllm_core/__init__.py",
   "src/openllm_core/_prompt.py",
   "src/openllm_core/_schema.py",

@@ -1,25 +1,18 @@
-
 from __future__ import annotations
-import typing as t
-
-import click
-import inflection
-import orjson
+import typing as t, click, inflection, orjson, openllm
 from bentoml_cli.utils import opt_callback
-
-import openllm
-
-from .. import termui
-from ..._prompt import process_prompt
+from openllm.cli import termui
+from openllm.cli._factory import model_complete_envvar, output_option, machine_option
+from openllm_core._prompt import process_prompt
 
 LiteralOutput = t.Literal["json", "pretty", "porcelain"]
 
 @click.command("get_prompt", context_settings=termui.CONTEXT_SETTINGS)
-@click.argument("model_name", type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING.keys()]))
+@click.argument("model_name", type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING.keys()]), shell_complete=model_complete_envvar)
 @click.argument("prompt", type=click.STRING)
-@click.option("-o", "--output", "output", type=click.Choice(["json", "pretty", "porcelain"]), default="pretty", help="Showing output type.", show_default=True, envvar="OPENLLM_OUTPUT", show_envvar=True)
+@output_option
 @click.option("--format", type=click.STRING, default=None)
-@click.option("--machine", is_flag=True, default=False, hidden=True)
+@machine_option
 @click.option("--opt", help="Define additional prompt variables. (format: ``--opt system_prompt='You are a useful assistant'``)", required=False, multiple=True, callback=opt_callback, metavar="ARG=VALUE[,ARG=VALUE]")
 @click.pass_context
 def cli(ctx: click.Context, /, model_name: str, prompt: str, format: str | None, output: LiteralOutput, machine: bool, _memoized: dict[str, t.Any], **_: t.Any) -> str | None:

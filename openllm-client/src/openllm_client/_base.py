@@ -1,4 +1,4 @@
-# mypy: disable-error-code="override"
+# mypy: disable-error-code="override,no-redef"
 from __future__ import annotations
 import typing as t, functools, openllm_core, logging, httpx, orjson, attr, abc
 from http import HTTPStatus
@@ -88,7 +88,6 @@ class _ClientAttr:
   def config(self) -> openllm_core.LLMConfig: return openllm_core.AutoConfig.for_model(self.model_name).model_construct_env(**self.configuration)
   @functools.cached_property
   def inner(self) -> t.Any: raise NotImplementedError("'inner' client is not implemented.")
-
 
 class _Client(_ClientAttr):
   _host: str

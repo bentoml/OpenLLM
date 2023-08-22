@@ -1,3 +1,4 @@
+# mypy: disable-error-code="no-redef"
 from __future__ import annotations
 import functools, inspect, logging, math, os, sys, types, typing as t, warnings, psutil, bentoml
 from bentoml._internal.resource import get_resource, system_resources

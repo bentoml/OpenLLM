@@ -121,7 +121,6 @@ enable-by-default = false
 include = [
   "src/openllm_client/benmim",
   "src/openllm_client/__init__.py",
-  "src/openllm_client/_base.py",
   "src/openllm_client/client.py",
 ]
 # NOTE: This is consistent with pyproject.toml

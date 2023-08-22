@@ -1,16 +1,8 @@
-
 from __future__ import annotations
-
-import click
-import inflection
-import orjson
-
-import bentoml
-import openllm
+import click, inflection, orjson, bentoml, openllm
 from bentoml._internal.utils import human_readable_size
-
-from .. import termui
-from .._factory import LiteralOutput, output_option
+from openllm.cli import termui
+from openllm.cli._factory import LiteralOutput, output_option
 
 @click.command("list_bentos", context_settings=termui.CONTEXT_SETTINGS)
 @output_option(default_value="json")

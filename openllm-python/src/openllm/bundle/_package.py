@@ -18,17 +18,17 @@ logger = logging.getLogger(__name__)
 
 OPENLLM_DEV_BUILD = "OPENLLM_DEV_BUILD"
 
-def build_editable(path: str) -> str | None:
+def build_editable(path: str, package: t.Literal["openllm", "openllm_core", "openllm_client"] = "openllm") -> str | None:
   """Build OpenLLM if the OPENLLM_DEV_BUILD environment variable is set."""
   if str(os.environ.get(OPENLLM_DEV_BUILD, False)).lower() != "true": return None
   # We need to build the package in editable mode, so that we can import it
   from build import ProjectBuilder
   from build.env import IsolatedEnvBuilder
-  module_location = openllm_core.utils.pkg.source_locations("openllm")
+  module_location = openllm_core.utils.pkg.source_locations(package)
   if not module_location: raise RuntimeError("Could not find the source location of OpenLLM. Make sure to unset OPENLLM_DEV_BUILD if you are developing OpenLLM.")
   pyproject_path = Path(module_location).parent.parent/"pyproject.toml"
   if os.path.isfile(pyproject_path.__fspath__()):
-    logger.info("OpenLLM is installed in editable mode. Generating built wheels...")
+    logger.info("Generating built wheels for package %s...", package)
     with IsolatedEnvBuilder() as env:
       builder = ProjectBuilder(pyproject_path.parent)
       builder.python_executable = env.executable
@@ -72,8 +72,8 @@ def construct_python_options(llm: openllm.LLM[t.Any, t.Any], llm_fs: FS, extra_d
     if not openllm_core.utils.is_torch_available(): raise ValueError("PyTorch is not available. Make sure to have it locally installed.")
     packages.extend([f'torch>={importlib.metadata.version("torch")}'])
   wheels: list[str] = []
-  built_wheels = build_editable(llm_fs.getsyspath("/"))
-  if built_wheels is not None: wheels.append(llm_fs.getsyspath(f"/{built_wheels.split('/')[-1]}"))
+  built_wheels: list[str | None] = [build_editable(llm_fs.getsyspath("/"), t.cast(t.Literal["openllm", "openllm_core", "openllm_client"], p)) for p in ("openllm_core", "openllm_client", "openllm")]
+  if all(i for i in built_wheels): wheels.extend([llm_fs.getsyspath(f"/{i.split('/')[-1]}") for i in t.cast(t.List[str], built_wheels)])
   return PythonOptions(packages=packages, wheels=wheels, lock_packages=False, extra_index_url=["https://download.pytorch.org/whl/cu118"])
 
 def construct_docker_options(llm: openllm.LLM[t.Any, t.Any], _: FS, workers_per_resource: float, quantize: LiteralString | None, bettertransformer: bool | None, adapter_map: dict[str, str | None] | None, dockerfile_template: str | None, runtime: t.Literal["ggml", "transformers"], serialisation_format: t.Literal["safetensors", "legacy"], container_registry: LiteralContainerRegistry, container_version_strategy: LiteralContainerVersionStrategy) -> DockerOptions:

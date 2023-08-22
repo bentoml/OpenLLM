@@ -173,6 +173,7 @@ dependencies = [
 enable-by-default = false
 exclude = ["src/openllm/_service.py", "src/openllm/utils/__init__.py"]
 include = [
+  "src/openllm/__init__.py",
   "src/openllm/_quantisation.py",
   "src/openllm/_generation.py",
   "src/openllm/exceptions.py",

@@ -1,9 +1,8 @@
 from __future__ import annotations
-import importlib.machinery, logging, os, pkgutil, subprocess, sys, tempfile, typing as t
-import click, yaml
+import importlib.machinery, logging, os, pkgutil, subprocess, sys, tempfile, typing as t, click, yaml
 from openllm.cli import termui
 from openllm import playground
-from openllm.utils import is_jupyter_available, is_jupytext_available, is_notebook_available
+from openllm_core.utils import is_jupyter_available, is_jupytext_available, is_notebook_available
 
 if t.TYPE_CHECKING:
   import jupytext, nbformat
