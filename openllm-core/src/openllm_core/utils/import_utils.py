@@ -104,7 +104,19 @@ def is_tf_available() -> bool:
     _tf_version = None
     if USE_TF in ENV_VARS_TRUE_AND_AUTO_VALUES and USE_TORCH not in ENV_VARS_TRUE_VALUES:
       if _tf_available:
-        candidates = ("tensorflow", "tensorflow-cpu", "tensorflow-gpu", "tf-nightly", "tf-nightly-cpu", "tf-nightly-gpu", "intel-tensorflow", "intel-tensorflow-avx512", "tensorflow-rocm", "tensorflow-macos", "tensorflow-aarch64",)
+        candidates = (
+            "tensorflow",
+            "tensorflow-cpu",
+            "tensorflow-gpu",
+            "tf-nightly",
+            "tf-nightly-cpu",
+            "tf-nightly-gpu",
+            "intel-tensorflow",
+            "intel-tensorflow-avx512",
+            "tensorflow-rocm",
+            "tensorflow-macos",
+            "tensorflow-aarch64",
+        )
         _tf_version = None
         # For the metadata, we have to look for both tensorflow and tensorflow-cpu
         for _pkg in candidates:
@@ -240,9 +252,15 @@ You can install it with pip: `pip install fairscale`. Please note that you may n
 your runtime after installation.
 """
 
-BACKENDS_MAPPING: BackendOrderedDict = OrderedDict([("flax", (is_flax_available, FLAX_IMPORT_ERROR)), ("tf", (is_tf_available, TENSORFLOW_IMPORT_ERROR)), ("torch", (is_torch_available, PYTORCH_IMPORT_ERROR)), ("vllm", (is_vllm_available, VLLM_IMPORT_ERROR)), ("cpm_kernels", (is_cpm_kernels_available, CPM_KERNELS_IMPORT_ERROR)), ("einops", (is_einops_available, EINOPS_IMPORT_ERROR)), ("triton", (is_triton_available, TRITON_IMPORT_ERROR)), ("datasets", (is_datasets_available, DATASETS_IMPORT_ERROR)), (
-    "peft", (is_peft_available, PEFT_IMPORT_ERROR)
-), ("bitsandbytes", (is_bitsandbytes_available, BITSANDBYTES_IMPORT_ERROR)), ("auto-gptq", (is_autogptq_available, AUTOGPTQ_IMPORT_ERROR)), ("sentencepiece", (is_sentencepiece_available, SENTENCEPIECE_IMPORT_ERROR)), ("xformers", (is_xformers_available, XFORMERS_IMPORT_ERROR)), ("fairscale", (is_fairscale_available, FAIRSCALE_IMPORT_ERROR))])
+BACKENDS_MAPPING: BackendOrderedDict = OrderedDict([("flax", (is_flax_available, FLAX_IMPORT_ERROR)), ("tf", (is_tf_available, TENSORFLOW_IMPORT_ERROR)), (
+    "torch", (is_torch_available, PYTORCH_IMPORT_ERROR)
+), ("vllm", (is_vllm_available, VLLM_IMPORT_ERROR)), ("cpm_kernels", (is_cpm_kernels_available, CPM_KERNELS_IMPORT_ERROR)), ("einops", (is_einops_available, EINOPS_IMPORT_ERROR)), (
+    "triton", (is_triton_available, TRITON_IMPORT_ERROR)
+), ("datasets", (is_datasets_available, DATASETS_IMPORT_ERROR)), ("peft", (is_peft_available, PEFT_IMPORT_ERROR)), ("bitsandbytes", (is_bitsandbytes_available, BITSANDBYTES_IMPORT_ERROR)), (
+    "auto-gptq", (is_autogptq_available, AUTOGPTQ_IMPORT_ERROR)
+), ("sentencepiece", (is_sentencepiece_available, SENTENCEPIECE_IMPORT_ERROR)), ("xformers", (is_xformers_available, XFORMERS_IMPORT_ERROR)), (
+    "fairscale", (is_fairscale_available, FAIRSCALE_IMPORT_ERROR)
+)])
 class DummyMetaclass(abc.ABCMeta):
   """Metaclass for dummy object.
 
@@ -325,7 +343,15 @@ class EnvVarMixin(ReprMixin):
     elif hasattr(self, item): return getattr(self, item)
     raise KeyError(f"Key {item} not found in {self}")
 
-  def __init__(self, model_name: str, implementation: LiteralRuntime = "pt", model_id: str | None = None, bettertransformer: bool | None = None, quantize: LiteralString | None = None, runtime: t.Literal["ggml", "transformers"] = "transformers") -> None:
+  def __init__(
+      self,
+      model_name: str,
+      implementation: LiteralRuntime = "pt",
+      model_id: str | None = None,
+      bettertransformer: bool | None = None,
+      quantize: LiteralString | None = None,
+      runtime: t.Literal["ggml", "transformers"] = "transformers"
+  ) -> None:
     """EnvVarMixin is a mixin class that returns the value extracted from environment variables."""
     from openllm_core.utils import field_env_key
     self.model_name = inflection.underscore(model_name)

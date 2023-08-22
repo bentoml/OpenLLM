@@ -4,7 +4,7 @@ from openllm_core._typing_compat import overload
 from openllm_core.config.configuration_dolly_v2 import DEFAULT_PROMPT_TEMPLATE, END_KEY, RESPONSE_KEY, get_special_token_id
 
 if t.TYPE_CHECKING: import torch, transformers, tensorflow as tf
-else: torch, transformers, tf = openllm.utils.LazyLoader("torch", globals(), "torch"), openllm.utils.LazyLoader("transformers", globals(), "transformers"), openllm.utils.LazyLoader("tf", globals(), "tensorflow")
+else:  torch, transformers, tf = openllm.utils.LazyLoader("torch", globals(), "torch"), openllm.utils.LazyLoader("transformers", globals(), "transformers"), openllm.utils.LazyLoader("tf", globals(), "tensorflow")
 logger = logging.getLogger(__name__)
 @overload
 def get_pipeline(model: transformers.PreTrainedModel, tokenizer: transformers.PreTrainedTokenizer, _init: t.Literal[True] = True, **attrs: t.Any) -> transformers.Pipeline:
@@ -52,7 +52,12 @@ def get_pipeline(model: transformers.PreTrainedModel, tokenizer: transformers.Pr
       input_ids, attention_mask = input_tensors["input_ids"], input_tensors.get("attention_mask", None)
       if input_ids.shape[1] == 0: input_ids, attention_mask, in_b = None, None, 1
       else: in_b = input_ids.shape[0]
-      generated_sequence = self.model.generate(input_ids=input_ids.to(self.model.device) if input_ids is not None else None, attention_mask=attention_mask.to(self.model.device) if attention_mask is not None else None, pad_token_id=self.tokenizer.pad_token_id, **generate_kwargs)
+      generated_sequence = self.model.generate(
+          input_ids=input_ids.to(self.model.device) if input_ids is not None else None,
+          attention_mask=attention_mask.to(self.model.device) if attention_mask is not None else None,
+          pad_token_id=self.tokenizer.pad_token_id,
+          **generate_kwargs
+      )
       out_b = generated_sequence.shape[0]
       if self.framework == "pt": generated_sequence = generated_sequence.reshape(in_b, out_b // in_b, *generated_sequence.shape[1:])
       elif self.framework == "tf": generated_sequence = tf.reshape(generated_sequence, (in_b, out_b // in_b, *generated_sequence.shape[1:]))

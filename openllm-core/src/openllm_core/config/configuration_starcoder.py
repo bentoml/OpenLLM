@@ -30,7 +30,16 @@ class StarCoderConfig(openllm_core.LLMConfig):
 
   Refer to [StarCoder's model card](https://huggingface.co/bigcode/starcoder) for more information.
   """
-  __config__ = {"name_type": "lowercase", "requires_gpu": True, "url": "https://github.com/bigcode-project/starcoder", "architecture": "GPTBigCodeForCausalLM", "requirements": ["bitsandbytes"], "workers_per_resource": 0.5, "default_id": "bigcode/starcoder", "model_ids": ["bigcode/starcoder", "bigcode/starcoderbase"]}
+  __config__ = {
+      "name_type": "lowercase",
+      "requires_gpu": True,
+      "url": "https://github.com/bigcode-project/starcoder",
+      "architecture": "GPTBigCodeForCausalLM",
+      "requirements": ["bitsandbytes"],
+      "workers_per_resource": 0.5,
+      "default_id": "bigcode/starcoder",
+      "model_ids": ["bigcode/starcoder", "bigcode/starcoderbase"]
+  }
 
   class GenerationConfig:
     temperature: float = 0.2
@@ -41,7 +50,9 @@ class StarCoderConfig(openllm_core.LLMConfig):
     pad_token_id: int = 49152
     repetition_penalty: float = 1.2
 
-  def sanitize_parameters(self, prompt: str, temperature: float | None = None, top_p: float | None = None, max_new_tokens: int | None = None, repetition_penalty: float | None = None, **attrs: t.Any) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
+  def sanitize_parameters(
+      self, prompt: str, temperature: float | None = None, top_p: float | None = None, max_new_tokens: int | None = None, repetition_penalty: float | None = None, **attrs: t.Any
+  ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
     fim_mode, prefix, suffix = FIM_INDICATOR in prompt, None, None
     if fim_mode:
       try:

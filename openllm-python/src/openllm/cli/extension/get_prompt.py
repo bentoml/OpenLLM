@@ -11,7 +11,14 @@ LiteralOutput = t.Literal["json", "pretty", "porcelain"]
 @output_option
 @click.option("--format", type=click.STRING, default=None)
 @machine_option
-@click.option("--opt", help="Define additional prompt variables. (format: ``--opt system_prompt='You are a useful assistant'``)", required=False, multiple=True, callback=opt_callback, metavar="ARG=VALUE[,ARG=VALUE]")
+@click.option(
+    "--opt",
+    help="Define additional prompt variables. (format: ``--opt system_prompt='You are a useful assistant'``)",
+    required=False,
+    multiple=True,
+    callback=opt_callback,
+    metavar="ARG=VALUE[,ARG=VALUE]"
+)
 @click.pass_context
 def cli(ctx: click.Context, /, model_name: str, prompt: str, format: str | None, output: LiteralOutput, machine: bool, _memoized: dict[str, t.Any], **_: t.Any) -> str | None:
   """Get the default prompt used by OpenLLM."""

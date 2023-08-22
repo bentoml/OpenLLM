@@ -20,4 +20,12 @@ class GPTNeoX(openllm.LLM["transformers.GPTNeoXForCausalLM", "transformers.GPTNe
   def generate(self, prompt: str, **attrs: t.Any) -> list[str]:
     import torch
     with torch.inference_mode():
-      return self.tokenizer.batch_decode(self.model.generate(self.tokenizer(prompt, return_tensors="pt").to(self.device).input_ids, do_sample=True, generation_config=self.config.model_construct_env(**attrs).to_generation_config(), pad_token_id=self.tokenizer.eos_token_id, stopping_criteria=openllm.StoppingCriteriaList([openllm.StopOnTokens()])))
+      return self.tokenizer.batch_decode(
+          self.model.generate(
+              self.tokenizer(prompt, return_tensors="pt").to(self.device).input_ids,
+              do_sample=True,
+              generation_config=self.config.model_construct_env(**attrs).to_generation_config(),
+              pad_token_id=self.tokenizer.eos_token_id,
+              stopping_criteria=openllm.StoppingCriteriaList([openllm.StopOnTokens()])
+          )
+      )

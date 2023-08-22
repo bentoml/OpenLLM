@@ -23,7 +23,8 @@ class BaseAutoLLMClass:
     raise EnvironmentError(f"Cannot instantiate {self.__class__.__name__} directly. Please use '{self.__class__.__name__}.Runner(model_name)' instead.")
 
   @classmethod
-  def for_model(cls, model: str, /, model_id: str | None = None, model_version: str | None = None, llm_config: openllm.LLMConfig | None = None, ensure_available: bool = False, **attrs: t.Any) -> openllm.LLM[t.Any, t.Any]:
+  def for_model(cls, model: str, /, model_id: str | None = None, model_version: str | None = None, llm_config: openllm.LLMConfig | None = None, ensure_available: bool = False,
+                **attrs: t.Any) -> openllm.LLM[t.Any, t.Any]:
     """The lower level API for creating a LLM instance.
 
     ```python
@@ -62,14 +63,18 @@ class BaseAutoLLMClass:
     llm_class: The runnable to register.
     """
     if hasattr(llm_class, "config_class") and llm_class.config_class is not config_class:
-      raise ValueError(f"The model class you are passing has a `config_class` attribute that is not consistent with the config class you passed (model has {llm_class.config_class} and you passed {config_class}. Fix one of those so they match!")
+      raise ValueError(
+          f"The model class you are passing has a `config_class` attribute that is not consistent with the config class you passed (model has {llm_class.config_class} and you passed {config_class}. Fix one of those so they match!"
+      )
     cls._model_mapping.register(config_class, llm_class)
 
   @classmethod
   def infer_class_from_name(cls, name: str) -> type[openllm.LLM[t.Any, t.Any]]:
     config_class = openllm.AutoConfig.infer_class_from_name(name)
     if config_class in cls._model_mapping: return cls._model_mapping[config_class]
-    raise ValueError(f"Unrecognized configuration class ({config_class}) for {name}. Model name should be one of {', '.join(openllm.CONFIG_MAPPING.keys())} (Registered configuration class: {', '.join([i.__name__ for i in cls._model_mapping.keys()])}).")
+    raise ValueError(
+        f"Unrecognized configuration class ({config_class}) for {name}. Model name should be one of {', '.join(openllm.CONFIG_MAPPING.keys())} (Registered configuration class: {', '.join([i.__name__ for i in cls._model_mapping.keys()])})."
+    )
 def getattribute_from_module(module: types.ModuleType, attr: t.Any) -> t.Any:
   if attr is None: return
   if isinstance(attr, tuple): return tuple(getattribute_from_module(module, a) for a in attr)
@@ -127,13 +132,23 @@ class _LazyAutoMapping(OrderedDict, ReprMixin):
     return bool(self.keys())
 
   def keys(self) -> ConfigModelKeysView:
-    return t.cast("ConfigModelKeysView", [self._load_attr_from_module(key, name) for key, name in self._config_mapping.items() if key in self._model_mapping.keys()] + list(self._extra_content.keys()))
+    return t.cast(
+        "ConfigModelKeysView", [self._load_attr_from_module(key, name) for key, name in self._config_mapping.items() if key in self._model_mapping.keys()] + list(self._extra_content.keys())
+    )
 
   def values(self) -> ConfigModelValuesView:
-    return t.cast("ConfigModelValuesView", [self._load_attr_from_module(key, name) for key, name in self._model_mapping.items() if key in self._config_mapping.keys()] + list(self._extra_content.values()))
+    return t.cast(
+        "ConfigModelValuesView", [self._load_attr_from_module(key, name) for key, name in self._model_mapping.items() if key in self._config_mapping.keys()] + list(
+            self._extra_content.values()
+        )
+    )
 
   def items(self) -> ConfigModelItemsView:
-    return t.cast("ConfigModelItemsView", [(self._load_attr_from_module(key, self._config_mapping[key]), self._load_attr_from_module(key, self._model_mapping[key])) for key in self._model_mapping.keys() if key in self._config_mapping.keys()] + list(self._extra_content.items()))
+    return t.cast(
+        "ConfigModelItemsView",
+        [(self._load_attr_from_module(key, self._config_mapping[key]),
+          self._load_attr_from_module(key, self._model_mapping[key])) for key in self._model_mapping.keys() if key in self._config_mapping.keys()] + list(self._extra_content.items())
+    )
 
   def __iter__(self) -> t.Iterator[type[openllm.LLMConfig]]:
     return iter(t.cast("SupportsIter[t.Iterator[type[openllm.LLMConfig]]]", self.keys()))

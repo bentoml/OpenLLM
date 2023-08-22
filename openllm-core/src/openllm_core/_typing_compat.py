@@ -10,7 +10,10 @@ if t.TYPE_CHECKING:
   from bentoml._internal.runner.strategy import Strategy
 
   from .utils.lazy import VersionInfo
-M = t.TypeVar("M", bound="t.Union[transformers.PreTrainedModel, transformers.Pipeline, transformers.TFPreTrainedModel, transformers.FlaxPreTrainedModel, vllm.LLMEngine, vllm.AsyncLLMEngine, peft.PeftModel, autogptq.modeling.BaseGPTQForCausalLM]")
+M = t.TypeVar(
+    "M",
+    bound="t.Union[transformers.PreTrainedModel, transformers.Pipeline, transformers.TFPreTrainedModel, transformers.FlaxPreTrainedModel, vllm.LLMEngine, vllm.AsyncLLMEngine, peft.PeftModel, autogptq.modeling.BaseGPTQForCausalLM]"
+)
 T = t.TypeVar("T", bound="t.Union[transformers.PreTrainedTokenizerFast, transformers.PreTrainedTokenizer, transformers.PreTrainedTokenizerBase]")
 
 AnyCallable = t.Callable[..., t.Any]
@@ -79,7 +82,19 @@ class LLMRunner(bentoml.Runner, t.Generic[M, T]):
   generate_one: RunnerMethod[LLMRunnable[M, T], [str, list[str]], t.Sequence[dict[t.Literal["generated_text"], str]]]
   generate_iterator: RunnerMethod[LLMRunnable[M, T], [str], t.Generator[str, None, str]]
 
-  def __init__(self, runnable_class: type[LLMRunnable[M, T]], *, runnable_init_params: dict[str, t.Any] | None = ..., name: str | None = ..., scheduling_strategy: type[Strategy] = ..., models: list[bentoml.Model] | None = ..., max_batch_size: int | None = ..., max_latency_ms: int | None = ..., method_configs: dict[str, dict[str, int]] | None = ..., embedded: bool = False,) -> None:
+  def __init__(
+      self,
+      runnable_class: type[LLMRunnable[M, T]],
+      *,
+      runnable_init_params: dict[str, t.Any] | None = ...,
+      name: str | None = ...,
+      scheduling_strategy: type[Strategy] = ...,
+      models: list[bentoml.Model] | None = ...,
+      max_batch_size: int | None = ...,
+      max_latency_ms: int | None = ...,
+      method_configs: dict[str, dict[str, int]] | None = ...,
+      embedded: bool = False,
+  ) -> None:
     ...
 
   def __call__(self, prompt: str, **attrs: t.Any) -> t.Any:

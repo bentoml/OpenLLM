@@ -6,10 +6,25 @@ from __future__ import annotations
 import contextlib, functools, hashlib, logging, logging.config, os, sys, types, typing as t, openllm_core, asyncio
 from pathlib import Path
 from circus.exc import ConflictError
-from bentoml._internal.configuration import (DEBUG_ENV_VAR as DEBUG_ENV_VAR, GRPC_DEBUG_ENV_VAR as _GRPC_DEBUG_ENV_VAR, QUIET_ENV_VAR as QUIET_ENV_VAR, get_debug_mode as _get_debug_mode, get_quiet_mode as _get_quiet_mode, set_quiet_mode as set_quiet_mode,)
+from bentoml._internal.configuration import (
+    DEBUG_ENV_VAR as DEBUG_ENV_VAR,
+    GRPC_DEBUG_ENV_VAR as _GRPC_DEBUG_ENV_VAR,
+    QUIET_ENV_VAR as QUIET_ENV_VAR,
+    get_debug_mode as _get_debug_mode,
+    get_quiet_mode as _get_quiet_mode,
+    set_quiet_mode as set_quiet_mode,
+)
 from bentoml._internal.models.model import ModelContext as _ModelContext
 from bentoml._internal.types import LazyType as LazyType
-from bentoml._internal.utils import (LazyLoader as LazyLoader, bentoml_cattr as bentoml_cattr, calc_dir_size as calc_dir_size, first_not_none as first_not_none, pkg as pkg, reserve_free_port as reserve_free_port, resolve_user_filepath as resolve_user_filepath,)
+from bentoml._internal.utils import (
+    LazyLoader as LazyLoader,
+    bentoml_cattr as bentoml_cattr,
+    calc_dir_size as calc_dir_size,
+    first_not_none as first_not_none,
+    pkg as pkg,
+    reserve_free_port as reserve_free_port,
+    resolve_user_filepath as resolve_user_filepath,
+)
 from openllm_core.utils.lazy import (LazyModule as LazyModule, VersionInfo as VersionInfo,)
 
 if t.TYPE_CHECKING:
@@ -105,14 +120,16 @@ _LOGGING_CONFIG: dict[str, t.Any] = {
     "handlers": {
         "bentomlhandler": {
             "class": "logging.StreamHandler", "filters": ["excfilter", "infofilter"], "stream": "ext://sys.stdout"
-        }, "defaulthandler": {
+        },
+        "defaulthandler": {
             "class": "logging.StreamHandler", "level": logging.WARNING
         }
     },
     "loggers": {
         "bentoml": {
             "handlers": ["bentomlhandler", "defaulthandler"], "level": logging.INFO, "propagate": False
-        }, "openllm": {
+        },
+        "openllm": {
             "handlers": ["bentomlhandler", "defaulthandler"], "level": logging.INFO, "propagate": False
         }
     },

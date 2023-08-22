@@ -41,7 +41,13 @@ class StableLMConfig(openllm_core.LLMConfig):
   and [StableLM-base's model card](https://huggingface.co/stabilityai/stablelm-base-alpha-7b)
   for more information.
   """
-  __config__ = {"name_type": "lowercase", "url": "https://github.com/Stability-AI/StableLM", "architecture": "GPTNeoXForCausalLM", "default_id": "stabilityai/stablelm-tuned-alpha-3b", "model_ids": ["stabilityai/stablelm-tuned-alpha-3b", "stabilityai/stablelm-tuned-alpha-7b", "stabilityai/stablelm-base-alpha-3b", "stabilityai/stablelm-base-alpha-7b"]}
+  __config__ = {
+      "name_type": "lowercase",
+      "url": "https://github.com/Stability-AI/StableLM",
+      "architecture": "GPTNeoXForCausalLM",
+      "default_id": "stabilityai/stablelm-tuned-alpha-3b",
+      "model_ids": ["stabilityai/stablelm-tuned-alpha-3b", "stabilityai/stablelm-tuned-alpha-7b", "stabilityai/stablelm-base-alpha-3b", "stabilityai/stablelm-base-alpha-7b"]
+  }
 
   class GenerationConfig:
     temperature: float = 0.9
@@ -49,7 +55,16 @@ class StableLMConfig(openllm_core.LLMConfig):
     top_k: int = 0
     top_p: float = 0.9
 
-  def sanitize_parameters(self, prompt: str, temperature: float | None = None, max_new_tokens: int | None = None, top_k: int | None = None, top_p: float | None = None, use_default_prompt_template: bool = False, **attrs: t.Any) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
+  def sanitize_parameters(
+      self,
+      prompt: str,
+      temperature: float | None = None,
+      max_new_tokens: int | None = None,
+      top_k: int | None = None,
+      top_p: float | None = None,
+      use_default_prompt_template: bool = False,
+      **attrs: t.Any
+  ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
     if "tuned" in self._model_id and use_default_prompt_template:
       system_prompt = attrs.pop("system_prompt", SYSTEM_PROMPT)
       prompt_text = process_prompt(prompt, DEFAULT_PROMPT_TEMPLATE, use_default_prompt_template, system_prompt=system_prompt, **attrs)

@@ -54,7 +54,18 @@ def construct_python_options(llm: openllm.LLM[t.Any, t.Any], llm_fs: FS, extra_d
     packages.extend([importlib.metadata.version("flax"), importlib.metadata.version("jax"), importlib.metadata.version("jaxlib")])
   elif framework_envvar == "tf":
     if not openllm_core.utils.is_tf_available(): raise ValueError(f"TensorFlow is not available, while {env.framework} is set to 'tf'")
-    candidates = ("tensorflow", "tensorflow-cpu", "tensorflow-gpu", "tf-nightly", "tf-nightly-cpu", "tf-nightly-gpu", "intel-tensorflow", "intel-tensorflow-avx512", "tensorflow-rocm", "tensorflow-macos",)
+    candidates = (
+        "tensorflow",
+        "tensorflow-cpu",
+        "tensorflow-gpu",
+        "tf-nightly",
+        "tf-nightly-cpu",
+        "tf-nightly-gpu",
+        "intel-tensorflow",
+        "intel-tensorflow-avx512",
+        "tensorflow-rocm",
+        "tensorflow-macos",
+    )
     # For the metadata, we have to look for both tensorflow and tensorflow-cpu
     for candidate in candidates:
       try:
@@ -70,15 +81,39 @@ def construct_python_options(llm: openllm.LLM[t.Any, t.Any], llm_fs: FS, extra_d
     if not openllm_core.utils.is_torch_available(): raise ValueError("PyTorch is not available. Make sure to have it locally installed.")
     packages.extend([f'torch>={importlib.metadata.version("torch")}'])
   wheels: list[str] = []
-  built_wheels: list[str | None] = [build_editable(llm_fs.getsyspath("/"), t.cast(t.Literal["openllm", "openllm_core", "openllm_client"], p)) for p in ("openllm_core", "openllm_client", "openllm")]
+  built_wheels: list[str | None] = [
+      build_editable(llm_fs.getsyspath("/"), t.cast(t.Literal["openllm", "openllm_core", "openllm_client"], p)) for p in ("openllm_core", "openllm_client", "openllm")
+  ]
   if all(i for i in built_wheels): wheels.extend([llm_fs.getsyspath(f"/{i.split('/')[-1]}") for i in t.cast(t.List[str], built_wheels)])
   return PythonOptions(packages=packages, wheels=wheels, lock_packages=False, extra_index_url=["https://download.pytorch.org/whl/cu118"])
-def construct_docker_options(llm: openllm.LLM[t.Any, t.Any], _: FS, workers_per_resource: float, quantize: LiteralString | None, bettertransformer: bool | None, adapter_map: dict[str, str | None] | None, dockerfile_template: str | None, runtime: t.Literal["ggml", "transformers"], serialisation_format: t.Literal["safetensors", "legacy"], container_registry: LiteralContainerRegistry, container_version_strategy: LiteralContainerVersionStrategy) -> DockerOptions:
+def construct_docker_options(
+    llm: openllm.LLM[t.Any, t.Any],
+    _: FS,
+    workers_per_resource: float,
+    quantize: LiteralString | None,
+    bettertransformer: bool | None,
+    adapter_map: dict[str, str | None] | None,
+    dockerfile_template: str | None,
+    runtime: t.Literal["ggml", "transformers"],
+    serialisation_format: t.Literal["safetensors", "legacy"],
+    container_registry: LiteralContainerRegistry,
+    container_version_strategy: LiteralContainerVersionStrategy
+) -> DockerOptions:
   from openllm.cli._factory import parse_config_options
   environ = parse_config_options(llm.config, llm.config["timeout"], workers_per_resource, None, True, os.environ.copy())
   env: openllm_core.utils.EnvVarMixin = llm.config["env"]
   if env["framework_value"] == "vllm": serialisation_format = "legacy"
-  env_dict = {env.framework: env["framework_value"], env.config: f"'{llm.config.model_dump_json().decode()}'", env.model_id: f"/home/bentoml/bento/models/{llm.tag.path()}", "OPENLLM_MODEL": llm.config["model_name"], "OPENLLM_SERIALIZATION": serialisation_format, "OPENLLM_ADAPTER_MAP": f"'{orjson.dumps(adapter_map).decode()}'", "BENTOML_DEBUG": str(True), "BENTOML_QUIET": str(False), "BENTOML_CONFIG_OPTIONS": f"'{environ['BENTOML_CONFIG_OPTIONS']}'",}
+  env_dict = {
+      env.framework: env["framework_value"],
+      env.config: f"'{llm.config.model_dump_json().decode()}'",
+      env.model_id: f"/home/bentoml/bento/models/{llm.tag.path()}",
+      "OPENLLM_MODEL": llm.config["model_name"],
+      "OPENLLM_SERIALIZATION": serialisation_format,
+      "OPENLLM_ADAPTER_MAP": f"'{orjson.dumps(adapter_map).decode()}'",
+      "BENTOML_DEBUG": str(True),
+      "BENTOML_QUIET": str(False),
+      "BENTOML_CONFIG_OPTIONS": f"'{environ['BENTOML_CONFIG_OPTIONS']}'",
+  }
   if adapter_map: env_dict["BITSANDBYTES_NOWELCOME"] = os.environ.get("BITSANDBYTES_NOWELCOME", "1")
 
   # We need to handle None separately here, as env from subprocess doesn't accept None value.
@@ -120,7 +155,8 @@ def write_service(llm: openllm.LLM[t.Any, t.Any], adapter_map: dict[str, str | N
     src_contents = f.readlines()
   for it in src_contents:
     if OPENLLM_MODEL_NAME in it: src_contents[src_contents.index(it)] = (ModelNameFormatter(model_name).vformat(it)[:-(len(OPENLLM_MODEL_NAME) + 3)] + "\n")
-    elif OPENLLM_MODEL_ADAPTER_MAP in it: src_contents[src_contents.index(it)] = (ModelAdapterMapFormatter(orjson.dumps(adapter_map).decode()).vformat(it)[:-(len(OPENLLM_MODEL_ADAPTER_MAP) + 3)] + "\n")
+    elif OPENLLM_MODEL_ADAPTER_MAP in it:
+      src_contents[src_contents.index(it)] = (ModelAdapterMapFormatter(orjson.dumps(adapter_map).decode()).vformat(it)[:-(len(OPENLLM_MODEL_ADAPTER_MAP) + 3)] + "\n")
   script = f"# GENERATED BY 'openllm build {model_name}'. DO NOT EDIT\n\n" + "".join(src_contents)
   if DEBUG: logger.info("Generated script:\n%s", script)
   llm_fs.writetext(llm.config["service_name"], script)
@@ -170,7 +206,9 @@ def create_bento(
       exclude=["/venv", "/.venv", "__pycache__/", "*.py[cod]", "*$py.class"],
       python=construct_python_options(llm, llm_fs, extra_dependencies, adapter_map),
       models=[llm_spec],
-      docker=construct_docker_options(llm, llm_fs, workers_per_resource, quantize, bettertransformer, adapter_map, dockerfile_template, runtime, serialisation_format, container_registry, container_version_strategy)
+      docker=construct_docker_options(
+          llm, llm_fs, workers_per_resource, quantize, bettertransformer, adapter_map, dockerfile_template, runtime, serialisation_format, container_registry, container_version_strategy
+      )
   )
 
   bento = bentoml.Bento.create(build_config=build_config, version=bento_tag.version, build_ctx=llm_fs.getsyspath("/"))

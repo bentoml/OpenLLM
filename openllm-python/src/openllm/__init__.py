@@ -102,7 +102,9 @@ else:
 try:
   if not openllm_core.utils.is_torch_available(): raise exceptions.MissingDependencyError
 except exceptions.MissingDependencyError:
-  _import_structure["utils.dummy_pt_objects"] = [name for name in dir(utils.dummy_pt_objects) if not name.startswith("_") and name not in ("ChatGLM", "Baichuan", "MPT", "Falcon", "annotations")]
+  _import_structure["utils.dummy_pt_objects"] = [
+      name for name in dir(utils.dummy_pt_objects) if not name.startswith("_") and name not in ("ChatGLM", "Baichuan", "MPT", "Falcon", "annotations")
+  ]
 else:
   _import_structure["models.flan_t5"].extend(["FlanT5"])
   _import_structure["models.dolly_v2"].extend(["DollyV2"])

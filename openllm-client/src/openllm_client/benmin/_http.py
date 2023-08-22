@@ -51,7 +51,14 @@ class HttpClient(Client):
           if "x-bentoml-io-descriptor" not in meth_spec["responses"]["200"]: raise ValueError(f"Malformed BentoML spec received from BentoML server {url}")
           if "x-bentoml-name" not in meth_spec: raise ValueError(f"Malformed BentoML spec received from BentoML server {url}")
           try:
-            reflection.apis[meth_spec["x-bentoml-name"]] = InferenceAPI[t.Any](None, bentoml.io.from_spec(meth_spec["requestBody"]["x-bentoml-io-descriptor"]), bentoml.io.from_spec(meth_spec["responses"]["200"]["x-bentoml-io-descriptor"]), name=meth_spec["x-bentoml-name"], doc=meth_spec["description"], route=route.lstrip("/"))
+            reflection.apis[meth_spec["x-bentoml-name"]] = InferenceAPI[t.Any](
+                None,
+                bentoml.io.from_spec(meth_spec["requestBody"]["x-bentoml-io-descriptor"]),
+                bentoml.io.from_spec(meth_spec["responses"]["200"]["x-bentoml-io-descriptor"]),
+                name=meth_spec["x-bentoml-name"],
+                doc=meth_spec["description"],
+                route=route.lstrip("/")
+            )
           except Exception as e:
             logger.error("Failed to instantiate client for API %s: ", meth_spec["x-bentoml-name"], e)
     return cls(url, reflection)
@@ -69,7 +76,12 @@ class HttpClient(Client):
     if isinstance(fake_resp, starlette.responses.StreamingResponse): body = None
     else: body = fake_resp.body
 
-    resp = self.inner.post("/" + _inference_api.route if not _inference_api.route.startswith("/") else _inference_api.route, data=body, headers={"content-type": fake_resp.headers["content-type"]}, timeout=self.timeout)
+    resp = self.inner.post(
+        "/" + _inference_api.route if not _inference_api.route.startswith("/") else _inference_api.route,
+        data=body,
+        headers={"content-type": fake_resp.headers["content-type"]},
+        timeout=self.timeout
+    )
     if resp.status_code != 200: raise ValueError(f"Error while making request: {resp.status_code}: {resp.content!s}")
     fake_req = starlette.requests.Request(scope={"type": "http"})
     headers = starlette.datastructures.Headers(headers=resp.headers)
@@ -122,7 +134,14 @@ class AsyncHttpClient(AsyncClient):
           if "x-bentoml-io-descriptor" not in meth_spec["responses"]["200"]: raise ValueError(f"Malformed BentoML spec received from BentoML server {url}")
           if "x-bentoml-name" not in meth_spec: raise ValueError(f"Malformed BentoML spec received from BentoML server {url}")
           try:
-            reflection.apis[meth_spec["x-bentoml-name"]] = InferenceAPI[t.Any](None, bentoml.io.from_spec(meth_spec["requestBody"]["x-bentoml-io-descriptor"]), bentoml.io.from_spec(meth_spec["responses"]["200"]["x-bentoml-io-descriptor"]), name=meth_spec["x-bentoml-name"], doc=meth_spec["description"], route=route.lstrip("/"))
+            reflection.apis[meth_spec["x-bentoml-name"]] = InferenceAPI[t.Any](
+                None,
+                bentoml.io.from_spec(meth_spec["requestBody"]["x-bentoml-io-descriptor"]),
+                bentoml.io.from_spec(meth_spec["responses"]["200"]["x-bentoml-io-descriptor"]),
+                name=meth_spec["x-bentoml-name"],
+                doc=meth_spec["description"],
+                route=route.lstrip("/")
+            )
           except ValueError as e:
             logger.error("Failed to instantiate client for API %s: ", meth_spec["x-bentoml-name"], e)
     return cls(url, reflection)
@@ -140,7 +159,12 @@ class AsyncHttpClient(AsyncClient):
     if isinstance(fake_resp, starlette.responses.StreamingResponse): body = None
     else: body = t.cast(t.Any, fake_resp.body)
 
-    resp = await self.inner.post("/" + _inference_api.route if not _inference_api.route.startswith("/") else _inference_api.route, data=body, headers={"content-type": fake_resp.headers["content-type"]}, timeout=self.timeout)
+    resp = await self.inner.post(
+        "/" + _inference_api.route if not _inference_api.route.startswith("/") else _inference_api.route,
+        data=body,
+        headers={"content-type": fake_resp.headers["content-type"]},
+        timeout=self.timeout
+    )
     if resp.status_code != 200: raise ValueError(f"Error making request: {resp.status_code}: {(await resp.aread())!s}")
     fake_req = starlette.requests.Request(scope={"type": "http"})
     headers = starlette.datastructures.Headers(headers=resp.headers)

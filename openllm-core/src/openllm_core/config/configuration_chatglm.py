@@ -35,7 +35,17 @@ class ChatGLMConfig(openllm_core.LLMConfig):
 
   Refer to [ChatGLM's GitHub page](https://github.com/THUDM/ChatGLM-6B) for more information.
   """
-  __config__ = {"name_type": "lowercase", "trust_remote_code": True, "timeout": 3600000, "requires_gpu": True, "url": "https://github.com/THUDM/ChatGLM-6B", "requirements": ["cpm-kernels", "sentencepiece"], "architecture": "ChatGLMForConditionalGeneration", "default_id": "thudm/chatglm-6b", "model_ids": ["thudm/chatglm-6b", "thudm/chatglm-6b-int8", "thudm/chatglm-6b-int4", "thudm/chatglm2-6b", "thudm/chatglm2-6b-int4"]}
+  __config__ = {
+      "name_type": "lowercase",
+      "trust_remote_code": True,
+      "timeout": 3600000,
+      "requires_gpu": True,
+      "url": "https://github.com/THUDM/ChatGLM-6B",
+      "requirements": ["cpm-kernels", "sentencepiece"],
+      "architecture": "ChatGLMForConditionalGeneration",
+      "default_id": "thudm/chatglm-6b",
+      "model_ids": ["thudm/chatglm-6b", "thudm/chatglm-6b-int8", "thudm/chatglm-6b-int4", "thudm/chatglm2-6b", "thudm/chatglm2-6b-int4"]
+  }
   retain_history: bool = dantic.Field(False, description="Whether to retain history given to the model. If set to True, then the model will retain given history.")
   use_half_precision: bool = dantic.Field(True, description="Whether to use half precision for model.")
 
@@ -45,7 +55,17 @@ class ChatGLMConfig(openllm_core.LLMConfig):
     top_p: float = 0.7
     temperature: float = 0.95
 
-  def sanitize_parameters(self, prompt: str, max_new_tokens: int | None = None, num_beams: int | None = None, top_p: float | None = None, temperature: float | None = None, chat_history: list[tuple[str, str]] | None = None, use_default_prompt_template: bool = False, **attrs: t.Any) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
+  def sanitize_parameters(
+      self,
+      prompt: str,
+      max_new_tokens: int | None = None,
+      num_beams: int | None = None,
+      top_p: float | None = None,
+      temperature: float | None = None,
+      chat_history: list[tuple[str, str]] | None = None,
+      use_default_prompt_template: bool = False,
+      **attrs: t.Any
+  ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
     prompt_text = ""
     if use_default_prompt_template and chat_history is not None:
       for i, (old_query, response) in enumerate(chat_history):

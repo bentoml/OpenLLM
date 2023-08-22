@@ -45,7 +45,9 @@ def nightly_resolver(cls: type[RefResolver]) -> str:
   # If docker is not found, then fallback to previous behaviour. Which the container might not exists.
   docker_bin = shutil.which("docker")
   if docker_bin is None:
-    logger.warning("To get the correct available nightly container, make sure to have docker available. Fallback to previous behaviour for determine nightly hash (container might not exists due to the lack of GPU machine at a time. See https://github.com/bentoml/OpenLLM/pkgs/container/openllm for available image.)")
+    logger.warning(
+        "To get the correct available nightly container, make sure to have docker available. Fallback to previous behaviour for determine nightly hash (container might not exists due to the lack of GPU machine at a time. See https://github.com/bentoml/OpenLLM/pkgs/container/openllm for available image.)"
+    )
     commits = t.cast("list[dict[str, t.Any]]", cls._ghapi.repos.list_commits(since=_commit_time_range()))
     return next(f'sha-{it["sha"][:7]}' for it in commits if "[skip ci]" not in it["commit"]["message"])
   # now is the correct behaviour
@@ -71,7 +73,8 @@ class RefResolver:
       version: tuple[str, str | None] = (cls._ghapi.git.get_ref(ref=f"tags/{meta['name']}")["object"]["sha"], version_str)
     else:
       version = ("", version_str)
-    if openllm_core.utils.VersionInfo.from_version_string(t.cast(str, version_str)) < (0, 2, 12): raise VersionNotSupported(f"Version {version_str} doesn't support OpenLLM base container. Consider using 'nightly' or upgrade 'openllm>=0.2.12'")
+    if openllm_core.utils.VersionInfo.from_version_string(t.cast(str, version_str)) < (0, 2, 12):
+      raise VersionNotSupported(f"Version {version_str} doesn't support OpenLLM base container. Consider using 'nightly' or upgrade 'openllm>=0.2.12'")
     return _RefTuple((*version, "release" if _use_base_strategy else "custom"))
 
   @classmethod
@@ -96,7 +99,12 @@ class RefResolver:
 @functools.lru_cache(maxsize=256)
 def get_base_container_tag(strategy: LiteralContainerVersionStrategy | None = None) -> str:
   return RefResolver.from_strategy(strategy).tag
-def build_container(registries: LiteralContainerRegistry | t.Sequence[LiteralContainerRegistry] | None = None, version_strategy: LiteralContainerVersionStrategy = "release", push: bool = False, machine: bool = False) -> dict[str | LiteralContainerRegistry, str]:
+def build_container(
+    registries: LiteralContainerRegistry | t.Sequence[LiteralContainerRegistry] | None = None,
+    version_strategy: LiteralContainerVersionStrategy = "release",
+    push: bool = False,
+    machine: bool = False
+) -> dict[str | LiteralContainerRegistry, str]:
   try:
     if not _BUILDER.health(): raise openllm.exceptions.Error
   except (openllm.exceptions.Error, subprocess.CalledProcessError):
@@ -106,12 +114,22 @@ def build_container(registries: LiteralContainerRegistry | t.Sequence[LiteralCon
   if not _module_location: raise RuntimeError("Failed to determine source location of 'openllm'. (Possible broken installation)")
   pyproject_path = pathlib.Path(_module_location).parent.parent / "pyproject.toml"
   if not pyproject_path.exists(): raise ValueError("This utility can only be run within OpenLLM git repository. Clone it first with 'git clone https://github.com/bentoml/OpenLLM.git'")
-  if not registries: tags: dict[str | LiteralContainerRegistry, str] = {alias: f"{value}:{get_base_container_tag(version_strategy)}" for alias, value in _CONTAINER_REGISTRY.items()}  # default to all registries with latest tag strategy
+  if not registries:
+    tags: dict[str | LiteralContainerRegistry, str] = {
+        alias: f"{value}:{get_base_container_tag(version_strategy)}" for alias, value in _CONTAINER_REGISTRY.items()
+    }  # default to all registries with latest tag strategy
   else:
     registries = [registries] if isinstance(registries, str) else list(registries)
     tags = {name: f"{_CONTAINER_REGISTRY[name]}:{get_base_container_tag(version_strategy)}" for name in registries}
   try:
-    outputs = _BUILDER.build(file=pathlib.Path(__file__).parent.joinpath("Dockerfile").resolve().__fspath__(), context_path=pyproject_path.parent.__fspath__(), tag=tuple(tags.values()), push=push, progress="plain" if openllm_core.utils.get_debug_mode() else "auto", quiet=machine)
+    outputs = _BUILDER.build(
+        file=pathlib.Path(__file__).parent.joinpath("Dockerfile").resolve().__fspath__(),
+        context_path=pyproject_path.parent.__fspath__(),
+        tag=tuple(tags.values()),
+        push=push,
+        progress="plain" if openllm_core.utils.get_debug_mode() else "auto",
+        quiet=machine
+    )
     if machine and outputs is not None: tags["image_sha"] = outputs.decode("utf-8").strip()
   except Exception as err:
     raise openllm.exceptions.OpenLLMException(f"Failed to containerize base container images (Scroll up to see error above, or set OPENLLMDEVDEBUG=True for more traceback):\n{err}") from err

@@ -23,4 +23,6 @@ def process_prompt(prompt: str, template: str | None = None, use_prompt_template
   try:
     return template.format(instruction=prompt, **prompt_variables)
   except KeyError as e:
-    raise RuntimeError(f"Missing variable '{e.args[0]}' (required: {template_variables}) in the prompt template. Use 'use_prompt_template=False' to disable the default prompt template.") from None
+    raise RuntimeError(
+        f"Missing variable '{e.args[0]}' (required: {template_variables}) in the prompt template. Use 'use_prompt_template=False' to disable the default prompt template."
+    ) from None

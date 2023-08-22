@@ -55,8 +55,19 @@ class FalconConfig(openllm_core.LLMConfig):
     num_beams: int = 4
     early_stopping: bool = True
 
-  def sanitize_parameters(self, prompt: str, max_new_tokens: int | None = None, top_k: int | None = None, num_return_sequences: int | None = None, eos_token_id: int | None = None, use_default_prompt_template: bool = False, **attrs: t.Any) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
-    return process_prompt(prompt, DEFAULT_PROMPT_TEMPLATE, use_default_prompt_template, **attrs), {"max_new_tokens": max_new_tokens, "top_k": top_k, "num_return_sequences": num_return_sequences, "eos_token_id": eos_token_id, **attrs}, {}
+  def sanitize_parameters(
+      self,
+      prompt: str,
+      max_new_tokens: int | None = None,
+      top_k: int | None = None,
+      num_return_sequences: int | None = None,
+      eos_token_id: int | None = None,
+      use_default_prompt_template: bool = False,
+      **attrs: t.Any
+  ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
+    return process_prompt(prompt, DEFAULT_PROMPT_TEMPLATE, use_default_prompt_template, **attrs), {
+        "max_new_tokens": max_new_tokens, "top_k": top_k, "num_return_sequences": num_return_sequences, "eos_token_id": eos_token_id, **attrs
+    }, {}
 
   def postprocess_generate(self, prompt: str, generation_result: t.Sequence[str], **_: t.Any) -> str:
     return generation_result[0]

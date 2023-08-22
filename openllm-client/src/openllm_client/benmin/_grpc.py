@@ -20,12 +20,36 @@ class ClientCredentials(t.TypedDict):
   private_key: NotRequired[t.Union[bytes, str]]
   certificate_chain: NotRequired[t.Union[bytes, str]]
 @overload
-def dispatch_channel(server_url: str, typ: t.Literal["async"], ssl: bool = ..., ssl_client_credentials: ClientCredentials | None = ..., options: t.Any | None = ..., compression: grpc.Compression | None = ..., interceptors: t.Sequence[aio.ClientInterceptor] | None = ...) -> aio.Channel:
+def dispatch_channel(
+    server_url: str,
+    typ: t.Literal["async"],
+    ssl: bool = ...,
+    ssl_client_credentials: ClientCredentials | None = ...,
+    options: t.Any | None = ...,
+    compression: grpc.Compression | None = ...,
+    interceptors: t.Sequence[aio.ClientInterceptor] | None = ...
+) -> aio.Channel:
   ...
 @overload
-def dispatch_channel(server_url: str, typ: t.Literal["sync"], ssl: bool = ..., ssl_client_credentials: ClientCredentials | None = ..., options: t.Any | None = ..., compression: grpc.Compression | None = ..., interceptors: t.Sequence[aio.ClientInterceptor] | None = None) -> grpc.Channel:
+def dispatch_channel(
+    server_url: str,
+    typ: t.Literal["sync"],
+    ssl: bool = ...,
+    ssl_client_credentials: ClientCredentials | None = ...,
+    options: t.Any | None = ...,
+    compression: grpc.Compression | None = ...,
+    interceptors: t.Sequence[aio.ClientInterceptor] | None = None
+) -> grpc.Channel:
   ...
-def dispatch_channel(server_url: str, typ: t.Literal["async", "sync"] = "sync", ssl: bool = False, ssl_client_credentials: ClientCredentials | None = None, options: t.Any | None = None, compression: grpc.Compression | None = None, interceptors: t.Sequence[aio.ClientInterceptor] | None = None) -> aio.Channel | grpc.Channel:
+def dispatch_channel(
+    server_url: str,
+    typ: t.Literal["async", "sync"] = "sync",
+    ssl: bool = False,
+    ssl_client_credentials: ClientCredentials | None = None,
+    options: t.Any | None = None,
+    compression: grpc.Compression | None = None,
+    interceptors: t.Sequence[aio.ClientInterceptor] | None = None
+) -> aio.Channel | grpc.Channel:
   credentials = None
   if ssl:
     if ssl_client_credentials is None: raise RuntimeError("'ssl=True' requires 'ssl_client_credentials'")
@@ -42,8 +66,16 @@ class GrpcClient(Client):
   options: t.Any
   compression: t.Optional[grpc.Compression]
 
-  def __init__(self, server_url: str, svc: bentoml.Service,  # gRPC specific options
-                ssl: bool = False, options: t.Any | None = None, compression: grpc.Compression | None = None, ssl_client_credentials: ClientCredentials | None = None, **kwargs: t.Any) -> None:
+  def __init__(
+      self,
+      server_url: str,
+      svc: bentoml.Service,  # gRPC specific options
+      ssl: bool = False,
+      options: t.Any | None = None,
+      compression: grpc.Compression | None = None,
+      ssl_client_credentials: ClientCredentials | None = None,
+      **kwargs: t.Any
+  ) -> None:
     self.ssl, self.ssl_client_credentials, self.options, self.compression = ssl, ssl_client_credentials, options, compression
     super().__init__(server_url, svc, **kwargs)
 
@@ -57,7 +89,14 @@ class GrpcClient(Client):
 
   @staticmethod
   def wait_until_server_ready(host: str, port: int, timeout: float = 30, check_interval: int = 1, **kwargs: t.Any) -> None:
-    with dispatch_channel(f"{host.replace(r'localhost', '0.0.0.0')}:{port}", typ="sync", options=kwargs.get("options", None), compression=kwargs.get("compression", None), ssl=kwargs.get("ssl", False), ssl_client_credentials=kwargs.get("ssl_client_credentials", None)) as channel:
+    with dispatch_channel(
+        f"{host.replace(r'localhost', '0.0.0.0')}:{port}",
+        typ="sync",
+        options=kwargs.get("options", None),
+        compression=kwargs.get("compression", None),
+        ssl=kwargs.get("ssl", False),
+        ssl_client_credentials=kwargs.get("ssl_client_credentials", None)
+    ) as channel:
       req = pb_health.HealthCheckRequest()
       req.service = "bentoml.grpc.v1.BentoService"
       health_stub = services_health.HealthStub(channel)
@@ -80,12 +119,34 @@ class GrpcClient(Client):
 
   @classmethod
   def from_url(cls, url: str, **kwargs: t.Any) -> GrpcClient:
-    with dispatch_channel(url.replace(r"localhost", "0.0.0.0"), typ="sync", options=kwargs.get("options", None), compression=kwargs.get("compression", None), ssl=kwargs.get("ssl", False), ssl_client_credentials=kwargs.get("ssl_client_credentials", None)) as channel:
-      metadata = t.cast("ServiceMetadataResponse", channel.unary_unary("/bentoml.grpc.v1.BentoService/ServiceMetadata", request_serializer=pb.ServiceMetadataRequest.SerializeToString, response_deserializer=pb.ServiceMetadataResponse.FromString)(pb.ServiceMetadataRequest()))
+    with dispatch_channel(
+        url.replace(r"localhost", "0.0.0.0"),
+        typ="sync",
+        options=kwargs.get("options", None),
+        compression=kwargs.get("compression", None),
+        ssl=kwargs.get("ssl", False),
+        ssl_client_credentials=kwargs.get("ssl_client_credentials", None)
+    ) as channel:
+      metadata = t.cast(
+          "ServiceMetadataResponse",
+          channel.unary_unary(
+              "/bentoml.grpc.v1.BentoService/ServiceMetadata", request_serializer=pb.ServiceMetadataRequest.SerializeToString, response_deserializer=pb.ServiceMetadataResponse.FromString
+          )(pb.ServiceMetadataRequest())
+      )
     reflection = bentoml.Service(metadata.name)
     for api in metadata.apis:
       try:
-        reflection.apis[api.name] = InferenceAPI[t.Any](None, bentoml.io.from_spec({"id": api.input.descriptor_id, "args": json_format.MessageToDict(api.input.attributes).get("args", None)}), bentoml.io.from_spec({"id": api.output.descriptor_id, "args": json_format.MessageToDict(api.output.attributes).get("args", None)}), name=api.name, doc=api.docs)
+        reflection.apis[api.name] = InferenceAPI[t.Any](
+            None,
+            bentoml.io.from_spec({
+                "id": api.input.descriptor_id, "args": json_format.MessageToDict(api.input.attributes).get("args", None)
+            }),
+            bentoml.io.from_spec({
+                "id": api.output.descriptor_id, "args": json_format.MessageToDict(api.output.attributes).get("args", None)
+            }),
+            name=api.name,
+            doc=api.docs
+        )
       except Exception as e:
         logger.error("Failed to instantiate client for API %s: ", api.name, e)
     return cls(url, reflection, **kwargs)
@@ -111,8 +172,17 @@ class AsyncGrpcClient(AsyncClient):
   interceptors: t.Optional[t.Sequence[aio.ClientInterceptor]]
   compression: t.Optional[grpc.Compression]
 
-  def __init__(self, server_url: str, svc: bentoml.Service,  # gRPC specific options
-                ssl: bool = False, options: aio.ChannelArgumentType | None = None, interceptors: t.Sequence[aio.ClientInterceptor] | None = None, compression: grpc.Compression | None = None, ssl_client_credentials: ClientCredentials | None = None, **kwargs: t.Any) -> None:
+  def __init__(
+      self,
+      server_url: str,
+      svc: bentoml.Service,  # gRPC specific options
+      ssl: bool = False,
+      options: aio.ChannelArgumentType | None = None,
+      interceptors: t.Sequence[aio.ClientInterceptor] | None = None,
+      compression: grpc.Compression | None = None,
+      ssl_client_credentials: ClientCredentials | None = None,
+      **kwargs: t.Any
+  ) -> None:
     self.ssl, self.ssl_client_credentials, self.options, self.interceptors, self.compression = ssl, ssl_client_credentials, options, interceptors, compression
     super().__init__(server_url, svc, **kwargs)
 
@@ -126,7 +196,14 @@ class AsyncGrpcClient(AsyncClient):
 
   @staticmethod
   async def wait_until_server_ready(host: str, port: int, timeout: float = 30, check_interval: int = 1, **kwargs: t.Any) -> None:
-    async with dispatch_channel(f"{host.replace(r'localhost', '0.0.0.0')}:{port}", typ="async", options=kwargs.get("options", None), compression=kwargs.get("compression", None), ssl=kwargs.get("ssl", False), ssl_client_credentials=kwargs.get("ssl_client_credentials", None)) as channel:
+    async with dispatch_channel(
+        f"{host.replace(r'localhost', '0.0.0.0')}:{port}",
+        typ="async",
+        options=kwargs.get("options", None),
+        compression=kwargs.get("compression", None),
+        ssl=kwargs.get("ssl", False),
+        ssl_client_credentials=kwargs.get("ssl_client_credentials", None)
+    ) as channel:
       req = pb_health.HealthCheckRequest()
       req.service = "bentoml.grpc.v1.BentoService"
       health_stub = services_health.HealthStub(channel)
@@ -149,12 +226,35 @@ class AsyncGrpcClient(AsyncClient):
 
   @classmethod
   async def from_url(cls, url: str, **kwargs: t.Any) -> AsyncGrpcClient:
-    async with dispatch_channel(url.replace(r"localhost", "0.0.0.0"), typ="async", options=kwargs.get("options", None), compression=kwargs.get("compression", None), ssl=kwargs.get("ssl", False), ssl_client_credentials=kwargs.get("ssl_client_credentials", None), interceptors=kwargs.get("interceptors", None)) as channel:
-      metadata = t.cast("ServiceMetadataResponse", channel.unary_unary("/bentoml.grpc.v1.BentoService/ServiceMetadata", request_serializer=pb.ServiceMetadataRequest.SerializeToString, response_deserializer=pb.ServiceMetadataResponse.FromString)(pb.ServiceMetadataRequest()))
+    async with dispatch_channel(
+        url.replace(r"localhost", "0.0.0.0"),
+        typ="async",
+        options=kwargs.get("options", None),
+        compression=kwargs.get("compression", None),
+        ssl=kwargs.get("ssl", False),
+        ssl_client_credentials=kwargs.get("ssl_client_credentials", None),
+        interceptors=kwargs.get("interceptors", None)
+    ) as channel:
+      metadata = t.cast(
+          "ServiceMetadataResponse",
+          channel.unary_unary(
+              "/bentoml.grpc.v1.BentoService/ServiceMetadata", request_serializer=pb.ServiceMetadataRequest.SerializeToString, response_deserializer=pb.ServiceMetadataResponse.FromString
+          )(pb.ServiceMetadataRequest())
+      )
     reflection = bentoml.Service(metadata.name)
     for api in metadata.apis:
       try:
-        reflection.apis[api.name] = InferenceAPI[t.Any](None, bentoml.io.from_spec({"id": api.input.descriptor_id, "args": json_format.MessageToDict(api.input.attributes).get("args", None)}), bentoml.io.from_spec({"id": api.output.descriptor_id, "args": json_format.MessageToDict(api.output.attributes).get("args", None)}), name=api.name, doc=api.docs)
+        reflection.apis[api.name] = InferenceAPI[t.Any](
+            None,
+            bentoml.io.from_spec({
+                "id": api.input.descriptor_id, "args": json_format.MessageToDict(api.input.attributes).get("args", None)
+            }),
+            bentoml.io.from_spec({
+                "id": api.output.descriptor_id, "args": json_format.MessageToDict(api.output.attributes).get("args", None)
+            }),
+            name=api.name,
+            doc=api.docs
+        )
       except Exception as e:
         logger.error("Failed to instantiate client for API %s: ", api.name, e)
     return cls(url, reflection, **kwargs)

@@ -109,7 +109,9 @@ class DockerHandle(_Handle):
     container = self.docker_client.containers.get(self.container_name)
     return container.status in ["running", "created"]
 @contextlib.contextmanager
-def _local_handle(model: str, model_id: str, image_tag: str, deployment_mode: t.Literal["container", "local"], quantize: t.Literal["int8", "int4", "gptq"] | None = None, *, _serve_grpc: bool = False,):
+def _local_handle(
+    model: str, model_id: str, image_tag: str, deployment_mode: t.Literal["container", "local"], quantize: t.Literal["int8", "int4", "gptq"] | None = None, *, _serve_grpc: bool = False,
+):
   with openllm.utils.reserve_free_port() as port:
     pass
 
@@ -129,7 +131,9 @@ def _local_handle(model: str, model_id: str, image_tag: str, deployment_mode: t.
   if proc.stderr:
     proc.stderr.close()
 @contextlib.contextmanager
-def _container_handle(model: str, model_id: str, image_tag: str, deployment_mode: t.Literal["container", "local"], quantize: t.Literal["int8", "int4", "gptq"] | None = None, *, _serve_grpc: bool = False,):
+def _container_handle(
+    model: str, model_id: str, image_tag: str, deployment_mode: t.Literal["container", "local"], quantize: t.Literal["int8", "int4", "gptq"] | None = None, *, _serve_grpc: bool = False,
+):
   envvar = openllm.utils.EnvVarMixin(model)
 
   with openllm.utils.reserve_free_port() as port, openllm.utils.reserve_free_port() as prom_port:
@@ -154,7 +158,11 @@ def _container_handle(model: str, model_id: str, image_tag: str, deployment_mode
   gpus = openllm.utils.device_count() or -1
   devs = [docker.types.DeviceRequest(count=gpus, capabilities=[["gpu"]])] if gpus > 0 else None
 
-  container = client.containers.run(image_tag, command=args, name=container_name, environment=env, auto_remove=False, detach=True, device_requests=devs, ports={"3000/tcp": port, "3001/tcp": prom_port},)
+  container = client.containers.run(
+      image_tag, command=args, name=container_name, environment=env, auto_remove=False, detach=True, device_requests=devs, ports={
+          "3000/tcp": port, "3001/tcp": prom_port
+      },
+  )
 
   yield DockerHandle(client, container.name, port, deployment_mode)
 

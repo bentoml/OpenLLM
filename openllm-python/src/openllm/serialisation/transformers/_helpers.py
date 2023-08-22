@@ -38,7 +38,8 @@ def infer_tokenizers_from_llm(__llm: openllm.LLM[t.Any, T], /) -> T:
 def infer_autoclass_from_llm(llm: openllm.LLM[M, T], config: transformers.PretrainedConfig, /) -> _BaseAutoModelClass:
   if llm.config["trust_remote_code"]:
     autoclass = "AutoModelForSeq2SeqLM" if llm.config["model_type"] == "seq2seq_lm" else "AutoModelForCausalLM"
-    if not hasattr(config, "auto_map"): raise ValueError(f"Invalid configuraiton for {llm.model_id}. ``trust_remote_code=True`` requires `transformers.PretrainedConfig` to contain a `auto_map` mapping")
+    if not hasattr(config, "auto_map"):
+      raise ValueError(f"Invalid configuraiton for {llm.model_id}. ``trust_remote_code=True`` requires `transformers.PretrainedConfig` to contain a `auto_map` mapping")
     # in case this model doesn't use the correct auto class for model type, for example like chatglm
     # where it uses AutoModel instead of AutoModelForCausalLM. Then we fallback to AutoModel
     if autoclass not in config.auto_map: autoclass = "AutoModel"

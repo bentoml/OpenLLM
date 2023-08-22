@@ -5,7 +5,10 @@ These utilities will stay internal, and its API can be changed or updated withou
 from __future__ import annotations
 import os, typing as t
 from openllm_core.utils import LazyModule
-_import_structure: dict[str, list[str]] = {"_package": ["create_bento", "build_editable", "construct_python_options", "construct_docker_options"], "oci": ["CONTAINER_NAMES", "get_base_container_tag", "build_container", "get_base_container_name", "supported_registries", "RefResolver"]}
+_import_structure: dict[str, list[str]] = {
+    "_package": ["create_bento", "build_editable", "construct_python_options", "construct_docker_options"],
+    "oci": ["CONTAINER_NAMES", "get_base_container_tag", "build_container", "get_base_container_name", "supported_registries", "RefResolver"]
+}
 
 if t.TYPE_CHECKING:
   from . import _package as _package, oci as oci

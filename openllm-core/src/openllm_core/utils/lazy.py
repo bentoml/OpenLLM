@@ -42,7 +42,15 @@ class VersionInfo:
 _sentinel, _reserved_namespace = object(), {"__openllm_migration__"}
 class LazyModule(types.ModuleType):
   # Very heavily inspired by optuna.integration._IntegrationModule: https://github.com/optuna/optuna/blob/master/optuna/integration/__init__.py
-  def __init__(self, name: str, module_file: str, import_structure: dict[str, list[str]], module_spec: importlib.machinery.ModuleSpec | None = None, doc: str | None = None, extra_objects: dict[str, t.Any] | None = None):
+  def __init__(
+      self,
+      name: str,
+      module_file: str,
+      import_structure: dict[str, list[str]],
+      module_spec: importlib.machinery.ModuleSpec | None = None,
+      doc: str | None = None,
+      extra_objects: dict[str, t.Any] | None = None
+  ):
     """Lazily load this module as an object.
 
     It does instantiate a __all__ and __dir__ for IDE support
@@ -86,9 +94,24 @@ class LazyModule(types.ModuleType):
     It also contains a special case for all of the metadata information, such as __version__ and __version_info__.
     """
     if name in _reserved_namespace: raise openllm_core.exceptions.ForbiddenAttributeError(f"'{name}' is a reserved namespace for {self._name} and should not be access nor modified.")
-    dunder_to_metadata = {"__title__": "Name", "__copyright__": "", "__version__": "version", "__version_info__": "version", "__description__": "summary", "__uri__": "", "__url__": "", "__author__": "", "__email__": "", "__license__": "license", "__homepage__": ""}
+    dunder_to_metadata = {
+        "__title__": "Name",
+        "__copyright__": "",
+        "__version__": "version",
+        "__version_info__": "version",
+        "__description__": "summary",
+        "__uri__": "",
+        "__url__": "",
+        "__author__": "",
+        "__email__": "",
+        "__license__": "license",
+        "__homepage__": ""
+    }
     if name in dunder_to_metadata:
-      if name not in {"__version_info__", "__copyright__", "__version__"}: warnings.warn(f"Accessing '{self._name}.{name}' is deprecated. Please consider using 'importlib.metadata' directly to query for openllm packaging metadata.", DeprecationWarning, stacklevel=2)
+      if name not in {"__version_info__", "__copyright__", "__version__"}:
+        warnings.warn(
+            f"Accessing '{self._name}.{name}' is deprecated. Please consider using 'importlib.metadata' directly to query for openllm packaging metadata.", DeprecationWarning, stacklevel=2
+        )
       meta = importlib.metadata.metadata("openllm")
       project_url = dict(url.split(", ") for url in t.cast(t.List[str], meta.get_all("Project-URL")))
       if name == "__license__": return "Apache-2.0"

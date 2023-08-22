@@ -3,17 +3,33 @@ from __future__ import annotations
 import functools, importlib, os, sys, typing as t
 from enum import Enum
 import attr, click, click_option_group as cog, inflection, orjson
-from click import (ParamType, shell_completion as sc, types as click_types,)
-
+from click import ParamType, shell_completion as sc, types as click_types
 if t.TYPE_CHECKING: from attr import _ValidatorType
-
 AnyCallable = t.Callable[..., t.Any]
 FC = t.TypeVar("FC", bound=t.Union[AnyCallable, click.Command])
 
-__all__ = ["FC", "attrs_to_options", "Field", "parse_type", "is_typing", "is_literal", "ModuleType", "EnumChoice", "LiteralChoice", "allows_multiple", "is_mapping", "is_container", "parse_container_args", "parse_single_arg", "CUDA", "JsonType", "BytesType"]
+__all__ = [
+    "FC",
+    "attrs_to_options",
+    "Field",
+    "parse_type",
+    "is_typing",
+    "is_literal",
+    "ModuleType",
+    "EnumChoice",
+    "LiteralChoice",
+    "allows_multiple",
+    "is_mapping",
+    "is_container",
+    "parse_container_args",
+    "parse_single_arg",
+    "CUDA",
+    "JsonType",
+    "BytesType"
+]
 def __dir__() -> list[str]:
   return sorted(__all__)
-def attrs_to_options(name: str, field: attr.Attribute[t.Any], model_name: str, typ: t.Any | None = None, suffix_generation: bool = False, suffix_sampling: bool = False,) -> t.Callable[[FC], FC]:
+def attrs_to_options(name: str, field: attr.Attribute[t.Any], model_name: str, typ: t.Any = None, suffix_generation: bool = False, suffix_sampling: bool = False) -> t.Callable[[FC], FC]:
   # TODO: support parsing nested attrs class and Union
   envvar = field.metadata["env"]
   dasherized = inflection.dasherize(name)
@@ -29,7 +45,18 @@ def attrs_to_options(name: str, field: attr.Attribute[t.Any], model_name: str, t
   elif suffix_sampling: identifier = f"{model_name}_sampling_{underscored}"
   else: identifier = f"{model_name}_{underscored}"
 
-  return cog.optgroup.option(identifier, full_option_name, type=parse_type(typ), required=field.default is attr.NOTHING, default=field.default if field.default not in (attr.NOTHING, None) else None, show_default=True, multiple=allows_multiple(typ) if typ else False, help=field.metadata.get("description", "(No description provided)"), show_envvar=True, envvar=envvar,)
+  return cog.optgroup.option(
+      identifier,
+      full_option_name,
+      type=parse_type(typ),
+      required=field.default is attr.NOTHING,
+      default=field.default if field.default not in (attr.NOTHING, None) else None,
+      show_default=True,
+      multiple=allows_multiple(typ) if typ else False,
+      help=field.metadata.get("description", "(No description provided)"),
+      show_envvar=True,
+      envvar=envvar,
+  )
 def env_converter(value: t.Any, env: str | None = None) -> t.Any:
   if env is not None:
     value = os.environ.get(env, value)
@@ -39,7 +66,18 @@ def env_converter(value: t.Any, env: str | None = None) -> t.Any:
       except orjson.JSONDecodeError as err:
         raise RuntimeError(f"Failed to parse ({value!r}) from '{env}': {err}") from None
   return value
-def Field(default: t.Any = None, *, ge: int | float | None = None, le: int | float | None = None, validator: _ValidatorType[t.Any] | None = None, description: str | None = None, env: str | None = None, auto_default: bool = False, use_default_converter: bool = True, **attrs: t.Any) -> t.Any:
+def Field(
+    default: t.Any = None,
+    *,
+    ge: int | float | None = None,
+    le: int | float | None = None,
+    validator: _ValidatorType[t.Any] | None = None,
+    description: str | None = None,
+    env: str | None = None,
+    auto_default: bool = False,
+    use_default_converter: bool = True,
+    **attrs: t.Any
+) -> t.Any:
   """A decorator that extends attr.field with additional arguments, which provides the same interface as pydantic's Field.
 
   By default, if both validator and ge are provided, then then ge will be

@@ -177,21 +177,40 @@ def _validate(cls: type[DynResource], val: list[t.Any]) -> None:
   except (ImportError, RuntimeError):
     pass
 def _make_resource_class(name: str, resource_kind: str, docstring: str) -> type[DynResource]:
-  return types.new_class(name, (bentoml.Resource[t.List[str]], ReprMixin), {"resource_id": resource_kind}, lambda ns: ns.update({"resource_id": resource_kind, "from_spec": classmethod(_from_spec), "from_system": classmethod(_from_system), "validate": classmethod(_validate), "__repr_keys__": property(lambda _: {"resource_id"}), "__doc__": inspect.cleandoc(docstring), "__module__": "openllm._strategies"}))
+  return types.new_class(
+      name, (bentoml.Resource[t.List[str]], ReprMixin), {"resource_id": resource_kind},
+      lambda ns: ns.update({
+          "resource_id": resource_kind,
+          "from_spec": classmethod(_from_spec),
+          "from_system": classmethod(_from_system),
+          "validate": classmethod(_validate),
+          "__repr_keys__": property(lambda _: {"resource_id"}),
+          "__doc__": inspect.cleandoc(docstring),
+          "__module__": "openllm._strategies"
+      })
+  )
 # NOTE: we need to hint these t.Literal since mypy is to dumb to infer this as literal :facepalm:
 _TPU_RESOURCE: t.Literal["cloud-tpus.google.com/v2"] = "cloud-tpus.google.com/v2"
 _AMD_GPU_RESOURCE: t.Literal["amd.com/gpu"] = "amd.com/gpu"
 _NVIDIA_GPU_RESOURCE: t.Literal["nvidia.com/gpu"] = "nvidia.com/gpu"
 _CPU_RESOURCE: t.Literal["cpu"] = "cpu"
 
-NvidiaGpuResource = _make_resource_class("NvidiaGpuResource", _NVIDIA_GPU_RESOURCE, """NVIDIA GPU resource.
+NvidiaGpuResource = _make_resource_class(
+    "NvidiaGpuResource",
+    _NVIDIA_GPU_RESOURCE,
+    """NVIDIA GPU resource.
 
     This is a modified version of internal's BentoML's NvidiaGpuResource
-    where it respects and parse CUDA_VISIBLE_DEVICES correctly.""")
-AmdGpuResource = _make_resource_class("AmdGpuResource", _AMD_GPU_RESOURCE, """AMD GPU resource.
+    where it respects and parse CUDA_VISIBLE_DEVICES correctly."""
+)
+AmdGpuResource = _make_resource_class(
+    "AmdGpuResource",
+    _AMD_GPU_RESOURCE,
+    """AMD GPU resource.
 
     Since ROCm will respect CUDA_VISIBLE_DEVICES, the behaviour of from_spec, from_system are similar to
-    ``NvidiaGpuResource``. Currently ``validate`` is not yet supported.""")
+    ``NvidiaGpuResource``. Currently ``validate`` is not yet supported."""
+)
 
 LiteralResourceSpec = t.Literal["cloud-tpus.google.com/v2", "amd.com/gpu", "nvidia.com/gpu", "cpu"]
 # convenient mapping

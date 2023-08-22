@@ -71,7 +71,14 @@ def _start(
   """
   from .entrypoint import start_command, start_grpc_command
   llm_config = openllm.AutoConfig.for_model(model_name)
-  _ModelEnv = openllm_core.utils.EnvVarMixin(model_name, openllm_core.utils.first_not_none(framework, default=llm_config.default_implementation()), model_id=model_id, bettertransformer=bettertransformer, quantize=quantize, runtime=runtime)
+  _ModelEnv = openllm_core.utils.EnvVarMixin(
+      model_name,
+      openllm_core.utils.first_not_none(framework, default=llm_config.default_implementation()),
+      model_id=model_id,
+      bettertransformer=bettertransformer,
+      quantize=quantize,
+      runtime=runtime
+  )
   os.environ[_ModelEnv.framework] = _ModelEnv["framework_value"]
 
   args: list[str] = ["--runtime", runtime]
@@ -87,7 +94,9 @@ def _start(
   if additional_args: args.extend(additional_args)
   if __test__: args.append("--return-process")
 
-  return start_command_factory(start_command if not _serve_grpc else start_grpc_command, model_name, _context_settings=termui.CONTEXT_SETTINGS, _serve_grpc=_serve_grpc).main(args=args if len(args) > 0 else None, standalone_mode=False)
+  return start_command_factory(start_command if not _serve_grpc else start_grpc_command, model_name, _context_settings=termui.CONTEXT_SETTINGS, _serve_grpc=_serve_grpc).main(
+      args=args if len(args) > 0 else None, standalone_mode=False
+  )
 @inject
 def _build(
     model_name: str,
@@ -190,9 +199,21 @@ def _build(
     if e.stderr: raise OpenLLMException(e.stderr.decode("utf-8")) from None
     raise OpenLLMException(str(e)) from None
   matched = re.match(r"__tag__:([^:\n]+:[^:\n]+)$", output.decode("utf-8").strip())
-  if matched is None: raise ValueError(f"Failed to find tag from output: {output.decode('utf-8').strip()}\nNote: Output from 'openllm build' might not be correct. Please open an issue on GitHub.")
+  if matched is None:
+    raise ValueError(f"Failed to find tag from output: {output.decode('utf-8').strip()}\nNote: Output from 'openllm build' might not be correct. Please open an issue on GitHub.")
   return bentoml.get(matched.group(1), _bento_store=bento_store)
-def _import_model(model_name: str, /, *, model_id: str | None = None, model_version: str | None = None, runtime: t.Literal["ggml", "transformers"] = "transformers", implementation: LiteralRuntime = "pt", quantize: t.Literal["int8", "int4", "gptq"] | None = None, serialisation_format: t.Literal["legacy", "safetensors"] = "safetensors", additional_args: t.Sequence[str] | None = None) -> bentoml.Model:
+def _import_model(
+    model_name: str,
+    /,
+    *,
+    model_id: str | None = None,
+    model_version: str | None = None,
+    runtime: t.Literal["ggml", "transformers"] = "transformers",
+    implementation: LiteralRuntime = "pt",
+    quantize: t.Literal["int8", "int4", "gptq"] | None = None,
+    serialisation_format: t.Literal["legacy", "safetensors"] = "safetensors",
+    additional_args: t.Sequence[str] | None = None
+) -> bentoml.Model:
   """Import a LLM into local store.
 
   > [!NOTE]

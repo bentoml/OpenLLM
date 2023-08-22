@@ -12,9 +12,24 @@ def get_or_download(ids: str = _BENTOMODEL_ID) -> bentoml.Model:
   try:
     return bentoml.transformers.get(ids)
   except bentoml.exceptions.NotFound:
-    model_signatures = {k: ModelSignature(batchable=False) for k in ("forward", "generate", "contrastive_search", "greedy_search", "sample", "beam_search", "beam_sample", "group_beam_search", "constrained_beam_search", "__call__")}
-    with bentoml.models.create(ids, module=MODULE_NAME, api_version=API_VERSION, options=ModelOptions(), context=openllm.utils.generate_context(framework_name="transformers"), labels={"runtime": "pt", "framework": "openllm"}, signatures=model_signatures) as bentomodel:
-      snapshot_download(_GENERIC_EMBEDDING_ID, local_dir=bentomodel.path, local_dir_use_symlinks=False, ignore_patterns=["*.safetensors", "*.h5", "*.ot", "*.pdf", "*.md", ".gitattributes", "LICENSE.txt"])
+    model_signatures = {
+        k: ModelSignature(batchable=False)
+        for k in ("forward", "generate", "contrastive_search", "greedy_search", "sample", "beam_search", "beam_sample", "group_beam_search", "constrained_beam_search", "__call__")
+    }
+    with bentoml.models.create(
+        ids,
+        module=MODULE_NAME,
+        api_version=API_VERSION,
+        options=ModelOptions(),
+        context=openllm.utils.generate_context(framework_name="transformers"),
+        labels={
+            "runtime": "pt", "framework": "openllm"
+        },
+        signatures=model_signatures
+    ) as bentomodel:
+      snapshot_download(
+          _GENERIC_EMBEDDING_ID, local_dir=bentomodel.path, local_dir_use_symlinks=False, ignore_patterns=["*.safetensors", "*.h5", "*.ot", "*.pdf", "*.md", ".gitattributes", "LICENSE.txt"]
+      )
       return bentomodel
 class GenericEmbeddingRunnable(bentoml.Runnable):
   SUPPORTED_RESOURCES = ("nvidia.com/gpu", "cpu")

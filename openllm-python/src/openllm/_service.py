@@ -1,13 +1,15 @@
-# mypy: disable-error-code="call-arg,misc,attr-defined,type-abstract"
+# mypy: disable-error-code="call-arg,misc,attr-defined,type-abstract,type-arg,valid-type,arg-type"
 from __future__ import annotations
 import os, warnings, orjson, bentoml, openllm, openllm_core, typing as t
 from starlette.applications import Starlette
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 if t.TYPE_CHECKING:
+  from openllm_core._typing_compat import TypeAlias
   from starlette.requests import Request
   from starlette.responses import Response
   from bentoml._internal.runner.runner import RunnerMethod, AbstractRunner
+  _EmbeddingMethod: TypeAlias = RunnerMethod[t.Union[bentoml.Runnable, openllm.LLMRunnable[t.Any, t.Any]], [t.List[str]], t.Sequence[openllm.LLMEmbeddings]]
 # The following warnings from bitsandbytes, and probably not that important for users to see
 warnings.filterwarnings("ignore", message="MatMul8bitLt: inputs will be cast from torch.float32 to float16 during quantization")
 warnings.filterwarnings("ignore", message="MatMul8bitLt: inputs will be cast from torch.bfloat16 to float16 during quantization")
@@ -16,7 +18,13 @@ model = os.environ.get("OPENLLM_MODEL", "{__model_name__}")  # openllm: model na
 adapter_map = os.environ.get("OPENLLM_ADAPTER_MAP", """{__model_adapter_map__}""")  # openllm: model adapter map
 llm_config = openllm.AutoConfig.for_model(model)
 runner = openllm.Runner(model, llm_config=llm_config, ensure_available=False, adapter_map=orjson.loads(adapter_map))
-generic_embedding_runner = bentoml.Runner(openllm.GenericEmbeddingRunnable, name="llm-generic-embedding", scheduling_strategy=openllm_core.CascadingResourceStrategy, max_batch_size=32, max_latency_ms=300)  # type: ignore[arg-type] # XXX: remove once bentoml.Runner is correct set with type.
+generic_embedding_runner = bentoml.Runner(
+    openllm.GenericEmbeddingRunnable,  # XXX: remove arg-type once bentoml.Runner is correct set with type
+    name="llm-generic-embedding",
+    scheduling_strategy=openllm_core.CascadingResourceStrategy,
+    max_batch_size=32,
+    max_latency_ms=300
+)
 runners: list[AbstractRunner] = [runner]
 if not runner.supports_embeddings: runners.append(generic_embedding_runner)
 svc = bentoml.Service(name=f"llm-{llm_config['start_name']}-service", runners=runners)
@@ -31,9 +39,29 @@ async def generate_v1(input_dict: dict[str, t.Any]) -> openllm.GenerationOutput:
 async def generate_stream_v1(input_dict: dict[str, t.Any]) -> t.AsyncGenerator[str, None]:
   qa_inputs = openllm.GenerationInput.from_llm_config(llm_config)(**input_dict)
   return runner.generate_iterator.async_stream(qa_inputs.prompt, adapter_name=qa_inputs.adapter_name, **qa_inputs.llm_config.model_dump())
-@svc.api(route="/v1/metadata", input=bentoml.io.Text(), output=bentoml.io.JSON.from_sample({"model_id": runner.llm.model_id, "timeout": 3600, "model_name": llm_config["model_name"], "framework": "pt", "configuration": "", "supports_embeddings": runner.supports_embeddings, "supports_hf_agent": runner.supports_hf_agent}))
+@svc.api(
+    route="/v1/metadata",
+    input=bentoml.io.Text(),
+    output=bentoml.io.JSON.from_sample({
+        "model_id": runner.llm.model_id,
+        "timeout": 3600,
+        "model_name": llm_config["model_name"],
+        "framework": "pt",
+        "configuration": "",
+        "supports_embeddings": runner.supports_embeddings,
+        "supports_hf_agent": runner.supports_hf_agent
+    })
+)
 def metadata_v1(_: str) -> openllm.MetadataOutput:
-  return openllm.MetadataOutput(timeout=llm_config["timeout"], model_name=llm_config["model_name"], framework=llm_config["env"]["framework_value"], model_id=runner.llm.model_id, configuration=llm_config.model_dump_json().decode(), supports_embeddings=runner.supports_embeddings, supports_hf_agent=runner.supports_hf_agent)
+  return openllm.MetadataOutput(
+      timeout=llm_config["timeout"],
+      model_name=llm_config["model_name"],
+      framework=llm_config["env"]["framework_value"],
+      model_id=runner.llm.model_id,
+      configuration=llm_config.model_dump_json().decode(),
+      supports_embeddings=runner.supports_embeddings,
+      supports_hf_agent=runner.supports_hf_agent
+  )
 @svc.api(
     route="/v1/embeddings",
     input=bentoml.io.JSON.from_sample(["Hey Jude, welcome to the jungle!", "What is the meaning of life?"]),
@@ -70,7 +98,7 @@ def metadata_v1(_: str) -> openllm.MetadataOutput:
     })
 )
 async def embeddings_v1(phrases: list[str]) -> openllm.EmbeddingsOutput:
-  embed_call: RunnerMethod[bentoml.Runnable | openllm.LLMRunnable[t.Any, t.Any], [list[str]], t.Sequence[openllm.LLMEmbeddings]] = runner.embeddings if runner.supports_embeddings else generic_embedding_runner.encode  # type: ignore[type-arg,assignment,valid-type]
+  embed_call: _EmbeddingMethod = runner.embeddings if runner.supports_embeddings else generic_embedding_runner.encode  # type: ignore[type-arg,assignment,valid-type]
   responses = (await embed_call.async_run(phrases))[0]
   return openllm.EmbeddingsOutput(embeddings=responses["embeddings"], num_tokens=responses["num_tokens"])
 if runner.supports_hf_agent and openllm.utils.is_transformers_supports_agent():

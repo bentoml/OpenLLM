@@ -5,7 +5,9 @@ if t.TYPE_CHECKING: from pathlib import Path
 
 HF_INTERNAL_T5_TESTING = "hf-internal-testing/tiny-random-t5"
 
-actions_xfail = functools.partial(pytest.mark.xfail, condition=os.getenv("GITHUB_ACTIONS") is not None, reason="Marking GitHub Actions to xfail due to flakiness and building environment not isolated.",)
+actions_xfail = functools.partial(
+    pytest.mark.xfail, condition=os.getenv("GITHUB_ACTIONS") is not None, reason="Marking GitHub Actions to xfail due to flakiness and building environment not isolated.",
+)
 @actions_xfail
 def test_general_build_with_internal_testing():
   bento_store = BentoMLContainer.bento_store.get()
