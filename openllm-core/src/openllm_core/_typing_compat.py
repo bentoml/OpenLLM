@@ -40,17 +40,12 @@ if sys.version_info[:2] >= (3,10):
 else:
   from typing_extensions import TypeAlias as TypeAlias, ParamSpec as ParamSpec, Concatenate as Concatenate
 
-if sys.version_info[:2] >= (3,9):
-  from typing import TypedDict as TypedDict
-else:
-  from typing_extensions import TypedDict as TypedDict
-
-class PeftAdapterOutput(TypedDict):
+class PeftAdapterOutput(t.TypedDict):
   success: bool
   result: t.Dict[str, peft.PeftConfig]
   error_msg: str
 
-class LLMEmbeddings(TypedDict):
+class LLMEmbeddings(t.TypedDict):
   embeddings: t.List[t.List[float]]
   num_tokens: int
 

@@ -4,7 +4,7 @@ import typing as t, logging, time, functools, bentoml
 from bentoml._internal.service.inference_api import InferenceAPI
 from openllm_client.benmin import Client, AsyncClient
 from openllm_core.utils import is_grpc_available, is_grpc_health_available, ensure_exec_coro
-from openllm_core._typing_compat import TypedDict, NotRequired, overload
+from openllm_core._typing_compat import NotRequired, overload
 from bentoml.grpc.utils import load_from_file, import_generated_stubs
 if not is_grpc_available() or not is_grpc_health_available(): raise ImportError("gRPC is required to use gRPC client. Install with 'pip install \"openllm-client[grpc]\"'.")
 from grpc import aio
@@ -18,7 +18,7 @@ if t.TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-class ClientCredentials(TypedDict):
+class ClientCredentials(t.TypedDict):
   root_certificates: NotRequired[t.Union[bytes, str]]
   private_key: NotRequired[t.Union[bytes, str]]
   certificate_chain: NotRequired[t.Union[bytes, str]]
