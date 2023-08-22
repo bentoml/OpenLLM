@@ -88,9 +88,6 @@ jobs:
           security-group-id: ${{ env.EC2_SECURITY_GROUP }}
   build-and-push-embedding-bento:
     name: Build embedding container
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.job }}-${{ github.head_ref || github.run_id }}
-      cancel-in-progress: true
     needs: start-runner
     runs-on: ${{ needs.start-runner.outputs.label }} # run the job on the newly created runner
     permissions:
