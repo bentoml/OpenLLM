@@ -95,28 +95,15 @@ Twitter = "https://twitter.com/bentomlai"
 
 [project.optional-dependencies]
 agents = ["transformers[agents]>=4.30", "diffusers", "soundfile"]
-all = [
-  "openllm[agents]",
-  "openllm[baichuan]",
-  "openllm[chatglm]",
-  "openllm[falcon]",
-  "openllm[fine-tune]",
-  "openllm[flan-t5]",
-  "openllm[ggml]",
-  "openllm[gptq]",
-  "openllm[llama]",
-  "openllm[mpt]",
-  "openllm[openai]",
-  "openllm[opt]",
-  "openllm[playground]",
-  "openllm[starcoder]",
-  "openllm[vllm]",
-]
+all = ["openllm[full]"]
 baichuan = ["cpm-kernels", "sentencepiece"]
 chatglm = ["cpm-kernels", "sentencepiece"]
 falcon = ["einops", "xformers"]
 fine-tune = ["peft>=0.4.0", "bitsandbytes", "datasets", "accelerate", "trl"]
 flan-t5 = ["flax>=0.7", "jax", "jaxlib", "tensorflow", "keras"]
+full = [
+  "openllm[agents,baichuan,chatglm,falcon,fine-tune,flan-t5,ggml,gptq,llama,mpt,openai,opt,playground,starcoder,vllm]",
+]
 ggml = ["ctransformers"]
 gptq = ["auto-gptq[triton]"]
 llama = ["fairscale", "sentencepiece"]

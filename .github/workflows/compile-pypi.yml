@@ -105,7 +105,7 @@ jobs:
           - [ubuntu-latest, linux-x86_64, ""]
           - [macos-latest, macos-x86_64, "x86_64"]
           - [macos-latest, macos-arm64, "arm64"]
-          - [macos-latest, macos-universal, "universal2"]
+          - [macos-latest, macos-universal2, "universal2"]
         directory: ["openllm-core", "openllm-python", "openllm-client"]
     needs: get_commit_message
     if: >-
