@@ -125,6 +125,7 @@ jobs:
           package-dir: ${{ matrix.directory }}
           config-file: pyproject.toml
         env:
+          CIBW_BEFORE_BUILD: "HATCH_BUILD_HOOKS_ENABLE=0 bash local.sh"
           CIBW_PRERELEASE_PYTHONS: True
           CIBW_BEFORE_BUILD_MACOS: "rustup target add aarch64-apple-darwin"
           CIBW_ARCHS_MACOS: "${{ matrix.buildplatform[2] }}"

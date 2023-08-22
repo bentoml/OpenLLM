@@ -52,6 +52,9 @@ typing = [
 update-dummy = ["- ./tools/update-dummy.py", "./tools/update-dummy.py"]
 [envs.tests]
 dependencies = [
+    "openllm-core @ {root:uri}/openllm-core",
+    "openllm-client @ {root:uri}/openllm-client",
+    "openllm[opt,chatglm,fine-tune] @ {root:uri}/openllm-python",
     # NOTE: interact with docker for container tests.
     "docker",
     # NOTE: Tests strategies with Hypothesis and pytest, and snapshot testing with syrupy
@@ -95,6 +98,7 @@ clojure = ["bash tools/run-clojure-ui.sh"]
 [envs.ci]
 detached = true
 [envs.ci.scripts]
+edi = "bash local.sh"
 lock = [
     "bash tools/lock-actions.sh",
     "pushd contrib/clojure && pnpm i --frozen-lockfile",

@@ -5,7 +5,6 @@ requires = [
   "hatchling==1.18.0",
   "hatch-vcs==0.3.0",
   "hatch-fancy-pypi-readme==23.1.0",
-  "hatch-mypyc==0.16.0",
 ]
 
 [project]
