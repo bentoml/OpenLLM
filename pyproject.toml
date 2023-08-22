@@ -100,10 +100,10 @@ MYPYC_DEBUG_LEVEL = "1"
 MYPYC_OPT_LEVEL = "3"
 
 [tool.cibuildwheel.linux]
-before-build = ["yum install -y clang gcc", "HATCH_BUILD_HOOKS_ENABLE=0 bash local.sh"]
+before-build = ["yum install -y clang gcc"]
 
 [tool.cibuildwheel.macos]
-before-build = ["rustup target add aarch64-apple-darwin", "HATCH_BUILD_HOOKS_ENABLE=0 bash local.sh"]
+before-build = ["rustup target add aarch64-apple-darwin"]
 
 [tool.cibuildwheel.linux.environment]
 HATCH_BUILD_HOOKS_ENABLE = "1"

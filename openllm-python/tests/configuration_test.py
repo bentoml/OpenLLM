@@ -4,7 +4,6 @@ from unittest import mock
 from openllm_core._configuration import GenerationConfig, ModelSettings, field_env_key
 from hypothesis import assume, given, strategies as st
 from ._strategies._configuration import make_llm_config, model_settings
-from openllm_core._typing_compat import DictStrAny
 
 # XXX: @aarnphm fixes TypedDict behaviour in 3.11
 @pytest.mark.skipif(sys.version_info[:2] == (3, 11), reason="TypedDict in 3.11 behaves differently, so we need to fix this")
@@ -111,7 +110,7 @@ def test_struct_envvar_with_overwrite_provided_env(monkeypatch: pytest.MonkeyPat
     assert sent.field1 == 20.0
 
 @given(model_settings())
-@pytest.mark.parametrize(("return_dict", "typ"), [(True, DictStrAny), (False, transformers.GenerationConfig)])
+@pytest.mark.parametrize(("return_dict", "typ"), [(True, dict), (False, transformers.GenerationConfig)])
 def test_conversion_to_transformers(return_dict: bool, typ: type[t.Any], gen_settings: ModelSettings):
   cl_ = make_llm_config("ConversionLLM", gen_settings)
   assert isinstance(cl_().to_generation_config(return_as_dict=return_dict), typ)
