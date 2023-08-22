@@ -4,8 +4,9 @@ import os, typing as t, sys
 from pathlib import Path
 _ROOT = Path(__file__).parent.parent
 
-sys.path.insert(0, (_ROOT/"openllm-python"/"src").__fspath__())
-from openllm._configuration import LiteralRuntime
+sys.path.insert(0, (_ROOT/"openllm-core"/"src").__fspath__())
+sys.path.insert(1, (_ROOT/"openllm-python"/"src").__fspath__())
+from openllm_core._configuration import LiteralRuntime
 from openllm.models import auto
 from openllm import CONFIG_MAPPING
 
@@ -31,7 +32,7 @@ def write_stub(framework: LiteralRuntime, _path: str) -> list[str]:
           f"# To update this, run ./{_path}",
           "from __future__ import annotations",
           "import typing as _t",
-          "from openllm.utils import DummyMetaclass as _DummyMetaclass, require_backends as _require_backends",
+          "from openllm_core.utils import DummyMetaclass as _DummyMetaclass, require_backends as _require_backends",
           ]
   base.extend([v for it in [make_class_stub(k, framework) for k in get_mapping(framework)] for v in it])
   # autoclass

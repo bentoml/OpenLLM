@@ -2,7 +2,7 @@
 # To update this, run ./tools/update-dummy.py
 from __future__ import annotations
 import typing as _t
-from openllm.utils import DummyMetaclass as _DummyMetaclass, require_backends as _require_backends
+from openllm_core.utils import DummyMetaclass as _DummyMetaclass, require_backends as _require_backends
 class VLLMBaichuan(metaclass=_DummyMetaclass):
   _backends=["vllm","cpm_kernels","sentencepiece"]
   def __init__(self,*param_decls:_t.Any,**attrs: _t.Any):_require_backends(self,["vllm","cpm_kernels","sentencepiece"])

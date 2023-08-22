@@ -1,5 +1,5 @@
 from __future__ import annotations
-import copy, typing as t, openllm
+import copy, typing as t, openllm_core, openllm
 from bentoml._internal.models.model import ModelInfo, ModelSignature
 from openllm.serialisation.constants import FRAMEWORK_TO_AUTOCLASS_MAPPING, HUB_ATTRS
 
@@ -7,8 +7,8 @@ if t.TYPE_CHECKING:
   import torch, transformers, bentoml
   from transformers.models.auto.auto_factory import _BaseAutoModelClass
   from bentoml._internal.models.model import ModelSignaturesType
-  from openllm._typing_compat import DictStrAny, M, T
-else: transformers, torch = openllm.utils.LazyLoader("transformers", globals(), "transformers"), openllm.utils.LazyLoader("torch", globals(), "torch")
+  from openllm_core._typing_compat import DictStrAny, M, T
+else: transformers, torch = openllm_core.utils.LazyLoader("transformers", globals(), "transformers"), openllm_core.utils.LazyLoader("torch", globals(), "torch")
 
 _object_setattr = object.__setattr__
 
@@ -33,7 +33,7 @@ def process_config(model_id: str, trust_remote_code: bool, **attrs: t.Any) -> tu
   return config, hub_attrs, attrs
 
 def infer_tokenizers_from_llm(__llm: openllm.LLM[t.Any, T], /) -> T:
-  __cls = getattr(transformers, openllm.utils.first_not_none(__llm.config["tokenizer_class"], default="AutoTokenizer"), None)
+  __cls = getattr(transformers, openllm_core.utils.first_not_none(__llm.config["tokenizer_class"], default="AutoTokenizer"), None)
   if __cls is None: raise ValueError(f"Cannot infer correct tokenizer class for {__llm}. Make sure to unset `tokenizer_class`")
   return __cls
 

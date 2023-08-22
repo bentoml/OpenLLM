@@ -1,24 +1,16 @@
-
 from __future__ import annotations
-import shutil
-import subprocess
-import typing as t
-
-import click
-import psutil
+import shutil, subprocess, typing as t, click, psutil, bentoml
 from simple_di import Provide, inject
-
-import bentoml
 from bentoml._internal.configuration.containers import BentoMLContainer
 
-from .. import termui
+from openllm.cli import termui
+from openllm.cli._factory import bento_complete_envvar, machine_option
 
-if t.TYPE_CHECKING:
-  from bentoml._internal.bento import BentoStore
+if t.TYPE_CHECKING: from bentoml._internal.bento import BentoStore
 
 @click.command("dive_bentos", context_settings=termui.CONTEXT_SETTINGS)
-@click.argument("bento", type=str)
-@click.option("--machine", is_flag=True, default=False, hidden=True)
+@click.argument("bento", type=str, shell_complete=bento_complete_envvar)
+@machine_option
 @click.pass_context
 @inject
 def cli(ctx: click.Context, bento: str, machine: bool, _bento_store: BentoStore = Provide[BentoMLContainer.bento_store]) -> str | None:
@@ -32,5 +24,5 @@ def cli(ctx: click.Context, bento: str, machine: bool, _bento_store: BentoStore 
   if machine: return bentomodel.path
   # copy and paste this into a new shell
   if psutil.WINDOWS: subprocess.check_call([shutil.which("dir") or "dir"], cwd=bentomodel.path)
-  else: subprocess.check_call([shutil.which("tree") or "tree"], cwd=bentomodel.path)
+  else: subprocess.check_call([shutil.which("ls") or "ls", "-Rrthla"], cwd=bentomodel.path)
   ctx.exit(0)

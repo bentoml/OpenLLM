@@ -66,11 +66,15 @@ jobs:
           echo "message=$COMMIT_MSG" >> $GITHUB_OUTPUT
           echo github.ref ${{ github.ref }}
   pure-wheels-sdist:
-    name: Pure wheels and sdist distribution
+    name: Pure wheels and sdist distribution (${{ matrix.directory }})
     runs-on: ubuntu-latest
     needs: get_commit_message
     if: >-
       contains(needs.get_commit_message.outputs.message, '[wheel build]') || github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, '02 - Wheel Build')) || (github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/heads/main')))
+    strategy:
+      fail-fast: false
+      matrix:
+        directory: ["openllm-core", "openllm-python", "openllm-client"]
     steps:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # ratchet:actions/checkout@v3
         with:
@@ -82,37 +86,27 @@ jobs:
           python-version-file: .python-version-default
       - name: Build
         run: hatch build
-        working-directory: openllm-python
+        working-directory: ${{ matrix.directory }}
       - name: Upload artifacts
         uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # ratchet:actions/upload-artifact@v3
         with:
           name: python-artefacts
-          path: openllm-python/dist/*
+          path: ${{ matrix.directory }}/dist/*
           if-no-files-found: error
   mypyc:
-    name: Compiled mypyc wheels (${{ matrix.name }})
-    runs-on: ${{ matrix.os }}
-    defaults:
-      run:
-        working-directory: ./openllm-python
+    name: Compiled wheels (${{ matrix.buildplatform[1] }}-${{ matrix.directory }})
+    runs-on: ${{ matrix.buildplatform[0] }}
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: ubuntu-latest
-            name: linux-x86_64
-          # NOTE: darwin amd64
-          - os: macos-latest
-            name: macos-x86_64
-            macos_arch: "x86_64"
-          # NOTE: darwin arm64
-          - os: macos-latest
-            name: macos-arm64
-            macos_arch: "arm64"
-          # NOTE: darwin universal2
-          - os: macos-latest
-            name: macos-universal2
-            macos_arch: "universal2"
+        # Github Actions doesn't support pairing matrix values together, let's improvise
+        # https://github.com/github/feedback/discussions/7835#discussioncomment-1769026
+        buildplatform:
+          - [ubuntu-latest, linux-x86_64, ""]
+          - [macos-latest, macos-x86_64, "x86_64"]
+          - [macos-latest, macos-arm64, "arm64"]
+          - [macos-latest, macos-universal2, "universal2"]
+        directory: ["openllm-core", "openllm-python", "openllm-client"]
     needs: get_commit_message
     if: >-
       contains(needs.get_commit_message.outputs.message, '[wheel build]') || github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, '02 - Wheel Build')) || (github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/heads/main')))
@@ -128,17 +122,16 @@ jobs:
       - name: Build wheels via cibuildwheel
         uses: pypa/cibuildwheel@39a63b5912f086dd459cf6fcb13dcdd3fe3bc24d # ratchet:pypa/cibuildwheel@v2.15.0
         with:
-          package-dir: openllm-python
+          package-dir: ${{ matrix.directory }}
           config-file: pyproject.toml
         env:
           CIBW_PRERELEASE_PYTHONS: True
-          CIBW_BEFORE_BUILD_MACOS: "rustup target add aarch64-apple-darwin"
-          CIBW_ARCHS_MACOS: "${{ matrix.macos_arch }}"
+          CIBW_ARCHS_MACOS: "${{ matrix.buildplatform[2] }}"
           MYPYPATH: /project/typings
       - name: Upload wheels as workflow artifacts
         uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # ratchet:actions/upload-artifact@v3
         with:
-          name: ${{ matrix.name }}-mypyc-wheels
+          name: ${{ matrix.buildplatform[1] }}-mypyc-wheels
           path: ./wheelhouse/*.whl
   check-download-artefacts:
     name: dry-run for downloading artefacts

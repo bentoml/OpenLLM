@@ -3,10 +3,10 @@ from __future__ import annotations
 import importlib, inspect, logging, typing as t
 from collections import OrderedDict
 import inflection, openllm
-from openllm.utils import ReprMixin
+from openllm_core.utils import ReprMixin
 
 if t.TYPE_CHECKING:
-  from openllm._typing_compat import LiteralString, LLMRunner
+  from openllm_core._typing_compat import LiteralString, LLMRunner
   import types
   from collections import _odict_items, _odict_keys, _odict_values
 

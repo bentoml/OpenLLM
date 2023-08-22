@@ -12,11 +12,11 @@ START_ATTRS_COMMENT = f"# {os.path.basename(__file__)}: attrs start\n"
 END_ATTRS_COMMENT = f"# {os.path.basename(__file__)}: attrs stop\n"
 
 ROOT = Path(__file__).parent.parent
-_TARGET_FILE = ROOT/"openllm-python"/"src"/"openllm"/"_configuration.py"
+_TARGET_FILE = ROOT/"openllm-core"/"src"/"openllm_core"/"_configuration.py"
 
-sys.path.insert(0, (ROOT/"openllm-python"/"src").__fspath__())
-from openllm._configuration import GenerationConfig, ModelSettings, PeftType, SamplingParams
-from openllm.utils import codegen
+sys.path.insert(0, (ROOT/"openllm-core"/"src").__fspath__())
+from openllm_core._configuration import GenerationConfig, ModelSettings, PeftType, SamplingParams
+from openllm_core.utils import codegen
 
 def process_annotations(annotations: str) -> str:
   if "NotRequired" in annotations: return annotations[len("NotRequired["):-1]
@@ -106,8 +106,8 @@ def main() -> int:
   lines.append(" "*2 + "# NOTE: generation_class, sampling_class and extras arguments\n")
   lines.extend([
   " "*2 + line for line in [
-    "@overload\n", 'def __getitem__(self, item: t.Literal["generation_class"]) -> t.Type[openllm.GenerationConfig]: ...\n',
-    "@overload\n", 'def __getitem__(self, item: t.Literal["sampling_class"]) -> t.Type[openllm.SamplingParams]: ...\n',
+    "@overload\n", 'def __getitem__(self, item: t.Literal["generation_class"]) -> t.Type[openllm_core.GenerationConfig]: ...\n',
+    "@overload\n", 'def __getitem__(self, item: t.Literal["sampling_class"]) -> t.Type[openllm_core.SamplingParams]: ...\n',
     "@overload\n", 'def __getitem__(self, item: t.Literal["extras"]) -> t.Dict[str, t.Any]: ...\n',
   ]])
   lines.append(" "*2 + "# NOTE: GenerationConfig arguments\n")

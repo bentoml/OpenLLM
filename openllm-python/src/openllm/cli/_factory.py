@@ -1,16 +1,16 @@
 from __future__ import annotations
-import functools, importlib.util, os, typing as t, logging
-import click, click_option_group as cog, inflection, orjson, bentoml, openllm
+import functools, importlib.util, os, typing as t, logging, click, click_option_group as cog, inflection, orjson, bentoml, openllm
+from click import shell_completion as sc
 from bentoml_cli.utils import BentoMLCommandGroup
 from click.shell_completion import CompletionItem
-from openllm.utils import DEBUG
+from openllm_core.utils import DEBUG
 from bentoml._internal.configuration.containers import BentoMLContainer
-from openllm._typing_compat import LiteralString, DictStrAny, ParamSpec, Concatenate
+from openllm_core._typing_compat import LiteralString, DictStrAny, ParamSpec, Concatenate
 from . import termui
 
 if t.TYPE_CHECKING:
   import subprocess
-  from openllm._configuration import LLMConfig
+  from openllm_core._configuration import LLMConfig
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +19,12 @@ LiteralOutput = t.Literal["json", "pretty", "porcelain"]
 
 _AnyCallable = t.Callable[..., t.Any]
 FC = t.TypeVar("FC", bound=t.Union[_AnyCallable, click.Command])
+
+def bento_complete_envvar(ctx: click.Context, param: click.Parameter, incomplete: str) -> list[sc.CompletionItem]:
+  return [sc.CompletionItem(str(it.tag), help="Bento") for it in bentoml.list() if str(it.tag).startswith(incomplete) and all(k in it.info.labels for k in {"start_name", "bundler"})]
+
+def model_complete_envvar(ctx: click.Context, param: click.Parameter, incomplete: str) -> list[sc.CompletionItem]:
+  return [sc.CompletionItem(inflection.dasherize(it), help="Model") for it in openllm.CONFIG_MAPPING if it.startswith(incomplete)]
 
 def parse_config_options(config: LLMConfig, server_timeout: int, workers_per_resource: float, device: t.Tuple[str, ...] | None, cors: bool, environ: DictStrAny) -> DictStrAny:
   # TODO: Support amd.com/gpu on k8s
@@ -316,7 +322,7 @@ def cors_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC
 def machine_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]: return cli_option("--machine", is_flag=True, default=False, hidden=True, **attrs)(f)
 def model_id_option(f: _AnyCallable | None = None, *, model_env: openllm.utils.EnvVarMixin | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]: return cli_option("--model-id", type=click.STRING, default=None, envvar=model_env.model_id if model_env is not None else None, show_envvar=model_env is not None, help="Optional model_id name or path for (fine-tune) weight.", **attrs)(f)
 def model_version_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]: return cli_option("--model-version", type=click.STRING, default=None, help="Optional model version to save for this model. It will be inferred automatically from model-id.", **attrs)(f)
-def model_name_argument(f: _AnyCallable | None = None, required: bool = True) -> t.Callable[[FC], FC]: return cli_argument("model_name", type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING]), required=required)(f)
+def model_name_argument(f: _AnyCallable | None = None, required: bool = True, **attrs: t.Any) -> t.Callable[[FC], FC]: return cli_argument("model_name", type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING]), required=required, **attrs)(f)
 def quantize_option(f: _AnyCallable | None = None, *, build: bool = False, model_env: openllm.utils.EnvVarMixin | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option(
       "--quantise", "--quantize", "quantize", type=click.Choice(["int8", "int4", "gptq"]), default=None, envvar=model_env.quantize if model_env is not None else None, show_envvar=model_env is not None, help="""Dynamic quantization for running this LLM.
@@ -382,7 +388,7 @@ def serialisation_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Cal
   )(f)
 def container_registry_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option(
-      "--container-registry", "container_registry", type=str, default="ecr", show_default=True, show_envvar=True, envvar="OPENLLM_CONTAINER_REGISTRY", callback=container_registry_callback, help="""The default container registry to get the base image for building BentoLLM.
+      "--container-registry", "container_registry", type=click.Choice(list(openllm.bundle.CONTAINER_NAMES)), default="ecr", show_default=True, show_envvar=True, envvar="OPENLLM_CONTAINER_REGISTRY", callback=container_registry_callback, help="""The default container registry to get the base image for building BentoLLM.
 
                                                                                                                         Currently, it supports 'ecr', 'ghcr.io', 'docker.io'
 

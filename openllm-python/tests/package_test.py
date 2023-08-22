@@ -1,15 +1,7 @@
 from __future__ import annotations
-import functools
-import os
-import typing as t
-
-import pytest
-
-import openllm
+import functools, os, typing as t, pytest, openllm
 from bentoml._internal.configuration.containers import BentoMLContainer
-
-if t.TYPE_CHECKING:
-  from pathlib import Path
+if t.TYPE_CHECKING: from pathlib import Path
 
 HF_INTERNAL_T5_TESTING = "hf-internal-testing/tiny-random-t5"
 

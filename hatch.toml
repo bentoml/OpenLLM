@@ -1,5 +1,7 @@
 [envs.default]
 dependencies = [
+    "openllm-core @ {root:uri}/openllm-core",
+    "openllm-client @ {root:uri}/openllm-client",
     "openllm[opt,chatglm,fine-tune] @ {root:uri}/openllm-python",
     # NOTE: To run all hooks
     "pre-commit",
@@ -26,7 +28,6 @@ check-stubs = [
     "./tools/update-models-import.py",
     "update-dummy",
 ]
-compile = "bash ./compile.sh {args}"
 inplace-changelog = "towncrier build --version main --keep"
 quality = [
     "./tools/dependencies.py",
@@ -36,13 +37,12 @@ quality = [
     "check-stubs",
     "- pre-commit run --all-files",
 ]
-recompile = ["bash ./clean.sh", "compile"]
 setup = [
     "pre-commit install",
     "- ln -s .python-version-default .python-version",
     "curl -fsSL https://raw.githubusercontent.com/clj-kondo/clj-kondo/master/script/install-clj-kondo | bash -",
 ]
-tool = ["quality", "recompile -nx"]
+tool = ["quality", "bash ./clean.sh", "bash ./compile.sh {args}"]
 typing = [
     "- pre-commit run mypy {args:-a}",
     "- pre-commit run pyright {args:-a}",
@@ -50,6 +50,8 @@ typing = [
 update-dummy = ["- ./tools/update-dummy.py", "./tools/update-dummy.py"]
 [envs.tests]
 dependencies = [
+    "openllm-core @ {root:uri}/openllm-core",
+    "openllm-client @ {root:uri}/openllm-client",
     "openllm[opt,chatglm,fine-tune] @ {root:uri}/openllm-python",
     # NOTE: interact with docker for container tests.
     "docker",
@@ -94,7 +96,10 @@ clojure = ["bash tools/run-clojure-ui.sh"]
 [envs.ci]
 detached = true
 [envs.ci.scripts]
+compile = "bash ./compile.sh {args}"
+recompile = ["bash ./clean.sh", "compile"]
+edi = "bash local.sh"
 lock = [
-    "bash tools/lock-actions",
+    "bash tools/lock-actions.sh",
     "pushd contrib/clojure && pnpm i --frozen-lockfile",
 ]

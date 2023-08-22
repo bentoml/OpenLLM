@@ -2,7 +2,7 @@
 contrib/clojure/pnpm-lock.yaml linguist-generated=true
 contrib/clojure/src/generated/** linguist-generated=true
 
-# Python core
+# Python sdk
 openllm-python/tests/models/__snapshots__/* linguist-generated=true
 openllm-python/src/openllm/utils/dummy_*.py linguist-generated=true
 openllm-python/src/openllm/models/__init__.py linguist-generated=true

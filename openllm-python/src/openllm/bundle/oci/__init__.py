@@ -1,25 +1,22 @@
 # mypy: disable-error-code="misc"
 """OCI-related utilities for OpenLLM. This module is considered to be internal and API are subjected to change."""
 from __future__ import annotations
-import functools, importlib, logging, os, pathlib, shutil, subprocess, typing as t
+import functools, importlib, logging, os, pathlib, shutil, subprocess, typing as t, openllm_core
 from datetime import datetime, timedelta, timezone
 import attr, orjson, bentoml, openllm
-from openllm.utils.lazy import VersionInfo
+from openllm_core.utils.lazy import VersionInfo
 
 if t.TYPE_CHECKING:
+  from openllm_core._typing_compat import LiteralContainerRegistry, LiteralContainerVersionStrategy
   from ghapi import all
-  from openllm._typing_compat import RefTuple, LiteralString
+  from openllm_core._typing_compat import RefTuple, LiteralString
 
-all = openllm.utils.LazyLoader("all", globals(), "ghapi.all")  # noqa: F811
+all = openllm_core.utils.LazyLoader("all", globals(), "ghapi.all")  # noqa: F811
 
 logger = logging.getLogger(__name__)
 
 _BUILDER = bentoml.container.get_backend("buildx")
 ROOT_DIR = pathlib.Path(os.path.abspath("__file__")).parent.parent.parent
-
-# TODO: support quay
-LiteralContainerRegistry = t.Literal["docker", "gh", "ecr"]
-LiteralContainerVersionStrategy = t.Literal["release", "nightly", "latest", "custom"]
 
 # XXX: This registry will be hard code for now for easier to maintain
 # but in the future, we can infer based on git repo and everything to make it more options for users
@@ -31,10 +28,10 @@ _CONTAINER_REGISTRY: dict[LiteralContainerRegistry, str] = {"docker": "docker.io
 _OWNER = "bentoml"
 _REPO = "openllm"
 
-_module_location = openllm.utils.pkg.source_locations("openllm")
+_module_location = openllm_core.utils.pkg.source_locations("openllm")
 
 @functools.lru_cache
-@openllm.utils.apply(str.lower)
+@openllm_core.utils.apply(str.lower)
 def get_base_container_name(reg: LiteralContainerRegistry) -> str: return _CONTAINER_REGISTRY[reg]
 
 def _convert_version_from_string(s: str) -> VersionInfo: return VersionInfo.from_version_string(s)
@@ -43,7 +40,7 @@ def _commit_time_range(r: int = 5) -> str: return (datetime.now(timezone.utc) - 
 class VersionNotSupported(openllm.exceptions.OpenLLMException):
   """Raised when the stable release is too low that it doesn't include OpenLLM base container."""
 
-_RefTuple: type[RefTuple] = openllm.utils.codegen.make_attr_tuple_class("_RefTuple", ["git_hash", "version", "strategy"])
+_RefTuple: type[RefTuple] = openllm_core.utils.codegen.make_attr_tuple_class("_RefTuple", ["git_hash", "version", "strategy"])
 
 def nightly_resolver(cls: type[RefResolver]) -> str:
   # NOTE: all openllm container will have sha-<git_hash[:7]>
@@ -60,7 +57,7 @@ def nightly_resolver(cls: type[RefResolver]) -> str:
 @attr.attrs(eq=False, order=False, slots=True, frozen=True)
 class RefResolver:
   git_hash: str = attr.field()
-  version: openllm.utils.VersionInfo = attr.field(converter=_convert_version_from_string)
+  version: openllm_core.utils.VersionInfo = attr.field(converter=_convert_version_from_string)
   strategy: LiteralContainerVersionStrategy = attr.field()
   _ghapi: t.ClassVar[all.GhApi] = all.GhApi(owner=_OWNER, repo=_REPO)
   @classmethod
@@ -74,7 +71,7 @@ class RefResolver:
       version_str = meta["name"].lstrip("v")
       version: tuple[str, str | None] = (cls._ghapi.git.get_ref(ref=f"tags/{meta['name']}")["object"]["sha"], version_str)
     else: version = ("", version_str)
-    if openllm.utils.VersionInfo.from_version_string(t.cast(str, version_str)) < (0, 2, 12): raise VersionNotSupported(f"Version {version_str} doesn't support OpenLLM base container. Consider using 'nightly' or upgrade 'openllm>=0.2.12'")
+    if openllm_core.utils.VersionInfo.from_version_string(t.cast(str, version_str)) < (0, 2, 12): raise VersionNotSupported(f"Version {version_str} doesn't support OpenLLM base container. Consider using 'nightly' or upgrade 'openllm>=0.2.12'")
     return _RefTuple((*version, "release" if _use_base_strategy else "custom"))
   @classmethod
   @functools.lru_cache(maxsize=64)
@@ -101,7 +98,7 @@ def build_container(registries: LiteralContainerRegistry | t.Sequence[LiteralCon
   try:
     if not _BUILDER.health(): raise openllm.exceptions.Error
   except (openllm.exceptions.Error, subprocess.CalledProcessError): raise RuntimeError("Building base container requires BuildKit (via Buildx) to be installed. See https://docs.docker.com/build/buildx/install/ for instalation instruction.") from None
-  if openllm.utils.device_count() == 0: raise RuntimeError("Building base container requires GPUs (None available)")
+  if openllm_core.utils.device_count() == 0: raise RuntimeError("Building base container requires GPUs (None available)")
   if not shutil.which("nvidia-container-runtime"): raise RuntimeError("NVIDIA Container Toolkit is required to compile CUDA kernel in container.")
   if not _module_location: raise RuntimeError("Failed to determine source location of 'openllm'. (Possible broken installation)")
   pyproject_path = pathlib.Path(_module_location).parent.parent / "pyproject.toml"
@@ -111,7 +108,7 @@ def build_container(registries: LiteralContainerRegistry | t.Sequence[LiteralCon
     registries = [registries] if isinstance(registries, str) else list(registries)
     tags = {name: f"{_CONTAINER_REGISTRY[name]}:{get_base_container_tag(version_strategy)}" for name in registries}
   try:
-    outputs = _BUILDER.build(file=pathlib.Path(__file__).parent.joinpath("Dockerfile").resolve().__fspath__(), context_path=pyproject_path.parent.__fspath__(), tag=tuple(tags.values()), push=push, progress="plain" if openllm.utils.get_debug_mode() else "auto", quiet=machine)
+    outputs = _BUILDER.build(file=pathlib.Path(__file__).parent.joinpath("Dockerfile").resolve().__fspath__(), context_path=pyproject_path.parent.__fspath__(), tag=tuple(tags.values()), push=push, progress="plain" if openllm_core.utils.get_debug_mode() else "auto", quiet=machine)
     if machine and outputs is not None: tags["image_sha"] = outputs.decode("utf-8").strip()
   except Exception as err: raise openllm.exceptions.OpenLLMException(f"Failed to containerize base container images (Scroll up to see error above, or set OPENLLMDEVDEBUG=True for more traceback):\n{err}") from err
   return tags
