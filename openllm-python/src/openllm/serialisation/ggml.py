@@ -9,8 +9,8 @@ import bentoml, openllm
 if t.TYPE_CHECKING: from openllm_core._typing_compat import M
 
 _conversion_strategy = {"pt": "ggml"}
-
-def import_model(llm: openllm.LLM[t.Any, t.Any], *decls: t.Any, trust_remote_code: bool = True, **attrs: t.Any,) -> bentoml.Model: raise NotImplementedError("Currently work in progress.")
+def import_model(llm: openllm.LLM[t.Any, t.Any], *decls: t.Any, trust_remote_code: bool = True, **attrs: t.Any,) -> bentoml.Model:
+  raise NotImplementedError("Currently work in progress.")
 def get(llm: openllm.LLM[t.Any, t.Any], auto_import: bool = False) -> bentoml.Model:
   """Return an instance of ``bentoml.Model`` from given LLM instance.
 
@@ -30,5 +30,7 @@ def get(llm: openllm.LLM[t.Any, t.Any], auto_import: bool = False) -> bentoml.Mo
     if auto_import:
       return import_model(llm, trust_remote_code=llm.__llm_trust_remote_code__)
     raise
-def load_model(llm: openllm.LLM[M, t.Any], *decls: t.Any, **attrs: t.Any) -> M: raise NotImplementedError("Currently work in progress.")
-def save_pretrained(llm: openllm.LLM[t.Any, t.Any], save_directory: str, **attrs: t.Any) -> None: raise NotImplementedError("Currently work in progress.")
+def load_model(llm: openllm.LLM[M, t.Any], *decls: t.Any, **attrs: t.Any) -> M:
+  raise NotImplementedError("Currently work in progress.")
+def save_pretrained(llm: openllm.LLM[t.Any, t.Any], save_directory: str, **attrs: t.Any) -> None:
+  raise NotImplementedError("Currently work in progress.")

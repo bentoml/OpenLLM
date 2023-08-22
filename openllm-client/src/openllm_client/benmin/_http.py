@@ -4,14 +4,13 @@ from bentoml._internal.service.inference_api import InferenceAPI
 from urllib.parse import urlparse
 from openllm_client.benmin import Client, AsyncClient
 from openllm_core.utils import ensure_exec_coro
-
 logger = logging.getLogger(__name__)
-
 class HttpClient(Client):
   @functools.cached_property
   def inner(self) -> httpx.Client:
     if not urlparse(self.server_url).netloc: raise ValueError(f"Invalid server url: {self.server_url}")
     return httpx.Client(base_url=self.server_url)
+
   @staticmethod
   def wait_until_server_ready(host: str, port: int, timeout: float = 30, check_interval: int = 1, **kwargs: t.Any) -> None:
     host = host if "://" in host else "http://" + host
@@ -26,12 +25,16 @@ class HttpClient(Client):
         logger.debug("Server is not ready yet, retrying in %d seconds...", check_interval)
         time.sleep(check_interval)
     # Try once more and raise for exception
-    try: httpx.get(f"{host}:{port}/readyz").raise_for_status()
+    try:
+      httpx.get(f"{host}:{port}/readyz").raise_for_status()
     except httpx.HTTPStatusError as err:
       logger.error("Failed to wait until server ready: %s:%d", host, port)
       logger.error(err)
       raise
-  def health(self) -> httpx.Response: return self.inner.get("/readyz")
+
+  def health(self) -> httpx.Response:
+    return self.inner.get("/readyz")
+
   @classmethod
   def from_url(cls, url: str, **kwargs: t.Any) -> HttpClient:
     url = url if "://" in url else "http://" + url
@@ -47,8 +50,10 @@ class HttpClient(Client):
           if "x-bentoml-io-descriptor" not in meth_spec["requestBody"]: raise ValueError(f"Malformed BentoML spec received from BentoML server {url}")
           if "x-bentoml-io-descriptor" not in meth_spec["responses"]["200"]: raise ValueError(f"Malformed BentoML spec received from BentoML server {url}")
           if "x-bentoml-name" not in meth_spec: raise ValueError(f"Malformed BentoML spec received from BentoML server {url}")
-          try: reflection.apis[meth_spec["x-bentoml-name"]] = InferenceAPI[t.Any](None, bentoml.io.from_spec(meth_spec["requestBody"]["x-bentoml-io-descriptor"]), bentoml.io.from_spec(meth_spec["responses"]["200"]["x-bentoml-io-descriptor"]), name=meth_spec["x-bentoml-name"], doc=meth_spec["description"], route=route.lstrip("/"))
-          except Exception as e: logger.error("Failed to instantiate client for API %s: ", meth_spec["x-bentoml-name"], e)
+          try:
+            reflection.apis[meth_spec["x-bentoml-name"]] = InferenceAPI[t.Any](None, bentoml.io.from_spec(meth_spec["requestBody"]["x-bentoml-io-descriptor"]), bentoml.io.from_spec(meth_spec["responses"]["200"]["x-bentoml-io-descriptor"]), name=meth_spec["x-bentoml-name"], doc=meth_spec["description"], route=route.lstrip("/"))
+          except Exception as e:
+            logger.error("Failed to instantiate client for API %s: ", meth_spec["x-bentoml-name"], e)
     return cls(url, reflection)
 
   def _call(self, data: t.Any, /, *, _inference_api: InferenceAPI[t.Any], **kwargs: t.Any) -> t.Any:
@@ -57,7 +62,8 @@ class HttpClient(Client):
     if _inference_api.multi_input:
       if data is not None: raise ValueError(f"'{_inference_api.name}' takes multiple inputs, and thus required to pass as keyword arguments.")
       fake_resp = ensure_exec_coro(_inference_api.input.to_http_response(kwargs, None))
-    else: fake_resp = ensure_exec_coro(_inference_api.input.to_http_response(data, None))
+    else:
+      fake_resp = ensure_exec_coro(_inference_api.input.to_http_response(data, None))
 
     # XXX: hack around StreamingResponse, since now we only have Text, for metadata so it is fine to do this.
     if isinstance(fake_resp, starlette.responses.StreamingResponse): body = None
@@ -71,12 +77,12 @@ class HttpClient(Client):
     # Request.headers sets a _headers variable. We will need to set this value to our fake request object.
     fake_req._headers = headers
     return ensure_exec_coro(_inference_api.output.from_http_request(fake_req))
-
 class AsyncHttpClient(AsyncClient):
   @functools.cached_property
   def inner(self) -> httpx.AsyncClient:
     if not urlparse(self.server_url).netloc: raise ValueError(f"Invalid server url: {self.server_url}")
     return httpx.AsyncClient(base_url=self.server_url)
+
   @staticmethod
   async def wait_until_server_ready(host: str, port: int, timeout: float = 30, check_interval: int = 1, **kwargs: t.Any) -> None:
     host = host if "://" in host else "http://" + host
@@ -95,14 +101,17 @@ class AsyncHttpClient(AsyncClient):
     async with httpx.AsyncClient(base_url=f"{host}:{port}") as sess:
       resp = await sess.get("/readyz")
       if resp.status_code != 200: raise TimeoutError(f"Timeout while waiting for server @ `{host}:{port}` to be ready: {resp.status_code}: {resp.content!s}")
-  async def health(self) -> httpx.Response: return await self.inner.get("/readyz")
+
+  async def health(self) -> httpx.Response:
+    return await self.inner.get("/readyz")
+
   @classmethod
   async def from_url(cls, url: str, **kwargs: t.Any) -> AsyncHttpClient:
     url = url if "://" in url else "http://" + url
     async with httpx.AsyncClient(base_url=url) as session:
-        resp = await session.get("/docs.json")
-        if resp.status_code != 200: raise ValueError(f"Failed to get OpenAPI schema from the server: {resp.status_code} {resp.reason_phrase}:\n{(await resp.aread()).decode()}")
-        _spec = orjson.loads(await resp.aread())
+      resp = await session.get("/docs.json")
+      if resp.status_code != 200: raise ValueError(f"Failed to get OpenAPI schema from the server: {resp.status_code} {resp.reason_phrase}:\n{(await resp.aread()).decode()}")
+      _spec = orjson.loads(await resp.aread())
 
     reflection = bentoml.Service(_spec["info"]["title"])
 
@@ -112,16 +121,20 @@ class AsyncHttpClient(AsyncClient):
           if "x-bentoml-io-descriptor" not in meth_spec["requestBody"]: raise ValueError(f"Malformed BentoML spec received from BentoML server {url}")
           if "x-bentoml-io-descriptor" not in meth_spec["responses"]["200"]: raise ValueError(f"Malformed BentoML spec received from BentoML server {url}")
           if "x-bentoml-name" not in meth_spec: raise ValueError(f"Malformed BentoML spec received from BentoML server {url}")
-          try: reflection.apis[meth_spec["x-bentoml-name"]] = InferenceAPI[t.Any](None, bentoml.io.from_spec(meth_spec["requestBody"]["x-bentoml-io-descriptor"]), bentoml.io.from_spec(meth_spec["responses"]["200"]["x-bentoml-io-descriptor"]), name=meth_spec["x-bentoml-name"], doc=meth_spec["description"], route=route.lstrip("/"))
-          except ValueError as e: logger.error("Failed to instantiate client for API %s: ", meth_spec["x-bentoml-name"], e)
+          try:
+            reflection.apis[meth_spec["x-bentoml-name"]] = InferenceAPI[t.Any](None, bentoml.io.from_spec(meth_spec["requestBody"]["x-bentoml-io-descriptor"]), bentoml.io.from_spec(meth_spec["responses"]["200"]["x-bentoml-io-descriptor"]), name=meth_spec["x-bentoml-name"], doc=meth_spec["description"], route=route.lstrip("/"))
+          except ValueError as e:
+            logger.error("Failed to instantiate client for API %s: ", meth_spec["x-bentoml-name"], e)
     return cls(url, reflection)
+
   async def _call(self, data: t.Any, /, *, _inference_api: InferenceAPI[t.Any], **kwargs: t.Any) -> t.Any:
     # All gRPC kwargs should be popped out.
     kwargs = {k: v for k, v in kwargs.items() if not k.startswith("_grpc_")}
     if _inference_api.multi_input:
       if data is not None: raise ValueError(f"'{_inference_api.name}' takes multiple inputs, and thus required to pass as keyword arguments.")
       fake_resp = await _inference_api.input.to_http_response(kwargs, None)
-    else: fake_resp = await _inference_api.input.to_http_response(data, None)
+    else:
+      fake_resp = await _inference_api.input.to_http_response(data, None)
 
     # XXX: hack around StreamingResponse, since now we only have Text, for metadata so it is fine to do this.
     if isinstance(fake_resp, starlette.responses.StreamingResponse): body = None

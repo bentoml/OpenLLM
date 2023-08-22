@@ -1,9 +1,9 @@
 from __future__ import annotations
 import typing as t, openllm
 if t.TYPE_CHECKING: import transformers
-
 class Baichuan(openllm.LLM["transformers.PreTrainedModel", "transformers.PreTrainedTokenizerBase"]):
   __openllm_internal__ = True
+
   def generate(self, prompt: str, **attrs: t.Any) -> list[str]:
     import torch
     inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)

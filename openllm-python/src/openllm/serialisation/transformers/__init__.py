@@ -7,19 +7,12 @@ from simple_di import Provide, inject
 from bentoml._internal.configuration.containers import BentoMLContainer
 from bentoml._internal.models.model import ModelOptions
 from .weights import HfIgnore
-from ._helpers import (
-  check_unintialised_params,
-  infer_autoclass_from_llm,
-  infer_tokenizers_from_llm,
-  make_model_signatures,
-  process_config,
-  update_model,
-)
+from ._helpers import check_unintialised_params, infer_autoclass_from_llm, infer_tokenizers_from_llm, make_model_signatures, process_config, update_model
 
 if t.TYPE_CHECKING:
   import types
 
-  import vllm, auto_gptq as autogptq, transformers ,torch
+  import vllm, auto_gptq as autogptq, transformers, torch
   import torch.nn
 
   from bentoml._internal.models import ModelStore
@@ -33,7 +26,6 @@ else:
 logger = logging.getLogger(__name__)
 
 __all__ = ["import_model", "get", "load_model", "save_pretrained"]
-
 @inject
 def import_model(llm: openllm.LLM[M, T], *decls: t.Any, trust_remote_code: bool, _model_store: ModelStore = Provide[BentoMLContainer.model_store], **attrs: t.Any) -> bentoml.Model:
   """Auto detect model type from given model_id and import it to bentoml's model store.
@@ -106,7 +98,8 @@ def import_model(llm: openllm.LLM[M, T], *decls: t.Any, trust_remote_code: bool,
         else:
           # we will clone the all tings into the bentomodel path without loading model into memory
           snapshot_download(llm.model_id, local_dir=bentomodel.path, local_dir_use_symlinks=False, ignore_patterns=HfIgnore.ignore_patterns(llm))
-    except Exception: raise
+    except Exception:
+      raise
     else:
       bentomodel.flush()  # type: ignore[no-untyped-call]
       bentomodel.save(_model_store)
@@ -117,7 +110,6 @@ def import_model(llm: openllm.LLM[M, T], *decls: t.Any, trust_remote_code: bool,
       # in the case where users first run openllm start without the model available locally.
       if openllm.utils.is_torch_available() and torch.cuda.is_available(): torch.cuda.empty_cache()
     return bentomodel
-
 def get(llm: openllm.LLM[M, T], auto_import: bool = False) -> bentoml.Model:
   """Return an instance of ``bentoml.Model`` from given LLM instance.
 
@@ -128,7 +120,8 @@ def get(llm: openllm.LLM[M, T], auto_import: bool = False) -> bentoml.Model:
   """
   try:
     model = bentoml.models.get(llm.tag)
-    if model.info.module not in ("openllm.serialisation.transformers" "bentoml.transformers", "bentoml._internal.frameworks.transformers", __name__):  # NOTE: backward compatible with previous version of OpenLLM.
+    if model.info.module not in ("openllm.serialisation.transformers"
+                                  "bentoml.transformers", "bentoml._internal.frameworks.transformers", __name__):  # NOTE: backward compatible with previous version of OpenLLM.
       raise bentoml.exceptions.NotFound(f"Model {model.tag} was saved with module {model.info.module}, not loading with 'openllm.serialisation.transformers'.")
     if "runtime" in model.info.labels and model.info.labels["runtime"] != llm.runtime:
       raise openllm.exceptions.OpenLLMException(f"Model {model.tag} was saved with runtime {model.info.labels['runtime']}, not loading with {llm.runtime}.")
@@ -136,7 +129,6 @@ def get(llm: openllm.LLM[M, T], auto_import: bool = False) -> bentoml.Model:
   except bentoml.exceptions.NotFound as err:
     if auto_import: return import_model(llm, trust_remote_code=llm.__llm_trust_remote_code__)
     raise err from None
-
 def load_model(llm: openllm.LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M:
   """Load the model from BentoML store.
 
@@ -156,7 +148,6 @@ def load_model(llm: openllm.LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M:
   if llm.bettertransformer and isinstance(model, transformers.PreTrainedModel): model = model.to_bettertransformer()
   if llm.__llm_implementation__ in {"pt", "vllm"}: check_unintialised_params(model)
   return t.cast("M", model)
-
 def save_pretrained(llm: openllm.LLM[M, T], save_directory: str, is_main_process: bool = True, state_dict: DictStrAny | None = None, save_function: t.Any | None = None, push_to_hub: bool = False, max_shard_size: int | str = "10GB", safe_serialization: bool = False, variant: str | None = None, **attrs: t.Any) -> None:
   save_function = t.cast(t.Callable[..., None], openllm.utils.first_not_none(save_function, default=torch.save))
   model_save_attrs, tokenizer_save_attrs = openllm.utils.normalize_attrs_to_model_tokenizer_pair(**attrs)

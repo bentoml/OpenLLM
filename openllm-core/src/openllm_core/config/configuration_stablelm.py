@@ -1,7 +1,6 @@
 from __future__ import annotations
 import openllm_core, typing as t
 from openllm_core._prompt import process_prompt
-
 START_STABLELM_COMMAND_DOCSTRING = """\
 Run a LLMServer for StableLM model.
 
@@ -28,7 +27,6 @@ SYSTEM_PROMPT = """<|SYSTEM|># StableLM Tuned (Alpha version)
 - StableLM will refuse to participate in anything that could harm a human.
 """
 DEFAULT_PROMPT_TEMPLATE = """{system_prompt}<|USER|>{instruction}<|ASSISTANT|>"""
-
 class StableLMConfig(openllm_core.LLMConfig):
   """StableLM-Base-Alpha is a suite of 3B and 7B parameter decoder-only language models.
 
@@ -43,17 +41,21 @@ class StableLMConfig(openllm_core.LLMConfig):
   and [StableLM-base's model card](https://huggingface.co/stabilityai/stablelm-base-alpha-7b)
   for more information.
   """
-  __config__ = {"name_type": "lowercase", "url": "https://github.com/Stability-AI/StableLM", "architecture": "GPTNeoXForCausalLM",
-                "default_id": "stabilityai/stablelm-tuned-alpha-3b", "model_ids": ["stabilityai/stablelm-tuned-alpha-3b", "stabilityai/stablelm-tuned-alpha-7b", "stabilityai/stablelm-base-alpha-3b", "stabilityai/stablelm-base-alpha-7b"]}
+  __config__ = {"name_type": "lowercase", "url": "https://github.com/Stability-AI/StableLM", "architecture": "GPTNeoXForCausalLM", "default_id": "stabilityai/stablelm-tuned-alpha-3b", "model_ids": ["stabilityai/stablelm-tuned-alpha-3b", "stabilityai/stablelm-tuned-alpha-7b", "stabilityai/stablelm-base-alpha-3b", "stabilityai/stablelm-base-alpha-7b"]}
+
   class GenerationConfig:
     temperature: float = 0.9
     max_new_tokens: int = 128
     top_k: int = 0
     top_p: float = 0.9
+
   def sanitize_parameters(self, prompt: str, temperature: float | None = None, max_new_tokens: int | None = None, top_k: int | None = None, top_p: float | None = None, use_default_prompt_template: bool = False, **attrs: t.Any) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
     if "tuned" in self._model_id and use_default_prompt_template:
       system_prompt = attrs.pop("system_prompt", SYSTEM_PROMPT)
       prompt_text = process_prompt(prompt, DEFAULT_PROMPT_TEMPLATE, use_default_prompt_template, system_prompt=system_prompt, **attrs)
-    else: prompt_text = prompt
+    else:
+      prompt_text = prompt
     return prompt_text, {"max_new_tokens": max_new_tokens, "temperature": temperature, "top_k": top_k, "top_p": top_p}, {}
-  def postprocess_generate(self, prompt: str, generation_result: list[str], **_: t.Any) -> str: return generation_result[0]
+
+  def postprocess_generate(self, prompt: str, generation_result: list[str], **_: t.Any) -> str:
+    return generation_result[0]

@@ -5,12 +5,12 @@ from bentoml._internal.resource import get_resource, system_resources
 from bentoml._internal.runner.strategy import THREAD_ENVS
 from .utils import DEBUG, ReprMixin
 from ._typing_compat import overload
-
 class DynResource(t.Protocol):
   resource_id: t.ClassVar[str]
-  @classmethod
-  def from_system(cls) -> t.Sequence[t.Any]: ...
 
+  @classmethod
+  def from_system(cls) -> t.Sequence[t.Any]:
+    ...
 logger = logging.getLogger(__name__)
 def _strtoul(s: str) -> int:
   """Return -1 or positive integer sequence string starts with,."""
@@ -21,7 +21,6 @@ def _strtoul(s: str) -> int:
     if idx + 1 == len(s): idx += 1  # noqa: PLW2901
   # NOTE: idx will be set via enumerate
   return int(s[:idx]) if idx > 0 else -1
-
 def _parse_list_with_prefix(lst: str, prefix: str) -> list[str]:
   rcs: list[str] = []
   for elem in lst.split(","):
@@ -31,16 +30,16 @@ def _parse_list_with_prefix(lst: str, prefix: str) -> list[str]:
     if not elem.startswith(prefix): break
     rcs.append(elem)
   return rcs
-
 _STACK_LEVEL = 3
-
-
 @overload  # variant: default callback
-def _parse_visible_devices() -> list[str] | None: ...
+def _parse_visible_devices() -> list[str] | None:
+  ...
 @overload  # variant: specify None, and respect_env
-def _parse_visible_devices(default_var: None, *, respect_env: t.Literal[True]) -> list[str] | None: ...
+def _parse_visible_devices(default_var: None, *, respect_env: t.Literal[True]) -> list[str] | None:
+  ...
 @overload  # variant: default var is something other than None
-def _parse_visible_devices(default_var: str = ..., *, respect_env: t.Literal[False]) -> list[str]: ...
+def _parse_visible_devices(default_var: str = ..., *, respect_env: t.Literal[False]) -> list[str]:
+  ...
 def _parse_visible_devices(default_var: str | None = None, respect_env: bool = True) -> list[str] | None:
   """CUDA_VISIBLE_DEVICES aware with default var for parsing spec."""
   if respect_env:
@@ -64,7 +63,6 @@ def _parse_visible_devices(default_var: str | None = None, respect_env: bool = T
     if x < 0: break
     rc.append(x)
   return [str(i) for i in rc]
-
 def _from_system(cls: type[DynResource]) -> list[str]:
   visible_devices = _parse_visible_devices()
   if visible_devices is None:
@@ -100,13 +98,15 @@ def _from_system(cls: type[DynResource]) -> list[str]:
       except (ImportError, RuntimeError, AttributeError):
         return []
   return visible_devices
-
 @overload
-def _from_spec(cls: type[DynResource], spec: int) -> list[str]: ...
+def _from_spec(cls: type[DynResource], spec: int) -> list[str]:
+  ...
 @overload
-def _from_spec(cls: type[DynResource], spec: list[int | str]) -> list[str]: ...
+def _from_spec(cls: type[DynResource], spec: list[int | str]) -> list[str]:
+  ...
 @overload
-def _from_spec(cls: type[DynResource], spec: str) -> list[str]: ...
+def _from_spec(cls: type[DynResource], spec: str) -> list[str]:
+  ...
 def _from_spec(cls: type[DynResource], spec: t.Any) -> list[str]:
   if isinstance(spec, int):
     if spec in (-1, 0): return []
@@ -116,13 +116,15 @@ def _from_spec(cls: type[DynResource], spec: t.Any) -> list[str]:
     if not spec: return []
     if spec.isdigit(): spec = ",".join([str(i) for i in range(_strtoul(spec))])
     return _parse_visible_devices(spec, respect_env=False)
-  elif isinstance(spec, list): return [str(x) for x in spec]
-  else: raise TypeError(f"'{cls.__name__}.from_spec' only supports parsing spec of type int, str, or list, got '{type(spec)}' instead.")
-
+  elif isinstance(spec, list):
+    return [str(x) for x in spec]
+  else:
+    raise TypeError(f"'{cls.__name__}.from_spec' only supports parsing spec of type int, str, or list, got '{type(spec)}' instead.")
 def _raw_device_uuid_nvml() -> list[str] | None:
   from ctypes import CDLL, byref, c_int, c_void_p, create_string_buffer
 
-  try: nvml_h = CDLL("libnvidia-ml.so.1")
+  try:
+    nvml_h = CDLL("libnvidia-ml.so.1")
   except Exception:
     warnings.warn("Failed to find nvidia binding", stacklevel=_STACK_LEVEL)
     return None
@@ -152,7 +154,6 @@ def _raw_device_uuid_nvml() -> list[str] | None:
     uuids.append(buf.raw.decode("ascii").strip("\0"))
   del nvml_h
   return uuids
-
 def _validate(cls: type[DynResource], val: list[t.Any]) -> None:
   if cls.resource_id == "amd.com/gpu":
     raise RuntimeError("AMD GPU validation is not yet supported. Make sure to call 'get_resource(..., validate=False)'")
@@ -175,9 +176,8 @@ def _validate(cls: type[DynResource], val: list[t.Any]) -> None:
         if err != cuda.CUresult.CUDA_SUCCESS: raise ValueError(f"Failed to get device {el}")
   except (ImportError, RuntimeError):
     pass
-
-def _make_resource_class(name: str, resource_kind: str, docstring: str) -> type[DynResource]: return types.new_class(name, (bentoml.Resource[t.List[str]], ReprMixin), {"resource_id": resource_kind}, lambda ns: ns.update({"resource_id": resource_kind, "from_spec": classmethod(_from_spec), "from_system": classmethod(_from_system), "validate": classmethod(_validate), "__repr_keys__": property(lambda _: {"resource_id"}), "__doc__": inspect.cleandoc(docstring), "__module__": "openllm._strategies"}))
-
+def _make_resource_class(name: str, resource_kind: str, docstring: str) -> type[DynResource]:
+  return types.new_class(name, (bentoml.Resource[t.List[str]], ReprMixin), {"resource_id": resource_kind}, lambda ns: ns.update({"resource_id": resource_kind, "from_spec": classmethod(_from_spec), "from_system": classmethod(_from_system), "validate": classmethod(_validate), "__repr_keys__": property(lambda _: {"resource_id"}), "__doc__": inspect.cleandoc(docstring), "__module__": "openllm._strategies"}))
 # NOTE: we need to hint these t.Literal since mypy is to dumb to infer this as literal :facepalm:
 _TPU_RESOURCE: t.Literal["cloud-tpus.google.com/v2"] = "cloud-tpus.google.com/v2"
 _AMD_GPU_RESOURCE: t.Literal["amd.com/gpu"] = "amd.com/gpu"
@@ -194,7 +194,6 @@ AmdGpuResource = _make_resource_class("AmdGpuResource", _AMD_GPU_RESOURCE, """AM
     ``NvidiaGpuResource``. Currently ``validate`` is not yet supported.""")
 
 LiteralResourceSpec = t.Literal["cloud-tpus.google.com/v2", "amd.com/gpu", "nvidia.com/gpu", "cpu"]
-
 # convenient mapping
 def resource_spec(name: t.Literal["tpu", "amd", "nvidia", "cpu"]) -> LiteralResourceSpec:
   if name == "tpu": return _TPU_RESOURCE
@@ -202,7 +201,6 @@ def resource_spec(name: t.Literal["tpu", "amd", "nvidia", "cpu"]) -> LiteralReso
   elif name == "nvidia": return _NVIDIA_GPU_RESOURCE
   elif name == "cpu": return _CPU_RESOURCE
   else: raise ValueError("Unknown alias. Accepted: ['tpu', 'amd', 'nvidia', 'cpu']")
-
 @functools.lru_cache
 def available_resource_spec() -> tuple[LiteralResourceSpec, ...]:
   """This is a utility function helps to determine the available resources from given running system.
@@ -216,7 +214,6 @@ def available_resource_spec() -> tuple[LiteralResourceSpec, ...]:
   if len(NvidiaGpuResource.from_system()) > 0: available.append(_NVIDIA_GPU_RESOURCE)
   available.append(_CPU_RESOURCE)
   return tuple(available)
-
 class CascadingResourceStrategy(bentoml.Strategy, ReprMixin):
   """This is extends the default BentoML strategy where we check for NVIDIA GPU resource -> AMD GPU resource -> CPU resource.
 
@@ -327,5 +324,4 @@ class CascadingResourceStrategy(bentoml.Strategy, ReprMixin):
       if idx >= len(gpus): raise ValueError(f"Number of available GPU ({gpus}) preceeds the given workers_per_resource {workers_per_resource}")
       dev = str(gpus[idx])
     return dev
-
-__all__=["CascadingResourceStrategy", "get_resource"]
+__all__ = ["CascadingResourceStrategy", "get_resource"]

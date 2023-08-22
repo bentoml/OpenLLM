@@ -4,7 +4,9 @@ from openllm.cli import termui
 from openllm.cli._factory import machine_option, container_registry_option
 if t.TYPE_CHECKING: from openllm_core._typing_compat import LiteralContainerRegistry, LiteralContainerVersionStrategy
 @click.command(
-    "build_base_container", context_settings=termui.CONTEXT_SETTINGS, help="""Base image builder for BentoLLM.
+    "build_base_container",
+    context_settings=termui.CONTEXT_SETTINGS,
+    help="""Base image builder for BentoLLM.
 
                 By default, the base image will include custom kernels (PagedAttention via vllm, FlashAttention-v2, etc.) built with CUDA 11.8, Python 3.9 on Ubuntu22.04.
                 Optionally, this can also be pushed directly to remote registry. Currently support ``docker.io``, ``ghcr.io`` and ``quay.io``.

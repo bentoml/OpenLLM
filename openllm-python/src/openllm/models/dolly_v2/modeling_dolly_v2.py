@@ -6,15 +6,18 @@ from openllm_core.config.configuration_dolly_v2 import DEFAULT_PROMPT_TEMPLATE, 
 if t.TYPE_CHECKING: import torch, transformers, tensorflow as tf
 else: torch, transformers, tf = openllm.utils.LazyLoader("torch", globals(), "torch"), openllm.utils.LazyLoader("transformers", globals(), "transformers"), openllm.utils.LazyLoader("tf", globals(), "tensorflow")
 logger = logging.getLogger(__name__)
-
 @overload
-def get_pipeline(model: transformers.PreTrainedModel, tokenizer: transformers.PreTrainedTokenizer, _init: t.Literal[True] = True, **attrs: t.Any) -> transformers.Pipeline: ...
+def get_pipeline(model: transformers.PreTrainedModel, tokenizer: transformers.PreTrainedTokenizer, _init: t.Literal[True] = True, **attrs: t.Any) -> transformers.Pipeline:
+  ...
 @overload
-def get_pipeline(model: transformers.PreTrainedModel, tokenizer: transformers.PreTrainedTokenizer, _init: t.Literal[False] = ..., **attrs: t.Any) -> type[transformers.Pipeline]: ...
+def get_pipeline(model: transformers.PreTrainedModel, tokenizer: transformers.PreTrainedTokenizer, _init: t.Literal[False] = ..., **attrs: t.Any) -> type[transformers.Pipeline]:
+  ...
 def get_pipeline(model: transformers.PreTrainedModel, tokenizer: transformers.PreTrainedTokenizer, _init: bool = False, **attrs: t.Any) -> type[transformers.Pipeline] | transformers.Pipeline:
   # Lazy loading the pipeline. See databricks' implementation on HuggingFace for more information.
   class InstructionTextGenerationPipeline(transformers.Pipeline):
-    def __init__(self, *args: t.Any, do_sample: bool = True, max_new_tokens: int = 256, top_p: float = 0.92, top_k: int = 0, **kwargs: t.Any): super().__init__(*args, model=model, tokenizer=tokenizer, do_sample=do_sample, max_new_tokens=max_new_tokens, top_p=top_p, top_k=top_k, **kwargs)
+    def __init__(self, *args: t.Any, do_sample: bool = True, max_new_tokens: int = 256, top_p: float = 0.92, top_k: int = 0, **kwargs: t.Any):
+      super().__init__(*args, model=model, tokenizer=tokenizer, do_sample=do_sample, max_new_tokens=max_new_tokens, top_p=top_p, top_k=top_k, **kwargs)
+
     def _sanitize_parameters(self, return_full_text: bool | None = None, **generate_kwargs: t.Any) -> tuple[dict[str, t.Any], dict[str, t.Any], dict[str, t.Any]]:
       if t.TYPE_CHECKING: assert self.tokenizer is not None
       preprocess_params: dict[str, t.Any] = {}
@@ -29,11 +32,13 @@ def get_pipeline(model: transformers.PreTrainedModel, tokenizer: transformers.Pr
           end_key_token_id = get_special_token_id(self.tokenizer, END_KEY)
           # Ensure generation stops once it generates "### End"
           generate_kwargs["eos_token_id"] = end_key_token_id
-        except ValueError: pass
+        except ValueError:
+          pass
       forward_params = generate_kwargs
       postprocess_params = {"response_key_token_id": response_key_token_id, "end_key_token_id": end_key_token_id}
       if return_full_text is not None: postprocess_params["return_full_text"] = return_full_text
       return preprocess_params, forward_params, postprocess_params
+
     def preprocess(self, input_: str, **generate_kwargs: t.Any) -> t.Dict[str, t.Any]:
       if t.TYPE_CHECKING: assert self.tokenizer is not None
       prompt_text = DEFAULT_PROMPT_TEMPLATE.format(instruction=input_)
@@ -41,6 +46,7 @@ def get_pipeline(model: transformers.PreTrainedModel, tokenizer: transformers.Pr
       inputs["prompt_text"] = prompt_text
       inputs["instruction_text"] = input_
       return t.cast(t.Dict[str, t.Any], inputs)
+
     def _forward(self, input_tensors: dict[str, t.Any], **generate_kwargs: t.Any) -> transformers.utils.generic.ModelOutput:
       if t.TYPE_CHECKING: assert self.tokenizer is not None
       input_ids, attention_mask = input_tensors["input_ids"], input_tensors.get("attention_mask", None)
@@ -52,6 +58,7 @@ def get_pipeline(model: transformers.PreTrainedModel, tokenizer: transformers.Pr
       elif self.framework == "tf": generated_sequence = tf.reshape(generated_sequence, (in_b, out_b // in_b, *generated_sequence.shape[1:]))
       instruction_text = input_tensors.pop("instruction_text")
       return {"generated_sequence": generated_sequence, "input_ids": input_ids, "instruction_text": instruction_text}
+
     def postprocess(self, model_outputs: dict[str, t.Any], response_key_token_id: int, end_key_token_id: int, return_full_text: bool = False) -> list[dict[t.Literal["generated_text"], str]]:
       if t.TYPE_CHECKING: assert self.tokenizer is not None
       _generated_sequence, instruction_text = model_outputs["generated_sequence"][0], model_outputs["instruction_text"]
@@ -64,16 +71,20 @@ def get_pipeline(model: transformers.PreTrainedModel, tokenizer: transformers.Pr
         if response_key_token_id and end_key_token_id:
           # Find where "### Response:" is first found in the generated tokens.  Considering this is part of the
           # prompt, we should definitely find it.  We will return the tokens found after this token.
-          try: response_pos = sequence.index(response_key_token_id)
-          except ValueError: response_pos = None
+          try:
+            response_pos = sequence.index(response_key_token_id)
+          except ValueError:
+            response_pos = None
           if response_pos is None: logger.warning("Could not find response key %s in: %s", response_key_token_id, sequence)
           if response_pos:
             # Next find where "### End" is located.  The model has been trained to end its responses with this
             # sequence (or actually, the token ID it maps to, since it is a special token).  We may not find
             # this token, as the response could be truncated.  If we don't find it then just return everything
             # to the end.  Note that even though we set eos_token_id, we still see the this token at the end.
-            try: end_pos = sequence.index(end_key_token_id)
-            except ValueError: end_pos = None
+            try:
+              end_pos = sequence.index(end_key_token_id)
+            except ValueError:
+              end_pos = None
             decoded = self.tokenizer.decode(sequence[response_pos + 1:end_pos]).strip()
         if not decoded:
           # Otherwise we'll decode everything and use a regex to find the response and end.
@@ -94,13 +105,19 @@ def get_pipeline(model: transformers.PreTrainedModel, tokenizer: transformers.Pr
         if return_full_text: decoded = f"{instruction_text}\n{decoded}"
         records.append({"generated_text": t.cast(str, decoded)})
       return records
-  return InstructionTextGenerationPipeline() if _init else InstructionTextGenerationPipeline
 
+  return InstructionTextGenerationPipeline() if _init else InstructionTextGenerationPipeline
 class DollyV2(openllm.LLM["transformers.Pipeline", "transformers.PreTrainedTokenizer"]):
   __openllm_internal__ = True
+
   @property
-  def import_kwargs(self) -> tuple[dict[str, t.Any], dict[str, t.Any]]: return {"device_map": "auto" if torch.cuda.is_available() and torch.cuda.device_count() > 1 else None, "torch_dtype": torch.bfloat16}, {}
-  def load_model(self, *args: t.Any, **attrs: t.Any) -> transformers.Pipeline: return get_pipeline(transformers.AutoModelForCausalLM.from_pretrained(self._bentomodel.path, *args, **attrs), self.tokenizer, _init=True, return_full_text=self.config.return_full_text)
+  def import_kwargs(self) -> tuple[dict[str, t.Any], dict[str, t.Any]]:
+    return {"device_map": "auto" if torch.cuda.is_available() and torch.cuda.device_count() > 1 else None, "torch_dtype": torch.bfloat16}, {}
+
+  def load_model(self, *args: t.Any, **attrs: t.Any) -> transformers.Pipeline:
+    return get_pipeline(transformers.AutoModelForCausalLM.from_pretrained(self._bentomodel.path, *args, **attrs), self.tokenizer, _init=True, return_full_text=self.config.return_full_text)
+
   def generate(self, prompt: str, **attrs: t.Any) -> list[dict[t.Literal["generated_text"], str]]:
     llm_config = self.config.model_construct_env(**attrs)
-    with torch.inference_mode(): return self.model(prompt, return_full_text=llm_config.return_full_text, generation_config=llm_config.to_generation_config())
+    with torch.inference_mode():
+      return self.model(prompt, return_full_text=llm_config.return_full_text, generation_config=llm_config.to_generation_config())

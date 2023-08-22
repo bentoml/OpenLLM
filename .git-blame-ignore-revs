@@ -1,3 +1,5 @@
 # You can use this file with 'git config blame.ignoreRevsFile .git-blame-ignore-revs'
 # 07/31/2023: Style guidelines
 8c2867d26dfff8a4cf33bc59d5a8dee159f3256a
+# 08/22/2023: Running yapf with guidelines
+1488fbb167a0ae5b0770f33f50a7ee7f7b2223c9
