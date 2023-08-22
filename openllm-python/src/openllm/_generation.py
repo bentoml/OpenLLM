@@ -3,8 +3,10 @@ from __future__ import annotations
 import typing as t, transformers
 if t.TYPE_CHECKING: import torch, openllm
 
+# reexport from transformers
 LogitsProcessorList = transformers.LogitsProcessorList
 StoppingCriteriaList = transformers.StoppingCriteriaList
+
 class StopSequenceCriteria(transformers.StoppingCriteria):
   def __init__(self, stop_sequences: str | list[str], tokenizer: transformers.PreTrainedTokenizer | transformers.PreTrainedTokenizerBase | transformers.PreTrainedTokenizerFast):
     if isinstance(stop_sequences, str): stop_sequences = [stop_sequences]
@@ -20,3 +22,18 @@ def prepare_logits_processor(config: openllm.LLMConfig) -> transformers.LogitsPr
   if 1e-8 <= generation_config["top_p"]: logits_processor.append(transformers.TopPLogitsWarper(generation_config["top_p"]))
   if generation_config["top_k"] > 0: logits_processor.append(transformers.TopKLogitsWarper(generation_config["top_k"]))
   return logits_processor
+
+# NOTE: The ordering here is important. Some models have two of these and we have a preference for which value gets used.
+SEQLEN_KEYS = ["max_sequence_length", "seq_length", "max_position_embeddings", "max_seq_len", "model_max_length"]
+def get_context_length(config: transformers.PretrainedConfig) -> int:
+  rope_scaling = getattr(config, "rope_scaling", None)
+  rope_scaling_factor = config.rope_scaling["factor"] if rope_scaling else 1.0
+  for key in SEQLEN_KEYS:
+    if getattr(config, key, None) is not None: return int(rope_scaling_factor*getattr(config,key))
+  return 2048
+def is_sentence_complete(output: str) -> bool: return output.endswith((".", "?", "!", "...", "。", "?", "!", "…", '"', "'", "”"))
+def is_partial_stop(output: str, stop_str: str) -> bool:
+    """Check whether the output contains a partial stop str."""
+    for i in range(0, min(len(output), len(stop_str))):
+        if stop_str.startswith(output[-i:]): return True
+    return False

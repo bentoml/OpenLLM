@@ -133,6 +133,10 @@ directory = "change"
 name = "Changes"
 showcontent = true
 [[tool.towncrier.type]]
+directory = "refactor"
+name = "Refactor"
+showcontent = true
+[[tool.towncrier.type]]
 directory = "feature"
 name = "Features"
 showcontent = true
@@ -161,7 +165,6 @@ extend-exclude = [
 ]
 extend-include = ["*.ipynb"]
 extend-select = [
-  "B",    # flake8-bugbear
   "I",    # isort
   "G",    # flake8-logging-format
   "W",    # pycodestyle
@@ -178,7 +181,6 @@ extend-select = [
 ]
 fix = true
 ignore = [
-  "B027",    # Allow non-abstract empty methods in abstract base classes
   "FBT003",  # Allow boolean positional values in function calls, like `dict.get(... True)`
   "PLR0911",
   "PLR0912",

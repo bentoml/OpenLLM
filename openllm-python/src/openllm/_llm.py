@@ -1,5 +1,5 @@
 from __future__ import annotations
-import functools, inspect, logging, os, re, traceback, types, typing as t, uuid, attr, fs.path, inflection, orjson, bentoml, openllm, openllm_core
+import functools, inspect, logging, os, re, traceback, types, typing as t, uuid, attr, fs.path, inflection, orjson, bentoml, openllm, openllm_core, gc
 from abc import ABC, abstractmethod
 from pathlib import Path
 from huggingface_hub import hf_hub_download
@@ -150,7 +150,7 @@ class LLMInterface(ABC, t.Generic[M, T]):
     """
     raise NotImplementedError
 
-  def generate_iterator(self, prompt: str, **attrs: t.Any) -> t.Iterator[t.Any]:
+  def generate_iterator(self, prompt: str, /, **attrs: t.Any) -> t.Iterator[t.Any]:
     """The iterator version of `generate` function."""
     raise NotImplementedError("Currently generate_iterator requires SSE (Server-side events) support, which is not yet implemented.")
 
@@ -672,7 +672,8 @@ class LLM(LLMInterface[M, T], ReprMixin):
     # NOTE: Save the args and kwargs for latter load
     self.__attrs_init__(llm_config, quantization_config, model_id, _runtime, args, {**model_kwds, **normalized_model_kwds}, {**tokenizer_kwds, **normalized_tokenizer_kwds}, _tag, _adapters_mapping, _model_version, _quantize_method, _serialisation_format, _local)
     # handle trust_remote_code
-    self.__llm_trust_remote_code__ = self._model_attrs.pop("trust_remote_code", self.config["trust_remote_code"])
+    _from_env = os.getenv("TRUST_REMOTE_CODE", None)
+    self.__llm_trust_remote_code__ = first_not_none(str(_from_env).upper() in ENV_VARS_TRUE_VALUES if _from_env else None, default=self._model_attrs.pop("trust_remote_code", self.config["trust_remote_code"]))
 
     self.llm_post_init()
     # we set it here so that we allow subclass to overwrite bettertransformer in llm_post_init
@@ -709,11 +710,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
   def llm_parameters(self) -> tuple[tuple[tuple[t.Any, ...], DictStrAny], DictStrAny]: return (self._model_decls, self._model_attrs), self._tokenizer_attrs
   @property
   def tag(self) -> bentoml.Tag: return self._tag
-
-  # ensure_model_id_exists can be called to save the model to local store
-  def ensure_model_id_exists(self) -> bentoml.Model:
-    from . import import_model
-    return import_model(self.config["start_name"], model_id=self.model_id, model_version=self._model_version, runtime=self.runtime, implementation=self.__llm_implementation__, quantize=self._quantize_method, serialisation_format=self._serialisation_format)
+  def ensure_model_id_exists(self) -> bentoml.Model: return openllm.import_model(self.config["start_name"], model_id=self.model_id, model_version=self._model_version, runtime=self.runtime, implementation=self.__llm_implementation__, quantize=self._quantize_method, serialisation_format=self._serialisation_format)
 
   @property
   def _bentomodel(self) -> bentoml.Model:
@@ -738,6 +735,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
     > [!NOTE]
     > This will be used from the client side.
     """
+    if isinstance(generation_result, dict): return generation_result["text"]
     return self.config.postprocess_generate(prompt, generation_result, **attrs)
 
   @property
@@ -881,7 +879,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
 
     generate_sig = ModelSignature.from_dict(t.cast("_ModelSignatureDict", ModelSignatureDict(batchable=False)))
     embeddings_sig = ModelSignature.from_dict(t.cast("_ModelSignatureDict", ModelSignatureDict(batchable=True, batch_dim=0)))
-    generate_iterator_sig = ModelSignature.from_dict(t.cast("_ModelSignatureDict", ModelSignatureDict(batchable=True)))
+    generate_iterator_sig = ModelSignature.from_dict(t.cast("_ModelSignatureDict", ModelSignatureDict(batchable=False)))
 
     # NOTE: returning the two langchain API's to the runner
     return llm_runner_class(self)(
@@ -890,7 +888,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
     )
 
   # NOTE: Scikit API
-  def predict(self, prompt: str, **attrs: t.Any) -> t.Any: return self.__call__(prompt, **attrs)
+  def predict(self, prompt: str, **attrs: t.Any) -> t.Any: return self(prompt, **attrs)
   def __call__(self, prompt: str, **attrs: t.Any) -> t.Any:
     """Returns the generation result and format the result.
 
@@ -907,6 +905,91 @@ class LLM(LLMInterface[M, T], ReprMixin):
     """
     prompt, generate_kwargs, postprocess_kwargs = self.sanitize_parameters(prompt, **attrs)
     return self.postprocess_generate(prompt, self.generate(prompt, **generate_kwargs), **postprocess_kwargs)
+
+  def generate(self, prompt: str, **attrs: t.Any) -> t.List[t.Any]:
+    # TODO: support different generation strategies, similar to self.model.generate
+    for it in self.generate_iterator(prompt, **attrs): pass
+    return [it]
+
+  def generate_iterator(self, prompt: str, /,
+                        *, context_length: int | None = None, echo: bool = True, stream_interval: int = 2, stop: str | t.Iterable[str] | None = None, stop_token_ids: list[int] | None = None, **attrs: t.Any) -> t.Iterator[t.Any]:
+    # NOTE: encoder-decoder models will need to implement their own generate_iterator for now
+    # inspired from fastchat's generate_stream_func
+    from ._generation import prepare_logits_processor, get_context_length, is_partial_stop
+
+    len_prompt = len(prompt)
+    if stop_token_ids is None: stop_token_ids = []
+    stop_token_ids.append(self.tokenizer.eos_token_id)
+
+    logits_processor = prepare_logits_processor(self.config)
+
+    input_ids = self.tokenizer(prompt).input_ids
+
+    if context_length is None: context_length = get_context_length(self.model.config)
+    max_src_len = context_length - self.config["max_new_tokens"] - 1
+
+    input_ids = input_ids[-max_src_len:]
+    output_ids = list(input_ids)
+    input_echo_len = len(input_ids)
+
+    past_key_values = out = token = None
+    for i in range(self.config["max_new_tokens"]):
+      if i == 0:  # prefill
+        out = self.model(torch.as_tensor([input_ids], device=self.device), use_cache=True)
+      else:  # decoding
+        out = self.model(input_ids=torch.as_tensor([[token]], device=self.device), use_cache=True, past_key_values=past_key_values) # type: ignore[has-type]
+      logits = out.logits
+      past_key_values = out.past_key_values
+
+      last_token_logits = logits_processor(torch.as_tensor([output_ids], device=logits.device) if self.config["repetition_penalty"] > 1.0 else None, logits[:, -1, :])[0] if logits_processor else logits[0, -1, :]
+      # Switch to CPU by avoiding some bugs in mps backend.
+      if self.device.type == "mps": last_token_logits = last_token_logits.float().to("cpu")
+
+      if self.config["temperature"] < 1e-5 or self.config["top_p"] < 1e-8: token = int(torch.argmax(last_token_logits))  # greedy
+      else: token = int(torch.multinomial(torch.softmax(last_token_logits, dim=-1), num_samples=1))
+      output_ids.append(token)
+
+      if token in stop_token_ids: stopped = True
+      else: stopped = False
+
+      # Yield the output tokens
+      if i % stream_interval == 0 or i == self.config["max_new_tokens"] - 1 or stopped:
+        tmp_output_ids = output_ids if echo else output_ids[input_echo_len:]
+        rfind_start = len_prompt if echo else 0
+        output = self.tokenizer.decode(tmp_output_ids, skip_special_tokens=True, spaces_between_special_tokens=False, clean_up_tokenization_spaces=True)
+
+        partially_stopped = False
+        if stop:
+          if isinstance(stop, str):
+            pos = output.rfind(stop, rfind_start)
+            if pos != -1: output, stopped = output[:pos], True
+            else: partially_stopped = is_partial_stop(output, stop)
+          elif isinstance(stop, t.Iterable):
+            for each_stop in stop:
+              pos = output.rfind(each_stop, rfind_start)
+              if pos != -1:
+                output, stopped = output[:pos], True
+                break
+              else:
+                partially_stopped = is_partial_stop(output, each_stop)
+                if partially_stopped: break
+          else: raise ValueError("Invalid stop field type.")
+
+        # Prevent yielding partial stop sequence
+        if not partially_stopped:
+          yield {"text": output, "usage": {"prompt_tokens": input_echo_len, "completion_tokens": i, "total_tokens": input_echo_len + i}, "finish_reason": None}
+      if stopped: break
+
+    # Finish stream event, which contains finish reason
+    if i == self.config["max_new_tokens"] - 1: finish_reason = "length"
+    elif stopped: finish_reason = "stop"
+    else: finish_reason = None
+    yield {"text": output, "usage": {"prompt_tokens": input_echo_len, "completion_tokens": i, "total_tokens": input_echo_len + i}, "finish_reason": finish_reason}
+
+    # Clean
+    del past_key_values, out
+    gc.collect()
+    torch.cuda.empty_cache()
 
 @overload
 def Runner(model_name: str, *, model_id: str | None = None, model_version: str | None = ..., init_local: t.Literal[False, True] = ..., **attrs: t.Any) -> LLMRunner[t.Any, t.Any]: ...
@@ -957,9 +1040,7 @@ def Runner(model_name: str, ensure_available: bool | None = None, init_local: bo
   if init_local: runner.init_local(quiet=True)
   return runner
 
-def method_signature(sig: ModelSignature) -> ModelSignatureDict:
-  return bentoml_cattr.unstructure(sig)
-
+def method_signature(sig: ModelSignature) -> ModelSignatureDict: return bentoml_cattr.unstructure(sig)
 class SetAdapterOutput(t.TypedDict):
   success: bool
   message: str
@@ -968,7 +1049,6 @@ def llm_runnable_class(self: LLM[M, T], embeddings_sig: ModelSignature, generate
   class _Runnable(bentoml.Runnable):
     SUPPORTED_RESOURCES = ("nvidia.com/gpu", "amd.com/gpu", "cpu")
     SUPPORTS_CPU_MULTI_THREADING = True
-
     def __init__(__self: _Runnable):
       # NOTE: The side effect of this line
       # is that it will load the imported model during
@@ -977,40 +1057,41 @@ def llm_runnable_class(self: LLM[M, T], embeddings_sig: ModelSignature, generate
       if self.adapters_mapping is not None:
         logger.info("Applying LoRA to %s...", self.runner_name)
         self.apply_adapter(inference_mode=True, load_adapters="all")
-
     def set_adapter(__self: _Runnable, adapter_name: str) -> None:
       if self.__llm_adapter_map__ is None: raise ValueError("No adapters available for current running server.")
       elif not isinstance(self.model, peft.PeftModel): raise RuntimeError("Model is not a PeftModel")
       if adapter_name != "default": self.model.set_adapter(adapter_name)
       logger.info("Successfully apply LoRA layer %s", adapter_name)
-
     @bentoml.Runnable.method(**method_signature(embeddings_sig))
-    def embeddings(__self: _Runnable, prompt: str | list[str]) -> t.Sequence[LLMEmbeddings]:
-      return [self.embeddings([prompt] if isinstance(prompt, str) else prompt)]
-
+    def embeddings(__self: _Runnable, prompt: str | list[str]) -> t.Sequence[LLMEmbeddings]: return [self.embeddings([prompt] if isinstance(prompt, str) else prompt)]
     @bentoml.Runnable.method(**method_signature(generate_sig))
     def __call__(__self: _Runnable, prompt: str, **attrs: t.Any) -> list[t.Any]:
       adapter_name = attrs.pop("adapter_name", None)
       if adapter_name is not None: __self.set_adapter(adapter_name)
       return self.generate(prompt, **attrs)
-
     @bentoml.Runnable.method(**method_signature(generate_sig))
     def generate(__self: _Runnable, prompt: str, **attrs: t.Any) -> list[t.Any]:
       adapter_name = attrs.pop("adapter_name", None)
       if adapter_name is not None: __self.set_adapter(adapter_name)
       return self.generate(prompt, **attrs)
-
     @bentoml.Runnable.method(**method_signature(generate_sig))
     def generate_one(__self: _Runnable, prompt: str, stop: list[str], **attrs: t.Any) -> t.Sequence[dict[t.Literal["generated_text"], str]]:
       adapter_name = attrs.pop("adapter_name", None)
       if adapter_name is not None: __self.set_adapter(adapter_name)
       return self.generate_one(prompt, stop, **attrs)
-
     @bentoml.Runnable.method(**method_signature(generate_iterator_sig))
-    def generate_iterator(__self: _Runnable, prompt: str, **attrs: t.Any) -> t.Generator[t.Any, None, None]:
+    def generate_iterator(__self: _Runnable, prompt: str, **attrs: t.Any) -> t.Generator[str, None, str]:
       adapter_name = attrs.pop("adapter_name", None)
       if adapter_name is not None: __self.set_adapter(adapter_name)
-      yield self.generate_iterator(prompt, **attrs)
+      pre = 0
+      for outputs in self.generate_iterator(prompt, **attrs):
+        output_text = outputs["text"].strip().split(" ")
+        now = len(output_text) - 1
+        if now > pre:
+          yield " ".join(output_text[pre:now])
+          pre = now
+      yield " ".join(output_text[pre:])
+      return " ".join(output_text)
 
   return types.new_class(self.__class__.__name__ + "Runnable", (_Runnable,), {}, lambda ns: ns.update({"SUPPORTED_RESOURCES": ("nvidia.com/gpu", "amd.com/gpu") if self.config["requires_gpu"] else ("nvidia.com/gpu", "amd.com/gpu", "cpu"), "__module__": self.__module__, "__doc__": self.config["env"].start_docstring}))
 
@@ -1047,9 +1128,7 @@ def llm_runner_class(self: LLM[M, T]) -> type[LLMRunner[M, T]]:
     """
     return __self.embeddings.run([prompt] if isinstance(prompt, str) else prompt)
 
-  def _wrapped_repr_keys(_: LLMRunner[M, T]) -> set[str]:
-    return {"config", "llm_type", "runner_methods", "runtime", "llm_tag"}
-
+  def _wrapped_repr_keys(_: LLMRunner[M, T]) -> set[str]: return {"config", "llm_type", "runner_methods", "runtime", "llm_tag"}
   def _wrapped_repr_args(__self: LLMRunner[M, T]) -> ReprArgs:
     yield "runner_methods", {method.name: {"batchable": method.config.batchable, "batch_dim": method.config.batch_dim if method.config.batchable else None} for method in __self.runner_methods}
     yield "config", self.config.model_dump(flatten=True)
@@ -1057,13 +1136,8 @@ def llm_runner_class(self: LLM[M, T]) -> type[LLMRunner[M, T]]:
     yield "runtime", self.runtime
     yield "llm_tag", self.tag
 
-  return types.new_class(
-      self.__class__.__name__ + "Runner", (bentoml.Runner,), exec_body=lambda ns: ns.update({
-          "llm_type": self.llm_type, "identifying_params": self.identifying_params, "llm_tag": self.tag, "llm": self,  # NOTE: self reference to LLM
-          "config": self.config, "implementation": self.__llm_implementation__, "peft_adapters": property(fget=available_adapters), "download_model": self.ensure_model_id_exists, "__call__": _wrapped_generate_run, "embed": _wrapped_embeddings_run, "__module__": self.__module__, "__doc__": self.config["env"].start_docstring, "__repr__": ReprMixin.__repr__, "__repr_keys__": property(
-              _wrapped_repr_keys
-          ), "__repr_args__": _wrapped_repr_args, "supports_embeddings": self["supports_embeddings"], "supports_hf_agent": self["supports_generate_one"], "has_adapters": self._adapters_mapping is not None,
-      }),
-  )
+  return types.new_class(self.__class__.__name__ + "Runner", (bentoml.Runner,), exec_body=lambda ns: ns.update({"llm_type": self.llm_type, "identifying_params": self.identifying_params, "llm_tag": self.tag, "llm": self, "config": self.config, "implementation": self.__llm_implementation__, "peft_adapters": property(fget=available_adapters),
+                                                                                                                "download_model": self.ensure_model_id_exists, "__call__": _wrapped_generate_run, "embed": _wrapped_embeddings_run, "__module__": self.__module__, "__doc__": self.config["env"].start_docstring, "__repr__": ReprMixin.__repr__,
+                                                                                                                "__repr_keys__": property( _wrapped_repr_keys), "__repr_args__": _wrapped_repr_args, "supports_embeddings": self["supports_embeddings"], "supports_hf_agent": self["supports_generate_one"], "has_adapters": self._adapters_mapping is not None}))
 
 __all__ = ["LLMRunner", "LLMRunnable", "Runner", "LLM", "llm_runner_class", "llm_runnable_class", "LLMEmbeddings"]
