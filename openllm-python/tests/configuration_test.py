@@ -1,31 +1,10 @@
 from __future__ import annotations
-import contextlib
-import logging
-import os
-import sys
-import typing as t
+import contextlib, os, sys, typing as t, attr, pytest, transformers, openllm
 from unittest import mock
-
-import attr
-import pytest
-import transformers
-from hypothesis import (
-  assume,
-  given,
-  strategies as st,
-)
-
-import openllm
-from openllm._configuration import GenerationConfig, ModelSettings, field_env_key
-
+from openllm_core._configuration import GenerationConfig, ModelSettings, field_env_key
+from hypothesis import assume, given, strategies as st
 from ._strategies._configuration import make_llm_config, model_settings
-
-logger = logging.getLogger(__name__)
-
-if t.TYPE_CHECKING:
-  DictStrAny = dict[str, t.Any]
-else:
-  DictStrAny = dict
+from openllm_core._typing_compat import DictStrAny
 
 # XXX: @aarnphm fixes TypedDict behaviour in 3.11
 @pytest.mark.skipif(sys.version_info[:2] == (3, 11), reason="TypedDict in 3.11 behaves differently, so we need to fix this")
@@ -43,7 +22,6 @@ def test_forbidden_access():
   assert pytest.raises(openllm.exceptions.ForbiddenAttributeError, cl_.__getattribute__, cl_(), "__config__",)
   assert pytest.raises(openllm.exceptions.ForbiddenAttributeError, cl_.__getattribute__, cl_(), "GenerationConfig",)
   assert pytest.raises(openllm.exceptions.ForbiddenAttributeError, cl_.__getattribute__, cl_(), "SamplingParams",)
-
   assert openllm.utils.lenient_issubclass(cl_.__openllm_generation_class__, GenerationConfig)
 
 @given(model_settings())
