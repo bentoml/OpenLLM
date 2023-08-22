@@ -96,6 +96,6 @@ clojure = ["bash tools/run-clojure-ui.sh"]
 detached = true
 [envs.ci.scripts]
 lock = [
-    "bash tools/lock-actions",
+    "bash tools/lock-actions.sh",
     "pushd contrib/clojure && pnpm i --frozen-lockfile",
 ]
