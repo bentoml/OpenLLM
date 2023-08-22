@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 try:
   from typing import GenericAlias as _TypingGenericAlias  # type: ignore
 except ImportError:
-  _TypingGenericAlias = ()  # python < 3.9 does not have GenericAlias (list[int], tuple[str, ...] and so on)
+  _TypingGenericAlias = ()  # type: ignore  # python < 3.9 does not have GenericAlias (list[int], tuple[str, ...] and so on)
 if sys.version_info < (3, 10): _WithArgsTypes = (_TypingGenericAlias,)
 else: _WithArgsTypes: t.Any = (t._GenericAlias, types.GenericAlias, types.UnionType)  # type: ignore #  _GenericAlias is the actual GenericAlias implementation
 

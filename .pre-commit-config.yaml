@@ -1,6 +1,6 @@
 ci:
   autoupdate_schedule: weekly
-  skip: [check-models-table-update, changelog-dry-run, pyright, mypy, sync-readme, clj-kondo]
+  skip: [check-models-table-update, changelog-dry-run, pyright, mypy, yapf, sync-readme, clj-kondo]
   autofix_commit_msg: "ci: auto fixes from pre-commit.ci\n\nFor more information, see https://pre-commit.ci"
   autoupdate_commit_msg: 'ci: pre-commit autoupdate [pre-commit.ci]'
 default_language_version:
@@ -8,7 +8,7 @@ default_language_version:
 exclude: '.*\.(css|js|svg)$'
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: 'v0.0.284'
+    rev: 'v0.0.285'
     hooks:
       - id: ruff
         verbose: true
@@ -19,7 +19,7 @@ repos:
       - id: editorconfig-checker
         verbose: true
   - repo: https://github.com/econchick/interrogate
-    rev: 1e74611fc5296b0572b6bb11b480d43242c4ec49
+    rev: 1.5.0
     hooks:
       - id: interrogate
         verbose: true
@@ -32,7 +32,7 @@ repos:
       - id: yapf
         verbose: true
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.5.0
+    rev: v1.5.1
     hooks:
       - id: mypy
         verbose: true
