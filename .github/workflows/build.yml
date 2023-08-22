@@ -6,7 +6,19 @@ on:
       - "main"
     tags:
       - "*"
+    paths:
+      - ".github/workflows/build-embedding.yml"
+      - "openllm-python/src/openllm/**"
+      - "openllm-core/src/openllm_core/**"
+      - "openllm-client/src/openllm_client/**"
   pull_request:
+    branches:
+      - "main"
+    paths:
+      - ".github/workflows/build-embedding.yml"
+      - "openllm-python/src/openllm/**"
+      - "openllm-core/src/openllm_core/**"
+      - "openllm-client/src/openllm_client/**"
     types: [labeled, opened, synchronize, reopened]
 env:
   LINES: 120
