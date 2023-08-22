@@ -124,7 +124,8 @@ class AsyncHttpClient(AsyncClient):
     else: fake_resp = await _inference_api.input.to_http_response(data, None)
 
     # XXX: hack around StreamingResponse, since now we only have Text, for metadata so it is fine to do this.
-    if isinstance(fake_resp, starlette.responses.StreamingResponse): body = None
+    if isinstance(fake_resp, starlette.responses.StreamingResponse):
+      body = "".join(t.cast(t.List[str], [s async for s in fake_resp.body_iterator]))
     else: body = t.cast(t.Any, fake_resp.body)
 
     resp = await self.inner.post("/" + _inference_api.route if not _inference_api.route.startswith("/") else _inference_api.route, data=body, headers={"content-type": fake_resp.headers["content-type"]}, timeout=self.timeout)
