@@ -1,12 +1,11 @@
-# mypy: disable-error-code="name-defined"
+# mypy: disable-error-code="name-defined,no-redef"
 from __future__ import annotations
-import logging, sys, typing as t
-from .utils import LazyLoader, is_autogptq_available, is_bitsandbytes_available, is_transformers_supports_kbit, pkg
-if sys.version_info[:2] >= (3, 11): from typing import overload
-else: from typing_extensions import overload
+import logging, typing as t
+from openllm_core.utils import LazyLoader, is_autogptq_available, is_bitsandbytes_available, is_transformers_supports_kbit, pkg
+from openllm_core._typing_compat import overload
 if t.TYPE_CHECKING:
   from ._llm import LLM
-  from ._typing_compat import DictStrAny
+  from openllm_core._typing_compat import DictStrAny
 
 autogptq, torch, transformers = LazyLoader("autogptq", globals(), "auto_gptq"), LazyLoader("torch", globals(), "torch"), LazyLoader("transformers", globals(), "transformers")
 

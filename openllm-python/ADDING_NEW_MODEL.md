@@ -8,20 +8,23 @@ environment by referring to our
 ## Procedure
 
 All the relevant code for incorporating a new model resides within
-[`src/openllm/models`](./src/openllm/models/) `model_name` in snake_case.
+[`$GIT_ROOT/openllm-python/src/openllm/models`](./src/openllm/models/) `model_name` in snake_case.
 Here's your roadmap:
 
 - [ ] Generate model configuration file:
-      `src/openllm/models/{model_name}/configuration_{model_name}.py`
+      `$GIT_ROOT/openllm-core/src/openllm_core/config/configuration_{model_name}.py`
 - [ ] Establish model implementation files:
-      `src/openllm/models/{model_name}/modeling_{runtime}_{model_name}.py`
+      `$GIT_ROOT/openllm-python/src/openllm/models/{model_name}/modeling_{runtime}_{model_name}.py`
 - [ ] Create module's `__init__.py`:
-      `src/openllm/models/{model_name}/__init__.py`
-- [ ] Adjust the entrypoints for files at `src/openllm/models/auto/*` If it is a
-      new runtime, then add it a `src/openllm/models/auto/modeling_{runtime}_auto.py`.
+      `$GIT_ROOT/openllm-python/src/openllm/models/{model_name}/__init__.py`
+- [ ] Adjust the entrypoints for files at `$GIT_ROOT/openllm-python/src/openllm/models/auto/*` If it is a
+      new runtime, then add it a `$GIT_ROOT/openllm-python/src/openllm/models/auto/modeling_{runtime}_auto.py`.
       See the other auto runtime for example.
-- [ ] Modify the main `__init__.py`: `src/openllm/models/__init__.py`
+- [ ] Run the following script: `$GIT_ROOT/tools/update-models-import.py`
 - [ ] Run the following to update stubs: `hatch run check-stubs`
+
+> [!NOTE]
+> `$GIT_ROOT` refers to `$(git rev-parse --show-toplevel)`
 
 For a working example, check out any existing model.
 

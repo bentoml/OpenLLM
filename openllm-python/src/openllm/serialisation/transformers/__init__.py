@@ -23,7 +23,7 @@ if t.TYPE_CHECKING:
   import torch.nn
 
   from bentoml._internal.models import ModelStore
-  from openllm._typing_compat import DictStrAny, M, T
+  from openllm_core._typing_compat import DictStrAny, M, T
 else:
   vllm = openllm.utils.LazyLoader("vllm", globals(), "vllm")
   autogptq = openllm.utils.LazyLoader("autogptq", globals(), "auto_gptq")

@@ -1,5 +1,7 @@
 [envs.default]
 dependencies = [
+    "openllm-core @ {root:uri}/openllm-core",
+    "openllm-client @ {root:uri}/openllm-client",
     "openllm[opt,chatglm,fine-tune] @ {root:uri}/openllm-python",
     # NOTE: To run all hooks
     "pre-commit",
@@ -50,7 +52,6 @@ typing = [
 update-dummy = ["- ./tools/update-dummy.py", "./tools/update-dummy.py"]
 [envs.tests]
 dependencies = [
-    "openllm[opt,chatglm,fine-tune] @ {root:uri}/openllm-python",
     # NOTE: interact with docker for container tests.
     "docker",
     # NOTE: Tests strategies with Hypothesis and pytest, and snapshot testing with syrupy

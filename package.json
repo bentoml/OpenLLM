@@ -1,5 +1,5 @@
 {
-  "name": "openllm",
+  "name": "openllm-monorepo",
   "version": "0.2.27.dev0",
   "description": "OpenLLM: Operating LLMs in production",
   "repository": "git@github.com:bentoml/OpenLLM.git",

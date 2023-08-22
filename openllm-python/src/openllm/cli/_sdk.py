@@ -1,6 +1,5 @@
 from __future__ import annotations
-import itertools, logging, os, re, subprocess, sys, typing as t
-import bentoml, openllm
+import itertools, logging, os, re, subprocess, sys, typing as t, bentoml, openllm, openllm_core
 from simple_di import Provide, inject
 from bentoml._internal.configuration.containers import BentoMLContainer
 from openllm.exceptions import OpenLLMException
@@ -8,10 +7,9 @@ from . import termui
 from ._factory import start_command_factory
 
 if t.TYPE_CHECKING:
-  from openllm._typing_compat import LiteralString, LiteralRuntime
+  from openllm_core._configuration import LLMConfig
+  from openllm_core._typing_compat import LiteralString, LiteralRuntime, LiteralContainerRegistry, LiteralContainerVersionStrategy
   from bentoml._internal.bento import BentoStore
-  from openllm._configuration import LLMConfig
-  from openllm.bundle.oci import LiteralContainerRegistry, LiteralContainerVersionStrategy
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +56,7 @@ def _start(model_name: str, /, *, model_id: str | None = None, timeout: int = 30
   """
   from .entrypoint import start_command, start_grpc_command
   llm_config = openllm.AutoConfig.for_model(model_name)
-  _ModelEnv = openllm.utils.EnvVarMixin(model_name, openllm.utils.first_not_none(framework, default=llm_config.default_implementation()), model_id=model_id, bettertransformer=bettertransformer, quantize=quantize, runtime=runtime)
+  _ModelEnv = openllm_core.utils.EnvVarMixin(model_name, openllm_core.utils.first_not_none(framework, default=llm_config.default_implementation()), model_id=model_id, bettertransformer=bettertransformer, quantize=quantize, runtime=runtime)
   os.environ[_ModelEnv.framework] = _ModelEnv["framework_value"]
 
   args: list[str] = ["--runtime", runtime]
@@ -203,5 +201,5 @@ def _list_models() -> dict[str, t.Any]:
   return models_command.main(args=["-o", "json", "--show-available", "--machine"], standalone_mode=False)
 
 
-start, start_grpc, build, import_model, list_models = openllm.utils.codegen.gen_sdk(_start, _serve_grpc=False), openllm.utils.codegen.gen_sdk(_start, _serve_grpc=True), openllm.utils.codegen.gen_sdk(_build), openllm.utils.codegen.gen_sdk(_import_model), openllm.utils.codegen.gen_sdk(_list_models)
+start, start_grpc, build, import_model, list_models = openllm_core.utils.codegen.gen_sdk(_start, _serve_grpc=False), openllm_core.utils.codegen.gen_sdk(_start, _serve_grpc=True), openllm_core.utils.codegen.gen_sdk(_build), openllm_core.utils.codegen.gen_sdk(_import_model), openllm_core.utils.codegen.gen_sdk(_list_models)
 __all__ = ["start", "start_grpc", "build", "import_model", "list_models"]

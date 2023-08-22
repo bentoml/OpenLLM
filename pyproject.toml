@@ -164,11 +164,9 @@ extend-select = [
   "B",    # flake8-bugbear
   "I",    # isort
   "G",    # flake8-logging-format
-  "D",    # pydocstyle
   "W",    # pycodestyle
   "Q",    # flake8-quotes
   "FA",   # flake8-future-annotations
-  "S",    # flake8-bandit
   "TCH",  # flake8-type-checking
   "PLW",  # pylint-warning
   "PLR",  # pylint-refactor
@@ -182,10 +180,6 @@ fix = true
 ignore = [
   "B027",    # Allow non-abstract empty methods in abstract base classes
   "FBT003",  # Allow boolean positional values in function calls, like `dict.get(... True)`
-  "S105",    # Ignore checks for possible passwords
-  "S106",
-  "S107",
-  "S603",    # ignore subprocess.call
   "PLR0911",
   "PLR0912",
   "PLR0913",
@@ -195,27 +189,23 @@ ignore = [
   "E401",    # ignore multiple line import
   "E702",
   "I001",    # unsorted imports
-  "D103",    # Just missing docstring for magic methods.
-  "D102",
-  "D101",
-  "D100",
   "TCH004",  # don't move runtime import out, just warn about it
   "RUF012",  # mutable attributes to be used with ClassVar
   "B905",    # zip warning about strict, only applicable for 3.10+
-  "D105",    # magic docstring
   "E701",    # multiple statement on single line
 ]
 line-length = 768
-target-version = "py38"
-typing-modules = ["openllm._typing_compat"]
+target-version = "py312"
+typing-modules = ["openllm_core._typing_compat"]
 unfixable = ["TCH004"]
 [tool.ruff.flake8-type-checking]
-exempt-modules = ["typing", "typing_extensions", "openllm._typing_compat"]
+exempt-modules = ["typing", "typing_extensions", "openllm_core._typing_compat"]
 runtime-evaluated-base-classes = [
   "pydantic.BaseModel",
-  "openllm._configuration.LLMConfig",
-  "openllm._configuration.GenerationConfig",
-  "openllm._configuration.ModelSettings",
+  "openllm_core._configuration.LLMConfig",
+  "openllm_core._configuration.GenerationConfig",
+  "openllm_core._configuration.ModelSettings",
+  "openllm.LLMConfig",
 ]
 runtime-evaluated-decorators = ["attrs.define", "attrs.frozen", "trait"]
 [tool.ruff.pydocstyle]
@@ -226,7 +216,7 @@ ignore-overlong-task-comments = true
 combine-as-imports = true
 force-single-line = false
 force-wrap-aliases = true
-known-first-party = ["openllm", "bentoml"]
+known-first-party = ["openllm", "bentoml", "openllm_core", "openllm_client"]
 known-third-party = [
   "transformers",
   "click",
@@ -244,13 +234,13 @@ required-imports = ["from __future__ import annotations"]
 avoid-escape = false
 [tool.ruff.extend-per-file-ignores]
 "openllm-python/src/openllm/_service.py" = ["E401"]
-"openllm-python/src/openllm/cli/entrypoint.py" = ["D301"]
-"openllm-python/src/openllm/client/runtimes/*" = ["D107"]
-"openllm-python/src/openllm/models/**" = ["E", "D", "F"]
-"openllm-python/src/openllm/utils/import_utils.py" = ["PLW0603"]
-"openllm-python/src/openllm/_configuration.py" = ["F811"]
-"openllm-python/tests/**/*" = ["S101", "TID252", "D", "PT011", "S307"]
-"typings/**" = ["D", "F", "E"]
+"openllm-python/src/openllm/models/**" = ["E", "F"]
+"openllm-python/tests/**/*" = ["S101", "TID252", "PT011", "S307"]
+"openllm-python/src/openllm/_llm.py" = ["F811"]
+"openllm-core/src/openllm_core/utils/import_utils.py" = ["PLW0603", "F811"]
+"openllm-core/src/openllm_core/_configuration.py" = ["F811"]
+"openllm-client/src/openllm_client/bentoclient/_http.py" = ["PERF203"]
+"typings/**" = ["F", "E"]
 
 [tool.yapf]
 ALIGN_CLOSING_BRACKET_WITH_VISUAL_INDENT = true
@@ -311,7 +301,7 @@ omit = [
   "openllm-python/src/openllm/__init__.py",
   "openllm-python/src/openllm/__main__.py",
   "openllm-python/src/openllm/utils/dummy_*.py",
-  "openllm-python/src/openllm/_typing_compat.py",
+  "openllm-core/src/openllm_core/_typing_compat.py",
 ]
 source_pkgs = ["openllm"]
 [tool.coverage.report]
@@ -327,6 +317,7 @@ exclude_lines = [
   'if DEBUG:',
   'if utils.DEBUG',
   'if openllm.utils.DEBUG',
+  'if openllm_core.utils.DEBUG',
   '@_overload',
   '@overload',
   '@t.overload',
@@ -342,7 +333,7 @@ omit = [
   "openllm-python/src/openllm/__init__.py",
   "openllm-python/src/openllm/__main__.py",
   "openllm-python/src/openllm/utils/dummy_*.py",
-  "openllm-python/src/openllm/_typing_compat.py",
+  "openllm-core/src/openllm_core/_typing_compat.py",
 ]
 precision = 2
 show_missing = true
@@ -359,15 +350,19 @@ exclude = [
   "openllm-python/src/openllm/__init__.py",
   "openllm-python/src/openllm/__main__.py",
   "openllm-python/src/openllm/utils/dummy_*.py",
-  "openllm-python/src/openllm/_typing_compat.py",
   "openllm-python/tests",
+  "openllm-core/src/openllm_core/_typing_compat.py",
   "cz.py",
   "hatch_build.py",
   "tools",
   "examples",
   "typings",
 ]
-executionEnvironments = [{ root = "openllm-python/src" }]
+executionEnvironments = [
+  { root = "openllm-python/src" },
+  { root = "openllm-core/src" },
+  { root = "openllm-client/src" },
+]
 pythonVersion = "3.12"
 enableExperimentalFeatures = true
 reportMissingImports = "warning"
@@ -389,10 +384,10 @@ exclude = [
   "openllm-python/src/openllm/playground",
   "openllm-python/src/openllm/utils/dummy_*.py",
   "openllm-python/src/openllm/models",
-  "openllm-python/src/openllm/_typing_compat.py",
   "openllm-python/src/openllm/_service.py",
+  "openllm-core/src/openllm_core/_typing_compat.py",
 ]
-modules = ["openllm"]
+modules = ["openllm", "openllm-core", "openllm-client"]
 mypy_path = "typings"
 pretty = true
 python_version = "3.8"
@@ -426,4 +421,4 @@ module = [
 ]
 [[tool.mypy.overrides]]
 ignore_errors = true
-module = ["openllm.models.*", "openllm.playground.*", "openllm._typing_compat"]
+module = ["openllm.models.*", "openllm.playground.*", "openllm_core._typing_compat"]

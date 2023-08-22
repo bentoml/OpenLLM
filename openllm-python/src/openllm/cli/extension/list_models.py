@@ -5,7 +5,7 @@ from bentoml._internal.utils import human_readable_size
 from openllm.cli import termui
 from openllm.cli._factory import LiteralOutput, model_name_argument, output_option
 
-if t.TYPE_CHECKING: from openllm._typing_compat import DictStrAny
+if t.TYPE_CHECKING: from openllm_core._typing_compat import DictStrAny
 
 @click.command("list_models", context_settings=termui.CONTEXT_SETTINGS)
 @model_name_argument(required=False)

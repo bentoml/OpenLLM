@@ -9,13 +9,18 @@ deploy, and monitor any LLMs with ease.
 * Native integration with BentoML and LangChain for custom LLM apps
 """
 from __future__ import annotations
-import logging as _logging, os as _os, typing as _t, warnings as _warnings
+import logging as _logging, os as _os, typing as _t, warnings as _warnings, openllm_core
 from pathlib import Path as _Path
 from . import exceptions as exceptions, utils as utils
 
-if utils.DEBUG:
-  utils.set_debug_mode(True)
-  utils.set_quiet_mode(False)
+from openllm_core._configuration import GenerationConfig as GenerationConfig, LLMConfig as LLMConfig, SamplingParams as SamplingParams
+from openllm_core._strategies import CascadingResourceStrategy as CascadingResourceStrategy, get_resource as get_resource
+from openllm_core._schema import EmbeddingsOutput as EmbeddingsOutput, GenerationInput as GenerationInput, GenerationOutput as GenerationOutput, HfAgentInput as HfAgentInput, MetadataOutput as MetadataOutput, unmarshal_vllm_outputs as unmarshal_vllm_outputs
+from openllm_core.config import AutoConfig as AutoConfig, CONFIG_MAPPING as CONFIG_MAPPING, CONFIG_MAPPING_NAMES as CONFIG_MAPPING_NAMES, BaichuanConfig as BaichuanConfig, ChatGLMConfig as ChatGLMConfig, DollyV2Config as DollyV2Config, FalconConfig as FalconConfig, FlanT5Config as FlanT5Config, GPTNeoXConfig as GPTNeoXConfig, LlamaConfig as LlamaConfig, MPTConfig as MPTConfig, OPTConfig as OPTConfig, StableLMConfig as StableLMConfig, StarCoderConfig as StarCoderConfig
+
+if openllm_core.utils.DEBUG:
+  openllm_core.utils.set_debug_mode(True)
+  openllm_core.utils.set_quiet_mode(False)
   _logging.basicConfig(level=_logging.NOTSET)
 else:
   # configuration for bitsandbytes before import
@@ -28,40 +33,26 @@ else:
   _warnings.filterwarnings("ignore", message="Neither GITHUB_TOKEN nor GITHUB_JWT_TOKEN found: running as unauthenticated")
 
 _import_structure: dict[str, list[str]] = {
-    "exceptions": [], "models": [], "client": [], "bundle": [], "playground": [], "testing": [], "utils": ["infer_auto_class"], "serialisation": ["ggml", "transformers"], "cli._sdk": ["start", "start_grpc", "build", "import_model", "list_models"],
-    "_llm": ["LLM", "Runner", "LLMRunner", "LLMRunnable", "LLMEmbeddings"], "_configuration": ["LLMConfig", "GenerationConfig", "SamplingParams"], "_generation": ["StopSequenceCriteria", "StopOnTokens", "LogitsProcessorList", "StoppingCriteriaList", "prepare_logits_processor"],
-    "_quantisation": ["infer_quantisation_config"], "_schema": ["GenerationInput", "GenerationOutput", "MetadataOutput", "EmbeddingsOutput", "unmarshal_vllm_outputs", "HfAgentInput"], "_embeddings": ["GenericEmbeddingRunnable"], "_strategies": ["CascadingResourceStrategy", "get_resource"],
-    "models.auto": ["AutoConfig", "CONFIG_MAPPING", "MODEL_MAPPING_NAMES", "MODEL_FLAX_MAPPING_NAMES", "MODEL_TF_MAPPING_NAMES", "MODEL_VLLM_MAPPING_NAMES"], "models.chatglm": ["ChatGLMConfig"], "models.baichuan": ["BaichuanConfig"], "models.dolly_v2": ["DollyV2Config"], "models.falcon": ["FalconConfig"], "models.flan_t5": ["FlanT5Config"], "models.gpt_neox": ["GPTNeoXConfig"], "models.llama": ["LlamaConfig"], "models.mpt": ["MPTConfig"], "models.opt": ["OPTConfig"], "models.stablelm": ["StableLMConfig"], "models.starcoder": ["StarCoderConfig"]
+    "exceptions": [], "models": [], "client": [], "bundle": [], "playground": [], "testing": [],
+    "utils": ["infer_auto_class"], "serialisation": ["ggml", "transformers"], "cli._sdk": ["start", "start_grpc", "build", "import_model", "list_models"], "_quantisation": ["infer_quantisation_config"], "_embeddings": ["GenericEmbeddingRunnable"],
+    "_llm": ["LLM", "Runner", "LLMRunner", "LLMRunnable", "LLMEmbeddings"], "_generation": ["StopSequenceCriteria", "StopOnTokens", "LogitsProcessorList", "StoppingCriteriaList", "prepare_logits_processor"],
+    "models.auto": ["MODEL_MAPPING_NAMES", "MODEL_FLAX_MAPPING_NAMES", "MODEL_TF_MAPPING_NAMES", "MODEL_VLLM_MAPPING_NAMES"], "models.chatglm": [], "models.baichuan": [], "models.dolly_v2": [], "models.falcon": [], "models.flan_t5": [], "models.gpt_neox": [], "models.llama": [], "models.mpt": [], "models.opt": [], "models.stablelm": [], "models.starcoder": []
 }
 COMPILED = _Path(__file__).suffix in (".pyd", ".so")
 
 if _t.TYPE_CHECKING:
   from . import bundle as bundle, cli as cli, client as client, models as models, playground as playground, serialisation as serialisation, testing as testing
-  from ._configuration import GenerationConfig as GenerationConfig, LLMConfig as LLMConfig, SamplingParams as SamplingParams
   from ._generation import LogitsProcessorList as LogitsProcessorList, StopOnTokens as StopOnTokens, StoppingCriteriaList as StoppingCriteriaList, StopSequenceCriteria as StopSequenceCriteria, prepare_logits_processor as prepare_logits_processor
   from ._llm import LLM as LLM, LLMEmbeddings as LLMEmbeddings, LLMRunnable as LLMRunnable, LLMRunner as LLMRunner, Runner as Runner
   from ._quantisation import infer_quantisation_config as infer_quantisation_config
-  from ._schema import EmbeddingsOutput as EmbeddingsOutput, GenerationInput as GenerationInput, GenerationOutput as GenerationOutput, HfAgentInput as HfAgentInput, MetadataOutput as MetadataOutput, unmarshal_vllm_outputs as unmarshal_vllm_outputs
   from ._embeddings import GenericEmbeddingRunnable as GenericEmbeddingRunnable
-  from ._strategies import CascadingResourceStrategy as CascadingResourceStrategy, get_resource as get_resource
   from .cli._sdk import build as build, import_model as import_model, list_models as list_models, start as start, start_grpc as start_grpc
-  from .models.auto import CONFIG_MAPPING as CONFIG_MAPPING, MODEL_FLAX_MAPPING_NAMES as MODEL_FLAX_MAPPING_NAMES, MODEL_MAPPING_NAMES as MODEL_MAPPING_NAMES, MODEL_TF_MAPPING_NAMES as MODEL_TF_MAPPING_NAMES, MODEL_VLLM_MAPPING_NAMES as MODEL_VLLM_MAPPING_NAMES, AutoConfig as AutoConfig
-  from .models.baichuan import BaichuanConfig as BaichuanConfig
-  from .models.chatglm import ChatGLMConfig as ChatGLMConfig
-  from .models.dolly_v2 import DollyV2Config as DollyV2Config
-  from .models.falcon import FalconConfig as FalconConfig
-  from .models.flan_t5 import FlanT5Config as FlanT5Config
-  from .models.gpt_neox import GPTNeoXConfig as GPTNeoXConfig
-  from .models.llama import LlamaConfig as LlamaConfig
-  from .models.mpt import MPTConfig as MPTConfig
-  from .models.opt import OPTConfig as OPTConfig
-  from .models.stablelm import StableLMConfig as StableLMConfig
-  from .models.starcoder import StarCoderConfig as StarCoderConfig
+  from .models.auto import MODEL_FLAX_MAPPING_NAMES as MODEL_FLAX_MAPPING_NAMES, MODEL_MAPPING_NAMES as MODEL_MAPPING_NAMES, MODEL_TF_MAPPING_NAMES as MODEL_TF_MAPPING_NAMES, MODEL_VLLM_MAPPING_NAMES as MODEL_VLLM_MAPPING_NAMES
   from .serialisation import ggml as ggml, transformers as transformers
   from .utils import infer_auto_class as infer_auto_class
 
 try:
-  if not (utils.is_torch_available() and utils.is_cpm_kernels_available()): raise exceptions.MissingDependencyError
+  if not (openllm_core.utils.is_torch_available() and openllm_core.utils.is_cpm_kernels_available()): raise exceptions.MissingDependencyError
 except exceptions.MissingDependencyError:
   _import_structure["utils.dummy_pt_objects"] = ["ChatGLM", "Baichuan"]
 else:
@@ -71,7 +62,7 @@ else:
     from .models.baichuan import Baichuan as Baichuan
     from .models.chatglm import ChatGLM as ChatGLM
 try:
-  if not (utils.is_torch_available() and utils.is_triton_available()): raise exceptions.MissingDependencyError
+  if not (openllm_core.utils.is_torch_available() and openllm_core.utils.is_triton_available()): raise exceptions.MissingDependencyError
 except exceptions.MissingDependencyError:
   if "utils.dummy_pt_objects" in _import_structure: _import_structure["utils.dummy_pt_objects"].extend(["MPT"])
   else: _import_structure["utils.dummy_pt_objects"] = ["MPT"]
@@ -79,7 +70,7 @@ else:
   _import_structure["models.mpt"].extend(["MPT"])
   if _t.TYPE_CHECKING: from .models.mpt import MPT as MPT
 try:
-  if not (utils.is_torch_available() and utils.is_einops_available()): raise exceptions.MissingDependencyError
+  if not (openllm_core.utils.is_torch_available() and openllm_core.utils.is_einops_available()): raise exceptions.MissingDependencyError
 except exceptions.MissingDependencyError:
   if "utils.dummy_pt_objects" in _import_structure: _import_structure["utils.dummy_pt_objects"].extend(["Falcon"])
   else: _import_structure["utils.dummy_pt_objects"] = ["Falcon"]
@@ -88,7 +79,7 @@ else:
   if _t.TYPE_CHECKING: from .models.falcon import Falcon as Falcon
 
 try:
-  if not utils.is_torch_available(): raise exceptions.MissingDependencyError
+  if not openllm_core.utils.is_torch_available(): raise exceptions.MissingDependencyError
 except exceptions.MissingDependencyError:
   _import_structure["utils.dummy_pt_objects"] = [name for name in dir(utils.dummy_pt_objects) if not name.startswith("_") and name not in ("ChatGLM", "Baichuan", "MPT", "Falcon", "annotations")]
 else:
@@ -110,7 +101,7 @@ else:
     from .models.stablelm import StableLM as StableLM
     from .models.starcoder import StarCoder as StarCoder
 try:
-  if not utils.is_vllm_available(): raise exceptions.MissingDependencyError
+  if not openllm_core.utils.is_vllm_available(): raise exceptions.MissingDependencyError
 except exceptions.MissingDependencyError:
   _import_structure["utils.dummy_vllm_objects"] = [name for name in dir(utils.dummy_vllm_objects) if not name.startswith("_") and name not in ("annotations",)]
 else:
@@ -136,7 +127,7 @@ else:
     from .models.stablelm import VLLMStableLM as VLLMStableLM
     from .models.starcoder import VLLMStarCoder as VLLMStarCoder
 try:
-  if not utils.is_flax_available(): raise exceptions.MissingDependencyError
+  if not openllm_core.utils.is_flax_available(): raise exceptions.MissingDependencyError
 except exceptions.MissingDependencyError:
   _import_structure["utils.dummy_flax_objects"] = [name for name in dir(utils.dummy_flax_objects) if not name.startswith("_") and name not in ("annotations",)]
 else:
@@ -148,7 +139,7 @@ else:
     from .models.flan_t5 import FlaxFlanT5 as FlaxFlanT5
     from .models.opt import FlaxOPT as FlaxOPT
 try:
-  if not utils.is_tf_available(): raise exceptions.MissingDependencyError
+  if not openllm_core.utils.is_tf_available(): raise exceptions.MissingDependencyError
 except exceptions.MissingDependencyError:
   _import_structure["utils.dummy_tf_objects"] = [name for name in dir(utils.dummy_tf_objects) if not name.startswith("_") and name not in ("annotations",)]
 else:
@@ -161,7 +152,7 @@ else:
     from .models.opt import TFOPT as TFOPT
 
 # NOTE: update this to sys.modules[__name__] once mypy_extensions can recognize __spec__
-__lazy = utils.LazyModule(__name__, _os.path.abspath("__file__"), _import_structure, extra_objects={"COMPILED": COMPILED})
+__lazy = openllm_core.utils.LazyModule(__name__, globals()["__file__"], _import_structure, extra_objects={"COMPILED": COMPILED})
 __all__ = __lazy.__all__
 __dir__ = __lazy.__dir__
 __getattr__ = __lazy.__getattr__

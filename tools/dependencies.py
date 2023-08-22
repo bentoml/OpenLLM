@@ -74,20 +74,14 @@ _BENTOML_EXT = ["grpc", "io"]
 _TRANSFORMERS_EXT = ["torch", "tokenizers", "accelerate"]
 
 _BASE_DEPENDENCIES = [
-    Dependencies(name="bentoml", extensions=_BENTOML_EXT, lower_constraint="1.0.25"),
+    Dependencies(name="bentoml", extensions=_BENTOML_EXT, lower_constraint="1.1.2"),
     Dependencies(name="transformers", extensions=_TRANSFORMERS_EXT, lower_constraint="4.29.0"),
+    Dependencies(name="openllm-client"),
     Dependencies(name="safetensors"),
     Dependencies(name="optimum"),
-    Dependencies(name="attrs", lower_constraint="23.1.0"),
-    Dependencies(name="cattrs", lower_constraint="23.1.0"),
-    Dependencies(name="orjson"),
-    Dependencies(name="inflection"),
-    Dependencies(name="tabulate", extensions=["widechars"], lower_constraint="0.9.0"),
-    Dependencies(name="httpx"),
-    Dependencies(name="click", lower_constraint="8.1.3"),
-    Dependencies(name="typing_extensions"),
-    Dependencies(name="mypy_extensions"),  # for mypyc compilation
     Dependencies(name="ghapi"),
+    Dependencies(name="tabulate", extensions=["widechars"], lower_constraint="0.9.0"),
+    Dependencies(name="click", lower_constraint="8.1.3"),
     Dependencies(name="cuda-python", platform=("Darwin", "ne")),
     Dependencies(name="bitsandbytes", upper_constraint="0.42"),  # 0.41  works with CUDA 11.8
 ]

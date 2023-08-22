@@ -2,14 +2,13 @@ from __future__ import annotations
 import sys, typing as t
 from openllm.exceptions import MissingDependencyError
 from openllm.utils import LazyModule, is_torch_available, is_vllm_available
+from openllm_core.config.configuration_dolly_v2 import (
+  DEFAULT_PROMPT_TEMPLATE as DEFAULT_PROMPT_TEMPLATE,
+  START_DOLLY_V2_COMMAND_DOCSTRING as START_DOLLY_V2_COMMAND_DOCSTRING,
+  DollyV2Config as DollyV2Config,
+)
 
-_import_structure: dict[str, list[str]] = {"configuration_dolly_v2": ["DollyV2Config", "START_DOLLY_V2_COMMAND_DOCSTRING", "DEFAULT_PROMPT_TEMPLATE"]}
-if t.TYPE_CHECKING:
-  from .configuration_dolly_v2 import (
-    DEFAULT_PROMPT_TEMPLATE as DEFAULT_PROMPT_TEMPLATE,
-    START_DOLLY_V2_COMMAND_DOCSTRING as START_DOLLY_V2_COMMAND_DOCSTRING,
-    DollyV2Config as DollyV2Config,
-  )
+_import_structure: dict[str, list[str]] = {}
 try:
   if not is_torch_available(): raise MissingDependencyError
 except MissingDependencyError: pass

@@ -1,10 +1,8 @@
 from __future__ import annotations
-import logging, typing as t, openllm
-from openllm._prompt import process_prompt
-from .configuration_opt import DEFAULT_PROMPT_TEMPLATE
+import typing as t, openllm
+from openllm_core._prompt import process_prompt
+from openllm_core.config.configuration_opt import DEFAULT_PROMPT_TEMPLATE
 if t.TYPE_CHECKING: import vllm, transformers
-
-logger = logging.getLogger(__name__)
 class VLLMOPT(openllm.LLM["vllm.LLMEngine", "transformers.GPT2Tokenizer"]):
   __openllm_internal__ = True
   tokenizer_id = "local"

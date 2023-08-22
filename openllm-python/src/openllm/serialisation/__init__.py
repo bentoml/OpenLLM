@@ -26,7 +26,7 @@ from __future__ import annotations
 import importlib, typing as t
 import cloudpickle, fs, openllm
 from bentoml._internal.models.model import CUSTOM_OBJECTS_FILENAME
-from openllm._typing_compat import M, T, ParamSpec
+from openllm_core._typing_compat import M, T, ParamSpec
 
 if t.TYPE_CHECKING:
   import bentoml

@@ -1,15 +1,11 @@
 from __future__ import annotations
 import typing as t, os
 import openllm
-from openllm.utils import LazyModule, is_flax_available, is_tf_available, is_torch_available, is_vllm_available
+from openllm_core.utils import LazyModule, is_flax_available, is_tf_available, is_torch_available, is_vllm_available
+from openllm_core.config import AutoConfig as AutoConfig, CONFIG_MAPPING as CONFIG_MAPPING, CONFIG_MAPPING_NAMES as CONFIG_MAPPING_NAMES
 
-_import_structure: dict[str, list[str]] = {"configuration_auto": ["AutoConfig", "CONFIG_MAPPING", "CONFIG_MAPPING_NAMES"], "modeling_auto": ["MODEL_MAPPING_NAMES"], "modeling_flax_auto": ["MODEL_FLAX_MAPPING_NAMES"], "modeling_tf_auto": ["MODEL_TF_MAPPING_NAMES"], "modeling_vllm_auto": ["MODEL_VLLM_MAPPING_NAMES"]}
+_import_structure: dict[str, list[str]] = {"modeling_auto": ["MODEL_MAPPING_NAMES"], "modeling_flax_auto": ["MODEL_FLAX_MAPPING_NAMES"], "modeling_tf_auto": ["MODEL_TF_MAPPING_NAMES"], "modeling_vllm_auto": ["MODEL_VLLM_MAPPING_NAMES"]}
 if t.TYPE_CHECKING:
-  from .configuration_auto import (
-    CONFIG_MAPPING as CONFIG_MAPPING,
-    CONFIG_MAPPING_NAMES as CONFIG_MAPPING_NAMES,
-    AutoConfig as AutoConfig,
-  )
   from .modeling_auto import MODEL_MAPPING_NAMES as MODEL_MAPPING_NAMES
   from .modeling_flax_auto import MODEL_FLAX_MAPPING_NAMES as MODEL_FLAX_MAPPING_NAMES
   from .modeling_tf_auto import MODEL_TF_MAPPING_NAMES as MODEL_TF_MAPPING_NAMES

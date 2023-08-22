@@ -4,9 +4,9 @@
 
 <div align="center">
     <h1 align="center">👾 OpenLLM Client</h1>
-    <a href="https://pypi.org/project/openllm">
+    <a href="https://pypi.org/project/openllm-client">
         <img src="https://img.shields.io/pypi/v/openllm-client.svg?logo=pypi&label=PyPI&logoColor=gold" alt="pypi_status" />
-    </a><a href="https://test.pypi.org/project/openllm/">
+    </a><a href="https://test.pypi.org/project/openllm-client/">
         <img src="https://img.shields.io/badge/Nightly-PyPI?logo=pypi&label=PyPI&color=gray&link=https%3A%2F%2Ftest.pypi.org%2Fproject%2Fopenllm%2F" alt="test_pypi_status" />
     </a><a href="https://twitter.com/bentomlai">
         <img src="https://badgen.net/badge/icon/@bentomlai/1DA1F2?icon=twitter&label=Follow%20Us" alt="Twitter" />
@@ -17,8 +17,8 @@
     </a><a href="https://results.pre-commit.ci/latest/github/bentoml/OpenLLM/main">
         <img src="https://results.pre-commit.ci/badge/github/bentoml/OpenLLM/main.svg" alt="pre-commit.ci status" />
     </a><br>
-    <a href="https://pypi.org/project/openllm">
-        <img src="https://img.shields.io/pypi/pyversions/openllm.svg?logo=python&label=Python&logoColor=gold" alt="python_version" />
+    <a href="https://pypi.org/project/openllm-client">
+        <img src="https://img.shields.io/pypi/pyversions/openllm-client.svg?logo=python&label=Python&logoColor=gold" alt="python_version" />
     </a><a href="htjtps://github.com/pypa/hatch">
         <img src="https://img.shields.io/badge/%F0%9F%A5%9A-Hatch-4051b5.svg" alt="Hatch" />
     </a><a href="https://github.com/bentoml/OpenLLM/blob/main/STYLE.md">
@@ -30,8 +30,7 @@
     </a><a href="https://github.com/microsoft/pyright">
         <img src="https://img.shields.io/badge/types-pyright-yellow.svg" alt="types - pyright" />
     </a><br>
-    <p>An open platform for operating large language models (LLMs) in production.</br>
-    Fine-tune, serve, deploy, and monitor any LLMs with ease.</p>
+    <p>OpenLLM Client: Interacting with OpenLLM HTTP/gRPC server, or any BentoML server.<br/></p>
     <i></i>
 </div>
 
@@ -42,23 +41,21 @@ deploy to the cloud or on-premises, and build powerful AI apps, and more.
 
 To learn more about OpenLLM, please visit <a href="https://github.com/bentoml/OpenLLM">OpenLLM's README.md</a>
 
-This package holds the underlying client implementation for OpenLLM, in Rust. If you are
+This package holds the underlying client implementation for OpenLLM. If you are
 coming from OpenLLM, the client can be accessed via `openllm.client`.
 
 It provides somewhat of a "similar" APIs to [`bentoml.Client`](https://docs.bentoml.com/en/latest/guides/client.html)
-for interacting with OpenLLM server, in which it can be extended to use with general
+(via `openllm_client.benmin`) for interacting with OpenLLM server. This can also be extended to use with general
 BentoML server as well.
 
 > [!NOTE]
-> The component of interop with generic BentoML server will be considered as experimental
-> playground that will/can be merged back to BentoML.
-> If you are just using this package for interacting with OpenLLM server, nothing should change
-> from `openllm.client` namespace.
+> The component of interop with generic BentoML server will be considered as experimental that will/can be merged back to BentoML.
+> If you are just using this package for interacting with OpenLLM server, nothing should change from `openllm.client` namespace.
 
 ```python
-import openllm_client
+import openllm
 
-client = openllm_client.HTTPClient()
+client = openllm.client.HTTPClient()
 
 client.query('Explain to me the difference between "further" and "farther"')
 ```
@@ -69,9 +66,7 @@ client.query('Explain to me the difference between "further" and "farther"')
 
 <br/>
 
-## Development
-
-See [this doc](./DESIGN.md) for more details on the design and development of this crate.
+<!-- hatch-fancy-pypi-readme interim start -->
 
 ## 📔 Citation
 
@@ -87,3 +82,5 @@ url = {https://github.com/bentoml/OpenLLM},
 year = {2023}
 }
 ```
+
+<!-- hatch-fancy-pypi-readme interim stop -->
