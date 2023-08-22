@@ -139,6 +139,7 @@ include = [
 mypy-args = [
   "--strict",
   # this is because all transient library doesn't have types
+  "--follow-imports=skip",
   "--allow-subclassing-any",
   "--check-untyped-defs",
   "--ignore-missing-imports",
