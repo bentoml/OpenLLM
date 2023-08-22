@@ -33,10 +33,31 @@ else:
   _warnings.filterwarnings("ignore", message="Neither GITHUB_TOKEN nor GITHUB_JWT_TOKEN found: running as unauthenticated")
 
 _import_structure: dict[str, list[str]] = {
-    "exceptions": [], "models": [], "client": [], "bundle": [], "playground": [], "testing": [],
-    "utils": ["infer_auto_class"], "serialisation": ["ggml", "transformers"], "cli._sdk": ["start", "start_grpc", "build", "import_model", "list_models"], "_quantisation": ["infer_quantisation_config"], "_embeddings": ["GenericEmbeddingRunnable"],
-    "_llm": ["LLM", "Runner", "LLMRunner", "LLMRunnable", "LLMEmbeddings"], "_generation": ["StopSequenceCriteria", "StopOnTokens", "LogitsProcessorList", "StoppingCriteriaList", "prepare_logits_processor"],
-    "models.auto": ["MODEL_MAPPING_NAMES", "MODEL_FLAX_MAPPING_NAMES", "MODEL_TF_MAPPING_NAMES", "MODEL_VLLM_MAPPING_NAMES"], "models.chatglm": [], "models.baichuan": [], "models.dolly_v2": [], "models.falcon": [], "models.flan_t5": [], "models.gpt_neox": [], "models.llama": [], "models.mpt": [], "models.opt": [], "models.stablelm": [], "models.starcoder": []
+    "exceptions": [],
+    "models": [],
+    "client": [],
+    "bundle": [],
+    "playground": [],
+    "testing": [],
+    "utils": ["infer_auto_class"],
+    "serialisation": ["ggml", "transformers"],
+    "cli._sdk": ["start", "start_grpc", "build", "import_model", "list_models"],
+    "_quantisation": ["infer_quantisation_config"],
+    "_embeddings": ["GenericEmbeddingRunnable"],
+    "_llm": ["LLM", "Runner", "LLMRunner", "LLMRunnable", "LLMEmbeddings"],
+    "_generation": ["StopSequenceCriteria", "StopOnTokens", "LogitsProcessorList", "StoppingCriteriaList", "prepare_logits_processor"],
+    "models.auto": ["MODEL_MAPPING_NAMES", "MODEL_FLAX_MAPPING_NAMES", "MODEL_TF_MAPPING_NAMES", "MODEL_VLLM_MAPPING_NAMES"],
+    "models.chatglm": [],
+    "models.baichuan": [],
+    "models.dolly_v2": [],
+    "models.falcon": [],
+    "models.flan_t5": [],
+    "models.gpt_neox": [],
+    "models.llama": [],
+    "models.mpt": [],
+    "models.opt": [],
+    "models.stablelm": [],
+    "models.starcoder": []
 }
 COMPILED = _Path(__file__).suffix in (".pyd", ".so")
 

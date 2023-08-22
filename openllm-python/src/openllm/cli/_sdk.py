@@ -10,11 +10,26 @@ if t.TYPE_CHECKING:
   from openllm_core._configuration import LLMConfig
   from openllm_core._typing_compat import LiteralString, LiteralRuntime, LiteralContainerRegistry, LiteralContainerVersionStrategy
   from bentoml._internal.bento import BentoStore
-
 logger = logging.getLogger(__name__)
-
-def _start(model_name: str, /, *, model_id: str | None = None, timeout: int = 30, workers_per_resource: t.Literal["conserved", "round_robin"] | float | None = None, device: tuple[str, ...] | t.Literal["all"] | None = None, quantize: t.Literal["int8", "int4", "gptq"] | None = None, bettertransformer: bool | None = None, runtime: t.Literal["ggml", "transformers"] = "transformers",
-            adapter_map: dict[LiteralString, str | None] | None = None, framework: LiteralRuntime | None = None, additional_args: list[str] | None = None, cors: bool = False, _serve_grpc: bool = False, __test__: bool = False, **_: t.Any) -> LLMConfig | subprocess.Popen[bytes]:
+def _start(
+    model_name: str,
+    /,
+    *,
+    model_id: str | None = None,
+    timeout: int = 30,
+    workers_per_resource: t.Literal["conserved", "round_robin"] | float | None = None,
+    device: tuple[str, ...] | t.Literal["all"] | None = None,
+    quantize: t.Literal["int8", "int4", "gptq"] | None = None,
+    bettertransformer: bool | None = None,
+    runtime: t.Literal["ggml", "transformers"] = "transformers",
+    adapter_map: dict[LiteralString, str | None] | None = None,
+    framework: LiteralRuntime | None = None,
+    additional_args: list[str] | None = None,
+    cors: bool = False,
+    _serve_grpc: bool = False,
+    __test__: bool = False,
+    **_: t.Any
+) -> LLMConfig | subprocess.Popen[bytes]:
   """Python API to start a LLM server. These provides one-to-one mapping to CLI arguments.
 
   For all additional arguments, pass it as string to ``additional_args``. For example, if you want to
@@ -73,9 +88,31 @@ def _start(model_name: str, /, *, model_id: str | None = None, timeout: int = 30
   if __test__: args.append("--return-process")
 
   return start_command_factory(start_command if not _serve_grpc else start_grpc_command, model_name, _context_settings=termui.CONTEXT_SETTINGS, _serve_grpc=_serve_grpc).main(args=args if len(args) > 0 else None, standalone_mode=False)
-
 @inject
-def _build(model_name: str, /, *, model_id: str | None = None, model_version: str | None = None, bento_version: str | None = None, quantize: t.Literal["int8", "int4", "gptq"] | None = None, bettertransformer: bool | None = None, adapter_map: dict[str, str | None] | None = None, build_ctx: str | None = None, enable_features: tuple[str, ...] | None = None, workers_per_resource: float | None = None, runtime: t.Literal["ggml", "transformers"] = "transformers", dockerfile_template: str | None = None, overwrite: bool = False, container_registry: LiteralContainerRegistry | None = None, container_version_strategy: LiteralContainerVersionStrategy | None = None, push: bool = False, containerize: bool = False, serialisation_format: t.Literal["safetensors", "legacy"] = "safetensors", additional_args: list[str] | None = None, bento_store: BentoStore = Provide[BentoMLContainer.bento_store]) -> bentoml.Bento:
+def _build(
+    model_name: str,
+    /,
+    *,
+    model_id: str | None = None,
+    model_version: str | None = None,
+    bento_version: str | None = None,
+    quantize: t.Literal["int8", "int4", "gptq"] | None = None,
+    bettertransformer: bool | None = None,
+    adapter_map: dict[str, str | None] | None = None,
+    build_ctx: str | None = None,
+    enable_features: tuple[str, ...] | None = None,
+    workers_per_resource: float | None = None,
+    runtime: t.Literal["ggml", "transformers"] = "transformers",
+    dockerfile_template: str | None = None,
+    overwrite: bool = False,
+    container_registry: LiteralContainerRegistry | None = None,
+    container_version_strategy: LiteralContainerVersionStrategy | None = None,
+    push: bool = False,
+    containerize: bool = False,
+    serialisation_format: t.Literal["safetensors", "legacy"] = "safetensors",
+    additional_args: list[str] | None = None,
+    bento_store: BentoStore = Provide[BentoMLContainer.bento_store]
+) -> bentoml.Bento:
   """Package a LLM into a Bento.
 
   The LLM will be built into a BentoService with the following structure:
@@ -155,7 +192,6 @@ def _build(model_name: str, /, *, model_id: str | None = None, model_version: st
   matched = re.match(r"__tag__:([^:\n]+:[^:\n]+)$", output.decode("utf-8").strip())
   if matched is None: raise ValueError(f"Failed to find tag from output: {output.decode('utf-8').strip()}\nNote: Output from 'openllm build' might not be correct. Please open an issue on GitHub.")
   return bentoml.get(matched.group(1), _bento_store=bento_store)
-
 def _import_model(model_name: str, /, *, model_id: str | None = None, model_version: str | None = None, runtime: t.Literal["ggml", "transformers"] = "transformers", implementation: LiteralRuntime = "pt", quantize: t.Literal["int8", "int4", "gptq"] | None = None, serialisation_format: t.Literal["legacy", "safetensors"] = "safetensors", additional_args: t.Sequence[str] | None = None) -> bentoml.Model:
   """Import a LLM into local store.
 
@@ -194,12 +230,9 @@ def _import_model(model_name: str, /, *, model_id: str | None = None, model_vers
   if additional_args is not None: args.extend(additional_args)
   if quantize is not None: args.extend(["--quantize", quantize])
   return import_command.main(args=args, standalone_mode=False)
-
 def _list_models() -> dict[str, t.Any]:
   """List all available models within the local store."""
   from .entrypoint import models_command
   return models_command.main(args=["-o", "json", "--show-available", "--machine"], standalone_mode=False)
-
-
 start, start_grpc, build, import_model, list_models = openllm_core.utils.codegen.gen_sdk(_start, _serve_grpc=False), openllm_core.utils.codegen.gen_sdk(_start, _serve_grpc=True), openllm_core.utils.codegen.gen_sdk(_build), openllm_core.utils.codegen.gen_sdk(_import_model), openllm_core.utils.codegen.gen_sdk(_list_models)
 __all__ = ["start", "start_grpc", "build", "import_model", "list_models"]

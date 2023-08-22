@@ -8,24 +8,24 @@ For example, the following config class:
 
 ```python
 class FlanT5Config(openllm.LLMConfig):
-    __config__ = {
-        "url": "https://huggingface.co/docs/transformers/model_doc/flan-t5",
-        "default_id": "google/flan-t5-large",
-        "model_ids": [
-            "google/flan-t5-small",
-            "google/flan-t5-base",
-            "google/flan-t5-large",
-            "google/flan-t5-xl",
-            "google/flan-t5-xxl",
-        ],
-    }
+  __config__ = {
+    "url": "https://huggingface.co/docs/transformers/model_doc/flan-t5",
+    "default_id": "google/flan-t5-large",
+    "model_ids": [
+        "google/flan-t5-small",
+        "google/flan-t5-base",
+        "google/flan-t5-large",
+        "google/flan-t5-xl",
+        "google/flan-t5-xxl",
+    ],
+  }
 
-    class GenerationConfig:
-        temperature: float = 0.9
-        max_new_tokens: int = 2048
-        top_k: int = 50
-        top_p: float = 0.4
-        repetition_penalty = 1.0
+  class GenerationConfig:
+    temperature: float = 0.9
+    max_new_tokens: int = 2048
+    top_k: int = 50
+    top_p: float = 0.4
+    repetition_penalty = 1.0
 ```
 
 which generates the environment OPENLLM_FLAN_T5_GENERATION_TEMPERATURE for users to configure temperature
@@ -40,18 +40,7 @@ from deepmerge.merger import Merger
 from ._strategies import LiteralResourceSpec, available_resource_spec, resource_spec
 from ._typing_compat import LiteralString, NotRequired, Required, overload, AdapterType, LiteralRuntime
 from .exceptions import ForbiddenAttributeError
-from .utils import (
-  ENV_VARS_TRUE_VALUES,
-  MYPY,
-  ReprMixin,
-  bentoml_cattr,
-  codegen,
-  dantic,
-  field_env_key,
-  first_not_none,
-  lenient_issubclass,
-  LazyLoader
-)
+from .utils import ENV_VARS_TRUE_VALUES, MYPY, ReprMixin, bentoml_cattr, codegen, dantic, field_env_key, first_not_none, lenient_issubclass, LazyLoader
 from .utils.import_utils import BACKENDS_MAPPING
 # NOTE: Using internal API from attr here, since we are actually allowing subclass of openllm_core.LLMConfig to become 'attrs'-ish
 from attr._compat import set_closure_cell
@@ -71,13 +60,11 @@ __all__ = ["LLMConfig", "GenerationConfig", "SamplingParams", "field_env_key"]
 
 logger = logging.getLogger(__name__)
 config_merger = Merger([(dict, "merge")], ["override"], ["override"])
-
 # case insensitive, but rename to conform with type
 class _PeftEnumMeta(enum.EnumMeta):
   def __getitem__(self, __key: str | t.Any, /) -> t.Any:
     if isinstance(__key, str): __key = inflection.underscore(__key).upper()
     return self._member_map_[__key]
-
 # vendorred from peft.utils.config.PeftType since we don't have hard dependency on peft
 # see https://github.com/huggingface/peft/blob/main/src/peft/utils/config.py
 class PeftType(str, enum.Enum, metaclass=_PeftEnumMeta):
@@ -97,21 +84,23 @@ class PeftType(str, enum.Enum, metaclass=_PeftEnumMeta):
     return None
 
   @classmethod
-  def supported(cls) -> set[str]: return {inflection.underscore(v.value) for v in cls}
-  def to_str(self) -> str: return self.value
-  @staticmethod
-  def get(__key: str | t.Any, /) -> PeftType: return PeftType[__key]  # type-safe getitem.
+  def supported(cls) -> set[str]:
+    return {inflection.underscore(v.value) for v in cls}
 
+  def to_str(self) -> str:
+    return self.value
+
+  @staticmethod
+  def get(__key: str | t.Any, /) -> PeftType:
+    return PeftType[__key]  # type-safe getitem.
 _PEFT_TASK_TYPE_TARGET_MAPPING = {"causal_lm": "CAUSAL_LM", "seq2seq_lm": "SEQ_2_SEQ_LM"}
 
 _object_setattr = object.__setattr__
-
 def _adapter_converter(value: AdapterType | str | PeftType | None) -> PeftType:
   if value is None: raise ValueError("'AdapterType' cannot be None.")
   if isinstance(value, PeftType): return value
   if value not in PeftType.supported(): raise ValueError(f"Given '{value}' is not a supported adapter type.")
   return PeftType.get(value)
-
 @attr.define(slots=True, init=True)
 class FineTuneConfig:
   """FineTuneConfig defines a default value for fine-tuning this any given LLM.
@@ -141,11 +130,16 @@ class FineTuneConfig:
   if t.TYPE_CHECKING and not MYPY:
     # The following type stubs makes __init__ aware of attrs internal type converter.
     @overload
-    def __init__(self, adapter_type: AdapterType = ..., adapter_config: dict[str, t.Any] = ..., inference_mode: bool = ..., llm_config_class: type[LLMConfig] = ...) -> None: ...
+    def __init__(self, adapter_type: AdapterType = ..., adapter_config: dict[str, t.Any] = ..., inference_mode: bool = ..., llm_config_class: type[LLMConfig] = ...) -> None:
+      ...
+
     @overload
-    def __init__(self, adapter_type: PeftType = ..., adapter_config: dict[str, t.Any] = ..., inference_mode: bool = ..., llm_config_class: type[LLMConfig] = ...) -> None: ...
+    def __init__(self, adapter_type: PeftType = ..., adapter_config: dict[str, t.Any] = ..., inference_mode: bool = ..., llm_config_class: type[LLMConfig] = ...) -> None:
+      ...
+
     # The below should be generated via attrs. Only here to conform with pyright strict checking.
-    def __init__(self, *args: t.Any, **kwargs: t.Any) -> None: ...
+    def __init__(self, *args: t.Any, **kwargs: t.Any) -> None:
+      ...
 
   adapter_type: PeftType = dantic.Field("lora", description=f"The type of adapter to use for fine-tuning. Available supported methods: {PeftType.supported()}, default to 'lora'", use_default_converter=False, converter=_adapter_converter)
   adapter_config: t.Dict[str, t.Any] = dantic.Field(None, description="The configuration for the adapter. The content of the dict depends on the adapter type.", validator=attr.validators.optional(attr.validators.instance_of(dict)), converter=attr.converters.default_if_none(factory=dict), use_default_converter=False)
@@ -172,7 +166,6 @@ class FineTuneConfig:
     adapter_type, inference_mode = attrs.pop("adapter_type", self.adapter_type), attrs.get("inference_mode", self.inference_mode)
     if "llm_config_class" in attrs: raise ForbiddenAttributeError("'llm_config_class' should not be passed when using 'with_config'.")
     return attr.evolve(self, adapter_type=adapter_type, inference_mode=inference_mode, adapter_config=config_merger.merge(self.adapter_config, attrs))
-
 @attr.frozen(slots=True, repr=False, init=False)
 class GenerationConfig(ReprMixin):
   """GenerationConfig is the attrs-compatible version of ``transformers.GenerationConfig``, with some additional validation and environment constructor.
@@ -195,7 +188,10 @@ class GenerationConfig(ReprMixin):
   top_p: float = dantic.Field(1.0, description="If set to float < 1, only the smallest set of most probable tokens with probabilities that add up to `top_p` or higher are kept for generation.")
   typical_p: float = dantic.Field(1.0, description="Local typicality measures how similar the conditional probability of predicting a target token next is to the expected conditional probability of predicting a random token next, given the partial text already generated. If set to float < 1, the smallest set of the most locally typical tokens with probabilities that add up to `typical_p` or higher are kept for generation. See [this paper](https://arxiv.org/pdf/2202.00666.pdf) for more details.")
   epsilon_cutoff: float = dantic.Field(0.0, description="If set to float strictly between 0 and 1, only tokens with a conditional probability greater than `epsilon_cutoff` will be sampled. In the paper, suggested values range from 3e-4 to 9e-4, depending on the size of the model. See [Truncation Sampling as Language Model Desmoothing](https://arxiv.org/abs/2210.15191) for more details.")
-  eta_cutoff: float = dantic.Field(0.0, description="""Eta sampling is a hybrid of locally typical sampling and epsilon sampling. If set to float strictly between 0 and 1, a token is only considered if it is greater than either `eta_cutoff` or `sqrt(eta_cutoff) * exp(-entropy(softmax(next_token_logits)))`. The latter term is intuitively the expected next token probability, scaled by `sqrt(eta_cutoff)`. In the paper, suggested values range from 3e-4 to 2e-3, depending on the size of the model. See [Truncation Sampling as Language Model Desmoothing](https://arxiv.org/abs/2210.15191) for more details. """)
+  eta_cutoff: float = dantic.Field(
+      0.0,
+      description="""Eta sampling is a hybrid of locally typical sampling and epsilon sampling. If set to float strictly between 0 and 1, a token is only considered if it is greater than either `eta_cutoff` or `sqrt(eta_cutoff) * exp(-entropy(softmax(next_token_logits)))`. The latter term is intuitively the expected next token probability, scaled by `sqrt(eta_cutoff)`. In the paper, suggested values range from 3e-4 to 2e-3, depending on the size of the model. See [Truncation Sampling as Language Model Desmoothing](https://arxiv.org/abs/2210.15191) for more details. """
+  )
   diversity_penalty: float = dantic.Field(0.0, description="This value is subtracted from a beam's score if it generates a token same as any beam from other group at a particular time. Note that `diversity_penalty` is only effective if `group beam search` is enabled. ")
   repetition_penalty: float = dantic.Field(1.0, description="The parameter for repetition penalty. 1.0 means no penalty. See [this paper](https://arxiv.org/pdf/1909.05858.pdf) for more details.")
   encoder_repetition_penalty: float = dantic.Field(1.0, description="The paramater for encoder_repetition_penalty. An exponential penalty on sequences that are not in the original input. 1.0 means no penalty.")
@@ -224,18 +220,21 @@ class GenerationConfig(ReprMixin):
 
   if t.TYPE_CHECKING and not MYPY:
     # stubs this for pyright as mypy already has a attr plugin builtin
-    def __attrs_init__(self, *args: t.Any, **attrs: t.Any) -> None: ...
+    def __attrs_init__(self, *args: t.Any, **attrs: t.Any) -> None:
+      ...
+
   def __init__(self, *, _internal: bool = False, **attrs: t.Any):
     if not _internal: raise RuntimeError("GenerationConfig is not meant to be used directly, but you can access this via a LLMConfig.generation_config")
     self.__attrs_init__(**attrs)
+
   def __getitem__(self, item: str) -> t.Any:
     if hasattr(self, item): return getattr(self, item)
     raise KeyError(f"'{self.__class__.__name__}' has no attribute {item}.")
+
   @property
-  def __repr_keys__(self) -> set[str]: return {i.name for i in attr.fields(self.__class__)}
-
+  def __repr_keys__(self) -> set[str]:
+    return {i.name for i in attr.fields(self.__class__)}
 bentoml_cattr.register_unstructure_hook_factory(lambda cls: attr.has(cls) and lenient_issubclass(cls, GenerationConfig), lambda cls: make_dict_unstructure_fn(cls, bentoml_cattr, _cattrs_omit_if_default=False, _cattrs_use_linecache=True, **{k: override(omit=True) for k, v in attr.fields_dict(cls).items() if v.default in (None, attr.NOTHING)}))
-
 @attr.frozen(slots=True, repr=False, init=False)
 class SamplingParams(ReprMixin):
   """SamplingParams is the attr-compatible version of ``vllm.SamplingParams``. It provides some utilities to also respect shared variables from ``openllm.LLMConfig``.
@@ -261,7 +260,8 @@ class SamplingParams(ReprMixin):
     top_k: int
     top_p: float
 
-    def __attrs_init__(self, *args: t.Any, **attrs: t.Any) -> None: ...
+    def __attrs_init__(self, *args: t.Any, **attrs: t.Any) -> None:
+      ...
 
   def __init__(self, *, _internal: bool = False, **attrs: t.Any):
     if not _internal: raise RuntimeError("SamplingParams is not meant to be used directly, but you can access this via a LLMConfig.sampling_config or create one with 'SamplingParams.from_generation_config'")
@@ -274,10 +274,14 @@ class SamplingParams(ReprMixin):
   def __getitem__(self, item: str) -> t.Any:
     if hasattr(self, item): return getattr(self, item)
     raise KeyError(f"'{self.__class__.__name__}' has no attribute {item}.")
-  @property
-  def __repr_keys__(self) -> set[str]: return {i.name for i in attr.fields(self.__class__)}
 
-  def to_vllm(self) -> vllm.SamplingParams: return vllm.SamplingParams(max_tokens=self.max_tokens, temperature=self.temperature, top_k=self.top_k, top_p=self.top_p, **bentoml_cattr.unstructure(self))
+  @property
+  def __repr_keys__(self) -> set[str]:
+    return {i.name for i in attr.fields(self.__class__)}
+
+  def to_vllm(self) -> vllm.SamplingParams:
+    return vllm.SamplingParams(max_tokens=self.max_tokens, temperature=self.temperature, top_k=self.top_k, top_p=self.top_p, **bentoml_cattr.unstructure(self))
+
   @classmethod
   def from_generation_config(cls, generation_config: GenerationConfig, **attrs: t.Any) -> Self:
     """The main entrypoint for creating a SamplingParams from ``openllm.LLMConfig``."""
@@ -290,13 +294,11 @@ class SamplingParams(ReprMixin):
     top_p = first_not_none(attrs.pop("top_p", None), default=generation_config["top_p"])
     max_tokens = first_not_none(attrs.pop("max_tokens", None), attrs.pop("max_new_tokens", None), default=generation_config["max_new_tokens"])
     return cls(_internal=True, temperature=temperature, top_k=top_k, top_p=top_p, max_tokens=max_tokens, **attrs)
-
 bentoml_cattr.register_unstructure_hook_factory(lambda cls: attr.has(cls) and lenient_issubclass(cls, SamplingParams), lambda cls: make_dict_unstructure_fn(cls, bentoml_cattr, _cattrs_omit_if_default=False, _cattrs_use_linecache=True, **{k: override(omit=True) for k, v in attr.fields_dict(cls).items() if v.default in (None, attr.NOTHING)}))
 bentoml_cattr.register_structure_hook_factory(lambda cls: attr.has(cls) and lenient_issubclass(cls, SamplingParams), lambda cls: make_dict_structure_fn(cls, bentoml_cattr, _cattrs_forbid_extra_keys=True, max_new_tokens=override(rename="max_tokens")))
 
 # cached it here to save one lookup per assignment
 _object_getattribute = object.__getattribute__
-
 class ModelSettings(t.TypedDict, total=False):
   """ModelSettings serve only for typing purposes as this is transcribed into LLMConfig.__config__.
 
@@ -341,9 +343,7 @@ class ModelSettings(t.TypedDict, total=False):
 
   # tokenizer_class is the custom tokenizer class for this given LLM
   tokenizer_class: t.Optional[str]
-
 _transformed_type: DictStrAny = {"fine_tune_strategies": t.Dict[AdapterType, FineTuneConfig], "default_implementation": t.Dict[LiteralResourceSpec, LiteralRuntime]}
-
 @attr.define(frozen=False, slots=True, field_transformer=lambda _, __: [attr.Attribute.from_counting_attr(k, dantic.Field(kw_only=False if t.get_origin(ann) is not Required else True, auto_default=True, use_default_converter=False, type=_transformed_type.get(k, ann), metadata={"target": f"__openllm_{k}__"}, description=f"ModelSettings field for {k}.")) for k, ann in t.get_type_hints(ModelSettings).items()])
 class _ModelSettingsAttr:
   """Internal attrs representation of ModelSettings."""
@@ -353,7 +353,8 @@ class _ModelSettingsAttr:
     raise KeyError(key)
 
   @classmethod
-  def default(cls) -> _ModelSettingsAttr: return cls(**t.cast(DictStrAny, ModelSettings(default_id="__default__", model_ids=["__default__"], architecture="PreTrainedModel", default_implementation={"cpu": "pt", "nvidia.com/gpu": "pt"}, name_type="dasherize", requires_gpu=False, url="", model_type="causal_lm", trust_remote_code=False, requirements=None, tokenizer_class=None, timeout=int(36e6), service_name="", workers_per_resource=1., runtime="transformers")))
+  def default(cls) -> _ModelSettingsAttr:
+    return cls(**t.cast(DictStrAny, ModelSettings(default_id="__default__", model_ids=["__default__"], architecture="PreTrainedModel", default_implementation={"cpu": "pt", "nvidia.com/gpu": "pt"}, name_type="dasherize", requires_gpu=False, url="", model_type="causal_lm", trust_remote_code=False, requirements=None, tokenizer_class=None, timeout=int(36e6), service_name="", workers_per_resource=1., runtime="transformers")))
 
   # NOTE: The below are dynamically generated by the field_transformer
   if t.TYPE_CHECKING:
@@ -379,7 +380,6 @@ class _ModelSettingsAttr:
     fine_tune_strategies: t.Dict[AdapterType, FineTuneConfig]
     tokenizer_class: t.Optional[str]
     # update-config-stubs.py: attrs stop
-
 # a heuristic cascading implementation resolver based on available resources
 def get_default_implementation(default_implementation_mapping: dict[LiteralResourceSpec, LiteralRuntime]) -> LiteralRuntime:
   available_spec = available_resource_spec()
@@ -387,7 +387,6 @@ def get_default_implementation(default_implementation_mapping: dict[LiteralResou
   elif resource_spec("amd") in available_spec: return default_implementation_mapping.get(resource_spec("amd"), "pt")
   elif resource_spec("nvidia") in available_spec: return default_implementation_mapping.get(resource_spec("nvidia"), "pt")
   else: return default_implementation_mapping.get(resource_spec("cpu"), "pt")
-
 def structure_settings(cl_: type[LLMConfig], cls: type[_ModelSettingsAttr]) -> _ModelSettingsAttr:
   if "generation_class" in cl_.__config__: raise ValueError(f"'generation_class' shouldn't be defined in '__config__', rather defining all required attributes under '{cl_}.GenerationConfig' instead.")
 
@@ -432,11 +431,9 @@ def structure_settings(cl_: type[LLMConfig], cls: type[_ModelSettingsAttr]) -> _
       _converted[_adapter_type] = FineTuneConfig(PeftType[_adapter_type], _possible_ft_config, False, _llm_config_class)
   _final_value_dct["fine_tune_strategies"] = _converted
   return attr.evolve(_settings_attr, **_final_value_dct)
-
 bentoml_cattr.register_structure_hook(_ModelSettingsAttr, structure_settings)
-
-def _setattr_class(attr_name: str, value_var: t.Any) -> str: return f"setattr(cls, '{attr_name}', {value_var})"
-
+def _setattr_class(attr_name: str, value_var: t.Any) -> str:
+  return f"setattr(cls, '{attr_name}', {value_var})"
 def _make_assignment_script(cls: type[LLMConfig], attributes: attr.AttrsInstance, _prefix: LiteralString = "openllm") -> t.Callable[..., None]:
   """Generate the assignment script with prefix attributes __openllm_<value>__."""
   args: ListStr = []
@@ -451,13 +448,13 @@ def _make_assignment_script(cls: type[LLMConfig], attributes: attr.AttrsInstance
     annotations[attr_name] = field.type
 
   return codegen.generate_function(cls, "__assign_attr", lines, args=("cls", *args), globs=globs, annotations=annotations)
-
 _reserved_namespace = {"__config__", "GenerationConfig", "SamplingParams"}
-
 @attr.define(slots=True)
 class _ConfigAttr:
   @staticmethod
-  def Field(default: t.Any = None, **attrs: t.Any) -> t.Any: return dantic.Field(default, **attrs)
+  def Field(default: t.Any = None, **attrs: t.Any) -> t.Any:
+    return dantic.Field(default, **attrs)
+
   """Field is a alias to the internal dantic utilities to easily create
     attrs.fields with pydantic-compatible interface. For example:
 
@@ -604,7 +601,6 @@ class _ConfigAttr:
     __openllm_tokenizer_class__: t.Optional[str] = Field(None)
     """Optional tokenizer class for this given LLM. See Llama for example."""
     # update-config-stubs.py: special stop
-
 class _ConfigBuilder:
   """A modified version of attrs internal _ClassBuilder, and should only be called within __init_subclass__ of LLMConfig.
 
@@ -673,7 +669,8 @@ class _ConfigBuilder:
     # and since we use the _ConfigBuilder in __init_subclass__, it will
     # raise recusion error. See https://peps.python.org/pep-0487/ for more
     # information on how __init_subclass__ works.
-    for k, value in cd.items(): setattr(self._cls, k, value)
+    for k, value in cd.items():
+      setattr(self._cls, k, value)
     return self.make_closure(self._cls)
 
   def make_closure(self, cls: type[t.Any]) -> type[t.Any]:
@@ -684,18 +681,23 @@ class _ConfigBuilder:
     # as `method.__closure__`.  Since we replace the class with a
     # clone, we rewrite these references so it keeps working.
     for item in cls.__dict__.values():
-      # Class- and staticmethods hide their functions inside.
-      # These might need to be rewritten as well.
-      if isinstance(item, (classmethod, staticmethod)): closure_cells = getattr(item.__func__, "__closure__", None)
-      # Workaround for property `super()` shortcut (PY3-only).
-      # There is no universal way for other descriptors.
-      elif isinstance(item, property): closure_cells = getattr(item.fget, "__closure__", None)
-      else: closure_cells = getattr(item, "__closure__", None)
+      if isinstance(item, (classmethod, staticmethod)):
+        # Class- and staticmethods hide their functions inside.
+        # These might need to be rewritten as well.
+        closure_cells = getattr(item.__func__, "__closure__", None)
+      elif isinstance(item, property):
+        # Workaround for property `super()` shortcut (PY3-only).
+        # There is no universal way for other descriptors.
+        closure_cells = getattr(item.fget, "__closure__", None)
+      else:
+        closure_cells = getattr(item, "__closure__", None)
 
       if not closure_cells: continue  # Catch None or the empty list.
       for cell in closure_cells:
-        try: match = cell.cell_contents is self._cls
-        except ValueError: pass  # ValueError: Cell is empty
+        try:
+          match = cell.cell_contents is self._cls
+        except ValueError:
+          pass  # ValueError: Cell is empty
         else:
           if match: set_closure_cell(cell, cls)
     return cls
@@ -703,12 +705,12 @@ class _ConfigBuilder:
   def add_attrs_init(self) -> Self:
     self._cls_dict["__attrs_init__"] = codegen.add_method_dunders(self._cls, _make_init(self._cls, self._attrs, self._has_pre_init, self._has_post_init, False, True, False, self._base_attr_map, False, None, True))
     return self
+
   def add_repr(self) -> Self:
     for key, fn in ReprMixin.__dict__.items():
       if key in ("__repr__", "__str__", "__repr_name__", "__repr_str__", "__repr_args__"): self._cls_dict[key] = codegen.add_method_dunders(self._cls, fn)
     self._cls_dict["__repr_keys__"] = property(lambda _: {i.name for i in self._attrs} | {"generation_config", "sampling_config"})
     return self
-
 @attr.define(slots=True, init=False)
 class LLMConfig(_ConfigAttr):
   """``openllm.LLMConfig`` is a pydantic-like ``attrs`` interface that offers fast and easy-to-use APIs.
@@ -816,14 +818,18 @@ class LLMConfig(_ConfigAttr):
 
     # auto assignment attributes generated from __config__ after create the new slot class.
     _make_assignment_script(cls, bentoml_cattr.structure(cls, _ModelSettingsAttr))(cls)
+
     def _make_subclass(class_attr: str, base: type[At], globs: dict[str, t.Any] | None = None, suffix_env: LiteralString | None = None) -> type[At]:
       camel_name = cls.__name__.replace("Config", "")
       klass = attr.make_class(f"{camel_name}{class_attr}", [], bases=(base,), slots=True, weakref_slot=True, frozen=True, repr=False, init=False, collect_by_mro=True, field_transformer=codegen.make_env_transformer(cls, cls.__openllm_model_name__, suffix=suffix_env, globs=globs, default_callback=lambda field_name, field_default: getattr(getattr(cls, class_attr), field_name, field_default) if codegen.has_own_attribute(cls, class_attr) else field_default))
       # For pickling to work, the __module__ variable needs to be set to the
       # frame where the class is created. This respect the module that is created from cls
-      try: klass.__module__ = cls.__module__
-      except (AttributeError, ValueError): pass
+      try:
+        klass.__module__ = cls.__module__
+      except (AttributeError, ValueError):
+        pass
       return t.cast("type[At]", klass)
+
     cls.__openllm_generation_class__ = _make_subclass("GenerationConfig", GenerationConfig, suffix_env="generation")
     cls.__openllm_sampling_class__ = _make_subclass("SamplingParams", SamplingParams, suffix_env="sampling")
 
@@ -864,8 +870,10 @@ class LLMConfig(_ConfigAttr):
     cls.__openllm_hints__ = {f.name: f.type for ite in [attr.fields(cls), attr.fields(cls.__openllm_generation_class__), attr.fields(cls.__openllm_sampling_class__),] for f in ite}
 
     # for pickling to work, need to set the module to the correct outer frame
-    try: cls.__module__ = sys._getframe(1).f_globals.get("__name__", "__main__")
-    except (AttributeError, ValueError): pass
+    try:
+      cls.__module__ = sys._getframe(1).f_globals.get("__name__", "__main__")
+    except (AttributeError, ValueError):
+      pass
 
   def __setattr__(self, attr: str, value: t.Any) -> None:
     if attr in _reserved_namespace: raise ForbiddenAttributeError(f"{attr} should not be set during runtime as these value will be reflected during runtime. Instead, you can create a custom LLM subclass {self.__class__.__name__}.")
@@ -889,6 +897,7 @@ class LLMConfig(_ConfigAttr):
     # The rest of attrs should only be the attributes to be passed to __attrs_init__
     self.__attrs_init__(**attrs)
 
+  # fmt: off
   # update-config-stubs.py: start
   # NOTE: ModelSettings arguments
   @overload
@@ -1052,6 +1061,7 @@ class LLMConfig(_ConfigAttr):
   @overload
   def __getitem__(self, item: t.Literal["ia3"]) -> dict[str, t.Any]: ...
   # update-config-stubs.py: stop
+  # fmt: on
 
   def __getitem__(self, item: LiteralString | t.Any) -> t.Any:
     """Allowing access LLMConfig as a dictionary. The order will always evaluate as.
@@ -1075,11 +1085,22 @@ class LLMConfig(_ConfigAttr):
   def __getattribute__(self, item: str) -> t.Any:
     if item in _reserved_namespace: raise ForbiddenAttributeError(f"'{item}' belongs to a private namespace for {self.__class__} and should not be access nor modified.")
     return _object_getattribute.__get__(self)(item)
-  def __len__(self) -> int: return len(self.__openllm_accepted_keys__) + len(self.__openllm_extras__)
-  def keys(self) -> list[str]: return list(self.__openllm_accepted_keys__) + list(self.__openllm_extras__)
-  def values(self) -> list[t.Any]: return ([getattr(self, k.name) for k in attr.fields(self.__class__)] + [getattr(self.generation_config, k.name) for k in attr.fields(self.__openllm_generation_class__)] + [getattr(self.sampling_config, k.name) for k in attr.fields(self.__openllm_sampling_class__)] + list(self.__openllm_extras__.values()))
-  def items(self) -> list[tuple[str, t.Any]]: return ([(k.name, getattr(self, k.name)) for k in attr.fields(self.__class__)] + [(k.name, getattr(self.generation_config, k.name)) for k in attr.fields(self.__openllm_generation_class__)] + [(k.name, getattr(self.sampling_config, k.name)) for k in attr.fields(self.__openllm_sampling_class__)] + list(self.__openllm_extras__.items()))
-  def __iter__(self) -> t.Iterator[str]: return iter(self.keys())
+
+  def __len__(self) -> int:
+    return len(self.__openllm_accepted_keys__) + len(self.__openllm_extras__)
+
+  def keys(self) -> list[str]:
+    return list(self.__openllm_accepted_keys__) + list(self.__openllm_extras__)
+
+  def values(self) -> list[t.Any]:
+    return ([getattr(self, k.name) for k in attr.fields(self.__class__)] + [getattr(self.generation_config, k.name) for k in attr.fields(self.__openllm_generation_class__)] + [getattr(self.sampling_config, k.name) for k in attr.fields(self.__openllm_sampling_class__)] + list(self.__openllm_extras__.values()))
+
+  def items(self) -> list[tuple[str, t.Any]]:
+    return ([(k.name, getattr(self, k.name)) for k in attr.fields(self.__class__)] + [(k.name, getattr(self.generation_config, k.name)) for k in attr.fields(self.__openllm_generation_class__)] + [(k.name, getattr(self.sampling_config, k.name)) for k in attr.fields(self.__openllm_sampling_class__)] + list(self.__openllm_extras__.items()))
+
+  def __iter__(self) -> t.Iterator[str]:
+    return iter(self.keys())
+
   def __contains__(self, item: t.Any) -> bool:
     if item in self.__openllm_extras__: return True
     return item in self.__openllm_accepted_keys__
@@ -1114,9 +1135,12 @@ class LLMConfig(_ConfigAttr):
     # frame where the class is created.  Bypass this step in environments where
     # sys._getframe is not defined (Jython for example) or sys._getframe is not
     # defined for arguments greater than 0 (IronPython).
-    try: new_cls.__module__ = sys._getframe(1).f_globals.get("__name__", "__main__")
-    except (AttributeError, ValueError): pass
+    try:
+      new_cls.__module__ = sys._getframe(1).f_globals.get("__name__", "__main__")
+    except (AttributeError, ValueError):
+      pass
     return new_cls(**attrs)
+
   def model_dump(self, flatten: bool = False, **_: t.Any) -> DictStrAny:
     dumped = bentoml_cattr.unstructure(self)
     generation_config = bentoml_cattr.unstructure(self.generation_config)
@@ -1125,13 +1149,18 @@ class LLMConfig(_ConfigAttr):
     else: dumped["generation_config"] = generation_config
     dumped.update(sampling_config)
     return dumped
-  def model_dump_json(self, **kwargs: t.Any) -> bytes: return orjson.dumps(self.model_dump(**kwargs))
+
+  def model_dump_json(self, **kwargs: t.Any) -> bytes:
+    return orjson.dumps(self.model_dump(**kwargs))
 
   @classmethod
   def model_construct_json(cls, json_str: str | bytes) -> Self:
-    try: attrs = orjson.loads(json_str)
-    except orjson.JSONDecodeError as err: raise openllm_core.exceptions.ValidationError(f"Failed to load JSON: {err}") from None
+    try:
+      attrs = orjson.loads(json_str)
+    except orjson.JSONDecodeError as err:
+      raise openllm_core.exceptions.ValidationError(f"Failed to load JSON: {err}") from None
     return bentoml_cattr.structure(attrs, cls)
+
   @classmethod
   def model_construct_env(cls, **attrs: t.Any) -> Self:
     """A helpers that respect configuration values environment variables."""
@@ -1141,8 +1170,10 @@ class LLMConfig(_ConfigAttr):
 
     config_from_env: DictStrAny = {}
     if env_json_string is not None:
-      try: config_from_env = orjson.loads(env_json_string)
-      except orjson.JSONDecodeError as e: raise RuntimeError(f"Failed to parse '{model_config}' as valid JSON string.") from e
+      try:
+        config_from_env = orjson.loads(env_json_string)
+      except orjson.JSONDecodeError as e:
+        raise RuntimeError(f"Failed to parse '{model_config}' as valid JSON string.") from e
 
     if "generation_config" in attrs:
       generation_config = attrs.pop("generation_config")
@@ -1173,13 +1204,20 @@ class LLMConfig(_ConfigAttr):
     return self.model_construct_env(**llm_config_attrs), {k: v for k, v in attrs.items() if k not in key_to_remove}
 
   @overload
-  def to_generation_config(self, return_as_dict: t.Literal[False] = False) -> transformers.GenerationConfig: ...
+  def to_generation_config(self, return_as_dict: t.Literal[False] = False) -> transformers.GenerationConfig:
+    ...
+
   @overload
-  def to_generation_config(self, return_as_dict: t.Literal[True] = ...) -> DictStrAny: ...
+  def to_generation_config(self, return_as_dict: t.Literal[True] = ...) -> DictStrAny:
+    ...
+
   def to_generation_config(self, return_as_dict: bool = False) -> transformers.GenerationConfig | DictStrAny:
     config = transformers.GenerationConfig(**bentoml_cattr.unstructure(self.generation_config))
     return config.to_dict() if return_as_dict else config
-  def to_sampling_config(self) -> vllm.SamplingParams: return self.sampling_config.to_vllm()
+
+  def to_sampling_config(self) -> vllm.SamplingParams:
+    return self.sampling_config.to_vllm()
+
   @classmethod
   def to_click_options(cls, f: AnyCallable) -> click.Command:
     """Convert current configuration to click options.
@@ -1217,9 +1255,12 @@ class LLMConfig(_ConfigAttr):
 
   # holds a mapping from self.__openllm_model_type__ to peft.TaskType
   @classmethod
-  def peft_task_type(cls) -> str: return _PEFT_TASK_TYPE_TARGET_MAPPING[cls.__openllm_model_type__]
+  def peft_task_type(cls) -> str:
+    return _PEFT_TASK_TYPE_TARGET_MAPPING[cls.__openllm_model_type__]
+
   @classmethod
-  def default_implementation(cls) -> LiteralRuntime: return first_not_none(cls.__openllm_env__["framework_value"], default=get_default_implementation(cls.__openllm_default_implementation__))
+  def default_implementation(cls) -> LiteralRuntime:
+    return first_not_none(cls.__openllm_env__["framework_value"], default=get_default_implementation(cls.__openllm_default_implementation__))
 
   def sanitize_parameters(self, prompt: str, **attrs: t.Any) -> tuple[str, DictStrAny, DictStrAny]:
     """This handler will sanitize all attrs and setup prompt text.
@@ -1245,10 +1286,7 @@ class LLMConfig(_ConfigAttr):
     `openllm.LLM` also has a postprocess_generate that will just call this method.
     """
     return generation_result
-
-
 bentoml_cattr.register_unstructure_hook_factory(lambda cls: lenient_issubclass(cls, LLMConfig), lambda cls: make_dict_unstructure_fn(cls, bentoml_cattr, _cattrs_omit_if_default=False, _cattrs_use_linecache=True))
-
 def structure_llm_config(data: t.Any, cls: type[LLMConfig]) -> LLMConfig:
   """Structure a dictionary to a LLMConfig object.
 
@@ -1270,6 +1308,5 @@ def structure_llm_config(data: t.Any, cls: type[LLMConfig]) -> LLMConfig:
   # The rest should be passed to extras
   data = {k: v for k, v in data.items() if k not in cls.__openllm_accepted_keys__}
   return cls(generation_config=generation_config, __openllm_extras__=data, **cls_attrs)
-
 bentoml_cattr.register_structure_hook_func(lambda cls: lenient_issubclass(cls, LLMConfig), structure_llm_config)
 openllm_home = os.path.expanduser(os.environ.get("OPENLLM_HOME", os.path.join(os.environ.get("XDG_CACHE_HOME", os.path.join(os.path.expanduser("~"), ".cache")), "openllm")))

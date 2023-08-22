@@ -7,7 +7,6 @@ from openllm.cli import termui
 from openllm.cli._factory import bento_complete_envvar, machine_option
 
 if t.TYPE_CHECKING: from bentoml._internal.bento import BentoStore
-
 @click.command("dive_bentos", context_settings=termui.CONTEXT_SETTINGS)
 @click.argument("bento", type=str, shell_complete=bento_complete_envvar)
 @machine_option

@@ -13,7 +13,6 @@ def parametrise_local_llm(model: str,) -> t.Generator[tuple[str, openllm.LLMRunn
   for framework, prompt in itertools.product(runtime_impl, _PROMPT_MAPPING.keys()):
     llm = openllm.Runner(model, model_id=_FRAMEWORK_MAPPING[model], ensure_available=True, implementation=framework, init_local=True,)
     yield prompt, llm
-
 def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
   if os.getenv("GITHUB_ACTIONS") is None:
     if "prompt" in metafunc.fixturenames and "llm" in metafunc.fixturenames:

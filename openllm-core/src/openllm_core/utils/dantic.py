@@ -3,11 +3,7 @@ from __future__ import annotations
 import functools, importlib, os, sys, typing as t
 from enum import Enum
 import attr, click, click_option_group as cog, inflection, orjson
-from click import (
-  ParamType,
-  shell_completion as sc,
-  types as click_types,
-)
+from click import (ParamType, shell_completion as sc, types as click_types,)
 
 if t.TYPE_CHECKING: from attr import _ValidatorType
 
@@ -15,8 +11,8 @@ AnyCallable = t.Callable[..., t.Any]
 FC = t.TypeVar("FC", bound=t.Union[AnyCallable, click.Command])
 
 __all__ = ["FC", "attrs_to_options", "Field", "parse_type", "is_typing", "is_literal", "ModuleType", "EnumChoice", "LiteralChoice", "allows_multiple", "is_mapping", "is_container", "parse_container_args", "parse_single_arg", "CUDA", "JsonType", "BytesType"]
-def __dir__() -> list[str]: return sorted(__all__)
-
+def __dir__() -> list[str]:
+  return sorted(__all__)
 def attrs_to_options(name: str, field: attr.Attribute[t.Any], model_name: str, typ: t.Any | None = None, suffix_generation: bool = False, suffix_sampling: bool = False,) -> t.Callable[[FC], FC]:
   # TODO: support parsing nested attrs class and Union
   envvar = field.metadata["env"]
@@ -34,15 +30,15 @@ def attrs_to_options(name: str, field: attr.Attribute[t.Any], model_name: str, t
   else: identifier = f"{model_name}_{underscored}"
 
   return cog.optgroup.option(identifier, full_option_name, type=parse_type(typ), required=field.default is attr.NOTHING, default=field.default if field.default not in (attr.NOTHING, None) else None, show_default=True, multiple=allows_multiple(typ) if typ else False, help=field.metadata.get("description", "(No description provided)"), show_envvar=True, envvar=envvar,)
-
 def env_converter(value: t.Any, env: str | None = None) -> t.Any:
   if env is not None:
     value = os.environ.get(env, value)
     if value is not None and isinstance(value, str):
-      try: return orjson.loads(value.lower())
-      except orjson.JSONDecodeError as err: raise RuntimeError(f"Failed to parse ({value!r}) from '{env}': {err}") from None
+      try:
+        return orjson.loads(value.lower())
+      except orjson.JSONDecodeError as err:
+        raise RuntimeError(f"Failed to parse ({value!r}) from '{env}': {err}") from None
   return value
-
 def Field(default: t.Any = None, *, ge: int | float | None = None, le: int | float | None = None, validator: _ValidatorType[t.Any] | None = None, description: str | None = None, env: str | None = None, auto_default: bool = False, use_default_converter: bool = True, **attrs: t.Any) -> t.Any:
   """A decorator that extends attr.field with additional arguments, which provides the same interface as pydantic's Field.
 
@@ -94,7 +90,6 @@ def Field(default: t.Any = None, *, ge: int | float | None = None, le: int | flo
     attrs.pop("default")
 
   return attr.field(metadata=metadata, validator=_validator, converter=converter, **attrs)
-
 def parse_type(field_type: t.Any) -> ParamType | tuple[ParamType, ...]:
   """Transforms the pydantic field's type into a click-compatible type.
 
@@ -125,7 +120,6 @@ def parse_type(field_type: t.Any) -> ParamType | tuple[ParamType, ...]:
   if lenient_issubclass(field_type, bytes): return BytesType()
   # return the current type: it should be a primitive
   return field_type
-
 def is_typing(field_type: type) -> bool:
   """Checks whether the current type is a module-like type.
 
@@ -139,7 +133,6 @@ def is_typing(field_type: type) -> bool:
   if raw is None: return False
   if raw is type or raw is t.Type: return True
   return False
-
 def is_literal(field_type: type) -> bool:
   """Checks whether the given field type is a Literal type or not.
 
@@ -154,7 +147,6 @@ def is_literal(field_type: type) -> bool:
   """
   origin = t.get_origin(field_type)
   return origin is not None and origin is t.Literal
-
 class ModuleType(ParamType):
   name = "module"
 
@@ -165,15 +157,17 @@ class ModuleType(ParamType):
 
     module = importlib.import_module(module_name)
     if class_name:
-      try: return getattr(module, class_name)
-      except AttributeError: raise ImportError(f"Module '{module_name}' does not define a '{class_name}' variable.") from None
+      try:
+        return getattr(module, class_name)
+      except AttributeError:
+        raise ImportError(f"Module '{module_name}' does not define a '{class_name}' variable.") from None
 
   def convert(self, value: str | t.Any, param: click.Parameter | None, ctx: click.Context | None) -> t.Any:
     try:
       if isinstance(value, str): return self._import_object(value)
       return value
-    except Exception as exc: self.fail(f"'{value}' is not a valid object ({type(exc)}: {exc!s})", param, ctx)
-
+    except Exception as exc:
+      self.fail(f"'{value}' is not a valid object ({type(exc)}: {exc!s})", param, ctx)
 class EnumChoice(click.Choice):
   name = "enum"
 
@@ -196,7 +190,6 @@ class EnumChoice(click.Choice):
     if isinstance(result, str):
       result = self.internal_type[result]
     return result
-
 class LiteralChoice(EnumChoice):
   name = "literal"
 
@@ -209,7 +202,6 @@ class LiteralChoice(EnumChoice):
     _mapping = {str(v): v for v in values}
     super(EnumChoice, self).__init__(list(_mapping), case_sensitive)
     self.internal_type = item_type
-
 def allows_multiple(field_type: type[t.Any]) -> bool:
   """Checks whether the current type allows for multiple arguments to be provided as input or not.
 
@@ -234,7 +226,6 @@ def allows_multiple(field_type: type[t.Any]) -> bool:
     # For the moment, only non-composite types are allowed.
     return not isinstance(args, tuple)
   return False
-
 def is_mapping(field_type: type) -> bool:
   """Checks whether this field represents a dictionary or JSON object.
 
@@ -251,7 +242,6 @@ def is_mapping(field_type: type) -> bool:
   origin = t.get_origin(field_type)
   if origin is None: return False
   return lenient_issubclass(origin, t.Mapping)
-
 def is_container(field_type: type) -> bool:
   """Checks whether the current type is a container type ('contains' other types), like lists and tuples.
 
@@ -270,7 +260,6 @@ def is_container(field_type: type) -> bool:
   # Early out for non-typing objects
   if origin is None: return False
   return lenient_issubclass(origin, t.Container)
-
 def parse_container_args(field_type: type[t.Any]) -> ParamType | tuple[ParamType, ...]:
   """Parses the arguments inside a container type (lists, tuples and so on).
 
@@ -293,7 +282,6 @@ def parse_container_args(field_type: type[t.Any]) -> ParamType | tuple[ParamType
     return parse_single_arg(args[0])
   # Then deal with fixed-length containers: Tuple[str, int, int]
   return tuple(parse_single_arg(arg) for arg in args)
-
 def parse_single_arg(arg: type) -> ParamType:
   """Returns the click-compatible type for container origin types.
 
@@ -314,23 +302,26 @@ def parse_single_arg(arg: type) -> ParamType:
   if is_container(arg): return JsonType()
   if lenient_issubclass(arg, bytes): return BytesType()
   return click_types.convert_type(arg)
-
 class BytesType(ParamType):
   name = "bytes"
+
   def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> t.Any:
     if isinstance(value, bytes): return value
-    try: return str.encode(value)
-    except Exception as exc: self.fail(f"'{value}' is not a valid string ({exc!s})", param, ctx)
-
+    try:
+      return str.encode(value)
+    except Exception as exc:
+      self.fail(f"'{value}' is not a valid string ({exc!s})", param, ctx)
 CYGWIN = sys.platform.startswith("cygwin")
 WIN = sys.platform.startswith("win")
 if sys.platform.startswith("win") and WIN:
+
   def _get_argv_encoding() -> str:
     import locale
     return locale.getpreferredencoding()
 else:
-  def _get_argv_encoding() -> str: return getattr(sys.stdin, "encoding", None) or sys.getfilesystemencoding()
 
+  def _get_argv_encoding() -> str:
+    return getattr(sys.stdin, "encoding", None) or sys.getfilesystemencoding()
 class CudaValueType(ParamType):
   name = "cuda"
   envvar_list_splitter = ","
@@ -341,6 +332,7 @@ class CudaValueType(ParamType):
     if "-1" in var:
       return var[:var.index("-1")]
     return var
+
   def shell_complete(self, ctx: click.Context, param: click.Parameter, incomplete: str) -> list[sc.CompletionItem]:
     """Return a list of :class:`~click.shell_completion.CompletionItem` objects for the incomplete value.
 
@@ -354,25 +346,30 @@ class CudaValueType(ParamType):
     from openllm_core.utils import available_devices
     mapping = incomplete.split(self.envvar_list_splitter) if incomplete else available_devices()
     return [sc.CompletionItem(str(i), help=f"CUDA device index {i}") for i in mapping]
+
   def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> t.Any:
     typ = click_types.convert_type(str)
     if isinstance(value, bytes):
       enc = _get_argv_encoding()
-      try: value = value.decode(enc)
+      try:
+        value = value.decode(enc)
       except UnicodeError:
         fs_enc = sys.getfilesystemencoding()
         if fs_enc != enc:
-          try: value = value.decode(fs_enc)
-          except UnicodeError: value = value.decode("utf-8", "replace")
-        else: value = value.decode("utf-8", "replace")
+          try:
+            value = value.decode(fs_enc)
+          except UnicodeError:
+            value = value.decode("utf-8", "replace")
+        else:
+          value = value.decode("utf-8", "replace")
     return tuple(typ(x, param, ctx) for x in value.split(","))
 
-  def __repr__(self) -> str: return "STRING"
-
+  def __repr__(self) -> str:
+    return "STRING"
 CUDA = CudaValueType()
-
 class JsonType(ParamType):
   name = "json"
+
   def __init__(self, should_load: bool = True) -> None:
     """Support JSON type for click.ParamType.
 
@@ -381,7 +378,10 @@ class JsonType(ParamType):
     """
     super().__init__()
     self.should_load = should_load
+
   def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> t.Any:
     if isinstance(value, dict) or not self.should_load: return value
-    try: return orjson.loads(value)
-    except orjson.JSONDecodeError as exc: self.fail(f"'{value}' is not a valid JSON string ({exc!s})", param, ctx)
+    try:
+      return orjson.loads(value)
+    except orjson.JSONDecodeError as exc:
+      self.fail(f"'{value}' is not a valid JSON string ({exc!s})", param, ctx)

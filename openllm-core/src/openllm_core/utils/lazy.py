@@ -1,6 +1,5 @@
 from __future__ import annotations
 import functools, importlib, importlib.machinery, importlib.metadata, importlib.util, itertools, os, time, types, warnings, typing as t, attr, openllm_core
-
 __all__ = ["VersionInfo", "LazyModule"]
 # vendorred from attrs
 @functools.total_ordering
@@ -10,27 +9,36 @@ class VersionInfo:
   minor: int = attr.field()
   micro: int = attr.field()
   releaselevel: str = attr.field()
+
   @classmethod
   def from_version_string(cls, s: str) -> VersionInfo:
     v = s.split(".")
     if len(v) == 3: v.append("final")
     return cls(major=int(v[0]), minor=int(v[1]), micro=int(v[2]), releaselevel=v[3])
+
   def _ensure_tuple(self, other: VersionInfo) -> tuple[tuple[int, int, int, str], tuple[int, int, int, str]]:
     cmp = attr.astuple(other) if self.__class__ is other.__class__ else other
     if not isinstance(cmp, tuple): raise NotImplementedError
     if not (1 <= len(cmp) <= 4): raise NotImplementedError
     return t.cast(t.Tuple[int, int, int, str], attr.astuple(self)[:len(cmp)]), t.cast(t.Tuple[int, int, int, str], cmp)
+
   def __eq__(self, other: t.Any) -> bool:
-    try: us, them = self._ensure_tuple(other)
-    except NotImplementedError: return NotImplemented
+    try:
+      us, them = self._ensure_tuple(other)
+    except NotImplementedError:
+      return NotImplemented
     return us == them
+
   def __lt__(self, other: t.Any) -> bool:
-    try: us, them = self._ensure_tuple(other)
-    except NotImplementedError: return NotImplemented
+    try:
+      us, them = self._ensure_tuple(other)
+    except NotImplementedError:
+      return NotImplemented
     # Since alphabetically "dev0" < "final" < "post1" < "post2", we don't have to do anything special with releaselevel for now.
     return us < them
-  def __repr__(self) -> str: return "{0}.{1}.{2}".format(*attr.astuple(self)[:3])
 
+  def __repr__(self) -> str:
+    return "{0}.{1}.{2}".format(*attr.astuple(self)[:3])
 _sentinel, _reserved_namespace = object(), {"__openllm_migration__"}
 class LazyModule(types.ModuleType):
   # Very heavily inspired by optuna.integration._IntegrationModule: https://github.com/optuna/optuna/blob/master/optuna/integration/__init__.py
@@ -52,7 +60,8 @@ class LazyModule(types.ModuleType):
     self._class_to_module: dict[str, str] = {}
     _extra_objects = {} if extra_objects is None else extra_objects
     for key, values in import_structure.items():
-      for value in values: self._class_to_module[value] = key
+      for value in values:
+        self._class_to_module[value] = key
     # Needed for autocompletion in an IDE
     self.__all__: list[str] = list(import_structure.keys()) + list(itertools.chain(*import_structure.values()))
     self.__file__ = module_file
@@ -62,11 +71,13 @@ class LazyModule(types.ModuleType):
     self._name = name
     self._objects = _extra_objects
     self._import_structure = import_structure
+
   def __dir__(self) -> list[str]:
     result = t.cast("list[str]", super().__dir__())
     # The elements of self.__all__ that are submodules may or may not be in the dir already, depending on whether
     # they have been accessed or not. So we only add the elements of self.__all__ that are not already in the dir.
     return result + [i for i in self.__all__ if i not in result]
+
   def __getattr__(self, name: str) -> t.Any:
     """Equivocal __getattr__ implementation.
 
@@ -99,8 +110,13 @@ class LazyModule(types.ModuleType):
     else: raise AttributeError(f"module {self.__name__} has no attribute {name}")
     setattr(self, name, value)
     return value
+
   def _get_module(self, module_name: str) -> types.ModuleType:
-    try: return importlib.import_module("." + module_name, self.__name__)
-    except Exception as e: raise RuntimeError(f"Failed to import {self.__name__}.{module_name} because of the following error (look up to see its traceback):\n{e}") from e
+    try:
+      return importlib.import_module("." + module_name, self.__name__)
+    except Exception as e:
+      raise RuntimeError(f"Failed to import {self.__name__}.{module_name} because of the following error (look up to see its traceback):\n{e}") from e
+
   # make sure this module is picklable
-  def __reduce__(self) -> tuple[type[LazyModule], tuple[str, str | None, dict[str, list[str]]]]: return (self.__class__, (self._name, self.__file__, self._import_structure))
+  def __reduce__(self) -> tuple[type[LazyModule], tuple[str, str | None, dict[str, list[str]]]]:
+    return (self.__class__, (self._name, self.__file__, self._import_structure))

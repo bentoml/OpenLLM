@@ -6,4 +6,6 @@
     exit 1
 )
 
-yapf -pdrm 2> /dev/null || exit 0
+yapf -pri openllm-python/** 2>/dev/null
+yapf -pri  openllm-core/** 2>/dev/null
+yapf -pri  openllm-client/** 2>/dev/null

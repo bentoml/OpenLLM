@@ -32,6 +32,7 @@ inplace-changelog = "towncrier build --version main --keep"
 quality = [
     "./tools/dependencies.py",
     "./tools/update-readme.py",
+    "- ./tools/yapf",
     "- ./tools/update-brew-tap.py",
     "bash ./tools/sync-readme.sh",
     "check-stubs",

@@ -1,6 +1,6 @@
 ci:
   autoupdate_schedule: weekly
-  skip: [check-models-table-update, changelog-dry-run, pyright, yapf, mypy, sync-readme, clj-kondo]
+  skip: [check-models-table-update, changelog-dry-run, pyright, mypy, sync-readme, clj-kondo]
   autofix_commit_msg: "ci: auto fixes from pre-commit.ci\n\nFor more information, see https://pre-commit.ci"
   autoupdate_commit_msg: 'ci: pre-commit autoupdate [pre-commit.ci]'
 default_language_version:
@@ -26,6 +26,11 @@ repos:
         types: [python]
         exclude: ^(docs|tools|openllm-python/tests)
         args: [--config=pyproject.toml]
+  - repo: https://github.com/google/yapf
+    rev: v0.40.1
+    hooks:
+      - id: yapf
+        verbose: true
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.5.0
     hooks:
@@ -71,16 +76,16 @@ repos:
       - id: check-yaml
         args: ['--unsafe']
       - id: check-toml
+      - id: check-docstring-first
+      - id: check-added-large-files
+      - id: debug-statements
+      - id: check-merge-conflict
+  - repo: meta
+    hooks:
+      - id: check-hooks-apply
+      - id: check-useless-excludes
   - repo: local
     hooks:
-      - id: yapf
-        verbose: true
-        name: yapf
-        entry: ./tools/yapf
-        types: [python]
-        language: python
-        pass_filenames: false
-        additional_dependencies: ['yapf==0.40.0']
       - id: check-models-table-update
         name: check if table in README.md is up-to-date
         entry: ./tools/assert-model-table-latest.py

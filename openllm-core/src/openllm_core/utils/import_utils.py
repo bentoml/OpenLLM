@@ -11,7 +11,6 @@ from .representation import ReprMixin
 if t.TYPE_CHECKING:
   BackendOrderedDict = OrderedDict[str, t.Tuple[t.Callable[[], bool], str]]
   from openllm_core._typing_compat import LiteralRuntime
-
 logger = logging.getLogger(__name__)
 OPTIONAL_DEPENDENCIES = {"opt", "flan-t5", "vllm", "fine-tune", "ggml", "agents", "openai", "playground", "gptq"}
 ENV_VARS_TRUE_VALUES = {"1", "ON", "YES", "TRUE"}
@@ -20,14 +19,14 @@ USE_TF = os.environ.get("USE_TF", "AUTO").upper()
 USE_TORCH = os.environ.get("USE_TORCH", "AUTO").upper()
 USE_JAX = os.environ.get("USE_FLAX", "AUTO").upper()
 FORCE_TF_AVAILABLE = os.environ.get("FORCE_TF_AVAILABLE", "AUTO").upper()
-
 def _is_package_available(package: str) -> bool:
   _package_available = importlib.util.find_spec(package) is not None
   if _package_available:
-    try: importlib.metadata.version(package)
-    except importlib.metadata.PackageNotFoundError: _package_available = False
+    try:
+      importlib.metadata.version(package)
+    except importlib.metadata.PackageNotFoundError:
+      _package_available = False
   return _package_available
-
 _torch_available = importlib.util.find_spec("torch") is not None
 _tf_available = importlib.util.find_spec("tensorflow") is not None
 _flax_available = importlib.util.find_spec("jax") is not None and importlib.util.find_spec("flax") is not None
@@ -48,32 +47,52 @@ _autogptq_available = _is_package_available("auto_gptq")
 _sentencepiece_available = _is_package_available("sentencepiece")
 _xformers_available = _is_package_available("xformers")
 _fairscale_available = _is_package_available("fairscale")
-
-def is_transformers_available() -> bool: return _transformers_available
-def is_grpc_available() -> bool: return _grpc_available
-def is_grpc_health_available() -> bool: return _grpc_health_available
-def is_transformers_supports_kbit() -> bool: return pkg.pkg_version_info("transformers")[:2] >= (4, 30)
-def is_transformers_supports_agent() -> bool: return pkg.pkg_version_info("transformers")[:2] >= (4, 29)
-def is_jupyter_available() -> bool: return _jupyter_available
-def is_jupytext_available() -> bool: return _jupytext_available
-def is_notebook_available() -> bool: return _notebook_available
-def is_triton_available() -> bool: return _triton_available
-def is_datasets_available() -> bool: return _datasets_available
-def is_peft_available() -> bool: return _peft_available
-def is_einops_available() -> bool: return _einops_available
-def is_cpm_kernels_available() -> bool: return _cpm_kernel_available
-def is_bitsandbytes_available() -> bool: return _bitsandbytes_available
-def is_autogptq_available() -> bool: return _autogptq_available
-def is_vllm_available() -> bool: return _vllm_available
-def is_sentencepiece_available() -> bool: return _sentencepiece_available
-def is_xformers_available() -> bool: return _xformers_available
-def is_fairscale_available() -> bool: return _fairscale_available
+def is_transformers_available() -> bool:
+  return _transformers_available
+def is_grpc_available() -> bool:
+  return _grpc_available
+def is_grpc_health_available() -> bool:
+  return _grpc_health_available
+def is_transformers_supports_kbit() -> bool:
+  return pkg.pkg_version_info("transformers")[:2] >= (4, 30)
+def is_transformers_supports_agent() -> bool:
+  return pkg.pkg_version_info("transformers")[:2] >= (4, 29)
+def is_jupyter_available() -> bool:
+  return _jupyter_available
+def is_jupytext_available() -> bool:
+  return _jupytext_available
+def is_notebook_available() -> bool:
+  return _notebook_available
+def is_triton_available() -> bool:
+  return _triton_available
+def is_datasets_available() -> bool:
+  return _datasets_available
+def is_peft_available() -> bool:
+  return _peft_available
+def is_einops_available() -> bool:
+  return _einops_available
+def is_cpm_kernels_available() -> bool:
+  return _cpm_kernel_available
+def is_bitsandbytes_available() -> bool:
+  return _bitsandbytes_available
+def is_autogptq_available() -> bool:
+  return _autogptq_available
+def is_vllm_available() -> bool:
+  return _vllm_available
+def is_sentencepiece_available() -> bool:
+  return _sentencepiece_available
+def is_xformers_available() -> bool:
+  return _xformers_available
+def is_fairscale_available() -> bool:
+  return _fairscale_available
 def is_torch_available() -> bool:
   global _torch_available
   if USE_TORCH in ENV_VARS_TRUE_AND_AUTO_VALUES and USE_TF not in ENV_VARS_TRUE_VALUES:
     if _torch_available:
-      try: importlib.metadata.version("torch")
-      except importlib.metadata.PackageNotFoundError: _torch_available = False
+      try:
+        importlib.metadata.version("torch")
+      except importlib.metadata.PackageNotFoundError:
+        _torch_available = False
   else:
     logger.info("Disabling PyTorch because USE_TF is set")
     _torch_available = False
@@ -92,7 +111,8 @@ def is_tf_available() -> bool:
           try:
             _tf_version = importlib.metadata.version(_pkg)
             break
-          except importlib.metadata.PackageNotFoundError: pass  # Ok to ignore here since we actually need to check for all possible tensorflow distribution.
+          except importlib.metadata.PackageNotFoundError:
+            pass  # Ok to ignore here since we actually need to check for all possible tensorflow distribution.
         _tf_available = _tf_version is not None
       if _tf_available:
         if _tf_version and packaging.version.parse(_tf_version) < packaging.version.parse("2"):
@@ -109,11 +129,11 @@ def is_flax_available() -> bool:
       try:
         importlib.metadata.version("jax")
         importlib.metadata.version("flax")
-      except importlib.metadata.PackageNotFoundError: _flax_available = False
+      except importlib.metadata.PackageNotFoundError:
+        _flax_available = False
   else:
     _flax_available = False
   return _flax_available
-
 VLLM_IMPORT_ERROR_WITH_PYTORCH = """\
 {0} requires the vLLM library but it was not found in your environment.
 However, we were able to find a PyTorch installation. PyTorch classes do not begin
@@ -220,22 +240,19 @@ You can install it with pip: `pip install fairscale`. Please note that you may n
 your runtime after installation.
 """
 
-BACKENDS_MAPPING: BackendOrderedDict = OrderedDict([("flax", (is_flax_available, FLAX_IMPORT_ERROR)), ("tf", (is_tf_available, TENSORFLOW_IMPORT_ERROR)), ("torch", (is_torch_available, PYTORCH_IMPORT_ERROR)),
-                                                    ("vllm", (is_vllm_available, VLLM_IMPORT_ERROR)), ("cpm_kernels", (is_cpm_kernels_available, CPM_KERNELS_IMPORT_ERROR)), ("einops", (is_einops_available, EINOPS_IMPORT_ERROR)),
-                                                    ("triton", (is_triton_available, TRITON_IMPORT_ERROR)), ("datasets", (is_datasets_available, DATASETS_IMPORT_ERROR)), ("peft", (is_peft_available, PEFT_IMPORT_ERROR)),
-                                                    ("bitsandbytes", (is_bitsandbytes_available, BITSANDBYTES_IMPORT_ERROR)), ("auto-gptq", (is_autogptq_available, AUTOGPTQ_IMPORT_ERROR)), ("sentencepiece", (is_sentencepiece_available, SENTENCEPIECE_IMPORT_ERROR)),
-                                                    ("xformers", (is_xformers_available, XFORMERS_IMPORT_ERROR)), ("fairscale", (is_fairscale_available, FAIRSCALE_IMPORT_ERROR))])
-
+BACKENDS_MAPPING: BackendOrderedDict = OrderedDict([("flax", (is_flax_available, FLAX_IMPORT_ERROR)), ("tf", (is_tf_available, TENSORFLOW_IMPORT_ERROR)), ("torch", (is_torch_available, PYTORCH_IMPORT_ERROR)), ("vllm", (is_vllm_available, VLLM_IMPORT_ERROR)), ("cpm_kernels", (is_cpm_kernels_available, CPM_KERNELS_IMPORT_ERROR)), ("einops", (is_einops_available, EINOPS_IMPORT_ERROR)), ("triton", (is_triton_available, TRITON_IMPORT_ERROR)), ("datasets", (is_datasets_available, DATASETS_IMPORT_ERROR)), (
+    "peft", (is_peft_available, PEFT_IMPORT_ERROR)
+), ("bitsandbytes", (is_bitsandbytes_available, BITSANDBYTES_IMPORT_ERROR)), ("auto-gptq", (is_autogptq_available, AUTOGPTQ_IMPORT_ERROR)), ("sentencepiece", (is_sentencepiece_available, SENTENCEPIECE_IMPORT_ERROR)), ("xformers", (is_xformers_available, XFORMERS_IMPORT_ERROR)), ("fairscale", (is_fairscale_available, FAIRSCALE_IMPORT_ERROR))])
 class DummyMetaclass(abc.ABCMeta):
   """Metaclass for dummy object.
 
   It will raises ImportError generated by ``require_backends`` if users try to access attributes from given class.
   """
   _backends: t.List[str]
+
   def __getattribute__(cls, key: str) -> t.Any:
     if key.startswith("_"): return super().__getattribute__(key)
     require_backends(cls, cls._backends)
-
 def require_backends(o: t.Any, backends: t.MutableSequence[str]) -> None:
   if not isinstance(backends, (list, tuple)): backends = list(backends)
   name = o.__name__ if hasattr(o, "__name__") else o.__class__.__name__
@@ -250,7 +267,6 @@ def require_backends(o: t.Any, backends: t.MutableSequence[str]) -> None:
     if "flax" not in backends and is_flax_available() and not is_vllm_available(): raise ImportError(VLLM_IMPORT_ERROR_WITH_FLAX.format(name))
   failed = [msg.format(name) for available, msg in (BACKENDS_MAPPING[backend] for backend in backends) if not available()]
   if failed: raise ImportError("".join(failed))
-
 class EnvVarMixin(ReprMixin):
   model_name: str
   config: str
@@ -259,32 +275,56 @@ class EnvVarMixin(ReprMixin):
   framework: str
   bettertransformer: str
   runtime: str
+
   @overload
-  def __getitem__(self, item: t.Literal["config"]) -> str: ...
+  def __getitem__(self, item: t.Literal["config"]) -> str:
+    ...
+
   @overload
-  def __getitem__(self, item: t.Literal["model_id"]) -> str: ...
+  def __getitem__(self, item: t.Literal["model_id"]) -> str:
+    ...
+
   @overload
-  def __getitem__(self, item: t.Literal["quantize"]) -> str: ...
+  def __getitem__(self, item: t.Literal["quantize"]) -> str:
+    ...
+
   @overload
-  def __getitem__(self, item: t.Literal["framework"]) -> str: ...
+  def __getitem__(self, item: t.Literal["framework"]) -> str:
+    ...
+
   @overload
-  def __getitem__(self, item: t.Literal["bettertransformer"]) -> str: ...
+  def __getitem__(self, item: t.Literal["bettertransformer"]) -> str:
+    ...
+
   @overload
-  def __getitem__(self, item: t.Literal["runtime"]) -> str: ...
+  def __getitem__(self, item: t.Literal["runtime"]) -> str:
+    ...
+
   @overload
-  def __getitem__(self, item: t.Literal["framework_value"]) -> LiteralRuntime: ...
+  def __getitem__(self, item: t.Literal["framework_value"]) -> LiteralRuntime:
+    ...
+
   @overload
-  def __getitem__(self, item: t.Literal["quantize_value"]) -> t.Literal["int8", "int4", "gptq"] | None: ...
+  def __getitem__(self, item: t.Literal["quantize_value"]) -> t.Literal["int8", "int4", "gptq"] | None:
+    ...
+
   @overload
-  def __getitem__(self, item: t.Literal["model_id_value"]) -> str | None: ...
+  def __getitem__(self, item: t.Literal["model_id_value"]) -> str | None:
+    ...
+
   @overload
-  def __getitem__(self, item: t.Literal["bettertransformer_value"]) -> bool: ...
+  def __getitem__(self, item: t.Literal["bettertransformer_value"]) -> bool:
+    ...
+
   @overload
-  def __getitem__(self, item: t.Literal["runtime_value"]) -> t.Literal["ggml", "transformers"]: ...
+  def __getitem__(self, item: t.Literal["runtime_value"]) -> t.Literal["ggml", "transformers"]:
+    ...
+
   def __getitem__(self, item: str | t.Any) -> t.Any:
     if item.endswith("_value") and hasattr(self, f"_{item}"): return object.__getattribute__(self, f"_{item}")()
     elif hasattr(self, item): return getattr(self, item)
     raise KeyError(f"Key {item} not found in {self}")
+
   def __init__(self, model_name: str, implementation: LiteralRuntime = "pt", model_id: str | None = None, bettertransformer: bool | None = None, quantize: LiteralString | None = None, runtime: t.Literal["ggml", "transformers"] = "transformers") -> None:
     """EnvVarMixin is a mixin class that returns the value extracted from environment variables."""
     from openllm_core.utils import field_env_key
@@ -294,25 +334,37 @@ class EnvVarMixin(ReprMixin):
     self._bettertransformer = bettertransformer
     self._quantize = quantize
     self._runtime = runtime
-    for att in {"config", "model_id", "quantize", "framework", "bettertransformer", "runtime"}: setattr(self, att, field_env_key(self.model_name, att.upper()))
+    for att in {"config", "model_id", "quantize", "framework", "bettertransformer", "runtime"}:
+      setattr(self, att, field_env_key(self.model_name, att.upper()))
+
   def _quantize_value(self) -> t.Literal["int8", "int4", "gptq"] | None:
     from . import first_not_none
     return t.cast(t.Optional[t.Literal["int8", "int4", "gptq"]], first_not_none(os.environ.get(self["quantize"]), default=self._quantize))
+
   def _framework_value(self) -> LiteralRuntime:
     from . import first_not_none
     return t.cast(t.Literal["pt", "tf", "flax", "vllm"], first_not_none(os.environ.get(self["framework"]), default=self._implementation))
+
   def _bettertransformer_value(self) -> bool:
     from . import first_not_none
     return t.cast(bool, first_not_none(os.environ.get(self["bettertransformer"], str(False)).upper() in ENV_VARS_TRUE_VALUES, default=self._bettertransformer))
+
   def _model_id_value(self) -> str | None:
     from . import first_not_none
     return first_not_none(os.environ.get(self["model_id"]), default=self._model_id)
+
   def _runtime_value(self) -> t.Literal["ggml", "transformers"]:
     from . import first_not_none
     return t.cast(t.Literal["ggml", "transformers"], first_not_none(os.environ.get(self["runtime"]), default=self._runtime))
+
   @property
-  def __repr_keys__(self) -> set[str]: return {"config", "model_id", "quantize", "framework", "bettertransformer", "runtime"}
+  def __repr_keys__(self) -> set[str]:
+    return {"config", "model_id", "quantize", "framework", "bettertransformer", "runtime"}
+
   @property
-  def start_docstring(self) -> str: return getattr(openllm_core.config, f"START_{self.model_name.upper()}_COMMAND_DOCSTRING")
+  def start_docstring(self) -> str:
+    return getattr(openllm_core.config, f"START_{self.model_name.upper()}_COMMAND_DOCSTRING")
+
   @property
-  def module(self) -> LazyLoader: return LazyLoader(self.model_name, globals(), f"openllm.models.{self.model_name}")
+  def module(self) -> LazyLoader:
+    return LazyLoader(self.model_name, globals(), f"openllm.models.{self.model_name}")
