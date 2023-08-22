@@ -74,25 +74,19 @@ _BENTOML_EXT = ["grpc", "io"]
 _TRANSFORMERS_EXT = ["torch", "tokenizers", "accelerate"]
 
 _BASE_DEPENDENCIES = [
-    Dependencies(name="bentoml", extensions=_BENTOML_EXT, lower_constraint="1.0.25"),
+    Dependencies(name="bentoml", extensions=_BENTOML_EXT, lower_constraint="1.1.2"),
     Dependencies(name="transformers", extensions=_TRANSFORMERS_EXT, lower_constraint="4.29.0"),
+    Dependencies(name="openllm-client"),
     Dependencies(name="safetensors"),
     Dependencies(name="optimum"),
-    Dependencies(name="attrs", lower_constraint="23.1.0"),
-    Dependencies(name="cattrs", lower_constraint="23.1.0"),
-    Dependencies(name="orjson"),
-    Dependencies(name="inflection"),
-    Dependencies(name="tabulate", extensions=["widechars"], lower_constraint="0.9.0"),
-    Dependencies(name="httpx"),
-    Dependencies(name="click", lower_constraint="8.1.3"),
-    Dependencies(name="typing_extensions"),
-    Dependencies(name="mypy_extensions"),  # for mypyc compilation
     Dependencies(name="ghapi"),
+    Dependencies(name="tabulate", extensions=["widechars"], lower_constraint="0.9.0"),
+    Dependencies(name="click", lower_constraint="8.1.3"),
     Dependencies(name="cuda-python", platform=("Darwin", "ne")),
     Dependencies(name="bitsandbytes", upper_constraint="0.42"),  # 0.41  works with CUDA 11.8
 ]
 
-_ALL_RUNTIME_DEPS = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
+_ALL_RUNTIME_DEPS = ["flax>=0.7", "jax", "jaxlib", "tensorflow", "keras"]
 FINE_TUNE_DEPS = ["peft>=0.4.0", "bitsandbytes", "datasets", "accelerate", "trl"]
 FLAN_T5_DEPS = _ALL_RUNTIME_DEPS
 OPT_DEPS = _ALL_RUNTIME_DEPS
@@ -137,10 +131,10 @@ def create_classifiers() -> Array:
 
 def create_optional_table() -> Table:
   all_array = tomlkit.array()
-  all_array.extend([f"openllm[{k}]" for k in _base_requirements])
+  all_array.append(f"openllm[{','.join(_base_requirements)}]")
 
   table = tomlkit.table(is_super_table=True)
-  _base_requirements.update({"all": all_array.multiline(True)})
+  _base_requirements.update({"full": all_array.multiline(True), "all": tomlkit.array('["openllm[full]"]')})
   table.update({k: v for k, v in sorted(_base_requirements.items())})
   table.add(tomlkit.nl())
 
@@ -163,7 +157,7 @@ def build_system() -> Table:
   table = tomlkit.table()
   table.add("build-backend", "hatchling.build")
   requires_array = tomlkit.array()
-  requires_array.extend(["hatchling==1.18.0", "hatch-vcs==0.3.0", "hatch-fancy-pypi-readme==23.1.0", "hatch-mypyc==0.16.0"])
+  requires_array.extend(["hatchling==1.18.0", "hatch-vcs==0.3.0", "hatch-fancy-pypi-readme==23.1.0"])
   table.add("requires", requires_array.multiline(True))
   return table
 

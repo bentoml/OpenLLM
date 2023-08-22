@@ -72,7 +72,7 @@ Before you can start developing, you'll need to set up your environment:
    dependencies.
 
 > [!NOTE]
-> If you want to install editable, make sure to install it from `openllm-python` folder
+> If you don't want to work with hatch, you can use the editable workflow with running `bash local.sh`
 
 ## Project Structure
 

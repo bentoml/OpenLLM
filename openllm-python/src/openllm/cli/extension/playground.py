@@ -1,13 +1,12 @@
 from __future__ import annotations
-import importlib.machinery, logging, os, pkgutil, subprocess, sys, tempfile, typing as t
-import click, yaml
+import importlib.machinery, logging, os, pkgutil, subprocess, sys, tempfile, typing as t, click, yaml
 from openllm.cli import termui
 from openllm import playground
-from openllm.utils import is_jupyter_available, is_jupytext_available, is_notebook_available
+from openllm_core.utils import is_jupyter_available, is_jupytext_available, is_notebook_available
 
 if t.TYPE_CHECKING:
   import jupytext, nbformat
-  from openllm._typing_compat import DictStrAny
+  from openllm_core._typing_compat import DictStrAny
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +37,7 @@ def cli(ctx: click.Context, output_dir: str | None, port: int) -> None:
   \b
   > [!NOTE]
   > This command requires Jupyter to be installed. Install it with 'pip install "openllm[playground]"'
-  """  # noqa: D301
+  """
   if not is_jupyter_available() or not is_jupytext_available() or not is_notebook_available():
     raise RuntimeError("Playground requires 'jupyter', 'jupytext', and 'notebook'. Install it with 'pip install \"openllm[playground]\"'")
   metadata = load_notebook_metadata()

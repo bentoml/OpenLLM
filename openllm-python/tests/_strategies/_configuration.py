@@ -1,11 +1,7 @@
 from __future__ import annotations
-import logging
-import typing as t
-
+import logging, typing as t, openllm
+from openllm_core._configuration import ModelSettings
 from hypothesis import strategies as st
-
-import openllm
-from openllm._configuration import ModelSettings
 
 logger = logging.getLogger(__name__)
 

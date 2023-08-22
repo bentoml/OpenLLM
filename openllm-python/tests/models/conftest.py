@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 import attr, docker, docker.errors, docker.types, orjson, pytest, openllm
 from syrupy.extensions.json import JSONSnapshotExtension
 from openllm._llm import normalise_model_name
-from openllm._typing_compat import DictStrAny, ListAny
+from openllm_core._typing_compat import DictStrAny, ListAny
 
 logger = logging.getLogger(__name__)
 

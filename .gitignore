@@ -141,4 +141,4 @@ pyapp
 /target
 
 .pdm-python
-/openllm-python/src/openllm/_version.py
+**/_version.py

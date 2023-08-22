@@ -1,11 +1,7 @@
 from __future__ import annotations
-import os
-import typing as t
+import os, typing as t, pytest
 
-import pytest
-
-if t.TYPE_CHECKING:
-  import openllm
+if t.TYPE_CHECKING: import openllm
 
 @pytest.mark.skipif(os.getenv("GITHUB_ACTIONS") is not None, reason="Model is too large for CI")
 def test_flan_t5_implementation(prompt: str, llm: openllm.LLM[t.Any, t.Any]):

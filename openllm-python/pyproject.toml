@@ -5,7 +5,6 @@ requires = [
   "hatchling==1.18.0",
   "hatch-vcs==0.3.0",
   "hatch-fancy-pypi-readme==23.1.0",
-  "hatch-mypyc==0.16.0",
 ]
 
 [project]
@@ -39,20 +38,14 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dependencies = [
-  "bentoml[grpc,io]>=1.0.25",
+  "bentoml[grpc,io]>=1.1.2",
   "transformers[torch,tokenizers,accelerate]>=4.29.0",
+  "openllm-client",
   "safetensors",
   "optimum",
-  "attrs>=23.1.0",
-  "cattrs>=23.1.0",
-  "orjson",
-  "inflection",
-  "tabulate[widechars]>=0.9.0",
-  "httpx",
-  "click>=8.1.3",
-  "typing_extensions",
-  "mypy_extensions",
   "ghapi",
+  "tabulate[widechars]>=0.9.0",
+  "click>=8.1.3",
   "cuda-python;platform_system!=\"Darwin\"",
   "bitsandbytes<0.42",
 ]
@@ -102,34 +95,21 @@ Twitter = "https://twitter.com/bentomlai"
 
 [project.optional-dependencies]
 agents = ["transformers[agents]>=4.30", "diffusers", "soundfile"]
-all = [
-  "openllm[agents]",
-  "openllm[baichuan]",
-  "openllm[chatglm]",
-  "openllm[falcon]",
-  "openllm[fine-tune]",
-  "openllm[flan-t5]",
-  "openllm[ggml]",
-  "openllm[gptq]",
-  "openllm[llama]",
-  "openllm[mpt]",
-  "openllm[openai]",
-  "openllm[opt]",
-  "openllm[playground]",
-  "openllm[starcoder]",
-  "openllm[vllm]",
-]
+all = ["openllm[full]"]
 baichuan = ["cpm-kernels", "sentencepiece"]
 chatglm = ["cpm-kernels", "sentencepiece"]
 falcon = ["einops", "xformers"]
 fine-tune = ["peft>=0.4.0", "bitsandbytes", "datasets", "accelerate", "trl"]
-flan-t5 = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
+flan-t5 = ["flax>=0.7", "jax", "jaxlib", "tensorflow", "keras"]
+full = [
+  "openllm[agents,baichuan,chatglm,falcon,fine-tune,flan-t5,ggml,gptq,llama,mpt,openai,opt,playground,starcoder,vllm]",
+]
 ggml = ["ctransformers"]
 gptq = ["auto-gptq[triton]"]
 llama = ["fairscale", "sentencepiece"]
 mpt = ["triton", "einops"]
 openai = ["openai", "tiktoken"]
-opt = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
+opt = ["flax>=0.7", "jax", "jaxlib", "tensorflow", "keras"]
 playground = ["jupyter", "notebook", "ipython", "jupytext", "nbformat"]
 starcoder = ["bitsandbytes"]
 vllm = ["vllm", "ray"]
@@ -165,10 +145,10 @@ exclude = [
 [tool.hatch.build.targets.wheel.hooks.mypyc]
 dependencies = [
   "hatch-mypyc==0.16.0",
-  "mypy==1.4.1",
+  "mypy==1.5.1",
   # avoid https://github.com/pallets/click/issues/2558
   "click==8.1.3",
-  "bentoml==1.1.1",
+  "bentoml==1.1.2",
   "transformers>=4.31.0",
   "pandas-stubs",
   "types-psutil",
@@ -177,19 +157,14 @@ dependencies = [
   "types-protobuf",
 ]
 enable-by-default = false
-exclude = ["src/openllm/_service.py", "src/openllm/_typing_compat.py"]
+exclude = ["src/openllm/_service.py", "src/openllm/utils/__init__.py"]
 include = [
-  "src/openllm/models/__init__.py",
-  "src/openllm/models/auto/__init__.py",
-  "src/openllm/utils/__init__.py",
   "src/openllm/__init__.py",
-  "src/openllm/_prompt.py",
-  "src/openllm/_schema.py",
   "src/openllm/_quantisation.py",
   "src/openllm/_generation.py",
-  "src/openllm/_strategies.py",
   "src/openllm/exceptions.py",
   "src/openllm/testing.py",
+  "src/openllm/utils",
 ]
 # NOTE: This is consistent with pyproject.toml
 mypy-args = [
@@ -204,7 +179,6 @@ mypy-args = [
   "--no-warn-no-return",
   "--no-warn-unused-ignores",
   "--exclude='/src\\/openllm\\/playground\\/**'",
-  "--exclude='/src\\/openllm\\/_typing_compat\\.py$'",
 ]
 options = { verbose = true, strip_asserts = true, debug_level = "2", opt_level = "3", include_runtime_files = true }
 require-runtime-dependencies = true

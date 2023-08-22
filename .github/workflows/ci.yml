@@ -116,7 +116,7 @@ jobs:
           bentoml-version: 'main'
           python-version-file: .python-version-default
       - name: Install self
-        run: pip install ./openllm-python
+        run: bash local.sh
       - name: Speed
         run: hyperfine -m 100 --warmup 10 openllm
   brew-dry-run:

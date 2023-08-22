@@ -1,14 +1,13 @@
 from __future__ import annotations
 import typing as t, bentoml, openllm, orjson, inflection ,click
-from bentoml._internal.utils import human_readable_size
-
 from openllm.cli import termui
-from openllm.cli._factory import LiteralOutput, model_name_argument, output_option
+from bentoml._internal.utils import human_readable_size
+from openllm.cli._factory import LiteralOutput, model_name_argument, output_option, model_complete_envvar
 
-if t.TYPE_CHECKING: from openllm._typing_compat import DictStrAny
+if t.TYPE_CHECKING: from openllm_core._typing_compat import DictStrAny
 
 @click.command("list_models", context_settings=termui.CONTEXT_SETTINGS)
-@model_name_argument(required=False)
+@model_name_argument(required=False, shell_complete=model_complete_envvar)
 @output_option(default_value="json")
 def cli(model_name: str | None, output: LiteralOutput) -> DictStrAny:
   """This is equivalent to openllm models --show-available less the nice table."""
