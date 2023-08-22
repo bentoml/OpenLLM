@@ -88,10 +88,12 @@ report-uncovered-html = "coverage html --skip-covered --skip-empty {args}"
 report-xml = "coverage xml {args}"
 write-summary-report = "python tools/write-coverage-report.py"
 [envs.ui]
+detached = true
 [envs.ui.scripts]
-server = """BENTOML_CONFIG_OPTIONS='api_server.http.cors.enabled=true api_server.http.cors.access_control_allow_origins="*" api_server.http.cors.access_control_allow_methods[0]="GET" api_server.http.cors.access_control_allow_methods[1]="OPTIONS" api_server.http.cors.access_control_allow_methods[2]="POST" api_server.http.cors.access_control_allow_methods[3]="HEAD" api_server.http.cors.access_control_allow_methods[4]="PUT"' openllm start {args:flan-t5} --working-dir {root:uri} --debug"""
+server = "openllm start {args:flan-t5} --working-dir {root:uri} --cors --debug"
 clojure = ["bash tools/run-clojure-ui.sh"]
 [envs.ci]
+detached = true
 [envs.ci.scripts]
 lock = [
     "bash tools/lock-actions",
