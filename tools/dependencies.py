@@ -86,7 +86,7 @@ _BASE_DEPENDENCIES = [
     Dependencies(name="bitsandbytes", upper_constraint="0.42"),  # 0.41  works with CUDA 11.8
 ]
 
-_ALL_RUNTIME_DEPS = ["flax", "jax", "jaxlib", "tensorflow", "keras"]
+_ALL_RUNTIME_DEPS = ["flax>=0.7", "jax", "jaxlib", "tensorflow", "keras"]
 FINE_TUNE_DEPS = ["peft>=0.4.0", "bitsandbytes", "datasets", "accelerate", "trl"]
 FLAN_T5_DEPS = _ALL_RUNTIME_DEPS
 OPT_DEPS = _ALL_RUNTIME_DEPS
@@ -157,7 +157,7 @@ def build_system() -> Table:
   table = tomlkit.table()
   table.add("build-backend", "hatchling.build")
   requires_array = tomlkit.array()
-  requires_array.extend(["hatchling==1.18.0", "hatch-vcs==0.3.0", "hatch-fancy-pypi-readme==23.1.0", "hatch-mypyc==0.16.0"])
+  requires_array.extend(["hatchling==1.18.0", "hatch-vcs==0.3.0", "hatch-fancy-pypi-readme==23.1.0"])
   table.add("requires", requires_array.multiline(True))
   return table
 

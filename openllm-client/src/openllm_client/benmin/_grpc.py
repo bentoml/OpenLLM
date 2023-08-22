@@ -1,3 +1,4 @@
+# mypy: disable-error-code="no-redef"
 from __future__ import annotations
 import typing as t, logging, time, functools, bentoml
 from bentoml._internal.service.inference_api import InferenceAPI

@@ -36,7 +36,7 @@ class HttpClient(Client):
   def from_url(cls, url: str, **kwargs: t.Any) -> HttpClient:
     url = url if "://" in url else "http://" + url
     resp = httpx.get(f"{url}/docs.json")
-    if resp.status_code != 200: raise ValueError(f"Failed to get OpenAPI schema from the server: {resp.status_code} {resp.reason_phrase}:\n{resp.content}")
+    if resp.status_code != 200: raise ValueError(f"Failed to get OpenAPI schema from the server: {resp.status_code} {resp.reason_phrase}:\n{resp.content.decode()}")
     _spec = orjson.loads(resp.content)
 
     reflection = bentoml.Service(_spec["info"]["title"])
@@ -59,8 +59,8 @@ class HttpClient(Client):
       fake_resp = ensure_exec_coro(_inference_api.input.to_http_response(kwargs, None))
     else: fake_resp = ensure_exec_coro(_inference_api.input.to_http_response(data, None))
 
-    # XXX: hack around StreamingResponse, since now we only have Text, so it is fine to do this.
-    if isinstance(fake_resp, starlette.responses.StreamingResponse): body = b""
+    # XXX: hack around StreamingResponse, since now we only have Text, for metadata so it is fine to do this.
+    if isinstance(fake_resp, starlette.responses.StreamingResponse): body = None
     else: body = fake_resp.body
 
     resp = self.inner.post("/" + _inference_api.route if not _inference_api.route.startswith("/") else _inference_api.route, data=body, headers={"content-type": fake_resp.headers["content-type"]}, timeout=self.timeout)
@@ -101,7 +101,7 @@ class AsyncHttpClient(AsyncClient):
     url = url if "://" in url else "http://" + url
     async with httpx.AsyncClient(base_url=url) as session:
         resp = await session.get("/docs.json")
-        if resp.status_code != 200: raise ValueError(f"Failed to get OpenAPI schema from the server: {resp.status_code} {resp.reason_phrase}:\n{await resp.aread()}")
+        if resp.status_code != 200: raise ValueError(f"Failed to get OpenAPI schema from the server: {resp.status_code} {resp.reason_phrase}:\n{(await resp.aread()).decode()}")
         _spec = orjson.loads(await resp.aread())
 
     reflection = bentoml.Service(_spec["info"]["title"])
@@ -123,9 +123,9 @@ class AsyncHttpClient(AsyncClient):
       fake_resp = await _inference_api.input.to_http_response(kwargs, None)
     else: fake_resp = await _inference_api.input.to_http_response(data, None)
 
-    # XXX: hack around StreamingResponse, since now we only have Text, so it is fine to do this.
-    if isinstance(fake_resp, starlette.responses.StreamingResponse): body = b""
-    else: body = fake_resp.body
+    # XXX: hack around StreamingResponse, since now we only have Text, for metadata so it is fine to do this.
+    if isinstance(fake_resp, starlette.responses.StreamingResponse): body = None
+    else: body = t.cast(t.Any, fake_resp.body)
 
     resp = await self.inner.post("/" + _inference_api.route if not _inference_api.route.startswith("/") else _inference_api.route, data=body, headers={"content-type": fake_resp.headers["content-type"]}, timeout=self.timeout)
     if resp.status_code != 200: raise ValueError(f"Error making request: {resp.status_code}: {(await resp.aread())!s}")

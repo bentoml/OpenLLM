@@ -12,7 +12,7 @@ if t.TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-@attr.define(slots=True, init=False)
+@attr.define(slots=False, init=False)
 class _ClientAttr:
   _address: str
   _timeout: float = attr.field(default=30)

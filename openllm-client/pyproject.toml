@@ -97,11 +97,7 @@ allow-direct-references = true
 only-include = ["src/openllm_client"]
 sources = ["src"]
 [tool.hatch.build.targets.sdist]
-exclude = [
-  "/.git_archival.txt",
-  "tests",
-  "/.python-version-default",
-]
+exclude = ["/.git_archival.txt", "tests", "/.python-version-default"]
 [tool.hatch.build.targets.wheel.hooks.mypyc]
 dependencies = [
   "hatch-mypyc==0.16.0",
@@ -117,11 +113,7 @@ dependencies = [
   "types-protobuf",
 ]
 enable-by-default = false
-include = [
-  "src/openllm_client/benmim",
-  "src/openllm_client/__init__.py",
-  "src/openllm_client/client.py",
-]
+include = ["src/openllm_client/__init__.py", "src/openllm_client/client.py"]
 # NOTE: This is consistent with pyproject.toml
 mypy-args = [
   "--strict",

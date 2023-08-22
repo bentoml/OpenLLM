@@ -28,7 +28,6 @@ check-stubs = [
     "./tools/update-models-import.py",
     "update-dummy",
 ]
-compile = "bash ./compile.sh {args}"
 inplace-changelog = "towncrier build --version main --keep"
 quality = [
     "./tools/dependencies.py",
@@ -38,13 +37,12 @@ quality = [
     "check-stubs",
     "- pre-commit run --all-files",
 ]
-recompile = ["bash ./clean.sh", "compile"]
 setup = [
     "pre-commit install",
     "- ln -s .python-version-default .python-version",
     "curl -fsSL https://raw.githubusercontent.com/clj-kondo/clj-kondo/master/script/install-clj-kondo | bash -",
 ]
-tool = ["quality", "recompile -nx"]
+tool = ["quality", "bash ./clean.sh", "bash ./compile.sh {args}"]
 typing = [
     "- pre-commit run mypy {args:-a}",
     "- pre-commit run pyright {args:-a}",
@@ -98,6 +96,8 @@ clojure = ["bash tools/run-clojure-ui.sh"]
 [envs.ci]
 detached = true
 [envs.ci.scripts]
+compile = "bash ./compile.sh {args}"
+recompile = ["bash ./clean.sh", "compile"]
 edi = "bash local.sh"
 lock = [
     "bash tools/lock-actions.sh",
