@@ -115,10 +115,10 @@ exclude = [
 [tool.hatch.build.targets.wheel.hooks.mypyc]
 dependencies = [
   "hatch-mypyc==0.16.0",
-  "mypy==1.4.1",
+  "mypy==1.5.1",
   # avoid https://github.com/pallets/click/issues/2558
   "click==8.1.3",
-  "bentoml==1.1.1",
+  "bentoml==1.1.2",
   "transformers>=4.31.0",
   "pandas-stubs",
   "types-psutil",
