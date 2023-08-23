@@ -97,7 +97,13 @@ allow-direct-references = true
 only-include = ["src/openllm_client"]
 sources = ["src"]
 [tool.hatch.build.targets.sdist]
-exclude = ["/.git_archival.txt", "tests", "/.python-version-default"]
+exclude = [
+  "/.git_archival.txt",
+  "tests",
+  "/.python-version-default",
+  "/generate-grpc-stubs",
+  "/dev.Dockerfile",
+]
 [tool.hatch.build.targets.wheel.hooks.mypyc]
 dependencies = [
   "hatch-mypyc==0.16.0",

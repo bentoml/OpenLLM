@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+#
+export BUILDX_NO_DEFAULT_LOAD=true
+
+: ${DEBUG=}
+
+progress=""
+if [ "$DEBUG" = "true" ]; then
+    progress="--progress=plain"
+fi
+
+buildxCmd() {
+    if docker buildx version > /dev/null 2>&1; then
+        set -x
+        docker buildx "$@" $progress
+    elif buildx version > /dev/null 2>&1; then
+        buildx "$@" $progress
+    else
+        echo "Make sure to have Docker Buildx installed."
+        exit 1
+    fi
+}
+
+GIT_ROOT=$(git rev-parse --show-toplevel)
+
+cd "$GIT_ROOT/openllm-client" || exit 1
+
+main() {
+    VERSION="${1:-v1}"
+    echo "Generating gRPC stubs for $VERSION..."
+
+    mkdir -p "src/openllm_client/pb/${VERSION}"
+
+    GENERATED_PB3_DIR="src/openllm_client/pb/${VERSION}/_generated_pb3"
+    \rm -rf "$GENERATED_PB3_DIR"
+    buildxCmd build --build-arg PROTOCOL_VERSION="$VERSION" \
+        --build-arg BUILDKIT_CONTEXT_KEEP_GIT_DIR=1 \
+        --build-arg GENERATED_PB3_DIR="${GENERATED_PB3_DIR}" \
+        --target "protobuf-3-output" --output "type=local,dest=${GENERATED_PB3_DIR}" --file "dev.Dockerfile" .
+
+    GENERATED_PB4_DIR="src/openllm_client/pb/${VERSION}/_generated_pb4"
+    \rm -rf "$GENERATED_PB4_DIR"
+    buildxCmd build --build-arg PROTOCOL_VERSION="$VERSION" \
+        --build-arg BUILDKIT_CONTEXT_KEEP_GIT_DIR=1 \
+        --build-arg GENERATED_PB4_DIR="${GENERATED_PB4_DIR}" \
+        --target "protobuf-4-output" --output "type=local,dest=${GENERATED_PB4_DIR}" --file "dev.Dockerfile" .
+    touch "src/openllm_client/pb/${VERSION}/__init__.py"
+    files=("service_pb2.py" "service_pb2.pyi" "service_pb2_grpc.py" "service_pb2_grpc.pyi")
+    for file in "${files[@]}";do
+      module="${file%.*}"
+      cat <<EOF> "src/openllm_client/pb/${VERSION}/${file}"
+from __future__ import annotations
+from google.protobuf import __version__
+if __version__.startswith("4"):
+    from ._generated_pb4.$module import *
+else:
+    from ._generated_pb3.$module import *
+EOF
+    done
+}
+
+if [ "${#}" -gt 1 ]; then
+    echo "$0 takes one optional argument. Usage: $0 [v1]"
+    exit 1
+fi
+main "$@"

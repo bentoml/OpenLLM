@@ -95,6 +95,7 @@ clojure = ["bash openllm-contrib/clojure/run-clojure-ui.sh"]
 [envs.ci]
 detached = true
 [envs.ci.scripts]
+client-stubs = "bash openllm-client/generate-grpc-stubs"
 compile = "bash ./compile.sh {args}"
 recompile = ["bash ./clean.sh", "compile"]
 edi = "bash local.sh"

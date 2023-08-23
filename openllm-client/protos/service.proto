@@ -1,0 +1,297 @@
+// Vendorred from: https://github.com/bentoml/BentoML/blob/main/src/bentoml/grpc/v1/service.proto
+syntax = "proto3";
+
+package bentoml.grpc.v1;
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/wrappers.proto";
+
+// cc_enable_arenas pre-allocate memory for given message to improve speed. (C++ only)
+option cc_enable_arenas = true;
+option go_package = "github.com/bentoml/bentoml/grpc/v1;service";
+option java_multiple_files = true;
+option java_outer_classname = "ServiceProto";
+option java_package = "com.bentoml.grpc.v1";
+option objc_class_prefix = "SVC";
+option py_generic_services = true;
+
+// a gRPC BentoServer.
+service BentoService {
+  // Call handles methodcaller of given API entrypoint.
+  rpc Call(Request) returns (Response) {}
+  // ServiceMetadata returns metadata of bentoml.Service.
+  rpc ServiceMetadata(ServiceMetadataRequest) returns (ServiceMetadataResponse) {}
+}
+
+// ServiceMetadataRequest message doesn't take any arguments.
+message ServiceMetadataRequest {}
+
+// ServiceMetadataResponse returns metadata of bentoml.Service.
+// Currently it includes name, version, apis, and docs.
+message ServiceMetadataResponse {
+  // DescriptorMetadata is a metadata of any given IODescriptor.
+  message DescriptorMetadata {
+    // descriptor_id describes the given ID of the descriptor, which matches with our OpenAPI definition.
+    optional string descriptor_id = 1;
+
+    // attributes is the kwargs of the given descriptor.
+    google.protobuf.Struct attributes = 2;
+  }
+  // InferenceAPI is bentoml._internal.service.inferece_api.InferenceAPI
+  // that is exposed to gRPC client.
+  // There is no way for reflection to get information of given @svc.api.
+  message InferenceAPI {
+    // name is the name of the API.
+    string name = 1;
+    // input is the input descriptor of the API.
+    optional DescriptorMetadata input = 2;
+    // output is the output descriptor of the API.
+    optional DescriptorMetadata output = 3;
+    // docs is the optional documentation of the API.
+    optional string docs = 4;
+  }
+  // name is the service name.
+  string name = 1;
+  // apis holds a list of InferenceAPI of the service.
+  repeated InferenceAPI apis = 2;
+  // docs is the documentation of the service.
+  string docs = 3;
+}
+
+// Request message for incoming Call.
+message Request {
+  // api_name defines the API entrypoint to call.
+  // api_name is the name of the function defined in bentoml.Service.
+  // Example:
+  //
+  //     @svc.api(input=NumpyNdarray(), output=File())
+  //     def predict(input: NDArray[float]) -> bytes:
+  //         ...
+  //
+  //     api_name is "predict" in this case.
+  string api_name = 1;
+
+  oneof content {
+    // NDArray represents a n-dimensional array of arbitrary type.
+    NDArray ndarray = 3;
+
+    // DataFrame represents any tabular data type. We are using
+    // DataFrame as a trivial representation for tabular type.
+    DataFrame dataframe = 5;
+
+    // Series portrays a series of values. This can be used for
+    // representing Series types in tabular data.
+    Series series = 6;
+
+    // File represents for any arbitrary file type. This can be
+    // plaintext, image, video, audio, etc.
+    File file = 7;
+
+    // Text represents a string inputs.
+    google.protobuf.StringValue text = 8;
+
+    // JSON is represented by using google.protobuf.Value.
+    // see https://github.com/protocolbuffers/protobuf/blob/main/src/google/protobuf/struct.proto
+    google.protobuf.Value json = 9;
+
+    // Multipart represents a multipart message.
+    // It comprises of a mapping from given type name to a subset of aforementioned types.
+    Multipart multipart = 10;
+
+    // serialized_bytes is for data serialized in BentoML's internal serialization format.
+    bytes serialized_bytes = 2;
+  }
+
+  // Tensor is similiar to ndarray but with a name
+  // We are reserving it for now for future use.
+  // repeated Tensor tensors = 4;
+  reserved 4, 11 to 13;
+}
+
+// Request message for incoming Call.
+message Response {
+  oneof content {
+    // NDArray represents a n-dimensional array of arbitrary type.
+    NDArray ndarray = 1;
+
+    // DataFrame represents any tabular data type. We are using
+    // DataFrame as a trivial representation for tabular type.
+    DataFrame dataframe = 3;
+
+    // Series portrays a series of values. This can be used for
+    // representing Series types in tabular data.
+    Series series = 5;
+
+    // File represents for any arbitrary file type. This can be
+    // plaintext, image, video, audio, etc.
+    File file = 6;
+
+    // Text represents a string inputs.
+    google.protobuf.StringValue text = 7;
+
+    // JSON is represented by using google.protobuf.Value.
+    // see https://github.com/protocolbuffers/protobuf/blob/main/src/google/protobuf/struct.proto
+    google.protobuf.Value json = 8;
+
+    // Multipart represents a multipart message.
+    // It comprises of a mapping from given type name to a subset of aforementioned types.
+    Multipart multipart = 9;
+
+    // serialized_bytes is for data serialized in BentoML's internal serialization format.
+    bytes serialized_bytes = 2;
+  }
+  // Tensor is similiar to ndarray but with a name
+  // We are reserving it for now for future use.
+  // repeated Tensor tensors = 4;
+  reserved 4, 10 to 13;
+}
+
+// Part represents possible value types for multipart message.
+// These are the same as the types in Request message.
+message Part {
+  oneof representation {
+    // NDArray represents a n-dimensional array of arbitrary type.
+    NDArray ndarray = 1;
+
+    // DataFrame represents any tabular data type. We are using
+    // DataFrame as a trivial representation for tabular type.
+    DataFrame dataframe = 3;
+
+    // Series portrays a series of values. This can be used for
+    // representing Series types in tabular data.
+    Series series = 5;
+
+    // File represents for any arbitrary file type. This can be
+    // plaintext, image, video, audio, etc.
+    File file = 6;
+
+    // Text represents a string inputs.
+    google.protobuf.StringValue text = 7;
+
+    // JSON is represented by using google.protobuf.Value.
+    // see https://github.com/protocolbuffers/protobuf/blob/main/src/google/protobuf/struct.proto
+    google.protobuf.Value json = 8;
+
+    // serialized_bytes is for data serialized in BentoML's internal serialization format.
+    bytes serialized_bytes = 4;
+  }
+
+  // Tensor is similiar to ndarray but with a name
+  // We are reserving it for now for future use.
+  // Tensor tensors = 4;
+  reserved 2, 9 to 13;
+}
+
+// Multipart represents a multipart message.
+// It comprises of a mapping from given type name to a subset of aforementioned types.
+message Multipart {
+  map<string, Part> fields = 1;
+}
+
+// File represents for any arbitrary file type. This can be
+// plaintext, image, video, audio, etc.
+message File {
+  // optional file type, let it be csv, text, parquet, etc.
+  // v1alpha1 uses 1 as FileType enum.
+  optional string kind = 3;
+  // contents of file as bytes.
+  bytes content = 2;
+}
+
+// DataFrame represents any tabular data type. We are using
+// DataFrame as a trivial representation for tabular type.
+// This message carries given implementation of tabular data based on given orientation.
+// TODO: support index, records, etc.
+message DataFrame {
+  // columns name
+  repeated string column_names = 1;
+
+  // columns orient.
+  // { column ↠ { index ↠ value } }
+  repeated Series columns = 2;
+}
+
+// Series portrays a series of values. This can be used for
+// representing Series types in tabular data.
+message Series {
+  // A bool parameter value
+  repeated bool bool_values = 1 [packed = true];
+
+  // A float parameter value
+  repeated float float_values = 2 [packed = true];
+
+  // A int32 parameter value
+  repeated int32 int32_values = 3 [packed = true];
+
+  // A int64 parameter value
+  repeated int64 int64_values = 6 [packed = true];
+
+  // A string parameter value
+  repeated string string_values = 5;
+
+  // represents a double parameter value.
+  repeated double double_values = 4 [packed = true];
+}
+
+// NDArray represents a n-dimensional array of arbitrary type.
+message NDArray {
+  // Represents data type of a given array.
+  enum DType {
+    // Represents a None type.
+    DTYPE_UNSPECIFIED = 0;
+
+    // Represents an float type.
+    DTYPE_FLOAT = 1;
+
+    // Represents an double type.
+    DTYPE_DOUBLE = 2;
+
+    // Represents a bool type.
+    DTYPE_BOOL = 3;
+
+    // Represents an int32 type.
+    DTYPE_INT32 = 4;
+
+    // Represents an int64 type.
+    DTYPE_INT64 = 5;
+
+    // Represents a uint32 type.
+    DTYPE_UINT32 = 6;
+
+    // Represents a uint64 type.
+    DTYPE_UINT64 = 7;
+
+    // Represents a string type.
+    DTYPE_STRING = 8;
+  }
+
+  // DTYPE is the data type of given array
+  DType dtype = 1;
+
+  // shape is the shape of given array.
+  repeated int32 shape = 2;
+
+  // represents a string parameter value.
+  repeated string string_values = 5;
+
+  // represents a float parameter value.
+  repeated float float_values = 3 [packed = true];
+
+  // represents a double parameter value.
+  repeated double double_values = 4 [packed = true];
+
+  // represents a bool parameter value.
+  repeated bool bool_values = 6 [packed = true];
+
+  // represents a int32 parameter value.
+  repeated int32 int32_values = 7 [packed = true];
+
+  // represents a int64 parameter value.
+  repeated int64 int64_values = 8 [packed = true];
+
+  // represents a uint32 parameter value.
+  repeated uint32 uint32_values = 9 [packed = true];
+
+  // represents a uint64 parameter value.
+  repeated uint64 uint64_values = 10 [packed = true];
+}

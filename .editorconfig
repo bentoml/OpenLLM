@@ -11,3 +11,5 @@ indent_size = 2
 
 [openllm-python/src/openllm/cli/entrypoint.py]
 indent_size = unset
+[openllm-client/src/openllm_client/pb/v1/*]
+indent_size = unset
