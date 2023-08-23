@@ -24,7 +24,7 @@ on:
       - '*.md'
       - 'changelog.d/**'
       - 'assets/**'
-      - 'contrib/clojure/**'
+      - 'openllm-contrib/clojure/**'
   pull_request:
     branches: [main]
     paths-ignore:
@@ -34,7 +34,7 @@ on:
       - '*.md'
       - 'changelog.d/**'
       - 'assets/**'
-      - 'contrib/clojure/**'
+      - 'openllm-contrib/clojure/**'
 env:
   LINES: 120
   COLUMNS: 120

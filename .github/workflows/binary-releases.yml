@@ -14,7 +14,7 @@ on:
       - 'assets/**'
       - 'openllm-node/**'
       - 'Formula/**'
-      - 'contrib/clojure/**'
+      - 'openllm-contrib/clojure/**'
   pull_request:
     branches: [main]
     paths-ignore:
@@ -26,7 +26,7 @@ on:
       - 'assets/**'
       - 'openllm-node/**'
       - 'Formula/**'
-      - 'contrib/clojure/**'
+      - 'openllm-contrib/clojure/**'
 defaults:
   run:
     shell: bash --noprofile --norc -exo pipefail {0}

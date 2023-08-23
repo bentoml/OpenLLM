@@ -2,9 +2,9 @@
 
 set -ex -o pipefail
 
-GIT_ROOT=$(git rev-parse --show-toplevel)
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
 
-cd "$GIT_ROOT" || exit 1
+cd "$SCRIPT_DIR" || exit 1
 
 if ! command -v node @ >&1 > /dev/null; then
   echo "Cannot find 'node' executable in PATH. Make sure to have Node.js setup. Refer to"
@@ -23,8 +23,4 @@ if ! command -v hatch @ >&1 > /dev/null; then
     exit 1
 fi
 
-pushd contrib/clojure > /dev/null
-pnpm install
-popd > /dev/null
-
-pnpm run -C "$GIT_ROOT"/contrib/clojure dev
+pnpm i && pnpm run dev

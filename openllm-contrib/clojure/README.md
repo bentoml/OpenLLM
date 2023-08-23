@@ -1,5 +1,5 @@
 <div align="center">
-    <h1 align="center">OpenLLM ClojureScript UI</h1>
+    <h1 align="center">🧭 OpenLLM ClojureScript UI</h1>
     <p>Built using <a href="http://reagent-project.github.io/">reagent</a>, <a href="https://github.com/day8/re-frame">reframe</a>, <a href="https://tailwindcss.com/">Tailwind CSS</a>, and <a href="https://shadow-cljs.github.io/docs/UsersGuide.html">shadow-cljs</a></br></p>
     <i></i>
 </div>
