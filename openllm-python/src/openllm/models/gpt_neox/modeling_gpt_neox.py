@@ -3,13 +3,13 @@ import logging, typing as t, openllm
 if t.TYPE_CHECKING: import transformers
 
 logger = logging.getLogger(__name__)
-class GPTNeoX(openllm.LLM["transformers.GPTNeoXForCausalLM", "transformers.GPTNeoXTokenizerFast"]):
+class GPTNeoX(openllm.LLM['transformers.GPTNeoXForCausalLM', 'transformers.GPTNeoXTokenizerFast']):
   __openllm_internal__ = True
 
   @property
   def import_kwargs(self) -> tuple[dict[str, t.Any], dict[str, t.Any]]:
     import torch
-    return {"device_map": "auto" if torch.cuda.is_available() and torch.cuda.device_count() > 1 else None}, {}
+    return {'device_map': 'auto' if torch.cuda.is_available() and torch.cuda.device_count() > 1 else None}, {}
 
   def load_model(self, *args: t.Any, **attrs: t.Any) -> transformers.GPTNeoXForCausalLM:
     import transformers
@@ -22,7 +22,7 @@ class GPTNeoX(openllm.LLM["transformers.GPTNeoXForCausalLM", "transformers.GPTNe
     with torch.inference_mode():
       return self.tokenizer.batch_decode(
           self.model.generate(
-              self.tokenizer(prompt, return_tensors="pt").to(self.device).input_ids,
+              self.tokenizer(prompt, return_tensors='pt').to(self.device).input_ids,
               do_sample=True,
               generation_config=self.config.model_construct_env(**attrs).to_generation_config(),
               pad_token_id=self.tokenizer.eos_token_id,

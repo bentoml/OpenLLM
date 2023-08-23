@@ -2,7 +2,7 @@ from __future__ import annotations
 import openllm_core, typing as t
 from openllm_core.utils import dantic
 from openllm_core._prompt import process_prompt
-START_OPT_COMMAND_DOCSTRING = """\
+START_OPT_COMMAND_DOCSTRING = '''\
 Run a LLMServer for OPT model.
 
 \b
@@ -26,8 +26,8 @@ or provide `--model-id` flag when running ``openllm start opt``:
 
 \b
 $ openllm start opt --model-id facebook/opt-6.7b
-"""
-DEFAULT_PROMPT_TEMPLATE = """{instruction}"""
+'''
+DEFAULT_PROMPT_TEMPLATE = '''{instruction}'''
 class OPTConfig(openllm_core.LLMConfig):
   """OPT was first introduced in [Open Pre-trained Transformer Language Models](https://arxiv.org/abs/2205.01068) and first released in [metaseq's repository](https://github.com/facebookresearch/metaseq) on May 3rd 2022 by Meta AI.
 
@@ -39,17 +39,17 @@ class OPTConfig(openllm_core.LLMConfig):
   Refer to [OPT's HuggingFace page](https://huggingface.co/docs/transformers/model_doc/opt) for more information.
   """
   __config__ = {
-      "name_type": "lowercase",
-      "trust_remote_code": False,
-      "url": "https://huggingface.co/docs/transformers/model_doc/opt",
-      "default_id": "facebook/opt-1.3b",
-      "architecture": "OPTForCausalLM",
-      "model_ids": ["facebook/opt-125m", "facebook/opt-350m", "facebook/opt-1.3b", "facebook/opt-2.7b", "facebook/opt-6.7b", "facebook/opt-66b"],
-      "fine_tune_strategies": ({
-          "adapter_type": "lora", "r": 16, "lora_alpha": 32, "target_modules": ["q_proj", "v_proj"], "lora_dropout": 0.05, "bias": "none"
+      'name_type': 'lowercase',
+      'trust_remote_code': False,
+      'url': 'https://huggingface.co/docs/transformers/model_doc/opt',
+      'default_id': 'facebook/opt-1.3b',
+      'architecture': 'OPTForCausalLM',
+      'model_ids': ['facebook/opt-125m', 'facebook/opt-350m', 'facebook/opt-1.3b', 'facebook/opt-2.7b', 'facebook/opt-6.7b', 'facebook/opt-66b'],
+      'fine_tune_strategies': ({
+          'adapter_type': 'lora', 'r': 16, 'lora_alpha': 32, 'target_modules': ['q_proj', 'v_proj'], 'lora_dropout': 0.05, 'bias': 'none'
       },)
   }
-  format_outputs: bool = dantic.Field(False, description="""Whether to format the outputs. This can be used when num_return_sequences > 1.""")
+  format_outputs: bool = dantic.Field(False, description='''Whether to format the outputs. This can be used when num_return_sequences > 1.''')
 
   class GenerationConfig:
     top_k: int = 15
@@ -68,10 +68,10 @@ class OPTConfig(openllm_core.LLMConfig):
       **attrs: t.Any
   ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
     return process_prompt(prompt, DEFAULT_PROMPT_TEMPLATE, use_default_prompt_template, **attrs), {
-        "max_new_tokens": max_new_tokens, "temperature": temperature, "top_k": top_k, "num_return_sequences": num_return_sequences
+        'max_new_tokens': max_new_tokens, 'temperature': temperature, 'top_k': top_k, 'num_return_sequences': num_return_sequences
     }, {}
 
   def postprocess_generate(self, prompt: str, generation_result: t.Sequence[str], **attrs: t.Any) -> str:
     if len(generation_result) == 1: return generation_result[0]
-    if self.config.format_outputs: return "Generated result:\n" + "\n -".join(generation_result)
-    else: return "\n".join(generation_result)
+    if self.config.format_outputs: return 'Generated result:\n' + '\n -'.join(generation_result)
+    else: return '\n'.join(generation_result)

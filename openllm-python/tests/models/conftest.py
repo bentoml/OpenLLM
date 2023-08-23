@@ -27,13 +27,13 @@ class ResponseComparator(JSONSnapshotExtension):
       try:
         data = orjson.loads(data)
       except orjson.JSONDecodeError as err:
-        raise ValueError(f"Failed to decode JSON data: {data}") from err
+        raise ValueError(f'Failed to decode JSON data: {data}') from err
       if openllm.utils.LazyType(DictStrAny).isinstance(data):
         return openllm.GenerationOutput(**data)
       elif openllm.utils.LazyType(ListAny).isinstance(data):
         return [openllm.GenerationOutput(**d) for d in data]
       else:
-        raise NotImplementedError(f"Data {data} has unsupported type.")
+        raise NotImplementedError(f'Data {data} has unsupported type.')
 
     serialized_data = convert_data(serialized_data)
     snapshot_data = convert_data(snapshot_data)
@@ -56,7 +56,7 @@ def response_snapshot(snapshot: SnapshotAssertion):
 @attr.define(init=False)
 class _Handle(ABC):
   port: int
-  deployment_mode: t.Literal["container", "local"]
+  deployment_mode: t.Literal['container', 'local']
 
   client: BaseAsyncClient[t.Any] = attr.field(init=False)
 
@@ -66,7 +66,7 @@ class _Handle(ABC):
       ...
 
   def __attrs_post_init__(self):
-    self.client = openllm.client.AsyncHTTPClient(f"http://localhost:{self.port}")
+    self.client = openllm.client.AsyncHTTPClient(f'http://localhost:{self.port}')
 
   @abstractmethod
   def status(self) -> bool:
@@ -76,19 +76,19 @@ class _Handle(ABC):
     start_time = time.time()
     while time.time() - start_time < timeout:
       if not self.status():
-        raise RuntimeError(f"Failed to initialise {self.__class__.__name__}")
+        raise RuntimeError(f'Failed to initialise {self.__class__.__name__}')
       await self.client.health()
       try:
-        await self.client.query("sanity")
+        await self.client.query('sanity')
         return
       except Exception:
         time.sleep(1)
-    raise RuntimeError(f"Handle failed to initialise within {timeout} seconds.")
+    raise RuntimeError(f'Handle failed to initialise within {timeout} seconds.')
 @attr.define(init=False)
 class LocalHandle(_Handle):
   process: subprocess.Popen[bytes]
 
-  def __init__(self, process: subprocess.Popen[bytes], port: int, deployment_mode: t.Literal["container", "local"],):
+  def __init__(self, process: subprocess.Popen[bytes], port: int, deployment_mode: t.Literal['container', 'local'],):
     self.__attrs_init__(port, deployment_mode, process)
 
   def status(self) -> bool:
@@ -102,23 +102,23 @@ class DockerHandle(_Handle):
   container_name: str
   docker_client: docker.DockerClient
 
-  def __init__(self, docker_client: docker.DockerClient, container_name: str, port: int, deployment_mode: t.Literal["container", "local"],):
+  def __init__(self, docker_client: docker.DockerClient, container_name: str, port: int, deployment_mode: t.Literal['container', 'local'],):
     self.__attrs_init__(port, deployment_mode, container_name, docker_client)
 
   def status(self) -> bool:
     container = self.docker_client.containers.get(self.container_name)
-    return container.status in ["running", "created"]
+    return container.status in ['running', 'created']
 @contextlib.contextmanager
 def _local_handle(
-    model: str, model_id: str, image_tag: str, deployment_mode: t.Literal["container", "local"], quantize: t.Literal["int8", "int4", "gptq"] | None = None, *, _serve_grpc: bool = False,
+    model: str, model_id: str, image_tag: str, deployment_mode: t.Literal['container', 'local'], quantize: t.Literal['int8', 'int4', 'gptq'] | None = None, *, _serve_grpc: bool = False,
 ):
   with openllm.utils.reserve_free_port() as port:
     pass
 
   if not _serve_grpc:
-    proc = openllm.start(model, model_id=model_id, quantize=quantize, additional_args=["--port", str(port)], __test__=True)
+    proc = openllm.start(model, model_id=model_id, quantize=quantize, additional_args=['--port', str(port)], __test__=True)
   else:
-    proc = openllm.start_grpc(model, model_id=model_id, quantize=quantize, additional_args=["--port", str(port)], __test__=True)
+    proc = openllm.start_grpc(model, model_id=model_id, quantize=quantize, additional_args=['--port', str(port)], __test__=True)
 
   yield LocalHandle(proc, port, deployment_mode)
   proc.terminate()
@@ -132,13 +132,13 @@ def _local_handle(
     proc.stderr.close()
 @contextlib.contextmanager
 def _container_handle(
-    model: str, model_id: str, image_tag: str, deployment_mode: t.Literal["container", "local"], quantize: t.Literal["int8", "int4", "gptq"] | None = None, *, _serve_grpc: bool = False,
+    model: str, model_id: str, image_tag: str, deployment_mode: t.Literal['container', 'local'], quantize: t.Literal['int8', 'int4', 'gptq'] | None = None, *, _serve_grpc: bool = False,
 ):
   envvar = openllm.utils.EnvVarMixin(model)
 
   with openllm.utils.reserve_free_port() as port, openllm.utils.reserve_free_port() as prom_port:
     pass
-  container_name = f"openllm-{model}-{normalise_model_name(model_id)}".replace("-", "_")
+  container_name = f'openllm-{model}-{normalise_model_name(model_id)}'.replace('-', '_')
   client = docker.from_env()
   try:
     container = client.containers.get(container_name)
@@ -148,7 +148,7 @@ def _container_handle(
   except docker.errors.NotFound:
     pass
 
-  args = ["serve" if not _serve_grpc else "serve-grpc"]
+  args = ['serve' if not _serve_grpc else 'serve-grpc']
 
   env: DictStrAny = {}
 
@@ -156,11 +156,11 @@ def _container_handle(
     env[envvar.quantize] = quantize
 
   gpus = openllm.utils.device_count() or -1
-  devs = [docker.types.DeviceRequest(count=gpus, capabilities=[["gpu"]])] if gpus > 0 else None
+  devs = [docker.types.DeviceRequest(count=gpus, capabilities=[['gpu']])] if gpus > 0 else None
 
   container = client.containers.run(
       image_tag, command=args, name=container_name, environment=env, auto_remove=False, detach=True, device_requests=devs, ports={
-          "3000/tcp": port, "3001/tcp": prom_port
+          '3000/tcp': port, '3001/tcp': prom_port
       },
   )
 
@@ -172,28 +172,28 @@ def _container_handle(
   except docker.errors.NotFound:
     pass
 
-  container_output = container.logs().decode("utf-8")
+  container_output = container.logs().decode('utf-8')
   print(container_output, file=sys.stderr)
 
   container.remove()
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope='session', autouse=True)
 def clean_context() -> t.Generator[contextlib.ExitStack, None, None]:
   stack = contextlib.ExitStack()
   yield stack
   stack.close()
-@pytest.fixture(scope="module")
+@pytest.fixture(scope='module')
 def el() -> t.Generator[asyncio.AbstractEventLoop, None, None]:
   loop = asyncio.get_event_loop()
   yield loop
   loop.close()
-@pytest.fixture(params=["container", "local"], scope="session")
+@pytest.fixture(params=['container', 'local'], scope='session')
 def deployment_mode(request: pytest.FixtureRequest) -> str:
   return request.param
-@pytest.fixture(scope="module")
-def handler(el: asyncio.AbstractEventLoop, deployment_mode: t.Literal["container", "local"]):
-  if deployment_mode == "container":
+@pytest.fixture(scope='module')
+def handler(el: asyncio.AbstractEventLoop, deployment_mode: t.Literal['container', 'local']):
+  if deployment_mode == 'container':
     return functools.partial(_container_handle, deployment_mode=deployment_mode)
-  elif deployment_mode == "local":
+  elif deployment_mode == 'local':
     return functools.partial(_local_handle, deployment_mode=deployment_mode)
   else:
-    raise ValueError(f"Unknown deployment mode: {deployment_mode}")
+    raise ValueError(f'Unknown deployment mode: {deployment_mode}')

@@ -9,14 +9,14 @@ try:
 except MissingDependencyError:
   pass
 else:
-  _import_structure["modeling_dolly_v2"] = ["DollyV2"]
+  _import_structure['modeling_dolly_v2'] = ['DollyV2']
   if t.TYPE_CHECKING: from .modeling_dolly_v2 import DollyV2 as DollyV2
 try:
   if not is_vllm_available(): raise MissingDependencyError
 except MissingDependencyError:
   pass
 else:
-  _import_structure["modeling_vllm_dolly_v2"] = ["VLLMDollyV2"]
+  _import_structure['modeling_vllm_dolly_v2'] = ['VLLMDollyV2']
   if t.TYPE_CHECKING: from .modeling_vllm_dolly_v2 import VLLMDollyV2 as VLLMDollyV2
 
-sys.modules[__name__] = LazyModule(__name__, globals()["__file__"], _import_structure)
+sys.modules[__name__] = LazyModule(__name__, globals()['__file__'], _import_structure)

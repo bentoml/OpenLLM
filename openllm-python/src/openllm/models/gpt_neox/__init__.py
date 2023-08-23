@@ -9,14 +9,14 @@ try:
 except MissingDependencyError:
   pass
 else:
-  _import_structure["modeling_gpt_neox"] = ["GPTNeoX"]
+  _import_structure['modeling_gpt_neox'] = ['GPTNeoX']
   if t.TYPE_CHECKING: from .modeling_gpt_neox import GPTNeoX as GPTNeoX
 try:
   if not is_vllm_available(): raise MissingDependencyError
 except MissingDependencyError:
   pass
 else:
-  _import_structure["modeling_vllm_gpt_neox"] = ["VLLMGPTNeoX"]
+  _import_structure['modeling_vllm_gpt_neox'] = ['VLLMGPTNeoX']
   if t.TYPE_CHECKING: from .modeling_vllm_gpt_neox import VLLMGPTNeoX as VLLMGPTNeoX
 
-sys.modules[__name__] = LazyModule(__name__, globals()["__file__"], _import_structure)
+sys.modules[__name__] = LazyModule(__name__, globals()['__file__'], _import_structure)

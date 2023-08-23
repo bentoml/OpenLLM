@@ -11,24 +11,24 @@ if t.TYPE_CHECKING:
 
   from .utils.lazy import VersionInfo
 M = t.TypeVar(
-    "M",
-    bound="t.Union[transformers.PreTrainedModel, transformers.Pipeline, transformers.TFPreTrainedModel, transformers.FlaxPreTrainedModel, vllm.LLMEngine, vllm.AsyncLLMEngine, peft.PeftModel, autogptq.modeling.BaseGPTQForCausalLM]"
+    'M',
+    bound='t.Union[transformers.PreTrainedModel, transformers.Pipeline, transformers.TFPreTrainedModel, transformers.FlaxPreTrainedModel, vllm.LLMEngine, vllm.AsyncLLMEngine, peft.PeftModel, autogptq.modeling.BaseGPTQForCausalLM]'
 )
-T = t.TypeVar("T", bound="t.Union[transformers.PreTrainedTokenizerFast, transformers.PreTrainedTokenizer, transformers.PreTrainedTokenizerBase]")
+T = t.TypeVar('T', bound='t.Union[transformers.PreTrainedTokenizerFast, transformers.PreTrainedTokenizer, transformers.PreTrainedTokenizerBase]')
 
 AnyCallable = t.Callable[..., t.Any]
 DictStrAny = t.Dict[str, t.Any]
 ListAny = t.List[t.Any]
 ListStr = t.List[str]
 TupleAny = t.Tuple[t.Any, ...]
-At = t.TypeVar("At", bound=attr.AttrsInstance)
+At = t.TypeVar('At', bound=attr.AttrsInstance)
 
-LiteralRuntime = t.Literal["pt", "tf", "flax", "vllm"]
-AdapterType = t.Literal["lora", "adalora", "adaption_prompt", "prefix_tuning", "p_tuning", "prompt_tuning", "ia3"]
+LiteralRuntime = t.Literal['pt', 'tf', 'flax', 'vllm']
+AdapterType = t.Literal['lora', 'adalora', 'adaption_prompt', 'prefix_tuning', 'p_tuning', 'prompt_tuning', 'ia3']
 
 # TODO: support quay
-LiteralContainerRegistry = t.Literal["docker", "gh", "ecr"]
-LiteralContainerVersionStrategy = t.Literal["release", "nightly", "latest", "custom"]
+LiteralContainerRegistry = t.Literal['docker', 'gh', 'ecr']
+LiteralContainerVersionStrategy = t.Literal['release', 'nightly', 'latest', 'custom']
 
 if sys.version_info[:2] >= (3, 11):
   from typing import LiteralString as LiteralString, Self as Self, overload as overload
@@ -58,13 +58,13 @@ class RefTuple(TupleAny):
   version: VersionInfo
   strategy: LiteralContainerVersionStrategy
 class LLMRunnable(bentoml.Runnable, t.Generic[M, T]):
-  SUPPORTED_RESOURCES = ("amd.com/gpu", "nvidia.com/gpu", "cpu")
+  SUPPORTED_RESOURCES = ('amd.com/gpu', 'nvidia.com/gpu', 'cpu')
   SUPPORTS_CPU_MULTI_THREADING = True
   __call__: RunnableMethod[LLMRunnable[M, T], [str], list[t.Any]]
-  set_adapter: RunnableMethod[LLMRunnable[M, T], [str], dict[t.Literal["success", "error_msg"], bool | str]]
+  set_adapter: RunnableMethod[LLMRunnable[M, T], [str], dict[t.Literal['success', 'error_msg'], bool | str]]
   embeddings: RunnableMethod[LLMRunnable[M, T], [list[str]], LLMEmbeddings]
   generate: RunnableMethod[LLMRunnable[M, T], [str], list[t.Any]]
-  generate_one: RunnableMethod[LLMRunnable[M, T], [str, list[str]], t.Sequence[dict[t.Literal["generated_text"], str]]]
+  generate_one: RunnableMethod[LLMRunnable[M, T], [str, list[str]], t.Sequence[dict[t.Literal['generated_text'], str]]]
   generate_iterator: RunnableMethod[LLMRunnable[M, T], [str], t.Generator[str, None, str]]
 class LLMRunner(bentoml.Runner, t.Generic[M, T]):
   __doc__: str
@@ -79,7 +79,7 @@ class LLMRunner(bentoml.Runner, t.Generic[M, T]):
   has_adapters: bool
   embeddings: RunnerMethod[LLMRunnable[M, T], [list[str]], t.Sequence[LLMEmbeddings]]
   generate: RunnerMethod[LLMRunnable[M, T], [str], list[t.Any]]
-  generate_one: RunnerMethod[LLMRunnable[M, T], [str, list[str]], t.Sequence[dict[t.Literal["generated_text"], str]]]
+  generate_one: RunnerMethod[LLMRunnable[M, T], [str, list[str]], t.Sequence[dict[t.Literal['generated_text'], str]]]
   generate_iterator: RunnerMethod[LLMRunnable[M, T], [str], t.Generator[str, None, str]]
 
   def __init__(

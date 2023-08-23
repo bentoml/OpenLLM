@@ -1,4 +1,4 @@
-"""An interface provides the best of pydantic and attrs."""
+'''An interface provides the best of pydantic and attrs.'''
 from __future__ import annotations
 import functools, importlib, os, sys, typing as t
 from enum import Enum
@@ -6,44 +6,44 @@ import attr, click, click_option_group as cog, inflection, orjson
 from click import ParamType, shell_completion as sc, types as click_types
 if t.TYPE_CHECKING: from attr import _ValidatorType
 AnyCallable = t.Callable[..., t.Any]
-FC = t.TypeVar("FC", bound=t.Union[AnyCallable, click.Command])
+FC = t.TypeVar('FC', bound=t.Union[AnyCallable, click.Command])
 
 __all__ = [
-    "FC",
-    "attrs_to_options",
-    "Field",
-    "parse_type",
-    "is_typing",
-    "is_literal",
-    "ModuleType",
-    "EnumChoice",
-    "LiteralChoice",
-    "allows_multiple",
-    "is_mapping",
-    "is_container",
-    "parse_container_args",
-    "parse_single_arg",
-    "CUDA",
-    "JsonType",
-    "BytesType"
+    'FC',
+    'attrs_to_options',
+    'Field',
+    'parse_type',
+    'is_typing',
+    'is_literal',
+    'ModuleType',
+    'EnumChoice',
+    'LiteralChoice',
+    'allows_multiple',
+    'is_mapping',
+    'is_container',
+    'parse_container_args',
+    'parse_single_arg',
+    'CUDA',
+    'JsonType',
+    'BytesType'
 ]
 def __dir__() -> list[str]:
   return sorted(__all__)
 def attrs_to_options(name: str, field: attr.Attribute[t.Any], model_name: str, typ: t.Any = None, suffix_generation: bool = False, suffix_sampling: bool = False) -> t.Callable[[FC], FC]:
   # TODO: support parsing nested attrs class and Union
-  envvar = field.metadata["env"]
+  envvar = field.metadata['env']
   dasherized = inflection.dasherize(name)
   underscored = inflection.underscore(name)
 
   if typ in (None, attr.NOTHING):
     typ = field.type
-    if typ is None: raise RuntimeError(f"Failed to parse type for {name}")
+    if typ is None: raise RuntimeError(f'Failed to parse type for {name}')
 
-  full_option_name = f"--{dasherized}"
-  if field.type is bool: full_option_name += f"/--no-{dasherized}"
-  if suffix_generation: identifier = f"{model_name}_generation_{underscored}"
-  elif suffix_sampling: identifier = f"{model_name}_sampling_{underscored}"
-  else: identifier = f"{model_name}_{underscored}"
+  full_option_name = f'--{dasherized}'
+  if field.type is bool: full_option_name += f'/--no-{dasherized}'
+  if suffix_generation: identifier = f'{model_name}_generation_{underscored}'
+  elif suffix_sampling: identifier = f'{model_name}_sampling_{underscored}'
+  else: identifier = f'{model_name}_{underscored}'
 
   return cog.optgroup.option(
       identifier,
@@ -53,7 +53,7 @@ def attrs_to_options(name: str, field: attr.Attribute[t.Any], model_name: str, t
       default=field.default if field.default not in (attr.NOTHING, None) else None,
       show_default=True,
       multiple=allows_multiple(typ) if typ else False,
-      help=field.metadata.get("description", "(No description provided)"),
+      help=field.metadata.get('description', '(No description provided)'),
       show_envvar=True,
       envvar=envvar,
   )
@@ -100,13 +100,13 @@ def Field(
   for this given Field.
   **attrs: The rest of the arguments are passed to attr.field
   """
-  metadata = attrs.pop("metadata", {})
-  if description is None: description = "(No description provided)"
-  metadata["description"] = description
-  if env is not None: metadata["env"] = env
+  metadata = attrs.pop('metadata', {})
+  if description is None: description = '(No description provided)'
+  metadata['description'] = description
+  if env is not None: metadata['env'] = env
   piped: list[_ValidatorType[t.Any]] = []
 
-  converter = attrs.pop("converter", None)
+  converter = attrs.pop('converter', None)
   if use_default_converter: converter = functools.partial(env_converter, env=env)
 
   if ge is not None: piped.append(attr.validators.ge(ge))
@@ -117,15 +117,15 @@ def Field(
   elif len(piped) == 1: _validator = piped[0]
   else: _validator = attr.validators.and_(*piped)
 
-  factory = attrs.pop("factory", None)
+  factory = attrs.pop('factory', None)
   if factory is not None and default is not None: raise RuntimeError("'factory' and 'default' are mutually exclusive.")
   # NOTE: the behaviour of this is we will respect factory over the default
-  if factory is not None: attrs["factory"] = factory
-  else: attrs["default"] = default
+  if factory is not None: attrs['factory'] = factory
+  else: attrs['default'] = default
 
-  kw_only = attrs.pop("kw_only", False)
+  kw_only = attrs.pop('kw_only', False)
   if auto_default and kw_only:
-    attrs.pop("default")
+    attrs.pop('default')
 
   return attr.field(metadata=metadata, validator=_validator, converter=converter, **attrs)
 def parse_type(field_type: t.Any) -> ParamType | tuple[ParamType, ...]:
@@ -140,7 +140,7 @@ def parse_type(field_type: t.Any) -> ParamType | tuple[ParamType, ...]:
   from . import lenient_issubclass
 
   if t.get_origin(field_type) is t.Union:
-    raise NotImplementedError("Unions are not supported")
+    raise NotImplementedError('Unions are not supported')
   # enumeration strings or other Enum derivatives
   if lenient_issubclass(field_type, Enum):
     return EnumChoice(enum=field_type, case_sensitive=True)
@@ -159,20 +159,20 @@ def parse_type(field_type: t.Any) -> ParamType | tuple[ParamType, ...]:
   # return the current type: it should be a primitive
   return field_type
 def is_typing(field_type: type) -> bool:
-  """Checks whether the current type is a module-like type.
+  '''Checks whether the current type is a module-like type.
 
   Args:
   field_type: pydantic field type
 
   Returns:
   bool: true if the type is itself a type
-  """
+  '''
   raw = t.get_origin(field_type)
   if raw is None: return False
   if raw is type or raw is t.Type: return True
   return False
 def is_literal(field_type: type) -> bool:
-  """Checks whether the given field type is a Literal type or not.
+  '''Checks whether the given field type is a Literal type or not.
 
   Literals are weird: isinstance and subclass do not work, so you compare
   the origin with the Literal declaration itself.
@@ -182,15 +182,15 @@ def is_literal(field_type: type) -> bool:
 
   Returns:
   bool: true if Literal type, false otherwise
-  """
+  '''
   origin = t.get_origin(field_type)
   return origin is not None and origin is t.Literal
 class ModuleType(ParamType):
-  name = "module"
+  name = 'module'
 
   def _import_object(self, value: str) -> t.Any:
-    module_name, class_name = value.rsplit(".", maxsplit=1)
-    if not all(s.isidentifier() for s in module_name.split(".")): raise ValueError(f"'{value}' is not a valid module name")
+    module_name, class_name = value.rsplit('.', maxsplit=1)
+    if not all(s.isidentifier() for s in module_name.split('.')): raise ValueError(f"'{value}' is not a valid module name")
     if not class_name.isidentifier(): raise ValueError(f"Variable '{class_name}' is not a valid identifier")
 
     module = importlib.import_module(module_name)
@@ -207,15 +207,15 @@ class ModuleType(ParamType):
     except Exception as exc:
       self.fail(f"'{value}' is not a valid object ({type(exc)}: {exc!s})", param, ctx)
 class EnumChoice(click.Choice):
-  name = "enum"
+  name = 'enum'
 
   def __init__(self, enum: Enum, case_sensitive: bool = False):
-    """Enum type support for click that extends ``click.Choice``.
+    '''Enum type support for click that extends ``click.Choice``.
 
     Args:
     enum: Given enum
     case_sensitive: Whether this choice should be case case_sensitive.
-    """
+    '''
     self.mapping = enum
     self.internal_type = type(enum)
     choices: list[t.Any] = [e.name for e in enum.__class__]
@@ -229,14 +229,14 @@ class EnumChoice(click.Choice):
       result = self.internal_type[result]
     return result
 class LiteralChoice(EnumChoice):
-  name = "literal"
+  name = 'literal'
 
   def __init__(self, value: t.Any, case_sensitive: bool = False):
-    """Literal support for click."""
+    '''Literal support for click.'''
     # expect every literal value to belong to the same primitive type
     values = list(value.__args__)
     item_type = type(values[0])
-    if not all(isinstance(v, item_type) for v in values): raise ValueError(f"Field {value} contains items of different types.")
+    if not all(isinstance(v, item_type) for v in values): raise ValueError(f'Field {value} contains items of different types.')
     _mapping = {str(v): v for v in values}
     super(EnumChoice, self).__init__(list(_mapping), case_sensitive)
     self.internal_type = item_type
@@ -265,14 +265,14 @@ def allows_multiple(field_type: type[t.Any]) -> bool:
     return not isinstance(args, tuple)
   return False
 def is_mapping(field_type: type) -> bool:
-  """Checks whether this field represents a dictionary or JSON object.
+  '''Checks whether this field represents a dictionary or JSON object.
 
   Args:
   field_type (type): pydantic type
 
   Returns:
   bool: true when the field is a dict-like object, false otherwise.
-  """
+  '''
   # Early out for standard containers.
   from . import lenient_issubclass
   if lenient_issubclass(field_type, t.Mapping): return True
@@ -299,16 +299,16 @@ def is_container(field_type: type) -> bool:
   if origin is None: return False
   return lenient_issubclass(origin, t.Container)
 def parse_container_args(field_type: type[t.Any]) -> ParamType | tuple[ParamType, ...]:
-  """Parses the arguments inside a container type (lists, tuples and so on).
+  '''Parses the arguments inside a container type (lists, tuples and so on).
 
   Args:
   field_type: pydantic field type
 
   Returns:
   ParamType | tuple[ParamType]: single click-compatible type or a tuple
-  """
+  '''
   if not is_container(field_type):
-    raise ValueError("Field type is not a container type.")
+    raise ValueError('Field type is not a container type.')
   args = t.get_args(field_type)
   # Early out for untyped containers: standard lists, tuples, List[Any]
   # Use strings when the type is unknown, avoid click's type guessing
@@ -341,7 +341,7 @@ def parse_single_arg(arg: type) -> ParamType:
   if lenient_issubclass(arg, bytes): return BytesType()
   return click_types.convert_type(arg)
 class BytesType(ParamType):
-  name = "bytes"
+  name = 'bytes'
 
   def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> t.Any:
     if isinstance(value, bytes): return value
@@ -349,9 +349,9 @@ class BytesType(ParamType):
       return str.encode(value)
     except Exception as exc:
       self.fail(f"'{value}' is not a valid string ({exc!s})", param, ctx)
-CYGWIN = sys.platform.startswith("cygwin")
-WIN = sys.platform.startswith("win")
-if sys.platform.startswith("win") and WIN:
+CYGWIN = sys.platform.startswith('cygwin')
+WIN = sys.platform.startswith('win')
+if sys.platform.startswith('win') and WIN:
 
   def _get_argv_encoding() -> str:
     import locale
@@ -359,20 +359,20 @@ if sys.platform.startswith("win") and WIN:
 else:
 
   def _get_argv_encoding() -> str:
-    return getattr(sys.stdin, "encoding", None) or sys.getfilesystemencoding()
+    return getattr(sys.stdin, 'encoding', None) or sys.getfilesystemencoding()
 class CudaValueType(ParamType):
-  name = "cuda"
-  envvar_list_splitter = ","
+  name = 'cuda'
+  envvar_list_splitter = ','
   is_composite = True
 
   def split_envvar_value(self, rv: str) -> t.Sequence[str]:
     var = tuple(i for i in rv.split(self.envvar_list_splitter))
-    if "-1" in var:
-      return var[:var.index("-1")]
+    if '-1' in var:
+      return var[:var.index('-1')]
     return var
 
   def shell_complete(self, ctx: click.Context, param: click.Parameter, incomplete: str) -> list[sc.CompletionItem]:
-    """Return a list of :class:`~click.shell_completion.CompletionItem` objects for the incomplete value.
+    '''Return a list of :class:`~click.shell_completion.CompletionItem` objects for the incomplete value.
 
     Most types do not provide completions, but some do, and this allows custom types to provide custom completions as well.
 
@@ -380,10 +380,10 @@ class CudaValueType(ParamType):
     ctx: Invocation context for this command.
     param: The parameter that is requesting completion.
     incomplete: Value being completed. May be empty.
-    """
+    '''
     from openllm_core.utils import available_devices
     mapping = incomplete.split(self.envvar_list_splitter) if incomplete else available_devices()
-    return [sc.CompletionItem(str(i), help=f"CUDA device index {i}") for i in mapping]
+    return [sc.CompletionItem(str(i), help=f'CUDA device index {i}') for i in mapping]
 
   def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> t.Any:
     typ = click_types.convert_type(str)
@@ -397,16 +397,16 @@ class CudaValueType(ParamType):
           try:
             value = value.decode(fs_enc)
           except UnicodeError:
-            value = value.decode("utf-8", "replace")
+            value = value.decode('utf-8', 'replace')
         else:
-          value = value.decode("utf-8", "replace")
-    return tuple(typ(x, param, ctx) for x in value.split(","))
+          value = value.decode('utf-8', 'replace')
+    return tuple(typ(x, param, ctx) for x in value.split(','))
 
   def __repr__(self) -> str:
-    return "STRING"
+    return 'STRING'
 CUDA = CudaValueType()
 class JsonType(ParamType):
-  name = "json"
+  name = 'json'
 
   def __init__(self, should_load: bool = True) -> None:
     """Support JSON type for click.ParamType.
