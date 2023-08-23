@@ -6,19 +6,12 @@
   "author": "Aaron Pham <29749331+aarnphm@users.noreply.github.com>",
   "license": "Apache-2.0",
   "engines": {
-    "node": ">=16"
+    "node": ">=18"
   },
   "workspaces": [
     "openllm-node",
     "openllm-contrib/clojure",
     "openllm-docs"
   ],
-  "private": true,
-  "devDependencies": {
-    "pyright": "^1.1.310",
-    "typescript": "^5.0.4"
-  },
-  "dependencies": {
-    "turbo": "^1.9.3"
-  }
+  "private": true
 }

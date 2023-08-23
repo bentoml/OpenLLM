@@ -1,0 +1,40 @@
+diff --git b/openllm-docs/package.json a/openllm-docs/package.json
+index a5087fb..7996a7d 100644
+--- b/openllm-docs/package.json
++++ a/openllm-docs/package.json
+@@ -1,15 +1,15 @@
+ {
+-  "name": "@jackyzha0/quartz",
+-  "description": "🌱 publish your digital garden and notes as a website",
++  "name": "@bentoml/openllm-docs",
++  "description": "📚 Documentation site for OpenLLM, built with Quartz",
+   "private": true,
+-  "version": "4.0.9",
++  "version": "4.0.9",
+   "type": "module",
+-  "author": "jackyzha0 <j.zhao2k19@gmail.com>",
+-  "license": "MIT",
+-  "homepage": "https://quartz.jzhao.xyz",
++  "author": "Aaron Pham <aarnphm@bentoml.com>",
++  "license": "Apache-2.0",
++  "homepage": "https://openllm.github.io",
+   "repository": {
+     "type": "git",
+-    "url": "https://github.com/jackyzha0/quartz.git"
++    "url": "https://github.com/bentoml/OpenLLM.git"
+   },
+   "scripts": {
+     "check": "tsc --noEmit && npx prettier . --check",
+diff --git b/openllm-docs/package.json a/openllm-docs/package.json
+index 39b9fe3..8d3225b 100644
+--- b/openllm-docs/package.json
++++ a/openllm-docs/package.json
+@@ -97,7 +97,7 @@
+     "@types/workerpool": "^6.4.0",
+     "@types/ws": "^8.5.5",
+     "@types/yargs": "^17.0.24",
+-    "esbuild": "^0.18.11",
++    "esbuild": "^0.19.1",
+     "prettier": "^3.0.0",
+     "tsx": "^3.12.7",
+     "typescript": "^5.0.4"
