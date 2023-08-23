@@ -543,10 +543,10 @@ client.embed("I like to eat apples")
 
 The following UIs are currently available for OpenLLM:
 
-| UI                                                                                | Owner                                         | Type                 | Progress |
-|-----------------------------------------------------------------------------------|-----------------------------------------------|----------------------|----------|
-| [Clojure](https://github.com/bentoml/OpenLLM/blob/main/contrib/clojure/README.md) | [@GutZuFusss](https://github.com/GutZuFusss)  | Community-maintained | 🔧       |
-| TS                                                                                | BentoML Team                                  |                      | 🚧       |
+| UI                                                                                        | Owner                                        | Type                 | Progress |
+|-------------------------------------------------------------------------------------------|----------------------------------------------|----------------------|----------|
+| [Clojure](https://github.com/bentoml/OpenLLM/blob/main/openllm-contrib/clojure/README.md) | [@GutZuFusss](https://github.com/GutZuFusss) | Community-maintained | 🔧       |
+| TS                                                                                        | BentoML Team                                 |                      | 🚧       |
 
 ## ⚙️ Integrations
 

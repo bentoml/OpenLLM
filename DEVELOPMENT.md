@@ -196,7 +196,7 @@ See this [docs](/.github/INFRA.md) for more information on OpenLLM's CI/CD workf
 
 ## UI
 
-See [ClojureScript UI's README.md](/contrib/clojure/README.md) for more information.
+See [ClojureScript UI's README.md](/openllm-contrib/clojure/README.md) for more information.
 
 ## Install from git archive install
 

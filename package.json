@@ -10,7 +10,7 @@
   },
   "workspaces": [
     "openllm-node",
-    "contrib/clojure"
+    "openllm-contrib/clojure"
   ],
   "private": true,
   "devDependencies": {

@@ -93,7 +93,7 @@ write-summary-report = "python tools/write-coverage-report.py"
 detached = true
 [envs.ui.scripts]
 server = "openllm start {args:flan-t5} --working-dir {root:uri} --cors --debug"
-clojure = ["bash tools/run-clojure-ui.sh"]
+clojure = ["bash openllm-contrib/clojure/run-clojure-ui.sh"]
 [envs.ci]
 detached = true
 [envs.ci.scripts]
@@ -102,5 +102,5 @@ recompile = ["bash ./clean.sh", "compile"]
 edi = "bash local.sh"
 lock = [
     "bash tools/lock-actions.sh",
-    "pushd contrib/clojure && pnpm i --frozen-lockfile",
+    "pushd openllm-contrib/clojure && pnpm i --frozen-lockfile",
 ]
