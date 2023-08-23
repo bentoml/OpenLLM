@@ -1,0 +1,9 @@
+public
+node_modules
+pnpm-lock.yaml
+.cache
+.docusaurus
+build
+.vercel
+.next
+pnpm-lock.yaml
