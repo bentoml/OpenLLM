@@ -137,8 +137,7 @@ specify different variants of the model to be served, by providing the
 openllm start flan-t5 --model-id google/flan-t5-large
 ```
 
-> [!NOTE]
-> `openllm` also supports all variants of fine-tuning weights, custom
+> [!NOTE] > `openllm` also supports all variants of fine-tuning weights, custom
 > model path as well as quantized weights for any of the supported models as
 > long as it can be loaded with the model architecture. Refer to
 > [supported models](https://github.com/bentoml/OpenLLM/tree/main#-supported-models)
@@ -544,7 +543,7 @@ client.embed("I like to eat apples")
 The following UIs are currently available for OpenLLM:
 
 | UI                                                                                        | Owner                                        | Type                 | Progress |
-|-------------------------------------------------------------------------------------------|----------------------------------------------|----------------------|----------|
+| ----------------------------------------------------------------------------------------- | -------------------------------------------- | -------------------- | -------- |
 | [Clojure](https://github.com/bentoml/OpenLLM/blob/main/openllm-contrib/clojure/README.md) | [@GutZuFusss](https://github.com/GutZuFusss) | Community-maintained | 🔧       |
 | TS                                                                                        | BentoML Team                                 |                      | 🚧       |
 
@@ -701,6 +700,7 @@ There are several ways to deploy your LLMs:
    ```bash
    bentoml containerize <name:version>
    ```
+
    This generates a OCI-compatible docker image that can be deployed anywhere
    docker runs. For best scalability and reliability of your LLM service in
    production, we recommend deploy with BentoCloud。

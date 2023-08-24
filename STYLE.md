@@ -93,6 +93,7 @@ _If you have any suggestions, feel free to give it on our discord server!_
   import os, sys
   import orjson, bentoml
   ```
+
   This is partially to make it easier to work with merge-conflicts, and easier
   for IDE to navigate context definition.
 
@@ -126,7 +127,7 @@ _If you have any suggestions, feel free to give it on our discord server!_
 - We also do some codegen for some of the assignment functions. These logics are
   largely based on the work of [attrs](https://github.com/python-attrs/attrs) to
   ensure fast and isolated codegen in Python. If you need codegen but don't know
-  how it works, feel free to mention @aarnphm_ on discord!
+  how it works, feel free to mention @aarnphm on discord!
 
 ## FAQ
 

@@ -7,3 +7,7 @@ build
 .vercel
 .next
 pnpm-lock.yaml
+openllm-python/tests
+CHANGELOG.md
+.github/CODE_OF_CONDUCT.md
+LICENSE.md

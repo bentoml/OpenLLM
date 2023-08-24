@@ -1,6 +1,6 @@
-service: "service:svc"
+service: 'service:svc'
 include:
-- "*.py"
+  - '*.py'
 python:
-   packages:
-   - openllm
+  packages:
+    - openllm

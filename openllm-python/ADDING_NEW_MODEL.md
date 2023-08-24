@@ -24,6 +24,7 @@ Here's your roadmap:
 - [ ] Run the following to update stubs: `hatch run check-stubs`
 
 > [!NOTE]
+>
 > `$GIT_ROOT` refers to `$(git rev-parse --show-toplevel)`
 
 For a working example, check out any existing model.

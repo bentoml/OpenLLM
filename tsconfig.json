@@ -2,11 +2,7 @@
   "compilerOptions": {
     "allowJs": true,
     "declaration": true,
-    "lib": [
-      "esnext",
-      "DOM",
-      "DOM.Iterable"
-    ],
+    "lib": ["esnext", "dom", "dom.Iterable"],
     "experimentalDecorators": true,
     "module": "esnext",
     "target": "esnext",
@@ -19,6 +15,9 @@
     "stripInternal": true,
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
-    "jsx": "preserve"
+    "jsx": "preserve",
+    "noEmit": true,
+    "esModuleInterop": true,
+    "isolatedModules": true
   }
 }

@@ -13,7 +13,7 @@ on:
         type: string
     outputs:
       sucess:
-        description: "Whether the build is successful or not"
+        description: 'Whether the build is successful or not'
         value: ${{ jobs.sucess-build.outputs.success }}
   push:
     branches: [main]
@@ -74,7 +74,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        directory: ["openllm-core", "openllm-python", "openllm-client"]
+        directory: ['openllm-core', 'openllm-python', 'openllm-client']
     steps:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # ratchet:actions/checkout@v3
         with:
@@ -102,11 +102,11 @@ jobs:
         # Github Actions doesn't support pairing matrix values together, let's improvise
         # https://github.com/github/feedback/discussions/7835#discussioncomment-1769026
         buildplatform:
-          - [ubuntu-latest, linux-x86_64, ""]
-          - [macos-latest, macos-x86_64, "x86_64"]
-          - [macos-latest, macos-arm64, "arm64"]
-          - [macos-latest, macos-universal2, "universal2"]
-        directory: ["openllm-core", "openllm-python", "openllm-client"]
+          - [ubuntu-latest, linux-x86_64, '']
+          - [macos-latest, macos-x86_64, 'x86_64']
+          - [macos-latest, macos-arm64, 'arm64']
+          - [macos-latest, macos-universal2, 'universal2']
+        directory: ['openllm-core', 'openllm-python', 'openllm-client']
     needs: get_commit_message
     if: >-
       contains(needs.get_commit_message.outputs.message, '[wheel build]') || github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, '02 - Wheel Build')) || (github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/heads/main')))
@@ -126,7 +126,7 @@ jobs:
           config-file: pyproject.toml
         env:
           CIBW_PRERELEASE_PYTHONS: True
-          CIBW_ARCHS_MACOS: "${{ matrix.buildplatform[2] }}"
+          CIBW_ARCHS_MACOS: '${{ matrix.buildplatform[2] }}'
           MYPYPATH: /project/typings
       - name: Upload wheels as workflow artifacts
         uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # ratchet:actions/upload-artifact@v3

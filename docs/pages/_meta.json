@@ -1,0 +1,34 @@
+{
+  "index": {
+    "type": "page",
+    "title": "OpenLLM",
+    "display": "hidden",
+    "theme": {
+      "layout": "raw"
+    }
+  },
+  "docs": {
+    "type": "page",
+    "title": "Documentation"
+  },
+  "about": {
+    "type": "page",
+    "title": "About",
+    "theme": {
+      "typesetting": "article"
+    }
+  },
+  "changelog": {
+    "type": "page",
+    "title": "Changelog",
+    "href": "https://github.com/bentoml/OpenLLM/blob/main/CHANGELOG.md",
+    "newWindow": true
+  },
+  "404": {
+    "type": "page",
+    "theme": {
+      "timestamp": false,
+      "typesetting": "article"
+    }
+  }
+}
