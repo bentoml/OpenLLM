@@ -1,7 +1,7 @@
 import React from 'react'
 import { useRouter } from 'next/router'
-import { useConfig } from 'nextra-theme-docs';
-import type { DocsThemeConfig  } from 'nextra-theme-docs'
+import { useConfig } from 'nextra-theme-docs'
+import type { DocsThemeConfig } from 'nextra-theme-docs'
 
 const openllmUrl = 'https://openllm.community'
 

@@ -18,26 +18,14 @@ module.exports = {
     // Rules for all files
     {
       files: '**/*.{js,jsx,cjs,mjs,ts,tsx,cts,mts}',
-      extends: [
-        'eslint:recommended',
-        'plugin:@typescript-eslint/recommended',
-        'plugin:import/typescript',
-        'prettier'
-      ],
+      extends: ['eslint:recommended', 'plugin:@typescript-eslint/recommended', 'plugin:import/typescript', 'prettier'],
       plugins: ['import', 'unicorn'],
       rules: {
         'prefer-object-has-own': 'error',
-        'logical-assignment-operators': [
-          'error',
-          'always',
-          { enforceForIfStatements: true }
-        ],
+        'logical-assignment-operators': ['error', 'always', { enforceForIfStatements: true }],
         'no-else-return': ['error', { allowElseIf: false }],
         'no-lonely-if': 'error',
-        'prefer-destructuring': [
-          'error',
-          { VariableDeclarator: { object: true } }
-        ],
+        'prefer-destructuring': ['error', { VariableDeclarator: { object: true } }],
         'import/no-duplicates': 'error',
         'no-negated-condition': 'off',
         'unicorn/no-negated-condition': 'error',
@@ -56,12 +44,7 @@ module.exports = {
     // Rules for React files
     {
       files: '{docs}/**',
-      extends: [
-        'plugin:react/recommended',
-        'plugin:react/jsx-runtime',
-        'plugin:react-hooks/recommended',
-        'plugin:@next/next/recommended'
-      ],
+      extends: ['plugin:react/recommended', 'plugin:react/jsx-runtime', 'plugin:react-hooks/recommended', 'plugin:@next/next/recommended'],
       rules: {
         'react/prop-types': 'off',
         'react/no-unknown-property': ['error', { ignore: ['jsx'] }],
@@ -71,22 +54,16 @@ module.exports = {
           'error',
           {
             // ❌ useMemo(…, [])
-            selector:
-              'CallExpression[callee.name=useMemo][arguments.1.type=ArrayExpression][arguments.1.elements.length=0]',
-            message:
-              "`useMemo` with an empty dependency array can't provide a stable reference, use `useRef` instead."
+            selector: 'CallExpression[callee.name=useMemo][arguments.1.type=ArrayExpression][arguments.1.elements.length=0]',
+            message: "`useMemo` with an empty dependency array can't provide a stable reference, use `useRef` instead."
           },
           {
             // ❌ z.object(…)
-            selector:
-              'MemberExpression[object.name=z] > .property[name=object]',
+            selector: 'MemberExpression[object.name=z] > .property[name=object]',
             message: 'Use z.strictObject is more safe.'
           }
         ],
-        'react/jsx-filename-extension': [
-          'error',
-          { extensions: ['.tsx', '.jsx'], allow: 'as-needed' }
-        ],
+        'react/jsx-filename-extension': ['error', { extensions: ['.tsx', '.jsx'], allow: 'as-needed' }],
         'react/jsx-curly-brace-presence': 'error',
         'react/jsx-boolean-value': 'error'
       },
@@ -102,10 +79,7 @@ module.exports = {
         // 'plugin:@typescript-eslint/recommended-requiring-type-checking'
       ],
       parserOptions: {
-        project: [
-          'docs/tsconfig.json',
-          'tsconfig.json'
-        ]
+        project: ['docs/tsconfig.json', 'tsconfig.json']
       },
       rules: {
         '@typescript-eslint/no-unnecessary-type-assertion': 'error',

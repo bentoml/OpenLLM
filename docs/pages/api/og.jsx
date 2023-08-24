@@ -71,7 +71,7 @@ export default async function image(req) {
     ),
     {
       width: 1200,
-      height: 630,
+      height: 630
       // fonts: [{ name: 'replica', data: replica, style: 'normal' }]
     }
   )

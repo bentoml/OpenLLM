@@ -37,6 +37,7 @@ quality = [
     "bash ./tools/sync-readme.sh",
     "check-stubs",
     "- pre-commit run --all-files",
+    "pnpm format"
 ]
 setup = [
     "pre-commit install",
