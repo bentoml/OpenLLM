@@ -39,7 +39,7 @@ This changelog is managed by towncrier and is compiled at release time.
 
 - OpenLLM now include a community-maintained ClojureScript UI, Thanks @GutZuFusss
 
-  See [this README.md](/contrib/clojure/README.md) for more information
+  See [this README.md](/openllm-contrib/clojure/README.md) for more information
 
   OpenLLM will also include a `--cors` to enable start with cors enabled.
   [#89](https://github.com/bentoml/openllm/issues/89)

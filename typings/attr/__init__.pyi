@@ -44,9 +44,9 @@ __author__: str
 __email__: str
 __license__: str
 __copyright__: str
-_T = TypeVar("_T")
-_C = TypeVar("_C", bound=type)
-_P = ParamSpec("_P")
+_T = TypeVar('_T')
+_C = TypeVar('_C', bound=type)
+_P = ParamSpec('_P')
 _EqOrderType: TypeAlias = Union[bool, Callable[[Any], Any]]
 _ValidatorType: TypeAlias = Callable[[Any, Attribute[_T], _T], Any]
 _ConverterType: TypeAlias = Callable[[Any], Any]
@@ -60,7 +60,7 @@ _ValidatorArgType: TypeAlias = Union[_ValidatorType[_T], Sequence[_ValidatorType
 
 class AttrsInstance(AttrsInstance_, Protocol): ...
 
-_A = TypeVar("_A", bound=AttrsInstance)
+_A = TypeVar('_A', bound=AttrsInstance)
 
 class _Nothing(enum.Enum):
     NOTHING = ...

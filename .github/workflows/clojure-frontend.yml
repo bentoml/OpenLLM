@@ -102,8 +102,8 @@ jobs:
         id: build-and-push
         uses: docker/build-push-action@2eb1c1961a95fc15694676618e422e8ba1d63825 # ratchet:docker/build-push-action@v4
         with:
-          context: contrib/clojure
-          file: contrib/clojure/Dockerfile
+          context: openllm-contrib/clojure
+          file: openllm-contrib/clojure/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           build-args: |

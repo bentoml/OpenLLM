@@ -6,7 +6,7 @@ else:
   from typing_extensions import TypeAlias
 
 AnyCallable: TypeAlias = Callable[..., Any]
-_FC = TypeVar("_FC", bound=Union[AnyCallable, click.Command])
+_FC = TypeVar('_FC', bound=Union[AnyCallable, click.Command])
 
 class GroupedOption(click.Option):
     def __init__(self, param_decls: Optional[Sequence[str]] = ..., *, group: OptionGroup, **attrs: Any) -> None: ...

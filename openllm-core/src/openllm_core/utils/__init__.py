@@ -37,12 +37,12 @@ except ImportError:
 if sys.version_info < (3, 10): _WithArgsTypes = (_TypingGenericAlias,)
 else: _WithArgsTypes: t.Any = (t._GenericAlias, types.GenericAlias, types.UnionType)  # type: ignore #  _GenericAlias is the actual GenericAlias implementation
 
-DEV_DEBUG_VAR = "OPENLLMDEVDEBUG"
+DEV_DEBUG_VAR = 'OPENLLMDEVDEBUG'
 def set_debug_mode(enabled: bool, level: int = 1) -> None:
   # monkeypatch bentoml._internal.configuration.set_debug_mode to remove unused logs
   if enabled: os.environ[DEV_DEBUG_VAR] = str(level)
   os.environ[DEBUG_ENV_VAR] = str(enabled)
-  os.environ[_GRPC_DEBUG_ENV_VAR] = "DEBUG" if enabled else "ERROR"
+  os.environ[_GRPC_DEBUG_ENV_VAR] = 'DEBUG' if enabled else 'ERROR'
 def lenient_issubclass(cls: t.Any, class_or_tuple: type[t.Any] | tuple[type[t.Any], ...] | None) -> bool:
   try:
     return isinstance(cls, type) and issubclass(cls, class_or_tuple)  # type: ignore[arg-type]
@@ -54,11 +54,11 @@ def ensure_exec_coro(coro: t.Coroutine[t.Any, t.Any, t.Any]) -> t.Any:
   if loop.is_running(): return asyncio.run_coroutine_threadsafe(coro, loop).result()
   else: return loop.run_until_complete(coro)
 def available_devices() -> tuple[str, ...]:
-  """Return available GPU under system. Currently only supports NVIDIA GPUs."""
+  '''Return available GPU under system. Currently only supports NVIDIA GPUs.'''
   from openllm_core._strategies import NvidiaGpuResource
   return tuple(NvidiaGpuResource.from_system())
 @functools.lru_cache(maxsize=128)
-def generate_hash_from_file(f: str, algorithm: t.Literal["md5", "sha1"] = "sha1") -> str:
+def generate_hash_from_file(f: str, algorithm: t.Literal['md5', 'sha1'] = 'sha1') -> str:
   """Generate a hash from given file's modification time.
 
   Args:
@@ -79,19 +79,19 @@ def non_intrusive_setattr(obj: t.Any, name: str, value: t.Any) -> None:
   _setattr = functools.partial(setattr, obj) if isinstance(obj, type) else _object_setattr.__get__(obj)
   if not hasattr(obj, name): _setattr(name, value)
 def field_env_key(model_name: str, key: str, suffix: str | None = None) -> str:
-  return "_".join(filter(None, map(str.upper, ["OPENLLM", model_name, suffix.strip("_") if suffix else "", key])))
+  return '_'.join(filter(None, map(str.upper, ['OPENLLM', model_name, suffix.strip('_') if suffix else '', key])))
 # Special debug flag controled via OPENLLMDEVDEBUG
 DEBUG: bool = sys.flags.dev_mode or (not sys.flags.ignore_environment and bool(os.environ.get(DEV_DEBUG_VAR)))
 # MYPY is like t.TYPE_CHECKING, but reserved for Mypy plugins
 MYPY = False
-SHOW_CODEGEN: bool = DEBUG and int(os.environ.get("OPENLLMDEVDEBUG", str(0))) > 3
+SHOW_CODEGEN: bool = DEBUG and int(os.environ.get('OPENLLMDEVDEBUG', str(0))) > 3
 def get_debug_mode() -> bool:
   return DEBUG or _get_debug_mode()
 def get_quiet_mode() -> bool:
   return not DEBUG and _get_quiet_mode()
 class ExceptionFilter(logging.Filter):
   def __init__(self, exclude_exceptions: list[type[Exception]] | None = None, **kwargs: t.Any):
-    """A filter of all exception."""
+    '''A filter of all exception.'''
     if exclude_exceptions is None: exclude_exceptions = [ConflictError]
     if ConflictError not in exclude_exceptions: exclude_exceptions.append(ConflictError)
     super(ExceptionFilter, self).__init__(**kwargs)
@@ -108,52 +108,52 @@ class InfoFilter(logging.Filter):
   def filter(self, record: logging.LogRecord) -> bool:
     return logging.INFO <= record.levelno < logging.WARNING
 _LOGGING_CONFIG: dict[str, t.Any] = {
-    "version": 1,
-    "disable_existing_loggers": True,
-    "filters": {
-        "excfilter": {
-            "()": "openllm_core.utils.ExceptionFilter"
-        }, "infofilter": {
-            "()": "openllm_core.utils.InfoFilter"
+    'version': 1,
+    'disable_existing_loggers': True,
+    'filters': {
+        'excfilter': {
+            '()': 'openllm_core.utils.ExceptionFilter'
+        }, 'infofilter': {
+            '()': 'openllm_core.utils.InfoFilter'
         }
     },
-    "handlers": {
-        "bentomlhandler": {
-            "class": "logging.StreamHandler", "filters": ["excfilter", "infofilter"], "stream": "ext://sys.stdout"
+    'handlers': {
+        'bentomlhandler': {
+            'class': 'logging.StreamHandler', 'filters': ['excfilter', 'infofilter'], 'stream': 'ext://sys.stdout'
         },
-        "defaulthandler": {
-            "class": "logging.StreamHandler", "level": logging.WARNING
+        'defaulthandler': {
+            'class': 'logging.StreamHandler', 'level': logging.WARNING
         }
     },
-    "loggers": {
-        "bentoml": {
-            "handlers": ["bentomlhandler", "defaulthandler"], "level": logging.INFO, "propagate": False
+    'loggers': {
+        'bentoml': {
+            'handlers': ['bentomlhandler', 'defaulthandler'], 'level': logging.INFO, 'propagate': False
         },
-        "openllm": {
-            "handlers": ["bentomlhandler", "defaulthandler"], "level": logging.INFO, "propagate": False
+        'openllm': {
+            'handlers': ['bentomlhandler', 'defaulthandler'], 'level': logging.INFO, 'propagate': False
         }
     },
-    "root": {
-        "level": logging.WARNING
+    'root': {
+        'level': logging.WARNING
     },
 }
 def configure_logging() -> None:
-  """Configure logging for OpenLLM.
+  '''Configure logging for OpenLLM.
 
   Behaves similar to how BentoML loggers are being configured.
-  """
+  '''
   if get_quiet_mode():
-    _LOGGING_CONFIG["loggers"]["openllm"]["level"] = logging.ERROR
-    _LOGGING_CONFIG["loggers"]["bentoml"]["level"] = logging.ERROR
-    _LOGGING_CONFIG["root"]["level"] = logging.ERROR
+    _LOGGING_CONFIG['loggers']['openllm']['level'] = logging.ERROR
+    _LOGGING_CONFIG['loggers']['bentoml']['level'] = logging.ERROR
+    _LOGGING_CONFIG['root']['level'] = logging.ERROR
   elif get_debug_mode() or DEBUG:
-    _LOGGING_CONFIG["loggers"]["openllm"]["level"] = logging.DEBUG
-    _LOGGING_CONFIG["loggers"]["bentoml"]["level"] = logging.DEBUG
-    _LOGGING_CONFIG["root"]["level"] = logging.DEBUG
+    _LOGGING_CONFIG['loggers']['openllm']['level'] = logging.DEBUG
+    _LOGGING_CONFIG['loggers']['bentoml']['level'] = logging.DEBUG
+    _LOGGING_CONFIG['root']['level'] = logging.DEBUG
   else:
-    _LOGGING_CONFIG["loggers"]["openllm"]["level"] = logging.INFO
-    _LOGGING_CONFIG["loggers"]["bentoml"]["level"] = logging.INFO
-    _LOGGING_CONFIG["root"]["level"] = logging.INFO
+    _LOGGING_CONFIG['loggers']['openllm']['level'] = logging.INFO
+    _LOGGING_CONFIG['loggers']['bentoml']['level'] = logging.INFO
+    _LOGGING_CONFIG['root']['level'] = logging.INFO
 
   logging.config.dictConfig(_LOGGING_CONFIG)
 @functools.lru_cache(maxsize=1)
@@ -162,10 +162,10 @@ def in_notebook() -> bool:
     from IPython.core.getipython import get_ipython
     if t.TYPE_CHECKING:
       from IPython.core.interactiveshell import InteractiveShell
-    return "IPKernelApp" in t.cast("dict[str, t.Any]", t.cast(t.Callable[[], "InteractiveShell"], get_ipython)().config)
+    return 'IPKernelApp' in t.cast('dict[str, t.Any]', t.cast(t.Callable[[], 'InteractiveShell'], get_ipython)().config)
   except (ImportError, AttributeError):
     return False
-_dockerenv, _cgroup = Path("/.dockerenv"), Path("/proc/self/cgroup")
+_dockerenv, _cgroup = Path('/.dockerenv'), Path('/proc/self/cgroup')
 class suppress(contextlib.suppress, contextlib.ContextDecorator):
   """A version of contextlib.suppress with decorator support.
 
@@ -175,7 +175,7 @@ class suppress(contextlib.suppress, contextlib.ContextDecorator):
   >>> key_error()
   """
 def compose(*funcs: AnyCallable) -> AnyCallable:
-  """Compose any number of unary functions into a single unary function.
+  '''Compose any number of unary functions into a single unary function.
 
   >>> import textwrap
   >>> expected = str.strip(textwrap.dedent(compose.__doc__))
@@ -189,7 +189,7 @@ def compose(*funcs: AnyCallable) -> AnyCallable:
   >>> f = compose(round_three, int.__truediv__)
   >>> [f(3*x, x+1) for x in range(1,10)]
   [1.5, 2.0, 2.25, 2.4, 2.5, 2.571, 2.625, 2.667, 2.7]
-  """
+  '''
   def compose_two(f1: AnyCallable, f2: AnyCallable) -> AnyCallable:
     return lambda *args, **kwargs: f1(f2(*args, **kwargs))
 
@@ -216,16 +216,16 @@ def apply(transform: AnyCallable) -> t.Callable[[AnyCallable], AnyCallable]:
 def _text_in_file(text: str, filename: Path) -> bool:
   return any(text in line for line in filename.open())
 def in_docker() -> bool:
-  """Is this current environment running in docker?
+  '''Is this current environment running in docker?
 
   ```python
   type(in_docker())
   ```
-  """
-  return _dockerenv.exists() or _text_in_file("docker", _cgroup)
-T, K = t.TypeVar("T"), t.TypeVar("K")
+  '''
+  return _dockerenv.exists() or _text_in_file('docker', _cgroup)
+T, K = t.TypeVar('T'), t.TypeVar('K')
 def resolve_filepath(path: str, ctx: str | None = None) -> str:
-  """Resolve a file path to an absolute path, expand user and environment variables."""
+  '''Resolve a file path to an absolute path, expand user and environment variables.'''
   try:
     return resolve_user_filepath(path, ctx)
   except FileNotFoundError:
@@ -233,16 +233,16 @@ def resolve_filepath(path: str, ctx: str | None = None) -> str:
 def validate_is_path(maybe_path: str) -> bool:
   return os.path.exists(os.path.dirname(resolve_filepath(maybe_path)))
 def generate_context(framework_name: str) -> _ModelContext:
-  framework_versions = {"transformers": pkg.get_pkg_version("transformers")}
-  if openllm_core.utils.is_torch_available(): framework_versions["torch"] = pkg.get_pkg_version("torch")
+  framework_versions = {'transformers': pkg.get_pkg_version('transformers')}
+  if openllm_core.utils.is_torch_available(): framework_versions['torch'] = pkg.get_pkg_version('torch')
   if openllm_core.utils.is_tf_available():
     from bentoml._internal.frameworks.utils.tensorflow import get_tf_version
-    framework_versions["tensorflow"] = get_tf_version()
-  if openllm_core.utils.is_flax_available(): framework_versions.update({"flax": pkg.get_pkg_version("flax"), "jax": pkg.get_pkg_version("jax"), "jaxlib": pkg.get_pkg_version("jaxlib")})
+    framework_versions['tensorflow'] = get_tf_version()
+  if openllm_core.utils.is_flax_available(): framework_versions.update({'flax': pkg.get_pkg_version('flax'), 'jax': pkg.get_pkg_version('jax'), 'jaxlib': pkg.get_pkg_version('jaxlib')})
   return _ModelContext(framework_name=framework_name, framework_versions=framework_versions)
-_TOKENIZER_PREFIX = "_tokenizer_"
+_TOKENIZER_PREFIX = '_tokenizer_'
 def normalize_attrs_to_model_tokenizer_pair(**attrs: t.Any) -> tuple[dict[str, t.Any], dict[str, t.Any]]:
-  """Normalize the given attrs to a model and tokenizer kwargs accordingly."""
+  '''Normalize the given attrs to a model and tokenizer kwargs accordingly.'''
   tokenizer_attrs = {k[len(_TOKENIZER_PREFIX):]: v for k, v in attrs.items() if k.startswith(_TOKENIZER_PREFIX)}
   for k in tuple(attrs.keys()):
     if k.startswith(_TOKENIZER_PREFIX): del attrs[k]
@@ -250,46 +250,46 @@ def normalize_attrs_to_model_tokenizer_pair(**attrs: t.Any) -> tuple[dict[str, t
 # NOTE: The set marks contains a set of modules name
 # that are available above and are whitelisted
 # to be included in the extra_objects map.
-_whitelist_modules = {"pkg"}
+_whitelist_modules = {'pkg'}
 
 # XXX: define all classes, functions import above this line
 # since _extras will be the locals() import from this file.
-_extras: dict[str, t.Any] = {k: v for k, v in locals().items() if k in _whitelist_modules or (not isinstance(v, types.ModuleType) and not k.startswith("_"))}
-_extras["__openllm_migration__"] = {"ModelEnv": "EnvVarMixin"}
+_extras: dict[str, t.Any] = {k: v for k, v in locals().items() if k in _whitelist_modules or (not isinstance(v, types.ModuleType) and not k.startswith('_'))}
+_extras['__openllm_migration__'] = {'ModelEnv': 'EnvVarMixin'}
 _import_structure: dict[str, list[str]] = {
-    "analytics": [],
-    "codegen": [],
-    "dantic": [],
-    "representation": ["ReprMixin"],
-    "lazy": ["LazyModule"],
-    "import_utils": [
-        "OPTIONAL_DEPENDENCIES",
-        "ENV_VARS_TRUE_VALUES",
-        "DummyMetaclass",
-        "EnvVarMixin",
-        "require_backends",
-        "is_cpm_kernels_available",
-        "is_einops_available",
-        "is_flax_available",
-        "is_tf_available",
-        "is_vllm_available",
-        "is_torch_available",
-        "is_bitsandbytes_available",
-        "is_peft_available",
-        "is_datasets_available",
-        "is_transformers_supports_kbit",
-        "is_transformers_supports_agent",
-        "is_jupyter_available",
-        "is_jupytext_available",
-        "is_notebook_available",
-        "is_triton_available",
-        "is_autogptq_available",
-        "is_sentencepiece_available",
-        "is_xformers_available",
-        "is_fairscale_available",
-        "is_grpc_available",
-        "is_grpc_health_available",
-        "is_transformers_available"
+    'analytics': [],
+    'codegen': [],
+    'dantic': [],
+    'representation': ['ReprMixin'],
+    'lazy': ['LazyModule'],
+    'import_utils': [
+        'OPTIONAL_DEPENDENCIES',
+        'ENV_VARS_TRUE_VALUES',
+        'DummyMetaclass',
+        'EnvVarMixin',
+        'require_backends',
+        'is_cpm_kernels_available',
+        'is_einops_available',
+        'is_flax_available',
+        'is_tf_available',
+        'is_vllm_available',
+        'is_torch_available',
+        'is_bitsandbytes_available',
+        'is_peft_available',
+        'is_datasets_available',
+        'is_transformers_supports_kbit',
+        'is_transformers_supports_agent',
+        'is_jupyter_available',
+        'is_jupytext_available',
+        'is_notebook_available',
+        'is_triton_available',
+        'is_autogptq_available',
+        'is_sentencepiece_available',
+        'is_xformers_available',
+        'is_fairscale_available',
+        'is_grpc_available',
+        'is_grpc_health_available',
+        'is_transformers_available'
     ]
 }
 
@@ -326,7 +326,7 @@ if t.TYPE_CHECKING:
       require_backends as require_backends,
   )
   from .representation import ReprMixin as ReprMixin
-__lazy = LazyModule(__name__, globals()["__file__"], _import_structure, extra_objects=_extras)
+__lazy = LazyModule(__name__, globals()['__file__'], _import_structure, extra_objects=_extras)
 __all__ = __lazy.__all__
 __dir__ = __lazy.__dir__
 __getattr__ = __lazy.__getattr__

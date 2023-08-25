@@ -3,6 +3,6 @@ import logging, typing as t, openllm
 if t.TYPE_CHECKING: import vllm, transformers
 
 logger = logging.getLogger(__name__)
-class VLLMFalcon(openllm.LLM["vllm.LLMEngine", "transformers.PreTrainedTokenizerBase"]):
+class VLLMFalcon(openllm.LLM['vllm.LLMEngine', 'transformers.PreTrainedTokenizerBase']):
   __openllm_internal__ = True
-  tokenizer_id = "local"
+  tokenizer_id = 'local'

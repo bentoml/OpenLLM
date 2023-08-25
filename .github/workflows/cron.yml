@@ -17,6 +17,9 @@ concurrency:
   group: cron-${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
 jobs:
+  scheduled-tests:
+    if: github.repository_owner == 'bentoml'
+    uses: bentoml/OpenLLM/.github/workflows/ci.yml@main # ratchet:exclude
   update-actions:
     runs-on: 'ubuntu-latest'
     name: Ratchet update

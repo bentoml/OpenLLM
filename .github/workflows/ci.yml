@@ -1,5 +1,6 @@
 name: Continuous Integration
 on:
+  workflow_call:
   push:
     branches: [main]
     paths-ignore:
@@ -9,7 +10,7 @@ on:
       - '*.md'
       - 'changelog.d/**'
       - 'assets/**'
-      - 'contrib/clojure/**'
+      - 'openllm-contrib/clojure/**'
   pull_request:
     branches: [main]
     paths-ignore:
@@ -19,7 +20,7 @@ on:
       - '*.md'
       - 'changelog.d/**'
       - 'assets/**'
-      - 'contrib/clojure/**'
+      - 'openllm-contrib/clojure/**'
 env:
   LINES: 120
   COLUMNS: 120
@@ -46,6 +47,7 @@ jobs:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # ratchet:actions/checkout@v3
         with:
           fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
       - uses: bentoml/setup-bentoml-action@59beefe94e2e8f8ebbedf555fc86bd5d1ae0a708 # ratchet:bentoml/setup-bentoml-action@v1
         with:
           bentoml-version: 'main'
@@ -63,12 +65,12 @@ jobs:
     name: report-coverage
     runs-on: ubuntu-latest
     if: false
-    needs:
-      - tests
+    needs: tests
     steps:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # ratchet:actions/checkout@v3
         with:
           fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
       - uses: bentoml/setup-bentoml-action@59beefe94e2e8f8ebbedf555fc86bd5d1ae0a708 # ratchet:bentoml/setup-bentoml-action@v1
         with:
           bentoml-version: 'main'

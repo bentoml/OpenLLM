@@ -9,14 +9,14 @@ try:
 except MissingDependencyError:
   pass
 else:
-  _import_structure["modeling_starcoder"] = ["StarCoder"]
+  _import_structure['modeling_starcoder'] = ['StarCoder']
   if t.TYPE_CHECKING: from .modeling_starcoder import StarCoder as StarCoder
 try:
   if not is_vllm_available(): raise MissingDependencyError
 except MissingDependencyError:
   pass
 else:
-  _import_structure["modeling_vllm_starcoder"] = ["VLLMStarCoder"]
+  _import_structure['modeling_vllm_starcoder'] = ['VLLMStarCoder']
   if t.TYPE_CHECKING: from .modeling_vllm_starcoder import VLLMStarCoder as VLLMStarCoder
 
-sys.modules[__name__] = LazyModule(__name__, globals()["__file__"], _import_structure)
+sys.modules[__name__] = LazyModule(__name__, globals()['__file__'], _import_structure)

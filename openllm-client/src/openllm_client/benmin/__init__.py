@@ -16,7 +16,7 @@ import typing as t, bentoml, attr, httpx
 from abc import abstractmethod
 if t.TYPE_CHECKING: from bentoml._internal.service.inference_api import InferenceAPI
 
-__all__ = ["Client", "AsyncClient"]
+__all__ = ['Client', 'AsyncClient']
 @attr.define(init=False)
 class Client:
   server_url: str
@@ -25,7 +25,7 @@ class Client:
   timeout: int = attr.field(default=30)
 
   def __init__(self, server_url: str, svc: bentoml.Service, **kwargs: t.Any) -> None:
-    if len(svc.apis) == 0: raise bentoml.exceptions.BentoMLException("No APIs was found while constructing clients.")
+    if len(svc.apis) == 0: raise bentoml.exceptions.BentoMLException('No APIs was found while constructing clients.')
     self.__attrs_init__(server_url=server_url, endpoints=list(svc.apis), svc=svc)
     for it, val in kwargs.items():
       object.__setattr__(self, it, val)
@@ -50,7 +50,7 @@ class Client:
       from ._grpc import GrpcClient
       return GrpcClient.from_url(url, **kwargs)
     except Exception as err:
-      raise bentoml.exceptions.BentoMLException("Failed to create client from url: %s" % url) from err
+      raise bentoml.exceptions.BentoMLException('Failed to create client from url: %s' % url) from err
 
   @staticmethod
   def wait_until_server_ready(host: str, port: int, timeout: float = 30, **kwargs: t.Any) -> None:
@@ -61,7 +61,7 @@ class Client:
       from ._grpc import GrpcClient
       return GrpcClient.wait_until_server_ready(host, port, timeout, **kwargs)
     except Exception as err:
-      raise bentoml.exceptions.BentoMLException("Failed to wait until server ready: %s:%d" % (host, port)) from err
+      raise bentoml.exceptions.BentoMLException('Failed to wait until server ready: %s:%d' % (host, port)) from err
 @attr.define(init=False)
 class AsyncClient:
   server_url: str
@@ -70,7 +70,7 @@ class AsyncClient:
   timeout: int = attr.field(default=30)
 
   def __init__(self, server_url: str, svc: bentoml.Service, **kwargs: t.Any) -> None:
-    if len(svc.apis) == 0: raise bentoml.exceptions.BentoMLException("No APIs was found while constructing clients.")
+    if len(svc.apis) == 0: raise bentoml.exceptions.BentoMLException('No APIs was found while constructing clients.')
     self.__attrs_init__(server_url=server_url, endpoints=list(svc.apis), svc=svc)
     for it, val in kwargs.items():
       object.__setattr__(self, it, val)
@@ -95,7 +95,7 @@ class AsyncClient:
       from ._grpc import AsyncGrpcClient
       return await AsyncGrpcClient.from_url(url, **kwargs)
     except Exception as err:
-      raise bentoml.exceptions.BentoMLException("Failed to create client from url: %s" % url) from err
+      raise bentoml.exceptions.BentoMLException('Failed to create client from url: %s' % url) from err
 
   @staticmethod
   async def wait_until_server_ready(host: str, port: int, timeout: float = 30, **kwargs: t.Any) -> None:
@@ -106,4 +106,4 @@ class AsyncClient:
       from ._grpc import AsyncGrpcClient
       await AsyncGrpcClient.wait_until_server_ready(host, port, timeout, **kwargs)
     except Exception as err:
-      raise bentoml.exceptions.BentoMLException("Failed to wait until server ready: %s:%d" % (host, port)) from err
+      raise bentoml.exceptions.BentoMLException('Failed to wait until server ready: %s:%d' % (host, port)) from err
