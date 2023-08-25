@@ -18,6 +18,54 @@ This changelog is managed by towncrier and is compiled at release time.
 
 <!-- towncrier release notes start -->
 
+## [0.2.27](https://github.com/bentoml/openllm/tree/v0.2.27)
+
+### Changes
+
+- Define specific style guideline for the project. See
+  [STYLE.md](https://github.com/bentoml/OpenLLM/blob/main/STYLE.md) for more
+  information.
+  [#168](https://github.com/bentoml/openllm/issues/168)
+
+
+### Refactor
+
+- Expose all extension via `openllm extension`
+
+  Added a separate section for all extension with the CLI. `openllm playground` is now considered as an extension
+
+  introduce compiled wheels gradually
+
+  added a easy `cz.py` for code golf and LOC
+  [#191](https://github.com/bentoml/openllm/issues/191)
+- Refactor openllm_js to openllm-node for initial node library development
+  [#199](https://github.com/bentoml/openllm/issues/199)
+- OpenLLM now comprise of three packages:
+
+  - `openllm-core`: main building blocks of OpenLLM, that doesn't depend on transformers and heavy DL libraries
+  - `openllm-client`: The implementation of `openllm.client`
+  - `openllm`: = `openllm-core` + `openllm-client` + DL features (under `openllm-python`)
+
+  OpenLLM now will provide `start-grpc` as opt-in. If you wan to use `openllm start-grpc`, make sure to install
+  with `pip install "openllm[grpc]"`
+  [#249](https://github.com/bentoml/openllm/issues/249)
+
+
+### Features
+
+- OpenLLM now provides SSE support
+
+  > [!NOTE]
+  > For this to work, you must install BentoML>=1.1.2:
+  > `pip install -U bentoml>=1.1.2`
+
+  The endpoint can be accessed via `/v1/generate_stream`
+
+  > [!NOTE]
+  > Curl does in fact does support SSE by passing in `-N`
+  [#240](https://github.com/bentoml/openllm/issues/240)
+
+
 ## [0.2.26](https://github.com/bentoml/openllm/tree/v0.2.26)
 
 ### Features
