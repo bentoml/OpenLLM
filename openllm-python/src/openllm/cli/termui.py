@@ -1,5 +1,11 @@
 from __future__ import annotations
-import os, typing as t, click, inflection, openllm
+import os
+import typing as t
+
+import click
+import inflection
+
+import openllm
 if t.TYPE_CHECKING: from openllm_core._typing_compat import DictStrAny
 def echo(text: t.Any, fg: str = 'green', _with_style: bool = True, **attrs: t.Any) -> None:
   attrs['fg'] = fg if not openllm.utils.get_debug_mode() else None

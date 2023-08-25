@@ -1,5 +1,7 @@
 from __future__ import annotations
-import typing as t, attr
+import typing as t
+
+import attr
 from huggingface_hub import HfApi
 if t.TYPE_CHECKING:
   import openllm

@@ -1,18 +1,32 @@
 # mypy: disable-error-code="misc"
 from __future__ import annotations
-import fs, fs.copy, fs.errors, orjson, bentoml, openllm_core, importlib.metadata, inspect, logging, os, typing as t, string
+import importlib.metadata
+import inspect
+import logging
+import os
+import string
+import typing as t
 from pathlib import Path
+
+import fs
+import fs.copy
+import fs.errors
+import orjson
 from simple_di import Provide, inject
+
+import bentoml
+import openllm_core
 from bentoml._internal.bento.build_config import BentoBuildConfig, DockerOptions, ModelSpec, PythonOptions
 from bentoml._internal.configuration.containers import BentoMLContainer
-from . import oci
 
+from . import oci
 if t.TYPE_CHECKING:
-  import openllm
   from fs.base import FS
-  from openllm_core._typing_compat import LiteralString, LiteralContainerRegistry, LiteralContainerVersionStrategy
+
+  import openllm
   from bentoml._internal.bento import BentoStore
   from bentoml._internal.models.model import ModelStore
+  from openllm_core._typing_compat import LiteralContainerRegistry, LiteralContainerVersionStrategy, LiteralString
 logger = logging.getLogger(__name__)
 
 OPENLLM_DEV_BUILD = 'OPENLLM_DEV_BUILD'

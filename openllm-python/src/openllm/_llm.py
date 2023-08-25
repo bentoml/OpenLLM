@@ -1,18 +1,43 @@
 # mypy: disable-error-code="name-defined,attr-defined"
 from __future__ import annotations
-import functools, inspect, logging, os, re, traceback, types, typing as t, uuid, attr, fs.path, inflection, orjson, bentoml, openllm, openllm_core, gc, pathlib, abc
+import abc
+import functools
+import gc
+import inspect
+import logging
+import os
+import pathlib
+import re
+import traceback
+import types
+import typing as t
+import uuid
+
+import attr
+import fs.path
+import inflection
+import orjson
 from huggingface_hub import hf_hub_download
+
+import bentoml
+import openllm
+import openllm_core
 from bentoml._internal.models.model import ModelSignature
 from openllm_core._configuration import FineTuneConfig, LLMConfig, _object_getattribute, _setattr_class
 from openllm_core._schema import unmarshal_vllm_outputs
+from openllm_core._typing_compat import AdaptersMapping, AdaptersTuple, AdapterType, AnyCallable, DictStrAny, ListStr, LiteralRuntime, LiteralString, LLMEmbeddings, LLMRunnable, LLMRunner, M, ModelSignatureDict as _ModelSignatureDict, NotRequired, PeftAdapterOutput, T, TupleAny, overload
 from openllm_core.utils import DEBUG, ENV_VARS_TRUE_VALUES, MYPY, EnvVarMixin, LazyLoader, ReprMixin, apply, bentoml_cattr, codegen, device_count, first_not_none, generate_hash_from_file, is_peft_available, is_torch_available, non_intrusive_setattr, normalize_attrs_to_model_tokenizer_pair, resolve_filepath, validate_is_path
+
 from ._quantisation import infer_quantisation_config
 from .exceptions import ForbiddenAttributeError, GpuNotAvailableError, OpenLLMException
 from .utils import infer_auto_class
-from openllm_core._typing_compat import AdaptersMapping, AdaptersTuple, AnyCallable, AdapterType, LiteralRuntime, DictStrAny, ListStr, LLMEmbeddings, LLMRunnable, LLMRunner, ModelSignatureDict as _ModelSignatureDict, PeftAdapterOutput, TupleAny, NotRequired, overload, M, T, LiteralString
-
 if t.TYPE_CHECKING:
-  import auto_gptq as autogptq, peft, torch, transformers, vllm
+  import auto_gptq as autogptq
+  import peft
+  import torch
+  import transformers
+  import vllm
+
   from openllm_core._configuration import PeftType
   from openllm_core.utils.representation import ReprArgs
 else:
@@ -1001,7 +1026,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
   ) -> t.Iterator[t.Any]:
     # NOTE: encoder-decoder models will need to implement their own generate_iterator for now
     # inspired from fastchat's generate_stream_func
-    from ._generation import prepare_logits_processor, get_context_length, is_partial_stop
+    from ._generation import get_context_length, is_partial_stop, prepare_logits_processor
 
     len_prompt = len(prompt)
     if stop_token_ids is None: stop_token_ids = []

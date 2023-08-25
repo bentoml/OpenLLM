@@ -1,8 +1,13 @@
 '''Schema definition for OpenLLM. This can be use for client interaction.'''
 from __future__ import annotations
-import functools, typing as t
-import attr, inflection
+import functools
+import typing as t
+
+import attr
+import inflection
+
 from openllm_core._configuration import GenerationConfig, LLMConfig
+
 from .utils import bentoml_cattr
 if t.TYPE_CHECKING: import vllm
 @attr.frozen(slots=True)

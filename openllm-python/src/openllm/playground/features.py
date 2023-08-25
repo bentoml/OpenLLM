@@ -4,7 +4,6 @@ import logging
 import typing as t
 
 import openllm
-
 openllm.utils.configure_logging()
 
 logger = logging.getLogger(__name__)
@@ -13,7 +12,6 @@ MAX_NEW_TOKENS = 384
 
 Q = "Answer the following question, step by step:\n{q}\nA:"
 question = "What is the meaning of life?"
-
 def main() -> int:
   parser = argparse.ArgumentParser()
   parser.add_argument("question", default=question)
@@ -44,11 +42,9 @@ def main() -> int:
   logger.info("=" * 10, "Response:", r.llm.postprocess_generate(prompt, res))
 
   return 0
-
 def _mp_fn(index: t.Any):  # noqa # type: ignore
   # For xla_spawn (TPUs)
   main()
-
 if openllm.utils.in_notebook():
   main()
 else:

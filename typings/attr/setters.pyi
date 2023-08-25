@@ -1,7 +1,6 @@
 from typing import Any, NewType, NoReturn, TypeVar
 
 from . import Attribute, _OnSetAttrType
-
 _T = TypeVar('_T')
 
 def frozen(instance: Any, attribute: Attribute[Any], new_value: Any) -> NoReturn: ...

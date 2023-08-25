@@ -1,5 +1,19 @@
 from __future__ import annotations
-import functools, importlib, importlib.machinery, importlib.metadata, importlib.util, itertools, os, time, types, warnings, typing as t, attr, openllm_core
+import functools
+import importlib
+import importlib.machinery
+import importlib.metadata
+import importlib.util
+import itertools
+import os
+import time
+import types
+import typing as t
+import warnings
+
+import attr
+
+import openllm_core
 __all__ = ['VersionInfo', 'LazyModule']
 # vendorred from attrs
 @functools.total_ordering

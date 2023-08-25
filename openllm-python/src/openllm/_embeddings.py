@@ -1,8 +1,13 @@
 # See https://github.com/bentoml/sentence-embedding-bento for more information.
 from __future__ import annotations
-import bentoml, openllm, transformers, typing as t
+import typing as t
+
+import transformers
 from huggingface_hub import snapshot_download
-from bentoml._internal.frameworks.transformers import MODULE_NAME, API_VERSION
+
+import bentoml
+import openllm
+from bentoml._internal.frameworks.transformers import API_VERSION, MODULE_NAME
 from bentoml._internal.models.model import ModelOptions, ModelSignature
 if t.TYPE_CHECKING: import torch
 
@@ -44,7 +49,8 @@ class GenericEmbeddingRunnable(bentoml.Runnable):
 
   @bentoml.Runnable.method(batchable=True, batch_dim=0)
   def encode(self, sentences: list[str]) -> t.Sequence[openllm.LLMEmbeddings]:
-    import torch, torch.nn.functional as F
+    import torch
+    import torch.nn.functional as F
     encoded_input = self.tokenizer(sentences, padding=True, truncation=True, return_tensors='pt').to(self.device)
     attention_mask = encoded_input['attention_mask']
     # Compute token embeddings

@@ -12,7 +12,6 @@ from .rwbase import (
     split_lines as split_lines,
     strip_transient as strip_transient,
 )
-
 class BytesEncoder(json.JSONEncoder):
     def default(self, obj: Any) -> Any: ...
 

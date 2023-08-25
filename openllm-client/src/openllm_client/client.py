@@ -1,7 +1,8 @@
 from __future__ import annotations
 import logging
 from urllib.parse import urlparse
-from ._base import BaseClient, BaseAsyncClient
+
+from ._base import BaseAsyncClient, BaseClient
 logger = logging.getLogger(__name__)
 def process_http_address(self: AsyncHTTPClient | HTTPClient, address: str) -> None:
   address = address if '://' in address else 'http://' + address

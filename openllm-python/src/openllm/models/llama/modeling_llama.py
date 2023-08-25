@@ -1,5 +1,7 @@
 from __future__ import annotations
-import typing as t, openllm
+import typing as t
+
+import openllm
 if t.TYPE_CHECKING: import transformers
 class Llama(openllm.LLM['transformers.LlamaForCausalLM', 'transformers.LlamaTokenizerFast']):
   __openllm_internal__ = True
@@ -10,7 +12,8 @@ class Llama(openllm.LLM['transformers.LlamaForCausalLM', 'transformers.LlamaToke
     return {'torch_dtype': torch.float16 if torch.cuda.is_available() else torch.float32}, {}
 
   def embeddings(self, prompts: list[str]) -> openllm.LLMEmbeddings:
-    import torch, torch.nn.functional as F
+    import torch
+    import torch.nn.functional as F
     encoding = self.tokenizer(prompts, padding=True, return_tensors='pt').to(self.device)
     input_ids, attention_mask = encoding['input_ids'], encoding['attention_mask']
     with torch.inference_mode():

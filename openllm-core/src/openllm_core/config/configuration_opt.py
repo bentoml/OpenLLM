@@ -1,7 +1,9 @@
 from __future__ import annotations
-import openllm_core, typing as t
-from openllm_core.utils import dantic
+import typing as t
+
+import openllm_core
 from openllm_core._prompt import process_prompt
+from openllm_core.utils import dantic
 START_OPT_COMMAND_DOCSTRING = '''\
 Run a LLMServer for OPT model.
 

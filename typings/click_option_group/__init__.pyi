@@ -9,7 +9,6 @@ from ._core import (
 )
 from ._decorators import optgroup
 from ._version import __version__
-
 '''
 click-option-group
 ~~~~~~~~~~~~~~~~~~

@@ -1,6 +1,5 @@
 import sys
 from typing import Any, Callable, Optional
-
 if sys.version_info[:2] >= (3, 10):
   from typing import TypeAlias
 else:

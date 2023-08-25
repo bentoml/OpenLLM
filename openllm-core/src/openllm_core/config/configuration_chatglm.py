@@ -1,5 +1,7 @@
 from __future__ import annotations
-import openllm_core, typing as t
+import typing as t
+
+import openllm_core
 from openllm_core.utils import dantic
 START_CHATGLM_COMMAND_DOCSTRING = '''\
 Run a LLMServer for ChatGLM model.

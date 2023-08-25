@@ -29,7 +29,6 @@ from random import randint, randrange
 
 import bitsandbytes as bnb
 from datasets import load_dataset
-
 # COPIED FROM https://github.com/artidoro/qlora/blob/main/qlora.py
 def find_all_linear_names(model):
   lora_module_names = set()
@@ -41,13 +40,11 @@ def find_all_linear_names(model):
   if "lm_head" in lora_module_names:  # needed for 16-bit
     lora_module_names.remove("lm_head")
   return list(lora_module_names)
-
 # Change this to the local converted path if you don't have access to the meta-llama model
 DEFAULT_MODEL_ID = "meta-llama/Llama-2-7b-hf"
 # change this to 'main' if you want to use the latest llama
 DEFAULT_MODEL_VERSION = "335a02887eb6684d487240bbc28b5699298c3135"
 DATASET_NAME = "databricks/databricks-dolly-15k"
-
 def format_dolly(sample):
   instruction = f"### Instruction\n{sample['instruction']}"
   context = f"### Context\n{sample['context']}" if len(sample["context"]) > 0 else None
@@ -55,15 +52,12 @@ def format_dolly(sample):
   # join all the parts together
   prompt = "\n\n".join([i for i in [instruction, context, response] if i is not None])
   return prompt
-
 # template dataset to add prompt to each sample
 def template_dataset(sample, tokenizer):
   sample["text"] = f"{format_dolly(sample)}{tokenizer.eos_token}"
   return sample
-
 # empty list to save remainder from batches to use in next batch
 remainder = {"input_ids": [], "attention_mask": [], "token_type_ids": []}
-
 def chunk(sample, chunk_length=2048):
   # define global remainder variable to save remainder from batches to use in next batch
   global remainder
@@ -84,7 +78,6 @@ def chunk(sample, chunk_length=2048):
   # prepare labels
   result["labels"] = result["input_ids"].copy()
   return result
-
 def prepare_datasets(tokenizer, dataset_name=DATASET_NAME):
   # Load dataset from the hub
   dataset = load_dataset(dataset_name, split="train")
@@ -103,11 +96,20 @@ def prepare_datasets(tokenizer, dataset_name=DATASET_NAME):
   # Print total number of samples
   print(f"Total number of samples: {len(lm_dataset)}")
   return lm_dataset
-
-def prepare_for_int4_training(model_id: str, model_version: str | None = None, gradient_checkpointing: bool = True, bf16: bool = True,) -> tuple[peft.PeftModel, transformers.LlamaTokenizerFast]:
+def prepare_for_int4_training(model_id: str, model_version: str | None = None, gradient_checkpointing: bool = True, bf16: bool = True,
+                              ) -> tuple[peft.PeftModel, transformers.LlamaTokenizerFast]:
   from peft.tuners.lora import LoraLayer
 
-  llm = openllm.AutoLLM.for_model("llama", model_id=model_id, model_version=model_version, ensure_available=True, quantize="int4", bnb_4bit_compute_dtype=torch.bfloat16, use_cache=not gradient_checkpointing, device_map="auto",)
+  llm = openllm.AutoLLM.for_model(
+      "llama",
+      model_id=model_id,
+      model_version=model_version,
+      ensure_available=True,
+      quantize="int4",
+      bnb_4bit_compute_dtype=torch.bfloat16,
+      use_cache=not gradient_checkpointing,
+      device_map="auto",
+  )
   print("Model summary:", llm.model)
 
   # get lora target modules
@@ -128,7 +130,6 @@ def prepare_for_int4_training(model_id: str, model_version: str | None = None, g
         if bf16 and module.weight.dtype == torch.float32:
           module = module.to(torch.bfloat16)
   return model, tokenizer
-
 @dataclasses.dataclass
 class TrainingArguments:
   per_device_train_batch_size: int = dataclasses.field(default=1)
@@ -140,14 +141,12 @@ class TrainingArguments:
   report_to: str = dataclasses.field(default="none")
   output_dir: str = dataclasses.field(default=os.path.join(os.getcwd(), "outputs", "llama"))
   save_strategy: str = dataclasses.field(default="no")
-
 @dataclasses.dataclass
 class ModelArguments:
   model_id: str = dataclasses.field(default=DEFAULT_MODEL_ID)
   model_version: str = dataclasses.field(default=DEFAULT_MODEL_VERSION)
   seed: int = dataclasses.field(default=42)
   merge_weights: bool = dataclasses.field(default=False)
-
 if openllm.utils.in_notebook():
   model_args, training_rags = ModelArguments(), TrainingArguments()
 else:
@@ -161,7 +160,6 @@ else:
 
 # import the model first hand
 openllm.import_model("llama", model_id=model_args.model_id, model_version=model_args.model_version)
-
 def train_loop(model_args: ModelArguments, training_args: TrainingArguments):
   import peft
 
@@ -170,7 +168,12 @@ def train_loop(model_args: ModelArguments, training_args: TrainingArguments):
   model, tokenizer = prepare_for_int4_training(model_args.model_id, gradient_checkpointing=training_args.gradient_checkpointing, bf16=training_args.bf16,)
   datasets = prepare_datasets(tokenizer)
 
-  trainer = transformers.Trainer(model=model, args=dataclasses.replace(transformers.TrainingArguments(training_args.output_dir), **dataclasses.asdict(training_args)), train_dataset=datasets, data_collator=transformers.default_data_collator,)
+  trainer = transformers.Trainer(
+      model=model,
+      args=dataclasses.replace(transformers.TrainingArguments(training_args.output_dir), **dataclasses.asdict(training_args)),
+      train_dataset=datasets,
+      data_collator=transformers.default_data_collator,
+  )
 
   trainer.train()
 
@@ -191,5 +194,4 @@ def train_loop(model_args: ModelArguments, training_args: TrainingArguments):
     model.save_pretrained(os.path.join(os.getcwd(), "outputs", "merged_llama_lora"), safe_serialization=True, max_shard_size="2GB")
   else:
     trainer.model.save_pretrained(os.path.join(training_args.output_dir, "lora"))
-
 train_loop(model_args, training_args)

@@ -1,5 +1,7 @@
 from __future__ import annotations
-import sys, typing as t
+import sys
+import typing as t
+
 from openllm.exceptions import MissingDependencyError
 from openllm.utils import LazyModule, is_torch_available, is_vllm_available
 from openllm_core.config.configuration_mpt import DEFAULT_PROMPT_TEMPLATE as DEFAULT_PROMPT_TEMPLATE, PROMPT_MAPPING as PROMPT_MAPPING, START_MPT_COMMAND_DOCSTRING as START_MPT_COMMAND_DOCSTRING, MPTConfig as MPTConfig

@@ -22,10 +22,8 @@ logger = logging.getLogger(__name__)
 
 from datasets import load_dataset
 from trl import SFTTrainer
-
 DEFAULT_MODEL_ID = "ybelkada/falcon-7b-sharded-bf16"
 DATASET_NAME = "timdettmers/openassistant-guanaco"
-
 @dataclasses.dataclass
 class TrainingArguments:
   per_device_train_batch_size: int = dataclasses.field(default=4)
@@ -42,12 +40,10 @@ class TrainingArguments:
   group_by_length: bool = dataclasses.field(default=True)
   lr_scheduler_type: str = dataclasses.field(default="constant")
   output_dir: str = dataclasses.field(default=os.path.join(os.getcwd(), "outputs", "falcon"))
-
 @dataclasses.dataclass
 class ModelArguments:
   model_id: str = dataclasses.field(default=DEFAULT_MODEL_ID)
   max_sequence_length: int = dataclasses.field(default=512)
-
 parser = transformers.HfArgumentParser((ModelArguments, TrainingArguments))
 if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
   # If we pass only one argument to the script and it's the path to a json file,
@@ -56,13 +52,20 @@ if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
 else:
   model_args, training_args = t.cast(t.Tuple[ModelArguments, TrainingArguments], parser.parse_args_into_dataclasses())
 
-model, tokenizer = openllm.AutoLLM.for_model("falcon", model_id=model_args.model_id, quantize="int4", bnb_4bit_quant_type="nf4", bnb_4bit_compute_dtype=torch.float16, ensure_available=True,).prepare_for_training(adapter_type="lora", lora_alpha=16, lora_dropout=0.1, r=16, bias="none", target_modules=["query_key_value", "dense", "dense_h_to_4h", "dense_4h_to_h",],)
+model, tokenizer = openllm.AutoLLM.for_model("falcon", model_id=model_args.model_id, quantize="int4", bnb_4bit_quant_type="nf4", bnb_4bit_compute_dtype=torch.float16, ensure_available=True).prepare_for_training(adapter_type="lora", lora_alpha=16, lora_dropout=0.1, r=16, bias="none", target_modules=["query_key_value", "dense", "dense_h_to_4h", "dense_4h_to_h"])
 model.config.use_cache = False
 tokenizer.pad_token = tokenizer.eos_token
 
 dataset = load_dataset(DATASET_NAME, split="train")
 
-trainer = SFTTrainer(model=model, train_dataset=dataset, dataset_text_field="text", max_seq_length=model_args.max_sequence_length, tokenizer=tokenizer, args=dataclasses.replace(transformers.TrainingArguments(training_args.output_dir), **dataclasses.asdict(training_args),),)
+trainer = SFTTrainer(
+    model=model,
+    train_dataset=dataset,
+    dataset_text_field="text",
+    max_seq_length=model_args.max_sequence_length,
+    tokenizer=tokenizer,
+    args=dataclasses.replace(transformers.TrainingArguments(training_args.output_dir), **dataclasses.asdict(training_args)),
+)
 
 # upcast layernorm in float32 for more stable training
 for name, module in trainer.model.named_modules():

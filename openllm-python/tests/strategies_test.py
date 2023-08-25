@@ -1,5 +1,10 @@
 from __future__ import annotations
-import os, typing as t, pytest, bentoml
+import os
+import typing as t
+
+import pytest
+
+import bentoml
 from openllm_core import _strategies as strategy
 from openllm_core._strategies import CascadingResourceStrategy, NvidiaGpuResource, get_resource
 if t.TYPE_CHECKING: from _pytest.monkeypatch import MonkeyPatch

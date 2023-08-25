@@ -1,10 +1,23 @@
 # mypy: disable-error-code="no-redef"
 from __future__ import annotations
-import functools, inspect, logging, math, os, sys, types, typing as t, warnings, psutil, bentoml
+import functools
+import inspect
+import logging
+import math
+import os
+import sys
+import types
+import typing as t
+import warnings
+
+import psutil
+
+import bentoml
 from bentoml._internal.resource import get_resource, system_resources
 from bentoml._internal.runner.strategy import THREAD_ENVS
-from .utils import DEBUG, ReprMixin
+
 from ._typing_compat import overload
+from .utils import DEBUG, ReprMixin
 class DynResource(t.Protocol):
   resource_id: t.ClassVar[str]
 

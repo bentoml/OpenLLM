@@ -18,7 +18,6 @@ from .nbjson import (
     to_notebook as to_notebook,
     writes as writes,
 )
-
 reads_json = reads
 writes_json = writes
 to_notebook_json = to_notebook

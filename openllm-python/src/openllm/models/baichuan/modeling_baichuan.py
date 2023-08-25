@@ -1,5 +1,7 @@
 from __future__ import annotations
-import typing as t, openllm
+import typing as t
+
+import openllm
 if t.TYPE_CHECKING: import transformers
 class Baichuan(openllm.LLM['transformers.PreTrainedModel', 'transformers.PreTrainedTokenizerBase']):
   __openllm_internal__ = True

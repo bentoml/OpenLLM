@@ -1,5 +1,11 @@
 from __future__ import annotations
-import click, inflection, orjson, bentoml, openllm
+
+import click
+import inflection
+import orjson
+
+import bentoml
+import openllm
 from bentoml._internal.utils import human_readable_size
 from openllm.cli import termui
 from openllm.cli._factory import LiteralOutput, output_option

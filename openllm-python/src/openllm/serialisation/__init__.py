@@ -23,13 +23,18 @@ llm.save_pretrained("./path/to/local-dolly")
 ```
 """
 from __future__ import annotations
-import importlib, typing as t
-import cloudpickle, fs, openllm
-from bentoml._internal.models.model import CUSTOM_OBJECTS_FILENAME
-from openllm_core._typing_compat import M, T, ParamSpec
+import importlib
+import typing as t
 
+import cloudpickle
+import fs
+
+import openllm
+from bentoml._internal.models.model import CUSTOM_OBJECTS_FILENAME
+from openllm_core._typing_compat import M, ParamSpec, T
 if t.TYPE_CHECKING:
   import bentoml
+
   from . import constants as constants, ggml as ggml, transformers as transformers
 P = ParamSpec('P')
 def load_tokenizer(llm: openllm.LLM[t.Any, T], **tokenizer_attrs: t.Any) -> T:

@@ -1,5 +1,7 @@
 from __future__ import annotations
-import typing as t, openllm
+import typing as t
+
+import openllm
 from openllm_core._prompt import process_prompt
 from openllm_core.config.configuration_flan_t5 import DEFAULT_PROMPT_TEMPLATE
 if t.TYPE_CHECKING: import transformers

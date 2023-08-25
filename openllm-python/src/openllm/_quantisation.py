@@ -1,11 +1,14 @@
 # mypy: disable-error-code="name-defined,no-redef"
 from __future__ import annotations
-import logging, typing as t
-from openllm_core.utils import LazyLoader, is_autogptq_available, is_bitsandbytes_available, is_transformers_supports_kbit, pkg
+import logging
+import typing as t
+
 from openllm_core._typing_compat import overload
+from openllm_core.utils import LazyLoader, is_autogptq_available, is_bitsandbytes_available, is_transformers_supports_kbit, pkg
 if t.TYPE_CHECKING:
-  from ._llm import LLM
   from openllm_core._typing_compat import DictStrAny
+
+  from ._llm import LLM
 autogptq, torch, transformers = LazyLoader('autogptq', globals(), 'auto_gptq'), LazyLoader('torch', globals(), 'torch'), LazyLoader('transformers', globals(), 'transformers')
 
 logger = logging.getLogger(__name__)

@@ -1,6 +1,10 @@
 from __future__ import annotations
-import typing as t, click, bentoml
+import typing as t
+
+import click
 from simple_di import Provide, inject
+
+import bentoml
 from bentoml._internal.bento.bento import BentoInfo
 from bentoml._internal.bento.build_config import DockerOptions
 from bentoml._internal.configuration.containers import BentoMLContainer
@@ -8,7 +12,6 @@ from bentoml._internal.container.generate import generate_containerfile
 from openllm.cli import termui
 from openllm.cli._factory import bento_complete_envvar
 from openllm_core.utils import bentoml_cattr
-
 if t.TYPE_CHECKING: from bentoml._internal.bento import BentoStore
 @click.command('get_containerfile', context_settings=termui.CONTEXT_SETTINGS, help='Return Containerfile of any given Bento.')
 @click.argument('bento', type=str, shell_complete=bento_complete_envvar)

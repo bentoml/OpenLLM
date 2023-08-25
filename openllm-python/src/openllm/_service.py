@@ -1,14 +1,23 @@
 # mypy: disable-error-code="call-arg,misc,attr-defined,type-abstract,type-arg,valid-type,arg-type"
 from __future__ import annotations
-import os, warnings, orjson, bentoml, openllm, openllm_core, typing as t
+import os
+import typing as t
+import warnings
+
+import orjson
 from starlette.applications import Starlette
 from starlette.responses import JSONResponse
 from starlette.routing import Route
+
+import bentoml
+import openllm
+import openllm_core
 if t.TYPE_CHECKING:
-  from openllm_core._typing_compat import TypeAlias
   from starlette.requests import Request
   from starlette.responses import Response
-  from bentoml._internal.runner.runner import RunnerMethod, AbstractRunner
+
+  from bentoml._internal.runner.runner import AbstractRunner, RunnerMethod
+  from openllm_core._typing_compat import TypeAlias
   _EmbeddingMethod: TypeAlias = RunnerMethod[t.Union[bentoml.Runnable, openllm.LLMRunnable[t.Any, t.Any]], [t.List[str]], t.Sequence[openllm.LLMEmbeddings]]
 # The following warnings from bitsandbytes, and probably not that important for users to see
 warnings.filterwarnings('ignore', message='MatMul8bitLt: inputs will be cast from torch.float32 to float16 during quantization')

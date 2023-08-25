@@ -1,8 +1,18 @@
 from __future__ import annotations
-import contextlib, os, sys, typing as t, attr, pytest, transformers, openllm
+import contextlib
+import os
+import sys
+import typing as t
 from unittest import mock
-from openllm_core._configuration import GenerationConfig, ModelSettings, field_env_key
+
+import attr
+import pytest
+import transformers
 from hypothesis import assume, given, strategies as st
+
+import openllm
+from openllm_core._configuration import GenerationConfig, ModelSettings, field_env_key
+
 from ._strategies._configuration import make_llm_config, model_settings
 # XXX: @aarnphm fixes TypedDict behaviour in 3.11
 @pytest.mark.skipif(sys.version_info[:2] == (3, 11), reason='TypedDict in 3.11 behaves differently, so we need to fix this')

@@ -12,8 +12,13 @@ The client implementation won't include a dynamic assignment of the service endp
 via `client.call` or `await client.call`.
 """
 from __future__ import annotations
-import typing as t, bentoml, attr, httpx
+import typing as t
 from abc import abstractmethod
+
+import attr
+import httpx
+
+import bentoml
 if t.TYPE_CHECKING: from bentoml._internal.service.inference_api import InferenceAPI
 
 __all__ = ['Client', 'AsyncClient']

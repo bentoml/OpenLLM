@@ -1,10 +1,16 @@
 from __future__ import annotations
-import functools, inspect, linecache, logging, types, typing as t, orjson
+import functools
+import inspect
+import linecache
+import logging
+import types
+import typing as t
 from operator import itemgetter
 
+import orjson
 if t.TYPE_CHECKING:
   import openllm_core
-  from openllm_core._typing_compat import LiteralString, AnyCallable, DictStrAny, ListStr
+  from openllm_core._typing_compat import AnyCallable, DictStrAny, ListStr, LiteralString
   PartialAny = functools.partial[t.Any]
 
 _T = t.TypeVar('_T', bound=t.Callable[..., t.Any])

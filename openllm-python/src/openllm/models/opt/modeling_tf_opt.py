@@ -1,5 +1,8 @@
 from __future__ import annotations
-import typing as t, bentoml, openllm
+import typing as t
+
+import bentoml
+import openllm
 from openllm_core.utils import generate_labels
 if t.TYPE_CHECKING: import transformers
 class TFOPT(openllm.LLM['transformers.TFOPTForCausalLM', 'transformers.GPT2Tokenizer']):

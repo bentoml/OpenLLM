@@ -1,5 +1,6 @@
 from __future__ import annotations
-import string, typing as t
+import string
+import typing as t
 class PromptFormatter(string.Formatter):
   """This PromptFormatter is largely based on langchain's implementation."""
   def vformat(self, format_string: str, args: t.Sequence[t.Any], kwargs: t.Mapping[str, t.Any]) -> t.Any:

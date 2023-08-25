@@ -1,8 +1,10 @@
 from __future__ import annotations
-import typing as t, os
+import os
+import typing as t
+
 import openllm
+from openllm_core.config import CONFIG_MAPPING as CONFIG_MAPPING, CONFIG_MAPPING_NAMES as CONFIG_MAPPING_NAMES, AutoConfig as AutoConfig
 from openllm_core.utils import LazyModule, is_flax_available, is_tf_available, is_torch_available, is_vllm_available
-from openllm_core.config import AutoConfig as AutoConfig, CONFIG_MAPPING as CONFIG_MAPPING, CONFIG_MAPPING_NAMES as CONFIG_MAPPING_NAMES
 _import_structure: dict[str, list[str]] = {
     'modeling_auto': ['MODEL_MAPPING_NAMES'],
     'modeling_flax_auto': ['MODEL_FLAX_MAPPING_NAMES'],

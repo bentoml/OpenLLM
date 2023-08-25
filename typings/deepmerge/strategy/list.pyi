@@ -1,6 +1,5 @@
 from .core import StrategyList
 from ..merger import Merger
-
 class ListStrategies(StrategyList):
     NAME: str = ...
 

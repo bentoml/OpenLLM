@@ -1,15 +1,27 @@
 # mypy: disable-error-code="misc"
 '''OCI-related utilities for OpenLLM. This module is considered to be internal and API are subjected to change.'''
 from __future__ import annotations
-import functools, importlib, logging, os, pathlib, shutil, subprocess, typing as t, openllm_core
+import functools
+import importlib
+import logging
+import os
+import pathlib
+import shutil
+import subprocess
+import typing as t
 from datetime import datetime, timedelta, timezone
-import attr, orjson, bentoml, openllm
-from openllm_core.utils.lazy import VersionInfo
 
+import attr
+import orjson
+
+import bentoml
+import openllm
+import openllm_core
+from openllm_core.utils.lazy import VersionInfo
 if t.TYPE_CHECKING:
-  from openllm_core._typing_compat import LiteralContainerRegistry, LiteralContainerVersionStrategy
   from ghapi import all
-  from openllm_core._typing_compat import RefTuple, LiteralString
+
+  from openllm_core._typing_compat import LiteralContainerRegistry, LiteralContainerVersionStrategy, LiteralString, RefTuple
 all = openllm_core.utils.LazyLoader('all', globals(), 'ghapi.all')  # noqa: F811
 
 logger = logging.getLogger(__name__)
