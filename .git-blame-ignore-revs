@@ -6,3 +6,5 @@
 eddbc063743b198d72c21bd7dced59dbd949b9f1
 # 08/23/2023: Synchronize style guidelines
 787ce1b3b63ecbacde371550f46fa7429f3e4db2
+# 08/25/2023: Consistency between yapf and ruff
+46c890480640294c3f34706d595559c7ea97dac5
