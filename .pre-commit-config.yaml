@@ -7,6 +7,16 @@ default_language_version:
   python: python3.11 # NOTE: sync with .python-version-default
 exclude: '.*\.(css|js|svg)$'
 repos:
+  - repo: https://github.com/google/yapf
+    rev: v0.40.1
+    hooks:
+      - id: yapf
+        verbose: true
+        exclude: |
+          (?x)^(
+              openllm-client/src/openllm_client/pb.*|
+              openllm-python/src/openllm/cli/entrypoint.py
+          )$
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: 'v0.0.285'
     hooks:
@@ -18,6 +28,11 @@ repos:
     hooks:
       - id: editorconfig-checker
         verbose: true
+        exclude: |
+          (?x)^(
+              openllm-client/src/openllm_client/pb.*|
+              openllm-python/src/openllm/cli/entrypoint.py
+          )$
   - repo: https://github.com/econchick/interrogate
     rev: 1.5.0
     hooks:
@@ -26,11 +41,6 @@ repos:
         types: [python]
         exclude: ^(docs|tools|openllm-python/tests)
         args: [--config=pyproject.toml]
-  - repo: https://github.com/google/yapf
-    rev: v0.40.1
-    hooks:
-      - id: yapf
-        verbose: true
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.5.1
     hooks:
@@ -43,6 +53,7 @@ repos:
               tests/.*|
               openllm-python/src/openllm/playground/.*|
               openllm-python/tests/.*|
+              openllm-client/src/openllm_client/pb.*|
               .github/.*|
               cz.py |
               hatch_build.py
