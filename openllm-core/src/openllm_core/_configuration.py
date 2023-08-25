@@ -157,7 +157,7 @@ class FineTuneConfig:
   inference_mode: bool = dantic.Field(False, description="Whether to use this Adapter for inference", use_default_converter=False)
   llm_config_class: type[LLMConfig] = dantic.Field(None, description="The reference class to openllm.LLMConfig", use_default_converter=False)
 
-  def to_peft_config(self) -> peft.PeftConfig:
+  def to_peft_config(self) -> peft.PeftConfig:  # type: ignore[name-defined]
     adapter_config = self.adapter_config.copy()
     # no need for peft_type since it is internally managed by OpenLLM and PEFT
     if "peft_type" in adapter_config: adapter_config.pop("peft_type")

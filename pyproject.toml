@@ -403,8 +403,8 @@ exclude = [
   "openllm-python/src/openllm/_service.py",
   "openllm-core/src/openllm_core/_typing_compat.py",
 ]
-modules = ["openllm", "openllm-core", "openllm-client"]
-mypy_path = "typings"
+modules = ["openllm", "openllm_core", "openllm_client"]
+mypy_path = "typings:openllm-core/src:openllm-client/src"
 pretty = true
 python_version = "3.8"
 show_error_codes = true
@@ -412,6 +412,7 @@ strict = true
 warn_return_any = false
 warn_unreachable = true
 warn_unused_ignores = false
+explicit_package_bases = true
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
 module = [
