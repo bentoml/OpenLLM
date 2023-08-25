@@ -28,7 +28,7 @@ generic_embedding_runner = bentoml.Runner(
 runners: list[AbstractRunner] = [runner]
 if not runner.supports_embeddings: runners.append(generic_embedding_runner)
 svc = bentoml.Service(name=f"llm-{llm_config['start_name']}-service", runners=runners)
-_JsonInput = bentoml.io.JSON.from_sample({'prompt': '', 'llm_config': llm_config.model_dump(flatten=True), 'adapter_name': ''})
+_JsonInput = bentoml.io.JSON.from_sample({'prompt': '', 'llm_config': llm_config.model_dump(flatten=True), 'adapter_name': None})
 @svc.api(route='/v1/generate', input=_JsonInput, output=bentoml.io.JSON.from_sample({'responses': [], 'configuration': llm_config.model_dump(flatten=True)}))
 async def generate_v1(input_dict: dict[str, t.Any]) -> openllm.GenerationOutput:
   qa_inputs = openllm.GenerationInput.from_llm_config(llm_config)(**input_dict)

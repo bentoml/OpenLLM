@@ -1,3 +1,4 @@
+# mypy: disable-error-code="name-defined,attr-defined"
 from __future__ import annotations
 import functools, inspect, logging, os, re, traceback, types, typing as t, uuid, attr, fs.path, inflection, orjson, bentoml, openllm, openllm_core, gc, pathlib, abc
 from huggingface_hub import hf_hub_download
@@ -847,7 +848,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
     peft_config = self.config['fine_tune_strategies'].get(adapter_type, FineTuneConfig(adapter_type=t.cast('PeftType', adapter_type), llm_config_class=self.config_class)).train().with_config(
         **attrs
     ).to_peft_config()
-    wrapped_peft = peft.get_peft_model(prepare_model_for_kbit_training(self.model, use_gradient_checkpointing=use_gradient_checkpointing), peft_config)
+    wrapped_peft = peft.get_peft_model(prepare_model_for_kbit_training(self.model, use_gradient_checkpointing=use_gradient_checkpointing), peft_config)  # type: ignore[no-untyped-call]
     if DEBUG: wrapped_peft.print_trainable_parameters()
     return wrapped_peft, self.tokenizer
 
