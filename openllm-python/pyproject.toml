@@ -38,7 +38,7 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dependencies = [
-  "bentoml[grpc,io]>=1.1.2",
+  "bentoml[io]>=1.1.2",
   "transformers[torch,tokenizers,accelerate]>=4.29.0",
   "openllm-client",
   "safetensors",
@@ -102,10 +102,11 @@ falcon = ["einops", "xformers"]
 fine-tune = ["peft>=0.4.0", "bitsandbytes", "datasets", "accelerate", "trl"]
 flan-t5 = ["flax>=0.7", "jax", "jaxlib", "tensorflow", "keras"]
 full = [
-  "openllm[agents,baichuan,chatglm,falcon,fine-tune,flan-t5,ggml,gptq,llama,mpt,openai,opt,playground,starcoder,vllm]",
+    "openllm[agents,baichuan,chatglm,falcon,fine-tune,flan-t5,ggml,gptq,grpc,llama,mpt,openai,opt,playground,starcoder,vllm]",
 ]
 ggml = ["ctransformers"]
 gptq = ["auto-gptq[triton]"]
+grpc = ["openllm-client[grpc]"]
 llama = ["fairscale", "sentencepiece"]
 mpt = ["triton", "einops"]
 openai = ["openai", "tiktoken"]

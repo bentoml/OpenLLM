@@ -5,14 +5,13 @@ from collections import OrderedDict
 import inflection, packaging.version
 from bentoml._internal.utils import LazyLoader, pkg
 from openllm_core._typing_compat import overload, LiteralString
-
 from .representation import ReprMixin
 
 if t.TYPE_CHECKING:
   BackendOrderedDict = OrderedDict[str, t.Tuple[t.Callable[[], bool], str]]
   from openllm_core._typing_compat import LiteralRuntime
 logger = logging.getLogger(__name__)
-OPTIONAL_DEPENDENCIES = {'opt', 'flan-t5', 'vllm', 'fine-tune', 'ggml', 'agents', 'openai', 'playground', 'gptq'}
+OPTIONAL_DEPENDENCIES = {'opt', 'flan-t5', 'vllm', 'fine-tune', 'ggml', 'agents', 'openai', 'playground', 'gptq', 'grpc'}
 ENV_VARS_TRUE_VALUES = {'1', 'ON', 'YES', 'TRUE'}
 ENV_VARS_TRUE_AND_AUTO_VALUES = ENV_VARS_TRUE_VALUES.union({'AUTO'})
 USE_TF = os.environ.get('USE_TF', 'AUTO').upper()
