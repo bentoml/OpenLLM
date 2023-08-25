@@ -236,6 +236,9 @@ relative-imports-order = "closest-to-furthest"
 required-imports = ["from __future__ import annotations"]
 [tool.ruff.flake8-quotes]
 avoid-escape = false
+multiline-quotes = "single"
+inline-quotes = "single"
+docstring-quotes = "single"
 [tool.ruff.extend-per-file-ignores]
 "openllm-python/src/openllm/_service.py" = ["E401"]
 "openllm-python/src/openllm/models/**" = ["E", "F"]

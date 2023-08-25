@@ -6,14 +6,17 @@ import { Feature, Features } from '@components/features'
 import { ArrowRightIcon } from '@components/icons'
 import cn from 'clsx'
 import Link from 'next/link'
+import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { useState } from 'react'
 import styles from './index.module.css'
+import docsCardDark from '../public/assets/card-1-dark.png'
+import docsCard from '../public/assets/card-1.png'
 
 <div className="home-content">
   <div className="content-container">
-    <h1 className="headline">Fine-tune, serve, deploy <br className='sm:block hidden'/>LLM in production</h1>
-    <p className="subtitle">Easy to use, powerful and flexible API <br className='sm:block hidden'/>with industry best-practices and everything you love from <a className="bentoml-link" href="https://bentoml.com" target="_blank">BentoML</a></p>
+    <h1 className="headline">Fine-tune, serve, deploy <br className='sm:block hidden'/>LLMs in production</h1>
+    <p className="subtitle">Easy to use, powerful APIs, built-in optimisation, with industry best-practices <br className='sm:block hidden'/> and everything you love from <a className="bentoml-link" href="https://bentoml.com" target="_blank">BentoML</a></p>
     <p className="subtitle">
       <Link className={styles.cta} href="/docs/getting-started">Get started <span>→</span></Link>
     </p>
@@ -21,8 +24,8 @@ import styles from './index.module.css'
   <style jsx>{`
     .content-container {
       max-width: 90rem;
-      padding-left: max(env(safe-area-inset-left),1.5rem);
-      padding-right: max(env(safe-area-inset-right),1.5rem);
+      padding-left: max(env(safe-area-inset-left), 1.5rem);
+      padding-right: max(env(safe-area-inset-right), 1.5rem);
       margin: 0 auto;
     }
     .features-container {
@@ -214,6 +217,33 @@ import styles from './index.module.css'
 
   <div className="features-container">
     <div className="content-container">
+    <Features>
+      <Feature index={0} large centered id="docs-card" href="/docs/supported-models">
+        <Image src={docsCard} alt="Background" loading="eager" />
+        <Image src={docsCardDark} alt="Background (Dark)" loading="eager" />
+        <h3>Built-in support <br className="show-on-mobile" /> for state-of-the-art LLMs</h3>
+      </Feature>
+       <Feature index={1} centered className="card-with-border" href="/docs/api">
+          <div className="h-full flex flex-col justify-between">
+            <h3>Flexible APIs <br className="show-on-mobile"/>with <span className="font-light">extensibility</span></h3>
+            <p className='text-left mb-8'>OpenLLM serve LLMs over RESTful APIs or [gRPC](https://docs.bentoml.com/en/latest/guides/grpc.html#serving-with-grpc) with one command. Query it via Web UI, CLI, [Python/TS Client](/docs/api/client) interchangeably.</p>
+            <div>
+              <div className={styles.optimization}>
+                <div style={{ fontSize: '.9rem' }} className="leading-8">
+                  <code>{`openllm start llama`}</code>
+                  <br/>
+                </div>
+              </div>
+              <ArrowRightIcon width="1.2em" className="text-neutral-400 rotate-90 my-6 mx-auto" />
+              <div className={styles.optimization}>
+                <div style={{ fontSize: '.9rem', justifyContent: 'left' }} className="leading-8">
+                  <code>{`client.query('What is the difference between llama and alpaca?')`}</code>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Feature>
+    </Features>
     </div>
   </div>
 </div>

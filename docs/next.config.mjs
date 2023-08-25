@@ -7,4 +7,18 @@ const withNextra = nextra({
   defaultShowCopyCode: true
 })
 
-export default withNextra({ reactStrictMode: true })
+export default withNextra({
+  reactStrictMode: true,
+  webpack(config) {
+    const allowedSvgRegex = /components\/icons\/.+\.svg$/
+
+    const fileLoaderRule = config.module.rules.find((rule) => rule.test?.test('.svg'))
+    fileLoaderRule.exclude = allowedSvgRegex
+
+    config.module.rules.push({
+      test: allowedSvgRegex,
+      use: ['@svgr/webpack']
+    })
+    return config
+  }
+})

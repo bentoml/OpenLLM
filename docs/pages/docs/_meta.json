@@ -24,7 +24,9 @@
     "type": "separator",
     "title": "API Reference"
   },
-  "api": "",
+  "api": {
+    "display": "hidden"
+  },
   "-- Ecosystem": {
     "type": "separator",
     "title": "More"
