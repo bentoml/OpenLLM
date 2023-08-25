@@ -1,15 +1,26 @@
 from __future__ import annotations
-import itertools, logging, os, re, subprocess, sys, typing as t, bentoml, openllm, openllm_core
+import itertools
+import logging
+import os
+import re
+import subprocess
+import sys
+import typing as t
+
 from simple_di import Provide, inject
+
+import bentoml
+import openllm
+import openllm_core
 from bentoml._internal.configuration.containers import BentoMLContainer
 from openllm.exceptions import OpenLLMException
+
 from . import termui
 from ._factory import start_command_factory
-
 if t.TYPE_CHECKING:
-  from openllm_core._configuration import LLMConfig
-  from openllm_core._typing_compat import LiteralString, LiteralRuntime, LiteralContainerRegistry, LiteralContainerVersionStrategy
   from bentoml._internal.bento import BentoStore
+  from openllm_core._configuration import LLMConfig
+  from openllm_core._typing_compat import LiteralContainerRegistry, LiteralContainerVersionStrategy, LiteralRuntime, LiteralString
 logger = logging.getLogger(__name__)
 def _start(
     model_name: str,

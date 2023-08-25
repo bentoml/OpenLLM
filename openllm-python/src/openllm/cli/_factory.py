@@ -1,15 +1,28 @@
 from __future__ import annotations
-import functools, importlib.util, os, typing as t, logging, click, click_option_group as cog, inflection, orjson, bentoml, openllm
-from click import shell_completion as sc
-from bentoml_cli.utils import BentoMLCommandGroup
-from click.shell_completion import CompletionItem
-from openllm_core.utils import DEBUG
-from bentoml._internal.configuration.containers import BentoMLContainer
-from openllm_core._typing_compat import LiteralString, DictStrAny, ParamSpec, Concatenate
-from . import termui
+import functools
+import importlib.util
+import logging
+import os
+import typing as t
 
+import click
+import click_option_group as cog
+import inflection
+import orjson
+from bentoml_cli.utils import BentoMLCommandGroup
+from click import shell_completion as sc
+from click.shell_completion import CompletionItem
+
+import bentoml
+import openllm
+from bentoml._internal.configuration.containers import BentoMLContainer
+from openllm_core._typing_compat import Concatenate, DictStrAny, LiteralString, ParamSpec
+from openllm_core.utils import DEBUG
+
+from . import termui
 if t.TYPE_CHECKING:
   import subprocess
+
   from openllm_core._configuration import LLMConfig
 logger = logging.getLogger(__name__)
 

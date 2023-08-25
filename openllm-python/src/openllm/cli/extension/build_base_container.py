@@ -1,7 +1,12 @@
 from __future__ import annotations
-import typing as t, click, orjson, openllm
+import typing as t
+
+import click
+import orjson
+
+import openllm
 from openllm.cli import termui
-from openllm.cli._factory import machine_option, container_registry_option
+from openllm.cli._factory import container_registry_option, machine_option
 if t.TYPE_CHECKING: from openllm_core._typing_compat import LiteralContainerRegistry, LiteralContainerVersionStrategy
 @click.command(
     'build_base_container',

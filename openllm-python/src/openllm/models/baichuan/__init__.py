@@ -1,5 +1,7 @@
 from __future__ import annotations
-import sys, typing as t
+import sys
+import typing as t
+
 from openllm.exceptions import MissingDependencyError
 from openllm.utils import LazyModule, is_cpm_kernels_available, is_torch_available, is_vllm_available
 from openllm_core.config.configuration_baichuan import DEFAULT_PROMPT_TEMPLATE as DEFAULT_PROMPT_TEMPLATE, START_BAICHUAN_COMMAND_DOCSTRING as START_BAICHUAN_COMMAND_DOCSTRING, BaichuanConfig as BaichuanConfig

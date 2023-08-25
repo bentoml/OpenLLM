@@ -1,5 +1,11 @@
 from __future__ import annotations
-import functools, os, typing as t, pytest, openllm
+import functools
+import os
+import typing as t
+
+import pytest
+
+import openllm
 from bentoml._internal.configuration.containers import BentoMLContainer
 if t.TYPE_CHECKING: from pathlib import Path
 

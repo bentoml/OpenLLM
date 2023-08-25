@@ -3,7 +3,9 @@
 These utilities will stay internal, and its API can be changed or updated without backward-compatibility.
 """
 from __future__ import annotations
-import os, typing as t
+import os
+import typing as t
+
 from openllm_core.utils import LazyModule
 _import_structure: dict[str, list[str]] = {
     '_package': ['create_bento', 'build_editable', 'construct_python_options', 'construct_docker_options'],

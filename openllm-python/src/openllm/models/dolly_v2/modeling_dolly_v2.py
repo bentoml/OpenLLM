@@ -1,8 +1,11 @@
 from __future__ import annotations
-import logging, re, typing as t, openllm
+import logging
+import re
+import typing as t
+
+import openllm
 from openllm_core._typing_compat import overload
 from openllm_core.config.configuration_dolly_v2 import DEFAULT_PROMPT_TEMPLATE, END_KEY, RESPONSE_KEY, get_special_token_id
-
 if t.TYPE_CHECKING: import torch, transformers, tensorflow as tf
 else:  torch, transformers, tf = openllm.utils.LazyLoader('torch', globals(), 'torch'), openllm.utils.LazyLoader('transformers', globals(), 'transformers'), openllm.utils.LazyLoader('tf', globals(), 'tensorflow')
 logger = logging.getLogger(__name__)

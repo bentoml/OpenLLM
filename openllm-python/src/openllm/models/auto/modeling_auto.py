@@ -1,8 +1,10 @@
 from __future__ import annotations
 import typing as t
 from collections import OrderedDict
-from .factory import BaseAutoLLMClass, _LazyAutoMapping
+
 from openllm_core.config import CONFIG_MAPPING_NAMES
+
+from .factory import BaseAutoLLMClass, _LazyAutoMapping
 MODEL_MAPPING_NAMES = OrderedDict([('chatglm', 'ChatGLM'), ('dolly_v2', 'DollyV2'), ('falcon', 'Falcon'), ('flan_t5', 'FlanT5'), ('gpt_neox', 'GPTNeoX'), ('llama', 'Llama'), ('mpt', 'MPT'), (
     'opt', 'OPT'
 ), ('stablelm', 'StableLM'), ('starcoder', 'StarCoder'), ('baichuan', 'Baichuan')])

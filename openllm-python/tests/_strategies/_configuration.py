@@ -1,7 +1,11 @@
 from __future__ import annotations
-import logging, typing as t, openllm
-from openllm_core._configuration import ModelSettings
+import logging
+import typing as t
+
 from hypothesis import strategies as st
+
+import openllm
+from openllm_core._configuration import ModelSettings
 logger = logging.getLogger(__name__)
 
 env_strats = st.sampled_from([openllm.utils.EnvVarMixin(model_name) for model_name in openllm.CONFIG_MAPPING.keys()])

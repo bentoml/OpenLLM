@@ -1,14 +1,25 @@
 # mypy: disable-error-code="override,no-redef"
 from __future__ import annotations
-import typing as t, functools, openllm_core, logging, httpx, orjson, attr, abc
+import abc
+import functools
+import logging
+import typing as t
 from http import HTTPStatus
 from urllib.parse import urljoin
-from .benmin import Client as BentoClient, AsyncClient as AsyncBentoClient
-from openllm_core.utils import is_transformers_supports_agent, is_transformers_available, bentoml_cattr, ensure_exec_coro
-from openllm_core._typing_compat import overload, LiteralString
+
+import attr
+import httpx
+import orjson
+
+import openllm_core
+from openllm_core._typing_compat import LiteralString, overload
+from openllm_core.utils import bentoml_cattr, ensure_exec_coro, is_transformers_available, is_transformers_supports_agent
+
+from .benmin import AsyncClient as AsyncBentoClient, Client as BentoClient
 if t.TYPE_CHECKING:
-  from openllm_core._typing_compat import LiteralRuntime, DictStrAny
   import transformers
+
+  from openllm_core._typing_compat import DictStrAny, LiteralRuntime
 logger = logging.getLogger(__name__)
 @attr.define(slots=False, init=False)
 class _ClientAttr:

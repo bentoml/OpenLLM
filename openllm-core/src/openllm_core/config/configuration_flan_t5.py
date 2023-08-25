@@ -1,5 +1,7 @@
 from __future__ import annotations
-import openllm_core, typing as t
+import typing as t
+
+import openllm_core
 from openllm_core._prompt import process_prompt
 START_FLAN_T5_COMMAND_DOCSTRING = '''\
 Run a LLMServer for FLAN-T5 model.

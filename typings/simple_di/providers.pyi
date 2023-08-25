@@ -15,7 +15,6 @@ else:
 from _typeshed import Incomplete
 
 from . import _VT, Provider, _SentinelClass
-
 class Placeholder(Provider[_VT]): ...
 
 class Static(Provider[_VT]):

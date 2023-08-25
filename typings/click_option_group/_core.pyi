@@ -1,5 +1,7 @@
-import sys, click
+import sys
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Set, Tuple, TypeVar, Union
+
+import click
 if sys.version_info[:2] >= (3, 10):
   from typing import TypeAlias
 else:

@@ -1,11 +1,16 @@
 from __future__ import annotations
-import shutil, subprocess, typing as t, click, psutil, bentoml
-from simple_di import Provide, inject
-from bentoml._internal.configuration.containers import BentoMLContainer
+import shutil
+import subprocess
+import typing as t
 
+import click
+import psutil
+from simple_di import Provide, inject
+
+import bentoml
+from bentoml._internal.configuration.containers import BentoMLContainer
 from openllm.cli import termui
 from openllm.cli._factory import bento_complete_envvar, machine_option
-
 if t.TYPE_CHECKING: from bentoml._internal.bento import BentoStore
 @click.command('dive_bentos', context_settings=termui.CONTEXT_SETTINGS)
 @click.argument('bento', type=str, shell_complete=bento_complete_envvar)

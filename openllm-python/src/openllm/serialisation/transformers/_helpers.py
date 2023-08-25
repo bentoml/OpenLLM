@@ -1,11 +1,17 @@
 from __future__ import annotations
-import copy, typing as t, openllm_core, openllm
+import copy
+import typing as t
+
+import openllm
+import openllm_core
 from bentoml._internal.models.model import ModelInfo, ModelSignature
 from openllm.serialisation.constants import FRAMEWORK_TO_AUTOCLASS_MAPPING, HUB_ATTRS
-
 if t.TYPE_CHECKING:
-  import torch, transformers, bentoml
+  import torch
+  import transformers
   from transformers.models.auto.auto_factory import _BaseAutoModelClass
+
+  import bentoml
   from bentoml._internal.models.model import ModelSignaturesType
   from openllm_core._typing_compat import DictStrAny, M, T
 else:

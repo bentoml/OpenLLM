@@ -1,8 +1,21 @@
 from __future__ import annotations
-import functools, httpx, time, logging, urllib.error, typing as t, orjson, bentoml, starlette.requests, starlette.datastructures, starlette.responses, asyncio
-from bentoml._internal.service.inference_api import InferenceAPI
+import asyncio
+import functools
+import logging
+import time
+import typing as t
+import urllib.error
 from urllib.parse import urlparse
-from openllm_client.benmin import Client, AsyncClient
+
+import httpx
+import orjson
+import starlette.datastructures
+import starlette.requests
+import starlette.responses
+
+import bentoml
+from bentoml._internal.service.inference_api import InferenceAPI
+from openllm_client.benmin import AsyncClient, Client
 from openllm_core.utils import ensure_exec_coro
 logger = logging.getLogger(__name__)
 class HttpClient(Client):

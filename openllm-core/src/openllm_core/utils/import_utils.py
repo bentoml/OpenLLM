@@ -1,12 +1,22 @@
 '''Some imports utils are vendorred from transformers/utils/import_utils.py for performance reasons.'''
 from __future__ import annotations
-import importlib, importlib.metadata, importlib.util, logging, os, abc, typing as t, openllm_core
+import abc
+import importlib
+import importlib.metadata
+import importlib.util
+import logging
+import os
+import typing as t
 from collections import OrderedDict
-import inflection, packaging.version
-from bentoml._internal.utils import LazyLoader, pkg
-from openllm_core._typing_compat import overload, LiteralString
-from .representation import ReprMixin
 
+import inflection
+import packaging.version
+
+import openllm_core
+from bentoml._internal.utils import LazyLoader, pkg
+from openllm_core._typing_compat import LiteralString, overload
+
+from .representation import ReprMixin
 if t.TYPE_CHECKING:
   BackendOrderedDict = OrderedDict[str, t.Tuple[t.Callable[[], bool], str]]
   from openllm_core._typing_compat import LiteralRuntime

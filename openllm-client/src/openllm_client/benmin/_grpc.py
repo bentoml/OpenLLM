@@ -1,15 +1,22 @@
 # mypy: disable-error-code="no-redef"
 from __future__ import annotations
-import typing as t, logging, time, functools, bentoml
+import functools
+import logging
+import time
+import typing as t
+
+import bentoml
 from bentoml._internal.service.inference_api import InferenceAPI
-from openllm_client.benmin import Client, AsyncClient
-from openllm_core.utils import is_grpc_available, is_grpc_health_available, ensure_exec_coro
+from bentoml.grpc.utils import import_generated_stubs, load_from_file
+from openllm_client.benmin import AsyncClient, Client
 from openllm_core._typing_compat import NotRequired, overload
-from bentoml.grpc.utils import load_from_file, import_generated_stubs
+from openllm_core.utils import ensure_exec_coro, is_grpc_available, is_grpc_health_available
 if not is_grpc_available() or not is_grpc_health_available(): raise ImportError("gRPC is required to use gRPC client. Install with 'pip install \"openllm-client[grpc]\"'.")
-from grpc import aio
+import grpc
+import grpc_health.v1.health_pb2 as pb_health
+import grpc_health.v1.health_pb2_grpc as services_health
 from google.protobuf import json_format
-import grpc, grpc_health.v1.health_pb2 as pb_health, grpc_health.v1.health_pb2_grpc as services_health
+from grpc import aio
 pb, services = import_generated_stubs('v1')
 
 if t.TYPE_CHECKING:

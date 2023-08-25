@@ -1,5 +1,9 @@
 from __future__ import annotations
-import logging, typing as t, bentoml, openllm
+import logging
+import typing as t
+
+import bentoml
+import openllm
 from openllm.utils import generate_labels, is_triton_available
 if t.TYPE_CHECKING: import transformers, torch
 
@@ -31,7 +35,8 @@ class MPT(openllm.LLM['transformers.PreTrainedModel', 'transformers.GPTNeoXToken
     return {'device_map': 'auto' if torch.cuda.is_available() and torch.cuda.device_count() > 1 else None, 'torch_dtype': torch.bfloat16 if torch.cuda.is_available() else torch.float32}, {}
 
   def import_model(self, *args: t.Any, trust_remote_code: bool = True, **attrs: t.Any) -> bentoml.Model:
-    import torch, transformers
+    import torch
+    import transformers
     _, tokenizer_attrs = self.llm_parameters
     torch_dtype = attrs.pop('torch_dtype', self.dtype)
     device_map = attrs.pop('device_map', None)

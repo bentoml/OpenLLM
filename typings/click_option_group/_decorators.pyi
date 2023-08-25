@@ -3,7 +3,6 @@ from typing import Any, Callable, Dict, List, NamedTuple, Optional, Tuple, Type,
 import click
 
 from ._core import _FC, AnyCallable, OptionGroup
-
 class OptionStackItem(NamedTuple):
     param_decls: Tuple[str, ...]
     attrs: Dict[str, Any]

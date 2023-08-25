@@ -1,6 +1,8 @@
 # mypy: disable-error-code="misc"
 from __future__ import annotations
-import typing as t, transformers
+import typing as t
+
+import transformers
 if t.TYPE_CHECKING: import torch, openllm
 
 # reexport from transformers

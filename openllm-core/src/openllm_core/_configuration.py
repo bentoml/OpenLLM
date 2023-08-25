@@ -34,21 +34,37 @@ dynamically during serve, ahead-of-serve or per requests.
 Refer to ``openllm.LLMConfig`` docstring for more information.
 '''
 from __future__ import annotations
-import copy, enum, logging, os, sys, types, typing as t, attr, click_option_group as cog, inflection, orjson, openllm_core
-from cattr.gen import make_dict_structure_fn, make_dict_unstructure_fn, override
-from deepmerge.merger import Merger
-from ._strategies import LiteralResourceSpec, available_resource_spec, resource_spec
-from ._typing_compat import LiteralString, NotRequired, Required, overload, AdapterType, LiteralRuntime
-from .exceptions import ForbiddenAttributeError
-from .utils import ENV_VARS_TRUE_VALUES, MYPY, ReprMixin, bentoml_cattr, codegen, dantic, field_env_key, first_not_none, lenient_issubclass, LazyLoader
-from .utils.import_utils import BACKENDS_MAPPING
+import copy
+import enum
+import logging
+import os
+import sys
+import types
+import typing as t
+
+import attr
+import click_option_group as cog
+import inflection
+import orjson
+
 # NOTE: Using internal API from attr here, since we are actually allowing subclass of openllm_core.LLMConfig to become 'attrs'-ish
 from attr._compat import set_closure_cell
 from attr._make import _CountingAttr, _make_init, _transform_attrs
-from ._typing_compat import AnyCallable, At, Self, ListStr, DictStrAny
+from cattr.gen import make_dict_structure_fn, make_dict_unstructure_fn, override
+from deepmerge.merger import Merger
 
+import openllm_core
+
+from ._strategies import LiteralResourceSpec, available_resource_spec, resource_spec
+from ._typing_compat import AdapterType, AnyCallable, At, DictStrAny, ListStr, LiteralRuntime, LiteralString, NotRequired, Required, Self, overload
+from .exceptions import ForbiddenAttributeError
+from .utils import ENV_VARS_TRUE_VALUES, MYPY, LazyLoader, ReprMixin, bentoml_cattr, codegen, dantic, field_env_key, first_not_none, lenient_issubclass
+from .utils.import_utils import BACKENDS_MAPPING
 if t.TYPE_CHECKING:
-  import click, peft, transformers, vllm
+  import click
+  import peft
+  import transformers
+  import vllm
   from transformers.generation.beam_constraints import Constraint
 else:
   Constraint = t.Any

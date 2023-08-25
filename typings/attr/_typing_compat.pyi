@@ -1,5 +1,4 @@
 from typing import Any, ClassVar, Protocol
-
 # MYPY is a special constant in mypy which works the same way as `TYPE_CHECKING`.
 MYPY: bool = False
 

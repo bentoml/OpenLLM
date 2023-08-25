@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import itertools, os, token, tokenize
+import itertools
+import os
+import token
+import tokenize
+
 from tabulate import tabulate
 TOKEN_WHITELIST = [token.OP, token.NAME, token.NUMBER, token.STRING]
 def run_cz(dir: str, package: str):

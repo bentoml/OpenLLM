@@ -1,11 +1,23 @@
 from __future__ import annotations
-import importlib.machinery, logging, os, pkgutil, subprocess, sys, tempfile, typing as t, click, yaml
-from openllm.cli import termui
-from openllm import playground
-from openllm_core.utils import is_jupyter_available, is_jupytext_available, is_notebook_available
+import importlib.machinery
+import logging
+import os
+import pkgutil
+import subprocess
+import sys
+import tempfile
+import typing as t
 
+import click
+import yaml
+
+from openllm import playground
+from openllm.cli import termui
+from openllm_core.utils import is_jupyter_available, is_jupytext_available, is_notebook_available
 if t.TYPE_CHECKING:
-  import jupytext, nbformat
+  import jupytext
+  import nbformat
+
   from openllm_core._typing_compat import DictStrAny
 logger = logging.getLogger(__name__)
 def load_notebook_metadata() -> DictStrAny:

@@ -3,7 +3,17 @@
 Users can disable this with OPENLLM_DO_NOT_TRACK envvar.
 '''
 from __future__ import annotations
-import contextlib, functools, logging, os, re, typing as t, importlib.metadata, attr, openllm_core
+import contextlib
+import functools
+import importlib.metadata
+import logging
+import os
+import re
+import typing as t
+
+import attr
+
+import openllm_core
 from bentoml._internal.utils import analytics as _internal_analytics
 from openllm_core._typing_compat import ParamSpec
 P = ParamSpec('P')

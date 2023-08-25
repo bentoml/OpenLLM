@@ -1,7 +1,6 @@
 from typing import Any, Callable, Generator, Generic, Tuple, TypeVar, Union, overload
 
 from _typeshed import Incomplete
-
 class _SentinelClass: ...
 _VT = TypeVar('_VT')
 

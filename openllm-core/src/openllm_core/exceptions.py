@@ -1,5 +1,6 @@
 '''Base exceptions for OpenLLM. This extends BentoML exceptions.'''
 from __future__ import annotations
+
 import bentoml
 class OpenLLMException(bentoml.exceptions.BentoMLException):
   '''Base class for all OpenLLM exceptions. This extends BentoMLException.'''

@@ -20,22 +20,47 @@ bentomodel = openllm.import_model("falcon", model_id='tiiuae/falcon-7b-instruct'
 ```
 """
 from __future__ import annotations
-import functools, http.client, inspect, itertools, logging, os, platform, re, subprocess, sys, time, traceback, typing as t, attr, click, click_option_group as cog, fs, fs.copy, fs.errors, inflection, orjson, bentoml, openllm
-from simple_di import Provide, inject
+import functools
+import http.client
+import inspect
+import itertools
+import logging
+import os
+import platform
+import re
+import subprocess
+import sys
+import time
+import traceback
+import typing as t
+
+import attr
+import click
+import click_option_group as cog
+import fs
+import fs.copy
+import fs.errors
+import inflection
+import orjson
 from bentoml_cli.utils import BentoMLCommandGroup, opt_callback
+from simple_di import Provide, inject
+
+import bentoml
+import openllm
 from bentoml._internal.configuration.containers import BentoMLContainer
 from bentoml._internal.models.model import ModelStore
-from . import termui
-from ._factory import FC, LiteralOutput, _AnyCallable, bettertransformer_option, container_registry_option, fast_option, machine_option, model_id_option, model_name_argument, model_version_option, output_option, parse_device_callback, quantize_option, serialisation_option, start_command_factory, workers_per_resource_option
 from openllm import bundle, serialisation
 from openllm.exceptions import OpenLLMException
 from openllm.models.auto import CONFIG_MAPPING, MODEL_FLAX_MAPPING_NAMES, MODEL_MAPPING_NAMES, MODEL_TF_MAPPING_NAMES, MODEL_VLLM_MAPPING_NAMES, AutoConfig, AutoLLM
-from openllm_core._typing_compat import DictStrAny, ParamSpec, Concatenate, LiteralString, Self, LiteralRuntime
-from openllm_core.utils import DEBUG, DEBUG_ENV_VAR, OPTIONAL_DEPENDENCIES, QUIET_ENV_VAR, EnvVarMixin, LazyLoader, analytics, bentoml_cattr, compose, configure_logging, dantic, first_not_none, get_debug_mode, get_quiet_mode, is_torch_available, is_transformers_supports_agent, resolve_user_filepath, set_debug_mode, set_quiet_mode
 from openllm.utils import infer_auto_class
+from openllm_core._typing_compat import Concatenate, DictStrAny, LiteralRuntime, LiteralString, ParamSpec, Self
+from openllm_core.utils import DEBUG, DEBUG_ENV_VAR, OPTIONAL_DEPENDENCIES, QUIET_ENV_VAR, EnvVarMixin, LazyLoader, analytics, bentoml_cattr, compose, configure_logging, dantic, first_not_none, get_debug_mode, get_quiet_mode, is_torch_available, is_transformers_supports_agent, resolve_user_filepath, set_debug_mode, set_quiet_mode
 
+from . import termui
+from ._factory import FC, LiteralOutput, _AnyCallable, bettertransformer_option, container_registry_option, fast_option, machine_option, model_id_option, model_name_argument, model_version_option, output_option, parse_device_callback, quantize_option, serialisation_option, start_command_factory, workers_per_resource_option
 if t.TYPE_CHECKING:
   import torch
+
   from bentoml._internal.bento import BentoStore
   from bentoml._internal.container import DefaultBuilder
   from openllm_core._schema import EmbeddingsOutput

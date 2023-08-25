@@ -1,6 +1,13 @@
 '''Tests utilities for OpenLLM.'''
 from __future__ import annotations
-import contextlib, logging, shutil, subprocess, typing as t, bentoml, openllm
+import contextlib
+import logging
+import shutil
+import subprocess
+import typing as t
+
+import bentoml
+import openllm
 if t.TYPE_CHECKING: from ._typing_compat import LiteralRuntime
 
 logger = logging.getLogger(__name__)

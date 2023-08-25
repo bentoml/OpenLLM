@@ -1,6 +1,10 @@
 from __future__ import annotations
+import typing as t
 from abc import abstractmethod
-import attr, orjson, typing as t
+
+import attr
+import orjson
+
 from openllm_core import utils
 if t.TYPE_CHECKING: from openllm_core._typing_compat import TypeAlias
 

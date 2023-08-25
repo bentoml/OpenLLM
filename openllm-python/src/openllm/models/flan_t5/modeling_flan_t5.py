@@ -1,5 +1,7 @@
 from __future__ import annotations
-import typing as t, openllm
+import typing as t
+
+import openllm
 if t.TYPE_CHECKING: import transformers
 class FlanT5(openllm.LLM['transformers.T5ForConditionalGeneration', 'transformers.T5TokenizerFast']):
   __openllm_internal__ = True
@@ -13,7 +15,8 @@ class FlanT5(openllm.LLM['transformers.T5ForConditionalGeneration', 'transformer
       )
 
   def embeddings(self, prompts: list[str]) -> openllm.LLMEmbeddings:
-    import torch, torch.nn.functional as F
+    import torch
+    import torch.nn.functional as F
     embeddings: list[list[float]] = []
     num_tokens = 0
     for prompt in prompts:

@@ -1,13 +1,18 @@
 # mypy: disable-error-code="type-arg"
 from __future__ import annotations
-import inflection, openllm_core, importlib, typing as t
+import importlib
+import typing as t
 from collections import OrderedDict
-from openllm_core.utils import ReprMixin
 
+import inflection
+
+import openllm_core
+from openllm_core.utils import ReprMixin
 if t.TYPE_CHECKING:
   import types
-  from openllm_core._typing_compat import LiteralString
   from collections import _odict_items, _odict_keys, _odict_values
+
+  from openllm_core._typing_compat import LiteralString
   ConfigKeysView = _odict_keys[str, type[openllm_core.LLMConfig]]
   ConfigValuesView = _odict_values[str, type[openllm_core.LLMConfig]]
   ConfigItemsView = _odict_items[str, type[openllm_core.LLMConfig]]
