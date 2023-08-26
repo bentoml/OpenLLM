@@ -2,7 +2,6 @@
 import ctypes
 import sys
 from typing import Any, Literal
-
 if sys.version_info[:2] >= (3, 11):
   from typing import LiteralString
 else:

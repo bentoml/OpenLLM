@@ -8,7 +8,6 @@ from .strategy.core import StrategyList
 from .strategy.dict import DictStrategies
 from .strategy.list import ListStrategies
 from .strategy.set import SetStrategies
-
 ConfigDictType: TypeAlias = Dict[str, Any]
 
 class Merger:

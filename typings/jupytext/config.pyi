@@ -4,7 +4,6 @@ from typing import Any, Dict
 from _typeshed import Incomplete
 
 from .formats import NOTEBOOK_EXTENSIONS as NOTEBOOK_EXTENSIONS
-
 class JupytextConfigurationError(ValueError): ...
 
 JUPYTEXT_CONFIG_FILES: Incomplete

@@ -1,12 +1,14 @@
-import sys, click
+import sys
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Set, Tuple, TypeVar, Union
+
+import click
 if sys.version_info[:2] >= (3, 10):
   from typing import TypeAlias
 else:
   from typing_extensions import TypeAlias
 
 AnyCallable: TypeAlias = Callable[..., Any]
-_FC = TypeVar("_FC", bound=Union[AnyCallable, click.Command])
+_FC = TypeVar('_FC', bound=Union[AnyCallable, click.Command])
 
 class GroupedOption(click.Option):
     def __init__(self, param_decls: Optional[Sequence[str]] = ..., *, group: OptionGroup, **attrs: Any) -> None: ...

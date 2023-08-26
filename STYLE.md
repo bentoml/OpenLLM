@@ -8,6 +8,10 @@ The manifestation of OpenLLM code style is a combination of
 inspiration from coding language such as APL, Haskell, and is designed for fast,
 experimental development and prototyping.
 
+> [!NOTE]
+> Some of this style can also be applied to TS/JS within the monorepo, and
+> I have setup tools to make sure style is consistent across languages.
+
 Everyone always has their own opinions on style. I believe this is exemplified
 further within the Python community, as it tries to be beginner-friendly, and
 therefore most people hold a very strong opinion on styling. I don't have a
@@ -74,6 +78,9 @@ bugs.
   of `lm_head.w`. Espically for implementing custom kernels and layers, it is
   crucial to follow its nomenclature. E.g: `conv1` instead of
   `first_conv_layer`.
+- for functions, try to use verb-noun naming convention. i.e: `get_tokenizer`,
+- also just use single quotes for string, and double quotes for within string when needed.
+  i.e: `f'hello "{name}"'`
 
 _If you have any suggestions, feel free to give it on our discord server!_
 

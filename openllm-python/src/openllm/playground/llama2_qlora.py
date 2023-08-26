@@ -104,10 +104,20 @@ def prepare_datasets(tokenizer, dataset_name=DATASET_NAME):
   print(f"Total number of samples: {len(lm_dataset)}")
   return lm_dataset
 
-def prepare_for_int4_training(model_id: str, model_version: str | None = None, gradient_checkpointing: bool = True, bf16: bool = True,) -> tuple[peft.PeftModel, transformers.LlamaTokenizerFast]:
+def prepare_for_int4_training(model_id: str, model_version: str | None = None, gradient_checkpointing: bool = True, bf16: bool = True,
+                              ) -> tuple[peft.PeftModel, transformers.LlamaTokenizerFast]:
   from peft.tuners.lora import LoraLayer
 
-  llm = openllm.AutoLLM.for_model("llama", model_id=model_id, model_version=model_version, ensure_available=True, quantize="int4", bnb_4bit_compute_dtype=torch.bfloat16, use_cache=not gradient_checkpointing, device_map="auto",)
+  llm = openllm.AutoLLM.for_model(
+      "llama",
+      model_id=model_id,
+      model_version=model_version,
+      ensure_available=True,
+      quantize="int4",
+      bnb_4bit_compute_dtype=torch.bfloat16,
+      use_cache=not gradient_checkpointing,
+      device_map="auto",
+  )
   print("Model summary:", llm.model)
 
   # get lora target modules
@@ -170,7 +180,12 @@ def train_loop(model_args: ModelArguments, training_args: TrainingArguments):
   model, tokenizer = prepare_for_int4_training(model_args.model_id, gradient_checkpointing=training_args.gradient_checkpointing, bf16=training_args.bf16,)
   datasets = prepare_datasets(tokenizer)
 
-  trainer = transformers.Trainer(model=model, args=dataclasses.replace(transformers.TrainingArguments(training_args.output_dir), **dataclasses.asdict(training_args)), train_dataset=datasets, data_collator=transformers.default_data_collator,)
+  trainer = transformers.Trainer(
+      model=model,
+      args=dataclasses.replace(transformers.TrainingArguments(training_args.output_dir), **dataclasses.asdict(training_args)),
+      train_dataset=datasets,
+      data_collator=transformers.default_data_collator,
+  )
 
   trainer.train()
 

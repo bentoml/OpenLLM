@@ -1,6 +1,8 @@
 from __future__ import annotations
-import openllm_core, typing as t
-START_STARCODER_COMMAND_DOCSTRING = """\
+import typing as t
+
+import openllm_core
+START_STARCODER_COMMAND_DOCSTRING = '''\
 Run a LLMServer for StarCoder model.
 
 \b
@@ -18,9 +20,10 @@ or provide `--model-id` flag when running ``openllm start starcoder``:
 
 \b
 $ openllm start starcoder --model-id 'bigcode/starcoder'
-"""
-DEFAULT_PROMPT_TEMPLATE = """{instruction}"""
-FIM_PREFIX, FIM_MIDDLE, FIM_SUFFIX, FIM_PAD, EOD, FIM_INDICATOR = "<fim-prefix>", "<fim-middle>", "<fim-suffix>", "<fim-pad>", "<|endoftext|>", "<FILL_HERE>"
+'''
+DEFAULT_PROMPT_TEMPLATE = '''{instruction}'''
+FIM_PREFIX, FIM_MIDDLE, FIM_SUFFIX, FIM_PAD, EOD, FIM_INDICATOR = '<fim-prefix>', '<fim-middle>', '<fim-suffix>', '<fim-pad>', '<|endoftext|>', '<FILL_HERE>'
+
 class StarCoderConfig(openllm_core.LLMConfig):
   """The StarCoder models are 15.5B parameter models trained on 80+ programming languages from [The Stack (v1.2)](https://huggingface.co/datasets/bigcode/the-stack), with opt-out requests excluded.
 
@@ -31,14 +34,14 @@ class StarCoderConfig(openllm_core.LLMConfig):
   Refer to [StarCoder's model card](https://huggingface.co/bigcode/starcoder) for more information.
   """
   __config__ = {
-      "name_type": "lowercase",
-      "requires_gpu": True,
-      "url": "https://github.com/bigcode-project/starcoder",
-      "architecture": "GPTBigCodeForCausalLM",
-      "requirements": ["bitsandbytes"],
-      "workers_per_resource": 0.5,
-      "default_id": "bigcode/starcoder",
-      "model_ids": ["bigcode/starcoder", "bigcode/starcoderbase"]
+      'name_type': 'lowercase',
+      'requires_gpu': True,
+      'url': 'https://github.com/bigcode-project/starcoder',
+      'architecture': 'GPTBigCodeForCausalLM',
+      'requirements': ['bitsandbytes'],
+      'workers_per_resource': 0.5,
+      'default_id': 'bigcode/starcoder',
+      'model_ids': ['bigcode/starcoder', 'bigcode/starcoderbase']
   }
 
   class GenerationConfig:
@@ -58,12 +61,12 @@ class StarCoderConfig(openllm_core.LLMConfig):
       try:
         prefix, suffix = prompt.split(FIM_INDICATOR)
       except Exception as err:
-        raise ValueError(f"Only one {FIM_INDICATOR} allowed in prompt") from err
-      prompt_text = f"{FIM_PREFIX}{prefix}{FIM_SUFFIX}{suffix}{FIM_MIDDLE}"
+        raise ValueError(f'Only one {FIM_INDICATOR} allowed in prompt') from err
+      prompt_text = f'{FIM_PREFIX}{prefix}{FIM_SUFFIX}{suffix}{FIM_MIDDLE}'
     else:
       prompt_text = prompt
     # XXX: This value for pad_token_id is currently a hack, need more investigate why the default starcoder doesn't include the same value as santacoder EOD
-    return prompt_text, {"temperature": temperature, "top_p": top_p, "max_new_tokens": max_new_tokens, "repetition_penalty": repetition_penalty, "pad_token_id": 49152, **attrs}, {}
+    return prompt_text, {'temperature': temperature, 'top_p': top_p, 'max_new_tokens': max_new_tokens, 'repetition_penalty': repetition_penalty, 'pad_token_id': 49152, **attrs}, {}
 
   def postprocess_generate(self, prompt: str, generation_result: t.Sequence[str], **_: t.Any) -> str:
     return generation_result[0]

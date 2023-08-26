@@ -5,7 +5,6 @@ from nbformat import NotebookNode
 from nbformat.v4.rwbase import NotebookReader, NotebookWriter
 
 from .config import JupytextConfiguration
-
 class NotSupportedNBFormatVersion(NotImplementedError): ...
 
 class TextNotebookConverter(NotebookReader, NotebookWriter):

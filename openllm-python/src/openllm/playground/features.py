@@ -4,7 +4,6 @@ import logging
 import typing as t
 
 import openllm
-
 openllm.utils.configure_logging()
 
 logger = logging.getLogger(__name__)

@@ -1,9 +1,8 @@
 from typing import Any, Callable, Generator, Generic, Tuple, TypeVar, Union, overload
 
 from _typeshed import Incomplete
-
 class _SentinelClass: ...
-_VT = TypeVar("_VT")
+_VT = TypeVar('_VT')
 
 class Provider(Generic[_VT]):
     STATE_FIELDS: Tuple[str, ...]
@@ -17,7 +16,7 @@ class _ProvideClass:
     def __getitem__(self, provider: Provider[_VT]) -> _VT: ...
 
 Provide: Incomplete
-_AnyCallable = TypeVar("_AnyCallable", bound=Callable[..., Any])
+_AnyCallable = TypeVar('_AnyCallable', bound=Callable[..., Any])
 
 
 @overload

@@ -1,5 +1,4 @@
 from typing import Any
-
 class FrozenError(AttributeError):
     msg: str = ...
 

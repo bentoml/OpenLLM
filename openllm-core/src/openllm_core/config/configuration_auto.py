@@ -1,21 +1,27 @@
 # mypy: disable-error-code="type-arg"
 from __future__ import annotations
-import inflection, openllm_core, importlib, typing as t
+import importlib
+import typing as t
 from collections import OrderedDict
-from openllm_core.utils import ReprMixin
 
+import inflection
+
+import openllm_core
+from openllm_core.utils import ReprMixin
 if t.TYPE_CHECKING:
   import types
-  from openllm_core._typing_compat import LiteralString
   from collections import _odict_items, _odict_keys, _odict_values
+
+  from openllm_core._typing_compat import LiteralString
   ConfigKeysView = _odict_keys[str, type[openllm_core.LLMConfig]]
   ConfigValuesView = _odict_values[str, type[openllm_core.LLMConfig]]
   ConfigItemsView = _odict_items[str, type[openllm_core.LLMConfig]]
 
 # NOTE: This is the entrypoint when adding new model config
-CONFIG_MAPPING_NAMES = OrderedDict([("chatglm", "ChatGLMConfig"), ("dolly_v2", "DollyV2Config"), ("falcon", "FalconConfig"), ("flan_t5", "FlanT5Config"), ("gpt_neox", "GPTNeoXConfig"), (
-    "llama", "LlamaConfig"
-), ("mpt", "MPTConfig"), ("opt", "OPTConfig"), ("stablelm", "StableLMConfig"), ("starcoder", "StarCoderConfig"), ("baichuan", "BaichuanConfig")])
+CONFIG_MAPPING_NAMES = OrderedDict([('chatglm', 'ChatGLMConfig'), ('dolly_v2', 'DollyV2Config'), ('falcon', 'FalconConfig'), ('flan_t5', 'FlanT5Config'), ('gpt_neox', 'GPTNeoXConfig'), (
+    'llama', 'LlamaConfig'
+), ('mpt', 'MPTConfig'), ('opt', 'OPTConfig'), ('stablelm', 'StableLMConfig'), ('starcoder', 'StarCoderConfig'), ('baichuan', 'BaichuanConfig')])
+
 class _LazyConfigMapping(OrderedDict, ReprMixin):
   def __init__(self, mapping: OrderedDict[LiteralString, LiteralString]):
     self._mapping = mapping
@@ -31,7 +37,7 @@ class _LazyConfigMapping(OrderedDict, ReprMixin):
     if module_name not in self._modules: self._modules[module_name] = openllm_core.utils.EnvVarMixin(module_name).module
     if hasattr(self._modules[module_name], value): return getattr(self._modules[module_name], value)
     # Some of the mappings have entries model_type -> config of another model type. In that case we try to grab the object at the top level.
-    return getattr(importlib.import_module("openllm"), value)
+    return getattr(importlib.import_module('openllm'), value)
 
   @property
   def __repr_keys__(self) -> set[str]:
@@ -44,13 +50,13 @@ class _LazyConfigMapping(OrderedDict, ReprMixin):
     yield from self._mapping.items()
 
   def keys(self) -> ConfigKeysView:
-    return t.cast("ConfigKeysView", list(self._mapping.keys()) + list(self._extra_content.keys()))
+    return t.cast('ConfigKeysView', list(self._mapping.keys()) + list(self._extra_content.keys()))
 
   def values(self) -> ConfigValuesView:
-    return t.cast("ConfigValuesView", [self[k] for k in self._mapping.keys()] + list(self._extra_content.values()))
+    return t.cast('ConfigValuesView', [self[k] for k in self._mapping.keys()] + list(self._extra_content.values()))
 
   def items(self) -> ConfigItemsView:
-    return t.cast("ConfigItemsView", [(k, self[k]) for k in self._mapping.keys()] + list(self._extra_content.items()))
+    return t.cast('ConfigItemsView', [(k, self[k]) for k in self._mapping.keys()] + list(self._extra_content.items()))
 
   def __iter__(self) -> t.Iterator[str]:
     return iter(list(self._mapping.keys()) + list(self._extra_content.keys()))
@@ -61,12 +67,14 @@ class _LazyConfigMapping(OrderedDict, ReprMixin):
   def register(self, key: str, value: t.Any) -> None:
     if key in self._mapping.keys(): raise ValueError(f"'{key}' is already used by a OpenLLM config, pick another name.")
     self._extra_content[key] = value
+
 CONFIG_MAPPING: dict[str, type[openllm_core.LLMConfig]] = _LazyConfigMapping(CONFIG_MAPPING_NAMES)
 # The below handle special alias when we call underscore to the name directly without processing camelcase first.
-CONFIG_NAME_ALIASES: dict[str, str] = {"chat_glm": "chatglm", "stable_lm": "stablelm", "star_coder": "starcoder", "gpt_neo_x": "gpt_neox",}
+CONFIG_NAME_ALIASES: dict[str, str] = {'chat_glm': 'chatglm', 'stable_lm': 'stablelm', 'star_coder': 'starcoder', 'gpt_neo_x': 'gpt_neox',}
+
 class AutoConfig:
   def __init__(self, *_: t.Any, **__: t.Any):
-    raise EnvironmentError("Cannot instantiate AutoConfig directly. Please use `AutoConfig.for_model(model_name)` instead.")
+    raise EnvironmentError('Cannot instantiate AutoConfig directly. Please use `AutoConfig.for_model(model_name)` instead.')
 
   @classmethod
   def for_model(cls, model_name: str, **attrs: t.Any) -> openllm_core.LLMConfig:

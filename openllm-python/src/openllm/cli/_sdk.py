@@ -1,27 +1,39 @@
 from __future__ import annotations
-import itertools, logging, os, re, subprocess, sys, typing as t, bentoml, openllm, openllm_core
+import itertools
+import logging
+import os
+import re
+import subprocess
+import sys
+import typing as t
+
 from simple_di import Provide, inject
+
+import bentoml
+import openllm
+import openllm_core
 from bentoml._internal.configuration.containers import BentoMLContainer
 from openllm.exceptions import OpenLLMException
+
 from . import termui
 from ._factory import start_command_factory
-
 if t.TYPE_CHECKING:
-  from openllm_core._configuration import LLMConfig
-  from openllm_core._typing_compat import LiteralString, LiteralRuntime, LiteralContainerRegistry, LiteralContainerVersionStrategy
   from bentoml._internal.bento import BentoStore
+  from openllm_core._configuration import LLMConfig
+  from openllm_core._typing_compat import LiteralContainerRegistry, LiteralContainerVersionStrategy, LiteralRuntime, LiteralString
 logger = logging.getLogger(__name__)
+
 def _start(
     model_name: str,
     /,
     *,
     model_id: str | None = None,
     timeout: int = 30,
-    workers_per_resource: t.Literal["conserved", "round_robin"] | float | None = None,
-    device: tuple[str, ...] | t.Literal["all"] | None = None,
-    quantize: t.Literal["int8", "int4", "gptq"] | None = None,
+    workers_per_resource: t.Literal['conserved', 'round_robin'] | float | None = None,
+    device: tuple[str, ...] | t.Literal['all'] | None = None,
+    quantize: t.Literal['int8', 'int4', 'gptq'] | None = None,
     bettertransformer: bool | None = None,
-    runtime: t.Literal["ggml", "transformers"] = "transformers",
+    runtime: t.Literal['ggml', 'transformers'] = 'transformers',
     adapter_map: dict[LiteralString, str | None] | None = None,
     framework: LiteralRuntime | None = None,
     additional_args: list[str] | None = None,
@@ -79,24 +91,25 @@ def _start(
       quantize=quantize,
       runtime=runtime
   )
-  os.environ[_ModelEnv.framework] = _ModelEnv["framework_value"]
+  os.environ[_ModelEnv.framework] = _ModelEnv['framework_value']
 
-  args: list[str] = ["--runtime", runtime]
-  if model_id: args.extend(["--model-id", model_id])
-  if timeout: args.extend(["--server-timeout", str(timeout)])
-  if workers_per_resource: args.extend(["--workers-per-resource", str(workers_per_resource) if not isinstance(workers_per_resource, str) else workers_per_resource])
-  if device and not os.environ.get("CUDA_VISIBLE_DEVICES"): args.extend(["--device", ",".join(device)])
+  args: list[str] = ['--runtime', runtime]
+  if model_id: args.extend(['--model-id', model_id])
+  if timeout: args.extend(['--server-timeout', str(timeout)])
+  if workers_per_resource: args.extend(['--workers-per-resource', str(workers_per_resource) if not isinstance(workers_per_resource, str) else workers_per_resource])
+  if device and not os.environ.get('CUDA_VISIBLE_DEVICES'): args.extend(['--device', ','.join(device)])
   if quantize and bettertransformer: raise OpenLLMException("'quantize' and 'bettertransformer' are currently mutually exclusive.")
-  if quantize: args.extend(["--quantize", str(quantize)])
-  elif bettertransformer: args.append("--bettertransformer")
-  if cors: args.append("--cors")
-  if adapter_map: args.extend(list(itertools.chain.from_iterable([["--adapter-id", f"{k}{':'+v if v else ''}"] for k, v in adapter_map.items()])))
+  if quantize: args.extend(['--quantize', str(quantize)])
+  elif bettertransformer: args.append('--bettertransformer')
+  if cors: args.append('--cors')
+  if adapter_map: args.extend(list(itertools.chain.from_iterable([['--adapter-id', f"{k}{':'+v if v else ''}"] for k, v in adapter_map.items()])))
   if additional_args: args.extend(additional_args)
-  if __test__: args.append("--return-process")
+  if __test__: args.append('--return-process')
 
   return start_command_factory(start_command if not _serve_grpc else start_grpc_command, model_name, _context_settings=termui.CONTEXT_SETTINGS, _serve_grpc=_serve_grpc).main(
       args=args if len(args) > 0 else None, standalone_mode=False
   )
+
 @inject
 def _build(
     model_name: str,
@@ -105,20 +118,20 @@ def _build(
     model_id: str | None = None,
     model_version: str | None = None,
     bento_version: str | None = None,
-    quantize: t.Literal["int8", "int4", "gptq"] | None = None,
+    quantize: t.Literal['int8', 'int4', 'gptq'] | None = None,
     bettertransformer: bool | None = None,
     adapter_map: dict[str, str | None] | None = None,
     build_ctx: str | None = None,
     enable_features: tuple[str, ...] | None = None,
     workers_per_resource: float | None = None,
-    runtime: t.Literal["ggml", "transformers"] = "transformers",
+    runtime: t.Literal['ggml', 'transformers'] = 'transformers',
     dockerfile_template: str | None = None,
     overwrite: bool = False,
     container_registry: LiteralContainerRegistry | None = None,
     container_version_strategy: LiteralContainerVersionStrategy | None = None,
     push: bool = False,
     containerize: bool = False,
-    serialisation_format: t.Literal["safetensors", "legacy"] = "safetensors",
+    serialisation_format: t.Literal['safetensors', 'legacy'] = 'safetensors',
     additional_args: list[str] | None = None,
     bento_store: BentoStore = Provide[BentoMLContainer.bento_store]
 ) -> bentoml.Bento:
@@ -171,47 +184,48 @@ def _build(
   Returns:
       ``bentoml.Bento | str``: BentoLLM instance. This can be used to serve the LLM or can be pushed to BentoCloud.
   """
-  args: list[str] = [sys.executable, "-m", "openllm", "build", model_name, "--machine", "--runtime", runtime, "--serialisation", serialisation_format]
+  args: list[str] = [sys.executable, '-m', 'openllm', 'build', model_name, '--machine', '--runtime', runtime, '--serialisation', serialisation_format]
   if quantize and bettertransformer: raise OpenLLMException("'quantize' and 'bettertransformer' are currently mutually exclusive.")
-  if quantize: args.extend(["--quantize", quantize])
-  if bettertransformer: args.append("--bettertransformer")
+  if quantize: args.extend(['--quantize', quantize])
+  if bettertransformer: args.append('--bettertransformer')
   if containerize and push: raise OpenLLMException("'containerize' and 'push' are currently mutually exclusive.")
-  if push: args.extend(["--push"])
-  if containerize: args.extend(["--containerize"])
-  if model_id: args.extend(["--model-id", model_id])
-  if build_ctx: args.extend(["--build-ctx", build_ctx])
-  if enable_features: args.extend([f"--enable-features={f}" for f in enable_features])
-  if workers_per_resource: args.extend(["--workers-per-resource", str(workers_per_resource)])
-  if overwrite: args.append("--overwrite")
+  if push: args.extend(['--push'])
+  if containerize: args.extend(['--containerize'])
+  if model_id: args.extend(['--model-id', model_id])
+  if build_ctx: args.extend(['--build-ctx', build_ctx])
+  if enable_features: args.extend([f'--enable-features={f}' for f in enable_features])
+  if workers_per_resource: args.extend(['--workers-per-resource', str(workers_per_resource)])
+  if overwrite: args.append('--overwrite')
   if adapter_map: args.extend([f"--adapter-id={k}{':'+v if v is not None else ''}" for k, v in adapter_map.items()])
-  if model_version: args.extend(["--model-version", model_version])
-  if bento_version: args.extend(["--bento-version", bento_version])
-  if dockerfile_template: args.extend(["--dockerfile-template", dockerfile_template])
-  if container_registry is None: container_registry = "ecr"
-  if container_version_strategy is None: container_version_strategy = "release"
-  args.extend(["--container-registry", container_registry, "--container-version-strategy", container_version_strategy])
+  if model_version: args.extend(['--model-version', model_version])
+  if bento_version: args.extend(['--bento-version', bento_version])
+  if dockerfile_template: args.extend(['--dockerfile-template', dockerfile_template])
+  if container_registry is None: container_registry = 'ecr'
+  if container_version_strategy is None: container_version_strategy = 'release'
+  args.extend(['--container-registry', container_registry, '--container-version-strategy', container_version_strategy])
   if additional_args: args.extend(additional_args)
 
   try:
     output = subprocess.check_output(args, env=os.environ.copy(), cwd=build_ctx or os.getcwd())
   except subprocess.CalledProcessError as e:
-    logger.error("Exception caught while building %s", model_name, exc_info=e)
-    if e.stderr: raise OpenLLMException(e.stderr.decode("utf-8")) from None
+    logger.error('Exception caught while building %s', model_name, exc_info=e)
+    if e.stderr: raise OpenLLMException(e.stderr.decode('utf-8')) from None
     raise OpenLLMException(str(e)) from None
-  matched = re.match(r"__tag__:([^:\n]+:[^:\n]+)$", output.decode("utf-8").strip())
+  matched = re.match(r'__tag__:([^:\n]+:[^:\n]+)$', output.decode('utf-8').strip())
   if matched is None:
     raise ValueError(f"Failed to find tag from output: {output.decode('utf-8').strip()}\nNote: Output from 'openllm build' might not be correct. Please open an issue on GitHub.")
   return bentoml.get(matched.group(1), _bento_store=bento_store)
+
 def _import_model(
     model_name: str,
     /,
     *,
     model_id: str | None = None,
     model_version: str | None = None,
-    runtime: t.Literal["ggml", "transformers"] = "transformers",
-    implementation: LiteralRuntime = "pt",
-    quantize: t.Literal["int8", "int4", "gptq"] | None = None,
-    serialisation_format: t.Literal["legacy", "safetensors"] = "safetensors",
+    runtime: t.Literal['ggml', 'transformers'] = 'transformers',
+    implementation: LiteralRuntime = 'pt',
+    quantize: t.Literal['int8', 'int4', 'gptq'] | None = None,
+    serialisation_format: t.Literal['legacy', 'safetensors'] = 'safetensors',
     additional_args: t.Sequence[str] | None = None
 ) -> bentoml.Model:
   """Import a LLM into local store.
@@ -245,15 +259,16 @@ def _import_model(
       ``bentoml.Model``:BentoModel of the given LLM. This can be used to serve the LLM or can be pushed to BentoCloud.
   """
   from .entrypoint import import_command
-  args = [model_name, "--runtime", runtime, "--implementation", implementation, "--machine", "--serialisation", serialisation_format,]
+  args = [model_name, '--runtime', runtime, '--implementation', implementation, '--machine', '--serialisation', serialisation_format,]
   if model_id is not None: args.append(model_id)
-  if model_version is not None: args.extend(["--model-version", str(model_version)])
+  if model_version is not None: args.extend(['--model-version', str(model_version)])
   if additional_args is not None: args.extend(additional_args)
-  if quantize is not None: args.extend(["--quantize", quantize])
+  if quantize is not None: args.extend(['--quantize', quantize])
   return import_command.main(args=args, standalone_mode=False)
+
 def _list_models() -> dict[str, t.Any]:
-  """List all available models within the local store."""
+  '''List all available models within the local store.'''
   from .entrypoint import models_command
-  return models_command.main(args=["-o", "json", "--show-available", "--machine"], standalone_mode=False)
+  return models_command.main(args=['-o', 'json', '--show-available', '--machine'], standalone_mode=False)
 start, start_grpc, build, import_model, list_models = openllm_core.utils.codegen.gen_sdk(_start, _serve_grpc=False), openllm_core.utils.codegen.gen_sdk(_start, _serve_grpc=True), openllm_core.utils.codegen.gen_sdk(_build), openllm_core.utils.codegen.gen_sdk(_import_model), openllm_core.utils.codegen.gen_sdk(_list_models)
-__all__ = ["start", "start_grpc", "build", "import_model", "list_models"]
+__all__ = ['start', 'start_grpc', 'build', 'import_model', 'list_models']

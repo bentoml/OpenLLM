@@ -18,15 +18,14 @@ from typing import (
 )
 
 from . import _ValidatorArgType, _ValidatorType
-
-_T = TypeVar("_T")
-_T1 = TypeVar("_T1")
-_T2 = TypeVar("_T2")
-_T3 = TypeVar("_T3")
-_I = TypeVar("_I", bound=Iterable[Any])
-_K = TypeVar("_K")
-_V = TypeVar("_V")
-_M = TypeVar("_M", bound=Mapping[Any, Any])
+_T = TypeVar('_T')
+_T1 = TypeVar('_T1')
+_T2 = TypeVar('_T2')
+_T3 = TypeVar('_T3')
+_I = TypeVar('_I', bound=Iterable[Any])
+_K = TypeVar('_K')
+_V = TypeVar('_V')
+_M = TypeVar('_M', bound=Mapping[Any, Any])
 
 def set_disabled(run: bool) -> None: ...
 def get_disabled() -> bool: ...

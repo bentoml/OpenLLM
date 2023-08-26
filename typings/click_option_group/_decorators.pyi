@@ -3,7 +3,6 @@ from typing import Any, Callable, Dict, List, NamedTuple, Optional, Tuple, Type,
 import click
 
 from ._core import _FC, AnyCallable, OptionGroup
-
 class OptionStackItem(NamedTuple):
     param_decls: Tuple[str, ...]
     attrs: Dict[str, Any]
@@ -13,7 +12,7 @@ class _NotAttachedOption(click.Option):
     def __init__(self, param_decls: Any = ..., *, all_not_attached_options: Any, **attrs: Any) -> None: ...
     def handle_parse_result(self, ctx: click.Context, opts: Any, args: List[str]) -> Any: ...
 
-_GrpType = TypeVar("_GrpType", bound=OptionGroup)
+_GrpType = TypeVar('_GrpType', bound=OptionGroup)
 
 class _OptGroup:
     def __init__(self) -> None: ...
