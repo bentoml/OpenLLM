@@ -55,7 +55,7 @@ jobs:
     if: >-
       contains(needs.get_commit_message.outputs.message, '[ec2 build]') || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, '00 - EC2 Build')) || (github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/heads/main')))
     env:
-      EC2_INSTANCE_TYPE: g5.12xlarge
+      EC2_INSTANCE_TYPE: t3.2xlarge
       EC2_AMI_ID: ami-089dafe9af191a0fd
       EC2_SUBNET_ID: subnet-0ca63188fe98788c1,subnet-05997205433b249d0,subnet-07ef5d3e974275fed,subnet-0161ef0151089bb0b
       EC2_SECURITY_GROUP: sg-051366641bf2b8049
