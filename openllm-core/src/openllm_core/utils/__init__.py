@@ -13,6 +13,7 @@ import os
 import sys
 import types
 import typing as t
+import uuid
 from pathlib import Path
 
 from circus.exc import ConflictError
@@ -121,6 +122,8 @@ class ExceptionFilter(logging.Filter):
 class InfoFilter(logging.Filter):
   def filter(self, record: logging.LogRecord) -> bool:
     return logging.INFO <= record.levelno < logging.WARNING
+def gen_random_uuid(prefix: str | None = None) -> str:
+  return '-'.join([prefix or 'openllm', str(uuid.uuid4().hex)])
 _LOGGING_CONFIG: dict[str, t.Any] = {
     'version': 1,
     'disable_existing_loggers': True,

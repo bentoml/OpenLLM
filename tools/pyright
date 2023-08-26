@@ -1,9 +1,0 @@
-#!/usr/bin/env bash
-
-# Check if pyright is installed, otherwise exit 1
-[[ -x "$(command -v pyright)" ]] || (
-    echo "pyright not found"
-    exit 1
-)
-
-pyright "$@" --level error 2> /dev/null || exit 0

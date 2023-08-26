@@ -22,7 +22,7 @@ if t.TYPE_CHECKING:
   from .utils.lazy import VersionInfo
 M = t.TypeVar(
     'M',
-    bound='t.Union[transformers.PreTrainedModel, transformers.Pipeline, transformers.TFPreTrainedModel, transformers.FlaxPreTrainedModel, vllm.LLMEngine, vllm.AsyncLLMEngine, peft.PeftModel, autogptq.modeling.BaseGPTQForCausalLM]'
+    bound='t.Union[transformers.PreTrainedModel, transformers.Pipeline, transformers.TFPreTrainedModel, transformers.FlaxPreTrainedModel, vllm.LLMEngine, peft.PeftModel, autogptq.modeling.BaseGPTQForCausalLM]'
 )
 T = t.TypeVar('T', bound='t.Union[transformers.PreTrainedTokenizerFast, transformers.PreTrainedTokenizer, transformers.PreTrainedTokenizerBase]')
 
@@ -78,6 +78,8 @@ class LLMRunner(bentoml.Runner, t.Generic[M, T]):
   __doc__: str
   __module__: str
   llm_type: str
+  llm_tag: bentoml.Tag
+  llm_framework: LiteralRuntime
   identifying_params: dict[str, t.Any]
   llm: openllm.LLM[M, T]
   config: openllm.LLMConfig
