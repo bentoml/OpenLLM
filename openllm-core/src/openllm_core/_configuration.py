@@ -76,11 +76,13 @@ __all__ = ['LLMConfig', 'GenerationConfig', 'SamplingParams', 'field_env_key']
 
 logger = logging.getLogger(__name__)
 config_merger = Merger([(dict, 'merge')], ['override'], ['override'])
+
 # case insensitive, but rename to conform with type
 class _PeftEnumMeta(enum.EnumMeta):
   def __getitem__(self, __key: str | t.Any, /) -> t.Any:
     if isinstance(__key, str): __key = inflection.underscore(__key).upper()
     return self._member_map_[__key]
+
 # vendorred from peft.utils.config.PeftType since we don't have hard dependency on peft
 # see https://github.com/huggingface/peft/blob/main/src/peft/utils/config.py
 class PeftType(str, enum.Enum, metaclass=_PeftEnumMeta):
@@ -109,14 +111,17 @@ class PeftType(str, enum.Enum, metaclass=_PeftEnumMeta):
   @staticmethod
   def get(__key: str | t.Any, /) -> PeftType:
     return PeftType[__key]  # type-safe getitem.
+
 _PEFT_TASK_TYPE_TARGET_MAPPING = {'causal_lm': 'CAUSAL_LM', 'seq2seq_lm': 'SEQ_2_SEQ_LM'}
 
 _object_setattr = object.__setattr__
+
 def _adapter_converter(value: AdapterType | str | PeftType | None) -> PeftType:
   if value is None: raise ValueError("'AdapterType' cannot be None.")
   if isinstance(value, PeftType): return value
   if value not in PeftType.supported(): raise ValueError(f"Given '{value}' is not a supported adapter type.")
   return PeftType.get(value)
+
 @attr.define(slots=True, init=True)
 class FineTuneConfig:
   '''FineTuneConfig defines a default value for fine-tuning this any given LLM.
@@ -193,6 +198,7 @@ class FineTuneConfig:
     adapter_type, inference_mode = attrs.pop('adapter_type', self.adapter_type), attrs.get('inference_mode', self.inference_mode)
     if 'llm_config_class' in attrs: raise ForbiddenAttributeError("'llm_config_class' should not be passed when using 'with_config'.")
     return attr.evolve(self, adapter_type=adapter_type, inference_mode=inference_mode, adapter_config=config_merger.merge(self.adapter_config, attrs))
+
 @attr.frozen(slots=True, repr=False, init=False)
 class GenerationConfig(ReprMixin):
   '''GenerationConfig is the attrs-compatible version of ``transformers.GenerationConfig``, with some additional validation and environment constructor.
@@ -317,6 +323,7 @@ class GenerationConfig(ReprMixin):
   @property
   def __repr_keys__(self) -> set[str]:
     return {i.name for i in attr.fields(self.__class__)}
+
 bentoml_cattr.register_unstructure_hook_factory(
     lambda cls: attr.has(cls) and lenient_issubclass(cls, GenerationConfig),
     lambda cls: make_dict_unstructure_fn(
@@ -329,6 +336,7 @@ bentoml_cattr.register_unstructure_hook_factory(
         }
     )
 )
+
 @attr.frozen(slots=True, repr=False, init=False)
 class SamplingParams(ReprMixin):
   '''SamplingParams is the attr-compatible version of ``vllm.SamplingParams``. It provides some utilities to also respect shared variables from ``openllm.LLMConfig``.
@@ -398,6 +406,7 @@ class SamplingParams(ReprMixin):
     top_p = first_not_none(attrs.pop('top_p', None), default=generation_config['top_p'])
     max_tokens = first_not_none(attrs.pop('max_tokens', None), attrs.pop('max_new_tokens', None), default=generation_config['max_new_tokens'])
     return cls(_internal=True, temperature=temperature, top_k=top_k, top_p=top_p, max_tokens=max_tokens, **attrs)
+
 bentoml_cattr.register_unstructure_hook_factory(
     lambda cls: attr.has(cls) and lenient_issubclass(cls, SamplingParams),
     lambda cls: make_dict_unstructure_fn(
@@ -417,6 +426,7 @@ bentoml_cattr.register_structure_hook_factory(
 
 # cached it here to save one lookup per assignment
 _object_getattribute = object.__getattribute__
+
 class ModelSettings(t.TypedDict, total=False):
   '''ModelSettings serve only for typing purposes as this is transcribed into LLMConfig.__config__.
 
@@ -461,7 +471,9 @@ class ModelSettings(t.TypedDict, total=False):
 
   # tokenizer_class is the custom tokenizer class for this given LLM
   tokenizer_class: t.Optional[str]
+
 _transformed_type: DictStrAny = {'fine_tune_strategies': t.Dict[AdapterType, FineTuneConfig], 'default_implementation': t.Dict[LiteralResourceSpec, LiteralRuntime]}
+
 @attr.define(
     frozen=False,
     slots=True,
@@ -539,6 +551,7 @@ class _ModelSettingsAttr:
     fine_tune_strategies: t.Dict[AdapterType, FineTuneConfig]
     tokenizer_class: t.Optional[str]
     # update-config-stubs.py: attrs stop
+
 # a heuristic cascading implementation resolver based on available resources
 def get_default_implementation(default_implementation_mapping: dict[LiteralResourceSpec, LiteralRuntime]) -> LiteralRuntime:
   available_spec = available_resource_spec()
@@ -546,6 +559,7 @@ def get_default_implementation(default_implementation_mapping: dict[LiteralResou
   elif resource_spec('amd') in available_spec: return default_implementation_mapping.get(resource_spec('amd'), 'pt')
   elif resource_spec('nvidia') in available_spec: return default_implementation_mapping.get(resource_spec('nvidia'), 'pt')
   else: return default_implementation_mapping.get(resource_spec('cpu'), 'pt')
+
 def structure_settings(cl_: type[LLMConfig], cls: type[_ModelSettingsAttr]) -> _ModelSettingsAttr:
   if 'generation_class' in cl_.__config__:
     raise ValueError(f"'generation_class' shouldn't be defined in '__config__', rather defining all required attributes under '{cl_}.GenerationConfig' instead.")
@@ -591,9 +605,12 @@ def structure_settings(cl_: type[LLMConfig], cls: type[_ModelSettingsAttr]) -> _
       _converted[_adapter_type] = FineTuneConfig(PeftType[_adapter_type], _possible_ft_config, False, _llm_config_class)
   _final_value_dct['fine_tune_strategies'] = _converted
   return attr.evolve(_settings_attr, **_final_value_dct)
+
 bentoml_cattr.register_structure_hook(_ModelSettingsAttr, structure_settings)
+
 def _setattr_class(attr_name: str, value_var: t.Any) -> str:
   return f"setattr(cls, '{attr_name}', {value_var})"
+
 def _make_assignment_script(cls: type[LLMConfig], attributes: attr.AttrsInstance, _prefix: LiteralString = 'openllm') -> t.Callable[..., None]:
   '''Generate the assignment script with prefix attributes __openllm_<value>__.'''
   args: ListStr = []
@@ -608,7 +625,9 @@ def _make_assignment_script(cls: type[LLMConfig], attributes: attr.AttrsInstance
     annotations[attr_name] = field.type
 
   return codegen.generate_function(cls, '__assign_attr', lines, args=('cls', *args), globs=globs, annotations=annotations)
+
 _reserved_namespace = {'__config__', 'GenerationConfig', 'SamplingParams'}
+
 @attr.define(slots=True)
 class _ConfigAttr:
   @staticmethod
@@ -760,6 +779,7 @@ class _ConfigAttr:
     '''The fine-tune strategies for this given LLM.'''
     __openllm_tokenizer_class__: t.Optional[str] = Field(None)
     '''Optional tokenizer class for this given LLM. See Llama for example.'''
+
     # update-config-stubs.py: special stop
 class _ConfigBuilder:
   """A modified version of attrs internal _ClassBuilder, and should only be called within __init_subclass__ of LLMConfig.
@@ -873,6 +893,7 @@ class _ConfigBuilder:
       if key in ('__repr__', '__str__', '__repr_name__', '__repr_str__', '__repr_args__'): self._cls_dict[key] = codegen.add_method_dunders(self._cls, fn)
     self._cls_dict['__repr_keys__'] = property(lambda _: {i.name for i in self._attrs} | {'generation_config', 'sampling_config'})
     return self
+
 @attr.define(slots=True, init=False)
 class LLMConfig(_ConfigAttr):
   """``openllm.LLMConfig`` is a pydantic-like ``attrs`` interface that offers fast and easy-to-use APIs.
@@ -1474,9 +1495,11 @@ class LLMConfig(_ConfigAttr):
     `openllm.LLM` also has a postprocess_generate that will just call this method.
     '''
     return generation_result
+
 bentoml_cattr.register_unstructure_hook_factory(
     lambda cls: lenient_issubclass(cls, LLMConfig), lambda cls: make_dict_unstructure_fn(cls, bentoml_cattr, _cattrs_omit_if_default=False, _cattrs_use_linecache=True)
 )
+
 def structure_llm_config(data: t.Any, cls: type[LLMConfig]) -> LLMConfig:
   """Structure a dictionary to a LLMConfig object.
 
@@ -1498,5 +1521,6 @@ def structure_llm_config(data: t.Any, cls: type[LLMConfig]) -> LLMConfig:
   # The rest should be passed to extras
   data = {k: v for k, v in data.items() if k not in cls.__openllm_accepted_keys__}
   return cls(generation_config=generation_config, __openllm_extras__=data, **cls_attrs)
+
 bentoml_cattr.register_structure_hook_func(lambda cls: lenient_issubclass(cls, LLMConfig), structure_llm_config)
 openllm_home = os.path.expanduser(os.environ.get('OPENLLM_HOME', os.path.join(os.environ.get('XDG_CACHE_HOME', os.path.join(os.path.expanduser('~'), '.cache')), 'openllm')))

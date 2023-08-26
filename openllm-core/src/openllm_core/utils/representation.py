@@ -9,6 +9,7 @@ from openllm_core import utils
 if t.TYPE_CHECKING: from openllm_core._typing_compat import TypeAlias
 
 ReprArgs: TypeAlias = t.Generator[t.Tuple[t.Optional[str], t.Any], None, None]
+
 class ReprMixin:
   @property
   @abstractmethod

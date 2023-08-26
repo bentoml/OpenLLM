@@ -43,9 +43,12 @@ _chat_prompt, _default_prompt, _instruct_prompt = '''{instruction}''', '''{instr
 {response_key}
 '''.format(intro=INTRO_BLURB, instruction_key=INSTRUCTION_KEY, instruction='{instruction}', response_key=RESPONSE_KEY)
 PROMPT_MAPPING = {'default': _default_prompt, 'instruct': _instruct_prompt, 'storywriter': _default_prompt, 'chat': _chat_prompt}
+
 def _get_prompt(model_type: str) -> str:
   return PROMPT_MAPPING[model_type]
+
 DEFAULT_PROMPT_TEMPLATE = _get_prompt
+
 class MPTConfig(openllm_core.LLMConfig):
   """MPT is a decoder-style transformer pretrained from scratch on English text and code.
 

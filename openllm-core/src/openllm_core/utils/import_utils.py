@@ -28,6 +28,7 @@ USE_TF = os.environ.get('USE_TF', 'AUTO').upper()
 USE_TORCH = os.environ.get('USE_TORCH', 'AUTO').upper()
 USE_JAX = os.environ.get('USE_FLAX', 'AUTO').upper()
 FORCE_TF_AVAILABLE = os.environ.get('FORCE_TF_AVAILABLE', 'AUTO').upper()
+
 def _is_package_available(package: str) -> bool:
   _package_available = importlib.util.find_spec(package) is not None
   if _package_available:
@@ -36,6 +37,7 @@ def _is_package_available(package: str) -> bool:
     except importlib.metadata.PackageNotFoundError:
       _package_available = False
   return _package_available
+
 _torch_available = importlib.util.find_spec('torch') is not None
 _tf_available = importlib.util.find_spec('tensorflow') is not None
 _flax_available = importlib.util.find_spec('jax') is not None and importlib.util.find_spec('flax') is not None
@@ -56,44 +58,64 @@ _autogptq_available = _is_package_available('auto_gptq')
 _sentencepiece_available = _is_package_available('sentencepiece')
 _xformers_available = _is_package_available('xformers')
 _fairscale_available = _is_package_available('fairscale')
+
 def is_transformers_available() -> bool:
   return _transformers_available
+
 def is_grpc_available() -> bool:
   return _grpc_available
+
 def is_grpc_health_available() -> bool:
   return _grpc_health_available
+
 def is_transformers_supports_kbit() -> bool:
   return pkg.pkg_version_info('transformers')[:2] >= (4, 30)
+
 def is_transformers_supports_agent() -> bool:
   return pkg.pkg_version_info('transformers')[:2] >= (4, 29)
+
 def is_jupyter_available() -> bool:
   return _jupyter_available
+
 def is_jupytext_available() -> bool:
   return _jupytext_available
+
 def is_notebook_available() -> bool:
   return _notebook_available
+
 def is_triton_available() -> bool:
   return _triton_available
+
 def is_datasets_available() -> bool:
   return _datasets_available
+
 def is_peft_available() -> bool:
   return _peft_available
+
 def is_einops_available() -> bool:
   return _einops_available
+
 def is_cpm_kernels_available() -> bool:
   return _cpm_kernel_available
+
 def is_bitsandbytes_available() -> bool:
   return _bitsandbytes_available
+
 def is_autogptq_available() -> bool:
   return _autogptq_available
+
 def is_vllm_available() -> bool:
   return _vllm_available
+
 def is_sentencepiece_available() -> bool:
   return _sentencepiece_available
+
 def is_xformers_available() -> bool:
   return _xformers_available
+
 def is_fairscale_available() -> bool:
   return _fairscale_available
+
 def is_torch_available() -> bool:
   global _torch_available
   if USE_TORCH in ENV_VARS_TRUE_AND_AUTO_VALUES and USE_TF not in ENV_VARS_TRUE_VALUES:
@@ -106,6 +128,7 @@ def is_torch_available() -> bool:
     logger.info('Disabling PyTorch because USE_TF is set')
     _torch_available = False
   return _torch_available
+
 def is_tf_available() -> bool:
   global _tf_available
   if FORCE_TF_AVAILABLE in ENV_VARS_TRUE_VALUES: _tf_available = True
@@ -143,6 +166,7 @@ def is_tf_available() -> bool:
       logger.info('Disabling Tensorflow because USE_TORCH is set')
       _tf_available = False
   return _tf_available
+
 def is_flax_available() -> bool:
   global _flax_available
   if USE_JAX in ENV_VARS_TRUE_AND_AUTO_VALUES:
@@ -155,6 +179,7 @@ def is_flax_available() -> bool:
   else:
     _flax_available = False
   return _flax_available
+
 VLLM_IMPORT_ERROR_WITH_PYTORCH = '''\
 {0} requires the vLLM library but it was not found in your environment.
 However, we were able to find a PyTorch installation. PyTorch classes do not begin
@@ -270,6 +295,7 @@ BACKENDS_MAPPING: BackendOrderedDict = OrderedDict([('flax', (is_flax_available,
 ), ('sentencepiece', (is_sentencepiece_available, SENTENCEPIECE_IMPORT_ERROR)), ('xformers', (is_xformers_available, XFORMERS_IMPORT_ERROR)), (
     'fairscale', (is_fairscale_available, FAIRSCALE_IMPORT_ERROR)
 )])
+
 class DummyMetaclass(abc.ABCMeta):
   '''Metaclass for dummy object.
 
@@ -280,6 +306,7 @@ class DummyMetaclass(abc.ABCMeta):
   def __getattribute__(cls, key: str) -> t.Any:
     if key.startswith('_'): return super().__getattribute__(key)
     require_backends(cls, cls._backends)
+
 def require_backends(o: t.Any, backends: t.MutableSequence[str]) -> None:
   if not isinstance(backends, (list, tuple)): backends = list(backends)
   name = o.__name__ if hasattr(o, '__name__') else o.__class__.__name__
@@ -294,6 +321,7 @@ def require_backends(o: t.Any, backends: t.MutableSequence[str]) -> None:
     if 'flax' not in backends and is_flax_available() and not is_vllm_available(): raise ImportError(VLLM_IMPORT_ERROR_WITH_FLAX.format(name))
   failed = [msg.format(name) for available, msg in (BACKENDS_MAPPING[backend] for backend in backends) if not available()]
   if failed: raise ImportError(''.join(failed))
+
 class EnvVarMixin(ReprMixin):
   model_name: str
   config: str

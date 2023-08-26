@@ -8,6 +8,7 @@ from lxml import etree
 ROOT = Path(__file__).resolve().parent.parent
 
 PACKAGES = {'openllm-python/src/openllm/': 'openllm'}
+
 def main() -> int:
   coverage_report = ROOT / 'coverage.xml'
   root = etree.fromstring(coverage_report.read_text())
@@ -42,4 +43,5 @@ def main() -> int:
   coverage_summary = ROOT / 'coverage-summary.json'
   coverage_summary.write_text(orjson.dumps(coverage_data, option=orjson.OPT_INDENT_2).decode(), encoding='utf-8')
   return 0
+
 if __name__ == '__main__': raise SystemExit(main())

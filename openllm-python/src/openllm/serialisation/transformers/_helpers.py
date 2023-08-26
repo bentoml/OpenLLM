@@ -18,6 +18,7 @@ else:
   transformers, torch = openllm_core.utils.LazyLoader('transformers', globals(), 'transformers'), openllm_core.utils.LazyLoader('torch', globals(), 'torch')
 
 _object_setattr = object.__setattr__
+
 def process_config(model_id: str, trust_remote_code: bool, **attrs: t.Any) -> tuple[transformers.PretrainedConfig, DictStrAny, DictStrAny]:
   '''A helper function that correctly parse config and attributes for transformers.PretrainedConfig.
 
@@ -37,10 +38,12 @@ def process_config(model_id: str, trust_remote_code: bool, **attrs: t.Any) -> tu
     if copied_attrs.get('torch_dtype', None) == 'auto': copied_attrs.pop('torch_dtype')
     config, attrs = transformers.AutoConfig.from_pretrained(model_id, return_unused_kwargs=True, trust_remote_code=trust_remote_code, **hub_attrs, **copied_attrs)
   return config, hub_attrs, attrs
+
 def infer_tokenizers_from_llm(__llm: openllm.LLM[t.Any, T], /) -> T:
   __cls = getattr(transformers, openllm_core.utils.first_not_none(__llm.config['tokenizer_class'], default='AutoTokenizer'), None)
   if __cls is None: raise ValueError(f'Cannot infer correct tokenizer class for {__llm}. Make sure to unset `tokenizer_class`')
   return __cls
+
 def infer_autoclass_from_llm(llm: openllm.LLM[M, T], config: transformers.PretrainedConfig, /) -> _BaseAutoModelClass:
   if llm.config['trust_remote_code']:
     autoclass = 'AutoModelForSeq2SeqLM' if llm.config['model_type'] == 'seq2seq_lm' else 'AutoModelForCausalLM'
@@ -55,9 +58,11 @@ def infer_autoclass_from_llm(llm: openllm.LLM[M, T], config: transformers.Pretra
     elif type(config) in transformers.MODEL_FOR_SEQ_TO_SEQ_CAUSAL_LM_MAPPING: idx = 1
     else: raise openllm.exceptions.OpenLLMException(f'Model type {type(config)} is not supported yet.')
     return getattr(transformers, FRAMEWORK_TO_AUTOCLASS_MAPPING[llm.__llm_implementation__][idx])
+
 def check_unintialised_params(model: torch.nn.Module) -> None:
   unintialized = [n for n, param in model.named_parameters() if param.data.device == torch.device('meta')]
   if len(unintialized) > 0: raise RuntimeError(f'Found the following unintialized parameters in {model}: {unintialized}')
+
 def update_model(bentomodel: bentoml.Model, metadata: DictStrAny) -> bentoml.Model:
   based: DictStrAny = copy.deepcopy(bentomodel.info.metadata)
   based.update(metadata)
@@ -65,6 +70,7 @@ def update_model(bentomodel: bentoml.Model, metadata: DictStrAny) -> bentoml.Mod
       tag=bentomodel.info.tag, module=bentomodel.info.module, labels=bentomodel.info.labels, options=bentomodel.info.options.to_dict(), signatures=bentomodel.info.signatures, context=bentomodel.info.context, api_version=bentomodel.info.api_version, creation_time=bentomodel.info.creation_time, metadata=based
   ))
   return bentomodel
+
 # NOTE: sync with bentoml/_internal/frameworks/transformers.py#make_default_signatures
 def make_model_signatures(llm: openllm.LLM[M, T]) -> ModelSignaturesType:
   infer_fn: tuple[str, ...] = ('__call__',)

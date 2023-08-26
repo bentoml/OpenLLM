@@ -36,8 +36,10 @@ __all__ = [
     'JsonType',
     'BytesType'
 ]
+
 def __dir__() -> list[str]:
   return sorted(__all__)
+
 def attrs_to_options(name: str, field: attr.Attribute[t.Any], model_name: str, typ: t.Any = None, suffix_generation: bool = False, suffix_sampling: bool = False) -> t.Callable[[FC], FC]:
   # TODO: support parsing nested attrs class and Union
   envvar = field.metadata['env']
@@ -66,6 +68,7 @@ def attrs_to_options(name: str, field: attr.Attribute[t.Any], model_name: str, t
       show_envvar=True,
       envvar=envvar,
   )
+
 def env_converter(value: t.Any, env: str | None = None) -> t.Any:
   if env is not None:
     value = os.environ.get(env, value)
@@ -75,6 +78,7 @@ def env_converter(value: t.Any, env: str | None = None) -> t.Any:
       except orjson.JSONDecodeError as err:
         raise RuntimeError(f"Failed to parse ({value!r}) from '{env}': {err}") from None
   return value
+
 def Field(
     default: t.Any = None,
     *,
@@ -137,6 +141,7 @@ def Field(
     attrs.pop('default')
 
   return attr.field(metadata=metadata, validator=_validator, converter=converter, **attrs)
+
 def parse_type(field_type: t.Any) -> ParamType | tuple[ParamType, ...]:
   """Transforms the pydantic field's type into a click-compatible type.
 
@@ -167,6 +172,7 @@ def parse_type(field_type: t.Any) -> ParamType | tuple[ParamType, ...]:
   if lenient_issubclass(field_type, bytes): return BytesType()
   # return the current type: it should be a primitive
   return field_type
+
 def is_typing(field_type: type) -> bool:
   '''Checks whether the current type is a module-like type.
 
@@ -180,6 +186,7 @@ def is_typing(field_type: type) -> bool:
   if raw is None: return False
   if raw is type or raw is t.Type: return True
   return False
+
 def is_literal(field_type: type) -> bool:
   '''Checks whether the given field type is a Literal type or not.
 
@@ -194,6 +201,7 @@ def is_literal(field_type: type) -> bool:
   '''
   origin = t.get_origin(field_type)
   return origin is not None and origin is t.Literal
+
 class ModuleType(ParamType):
   name = 'module'
 
@@ -215,6 +223,7 @@ class ModuleType(ParamType):
       return value
     except Exception as exc:
       self.fail(f"'{value}' is not a valid object ({type(exc)}: {exc!s})", param, ctx)
+
 class EnumChoice(click.Choice):
   name = 'enum'
 
@@ -237,6 +246,7 @@ class EnumChoice(click.Choice):
     if isinstance(result, str):
       result = self.internal_type[result]
     return result
+
 class LiteralChoice(EnumChoice):
   name = 'literal'
 
@@ -249,6 +259,7 @@ class LiteralChoice(EnumChoice):
     _mapping = {str(v): v for v in values}
     super(EnumChoice, self).__init__(list(_mapping), case_sensitive)
     self.internal_type = item_type
+
 def allows_multiple(field_type: type[t.Any]) -> bool:
   """Checks whether the current type allows for multiple arguments to be provided as input or not.
 
@@ -273,6 +284,7 @@ def allows_multiple(field_type: type[t.Any]) -> bool:
     # For the moment, only non-composite types are allowed.
     return not isinstance(args, tuple)
   return False
+
 def is_mapping(field_type: type) -> bool:
   '''Checks whether this field represents a dictionary or JSON object.
 
@@ -289,6 +301,7 @@ def is_mapping(field_type: type) -> bool:
   origin = t.get_origin(field_type)
   if origin is None: return False
   return lenient_issubclass(origin, t.Mapping)
+
 def is_container(field_type: type) -> bool:
   """Checks whether the current type is a container type ('contains' other types), like lists and tuples.
 
@@ -307,6 +320,7 @@ def is_container(field_type: type) -> bool:
   # Early out for non-typing objects
   if origin is None: return False
   return lenient_issubclass(origin, t.Container)
+
 def parse_container_args(field_type: type[t.Any]) -> ParamType | tuple[ParamType, ...]:
   '''Parses the arguments inside a container type (lists, tuples and so on).
 
@@ -329,6 +343,7 @@ def parse_container_args(field_type: type[t.Any]) -> ParamType | tuple[ParamType
     return parse_single_arg(args[0])
   # Then deal with fixed-length containers: Tuple[str, int, int]
   return tuple(parse_single_arg(arg) for arg in args)
+
 def parse_single_arg(arg: type) -> ParamType:
   """Returns the click-compatible type for container origin types.
 
@@ -349,6 +364,7 @@ def parse_single_arg(arg: type) -> ParamType:
   if is_container(arg): return JsonType()
   if lenient_issubclass(arg, bytes): return BytesType()
   return click_types.convert_type(arg)
+
 class BytesType(ParamType):
   name = 'bytes'
 
@@ -358,6 +374,7 @@ class BytesType(ParamType):
       return str.encode(value)
     except Exception as exc:
       self.fail(f"'{value}' is not a valid string ({exc!s})", param, ctx)
+
 CYGWIN = sys.platform.startswith('cygwin')
 WIN = sys.platform.startswith('win')
 if sys.platform.startswith('win') and WIN:
@@ -369,6 +386,7 @@ else:
 
   def _get_argv_encoding() -> str:
     return getattr(sys.stdin, 'encoding', None) or sys.getfilesystemencoding()
+
 class CudaValueType(ParamType):
   name = 'cuda'
   envvar_list_splitter = ','
@@ -413,7 +431,9 @@ class CudaValueType(ParamType):
 
   def __repr__(self) -> str:
     return 'STRING'
+
 CUDA = CudaValueType()
+
 class JsonType(ParamType):
   name = 'json'
 

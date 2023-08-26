@@ -11,6 +11,7 @@ if t.TYPE_CHECKING: import transformers
 else: transformers = openllm.utils.LazyLoader('transformers', globals(), 'transformers')
 
 logger = logging.getLogger(__name__)
+
 class FlaxOPT(openllm.LLM['transformers.TFOPTForCausalLM', 'transformers.GPT2Tokenizer']):
   __openllm_internal__ = True
 

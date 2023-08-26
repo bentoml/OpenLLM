@@ -23,6 +23,7 @@ or provide `--model-id` flag when running ``openllm start baichuan``:
 $ openllm start baichuan --model-id='fireballoon/baichuan-vicuna-chinese-7b'
 '''
 DEFAULT_PROMPT_TEMPLATE = '''{instruction}'''
+
 class BaichuanConfig(openllm_core.LLMConfig):
   """Baichuan-7B is an open-source, large-scale pre-trained language model developed by Baichuan Intelligent Technology.
 

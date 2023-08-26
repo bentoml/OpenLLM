@@ -29,6 +29,7 @@ SYSTEM_PROMPT = '''<|SYSTEM|># StableLM Tuned (Alpha version)
 - StableLM will refuse to participate in anything that could harm a human.
 '''
 DEFAULT_PROMPT_TEMPLATE = '''{system_prompt}<|USER|>{instruction}<|ASSISTANT|>'''
+
 class StableLMConfig(openllm_core.LLMConfig):
   """StableLM-Base-Alpha is a suite of 3B and 7B parameter decoder-only language models.
 

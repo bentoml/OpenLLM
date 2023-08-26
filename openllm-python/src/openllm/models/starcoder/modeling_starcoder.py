@@ -7,6 +7,7 @@ import openllm
 from openllm.utils import generate_labels
 from openllm_core.config.configuration_starcoder import EOD, FIM_MIDDLE, FIM_PAD, FIM_PREFIX, FIM_SUFFIX
 if t.TYPE_CHECKING: import transformers
+
 class StarCoder(openllm.LLM['transformers.GPTBigCodeForCausalLM', 'transformers.GPT2TokenizerFast']):
   __openllm_internal__ = True
 

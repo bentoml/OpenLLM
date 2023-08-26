@@ -6,6 +6,7 @@ import orjson
 PRECISION = Decimal('.01')
 
 ROOT = Path(__file__).resolve().parent.parent
+
 def main() -> int:
   coverage_summary = ROOT / 'coverage-summary.json'
 
@@ -35,4 +36,5 @@ def main() -> int:
   with coverage_report.open('w', encoding='utf-8') as f:
     f.write(''.join(lines))
   return 0
+
 if __name__ == '__main__': raise SystemExit(main())

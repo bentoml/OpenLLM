@@ -9,6 +9,7 @@ sys.path.insert(0, os.path.join(ROOT, 'openllm-python', 'src'))
 
 import openllm
 _OWNER, _REPO = 'bentoml', 'openllm'
+
 @dataclasses.dataclass(frozen=True)
 class Classifier:
   identifier: t.Dict[str, str] = dataclasses.field(
@@ -53,6 +54,7 @@ class Classifier:
   @staticmethod
   def create_status_classifier(level: int) -> str:
     return Classifier.create_classifier('status', Classifier.status()[level])
+
 @dataclasses.dataclass(frozen=True)
 class Dependencies:
   name: str
@@ -95,6 +97,7 @@ class Dependencies:
   @classmethod
   def from_tuple(cls, *decls: t.Any) -> Dependencies:
     return cls(*decls)
+
 lower_bentoml_constraint = '1.1.2'
 _BENTOML_EXT = ['io']
 _TRANSFORMERS_EXT = ['torch', 'tokenizers', 'accelerate']
@@ -138,8 +141,10 @@ _base_requirements.update({v: _locals.get(f'{inflection.underscore(v).upper()}_D
 _base_requirements = {k: v for k, v in sorted(_base_requirements.items())}
 
 fname = f'{os.path.basename(os.path.dirname(__file__))}/{os.path.basename(__file__)}'
+
 def correct_style(it: t.Any) -> t.Any:
   return it
+
 def create_classifiers() -> Array:
   arr = correct_style(tomlkit.array())
   arr.extend([
@@ -159,6 +164,7 @@ def create_classifiers() -> Array:
       *Classifier.create_python_classifier(),
   ])
   return arr.multiline(True)
+
 def create_optional_table() -> Table:
   all_array = tomlkit.array()
   all_array.append(f"openllm[{','.join(_base_requirements)}]")
@@ -169,6 +175,7 @@ def create_optional_table() -> Table:
   table.add(tomlkit.nl())
 
   return table
+
 def create_url_table(_info: t.Any) -> Table:
   table = tomlkit.table()
   _urls = {
@@ -183,6 +190,7 @@ def create_url_table(_info: t.Any) -> Table:
   }
   table.update({k: v for k, v in sorted(_urls.items())})
   return table
+
 def build_system() -> Table:
   table = tomlkit.table()
   table.add('build-backend', 'hatchling.build')
@@ -190,11 +198,13 @@ def build_system() -> Table:
   requires_array.extend(['hatchling==1.18.0', 'hatch-vcs==0.3.0', 'hatch-fancy-pypi-readme==23.1.0'])
   table.add('requires', requires_array.multiline(True))
   return table
+
 def authors() -> Array:
   arr = correct_style(tomlkit.array())
   arr.append(dict(name='Aaron Pham', email='aarnphm@bentoml.com'))
   arr.append(dict(name='BentoML Team', email='contact@bentoml.com'))
   return arr.multiline(True)
+
 def keywords() -> Array:
   arr = correct_style(tomlkit.array())
   arr.extend([
@@ -217,6 +227,7 @@ def keywords() -> Array:
       'Transformers'
   ])
   return arr.multiline(True)
+
 def build_cli_extensions() -> Table:
   table = tomlkit.table()
   ext: dict[str, str] = {'openllm': 'openllm.cli.entrypoint:cli'}
@@ -228,6 +239,7 @@ def build_cli_extensions() -> Table:
   })
   table.update(ext)
   return table
+
 def main() -> int:
   api = GhApi(owner=_OWNER, repo=_REPO, authenticate=False)
   _info = api.repos.get()
@@ -258,4 +270,5 @@ def main() -> int:
   with open(os.path.join(ROOT, 'openllm-python', 'pyproject.toml'), 'w') as f:
     f.write(tomlkit.dumps(pyproject))
   return 0
+
 if __name__ == '__main__': raise SystemExit(main())

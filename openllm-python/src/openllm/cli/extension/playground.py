@@ -20,11 +20,13 @@ if t.TYPE_CHECKING:
 
   from openllm_core._typing_compat import DictStrAny
 logger = logging.getLogger(__name__)
+
 def load_notebook_metadata() -> DictStrAny:
   with open(os.path.join(os.path.dirname(playground.__file__), '_meta.yml'), 'r') as f:
     content = yaml.safe_load(f)
   if not all('description' in k for k in content.values()): raise ValueError("Invalid metadata file. All entries must have a 'description' key.")
   return content
+
 @click.command('playground', context_settings=termui.CONTEXT_SETTINGS)
 @click.argument('output-dir', default=None, required=False)
 @click.option('--port', envvar='JUPYTER_PORT', show_envvar=True, show_default=True, default=8888, help='Default port for Jupyter server')

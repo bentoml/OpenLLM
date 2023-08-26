@@ -8,6 +8,7 @@ import bentoml
 from openllm_core import _strategies as strategy
 from openllm_core._strategies import CascadingResourceStrategy, NvidiaGpuResource, get_resource
 if t.TYPE_CHECKING: from _pytest.monkeypatch import MonkeyPatch
+
 def test_nvidia_gpu_resource_from_env(monkeypatch: pytest.MonkeyPatch):
   with monkeypatch.context() as mcls:
     mcls.setenv('CUDA_VISIBLE_DEVICES', '0,1')
@@ -15,6 +16,7 @@ def test_nvidia_gpu_resource_from_env(monkeypatch: pytest.MonkeyPatch):
     assert len(resource) == 2
     assert resource == ['0', '1']
     mcls.delenv('CUDA_VISIBLE_DEVICES')
+
 def test_nvidia_gpu_cutoff_minus(monkeypatch: pytest.MonkeyPatch):
   with monkeypatch.context() as mcls:
     mcls.setenv('CUDA_VISIBLE_DEVICES', '0,2,-1,1')
@@ -22,6 +24,7 @@ def test_nvidia_gpu_cutoff_minus(monkeypatch: pytest.MonkeyPatch):
     assert len(resource) == 2
     assert resource == ['0', '2']
     mcls.delenv('CUDA_VISIBLE_DEVICES')
+
 def test_nvidia_gpu_neg_val(monkeypatch: pytest.MonkeyPatch):
   with monkeypatch.context() as mcls:
     mcls.setenv('CUDA_VISIBLE_DEVICES', '-1')
@@ -29,6 +32,7 @@ def test_nvidia_gpu_neg_val(monkeypatch: pytest.MonkeyPatch):
     assert len(resource) == 0
     assert resource == []
     mcls.delenv('CUDA_VISIBLE_DEVICES')
+
 def test_nvidia_gpu_parse_literal(monkeypatch: pytest.MonkeyPatch):
   with monkeypatch.context() as mcls:
     mcls.setenv('CUDA_VISIBLE_DEVICES', 'GPU-5ebe9f43-ac33420d4628')
@@ -54,6 +58,7 @@ def test_nvidia_gpu_parse_literal(monkeypatch: pytest.MonkeyPatch):
     assert len(resource) == 1
     assert resource == ['MIG-GPU-5ebe9f43-ac33420d4628']
     mcls.delenv('CUDA_VISIBLE_DEVICES')
+
 @pytest.mark.skipif(os.getenv('GITHUB_ACTIONS') is not None, reason='skip GPUs test on CI')
 def test_nvidia_gpu_validate(monkeypatch: pytest.MonkeyPatch):
   with monkeypatch.context() as mcls:
@@ -64,6 +69,7 @@ def test_nvidia_gpu_validate(monkeypatch: pytest.MonkeyPatch):
     assert pytest.raises(ValueError, NvidiaGpuResource.validate, [*NvidiaGpuResource.from_system(), 1],).match('Input list should be all string type.')
     assert pytest.raises(ValueError, NvidiaGpuResource.validate, [-2]).match('Input list should be all string type.')
     assert pytest.raises(ValueError, NvidiaGpuResource.validate, ['GPU-5ebe9f43', 'GPU-ac33420d4628']).match('Failed to parse available GPUs UUID')
+
 def test_nvidia_gpu_from_spec(monkeypatch: pytest.MonkeyPatch):
   with monkeypatch.context() as mcls:
     # to make this tests works with system that has GPU
@@ -90,10 +96,13 @@ def test_nvidia_gpu_from_spec(monkeypatch: pytest.MonkeyPatch):
     NvidiaGpuResource.from_spec(1.5)
   with pytest.raises(ValueError):
     assert NvidiaGpuResource.from_spec(-2)
+
 class GPURunnable(bentoml.Runnable):
   SUPPORTED_RESOURCES = ('nvidia.com/gpu', 'amd.com/gpu')
+
 def unvalidated_get_resource(x: dict[str, t.Any], y: str, validate: bool = False):
   return get_resource(x, y, validate=validate)
+
 @pytest.mark.parametrize('gpu_type', ['nvidia.com/gpu', 'amd.com/gpu'])
 def test_cascade_strategy_worker_count(monkeypatch: MonkeyPatch, gpu_type: str):
   monkeypatch.setattr(strategy, 'get_resource', unvalidated_get_resource)
@@ -104,6 +113,7 @@ def test_cascade_strategy_worker_count(monkeypatch: MonkeyPatch, gpu_type: str):
   assert CascadingResourceStrategy.get_worker_count(GPURunnable, {gpu_type: [2, 7, 9]}, 0.5) == 1
   assert CascadingResourceStrategy.get_worker_count(GPURunnable, {gpu_type: [2, 7, 8, 9]}, 0.5) == 1
   assert CascadingResourceStrategy.get_worker_count(GPURunnable, {gpu_type: [2, 5, 7, 8, 9]}, 0.4) == 1
+
 @pytest.mark.parametrize('gpu_type', ['nvidia.com/gpu', 'amd.com/gpu'])
 def test_cascade_strategy_worker_env(monkeypatch: MonkeyPatch, gpu_type: str):
   monkeypatch.setattr(strategy, 'get_resource', unvalidated_get_resource)
@@ -142,6 +152,7 @@ def test_cascade_strategy_worker_env(monkeypatch: MonkeyPatch, gpu_type: str):
   assert envs.get('CUDA_VISIBLE_DEVICES') == '7,8'
   envs = CascadingResourceStrategy.get_worker_env(GPURunnable, {gpu_type: [2, 6, 7, 8, 9]}, 0.4, 2)
   assert envs.get('CUDA_VISIBLE_DEVICES') == '9'
+
 @pytest.mark.parametrize('gpu_type', ['nvidia.com/gpu', 'amd.com/gpu'])
 def test_cascade_strategy_disabled_via_env(monkeypatch: MonkeyPatch, gpu_type: str):
   monkeypatch.setattr(strategy, 'get_resource', unvalidated_get_resource)

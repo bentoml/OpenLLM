@@ -22,6 +22,7 @@ if t.TYPE_CHECKING:
   ConfigModelItemsView = _odict_items[type[openllm.LLMConfig], type[openllm.LLM[t.Any, t.Any]]]
 
 logger = logging.getLogger(__name__)
+
 class BaseAutoLLMClass:
   _model_mapping: t.ClassVar[_LazyAutoMapping]
 
@@ -81,6 +82,7 @@ class BaseAutoLLMClass:
     raise ValueError(
         f"Unrecognized configuration class ({config_class}) for {name}. Model name should be one of {', '.join(openllm.CONFIG_MAPPING.keys())} (Registered configuration class: {', '.join([i.__name__ for i in cls._model_mapping.keys()])})."
     )
+
 def getattribute_from_module(module: types.ModuleType, attr: t.Any) -> t.Any:
   if attr is None: return
   if isinstance(attr, tuple): return tuple(getattribute_from_module(module, a) for a in attr)
@@ -93,6 +95,7 @@ def getattribute_from_module(module: types.ModuleType, attr: t.Any) -> t.Any:
     except ValueError:
       raise ValueError(f'Could not find {attr} neither in {module} nor in {openllm_module}!') from None
   raise ValueError(f'Could not find {attr} in {openllm_module}!')
+
 class _LazyAutoMapping(OrderedDict, ReprMixin):
   """Based on transformers.models.auto.configuration_auto._LazyAutoMapping.
 
@@ -168,4 +171,5 @@ class _LazyAutoMapping(OrderedDict, ReprMixin):
     if hasattr(key, '__name__') and key.__name__ in self._reverse_config_mapping:
       if self._reverse_config_mapping[key.__name__] in self._model_mapping.keys(): raise ValueError(f"'{key}' is already used by a OpenLLM model.")
     self._extra_content[key] = value
+
 __all__ = ['BaseAutoLLMClass', '_LazyAutoMapping']

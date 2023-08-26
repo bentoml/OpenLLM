@@ -34,6 +34,7 @@ else:
 logger = logging.getLogger(__name__)
 
 __all__ = ['import_model', 'get', 'load_model', 'save_pretrained']
+
 @inject
 def import_model(llm: openllm.LLM[M, T], *decls: t.Any, trust_remote_code: bool, _model_store: ModelStore = Provide[BentoMLContainer.model_store], **attrs: t.Any) -> bentoml.Model:
   """Auto detect model type from given model_id and import it to bentoml's model store.
@@ -136,6 +137,7 @@ def import_model(llm: openllm.LLM[M, T], *decls: t.Any, trust_remote_code: bool,
       # in the case where users first run openllm start without the model available locally.
       if openllm.utils.is_torch_available() and torch.cuda.is_available(): torch.cuda.empty_cache()
     return bentomodel
+
 def get(llm: openllm.LLM[M, T], auto_import: bool = False) -> bentoml.Model:
   '''Return an instance of ``bentoml.Model`` from given LLM instance.
 
@@ -157,6 +159,7 @@ def get(llm: openllm.LLM[M, T], auto_import: bool = False) -> bentoml.Model:
   except bentoml.exceptions.NotFound as err:
     if auto_import: return import_model(llm, trust_remote_code=llm.__llm_trust_remote_code__)
     raise err from None
+
 def load_model(llm: openllm.LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M:
   '''Load the model from BentoML store.
 
@@ -189,6 +192,7 @@ def load_model(llm: openllm.LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M:
   if llm.bettertransformer and isinstance(model, transformers.PreTrainedModel): model = model.to_bettertransformer()
   if llm.__llm_implementation__ in {'pt', 'vllm'}: check_unintialised_params(model)
   return t.cast('M', model)
+
 def save_pretrained(
     llm: openllm.LLM[M, T],
     save_directory: str,

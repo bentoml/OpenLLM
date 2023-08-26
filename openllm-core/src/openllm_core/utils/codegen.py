@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 # sentinel object for unequivocal object() getattr
 _sentinel = object()
+
 def has_own_attribute(cls: type[t.Any], attrib_name: t.Any) -> bool:
   """Check whether *cls* defines *attrib_name* (and doesn't just inherit it)."""
   attr = getattr(cls, attrib_name, _sentinel)
@@ -26,14 +27,17 @@ def has_own_attribute(cls: type[t.Any], attrib_name: t.Any) -> bool:
     a = getattr(base_cls, attrib_name, None)
     if attr is a: return False
   return True
+
 def get_annotations(cls: type[t.Any]) -> DictStrAny:
   if has_own_attribute(cls, '__annotations__'): return cls.__annotations__
   return t.cast('DictStrAny', {})
+
 def is_class_var(annot: str | t.Any) -> bool:
   annot = str(annot)
   # Annotation can be quoted.
   if annot.startswith(("'", '"')) and annot.endswith(("'", '"')): annot = annot[1:-1]
   return annot.startswith(('typing.ClassVar', 't.ClassVar', 'ClassVar', 'typing_extensions.ClassVar',))
+
 def add_method_dunders(cls: type[t.Any], method_or_cls: _T, _overwrite_doc: str | None = None) -> _T:
   try:
     method_or_cls.__module__ = cls.__module__
@@ -48,8 +52,10 @@ def add_method_dunders(cls: type[t.Any], method_or_cls: _T, _overwrite_doc: str 
   except AttributeError:
     pass
   return method_or_cls
+
 def _compile_and_eval(script: str, globs: DictStrAny, locs: t.Any = None, filename: str = '') -> None:
   eval(compile(script, filename, 'exec'), globs, locs)
+
 def _make_method(name: str, script: str, filename: str, globs: DictStrAny) -> AnyCallable:
   locs: DictStrAny = {}
   # In order of debuggers like PDB being able to step through the code, we add a fake linecache entry.
@@ -64,6 +70,7 @@ def _make_method(name: str, script: str, filename: str, globs: DictStrAny) -> An
       count += 1
   _compile_and_eval(script, globs, locs, filename)
   return locs[name]
+
 def make_attr_tuple_class(cls_name: str, attr_names: t.Sequence[str]) -> type[t.Any]:
   '''Create a tuple subclass to hold class attributes.
 
@@ -86,8 +93,10 @@ def make_attr_tuple_class(cls_name: str, attr_names: t.Sequence[str]) -> type[t.
   if SHOW_CODEGEN: logger.info('Generated class for %s:\n\n%s', attr_class_name, '\n'.join(attr_class_template))
   _compile_and_eval('\n'.join(attr_class_template), globs)
   return globs[attr_class_name]
+
 def generate_unique_filename(cls: type[t.Any], func_name: str) -> str:
   return f"<{cls.__name__} generated {func_name} {cls.__module__}.{getattr(cls, '__qualname__', cls.__name__)}>"
+
 def generate_function(
     typ: type[t.Any], func_name: str, lines: list[str] | None, args: tuple[str, ...] | None, globs: dict[str, t.Any], annotations: dict[str, t.Any] | None = None
 ) -> AnyCallable:
@@ -97,6 +106,7 @@ def generate_function(
   if annotations: meth.__annotations__ = annotations
   if SHOW_CODEGEN: logger.info('Generated script for %s:\n\n%s', typ, script)
   return meth
+
 def make_env_transformer(
     cls: type[openllm_core.LLMConfig], model_name: str, suffix: LiteralString | None = None, default_callback: t.Callable[[str, t.Any], t.Any] | None = None, globs: DictStrAny | None = None,
 ) -> AnyCallable:
@@ -123,6 +133,7 @@ def make_env_transformer(
   ]
   fields_ann = 'list[attr.Attribute[t.Any]]'
   return generate_function(cls, '__auto_env', lines, args=('_', 'fields'), globs=globs, annotations={'_': 'type[LLMConfig]', 'fields': fields_ann, 'return': fields_ann})
+
 def gen_sdk(func: _T, name: str | None = None, **attrs: t.Any) -> _T:
   '''Enhance sdk with nice repr that plays well with your brain.'''
   from openllm_core.utils import ReprMixin
@@ -153,4 +164,5 @@ def gen_sdk(func: _T, name: str | None = None, **attrs: t.Any) -> _T:
           func,
       )
   )
+
 __all__ = ['gen_sdk', 'make_attr_tuple_class', 'make_env_transformer', 'generate_unique_filename', 'generate_function']

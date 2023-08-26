@@ -22,10 +22,12 @@ pb, services = import_generated_stubs('v1')
 if t.TYPE_CHECKING:
   from bentoml.grpc.v1.service_pb2 import ServiceMetadataResponse
 logger = logging.getLogger(__name__)
+
 class ClientCredentials(t.TypedDict):
   root_certificates: NotRequired[t.Union[bytes, str]]
   private_key: NotRequired[t.Union[bytes, str]]
   certificate_chain: NotRequired[t.Union[bytes, str]]
+
 @overload
 def dispatch_channel(
     server_url: str,
@@ -37,6 +39,7 @@ def dispatch_channel(
     interceptors: t.Sequence[aio.ClientInterceptor] | None = ...
 ) -> aio.Channel:
   ...
+
 @overload
 def dispatch_channel(
     server_url: str,
@@ -48,6 +51,7 @@ def dispatch_channel(
     interceptors: t.Sequence[aio.ClientInterceptor] | None = None
 ) -> grpc.Channel:
   ...
+
 def dispatch_channel(
     server_url: str,
     typ: t.Literal['async', 'sync'] = 'sync',
@@ -67,6 +71,7 @@ def dispatch_channel(
   elif typ == 'sync' and ssl: return grpc.secure_channel(server_url, credentials=credentials, options=options, compression=compression)
   elif typ == 'sync': return grpc.insecure_channel(server_url, options=options, compression=compression)
   else: raise ValueError(f'Unknown type: {typ}')
+
 class GrpcClient(Client):
   ssl: bool
   ssl_client_credentials: t.Optional[ClientCredentials]
@@ -172,6 +177,7 @@ class GrpcClient(Client):
     stubs = services.BentoServiceStub(self.inner)
     proto = stubs.Call(pb.Request(**{'api_name': api_fn[_inference_api], _inference_api.input.proto_fields[0]: fake_resp}), **channel_kwargs)
     return ensure_exec_coro(_inference_api.output.from_proto(getattr(proto, proto.WhichOneof('content'))))
+
 class AsyncGrpcClient(AsyncClient):
   ssl: bool
   ssl_client_credentials: t.Optional[ClientCredentials]

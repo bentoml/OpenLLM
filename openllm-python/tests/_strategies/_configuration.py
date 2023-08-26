@@ -9,6 +9,7 @@ from openllm_core._configuration import ModelSettings
 logger = logging.getLogger(__name__)
 
 env_strats = st.sampled_from([openllm.utils.EnvVarMixin(model_name) for model_name in openllm.CONFIG_MAPPING.keys()])
+
 @st.composite
 def model_settings(draw: st.DrawFn):
   '''Strategy for generating ModelSettings objects.'''
@@ -28,6 +29,7 @@ def model_settings(draw: st.DrawFn):
       'workers_per_resource': st.one_of(st.integers(min_value=1), st.floats(min_value=0.1, max_value=1.0)),
   }
   return draw(st.builds(ModelSettings, **kwargs))
+
 def make_llm_config(
     cls_name: str,
     dunder_config: dict[str, t.Any] | ModelSettings,

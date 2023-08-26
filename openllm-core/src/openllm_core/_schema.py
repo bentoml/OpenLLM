@@ -10,6 +10,7 @@ from openllm_core._configuration import GenerationConfig, LLMConfig
 
 from .utils import bentoml_cattr
 if t.TYPE_CHECKING: import vllm
+
 @attr.frozen(slots=True)
 class GenerationInput:
   prompt: str
@@ -41,6 +42,7 @@ class GenerationInput:
             'adapter_name': attr.field(default=None, type=str)
         }
     )
+
 @attr.frozen(slots=True)
 class GenerationOutput:
   responses: t.List[t.Any]
@@ -58,6 +60,7 @@ class GenerationOutput:
     if hasattr(self, key): return getattr(self, key)
     elif key in self.configuration: return self.configuration[key]
     else: raise KeyError(key)
+
 @attr.frozen(slots=True)
 class MetadataOutput:
   model_id: str
@@ -67,10 +70,12 @@ class MetadataOutput:
   configuration: str
   supports_embeddings: bool
   supports_hf_agent: bool
+
 @attr.frozen(slots=True)
 class EmbeddingsOutput:
   embeddings: t.List[t.List[float]]
   num_tokens: int
+
 def unmarshal_vllm_outputs(request_output: vllm.RequestOutput) -> dict[str, t.Any]:
   return dict(
       request_id=request_output.request_id,
@@ -82,6 +87,7 @@ def unmarshal_vllm_outputs(request_output: vllm.RequestOutput) -> dict[str, t.An
           for it in request_output.outputs
       ]
   )
+
 @attr.define
 class HfAgentInput:
   inputs: str

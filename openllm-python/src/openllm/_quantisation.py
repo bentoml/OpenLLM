@@ -14,12 +14,15 @@ autogptq, torch, transformers = LazyLoader('autogptq', globals(), 'auto_gptq'), 
 logger = logging.getLogger(__name__)
 
 QuantiseMode = t.Literal['int8', 'int4', 'gptq']
+
 @overload
 def infer_quantisation_config(cls: type[LLM[t.Any, t.Any]], quantise: t.Literal['int8', 'int4'], **attrs: t.Any) -> tuple[transformers.BitsAndBytesConfig, DictStrAny]:
   ...
+
 @overload
 def infer_quantisation_config(cls: type[LLM[t.Any, t.Any]], quantise: t.Literal['gptq'], **attrs: t.Any) -> tuple[autogptq.BaseQuantizeConfig, DictStrAny]:
   ...
+
 def infer_quantisation_config(cls: type[LLM[t.Any, t.Any]], quantise: QuantiseMode, **attrs: t.Any) -> tuple[transformers.BitsAndBytesConfig | autogptq.BaseQuantizeConfig, DictStrAny]:
   # 8 bit configuration
   int8_threshold = attrs.pop('llm_int8_threshhold', 6.0)

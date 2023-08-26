@@ -3,6 +3,7 @@ import typing as t
 
 import openllm
 if t.TYPE_CHECKING: import transformers
+
 class FlanT5(openllm.LLM['transformers.T5ForConditionalGeneration', 'transformers.T5TokenizerFast']):
   __openllm_internal__ = True
 

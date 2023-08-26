@@ -37,6 +37,7 @@ if t.TYPE_CHECKING:
 
   from . import constants as constants, ggml as ggml, transformers as transformers
 P = ParamSpec('P')
+
 def load_tokenizer(llm: openllm.LLM[t.Any, T], **tokenizer_attrs: t.Any) -> T:
   '''Load the tokenizer from BentoML store.
 
@@ -66,10 +67,13 @@ def load_tokenizer(llm: openllm.LLM[t.Any, T], **tokenizer_attrs: t.Any) -> T:
     elif tokenizer.eos_token_id is not None: tokenizer.pad_token_id = tokenizer.eos_token_id
     else: tokenizer.add_special_tokens({'pad_token': '[PAD]'})
   return tokenizer
+
 class _Caller(t.Protocol[P]):
   def __call__(self, llm: openllm.LLM[M, T], *args: P.args, **kwargs: P.kwargs) -> t.Any:
     ...
+
 _extras = ['get', 'import_model', 'save_pretrained', 'load_model']
+
 def _make_dispatch_function(fn: str) -> _Caller[P]:
   def caller(llm: openllm.LLM[M, T], *args: P.args, **kwargs: P.kwargs) -> t.Any:
     """Generic function dispatch to correct serialisation submodules based on LLM runtime.
@@ -81,6 +85,7 @@ def _make_dispatch_function(fn: str) -> _Caller[P]:
     return getattr(importlib.import_module(f'.{llm.runtime}', __name__), fn)(llm, *args, **kwargs)
 
   return caller
+
 if t.TYPE_CHECKING:
 
   def get(llm: openllm.LLM[M, T], *args: t.Any, **kwargs: t.Any) -> bentoml.Model:
@@ -94,10 +99,13 @@ if t.TYPE_CHECKING:
 
   def load_model(llm: openllm.LLM[M, T], *args: t.Any, **kwargs: t.Any) -> M:
     ...
+
 _import_structure: dict[str, list[str]] = {'ggml': [], 'transformers': [], 'constants': []}
 __all__ = ['ggml', 'transformers', 'constants', 'load_tokenizer', *_extras]
+
 def __dir__() -> list[str]:
   return sorted(__all__)
+
 def __getattr__(name: str) -> t.Any:
   if name == 'load_tokenizer': return load_tokenizer
   elif name in _import_structure: return importlib.import_module(f'.{name}', __name__)

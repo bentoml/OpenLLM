@@ -11,6 +11,7 @@ import openllm
 if t.TYPE_CHECKING: from ._typing_compat import LiteralRuntime
 
 logger = logging.getLogger(__name__)
+
 @contextlib.contextmanager
 def build_bento(
     model: str, model_id: str | None = None, quantize: t.Literal['int4', 'int8', 'gptq'] | None = None, runtime: t.Literal['ggml', 'transformers'] = 'transformers', cleanup: bool = False
@@ -21,6 +22,7 @@ def build_bento(
   if cleanup:
     logger.info('Deleting %s', bento.tag)
     bentoml.bentos.delete(bento.tag)
+
 @contextlib.contextmanager
 def build_container(bento: bentoml.Bento | str | bentoml.Tag, image_tag: str | None = None, cleanup: bool = False, **attrs: t.Any) -> t.Iterator[str]:
   if isinstance(bento, bentoml.Bento): bento_tag = bento.tag
@@ -36,6 +38,7 @@ def build_container(bento: bentoml.Bento | str | bentoml.Tag, image_tag: str | N
     if cleanup:
       logger.info('Deleting container %s', image_tag)
       subprocess.check_output([executable, 'rmi', '-f', image_tag])
+
 @contextlib.contextmanager
 def prepare(
     model: str,

@@ -9,12 +9,15 @@ from openllm_core.config.configuration_dolly_v2 import DEFAULT_PROMPT_TEMPLATE, 
 if t.TYPE_CHECKING: import torch, transformers, tensorflow as tf
 else:  torch, transformers, tf = openllm.utils.LazyLoader('torch', globals(), 'torch'), openllm.utils.LazyLoader('transformers', globals(), 'transformers'), openllm.utils.LazyLoader('tf', globals(), 'tensorflow')
 logger = logging.getLogger(__name__)
+
 @overload
 def get_pipeline(model: transformers.PreTrainedModel, tokenizer: transformers.PreTrainedTokenizer, _init: t.Literal[True] = True, **attrs: t.Any) -> transformers.Pipeline:
   ...
+
 @overload
 def get_pipeline(model: transformers.PreTrainedModel, tokenizer: transformers.PreTrainedTokenizer, _init: t.Literal[False] = ..., **attrs: t.Any) -> type[transformers.Pipeline]:
   ...
+
 def get_pipeline(model: transformers.PreTrainedModel, tokenizer: transformers.PreTrainedTokenizer, _init: bool = False, **attrs: t.Any) -> type[transformers.Pipeline] | transformers.Pipeline:
   # Lazy loading the pipeline. See databricks' implementation on HuggingFace for more information.
   class InstructionTextGenerationPipeline(transformers.Pipeline):
@@ -115,6 +118,7 @@ def get_pipeline(model: transformers.PreTrainedModel, tokenizer: transformers.Pr
       return records
 
   return InstructionTextGenerationPipeline() if _init else InstructionTextGenerationPipeline
+
 class DollyV2(openllm.LLM['transformers.Pipeline', 'transformers.PreTrainedTokenizer']):
   __openllm_internal__ = True
 

@@ -15,6 +15,7 @@ import attr
 
 import openllm_core
 __all__ = ['VersionInfo', 'LazyModule']
+
 # vendorred from attrs
 @functools.total_ordering
 @attr.attrs(eq=False, order=False, slots=True, frozen=True, repr=False)
@@ -53,7 +54,9 @@ class VersionInfo:
 
   def __repr__(self) -> str:
     return '{0}.{1}.{2}'.format(*attr.astuple(self)[:3])
+
 _sentinel, _reserved_namespace = object(), {'__openllm_migration__'}
+
 class LazyModule(types.ModuleType):
   # Very heavily inspired by optuna.integration._IntegrationModule: https://github.com/optuna/optuna/blob/master/optuna/integration/__init__.py
   def __init__(

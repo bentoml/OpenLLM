@@ -9,6 +9,7 @@ import openllm
 from bentoml._internal.utils import human_readable_size
 from openllm.cli import termui
 from openllm.cli._factory import LiteralOutput, output_option
+
 @click.command('list_bentos', context_settings=termui.CONTEXT_SETTINGS)
 @output_option(default_value='json')
 @click.pass_context

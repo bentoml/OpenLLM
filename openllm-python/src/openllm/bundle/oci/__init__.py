@@ -40,17 +40,23 @@ _OWNER = 'bentoml'
 _REPO = 'openllm'
 
 _module_location = openllm_core.utils.pkg.source_locations('openllm')
+
 @functools.lru_cache
 @openllm_core.utils.apply(str.lower)
 def get_base_container_name(reg: LiteralContainerRegistry) -> str:
   return _CONTAINER_REGISTRY[reg]
+
 def _convert_version_from_string(s: str) -> VersionInfo:
   return VersionInfo.from_version_string(s)
+
 def _commit_time_range(r: int = 5) -> str:
   return (datetime.now(timezone.utc) - timedelta(days=r)).strftime('%Y-%m-%dT%H:%M:%SZ')
+
 class VersionNotSupported(openllm.exceptions.OpenLLMException):
   """Raised when the stable release is too low that it doesn't include OpenLLM base container."""
+
 _RefTuple: type[RefTuple] = openllm_core.utils.codegen.make_attr_tuple_class('_RefTuple', ['git_hash', 'version', 'strategy'])
+
 def nightly_resolver(cls: type[RefResolver]) -> str:
   # NOTE: all openllm container will have sha-<git_hash[:7]>
   # This will use docker to run skopeo to determine the correct latest tag that is available
@@ -64,6 +70,7 @@ def nightly_resolver(cls: type[RefResolver]) -> str:
     return next(f'sha-{it["sha"][:7]}' for it in commits if '[skip ci]' not in it['commit']['message'])
   # now is the correct behaviour
   return orjson.loads(subprocess.check_output([docker_bin, 'run', '--rm', '-it', 'quay.io/skopeo/stable:latest', 'list-tags', 'docker://ghcr.io/bentoml/openllm']).decode().strip())['Tags'][-2]
+
 @attr.attrs(eq=False, order=False, slots=True, frozen=True)
 class RefResolver:
   git_hash: str = attr.field()
@@ -108,9 +115,11 @@ class RefResolver:
     if self.strategy == 'latest': return 'latest'
     elif self.strategy == 'nightly': return self.git_hash
     else: return repr(self.version)
+
 @functools.lru_cache(maxsize=256)
 def get_base_container_tag(strategy: LiteralContainerVersionStrategy | None = None) -> str:
   return RefResolver.from_strategy(strategy).tag
+
 def build_container(
     registries: LiteralContainerRegistry | t.Sequence[LiteralContainerRegistry] | None = None,
     version_strategy: LiteralContainerVersionStrategy = 'release',
@@ -146,13 +155,16 @@ def build_container(
   except Exception as err:
     raise openllm.exceptions.OpenLLMException(f'Failed to containerize base container images (Scroll up to see error above, or set OPENLLMDEVDEBUG=True for more traceback):\n{err}') from err
   return tags
+
 if t.TYPE_CHECKING:
   CONTAINER_NAMES: dict[LiteralContainerRegistry, str]
   supported_registries: list[str]
 
 __all__ = ['CONTAINER_NAMES', 'get_base_container_tag', 'build_container', 'get_base_container_name', 'supported_registries', 'RefResolver']
+
 def __dir__() -> list[str]:
   return sorted(__all__)
+
 def __getattr__(name: str) -> t.Any:
   if name == 'supported_registries': return functools.lru_cache(1)(lambda: list(_CONTAINER_REGISTRY))()
   elif name == 'CONTAINER_NAMES': return _CONTAINER_REGISTRY

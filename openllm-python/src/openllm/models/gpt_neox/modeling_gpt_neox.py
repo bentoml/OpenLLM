@@ -6,6 +6,7 @@ import openllm
 if t.TYPE_CHECKING: import transformers
 
 logger = logging.getLogger(__name__)
+
 class GPTNeoX(openllm.LLM['transformers.GPTNeoXForCausalLM', 'transformers.GPTNeoXTokenizerFast']):
   __openllm_internal__ = True
 

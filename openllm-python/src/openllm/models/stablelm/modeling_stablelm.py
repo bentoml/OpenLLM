@@ -3,6 +3,7 @@ import typing as t
 
 import openllm
 if t.TYPE_CHECKING: import transformers
+
 class StableLM(openllm.LLM['transformers.GPTNeoXForCausalLM', 'transformers.GPTNeoXTokenizerFast']):
   __openllm_internal__ = True
 

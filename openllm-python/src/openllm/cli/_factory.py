@@ -31,10 +31,13 @@ LiteralOutput = t.Literal['json', 'pretty', 'porcelain']
 
 _AnyCallable = t.Callable[..., t.Any]
 FC = t.TypeVar('FC', bound=t.Union[_AnyCallable, click.Command])
+
 def bento_complete_envvar(ctx: click.Context, param: click.Parameter, incomplete: str) -> list[sc.CompletionItem]:
   return [sc.CompletionItem(str(it.tag), help='Bento') for it in bentoml.list() if str(it.tag).startswith(incomplete) and all(k in it.info.labels for k in {'start_name', 'bundler'})]
+
 def model_complete_envvar(ctx: click.Context, param: click.Parameter, incomplete: str) -> list[sc.CompletionItem]:
   return [sc.CompletionItem(inflection.dasherize(it), help='Model') for it in openllm.CONFIG_MAPPING if it.startswith(incomplete)]
+
 def parse_config_options(config: LLMConfig, server_timeout: int, workers_per_resource: float, device: t.Tuple[str, ...] | None, cors: bool, environ: DictStrAny) -> DictStrAny:
   # TODO: Support amd.com/gpu on k8s
   _bentoml_config_options_env = environ.pop('BENTOML_CONFIG_OPTIONS', '')
@@ -55,7 +58,9 @@ def parse_config_options(config: LLMConfig, server_timeout: int, workers_per_res
   environ['BENTOML_CONFIG_OPTIONS'] = _bentoml_config_options_env
   if DEBUG: logger.debug('Setting BENTOML_CONFIG_OPTIONS=%s', _bentoml_config_options_env)
   return environ
+
 _adapter_mapping_key = 'adapter_map'
+
 def _id_callback(ctx: click.Context, _: click.Parameter, value: t.Tuple[str, ...] | None) -> None:
   if not value: return None
   if _adapter_mapping_key not in ctx.params: ctx.params[_adapter_mapping_key] = {}
@@ -69,6 +74,7 @@ def _id_callback(ctx: click.Context, _: click.Parameter, value: t.Tuple[str, ...
       pass
     ctx.params[_adapter_mapping_key][adapter_id] = adapter_name[0] if len(adapter_name) > 0 else None
   return None
+
 def start_command_factory(group: click.Group, model: str, _context_settings: DictStrAny | None = None, _serve_grpc: bool = False) -> click.Command:
   llm_config = openllm.AutoConfig.for_model(model)
   command_attrs: DictStrAny = dict(
@@ -212,6 +218,7 @@ Available official model_id(s): [default: {llm_config['default_id']}]
     return config
 
   return start_cmd
+
 def noop_command(group: click.Group, llm_config: LLMConfig, _serve_grpc: bool, **command_attrs: t.Any) -> click.Command:
   context_settings = command_attrs.pop('context_settings', {})
   context_settings.update({'ignore_unknown_options': True, 'allow_extra_args': True})
@@ -224,6 +231,7 @@ def noop_command(group: click.Group, llm_config: LLMConfig, _serve_grpc: bool, *
     return llm_config
 
   return noop
+
 def prerequisite_check(ctx: click.Context, llm_config: LLMConfig, quantize: LiteralString | None, adapter_map: dict[str, str | None] | None, num_workers: int) -> None:
   if adapter_map and not openllm.utils.is_peft_available(): ctx.fail("Using adapter requires 'peft' to be available. Make sure to install with 'pip install \"openllm[fine-tune]\"'")
   if quantize and llm_config.default_implementation() == 'vllm':
@@ -232,6 +240,7 @@ def prerequisite_check(ctx: click.Context, llm_config: LLMConfig, quantize: Lite
   if requirements is not None and len(requirements) > 0:
     missing_requirements = [i for i in requirements if importlib.util.find_spec(inflection.underscore(i)) is None]
     if len(missing_requirements) > 0: termui.echo(f'Make sure to have the following dependencies available: {missing_requirements}', fg='yellow')
+
 def start_decorator(llm_config: LLMConfig, serve_grpc: bool = False) -> t.Callable[[FC], t.Callable[[FC], FC]]:
   def wrapper(fn: FC) -> t.Callable[[FC], FC]:
     composed = openllm.utils.compose(
@@ -301,6 +310,7 @@ def start_decorator(llm_config: LLMConfig, serve_grpc: bool = False) -> t.Callab
     return composed(fn)
 
   return wrapper
+
 def parse_device_callback(ctx: click.Context, param: click.Parameter, value: tuple[tuple[str], ...] | None) -> t.Tuple[str, ...] | None:
   if value is None: return value
   if not isinstance(value, tuple): ctx.fail(f'{param} only accept multiple values, not {type(value)} (value: {value})')
@@ -308,10 +318,12 @@ def parse_device_callback(ctx: click.Context, param: click.Parameter, value: tup
   # NOTE: --device all is a special case
   if len(el) == 1 and el[0] == 'all': return tuple(map(str, openllm.utils.available_devices()))
   return el
+
 # NOTE: A list of bentoml option that is not needed for parsing.
 # NOTE: User shouldn't set '--working-dir', as OpenLLM will setup this.
 # NOTE: production is also deprecated
 _IGNORED_OPTIONS = {'working_dir', 'production', 'protocol_version'}
+
 def parse_serve_args(serve_grpc: bool) -> t.Callable[[t.Callable[..., LLMConfig]], t.Callable[[FC], FC]]:
   '''Parsing `bentoml serve|serve-grpc` click.Option to be parsed via `openllm start`.'''
   from bentoml_cli.cli import cli
@@ -339,7 +351,9 @@ def parse_serve_args(serve_grpc: bool) -> t.Callable[[t.Callable[..., LLMConfig]
     return group(f)
 
   return decorator
+
 _http_server_args, _grpc_server_args = parse_serve_args(False), parse_serve_args(True)
+
 def _click_factory_type(*param_decls: t.Any, **attrs: t.Any) -> t.Callable[[FC | None], FC]:
   '''General ``@click`` decorator with some sauce.
 
@@ -356,8 +370,10 @@ def _click_factory_type(*param_decls: t.Any, **attrs: t.Any) -> t.Callable[[FC |
     return t.cast(FC, callback(*param_decls, **attrs)(f) if f is not None else callback(*param_decls, **attrs))
 
   return decorator
+
 cli_option = functools.partial(_click_factory_type, attr='option')
 cli_argument = functools.partial(_click_factory_type, attr='argument')
+
 def output_option(f: _AnyCallable | None = None, *, default_value: LiteralOutput = 'pretty', **attrs: t.Any) -> t.Callable[[FC], FC]:
   output = ['json', 'pretty', 'porcelain']
 
@@ -377,6 +393,7 @@ def output_option(f: _AnyCallable | None = None, *, default_value: LiteralOutput
       shell_complete=complete_output_var,
       **attrs
   )(f)
+
 def fast_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option(
       '--fast/--no-fast',
@@ -390,10 +407,13 @@ def fast_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC
                                                                                                           ''',
       **attrs
   )(f)
+
 def cors_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option('--cors/--no-cors', show_default=True, default=False, envvar='OPENLLM_CORS', show_envvar=True, help='Enable CORS for the server.', **attrs)(f)
+
 def machine_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option('--machine', is_flag=True, default=False, hidden=True, **attrs)(f)
+
 def model_id_option(f: _AnyCallable | None = None, *, model_env: openllm.utils.EnvVarMixin | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option(
       '--model-id',
@@ -404,10 +424,13 @@ def model_id_option(f: _AnyCallable | None = None, *, model_env: openllm.utils.E
       help='Optional model_id name or path for (fine-tune) weight.',
       **attrs
   )(f)
+
 def model_version_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option('--model-version', type=click.STRING, default=None, help='Optional model version to save for this model. It will be inferred automatically from model-id.', **attrs)(f)
+
 def model_name_argument(f: _AnyCallable | None = None, required: bool = True, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_argument('model_name', type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING]), required=required, **attrs)(f)
+
 def quantize_option(f: _AnyCallable | None = None, *, build: bool = False, model_env: openllm.utils.EnvVarMixin | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option(
       '--quantise',
@@ -433,6 +456,7 @@ def quantize_option(f: _AnyCallable | None = None, *, build: bool = False, model
       > [!NOTE] that quantization are currently only available in *PyTorch* models.''',
       **attrs
   )(f)
+
 def workers_per_resource_option(f: _AnyCallable | None = None, *, build: bool = False, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option(
       '--workers-per-resource',
@@ -458,6 +482,7 @@ def workers_per_resource_option(f: _AnyCallable | None = None, *, build: bool = 
       ),
       **attrs
   )(f)
+
 def bettertransformer_option(f: _AnyCallable | None = None, *, build: bool = False, model_env: openllm.utils.EnvVarMixin | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option(
       '--bettertransformer',
@@ -469,6 +494,7 @@ def bettertransformer_option(f: _AnyCallable | None = None, *, build: bool = Fal
       if not build else 'Set default environment variable whether to serve this model with FasterTransformer in build time.',
       **attrs
   )(f)
+
 def serialisation_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option(
       '--serialisation',
@@ -498,6 +524,7 @@ def serialisation_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Cal
       ''',
       **attrs
   )(f)
+
 def container_registry_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option(
       '--container-registry',
@@ -517,7 +544,9 @@ def container_registry_option(f: _AnyCallable | None = None, **attrs: t.Any) -> 
       ''',
       **attrs
   )(f)
+
 _wpr_strategies = {'round_robin', 'conserved'}
+
 def workers_per_resource_callback(ctx: click.Context, param: click.Parameter, value: str | None) -> str | None:
   if value is None: return value
   value = inflection.underscore(value)
@@ -529,6 +558,7 @@ def workers_per_resource_callback(ctx: click.Context, param: click.Parameter, va
       raise click.BadParameter(f"'workers_per_resource' only accept '{_wpr_strategies}' as possible strategies, otherwise pass in float.", ctx, param) from None
     else:
       return value
+
 def container_registry_callback(ctx: click.Context, param: click.Parameter, value: str | None) -> str | None:
   if value is None: return value
   if value not in openllm.bundle.supported_registries: raise click.BadParameter(f'Value must be one of {openllm.bundle.supported_registries}', ctx, param)

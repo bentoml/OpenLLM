@@ -24,6 +24,7 @@ from datasets import load_dataset
 from trl import SFTTrainer
 DEFAULT_MODEL_ID = "ybelkada/falcon-7b-sharded-bf16"
 DATASET_NAME = "timdettmers/openassistant-guanaco"
+
 @dataclasses.dataclass
 class TrainingArguments:
   per_device_train_batch_size: int = dataclasses.field(default=4)
@@ -40,10 +41,12 @@ class TrainingArguments:
   group_by_length: bool = dataclasses.field(default=True)
   lr_scheduler_type: str = dataclasses.field(default="constant")
   output_dir: str = dataclasses.field(default=os.path.join(os.getcwd(), "outputs", "falcon"))
+
 @dataclasses.dataclass
 class ModelArguments:
   model_id: str = dataclasses.field(default=DEFAULT_MODEL_ID)
   max_sequence_length: int = dataclasses.field(default=512)
+
 parser = transformers.HfArgumentParser((ModelArguments, TrainingArguments))
 if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
   # If we pass only one argument to the script and it's the path to a json file,

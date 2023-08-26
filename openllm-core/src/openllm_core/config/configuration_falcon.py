@@ -28,6 +28,7 @@ DEFAULT_PROMPT_TEMPLATE = '''{context}
 {user_name}: {instruction}
 {agent}:
 '''
+
 class FalconConfig(openllm_core.LLMConfig):
   """Falcon-7B is a 7B parameters causal decoder-only model built by TII and trained on 1,500B tokens of [RefinedWeb](https://huggingface.co/datasets/tiiuae/falcon-refinedweb) enhanced with curated corpora.
 

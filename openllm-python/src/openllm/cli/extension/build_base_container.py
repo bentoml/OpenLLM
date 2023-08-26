@@ -8,6 +8,7 @@ import openllm
 from openllm.cli import termui
 from openllm.cli._factory import container_registry_option, machine_option
 if t.TYPE_CHECKING: from openllm_core._typing_compat import LiteralContainerRegistry, LiteralContainerVersionStrategy
+
 @click.command(
     'build_base_container',
     context_settings=termui.CONTEXT_SETTINGS,

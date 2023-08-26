@@ -38,17 +38,20 @@ runners: list[AbstractRunner] = [runner]
 if not runner.supports_embeddings: runners.append(generic_embedding_runner)
 svc = bentoml.Service(name=f"llm-{llm_config['start_name']}-service", runners=runners)
 _JsonInput = bentoml.io.JSON.from_sample({'prompt': '', 'llm_config': llm_config.model_dump(flatten=True), 'adapter_name': None})
+
 @svc.api(route='/v1/generate', input=_JsonInput, output=bentoml.io.JSON.from_sample({'responses': [], 'configuration': llm_config.model_dump(flatten=True)}))
 async def generate_v1(input_dict: dict[str, t.Any]) -> openllm.GenerationOutput:
   qa_inputs = openllm.GenerationInput.from_llm_config(llm_config)(**input_dict)
   config = qa_inputs.llm_config.model_dump()
   responses = await runner.generate.async_run(qa_inputs.prompt, **{'adapter_name': qa_inputs.adapter_name, **config})
   return openllm.GenerationOutput(responses=responses, configuration=config)
+
 @svc.api(route='/v1/generate_stream', input=_JsonInput, output=bentoml.io.Text(content_type='text/event-stream'))
 async def generate_stream_v1(input_dict: dict[str, t.Any]) -> t.AsyncGenerator[str, None]:
   echo = input_dict.pop('echo', False)
   qa_inputs = openllm.GenerationInput.from_llm_config(llm_config)(**input_dict)
   return runner.generate_iterator.async_stream(qa_inputs.prompt, adapter_name=qa_inputs.adapter_name, echo=echo, **qa_inputs.llm_config.model_dump())
+
 @svc.api(
     route='/v1/metadata',
     input=bentoml.io.Text(),
@@ -72,6 +75,7 @@ def metadata_v1(_: str) -> openllm.MetadataOutput:
       supports_embeddings=runner.supports_embeddings,
       supports_hf_agent=runner.supports_hf_agent
   )
+
 @svc.api(
     route='/v1/embeddings',
     input=bentoml.io.JSON.from_sample(['Hey Jude, welcome to the jungle!', 'What is the meaning of life?']),
@@ -111,6 +115,7 @@ async def embeddings_v1(phrases: list[str]) -> openllm.EmbeddingsOutput:
   embed_call: _EmbeddingMethod = runner.embeddings if runner.supports_embeddings else generic_embedding_runner.encode  # type: ignore[type-arg,assignment,valid-type]
   responses = (await embed_call.async_run(phrases))[0]
   return openllm.EmbeddingsOutput(embeddings=responses['embeddings'], num_tokens=responses['num_tokens'])
+
 if runner.supports_hf_agent and openllm.utils.is_transformers_supports_agent():
 
   async def hf_agent(request: Request) -> Response:
@@ -127,11 +132,13 @@ if runner.supports_hf_agent and openllm.utils.is_transformers_supports_agent():
 
   hf_app = Starlette(debug=True, routes=[Route('/agent', hf_agent, methods=['POST'])])
   svc.mount_asgi_app(hf_app, path='/hf')
+
 # general metadata app
 async def list_adapter_v1(_: Request) -> Response:
   res: dict[str, t.Any] = {}
   if runner.peft_adapters['success'] is True: res['result'] = {k: v.to_dict() for k, v in runner.peft_adapters['result'].items()}
   res.update({'success': runner.peft_adapters['success'], 'error_msg': runner.peft_adapters['error_msg']})
   return JSONResponse(res, status_code=200)
+
 adapters_app_v1 = Starlette(debug=True, routes=[Route('/adapters', list_adapter_v1, methods=['GET'])])
 svc.mount_asgi_app(adapters_app_v1, path='/v1')

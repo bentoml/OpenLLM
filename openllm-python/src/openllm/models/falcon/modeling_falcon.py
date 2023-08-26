@@ -4,6 +4,7 @@ import typing as t
 import openllm
 if t.TYPE_CHECKING: import torch, transformers
 else: torch, transformers = openllm.utils.LazyLoader('torch', globals(), 'torch'), openllm.utils.LazyLoader('transformers', globals(), 'transformers')
+
 class Falcon(openllm.LLM['transformers.PreTrainedModel', 'transformers.PreTrainedTokenizerBase']):
   __openllm_internal__ = True
 

@@ -49,22 +49,28 @@ if sys.version_info[:2] >= (3, 10):
   from typing import Concatenate as Concatenate, ParamSpec as ParamSpec, TypeAlias as TypeAlias
 else:
   from typing_extensions import Concatenate as Concatenate, ParamSpec as ParamSpec, TypeAlias as TypeAlias
+
 class PeftAdapterOutput(t.TypedDict):
   success: bool
   result: t.Dict[str, peft.PeftConfig]
   error_msg: str
+
 class LLMEmbeddings(t.TypedDict):
   embeddings: t.List[t.List[float]]
   num_tokens: int
+
 class AdaptersTuple(TupleAny):
   adapter_id: str
   name: t.Optional[str]
   config: DictStrAny
+
 AdaptersMapping = t.Dict[AdapterType, t.Tuple[AdaptersTuple, ...]]
+
 class RefTuple(TupleAny):
   git_hash: str
   version: VersionInfo
   strategy: LiteralContainerVersionStrategy
+
 class LLMRunnable(bentoml.Runnable, t.Generic[M, T]):
   SUPPORTED_RESOURCES = ('amd.com/gpu', 'nvidia.com/gpu', 'cpu')
   SUPPORTS_CPU_MULTI_THREADING = True
@@ -74,6 +80,7 @@ class LLMRunnable(bentoml.Runnable, t.Generic[M, T]):
   generate: RunnableMethod[LLMRunnable[M, T], [str], list[t.Any]]
   generate_one: RunnableMethod[LLMRunnable[M, T], [str, list[str]], t.Sequence[dict[t.Literal['generated_text'], str]]]
   generate_iterator: RunnableMethod[LLMRunnable[M, T], [str], t.Generator[str, None, str]]
+
 class LLMRunner(bentoml.Runner, t.Generic[M, T]):
   __doc__: str
   __module__: str

@@ -49,15 +49,19 @@ else:
 ResolvedAdaptersMapping = t.Dict[AdapterType, t.Dict[str, t.Tuple['peft.PeftConfig', str]]]
 
 logger = logging.getLogger(__name__)
+
 class ModelSignatureDict(t.TypedDict, total=False):
   batchable: bool
   batch_dim: t.Union[t.Tuple[int, int], int]
   input_spec: NotRequired[t.Union[t.Any, t.Tuple[t.Any]]]
   output_spec: NotRequired[t.Any]
+
 def normalise_model_name(name: str) -> str:
   return os.path.basename(resolve_filepath(name)) if validate_is_path(name) else re.sub('[^a-zA-Z0-9]+', '-', name)
+
 # the below is similar to peft.utils.other.CONFIG_NAME
 PEFT_CONFIG_NAME = 'adapter_config.json'
+
 def resolve_peft_config_type(adapter_map: dict[str, str | None]) -> AdaptersMapping:
   '''Resolve the type of the PeftConfig given the adapter_map.
 
@@ -88,7 +92,9 @@ def resolve_peft_config_type(adapter_map: dict[str, str | None]) -> AdaptersMapp
     if _peft_type not in resolved: resolved[_peft_type] = ()
     resolved[_peft_type] += (_AdaptersTuple((path_or_adapter_id, resolve_name, resolved_config)),)
   return resolved
+
 _reserved_namespace = {'config_class', 'model', 'tokenizer', 'import_kwargs'}
+
 class LLMInterface(abc.ABC, t.Generic[M, T]):
   '''This defines the loose contract for all openllm.LLM implementations.'''
   @property
@@ -241,23 +247,31 @@ class LLMInterface(abc.ABC, t.Generic[M, T]):
         **attrs: t.Any
     ) -> None:
       '''Generated __attrs_init__ for openllm.LLM.'''
+
 _R = t.TypeVar('_R', covariant=True)
+
 class _import_model_wrapper(t.Generic[_R, M, T], t.Protocol):
   def __call__(self, llm: LLM[M, T], *decls: t.Any, trust_remote_code: bool, **attrs: t.Any) -> _R:
     ...
+
 class _load_model_wrapper(t.Generic[M, T], t.Protocol):
   def __call__(self, llm: LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M:
     ...
+
 class _load_tokenizer_wrapper(t.Generic[M, T], t.Protocol):
   def __call__(self, llm: LLM[M, T], **attrs: t.Any) -> T:
     ...
+
 class _llm_post_init_wrapper(t.Generic[M, T], t.Protocol):
   def __call__(self, llm: LLM[M, T]) -> T:
     ...
+
 class _save_pretrained_wrapper(t.Generic[M, T], t.Protocol):
   def __call__(self, llm: LLM[M, T], save_directory: str | pathlib.Path, **attrs: t.Any) -> None:
     ...
+
 _object_setattr = object.__setattr__
+
 # NOTE: the following wrapper are a light meta ops for wrapping default params to internal methods implementation.
 def _wrapped_import_model(f: _import_model_wrapper[bentoml.Model, M, T]) -> t.Callable[[LLM[M, T]], bentoml.Model]:
   @functools.wraps(f)
@@ -269,11 +283,14 @@ def _wrapped_import_model(f: _import_model_wrapper[bentoml.Model, M, T]) -> t.Ca
     return f(self, *decls, trust_remote_code=trust_remote_code, **attrs)
 
   return wrapper
+
 _DEFAULT_TOKENIZER = 'hf-internal-testing/llama-tokenizer'
+
 def get_engine_args(llm: LLM[M, T], tokenizer: str = _DEFAULT_TOKENIZER) -> vllm.EngineArgs:
   return vllm.EngineArgs(
       model=llm._bentomodel.path, tokenizer=tokenizer, tokenizer_mode='auto', tensor_parallel_size=1 if device_count() < 2 else device_count(), dtype='auto', worker_use_ray=False
   )
+
 def _wrapped_load_model(f: _load_model_wrapper[M, T]) -> t.Callable[[LLM[M, T]], M | vllm.LLMEngine]:
   @functools.wraps(f)
   def wrapper(self: LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M | vllm.LLMEngine:
@@ -289,12 +306,14 @@ def _wrapped_load_model(f: _load_model_wrapper[M, T]) -> t.Callable[[LLM[M, T]],
       return f(self, *(*model_decls, *decls), **{**model_attrs, **attrs})
 
   return wrapper
+
 def _wrapped_load_tokenizer(f: _load_tokenizer_wrapper[M, T]) -> t.Callable[[LLM[M, T]], T]:
   @functools.wraps(f)
   def wrapper(self: LLM[M, T], **tokenizer_attrs: t.Any) -> T:
     return f(self, **{**self.llm_parameters[-1], **tokenizer_attrs})
 
   return wrapper
+
 def _wrapped_llm_post_init(f: _llm_post_init_wrapper[M, T]) -> t.Callable[[LLM[M, T]], None]:
   @functools.wraps(f)
   def wrapper(self: LLM[M, T]) -> None:
@@ -302,6 +321,7 @@ def _wrapped_llm_post_init(f: _llm_post_init_wrapper[M, T]) -> t.Callable[[LLM[M
     f(self)
 
   return wrapper
+
 def _wrapped_save_pretrained(f: _save_pretrained_wrapper[M, T]) -> t.Callable[[LLM[M, T], str | pathlib.Path], None]:
   @functools.wraps(f)
   def wrapper(self: LLM[M, T], save_directory: str | pathlib.Path, **attrs: t.Any) -> None:
@@ -312,6 +332,7 @@ def _wrapped_save_pretrained(f: _save_pretrained_wrapper[M, T]) -> t.Callable[[L
     f(self, save_directory, **attrs)
 
   return wrapper
+
 def _update_docstring(cls: LLM[M, T], fn: str) -> AnyCallable:
   # update docstring for given entrypoint
   original_fn = getattr(cls, fn, getattr(LLMInterface, fn))
@@ -323,6 +344,7 @@ def _update_docstring(cls: LLM[M, T], fn: str) -> AnyCallable:
     '''
   setattr(cls, fn, original_fn)
   return original_fn
+
 def _make_assignment_script(cls: type[LLM[M, T]]) -> t.Callable[[type[LLM[M, T]]], None]:
   attributes = {
       'import_model': _wrapped_import_model,
@@ -361,8 +383,10 @@ def _make_assignment_script(cls: type[LLM[M, T]]) -> t.Callable[[type[LLM[M, T]]
     lines.extend([_setattr_class(key, f"cls.{fn} is not _cached_LLMInterface_get('{fn}')"), f"__gen_docstring(cls, '{fn}')",])
     anns[key] = interface_anns.get(key)
   return codegen.generate_function(cls, '__assign_llm_attr', lines, args=('cls', *args), globs=globs, annotations=anns)
+
 def vllm_postprocess_generate(self: LLM['vllm.LLMEngine', T], prompt: str, generation_result: list[dict[str, t.Any]], **_: t.Any) -> str:
   return generation_result[0]['outputs'][0]['text']
+
 def vllm_generate_iterator(
     self: LLM['vllm.LLMEngine', T], prompt: str, /, *, echo: bool = False, stop: str | t.Iterable[str] | None = None, stop_token_ids: list[int] | None = None, **attrs: t.Any
 ) -> t.Iterator[dict[str, t.Any]]:
@@ -387,6 +411,7 @@ def vllm_generate_iterator(
       else: text_outputs = [output.text for output in request_output.outputs]
       yield {'text': text_outputs, 'error_code': 0}
       if request_output.finished: break
+
 def vllm_generate(self: LLM['vllm.LLMEngine', T], prompt: str, **attrs: t.Any) -> list[dict[str, t.Any]]:
   request_id: str = attrs.pop('request_id', None)
   if request_id is None: raise ValueError('request_id must not be None.')
@@ -396,7 +421,9 @@ def vllm_generate(self: LLM['vllm.LLMEngine', T], prompt: str, **attrs: t.Any) -
   while self.model.has_unfinished_requests():
     outputs.extend([r for r in self.model.step() if r.finished])
   return [unmarshal_vllm_outputs(i) for i in outputs]
+
 _AdaptersTuple: type[AdaptersTuple] = codegen.make_attr_tuple_class('AdaptersTuple', ['adapter_id', 'name', 'config'])
+
 @attr.define(slots=True, repr=False, init=False)
 class LLM(LLMInterface[M, T], ReprMixin):
   if t.TYPE_CHECKING: __name__: str
@@ -1140,6 +1167,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
     del past_key_values, out
     gc.collect()
     torch.cuda.empty_cache()
+
 # fmt: off
 @overload
 def Runner(model_name: str, *, model_id: str | None = None, model_version: str | None = ..., init_local: t.Literal[False, True] = ..., **attrs: t.Any) -> LLMRunner[t.Any, t.Any]: ...

@@ -5,6 +5,7 @@ import openllm
 from openllm_core._prompt import process_prompt
 from openllm_core.config.configuration_flan_t5 import DEFAULT_PROMPT_TEMPLATE
 if t.TYPE_CHECKING: import transformers
+
 class FlaxFlanT5(openllm.LLM['transformers.FlaxT5ForConditionalGeneration', 'transformers.T5TokenizerFast']):
   __openllm_internal__ = True
 

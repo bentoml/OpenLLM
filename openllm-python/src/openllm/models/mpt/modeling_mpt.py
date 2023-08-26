@@ -8,6 +8,7 @@ from openllm.utils import generate_labels, is_triton_available
 if t.TYPE_CHECKING: import transformers, torch
 
 logger = logging.getLogger(__name__)
+
 def get_mpt_config(
     model_id_or_path: str, max_sequence_length: int, device: torch.device | str | int | None, device_map: str | None = None, trust_remote_code: bool = True
 ) -> transformers.PretrainedConfig:
@@ -22,6 +23,7 @@ def get_mpt_config(
   # setting max_seq_len
   config.max_seq_len = max_sequence_length
   return config
+
 class MPT(openllm.LLM['transformers.PreTrainedModel', 'transformers.GPTNeoXTokenizerFast']):
   __openllm_internal__ = True
 

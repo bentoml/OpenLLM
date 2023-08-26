@@ -1,6 +1,7 @@
 from __future__ import annotations
 import string
 import typing as t
+
 class PromptFormatter(string.Formatter):
   """This PromptFormatter is largely based on langchain's implementation."""
   def vformat(self, format_string: str, args: t.Sequence[t.Any], kwargs: t.Mapping[str, t.Any]) -> t.Any:
@@ -13,7 +14,9 @@ class PromptFormatter(string.Formatter):
 
   def extract_template_variables(self, template: str) -> t.Sequence[str]:
     return [field[1] for field in self.parse(template) if field[1] is not None]
+
 default_formatter = PromptFormatter()
+
 def process_prompt(prompt: str, template: str | None = None, use_prompt_template: bool = True, **attrs: t.Any) -> str:
   # Currently, all default prompt will always have `instruction` key.
   if not use_prompt_template: return prompt

@@ -24,6 +24,7 @@ or provide `--model-id` flag when running ``openllm start gpt-neox``:
 $ openllm start gpt-neox --model-id 'stabilityai/stablelm-tuned-alpha-3b'
 '''
 DEFAULT_PROMPT_TEMPLATE = '''{instruction}'''
+
 class GPTNeoXConfig(openllm_core.LLMConfig):
   """GPTNeoX is an autoregressive language model trained on the Pile, whose weights will be made freely and openly available to the public through a permissive license.
 

@@ -22,6 +22,7 @@ import bentoml
 if t.TYPE_CHECKING: from bentoml._internal.service.inference_api import InferenceAPI
 
 __all__ = ['Client', 'AsyncClient']
+
 @attr.define(init=False)
 class Client:
   server_url: str
@@ -67,6 +68,7 @@ class Client:
       return GrpcClient.wait_until_server_ready(host, port, timeout, **kwargs)
     except Exception as err:
       raise bentoml.exceptions.BentoMLException('Failed to wait until server ready: %s:%d' % (host, port)) from err
+
 @attr.define(init=False)
 class AsyncClient:
   server_url: str

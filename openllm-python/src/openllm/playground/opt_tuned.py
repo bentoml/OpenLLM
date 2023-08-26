@@ -24,6 +24,7 @@ from datasets import load_dataset
 if t.TYPE_CHECKING:
   from peft import PeftModel
 DEFAULT_MODEL_ID = "facebook/opt-6.7b"
+
 def load_trainer(model: PeftModel, tokenizer: transformers.GPT2TokenizerFast, dataset_dict: t.Any, training_args: TrainingArguments):
   return transformers.Trainer(
       model=model,
@@ -31,6 +32,7 @@ def load_trainer(model: PeftModel, tokenizer: transformers.GPT2TokenizerFast, da
       args=dataclasses.replace(transformers.TrainingArguments(training_args.output_dir), **dataclasses.asdict(training_args)),
       data_collator=transformers.DataCollatorForLanguageModeling(tokenizer, mlm=False),
   )
+
 @dataclasses.dataclass
 class TrainingArguments:
   per_device_train_batch_size: int = dataclasses.field(default=4)
@@ -41,9 +43,11 @@ class TrainingArguments:
   fp16: bool = dataclasses.field(default=True)
   logging_steps: int = dataclasses.field(default=1)
   output_dir: str = dataclasses.field(default=os.path.join(os.getcwd(), "outputs", "opt"))
+
 @dataclasses.dataclass
 class ModelArguments:
   model_id: str = dataclasses.field(default=DEFAULT_MODEL_ID)
+
 parser = transformers.HfArgumentParser((ModelArguments, TrainingArguments))
 if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
   # If we pass only one argument to the script and it's the path to a json file,

@@ -30,6 +30,7 @@ or provide `--model-id` flag when running ``openllm start opt``:
 $ openllm start opt --model-id facebook/opt-6.7b
 '''
 DEFAULT_PROMPT_TEMPLATE = '''{instruction}'''
+
 class OPTConfig(openllm_core.LLMConfig):
   """OPT was first introduced in [Open Pre-trained Transformer Language Models](https://arxiv.org/abs/2205.01068) and first released in [metaseq's repository](https://github.com/facebookresearch/metaseq) on May 3rd 2022 by Meta AI.
 

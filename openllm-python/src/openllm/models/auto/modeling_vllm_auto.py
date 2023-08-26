@@ -9,5 +9,6 @@ MODEL_VLLM_MAPPING_NAMES = OrderedDict([('baichuan', 'VLLMBaichuan'), ('dolly_v2
     'opt', 'VLLMOPT'
 ), ('stablelm', 'VLLMStableLM'), ('starcoder', 'VLLMStarCoder'), ('llama', 'VLLMLlama')])
 MODEL_VLLM_MAPPING = _LazyAutoMapping(CONFIG_MAPPING_NAMES, MODEL_VLLM_MAPPING_NAMES)
+
 class AutoVLLM(BaseAutoLLMClass):
   _model_mapping: t.ClassVar = MODEL_VLLM_MAPPING

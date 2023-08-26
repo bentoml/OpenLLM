@@ -8,6 +8,7 @@ END_COMMENT = f'<!-- {os.path.basename(__file__)}: stop -->\n'
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, 'openllm-python', 'src'))
 import openllm
+
 def main() -> int:
   with open(os.path.join(ROOT, 'openllm-python', 'pyproject.toml'), 'r') as f:
     deps = tomlkit.parse(f.read()).value['project']['optional-dependencies']
@@ -56,4 +57,5 @@ def main() -> int:
   with open(os.path.join(ROOT, 'README.md'), 'w') as f:
     f.writelines(readme)
   return 0
+
 if __name__ == '__main__': raise SystemExit(main())

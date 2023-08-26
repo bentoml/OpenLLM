@@ -18,6 +18,7 @@ from bentoml._internal.service.inference_api import InferenceAPI
 from openllm_client.benmin import AsyncClient, Client
 from openllm_core.utils import ensure_exec_coro
 logger = logging.getLogger(__name__)
+
 class HttpClient(Client):
   @functools.cached_property
   def inner(self) -> httpx.Client:
@@ -102,6 +103,7 @@ class HttpClient(Client):
     # Request.headers sets a _headers variable. We will need to set this value to our fake request object.
     fake_req._headers = headers
     return ensure_exec_coro(_inference_api.output.from_http_request(fake_req))
+
 class AsyncHttpClient(AsyncClient):
   @functools.cached_property
   def inner(self) -> httpx.AsyncClient:

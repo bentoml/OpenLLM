@@ -5,6 +5,7 @@ import bentoml
 import openllm
 from openllm_core.utils import generate_labels
 if t.TYPE_CHECKING: import transformers
+
 class TFOPT(openllm.LLM['transformers.TFOPTForCausalLM', 'transformers.GPT2Tokenizer']):
   __openllm_internal__ = True
 

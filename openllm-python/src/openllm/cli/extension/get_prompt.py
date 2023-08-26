@@ -11,6 +11,7 @@ from openllm.cli import termui
 from openllm.cli._factory import machine_option, model_complete_envvar, output_option
 from openllm_core._prompt import process_prompt
 LiteralOutput = t.Literal['json', 'pretty', 'porcelain']
+
 @click.command('get_prompt', context_settings=termui.CONTEXT_SETTINGS)
 @click.argument('model_name', type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING.keys()]), shell_complete=model_complete_envvar)
 @click.argument('prompt', type=click.STRING)

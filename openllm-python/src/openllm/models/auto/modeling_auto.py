@@ -9,5 +9,6 @@ MODEL_MAPPING_NAMES = OrderedDict([('chatglm', 'ChatGLM'), ('dolly_v2', 'DollyV2
     'opt', 'OPT'
 ), ('stablelm', 'StableLM'), ('starcoder', 'StarCoder'), ('baichuan', 'Baichuan')])
 MODEL_MAPPING = _LazyAutoMapping(CONFIG_MAPPING_NAMES, MODEL_MAPPING_NAMES)
+
 class AutoLLM(BaseAutoLLMClass):
   _model_mapping: t.ClassVar = MODEL_MAPPING

@@ -7,6 +7,7 @@ import tokenize
 
 from tabulate import tabulate
 TOKEN_WHITELIST = [token.OP, token.NAME, token.NUMBER, token.STRING]
+
 def run_cz(dir: str, package: str):
   headers = ['Name', 'Lines', 'Tokens/Line']
   table = []
@@ -22,9 +23,11 @@ def run_cz(dir: str, package: str):
   for dir_name, group in itertools.groupby(sorted([(x[0].rsplit('/', 1)[0], x[1]) for x in table]), key=lambda x: x[0]):
     print(f'{dir_name:35s} : {sum([x[1] for x in group]):6d}')
   print(f'\ntotal line count: {sum([x[1] for x in table])}')
+
 def main() -> int:
   run_cz('openllm-python', 'openllm')
   run_cz('openllm-core', 'openllm_core')
   run_cz('openllm-client', 'openllm_client')
   return 0
+
 if __name__ == '__main__': raise SystemExit(main())

@@ -21,6 +21,7 @@ if t.TYPE_CHECKING:
 
   from openllm_core._typing_compat import DictStrAny, LiteralRuntime
 logger = logging.getLogger(__name__)
+
 @attr.define(slots=False, init=False)
 class _ClientAttr:
   _address: str
@@ -145,6 +146,7 @@ class _ClientAttr:
   @functools.cached_property
   def inner(self) -> t.Any:
     raise NotImplementedError("'inner' client is not implemented.")
+
 class _Client(_ClientAttr):
   _host: str
   _port: str
@@ -175,6 +177,7 @@ class _Client(_ClientAttr):
     except Exception as err:
       logger.error('Exception caught while sending instruction to HF agent: %s', err, exc_info=err)
       logger.info("Tip: LLMServer at '%s' might not support 'generate_one'.", self._address)
+
 class _AsyncClient(_ClientAttr):
   _host: str
   _port: str
@@ -230,6 +233,7 @@ class _AsyncClient(_ClientAttr):
     else:
       tool_code = get_tool_creation_code(code, self._hf_agent.toolbox, remote=remote)
       return f'{tool_code}\n{code}'
+
 class BaseClient(_Client):
   def chat(self, prompt: str, history: list[str], **attrs: t.Any) -> str:
     raise NotImplementedError
@@ -255,6 +259,7 @@ class BaseClient(_Client):
     if return_response == 'attrs': return r
     elif return_response == 'raw': return bentoml_cattr.unstructure(r)
     else: return self.config.postprocess_generate(prompt, r.responses, **postprocess_kwargs)
+
 class BaseAsyncClient(_AsyncClient):
   async def chat(self, prompt: str, history: list[str], **attrs: t.Any) -> str:
     raise NotImplementedError

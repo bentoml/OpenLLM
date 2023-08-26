@@ -13,6 +13,7 @@ if t.TYPE_CHECKING: import torch
 
 _GENERIC_EMBEDDING_ID = 'sentence-transformers/all-MiniLM-L6-v2'
 _BENTOMODEL_ID = 'sentence-transformers--all-MiniLM-L6-v2'
+
 def get_or_download(ids: str = _BENTOMODEL_ID) -> bentoml.Model:
   try:
     return bentoml.transformers.get(ids)
@@ -36,6 +37,7 @@ def get_or_download(ids: str = _BENTOMODEL_ID) -> bentoml.Model:
           _GENERIC_EMBEDDING_ID, local_dir=bentomodel.path, local_dir_use_symlinks=False, ignore_patterns=['*.safetensors', '*.h5', '*.ot', '*.pdf', '*.md', '.gitattributes', 'LICENSE.txt']
       )
       return bentomodel
+
 class GenericEmbeddingRunnable(bentoml.Runnable):
   SUPPORTED_RESOURCES = ('nvidia.com/gpu', 'cpu')
   SUPPORTS_CPU_MULTI_THREADING = True
@@ -67,4 +69,5 @@ class GenericEmbeddingRunnable(bentoml.Runnable):
     token_embeddings = model_output[0]  # First element of model_output contains all token embeddings
     input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
     return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
+
 __all__ = ['GenericEmbeddingRunnable']

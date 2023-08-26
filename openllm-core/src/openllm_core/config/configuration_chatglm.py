@@ -23,6 +23,7 @@ or provide `--model-id` flag when running ``openllm start chatglm``:
 $ openllm start chatglm --model-id='thudm/chatglm-6b-int8'
 '''
 DEFAULT_PROMPT_TEMPLATE = '''{instruction}'''
+
 class ChatGLMConfig(openllm_core.LLMConfig):
   """ChatGLM is an open bilingual language model based on [General Language Model (GLM)](https://github.com/THUDM/GLM) framework.
 

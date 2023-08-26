@@ -37,6 +37,7 @@ DEFAULT_PROMPT_TEMPLATE = '''{intro}
 {instruction}
 {response_key}
 '''.format(intro=INTRO_BLURB, instruction_key=INSTRUCTION_KEY, instruction='{instruction}', response_key=RESPONSE_KEY)
+
 def get_special_token_id(tokenizer: transformers.PreTrainedTokenizer, key: str) -> int:
   '''Gets the token ID for a given string that has been added to the tokenizer as a special token.
 
@@ -56,6 +57,7 @@ def get_special_token_id(tokenizer: transformers.PreTrainedTokenizer, key: str) 
   token_ids = tokenizer.encode(key)
   if len(token_ids) > 1: raise ValueError(f"Expected only a single token for '{key}' but found {token_ids}")
   return token_ids[0]
+
 class DollyV2Config(openllm_core.LLMConfig):
   """Databricks` Dolly is an instruction-following large language model trained on the Databricks machine learning platform that is licensed for commercial use.
 

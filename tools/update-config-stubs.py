@@ -17,10 +17,12 @@ _TARGET_FILE = ROOT / 'openllm-core' / 'src' / 'openllm_core' / '_configuration.
 sys.path.insert(0, (ROOT / 'openllm-core' / 'src').__fspath__())
 from openllm_core._configuration import GenerationConfig, ModelSettings, PeftType, SamplingParams
 from openllm_core.utils import codegen
+
 def process_annotations(annotations: str) -> str:
   if 'NotRequired' in annotations: return annotations[len('NotRequired['):-1]
   elif 'Required' in annotations: return annotations[len('Required['):-1]
   else: return annotations
+
 _value_docstring = {
     'default_id': '''Return the default model to use when using 'openllm start <model_id>'.
         This could be one of the keys in 'self.model_ids' or custom users model.
@@ -81,6 +83,7 @@ _value_docstring = {
 }
 
 _transformed = {'fine_tune_strategies': 't.Dict[AdapterType, FineTuneConfig]'}
+
 def main() -> int:
   with _TARGET_FILE.open('r') as f:
     processed = f.readlines()
@@ -135,4 +138,5 @@ def main() -> int:
   with _TARGET_FILE.open('w') as f:
     f.writelines(processed)
   return 0
+
 if __name__ == '__main__': raise SystemExit(main())

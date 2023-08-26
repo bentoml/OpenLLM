@@ -15,7 +15,9 @@ import typing as t
 
 import openllm_client
 if t.TYPE_CHECKING:  from openllm_client import AsyncHTTPClient as AsyncHTTPClient, BaseAsyncClient as BaseAsyncClient, BaseClient as BaseClient, HTTPClient as HTTPClient, GrpcClient as GrpcClient, AsyncGrpcClient as AsyncGrpcClient
+
 def __dir__() -> t.Sequence[str]:
   return sorted(dir(openllm_client))
+
 def __getattr__(it: str) -> t.Any:
   return getattr(openllm_client, it)

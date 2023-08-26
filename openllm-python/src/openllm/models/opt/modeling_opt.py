@@ -6,6 +6,7 @@ import openllm
 if t.TYPE_CHECKING: import transformers
 
 logger = logging.getLogger(__name__)
+
 class OPT(openllm.LLM['transformers.OPTForCausalLM', 'transformers.GPT2Tokenizer']):
   __openllm_internal__ = True
 
