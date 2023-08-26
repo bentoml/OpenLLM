@@ -125,7 +125,7 @@ AGENTS_DEPS = ['transformers[agents]>=4.30', 'diffusers', 'soundfile']
 PLAYGROUND_DEPS = ['jupyter', 'notebook', 'ipython', 'jupytext', 'nbformat']
 GGML_DEPS = ['ctransformers']
 GPTQ_DEPS = ['auto-gptq[triton]']
-VLLM_DEPS = ['vllm', 'ray']
+VLLM_DEPS = ['vllm>=0.1.4', 'ray']
 
 _base_requirements: dict[str, t.Any] = {
     inflection.dasherize(name): config_cls.__openllm_requirements__ for name, config_cls in openllm.CONFIG_MAPPING.items() if config_cls.__openllm_requirements__

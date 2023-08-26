@@ -60,20 +60,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends ninja-build && 
 RUN /opt/conda/bin/conda install -c "nvidia/label/cuda-11.8.0"  cuda==11.8 && \
     /opt/conda/bin/conda clean -ya
 
-# NOTE: Build vllm CUDA kernels
-FROM kernel-builder as vllm-builder
-
-ENV COMMIT_HASH d1744376ae9fdbfa6a2dc763e1c67309e138fa3d
-ARG COMMIT_HASH=${COMMIT_HASH}
-
-WORKDIR /usr/src
-
-RUN <<EOT
-git clone https://github.com/vllm-project/vllm.git && cd vllm
-git fetch && git checkout ${COMMIT_HASH}
-python setup.py build
-EOT
-
 # NOTE: Build flash-attention-2 CUDA kernels
 FROM kernel-builder as flash-attn-v2-builder
 
@@ -122,9 +108,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy conda with PyTorch installed
 COPY --from=pytorch-install /opt/conda /opt/conda
 
-# Copy build artefacts for vllm
-COPY --from=vllm-builder /usr/src/vllm/build/lib.linux-x86_64-cpython-39 /opt/conda/lib/python3.9/site-packages
-
 # Copy build artefacts for flash-attention-v2
 COPY --from=flash-attn-v2-builder /usr/src/flash-attention-v2/build/lib.linux-x86_64-cpython-39 /opt/conda/lib/python3.9/site-packages
 
@@ -146,7 +129,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
 # Install all required dependencies
 RUN --mount=type=cache,target=/root/.cache/pip \
   pip install --extra-index-url "https://download.pytorch.org/whl/cu118" -v --no-cache-dir \
-    "ray==2.6.0" "einops" "torch>=2.0.1+cu118" xformers "jax[cuda11_local]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html ".[opt,mpt,fine-tune,llama,chatglm]"
+    "ray==2.6.0" "einops" "vllm>=0.1.4" "torch>=2.0.1+cu118" xformers "jax[cuda11_local]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html ".[opt,mpt,fine-tune,llama,chatglm]"
 
 FROM base-container
 
