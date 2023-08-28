@@ -9,7 +9,7 @@ jobs:
     if: "github.repository == 'bentoml/OpenLLM'" # Don't run on fork repository
     steps:
       - name: Check out code
-        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # ratchet:actions/checkout@v3
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # ratchet:actions/checkout@v3
       - name: Cleanup
         run: "gh extension install actions/gh-actions-cache\n\nREPO=${{ github.repository }}\nBRANCH=\"refs/pull/${{ github.event.pull_request.number }}/merge\"\n\necho \"Fetching list of cache key\"\ncacheKeysForPR=$(gh actions-cache list -R $REPO -B $BRANCH -L 100 | cut -f 1 )\n\n## Setting this to not fail the workflow while deleting cache keys. \nset +e\necho \"Deleting caches...\"\nfor cacheKey in $cacheKeysForPR\ndo\n    gh actions-cache delete $cacheKey -R $REPO -B $BRANCH --confirm\ndone\necho \"Done\"\n"
         env:
