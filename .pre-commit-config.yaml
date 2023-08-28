@@ -8,7 +8,7 @@ default_language_version:
 exclude: '.*\.(css|js|svg)$'
 repos:
   - repo: https://github.com/google/yapf
-    rev: v0.40.1
+    rev: v0.40.0
     hooks:
       - id: yapf
         verbose: true
@@ -18,7 +18,7 @@ repos:
               openllm-python/src/openllm/cli/entrypoint.py
           )$
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: 'v0.0.285'
+    rev: 'v0.0.286'
     hooks:
       - id: ruff
         verbose: true
