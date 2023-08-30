@@ -4,16 +4,24 @@ import typing as t
 
 import openllm
 import openllm_core
-from bentoml._internal.models.model import ModelInfo, ModelSignature
-from openllm.serialisation.constants import FRAMEWORK_TO_AUTOCLASS_MAPPING, HUB_ATTRS
+
+from bentoml._internal.models.model import ModelInfo
+from bentoml._internal.models.model import ModelSignature
+from openllm.serialisation.constants import FRAMEWORK_TO_AUTOCLASS_MAPPING
+from openllm.serialisation.constants import HUB_ATTRS
+
 if t.TYPE_CHECKING:
   import torch
   import transformers
+
   from transformers.models.auto.auto_factory import _BaseAutoModelClass
 
   import bentoml
+
   from bentoml._internal.models.model import ModelSignaturesType
-  from openllm_core._typing_compat import DictStrAny, M, T
+  from openllm_core._typing_compat import DictStrAny
+  from openllm_core._typing_compat import M
+  from openllm_core._typing_compat import T
 else:
   transformers, torch = openllm_core.utils.LazyLoader('transformers', globals(), 'transformers'), openllm_core.utils.LazyLoader('torch', globals(), 'torch')
 

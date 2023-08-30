@@ -2,8 +2,10 @@ from __future__ import annotations
 import typing as t
 
 import openllm_core
+
 from openllm_core._prompt import process_prompt
 from openllm_core.utils import dantic
+
 MPTPromptType = t.Literal['default', 'instruct', 'chat', 'storywriter']
 
 START_MPT_COMMAND_DOCSTRING = '''\

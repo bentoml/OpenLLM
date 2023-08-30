@@ -14,8 +14,10 @@ import typing as t
 import attr
 
 import openllm_core
+
 from bentoml._internal.utils import analytics as _internal_analytics
 from openllm_core._typing_compat import ParamSpec
+
 P = ParamSpec('P')
 T = t.TypeVar('T')
 logger = logging.getLogger(__name__)

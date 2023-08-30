@@ -8,9 +8,14 @@ import typing as t
 
 import openllm_core
 
-from . import dummy_flax_objects as dummy_flax_objects, dummy_pt_objects as dummy_pt_objects, dummy_tf_objects as dummy_tf_objects, dummy_vllm_objects as dummy_vllm_objects
+from . import dummy_flax_objects as dummy_flax_objects
+from . import dummy_pt_objects as dummy_pt_objects
+from . import dummy_tf_objects as dummy_tf_objects
+from . import dummy_vllm_objects as dummy_vllm_objects
+
 if t.TYPE_CHECKING:
   import openllm
+
   from openllm_core._typing_compat import LiteralRuntime
 
 def generate_labels(llm: openllm.LLM[t.Any, t.Any]) -> dict[str, t.Any]:

@@ -5,6 +5,7 @@ import logging
 import time
 import typing as t
 import urllib.error
+
 from urllib.parse import urlparse
 
 import httpx
@@ -14,9 +15,12 @@ import starlette.requests
 import starlette.responses
 
 import bentoml
+
 from bentoml._internal.service.inference_api import InferenceAPI
-from openllm_client.benmin import AsyncClient, Client
+from openllm_client.benmin import AsyncClient
+from openllm_client.benmin import Client
 from openllm_core.utils import ensure_exec_coro
+
 logger = logging.getLogger(__name__)
 
 class HttpClient(Client):

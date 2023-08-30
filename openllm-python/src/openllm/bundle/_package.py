@@ -6,27 +6,39 @@ import logging
 import os
 import string
 import typing as t
+
 from pathlib import Path
 
 import fs
 import fs.copy
 import fs.errors
 import orjson
-from simple_di import Provide, inject
+
+from simple_di import Provide
+from simple_di import inject
 
 import bentoml
 import openllm_core
-from bentoml._internal.bento.build_config import BentoBuildConfig, DockerOptions, ModelSpec, PythonOptions
+
+from bentoml._internal.bento.build_config import BentoBuildConfig
+from bentoml._internal.bento.build_config import DockerOptions
+from bentoml._internal.bento.build_config import ModelSpec
+from bentoml._internal.bento.build_config import PythonOptions
 from bentoml._internal.configuration.containers import BentoMLContainer
 
 from . import oci
+
 if t.TYPE_CHECKING:
   from fs.base import FS
 
   import openllm
+
   from bentoml._internal.bento import BentoStore
   from bentoml._internal.models.model import ModelStore
-  from openllm_core._typing_compat import LiteralContainerRegistry, LiteralContainerVersionStrategy, LiteralString
+  from openllm_core._typing_compat import LiteralContainerRegistry
+  from openllm_core._typing_compat import LiteralContainerVersionStrategy
+  from openllm_core._typing_compat import LiteralString
+
 logger = logging.getLogger(__name__)
 
 OPENLLM_DEV_BUILD = 'OPENLLM_DEV_BUILD'

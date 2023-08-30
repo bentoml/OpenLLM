@@ -2,6 +2,7 @@
 from __future__ import annotations
 import os
 from pathlib import Path
+
 _TARGET_FILE = Path(__file__).parent.parent / 'openllm-python' / 'src' / 'openllm' / 'models' / '__init__.py'
 
 def create_module_import() -> str:

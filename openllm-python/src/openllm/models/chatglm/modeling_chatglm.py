@@ -2,7 +2,8 @@ from __future__ import annotations
 import typing as t
 
 import openllm
-if t.TYPE_CHECKING: import transformers
+if t.TYPE_CHECKING:
+  import transformers
 
 class ChatGLM(openllm.LLM['transformers.PreTrainedModel', 'transformers.PreTrainedTokenizerFast']):
   __openllm_internal__ = True

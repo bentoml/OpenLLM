@@ -23,6 +23,7 @@ from datasets import load_dataset
 
 if t.TYPE_CHECKING:
   from peft import PeftModel
+
 DEFAULT_MODEL_ID = "facebook/opt-6.7b"
 
 def load_trainer(model: PeftModel, tokenizer: transformers.GPT2TokenizerFast, dataset_dict: t.Any, training_args: TrainingArguments):

@@ -2,15 +2,21 @@
 from __future__ import annotations
 import importlib
 import typing as t
+
 from collections import OrderedDict
 
 import inflection
 
 import openllm_core
+
 from openllm_core.utils import ReprMixin
+
 if t.TYPE_CHECKING:
   import types
-  from collections import _odict_items, _odict_keys, _odict_values
+
+  from collections import _odict_items
+  from collections import _odict_keys
+  from collections import _odict_values
 
   from openllm_core._typing_compat import LiteralString
   ConfigKeysView = _odict_keys[str, type[openllm_core.LLMConfig]]

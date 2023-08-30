@@ -1,4 +1,5 @@
 from enum import Enum
+
 class CUresult(Enum):
     CUDA_SUCCESS = 0
 

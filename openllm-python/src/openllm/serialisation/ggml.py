@@ -7,7 +7,9 @@ import typing as t
 
 import bentoml
 import openllm
-if t.TYPE_CHECKING: from openllm_core._typing_compat import M
+
+if t.TYPE_CHECKING:
+  from openllm_core._typing_compat import M
 
 _conversion_strategy = {'pt': 'ggml'}
 

@@ -2,6 +2,7 @@ from typing import Any
 
 from .core import StrategyList
 from ..merger import Merger
+
 class SetStrategies(StrategyList):
     NAME: str | None = ...
 

@@ -1,7 +1,10 @@
 # See https://github.com/RadeonOpenCompute/rocm_smi_lib/blob/master/python_smi_tools/rsmiBindings.py
 import ctypes
 import sys
-from typing import Any, Literal
+
+from typing import Any
+from typing import Literal
+
 if sys.version_info[:2] >= (3, 11):
   from typing import LiteralString
 else:

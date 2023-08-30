@@ -3,13 +3,19 @@ from __future__ import annotations
 import typing as t
 
 import transformers
+
 from huggingface_hub import snapshot_download
 
 import bentoml
 import openllm
-from bentoml._internal.frameworks.transformers import API_VERSION, MODULE_NAME
-from bentoml._internal.models.model import ModelOptions, ModelSignature
-if t.TYPE_CHECKING: import torch
+
+from bentoml._internal.frameworks.transformers import API_VERSION
+from bentoml._internal.frameworks.transformers import MODULE_NAME
+from bentoml._internal.models.model import ModelOptions
+from bentoml._internal.models.model import ModelSignature
+
+if t.TYPE_CHECKING:
+  import torch
 
 _GENERIC_EMBEDDING_ID = 'sentence-transformers/all-MiniLM-L6-v2'
 _BENTOMODEL_ID = 'sentence-transformers--all-MiniLM-L6-v2'

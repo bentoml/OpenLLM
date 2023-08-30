@@ -5,6 +5,7 @@ import typing as t
 import warnings
 
 import orjson
+
 from starlette.applications import Starlette
 from starlette.responses import JSONResponse
 from starlette.routing import Route
@@ -12,17 +13,21 @@ from starlette.routing import Route
 import bentoml
 import openllm
 import openllm_core
+
 if t.TYPE_CHECKING:
   from starlette.requests import Request
   from starlette.responses import Response
 
-  from bentoml._internal.runner.runner import AbstractRunner, RunnerMethod
+  from bentoml._internal.runner.runner import AbstractRunner
+  from bentoml._internal.runner.runner import RunnerMethod
   from openllm_core._typing_compat import TypeAlias
-  _EmbeddingMethod: TypeAlias = RunnerMethod[t.Union[bentoml.Runnable, openllm.LLMRunnable[t.Any, t.Any]], [t.List[str]], t.Sequence[openllm.LLMEmbeddings]]
+  _EmbeddingMethod: TypeAlias = RunnerMethod[t.Union[bentoml.Runnable, openllm.LLMRunnable[t.Any, t.Any]], [t.List[str]], t.Sequence[openllm.EmbeddingsOutput]]
+
 # The following warnings from bitsandbytes, and probably not that important for users to see
 warnings.filterwarnings('ignore', message='MatMul8bitLt: inputs will be cast from torch.float32 to float16 during quantization')
 warnings.filterwarnings('ignore', message='MatMul8bitLt: inputs will be cast from torch.bfloat16 to float16 during quantization')
 warnings.filterwarnings('ignore', message='The installed version of bitsandbytes was compiled without GPU support.')
+
 model = os.environ.get('OPENLLM_MODEL', '{__model_name__}')  # openllm: model name
 adapter_map = os.environ.get('OPENLLM_ADAPTER_MAP', '''{__model_adapter_map__}''')  # openllm: model adapter map
 llm_config = openllm.AutoConfig.for_model(model)
@@ -37,6 +42,7 @@ generic_embedding_runner = bentoml.Runner(
 runners: list[AbstractRunner] = [runner]
 if not runner.supports_embeddings: runners.append(generic_embedding_runner)
 svc = bentoml.Service(name=f"llm-{llm_config['start_name']}-service", runners=runners)
+
 _JsonInput = bentoml.io.JSON.from_sample({'prompt': '', 'llm_config': llm_config.model_dump(flatten=True), 'adapter_name': None})
 
 @svc.api(route='/v1/generate', input=_JsonInput, output=bentoml.io.JSON.from_sample({'responses': [], 'configuration': llm_config.model_dump(flatten=True)}))

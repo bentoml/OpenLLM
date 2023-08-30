@@ -2,6 +2,7 @@
 from __future__ import annotations
 import os, inflection, tomlkit, sys
 import typing as t
+
 START_COMMENT = f'<!-- {os.path.basename(__file__)}: start -->\n'
 END_COMMENT = f'<!-- {os.path.basename(__file__)}: stop -->\n'
 

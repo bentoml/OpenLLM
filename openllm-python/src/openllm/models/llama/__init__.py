@@ -3,8 +3,14 @@ import sys
 import typing as t
 
 from openllm.exceptions import MissingDependencyError
-from openllm.utils import LazyModule, is_torch_available, is_vllm_available
-from openllm_core.config.configuration_llama import DEFAULT_PROMPT_TEMPLATE as DEFAULT_PROMPT_TEMPLATE, PROMPT_MAPPING as PROMPT_MAPPING, START_LLAMA_COMMAND_DOCSTRING as START_LLAMA_COMMAND_DOCSTRING, LlamaConfig as LlamaConfig
+from openllm.utils import LazyModule
+from openllm.utils import is_torch_available
+from openllm.utils import is_vllm_available
+from openllm_core.config.configuration_llama import DEFAULT_PROMPT_TEMPLATE as DEFAULT_PROMPT_TEMPLATE
+from openllm_core.config.configuration_llama import PROMPT_MAPPING as PROMPT_MAPPING
+from openllm_core.config.configuration_llama import START_LLAMA_COMMAND_DOCSTRING as START_LLAMA_COMMAND_DOCSTRING
+from openllm_core.config.configuration_llama import LlamaConfig as LlamaConfig
+
 _import_structure: dict[str, list[str]] = {}
 try:
   if not is_vllm_available(): raise MissingDependencyError

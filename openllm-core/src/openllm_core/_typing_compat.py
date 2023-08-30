@@ -7,7 +7,9 @@ import typing as t
 import attr
 
 import bentoml
+
 from bentoml._internal.types import ModelSignatureDict as ModelSignatureDict
+
 if t.TYPE_CHECKING:
   import auto_gptq as autogptq
   import peft
@@ -15,11 +17,13 @@ if t.TYPE_CHECKING:
   import vllm
 
   import openllm
+
   from bentoml._internal.runner.runnable import RunnableMethod
   from bentoml._internal.runner.runner import RunnerMethod
   from bentoml._internal.runner.strategy import Strategy
 
   from .utils.lazy import VersionInfo
+
 M = t.TypeVar(
     'M',
     bound='t.Union[transformers.PreTrainedModel, transformers.Pipeline, transformers.TFPreTrainedModel, transformers.FlaxPreTrainedModel, vllm.LLMEngine, peft.PeftModel, autogptq.modeling.BaseGPTQForCausalLM]'
@@ -41,14 +45,28 @@ LiteralContainerRegistry = t.Literal['docker', 'gh', 'ecr']
 LiteralContainerVersionStrategy = t.Literal['release', 'nightly', 'latest', 'custom']
 
 if sys.version_info[:2] >= (3, 11):
-  from typing import LiteralString as LiteralString, NotRequired as NotRequired, Required as Required, Self as Self, dataclass_transform as dataclass_transform, overload as overload
+  from typing import LiteralString as LiteralString
+  from typing import NotRequired as NotRequired
+  from typing import Required as Required
+  from typing import Self as Self
+  from typing import dataclass_transform as dataclass_transform
+  from typing import overload as overload
 else:
-  from typing_extensions import LiteralString as LiteralString, NotRequired as NotRequired, Required as Required, Self as Self, dataclass_transform as dataclass_transform, overload as overload
+  from typing_extensions import LiteralString as LiteralString
+  from typing_extensions import NotRequired as NotRequired
+  from typing_extensions import Required as Required
+  from typing_extensions import Self as Self
+  from typing_extensions import dataclass_transform as dataclass_transform
+  from typing_extensions import overload as overload
 
 if sys.version_info[:2] >= (3, 10):
-  from typing import Concatenate as Concatenate, ParamSpec as ParamSpec, TypeAlias as TypeAlias
+  from typing import Concatenate as Concatenate
+  from typing import ParamSpec as ParamSpec
+  from typing import TypeAlias as TypeAlias
 else:
-  from typing_extensions import Concatenate as Concatenate, ParamSpec as ParamSpec, TypeAlias as TypeAlias
+  from typing_extensions import Concatenate as Concatenate
+  from typing_extensions import ParamSpec as ParamSpec
+  from typing_extensions import TypeAlias as TypeAlias
 
 class PeftAdapterOutput(t.TypedDict):
   success: bool

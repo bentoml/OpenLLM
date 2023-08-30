@@ -1,37 +1,42 @@
 import enum
 import sys
-from typing import (
-  Any,
-  Callable,
-  Dict,
-  Generic,
-  List,
-  Literal,
-  Mapping,
-  Optional,
-  Protocol,
-  Sequence,
-  Tuple,
-  Type,
-  TypeVar,
-  Union,
-  overload,
-)
-if sys.version_info[:2] >= (3, 11):
-  from typing import ParamSpec, TypeAlias, TypeGuard, dataclass_transform
-else:
-  from typing_extensions import ParamSpec, TypeAlias, TypeGuard, dataclass_transform
 
-from . import (
-  converters as converters,
-  exceptions as exceptions,
-  filters as filters,
-  setters as setters,
-  validators as validators,
-)
+from typing import Any
+from typing import Callable
+from typing import Dict
+from typing import Generic
+from typing import List
+from typing import Literal
+from typing import Mapping
+from typing import Optional
+from typing import Protocol
+from typing import Sequence
+from typing import Tuple
+from typing import Type
+from typing import TypeVar
+from typing import Union
+from typing import overload
+
+if sys.version_info[:2] >= (3, 11):
+  from typing import ParamSpec
+  from typing import TypeAlias
+  from typing import TypeGuard
+  from typing import dataclass_transform
+else:
+  from typing_extensions import ParamSpec
+  from typing_extensions import TypeAlias
+  from typing_extensions import TypeGuard
+  from typing_extensions import dataclass_transform
+
+from . import converters as converters
+from . import exceptions as exceptions
+from . import filters as filters
+from . import setters as setters
+from . import validators as validators
 from ._cmp import cmp_using as cmp_using
 from ._typing_compat import AttrsInstance_
 from ._version_info import VersionInfo
+
 __version__: str
 __version_info__: VersionInfo
 __title__: str

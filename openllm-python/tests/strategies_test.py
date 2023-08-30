@@ -5,9 +5,14 @@ import typing as t
 import pytest
 
 import bentoml
+
 from openllm_core import _strategies as strategy
-from openllm_core._strategies import CascadingResourceStrategy, NvidiaGpuResource, get_resource
-if t.TYPE_CHECKING: from _pytest.monkeypatch import MonkeyPatch
+from openllm_core._strategies import CascadingResourceStrategy
+from openllm_core._strategies import NvidiaGpuResource
+from openllm_core._strategies import get_resource
+
+if t.TYPE_CHECKING:
+  from _pytest.monkeypatch import MonkeyPatch
 
 def test_nvidia_gpu_resource_from_env(monkeypatch: pytest.MonkeyPatch):
   with monkeypatch.context() as mcls:

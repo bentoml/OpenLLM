@@ -16,20 +16,62 @@ import attr
 import fs.path
 import inflection
 import orjson
+
 from huggingface_hub import hf_hub_download
 
 import bentoml
 import openllm
 import openllm_core
+
 from bentoml._internal.models.model import ModelSignature
-from openllm_core._configuration import FineTuneConfig, LLMConfig, _object_getattribute, _setattr_class
+from openllm_core._configuration import FineTuneConfig
+from openllm_core._configuration import LLMConfig
+from openllm_core._configuration import _object_getattribute
+from openllm_core._configuration import _setattr_class
 from openllm_core._schema import unmarshal_vllm_outputs
-from openllm_core._typing_compat import AdaptersMapping, AdaptersTuple, AdapterType, AnyCallable, DictStrAny, ListStr, LiteralRuntime, LiteralString, LLMEmbeddings, LLMRunnable, LLMRunner, M, ModelSignatureDict as _ModelSignatureDict, NotRequired, PeftAdapterOutput, T, TupleAny, overload
-from openllm_core.utils import DEBUG, ENV_VARS_TRUE_VALUES, MYPY, EnvVarMixin, LazyLoader, ReprMixin, apply, bentoml_cattr, codegen, device_count, first_not_none, generate_hash_from_file, is_peft_available, is_torch_available, non_intrusive_setattr, normalize_attrs_to_model_tokenizer_pair, resolve_filepath, validate_is_path
+from openllm_core._typing_compat import AdaptersMapping
+from openllm_core._typing_compat import AdaptersTuple
+from openllm_core._typing_compat import AdapterType
+from openllm_core._typing_compat import AnyCallable
+from openllm_core._typing_compat import DictStrAny
+from openllm_core._typing_compat import ListStr
+from openllm_core._typing_compat import LiteralRuntime
+from openllm_core._typing_compat import LiteralString
+from openllm_core._typing_compat import LLMEmbeddings
+from openllm_core._typing_compat import LLMRunnable
+from openllm_core._typing_compat import LLMRunner
+from openllm_core._typing_compat import M
+from openllm_core._typing_compat import ModelSignatureDict as _ModelSignatureDict
+from openllm_core._typing_compat import NotRequired
+from openllm_core._typing_compat import PeftAdapterOutput
+from openllm_core._typing_compat import T
+from openllm_core._typing_compat import TupleAny
+from openllm_core._typing_compat import overload
+from openllm_core.utils import DEBUG
+from openllm_core.utils import ENV_VARS_TRUE_VALUES
+from openllm_core.utils import MYPY
+from openllm_core.utils import EnvVarMixin
+from openllm_core.utils import LazyLoader
+from openllm_core.utils import ReprMixin
+from openllm_core.utils import apply
+from openllm_core.utils import bentoml_cattr
+from openllm_core.utils import codegen
+from openllm_core.utils import device_count
+from openllm_core.utils import first_not_none
+from openllm_core.utils import generate_hash_from_file
+from openllm_core.utils import is_peft_available
+from openllm_core.utils import is_torch_available
+from openllm_core.utils import non_intrusive_setattr
+from openllm_core.utils import normalize_attrs_to_model_tokenizer_pair
+from openllm_core.utils import resolve_filepath
+from openllm_core.utils import validate_is_path
 
 from ._quantisation import infer_quantisation_config
-from .exceptions import ForbiddenAttributeError, GpuNotAvailableError, OpenLLMException
+from .exceptions import ForbiddenAttributeError
+from .exceptions import GpuNotAvailableError
+from .exceptions import OpenLLMException
 from .utils import infer_auto_class
+
 if t.TYPE_CHECKING:
   import auto_gptq as autogptq
   import peft
@@ -1077,7 +1119,9 @@ class LLM(LLMInterface[M, T], ReprMixin):
       **attrs: t.Any
   ) -> t.Iterator[t.Any]:
     # NOTE: encoder-decoder models will need to implement their own generate_iterator for now
-    from ._generation import get_context_length, is_partial_stop, prepare_logits_processor
+    from ._generation import get_context_length
+    from ._generation import is_partial_stop
+    from ._generation import prepare_logits_processor
 
     len_prompt = len(prompt)
     if stop_token_ids is None: stop_token_ids = []

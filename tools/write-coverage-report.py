@@ -3,6 +3,7 @@ from __future__ import annotations
 from decimal import ROUND_DOWN, Decimal
 from pathlib import Path
 import orjson
+
 PRECISION = Decimal('.01')
 
 ROOT = Path(__file__).resolve().parent.parent
