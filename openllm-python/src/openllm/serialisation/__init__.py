@@ -44,10 +44,11 @@ def load_tokenizer(llm: openllm.LLM[t.Any, T], **tokenizer_attrs: t.Any) -> T:
         raise openllm.exceptions.OpenLLMException(
             "Bento model does not have tokenizer. Make sure to save"
             " the tokenizer within the model via 'custom_objects'."
-            " For example: \"bentoml.transformers.save_model(..., custom_objects={'tokenizer': tokenizer})\""
-        ) from None
+            " For example: \"bentoml.transformers.save_model(..., custom_objects={'tokenizer': tokenizer})\"") from None
   else:
-    tokenizer = infer_tokenizers_from_llm(llm).from_pretrained(bentomodel_fs.getsyspath('/'), trust_remote_code=llm.__llm_trust_remote_code__, **tokenizer_attrs)
+    tokenizer = infer_tokenizers_from_llm(llm).from_pretrained(bentomodel_fs.getsyspath('/'),
+                                                               trust_remote_code=llm.__llm_trust_remote_code__,
+                                                               **tokenizer_attrs)
 
   if tokenizer.pad_token_id is None:
     if config.pad_token_id is not None: tokenizer.pad_token_id = config.pad_token_id
@@ -57,12 +58,14 @@ def load_tokenizer(llm: openllm.LLM[t.Any, T], **tokenizer_attrs: t.Any) -> T:
   return tokenizer
 
 class _Caller(t.Protocol[P]):
+
   def __call__(self, llm: openllm.LLM[M, T], *args: P.args, **kwargs: P.kwargs) -> t.Any:
     ...
 
 _extras = ['get', 'import_model', 'load_model']
 
 def _make_dispatch_function(fn: str) -> _Caller[P]:
+
   def caller(llm: openllm.LLM[M, T], *args: P.args, **kwargs: P.kwargs) -> t.Any:
     """Generic function dispatch to correct serialisation submodules based on LLM runtime.
 

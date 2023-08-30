@@ -89,19 +89,22 @@ class DollyV2Config(openllm_core.LLMConfig):
     max_new_tokens: int = 256
     eos_token_id: int = 50277  # NOTE: from get_special_token_id(self.tokenizer, END_KEY)
 
-  def sanitize_parameters(
-      self,
-      prompt: str,
-      max_new_tokens: int | None = None,
-      temperature: float | None = None,
-      top_k: int | None = None,
-      top_p: float | None = None,
-      use_default_prompt_template: bool = True,
-      **attrs: t.Any
-  ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
+  def sanitize_parameters(self,
+                          prompt: str,
+                          max_new_tokens: int | None = None,
+                          temperature: float | None = None,
+                          top_k: int | None = None,
+                          top_p: float | None = None,
+                          use_default_prompt_template: bool = True,
+                          **attrs: t.Any) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
     return process_prompt(prompt, DEFAULT_PROMPT_TEMPLATE, use_default_prompt_template, **attrs), {
-        'max_new_tokens': max_new_tokens, 'top_k': top_k, 'top_p': top_p, 'temperature': temperature, **attrs
+        'max_new_tokens': max_new_tokens,
+        'top_k': top_k,
+        'top_p': top_p,
+        'temperature': temperature,
+        **attrs
     }, {}
 
-  def postprocess_generate(self, prompt: str, generation_result: list[dict[t.Literal['generated_text'], str]], **_: t.Any) -> str:
+  def postprocess_generate(self, prompt: str, generation_result: list[dict[t.Literal['generated_text'], str]],
+                           **_: t.Any) -> str:
     return generation_result[0]['generated_text']

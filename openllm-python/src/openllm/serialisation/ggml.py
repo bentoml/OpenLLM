@@ -13,7 +13,11 @@ if t.TYPE_CHECKING:
 
 _conversion_strategy = {'pt': 'ggml'}
 
-def import_model(llm: openllm.LLM[t.Any, t.Any], *decls: t.Any, trust_remote_code: bool = True, **attrs: t.Any,) -> bentoml.Model:
+def import_model(llm: openllm.LLM[t.Any, t.Any],
+                 *decls: t.Any,
+                 trust_remote_code: bool = True,
+                 **attrs: t.Any,
+                ) -> bentoml.Model:
   raise NotImplementedError('Currently work in progress.')
 
 def get(llm: openllm.LLM[t.Any, t.Any], auto_import: bool = False) -> bentoml.Model:
@@ -27,9 +31,12 @@ def get(llm: openllm.LLM[t.Any, t.Any], auto_import: bool = False) -> bentoml.Mo
   try:
     model = bentoml.models.get(llm.tag)
     if model.info.module not in ('openllm.serialisation.ggml', __name__):
-      raise bentoml.exceptions.NotFound(f"Model {model.tag} was saved with module {model.info.module}, not loading with 'openllm.serialisation.transformers'.")
+      raise bentoml.exceptions.NotFound(
+          f"Model {model.tag} was saved with module {model.info.module}, not loading with 'openllm.serialisation.transformers'."
+      )
     if 'runtime' in model.info.labels and model.info.labels['runtime'] != llm.runtime:
-      raise openllm.exceptions.OpenLLMException(f"Model {model.tag} was saved with runtime {model.info.labels['runtime']}, not loading with {llm.runtime}.")
+      raise openllm.exceptions.OpenLLMException(
+          f"Model {model.tag} was saved with runtime {model.info.labels['runtime']}, not loading with {llm.runtime}.")
     return model
   except bentoml.exceptions.NotFound:
     if auto_import:

@@ -18,7 +18,11 @@ def main() -> int:
 
   start_index, stop_index = readme.index(START_COMMENT), readme.index(END_COMMENT)
   formatted: dict[t.Literal['Model', 'Architecture', 'URL', 'Installation', 'Model Ids'], list[str | list[str]]] = {
-      'Model': [], 'Architecture': [], 'URL': [], 'Model Ids': [], 'Installation': [],
+      'Model': [],
+      'Architecture': [],
+      'URL': [],
+      'Model Ids': [],
+      'Installation': [],
   }
   max_install_len_div = 0
   for name, config_cls in openllm.CONFIG_MAPPING.items():
@@ -38,7 +42,8 @@ def main() -> int:
   meta.extend([f'<th>{header}</th>\n' for header in formatted.keys() if header not in ('URL',)])
   meta += ['</tr>\n']
   # NOTE: rows
-  for name, architecture, url, model_ids, installation in t.cast(t.Iterable[t.Tuple[str, str, str, t.List[str], str]], zip(*formatted.values())):
+  for name, architecture, url, model_ids, installation in t.cast(t.Iterable[t.Tuple[str, str, str, t.List[str], str]],
+                                                                 zip(*formatted.values())):
     meta += '<tr>\n'
     # configure architecture URL
     cfg_cls = openllm.CONFIG_MAPPING[name]

@@ -37,21 +37,24 @@ class BaichuanConfig(openllm_core.LLMConfig):
   Refer to [Baichuan-7B's GitHub page](https://github.com/baichuan-inc/Baichuan-7B) for more information.
   """
   __config__ = {
-      'name_type': 'lowercase',
-      'trust_remote_code': True,
-      'timeout': 3600000,
-      'requires_gpu': True,
-      'url': 'https://github.com/baichuan-inc/Baichuan-7B',
+      'name_type':
+          'lowercase',
+      'trust_remote_code':
+          True,
+      'timeout':
+          3600000,
+      'requires_gpu':
+          True,
+      'url':
+          'https://github.com/baichuan-inc/Baichuan-7B',
       'requirements': ['cpm-kernels', 'sentencepiece'],
-      'architecture': 'BaiChuanForCausalLM',
-      'default_id': 'baichuan-inc/baichuan-7b',
-      'model_ids': [
+      'architecture':
+          'BaiChuanForCausalLM',
+      'default_id':
           'baichuan-inc/baichuan-7b',
-          'baichuan-inc/baichuan-13b-base',
-          'baichuan-inc/baichuan-13b-chat',
-          'fireballoon/baichuan-vicuna-chinese-7b',
-          'fireballoon/baichuan-vicuna-7b',
-          'hiyouga/baichuan-7b-sft'
+      'model_ids': [
+          'baichuan-inc/baichuan-7b', 'baichuan-inc/baichuan-13b-base', 'baichuan-inc/baichuan-13b-chat',
+          'fireballoon/baichuan-vicuna-chinese-7b', 'fireballoon/baichuan-vicuna-7b', 'hiyouga/baichuan-7b-sft'
       ]
   }
 
@@ -60,10 +63,19 @@ class BaichuanConfig(openllm_core.LLMConfig):
     top_p: float = 0.7
     temperature: float = 0.95
 
-  def sanitize_parameters(
-      self, prompt: str, max_new_tokens: int | None = None, top_p: float | None = None, temperature: float | None = None, use_default_prompt_template: bool = False, **attrs: t.Any
-  ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
-    return process_prompt(prompt, DEFAULT_PROMPT_TEMPLATE, use_default_prompt_template, **attrs), {'max_new_tokens': max_new_tokens, 'top_p': top_p, 'temperature': temperature, **attrs}, {}
+  def sanitize_parameters(self,
+                          prompt: str,
+                          max_new_tokens: int | None = None,
+                          top_p: float | None = None,
+                          temperature: float | None = None,
+                          use_default_prompt_template: bool = False,
+                          **attrs: t.Any) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
+    return process_prompt(prompt, DEFAULT_PROMPT_TEMPLATE, use_default_prompt_template, **attrs), {
+        'max_new_tokens': max_new_tokens,
+        'top_p': top_p,
+        'temperature': temperature,
+        **attrs
+    }, {}
 
   def postprocess_generate(self, prompt: str, generation_result: t.Sequence[str], **_: t.Any) -> str:
     return generation_result[0]

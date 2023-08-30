@@ -95,17 +95,27 @@ def _start(
   args: list[str] = ['--runtime', runtime]
   if model_id: args.extend(['--model-id', model_id])
   if timeout: args.extend(['--server-timeout', str(timeout)])
-  if workers_per_resource: args.extend(['--workers-per-resource', str(workers_per_resource) if not isinstance(workers_per_resource, str) else workers_per_resource])
+  if workers_per_resource:
+    args.extend([
+        '--workers-per-resource',
+        str(workers_per_resource) if not isinstance(workers_per_resource, str) else workers_per_resource
+    ])
   if device and not os.environ.get('CUDA_VISIBLE_DEVICES'): args.extend(['--device', ','.join(device)])
   if quantize: args.extend(['--quantize', str(quantize)])
   if cors: args.append('--cors')
-  if adapter_map: args.extend(list(itertools.chain.from_iterable([['--adapter-id', f"{k}{':'+v if v else ''}"] for k, v in adapter_map.items()])))
+  if adapter_map:
+    args.extend(
+        list(
+            itertools.chain.from_iterable([['--adapter-id', f"{k}{':'+v if v else ''}"] for k, v in adapter_map.items()
+                                          ])))
   if additional_args: args.extend(additional_args)
   if __test__: args.append('--return-process')
 
-  return start_command_factory(start_command if not _serve_grpc else start_grpc_command, model_name, _context_settings=termui.CONTEXT_SETTINGS, _serve_grpc=_serve_grpc).main(
-      args=args if len(args) > 0 else None, standalone_mode=False
-  )
+  return start_command_factory(start_command if not _serve_grpc else start_grpc_command,
+                               model_name,
+                               _context_settings=termui.CONTEXT_SETTINGS,
+                               _serve_grpc=_serve_grpc).main(args=args if len(args) > 0 else None,
+                                                             standalone_mode=False)
 
 @inject
 def _build(
@@ -203,21 +213,21 @@ def _build(
     raise OpenLLMException(str(e)) from None
   matched = re.match(r'__tag__:([^:\n]+:[^:\n]+)$', output.decode('utf-8').strip())
   if matched is None:
-    raise ValueError(f"Failed to find tag from output: {output.decode('utf-8').strip()}\nNote: Output from 'openllm build' might not be correct. Please open an issue on GitHub.")
+    raise ValueError(
+        f"Failed to find tag from output: {output.decode('utf-8').strip()}\nNote: Output from 'openllm build' might not be correct. Please open an issue on GitHub."
+    )
   return bentoml.get(matched.group(1), _bento_store=bento_store)
 
-def _import_model(
-    model_name: str,
-    /,
-    *,
-    model_id: str | None = None,
-    model_version: str | None = None,
-    runtime: t.Literal['ggml', 'transformers'] = 'transformers',
-    implementation: LiteralRuntime = 'pt',
-    quantize: t.Literal['int8', 'int4', 'gptq'] | None = None,
-    serialisation_format: t.Literal['legacy', 'safetensors'] = 'safetensors',
-    additional_args: t.Sequence[str] | None = None
-) -> bentoml.Model:
+def _import_model(model_name: str,
+                  /,
+                  *,
+                  model_id: str | None = None,
+                  model_version: str | None = None,
+                  runtime: t.Literal['ggml', 'transformers'] = 'transformers',
+                  implementation: LiteralRuntime = 'pt',
+                  quantize: t.Literal['int8', 'int4', 'gptq'] | None = None,
+                  serialisation_format: t.Literal['legacy', 'safetensors'] = 'safetensors',
+                  additional_args: t.Sequence[str] | None = None) -> bentoml.Model:
   """Import a LLM into local store.
 
   > [!NOTE]
@@ -249,7 +259,10 @@ def _import_model(
       ``bentoml.Model``:BentoModel of the given LLM. This can be used to serve the LLM or can be pushed to BentoCloud.
   """
   from .entrypoint import import_command
-  args = [model_name, '--runtime', runtime, '--implementation', implementation, '--machine', '--serialisation', serialisation_format,]
+  args = [
+      model_name, '--runtime', runtime, '--implementation', implementation, '--machine', '--serialisation',
+      serialisation_format,
+  ]
   if model_id is not None: args.append(model_id)
   if model_version is not None: args.extend(['--model-version', str(model_version)])
   if additional_args is not None: args.extend(additional_args)
@@ -260,5 +273,9 @@ def _list_models() -> dict[str, t.Any]:
   '''List all available models within the local store.'''
   from .entrypoint import models_command
   return models_command.main(args=['-o', 'json', '--show-available', '--machine'], standalone_mode=False)
-start, start_grpc, build, import_model, list_models = openllm_core.utils.codegen.gen_sdk(_start, _serve_grpc=False), openllm_core.utils.codegen.gen_sdk(_start, _serve_grpc=True), openllm_core.utils.codegen.gen_sdk(_build), openllm_core.utils.codegen.gen_sdk(_import_model), openllm_core.utils.codegen.gen_sdk(_list_models)
+
+start, start_grpc, build, import_model, list_models = openllm_core.utils.codegen.gen_sdk(
+    _start, _serve_grpc=False), openllm_core.utils.codegen.gen_sdk(
+        _start, _serve_grpc=True), openllm_core.utils.codegen.gen_sdk(_build), openllm_core.utils.codegen.gen_sdk(
+            _import_model), openllm_core.utils.codegen.gen_sdk(_list_models)
 __all__ = ['start', 'start_grpc', 'build', 'import_model', 'list_models']

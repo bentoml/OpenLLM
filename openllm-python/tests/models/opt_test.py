@@ -16,8 +16,11 @@ model = 'opt'
 model_id = 'facebook/opt-125m'
 
 @pytest.fixture(scope='module')
-def opt_125m_handle(handler: HandleProtocol, deployment_mode: t.Literal['container', 'local'], clean_context: contextlib.ExitStack,):
-  with openllm.testing.prepare(model, model_id=model_id, deployment_mode=deployment_mode, clean_context=clean_context) as image_tag:
+def opt_125m_handle(handler: HandleProtocol, deployment_mode: t.Literal['container', 'local'],
+                    clean_context: contextlib.ExitStack,
+                   ):
+  with openllm.testing.prepare(model, model_id=model_id, deployment_mode=deployment_mode,
+                               clean_context=clean_context) as image_tag:
     with handler(model=model, model_id=model_id, image_tag=image_tag) as handle:
       yield handle
 

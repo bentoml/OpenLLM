@@ -23,16 +23,6 @@ repos:
       - id: ruff
         verbose: true
         args: [--exit-non-zero-on-fix, --show-fixes]
-  - repo: https://github.com/editorconfig-checker/editorconfig-checker.python
-    rev: '2.7.2'
-    hooks:
-      - id: editorconfig-checker
-        verbose: true
-        exclude: |
-          (?x)^(
-              openllm-client/src/openllm_client/pb.*|
-              openllm-python/src/openllm/cli/entrypoint.py
-          )$
   - repo: https://github.com/econchick/interrogate
     rev: 1.5.0
     hooks:

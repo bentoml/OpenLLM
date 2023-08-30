@@ -42,7 +42,8 @@ If a question does not make any sense, or is not factually coherent, explain why
 '''
 SINST_KEY, EINST_KEY, SYS_KEY, EOS_TOKEN, BOS_TOKEN = '[INST]', '[/INST]', '<<SYS>>', '</s>', '<s>'
 # TODO: support history and v1 prompt implementation
-_v1_prompt, _v2_prompt = '''{instruction}''', '''{start_key} {sys_key}\n{system_message}\n{sys_key}\n\n{instruction}\n{end_key} '''.format(start_key=SINST_KEY, sys_key=SYS_KEY, system_message=SYSTEM_MESSAGE, instruction='{instruction}', end_key=EINST_KEY)
+_v1_prompt, _v2_prompt = '''{instruction}''', '''{start_key} {sys_key}\n{system_message}\n{sys_key}\n\n{instruction}\n{end_key} '''.format(
+    start_key=SINST_KEY, sys_key=SYS_KEY, system_message=SYSTEM_MESSAGE, instruction='{instruction}', end_key=EINST_KEY)
 PROMPT_MAPPING = {'v1': _v1_prompt, 'v2': _v2_prompt}
 
 def _get_prompt(model_type: t.Literal['v1', 'v2']) -> str:
@@ -62,40 +63,38 @@ class LlamaConfig(openllm_core.LLMConfig):
   Refer to [Llama's model card](https://huggingface.co/docs/transformers/main/model_doc/llama)
   for more information.
   """
-  use_llama2_prompt: bool = dantic.Field(False, description='Whether to use the prompt format for Llama 2. Disable this when working with Llama 1.')
+  use_llama2_prompt: bool = dantic.Field(
+      False, description='Whether to use the prompt format for Llama 2. Disable this when working with Llama 1.')
   __config__ = {
-      'name_type': 'lowercase',
-      'url': 'https://github.com/facebookresearch/llama',
+      'name_type':
+          'lowercase',
+      'url':
+          'https://github.com/facebookresearch/llama',
       'default_implementation': {
-          'cpu': 'pt', 'nvidia.com/gpu': 'pt'
+          'cpu': 'pt',
+          'nvidia.com/gpu': 'pt'
       },
-      'architecture': 'LlamaForCausalLM',
+      'architecture':
+          'LlamaForCausalLM',
       'requirements': ['fairscale', 'sentencepiece'],
-      'tokenizer_class': 'LlamaTokenizerFast',
-      'default_id': 'NousResearch/llama-2-7b-hf',
-      'model_ids': [
-          'meta-llama/Llama-2-70b-chat-hf',
-          'meta-llama/Llama-2-13b-chat-hf',
-          'meta-llama/Llama-2-7b-chat-hf',
-          'meta-llama/Llama-2-70b-hf',
-          'meta-llama/Llama-2-13b-hf',
-          'meta-llama/Llama-2-7b-hf',
-          'NousResearch/llama-2-70b-chat-hf',
-          'NousResearch/llama-2-13b-chat-hf',
-          'NousResearch/llama-2-7b-chat-hf',
-          'NousResearch/llama-2-70b-hf',
-          'NousResearch/llama-2-13b-hf',
+      'tokenizer_class':
+          'LlamaTokenizerFast',
+      'default_id':
           'NousResearch/llama-2-7b-hf',
-          'openlm-research/open_llama_7b_v2',
-          'openlm-research/open_llama_3b_v2',
-          'openlm-research/open_llama_13b',
-          'huggyllama/llama-65b',
-          'huggyllama/llama-30b',
-          'huggyllama/llama-13b',
-          'huggyllama/llama-7b'
+      'model_ids': [
+          'meta-llama/Llama-2-70b-chat-hf', 'meta-llama/Llama-2-13b-chat-hf', 'meta-llama/Llama-2-7b-chat-hf',
+          'meta-llama/Llama-2-70b-hf', 'meta-llama/Llama-2-13b-hf', 'meta-llama/Llama-2-7b-hf',
+          'NousResearch/llama-2-70b-chat-hf', 'NousResearch/llama-2-13b-chat-hf', 'NousResearch/llama-2-7b-chat-hf',
+          'NousResearch/llama-2-70b-hf', 'NousResearch/llama-2-13b-hf', 'NousResearch/llama-2-7b-hf',
+          'openlm-research/open_llama_7b_v2', 'openlm-research/open_llama_3b_v2', 'openlm-research/open_llama_13b',
+          'huggyllama/llama-65b', 'huggyllama/llama-30b', 'huggyllama/llama-13b', 'huggyllama/llama-7b'
       ],
       'fine_tune_strategies': ({
-          'adapter_type': 'lora', 'r': 64, 'lora_alpha': 16, 'lora_dropout': 0.1, 'bias': 'none'
+          'adapter_type': 'lora',
+          'r': 64,
+          'lora_alpha': 16,
+          'lora_dropout': 0.1,
+          'bias': 'none'
       },)
   }
 
@@ -109,20 +108,24 @@ class LlamaConfig(openllm_core.LLMConfig):
     best_of: int = 1
     presence_penalty: float = 0.5
 
-  def sanitize_parameters(
-      self,
-      prompt: str,
-      top_k: int | None = None,
-      top_p: float | None = None,
-      temperature: float | None = None,
-      max_new_tokens: int | None = None,
-      use_default_prompt_template: bool = False,
-      use_llama2_prompt: bool = True,
-      **attrs: t.Any
-  ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
-    return process_prompt(prompt, DEFAULT_PROMPT_TEMPLATE('v2' if use_llama2_prompt else 'v1') if use_default_prompt_template else None, use_default_prompt_template, **attrs), {
-        'max_new_tokens': max_new_tokens, 'temperature': temperature, 'top_p': top_p, 'top_k': top_k
-    }, {}
+  def sanitize_parameters(self,
+                          prompt: str,
+                          top_k: int | None = None,
+                          top_p: float | None = None,
+                          temperature: float | None = None,
+                          max_new_tokens: int | None = None,
+                          use_default_prompt_template: bool = False,
+                          use_llama2_prompt: bool = True,
+                          **attrs: t.Any) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
+    return process_prompt(
+        prompt,
+        DEFAULT_PROMPT_TEMPLATE('v2' if use_llama2_prompt else 'v1') if use_default_prompt_template else None,
+        use_default_prompt_template, **attrs), {
+            'max_new_tokens': max_new_tokens,
+            'temperature': temperature,
+            'top_p': top_p,
+            'top_k': top_k
+        }, {}
 
   def postprocess_generate(self, prompt: str, generation_result: list[str], **_: t.Any) -> str:
     return generation_result[0]

@@ -24,11 +24,14 @@ if t.TYPE_CHECKING:
   ConfigItemsView = _odict_items[str, type[openllm_core.LLMConfig]]
 
 # NOTE: This is the entrypoint when adding new model config
-CONFIG_MAPPING_NAMES = OrderedDict([('chatglm', 'ChatGLMConfig'), ('dolly_v2', 'DollyV2Config'), ('falcon', 'FalconConfig'), ('flan_t5', 'FlanT5Config'), ('gpt_neox', 'GPTNeoXConfig'), (
-    'llama', 'LlamaConfig'
-), ('mpt', 'MPTConfig'), ('opt', 'OPTConfig'), ('stablelm', 'StableLMConfig'), ('starcoder', 'StarCoderConfig'), ('baichuan', 'BaichuanConfig')])
+CONFIG_MAPPING_NAMES = OrderedDict([('chatglm', 'ChatGLMConfig'), ('dolly_v2', 'DollyV2Config'),
+                                    ('falcon', 'FalconConfig'), ('flan_t5', 'FlanT5Config'),
+                                    ('gpt_neox', 'GPTNeoXConfig'), ('llama', 'LlamaConfig'), ('mpt', 'MPTConfig'),
+                                    ('opt', 'OPTConfig'), ('stablelm', 'StableLMConfig'),
+                                    ('starcoder', 'StarCoderConfig'), ('baichuan', 'BaichuanConfig')])
 
 class _LazyConfigMapping(OrderedDict, ReprMixin):
+
   def __init__(self, mapping: OrderedDict[LiteralString, LiteralString]):
     self._mapping = mapping
     self._extra_content: dict[str, t.Any] = {}
@@ -76,21 +79,32 @@ class _LazyConfigMapping(OrderedDict, ReprMixin):
 
 CONFIG_MAPPING: dict[str, type[openllm_core.LLMConfig]] = _LazyConfigMapping(CONFIG_MAPPING_NAMES)
 # The below handle special alias when we call underscore to the name directly without processing camelcase first.
-CONFIG_NAME_ALIASES: dict[str, str] = {'chat_glm': 'chatglm', 'stable_lm': 'stablelm', 'star_coder': 'starcoder', 'gpt_neo_x': 'gpt_neox',}
+CONFIG_NAME_ALIASES: dict[str, str] = {
+    'chat_glm': 'chatglm',
+    'stable_lm': 'stablelm',
+    'star_coder': 'starcoder',
+    'gpt_neo_x': 'gpt_neox',
+}
 
 class AutoConfig:
+
   def __init__(self, *_: t.Any, **__: t.Any):
-    raise EnvironmentError('Cannot instantiate AutoConfig directly. Please use `AutoConfig.for_model(model_name)` instead.')
+    raise EnvironmentError(
+        'Cannot instantiate AutoConfig directly. Please use `AutoConfig.for_model(model_name)` instead.')
 
   @classmethod
   def for_model(cls, model_name: str, **attrs: t.Any) -> openllm_core.LLMConfig:
     model_name = inflection.underscore(model_name)
     if model_name in CONFIG_MAPPING: return CONFIG_MAPPING[model_name].model_construct_env(**attrs)
-    raise ValueError(f"Unrecognized configuration class for {model_name}. Model name should be one of {', '.join(CONFIG_MAPPING.keys())}.")
+    raise ValueError(
+        f"Unrecognized configuration class for {model_name}. Model name should be one of {', '.join(CONFIG_MAPPING.keys())}."
+    )
 
   @classmethod
   def infer_class_from_name(cls, name: str) -> type[openllm_core.LLMConfig]:
     model_name = inflection.underscore(name)
     if model_name in CONFIG_NAME_ALIASES: model_name = CONFIG_NAME_ALIASES[model_name]
     if model_name in CONFIG_MAPPING: return CONFIG_MAPPING[model_name]
-    raise ValueError(f"Unrecognized configuration class for {model_name}. Model name should be one of {', '.join(CONFIG_MAPPING.keys())}.")
+    raise ValueError(
+        f"Unrecognized configuration class for {model_name}. Model name should be one of {', '.join(CONFIG_MAPPING.keys())}."
+    )

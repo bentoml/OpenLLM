@@ -26,11 +26,14 @@ else:
   # configuration for bitsandbytes before import
   _os.environ["BITSANDBYTES_NOWELCOME"] = _os.environ.get("BITSANDBYTES_NOWELCOME", "1")
   # NOTE: The following warnings from bitsandbytes, and probably not that important for users to see when DEBUG is False
-  _warnings.filterwarnings("ignore", message="MatMul8bitLt: inputs will be cast from torch.float32 to float16 during quantization")
-  _warnings.filterwarnings("ignore", message="MatMul8bitLt: inputs will be cast from torch.bfloat16 to float16 during quantization")
+  _warnings.filterwarnings(
+      "ignore", message="MatMul8bitLt: inputs will be cast from torch.float32 to float16 during quantization")
+  _warnings.filterwarnings(
+      "ignore", message="MatMul8bitLt: inputs will be cast from torch.bfloat16 to float16 during quantization")
   _warnings.filterwarnings("ignore", message="The installed version of bitsandbytes was compiled without GPU support.")
   # NOTE: ignore the following warning from ghapi as it is not important for users
-  _warnings.filterwarnings("ignore", message="Neither GITHUB_TOKEN nor GITHUB_JWT_TOKEN found: running as unauthenticated")
+  _warnings.filterwarnings("ignore",
+                           message="Neither GITHUB_TOKEN nor GITHUB_JWT_TOKEN found: running as unauthenticated")
 
 _import_structure: dict[str, list[str]] = {
     "exceptions": [],
@@ -73,7 +76,8 @@ if _t.TYPE_CHECKING:
   from .utils import infer_auto_class as infer_auto_class
 
 try:
-  if not (openllm_core.utils.is_torch_available() and openllm_core.utils.is_cpm_kernels_available()): raise exceptions.MissingDependencyError
+  if not (openllm_core.utils.is_torch_available() and openllm_core.utils.is_cpm_kernels_available()):
+    raise exceptions.MissingDependencyError
 except exceptions.MissingDependencyError:
   _import_structure["utils.dummy_pt_objects"] = ["ChatGLM", "Baichuan"]
 else:
@@ -83,7 +87,8 @@ else:
     from .models.baichuan import Baichuan as Baichuan
     from .models.chatglm import ChatGLM as ChatGLM
 try:
-  if not (openllm_core.utils.is_torch_available() and openllm_core.utils.is_triton_available()): raise exceptions.MissingDependencyError
+  if not (openllm_core.utils.is_torch_available() and openllm_core.utils.is_triton_available()):
+    raise exceptions.MissingDependencyError
 except exceptions.MissingDependencyError:
   if "utils.dummy_pt_objects" in _import_structure: _import_structure["utils.dummy_pt_objects"].extend(["MPT"])
   else: _import_structure["utils.dummy_pt_objects"] = ["MPT"]
@@ -91,7 +96,8 @@ else:
   _import_structure["models.mpt"].extend(["MPT"])
   if _t.TYPE_CHECKING: from .models.mpt import MPT as MPT
 try:
-  if not (openllm_core.utils.is_torch_available() and openllm_core.utils.is_einops_available()): raise exceptions.MissingDependencyError
+  if not (openllm_core.utils.is_torch_available() and openllm_core.utils.is_einops_available()):
+    raise exceptions.MissingDependencyError
 except exceptions.MissingDependencyError:
   if "utils.dummy_pt_objects" in _import_structure: _import_structure["utils.dummy_pt_objects"].extend(["Falcon"])
   else: _import_structure["utils.dummy_pt_objects"] = ["Falcon"]
@@ -103,7 +109,8 @@ try:
   if not openllm_core.utils.is_torch_available(): raise exceptions.MissingDependencyError
 except exceptions.MissingDependencyError:
   _import_structure["utils.dummy_pt_objects"] = [
-      name for name in dir(utils.dummy_pt_objects) if not name.startswith("_") and name not in ("ChatGLM", "Baichuan", "MPT", "Falcon", "annotations")
+      name for name in dir(utils.dummy_pt_objects)
+      if not name.startswith("_") and name not in ("ChatGLM", "Baichuan", "MPT", "Falcon", "annotations")
   ]
 else:
   _import_structure["models.flan_t5"].extend(["FlanT5"])
@@ -126,7 +133,9 @@ else:
 try:
   if not openllm_core.utils.is_vllm_available(): raise exceptions.MissingDependencyError
 except exceptions.MissingDependencyError:
-  _import_structure["utils.dummy_vllm_objects"] = [name for name in dir(utils.dummy_vllm_objects) if not name.startswith("_") and name not in ("annotations",)]
+  _import_structure["utils.dummy_vllm_objects"] = [
+      name for name in dir(utils.dummy_vllm_objects) if not name.startswith("_") and name not in ("annotations",)
+  ]
 else:
   _import_structure["models.baichuan"].extend(["VLLMBaichuan"])
   _import_structure["models.llama"].extend(["VLLMLlama"])
@@ -152,7 +161,9 @@ else:
 try:
   if not openllm_core.utils.is_flax_available(): raise exceptions.MissingDependencyError
 except exceptions.MissingDependencyError:
-  _import_structure["utils.dummy_flax_objects"] = [name for name in dir(utils.dummy_flax_objects) if not name.startswith("_") and name not in ("annotations",)]
+  _import_structure["utils.dummy_flax_objects"] = [
+      name for name in dir(utils.dummy_flax_objects) if not name.startswith("_") and name not in ("annotations",)
+  ]
 else:
   _import_structure["models.flan_t5"].extend(["FlaxFlanT5"])
   _import_structure["models.opt"].extend(["FlaxOPT"])
@@ -164,7 +175,9 @@ else:
 try:
   if not openllm_core.utils.is_tf_available(): raise exceptions.MissingDependencyError
 except exceptions.MissingDependencyError:
-  _import_structure["utils.dummy_tf_objects"] = [name for name in dir(utils.dummy_tf_objects) if not name.startswith("_") and name not in ("annotations",)]
+  _import_structure["utils.dummy_tf_objects"] = [
+      name for name in dir(utils.dummy_tf_objects) if not name.startswith("_") and name not in ("annotations",)
+  ]
 else:
   _import_structure["models.flan_t5"].extend(["TFFlanT5"])
   _import_structure["models.opt"].extend(["TFOPT"])

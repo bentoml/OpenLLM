@@ -16,19 +16,32 @@ env_strats = st.sampled_from([openllm.utils.EnvVarMixin(model_name) for model_na
 def model_settings(draw: st.DrawFn):
   '''Strategy for generating ModelSettings objects.'''
   kwargs: dict[str, t.Any] = {
-      'default_id': st.text(min_size=1),
-      'model_ids': st.lists(st.text(), min_size=1),
-      'architecture': st.text(min_size=1),
-      'url': st.text(),
-      'requires_gpu': st.booleans(),
-      'trust_remote_code': st.booleans(),
-      'requirements': st.none() | st.lists(st.text(), min_size=1),
-      'default_implementation': st.dictionaries(st.sampled_from(['cpu', 'nvidia.com/gpu']), st.sampled_from(['vllm', 'pt', 'tf', 'flax'])),
-      'model_type': st.sampled_from(['causal_lm', 'seq2seq_lm']),
-      'runtime': st.sampled_from(['transformers', 'ggml']),
-      'name_type': st.sampled_from(['dasherize', 'lowercase']),
-      'timeout': st.integers(min_value=3600),
-      'workers_per_resource': st.one_of(st.integers(min_value=1), st.floats(min_value=0.1, max_value=1.0)),
+      'default_id':
+          st.text(min_size=1),
+      'model_ids':
+          st.lists(st.text(), min_size=1),
+      'architecture':
+          st.text(min_size=1),
+      'url':
+          st.text(),
+      'requires_gpu':
+          st.booleans(),
+      'trust_remote_code':
+          st.booleans(),
+      'requirements':
+          st.none() | st.lists(st.text(), min_size=1),
+      'default_implementation':
+          st.dictionaries(st.sampled_from(['cpu', 'nvidia.com/gpu']), st.sampled_from(['vllm', 'pt', 'tf', 'flax'])),
+      'model_type':
+          st.sampled_from(['causal_lm', 'seq2seq_lm']),
+      'runtime':
+          st.sampled_from(['transformers', 'ggml']),
+      'name_type':
+          st.sampled_from(['dasherize', 'lowercase']),
+      'timeout':
+          st.integers(min_value=3600),
+      'workers_per_resource':
+          st.one_of(st.integers(min_value=1), st.floats(min_value=0.1, max_value=1.0)),
   }
   return draw(st.builds(ModelSettings, **kwargs))
 
