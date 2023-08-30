@@ -1,6 +1,8 @@
-from typing import Any, TextIO
+from typing import Any
+from typing import TextIO
 
 from nbformat.notebooknode import NotebookNode
+
 def rejoin_lines(nb: NotebookNode) -> Any: ...
 def split_lines(nb: NotebookNode) -> Any: ...
 def strip_transient(nb: NotebookNode) -> Any: ...

@@ -2,10 +2,14 @@ from __future__ import annotations
 import typing as t
 
 import attr
+
 from huggingface_hub import HfApi
+
 if t.TYPE_CHECKING:
   import openllm
-  from openllm_core._typing_compat import M, T
+
+  from openllm_core._typing_compat import M
+  from openllm_core._typing_compat import T
 
 def has_safetensors_weights(model_id: str, revision: str | None = None) -> bool:
   return any(s.rfilename.endswith('.safetensors') for s in HfApi().model_info(model_id, revision=revision).siblings)

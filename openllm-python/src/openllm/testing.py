@@ -8,7 +8,9 @@ import typing as t
 
 import bentoml
 import openllm
-if t.TYPE_CHECKING: from ._typing_compat import LiteralRuntime
+
+if t.TYPE_CHECKING:
+  from openllm_core._typing_compat import LiteralRuntime
 
 logger = logging.getLogger(__name__)
 

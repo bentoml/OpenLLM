@@ -1,11 +1,11 @@
 import sys
-from typing import (
-    Any,
-    Callable as CallableType,
-    Dict,
-    Tuple,
-    Union,
-)
+
+from typing import Any
+from typing import Callable as CallableType
+from typing import Dict
+from typing import Tuple
+from typing import Union
+
 if sys.version_info[:2] >= (3, 10):
   from typing import TypeAlias
 else:
@@ -14,7 +14,10 @@ else:
 
 from _typeshed import Incomplete
 
-from . import _VT, Provider, _SentinelClass
+from . import _VT
+from . import Provider
+from . import _SentinelClass
+
 class Placeholder(Provider[_VT]): ...
 
 class Static(Provider[_VT]):

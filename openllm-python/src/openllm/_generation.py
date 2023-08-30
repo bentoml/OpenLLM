@@ -3,7 +3,11 @@ from __future__ import annotations
 import typing as t
 
 import transformers
-if t.TYPE_CHECKING: import torch, openllm
+
+if t.TYPE_CHECKING:
+  import torch
+
+  import openllm
 
 # reexport from transformers
 LogitsProcessorList = transformers.LogitsProcessorList

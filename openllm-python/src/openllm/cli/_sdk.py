@@ -7,20 +7,27 @@ import subprocess
 import sys
 import typing as t
 
-from simple_di import Provide, inject
+from simple_di import Provide
+from simple_di import inject
 
 import bentoml
 import openllm
 import openllm_core
+
 from bentoml._internal.configuration.containers import BentoMLContainer
 from openllm.exceptions import OpenLLMException
 
 from . import termui
 from ._factory import start_command_factory
+
 if t.TYPE_CHECKING:
   from bentoml._internal.bento import BentoStore
   from openllm_core._configuration import LLMConfig
-  from openllm_core._typing_compat import LiteralContainerRegistry, LiteralContainerVersionStrategy, LiteralRuntime, LiteralString
+  from openllm_core._typing_compat import LiteralContainerRegistry
+  from openllm_core._typing_compat import LiteralContainerVersionStrategy
+  from openllm_core._typing_compat import LiteralRuntime
+  from openllm_core._typing_compat import LiteralString
+
 logger = logging.getLogger(__name__)
 
 def _start(
@@ -81,7 +88,8 @@ def _start(
       framework: The framework to use for this LLM. By default, this is set to ``pt``.
       additional_args: Additional arguments to pass to ``openllm start``.
   """
-  from .entrypoint import start_command, start_grpc_command
+  from .entrypoint import start_command
+  from .entrypoint import start_grpc_command
   llm_config = openllm.AutoConfig.for_model(model_name)
   _ModelEnv = openllm_core.utils.EnvVarMixin(
       model_name,

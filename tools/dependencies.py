@@ -8,6 +8,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, 'openllm-python', 'src'))
 
 import openllm
+
 _OWNER, _REPO = 'bentoml', 'openllm'
 
 @dataclasses.dataclass(frozen=True)

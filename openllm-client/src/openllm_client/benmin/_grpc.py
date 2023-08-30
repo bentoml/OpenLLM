@@ -6,21 +6,31 @@ import time
 import typing as t
 
 import bentoml
+
 from bentoml._internal.service.inference_api import InferenceAPI
-from bentoml.grpc.utils import import_generated_stubs, load_from_file
-from openllm_client.benmin import AsyncClient, Client
-from openllm_core._typing_compat import NotRequired, overload
-from openllm_core.utils import ensure_exec_coro, is_grpc_available, is_grpc_health_available
+from bentoml.grpc.utils import import_generated_stubs
+from bentoml.grpc.utils import load_from_file
+from openllm_client.benmin import AsyncClient
+from openllm_client.benmin import Client
+from openllm_core._typing_compat import NotRequired
+from openllm_core._typing_compat import overload
+from openllm_core.utils import ensure_exec_coro
+from openllm_core.utils import is_grpc_available
+from openllm_core.utils import is_grpc_health_available
+
 if not is_grpc_available() or not is_grpc_health_available(): raise ImportError("gRPC is required to use gRPC client. Install with 'pip install \"openllm-client[grpc]\"'.")
 import grpc
 import grpc_health.v1.health_pb2 as pb_health
 import grpc_health.v1.health_pb2_grpc as services_health
+
 from google.protobuf import json_format
 from grpc import aio
+
 pb, services = import_generated_stubs('v1')
 
 if t.TYPE_CHECKING:
   from bentoml.grpc.v1.service_pb2 import ServiceMetadataResponse
+
 logger = logging.getLogger(__name__)
 
 class ClientCredentials(t.TypedDict):

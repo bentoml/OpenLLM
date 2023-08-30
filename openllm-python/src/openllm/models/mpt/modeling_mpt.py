@@ -4,8 +4,11 @@ import typing as t
 
 import bentoml
 import openllm
-from openllm.utils import generate_labels, is_triton_available
-if t.TYPE_CHECKING: import transformers, torch
+from openllm.utils import generate_labels
+from openllm.utils import is_triton_available
+if t.TYPE_CHECKING:
+  import torch
+  import transformers
 
 logger = logging.getLogger(__name__)
 

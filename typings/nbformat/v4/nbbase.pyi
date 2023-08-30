@@ -2,6 +2,7 @@ from typing import Any
 
 from _typeshed import Incomplete
 from nbformat.notebooknode import NotebookNode as NotebookNode
+
 nbformat: int
 nbformat_minor: int
 nbformat_schema: Incomplete

@@ -6,10 +6,13 @@ import typing as t
 import attr
 import inflection
 
-from openllm_core._configuration import GenerationConfig, LLMConfig
+from openllm_core._configuration import GenerationConfig
+from openllm_core._configuration import LLMConfig
 
 from .utils import bentoml_cattr
-if t.TYPE_CHECKING: import vllm
+
+if t.TYPE_CHECKING:
+  import vllm
 
 @attr.frozen(slots=True)
 class GenerationInput:

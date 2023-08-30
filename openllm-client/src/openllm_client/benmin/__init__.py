@@ -13,13 +13,16 @@ via `client.call` or `await client.call`.
 """
 from __future__ import annotations
 import typing as t
+
 from abc import abstractmethod
 
 import attr
 import httpx
 
 import bentoml
-if t.TYPE_CHECKING: from bentoml._internal.service.inference_api import InferenceAPI
+
+if t.TYPE_CHECKING:
+  from bentoml._internal.service.inference_api import InferenceAPI
 
 __all__ = ['Client', 'AsyncClient']
 

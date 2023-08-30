@@ -47,24 +47,50 @@ import click_option_group as cog
 import inflection
 import orjson
 
-# NOTE: Using internal API from attr here, since we are actually allowing subclass of openllm_core.LLMConfig to become 'attrs'-ish
 from attr._compat import set_closure_cell
-from attr._make import _CountingAttr, _make_init, _transform_attrs
-from cattr.gen import make_dict_structure_fn, make_dict_unstructure_fn, override
+from attr._make import _CountingAttr
+from attr._make import _make_init
+from attr._make import _transform_attrs
+from cattr.gen import make_dict_structure_fn
+from cattr.gen import make_dict_unstructure_fn
+from cattr.gen import override
 from deepmerge.merger import Merger
 
 import openllm_core
 
-from ._strategies import LiteralResourceSpec, available_resource_spec, resource_spec
-from ._typing_compat import AdapterType, AnyCallable, At, DictStrAny, ListStr, LiteralRuntime, LiteralString, NotRequired, Required, Self, overload
+from ._strategies import LiteralResourceSpec
+from ._strategies import available_resource_spec
+from ._strategies import resource_spec
+from ._typing_compat import AdapterType
+from ._typing_compat import AnyCallable
+from ._typing_compat import At
+from ._typing_compat import DictStrAny
+from ._typing_compat import ListStr
+from ._typing_compat import LiteralRuntime
+from ._typing_compat import LiteralString
+from ._typing_compat import NotRequired
+from ._typing_compat import Required
+from ._typing_compat import Self
+from ._typing_compat import overload
 from .exceptions import ForbiddenAttributeError
-from .utils import ENV_VARS_TRUE_VALUES, MYPY, LazyLoader, ReprMixin, bentoml_cattr, codegen, dantic, field_env_key, first_not_none, lenient_issubclass
+from .utils import ENV_VARS_TRUE_VALUES
+from .utils import MYPY
+from .utils import LazyLoader
+from .utils import ReprMixin
+from .utils import bentoml_cattr
+from .utils import codegen
+from .utils import dantic
+from .utils import field_env_key
+from .utils import first_not_none
+from .utils import lenient_issubclass
 from .utils.import_utils import BACKENDS_MAPPING
+
 if t.TYPE_CHECKING:
   import click
   import peft
   import transformers
   import vllm
+
   from transformers.generation.beam_constraints import Constraint
 else:
   Constraint = t.Any
@@ -781,6 +807,7 @@ class _ConfigAttr:
     '''Optional tokenizer class for this given LLM. See Llama for example.'''
 
     # update-config-stubs.py: special stop
+
 class _ConfigBuilder:
   """A modified version of attrs internal _ClassBuilder, and should only be called within __init_subclass__ of LLMConfig.
 

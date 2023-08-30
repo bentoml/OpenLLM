@@ -1,10 +1,13 @@
-from typing import IO, Any
+from typing import IO
+from typing import Any
 
 from _typeshed import Incomplete
 from nbformat import NotebookNode
-from nbformat.v4.rwbase import NotebookReader, NotebookWriter
+from nbformat.v4.rwbase import NotebookReader
+from nbformat.v4.rwbase import NotebookWriter
 
 from .config import JupytextConfiguration
+
 class NotSupportedNBFormatVersion(NotImplementedError): ...
 
 class TextNotebookConverter(NotebookReader, NotebookWriter):

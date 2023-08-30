@@ -6,8 +6,11 @@ import typing as t
 import pytest
 
 import openllm
+
 from bentoml._internal.configuration.containers import BentoMLContainer
-if t.TYPE_CHECKING: from pathlib import Path
+
+if t.TYPE_CHECKING:
+  from pathlib import Path
 
 HF_INTERNAL_T5_TESTING = 'hf-internal-testing/tiny-random-t5'
 

@@ -30,12 +30,19 @@ import cloudpickle
 import fs
 
 import openllm
+
 from bentoml._internal.models.model import CUSTOM_OBJECTS_FILENAME
-from openllm_core._typing_compat import M, ParamSpec, T
+from openllm_core._typing_compat import M
+from openllm_core._typing_compat import ParamSpec
+from openllm_core._typing_compat import T
+
 if t.TYPE_CHECKING:
   import bentoml
 
-  from . import constants as constants, ggml as ggml, transformers as transformers
+  from . import constants as constants
+  from . import ggml as ggml
+  from . import transformers as transformers
+
 P = ParamSpec('P')
 
 def load_tokenizer(llm: openllm.LLM[t.Any, T], **tokenizer_attrs: t.Any) -> T:
@@ -44,7 +51,8 @@ def load_tokenizer(llm: openllm.LLM[t.Any, T], **tokenizer_attrs: t.Any) -> T:
   By default, it will try to find the bentomodel whether it is in store..
   If model is not found, it will raises a ``bentoml.exceptions.NotFound``.
   '''
-  from .transformers._helpers import infer_tokenizers_from_llm, process_config
+  from .transformers._helpers import infer_tokenizers_from_llm
+  from .transformers._helpers import process_config
 
   config, *_ = process_config(llm._bentomodel.path, llm.__llm_trust_remote_code__)
   bentomodel_fs = fs.open_fs(llm._bentomodel.path)

@@ -6,7 +6,9 @@ import logging
 import sys
 import time
 import typing as t
-from abc import ABC, abstractmethod
+
+from abc import ABC
+from abc import abstractmethod
 
 import attr
 import docker
@@ -14,18 +16,25 @@ import docker.errors
 import docker.types
 import orjson
 import pytest
+
 from syrupy.extensions.json import JSONSnapshotExtension
 
 import openllm
+
 from openllm._llm import normalise_model_name
-from openllm_core._typing_compat import DictStrAny, ListAny
+from openllm_core._typing_compat import DictStrAny
+from openllm_core._typing_compat import ListAny
+
 logger = logging.getLogger(__name__)
 
 if t.TYPE_CHECKING:
   import subprocess
 
   from syrupy.assertion import SnapshotAssertion
-  from syrupy.types import PropertyFilter, PropertyMatcher, SerializableData, SerializedData
+  from syrupy.types import PropertyFilter
+  from syrupy.types import PropertyMatcher
+  from syrupy.types import SerializableData
+  from syrupy.types import SerializedData
 
   from openllm._configuration import GenerationConfig
   from openllm.client import BaseAsyncClient

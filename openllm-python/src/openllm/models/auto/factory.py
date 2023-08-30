@@ -12,11 +12,14 @@ import openllm
 from openllm_core.utils import ReprMixin
 if t.TYPE_CHECKING:
   import types
-  from collections import _odict_items, _odict_keys, _odict_values
+  from collections import _odict_items
+  from collections import _odict_keys
+  from collections import _odict_values
 
   from _typeshed import SupportsIter
 
-  from openllm_core._typing_compat import LiteralString, LLMRunner
+  from openllm_core._typing_compat import LiteralString
+  from openllm_core._typing_compat import LLMRunner
   ConfigModelKeysView = _odict_keys[type[openllm.LLMConfig], type[openllm.LLM[t.Any, t.Any]]]
   ConfigModelValuesView = _odict_values[type[openllm.LLMConfig], type[openllm.LLM[t.Any, t.Any]]]
   ConfigModelItemsView = _odict_items[type[openllm.LLMConfig], type[openllm.LLM[t.Any, t.Any]]]

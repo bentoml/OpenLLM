@@ -1,9 +1,11 @@
 from collections.abc import Generator
-from typing import Any, Dict
+from typing import Any
+from typing import Dict
 
 from _typeshed import Incomplete
 
 from .formats import NOTEBOOK_EXTENSIONS as NOTEBOOK_EXTENSIONS
+
 class JupytextConfigurationError(ValueError): ...
 
 JUPYTEXT_CONFIG_FILES: Incomplete

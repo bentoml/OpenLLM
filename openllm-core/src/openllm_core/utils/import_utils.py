@@ -7,19 +7,25 @@ import importlib.util
 import logging
 import os
 import typing as t
+
 from collections import OrderedDict
 
 import inflection
 import packaging.version
 
 import openllm_core
-from bentoml._internal.utils import LazyLoader, pkg
-from openllm_core._typing_compat import LiteralString, overload
+
+from bentoml._internal.utils import LazyLoader
+from bentoml._internal.utils import pkg
+from openllm_core._typing_compat import LiteralString
+from openllm_core._typing_compat import overload
 
 from .representation import ReprMixin
+
 if t.TYPE_CHECKING:
   BackendOrderedDict = OrderedDict[str, t.Tuple[t.Callable[[], bool], str]]
   from openllm_core._typing_compat import LiteralRuntime
+
 logger = logging.getLogger(__name__)
 OPTIONAL_DEPENDENCIES = {'opt', 'flan-t5', 'vllm', 'fine-tune', 'ggml', 'agents', 'openai', 'playground', 'gptq', 'grpc'}
 ENV_VARS_TRUE_VALUES = {'1', 'ON', 'YES', 'TRUE'}
@@ -406,7 +412,7 @@ class EnvVarMixin(ReprMixin):
 
   def _framework_value(self) -> LiteralRuntime:
     from . import first_not_none
-    return t.cast(t.Literal['pt', 'tf', 'flax', 'vllm'], first_not_none(os.environ.get(self['framework']), default=self._implementation))
+    return t.cast(LiteralRuntime, first_not_none(os.environ.get(self['framework']), default=self._implementation))
 
   def _bettertransformer_value(self) -> bool:
     from . import first_not_none

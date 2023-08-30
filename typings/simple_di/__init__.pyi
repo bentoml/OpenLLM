@@ -1,6 +1,14 @@
-from typing import Any, Callable, Generator, Generic, Tuple, TypeVar, Union, overload
+from typing import Any
+from typing import Callable
+from typing import Generator
+from typing import Generic
+from typing import Tuple
+from typing import TypeVar
+from typing import Union
+from typing import overload
 
 from _typeshed import Incomplete
+
 class _SentinelClass: ...
 _VT = TypeVar('_VT')
 
