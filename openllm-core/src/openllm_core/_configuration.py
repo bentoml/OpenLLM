@@ -73,7 +73,6 @@ from ._typing_compat import Required
 from ._typing_compat import Self
 from ._typing_compat import overload
 from .exceptions import ForbiddenAttributeError
-from .utils import ENV_VARS_TRUE_VALUES
 from .utils import MYPY
 from .utils import LazyLoader
 from .utils import ReprMixin
@@ -478,7 +477,6 @@ class ModelSettings(t.TypedDict, total=False):
   requirements: t.Optional[ListStr]
 
   # llm implementation specifics
-  bettertransformer: bool
   model_type: t.Literal['causal_lm', 'seq2seq_lm']
   runtime: t.Literal['transformers', 'ggml']
 
@@ -565,7 +563,6 @@ class _ModelSettingsAttr:
     trust_remote_code: bool
     service_name: str
     requirements: t.Optional[ListStr]
-    bettertransformer: bool
     model_type: t.Literal['causal_lm', 'seq2seq_lm']
     runtime: t.Literal['transformers', 'ggml']
     name_type: t.Optional[t.Literal['dasherize', 'lowercase']]
@@ -610,13 +607,9 @@ def structure_settings(cl_: type[LLMConfig], cls: type[_ModelSettingsAttr]) -> _
     if not BACKENDS_MAPPING[library_stub][0](): default_implementation[rs] = 'pt'
   _final_value_dct['default_implementation'] = default_implementation
 
-  env = openllm_core.utils.EnvVarMixin(model_name, get_default_implementation(default_implementation), model_id=_settings_attr.default_id, bettertransformer=_settings_attr.bettertransformer)
+  env = openllm_core.utils.EnvVarMixin(model_name, get_default_implementation(default_implementation), model_id=_settings_attr.default_id)
   _final_value_dct['env'] = env
 
-  # bettertransformer support
-  if _settings_attr['bettertransformer'] is None: _final_value_dct['bettertransformer'] = str(env['bettertransformer_value']).upper() in ENV_VARS_TRUE_VALUES
-  # if requires_gpu is True, then disable BetterTransformer for quantization.
-  if _settings_attr['requires_gpu']: _final_value_dct['bettertransformer'] = False
   _final_value_dct['service_name'] = f'generated_{model_name}_service.py'
 
   # NOTE: The key for fine-tune strategies is 'fine_tune_strategies'
@@ -771,8 +764,6 @@ class _ConfigAttr:
     __openllm_requirements__: t.Optional[ListStr] = Field(None)
     '''The default PyPI requirements needed to run this given LLM. By default, we will depend on
         bentoml, torch, transformers.'''
-    __openllm_bettertransformer__: bool = Field(None)
-    '''Whether to use BetterTransformer for this given LLM. This depends per model architecture. By default, we will use BetterTransformer for T5 and StableLM models, and set to False for every other models.'''
     __openllm_model_type__: t.Literal['causal_lm', 'seq2seq_lm'] = Field(None)
     '''The model type for this given LLM. By default, it should be causal language modeling.
         Currently supported 'causal_lm' or 'seq2seq_lm'
@@ -1148,8 +1139,6 @@ class LLMConfig(_ConfigAttr):
   def __getitem__(self, item: t.Literal['service_name']) -> str: ...
   @overload
   def __getitem__(self, item: t.Literal['requirements']) -> t.Optional[ListStr]: ...
-  @overload
-  def __getitem__(self, item: t.Literal['bettertransformer']) -> bool: ...
   @overload
   def __getitem__(self, item: t.Literal['model_type']) -> t.Literal['causal_lm', 'seq2seq_lm']: ...
   @overload

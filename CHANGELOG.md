@@ -721,9 +721,6 @@ No significant changes.
   `openllm start` now support `--quantize int8` and `--quantize int4` `GPTQ`
   quantization support is on the roadmap and currently being worked on.
 
-  `openllm start` now also support `--bettertransformer` to use
-  `BetterTransformer` for serving.
-
   Refactored `openllm.LLMConfig` to be able to use with `__getitem__`:
   `openllm.DollyV2Config()['requirements']`.
 
@@ -731,8 +728,6 @@ No significant changes.
   `__openllm_*__ > self.<key> > __openllm_generation_class__ > __openllm_extras__`.
 
   Added `towncrier` workflow to easily generate changelog entries
-
-  Added `use_pipeline`, `bettertransformer` flag into ModelSettings
 
   `LLMConfig` now supported `__dataclass_transform__` protocol to help with
   type-checking

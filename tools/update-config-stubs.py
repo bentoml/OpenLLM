@@ -57,7 +57,6 @@ _value_docstring = {
     'service_name': """Generated service name for this LLMConfig. By default, it is 'generated_{model_name}_service.py'""",
     'requirements': '''The default PyPI requirements needed to run this given LLM. By default, we will depend on
         bentoml, torch, transformers.''',
-    'bettertransformer': '''Whether to use BetterTransformer for this given LLM. This depends per model architecture. By default, we will use BetterTransformer for T5 and StableLM models, and set to False for every other models.''',
     'model_type': '''The model type for this given LLM. By default, it should be causal language modeling.
         Currently supported 'causal_lm' or 'seq2seq_lm'
         ''',

@@ -94,9 +94,7 @@ from . import termui
 from ._factory import FC
 from ._factory import LiteralOutput
 from ._factory import _AnyCallable
-from ._factory import bettertransformer_option
 from ._factory import container_registry_option
-from ._factory import fast_option
 from ._factory import machine_option
 from ._factory import model_id_option
 from ._factory import model_name_argument
@@ -452,7 +450,6 @@ def import_command(
 @click.option('--device', type=dantic.CUDA, multiple=True, envvar='CUDA_VISIBLE_DEVICES', callback=parse_device_callback, help='Set the device', show_envvar=True)
 @cog.optgroup.group(cls=cog.MutuallyExclusiveOptionGroup, name='Optimisation options')
 @quantize_option(factory=cog.optgroup, build=True)
-@bettertransformer_option(factory=cog.optgroup)
 @click.option('--runtime', type=click.Choice(['ggml', 'transformers']), default='transformers', help='The runtime to use for the given model. Default is transformers.')
 @click.option(
     '--enable-features',
@@ -476,7 +473,6 @@ def import_command(
 @click.option(
     '--container-version-strategy', type=click.Choice(['release', 'latest', 'nightly']), default='release', help="Default container version strategy for the image from '--container-registry'"
 )
-@fast_option
 @cog.optgroup.group(cls=cog.MutuallyExclusiveOptionGroup, name='Utilities options')
 @cog.optgroup.option(
     '--containerize',
@@ -499,7 +495,6 @@ def build_command(
     runtime: t.Literal['ggml', 'transformers'],
     quantize: t.Literal['int8', 'int4', 'gptq'] | None,
     enable_features: tuple[str, ...] | None,
-    bettertransformer: bool | None,
     workers_per_resource: float | None,
     adapter_id: tuple[str, ...],
     build_ctx: str | None,
@@ -510,7 +505,6 @@ def build_command(
     containerize: bool,
     push: bool,
     serialisation_format: t.Literal['safetensors', 'legacy'],
-    fast: bool,
     container_registry: LiteralContainerRegistry,
     container_version_strategy: LiteralContainerVersionStrategy,
     force_push: bool,
@@ -539,7 +533,7 @@ def build_command(
   _previously_built = False
 
   llm_config = AutoConfig.for_model(model_name)
-  env = EnvVarMixin(model_name, llm_config.default_implementation(), model_id=model_id, quantize=quantize, bettertransformer=bettertransformer, runtime=runtime)
+  env = EnvVarMixin(model_name, llm_config.default_implementation(), model_id=model_id, quantize=quantize, runtime=runtime)
 
   # NOTE: We set this environment variable so that our service.py logic won't raise RuntimeError
   # during build. This is a current limitation of bentoml build where we actually import the service.py into sys.path
@@ -547,10 +541,9 @@ def build_command(
     os.environ.update({'OPENLLM_MODEL': inflection.underscore(model_name), env.runtime: str(env['runtime_value']), 'OPENLLM_SERIALIZATION': serialisation_format})
     if env['model_id_value']: os.environ[env.model_id] = str(env['model_id_value'])
     if env['quantize_value']: os.environ[env.quantize] = str(env['quantize_value'])
-    os.environ[env.bettertransformer] = str(env['bettertransformer_value'])
 
     llm = infer_auto_class(env['framework_value']).for_model(
-        model_name, model_id=env['model_id_value'], llm_config=llm_config, ensure_available=not fast, model_version=model_version, serialisation=serialisation_format, **attrs
+        model_name, model_id=env['model_id_value'], llm_config=llm_config, ensure_available=True, model_version=model_version, serialisation=serialisation_format, **attrs
     )
 
     labels = dict(llm.identifying_params)
@@ -603,7 +596,6 @@ def build_command(
             workers_per_resource=workers_per_resource,
             adapter_map=adapter_map,
             quantize=quantize,
-            bettertransformer=bettertransformer,
             extra_dependencies=enable_features,
             dockerfile_template=dockerfile_template_path,
             runtime=runtime,
@@ -667,21 +659,21 @@ def models_command(ctx: click.Context, output: LiteralOutput, show_available: bo
   else:
     failed_initialized: list[tuple[str, Exception]] = []
 
-    json_data: dict[str, dict[t.Literal['architecture', 'model_id', 'url', 'installation', 'cpu', 'gpu', 'runtime_impl'], t.Any] | t.Any] = {}
+    json_data: dict[str, dict[t.Literal['architecture', 'model_id', 'url', 'installation', 'cpu', 'gpu', 'backend'], t.Any] | t.Any] = {}
     converted: list[str] = []
     for m in models:
       config = AutoConfig.for_model(m)
-      runtime_impl: tuple[str, ...] = ()
-      if config['model_name'] in MODEL_MAPPING_NAMES: runtime_impl += ('pt',)
-      if config['model_name'] in MODEL_FLAX_MAPPING_NAMES: runtime_impl += ('flax',)
-      if config['model_name'] in MODEL_TF_MAPPING_NAMES: runtime_impl += ('tf',)
-      if config['model_name'] in MODEL_VLLM_MAPPING_NAMES: runtime_impl += ('vllm',)
+      backend: tuple[str, ...] = ()
+      if config['model_name'] in MODEL_MAPPING_NAMES: backend += ('pt',)
+      if config['model_name'] in MODEL_FLAX_MAPPING_NAMES: backend += ('flax',)
+      if config['model_name'] in MODEL_TF_MAPPING_NAMES: backend += ('tf',)
+      if config['model_name'] in MODEL_VLLM_MAPPING_NAMES: backend += ('vllm',)
       json_data[m] = {
           'architecture': config['architecture'],
           'model_id': config['model_ids'],
           'cpu': not config['requires_gpu'],
           'gpu': True,
-          'runtime_impl': runtime_impl,
+          'backend': backend,
           'installation': f'"openllm[{m}]"' if m in OPTIONAL_DEPENDENCIES or config['requirements'] else 'openllm',
       }
       converted.extend([normalise_model_name(i) for i in config['model_ids']])
@@ -708,10 +700,10 @@ def models_command(ctx: click.Context, output: LiteralOutput, show_available: bo
       import tabulate
 
       tabulate.PRESERVE_WHITESPACE = True
-      # llm, architecture, url, model_id, installation, cpu, gpu, runtime_impl
+      # llm, architecture, url, model_id, installation, cpu, gpu, backend
       data: list[str | tuple[str, str, list[str], str, LiteralString, LiteralString, tuple[LiteralRuntime, ...]]] = []
       for m, v in json_data.items():
-        data.extend([(m, v['architecture'], v['model_id'], v['installation'], '❌' if not v['cpu'] else '✅', '✅', v['runtime_impl'],)])
+        data.extend([(m, v['architecture'], v['model_id'], v['installation'], '❌' if not v['cpu'] else '✅', '✅', v['backend'],)])
       column_widths = [
           int(termui.COLUMNS / 12), int(termui.COLUMNS / 6), int(termui.COLUMNS / 4), int(termui.COLUMNS / 12), int(termui.COLUMNS / 12), int(termui.COLUMNS / 12), int(termui.COLUMNS / 4),
       ]

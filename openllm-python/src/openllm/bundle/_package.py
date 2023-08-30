@@ -120,7 +120,6 @@ def construct_docker_options(
     _: FS,
     workers_per_resource: float,
     quantize: LiteralString | None,
-    bettertransformer: bool | None,
     adapter_map: dict[str, str | None] | None,
     dockerfile_template: str | None,
     runtime: t.Literal['ggml', 'transformers'],
@@ -146,9 +145,8 @@ def construct_docker_options(
   if adapter_map: env_dict['BITSANDBYTES_NOWELCOME'] = os.environ.get('BITSANDBYTES_NOWELCOME', '1')
 
   # We need to handle None separately here, as env from subprocess doesn't accept None value.
-  _env = openllm_core.utils.EnvVarMixin(llm.config['model_name'], bettertransformer=bettertransformer, quantize=quantize, runtime=runtime)
+  _env = openllm_core.utils.EnvVarMixin(llm.config['model_name'], quantize=quantize, runtime=runtime)
 
-  env_dict[_env.bettertransformer] = str(_env['bettertransformer_value'])
   if _env['quantize_value'] is not None: env_dict[_env.quantize] = t.cast(str, _env['quantize_value'])
   env_dict[_env.runtime] = _env['runtime_value']
   return DockerOptions(base_image=f'{oci.CONTAINER_NAMES[container_registry]}:{oci.get_base_container_tag(container_version_strategy)}', env=env_dict, dockerfile_template=dockerfile_template)
@@ -203,7 +201,6 @@ def create_bento(
     llm: openllm.LLM[t.Any, t.Any],
     workers_per_resource: str | float,
     quantize: LiteralString | None,
-    bettertransformer: bool | None,
     dockerfile_template: str | None,
     adapter_map: dict[str, str | None] | None = None,
     extra_dependencies: tuple[str, ...] | None = None,
@@ -243,7 +240,7 @@ def create_bento(
       python=construct_python_options(llm, llm_fs, extra_dependencies, adapter_map),
       models=[llm_spec],
       docker=construct_docker_options(
-          llm, llm_fs, workers_per_resource, quantize, bettertransformer, adapter_map, dockerfile_template, runtime, serialisation_format, container_registry, container_version_strategy
+          llm, llm_fs, workers_per_resource, quantize, adapter_map, dockerfile_template, runtime, serialisation_format, container_registry, container_version_strategy
       )
   )
 

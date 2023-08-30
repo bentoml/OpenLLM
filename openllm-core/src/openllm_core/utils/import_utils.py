@@ -334,7 +334,6 @@ class EnvVarMixin(ReprMixin):
   model_id: str
   quantize: str
   framework: str
-  bettertransformer: str
   runtime: str
 
   @overload
@@ -354,10 +353,6 @@ class EnvVarMixin(ReprMixin):
     ...
 
   @overload
-  def __getitem__(self, item: t.Literal['bettertransformer']) -> str:
-    ...
-
-  @overload
   def __getitem__(self, item: t.Literal['runtime']) -> str:
     ...
 
@@ -374,10 +369,6 @@ class EnvVarMixin(ReprMixin):
     ...
 
   @overload
-  def __getitem__(self, item: t.Literal['bettertransformer_value']) -> bool:
-    ...
-
-  @overload
   def __getitem__(self, item: t.Literal['runtime_value']) -> t.Literal['ggml', 'transformers']:
     ...
 
@@ -391,7 +382,6 @@ class EnvVarMixin(ReprMixin):
       model_name: str,
       implementation: LiteralRuntime = 'pt',
       model_id: str | None = None,
-      bettertransformer: bool | None = None,
       quantize: LiteralString | None = None,
       runtime: t.Literal['ggml', 'transformers'] = 'transformers'
   ) -> None:
@@ -400,10 +390,9 @@ class EnvVarMixin(ReprMixin):
     self.model_name = inflection.underscore(model_name)
     self._implementation = implementation
     self._model_id = model_id
-    self._bettertransformer = bettertransformer
     self._quantize = quantize
     self._runtime = runtime
-    for att in {'config', 'model_id', 'quantize', 'framework', 'bettertransformer', 'runtime'}:
+    for att in {'config', 'model_id', 'quantize', 'framework', 'runtime'}:
       setattr(self, att, field_env_key(self.model_name, att.upper()))
 
   def _quantize_value(self) -> t.Literal['int8', 'int4', 'gptq'] | None:
@@ -413,10 +402,6 @@ class EnvVarMixin(ReprMixin):
   def _framework_value(self) -> LiteralRuntime:
     from . import first_not_none
     return t.cast(LiteralRuntime, first_not_none(os.environ.get(self['framework']), default=self._implementation))
-
-  def _bettertransformer_value(self) -> bool:
-    from . import first_not_none
-    return t.cast(bool, first_not_none(os.environ.get(self['bettertransformer'], str(False)).upper() in ENV_VARS_TRUE_VALUES, default=self._bettertransformer))
 
   def _model_id_value(self) -> str | None:
     from . import first_not_none
@@ -428,7 +413,7 @@ class EnvVarMixin(ReprMixin):
 
   @property
   def __repr_keys__(self) -> set[str]:
-    return {'config', 'model_id', 'quantize', 'framework', 'bettertransformer', 'runtime'}
+    return {'config', 'model_id', 'quantize', 'framework', 'runtime'}
 
   @property
   def start_docstring(self) -> str:

@@ -53,7 +53,6 @@ from openllm_core.utils import first_not_none
 from openllm_core.utils import generate_hash_from_file
 from openllm_core.utils import is_peft_available
 from openllm_core.utils import is_torch_available
-from openllm_core.utils import non_intrusive_setattr
 from openllm_core.utils import normalize_attrs_to_model_tokenizer_pair
 from openllm_core.utils import resolve_filepath
 from openllm_core.utils import validate_is_path
@@ -66,7 +65,6 @@ from .exceptions import OpenLLMException
 from .utils import infer_auto_class
 
 if t.TYPE_CHECKING:
-  import pathlib
 
   import auto_gptq as autogptq
   import peft
@@ -214,15 +212,6 @@ class LLMSerialisation(abc.ABC, t.Generic[M, T]):
     '''
     raise NotImplementedError
 
-  def save_pretrained(self, save_directory: str | pathlib.Path, **attrs: t.Any) -> None:
-    '''This function defines how this model can be saved to local store.
-
-    This will be called during ``import_model``. By default, it will use ``openllm.serialisation.save_pretrained``.
-    Additionally, the function signature are similar to ``transformers.PreTrainedModel.save_pretrained``
-    This is useful during fine tuning.
-    '''
-    raise NotImplementedError
-
 class LLMInterface(LLMFunction, LLMSerialisation[M, T], abc.ABC):
   def llm_post_init(self) -> None:
     '''This function can be implemented if you need to initialized any additional variables that doesn't concern OpenLLM internals.
@@ -255,13 +244,6 @@ class LLMInterface(LLMFunction, LLMSerialisation[M, T], abc.ABC):
   # NOTE: All fields below are attributes that can be accessed by users.
   config_class: t.Type[LLMConfig]
   '''The config class to use for this LLM. If you are creating a custom LLM, you must specify this class.'''
-  bettertransformer: bool
-  '''Whether to load this LLM with FasterTransformer enabled. The order of loading is:
-
-    - If pass within `for_model`, `from_pretrained` or `__init__`, Default to self.config['bettertransformer']
-
-    > [!NOTE] that if LoRA is enabled, bettertransformer will be disabled.
-    '''
   device: 'torch.device'
   '''The device to be used for this LLM. If the implementation is 'pt', then it will be torch.device, else string.'''
   tokenizer_id: t.Union[t.Literal['local'], LiteralString]
@@ -422,7 +404,6 @@ class LLM(LLMInterface[M, T], ReprMixin):
       *args: t.Any,
       runtime: t.Literal['ggml', 'transformers'] | None = ...,
       quantize: t.Literal['int8', 'int4'] = ...,
-      bettertransformer: str | bool | None = ...,
       adapter_id: str | None = ...,
       adapter_name: str | None = ...,
       adapter_map: dict[str, str | None] | None = ...,
@@ -442,7 +423,6 @@ class LLM(LLMInterface[M, T], ReprMixin):
       *args: t.Any,
       runtime: t.Literal['ggml', 'transformers'] | None = ...,
       quantize: t.Literal['gptq'] = ...,
-      bettertransformer: str | bool | None = ...,
       adapter_id: str | None = ...,
       adapter_name: str | None = ...,
       adapter_map: dict[str, str | None] | None = ...,
@@ -461,7 +441,6 @@ class LLM(LLMInterface[M, T], ReprMixin):
       *args: t.Any,
       runtime: t.Literal['ggml', 'transformers'] | None = None,
       quantize: t.Literal['int8', 'int4', 'gptq'] | None = None,
-      bettertransformer: str | bool | None = None,
       adapter_id: str | None = None,
       adapter_name: str | None = None,
       adapter_map: dict[str, str | None] | None = None,
@@ -478,7 +457,6 @@ class LLM(LLMInterface[M, T], ReprMixin):
     > This is most notable during serving time.
 
     - quantize: quantize the model with the given quantization method. Currently supported int8, int4 quantization
-    - bettertransformer: Apply FasterTransformer to given pretrained weight
 
     > Currently, the above two options are mutually exclusive.
 
@@ -518,7 +496,6 @@ class LLM(LLMInterface[M, T], ReprMixin):
         quantization_config: The quantization config (`transformers.BitsAndBytesConfig` | `autogtpq.BaseQuantizeConfig`) to use. Note that this is mutually exclusive with `quantize`
         serialisation: Type of model format to save to local store. If set to 'safetensors', then OpenLLM will save model using safetensors.
                       Default behaviour is similar to ``safe_serialization=False``.
-        bettertransformer: Whether to use BetterTransformer with this model. Defaults to False.
         adapter_id: The [LoRA](https://arxiv.org/pdf/2106.09685.pdf) pretrained id or local path to use for this LLM. Defaults to None.
         adapter_name: The adapter name to use for this LLM. Defaults to None.
         adapter_map: The adapter map to use for this LLM. Defaults to None. Note that this is mutually exclusive with adapter_id/adapter_name arguments.
@@ -569,7 +546,6 @@ class LLM(LLMInterface[M, T], ReprMixin):
         _tag=_tag,
         _serialisation_format=serialisation,
         _local=_local,
-        bettertransformer=str(first_not_none(bettertransformer, os.environ.get(cfg_cls.__openllm_env__['bettertransformer']), default=None)).upper() in ENV_VARS_TRUE_VALUES,
         _runtime=first_not_none(runtime, t.cast(t.Optional[t.Literal['ggml', 'transformers']], os.environ.get(cfg_cls.__openllm_env__['runtime'])), default=cfg_cls.__openllm_runtime__),
         _adapters_mapping=resolve_peft_config_type(adapter_map) if adapter_map is not None else None,
         **attrs
@@ -624,7 +600,6 @@ class LLM(LLMInterface[M, T], ReprMixin):
       *args: t.Any,
       model_id: str,
       llm_config: LLMConfig,
-      bettertransformer: bool | None,
       quantization_config: transformers.BitsAndBytesConfig | autogptq.BaseQuantizeConfig | None,
       _adapters_mapping: AdaptersMapping | None,
       _tag: bentoml.Tag,
@@ -713,7 +688,6 @@ class LLM(LLMInterface[M, T], ReprMixin):
         model_id: The pretrained model to use. Defaults to None. If None, 'self.default_id' will be used.
         llm_config: The config to use for this LLM. Defaults to None. If not passed, OpenLLM
                     will use `config_class` to construct default configuration.
-        bettertransformer: Whether to use BetterTransformer with this model. Defaults to False.
         quantization_config: ``transformers.BitsAndBytesConfig`` configuration, or 'gptq' denoting this model to be loaded with GPTQ.
         *args: The args to be passed to the model.
         **attrs: The kwargs to be passed to the model.
@@ -755,11 +729,6 @@ class LLM(LLMInterface[M, T], ReprMixin):
     )
 
     self.llm_post_init()
-    # we set it here so that we allow subclass to overwrite bettertransformer in llm_post_init
-    if bettertransformer is True: self.bettertransformer = bettertransformer
-    else: non_intrusive_setattr(self, 'bettertransformer', self.config['bettertransformer'])
-    # If lora is passed, the disable bettertransformer
-    if _adapters_mapping and self.bettertransformer is True: self.bettertransformer = False
 
   def __setattr__(self, attr: str, value: t.Any) -> None:
     if attr in _reserved_namespace:
@@ -1193,7 +1162,6 @@ def Runner(
     llm_config: LLMConfig | None = ...,
     runtime: t.Literal['ggml', 'transformers'] | None = ...,
     quantize: t.Literal['int8', 'int4', 'gptq'] | None = ...,
-    bettertransformer: str | bool | None = ...,
     adapter_id: str | None = ...,
     adapter_name: str | None = ...,
     adapter_map: dict[str, str | None] | None = ...,
@@ -1239,7 +1207,6 @@ def Runner(model_name: str, ensure_available: bool | None = None, init_local: bo
   if llm_config is not None:
     attrs.update({
         'model_id': llm_config['env']['model_id_value'],
-        'bettertransformer': llm_config['env']['bettertransformer_value'],
         'quantize': llm_config['env']['quantize_value'],
         'runtime': llm_config['env']['runtime_value'],
         'serialisation': first_not_none(os.environ.get('OPENLLM_SERIALIZATION'), attrs.get('serialisation'), default='safetensors')
@@ -1369,14 +1336,12 @@ def llm_runner_class(self: LLM[M, T]) -> type[LLMRunner[M, T]]:
     yield 'llm_type', __self.llm_type
     yield 'runtime', self.runtime
     yield 'llm_tag', self.tag
-    yield 'llm_framework', self.__llm_implementation__
 
   return types.new_class(
       self.__class__.__name__ + 'Runner', (bentoml.Runner,),
       exec_body=lambda ns: ns.update({
           'llm_type': self.llm_type,
           'identifying_params': self.identifying_params,
-          'llm_framework': self.__llm_implementation__,
           'llm_tag': self.tag,
           'llm': self,
           'config': self.config,

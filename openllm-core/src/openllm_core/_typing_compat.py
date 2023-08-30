@@ -102,7 +102,6 @@ class LLMRunner(bentoml.Runner, t.Generic[M, T]):
   __module__: str
   llm_type: str
   llm_tag: bentoml.Tag
-  llm_framework: LiteralRuntime
   identifying_params: dict[str, t.Any]
   llm: openllm.LLM[M, T]
   config: openllm.LLMConfig

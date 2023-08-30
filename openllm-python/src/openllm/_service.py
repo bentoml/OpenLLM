@@ -65,7 +65,7 @@ async def generate_stream_v1(input_dict: dict[str, t.Any]) -> t.AsyncGenerator[s
         'model_id': runner.llm.model_id,
         'timeout': 3600,
         'model_name': llm_config['model_name'],
-        'framework': runner.llm_framework,
+        'framework': runner.implementation,
         'configuration': '',
         'supports_embeddings': runner.supports_embeddings,
         'supports_hf_agent': runner.supports_hf_agent

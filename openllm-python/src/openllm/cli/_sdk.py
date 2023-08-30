@@ -39,7 +39,6 @@ def _start(
     workers_per_resource: t.Literal['conserved', 'round_robin'] | float | None = None,
     device: tuple[str, ...] | t.Literal['all'] | None = None,
     quantize: t.Literal['int8', 'int4', 'gptq'] | None = None,
-    bettertransformer: bool | None = None,
     runtime: t.Literal['ggml', 'transformers'] = 'transformers',
     adapter_map: dict[LiteralString, str | None] | None = None,
     framework: LiteralRuntime | None = None,
@@ -58,8 +57,6 @@ def _start(
   > to start the server instead of blocking the main thread.
 
   ``openllm.start`` will invoke ``click.Command`` under the hood, so it behaves exactly the same as the CLI interaction.
-
-  > [!NOTE] ``quantize`` and ``bettertransformer`` are mutually exclusive.
 
   Args:
       model_name: The model name to start this LLM
@@ -81,7 +78,6 @@ def _start(
                 - int8: Quantize the model with 8bit (bitsandbytes required)
                 - int4: Quantize the model with 4bit (bitsandbytes required)
                 - gptq: Quantize the model with GPTQ (auto-gptq required)
-      bettertransformer: Convert given model to FastTransformer with PyTorch.
       runtime: The runtime to use for this LLM. By default, this is set to ``transformers``. In the future, this will include supports for GGML.
       cors: Whether to enable CORS for this LLM. By default, this is set to ``False``.
       adapter_map: The adapter mapping of LoRA to use for this LLM. It accepts a dictionary of ``{adapter_id: adapter_name}``.
@@ -92,12 +88,7 @@ def _start(
   from .entrypoint import start_grpc_command
   llm_config = openllm.AutoConfig.for_model(model_name)
   _ModelEnv = openllm_core.utils.EnvVarMixin(
-      model_name,
-      openllm_core.utils.first_not_none(framework, default=llm_config.default_implementation()),
-      model_id=model_id,
-      bettertransformer=bettertransformer,
-      quantize=quantize,
-      runtime=runtime
+      model_name, openllm_core.utils.first_not_none(framework, default=llm_config.default_implementation()), model_id=model_id, quantize=quantize, runtime=runtime
   )
   os.environ[_ModelEnv.framework] = _ModelEnv['framework_value']
 
@@ -106,9 +97,7 @@ def _start(
   if timeout: args.extend(['--server-timeout', str(timeout)])
   if workers_per_resource: args.extend(['--workers-per-resource', str(workers_per_resource) if not isinstance(workers_per_resource, str) else workers_per_resource])
   if device and not os.environ.get('CUDA_VISIBLE_DEVICES'): args.extend(['--device', ','.join(device)])
-  if quantize and bettertransformer: raise OpenLLMException("'quantize' and 'bettertransformer' are currently mutually exclusive.")
   if quantize: args.extend(['--quantize', str(quantize)])
-  elif bettertransformer: args.append('--bettertransformer')
   if cors: args.append('--cors')
   if adapter_map: args.extend(list(itertools.chain.from_iterable([['--adapter-id', f"{k}{':'+v if v else ''}"] for k, v in adapter_map.items()])))
   if additional_args: args.extend(additional_args)
@@ -127,7 +116,6 @@ def _build(
     model_version: str | None = None,
     bento_version: str | None = None,
     quantize: t.Literal['int8', 'int4', 'gptq'] | None = None,
-    bettertransformer: bool | None = None,
     adapter_map: dict[str, str | None] | None = None,
     build_ctx: str | None = None,
     enable_features: tuple[str, ...] | None = None,
@@ -147,11 +135,8 @@ def _build(
 
   The LLM will be built into a BentoService with the following structure:
   if ``quantize`` is passed, it will instruct the model to be quantized dynamically during serving time.
-  if ``bettertransformer`` is passed, it will instruct the model to apply FasterTransformer during serving time.
 
   ``openllm.build`` will invoke ``click.Command`` under the hood, so it behaves exactly the same as ``openllm build`` CLI.
-
-  > [!NOTE] ``quantize`` and ``bettertransformer`` are mutually exclusive.
 
   Args:
       model_name: The model name to start this LLM
@@ -163,7 +148,6 @@ def _build(
                 - int8: Quantize the model with 8bit (bitsandbytes required)
                 - int4: Quantize the model with 4bit (bitsandbytes required)
                 - gptq: Quantize the model with GPTQ (auto-gptq required)
-      bettertransformer: Convert given model to FastTransformer with PyTorch.
       adapter_map: The adapter mapping of LoRA to use for this LLM. It accepts a dictionary of ``{adapter_id: adapter_name}``.
       build_ctx: The build context to use for building BentoLLM. By default, it sets to current directory.
       enable_features: Additional OpenLLM features to be included with this BentoLLM.
@@ -193,9 +177,7 @@ def _build(
       ``bentoml.Bento | str``: BentoLLM instance. This can be used to serve the LLM or can be pushed to BentoCloud.
   """
   args: list[str] = [sys.executable, '-m', 'openllm', 'build', model_name, '--machine', '--runtime', runtime, '--serialisation', serialisation_format]
-  if quantize and bettertransformer: raise OpenLLMException("'quantize' and 'bettertransformer' are currently mutually exclusive.")
   if quantize: args.extend(['--quantize', quantize])
-  if bettertransformer: args.append('--bettertransformer')
   if containerize and push: raise OpenLLMException("'containerize' and 'push' are currently mutually exclusive.")
   if push: args.extend(['--push'])
   if containerize: args.extend(['--containerize'])

@@ -94,7 +94,7 @@ def _from_system(cls: type[DynResource]) -> list[str]:
   if visible_devices is None:
     if cls.resource_id == 'amd.com/gpu':
       if not psutil.LINUX:
-        if DEBUG: warnings.warn('AMD GPUs is currently only supported on Linux.', stacklevel=_STACK_LEVEL)
+        if DEBUG: logger.debug('AMD GPUs is currently only supported on Linux.')
         return []
       # ROCm does not currently have the rocm_smi wheel.
       # So we need to use the ctypes bindings directly.
