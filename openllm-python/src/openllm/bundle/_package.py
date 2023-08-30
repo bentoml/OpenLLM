@@ -127,18 +127,12 @@ def construct_python_options(llm: openllm.LLM[t.Any, t.Any],
                        lock_packages=False,
                        extra_index_url=['https://download.pytorch.org/whl/cu118'])
 
-def construct_docker_options(
-    llm: openllm.LLM[t.Any, t.Any],
-    _: FS,
-    workers_per_resource: float,
-    quantize: LiteralString | None,
-    adapter_map: dict[str, str | None] | None,
-    dockerfile_template: str | None,
-    runtime: t.Literal['ggml', 'transformers'],
-    serialisation_format: t.Literal['safetensors', 'legacy'],
-    container_registry: LiteralContainerRegistry,
-    container_version_strategy: LiteralContainerVersionStrategy
-) -> DockerOptions:
+def construct_docker_options(llm: openllm.LLM[t.Any, t.Any], _: FS, workers_per_resource: float,
+                             quantize: LiteralString | None, adapter_map: dict[str, str | None] | None,
+                             dockerfile_template: str | None, runtime: t.Literal['ggml', 'transformers'],
+                             serialisation_format: t.Literal['safetensors',
+                                                             'legacy'], container_registry: LiteralContainerRegistry,
+                             container_version_strategy: LiteralContainerVersionStrategy) -> DockerOptions:
   from openllm.cli._factory import parse_config_options
   environ = parse_config_options(llm.config, llm.config['timeout'], workers_per_resource, None, True, os.environ.copy())
   env: openllm_core.utils.EnvVarMixin = llm.config['env']
@@ -214,22 +208,20 @@ def write_service(llm: openllm.LLM[t.Any, t.Any], adapter_map: dict[str, str | N
   llm_fs.writetext(llm.config['service_name'], script)
 
 @inject
-def create_bento(
-    bento_tag: bentoml.Tag,
-    llm_fs: FS,
-    llm: openllm.LLM[t.Any, t.Any],
-    workers_per_resource: str | float,
-    quantize: LiteralString | None,
-    dockerfile_template: str | None,
-    adapter_map: dict[str, str | None] | None = None,
-    extra_dependencies: tuple[str, ...] | None = None,
-    runtime: t.Literal['ggml', 'transformers'] = 'transformers',
-    serialisation_format: t.Literal['safetensors', 'legacy'] = 'safetensors',
-    container_registry: LiteralContainerRegistry = 'ecr',
-    container_version_strategy: LiteralContainerVersionStrategy = 'release',
-    _bento_store: BentoStore = Provide[BentoMLContainer.bento_store],
-    _model_store: ModelStore = Provide[BentoMLContainer.model_store]
-) -> bentoml.Bento:
+def create_bento(bento_tag: bentoml.Tag,
+                 llm_fs: FS,
+                 llm: openllm.LLM[t.Any, t.Any],
+                 workers_per_resource: str | float,
+                 quantize: LiteralString | None,
+                 dockerfile_template: str | None,
+                 adapter_map: dict[str, str | None] | None = None,
+                 extra_dependencies: tuple[str, ...] | None = None,
+                 runtime: t.Literal['ggml', 'transformers'] = 'transformers',
+                 serialisation_format: t.Literal['safetensors', 'legacy'] = 'safetensors',
+                 container_registry: LiteralContainerRegistry = 'ecr',
+                 container_version_strategy: LiteralContainerVersionStrategy = 'release',
+                 _bento_store: BentoStore = Provide[BentoMLContainer.bento_store],
+                 _model_store: ModelStore = Provide[BentoMLContainer.model_store]) -> bentoml.Bento:
   framework_envvar = llm.config['env']['framework_value']
   labels = dict(llm.identifying_params)
   labels.update({
@@ -258,19 +250,18 @@ def create_bento(
   write_service(llm, adapter_map, llm_fs)
 
   llm_spec = ModelSpec.from_item({'tag': str(llm.tag), 'alias': llm.tag.name})
-  build_config = BentoBuildConfig(
-      service=f"{llm.config['service_name']}:svc",
-      name=bento_tag.name,
-      labels=labels,
-      description=f"OpenLLM service for {llm.config['start_name']}",
-      include=list(llm_fs.walk.files()),
-      exclude=['/venv', '/.venv', '__pycache__/', '*.py[cod]', '*$py.class'],
-      python=construct_python_options(llm, llm_fs, extra_dependencies, adapter_map),
-      models=[llm_spec],
-      docker=construct_docker_options(
-          llm, llm_fs, workers_per_resource, quantize, adapter_map, dockerfile_template, runtime, serialisation_format, container_registry, container_version_strategy
-      )
-  )
+  build_config = BentoBuildConfig(service=f"{llm.config['service_name']}:svc",
+                                  name=bento_tag.name,
+                                  labels=labels,
+                                  description=f"OpenLLM service for {llm.config['start_name']}",
+                                  include=list(llm_fs.walk.files()),
+                                  exclude=['/venv', '/.venv', '__pycache__/', '*.py[cod]', '*$py.class'],
+                                  python=construct_python_options(llm, llm_fs, extra_dependencies, adapter_map),
+                                  models=[llm_spec],
+                                  docker=construct_docker_options(llm, llm_fs, workers_per_resource, quantize,
+                                                                  adapter_map, dockerfile_template, runtime,
+                                                                  serialisation_format, container_registry,
+                                                                  container_version_strategy))
 
   bento = bentoml.Bento.create(build_config=build_config, version=bento_tag.version, build_ctx=llm_fs.getsyspath('/'))
   # NOTE: the model_id_path here are only used for setting this environment variable within the container built with for BentoLLM.

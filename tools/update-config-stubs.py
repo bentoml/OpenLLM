@@ -66,7 +66,8 @@ _value_docstring = {
     'requirements':
         '''The default PyPI requirements needed to run this given LLM. By default, we will depend on
         bentoml, torch, transformers.''',
-    'model_type': '''The model type for this given LLM. By default, it should be causal language modeling.
+    'model_type':
+        '''The model type for this given LLM. By default, it should be causal language modeling.
         Currently supported 'causal_lm' or 'seq2seq_lm'
         ''',
     'runtime':

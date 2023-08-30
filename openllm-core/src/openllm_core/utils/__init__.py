@@ -20,6 +20,7 @@ from pathlib import Path
 from circus.exc import ConflictError
 
 import openllm_core
+
 from bentoml._internal.configuration import DEBUG_ENV_VAR as DEBUG_ENV_VAR
 from bentoml._internal.configuration import GRPC_DEBUG_ENV_VAR as _GRPC_DEBUG_ENV_VAR
 from bentoml._internal.configuration import QUIET_ENV_VAR as QUIET_ENV_VAR
@@ -107,7 +108,8 @@ def field_env_key(model_name: str, key: str, suffix: str | None = None) -> str:
   return '_'.join(filter(None, map(str.upper, ['OPENLLM', model_name, suffix.strip('_') if suffix else '', key])))
 
 # Special debug flag controled via OPENLLMDEVDEBUG
-DEBUG: bool = sys.flags.dev_mode or (not sys.flags.ignore_environment) or (str(os.environ.get(DEV_DEBUG_VAR, None)).upper() in ENV_VARS_TRUE_VALUES)
+DEBUG: bool = sys.flags.dev_mode or (not sys.flags.ignore_environment) or (str(os.environ.get(
+    DEV_DEBUG_VAR, None)).upper() in ENV_VARS_TRUE_VALUES)
 # Whether to show the codenge for debug purposes
 SHOW_CODEGEN: bool = DEBUG and int(os.environ.get('OPENLLMDEVDEBUG', str(0))) > 3
 # MYPY is like t.TYPE_CHECKING, but reserved for Mypy plugins

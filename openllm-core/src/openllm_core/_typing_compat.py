@@ -161,19 +161,23 @@ class LLMRunner(bentoml.Runner, t.Generic[M, T]):
     ...
 
 class load_model_protocol(t.Generic[M, T], t.Protocol):
+
   def __call__(self, llm: LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M:
     ...
 
 class load_tokenizer_protocol(t.Generic[M, T], t.Protocol):
+
   def __call__(self, llm: LLM[M, T], **attrs: t.Any) -> T:
     ...
 
 _R = t.TypeVar('_R', covariant=True)
 
 class import_model_protocol(t.Generic[_R, M, T], t.Protocol):
+
   def __call__(self, llm: LLM[M, T], *decls: t.Any, trust_remote_code: bool, **attrs: t.Any) -> _R:
     ...
 
 class llm_post_init_protocol(t.Generic[M, T], t.Protocol):
+
   def __call__(self, llm: LLM[M, T]) -> T:
     ...

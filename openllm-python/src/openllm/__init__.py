@@ -48,8 +48,13 @@ _import_structure: dict[str, list[str]] = {
     "_quantisation": ["infer_quantisation_config"],
     "_embeddings": ["GenericEmbeddingRunnable"],
     "_llm": ["LLM", "Runner", "LLMRunner", "LLMRunnable", "EmbeddingsOutput"],
-    "_generation": ["StopSequenceCriteria", "StopOnTokens", "LogitsProcessorList", "StoppingCriteriaList", "prepare_logits_processor"],
-    "models.auto": ["MODEL_MAPPING_NAMES", "MODEL_FLAX_MAPPING_NAMES", "MODEL_TF_MAPPING_NAMES", "MODEL_VLLM_MAPPING_NAMES"],
+    "_generation": [
+        "StopSequenceCriteria", "StopOnTokens", "LogitsProcessorList", "StoppingCriteriaList",
+        "prepare_logits_processor"
+    ],
+    "models.auto": [
+        "MODEL_MAPPING_NAMES", "MODEL_FLAX_MAPPING_NAMES", "MODEL_TF_MAPPING_NAMES", "MODEL_VLLM_MAPPING_NAMES"
+    ],
     "models.chatglm": [],
     "models.baichuan": [],
     "models.dolly_v2": [],
@@ -188,7 +193,15 @@ else:
     from .models.opt import TFOPT as TFOPT
 
 # NOTE: update this to sys.modules[__name__] once mypy_extensions can recognize __spec__
-__lazy = openllm_core.utils.LazyModule(__name__, globals()["__file__"], _import_structure, extra_objects={"COMPILED": COMPILED, "__openllm_migration__": {"LLMEmbeddings": "EmbeddingsOutput"}})
+__lazy = openllm_core.utils.LazyModule(__name__,
+                                       globals()["__file__"],
+                                       _import_structure,
+                                       extra_objects={
+                                           "COMPILED": COMPILED,
+                                           "__openllm_migration__": {
+                                               "LLMEmbeddings": "EmbeddingsOutput"
+                                           }
+                                       })
 __all__ = __lazy.__all__
 __dir__ = __lazy.__dir__
 __getattr__ = __lazy.__getattr__

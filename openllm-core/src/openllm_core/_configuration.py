@@ -707,7 +707,9 @@ def structure_settings(cl_: type[LLMConfig], cls: type[_ModelSettingsAttr]) -> _
     if not BACKENDS_MAPPING[library_stub][0](): default_implementation[rs] = 'pt'
   _final_value_dct['default_implementation'] = default_implementation
 
-  env = openllm_core.utils.EnvVarMixin(model_name, get_default_implementation(default_implementation), model_id=_settings_attr.default_id)
+  env = openllm_core.utils.EnvVarMixin(model_name,
+                                       get_default_implementation(default_implementation),
+                                       model_id=_settings_attr.default_id)
   _final_value_dct['env'] = env
 
   _final_value_dct['service_name'] = f'generated_{model_name}_service.py'

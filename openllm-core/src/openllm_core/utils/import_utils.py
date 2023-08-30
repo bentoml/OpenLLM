@@ -380,14 +380,12 @@ class EnvVarMixin(ReprMixin):
     elif hasattr(self, item): return getattr(self, item)
     raise KeyError(f'Key {item} not found in {self}')
 
-  def __init__(
-      self,
-      model_name: str,
-      implementation: LiteralRuntime = 'pt',
-      model_id: str | None = None,
-      quantize: LiteralString | None = None,
-      runtime: t.Literal['ggml', 'transformers'] = 'transformers'
-  ) -> None:
+  def __init__(self,
+               model_name: str,
+               implementation: LiteralRuntime = 'pt',
+               model_id: str | None = None,
+               quantize: LiteralString | None = None,
+               runtime: t.Literal['ggml', 'transformers'] = 'transformers') -> None:
     '''EnvVarMixin is a mixin class that returns the value extracted from environment variables.'''
     from openllm_core.utils import field_env_key
     self.model_name = inflection.underscore(model_name)

@@ -68,7 +68,10 @@ class GenericEmbeddingRunnable(bentoml.Runnable):
       model_output = self.model(**encoded_input)
     # Perform pooling and normalize
     sentence_embeddings = F.normalize(self.mean_pooling(model_output, attention_mask), p=2, dim=1)
-    return [openllm.EmbeddingsOutput(embeddings=sentence_embeddings.cpu().numpy(), num_tokens=int(torch.sum(attention_mask).item()))]
+    return [
+        openllm.EmbeddingsOutput(embeddings=sentence_embeddings.cpu().numpy(),
+                                 num_tokens=int(torch.sum(attention_mask).item()))
+    ]
 
   @staticmethod
   def mean_pooling(model_output: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:

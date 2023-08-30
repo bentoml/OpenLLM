@@ -30,24 +30,22 @@ if t.TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-def _start(
-    model_name: str,
-    /,
-    *,
-    model_id: str | None = None,
-    timeout: int = 30,
-    workers_per_resource: t.Literal['conserved', 'round_robin'] | float | None = None,
-    device: tuple[str, ...] | t.Literal['all'] | None = None,
-    quantize: t.Literal['int8', 'int4', 'gptq'] | None = None,
-    runtime: t.Literal['ggml', 'transformers'] = 'transformers',
-    adapter_map: dict[LiteralString, str | None] | None = None,
-    framework: LiteralRuntime | None = None,
-    additional_args: list[str] | None = None,
-    cors: bool = False,
-    _serve_grpc: bool = False,
-    __test__: bool = False,
-    **_: t.Any
-) -> LLMConfig | subprocess.Popen[bytes]:
+def _start(model_name: str,
+           /,
+           *,
+           model_id: str | None = None,
+           timeout: int = 30,
+           workers_per_resource: t.Literal['conserved', 'round_robin'] | float | None = None,
+           device: tuple[str, ...] | t.Literal['all'] | None = None,
+           quantize: t.Literal['int8', 'int4', 'gptq'] | None = None,
+           runtime: t.Literal['ggml', 'transformers'] = 'transformers',
+           adapter_map: dict[LiteralString, str | None] | None = None,
+           framework: LiteralRuntime | None = None,
+           additional_args: list[str] | None = None,
+           cors: bool = False,
+           _serve_grpc: bool = False,
+           __test__: bool = False,
+           **_: t.Any) -> LLMConfig | subprocess.Popen[bytes]:
   """Python API to start a LLM server. These provides one-to-one mapping to CLI arguments.
 
   For all additional arguments, pass it as string to ``additional_args``. For example, if you want to
@@ -87,9 +85,12 @@ def _start(
   from .entrypoint import start_command
   from .entrypoint import start_grpc_command
   llm_config = openllm.AutoConfig.for_model(model_name)
-  _ModelEnv = openllm_core.utils.EnvVarMixin(
-      model_name, openllm_core.utils.first_not_none(framework, default=llm_config.default_implementation()), model_id=model_id, quantize=quantize, runtime=runtime
-  )
+  _ModelEnv = openllm_core.utils.EnvVarMixin(model_name,
+                                             openllm_core.utils.first_not_none(
+                                                 framework, default=llm_config.default_implementation()),
+                                             model_id=model_id,
+                                             quantize=quantize,
+                                             runtime=runtime)
   os.environ[_ModelEnv.framework] = _ModelEnv['framework_value']
 
   args: list[str] = ['--runtime', runtime]
@@ -118,29 +119,27 @@ def _start(
                                                              standalone_mode=False)
 
 @inject
-def _build(
-    model_name: str,
-    /,
-    *,
-    model_id: str | None = None,
-    model_version: str | None = None,
-    bento_version: str | None = None,
-    quantize: t.Literal['int8', 'int4', 'gptq'] | None = None,
-    adapter_map: dict[str, str | None] | None = None,
-    build_ctx: str | None = None,
-    enable_features: tuple[str, ...] | None = None,
-    workers_per_resource: float | None = None,
-    runtime: t.Literal['ggml', 'transformers'] = 'transformers',
-    dockerfile_template: str | None = None,
-    overwrite: bool = False,
-    container_registry: LiteralContainerRegistry | None = None,
-    container_version_strategy: LiteralContainerVersionStrategy | None = None,
-    push: bool = False,
-    containerize: bool = False,
-    serialisation_format: t.Literal['safetensors', 'legacy'] = 'safetensors',
-    additional_args: list[str] | None = None,
-    bento_store: BentoStore = Provide[BentoMLContainer.bento_store]
-) -> bentoml.Bento:
+def _build(model_name: str,
+           /,
+           *,
+           model_id: str | None = None,
+           model_version: str | None = None,
+           bento_version: str | None = None,
+           quantize: t.Literal['int8', 'int4', 'gptq'] | None = None,
+           adapter_map: dict[str, str | None] | None = None,
+           build_ctx: str | None = None,
+           enable_features: tuple[str, ...] | None = None,
+           workers_per_resource: float | None = None,
+           runtime: t.Literal['ggml', 'transformers'] = 'transformers',
+           dockerfile_template: str | None = None,
+           overwrite: bool = False,
+           container_registry: LiteralContainerRegistry | None = None,
+           container_version_strategy: LiteralContainerVersionStrategy | None = None,
+           push: bool = False,
+           containerize: bool = False,
+           serialisation_format: t.Literal['safetensors', 'legacy'] = 'safetensors',
+           additional_args: list[str] | None = None,
+           bento_store: BentoStore = Provide[BentoMLContainer.bento_store]) -> bentoml.Bento:
   """Package a LLM into a Bento.
 
   The LLM will be built into a BentoService with the following structure:
@@ -186,7 +185,10 @@ def _build(
   Returns:
       ``bentoml.Bento | str``: BentoLLM instance. This can be used to serve the LLM or can be pushed to BentoCloud.
   """
-  args: list[str] = [sys.executable, '-m', 'openllm', 'build', model_name, '--machine', '--runtime', runtime, '--serialisation', serialisation_format]
+  args: list[str] = [
+      sys.executable, '-m', 'openllm', 'build', model_name, '--machine', '--runtime', runtime, '--serialisation',
+      serialisation_format
+  ]
   if quantize: args.extend(['--quantize', quantize])
   if containerize and push: raise OpenLLMException("'containerize' and 'push' are currently mutually exclusive.")
   if push: args.extend(['--push'])

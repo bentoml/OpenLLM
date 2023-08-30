@@ -145,23 +145,14 @@ Available official model_id(s): [default: {llm_config['default_id']}]
   @group.command(**command_attrs)
   @start_decorator(llm_config, serve_grpc=_serve_grpc)
   @click.pass_context
-  def start_cmd(
-      ctx: click.Context,
-      /,
-      server_timeout: int,
-      model_id: str | None,
-      model_version: str | None,
-      workers_per_resource: t.Literal['conserved', 'round_robin'] | LiteralString,
-      device: t.Tuple[str, ...],
-      quantize: t.Literal['int8', 'int4', 'gptq'] | None,
-      runtime: t.Literal['ggml', 'transformers'],
-      serialisation_format: t.Literal['safetensors', 'legacy'],
-      cors: bool,
-      adapter_id: str | None,
-      return_process: bool,
-      **attrs: t.Any,
-  ) -> LLMConfig | subprocess.Popen[bytes]:
-    if serialisation_format == 'safetensors' and quantize is not None and os.environ.get('OPENLLM_SERIALIZATION_WARNING', str(True)).upper() in openllm.utils.ENV_VARS_TRUE_VALUES:
+  def start_cmd(ctx: click.Context, /, server_timeout: int, model_id: str | None, model_version: str | None,
+                workers_per_resource: t.Literal['conserved', 'round_robin'] | LiteralString, device: t.Tuple[str, ...],
+                quantize: t.Literal['int8', 'int4', 'gptq'] | None, runtime: t.Literal['ggml', 'transformers'],
+                serialisation_format: t.Literal['safetensors', 'legacy'], cors: bool, adapter_id: str | None,
+                return_process: bool, **attrs: t.Any,
+               ) -> LLMConfig | subprocess.Popen[bytes]:
+    if serialisation_format == 'safetensors' and quantize is not None and os.environ.get(
+        'OPENLLM_SERIALIZATION_WARNING', str(True)).upper() in openllm.utils.ENV_VARS_TRUE_VALUES:
       termui.echo(
           f"'--quantize={quantize}' might not work with 'safetensors' serialisation format. Use with caution!. To silence this warning, set \"OPENLLM_SERIALIZATION_WARNING=False\"\nNote: You can always fallback to '--serialisation legacy' when running quantisation.",
           fg='yellow')
@@ -190,7 +181,11 @@ Available official model_id(s): [default: {llm_config['default_id']}]
       wpr = float(wpr)
 
     # Create a new model env to work with the envvar during CLI invocation
-    env = openllm.utils.EnvVarMixin(config['model_name'], config.default_implementation(), model_id=model_id or config['default_id'], quantize=quantize, runtime=runtime)
+    env = openllm.utils.EnvVarMixin(config['model_name'],
+                                    config.default_implementation(),
+                                    model_id=model_id or config['default_id'],
+                                    quantize=quantize,
+                                    runtime=runtime)
     prerequisite_check(ctx, config, quantize, adapter_map, int(1 / wpr))
 
     # NOTE: This is to set current configuration
@@ -209,9 +204,13 @@ Available official model_id(s): [default: {llm_config['default_id']}]
     if env['model_id_value']: start_env[env.model_id] = str(env['model_id_value'])
     if quantize is not None: start_env[env.quantize] = str(t.cast(str, env['quantize_value']))
 
-    llm = openllm.utils.infer_auto_class(env['framework_value']).for_model(
-        model, model_id=start_env[env.model_id], model_version=model_version, llm_config=config, ensure_available=True, adapter_map=adapter_map, serialisation=serialisation_format
-    )
+    llm = openllm.utils.infer_auto_class(env['framework_value']).for_model(model,
+                                                                           model_id=start_env[env.model_id],
+                                                                           model_version=model_version,
+                                                                           llm_config=config,
+                                                                           ensure_available=True,
+                                                                           adapter_map=adapter_map,
+                                                                           serialisation=serialisation_format)
     start_env.update({env.config: llm.config.model_dump_json().decode()})
 
     server = bentoml.GrpcServer('_service:svc', **server_attrs) if _serve_grpc else bentoml.HTTPServer(
@@ -279,21 +278,19 @@ def start_decorator(llm_config: LLMConfig, serve_grpc: bool = False) -> t.Callab
 
   def wrapper(fn: FC) -> t.Callable[[FC], FC]:
     composed = openllm.utils.compose(
-        llm_config.to_click_options,
-        _http_server_args if not serve_grpc else _grpc_server_args,
-        cog.optgroup.group('General LLM Options', help=f"The following options are related to running '{llm_config['start_name']}' LLM Server."),
-        model_id_option(factory=cog.optgroup, model_env=llm_config['env']),
-        model_version_option(factory=cog.optgroup),
-        cog.optgroup.option('--server-timeout', type=int, default=None, help='Server timeout in seconds'),
-        workers_per_resource_option(factory=cog.optgroup),
-        cors_option(factory=cog.optgroup),
+        llm_config.to_click_options, _http_server_args if not serve_grpc else _grpc_server_args,
         cog.optgroup.group(
             'General LLM Options',
             help=f"The following options are related to running '{llm_config['start_name']}' LLM Server."),
         model_id_option(factory=cog.optgroup, model_env=llm_config['env']), model_version_option(factory=cog.optgroup),
         cog.optgroup.option('--server-timeout', type=int, default=None, help='Server timeout in seconds'),
         workers_per_resource_option(factory=cog.optgroup), cors_option(factory=cog.optgroup),
-        fast_option(factory=cog.optgroup),
+        cog.optgroup.group(
+            'General LLM Options',
+            help=f"The following options are related to running '{llm_config['start_name']}' LLM Server."),
+        model_id_option(factory=cog.optgroup, model_env=llm_config['env']), model_version_option(factory=cog.optgroup),
+        cog.optgroup.option('--server-timeout', type=int, default=None, help='Server timeout in seconds'),
+        workers_per_resource_option(factory=cog.optgroup), cors_option(factory=cog.optgroup),
         cog.optgroup.group('LLM Optimization Options',
                            help='''Optimization related options.
 
@@ -316,8 +313,7 @@ def start_decorator(llm_config: LLMConfig, serve_grpc: bool = False) -> t.Callab
                             type=click.Choice(['ggml', 'transformers']),
                             default='transformers',
                             help='The runtime to use for the given model. Default is transformers.'),
-        quantize_option(factory=cog.optgroup, model_env=llm_config['env']),
-        serialisation_option(factory=cog.optgroup),
+        quantize_option(factory=cog.optgroup, model_env=llm_config['env']), serialisation_option(factory=cog.optgroup),
         cog.optgroup.group('Fine-tuning related options',
                            help='''\
     Note that the argument `--adapter-id` can accept the following format:

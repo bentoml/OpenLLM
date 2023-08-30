@@ -133,8 +133,7 @@ def import_model(llm: openllm.LLM[M, T],
                                                             trust_remote_code=trust_remote_code,
                                                             use_safetensors=safe_serialisation,
                                                             **hub_attrs,
-                                                            **attrs,
-                                                           )
+                                                            **attrs)
         update_model(bentomodel,
                      metadata={
                          '_pretrained_class': model.__class__.__name__,
@@ -235,8 +234,12 @@ def load_model(llm: openllm.LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M:
                                                        **attrs)
 
   device_map = attrs.pop('device_map', 'auto' if torch.cuda.is_available() and torch.cuda.device_count() > 1 else None)
-  model = infer_autoclass_from_llm(llm, config).from_pretrained(
-      llm._bentomodel.path, *decls, config=config, trust_remote_code=llm.__llm_trust_remote_code__, device_map=device_map, **hub_attrs, **attrs
-  ).eval()
+  model = infer_autoclass_from_llm(llm, config).from_pretrained(llm._bentomodel.path,
+                                                                *decls,
+                                                                config=config,
+                                                                trust_remote_code=llm.__llm_trust_remote_code__,
+                                                                device_map=device_map,
+                                                                **hub_attrs,
+                                                                **attrs).eval()
   if llm.__llm_implementation__ in {'pt', 'vllm'}: check_unintialised_params(model)
   return t.cast('M', model)

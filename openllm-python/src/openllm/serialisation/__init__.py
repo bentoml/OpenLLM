@@ -17,12 +17,14 @@ from bentoml._internal.models.model import CUSTOM_OBJECTS_FILENAME
 from openllm_core._typing_compat import M
 from openllm_core._typing_compat import ParamSpec
 from openllm_core._typing_compat import T
+
 if t.TYPE_CHECKING:
   import bentoml
 
   from . import constants as constants
   from . import ggml as ggml
   from . import transformers as transformers
+
 P = ParamSpec('P')
 
 def load_tokenizer(llm: openllm.LLM[t.Any, T], **tokenizer_attrs: t.Any) -> T:

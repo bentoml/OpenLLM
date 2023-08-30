@@ -72,19 +72,17 @@ async def generate_stream_v1(input_dict: dict[str, t.Any]) -> t.AsyncGenerator[s
                                                echo=echo,
                                                **qa_inputs.llm_config.model_dump())
 
-@svc.api(
-    route='/v1/metadata',
-    input=bentoml.io.Text(),
-    output=bentoml.io.JSON.from_sample({
-        'model_id': runner.llm.model_id,
-        'timeout': 3600,
-        'model_name': llm_config['model_name'],
-        'framework': runner.implementation,
-        'configuration': '',
-        'supports_embeddings': runner.supports_embeddings,
-        'supports_hf_agent': runner.supports_hf_agent
-    })
-)
+@svc.api(route='/v1/metadata',
+         input=bentoml.io.Text(),
+         output=bentoml.io.JSON.from_sample({
+             'model_id': runner.llm.model_id,
+             'timeout': 3600,
+             'model_name': llm_config['model_name'],
+             'framework': runner.implementation,
+             'configuration': '',
+             'supports_embeddings': runner.supports_embeddings,
+             'supports_hf_agent': runner.supports_hf_agent
+         }))
 def metadata_v1(_: str) -> openllm.MetadataOutput:
   return openllm.MetadataOutput(timeout=llm_config['timeout'],
                                 model_name=llm_config['model_name'],

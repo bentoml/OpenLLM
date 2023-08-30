@@ -14,6 +14,7 @@ import traceback
 import typing as t
 
 import openllm
+
 from openllm_core._configuration import _object_getattribute
 from openllm_core._configuration import _setattr_class
 from openllm_core._schema import unmarshal_vllm_outputs
@@ -32,12 +33,14 @@ from openllm_core.utils import first_not_none
 from openllm_core.utils import is_torch_available
 
 from .exceptions import OpenLLMException
+
 if t.TYPE_CHECKING:
   import torch
   import transformers
   import vllm
 
   import bentoml
+
   from openllm._llm import LLM
 else:
   transformers = LazyLoader('transformers', globals(), 'transformers')
@@ -45,6 +48,7 @@ else:
   vllm = LazyLoader('vllm', globals(), 'vllm')
 
 def import_model(fn: import_model_protocol[bentoml.Model, M, T]) -> t.Callable[[LLM[M, T]], bentoml.Model]:
+
   @functools.wraps(fn)
   def inner(self: LLM[M, T], *decls: t.Any, trust_remote_code: bool | None = None, **attrs: t.Any) -> bentoml.Model:
     trust_remote_code = first_not_none(trust_remote_code, default=self.__llm_trust_remote_code__)
@@ -56,21 +60,19 @@ def import_model(fn: import_model_protocol[bentoml.Model, M, T]) -> t.Callable[[
   return inner
 
 def load_model(fn: load_model_protocol[M, T]) -> t.Callable[[LLM[M, T]], M | vllm.LLMEngine]:
+
   @functools.wraps(fn)
   def inner(self: LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M | vllm.LLMEngine:
     if self.__llm_implementation__ == 'vllm':
       # TODO: Do some more processing with token_id once we support token streaming
       try:
         return vllm.LLMEngine.from_engine_args(
-            vllm.EngineArgs(
-                model=self._bentomodel.path,
-                tokenizer=self._bentomodel.path if self.tokenizer_id == 'local' else self.tokenizer_id,
-                tokenizer_mode='auto',
-                tensor_parallel_size=1 if device_count() < 2 else device_count(),
-                dtype='auto',
-                worker_use_ray=False
-            )
-        )
+            vllm.EngineArgs(model=self._bentomodel.path,
+                            tokenizer=self._bentomodel.path if self.tokenizer_id == 'local' else self.tokenizer_id,
+                            tokenizer_mode='auto',
+                            tensor_parallel_size=1 if device_count() < 2 else device_count(),
+                            dtype='auto',
+                            worker_use_ray=False))
       except Exception as err:
         traceback.print_exc()
         raise OpenLLMException(f'Failed to initialise vLLMEngine due to the following error:\n{err}') from None
@@ -81,6 +83,7 @@ def load_model(fn: load_model_protocol[M, T]) -> t.Callable[[LLM[M, T]], M | vll
   return inner
 
 def load_tokenizer(fn: load_tokenizer_protocol[M, T]) -> t.Callable[[LLM[M, T]], T]:
+
   @functools.wraps(fn)
   def inner(self: LLM[M, T], **tokenizer_attrs: t.Any) -> T:
     return fn(self, **{**self.llm_parameters[-1], **tokenizer_attrs})
@@ -88,9 +91,11 @@ def load_tokenizer(fn: load_tokenizer_protocol[M, T]) -> t.Callable[[LLM[M, T]],
   return inner
 
 def llm_post_init(fn: llm_post_init_protocol[M, T]) -> t.Callable[[LLM[M, T]], None]:
+
   @functools.wraps(fn)
   def inner(self: LLM[M, T]) -> None:
-    if self.__llm_implementation__ == 'pt' and is_torch_available(): self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    if self.__llm_implementation__ == 'pt' and is_torch_available():
+      self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     fn(self)
 
   return inner
@@ -104,9 +109,13 @@ def make_assignment_script(cls: type[LLM[M, T]]) -> t.Callable[[type[LLM[M, T]]]
   anns: DictStrAny = {}
   globs: DictStrAny = {'cls': cls, '__wrapped_llm_post_init': llm_post_init}
   # _cached_LLMFunction_get and _ccached_LLMSerialisation_get
-  globs.update({f'_cached_{cl_.__name__}_get': _object_getattribute.__get__(cl_) for cl_ in {LLMSerialisation, LLMFunction}})
+  globs.update(
+      {f'_cached_{cl_.__name__}_get': _object_getattribute.__get__(cl_) for cl_ in {LLMSerialisation, LLMFunction}})
   # llm_post_init implementation
-  lines: ListStr = [f'_impl_{cls.__name__}_func=cls.llm_post_init', _setattr_class('llm_post_init', f'__wrapped_llm_post_init(_impl_{cls.__name__}_func)')]
+  lines: ListStr = [
+      f'_impl_{cls.__name__}_func=cls.llm_post_init',
+      _setattr_class('llm_post_init', f'__wrapped_llm_post_init(_impl_{cls.__name__}_func)')
+  ]
 
   serialisation_attr = {'import_model': import_model, 'load_model': load_model, 'load_tokenizer': load_tokenizer,}
   for func, impl in serialisation_attr.items():
@@ -114,11 +123,17 @@ def make_assignment_script(cls: type[LLM[M, T]]) -> t.Callable[[type[LLM[M, T]]]
     globs.update({f'__serialisation_{func}': getattr(openllm.serialisation, func, None), impl_name: impl})
     cached_func_name = f'_cached_{cls.__name__}_func'
     func_call = f"_impl_{cls.__name__}_{func}={cached_func_name} if {cached_func_name} is not _cached_LLMSerialisation_get('{func}') else __serialisation_{func}"
-    lines.extend([f'{cached_func_name}=cls.{func}', func_call, _setattr_class(func, f'{impl_name}(_impl_{cls.__name__}_{func})')])
+    lines.extend([
+        f'{cached_func_name}=cls.{func}', func_call,
+        _setattr_class(func, f'{impl_name}(_impl_{cls.__name__}_{func})')
+    ])
 
   # assign vLLM implementation
   if cls.__llm_implementation__ == 'vllm':
-    globs.update({f'_vllm_{it}': fn for it, fn in zip(LLMFunction.__abstractmethods__, (vllm_generate, vllm_generate_iterator, vllm_postprocess_generate))})
+    globs.update({
+        f'_vllm_{it}': fn for it, fn in zip(LLMFunction.__abstractmethods__, (vllm_generate, vllm_generate_iterator,
+                                                                              vllm_postprocess_generate))
+    })
     lines.extend([_setattr_class(it, f'_vllm_{it}') for it in LLMFunction.__abstractmethods__])
 
   # cached attribute initialisation
@@ -136,17 +151,24 @@ def make_assignment_script(cls: type[LLM[M, T]]) -> t.Callable[[type[LLM[M, T]]]
     return f'__llm_supports_{key}__'
 
   bool_attr = {it for it in LLMFunction.__dict__ if not it.startswith('_')}
-  lines.extend([_setattr_class(dunder_support(fn), f"cls.{fn} is not _cached_LLMFunction_get('{fn}')") for fn in bool_attr])
+  lines.extend(
+      [_setattr_class(dunder_support(fn), f"cls.{fn} is not _cached_LLMFunction_get('{fn}')") for fn in bool_attr])
   anns.update({dunder_support(fn): interface_anns.get(dunder_support(fn)) for fn in bool_attr})
 
   return codegen.generate_function(cls, '__assign_llm_attr', lines, args=('cls', *args), globs=globs, annotations=anns)
 
-def vllm_postprocess_generate(self: LLM['vllm.LLMEngine', T], prompt: str, generation_result: list[dict[str, t.Any]], **_: t.Any) -> str:
+def vllm_postprocess_generate(self: LLM['vllm.LLMEngine', T], prompt: str, generation_result: list[dict[str, t.Any]],
+                              **_: t.Any) -> str:
   return generation_result[0]['outputs'][0]['text']
 
-def vllm_generate_iterator(
-    self: LLM['vllm.LLMEngine', T], prompt: str, /, *, echo: bool = False, stop: str | t.Iterable[str] | None = None, stop_token_ids: list[int] | None = None, **attrs: t.Any
-) -> t.Iterator[dict[str, t.Any]]:
+def vllm_generate_iterator(self: LLM['vllm.LLMEngine', T],
+                           prompt: str,
+                           /,
+                           *,
+                           echo: bool = False,
+                           stop: str | t.Iterable[str] | None = None,
+                           stop_token_ids: list[int] | None = None,
+                           **attrs: t.Any) -> t.Iterator[dict[str, t.Any]]:
   request_id: str | None = attrs.pop('request_id', None)
   if request_id is None: raise ValueError('request_id must not be None.')
   if stop_token_ids is None: stop_token_ids = []
@@ -174,7 +196,9 @@ def vllm_generate(self: LLM['vllm.LLMEngine', T], prompt: str, **attrs: t.Any) -
   if request_id is None: raise ValueError('request_id must not be None.')
   outputs: list[vllm.RequestOutput] = []
   # TODO: support prompt_token_ids
-  self.model.add_request(request_id=request_id, prompt=prompt, sampling_params=self.config.model_construct_env(**attrs).to_sampling_config())
+  self.model.add_request(request_id=request_id,
+                         prompt=prompt,
+                         sampling_params=self.config.model_construct_env(**attrs).to_sampling_config())
   while self.model.has_unfinished_requests():
     outputs.extend([r for r in self.model.step() if r.finished])
   return [unmarshal_vllm_outputs(i) for i in outputs]

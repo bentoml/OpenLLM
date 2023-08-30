@@ -23,7 +23,8 @@ class Llama(openllm.LLM['transformers.LlamaForCausalLM', 'transformers.LlamaToke
       mask = attention_mask.unsqueeze(-1).expand(data.size()).float()
       masked_embeddings = data * mask
       sum_embeddings, seq_length = torch.sum(masked_embeddings, dim=1), torch.sum(mask, dim=1)
-    return openllm.EmbeddingsOutput(embeddings=F.normalize(sum_embeddings / seq_length, p=2, dim=1).tolist(), num_tokens=int(torch.sum(attention_mask).item()))
+    return openllm.EmbeddingsOutput(embeddings=F.normalize(sum_embeddings / seq_length, p=2, dim=1).tolist(),
+                                    num_tokens=int(torch.sum(attention_mask).item()))
 
   def generate_one(self, prompt: str, stop: list[str],
                    **preprocess_generate_kwds: t.Any) -> list[dict[t.Literal['generated_text'], str]]:
