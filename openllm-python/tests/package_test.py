@@ -4,6 +4,7 @@ import os
 import typing as t
 
 import pytest
+import transformers
 
 import openllm
 
@@ -39,7 +40,11 @@ def test_general_build_from_local(tmp_path_factory: pytest.TempPathFactory):
   if llm.bettertransformer:
     llm.__llm_model__ = llm.model.reverse_bettertransformer()
 
-  llm.save_pretrained(local_path)
+  if isinstance(llm.model, transformers.Pipeline):
+    llm.model.save_pretrained(str(local_path))
+  else:
+    llm.model.save_pretrained(str(local_path))
+    llm.tokenizer.save_pretrained(str(local_path))
 
   assert openllm.build('flan-t5', model_id=local_path.resolve().__fspath__(), model_version='local')
 

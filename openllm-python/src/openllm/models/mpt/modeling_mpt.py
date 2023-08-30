@@ -30,10 +30,6 @@ def get_mpt_config(
 class MPT(openllm.LLM['transformers.PreTrainedModel', 'transformers.GPTNeoXTokenizerFast']):
   __openllm_internal__ = True
 
-  def llm_post_init(self) -> None:
-    import torch
-    self.dtype = torch.bfloat16 if torch.cuda.is_available() else torch.float32
-
   @property
   def import_kwargs(self) -> tuple[dict[str, t.Any], dict[str, t.Any]]:
     import torch
@@ -43,7 +39,7 @@ class MPT(openllm.LLM['transformers.PreTrainedModel', 'transformers.GPTNeoXToken
     import torch
     import transformers
     _, tokenizer_attrs = self.llm_parameters
-    torch_dtype = attrs.pop('torch_dtype', self.dtype)
+    torch_dtype = attrs.pop('torch_dtype', torch.bfloat16 if torch.cuda.is_available() else torch.float32)
     device_map = attrs.pop('device_map', None)
     attrs.pop('low_cpu_mem_usage', None)
     config = get_mpt_config(self.model_id, self.config.max_sequence_length, self.device, device_map=device_map, trust_remote_code=trust_remote_code)
@@ -57,7 +53,7 @@ class MPT(openllm.LLM['transformers.PreTrainedModel', 'transformers.GPTNeoXToken
 
   def load_model(self, *args: t.Any, **attrs: t.Any) -> transformers.PreTrainedModel:
     import transformers
-    torch_dtype = attrs.pop('torch_dtype', self.dtype)
+    torch_dtype = attrs.pop('torch_dtype', torch.bfloat16 if torch.cuda.is_available() else torch.float32)
     device_map = attrs.pop('device_map', None)
     trust_remote_code = attrs.pop('trust_remote_code', True)
     config = get_mpt_config(self._bentomodel.path, self.config.max_sequence_length, self.device, device_map=device_map, trust_remote_code=trust_remote_code,)

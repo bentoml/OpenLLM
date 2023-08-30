@@ -43,7 +43,7 @@ else:
 
 logger = logging.getLogger(__name__)
 
-__all__ = ['import_model', 'get', 'load_model', 'save_pretrained']
+__all__ = ['import_model', 'get', 'load_model']
 
 @inject
 def import_model(llm: openllm.LLM[M, T], *decls: t.Any, trust_remote_code: bool, _model_store: ModelStore = Provide[BentoMLContainer.model_store], **attrs: t.Any) -> bentoml.Model:

@@ -9,7 +9,6 @@ import pathlib
 import shutil
 import subprocess
 import typing as t
-
 from datetime import datetime
 from datetime import timedelta
 from datetime import timezone
@@ -30,7 +29,6 @@ if t.TYPE_CHECKING:
   from openllm_core._typing_compat import LiteralContainerVersionStrategy
   from openllm_core._typing_compat import LiteralString
   from openllm_core._typing_compat import RefTuple
-
 all = openllm_core.utils.LazyLoader('all', globals(), 'ghapi.all')  # noqa: F811
 
 logger = logging.getLogger(__name__)
@@ -85,7 +83,7 @@ class RefResolver:
   git_hash: str = attr.field()
   version: openllm_core.utils.VersionInfo = attr.field(converter=_convert_version_from_string)
   strategy: LiteralContainerVersionStrategy = attr.field()
-  _ghapi: t.ClassVar[all.GhApi] = all.GhApi(owner=_OWNER, repo=_REPO)
+  _ghapi: t.ClassVar[all.GhApi] = all.GhApi(owner=_OWNER, repo=_REPO, authenticate=False)
 
   @classmethod
   def _nightly_ref(cls) -> RefTuple:

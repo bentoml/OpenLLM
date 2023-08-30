@@ -96,7 +96,7 @@ def make_attr_tuple_class(cls_name: str, attr_names: t.Sequence[str]) -> type[t.
   else:
     attr_class_template.append('    pass')
   globs: DictStrAny = {'_attrs_itemgetter': itemgetter, '_attrs_property': property}
-  if SHOW_CODEGEN: logger.info('Generated class for %s:\n\n%s', attr_class_name, '\n'.join(attr_class_template))
+  if SHOW_CODEGEN: print(f'Generated class for {attr_class_name}:\n\n', '\n'.join(attr_class_template))
   _compile_and_eval('\n'.join(attr_class_template), globs)
   return globs[attr_class_name]
 
@@ -110,7 +110,7 @@ def generate_function(
   script = 'def %s(%s):\n    %s\n' % (func_name, ', '.join(args) if args is not None else '', '\n    '.join(lines) if lines else 'pass')
   meth = _make_method(func_name, script, generate_unique_filename(typ, func_name), globs)
   if annotations: meth.__annotations__ = annotations
-  if SHOW_CODEGEN: logger.info('Generated script for %s:\n\n%s', typ, script)
+  if SHOW_CODEGEN: print('Generated script for {typ}:\n\n', script)
   return meth
 
 def make_env_transformer(

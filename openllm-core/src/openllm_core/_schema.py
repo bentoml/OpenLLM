@@ -1,4 +1,4 @@
-'''Schema definition for OpenLLM. This can be use for client interaction.'''
+'''Schema definition for OpenLLM. This schema is used throughout openllm core components library.'''
 from __future__ import annotations
 import functools
 import typing as t

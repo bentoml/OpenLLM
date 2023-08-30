@@ -1,27 +1,9 @@
-"""Serialisation utilities for OpenLLM.
+'''Serialisation utilities for OpenLLM.
 
 Currently supports transformers for PyTorch, Tensorflow and Flax.
 
 Currently, GGML format is working in progress.
-
-## Usage
-
-```python
-import openllm
-
-llm = openllm.AutoLLM.for_model("dolly-v2")
-llm.save_pretrained("./path/to/local-dolly")
-```
-
-To use different runtime, specify directly in the `for_model` method:
-
-```python
-import openllm
-
-llm = openllm.AutoLLM.for_model("dolly-v2", runtime='ggml')
-llm.save_pretrained("./path/to/local-dolly")
-```
-"""
+'''
 from __future__ import annotations
 import importlib
 import typing as t
@@ -35,14 +17,12 @@ from bentoml._internal.models.model import CUSTOM_OBJECTS_FILENAME
 from openllm_core._typing_compat import M
 from openllm_core._typing_compat import ParamSpec
 from openllm_core._typing_compat import T
-
 if t.TYPE_CHECKING:
   import bentoml
 
   from . import constants as constants
   from . import ggml as ggml
   from . import transformers as transformers
-
 P = ParamSpec('P')
 
 def load_tokenizer(llm: openllm.LLM[t.Any, T], **tokenizer_attrs: t.Any) -> T:
@@ -80,7 +60,7 @@ class _Caller(t.Protocol[P]):
   def __call__(self, llm: openllm.LLM[M, T], *args: P.args, **kwargs: P.kwargs) -> t.Any:
     ...
 
-_extras = ['get', 'import_model', 'save_pretrained', 'load_model']
+_extras = ['get', 'import_model', 'load_model']
 
 def _make_dispatch_function(fn: str) -> _Caller[P]:
   def caller(llm: openllm.LLM[M, T], *args: P.args, **kwargs: P.kwargs) -> t.Any:
@@ -100,9 +80,6 @@ if t.TYPE_CHECKING:
     ...
 
   def import_model(llm: openllm.LLM[M, T], *args: t.Any, **kwargs: t.Any) -> bentoml.Model:
-    ...
-
-  def save_pretrained(llm: openllm.LLM[M, T], *args: t.Any, **kwargs: t.Any) -> None:
     ...
 
   def load_model(llm: openllm.LLM[M, T], *args: t.Any, **kwargs: t.Any) -> M:

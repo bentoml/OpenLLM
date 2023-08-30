@@ -16,7 +16,7 @@ class FlanT5(openllm.LLM['transformers.T5ForConditionalGeneration', 'transformer
           skip_special_tokens=True
       )
 
-  def embeddings(self, prompts: list[str]) -> openllm.LLMEmbeddings:
+  def embeddings(self, prompts: list[str]) -> openllm.EmbeddingsOutput:
     import torch
     import torch.nn.functional as F
     embeddings: list[list[float]] = []
@@ -28,4 +28,4 @@ class FlanT5(openllm.LLM['transformers.T5ForConditionalGeneration', 'transformer
         data = F.normalize(torch.mean(outputs.encoder_last_hidden_state[0], dim=0), p=2, dim=0)
         embeddings.append(data.tolist())
         num_tokens += len(input_ids[0])
-    return openllm.LLMEmbeddings(embeddings=embeddings, num_tokens=num_tokens)
+    return openllm.EmbeddingsOutput(embeddings=embeddings, num_tokens=num_tokens)

@@ -230,7 +230,7 @@ No significant changes.
 
   ```bash
   docker run --rm --gpus all -it -v /home/ubuntu/.local/share/bentoml:/tmp/bentoml -e BENTOML_HOME=/tmp/bentoml \
-              -e OPENLLM_USE_LOCAL_LATEST=True -e OPENLLM_LLAMA_FRAMEWORK=vllm ghcr.io/bentoml/openllm:2b5e96f90ad314f54e07b5b31e386e7d688d9bb2 start llama --model-id meta-llama/Llama-2-7b-chat-hf --workers-per-resource conserved --debug`
+              -e OPENLLM_USE_LOCAL_LATEST=True -e OPENLLM_BACKEND=vllm ghcr.io/bentoml/openllm:2b5e96f90ad314f54e07b5b31e386e7d688d9bb2 start llama --model-id meta-llama/Llama-2-7b-chat-hf --workers-per-resource conserved --debug`
   ```
 
   In conjunction with this, OpenLLM now also have a set of small CLI utilities via ``openllm ext`` for ease-of-use

@@ -44,7 +44,7 @@ _import_structure: dict[str, list[str]] = {
     "cli._sdk": ["start", "start_grpc", "build", "import_model", "list_models"],
     "_quantisation": ["infer_quantisation_config"],
     "_embeddings": ["GenericEmbeddingRunnable"],
-    "_llm": ["LLM", "Runner", "LLMRunner", "LLMRunnable", "LLMEmbeddings"],
+    "_llm": ["LLM", "Runner", "LLMRunner", "LLMRunnable", "EmbeddingsOutput"],
     "_generation": ["StopSequenceCriteria", "StopOnTokens", "LogitsProcessorList", "StoppingCriteriaList", "prepare_logits_processor"],
     "models.auto": ["MODEL_MAPPING_NAMES", "MODEL_FLAX_MAPPING_NAMES", "MODEL_TF_MAPPING_NAMES", "MODEL_VLLM_MAPPING_NAMES"],
     "models.chatglm": [],
@@ -64,7 +64,7 @@ COMPILED = _Path(__file__).suffix in (".pyd", ".so")
 if _t.TYPE_CHECKING:
   from . import bundle as bundle, cli as cli, client as client, models as models, playground as playground, serialisation as serialisation, testing as testing
   from ._generation import LogitsProcessorList as LogitsProcessorList, StopOnTokens as StopOnTokens, StoppingCriteriaList as StoppingCriteriaList, StopSequenceCriteria as StopSequenceCriteria, prepare_logits_processor as prepare_logits_processor
-  from ._llm import LLM as LLM, LLMEmbeddings as LLMEmbeddings, LLMRunnable as LLMRunnable, LLMRunner as LLMRunner, Runner as Runner
+  from ._llm import LLM as LLM, EmbeddingsOutput as EmbeddingsOutput, LLMRunnable as LLMRunnable, LLMRunner as LLMRunner, Runner as Runner
   from ._quantisation import infer_quantisation_config as infer_quantisation_config
   from ._embeddings import GenericEmbeddingRunnable as GenericEmbeddingRunnable
   from .cli._sdk import build as build, import_model as import_model, list_models as list_models, start as start, start_grpc as start_grpc
@@ -175,7 +175,7 @@ else:
     from .models.opt import TFOPT as TFOPT
 
 # NOTE: update this to sys.modules[__name__] once mypy_extensions can recognize __spec__
-__lazy = openllm_core.utils.LazyModule(__name__, globals()["__file__"], _import_structure, extra_objects={"COMPILED": COMPILED})
+__lazy = openllm_core.utils.LazyModule(__name__, globals()["__file__"], _import_structure, extra_objects={"COMPILED": COMPILED, "__openllm_migration__": {"LLMEmbeddings": "EmbeddingsOutput"}})
 __all__ = __lazy.__all__
 __dir__ = __lazy.__dir__
 __getattr__ = __lazy.__getattr__
