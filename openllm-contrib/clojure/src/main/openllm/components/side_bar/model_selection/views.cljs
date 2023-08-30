@@ -16,14 +16,16 @@
     (fn []
       [:div {:class "px-5 mb-3 mt-1"}
        [:label {:class "text-black"} "Model"
-        (into [select {:class "w-full h-8 mb-1"
+        (into [select {:class "w-full h-8 mb-1 mt-0.5"
                        :value @model-type
+                       :sx {:legend {:display "none"}}
                        :read-only true}]
               (map #(do [:option {:value %} %])
                    @all-model-types))]
        [:label {:class "text-black"} "Model ID"
-        (into [select {:class "w-full h-8"
+        (into [select {:class "w-full h-8 mt-0.5"
                        :value @model-id
+                       :sx {:legend {:display "none"}}
                        :read-only true}]
               (map #(do [:option {:value %} (str %)])
                    @all-model-ids))]])))
