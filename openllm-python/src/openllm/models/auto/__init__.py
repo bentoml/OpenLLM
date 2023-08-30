@@ -43,7 +43,8 @@ except openllm.exceptions.MissingDependencyError:
   pass
 else:
   _import_structure['modeling_flax_auto'].extend(['AutoFlaxLLM', 'MODEL_FLAX_MAPPING'])
-  if t.TYPE_CHECKING: from .modeling_flax_auto import MODEL_FLAX_MAPPING as MODEL_FLAX_MAPPING, AutoFlaxLLM as AutoFlaxLLM
+  if t.TYPE_CHECKING:
+    from .modeling_flax_auto import MODEL_FLAX_MAPPING as MODEL_FLAX_MAPPING, AutoFlaxLLM as AutoFlaxLLM
 try:
   if not is_tf_available(): raise openllm.exceptions.MissingDependencyError
 except openllm.exceptions.MissingDependencyError:

@@ -54,9 +54,13 @@ class StarCoderConfig(openllm_core.LLMConfig):
     pad_token_id: int = 49152
     repetition_penalty: float = 1.2
 
-  def sanitize_parameters(
-      self, prompt: str, temperature: float | None = None, top_p: float | None = None, max_new_tokens: int | None = None, repetition_penalty: float | None = None, **attrs: t.Any
-  ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
+  def sanitize_parameters(self,
+                          prompt: str,
+                          temperature: float | None = None,
+                          top_p: float | None = None,
+                          max_new_tokens: int | None = None,
+                          repetition_penalty: float | None = None,
+                          **attrs: t.Any) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
     fim_mode, prefix, suffix = FIM_INDICATOR in prompt, None, None
     if fim_mode:
       try:
@@ -67,7 +71,14 @@ class StarCoderConfig(openllm_core.LLMConfig):
     else:
       prompt_text = prompt
     # XXX: This value for pad_token_id is currently a hack, need more investigate why the default starcoder doesn't include the same value as santacoder EOD
-    return prompt_text, {'temperature': temperature, 'top_p': top_p, 'max_new_tokens': max_new_tokens, 'repetition_penalty': repetition_penalty, 'pad_token_id': 49152, **attrs}, {}
+    return prompt_text, {
+        'temperature': temperature,
+        'top_p': top_p,
+        'max_new_tokens': max_new_tokens,
+        'repetition_penalty': repetition_penalty,
+        'pad_token_id': 49152,
+        **attrs
+    }, {}
 
   def postprocess_generate(self, prompt: str, generation_result: t.Sequence[str], **_: t.Any) -> str:
     return generation_result[0]

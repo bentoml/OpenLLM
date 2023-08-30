@@ -24,14 +24,19 @@ if t.TYPE_CHECKING:
 @machine_option
 @click.pass_context
 @inject
-def cli(ctx: click.Context, bento: str, machine: bool, _bento_store: BentoStore = Provide[BentoMLContainer.bento_store]) -> str | None:
+def cli(ctx: click.Context,
+        bento: str,
+        machine: bool,
+        _bento_store: BentoStore = Provide[BentoMLContainer.bento_store]) -> str | None:
   '''Dive into a BentoLLM. This is synonymous to cd $(b get <bento>:<tag> -o path).'''
   try:
     bentomodel = _bento_store.get(bento)
   except bentoml.exceptions.NotFound:
     ctx.fail(f'Bento {bento} not found. Make sure to call `openllm build` first.')
   if 'bundler' not in bentomodel.info.labels or bentomodel.info.labels['bundler'] != 'openllm.bundle':
-    ctx.fail(f"Bento is either too old or not built with OpenLLM. Make sure to use ``openllm build {bentomodel.info.labels['start_name']}`` for correctness.")
+    ctx.fail(
+        f"Bento is either too old or not built with OpenLLM. Make sure to use ``openllm build {bentomodel.info.labels['start_name']}`` for correctness."
+    )
   if machine: return bentomodel.path
   # copy and paste this into a new shell
   if psutil.WINDOWS: subprocess.check_call([shutil.which('dir') or 'dir'], cwd=bentomodel.path)

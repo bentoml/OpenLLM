@@ -60,15 +60,13 @@ _sentinel, _reserved_namespace = object(), {'__openllm_migration__'}
 
 class LazyModule(types.ModuleType):
   # Very heavily inspired by optuna.integration._IntegrationModule: https://github.com/optuna/optuna/blob/master/optuna/integration/__init__.py
-  def __init__(
-      self,
-      name: str,
-      module_file: str,
-      import_structure: dict[str, list[str]],
-      module_spec: importlib.machinery.ModuleSpec | None = None,
-      doc: str | None = None,
-      extra_objects: dict[str, t.Any] | None = None
-  ):
+  def __init__(self,
+               name: str,
+               module_file: str,
+               import_structure: dict[str, list[str]],
+               module_spec: importlib.machinery.ModuleSpec | None = None,
+               doc: str | None = None,
+               extra_objects: dict[str, t.Any] | None = None):
     """Lazily load this module as an object.
 
     It does instantiate a __all__ and __dir__ for IDE support
@@ -111,7 +109,9 @@ class LazyModule(types.ModuleType):
 
     It also contains a special case for all of the metadata information, such as __version__ and __version_info__.
     '''
-    if name in _reserved_namespace: raise openllm_core.exceptions.ForbiddenAttributeError(f"'{name}' is a reserved namespace for {self._name} and should not be access nor modified.")
+    if name in _reserved_namespace:
+      raise openllm_core.exceptions.ForbiddenAttributeError(
+          f"'{name}' is a reserved namespace for {self._name} and should not be access nor modified.")
     dunder_to_metadata = {
         '__title__': 'Name',
         '__copyright__': '',
@@ -128,27 +128,36 @@ class LazyModule(types.ModuleType):
     if name in dunder_to_metadata:
       if name not in {'__version_info__', '__copyright__', '__version__'}:
         warnings.warn(
-            f"Accessing '{self._name}.{name}' is deprecated. Please consider using 'importlib.metadata' directly to query for openllm packaging metadata.", DeprecationWarning, stacklevel=2
-        )
+            f"Accessing '{self._name}.{name}' is deprecated. Please consider using 'importlib.metadata' directly to query for openllm packaging metadata.",
+            DeprecationWarning,
+            stacklevel=2)
       meta = importlib.metadata.metadata('openllm')
       project_url = dict(url.split(', ') for url in t.cast(t.List[str], meta.get_all('Project-URL')))
       if name == '__license__': return 'Apache-2.0'
       elif name == '__copyright__': return f"Copyright (c) 2023-{time.strftime('%Y')}, Aaron Pham et al."
       elif name in ('__uri__', '__url__'): return project_url['GitHub']
       elif name == '__homepage__': return project_url['Homepage']
-      elif name == '__version_info__': return VersionInfo.from_version_string(meta['version'])  # similar to how attrs handle __version_info__
-      elif name == '__author__': return meta['Author-email'].rsplit(' ', 1)[0]
-      elif name == '__email__': return meta['Author-email'].rsplit('<', 1)[1][:-1]
+      elif name == '__version_info__':
+        return VersionInfo.from_version_string(meta['version'])  # similar to how attrs handle __version_info__
+      elif name == '__author__':
+        return meta['Author-email'].rsplit(' ', 1)[0]
+      elif name == '__email__':
+        return meta['Author-email'].rsplit('<', 1)[1][:-1]
       return meta[dunder_to_metadata[name]]
     if '__openllm_migration__' in self._objects:
       cur_value = self._objects['__openllm_migration__'].get(name, _sentinel)
       if cur_value is not _sentinel:
-        warnings.warn(f"'{name}' is deprecated and will be removed in future version. Make sure to use '{cur_value}' instead", DeprecationWarning, stacklevel=3)
+        warnings.warn(
+            f"'{name}' is deprecated and will be removed in future version. Make sure to use '{cur_value}' instead",
+            DeprecationWarning,
+            stacklevel=3)
         return getattr(self, cur_value)
     if name in self._objects: return self._objects.__getitem__(name)
     if name in self._modules: value = self._get_module(name)
-    elif name in self._class_to_module.keys(): value = getattr(self._get_module(self._class_to_module.__getitem__(name)), name)
-    else: raise AttributeError(f'module {self.__name__} has no attribute {name}')
+    elif name in self._class_to_module.keys():
+      value = getattr(self._get_module(self._class_to_module.__getitem__(name)), name)
+    else:
+      raise AttributeError(f'module {self.__name__} has no attribute {name}')
     setattr(self, name, value)
     return value
 
@@ -156,7 +165,9 @@ class LazyModule(types.ModuleType):
     try:
       return importlib.import_module('.' + module_name, self.__name__)
     except Exception as e:
-      raise RuntimeError(f'Failed to import {self.__name__}.{module_name} because of the following error (look up to see its traceback):\n{e}') from e
+      raise RuntimeError(
+          f'Failed to import {self.__name__}.{module_name} because of the following error (look up to see its traceback):\n{e}'
+      ) from e
 
   # make sure this module is picklable
   def __reduce__(self) -> tuple[type[LazyModule], tuple[str, str | None, dict[str, list[str]]]]:

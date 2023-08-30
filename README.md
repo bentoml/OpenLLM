@@ -22,7 +22,7 @@
     </a><a href="https://github.com/pypa/hatch">
         <img src="https://img.shields.io/badge/%F0%9F%A5%9A-Hatch-4051b5.svg" alt="Hatch" />
     </a><a href="https://github.com/bentoml/OpenLLM/blob/main/STYLE.md">
-        <img src="https://img.shields.io/badge/code%20style-experimental-000000.svg" alt="code style" />
+        <img src="https://img.shields.io/badge/code%20style-Google-000000.svg" alt="code style" />
     </a><a href="https://github.com/astral-sh/ruff">
         <img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/charliermarsh/ruff/main/assets/badge/v2.json" alt="Ruff" />
     </a><a href="https://github.com/python/mypy">
