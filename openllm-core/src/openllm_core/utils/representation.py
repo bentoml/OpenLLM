@@ -14,6 +14,7 @@ if t.TYPE_CHECKING:
 ReprArgs: TypeAlias = t.Generator[t.Tuple[t.Optional[str], t.Any], None, None]
 
 class ReprMixin:
+
   @property
   @abstractmethod
   def __repr_keys__(self) -> set[str]:

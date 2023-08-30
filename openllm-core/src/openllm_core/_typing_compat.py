@@ -26,9 +26,14 @@ if t.TYPE_CHECKING:
 
 M = t.TypeVar(
     'M',
-    bound='t.Union[transformers.PreTrainedModel, transformers.Pipeline, transformers.TFPreTrainedModel, transformers.FlaxPreTrainedModel, vllm.LLMEngine, peft.PeftModel, autogptq.modeling.BaseGPTQForCausalLM]'
+    bound=
+    't.Union[transformers.PreTrainedModel, transformers.Pipeline, transformers.TFPreTrainedModel, transformers.FlaxPreTrainedModel, vllm.LLMEngine, peft.PeftModel, autogptq.modeling.BaseGPTQForCausalLM]'
 )
-T = t.TypeVar('T', bound='t.Union[transformers.PreTrainedTokenizerFast, transformers.PreTrainedTokenizer, transformers.PreTrainedTokenizerBase]')
+T = t.TypeVar(
+    'T',
+    bound=
+    't.Union[transformers.PreTrainedTokenizerFast, transformers.PreTrainedTokenizer, transformers.PreTrainedTokenizerBase]'
+)
 
 AnyCallable = t.Callable[..., t.Any]
 DictStrAny = t.Dict[str, t.Any]
@@ -93,7 +98,6 @@ class LLMRunnable(bentoml.Runnable, t.Generic[M, T]):
   SUPPORTED_RESOURCES = ('amd.com/gpu', 'nvidia.com/gpu', 'cpu')
   SUPPORTS_CPU_MULTI_THREADING = True
   __call__: RunnableMethod[LLMRunnable[M, T], [str], list[t.Any]]
-  set_adapter: RunnableMethod[LLMRunnable[M, T], [str], dict[t.Literal['success', 'error_msg'], bool | str]]
   embeddings: RunnableMethod[LLMRunnable[M, T], [list[str]], LLMEmbeddings]
   generate: RunnableMethod[LLMRunnable[M, T], [str], list[t.Any]]
   generate_one: RunnableMethod[LLMRunnable[M, T], [str, list[str]], t.Sequence[dict[t.Literal['generated_text'], str]]]
@@ -117,19 +121,18 @@ class LLMRunner(bentoml.Runner, t.Generic[M, T]):
   generate_one: RunnerMethod[LLMRunnable[M, T], [str, list[str]], t.Sequence[dict[t.Literal['generated_text'], str]]]
   generate_iterator: RunnerMethod[LLMRunnable[M, T], [str], t.Generator[str, None, str]]
 
-  def __init__(
-      self,
-      runnable_class: type[LLMRunnable[M, T]],
-      *,
-      runnable_init_params: dict[str, t.Any] | None = ...,
-      name: str | None = ...,
-      scheduling_strategy: type[Strategy] = ...,
-      models: list[bentoml.Model] | None = ...,
-      max_batch_size: int | None = ...,
-      max_latency_ms: int | None = ...,
-      method_configs: dict[str, dict[str, int]] | None = ...,
-      embedded: bool = False,
-  ) -> None:
+  def __init__(self,
+               runnable_class: type[LLMRunnable[M, T]],
+               *,
+               runnable_init_params: dict[str, t.Any] | None = ...,
+               name: str | None = ...,
+               scheduling_strategy: type[Strategy] = ...,
+               models: list[bentoml.Model] | None = ...,
+               max_batch_size: int | None = ...,
+               max_latency_ms: int | None = ...,
+               method_configs: dict[str, dict[str, int]] | None = ...,
+               embedded: bool = False,
+              ) -> None:
     ...
 
   def __call__(self, prompt: str, **attrs: t.Any) -> t.Any:

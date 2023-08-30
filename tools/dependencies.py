@@ -23,13 +23,17 @@ class Classifier:
           'audience': 'Intended Audience',
           'typing': 'Typing',
           'language': 'Programming Language',
-      }
-  )
+      })
   joiner: str = ' :: '
 
   @staticmethod
   def status() -> dict[int, str]:
-    return {v: status for v, status in zip(range(1, 8), ['1 - Planning', '2 - Pre-Alpha', '3 - Alpha', '4 - Beta', '5 - Production/Stable', '6 - Mature', '7 - Inactive'])}
+    return {
+        v: status for v, status in zip(range(1, 8), [
+            '1 - Planning', '2 - Pre-Alpha', '3 - Alpha', '4 - Beta', '5 - Production/Stable', '6 - Mature',
+            '7 - Inactive'
+        ])
+    }
 
   @staticmethod
   def apache() -> str:
@@ -43,10 +47,14 @@ class Classifier:
     return cls_.joiner.join([cls_.identifier[identifier], *decls])
 
   @staticmethod
-  def create_python_classifier(implementation: list[str] | None = None, supported_version: list[str] | None = None) -> list[str]:
+  def create_python_classifier(implementation: list[str] | None = None,
+                               supported_version: list[str] | None = None) -> list[str]:
     if supported_version is None: supported_version = ['3.8', '3.9', '3.10', '3.11', '3.12']
     if implementation is None: implementation = ['CPython', 'PyPy']
-    base = [Classifier.create_classifier('language', 'Python'), Classifier.create_classifier('language', 'Python', '3'),]
+    base = [
+        Classifier.create_classifier('language', 'Python'),
+        Classifier.create_classifier('language', 'Python', '3'),
+    ]
     base.append(Classifier.create_classifier('language', 'Python', '3', 'Only'))
     base.extend([Classifier.create_classifier('language', 'Python', version) for version in supported_version])
     base.extend([Classifier.create_classifier('language', 'Python', 'Implementation', impl) for impl in implementation])
@@ -85,12 +93,18 @@ class Dependencies:
 
   def to_str(self) -> str:
     deps: list[str] = []
-    if self.lower_constraint is not None and self.upper_constraint is not None: dep = f'{self.name}{self.pypi_extensions}>={self.lower_constraint},<{self.upper_constraint}'
-    elif self.lower_constraint is not None: dep = f'{self.name}{self.pypi_extensions}>={self.lower_constraint}'
-    elif self.upper_constraint is not None: dep = f'{self.name}{self.pypi_extensions}<{self.upper_constraint}'
-    elif self.subdirectory is not None: dep = f'{self.name}{self.pypi_extensions} @ git+https://github.com/{self.git_repo_url}.git#subdirectory={self.subdirectory}'
-    elif self.branch is not None: dep = f'{self.name}{self.pypi_extensions} @ git+https://github.com/{self.git_repo_url}.git@{self.branch}'
-    else: dep = f'{self.name}{self.pypi_extensions}'
+    if self.lower_constraint is not None and self.upper_constraint is not None:
+      dep = f'{self.name}{self.pypi_extensions}>={self.lower_constraint},<{self.upper_constraint}'
+    elif self.lower_constraint is not None:
+      dep = f'{self.name}{self.pypi_extensions}>={self.lower_constraint}'
+    elif self.upper_constraint is not None:
+      dep = f'{self.name}{self.pypi_extensions}<{self.upper_constraint}'
+    elif self.subdirectory is not None:
+      dep = f'{self.name}{self.pypi_extensions} @ git+https://github.com/{self.git_repo_url}.git#subdirectory={self.subdirectory}'
+    elif self.branch is not None:
+      dep = f'{self.name}{self.pypi_extensions} @ git+https://github.com/{self.git_repo_url}.git@{self.branch}'
+    else:
+      dep = f'{self.name}{self.pypi_extensions}'
     deps.append(dep)
     if self.platform: deps.append(self.platform_restriction(*self.platform))
     return ';'.join(deps)
@@ -129,7 +143,9 @@ GPTQ_DEPS = ['auto-gptq[triton]']
 VLLM_DEPS = ['vllm>=0.1.4', 'ray']
 
 _base_requirements: dict[str, t.Any] = {
-    inflection.dasherize(name): config_cls.__openllm_requirements__ for name, config_cls in openllm.CONFIG_MAPPING.items() if config_cls.__openllm_requirements__
+    inflection.dasherize(name): config_cls.__openllm_requirements__
+    for name, config_cls in openllm.CONFIG_MAPPING.items()
+    if config_cls.__openllm_requirements__
 }
 
 # shallow copy from locals()
@@ -137,7 +153,8 @@ _locals = locals().copy()
 
 # NOTE: update this table when adding new external dependencies
 # sync with openllm.utils.OPTIONAL_DEPENDENCIES
-_base_requirements.update({v: _locals.get(f'{inflection.underscore(v).upper()}_DEPS') for v in openllm.utils.OPTIONAL_DEPENDENCIES})
+_base_requirements.update(
+    {v: _locals.get(f'{inflection.underscore(v).upper()}_DEPS') for v in openllm.utils.OPTIONAL_DEPENDENCIES})
 
 _base_requirements = {k: v for k, v in sorted(_base_requirements.items())}
 
@@ -161,8 +178,7 @@ def create_classifiers() -> Array:
       Classifier.create_classifier('audience', 'Developers'),
       Classifier.create_classifier('audience', 'Science/Research'),
       Classifier.create_classifier('audience', 'System Administrators'),
-      Classifier.create_classifier('typing', 'Typed'),
-      *Classifier.create_python_classifier(),
+      Classifier.create_classifier('typing', 'Typed'), *Classifier.create_python_classifier(),
   ])
   return arr.multiline(True)
 
@@ -171,7 +187,10 @@ def create_optional_table() -> Table:
   all_array.append(f"openllm[{','.join(_base_requirements)}]")
 
   table = tomlkit.table(is_super_table=True)
-  _base_requirements.update({'full': correct_style(all_array.multiline(True)), 'all': tomlkit.array('["openllm[full]"]')})
+  _base_requirements.update({
+      'full': correct_style(all_array.multiline(True)),
+      'all': tomlkit.array('["openllm[full]"]')
+  })
   table.update({k: v for k, v in sorted(_base_requirements.items())})
   table.add(tomlkit.nl())
 
@@ -209,22 +228,8 @@ def authors() -> Array:
 def keywords() -> Array:
   arr = correct_style(tomlkit.array())
   arr.extend([
-      'MLOps',
-      'AI',
-      'BentoML',
-      'Model Serving',
-      'Model Deployment',
-      'LLMOps',
-      'Falcon',
-      'Vicuna',
-      'Llama 2',
-      'Fine tuning',
-      'Serverless',
-      'Large Language Model',
-      'Generative AI',
-      'StableLM',
-      'Alpaca',
-      'PyTorch',
+      'MLOps', 'AI', 'BentoML', 'Model Serving', 'Model Deployment', 'LLMOps', 'Falcon', 'Vicuna', 'Llama 2',
+      'Fine tuning', 'Serverless', 'Large Language Model', 'Generative AI', 'StableLM', 'Alpaca', 'PyTorch',
       'Transformers'
   ])
   return arr.multiline(True)
@@ -234,8 +239,10 @@ def build_cli_extensions() -> Table:
   ext: dict[str, str] = {'openllm': 'openllm.cli.entrypoint:cli'}
   ext.update({
       f'openllm-{inflection.dasherize(ke)}': f'openllm.cli.extension.{ke}:cli' for ke in sorted([
-          fname[:-3] for fname in os.listdir(os.path.abspath(os.path.join(ROOT, 'openllm-python', 'src', 'openllm', 'cli', 'extension'))) if fname.endswith('.py') and
-          not fname.startswith('__')
+          fname[:-3]
+          for fname in os.listdir(
+              os.path.abspath(os.path.join(ROOT, 'openllm-python', 'src', 'openllm', 'cli', 'extension')))
+          if fname.endswith('.py') and not fname.startswith('__')
       ])
   })
   table.update(ext)

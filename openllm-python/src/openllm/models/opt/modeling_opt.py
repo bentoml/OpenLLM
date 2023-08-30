@@ -19,6 +19,7 @@ class OPT(openllm.LLM['transformers.OPTForCausalLM', 'transformers.GPT2Tokenizer
     import torch
     with torch.inference_mode():
       return self.tokenizer.batch_decode(
-          self.model.generate(**self.tokenizer(prompt, return_tensors='pt').to(self.device), do_sample=True, generation_config=self.config.model_construct_env(**attrs).to_generation_config()),
-          skip_special_tokens=True
-      )
+          self.model.generate(**self.tokenizer(prompt, return_tensors='pt').to(self.device),
+                              do_sample=True,
+                              generation_config=self.config.model_construct_env(**attrs).to_generation_config()),
+          skip_special_tokens=True)

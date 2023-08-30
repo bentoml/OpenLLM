@@ -11,5 +11,6 @@ class Baichuan(openllm.LLM['transformers.PreTrainedModel', 'transformers.PreTrai
     import torch
     inputs = self.tokenizer(prompt, return_tensors='pt').to(self.device)
     with torch.inference_mode(), torch.autocast('cuda', dtype=torch.float16):  # type: ignore[attr-defined]
-      outputs = self.model.generate(**inputs, generation_config=self.config.model_construct_env(**attrs).to_generation_config())
+      outputs = self.model.generate(**inputs,
+                                    generation_config=self.config.model_construct_env(**attrs).to_generation_config())
       return self.tokenizer.batch_decode(outputs, skip_special_tokens=True)

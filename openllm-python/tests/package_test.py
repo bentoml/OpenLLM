@@ -15,7 +15,9 @@ if t.TYPE_CHECKING:
 HF_INTERNAL_T5_TESTING = 'hf-internal-testing/tiny-random-t5'
 
 actions_xfail = functools.partial(
-    pytest.mark.xfail, condition=os.getenv('GITHUB_ACTIONS') is not None, reason='Marking GitHub Actions to xfail due to flakiness and building environment not isolated.',
+    pytest.mark.xfail,
+    condition=os.getenv('GITHUB_ACTIONS') is not None,
+    reason='Marking GitHub Actions to xfail due to flakiness and building environment not isolated.',
 )
 
 @actions_xfail
@@ -46,7 +48,9 @@ def test_general_build_from_local(tmp_path_factory: pytest.TempPathFactory):
 @pytest.fixture()
 def dockerfile_template(tmp_path_factory: pytest.TempPathFactory):
   file = tmp_path_factory.mktemp('dockerfiles') / 'Dockerfile.template'
-  file.write_text("{% extends bento_base_template %}\n{% block SETUP_BENTO_ENTRYPOINT %}\n{{ super() }}\nRUN echo 'sanity from custom dockerfile'\n{% endblock %}")
+  file.write_text(
+      "{% extends bento_base_template %}\n{% block SETUP_BENTO_ENTRYPOINT %}\n{{ super() }}\nRUN echo 'sanity from custom dockerfile'\n{% endblock %}"
+  )
   return file
 
 @pytest.mark.usefixtures('dockerfile_template')

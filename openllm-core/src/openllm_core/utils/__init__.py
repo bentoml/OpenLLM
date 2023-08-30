@@ -47,9 +47,12 @@ logger = logging.getLogger(__name__)
 try:
   from typing import GenericAlias as _TypingGenericAlias  # type: ignore
 except ImportError:
-  _TypingGenericAlias = ()  # type: ignore  # python < 3.9 does not have GenericAlias (list[int], tuple[str, ...] and so on)
+  _TypingGenericAlias = (
+  )  # type: ignore  # python < 3.9 does not have GenericAlias (list[int], tuple[str, ...] and so on)
 if sys.version_info < (3, 10): _WithArgsTypes = (_TypingGenericAlias,)
-else: _WithArgsTypes: t.Any = (t._GenericAlias, types.GenericAlias, types.UnionType)  # type: ignore #  _GenericAlias is the actual GenericAlias implementation
+else:
+  _WithArgsTypes: t.Any = (t._GenericAlias, types.GenericAlias, types.UnionType
+                          )  # type: ignore #  _GenericAlias is the actual GenericAlias implementation
 
 DEV_DEBUG_VAR = 'OPENLLMDEVDEBUG'
 
@@ -117,6 +120,7 @@ def get_quiet_mode() -> bool:
   return not DEBUG and _get_quiet_mode()
 
 class ExceptionFilter(logging.Filter):
+
   def __init__(self, exclude_exceptions: list[type[Exception]] | None = None, **kwargs: t.Any):
     '''A filter of all exception.'''
     if exclude_exceptions is None: exclude_exceptions = [ConflictError]
@@ -133,6 +137,7 @@ class ExceptionFilter(logging.Filter):
     return True
 
 class InfoFilter(logging.Filter):
+
   def filter(self, record: logging.LogRecord) -> bool:
     return logging.INFO <= record.levelno < logging.WARNING
 
@@ -145,24 +150,32 @@ _LOGGING_CONFIG: dict[str, t.Any] = {
     'filters': {
         'excfilter': {
             '()': 'openllm_core.utils.ExceptionFilter'
-        }, 'infofilter': {
+        },
+        'infofilter': {
             '()': 'openllm_core.utils.InfoFilter'
         }
     },
     'handlers': {
         'bentomlhandler': {
-            'class': 'logging.StreamHandler', 'filters': ['excfilter', 'infofilter'], 'stream': 'ext://sys.stdout'
+            'class': 'logging.StreamHandler',
+            'filters': ['excfilter', 'infofilter'],
+            'stream': 'ext://sys.stdout'
         },
         'defaulthandler': {
-            'class': 'logging.StreamHandler', 'level': logging.WARNING
+            'class': 'logging.StreamHandler',
+            'level': logging.WARNING
         }
     },
     'loggers': {
         'bentoml': {
-            'handlers': ['bentomlhandler', 'defaulthandler'], 'level': logging.INFO, 'propagate': False
+            'handlers': ['bentomlhandler', 'defaulthandler'],
+            'level': logging.INFO,
+            'propagate': False
         },
         'openllm': {
-            'handlers': ['bentomlhandler', 'defaulthandler'], 'level': logging.INFO, 'propagate': False
+            'handlers': ['bentomlhandler', 'defaulthandler'],
+            'level': logging.INFO,
+            'propagate': False
         }
     },
     'root': {
@@ -227,6 +240,7 @@ def compose(*funcs: AnyCallable) -> AnyCallable:
   >>> [f(3*x, x+1) for x in range(1,10)]
   [1.5, 2.0, 2.25, 2.4, 2.5, 2.571, 2.625, 2.667, 2.7]
   '''
+
   def compose_two(f1: AnyCallable, f2: AnyCallable) -> AnyCallable:
     return lambda *args, **kwargs: f1(f2(*args, **kwargs))
 
@@ -282,7 +296,12 @@ def generate_context(framework_name: str) -> _ModelContext:
   if openllm_core.utils.is_tf_available():
     from bentoml._internal.frameworks.utils.tensorflow import get_tf_version
     framework_versions['tensorflow'] = get_tf_version()
-  if openllm_core.utils.is_flax_available(): framework_versions.update({'flax': pkg.get_pkg_version('flax'), 'jax': pkg.get_pkg_version('jax'), 'jaxlib': pkg.get_pkg_version('jaxlib')})
+  if openllm_core.utils.is_flax_available():
+    framework_versions.update({
+        'flax': pkg.get_pkg_version('flax'),
+        'jax': pkg.get_pkg_version('jax'),
+        'jaxlib': pkg.get_pkg_version('jaxlib')
+    })
   return _ModelContext(framework_name=framework_name, framework_versions=framework_versions)
 
 _TOKENIZER_PREFIX = '_tokenizer_'
@@ -301,7 +320,11 @@ _whitelist_modules = {'pkg'}
 
 # XXX: define all classes, functions import above this line
 # since _extras will be the locals() import from this file.
-_extras: dict[str, t.Any] = {k: v for k, v in locals().items() if k in _whitelist_modules or (not isinstance(v, types.ModuleType) and not k.startswith('_'))}
+_extras: dict[str, t.Any] = {
+    k: v
+    for k, v in locals().items()
+    if k in _whitelist_modules or (not isinstance(v, types.ModuleType) and not k.startswith('_'))
+}
 _extras['__openllm_migration__'] = {'ModelEnv': 'EnvVarMixin'}
 _import_structure: dict[str, list[str]] = {
     'analytics': [],
@@ -310,32 +333,12 @@ _import_structure: dict[str, list[str]] = {
     'representation': ['ReprMixin'],
     'lazy': ['LazyModule'],
     'import_utils': [
-        'OPTIONAL_DEPENDENCIES',
-        'DummyMetaclass',
-        'EnvVarMixin',
-        'require_backends',
-        'is_cpm_kernels_available',
-        'is_einops_available',
-        'is_flax_available',
-        'is_tf_available',
-        'is_vllm_available',
-        'is_torch_available',
-        'is_bitsandbytes_available',
-        'is_peft_available',
-        'is_datasets_available',
-        'is_transformers_supports_kbit',
-        'is_transformers_supports_agent',
-        'is_jupyter_available',
-        'is_jupytext_available',
-        'is_notebook_available',
-        'is_triton_available',
-        'is_autogptq_available',
-        'is_sentencepiece_available',
-        'is_xformers_available',
-        'is_fairscale_available',
-        'is_grpc_available',
-        'is_grpc_health_available',
-        'is_transformers_available'
+        'OPTIONAL_DEPENDENCIES', 'DummyMetaclass', 'EnvVarMixin', 'require_backends', 'is_cpm_kernels_available',
+        'is_einops_available', 'is_flax_available', 'is_tf_available', 'is_vllm_available', 'is_torch_available',
+        'is_bitsandbytes_available', 'is_peft_available', 'is_datasets_available', 'is_transformers_supports_kbit',
+        'is_transformers_supports_agent', 'is_jupyter_available', 'is_jupytext_available', 'is_notebook_available',
+        'is_triton_available', 'is_autogptq_available', 'is_sentencepiece_available', 'is_xformers_available',
+        'is_fairscale_available', 'is_grpc_available', 'is_grpc_health_available', 'is_transformers_available'
     ]
 }
 
