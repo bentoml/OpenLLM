@@ -129,9 +129,8 @@ def construct_python_options(llm: openllm.LLM[t.Any, t.Any],
 
 def construct_docker_options(llm: openllm.LLM[t.Any, t.Any], _: FS, workers_per_resource: float,
                              quantize: LiteralString | None, adapter_map: dict[str, str | None] | None,
-                             dockerfile_template: str | None, runtime: t.Literal['ggml', 'transformers'],
-                             serialisation_format: t.Literal['safetensors',
-                                                             'legacy'], container_registry: LiteralContainerRegistry,
+                             dockerfile_template: str | None, serialisation_format: t.Literal['safetensors', 'legacy'],
+                             container_registry: LiteralContainerRegistry,
                              container_version_strategy: LiteralContainerVersionStrategy) -> DockerOptions:
   from openllm.cli._factory import parse_config_options
   environ = parse_config_options(llm.config, llm.config['timeout'], workers_per_resource, None, True, os.environ.copy())
@@ -151,10 +150,9 @@ def construct_docker_options(llm: openllm.LLM[t.Any, t.Any], _: FS, workers_per_
   if adapter_map: env_dict['BITSANDBYTES_NOWELCOME'] = os.environ.get('BITSANDBYTES_NOWELCOME', '1')
 
   # We need to handle None separately here, as env from subprocess doesn't accept None value.
-  _env = openllm_core.utils.EnvVarMixin(llm.config['model_name'], quantize=quantize, runtime=runtime)
+  _env = openllm_core.utils.EnvVarMixin(llm.config['model_name'], quantize=quantize)
 
   if _env['quantize_value'] is not None: env_dict[_env.quantize] = t.cast(str, _env['quantize_value'])
-  env_dict[_env.runtime] = _env['runtime_value']
   return DockerOptions(
       base_image=f'{oci.CONTAINER_NAMES[container_registry]}:{oci.get_base_container_tag(container_version_strategy)}',
       env=env_dict,
@@ -216,7 +214,6 @@ def create_bento(bento_tag: bentoml.Tag,
                  dockerfile_template: str | None,
                  adapter_map: dict[str, str | None] | None = None,
                  extra_dependencies: tuple[str, ...] | None = None,
-                 runtime: t.Literal['ggml', 'transformers'] = 'transformers',
                  serialisation_format: t.Literal['safetensors', 'legacy'] = 'safetensors',
                  container_registry: LiteralContainerRegistry = 'ecr',
                  container_version_strategy: LiteralContainerVersionStrategy = 'release',
@@ -259,7 +256,7 @@ def create_bento(bento_tag: bentoml.Tag,
                                   python=construct_python_options(llm, llm_fs, extra_dependencies, adapter_map),
                                   models=[llm_spec],
                                   docker=construct_docker_options(llm, llm_fs, workers_per_resource, quantize,
-                                                                  adapter_map, dockerfile_template, runtime,
+                                                                  adapter_map, dockerfile_template,
                                                                   serialisation_format, container_registry,
                                                                   container_version_strategy))
 

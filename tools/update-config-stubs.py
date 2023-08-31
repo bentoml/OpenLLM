@@ -56,34 +56,29 @@ _value_docstring = {
     It is a dictionary of key as the accelerator spec in k4s ('cpu', 'nvidia.com/gpu', 'amd.com/gpu', 'cloud-tpus.google.com/v2', ...) and the values as supported OpenLLM Runtime ('flax', 'tf', 'pt', 'vllm')
     ''',
     'url':
-        '''The resolved url for this LLMConfig.''',
+        'The resolved url for this LLMConfig.',
     'requires_gpu':
-        '''Determines if this model is only available on GPU. By default it supports GPU and fallback to CPU.''',
+        'Determines if this model is only available on GPU. By default it supports GPU and fallback to CPU.',
     'trust_remote_code':
-        '''Whether to always trust remote code''',
+        'Whether to always trust remote code',
     'service_name':
-        """Generated service name for this LLMConfig. By default, it is 'generated_{model_name}_service.py'""",
+        "Generated service name for this LLMConfig. By default, it is \"generated_{model_name}_service.py\"",
     'requirements':
-        '''The default PyPI requirements needed to run this given LLM. By default, we will depend on
-        bentoml, torch, transformers.''',
+        'The default PyPI requirements needed to run this given LLM. By default, we will depend on bentoml, torch, transformers.',
     'model_type':
-        '''The model type for this given LLM. By default, it should be causal language modeling.
-        Currently supported 'causal_lm' or 'seq2seq_lm'
-        ''',
-    'runtime':
-        '''The runtime to use for this model. Possible values are `transformers` or `ggml`. See Llama for more information.''',
+        'The model type for this given LLM. By default, it should be causal language modeling. Currently supported "causal_lm" or "seq2seq_lm"',
     'name_type':
         '''The default name typed for this model. "dasherize" will convert the name to lowercase and
         replace spaces with dashes. "lowercase" will convert the name to lowercase. If this is not set, then both
         `model_name` and `start_name` must be specified.''',
     'model_name':
-        '''The normalized version of __openllm_start_name__, determined by __openllm_name_type__''',
+        'The normalized version of __openllm_start_name__, determined by __openllm_name_type__',
     'start_name':
-        '''Default name to be used with `openllm start`''',
+        'Default name to be used with `openllm start`',
     'env':
-        '''A EnvVarMixin instance for this LLMConfig.''',
+        'A EnvVarMixin instance for this LLMConfig.',
     'timeout':
-        '''The default timeout to be set for this given LLM.''',
+        'The default timeout to be set for this given LLM.',
     'workers_per_resource':
         '''The number of workers per resource. This is used to determine the number of workers to use for this model.
         For example, if this is set to 0.5, then OpenLLM will use 1 worker per 2 resources. If this is set to 1, then
@@ -95,9 +90,9 @@ _value_docstring = {
         By default, it is set to 1.
         ''',
     'fine_tune_strategies':
-        '''The fine-tune strategies for this given LLM.''',
+        'The fine-tune strategies for this given LLM.',
     'tokenizer_class':
-        '''Optional tokenizer class for this given LLM. See Llama for example.''',
+        'Optional tokenizer class for this given LLM. See Llama for example.',
 }
 
 _transformed = {'fine_tune_strategies': 't.Dict[AdapterType, FineTuneConfig]'}
@@ -123,7 +118,7 @@ def main() -> int:
     config_attr_lines.extend([
         ' ' * 4 + line for line in [
             f'__openllm_{keys}__: {_transformed.get(keys, process_annotations(ForwardRef.__forward_arg__))} = Field(None)\n',
-            f'"""{_value_docstring[keys]}"""\n',
+            f"'''{_value_docstring[keys]}'''\n",
         ]
     ])
   # NOTE: inline runtime __getitem__ overload process
@@ -133,7 +128,7 @@ def main() -> int:
     lines.extend([
         ' ' * 2 + line for line in [
             '@overload\n',
-            f'def __getitem__(self, item: t.Literal["{keys}"]) -> {_transformed.get(keys, process_annotations(ForwardRef.__forward_arg__))}: ...\n',
+            f"def __getitem__(self, item: t.Literal['{keys}']) -> {_transformed.get(keys, process_annotations(ForwardRef.__forward_arg__))}: ...\n",
         ]
     ])
   # special case variables: generation_class, extras, sampling_class
@@ -141,10 +136,10 @@ def main() -> int:
   lines.extend([
       ' ' * 2 + line for line in [
           '@overload\n',
-          'def __getitem__(self, item: t.Literal["generation_class"]) -> t.Type[openllm_core.GenerationConfig]: ...\n',
+          "def __getitem__(self, item: t.Literal['generation_class']) -> t.Type[openllm_core.GenerationConfig]: ...\n",
           '@overload\n',
-          'def __getitem__(self, item: t.Literal["sampling_class"]) -> t.Type[openllm_core.SamplingParams]: ...\n',
-          '@overload\n', 'def __getitem__(self, item: t.Literal["extras"]) -> t.Dict[str, t.Any]: ...\n',
+          "def __getitem__(self, item: t.Literal['sampling_class']) -> t.Type[openllm_core.SamplingParams]: ...\n",
+          '@overload\n', "def __getitem__(self, item: t.Literal['extras']) -> t.Dict[str, t.Any]: ...\n",
       ]
   ])
   lines.append(' ' * 2 + '# NOTE: GenerationConfig arguments\n')
@@ -152,20 +147,20 @@ def main() -> int:
   for keys, type_pep563 in generation_config_anns.items():
     lines.extend([
         ' ' * 2 + line
-        for line in ['@overload\n', f'def __getitem__(self, item: t.Literal["{keys}"]) -> {type_pep563}: ...\n']
+        for line in ['@overload\n', f"def __getitem__(self, item: t.Literal['{keys}']) -> {type_pep563}: ...\n"]
     ])
   lines.append(' ' * 2 + '# NOTE: SamplingParams arguments\n')
   for keys, type_pep563 in codegen.get_annotations(SamplingParams).items():
     if keys not in generation_config_anns:
       lines.extend([
           ' ' * 2 + line
-          for line in ['@overload\n', f'def __getitem__(self, item: t.Literal["{keys}"]) -> {type_pep563}: ...\n',]
+          for line in ['@overload\n', f"def __getitem__(self, item: t.Literal['{keys}']) -> {type_pep563}: ...\n",]
       ])
   lines.append(' ' * 2 + '# NOTE: PeftType arguments\n')
   for keys in PeftType._member_names_:
     lines.extend([
         ' ' * 2 + line for line in
-        ['@overload\n', f'def __getitem__(self, item: t.Literal["{keys.lower()}"]) -> dict[str, t.Any]: ...\n',]
+        ['@overload\n', f"def __getitem__(self, item: t.Literal['{keys.lower()}']) -> dict[str, t.Any]: ...\n",]
     ])
 
   processed = processed[:start_attrs_idx] + [

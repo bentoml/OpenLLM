@@ -139,11 +139,8 @@ def make_env_transformer(cls: type[openllm_core.LLMConfig],
       '__model_name': model_name,
   })
   lines: ListStr = [
-      '__env = lambda field_name: __field_env(__model_name, field_name, __suffix)', 'return [', '    f.evolve(',
-      '        default=__populate_env(__default_callback(f.name, f.default), __env(f.name)),', '        metadata={',
-      "            'env': f.metadata.get('env', __env(f.name)),",
-      "            'description': f.metadata.get('description', '(not provided)'),", '        },', '    )',
-      '    for f in fields', ']'
+      '__env=lambda field_name:__field_env(field_name,__suffix)',
+      "return [f.evolve(default=__populate_env(__default_callback(f.name,f.default),__env(f.name)),metadata={'env':f.metadata.get('env',__env(f.name)),'description':f.metadata.get('description', '(not provided)')}) for f in fields]"
   ]
   fields_ann = 'list[attr.Attribute[t.Any]]'
   return generate_function(cls,

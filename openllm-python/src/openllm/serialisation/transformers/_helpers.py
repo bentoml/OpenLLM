@@ -76,7 +76,7 @@ def infer_autoclass_from_llm(llm: openllm.LLM[M, T], config: transformers.Pretra
     if type(config) in transformers.MODEL_FOR_CAUSAL_LM_MAPPING: idx = 0
     elif type(config) in transformers.MODEL_FOR_SEQ_TO_SEQ_CAUSAL_LM_MAPPING: idx = 1
     else: raise openllm.exceptions.OpenLLMException(f'Model type {type(config)} is not supported yet.')
-    return getattr(transformers, FRAMEWORK_TO_AUTOCLASS_MAPPING[llm.__llm_implementation__][idx])
+    return getattr(transformers, FRAMEWORK_TO_AUTOCLASS_MAPPING[llm.__llm_backend__][idx])
 
 def check_unintialised_params(model: torch.nn.Module) -> None:
   unintialized = [n for n, param in model.named_parameters() if param.data.device == torch.device('meta')]
@@ -104,11 +104,11 @@ def update_model(bentomodel: bentoml.Model, metadata: DictStrAny) -> bentoml.Mod
 def make_model_signatures(llm: openllm.LLM[M, T]) -> ModelSignaturesType:
   infer_fn: tuple[str, ...] = ('__call__',)
   default_config = ModelSignature(batchable=False)
-  if llm.__llm_implementation__ in {'pt', 'vllm'}:
+  if llm.__llm_backend__ in {'pt', 'vllm'}:
     infer_fn += ('forward', 'generate', 'contrastive_search', 'greedy_search', 'sample', 'beam_search', 'beam_sample',
                  'group_beam_search', 'constrained_beam_search',
                 )
-  elif llm.__llm_implementation__ == 'tf':
+  elif llm.__llm_backend__ == 'tf':
     infer_fn += ('predict', 'call', 'generate', 'compute_transition_scores', 'greedy_search', 'sample', 'beam_search',
                  'contrastive_search',
                 )

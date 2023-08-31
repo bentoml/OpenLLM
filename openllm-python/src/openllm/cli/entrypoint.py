@@ -66,7 +66,7 @@ from openllm.models.auto import AutoLLM
 from openllm.utils import infer_auto_class
 from openllm_core._typing_compat import Concatenate
 from openllm_core._typing_compat import DictStrAny
-from openllm_core._typing_compat import LiteralRuntime
+from openllm_core._typing_compat import LiteralBackend
 from openllm_core._typing_compat import LiteralString
 from openllm_core._typing_compat import ParamSpec
 from openllm_core._typing_compat import Self
@@ -346,7 +346,6 @@ _start_mapping = {
 @click.argument('model_id', type=click.STRING, default=None, metavar='Optional[REMOTE_REPO/MODEL_ID | /path/to/local/model]', required=False)
 @click.argument('converter', envvar='CONVERTER', type=click.STRING, default=None, required=False, metavar=None)
 @model_version_option
-@click.option('--runtime', type=click.Choice(['ggml', 'transformers']), default='transformers', help='The runtime to use for the given model. Default is transformers.')
 @output_option
 @quantize_option
 @machine_option
@@ -358,9 +357,8 @@ def import_command(
     converter: str | None,
     model_version: str | None,
     output: LiteralOutput,
-    runtime: t.Literal['ggml', 'transformers'],
     machine: bool,
-    implementation: LiteralRuntime | None,
+    implementation: LiteralBackend | None,
     quantize: t.Literal['int8', 'int4', 'gptq'] | None,
     serialisation_format: t.Literal['safetensors', 'legacy'],
 ) -> bentoml.Model:
@@ -413,12 +411,10 @@ def import_command(
   ```bash
   $ CONVERTER=llama2-hf openllm import llama /path/to/llama-2
   ```
-
-  > [!WARNING] This behaviour will override ``--runtime``. Therefore make sure that the LLM contains correct conversion strategies to both GGML and HF.
   """
   llm_config = AutoConfig.for_model(model_name)
-  env = EnvVarMixin(model_name, llm_config.default_implementation(), model_id=model_id, runtime=runtime, quantize=quantize)
-  impl: LiteralRuntime = first_not_none(implementation, default=env['framework_value'])
+  env = EnvVarMixin(model_name, llm_config.default_implementation(), model_id=model_id, quantize=quantize)
+  impl: LiteralBackend = first_not_none(implementation, default=env['framework_value'])
   llm = infer_auto_class(impl).for_model(
       model_name, model_id=env['model_id_value'], llm_config=llm_config, model_version=model_version, ensure_available=False, serialisation=serialisation_format
   )
@@ -428,7 +424,7 @@ def import_command(
     _previously_saved = True
   except bentoml.exceptions.NotFound:
     if not machine and output == 'pretty':
-      msg = f"'{model_name}' {'with model_id='+ model_id if model_id is not None else ''} does not exists in local store for implementation {llm.__llm_implementation__}. Saving to BENTOML_HOME{' (path=' + os.environ.get('BENTOML_HOME', BentoMLContainer.bentoml_home.get()) + ')' if get_debug_mode() else ''}..."
+      msg = f"'{model_name}' {'with model_id='+ model_id if model_id is not None else ''} does not exists in local store for implementation {llm.__llm_backend__}. Saving to BENTOML_HOME{' (path=' + os.environ.get('BENTOML_HOME', BentoMLContainer.bentoml_home.get()) + ')' if get_debug_mode() else ''}..."
       termui.echo(msg, fg='yellow', nl=True)
     _ref = serialisation.get(llm, auto_import=True)
     if impl == 'pt' and is_torch_available() and torch.cuda.is_available(): torch.cuda.empty_cache()
@@ -450,7 +446,6 @@ def import_command(
 @click.option('--device', type=dantic.CUDA, multiple=True, envvar='CUDA_VISIBLE_DEVICES', callback=parse_device_callback, help='Set the device', show_envvar=True)
 @cog.optgroup.group(cls=cog.MutuallyExclusiveOptionGroup, name='Optimisation options')
 @quantize_option(factory=cog.optgroup, build=True)
-@click.option('--runtime', type=click.Choice(['ggml', 'transformers']), default='transformers', help='The runtime to use for the given model. Default is transformers.')
 @click.option(
     '--enable-features',
     multiple=True,
@@ -492,7 +487,6 @@ def build_command(
     bento_version: str | None,
     overwrite: bool,
     output: LiteralOutput,
-    runtime: t.Literal['ggml', 'transformers'],
     quantize: t.Literal['int8', 'int4', 'gptq'] | None,
     enable_features: tuple[str, ...] | None,
     workers_per_resource: float | None,
@@ -533,12 +527,12 @@ def build_command(
   _previously_built = False
 
   llm_config = AutoConfig.for_model(model_name)
-  env = EnvVarMixin(model_name, llm_config.default_implementation(), model_id=model_id, quantize=quantize, runtime=runtime)
+  env = EnvVarMixin(model_name, llm_config.default_implementation(), model_id=model_id, quantize=quantize)
 
   # NOTE: We set this environment variable so that our service.py logic won't raise RuntimeError
   # during build. This is a current limitation of bentoml build where we actually import the service.py into sys.path
   try:
-    os.environ.update({'OPENLLM_MODEL': inflection.underscore(model_name), env.runtime: str(env['runtime_value']), 'OPENLLM_SERIALIZATION': serialisation_format})
+    os.environ.update({'OPENLLM_MODEL': inflection.underscore(model_name), 'OPENLLM_SERIALIZATION': serialisation_format})
     if env['model_id_value']: os.environ[env.model_id] = str(env['model_id_value'])
     if env['quantize_value']: os.environ[env.quantize] = str(env['quantize_value'])
 
@@ -598,7 +592,6 @@ def build_command(
             quantize=quantize,
             extra_dependencies=enable_features,
             dockerfile_template=dockerfile_template_path,
-            runtime=runtime,
             container_registry=container_registry,
             container_version_strategy=container_version_strategy
         )
@@ -701,7 +694,7 @@ def models_command(ctx: click.Context, output: LiteralOutput, show_available: bo
 
       tabulate.PRESERVE_WHITESPACE = True
       # llm, architecture, url, model_id, installation, cpu, gpu, backend
-      data: list[str | tuple[str, str, list[str], str, LiteralString, LiteralString, tuple[LiteralRuntime, ...]]] = []
+      data: list[str | tuple[str, str, list[str], str, LiteralString, LiteralString, tuple[LiteralBackend, ...]]] = []
       for m, v in json_data.items():
         data.extend([(m, v['architecture'], v['model_id'], v['installation'], '❌' if not v['cpu'] else '✅', '✅', v['backend'],)])
       column_widths = [

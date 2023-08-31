@@ -28,7 +28,7 @@ if t.TYPE_CHECKING:
   import transformers
 
   from openllm_core._typing_compat import DictStrAny
-  from openllm_core._typing_compat import LiteralRuntime
+  from openllm_core._typing_compat import LiteralBackend
 
 logger = logging.getLogger(__name__)
 
@@ -125,7 +125,7 @@ class _ClientAttr:
       raise RuntimeError('Malformed service endpoint. (Possible malicious)') from None
 
   @property
-  def framework(self) -> LiteralRuntime:
+  def framework(self) -> LiteralBackend:
     try:
       return self._metadata['framework']
     except KeyError:

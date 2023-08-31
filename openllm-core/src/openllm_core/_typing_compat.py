@@ -44,7 +44,7 @@ ListStr = t.List[str]
 TupleAny = t.Tuple[t.Any, ...]
 At = t.TypeVar('At', bound=attr.AttrsInstance)
 
-LiteralRuntime = t.Literal['pt', 'tf', 'flax', 'vllm']
+LiteralBackend = t.Literal['pt', 'tf', 'flax', 'vllm', 'ggml', 'mlc']
 AdapterType = t.Literal['lora', 'adalora', 'adaption_prompt', 'prefix_tuning', 'p_tuning', 'prompt_tuning', 'ia3']
 
 # TODO: support quay
@@ -96,7 +96,6 @@ class LLMRunnable(bentoml.Runnable, t.Generic[M, T]):
   SUPPORTED_RESOURCES = ('amd.com/gpu', 'nvidia.com/gpu', 'cpu')
   SUPPORTS_CPU_MULTI_THREADING = True
   __call__: RunnableMethod[LLMRunnable[M, T], [str], list[t.Any]]
-  set_adapter: RunnableMethod[LLMRunnable[M, T], [str], dict[t.Literal['success', 'error_msg'], bool | str]]
   embeddings: RunnableMethod[LLMRunnable[M, T], [list[str]], EmbeddingsOutput]
   generate: RunnableMethod[LLMRunnable[M, T], [str], list[t.Any]]
   generate_one: RunnableMethod[LLMRunnable[M, T], [str, list[str]], t.Sequence[dict[t.Literal['generated_text'], str]]]
@@ -110,7 +109,7 @@ class LLMRunner(bentoml.Runner, t.Generic[M, T]):
   identifying_params: dict[str, t.Any]
   llm: openllm.LLM[M, T]
   config: openllm.LLMConfig
-  implementation: LiteralRuntime
+  implementation: LiteralBackend
   supports_embeddings: bool
   supports_hf_agent: bool
   has_adapters: bool

@@ -1,13 +1,3 @@
-'''codegen magik for some openllm core representation of LLM.
-
-This has to do with Python doesn't have correct overload and overriding.
-
-Some of the current solution is in terms of subclass implementation, users often have to
-prepend an underscore to some of this function. Imho this is not nice, and subclass should
-just be able to implement the correct function the internal code.
-
-To achieve this, since Python allows you to pretty much do anything, this module will allow
-to generate dynamic class and override generated class with correct setattr attribute for `openllm.LLM`.'''
 from __future__ import annotations
 import functools
 import traceback
@@ -15,6 +5,7 @@ import typing as t
 
 import openllm
 
+from openllm.exceptions import OpenLLMException
 from openllm_core._configuration import _object_getattribute
 from openllm_core._configuration import _setattr_class
 from openllm_core._schema import unmarshal_vllm_outputs
@@ -32,18 +23,14 @@ from openllm_core.utils import device_count
 from openllm_core.utils import first_not_none
 from openllm_core.utils import is_torch_available
 
-from .exceptions import OpenLLMException
-
 if t.TYPE_CHECKING:
   import torch
-  import transformers
   import vllm
 
   import bentoml
 
   from openllm._llm import LLM
 else:
-  transformers = LazyLoader('transformers', globals(), 'transformers')
   torch = LazyLoader('torch', globals(), 'torch')
   vllm = LazyLoader('vllm', globals(), 'vllm')
 
@@ -51,7 +38,7 @@ def import_model(fn: import_model_protocol[bentoml.Model, M, T]) -> t.Callable[[
 
   @functools.wraps(fn)
   def inner(self: LLM[M, T], *decls: t.Any, trust_remote_code: bool | None = None, **attrs: t.Any) -> bentoml.Model:
-    trust_remote_code = first_not_none(trust_remote_code, default=self.__llm_trust_remote_code__)
+    trust_remote_code = first_not_none(trust_remote_code, default=self.trust_remote_code)
     (model_decls, model_attrs), _ = self.llm_parameters
     decls = (*model_decls, *decls)
     attrs = {**model_attrs, **attrs}
@@ -63,7 +50,7 @@ def load_model(fn: load_model_protocol[M, T]) -> t.Callable[[LLM[M, T]], M | vll
 
   @functools.wraps(fn)
   def inner(self: LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M | vllm.LLMEngine:
-    if self.__llm_implementation__ == 'vllm':
+    if self.__llm_backend__ == 'vllm':
       # TODO: Do some more processing with token_id once we support token streaming
       try:
         return vllm.LLMEngine.from_engine_args(
@@ -94,13 +81,14 @@ def llm_post_init(fn: llm_post_init_protocol[M, T]) -> t.Callable[[LLM[M, T]], N
 
   @functools.wraps(fn)
   def inner(self: LLM[M, T]) -> None:
-    if self.__llm_implementation__ == 'pt' and is_torch_available():
+    if self.__llm_backend__ == 'pt' and is_torch_available():
       self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     fn(self)
 
   return inner
 
-def make_assignment_script(cls: type[LLM[M, T]]) -> t.Callable[[type[LLM[M, T]]], None]:
+def make_llm_attributes(cls: type[LLM[M, T]]) -> t.Callable[[type[LLM[M, T]]], None]:
+  '''Make LLM attributes for the given LLM subclass.'''
   from ._llm import LLMFunction
   from ._llm import LLMInterface
   from ._llm import LLMSerialisation
@@ -129,20 +117,22 @@ def make_assignment_script(cls: type[LLM[M, T]]) -> t.Callable[[type[LLM[M, T]]]
     ])
 
   # assign vLLM implementation
-  if cls.__llm_implementation__ == 'vllm':
-    globs.update({
-        f'_vllm_{it}': fn for it, fn in zip(LLMFunction.__abstractmethods__, (vllm_generate, vllm_generate_iterator,
-                                                                              vllm_postprocess_generate))
-    })
-    lines.extend([_setattr_class(it, f'_vllm_{it}') for it in LLMFunction.__abstractmethods__])
+  if cls.__llm_backend__ == 'vllm':
+    vllm_func = {
+        f'_vllm_{it}': fn
+        for it, fn in zip(('generate', 'generate_iterator',
+                           'postprocess_generate'), (vllm_generate, vllm_generate_iterator, vllm_postprocess_generate))
+    }
+    globs.update(vllm_func)
+    lines.extend([_setattr_class(it[6:], it) for it in vllm_func])
 
-  # cached attribute initialisation
-  st_attr = {'bentomodel', 'model', 'tokenizer', 'adapter_map'}
   interface_anns = codegen.get_annotations(LLMInterface)
 
+  # cached attribute initialisation
   def dunder_cached(key: str) -> str:
     return f'__llm_{key}__'
 
+  st_attr = {'bentomodel', 'model', 'tokenizer', 'adapter_map'}
   lines.extend([_setattr_class(dunder_cached(v), None) for v in st_attr])
   anns.update({dunder_cached(v): interface_anns.get(dunder_cached(v)) for v in st_attr})
 
@@ -150,7 +140,7 @@ def make_assignment_script(cls: type[LLM[M, T]]) -> t.Callable[[type[LLM[M, T]]]
   def dunder_support(key: str) -> str:
     return f'__llm_supports_{key}__'
 
-  bool_attr = {it for it in LLMFunction.__dict__ if not it.startswith('_')}
+  bool_attr = {it[15:-2] for it in interface_anns if it.startswith('__llm_supports_')}
   lines.extend(
       [_setattr_class(dunder_support(fn), f"cls.{fn} is not _cached_LLMFunction_get('{fn}')") for fn in bool_attr])
   anns.update({dunder_support(fn): interface_anns.get(dunder_support(fn)) for fn in bool_attr})

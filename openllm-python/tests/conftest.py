@@ -8,7 +8,7 @@ import pytest
 import openllm
 
 if t.TYPE_CHECKING:
-  from openllm_core._typing_compat import LiteralRuntime
+  from openllm_core._typing_compat import LiteralBackend
 
 _FRAMEWORK_MAPPING = {
     'flan_t5': 'google/flan-t5-small',
@@ -23,11 +23,11 @@ _PROMPT_MAPPING = {
 def parametrise_local_llm(
     model: str,) -> t.Generator[tuple[str, openllm.LLMRunner[t.Any, t.Any] | openllm.LLM[t.Any, t.Any]], None, None]:
   if model not in _FRAMEWORK_MAPPING: pytest.skip(f"'{model}' is not yet supported in framework testing.")
-  runtime_impl: tuple[LiteralRuntime, ...] = tuple()
-  if model in openllm.MODEL_MAPPING_NAMES: runtime_impl += ('pt',)
-  if model in openllm.MODEL_FLAX_MAPPING_NAMES: runtime_impl += ('flax',)
-  if model in openllm.MODEL_TF_MAPPING_NAMES: runtime_impl += ('tf',)
-  for framework, prompt in itertools.product(runtime_impl, _PROMPT_MAPPING.keys()):
+  backends: tuple[LiteralBackend, ...] = tuple()
+  if model in openllm.MODEL_MAPPING_NAMES: backends += ('pt',)
+  if model in openllm.MODEL_FLAX_MAPPING_NAMES: backends += ('flax',)
+  if model in openllm.MODEL_TF_MAPPING_NAMES: backends += ('tf',)
+  for framework, prompt in itertools.product(backends, _PROMPT_MAPPING.keys()):
     llm = openllm.Runner(model,
                          model_id=_FRAMEWORK_MAPPING[model],
                          ensure_available=True,

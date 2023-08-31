@@ -47,12 +47,12 @@ logger = logging.getLogger(__name__)
 try:
   from typing import GenericAlias as _TypingGenericAlias  # type: ignore
 except ImportError:
-  _TypingGenericAlias = (
-  )  # type: ignore  # python < 3.9 does not have GenericAlias (list[int], tuple[str, ...] and so on)
+  # python < 3.9 does not have GenericAlias (list[int], tuple[str, ...] and so on)
+  _TypingGenericAlias = ()  # type: ignore
 if sys.version_info < (3, 10): _WithArgsTypes = (_TypingGenericAlias,)
 else:
-  _WithArgsTypes: t.Any = (t._GenericAlias, types.GenericAlias, types.UnionType
-                          )  # type: ignore #  _GenericAlias is the actual GenericAlias implementation
+  #  _GenericAlias is the actual GenericAlias implementation
+  _WithArgsTypes: t.Any = (t._GenericAlias, types.GenericAlias, types.UnionType)  # type: ignore
 
 DEV_DEBUG_VAR = 'OPENLLMDEVDEBUG'
 
@@ -104,8 +104,8 @@ def non_intrusive_setattr(obj: t.Any, name: str, value: t.Any) -> None:
   _setattr = functools.partial(setattr, obj) if isinstance(obj, type) else _object_setattr.__get__(obj)
   if not hasattr(obj, name): _setattr(name, value)
 
-def field_env_key(model_name: str, key: str, suffix: str | None = None) -> str:
-  return '_'.join(filter(None, map(str.upper, ['OPENLLM', model_name, suffix.strip('_') if suffix else '', key])))
+def field_env_key(key: str, suffix: str | None = None) -> str:
+  return '_'.join(filter(None, map(str.upper, ['OPENLLM', suffix.strip('_') if suffix else '', key])))
 
 # Special debug flag controled via OPENLLMDEVDEBUG
 DEBUG: bool = sys.flags.dev_mode or (not sys.flags.ignore_environment) or (str(os.environ.get(

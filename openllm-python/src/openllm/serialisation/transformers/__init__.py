@@ -28,17 +28,13 @@ if t.TYPE_CHECKING:
   import auto_gptq as autogptq
   import torch
   import torch.nn
-  import transformers
-  import vllm
 
   from bentoml._internal.models import ModelStore
   from openllm_core._typing_compat import DictStrAny
   from openllm_core._typing_compat import M
   from openllm_core._typing_compat import T
 else:
-  vllm = openllm.utils.LazyLoader('vllm', globals(), 'vllm')
   autogptq = openllm.utils.LazyLoader('autogptq', globals(), 'auto_gptq')
-  transformers = openllm.utils.LazyLoader('transformers', globals(), 'transformers')
   torch = openllm.utils.LazyLoader('torch', globals(), 'torch')
 
 logger = logging.getLogger(__name__)
@@ -74,7 +70,7 @@ def import_model(llm: openllm.LLM[M, T],
   safe_serialisation = openllm.utils.first_not_none(attrs.get('safe_serialization'),
                                                     default=llm._serialisation_format == 'safetensors')
   # Disable safe serialization with vLLM
-  if llm.__llm_implementation__ == 'vllm': safe_serialisation = False
+  if llm.__llm_backend__ == 'vllm': safe_serialisation = False
   metadata: DictStrAny = {
       'safe_serialisation': safe_serialisation,
       '_quantize': quantize_method is not None and quantize_method
@@ -95,8 +91,8 @@ def import_model(llm: openllm.LLM[M, T],
     # since saving int4 is not yet supported
     if 'quantization_config' in attrs and getattr(attrs['quantization_config'], 'load_in_4bit', False):
       attrs.pop('quantization_config')
-    if llm.__llm_implementation__ != 'flax': attrs['use_safetensors'] = safe_serialisation
-    metadata['_framework'] = 'pt' if llm.__llm_implementation__ == 'vllm' else llm.__llm_implementation__
+    if llm.__llm_backend__ != 'flax': attrs['use_safetensors'] = safe_serialisation
+    metadata['_framework'] = 'pt' if llm.__llm_backend__ == 'vllm' else llm.__llm_backend__
 
   tokenizer = infer_tokenizers_from_llm(llm).from_pretrained(llm.model_id,
                                                              trust_remote_code=trust_remote_code,
@@ -197,12 +193,13 @@ def get(llm: openllm.LLM[M, T], auto_import: bool = False) -> bentoml.Model:
       raise bentoml.exceptions.NotFound(
           f"Model {model.tag} was saved with module {model.info.module}, not loading with 'openllm.serialisation.transformers'."
       )
-    if 'runtime' in model.info.labels and model.info.labels['runtime'] != llm.runtime:
+    if 'backend' in model.info.labels and model.info.labels['backend'] != llm.__llm_backend__:
       raise openllm.exceptions.OpenLLMException(
-          f"Model {model.tag} was saved with runtime {model.info.labels['runtime']}, not loading with {llm.runtime}.")
+          f"Model {model.tag} was saved with backend {model.info.labels['backend']}, while loading with {llm.__llm_backend__}."
+      )
     return model
   except bentoml.exceptions.NotFound as err:
-    if auto_import: return import_model(llm, trust_remote_code=llm.__llm_trust_remote_code__)
+    if auto_import: return import_model(llm, trust_remote_code=llm.trust_remote_code)
     raise err from None
 
 def load_model(llm: openllm.LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M:
@@ -211,7 +208,7 @@ def load_model(llm: openllm.LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M:
   By default, it will try to find check the model in the local store.
   If model is not found, it will raises a ``bentoml.exceptions.NotFound``.
   '''
-  config, hub_attrs, attrs = process_config(llm.model_id, llm.__llm_trust_remote_code__, **attrs)
+  config, hub_attrs, attrs = process_config(llm.model_id, llm.trust_remote_code, **attrs)
   safe_serialization = openllm.utils.first_not_none(t.cast(
       t.Optional[bool], llm._bentomodel.info.metadata.get('safe_serialisation', None)),
                                                     attrs.pop('safe_serialization', None),
@@ -228,7 +225,7 @@ def load_model(llm: openllm.LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M:
                                                        *decls,
                                                        quantize_config=t.cast('autogptq.BaseQuantizeConfig',
                                                                               llm.quantization_config),
-                                                       trust_remote_code=llm.__llm_trust_remote_code__,
+                                                       trust_remote_code=llm.trust_remote_code,
                                                        use_safetensors=safe_serialization,
                                                        **hub_attrs,
                                                        **attrs)
@@ -237,9 +234,9 @@ def load_model(llm: openllm.LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M:
   model = infer_autoclass_from_llm(llm, config).from_pretrained(llm._bentomodel.path,
                                                                 *decls,
                                                                 config=config,
-                                                                trust_remote_code=llm.__llm_trust_remote_code__,
+                                                                trust_remote_code=llm.trust_remote_code,
                                                                 device_map=device_map,
                                                                 **hub_attrs,
                                                                 **attrs).eval()
-  if llm.__llm_implementation__ in {'pt', 'vllm'}: check_unintialised_params(model)
+  if llm.__llm_backend__ in {'pt', 'vllm'}: check_unintialised_params(model)
   return t.cast('M', model)

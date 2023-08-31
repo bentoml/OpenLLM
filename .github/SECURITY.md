@@ -8,8 +8,7 @@ are backward compatible. We are more lenient with patch as the development can
 move quickly.
 
 If you are just using public API, then feel free to always upgrade. Whenever
-there is a breaking policies, it will become a `DeprecationWarning` with a
-period of 12 months before becoming broken.
+there is a breaking policies, it will be announced and will be broken.
 
 > [!WARNING]
 > Everything package under `openllm` that has an underscore prefixes

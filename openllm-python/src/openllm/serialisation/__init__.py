@@ -36,7 +36,7 @@ def load_tokenizer(llm: openllm.LLM[t.Any, T], **tokenizer_attrs: t.Any) -> T:
   from .transformers._helpers import infer_tokenizers_from_llm
   from .transformers._helpers import process_config
 
-  config, *_ = process_config(llm._bentomodel.path, llm.__llm_trust_remote_code__)
+  config, *_ = process_config(llm._bentomodel.path, llm.trust_remote_code)
   bentomodel_fs = fs.open_fs(llm._bentomodel.path)
   if bentomodel_fs.isfile(CUSTOM_OBJECTS_FILENAME):
     with bentomodel_fs.open(CUSTOM_OBJECTS_FILENAME, 'rb') as cofile:
@@ -44,12 +44,11 @@ def load_tokenizer(llm: openllm.LLM[t.Any, T], **tokenizer_attrs: t.Any) -> T:
         tokenizer = cloudpickle.load(t.cast('t.IO[bytes]', cofile))['tokenizer']
       except KeyError:
         raise openllm.exceptions.OpenLLMException(
-            "Bento model does not have tokenizer. Make sure to save"
-            " the tokenizer within the model via 'custom_objects'."
-            " For example: \"bentoml.transformers.save_model(..., custom_objects={'tokenizer': tokenizer})\"") from None
+            "Bento model does not have tokenizer. Make sure to save the tokenizer within the model via 'custom_objects'. "
+            "For example: \"bentoml.transformers.save_model(..., custom_objects={'tokenizer': tokenizer})\"") from None
   else:
     tokenizer = infer_tokenizers_from_llm(llm).from_pretrained(bentomodel_fs.getsyspath('/'),
-                                                               trust_remote_code=llm.__llm_trust_remote_code__,
+                                                               trust_remote_code=llm.trust_remote_code,
                                                                **tokenizer_attrs)
 
   if tokenizer.pad_token_id is None:
@@ -71,11 +70,13 @@ def _make_dispatch_function(fn: str) -> _Caller[P]:
   def caller(llm: openllm.LLM[M, T], *args: P.args, **kwargs: P.kwargs) -> t.Any:
     """Generic function dispatch to correct serialisation submodules based on LLM runtime.
 
-    > [!NOTE] See 'openllm.serialisation.transformers' if 'llm.runtime="transformers"'
+    > [!NOTE] See 'openllm.serialisation.transformers' if 'llm.__llm_backend__ in ("pt", "tf", "flax", "vllm")'
 
-    > [!NOTE] See 'openllm.serialisation.ggml' if 'llm.runtime="ggml"'
+    > [!NOTE] See 'openllm.serialisation.ggml' if 'llm.__llm_backend__="ggml"'
     """
-    return getattr(importlib.import_module(f'.{llm.runtime}', __name__), fn)(llm, *args, **kwargs)
+    serde = 'transformers'
+    if llm.__llm_backend__ == 'ggml': serde = 'ggml'
+    return getattr(importlib.import_module(f'.{serde}', __name__), fn)(llm, *args, **kwargs)
 
   return caller
 

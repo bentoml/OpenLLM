@@ -147,9 +147,9 @@ Available official model_id(s): [default: {llm_config['default_id']}]
   @click.pass_context
   def start_cmd(ctx: click.Context, /, server_timeout: int, model_id: str | None, model_version: str | None,
                 workers_per_resource: t.Literal['conserved', 'round_robin'] | LiteralString, device: t.Tuple[str, ...],
-                quantize: t.Literal['int8', 'int4', 'gptq'] | None, runtime: t.Literal['ggml', 'transformers'],
-                serialisation_format: t.Literal['safetensors', 'legacy'], cors: bool, adapter_id: str | None,
-                return_process: bool, **attrs: t.Any,
+                quantize: t.Literal['int8', 'int4', 'gptq'] | None, serialisation_format: t.Literal['safetensors',
+                                                                                                    'legacy'],
+                cors: bool, adapter_id: str | None, return_process: bool, **attrs: t.Any,
                ) -> LLMConfig | subprocess.Popen[bytes]:
     if serialisation_format == 'safetensors' and quantize is not None and os.environ.get(
         'OPENLLM_SERIALIZATION_WARNING', str(True)).upper() in openllm.utils.ENV_VARS_TRUE_VALUES:
@@ -184,8 +184,7 @@ Available official model_id(s): [default: {llm_config['default_id']}]
     env = openllm.utils.EnvVarMixin(config['model_name'],
                                     config.default_implementation(),
                                     model_id=model_id or config['default_id'],
-                                    quantize=quantize,
-                                    runtime=runtime)
+                                    quantize=quantize)
     prerequisite_check(ctx, config, quantize, adapter_map, int(1 / wpr))
 
     # NOTE: This is to set current configuration
@@ -198,7 +197,6 @@ Available official model_id(s): [default: {llm_config['default_id']}]
         'BENTOML_HOME': os.environ.get('BENTOML_HOME', BentoMLContainer.bentoml_home.get()),
         'OPENLLM_ADAPTER_MAP': orjson.dumps(adapter_map).decode(),
         'OPENLLM_SERIALIZATION': serialisation_format,
-        env.runtime: env['runtime_value'],
         env.framework: env['framework_value']
     })
     if env['model_id_value']: start_env[env.model_id] = str(env['model_id_value'])
@@ -308,12 +306,8 @@ def start_decorator(llm_config: LLMConfig, serve_grpc: bool = False) -> t.Callab
                             envvar='CUDA_VISIBLE_DEVICES',
                             callback=parse_device_callback,
                             help=f"Assign GPU devices (if available) for {llm_config['model_name']}.",
-                            show_envvar=True),
-        cog.optgroup.option('--runtime',
-                            type=click.Choice(['ggml', 'transformers']),
-                            default='transformers',
-                            help='The runtime to use for the given model. Default is transformers.'),
-        quantize_option(factory=cog.optgroup, model_env=llm_config['env']), serialisation_option(factory=cog.optgroup),
+                            show_envvar=True), quantize_option(factory=cog.optgroup, model_env=llm_config['env']),
+        serialisation_option(factory=cog.optgroup),
         cog.optgroup.group('Fine-tuning related options',
                            help='''\
     Note that the argument `--adapter-id` can accept the following format:

@@ -10,7 +10,7 @@ import bentoml
 import openllm
 
 if t.TYPE_CHECKING:
-  from openllm_core._typing_compat import LiteralRuntime
+  from openllm_core._typing_compat import LiteralBackend
 
 logger = logging.getLogger(__name__)
 
@@ -18,10 +18,9 @@ logger = logging.getLogger(__name__)
 def build_bento(model: str,
                 model_id: str | None = None,
                 quantize: t.Literal['int4', 'int8', 'gptq'] | None = None,
-                runtime: t.Literal['ggml', 'transformers'] = 'transformers',
                 cleanup: bool = False) -> t.Iterator[bentoml.Bento]:
   logger.info('Building BentoML for %s', model)
-  bento = openllm.build(model, model_id=model_id, quantize=quantize, runtime=runtime)
+  bento = openllm.build(model, model_id=model_id, quantize=quantize)
   yield bento
   if cleanup:
     logger.info('Deleting %s', bento.tag)
@@ -49,7 +48,7 @@ def build_container(bento: bentoml.Bento | str | bentoml.Tag,
 @contextlib.contextmanager
 def prepare(model: str,
             model_id: str | None = None,
-            implementation: LiteralRuntime = 'pt',
+            implementation: LiteralBackend = 'pt',
             deployment_mode: t.Literal['container', 'local'] = 'local',
             clean_context: contextlib.ExitStack | None = None,
             cleanup: bool = True) -> t.Iterator[str]:
