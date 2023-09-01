@@ -19,11 +19,14 @@ By default, this model will use [vLLM](https://github.com/vllm-project/vllm) for
 This model will also supports PyTorch.
 
 \b
-- To use PyTorch, set the environment variable ``OPENLLM_LLAMA_FRAMEWORK="pt"``
+- To use PyTorch, set the environment variable ``OPENLLM_BACKEND="pt"``
+
+\b
+- To use vLLM, set the environment variable ``OPENLLM_BACKEND="vllm"``
 
 \b
 Llama Runner will use decapoda-research/llama-7b-hf as the default model. To change to any other Llama
-saved pretrained, or a fine-tune Llama, provide ``OPENLLM_LLAMA_MODEL_ID='openlm-research/open_llama_7b_v2'``
+saved pretrained, or a fine-tune Llama, provide ``OPENLLM_MODEL_ID='openlm-research/open_llama_7b_v2'``
 or provide `--model-id` flag when running ``openllm start llama``:
 
 \b
@@ -70,7 +73,7 @@ class LlamaConfig(openllm_core.LLMConfig):
           'lowercase',
       'url':
           'https://github.com/facebookresearch/llama',
-      'default_implementation': {
+      'default_backend': {
           'cpu': 'pt',
           'nvidia.com/gpu': 'pt'
       },

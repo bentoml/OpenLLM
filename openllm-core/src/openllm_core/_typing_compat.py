@@ -21,6 +21,8 @@ if t.TYPE_CHECKING:
   from bentoml._internal.runner.runnable import RunnableMethod
   from bentoml._internal.runner.runner import RunnerMethod
   from bentoml._internal.runner.strategy import Strategy
+  from openllm._llm import LLM
+  from openllm_core._schema import EmbeddingsOutput
 
   from .utils.lazy import VersionInfo
 
@@ -35,6 +37,9 @@ T = t.TypeVar(
     't.Union[transformers.PreTrainedTokenizerFast, transformers.PreTrainedTokenizer, transformers.PreTrainedTokenizerBase]'
 )
 
+def get_literal_args(typ: t.Any) -> tuple[str, ...]:
+  return getattr(typ, '__args__')
+
 AnyCallable = t.Callable[..., t.Any]
 DictStrAny = t.Dict[str, t.Any]
 ListAny = t.List[t.Any]
@@ -42,7 +47,7 @@ ListStr = t.List[str]
 TupleAny = t.Tuple[t.Any, ...]
 At = t.TypeVar('At', bound=attr.AttrsInstance)
 
-LiteralRuntime = t.Literal['pt', 'tf', 'flax', 'vllm']
+LiteralBackend = t.Literal['pt', 'tf', 'flax', 'vllm', 'ggml', 'mlc']
 AdapterType = t.Literal['lora', 'adalora', 'adaption_prompt', 'prefix_tuning', 'p_tuning', 'prompt_tuning', 'ia3']
 
 # TODO: support quay
@@ -78,10 +83,6 @@ class PeftAdapterOutput(t.TypedDict):
   result: t.Dict[str, peft.PeftConfig]
   error_msg: str
 
-class LLMEmbeddings(t.TypedDict):
-  embeddings: t.List[t.List[float]]
-  num_tokens: int
-
 class AdaptersTuple(TupleAny):
   adapter_id: str
   name: t.Optional[str]
@@ -98,7 +99,7 @@ class LLMRunnable(bentoml.Runnable, t.Generic[M, T]):
   SUPPORTED_RESOURCES = ('amd.com/gpu', 'nvidia.com/gpu', 'cpu')
   SUPPORTS_CPU_MULTI_THREADING = True
   __call__: RunnableMethod[LLMRunnable[M, T], [str], list[t.Any]]
-  embeddings: RunnableMethod[LLMRunnable[M, T], [list[str]], LLMEmbeddings]
+  embeddings: RunnableMethod[LLMRunnable[M, T], [list[str]], EmbeddingsOutput]
   generate: RunnableMethod[LLMRunnable[M, T], [str], list[t.Any]]
   generate_one: RunnableMethod[LLMRunnable[M, T], [str, list[str]], t.Sequence[dict[t.Literal['generated_text'], str]]]
   generate_iterator: RunnableMethod[LLMRunnable[M, T], [str], t.Generator[str, None, str]]
@@ -108,15 +109,14 @@ class LLMRunner(bentoml.Runner, t.Generic[M, T]):
   __module__: str
   llm_type: str
   llm_tag: bentoml.Tag
-  llm_framework: LiteralRuntime
   identifying_params: dict[str, t.Any]
   llm: openllm.LLM[M, T]
   config: openllm.LLMConfig
-  implementation: LiteralRuntime
+  backend: LiteralBackend
   supports_embeddings: bool
   supports_hf_agent: bool
   has_adapters: bool
-  embeddings: RunnerMethod[LLMRunnable[M, T], [list[str]], t.Sequence[LLMEmbeddings]]
+  embeddings: RunnerMethod[LLMRunnable[M, T], [list[str]], t.Sequence[EmbeddingsOutput]]
   generate: RunnerMethod[LLMRunnable[M, T], [str], list[t.Any]]
   generate_one: RunnerMethod[LLMRunnable[M, T], [str, list[str]], t.Sequence[dict[t.Literal['generated_text'], str]]]
   generate_iterator: RunnerMethod[LLMRunnable[M, T], [str], t.Generator[str, None, str]]
@@ -139,7 +139,7 @@ class LLMRunner(bentoml.Runner, t.Generic[M, T]):
     ...
 
   @abc.abstractmethod
-  def embed(self, prompt: str | list[str]) -> LLMEmbeddings:
+  def embed(self, prompt: str | list[str]) -> EmbeddingsOutput:
     ...
 
   def run(self, prompt: str, **attrs: t.Any) -> t.Any:
@@ -160,4 +160,26 @@ class LLMRunner(bentoml.Runner, t.Generic[M, T]):
   @property
   @abc.abstractmethod
   def __repr_keys__(self) -> set[str]:
+    ...
+
+class load_model_protocol(t.Generic[M, T], t.Protocol):
+
+  def __call__(self, llm: LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M:
+    ...
+
+class load_tokenizer_protocol(t.Generic[M, T], t.Protocol):
+
+  def __call__(self, llm: LLM[M, T], **attrs: t.Any) -> T:
+    ...
+
+_R = t.TypeVar('_R', covariant=True)
+
+class import_model_protocol(t.Generic[_R, M, T], t.Protocol):
+
+  def __call__(self, llm: LLM[M, T], *decls: t.Any, trust_remote_code: bool, **attrs: t.Any) -> _R:
+    ...
+
+class llm_post_init_protocol(t.Generic[M, T], t.Protocol):
+
+  def __call__(self, llm: LLM[M, T]) -> T:
     ...

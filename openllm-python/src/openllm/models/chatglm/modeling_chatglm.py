@@ -18,7 +18,7 @@ class ChatGLM(openllm.LLM['transformers.PreTrainedModel', 'transformers.PreTrain
                              prompt,
                              generation_config=self.config.model_construct_env(**attrs).to_generation_config())
 
-  def embeddings(self, prompts: list[str]) -> openllm.LLMEmbeddings:
+  def embeddings(self, prompts: list[str]) -> openllm.EmbeddingsOutput:
     import torch
     import torch.nn.functional as F
     embeddings: list[list[float]] = []
@@ -30,4 +30,4 @@ class ChatGLM(openllm.LLM['transformers.PreTrainedModel', 'transformers.PreTrain
         data = F.normalize(torch.mean(outputs.hidden_states[-1].transpose(0, 1), dim=0), p=2, dim=0)
         embeddings.append(data.tolist())
         num_tokens += len(input_ids[0])
-    return openllm.LLMEmbeddings(embeddings=embeddings, num_tokens=num_tokens)
+    return openllm.EmbeddingsOutput(embeddings=embeddings, num_tokens=num_tokens)

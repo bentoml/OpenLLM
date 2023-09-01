@@ -31,10 +31,10 @@
 (s/def ::model_id (s/coll-of string? :kind vector?))                   ;; model_id is a vector of all models for a given model_type
 (s/def ::url string?)                                                  ;; url to the model's page
 (s/def ::requires_gpu boolean?)                                        ;; whether the model requires a gpu
-(s/def ::runtime_impl ::vec-of-runtimes?)                              ;; supported runtimes
+(s/def ::backend ::vec-of-runtimes?)                                   ;; supported runtimes
 (s/def ::installation string?)                                         ;; installation instructions (pip command)
 (s/def ::model-spec (s/keys :req-un [::model_id ::url ::requires_gpu   ;; the spec for a single model (aggregates all the above)
-                                     ::runtime_impl ::installation]))
+                                     ::backend ::installation]))
 (s/def ::all-models #(or loading-text                                  ;; -- this is the case when the file with the model data has not been loaded yet by the ::set-model-data effect
                          (s/map-of keyword? ::model-spec)))            ;; map of all models
 

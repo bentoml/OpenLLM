@@ -23,9 +23,9 @@ class HfIgnore:
 
   @classmethod
   def ignore_patterns(cls, llm: openllm.LLM[M, T]) -> list[str]:
-    if llm.__llm_implementation__ == 'vllm': base = [cls.tf, cls.flax, cls.safetensors]
-    elif llm.__llm_implementation__ == 'tf': base = [cls.flax, cls.pt]
-    elif llm.__llm_implementation__ == 'flax':
+    if llm.__llm_backend__ == 'vllm': base = [cls.tf, cls.flax, cls.safetensors]
+    elif llm.__llm_backend__ == 'tf': base = [cls.flax, cls.pt]
+    elif llm.__llm_backend__ == 'flax':
       base = [cls.tf, cls.pt, cls.safetensors]  # as of current, safetensors is not supported with flax
     else:
       base = [cls.tf, cls.flax]

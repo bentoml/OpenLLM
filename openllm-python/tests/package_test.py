@@ -4,6 +4,7 @@ import os
 import typing as t
 
 import pytest
+import transformers
 
 import openllm
 
@@ -28,7 +29,7 @@ def test_general_build_with_internal_testing():
   bento = openllm.build('flan-t5', model_id=HF_INTERNAL_T5_TESTING)
 
   assert llm.llm_type == bento.info.labels['_type']
-  assert llm.config['env']['framework_value'] == bento.info.labels['_framework']
+  assert llm.config['env']['backend_value'] == bento.info.labels['_framework']
 
   bento = openllm.build('flan-t5', model_id=HF_INTERNAL_T5_TESTING)
   assert len(bento_store.list(bento.tag)) == 1
@@ -38,10 +39,11 @@ def test_general_build_from_local(tmp_path_factory: pytest.TempPathFactory):
   local_path = tmp_path_factory.mktemp('local_t5')
   llm = openllm.AutoLLM.for_model('flan-t5', model_id=HF_INTERNAL_T5_TESTING, ensure_available=True)
 
-  if llm.bettertransformer:
-    llm.__llm_model__ = llm.model.reverse_bettertransformer()
-
-  llm.save_pretrained(local_path)
+  if isinstance(llm.model, transformers.Pipeline):
+    llm.model.save_pretrained(str(local_path))
+  else:
+    llm.model.save_pretrained(str(local_path))
+    llm.tokenizer.save_pretrained(str(local_path))
 
   assert openllm.build('flan-t5', model_id=local_path.resolve().__fspath__(), model_version='local')
 

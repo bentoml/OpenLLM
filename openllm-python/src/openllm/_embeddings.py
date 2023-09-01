@@ -58,7 +58,7 @@ class GenericEmbeddingRunnable(bentoml.Runnable):
     self.model.to(self.device)
 
   @bentoml.Runnable.method(batchable=True, batch_dim=0)
-  def encode(self, sentences: list[str]) -> t.Sequence[openllm.LLMEmbeddings]:
+  def encode(self, sentences: list[str]) -> t.Sequence[openllm.EmbeddingsOutput]:
     import torch
     import torch.nn.functional as F
     encoded_input = self.tokenizer(sentences, padding=True, truncation=True, return_tensors='pt').to(self.device)
@@ -69,8 +69,8 @@ class GenericEmbeddingRunnable(bentoml.Runnable):
     # Perform pooling and normalize
     sentence_embeddings = F.normalize(self.mean_pooling(model_output, attention_mask), p=2, dim=1)
     return [
-        openllm.LLMEmbeddings(embeddings=sentence_embeddings.cpu().numpy(),
-                              num_tokens=int(torch.sum(attention_mask).item()))
+        openllm.EmbeddingsOutput(embeddings=sentence_embeddings.cpu().numpy(),
+                                 num_tokens=int(torch.sum(attention_mask).item()))
     ]
 
   @staticmethod

@@ -47,12 +47,12 @@ logger = logging.getLogger(__name__)
 try:
   from typing import GenericAlias as _TypingGenericAlias  # type: ignore
 except ImportError:
-  _TypingGenericAlias = (
-  )  # type: ignore  # python < 3.9 does not have GenericAlias (list[int], tuple[str, ...] and so on)
+  # python < 3.9 does not have GenericAlias (list[int], tuple[str, ...] and so on)
+  _TypingGenericAlias = ()  # type: ignore
 if sys.version_info < (3, 10): _WithArgsTypes = (_TypingGenericAlias,)
 else:
-  _WithArgsTypes: t.Any = (t._GenericAlias, types.GenericAlias, types.UnionType
-                          )  # type: ignore #  _GenericAlias is the actual GenericAlias implementation
+  #  _GenericAlias is the actual GenericAlias implementation
+  _WithArgsTypes: t.Any = (t._GenericAlias, types.GenericAlias, types.UnionType)  # type: ignore
 
 DEV_DEBUG_VAR = 'OPENLLMDEVDEBUG'
 
@@ -96,6 +96,9 @@ def generate_hash_from_file(f: str, algorithm: t.Literal['md5', 'sha1'] = 'sha1'
 def device_count() -> int:
   return len(available_devices())
 
+def check_bool_env(env: str, default: bool = True) -> bool:
+  return os.environ.get(env, str(default)).upper() in ENV_VARS_TRUE_VALUES
+
 # equivocal setattr to save one lookup per assignment
 _object_setattr = object.__setattr__
 
@@ -104,14 +107,16 @@ def non_intrusive_setattr(obj: t.Any, name: str, value: t.Any) -> None:
   _setattr = functools.partial(setattr, obj) if isinstance(obj, type) else _object_setattr.__get__(obj)
   if not hasattr(obj, name): _setattr(name, value)
 
-def field_env_key(model_name: str, key: str, suffix: str | None = None) -> str:
-  return '_'.join(filter(None, map(str.upper, ['OPENLLM', model_name, suffix.strip('_') if suffix else '', key])))
+def field_env_key(key: str, suffix: str | None = None) -> str:
+  return '_'.join(filter(None, map(str.upper, ['OPENLLM', suffix.strip('_') if suffix else '', key])))
 
 # Special debug flag controled via OPENLLMDEVDEBUG
-DEBUG: bool = sys.flags.dev_mode or (not sys.flags.ignore_environment and bool(os.environ.get(DEV_DEBUG_VAR)))
+DEBUG: bool = sys.flags.dev_mode or (not sys.flags.ignore_environment and check_bool_env(DEV_DEBUG_VAR, default=False))
+# Whether to show the codenge for debug purposes
+SHOW_CODEGEN: bool = DEBUG and (os.environ.get(DEV_DEBUG_VAR, str(0)).isdigit() and
+                                int(os.environ.get(DEV_DEBUG_VAR, str(0))) > 3)
 # MYPY is like t.TYPE_CHECKING, but reserved for Mypy plugins
 MYPY = False
-SHOW_CODEGEN: bool = DEBUG and int(os.environ.get('OPENLLMDEVDEBUG', str(0))) > 3
 
 def get_debug_mode() -> bool:
   return DEBUG or _get_debug_mode()
@@ -193,6 +198,7 @@ def configure_logging() -> None:
     _LOGGING_CONFIG['loggers']['bentoml']['level'] = logging.ERROR
     _LOGGING_CONFIG['root']['level'] = logging.ERROR
   elif get_debug_mode() or DEBUG:
+    _LOGGING_CONFIG['handlers']['defaulthandler']['level'] = logging.DEBUG
     _LOGGING_CONFIG['loggers']['openllm']['level'] = logging.DEBUG
     _LOGGING_CONFIG['loggers']['bentoml']['level'] = logging.DEBUG
     _LOGGING_CONFIG['root']['level'] = logging.DEBUG
@@ -330,8 +336,8 @@ _import_structure: dict[str, list[str]] = {
     'analytics': [],
     'codegen': [],
     'dantic': [],
+    'lazy': [],
     'representation': ['ReprMixin'],
-    'lazy': ['LazyModule'],
     'import_utils': [
         'OPTIONAL_DEPENDENCIES', 'DummyMetaclass', 'EnvVarMixin', 'require_backends', 'is_cpm_kernels_available',
         'is_einops_available', 'is_flax_available', 'is_tf_available', 'is_vllm_available', 'is_torch_available',

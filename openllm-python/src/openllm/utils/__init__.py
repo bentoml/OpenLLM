@@ -16,11 +16,11 @@ from . import dummy_vllm_objects as dummy_vllm_objects
 if t.TYPE_CHECKING:
   import openllm
 
-  from openllm_core._typing_compat import LiteralRuntime
+  from openllm_core._typing_compat import LiteralBackend
 
 def generate_labels(llm: openllm.LLM[t.Any, t.Any]) -> dict[str, t.Any]:
   return {
-      'runtime': llm.runtime,
+      'backend': llm.__llm_backend__,
       'framework': 'openllm',
       'model_name': llm.config['model_name'],
       'architecture': llm.config['architecture'],
@@ -28,14 +28,13 @@ def generate_labels(llm: openllm.LLM[t.Any, t.Any]) -> dict[str, t.Any]:
   }
 
 def infer_auto_class(
-    implementation: LiteralRuntime
-) -> type[openllm.AutoLLM | openllm.AutoTFLLM | openllm.AutoFlaxLLM | openllm.AutoVLLM]:
+    backend: LiteralBackend) -> type[openllm.AutoLLM | openllm.AutoTFLLM | openllm.AutoFlaxLLM | openllm.AutoVLLM]:
   import openllm
-  if implementation == 'tf': return openllm.AutoTFLLM
-  elif implementation == 'flax': return openllm.AutoFlaxLLM
-  elif implementation == 'pt': return openllm.AutoLLM
-  elif implementation == 'vllm': return openllm.AutoVLLM
-  else: raise RuntimeError(f"Unknown implementation: {implementation} (supported: 'pt', 'flax', 'tf', 'vllm')")
+  if backend == 'tf': return openllm.AutoTFLLM
+  elif backend == 'flax': return openllm.AutoFlaxLLM
+  elif backend == 'pt': return openllm.AutoLLM
+  elif backend == 'vllm': return openllm.AutoVLLM
+  else: raise RuntimeError(f"Unknown backend: {backend} (supported: 'pt', 'flax', 'tf', 'vllm')")
 
 __all__ = [
     'generate_labels', 'infer_auto_class', 'dummy_flax_objects', 'dummy_pt_objects', 'dummy_tf_objects',

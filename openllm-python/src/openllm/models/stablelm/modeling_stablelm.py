@@ -8,10 +8,6 @@ if t.TYPE_CHECKING:
 class StableLM(openllm.LLM['transformers.GPTNeoXForCausalLM', 'transformers.GPTNeoXTokenizerFast']):
   __openllm_internal__ = True
 
-  def llm_post_init(self) -> None:
-    import torch
-    self.bettertransformer = True if not torch.cuda.is_available() else False
-
   @property
   def import_kwargs(self) -> tuple[dict[str, t.Any], dict[str, t.Any]]:
     import torch

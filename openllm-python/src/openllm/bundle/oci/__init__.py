@@ -94,7 +94,7 @@ class RefResolver:
   git_hash: str = attr.field()
   version: openllm_core.utils.VersionInfo = attr.field(converter=_convert_version_from_string)
   strategy: LiteralContainerVersionStrategy = attr.field()
-  _ghapi: t.ClassVar[all.GhApi] = all.GhApi(owner=_OWNER, repo=_REPO)
+  _ghapi: t.ClassVar[all.GhApi] = all.GhApi(owner=_OWNER, repo=_REPO, authenticate=False)
 
   @classmethod
   def _nightly_ref(cls) -> RefTuple:

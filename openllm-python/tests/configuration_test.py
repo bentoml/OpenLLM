@@ -111,10 +111,7 @@ def patch_env(**attrs: t.Any):
     yield
 
 def test_struct_envvar():
-  with patch_env(**{
-      field_env_key('env_llm', 'field1'): '4',
-      field_env_key('env_llm', 'temperature', suffix='generation'): '0.2',
-  }):
+  with patch_env(**{field_env_key('field1'): '4', field_env_key('temperature', suffix='generation'): '0.2',}):
 
     class EnvLLM(openllm.LLMConfig):
       __config__ = {'default_id': 'asdfasdf', 'model_ids': ['asdf', 'asdfasdfads'], 'architecture': 'PreTrainedModel',}
@@ -146,8 +143,8 @@ def test_struct_provided_fields():
 
 def test_struct_envvar_with_overwrite_provided_env(monkeypatch: pytest.MonkeyPatch):
   with monkeypatch.context() as mk:
-    mk.setenv(field_env_key('overwrite_with_env_available', 'field1'), str(4.0))
-    mk.setenv(field_env_key('overwrite_with_env_available', 'temperature', suffix='generation'), str(0.2))
+    mk.setenv(field_env_key('field1'), str(4.0))
+    mk.setenv(field_env_key('temperature', suffix='generation'), str(0.2))
     sent = make_llm_config('OverwriteWithEnvAvailable', {
         'default_id': 'asdfasdf',
         'model_ids': ['asdf', 'asdfasdfads'],

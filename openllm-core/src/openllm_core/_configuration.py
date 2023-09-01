@@ -66,14 +66,13 @@ from ._typing_compat import AnyCallable
 from ._typing_compat import At
 from ._typing_compat import DictStrAny
 from ._typing_compat import ListStr
-from ._typing_compat import LiteralRuntime
+from ._typing_compat import LiteralBackend
 from ._typing_compat import LiteralString
 from ._typing_compat import NotRequired
 from ._typing_compat import Required
 from ._typing_compat import Self
 from ._typing_compat import overload
 from .exceptions import ForbiddenAttributeError
-from .utils import ENV_VARS_TRUE_VALUES
 from .utils import MYPY
 from .utils import LazyLoader
 from .utils import ReprMixin
@@ -312,7 +311,7 @@ class GenerationConfig(ReprMixin):
   eta_cutoff: float = dantic.Field(
       0.0,
       description=
-      '''Eta sampling is a hybrid of locally typical sampling and epsilon sampling. If set to float strictly between 0 and 1, a token is only considered if it is greater than either `eta_cutoff` or `sqrt(eta_cutoff) * exp(-entropy(softmax(next_token_logits)))`. The latter term is intuitively the expected next token probability, scaled by `sqrt(eta_cutoff)`. In the paper, suggested values range from 3e-4 to 2e-3, depending on the size of the model. See [Truncation Sampling as Language Model Desmoothing](https://arxiv.org/abs/2210.15191) for more details. '''
+      'Eta sampling is a hybrid of locally typical sampling and epsilon sampling. If set to float strictly between 0 and 1, a token is only considered if it is greater than either `eta_cutoff` or `sqrt(eta_cutoff) * exp(-entropy(softmax(next_token_logits)))`. The latter term is intuitively the expected next token probability, scaled by `sqrt(eta_cutoff)`. In the paper, suggested values range from 3e-4 to 2e-3, depending on the size of the model. See [Truncation Sampling as Language Model Desmoothing](https://arxiv.org/abs/2210.15191) for more details. '
   )
   diversity_penalty: float = dantic.Field(
       0.0,
@@ -387,17 +386,17 @@ class GenerationConfig(ReprMixin):
   output_attentions: bool = dantic.Field(
       False,
       description=
-      '''Whether or not to return the attentions tensors of all attention layers. See `attentions` under returned tensors for more details.'''
+      'Whether or not to return the attentions tensors of all attention layers. See `attentions` under returned tensors for more details.'
   )
   output_hidden_states: bool = dantic.Field(
       False,
       description=
-      '''Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors for more details.'''
+      'Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors for more details.'
   )
   output_scores: bool = dantic.Field(
       False,
-      description=
-      '''Whether or not to return the prediction scores. See `scores` under returned tensors for more details.''')
+      description='Whether or not to return the prediction scores. See `scores` under returned tensors for more details.'
+  )
   pad_token_id: int = dantic.Field(description='The id of the *padding* token.')
   bos_token_id: int = dantic.Field(description='The id of the *beginning-of-sequence* token.')
   eos_token_id: t.Union[int, t.List[int]] = dantic.Field(
@@ -565,7 +564,7 @@ class ModelSettings(t.TypedDict, total=False):
   architecture: Required[str]
 
   # default OpenLLM runtime imlementation
-  default_implementation: NotRequired[t.Dict[LiteralResourceSpec, LiteralRuntime]]
+  default_backend: NotRequired[t.Dict[LiteralResourceSpec, LiteralBackend]]
 
   # meta
   url: str
@@ -575,9 +574,7 @@ class ModelSettings(t.TypedDict, total=False):
   requirements: t.Optional[ListStr]
 
   # llm implementation specifics
-  bettertransformer: bool
   model_type: t.Literal['causal_lm', 'seq2seq_lm']
-  runtime: t.Literal['transformers', 'ggml']
 
   # naming convention, only name_type is needed to infer from the class
   # as the three below it can be determined automatically
@@ -597,7 +594,7 @@ class ModelSettings(t.TypedDict, total=False):
 
 _transformed_type: DictStrAny = {
     'fine_tune_strategies': t.Dict[AdapterType, FineTuneConfig],
-    'default_implementation': t.Dict[LiteralResourceSpec, LiteralRuntime]
+    'default_backend': t.Dict[LiteralResourceSpec, LiteralBackend]
 }
 
 @attr.define(frozen=False,
@@ -628,7 +625,7 @@ class _ModelSettingsAttr:
         ModelSettings(default_id='__default__',
                       model_ids=['__default__'],
                       architecture='PreTrainedModel',
-                      default_implementation={
+                      default_backend={
                           'cpu': 'pt',
                           'nvidia.com/gpu': 'pt'
                       },
@@ -641,8 +638,7 @@ class _ModelSettingsAttr:
                       tokenizer_class=None,
                       timeout=int(36e6),
                       service_name='',
-                      workers_per_resource=1.,
-                      runtime='transformers')))
+                      workers_per_resource=1.)))
 
   # NOTE: The below are dynamically generated by the field_transformer
   if t.TYPE_CHECKING:
@@ -650,15 +646,13 @@ class _ModelSettingsAttr:
     default_id: str
     model_ids: ListStr
     architecture: str
-    default_implementation: t.Dict[LiteralResourceSpec, LiteralRuntime]
+    default_backend: t.Dict[LiteralResourceSpec, LiteralBackend]
     url: str
     requires_gpu: bool
     trust_remote_code: bool
     service_name: str
     requirements: t.Optional[ListStr]
-    bettertransformer: bool
     model_type: t.Literal['causal_lm', 'seq2seq_lm']
-    runtime: t.Literal['transformers', 'ggml']
     name_type: t.Optional[t.Literal['dasherize', 'lowercase']]
     model_name: str
     start_name: str
@@ -670,15 +664,14 @@ class _ModelSettingsAttr:
     # update-config-stubs.py: attrs stop
 
 # a heuristic cascading implementation resolver based on available resources
-def get_default_implementation(
-    default_implementation_mapping: dict[LiteralResourceSpec, LiteralRuntime]) -> LiteralRuntime:
+def get_default_backend(backend_mapping: dict[LiteralResourceSpec, LiteralBackend]) -> LiteralBackend:
   available_spec = available_resource_spec()
-  if resource_spec('tpu') in available_spec: return default_implementation_mapping.get(resource_spec('tpu'), 'pt')
-  elif resource_spec('amd') in available_spec: return default_implementation_mapping.get(resource_spec('amd'), 'pt')
+  if resource_spec('tpu') in available_spec: return backend_mapping.get(resource_spec('tpu'), 'pt')
+  elif resource_spec('amd') in available_spec: return backend_mapping.get(resource_spec('amd'), 'pt')
   elif resource_spec('nvidia') in available_spec:
-    return default_implementation_mapping.get(resource_spec('nvidia'), 'pt')
+    return backend_mapping.get(resource_spec('nvidia'), 'pt')
   else:
-    return default_implementation_mapping.get(resource_spec('cpu'), 'pt')
+    return backend_mapping.get(resource_spec('cpu'), 'pt')
 
 def structure_settings(cl_: type[LLMConfig], cls: type[_ModelSettingsAttr]) -> _ModelSettingsAttr:
   if 'generation_class' in cl_.__config__:
@@ -704,23 +697,17 @@ def structure_settings(cl_: type[LLMConfig], cls: type[_ModelSettingsAttr]) -> _
 
   model_name = _final_value_dct['model_name'] if 'model_name' in _final_value_dct else _settings_attr.model_name
   # if the default implementation dependencies doesn't exist, then always fallback to 'pt'
-  default_implementation = _settings_attr.default_implementation
-  for rs, runtime in default_implementation.items():
+  default_backend = _settings_attr.default_backend
+  for rs, runtime in default_backend.items():
     library_stub = 'torch' if runtime == 'pt' else runtime
-    if not BACKENDS_MAPPING[library_stub][0](): default_implementation[rs] = 'pt'
-  _final_value_dct['default_implementation'] = default_implementation
+    if not BACKENDS_MAPPING[library_stub][0](): default_backend[rs] = 'pt'
+  _final_value_dct['default_backend'] = default_backend
 
   env = openllm_core.utils.EnvVarMixin(model_name,
-                                       get_default_implementation(default_implementation),
-                                       model_id=_settings_attr.default_id,
-                                       bettertransformer=_settings_attr.bettertransformer)
+                                       backend=get_default_backend(default_backend),
+                                       model_id=_settings_attr.default_id)
   _final_value_dct['env'] = env
 
-  # bettertransformer support
-  if _settings_attr['bettertransformer'] is None:
-    _final_value_dct['bettertransformer'] = str(env['bettertransformer_value']).upper() in ENV_VARS_TRUE_VALUES
-  # if requires_gpu is True, then disable BetterTransformer for quantization.
-  if _settings_attr['requires_gpu']: _final_value_dct['bettertransformer'] = False
   _final_value_dct['service_name'] = f'generated_{model_name}_service.py'
 
   # NOTE: The key for fine-tune strategies is 'fine_tune_strategies'
@@ -775,16 +762,16 @@ class _ConfigAttr:
 
   @staticmethod
   def Field(default: t.Any = None, **attrs: t.Any) -> t.Any:
+    '''Field is a alias to the internal dantic utilities to easily create
+      attrs.fields with pydantic-compatible interface. For example:
+
+      ```python
+      class MyModelConfig(openllm.LLMConfig):
+          field1 = openllm.LLMConfig.Field(...)
+      ```
+    '''
     return dantic.Field(default, **attrs)
 
-  '''Field is a alias to the internal dantic utilities to easily create
-    attrs.fields with pydantic-compatible interface. For example:
-
-    ```python
-    class MyModelConfig(openllm.LLMConfig):
-        field1 = openllm.LLMConfig.Field(...)
-    ```
-    '''
   # NOTE: The following is handled via __init_subclass__, and is only used for TYPE_CHECKING
   if t.TYPE_CHECKING:
     # NOTE: public attributes to override
@@ -873,11 +860,8 @@ class _ConfigAttr:
             ```bash
             openllm start gpt-neox --model-id stabilityai/stablelm-tuned-alpha-3b
             ```'''
-    __openllm_default_implementation__: t.Dict[LiteralResourceSpec, LiteralRuntime] = Field(None)
-    '''The default runtime to run this LLM. By default, it will be PyTorch (pt) for most models. For some models, such as Llama, it will use `vllm` or `flax`.
-
-    It is a dictionary of key as the accelerator spec in k4s ('cpu', 'nvidia.com/gpu', 'amd.com/gpu', 'cloud-tpus.google.com/v2', ...) and the values as supported OpenLLM Runtime ('flax', 'tf', 'pt', 'vllm')
-    '''
+    __openllm_default_backend__: t.Dict[LiteralResourceSpec, LiteralBackend] = Field(None)
+    '''The default backend to run LLM based on available accelerator. By default, it will be PyTorch (pt) for most models. For some models, such as Llama, it will use `vllm` or `flax`. It is a dictionary of key as the accelerator spec in k8s ('cpu', 'nvidia.com/gpu', 'amd.com/gpu', 'cloud-tpus.google.com/v2', ...) and the values as supported OpenLLM backend ('flax', 'tf', 'pt', 'vllm', 'ggml', 'mlc')'''
     __openllm_url__: str = Field(None)
     '''The resolved url for this LLMConfig.'''
     __openllm_requires_gpu__: bool = Field(None)
@@ -885,18 +869,11 @@ class _ConfigAttr:
     __openllm_trust_remote_code__: bool = Field(None)
     '''Whether to always trust remote code'''
     __openllm_service_name__: str = Field(None)
-    """Generated service name for this LLMConfig. By default, it is 'generated_{model_name}_service.py'"""
+    '''Generated service name for this LLMConfig. By default, it is "generated_{model_name}_service.py"'''
     __openllm_requirements__: t.Optional[ListStr] = Field(None)
-    '''The default PyPI requirements needed to run this given LLM. By default, we will depend on
-        bentoml, torch, transformers.'''
-    __openllm_bettertransformer__: bool = Field(None)
-    '''Whether to use BetterTransformer for this given LLM. This depends per model architecture. By default, we will use BetterTransformer for T5 and StableLM models, and set to False for every other models.'''
+    '''The default PyPI requirements needed to run this given LLM. By default, we will depend on bentoml, torch, transformers.'''
     __openllm_model_type__: t.Literal['causal_lm', 'seq2seq_lm'] = Field(None)
-    '''The model type for this given LLM. By default, it should be causal language modeling.
-        Currently supported 'causal_lm' or 'seq2seq_lm'
-        '''
-    __openllm_runtime__: t.Literal['transformers', 'ggml'] = Field(None)
-    '''The runtime to use for this model. Possible values are `transformers` or `ggml`. See Llama for more information.'''
+    '''The model type for this given LLM. By default, it should be causal language modeling. Currently supported "causal_lm" or "seq2seq_lm"'''
     __openllm_name_type__: t.Optional[t.Literal['dasherize', 'lowercase']] = Field(None)
     '''The default name typed for this model. "dasherize" will convert the name to lowercase and
         replace spaces with dashes. "lowercase" will convert the name to lowercase. If this is not set, then both
@@ -1212,8 +1189,8 @@ class LLMConfig(_ConfigAttr):
       annotated_names.add(attr_name)
       val = cd.get(attr_name, attr.NOTHING)
       if not isinstance(val, _CountingAttr):
-        if val is attr.NOTHING: val = cls.Field(env=field_env_key(cls.__openllm_model_name__, attr_name))
-        else: val = cls.Field(default=val, env=field_env_key(cls.__openllm_model_name__, attr_name))
+        if val is attr.NOTHING: val = cls.Field(env=field_env_key(attr_name))
+        else: val = cls.Field(default=val, env=field_env_key(attr_name))
       these[attr_name] = val
     unannotated = ca_names - annotated_names
     if len(unannotated) > 0:
@@ -1293,7 +1270,7 @@ class LLMConfig(_ConfigAttr):
   @overload
   def __getitem__(self, item: t.Literal['architecture']) -> str: ...
   @overload
-  def __getitem__(self, item: t.Literal['default_implementation']) -> t.Dict[LiteralResourceSpec, LiteralRuntime]: ...
+  def __getitem__(self, item: t.Literal['default_backend']) -> t.Dict[LiteralResourceSpec, LiteralBackend]: ...
   @overload
   def __getitem__(self, item: t.Literal['url']) -> str: ...
   @overload
@@ -1305,11 +1282,7 @@ class LLMConfig(_ConfigAttr):
   @overload
   def __getitem__(self, item: t.Literal['requirements']) -> t.Optional[ListStr]: ...
   @overload
-  def __getitem__(self, item: t.Literal['bettertransformer']) -> bool: ...
-  @overload
   def __getitem__(self, item: t.Literal['model_type']) -> t.Literal['causal_lm', 'seq2seq_lm']: ...
-  @overload
-  def __getitem__(self, item: t.Literal['runtime']) -> t.Literal['transformers', 'ggml']: ...
   @overload
   def __getitem__(self, item: t.Literal['name_type']) -> t.Optional[t.Literal['dasherize', 'lowercase']]: ...
   @overload
@@ -1663,9 +1636,9 @@ class LLMConfig(_ConfigAttr):
     return _PEFT_TASK_TYPE_TARGET_MAPPING[cls.__openllm_model_type__]
 
   @classmethod
-  def default_implementation(cls) -> LiteralRuntime:
-    return first_not_none(cls.__openllm_env__['framework_value'],
-                          default=get_default_implementation(cls.__openllm_default_implementation__))
+  def default_backend(cls) -> LiteralBackend:
+    return first_not_none(cls.__openllm_env__['backend_value'],
+                          default=get_default_backend(cls.__openllm_default_backend__))
 
   def sanitize_parameters(self, prompt: str, **attrs: t.Any) -> tuple[str, DictStrAny, DictStrAny]:
     '''This handler will sanitize all attrs and setup prompt text.

@@ -16,12 +16,15 @@ from click.shell_completion import CompletionItem
 
 import bentoml
 import openllm
+import openllm_core
 
 from bentoml._internal.configuration.containers import BentoMLContainer
 from openllm_core._typing_compat import Concatenate
 from openllm_core._typing_compat import DictStrAny
+from openllm_core._typing_compat import LiteralBackend
 from openllm_core._typing_compat import LiteralString
 from openllm_core._typing_compat import ParamSpec
+from openllm_core._typing_compat import get_literal_args
 from openllm_core.utils import DEBUG
 
 from . import termui
@@ -147,14 +150,12 @@ Available official model_id(s): [default: {llm_config['default_id']}]
   @click.pass_context
   def start_cmd(ctx: click.Context, /, server_timeout: int, model_id: str | None, model_version: str | None,
                 workers_per_resource: t.Literal['conserved', 'round_robin'] | LiteralString, device: t.Tuple[str, ...],
-                quantize: t.Literal['int8', 'int4', 'gptq'] | None, bettertransformer: bool | None,
-                runtime: t.Literal['ggml', 'transformers'], fast: bool, serialisation_format: t.Literal['safetensors',
-                                                                                                        'legacy'],
-                cors: bool, adapter_id: str | None, return_process: bool, **attrs: t.Any,
+                quantize: t.Literal['int8', 'int4', 'gptq'] | None, backend: LiteralBackend,
+                serialisation_format: t.Literal['safetensors', 'legacy'], cors: bool, adapter_id: str | None,
+                return_process: bool, **attrs: t.Any,
                ) -> LLMConfig | subprocess.Popen[bytes]:
-    fast = str(fast).upper() in openllm.utils.ENV_VARS_TRUE_VALUES
-    if serialisation_format == 'safetensors' and quantize is not None and os.environ.get(
-        'OPENLLM_SERIALIZATION_WARNING', str(True)).upper() in openllm.utils.ENV_VARS_TRUE_VALUES:
+    if serialisation_format == 'safetensors' and quantize is not None and openllm_core.utils.check_bool_env(
+        'OPENLLM_SERIALIZATION_WARNING'):
       termui.echo(
           f"'--quantize={quantize}' might not work with 'safetensors' serialisation format. Use with caution!. To silence this warning, set \"OPENLLM_SERIALIZATION_WARNING=False\"\nNote: You can always fallback to '--serialisation legacy' when running quantisation.",
           fg='yellow')
@@ -184,20 +185,18 @@ Available official model_id(s): [default: {llm_config['default_id']}]
 
     # Create a new model env to work with the envvar during CLI invocation
     env = openllm.utils.EnvVarMixin(config['model_name'],
-                                    config.default_implementation(),
+                                    backend,
                                     model_id=model_id or config['default_id'],
-                                    bettertransformer=bettertransformer,
-                                    quantize=quantize,
-                                    runtime=runtime)
-    prerequisite_check(ctx, config, quantize, adapter_map, int(1 / wpr))
+                                    quantize=quantize)
+    requirements = llm_config['requirements']
+    if requirements is not None and len(requirements) > 0:
+      missing_requirements = [i for i in requirements if importlib.util.find_spec(inflection.underscore(i)) is None]
+      if len(missing_requirements) > 0:
+        termui.echo(f'Make sure to have the following dependencies available: {missing_requirements}', fg='yellow')
 
     # NOTE: This is to set current configuration
     start_env = os.environ.copy()
     start_env = parse_config_options(config, server_timeout, wpr, device, cors, start_env)
-    if fast:
-      termui.echo(
-          f"Fast mode is enabled. Make sure the model is available in local store before 'start': 'openllm import {model}{' --model-id ' + model_id if model_id else ''}'",
-          fg='yellow')
 
     start_env.update({
         'OPENLLM_MODEL': model,
@@ -205,21 +204,18 @@ Available official model_id(s): [default: {llm_config['default_id']}]
         'BENTOML_HOME': os.environ.get('BENTOML_HOME', BentoMLContainer.bentoml_home.get()),
         'OPENLLM_ADAPTER_MAP': orjson.dumps(adapter_map).decode(),
         'OPENLLM_SERIALIZATION': serialisation_format,
-        env.runtime: env['runtime_value'],
-        env.framework: env['framework_value']
+        env.backend: env['backend_value']
     })
     if env['model_id_value']: start_env[env.model_id] = str(env['model_id_value'])
-    # NOTE: quantize and bettertransformer value is already assigned within env
-    if bettertransformer is not None: start_env[env.bettertransformer] = str(env['bettertransformer_value'])
     if quantize is not None: start_env[env.quantize] = str(t.cast(str, env['quantize_value']))
 
-    llm = openllm.utils.infer_auto_class(env['framework_value']).for_model(model,
-                                                                           model_id=start_env[env.model_id],
-                                                                           model_version=model_version,
-                                                                           llm_config=config,
-                                                                           ensure_available=not fast,
-                                                                           adapter_map=adapter_map,
-                                                                           serialisation=serialisation_format)
+    llm = openllm.utils.infer_auto_class(env['backend_value']).for_model(model,
+                                                                         model_id=start_env[env.model_id],
+                                                                         model_version=model_version,
+                                                                         llm_config=config,
+                                                                         ensure_available=True,
+                                                                         adapter_map=adapter_map,
+                                                                         serialisation=serialisation_format)
     start_env.update({env.config: llm.config.model_dump_json().decode()})
 
     server = bentoml.GrpcServer('_service:svc', **server_attrs) if _serve_grpc else bentoml.HTTPServer(
@@ -268,21 +264,6 @@ def noop_command(group: click.Group, llm_config: LLMConfig, _serve_grpc: bool, *
 
   return noop
 
-def prerequisite_check(ctx: click.Context, llm_config: LLMConfig, quantize: LiteralString | None,
-                       adapter_map: dict[str, str | None] | None, num_workers: int) -> None:
-  if adapter_map and not openllm.utils.is_peft_available():
-    ctx.fail(
-        "Using adapter requires 'peft' to be available. Make sure to install with 'pip install \"openllm[fine-tune]\"'")
-  if quantize and llm_config.default_implementation() == 'vllm':
-    ctx.fail(
-        f"Quantization is not yet supported with vLLM. Set '{llm_config['env']['framework']}=\"pt\"' to run with quantization."
-    )
-  requirements = llm_config['requirements']
-  if requirements is not None and len(requirements) > 0:
-    missing_requirements = [i for i in requirements if importlib.util.find_spec(inflection.underscore(i)) is None]
-    if len(missing_requirements) > 0:
-      termui.echo(f'Make sure to have the following dependencies available: {missing_requirements}', fg='yellow')
-
 def start_decorator(llm_config: LLMConfig, serve_grpc: bool = False) -> t.Callable[[FC], t.Callable[[FC], FC]]:
 
   def wrapper(fn: FC) -> t.Callable[[FC], FC]:
@@ -291,22 +272,21 @@ def start_decorator(llm_config: LLMConfig, serve_grpc: bool = False) -> t.Callab
         cog.optgroup.group(
             'General LLM Options',
             help=f"The following options are related to running '{llm_config['start_name']}' LLM Server."),
-        model_id_option(factory=cog.optgroup, model_env=llm_config['env']), model_version_option(factory=cog.optgroup),
+        model_id_option(factory=cog.optgroup), model_version_option(factory=cog.optgroup),
         cog.optgroup.option('--server-timeout', type=int, default=None, help='Server timeout in seconds'),
         workers_per_resource_option(factory=cog.optgroup), cors_option(factory=cog.optgroup),
-        fast_option(factory=cog.optgroup),
+        backend_option(factory=cog.optgroup),
         cog.optgroup.group('LLM Optimization Options',
                            help='''Optimization related options.
 
-            OpenLLM supports running model with [BetterTransformer](https://pytorch.org/blog/a-better-transformer-for-fast-transformer-encoder-inference/),
-            k-bit quantization (8-bit, 4-bit), GPTQ quantization, PagedAttention via vLLM.
+            OpenLLM supports running model k-bit quantization (8-bit, 4-bit), GPTQ quantization, PagedAttention via vLLM.
 
             The following are either in our roadmap or currently being worked on:
 
             - DeepSpeed Inference: [link](https://www.deepspeed.ai/inference/)
             - GGML: Fast inference on [bare metal](https://github.com/ggerganov/ggml)
             ''',
-                          ),
+                          ), quantize_option(factory=cog.optgroup), serialisation_option(factory=cog.optgroup),
         cog.optgroup.option('--device',
                             type=openllm.utils.dantic.CUDA,
                             multiple=True,
@@ -314,13 +294,6 @@ def start_decorator(llm_config: LLMConfig, serve_grpc: bool = False) -> t.Callab
                             callback=parse_device_callback,
                             help=f"Assign GPU devices (if available) for {llm_config['model_name']}.",
                             show_envvar=True),
-        cog.optgroup.option('--runtime',
-                            type=click.Choice(['ggml', 'transformers']),
-                            default='transformers',
-                            help='The runtime to use for the given model. Default is transformers.'),
-        quantize_option(factory=cog.optgroup, model_env=llm_config['env']),
-        bettertransformer_option(factory=cog.optgroup, model_env=llm_config['env']),
-        serialisation_option(factory=cog.optgroup),
         cog.optgroup.group('Fine-tuning related options',
                            help='''\
     Note that the argument `--adapter-id` can accept the following format:
@@ -439,18 +412,6 @@ def output_option(f: _AnyCallable | None = None,
                     shell_complete=complete_output_var,
                     **attrs)(f)
 
-def fast_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
-  return cli_option('--fast/--no-fast',
-                    show_default=True,
-                    default=False,
-                    envvar='OPENLLM_USE_LOCAL_LATEST',
-                    show_envvar=True,
-                    help='''Whether to skip checking if models is already in store.
-
-                                                                                                          This is useful if you already downloaded or setup the model beforehand.
-                                                                                                          ''',
-                    **attrs)(f)
-
 def cors_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option('--cors/--no-cors',
                     show_default=True,
@@ -463,15 +424,12 @@ def cors_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC
 def machine_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option('--machine', is_flag=True, default=False, hidden=True, **attrs)(f)
 
-def model_id_option(f: _AnyCallable | None = None,
-                    *,
-                    model_env: openllm.utils.EnvVarMixin | None = None,
-                    **attrs: t.Any) -> t.Callable[[FC], FC]:
+def model_id_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option('--model-id',
                     type=click.STRING,
                     default=None,
-                    envvar=model_env.model_id if model_env is not None else None,
-                    show_envvar=model_env is not None,
+                    envvar='OPENLLM_MODEL_ID',
+                    show_envvar=True,
                     help='Optional model_id name or path for (fine-tune) weight.',
                     **attrs)(f)
 
@@ -483,24 +441,31 @@ def model_version_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Cal
       help='Optional model version to save for this model. It will be inferred automatically from model-id.',
       **attrs)(f)
 
+def backend_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
+  # NOTE: LiteralBackend needs to remove the last two item as ggml and mlc is wip
+  # XXX: remove the check for __args__ once we have ggml and mlc supports
+  return cli_option('--backend',
+                    type=click.Choice(get_literal_args(LiteralBackend)[:-2]),
+                    default='pt',
+                    envvar='OPENLLM_BACKEND',
+                    show_envvar=True,
+                    help='The implementation for saving this LLM.',
+                    **attrs)(f)
+
 def model_name_argument(f: _AnyCallable | None = None, required: bool = True, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_argument('model_name',
                       type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING]),
                       required=required,
                       **attrs)(f)
 
-def quantize_option(f: _AnyCallable | None = None,
-                    *,
-                    build: bool = False,
-                    model_env: openllm.utils.EnvVarMixin | None = None,
-                    **attrs: t.Any) -> t.Callable[[FC], FC]:
+def quantize_option(f: _AnyCallable | None = None, *, build: bool = False, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option('--quantise',
                     '--quantize',
                     'quantize',
                     type=click.Choice(['int8', 'int4', 'gptq']),
                     default=None,
-                    envvar=model_env.quantize if model_env is not None else None,
-                    show_envvar=model_env is not None,
+                    envvar='OPENLLM_QUANTIZE',
+                    show_envvar=True,
                     help='''Dynamic quantization for running this LLM.
 
       The following quantization strategies are supported:
@@ -542,21 +507,6 @@ def workers_per_resource_option(f: _AnyCallable | None = None,
       > ensure it has the same effect with 'openllm start --api-workers ...'""" if build else ''),
                     **attrs)(f)
 
-def bettertransformer_option(f: _AnyCallable | None = None,
-                             *,
-                             build: bool = False,
-                             model_env: openllm.utils.EnvVarMixin | None = None,
-                             **attrs: t.Any) -> t.Callable[[FC], FC]:
-  return cli_option(
-      '--bettertransformer',
-      is_flag=True,
-      default=None,
-      envvar=model_env.bettertransformer if model_env is not None else None,
-      show_envvar=model_env is not None,
-      help='Apply FasterTransformer wrapper to serve model. This will applies during serving time.' if not build else
-      'Set default environment variable whether to serve this model with FasterTransformer in build time.',
-      **attrs)(f)
-
 def serialisation_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option('--serialisation',
                     '--serialization',
@@ -586,22 +536,18 @@ def serialisation_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Cal
                     **attrs)(f)
 
 def container_registry_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
-  return cli_option('--container-registry',
-                    'container_registry',
-                    type=click.Choice(list(openllm.bundle.CONTAINER_NAMES)),
-                    default='ecr',
-                    show_default=True,
-                    show_envvar=True,
-                    envvar='OPENLLM_CONTAINER_REGISTRY',
-                    callback=container_registry_callback,
-                    help='''The default container registry to get the base image for building BentoLLM.
-
-      Currently, it supports 'ecr', 'ghcr.io', 'docker.io'
-
-      \b
-      > [!NOTE] that in order to build the base image, you will need a GPUs to compile custom kernel. See ``openllm ext build-base-container`` for more information.
-      ''',
-                    **attrs)(f)
+  return cli_option(
+      '--container-registry',
+      'container_registry',
+      type=click.Choice(list(openllm.bundle.CONTAINER_NAMES)),
+      default='ecr',
+      show_default=True,
+      show_envvar=True,
+      envvar='OPENLLM_CONTAINER_REGISTRY',
+      callback=container_registry_callback,
+      help=
+      'The default container registry to get the base image for building BentoLLM. Currently, it supports ecr, ghcr, docker',
+      **attrs)(f)
 
 _wpr_strategies = {'round_robin', 'conserved'}
 

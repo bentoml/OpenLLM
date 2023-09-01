@@ -48,14 +48,14 @@ def get_special_token_id(tokenizer: transformers.PreTrainedTokenizer, key: str) 
   treated specially and converted to a single, new token.  This retrieves the token ID each of these keys map to.
 
   Args:
-  tokenizer: the tokenizer
-  key: the key to convert to a single token
+    tokenizer: the tokenizer
+    key: the key to convert to a single token
 
   Raises:
-  RuntimeError: if more than one ID was generated
+    RuntimeError: if more than one ID was generated
 
   Returns:
-  int: the token ID for the given key.
+    int: the token ID for the given key.
   '''
   token_ids = tokenizer.encode(key)
   if len(token_ids) > 1: raise ValueError(f"Expected only a single token for '{key}' but found {token_ids}")

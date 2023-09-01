@@ -17,6 +17,7 @@ import openllm_core
 
 from bentoml._internal.utils import LazyLoader
 from bentoml._internal.utils import pkg
+from openllm_core._typing_compat import LiteralBackend
 from openllm_core._typing_compat import LiteralString
 from openllm_core._typing_compat import overload
 
@@ -24,7 +25,6 @@ from .representation import ReprMixin
 
 if t.TYPE_CHECKING:
   BackendOrderedDict = OrderedDict[str, t.Tuple[t.Callable[[], bool], str]]
-  from openllm_core._typing_compat import LiteralRuntime
 
 logger = logging.getLogger(__name__)
 OPTIONAL_DEPENDENCIES = {
@@ -336,9 +336,7 @@ class EnvVarMixin(ReprMixin):
   config: str
   model_id: str
   quantize: str
-  framework: str
-  bettertransformer: str
-  runtime: str
+  backend: str
 
   @overload
   def __getitem__(self, item: t.Literal['config']) -> str:
@@ -353,19 +351,11 @@ class EnvVarMixin(ReprMixin):
     ...
 
   @overload
-  def __getitem__(self, item: t.Literal['framework']) -> str:
+  def __getitem__(self, item: t.Literal['backend']) -> str:
     ...
 
   @overload
-  def __getitem__(self, item: t.Literal['bettertransformer']) -> str:
-    ...
-
-  @overload
-  def __getitem__(self, item: t.Literal['runtime']) -> str:
-    ...
-
-  @overload
-  def __getitem__(self, item: t.Literal['framework_value']) -> LiteralRuntime:
+  def __getitem__(self, item: t.Literal['backend_value']) -> LiteralBackend:
     ...
 
   @overload
@@ -376,14 +366,6 @@ class EnvVarMixin(ReprMixin):
   def __getitem__(self, item: t.Literal['model_id_value']) -> str | None:
     ...
 
-  @overload
-  def __getitem__(self, item: t.Literal['bettertransformer_value']) -> bool:
-    ...
-
-  @overload
-  def __getitem__(self, item: t.Literal['runtime_value']) -> t.Literal['ggml', 'transformers']:
-    ...
-
   def __getitem__(self, item: str | t.Any) -> t.Any:
     if item.endswith('_value') and hasattr(self, f'_{item}'): return object.__getattribute__(self, f'_{item}')()
     elif hasattr(self, item): return getattr(self, item)
@@ -391,50 +373,34 @@ class EnvVarMixin(ReprMixin):
 
   def __init__(self,
                model_name: str,
-               implementation: LiteralRuntime = 'pt',
+               backend: LiteralBackend = 'pt',
                model_id: str | None = None,
-               bettertransformer: bool | None = None,
-               quantize: LiteralString | None = None,
-               runtime: t.Literal['ggml', 'transformers'] = 'transformers') -> None:
+               quantize: LiteralString | None = None) -> None:
     '''EnvVarMixin is a mixin class that returns the value extracted from environment variables.'''
     from openllm_core.utils import field_env_key
     self.model_name = inflection.underscore(model_name)
-    self._implementation = implementation
+    self._backend = backend
     self._model_id = model_id
-    self._bettertransformer = bettertransformer
     self._quantize = quantize
-    self._runtime = runtime
-    for att in {'config', 'model_id', 'quantize', 'framework', 'bettertransformer', 'runtime'}:
-      setattr(self, att, field_env_key(self.model_name, att.upper()))
+    for att in {'config', 'model_id', 'quantize', 'backend'}:
+      setattr(self, att, field_env_key(att.upper()))
 
   def _quantize_value(self) -> t.Literal['int8', 'int4', 'gptq'] | None:
     from . import first_not_none
     return t.cast(t.Optional[t.Literal['int8', 'int4', 'gptq']],
                   first_not_none(os.environ.get(self['quantize']), default=self._quantize))
 
-  def _framework_value(self) -> LiteralRuntime:
+  def _backend_value(self) -> LiteralBackend:
     from . import first_not_none
-    return t.cast(LiteralRuntime, first_not_none(os.environ.get(self['framework']), default=self._implementation))
-
-  def _bettertransformer_value(self) -> bool:
-    from . import first_not_none
-    return t.cast(
-        bool,
-        first_not_none(os.environ.get(self['bettertransformer'], str(False)).upper() in ENV_VARS_TRUE_VALUES,
-                       default=self._bettertransformer))
+    return t.cast(LiteralBackend, first_not_none(os.environ.get(self['backend']), default=self._backend))
 
   def _model_id_value(self) -> str | None:
     from . import first_not_none
     return first_not_none(os.environ.get(self['model_id']), default=self._model_id)
 
-  def _runtime_value(self) -> t.Literal['ggml', 'transformers']:
-    from . import first_not_none
-    return t.cast(t.Literal['ggml', 'transformers'],
-                  first_not_none(os.environ.get(self['runtime']), default=self._runtime))
-
   @property
   def __repr_keys__(self) -> set[str]:
-    return {'config', 'model_id', 'quantize', 'framework', 'bettertransformer', 'runtime'}
+    return {'config', 'model_id', 'quantize', 'backend'}
 
   @property
   def start_docstring(self) -> str:

@@ -17,14 +17,14 @@ Run a LLMServer for FLAN-T5 model.
 By default, this model will use the PyTorch model for inference. However, this model supports both Flax and Tensorflow.
 
 \b
-- To use Flax, set the environment variable ``OPENLLM_FLAN_T5_FRAMEWORK="flax"``
+- To use Flax, set the environment variable ``OPENLLM_BACKEND="flax"``
 
 \b
-- To use Tensorflow, set the environment variable ``OPENLLM_FLAN_T5_FRAMEWORK="tf"``
+- To use Tensorflow, set the environment variable ``OPENLLM_BACKEND="tf"``
 
 \b
 FLAN-T5 Runner will use google/flan-t5-large as the default model. To change to any other FLAN-T5
-saved pretrained, or a fine-tune FLAN-T5, provide ``OPENLLM_FLAN_T5_MODEL_ID='google/flan-t5-xxl'``
+saved pretrained, or a fine-tune FLAN-T5, provide ``OPENLLM_MODEL_ID='google/flan-t5-xxl'``
 or provide `--model-id` flag when running ``openllm start flan-t5``:
 
 \b

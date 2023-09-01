@@ -28,7 +28,7 @@ if t.TYPE_CHECKING:
   import transformers
 
   from openllm_core._typing_compat import DictStrAny
-  from openllm_core._typing_compat import LiteralRuntime
+  from openllm_core._typing_compat import LiteralBackend
 
 logger = logging.getLogger(__name__)
 
@@ -98,7 +98,7 @@ class _ClientAttr:
       raise RuntimeError(
           "transformers is required to use HF agent. Install with 'pip install \"openllm-client[agents]\"'.")
     if not self.supports_hf_agent:
-      raise RuntimeError(f'{self.model_name} ({self.framework}) does not support running HF agent.')
+      raise RuntimeError(f'{self.model_name} ({self.backend}) does not support running HF agent.')
     if not is_transformers_supports_agent():
       raise RuntimeError(
           "Current 'transformers' does not support Agent. Make sure to upgrade to at least 4.29: 'pip install -U \"transformers>=4.29\"'"
@@ -125,9 +125,9 @@ class _ClientAttr:
       raise RuntimeError('Malformed service endpoint. (Possible malicious)') from None
 
   @property
-  def framework(self) -> LiteralRuntime:
+  def backend(self) -> LiteralBackend:
     try:
-      return self._metadata['framework']
+      return self._metadata['backend']
     except KeyError:
       raise RuntimeError('Malformed service endpoint. (Possible malicious)') from None
 

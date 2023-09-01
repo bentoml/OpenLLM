@@ -96,7 +96,7 @@ def make_attr_tuple_class(cls_name: str, attr_names: t.Sequence[str]) -> type[t.
   else:
     attr_class_template.append('    pass')
   globs: DictStrAny = {'_attrs_itemgetter': itemgetter, '_attrs_property': property}
-  if SHOW_CODEGEN: logger.info('Generated class for %s:\n\n%s', attr_class_name, '\n'.join(attr_class_template))
+  if SHOW_CODEGEN: print(f'Generated class for {attr_class_name}:\n\n', '\n'.join(attr_class_template))
   _compile_and_eval('\n'.join(attr_class_template), globs)
   return globs[attr_class_name]
 
@@ -114,7 +114,7 @@ def generate_function(typ: type[t.Any],
                                       '\n    '.join(lines) if lines else 'pass')
   meth = _make_method(func_name, script, generate_unique_filename(typ, func_name), globs)
   if annotations: meth.__annotations__ = annotations
-  if SHOW_CODEGEN: logger.info('Generated script for %s:\n\n%s', typ, script)
+  if SHOW_CODEGEN: print('Generated script for {typ}:\n\n', script)
   return meth
 
 def make_env_transformer(cls: type[openllm_core.LLMConfig],
@@ -139,11 +139,8 @@ def make_env_transformer(cls: type[openllm_core.LLMConfig],
       '__model_name': model_name,
   })
   lines: ListStr = [
-      '__env = lambda field_name: __field_env(__model_name, field_name, __suffix)', 'return [', '    f.evolve(',
-      '        default=__populate_env(__default_callback(f.name, f.default), __env(f.name)),', '        metadata={',
-      "            'env': f.metadata.get('env', __env(f.name)),",
-      "            'description': f.metadata.get('description', '(not provided)'),", '        },', '    )',
-      '    for f in fields', ']'
+      '__env=lambda field_name:__field_env(field_name,__suffix)',
+      "return [f.evolve(default=__populate_env(__default_callback(f.name,f.default),__env(f.name)),metadata={'env':f.metadata.get('env',__env(f.name)),'description':f.metadata.get('description', '(not provided)')}) for f in fields]"
   ]
   fields_ann = 'list[attr.Attribute[t.Any]]'
   return generate_function(cls,

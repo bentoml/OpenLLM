@@ -230,7 +230,7 @@ No significant changes.
 
   ```bash
   docker run --rm --gpus all -it -v /home/ubuntu/.local/share/bentoml:/tmp/bentoml -e BENTOML_HOME=/tmp/bentoml \
-              -e OPENLLM_USE_LOCAL_LATEST=True -e OPENLLM_LLAMA_FRAMEWORK=vllm ghcr.io/bentoml/openllm:2b5e96f90ad314f54e07b5b31e386e7d688d9bb2 start llama --model-id meta-llama/Llama-2-7b-chat-hf --workers-per-resource conserved --debug`
+              -e OPENLLM_USE_LOCAL_LATEST=True -e OPENLLM_BACKEND=vllm ghcr.io/bentoml/openllm:2b5e96f90ad314f54e07b5b31e386e7d688d9bb2 start llama --model-id meta-llama/Llama-2-7b-chat-hf --workers-per-resource conserved --debug`
   ```
 
   In conjunction with this, OpenLLM now also have a set of small CLI utilities via ``openllm ext`` for ease-of-use
@@ -721,9 +721,6 @@ No significant changes.
   `openllm start` now support `--quantize int8` and `--quantize int4` `GPTQ`
   quantization support is on the roadmap and currently being worked on.
 
-  `openllm start` now also support `--bettertransformer` to use
-  `BetterTransformer` for serving.
-
   Refactored `openllm.LLMConfig` to be able to use with `__getitem__`:
   `openllm.DollyV2Config()['requirements']`.
 
@@ -731,8 +728,6 @@ No significant changes.
   `__openllm_*__ > self.<key> > __openllm_generation_class__ > __openllm_extras__`.
 
   Added `towncrier` workflow to easily generate changelog entries
-
-  Added `use_pipeline`, `bettertransformer` flag into ModelSettings
 
   `LLMConfig` now supported `__dataclass_transform__` protocol to help with
   type-checking
