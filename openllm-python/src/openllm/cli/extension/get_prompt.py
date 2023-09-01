@@ -18,9 +18,7 @@ from openllm_core._prompt import process_prompt
 LiteralOutput = t.Literal['json', 'pretty', 'porcelain']
 
 @click.command('get_prompt', context_settings=termui.CONTEXT_SETTINGS)
-@click.argument('model_name',
-                type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING.keys()]),
-                shell_complete=model_complete_envvar)
+@click.argument('model_name', type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING.keys()]), shell_complete=model_complete_envvar)
 @click.argument('prompt', type=click.STRING)
 @output_option
 @click.option('--format', type=click.STRING, default=None)
@@ -32,8 +30,7 @@ LiteralOutput = t.Literal['json', 'pretty', 'porcelain']
               callback=opt_callback,
               metavar='ARG=VALUE[,ARG=VALUE]')
 @click.pass_context
-def cli(ctx: click.Context, /, model_name: str, prompt: str, format: str | None, output: LiteralOutput, machine: bool, _memoized: dict[str, t.Any],
-        **_: t.Any) -> str | None:
+def cli(ctx: click.Context, /, model_name: str, prompt: str, format: str | None, output: LiteralOutput, machine: bool, _memoized: dict[str, t.Any], **_: t.Any) -> str | None:
   '''Get the default prompt used by OpenLLM.'''
   module = openllm.utils.EnvVarMixin(model_name).module
   _memoized = {k: v[0] for k, v in _memoized.items() if v}

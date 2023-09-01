@@ -28,10 +28,7 @@ class Classifier:
 
   @staticmethod
   def status() -> dict[int, str]:
-    return {
-        v: status for v, status in zip(range(
-            1, 8), ['1 - Planning', '2 - Pre-Alpha', '3 - Alpha', '4 - Beta', '5 - Production/Stable', '6 - Mature', '7 - Inactive'])
-    }
+    return {v: status for v, status in zip(range(1, 8), ['1 - Planning', '2 - Pre-Alpha', '3 - Alpha', '4 - Beta', '5 - Production/Stable', '6 - Mature', '7 - Inactive'])}
 
   @staticmethod
   def apache() -> str:
@@ -137,9 +134,7 @@ GPTQ_DEPS = ['auto-gptq[triton]']
 VLLM_DEPS = ['vllm>=0.1.4', 'ray']
 
 _base_requirements: dict[str, t.Any] = {
-    inflection.dasherize(name): config_cls.__openllm_requirements__
-    for name, config_cls in openllm.CONFIG_MAPPING.items()
-    if config_cls.__openllm_requirements__
+    inflection.dasherize(name): config_cls.__openllm_requirements__ for name, config_cls in openllm.CONFIG_MAPPING.items() if config_cls.__openllm_requirements__
 }
 
 # shallow copy from locals()
@@ -171,7 +166,8 @@ def create_classifiers() -> Array:
       Classifier.create_classifier('audience', 'Developers'),
       Classifier.create_classifier('audience', 'Science/Research'),
       Classifier.create_classifier('audience', 'System Administrators'),
-      Classifier.create_classifier('typing', 'Typed'), *Classifier.create_python_classifier(),
+      Classifier.create_classifier('typing', 'Typed'),
+      *Classifier.create_python_classifier(),
   ])
   return arr.multiline(True)
 
@@ -218,8 +214,23 @@ def authors() -> Array:
 def keywords() -> Array:
   arr = correct_style(tomlkit.array())
   arr.extend([
-      'MLOps', 'AI', 'BentoML', 'Model Serving', 'Model Deployment', 'LLMOps', 'Falcon', 'Vicuna', 'Llama 2', 'Fine tuning', 'Serverless',
-      'Large Language Model', 'Generative AI', 'StableLM', 'Alpaca', 'PyTorch', 'Transformers'
+      'MLOps',
+      'AI',
+      'BentoML',
+      'Model Serving',
+      'Model Deployment',
+      'LLMOps',
+      'Falcon',
+      'Vicuna',
+      'Llama 2',
+      'Fine tuning',
+      'Serverless',
+      'Large Language Model',
+      'Generative AI',
+      'StableLM',
+      'Alpaca',
+      'PyTorch',
+      'Transformers'
   ])
   return arr.multiline(True)
 

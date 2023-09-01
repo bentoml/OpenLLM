@@ -6,6 +6,4 @@ FRAMEWORK_TO_AUTOCLASS_MAPPING = {
     'flax': ('FlaxAutoModelForCausalLM', 'FlaxAutoModelForSeq2SeqLM'),
     'vllm': ('AutoModelForCausalLM', 'AutoModelForSeq2SeqLM')
 }
-HUB_ATTRS = [
-    'cache_dir', 'code_revision', 'force_download', 'local_files_only', 'proxies', 'resume_download', 'revision', 'subfolder', 'use_auth_token'
-]
+HUB_ATTRS = ['cache_dir', 'code_revision', 'force_download', 'local_files_only', 'proxies', 'resume_download', 'revision', 'subfolder', 'use_auth_token']

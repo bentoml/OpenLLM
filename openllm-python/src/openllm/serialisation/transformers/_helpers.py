@@ -23,8 +23,7 @@ if t.TYPE_CHECKING:
   from openllm_core._typing_compat import M
   from openllm_core._typing_compat import T
 else:
-  transformers, torch = openllm_core.utils.LazyLoader('transformers', globals(),
-                                                      'transformers'), openllm_core.utils.LazyLoader('torch', globals(), 'torch')
+  transformers, torch = openllm_core.utils.LazyLoader('transformers', globals(), 'transformers'), openllm_core.utils.LazyLoader('torch', globals(), 'torch')
 
 _object_setattr = object.__setattr__
 
@@ -45,11 +44,7 @@ def process_config(model_id: str, trust_remote_code: bool, **attrs: t.Any) -> tu
   if not isinstance(config, transformers.PretrainedConfig):
     copied_attrs = copy.deepcopy(attrs)
     if copied_attrs.get('torch_dtype', None) == 'auto': copied_attrs.pop('torch_dtype')
-    config, attrs = transformers.AutoConfig.from_pretrained(model_id,
-                                                            return_unused_kwargs=True,
-                                                            trust_remote_code=trust_remote_code,
-                                                            **hub_attrs,
-                                                            **copied_attrs)
+    config, attrs = transformers.AutoConfig.from_pretrained(model_id, return_unused_kwargs=True, trust_remote_code=trust_remote_code, **hub_attrs, **copied_attrs)
   return config, hub_attrs, attrs
 
 def infer_tokenizers_from_llm(__llm: openllm.LLM[t.Any, T], /) -> T:
@@ -62,9 +57,7 @@ def infer_autoclass_from_llm(llm: openllm.LLM[M, T], config: transformers.Pretra
   if llm.config['trust_remote_code']:
     autoclass = 'AutoModelForSeq2SeqLM' if llm.config['model_type'] == 'seq2seq_lm' else 'AutoModelForCausalLM'
     if not hasattr(config, 'auto_map'):
-      raise ValueError(
-          f'Invalid configuraiton for {llm.model_id}. ``trust_remote_code=True`` requires `transformers.PretrainedConfig` to contain a `auto_map` mapping'
-      )
+      raise ValueError(f'Invalid configuraiton for {llm.model_id}. ``trust_remote_code=True`` requires `transformers.PretrainedConfig` to contain a `auto_map` mapping')
     # in case this model doesn't use the correct auto class for model type, for example like chatglm
     # where it uses AutoModel instead of AutoModelForCausalLM. Then we fallback to AutoModel
     if autoclass not in config.auto_map: autoclass = 'AutoModel'
@@ -84,7 +77,8 @@ def update_model(bentomodel: bentoml.Model, metadata: DictStrAny) -> bentoml.Mod
   based: DictStrAny = copy.deepcopy(bentomodel.info.metadata)
   based.update(metadata)
   _object_setattr(
-      bentomodel, '_info',
+      bentomodel,
+      '_info',
       ModelInfo(  # type: ignore[call-arg] # XXX: remove me once upstream is merged
           tag=bentomodel.info.tag,
           module=bentomodel.info.module,
@@ -102,9 +96,7 @@ def make_model_signatures(llm: openllm.LLM[M, T]) -> ModelSignaturesType:
   infer_fn: tuple[str, ...] = ('__call__',)
   default_config = ModelSignature(batchable=False)
   if llm.__llm_backend__ in {'pt', 'vllm'}:
-    infer_fn += ('forward', 'generate', 'contrastive_search', 'greedy_search', 'sample', 'beam_search', 'beam_sample', 'group_beam_search',
-                 'constrained_beam_search',
-                 )
+    infer_fn += ('forward', 'generate', 'contrastive_search', 'greedy_search', 'sample', 'beam_search', 'beam_sample', 'group_beam_search', 'constrained_beam_search',)
   elif llm.__llm_backend__ == 'tf':
     infer_fn += ('predict', 'call', 'generate', 'compute_transition_scores', 'greedy_search', 'sample', 'beam_search', 'contrastive_search',)
   else:

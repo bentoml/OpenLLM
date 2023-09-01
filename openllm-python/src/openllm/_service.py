@@ -21,8 +21,7 @@ if t.TYPE_CHECKING:
   from bentoml._internal.runner.runner import AbstractRunner
   from bentoml._internal.runner.runner import RunnerMethod
   from openllm_core._typing_compat import TypeAlias
-  _EmbeddingMethod: TypeAlias = RunnerMethod[t.Union[bentoml.Runnable, openllm.LLMRunnable[t.Any, t.Any]], [t.List[str]],
-                                             t.Sequence[openllm.EmbeddingsOutput]]
+  _EmbeddingMethod: TypeAlias = RunnerMethod[t.Union[bentoml.Runnable, openllm.LLMRunnable[t.Any, t.Any]], [t.List[str]], t.Sequence[openllm.EmbeddingsOutput]]
 
 # The following warnings from bitsandbytes, and probably not that important for users to see
 warnings.filterwarnings('ignore', message='MatMul8bitLt: inputs will be cast from torch.float32 to float16 during quantization')
@@ -44,12 +43,7 @@ svc = bentoml.Service(name=f"llm-{llm_config['start_name']}-service", runners=ru
 
 _JsonInput = bentoml.io.JSON.from_sample({'prompt': '', 'llm_config': llm_config.model_dump(flatten=True), 'adapter_name': None})
 
-@svc.api(route='/v1/generate',
-         input=_JsonInput,
-         output=bentoml.io.JSON.from_sample({
-             'responses': [],
-             'configuration': llm_config.model_dump(flatten=True)
-         }))
+@svc.api(route='/v1/generate', input=_JsonInput, output=bentoml.io.JSON.from_sample({'responses': [], 'configuration': llm_config.model_dump(flatten=True)}))
 async def generate_v1(input_dict: dict[str, t.Any]) -> openllm.GenerationOutput:
   qa_inputs = openllm.GenerationInput.from_llm_config(llm_config)(**input_dict)
   config = qa_inputs.llm_config.model_dump()
@@ -86,11 +80,32 @@ def metadata_v1(_: str) -> openllm.MetadataOutput:
          input=bentoml.io.JSON.from_sample(['Hey Jude, welcome to the jungle!', 'What is the meaning of life?']),
          output=bentoml.io.JSON.from_sample({
              'embeddings': [
-                 0.007917795330286026, -0.014421648345887661, 0.00481307040899992, 0.007331526838243008, -0.0066398633643984795, 0.00945580005645752,
-                 0.0087016262114048, -0.010709521360695362, 0.012635177001357079, 0.010541186667978764, -0.00730888033285737, -0.001783102168701589,
-                 0.02339819073677063, -0.010825827717781067, -0.015888236463069916, 0.01876218430697918, 0.0076906150206923485, 0.0009032754460349679,
-                 -0.010024012066423893, 0.01090280432254076, -0.008668390102684498, 0.02070549875497818, 0.0014594447566196322, -0.018775740638375282,
-                 -0.014814382418990135, 0.01796768605709076
+                 0.007917795330286026,
+                 -0.014421648345887661,
+                 0.00481307040899992,
+                 0.007331526838243008,
+                 -0.0066398633643984795,
+                 0.00945580005645752,
+                 0.0087016262114048,
+                 -0.010709521360695362,
+                 0.012635177001357079,
+                 0.010541186667978764,
+                 -0.00730888033285737,
+                 -0.001783102168701589,
+                 0.02339819073677063,
+                 -0.010825827717781067,
+                 -0.015888236463069916,
+                 0.01876218430697918,
+                 0.0076906150206923485,
+                 0.0009032754460349679,
+                 -0.010024012066423893,
+                 0.01090280432254076,
+                 -0.008668390102684498,
+                 0.02070549875497818,
+                 0.0014594447566196322,
+                 -0.018775740638375282,
+                 -0.014814382418990135,
+                 0.01796768605709076
              ],
              'num_tokens': 20
          }))

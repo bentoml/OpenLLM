@@ -11,8 +11,7 @@ class TFOPT(openllm.LLM['transformers.TFOPTForCausalLM', 'transformers.GPT2Token
 
   def import_model(self, *args: t.Any, trust_remote_code: bool = False, **attrs: t.Any) -> bentoml.Model:
     import transformers
-    config, tokenizer = transformers.AutoConfig.from_pretrained(self.model_id), transformers.AutoTokenizer.from_pretrained(
-        self.model_id, **self.llm_parameters[-1])
+    config, tokenizer = transformers.AutoConfig.from_pretrained(self.model_id), transformers.AutoTokenizer.from_pretrained(self.model_id, **self.llm_parameters[-1])
     tokenizer.pad_token_id = config.pad_token_id
     return bentoml.transformers.save_model(self.tag,
                                            transformers.TFOPTForCausalLM.from_pretrained(self.model_id, trust_remote_code=trust_remote_code, **attrs),

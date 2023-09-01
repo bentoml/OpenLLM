@@ -69,12 +69,10 @@ class MPTConfig(openllm_core.LLMConfig):
       'architecture': 'MPTForCausalLM',
       'default_id': 'mosaicml/mpt-7b-instruct',
       'model_ids': [
-          'mosaicml/mpt-7b', 'mosaicml/mpt-7b-instruct', 'mosaicml/mpt-7b-chat', 'mosaicml/mpt-7b-storywriter', 'mosaicml/mpt-30b',
-          'mosaicml/mpt-30b-instruct', 'mosaicml/mpt-30b-chat'
+          'mosaicml/mpt-7b', 'mosaicml/mpt-7b-instruct', 'mosaicml/mpt-7b-chat', 'mosaicml/mpt-7b-storywriter', 'mosaicml/mpt-30b', 'mosaicml/mpt-30b-instruct', 'mosaicml/mpt-30b-chat'
       ]
   }
-  prompt_type: MPTPromptType = dantic.Field('"default"',
-                                            description='Given prompt type for running MPT. Default will be inferred from model name if pretrained.')
+  prompt_type: MPTPromptType = dantic.Field('"default"', description='Given prompt type for running MPT. Default will be inferred from model name if pretrained.')
   max_sequence_length: int = dantic.Field(
       2048,
       description=
@@ -103,11 +101,7 @@ class MPTConfig(openllm_core.LLMConfig):
         elif 'chat' in self.model_id: prompt_type = 'chat'
         else: prompt_type = 'default'
       _template = DEFAULT_PROMPT_TEMPLATE(prompt_type)
-    return process_prompt(prompt, _template, use_default_prompt_template), {
-        'max_new_tokens': max_new_tokens,
-        'temperature': temperature,
-        'top_p': top_p
-    }, {}
+    return process_prompt(prompt, _template, use_default_prompt_template), {'max_new_tokens': max_new_tokens, 'temperature': temperature, 'top_p': top_p}, {}
 
   def postprocess_generate(self, prompt: str, generation_result: t.Sequence[str], **attrs: t.Any) -> str:
     return generation_result[0]

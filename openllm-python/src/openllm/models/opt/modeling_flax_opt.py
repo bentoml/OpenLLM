@@ -16,8 +16,7 @@ class FlaxOPT(openllm.LLM['transformers.TFOPTForCausalLM', 'transformers.GPT2Tok
   __openllm_internal__ = True
 
   def import_model(self, *args: t.Any, trust_remote_code: bool = False, **attrs: t.Any) -> bentoml.Model:
-    config, tokenizer = transformers.AutoConfig.from_pretrained(self.model_id), transformers.AutoTokenizer.from_pretrained(
-        self.model_id, **self.llm_parameters[-1])
+    config, tokenizer = transformers.AutoConfig.from_pretrained(self.model_id), transformers.AutoTokenizer.from_pretrained(self.model_id, **self.llm_parameters[-1])
     tokenizer.pad_token_id = config.pad_token_id
     return bentoml.transformers.save_model(self.tag,
                                            transformers.FlaxAutoModelForCausalLM.from_pretrained(self.model_id, **attrs),
@@ -34,11 +33,7 @@ class FlaxOPT(openllm.LLM['transformers.TFOPTForCausalLM', 'transformers.GPT2Tok
                           use_default_prompt_template: bool = False,
                           **attrs: t.Any) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
     return process_prompt(prompt, DEFAULT_PROMPT_TEMPLATE, use_default_prompt_template, **attrs), {
-        'max_new_tokens': max_new_tokens,
-        'temperature': temperature,
-        'top_k': top_k,
-        'num_return_sequences': num_return_sequences,
-        'repetition_penalty': repetition_penalty
+        'max_new_tokens': max_new_tokens, 'temperature': temperature, 'top_k': top_k, 'num_return_sequences': num_return_sequences, 'repetition_penalty': repetition_penalty
     }, {}
 
   def generate(self, prompt: str, **attrs: t.Any) -> list[str]:

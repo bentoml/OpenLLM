@@ -40,9 +40,7 @@ class GenerationInput:
     return attr.make_class(inflection.camelize(llm_config['model_name']) + 'GenerationInput',
                            attrs={
                                'prompt': attr.field(type=str),
-                               'llm_config': attr.field(type=llm_config.__class__,
-                                                        default=llm_config,
-                                                        converter=functools.partial(cls.convert_llm_config, cls=llm_config.__class__)),
+                               'llm_config': attr.field(type=llm_config.__class__, default=llm_config, converter=functools.partial(cls.convert_llm_config, cls=llm_config.__class__)),
                                'adapter_name': attr.field(default=None, type=str)
                            })
 
@@ -85,12 +83,8 @@ def unmarshal_vllm_outputs(request_output: vllm.RequestOutput) -> dict[str, t.An
               finished=request_output.finished,
               prompt_token_ids=request_output.prompt_token_ids,
               outputs=[
-                  dict(index=it.index,
-                       text=it.text,
-                       token_ids=it.token_ids,
-                       cumulative_logprob=it.cumulative_logprob,
-                       logprobs=it.logprobs,
-                       finish_reason=it.finish_reason) for it in request_output.outputs
+                  dict(index=it.index, text=it.text, token_ids=it.token_ids, cumulative_logprob=it.cumulative_logprob, logprobs=it.logprobs, finish_reason=it.finish_reason)
+                  for it in request_output.outputs
               ])
 
 @attr.define

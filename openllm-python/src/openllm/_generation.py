@@ -14,8 +14,7 @@ LogitsProcessorList = transformers.LogitsProcessorList
 StoppingCriteriaList = transformers.StoppingCriteriaList
 
 class StopSequenceCriteria(transformers.StoppingCriteria):
-  def __init__(self, stop_sequences: str | list[str],
-               tokenizer: transformers.PreTrainedTokenizer | transformers.PreTrainedTokenizerBase | transformers.PreTrainedTokenizerFast):
+  def __init__(self, stop_sequences: str | list[str], tokenizer: transformers.PreTrainedTokenizer | transformers.PreTrainedTokenizerBase | transformers.PreTrainedTokenizerFast):
     if isinstance(stop_sequences, str): stop_sequences = [stop_sequences]
     self.stop_sequences, self.tokenizer = stop_sequences, tokenizer
 

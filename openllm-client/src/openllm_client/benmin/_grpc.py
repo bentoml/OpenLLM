@@ -154,12 +154,10 @@ class GrpcClient(Client):
       try:
         reflection.apis[api.name] = InferenceAPI[t.Any](None,
                                                         bentoml.io.from_spec({
-                                                            'id': api.input.descriptor_id,
-                                                            'args': json_format.MessageToDict(api.input.attributes).get('args', None)
+                                                            'id': api.input.descriptor_id, 'args': json_format.MessageToDict(api.input.attributes).get('args', None)
                                                         }),
                                                         bentoml.io.from_spec({
-                                                            'id': api.output.descriptor_id,
-                                                            'args': json_format.MessageToDict(api.output.attributes).get('args', None)
+                                                            'id': api.output.descriptor_id, 'args': json_format.MessageToDict(api.output.attributes).get('args', None)
                                                         }),
                                                         name=api.name,
                                                         doc=api.docs)
@@ -207,11 +205,7 @@ class AsyncGrpcClient(AsyncClient):
     if self.ssl:
       if self.ssl_client_credentials is None: raise RuntimeError("'ssl=True' requires 'ssl_client_credentials'")
       credentials = grpc.ssl_channel_credentials(**{k: load_from_file(v) if isinstance(v, str) else v for k, v in self.ssl_client_credentials.items()})
-      return aio.secure_channel(self.server_url,
-                                credentials=credentials,
-                                options=self.options,
-                                compression=self.compression,
-                                interceptors=self.interceptors)
+      return aio.secure_channel(self.server_url, credentials=credentials, options=self.options, compression=self.compression, interceptors=self.interceptors)
     return aio.insecure_channel(self.server_url, options=self.options, compression=self.compression, interceptors=self.interceptors)
 
   @staticmethod
@@ -262,12 +256,10 @@ class AsyncGrpcClient(AsyncClient):
       try:
         reflection.apis[api.name] = InferenceAPI[t.Any](None,
                                                         bentoml.io.from_spec({
-                                                            'id': api.input.descriptor_id,
-                                                            'args': json_format.MessageToDict(api.input.attributes).get('args', None)
+                                                            'id': api.input.descriptor_id, 'args': json_format.MessageToDict(api.input.attributes).get('args', None)
                                                         }),
                                                         bentoml.io.from_spec({
-                                                            'id': api.output.descriptor_id,
-                                                            'args': json_format.MessageToDict(api.output.attributes).get('args', None)
+                                                            'id': api.output.descriptor_id, 'args': json_format.MessageToDict(api.output.attributes).get('args', None)
                                                         }),
                                                         name=api.name,
                                                         doc=api.docs)

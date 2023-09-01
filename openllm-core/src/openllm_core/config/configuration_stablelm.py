@@ -51,10 +51,7 @@ class StableLMConfig(openllm_core.LLMConfig):
       'url': 'https://github.com/Stability-AI/StableLM',
       'architecture': 'GPTNeoXForCausalLM',
       'default_id': 'stabilityai/stablelm-tuned-alpha-3b',
-      'model_ids': [
-          'stabilityai/stablelm-tuned-alpha-3b', 'stabilityai/stablelm-tuned-alpha-7b', 'stabilityai/stablelm-base-alpha-3b',
-          'stabilityai/stablelm-base-alpha-7b'
-      ]
+      'model_ids': ['stabilityai/stablelm-tuned-alpha-3b', 'stabilityai/stablelm-tuned-alpha-7b', 'stabilityai/stablelm-base-alpha-3b', 'stabilityai/stablelm-base-alpha-7b']
   }
 
   class GenerationConfig:

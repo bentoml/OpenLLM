@@ -28,14 +28,10 @@ if t.TYPE_CHECKING:
                 Note that we already release images on our CI to ECR and GHCR, so you don't need to build it yourself.
                 ''')
 @container_registry_option
-@click.option('--version-strategy',
-              type=click.Choice(['release', 'latest', 'nightly']),
-              default='nightly',
-              help='Version strategy to use for tagging the image.')
+@click.option('--version-strategy', type=click.Choice(['release', 'latest', 'nightly']), default='nightly', help='Version strategy to use for tagging the image.')
 @click.option('--push/--no-push', help='Whether to push to remote repository', is_flag=True, default=False)
 @machine_option
-def cli(container_registry: tuple[LiteralContainerRegistry, ...] | None, version_strategy: LiteralContainerVersionStrategy, push: bool,
-        machine: bool) -> dict[str, str]:
+def cli(container_registry: tuple[LiteralContainerRegistry, ...] | None, version_strategy: LiteralContainerVersionStrategy, push: bool, machine: bool) -> dict[str, str]:
   mapping = openllm.bundle.build_container(container_registry, version_strategy, push, machine)
   if machine: termui.echo(orjson.dumps(mapping, option=orjson.OPT_INDENT_2).decode(), fg='white')
   return mapping

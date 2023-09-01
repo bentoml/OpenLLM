@@ -43,35 +43,29 @@ _AnyCallable = t.Callable[..., t.Any]
 FC = t.TypeVar('FC', bound=t.Union[_AnyCallable, click.Command])
 
 def bento_complete_envvar(ctx: click.Context, param: click.Parameter, incomplete: str) -> list[sc.CompletionItem]:
-  return [
-      sc.CompletionItem(str(it.tag), help='Bento')
-      for it in bentoml.list()
-      if str(it.tag).startswith(incomplete) and all(k in it.info.labels for k in {'start_name', 'bundler'})
-  ]
+  return [sc.CompletionItem(str(it.tag), help='Bento') for it in bentoml.list() if str(it.tag).startswith(incomplete) and all(k in it.info.labels for k in {'start_name', 'bundler'})]
 
 def model_complete_envvar(ctx: click.Context, param: click.Parameter, incomplete: str) -> list[sc.CompletionItem]:
   return [sc.CompletionItem(inflection.dasherize(it), help='Model') for it in openllm.CONFIG_MAPPING if it.startswith(incomplete)]
 
-def parse_config_options(config: LLMConfig, server_timeout: int, workers_per_resource: float, device: t.Tuple[str, ...] | None, cors: bool,
-                         environ: DictStrAny) -> DictStrAny:
+def parse_config_options(config: LLMConfig, server_timeout: int, workers_per_resource: float, device: t.Tuple[str, ...] | None, cors: bool, environ: DictStrAny) -> DictStrAny:
   # TODO: Support amd.com/gpu on k8s
   _bentoml_config_options_env = environ.pop('BENTOML_CONFIG_OPTIONS', '')
   _bentoml_config_options_opts = [
-      'tracing.sample_rate=1.0', f'api_server.traffic.timeout={server_timeout}',
+      'tracing.sample_rate=1.0',
+      f'api_server.traffic.timeout={server_timeout}',
       f'runners."llm-{config["start_name"]}-runner".traffic.timeout={config["timeout"]}',
       f'runners."llm-{config["start_name"]}-runner".workers_per_resource={workers_per_resource}'
   ]
   if device:
     if len(device) > 1:
-      _bentoml_config_options_opts.extend(
-          [f'runners."llm-{config["start_name"]}-runner".resources."nvidia.com/gpu"[{idx}]={dev}' for idx, dev in enumerate(device)])
+      _bentoml_config_options_opts.extend([f'runners."llm-{config["start_name"]}-runner".resources."nvidia.com/gpu"[{idx}]={dev}' for idx, dev in enumerate(device)])
     else:
       _bentoml_config_options_opts.append(f'runners."llm-{config["start_name"]}-runner".resources."nvidia.com/gpu"=[{device[0]}]')
   _bentoml_config_options_opts.append(f'runners."llm-generic-embedding".resources.cpu={openllm.get_resource({"cpu":"system"},"cpu")}')
   if cors:
     _bentoml_config_options_opts.extend(['api_server.http.cors.enabled=true', 'api_server.http.cors.access_control_allow_origins="*"'])
-    _bentoml_config_options_opts.extend(
-        [f'api_server.http.cors.access_control_allow_methods[{idx}]="{it}"' for idx, it in enumerate(['GET', 'OPTIONS', 'POST', 'HEAD', 'PUT'])])
+    _bentoml_config_options_opts.extend([f'api_server.http.cors.access_control_allow_methods[{idx}]="{it}"' for idx, it in enumerate(['GET', 'OPTIONS', 'POST', 'HEAD', 'PUT'])])
   _bentoml_config_options_env += ' ' if _bentoml_config_options_env else '' + ' '.join(_bentoml_config_options_opts)
   environ['BENTOML_CONFIG_OPTIONS'] = _bentoml_config_options_env
   if DEBUG: logger.debug('Setting BENTOML_CONFIG_OPTIONS=%s', _bentoml_config_options_env)
@@ -123,18 +117,27 @@ Available official model_id(s): [default: {llm_config['default_id']}]
   if llm_config['requires_gpu'] and openllm.utils.device_count() < 1:
     # NOTE: The model requires GPU, therefore we will return a dummy command
     command_attrs.update({
-        'short_help': '(Disabled because there is no GPU available)',
-        'help': f'{model} is currently not available to run on your local machine because it requires GPU for inference.'
+        'short_help': '(Disabled because there is no GPU available)', 'help': f'{model} is currently not available to run on your local machine because it requires GPU for inference.'
     })
     return noop_command(group, llm_config, _serve_grpc, **command_attrs)
 
   @group.command(**command_attrs)
   @start_decorator(llm_config, serve_grpc=_serve_grpc)
   @click.pass_context
-  def start_cmd(ctx: click.Context, /, server_timeout: int, model_id: str | None, model_version: str | None,
-                workers_per_resource: t.Literal['conserved', 'round_robin'] | LiteralString, device: t.Tuple[str, ...],
-                quantize: t.Literal['int8', 'int4', 'gptq'] | None, backend: LiteralBackend, serialisation_format: t.Literal['safetensors', 'legacy'],
-                cors: bool, adapter_id: str | None, return_process: bool, **attrs: t.Any,
+  def start_cmd(ctx: click.Context,
+                /,
+                server_timeout: int,
+                model_id: str | None,
+                model_version: str | None,
+                workers_per_resource: t.Literal['conserved', 'round_robin'] | LiteralString,
+                device: t.Tuple[str, ...],
+                quantize: t.Literal['int8', 'int4', 'gptq'] | None,
+                backend: LiteralBackend,
+                serialisation_format: t.Literal['safetensors', 'legacy'],
+                cors: bool,
+                adapter_id: str | None,
+                return_process: bool,
+                **attrs: t.Any,
                 ) -> LLMConfig | subprocess.Popen[bytes]:
     if serialisation_format == 'safetensors' and quantize is not None and openllm_core.utils.check_bool_env('OPENLLM_SERIALIZATION_WARNING'):
       termui.echo(
@@ -202,8 +205,7 @@ Available official model_id(s): [default: {llm_config['default_id']}]
     def next_step(model_name: str, adapter_map: DictStrAny | None) -> None:
       cmd_name = f'openllm build {model_name}'
       if adapter_map is not None:
-        cmd_name += ' ' + ' '.join(
-            [f'--adapter-id {s}' for s in [f'{p}:{name}' if name not in (None, 'default') else p for p, name in adapter_map.items()]])
+        cmd_name += ' ' + ' '.join([f'--adapter-id {s}' for s in [f'{p}:{name}' if name not in (None, 'default') else p for p, name in adapter_map.items()]])
       if not openllm.utils.get_quiet_mode():
         termui.echo(f"\n🚀 Next step: run '{cmd_name}' to create a Bento for {model_name}", fg='blue')
 
@@ -242,11 +244,15 @@ def noop_command(group: click.Group, llm_config: LLMConfig, _serve_grpc: bool, *
 def start_decorator(llm_config: LLMConfig, serve_grpc: bool = False) -> t.Callable[[FC], t.Callable[[FC], FC]]:
   def wrapper(fn: FC) -> t.Callable[[FC], FC]:
     composed = openllm.utils.compose(
-        llm_config.to_click_options, _http_server_args if not serve_grpc else _grpc_server_args,
+        llm_config.to_click_options,
+        _http_server_args if not serve_grpc else _grpc_server_args,
         cog.optgroup.group('General LLM Options', help=f"The following options are related to running '{llm_config['start_name']}' LLM Server."),
-        model_id_option(factory=cog.optgroup), model_version_option(factory=cog.optgroup),
+        model_id_option(factory=cog.optgroup),
+        model_version_option(factory=cog.optgroup),
         cog.optgroup.option('--server-timeout', type=int, default=None, help='Server timeout in seconds'),
-        workers_per_resource_option(factory=cog.optgroup), cors_option(factory=cog.optgroup), backend_option(factory=cog.optgroup),
+        workers_per_resource_option(factory=cog.optgroup),
+        cors_option(factory=cog.optgroup),
+        backend_option(factory=cog.optgroup),
         cog.optgroup.group('LLM Optimization Options',
                            help='''Optimization related options.
 
@@ -257,7 +263,9 @@ def start_decorator(llm_config: LLMConfig, serve_grpc: bool = False) -> t.Callab
             - DeepSpeed Inference: [link](https://www.deepspeed.ai/inference/)
             - GGML: Fast inference on [bare metal](https://github.com/ggerganov/ggml)
             ''',
-                           ), quantize_option(factory=cog.optgroup), serialisation_option(factory=cog.optgroup),
+                           ),
+        quantize_option(factory=cog.optgroup),
+        serialisation_option(factory=cog.optgroup),
         cog.optgroup.option('--device',
                             type=openllm.utils.dantic.CUDA,
                             multiple=True,
@@ -375,32 +383,16 @@ def output_option(f: _AnyCallable | None = None, *, default_value: LiteralOutput
                     **attrs)(f)
 
 def cors_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
-  return cli_option('--cors/--no-cors',
-                    show_default=True,
-                    default=False,
-                    envvar='OPENLLM_CORS',
-                    show_envvar=True,
-                    help='Enable CORS for the server.',
-                    **attrs)(f)
+  return cli_option('--cors/--no-cors', show_default=True, default=False, envvar='OPENLLM_CORS', show_envvar=True, help='Enable CORS for the server.', **attrs)(f)
 
 def machine_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option('--machine', is_flag=True, default=False, hidden=True, **attrs)(f)
 
 def model_id_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
-  return cli_option('--model-id',
-                    type=click.STRING,
-                    default=None,
-                    envvar='OPENLLM_MODEL_ID',
-                    show_envvar=True,
-                    help='Optional model_id name or path for (fine-tune) weight.',
-                    **attrs)(f)
+  return cli_option('--model-id', type=click.STRING, default=None, envvar='OPENLLM_MODEL_ID', show_envvar=True, help='Optional model_id name or path for (fine-tune) weight.', **attrs)(f)
 
 def model_version_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
-  return cli_option('--model-version',
-                    type=click.STRING,
-                    default=None,
-                    help='Optional model version to save for this model. It will be inferred automatically from model-id.',
-                    **attrs)(f)
+  return cli_option('--model-version', type=click.STRING, default=None, help='Optional model version to save for this model. It will be inferred automatically from model-id.', **attrs)(f)
 
 def backend_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   # NOTE: LiteralBackend needs to remove the last two item as ggml and mlc is wip
@@ -512,8 +504,7 @@ def workers_per_resource_callback(ctx: click.Context, param: click.Parameter, va
     try:
       float(value)  # type: ignore[arg-type]
     except ValueError:
-      raise click.BadParameter(f"'workers_per_resource' only accept '{_wpr_strategies}' as possible strategies, otherwise pass in float.", ctx,
-                               param) from None
+      raise click.BadParameter(f"'workers_per_resource' only accept '{_wpr_strategies}' as possible strategies, otherwise pass in float.", ctx, param) from None
     else:
       return value
 

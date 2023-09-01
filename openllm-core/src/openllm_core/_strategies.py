@@ -217,7 +217,8 @@ def _validate(cls: type[DynResource], val: list[t.Any]) -> None:
 
 def _make_resource_class(name: str, resource_kind: str, docstring: str) -> type[DynResource]:
   return types.new_class(
-      name, (bentoml.Resource[t.List[str]], ReprMixin), {'resource_id': resource_kind}, lambda ns: ns.update({
+      name, (bentoml.Resource[t.List[str]], ReprMixin), {'resource_id': resource_kind},
+      lambda ns: ns.update({
           'resource_id': resource_kind,
           'from_spec': classmethod(_from_spec),
           'from_system': classmethod(_from_system),
@@ -234,12 +235,16 @@ _NVIDIA_GPU_RESOURCE: t.Literal['nvidia.com/gpu'] = 'nvidia.com/gpu'
 _CPU_RESOURCE: t.Literal['cpu'] = 'cpu'
 
 NvidiaGpuResource = _make_resource_class(
-    'NvidiaGpuResource', _NVIDIA_GPU_RESOURCE, '''NVIDIA GPU resource.
+    'NvidiaGpuResource',
+    _NVIDIA_GPU_RESOURCE,
+    '''NVIDIA GPU resource.
 
     This is a modified version of internal's BentoML's NvidiaGpuResource
     where it respects and parse CUDA_VISIBLE_DEVICES correctly.''')
 AmdGpuResource = _make_resource_class(
-    'AmdGpuResource', _AMD_GPU_RESOURCE, '''AMD GPU resource.
+    'AmdGpuResource',
+    _AMD_GPU_RESOURCE,
+    '''AMD GPU resource.
 
     Since ROCm will respect CUDA_VISIBLE_DEVICES, the behaviour of from_spec, from_system are similar to
     ``NvidiaGpuResource``. Currently ``validate`` is not yet supported.''')
@@ -305,13 +310,10 @@ class CascadingResourceStrategy(bentoml.Strategy, ReprMixin):
       return math.ceil(cpus) * workers_per_resource
 
     # this should not be reached by user since we always read system resource as default
-    raise ValueError(
-        f'No known supported resource available for {runnable_class}. Please check your resource request. Leaving it blank will allow BentoML to use system resources.'
-    )
+    raise ValueError(f'No known supported resource available for {runnable_class}. Please check your resource request. Leaving it blank will allow BentoML to use system resources.')
 
   @classmethod
-  def get_worker_env(cls, runnable_class: type[bentoml.Runnable], resource_request: dict[str, t.Any] | None, workers_per_resource: int | float,
-                     worker_index: int) -> dict[str, t.Any]:
+  def get_worker_env(cls, runnable_class: type[bentoml.Runnable], resource_request: dict[str, t.Any] | None, workers_per_resource: int | float, worker_index: int) -> dict[str, t.Any]:
     '''Get worker env for this given worker_index.
 
     Args:
@@ -369,15 +371,12 @@ class CascadingResourceStrategy(bentoml.Strategy, ReprMixin):
       # NOTE: We hit this branch when workers_per_resource is set to
       # float, for example 0.5 or 0.25
       if workers_per_resource > 1:
-        raise ValueError(
-            "Currently, the default strategy doesn't support workers_per_resource > 1. It is recommended that one should implement a custom strategy in this case."
-        )
+        raise ValueError("Currently, the default strategy doesn't support workers_per_resource > 1. It is recommended that one should implement a custom strategy in this case.")
       # We are round the assigned resource here. This means if workers_per_resource=.4
       # then it will round down to 2. If workers_per_source=0.6, then it will also round up to 2.
       assigned_resource_per_worker = round(1 / workers_per_resource)
       if len(gpus) < assigned_resource_per_worker:
-        logger.warning('Failed to allocate %s GPUs for %s (number of available GPUs < assigned workers per resource [%s])', gpus, worker_index,
-                       assigned_resource_per_worker)
+        logger.warning('Failed to allocate %s GPUs for %s (number of available GPUs < assigned workers per resource [%s])', gpus, worker_index, assigned_resource_per_worker)
         raise IndexError(f"There aren't enough assigned GPU(s) for given worker id '{worker_index}' [required: {assigned_resource_per_worker}].")
       assigned_gpu = gpus[assigned_resource_per_worker * worker_index:assigned_resource_per_worker * (worker_index + 1)]
       dev = ','.join(assigned_gpu)

@@ -43,13 +43,10 @@ def load_tokenizer(llm: openllm.LLM[t.Any, T], **tokenizer_attrs: t.Any) -> T:
       try:
         tokenizer = cloudpickle.load(t.cast('t.IO[bytes]', cofile))['tokenizer']
       except KeyError:
-        raise openllm.exceptions.OpenLLMException(
-            "Bento model does not have tokenizer. Make sure to save the tokenizer within the model via 'custom_objects'. "
-            "For example: \"bentoml.transformers.save_model(..., custom_objects={'tokenizer': tokenizer})\"") from None
+        raise openllm.exceptions.OpenLLMException("Bento model does not have tokenizer. Make sure to save the tokenizer within the model via 'custom_objects'. "
+                                                  "For example: \"bentoml.transformers.save_model(..., custom_objects={'tokenizer': tokenizer})\"") from None
   else:
-    tokenizer = infer_tokenizers_from_llm(llm).from_pretrained(bentomodel_fs.getsyspath('/'),
-                                                               trust_remote_code=llm.trust_remote_code,
-                                                               **tokenizer_attrs)
+    tokenizer = infer_tokenizers_from_llm(llm).from_pretrained(bentomodel_fs.getsyspath('/'), trust_remote_code=llm.trust_remote_code, **tokenizer_attrs)
 
   if tokenizer.pad_token_id is None:
     if config.pad_token_id is not None: tokenizer.pad_token_id = config.pad_token_id

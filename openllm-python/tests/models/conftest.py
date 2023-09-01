@@ -73,8 +73,7 @@ class ResponseComparator(JSONSnapshotExtension):
       return s == t
 
     def eq_output(s: openllm.GenerationOutput, t: openllm.GenerationOutput) -> bool:
-      return (len(s.responses) == len(t.responses) and all([_s == _t for _s, _t in zip(s.responses, t.responses)]) and
-              eq_config(s.marshaled_config, t.marshaled_config))
+      return (len(s.responses) == len(t.responses) and all([_s == _t for _s, _t in zip(s.responses, t.responses)]) and eq_config(s.marshaled_config, t.marshaled_config))
 
     return len(serialized_data) == len(snapshot_data) and all([eq_output(s, t) for s, t in zip(serialized_data, snapshot_data)])
 
@@ -210,8 +209,7 @@ def _container_handle(model: str,
                                     detach=True,
                                     device_requests=devs,
                                     ports={
-                                        '3000/tcp': port,
-                                        '3001/tcp': prom_port
+                                        '3000/tcp': port, '3001/tcp': prom_port
                                     },
                                     )
 

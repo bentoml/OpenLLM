@@ -153,13 +153,11 @@ class _LazyAutoMapping(OrderedDict, ReprMixin):
 
   def keys(self) -> ConfigModelKeysView:
     return t.cast('ConfigModelKeysView',
-                  [self._load_attr_from_module(key, name) for key, name in self._config_mapping.items() if key in self._model_mapping.keys()] +
-                  list(self._extra_content.keys()))
+                  [self._load_attr_from_module(key, name) for key, name in self._config_mapping.items() if key in self._model_mapping.keys()] + list(self._extra_content.keys()))
 
   def values(self) -> ConfigModelValuesView:
     return t.cast('ConfigModelValuesView',
-                  [self._load_attr_from_module(key, name) for key, name in self._model_mapping.items() if key in self._config_mapping.keys()] +
-                  list(self._extra_content.values()))
+                  [self._load_attr_from_module(key, name) for key, name in self._model_mapping.items() if key in self._config_mapping.keys()] + list(self._extra_content.values()))
 
   def items(self) -> ConfigModelItemsView:
     return t.cast('ConfigModelItemsView',

@@ -95,8 +95,7 @@ class _ClientAttr:
     if not self.supports_hf_agent:
       raise RuntimeError(f'{self.model_name} ({self.backend}) does not support running HF agent.')
     if not is_transformers_supports_agent():
-      raise RuntimeError(
-          "Current 'transformers' does not support Agent. Make sure to upgrade to at least 4.29: 'pip install -U \"transformers>=4.29\"'")
+      raise RuntimeError("Current 'transformers' does not support Agent. Make sure to upgrade to at least 4.29: 'pip install -U \"transformers>=4.29\"'")
     import transformers
     return transformers.HfAgent(urljoin(self._address, '/hf/agent'))
 
@@ -230,15 +229,7 @@ class _AsyncClient(_ClientAttr):
     stop = ['Task:']
     prompt = t.cast(str, self._hf_agent.format_prompt(task))
     async with httpx.AsyncClient(timeout=httpx.Timeout(self.timeout)) as client:
-      response = await client.post(self._hf_agent.url_endpoint,
-                                   json={
-                                       'inputs': prompt,
-                                       'parameters': {
-                                           'max_new_tokens': 200,
-                                           'return_full_text': False,
-                                           'stop': stop
-                                       }
-                                   })
+      response = await client.post(self._hf_agent.url_endpoint, json={'inputs': prompt, 'parameters': {'max_new_tokens': 200, 'return_full_text': False, 'stop': stop}})
       if response.status_code != HTTPStatus.OK: raise ValueError(f'Error {response.status_code}: {response.json()}')
 
     result = response.json()[0]['generated_text']
@@ -279,12 +270,8 @@ class BaseClient(_Client):
       logger.warning("'return_attrs' is now deprecated. Please use 'return_response=\"attrs\"' instead.")
       if return_attrs is True: return_response = 'attrs'
     use_default_prompt_template = attrs.pop('use_default_prompt_template', False)
-    prompt, generate_kwargs, postprocess_kwargs = self.config.sanitize_parameters(prompt,
-                                                                                  use_default_prompt_template=use_default_prompt_template,
-                                                                                  **attrs)
-    r = openllm_core.GenerationOutput(
-        **self.call('generate',
-                    openllm_core.GenerationInput(prompt=prompt, llm_config=self.config.model_construct_env(**generate_kwargs)).model_dump()))
+    prompt, generate_kwargs, postprocess_kwargs = self.config.sanitize_parameters(prompt, use_default_prompt_template=use_default_prompt_template, **attrs)
+    r = openllm_core.GenerationOutput(**self.call('generate', openllm_core.GenerationInput(prompt=prompt, llm_config=self.config.model_construct_env(**generate_kwargs)).model_dump()))
     if return_response == 'attrs': return r
     elif return_response == 'raw': return bentoml_cattr.unstructure(r)
     else: return self.config.postprocess_generate(prompt, r.responses, **postprocess_kwargs)
@@ -309,12 +296,8 @@ class BaseAsyncClient(_AsyncClient):
       logger.warning("'return_attrs' is now deprecated. Please use 'return_response=\"attrs\"' instead.")
       if return_attrs is True: return_response = 'attrs'
     use_default_prompt_template = attrs.pop('use_default_prompt_template', False)
-    prompt, generate_kwargs, postprocess_kwargs = self.config.sanitize_parameters(prompt,
-                                                                                  use_default_prompt_template=use_default_prompt_template,
-                                                                                  **attrs)
-    r = openllm_core.GenerationOutput(
-        **(await self.call('generate',
-                           openllm_core.GenerationInput(prompt=prompt, llm_config=self.config.model_construct_env(**generate_kwargs)).model_dump())))
+    prompt, generate_kwargs, postprocess_kwargs = self.config.sanitize_parameters(prompt, use_default_prompt_template=use_default_prompt_template, **attrs)
+    r = openllm_core.GenerationOutput(**(await self.call('generate', openllm_core.GenerationInput(prompt=prompt, llm_config=self.config.model_construct_env(**generate_kwargs)).model_dump())))
     if return_response == 'attrs': return r
     elif return_response == 'raw': return bentoml_cattr.unstructure(r)
     else: return self.config.postprocess_generate(prompt, r.responses, **postprocess_kwargs)

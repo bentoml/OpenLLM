@@ -15,10 +15,7 @@ if t.TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 @contextlib.contextmanager
-def build_bento(model: str,
-                model_id: str | None = None,
-                quantize: t.Literal['int4', 'int8', 'gptq'] | None = None,
-                cleanup: bool = False) -> t.Iterator[bentoml.Bento]:
+def build_bento(model: str, model_id: str | None = None, quantize: t.Literal['int4', 'int8', 'gptq'] | None = None, cleanup: bool = False) -> t.Iterator[bentoml.Bento]:
   logger.info('Building BentoML for %s', model)
   bento = openllm.build(model, model_id=model_id, quantize=quantize)
   yield bento

@@ -12,36 +12,24 @@ from openllm_core.config.configuration_dolly_v2 import get_special_token_id
 if t.TYPE_CHECKING: import torch, transformers, tensorflow as tf
 else:
   torch, transformers, tf = openllm.utils.LazyLoader('torch', globals(), 'torch'), openllm.utils.LazyLoader('transformers', globals(),
-                                                                                                            'transformers'), openllm.utils.LazyLoader(
-                                                                                                                'tf', globals(), 'tensorflow')
+                                                                                                            'transformers'), openllm.utils.LazyLoader('tf', globals(), 'tensorflow')
 logger = logging.getLogger(__name__)
 
 @overload
-def get_pipeline(model: transformers.PreTrainedModel,
-                 tokenizer: transformers.PreTrainedTokenizer,
-                 _init: t.Literal[True] = True,
-                 **attrs: t.Any) -> transformers.Pipeline:
+def get_pipeline(model: transformers.PreTrainedModel, tokenizer: transformers.PreTrainedTokenizer, _init: t.Literal[True] = True, **attrs: t.Any) -> transformers.Pipeline:
   ...
 
 @overload
-def get_pipeline(model: transformers.PreTrainedModel,
-                 tokenizer: transformers.PreTrainedTokenizer,
-                 _init: t.Literal[False] = ...,
-                 **attrs: t.Any) -> type[transformers.Pipeline]:
+def get_pipeline(model: transformers.PreTrainedModel, tokenizer: transformers.PreTrainedTokenizer, _init: t.Literal[False] = ..., **attrs: t.Any) -> type[transformers.Pipeline]:
   ...
 
-def get_pipeline(model: transformers.PreTrainedModel,
-                 tokenizer: transformers.PreTrainedTokenizer,
-                 _init: bool = False,
-                 **attrs: t.Any) -> type[transformers.Pipeline] | transformers.Pipeline:
+def get_pipeline(model: transformers.PreTrainedModel, tokenizer: transformers.PreTrainedTokenizer, _init: bool = False, **attrs: t.Any) -> type[transformers.Pipeline] | transformers.Pipeline:
   # Lazy loading the pipeline. See databricks' implementation on HuggingFace for more information.
   class InstructionTextGenerationPipeline(transformers.Pipeline):
     def __init__(self, *args: t.Any, do_sample: bool = True, max_new_tokens: int = 256, top_p: float = 0.92, top_k: int = 0, **kwargs: t.Any):
       super().__init__(*args, model=model, tokenizer=tokenizer, do_sample=do_sample, max_new_tokens=max_new_tokens, top_p=top_p, top_k=top_k, **kwargs)
 
-    def _sanitize_parameters(self,
-                             return_full_text: bool | None = None,
-                             **generate_kwargs: t.Any) -> tuple[dict[str, t.Any], dict[str, t.Any], dict[str, t.Any]]:
+    def _sanitize_parameters(self, return_full_text: bool | None = None, **generate_kwargs: t.Any) -> tuple[dict[str, t.Any], dict[str, t.Any], dict[str, t.Any]]:
       if t.TYPE_CHECKING: assert self.tokenizer is not None
       preprocess_params: dict[str, t.Any] = {}
       # newer versions of the tokenizer configure the response key as a special token.  newer versions still may
@@ -87,11 +75,7 @@ def get_pipeline(model: transformers.PreTrainedModel,
       instruction_text = input_tensors.pop('instruction_text')
       return {'generated_sequence': generated_sequence, 'input_ids': input_ids, 'instruction_text': instruction_text}
 
-    def postprocess(self,
-                    model_outputs: dict[str, t.Any],
-                    response_key_token_id: int,
-                    end_key_token_id: int,
-                    return_full_text: bool = False) -> list[dict[t.Literal['generated_text'], str]]:
+    def postprocess(self, model_outputs: dict[str, t.Any], response_key_token_id: int, end_key_token_id: int, return_full_text: bool = False) -> list[dict[t.Literal['generated_text'], str]]:
       if t.TYPE_CHECKING: assert self.tokenizer is not None
       _generated_sequence, instruction_text = model_outputs['generated_sequence'][0], model_outputs['instruction_text']
       generated_sequence: list[list[int]] = _generated_sequence.numpy().tolist()
@@ -149,10 +133,7 @@ class DollyV2(openllm.LLM['transformers.Pipeline', 'transformers.PreTrainedToken
     return {'device_map': 'auto' if torch.cuda.is_available() and torch.cuda.device_count() > 1 else None, 'torch_dtype': torch.bfloat16}, {}
 
   def load_model(self, *args: t.Any, **attrs: t.Any) -> transformers.Pipeline:
-    return get_pipeline(transformers.AutoModelForCausalLM.from_pretrained(self._bentomodel.path, *args, **attrs),
-                        self.tokenizer,
-                        _init=True,
-                        return_full_text=self.config.return_full_text)
+    return get_pipeline(transformers.AutoModelForCausalLM.from_pretrained(self._bentomodel.path, *args, **attrs), self.tokenizer, _init=True, return_full_text=self.config.return_full_text)
 
   def generate(self, prompt: str, **attrs: t.Any) -> list[dict[t.Literal['generated_text'], str]]:
     llm_config = self.config.model_construct_env(**attrs)

@@ -83,10 +83,7 @@ def _start(model_name: str,
   from .entrypoint import start_command
   from .entrypoint import start_grpc_command
   llm_config = openllm.AutoConfig.for_model(model_name)
-  _ModelEnv = openllm_core.utils.EnvVarMixin(model_name,
-                                             backend=openllm_core.utils.first_not_none(backend, default=llm_config.default_backend()),
-                                             model_id=model_id,
-                                             quantize=quantize)
+  _ModelEnv = openllm_core.utils.EnvVarMixin(model_name, backend=openllm_core.utils.first_not_none(backend, default=llm_config.default_backend()), model_id=model_id, quantize=quantize)
   os.environ[_ModelEnv.backend] = _ModelEnv['backend_value']
 
   args: list[str] = []
@@ -102,9 +99,7 @@ def _start(model_name: str,
   if additional_args: args.extend(additional_args)
   if __test__: args.append('--return-process')
 
-  return start_command_factory(start_command if not _serve_grpc else start_grpc_command,
-                               model_name,
-                               _context_settings=termui.CONTEXT_SETTINGS,
+  return start_command_factory(start_command if not _serve_grpc else start_grpc_command, model_name, _context_settings=termui.CONTEXT_SETTINGS,
                                _serve_grpc=_serve_grpc).main(args=args if len(args) > 0 else None, standalone_mode=False)
 
 @inject
@@ -199,9 +194,7 @@ def _build(model_name: str,
     raise OpenLLMException(str(e)) from None
   matched = re.match(r'__tag__:([^:\n]+:[^:\n]+)$', output.decode('utf-8').strip())
   if matched is None:
-    raise ValueError(
-        f"Failed to find tag from output: {output.decode('utf-8').strip()}\nNote: Output from 'openllm build' might not be correct. Please open an issue on GitHub."
-    )
+    raise ValueError(f"Failed to find tag from output: {output.decode('utf-8').strip()}\nNote: Output from 'openllm build' might not be correct. Please open an issue on GitHub.")
   return bentoml.get(matched.group(1), _bento_store=bento_store)
 
 def _import_model(model_name: str,
@@ -256,6 +249,5 @@ def _list_models() -> dict[str, t.Any]:
   return models_command.main(args=['-o', 'json', '--show-available', '--machine'], standalone_mode=False)
 
 start, start_grpc, build, import_model, list_models = openllm_core.utils.codegen.gen_sdk(_start, _serve_grpc=False), openllm_core.utils.codegen.gen_sdk(
-    _start, _serve_grpc=True), openllm_core.utils.codegen.gen_sdk(_build), openllm_core.utils.codegen.gen_sdk(
-        _import_model), openllm_core.utils.codegen.gen_sdk(_list_models)
+    _start, _serve_grpc=True), openllm_core.utils.codegen.gen_sdk(_build), openllm_core.utils.codegen.gen_sdk(_import_model), openllm_core.utils.codegen.gen_sdk(_list_models)
 __all__ = ['start', 'start_grpc', 'build', 'import_model', 'list_models']

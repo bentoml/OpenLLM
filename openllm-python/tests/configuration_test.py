@@ -31,20 +31,12 @@ def test_missing_default():
   with pytest.raises(ValueError, match='Missing required fields *'):
     make_llm_config('MissingModelId', {'default_id': 'huggingface/t5-tiny-testing', 'requirements': ['bentoml']})
   with pytest.raises(ValueError, match='Missing required fields *'):
-    make_llm_config('MissingArchitecture', {
-        'default_id': 'huggingface/t5-tiny-testing',
-        'model_ids': ['huggingface/t5-tiny-testing'],
-        'requirements': ['bentoml'],
-    },
-                    )
+    make_llm_config('MissingArchitecture', {'default_id': 'huggingface/t5-tiny-testing', 'model_ids': ['huggingface/t5-tiny-testing'], 'requirements': ['bentoml'],},)
 
 def test_forbidden_access():
   cl_ = make_llm_config(
       'ForbiddenAccess', {
-          'default_id': 'huggingface/t5-tiny-testing',
-          'model_ids': ['huggingface/t5-tiny-testing', 'bentoml/t5-tiny-testing'],
-          'architecture': 'PreTrainedModel',
-          'requirements': ['bentoml'],
+          'default_id': 'huggingface/t5-tiny-testing', 'model_ids': ['huggingface/t5-tiny-testing', 'bentoml/t5-tiny-testing'], 'architecture': 'PreTrainedModel', 'requirements': ['bentoml'],
       },
   )
 
@@ -77,9 +69,7 @@ def test_config_derived_follow_attrs_protocol(gen_settings: ModelSettings):
   cl_ = make_llm_config('AttrsProtocolLLM', gen_settings)
   assert attr.has(cl_)
 
-@given(model_settings(), st.integers(max_value=283473), st.floats(min_value=0.0, max_value=1.0), st.integers(max_value=283473),
-       st.floats(min_value=0.0, max_value=1.0),
-       )
+@given(model_settings(), st.integers(max_value=283473), st.floats(min_value=0.0, max_value=1.0), st.integers(max_value=283473), st.floats(min_value=0.0, max_value=1.0),)
 def test_complex_struct_dump(gen_settings: ModelSettings, field1: int, temperature: float, input_field1: int, input_temperature: float):
   cl_ = make_llm_config('ComplexLLM', gen_settings, fields=(('field1', 'float', field1),), generation_fields=(('temperature', temperature),),)
   sent = cl_()
@@ -138,9 +128,7 @@ def test_struct_envvar_with_overwrite_provided_env(monkeypatch: pytest.MonkeyPat
     mk.setenv(field_env_key('field1'), str(4.0))
     mk.setenv(field_env_key('temperature', suffix='generation'), str(0.2))
     sent = make_llm_config('OverwriteWithEnvAvailable', {
-        'default_id': 'asdfasdf',
-        'model_ids': ['asdf', 'asdfasdfads'],
-        'architecture': 'PreTrainedModel'
+        'default_id': 'asdfasdf', 'model_ids': ['asdf', 'asdfasdfads'], 'architecture': 'PreTrainedModel'
     },
                            fields=(('field1', 'float', 3.0),),
                            ).model_construct_env(field1=20.0, temperature=0.4)

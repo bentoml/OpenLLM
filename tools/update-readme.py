@@ -18,11 +18,7 @@ def main() -> int:
 
   start_index, stop_index = readme.index(START_COMMENT), readme.index(END_COMMENT)
   formatted: dict[t.Literal['Model', 'Architecture', 'URL', 'Installation', 'Model Ids'], list[str | list[str]]] = {
-      'Model': [],
-      'Architecture': [],
-      'URL': [],
-      'Model Ids': [],
-      'Installation': [],
+      'Model': [], 'Architecture': [], 'URL': [], 'Model Ids': [], 'Installation': [],
   }
   max_install_len_div = 0
   for name, config_cls in openllm.CONFIG_MAPPING.items():

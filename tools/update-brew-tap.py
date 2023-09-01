@@ -16,9 +16,7 @@ _OWNER = 'bentoml'
 _REPO = 'openllm'
 
 _gz_strategies: dict[t.Literal['macos_arm', 'macos_intel', 'linux_intel'], str] = {
-    'macos_arm': 'aarch64-apple-darwin',
-    'macos_intel': 'x86_64-apple-darwin',
-    'linux_intel': 'x86_64-unknown-linux-musl'
+    'macos_arm': 'aarch64-apple-darwin', 'macos_intel': 'x86_64-apple-darwin', 'linux_intel': 'x86_64-unknown-linux-musl'
 }
 
 def determine_release_url(svn_url: str, tag: str, target: t.Literal['macos_arm', 'macos_intel', 'linux_intel', 'archive']) -> str:
@@ -34,9 +32,7 @@ def main() -> int:
   _info = api.repos.get()
   release_tag = api.repos.get_latest_release().name
 
-  shadict: dict[str, t.Any] = {
-      k: get_release_hash_command(determine_release_url(_info.svn_url, release_tag, k), release_tag)().strip() for k in _gz_strategies
-  }
+  shadict: dict[str, t.Any] = {k: get_release_hash_command(determine_release_url(_info.svn_url, release_tag, k), release_tag)().strip() for k in _gz_strategies}
   shadict['archive'] = get_release_hash_command(determine_release_url(_info.svn_url, release_tag, 'archive'), release_tag)().strip()
 
   ENVIRONMENT = Environment(extensions=['jinja2.ext.do', 'jinja2.ext.loopcontrols', 'jinja2.ext.debug'],

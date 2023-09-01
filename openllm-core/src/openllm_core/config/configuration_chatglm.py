@@ -51,8 +51,7 @@ class ChatGLMConfig(openllm_core.LLMConfig):
       'default_id': 'thudm/chatglm-6b',
       'model_ids': ['thudm/chatglm-6b', 'thudm/chatglm-6b-int8', 'thudm/chatglm-6b-int4', 'thudm/chatglm2-6b', 'thudm/chatglm2-6b-int4']
   }
-  retain_history: bool = dantic.Field(
-      False, description='Whether to retain history given to the model. If set to True, then the model will retain given history.')
+  retain_history: bool = dantic.Field(False, description='Whether to retain history given to the model. If set to True, then the model will retain given history.')
   use_half_precision: bool = dantic.Field(True, description='Whether to use half precision for model.')
 
   class GenerationConfig:
@@ -78,20 +77,9 @@ class ChatGLMConfig(openllm_core.LLMConfig):
     else:
       prompt_text = prompt
     postprocess_generate_kwargs = {'chat_history': chat_history if chat_history is not None else None}
-    return prompt_text, {
-        'max_new_tokens': max_new_tokens,
-        'num_beams': num_beams,
-        'top_p': top_p,
-        'temperature': temperature,
-        **attrs
-    }, postprocess_generate_kwargs
+    return prompt_text, {'max_new_tokens': max_new_tokens, 'num_beams': num_beams, 'top_p': top_p, 'temperature': temperature, **attrs}, postprocess_generate_kwargs
 
-  def postprocess_generate(self,
-                           prompt: str,
-                           generation_result: tuple[str, list[tuple[str, str]]],
-                           *,
-                           chat_history: list[tuple[str, str]] | None = None,
-                           **attrs: t.Any) -> str:
+  def postprocess_generate(self, prompt: str, generation_result: tuple[str, list[tuple[str, str]]], *, chat_history: list[tuple[str, str]] | None = None, **attrs: t.Any) -> str:
     generated, history = generation_result
     if self.config.retain_history:
       if chat_history is None: raise ValueError("'retain_history' is True while there is no history provided.")

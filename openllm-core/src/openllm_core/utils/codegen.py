@@ -130,28 +130,13 @@ def make_env_transformer(cls: type[openllm_core.LLMConfig],
 
   default_callback = identity if default_callback is None else default_callback
   globs = {} if globs is None else globs
-  globs.update({
-      '__populate_env': dantic.env_converter,
-      '__default_callback': default_callback,
-      '__field_env': field_env_key,
-      '__suffix': suffix or '',
-      '__model_name': model_name,
-  })
+  globs.update({'__populate_env': dantic.env_converter, '__default_callback': default_callback, '__field_env': field_env_key, '__suffix': suffix or '', '__model_name': model_name,})
   lines: ListStr = [
       '__env=lambda field_name:__field_env(field_name,__suffix)',
       "return [f.evolve(default=__populate_env(__default_callback(f.name,f.default),__env(f.name)),metadata={'env':f.metadata.get('env',__env(f.name)),'description':f.metadata.get('description', '(not provided)')}) for f in fields]"
   ]
   fields_ann = 'list[attr.Attribute[t.Any]]'
-  return generate_function(cls,
-                           '__auto_env',
-                           lines,
-                           args=('_', 'fields'),
-                           globs=globs,
-                           annotations={
-                               '_': 'type[LLMConfig]',
-                               'fields': fields_ann,
-                               'return': fields_ann
-                           })
+  return generate_function(cls, '__auto_env', lines, args=('_', 'fields'), globs=globs, annotations={'_': 'type[LLMConfig]', 'fields': fields_ann, 'return': fields_ann})
 
 def gen_sdk(func: _T, name: str | None = None, **attrs: t.Any) -> _T:
   '''Enhance sdk with nice repr that plays well with your brain.'''
@@ -178,7 +163,8 @@ def gen_sdk(func: _T, name: str | None = None, **attrs: t.Any) -> _T:
                               '__doc__': inspect.cleandoc(doc),
                               '__module__': 'openllm'
                           }),
-                          )(func, **attrs), func,
+                          )(func, **attrs),
+          func,
       ))
 
 __all__ = ['gen_sdk', 'make_attr_tuple_class', 'make_env_transformer', 'generate_unique_filename', 'generate_function']

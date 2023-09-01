@@ -99,10 +99,7 @@ def make_llm_attributes(cls: type[LLM[M, T]]) -> t.Callable[[type[LLM[M, T]]], N
   # _cached_LLMFunction_get and _ccached_LLMSerialisation_get
   globs.update({f'_cached_{cl_.__name__}_get': _object_getattribute.__get__(cl_) for cl_ in {LLMSerialisation, LLMFunction}})
   # llm_post_init implementation
-  lines: ListStr = [
-      f'_impl_{cls.__name__}_func=cls.llm_post_init',
-      _setattr_class('llm_post_init', f'__wrapped_llm_post_init(_impl_{cls.__name__}_func)')
-  ]
+  lines: ListStr = [f'_impl_{cls.__name__}_func=cls.llm_post_init', _setattr_class('llm_post_init', f'__wrapped_llm_post_init(_impl_{cls.__name__}_func)')]
 
   serialisation_attr = {'import_model': import_model, 'load_model': load_model, 'load_tokenizer': load_tokenizer,}
   for func, impl in serialisation_attr.items():
@@ -114,10 +111,7 @@ def make_llm_attributes(cls: type[LLM[M, T]]) -> t.Callable[[type[LLM[M, T]]], N
 
   # assign vLLM implementation
   if cls.__llm_backend__ == 'vllm':
-    vllm_func = {
-        f'_vllm_{it}': fn
-        for it, fn in zip(('generate', 'generate_iterator', 'postprocess_generate'), (vllm_generate, vllm_generate_iterator, vllm_postprocess_generate))
-    }
+    vllm_func = {f'_vllm_{it}': fn for it, fn in zip(('generate', 'generate_iterator', 'postprocess_generate'), (vllm_generate, vllm_generate_iterator, vllm_postprocess_generate))}
     globs.update(vllm_func)
     lines.extend([_setattr_class(it[6:], it) for it in vllm_func])
 
@@ -137,15 +131,7 @@ def make_llm_attributes(cls: type[LLM[M, T]]) -> t.Callable[[type[LLM[M, T]]], N
   bool_attr = {it[15:-2] for it in interface_anns if it.startswith('__llm_supports_')}
   lines.extend([_setattr_class(dunder_support(fn), f"cls.{fn} is not _cached_LLMFunction_get('{fn}')") for fn in bool_attr])
 
-  return codegen.generate_function(cls,
-                                   '__assign_llm_attr',
-                                   lines,
-                                   args=('cls', *args),
-                                   globs=globs,
-                                   annotations={
-                                       'cls': 't.Type[LLM]',
-                                       'return': None
-                                   })
+  return codegen.generate_function(cls, '__assign_llm_attr', lines, args=('cls', *args), globs=globs, annotations={'cls': 't.Type[LLM]', 'return': None})
 
 def vllm_postprocess_generate(self: LLM['vllm.LLMEngine', T], prompt: str, generation_result: list[dict[str, t.Any]], **_: t.Any) -> str:
   return generation_result[0]['outputs'][0]['text']

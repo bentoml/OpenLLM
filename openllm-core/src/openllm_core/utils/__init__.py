@@ -152,32 +152,24 @@ _LOGGING_CONFIG: dict[str, t.Any] = {
     'filters': {
         'excfilter': {
             '()': 'openllm_core.utils.ExceptionFilter'
-        },
-        'infofilter': {
+        }, 'infofilter': {
             '()': 'openllm_core.utils.InfoFilter'
         }
     },
     'handlers': {
         'bentomlhandler': {
-            'class': 'logging.StreamHandler',
-            'filters': ['excfilter', 'infofilter'],
-            'stream': 'ext://sys.stdout'
+            'class': 'logging.StreamHandler', 'filters': ['excfilter', 'infofilter'], 'stream': 'ext://sys.stdout'
         },
         'defaulthandler': {
-            'class': 'logging.StreamHandler',
-            'level': logging.WARNING
+            'class': 'logging.StreamHandler', 'level': logging.WARNING
         }
     },
     'loggers': {
         'bentoml': {
-            'handlers': ['bentomlhandler', 'defaulthandler'],
-            'level': logging.INFO,
-            'propagate': False
+            'handlers': ['bentomlhandler', 'defaulthandler'], 'level': logging.INFO, 'propagate': False
         },
         'openllm': {
-            'handlers': ['bentomlhandler', 'defaulthandler'],
-            'level': logging.INFO,
-            'propagate': False
+            'handlers': ['bentomlhandler', 'defaulthandler'], 'level': logging.INFO, 'propagate': False
         }
     },
     'root': {
@@ -318,9 +310,7 @@ _whitelist_modules = {'pkg'}
 
 # XXX: define all classes, functions import above this line
 # since _extras will be the locals() import from this file.
-_extras: dict[str, t.Any] = {
-    k: v for k, v in locals().items() if k in _whitelist_modules or (not isinstance(v, types.ModuleType) and not k.startswith('_'))
-}
+_extras: dict[str, t.Any] = {k: v for k, v in locals().items() if k in _whitelist_modules or (not isinstance(v, types.ModuleType) and not k.startswith('_'))}
 _extras['__openllm_migration__'] = {'ModelEnv': 'EnvVarMixin'}
 _import_structure: dict[str, list[str]] = {
     'analytics': [],
@@ -329,11 +319,32 @@ _import_structure: dict[str, list[str]] = {
     'lazy': [],
     'representation': ['ReprMixin'],
     'import_utils': [
-        'OPTIONAL_DEPENDENCIES', 'DummyMetaclass', 'EnvVarMixin', 'require_backends', 'is_cpm_kernels_available', 'is_einops_available',
-        'is_flax_available', 'is_tf_available', 'is_vllm_available', 'is_torch_available', 'is_bitsandbytes_available', 'is_peft_available',
-        'is_datasets_available', 'is_transformers_supports_kbit', 'is_transformers_supports_agent', 'is_jupyter_available', 'is_jupytext_available',
-        'is_notebook_available', 'is_triton_available', 'is_autogptq_available', 'is_sentencepiece_available', 'is_xformers_available',
-        'is_fairscale_available', 'is_grpc_available', 'is_grpc_health_available', 'is_transformers_available'
+        'OPTIONAL_DEPENDENCIES',
+        'DummyMetaclass',
+        'EnvVarMixin',
+        'require_backends',
+        'is_cpm_kernels_available',
+        'is_einops_available',
+        'is_flax_available',
+        'is_tf_available',
+        'is_vllm_available',
+        'is_torch_available',
+        'is_bitsandbytes_available',
+        'is_peft_available',
+        'is_datasets_available',
+        'is_transformers_supports_kbit',
+        'is_transformers_supports_agent',
+        'is_jupyter_available',
+        'is_jupytext_available',
+        'is_notebook_available',
+        'is_triton_available',
+        'is_autogptq_available',
+        'is_sentencepiece_available',
+        'is_xformers_available',
+        'is_fairscale_available',
+        'is_grpc_available',
+        'is_grpc_health_available',
+        'is_transformers_available'
     ]
 }
 

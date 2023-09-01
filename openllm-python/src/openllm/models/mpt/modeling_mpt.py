@@ -36,10 +36,7 @@ class MPT(openllm.LLM['transformers.PreTrainedModel', 'transformers.GPTNeoXToken
   @property
   def import_kwargs(self) -> tuple[dict[str, t.Any], dict[str, t.Any]]:
     import torch
-    return {
-        'device_map': 'auto' if torch.cuda.is_available() and torch.cuda.device_count() > 1 else None,
-        'torch_dtype': torch.bfloat16 if torch.cuda.is_available() else torch.float32
-    }, {}
+    return {'device_map': 'auto' if torch.cuda.is_available() and torch.cuda.device_count() > 1 else None, 'torch_dtype': torch.bfloat16 if torch.cuda.is_available() else torch.float32}, {}
 
   def import_model(self, *args: t.Any, trust_remote_code: bool = True, **attrs: t.Any) -> bentoml.Model:
     import torch
@@ -51,12 +48,7 @@ class MPT(openllm.LLM['transformers.PreTrainedModel', 'transformers.GPTNeoXToken
     config = get_mpt_config(self.model_id, self.config.max_sequence_length, self.device, device_map=device_map, trust_remote_code=trust_remote_code)
     tokenizer = transformers.AutoTokenizer.from_pretrained(self.model_id, **tokenizer_attrs)
     if tokenizer.pad_token_id is None: tokenizer.pad_token = tokenizer.eos_token
-    model = transformers.AutoModelForCausalLM.from_pretrained(self.model_id,
-                                                              config=config,
-                                                              torch_dtype=torch_dtype,
-                                                              trust_remote_code=trust_remote_code,
-                                                              device_map=device_map,
-                                                              **attrs)
+    model = transformers.AutoModelForCausalLM.from_pretrained(self.model_id, config=config, torch_dtype=torch_dtype, trust_remote_code=trust_remote_code, device_map=device_map, **attrs)
     try:
       return bentoml.transformers.save_model(self.tag, model, custom_objects={'tokenizer': tokenizer}, labels=generate_labels(self))
     finally:
@@ -67,12 +59,7 @@ class MPT(openllm.LLM['transformers.PreTrainedModel', 'transformers.GPTNeoXToken
     torch_dtype = attrs.pop('torch_dtype', torch.bfloat16 if torch.cuda.is_available() else torch.float32)
     device_map = attrs.pop('device_map', None)
     trust_remote_code = attrs.pop('trust_remote_code', True)
-    config = get_mpt_config(self._bentomodel.path,
-                            self.config.max_sequence_length,
-                            self.device,
-                            device_map=device_map,
-                            trust_remote_code=trust_remote_code,
-                            )
+    config = get_mpt_config(self._bentomodel.path, self.config.max_sequence_length, self.device, device_map=device_map, trust_remote_code=trust_remote_code,)
     model = transformers.AutoModelForCausalLM.from_pretrained(self._bentomodel.path,
                                                               config=config,
                                                               trust_remote_code=trust_remote_code,

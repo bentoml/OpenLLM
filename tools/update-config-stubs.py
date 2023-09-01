@@ -91,28 +91,23 @@ def main() -> int:
   # NOTE: inline stubs for _ConfigAttr type stubs
   config_attr_lines: list[str] = []
   for keys, ForwardRef in codegen.get_annotations(ModelSettings).items():
-    config_attr_lines.extend([
-        ' ' * 4 + line for line in [
-            f'__openllm_{keys}__: {_transformed.get(keys, process_annotations(ForwardRef.__forward_arg__))} = Field(None)\n',
-            f"'''{_value_docstring[keys]}'''\n",
-        ]
-    ])
+    config_attr_lines.extend(
+        [' ' * 4 + line for line in [f'__openllm_{keys}__: {_transformed.get(keys, process_annotations(ForwardRef.__forward_arg__))} = Field(None)\n', f"'''{_value_docstring[keys]}'''\n",]])
   # NOTE: inline runtime __getitem__ overload process
   lines: list[str] = []
   lines.append(' ' * 2 + '# NOTE: ModelSettings arguments\n')
   for keys, ForwardRef in codegen.get_annotations(ModelSettings).items():
-    lines.extend([
-        ' ' * 2 + line for line in [
-            '@overload\n',
-            f"def __getitem__(self, item: t.Literal['{keys}']) -> {_transformed.get(keys, process_annotations(ForwardRef.__forward_arg__))}: ...\n",
-        ]
-    ])
+    lines.extend(
+        [' ' * 2 + line for line in ['@overload\n', f"def __getitem__(self, item: t.Literal['{keys}']) -> {_transformed.get(keys, process_annotations(ForwardRef.__forward_arg__))}: ...\n",]])
   # special case variables: generation_class, extras, sampling_class
   lines.append(' ' * 2 + '# NOTE: generation_class, sampling_class and extras arguments\n')
   lines.extend([
       ' ' * 2 + line for line in [
-          '@overload\n', "def __getitem__(self, item: t.Literal['generation_class']) -> t.Type[openllm_core.GenerationConfig]: ...\n", '@overload\n',
-          "def __getitem__(self, item: t.Literal['sampling_class']) -> t.Type[openllm_core.SamplingParams]: ...\n", '@overload\n',
+          '@overload\n',
+          "def __getitem__(self, item: t.Literal['generation_class']) -> t.Type[openllm_core.GenerationConfig]: ...\n",
+          '@overload\n',
+          "def __getitem__(self, item: t.Literal['sampling_class']) -> t.Type[openllm_core.SamplingParams]: ...\n",
+          '@overload\n',
           "def __getitem__(self, item: t.Literal['extras']) -> t.Dict[str, t.Any]: ...\n",
       ]
   ])
@@ -128,11 +123,9 @@ def main() -> int:
   for keys in PeftType._member_names_:
     lines.extend([' ' * 2 + line for line in ['@overload\n', f"def __getitem__(self, item: t.Literal['{keys.lower()}']) -> dict[str, t.Any]: ...\n",]])
 
-  processed = processed[:start_attrs_idx] + [' ' * 4 + START_ATTRS_COMMENT, *special_attrs_lines, ' ' * 4 + END_ATTRS_COMMENT
-                                             ] + processed[end_attrs_idx + 1:start_stub_idx] + [
-                                                 ' ' * 4 + START_SPECIAL_COMMENT, *config_attr_lines, ' ' * 4 + END_SPECIAL_COMMENT
-                                             ] + processed[end_stub_idx + 1:start_idx] + [' ' * 2 + START_COMMENT, *lines, ' ' * 2 + END_COMMENT
-                                                                                          ] + processed[end_idx + 1:]
+  processed = processed[:start_attrs_idx] + [' ' * 4 + START_ATTRS_COMMENT, *special_attrs_lines, ' ' * 4 + END_ATTRS_COMMENT] + processed[end_attrs_idx + 1:start_stub_idx] + [
+      ' ' * 4 + START_SPECIAL_COMMENT, *config_attr_lines, ' ' * 4 + END_SPECIAL_COMMENT
+  ] + processed[end_stub_idx + 1:start_idx] + [' ' * 2 + START_COMMENT, *lines, ' ' * 2 + END_COMMENT] + processed[end_idx + 1:]
   with _TARGET_FILE.open('w') as f:
     f.writelines(processed)
   return 0

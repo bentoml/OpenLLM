@@ -126,10 +126,9 @@ class LazyModule(types.ModuleType):
     }
     if name in dunder_to_metadata:
       if name not in {'__version_info__', '__copyright__', '__version__'}:
-        warnings.warn(
-            f"Accessing '{self._name}.{name}' is deprecated. Please consider using 'importlib.metadata' directly to query for openllm packaging metadata.",
-            DeprecationWarning,
-            stacklevel=2)
+        warnings.warn(f"Accessing '{self._name}.{name}' is deprecated. Please consider using 'importlib.metadata' directly to query for openllm packaging metadata.",
+                      DeprecationWarning,
+                      stacklevel=2)
       meta = importlib.metadata.metadata('openllm')
       project_url = dict(url.split(', ') for url in t.cast(t.List[str], meta.get_all('Project-URL')))
       if name == '__license__': return 'Apache-2.0'
@@ -146,9 +145,7 @@ class LazyModule(types.ModuleType):
     if '__openllm_migration__' in self._objects:
       cur_value = self._objects['__openllm_migration__'].get(name, _sentinel)
       if cur_value is not _sentinel:
-        warnings.warn(f"'{name}' is deprecated and will be removed in future version. Make sure to use '{cur_value}' instead",
-                      DeprecationWarning,
-                      stacklevel=3)
+        warnings.warn(f"'{name}' is deprecated and will be removed in future version. Make sure to use '{cur_value}' instead", DeprecationWarning, stacklevel=3)
         return getattr(self, cur_value)
     if name in self._objects: return self._objects.__getitem__(name)
     if name in self._modules: value = self._get_module(name)

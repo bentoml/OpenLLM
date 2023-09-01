@@ -42,11 +42,7 @@ ROOT_DIR = pathlib.Path(os.path.abspath('__file__')).parent.parent.parent
 # but in the future, we can infer based on git repo and everything to make it more options for users
 # to build the base image. For now, all of the base image will be <registry>/bentoml/openllm:...
 # NOTE: The ECR registry is the public one and currently only @bentoml team has access to push it.
-_CONTAINER_REGISTRY: dict[LiteralContainerRegistry, str] = {
-    'docker': 'docker.io/bentoml/openllm',
-    'gh': 'ghcr.io/bentoml/openllm',
-    'ecr': 'public.ecr.aws/y5w8i4y6/bentoml/openllm'
-}
+_CONTAINER_REGISTRY: dict[LiteralContainerRegistry, str] = {'docker': 'docker.io/bentoml/openllm', 'gh': 'ghcr.io/bentoml/openllm', 'ecr': 'public.ecr.aws/y5w8i4y6/bentoml/openllm'}
 
 # TODO: support custom fork. Currently it only support openllm main.
 _OWNER = 'bentoml'
@@ -82,9 +78,7 @@ def nightly_resolver(cls: type[RefResolver]) -> str:
     commits = t.cast('list[dict[str, t.Any]]', cls._ghapi.repos.list_commits(since=_commit_time_range()))
     return next(f'sha-{it["sha"][:7]}' for it in commits if '[skip ci]' not in it['commit']['message'])
   # now is the correct behaviour
-  return orjson.loads(
-      subprocess.check_output([docker_bin, 'run', '--rm', '-it', 'quay.io/skopeo/stable:latest', 'list-tags',
-                               'docker://ghcr.io/bentoml/openllm']).decode().strip())['Tags'][-2]
+  return orjson.loads(subprocess.check_output([docker_bin, 'run', '--rm', '-it', 'quay.io/skopeo/stable:latest', 'list-tags', 'docker://ghcr.io/bentoml/openllm']).decode().strip())['Tags'][-2]
 
 @attr.attrs(eq=False, order=False, slots=True, frozen=True)
 class RefResolver:
@@ -142,9 +136,7 @@ def build_container(registries: LiteralContainerRegistry | t.Sequence[LiteralCon
   try:
     if not _BUILDER.health(): raise openllm.exceptions.Error
   except (openllm.exceptions.Error, subprocess.CalledProcessError):
-    raise RuntimeError(
-        'Building base container requires BuildKit (via Buildx) to be installed. See https://docs.docker.com/build/buildx/install/ for instalation instruction.'
-    ) from None
+    raise RuntimeError('Building base container requires BuildKit (via Buildx) to be installed. See https://docs.docker.com/build/buildx/install/ for instalation instruction.') from None
   if openllm_core.utils.device_count() == 0:
     raise RuntimeError('Building base container requires GPUs (None available)')
   if not shutil.which('nvidia-container-runtime'):
@@ -153,8 +145,7 @@ def build_container(registries: LiteralContainerRegistry | t.Sequence[LiteralCon
     raise RuntimeError("Failed to determine source location of 'openllm'. (Possible broken installation)")
   pyproject_path = pathlib.Path(_module_location).parent.parent / 'pyproject.toml'
   if not pyproject_path.exists():
-    raise ValueError(
-        "This utility can only be run within OpenLLM git repository. Clone it first with 'git clone https://github.com/bentoml/OpenLLM.git'")
+    raise ValueError("This utility can only be run within OpenLLM git repository. Clone it first with 'git clone https://github.com/bentoml/OpenLLM.git'")
   if not registries:
     tags: dict[str | LiteralContainerRegistry, str] = {
         alias: f'{value}:{get_base_container_tag(version_strategy)}' for alias, value in _CONTAINER_REGISTRY.items()
@@ -171,8 +162,7 @@ def build_container(registries: LiteralContainerRegistry | t.Sequence[LiteralCon
                              quiet=machine)
     if machine and outputs is not None: tags['image_sha'] = outputs.decode('utf-8').strip()
   except Exception as err:
-    raise openllm.exceptions.OpenLLMException(
-        f'Failed to containerize base container images (Scroll up to see error above, or set OPENLLMDEVDEBUG=True for more traceback):\n{err}') from err
+    raise openllm.exceptions.OpenLLMException(f'Failed to containerize base container images (Scroll up to see error above, or set OPENLLMDEVDEBUG=True for more traceback):\n{err}') from err
   return tags
 
 if t.TYPE_CHECKING:

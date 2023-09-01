@@ -129,9 +129,7 @@ else:
 try:
   if not openllm_core.utils.is_vllm_available(): raise exceptions.MissingDependencyError
 except exceptions.MissingDependencyError:
-  _import_structure["utils.dummy_vllm_objects"] = [
-      name for name in dir(utils.dummy_vllm_objects) if not name.startswith("_") and name not in ("annotations",)
-  ]
+  _import_structure["utils.dummy_vllm_objects"] = [name for name in dir(utils.dummy_vllm_objects) if not name.startswith("_") and name not in ("annotations",)]
 else:
   _import_structure["models.baichuan"].extend(["VLLMBaichuan"])
   _import_structure["models.llama"].extend(["VLLMLlama"])
@@ -157,9 +155,7 @@ else:
 try:
   if not openllm_core.utils.is_flax_available(): raise exceptions.MissingDependencyError
 except exceptions.MissingDependencyError:
-  _import_structure["utils.dummy_flax_objects"] = [
-      name for name in dir(utils.dummy_flax_objects) if not name.startswith("_") and name not in ("annotations",)
-  ]
+  _import_structure["utils.dummy_flax_objects"] = [name for name in dir(utils.dummy_flax_objects) if not name.startswith("_") and name not in ("annotations",)]
 else:
   _import_structure["models.flan_t5"].extend(["FlaxFlanT5"])
   _import_structure["models.opt"].extend(["FlaxOPT"])
@@ -171,9 +167,7 @@ else:
 try:
   if not openllm_core.utils.is_tf_available(): raise exceptions.MissingDependencyError
 except exceptions.MissingDependencyError:
-  _import_structure["utils.dummy_tf_objects"] = [
-      name for name in dir(utils.dummy_tf_objects) if not name.startswith("_") and name not in ("annotations",)
-  ]
+  _import_structure["utils.dummy_tf_objects"] = [name for name in dir(utils.dummy_tf_objects) if not name.startswith("_") and name not in ("annotations",)]
 else:
   _import_structure["models.flan_t5"].extend(["TFFlanT5"])
   _import_structure["models.opt"].extend(["TFOPT"])
@@ -184,15 +178,7 @@ else:
     from .models.opt import TFOPT as TFOPT
 
 # NOTE: update this to sys.modules[__name__] once mypy_extensions can recognize __spec__
-__lazy = openllm_core.utils.LazyModule(__name__,
-                                       globals()["__file__"],
-                                       _import_structure,
-                                       extra_objects={
-                                           "COMPILED": COMPILED,
-                                           "__openllm_migration__": {
-                                               "LLMEmbeddings": "EmbeddingsOutput"
-                                           }
-                                       })
+__lazy = openllm_core.utils.LazyModule(__name__, globals()["__file__"], _import_structure, extra_objects={"COMPILED": COMPILED, "__openllm_migration__": {"LLMEmbeddings": "EmbeddingsOutput"}})
 __all__ = __lazy.__all__
 __dir__ = __lazy.__dir__
 __getattr__ = __lazy.__getattr__

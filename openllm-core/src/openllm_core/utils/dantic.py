@@ -25,19 +25,29 @@ AnyCallable = t.Callable[..., t.Any]
 FC = t.TypeVar('FC', bound=t.Union[AnyCallable, click.Command])
 
 __all__ = [
-    'FC', 'attrs_to_options', 'Field', 'parse_type', 'is_typing', 'is_literal', 'ModuleType', 'EnumChoice', 'LiteralChoice', 'allows_multiple',
-    'is_mapping', 'is_container', 'parse_container_args', 'parse_single_arg', 'CUDA', 'JsonType', 'BytesType'
+    'FC',
+    'attrs_to_options',
+    'Field',
+    'parse_type',
+    'is_typing',
+    'is_literal',
+    'ModuleType',
+    'EnumChoice',
+    'LiteralChoice',
+    'allows_multiple',
+    'is_mapping',
+    'is_container',
+    'parse_container_args',
+    'parse_single_arg',
+    'CUDA',
+    'JsonType',
+    'BytesType'
 ]
 
 def __dir__() -> list[str]:
   return sorted(__all__)
 
-def attrs_to_options(name: str,
-                     field: attr.Attribute[t.Any],
-                     model_name: str,
-                     typ: t.Any = None,
-                     suffix_generation: bool = False,
-                     suffix_sampling: bool = False) -> t.Callable[[FC], FC]:
+def attrs_to_options(name: str, field: attr.Attribute[t.Any], model_name: str, typ: t.Any = None, suffix_generation: bool = False, suffix_sampling: bool = False) -> t.Callable[[FC], FC]:
   # TODO: support parsing nested attrs class and Union
   envvar = field.metadata['env']
   dasherized = inflection.dasherize(name)

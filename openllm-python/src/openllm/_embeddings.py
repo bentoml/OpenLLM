@@ -25,8 +25,8 @@ def get_or_download(ids: str = _BENTOMODEL_ID) -> bentoml.Model:
     return bentoml.transformers.get(ids)
   except bentoml.exceptions.NotFound:
     model_signatures = {
-        k: ModelSignature(batchable=False) for k in ('forward', 'generate', 'contrastive_search', 'greedy_search', 'sample', 'beam_search',
-                                                    'beam_sample', 'group_beam_search', 'constrained_beam_search', '__call__')
+        k: ModelSignature(batchable=False)
+        for k in ('forward', 'generate', 'contrastive_search', 'greedy_search', 'sample', 'beam_search', 'beam_sample', 'group_beam_search', 'constrained_beam_search', '__call__')
     }
     with bentoml.models.create(ids,
                                module=MODULE_NAME,
@@ -34,8 +34,7 @@ def get_or_download(ids: str = _BENTOMODEL_ID) -> bentoml.Model:
                                options=ModelOptions(),
                                context=openllm.utils.generate_context(framework_name='transformers'),
                                labels={
-                                   'runtime': 'pt',
-                                   'framework': 'openllm'
+                                   'runtime': 'pt', 'framework': 'openllm'
                                },
                                signatures=model_signatures) as bentomodel:
       snapshot_download(_GENERIC_EMBEDDING_ID,

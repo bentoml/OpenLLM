@@ -43,11 +43,7 @@ logger = logging.getLogger(__name__)
 __all__ = ['import_model', 'get', 'load_model']
 
 @inject
-def import_model(llm: openllm.LLM[M, T],
-                 *decls: t.Any,
-                 trust_remote_code: bool,
-                 _model_store: ModelStore = Provide[BentoMLContainer.model_store],
-                 **attrs: t.Any) -> bentoml.Model:
+def import_model(llm: openllm.LLM[M, T], *decls: t.Any, trust_remote_code: bool, _model_store: ModelStore = Provide[BentoMLContainer.model_store], **attrs: t.Any) -> bentoml.Model:
   """Auto detect model type from given model_id and import it to bentoml's model store.
 
   For all kwargs, it will be parsed into `transformers.AutoConfig.from_pretrained` first,
@@ -76,8 +72,7 @@ def import_model(llm: openllm.LLM[M, T],
 
   if quantize_method == 'gptq':
     if not openllm.utils.is_autogptq_available():
-      raise openllm.exceptions.OpenLLMException(
-          "GPTQ quantisation requires 'auto-gptq' (Not found in local environment). Install it with 'pip install \"openllm[gptq]\"'")
+      raise openllm.exceptions.OpenLLMException("GPTQ quantisation requires 'auto-gptq' (Not found in local environment). Install it with 'pip install \"openllm[gptq]\"'")
     if llm.config['model_type'] != 'causal_lm':
       raise openllm.exceptions.OpenLLMException(f"GPTQ only support Causal LM (got {llm.__class__} of {llm.config['model_type']})")
     signatures['generate'] = {'batchable': False}
@@ -107,8 +102,7 @@ def import_model(llm: openllm.LLM[M, T],
       tokenizer.save_pretrained(bentomodel.path)
       if quantize_method == 'gptq':
         if not openllm.utils.is_autogptq_available():
-          raise openllm.exceptions.OpenLLMException(
-              "GPTQ quantisation requires 'auto-gptq' (Not found in local environment). Install it with 'pip install \"openllm[gptq]\"'")
+          raise openllm.exceptions.OpenLLMException("GPTQ quantisation requires 'auto-gptq' (Not found in local environment). Install it with 'pip install \"openllm[gptq]\"'")
         if llm.config['model_type'] != 'causal_lm':
           raise openllm.exceptions.OpenLLMException(f"GPTQ only support Causal LM (got {llm.__class__} of {llm.config['model_type']})")
         logger.debug('Saving model with GPTQ quantisation will require loading model into memory.')
@@ -124,20 +118,13 @@ def import_model(llm: openllm.LLM[M, T],
       else:
         architectures = getattr(config, 'architectures', [])
         if not architectures:
-          raise RuntimeError(
-              'Failed to determine the architecture for this model. Make sure the `config.json` is valid and can be loaded with `transformers.AutoConfig`'
-          )
+          raise RuntimeError('Failed to determine the architecture for this model. Make sure the `config.json` is valid and can be loaded with `transformers.AutoConfig`')
         architecture = architectures[0]
         update_model(bentomodel, metadata={'_pretrained_class': architecture})
         if llm._local:
           # possible local path
           logger.debug('Model will be loaded into memory to save to target store as it is from local path.')
-          model = infer_autoclass_from_llm(llm, config).from_pretrained(llm.model_id,
-                                                                        *decls,
-                                                                        config=config,
-                                                                        trust_remote_code=trust_remote_code,
-                                                                        **hub_attrs,
-                                                                        **attrs)
+          model = infer_autoclass_from_llm(llm, config).from_pretrained(llm.model_id, *decls, config=config, trust_remote_code=trust_remote_code, **hub_attrs, **attrs)
           # for trust_remote_code to work
           bentomodel.enter_cloudpickle_context([importlib.import_module(model.__module__)], imported_modules)
           model.save_pretrained(bentomodel.path, max_shard_size='5GB', safe_serialization=safe_serialisation)
@@ -149,8 +136,7 @@ def import_model(llm: openllm.LLM[M, T],
     else:
       bentomodel.flush()  # type: ignore[no-untyped-call]
       bentomodel.save(_model_store)
-      openllm.utils.analytics.track(
-          openllm.utils.analytics.ModelSaveEvent(module=bentomodel.info.module, model_size_in_kb=openllm.utils.calc_dir_size(bentomodel.path) / 1024))
+      openllm.utils.analytics.track(openllm.utils.analytics.ModelSaveEvent(module=bentomodel.info.module, model_size_in_kb=openllm.utils.calc_dir_size(bentomodel.path) / 1024))
     finally:
       bentomodel.exit_cloudpickle_context(imported_modules)
       # NOTE: We need to free up the cache after importing the model
@@ -171,8 +157,7 @@ def get(llm: openllm.LLM[M, T], auto_import: bool = False) -> bentoml.Model:
     if Version(model.info.api_version) < Version('v2'):
       raise openllm.exceptions.OpenLLMException('Please run "openllm prune -y --include-bentos" and upgrade all saved model to latest release.')
     if model.info.labels['backend'] != llm.__llm_backend__:
-      raise openllm.exceptions.OpenLLMException(
-          f"Model {model.tag} was saved with backend {model.info.labels['backend']}, while loading with {llm.__llm_backend__}.")
+      raise openllm.exceptions.OpenLLMException(f"Model {model.tag} was saved with backend {model.info.labels['backend']}, while loading with {llm.__llm_backend__}.")
     return model
   except Exception as err:
     if auto_import: return import_model(llm, trust_remote_code=llm.trust_remote_code)
@@ -185,8 +170,7 @@ def load_model(llm: openllm.LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M:
                                                     default=llm._serialisation_format == 'safetensors')
   if '_quantize' in llm._bentomodel.info.metadata and llm._bentomodel.info.metadata['_quantize'] == 'gptq':
     if not openllm.utils.is_autogptq_available():
-      raise openllm.exceptions.OpenLLMException(
-          "GPTQ quantisation requires 'auto-gptq' (Not found in local environment). Install it with 'pip install \"openllm[gptq]\"'")
+      raise openllm.exceptions.OpenLLMException("GPTQ quantisation requires 'auto-gptq' (Not found in local environment). Install it with 'pip install \"openllm[gptq]\"'")
     if llm.config['model_type'] != 'causal_lm':
       raise openllm.exceptions.OpenLLMException(f"GPTQ only support Causal LM (got {llm.__class__} of {llm.config['model_type']})")
     return autogptq.AutoGPTQForCausalLM.from_quantized(llm._bentomodel.path,

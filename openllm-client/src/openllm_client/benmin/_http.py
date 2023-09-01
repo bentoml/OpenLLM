@@ -73,13 +73,12 @@ class HttpClient(Client):
           if 'x-bentoml-name' not in meth_spec:
             raise ValueError(f'Malformed BentoML spec received from BentoML server {url}')
           try:
-            reflection.apis[meth_spec['x-bentoml-name']] = InferenceAPI[t.Any](
-                None,
-                bentoml.io.from_spec(meth_spec['requestBody']['x-bentoml-io-descriptor']),
-                bentoml.io.from_spec(meth_spec['responses']['200']['x-bentoml-io-descriptor']),
-                name=meth_spec['x-bentoml-name'],
-                doc=meth_spec['description'],
-                route=route.lstrip('/'))
+            reflection.apis[meth_spec['x-bentoml-name']] = InferenceAPI[t.Any](None,
+                                                                               bentoml.io.from_spec(meth_spec['requestBody']['x-bentoml-io-descriptor']),
+                                                                               bentoml.io.from_spec(meth_spec['responses']['200']['x-bentoml-io-descriptor']),
+                                                                               name=meth_spec['x-bentoml-name'],
+                                                                               doc=meth_spec['description'],
+                                                                               route=route.lstrip('/'))
           except Exception as e:
             logger.error('Failed to instantiate client for API %s: ', meth_spec['x-bentoml-name'], e)
     return cls(url, reflection)
@@ -160,13 +159,12 @@ class AsyncHttpClient(AsyncClient):
           if 'x-bentoml-name' not in meth_spec:
             raise ValueError(f'Malformed BentoML spec received from BentoML server {url}')
           try:
-            reflection.apis[meth_spec['x-bentoml-name']] = InferenceAPI[t.Any](
-                None,
-                bentoml.io.from_spec(meth_spec['requestBody']['x-bentoml-io-descriptor']),
-                bentoml.io.from_spec(meth_spec['responses']['200']['x-bentoml-io-descriptor']),
-                name=meth_spec['x-bentoml-name'],
-                doc=meth_spec['description'],
-                route=route.lstrip('/'))
+            reflection.apis[meth_spec['x-bentoml-name']] = InferenceAPI[t.Any](None,
+                                                                               bentoml.io.from_spec(meth_spec['requestBody']['x-bentoml-io-descriptor']),
+                                                                               bentoml.io.from_spec(meth_spec['responses']['200']['x-bentoml-io-descriptor']),
+                                                                               name=meth_spec['x-bentoml-name'],
+                                                                               doc=meth_spec['description'],
+                                                                               route=route.lstrip('/'))
           except ValueError as e:
             logger.error('Failed to instantiate client for API %s: ', meth_spec['x-bentoml-name'], e)
     return cls(url, reflection)
