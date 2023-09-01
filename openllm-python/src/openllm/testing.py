@@ -27,10 +27,7 @@ def build_bento(model: str,
     bentoml.bentos.delete(bento.tag)
 
 @contextlib.contextmanager
-def build_container(bento: bentoml.Bento | str | bentoml.Tag,
-                    image_tag: str | None = None,
-                    cleanup: bool = False,
-                    **attrs: t.Any) -> t.Iterator[str]:
+def build_container(bento: bentoml.Bento | str | bentoml.Tag, image_tag: str | None = None, cleanup: bool = False, **attrs: t.Any) -> t.Iterator[str]:
   if isinstance(bento, bentoml.Bento): bento_tag = bento.tag
   else: bento_tag = bentoml.Tag.from_taglike(bento)
   if image_tag is None: image_tag = str(bento_tag)

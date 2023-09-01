@@ -24,13 +24,11 @@ if t.TYPE_CHECKING:
   from openllm_core._typing_compat import T
 else:
   transformers, torch = openllm_core.utils.LazyLoader('transformers', globals(),
-                                                      'transformers'), openllm_core.utils.LazyLoader(
-                                                          'torch', globals(), 'torch')
+                                                      'transformers'), openllm_core.utils.LazyLoader('torch', globals(), 'torch')
 
 _object_setattr = object.__setattr__
 
-def process_config(model_id: str, trust_remote_code: bool,
-                   **attrs: t.Any) -> tuple[transformers.PretrainedConfig, DictStrAny, DictStrAny]:
+def process_config(model_id: str, trust_remote_code: bool, **attrs: t.Any) -> tuple[transformers.PretrainedConfig, DictStrAny, DictStrAny]:
   '''A helper function that correctly parse config and attributes for transformers.PretrainedConfig.
 
   Args:
@@ -55,8 +53,7 @@ def process_config(model_id: str, trust_remote_code: bool,
   return config, hub_attrs, attrs
 
 def infer_tokenizers_from_llm(__llm: openllm.LLM[t.Any, T], /) -> T:
-  __cls = getattr(transformers,
-                  openllm_core.utils.first_not_none(__llm.config['tokenizer_class'], default='AutoTokenizer'), None)
+  __cls = getattr(transformers, openllm_core.utils.first_not_none(__llm.config['tokenizer_class'], default='AutoTokenizer'), None)
   if __cls is None:
     raise ValueError(f'Cannot infer correct tokenizer class for {__llm}. Make sure to unset `tokenizer_class`')
   return __cls
@@ -105,13 +102,11 @@ def make_model_signatures(llm: openllm.LLM[M, T]) -> ModelSignaturesType:
   infer_fn: tuple[str, ...] = ('__call__',)
   default_config = ModelSignature(batchable=False)
   if llm.__llm_backend__ in {'pt', 'vllm'}:
-    infer_fn += ('forward', 'generate', 'contrastive_search', 'greedy_search', 'sample', 'beam_search', 'beam_sample',
-                 'group_beam_search', 'constrained_beam_search',
-                )
+    infer_fn += ('forward', 'generate', 'contrastive_search', 'greedy_search', 'sample', 'beam_search', 'beam_sample', 'group_beam_search',
+                 'constrained_beam_search',
+                 )
   elif llm.__llm_backend__ == 'tf':
-    infer_fn += ('predict', 'call', 'generate', 'compute_transition_scores', 'greedy_search', 'sample', 'beam_search',
-                 'contrastive_search',
-                )
+    infer_fn += ('predict', 'call', 'generate', 'compute_transition_scores', 'greedy_search', 'sample', 'beam_search', 'contrastive_search',)
   else:
     infer_fn += ('generate',)
   return {k: default_config for k in infer_fn}

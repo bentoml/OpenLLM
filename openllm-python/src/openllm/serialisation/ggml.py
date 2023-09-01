@@ -13,11 +13,7 @@ if t.TYPE_CHECKING:
 
 _conversion_strategy = {'pt': 'ggml'}
 
-def import_model(llm: openllm.LLM[t.Any, t.Any],
-                 *decls: t.Any,
-                 trust_remote_code: bool = True,
-                 **attrs: t.Any,
-                ) -> bentoml.Model:
+def import_model(llm: openllm.LLM[t.Any, t.Any], *decls: t.Any, trust_remote_code: bool = True, **attrs: t.Any,) -> bentoml.Model:
   raise NotImplementedError('Currently work in progress.')
 
 def get(llm: openllm.LLM[t.Any, t.Any], auto_import: bool = False) -> bentoml.Model:

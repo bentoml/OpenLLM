@@ -21,11 +21,7 @@ class GenerationInput:
   adapter_name: str | None = attr.field(default=None)
 
   def model_dump(self) -> dict[str, t.Any]:
-    return {
-        'prompt': self.prompt,
-        'llm_config': self.llm_config.model_dump(flatten=True),
-        'adapter_name': self.adapter_name
-    }
+    return {'prompt': self.prompt, 'llm_config': self.llm_config.model_dump(flatten=True), 'adapter_name': self.adapter_name}
 
   @staticmethod
   def convert_llm_config(data: dict[str, t.Any] | LLMConfig, cls: type[LLMConfig] | None = None) -> LLMConfig:
@@ -43,15 +39,11 @@ class GenerationInput:
   def from_llm_config(cls, llm_config: LLMConfig) -> type[GenerationInput]:
     return attr.make_class(inflection.camelize(llm_config['model_name']) + 'GenerationInput',
                            attrs={
-                               'prompt':
-                                   attr.field(type=str),
-                               'llm_config':
-                                   attr.field(type=llm_config.__class__,
-                                              default=llm_config,
-                                              converter=functools.partial(cls.convert_llm_config,
-                                                                          cls=llm_config.__class__)),
-                               'adapter_name':
-                                   attr.field(default=None, type=str)
+                               'prompt': attr.field(type=str),
+                               'llm_config': attr.field(type=llm_config.__class__,
+                                                        default=llm_config,
+                                                        converter=functools.partial(cls.convert_llm_config, cls=llm_config.__class__)),
+                               'adapter_name': attr.field(default=None, type=str)
                            })
 
 @attr.frozen(slots=True)

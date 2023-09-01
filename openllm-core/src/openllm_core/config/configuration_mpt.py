@@ -44,12 +44,7 @@ _chat_prompt, _default_prompt, _instruct_prompt = '''{instruction}''', '''{instr
 {instruction}
 {response_key}
 '''.format(intro=INTRO_BLURB, instruction_key=INSTRUCTION_KEY, instruction='{instruction}', response_key=RESPONSE_KEY)
-PROMPT_MAPPING = {
-    'default': _default_prompt,
-    'instruct': _instruct_prompt,
-    'storywriter': _default_prompt,
-    'chat': _chat_prompt
-}
+PROMPT_MAPPING = {'default': _default_prompt, 'instruct': _instruct_prompt, 'storywriter': _default_prompt, 'chat': _chat_prompt}
 
 def _get_prompt(model_type: str) -> str:
   return PROMPT_MAPPING[model_type]
@@ -66,27 +61,20 @@ class MPTConfig(openllm_core.LLMConfig):
   for more details on specific models.
   """
   __config__ = {
-      'name_type':
-          'lowercase',
-      'trust_remote_code':
-          True,
-      'url':
-          'https://huggingface.co/mosaicml',
-      'timeout':
-          int(36e6),
+      'name_type': 'lowercase',
+      'trust_remote_code': True,
+      'url': 'https://huggingface.co/mosaicml',
+      'timeout': int(36e6),
       'requirements': ['triton', 'einops'],
-      'architecture':
-          'MPTForCausalLM',
-      'default_id':
-          'mosaicml/mpt-7b-instruct',
+      'architecture': 'MPTForCausalLM',
+      'default_id': 'mosaicml/mpt-7b-instruct',
       'model_ids': [
-          'mosaicml/mpt-7b', 'mosaicml/mpt-7b-instruct', 'mosaicml/mpt-7b-chat', 'mosaicml/mpt-7b-storywriter',
-          'mosaicml/mpt-30b', 'mosaicml/mpt-30b-instruct', 'mosaicml/mpt-30b-chat'
+          'mosaicml/mpt-7b', 'mosaicml/mpt-7b-instruct', 'mosaicml/mpt-7b-chat', 'mosaicml/mpt-7b-storywriter', 'mosaicml/mpt-30b',
+          'mosaicml/mpt-30b-instruct', 'mosaicml/mpt-30b-chat'
       ]
   }
-  prompt_type: MPTPromptType = dantic.Field(
-      '"default"',
-      description='Given prompt type for running MPT. Default will be inferred from model name if pretrained.')
+  prompt_type: MPTPromptType = dantic.Field('"default"',
+                                            description='Given prompt type for running MPT. Default will be inferred from model name if pretrained.')
   max_sequence_length: int = dantic.Field(
       2048,
       description=
@@ -106,7 +94,7 @@ class MPTConfig(openllm_core.LLMConfig):
                           prompt_type: MPTPromptType | None = None,
                           use_default_prompt_template: bool = True,
                           **attrs: t.Any,
-                         ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
+                          ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
     _template = None
     if use_default_prompt_template:
       if prompt_type is None:

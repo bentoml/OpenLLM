@@ -47,17 +47,13 @@ class StableLMConfig(openllm_core.LLMConfig):
   for more information.
   """
   __config__ = {
-      'name_type':
-          'lowercase',
-      'url':
-          'https://github.com/Stability-AI/StableLM',
-      'architecture':
-          'GPTNeoXForCausalLM',
-      'default_id':
-          'stabilityai/stablelm-tuned-alpha-3b',
+      'name_type': 'lowercase',
+      'url': 'https://github.com/Stability-AI/StableLM',
+      'architecture': 'GPTNeoXForCausalLM',
+      'default_id': 'stabilityai/stablelm-tuned-alpha-3b',
       'model_ids': [
-          'stabilityai/stablelm-tuned-alpha-3b', 'stabilityai/stablelm-tuned-alpha-7b',
-          'stabilityai/stablelm-base-alpha-3b', 'stabilityai/stablelm-base-alpha-7b'
+          'stabilityai/stablelm-tuned-alpha-3b', 'stabilityai/stablelm-tuned-alpha-7b', 'stabilityai/stablelm-base-alpha-3b',
+          'stabilityai/stablelm-base-alpha-7b'
       ]
   }
 
@@ -77,19 +73,10 @@ class StableLMConfig(openllm_core.LLMConfig):
                           **attrs: t.Any) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
     if 'tuned' in self._model_id and use_default_prompt_template:
       system_prompt = attrs.pop('system_prompt', SYSTEM_PROMPT)
-      prompt_text = process_prompt(prompt,
-                                   DEFAULT_PROMPT_TEMPLATE,
-                                   use_default_prompt_template,
-                                   system_prompt=system_prompt,
-                                   **attrs)
+      prompt_text = process_prompt(prompt, DEFAULT_PROMPT_TEMPLATE, use_default_prompt_template, system_prompt=system_prompt, **attrs)
     else:
       prompt_text = prompt
-    return prompt_text, {
-        'max_new_tokens': max_new_tokens,
-        'temperature': temperature,
-        'top_k': top_k,
-        'top_p': top_p
-    }, {}
+    return prompt_text, {'max_new_tokens': max_new_tokens, 'temperature': temperature, 'top_k': top_k, 'top_p': top_p}, {}
 
   def postprocess_generate(self, prompt: str, generation_result: list[str], **_: t.Any) -> str:
     return generation_result[0]

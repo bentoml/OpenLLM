@@ -27,8 +27,7 @@ def generate_labels(llm: openllm.LLM[t.Any, t.Any]) -> dict[str, t.Any]:
       'serialisation_format': llm._serialisation_format
   }
 
-def infer_auto_class(
-    backend: LiteralBackend) -> type[openllm.AutoLLM | openllm.AutoTFLLM | openllm.AutoFlaxLLM | openllm.AutoVLLM]:
+def infer_auto_class(backend: LiteralBackend) -> type[openllm.AutoLLM | openllm.AutoTFLLM | openllm.AutoFlaxLLM | openllm.AutoVLLM]:
   import openllm
   if backend == 'tf': return openllm.AutoTFLLM
   elif backend == 'flax': return openllm.AutoFlaxLLM
@@ -36,10 +35,7 @@ def infer_auto_class(
   elif backend == 'vllm': return openllm.AutoVLLM
   else: raise RuntimeError(f"Unknown backend: {backend} (supported: 'pt', 'flax', 'tf', 'vllm')")
 
-__all__ = [
-    'generate_labels', 'infer_auto_class', 'dummy_flax_objects', 'dummy_pt_objects', 'dummy_tf_objects',
-    'dummy_vllm_objects'
-]
+__all__ = ['generate_labels', 'infer_auto_class', 'dummy_flax_objects', 'dummy_pt_objects', 'dummy_tf_objects', 'dummy_vllm_objects']
 
 def __dir__() -> t.Sequence[str]:
   return sorted(__all__)

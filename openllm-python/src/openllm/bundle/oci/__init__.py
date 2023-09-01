@@ -68,8 +68,7 @@ def _commit_time_range(r: int = 5) -> str:
 class VersionNotSupported(openllm.exceptions.OpenLLMException):
   """Raised when the stable release is too low that it doesn't include OpenLLM base container."""
 
-_RefTuple: type[RefTuple] = openllm_core.utils.codegen.make_attr_tuple_class('_RefTuple',
-                                                                             ['git_hash', 'version', 'strategy'])
+_RefTuple: type[RefTuple] = openllm_core.utils.codegen.make_attr_tuple_class('_RefTuple', ['git_hash', 'version', 'strategy'])
 
 def nightly_resolver(cls: type[RefResolver]) -> str:
   # NOTE: all openllm container will have sha-<git_hash[:7]>
@@ -84,10 +83,8 @@ def nightly_resolver(cls: type[RefResolver]) -> str:
     return next(f'sha-{it["sha"][:7]}' for it in commits if '[skip ci]' not in it['commit']['message'])
   # now is the correct behaviour
   return orjson.loads(
-      subprocess.check_output([
-          docker_bin, 'run', '--rm', '-it', 'quay.io/skopeo/stable:latest', 'list-tags',
-          'docker://ghcr.io/bentoml/openllm'
-      ]).decode().strip())['Tags'][-2]
+      subprocess.check_output([docker_bin, 'run', '--rm', '-it', 'quay.io/skopeo/stable:latest', 'list-tags',
+                               'docker://ghcr.io/bentoml/openllm']).decode().strip())['Tags'][-2]
 
 @attr.attrs(eq=False, order=False, slots=True, frozen=True)
 class RefResolver:
@@ -107,20 +104,16 @@ class RefResolver:
       # NOTE: This strategy will only support openllm>0.2.12
       meta: dict[str, t.Any] = cls._ghapi.repos.get_latest_release()
       version_str = meta['name'].lstrip('v')
-      version: tuple[str,
-                     str | None] = (cls._ghapi.git.get_ref(ref=f"tags/{meta['name']}")['object']['sha'], version_str)
+      version: tuple[str, str | None] = (cls._ghapi.git.get_ref(ref=f"tags/{meta['name']}")['object']['sha'], version_str)
     else:
       version = ('', version_str)
     if openllm_core.utils.VersionInfo.from_version_string(t.cast(str, version_str)) < (0, 2, 12):
-      raise VersionNotSupported(
-          f"Version {version_str} doesn't support OpenLLM base container. Consider using 'nightly' or upgrade 'openllm>=0.2.12'"
-      )
+      raise VersionNotSupported(f"Version {version_str} doesn't support OpenLLM base container. Consider using 'nightly' or upgrade 'openllm>=0.2.12'")
     return _RefTuple((*version, 'release' if _use_base_strategy else 'custom'))
 
   @classmethod
   @functools.lru_cache(maxsize=64)
-  def from_strategy(cls,
-                    strategy_or_version: t.Literal['release', 'nightly'] | LiteralString | None = None) -> RefResolver:
+  def from_strategy(cls, strategy_or_version: t.Literal['release', 'nightly'] | LiteralString | None = None) -> RefResolver:
     # using default strategy
     if strategy_or_version is None or strategy_or_version == 'release': return cls(*cls._release_ref())
     elif strategy_or_version == 'latest': return cls('latest', '0.0.0', 'latest')
@@ -128,8 +121,7 @@ class RefResolver:
       _ref = cls._nightly_ref()
       return cls(_ref[0], '0.0.0', _ref[-1])
     else:
-      logger.warning('Using custom %s. Make sure that it is at lease 0.2.12 for base container support.',
-                     strategy_or_version)
+      logger.warning('Using custom %s. Make sure that it is at lease 0.2.12 for base container support.', strategy_or_version)
       return cls(*cls._release_ref(version_str=strategy_or_version))
 
   @property
@@ -162,8 +154,7 @@ def build_container(registries: LiteralContainerRegistry | t.Sequence[LiteralCon
   pyproject_path = pathlib.Path(_module_location).parent.parent / 'pyproject.toml'
   if not pyproject_path.exists():
     raise ValueError(
-        "This utility can only be run within OpenLLM git repository. Clone it first with 'git clone https://github.com/bentoml/OpenLLM.git'"
-    )
+        "This utility can only be run within OpenLLM git repository. Clone it first with 'git clone https://github.com/bentoml/OpenLLM.git'")
   if not registries:
     tags: dict[str | LiteralContainerRegistry, str] = {
         alias: f'{value}:{get_base_container_tag(version_strategy)}' for alias, value in _CONTAINER_REGISTRY.items()
@@ -181,18 +172,14 @@ def build_container(registries: LiteralContainerRegistry | t.Sequence[LiteralCon
     if machine and outputs is not None: tags['image_sha'] = outputs.decode('utf-8').strip()
   except Exception as err:
     raise openllm.exceptions.OpenLLMException(
-        f'Failed to containerize base container images (Scroll up to see error above, or set OPENLLMDEVDEBUG=True for more traceback):\n{err}'
-    ) from err
+        f'Failed to containerize base container images (Scroll up to see error above, or set OPENLLMDEVDEBUG=True for more traceback):\n{err}') from err
   return tags
 
 if t.TYPE_CHECKING:
   CONTAINER_NAMES: dict[LiteralContainerRegistry, str]
   supported_registries: list[str]
 
-__all__ = [
-    'CONTAINER_NAMES', 'get_base_container_tag', 'build_container', 'get_base_container_name', 'supported_registries',
-    'RefResolver'
-]
+__all__ = ['CONTAINER_NAMES', 'get_base_container_tag', 'build_container', 'get_base_container_name', 'supported_registries', 'RefResolver']
 
 def __dir__() -> list[str]:
   return sorted(__all__)

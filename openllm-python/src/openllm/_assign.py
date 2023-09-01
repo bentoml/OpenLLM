@@ -36,7 +36,6 @@ else:
   vllm = LazyLoader('vllm', globals(), 'vllm')
 
 def import_model(fn: import_model_protocol[bentoml.Model, M, T]) -> t.Callable[[LLM[M, T]], bentoml.Model]:
-
   @functools.wraps(fn)
   def inner(self: LLM[M, T], *decls: t.Any, trust_remote_code: bool | None = None, **attrs: t.Any) -> bentoml.Model:
     trust_remote_code = first_not_none(trust_remote_code, default=self.trust_remote_code)
@@ -48,7 +47,6 @@ def import_model(fn: import_model_protocol[bentoml.Model, M, T]) -> t.Callable[[
   return inner
 
 def load_model(fn: load_model_protocol[M, T]) -> t.Callable[[LLM[M, T]], M | vllm.LLMEngine]:
-
   @functools.wraps(fn)
   def inner(self: LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M | vllm.LLMEngine:
     if self.__llm_backend__ == 'vllm':
@@ -71,7 +69,6 @@ def load_model(fn: load_model_protocol[M, T]) -> t.Callable[[LLM[M, T]], M | vll
   return inner
 
 def load_tokenizer(fn: load_tokenizer_protocol[M, T]) -> t.Callable[[LLM[M, T]], T]:
-
   @functools.wraps(fn)
   def inner(self: LLM[M, T], **tokenizer_attrs: t.Any) -> T:
     return fn(self, **{**self.llm_parameters[-1], **tokenizer_attrs})
@@ -79,7 +76,6 @@ def load_tokenizer(fn: load_tokenizer_protocol[M, T]) -> t.Callable[[LLM[M, T]],
   return inner
 
 def llm_post_init(fn: llm_post_init_protocol[M, T]) -> t.Callable[[LLM[M, T]], None]:
-
   @functools.wraps(fn)
   def inner(self: LLM[M, T]) -> None:
     if self.__llm_backend__ == 'pt' and is_torch_available():
@@ -98,8 +94,7 @@ def make_llm_attributes(cls: type[LLM[M, T]]) -> t.Callable[[type[LLM[M, T]]], N
   args: ListStr = []
   globs: DictStrAny = {'cls': cls, '__wrapped_llm_post_init': llm_post_init, 'LLM': LLM}
   # _cached_LLMFunction_get and _ccached_LLMSerialisation_get
-  globs.update(
-      {f'_cached_{cl_.__name__}_get': _object_getattribute.__get__(cl_) for cl_ in {LLMSerialisation, LLMFunction}})
+  globs.update({f'_cached_{cl_.__name__}_get': _object_getattribute.__get__(cl_) for cl_ in {LLMSerialisation, LLMFunction}})
   # llm_post_init implementation
   lines: ListStr = [
       f'_impl_{cls.__name__}_func=cls.llm_post_init',
@@ -112,17 +107,13 @@ def make_llm_attributes(cls: type[LLM[M, T]]) -> t.Callable[[type[LLM[M, T]]], N
     globs.update({f'__serialisation_{func}': getattr(openllm.serialisation, func, None), impl_name: impl})
     cached_func_name = f'_cached_{cls.__name__}_func'
     func_call = f"_impl_{cls.__name__}_{func}={cached_func_name} if {cached_func_name} is not _cached_LLMSerialisation_get('{func}') else __serialisation_{func}"
-    lines.extend([
-        f'{cached_func_name}=cls.{func}', func_call,
-        _setattr_class(func, f'{impl_name}(_impl_{cls.__name__}_{func})')
-    ])
+    lines.extend([f'{cached_func_name}=cls.{func}', func_call, _setattr_class(func, f'{impl_name}(_impl_{cls.__name__}_{func})')])
 
   # assign vLLM implementation
   if cls.__llm_backend__ == 'vllm':
     vllm_func = {
         f'_vllm_{it}': fn
-        for it, fn in zip(('generate', 'generate_iterator',
-                           'postprocess_generate'), (vllm_generate, vllm_generate_iterator, vllm_postprocess_generate))
+        for it, fn in zip(('generate', 'generate_iterator', 'postprocess_generate'), (vllm_generate, vllm_generate_iterator, vllm_postprocess_generate))
     }
     globs.update(vllm_func)
     lines.extend([_setattr_class(it[6:], it) for it in vllm_func])
@@ -141,8 +132,7 @@ def make_llm_attributes(cls: type[LLM[M, T]]) -> t.Callable[[type[LLM[M, T]]], N
     return f'__llm_supports_{key}__'
 
   bool_attr = {it[15:-2] for it in interface_anns if it.startswith('__llm_supports_')}
-  lines.extend(
-      [_setattr_class(dunder_support(fn), f"cls.{fn} is not _cached_LLMFunction_get('{fn}')") for fn in bool_attr])
+  lines.extend([_setattr_class(dunder_support(fn), f"cls.{fn} is not _cached_LLMFunction_get('{fn}')") for fn in bool_attr])
 
   return codegen.generate_function(cls,
                                    '__assign_llm_attr',
@@ -154,8 +144,7 @@ def make_llm_attributes(cls: type[LLM[M, T]]) -> t.Callable[[type[LLM[M, T]]], N
                                        'return': None
                                    })
 
-def vllm_postprocess_generate(self: LLM['vllm.LLMEngine', T], prompt: str, generation_result: list[dict[str, t.Any]],
-                              **_: t.Any) -> str:
+def vllm_postprocess_generate(self: LLM['vllm.LLMEngine', T], prompt: str, generation_result: list[dict[str, t.Any]], **_: t.Any) -> str:
   return generation_result[0]['outputs'][0]['text']
 
 def vllm_generate_iterator(self: LLM['vllm.LLMEngine', T],
@@ -193,9 +182,7 @@ def vllm_generate(self: LLM['vllm.LLMEngine', T], prompt: str, **attrs: t.Any) -
   if request_id is None: raise ValueError('request_id must not be None.')
   outputs: list[vllm.RequestOutput] = []
   # TODO: support prompt_token_ids
-  self.model.add_request(request_id=request_id,
-                         prompt=prompt,
-                         sampling_params=self.config.model_construct_env(**attrs).to_sampling_config())
+  self.model.add_request(request_id=request_id, prompt=prompt, sampling_params=self.config.model_construct_env(**attrs).to_sampling_config())
   while self.model.has_unfinished_requests():
     outputs.extend([r for r in self.model.step() if r.finished])
   return [unmarshal_vllm_outputs(i) for i in outputs]

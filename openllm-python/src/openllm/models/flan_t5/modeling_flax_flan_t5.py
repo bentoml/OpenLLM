@@ -32,10 +32,9 @@ class FlaxFlanT5(openllm.LLM['transformers.FlaxT5ForConditionalGeneration', 'tra
   def generate(self, prompt: str, **attrs: t.Any) -> list[str]:
     # NOTE: decoder_start_token_id is extracted from https://huggingface.co/google/flan-t5-small/tree/main as it is required for encoder-decoder generation.
     decoder_start_token_id = attrs.pop('decoder_start_token_id', 0)
-    return self.tokenizer.batch_decode(self.model.generate(
-        self.tokenizer(prompt, return_tensors='np')['input_ids'],
-        do_sample=True,
-        generation_config=self.config.model_construct_env(**attrs).to_generation_config(),
-        decoder_start_token_id=decoder_start_token_id).sequences,
+    return self.tokenizer.batch_decode(self.model.generate(self.tokenizer(prompt, return_tensors='np')['input_ids'],
+                                                           do_sample=True,
+                                                           generation_config=self.config.model_construct_env(**attrs).to_generation_config(),
+                                                           decoder_start_token_id=decoder_start_token_id).sequences,
                                        skip_special_tokens=True,
                                        clean_up_tokenization_spaces=True)

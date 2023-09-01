@@ -21,8 +21,7 @@ _gz_strategies: dict[t.Literal['macos_arm', 'macos_intel', 'linux_intel'], str] 
     'linux_intel': 'x86_64-unknown-linux-musl'
 }
 
-def determine_release_url(svn_url: str, tag: str, target: t.Literal['macos_arm', 'macos_intel', 'linux_intel',
-                                                                    'archive']) -> str:
+def determine_release_url(svn_url: str, tag: str, target: t.Literal['macos_arm', 'macos_intel', 'linux_intel', 'archive']) -> str:
   if target == 'archive': return f'{svn_url}/archive/{tag}.tar.gz'
   return f"{svn_url}/releases/download/{tag}/openllm-{tag.replace('v', '')}-{_gz_strategies[target]}.tar.gz"
 
@@ -36,11 +35,9 @@ def main() -> int:
   release_tag = api.repos.get_latest_release().name
 
   shadict: dict[str, t.Any] = {
-      k: get_release_hash_command(determine_release_url(_info.svn_url, release_tag, k), release_tag)().strip()
-      for k in _gz_strategies
+      k: get_release_hash_command(determine_release_url(_info.svn_url, release_tag, k), release_tag)().strip() for k in _gz_strategies
   }
-  shadict['archive'] = get_release_hash_command(determine_release_url(_info.svn_url, release_tag, 'archive'),
-                                                release_tag)().strip()
+  shadict['archive'] = get_release_hash_command(determine_release_url(_info.svn_url, release_tag, 'archive'), release_tag)().strip()
 
   ENVIRONMENT = Environment(extensions=['jinja2.ext.do', 'jinja2.ext.loopcontrols', 'jinja2.ext.debug'],
                             trim_blocks=True,

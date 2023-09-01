@@ -41,30 +41,18 @@ class ChatGLMConfig(openllm_core.LLMConfig):
   Refer to [ChatGLM's GitHub page](https://github.com/THUDM/ChatGLM-6B) for more information.
   """
   __config__ = {
-      'name_type':
-          'lowercase',
-      'trust_remote_code':
-          True,
-      'timeout':
-          3600000,
-      'requires_gpu':
-          True,
-      'url':
-          'https://github.com/THUDM/ChatGLM-6B',
+      'name_type': 'lowercase',
+      'trust_remote_code': True,
+      'timeout': 3600000,
+      'requires_gpu': True,
+      'url': 'https://github.com/THUDM/ChatGLM-6B',
       'requirements': ['cpm-kernels', 'sentencepiece'],
-      'architecture':
-          'ChatGLMForConditionalGeneration',
-      'default_id':
-          'thudm/chatglm-6b',
-      'model_ids': [
-          'thudm/chatglm-6b', 'thudm/chatglm-6b-int8', 'thudm/chatglm-6b-int4', 'thudm/chatglm2-6b',
-          'thudm/chatglm2-6b-int4'
-      ]
+      'architecture': 'ChatGLMForConditionalGeneration',
+      'default_id': 'thudm/chatglm-6b',
+      'model_ids': ['thudm/chatglm-6b', 'thudm/chatglm-6b-int8', 'thudm/chatglm-6b-int4', 'thudm/chatglm2-6b', 'thudm/chatglm2-6b-int4']
   }
   retain_history: bool = dantic.Field(
-      False,
-      description=
-      'Whether to retain history given to the model. If set to True, then the model will retain given history.')
+      False, description='Whether to retain history given to the model. If set to True, then the model will retain given history.')
   use_half_precision: bool = dantic.Field(True, description='Whether to use half precision for model.')
 
   class GenerationConfig:

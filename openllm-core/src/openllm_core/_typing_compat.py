@@ -31,11 +31,7 @@ M = t.TypeVar(
     bound=
     't.Union[transformers.PreTrainedModel, transformers.Pipeline, transformers.TFPreTrainedModel, transformers.FlaxPreTrainedModel, vllm.LLMEngine, peft.PeftModel, autogptq.modeling.BaseGPTQForCausalLM]'
 )
-T = t.TypeVar(
-    'T',
-    bound=
-    't.Union[transformers.PreTrainedTokenizerFast, transformers.PreTrainedTokenizer, transformers.PreTrainedTokenizerBase]'
-)
+T = t.TypeVar('T', bound='t.Union[transformers.PreTrainedTokenizerFast, transformers.PreTrainedTokenizer, transformers.PreTrainedTokenizerBase]')
 
 def get_literal_args(typ: t.Any) -> tuple[str, ...]:
   return getattr(typ, '__args__')
@@ -132,7 +128,7 @@ class LLMRunner(bentoml.Runner, t.Generic[M, T]):
                max_latency_ms: int | None = ...,
                method_configs: dict[str, dict[str, int]] | None = ...,
                embedded: bool = False,
-              ) -> None:
+               ) -> None:
     ...
 
   def __call__(self, prompt: str, **attrs: t.Any) -> t.Any:
@@ -163,23 +159,19 @@ class LLMRunner(bentoml.Runner, t.Generic[M, T]):
     ...
 
 class load_model_protocol(t.Generic[M, T], t.Protocol):
-
   def __call__(self, llm: LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M:
     ...
 
 class load_tokenizer_protocol(t.Generic[M, T], t.Protocol):
-
   def __call__(self, llm: LLM[M, T], **attrs: t.Any) -> T:
     ...
 
 _R = t.TypeVar('_R', covariant=True)
 
 class import_model_protocol(t.Generic[_R, M, T], t.Protocol):
-
   def __call__(self, llm: LLM[M, T], *decls: t.Any, trust_remote_code: bool, **attrs: t.Any) -> _R:
     ...
 
 class llm_post_init_protocol(t.Generic[M, T], t.Protocol):
-
   def __call__(self, llm: LLM[M, T]) -> T:
     ...

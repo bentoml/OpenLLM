@@ -26,14 +26,12 @@ if t.TYPE_CHECKING:
 
 DEFAULT_MODEL_ID = "facebook/opt-6.7b"
 
-def load_trainer(model: PeftModel, tokenizer: transformers.GPT2TokenizerFast, dataset_dict: t.Any,
-                 training_args: TrainingArguments):
+def load_trainer(model: PeftModel, tokenizer: transformers.GPT2TokenizerFast, dataset_dict: t.Any, training_args: TrainingArguments):
   return transformers.Trainer(model=model,
                               train_dataset=dataset_dict["train"],
-                              args=dataclasses.replace(transformers.TrainingArguments(training_args.output_dir),
-                                                       **dataclasses.asdict(training_args)),
+                              args=dataclasses.replace(transformers.TrainingArguments(training_args.output_dir), **dataclasses.asdict(training_args)),
                               data_collator=transformers.DataCollatorForLanguageModeling(tokenizer, mlm=False),
-                             )
+                              )
 
 @dataclasses.dataclass
 class TrainingArguments:
@@ -58,16 +56,13 @@ if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
 else:
   model_args, training_args = t.cast(t.Tuple[ModelArguments, TrainingArguments], parser.parse_args_into_dataclasses())
 
-model, tokenizer = openllm.AutoLLM.for_model("opt",
-                                             model_id=model_args.model_id,
-                                             quantize="int8",
-                                             ensure_available=True).prepare_for_training(
-                                                 adapter_type="lora",
-                                                 r=16,
-                                                 lora_alpha=32,
-                                                 target_modules=["q_proj", "v_proj"],
-                                                 lora_dropout=0.05,
-                                                 bias="none")
+model, tokenizer = openllm.AutoLLM.for_model("opt", model_id=model_args.model_id, quantize="int8",
+                                             ensure_available=True).prepare_for_training(adapter_type="lora",
+                                                                                         r=16,
+                                                                                         lora_alpha=32,
+                                                                                         target_modules=["q_proj", "v_proj"],
+                                                                                         lora_dropout=0.05,
+                                                                                         bias="none")
 
 # ft on english_quotes
 data = load_dataset("Abirate/english_quotes")

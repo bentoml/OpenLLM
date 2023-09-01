@@ -69,16 +69,10 @@ def dispatch_channel(server_url: str,
   credentials = None
   if ssl:
     if ssl_client_credentials is None: raise RuntimeError("'ssl=True' requires 'ssl_client_credentials'")
-    credentials = grpc.ssl_channel_credentials(**{
-        k: load_from_file(v) if isinstance(v, str) else v for k, v in ssl_client_credentials.items()
-    })
+    credentials = grpc.ssl_channel_credentials(**{k: load_from_file(v) if isinstance(v, str) else v for k, v in ssl_client_credentials.items()})
 
   if typ == 'async' and ssl:
-    return aio.secure_channel(server_url,
-                              credentials=credentials,
-                              options=options,
-                              compression=compression,
-                              interceptors=interceptors)
+    return aio.secure_channel(server_url, credentials=credentials, options=options, compression=compression, interceptors=interceptors)
   elif typ == 'async':
     return aio.insecure_channel(server_url, options=options, compression=compression, interceptors=interceptors)
   elif typ == 'sync' and ssl:
@@ -109,21 +103,12 @@ class GrpcClient(Client):
   def inner(self) -> grpc.Channel:
     if self.ssl:
       if self.ssl_client_credentials is None: raise RuntimeError("'ssl=True' requires 'ssl_client_credentials'")
-      credentials = grpc.ssl_channel_credentials(**{
-          k: load_from_file(v) if isinstance(v, str) else v for k, v in self.ssl_client_credentials.items()
-      })
-      return grpc.secure_channel(self.server_url,
-                                 credentials=credentials,
-                                 options=self.options,
-                                 compression=self.compression)
+      credentials = grpc.ssl_channel_credentials(**{k: load_from_file(v) if isinstance(v, str) else v for k, v in self.ssl_client_credentials.items()})
+      return grpc.secure_channel(self.server_url, credentials=credentials, options=self.options, compression=self.compression)
     return grpc.insecure_channel(self.server_url, options=self.options, compression=self.compression)
 
   @staticmethod
-  def wait_until_server_ready(host: str,
-                              port: int,
-                              timeout: float = 30,
-                              check_interval: int = 1,
-                              **kwargs: t.Any) -> None:
+  def wait_until_server_ready(host: str, port: int, timeout: float = 30, check_interval: int = 1, **kwargs: t.Any) -> None:
     with dispatch_channel(f"{host.replace(r'localhost', '0.0.0.0')}:{port}",
                           typ='sync',
                           options=kwargs.get('options', None),
@@ -167,18 +152,17 @@ class GrpcClient(Client):
     reflection = bentoml.Service(metadata.name)
     for api in metadata.apis:
       try:
-        reflection.apis[api.name] = InferenceAPI[t.Any](
-            None,
-            bentoml.io.from_spec({
-                'id': api.input.descriptor_id,
-                'args': json_format.MessageToDict(api.input.attributes).get('args', None)
-            }),
-            bentoml.io.from_spec({
-                'id': api.output.descriptor_id,
-                'args': json_format.MessageToDict(api.output.attributes).get('args', None)
-            }),
-            name=api.name,
-            doc=api.docs)
+        reflection.apis[api.name] = InferenceAPI[t.Any](None,
+                                                        bentoml.io.from_spec({
+                                                            'id': api.input.descriptor_id,
+                                                            'args': json_format.MessageToDict(api.input.attributes).get('args', None)
+                                                        }),
+                                                        bentoml.io.from_spec({
+                                                            'id': api.output.descriptor_id,
+                                                            'args': json_format.MessageToDict(api.output.attributes).get('args', None)
+                                                        }),
+                                                        name=api.name,
+                                                        doc=api.docs)
       except Exception as e:
         logger.error('Failed to instantiate client for API %s: ', api.name, e)
     return cls(url, reflection, **kwargs)
@@ -187,24 +171,16 @@ class GrpcClient(Client):
     return services_health.HealthStub(self.inner).Check(pb_health.HealthCheckRequest(service=''))
 
   def _call(self, data: t.Any, /, *, _inference_api: InferenceAPI[t.Any], **kwargs: t.Any) -> t.Any:
-    channel_kwargs = {
-        k: kwargs.pop(f'_grpc_channel_{k}', None)
-        for k in {'timeout', 'metadata', 'credentials', 'wait_for_ready', 'compression'}
-    }
+    channel_kwargs = {k: kwargs.pop(f'_grpc_channel_{k}', None) for k in {'timeout', 'metadata', 'credentials', 'wait_for_ready', 'compression'}}
     if _inference_api.multi_input:
       if data is not None:
-        raise ValueError(
-            f"'{_inference_api.name}' takes multiple inputs, and thus required to pass as keyword arguments.")
+        raise ValueError(f"'{_inference_api.name}' takes multiple inputs, and thus required to pass as keyword arguments.")
       fake_resp = ensure_exec_coro(_inference_api.input.to_proto(kwargs))
     else:
       fake_resp = ensure_exec_coro(_inference_api.input.to_proto(data))
     api_fn = {v: k for k, v in self.svc.apis.items()}
     stubs = services.BentoServiceStub(self.inner)
-    proto = stubs.Call(
-        pb.Request(**{
-            'api_name': api_fn[_inference_api],
-            _inference_api.input.proto_fields[0]: fake_resp
-        }), **channel_kwargs)
+    proto = stubs.Call(pb.Request(**{'api_name': api_fn[_inference_api], _inference_api.input.proto_fields[0]: fake_resp}), **channel_kwargs)
     return ensure_exec_coro(_inference_api.output.from_proto(getattr(proto, proto.WhichOneof('content'))))
 
 class AsyncGrpcClient(AsyncClient):
@@ -230,25 +206,16 @@ class AsyncGrpcClient(AsyncClient):
   def inner(self) -> aio.Channel:
     if self.ssl:
       if self.ssl_client_credentials is None: raise RuntimeError("'ssl=True' requires 'ssl_client_credentials'")
-      credentials = grpc.ssl_channel_credentials(**{
-          k: load_from_file(v) if isinstance(v, str) else v for k, v in self.ssl_client_credentials.items()
-      })
+      credentials = grpc.ssl_channel_credentials(**{k: load_from_file(v) if isinstance(v, str) else v for k, v in self.ssl_client_credentials.items()})
       return aio.secure_channel(self.server_url,
                                 credentials=credentials,
                                 options=self.options,
                                 compression=self.compression,
                                 interceptors=self.interceptors)
-    return aio.insecure_channel(self.server_url,
-                                options=self.options,
-                                compression=self.compression,
-                                interceptors=self.interceptors)
+    return aio.insecure_channel(self.server_url, options=self.options, compression=self.compression, interceptors=self.interceptors)
 
   @staticmethod
-  async def wait_until_server_ready(host: str,
-                                    port: int,
-                                    timeout: float = 30,
-                                    check_interval: int = 1,
-                                    **kwargs: t.Any) -> None:
+  async def wait_until_server_ready(host: str, port: int, timeout: float = 30, check_interval: int = 1, **kwargs: t.Any) -> None:
     async with dispatch_channel(f"{host.replace(r'localhost', '0.0.0.0')}:{port}",
                                 typ='async',
                                 options=kwargs.get('options', None),
@@ -293,18 +260,17 @@ class AsyncGrpcClient(AsyncClient):
     reflection = bentoml.Service(metadata.name)
     for api in metadata.apis:
       try:
-        reflection.apis[api.name] = InferenceAPI[t.Any](
-            None,
-            bentoml.io.from_spec({
-                'id': api.input.descriptor_id,
-                'args': json_format.MessageToDict(api.input.attributes).get('args', None)
-            }),
-            bentoml.io.from_spec({
-                'id': api.output.descriptor_id,
-                'args': json_format.MessageToDict(api.output.attributes).get('args', None)
-            }),
-            name=api.name,
-            doc=api.docs)
+        reflection.apis[api.name] = InferenceAPI[t.Any](None,
+                                                        bentoml.io.from_spec({
+                                                            'id': api.input.descriptor_id,
+                                                            'args': json_format.MessageToDict(api.input.attributes).get('args', None)
+                                                        }),
+                                                        bentoml.io.from_spec({
+                                                            'id': api.output.descriptor_id,
+                                                            'args': json_format.MessageToDict(api.output.attributes).get('args', None)
+                                                        }),
+                                                        name=api.name,
+                                                        doc=api.docs)
       except Exception as e:
         logger.error('Failed to instantiate client for API %s: ', api.name, e)
     return cls(url, reflection, **kwargs)
@@ -313,25 +279,17 @@ class AsyncGrpcClient(AsyncClient):
     return await services_health.HealthStub(self.inner).Check(pb_health.HealthCheckRequest(service=''))
 
   async def _call(self, data: t.Any, /, *, _inference_api: InferenceAPI[t.Any], **kwargs: t.Any) -> t.Any:
-    channel_kwargs = {
-        k: kwargs.pop(f'_grpc_channel_{k}', None)
-        for k in {'timeout', 'metadata', 'credentials', 'wait_for_ready', 'compression'}
-    }
+    channel_kwargs = {k: kwargs.pop(f'_grpc_channel_{k}', None) for k in {'timeout', 'metadata', 'credentials', 'wait_for_ready', 'compression'}}
     state = self.inner.get_state(try_to_connect=True)
     if state != grpc.ChannelConnectivity.READY: await self.inner.channel_ready()
     if _inference_api.multi_input:
       if data is not None:
-        raise ValueError(
-            f"'{_inference_api.name}' takes multiple inputs, and thus required to pass as keyword arguments.")
+        raise ValueError(f"'{_inference_api.name}' takes multiple inputs, and thus required to pass as keyword arguments.")
       fake_resp = await _inference_api.input.to_proto(kwargs)
     else:
       fake_resp = await _inference_api.input.to_proto(data)
     api_fn = {v: k for k, v in self.svc.apis.items()}
     async with self.inner:
       stubs = services.BentoServiceStub(self.inner)
-      proto = await stubs.Call(
-          pb.Request(**{
-              'api_name': api_fn[_inference_api],
-              _inference_api.input.proto_fields[0]: fake_resp
-          }), **channel_kwargs)
+      proto = await stubs.Call(pb.Request(**{'api_name': api_fn[_inference_api], _inference_api.input.proto_fields[0]: fake_resp}), **channel_kwargs)
     return await _inference_api.output.from_proto(getattr(proto, proto.WhichOneof('content')))

@@ -40,18 +40,11 @@ class FlanT5Config(openllm_core.LLMConfig):
   Refer to [FLAN-T5's page](https://huggingface.co/docs/transformers/model_doc/flan-t5) for more information.
   """
   __config__ = {
-      'url':
-          'https://huggingface.co/docs/transformers/model_doc/flan-t5',
-      'architecture':
-          'T5ForConditionalGeneration',
-      'model_type':
-          'seq2seq_lm',
-      'default_id':
-          'google/flan-t5-large',
-      'model_ids': [
-          'google/flan-t5-small', 'google/flan-t5-base', 'google/flan-t5-large', 'google/flan-t5-xl',
-          'google/flan-t5-xxl',
-      ]
+      'url': 'https://huggingface.co/docs/transformers/model_doc/flan-t5',
+      'architecture': 'T5ForConditionalGeneration',
+      'model_type': 'seq2seq_lm',
+      'default_id': 'google/flan-t5-large',
+      'model_ids': ['google/flan-t5-small', 'google/flan-t5-base', 'google/flan-t5-large', 'google/flan-t5-xl', 'google/flan-t5-xxl']
   }
 
   class GenerationConfig:
