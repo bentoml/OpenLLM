@@ -20,16 +20,21 @@ class HfIgnore:
   pt = '*.bin'
   tf = '*.h5'
   flax = '*.msgpack'
+  gguf = '*.gguf'
 
   @classmethod
   def ignore_patterns(cls, llm: openllm.LLM[M, T]) -> list[str]:
-    if llm.__llm_backend__ == 'vllm': base = [cls.tf, cls.flax, cls.safetensors]
-    elif llm.__llm_backend__ == 'tf': base = [cls.flax, cls.pt]
+    if llm.__llm_backend__ == 'vllm': base = [cls.tf, cls.flax, cls.safetensors, cls.gguf]
+    elif llm.__llm_backend__ == 'tf': base = [cls.flax, cls.pt, cls.gguf]
     elif llm.__llm_backend__ == 'flax':
-      base = [cls.tf, cls.pt, cls.safetensors]  # as of current, safetensors is not supported with flax
-    else:
-      base = [cls.tf, cls.flax]
+      base = [cls.tf, cls.pt, cls.safetensors, cls.gguf]  # as of current, safetensors is not supported with flax
+    elif llm.__llm_backend__ == 'pt':
+      base = [cls.tf, cls.flax, cls.gguf]
       if has_safetensors_weights(llm.model_id): base.append(cls.pt)
+    elif llm.__llm_backend__ == 'ggml':
+      base = [cls.tf, cls.flax, cls.pt, cls.safetensors]
+    else:
+      raise ValueError('Unknown backend (should never happen at all.)')
     # filter out these files, since we probably don't need them for now.
     base.extend(['*.pdf', '*.md', '.gitattributes', 'LICENSE.txt'])
     return base
