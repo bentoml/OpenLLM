@@ -39,7 +39,7 @@ def _start(model_name: str,
            device: tuple[str, ...] | t.Literal['all'] | None = None,
            quantize: t.Literal['int8', 'int4', 'gptq'] | None = None,
            adapter_map: dict[LiteralString, str | None] | None = None,
-           framework: LiteralBackend | None = None,
+           backend: LiteralBackend | None = None,
            additional_args: list[str] | None = None,
            cors: bool = False,
            _serve_grpc: bool = False,
@@ -77,18 +77,18 @@ def _start(model_name: str,
               - gptq: Quantize the model with GPTQ (auto-gptq required)
     cors: Whether to enable CORS for this LLM. By default, this is set to ``False``.
     adapter_map: The adapter mapping of LoRA to use for this LLM. It accepts a dictionary of ``{adapter_id: adapter_name}``.
-    framework: The framework to use for this LLM. By default, this is set to ``pt``.
+    backend: The backend to use for this LLM. By default, this is set to ``pt``.
     additional_args: Additional arguments to pass to ``openllm start``.
   """
   from .entrypoint import start_command
   from .entrypoint import start_grpc_command
   llm_config = openllm.AutoConfig.for_model(model_name)
   _ModelEnv = openllm_core.utils.EnvVarMixin(model_name,
-                                             openllm_core.utils.first_not_none(
-                                                 framework, default=llm_config.default_implementation()),
+                                             backend=openllm_core.utils.first_not_none(
+                                                 backend, default=llm_config.default_backend()),
                                              model_id=model_id,
                                              quantize=quantize)
-  os.environ[_ModelEnv.framework] = _ModelEnv['framework_value']
+  os.environ[_ModelEnv.backend] = _ModelEnv['backend_value']
 
   args: list[str] = []
   if model_id: args.extend(['--model-id', model_id])
@@ -219,7 +219,7 @@ def _import_model(model_name: str,
                   *,
                   model_id: str | None = None,
                   model_version: str | None = None,
-                  implementation: LiteralBackend = 'pt',
+                  backend: LiteralBackend = 'pt',
                   quantize: t.Literal['int8', 'int4', 'gptq'] | None = None,
                   serialisation_format: t.Literal['legacy', 'safetensors'] = 'safetensors',
                   additional_args: t.Sequence[str] | None = None) -> bentoml.Model:
@@ -239,7 +239,7 @@ def _import_model(model_name: str,
     model_name: The model name to start this LLM
     model_id: Optional model id for this given LLM
     model_version: Optional model version for this given LLM
-    implementation: The implementation to use for this LLM. By default, this is set to ``pt``.
+    backend: The backend to use for this LLM. By default, this is set to ``pt``.
     quantize: Quantize the model weights. This is only applicable for PyTorch models.
               Possible quantisation strategies:
               - int8: Quantize the model with 8bit (bitsandbytes required)
@@ -253,7 +253,7 @@ def _import_model(model_name: str,
     ``bentoml.Model``:BentoModel of the given LLM. This can be used to serve the LLM or can be pushed to BentoCloud.
   """
   from .entrypoint import import_command
-  args = [model_name, '--implementation', implementation, '--machine', '--serialisation', serialisation_format]
+  args = [model_name, '--backend', backend, '--machine', '--serialisation', serialisation_format]
   if model_id is not None: args.append(model_id)
   if model_version is not None: args.extend(['--model-version', str(model_version)])
   if additional_args is not None: args.extend(additional_args)

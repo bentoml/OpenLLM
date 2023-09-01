@@ -1,3 +1,4 @@
+'''LLM assignment magik.'''
 from __future__ import annotations
 import functools
 import traceback
@@ -89,13 +90,13 @@ def llm_post_init(fn: llm_post_init_protocol[M, T]) -> t.Callable[[LLM[M, T]], N
 
 def make_llm_attributes(cls: type[LLM[M, T]]) -> t.Callable[[type[LLM[M, T]]], None]:
   '''Make LLM attributes for the given LLM subclass.'''
+  from ._llm import LLM
   from ._llm import LLMFunction
   from ._llm import LLMInterface
   from ._llm import LLMSerialisation
 
   args: ListStr = []
-  anns: DictStrAny = {}
-  globs: DictStrAny = {'cls': cls, '__wrapped_llm_post_init': llm_post_init}
+  globs: DictStrAny = {'cls': cls, '__wrapped_llm_post_init': llm_post_init, 'LLM': LLM}
   # _cached_LLMFunction_get and _ccached_LLMSerialisation_get
   globs.update(
       {f'_cached_{cl_.__name__}_get': _object_getattribute.__get__(cl_) for cl_ in {LLMSerialisation, LLMFunction}})
@@ -132,9 +133,8 @@ def make_llm_attributes(cls: type[LLM[M, T]]) -> t.Callable[[type[LLM[M, T]]], N
   def dunder_cached(key: str) -> str:
     return f'__llm_{key}__'
 
-  st_attr = {'bentomodel', 'model', 'tokenizer', 'adapter_map'}
+  st_attr = {'model', 'tokenizer', 'adapter_map'}
   lines.extend([_setattr_class(dunder_cached(v), None) for v in st_attr])
-  anns.update({dunder_cached(v): interface_anns.get(dunder_cached(v)) for v in st_attr})
 
   # boolean for better LLM implementation resolver
   def dunder_support(key: str) -> str:
@@ -143,9 +143,16 @@ def make_llm_attributes(cls: type[LLM[M, T]]) -> t.Callable[[type[LLM[M, T]]], N
   bool_attr = {it[15:-2] for it in interface_anns if it.startswith('__llm_supports_')}
   lines.extend(
       [_setattr_class(dunder_support(fn), f"cls.{fn} is not _cached_LLMFunction_get('{fn}')") for fn in bool_attr])
-  anns.update({dunder_support(fn): interface_anns.get(dunder_support(fn)) for fn in bool_attr})
 
-  return codegen.generate_function(cls, '__assign_llm_attr', lines, args=('cls', *args), globs=globs, annotations=anns)
+  return codegen.generate_function(cls,
+                                   '__assign_llm_attr',
+                                   lines,
+                                   args=('cls', *args),
+                                   globs=globs,
+                                   annotations={
+                                       'cls': 't.Type[LLM]',
+                                       'return': None
+                                   })
 
 def vllm_postprocess_generate(self: LLM['vllm.LLMEngine', T], prompt: str, generation_result: list[dict[str, t.Any]],
                               **_: t.Any) -> str:

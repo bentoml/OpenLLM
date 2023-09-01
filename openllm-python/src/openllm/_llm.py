@@ -5,7 +5,6 @@ import gc
 import inspect
 import logging
 import os
-import re
 import types
 import typing as t
 
@@ -39,7 +38,6 @@ from openllm_core._typing_compat import T
 from openllm_core._typing_compat import TupleAny
 from openllm_core._typing_compat import overload
 from openllm_core.utils import DEBUG
-from openllm_core.utils import ENV_VARS_TRUE_VALUES
 from openllm_core.utils import MYPY
 from openllm_core.utils import EnvVarMixin
 from openllm_core.utils import LazyLoader
@@ -83,8 +81,9 @@ ResolvedAdaptersMapping = t.Dict[AdapterType, t.Dict[str, t.Tuple['peft.PeftConf
 logger = logging.getLogger(__name__)
 
 def normalise_model_name(name: str) -> str:
+  if validate_is_path(name): return os.path.basename(resolve_filepath(name))
   name = name.replace('/', '--')
-  return os.path.basename(resolve_filepath(name)) if validate_is_path(name) else re.sub('[^a-zA-Z0-9]+', '-', name)
+  return inflection.dasherize(name)
 
 # the below is similar to peft.utils.other.CONFIG_NAME
 PEFT_CONFIG_NAME = 'adapter_config.json'
@@ -262,8 +261,6 @@ class LLMInterface(LLMFunction, LLMSerialisation[M, T], abc.ABC):
   '''A reference to the actual model. Instead of access this directly, you should use `model` property instead.'''
   __llm_tokenizer__: t.Optional[T]
   '''A reference to the actual tokenizer. Instead of access this directly, you should use `tokenizer` property instead.'''
-  __llm_bentomodel__: t.Optional[bentoml.Model]
-  '''A reference to the bentomodel used for this LLM. Instead of access this directly, you should use `_bentomodel` property instead.'''
   __llm_adapter_map__: t.Optional[ResolvedAdaptersMapping]
   '''A reference to the the cached LoRA adapter mapping.'''
 
@@ -309,13 +306,6 @@ class LLM(LLMInterface[M, T], ReprMixin):
   _serialisation_format: t.Literal['safetensors', 'legacy']
   _local: bool
 
-  @staticmethod
-  def _infer_backend_from_name(name: str) -> tuple[LiteralBackend, str]:
-    if name.startswith('Flax'): return 'flax', name[4:]
-    elif name.startswith('TF'): return 'tf', name[2:]
-    elif name.startswith('VLLM'): return 'vllm', name[4:]
-    else: return 'pt', name
-
   def __init_subclass__(cls: type[LLM[M, T]]) -> None:
     cd = cls.__dict__
     if cls.__name__.startswith('Flax'):
@@ -326,11 +316,10 @@ class LLM(LLMInterface[M, T], ReprMixin):
       cls.__llm_backend__, config_class = 'vllm', openllm.AutoConfig.infer_class_from_name(cls.__name__[4:])
     else:
       cls.__llm_backend__, config_class = 'pt', openllm.AutoConfig.infer_class_from_name(cls.__name__)
-    if 'tokenizer_id' not in cd and cls.__llm_backend__ == 'vllm': cls.tokenizer_id = _DEFAULT_TOKENIZER
-    if '__openllm_internal__' in cd:
-      if 'config_class' not in cd: cls.config_class = config_class
-    elif 'config_class' not in cd:
+    if '__openllm_internal__' not in cd and 'config_class' not in cd:
       raise RuntimeError("Missing required key 'config_class'. Make sure to define it within the LLM subclass.")
+    if '__openllm_internal__' in cd and 'config_class' not in cd: cls.config_class = config_class
+    if 'tokenizer_id' not in cd and cls.__llm_backend__ == 'vllm': cls.tokenizer_id = _DEFAULT_TOKENIZER
     make_llm_attributes(cls)(cls)
 
   @overload
@@ -338,7 +327,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
     ...
 
   @overload
-  def __getitem__(self, item: t.Literal['implementation']) -> LiteralBackend:
+  def __getitem__(self, item: t.Literal['backend']) -> LiteralBackend:
     ...
 
   @overload
@@ -347,10 +336,6 @@ class LLM(LLMInterface[M, T], ReprMixin):
 
   @overload
   def __getitem__(self, item: t.Literal['tokenizer']) -> T | None:
-    ...
-
-  @overload
-  def __getitem__(self, item: t.Literal['bentomodel']) -> bentoml.Model | None:
     ...
 
   @overload
@@ -511,9 +496,9 @@ class LLM(LLMInterface[M, T], ReprMixin):
   def _generate_tag_str(cls, model_id: str, model_version: str | None) -> str:
     '''Generate a compliant ``bentoml.Tag`` from model_id.
 
-    If model_id is a pretrained_id from HF, then it will have the following format: <framework>-<normalise_model_id>:<revision>
+    If model_id is a pretrained_id from HF, then it will have the following format: <backend>-<normalise_model_id>:<revision>
     If model_id contains the revision itself, then the same format above
-    If model_id is a path, then it will be <framework>-<basename_of_path>:<generated_sha1> if model_version is not passesd, otherwise <framework>-<basename_of_path>:<model_version>
+    If model_id is a path, then it will be <backend>-<basename_of_path>:<generated_sha1> if model_version is not passesd, otherwise <backend>-<basename_of_path>:<model_version>
 
     > [!NOTE] here that the generated SHA1 for path cases is that it will be based on last modified time.
 
@@ -537,9 +522,8 @@ class LLM(LLMInterface[M, T], ReprMixin):
       return f'{cls.__llm_backend__}-{model_name}:{maybe_revision[0]}'
 
     tag_name = f'{cls.__llm_backend__}-{model_name}'
-    if os.environ.get('OPENLLM_USE_LOCAL_LATEST', str(False)).upper() in ENV_VARS_TRUE_VALUES:
-      return bentoml_cattr.unstructure(
-          bentoml.models.get(f"{tag_name}{':'+model_version if model_version is not None else ''}").tag)
+    if openllm_core.utils.check_bool_env('OPENLLM_USE_LOCAL_LATEST', False):
+      return str(bentoml.models.get(f"{tag_name}{':'+model_version if model_version is not None else ''}").tag)
     if validate_is_path(model_id):
       model_id, model_version = resolve_filepath(model_id), first_not_none(model_version,
                                                                            default=generate_hash_from_file(model_id))
@@ -678,9 +662,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
 
   @property
   def trust_remote_code(self) -> bool:
-    # handle trust_remote_code
-    _from_env = os.getenv('TRUST_REMOTE_CODE', None)
-    return first_not_none(str(_from_env).upper() in ENV_VARS_TRUE_VALUES if _from_env else None,
+    return first_not_none(openllm_core.utils.check_bool_env('TRUST_REMOTE_CODE'),
                           default=self.config['trust_remote_code'])
 
   @property
@@ -733,14 +715,13 @@ class LLM(LLMInterface[M, T], ReprMixin):
     return openllm.import_model(self.config['start_name'],
                                 model_id=self.model_id,
                                 model_version=self._model_version,
-                                implementation=self.__llm_backend__,
+                                backend=self.__llm_backend__,
                                 quantize=self._quantize_method,
                                 serialisation_format=self._serialisation_format)
 
   @property
   def _bentomodel(self) -> bentoml.Model:
-    if self.__llm_bentomodel__ is None: self.__llm_bentomodel__ = openllm.serialisation.get(self)
-    return self.__llm_bentomodel__
+    return openllm.serialisation.get(self, auto_import=True)
 
   def sanitize_parameters(self, prompt: str, **attrs: t.Any) -> tuple[str, DictStrAny, DictStrAny]:
     '''This handler will sanitize all attrs and setup prompt text.
@@ -1168,9 +1149,9 @@ def Runner(model_name: str,
   ...
 
 def Runner(model_name: str,
-           ensure_available: bool | None = None,
+           ensure_available: bool = False,
            init_local: bool = False,
-           implementation: LiteralBackend | None = None,
+           backend: LiteralBackend | None = None,
            llm_config: LLMConfig | None = None,
            **attrs: t.Any) -> LLMRunner[t.Any, t.Any]:
   '''Create a Runner for given LLM. For a list of currently supported LLM, check out 'openllm models'.
@@ -1195,14 +1176,11 @@ def Runner(model_name: str,
   Args:
     model_name: Supported model name from 'openllm models'
     ensure_available: If True, it will download the model if it is not available. If False, it will skip downloading the model.
-    If False, make sure the model is available locally.
-    implementation: The given Runner implementation one choose for this Runner. By default, it is retrieved from the enviroment variable
-    of the respected model_name. For example: 'flan-t5' -> "OPENLLM_FLAN_T5_FRAMEWORK"
+                      If False, make sure the model is available locally.
+    backend: The given Runner implementation one choose for this Runner. If `OPENLLM_BACKEND` is set, it will respect it.
     llm_config: Optional ``openllm.LLMConfig`` to initialise this ``openllm.LLMRunner``.
-    init_local: If True, it will initialize the model locally. This is useful if you want to
-    run the model locally. (Symmetrical to bentoml.Runner.init_local())
-    **attrs: The rest of kwargs will then be passed to the LLM. Refer to the LLM documentation for the kwargs
-    behaviour
+    init_local: If True, it will initialize the model locally. This is useful if you want to run the model locally. (Symmetrical to bentoml.Runner.init_local())
+    **attrs: The rest of kwargs will then be passed to the LLM. Refer to the LLM documentation for the kwargs behaviour
   '''
   if llm_config is not None:
     attrs.update({
@@ -1214,15 +1192,13 @@ def Runner(model_name: str,
             first_not_none(os.environ.get('OPENLLM_SERIALIZATION'), attrs.get('serialisation'), default='safetensors')
     })
 
-  default_implementation = llm_config.default_implementation() if llm_config is not None else 'pt'
-  implementation = t.cast(
-      LiteralBackend,
-      first_not_none(implementation, default=EnvVarMixin(model_name, default_implementation)['framework_value']))
-  runner = infer_auto_class(implementation).create_runner(
-      model_name,
-      llm_config=llm_config,
-      ensure_available=ensure_available if ensure_available is not None else init_local,
-      **attrs)
+  default_backend = llm_config.default_backend() if llm_config is not None else 'pt'
+  backend = t.cast(LiteralBackend,
+                   first_not_none(backend, default=EnvVarMixin(model_name, backend=default_backend)['backend_value']))
+  runner = infer_auto_class(backend).create_runner(model_name,
+                                                   llm_config=llm_config,
+                                                   ensure_available=ensure_available,
+                                                   **attrs)
   if init_local: runner.init_local(quiet=True)
   return runner
 
@@ -1239,7 +1215,7 @@ def llm_runnable_class(self: LLM[M, T], embeddings_sig: ModelSignature, generate
   class _Runnable(bentoml.Runnable):
     SUPPORTED_RESOURCES = ('nvidia.com/gpu', 'amd.com/gpu', 'cpu')
     SUPPORTS_CPU_MULTI_THREADING = True
-    framework = self.__llm_backend__
+    backend = self.__llm_backend__
 
     def __init__(__self: _Runnable):
       # NOTE: The side effect of this line
@@ -1270,7 +1246,7 @@ def llm_runnable_class(self: LLM[M, T], embeddings_sig: ModelSignature, generate
     def generate(__self: _Runnable, prompt: str, **attrs: t.Any) -> list[t.Any]:
       adapter_name = attrs.pop('adapter_name', None)
       if adapter_name is not None: __self.set_adapter(adapter_name)
-      if __self.framework == 'vllm': attrs.setdefault('request_id', openllm_core.utils.gen_random_uuid())
+      if __self.backend == 'vllm': attrs.setdefault('request_id', openllm_core.utils.gen_random_uuid())
       return self.generate(prompt, **attrs)
 
     @bentoml.Runnable.method(**method_signature(generate_sig))
@@ -1286,7 +1262,7 @@ def llm_runnable_class(self: LLM[M, T], embeddings_sig: ModelSignature, generate
       if adapter_name is not None: __self.set_adapter(adapter_name)
       pre = 0
       for outputs in self.generate_iterator(prompt, request_id=openllm_core.utils.gen_random_uuid(), **attrs):
-        output_text = outputs['text'][0] if __self.framework == 'vllm' else outputs['text']
+        output_text = outputs['text'][0] if __self.backend == 'vllm' else outputs['text']
         output_text = output_text.strip().split(' ')
         now = len(output_text) - 1
         if now > pre:
@@ -1340,7 +1316,7 @@ def llm_runner_class(self: LLM[M, T]) -> type[LLMRunner[M, T]]:
     Usage:
 
     ```python
-    runner = openllm.Runner('llama', implementation='pt')
+    runner = openllm.Runner('llama', backend='pt')
     runner.embed("What is the meaning of life?")
     ```
     '''
@@ -1368,7 +1344,7 @@ def llm_runner_class(self: LLM[M, T]) -> type[LLMRunner[M, T]]:
                              'llm_tag': self.tag,
                              'llm': self,
                              'config': self.config,
-                             'implementation': self.__llm_backend__,
+                             'backend': self.__llm_backend__,
                              'peft_adapters': property(fget=available_adapters),
                              'download_model': self.ensure_model_id_exists,
                              '__call__': _wrapped_generate_run,

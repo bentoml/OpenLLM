@@ -29,7 +29,7 @@ def test_general_build_with_internal_testing():
   bento = openllm.build('flan-t5', model_id=HF_INTERNAL_T5_TESTING)
 
   assert llm.llm_type == bento.info.labels['_type']
-  assert llm.config['env']['framework_value'] == bento.info.labels['_framework']
+  assert llm.config['env']['backend_value'] == bento.info.labels['_framework']
 
   bento = openllm.build('flan-t5', model_id=HF_INTERNAL_T5_TESTING)
   assert len(bento_store.list(bento.tag)) == 1

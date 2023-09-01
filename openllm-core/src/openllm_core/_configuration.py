@@ -564,7 +564,7 @@ class ModelSettings(t.TypedDict, total=False):
   architecture: Required[str]
 
   # default OpenLLM runtime imlementation
-  default_implementation: NotRequired[t.Dict[LiteralResourceSpec, LiteralBackend]]
+  default_backend: NotRequired[t.Dict[LiteralResourceSpec, LiteralBackend]]
 
   # meta
   url: str
@@ -594,7 +594,7 @@ class ModelSettings(t.TypedDict, total=False):
 
 _transformed_type: DictStrAny = {
     'fine_tune_strategies': t.Dict[AdapterType, FineTuneConfig],
-    'default_implementation': t.Dict[LiteralResourceSpec, LiteralBackend]
+    'default_backend': t.Dict[LiteralResourceSpec, LiteralBackend]
 }
 
 @attr.define(frozen=False,
@@ -625,7 +625,7 @@ class _ModelSettingsAttr:
         ModelSettings(default_id='__default__',
                       model_ids=['__default__'],
                       architecture='PreTrainedModel',
-                      default_implementation={
+                      default_backend={
                           'cpu': 'pt',
                           'nvidia.com/gpu': 'pt'
                       },
@@ -646,7 +646,7 @@ class _ModelSettingsAttr:
     default_id: str
     model_ids: ListStr
     architecture: str
-    default_implementation: t.Dict[LiteralResourceSpec, LiteralBackend]
+    default_backend: t.Dict[LiteralResourceSpec, LiteralBackend]
     url: str
     requires_gpu: bool
     trust_remote_code: bool
@@ -664,15 +664,14 @@ class _ModelSettingsAttr:
     # update-config-stubs.py: attrs stop
 
 # a heuristic cascading implementation resolver based on available resources
-def get_default_implementation(
-    default_implementation_mapping: dict[LiteralResourceSpec, LiteralBackend]) -> LiteralBackend:
+def get_default_backend(backend_mapping: dict[LiteralResourceSpec, LiteralBackend]) -> LiteralBackend:
   available_spec = available_resource_spec()
-  if resource_spec('tpu') in available_spec: return default_implementation_mapping.get(resource_spec('tpu'), 'pt')
-  elif resource_spec('amd') in available_spec: return default_implementation_mapping.get(resource_spec('amd'), 'pt')
+  if resource_spec('tpu') in available_spec: return backend_mapping.get(resource_spec('tpu'), 'pt')
+  elif resource_spec('amd') in available_spec: return backend_mapping.get(resource_spec('amd'), 'pt')
   elif resource_spec('nvidia') in available_spec:
-    return default_implementation_mapping.get(resource_spec('nvidia'), 'pt')
+    return backend_mapping.get(resource_spec('nvidia'), 'pt')
   else:
-    return default_implementation_mapping.get(resource_spec('cpu'), 'pt')
+    return backend_mapping.get(resource_spec('cpu'), 'pt')
 
 def structure_settings(cl_: type[LLMConfig], cls: type[_ModelSettingsAttr]) -> _ModelSettingsAttr:
   if 'generation_class' in cl_.__config__:
@@ -698,14 +697,14 @@ def structure_settings(cl_: type[LLMConfig], cls: type[_ModelSettingsAttr]) -> _
 
   model_name = _final_value_dct['model_name'] if 'model_name' in _final_value_dct else _settings_attr.model_name
   # if the default implementation dependencies doesn't exist, then always fallback to 'pt'
-  default_implementation = _settings_attr.default_implementation
-  for rs, runtime in default_implementation.items():
+  default_backend = _settings_attr.default_backend
+  for rs, runtime in default_backend.items():
     library_stub = 'torch' if runtime == 'pt' else runtime
-    if not BACKENDS_MAPPING[library_stub][0](): default_implementation[rs] = 'pt'
-  _final_value_dct['default_implementation'] = default_implementation
+    if not BACKENDS_MAPPING[library_stub][0](): default_backend[rs] = 'pt'
+  _final_value_dct['default_backend'] = default_backend
 
   env = openllm_core.utils.EnvVarMixin(model_name,
-                                       get_default_implementation(default_implementation),
+                                       backend=get_default_backend(default_backend),
                                        model_id=_settings_attr.default_id)
   _final_value_dct['env'] = env
 
@@ -861,11 +860,8 @@ class _ConfigAttr:
             ```bash
             openllm start gpt-neox --model-id stabilityai/stablelm-tuned-alpha-3b
             ```'''
-    __openllm_default_implementation__: t.Dict[LiteralResourceSpec, LiteralBackend] = Field(None)
-    '''The default runtime to run this LLM. By default, it will be PyTorch (pt) for most models. For some models, such as Llama, it will use `vllm` or `flax`.
-
-    It is a dictionary of key as the accelerator spec in k4s ('cpu', 'nvidia.com/gpu', 'amd.com/gpu', 'cloud-tpus.google.com/v2', ...) and the values as supported OpenLLM Runtime ('flax', 'tf', 'pt', 'vllm')
-    '''
+    __openllm_default_backend__: t.Dict[LiteralResourceSpec, LiteralBackend] = Field(None)
+    '''The default backend to run LLM based on available accelerator. By default, it will be PyTorch (pt) for most models. For some models, such as Llama, it will use `vllm` or `flax`. It is a dictionary of key as the accelerator spec in k8s ('cpu', 'nvidia.com/gpu', 'amd.com/gpu', 'cloud-tpus.google.com/v2', ...) and the values as supported OpenLLM backend ('flax', 'tf', 'pt', 'vllm', 'ggml', 'mlc')'''
     __openllm_url__: str = Field(None)
     '''The resolved url for this LLMConfig.'''
     __openllm_requires_gpu__: bool = Field(None)
@@ -1193,8 +1189,8 @@ class LLMConfig(_ConfigAttr):
       annotated_names.add(attr_name)
       val = cd.get(attr_name, attr.NOTHING)
       if not isinstance(val, _CountingAttr):
-        if val is attr.NOTHING: val = cls.Field(env=field_env_key(cls.__openllm_model_name__, attr_name))
-        else: val = cls.Field(default=val, env=field_env_key(cls.__openllm_model_name__, attr_name))
+        if val is attr.NOTHING: val = cls.Field(env=field_env_key(attr_name))
+        else: val = cls.Field(default=val, env=field_env_key(attr_name))
       these[attr_name] = val
     unannotated = ca_names - annotated_names
     if len(unannotated) > 0:
@@ -1274,7 +1270,7 @@ class LLMConfig(_ConfigAttr):
   @overload
   def __getitem__(self, item: t.Literal['architecture']) -> str: ...
   @overload
-  def __getitem__(self, item: t.Literal['default_implementation']) -> t.Dict[LiteralResourceSpec, LiteralBackend]: ...
+  def __getitem__(self, item: t.Literal['default_backend']) -> t.Dict[LiteralResourceSpec, LiteralBackend]: ...
   @overload
   def __getitem__(self, item: t.Literal['url']) -> str: ...
   @overload
@@ -1640,9 +1636,9 @@ class LLMConfig(_ConfigAttr):
     return _PEFT_TASK_TYPE_TARGET_MAPPING[cls.__openllm_model_type__]
 
   @classmethod
-  def default_implementation(cls) -> LiteralBackend:
-    return first_not_none(cls.__openllm_env__['framework_value'],
-                          default=get_default_implementation(cls.__openllm_default_implementation__))
+  def default_backend(cls) -> LiteralBackend:
+    return first_not_none(cls.__openllm_env__['backend_value'],
+                          default=get_default_backend(cls.__openllm_default_backend__))
 
   def sanitize_parameters(self, prompt: str, **attrs: t.Any) -> tuple[str, DictStrAny, DictStrAny]:
     '''This handler will sanitize all attrs and setup prompt text.

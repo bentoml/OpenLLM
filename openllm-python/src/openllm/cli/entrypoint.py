@@ -80,7 +80,6 @@ from openllm_core.utils import analytics
 from openllm_core.utils import bentoml_cattr
 from openllm_core.utils import compose
 from openllm_core.utils import configure_logging
-from openllm_core.utils import dantic
 from openllm_core.utils import first_not_none
 from openllm_core.utils import get_debug_mode
 from openllm_core.utils import get_quiet_mode
@@ -94,13 +93,13 @@ from . import termui
 from ._factory import FC
 from ._factory import LiteralOutput
 from ._factory import _AnyCallable
+from ._factory import backend_option
 from ._factory import container_registry_option
 from ._factory import machine_option
 from ._factory import model_id_option
 from ._factory import model_name_argument
 from ._factory import model_version_option
 from ._factory import output_option
-from ._factory import parse_device_callback
 from ._factory import quantize_option
 from ._factory import serialisation_option
 from ._factory import start_command_factory
@@ -203,21 +202,6 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
 
     return t.cast(t.Callable[Concatenate[bool, P], t.Any], wrapper)
 
-  @staticmethod
-  def exception_handling(func: t.Callable[P, t.Any], group: click.Group, **attrs: t.Any) -> t.Callable[P, t.Any]:
-    command_name = attrs.get('name', func.__name__)
-
-    @functools.wraps(func)
-    def wrapper(*args: P.args, **attrs: P.kwargs) -> t.Any:
-      try:
-        return func(*args, **attrs)
-      except OpenLLMException as err:
-        raise click.ClickException(click.style(f"[{group.name}] '{command_name}' failed: " + err.message, fg='red')) from err
-      except KeyboardInterrupt:
-        pass
-
-    return wrapper
-
   def get_command(self, ctx: click.Context, cmd_name: str) -> click.Command | None:
     if cmd_name in t.cast('Extensions', extension_command).list_commands(ctx):
       return t.cast('Extensions', extension_command).get_command(ctx, cmd_name)
@@ -251,11 +235,11 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
       name = name.replace('_', '-')
       kwargs.setdefault('help', inspect.getdoc(f))
       kwargs.setdefault('name', name)
-      wrapped = self.exception_handling(self.usage_tracking(self.common_params(f), self, **kwargs), self, **kwargs)
+      wrapped = self.usage_tracking(self.common_params(f), self, **kwargs)
 
       # move common parameters to end of the parameters list
       _memo = getattr(wrapped, '__click_params__', None)
-      if _memo is None: raise RuntimeError('Click command not register correctly.')
+      if _memo is None: raise ValueError('Click command not register correctly.')
       _object_setattr(wrapped, '__click_params__', _memo[-self.NUMBER_OF_COMMON_PARAMS:] + _memo[:-self.NUMBER_OF_COMMON_PARAMS])
       # NOTE: we need to call super of super to avoid conflict with BentoMLCommandGroup command setup
       cmd = super(BentoMLCommandGroup, self).command(*args, **kwargs)(wrapped)
@@ -349,7 +333,7 @@ _start_mapping = {
 @output_option
 @quantize_option
 @machine_option
-@click.option('--implementation', type=click.Choice(['pt', 'tf', 'flax', 'vllm']), default=None, help='The implementation for saving this LLM.')
+@backend_option
 @serialisation_option
 def import_command(
     model_name: str,
@@ -358,7 +342,7 @@ def import_command(
     model_version: str | None,
     output: LiteralOutput,
     machine: bool,
-    implementation: LiteralBackend | None,
+    backend: LiteralBackend,
     quantize: t.Literal['int8', 'int4', 'gptq'] | None,
     serialisation_format: t.Literal['safetensors', 'legacy'],
 ) -> bentoml.Model:
@@ -413,37 +397,38 @@ def import_command(
   ```
   """
   llm_config = AutoConfig.for_model(model_name)
-  env = EnvVarMixin(model_name, llm_config.default_implementation(), model_id=model_id, quantize=quantize)
-  impl: LiteralBackend = first_not_none(implementation, default=env['framework_value'])
-  llm = infer_auto_class(impl).for_model(
+  env = EnvVarMixin(model_name, backend=llm_config.default_backend(), model_id=model_id, quantize=quantize)
+  backend = first_not_none(backend, default=env['backend_value'])
+  llm = infer_auto_class(backend).for_model(
       model_name, model_id=env['model_id_value'], llm_config=llm_config, model_version=model_version, ensure_available=False, serialisation=serialisation_format
   )
   _previously_saved = False
   try:
     _ref = serialisation.get(llm)
     _previously_saved = True
-  except bentoml.exceptions.NotFound:
+  except openllm.exceptions.OpenLLMException:
     if not machine and output == 'pretty':
-      msg = f"'{model_name}' {'with model_id='+ model_id if model_id is not None else ''} does not exists in local store for implementation {llm.__llm_backend__}. Saving to BENTOML_HOME{' (path=' + os.environ.get('BENTOML_HOME', BentoMLContainer.bentoml_home.get()) + ')' if get_debug_mode() else ''}..."
+      msg = f"'{model_name}' {'with model_id='+ model_id if model_id is not None else ''} does not exists in local store for backend {llm.__llm_backend__}. Saving to BENTOML_HOME{' (path=' + os.environ.get('BENTOML_HOME', BentoMLContainer.bentoml_home.get()) + ')' if get_debug_mode() else ''}..."
       termui.echo(msg, fg='yellow', nl=True)
     _ref = serialisation.get(llm, auto_import=True)
-    if impl == 'pt' and is_torch_available() and torch.cuda.is_available(): torch.cuda.empty_cache()
+    if backend == 'pt' and is_torch_available() and torch.cuda.is_available(): torch.cuda.empty_cache()
   if machine: return _ref
   elif output == 'pretty':
-    if _previously_saved: termui.echo(f"{model_name} with 'model_id={model_id}' is already setup for framework '{impl}': {_ref.tag!s}", nl=True, fg='yellow')
+    if _previously_saved: termui.echo(f"{model_name} with 'model_id={model_id}' is already setup for backend '{backend}': {_ref.tag!s}", nl=True, fg='yellow')
     else: termui.echo(f'Saved model: {_ref.tag}')
-  elif output == 'json': termui.echo(orjson.dumps({'previously_setup': _previously_saved, 'framework': impl, 'tag': str(_ref.tag)}, option=orjson.OPT_INDENT_2).decode())
+  elif output == 'json': termui.echo(orjson.dumps({'previously_setup': _previously_saved, 'backend': backend, 'tag': str(_ref.tag)}, option=orjson.OPT_INDENT_2).decode())
   else: termui.echo(_ref.tag)
   return _ref
+
 @cli.command(context_settings={'token_normalize_func': inflection.underscore})
 @model_name_argument
 @model_id_option
 @output_option
 @machine_option
+@backend_option
 @click.option('--bento-version', type=str, default=None, help='Optional bento version for this BentoLLM. Default is the the model revision.')
 @click.option('--overwrite', is_flag=True, help='Overwrite existing Bento for given LLM if it already exists.')
 @workers_per_resource_option(factory=click, build=True)
-@click.option('--device', type=dantic.CUDA, multiple=True, envvar='CUDA_VISIBLE_DEVICES', callback=parse_device_callback, help='Set the device', show_envvar=True)
 @cog.optgroup.group(cls=cog.MutuallyExclusiveOptionGroup, name='Optimisation options')
 @quantize_option(factory=cog.optgroup, build=True)
 @click.option(
@@ -492,8 +477,8 @@ def build_command(
     workers_per_resource: float | None,
     adapter_id: tuple[str, ...],
     build_ctx: str | None,
+    backend: LiteralBackend,
     machine: bool,
-    device: tuple[str, ...],
     model_version: str | None,
     dockerfile_template: t.TextIO | None,
     containerize: bool,
@@ -527,21 +512,21 @@ def build_command(
   _previously_built = False
 
   llm_config = AutoConfig.for_model(model_name)
-  env = EnvVarMixin(model_name, llm_config.default_implementation(), model_id=model_id, quantize=quantize)
+  env = EnvVarMixin(model_name, backend=backend, model_id=model_id, quantize=quantize)
 
   # NOTE: We set this environment variable so that our service.py logic won't raise RuntimeError
   # during build. This is a current limitation of bentoml build where we actually import the service.py into sys.path
   try:
-    os.environ.update({'OPENLLM_MODEL': inflection.underscore(model_name), 'OPENLLM_SERIALIZATION': serialisation_format})
+    os.environ.update({'OPENLLM_MODEL': inflection.underscore(model_name), 'OPENLLM_SERIALIZATION': serialisation_format, 'OPENLLM_BACKEND': env['backend_value']})
     if env['model_id_value']: os.environ[env.model_id] = str(env['model_id_value'])
     if env['quantize_value']: os.environ[env.quantize] = str(env['quantize_value'])
 
-    llm = infer_auto_class(env['framework_value']).for_model(
+    llm = infer_auto_class(env['backend_value']).for_model(
         model_name, model_id=env['model_id_value'], llm_config=llm_config, ensure_available=True, model_version=model_version, serialisation=serialisation_format, **attrs
     )
 
     labels = dict(llm.identifying_params)
-    labels.update({'_type': llm.llm_type, '_framework': env['framework_value']})
+    labels.update({'_type': llm.llm_type, '_framework': env['backend_value']})
     workers_per_resource = first_not_none(workers_per_resource, default=llm_config['workers_per_resource'])
 
     with fs.open_fs(f"temp://llm_{llm_config['model_name']}") as llm_fs:
@@ -617,16 +602,17 @@ def build_command(
 
   if push: BentoMLContainer.bentocloud_client.get().push_bento(bento, context=t.cast(GlobalOptions, ctx.obj).cloud_context, force=force_push)
   elif containerize:
-    backend = t.cast('DefaultBuilder', os.environ.get('BENTOML_CONTAINERIZE_BACKEND', 'docker'))
+    container_backend = t.cast('DefaultBuilder', os.environ.get('BENTOML_CONTAINERIZE_BACKEND', 'docker'))
     try:
-      bentoml.container.health(backend)
+      bentoml.container.health(container_backend)
     except subprocess.CalledProcessError:
       raise OpenLLMException(f'Failed to use backend {backend}') from None
     try:
-      bentoml.container.build(bento.tag, backend=backend, features=('grpc', 'io'))
+      bentoml.container.build(bento.tag, backend=container_backend, features=('grpc', 'io'))
     except Exception as err:
       raise OpenLLMException(f"Exception caught while containerizing '{bento.tag!s}':\n{err}") from err
   return bento
+
 @cli.command()
 @output_option
 @click.option('--show-available', is_flag=True, default=False, help="Show available models in local store (mutually exclusive with '-o porcelain').")

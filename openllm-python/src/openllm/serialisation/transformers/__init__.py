@@ -5,6 +5,7 @@ import logging
 import typing as t
 
 from huggingface_hub import snapshot_download
+from packaging.version import Version
 from simple_di import Provide
 from simple_di import inject
 
@@ -104,7 +105,7 @@ def import_model(llm: openllm.LLM[M, T],
   imported_modules: list[types.ModuleType] = []
   bentomodel = bentoml.Model.create(llm.tag,
                                     module='openllm.serialisation.transformers',
-                                    api_version='v1',
+                                    api_version='v2',
                                     options=ModelOptions(),
                                     context=openllm.utils.generate_context(framework_name='openllm'),
                                     labels=openllm.utils.generate_labels(llm),
@@ -187,27 +188,20 @@ def get(llm: openllm.LLM[M, T], auto_import: bool = False) -> bentoml.Model:
   '''
   try:
     model = bentoml.models.get(llm.tag)
-    if model.info.module not in ('openllm.serialisation.transformers'
-                                 'bentoml.transformers', 'bentoml._internal.frameworks.transformers',
-                                 __name__):  # NOTE: backward compatible with previous version of OpenLLM.
-      raise bentoml.exceptions.NotFound(
-          f"Model {model.tag} was saved with module {model.info.module}, not loading with 'openllm.serialisation.transformers'."
-      )
-    if 'backend' in model.info.labels and model.info.labels['backend'] != llm.__llm_backend__:
+    if Version(model.info.api_version) < Version('v2'):
+      raise openllm.exceptions.OpenLLMException(
+          'Please run "openllm prune -y --include-bentos" and upgrade all saved model to latest release.')
+    if model.info.labels['backend'] != llm.__llm_backend__:
       raise openllm.exceptions.OpenLLMException(
           f"Model {model.tag} was saved with backend {model.info.labels['backend']}, while loading with {llm.__llm_backend__}."
       )
     return model
-  except bentoml.exceptions.NotFound as err:
+  except Exception as err:
     if auto_import: return import_model(llm, trust_remote_code=llm.trust_remote_code)
-    raise err from None
+    raise openllm.exceptions.OpenLLMException(
+        f'Failed while getting stored artefact (lookup for traceback):\n{err}') from err
 
 def load_model(llm: openllm.LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M:
-  '''Load the model from BentoML store.
-
-  By default, it will try to find check the model in the local store.
-  If model is not found, it will raises a ``bentoml.exceptions.NotFound``.
-  '''
   config, hub_attrs, attrs = process_config(llm.model_id, llm.trust_remote_code, **attrs)
   safe_serialization = openllm.utils.first_not_none(t.cast(
       t.Optional[bool], llm._bentomodel.info.metadata.get('safe_serialisation', None)),

@@ -77,7 +77,7 @@ class MetadataOutput:
   model_id: str
   timeout: int
   model_name: str
-  framework: str
+  backend: str
   configuration: str
   supports_embeddings: bool
   supports_hf_agent: bool

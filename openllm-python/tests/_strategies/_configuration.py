@@ -30,7 +30,7 @@ def model_settings(draw: st.DrawFn):
           st.booleans(),
       'requirements':
           st.none() | st.lists(st.text(), min_size=1),
-      'default_implementation':
+      'default_backend':
           st.dictionaries(st.sampled_from(['cpu', 'nvidia.com/gpu']), st.sampled_from(['vllm', 'pt', 'tf', 'flax'])),
       'model_type':
           st.sampled_from(['causal_lm', 'seq2seq_lm']),

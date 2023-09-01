@@ -10,7 +10,7 @@ import openllm
 if t.TYPE_CHECKING:
   from openllm_core._typing_compat import LiteralBackend
 
-_FRAMEWORK_MAPPING = {
+_MODELING_MAPPING = {
     'flan_t5': 'google/flan-t5-small',
     'opt': 'facebook/opt-125m',
     'baichuan': 'baichuan-inc/Baichuan-7B',
@@ -22,19 +22,17 @@ _PROMPT_MAPPING = {
 
 def parametrise_local_llm(
     model: str,) -> t.Generator[tuple[str, openllm.LLMRunner[t.Any, t.Any] | openllm.LLM[t.Any, t.Any]], None, None]:
-  if model not in _FRAMEWORK_MAPPING: pytest.skip(f"'{model}' is not yet supported in framework testing.")
+  if model not in _MODELING_MAPPING: pytest.skip(f"'{model}' is not yet supported in framework testing.")
   backends: tuple[LiteralBackend, ...] = tuple()
   if model in openllm.MODEL_MAPPING_NAMES: backends += ('pt',)
   if model in openllm.MODEL_FLAX_MAPPING_NAMES: backends += ('flax',)
   if model in openllm.MODEL_TF_MAPPING_NAMES: backends += ('tf',)
-  for framework, prompt in itertools.product(backends, _PROMPT_MAPPING.keys()):
-    llm = openllm.Runner(model,
-                         model_id=_FRAMEWORK_MAPPING[model],
-                         ensure_available=True,
-                         implementation=framework,
-                         init_local=True,
-                        )
-    yield prompt, llm
+  for backend, prompt in itertools.product(backends, _PROMPT_MAPPING.keys()):
+    yield prompt, openllm.Runner(model,
+                                 model_id=_MODELING_MAPPING[model],
+                                 ensure_available=True,
+                                 backend=backend,
+                                 init_local=True)
 
 def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
   if os.getenv('GITHUB_ACTIONS') is None:

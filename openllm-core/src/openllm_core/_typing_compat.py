@@ -37,6 +37,9 @@ T = t.TypeVar(
     't.Union[transformers.PreTrainedTokenizerFast, transformers.PreTrainedTokenizer, transformers.PreTrainedTokenizerBase]'
 )
 
+def get_literal_args(typ: t.Any) -> tuple[str, ...]:
+  return getattr(typ, '__args__')
+
 AnyCallable = t.Callable[..., t.Any]
 DictStrAny = t.Dict[str, t.Any]
 ListAny = t.List[t.Any]
@@ -109,7 +112,7 @@ class LLMRunner(bentoml.Runner, t.Generic[M, T]):
   identifying_params: dict[str, t.Any]
   llm: openllm.LLM[M, T]
   config: openllm.LLMConfig
-  implementation: LiteralBackend
+  backend: LiteralBackend
   supports_embeddings: bool
   supports_hf_agent: bool
   has_adapters: bool
