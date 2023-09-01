@@ -125,7 +125,10 @@ def construct_python_options(llm: openllm.LLM[t.Any, t.Any],
   return PythonOptions(packages=packages,
                        wheels=wheels,
                        lock_packages=False,
-                       extra_index_url=['https://download.pytorch.org/whl/cu118'])
+                       extra_index_url=[
+                           'https://download.pytorch.org/whl/cu118',
+                           'https://huggingface.github.io/autogptq-index/whl/cu118/'
+                       ])
 
 def construct_docker_options(llm: openllm.LLM[t.Any, t.Any], _: FS, workers_per_resource: float,
                              quantize: LiteralString | None, adapter_map: dict[str, str | None] | None,

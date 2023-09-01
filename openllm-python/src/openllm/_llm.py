@@ -1118,7 +1118,6 @@ def Runner(model_name: str,
            max_batch_size: int | None = ...,
            max_latency_ms: int | None = ...,
            method_configs: dict[str, ModelSignatureDict | ModelSignature] | None = ...,
-           embedded: t.Literal[True, False] = ...,
            scheduling_strategy: type[bentoml.Strategy] | None = ...,
            **attrs: t.Any) -> LLMRunner[t.Any, t.Any]:
   ...
@@ -1126,9 +1125,9 @@ def Runner(model_name: str,
 @overload
 def Runner(model_name: str,
            *,
-           ensure_available: bool | None = None,
+           ensure_available: bool = ...,
            init_local: bool = ...,
-           implementation: LiteralBackend | None = None,
+           backend: LiteralBackend | None = None,
            llm_config: LLMConfig | None = None,
            **attrs: t.Any) -> LLMRunner[t.Any, t.Any]:
   ...
@@ -1192,9 +1191,13 @@ def Runner(model_name: str,
             first_not_none(os.environ.get('OPENLLM_SERIALIZATION'), attrs.get('serialisation'), default='safetensors')
     })
 
-  default_backend = llm_config.default_backend() if llm_config is not None else 'pt'
-  backend = t.cast(LiteralBackend,
-                   first_not_none(backend, default=EnvVarMixin(model_name, backend=default_backend)['backend_value']))
+  backend = t.cast(
+      LiteralBackend,
+      first_not_none(backend,
+                     default=EnvVarMixin(
+                         model_name,
+                         backend=llm_config.default_backend() if llm_config is not None else 'pt')['backend_value']))
+  if init_local: ensure_available = True
   runner = infer_auto_class(backend).create_runner(model_name,
                                                    llm_config=llm_config,
                                                    ensure_available=ensure_available,
@@ -1218,9 +1221,8 @@ def llm_runnable_class(self: LLM[M, T], embeddings_sig: ModelSignature, generate
     backend = self.__llm_backend__
 
     def __init__(__self: _Runnable):
-      # NOTE: The side effect of this line
-      # is that it will load the imported model during
-      # runner startup. So don't remove it!!
+      # NOTE: The side effect of this line is that it will load the
+      # imported model during runner startup. So don't remove it!!
       if not self.model: raise RuntimeError('Failed to load the model correctly (See traceback above)')
       if self.adapters_mapping is not None:
         logger.info('Applying LoRA to %s...', self.runner_name)
@@ -1232,31 +1234,31 @@ def llm_runnable_class(self: LLM[M, T], embeddings_sig: ModelSignature, generate
       if adapter_name != 'default': self.model.set_adapter(adapter_name)
       logger.info('Successfully apply LoRA layer %s', adapter_name)
 
-    @bentoml.Runnable.method(**method_signature(embeddings_sig))
+    @bentoml.Runnable.method(**method_signature(embeddings_sig))  # type: ignore
     def embeddings(__self: _Runnable, prompt: str | list[str]) -> t.Sequence[EmbeddingsOutput]:
       return [self.embeddings([prompt] if isinstance(prompt, str) else prompt)]
 
-    @bentoml.Runnable.method(**method_signature(generate_sig))
+    @bentoml.Runnable.method(**method_signature(generate_sig))  # type: ignore
     def __call__(__self: _Runnable, prompt: str, **attrs: t.Any) -> list[t.Any]:
       adapter_name = attrs.pop('adapter_name', None)
       if adapter_name is not None: __self.set_adapter(adapter_name)
       return self.generate(prompt, **attrs)
 
-    @bentoml.Runnable.method(**method_signature(generate_sig))
+    @bentoml.Runnable.method(**method_signature(generate_sig))  # type: ignore
     def generate(__self: _Runnable, prompt: str, **attrs: t.Any) -> list[t.Any]:
       adapter_name = attrs.pop('adapter_name', None)
       if adapter_name is not None: __self.set_adapter(adapter_name)
       if __self.backend == 'vllm': attrs.setdefault('request_id', openllm_core.utils.gen_random_uuid())
       return self.generate(prompt, **attrs)
 
-    @bentoml.Runnable.method(**method_signature(generate_sig))
+    @bentoml.Runnable.method(**method_signature(generate_sig))  # type: ignore
     def generate_one(__self: _Runnable, prompt: str, stop: list[str],
                      **attrs: t.Any) -> t.Sequence[dict[t.Literal['generated_text'], str]]:
       adapter_name = attrs.pop('adapter_name', None)
       if adapter_name is not None: __self.set_adapter(adapter_name)
       return self.generate_one(prompt, stop, **attrs)
 
-    @bentoml.Runnable.method(**method_signature(generate_iterator_sig))
+    @bentoml.Runnable.method(**method_signature(generate_iterator_sig))  # type: ignore
     def generate_iterator(__self: _Runnable, prompt: str, **attrs: t.Any) -> t.Generator[str, None, str]:
       adapter_name = attrs.pop('adapter_name', None)
       if adapter_name is not None: __self.set_adapter(adapter_name)
