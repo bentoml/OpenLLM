@@ -50,14 +50,10 @@ def bento_complete_envvar(ctx: click.Context, param: click.Parameter, incomplete
   ]
 
 def model_complete_envvar(ctx: click.Context, param: click.Parameter, incomplete: str) -> list[sc.CompletionItem]:
-  return [
-      sc.CompletionItem(inflection.dasherize(it), help='Model')
-      for it in openllm.CONFIG_MAPPING
-      if it.startswith(incomplete)
-  ]
+  return [sc.CompletionItem(inflection.dasherize(it), help='Model') for it in openllm.CONFIG_MAPPING if it.startswith(incomplete)]
 
-def parse_config_options(config: LLMConfig, server_timeout: int, workers_per_resource: float,
-                         device: t.Tuple[str, ...] | None, cors: bool, environ: DictStrAny) -> DictStrAny:
+def parse_config_options(config: LLMConfig, server_timeout: int, workers_per_resource: float, device: t.Tuple[str, ...] | None, cors: bool,
+                         environ: DictStrAny) -> DictStrAny:
   # TODO: Support amd.com/gpu on k8s
   _bentoml_config_options_env = environ.pop('BENTOML_CONFIG_OPTIONS', '')
   _bentoml_config_options_opts = [
@@ -67,22 +63,15 @@ def parse_config_options(config: LLMConfig, server_timeout: int, workers_per_res
   ]
   if device:
     if len(device) > 1:
-      _bentoml_config_options_opts.extend([
-          f'runners."llm-{config["start_name"]}-runner".resources."nvidia.com/gpu"[{idx}]={dev}'
-          for idx, dev in enumerate(device)
-      ])
+      _bentoml_config_options_opts.extend(
+          [f'runners."llm-{config["start_name"]}-runner".resources."nvidia.com/gpu"[{idx}]={dev}' for idx, dev in enumerate(device)])
     else:
-      _bentoml_config_options_opts.append(
-          f'runners."llm-{config["start_name"]}-runner".resources."nvidia.com/gpu"=[{device[0]}]')
-  _bentoml_config_options_opts.append(
-      f'runners."llm-generic-embedding".resources.cpu={openllm.get_resource({"cpu":"system"},"cpu")}')
+      _bentoml_config_options_opts.append(f'runners."llm-{config["start_name"]}-runner".resources."nvidia.com/gpu"=[{device[0]}]')
+  _bentoml_config_options_opts.append(f'runners."llm-generic-embedding".resources.cpu={openllm.get_resource({"cpu":"system"},"cpu")}')
   if cors:
+    _bentoml_config_options_opts.extend(['api_server.http.cors.enabled=true', 'api_server.http.cors.access_control_allow_origins="*"'])
     _bentoml_config_options_opts.extend(
-        ['api_server.http.cors.enabled=true', 'api_server.http.cors.access_control_allow_origins="*"'])
-    _bentoml_config_options_opts.extend([
-        f'api_server.http.cors.access_control_allow_methods[{idx}]="{it}"'
-        for idx, it in enumerate(['GET', 'OPTIONS', 'POST', 'HEAD', 'PUT'])
-    ])
+        [f'api_server.http.cors.access_control_allow_methods[{idx}]="{it}"' for idx, it in enumerate(['GET', 'OPTIONS', 'POST', 'HEAD', 'PUT'])])
   _bentoml_config_options_env += ' ' if _bentoml_config_options_env else '' + ' '.join(_bentoml_config_options_opts)
   environ['BENTOML_CONFIG_OPTIONS'] = _bentoml_config_options_env
   if DEBUG: logger.debug('Setting BENTOML_CONFIG_OPTIONS=%s', _bentoml_config_options_env)
@@ -104,17 +93,13 @@ def _id_callback(ctx: click.Context, _: click.Parameter, value: t.Tuple[str, ...
     ctx.params[_adapter_mapping_key][adapter_id] = adapter_name[0] if len(adapter_name) > 0 else None
   return None
 
-def start_command_factory(group: click.Group,
-                          model: str,
-                          _context_settings: DictStrAny | None = None,
-                          _serve_grpc: bool = False) -> click.Command:
+def start_command_factory(group: click.Group, model: str, _context_settings: DictStrAny | None = None, _serve_grpc: bool = False) -> click.Command:
   llm_config = openllm.AutoConfig.for_model(model)
-  command_attrs: DictStrAny = dict(
-      name=llm_config['model_name'],
-      context_settings=_context_settings or termui.CONTEXT_SETTINGS,
-      short_help=f"Start a LLMServer for '{model}'",
-      aliases=[llm_config['start_name']] if llm_config['name_type'] == 'dasherize' else None,
-      help=f'''\
+  command_attrs: DictStrAny = dict(name=llm_config['model_name'],
+                                   context_settings=_context_settings or termui.CONTEXT_SETTINGS,
+                                   short_help=f"Start a LLMServer for '{model}'",
+                                   aliases=[llm_config['start_name']] if llm_config['name_type'] == 'dasherize' else None,
+                                   help=f'''\
 {llm_config['env'].start_docstring}
 
 \b
@@ -133,15 +118,13 @@ Available official model_id(s): [default: {llm_config['default_id']}]
 \b
 {orjson.dumps(llm_config['model_ids'], option=orjson.OPT_INDENT_2).decode()}
 ''',
-  )
+                                   )
 
   if llm_config['requires_gpu'] and openllm.utils.device_count() < 1:
     # NOTE: The model requires GPU, therefore we will return a dummy command
     command_attrs.update({
-        'short_help':
-            '(Disabled because there is no GPU available)',
-        'help':
-            f'{model} is currently not available to run on your local machine because it requires GPU for inference.'
+        'short_help': '(Disabled because there is no GPU available)',
+        'help': f'{model} is currently not available to run on your local machine because it requires GPU for inference.'
     })
     return noop_command(group, llm_config, _serve_grpc, **command_attrs)
 
@@ -150,12 +133,10 @@ Available official model_id(s): [default: {llm_config['default_id']}]
   @click.pass_context
   def start_cmd(ctx: click.Context, /, server_timeout: int, model_id: str | None, model_version: str | None,
                 workers_per_resource: t.Literal['conserved', 'round_robin'] | LiteralString, device: t.Tuple[str, ...],
-                quantize: t.Literal['int8', 'int4', 'gptq'] | None, backend: LiteralBackend,
-                serialisation_format: t.Literal['safetensors', 'legacy'], cors: bool, adapter_id: str | None,
-                return_process: bool, **attrs: t.Any,
-               ) -> LLMConfig | subprocess.Popen[bytes]:
-    if serialisation_format == 'safetensors' and quantize is not None and openllm_core.utils.check_bool_env(
-        'OPENLLM_SERIALIZATION_WARNING'):
+                quantize: t.Literal['int8', 'int4', 'gptq'] | None, backend: LiteralBackend, serialisation_format: t.Literal['safetensors', 'legacy'],
+                cors: bool, adapter_id: str | None, return_process: bool, **attrs: t.Any,
+                ) -> LLMConfig | subprocess.Popen[bytes]:
+    if serialisation_format == 'safetensors' and quantize is not None and openllm_core.utils.check_bool_env('OPENLLM_SERIALIZATION_WARNING'):
       termui.echo(
           f"'--quantize={quantize}' might not work with 'safetensors' serialisation format. Use with caution!. To silence this warning, set \"OPENLLM_SERIALIZATION_WARNING=False\"\nNote: You can always fallback to '--serialisation legacy' when running quantisation.",
           fg='yellow')
@@ -184,10 +165,7 @@ Available official model_id(s): [default: {llm_config['default_id']}]
       wpr = float(wpr)
 
     # Create a new model env to work with the envvar during CLI invocation
-    env = openllm.utils.EnvVarMixin(config['model_name'],
-                                    backend,
-                                    model_id=model_id or config['default_id'],
-                                    quantize=quantize)
+    env = openllm.utils.EnvVarMixin(config['model_name'], backend, model_id=model_id or config['default_id'], quantize=quantize)
     requirements = llm_config['requirements']
     if requirements is not None and len(requirements) > 0:
       missing_requirements = [i for i in requirements if importlib.util.find_spec(inflection.underscore(i)) is None]
@@ -218,17 +196,14 @@ Available official model_id(s): [default: {llm_config['default_id']}]
                                                                          serialisation=serialisation_format)
     start_env.update({env.config: llm.config.model_dump_json().decode()})
 
-    server = bentoml.GrpcServer('_service:svc', **server_attrs) if _serve_grpc else bentoml.HTTPServer(
-        '_service:svc', **server_attrs)
+    server = bentoml.GrpcServer('_service:svc', **server_attrs) if _serve_grpc else bentoml.HTTPServer('_service:svc', **server_attrs)
     openllm.utils.analytics.track_start_init(llm.config)
 
     def next_step(model_name: str, adapter_map: DictStrAny | None) -> None:
       cmd_name = f'openllm build {model_name}'
       if adapter_map is not None:
-        cmd_name += ' ' + ' '.join([
-            f'--adapter-id {s}'
-            for s in [f'{p}:{name}' if name not in (None, 'default') else p for p, name in adapter_map.items()]
-        ])
+        cmd_name += ' ' + ' '.join(
+            [f'--adapter-id {s}' for s in [f'{p}:{name}' if name not in (None, 'default') else p for p, name in adapter_map.items()]])
       if not openllm.utils.get_quiet_mode():
         termui.echo(f"\n🚀 Next step: run '{cmd_name}' to create a Bento for {model_name}", fg='blue')
 
@@ -265,17 +240,13 @@ def noop_command(group: click.Group, llm_config: LLMConfig, _serve_grpc: bool, *
   return noop
 
 def start_decorator(llm_config: LLMConfig, serve_grpc: bool = False) -> t.Callable[[FC], t.Callable[[FC], FC]]:
-
   def wrapper(fn: FC) -> t.Callable[[FC], FC]:
     composed = openllm.utils.compose(
         llm_config.to_click_options, _http_server_args if not serve_grpc else _grpc_server_args,
-        cog.optgroup.group(
-            'General LLM Options',
-            help=f"The following options are related to running '{llm_config['start_name']}' LLM Server."),
+        cog.optgroup.group('General LLM Options', help=f"The following options are related to running '{llm_config['start_name']}' LLM Server."),
         model_id_option(factory=cog.optgroup), model_version_option(factory=cog.optgroup),
         cog.optgroup.option('--server-timeout', type=int, default=None, help='Server timeout in seconds'),
-        workers_per_resource_option(factory=cog.optgroup), cors_option(factory=cog.optgroup),
-        backend_option(factory=cog.optgroup),
+        workers_per_resource_option(factory=cog.optgroup), cors_option(factory=cog.optgroup), backend_option(factory=cog.optgroup),
         cog.optgroup.group('LLM Optimization Options',
                            help='''Optimization related options.
 
@@ -286,7 +257,7 @@ def start_decorator(llm_config: LLMConfig, serve_grpc: bool = False) -> t.Callab
             - DeepSpeed Inference: [link](https://www.deepspeed.ai/inference/)
             - GGML: Fast inference on [bare metal](https://github.com/ggerganov/ggml)
             ''',
-                          ), quantize_option(factory=cog.optgroup), serialisation_option(factory=cog.optgroup),
+                           ), quantize_option(factory=cog.optgroup), serialisation_option(factory=cog.optgroup),
         cog.optgroup.option('--device',
                             type=openllm.utils.dantic.CUDA,
                             multiple=True,
@@ -312,8 +283,7 @@ def start_decorator(llm_config: LLMConfig, serve_grpc: bool = False) -> t.Callab
     '''),
         cog.optgroup.option('--adapter-id',
                             default=None,
-                            help='Optional name or path for given LoRA adapter' +
-                            f" to wrap '{llm_config['model_name']}'",
+                            help='Optional name or path for given LoRA adapter' + f" to wrap '{llm_config['model_name']}'",
                             multiple=True,
                             callback=_id_callback,
                             metavar='[PATH | [remote/][adapter_name:]adapter_id][, ...]'),
@@ -323,8 +293,7 @@ def start_decorator(llm_config: LLMConfig, serve_grpc: bool = False) -> t.Callab
 
   return wrapper
 
-def parse_device_callback(ctx: click.Context, param: click.Parameter,
-                          value: tuple[tuple[str], ...] | None) -> t.Tuple[str, ...] | None:
+def parse_device_callback(ctx: click.Context, param: click.Parameter, value: tuple[tuple[str], ...] | None) -> t.Tuple[str, ...] | None:
   if value is None: return value
   if not isinstance(value, tuple): ctx.fail(f'{param} only accept multiple values, not {type(value)} (value: {value})')
   el: t.Tuple[str, ...] = tuple(i for k in value for i in k)
@@ -342,19 +311,15 @@ def parse_serve_args(serve_grpc: bool) -> t.Callable[[t.Callable[..., LLMConfig]
   from bentoml_cli.cli import cli
 
   command = 'serve' if not serve_grpc else 'serve-grpc'
-  group = cog.optgroup.group(
-      f"Start a {'HTTP' if not serve_grpc else 'gRPC'} server options",
-      help=f"Related to serving the model [synonymous to `bentoml {'serve-http' if not serve_grpc else command }`]",
-  )
+  group = cog.optgroup.group(f"Start a {'HTTP' if not serve_grpc else 'gRPC'} server options",
+                             help=f"Related to serving the model [synonymous to `bentoml {'serve-http' if not serve_grpc else command }`]",
+                             )
 
   def decorator(f: t.Callable[Concatenate[int, t.Optional[str], P], LLMConfig]) -> t.Callable[[FC], FC]:
     serve_command = cli.commands[command]
     # The first variable is the argument bento
     # The last five is from BentoMLCommandGroup.NUMBER_OF_COMMON_PARAMS
-    serve_options = [
-        p for p in serve_command.params[1:-BentoMLCommandGroup.NUMBER_OF_COMMON_PARAMS]
-        if p.name not in _IGNORED_OPTIONS
-    ]
+    serve_options = [p for p in serve_command.params[1:-BentoMLCommandGroup.NUMBER_OF_COMMON_PARAMS] if p.name not in _IGNORED_OPTIONS]
     for options in reversed(serve_options):
       attrs = options.to_info_dict()
       # we don't need param_type_name, since it should all be options
@@ -391,10 +356,7 @@ def _click_factory_type(*param_decls: t.Any, **attrs: t.Any) -> t.Callable[[FC |
 cli_option = functools.partial(_click_factory_type, attr='option')
 cli_argument = functools.partial(_click_factory_type, attr='argument')
 
-def output_option(f: _AnyCallable | None = None,
-                  *,
-                  default_value: LiteralOutput = 'pretty',
-                  **attrs: t.Any) -> t.Callable[[FC], FC]:
+def output_option(f: _AnyCallable | None = None, *, default_value: LiteralOutput = 'pretty', **attrs: t.Any) -> t.Callable[[FC], FC]:
   output = ['json', 'pretty', 'porcelain']
 
   def complete_output_var(ctx: click.Context, param: click.Parameter, incomplete: str) -> list[CompletionItem]:
@@ -434,12 +396,11 @@ def model_id_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable
                     **attrs)(f)
 
 def model_version_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
-  return cli_option(
-      '--model-version',
-      type=click.STRING,
-      default=None,
-      help='Optional model version to save for this model. It will be inferred automatically from model-id.',
-      **attrs)(f)
+  return cli_option('--model-version',
+                    type=click.STRING,
+                    default=None,
+                    help='Optional model version to save for this model. It will be inferred automatically from model-id.',
+                    **attrs)(f)
 
 def backend_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   # NOTE: LiteralBackend needs to remove the last two item as ggml and mlc is wip
@@ -453,10 +414,7 @@ def backend_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[
                     **attrs)(f)
 
 def model_name_argument(f: _AnyCallable | None = None, required: bool = True, **attrs: t.Any) -> t.Callable[[FC], FC]:
-  return cli_argument('model_name',
-                      type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING]),
-                      required=required,
-                      **attrs)(f)
+  return cli_argument('model_name', type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING]), required=required, **attrs)(f)
 
 def quantize_option(f: _AnyCallable | None = None, *, build: bool = False, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option('--quantise',
@@ -482,10 +440,7 @@ def quantize_option(f: _AnyCallable | None = None, *, build: bool = False, **att
       > [!NOTE] that quantization are currently only available in *PyTorch* models.''',
                     **attrs)(f)
 
-def workers_per_resource_option(f: _AnyCallable | None = None,
-                                *,
-                                build: bool = False,
-                                **attrs: t.Any) -> t.Callable[[FC], FC]:
+def workers_per_resource_option(f: _AnyCallable | None = None, *, build: bool = False, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option('--workers-per-resource',
                     default=None,
                     callback=workers_per_resource_callback,
@@ -536,18 +491,16 @@ def serialisation_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Cal
                     **attrs)(f)
 
 def container_registry_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
-  return cli_option(
-      '--container-registry',
-      'container_registry',
-      type=click.Choice(list(openllm.bundle.CONTAINER_NAMES)),
-      default='ecr',
-      show_default=True,
-      show_envvar=True,
-      envvar='OPENLLM_CONTAINER_REGISTRY',
-      callback=container_registry_callback,
-      help=
-      'The default container registry to get the base image for building BentoLLM. Currently, it supports ecr, ghcr, docker',
-      **attrs)(f)
+  return cli_option('--container-registry',
+                    'container_registry',
+                    type=click.Choice(list(openllm.bundle.CONTAINER_NAMES)),
+                    default='ecr',
+                    show_default=True,
+                    show_envvar=True,
+                    envvar='OPENLLM_CONTAINER_REGISTRY',
+                    callback=container_registry_callback,
+                    help='The default container registry to get the base image for building BentoLLM. Currently, it supports ecr, ghcr, docker',
+                    **attrs)(f)
 
 _wpr_strategies = {'round_robin', 'conserved'}
 
@@ -559,9 +512,8 @@ def workers_per_resource_callback(ctx: click.Context, param: click.Parameter, va
     try:
       float(value)  # type: ignore[arg-type]
     except ValueError:
-      raise click.BadParameter(
-          f"'workers_per_resource' only accept '{_wpr_strategies}' as possible strategies, otherwise pass in float.",
-          ctx, param) from None
+      raise click.BadParameter(f"'workers_per_resource' only accept '{_wpr_strategies}' as possible strategies, otherwise pass in float.", ctx,
+                               param) from None
     else:
       return value
 

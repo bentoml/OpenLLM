@@ -24,14 +24,12 @@ def process_annotations(annotations: str) -> str:
   else: return annotations
 
 _value_docstring = {
-    'default_id':
-        '''Return the default model to use when using 'openllm start <model_id>'.
+    'default_id': '''Return the default model to use when using 'openllm start <model_id>'.
         This could be one of the keys in 'self.model_ids' or custom users model.
 
         This field is required when defining under '__config__'.
         ''',
-    'model_ids':
-        '''A list of supported pretrained models tag for this given runnable.
+    'model_ids': '''A list of supported pretrained models tag for this given runnable.
 
         For example:
             For FLAN-T5 impl, this would be ["google/flan-t5-small", "google/flan-t5-base",
@@ -39,8 +37,7 @@ _value_docstring = {
 
         This field is required when defining under '__config__'.
         ''',
-    'architecture':
-        '''The model architecture that is supported by this LLM.
+    'architecture': '''The model architecture that is supported by this LLM.
 
         Note that any model weights within this architecture generation can always be run and supported by this LLM.
 
@@ -50,34 +47,21 @@ _value_docstring = {
             ```bash
             openllm start gpt-neox --model-id stabilityai/stablelm-tuned-alpha-3b
             ```''',
-    'default_backend':
-        '''The default backend to run LLM based on available accelerator. By default, it will be PyTorch (pt) for most models. For some models, such as Llama, it will use `vllm` or `flax`. It is a dictionary of key as the accelerator spec in k8s ('cpu', 'nvidia.com/gpu', 'amd.com/gpu', 'cloud-tpus.google.com/v2', ...) and the values as supported OpenLLM backend ('flax', 'tf', 'pt', 'vllm', 'ggml', 'mlc')''',
-    'url':
-        'The resolved url for this LLMConfig.',
-    'requires_gpu':
-        'Determines if this model is only available on GPU. By default it supports GPU and fallback to CPU.',
-    'trust_remote_code':
-        'Whether to always trust remote code',
-    'service_name':
-        "Generated service name for this LLMConfig. By default, it is \"generated_{model_name}_service.py\"",
-    'requirements':
-        'The default PyPI requirements needed to run this given LLM. By default, we will depend on bentoml, torch, transformers.',
-    'model_type':
-        'The model type for this given LLM. By default, it should be causal language modeling. Currently supported "causal_lm" or "seq2seq_lm"',
-    'name_type':
-        '''The default name typed for this model. "dasherize" will convert the name to lowercase and
+    'default_backend': '''The default backend to run LLM based on available accelerator. By default, it will be PyTorch (pt) for most models. For some models, such as Llama, it will use `vllm` or `flax`. It is a dictionary of key as the accelerator spec in k8s ('cpu', 'nvidia.com/gpu', 'amd.com/gpu', 'cloud-tpus.google.com/v2', ...) and the values as supported OpenLLM backend ('flax', 'tf', 'pt', 'vllm', 'ggml', 'mlc')''',
+    'url': 'The resolved url for this LLMConfig.',
+    'requires_gpu': 'Determines if this model is only available on GPU. By default it supports GPU and fallback to CPU.',
+    'trust_remote_code': 'Whether to always trust remote code',
+    'service_name': "Generated service name for this LLMConfig. By default, it is \"generated_{model_name}_service.py\"",
+    'requirements': 'The default PyPI requirements needed to run this given LLM. By default, we will depend on bentoml, torch, transformers.',
+    'model_type': 'The model type for this given LLM. By default, it should be causal language modeling. Currently supported "causal_lm" or "seq2seq_lm"',
+    'name_type': '''The default name typed for this model. "dasherize" will convert the name to lowercase and
         replace spaces with dashes. "lowercase" will convert the name to lowercase. If this is not set, then both
         `model_name` and `start_name` must be specified.''',
-    'model_name':
-        'The normalized version of __openllm_start_name__, determined by __openllm_name_type__',
-    'start_name':
-        'Default name to be used with `openllm start`',
-    'env':
-        'A EnvVarMixin instance for this LLMConfig.',
-    'timeout':
-        'The default timeout to be set for this given LLM.',
-    'workers_per_resource':
-        '''The number of workers per resource. This is used to determine the number of workers to use for this model.
+    'model_name': 'The normalized version of __openllm_start_name__, determined by __openllm_name_type__',
+    'start_name': 'Default name to be used with `openllm start`',
+    'env': 'A EnvVarMixin instance for this LLMConfig.',
+    'timeout': 'The default timeout to be set for this given LLM.',
+    'workers_per_resource': '''The number of workers per resource. This is used to determine the number of workers to use for this model.
         For example, if this is set to 0.5, then OpenLLM will use 1 worker per 2 resources. If this is set to 1, then
         OpenLLM will use 1 worker per resource. If this is set to 2, then OpenLLM will use 2 workers per resource.
 
@@ -86,10 +70,8 @@ _value_docstring = {
 
         By default, it is set to 1.
         ''',
-    'fine_tune_strategies':
-        'The fine-tune strategies for this given LLM.',
-    'tokenizer_class':
-        'Optional tokenizer class for this given LLM. See Llama for example.',
+    'fine_tune_strategies': 'The fine-tune strategies for this given LLM.',
+    'tokenizer_class': 'Optional tokenizer class for this given LLM. See Llama for example.',
 }
 
 _transformed = {'fine_tune_strategies': 't.Dict[AdapterType, FineTuneConfig]'}
@@ -99,16 +81,13 @@ def main() -> int:
     processed = f.readlines()
 
   start_idx, end_idx = processed.index(' ' * 2 + START_COMMENT), processed.index(' ' * 2 + END_COMMENT)
-  start_stub_idx, end_stub_idx = processed.index(' ' * 4 + START_SPECIAL_COMMENT), processed.index(' ' * 4 +
-                                                                                                   END_SPECIAL_COMMENT)
-  start_attrs_idx, end_attrs_idx = processed.index(' ' * 4 + START_ATTRS_COMMENT), processed.index(' ' * 4 +
-                                                                                                   END_ATTRS_COMMENT)
+  start_stub_idx, end_stub_idx = processed.index(' ' * 4 + START_SPECIAL_COMMENT), processed.index(' ' * 4 + END_SPECIAL_COMMENT)
+  start_attrs_idx, end_attrs_idx = processed.index(' ' * 4 + START_ATTRS_COMMENT), processed.index(' ' * 4 + END_ATTRS_COMMENT)
 
   # NOTE: inline stubs __config__ attrs representation
   special_attrs_lines: list[str] = []
   for keys, ForwardRef in codegen.get_annotations(ModelSettings).items():
-    special_attrs_lines.append(
-        f"{' ' * 4}{keys}: {_transformed.get(keys, process_annotations(ForwardRef.__forward_arg__))}\n")
+    special_attrs_lines.append(f"{' ' * 4}{keys}: {_transformed.get(keys, process_annotations(ForwardRef.__forward_arg__))}\n")
   # NOTE: inline stubs for _ConfigAttr type stubs
   config_attr_lines: list[str] = []
   for keys, ForwardRef in codegen.get_annotations(ModelSettings).items():
@@ -132,40 +111,28 @@ def main() -> int:
   lines.append(' ' * 2 + '# NOTE: generation_class, sampling_class and extras arguments\n')
   lines.extend([
       ' ' * 2 + line for line in [
-          '@overload\n',
-          "def __getitem__(self, item: t.Literal['generation_class']) -> t.Type[openllm_core.GenerationConfig]: ...\n",
-          '@overload\n',
-          "def __getitem__(self, item: t.Literal['sampling_class']) -> t.Type[openllm_core.SamplingParams]: ...\n",
-          '@overload\n', "def __getitem__(self, item: t.Literal['extras']) -> t.Dict[str, t.Any]: ...\n",
+          '@overload\n', "def __getitem__(self, item: t.Literal['generation_class']) -> t.Type[openllm_core.GenerationConfig]: ...\n", '@overload\n',
+          "def __getitem__(self, item: t.Literal['sampling_class']) -> t.Type[openllm_core.SamplingParams]: ...\n", '@overload\n',
+          "def __getitem__(self, item: t.Literal['extras']) -> t.Dict[str, t.Any]: ...\n",
       ]
   ])
   lines.append(' ' * 2 + '# NOTE: GenerationConfig arguments\n')
   generation_config_anns = codegen.get_annotations(GenerationConfig)
   for keys, type_pep563 in generation_config_anns.items():
-    lines.extend([
-        ' ' * 2 + line
-        for line in ['@overload\n', f"def __getitem__(self, item: t.Literal['{keys}']) -> {type_pep563}: ...\n"]
-    ])
+    lines.extend([' ' * 2 + line for line in ['@overload\n', f"def __getitem__(self, item: t.Literal['{keys}']) -> {type_pep563}: ...\n"]])
   lines.append(' ' * 2 + '# NOTE: SamplingParams arguments\n')
   for keys, type_pep563 in codegen.get_annotations(SamplingParams).items():
     if keys not in generation_config_anns:
-      lines.extend([
-          ' ' * 2 + line
-          for line in ['@overload\n', f"def __getitem__(self, item: t.Literal['{keys}']) -> {type_pep563}: ...\n",]
-      ])
+      lines.extend([' ' * 2 + line for line in ['@overload\n', f"def __getitem__(self, item: t.Literal['{keys}']) -> {type_pep563}: ...\n",]])
   lines.append(' ' * 2 + '# NOTE: PeftType arguments\n')
   for keys in PeftType._member_names_:
-    lines.extend([
-        ' ' * 2 + line for line in
-        ['@overload\n', f"def __getitem__(self, item: t.Literal['{keys.lower()}']) -> dict[str, t.Any]: ...\n",]
-    ])
+    lines.extend([' ' * 2 + line for line in ['@overload\n', f"def __getitem__(self, item: t.Literal['{keys.lower()}']) -> dict[str, t.Any]: ...\n",]])
 
-  processed = processed[:start_attrs_idx] + [
-      ' ' * 4 + START_ATTRS_COMMENT, *special_attrs_lines, ' ' * 4 + END_ATTRS_COMMENT
-  ] + processed[end_attrs_idx + 1:start_stub_idx] + [
-      ' ' * 4 + START_SPECIAL_COMMENT, *config_attr_lines, ' ' * 4 + END_SPECIAL_COMMENT
-  ] + processed[end_stub_idx + 1:start_idx] + [' ' * 2 + START_COMMENT, *lines, ' ' * 2 + END_COMMENT
-                                              ] + processed[end_idx + 1:]
+  processed = processed[:start_attrs_idx] + [' ' * 4 + START_ATTRS_COMMENT, *special_attrs_lines, ' ' * 4 + END_ATTRS_COMMENT
+                                             ] + processed[end_attrs_idx + 1:start_stub_idx] + [
+                                                 ' ' * 4 + START_SPECIAL_COMMENT, *config_attr_lines, ' ' * 4 + END_SPECIAL_COMMENT
+                                             ] + processed[end_stub_idx + 1:start_idx] + [' ' * 2 + START_COMMENT, *lines, ' ' * 2 + END_COMMENT
+                                                                                          ] + processed[end_idx + 1:]
   with _TARGET_FILE.open('w') as f:
     f.writelines(processed)
   return 0

@@ -42,8 +42,7 @@ def main() -> int:
   meta.extend([f'<th>{header}</th>\n' for header in formatted.keys() if header not in ('URL',)])
   meta += ['</tr>\n']
   # NOTE: rows
-  for name, architecture, url, model_ids, installation in t.cast(t.Iterable[t.Tuple[str, str, str, t.List[str], str]],
-                                                                 zip(*formatted.values())):
+  for name, architecture, url, model_ids, installation in t.cast(t.Iterable[t.Tuple[str, str, str, t.List[str], str]], zip(*formatted.values())):
     meta += '<tr>\n'
     # configure architecture URL
     cfg_cls = openllm.CONFIG_MAPPING[name]

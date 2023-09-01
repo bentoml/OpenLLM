@@ -26,17 +26,14 @@ def cli(model_name: str | None, output: LiteralOutput) -> DictStrAny:
   models = tuple(inflection.dasherize(key) for key in openllm.CONFIG_MAPPING.keys())
   ids_in_local_store = {
       k: [
-          i for i in bentoml.models.list() if 'framework' in i.info.labels and
-          i.info.labels['framework'] == 'openllm' and 'model_name' in i.info.labels and i.info.labels['model_name'] == k
+          i for i in bentoml.models.list() if 'framework' in i.info.labels and i.info.labels['framework'] == 'openllm' and
+          'model_name' in i.info.labels and i.info.labels['model_name'] == k
       ] for k in models
   }
   if model_name is not None:
     ids_in_local_store = {
-        k: [
-            i
-            for i in v
-            if 'model_name' in i.info.labels and i.info.labels['model_name'] == inflection.dasherize(model_name)
-        ] for k, v in ids_in_local_store.items()
+        k: [i for i in v if 'model_name' in i.info.labels and i.info.labels['model_name'] == inflection.dasherize(model_name)]
+        for k, v in ids_in_local_store.items()
     }
   ids_in_local_store = {k: v for k, v in ids_in_local_store.items() if v}
   local_models = {

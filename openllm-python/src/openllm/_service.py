@@ -21,35 +21,28 @@ if t.TYPE_CHECKING:
   from bentoml._internal.runner.runner import AbstractRunner
   from bentoml._internal.runner.runner import RunnerMethod
   from openllm_core._typing_compat import TypeAlias
-  _EmbeddingMethod: TypeAlias = RunnerMethod[t.Union[bentoml.Runnable, openllm.LLMRunnable[t.Any, t.Any]],
-                                             [t.List[str]], t.Sequence[openllm.EmbeddingsOutput]]
+  _EmbeddingMethod: TypeAlias = RunnerMethod[t.Union[bentoml.Runnable, openllm.LLMRunnable[t.Any, t.Any]], [t.List[str]],
+                                             t.Sequence[openllm.EmbeddingsOutput]]
 
 # The following warnings from bitsandbytes, and probably not that important for users to see
-warnings.filterwarnings('ignore',
-                        message='MatMul8bitLt: inputs will be cast from torch.float32 to float16 during quantization')
-warnings.filterwarnings('ignore',
-                        message='MatMul8bitLt: inputs will be cast from torch.bfloat16 to float16 during quantization')
+warnings.filterwarnings('ignore', message='MatMul8bitLt: inputs will be cast from torch.float32 to float16 during quantization')
+warnings.filterwarnings('ignore', message='MatMul8bitLt: inputs will be cast from torch.bfloat16 to float16 during quantization')
 warnings.filterwarnings('ignore', message='The installed version of bitsandbytes was compiled without GPU support.')
 
 model = os.environ.get('OPENLLM_MODEL', '{__model_name__}')  # openllm: model name
 adapter_map = os.environ.get('OPENLLM_ADAPTER_MAP', '''{__model_adapter_map__}''')  # openllm: model adapter map
 llm_config = openllm.AutoConfig.for_model(model)
 runner = openllm.Runner(model, llm_config=llm_config, ensure_available=False, adapter_map=orjson.loads(adapter_map))
-generic_embedding_runner = bentoml.Runner(
-    openllm.GenericEmbeddingRunnable,  # XXX: remove arg-type once bentoml.Runner is correct set with type
-    name='llm-generic-embedding',
-    scheduling_strategy=openllm_core.CascadingResourceStrategy,
-    max_batch_size=32,
-    max_latency_ms=300)
+generic_embedding_runner = bentoml.Runner(openllm.GenericEmbeddingRunnable,  # XXX: remove arg-type once bentoml.Runner is correct set with type
+                                          name='llm-generic-embedding',
+                                          scheduling_strategy=openllm_core.CascadingResourceStrategy,
+                                          max_batch_size=32,
+                                          max_latency_ms=300)
 runners: list[AbstractRunner] = [runner]
 if not runner.supports_embeddings: runners.append(generic_embedding_runner)
 svc = bentoml.Service(name=f"llm-{llm_config['start_name']}-service", runners=runners)
 
-_JsonInput = bentoml.io.JSON.from_sample({
-    'prompt': '',
-    'llm_config': llm_config.model_dump(flatten=True),
-    'adapter_name': None
-})
+_JsonInput = bentoml.io.JSON.from_sample({'prompt': '', 'llm_config': llm_config.model_dump(flatten=True), 'adapter_name': None})
 
 @svc.api(route='/v1/generate',
          input=_JsonInput,
@@ -67,10 +60,7 @@ async def generate_v1(input_dict: dict[str, t.Any]) -> openllm.GenerationOutput:
 async def generate_stream_v1(input_dict: dict[str, t.Any]) -> t.AsyncGenerator[str, None]:
   echo = input_dict.pop('echo', False)
   qa_inputs = openllm.GenerationInput.from_llm_config(llm_config)(**input_dict)
-  return runner.generate_iterator.async_stream(qa_inputs.prompt,
-                                               adapter_name=qa_inputs.adapter_name,
-                                               echo=echo,
-                                               **qa_inputs.llm_config.model_dump())
+  return runner.generate_iterator.async_stream(qa_inputs.prompt, adapter_name=qa_inputs.adapter_name, echo=echo, **qa_inputs.llm_config.model_dump())
 
 @svc.api(route='/v1/metadata',
          input=bentoml.io.Text(),
@@ -96,12 +86,10 @@ def metadata_v1(_: str) -> openllm.MetadataOutput:
          input=bentoml.io.JSON.from_sample(['Hey Jude, welcome to the jungle!', 'What is the meaning of life?']),
          output=bentoml.io.JSON.from_sample({
              'embeddings': [
-                 0.007917795330286026, -0.014421648345887661, 0.00481307040899992, 0.007331526838243008,
-                 -0.0066398633643984795, 0.00945580005645752, 0.0087016262114048, -0.010709521360695362,
-                 0.012635177001357079, 0.010541186667978764, -0.00730888033285737, -0.001783102168701589,
-                 0.02339819073677063, -0.010825827717781067, -0.015888236463069916, 0.01876218430697918,
-                 0.0076906150206923485, 0.0009032754460349679, -0.010024012066423893, 0.01090280432254076,
-                 -0.008668390102684498, 0.02070549875497818, 0.0014594447566196322, -0.018775740638375282,
+                 0.007917795330286026, -0.014421648345887661, 0.00481307040899992, 0.007331526838243008, -0.0066398633643984795, 0.00945580005645752,
+                 0.0087016262114048, -0.010709521360695362, 0.012635177001357079, 0.010541186667978764, -0.00730888033285737, -0.001783102168701589,
+                 0.02339819073677063, -0.010825827717781067, -0.015888236463069916, 0.01876218430697918, 0.0076906150206923485, 0.0009032754460349679,
+                 -0.010024012066423893, 0.01090280432254076, -0.008668390102684498, 0.02070549875497818, 0.0014594447566196322, -0.018775740638375282,
                  -0.014814382418990135, 0.01796768605709076
              ],
              'num_tokens': 20
@@ -121,8 +109,7 @@ if runner.supports_hf_agent and openllm.utils.is_transformers_supports_agent():
       raise openllm.exceptions.OpenLLMException(f'Invalid JSON input received: {err}') from None
     stop = input_data.parameters.pop('stop', ['\n'])
     try:
-      return JSONResponse(await runner.generate_one.async_run(input_data.inputs, stop, **input_data.parameters),
-                          status_code=200)
+      return JSONResponse(await runner.generate_one.async_run(input_data.inputs, stop, **input_data.parameters), status_code=200)
     except NotImplementedError:
       return JSONResponse(f"'{model}' is currently not supported with HuggingFace agents.", status_code=500)
 

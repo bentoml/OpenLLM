@@ -7,6 +7,5 @@ FRAMEWORK_TO_AUTOCLASS_MAPPING = {
     'vllm': ('AutoModelForCausalLM', 'AutoModelForSeq2SeqLM')
 }
 HUB_ATTRS = [
-    'cache_dir', 'code_revision', 'force_download', 'local_files_only', 'proxies', 'resume_download', 'revision',
-    'subfolder', 'use_auth_token'
+    'cache_dir', 'code_revision', 'force_download', 'local_files_only', 'proxies', 'resume_download', 'revision', 'subfolder', 'use_auth_token'
 ]

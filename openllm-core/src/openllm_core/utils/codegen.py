@@ -110,8 +110,7 @@ def generate_function(typ: type[t.Any],
                       globs: dict[str, t.Any],
                       annotations: dict[str, t.Any] | None = None) -> AnyCallable:
   from openllm_core.utils import SHOW_CODEGEN
-  script = 'def %s(%s):\n    %s\n' % (func_name, ', '.join(args) if args is not None else '',
-                                      '\n    '.join(lines) if lines else 'pass')
+  script = 'def %s(%s):\n    %s\n' % (func_name, ', '.join(args) if args is not None else '', '\n    '.join(lines) if lines else 'pass')
   meth = _make_method(func_name, script, generate_unique_filename(typ, func_name), globs)
   if annotations: meth.__annotations__ = annotations
   if SHOW_CODEGEN: print('Generated script for {typ}:\n\n', script)
@@ -122,7 +121,7 @@ def make_env_transformer(cls: type[openllm_core.LLMConfig],
                          suffix: LiteralString | None = None,
                          default_callback: t.Callable[[str, t.Any], t.Any] | None = None,
                          globs: DictStrAny | None = None,
-                        ) -> AnyCallable:
+                         ) -> AnyCallable:
   from openllm_core.utils import dantic
   from openllm_core.utils import field_env_key
 
@@ -171,16 +170,15 @@ def gen_sdk(func: _T, name: str | None = None, **attrs: t.Any) -> _T:
   return t.cast(
       _T,
       functools.update_wrapper(
-          types.new_class(
-              name, (t.cast('PartialAny', functools.partial), ReprMixin),
-              exec_body=lambda ns: ns.update({
-                  '__repr_keys__': property(lambda _: [i for i in _signatures.keys() if not i.startswith('_')]),
-                  '__repr_args__': _repr_args,
-                  '__repr__': _repr,
-                  '__doc__': inspect.cleandoc(doc),
-                  '__module__': 'openllm'
-              }),
-          )(func, **attrs), func,
+          types.new_class(name, (t.cast('PartialAny', functools.partial), ReprMixin),
+                          exec_body=lambda ns: ns.update({
+                              '__repr_keys__': property(lambda _: [i for i in _signatures.keys() if not i.startswith('_')]),
+                              '__repr_args__': _repr_args,
+                              '__repr__': _repr,
+                              '__doc__': inspect.cleandoc(doc),
+                              '__module__': 'openllm'
+                          }),
+                          )(func, **attrs), func,
       ))
 
 __all__ = ['gen_sdk', 'make_attr_tuple_class', 'make_env_transformer', 'generate_unique_filename', 'generate_function']

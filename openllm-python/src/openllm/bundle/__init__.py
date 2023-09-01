@@ -10,10 +10,7 @@ from openllm_core.utils import LazyModule
 
 _import_structure: dict[str, list[str]] = {
     '_package': ['create_bento', 'build_editable', 'construct_python_options', 'construct_docker_options'],
-    'oci': [
-        'CONTAINER_NAMES', 'get_base_container_tag', 'build_container', 'get_base_container_name',
-        'supported_registries', 'RefResolver'
-    ]
+    'oci': ['CONTAINER_NAMES', 'get_base_container_tag', 'build_container', 'get_base_container_name', 'supported_registries', 'RefResolver']
 }
 
 if t.TYPE_CHECKING:

@@ -16,9 +16,5 @@ def echo(text: t.Any, fg: str = 'green', _with_style: bool = True, **attrs: t.An
     t.cast(t.Callable[..., None], click.echo if not _with_style else click.secho)(text, **attrs)
 
 COLUMNS: int = int(os.environ.get('COLUMNS', str(120)))
-CONTEXT_SETTINGS: DictStrAny = {
-    'help_option_names': ['-h', '--help'],
-    'max_content_width': COLUMNS,
-    'token_normalize_func': inflection.underscore
-}
+CONTEXT_SETTINGS: DictStrAny = {'help_option_names': ['-h', '--help'], 'max_content_width': COLUMNS, 'token_normalize_func': inflection.underscore}
 __all__ = ['echo', 'COLUMNS', 'CONTEXT_SETTINGS']

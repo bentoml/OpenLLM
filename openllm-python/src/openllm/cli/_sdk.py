@@ -84,8 +84,7 @@ def _start(model_name: str,
   from .entrypoint import start_grpc_command
   llm_config = openllm.AutoConfig.for_model(model_name)
   _ModelEnv = openllm_core.utils.EnvVarMixin(model_name,
-                                             backend=openllm_core.utils.first_not_none(
-                                                 backend, default=llm_config.default_backend()),
+                                             backend=openllm_core.utils.first_not_none(backend, default=llm_config.default_backend()),
                                              model_id=model_id,
                                              quantize=quantize)
   os.environ[_ModelEnv.backend] = _ModelEnv['backend_value']
@@ -94,26 +93,19 @@ def _start(model_name: str,
   if model_id: args.extend(['--model-id', model_id])
   if timeout: args.extend(['--server-timeout', str(timeout)])
   if workers_per_resource:
-    args.extend([
-        '--workers-per-resource',
-        str(workers_per_resource) if not isinstance(workers_per_resource, str) else workers_per_resource
-    ])
+    args.extend(['--workers-per-resource', str(workers_per_resource) if not isinstance(workers_per_resource, str) else workers_per_resource])
   if device and not os.environ.get('CUDA_VISIBLE_DEVICES'): args.extend(['--device', ','.join(device)])
   if quantize: args.extend(['--quantize', str(quantize)])
   if cors: args.append('--cors')
   if adapter_map:
-    args.extend(
-        list(
-            itertools.chain.from_iterable([['--adapter-id', f"{k}{':'+v if v else ''}"] for k, v in adapter_map.items()
-                                          ])))
+    args.extend(list(itertools.chain.from_iterable([['--adapter-id', f"{k}{':'+v if v else ''}"] for k, v in adapter_map.items()])))
   if additional_args: args.extend(additional_args)
   if __test__: args.append('--return-process')
 
   return start_command_factory(start_command if not _serve_grpc else start_grpc_command,
                                model_name,
                                _context_settings=termui.CONTEXT_SETTINGS,
-                               _serve_grpc=_serve_grpc).main(args=args if len(args) > 0 else None,
-                                                             standalone_mode=False)
+                               _serve_grpc=_serve_grpc).main(args=args if len(args) > 0 else None, standalone_mode=False)
 
 @inject
 def _build(model_name: str,
@@ -180,9 +172,7 @@ def _build(model_name: str,
   Returns:
       ``bentoml.Bento | str``: BentoLLM instance. This can be used to serve the LLM or can be pushed to BentoCloud.
   """
-  args: list[str] = [
-      sys.executable, '-m', 'openllm', 'build', model_name, '--machine', '--serialisation', serialisation_format
-  ]
+  args: list[str] = [sys.executable, '-m', 'openllm', 'build', model_name, '--machine', '--serialisation', serialisation_format]
   if quantize: args.extend(['--quantize', quantize])
   if containerize and push: raise OpenLLMException("'containerize' and 'push' are currently mutually exclusive.")
   if push: args.extend(['--push'])
@@ -265,8 +255,7 @@ def _list_models() -> dict[str, t.Any]:
   from .entrypoint import models_command
   return models_command.main(args=['-o', 'json', '--show-available', '--machine'], standalone_mode=False)
 
-start, start_grpc, build, import_model, list_models = openllm_core.utils.codegen.gen_sdk(
-    _start, _serve_grpc=False), openllm_core.utils.codegen.gen_sdk(
-        _start, _serve_grpc=True), openllm_core.utils.codegen.gen_sdk(_build), openllm_core.utils.codegen.gen_sdk(
-            _import_model), openllm_core.utils.codegen.gen_sdk(_list_models)
+start, start_grpc, build, import_model, list_models = openllm_core.utils.codegen.gen_sdk(_start, _serve_grpc=False), openllm_core.utils.codegen.gen_sdk(
+    _start, _serve_grpc=True), openllm_core.utils.codegen.gen_sdk(_build), openllm_core.utils.codegen.gen_sdk(
+        _import_model), openllm_core.utils.codegen.gen_sdk(_list_models)
 __all__ = ['start', 'start_grpc', 'build', 'import_model', 'list_models']

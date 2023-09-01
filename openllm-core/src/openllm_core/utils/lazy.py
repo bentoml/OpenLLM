@@ -110,8 +110,7 @@ class LazyModule(types.ModuleType):
     It also contains a special case for all of the metadata information, such as __version__ and __version_info__.
     '''
     if name in _reserved_namespace:
-      raise openllm_core.exceptions.ForbiddenAttributeError(
-          f"'{name}' is a reserved namespace for {self._name} and should not be access nor modified.")
+      raise openllm_core.exceptions.ForbiddenAttributeError(f"'{name}' is a reserved namespace for {self._name} and should not be access nor modified.")
     dunder_to_metadata = {
         '__title__': 'Name',
         '__copyright__': '',
@@ -147,10 +146,9 @@ class LazyModule(types.ModuleType):
     if '__openllm_migration__' in self._objects:
       cur_value = self._objects['__openllm_migration__'].get(name, _sentinel)
       if cur_value is not _sentinel:
-        warnings.warn(
-            f"'{name}' is deprecated and will be removed in future version. Make sure to use '{cur_value}' instead",
-            DeprecationWarning,
-            stacklevel=3)
+        warnings.warn(f"'{name}' is deprecated and will be removed in future version. Make sure to use '{cur_value}' instead",
+                      DeprecationWarning,
+                      stacklevel=3)
         return getattr(self, cur_value)
     if name in self._objects: return self._objects.__getitem__(name)
     if name in self._modules: value = self._get_module(name)
@@ -165,9 +163,7 @@ class LazyModule(types.ModuleType):
     try:
       return importlib.import_module('.' + module_name, self.__name__)
     except Exception as e:
-      raise RuntimeError(
-          f'Failed to import {self.__name__}.{module_name} because of the following error (look up to see its traceback):\n{e}'
-      ) from e
+      raise RuntimeError(f'Failed to import {self.__name__}.{module_name} because of the following error (look up to see its traceback):\n{e}') from e
 
   # make sure this module is picklable
   def __reduce__(self) -> tuple[type[LazyModule], tuple[str, str | None, dict[str, list[str]]]]:

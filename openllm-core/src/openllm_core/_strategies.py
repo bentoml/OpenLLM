@@ -151,8 +151,7 @@ def _from_spec(cls: type[DynResource], spec: t.Any) -> list[str]:
   elif isinstance(spec, list):
     return [str(x) for x in spec]
   else:
-    raise TypeError(
-        f"'{cls.__name__}.from_spec' only supports parsing spec of type int, str, or list, got '{type(spec)}' instead.")
+    raise TypeError(f"'{cls.__name__}.from_spec' only supports parsing spec of type int, str, or list, got '{type(spec)}' instead.")
 
 def _raw_device_uuid_nvml() -> list[str] | None:
   from ctypes import CDLL
@@ -278,10 +277,8 @@ class CascadingResourceStrategy(bentoml.Strategy, ReprMixin):
 
   TODO: Support CloudTPUResource
   """
-
   @classmethod
-  def get_worker_count(cls, runnable_class: type[bentoml.Runnable], resource_request: dict[str, t.Any] | None,
-                       workers_per_resource: float) -> int:
+  def get_worker_count(cls, runnable_class: type[bentoml.Runnable], resource_request: dict[str, t.Any] | None, workers_per_resource: float) -> int:
     '''Return the number of workers to be used for the given runnable class.
 
     Note that for all available GPU, the number of workers will always be 1.
@@ -313,8 +310,8 @@ class CascadingResourceStrategy(bentoml.Strategy, ReprMixin):
     )
 
   @classmethod
-  def get_worker_env(cls, runnable_class: type[bentoml.Runnable], resource_request: dict[str, t.Any] | None,
-                     workers_per_resource: int | float, worker_index: int) -> dict[str, t.Any]:
+  def get_worker_env(cls, runnable_class: type[bentoml.Runnable], resource_request: dict[str, t.Any] | None, workers_per_resource: int | float,
+                     worker_index: int) -> dict[str, t.Any]:
     '''Get worker env for this given worker_index.
 
     Args:
@@ -379,19 +376,15 @@ class CascadingResourceStrategy(bentoml.Strategy, ReprMixin):
       # then it will round down to 2. If workers_per_source=0.6, then it will also round up to 2.
       assigned_resource_per_worker = round(1 / workers_per_resource)
       if len(gpus) < assigned_resource_per_worker:
-        logger.warning(
-            'Failed to allocate %s GPUs for %s (number of available GPUs < assigned workers per resource [%s])', gpus,
-            worker_index, assigned_resource_per_worker)
-        raise IndexError(
-            f"There aren't enough assigned GPU(s) for given worker id '{worker_index}' [required: {assigned_resource_per_worker}]."
-        )
+        logger.warning('Failed to allocate %s GPUs for %s (number of available GPUs < assigned workers per resource [%s])', gpus, worker_index,
+                       assigned_resource_per_worker)
+        raise IndexError(f"There aren't enough assigned GPU(s) for given worker id '{worker_index}' [required: {assigned_resource_per_worker}].")
       assigned_gpu = gpus[assigned_resource_per_worker * worker_index:assigned_resource_per_worker * (worker_index + 1)]
       dev = ','.join(assigned_gpu)
     else:
       idx = worker_index // workers_per_resource
       if idx >= len(gpus):
-        raise ValueError(
-            f'Number of available GPU ({gpus}) preceeds the given workers_per_resource {workers_per_resource}')
+        raise ValueError(f'Number of available GPU ({gpus}) preceeds the given workers_per_resource {workers_per_resource}')
       dev = str(gpus[idx])
     return dev
 

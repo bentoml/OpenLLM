@@ -26,14 +26,11 @@ else:
   # configuration for bitsandbytes before import
   _os.environ["BITSANDBYTES_NOWELCOME"] = _os.environ.get("BITSANDBYTES_NOWELCOME", "1")
   # NOTE: The following warnings from bitsandbytes, and probably not that important for users to see when DEBUG is False
-  _warnings.filterwarnings(
-      "ignore", message="MatMul8bitLt: inputs will be cast from torch.float32 to float16 during quantization")
-  _warnings.filterwarnings(
-      "ignore", message="MatMul8bitLt: inputs will be cast from torch.bfloat16 to float16 during quantization")
+  _warnings.filterwarnings("ignore", message="MatMul8bitLt: inputs will be cast from torch.float32 to float16 during quantization")
+  _warnings.filterwarnings("ignore", message="MatMul8bitLt: inputs will be cast from torch.bfloat16 to float16 during quantization")
   _warnings.filterwarnings("ignore", message="The installed version of bitsandbytes was compiled without GPU support.")
   # NOTE: ignore the following warning from ghapi as it is not important for users
-  _warnings.filterwarnings("ignore",
-                           message="Neither GITHUB_TOKEN nor GITHUB_JWT_TOKEN found: running as unauthenticated")
+  _warnings.filterwarnings("ignore", message="Neither GITHUB_TOKEN nor GITHUB_JWT_TOKEN found: running as unauthenticated")
 
 _import_structure: dict[str, list[str]] = {
     "exceptions": [],
@@ -48,13 +45,8 @@ _import_structure: dict[str, list[str]] = {
     "_quantisation": ["infer_quantisation_config"],
     "_embeddings": ["GenericEmbeddingRunnable"],
     "_llm": ["LLM", "Runner", "LLMRunner", "LLMRunnable", "EmbeddingsOutput"],
-    "_generation": [
-        "StopSequenceCriteria", "StopOnTokens", "LogitsProcessorList", "StoppingCriteriaList",
-        "prepare_logits_processor"
-    ],
-    "models.auto": [
-        "MODEL_MAPPING_NAMES", "MODEL_FLAX_MAPPING_NAMES", "MODEL_TF_MAPPING_NAMES", "MODEL_VLLM_MAPPING_NAMES"
-    ],
+    "_generation": ["StopSequenceCriteria", "StopOnTokens", "LogitsProcessorList", "StoppingCriteriaList", "prepare_logits_processor"],
+    "models.auto": ["MODEL_MAPPING_NAMES", "MODEL_FLAX_MAPPING_NAMES", "MODEL_TF_MAPPING_NAMES", "MODEL_VLLM_MAPPING_NAMES"],
     "models.chatglm": [],
     "models.baichuan": [],
     "models.dolly_v2": [],
@@ -114,8 +106,7 @@ try:
   if not openllm_core.utils.is_torch_available(): raise exceptions.MissingDependencyError
 except exceptions.MissingDependencyError:
   _import_structure["utils.dummy_pt_objects"] = [
-      name for name in dir(utils.dummy_pt_objects)
-      if not name.startswith("_") and name not in ("ChatGLM", "Baichuan", "MPT", "Falcon", "annotations")
+      name for name in dir(utils.dummy_pt_objects) if not name.startswith("_") and name not in ("ChatGLM", "Baichuan", "MPT", "Falcon", "annotations")
   ]
 else:
   _import_structure["models.flan_t5"].extend(["FlanT5"])

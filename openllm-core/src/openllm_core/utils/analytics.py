@@ -34,7 +34,6 @@ def _usage_event_debugging() -> bool:
   return os.environ.get('__BENTOML_DEBUG_USAGE', str(False)).lower() == 'true'
 
 def silent(func: t.Callable[P, T]) -> t.Callable[P, T]:
-
   @functools.wraps(func)
   def wrapper(*args: P.args, **kwargs: P.kwargs) -> t.Any:
     try:
@@ -62,7 +61,6 @@ def set_bentoml_tracking() -> t.Generator[None, None, None]:
     os.environ[_internal_analytics.BENTOML_DO_NOT_TRACK] = original_value
 
 class EventMeta:
-
   @property
   def event_name(self) -> str:
     # camel case to snake case

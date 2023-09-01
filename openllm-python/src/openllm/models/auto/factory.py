@@ -30,9 +30,7 @@ class BaseAutoLLMClass:
   _model_mapping: t.ClassVar[_LazyAutoMapping]
 
   def __init__(self, *args: t.Any, **attrs: t.Any):
-    raise EnvironmentError(
-        f"Cannot instantiate {self.__class__.__name__} directly. Please use '{self.__class__.__name__}.Runner(model_name)' instead."
-    )
+    raise EnvironmentError(f"Cannot instantiate {self.__class__.__name__} directly. Please use '{self.__class__.__name__}.Runner(model_name)' instead.")
 
   @classmethod
   def for_model(cls,
@@ -50,10 +48,7 @@ class BaseAutoLLMClass:
     >>> llm = openllm.AutoLLM.for_model("flan-t5")
     ```
     '''
-    llm = cls.infer_class_from_name(model).from_pretrained(model_id=model_id,
-                                                           model_version=model_version,
-                                                           llm_config=llm_config,
-                                                           **attrs)
+    llm = cls.infer_class_from_name(model).from_pretrained(model_id=model_id, model_version=model_version, llm_config=llm_config, **attrs)
     if ensure_available: llm.ensure_model_id_exists()
     return llm
 
@@ -116,9 +111,7 @@ class _LazyAutoMapping(OrderedDict, ReprMixin):
   This OrderedDict values() and keys() returns the list instead, so you don't
   have to do list(mapping.values()) to get the list of values.
   """
-
-  def __init__(self, config_mapping: OrderedDict[LiteralString, LiteralString],
-               model_mapping: OrderedDict[LiteralString, LiteralString]):
+  def __init__(self, config_mapping: OrderedDict[LiteralString, LiteralString], model_mapping: OrderedDict[LiteralString, LiteralString]):
     self._config_mapping = config_mapping
     self._reverse_config_mapping = {v: k for k, v in config_mapping.items()}
     self._model_mapping = model_mapping
@@ -153,32 +146,26 @@ class _LazyAutoMapping(OrderedDict, ReprMixin):
     return ReprMixin.__repr__(self)
 
   def __repr_args__(self) -> t.Generator[tuple[str, tuple[str, str]], t.Any, t.Any]:
-    yield from ((key, (value, self._model_mapping[key]))
-                for key, value in self._config_mapping.items()
-                if key in self._model_mapping)
+    yield from ((key, (value, self._model_mapping[key])) for key, value in self._config_mapping.items() if key in self._model_mapping)
 
   def __bool__(self) -> bool:
     return bool(self.keys())
 
   def keys(self) -> ConfigModelKeysView:
-    return t.cast('ConfigModelKeysView', [
-        self._load_attr_from_module(key, name)
-        for key, name in self._config_mapping.items()
-        if key in self._model_mapping.keys()
-    ] + list(self._extra_content.keys()))
+    return t.cast('ConfigModelKeysView',
+                  [self._load_attr_from_module(key, name) for key, name in self._config_mapping.items() if key in self._model_mapping.keys()] +
+                  list(self._extra_content.keys()))
 
   def values(self) -> ConfigModelValuesView:
-    return t.cast('ConfigModelValuesView', [
-        self._load_attr_from_module(key, name)
-        for key, name in self._model_mapping.items()
-        if key in self._config_mapping.keys()
-    ] + list(self._extra_content.values()))
+    return t.cast('ConfigModelValuesView',
+                  [self._load_attr_from_module(key, name) for key, name in self._model_mapping.items() if key in self._config_mapping.keys()] +
+                  list(self._extra_content.values()))
 
   def items(self) -> ConfigModelItemsView:
-    return t.cast('ConfigModelItemsView', [(self._load_attr_from_module(
-        key, self._config_mapping[key]), self._load_attr_from_module(key, self._model_mapping[key]))
-                                           for key in self._model_mapping.keys()
-                                           if key in self._config_mapping.keys()] + list(self._extra_content.items()))
+    return t.cast('ConfigModelItemsView',
+                  [(self._load_attr_from_module(key, self._config_mapping[key]), self._load_attr_from_module(key, self._model_mapping[key]))
+                   for key in self._model_mapping.keys()
+                   if key in self._config_mapping.keys()] + list(self._extra_content.items()))
 
   def __iter__(self) -> t.Iterator[type[openllm.LLMConfig]]:
     return iter(t.cast('SupportsIter[t.Iterator[type[openllm.LLMConfig]]]', self.keys()))

@@ -59,14 +59,12 @@ def load_tokenizer(llm: openllm.LLM[t.Any, T], **tokenizer_attrs: t.Any) -> T:
   return tokenizer
 
 class _Caller(t.Protocol[P]):
-
   def __call__(self, llm: openllm.LLM[M, T], *args: P.args, **kwargs: P.kwargs) -> t.Any:
     ...
 
 _extras = ['get', 'import_model', 'load_model']
 
 def _make_dispatch_function(fn: str) -> _Caller[P]:
-
   def caller(llm: openllm.LLM[M, T], *args: P.args, **kwargs: P.kwargs) -> t.Any:
     """Generic function dispatch to correct serialisation submodules based on LLM runtime.
 

@@ -27,9 +27,7 @@ if t.TYPE_CHECKING:
   BackendOrderedDict = OrderedDict[str, t.Tuple[t.Callable[[], bool], str]]
 
 logger = logging.getLogger(__name__)
-OPTIONAL_DEPENDENCIES = {
-    'opt', 'flan-t5', 'vllm', 'fine-tune', 'ggml', 'agents', 'openai', 'playground', 'gptq', 'grpc'
-}
+OPTIONAL_DEPENDENCIES = {'opt', 'flan-t5', 'vllm', 'fine-tune', 'ggml', 'agents', 'openai', 'playground', 'gptq', 'grpc'}
 ENV_VARS_TRUE_VALUES = {'1', 'ON', 'YES', 'TRUE'}
 ENV_VARS_TRUE_AND_AUTO_VALUES = ENV_VARS_TRUE_VALUES.union({'AUTO'})
 USE_TF = os.environ.get('USE_TF', 'AUTO').upper()
@@ -144,10 +142,9 @@ def is_tf_available() -> bool:
     _tf_version = None
     if USE_TF in ENV_VARS_TRUE_AND_AUTO_VALUES and USE_TORCH not in ENV_VARS_TRUE_VALUES:
       if _tf_available:
-        candidates = ('tensorflow', 'tensorflow-cpu', 'tensorflow-gpu', 'tf-nightly', 'tf-nightly-cpu',
-                      'tf-nightly-gpu', 'intel-tensorflow', 'intel-tensorflow-avx512', 'tensorflow-rocm',
-                      'tensorflow-macos', 'tensorflow-aarch64',
-                     )
+        candidates = ('tensorflow', 'tensorflow-cpu', 'tensorflow-gpu', 'tf-nightly', 'tf-nightly-cpu', 'tf-nightly-gpu', 'intel-tensorflow',
+                      'intel-tensorflow-avx512', 'tensorflow-rocm', 'tensorflow-macos', 'tensorflow-aarch64',
+                      )
         _tf_version = None
         # For the metadata, we have to look for both tensorflow and tensorflow-cpu
         for _pkg in candidates:
@@ -285,18 +282,20 @@ You can install it with pip: `pip install fairscale`. Please note that you may n
 your runtime after installation.
 '''
 
-BACKENDS_MAPPING: BackendOrderedDict = OrderedDict([
-    ('flax', (is_flax_available, FLAX_IMPORT_ERROR)), ('tf', (is_tf_available, TENSORFLOW_IMPORT_ERROR)),
-    ('torch', (is_torch_available, PYTORCH_IMPORT_ERROR)), ('vllm', (is_vllm_available, VLLM_IMPORT_ERROR)),
-    ('cpm_kernels', (is_cpm_kernels_available, CPM_KERNELS_IMPORT_ERROR)),
-    ('einops', (is_einops_available, EINOPS_IMPORT_ERROR)), ('triton', (is_triton_available, TRITON_IMPORT_ERROR)),
-    ('datasets', (is_datasets_available, DATASETS_IMPORT_ERROR)), ('peft', (is_peft_available, PEFT_IMPORT_ERROR)),
-    ('bitsandbytes', (is_bitsandbytes_available, BITSANDBYTES_IMPORT_ERROR)),
-    ('auto-gptq', (is_autogptq_available, AUTOGPTQ_IMPORT_ERROR)),
-    ('sentencepiece', (is_sentencepiece_available, SENTENCEPIECE_IMPORT_ERROR)),
-    ('xformers', (is_xformers_available, XFORMERS_IMPORT_ERROR)),
-    ('fairscale', (is_fairscale_available, FAIRSCALE_IMPORT_ERROR))
-])
+BACKENDS_MAPPING: BackendOrderedDict = OrderedDict([('flax', (is_flax_available, FLAX_IMPORT_ERROR)),
+                                                    ('tf', (is_tf_available, TENSORFLOW_IMPORT_ERROR)),
+                                                    ('torch', (is_torch_available, PYTORCH_IMPORT_ERROR)),
+                                                    ('vllm', (is_vllm_available, VLLM_IMPORT_ERROR)),
+                                                    ('cpm_kernels', (is_cpm_kernels_available, CPM_KERNELS_IMPORT_ERROR)),
+                                                    ('einops', (is_einops_available, EINOPS_IMPORT_ERROR)),
+                                                    ('triton', (is_triton_available, TRITON_IMPORT_ERROR)),
+                                                    ('datasets', (is_datasets_available, DATASETS_IMPORT_ERROR)),
+                                                    ('peft', (is_peft_available, PEFT_IMPORT_ERROR)),
+                                                    ('bitsandbytes', (is_bitsandbytes_available, BITSANDBYTES_IMPORT_ERROR)),
+                                                    ('auto-gptq', (is_autogptq_available, AUTOGPTQ_IMPORT_ERROR)),
+                                                    ('sentencepiece', (is_sentencepiece_available, SENTENCEPIECE_IMPORT_ERROR)),
+                                                    ('xformers', (is_xformers_available, XFORMERS_IMPORT_ERROR)),
+                                                    ('fairscale', (is_fairscale_available, FAIRSCALE_IMPORT_ERROR))])
 
 class DummyMetaclass(abc.ABCMeta):
   '''Metaclass for dummy object.
@@ -326,9 +325,7 @@ def require_backends(o: t.Any, backends: t.MutableSequence[str]) -> None:
       raise ImportError(VLLM_IMPORT_ERROR_WITH_TF.format(name))
     if 'flax' not in backends and is_flax_available() and not is_vllm_available():
       raise ImportError(VLLM_IMPORT_ERROR_WITH_FLAX.format(name))
-  failed = [
-      msg.format(name) for available, msg in (BACKENDS_MAPPING[backend] for backend in backends) if not available()
-  ]
+  failed = [msg.format(name) for available, msg in (BACKENDS_MAPPING[backend] for backend in backends) if not available()]
   if failed: raise ImportError(''.join(failed))
 
 class EnvVarMixin(ReprMixin):
@@ -371,11 +368,7 @@ class EnvVarMixin(ReprMixin):
     elif hasattr(self, item): return getattr(self, item)
     raise KeyError(f'Key {item} not found in {self}')
 
-  def __init__(self,
-               model_name: str,
-               backend: LiteralBackend = 'pt',
-               model_id: str | None = None,
-               quantize: LiteralString | None = None) -> None:
+  def __init__(self, model_name: str, backend: LiteralBackend = 'pt', model_id: str | None = None, quantize: LiteralString | None = None) -> None:
     '''EnvVarMixin is a mixin class that returns the value extracted from environment variables.'''
     from openllm_core.utils import field_env_key
     self.model_name = inflection.underscore(model_name)
@@ -387,8 +380,7 @@ class EnvVarMixin(ReprMixin):
 
   def _quantize_value(self) -> t.Literal['int8', 'int4', 'gptq'] | None:
     from . import first_not_none
-    return t.cast(t.Optional[t.Literal['int8', 'int4', 'gptq']],
-                  first_not_none(os.environ.get(self['quantize']), default=self._quantize))
+    return t.cast(t.Optional[t.Literal['int8', 'int4', 'gptq']], first_not_none(os.environ.get(self['quantize']), default=self._quantize))
 
   def _backend_value(self) -> LiteralBackend:
     from . import first_not_none

@@ -16,11 +16,8 @@ model = 'flan_t5'
 model_id = 'google/flan-t5-small'
 
 @pytest.fixture(scope='module')
-def flan_t5_handle(handler: HandleProtocol, deployment_mode: t.Literal['container', 'local'],
-                   clean_context: contextlib.ExitStack,
-                  ):
-  with openllm.testing.prepare(model, model_id=model_id, deployment_mode=deployment_mode,
-                               clean_context=clean_context) as image_tag:
+def flan_t5_handle(handler: HandleProtocol, deployment_mode: t.Literal['container', 'local'], clean_context: contextlib.ExitStack,):
+  with openllm.testing.prepare(model, model_id=model_id, deployment_mode=deployment_mode, clean_context=clean_context) as image_tag:
     with handler(model=model, model_id=model_id, image_tag=image_tag) as handle:
       yield handle
 

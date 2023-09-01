@@ -68,24 +68,18 @@ def import_model(llm: openllm.LLM[M, T],
   config, hub_attrs, attrs = process_config(llm.model_id, trust_remote_code, **attrs)
   _, tokenizer_attrs = llm.llm_parameters
   quantize_method = llm._quantize_method
-  safe_serialisation = openllm.utils.first_not_none(attrs.get('safe_serialization'),
-                                                    default=llm._serialisation_format == 'safetensors')
+  safe_serialisation = openllm.utils.first_not_none(attrs.get('safe_serialization'), default=llm._serialisation_format == 'safetensors')
   # Disable safe serialization with vLLM
   if llm.__llm_backend__ == 'vllm': safe_serialisation = False
-  metadata: DictStrAny = {
-      'safe_serialisation': safe_serialisation,
-      '_quantize': quantize_method is not None and quantize_method
-  }
+  metadata: DictStrAny = {'safe_serialisation': safe_serialisation, '_quantize': quantize_method is not None and quantize_method}
   signatures: DictStrAny = {}
 
   if quantize_method == 'gptq':
     if not openllm.utils.is_autogptq_available():
       raise openllm.exceptions.OpenLLMException(
-          "GPTQ quantisation requires 'auto-gptq' (Not found in local environment). Install it with 'pip install \"openllm[gptq]\"'"
-      )
+          "GPTQ quantisation requires 'auto-gptq' (Not found in local environment). Install it with 'pip install \"openllm[gptq]\"'")
     if llm.config['model_type'] != 'causal_lm':
-      raise openllm.exceptions.OpenLLMException(
-          f"GPTQ only support Causal LM (got {llm.__class__} of {llm.config['model_type']})")
+      raise openllm.exceptions.OpenLLMException(f"GPTQ only support Causal LM (got {llm.__class__} of {llm.config['model_type']})")
     signatures['generate'] = {'batchable': False}
   else:
     # this model might be called with --quantize int4, therefore we need to pop this out
@@ -95,10 +89,7 @@ def import_model(llm: openllm.LLM[M, T],
     if llm.__llm_backend__ != 'flax': attrs['use_safetensors'] = safe_serialisation
     metadata['_framework'] = 'pt' if llm.__llm_backend__ == 'vllm' else llm.__llm_backend__
 
-  tokenizer = infer_tokenizers_from_llm(llm).from_pretrained(llm.model_id,
-                                                             trust_remote_code=trust_remote_code,
-                                                             **hub_attrs,
-                                                             **tokenizer_attrs)
+  tokenizer = infer_tokenizers_from_llm(llm).from_pretrained(llm.model_id, trust_remote_code=trust_remote_code, **hub_attrs, **tokenizer_attrs)
   if tokenizer.pad_token is None: tokenizer.pad_token = tokenizer.eos_token
 
   external_modules: list[types.ModuleType] = [importlib.import_module(tokenizer.__module__)]
@@ -117,25 +108,18 @@ def import_model(llm: openllm.LLM[M, T],
       if quantize_method == 'gptq':
         if not openllm.utils.is_autogptq_available():
           raise openllm.exceptions.OpenLLMException(
-              "GPTQ quantisation requires 'auto-gptq' (Not found in local environment). Install it with 'pip install \"openllm[gptq]\"'"
-          )
+              "GPTQ quantisation requires 'auto-gptq' (Not found in local environment). Install it with 'pip install \"openllm[gptq]\"'")
         if llm.config['model_type'] != 'causal_lm':
-          raise openllm.exceptions.OpenLLMException(
-              f"GPTQ only support Causal LM (got {llm.__class__} of {llm.config['model_type']})")
+          raise openllm.exceptions.OpenLLMException(f"GPTQ only support Causal LM (got {llm.__class__} of {llm.config['model_type']})")
         logger.debug('Saving model with GPTQ quantisation will require loading model into memory.')
         model = autogptq.AutoGPTQForCausalLM.from_quantized(llm.model_id,
                                                             *decls,
-                                                            quantize_config=t.cast('autogptq.BaseQuantizeConfig',
-                                                                                   llm.quantization_config),
+                                                            quantize_config=t.cast('autogptq.BaseQuantizeConfig', llm.quantization_config),
                                                             trust_remote_code=trust_remote_code,
                                                             use_safetensors=safe_serialisation,
                                                             **hub_attrs,
                                                             **attrs)
-        update_model(bentomodel,
-                     metadata={
-                         '_pretrained_class': model.__class__.__name__,
-                         '_framework': model.model.framework
-                     })
+        update_model(bentomodel, metadata={'_pretrained_class': model.__class__.__name__, '_framework': model.model.framework})
         model.save_quantized(bentomodel.path, use_safetensors=safe_serialisation)
       else:
         architectures = getattr(config, 'architectures', [])
@@ -159,18 +143,14 @@ def import_model(llm: openllm.LLM[M, T],
           model.save_pretrained(bentomodel.path, max_shard_size='5GB', safe_serialization=safe_serialisation)
         else:
           # we will clone the all tings into the bentomodel path without loading model into memory
-          snapshot_download(llm.model_id,
-                            local_dir=bentomodel.path,
-                            local_dir_use_symlinks=False,
-                            ignore_patterns=HfIgnore.ignore_patterns(llm))
+          snapshot_download(llm.model_id, local_dir=bentomodel.path, local_dir_use_symlinks=False, ignore_patterns=HfIgnore.ignore_patterns(llm))
     except Exception:
       raise
     else:
       bentomodel.flush()  # type: ignore[no-untyped-call]
       bentomodel.save(_model_store)
       openllm.utils.analytics.track(
-          openllm.utils.analytics.ModelSaveEvent(module=bentomodel.info.module,
-                                                 model_size_in_kb=openllm.utils.calc_dir_size(bentomodel.path) / 1024))
+          openllm.utils.analytics.ModelSaveEvent(module=bentomodel.info.module, model_size_in_kb=openllm.utils.calc_dir_size(bentomodel.path) / 1024))
     finally:
       bentomodel.exit_cloudpickle_context(imported_modules)
       # NOTE: We need to free up the cache after importing the model
@@ -189,36 +169,29 @@ def get(llm: openllm.LLM[M, T], auto_import: bool = False) -> bentoml.Model:
   try:
     model = bentoml.models.get(llm.tag)
     if Version(model.info.api_version) < Version('v2'):
-      raise openllm.exceptions.OpenLLMException(
-          'Please run "openllm prune -y --include-bentos" and upgrade all saved model to latest release.')
+      raise openllm.exceptions.OpenLLMException('Please run "openllm prune -y --include-bentos" and upgrade all saved model to latest release.')
     if model.info.labels['backend'] != llm.__llm_backend__:
       raise openllm.exceptions.OpenLLMException(
-          f"Model {model.tag} was saved with backend {model.info.labels['backend']}, while loading with {llm.__llm_backend__}."
-      )
+          f"Model {model.tag} was saved with backend {model.info.labels['backend']}, while loading with {llm.__llm_backend__}.")
     return model
   except Exception as err:
     if auto_import: return import_model(llm, trust_remote_code=llm.trust_remote_code)
-    raise openllm.exceptions.OpenLLMException(
-        f'Failed while getting stored artefact (lookup for traceback):\n{err}') from err
+    raise openllm.exceptions.OpenLLMException(f'Failed while getting stored artefact (lookup for traceback):\n{err}') from err
 
 def load_model(llm: openllm.LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M:
   config, hub_attrs, attrs = process_config(llm.model_id, llm.trust_remote_code, **attrs)
-  safe_serialization = openllm.utils.first_not_none(t.cast(
-      t.Optional[bool], llm._bentomodel.info.metadata.get('safe_serialisation', None)),
+  safe_serialization = openllm.utils.first_not_none(t.cast(t.Optional[bool], llm._bentomodel.info.metadata.get('safe_serialisation', None)),
                                                     attrs.pop('safe_serialization', None),
                                                     default=llm._serialisation_format == 'safetensors')
   if '_quantize' in llm._bentomodel.info.metadata and llm._bentomodel.info.metadata['_quantize'] == 'gptq':
     if not openllm.utils.is_autogptq_available():
       raise openllm.exceptions.OpenLLMException(
-          "GPTQ quantisation requires 'auto-gptq' (Not found in local environment). Install it with 'pip install \"openllm[gptq]\"'"
-      )
+          "GPTQ quantisation requires 'auto-gptq' (Not found in local environment). Install it with 'pip install \"openllm[gptq]\"'")
     if llm.config['model_type'] != 'causal_lm':
-      raise openllm.exceptions.OpenLLMException(
-          f"GPTQ only support Causal LM (got {llm.__class__} of {llm.config['model_type']})")
+      raise openllm.exceptions.OpenLLMException(f"GPTQ only support Causal LM (got {llm.__class__} of {llm.config['model_type']})")
     return autogptq.AutoGPTQForCausalLM.from_quantized(llm._bentomodel.path,
                                                        *decls,
-                                                       quantize_config=t.cast('autogptq.BaseQuantizeConfig',
-                                                                              llm.quantization_config),
+                                                       quantize_config=t.cast('autogptq.BaseQuantizeConfig', llm.quantization_config),
                                                        trust_remote_code=llm.trust_remote_code,
                                                        use_safetensors=safe_serialization,
                                                        **hub_attrs,

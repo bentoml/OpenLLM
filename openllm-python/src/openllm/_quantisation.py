@@ -16,8 +16,7 @@ if t.TYPE_CHECKING:
   from ._llm import LLM
 
 autogptq, torch, transformers = LazyLoader('autogptq', globals(),
-                                           'auto_gptq'), LazyLoader('torch', globals(), 'torch'), LazyLoader(
-                                               'transformers', globals(), 'transformers')
+                                           'auto_gptq'), LazyLoader('torch', globals(), 'torch'), LazyLoader('transformers', globals(), 'transformers')
 
 logger = logging.getLogger(__name__)
 
@@ -33,9 +32,8 @@ def infer_quantisation_config(cls: type[LLM[t.Any, t.Any]], quantise: t.Literal[
                               **attrs: t.Any) -> tuple[autogptq.BaseQuantizeConfig, DictStrAny]:
   ...
 
-def infer_quantisation_config(
-    cls: type[LLM[t.Any, t.Any]], quantise: QuantiseMode,
-    **attrs: t.Any) -> tuple[transformers.BitsAndBytesConfig | autogptq.BaseQuantizeConfig, DictStrAny]:
+def infer_quantisation_config(cls: type[LLM[t.Any, t.Any]], quantise: QuantiseMode,
+                              **attrs: t.Any) -> tuple[transformers.BitsAndBytesConfig | autogptq.BaseQuantizeConfig, DictStrAny]:
   # 8 bit configuration
   int8_threshold = attrs.pop('llm_int8_threshhold', 6.0)
   int8_enable_fp32_cpu_offload = attrs.pop('llm_int8_enable_fp32_cpu_offload', False)
@@ -61,7 +59,7 @@ def infer_quantisation_config(
                                            llm_int8_threshhold=int8_threshold,
                                            llm_int8_skip_modules=int8_skip_modules,
                                            llm_int8_has_fp16_weight=int8_has_fp16_weight,
-                                          )
+                                           )
 
   # 4 bit configuration
   int4_compute_dtype = attrs.pop('bnb_4bit_compute_dtype', torch.bfloat16)
@@ -72,9 +70,7 @@ def infer_quantisation_config(
   # quantize is a openllm.LLM feature, where we can quantize the model
   # with bitsandbytes or quantization aware training.
   if not is_bitsandbytes_available():
-    raise RuntimeError(
-        "Quantization requires bitsandbytes to be installed. Make sure to install OpenLLM with 'pip install \"openllm[fine-tune]\"'"
-    )
+    raise RuntimeError("Quantization requires bitsandbytes to be installed. Make sure to install OpenLLM with 'pip install \"openllm[fine-tune]\"'")
   if quantise == 'int8': quantisation_config = create_int8_config(int8_skip_modules)
   elif quantise == 'int4':
     if is_transformers_supports_kbit():

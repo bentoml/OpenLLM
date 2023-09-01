@@ -14,18 +14,15 @@ LogitsProcessorList = transformers.LogitsProcessorList
 StoppingCriteriaList = transformers.StoppingCriteriaList
 
 class StopSequenceCriteria(transformers.StoppingCriteria):
-
-  def __init__(self, stop_sequences: str | list[str], tokenizer: transformers.PreTrainedTokenizer |
-               transformers.PreTrainedTokenizerBase | transformers.PreTrainedTokenizerFast):
+  def __init__(self, stop_sequences: str | list[str],
+               tokenizer: transformers.PreTrainedTokenizer | transformers.PreTrainedTokenizerBase | transformers.PreTrainedTokenizerFast):
     if isinstance(stop_sequences, str): stop_sequences = [stop_sequences]
     self.stop_sequences, self.tokenizer = stop_sequences, tokenizer
 
   def __call__(self, input_ids: torch.Tensor, scores: t.Any, **_: t.Any) -> bool:
-    return any(
-        self.tokenizer.decode(input_ids.tolist()[0]).endswith(stop_sequence) for stop_sequence in self.stop_sequences)
+    return any(self.tokenizer.decode(input_ids.tolist()[0]).endswith(stop_sequence) for stop_sequence in self.stop_sequences)
 
 class StopOnTokens(transformers.StoppingCriteria):
-
   def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **_: t.Any) -> bool:
     return input_ids[0][-1] in {50278, 50279, 50277, 1, 0}
 

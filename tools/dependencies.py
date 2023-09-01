@@ -29,10 +29,8 @@ class Classifier:
   @staticmethod
   def status() -> dict[int, str]:
     return {
-        v: status for v, status in zip(range(1, 8), [
-            '1 - Planning', '2 - Pre-Alpha', '3 - Alpha', '4 - Beta', '5 - Production/Stable', '6 - Mature',
-            '7 - Inactive'
-        ])
+        v: status for v, status in zip(range(
+            1, 8), ['1 - Planning', '2 - Pre-Alpha', '3 - Alpha', '4 - Beta', '5 - Production/Stable', '6 - Mature', '7 - Inactive'])
     }
 
   @staticmethod
@@ -47,14 +45,10 @@ class Classifier:
     return cls_.joiner.join([cls_.identifier[identifier], *decls])
 
   @staticmethod
-  def create_python_classifier(implementation: list[str] | None = None,
-                               supported_version: list[str] | None = None) -> list[str]:
+  def create_python_classifier(implementation: list[str] | None = None, supported_version: list[str] | None = None) -> list[str]:
     if supported_version is None: supported_version = ['3.8', '3.9', '3.10', '3.11', '3.12']
     if implementation is None: implementation = ['CPython', 'PyPy']
-    base = [
-        Classifier.create_classifier('language', 'Python'),
-        Classifier.create_classifier('language', 'Python', '3'),
-    ]
+    base = [Classifier.create_classifier('language', 'Python'), Classifier.create_classifier('language', 'Python', '3'),]
     base.append(Classifier.create_classifier('language', 'Python', '3', 'Only'))
     base.extend([Classifier.create_classifier('language', 'Python', version) for version in supported_version])
     base.extend([Classifier.create_classifier('language', 'Python', 'Implementation', impl) for impl in implementation])
@@ -153,8 +147,7 @@ _locals = locals().copy()
 
 # NOTE: update this table when adding new external dependencies
 # sync with openllm.utils.OPTIONAL_DEPENDENCIES
-_base_requirements.update(
-    {v: _locals.get(f'{inflection.underscore(v).upper()}_DEPS') for v in openllm.utils.OPTIONAL_DEPENDENCIES})
+_base_requirements.update({v: _locals.get(f'{inflection.underscore(v).upper()}_DEPS') for v in openllm.utils.OPTIONAL_DEPENDENCIES})
 
 _base_requirements = {k: v for k, v in sorted(_base_requirements.items())}
 
@@ -187,10 +180,7 @@ def create_optional_table() -> Table:
   all_array.append(f"openllm[{','.join(_base_requirements)}]")
 
   table = tomlkit.table(is_super_table=True)
-  _base_requirements.update({
-      'full': correct_style(all_array.multiline(True)),
-      'all': tomlkit.array('["openllm[full]"]')
-  })
+  _base_requirements.update({'full': correct_style(all_array.multiline(True)), 'all': tomlkit.array('["openllm[full]"]')})
   table.update({k: v for k, v in sorted(_base_requirements.items())})
   table.add(tomlkit.nl())
 
@@ -228,9 +218,8 @@ def authors() -> Array:
 def keywords() -> Array:
   arr = correct_style(tomlkit.array())
   arr.extend([
-      'MLOps', 'AI', 'BentoML', 'Model Serving', 'Model Deployment', 'LLMOps', 'Falcon', 'Vicuna', 'Llama 2',
-      'Fine tuning', 'Serverless', 'Large Language Model', 'Generative AI', 'StableLM', 'Alpaca', 'PyTorch',
-      'Transformers'
+      'MLOps', 'AI', 'BentoML', 'Model Serving', 'Model Deployment', 'LLMOps', 'Falcon', 'Vicuna', 'Llama 2', 'Fine tuning', 'Serverless',
+      'Large Language Model', 'Generative AI', 'StableLM', 'Alpaca', 'PyTorch', 'Transformers'
   ])
   return arr.multiline(True)
 
@@ -240,8 +229,7 @@ def build_cli_extensions() -> Table:
   ext.update({
       f'openllm-{inflection.dasherize(ke)}': f'openllm.cli.extension.{ke}:cli' for ke in sorted([
           fname[:-3]
-          for fname in os.listdir(
-              os.path.abspath(os.path.join(ROOT, 'openllm-python', 'src', 'openllm', 'cli', 'extension')))
+          for fname in os.listdir(os.path.abspath(os.path.join(ROOT, 'openllm-python', 'src', 'openllm', 'cli', 'extension')))
           if fname.endswith('.py') and not fname.startswith('__')
       ])
   })

@@ -11,8 +11,9 @@ from openllm_core.config.configuration_dolly_v2 import RESPONSE_KEY
 from openllm_core.config.configuration_dolly_v2 import get_special_token_id
 if t.TYPE_CHECKING: import torch, transformers, tensorflow as tf
 else:
-  torch, transformers, tf = openllm.utils.LazyLoader('torch', globals(), 'torch'), openllm.utils.LazyLoader(
-      'transformers', globals(), 'transformers'), openllm.utils.LazyLoader('tf', globals(), 'tensorflow')
+  torch, transformers, tf = openllm.utils.LazyLoader('torch', globals(), 'torch'), openllm.utils.LazyLoader('transformers', globals(),
+                                                                                                            'transformers'), openllm.utils.LazyLoader(
+                                                                                                                'tf', globals(), 'tensorflow')
 logger = logging.getLogger(__name__)
 
 @overload
@@ -35,22 +36,8 @@ def get_pipeline(model: transformers.PreTrainedModel,
                  **attrs: t.Any) -> type[transformers.Pipeline] | transformers.Pipeline:
   # Lazy loading the pipeline. See databricks' implementation on HuggingFace for more information.
   class InstructionTextGenerationPipeline(transformers.Pipeline):
-
-    def __init__(self,
-                 *args: t.Any,
-                 do_sample: bool = True,
-                 max_new_tokens: int = 256,
-                 top_p: float = 0.92,
-                 top_k: int = 0,
-                 **kwargs: t.Any):
-      super().__init__(*args,
-                       model=model,
-                       tokenizer=tokenizer,
-                       do_sample=do_sample,
-                       max_new_tokens=max_new_tokens,
-                       top_p=top_p,
-                       top_k=top_k,
-                       **kwargs)
+    def __init__(self, *args: t.Any, do_sample: bool = True, max_new_tokens: int = 256, top_p: float = 0.92, top_k: int = 0, **kwargs: t.Any):
+      super().__init__(*args, model=model, tokenizer=tokenizer, do_sample=do_sample, max_new_tokens=max_new_tokens, top_p=top_p, top_k=top_k, **kwargs)
 
     def _sanitize_parameters(self,
                              return_full_text: bool | None = None,
@@ -59,8 +46,7 @@ def get_pipeline(model: transformers.PreTrainedModel,
       preprocess_params: dict[str, t.Any] = {}
       # newer versions of the tokenizer configure the response key as a special token.  newer versions still may
       # append a newline to yield a single token.  find whatever token is configured for the response key.
-      tokenizer_response_key = next(
-          (token for token in self.tokenizer.additional_special_tokens if token.startswith(RESPONSE_KEY)), None)
+      tokenizer_response_key = next((token for token in self.tokenizer.additional_special_tokens if token.startswith(RESPONSE_KEY)), None)
       response_key_token_id = None
       end_key_token_id = None
       if tokenizer_response_key:
@@ -84,17 +70,15 @@ def get_pipeline(model: transformers.PreTrainedModel,
       inputs['instruction_text'] = input_
       return t.cast(t.Dict[str, t.Any], inputs)
 
-    def _forward(self, input_tensors: dict[str, t.Any],
-                 **generate_kwargs: t.Any) -> transformers.utils.generic.ModelOutput:
+    def _forward(self, input_tensors: dict[str, t.Any], **generate_kwargs: t.Any) -> transformers.utils.generic.ModelOutput:
       if t.TYPE_CHECKING: assert self.tokenizer is not None
       input_ids, attention_mask = input_tensors['input_ids'], input_tensors.get('attention_mask', None)
       if input_ids.shape[1] == 0: input_ids, attention_mask, in_b = None, None, 1
       else: in_b = input_ids.shape[0]
-      generated_sequence = self.model.generate(
-          input_ids=input_ids.to(self.model.device) if input_ids is not None else None,
-          attention_mask=attention_mask.to(self.model.device) if attention_mask is not None else None,
-          pad_token_id=self.tokenizer.pad_token_id,
-          **generate_kwargs)
+      generated_sequence = self.model.generate(input_ids=input_ids.to(self.model.device) if input_ids is not None else None,
+                                               attention_mask=attention_mask.to(self.model.device) if attention_mask is not None else None,
+                                               pad_token_id=self.tokenizer.pad_token_id,
+                                               **generate_kwargs)
       out_b = generated_sequence.shape[0]
       if self.framework == 'pt':
         generated_sequence = generated_sequence.reshape(in_b, out_b // in_b, *generated_sequence.shape[1:])
@@ -162,10 +146,7 @@ class DollyV2(openllm.LLM['transformers.Pipeline', 'transformers.PreTrainedToken
 
   @property
   def import_kwargs(self) -> tuple[dict[str, t.Any], dict[str, t.Any]]:
-    return {
-        'device_map': 'auto' if torch.cuda.is_available() and torch.cuda.device_count() > 1 else None,
-        'torch_dtype': torch.bfloat16
-    }, {}
+    return {'device_map': 'auto' if torch.cuda.is_available() and torch.cuda.device_count() > 1 else None, 'torch_dtype': torch.bfloat16}, {}
 
   def load_model(self, *args: t.Any, **attrs: t.Any) -> transformers.Pipeline:
     return get_pipeline(transformers.AutoModelForCausalLM.from_pretrained(self._bentomodel.path, *args, **attrs),
@@ -176,6 +157,4 @@ class DollyV2(openllm.LLM['transformers.Pipeline', 'transformers.PreTrainedToken
   def generate(self, prompt: str, **attrs: t.Any) -> list[dict[t.Literal['generated_text'], str]]:
     llm_config = self.config.model_construct_env(**attrs)
     with torch.inference_mode():
-      return self.model(prompt,
-                        return_full_text=llm_config.return_full_text,
-                        generation_config=llm_config.to_generation_config())
+      return self.model(prompt, return_full_text=llm_config.return_full_text, generation_config=llm_config.to_generation_config())

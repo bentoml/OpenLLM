@@ -40,13 +40,7 @@ if t.TYPE_CHECKING:
   from openllm.client import BaseAsyncClient
 
 class ResponseComparator(JSONSnapshotExtension):
-
-  def serialize(self,
-                data: SerializableData,
-                *,
-                exclude: PropertyFilter | None = None,
-                matcher: PropertyMatcher | None = None,
-               ) -> SerializedData:
+  def serialize(self, data: SerializableData, *, exclude: PropertyFilter | None = None, matcher: PropertyMatcher | None = None,) -> SerializedData:
     if openllm.utils.LazyType(ListAny).isinstance(data):
       data = [d.unmarshaled for d in data]
     else:
@@ -55,7 +49,6 @@ class ResponseComparator(JSONSnapshotExtension):
     return orjson.dumps(data, option=orjson.OPT_INDENT_2 | orjson.OPT_SORT_KEYS).decode()
 
   def matches(self, *, serialized_data: SerializableData, snapshot_data: SerializableData) -> bool:
-
     def convert_data(data: SerializableData) -> openllm.GenerationOutput | t.Sequence[openllm.GenerationOutput]:
       try:
         data = orjson.loads(data)
@@ -83,8 +76,7 @@ class ResponseComparator(JSONSnapshotExtension):
       return (len(s.responses) == len(t.responses) and all([_s == _t for _s, _t in zip(s.responses, t.responses)]) and
               eq_config(s.marshaled_config, t.marshaled_config))
 
-    return len(serialized_data) == len(snapshot_data) and all(
-        [eq_output(s, t) for s, t in zip(serialized_data, snapshot_data)])
+    return len(serialized_data) == len(snapshot_data) and all([eq_output(s, t) for s, t in zip(serialized_data, snapshot_data)])
 
 @pytest.fixture()
 def response_snapshot(snapshot: SnapshotAssertion):
@@ -133,14 +125,8 @@ class LocalHandle(_Handle):
     return self.process.poll() is None
 
 class HandleProtocol(t.Protocol):
-
   @contextlib.contextmanager
-  def __call__(*,
-               model: str,
-               model_id: str,
-               image_tag: str,
-               quantize: t.AnyStr | None = None,
-              ) -> t.Generator[_Handle, None, None]:
+  def __call__(*, model: str, model_id: str, image_tag: str, quantize: t.AnyStr | None = None,) -> t.Generator[_Handle, None, None]:
     ...
 
 @attr.define(init=False)
@@ -148,9 +134,7 @@ class DockerHandle(_Handle):
   container_name: str
   docker_client: docker.DockerClient
 
-  def __init__(self, docker_client: docker.DockerClient, container_name: str, port: int,
-               deployment_mode: t.Literal['container', 'local'],
-              ):
+  def __init__(self, docker_client: docker.DockerClient, container_name: str, port: int, deployment_mode: t.Literal['container', 'local'],):
     self.__attrs_init__(port, deployment_mode, container_name, docker_client)
 
   def status(self) -> bool:
@@ -165,22 +149,14 @@ def _local_handle(model: str,
                   quantize: t.Literal['int8', 'int4', 'gptq'] | None = None,
                   *,
                   _serve_grpc: bool = False,
-                 ):
+                  ):
   with openllm.utils.reserve_free_port() as port:
     pass
 
   if not _serve_grpc:
-    proc = openllm.start(model,
-                         model_id=model_id,
-                         quantize=quantize,
-                         additional_args=['--port', str(port)],
-                         __test__=True)
+    proc = openllm.start(model, model_id=model_id, quantize=quantize, additional_args=['--port', str(port)], __test__=True)
   else:
-    proc = openllm.start_grpc(model,
-                              model_id=model_id,
-                              quantize=quantize,
-                              additional_args=['--port', str(port)],
-                              __test__=True)
+    proc = openllm.start_grpc(model, model_id=model_id, quantize=quantize, additional_args=['--port', str(port)], __test__=True)
 
   yield LocalHandle(proc, port, deployment_mode)
   proc.terminate()
@@ -201,7 +177,7 @@ def _container_handle(model: str,
                       quantize: t.Literal['int8', 'int4', 'gptq'] | None = None,
                       *,
                       _serve_grpc: bool = False,
-                     ):
+                      ):
   envvar = openllm.utils.EnvVarMixin(model)
 
   with openllm.utils.reserve_free_port() as port, openllm.utils.reserve_free_port() as prom_port:
@@ -237,7 +213,7 @@ def _container_handle(model: str,
                                         '3000/tcp': port,
                                         '3001/tcp': prom_port
                                     },
-                                   )
+                                    )
 
   yield DockerHandle(client, container.name, port, deployment_mode)
 

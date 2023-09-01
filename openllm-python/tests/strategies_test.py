@@ -71,11 +71,9 @@ def test_nvidia_gpu_validate(monkeypatch: pytest.MonkeyPatch):
     mcls.setenv('CUDA_VISIBLE_DEVICES', '')
     assert len(NvidiaGpuResource.from_system()) >= 0  # TODO: real from_system tests
 
-    assert pytest.raises(ValueError, NvidiaGpuResource.validate, [*NvidiaGpuResource.from_system(), 1],
-                        ).match('Input list should be all string type.')
+    assert pytest.raises(ValueError, NvidiaGpuResource.validate, [*NvidiaGpuResource.from_system(), 1],).match('Input list should be all string type.')
     assert pytest.raises(ValueError, NvidiaGpuResource.validate, [-2]).match('Input list should be all string type.')
-    assert pytest.raises(ValueError, NvidiaGpuResource.validate,
-                         ['GPU-5ebe9f43', 'GPU-ac33420d4628']).match('Failed to parse available GPUs UUID')
+    assert pytest.raises(ValueError, NvidiaGpuResource.validate, ['GPU-5ebe9f43', 'GPU-ac33420d4628']).match('Failed to parse available GPUs UUID')
 
 def test_nvidia_gpu_from_spec(monkeypatch: pytest.MonkeyPatch):
   with monkeypatch.context() as mcls:

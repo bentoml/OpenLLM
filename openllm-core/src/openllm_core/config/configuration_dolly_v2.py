@@ -105,6 +105,5 @@ class DollyV2Config(openllm_core.LLMConfig):
         **attrs
     }, {}
 
-  def postprocess_generate(self, prompt: str, generation_result: list[dict[t.Literal['generated_text'], str]],
-                           **_: t.Any) -> str:
+  def postprocess_generate(self, prompt: str, generation_result: list[dict[t.Literal['generated_text'], str]], **_: t.Any) -> str:
     return generation_result[0]['generated_text']

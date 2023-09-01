@@ -14,9 +14,7 @@ class ChatGLM(openllm.LLM['transformers.PreTrainedModel', 'transformers.PreTrain
       self.model.eval()
       # Only use half precision if the model is not yet quantized
       if self.config.use_half_precision: self.model.half()
-      return self.model.chat(self.tokenizer,
-                             prompt,
-                             generation_config=self.config.model_construct_env(**attrs).to_generation_config())
+      return self.model.chat(self.tokenizer, prompt, generation_config=self.config.model_construct_env(**attrs).to_generation_config())
 
   def embeddings(self, prompts: list[str]) -> openllm.EmbeddingsOutput:
     import torch

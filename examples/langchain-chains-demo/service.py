@@ -44,17 +44,11 @@ svc = bentoml.Service("fb-ads-copy", runners=[llm.runner])
 def download(_: bentoml.Context):
   llm.runner.download_model()
 
-SAMPLE_INPUT = Query(
-    industry="SAAS",
-    product_name="BentoML",
-    keywords=["open source", "developer tool", "AI application platform", "serverless", "cost-efficient"],
-    llm_config=llm.runner.config.model_dump(),
-)
+SAMPLE_INPUT = Query(industry="SAAS",
+                     product_name="BentoML",
+                     keywords=["open source", "developer tool", "AI application platform", "serverless", "cost-efficient"],
+                     llm_config=llm.runner.config.model_dump())
 
 @svc.api(input=JSON.from_sample(sample=SAMPLE_INPUT), output=Text())
 def generate(query: Query):
-  return chain.run({
-      "industry": query.industry,
-      "product_name": query.product_name,
-      "keywords": ", ".join(query.keywords)
-  })
+  return chain.run({"industry": query.industry, "product_name": query.product_name, "keywords": ", ".join(query.keywords)})

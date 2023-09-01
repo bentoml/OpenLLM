@@ -48,11 +48,7 @@ class MPT(openllm.LLM['transformers.PreTrainedModel', 'transformers.GPTNeoXToken
     torch_dtype = attrs.pop('torch_dtype', torch.bfloat16 if torch.cuda.is_available() else torch.float32)
     device_map = attrs.pop('device_map', None)
     attrs.pop('low_cpu_mem_usage', None)
-    config = get_mpt_config(self.model_id,
-                            self.config.max_sequence_length,
-                            self.device,
-                            device_map=device_map,
-                            trust_remote_code=trust_remote_code)
+    config = get_mpt_config(self.model_id, self.config.max_sequence_length, self.device, device_map=device_map, trust_remote_code=trust_remote_code)
     tokenizer = transformers.AutoTokenizer.from_pretrained(self.model_id, **tokenizer_attrs)
     if tokenizer.pad_token_id is None: tokenizer.pad_token = tokenizer.eos_token
     model = transformers.AutoModelForCausalLM.from_pretrained(self.model_id,
@@ -62,10 +58,7 @@ class MPT(openllm.LLM['transformers.PreTrainedModel', 'transformers.GPTNeoXToken
                                                               device_map=device_map,
                                                               **attrs)
     try:
-      return bentoml.transformers.save_model(self.tag,
-                                             model,
-                                             custom_objects={'tokenizer': tokenizer},
-                                             labels=generate_labels(self))
+      return bentoml.transformers.save_model(self.tag, model, custom_objects={'tokenizer': tokenizer}, labels=generate_labels(self))
     finally:
       torch.cuda.empty_cache()
 
@@ -79,7 +72,7 @@ class MPT(openllm.LLM['transformers.PreTrainedModel', 'transformers.GPTNeoXToken
                             self.device,
                             device_map=device_map,
                             trust_remote_code=trust_remote_code,
-                           )
+                            )
     model = transformers.AutoModelForCausalLM.from_pretrained(self._bentomodel.path,
                                                               config=config,
                                                               trust_remote_code=trust_remote_code,
