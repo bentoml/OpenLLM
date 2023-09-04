@@ -22,7 +22,7 @@
     </a><a href="https://github.com/pypa/hatch">
         <img src="https://img.shields.io/badge/%F0%9F%A5%9A-Hatch-4051b5.svg" alt="Hatch" />
     </a><a href="https://github.com/bentoml/OpenLLM/blob/main/STYLE.md">
-        <img src="https://img.shields.io/badge/code%20style-experimental-000000.svg" alt="code style" />
+        <img src="https://img.shields.io/badge/code%20style-Google-000000.svg" alt="code style" />
     </a><a href="https://github.com/astral-sh/ruff">
         <img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/charliermarsh/ruff/main/assets/badge/v2.json" alt="Ruff" />
     </a><a href="https://github.com/python/mypy">
@@ -407,23 +407,28 @@ pip install "openllm[baichuan]"
 ### Runtime Implementations (Experimental)
 
 Different LLMs may have multiple runtime implementations. For instance, they
-might use Pytorch (`pt`), Tensorflow (`tf`), or Flax (`flax`).
+might use Pytorch (`pt`), Tensorflow (`tf`), Flax (`flax`) or vLLM (`vllm`).
 
 If you wish to specify a particular runtime for a model, you can do so by
-setting the `OPENLLM_{MODEL_NAME}_FRAMEWORK={runtime}` environment variable
+setting the `OPENLLM_BACKEND={runtime}` environment variable
 before running `openllm start`.
 
 For example, if you want to use the Tensorflow (`tf`) implementation for the
 `flan-t5` model, you can use the following command:
 
 ```bash
-OPENLLM_FLAN_T5_FRAMEWORK=tf openllm start flan-t5
+OPENLLM_BACKEND=tf openllm start flan-t5
+
+openllm start flan-t5 --backend tf
 ```
 
 > [!NOTE]
 > For GPU support on Flax, refers to
 > [Jax's installation](https://github.com/google/jax#pip-installation-gpu-cuda-installed-via-pip-easier)
 > to make sure that you have Jax support for the corresponding CUDA version.
+
+> [!IMPORTANT]
+> To use vLLM backend, at least a GPU with Ampere or newer architecture and CUDA 11.8 is required.
 
 ### Quantisation
 
@@ -543,10 +548,10 @@ client.embed("I like to eat apples")
 
 The following UIs are currently available for OpenLLM:
 
-| UI                                                                                        | Owner                                        | Type                 | Progress |
-|-------------------------------------------------------------------------------------------|----------------------------------------------|----------------------|----------|
-| [Clojure](https://github.com/bentoml/OpenLLM/blob/main/openllm-contrib/clojure/README.md) | [@GutZuFusss](https://github.com/GutZuFusss) | Community-maintained | 🔧       |
-| TS                                                                                        | BentoML Team                                 |                      | 🚧       |
+| UI                                                                                | Owner                                         | Type                 | Progress |
+|-----------------------------------------------------------------------------------|-----------------------------------------------|----------------------|----------|
+| [Clojure](https://github.com/bentoml/OpenLLM/blob/main/contrib/clojure/README.md) | [@GutZuFusss](https://github.com/GutZuFusss)  | Community-maintained | 🔧       |
+| TS                                                                                | BentoML Team                                  |                      | 🚧       |
 
 ## ⚙️ Integrations
 
