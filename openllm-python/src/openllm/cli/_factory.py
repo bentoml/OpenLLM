@@ -22,6 +22,7 @@ from bentoml._internal.configuration.containers import BentoMLContainer
 from openllm_core._typing_compat import Concatenate
 from openllm_core._typing_compat import DictStrAny
 from openllm_core._typing_compat import LiteralBackend
+from openllm_core._typing_compat import LiteralQuantise
 from openllm_core._typing_compat import LiteralString
 from openllm_core._typing_compat import ParamSpec
 from openllm_core._typing_compat import get_literal_args
@@ -131,15 +132,15 @@ Available official model_id(s): [default: {llm_config['default_id']}]
                 model_version: str | None,
                 workers_per_resource: t.Literal['conserved', 'round_robin'] | LiteralString,
                 device: t.Tuple[str, ...],
-                quantize: t.Literal['int8', 'int4', 'gptq'] | None,
+                quantize: LiteralQuantise | None,
                 backend: LiteralBackend,
-                serialisation_format: t.Literal['safetensors', 'legacy'],
+                serialisation: t.Literal['safetensors', 'legacy'],
                 cors: bool,
                 adapter_id: str | None,
                 return_process: bool,
                 **attrs: t.Any,
                 ) -> LLMConfig | subprocess.Popen[bytes]:
-    if serialisation_format == 'safetensors' and quantize is not None and openllm_core.utils.check_bool_env('OPENLLM_SERIALIZATION_WARNING'):
+    if serialisation == 'safetensors' and quantize is not None and openllm_core.utils.check_bool_env('OPENLLM_SERIALIZATION_WARNING'):
       termui.echo(
           f"'--quantize={quantize}' might not work with 'safetensors' serialisation format. Use with caution!. To silence this warning, set \"OPENLLM_SERIALIZATION_WARNING=False\"\nNote: You can always fallback to '--serialisation legacy' when running quantisation.",
           fg='yellow')
@@ -184,11 +185,11 @@ Available official model_id(s): [default: {llm_config['default_id']}]
         'BENTOML_DEBUG': str(openllm.utils.get_debug_mode()),
         'BENTOML_HOME': os.environ.get('BENTOML_HOME', BentoMLContainer.bentoml_home.get()),
         'OPENLLM_ADAPTER_MAP': orjson.dumps(adapter_map).decode(),
-        'OPENLLM_SERIALIZATION': serialisation_format,
-        env.backend: env['backend_value']
+        'OPENLLM_SERIALIZATION': serialisation,
+        env.backend: env['backend_value'],
+        env.quantize: env['quantize_value']
     })
     if env['model_id_value']: start_env[env.model_id] = str(env['model_id_value'])
-    if quantize is not None: start_env[env.quantize] = str(t.cast(str, env['quantize_value']))
 
     llm = openllm.utils.infer_auto_class(env['backend_value']).for_model(model,
                                                                          model_id=start_env[env.model_id],
@@ -196,7 +197,8 @@ Available official model_id(s): [default: {llm_config['default_id']}]
                                                                          llm_config=config,
                                                                          ensure_available=True,
                                                                          adapter_map=adapter_map,
-                                                                         serialisation=serialisation_format)
+                                                                         quantize=env['quantize_value'],
+                                                                         serialisation=serialisation)
     start_env.update({env.config: llm.config.model_dump_json().decode()})
 
     server = bentoml.GrpcServer('_service:svc', **server_attrs) if _serve_grpc else bentoml.HTTPServer('_service:svc', **server_attrs)
@@ -262,8 +264,7 @@ def start_decorator(llm_config: LLMConfig, serve_grpc: bool = False) -> t.Callab
 
             - DeepSpeed Inference: [link](https://www.deepspeed.ai/inference/)
             - GGML: Fast inference on [bare metal](https://github.com/ggerganov/ggml)
-            ''',
-                           ),
+            '''),
         quantize_option(factory=cog.optgroup),
         serialisation_option(factory=cog.optgroup),
         cog.optgroup.option('--device',
@@ -457,7 +458,7 @@ def workers_per_resource_option(f: _AnyCallable | None = None, *, build: bool = 
 def serialisation_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option('--serialisation',
                     '--serialization',
-                    'serialisation_format',
+                    'serialisation',
                     type=click.Choice(['safetensors', 'legacy']),
                     default='safetensors',
                     show_default=True,

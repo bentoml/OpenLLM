@@ -128,19 +128,19 @@ def construct_docker_options(llm: openllm.LLM[t.Any, t.Any],
                              quantize: LiteralString | None,
                              adapter_map: dict[str, str | None] | None,
                              dockerfile_template: str | None,
-                             serialisation_format: t.Literal['safetensors', 'legacy'],
+                             serialisation: t.Literal['safetensors', 'legacy'],
                              container_registry: LiteralContainerRegistry,
                              container_version_strategy: LiteralContainerVersionStrategy) -> DockerOptions:
   from openllm.cli._factory import parse_config_options
   environ = parse_config_options(llm.config, llm.config['timeout'], workers_per_resource, None, True, os.environ.copy())
   env: openllm_core.utils.EnvVarMixin = llm.config['env']
-  if env['backend_value'] == 'vllm': serialisation_format = 'legacy'
+  if env['backend_value'] == 'vllm': serialisation = 'legacy'
   env_dict = {
       env.backend: env['backend_value'],
       env.config: f"'{llm.config.model_dump_json().decode()}'",
       env.model_id: f'/home/bentoml/bento/models/{llm.tag.path()}',
       'OPENLLM_MODEL': llm.config['model_name'],
-      'OPENLLM_SERIALIZATION': serialisation_format,
+      'OPENLLM_SERIALIZATION': serialisation,
       'OPENLLM_ADAPTER_MAP': f"'{orjson.dumps(adapter_map).decode()}'",
       'BENTOML_DEBUG': str(True),
       'BENTOML_QUIET': str(False),
@@ -207,7 +207,7 @@ def create_bento(bento_tag: bentoml.Tag,
                  dockerfile_template: str | None,
                  adapter_map: dict[str, str | None] | None = None,
                  extra_dependencies: tuple[str, ...] | None = None,
-                 serialisation_format: t.Literal['safetensors', 'legacy'] = 'safetensors',
+                 serialisation: t.Literal['safetensors', 'legacy'] = 'safetensors',
                  container_registry: LiteralContainerRegistry = 'ecr',
                  container_version_strategy: LiteralContainerVersionStrategy = 'release',
                  _bento_store: BentoStore = Provide[BentoMLContainer.bento_store],
@@ -246,7 +246,7 @@ def create_bento(bento_tag: bentoml.Tag,
                                                                   quantize,
                                                                   adapter_map,
                                                                   dockerfile_template,
-                                                                  serialisation_format,
+                                                                  serialisation,
                                                                   container_registry,
                                                                   container_version_strategy))
 

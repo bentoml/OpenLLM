@@ -49,7 +49,7 @@ class BaseAutoLLMClass:
     ```
     '''
     llm = cls.infer_class_from_name(model).from_pretrained(model_id=model_id, model_version=model_version, llm_config=llm_config, **attrs)
-    if ensure_available: llm.ensure_model_id_exists()
+    if ensure_available: llm.save_pretrained()
     return llm
 
   @classmethod

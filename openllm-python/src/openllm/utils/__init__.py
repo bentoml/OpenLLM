@@ -19,13 +19,7 @@ if t.TYPE_CHECKING:
   from openllm_core._typing_compat import LiteralBackend
 
 def generate_labels(llm: openllm.LLM[t.Any, t.Any]) -> dict[str, t.Any]:
-  return {
-      'backend': llm.__llm_backend__,
-      'framework': 'openllm',
-      'model_name': llm.config['model_name'],
-      'architecture': llm.config['architecture'],
-      'serialisation_format': llm._serialisation_format
-  }
+  return {'backend': llm.__llm_backend__, 'framework': 'openllm', 'model_name': llm.config['model_name'], 'architecture': llm.config['architecture'], 'serialisation': llm._serialisation}
 
 def infer_auto_class(backend: LiteralBackend) -> type[openllm.AutoLLM | openllm.AutoTFLLM | openllm.AutoFlaxLLM | openllm.AutoVLLM]:
   import openllm

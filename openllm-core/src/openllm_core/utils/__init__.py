@@ -332,8 +332,6 @@ _import_structure: dict[str, list[str]] = {
         'is_bitsandbytes_available',
         'is_peft_available',
         'is_datasets_available',
-        'is_transformers_supports_kbit',
-        'is_transformers_supports_agent',
         'is_jupyter_available',
         'is_jupytext_available',
         'is_notebook_available',
@@ -344,7 +342,10 @@ _import_structure: dict[str, list[str]] = {
         'is_fairscale_available',
         'is_grpc_available',
         'is_grpc_health_available',
-        'is_transformers_available'
+        'is_transformers_available',
+        'is_transformers_supports_kbit',
+        'is_transformers_supports_agent',
+        'is_optimum_supports_gptq',
     ]
 }
 
@@ -368,6 +369,7 @@ if t.TYPE_CHECKING:
   from .import_utils import is_jupyter_available as is_jupyter_available
   from .import_utils import is_jupytext_available as is_jupytext_available
   from .import_utils import is_notebook_available as is_notebook_available
+  from .import_utils import is_optimum_supports_gptq as is_optimum_supports_gptq
   from .import_utils import is_peft_available as is_peft_available
   from .import_utils import is_sentencepiece_available as is_sentencepiece_available
   from .import_utils import is_tf_available as is_tf_available

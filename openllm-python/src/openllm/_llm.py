@@ -28,6 +28,7 @@ from openllm_core._typing_compat import AdaptersTuple
 from openllm_core._typing_compat import AdapterType
 from openllm_core._typing_compat import DictStrAny
 from openllm_core._typing_compat import LiteralBackend
+from openllm_core._typing_compat import LiteralQuantise
 from openllm_core._typing_compat import LiteralString
 from openllm_core._typing_compat import LLMRunnable
 from openllm_core._typing_compat import LLMRunner
@@ -63,7 +64,6 @@ from .utils import infer_auto_class
 
 if t.TYPE_CHECKING:
 
-  import auto_gptq as autogptq
   import peft
   import torch
   import transformers
@@ -71,7 +71,6 @@ if t.TYPE_CHECKING:
   from openllm_core._configuration import PeftType
   from openllm_core.utils.representation import ReprArgs
 else:
-  autogptq = LazyLoader('autogptq', globals(), 'auto_gptq')
   transformers = LazyLoader('transformers', globals(), 'transformers')
   torch = LazyLoader('torch', globals(), 'torch')
   peft = LazyLoader('peft', globals(), 'peft')
@@ -79,6 +78,8 @@ else:
 ResolvedAdaptersMapping = t.Dict[AdapterType, t.Dict[str, t.Tuple['peft.PeftConfig', str]]]
 
 logger = logging.getLogger(__name__)
+
+_object_setattr = object.__setattr__
 
 def normalise_model_name(name: str) -> str:
   if validate_is_path(name): return os.path.basename(resolve_filepath(name))
@@ -280,7 +281,8 @@ class LLM(LLMInterface[M, T], ReprMixin):
 
     def __attrs_init__(self,
                        config: LLMConfig,
-                       quantization_config: t.Optional[t.Union[transformers.BitsAndBytesConfig, autogptq.BaseQuantizeConfig]],
+                       quantize: t.Optional[LiteralQuantise],
+                       quantization_config: t.Optional[t.Union[transformers.BitsAndBytesConfig, transformers.GPTQConfig]],
                        model_id: str,
                        model_decls: TupleAny,
                        model_attrs: DictStrAny,
@@ -288,17 +290,16 @@ class LLM(LLMInterface[M, T], ReprMixin):
                        tag: bentoml.Tag,
                        adapters_mapping: t.Optional[AdaptersMapping],
                        model_version: t.Optional[str],
-                       quantize_method: t.Optional[t.Literal['int8', 'int4', 'gptq']],
-                       serialisation_format: t.Literal['safetensors', 'legacy'],
+                       serialisation: t.Literal['safetensors', 'legacy'],
                        _local: bool,
                        **attrs: t.Any) -> None:
       '''Generated __attrs_init__ for openllm.LLM.'''
 
   config: LLMConfig
   '''The config instance to use for this LLM. This will be created based on config_class and available when initialising the LLM.'''
-  quantization_config: transformers.BitsAndBytesConfig | autogptq.BaseQuantizeConfig | None
+  quantization_config: transformers.BitsAndBytesConfig | transformers.GPTQConfig | None
   '''Quantisation config for quantised model on the fly.'''
-
+  _quantize: LiteralQuantise | None
   _model_id: str
   _model_decls: TupleAny
   _model_attrs: DictStrAny
@@ -306,8 +307,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
   _tag: bentoml.Tag
   _adapters_mapping: AdaptersMapping | None
   _model_version: str
-  _quantize_method: t.Literal['int8', 'int4', 'gptq'] | None
-  _serialisation_format: t.Literal['safetensors', 'legacy']
+  _serialisation: t.Literal['safetensors', 'legacy']
   _local: bool
 
   def __init_subclass__(cls: type[LLM[M, T]]) -> None:
@@ -376,11 +376,11 @@ class LLM(LLMInterface[M, T], ReprMixin):
                       model_version: str | None = None,
                       llm_config: LLMConfig | None = None,
                       *args: t.Any,
-                      quantize: t.Literal['int8', 'int4', 'gptq'] | None = None,
+                      quantize: LiteralQuantise | None = None,
                       adapter_id: str | None = None,
                       adapter_name: str | None = None,
                       adapter_map: dict[str, str | None] | None = None,
-                      quantization_config: transformers.BitsAndBytesConfig | autogptq.BaseQuantizeConfig | None = None,
+                      quantization_config: transformers.BitsAndBytesConfig | transformers.GPTQConfig | None = None,
                       serialisation: t.Literal['safetensors', 'legacy'] = 'safetensors',
                       **attrs: t.Any) -> LLM[M, T]:
     '''Instantiate a pretrained LLM.
@@ -403,9 +403,6 @@ class LLM(LLMInterface[M, T], ReprMixin):
     model = openllm.AutoLLM.from_pretrained("opt", quantize='int8', llm_int8_enable_fp32_cpu_offload=False)
     ```
 
-    For all GPTQ-related options, it accepts all value prefixed with `gptq_*`. The parsed value then could be parsed
-    to ``auto_gptq.BaseQuantizeConfig``.
-
     ### Adapter options:
 
     > This is used in conjunction with the fine-tuning features
@@ -427,7 +424,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
                     will use `config_class` to construct default configuration.
         quantize: The quantization to use for this LLM. Defaults to None. Possible values
                   include int8, int4 and gptq.
-        quantization_config: The quantization config (`transformers.BitsAndBytesConfig` | `autogtpq.BaseQuantizeConfig`) to use. Note that this is mutually exclusive with `quantize`
+        quantization_config: The quantization config (`transformers.BitsAndBytesConfig` | `transformers.GPTQConfig`) to use. Note that this is mutually exclusive with `quantize`
         serialisation: Type of model format to save to local store. If set to 'safetensors', then OpenLLM will save model using safetensors.
                       Default behaviour is similar to ``safe_serialization=False``.
         adapter_id: The [LoRA](https://arxiv.org/pdf/2106.09685.pdf) pretrained id or local path to use for this LLM. Defaults to None.
@@ -440,13 +437,15 @@ class LLM(LLMInterface[M, T], ReprMixin):
     _local = False
     _model_id: str = first_not_none(model_id, os.environ.get(cfg_cls.__openllm_env__['model_id']), default=cfg_cls.__openllm_default_id__)
     if validate_is_path(_model_id): _model_id, _local = resolve_filepath(_model_id), True
-    quantize = first_not_none(quantize, t.cast(t.Optional[t.Literal['int8', 'int4', 'gptq']], os.environ.get(cfg_cls.__openllm_env__['quantize'])), default=None)
+    quantize = first_not_none(quantize, t.cast(t.Optional[LiteralQuantise], os.environ.get(cfg_cls.__openllm_env__['quantize'])), default=None)
 
     # quantization setup
     if quantization_config and quantize:
       raise ValueError("'quantization_config' and 'quantize' are mutually exclusive. Either customise your quantization_config or use the 'quantize' argument.")
     if quantization_config is None and quantize is not None:
-      quantization_config, attrs = infer_quantisation_config(cls, quantize, **attrs)
+      # in case users input `tokenizer` to __init__, default to the _model_id
+      _gptq_tokenizer = attrs.pop('tokenizer', _model_id)
+      quantization_config, attrs = infer_quantisation_config(cls, quantize, tokenizer=_gptq_tokenizer, **attrs)
     if quantize == 'gptq': serialisation = 'safetensors'
     elif cls.__llm_backend__ == 'vllm': serialisation = 'legacy'  # Currently working-in-progress
 
@@ -476,10 +475,10 @@ class LLM(LLMInterface[M, T], ReprMixin):
                model_id=_model_id,
                llm_config=llm_config,
                quantization_config=quantization_config,
-               _quantize_method=quantize,
+               _quantize=quantize,
                _model_version=_tag.version,
                _tag=_tag,
-               _serialisation_format=serialisation,
+               _serialisation=serialisation,
                _local=_local,
                _adapters_mapping=resolve_peft_config_type(adapter_map) if adapter_map is not None else None,
                **attrs)
@@ -534,12 +533,12 @@ class LLM(LLMInterface[M, T], ReprMixin):
                *args: t.Any,
                model_id: str,
                llm_config: LLMConfig,
-               quantization_config: transformers.BitsAndBytesConfig | autogptq.BaseQuantizeConfig | None,
+               quantization_config: transformers.BitsAndBytesConfig | transformers.GPTQConfig | None,
                _adapters_mapping: AdaptersMapping | None,
                _tag: bentoml.Tag,
-               _quantize_method: t.Literal['int8', 'int4', 'gptq'] | None,
+               _quantize: LiteralQuantise | None,
                _model_version: str,
-               _serialisation_format: t.Literal['safetensors', 'legacy'],
+               _serialisation: t.Literal['safetensors', 'legacy'],
                _local: bool,
                **attrs: t.Any,
                ):
@@ -641,6 +640,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
     # NOTE: Save the args and kwargs for latter load
     self.__attrs_init__(llm_config,
                         quantization_config,
+                        _quantize,
                         model_id,
                         args, {
                             **model_kwds, **normalized_model_kwds
@@ -650,8 +650,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
                         _tag,
                         _adapters_mapping,
                         _model_version,
-                        _quantize_method,
-                        _serialisation_format,
+                        _serialisation,
                         _local)
 
     self.llm_post_init()
@@ -672,7 +671,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
 
   @adapters_mapping.setter
   def adapters_mapping(self, value: AdaptersMapping) -> None:
-    self._adapters_mapping = value
+    _object_setattr(self, '_adapters_mapping', value)
 
   @property
   def __repr_keys__(self) -> set[str]:
@@ -709,13 +708,13 @@ class LLM(LLMInterface[M, T], ReprMixin):
   def tag(self) -> bentoml.Tag:
     return self._tag
 
-  def ensure_model_id_exists(self) -> bentoml.Model:
+  def save_pretrained(self) -> bentoml.Model:
     return openllm.import_model(self.config['start_name'],
                                 model_id=self.model_id,
                                 model_version=self._model_version,
                                 backend=self.__llm_backend__,
-                                quantize=self._quantize_method,
-                                serialisation_format=self._serialisation_format)
+                                quantize=self._quantize,
+                                serialisation=self._serialisation)
 
   @property
   def _bentomodel(self) -> bentoml.Model:
@@ -1085,11 +1084,11 @@ def Runner(model_name: str,
            model_id: str | None = ...,
            model_version: str | None = ...,
            llm_config: LLMConfig | None = ...,
-           quantize: t.Literal['int8', 'int4', 'gptq'] | None = ...,
+           quantize: LiteralQuantise | None = ...,
            adapter_id: str | None = ...,
            adapter_name: str | None = ...,
            adapter_map: dict[str, str | None] | None = ...,
-           quantization_config: transformers.BitsAndBytesConfig | autogptq.BaseQuantizeConfig | None = None,
+           quantization_config: transformers.BitsAndBytesConfig | transformers.GPTQConfig | None = None,
            serialisation: t.Literal['safetensors', 'legacy'] = ...,
            **attrs: t.Any) -> LLMRunner[t.Any, t.Any]:
   ...
@@ -1270,7 +1269,7 @@ def llm_runner_class(self: LLM[M, T]) -> type[LLMRunner[M, T]]:
                              'config': self.config,
                              'backend': self.__llm_backend__,
                              'peft_adapters': property(fget=available_adapters),
-                             'download_model': self.ensure_model_id_exists,
+                             'download_model': self.save_pretrained,
                              '__call__': _wrapped_generate_run,
                              'embed': _wrapped_embeddings_run,
                              '__module__': self.__module__,

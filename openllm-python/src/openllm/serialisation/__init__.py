@@ -37,6 +37,7 @@ def load_tokenizer(llm: openllm.LLM[t.Any, T], **tokenizer_attrs: t.Any) -> T:
   from .transformers._helpers import process_config
 
   config, *_ = process_config(llm._bentomodel.path, llm.trust_remote_code)
+
   bentomodel_fs = fs.open_fs(llm._bentomodel.path)
   if bentomodel_fs.isfile(CUSTOM_OBJECTS_FILENAME):
     with bentomodel_fs.open(CUSTOM_OBJECTS_FILENAME, 'rb') as cofile:

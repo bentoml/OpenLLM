@@ -26,6 +26,7 @@ if t.TYPE_CHECKING:
   from openllm_core._typing_compat import LiteralBackend
   from openllm_core._typing_compat import LiteralContainerRegistry
   from openllm_core._typing_compat import LiteralContainerVersionStrategy
+  from openllm_core._typing_compat import LiteralQuantise
   from openllm_core._typing_compat import LiteralString
 
 logger = logging.getLogger(__name__)
@@ -37,7 +38,7 @@ def _start(model_name: str,
            timeout: int = 30,
            workers_per_resource: t.Literal['conserved', 'round_robin'] | float | None = None,
            device: tuple[str, ...] | t.Literal['all'] | None = None,
-           quantize: t.Literal['int8', 'int4', 'gptq'] | None = None,
+           quantize: LiteralQuantise | None = None,
            adapter_map: dict[LiteralString, str | None] | None = None,
            backend: LiteralBackend | None = None,
            additional_args: list[str] | None = None,
@@ -109,7 +110,7 @@ def _build(model_name: str,
            model_id: str | None = None,
            model_version: str | None = None,
            bento_version: str | None = None,
-           quantize: t.Literal['int8', 'int4', 'gptq'] | None = None,
+           quantize: LiteralQuantise | None = None,
            adapter_map: dict[str, str | None] | None = None,
            build_ctx: str | None = None,
            enable_features: tuple[str, ...] | None = None,
@@ -120,7 +121,7 @@ def _build(model_name: str,
            container_version_strategy: LiteralContainerVersionStrategy | None = None,
            push: bool = False,
            containerize: bool = False,
-           serialisation_format: t.Literal['safetensors', 'legacy'] = 'safetensors',
+           serialisation: t.Literal['safetensors', 'legacy'] = 'safetensors',
            additional_args: list[str] | None = None,
            bento_store: BentoStore = Provide[BentoMLContainer.bento_store]) -> bentoml.Bento:
   """Package a LLM into a Bento.
@@ -160,14 +161,14 @@ def _build(model_name: str,
                   container_registry: Container registry to choose the base OpenLLM container image to build from. Default to ECR.
     container_registry: Container registry to choose the base OpenLLM container image to build from. Default to ECR.
     container_version_strategy: The container version strategy. Default to the latest release of OpenLLM.
-    serialisation_format: Serialisation for saving models. Default to 'safetensors', which is equivalent to `safe_serialization=True`
+    serialisation: Serialisation for saving models. Default to 'safetensors', which is equivalent to `safe_serialization=True`
     additional_args: Additional arguments to pass to ``openllm build``.
     bento_store: Optional BentoStore for saving this BentoLLM. Default to the default BentoML local store.
 
   Returns:
       ``bentoml.Bento | str``: BentoLLM instance. This can be used to serve the LLM or can be pushed to BentoCloud.
   """
-  args: list[str] = [sys.executable, '-m', 'openllm', 'build', model_name, '--machine', '--serialisation', serialisation_format]
+  args: list[str] = [sys.executable, '-m', 'openllm', 'build', model_name, '--machine', '--serialisation', serialisation]
   if quantize: args.extend(['--quantize', quantize])
   if containerize and push: raise OpenLLMException("'containerize' and 'push' are currently mutually exclusive.")
   if push: args.extend(['--push'])
@@ -203,8 +204,8 @@ def _import_model(model_name: str,
                   model_id: str | None = None,
                   model_version: str | None = None,
                   backend: LiteralBackend = 'pt',
-                  quantize: t.Literal['int8', 'int4', 'gptq'] | None = None,
-                  serialisation_format: t.Literal['legacy', 'safetensors'] = 'safetensors',
+                  quantize: LiteralQuantise | None = None,
+                  serialisation: t.Literal['legacy', 'safetensors'] = 'safetensors',
                   additional_args: t.Sequence[str] | None = None) -> bentoml.Model:
   """Import a LLM into local store.
 
@@ -228,7 +229,7 @@ def _import_model(model_name: str,
               - int8: Quantize the model with 8bit (bitsandbytes required)
               - int4: Quantize the model with 4bit (bitsandbytes required)
               - gptq: Quantize the model with GPTQ (auto-gptq required)
-    serialisation_format: Type of model format to save to local store. If set to 'safetensors', then OpenLLM will save model using safetensors.
+    serialisation: Type of model format to save to local store. If set to 'safetensors', then OpenLLM will save model using safetensors.
     Default behaviour is similar to ``safe_serialization=False``.
     additional_args: Additional arguments to pass to ``openllm import``.
 
@@ -236,7 +237,7 @@ def _import_model(model_name: str,
     ``bentoml.Model``:BentoModel of the given LLM. This can be used to serve the LLM or can be pushed to BentoCloud.
   """
   from .entrypoint import import_command
-  args = [model_name, '--backend', backend, '--machine', '--serialisation', serialisation_format]
+  args = [model_name, '--backend', backend, '--machine', '--serialisation', serialisation]
   if model_id is not None: args.append(model_id)
   if model_version is not None: args.extend(['--model-version', str(model_version)])
   if additional_args is not None: args.extend(additional_args)

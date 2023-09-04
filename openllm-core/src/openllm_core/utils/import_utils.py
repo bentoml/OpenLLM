@@ -80,6 +80,9 @@ def is_transformers_supports_kbit() -> bool:
 def is_transformers_supports_agent() -> bool:
   return pkg.pkg_version_info('transformers')[:2] >= (4, 29)
 
+def is_optimum_supports_gptq() -> bool:
+  return pkg.pkg_version_info('optimum')[:2] >= (0, 12)
+
 def is_jupyter_available() -> bool:
   return _jupyter_available
 
