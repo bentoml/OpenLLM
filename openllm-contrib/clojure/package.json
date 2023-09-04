@@ -55,7 +55,7 @@
     "@floating-ui/dom": "^1.5.1",
     "@floating-ui/react-dom": "^2.0.2",
     "@mui/base": "5.0.0-beta.12",
-    "@mui/icons-material": "5.14.6",
+    "@mui/icons-material": "5.14.7",
     "@mui/material": "5.14.6",
     "@mui/private-theming": "^5.14.5",
     "@mui/styled-engine": "^5.13.2",
