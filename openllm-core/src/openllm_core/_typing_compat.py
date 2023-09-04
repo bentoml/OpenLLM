@@ -11,7 +11,6 @@ import bentoml
 from bentoml._internal.types import ModelSignatureDict as ModelSignatureDict
 
 if t.TYPE_CHECKING:
-  import auto_gptq as autogptq
   import peft
   import transformers
   import vllm
@@ -26,11 +25,7 @@ if t.TYPE_CHECKING:
 
   from .utils.lazy import VersionInfo
 
-M = t.TypeVar(
-    'M',
-    bound=
-    't.Union[transformers.PreTrainedModel, transformers.Pipeline, transformers.TFPreTrainedModel, transformers.FlaxPreTrainedModel, vllm.LLMEngine, peft.PeftModel, autogptq.modeling.BaseGPTQForCausalLM]'
-)
+M = t.TypeVar('M', bound='t.Union[transformers.PreTrainedModel, transformers.Pipeline, transformers.TFPreTrainedModel, transformers.FlaxPreTrainedModel, vllm.LLMEngine, peft.PeftModel]')
 T = t.TypeVar('T', bound='t.Union[transformers.PreTrainedTokenizerFast, transformers.PreTrainedTokenizer, transformers.PreTrainedTokenizerBase]')
 
 def get_literal_args(typ: t.Any) -> tuple[str, ...]:
@@ -43,6 +38,7 @@ ListStr = t.List[str]
 TupleAny = t.Tuple[t.Any, ...]
 At = t.TypeVar('At', bound=attr.AttrsInstance)
 
+LiteralQuantise = t.Literal['int8', 'int4', 'gptq']
 LiteralBackend = t.Literal['pt', 'tf', 'flax', 'vllm', 'ggml', 'mlc']
 AdapterType = t.Literal['lora', 'adalora', 'adaption_prompt', 'prefix_tuning', 'p_tuning', 'prompt_tuning', 'ia3']
 

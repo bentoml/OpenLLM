@@ -109,12 +109,11 @@ def metadata_v1(_: str) -> openllm.MetadataOutput:
              ],
              'num_tokens': 20
          }))
-async def embeddings_v1(phrases: list[str]) -> openllm.EmbeddingsOutput:
+async def embeddings_v1(phrases: list[str]) -> list[openllm.EmbeddingsOutput]:
   embed_call: _EmbeddingMethod = runner.embeddings if runner.supports_embeddings else generic_embedding_runner.encode  # type: ignore[type-arg,assignment,valid-type]
-  responses = (await embed_call.async_run(phrases))[0]
-  return openllm.EmbeddingsOutput(embeddings=responses['embeddings'], num_tokens=responses['num_tokens'])
+  return await embed_call.async_run(phrases)
 
-if runner.supports_hf_agent and openllm.utils.is_transformers_supports_agent():
+if runner.supports_hf_agent:
 
   async def hf_agent(request: Request) -> Response:
     json_str = await request.body()

@@ -5,7 +5,6 @@ import typing as t
 import openllm
 import openllm_core
 
-from bentoml._internal.models.model import ModelInfo
 from bentoml._internal.models.model import ModelSignature
 from openllm.serialisation.constants import FRAMEWORK_TO_AUTOCLASS_MAPPING
 from openllm.serialisation.constants import HUB_ATTRS
@@ -16,16 +15,12 @@ if t.TYPE_CHECKING:
 
   from transformers.models.auto.auto_factory import _BaseAutoModelClass
 
-  import bentoml
-
   from bentoml._internal.models.model import ModelSignaturesType
   from openllm_core._typing_compat import DictStrAny
   from openllm_core._typing_compat import M
   from openllm_core._typing_compat import T
 else:
   transformers, torch = openllm_core.utils.LazyLoader('transformers', globals(), 'transformers'), openllm_core.utils.LazyLoader('torch', globals(), 'torch')
-
-_object_setattr = object.__setattr__
 
 def process_config(model_id: str, trust_remote_code: bool, **attrs: t.Any) -> tuple[transformers.PretrainedConfig, DictStrAny, DictStrAny]:
   '''A helper function that correctly parse config and attributes for transformers.PretrainedConfig.
@@ -72,24 +67,6 @@ def check_unintialised_params(model: torch.nn.Module) -> None:
   unintialized = [n for n, param in model.named_parameters() if param.data.device == torch.device('meta')]
   if len(unintialized) > 0:
     raise RuntimeError(f'Found the following unintialized parameters in {model}: {unintialized}')
-
-def update_model(bentomodel: bentoml.Model, metadata: DictStrAny) -> bentoml.Model:
-  based: DictStrAny = copy.deepcopy(bentomodel.info.metadata)
-  based.update(metadata)
-  _object_setattr(
-      bentomodel,
-      '_info',
-      ModelInfo(  # type: ignore[call-arg] # XXX: remove me once upstream is merged
-          tag=bentomodel.info.tag,
-          module=bentomodel.info.module,
-          labels=bentomodel.info.labels,
-          options=bentomodel.info.options.to_dict(),
-          signatures=bentomodel.info.signatures,
-          context=bentomodel.info.context,
-          api_version=bentomodel.info.api_version,
-          creation_time=bentomodel.info.creation_time,
-          metadata=based))
-  return bentomodel
 
 # NOTE: sync with bentoml/_internal/frameworks/transformers.py#make_default_signatures
 def make_model_signatures(llm: openllm.LLM[M, T]) -> ModelSignaturesType:

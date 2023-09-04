@@ -110,10 +110,11 @@ _TRANSFORMERS_EXT = ['torch', 'tokenizers', 'accelerate']
 
 _BASE_DEPENDENCIES = [
     Dependencies(name='bentoml', extensions=_BENTOML_EXT, lower_constraint=lower_bentoml_constraint),
-    Dependencies(name='transformers', extensions=_TRANSFORMERS_EXT, lower_constraint='4.29.0'),
+    Dependencies(name='transformers', extensions=_TRANSFORMERS_EXT, lower_constraint='4.32.1'),
     Dependencies(name='openllm-client'),
     Dependencies(name='safetensors'),
-    Dependencies(name='optimum'),
+    Dependencies(name='optimum', lower_constraint="1.12.0"),
+    Dependencies(name='accelerate'),
     Dependencies(name='ghapi'),
     Dependencies(name='tabulate', extensions=['widechars'], lower_constraint='0.9.0'),
     Dependencies(name='click', lower_constraint='8.1.3'),
@@ -122,7 +123,7 @@ _BASE_DEPENDENCIES = [
 ]
 
 _ALL_RUNTIME_DEPS = ['flax>=0.7', 'jax', 'jaxlib', 'tensorflow', 'keras']
-FINE_TUNE_DEPS = ['peft>=0.4.0', 'bitsandbytes', 'datasets', 'accelerate', 'trl']
+FINE_TUNE_DEPS = ['peft>=0.5.0', 'bitsandbytes', 'datasets', 'accelerate', 'trl']
 FLAN_T5_DEPS = _ALL_RUNTIME_DEPS
 OPT_DEPS = _ALL_RUNTIME_DEPS
 GRPC_DEPS = ['openllm-client[grpc]']
@@ -130,7 +131,7 @@ OPENAI_DEPS = ['openai', 'tiktoken']
 AGENTS_DEPS = ['transformers[agents]>=4.30', 'diffusers', 'soundfile']
 PLAYGROUND_DEPS = ['jupyter', 'notebook', 'ipython', 'jupytext', 'nbformat']
 GGML_DEPS = ['ctransformers']
-GPTQ_DEPS = ['auto-gptq[triton]']
+GPTQ_DEPS = ['auto-gptq[triton]>=0.4.2', 'optimum>=1.12.0']
 VLLM_DEPS = ['vllm>=0.1.4', 'ray']
 
 _base_requirements: dict[str, t.Any] = {

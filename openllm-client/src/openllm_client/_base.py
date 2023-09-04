@@ -19,7 +19,6 @@ from openllm_core._typing_compat import overload
 from openllm_core.utils import bentoml_cattr
 from openllm_core.utils import ensure_exec_coro
 from openllm_core.utils import is_transformers_available
-from openllm_core.utils import is_transformers_supports_agent
 
 from .benmin import AsyncClient as AsyncBentoClient
 from .benmin import Client as BentoClient
@@ -94,8 +93,6 @@ class _ClientAttr:
       raise RuntimeError("transformers is required to use HF agent. Install with 'pip install \"openllm-client[agents]\"'.")
     if not self.supports_hf_agent:
       raise RuntimeError(f'{self.model_name} ({self.backend}) does not support running HF agent.')
-    if not is_transformers_supports_agent():
-      raise RuntimeError("Current 'transformers' does not support Agent. Make sure to upgrade to at least 4.29: 'pip install -U \"transformers>=4.29\"'")
     import transformers
     return transformers.HfAgent(urljoin(self._address, '/hf/agent'))
 
@@ -215,8 +212,6 @@ class _AsyncClient(_ClientAttr):
     else: raise RuntimeError(f"Unknown 'agent_type={agent_type}'")
 
   async def _run_hf_agent(self, *args: t.Any, **kwargs: t.Any) -> t.Any:
-    if not is_transformers_supports_agent():
-      raise RuntimeError('This version of transformers does not support agent.run. Make sure to upgrade to transformers>4.30.0')
     if len(args) > 1: raise ValueError("'args' should only take one positional argument.")
     from transformers.tools.agents import clean_code_for_run
     from transformers.tools.agents import get_tool_creation_code
