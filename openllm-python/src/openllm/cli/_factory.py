@@ -187,9 +187,9 @@ Available official model_id(s): [default: {llm_config['default_id']}]
         'OPENLLM_ADAPTER_MAP': orjson.dumps(adapter_map).decode(),
         'OPENLLM_SERIALIZATION': serialisation,
         env.backend: env['backend_value'],
-        env.quantize: env['quantize_value']
     })
     if env['model_id_value']: start_env[env.model_id] = str(env['model_id_value'])
+    if env['quantize_value']: start_env[env.quantize] = str(env['quantize_value'])
 
     llm = openllm.utils.infer_auto_class(env['backend_value']).for_model(model,
                                                                          model_id=start_env[env.model_id],
