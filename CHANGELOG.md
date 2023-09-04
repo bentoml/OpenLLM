@@ -18,6 +18,47 @@ This changelog is managed by towncrier and is compiled at release time.
 
 <!-- towncrier release notes start -->
 
+## [0.3.0](https://github.com/bentoml/openllm/tree/v0.3.0)
+
+### Backwards-incompatible Changes
+
+- All environment variable now will be more simplified, without the need for the specific model prefix
+
+  For example: OPENLLM_LLAMA_GENERATION_MAX_NEW_TOKENS now becomes OPENLLM_GENERATION_MAX_NEW_TOKENS
+
+  Unify some misc environment variable. To switch different backend, one can use `--backend` for both `start` and `build`
+
+  ```bash
+  openllm start llama --backend vllm
+  ```
+
+  or the environment variable `OPENLLM_BACKEND`
+
+  ```bash
+  OPENLLM_BACKEND=vllm openllm start llama
+  ```
+
+  `openllm.Runner` now will default to try download the model the first time if the model is not available, and get the cached in model store consequently
+
+  Model serialisation now updated to a new API version with more clear name change, kindly ask users to do `openllm prune -y --include-bentos` and update to
+  this current version of openllm
+  [#283](https://github.com/bentoml/openllm/issues/283)
+
+
+### Refactor
+
+- Refactor GPTQ to use official implementation from transformers>=4.32
+  [#297](https://github.com/bentoml/openllm/issues/297)
+
+
+### Features
+
+- Added support for vLLM streaming
+
+  This can now be accessed via `/v1/generate_stream`
+  [#260](https://github.com/bentoml/openllm/issues/260)
+
+
 ## [0.2.27](https://github.com/bentoml/openllm/tree/v0.2.27)
 
 ### Changes
