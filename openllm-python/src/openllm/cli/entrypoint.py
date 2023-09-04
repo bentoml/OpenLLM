@@ -84,7 +84,6 @@ from openllm_core.utils import first_not_none
 from openllm_core.utils import get_debug_mode
 from openllm_core.utils import get_quiet_mode
 from openllm_core.utils import is_torch_available
-from openllm_core.utils import is_transformers_supports_agent
 from openllm_core.utils import resolve_user_filepath
 from openllm_core.utils import set_debug_mode
 from openllm_core.utils import set_quiet_mode
@@ -800,7 +799,6 @@ def instruct_command(endpoint: str, timeout: int, agent: LiteralString, output: 
   except http.client.BadStatusLine:
     raise click.ClickException(f'{endpoint} is neither a HTTP server nor reachable.') from None
   if agent == 'hf':
-    if not is_transformers_supports_agent(): raise click.UsageError("Transformers version should be at least 4.29 to support HfAgent. Upgrade with 'pip install -U transformers'")
     _memoized = {k: v[0] for k, v in _memoized.items() if v}
     client._hf_agent.set_stream(logger.info)
     if output != 'porcelain': termui.echo(f"Sending the following prompt ('{task}') with the following vars: {_memoized}", fg='magenta')

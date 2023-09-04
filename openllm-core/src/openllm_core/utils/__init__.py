@@ -343,8 +343,6 @@ _import_structure: dict[str, list[str]] = {
         'is_grpc_available',
         'is_grpc_health_available',
         'is_transformers_available',
-        'is_transformers_supports_kbit',
-        'is_transformers_supports_agent',
         'is_optimum_supports_gptq',
     ]
 }
@@ -375,8 +373,6 @@ if t.TYPE_CHECKING:
   from .import_utils import is_tf_available as is_tf_available
   from .import_utils import is_torch_available as is_torch_available
   from .import_utils import is_transformers_available as is_transformers_available
-  from .import_utils import is_transformers_supports_agent as is_transformers_supports_agent
-  from .import_utils import is_transformers_supports_kbit as is_transformers_supports_kbit
   from .import_utils import is_triton_available as is_triton_available
   from .import_utils import is_vllm_available as is_vllm_available
   from .import_utils import is_xformers_available as is_xformers_available

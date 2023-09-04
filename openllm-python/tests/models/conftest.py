@@ -142,7 +142,7 @@ class DockerHandle(_Handle):
     return container.status in ['running', 'created']
 
 @contextlib.contextmanager
-def _local_handle(model: str, model_id: str, image_tag: str, deployment_mode: t.Literal['container', 'local'], quantize: LiteralQuantise | None = None, *, _serve_grpc: bool = False,):
+def _local_handle(model: str, model_id: str, image_tag: str, deployment_mode: t.Literal['container', 'local'], quantize: LiteralQuantise | None = None, *, _serve_grpc: bool = False):
   with openllm.utils.reserve_free_port() as port:
     pass
 
@@ -163,7 +163,7 @@ def _local_handle(model: str, model_id: str, image_tag: str, deployment_mode: t.
     proc.stderr.close()
 
 @contextlib.contextmanager
-def _container_handle(model: str, model_id: str, image_tag: str, deployment_mode: t.Literal['container', 'local'], quantize: LiteralQuantise | None = None, *, _serve_grpc: bool = False,):
+def _container_handle(model: str, model_id: str, image_tag: str, deployment_mode: t.Literal['container', 'local'], quantize: LiteralQuantise | None = None, *, _serve_grpc: bool = False):
   envvar = openllm.utils.EnvVarMixin(model)
 
   with openllm.utils.reserve_free_port() as port, openllm.utils.reserve_free_port() as prom_port:
