@@ -892,10 +892,13 @@ class LLM(LLMInterface[M, T], ReprMixin):
     '''
     models = models if models is not None else []
 
-    try:
-      models.append(self._bentomodel)
-    except bentoml.exceptions.NotFound as err:
-      raise RuntimeError(f'Failed to locate {self._bentomodel}:{err}') from None
+    if os.environ.get('BENTO_PATH') is None:
+      # Hmm we should only add this if it is not in the container environment
+      # BentoML sets BENTO_PATH so we can use this as switch logic here.
+      try:
+        models.append(self._bentomodel)
+      except bentoml.exceptions.NotFound as err:
+        raise RuntimeError(f'Failed to locate {self._bentomodel}:{err}') from None
 
     generate_sig = ModelSignature.from_dict(ModelSignatureDict(batchable=False))
     embeddings_sig = ModelSignature.from_dict(ModelSignatureDict(batchable=True, batch_dim=0))
