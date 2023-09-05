@@ -138,7 +138,7 @@ To interact with the server, you can visit the web UI at [http://0.0.0.0:3000/]
 
 ```python
 import openllm
-client = openllm.clint.HTTPClient('http://localhost:3000')
+client = openllm.client.HTTPClient('http://localhost:3000')
 client.query('Explain to me the difference between "further" and "farther"')
 ```
 
