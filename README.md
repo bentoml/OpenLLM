@@ -222,13 +222,13 @@ You can specify any of the following Llama models by using `--model-id`.
 ### Supported backends
 
 - PyTorch (Default):
-    
+
     ```bash
     openllm start llama --model-id meta-llama/Llama-2-7b-chat-hf --backend pt
     ```
-    
+
 - vLLM (Recommended):
-    
+
     ```bash
     pip install "openllm[llama, vllm]"
     openllm start llama --model-id meta-llama/Llama-2-7b-chat-hf --backend vllm
@@ -274,7 +274,7 @@ You can specify any of the following ChatGLM models by using `--model-id`.
 ### Supported backends
 
 - PyTorch (Default):
-    
+
     ```bash
     openllm start chatglm --model-id thudm/chatglm-6b --backend pt
     ```
@@ -314,13 +314,13 @@ You can specify any of the following Dolly-v2 models by using `--model-id`.
 ### Supported backends
 
 - PyTorch (Default):
-    
+
     ```bash
     openllm start dolly-v2 --model-id databricks/dolly-v2-3b --backend pt
     ```
-    
+
 - vLLM:
-    
+
     ```bash
     openllm start dolly-v2 --model-id databricks/dolly-v2-3b --backend vllm
     ```
@@ -364,18 +364,18 @@ You can specify any of the following Falcon models by using `--model-id`.
 ### Supported backends
 
 - PyTorch (Default):
-    
+
     ```bash
     openllm start falcon --model-id tiiuae/falcon-7b --backend pt
     ```
-    
+
 - vLLM:
-    
+
     ```bash
     pip install "openllm[falcon, vllm]"
     openllm start falcon --model-id tiiuae/falcon-7b --backend vllm
     ```
-    
+
 > [!NOTE]
 > Currently when using the vLLM backend, quantization and adapters are not supported.
 
@@ -416,20 +416,20 @@ You can specify any of the following Flan-T5 models by using `--model-id`.
 ### Supported backends
 
 - PyTorch (Default):
-    
+
     ```bash
     openllm start flan-t5 --model-id google/flan-t5-large --backend pt
     ```
-    
+
 - Flax:
-    
+
     ```bash
     pip install "openllm[flan-t5, flax]"
     openllm start flan-t5 --model-id google/flan-t5-large --backend flax
     ```
-    
+
 - TensorFlow:
-    
+
     ```bash
     pip install "openllm[flan-t5, tf]"
     openllm start flan-t5 --model-id google/flan-t5-large --backend tf
@@ -471,13 +471,13 @@ You can specify any of the following GPT-NeoX models by using `--model-id`.
 ### Supported backends
 
 - PyTorch (Default):
-    
+
     ```bash
     openllm start gpt-neox --model-id eleutherai/gpt-neox-20b --backend pt
     ```
-    
+
 - vLLM:
-    
+
     ```bash
     openllm start gpt-neox --model-id eleutherai/gpt-neox-20b --backend vllm
     ```
@@ -524,18 +524,18 @@ You can specify any of the following MPT models by using `--model-id`.
 ### Supported backends
 
 - PyTorch (Default):
-    
+
     ```bash
     openllm start mpt --model-id mosaicml/mpt-7b-chat --backend pt
     ```
-    
+
 - vLLM (Recommended):
-    
+
     ```bash
     pip install "openllm[mpt, vllm]"
     openllm start mpt --model-id mosaicml/mpt-7b-chat --backend vllm
     ```
-    
+
 > [!NOTE]
 > Currently when using the vLLM backend, quantization and adapters are not supported.
 
@@ -577,32 +577,32 @@ You can specify any of the following OPT models by using `--model-id`.
 ### Supported backends
 
 - PyTorch (Default):
-    
+
     ```bash
     openllm start opt --model-id facebook/opt-2.7b --backend pt
     ```
-    
+
 - vLLM:
-    
+
     ```bash
     pip install "openllm[opt, vllm]"
     openllm start opt --model-id facebook/opt-2.7b --backend vllm
     ```
-    
+
 - TensorFlow:
-    
+
     ```bash
     pip install "openllm[opt, tf]"
     openllm start opt --model-id facebook/opt-2.7b --backend tf
     ```
-    
+
 - Flax:
-    
+
     ```bash
     pip install "openllm[opt, flax]"
     openllm start opt --model-id facebook/opt-2.7b --backend flax
     ```
-    
+
 > [!NOTE]
 > Currently when using the vLLM backend, quantization and adapters are not supported.
 
@@ -642,13 +642,13 @@ You can specify any of the following StableLM models by using `--model-id`.
 ### Supported backends
 
 - PyTorch (Default):
-    
+
     ```bash
     openllm start stablelm --model-id stabilityai/stablelm-tuned-alpha-7b --backend pt
     ```
-    
+
 - vLLM:
-    
+
     ```bash
     openllm start stablelm --model-id stabilityai/stablelm-tuned-alpha-7b --backend vllm
     ```
@@ -690,13 +690,13 @@ You can specify any of the following StarCoder models by using `--model-id`.
 ### Supported backends
 
 - PyTorch (Default):
-    
+
     ```bash
     openllm start startcoder --model-id bigcode/starcoder --backend pt
     ```
-    
+
 - vLLM:
-    
+
     ```bash
     pip install "openllm[startcoder, vllm]"
     openllm start startcoder --model-id bigcode/starcoder --backend vllm
@@ -743,13 +743,13 @@ You can specify any of the following Baichuan models by using `--model-id`.
 ### Supported backends
 
 - PyTorch (Default):
-    
+
     ```bash
     openllm start baichuan --model-id baichuan-inc/baichuan-13b-base --backend pt
     ```
-    
+
 - vLLM:
-    
+
     ```bash
     pip install "openllm[baichuan, vllm]"
     openllm start baichuan --model-id baichuan-inc/baichuan-13b-base --backend vllm
