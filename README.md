@@ -54,7 +54,7 @@ Key features include:
 
 ⚡ **Quantization**: Run inference with less computational and memory costs though quantization techniques like [bitsandbytes](https://github.com/TimDettmers/bitsandbytes) and [GPTQ](https://arxiv.org/abs/2210.17323).
 
-📡 **Streaming**: Support token streaming through server-sent events (SSE). You can use the `generate_stream` endpoint for streaming responses from LLMs.
+📡 **Streaming**: Support token streaming through server-sent events (SSE). You can use the `/v1/generate_stream` endpoint for streaming responses from LLMs.
 
 🔄 **Continuous batching**: Support continuous batching via [vLLM](https://github.com/vllm-project/vllm) for increased total throughput.
 
