@@ -1,6 +1,6 @@
 ci:
   autoupdate_schedule: weekly
-  skip: [check-models-table-update, changelog-dry-run, mypy, yapf, sync-readme, clj-kondo]
+  skip: [changelog-dry-run, mypy, yapf, clj-kondo]
   autofix_commit_msg: "ci: auto fixes from pre-commit.ci\n\nFor more information, see https://pre-commit.ci"
   autoupdate_commit_msg: 'ci: pre-commit autoupdate [pre-commit.ci]'
 default_language_version:
@@ -81,54 +81,42 @@ repos:
       - id: check-added-large-files
       - id: debug-statements
       - id: check-merge-conflict
-  # - repo: https://github.com/RobertCraigie/pyright-python
-  #   rev: v1.1.324
-  #   hooks:
-  #   - id: pyright
-  #     verbose: true
-  #     args: [--level, error]
-  #     exclude: |
-  #       (?x)^(
-  #           examples/.*|
-  #           tools/.*|
-  #           tests/.*|
-  #           openllm-python/src/openllm/playground/.*|
-  #           openllm-python/tests/.*|
-  #           openllm-client/src/openllm_client/pb.*|
-  #           .github/.*|
-  #           cz.py |
-  #           hatch_build.py
-  #       )$
-  #     additional_dependencies:
-  #       - openllm-client[grpc]
-  #       - bentoml[io]>=1.1.2
-  #       - transformers[agents,torch,tokenizers,accelerate]>=4.29.0
-  #       - peft
-  #       - safetensors
-  #       - optimum
-  #       - ghapi
-  #       - click==8.1.3
-  #       - bitsandbytes
-  #       - diffusers
-  #       - soundfile
+  - repo: https://github.com/RobertCraigie/pyright-python
+    rev: v1.1.324
+    hooks:
+    - id: pyright
+      verbose: true
+      args: [--level, error]
+      exclude: |
+        (?x)^(
+            examples/.*|
+            tools/.*|
+            tests/.*|
+            openllm-python/src/openllm/playground/.*|
+            openllm-python/tests/.*|
+            openllm-client/src/openllm_client/pb.*|
+            .github/.*|
+            cz.py |
+            hatch_build.py
+        )$
+      additional_dependencies:
+        - openllm-client[grpc]
+        - bentoml[io]>=1.1.2
+        - transformers[agents,torch,tokenizers,accelerate]>=4.29.0
+        - peft
+        - safetensors
+        - optimum
+        - ghapi
+        - click==8.1.3
+        - bitsandbytes
+        - diffusers
+        - soundfile
   - repo: meta
     hooks:
       - id: check-hooks-apply
       - id: check-useless-excludes
   - repo: local
     hooks:
-      - id: check-models-table-update
-        name: check if table in README.md is up-to-date
-        entry: ./tools/assert-model-table-latest.py
-        language: script
-        verbose: true
-        files: README.md
-      - id: sync-readme
-        name: sync readme with python core library
-        entry: ./tools/sync-readme.sh
-        language: script
-        verbose: true
-        files: README.md
       - id: changelog-dry-run
         name: Running changelog dry-run
         entry: hatch run changelog
