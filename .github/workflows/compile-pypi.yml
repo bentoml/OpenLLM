@@ -96,6 +96,7 @@ jobs:
   mypyc:
     name: Compiled wheels (${{ matrix.buildplatform[1] }}-${{ matrix.directory }})
     runs-on: ${{ matrix.buildplatform[0] }}
+    if: false
     strategy:
       fail-fast: false
       matrix:
@@ -136,7 +137,8 @@ jobs:
   check-download-artefacts:
     name: dry-run for downloading artefacts
     if: github.event_name == 'pull_request'
-    needs: [pure-wheels-sdist, mypyc]
+    needs: [pure-wheels-sdist]
+    # needs: [pure-wheels-sdist, mypyc]
     runs-on: ubuntu-latest
     steps:
       - name: Download Python artifacts
@@ -144,68 +146,70 @@ jobs:
         with:
           name: python-artefacts
           path: dist
-      - name: Download Linux x86_64 compiled artifacts
-        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
-        with:
-          name: linux-x86_64-mypyc-wheels
-          path: dist
-      - name: Download MacOS x86_64 compiled artifacts
-        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
-        with:
-          name: macos-x86_64-mypyc-wheels
-          path: dist
-      - name: Download MacOS arm64 compiled artifacts
-        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
-        with:
-          name: macos-arm64-mypyc-wheels
-          path: dist
-      - name: Download MacOS universal2 compiled artifacts
-        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
-        with:
-          name: macos-universal2-mypyc-wheels
-          path: dist
-      - name: dry ls
-        run: ls -rthlaR
+      # - name: Download Linux x86_64 compiled artifacts
+      #   uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
+      #   with:
+      #     name: linux-x86_64-mypyc-wheels
+      #     path: dist
+      # - name: Download MacOS x86_64 compiled artifacts
+      #   uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
+      #   with:
+      #     name: macos-x86_64-mypyc-wheels
+      #     path: dist
+      # - name: Download MacOS arm64 compiled artifacts
+      #   uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
+      #   with:
+      #     name: macos-arm64-mypyc-wheels
+      #     path: dist
+      # - name: Download MacOS universal2 compiled artifacts
+      #   uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
+      #   with:
+      #     name: macos-universal2-mypyc-wheels
+      #     path: dist
+      # - name: dry ls
+      #   run: ls -rthlaR
   push-nightly:
     name: Push nightly wheels
     if: ${{ !github.event.repository.fork && github.event_name == 'push' }}
     runs-on: ubuntu-latest
     permissions:
       id-token: write
-    needs: [pure-wheels-sdist, mypyc]
+    # needs: [pure-wheels-sdist, mypyc]
+    needs: [pure-wheels-sdist]
     steps:
       - name: Download Python artifacts
         uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
         with:
           name: python-artefacts
           path: dist
-      - name: Download Linux x86_64 compiled artifacts
-        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
-        with:
-          name: linux-x86_64-mypyc-wheels
-          path: dist
-      - name: Download MacOS x86_64 compiled artifacts
-        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
-        with:
-          name: macos-x86_64-mypyc-wheels
-          path: dist
-      - name: Download MacOS arm64 compiled artifacts
-        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
-        with:
-          name: macos-arm64-mypyc-wheels
-          path: dist
-      - name: Download MacOS universal2 compiled artifacts
-        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
-        with:
-          name: macos-universal2-mypyc-wheels
-          path: dist
+      # - name: Download Linux x86_64 compiled artifacts
+      #   uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
+      #   with:
+      #     name: linux-x86_64-mypyc-wheels
+      #     path: dist
+      # - name: Download MacOS x86_64 compiled artifacts
+      #   uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
+      #   with:
+      #     name: macos-x86_64-mypyc-wheels
+      #     path: dist
+      # - name: Download MacOS arm64 compiled artifacts
+      #   uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
+      #   with:
+      #     name: macos-arm64-mypyc-wheels
+      #     path: dist
+      # - name: Download MacOS universal2 compiled artifacts
+      #   uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
+      #   with:
+      #     name: macos-universal2-mypyc-wheels
+      #     path: dist
       - name: Publish nightly wheels to test.pypi.org
         uses: pypa/gh-action-pypi-publish@b7f401de30cb6434a1e19f805ff006643653240e # ratchet:pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
   sucess-push: # https://github.com/marketplace/actions/alls-green#why
     if: github.event_name == 'push'
-    needs: [push-nightly, pure-wheels-sdist, mypyc]
+    # needs: [push-nightly, pure-wheels-sdist, mypyc]
+    needs: [push-nightly, pure-wheels-sdist]
     runs-on: ubuntu-latest
     outputs:
       success: ${{ steps.everygreen.outputs.success }}
@@ -217,7 +221,8 @@ jobs:
           jobs: ${{ toJSON(needs) }}
   sucess-pr: # https://github.com/marketplace/actions/alls-green#why
     if: github.event_name == 'pull_request'
-    needs: [pure-wheels-sdist, mypyc]
+    # needs: [pure-wheels-sdist, mypyc]
+    needs: [pure-wheels-sdist]
     runs-on: ubuntu-latest
     outputs:
       success: ${{ steps.everygreen.outputs.success }}
