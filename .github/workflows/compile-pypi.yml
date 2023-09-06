@@ -97,6 +97,8 @@ jobs:
     name: Compiled wheels (${{ matrix.buildplatform[1] }}-${{ matrix.directory }})
     runs-on: ${{ matrix.buildplatform[0] }}
     if: false
+    # if: >-
+    #   contains(needs.get_commit_message.outputs.message, '[wheel build]') || github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, '02 - Wheel Build')) || (github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/heads/main')))
     strategy:
       fail-fast: false
       matrix:
@@ -109,8 +111,6 @@ jobs:
           - [macos-latest, macos-universal2, "universal2"]
         directory: ["openllm-core", "openllm-python", "openllm-client"]
     needs: get_commit_message
-    if: >-
-      contains(needs.get_commit_message.outputs.message, '[wheel build]') || github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, '02 - Wheel Build')) || (github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/heads/main')))
     steps:
       - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # ratchet:actions/checkout@v3
         with:
