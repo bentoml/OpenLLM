@@ -18,6 +18,16 @@ This changelog is managed by towncrier and is compiled at release time.
 
 <!-- towncrier release notes start -->
 
+## [0.3.1](https://github.com/bentoml/openllm/tree/v0.3.1)
+
+### Changes
+
+- revert back to only release pure wheels
+
+  disable compiling wheels for now once we move to different implementation
+  [#304](https://github.com/bentoml/openllm/issues/304)
+
+
 ## [0.3.0](https://github.com/bentoml/openllm/tree/v0.3.0)
 
 ### Backwards-incompatible Changes
