@@ -1,6 +1,6 @@
 {
   "name": "openllm-monorepo",
-  "version": "0.3.2.dev0",
+  "version": "0.3.2",
   "description": "OpenLLM: Operating LLMs in production",
   "repository": "git@github.com:bentoml/OpenLLM.git",
   "author": "Aaron Pham <29749331+aarnphm@users.noreply.github.com>",
