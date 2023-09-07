@@ -43,7 +43,7 @@ Key features include:
 
 🚂 **State-of-the-art LLMs**: Integrated support for a wide range of open-source LLMs and model runtimes, including but not limited to Llama 2, StableLM, Falcon, Dolly, Flan-T5, ChatGLM, and StarCoder.
 
-🔥 **Flexible APIs**: Serve LLMs over a RESTful API or gRPC with a single command. You can interact with the mode using a Web UI, CLI, Python/JavaScript clients, or any HTTP client of your choice.
+🔥 **Flexible APIs**: Serve LLMs over a RESTful API or gRPC with a single command. You can interact with the model using a Web UI, CLI, Python/JavaScript clients, or any HTTP client of your choice.
 
 ⛓️ **Freedom to build**: First-class support for LangChain, BentoML and Hugging Face, allowing you to easily create your own AI applications by composing LLMs with other models and services.
 
