@@ -108,7 +108,7 @@ full = [
 ggml = ["ctransformers"]
 gptq = ["auto-gptq[triton]>=0.4.2", "optimum>=1.12.0"]
 grpc = ["openllm-client[grpc]"]
-llama = ["fairscale", "sentencepiece"]
+llama = ["fairscale", "sentencepiece", "scipy"]
 mpt = ["triton", "einops"]
 openai = ["openai", "tiktoken"]
 opt = ["flax>=0.7", "jax", "jaxlib", "tensorflow", "keras"]

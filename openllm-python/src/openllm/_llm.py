@@ -444,8 +444,8 @@ class LLM(LLMInterface[M, T], ReprMixin):
       raise ValueError("'quantization_config' and 'quantize' are mutually exclusive. Either customise your quantization_config or use the 'quantize' argument.")
     if quantization_config is None and quantize is not None:
       # in case users input `tokenizer` to __init__, default to the _model_id
-      _gptq_tokenizer = attrs.pop('tokenizer', _model_id)
-      quantization_config, attrs = infer_quantisation_config(cls, quantize, tokenizer=_gptq_tokenizer, **attrs)
+      if quantize == 'gptq': attrs.setdefault('tokenizer', _model_id)
+      quantization_config, attrs = infer_quantisation_config(cls, quantize, **attrs)
     if quantize == 'gptq': serialisation = 'safetensors'
     elif cls.__llm_backend__ == 'vllm': serialisation = 'legacy'  # Currently working-in-progress
 
