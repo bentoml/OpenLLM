@@ -41,6 +41,7 @@ dependencies = [
     "bentoml[io]>=1.1.2",
     "transformers[torch,tokenizers,accelerate]>=4.32.1",
     "openllm-client",
+    "openllm-core",
     "safetensors",
     "optimum>=1.12.0",
     "accelerate",

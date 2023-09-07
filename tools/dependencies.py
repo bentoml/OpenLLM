@@ -112,6 +112,7 @@ _BASE_DEPENDENCIES = [
     Dependencies(name='bentoml', extensions=_BENTOML_EXT, lower_constraint=lower_bentoml_constraint),
     Dependencies(name='transformers', extensions=_TRANSFORMERS_EXT, lower_constraint='4.32.1'),
     Dependencies(name='openllm-client'),
+    Dependencies(name='openllm-core'),
     Dependencies(name='safetensors'),
     Dependencies(name='optimum', lower_constraint="1.12.0"),
     Dependencies(name='accelerate'),
