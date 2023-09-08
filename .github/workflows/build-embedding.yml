@@ -171,7 +171,7 @@ jobs:
                     ca-certificates gnupg2 bash build-essential {% if __options__system_packages is not none %}{{ __options__system_packages | join(' ') }}{% endif -%}
             {% endblock %}
           EOF
-          bento_tag=$(python -c "import openllm;print(str(openllm.build('opt',bento_version='sha-${{ env.GITHUB_SHA_SHORT }}',serialisation_format='legacy').tag))")
+          bento_tag=$(python -c "import openllm;print(str(openllm.build('opt',bento_version='sha-${{ env.GITHUB_SHA_SHORT }}',serialisation='legacy').tag))")
           echo "tag=$bento_tag" >> $GITHUB_OUTPUT
       - name: Build and push Embedding Bento
         id: build-and-push
