@@ -151,6 +151,7 @@ jobs:
         id: bento-tag
         run: |
           bash local.sh
+          pip install 'build[virtualenv]==0.10.0'
           openllm build opt --serialisation legacy --bento-version sha-${{ env.GITHUB_SHA_SHORT }} --machine --dockerfile-template - <<EOF
             {% extends "python_debian.j2" %}
             {% block SETUP_BENTO_BASE_IMAGE %}
