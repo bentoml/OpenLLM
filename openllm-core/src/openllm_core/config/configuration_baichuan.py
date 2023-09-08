@@ -18,7 +18,7 @@ Currently, Baichuan only supports PyTorch. Make sure ``torch`` is available in y
 
 \b
 Baichuan Runner will use baichuan-inc/Baichuan-7B as the default model. To change to any other
-saved pretrained Baichuan, provide ``OPENLLM_Baichuan_MODEL_ID='fireballoon/baichuan-vicuna-chinese-7b'``
+saved pretrained Baichuan, provide ``OPENLLM_MODEL_ID='fireballoon/baichuan-vicuna-chinese-7b'``
 or provide `--model-id` flag when running ``openllm start baichuan``:
 
 \b

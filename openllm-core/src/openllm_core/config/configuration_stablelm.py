@@ -18,7 +18,7 @@ Currently, StableLM only supports PyTorch. Make sure ``torch`` is available in y
 
 \b
 StableLM Runner will use stabilityai/stablelm-base-alpha-3b as the default model. To change to any other StableLM
-saved pretrained, or a fine-tune StableLM, provide ``OPENLLM_STABLELM_MODEL_ID='stabilityai/stablelm-tuned-alpha-3b'``
+saved pretrained, or a fine-tune StableLM, provide ``OPENLLM_MODEL_ID='stabilityai/stablelm-tuned-alpha-3b'``
 or provide `--model-id` flag when running ``openllm start stablelm``:
 
 \b

@@ -22,7 +22,7 @@ Currently, dolly-v2 only supports PyTorch. Make sure ``torch`` is available in y
 
 \b
 Dolly-v2 Runner will use databricks/dolly-v2-3b as the default model. To change to any other dolly-v2
-saved pretrained, or a fine-tune dolly-v2, provide ``OPENLLM_DOLLY_V2_MODEL_ID='databricks/dolly-v2-7b'``
+saved pretrained, or a fine-tune dolly-v2, provide ``OPENLLM_MODEL_ID='databricks/dolly-v2-7b'``
 or provide `--model-id` flag when running ``openllm start dolly-v2``:
 
 \b
