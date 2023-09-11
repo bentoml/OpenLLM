@@ -281,8 +281,8 @@ class LLM(LLMInterface[M, T], ReprMixin):
 
     def __attrs_init__(self,
                        config: LLMConfig,
-                       quantize: t.Optional[LiteralQuantise],
                        quantization_config: t.Optional[t.Union[transformers.BitsAndBytesConfig, transformers.GPTQConfig]],
+                       quantize: t.Optional[LiteralQuantise],
                        model_id: str,
                        model_decls: TupleAny,
                        model_attrs: DictStrAny,
@@ -446,8 +446,6 @@ class LLM(LLMInterface[M, T], ReprMixin):
       # in case users input `tokenizer` to __init__, default to the _model_id
       if quantize == 'gptq': attrs.setdefault('tokenizer', _model_id)
       quantization_config, attrs = infer_quantisation_config(cls, quantize, **attrs)
-    if quantize == 'gptq': serialisation = 'safetensors'
-    elif cls.__llm_backend__ == 'vllm': serialisation = 'legacy'  # Currently working-in-progress
 
     # NOTE: LoRA adapter setup
     if adapter_map and adapter_id:
@@ -534,12 +532,12 @@ class LLM(LLMInterface[M, T], ReprMixin):
                model_id: str,
                llm_config: LLMConfig,
                quantization_config: transformers.BitsAndBytesConfig | transformers.GPTQConfig | None,
-               _adapters_mapping: AdaptersMapping | None,
-               _tag: bentoml.Tag,
                _quantize: LiteralQuantise | None,
                _model_version: str,
+               _tag: bentoml.Tag,
                _serialisation: t.Literal['safetensors', 'legacy'],
                _local: bool,
+               _adapters_mapping: AdaptersMapping | None,
                **attrs: t.Any,
                ):
     '''Initialize the LLM with given pretrained model.
