@@ -43,7 +43,7 @@ jobs:
     outputs:
       message: ${{ steps.commit_message.outputs.message }}
     steps:
-      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # ratchet:actions/checkout@v3
+      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # ratchet:actions/checkout@v4
         # Gets the correct commit message for pull request
         with:
           ref: ${{ github.event.pull_request.head.sha }}
@@ -70,7 +70,7 @@ jobs:
       ec2-instance-id: ${{ steps.start-ec2-runner.outputs.ec2-instance-id }}
     steps:
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@04b98b3f9e85f563fb061be8751a0352327246b0 # ratchet:aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@5fd3084fc36e372ff1fff382a39b10d03659f355 # ratchet:aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -98,10 +98,10 @@ jobs:
       id-token: write
       security-events: write
     steps:
-      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # ratchet:actions/checkout@v3
+      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # ratchet:actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: bentoml/setup-bentoml-action@d4010d8303684b183f45b33c6a44644f81337bdb # ratchet:bentoml/setup-bentoml-action@v1
+      - uses: bentoml/setup-bentoml-action@862aa8fa0e0c3793fcca4bfe7a62717a497417e4 # ratchet:bentoml/setup-bentoml-action@v1
         with:
           bentoml-version: 'main'
           python-version: '3.11'
@@ -224,7 +224,7 @@ jobs:
       (contains(needs.get_commit_message.outputs.message, '[ec2 build]') || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, '00 - EC2 Build')) || (github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/heads/main')))) && always()
     steps:
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@04b98b3f9e85f563fb061be8751a0352327246b0 # ratchet:aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@5fd3084fc36e372ff1fff382a39b10d03659f355 # ratchet:aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

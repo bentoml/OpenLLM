@@ -37,7 +37,7 @@ jobs:
     outputs:
       message: ${{ steps.commit_message.outputs.message }}
     steps:
-      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # ratchet:actions/checkout@v3
+      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # ratchet:actions/checkout@v4
         # Gets the correct commit message for pull request
         with:
           ref: ${{ github.event.pull_request.head.sha }}
@@ -64,7 +64,7 @@ jobs:
       ec2-instance-id: ${{ steps.start-ec2-runner.outputs.ec2-instance-id }}
     steps:
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@04b98b3f9e85f563fb061be8751a0352327246b0 # ratchet:aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@5fd3084fc36e372ff1fff382a39b10d03659f355 # ratchet:aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_PROD_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_PROD_SECRET_ACCESS_KEY }}
@@ -95,7 +95,7 @@ jobs:
       id-token: write
       security-events: write
     steps:
-      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # ratchet:actions/checkout@v3
+      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # ratchet:actions/checkout@v4
         with:
           fetch-depth: 1
       - name: Inject slug/short variables
@@ -160,7 +160,7 @@ jobs:
             org.opencontainers.image.source="https://github.com/bentoml/OpenLLM"
       - name: Build and push Docker image
         id: build-and-push
-        uses: docker/build-push-action@2eb1c1961a95fc15694676618e422e8ba1d63825 # ratchet:docker/build-push-action@v4
+        uses: docker/build-push-action@0a97817b6ade9f46837855d676c4cca3a2471fc9 # ratchet:docker/build-push-action@v4
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_PROD_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_PROD_SECRET_ACCESS_KEY }}
@@ -221,7 +221,7 @@ jobs:
       (contains(needs.get_commit_message.outputs.message, '[ec2 build]') || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, '00 - EC2 Build')) || (github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/heads/main')))) && always()
     steps:
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@04b98b3f9e85f563fb061be8751a0352327246b0 # ratchet:aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@5fd3084fc36e372ff1fff382a39b10d03659f355 # ratchet:aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_PROD_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_PROD_SECRET_ACCESS_KEY }}

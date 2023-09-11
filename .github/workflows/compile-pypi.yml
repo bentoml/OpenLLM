@@ -54,7 +54,7 @@ jobs:
     outputs:
       message: ${{ steps.commit_message.outputs.message }}
     steps:
-      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # ratchet:actions/checkout@v3
+      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # ratchet:actions/checkout@v4
         # Gets the correct commit message for pull request
         with:
           ref: ${{ github.event.pull_request.head.sha }}
@@ -76,11 +76,11 @@ jobs:
       matrix:
         directory: ["openllm-core", "openllm-python", "openllm-client"]
     steps:
-      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # ratchet:actions/checkout@v3
+      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # ratchet:actions/checkout@v4
         with:
           fetch-depth: 0
           ref: '${{ inputs.tags }}'
-      - uses: bentoml/setup-bentoml-action@d4010d8303684b183f45b33c6a44644f81337bdb # ratchet:bentoml/setup-bentoml-action@v1
+      - uses: bentoml/setup-bentoml-action@862aa8fa0e0c3793fcca4bfe7a62717a497417e4 # ratchet:bentoml/setup-bentoml-action@v1
         with:
           bentoml-version: 'main'
           python-version-file: .python-version-default
@@ -88,7 +88,7 @@ jobs:
         run: hatch build
         working-directory: ${{ matrix.directory }}
       - name: Upload artifacts
-        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # ratchet:actions/upload-artifact@v3
+        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # ratchet:actions/upload-artifact@v3
         with:
           name: python-artefacts
           path: ${{ matrix.directory }}/dist/*
@@ -112,11 +112,11 @@ jobs:
         directory: ["openllm-core", "openllm-python", "openllm-client"]
     needs: get_commit_message
     steps:
-      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # ratchet:actions/checkout@v3
+      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # ratchet:actions/checkout@v4
         with:
           fetch-depth: 0
           ref: '${{ inputs.tags }}'
-      - uses: bentoml/setup-bentoml-action@d4010d8303684b183f45b33c6a44644f81337bdb # ratchet:bentoml/setup-bentoml-action@v1
+      - uses: bentoml/setup-bentoml-action@862aa8fa0e0c3793fcca4bfe7a62717a497417e4 # ratchet:bentoml/setup-bentoml-action@v1
         with:
           bentoml-version: 'main'
           python-version: '3.8'
@@ -130,7 +130,7 @@ jobs:
           CIBW_ARCHS_MACOS: "${{ matrix.buildplatform[2] }}"
           MYPYPATH: /project/typings
       - name: Upload wheels as workflow artifacts
-        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # ratchet:actions/upload-artifact@v3
+        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # ratchet:actions/upload-artifact@v3
         with:
           name: ${{ matrix.buildplatform[1] }}-mypyc-wheels
           path: ./wheelhouse/*.whl
@@ -146,28 +146,28 @@ jobs:
         with:
           name: python-artefacts
           path: dist
-      # - name: Download Linux x86_64 compiled artifacts
-      #   uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
-      #   with:
-      #     name: linux-x86_64-mypyc-wheels
-      #     path: dist
-      # - name: Download MacOS x86_64 compiled artifacts
-      #   uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
-      #   with:
-      #     name: macos-x86_64-mypyc-wheels
-      #     path: dist
-      # - name: Download MacOS arm64 compiled artifacts
-      #   uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
-      #   with:
-      #     name: macos-arm64-mypyc-wheels
-      #     path: dist
-      # - name: Download MacOS universal2 compiled artifacts
-      #   uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
-      #   with:
-      #     name: macos-universal2-mypyc-wheels
-      #     path: dist
-      # - name: dry ls
-      #   run: ls -rthlaR
+          # - name: Download Linux x86_64 compiled artifacts
+          #   uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
+          #   with:
+          #     name: linux-x86_64-mypyc-wheels
+          #     path: dist
+          # - name: Download MacOS x86_64 compiled artifacts
+          #   uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
+          #   with:
+          #     name: macos-x86_64-mypyc-wheels
+          #     path: dist
+          # - name: Download MacOS arm64 compiled artifacts
+          #   uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
+          #   with:
+          #     name: macos-arm64-mypyc-wheels
+          #     path: dist
+          # - name: Download MacOS universal2 compiled artifacts
+          #   uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
+          #   with:
+          #     name: macos-universal2-mypyc-wheels
+          #     path: dist
+          # - name: dry ls
+          #   run: ls -rthlaR
   push-nightly:
     name: Push nightly wheels
     if: ${{ !github.event.repository.fork && github.event_name == 'push' }}

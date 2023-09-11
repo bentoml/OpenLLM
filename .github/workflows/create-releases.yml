@@ -30,17 +30,17 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
-      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # ratchet:actions/checkout@v3
+      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # ratchet:actions/checkout@v4
         with:
           fetch-depth: 0
           token: ${{ secrets.OPENLLM_PAT }}
-      - uses: bentoml/setup-bentoml-action@d4010d8303684b183f45b33c6a44644f81337bdb # ratchet:bentoml/setup-bentoml-action@v1
+      - uses: bentoml/setup-bentoml-action@862aa8fa0e0c3793fcca4bfe7a62717a497417e4 # ratchet:bentoml/setup-bentoml-action@v1
         with:
           bentoml-version: 'main'
           python-version-file: .python-version-default
       - name: Import bot's GPG key for signing commits
         id: import-gpg
-        uses: crazy-max/ghaction-import-gpg@82a020f1f7f605c65dd2449b392a52c3fcfef7ef # ratchet:crazy-max/ghaction-import-gpg@v5
+        uses: crazy-max/ghaction-import-gpg@82a020f1f7f605c65dd2449b392a52c3fcfef7ef # ratchet:crazy-max/ghaction-import-gpg@v6
         with:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.GPG_PASSPHRASE }}
@@ -78,7 +78,7 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # ratchet:actions/checkout@v3
+      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # ratchet:actions/checkout@v4
         with:
           ref: '${{ needs.release.outputs.version }}'
           token: ${{ secrets.OPENLLM_PAT }}
@@ -124,7 +124,7 @@ jobs:
       contents: write
       id-token: write
     steps:
-      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # ratchet:actions/checkout@v3
+      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # ratchet:actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Setup python
@@ -137,7 +137,7 @@ jobs:
         run: sudo apt-get install -y jq curl
       - name: Import bot's GPG key for signing commits
         id: import-gpg-key
-        uses: crazy-max/ghaction-import-gpg@82a020f1f7f605c65dd2449b392a52c3fcfef7ef # ratchet:crazy-max/ghaction-import-gpg@v5
+        uses: crazy-max/ghaction-import-gpg@82a020f1f7f605c65dd2449b392a52c3fcfef7ef # ratchet:crazy-max/ghaction-import-gpg@v6
         with:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.GPG_PASSPHRASE }}
@@ -199,10 +199,10 @@ jobs:
       contents: write
       id-token: write
     steps:
-      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # ratchet:actions/checkout@v3
+      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # ratchet:actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: bentoml/setup-bentoml-action@d4010d8303684b183f45b33c6a44644f81337bdb # ratchet:bentoml/setup-bentoml-action@v1
+      - uses: bentoml/setup-bentoml-action@862aa8fa0e0c3793fcca4bfe7a62717a497417e4 # ratchet:bentoml/setup-bentoml-action@v1
         with:
           bentoml-version: 'main'
           python-version-file: .python-version-default
@@ -210,7 +210,7 @@ jobs:
         run: sudo apt-get install -y jq curl
       - name: Import bot's GPG key for signing commits
         id: import-gpg-key
-        uses: crazy-max/ghaction-import-gpg@82a020f1f7f605c65dd2449b392a52c3fcfef7ef # ratchet:crazy-max/ghaction-import-gpg@v5
+        uses: crazy-max/ghaction-import-gpg@82a020f1f7f605c65dd2449b392a52c3fcfef7ef # ratchet:crazy-max/ghaction-import-gpg@v6
         with:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.GPG_PASSPHRASE }}

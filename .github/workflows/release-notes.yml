@@ -24,11 +24,11 @@ jobs:
       contents: write
       id-token: write
     steps:
-      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # ratchet:actions/checkout@v3
+      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # ratchet:actions/checkout@v4
         with:
           fetch-depth: 0
           ref: '${{ inputs.tags }}'
-      - uses: bentoml/setup-bentoml-action@d4010d8303684b183f45b33c6a44644f81337bdb # ratchet:bentoml/setup-bentoml-action@v1
+      - uses: bentoml/setup-bentoml-action@862aa8fa0e0c3793fcca4bfe7a62717a497417e4 # ratchet:bentoml/setup-bentoml-action@v1
         with:
           bentoml-version: 'main'
           python-version-file: .python-version-default

@@ -45,7 +45,7 @@ jobs:
     outputs:
       message: ${{ steps.commit_message.outputs.message }}
     steps:
-      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # ratchet:actions/checkout@v3
+      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # ratchet:actions/checkout@v4
         # Gets the correct commit message for pull request
         with:
           ref: ${{ github.event.pull_request.head.sha }}
@@ -63,10 +63,10 @@ jobs:
     if: >-
       contains(needs.get_commit_message.outputs.message, '[binary build]') || github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, '03 - Standalone Build')) || (github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/heads/main')))
     steps:
-      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # ratchet:actions/checkout@v3
+      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # ratchet:actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: bentoml/setup-bentoml-action@d4010d8303684b183f45b33c6a44644f81337bdb # ratchet:bentoml/setup-bentoml-action@v1
+      - uses: bentoml/setup-bentoml-action@862aa8fa0e0c3793fcca4bfe7a62717a497417e4 # ratchet:bentoml/setup-bentoml-action@v1
         with:
           bentoml-version: 'main'
       - name: Pull latest change
@@ -79,7 +79,7 @@ jobs:
           bash local.sh
           python -m build -sw openllm-python/
       - name: Upload artifacts
-        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # ratchet:actions/upload-artifact@v3
+        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # ratchet:actions/upload-artifact@v3
         with:
           name: binary-artefacts
           path: openllm-python/dist/*
@@ -132,7 +132,7 @@ jobs:
       PYAPP_PIP_EXTERNAL: 'true'
     steps:
       - name: Checkout code
-        uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # ratchet:actions/checkout@v3
+        uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # ratchet:actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Pull latest change
@@ -148,12 +148,12 @@ jobs:
       - name: Install Hatch
         run: pip install -U hatch
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@00b49be78f40fba4e87296b2ead62868750bdd83 # ratchet:dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@7270583354e7defc2a2693a5656e481365434ba2 # ratchet:dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.job.target }}
       - name: Set up cross compiling
         if: matrix.job.cross
-        uses: taiki-e/install-action@6801bd56b9711500292d943350f0b1f3559d7acb # ratchet:taiki-e/install-action@v2
+        uses: taiki-e/install-action@63c295a1d121591e8dd1e152c88a8e9a9b1ecef5 # ratchet:taiki-e/install-action@v2
         with:
           tool: cross
       - name: Configure cross compiling
@@ -213,14 +213,14 @@ jobs:
           done
       - name: Upload staged archive
         if: runner.os != 'Linux'
-        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # ratchet:actions/upload-artifact@v3
+        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # ratchet:actions/upload-artifact@v3
         with:
           name: staged-${{ runner.os }}
           path: openllm-python/packaging/*
           if-no-files-found: error
       - name: Upload archive
         if: runner.os == 'Linux'
-        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # ratchet:actions/upload-artifact@v3
+        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # ratchet:actions/upload-artifact@v3
         with:
           name: standalone
           path: openllm-python/packaging/*
@@ -237,7 +237,7 @@ jobs:
         working-directory: openllm-python
     steps:
       - name: Checkout code
-        uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # ratchet:actions/checkout@v3
+        uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # ratchet:actions/checkout@v4
       - name: Set up Python
         uses: actions/setup-python@61a6322f88396a6271a6ee3565807d608ecaddd1 # ratchet:actions/setup-python@v4
         with:
@@ -276,13 +276,13 @@ jobs:
           mkdir installers
           mv build/*/release/*/*.{exe,msi} installers
       - name: Upload binaries
-        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # ratchet:actions/upload-artifact@v3
+        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # ratchet:actions/upload-artifact@v3
         with:
           name: standalone
           path: openllm-python/archives/*
           if-no-files-found: error
       - name: Upload installers
-        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # ratchet:actions/upload-artifact@v3
+        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # ratchet:actions/upload-artifact@v3
         with:
           name: installers
           path: openllm-python/installers/*
