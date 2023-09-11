@@ -82,7 +82,7 @@ repos:
       - id: debug-statements
       - id: check-merge-conflict
   - repo: https://github.com/RobertCraigie/pyright-python
-    rev: v1.1.324
+    rev: v1.1.326
     hooks:
     - id: pyright
       verbose: true
