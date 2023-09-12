@@ -1,7 +1,6 @@
 '''LLM assignment magik.'''
 from __future__ import annotations
 import functools
-import math
 import traceback
 import typing as t
 
@@ -52,7 +51,7 @@ def load_model(fn: load_model_protocol[M, T]) -> t.Callable[[LLM[M, T]], M | vll
   def inner(self: LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M | vllm.LLMEngine:
     if self.__llm_backend__ == 'vllm':
       num_gpus, dev = 1, device_count()
-      if dev >= 2: num_gpus = dev if dev // 2 == 0 else math.ceil(dev / 2)
+      if dev >= 2: num_gpus = min(dev // 2 * 2, dev)
       # TODO: Do some more processing with token_id once we support token streaming
       try:
         return vllm.LLMEngine.from_engine_args(
