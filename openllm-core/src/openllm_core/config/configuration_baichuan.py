@@ -2,7 +2,9 @@ from __future__ import annotations
 import typing as t
 
 import openllm_core
+
 from openllm_core._prompt import process_prompt
+
 START_BAICHUAN_COMMAND_DOCSTRING = '''\
 Run a LLMServer for Baichuan model.
 
@@ -16,7 +18,7 @@ Currently, Baichuan only supports PyTorch. Make sure ``torch`` is available in y
 
 \b
 Baichuan Runner will use baichuan-inc/Baichuan-7B as the default model. To change to any other
-saved pretrained Baichuan, provide ``OPENLLM_Baichuan_MODEL_ID='fireballoon/baichuan-vicuna-chinese-7b'``
+saved pretrained Baichuan, provide ``OPENLLM_MODEL_ID='fireballoon/baichuan-vicuna-chinese-7b'``
 or provide `--model-id` flag when running ``openllm start baichuan``:
 
 \b
@@ -58,9 +60,13 @@ class BaichuanConfig(openllm_core.LLMConfig):
     top_p: float = 0.7
     temperature: float = 0.95
 
-  def sanitize_parameters(
-      self, prompt: str, max_new_tokens: int | None = None, top_p: float | None = None, temperature: float | None = None, use_default_prompt_template: bool = False, **attrs: t.Any
-  ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
+  def sanitize_parameters(self,
+                          prompt: str,
+                          max_new_tokens: int | None = None,
+                          top_p: float | None = None,
+                          temperature: float | None = None,
+                          use_default_prompt_template: bool = False,
+                          **attrs: t.Any) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
     return process_prompt(prompt, DEFAULT_PROMPT_TEMPLATE, use_default_prompt_template, **attrs), {'max_new_tokens': max_new_tokens, 'top_p': top_p, 'temperature': temperature, **attrs}, {}
 
   def postprocess_generate(self, prompt: str, generation_result: t.Sequence[str], **_: t.Any) -> str:

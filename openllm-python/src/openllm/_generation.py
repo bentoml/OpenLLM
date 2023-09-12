@@ -3,7 +3,11 @@ from __future__ import annotations
 import typing as t
 
 import transformers
-if t.TYPE_CHECKING: import torch, openllm
+
+if t.TYPE_CHECKING:
+  import torch
+
+  import openllm
 
 # reexport from transformers
 LogitsProcessorList = transformers.LogitsProcessorList
@@ -24,9 +28,12 @@ class StopOnTokens(transformers.StoppingCriteria):
 def prepare_logits_processor(config: openllm.LLMConfig) -> transformers.LogitsProcessorList:
   generation_config = config.generation_config
   logits_processor = transformers.LogitsProcessorList()
-  if generation_config['temperature'] >= 1e-5 and generation_config['temperature'] != 1.0: logits_processor.append(transformers.TemperatureLogitsWarper(generation_config['temperature']))
-  if generation_config['repetition_penalty'] > 1.0: logits_processor.append(transformers.RepetitionPenaltyLogitsProcessor(generation_config['repetition_penalty']))
-  if 1e-8 <= generation_config['top_p']: logits_processor.append(transformers.TopPLogitsWarper(generation_config['top_p']))
+  if generation_config['temperature'] >= 1e-5 and generation_config['temperature'] != 1.0:
+    logits_processor.append(transformers.TemperatureLogitsWarper(generation_config['temperature']))
+  if generation_config['repetition_penalty'] > 1.0:
+    logits_processor.append(transformers.RepetitionPenaltyLogitsProcessor(generation_config['repetition_penalty']))
+  if 1e-8 <= generation_config['top_p']:
+    logits_processor.append(transformers.TopPLogitsWarper(generation_config['top_p']))
   if generation_config['top_k'] > 0: logits_processor.append(transformers.TopKLogitsWarper(generation_config['top_k']))
   return logits_processor
 

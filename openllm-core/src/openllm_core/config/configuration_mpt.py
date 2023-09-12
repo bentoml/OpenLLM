@@ -2,8 +2,10 @@ from __future__ import annotations
 import typing as t
 
 import openllm_core
+
 from openllm_core._prompt import process_prompt
 from openllm_core.utils import dantic
+
 MPTPromptType = t.Literal['default', 'instruct', 'chat', 'storywriter']
 
 START_MPT_COMMAND_DOCSTRING = '''\
@@ -26,7 +28,7 @@ pip install "openllm[mpt]"
 
 \b
 MPT Runner will use mosaicml/mpt-7b-instruct as the default model. To change to any other MPT
-saved pretrained, or a fine-tune MPT, provide ``OPENLLM_MPT_MODEL_ID='mosaicml/mpt-30b'``
+saved pretrained, or a fine-tune MPT, provide ``OPENLLM_MODEL_ID='mosaicml/mpt-30b'``
 or provide `--model-id` flag when running ``openllm start mpt``:
 
 \b
@@ -73,7 +75,8 @@ class MPTConfig(openllm_core.LLMConfig):
   prompt_type: MPTPromptType = dantic.Field('"default"', description='Given prompt type for running MPT. Default will be inferred from model name if pretrained.')
   max_sequence_length: int = dantic.Field(
       2048,
-      description='Max sequence length to run MPT with. Note that MPT is trained ith sequence length of 2048, but with [ALiBi](https://arxiv.org/abs/2108.12409) it can set up to 4096 (for 7b models) and 16384 (for 30b models)'
+      description=
+      'Max sequence length to run MPT with. Note that MPT is trained ith sequence length of 2048, but with [ALiBi](https://arxiv.org/abs/2108.12409) it can set up to 4096 (for 7b models) and 16384 (for 30b models)'
   )
 
   class GenerationConfig:
@@ -81,16 +84,15 @@ class MPTConfig(openllm_core.LLMConfig):
     temperature: float = 0
     top_p: float = 0.8
 
-  def sanitize_parameters(
-      self,
-      prompt: str,
-      max_new_tokens: int | None = None,
-      temperature: float | None = None,
-      top_p: float | None = None,
-      prompt_type: MPTPromptType | None = None,
-      use_default_prompt_template: bool = True,
-      **attrs: t.Any,
-  ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
+  def sanitize_parameters(self,
+                          prompt: str,
+                          max_new_tokens: int | None = None,
+                          temperature: float | None = None,
+                          top_p: float | None = None,
+                          prompt_type: MPTPromptType | None = None,
+                          use_default_prompt_template: bool = True,
+                          **attrs: t.Any,
+                          ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
     _template = None
     if use_default_prompt_template:
       if prompt_type is None:

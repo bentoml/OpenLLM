@@ -5,12 +5,18 @@ import linecache
 import logging
 import types
 import typing as t
+
 from operator import itemgetter
 
 import orjson
+
 if t.TYPE_CHECKING:
   import openllm_core
-  from openllm_core._typing_compat import AnyCallable, DictStrAny, ListStr, LiteralString
+
+  from openllm_core._typing_compat import AnyCallable
+  from openllm_core._typing_compat import DictStrAny
+  from openllm_core._typing_compat import ListStr
+  from openllm_core._typing_compat import LiteralString
   PartialAny = functools.partial[t.Any]
 
 _T = t.TypeVar('_T', bound=t.Callable[..., t.Any])
@@ -90,27 +96,34 @@ def make_attr_tuple_class(cls_name: str, attr_names: t.Sequence[str]) -> type[t.
   else:
     attr_class_template.append('    pass')
   globs: DictStrAny = {'_attrs_itemgetter': itemgetter, '_attrs_property': property}
-  if SHOW_CODEGEN: logger.info('Generated class for %s:\n\n%s', attr_class_name, '\n'.join(attr_class_template))
+  if SHOW_CODEGEN: print(f'Generated class for {attr_class_name}:\n\n', '\n'.join(attr_class_template))
   _compile_and_eval('\n'.join(attr_class_template), globs)
   return globs[attr_class_name]
 
 def generate_unique_filename(cls: type[t.Any], func_name: str) -> str:
   return f"<{cls.__name__} generated {func_name} {cls.__module__}.{getattr(cls, '__qualname__', cls.__name__)}>"
 
-def generate_function(
-    typ: type[t.Any], func_name: str, lines: list[str] | None, args: tuple[str, ...] | None, globs: dict[str, t.Any], annotations: dict[str, t.Any] | None = None
-) -> AnyCallable:
+def generate_function(typ: type[t.Any],
+                      func_name: str,
+                      lines: list[str] | None,
+                      args: tuple[str, ...] | None,
+                      globs: dict[str, t.Any],
+                      annotations: dict[str, t.Any] | None = None) -> AnyCallable:
   from openllm_core.utils import SHOW_CODEGEN
   script = 'def %s(%s):\n    %s\n' % (func_name, ', '.join(args) if args is not None else '', '\n    '.join(lines) if lines else 'pass')
   meth = _make_method(func_name, script, generate_unique_filename(typ, func_name), globs)
   if annotations: meth.__annotations__ = annotations
-  if SHOW_CODEGEN: logger.info('Generated script for %s:\n\n%s', typ, script)
+  if SHOW_CODEGEN: print('Generated script for {typ}:\n\n', script)
   return meth
 
-def make_env_transformer(
-    cls: type[openllm_core.LLMConfig], model_name: str, suffix: LiteralString | None = None, default_callback: t.Callable[[str, t.Any], t.Any] | None = None, globs: DictStrAny | None = None,
-) -> AnyCallable:
-  from openllm_core.utils import dantic, field_env_key
+def make_env_transformer(cls: type[openllm_core.LLMConfig],
+                         model_name: str,
+                         suffix: LiteralString | None = None,
+                         default_callback: t.Callable[[str, t.Any], t.Any] | None = None,
+                         globs: DictStrAny | None = None,
+                         ) -> AnyCallable:
+  from openllm_core.utils import dantic
+  from openllm_core.utils import field_env_key
 
   def identity(_: str, x_value: t.Any) -> t.Any:
     return x_value
@@ -119,17 +132,8 @@ def make_env_transformer(
   globs = {} if globs is None else globs
   globs.update({'__populate_env': dantic.env_converter, '__default_callback': default_callback, '__field_env': field_env_key, '__suffix': suffix or '', '__model_name': model_name,})
   lines: ListStr = [
-      '__env = lambda field_name: __field_env(__model_name, field_name, __suffix)',
-      'return [',
-      '    f.evolve(',
-      '        default=__populate_env(__default_callback(f.name, f.default), __env(f.name)),',
-      '        metadata={',
-      "            'env': f.metadata.get('env', __env(f.name)),",
-      "            'description': f.metadata.get('description', '(not provided)'),",
-      '        },',
-      '    )',
-      '    for f in fields',
-      ']'
+      '__env=lambda field_name:__field_env(field_name,__suffix)',
+      "return [f.evolve(default=__populate_env(__default_callback(f.name,f.default),__env(f.name)),metadata={'env':f.metadata.get('env',__env(f.name)),'description':f.metadata.get('description', '(not provided)')}) for f in fields]"
   ]
   fields_ann = 'list[attr.Attribute[t.Any]]'
   return generate_function(cls, '__auto_env', lines, args=('_', 'fields'), globs=globs, annotations={'_': 'type[LLMConfig]', 'fields': fields_ann, 'return': fields_ann})
@@ -151,18 +155,16 @@ def gen_sdk(func: _T, name: str | None = None, **attrs: t.Any) -> _T:
   return t.cast(
       _T,
       functools.update_wrapper(
-          types.new_class(
-              name, (t.cast('PartialAny', functools.partial), ReprMixin),
-              exec_body=lambda ns: ns.update({
-                  '__repr_keys__': property(lambda _: [i for i in _signatures.keys() if not i.startswith('_')]),
-                  '__repr_args__': _repr_args,
-                  '__repr__': _repr,
-                  '__doc__': inspect.cleandoc(doc),
-                  '__module__': 'openllm'
-              }),
-          )(func, **attrs),
+          types.new_class(name, (t.cast('PartialAny', functools.partial), ReprMixin),
+                          exec_body=lambda ns: ns.update({
+                              '__repr_keys__': property(lambda _: [i for i in _signatures.keys() if not i.startswith('_')]),
+                              '__repr_args__': _repr_args,
+                              '__repr__': _repr,
+                              '__doc__': inspect.cleandoc(doc),
+                              '__module__': 'openllm'
+                          }),
+                          )(func, **attrs),
           func,
-      )
-  )
+      ))
 
 __all__ = ['gen_sdk', 'make_attr_tuple_class', 'make_env_transformer', 'generate_unique_filename', 'generate_function']

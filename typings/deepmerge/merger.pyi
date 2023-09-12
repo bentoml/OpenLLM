@@ -1,5 +1,11 @@
 import sys
-from typing import Any, Dict, List, Tuple, Union
+
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Tuple
+from typing import Union
+
 if sys.version_info[:2] >= (3, 10):
   from typing import TypeAlias
 else:
@@ -8,6 +14,7 @@ from .strategy.core import StrategyList
 from .strategy.dict import DictStrategies
 from .strategy.list import ListStrategies
 from .strategy.set import SetStrategies
+
 ConfigDictType: TypeAlias = Dict[str, Any]
 
 class Merger:

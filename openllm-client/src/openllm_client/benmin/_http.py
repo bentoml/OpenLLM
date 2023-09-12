@@ -5,6 +5,7 @@ import logging
 import time
 import typing as t
 import urllib.error
+
 from urllib.parse import urlparse
 
 import httpx
@@ -14,9 +15,12 @@ import starlette.requests
 import starlette.responses
 
 import bentoml
+
 from bentoml._internal.service.inference_api import InferenceAPI
-from openllm_client.benmin import AsyncClient, Client
+from openllm_client.benmin import AsyncClient
+from openllm_client.benmin import Client
 from openllm_core.utils import ensure_exec_coro
+
 logger = logging.getLogger(__name__)
 
 class HttpClient(Client):
@@ -53,7 +57,8 @@ class HttpClient(Client):
   def from_url(cls, url: str, **kwargs: t.Any) -> HttpClient:
     url = url if '://' in url else 'http://' + url
     resp = httpx.get(f'{url}/docs.json')
-    if resp.status_code != 200: raise ValueError(f'Failed to get OpenAPI schema from the server: {resp.status_code} {resp.reason_phrase}:\n{resp.content.decode()}')
+    if resp.status_code != 200:
+      raise ValueError(f'Failed to get OpenAPI schema from the server: {resp.status_code} {resp.reason_phrase}:\n{resp.content.decode()}')
     _spec = orjson.loads(resp.content)
 
     reflection = bentoml.Service(_spec['info']['title'])
@@ -61,18 +66,19 @@ class HttpClient(Client):
     for route, spec in _spec['paths'].items():
       for meth_spec in spec.values():
         if 'tags' in meth_spec and 'Service APIs' in meth_spec['tags']:
-          if 'x-bentoml-io-descriptor' not in meth_spec['requestBody']: raise ValueError(f'Malformed BentoML spec received from BentoML server {url}')
-          if 'x-bentoml-io-descriptor' not in meth_spec['responses']['200']: raise ValueError(f'Malformed BentoML spec received from BentoML server {url}')
-          if 'x-bentoml-name' not in meth_spec: raise ValueError(f'Malformed BentoML spec received from BentoML server {url}')
+          if 'x-bentoml-io-descriptor' not in meth_spec['requestBody']:
+            raise ValueError(f'Malformed BentoML spec received from BentoML server {url}')
+          if 'x-bentoml-io-descriptor' not in meth_spec['responses']['200']:
+            raise ValueError(f'Malformed BentoML spec received from BentoML server {url}')
+          if 'x-bentoml-name' not in meth_spec:
+            raise ValueError(f'Malformed BentoML spec received from BentoML server {url}')
           try:
-            reflection.apis[meth_spec['x-bentoml-name']] = InferenceAPI[t.Any](
-                None,
-                bentoml.io.from_spec(meth_spec['requestBody']['x-bentoml-io-descriptor']),
-                bentoml.io.from_spec(meth_spec['responses']['200']['x-bentoml-io-descriptor']),
-                name=meth_spec['x-bentoml-name'],
-                doc=meth_spec['description'],
-                route=route.lstrip('/')
-            )
+            reflection.apis[meth_spec['x-bentoml-name']] = InferenceAPI[t.Any](None,
+                                                                               bentoml.io.from_spec(meth_spec['requestBody']['x-bentoml-io-descriptor']),
+                                                                               bentoml.io.from_spec(meth_spec['responses']['200']['x-bentoml-io-descriptor']),
+                                                                               name=meth_spec['x-bentoml-name'],
+                                                                               doc=meth_spec['description'],
+                                                                               route=route.lstrip('/'))
           except Exception as e:
             logger.error('Failed to instantiate client for API %s: ', meth_spec['x-bentoml-name'], e)
     return cls(url, reflection)
@@ -81,7 +87,8 @@ class HttpClient(Client):
     # All gRPC kwargs should be popped out.
     kwargs = {k: v for k, v in kwargs.items() if not k.startswith('_grpc_')}
     if _inference_api.multi_input:
-      if data is not None: raise ValueError(f"'{_inference_api.name}' takes multiple inputs, and thus required to pass as keyword arguments.")
+      if data is not None:
+        raise ValueError(f"'{_inference_api.name}' takes multiple inputs, and thus required to pass as keyword arguments.")
       fake_resp = ensure_exec_coro(_inference_api.input.to_http_response(kwargs, None))
     else:
       fake_resp = ensure_exec_coro(_inference_api.input.to_http_response(data, None))
@@ -90,12 +97,10 @@ class HttpClient(Client):
     if isinstance(fake_resp, starlette.responses.StreamingResponse): body = None
     else: body = fake_resp.body
 
-    resp = self.inner.post(
-        '/' + _inference_api.route if not _inference_api.route.startswith('/') else _inference_api.route,
-        data=body,
-        headers={'content-type': fake_resp.headers['content-type']},
-        timeout=self.timeout
-    )
+    resp = self.inner.post('/' + _inference_api.route if not _inference_api.route.startswith('/') else _inference_api.route,
+                           data=body,
+                           headers={'content-type': fake_resp.headers['content-type']},
+                           timeout=self.timeout)
     if resp.status_code != 200: raise ValueError(f'Error while making request: {resp.status_code}: {resp.content!s}')
     fake_req = starlette.requests.Request(scope={'type': 'http'})
     headers = starlette.datastructures.Headers(headers=resp.headers)
@@ -127,7 +132,8 @@ class AsyncHttpClient(AsyncClient):
     # Try once more and raise for exception
     async with httpx.AsyncClient(base_url=f'{host}:{port}') as sess:
       resp = await sess.get('/readyz')
-      if resp.status_code != 200: raise TimeoutError(f'Timeout while waiting for server @ `{host}:{port}` to be ready: {resp.status_code}: {resp.content!s}')
+      if resp.status_code != 200:
+        raise TimeoutError(f'Timeout while waiting for server @ `{host}:{port}` to be ready: {resp.status_code}: {resp.content!s}')
 
   async def health(self) -> httpx.Response:
     return await self.inner.get('/readyz')
@@ -137,7 +143,8 @@ class AsyncHttpClient(AsyncClient):
     url = url if '://' in url else 'http://' + url
     async with httpx.AsyncClient(base_url=url) as session:
       resp = await session.get('/docs.json')
-      if resp.status_code != 200: raise ValueError(f'Failed to get OpenAPI schema from the server: {resp.status_code} {resp.reason_phrase}:\n{(await resp.aread()).decode()}')
+      if resp.status_code != 200:
+        raise ValueError(f'Failed to get OpenAPI schema from the server: {resp.status_code} {resp.reason_phrase}:\n{(await resp.aread()).decode()}')
       _spec = orjson.loads(await resp.aread())
 
     reflection = bentoml.Service(_spec['info']['title'])
@@ -145,18 +152,19 @@ class AsyncHttpClient(AsyncClient):
     for route, spec in _spec['paths'].items():
       for meth_spec in spec.values():
         if 'tags' in meth_spec and 'Service APIs' in meth_spec['tags']:
-          if 'x-bentoml-io-descriptor' not in meth_spec['requestBody']: raise ValueError(f'Malformed BentoML spec received from BentoML server {url}')
-          if 'x-bentoml-io-descriptor' not in meth_spec['responses']['200']: raise ValueError(f'Malformed BentoML spec received from BentoML server {url}')
-          if 'x-bentoml-name' not in meth_spec: raise ValueError(f'Malformed BentoML spec received from BentoML server {url}')
+          if 'x-bentoml-io-descriptor' not in meth_spec['requestBody']:
+            raise ValueError(f'Malformed BentoML spec received from BentoML server {url}')
+          if 'x-bentoml-io-descriptor' not in meth_spec['responses']['200']:
+            raise ValueError(f'Malformed BentoML spec received from BentoML server {url}')
+          if 'x-bentoml-name' not in meth_spec:
+            raise ValueError(f'Malformed BentoML spec received from BentoML server {url}')
           try:
-            reflection.apis[meth_spec['x-bentoml-name']] = InferenceAPI[t.Any](
-                None,
-                bentoml.io.from_spec(meth_spec['requestBody']['x-bentoml-io-descriptor']),
-                bentoml.io.from_spec(meth_spec['responses']['200']['x-bentoml-io-descriptor']),
-                name=meth_spec['x-bentoml-name'],
-                doc=meth_spec['description'],
-                route=route.lstrip('/')
-            )
+            reflection.apis[meth_spec['x-bentoml-name']] = InferenceAPI[t.Any](None,
+                                                                               bentoml.io.from_spec(meth_spec['requestBody']['x-bentoml-io-descriptor']),
+                                                                               bentoml.io.from_spec(meth_spec['responses']['200']['x-bentoml-io-descriptor']),
+                                                                               name=meth_spec['x-bentoml-name'],
+                                                                               doc=meth_spec['description'],
+                                                                               route=route.lstrip('/'))
           except ValueError as e:
             logger.error('Failed to instantiate client for API %s: ', meth_spec['x-bentoml-name'], e)
     return cls(url, reflection)
@@ -165,7 +173,8 @@ class AsyncHttpClient(AsyncClient):
     # All gRPC kwargs should be popped out.
     kwargs = {k: v for k, v in kwargs.items() if not k.startswith('_grpc_')}
     if _inference_api.multi_input:
-      if data is not None: raise ValueError(f"'{_inference_api.name}' takes multiple inputs, and thus required to pass as keyword arguments.")
+      if data is not None:
+        raise ValueError(f"'{_inference_api.name}' takes multiple inputs, and thus required to pass as keyword arguments.")
       fake_resp = await _inference_api.input.to_http_response(kwargs, None)
     else:
       fake_resp = await _inference_api.input.to_http_response(data, None)
@@ -174,12 +183,10 @@ class AsyncHttpClient(AsyncClient):
     if isinstance(fake_resp, starlette.responses.StreamingResponse): body = None
     else: body = t.cast(t.Any, fake_resp.body)
 
-    resp = await self.inner.post(
-        '/' + _inference_api.route if not _inference_api.route.startswith('/') else _inference_api.route,
-        data=body,
-        headers={'content-type': fake_resp.headers['content-type']},
-        timeout=self.timeout
-    )
+    resp = await self.inner.post('/' + _inference_api.route if not _inference_api.route.startswith('/') else _inference_api.route,
+                                 data=body,
+                                 headers={'content-type': fake_resp.headers['content-type']},
+                                 timeout=self.timeout)
     if resp.status_code != 200: raise ValueError(f'Error making request: {resp.status_code}: {(await resp.aread())!s}')
     fake_req = starlette.requests.Request(scope={'type': 'http'})
     headers = starlette.datastructures.Headers(headers=resp.headers)

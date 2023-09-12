@@ -2,9 +2,12 @@ from __future__ import annotations
 import typing as t
 
 import openllm_core
+
 from openllm_core._prompt import process_prompt
 from openllm_core.utils import dantic
-if t.TYPE_CHECKING: import transformers
+
+if t.TYPE_CHECKING:
+  import transformers
 
 START_DOLLY_V2_COMMAND_DOCSTRING = '''\
 Run a LLMServer for dolly-v2 model.
@@ -19,7 +22,7 @@ Currently, dolly-v2 only supports PyTorch. Make sure ``torch`` is available in y
 
 \b
 Dolly-v2 Runner will use databricks/dolly-v2-3b as the default model. To change to any other dolly-v2
-saved pretrained, or a fine-tune dolly-v2, provide ``OPENLLM_DOLLY_V2_MODEL_ID='databricks/dolly-v2-7b'``
+saved pretrained, or a fine-tune dolly-v2, provide ``OPENLLM_MODEL_ID='databricks/dolly-v2-7b'``
 or provide `--model-id` flag when running ``openllm start dolly-v2``:
 
 \b
@@ -45,14 +48,14 @@ def get_special_token_id(tokenizer: transformers.PreTrainedTokenizer, key: str) 
   treated specially and converted to a single, new token.  This retrieves the token ID each of these keys map to.
 
   Args:
-  tokenizer: the tokenizer
-  key: the key to convert to a single token
+    tokenizer: the tokenizer
+    key: the key to convert to a single token
 
   Raises:
-  RuntimeError: if more than one ID was generated
+    RuntimeError: if more than one ID was generated
 
   Returns:
-  int: the token ID for the given key.
+    int: the token ID for the given key.
   '''
   token_ids = tokenizer.encode(key)
   if len(token_ids) > 1: raise ValueError(f"Expected only a single token for '{key}' but found {token_ids}")
@@ -86,16 +89,14 @@ class DollyV2Config(openllm_core.LLMConfig):
     max_new_tokens: int = 256
     eos_token_id: int = 50277  # NOTE: from get_special_token_id(self.tokenizer, END_KEY)
 
-  def sanitize_parameters(
-      self,
-      prompt: str,
-      max_new_tokens: int | None = None,
-      temperature: float | None = None,
-      top_k: int | None = None,
-      top_p: float | None = None,
-      use_default_prompt_template: bool = True,
-      **attrs: t.Any
-  ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
+  def sanitize_parameters(self,
+                          prompt: str,
+                          max_new_tokens: int | None = None,
+                          temperature: float | None = None,
+                          top_k: int | None = None,
+                          top_p: float | None = None,
+                          use_default_prompt_template: bool = True,
+                          **attrs: t.Any) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
     return process_prompt(prompt, DEFAULT_PROMPT_TEMPLATE, use_default_prompt_template, **attrs), {
         'max_new_tokens': max_new_tokens, 'top_k': top_k, 'top_p': top_p, 'temperature': temperature, **attrs
     }, {}

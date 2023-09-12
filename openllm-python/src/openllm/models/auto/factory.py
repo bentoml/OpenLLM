@@ -12,11 +12,14 @@ import openllm
 from openllm_core.utils import ReprMixin
 if t.TYPE_CHECKING:
   import types
-  from collections import _odict_items, _odict_keys, _odict_values
+  from collections import _odict_items
+  from collections import _odict_keys
+  from collections import _odict_values
 
   from _typeshed import SupportsIter
 
-  from openllm_core._typing_compat import LiteralString, LLMRunner
+  from openllm_core._typing_compat import LiteralString
+  from openllm_core._typing_compat import LLMRunner
   ConfigModelKeysView = _odict_keys[type[openllm.LLMConfig], type[openllm.LLM[t.Any, t.Any]]]
   ConfigModelValuesView = _odict_values[type[openllm.LLMConfig], type[openllm.LLM[t.Any, t.Any]]]
   ConfigModelItemsView = _odict_items[type[openllm.LLMConfig], type[openllm.LLM[t.Any, t.Any]]]
@@ -30,7 +33,13 @@ class BaseAutoLLMClass:
     raise EnvironmentError(f"Cannot instantiate {self.__class__.__name__} directly. Please use '{self.__class__.__name__}.Runner(model_name)' instead.")
 
   @classmethod
-  def for_model(cls, model: str, /, model_id: str | None = None, model_version: str | None = None, llm_config: openllm.LLMConfig | None = None, ensure_available: bool = False,
+  def for_model(cls,
+                model: str,
+                /,
+                model_id: str | None = None,
+                model_version: str | None = None,
+                llm_config: openllm.LLMConfig | None = None,
+                ensure_available: bool = False,
                 **attrs: t.Any) -> openllm.LLM[t.Any, t.Any]:
     '''The lower level API for creating a LLM instance.
 
@@ -40,7 +49,7 @@ class BaseAutoLLMClass:
     ```
     '''
     llm = cls.infer_class_from_name(model).from_pretrained(model_id=model_id, model_version=model_version, llm_config=llm_config, **attrs)
-    if ensure_available: llm.ensure_model_id_exists()
+    if ensure_available: llm.save_pretrained()
     return llm
 
   @classmethod
@@ -112,7 +121,8 @@ class _LazyAutoMapping(OrderedDict, ReprMixin):
   def __getitem__(self, key: type[openllm.LLMConfig]) -> type[openllm.LLM[t.Any, t.Any]]:
     if key in self._extra_content: return self._extra_content[key]
     model_type = self._reverse_config_mapping[key.__name__]
-    if model_type in self._model_mapping: return self._load_attr_from_module(model_type, self._model_mapping[model_type])
+    if model_type in self._model_mapping:
+      return self._load_attr_from_module(model_type, self._model_mapping[model_type])
     # Maybe there was several model types associated with this config.
     model_types = [k for k, v in self._config_mapping.items() if v == key.__name__]
     for mtype in model_types:
@@ -121,7 +131,8 @@ class _LazyAutoMapping(OrderedDict, ReprMixin):
 
   def _load_attr_from_module(self, model_type: str, attr: str) -> t.Any:
     module_name = inflection.underscore(model_type)
-    if module_name not in self._modules: self._modules[module_name] = importlib.import_module(f'.{module_name}', 'openllm.models')
+    if module_name not in self._modules:
+      self._modules[module_name] = importlib.import_module(f'.{module_name}', 'openllm.models')
     return getattribute_from_module(self._modules[module_name], attr)
 
   def __len__(self) -> int:
@@ -141,23 +152,18 @@ class _LazyAutoMapping(OrderedDict, ReprMixin):
     return bool(self.keys())
 
   def keys(self) -> ConfigModelKeysView:
-    return t.cast(
-        'ConfigModelKeysView', [self._load_attr_from_module(key, name) for key, name in self._config_mapping.items() if key in self._model_mapping.keys()] + list(self._extra_content.keys())
-    )
+    return t.cast('ConfigModelKeysView',
+                  [self._load_attr_from_module(key, name) for key, name in self._config_mapping.items() if key in self._model_mapping.keys()] + list(self._extra_content.keys()))
 
   def values(self) -> ConfigModelValuesView:
-    return t.cast(
-        'ConfigModelValuesView', [self._load_attr_from_module(key, name) for key, name in self._model_mapping.items() if key in self._config_mapping.keys()] + list(
-            self._extra_content.values()
-        )
-    )
+    return t.cast('ConfigModelValuesView',
+                  [self._load_attr_from_module(key, name) for key, name in self._model_mapping.items() if key in self._config_mapping.keys()] + list(self._extra_content.values()))
 
   def items(self) -> ConfigModelItemsView:
-    return t.cast(
-        'ConfigModelItemsView',
-        [(self._load_attr_from_module(key, self._config_mapping[key]),
-          self._load_attr_from_module(key, self._model_mapping[key])) for key in self._model_mapping.keys() if key in self._config_mapping.keys()] + list(self._extra_content.items())
-    )
+    return t.cast('ConfigModelItemsView',
+                  [(self._load_attr_from_module(key, self._config_mapping[key]), self._load_attr_from_module(key, self._model_mapping[key]))
+                   for key in self._model_mapping.keys()
+                   if key in self._config_mapping.keys()] + list(self._extra_content.items()))
 
   def __iter__(self) -> t.Iterator[type[openllm.LLMConfig]]:
     return iter(t.cast('SupportsIter[t.Iterator[type[openllm.LLMConfig]]]', self.keys()))
@@ -169,7 +175,8 @@ class _LazyAutoMapping(OrderedDict, ReprMixin):
 
   def register(self, key: t.Any, value: t.Any) -> None:
     if hasattr(key, '__name__') and key.__name__ in self._reverse_config_mapping:
-      if self._reverse_config_mapping[key.__name__] in self._model_mapping.keys(): raise ValueError(f"'{key}' is already used by a OpenLLM model.")
+      if self._reverse_config_mapping[key.__name__] in self._model_mapping.keys():
+        raise ValueError(f"'{key}' is already used by a OpenLLM model.")
     self._extra_content[key] = value
 
 __all__ = ['BaseAutoLLMClass', '_LazyAutoMapping']

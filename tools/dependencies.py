@@ -8,6 +8,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, 'openllm-python', 'src'))
 
 import openllm
+
 _OWNER, _REPO = 'bentoml', 'openllm'
 
 @dataclasses.dataclass(frozen=True)
@@ -22,8 +23,7 @@ class Classifier:
           'audience': 'Intended Audience',
           'typing': 'Typing',
           'language': 'Programming Language',
-      }
-  )
+      })
   joiner: str = ' :: '
 
   @staticmethod
@@ -84,12 +84,18 @@ class Dependencies:
 
   def to_str(self) -> str:
     deps: list[str] = []
-    if self.lower_constraint is not None and self.upper_constraint is not None: dep = f'{self.name}{self.pypi_extensions}>={self.lower_constraint},<{self.upper_constraint}'
-    elif self.lower_constraint is not None: dep = f'{self.name}{self.pypi_extensions}>={self.lower_constraint}'
-    elif self.upper_constraint is not None: dep = f'{self.name}{self.pypi_extensions}<{self.upper_constraint}'
-    elif self.subdirectory is not None: dep = f'{self.name}{self.pypi_extensions} @ git+https://github.com/{self.git_repo_url}.git#subdirectory={self.subdirectory}'
-    elif self.branch is not None: dep = f'{self.name}{self.pypi_extensions} @ git+https://github.com/{self.git_repo_url}.git@{self.branch}'
-    else: dep = f'{self.name}{self.pypi_extensions}'
+    if self.lower_constraint is not None and self.upper_constraint is not None:
+      dep = f'{self.name}{self.pypi_extensions}>={self.lower_constraint},<{self.upper_constraint}'
+    elif self.lower_constraint is not None:
+      dep = f'{self.name}{self.pypi_extensions}>={self.lower_constraint}'
+    elif self.upper_constraint is not None:
+      dep = f'{self.name}{self.pypi_extensions}<{self.upper_constraint}'
+    elif self.subdirectory is not None:
+      dep = f'{self.name}{self.pypi_extensions} @ git+https://github.com/{self.git_repo_url}.git#subdirectory={self.subdirectory}'
+    elif self.branch is not None:
+      dep = f'{self.name}{self.pypi_extensions} @ git+https://github.com/{self.git_repo_url}.git@{self.branch}'
+    else:
+      dep = f'{self.name}{self.pypi_extensions}'
     deps.append(dep)
     if self.platform: deps.append(self.platform_restriction(*self.platform))
     return ';'.join(deps)
@@ -104,10 +110,12 @@ _TRANSFORMERS_EXT = ['torch', 'tokenizers', 'accelerate']
 
 _BASE_DEPENDENCIES = [
     Dependencies(name='bentoml', extensions=_BENTOML_EXT, lower_constraint=lower_bentoml_constraint),
-    Dependencies(name='transformers', extensions=_TRANSFORMERS_EXT, lower_constraint='4.29.0'),
+    Dependencies(name='transformers', extensions=_TRANSFORMERS_EXT, lower_constraint='4.32.1'),
     Dependencies(name='openllm-client'),
+    Dependencies(name='openllm-core'),
     Dependencies(name='safetensors'),
-    Dependencies(name='optimum'),
+    Dependencies(name='optimum', lower_constraint="1.12.0"),
+    Dependencies(name='accelerate'),
     Dependencies(name='ghapi'),
     Dependencies(name='tabulate', extensions=['widechars'], lower_constraint='0.9.0'),
     Dependencies(name='click', lower_constraint='8.1.3'),
@@ -116,7 +124,7 @@ _BASE_DEPENDENCIES = [
 ]
 
 _ALL_RUNTIME_DEPS = ['flax>=0.7', 'jax', 'jaxlib', 'tensorflow', 'keras']
-FINE_TUNE_DEPS = ['peft>=0.4.0', 'bitsandbytes', 'datasets', 'accelerate', 'trl']
+FINE_TUNE_DEPS = ['peft>=0.5.0', 'bitsandbytes', 'datasets', 'accelerate', 'trl']
 FLAN_T5_DEPS = _ALL_RUNTIME_DEPS
 OPT_DEPS = _ALL_RUNTIME_DEPS
 GRPC_DEPS = ['openllm-client[grpc]']
@@ -124,8 +132,8 @@ OPENAI_DEPS = ['openai', 'tiktoken']
 AGENTS_DEPS = ['transformers[agents]>=4.30', 'diffusers', 'soundfile']
 PLAYGROUND_DEPS = ['jupyter', 'notebook', 'ipython', 'jupytext', 'nbformat']
 GGML_DEPS = ['ctransformers']
-GPTQ_DEPS = ['auto-gptq[triton]']
-VLLM_DEPS = ['vllm', 'ray']
+GPTQ_DEPS = ['auto-gptq[triton]>=0.4.2', 'optimum>=1.12.0']
+VLLM_DEPS = ['vllm>=0.1.6', 'ray']
 
 _base_requirements: dict[str, t.Any] = {
     inflection.dasherize(name): config_cls.__openllm_requirements__ for name, config_cls in openllm.CONFIG_MAPPING.items() if config_cls.__openllm_requirements__
@@ -233,8 +241,9 @@ def build_cli_extensions() -> Table:
   ext: dict[str, str] = {'openllm': 'openllm.cli.entrypoint:cli'}
   ext.update({
       f'openllm-{inflection.dasherize(ke)}': f'openllm.cli.extension.{ke}:cli' for ke in sorted([
-          fname[:-3] for fname in os.listdir(os.path.abspath(os.path.join(ROOT, 'openllm-python', 'src', 'openllm', 'cli', 'extension'))) if fname.endswith('.py') and
-          not fname.startswith('__')
+          fname[:-3]
+          for fname in os.listdir(os.path.abspath(os.path.join(ROOT, 'openllm-python', 'src', 'openllm', 'cli', 'extension')))
+          if fname.endswith('.py') and not fname.startswith('__')
       ])
   })
   table.update(ext)

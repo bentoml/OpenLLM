@@ -3,7 +3,8 @@ import typing as t
 
 import openllm
 if t.TYPE_CHECKING: import torch, transformers
-else: torch, transformers = openllm.utils.LazyLoader('torch', globals(), 'torch'), openllm.utils.LazyLoader('transformers', globals(), 'transformers')
+else:
+  torch, transformers = openllm.utils.LazyLoader('torch', globals(), 'torch'), openllm.utils.LazyLoader('transformers', globals(), 'transformers')
 
 class Falcon(openllm.LLM['transformers.PreTrainedModel', 'transformers.PreTrainedTokenizerBase']):
   __openllm_internal__ = True
@@ -15,14 +16,10 @@ class Falcon(openllm.LLM['transformers.PreTrainedModel', 'transformers.PreTraine
   def generate(self, prompt: str, **attrs: t.Any) -> list[str]:
     eos_token_id, inputs = attrs.pop('eos_token_id', self.tokenizer.eos_token_id), self.tokenizer(prompt, return_tensors='pt').to(self.device)
     with torch.inference_mode(), torch.autocast('cuda', dtype=torch.float16):  # type: ignore[attr-defined]
-      return self.tokenizer.batch_decode(
-          self.model.generate(
-              input_ids=inputs['input_ids'],
-              attention_mask=inputs['attention_mask'],
-              generation_config=self.config.model_construct_env(eos_token_id=eos_token_id, **attrs).to_generation_config()
-          ),
-          skip_special_tokens=True
-      )
+      return self.tokenizer.batch_decode(self.model.generate(input_ids=inputs['input_ids'],
+                                                             attention_mask=inputs['attention_mask'],
+                                                             generation_config=self.config.model_construct_env(eos_token_id=eos_token_id, **attrs).to_generation_config()),
+                                         skip_special_tokens=True)
 
   def generate_one(self, prompt: str, stop: list[str], **preprocess_generate_kwds: t.Any) -> list[dict[t.Literal['generated_text'], str]]:
     max_new_tokens, encoded_inputs = preprocess_generate_kwds.pop('max_new_tokens', 200), self.tokenizer(prompt, return_tensors='pt').to(self.device)

@@ -5,6 +5,7 @@ import importlib
 import os
 import sys
 import typing as t
+
 from enum import Enum
 
 import attr
@@ -12,8 +13,14 @@ import click
 import click_option_group as cog
 import inflection
 import orjson
-from click import ParamType, shell_completion as sc, types as click_types
-if t.TYPE_CHECKING: from attr import _ValidatorType
+
+from click import ParamType
+from click import shell_completion as sc
+from click import types as click_types
+
+if t.TYPE_CHECKING:
+  from attr import _ValidatorType
+
 AnyCallable = t.Callable[..., t.Any]
 FC = t.TypeVar('FC', bound=t.Union[AnyCallable, click.Command])
 
@@ -56,18 +63,17 @@ def attrs_to_options(name: str, field: attr.Attribute[t.Any], model_name: str, t
   elif suffix_sampling: identifier = f'{model_name}_sampling_{underscored}'
   else: identifier = f'{model_name}_{underscored}'
 
-  return cog.optgroup.option(
-      identifier,
-      full_option_name,
-      type=parse_type(typ),
-      required=field.default is attr.NOTHING,
-      default=field.default if field.default not in (attr.NOTHING, None) else None,
-      show_default=True,
-      multiple=allows_multiple(typ) if typ else False,
-      help=field.metadata.get('description', '(No description provided)'),
-      show_envvar=True,
-      envvar=envvar,
-  )
+  return cog.optgroup.option(identifier,
+                             full_option_name,
+                             type=parse_type(typ),
+                             required=field.default is attr.NOTHING,
+                             default=field.default if field.default not in (attr.NOTHING, None) else None,
+                             show_default=True,
+                             multiple=allows_multiple(typ) if typ else False,
+                             help=field.metadata.get('description', '(No description provided)'),
+                             show_envvar=True,
+                             envvar=envvar,
+                             )
 
 def env_converter(value: t.Any, env: str | None = None) -> t.Any:
   if env is not None:
@@ -79,18 +85,16 @@ def env_converter(value: t.Any, env: str | None = None) -> t.Any:
         raise RuntimeError(f"Failed to parse ({value!r}) from '{env}': {err}") from None
   return value
 
-def Field(
-    default: t.Any = None,
-    *,
-    ge: int | float | None = None,
-    le: int | float | None = None,
-    validator: _ValidatorType[t.Any] | None = None,
-    description: str | None = None,
-    env: str | None = None,
-    auto_default: bool = False,
-    use_default_converter: bool = True,
-    **attrs: t.Any
-) -> t.Any:
+def Field(default: t.Any = None,
+          *,
+          ge: int | float | None = None,
+          le: int | float | None = None,
+          validator: _ValidatorType[t.Any] | None = None,
+          description: str | None = None,
+          env: str | None = None,
+          auto_default: bool = False,
+          use_default_converter: bool = True,
+          **attrs: t.Any) -> t.Any:
   """A decorator that extends attr.field with additional arguments, which provides the same interface as pydantic's Field.
 
   By default, if both validator and ge are provided, then then ge will be
@@ -207,7 +211,8 @@ class ModuleType(ParamType):
 
   def _import_object(self, value: str) -> t.Any:
     module_name, class_name = value.rsplit('.', maxsplit=1)
-    if not all(s.isidentifier() for s in module_name.split('.')): raise ValueError(f"'{value}' is not a valid module name")
+    if not all(s.isidentifier() for s in module_name.split('.')):
+      raise ValueError(f"'{value}' is not a valid module name")
     if not class_name.isidentifier(): raise ValueError(f"Variable '{class_name}' is not a valid identifier")
 
     module = importlib.import_module(module_name)
@@ -255,7 +260,8 @@ class LiteralChoice(EnumChoice):
     # expect every literal value to belong to the same primitive type
     values = list(value.__args__)
     item_type = type(values[0])
-    if not all(isinstance(v, item_type) for v in values): raise ValueError(f'Field {value} contains items of different types.')
+    if not all(isinstance(v, item_type) for v in values):
+      raise ValueError(f'Field {value} contains items of different types.')
     _mapping = {str(v): v for v in values}
     super(EnumChoice, self).__init__(list(_mapping), case_sensitive)
     self.internal_type = item_type

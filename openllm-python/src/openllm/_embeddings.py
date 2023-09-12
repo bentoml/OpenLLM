@@ -3,13 +3,19 @@ from __future__ import annotations
 import typing as t
 
 import transformers
+
 from huggingface_hub import snapshot_download
 
 import bentoml
 import openllm
-from bentoml._internal.frameworks.transformers import API_VERSION, MODULE_NAME
-from bentoml._internal.models.model import ModelOptions, ModelSignature
-if t.TYPE_CHECKING: import torch
+
+from bentoml._internal.frameworks.transformers import API_VERSION
+from bentoml._internal.frameworks.transformers import MODULE_NAME
+from bentoml._internal.models.model import ModelOptions
+from bentoml._internal.models.model import ModelSignature
+
+if t.TYPE_CHECKING:
+  import torch
 
 _GENERIC_EMBEDDING_ID = 'sentence-transformers/all-MiniLM-L6-v2'
 _BENTOMODEL_ID = 'sentence-transformers--all-MiniLM-L6-v2'
@@ -22,20 +28,19 @@ def get_or_download(ids: str = _BENTOMODEL_ID) -> bentoml.Model:
         k: ModelSignature(batchable=False)
         for k in ('forward', 'generate', 'contrastive_search', 'greedy_search', 'sample', 'beam_search', 'beam_sample', 'group_beam_search', 'constrained_beam_search', '__call__')
     }
-    with bentoml.models.create(
-        ids,
-        module=MODULE_NAME,
-        api_version=API_VERSION,
-        options=ModelOptions(),
-        context=openllm.utils.generate_context(framework_name='transformers'),
-        labels={
-            'runtime': 'pt', 'framework': 'openllm'
-        },
-        signatures=model_signatures
-    ) as bentomodel:
-      snapshot_download(
-          _GENERIC_EMBEDDING_ID, local_dir=bentomodel.path, local_dir_use_symlinks=False, ignore_patterns=['*.safetensors', '*.h5', '*.ot', '*.pdf', '*.md', '.gitattributes', 'LICENSE.txt']
-      )
+    with bentoml.models.create(ids,
+                               module=MODULE_NAME,
+                               api_version=API_VERSION,
+                               options=ModelOptions(),
+                               context=openllm.utils.generate_context(framework_name='transformers'),
+                               labels={
+                                   'runtime': 'pt', 'framework': 'openllm'
+                               },
+                               signatures=model_signatures) as bentomodel:
+      snapshot_download(_GENERIC_EMBEDDING_ID,
+                        local_dir=bentomodel.path,
+                        local_dir_use_symlinks=False,
+                        ignore_patterns=['*.safetensors', '*.h5', '*.ot', '*.pdf', '*.md', '.gitattributes', 'LICENSE.txt'])
       return bentomodel
 
 class GenericEmbeddingRunnable(bentoml.Runnable):
@@ -50,7 +55,7 @@ class GenericEmbeddingRunnable(bentoml.Runnable):
     self.model.to(self.device)
 
   @bentoml.Runnable.method(batchable=True, batch_dim=0)
-  def encode(self, sentences: list[str]) -> t.Sequence[openllm.LLMEmbeddings]:
+  def encode(self, sentences: list[str]) -> t.Sequence[openllm.EmbeddingsOutput]:
     import torch
     import torch.nn.functional as F
     encoded_input = self.tokenizer(sentences, padding=True, truncation=True, return_tensors='pt').to(self.device)
@@ -60,7 +65,7 @@ class GenericEmbeddingRunnable(bentoml.Runnable):
       model_output = self.model(**encoded_input)
     # Perform pooling and normalize
     sentence_embeddings = F.normalize(self.mean_pooling(model_output, attention_mask), p=2, dim=1)
-    return [openllm.LLMEmbeddings(embeddings=sentence_embeddings.cpu().numpy(), num_tokens=int(torch.sum(attention_mask).item()))]
+    return [openllm.EmbeddingsOutput(embeddings=sentence_embeddings.cpu().numpy(), num_tokens=int(torch.sum(attention_mask).item()))]
 
   @staticmethod
   def mean_pooling(model_output: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:

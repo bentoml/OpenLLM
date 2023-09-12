@@ -24,11 +24,11 @@ jobs:
       contents: write
       id-token: write
     steps:
-      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # ratchet:actions/checkout@v3
+      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # ratchet:actions/checkout@v4
         with:
           fetch-depth: 0
           ref: '${{ inputs.tags }}'
-      - uses: bentoml/setup-bentoml-action@59beefe94e2e8f8ebbedf555fc86bd5d1ae0a708 # ratchet:bentoml/setup-bentoml-action@v1
+      - uses: bentoml/setup-bentoml-action@862aa8fa0e0c3793fcca4bfe7a62717a497417e4 # ratchet:bentoml/setup-bentoml-action@v1
         with:
           bentoml-version: 'main'
           python-version-file: .python-version-default
@@ -39,26 +39,26 @@ jobs:
         with:
           name: python-artefacts
           path: dist
-      - name: Download Linux x86_64 compiled artifacts
-        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
-        with:
-          name: linux-x86_64-mypyc-wheels
-          path: dist
-      - name: Download MacOS x86_64 compiled artifacts
-        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
-        with:
-          name: macos-x86_64-mypyc-wheels
-          path: dist
-      - name: Download MacOS arm64 compiled artifacts
-        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
-        with:
-          name: macos-arm64-mypyc-wheels
-          path: dist
-      - name: Download MacOS universal2 compiled artifacts
-        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
-        with:
-          name: macos-universal2-mypyc-wheels
-          path: dist
+      # - name: Download Linux x86_64 compiled artifacts
+      #   uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
+      #   with:
+      #     name: linux-x86_64-mypyc-wheels
+      #     path: dist
+      # - name: Download MacOS x86_64 compiled artifacts
+      #   uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
+      #   with:
+      #     name: macos-x86_64-mypyc-wheels
+      #     path: dist
+      # - name: Download MacOS arm64 compiled artifacts
+      #   uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
+      #   with:
+      #     name: macos-arm64-mypyc-wheels
+      #     path: dist
+      # - name: Download MacOS universal2 compiled artifacts
+      #   uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
+      #   with:
+      #     name: macos-universal2-mypyc-wheels
+      #     path: dist
       - name: Download binaries
         uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
         with:

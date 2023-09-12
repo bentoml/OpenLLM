@@ -2,7 +2,9 @@ from __future__ import annotations
 import typing as t
 
 import openllm_core
+
 from openllm_core._prompt import process_prompt
+
 START_STABLELM_COMMAND_DOCSTRING = '''\
 Run a LLMServer for StableLM model.
 
@@ -16,7 +18,7 @@ Currently, StableLM only supports PyTorch. Make sure ``torch`` is available in y
 
 \b
 StableLM Runner will use stabilityai/stablelm-base-alpha-3b as the default model. To change to any other StableLM
-saved pretrained, or a fine-tune StableLM, provide ``OPENLLM_STABLELM_MODEL_ID='stabilityai/stablelm-tuned-alpha-3b'``
+saved pretrained, or a fine-tune StableLM, provide ``OPENLLM_MODEL_ID='stabilityai/stablelm-tuned-alpha-3b'``
 or provide `--model-id` flag when running ``openllm start stablelm``:
 
 \b
@@ -58,16 +60,14 @@ class StableLMConfig(openllm_core.LLMConfig):
     top_k: int = 0
     top_p: float = 0.9
 
-  def sanitize_parameters(
-      self,
-      prompt: str,
-      temperature: float | None = None,
-      max_new_tokens: int | None = None,
-      top_k: int | None = None,
-      top_p: float | None = None,
-      use_default_prompt_template: bool = False,
-      **attrs: t.Any
-  ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
+  def sanitize_parameters(self,
+                          prompt: str,
+                          temperature: float | None = None,
+                          max_new_tokens: int | None = None,
+                          top_k: int | None = None,
+                          top_p: float | None = None,
+                          use_default_prompt_template: bool = False,
+                          **attrs: t.Any) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
     if 'tuned' in self._model_id and use_default_prompt_template:
       system_prompt = attrs.pop('system_prompt', SYSTEM_PROMPT)
       prompt_text = process_prompt(prompt, DEFAULT_PROMPT_TEMPLATE, use_default_prompt_template, system_prompt=system_prompt, **attrs)

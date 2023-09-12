@@ -14,19 +14,20 @@ import typing as t
 import attr
 
 import openllm_core
+
 from bentoml._internal.utils import analytics as _internal_analytics
 from openllm_core._typing_compat import ParamSpec
+
 P = ParamSpec('P')
 T = t.TypeVar('T')
 logger = logging.getLogger(__name__)
 
 # This variable is a proxy that will control BENTOML_DO_NOT_TRACK
 OPENLLM_DO_NOT_TRACK = 'OPENLLM_DO_NOT_TRACK'
-DO_NOT_TRACK = os.environ.get(OPENLLM_DO_NOT_TRACK, str(False)).upper()
 
 @functools.lru_cache(maxsize=1)
 def do_not_track() -> bool:
-  return DO_NOT_TRACK in openllm_core.utils.ENV_VARS_TRUE_VALUES
+  return openllm_core.utils.check_bool_env(OPENLLM_DO_NOT_TRACK)
 
 @functools.lru_cache(maxsize=1)
 def _usage_event_debugging() -> bool:

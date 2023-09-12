@@ -75,7 +75,7 @@ def chunk(sample, chunk_length=2048):
 
   # get max number of chunks for batch
   if batch_total_length >= chunk_length:
-    batch_chunk_length = (batch_total_length//chunk_length) * chunk_length
+    batch_chunk_length = (batch_total_length // chunk_length) * chunk_length
 
   # Split by chunks of max_len.
   result = {k: [t[i:i + chunk_length] for i in range(0, batch_chunk_length, chunk_length)] for k, t in concatenated_examples.items()}
@@ -98,26 +98,28 @@ def prepare_datasets(tokenizer, dataset_name=DATASET_NAME):
   print("Sample from dolly-v2 ds:", dataset[randint(0, len(dataset))]["text"])
 
   # tokenize and chunk dataset
-  lm_dataset = dataset.map(lambda sample: tokenizer(sample["text"]), batched=True, remove_columns=list(dataset.features)).map(partial(chunk, chunk_length=2048), batched=True,)
+  lm_dataset = dataset.map(lambda sample: tokenizer(sample["text"]), batched=True, remove_columns=list(dataset.features)).map(partial(chunk, chunk_length=2048), batched=True)
 
   # Print total number of samples
   print(f"Total number of samples: {len(lm_dataset)}")
   return lm_dataset
 
-def prepare_for_int4_training(model_id: str, model_version: str | None = None, gradient_checkpointing: bool = True, bf16: bool = True,
+def prepare_for_int4_training(model_id: str,
+                              model_version: str | None = None,
+                              gradient_checkpointing: bool = True,
+                              bf16: bool = True,
                               ) -> tuple[peft.PeftModel, transformers.LlamaTokenizerFast]:
   from peft.tuners.lora import LoraLayer
 
-  llm = openllm.AutoLLM.for_model(
-      "llama",
-      model_id=model_id,
-      model_version=model_version,
-      ensure_available=True,
-      quantize="int4",
-      bnb_4bit_compute_dtype=torch.bfloat16,
-      use_cache=not gradient_checkpointing,
-      device_map="auto",
-  )
+  llm = openllm.AutoLLM.for_model("llama",
+                                  model_id=model_id,
+                                  model_version=model_version,
+                                  ensure_available=True,
+                                  quantize="int4",
+                                  bnb_4bit_compute_dtype=torch.bfloat16,
+                                  use_cache=not gradient_checkpointing,
+                                  device_map="auto",
+                                  )
   print("Model summary:", llm.model)
 
   # get lora target modules
@@ -180,12 +182,11 @@ def train_loop(model_args: ModelArguments, training_args: TrainingArguments):
   model, tokenizer = prepare_for_int4_training(model_args.model_id, gradient_checkpointing=training_args.gradient_checkpointing, bf16=training_args.bf16,)
   datasets = prepare_datasets(tokenizer)
 
-  trainer = transformers.Trainer(
-      model=model,
-      args=dataclasses.replace(transformers.TrainingArguments(training_args.output_dir), **dataclasses.asdict(training_args)),
-      train_dataset=datasets,
-      data_collator=transformers.default_data_collator,
-  )
+  trainer = transformers.Trainer(model=model,
+                                 args=dataclasses.replace(transformers.TrainingArguments(training_args.output_dir), **dataclasses.asdict(training_args)),
+                                 train_dataset=datasets,
+                                 data_collator=transformers.default_data_collator,
+                                 )
 
   trainer.train()
 

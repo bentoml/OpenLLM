@@ -2,7 +2,8 @@ from __future__ import annotations
 import typing as t
 
 import openllm
-if t.TYPE_CHECKING: import transformers
+if t.TYPE_CHECKING:
+  import transformers
 
 class ChatGLM(openllm.LLM['transformers.PreTrainedModel', 'transformers.PreTrainedTokenizerFast']):
   __openllm_internal__ = True
@@ -15,7 +16,7 @@ class ChatGLM(openllm.LLM['transformers.PreTrainedModel', 'transformers.PreTrain
       if self.config.use_half_precision: self.model.half()
       return self.model.chat(self.tokenizer, prompt, generation_config=self.config.model_construct_env(**attrs).to_generation_config())
 
-  def embeddings(self, prompts: list[str]) -> openllm.LLMEmbeddings:
+  def embeddings(self, prompts: list[str]) -> openllm.EmbeddingsOutput:
     import torch
     import torch.nn.functional as F
     embeddings: list[list[float]] = []
@@ -27,4 +28,4 @@ class ChatGLM(openllm.LLM['transformers.PreTrainedModel', 'transformers.PreTrain
         data = F.normalize(torch.mean(outputs.hidden_states[-1].transpose(0, 1), dim=0), p=2, dim=0)
         embeddings.append(data.tolist())
         num_tokens += len(input_ids[0])
-    return openllm.LLMEmbeddings(embeddings=embeddings, num_tokens=num_tokens)
+    return openllm.EmbeddingsOutput(embeddings=embeddings, num_tokens=num_tokens)

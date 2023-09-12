@@ -14,40 +14,45 @@ import sys
 import types
 import typing as t
 import uuid
+
 from pathlib import Path
 
 from circus.exc import ConflictError
 
 import openllm_core
-from bentoml._internal.configuration import (
-    DEBUG_ENV_VAR as DEBUG_ENV_VAR,
-    GRPC_DEBUG_ENV_VAR as _GRPC_DEBUG_ENV_VAR,
-    QUIET_ENV_VAR as QUIET_ENV_VAR,
-    get_debug_mode as _get_debug_mode,
-    get_quiet_mode as _get_quiet_mode,
-    set_quiet_mode as set_quiet_mode,
-)
+
+from bentoml._internal.configuration import DEBUG_ENV_VAR as DEBUG_ENV_VAR
+from bentoml._internal.configuration import GRPC_DEBUG_ENV_VAR as _GRPC_DEBUG_ENV_VAR
+from bentoml._internal.configuration import QUIET_ENV_VAR as QUIET_ENV_VAR
+from bentoml._internal.configuration import get_debug_mode as _get_debug_mode
+from bentoml._internal.configuration import get_quiet_mode as _get_quiet_mode
+from bentoml._internal.configuration import set_quiet_mode as set_quiet_mode
 from bentoml._internal.models.model import ModelContext as _ModelContext
 from bentoml._internal.types import LazyType as LazyType
-from bentoml._internal.utils import (
-    LazyLoader as LazyLoader,
-    bentoml_cattr as bentoml_cattr,
-    calc_dir_size as calc_dir_size,
-    first_not_none as first_not_none,
-    pkg as pkg,
-    reserve_free_port as reserve_free_port,
-    resolve_user_filepath as resolve_user_filepath,
-)
-from openllm_core.utils.lazy import (LazyModule as LazyModule, VersionInfo as VersionInfo,)
+from bentoml._internal.utils import LazyLoader as LazyLoader
+from bentoml._internal.utils import bentoml_cattr as bentoml_cattr
+from bentoml._internal.utils import calc_dir_size as calc_dir_size
+from bentoml._internal.utils import first_not_none as first_not_none
+from bentoml._internal.utils import pkg as pkg
+from bentoml._internal.utils import reserve_free_port as reserve_free_port
+from bentoml._internal.utils import resolve_user_filepath as resolve_user_filepath
+from openllm_core.utils.import_utils import ENV_VARS_TRUE_VALUES as ENV_VARS_TRUE_VALUES
+from openllm_core.utils.lazy import LazyModule as LazyModule
+from openllm_core.utils.lazy import VersionInfo as VersionInfo
+
 if t.TYPE_CHECKING:
   from openllm_core._typing_compat import AnyCallable
+
 logger = logging.getLogger(__name__)
 try:
   from typing import GenericAlias as _TypingGenericAlias  # type: ignore
 except ImportError:
-  _TypingGenericAlias = ()  # type: ignore  # python < 3.9 does not have GenericAlias (list[int], tuple[str, ...] and so on)
+  # python < 3.9 does not have GenericAlias (list[int], tuple[str, ...] and so on)
+  _TypingGenericAlias = ()  # type: ignore
 if sys.version_info < (3, 10): _WithArgsTypes = (_TypingGenericAlias,)
-else: _WithArgsTypes: t.Any = (t._GenericAlias, types.GenericAlias, types.UnionType)  # type: ignore #  _GenericAlias is the actual GenericAlias implementation
+else:
+  #  _GenericAlias is the actual GenericAlias implementation
+  _WithArgsTypes: t.Any = (t._GenericAlias, types.GenericAlias, types.UnionType)  # type: ignore
 
 DEV_DEBUG_VAR = 'OPENLLMDEVDEBUG'
 
@@ -91,6 +96,9 @@ def generate_hash_from_file(f: str, algorithm: t.Literal['md5', 'sha1'] = 'sha1'
 def device_count() -> int:
   return len(available_devices())
 
+def check_bool_env(env: str, default: bool = True) -> bool:
+  return os.environ.get(env, str(default)).upper() in ENV_VARS_TRUE_VALUES
+
 # equivocal setattr to save one lookup per assignment
 _object_setattr = object.__setattr__
 
@@ -99,14 +107,15 @@ def non_intrusive_setattr(obj: t.Any, name: str, value: t.Any) -> None:
   _setattr = functools.partial(setattr, obj) if isinstance(obj, type) else _object_setattr.__get__(obj)
   if not hasattr(obj, name): _setattr(name, value)
 
-def field_env_key(model_name: str, key: str, suffix: str | None = None) -> str:
-  return '_'.join(filter(None, map(str.upper, ['OPENLLM', model_name, suffix.strip('_') if suffix else '', key])))
+def field_env_key(key: str, suffix: str | None = None) -> str:
+  return '_'.join(filter(None, map(str.upper, ['OPENLLM', suffix.strip('_') if suffix else '', key])))
 
 # Special debug flag controled via OPENLLMDEVDEBUG
-DEBUG: bool = sys.flags.dev_mode or (not sys.flags.ignore_environment and bool(os.environ.get(DEV_DEBUG_VAR)))
+DEBUG: bool = sys.flags.dev_mode or (not sys.flags.ignore_environment and check_bool_env(DEV_DEBUG_VAR, default=False))
+# Whether to show the codenge for debug purposes
+SHOW_CODEGEN: bool = DEBUG and (os.environ.get(DEV_DEBUG_VAR, str(0)).isdigit() and int(os.environ.get(DEV_DEBUG_VAR, str(0))) > 3)
 # MYPY is like t.TYPE_CHECKING, but reserved for Mypy plugins
 MYPY = False
-SHOW_CODEGEN: bool = DEBUG and int(os.environ.get('OPENLLMDEVDEBUG', str(0))) > 3
 
 def get_debug_mode() -> bool:
   return DEBUG or _get_debug_mode()
@@ -178,6 +187,7 @@ def configure_logging() -> None:
     _LOGGING_CONFIG['loggers']['bentoml']['level'] = logging.ERROR
     _LOGGING_CONFIG['root']['level'] = logging.ERROR
   elif get_debug_mode() or DEBUG:
+    _LOGGING_CONFIG['handlers']['defaulthandler']['level'] = logging.DEBUG
     _LOGGING_CONFIG['loggers']['openllm']['level'] = logging.DEBUG
     _LOGGING_CONFIG['loggers']['bentoml']['level'] = logging.DEBUG
     _LOGGING_CONFIG['root']['level'] = logging.DEBUG
@@ -280,7 +290,8 @@ def generate_context(framework_name: str) -> _ModelContext:
   if openllm_core.utils.is_tf_available():
     from bentoml._internal.frameworks.utils.tensorflow import get_tf_version
     framework_versions['tensorflow'] = get_tf_version()
-  if openllm_core.utils.is_flax_available(): framework_versions.update({'flax': pkg.get_pkg_version('flax'), 'jax': pkg.get_pkg_version('jax'), 'jaxlib': pkg.get_pkg_version('jaxlib')})
+  if openllm_core.utils.is_flax_available():
+    framework_versions.update({'flax': pkg.get_pkg_version('flax'), 'jax': pkg.get_pkg_version('jax'), 'jaxlib': pkg.get_pkg_version('jaxlib')})
   return _ModelContext(framework_name=framework_name, framework_versions=framework_versions)
 
 _TOKENIZER_PREFIX = '_tokenizer_'
@@ -305,11 +316,10 @@ _import_structure: dict[str, list[str]] = {
     'analytics': [],
     'codegen': [],
     'dantic': [],
+    'lazy': [],
     'representation': ['ReprMixin'],
-    'lazy': ['LazyModule'],
     'import_utils': [
         'OPTIONAL_DEPENDENCIES',
-        'ENV_VARS_TRUE_VALUES',
         'DummyMetaclass',
         'EnvVarMixin',
         'require_backends',
@@ -322,8 +332,6 @@ _import_structure: dict[str, list[str]] = {
         'is_bitsandbytes_available',
         'is_peft_available',
         'is_datasets_available',
-        'is_transformers_supports_kbit',
-        'is_transformers_supports_agent',
         'is_jupyter_available',
         'is_jupytext_available',
         'is_notebook_available',
@@ -334,43 +342,43 @@ _import_structure: dict[str, list[str]] = {
         'is_fairscale_available',
         'is_grpc_available',
         'is_grpc_health_available',
-        'is_transformers_available'
+        'is_transformers_available',
+        'is_optimum_supports_gptq',
     ]
 }
 
 if t.TYPE_CHECKING:
   # NOTE: The following exports useful utils from bentoml
-  from . import (analytics as analytics, codegen as codegen, dantic as dantic,)
-  from .import_utils import (
-      ENV_VARS_TRUE_VALUES as ENV_VARS_TRUE_VALUES,
-      OPTIONAL_DEPENDENCIES as OPTIONAL_DEPENDENCIES,
-      DummyMetaclass as DummyMetaclass,
-      EnvVarMixin as EnvVarMixin,
-      is_autogptq_available as is_autogptq_available,
-      is_bitsandbytes_available as is_bitsandbytes_available,
-      is_cpm_kernels_available as is_cpm_kernels_available,
-      is_datasets_available as is_datasets_available,
-      is_einops_available as is_einops_available,
-      is_fairscale_available as is_fairscale_available,
-      is_flax_available as is_flax_available,
-      is_grpc_available as is_grpc_available,
-      is_grpc_health_available as is_grpc_health_available,
-      is_jupyter_available as is_jupyter_available,
-      is_jupytext_available as is_jupytext_available,
-      is_notebook_available as is_notebook_available,
-      is_peft_available as is_peft_available,
-      is_sentencepiece_available as is_sentencepiece_available,
-      is_tf_available as is_tf_available,
-      is_torch_available as is_torch_available,
-      is_transformers_available as is_transformers_available,
-      is_transformers_supports_agent as is_transformers_supports_agent,
-      is_transformers_supports_kbit as is_transformers_supports_kbit,
-      is_triton_available as is_triton_available,
-      is_vllm_available as is_vllm_available,
-      is_xformers_available as is_xformers_available,
-      require_backends as require_backends,
-  )
+  from . import analytics as analytics
+  from . import codegen as codegen
+  from . import dantic as dantic
+  from .import_utils import OPTIONAL_DEPENDENCIES as OPTIONAL_DEPENDENCIES
+  from .import_utils import DummyMetaclass as DummyMetaclass
+  from .import_utils import EnvVarMixin as EnvVarMixin
+  from .import_utils import is_autogptq_available as is_autogptq_available
+  from .import_utils import is_bitsandbytes_available as is_bitsandbytes_available
+  from .import_utils import is_cpm_kernels_available as is_cpm_kernels_available
+  from .import_utils import is_datasets_available as is_datasets_available
+  from .import_utils import is_einops_available as is_einops_available
+  from .import_utils import is_fairscale_available as is_fairscale_available
+  from .import_utils import is_flax_available as is_flax_available
+  from .import_utils import is_grpc_available as is_grpc_available
+  from .import_utils import is_grpc_health_available as is_grpc_health_available
+  from .import_utils import is_jupyter_available as is_jupyter_available
+  from .import_utils import is_jupytext_available as is_jupytext_available
+  from .import_utils import is_notebook_available as is_notebook_available
+  from .import_utils import is_optimum_supports_gptq as is_optimum_supports_gptq
+  from .import_utils import is_peft_available as is_peft_available
+  from .import_utils import is_sentencepiece_available as is_sentencepiece_available
+  from .import_utils import is_tf_available as is_tf_available
+  from .import_utils import is_torch_available as is_torch_available
+  from .import_utils import is_transformers_available as is_transformers_available
+  from .import_utils import is_triton_available as is_triton_available
+  from .import_utils import is_vllm_available as is_vllm_available
+  from .import_utils import is_xformers_available as is_xformers_available
+  from .import_utils import require_backends as require_backends
   from .representation import ReprMixin as ReprMixin
+
 __lazy = LazyModule(__name__, globals()['__file__'], _import_structure, extra_objects=_extras)
 __all__ = __lazy.__all__
 __dir__ = __lazy.__dir__

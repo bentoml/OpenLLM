@@ -18,6 +18,65 @@ This changelog is managed by towncrier and is compiled at release time.
 
 <!-- towncrier release notes start -->
 
+## [0.3.3](https://github.com/bentoml/openllm/tree/v0.3.3)
+No significant changes.
+
+
+## [0.3.2](https://github.com/bentoml/openllm/tree/v0.3.2)
+No significant changes.
+
+
+## [0.3.1](https://github.com/bentoml/openllm/tree/v0.3.1)
+
+### Changes
+
+- revert back to only release pure wheels
+
+  disable compiling wheels for now once we move to different implementation
+  [#304](https://github.com/bentoml/openllm/issues/304)
+
+
+## [0.3.0](https://github.com/bentoml/openllm/tree/v0.3.0)
+
+### Backwards-incompatible Changes
+
+- All environment variable now will be more simplified, without the need for the specific model prefix
+
+  For example: OPENLLM_LLAMA_GENERATION_MAX_NEW_TOKENS now becomes OPENLLM_GENERATION_MAX_NEW_TOKENS
+
+  Unify some misc environment variable. To switch different backend, one can use `--backend` for both `start` and `build`
+
+  ```bash
+  openllm start llama --backend vllm
+  ```
+
+  or the environment variable `OPENLLM_BACKEND`
+
+  ```bash
+  OPENLLM_BACKEND=vllm openllm start llama
+  ```
+
+  `openllm.Runner` now will default to try download the model the first time if the model is not available, and get the cached in model store consequently
+
+  Model serialisation now updated to a new API version with more clear name change, kindly ask users to do `openllm prune -y --include-bentos` and update to
+  this current version of openllm
+  [#283](https://github.com/bentoml/openllm/issues/283)
+
+
+### Refactor
+
+- Refactor GPTQ to use official implementation from transformers>=4.32
+  [#297](https://github.com/bentoml/openllm/issues/297)
+
+
+### Features
+
+- Added support for vLLM streaming
+
+  This can now be accessed via `/v1/generate_stream`
+  [#260](https://github.com/bentoml/openllm/issues/260)
+
+
 ## [0.2.27](https://github.com/bentoml/openllm/tree/v0.2.27)
 
 ### Changes
@@ -230,7 +289,7 @@ No significant changes.
 
   ```bash
   docker run --rm --gpus all -it -v /home/ubuntu/.local/share/bentoml:/tmp/bentoml -e BENTOML_HOME=/tmp/bentoml \
-              -e OPENLLM_USE_LOCAL_LATEST=True -e OPENLLM_LLAMA_FRAMEWORK=vllm ghcr.io/bentoml/openllm:2b5e96f90ad314f54e07b5b31e386e7d688d9bb2 start llama --model-id meta-llama/Llama-2-7b-chat-hf --workers-per-resource conserved --debug`
+              -e OPENLLM_USE_LOCAL_LATEST=True -e OPENLLM_BACKEND=vllm ghcr.io/bentoml/openllm:2b5e96f90ad314f54e07b5b31e386e7d688d9bb2 start llama --model-id meta-llama/Llama-2-7b-chat-hf --workers-per-resource conserved --debug`
   ```
 
   In conjunction with this, OpenLLM now also have a set of small CLI utilities via ``openllm ext`` for ease-of-use
@@ -721,9 +780,6 @@ No significant changes.
   `openllm start` now support `--quantize int8` and `--quantize int4` `GPTQ`
   quantization support is on the roadmap and currently being worked on.
 
-  `openllm start` now also support `--bettertransformer` to use
-  `BetterTransformer` for serving.
-
   Refactored `openllm.LLMConfig` to be able to use with `__getitem__`:
   `openllm.DollyV2Config()['requirements']`.
 
@@ -731,8 +787,6 @@ No significant changes.
   `__openllm_*__ > self.<key> > __openllm_generation_class__ > __openllm_extras__`.
 
   Added `towncrier` workflow to easily generate changelog entries
-
-  Added `use_pipeline`, `bettertransformer` flag into ModelSettings
 
   `LLMConfig` now supported `__dataclass_transform__` protocol to help with
   type-checking

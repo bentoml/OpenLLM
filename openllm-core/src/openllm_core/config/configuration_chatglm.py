@@ -2,7 +2,9 @@ from __future__ import annotations
 import typing as t
 
 import openllm_core
+
 from openllm_core.utils import dantic
+
 START_CHATGLM_COMMAND_DOCSTRING = '''\
 Run a LLMServer for ChatGLM model.
 
@@ -16,7 +18,7 @@ Currently, ChatGLM only supports PyTorch. Make sure ``torch`` is available in yo
 
 \b
 ChatGLM Runner will use THUDM/ChatGLM-6b as the default model. To change to any other ChatGLM
-saved pretrained, or a fine-tune ChatGLM, provide ``OPENLLM_CHATGLM_MODEL_ID='thudm/chatglm-6b-int8'``
+saved pretrained, or a fine-tune ChatGLM, provide ``OPENLLM_MODEL_ID='thudm/chatglm-6b-int8'``
 or provide `--model-id` flag when running ``openllm start chatglm``:
 
 \b
@@ -58,17 +60,15 @@ class ChatGLMConfig(openllm_core.LLMConfig):
     top_p: float = 0.7
     temperature: float = 0.95
 
-  def sanitize_parameters(
-      self,
-      prompt: str,
-      max_new_tokens: int | None = None,
-      num_beams: int | None = None,
-      top_p: float | None = None,
-      temperature: float | None = None,
-      chat_history: list[tuple[str, str]] | None = None,
-      use_default_prompt_template: bool = False,
-      **attrs: t.Any
-  ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
+  def sanitize_parameters(self,
+                          prompt: str,
+                          max_new_tokens: int | None = None,
+                          num_beams: int | None = None,
+                          top_p: float | None = None,
+                          temperature: float | None = None,
+                          chat_history: list[tuple[str, str]] | None = None,
+                          use_default_prompt_template: bool = False,
+                          **attrs: t.Any) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
     prompt_text = ''
     if use_default_prompt_template and chat_history is not None:
       for i, (old_query, response) in enumerate(chat_history):

@@ -2,8 +2,10 @@ from __future__ import annotations
 import typing as t
 
 import openllm_core
+
 from openllm_core._prompt import process_prompt
 from openllm_core.utils import dantic
+
 START_LLAMA_COMMAND_DOCSTRING = '''\
 Run a LLMServer for Llama model.
 
@@ -17,11 +19,14 @@ By default, this model will use [vLLM](https://github.com/vllm-project/vllm) for
 This model will also supports PyTorch.
 
 \b
-- To use PyTorch, set the environment variable ``OPENLLM_LLAMA_FRAMEWORK="pt"``
+- To use PyTorch, set the environment variable ``OPENLLM_BACKEND="pt"``
+
+\b
+- To use vLLM, set the environment variable ``OPENLLM_BACKEND="vllm"``
 
 \b
 Llama Runner will use decapoda-research/llama-7b-hf as the default model. To change to any other Llama
-saved pretrained, or a fine-tune Llama, provide ``OPENLLM_LLAMA_MODEL_ID='openlm-research/open_llama_7b_v2'``
+saved pretrained, or a fine-tune Llama, provide ``OPENLLM_MODEL_ID='openlm-research/open_llama_7b_v2'``
 or provide `--model-id` flag when running ``openllm start llama``:
 
 \b
@@ -40,7 +45,11 @@ If a question does not make any sense, or is not factually coherent, explain why
 '''
 SINST_KEY, EINST_KEY, SYS_KEY, EOS_TOKEN, BOS_TOKEN = '[INST]', '[/INST]', '<<SYS>>', '</s>', '<s>'
 # TODO: support history and v1 prompt implementation
-_v1_prompt, _v2_prompt = '''{instruction}''', '''{start_key} {sys_key}\n{system_message}\n{sys_key}\n\n{instruction}\n{end_key} '''.format(start_key=SINST_KEY, sys_key=SYS_KEY, system_message=SYSTEM_MESSAGE, instruction='{instruction}', end_key=EINST_KEY)
+_v1_prompt, _v2_prompt = '''{instruction}''', '''{start_key} {sys_key}\n{system_message}\n{sys_key}\n\n{instruction}\n{end_key} '''.format(start_key=SINST_KEY,
+                                                                                                                                           sys_key=SYS_KEY,
+                                                                                                                                           system_message=SYSTEM_MESSAGE,
+                                                                                                                                           instruction='{instruction}',
+                                                                                                                                           end_key=EINST_KEY)
 PROMPT_MAPPING = {'v1': _v1_prompt, 'v2': _v2_prompt}
 
 def _get_prompt(model_type: t.Literal['v1', 'v2']) -> str:
@@ -64,11 +73,11 @@ class LlamaConfig(openllm_core.LLMConfig):
   __config__ = {
       'name_type': 'lowercase',
       'url': 'https://github.com/facebookresearch/llama',
-      'default_implementation': {
+      'default_backend': {
           'cpu': 'pt', 'nvidia.com/gpu': 'pt'
       },
       'architecture': 'LlamaForCausalLM',
-      'requirements': ['fairscale', 'sentencepiece'],
+      'requirements': ['fairscale', 'sentencepiece', 'scipy'],
       'tokenizer_class': 'LlamaTokenizerFast',
       'default_id': 'NousResearch/llama-2-7b-hf',
       'model_ids': [
@@ -107,17 +116,15 @@ class LlamaConfig(openllm_core.LLMConfig):
     best_of: int = 1
     presence_penalty: float = 0.5
 
-  def sanitize_parameters(
-      self,
-      prompt: str,
-      top_k: int | None = None,
-      top_p: float | None = None,
-      temperature: float | None = None,
-      max_new_tokens: int | None = None,
-      use_default_prompt_template: bool = False,
-      use_llama2_prompt: bool = True,
-      **attrs: t.Any
-  ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
+  def sanitize_parameters(self,
+                          prompt: str,
+                          top_k: int | None = None,
+                          top_p: float | None = None,
+                          temperature: float | None = None,
+                          max_new_tokens: int | None = None,
+                          use_default_prompt_template: bool = False,
+                          use_llama2_prompt: bool = True,
+                          **attrs: t.Any) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
     return process_prompt(prompt, DEFAULT_PROMPT_TEMPLATE('v2' if use_llama2_prompt else 'v1') if use_default_prompt_template else None, use_default_prompt_template, **attrs), {
         'max_new_tokens': max_new_tokens, 'temperature': temperature, 'top_p': top_p, 'top_k': top_k
     }, {}

@@ -192,7 +192,6 @@ ignore = [
   "E501",    # ignore line length violation
   "E401",    # ignore multiple line import
   "E702",
-  "I001",    # unsorted imports
   "TCH004",  # don't move runtime import out, just warn about it
   "RUF012",  # mutable attributes to be used with ClassVar
   "E701",    # multiple statement on single line
@@ -217,7 +216,7 @@ convention = "google"
 ignore-overlong-task-comments = true
 [tool.ruff.isort]
 combine-as-imports = true
-force-single-line = false
+force-single-line = true
 force-wrap-aliases = false
 known-first-party = ["openllm", "bentoml", "openllm_core", "openllm_client"]
 known-third-party = [
@@ -230,8 +229,8 @@ known-third-party = [
   "peft",
   "click_option_group",
 ]
-lines-after-imports = 0
-lines-between-types = 0
+lines-after-imports = 1
+lines-between-types = 1
 no-lines-before = ["future", "standard-library"]
 relative-imports-order = "closest-to-furthest"
 required-imports = ["from __future__ import annotations"]
@@ -242,7 +241,7 @@ inline-quotes = "single"
 docstring-quotes = "single"
 [tool.ruff.extend-per-file-ignores]
 "openllm-python/src/openllm/_service.py" = ["E401"]
-"openllm-python/src/openllm/models/**" = ["E", "F"]
+"openllm-python/src/openllm/models/**" = ["E", "F", "I001"]
 "openllm-python/tests/**/*" = ["S101", "TID252", "PT011", "S307"]
 "openllm-python/src/openllm/_llm.py" = ["F811"]
 "openllm-core/src/openllm_core/utils/import_utils.py" = ["PLW0603", "F811"]
@@ -259,27 +258,21 @@ ignore_patterns = [
 ]
 
 [tool.yapf]
-ALIGN_CLOSING_BRACKET_WITH_VISUAL_INDENT = true
-ALLOW_MULTILINE_DICTIONARY_KEYS = false
-ALLOW_MULTILINE_LAMBDAS = false
-ALLOW_SPLIT_BEFORE_DEFAULT_OR_NAMED_ASSIGNS = false
-ALLOW_SPLIT_BEFORE_DICT_VALUE = false
-ARITHMETIC_PRECEDENCE_INDICATION = true
+based_on_style = "google"
+INDENT_WIDTH = 2
+JOIN_MULTIPLE_LINES = true
+COLUMN_LIMIT = 192
+USE_TABS = false
 BLANK_LINES_AROUND_TOP_LEVEL_DEFINITION = 1
-BLANK_LINES_BETWEEN_TOP_LEVEL_IMPORTS_AND_VARIABLES = 0
+BLANK_LINES_BETWEEN_TOP_LEVEL_IMPORTS_AND_VARIABLES = 1
+DISABLE_ENDING_COMMA_HEURISTIC = true
 BLANK_LINE_BEFORE_CLASS_DOCSTRING = false
 BLANK_LINE_BEFORE_MODULE_DOCSTRING = false
 BLANK_LINE_BEFORE_NESTED_CLASS_OR_DEF = false
+ALIGN_CLOSING_BRACKET_WITH_VISUAL_INDENT = true
+ALLOW_MULTILINE_DICTIONARY_KEYS = false
+ALLOW_SPLIT_BEFORE_DICT_VALUE = false
 COALESCE_BRACKETS = true
-COLUMN_LIMIT = 192
-CONTINUATION_ALIGN_STYLE = "SPACE"
-DEDENT_CLOSING_BRACKETS = true
-DISABLE_ENDING_COMMA_HEURISTIC = true
-EACH_DICT_ENTRY_ON_SEPARATE_LINE = true
-INDENT_BLANK_LINES = false
-INDENT_CLOSING_BRACKETS = false
-INDENT_WIDTH = 2
-JOIN_MULTIPLE_LINES = true
 NO_SPACES_AROUND_SELECTED_BINARY_OPERATORS = true
 SPACES_AROUND_SUBSCRIPT_COLON = false
 SPACES_AROUND_DICT_DELIMITERS = false
@@ -290,23 +283,7 @@ SPACE_BETWEEN_ENDING_COMMA_AND_CLOSING_BRACKET = false
 SPACE_INSIDE_BRACKETS = false
 SPLIT_ALL_COMMA_SEPARATED_VALUES = false
 SPLIT_ALL_TOP_LEVEL_COMMA_SEPARATED_VALUES = true
-SPLIT_ARGUMENTS_WHEN_COMMA_TERMINATED = false
-SPLIT_BEFORE_BITWISE_OPERATOR = false
-SPLIT_BEFORE_CLOSING_BRACKET = false
-SPLIT_BEFORE_DICT_SET_GENERATOR = false
-# similar to how rust format its expression
 SPLIT_BEFORE_DOT = true
-SPLIT_BEFORE_EXPRESSION_AFTER_OPENING_PAREN = false
-SPLIT_BEFORE_FIRST_ARGUMENT = false
-SPLIT_BEFORE_LOGICAL_OPERATOR = false
-SPLIT_BEFORE_NAMED_ASSIGNS = false
-SPLIT_COMPLEX_COMPREHENSION = true
-SPLIT_PENALTY_IMPORT_NAMES = 10000
-SPLIT_PENALTY_AFTER_OPENING_BRACKET = 350
-SPLIT_PENALTY_BEFORE_IF_EXPR = 10000
-SPLIT_PENALTY_COMPREHENSION = 2500
-SPLIT_PENALTY_FOR_ADDED_LINE_SPLIT = 5000
-USE_TABS = false
 
 [tool.pytest.ini_options]
 addopts = ["-rfEX", "-pno:warnings", "--snapshot-warn-unused"]

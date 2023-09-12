@@ -1,7 +1,12 @@
 import sys
-from typing import Any, Dict
-if sys.version_info[:2] >= (3,11): from typing import Self
-else: from typing_extensions import Self
+
+from typing import Any
+from typing import Dict
+
+if sys.version_info[:2] >= (3,11):
+  from typing import Self
+else:
+  from typing_extensions import Self
 
 class Struct(Dict[str, Any]):
     _allownew: bool = True

@@ -5,7 +5,11 @@ import typing as t
 import bentoml
 import openllm
 from openllm.utils import generate_labels
-from openllm_core.config.configuration_starcoder import EOD, FIM_MIDDLE, FIM_PAD, FIM_PREFIX, FIM_SUFFIX
+from openllm_core.config.configuration_starcoder import EOD
+from openllm_core.config.configuration_starcoder import FIM_MIDDLE
+from openllm_core.config.configuration_starcoder import FIM_PAD
+from openllm_core.config.configuration_starcoder import FIM_PREFIX
+from openllm_core.config.configuration_starcoder import FIM_SUFFIX
 if t.TYPE_CHECKING: import transformers
 
 class StarCoder(openllm.LLM['transformers.GPTBigCodeForCausalLM', 'transformers.GPT2TokenizerFast']):
@@ -33,12 +37,10 @@ class StarCoder(openllm.LLM['transformers.GPTBigCodeForCausalLM', 'transformers.
     with torch.inference_mode():
       # eos_token_id=self.tokenizer.convert_tokens_to_ids("<|end|>"), # NOTE: this is for finetuning starcoder
       # NOTE: support fine-tuning starcoder
-      result_tensor = self.model.generate(
-          self.tokenizer.encode(prompt, return_tensors='pt').to(self.device),
-          do_sample=True,
-          pad_token_id=self.tokenizer.eos_token_id,
-          generation_config=self.config.model_construct_env(**attrs).to_generation_config()
-      )
+      result_tensor = self.model.generate(self.tokenizer.encode(prompt, return_tensors='pt').to(self.device),
+                                          do_sample=True,
+                                          pad_token_id=self.tokenizer.eos_token_id,
+                                          generation_config=self.config.model_construct_env(**attrs).to_generation_config())
       # TODO: We will probably want to return the tokenizer here so that we can manually process this
       # return (skip_special_tokens=False, clean_up_tokenization_spaces=False))
       return self.tokenizer.batch_decode(result_tensor[0], skip_special_tokens=True, clean_up_tokenization_spaces=True)

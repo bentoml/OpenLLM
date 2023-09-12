@@ -1,4 +1,2 @@
-from . import (
-    cuda as cuda,
-    cudart as cudart,
-)
+from . import cuda as cuda
+from . import cudart as cudart

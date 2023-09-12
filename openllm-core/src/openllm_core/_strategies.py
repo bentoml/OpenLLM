@@ -13,11 +13,14 @@ import warnings
 import psutil
 
 import bentoml
-from bentoml._internal.resource import get_resource, system_resources
+
+from bentoml._internal.resource import get_resource
+from bentoml._internal.resource import system_resources
 from bentoml._internal.runner.strategy import THREAD_ENVS
 
 from ._typing_compat import overload
-from .utils import DEBUG, ReprMixin
+from .utils import DEBUG
+from .utils import ReprMixin
 
 class DynResource(t.Protocol):
   resource_id: t.ClassVar[str]
@@ -91,17 +94,19 @@ def _from_system(cls: type[DynResource]) -> list[str]:
   if visible_devices is None:
     if cls.resource_id == 'amd.com/gpu':
       if not psutil.LINUX:
-        if DEBUG: warnings.warn('AMD GPUs is currently only supported on Linux.', stacklevel=_STACK_LEVEL)
+        if DEBUG: logger.debug('AMD GPUs is currently only supported on Linux.')
         return []
       # ROCm does not currently have the rocm_smi wheel.
       # So we need to use the ctypes bindings directly.
       # we don't want to use CLI because parsing is a pain.
       sys.path.append('/opt/rocm/libexec/rocm_smi')
       try:
-        from ctypes import byref, c_uint32
+        from ctypes import byref
+        from ctypes import c_uint32
 
         # refers to https://github.com/RadeonOpenCompute/rocm_smi_lib/blob/master/python_smi_tools/rsmiBindings.py
-        from rsmiBindings import rocmsmi, rsmi_status_t
+        from rsmiBindings import rocmsmi
+        from rsmiBindings import rsmi_status_t
 
         device_count = c_uint32(0)
         ret = rocmsmi.rsmi_num_monitor_devices(byref(device_count))
@@ -149,7 +154,11 @@ def _from_spec(cls: type[DynResource], spec: t.Any) -> list[str]:
     raise TypeError(f"'{cls.__name__}.from_spec' only supports parsing spec of type int, str, or list, got '{type(spec)}' instead.")
 
 def _raw_device_uuid_nvml() -> list[str] | None:
-  from ctypes import CDLL, byref, c_int, c_void_p, create_string_buffer
+  from ctypes import CDLL
+  from ctypes import byref
+  from ctypes import c_int
+  from ctypes import c_void_p
+  from ctypes import create_string_buffer
 
   try:
     nvml_h = CDLL('libnvidia-ml.so.1')
@@ -217,8 +226,7 @@ def _make_resource_class(name: str, resource_kind: str, docstring: str) -> type[
           '__repr_keys__': property(lambda _: {'resource_id'}),
           '__doc__': inspect.cleandoc(docstring),
           '__module__': 'openllm._strategies'
-      })
-  )
+      }))
 
 # NOTE: we need to hint these t.Literal since mypy is to dumb to infer this as literal :facepalm:
 _TPU_RESOURCE: t.Literal['cloud-tpus.google.com/v2'] = 'cloud-tpus.google.com/v2'
@@ -232,16 +240,14 @@ NvidiaGpuResource = _make_resource_class(
     '''NVIDIA GPU resource.
 
     This is a modified version of internal's BentoML's NvidiaGpuResource
-    where it respects and parse CUDA_VISIBLE_DEVICES correctly.'''
-)
+    where it respects and parse CUDA_VISIBLE_DEVICES correctly.''')
 AmdGpuResource = _make_resource_class(
     'AmdGpuResource',
     _AMD_GPU_RESOURCE,
     '''AMD GPU resource.
 
     Since ROCm will respect CUDA_VISIBLE_DEVICES, the behaviour of from_spec, from_system are similar to
-    ``NvidiaGpuResource``. Currently ``validate`` is not yet supported.'''
-)
+    ``NvidiaGpuResource``. Currently ``validate`` is not yet supported.''')
 
 LiteralResourceSpec = t.Literal['cloud-tpus.google.com/v2', 'amd.com/gpu', 'nvidia.com/gpu', 'cpu']
 
@@ -294,10 +300,12 @@ class CascadingResourceStrategy(bentoml.Strategy, ReprMixin):
     # use CPU
     cpus = get_resource(resource_request, 'cpu')
     if cpus is not None and cpus > 0:
-      if 'cpu' not in runnable_class.SUPPORTED_RESOURCES: logger.warning('No known supported resource available for %s, falling back to using CPU.', runnable_class)
+      if 'cpu' not in runnable_class.SUPPORTED_RESOURCES:
+        logger.warning('No known supported resource available for %s, falling back to using CPU.', runnable_class)
 
       if runnable_class.SUPPORTS_CPU_MULTI_THREADING:
-        if isinstance(workers_per_resource, float) and workers_per_resource < 1.0: raise ValueError('Fractional CPU multi threading support is not yet supported.')
+        if isinstance(workers_per_resource, float) and workers_per_resource < 1.0:
+          raise ValueError('Fractional CPU multi threading support is not yet supported.')
         return int(workers_per_resource)
       return math.ceil(cpus) * workers_per_resource
 
@@ -370,11 +378,12 @@ class CascadingResourceStrategy(bentoml.Strategy, ReprMixin):
       if len(gpus) < assigned_resource_per_worker:
         logger.warning('Failed to allocate %s GPUs for %s (number of available GPUs < assigned workers per resource [%s])', gpus, worker_index, assigned_resource_per_worker)
         raise IndexError(f"There aren't enough assigned GPU(s) for given worker id '{worker_index}' [required: {assigned_resource_per_worker}].")
-      assigned_gpu = gpus[assigned_resource_per_worker * worker_index:assigned_resource_per_worker * (worker_index+1)]
+      assigned_gpu = gpus[assigned_resource_per_worker * worker_index:assigned_resource_per_worker * (worker_index + 1)]
       dev = ','.join(assigned_gpu)
     else:
       idx = worker_index // workers_per_resource
-      if idx >= len(gpus): raise ValueError(f'Number of available GPU ({gpus}) preceeds the given workers_per_resource {workers_per_resource}')
+      if idx >= len(gpus):
+        raise ValueError(f'Number of available GPU ({gpus}) preceeds the given workers_per_resource {workers_per_resource}')
       dev = str(gpus[idx])
     return dev
 

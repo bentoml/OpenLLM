@@ -37,7 +37,7 @@ jobs:
     outputs:
       message: ${{ steps.commit_message.outputs.message }}
     steps:
-      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # ratchet:actions/checkout@v3
+      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # ratchet:actions/checkout@v4
         # Gets the correct commit message for pull request
         with:
           ref: ${{ github.event.pull_request.head.sha }}
@@ -55,7 +55,7 @@ jobs:
     if: >-
       contains(needs.get_commit_message.outputs.message, '[ec2 build]') || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, '00 - EC2 Build')) || (github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/heads/main')))
     env:
-      EC2_INSTANCE_TYPE: g5.12xlarge
+      EC2_INSTANCE_TYPE: t3.2xlarge
       EC2_AMI_ID: ami-089dafe9af191a0fd
       EC2_SUBNET_ID: subnet-0ca63188fe98788c1,subnet-05997205433b249d0,subnet-07ef5d3e974275fed,subnet-0161ef0151089bb0b
       EC2_SECURITY_GROUP: sg-051366641bf2b8049
@@ -64,7 +64,7 @@ jobs:
       ec2-instance-id: ${{ steps.start-ec2-runner.outputs.ec2-instance-id }}
     steps:
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@5fd3084fc36e372ff1fff382a39b10d03659f355 # ratchet:aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@50ac8dd1e1b10d09dac7b8727528b91bed831ac0 # ratchet:aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_PROD_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_PROD_SECRET_ACCESS_KEY }}
@@ -95,7 +95,7 @@ jobs:
       id-token: write
       security-events: write
     steps:
-      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # ratchet:actions/checkout@v3
+      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # ratchet:actions/checkout@v4
         with:
           fetch-depth: 1
       - name: Inject slug/short variables
@@ -103,7 +103,7 @@ jobs:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@2b82ce82d56a2a04d2637cd93a637ae1b359c0a7 # ratchet:docker/setup-qemu-action@v2.2.0
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@4c0219f9ac95b02789c1075625400b2acbff50b1 # ratchet:docker/setup-buildx-action@v2.9.1
+        uses: docker/setup-buildx-action@885d1462b80bc1c1c7f0b00334ad271f09369c55 # ratchet:docker/setup-buildx-action@v2.10.0
         with:
           install: true
           driver-opts: |
@@ -111,7 +111,7 @@ jobs:
             network=host
       - name: Install cosign
         if: github.event_name != 'pull_request'
-        uses: sigstore/cosign-installer@6e04d228eb30da1757ee4e1dd75a0ec73a653e06 # ratchet:sigstore/cosign-installer@v3.1.1
+        uses: sigstore/cosign-installer@11086d25041f77fe8fe7b9ea4e48e3b9192b8f19 # ratchet:sigstore/cosign-installer@v3.1.2
         with:
           cosign-release: 'v2.1.1'
       - name: Login to GitHub Container Registry
@@ -160,7 +160,7 @@ jobs:
             org.opencontainers.image.source="https://github.com/bentoml/OpenLLM"
       - name: Build and push Docker image
         id: build-and-push
-        uses: docker/build-push-action@2eb1c1961a95fc15694676618e422e8ba1d63825 # ratchet:docker/build-push-action@v4
+        uses: docker/build-push-action@0a97817b6ade9f46837855d676c4cca3a2471fc9 # ratchet:docker/build-push-action@v4
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_PROD_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_PROD_SECRET_ACCESS_KEY }}
@@ -187,7 +187,7 @@ jobs:
           COSIGN_EXPERIMENTAL: 'true'
         run: echo "${{ steps.meta.outputs.tags }}" | xargs -I {} cosign sign --yes {}@${{ steps.build-and-push.outputs.digest }}
       - name: Run Trivy in GitHub SBOM mode and submit results to Dependency Graph
-        uses: aquasecurity/trivy-action@559eb1224e654a86c844a795e6702a0742c60c72 # ratchet:aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@fbd16365eb88e12433951383f5e99bd901fc618f # ratchet:aquasecurity/trivy-action@master
         if: ${{ github.event_name != 'pull_request' }}
         with:
           image-ref: 'ghcr.io/bentoml/openllm:sha-${{ env.GITHUB_SHA_SHORT }}'
@@ -196,7 +196,7 @@ jobs:
           github-pat: ${{ secrets.GITHUB_TOKEN }}
           scanners: 'vuln'
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@559eb1224e654a86c844a795e6702a0742c60c72 # ratchet:aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@fbd16365eb88e12433951383f5e99bd901fc618f # ratchet:aquasecurity/trivy-action@master
         if: ${{ github.event_name != 'pull_request' }}
         with:
           image-ref: 'ghcr.io/bentoml/openllm:sha-${{ env.GITHUB_SHA_SHORT }}'
@@ -205,7 +205,7 @@ jobs:
           severity: 'CRITICAL'
           scanners: 'vuln'
       - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@a09933a12a80f87b87005513f0abb1494c27a716 # ratchet:github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@00e563ead9f72a8461b24876bee2d0c2e8bd2ee8 # ratchet:github/codeql-action/upload-sarif@v2
         if: ${{ github.event_name != 'pull_request' }}
         with:
           sarif_file: 'trivy-results.sarif'
@@ -221,7 +221,7 @@ jobs:
       (contains(needs.get_commit_message.outputs.message, '[ec2 build]') || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, '00 - EC2 Build')) || (github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/heads/main')))) && always()
     steps:
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@5fd3084fc36e372ff1fff382a39b10d03659f355 # ratchet:aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@50ac8dd1e1b10d09dac7b8727528b91bed831ac0 # ratchet:aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_PROD_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_PROD_SECRET_ACCESS_KEY }}

@@ -7,19 +7,25 @@ import importlib.util
 import logging
 import os
 import typing as t
+
 from collections import OrderedDict
 
 import inflection
 import packaging.version
 
 import openllm_core
-from bentoml._internal.utils import LazyLoader, pkg
-from openllm_core._typing_compat import LiteralString, overload
+
+from bentoml._internal.utils import LazyLoader
+from bentoml._internal.utils import pkg
+from openllm_core._typing_compat import LiteralBackend
+from openllm_core._typing_compat import LiteralString
+from openllm_core._typing_compat import overload
 
 from .representation import ReprMixin
+
 if t.TYPE_CHECKING:
   BackendOrderedDict = OrderedDict[str, t.Tuple[t.Callable[[], bool], str]]
-  from openllm_core._typing_compat import LiteralRuntime
+
 logger = logging.getLogger(__name__)
 OPTIONAL_DEPENDENCIES = {'opt', 'flan-t5', 'vllm', 'fine-tune', 'ggml', 'agents', 'openai', 'playground', 'gptq', 'grpc'}
 ENV_VARS_TRUE_VALUES = {'1', 'ON', 'YES', 'TRUE'}
@@ -68,11 +74,8 @@ def is_grpc_available() -> bool:
 def is_grpc_health_available() -> bool:
   return _grpc_health_available
 
-def is_transformers_supports_kbit() -> bool:
-  return pkg.pkg_version_info('transformers')[:2] >= (4, 30)
-
-def is_transformers_supports_agent() -> bool:
-  return pkg.pkg_version_info('transformers')[:2] >= (4, 29)
+def is_optimum_supports_gptq() -> bool:
+  return pkg.pkg_version_info('optimum')[:2] >= (0, 12)
 
 def is_jupyter_available() -> bool:
   return _jupyter_available
@@ -136,19 +139,18 @@ def is_tf_available() -> bool:
     _tf_version = None
     if USE_TF in ENV_VARS_TRUE_AND_AUTO_VALUES and USE_TORCH not in ENV_VARS_TRUE_VALUES:
       if _tf_available:
-        candidates = (
-            'tensorflow',
-            'tensorflow-cpu',
-            'tensorflow-gpu',
-            'tf-nightly',
-            'tf-nightly-cpu',
-            'tf-nightly-gpu',
-            'intel-tensorflow',
-            'intel-tensorflow-avx512',
-            'tensorflow-rocm',
-            'tensorflow-macos',
-            'tensorflow-aarch64',
-        )
+        candidates = ('tensorflow',
+                      'tensorflow-cpu',
+                      'tensorflow-gpu',
+                      'tf-nightly',
+                      'tf-nightly-cpu',
+                      'tf-nightly-gpu',
+                      'intel-tensorflow',
+                      'intel-tensorflow-avx512',
+                      'tensorflow-rocm',
+                      'tensorflow-macos',
+                      'tensorflow-aarch64',
+                      )
         _tf_version = None
         # For the metadata, we have to look for both tensorflow and tensorflow-cpu
         for _pkg in candidates:
@@ -286,15 +288,13 @@ You can install it with pip: `pip install fairscale`. Please note that you may n
 your runtime after installation.
 '''
 
-BACKENDS_MAPPING: BackendOrderedDict = OrderedDict([('flax', (is_flax_available, FLAX_IMPORT_ERROR)), ('tf', (is_tf_available, TENSORFLOW_IMPORT_ERROR)), (
-    'torch', (is_torch_available, PYTORCH_IMPORT_ERROR)
-), ('vllm', (is_vllm_available, VLLM_IMPORT_ERROR)), ('cpm_kernels', (is_cpm_kernels_available, CPM_KERNELS_IMPORT_ERROR)), ('einops', (is_einops_available, EINOPS_IMPORT_ERROR)), (
-    'triton', (is_triton_available, TRITON_IMPORT_ERROR)
-), ('datasets', (is_datasets_available, DATASETS_IMPORT_ERROR)), ('peft', (is_peft_available, PEFT_IMPORT_ERROR)), ('bitsandbytes', (is_bitsandbytes_available, BITSANDBYTES_IMPORT_ERROR)), (
-    'auto-gptq', (is_autogptq_available, AUTOGPTQ_IMPORT_ERROR)
-), ('sentencepiece', (is_sentencepiece_available, SENTENCEPIECE_IMPORT_ERROR)), ('xformers', (is_xformers_available, XFORMERS_IMPORT_ERROR)), (
-    'fairscale', (is_fairscale_available, FAIRSCALE_IMPORT_ERROR)
-)])
+BACKENDS_MAPPING: BackendOrderedDict = OrderedDict([('flax', (is_flax_available, FLAX_IMPORT_ERROR)), ('tf', (is_tf_available, TENSORFLOW_IMPORT_ERROR)),
+                                                    ('torch', (is_torch_available, PYTORCH_IMPORT_ERROR)), ('vllm', (is_vllm_available, VLLM_IMPORT_ERROR)),
+                                                    ('cpm_kernels', (is_cpm_kernels_available, CPM_KERNELS_IMPORT_ERROR)), ('einops', (is_einops_available, EINOPS_IMPORT_ERROR)),
+                                                    ('triton', (is_triton_available, TRITON_IMPORT_ERROR)), ('datasets', (is_datasets_available, DATASETS_IMPORT_ERROR)),
+                                                    ('peft', (is_peft_available, PEFT_IMPORT_ERROR)), ('bitsandbytes', (is_bitsandbytes_available, BITSANDBYTES_IMPORT_ERROR)),
+                                                    ('auto-gptq', (is_autogptq_available, AUTOGPTQ_IMPORT_ERROR)), ('sentencepiece', (is_sentencepiece_available, SENTENCEPIECE_IMPORT_ERROR)),
+                                                    ('xformers', (is_xformers_available, XFORMERS_IMPORT_ERROR)), ('fairscale', (is_fairscale_available, FAIRSCALE_IMPORT_ERROR))])
 
 class DummyMetaclass(abc.ABCMeta):
   '''Metaclass for dummy object.
@@ -311,14 +311,19 @@ def require_backends(o: t.Any, backends: t.MutableSequence[str]) -> None:
   if not isinstance(backends, (list, tuple)): backends = list(backends)
   name = o.__name__ if hasattr(o, '__name__') else o.__class__.__name__
   # Raise an error for users who might not realize that classes without "TF" are torch-only
-  if 'torch' in backends and 'tf' not in backends and not is_torch_available() and is_tf_available(): raise ImportError(PYTORCH_IMPORT_ERROR_WITH_TF.format(name))
+  if 'torch' in backends and 'tf' not in backends and not is_torch_available() and is_tf_available():
+    raise ImportError(PYTORCH_IMPORT_ERROR_WITH_TF.format(name))
   # Raise the inverse error for PyTorch users trying to load TF classes
-  if 'tf' in backends and 'torch' not in backends and is_torch_available() and not is_tf_available(): raise ImportError(TF_IMPORT_ERROR_WITH_PYTORCH.format(name))
+  if 'tf' in backends and 'torch' not in backends and is_torch_available() and not is_tf_available():
+    raise ImportError(TF_IMPORT_ERROR_WITH_PYTORCH.format(name))
   # Raise an error when vLLM is not available to consider the alternative, order from PyTorch -> Tensorflow -> Flax
   if 'vllm' in backends:
-    if 'torch' not in backends and is_torch_available() and not is_vllm_available(): raise ImportError(VLLM_IMPORT_ERROR_WITH_PYTORCH.format(name))
-    if 'tf' not in backends and is_tf_available() and not is_vllm_available(): raise ImportError(VLLM_IMPORT_ERROR_WITH_TF.format(name))
-    if 'flax' not in backends and is_flax_available() and not is_vllm_available(): raise ImportError(VLLM_IMPORT_ERROR_WITH_FLAX.format(name))
+    if 'torch' not in backends and is_torch_available() and not is_vllm_available():
+      raise ImportError(VLLM_IMPORT_ERROR_WITH_PYTORCH.format(name))
+    if 'tf' not in backends and is_tf_available() and not is_vllm_available():
+      raise ImportError(VLLM_IMPORT_ERROR_WITH_TF.format(name))
+    if 'flax' not in backends and is_flax_available() and not is_vllm_available():
+      raise ImportError(VLLM_IMPORT_ERROR_WITH_FLAX.format(name))
   failed = [msg.format(name) for available, msg in (BACKENDS_MAPPING[backend] for backend in backends) if not available()]
   if failed: raise ImportError(''.join(failed))
 
@@ -327,9 +332,7 @@ class EnvVarMixin(ReprMixin):
   config: str
   model_id: str
   quantize: str
-  framework: str
-  bettertransformer: str
-  runtime: str
+  backend: str
 
   @overload
   def __getitem__(self, item: t.Literal['config']) -> str:
@@ -344,19 +347,11 @@ class EnvVarMixin(ReprMixin):
     ...
 
   @overload
-  def __getitem__(self, item: t.Literal['framework']) -> str:
+  def __getitem__(self, item: t.Literal['backend']) -> str:
     ...
 
   @overload
-  def __getitem__(self, item: t.Literal['bettertransformer']) -> str:
-    ...
-
-  @overload
-  def __getitem__(self, item: t.Literal['runtime']) -> str:
-    ...
-
-  @overload
-  def __getitem__(self, item: t.Literal['framework_value']) -> LiteralRuntime:
+  def __getitem__(self, item: t.Literal['backend_value']) -> LiteralBackend:
     ...
 
   @overload
@@ -367,62 +362,36 @@ class EnvVarMixin(ReprMixin):
   def __getitem__(self, item: t.Literal['model_id_value']) -> str | None:
     ...
 
-  @overload
-  def __getitem__(self, item: t.Literal['bettertransformer_value']) -> bool:
-    ...
-
-  @overload
-  def __getitem__(self, item: t.Literal['runtime_value']) -> t.Literal['ggml', 'transformers']:
-    ...
-
   def __getitem__(self, item: str | t.Any) -> t.Any:
     if item.endswith('_value') and hasattr(self, f'_{item}'): return object.__getattribute__(self, f'_{item}')()
     elif hasattr(self, item): return getattr(self, item)
     raise KeyError(f'Key {item} not found in {self}')
 
-  def __init__(
-      self,
-      model_name: str,
-      implementation: LiteralRuntime = 'pt',
-      model_id: str | None = None,
-      bettertransformer: bool | None = None,
-      quantize: LiteralString | None = None,
-      runtime: t.Literal['ggml', 'transformers'] = 'transformers'
-  ) -> None:
+  def __init__(self, model_name: str, backend: LiteralBackend = 'pt', model_id: str | None = None, quantize: LiteralString | None = None) -> None:
     '''EnvVarMixin is a mixin class that returns the value extracted from environment variables.'''
     from openllm_core.utils import field_env_key
     self.model_name = inflection.underscore(model_name)
-    self._implementation = implementation
+    self._backend = backend
     self._model_id = model_id
-    self._bettertransformer = bettertransformer
     self._quantize = quantize
-    self._runtime = runtime
-    for att in {'config', 'model_id', 'quantize', 'framework', 'bettertransformer', 'runtime'}:
-      setattr(self, att, field_env_key(self.model_name, att.upper()))
+    for att in {'config', 'model_id', 'quantize', 'backend'}:
+      setattr(self, att, field_env_key(att.upper()))
 
   def _quantize_value(self) -> t.Literal['int8', 'int4', 'gptq'] | None:
     from . import first_not_none
     return t.cast(t.Optional[t.Literal['int8', 'int4', 'gptq']], first_not_none(os.environ.get(self['quantize']), default=self._quantize))
 
-  def _framework_value(self) -> LiteralRuntime:
+  def _backend_value(self) -> LiteralBackend:
     from . import first_not_none
-    return t.cast(t.Literal['pt', 'tf', 'flax', 'vllm'], first_not_none(os.environ.get(self['framework']), default=self._implementation))
-
-  def _bettertransformer_value(self) -> bool:
-    from . import first_not_none
-    return t.cast(bool, first_not_none(os.environ.get(self['bettertransformer'], str(False)).upper() in ENV_VARS_TRUE_VALUES, default=self._bettertransformer))
+    return t.cast(LiteralBackend, first_not_none(os.environ.get(self['backend']), default=self._backend))
 
   def _model_id_value(self) -> str | None:
     from . import first_not_none
     return first_not_none(os.environ.get(self['model_id']), default=self._model_id)
 
-  def _runtime_value(self) -> t.Literal['ggml', 'transformers']:
-    from . import first_not_none
-    return t.cast(t.Literal['ggml', 'transformers'], first_not_none(os.environ.get(self['runtime']), default=self._runtime))
-
   @property
   def __repr_keys__(self) -> set[str]:
-    return {'config', 'model_id', 'quantize', 'framework', 'bettertransformer', 'runtime'}
+    return {'config', 'model_id', 'quantize', 'backend'}
 
   @property
   def start_docstring(self) -> str:

@@ -2,8 +2,10 @@ from __future__ import annotations
 import typing as t
 
 import openllm_core
+
 from openllm_core._prompt import process_prompt
 from openllm_core.utils import dantic
+
 START_OPT_COMMAND_DOCSTRING = '''\
 Run a LLMServer for OPT model.
 
@@ -16,14 +18,14 @@ Run a LLMServer for OPT model.
 By default, this model will use the PyTorch model for inference. However, this model supports both Flax and Tensorflow.
 
 \b
-- To use Flax, set the environment variable ``OPENLLM_OPT_FRAMEWORK="flax"``
+- To use Flax, set the environment variable ``OPENLLM_BACKEND="flax"``
 
 \b
-- To use Tensorflow, set the environment variable ``OPENLLM_OPT_FRAMEWORK="tf"``
+- To use Tensorflow, set the environment variable ``OPENLLM_BACKEND="tf"``
 
 \b
 OPT Runner will use facebook/opt-2.7b as the default model. To change to any other OPT
-saved pretrained, or a fine-tune OPT, provide ``OPENLLM_OPT_MODEL_ID='facebook/opt-6.7b'``
+saved pretrained, or a fine-tune OPT, provide ``OPENLLM_MODEL_ID='facebook/opt-6.7b'``
 or provide `--model-id` flag when running ``openllm start opt``:
 
 \b
@@ -60,16 +62,14 @@ class OPTConfig(openllm_core.LLMConfig):
     max_new_tokens: int = 1024
     num_return_sequences: int = 1
 
-  def sanitize_parameters(
-      self,
-      prompt: str,
-      max_new_tokens: int | None = None,
-      temperature: float | None = None,
-      top_k: int | None = None,
-      num_return_sequences: int | None = None,
-      use_default_prompt_template: bool = False,
-      **attrs: t.Any
-  ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
+  def sanitize_parameters(self,
+                          prompt: str,
+                          max_new_tokens: int | None = None,
+                          temperature: float | None = None,
+                          top_k: int | None = None,
+                          num_return_sequences: int | None = None,
+                          use_default_prompt_template: bool = False,
+                          **attrs: t.Any) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
     return process_prompt(prompt, DEFAULT_PROMPT_TEMPLATE, use_default_prompt_template, **attrs), {
         'max_new_tokens': max_new_tokens, 'temperature': temperature, 'top_k': top_k, 'num_return_sequences': num_return_sequences
     }, {}

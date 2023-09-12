@@ -2,15 +2,21 @@
 from __future__ import annotations
 import importlib
 import typing as t
+
 from collections import OrderedDict
 
 import inflection
 
 import openllm_core
+
 from openllm_core.utils import ReprMixin
+
 if t.TYPE_CHECKING:
   import types
-  from collections import _odict_items, _odict_keys, _odict_values
+
+  from collections import _odict_items
+  from collections import _odict_keys
+  from collections import _odict_values
 
   from openllm_core._typing_compat import LiteralString
   ConfigKeysView = _odict_keys[str, type[openllm_core.LLMConfig]]
@@ -18,9 +24,9 @@ if t.TYPE_CHECKING:
   ConfigItemsView = _odict_items[str, type[openllm_core.LLMConfig]]
 
 # NOTE: This is the entrypoint when adding new model config
-CONFIG_MAPPING_NAMES = OrderedDict([('chatglm', 'ChatGLMConfig'), ('dolly_v2', 'DollyV2Config'), ('falcon', 'FalconConfig'), ('flan_t5', 'FlanT5Config'), ('gpt_neox', 'GPTNeoXConfig'), (
-    'llama', 'LlamaConfig'
-), ('mpt', 'MPTConfig'), ('opt', 'OPTConfig'), ('stablelm', 'StableLMConfig'), ('starcoder', 'StarCoderConfig'), ('baichuan', 'BaichuanConfig')])
+CONFIG_MAPPING_NAMES = OrderedDict([('chatglm', 'ChatGLMConfig'), ('dolly_v2', 'DollyV2Config'), ('falcon', 'FalconConfig'), ('flan_t5', 'FlanT5Config'), ('gpt_neox', 'GPTNeoXConfig'),
+                                    ('llama', 'LlamaConfig'), ('mpt', 'MPTConfig'), ('opt', 'OPTConfig'), ('stablelm', 'StableLMConfig'), ('starcoder', 'StarCoderConfig'),
+                                    ('baichuan', 'BaichuanConfig')])
 
 class _LazyConfigMapping(OrderedDict, ReprMixin):
   def __init__(self, mapping: OrderedDict[LiteralString, LiteralString]):
@@ -70,7 +76,7 @@ class _LazyConfigMapping(OrderedDict, ReprMixin):
 
 CONFIG_MAPPING: dict[str, type[openllm_core.LLMConfig]] = _LazyConfigMapping(CONFIG_MAPPING_NAMES)
 # The below handle special alias when we call underscore to the name directly without processing camelcase first.
-CONFIG_NAME_ALIASES: dict[str, str] = {'chat_glm': 'chatglm', 'stable_lm': 'stablelm', 'star_coder': 'starcoder', 'gpt_neo_x': 'gpt_neox',}
+CONFIG_NAME_ALIASES: dict[str, str] = {'chat_glm': 'chatglm', 'stable_lm': 'stablelm', 'star_coder': 'starcoder', 'gpt_neo_x': 'gpt_neox'}
 
 class AutoConfig:
   def __init__(self, *_: t.Any, **__: t.Any):

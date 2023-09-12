@@ -1,6 +1,6 @@
 ci:
   autoupdate_schedule: weekly
-  skip: [check-models-table-update, changelog-dry-run, mypy, yapf, sync-readme, clj-kondo, eslint, prettier]
+  skip: [changelog-dry-run, mypy, yapf, clj-kondo, pyright, eslint, prettier]
   autofix_commit_msg: "ci: auto fixes from pre-commit.ci\n\nFor more information, see https://pre-commit.ci"
   autoupdate_commit_msg: 'ci: pre-commit autoupdate [pre-commit.ci]'
 default_language_version:
@@ -8,7 +8,7 @@ default_language_version:
 exclude: '.*\.(css|js|svg)$'
 repos:
   - repo: https://github.com/google/yapf
-    rev: v0.40.1
+    rev: v0.40.0
     hooks:
       - id: yapf
         verbose: true
@@ -18,21 +18,11 @@ repos:
               openllm-python/src/openllm/cli/entrypoint.py
           )$
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: 'v0.0.285'
+    rev: 'v0.0.287'
     hooks:
       - id: ruff
         verbose: true
         args: [--exit-non-zero-on-fix, --show-fixes]
-  - repo: https://github.com/editorconfig-checker/editorconfig-checker.python
-    rev: '2.7.2'
-    hooks:
-      - id: editorconfig-checker
-        verbose: true
-        exclude: |
-          (?x)^(
-              openllm-client/src/openllm_client/pb.*|
-              openllm-python/src/openllm/cli/entrypoint.py
-          )$
   - repo: https://github.com/econchick/interrogate
     rev: 1.5.0
     hooks:
@@ -105,54 +95,42 @@ repos:
       - id: check-added-large-files
       - id: debug-statements
       - id: check-merge-conflict
-  # - repo: https://github.com/RobertCraigie/pyright-python
-  #   rev: v1.1.324
-  #   hooks:
-  #   - id: pyright
-  #     verbose: true
-  #     args: [--level, error]
-  #     exclude: |
-  #       (?x)^(
-  #           examples/.*|
-  #           tools/.*|
-  #           tests/.*|
-  #           openllm-python/src/openllm/playground/.*|
-  #           openllm-python/tests/.*|
-  #           openllm-client/src/openllm_client/pb.*|
-  #           .github/.*|
-  #           cz.py |
-  #           hatch_build.py
-  #       )$
-  #     additional_dependencies:
-  #       - openllm-client[grpc]
-  #       - bentoml[io]>=1.1.2
-  #       - transformers[agents,torch,tokenizers,accelerate]>=4.29.0
-  #       - peft
-  #       - safetensors
-  #       - optimum
-  #       - ghapi
-  #       - click==8.1.3
-  #       - bitsandbytes
-  #       - diffusers
-  #       - soundfile
+  - repo: https://github.com/RobertCraigie/pyright-python
+    rev: v1.1.326
+    hooks:
+      - id: pyright
+        verbose: true
+        args: [--level, error]
+        exclude: |
+          (?x)^(
+              examples/.*|
+              tools/.*|
+              tests/.*|
+              openllm-python/src/openllm/playground/.*|
+              openllm-python/tests/.*|
+              openllm-client/src/openllm_client/pb.*|
+              .github/.*|
+              cz.py |
+              hatch_build.py
+          )$
+        additional_dependencies:
+          - openllm-client[grpc]
+          - bentoml[io]>=1.1.2
+          - transformers[agents,torch,tokenizers,accelerate]>=4.29.0
+          - peft
+          - safetensors
+          - optimum
+          - ghapi
+          - click==8.1.3
+          - bitsandbytes
+          - diffusers
+          - soundfile
   - repo: meta
     hooks:
       - id: check-hooks-apply
       - id: check-useless-excludes
   - repo: local
     hooks:
-      - id: check-models-table-update
-        name: check if table in README.md is up-to-date
-        entry: ./tools/assert-model-table-latest.py
-        language: script
-        verbose: true
-        files: README.md
-      - id: sync-readme
-        name: sync readme with python core library
-        entry: ./tools/sync-readme.sh
-        language: script
-        verbose: true
-        files: README.md
       - id: changelog-dry-run
         name: Running changelog dry-run
         entry: hatch run changelog

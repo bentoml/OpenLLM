@@ -2,6 +2,7 @@ from __future__ import annotations
 import typing as t
 
 import openllm_core
+
 START_STARCODER_COMMAND_DOCSTRING = '''\
 Run a LLMServer for StarCoder model.
 
@@ -15,7 +16,7 @@ Currently, StarCoder only supports PyTorch. Make sure ``torch`` is available in 
 
 \b
 StarCoder Runner will use bigcode/starcoder as the default model. To change to any other StarCoder
-saved pretrained, or a fine-tune StarCoder, provide ``OPENLLM_STARCODER_MODEL_ID='bigcode/starcoder'``
+saved pretrained, or a fine-tune StarCoder, provide ``OPENLLM_MODEL_ID='bigcode/starcoder'``
 or provide `--model-id` flag when running ``openllm start starcoder``:
 
 \b
@@ -53,9 +54,13 @@ class StarCoderConfig(openllm_core.LLMConfig):
     pad_token_id: int = 49152
     repetition_penalty: float = 1.2
 
-  def sanitize_parameters(
-      self, prompt: str, temperature: float | None = None, top_p: float | None = None, max_new_tokens: int | None = None, repetition_penalty: float | None = None, **attrs: t.Any
-  ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
+  def sanitize_parameters(self,
+                          prompt: str,
+                          temperature: float | None = None,
+                          top_p: float | None = None,
+                          max_new_tokens: int | None = None,
+                          repetition_penalty: float | None = None,
+                          **attrs: t.Any) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
     fim_mode, prefix, suffix = FIM_INDICATOR in prompt, None, None
     if fim_mode:
       try:

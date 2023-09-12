@@ -3,8 +3,15 @@ import os
 import typing as t
 
 import openllm
-from openllm_core.config import CONFIG_MAPPING as CONFIG_MAPPING, CONFIG_MAPPING_NAMES as CONFIG_MAPPING_NAMES, AutoConfig as AutoConfig
-from openllm_core.utils import LazyModule, is_flax_available, is_tf_available, is_torch_available, is_vllm_available
+from openllm_core.config import CONFIG_MAPPING as CONFIG_MAPPING
+from openllm_core.config import CONFIG_MAPPING_NAMES as CONFIG_MAPPING_NAMES
+from openllm_core.config import AutoConfig as AutoConfig
+from openllm_core.utils import LazyModule
+from openllm_core.utils import is_flax_available
+from openllm_core.utils import is_tf_available
+from openllm_core.utils import is_torch_available
+from openllm_core.utils import is_vllm_available
+
 _import_structure: dict[str, list[str]] = {
     'modeling_auto': ['MODEL_MAPPING_NAMES'],
     'modeling_flax_auto': ['MODEL_FLAX_MAPPING_NAMES'],
@@ -36,7 +43,8 @@ except openllm.exceptions.MissingDependencyError:
   pass
 else:
   _import_structure['modeling_flax_auto'].extend(['AutoFlaxLLM', 'MODEL_FLAX_MAPPING'])
-  if t.TYPE_CHECKING: from .modeling_flax_auto import MODEL_FLAX_MAPPING as MODEL_FLAX_MAPPING, AutoFlaxLLM as AutoFlaxLLM
+  if t.TYPE_CHECKING:
+    from .modeling_flax_auto import MODEL_FLAX_MAPPING as MODEL_FLAX_MAPPING, AutoFlaxLLM as AutoFlaxLLM
 try:
   if not is_tf_available(): raise openllm.exceptions.MissingDependencyError
 except openllm.exceptions.MissingDependencyError:

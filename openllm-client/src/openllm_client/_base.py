@@ -4,6 +4,7 @@ import abc
 import functools
 import logging
 import typing as t
+
 from http import HTTPStatus
 from urllib.parse import urljoin
 
@@ -12,14 +13,22 @@ import httpx
 import orjson
 
 import openllm_core
-from openllm_core._typing_compat import LiteralString, overload
-from openllm_core.utils import bentoml_cattr, ensure_exec_coro, is_transformers_available, is_transformers_supports_agent
 
-from .benmin import AsyncClient as AsyncBentoClient, Client as BentoClient
+from openllm_core._typing_compat import LiteralString
+from openllm_core._typing_compat import overload
+from openllm_core.utils import bentoml_cattr
+from openllm_core.utils import ensure_exec_coro
+from openllm_core.utils import is_transformers_available
+
+from .benmin import AsyncClient as AsyncBentoClient
+from .benmin import Client as BentoClient
+
 if t.TYPE_CHECKING:
   import transformers
 
-  from openllm_core._typing_compat import DictStrAny, LiteralRuntime
+  from openllm_core._typing_compat import DictStrAny
+  from openllm_core._typing_compat import LiteralBackend
+
 logger = logging.getLogger(__name__)
 
 @attr.define(slots=False, init=False)
@@ -80,9 +89,10 @@ class _ClientAttr:
 
   @functools.cached_property
   def _hf_agent(self) -> transformers.HfAgent:
-    if not is_transformers_available(): raise RuntimeError("transformers is required to use HF agent. Install with 'pip install \"openllm-client[agents]\"'.")
-    if not self.supports_hf_agent: raise RuntimeError(f'{self.model_name} ({self.framework}) does not support running HF agent.')
-    if not is_transformers_supports_agent(): raise RuntimeError("Current 'transformers' does not support Agent. Make sure to upgrade to at least 4.29: 'pip install -U \"transformers>=4.29\"'")
+    if not is_transformers_available():
+      raise RuntimeError("transformers is required to use HF agent. Install with 'pip install \"openllm-client[agents]\"'.")
+    if not self.supports_hf_agent:
+      raise RuntimeError(f'{self.model_name} ({self.backend}) does not support running HF agent.')
     import transformers
     return transformers.HfAgent(urljoin(self._address, '/hf/agent'))
 
@@ -105,9 +115,9 @@ class _ClientAttr:
       raise RuntimeError('Malformed service endpoint. (Possible malicious)') from None
 
   @property
-  def framework(self) -> LiteralRuntime:
+  def backend(self) -> LiteralBackend:
     try:
-      return self._metadata['framework']
+      return self._metadata['backend']
     except KeyError:
       raise RuntimeError('Malformed service endpoint. (Possible malicious)') from None
 
@@ -202,9 +212,10 @@ class _AsyncClient(_ClientAttr):
     else: raise RuntimeError(f"Unknown 'agent_type={agent_type}'")
 
   async def _run_hf_agent(self, *args: t.Any, **kwargs: t.Any) -> t.Any:
-    if not is_transformers_supports_agent(): raise RuntimeError('This version of transformers does not support agent.run. Make sure to upgrade to transformers>4.30.0')
     if len(args) > 1: raise ValueError("'args' should only take one positional argument.")
-    from transformers.tools.agents import clean_code_for_run, get_tool_creation_code, resolve_tools
+    from transformers.tools.agents import clean_code_for_run
+    from transformers.tools.agents import get_tool_creation_code
+    from transformers.tools.agents import resolve_tools
     from transformers.tools.python_interpreter import evaluate
 
     task = kwargs.pop('task', args[0])

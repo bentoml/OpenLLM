@@ -3,17 +3,25 @@ import contextlib
 import os
 import sys
 import typing as t
+
 from unittest import mock
 
 import attr
 import pytest
 import transformers
-from hypothesis import assume, given, strategies as st
+
+from hypothesis import assume
+from hypothesis import given
+from hypothesis import strategies as st
 
 import openllm
-from openllm_core._configuration import GenerationConfig, ModelSettings, field_env_key
 
-from ._strategies._configuration import make_llm_config, model_settings
+from openllm_core._configuration import GenerationConfig
+from openllm_core._configuration import ModelSettings
+from openllm_core._configuration import field_env_key
+
+from ._strategies._configuration import make_llm_config
+from ._strategies._configuration import model_settings
 
 # XXX: @aarnphm fixes TypedDict behaviour in 3.11
 @pytest.mark.skipif(sys.version_info[:2] == (3, 11), reason='TypedDict in 3.11 behaves differently, so we need to fix this')
@@ -86,7 +94,7 @@ def patch_env(**attrs: t.Any):
     yield
 
 def test_struct_envvar():
-  with patch_env(**{field_env_key('env_llm', 'field1'): '4', field_env_key('env_llm', 'temperature', suffix='generation'): '0.2',}):
+  with patch_env(**{field_env_key('field1'): '4', field_env_key('temperature', suffix='generation'): '0.2',}):
 
     class EnvLLM(openllm.LLMConfig):
       __config__ = {'default_id': 'asdfasdf', 'model_ids': ['asdf', 'asdfasdfads'], 'architecture': 'PreTrainedModel',}
@@ -117,13 +125,13 @@ def test_struct_provided_fields():
 
 def test_struct_envvar_with_overwrite_provided_env(monkeypatch: pytest.MonkeyPatch):
   with monkeypatch.context() as mk:
-    mk.setenv(field_env_key('overwrite_with_env_available', 'field1'), str(4.0))
-    mk.setenv(field_env_key('overwrite_with_env_available', 'temperature', suffix='generation'), str(0.2))
-    sent = make_llm_config(
-        'OverwriteWithEnvAvailable', {
-            'default_id': 'asdfasdf', 'model_ids': ['asdf', 'asdfasdfads'], 'architecture': 'PreTrainedModel'
-        }, fields=(('field1', 'float', 3.0),),
-    ).model_construct_env(field1=20.0, temperature=0.4)
+    mk.setenv(field_env_key('field1'), str(4.0))
+    mk.setenv(field_env_key('temperature', suffix='generation'), str(0.2))
+    sent = make_llm_config('OverwriteWithEnvAvailable', {
+        'default_id': 'asdfasdf', 'model_ids': ['asdf', 'asdfasdfads'], 'architecture': 'PreTrainedModel'
+    },
+                           fields=(('field1', 'float', 3.0),),
+                           ).model_construct_env(field1=20.0, temperature=0.4)
     assert sent.generation_config.temperature == 0.4
     assert sent.field1 == 20.0
 

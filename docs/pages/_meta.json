@@ -2,7 +2,7 @@
   "index": {
     "type": "page",
     "title": "Introduction",
-    "display": "hidden",
+    "display": "hidden"
   },
   "docs": {
     "type": "page",

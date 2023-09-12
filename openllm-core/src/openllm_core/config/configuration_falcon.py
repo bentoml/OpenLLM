@@ -2,7 +2,9 @@ from __future__ import annotations
 import typing as t
 
 import openllm_core
+
 from openllm_core._prompt import process_prompt
+
 START_FALCON_COMMAND_DOCSTRING = '''\
 Run a LLMServer for FalconLM model.
 
@@ -18,7 +20,7 @@ Note that if you use vLLM, a NVIDIA GPU is required.
 
 \b
 FalconLM Runner will use tiiuae/falcon-7b as the default model. To change to any other FalconLM
-saved pretrained, or a fine-tune FalconLM, provide ``OPENLLM_FALCON_MODEL_ID='tiiuae/falcon-7b-instruct'``
+saved pretrained, or a fine-tune FalconLM, provide ``OPENLLM_MODEL_ID='tiiuae/falcon-7b-instruct'``
 or provide `--model-id` flag when running ``openllm start falcon``:
 
 \b
@@ -58,16 +60,14 @@ class FalconConfig(openllm_core.LLMConfig):
     num_beams: int = 4
     early_stopping: bool = True
 
-  def sanitize_parameters(
-      self,
-      prompt: str,
-      max_new_tokens: int | None = None,
-      top_k: int | None = None,
-      num_return_sequences: int | None = None,
-      eos_token_id: int | None = None,
-      use_default_prompt_template: bool = False,
-      **attrs: t.Any
-  ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
+  def sanitize_parameters(self,
+                          prompt: str,
+                          max_new_tokens: int | None = None,
+                          top_k: int | None = None,
+                          num_return_sequences: int | None = None,
+                          eos_token_id: int | None = None,
+                          use_default_prompt_template: bool = False,
+                          **attrs: t.Any) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
     return process_prompt(prompt, DEFAULT_PROMPT_TEMPLATE, use_default_prompt_template, **attrs), {
         'max_new_tokens': max_new_tokens, 'top_k': top_k, 'num_return_sequences': num_return_sequences, 'eos_token_id': eos_token_id, **attrs
     }, {}
