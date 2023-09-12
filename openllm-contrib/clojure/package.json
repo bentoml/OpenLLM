@@ -46,7 +46,7 @@
     "@emotion/react": "^11.11.1",
     "@emotion/serialize": "^1.1.2",
     "@emotion/sheet": "^1.2.2",
-    "@emotion/styled": "^11.10.6",
+    "@emotion/styled": "^11.11.0",
     "@emotion/unitless": "^0.8.1",
     "@emotion/use-insertion-effect-with-fallbacks": "^1.0.1",
     "@emotion/utils": "^1.2.1",
