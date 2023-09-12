@@ -14,6 +14,11 @@ cd "$GIT_ROOT" || exit 1
     exit 1
 )
 
+docker version &>/dev/null || (
+  echo "docker is not healthy. Make sure to have docker running"
+  exit 1
+)
+
 [[ -z "${ACTIONS_TOKEN}" ]] && (
     echo "ACTIONS_TOKEN not found. Make sure to have ACTIONS_TOKEN set to run this job."
     exit 1
