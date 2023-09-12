@@ -28,8 +28,8 @@ class VLLMStarCoder(metaclass=_DummyMetaclass):
   _backends=["vllm","bitsandbytes"]
   def __init__(self,*param_decls:_t.Any,**attrs: _t.Any):_require_backends(self,["vllm","bitsandbytes"])
 class VLLMLlama(metaclass=_DummyMetaclass):
-  _backends=["vllm","fairscale","sentencepiece"]
-  def __init__(self,*param_decls:_t.Any,**attrs: _t.Any):_require_backends(self,["vllm","fairscale","sentencepiece"])
+  _backends=["vllm","fairscale","sentencepiece","scipy"]
+  def __init__(self,*param_decls:_t.Any,**attrs: _t.Any):_require_backends(self,["vllm","fairscale","sentencepiece","scipy"])
 class AutoVLLM(metaclass=_DummyMetaclass):
   _backends=["vllm"]
   def __init__(self,*param_decls:_t.Any,**attrs: _t.Any):_require_backends(self,["vllm"])
