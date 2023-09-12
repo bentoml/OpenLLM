@@ -45,7 +45,7 @@ class Classifier:
   def create_python_classifier(implementation: list[str] | None = None, supported_version: list[str] | None = None) -> list[str]:
     if supported_version is None: supported_version = ['3.8', '3.9', '3.10', '3.11', '3.12']
     if implementation is None: implementation = ['CPython', 'PyPy']
-    base = [Classifier.create_classifier('language', 'Python'), Classifier.create_classifier('language', 'Python', '3'),]
+    base = [Classifier.create_classifier('language', 'Python'), Classifier.create_classifier('language', 'Python', '3')]
     base.append(Classifier.create_classifier('language', 'Python', '3', 'Only'))
     base.extend([Classifier.create_classifier('language', 'Python', version) for version in supported_version])
     base.extend([Classifier.create_classifier('language', 'Python', 'Implementation', impl) for impl in implementation])

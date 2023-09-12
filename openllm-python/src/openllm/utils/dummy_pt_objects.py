@@ -19,8 +19,8 @@ class GPTNeoX(metaclass=_DummyMetaclass):
   _backends=["torch"]
   def __init__(self,*param_decls:_t.Any,**attrs: _t.Any):_require_backends(self,["torch"])
 class Llama(metaclass=_DummyMetaclass):
-  _backends=["torch","fairscale","sentencepiece"]
-  def __init__(self,*param_decls:_t.Any,**attrs: _t.Any):_require_backends(self,["torch","fairscale","sentencepiece"])
+  _backends=["torch","fairscale","sentencepiece","scipy"]
+  def __init__(self,*param_decls:_t.Any,**attrs: _t.Any):_require_backends(self,["torch","fairscale","sentencepiece","scipy"])
 class MPT(metaclass=_DummyMetaclass):
   _backends=["torch","triton","einops"]
   def __init__(self,*param_decls:_t.Any,**attrs: _t.Any):_require_backends(self,["torch","triton","einops"])

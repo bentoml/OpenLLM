@@ -66,8 +66,6 @@ def import_model(llm: openllm.LLM[M, T], *decls: t.Any, trust_remote_code: bool,
   _, tokenizer_attrs = llm.llm_parameters
   quantize = llm._quantize
   safe_serialisation = openllm.utils.first_not_none(attrs.get('safe_serialization'), default=llm._serialisation == 'safetensors')
-  # Disable safe serialization with vLLM
-  if llm.__llm_backend__ == 'vllm': safe_serialisation = False
   metadata: DictStrAny = {'safe_serialisation': safe_serialisation}
   if quantize: metadata['_quantize'] = quantize
   architectures = getattr(config, 'architectures', [])

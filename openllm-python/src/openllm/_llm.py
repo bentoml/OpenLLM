@@ -281,8 +281,8 @@ class LLM(LLMInterface[M, T], ReprMixin):
 
     def __attrs_init__(self,
                        config: LLMConfig,
-                       quantize: t.Optional[LiteralQuantise],
                        quantization_config: t.Optional[t.Union[transformers.BitsAndBytesConfig, transformers.GPTQConfig]],
+                       quantize: t.Optional[LiteralQuantise],
                        model_id: str,
                        model_decls: TupleAny,
                        model_attrs: DictStrAny,
@@ -446,8 +446,6 @@ class LLM(LLMInterface[M, T], ReprMixin):
       # in case users input `tokenizer` to __init__, default to the _model_id
       if quantize == 'gptq': attrs.setdefault('tokenizer', _model_id)
       quantization_config, attrs = infer_quantisation_config(cls, quantize, **attrs)
-    if quantize == 'gptq': serialisation = 'safetensors'
-    elif cls.__llm_backend__ == 'vllm': serialisation = 'legacy'  # Currently working-in-progress
 
     # NOTE: LoRA adapter setup
     if adapter_map and adapter_id:
@@ -534,12 +532,12 @@ class LLM(LLMInterface[M, T], ReprMixin):
                model_id: str,
                llm_config: LLMConfig,
                quantization_config: transformers.BitsAndBytesConfig | transformers.GPTQConfig | None,
-               _adapters_mapping: AdaptersMapping | None,
-               _tag: bentoml.Tag,
                _quantize: LiteralQuantise | None,
                _model_version: str,
+               _tag: bentoml.Tag,
                _serialisation: t.Literal['safetensors', 'legacy'],
                _local: bool,
+               _adapters_mapping: AdaptersMapping | None,
                **attrs: t.Any,
                ):
     '''Initialize the LLM with given pretrained model.
@@ -940,6 +938,16 @@ class LLM(LLMInterface[M, T], ReprMixin):
     '''
     prompt, generate_kwargs, postprocess_kwargs = self.sanitize_parameters(prompt, **attrs)
     return self.postprocess_generate(prompt, self.generate(prompt, **generate_kwargs), **postprocess_kwargs)
+
+  def generate_one(self, prompt: str, stop: list[str], **preprocess_generate_kwds: t.Any) -> list[dict[t.Literal['generated_text'], str]]:
+    max_new_tokens, encoded_inputs = preprocess_generate_kwds.pop('max_new_tokens', 200), self.tokenizer(prompt, return_tensors='pt').to(self.device)
+    src_len, stopping_criteria = encoded_inputs['input_ids'].shape[1], preprocess_generate_kwds.pop('stopping_criteria', openllm.StoppingCriteriaList([]))
+    stopping_criteria.append(openllm.StopSequenceCriteria(stop, self.tokenizer))
+    result = self.tokenizer.decode(self.model.generate(encoded_inputs['input_ids'], max_new_tokens=max_new_tokens, stopping_criteria=stopping_criteria)[0].tolist()[src_len:])
+    # Inference API returns the stop sequence
+    for stop_seq in stop:
+      if result.endswith(stop_seq): result = result[:-len(stop_seq)]
+    return [{'generated_text': result}]
 
   def generate(self, prompt: str, **attrs: t.Any) -> t.List[t.Any]:
     # TODO: support different generation strategies, similar to self.model.generate
