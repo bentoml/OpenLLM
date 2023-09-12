@@ -37,7 +37,7 @@
     "prettier": "3.0.2",
     "prettier-plugin-pkg": "0.18.0",
     "prettier-plugin-tailwindcss": "0.5.3",
-    "turbo": "1.10.12",
+    "turbo": "1.10.13",
     "typescript": "5.2.2"
   },
   "pnpm": {
