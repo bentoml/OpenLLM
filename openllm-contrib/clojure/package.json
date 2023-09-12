@@ -43,7 +43,7 @@
     "@emotion/hash": "^0.9.1",
     "@emotion/is-prop-valid": "^1.2.1",
     "@emotion/memoize": "^0.8.1",
-    "@emotion/react": "^11.10.6",
+    "@emotion/react": "^11.11.1",
     "@emotion/serialize": "^1.1.2",
     "@emotion/sheet": "^1.2.2",
     "@emotion/styled": "^11.10.6",
