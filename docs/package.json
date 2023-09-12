@@ -22,7 +22,6 @@
     "@vercel/analytics": "*",
     "@vercel/og": "0.5.11",
     "clsx": "^2.0.0",
-    "framer-motion": "10.16.1",
     "next": "*",
     "next-themes": "^0.2.1",
     "nextra": "2.11.1",

@@ -42,10 +42,6 @@ chain = LLMChain(llm=llm, prompt=prompt)
 
 svc = bentoml.Service("fb-ads-copy", runners=[llm.runner])
 
-@svc.on_startup
-def download(_: bentoml.Context):
-  llm.runner.download_model()
-
 SAMPLE_INPUT = Query(
     industry="SAAS", product_name="BentoML", keywords=["open source", "developer tool", "AI application platform", "serverless", "cost-efficient"], llm_config=llm.runner.config.model_dump(),
 )

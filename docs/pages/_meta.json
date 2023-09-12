@@ -1,11 +1,8 @@
 {
   "index": {
     "type": "page",
-    "title": "OpenLLM",
+    "title": "Introduction",
     "display": "hidden",
-    "theme": {
-      "layout": "raw"
-    }
   },
   "docs": {
     "type": "page",
