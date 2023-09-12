@@ -264,8 +264,8 @@ importers:
         specifier: ^10.4.12
         version: 10.4.12(postcss@8.4.23)
       cssnano:
-        specifier: ^6.0.0
-        version: 6.0.0(postcss@8.4.23)
+        specifier: ^6.0.1
+        version: 6.0.1(postcss@8.4.23)
       npm-run-all:
         specifier: ^4.1.5
         version: 4.1.5
@@ -3680,8 +3680,8 @@ packages:
       postcss: 8.4.23
     dev: true
 
-  /cssnano@6.0.0(postcss@8.4.23):
-    resolution: {integrity: sha512-RGlcbzGhzEBCHuQe3k+Udyj5M00z0pm9S+VurHXFEOXxH+y0sVrJH2sMzoyz2d8N1EScazg+DVvmgyx0lurwwA==}
+  /cssnano@6.0.1(postcss@8.4.23):
+    resolution: {integrity: sha512-fVO1JdJ0LSdIGJq68eIxOqFpIJrZqXUsBt8fkrBcztCQqAjQD51OhZp7tc0ImcbwXD4k7ny84QTV90nZhmqbkg==}
     engines: {node: ^14 || ^16 || >=18.0}
     peerDependencies:
       postcss: ^8.2.15
