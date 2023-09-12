@@ -17,15 +17,12 @@ concurrency:
   group: cron-${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
 jobs:
-  scheduled-tests:
-    if: github.repository_owner == 'bentoml'
-    uses: bentoml/OpenLLM/.github/workflows/ci.yml@main # ratchet:exclude
   update-actions:
     runs-on: 'ubuntu-latest'
     name: Ratchet update
     if: "github.repository == 'bentoml/OpenLLM'" # Don't run on fork repository
     env:
-      ACTIONS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      ACTIONS_TOKEN: ${{ secrets.OPENLLM_PAT }}
     steps:
       - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # ratchet:actions/checkout@v4
         with:
