@@ -25,7 +25,7 @@
     "@edge-runtime/vm": "3.1.0",
     "@next/eslint-plugin-next": "13.4.19",
     "@types/node": "20.5.3",
-    "@typescript-eslint/eslint-plugin": "6.4.1",
+    "@typescript-eslint/eslint-plugin": "6.7.0",
     "@typescript-eslint/parser": "6.4.1",
     "eslint": "8.47.0",
     "eslint-config-prettier": "9.0.0",
