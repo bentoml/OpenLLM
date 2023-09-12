@@ -1,7 +1,6 @@
 '''LLM assignment magik.'''
 from __future__ import annotations
 import functools
-import math
 import traceback
 import typing as t
 
