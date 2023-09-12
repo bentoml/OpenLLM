@@ -200,8 +200,8 @@ importers:
         specifier: ^5.14.5
         version: 5.14.5(@emotion/react@11.11.1)(@emotion/styled@11.11.0)(react@18.2.0)
       '@mui/utils':
-        specifier: ^5.14.5
-        version: 5.14.5(react@18.2.0)
+        specifier: ^5.14.8
+        version: 5.14.8(react@18.2.0)
       '@mui/x-data-grid':
         specifier: 6.13.0
         version: 6.13.0(@mui/material@5.14.8)(@mui/system@5.14.5)(react-dom@18.2.0)(react@18.2.0)
@@ -1988,7 +1988,7 @@ packages:
       '@mui/private-theming': 5.14.8(react@18.2.0)
       '@mui/styled-engine': 5.13.2(@emotion/react@11.11.1)(@emotion/styled@11.11.0)(react@18.2.0)
       '@mui/types': 7.2.4
-      '@mui/utils': 5.14.5(react@18.2.0)
+      '@mui/utils': 5.14.8(react@18.2.0)
       clsx: 2.0.0
       csstype: 3.1.2
       prop-types: 15.8.1
@@ -2031,20 +2031,6 @@ packages:
     peerDependenciesMeta:
       '@types/react':
         optional: true
-    dev: false
-
-  /@mui/utils@5.14.5(react@18.2.0):
-    resolution: {integrity: sha512-6Hzw63VR9C5xYv+CbjndoRLU6Gntal8rJ5W+GUzkyHrGWIyYPWZPa6AevnyGioySNETATe1H9oXS8f/7qgIHJA==}
-    engines: {node: '>=12.0.0'}
-    peerDependencies:
-      react: ^17.0.0 || ^18.0.0
-    dependencies:
-      '@babel/runtime': 7.22.10
-      '@types/prop-types': 15.7.5
-      '@types/react-is': 18.2.1
-      prop-types: 15.8.1
-      react: 18.2.0
-      react-is: 18.2.0
     dev: false
 
   /@mui/utils@5.14.8(react@18.2.0):
