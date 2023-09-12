@@ -74,7 +74,7 @@ jobs:
         with:
           cosign-release: 'v2.1.1'
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc # ratchet:docker/login-action@v2.2.0
+        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # ratchet:docker/login-action@v3.0.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
