@@ -8,7 +8,7 @@ on:
     #        │  │ │ ┌───────────── month (1 - 12 or JAN-DEC)
     #        │  │ │ │ ┌───────────── day of the week (0 - 6 or SUN-SAT)
     #        │  │ │ │ │
-    - cron: "42 2 * * SUN-WED"
+    - cron: '42 2 * * SUN-WED'
 # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#defaultsrun
 defaults:
   run:
@@ -49,8 +49,8 @@ jobs:
           GIT_COMMITTER_EMAIL: ${{ steps.import-gpg-key.outputs.email }}
           BRANCH_NAME: cron/ratchet
         with:
-          title: "ci: update lock actions [generated]"
-          commit-message: "cron: ratchet update"
+          title: 'ci: update lock actions [generated]'
+          commit-message: 'cron: ratchet update'
           branch-suffix: timestamp
           signoff: true
           delete-branch: true

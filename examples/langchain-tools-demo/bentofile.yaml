@@ -1,5 +1,5 @@
-service: "service:svc"
+service: 'service:svc'
 include:
-- "*.py"
+  - '*.py'
 python:
-   requirements_txt: "./requirements.txt"
+  requirements_txt: './requirements.txt'

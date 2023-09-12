@@ -24,8 +24,8 @@
     "postcss:build": "cross-env postcss src/css/tailwind.css -o ./public/css/main.css --verbose",
     "postcss:watch": "cross-env postcss src/css/tailwind.css -o ./public/css/main.css --verbose -w --poll 200",
     "postcss:release": "cross-env NODE_ENV=production postcss src/css/tailwind.css -o ./public/css/main.css --verbose",
-    "dev": "run-p -l *:watch",
-    "release": "run-s *:release"
+    "dev": "run-p -l shadow:watch postcss:watch",
+    "release": "run-s shadow:release postcss:watch"
   },
   "devDependencies": {
     "@types/react-transition-group": "^4.4.6",

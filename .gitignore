@@ -142,3 +142,12 @@ pyapp
 
 .pdm-python
 **/_version.py
+
+# openllm-docs
+.docs-checkout
+quartz.git
+public
+prof
+tsconfig.tsbuildinfo
+.quartz-cache
+private/

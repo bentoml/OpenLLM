@@ -3,22 +3,22 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - "main"
+      - 'main'
     tags:
-      - "*"
+      - '*'
     paths:
-      - ".github/workflows/build-embedding.yml"
-      - "openllm-python/src/openllm/**"
-      - "openllm-core/src/openllm_core/**"
-      - "openllm-client/src/openllm_client/**"
+      - '.github/workflows/build-embedding.yml'
+      - 'openllm-python/src/openllm/**'
+      - 'openllm-core/src/openllm_core/**'
+      - 'openllm-client/src/openllm_client/**'
   pull_request:
     branches:
-      - "main"
+      - 'main'
     paths:
-      - ".github/workflows/build-embedding.yml"
-      - "openllm-python/src/openllm/**"
-      - "openllm-core/src/openllm_core/**"
-      - "openllm-client/src/openllm_client/**"
+      - '.github/workflows/build-embedding.yml'
+      - 'openllm-python/src/openllm/**'
+      - 'openllm-core/src/openllm_core/**'
+      - 'openllm-client/src/openllm_client/**'
     types: [labeled, opened, synchronize, reopened]
 env:
   LINES: 120
@@ -184,7 +184,7 @@ jobs:
       - name: Sign the released image
         if: ${{ github.event_name != 'pull_request' }}
         env:
-          COSIGN_EXPERIMENTAL: "true"
+          COSIGN_EXPERIMENTAL: 'true'
         run: echo "${{ steps.meta.outputs.tags }}" | xargs -I {} cosign sign --yes {}@${{ steps.build-and-push.outputs.digest }}
       - name: Run Trivy in GitHub SBOM mode and submit results to Dependency Graph
         uses: aquasecurity/trivy-action@fbd16365eb88e12433951383f5e99bd901fc618f # ratchet:aquasecurity/trivy-action@master

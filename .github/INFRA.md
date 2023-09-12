@@ -7,6 +7,7 @@
 OpenLLM uses a GitHub Action to run all CI/CD workflows. It also use [pre-commit.ci](https://pre-commit.ci/) to run CI for all pre-commit hooks.
 
 The folder structure of this are as follow:
+
 ```prolog
 .
 ├── CODEOWNERS                # Code owners

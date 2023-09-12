@@ -695,7 +695,7 @@ def models_command(ctx: click.Context, output: LiteralOutput, show_available: bo
           termui.echo(traceback.print_exception(None, err, None, limit=5), fg='red')  # type: ignore[func-returns-value]
         sys.exit(1)
 
-      table = tabulate.tabulate(data, tablefmt='fancy_grid', headers=['LLM', 'Architecture', 'Models Id', 'pip install', 'CPU', 'GPU', 'Runtime'], maxcolwidths=column_widths)
+      table = tabulate.tabulate(data, tablefmt='fancy_grid', headers=['LLM', 'Architecture', 'Models Id', 'Installation', 'Runtime'], maxcolwidths=column_widths)
       termui.echo(table, fg='white')
 
       if DEBUG and len(failed_initialized) > 0:

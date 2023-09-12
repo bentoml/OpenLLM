@@ -4,16 +4,16 @@ on:
   push:
     branches: [main]
     tags:
-      - "*"
+      - '*'
     paths:
-      - 'openllm-contrib/clojure/**'
-      - ".github/workflows/clojure-frontend.yml"
+      - 'contrib/clojure/**'
+      - '.github/workflows/clojure-frontend.yml'
   pull_request:
     types: [labeled, opened, synchronize, reopened]
     branches: [main]
     paths:
-      - 'openllm-contrib/clojure/**'
-      - ".github/workflows/clojure-frontend.yml"
+      - 'contrib/clojure/**'
+      - '.github/workflows/clojure-frontend.yml'
 # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#defaultsrun
 defaults:
   run:
@@ -114,7 +114,7 @@ jobs:
       - name: Sign the released image
         if: ${{ github.event_name != 'pull_request' }}
         env:
-          COSIGN_EXPERIMENTAL: "true"
+          COSIGN_EXPERIMENTAL: 'true'
         run: echo "${{ steps.meta.outputs.tags }}" | xargs -I {} cosign sign --yes {}@${{ steps.build-and-push.outputs.digest }}
       - name: Run Trivy in GitHub SBOM mode and submit results to Dependency Graph
         uses: aquasecurity/trivy-action@fbd16365eb88e12433951383f5e99bd901fc618f # ratchet:aquasecurity/trivy-action@master

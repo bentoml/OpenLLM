@@ -43,7 +43,7 @@ Key features include:
 
 🚂 **State-of-the-art LLMs**: Integrated support for a wide range of open-source LLMs and model runtimes, including but not limited to Llama 2, StableLM, Falcon, Dolly, Flan-T5, ChatGLM, and StarCoder.
 
-🔥 **Flexible APIs**: Serve LLMs over a RESTful API or gRPC with a single command. You can interact with the mode using a Web UI, CLI, Python/JavaScript clients, or any HTTP client of your choice.
+🔥 **Flexible APIs**: Serve LLMs over a RESTful API or gRPC with a single command. You can interact with the model using a Web UI, CLI, Python/JavaScript clients, or any HTTP client of your choice.
 
 ⛓️ **Freedom to build**: First-class support for LangChain, BentoML and Hugging Face, allowing you to easily create your own AI applications by composing LLMs with other models and services.
 
@@ -223,16 +223,16 @@ You can specify any of the following Llama models by using `--model-id`.
 
 - PyTorch (Default):
 
-    ```bash
-    openllm start llama --model-id meta-llama/Llama-2-7b-chat-hf --backend pt
-    ```
+  ```bash
+  openllm start llama --model-id meta-llama/Llama-2-7b-chat-hf --backend pt
+  ```
 
 - vLLM (Recommended):
 
-    ```bash
-    pip install "openllm[llama, vllm]"
-    openllm start llama --model-id meta-llama/Llama-2-7b-chat-hf --backend vllm
-    ```
+  ```bash
+  pip install "openllm[llama, vllm]"
+  openllm start llama --model-id meta-llama/Llama-2-7b-chat-hf --backend vllm
+  ```
 
 > [!NOTE]
 > Currently when using the vLLM backend, quantization and adapters are not supported.
@@ -275,9 +275,9 @@ You can specify any of the following ChatGLM models by using `--model-id`.
 
 - PyTorch (Default):
 
-    ```bash
-    openllm start chatglm --model-id thudm/chatglm-6b --backend pt
-    ```
+  ```bash
+  openllm start chatglm --model-id thudm/chatglm-6b --backend pt
+  ```
 
 </details>
 
@@ -315,15 +315,15 @@ You can specify any of the following Dolly-v2 models by using `--model-id`.
 
 - PyTorch (Default):
 
-    ```bash
-    openllm start dolly-v2 --model-id databricks/dolly-v2-3b --backend pt
-    ```
+  ```bash
+  openllm start dolly-v2 --model-id databricks/dolly-v2-3b --backend pt
+  ```
 
 - vLLM:
 
-    ```bash
-    openllm start dolly-v2 --model-id databricks/dolly-v2-3b --backend vllm
-    ```
+  ```bash
+  openllm start dolly-v2 --model-id databricks/dolly-v2-3b --backend vllm
+  ```
 
 > [!NOTE]
 > Currently when using the vLLM backend, quantization and adapters are not supported.
@@ -365,16 +365,16 @@ You can specify any of the following Falcon models by using `--model-id`.
 
 - PyTorch (Default):
 
-    ```bash
-    openllm start falcon --model-id tiiuae/falcon-7b --backend pt
-    ```
+  ```bash
+  openllm start falcon --model-id tiiuae/falcon-7b --backend pt
+  ```
 
 - vLLM:
 
-    ```bash
-    pip install "openllm[falcon, vllm]"
-    openllm start falcon --model-id tiiuae/falcon-7b --backend vllm
-    ```
+  ```bash
+  pip install "openllm[falcon, vllm]"
+  openllm start falcon --model-id tiiuae/falcon-7b --backend vllm
+  ```
 
 > [!NOTE]
 > Currently when using the vLLM backend, quantization and adapters are not supported.
@@ -417,23 +417,23 @@ You can specify any of the following Flan-T5 models by using `--model-id`.
 
 - PyTorch (Default):
 
-    ```bash
-    openllm start flan-t5 --model-id google/flan-t5-large --backend pt
-    ```
+  ```bash
+  openllm start flan-t5 --model-id google/flan-t5-large --backend pt
+  ```
 
 - Flax:
 
-    ```bash
-    pip install "openllm[flan-t5, flax]"
-    openllm start flan-t5 --model-id google/flan-t5-large --backend flax
-    ```
+  ```bash
+  pip install "openllm[flan-t5, flax]"
+  openllm start flan-t5 --model-id google/flan-t5-large --backend flax
+  ```
 
 - TensorFlow:
 
-    ```bash
-    pip install "openllm[flan-t5, tf]"
-    openllm start flan-t5 --model-id google/flan-t5-large --backend tf
-    ```
+  ```bash
+  pip install "openllm[flan-t5, tf]"
+  openllm start flan-t5 --model-id google/flan-t5-large --backend tf
+  ```
 
 > [!NOTE]
 > Currently when using the vLLM backend, quantization and adapters are not supported.
@@ -472,15 +472,15 @@ You can specify any of the following GPT-NeoX models by using `--model-id`.
 
 - PyTorch (Default):
 
-    ```bash
-    openllm start gpt-neox --model-id eleutherai/gpt-neox-20b --backend pt
-    ```
+  ```bash
+  openllm start gpt-neox --model-id eleutherai/gpt-neox-20b --backend pt
+  ```
 
 - vLLM:
 
-    ```bash
-    openllm start gpt-neox --model-id eleutherai/gpt-neox-20b --backend vllm
-    ```
+  ```bash
+  openllm start gpt-neox --model-id eleutherai/gpt-neox-20b --backend vllm
+  ```
 
 > [!NOTE]
 > Currently when using the vLLM backend, quantization and adapters are not supported.
@@ -525,16 +525,16 @@ You can specify any of the following MPT models by using `--model-id`.
 
 - PyTorch (Default):
 
-    ```bash
-    openllm start mpt --model-id mosaicml/mpt-7b-chat --backend pt
-    ```
+  ```bash
+  openllm start mpt --model-id mosaicml/mpt-7b-chat --backend pt
+  ```
 
 - vLLM (Recommended):
 
-    ```bash
-    pip install "openllm[mpt, vllm]"
-    openllm start mpt --model-id mosaicml/mpt-7b-chat --backend vllm
-    ```
+  ```bash
+  pip install "openllm[mpt, vllm]"
+  openllm start mpt --model-id mosaicml/mpt-7b-chat --backend vllm
+  ```
 
 > [!NOTE]
 > Currently when using the vLLM backend, quantization and adapters are not supported.
@@ -578,30 +578,30 @@ You can specify any of the following OPT models by using `--model-id`.
 
 - PyTorch (Default):
 
-    ```bash
-    openllm start opt --model-id facebook/opt-2.7b --backend pt
-    ```
+  ```bash
+  openllm start opt --model-id facebook/opt-2.7b --backend pt
+  ```
 
 - vLLM:
 
-    ```bash
-    pip install "openllm[opt, vllm]"
-    openllm start opt --model-id facebook/opt-2.7b --backend vllm
-    ```
+  ```bash
+  pip install "openllm[opt, vllm]"
+  openllm start opt --model-id facebook/opt-2.7b --backend vllm
+  ```
 
 - TensorFlow:
 
-    ```bash
-    pip install "openllm[opt, tf]"
-    openllm start opt --model-id facebook/opt-2.7b --backend tf
-    ```
+  ```bash
+  pip install "openllm[opt, tf]"
+  openllm start opt --model-id facebook/opt-2.7b --backend tf
+  ```
 
 - Flax:
 
-    ```bash
-    pip install "openllm[opt, flax]"
-    openllm start opt --model-id facebook/opt-2.7b --backend flax
-    ```
+  ```bash
+  pip install "openllm[opt, flax]"
+  openllm start opt --model-id facebook/opt-2.7b --backend flax
+  ```
 
 > [!NOTE]
 > Currently when using the vLLM backend, quantization and adapters are not supported.
@@ -643,15 +643,15 @@ You can specify any of the following StableLM models by using `--model-id`.
 
 - PyTorch (Default):
 
-    ```bash
-    openllm start stablelm --model-id stabilityai/stablelm-tuned-alpha-7b --backend pt
-    ```
+  ```bash
+  openllm start stablelm --model-id stabilityai/stablelm-tuned-alpha-7b --backend pt
+  ```
 
 - vLLM:
 
-    ```bash
-    openllm start stablelm --model-id stabilityai/stablelm-tuned-alpha-7b --backend vllm
-    ```
+  ```bash
+  openllm start stablelm --model-id stabilityai/stablelm-tuned-alpha-7b --backend vllm
+  ```
 
 > [!NOTE]
 > Currently when using the vLLM backend, quantization and adapters are not supported.
@@ -691,16 +691,16 @@ You can specify any of the following StarCoder models by using `--model-id`.
 
 - PyTorch (Default):
 
-    ```bash
-    openllm start startcoder --model-id bigcode/starcoder --backend pt
-    ```
+  ```bash
+  openllm start startcoder --model-id bigcode/starcoder --backend pt
+  ```
 
 - vLLM:
 
-    ```bash
-    pip install "openllm[startcoder, vllm]"
-    openllm start startcoder --model-id bigcode/starcoder --backend vllm
-    ```
+  ```bash
+  pip install "openllm[startcoder, vllm]"
+  openllm start startcoder --model-id bigcode/starcoder --backend vllm
+  ```
 
 > [!NOTE]
 > Currently when using the vLLM backend, quantization and adapters are not supported.
@@ -744,16 +744,16 @@ You can specify any of the following Baichuan models by using `--model-id`.
 
 - PyTorch (Default):
 
-    ```bash
-    openllm start baichuan --model-id baichuan-inc/baichuan-13b-base --backend pt
-    ```
+  ```bash
+  openllm start baichuan --model-id baichuan-inc/baichuan-13b-base --backend pt
+  ```
 
 - vLLM:
 
-    ```bash
-    pip install "openllm[baichuan, vllm]"
-    openllm start baichuan --model-id baichuan-inc/baichuan-13b-base --backend vllm
-    ```
+  ```bash
+  pip install "openllm[baichuan, vllm]"
+  openllm start baichuan --model-id baichuan-inc/baichuan-13b-base --backend vllm
+  ```
 
 > [!NOTE]
 > Currently when using the vLLM backend, quantization and adapters are not supported.
@@ -815,9 +815,9 @@ openllm start falcon --model-id TheBloke/falcon-40b-instruct-GPTQ --quantize gpt
 ```
 
 > [!NOTE]
-> In order to run GPTQ, make sure you run `pip install "openllm[gptq]"` first
-> to install the dependency. The weights of all supported models should be quantized before serving.
-> See [GPTQ-for-LLaMa](https://github.com/qwopqwop200/GPTQ-for-LLaMa) for more information on GPTQ quantization.
+> In order to run GPTQ, make sure you run `pip install "openllm[gptq]" --extra-index-url https://huggingface.github.io/autogptq-index/whl/cu118/`
+> first to install the dependency. From the GPTQ paper, it is recommended to quantized the weights before serving.
+> See [AutoGPTQ](https://github.com/PanQiWei/AutoGPTQ) for more information on GPTQ quantization.
 
 ## 🛠️ Fine-tuning support (Experimental)
 
@@ -910,10 +910,10 @@ client.embed("I like to eat apples")
 
 The following UIs are currently available for OpenLLM:
 
-| UI                                                                                | Owner                                         | Type                 | Progress |
-|-----------------------------------------------------------------------------------|-----------------------------------------------|----------------------|----------|
-| [Clojure](https://github.com/bentoml/OpenLLM/blob/main/contrib/clojure/README.md) | [@GutZuFusss](https://github.com/GutZuFusss)  | Community-maintained | 🔧       |
-| TS                                                                                | BentoML Team                                  |                      | 🚧       |
+| UI                                                                                        | Owner                                        | Type                 | Progress |
+| ----------------------------------------------------------------------------------------- | -------------------------------------------- | -------------------- | -------- |
+| [Clojure](https://github.com/bentoml/OpenLLM/blob/main/openllm-contrib/clojure/README.md) | [@GutZuFusss](https://github.com/GutZuFusss) | Community-maintained | 🔧       |
+| TS                                                                                        | BentoML Team                                 |                      | 🚧       |
 
 ## ⚙️ Integrations
 
@@ -1068,6 +1068,7 @@ There are several ways to deploy your LLMs:
    ```bash
    bentoml containerize <name:version>
    ```
+
    This generates a OCI-compatible docker image that can be deployed anywhere
    docker runs. For best scalability and reliability of your LLM service in
    production, we recommend deploy with BentoCloud。

@@ -13,7 +13,7 @@ on:
         type: string
     outputs:
       sucess:
-        description: "Whether the build is successful or not"
+        description: 'Whether the build is successful or not'
         value: ${{ jobs.sucess-build.outputs.success }}
   push:
     branches: [main]
@@ -74,7 +74,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        directory: ["openllm-core", "openllm-python", "openllm-client"]
+        directory: ['openllm-core', 'openllm-python', 'openllm-client']
     steps:
       - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # ratchet:actions/checkout@v4
         with:
@@ -105,11 +105,11 @@ jobs:
         # Github Actions doesn't support pairing matrix values together, let's improvise
         # https://github.com/github/feedback/discussions/7835#discussioncomment-1769026
         buildplatform:
-          - [ubuntu-latest, linux-x86_64, ""]
-          - [macos-latest, macos-x86_64, "x86_64"]
-          - [macos-latest, macos-arm64, "arm64"]
-          - [macos-latest, macos-universal2, "universal2"]
-        directory: ["openllm-core", "openllm-python", "openllm-client"]
+          - [ubuntu-latest, linux-x86_64, '']
+          - [macos-latest, macos-x86_64, 'x86_64']
+          - [macos-latest, macos-arm64, 'arm64']
+          - [macos-latest, macos-universal2, 'universal2']
+        directory: ['openllm-core', 'openllm-python', 'openllm-client']
     needs: get_commit_message
     steps:
       - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # ratchet:actions/checkout@v4
@@ -127,7 +127,7 @@ jobs:
           config-file: pyproject.toml
         env:
           CIBW_PRERELEASE_PYTHONS: True
-          CIBW_ARCHS_MACOS: "${{ matrix.buildplatform[2] }}"
+          CIBW_ARCHS_MACOS: '${{ matrix.buildplatform[2] }}'
           MYPYPATH: /project/typings
       - name: Upload wheels as workflow artifacts
         uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # ratchet:actions/upload-artifact@v3

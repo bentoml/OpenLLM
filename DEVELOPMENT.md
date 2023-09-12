@@ -64,6 +64,7 @@ Before you can start developing, you'll need to set up your environment:
    ```
 
 8. Enter a project's environment with.
+
    ```bash
    hatch shell
    ```
@@ -114,6 +115,7 @@ After setting up your environment, here's how you can start contributing:
    ```bash
    hatch run quality
    ```
+
 4. Write tests that verify your feature or fix (see
    [Writing Tests](#writing-tests) below).
 5. Run all tests to ensure your changes haven't broken anything:
@@ -121,16 +123,19 @@ After setting up your environment, here's how you can start contributing:
    ```bash
    hatch run tests:python
    ```
+
 6. Commit your changes:
 
    ```bash
    git commit -m "Add my feature"
    ```
+
 7. Push your changes to your fork:
 
    ```bash
    git push origin feature/my-feature
    ```
+
 8. Submit a Pull Request on GitHub.
 
 ## Using a custom fork
@@ -198,6 +203,8 @@ See this [docs](/.github/INFRA.md) for more information on OpenLLM's CI/CD workf
 
 See [ClojureScript UI's README.md](/openllm-contrib/clojure/README.md) for more information.
 
+See [Documentation's README.md](/docs/README.md) for more information on running locally.
+
 ## Install from git archive install
 
 ```bash
@@ -251,6 +258,7 @@ simple rules:
 
   - Added `LLM.func()`.
   - `LLM.func()` now doesn't do X.Y.Z anymore when passed the _foobar_ argument.
+
 - If you want to reference multiple issues, copy the news fragment to another
   filename. _Towncrier_ will merge all news fragments with identical contents
   into one entry with multiple links to the respective pull requests.

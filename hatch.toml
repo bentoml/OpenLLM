@@ -33,6 +33,7 @@ quality = [
   "check-stubs",
   "bash ./tools/mirror.sh",
   "- pre-commit run --all-files",
+  "- pnpm format",
 ]
 setup = [
   "pre-commit install",
@@ -89,6 +90,7 @@ write-summary-report = "python tools/write-coverage-report.py"
 detached = true
 [envs.ui.scripts]
 server = "openllm start {args:flan-t5} --working-dir {root:uri} --cors --debug"
+docs = "cd docs && pnpm dev"
 clojure = ["bash openllm-contrib/clojure/run-clojure-ui.sh"]
 [envs.ci]
 detached = true

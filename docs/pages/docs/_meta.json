@@ -1,0 +1,44 @@
+{
+  "index": "Introduction",
+  "installation": "Installation",
+  "getting-started": "Getting Started",
+  "about-link": {
+    "title": "About OpenLLM",
+    "href": "/about"
+  },
+  "-- Models": {
+    "type": "separator",
+    "title": "Supported Models"
+  },
+  "supported-models": "Supported Models",
+  "add-new-model": "Adding a New Model",
+  "-- Advanced": {
+    "type": "separator",
+    "title": "Advanced"
+  },
+  "features": {
+    "display": "hidden",
+    "title": "Features"
+  },
+  "-- API Reference": {
+    "type": "separator",
+    "title": "API Reference"
+  },
+  "api": {
+    "display": "hidden"
+  },
+  "-- Ecosystem": {
+    "type": "separator",
+    "title": "More"
+  },
+  "bentocloud": {
+    "title": "☁️ BentoCloud ↗",
+    "href": "https://l.bentoml.com/bento-cloud",
+    "newWindow": true
+  },
+  "bentoml": {
+    "title": "🍱 BentoML ↗",
+    "href": "https://docs.bentoml.com/en/latest/",
+    "newWindow": true
+  }
+}

@@ -1,14 +1,5 @@
 {
-  "compilerOptions": {
-    "declaration": true,
-    "outDir": "dist",
-    "rootDir": "src",
-    "target": "ES2021",
-    "module": "CommonJS",
-    "strict": true,
-    "allowJS": true,
-    "typeRoots": ["node_modules/@types"]
-  },
-  "include": ["src/**/*"],
+  "extends": "../tsconfig.json",
+  "include": ["src/**/*", "**/*.ts", "**/*.tsx"],
   "exclude": ["node_modules", "dist"]
 }

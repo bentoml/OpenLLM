@@ -7,7 +7,7 @@ SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
 cd "$SCRIPT_DIR" || exit 1
 
 if ! command -v node @ >&1 > /dev/null; then
-  echo "Cannot find 'node' executable in PATH. Make sure to have Node.js setup. Refer to"
+  echo "Cannot find 'node' executable in PATH. Make sure to have Node.js setup"
 fi
 
 if ! command -v pnpm @ >&1 > /dev/null; then
