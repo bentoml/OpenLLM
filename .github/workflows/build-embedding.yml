@@ -130,7 +130,7 @@ jobs:
       - name: Extract metadata tags and labels on PRs
         if: github.event_name == 'pull_request'
         id: meta-pr
-        uses: docker/metadata-action@818d4b7b91585d195f67373fd9cb0332e31a7175 # ratchet:docker/metadata-action@v4.6.0
+        uses: docker/metadata-action@96383f45573cb7f253c731d3b3ab81c87ef81934 # ratchet:docker/metadata-action@v5.0.0
         with:
           images: ghcr.io/bentoml/openllm-embedding
           tags: |
@@ -138,7 +138,7 @@ jobs:
       - name: Extract metadata tags and labels for main, release or tag
         if: github.event_name != 'pull_request'
         id: meta
-        uses: docker/metadata-action@818d4b7b91585d195f67373fd9cb0332e31a7175 # ratchet:docker/metadata-action@v4.6.0
+        uses: docker/metadata-action@96383f45573cb7f253c731d3b3ab81c87ef81934 # ratchet:docker/metadata-action@v5.0.0
         with:
           flavor: latest=auto
           images: ghcr.io/bentoml/openllm-embedding
