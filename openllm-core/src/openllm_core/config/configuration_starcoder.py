@@ -40,7 +40,6 @@ class StarCoderConfig(openllm_core.LLMConfig):
       'url': 'https://github.com/bigcode-project/starcoder',
       'architecture': 'GPTBigCodeForCausalLM',
       'requirements': ['bitsandbytes'],
-      'workers_per_resource': 0.5,
       'default_id': 'bigcode/starcoder',
       'model_ids': ['bigcode/starcoder', 'bigcode/starcoderbase']
   }

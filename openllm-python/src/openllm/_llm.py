@@ -640,11 +640,9 @@ class LLM(LLMInterface[M, T], ReprMixin):
                         quantization_config,
                         _quantize,
                         model_id,
-                        args, {
-                            **model_kwds, **normalized_model_kwds
-                        }, {
-                            **tokenizer_kwds, **normalized_tokenizer_kwds
-                        },
+                        args,
+                        {**model_kwds, **normalized_model_kwds},
+                        {**tokenizer_kwds, **normalized_tokenizer_kwds},
                         _tag,
                         _adapters_mapping,
                         _model_version,
@@ -751,7 +749,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
       # If OOM, then it is probably you don't have enough VRAM to run this model.
       if self.__llm_backend__ == 'pt' and is_torch_available():
         loaded_in_kbit = getattr(model, 'is_loaded_in_8bit', False) or getattr(model, 'is_loaded_in_4bit', False) or getattr(model, 'is_quantized', False)
-        if torch.cuda.is_available() and torch.cuda.device_count() == 1 and not loaded_in_kbit:
+        if torch.cuda.is_available() and torch.cuda.device_count() == 1 and not loaded_in_kbit and not isinstance(model, transformers.Pipeline):
           try:
             model = model.to('cuda')
           except Exception as err:
@@ -971,92 +969,90 @@ class LLM(LLMInterface[M, T], ReprMixin):
     from ._generation import prepare_logits_processor
 
     len_prompt = len(prompt)
+    config = self.config.model_construct_env(**attrs)
     if stop_token_ids is None: stop_token_ids = []
     stop_token_ids.append(self.tokenizer.eos_token_id)
 
-    logits_processor = prepare_logits_processor(self.config)
+    logits_processor = prepare_logits_processor(config)
 
-    input_ids = self.tokenizer(prompt).input_ids
+    with torch.inference_mode():
+      input_ids = self.tokenizer(prompt).input_ids
 
-    if context_length is None: context_length = get_context_length(self.model.config)
-    max_src_len = context_length - self.config['max_new_tokens'] - 1
+      if context_length is None: context_length = get_context_length(self.model.config)
+      max_src_len = context_length - config['max_new_tokens'] - 1
 
-    input_ids = input_ids[-max_src_len:]
-    output_ids = list(input_ids)
-    input_echo_len = len(input_ids)
+      input_ids = input_ids[-max_src_len:]
+      output_ids = list(input_ids)
+      input_echo_len = len(input_ids)
 
-    past_key_values = out = token = None
-    for i in range(self.config['max_new_tokens']):
-      torch.cuda.synchronize()
-      if i == 0:  # prefill
-        out = self.model(torch.as_tensor([input_ids], device=self.device), use_cache=True)
+      past_key_values = out = None
+      finish_reason = None
+      for i in range(config['max_new_tokens']):
+        torch.cuda.synchronize()
+        if i == 0:  # prefill
+          out = self.model(torch.as_tensor([input_ids], device=self.device), use_cache=True)
+        else:  # decoding
+          out = self.model(torch.as_tensor([[token]], device=self.device), use_cache=True, past_key_values=past_key_values)
         logits = out.logits
         past_key_values = out.past_key_values
-      else:  # decoding
-        out = self.model(input_ids=torch.as_tensor([[token]], device=self.device), use_cache=True, past_key_values=past_key_values)
-        logits = out.logits
-        past_key_values = out.past_key_values
+        torch.cuda.synchronize()
 
-      if logits_processor:
-        if self.config['repetition_penalty'] > 1.0:
-          tmp_output_ids: t.Any = torch.as_tensor([output_ids], device=self.device)
+        if logits_processor:
+          if config['repetition_penalty'] > 1.0:
+            tmp_output_ids: t.Any = torch.as_tensor([output_ids], device=self.device)
+          else:
+            tmp_output_ids = None
+          last_token_logits = logits_processor(tmp_output_ids, logits[:, -1, :])[0]
         else:
-          tmp_output_ids = None
-        last_token_logits = logits_processor(tmp_output_ids, logits[:, -1, :])[0]
-      else:
-        last_token_logits = logits[0, -1, :]
+          last_token_logits = logits[0, -1, :]
 
-      # Switch to CPU by avoiding some bugs in mps backend.
-      if self.device.type == 'mps': last_token_logits = last_token_logits.float().to('cpu')
+        # Switch to CPU by avoiding some bugs in mps backend.
+        if self.device.type == 'mps': last_token_logits = last_token_logits.float().to('cpu')
 
-      if self.config['temperature'] < 1e-5 or self.config['top_p'] < 1e-8:
-        token = int(torch.argmax(last_token_logits))  # greedy
-      else:
-        probs = torch.softmax(last_token_logits, dim=-1)
-        token = int(torch.multinomial(probs, num_samples=1))
-      output_ids.append(token)
-      torch.cuda.synchronize()
-
-      if token in stop_token_ids: stopped = True
-      else: stopped = False
-
-      # Yield the output tokens
-      if i % stream_interval == 0 or i == self.config['max_new_tokens'] - 1 or stopped:
-        if echo:
-          tmp_output_ids = output_ids
-          rfind_start = len_prompt
+        if config['temperature'] < 1e-5 or config['top_p'] < 1e-8:
+          token = int(torch.argmax(last_token_logits))  # greedy
         else:
-          tmp_output_ids = output_ids[input_echo_len:]
-          rfind_start = 0
-        output = self.tokenizer.decode(tmp_output_ids, skip_special_tokens=True, spaces_between_special_tokens=False, clean_up_tokenization_spaces=True)
+          probs = torch.softmax(last_token_logits, dim=-1)
+          indices = torch.multinomial(probs, num_samples=2)
+          token = int(indices.tolist()[0])
+        output_ids.append(token)
 
-        partially_stopped = False
-        if stop:
-          if isinstance(stop, str):
-            pos = output.rfind(stop, rfind_start)
-            if pos != -1: output, stopped = output[:pos], True
-            else: partially_stopped = is_partial_stop(output, stop)
-          elif isinstance(stop, t.Iterable):
-            for each_stop in stop:
-              pos = output.rfind(each_stop, rfind_start)
-              if pos != -1:
-                output, stopped = output[:pos], True
-                break
-              else:
-                partially_stopped = is_partial_stop(output, each_stop)
-                if partially_stopped: break
-          else: raise ValueError('Invalid stop field type.')
+        stopped = token in stop_token_ids
 
-        # Prevent yielding partial stop sequence
-        if not partially_stopped:
-          yield {'text': output, 'usage': {'prompt_tokens': input_echo_len, 'completion_tokens': i, 'total_tokens': input_echo_len + i}, 'finish_reason': None}
-      if stopped: break
+        # Yield the output tokens
+        if i % stream_interval == 0 or i == config['max_new_tokens'] - 1 or stopped:
+          if echo:
+            tmp_output_ids = output_ids
+            rfind_start = len_prompt
+          else:
+            tmp_output_ids = output_ids[input_echo_len:]
+            rfind_start = 0
+          output = self.tokenizer.decode(tmp_output_ids, skip_special_tokens=True, spaces_between_special_tokens=False, clean_up_tokenization_spaces=True)
 
-    # Finish stream event, which contains finish reason
-    if i == self.config['max_new_tokens'] - 1: finish_reason = 'length'
-    elif stopped: finish_reason = 'stop'
-    else: finish_reason = None
-    yield {'text': output, 'usage': {'prompt_tokens': input_echo_len, 'completion_tokens': i, 'total_tokens': input_echo_len + i}, 'finish_reason': finish_reason}
+          partially_stopped = False
+          if stop:
+            if isinstance(stop, str):
+              pos = output.rfind(stop, rfind_start)
+              if pos != -1: output, stopped = output[:pos], True
+              else: partially_stopped = is_partial_stop(output, stop)
+            elif isinstance(stop, t.Iterable):
+              for each_stop in stop:
+                pos = output.rfind(each_stop, rfind_start)
+                if pos != -1:
+                  output, stopped = output[:pos], True
+                  break
+                else:
+                  partially_stopped = is_partial_stop(output, each_stop)
+                  if partially_stopped: break
+            else: raise ValueError('Invalid stop field type.')
+
+          # Prevent yielding partial stop sequence
+          if not partially_stopped:
+            yield {'text': output, 'usage': {'prompt_tokens': input_echo_len, 'completion_tokens': i, 'total_tokens': input_echo_len + i}, 'finish_reason': None}
+        if stopped: break
+      else: finish_reason = 'length'  # finish stream events
+      if stopped: finish_reason = 'stop'
+      yield {'text': output, 'usage': {'prompt_tokens': input_echo_len, 'completion_tokens': i, 'total_tokens': input_echo_len + i}, 'finish_reason': finish_reason}
     # Clean
     del past_key_values, out
     gc.collect()
@@ -1178,30 +1174,30 @@ def llm_runnable_class(self: LLM[M, T], embeddings_sig: ModelSignature, generate
       if adapter_name != 'default': self.model.set_adapter(adapter_name)
       logger.info('Successfully apply LoRA layer %s', adapter_name)
 
-    @bentoml.Runnable.method(**method_signature(embeddings_sig))  # type: ignore
+    @bentoml.Runnable.method(**method_signature(embeddings_sig))
     def embeddings(__self: _Runnable, prompt: str | list[str]) -> t.Sequence[EmbeddingsOutput]:
       return [self.embeddings([prompt] if isinstance(prompt, str) else prompt)]
 
-    @bentoml.Runnable.method(**method_signature(generate_sig))  # type: ignore
+    @bentoml.Runnable.method(**method_signature(generate_sig))
     def __call__(__self: _Runnable, prompt: str, **attrs: t.Any) -> list[t.Any]:
       adapter_name = attrs.pop('adapter_name', None)
       if adapter_name is not None: __self.set_adapter(adapter_name)
       return self.generate(prompt, **attrs)
 
-    @bentoml.Runnable.method(**method_signature(generate_sig))  # type: ignore
+    @bentoml.Runnable.method(**method_signature(generate_sig))
     def generate(__self: _Runnable, prompt: str, **attrs: t.Any) -> list[t.Any]:
       adapter_name = attrs.pop('adapter_name', None)
       if adapter_name is not None: __self.set_adapter(adapter_name)
       if __self.backend == 'vllm': attrs.setdefault('request_id', openllm_core.utils.gen_random_uuid())
       return self.generate(prompt, **attrs)
 
-    @bentoml.Runnable.method(**method_signature(generate_sig))  # type: ignore
+    @bentoml.Runnable.method(**method_signature(generate_sig))
     def generate_one(__self: _Runnable, prompt: str, stop: list[str], **attrs: t.Any) -> t.Sequence[dict[t.Literal['generated_text'], str]]:
       adapter_name = attrs.pop('adapter_name', None)
       if adapter_name is not None: __self.set_adapter(adapter_name)
       return self.generate_one(prompt, stop, **attrs)
 
-    @bentoml.Runnable.method(**method_signature(generate_iterator_sig))  # type: ignore
+    @bentoml.Runnable.method(**method_signature(generate_iterator_sig))
     def generate_iterator(__self: _Runnable, prompt: str, **attrs: t.Any) -> t.Generator[str, None, str]:
       adapter_name = attrs.pop('adapter_name', None)
       if adapter_name is not None: __self.set_adapter(adapter_name)

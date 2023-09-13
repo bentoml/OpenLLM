@@ -1,5 +1,4 @@
 from __future__ import annotations
-import logging
 import typing as t
 
 import bentoml
@@ -31,16 +30,3 @@ class StarCoder(openllm.LLM['transformers.GPTBigCodeForCausalLM', 'transformers.
       return bentoml.transformers.save_model(self.tag, model, custom_objects={'tokenizer': tokenizer}, labels=generate_labels(self))
     finally:
       torch.cuda.empty_cache()
-
-  def generate(self, prompt: str, **attrs: t.Any) -> list[str]:
-    import torch
-    with torch.inference_mode():
-      # eos_token_id=self.tokenizer.convert_tokens_to_ids("<|end|>"), # NOTE: this is for finetuning starcoder
-      # NOTE: support fine-tuning starcoder
-      result_tensor = self.model.generate(self.tokenizer.encode(prompt, return_tensors='pt').to(self.device),
-                                          do_sample=True,
-                                          pad_token_id=self.tokenizer.eos_token_id,
-                                          generation_config=self.config.model_construct_env(**attrs).to_generation_config())
-      # TODO: We will probably want to return the tokenizer here so that we can manually process this
-      # return (skip_special_tokens=False, clean_up_tokenization_spaces=False))
-      return self.tokenizer.batch_decode(result_tensor[0], skip_special_tokens=True, clean_up_tokenization_spaces=True)

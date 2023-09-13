@@ -868,6 +868,8 @@ def query_command(
   res = client.query(prompt, return_response='raw', **{**client.configuration, **_memoized})
   if output == 'pretty':
     response = client.config.postprocess_generate(prompt, res['responses'])
+    if client.backend == 'vllm': response = response['outputs'][0]['text']
+    else: response = response['text']
     termui.echo('\n\n==Responses==\n', fg='white')
     termui.echo(response, fg=generated_fg)
   elif output == 'json':

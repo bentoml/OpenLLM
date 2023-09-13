@@ -94,7 +94,7 @@ class LLMRunnable(bentoml.Runnable, t.Generic[M, T]):
   embeddings: RunnableMethod[LLMRunnable[M, T], [list[str]], EmbeddingsOutput]
   generate: RunnableMethod[LLMRunnable[M, T], [str], list[t.Any]]
   generate_one: RunnableMethod[LLMRunnable[M, T], [str, list[str]], t.Sequence[dict[t.Literal['generated_text'], str]]]
-  generate_iterator: RunnableMethod[LLMRunnable[M, T], [str], t.Generator[str, None, str]]
+  generate_iterator: RunnableMethod[LLMRunnable[M, T], [str], t.Iterator[t.Any]]
 
 class LLMRunner(bentoml.Runner, t.Generic[M, T]):
   __doc__: str
@@ -111,7 +111,7 @@ class LLMRunner(bentoml.Runner, t.Generic[M, T]):
   embeddings: RunnerMethod[LLMRunnable[M, T], [list[str]], t.Sequence[EmbeddingsOutput]]
   generate: RunnerMethod[LLMRunnable[M, T], [str], list[t.Any]]
   generate_one: RunnerMethod[LLMRunnable[M, T], [str, list[str]], t.Sequence[dict[t.Literal['generated_text'], str]]]
-  generate_iterator: RunnerMethod[LLMRunnable[M, T], [str], t.Generator[str, None, str]]
+  generate_iterator: RunnerMethod[LLMRunnable[M, T], [str], t.Iterator[t.Any]]
 
   def __init__(self,
                runnable_class: type[LLMRunnable[M, T]],
