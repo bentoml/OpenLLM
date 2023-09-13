@@ -22,6 +22,7 @@ from openllm_core.utils import LazyLoader
 from openllm_core.utils import codegen
 from openllm_core.utils import device_count
 from openllm_core.utils import first_not_none
+from openllm_core.utils import get_debug_mode
 from openllm_core.utils import is_torch_available
 
 if t.TYPE_CHECKING:
@@ -38,11 +39,8 @@ else:
 def import_model(fn: import_model_protocol[bentoml.Model, M, T]) -> t.Callable[[LLM[M, T]], bentoml.Model]:
   @functools.wraps(fn)
   def inner(self: LLM[M, T], *decls: t.Any, trust_remote_code: bool | None = None, **attrs: t.Any) -> bentoml.Model:
-    trust_remote_code = first_not_none(trust_remote_code, default=self.trust_remote_code)
     (model_decls, model_attrs), _ = self.llm_parameters
-    decls = (*model_decls, *decls)
-    attrs = {**model_attrs, **attrs}
-    return fn(self, *decls, trust_remote_code=trust_remote_code, **attrs)
+    return fn(self, *model_decls, *decls, trust_remote_code=first_not_none(trust_remote_code, default=self.trust_remote_code), **model_attrs, **attrs)
 
   return inner
 
@@ -52,21 +50,22 @@ def load_model(fn: load_model_protocol[M, T]) -> t.Callable[[LLM[M, T]], M | vll
     if self.__llm_backend__ == 'vllm':
       num_gpus, dev = 1, device_count()
       if dev >= 2: num_gpus = min(dev // 2 * 2, dev)
-      # TODO: Do some more processing with token_id once we support token streaming
       try:
-        return vllm.LLMEngine.from_engine_args(
-            vllm.EngineArgs(model=self._bentomodel.path,
-                            tokenizer=self._bentomodel.path if self.tokenizer_id == 'local' else self.tokenizer_id,
-                            tokenizer_mode='auto',
-                            tensor_parallel_size=num_gpus,
-                            dtype='auto',
-                            worker_use_ray=False))
+        return vllm.AsyncLLMEngine.from_engine_args(
+            vllm.AsyncEngineArgs(model=self._bentomodel.path,
+                                 tokenizer=self._bentomodel.path if self.tokenizer_id == 'local' else self.tokenizer_id,
+                                 tokenizer_mode='auto',
+                                 tensor_parallel_size=num_gpus,
+                                 dtype='auto',
+                                 disable_log_requests=not get_debug_mode(),
+                                 worker_use_ray=False,
+                                 engine_use_ray=False))
       except Exception as err:
         traceback.print_exc()
         raise OpenLLMException(f'Failed to initialise vLLMEngine due to the following error:\n{err}') from None
     else:
       (model_decls, model_attrs), _ = self.llm_parameters
-      return fn(self, *(*model_decls, *decls), **{**model_attrs, **attrs})
+      return fn(self, *model_decls, *decls, **model_attrs, **attrs)
 
   return inner
 
