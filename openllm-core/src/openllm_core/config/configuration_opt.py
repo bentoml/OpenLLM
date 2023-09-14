@@ -10,7 +10,7 @@ START_OPT_COMMAND_DOCSTRING = '''\
 Run a LLMServer for OPT model.
 
 \b
-> See more information about falcon at [facebook/opt-66b](https://huggingface.co/facebook/opt-66b)
+> See more information about OPT at [facebook/opt-66b](https://huggingface.co/facebook/opt-66b)
 
 \b
 ## Usage

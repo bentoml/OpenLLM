@@ -25,7 +25,7 @@ if t.TYPE_CHECKING:
 
   from .utils.lazy import VersionInfo
 
-M = t.TypeVar('M', bound='t.Union[transformers.PreTrainedModel, transformers.Pipeline, transformers.TFPreTrainedModel, transformers.FlaxPreTrainedModel, vllm.LLMEngine, peft.PeftModel]')
+M = t.TypeVar('M', bound='t.Union[transformers.PreTrainedModel, transformers.Pipeline, transformers.TFPreTrainedModel, transformers.FlaxPreTrainedModel, vllm.AsyncLLMEngine, peft.PeftModel]')
 T = t.TypeVar('T', bound='t.Union[transformers.PreTrainedTokenizerFast, transformers.PreTrainedTokenizer, transformers.PreTrainedTokenizerBase]')
 
 def get_literal_args(typ: t.Any) -> tuple[str, ...]:
@@ -95,6 +95,7 @@ class LLMRunnable(bentoml.Runnable, t.Generic[M, T]):
   generate: RunnableMethod[LLMRunnable[M, T], [str], list[t.Any]]
   generate_one: RunnableMethod[LLMRunnable[M, T], [str, list[str]], t.Sequence[dict[t.Literal['generated_text'], str]]]
   generate_iterator: RunnableMethod[LLMRunnable[M, T], [str], t.Iterator[t.Any]]
+  vllm_generate_iterator: RunnableMethod[LLMRunnable[M, T], [str], t.AsyncGenerator[str, None]]
 
 class LLMRunner(bentoml.Runner, t.Generic[M, T]):
   __doc__: str
@@ -112,6 +113,7 @@ class LLMRunner(bentoml.Runner, t.Generic[M, T]):
   generate: RunnerMethod[LLMRunnable[M, T], [str], list[t.Any]]
   generate_one: RunnerMethod[LLMRunnable[M, T], [str, list[str]], t.Sequence[dict[t.Literal['generated_text'], str]]]
   generate_iterator: RunnerMethod[LLMRunnable[M, T], [str], t.Iterator[t.Any]]
+  vllm_generate_iterator: RunnerMethod[LLMRunnable[M, T], [str], t.AsyncGenerator[str, None]]
 
   def __init__(self,
                runnable_class: type[LLMRunnable[M, T]],

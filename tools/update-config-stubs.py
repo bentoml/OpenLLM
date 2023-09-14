@@ -49,7 +49,6 @@ _value_docstring = {
             ```''',
     'default_backend': '''The default backend to run LLM based on available accelerator. By default, it will be PyTorch (pt) for most models. For some models, such as Llama, it will use `vllm` or `flax`. It is a dictionary of key as the accelerator spec in k8s ('cpu', 'nvidia.com/gpu', 'amd.com/gpu', 'cloud-tpus.google.com/v2', ...) and the values as supported OpenLLM backend ('flax', 'tf', 'pt', 'vllm', 'ggml', 'mlc')''',
     'url': 'The resolved url for this LLMConfig.',
-    'requires_gpu': 'Determines if this model is only available on GPU. By default it supports GPU and fallback to CPU.',
     'trust_remote_code': 'Whether to always trust remote code',
     'service_name': "Generated service name for this LLMConfig. By default, it is \"generated_{model_name}_service.py\"",
     'requirements': 'The default PyPI requirements needed to run this given LLM. By default, we will depend on bentoml, torch, transformers.',

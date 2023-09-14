@@ -112,15 +112,7 @@ Available official model_id(s): [default: {llm_config['default_id']}]
 
 \b
 {orjson.dumps(llm_config['model_ids'], option=orjson.OPT_INDENT_2).decode()}
-''',
-                                   )
-
-  if llm_config['requires_gpu'] and openllm.utils.device_count() < 1:
-    # NOTE: The model requires GPU, therefore we will return a dummy command
-    command_attrs.update({
-        'short_help': '(Disabled because there is no GPU available)', 'help': f'{model} is currently not available to run on your local machine because it requires GPU for inference.'
-    })
-    return noop_command(group, llm_config, _serve_grpc, **command_attrs)
+''')
 
   @group.command(**command_attrs)
   @start_decorator(llm_config, serve_grpc=_serve_grpc)
@@ -229,19 +221,6 @@ Available official model_id(s): [default: {llm_config['default_id']}]
     return config
 
   return start_cmd
-
-def noop_command(group: click.Group, llm_config: LLMConfig, _serve_grpc: bool, **command_attrs: t.Any) -> click.Command:
-  context_settings = command_attrs.pop('context_settings', {})
-  context_settings.update({'ignore_unknown_options': True, 'allow_extra_args': True})
-  command_attrs['context_settings'] = context_settings
-  # NOTE: The model requires GPU, therefore we will return a dummy command
-  @group.command(**command_attrs)
-  def noop(**_: t.Any) -> LLMConfig:
-    termui.echo('No GPU available, therefore this command is disabled', fg='red')
-    openllm.utils.analytics.track_start_init(llm_config)
-    return llm_config
-
-  return noop
 
 def start_decorator(llm_config: LLMConfig, serve_grpc: bool = False) -> t.Callable[[FC], t.Callable[[FC], FC]]:
   def wrapper(fn: FC) -> t.Callable[[FC], FC]:

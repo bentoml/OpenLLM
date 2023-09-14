@@ -465,7 +465,6 @@ class ModelSettings(t.TypedDict, total=False):
 
   # meta
   url: str
-  requires_gpu: bool
   trust_remote_code: bool
   service_name: NotRequired[str]
   requirements: t.Optional[ListStr]
@@ -523,7 +522,6 @@ class _ModelSettingsAttr:
                           'cpu': 'pt', 'nvidia.com/gpu': 'pt'
                       },
                       name_type='dasherize',
-                      requires_gpu=False,
                       url='',
                       model_type='causal_lm',
                       trust_remote_code=False,
@@ -541,7 +539,6 @@ class _ModelSettingsAttr:
     architecture: str
     default_backend: t.Dict[LiteralResourceSpec, LiteralBackend]
     url: str
-    requires_gpu: bool
     trust_remote_code: bool
     service_name: str
     requirements: t.Optional[ListStr]
@@ -737,8 +734,6 @@ class _ConfigAttr:
     '''The default backend to run LLM based on available accelerator. By default, it will be PyTorch (pt) for most models. For some models, such as Llama, it will use `vllm` or `flax`. It is a dictionary of key as the accelerator spec in k8s ('cpu', 'nvidia.com/gpu', 'amd.com/gpu', 'cloud-tpus.google.com/v2', ...) and the values as supported OpenLLM backend ('flax', 'tf', 'pt', 'vllm', 'ggml', 'mlc')'''
     __openllm_url__: str = Field(None)
     '''The resolved url for this LLMConfig.'''
-    __openllm_requires_gpu__: bool = Field(None)
-    '''Determines if this model is only available on GPU. By default it supports GPU and fallback to CPU.'''
     __openllm_trust_remote_code__: bool = Field(None)
     '''Whether to always trust remote code'''
     __openllm_service_name__: str = Field(None)
@@ -932,7 +927,6 @@ class LLMConfig(_ConfigAttr):
       __config__ = {
           "name_type": "lowercase",
           "trust_remote_code": True,
-          "requires_gpu": True,
           "timeout": 3600000,
           "url": "https://falconllm.tii.ae/",
           "requirements": ["einops", "xformers", "safetensors"],
@@ -1107,8 +1101,6 @@ class LLMConfig(_ConfigAttr):
   def __getitem__(self, item: t.Literal['default_backend']) -> t.Dict[LiteralResourceSpec, LiteralBackend]: ...
   @overload
   def __getitem__(self, item: t.Literal['url']) -> str: ...
-  @overload
-  def __getitem__(self, item: t.Literal['requires_gpu']) -> bool: ...
   @overload
   def __getitem__(self, item: t.Literal['trust_remote_code']) -> bool: ...
   @overload

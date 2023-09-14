@@ -44,9 +44,9 @@ def import_model(fn: import_model_protocol[bentoml.Model, M, T]) -> t.Callable[[
 
   return inner
 
-def load_model(fn: load_model_protocol[M, T]) -> t.Callable[[LLM[M, T]], M | vllm.LLMEngine]:
+def load_model(fn: load_model_protocol[M, T]) -> t.Callable[[LLM[M, T]], M | vllm.AsyncLLMEngine]:
   @functools.wraps(fn)
-  def inner(self: LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M | vllm.LLMEngine:
+  def inner(self: LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M | vllm.AsyncLLMEngine:
     if self.__llm_backend__ == 'vllm':
       num_gpus, dev = 1, device_count()
       if dev >= 2: num_gpus = min(dev // 2 * 2, dev)
@@ -131,10 +131,10 @@ def make_llm_attributes(cls: type[LLM[M, T]]) -> t.Callable[[type[LLM[M, T]]], N
 
   return codegen.generate_function(cls, '__assign_llm_attr', lines, args=('cls', *args), globs=globs, annotations={'cls': 't.Type[LLM]', 'return': None})
 
-def vllm_postprocess_generate(self: LLM['vllm.LLMEngine', T], prompt: str, generation_result: list[dict[str, t.Any]], **_: t.Any) -> str:
+def vllm_postprocess_generate(self: LLM['vllm.AsyncLLMEngine', T], prompt: str, generation_result: list[dict[str, t.Any]], **_: t.Any) -> str:
   return generation_result[0]['outputs'][0]['text']
 
-def vllm_generate_iterator(self: LLM['vllm.LLMEngine', T],
+def vllm_generate_iterator(self: LLM['vllm.AsyncLLMEngine', T],
                            prompt: str,
                            /,
                            *,
@@ -164,7 +164,7 @@ def vllm_generate_iterator(self: LLM['vllm.LLMEngine', T],
       yield {'text': text_outputs, 'error_code': 0}
       if request_output.finished: break
 
-def vllm_generate(self: LLM['vllm.LLMEngine', T], prompt: str, **attrs: t.Any) -> list[dict[str, t.Any]]:
+def vllm_generate(self: LLM['vllm.AsyncLLMEngine', T], prompt: str, **attrs: t.Any) -> list[dict[str, t.Any]]:
   request_id: str | None = attrs.pop('request_id', None)
   if request_id is None: raise ValueError('request_id must not be None.')
   outputs: list[vllm.RequestOutput] = []
