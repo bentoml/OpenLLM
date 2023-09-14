@@ -26,4 +26,9 @@ else:
   _import_structure['modeling_vllm_gpt_neox'] = ['VLLMGPTNeoX']
   if t.TYPE_CHECKING: from .modeling_vllm_gpt_neox import VLLMGPTNeoX as VLLMGPTNeoX
 
-sys.modules[__name__] = LazyModule(__name__, globals()['__file__'], _import_structure)
+sys.modules[__name__] = LazyModule(__name__,
+                                   globals()['__file__'],
+                                   _import_structure,
+                                   extra_objects={
+                                       'DEFAULT_PROMPT_TEMPLATE': DEFAULT_PROMPT_TEMPLATE, 'START_GPT_NEOX_COMMAND_DOCSTRING': START_GPT_NEOX_COMMAND_DOCSTRING, 'GPTNeoXConfig': GPTNeoXConfig
+                                   })

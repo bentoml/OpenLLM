@@ -26,4 +26,9 @@ else:
   _import_structure['modeling_vllm_dolly_v2'] = ['VLLMDollyV2']
   if t.TYPE_CHECKING: from .modeling_vllm_dolly_v2 import VLLMDollyV2 as VLLMDollyV2
 
-sys.modules[__name__] = LazyModule(__name__, globals()['__file__'], _import_structure)
+sys.modules[__name__] = LazyModule(__name__,
+                                   globals()['__file__'],
+                                   _import_structure,
+                                   extra_objects={
+                                       'DEFAULT_PROMPT_TEMPLATE': DEFAULT_PROMPT_TEMPLATE, 'START_DOLLY_V2_COMMAND_DOCSTRING': START_DOLLY_V2_COMMAND_DOCSTRING, 'DollyV2Config': DollyV2Config
+                                   })

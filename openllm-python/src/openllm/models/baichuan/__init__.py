@@ -27,4 +27,11 @@ else:
   _import_structure['modeling_vllm_baichuan'] = ['VLLMBaichuan']
   if t.TYPE_CHECKING: from .modeling_vllm_baichuan import VLLMBaichuan as VLLMBaichuan
 
-sys.modules[__name__] = LazyModule(__name__, globals()['__file__'], _import_structure)
+sys.modules[__name__] = LazyModule(__name__,
+                                   globals()['__file__'],
+                                   _import_structure,
+                                   extra_objects={
+                                       'DEFAULT_PROMPT_TEMPLATE': DEFAULT_PROMPT_TEMPLATE,
+                                       'START_BAICHUAN_COMMAND_DOCSTRING': START_BAICHUAN_COMMAND_DOCSTRING,
+                                       'BaichuanConfig': BaichuanConfig
+                                   })
