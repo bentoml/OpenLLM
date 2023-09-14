@@ -18,6 +18,16 @@ This changelog is managed by towncrier and is compiled at release time.
 
 <!-- towncrier release notes start -->
 
+## [0.3.4](https://github.com/bentoml/openllm/tree/v0.3.4)
+
+### Bug fix
+
+- vLLM now should support safetensors loading format, so `--serlisation` should be agnostic of backend now
+
+  Removed some legacy check and default behaviour
+  [#324](https://github.com/bentoml/openllm/issues/324)
+
+
 ## [0.3.3](https://github.com/bentoml/openllm/tree/v0.3.3)
 No significant changes.
 
