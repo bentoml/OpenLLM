@@ -1172,30 +1172,30 @@ def llm_runnable_class(self: LLM[M, T], embeddings_sig: ModelSignature, generate
       if adapter_name != 'default': self.model.set_adapter(adapter_name)
       logger.info('Successfully apply LoRA layer %s', adapter_name)
 
-    @bentoml.Runnable.method(**method_signature(embeddings_sig))
+    @bentoml.Runnable.method(**method_signature(embeddings_sig))  # type: ignore
     def embeddings(__self: _Runnable, prompt: str | list[str]) -> t.Sequence[EmbeddingsOutput]:
       return [self.embeddings([prompt] if isinstance(prompt, str) else prompt)]
 
-    @bentoml.Runnable.method(**method_signature(generate_sig))
+    @bentoml.Runnable.method(**method_signature(generate_sig))  # type: ignore
     def __call__(__self: _Runnable, prompt: str, **attrs: t.Any) -> list[t.Any]:
       adapter_name = attrs.pop('adapter_name', None)
       if adapter_name is not None: __self.set_adapter(adapter_name)
       return self.generate(prompt, **attrs)
 
-    @bentoml.Runnable.method(**method_signature(generate_sig))
+    @bentoml.Runnable.method(**method_signature(generate_sig))  # type: ignore
     def generate(__self: _Runnable, prompt: str, **attrs: t.Any) -> list[t.Any]:
       adapter_name = attrs.pop('adapter_name', None)
       if adapter_name is not None: __self.set_adapter(adapter_name)
       if __self.backend == 'vllm': attrs.setdefault('request_id', openllm_core.utils.gen_random_uuid())
       return self.generate(prompt, **attrs)
 
-    @bentoml.Runnable.method(**method_signature(generate_sig))
+    @bentoml.Runnable.method(**method_signature(generate_sig))  # type: ignore
     def generate_one(__self: _Runnable, prompt: str, stop: list[str], **attrs: t.Any) -> t.Sequence[dict[t.Literal['generated_text'], str]]:
       adapter_name = attrs.pop('adapter_name', None)
       if adapter_name is not None: __self.set_adapter(adapter_name)
       return self.generate_one(prompt, stop, **attrs)
 
-    @bentoml.Runnable.method(**method_signature(generate_iterator_sig))
+    @bentoml.Runnable.method(**method_signature(generate_iterator_sig))  # type: ignore
     def generate_iterator(__self: _Runnable, prompt: str, **attrs: t.Any) -> t.Generator[str, None, str]:
       adapter_name = attrs.pop('adapter_name', None)
       if adapter_name is not None: __self.set_adapter(adapter_name)
@@ -1209,8 +1209,8 @@ def llm_runnable_class(self: LLM[M, T], embeddings_sig: ModelSignature, generate
       yield ' '.join(output_text[pre:]) + ' '
       return ' '.join(output_text) + ' '
 
-    @bentoml.Runnable.method(**method_signature(generate_iterator_sig))
-    async def vllm_generate_iterator(__self: _Runnable, prompt: str, **attrs: t.Any) -> t.AsyncGenerator[bytes, None]:
+    @bentoml.Runnable.method(**method_signature(generate_iterator_sig))  # type: ignore
+    async def vllm_generate_iterator(__self: _Runnable, prompt: str, **attrs: t.Any) -> t.AsyncGenerator[str, None]:
       # TODO: System prompt support
       pre = 0
       prompt = process_prompt(prompt, None, False)
