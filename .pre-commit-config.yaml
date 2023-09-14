@@ -60,12 +60,14 @@ repos:
               openllm-client/src/openllm_client/pb.*|
               .github/.*|
               cz.py |
+              bench.py |
               hatch_build.py
           )$
         additional_dependencies:
           - click==8.1.3
           - peft
           - bentoml==1.1.1
+          - build==0.10.0
           - transformers>=4.31.0
           - pandas-stubs
           - types-psutil

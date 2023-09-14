@@ -95,6 +95,7 @@ class LLMRunnable(bentoml.Runnable, t.Generic[M, T]):
   generate: RunnableMethod[LLMRunnable[M, T], [str], list[t.Any]]
   generate_one: RunnableMethod[LLMRunnable[M, T], [str, list[str]], t.Sequence[dict[t.Literal['generated_text'], str]]]
   generate_iterator: RunnableMethod[LLMRunnable[M, T], [str], t.Iterator[t.Any]]
+  vllm_generate: RunnableMethod[LLMRunnable[M, T], [str], list[t.Any]]
   vllm_generate_iterator: RunnableMethod[LLMRunnable[M, T], [str], t.AsyncGenerator[str, None]]
 
 class LLMRunner(bentoml.Runner, t.Generic[M, T]):
@@ -113,6 +114,7 @@ class LLMRunner(bentoml.Runner, t.Generic[M, T]):
   generate: RunnerMethod[LLMRunnable[M, T], [str], list[t.Any]]
   generate_one: RunnerMethod[LLMRunnable[M, T], [str, list[str]], t.Sequence[dict[t.Literal['generated_text'], str]]]
   generate_iterator: RunnerMethod[LLMRunnable[M, T], [str], t.Iterator[t.Any]]
+  vllm_generate: RunnerMethod[LLMRunnable[M, T], [str], list[t.Any]]
   vllm_generate_iterator: RunnerMethod[LLMRunnable[M, T], [str], t.AsyncGenerator[str, None]]
 
   def __init__(self,

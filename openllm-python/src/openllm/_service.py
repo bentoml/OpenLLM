@@ -47,7 +47,10 @@ _JsonInput = bentoml.io.JSON.from_sample({'prompt': '', 'llm_config': llm_config
 async def generate_v1(input_dict: dict[str, t.Any]) -> openllm.GenerationOutput:
   qa_inputs = openllm.GenerationInput.from_llm_config(llm_config)(**input_dict)
   config = qa_inputs.llm_config.model_dump()
-  responses = await runner.generate.async_run(qa_inputs.prompt, **{'adapter_name': qa_inputs.adapter_name, **config})
+  if runner.backend == 'vllm':
+    responses = await runner.vllm_generate.async_run(qa_inputs.prompt, adapter_name=qa_inputs.adapter_name, request_id=openllm_core.utils.gen_random_uuid(), **config)
+  else:
+    responses = await runner.generate.async_run(qa_inputs.prompt, adapter_name=qa_inputs.adapter_name, **config)
   return openllm.GenerationOutput(responses=responses, configuration=config)
 
 @svc.api(route='/v1/generate_stream', input=_JsonInput, output=bentoml.io.Text(content_type='text/event-stream'))

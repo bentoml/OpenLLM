@@ -1,6 +1,7 @@
 # mypy: disable-error-code="name-defined,attr-defined"
 from __future__ import annotations
 import abc
+import asyncio
 import gc
 import inspect
 import logging
@@ -47,6 +48,7 @@ from openllm_core.utils import ReprMixin
 from openllm_core.utils import apply
 from openllm_core.utils import bentoml_cattr
 from openllm_core.utils import codegen
+from openllm_core.utils import ensure_exec_coro
 from openllm_core.utils import first_not_none
 from openllm_core.utils import generate_hash_from_file
 from openllm_core.utils import is_peft_available
@@ -66,6 +68,7 @@ if t.TYPE_CHECKING:
   import peft
   import torch
   import transformers
+  import vllm
 
   from openllm_core._configuration import PeftType
   from openllm_core.utils.representation import ReprArgs
@@ -1186,7 +1189,6 @@ def llm_runnable_class(self: LLM[M, T], embeddings_sig: ModelSignature, generate
     def generate(__self: _Runnable, prompt: str, **attrs: t.Any) -> list[t.Any]:
       adapter_name = attrs.pop('adapter_name', None)
       if adapter_name is not None: __self.set_adapter(adapter_name)
-      if __self.backend == 'vllm': attrs.setdefault('request_id', openllm_core.utils.gen_random_uuid())
       return self.generate(prompt, **attrs)
 
     @bentoml.Runnable.method(**method_signature(generate_sig))  # type: ignore
@@ -1208,6 +1210,41 @@ def llm_runnable_class(self: LLM[M, T], embeddings_sig: ModelSignature, generate
           pre = now
       yield ' '.join(output_text[pre:]) + ' '
       return ' '.join(output_text) + ' '
+
+    @bentoml.Runnable.method(**method_signature(generate_sig))  # type: ignore
+    def vllm_generate(__self: _Runnable, prompt: str, **attrs: t.Any) -> list[t.Any]:
+      stop: str | t.Iterable[str] | None = attrs.pop('stop', None)
+      stop_token_ids: list[int] | None = attrs.pop('stop_token_ids', None)
+      adapter_name = attrs.pop('adapter_name', None)
+      if adapter_name is not None: __self.set_adapter(adapter_name)
+      request_id: str | None = attrs.pop('request_id', None)
+      if request_id is None: raise ValueError('request_id must not be None.')
+
+      if stop_token_ids is None: stop_token_ids = []
+      stop_token_ids.append(self.tokenizer.eos_token_id)
+      stop_: set[str] = set()
+      if isinstance(stop, str) and stop != '': stop_.add(stop)
+      elif isinstance(stop, list) and stop != []: stop_.update(stop)
+      for tid in stop_token_ids:
+        if tid: stop_.add(self.tokenizer.decode(tid))
+
+      if self.config['temperature'] <= 1e-5: top_p = 1.0
+      else: top_p = self.config['top_p']
+      config = self.config.model_construct_env(stop=list(stop_), top_p=top_p, **attrs)
+      sampling_params = config.to_sampling_config()
+
+      async def loop() -> list[str]:
+        async for request_output in t.cast('vllm.AsyncLLMEngine', self.model).generate(prompt=prompt, sampling_params=sampling_params, request_id=request_id):
+          pass
+        return [output.text for output in request_output.outputs]
+
+      try:
+        return asyncio.run(loop())
+      except RuntimeError:
+        try:
+          return ensure_exec_coro(loop())
+        except Exception:
+          raise
 
     @bentoml.Runnable.method(**method_signature(generate_iterator_sig))  # type: ignore
     async def vllm_generate_iterator(__self: _Runnable, prompt: str, **attrs: t.Any) -> t.AsyncGenerator[str, None]:
@@ -1234,7 +1271,7 @@ def llm_runnable_class(self: LLM[M, T], embeddings_sig: ModelSignature, generate
       else: top_p = self.config['top_p']
       config = self.config.model_construct_env(stop=list(stop_), top_p=top_p, **attrs)
       sampling_params = config.to_sampling_config()
-      async for request_output in self.model.generate(prompt=prompt, sampling_params=sampling_params, request_id=request_id):
+      async for request_output in t.cast('vllm.AsyncLLMEngine', self.model).generate(prompt=prompt, sampling_params=sampling_params, request_id=request_id):
         if echo: text_outputs = [prompt + output.text for output in request_output.outputs]
         else: text_outputs = [output.text for output in request_output.outputs]
         output_text = text_outputs[0]
