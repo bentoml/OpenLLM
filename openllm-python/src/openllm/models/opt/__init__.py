@@ -42,4 +42,9 @@ else:
   _import_structure['modeling_tf_opt'] = ['TFOPT']
   if t.TYPE_CHECKING: from .modeling_tf_opt import TFOPT as TFOPT
 
-sys.modules[__name__] = LazyModule(__name__, globals()['__file__'], _import_structure)
+sys.modules[__name__] = LazyModule(__name__,
+                                   globals()['__file__'],
+                                   _import_structure,
+                                   extra_objects={
+                                       'DEFAULT_PROMPT_TEMPLATE': DEFAULT_PROMPT_TEMPLATE, 'START_OPT_COMMAND_DOCSTRING': START_OPT_COMMAND_DOCSTRING, 'OPTConfig': OPTConfig,
+                                   })

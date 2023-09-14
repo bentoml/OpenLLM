@@ -26,4 +26,11 @@ else:
   _import_structure['modeling_vllm_stablelm'] = ['VLLMStableLM']
   if t.TYPE_CHECKING: from .modeling_vllm_stablelm import VLLMStableLM as VLLMStableLM
 
-sys.modules[__name__] = LazyModule(__name__, globals()['__file__'], _import_structure)
+sys.modules[__name__] = LazyModule(__name__,
+                                   globals()['__file__'],
+                                   _import_structure,
+                                   extra_objects={
+                                       'DEFAULT_PROMPT_TEMPLATE': DEFAULT_PROMPT_TEMPLATE,
+                                       'START_STABLELM_COMMAND_DOCSTRING': START_STABLELM_COMMAND_DOCSTRING,
+                                       'StableLMConfig': StableLMConfig,
+                                   })

@@ -27,4 +27,12 @@ else:
   _import_structure['modeling_vllm_mpt'] = ['VLLMMPT']
   if t.TYPE_CHECKING: from .modeling_vllm_mpt import VLLMMPT as VLLMMPT
 
-sys.modules[__name__] = LazyModule(__name__, globals()['__file__'], _import_structure)
+sys.modules[__name__] = LazyModule(__name__,
+                                   globals()['__file__'],
+                                   _import_structure,
+                                   extra_objects={
+                                       'DEFAULT_PROMPT_TEMPLATE': DEFAULT_PROMPT_TEMPLATE,
+                                       'START_MPT_COMMAND_DOCSTRING': START_MPT_COMMAND_DOCSTRING,
+                                       'MPTConfig': MPTConfig,
+                                       'PROMPT_MAPPING': PROMPT_MAPPING
+                                   })

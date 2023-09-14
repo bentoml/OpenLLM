@@ -27,4 +27,12 @@ else:
   _import_structure['modeling_llama'] = ['Llama']
   if t.TYPE_CHECKING: from .modeling_llama import Llama as Llama
 
-sys.modules[__name__] = LazyModule(__name__, globals()['__file__'], _import_structure)
+sys.modules[__name__] = LazyModule(__name__,
+                                   globals()['__file__'],
+                                   _import_structure,
+                                   extra_objects={
+                                       'DEFAULT_PROMPT_TEMPLATE': DEFAULT_PROMPT_TEMPLATE,
+                                       'START_LLAMA_COMMAND_DOCSTRING': START_LLAMA_COMMAND_DOCSTRING,
+                                       'LlamaConfig': LlamaConfig,
+                                       'PROMPT_MAPPING': PROMPT_MAPPING
+                                   })
