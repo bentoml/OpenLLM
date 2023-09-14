@@ -20,7 +20,6 @@ def model_settings(draw: st.DrawFn):
       'model_ids': st.lists(st.text(), min_size=1),
       'architecture': st.text(min_size=1),
       'url': st.text(),
-      'requires_gpu': st.booleans(),
       'trust_remote_code': st.booleans(),
       'requirements': st.none() | st.lists(st.text(), min_size=1),
       'default_backend': st.dictionaries(st.sampled_from(['cpu', 'nvidia.com/gpu']), st.sampled_from(['vllm', 'pt', 'tf', 'flax'])),

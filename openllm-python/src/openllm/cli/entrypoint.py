@@ -651,8 +651,6 @@ def models_command(ctx: click.Context, output: LiteralOutput, show_available: bo
       json_data[m] = {
           'architecture': config['architecture'],
           'model_id': config['model_ids'],
-          'cpu': not config['requires_gpu'],
-          'gpu': True,
           'backend': backend,
           'installation': f'"openllm[{m}]"' if m in OPTIONAL_DEPENDENCIES or config['requirements'] else 'openllm',
       }
@@ -680,13 +678,11 @@ def models_command(ctx: click.Context, output: LiteralOutput, show_available: bo
       import tabulate
 
       tabulate.PRESERVE_WHITESPACE = True
-      # llm, architecture, url, model_id, installation, cpu, gpu, backend
-      data: list[str | tuple[str, str, list[str], str, LiteralString, LiteralString, tuple[LiteralBackend, ...]]] = []
+      # llm, architecture, url, model_id, installation, backend
+      data: list[str | tuple[str, str, list[str], str, tuple[LiteralBackend, ...]]] = []
       for m, v in json_data.items():
-        data.extend([(m, v['architecture'], v['model_id'], v['installation'], '❌' if not v['cpu'] else '✅', '✅', v['backend'],)])
-      column_widths = [
-          int(termui.COLUMNS / 12), int(termui.COLUMNS / 6), int(termui.COLUMNS / 4), int(termui.COLUMNS / 12), int(termui.COLUMNS / 12), int(termui.COLUMNS / 12), int(termui.COLUMNS / 4),
-      ]
+        data.extend([(m, v['architecture'], v['model_id'], v['installation'], v['backend'])])
+      column_widths = [int(termui.COLUMNS / 12), int(termui.COLUMNS / 6), int(termui.COLUMNS / 4), int(termui.COLUMNS / 6),  int(termui.COLUMNS / 4)]
 
       if len(data) == 0 and len(failed_initialized) > 0:
         termui.echo('Exception found while parsing models:\n', fg='yellow')
@@ -868,6 +864,7 @@ def query_command(
   res = client.query(prompt, return_response='raw', **{**client.configuration, **_memoized})
   if output == 'pretty':
     response = client.config.postprocess_generate(prompt, res['responses'])
+    if isinstance(response, dict) and 'text' in response: response = response['text']
     termui.echo('\n\n==Responses==\n', fg='white')
     termui.echo(response, fg=generated_fg)
   elif output == 'json':

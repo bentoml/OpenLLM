@@ -40,7 +40,6 @@ class BaichuanConfig(openllm_core.LLMConfig):
       'name_type': 'lowercase',
       'trust_remote_code': True,
       'timeout': 3600000,
-      'requires_gpu': True,
       'url': 'https://github.com/baichuan-inc/Baichuan-7B',
       'requirements': ['cpm-kernels', 'sentencepiece'],
       'architecture': 'BaiChuanForCausalLM',
