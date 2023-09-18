@@ -182,8 +182,8 @@ importers:
         specifier: ^2.0.2
         version: 2.0.2(react-dom@18.2.0)(react@18.2.0)
       '@mui/base':
-        specifier: 5.0.0-beta.14
-        version: 5.0.0-beta.14(react-dom@18.2.0)(react@18.2.0)
+        specifier: 5.0.0-beta.15
+        version: 5.0.0-beta.15(react-dom@18.2.0)(react@18.2.0)
       '@mui/icons-material':
         specifier: 5.14.8
         version: 5.14.8(@mui/material@5.14.8)(react@18.2.0)
@@ -1842,13 +1842,35 @@ packages:
       '@emotion/is-prop-valid': 1.2.1
       '@floating-ui/react-dom': 2.0.2(react-dom@18.2.0)(react@18.2.0)
       '@mui/types': 7.2.4
-      '@mui/utils': 5.14.8(react@18.2.0)
+      '@mui/utils': 5.14.9(react-dom@18.2.0)(react@18.2.0)
       '@popperjs/core': 2.11.8
       clsx: 2.0.0
       prop-types: 15.8.1
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
       react-is: 18.2.0
+    dev: false
+
+  /@mui/base@5.0.0-beta.15(react-dom@18.2.0)(react@18.2.0):
+    resolution: {integrity: sha512-Xtom3YSdi0iwYPtyVRFUEGoRwi6IHWixPwifDKaK+4PkEPtUWMU5YOIJfTsmC59ri+dFvA3oBNSiTPUGGrklZw==}
+    engines: {node: '>=12.0.0'}
+    peerDependencies:
+      '@types/react': ^17.0.0 || ^18.0.0
+      react: ^17.0.0 || ^18.0.0
+      react-dom: ^17.0.0 || ^18.0.0
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+    dependencies:
+      '@babel/runtime': 7.22.15
+      '@floating-ui/react-dom': 2.0.2(react-dom@18.2.0)(react@18.2.0)
+      '@mui/types': 7.2.4
+      '@mui/utils': 5.14.9(react-dom@18.2.0)(react@18.2.0)
+      '@popperjs/core': 2.11.8
+      clsx: 2.0.0
+      prop-types: 15.8.1
+      react: 18.2.0
+      react-dom: 18.2.0(react@18.2.0)
     dev: false
 
   /@mui/core-downloads-tracker@5.14.8:
@@ -2018,6 +2040,24 @@ packages:
       react-is: 18.2.0
     dev: false
 
+  /@mui/utils@5.14.9(react-dom@18.2.0)(react@18.2.0):
+    resolution: {integrity: sha512-9ysB5e+RwS7ofn0n3nwAg1/3c81vBTmSvauD3EuK9LmqMzhmF//BFDaC44U4yITvB/0m1kWyDqg924Ll3VHCcg==}
+    engines: {node: '>=12.0.0'}
+    peerDependencies:
+      '@types/react': ^17.0.0 || ^18.0.0
+      react: ^17.0.0 || ^18.0.0
+      react-dom: ^17.0.0 || ^18.0.0
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+    dependencies:
+      '@babel/runtime': 7.22.15
+      prop-types: 15.8.1
+      react: 18.2.0
+      react-dom: 18.2.0(react@18.2.0)
+      react-is: 18.2.0
+    dev: false
+
   /@mui/x-data-grid@6.13.0(@mui/material@5.14.8)(@mui/system@5.14.8)(react-dom@18.2.0)(react@18.2.0):
     resolution: {integrity: sha512-HRZGPdE+unZEiygcMqLsKOJ1F7iaTrhGQXGdlFLLniwfYMzVmJgZQXYCCeOIkCQqF28rQniF+4PbRhmFERdqSQ==}
     engines: {node: '>=14.0.0'}
@@ -2078,7 +2118,7 @@ packages:
       '@babel/runtime': 7.22.15
       '@emotion/react': 11.11.1(react@18.2.0)
       '@emotion/styled': 11.11.0(@emotion/react@11.11.1)(react@18.2.0)
-      '@mui/base': 5.0.0-beta.14(react-dom@18.2.0)(react@18.2.0)
+      '@mui/base': 5.0.0-beta.15(react-dom@18.2.0)(react@18.2.0)
       '@mui/material': 5.14.8(@emotion/react@11.11.1)(@emotion/styled@11.11.0)(react-dom@18.2.0)(react@18.2.0)
       '@mui/system': 5.14.8(@emotion/react@11.11.1)(@emotion/styled@11.11.0)(react@18.2.0)
       '@mui/utils': 5.14.8(react@18.2.0)
