@@ -1,0 +1,3 @@
+openllm[llama]
+bentoml
+vllm

@@ -1,0 +1,7 @@
+service: 'service:svc'
+include:
+  - '*.py'
+python:
+  packages:
+    - openllm[llama,vllm]
+    - git+https://github.com/huggingface/accelerate.git

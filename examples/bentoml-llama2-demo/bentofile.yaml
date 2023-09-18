@@ -1,0 +1,7 @@
+#@title Define the bentofile.yaml (modify it following https://docs.bentoml.com/en/latest/concepts/bento.html)
+service: 'service:svc'
+include:
+  - '*.py'
+python:
+  packages:
+    - openllm

@@ -1,0 +1,76 @@
+{
+    "cluster_name": "aws-us-west-1",
+    "name": "llama2-service",
+    "description": "from colab",
+    "mode": "function",
+    "targets": [
+        {
+            "type": "stable",
+            "bento_repository": "llama-service",
+            "bento": "qtsc6esw266jiasc",
+            "config": {
+                "hpa_conf": {
+                    "min_replicas": 1,
+                    "max_replicas": 1,
+                    "policy": {
+                        "metrics": [],
+                        "scale_up_behavior": "fast",
+                        "scale_down_behavior": "stable"
+                    }
+                },
+                "resources": {
+                    "requests": {
+                        "cpu": "500m",
+                        "memory": "500Mi",
+                        "gpu": ""
+                    },
+                    "limits": {
+                        "cpu": "1000m",
+                        "memory": "1024Mi",
+                        "gpu": ""
+                    }
+                },
+                "envs": [],
+                "runners": {
+                    "llm-llama-runner": {
+                        "resources": {
+                            "requests": {
+                                "cpu": "500m",
+                                "memory": "500Mi",
+                                "gpu": ""
+                            },
+                            "limits": {
+                                "cpu": "1000m",
+                                "memory": "1024Mi",
+                                "gpu": ""
+                            }
+                        },
+                        "hpa_conf": {
+                            "min_replicas": 1,
+                            "max_replicas": 1,
+                            "policy": {
+                                "metrics": [],
+                                "scale_up_behavior": "fast",
+                                "scale_down_behavior": "stable"
+                            }
+                        },
+                        "deployment_strategy": "RollingUpdate",
+                        "traffic_control": {
+                            "timeout": "60s",
+                            "request_queue": {}
+                        },
+                        "resource_instance": "starter-aws-t3-2xlarge-cpu-small"
+                    }
+                },
+                "access_control": "public",
+                "deployment_strategy": "RollingUpdate",
+                "traffic_control": {
+                    "timeout": "60s",
+                    "request_queue": {}
+                },
+                "resource_instance": "starter-aws-t3-2xlarge-cpu-small"
+            }
+        }
+    ],
+    "kube_namespace": "org-playx--aws-us-west-1"
+}
