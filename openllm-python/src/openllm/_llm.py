@@ -31,6 +31,7 @@ from openllm_core._typing_compat import AdapterType
 from openllm_core._typing_compat import DictStrAny
 from openllm_core._typing_compat import LiteralBackend
 from openllm_core._typing_compat import LiteralQuantise
+from openllm_core._typing_compat import LiteralSerialisation
 from openllm_core._typing_compat import LiteralString
 from openllm_core._typing_compat import LLMRunnable
 from openllm_core._typing_compat import LLMRunner
@@ -292,7 +293,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
                        tag: bentoml.Tag,
                        adapters_mapping: t.Optional[AdaptersMapping],
                        model_version: t.Optional[str],
-                       serialisation: t.Literal['safetensors', 'legacy'],
+                       serialisation: LiteralSerialisation,
                        _local: bool,
                        **attrs: t.Any) -> None:
       '''Generated __attrs_init__ for openllm.LLM.'''
@@ -309,7 +310,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
   _tag: bentoml.Tag
   _adapters_mapping: AdaptersMapping | None
   _model_version: str
-  _serialisation: t.Literal['safetensors', 'legacy']
+  _serialisation: LiteralSerialisation
   _local: bool
 
   def __init_subclass__(cls: type[LLM[M, T]]) -> None:
@@ -383,7 +384,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
                       adapter_name: str | None = None,
                       adapter_map: dict[str, str | None] | None = None,
                       quantization_config: transformers.BitsAndBytesConfig | transformers.GPTQConfig | None = None,
-                      serialisation: t.Literal['safetensors', 'legacy'] = 'safetensors',
+                      serialisation: LiteralSerialisation = 'safetensors',
                       **attrs: t.Any) -> LLM[M, T]:
     '''Instantiate a pretrained LLM.
 
@@ -537,7 +538,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
                _quantize: LiteralQuantise | None,
                _model_version: str,
                _tag: bentoml.Tag,
-               _serialisation: t.Literal['safetensors', 'legacy'],
+               _serialisation: LiteralSerialisation,
                _local: bool,
                _adapters_mapping: AdaptersMapping | None,
                **attrs: t.Any,
@@ -1097,7 +1098,7 @@ def Runner(model_name: str,
            adapter_name: str | None = ...,
            adapter_map: dict[str, str | None] | None = ...,
            quantization_config: transformers.BitsAndBytesConfig | transformers.GPTQConfig | None = None,
-           serialisation: t.Literal['safetensors', 'legacy'] = ...,
+           serialisation: LiteralSerialisation = ...,
            **attrs: t.Any) -> LLMRunner[t.Any, t.Any]:
   ...
 
@@ -1139,7 +1140,7 @@ def Runner(model_name: str,
     attrs.update({
         'model_id': llm_config['env']['model_id_value'],
         'quantize': llm_config['env']['quantize_value'],
-        'serialisation': first_not_none(os.environ.get('OPENLLM_SERIALIZATION'), attrs.get('serialisation'), default='safetensors')
+        'serialisation': first_not_none(os.environ.get('OPENLLM_SERIALIZATION'), attrs.get('serialisation'), default=llm_config['serialisation'])
     })
 
   backend = t.cast(LiteralBackend, first_not_none(backend, default=EnvVarMixin(model_name, backend=llm_config.default_backend() if llm_config is not None else 'pt')['backend_value']))

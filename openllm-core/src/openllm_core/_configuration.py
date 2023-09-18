@@ -67,6 +67,7 @@ from ._typing_compat import At
 from ._typing_compat import DictStrAny
 from ._typing_compat import ListStr
 from ._typing_compat import LiteralBackend
+from ._typing_compat import LiteralSerialisation
 from ._typing_compat import LiteralString
 from ._typing_compat import NotRequired
 from ._typing_compat import Required
@@ -465,6 +466,7 @@ class ModelSettings(t.TypedDict, total=False):
 
   # meta
   url: str
+  serialisation: LiteralSerialisation
   trust_remote_code: bool
   service_name: NotRequired[str]
   requirements: t.Optional[ListStr]
@@ -521,6 +523,7 @@ class _ModelSettingsAttr:
                       default_backend={
                           'cpu': 'pt', 'nvidia.com/gpu': 'pt'
                       },
+                      serialisation='legacy',
                       name_type='dasherize',
                       url='',
                       model_type='causal_lm',
@@ -539,6 +542,7 @@ class _ModelSettingsAttr:
     architecture: str
     default_backend: t.Dict[LiteralResourceSpec, LiteralBackend]
     url: str
+    serialisation: LiteralSerialisation
     trust_remote_code: bool
     service_name: str
     requirements: t.Optional[ListStr]
@@ -734,6 +738,8 @@ class _ConfigAttr:
     '''The default backend to run LLM based on available accelerator. By default, it will be PyTorch (pt) for most models. For some models, such as Llama, it will use `vllm` or `flax`. It is a dictionary of key as the accelerator spec in k8s ('cpu', 'nvidia.com/gpu', 'amd.com/gpu', 'cloud-tpus.google.com/v2', ...) and the values as supported OpenLLM backend ('flax', 'tf', 'pt', 'vllm', 'ggml', 'mlc')'''
     __openllm_url__: str = Field(None)
     '''The resolved url for this LLMConfig.'''
+    __openllm_serialisation__: LiteralSerialisation = Field(None)
+    '''Default serialisation format for different models. Some will default to use the legacy 'bin'. '''
     __openllm_trust_remote_code__: bool = Field(None)
     '''Whether to always trust remote code'''
     __openllm_service_name__: str = Field(None)
@@ -1101,6 +1107,8 @@ class LLMConfig(_ConfigAttr):
   def __getitem__(self, item: t.Literal['default_backend']) -> t.Dict[LiteralResourceSpec, LiteralBackend]: ...
   @overload
   def __getitem__(self, item: t.Literal['url']) -> str: ...
+  @overload
+  def __getitem__(self, item: t.Literal['serialisation']) -> LiteralSerialisation: ...
   @overload
   def __getitem__(self, item: t.Literal['trust_remote_code']) -> bool: ...
   @overload

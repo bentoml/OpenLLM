@@ -80,6 +80,7 @@ class LlamaConfig(openllm_core.LLMConfig):
       'requirements': ['fairscale', 'sentencepiece', 'scipy'],
       'tokenizer_class': 'LlamaTokenizerFast',
       'default_id': 'NousResearch/llama-2-7b-hf',
+      'serialisation': 'safetensors',
       'model_ids': [
           'meta-llama/Llama-2-70b-chat-hf',
           'meta-llama/Llama-2-13b-chat-hf',
