@@ -37,6 +37,7 @@ if t.TYPE_CHECKING:
   from bentoml._internal.models.model import ModelStore
   from openllm_core._typing_compat import LiteralContainerRegistry
   from openllm_core._typing_compat import LiteralContainerVersionStrategy
+  from openllm_core._typing_compat import LiteralSerialisation
   from openllm_core._typing_compat import LiteralString
 
 logger = logging.getLogger(__name__)
@@ -128,13 +129,12 @@ def construct_docker_options(llm: openllm.LLM[t.Any, t.Any],
                              quantize: LiteralString | None,
                              adapter_map: dict[str, str | None] | None,
                              dockerfile_template: str | None,
-                             serialisation: t.Literal['safetensors', 'legacy'],
+                             serialisation: LiteralSerialisation,
                              container_registry: LiteralContainerRegistry,
                              container_version_strategy: LiteralContainerVersionStrategy) -> DockerOptions:
   from openllm.cli._factory import parse_config_options
   environ = parse_config_options(llm.config, llm.config['timeout'], workers_per_resource, None, True, os.environ.copy())
   env: openllm_core.utils.EnvVarMixin = llm.config['env']
-  if env['backend_value'] == 'vllm': serialisation = 'legacy'
   env_dict = {
       env.backend: env['backend_value'],
       env.config: f"'{llm.config.model_dump_json().decode()}'",
@@ -207,12 +207,13 @@ def create_bento(bento_tag: bentoml.Tag,
                  dockerfile_template: str | None,
                  adapter_map: dict[str, str | None] | None = None,
                  extra_dependencies: tuple[str, ...] | None = None,
-                 serialisation: t.Literal['safetensors', 'legacy'] = 'safetensors',
+                 serialisation: LiteralSerialisation | None = None,
                  container_registry: LiteralContainerRegistry = 'ecr',
                  container_version_strategy: LiteralContainerVersionStrategy = 'release',
                  _bento_store: BentoStore = Provide[BentoMLContainer.bento_store],
                  _model_store: ModelStore = Provide[BentoMLContainer.model_store]) -> bentoml.Bento:
   backend_envvar = llm.config['env']['backend_value']
+  _serialisation: LiteralSerialisation = openllm_core.utils.first_not_none(serialisation, default=llm.config['serialisation'])
   labels = dict(llm.identifying_params)
   labels.update({'_type': llm.llm_type, '_framework': backend_envvar, 'start_name': llm.config['start_name'], 'base_name_or_path': llm.model_id, 'bundler': 'openllm.bundle'})
   if adapter_map: labels.update(adapter_map)
@@ -246,7 +247,7 @@ def create_bento(bento_tag: bentoml.Tag,
                                                                   quantize,
                                                                   adapter_map,
                                                                   dockerfile_template,
-                                                                  serialisation,
+                                                                  _serialisation,
                                                                   container_registry,
                                                                   container_version_strategy))
 

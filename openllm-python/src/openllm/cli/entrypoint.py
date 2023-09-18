@@ -50,6 +50,7 @@ from simple_di import inject
 
 import bentoml
 import openllm
+import openllm_core
 
 from bentoml._internal.configuration.containers import BentoMLContainer
 from bentoml._internal.models.model import ModelStore
@@ -67,6 +68,7 @@ from openllm_core._typing_compat import Concatenate
 from openllm_core._typing_compat import DictStrAny
 from openllm_core._typing_compat import LiteralBackend
 from openllm_core._typing_compat import LiteralQuantise
+from openllm_core._typing_compat import LiteralSerialisation
 from openllm_core._typing_compat import LiteralString
 from openllm_core._typing_compat import ParamSpec
 from openllm_core._typing_compat import Self
@@ -343,7 +345,7 @@ def import_command(
     machine: bool,
     backend: LiteralBackend,
     quantize: LiteralQuantise | None,
-    serialisation: t.Literal['safetensors', 'legacy'],
+    serialisation: LiteralSerialisation | None,
 ) -> bentoml.Model:
   """Setup LLM interactively.
 
@@ -396,13 +398,10 @@ def import_command(
   ```
   """
   llm_config = AutoConfig.for_model(model_name)
+  _serialisation = openllm_core.utils.first_not_none(serialisation, default=llm_config['serialisation'])
   env = EnvVarMixin(model_name, backend=llm_config.default_backend(), model_id=model_id, quantize=quantize)
   backend = first_not_none(backend, default=env['backend_value'])
-  llm = infer_auto_class(backend).for_model(
-      model_name, model_id=env['model_id_value'], llm_config=llm_config, model_version=model_version, ensure_available=False,
-                                                                         quantize=env['quantize_value'],
-serialisation=serialisation
-  )
+  llm = infer_auto_class(backend).for_model(model_name, model_id=env['model_id_value'], llm_config=llm_config, model_version=model_version, ensure_available=False, quantize=env['quantize_value'], serialisation=_serialisation)
   _previously_saved = False
   try:
     _ref = openllm.serialisation.get(llm)
@@ -484,7 +483,7 @@ def build_command(
     dockerfile_template: t.TextIO | None,
     containerize: bool,
     push: bool,
-    serialisation: t.Literal['safetensors', 'legacy'],
+    serialisation: LiteralSerialisation | None,
     container_registry: LiteralContainerRegistry,
     container_version_strategy: LiteralContainerVersionStrategy,
     force_push: bool,
@@ -513,17 +512,18 @@ def build_command(
   _previously_built = False
 
   llm_config = AutoConfig.for_model(model_name)
+  _serialisation = openllm_core.utils.first_not_none(serialisation, default=llm_config['serialisation'])
   env = EnvVarMixin(model_name, backend=backend, model_id=model_id, quantize=quantize)
 
   # NOTE: We set this environment variable so that our service.py logic won't raise RuntimeError
   # during build. This is a current limitation of bentoml build where we actually import the service.py into sys.path
   try:
-    os.environ.update({'OPENLLM_MODEL': inflection.underscore(model_name), 'OPENLLM_SERIALIZATION': serialisation, env.backend: env['backend_value']})
+    os.environ.update({'OPENLLM_MODEL': inflection.underscore(model_name), 'OPENLLM_SERIALIZATION': _serialisation, env.backend: env['backend_value']})
     if env['model_id_value']: os.environ[env.model_id] = str(env['model_id_value'])
     if env['quantize_value']: os.environ[env.quantize] = str(env['quantize_value'])
 
     llm = infer_auto_class(env['backend_value']).for_model(
-        model_name, model_id=env['model_id_value'], llm_config=llm_config, ensure_available=True, model_version=model_version, quantize=env['quantize_value'], serialisation=serialisation, **attrs
+        model_name, model_id=env['model_id_value'], llm_config=llm_config, ensure_available=True, model_version=model_version, quantize=env['quantize_value'], serialisation=_serialisation, **attrs
     )
 
     labels = dict(llm.identifying_params)

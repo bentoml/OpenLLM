@@ -48,6 +48,7 @@ _value_docstring = {
             openllm start gpt-neox --model-id stabilityai/stablelm-tuned-alpha-3b
             ```''',
     'default_backend': '''The default backend to run LLM based on available accelerator. By default, it will be PyTorch (pt) for most models. For some models, such as Llama, it will use `vllm` or `flax`. It is a dictionary of key as the accelerator spec in k8s ('cpu', 'nvidia.com/gpu', 'amd.com/gpu', 'cloud-tpus.google.com/v2', ...) and the values as supported OpenLLM backend ('flax', 'tf', 'pt', 'vllm', 'ggml', 'mlc')''',
+    'serialisation': '''Default serialisation format for different models. Some will default to use the legacy 'bin'. ''',
     'url': 'The resolved url for this LLMConfig.',
     'trust_remote_code': 'Whether to always trust remote code',
     'service_name': "Generated service name for this LLMConfig. By default, it is \"generated_{model_name}_service.py\"",
