@@ -20,7 +20,7 @@
   "dependencies": {
     "@mdx-js/react": "*",
     "@vercel/analytics": "*",
-    "@vercel/og": "0.5.11",
+    "@vercel/og": "0.5.13",
     "clsx": "^2.0.0",
     "next": "*",
     "next-themes": "^0.2.1",
