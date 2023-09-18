@@ -18,6 +18,24 @@ This changelog is managed by towncrier and is compiled at release time.
 
 <!-- towncrier release notes start -->
 
+## [0.3.5](https://github.com/bentoml/openllm/tree/v0.3.5)
+
+### Features
+
+- Added support for continuous batching via vLLM
+
+  Currently benchmark shows that 100 concurrent requests shows around 1218 TPS on 1 A100 running meta-llama/Llama-2-13b-chat-hf
+  [#349](https://github.com/bentoml/openllm/issues/349)
+
+
+### Bug fix
+
+- Set a default serialisation for all models.
+
+  Currently, only Llama 2 will use safetensors as default format. For all other models, if they have safetensors format, then it will can be opt-int via `--serialisation safetensors`
+  [#355](https://github.com/bentoml/openllm/issues/355)
+
+
 ## [0.3.4](https://github.com/bentoml/openllm/tree/v0.3.4)
 
 ### Bug fix
