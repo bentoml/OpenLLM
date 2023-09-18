@@ -41,7 +41,7 @@ jobs:
       - name: Locking dependencies
         run: bash ./tools/update-actions.sh
       - name: Create a PR
-        uses: peter-evans/create-pull-request@38e0b6e68b4c852a5500a94740f0e535e0d7ba54 # ratchet:peter-evans/create-pull-request@v4
+        uses: peter-evans/create-pull-request@153407881ec5c347639a548ade7d8ad1d6740e38 # ratchet:peter-evans/create-pull-request@v4
         env:
           GIT_AUTHOR_NAME: ${{ steps.import-gpg-key.outputs.name }}
           GIT_AUTHOR_EMAIL: ${{ steps.import-gpg-key.outputs.email }}
