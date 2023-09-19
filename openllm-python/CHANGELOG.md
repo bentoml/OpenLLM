@@ -18,6 +18,14 @@ This changelog is managed by towncrier and is compiled at release time.
 
 <!-- towncrier release notes start -->
 
+## [0.3.6](https://github.com/bentoml/openllm/tree/v0.3.6)
+
+### Features
+
+- Added support for continuous batching on `/v1/generate`
+  [#375](https://github.com/bentoml/openllm/issues/375)
+
+
 ## [0.3.5](https://github.com/bentoml/openllm/tree/v0.3.5)
 
 ### Features
