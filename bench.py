@@ -1,4 +1,5 @@
 from __future__ import annotations
+import argparse
 import asyncio
 import json
 
@@ -14,8 +15,9 @@ async def send_request(url, prompt, session, model, **attrs):
     result = await response.text()
   print('-' * 10 + '\n\n prompt:', prompt, '\nGeneration:', result, '\n\n' + '-' * 10)
 
-async def main():
-  url = 'http://localhost:3000/v1/generate_stream'
+async def main(args: argparse.Namespace) -> int:
+  endpoint = 'generate' if args.generate else 'generate_stream'
+  url = f'http://localhost:3000/v1/{endpoint}'
   # len=100
   prompts = [
       'What is the meaning of life?',
@@ -135,5 +137,10 @@ async def main():
   ]
   async with aiohttp.ClientSession() as session:
     await asyncio.gather(*[send_request(url, prompt, session, 'llama', max_new_tokens=4096, top_p=0.21) for _, prompt in enumerate(prompts)])
+  return 0
 
-if __name__ == '__main__': asyncio.run(main())
+if __name__ == '__main__':
+  parser = argparse.ArgumentParser()
+  parser.add_argument('--generate', default=False, action='store_true', help='Whether to test with stream endpoint.')
+  args = parser.parse_args()
+  raise SystemExit(asyncio.run(main(args)))
