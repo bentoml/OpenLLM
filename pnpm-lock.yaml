@@ -16,8 +16,8 @@ importers:
   .:
     devDependencies:
       '@edge-runtime/vm':
-        specifier: 3.1.0
-        version: 3.1.0
+        specifier: 3.1.3
+        version: 3.1.3
       '@next/eslint-plugin-next':
         specifier: 13.4.19
         version: 13.4.19
@@ -1545,16 +1545,16 @@ packages:
     resolution: {integrity: sha512-Tbsj02wXCbqGmzdnXNk0SOF19ChhRU70BsroIi4Pm6Ehp56in6vch94mfbdQ17DozxkL3BAVjbZ4Qc1a0HFRAg==}
     dev: false
 
-  /@edge-runtime/primitives@3.1.0:
-    resolution: {integrity: sha512-yxr1QM/lC8nrU38zxePeDqVeIjwsJ83gKGTH8YJ4CoHTv3q+6xEeqRIT+/9IPX/FApWYtnxHauhNqr6CHRj5YA==}
+  /@edge-runtime/primitives@4.0.1:
+    resolution: {integrity: sha512-hxWUzx1SeyOed/Ea9Z6y6tyFKSj8gQWIdLilybTR2ene1IthLZE01A1SLGoch1szUdhFlUwpWDaYBYQw00lj2g==}
     engines: {node: '>=16'}
     dev: true
 
-  /@edge-runtime/vm@3.1.0:
-    resolution: {integrity: sha512-Y2JZgJP+4byI17SiDeEZhvBUvJ+om7E5ll/jrS7aGRpet5qKnJSsGep6xxhMjqT/j8ulFvTMN/kdlMMy5pEKBQ==}
+  /@edge-runtime/vm@3.1.3:
+    resolution: {integrity: sha512-LkEtuVtT1kgOEghxFAEJZ+BeIpGz3XfI2l1Ts74HXzd3JneMmmx6RRkNiEE85DVBpuvv9d8KB1u+lc1CHTmz/g==}
     engines: {node: '>=16'}
     dependencies:
-      '@edge-runtime/primitives': 3.1.0
+      '@edge-runtime/primitives': 4.0.1
     dev: true
 
   /@emotion/babel-plugin@11.11.0:
