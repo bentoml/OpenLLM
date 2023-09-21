@@ -191,8 +191,8 @@ importers:
         specifier: 5.14.9
         version: 5.14.9(@emotion/react@11.11.1)(@emotion/styled@11.11.0)(react-dom@18.2.0)(react@18.2.0)
       '@mui/private-theming':
-        specifier: ^5.14.8
-        version: 5.14.8(react@18.2.0)
+        specifier: ^5.14.10
+        version: 5.14.10(react@18.2.0)
       '@mui/styled-engine':
         specifier: ^5.14.10
         version: 5.14.10(@emotion/react@11.11.1)(@emotion/styled@11.11.0)(react@18.2.0)
@@ -1941,22 +1941,6 @@ packages:
     dependencies:
       '@babel/runtime': 7.22.15
       '@mui/utils': 5.14.10(react@18.2.0)
-      prop-types: 15.8.1
-      react: 18.2.0
-    dev: false
-
-  /@mui/private-theming@5.14.8(react@18.2.0):
-    resolution: {integrity: sha512-iBzpcl3Mh92XaYpYPdgzzRxNGkjpoDz8rf8/q5m+EBPowFEHV+CCS9hC0Q2pOKLW3VFFikA7w/GHt7n++40JGQ==}
-    engines: {node: '>=12.0.0'}
-    peerDependencies:
-      '@types/react': ^17.0.0 || ^18.0.0
-      react: ^17.0.0 || ^18.0.0
-    peerDependenciesMeta:
-      '@types/react':
-        optional: true
-    dependencies:
-      '@babel/runtime': 7.22.15
-      '@mui/utils': 5.14.8(react@18.2.0)
       prop-types: 15.8.1
       react: 18.2.0
     dev: false

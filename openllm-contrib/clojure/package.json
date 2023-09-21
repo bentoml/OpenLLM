@@ -57,7 +57,7 @@
     "@mui/base": "5.0.0-beta.16",
     "@mui/icons-material": "5.14.8",
     "@mui/material": "5.14.9",
-    "@mui/private-theming": "^5.14.8",
+    "@mui/private-theming": "^5.14.10",
     "@mui/styled-engine": "^5.14.10",
     "@mui/system": "^5.14.10",
     "@mui/utils": "^5.14.8",
