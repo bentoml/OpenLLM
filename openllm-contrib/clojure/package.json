@@ -60,7 +60,7 @@
     "@mui/private-theming": "^5.14.10",
     "@mui/styled-engine": "^5.14.10",
     "@mui/system": "^5.14.10",
-    "@mui/utils": "^5.14.8",
+    "@mui/utils": "^5.14.10",
     "@mui/x-data-grid": "6.14.0",
     "@mui/x-date-pickers": "6.13.0",
     "@popperjs/core": "^2.11.8",
