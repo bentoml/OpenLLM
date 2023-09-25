@@ -38,6 +38,8 @@ class BaseAutoLLMClass:
                 /,
                 model_id: str | None = None,
                 model_version: str | None = None,
+                prompt_template: str | None = None,
+                system_message: str | None = None,
                 llm_config: openllm.LLMConfig | None = None,
                 ensure_available: bool = False,
                 **attrs: t.Any) -> openllm.LLM[t.Any, t.Any]:
@@ -48,7 +50,12 @@ class BaseAutoLLMClass:
     >>> llm = openllm.AutoLLM.for_model("flan-t5")
     ```
     '''
-    llm = cls.infer_class_from_name(model).from_pretrained(model_id=model_id, model_version=model_version, llm_config=llm_config, **attrs)
+    llm = cls.infer_class_from_name(model).from_pretrained(model_id=model_id,
+                                                           model_version=model_version,
+                                                           prompt_template=prompt_template,
+                                                           system_message=system_message,
+                                                           llm_config=llm_config,
+                                                           **attrs)
     if ensure_available: llm.save_pretrained()
     return llm
 

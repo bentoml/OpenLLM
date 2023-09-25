@@ -3,7 +3,8 @@ import typing as t
 
 import openllm_core
 
-from openllm_core._prompt import process_prompt
+from openllm_core.prompts._prompt import process_prompt
+from openllm_core.prompts.prompt_template import PromptTemplate
 
 START_BAICHUAN_COMMAND_DOCSTRING = '''\
 Run a LLMServer for Baichuan model.
@@ -24,7 +25,8 @@ or provide `--model-id` flag when running ``openllm start baichuan``:
 \b
 $ openllm start baichuan --model-id='fireballoon/baichuan-vicuna-chinese-7b'
 '''
-DEFAULT_PROMPT_TEMPLATE = '''{instruction}'''
+DEFAULT_SYSTEM_MESSAGE = "A chat between a curious user and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the user's questions."
+DEFAULT_PROMPT_TEMPLATE = '{system_message}\nHuman: {instruction}\nAssistant: '
 
 class BaichuanConfig(openllm_core.LLMConfig):
   """Baichuan-7B is an open-source, large-scale pre-trained language model developed by Baichuan Intelligent Technology.
@@ -61,12 +63,19 @@ class BaichuanConfig(openllm_core.LLMConfig):
 
   def sanitize_parameters(self,
                           prompt: str,
+                          prompt_template: PromptTemplate | None = None,
                           max_new_tokens: int | None = None,
                           top_p: float | None = None,
                           temperature: float | None = None,
                           use_default_prompt_template: bool = False,
                           **attrs: t.Any) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
-    return process_prompt(prompt, DEFAULT_PROMPT_TEMPLATE, use_default_prompt_template, **attrs), {'max_new_tokens': max_new_tokens, 'top_p': top_p, 'temperature': temperature, **attrs}, {}
+    if prompt_template is None:
+      prompt_template = PromptTemplate(DEFAULT_PROMPT_TEMPLATE, DEFAULT_SYSTEM_MESSAGE)
+    else:
+      if prompt_template.template is None: prompt_template.template = DEFAULT_PROMPT_TEMPLATE
+      if prompt_template.system_message is None: prompt_template.system_message = DEFAULT_SYSTEM_MESSAGE
+
+    return process_prompt(prompt, prompt_template.template, **attrs), {'max_new_tokens': max_new_tokens, 'top_p': top_p, 'temperature': temperature, **attrs}, {}
 
   def postprocess_generate(self, prompt: str, generation_result: t.Sequence[str], **_: t.Any) -> str:
     return generation_result[0]

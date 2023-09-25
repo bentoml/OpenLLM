@@ -3,7 +3,7 @@ import typing as t
 
 import openllm_core
 
-from openllm_core._prompt import process_prompt
+from openllm_core.prompts._prompt import process_prompt
 
 START_STABLELM_COMMAND_DOCSTRING = '''\
 Run a LLMServer for StableLM model.
@@ -62,6 +62,7 @@ class StableLMConfig(openllm_core.LLMConfig):
 
   def sanitize_parameters(self,
                           prompt: str,
+                          prompt_template: str | None = None,
                           temperature: float | None = None,
                           max_new_tokens: int | None = None,
                           top_k: int | None = None,

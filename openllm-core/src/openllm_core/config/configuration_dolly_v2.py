@@ -3,7 +3,7 @@ import typing as t
 
 import openllm_core
 
-from openllm_core._prompt import process_prompt
+from openllm_core.prompts._prompt import process_prompt
 from openllm_core.utils import dantic
 
 if t.TYPE_CHECKING:
@@ -91,6 +91,7 @@ class DollyV2Config(openllm_core.LLMConfig):
 
   def sanitize_parameters(self,
                           prompt: str,
+                          prompt_template: str | None = None,
                           max_new_tokens: int | None = None,
                           temperature: float | None = None,
                           top_k: int | None = None,

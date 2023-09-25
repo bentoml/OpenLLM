@@ -3,7 +3,8 @@ import typing as t
 
 import openllm_core
 
-from openllm_core._prompt import process_prompt
+from openllm_core.prompts._prompt import process_prompt
+from openllm_core.prompts.prompt_template import PromptTemplate
 from openllm_core.utils import dantic
 
 START_LLAMA_COMMAND_DOCSTRING = '''\
@@ -38,7 +39,7 @@ OpenLLM also supports running Llama-2 and its fine-tune and variants. To import 
 \b
 $ CONVERTER=hf-llama2 openllm import llama /path/to/llama-2
 '''
-SYSTEM_MESSAGE = '''
+DEFAULT_SYSTEM_MESSAGE = '''
 You are a helpful, respectful and honest assistant. Always answer as helpfully as possible, while being safe.  Your answers should not include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that your responses are socially unbiased and positive in nature.
 
 If a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information.
@@ -47,7 +48,7 @@ SINST_KEY, EINST_KEY, SYS_KEY, EOS_TOKEN, BOS_TOKEN = '[INST]', '[/INST]', '<<SY
 # TODO: support history and v1 prompt implementation
 _v1_prompt, _v2_prompt = '''{instruction}''', '''{start_key} {sys_key}\n{system_message}\n{sys_key}\n\n{instruction}\n{end_key} '''.format(start_key=SINST_KEY,
                                                                                                                                            sys_key=SYS_KEY,
-                                                                                                                                           system_message=SYSTEM_MESSAGE,
+                                                                                                                                           system_message='{system_message}',
                                                                                                                                            instruction='{instruction}',
                                                                                                                                            end_key=EINST_KEY)
 PROMPT_MAPPING = {'v1': _v1_prompt, 'v2': _v2_prompt}
@@ -118,6 +119,7 @@ class LlamaConfig(openllm_core.LLMConfig):
 
   def sanitize_parameters(self,
                           prompt: str,
+                          prompt_template: PromptTemplate | None = None,
                           top_k: int | None = None,
                           top_p: float | None = None,
                           temperature: float | None = None,
@@ -125,9 +127,13 @@ class LlamaConfig(openllm_core.LLMConfig):
                           use_default_prompt_template: bool = False,
                           use_llama2_prompt: bool = True,
                           **attrs: t.Any) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
-    return process_prompt(prompt, DEFAULT_PROMPT_TEMPLATE('v2' if use_llama2_prompt else 'v1') if use_default_prompt_template else None, use_default_prompt_template, **attrs), {
-        'max_new_tokens': max_new_tokens, 'temperature': temperature, 'top_p': top_p, 'top_k': top_k
-    }, {}
+    if prompt_template is None:
+      prompt_template = PromptTemplate(DEFAULT_PROMPT_TEMPLATE('v2' if use_llama2_prompt else 'v1'), DEFAULT_SYSTEM_MESSAGE)
+    else:
+      if prompt_template.template is None: prompt_template.template = DEFAULT_PROMPT_TEMPLATE('v2' if use_llama2_prompt else 'v1')
+      if prompt_template.system_message is None: prompt_template.system_message = DEFAULT_SYSTEM_MESSAGE
+
+    return process_prompt(prompt, prompt_template.template, **attrs), {'max_new_tokens': max_new_tokens, 'temperature': temperature, 'top_p': top_p, 'top_k': top_k}, {}
 
   def postprocess_generate(self, prompt: str, generation_result: list[str], **_: t.Any) -> str:
     return generation_result[0]

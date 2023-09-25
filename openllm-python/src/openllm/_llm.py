@@ -23,7 +23,6 @@ import openllm_core
 from bentoml._internal.models.model import ModelSignature
 from openllm_core._configuration import FineTuneConfig
 from openllm_core._configuration import LLMConfig
-from openllm_core._prompt import process_prompt
 from openllm_core._schema import EmbeddingsOutput
 from openllm_core._typing_compat import AdaptersMapping
 from openllm_core._typing_compat import AdaptersTuple
@@ -40,6 +39,8 @@ from openllm_core._typing_compat import PeftAdapterOutput
 from openllm_core._typing_compat import T
 from openllm_core._typing_compat import TupleAny
 from openllm_core._typing_compat import overload
+from openllm_core.prompts._prompt import process_prompt
+from openllm_core.prompts.prompt_template import PromptTemplate
 from openllm_core.utils import DEBUG
 from openllm_core.utils import MYPY
 from openllm_core.utils import EnvVarMixin
@@ -294,6 +295,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
                        model_version: t.Optional[str],
                        serialisation: t.Literal['safetensors', 'legacy'],
                        _local: bool,
+                       prompt_template: PromptTemplate,
                        **attrs: t.Any) -> None:
       '''Generated __attrs_init__ for openllm.LLM.'''
 
@@ -311,6 +313,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
   _model_version: str
   _serialisation: t.Literal['safetensors', 'legacy']
   _local: bool
+  _prompt_template: PromptTemplate
 
   def __init_subclass__(cls: type[LLM[M, T]]) -> None:
     cd = cls.__dict__
@@ -376,6 +379,8 @@ class LLM(LLMInterface[M, T], ReprMixin):
   def from_pretrained(cls,
                       model_id: str | None = None,
                       model_version: str | None = None,
+                      prompt_template: str | None = None,
+                      system_message: str | None = None,
                       llm_config: LLMConfig | None = None,
                       *args: t.Any,
                       quantize: LiteralQuantise | None = None,
@@ -422,6 +427,8 @@ class LLM(LLMInterface[M, T], ReprMixin):
         model_version: Optional version for this given model id. Default to None. This is useful for saving from custom path.
                       If set to None, the version will either be the git hash from given pretrained model, or the hash inferred
                       from last modified time of the given directory.
+        system_message: Optional system message for what the system prompt for the specified LLM is. If not given, the default system message will be used.
+        prompt_template: Optional custom prompt template. If not given, the default prompt template for the specified model will be used.
         llm_config: The config to use for this LLM. Defaults to None. If not passed, OpenLLM
                     will use `config_class` to construct default configuration.
         quantize: The quantization to use for this LLM. Defaults to None. Possible values
@@ -471,12 +478,15 @@ class LLM(LLMInterface[M, T], ReprMixin):
     except Exception as err:
       raise OpenLLMException(f"Failed to generate a valid tag for {cfg_cls.__openllm_start_name__} with 'model_id={_model_id}' (lookup to see its traceback):\n{err}") from err
 
+    template = PromptTemplate(prompt_template, system_message)
+
     return cls(*args,
                model_id=_model_id,
                llm_config=llm_config,
                quantization_config=quantization_config,
                _quantize=quantize,
                _model_version=_tag.version,
+               _prompt_template=template,
                _tag=_tag,
                _serialisation=serialisation,
                _local=_local,
@@ -539,6 +549,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
                _tag: bentoml.Tag,
                _serialisation: t.Literal['safetensors', 'legacy'],
                _local: bool,
+               _prompt_template: PromptTemplate,
                _adapters_mapping: AdaptersMapping | None,
                **attrs: t.Any,
                ):
@@ -651,7 +662,8 @@ class LLM(LLMInterface[M, T], ReprMixin):
                         _adapters_mapping,
                         _model_version,
                         _serialisation,
-                        _local)
+                        _local,
+                        _prompt_template)
 
     self.llm_post_init()
 
@@ -729,6 +741,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
     - The attributes dictionary that can be passed into LLMConfig to generate a GenerationConfig
     - The attributes dictionary that will be passed into `self.postprocess_generate`.
     '''
+    attrs.update({'prompt_template': self._prompt_template})
     return self.config.sanitize_parameters(prompt, **attrs)
 
   def postprocess_generate(self, prompt: str, generation_result: t.Any, **attrs: t.Any) -> t.Any:
@@ -938,9 +951,10 @@ class LLM(LLMInterface[M, T], ReprMixin):
     prompt, generate_kwargs, postprocess_kwargs = self.sanitize_parameters(prompt, **attrs)
     return self.postprocess_generate(prompt, self.generate(prompt, **generate_kwargs), **postprocess_kwargs)
 
-  def generate_one(self, prompt: str, stop: list[str], **preprocess_generate_kwds: t.Any) -> list[dict[t.Literal['generated_text'], str]]:
-    max_new_tokens, encoded_inputs = preprocess_generate_kwds.pop('max_new_tokens', 200), self.tokenizer(prompt, return_tensors='pt').to(self.device)
-    src_len, stopping_criteria = encoded_inputs['input_ids'].shape[1], preprocess_generate_kwds.pop('stopping_criteria', openllm.StoppingCriteriaList([]))
+  def generate_one(self, prompt: str, stop: list[str], **attrs: t.Any) -> list[dict[t.Literal['generated_text'], str]]:
+    prompt, generate_kwargs, _ = self.sanitize_parameters(prompt, **attrs)
+    max_new_tokens, encoded_inputs = generate_kwargs.pop('max_new_tokens', 200), self.tokenizer(prompt, return_tensors='pt').to(self.device)
+    src_len, stopping_criteria = encoded_inputs['input_ids'].shape[1], generate_kwargs.pop('stopping_criteria', openllm.StoppingCriteriaList([]))
     stopping_criteria.append(openllm.StopSequenceCriteria(stop, self.tokenizer))
     result = self.tokenizer.decode(self.model.generate(encoded_inputs['input_ids'], max_new_tokens=max_new_tokens, stopping_criteria=stopping_criteria)[0].tolist()[src_len:])
     # Inference API returns the stop sequence
@@ -950,6 +964,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
 
   def generate(self, prompt: str, **attrs: t.Any) -> t.List[t.Any]:
     # TODO: support different generation strategies, similar to self.model.generate
+    prompt, attrs, _ = self.sanitize_parameters(prompt, **attrs)
     for it in self.generate_iterator(prompt, **attrs):
       pass
     return [it]
@@ -969,6 +984,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
     from ._generation import is_partial_stop
     from ._generation import prepare_logits_processor
 
+    prompt, attrs, _ = self.sanitize_parameters(prompt, **attrs)
     len_prompt = len(prompt)
     config = self.config.model_construct_env(**attrs)
     if stop_token_ids is None: stop_token_ids = []
@@ -1181,24 +1197,28 @@ def llm_runnable_class(self: LLM[M, T], embeddings_sig: ModelSignature, generate
 
     @bentoml.Runnable.method(**method_signature(generate_sig))  # type: ignore
     def __call__(__self: _Runnable, prompt: str, **attrs: t.Any) -> list[t.Any]:
+      prompt, attrs, _ = self.sanitize_parameters(prompt, **attrs)
       adapter_name = attrs.pop('adapter_name', None)
       if adapter_name is not None: __self.set_adapter(adapter_name)
       return self.generate(prompt, **attrs)
 
     @bentoml.Runnable.method(**method_signature(generate_sig))  # type: ignore
     def generate(__self: _Runnable, prompt: str, **attrs: t.Any) -> list[t.Any]:
+      prompt, attrs, _ = self.sanitize_parameters(prompt, **attrs)
       adapter_name = attrs.pop('adapter_name', None)
       if adapter_name is not None: __self.set_adapter(adapter_name)
       return self.generate(prompt, **attrs)
 
     @bentoml.Runnable.method(**method_signature(generate_sig))  # type: ignore
     def generate_one(__self: _Runnable, prompt: str, stop: list[str], **attrs: t.Any) -> t.Sequence[dict[t.Literal['generated_text'], str]]:
+      prompt, attrs, _ = self.sanitize_parameters(prompt, **attrs)
       adapter_name = attrs.pop('adapter_name', None)
       if adapter_name is not None: __self.set_adapter(adapter_name)
       return self.generate_one(prompt, stop, **attrs)
 
     @bentoml.Runnable.method(**method_signature(generate_iterator_sig))  # type: ignore
     def generate_iterator(__self: _Runnable, prompt: str, **attrs: t.Any) -> t.Generator[str, None, str]:
+      prompt, attrs, _ = self.sanitize_parameters(prompt, **attrs)
       adapter_name = attrs.pop('adapter_name', None)
       if adapter_name is not None: __self.set_adapter(adapter_name)
       pre = 0

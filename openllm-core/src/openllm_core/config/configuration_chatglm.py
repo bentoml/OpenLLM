@@ -61,6 +61,7 @@ class ChatGLMConfig(openllm_core.LLMConfig):
 
   def sanitize_parameters(self,
                           prompt: str,
+                          prompt_template: str | None = None,
                           max_new_tokens: int | None = None,
                           num_beams: int | None = None,
                           top_p: float | None = None,

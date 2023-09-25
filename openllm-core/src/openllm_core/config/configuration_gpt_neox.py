@@ -3,7 +3,7 @@ import typing as t
 
 import openllm_core
 
-from openllm_core._prompt import process_prompt
+from openllm_core.prompts._prompt import process_prompt
 from openllm_core.utils import dantic
 
 START_GPT_NEOX_COMMAND_DOCSTRING = '''\
@@ -58,6 +58,7 @@ class GPTNeoXConfig(openllm_core.LLMConfig):
 
   def sanitize_parameters(self,
                           prompt: str,
+                          prompt_template: str | None = None,
                           temperature: float | None = None,
                           max_new_tokens: int | None = None,
                           use_default_prompt_template: bool = True,

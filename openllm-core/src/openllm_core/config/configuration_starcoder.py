@@ -54,6 +54,7 @@ class StarCoderConfig(openllm_core.LLMConfig):
 
   def sanitize_parameters(self,
                           prompt: str,
+                          prompt_template: str | None = None,
                           temperature: float | None = None,
                           top_p: float | None = None,
                           max_new_tokens: int | None = None,
