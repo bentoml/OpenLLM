@@ -24,7 +24,7 @@
     "clsx": "^2.0.0",
     "next": "*",
     "next-themes": "^0.2.1",
-    "nextra": "2.11.1",
+    "nextra": "2.13.0",
     "nextra-theme-docs": "2.12.3",
     "react": "*",
     "react-dom": "*"
