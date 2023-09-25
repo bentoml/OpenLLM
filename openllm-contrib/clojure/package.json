@@ -35,7 +35,7 @@
     "postcss": "^8.4.29",
     "postcss-cli": "^10.1.0",
     "shadow-cljs": "2.25.4",
-    "tailwindcss": "^3.3.2"
+    "tailwindcss": "^3.3.3"
   },
   "dependencies": {
     "@babel/runtime": "^7.22.15",
