@@ -17,4 +17,5 @@ def from_spec(spec: dict[str, t.Any]) -> IODescriptor[t.Any]:
 T = t.TypeVar('T')
 
 class IODescriptor(t.Generic[T]):
-  ...
+  def __init_subclass__(cls) -> None:
+    ...
