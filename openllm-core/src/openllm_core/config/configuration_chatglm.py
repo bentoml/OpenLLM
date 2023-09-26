@@ -5,6 +5,9 @@ import openllm_core
 
 from openllm_core.utils import dantic
 
+if t.TYPE_CHECKING:
+  from openllm_core.prompt import PromptTemplate
+
 START_CHATGLM_COMMAND_DOCSTRING = '''\
 Run a LLMServer for ChatGLM model.
 
@@ -61,7 +64,8 @@ class ChatGLMConfig(openllm_core.LLMConfig):
 
   def sanitize_parameters(self,
                           prompt: str,
-                          prompt_template: str | None = None,
+                          prompt_template: PromptTemplate | str | None = None,
+                          system_message: str | None = None,
                           max_new_tokens: int | None = None,
                           num_beams: int | None = None,
                           top_p: float | None = None,

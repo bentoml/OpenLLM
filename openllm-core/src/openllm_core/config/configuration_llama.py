@@ -3,8 +3,8 @@ import typing as t
 
 import openllm_core
 
-from openllm_core.prompts._prompt import process_prompt
-from openllm_core.prompts.prompt_template import PromptTemplate
+from openllm_core.prompt import PromptTemplate
+from openllm_core.prompt import process_prompt
 from openllm_core.utils import dantic
 
 START_LLAMA_COMMAND_DOCSTRING = '''\
@@ -119,7 +119,8 @@ class LlamaConfig(openllm_core.LLMConfig):
 
   def sanitize_parameters(self,
                           prompt: str,
-                          prompt_template: PromptTemplate | None = None,
+                          prompt_template: PromptTemplate | str | None = None,
+                          system_message: str | None = None,
                           top_k: int | None = None,
                           top_p: float | None = None,
                           temperature: float | None = None,
@@ -127,13 +128,13 @@ class LlamaConfig(openllm_core.LLMConfig):
                           use_default_prompt_template: bool = False,
                           use_llama2_prompt: bool = True,
                           **attrs: t.Any) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
+    system_message = DEFAULT_SYSTEM_MESSAGE if system_message is None else system_message
     if prompt_template is None:
-      prompt_template = PromptTemplate(DEFAULT_PROMPT_TEMPLATE('v2' if use_llama2_prompt else 'v1'), DEFAULT_SYSTEM_MESSAGE)
-    else:
-      if prompt_template.template is None: prompt_template.template = DEFAULT_PROMPT_TEMPLATE('v2' if use_llama2_prompt else 'v1')
-      if prompt_template.system_message is None: prompt_template.system_message = DEFAULT_SYSTEM_MESSAGE
+      prompt_template = PromptTemplate(DEFAULT_PROMPT_TEMPLATE('v2' if use_llama2_prompt else 'v1'), system_message)
+    elif isinstance(prompt_template, str):
+      prompt_template = PromptTemplate(prompt_template, system_message)
 
-    return process_prompt(prompt, prompt_template.template, **attrs), {'max_new_tokens': max_new_tokens, 'temperature': temperature, 'top_p': top_p, 'top_k': top_k}, {}
+    return process_prompt(prompt, prompt_template, **attrs), {'max_new_tokens': max_new_tokens, 'temperature': temperature, 'top_p': top_p, 'top_k': top_k}, {}
 
   def postprocess_generate(self, prompt: str, generation_result: list[str], **_: t.Any) -> str:
     return generation_result[0]

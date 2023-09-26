@@ -39,8 +39,8 @@ from openllm_core._typing_compat import PeftAdapterOutput
 from openllm_core._typing_compat import T
 from openllm_core._typing_compat import TupleAny
 from openllm_core._typing_compat import overload
-from openllm_core.prompts._prompt import process_prompt
-from openllm_core.prompts.prompt_template import PromptTemplate
+from openllm_core.prompt import PromptTemplate
+from openllm_core.prompt import process_prompt
 from openllm_core.utils import DEBUG
 from openllm_core.utils import MYPY
 from openllm_core.utils import EnvVarMixin
@@ -295,7 +295,8 @@ class LLM(LLMInterface[M, T], ReprMixin):
                        model_version: t.Optional[str],
                        serialisation: t.Literal['safetensors', 'legacy'],
                        _local: bool,
-                       prompt_template: PromptTemplate,
+                       prompt_template: PromptTemplate | str | None,
+                       system_message: str | None,
                        **attrs: t.Any) -> None:
       '''Generated __attrs_init__ for openllm.LLM.'''
 
@@ -313,7 +314,8 @@ class LLM(LLMInterface[M, T], ReprMixin):
   _model_version: str
   _serialisation: t.Literal['safetensors', 'legacy']
   _local: bool
-  _prompt_template: PromptTemplate
+  _prompt_template: PromptTemplate | str | None
+  _system_message: str | None
 
   def __init_subclass__(cls: type[LLM[M, T]]) -> None:
     cd = cls.__dict__
@@ -379,7 +381,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
   def from_pretrained(cls,
                       model_id: str | None = None,
                       model_version: str | None = None,
-                      prompt_template: str | None = None,
+                      prompt_template: PromptTemplate | str | None = None,
                       system_message: str | None = None,
                       llm_config: LLMConfig | None = None,
                       *args: t.Any,
@@ -478,15 +480,14 @@ class LLM(LLMInterface[M, T], ReprMixin):
     except Exception as err:
       raise OpenLLMException(f"Failed to generate a valid tag for {cfg_cls.__openllm_start_name__} with 'model_id={_model_id}' (lookup to see its traceback):\n{err}") from err
 
-    template = PromptTemplate(prompt_template, system_message)
-
     return cls(*args,
                model_id=_model_id,
                llm_config=llm_config,
                quantization_config=quantization_config,
                _quantize=quantize,
                _model_version=_tag.version,
-               _prompt_template=template,
+               _prompt_template=prompt_template,
+               _system_message=system_message,
                _tag=_tag,
                _serialisation=serialisation,
                _local=_local,
@@ -549,7 +550,8 @@ class LLM(LLMInterface[M, T], ReprMixin):
                _tag: bentoml.Tag,
                _serialisation: t.Literal['safetensors', 'legacy'],
                _local: bool,
-               _prompt_template: PromptTemplate,
+               _prompt_template: PromptTemplate | str | None,
+               _system_message: str | None,
                _adapters_mapping: AdaptersMapping | None,
                **attrs: t.Any,
                ):
@@ -663,7 +665,8 @@ class LLM(LLMInterface[M, T], ReprMixin):
                         _model_version,
                         _serialisation,
                         _local,
-                        _prompt_template)
+                        _prompt_template,
+                        _system_message)
 
     self.llm_post_init()
 
@@ -741,7 +744,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
     - The attributes dictionary that can be passed into LLMConfig to generate a GenerationConfig
     - The attributes dictionary that will be passed into `self.postprocess_generate`.
     '''
-    attrs.update({'prompt_template': self._prompt_template})
+    attrs.update({'prompt_template': self._prompt_template, 'system_message': self._system_message})
     return self.config.sanitize_parameters(prompt, **attrs)
 
   def postprocess_generate(self, prompt: str, generation_result: t.Any, **attrs: t.Any) -> t.Any:

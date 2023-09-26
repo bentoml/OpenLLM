@@ -3,8 +3,8 @@ import typing as t
 
 import openllm_core
 
-from openllm_core.prompts._prompt import process_prompt
-from openllm_core.prompts.prompt_template import PromptTemplate
+from openllm_core.prompt import PromptTemplate
+from openllm_core.prompt import process_prompt
 
 START_BAICHUAN_COMMAND_DOCSTRING = '''\
 Run a LLMServer for Baichuan model.
@@ -63,19 +63,21 @@ class BaichuanConfig(openllm_core.LLMConfig):
 
   def sanitize_parameters(self,
                           prompt: str,
-                          prompt_template: PromptTemplate | None = None,
+                          prompt_template: PromptTemplate | str | None = None,
+                          system_message: str | None = None,
                           max_new_tokens: int | None = None,
                           top_p: float | None = None,
                           temperature: float | None = None,
                           use_default_prompt_template: bool = False,
                           **attrs: t.Any) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
-    if prompt_template is None:
-      prompt_template = PromptTemplate(DEFAULT_PROMPT_TEMPLATE, DEFAULT_SYSTEM_MESSAGE)
-    else:
-      if prompt_template.template is None: prompt_template.template = DEFAULT_PROMPT_TEMPLATE
-      if prompt_template.system_message is None: prompt_template.system_message = DEFAULT_SYSTEM_MESSAGE
 
-    return process_prompt(prompt, prompt_template.template, **attrs), {'max_new_tokens': max_new_tokens, 'top_p': top_p, 'temperature': temperature, **attrs}, {}
+    system_message = DEFAULT_SYSTEM_MESSAGE if system_message is None else system_message
+    if prompt_template is None:
+      prompt_template = PromptTemplate(DEFAULT_PROMPT_TEMPLATE, system_message)
+    elif isinstance(prompt_template, str):
+      prompt_template = PromptTemplate(prompt_template, system_message)
+
+    return process_prompt(prompt, prompt_template, **attrs), {'max_new_tokens': max_new_tokens, 'top_p': top_p, 'temperature': temperature, **attrs}, {}
 
   def postprocess_generate(self, prompt: str, generation_result: t.Sequence[str], **_: t.Any) -> str:
     return generation_result[0]
