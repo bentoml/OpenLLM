@@ -45,7 +45,7 @@ jobs:
     outputs:
       message: ${{ steps.commit_message.outputs.message }}
     steps:
-      - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # ratchet:actions/checkout@v4
+      - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # ratchet:actions/checkout@v4.1.0
         # Gets the correct commit message for pull request
         with:
           ref: ${{ github.event.pull_request.head.sha }}
@@ -63,7 +63,7 @@ jobs:
     if: >-
       contains(needs.get_commit_message.outputs.message, '[binary build]') || github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, '03 - Standalone Build')) || (github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/heads/main')))
     steps:
-      - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # ratchet:actions/checkout@v4
+      - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # ratchet:actions/checkout@v4.1.0
         with:
           fetch-depth: 0
       - uses: bentoml/setup-bentoml-action@862aa8fa0e0c3793fcca4bfe7a62717a497417e4 # ratchet:bentoml/setup-bentoml-action@v1
@@ -132,7 +132,7 @@ jobs:
       PYAPP_PIP_EXTERNAL: 'true'
     steps:
       - name: Checkout code
-        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # ratchet:actions/checkout@v4
+        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # ratchet:actions/checkout@v4.1.0
         with:
           fetch-depth: 0
       - name: Pull latest change
@@ -237,7 +237,7 @@ jobs:
         working-directory: openllm-python
     steps:
       - name: Checkout code
-        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # ratchet:actions/checkout@v4
+        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # ratchet:actions/checkout@v4.1.0
       - name: Set up Python
         uses: actions/setup-python@61a6322f88396a6271a6ee3565807d608ecaddd1 # ratchet:actions/setup-python@v4
         with:

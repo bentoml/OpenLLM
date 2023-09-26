@@ -24,7 +24,7 @@ jobs:
     env:
       ACTIONS_TOKEN: ${{ secrets.OPENLLM_PAT }}
     steps:
-      - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # ratchet:actions/checkout@v4
+      - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # ratchet:actions/checkout@v4.1.0
         with:
           fetch-depth: 0
       - name: Install jq and curl
