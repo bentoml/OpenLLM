@@ -3,34 +3,24 @@ import typing as t
 
 import attr
 
-from .utils import PromptFormatter
-
-default_formatter = PromptFormatter()
+from .utils import default_formatter
 
 @attr.define(slots=True)
 class PromptTemplate:
-  _template: str | None
-  _system_message: str | None
+  prompt_template: str
+  input_variables: t.Mapping[str, str]
+  prepared_template: str = attr.field(init=False)
 
-  def __init__(self, template: str | None = None, system_message: str | None = None) -> None:
-    self._template = template
-    self._system_message = system_message
-
-  def _fill_in_variables(self, **kwargs: t.Any) -> str | None:
-    if self._template is None: return self._template
-    template_variables = default_formatter.extract_template_variables(self._template)
-    prompt_variables = {key: '{' + key + '}' if key not in kwargs else (kwargs[key] or '') for key in template_variables}
-    return self._template.format(**prompt_variables)
-
-  @property
-  def template(self) -> str | None:
-    return self._fill_in_variables(system_message=self._system_message)
+  def __attrs_post_init__(self) -> None:
+    template_variables = default_formatter.extract_template_variables(self.prompt_template)
+    prompt_variables = {key: '{' + key + '}' if key not in self.input_variables else (self.input_variables[key] or '') for key in template_variables}
+    self.prepared_template = self.prompt_template.format(**prompt_variables)
 
 def process_prompt(prompt: str, template: PromptTemplate | str | None = None, use_prompt_template: bool = True, **attrs: t.Any) -> str:
   # Currently, all default prompt will always have `instruction` key.
-  if isinstance(template, PromptTemplate): template = template.template
   if not use_prompt_template: return prompt
   elif template is None: raise ValueError("'template' can't be None while 'use_prompt_template=False'")
+  if isinstance(template, PromptTemplate): template = template.prepared_template
   template_variables = default_formatter.extract_template_variables(template)
   prompt_variables = {k: v for k, v in attrs.items() if k in template_variables}
   if 'instruction' in prompt_variables:

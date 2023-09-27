@@ -130,9 +130,9 @@ class LlamaConfig(openllm_core.LLMConfig):
                           **attrs: t.Any) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
     system_message = DEFAULT_SYSTEM_MESSAGE if system_message is None else system_message
     if prompt_template is None:
-      prompt_template = PromptTemplate(DEFAULT_PROMPT_TEMPLATE('v2' if use_llama2_prompt else 'v1'), system_message)
+      prompt_template = PromptTemplate(prompt_template=DEFAULT_PROMPT_TEMPLATE('v2' if use_llama2_prompt else 'v1'), input_variables={'system_message': system_message})
     elif isinstance(prompt_template, str):
-      prompt_template = PromptTemplate(prompt_template, system_message)
+      prompt_template = PromptTemplate(prompt_template=prompt_template, input_variables={'system_message': system_message})
 
     return process_prompt(prompt, prompt_template, **attrs), {'max_new_tokens': max_new_tokens, 'temperature': temperature, 'top_p': top_p, 'top_k': top_k}, {}
 

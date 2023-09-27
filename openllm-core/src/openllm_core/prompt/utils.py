@@ -14,3 +14,5 @@ class PromptFormatter(string.Formatter):
 
   def extract_template_variables(self, template: str) -> t.Sequence[str]:
     return [field[1] for field in self.parse(template) if field[1] is not None]
+
+default_formatter = PromptFormatter()

@@ -70,12 +70,11 @@ class BaichuanConfig(openllm_core.LLMConfig):
                           temperature: float | None = None,
                           use_default_prompt_template: bool = False,
                           **attrs: t.Any) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
-
     system_message = DEFAULT_SYSTEM_MESSAGE if system_message is None else system_message
     if prompt_template is None:
-      prompt_template = PromptTemplate(DEFAULT_PROMPT_TEMPLATE, system_message)
+      prompt_template = PromptTemplate(prompt_template=DEFAULT_PROMPT_TEMPLATE, input_variables={'system_message': system_message})
     elif isinstance(prompt_template, str):
-      prompt_template = PromptTemplate(prompt_template, system_message)
+      prompt_template = PromptTemplate(prompt_template=prompt_template, input_variables={'system_message': system_message})
 
     return process_prompt(prompt, prompt_template, **attrs), {'max_new_tokens': max_new_tokens, 'top_p': top_p, 'temperature': temperature, **attrs}, {}
 
