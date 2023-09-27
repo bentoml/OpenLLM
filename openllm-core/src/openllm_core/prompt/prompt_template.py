@@ -13,7 +13,7 @@ class PromptTemplate:
 
   def __attrs_post_init__(self) -> None:
     template_variables = default_formatter.extract_template_variables(self.prompt_template)
-    prompt_variables = {key: '{' + key + '}' if key not in self.input_variables else (self.input_variables[key] or '') for key in template_variables}
+    prompt_variables = {key: '{' + key + '}' if key not in self.input_variables else self.input_variables[key] for key in template_variables}
     self.prepared_template = self.prompt_template.format(**prompt_variables)
 
 def process_prompt(prompt: str, template: PromptTemplate | str | None = None, use_prompt_template: bool = True, **attrs: t.Any) -> str:
