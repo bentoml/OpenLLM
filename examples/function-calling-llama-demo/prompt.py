@@ -3,27 +3,26 @@ from string import Template
 from typing import Callable, Dict, Any, List
 import json
 
-HVAC_FUNCS =[
+EXAMPLE_FUNCS =[
 {
-    "function": "HVAC_CONTROL",
-    "description": "Call an API to adjust the AC setting in the car.",
+    "function": "search_bing",
+    "description": "Search the web for content on Bing. This allows users to search online/the internet/the web for content.",
     "arguments": [
         {
-            "name": "action",
-            "description": """The type of action requested, must be one of the following:
-'SET_TEMPERATURE': set, increase, decrease or turn on AC to a desired temperature. Must be used with the temperature argument;
-'UP': increase the temperature from current setting. If a specific temperature is given, use SET_TEMPERATURE instead;
-'DOWN': decrease the temperature from current setting. If a specific temperature is given, use SET_TEMPERATURE instead;
-'ON': turn on the AC;
-'OFF': turn off the AC;
-            """,
-            "enum": ["ON", "OFF", "UP", "DOWN", "SET_TEMPERATURE"],
+            "name": "query",
             "type": "string",
-        },
+            "description": "The search query string"
+        }
+    ]
+},
+{
+    "function": "search_arxiv",
+    "description": "Search for research papers on ArXiv. Make use of AND, OR and NOT operators as appropriate to join terms within the query.",
+    "arguments": [
         {
-            "name": "temperature",
-            "type": "number",
-            "description": "Only used together with the type argument is SET_TEMPERATURE",
+            "name": "query",
+            "type": "string",
+            "description": "The search query string"
         }
     ]
 }]
