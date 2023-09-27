@@ -116,8 +116,8 @@ importers:
         specifier: ^18.0.6
         version: 18.0.6
       autoprefixer:
-        specifier: ^10.4.12
-        version: 10.4.12(postcss@8.4.29)
+        specifier: ^10.4.16
+        version: 10.4.16(postcss@8.4.29)
       eslint:
         specifier: '*'
         version: 8.47.0
@@ -261,8 +261,8 @@ importers:
         specifier: ^4.4.6
         version: 4.4.6
       autoprefixer:
-        specifier: ^10.4.12
-        version: 10.4.12(postcss@8.4.29)
+        specifier: ^10.4.16
+        version: 10.4.16(postcss@8.4.29)
       cssnano:
         specifier: ^6.0.1
         version: 6.0.1(postcss@8.4.29)
@@ -2941,16 +2941,16 @@ packages:
     resolution: {integrity: sha512-Oei9OH4tRh0YqU3GxhX79dM/mwVgvbZJaSNaRk+bshkj0S5cfHcgYakreBjrHwatXKbz+IoIdYLxrKim2MjW0Q==}
     dev: true
 
-  /autoprefixer@10.4.12(postcss@8.4.29):
-    resolution: {integrity: sha512-WrCGV9/b97Pa+jtwf5UGaRjgQIg7OK3D06GnoYoZNcG1Xb8Gt3EfuKjlhh9i/VtT16g6PYjZ69jdJ2g8FxSC4Q==}
+  /autoprefixer@10.4.16(postcss@8.4.29):
+    resolution: {integrity: sha512-7vd3UC6xKp0HLfua5IjZlcXvGAGy7cBAXTg2lyQ/8WpNhd6SiZ8Be+xm3FyBSYJx5GKcpRCzBh7RH4/0dnY+uQ==}
     engines: {node: ^10 || ^12 || >=14}
     hasBin: true
     peerDependencies:
       postcss: ^8.1.0
     dependencies:
       browserslist: 4.21.10
-      caniuse-lite: 1.0.30001520
-      fraction.js: 4.2.0
+      caniuse-lite: 1.0.30001539
+      fraction.js: 4.3.6
       normalize-range: 0.1.2
       picocolors: 1.0.0
       postcss: 8.4.29
@@ -3119,7 +3119,7 @@ packages:
     engines: {node: ^6 || ^7 || ^8 || ^9 || ^10 || ^11 || ^12 || >=13.7}
     hasBin: true
     dependencies:
-      caniuse-lite: 1.0.30001520
+      caniuse-lite: 1.0.30001539
       electron-to-chromium: 1.4.492
       node-releases: 2.0.13
       update-browserslist-db: 1.0.11(browserslist@4.21.10)
@@ -3199,13 +3199,17 @@ packages:
     resolution: {integrity: sha512-bsTwuIg/BZZK/vreVTYYbSWoe2F+71P7K5QGEX+pT250DZbfU1MQ5prOKpPR+LL6uWKK3KMwMCAS74QB3Um1uw==}
     dependencies:
       browserslist: 4.21.10
-      caniuse-lite: 1.0.30001520
+      caniuse-lite: 1.0.30001539
       lodash.memoize: 4.1.2
       lodash.uniq: 4.5.0
     dev: true
 
   /caniuse-lite@1.0.30001520:
     resolution: {integrity: sha512-tahF5O9EiiTzwTUqAeFjIZbn4Dnqxzz7ktrgGlMYNLH43Ul26IgTMH/zvL3DG0lZxBYnlT04axvInszUsZULdA==}
+    dev: false
+
+  /caniuse-lite@1.0.30001539:
+    resolution: {integrity: sha512-hfS5tE8bnNiNvEOEkm8HElUHroYwlqMMENEzELymy77+tJ6m+gA2krtHl5hxJaj71OlpC2cHZbdSMX1/YEqEkA==}
 
   /ccount@2.0.1:
     resolution: {integrity: sha512-eyrF0jiFpY+3drT6383f1qhkbGsLSifNAjA61IUjZjmLCWjItY6LB9ft9YhoDgwfmclB2zhu51Lc7+95b8NRAg==}
@@ -4837,8 +4841,8 @@ packages:
       mime-types: 2.1.35
     dev: true
 
-  /fraction.js@4.2.0:
-    resolution: {integrity: sha512-MhLuK+2gUcnZe8ZHlaaINnQLl0xRIGRfcGk2yl8xoQAfHrSsL3rYu6FCmBdkdbhc9EPlwyGHewaRsvwRMJtAlA==}
+  /fraction.js@4.3.6:
+    resolution: {integrity: sha512-n2aZ9tNfYDwaHhvFTkhFErqOMIb8uyzSQ+vGJBjZyanAKZVbGUQ1sngfk9FdkBw7G26O7AgNjLcecLffD1c7eg==}
     dev: true
 
   /fs-extra@11.1.1:
