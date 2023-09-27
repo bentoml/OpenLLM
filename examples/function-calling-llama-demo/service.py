@@ -11,7 +11,7 @@ svc = bentoml.Service('assistant', runners=[llm_runner])
 async def query(input: str) -> Dict:
     try:
         input_prompt = prompt_template(HVAC_FUNCS)(input)
-        
+
         print("** llm prompt:", input_prompt)
         async for output in llm_runner.vllm_generate.async_stream(input_prompt, request_id=openllm_core.utils.gen_random_uuid()):
             responses = output
