@@ -8,7 +8,7 @@ default_language_version:
 exclude: '.*\.(css|js|svg)$'
 repos:
   - repo: https://github.com/google/yapf
-    rev: v0.40.0
+    rev: v0.40.2
     hooks:
       - id: yapf
         verbose: true
@@ -18,7 +18,7 @@ repos:
               openllm-python/src/openllm/cli/entrypoint.py
           )$
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: 'v0.0.290'
+    rev: 'v0.0.291'
     hooks:
       - id: ruff
         verbose: true
@@ -32,7 +32,7 @@ repos:
         exclude: ^(docs|tools|openllm-python/tests)
         args: [--config=pyproject.toml]
   - repo: https://github.com/pre-commit/mirrors-eslint
-    rev: v8.49.0
+    rev: v8.50.0
     hooks:
       - id: eslint
         verbose: true
