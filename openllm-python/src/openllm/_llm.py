@@ -7,7 +7,6 @@ import logging
 import os
 import types
 import typing as t
-
 import attr
 import fs.path
 import inflection
@@ -738,7 +737,8 @@ class LLM(LLMInterface[M, T], ReprMixin):
     > [!NOTE]
     > This will be used from the client side.
     '''
-    if isinstance(generation_result, dict) and 'text' in generation_result: return generation_result['text']
+    import pdb; pdb.set_trace()
+    if isinstance(generation_result, dict) and 'text' in generation_result: return generation_result
     return self.config.postprocess_generate(prompt, generation_result, **attrs)
 
   @property
@@ -974,7 +974,6 @@ class LLM(LLMInterface[M, T], ReprMixin):
     stop_token_ids.append(self.tokenizer.eos_token_id)
 
     logits_processor = prepare_logits_processor(config)
-
     with torch.inference_mode():
       input_ids = self.tokenizer(prompt).input_ids
 
@@ -988,14 +987,16 @@ class LLM(LLMInterface[M, T], ReprMixin):
       past_key_values = out = token = None
       finish_reason = None
       for i in range(config['max_new_tokens']):
-        torch.cuda.synchronize()
+        if torch.cuda.is_available():
+          torch.cuda.synchronize()
         if i == 0:  # prefill
           out = self.model(torch.as_tensor([input_ids], device=self.device), use_cache=True)
         else:  # decoding
           out = self.model(torch.as_tensor([[token]], device=self.device), use_cache=True, past_key_values=past_key_values)
         logits = out.logits
         past_key_values = out.past_key_values
-        torch.cuda.synchronize()
+        if torch.cuda.is_available():
+          torch.cuda.synchronize()
 
         if logits_processor:
           if config['repetition_penalty'] > 1.0:
