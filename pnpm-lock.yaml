@@ -276,8 +276,8 @@ importers:
         specifier: ^10.1.0
         version: 10.1.0(postcss@8.4.29)
       shadow-cljs:
-        specifier: 2.25.4
-        version: 2.25.4
+        specifier: 2.25.6
+        version: 2.25.6
       tailwindcss:
         specifier: ^3.3.3
         version: 3.3.3
@@ -8248,8 +8248,8 @@ packages:
     resolution: {integrity: sha512-cZB2pzVXBnhpJ6PQdsjO+j/MksR28mv4QD/hP/2y1fsIa9Z9RutYgh3N34FZ8Ktl4puAXaIGlct+gMCJ5BmwmA==}
     dev: true
 
-  /shadow-cljs@2.25.4:
-    resolution: {integrity: sha512-pxQok9zxKv8Ohp0bhJS7/lZq7Pe3P2NQ189FGGw3wcq/AgwHBH61ysFbGKZpQ5ZliYF8gJ4VwZM4Bqsbm7AqPw==}
+  /shadow-cljs@2.25.6:
+    resolution: {integrity: sha512-VJwXtZ3CypXsAlPVoqZxw6nzSHNqo/+7bIj55I0bNR+v5i5K21ev6iEeO28hIAhrM1wsjMiJiTFIIro5cIP73w==}
     engines: {node: '>=6.0.0'}
     hasBin: true
     dependencies:
