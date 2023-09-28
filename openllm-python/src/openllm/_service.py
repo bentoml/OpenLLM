@@ -1,10 +1,11 @@
 # mypy: disable-error-code="call-arg,misc,attr-defined,type-abstract,type-arg,valid-type,arg-type"
 from __future__ import annotations
+import json
 import os
+import time
 import typing as t
 import warnings
-import json
-import time
+
 import orjson
 
 from starlette.applications import Starlette
@@ -74,9 +75,9 @@ async def generate_stream_v1(input_dict: dict[str, t.Any]) -> t.AsyncGenerator[s
 async def completion_v1(input_dict: dict[str, t.Any], ctx: bentoml.Context):
   stream = input_dict.pop('stream', False)        # Determine whether to stream the response
   echo = input_dict.pop('echo', False)
-  input_model = input_dict.pop('model', None)     # We don't need the exact model name here
+  input_dict.pop('model', None)     # We don't need the exact model name here
   default_config = llm_config.model_dump(flatten=True)
-  
+
   for key in list(input_dict.keys()):
     if key == 'prompt': continue
     elif key == 'max_tokens':
@@ -85,7 +86,7 @@ async def completion_v1(input_dict: dict[str, t.Any], ctx: bentoml.Context):
       default_config[key] = input_dict[key]   # Replace the default config with the input config
     del input_dict[key]                       # Remove the key from input_dict
   input_dict['adapter_name'] = None
-    
+
   input_dict['llm_config'] = default_config
   qa_inputs = openllm.GenerationInput.from_llm_config(llm_config)(**input_dict)
   config = qa_inputs.llm_config.model_dump()
@@ -94,11 +95,11 @@ async def completion_v1(input_dict: dict[str, t.Any], ctx: bentoml.Context):
     print(responses)
     return json.dumps(
     {
-      'id': openllm_core.utils.gen_random_uuid(), 
+      'id': openllm_core.utils.gen_random_uuid(),
       'object': 'text_completion',
       'created': int(time.time()),
       'model': model,
-      'choices': [  
+      'choices': [
         {
           'text': response,
           'index': i,
@@ -112,7 +113,7 @@ async def completion_v1(input_dict: dict[str, t.Any], ctx: bentoml.Context):
         'total_tokens': 0
       }
     })
-  
+
   def CompletionResponseStream(response: str):
     return json.dumps(
      {
@@ -128,14 +129,14 @@ async def completion_v1(input_dict: dict[str, t.Any], ctx: bentoml.Context):
         }
       ],
       'model': model
-     } 
+     }
     )
-  
+
   async def stream_response_generator(responses)->t.AsyncGenerator[str, None]:
     async for response in responses:
       response = CompletionResponseStream(response)
-      yield f"data: {response}\n\n"
-    yield "data: [DONE]\n\n"
+      yield f'data: {response}\n\n'
+    yield 'data: [DONE]\n\n'
 
   if stream:
     ctx.response.headers['Content-Type'] = 'text/event-stream'
