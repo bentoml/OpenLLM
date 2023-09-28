@@ -51,7 +51,7 @@
     "@emotion/use-insertion-effect-with-fallbacks": "^1.0.1",
     "@emotion/utils": "^1.2.1",
     "@emotion/weak-memoize": "^0.3.1",
-    "@floating-ui/core": "^1.4.1",
+    "@floating-ui/core": "^1.5.0",
     "@floating-ui/dom": "^1.5.3",
     "@floating-ui/react-dom": "^2.0.2",
     "@mui/base": "5.0.0-beta.16",
