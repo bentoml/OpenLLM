@@ -16,6 +16,12 @@ class PromptTemplate:
     prompt_variables = {key: '{' + key + '}' if key not in self.input_variables else self.input_variables[key] for key in template_variables}
     self.prepared_template = self.prompt_template.format(**prompt_variables)
 
+  def with_input_variables(self, input_variables: t.Mapping[str, str]) -> str:
+    template_variables = default_formatter.extract_template_variables(self.prompt_template)
+    merged_inputs = {**self.input_variables, **input_variables}
+    prompt_variables = {key: '{' + key + '}' if key not in merged_inputs else merged_inputs[key] for key in template_variables}
+    return self.prompt_template.format(**prompt_variables)
+
 def process_prompt(prompt: str, template: PromptTemplate | str | None = None, use_prompt_template: bool = True, **attrs: t.Any) -> str:
   # Currently, all default prompt will always have `instruction` key.
   if not use_prompt_template: return prompt
