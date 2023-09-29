@@ -3,11 +3,11 @@ import typing as t
 
 import openllm_core
 
-from openllm_core.prompt import process_prompt
+from openllm_core.prompts import process_prompt
 from openllm_core.utils import dantic
 
 if t.TYPE_CHECKING:
-  from openllm_core.prompt.prompt_template import PromptTemplate
+  from openllm_core.prompts.prompt_template import PromptTemplate
 
 START_OPT_COMMAND_DOCSTRING = '''\
 Run a LLMServer for OPT model.

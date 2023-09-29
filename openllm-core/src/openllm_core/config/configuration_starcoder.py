@@ -4,7 +4,7 @@ import typing as t
 import openllm_core
 
 if t.TYPE_CHECKING:
-  from openllm_core.prompt import PromptTemplate
+  from openllm_core.prompts import PromptTemplate
 
 START_STARCODER_COMMAND_DOCSTRING = '''\
 Run a LLMServer for StarCoder model.

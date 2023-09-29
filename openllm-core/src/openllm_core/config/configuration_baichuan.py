@@ -3,8 +3,7 @@ import typing as t
 
 import openllm_core
 
-from openllm_core.prompt import PromptTemplate
-from openllm_core.prompt import process_prompt
+from openllm_core.prompts import PromptTemplate
 
 START_BAICHUAN_COMMAND_DOCSTRING = '''\
 Run a LLMServer for Baichuan model.
@@ -26,7 +25,7 @@ or provide `--model-id` flag when running ``openllm start baichuan``:
 $ openllm start baichuan --model-id='fireballoon/baichuan-vicuna-chinese-7b'
 '''
 DEFAULT_SYSTEM_MESSAGE = ''
-DEFAULT_PROMPT_TEMPLATE = '{instruction}'
+DEFAULT_PROMPT_TEMPLATE = PromptTemplate('{instruction}')
 
 class BaichuanConfig(openllm_core.LLMConfig):
   """Baichuan-7B is an open-source, large-scale pre-trained language model developed by Baichuan Intelligent Technology.
@@ -68,15 +67,11 @@ class BaichuanConfig(openllm_core.LLMConfig):
                           max_new_tokens: int | None = None,
                           top_p: float | None = None,
                           temperature: float | None = None,
-                          use_default_prompt_template: bool = False,
                           **attrs: t.Any) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
     system_message = DEFAULT_SYSTEM_MESSAGE if system_message is None else system_message
-    if prompt_template is None:
-      prompt_template = PromptTemplate(prompt_template=DEFAULT_PROMPT_TEMPLATE, input_variables={'system_message': system_message})
-    elif isinstance(prompt_template, str):
-      prompt_template = PromptTemplate(prompt_template=prompt_template, input_variables={'system_message': system_message})
-
-    return process_prompt(prompt, prompt_template, **attrs), {'max_new_tokens': max_new_tokens, 'top_p': top_p, 'temperature': temperature, **attrs}, {}
+    if prompt_template is None: prompt_template = DEFAULT_PROMPT_TEMPLATE
+    elif isinstance(prompt_template, str): prompt_template = PromptTemplate(template=prompt_template)
+    return prompt_template.with_options(system_message=system_message).format(instruction=prompt), {'max_new_tokens': max_new_tokens, 'top_p': top_p, 'temperature': temperature, **attrs}, {}
 
   def postprocess_generate(self, prompt: str, generation_result: t.Sequence[str], **_: t.Any) -> str:
     return generation_result[0]

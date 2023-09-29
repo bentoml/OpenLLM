@@ -3,8 +3,8 @@ import typing as t
 
 import openllm_core
 
-from openllm_core.prompt import PromptTemplate
-from openllm_core.prompt import process_prompt
+from openllm_core.prompts import PromptTemplate
+from openllm_core.prompts import process_prompt
 
 START_FALCON_COMMAND_DOCSTRING = '''\
 Run a LLMServer for FalconLM model.

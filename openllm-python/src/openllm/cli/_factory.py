@@ -193,6 +193,8 @@ Available official model_id(s): [default: {llm_config['default_id']}]
     })
     if env['model_id_value']: start_env[env.model_id] = str(env['model_id_value'])
     if env['quantize_value']: start_env[env.quantize] = str(env['quantize_value'])
+    if system_message: start_env['OPENLLM_SYSTEM_MESSAGE'] = system_message
+    if prompt_template: start_env['OPENLLM_PROMPT_TEMPLATE'] = prompt_template
 
     llm = openllm.utils.infer_auto_class(env['backend_value']).for_model(model,
                                                                          model_id=start_env[env.model_id],

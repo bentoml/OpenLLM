@@ -39,8 +39,8 @@ from openllm_core._typing_compat import PeftAdapterOutput
 from openllm_core._typing_compat import T
 from openllm_core._typing_compat import TupleAny
 from openllm_core._typing_compat import overload
-from openllm_core.prompt import PromptTemplate
-from openllm_core.prompt import process_prompt
+from openllm_core.prompts import PromptTemplate
+from openllm_core.prompts import process_prompt
 from openllm_core.utils import DEBUG
 from openllm_core.utils import MYPY
 from openllm_core.utils import EnvVarMixin
@@ -1158,7 +1158,9 @@ def Runner(model_name: str,
     attrs.update({
         'model_id': llm_config['env']['model_id_value'],
         'quantize': llm_config['env']['quantize_value'],
-        'serialisation': first_not_none(os.environ.get('OPENLLM_SERIALIZATION'), attrs.get('serialisation'), default='safetensors')
+        'serialisation': first_not_none(os.environ.get('OPENLLM_SERIALIZATION'), attrs.get('serialisation'), default='safetensors'),
+        'system_message': first_not_none(os.environ.get('OPENLLM_SYSTEM_MESSAGE'), attrs.get('system_message'), None),
+        'prompt_template': first_not_none(os.environ.get('OPENLLM_PROMPT_TEMPLATE'), attrs.get('prompt_template'), None),
     })
 
   backend = t.cast(LiteralBackend, first_not_none(backend, default=EnvVarMixin(model_name, backend=llm_config.default_backend() if llm_config is not None else 'pt')['backend_value']))

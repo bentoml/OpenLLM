@@ -13,7 +13,7 @@ from openllm.cli import termui
 from openllm.cli._factory import machine_option
 from openllm.cli._factory import model_complete_envvar
 from openllm.cli._factory import output_option
-from openllm_core.prompt import process_prompt
+from openllm_core.prompts import process_prompt
 
 LiteralOutput = t.Literal['json', 'pretty', 'porcelain']
 

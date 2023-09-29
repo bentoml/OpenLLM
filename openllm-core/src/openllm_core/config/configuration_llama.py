@@ -3,8 +3,7 @@ import typing as t
 
 import openllm_core
 
-from openllm_core.prompt import PromptTemplate
-from openllm_core.prompt import process_prompt
+from openllm_core.prompts import PromptTemplate
 from openllm_core.utils import dantic
 
 START_LLAMA_COMMAND_DOCSTRING = '''\
@@ -53,8 +52,8 @@ _v1_prompt, _v2_prompt = '''{instruction}''', '''{start_key} {sys_key}\n{system_
                                                                                                                                            end_key=EINST_KEY)
 PROMPT_MAPPING = {'v1': _v1_prompt, 'v2': _v2_prompt}
 
-def _get_prompt(model_type: t.Literal['v1', 'v2']) -> str:
-  return PROMPT_MAPPING[model_type]
+def _get_prompt(model_type: t.Literal['v1', 'v2']) -> PromptTemplate:
+  return PromptTemplate(PROMPT_MAPPING[model_type])
 
 DEFAULT_PROMPT_TEMPLATE = _get_prompt
 
@@ -125,16 +124,14 @@ class LlamaConfig(openllm_core.LLMConfig):
                           top_p: float | None = None,
                           temperature: float | None = None,
                           max_new_tokens: int | None = None,
-                          use_default_prompt_template: bool = False,
                           use_llama2_prompt: bool = True,
                           **attrs: t.Any) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
     system_message = DEFAULT_SYSTEM_MESSAGE if system_message is None else system_message
-    if prompt_template is None:
-      prompt_template = PromptTemplate(prompt_template=DEFAULT_PROMPT_TEMPLATE('v2' if use_llama2_prompt else 'v1'), input_variables={'system_message': system_message})
-    elif isinstance(prompt_template, str):
-      prompt_template = PromptTemplate(prompt_template=prompt_template, input_variables={'system_message': system_message})
-
-    return process_prompt(prompt, prompt_template, **attrs), {'max_new_tokens': max_new_tokens, 'temperature': temperature, 'top_p': top_p, 'top_k': top_k}, {}
+    if prompt_template is None: prompt_template = DEFAULT_PROMPT_TEMPLATE('v2' if use_llama2_prompt else 'v1')
+    elif isinstance(prompt_template, str): prompt_template = PromptTemplate(template=prompt_template)
+    return prompt_template.with_options(system_message=system_message).format(instruction=prompt), {
+        'max_new_tokens': max_new_tokens, 'temperature': temperature, 'top_p': top_p, 'top_k': top_k
+    }, {}
 
   def postprocess_generate(self, prompt: str, generation_result: list[str], **_: t.Any) -> str:
     return generation_result[0]
