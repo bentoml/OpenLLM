@@ -738,7 +738,6 @@ class LLM(LLMInterface[M, T], ReprMixin):
     > [!NOTE]
     > This will be used from the client side.
     '''
-    import pdb; pdb.set_trace()
     if isinstance(generation_result, dict) and 'text' in generation_result: return generation_result
     return self.config.postprocess_generate(prompt, generation_result, **attrs)
 
