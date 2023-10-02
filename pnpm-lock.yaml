@@ -206,8 +206,8 @@ importers:
         specifier: 6.16.0
         version: 6.16.0(@mui/material@5.14.9)(@mui/system@5.14.10)(react-dom@18.2.0)(react@18.2.0)
       '@mui/x-date-pickers':
-        specifier: 6.13.0
-        version: 6.13.0(@emotion/react@11.11.1)(@emotion/styled@11.11.0)(@mui/material@5.14.9)(@mui/system@5.14.10)(react-dom@18.2.0)(react@18.2.0)
+        specifier: 6.16.0
+        version: 6.16.0(@emotion/react@11.11.1)(@emotion/styled@11.11.0)(@mui/material@5.14.9)(@mui/system@5.14.10)(react-dom@18.2.0)(react@18.2.0)
       '@popperjs/core':
         specifier: ^2.11.8
         version: 2.11.8
@@ -2082,8 +2082,8 @@ packages:
       - '@types/react'
     dev: false
 
-  /@mui/x-date-pickers@6.13.0(@emotion/react@11.11.1)(@emotion/styled@11.11.0)(@mui/material@5.14.9)(@mui/system@5.14.10)(react-dom@18.2.0)(react@18.2.0):
-    resolution: {integrity: sha512-mNfWXrS9PMLI+lgeEw6R08g5j1Yewat+A7MiI2QuwZteX3b83JQnm73RCGrSFTpvOP1/v6yIBPbxPZin5eu6GA==}
+  /@mui/x-date-pickers@6.16.0(@emotion/react@11.11.1)(@emotion/styled@11.11.0)(@mui/material@5.14.9)(@mui/system@5.14.10)(react-dom@18.2.0)(react@18.2.0):
+    resolution: {integrity: sha512-5xN/OuVtcy/bX/Yx4cJrGWLmHTMTZkufhQMtInFOM8u93TJJSPwA7X86vQdl6OztYNyYKnEpxNKxSrxcDHfKFQ==}
     engines: {node: '>=14.0.0'}
     peerDependencies:
       '@emotion/react': ^11.9.0
