@@ -32,7 +32,7 @@
     "autoprefixer": "^10.4.16",
     "cssnano": "^6.0.1",
     "npm-run-all": "^4.1.5",
-    "postcss": "^8.4.30",
+    "postcss": "^8.4.31",
     "postcss-cli": "^10.1.0",
     "shadow-cljs": "2.25.6",
     "tailwindcss": "^3.3.3"
