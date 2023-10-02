@@ -182,8 +182,8 @@ importers:
         specifier: ^2.0.2
         version: 2.0.2(react-dom@18.2.0)(react@18.2.0)
       '@mui/base':
-        specifier: 5.0.0-beta.16
-        version: 5.0.0-beta.16(react-dom@18.2.0)(react@18.2.0)
+        specifier: 5.0.0-beta.17
+        version: 5.0.0-beta.17(react-dom@18.2.0)(react@18.2.0)
       '@mui/icons-material':
         specifier: 5.14.9
         version: 5.14.9(@mui/material@5.14.9)(react@18.2.0)
@@ -1882,7 +1882,7 @@ packages:
       '@babel/runtime': 7.22.15
       '@floating-ui/react-dom': 2.0.2(react-dom@18.2.0)(react@18.2.0)
       '@mui/types': 7.2.4
-      '@mui/utils': 5.14.10(react@18.2.0)
+      '@mui/utils': 5.14.11(react@18.2.0)
       '@popperjs/core': 2.11.8
       clsx: 2.0.0
       prop-types: 15.8.1
@@ -1890,8 +1890,8 @@ packages:
       react-dom: 18.2.0(react@18.2.0)
     dev: false
 
-  /@mui/base@5.0.0-beta.16(react-dom@18.2.0)(react@18.2.0):
-    resolution: {integrity: sha512-OYxhC81c9bO0wobGcM8rrY5bRwpCXAI21BL0P2wz/2vTv4ek7ALz9+U5M8wgdmtRNUhmCmAB4L2WRwFRf5Cd8Q==}
+  /@mui/base@5.0.0-beta.17(react-dom@18.2.0)(react@18.2.0):
+    resolution: {integrity: sha512-xNbk7iOXrglNdIxFBN0k3ySsPIFLWCnFxqsAYl7CIcDkD9low4kJ7IUuy6ctwx/HAy2fenrT3KXHr1sGjAMgpQ==}
     engines: {node: '>=12.0.0'}
     peerDependencies:
       '@types/react': ^17.0.0 || ^18.0.0
@@ -1904,7 +1904,7 @@ packages:
       '@babel/runtime': 7.22.15
       '@floating-ui/react-dom': 2.0.2(react-dom@18.2.0)(react@18.2.0)
       '@mui/types': 7.2.4
-      '@mui/utils': 5.14.10(react@18.2.0)
+      '@mui/utils': 5.14.11(react@18.2.0)
       '@popperjs/core': 2.11.8
       clsx: 2.0.0
       prop-types: 15.8.1
@@ -2060,6 +2060,23 @@ packages:
       react-is: 18.2.0
     dev: false
 
+  /@mui/utils@5.14.11(react@18.2.0):
+    resolution: {integrity: sha512-fmkIiCPKyDssYrJ5qk+dime1nlO3dmWfCtaPY/uVBqCRMBZ11JhddB9m8sjI2mgqQQwRJG5bq3biaosNdU/s4Q==}
+    engines: {node: '>=12.0.0'}
+    peerDependencies:
+      '@types/react': ^17.0.0 || ^18.0.0
+      react: ^17.0.0 || ^18.0.0
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+    dependencies:
+      '@babel/runtime': 7.22.15
+      '@types/prop-types': 15.7.5
+      prop-types: 15.8.1
+      react: 18.2.0
+      react-is: 18.2.0
+    dev: false
+
   /@mui/x-data-grid@6.15.0(@mui/material@5.14.9)(@mui/system@5.14.10)(react-dom@18.2.0)(react@18.2.0):
     resolution: {integrity: sha512-0u7Z+al7M1BOni5SILp+gc4coJy88oOrUoVfOSGQdfTAJwcoHvP3KZYA80MGBsQwo5A9/bZz40HK8+mdm+ftnA==}
     engines: {node: '>=14.0.0'}
@@ -2122,7 +2139,7 @@ packages:
       '@babel/runtime': 7.22.15
       '@emotion/react': 11.11.1(react@18.2.0)
       '@emotion/styled': 11.11.0(@emotion/react@11.11.1)(react@18.2.0)
-      '@mui/base': 5.0.0-beta.16(react-dom@18.2.0)(react@18.2.0)
+      '@mui/base': 5.0.0-beta.17(react-dom@18.2.0)(react@18.2.0)
       '@mui/material': 5.14.9(@emotion/react@11.11.1)(@emotion/styled@11.11.0)(react-dom@18.2.0)(react@18.2.0)
       '@mui/system': 5.14.10(@emotion/react@11.11.1)(@emotion/styled@11.11.0)(react@18.2.0)
       '@mui/utils': 5.14.10(react@18.2.0)
