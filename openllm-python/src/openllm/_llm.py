@@ -738,8 +738,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
     > [!NOTE]
     > This will be used from the client side.
     '''
-    import pdb; pdb.set_trace()
-    if isinstance(generation_result, dict) and 'text' in generation_result: return generation_result
+    if isinstance(generation_result, dict) and 'text' in generation_result: return generation_result['text']
     return self.config.postprocess_generate(prompt, generation_result, **attrs)
 
   @property
@@ -988,16 +987,14 @@ class LLM(LLMInterface[M, T], ReprMixin):
       past_key_values = out = token = None
       finish_reason = None
       for i in range(config['max_new_tokens']):
-        if torch.cuda.is_available():
-          torch.cuda.synchronize()
+        torch.cuda.synchronize()
         if i == 0:  # prefill
           out = self.model(torch.as_tensor([input_ids], device=self.device), use_cache=True)
         else:  # decoding
           out = self.model(torch.as_tensor([[token]], device=self.device), use_cache=True, past_key_values=past_key_values)
         logits = out.logits
         past_key_values = out.past_key_values
-        if torch.cuda.is_available():
-          torch.cuda.synchronize()
+        torch.cuda.synchronize()
 
         if logits_processor:
           if config['repetition_penalty'] > 1.0:

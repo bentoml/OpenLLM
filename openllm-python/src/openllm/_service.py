@@ -15,7 +15,9 @@ from starlette.routing import Route
 import bentoml
 import openllm
 import openllm_core
-
+import openllm.protocol.openai as openai
+import openllm.conversion as conversion
+import attr
 if t.TYPE_CHECKING:
   from starlette.requests import Request
   from starlette.responses import Response
@@ -73,69 +75,27 @@ async def generate_stream_v1(input_dict: dict[str, t.Any]) -> t.AsyncGenerator[s
 
 @svc.api(route='v1/completions', input=_JsonInput, output=bentoml.io.Text())
 async def completion_v1(input_dict: dict[str, t.Any], ctx: bentoml.Context):
-  stream = input_dict.pop('stream', False)        # Determine whether to stream the response
+  stream = input_dict.pop('stream', False)  # Determine whether to stream the response
   echo = input_dict.pop('echo', False)
-  input_dict.pop('model', None)     # We don't need the exact model name here
   default_config = llm_config.model_dump(flatten=True)
-
-  for key in list(input_dict.keys()):
-    if key == 'prompt': continue
-    elif key == 'max_tokens':
-      default_config['max_new_tokens'] = input_dict[key]
-    elif key in default_config:
-      default_config[key] = input_dict[key]   # Replace the default config with the input config
-    del input_dict[key]                       # Remove the key from input_dict
-  input_dict['adapter_name'] = None
-
-  input_dict['llm_config'] = default_config
+  input_dict = conversion.openllm_to_openai_config(input_dict, default_config)
   qa_inputs = openllm.GenerationInput.from_llm_config(llm_config)(**input_dict)
   config = qa_inputs.llm_config.model_dump()
-
-  def CompletionResponse(responses: list[str]):
-    print(responses)
-    return json.dumps(
-    {
-      'id': openllm_core.utils.gen_random_uuid(),
-      'object': 'text_completion',
-      'created': int(time.time()),
-      'model': model,
-      'choices': [
-        {
-          'text': response,
-          'index': i,
-          'logprobs': None,
-          'finish_reason': 'stop' # TODO: Get from generated_result
-        } for i, response in enumerate(responses)
-      ],
-      'usage': {  # TODO: Get from generated_result
-        'prompt_tokens': 0,
-        'completion_tokens': 0,
-        'total_tokens': 0
-      }
-    })
-
-  def CompletionResponseStream(response: str):
-    return json.dumps(
-     {
-      'id': openllm_core.utils.gen_random_uuid(),
-      'object': 'text_completion',
-      'created': int(time.time()),
-      'choices': [
-        {
-          'text': response,
-          'index': 0,
-          'logprobs': None,
-          'finish_reason': None
-        }
-      ],
-      'model': model
-     }
-    )
+  
+  def completion_response(responses: list[str]):
+    choices = [openai.CompletionTextChoice(text=response, index=i) for i, response in enumerate(responses)]
+    result = openai.CompletionResponse(choices=choices, model=model) # TODO: logprobs, finish_reason and usage
+    print(attr.asdict(result))
+    return json.dumps(attr.asdict(result))
+  
+  def complete_stream_response(response: str):
+    choices = [openai.CompletionTextChoice(text=response, index=0)]
+    result = openai.CompletionResponseStream(choices=choices, model=model) # TODO: logprobs, finish_reason
+    return json.dumps(attr.asdict(result))
 
   async def stream_response_generator(responses)->t.AsyncGenerator[str, None]:
     async for response in responses:
-      response = CompletionResponseStream(response)
-      yield f'data: {response}\n\n'
+      yield f'data: {complete_stream_response(response)}\n\n'
     yield 'data: [DONE]\n\n'
 
   if stream:
@@ -153,7 +113,7 @@ async def completion_v1(input_dict: dict[str, t.Any], ctx: bentoml.Context):
       if responses is None: raise ValueError("'responses' should not be None.")
     else:
       responses = await runner.generate.async_run(qa_inputs.prompt, adapter_name=qa_inputs.adapter_name, **config)
-    return CompletionResponse(responses)
+    return completion_response(responses)
 
 @svc.api(route='/v1/metadata',
          input=bentoml.io.Text(),
