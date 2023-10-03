@@ -54,7 +54,7 @@ jobs:
     outputs:
       message: ${{ steps.commit_message.outputs.message }}
     steps:
-      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # ratchet:actions/checkout@v4
+      - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # ratchet:actions/checkout@v4.1.0
         # Gets the correct commit message for pull request
         with:
           ref: ${{ github.event.pull_request.head.sha }}
@@ -76,7 +76,7 @@ jobs:
       matrix:
         directory: ['openllm-core', 'openllm-python', 'openllm-client']
     steps:
-      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # ratchet:actions/checkout@v4
+      - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # ratchet:actions/checkout@v4.1.0
         with:
           fetch-depth: 0
           ref: '${{ inputs.tags }}'
@@ -112,7 +112,7 @@ jobs:
         directory: ['openllm-core', 'openllm-python', 'openllm-client']
     needs: get_commit_message
     steps:
-      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # ratchet:actions/checkout@v4
+      - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # ratchet:actions/checkout@v4.1.0
         with:
           fetch-depth: 0
           ref: '${{ inputs.tags }}'
@@ -121,7 +121,7 @@ jobs:
           bentoml-version: 'main'
           python-version: '3.8'
       - name: Build wheels via cibuildwheel
-        uses: pypa/cibuildwheel@39a63b5912f086dd459cf6fcb13dcdd3fe3bc24d # ratchet:pypa/cibuildwheel@v2.15.0
+        uses: pypa/cibuildwheel@7da7df1efc530f07d1945c00934b8cfd34be0d50 # ratchet:pypa/cibuildwheel@v2.16.1
         with:
           package-dir: ${{ matrix.directory }}
           config-file: pyproject.toml

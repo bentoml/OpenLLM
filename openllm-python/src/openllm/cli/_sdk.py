@@ -27,6 +27,7 @@ if t.TYPE_CHECKING:
   from openllm_core._typing_compat import LiteralContainerRegistry
   from openllm_core._typing_compat import LiteralContainerVersionStrategy
   from openllm_core._typing_compat import LiteralQuantise
+  from openllm_core._typing_compat import LiteralSerialisation
   from openllm_core._typing_compat import LiteralString
 
 logger = logging.getLogger(__name__)
@@ -121,7 +122,7 @@ def _build(model_name: str,
            container_version_strategy: LiteralContainerVersionStrategy | None = None,
            push: bool = False,
            containerize: bool = False,
-           serialisation: t.Literal['safetensors', 'legacy'] = 'safetensors',
+           serialisation: LiteralSerialisation | None = None,
            additional_args: list[str] | None = None,
            bento_store: BentoStore = Provide[BentoMLContainer.bento_store]) -> bentoml.Bento:
   """Package a LLM into a Bento.
@@ -168,7 +169,9 @@ def _build(model_name: str,
   Returns:
       ``bentoml.Bento | str``: BentoLLM instance. This can be used to serve the LLM or can be pushed to BentoCloud.
   """
-  args: list[str] = [sys.executable, '-m', 'openllm', 'build', model_name, '--machine', '--serialisation', serialisation]
+  config = openllm.AutoConfig.for_model(model_name)
+  _serialisation = openllm_core.utils.first_not_none(serialisation, default=config['serialisation'])
+  args: list[str] = [sys.executable, '-m', 'openllm', 'build', model_name, '--machine', '--serialisation', _serialisation]
   if quantize: args.extend(['--quantize', quantize])
   if containerize and push: raise OpenLLMException("'containerize' and 'push' are currently mutually exclusive.")
   if push: args.extend(['--push'])
@@ -205,7 +208,7 @@ def _import_model(model_name: str,
                   model_version: str | None = None,
                   backend: LiteralBackend = 'pt',
                   quantize: LiteralQuantise | None = None,
-                  serialisation: t.Literal['legacy', 'safetensors'] = 'safetensors',
+                  serialisation: t.Literal['legacy', 'safetensors'] | None = None,
                   additional_args: t.Sequence[str] | None = None) -> bentoml.Model:
   """Import a LLM into local store.
 
@@ -237,7 +240,9 @@ def _import_model(model_name: str,
     ``bentoml.Model``:BentoModel of the given LLM. This can be used to serve the LLM or can be pushed to BentoCloud.
   """
   from .entrypoint import import_command
-  args = [model_name, '--backend', backend, '--machine', '--serialisation', serialisation]
+  config = openllm.AutoConfig.for_model(model_name)
+  _serialisation = openllm_core.utils.first_not_none(serialisation, default=config['serialisation'])
+  args = [model_name, '--backend', backend, '--machine', '--serialisation', _serialisation]
   if model_id is not None: args.append(model_id)
   if model_version is not None: args.extend(['--model-version', str(model_version)])
   if additional_args is not None: args.extend(additional_args)

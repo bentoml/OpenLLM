@@ -1,7 +1,6 @@
 # mypy: disable-error-code="name-defined,attr-defined"
 from __future__ import annotations
 import abc
-import asyncio
 import gc
 import inspect
 import logging
@@ -30,6 +29,7 @@ from openllm_core._typing_compat import AdapterType
 from openllm_core._typing_compat import DictStrAny
 from openllm_core._typing_compat import LiteralBackend
 from openllm_core._typing_compat import LiteralQuantise
+from openllm_core._typing_compat import LiteralSerialisation
 from openllm_core._typing_compat import LiteralString
 from openllm_core._typing_compat import LLMRunnable
 from openllm_core._typing_compat import LLMRunner
@@ -49,7 +49,6 @@ from openllm_core.utils import ReprMixin
 from openllm_core.utils import apply
 from openllm_core.utils import bentoml_cattr
 from openllm_core.utils import codegen
-from openllm_core.utils import ensure_exec_coro
 from openllm_core.utils import first_not_none
 from openllm_core.utils import generate_hash_from_file
 from openllm_core.utils import is_peft_available
@@ -293,7 +292,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
                        tag: bentoml.Tag,
                        adapters_mapping: t.Optional[AdaptersMapping],
                        model_version: t.Optional[str],
-                       serialisation: t.Literal['safetensors', 'legacy'],
+                       serialisation: LiteralSerialisation,
                        _local: bool,
                        prompt_template: PromptTemplate | str | None,
                        system_message: str | None,
@@ -312,7 +311,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
   _tag: bentoml.Tag
   _adapters_mapping: AdaptersMapping | None
   _model_version: str
-  _serialisation: t.Literal['safetensors', 'legacy']
+  _serialisation: LiteralSerialisation
   _local: bool
   _prompt_template: PromptTemplate | str | None
   _system_message: str | None
@@ -390,7 +389,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
                       adapter_name: str | None = None,
                       adapter_map: dict[str, str | None] | None = None,
                       quantization_config: transformers.BitsAndBytesConfig | transformers.GPTQConfig | None = None,
-                      serialisation: t.Literal['safetensors', 'legacy'] = 'safetensors',
+                      serialisation: LiteralSerialisation = 'safetensors',
                       **attrs: t.Any) -> LLM[M, T]:
     '''Instantiate a pretrained LLM.
 
@@ -548,7 +547,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
                _quantize: LiteralQuantise | None,
                _model_version: str,
                _tag: bentoml.Tag,
-               _serialisation: t.Literal['safetensors', 'legacy'],
+               _serialisation: LiteralSerialisation,
                _local: bool,
                _prompt_template: PromptTemplate | str | None,
                _system_message: str | None,
@@ -1116,7 +1115,7 @@ def Runner(model_name: str,
            adapter_name: str | None = ...,
            adapter_map: dict[str, str | None] | None = ...,
            quantization_config: transformers.BitsAndBytesConfig | transformers.GPTQConfig | None = None,
-           serialisation: t.Literal['safetensors', 'legacy'] = ...,
+           serialisation: LiteralSerialisation = ...,
            **attrs: t.Any) -> LLMRunner[t.Any, t.Any]:
   ...
 
@@ -1158,7 +1157,7 @@ def Runner(model_name: str,
     attrs.update({
         'model_id': llm_config['env']['model_id_value'],
         'quantize': llm_config['env']['quantize_value'],
-        'serialisation': first_not_none(os.environ.get('OPENLLM_SERIALIZATION'), attrs.get('serialisation'), default='safetensors'),
+        'serialisation': first_not_none(os.environ.get('OPENLLM_SERIALIZATION'), attrs.get('serialisation'), default=llm_config['serialisation']),
         'system_message': first_not_none(os.environ.get('OPENLLM_SYSTEM_MESSAGE'), attrs.get('system_message'), None),
         'prompt_template': first_not_none(os.environ.get('OPENLLM_PROMPT_TEMPLATE'), attrs.get('prompt_template'), None),
     })
@@ -1237,8 +1236,9 @@ def llm_runnable_class(self: LLM[M, T], embeddings_sig: ModelSignature, generate
       return ' '.join(output_text) + ' '
 
     @bentoml.Runnable.method(**method_signature(generate_sig))  # type: ignore
-    def vllm_generate(__self: _Runnable, prompt: str, **attrs: t.Any) -> list[t.Any]:
+    async def vllm_generate(__self: _Runnable, prompt: str, **attrs: t.Any) -> t.AsyncGenerator[list[t.Any], None]:
       stop: str | t.Iterable[str] | None = attrs.pop('stop', None)
+      echo = attrs.pop('echo', False)
       stop_token_ids: list[int] | None = attrs.pop('stop_token_ids', None)
       adapter_name = attrs.pop('adapter_name', None)
       if adapter_name is not None: __self.set_adapter(adapter_name)
@@ -1258,18 +1258,14 @@ def llm_runnable_class(self: LLM[M, T], embeddings_sig: ModelSignature, generate
       config = self.config.model_construct_env(stop=list(stop_), top_p=top_p, **attrs)
       sampling_params = config.to_sampling_config()
 
-      async def loop() -> list[str]:
-        async for request_output in t.cast('vllm.AsyncLLMEngine', self.model).generate(prompt=prompt, sampling_params=sampling_params, request_id=request_id):
-          pass
-        return [output.text for output in request_output.outputs]
-
-      try:
-        return asyncio.run(loop())
-      except RuntimeError:
-        try:
-          return ensure_exec_coro(loop())
-        except Exception:
-          raise
+      final_output = None
+      async for request_output in t.cast('vllm.AsyncLLMEngine', self.model).generate(prompt=prompt, sampling_params=sampling_params, request_id=request_id):
+        final_output = request_output
+      if final_output is None: raise ValueError("'output' should not be None")
+      prompt = final_output.prompt
+      if echo: text_outputs = [prompt + output.text for output in final_output.outputs]
+      else: text_outputs = [output.text for output in final_output.outputs]
+      yield text_outputs
 
     @bentoml.Runnable.method(**method_signature(generate_iterator_sig))  # type: ignore
     async def vllm_generate_iterator(__self: _Runnable, prompt: str, **attrs: t.Any) -> t.AsyncGenerator[str, None]:

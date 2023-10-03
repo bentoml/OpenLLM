@@ -80,6 +80,7 @@ class LlamaConfig(openllm_core.LLMConfig):
       'requirements': ['fairscale', 'sentencepiece', 'scipy'],
       'tokenizer_class': 'LlamaTokenizerFast',
       'default_id': 'NousResearch/llama-2-7b-hf',
+      'serialisation': 'safetensors',
       'model_ids': [
           'meta-llama/Llama-2-70b-chat-hf',
           'meta-llama/Llama-2-13b-chat-hf',
@@ -93,13 +94,6 @@ class LlamaConfig(openllm_core.LLMConfig):
           'NousResearch/llama-2-70b-hf',
           'NousResearch/llama-2-13b-hf',
           'NousResearch/llama-2-7b-hf',
-          'openlm-research/open_llama_7b_v2',
-          'openlm-research/open_llama_3b_v2',
-          'openlm-research/open_llama_13b',
-          'huggyllama/llama-65b',
-          'huggyllama/llama-30b',
-          'huggyllama/llama-13b',
-          'huggyllama/llama-7b'
       ],
       'fine_tune_strategies': ({
           'adapter_type': 'lora', 'r': 64, 'lora_alpha': 16, 'lora_dropout': 0.1, 'bias': 'none'

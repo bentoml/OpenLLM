@@ -23,6 +23,7 @@ from openllm_core._typing_compat import Concatenate
 from openllm_core._typing_compat import DictStrAny
 from openllm_core._typing_compat import LiteralBackend
 from openllm_core._typing_compat import LiteralQuantise
+from openllm_core._typing_compat import LiteralSerialisation
 from openllm_core._typing_compat import LiteralString
 from openllm_core._typing_compat import ParamSpec
 from openllm_core._typing_compat import get_literal_args
@@ -128,16 +129,18 @@ Available official model_id(s): [default: {llm_config['default_id']}]
                 device: t.Tuple[str, ...],
                 quantize: LiteralQuantise | None,
                 backend: LiteralBackend,
-                serialisation: t.Literal['safetensors', 'legacy'],
+                serialisation: LiteralSerialisation | None,
                 cors: bool,
                 adapter_id: str | None,
                 return_process: bool,
                 **attrs: t.Any,
                 ) -> LLMConfig | subprocess.Popen[bytes]:
-    if serialisation == 'safetensors' and quantize is not None and openllm_core.utils.check_bool_env('OPENLLM_SERIALIZATION_WARNING'):
+    _serialisation = openllm_core.utils.first_not_none(serialisation, default=llm_config['serialisation'])
+    if _serialisation == 'safetensors' and quantize is not None and openllm_core.utils.check_bool_env('OPENLLM_SERIALIZATION_WARNING'):
       termui.echo(
-          f"'--quantize={quantize}' might not work with 'safetensors' serialisation format. Use with caution!. To silence this warning, set \"OPENLLM_SERIALIZATION_WARNING=False\"\nNote: You can always fallback to '--serialisation legacy' when running quantisation.",
+          f"'--quantize={quantize}' might not work with 'safetensors' serialisation format. To silence this warning, set \"OPENLLM_SERIALIZATION_WARNING=False\"\nNote: You can always fallback to '--serialisation legacy' when running quantisation.",
           fg='yellow')
+      termui.echo(f"Make sure to check out '{model_id}' repository to see if the weights is in '{_serialisation}' format if unsure.")
     adapter_map: dict[str, str | None] | None = attrs.pop(_adapter_mapping_key, None)
     config, server_attrs = llm_config.model_validate_click(**attrs)
     server_timeout = openllm.utils.first_not_none(server_timeout, default=config['timeout'])
@@ -188,7 +191,7 @@ Available official model_id(s): [default: {llm_config['default_id']}]
         'BENTOML_DEBUG': str(openllm.utils.get_debug_mode()),
         'BENTOML_HOME': os.environ.get('BENTOML_HOME', BentoMLContainer.bentoml_home.get()),
         'OPENLLM_ADAPTER_MAP': orjson.dumps(adapter_map).decode(),
-        'OPENLLM_SERIALIZATION': serialisation,
+        'OPENLLM_SERIALIZATION': _serialisation,
         env.backend: env['backend_value'],
     })
     if env['model_id_value']: start_env[env.model_id] = str(env['model_id_value'])
@@ -205,7 +208,7 @@ Available official model_id(s): [default: {llm_config['default_id']}]
                                                                          ensure_available=True,
                                                                          adapter_map=adapter_map,
                                                                          quantize=env['quantize_value'],
-                                                                         serialisation=serialisation)
+                                                                         serialisation=_serialisation)
     start_env.update({env.config: llm.config.model_dump_json().decode()})
 
     server = bentoml.GrpcServer('_service:svc', **server_attrs) if _serve_grpc else bentoml.HTTPServer('_service:svc', **server_attrs)
@@ -472,11 +475,12 @@ def serialisation_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Cal
   return cli_option('--serialisation',
                     '--serialization',
                     'serialisation',
-                    type=click.Choice(['safetensors', 'legacy']),
-                    default='safetensors',
+                    type=str,
+                    default=None,
                     show_default=True,
                     show_envvar=True,
                     envvar='OPENLLM_SERIALIZATION',
+                    callback=serialisation_callback,
                     help='''Serialisation format for save/load LLM.
 
       Currently the following strategies are supported:
@@ -495,6 +499,12 @@ def serialisation_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Cal
       > [!NOTE] that GGML format is working in progress.
       ''',
                     **attrs)(f)
+
+def serialisation_callback(ctx: click.Context, param: click.Parameter, value: LiteralSerialisation | None) -> LiteralSerialisation | None:
+  if value is None: return value
+  if value not in {'safetensors', 'legacy'}:
+    raise click.BadParameter(f"'serialisation' only accept 'safetensors', 'legacy' as serialisation format. got {value} instead.", ctx, param) from None
+  return value
 
 def container_registry_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option('--container-registry',
