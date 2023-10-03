@@ -124,7 +124,7 @@ Available official model_id(s): [default: {llm_config['default_id']}]
                 model_id: str | None,
                 model_version: str | None,
                 system_message: str | None,
-                prompt_template_file: str | None,
+                prompt_template_file: t.IO[t.Any],
                 workers_per_resource: t.Literal['conserved', 'round_robin'] | LiteralString,
                 device: t.Tuple[str, ...],
                 quantize: LiteralQuantise | None,
@@ -177,15 +177,7 @@ Available official model_id(s): [default: {llm_config['default_id']}]
     start_env = os.environ.copy()
     start_env = parse_config_options(config, server_timeout, wpr, device, cors, start_env)
 
-    # read system_message_file
-    prompt_template = None
-    if prompt_template_file is not None:
-      try:
-        with open(prompt_template_file) as f:
-          prompt_template = f.read()
-      except Exception as err:
-        termui.echo(f'Error reading prompt_template_file ({prompt_template_file}):\n{err}\nThe default prompt template for the model will be used.', fg='red')
-
+    prompt_template: str | None = prompt_template_file.read() if prompt_template_file is not None else None
     start_env.update({
         'OPENLLM_MODEL': model,
         'BENTOML_DEBUG': str(openllm.utils.get_debug_mode()),
@@ -399,17 +391,15 @@ def system_message_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Ca
                     type=click.STRING,
                     default=None,
                     envvar='OPENLLM_SYSTEM_MESSAGE',
-                    help='Optional system message for what the system prompt for the specified LLM is. If not given, the default system message will be used.',
+                    help='Optional system message for supported LLMs. If given LLM supports system message, OpenLLM will provide a default system message.',
                     **attrs)(f)
 
 def prompt_template_file_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
-  return cli_option(
-      '--prompt-template-file',
-      type=click.STRING,
-      default=None,
-      help=
-      'Optional file path pointing to a file where the user has defined a custom prompt template as the file content. If not given, the default prompt template for the specified model will be used',
-      **attrs)(f)
+  return cli_option('--prompt-template-file',
+                    type=click.File(),
+                    default=None,
+                    help='Optional file path containing user-defined custom prompt template. By default, the prompt template for the specified LLM will be used.',
+                    **attrs)(f)
 
 def backend_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   # NOTE: LiteralBackend needs to remove the last two item as ggml and mlc is wip

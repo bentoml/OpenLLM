@@ -5,6 +5,9 @@ import attr
 
 from .utils import default_formatter
 
+# equivocal setattr to save one lookup per assignment
+_object_setattr = object.__setattr__
+
 @attr.define(slots=True)
 class PromptTemplate:
   template: str
@@ -15,7 +18,12 @@ class PromptTemplate:
 
   def with_options(self, **attrs: t.Any) -> PromptTemplate:
     prompt_variables = {key: '{' + key + '}' if key not in attrs else attrs[key] for key in self._input_variables}
-    return PromptTemplate(self.template.format(**prompt_variables))
+    o = attr.evolve(self, template=self.template.format(**prompt_variables))
+    _object_setattr(o, '_input_variables', default_formatter.extract_template_variables(o.template))
+    return o
+
+  def to_string(self) -> str:
+    return self.template
 
   def format(self, **attrs: t.Any) -> str:
     prompt_variables = {k: v for k, v in attrs.items() if k in self._input_variables}
@@ -29,7 +37,7 @@ def process_prompt(prompt: str, template: PromptTemplate | str | None = None, us
   # Currently, all default prompt will always have `instruction` key.
   if not use_prompt_template: return prompt
   elif template is None: raise ValueError("'template' can't be None while 'use_prompt_template=False'")
-  if isinstance(template, PromptTemplate): template = template.template
+  if isinstance(template, PromptTemplate): template = template.to_string()
   template_variables = default_formatter.extract_template_variables(template)
   prompt_variables = {k: v for k, v in attrs.items() if k in template_variables}
   if 'instruction' in prompt_variables:

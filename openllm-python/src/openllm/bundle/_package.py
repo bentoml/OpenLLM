@@ -147,6 +147,8 @@ def construct_docker_options(llm: openllm.LLM[t.Any, t.Any],
       'BENTOML_CONFIG_OPTIONS': f"'{environ['BENTOML_CONFIG_OPTIONS']}'",
   }
   if adapter_map: env_dict['BITSANDBYTES_NOWELCOME'] = os.environ.get('BITSANDBYTES_NOWELCOME', '1')
+  if llm._system_message: env_dict['OPENLLM_SYSTEM_MESSAGE'] = repr(llm._system_message)
+  if llm._prompt_template: env_dict['OPENLLM_PROMPT_TEMPLATE'] = repr(llm._prompt_template.to_string())
 
   # We need to handle None separately here, as env from subprocess doesn't accept None value.
   _env = openllm_core.utils.EnvVarMixin(llm.config['model_name'], quantize=quantize)
@@ -212,10 +214,11 @@ def create_bento(bento_tag: bentoml.Tag,
                  container_version_strategy: LiteralContainerVersionStrategy = 'release',
                  _bento_store: BentoStore = Provide[BentoMLContainer.bento_store],
                  _model_store: ModelStore = Provide[BentoMLContainer.model_store]) -> bentoml.Bento:
-  backend_envvar = llm.config['env']['backend_value']
   _serialisation: LiteralSerialisation = openllm_core.utils.first_not_none(serialisation, default=llm.config['serialisation'])
   labels = dict(llm.identifying_params)
-  labels.update({'_type': llm.llm_type, '_framework': backend_envvar, 'start_name': llm.config['start_name'], 'base_name_or_path': llm.model_id, 'bundler': 'openllm.bundle'})
+  labels.update({
+      '_type': llm.llm_type, '_framework': llm.config['env']['backend_value'], 'start_name': llm.config['start_name'], 'base_name_or_path': llm.model_id, 'bundler': 'openllm.bundle'
+  })
   if adapter_map: labels.update(adapter_map)
   if isinstance(workers_per_resource, str):
     if workers_per_resource == 'round_robin': workers_per_resource = 1.0

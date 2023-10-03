@@ -51,7 +51,11 @@ def cli(ctx: click.Context, /, model_name: str, prompt: str, format: str | None,
       _prompt_template = template(format)
     else:
       _prompt_template = template
-    fully_formatted = process_prompt(prompt, _prompt_template, True, **_memoized)
+    try:
+      # backward-compatible. TO BE REMOVED once every model has default system message and prompt template.
+      fully_formatted = process_prompt(prompt, _prompt_template, True, **_memoized)
+    except RuntimeError:
+      fully_formatted = openllm.AutoConfig.for_model(model_name).sanitize_parameters(prompt, prompt_template=_prompt_template)[0]
     if machine: return repr(fully_formatted)
     elif output == 'porcelain': termui.echo(repr(fully_formatted), fg='white')
     elif output == 'json':

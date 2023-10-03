@@ -294,7 +294,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
                        model_version: t.Optional[str],
                        serialisation: LiteralSerialisation,
                        _local: bool,
-                       prompt_template: PromptTemplate | str | None,
+                       prompt_template: PromptTemplate | None,
                        system_message: str | None,
                        **attrs: t.Any) -> None:
       '''Generated __attrs_init__ for openllm.LLM.'''
@@ -313,7 +313,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
   _model_version: str
   _serialisation: LiteralSerialisation
   _local: bool
-  _prompt_template: PromptTemplate | str | None
+  _prompt_template: PromptTemplate | None
   _system_message: str | None
 
   def __init_subclass__(cls: type[LLM[M, T]]) -> None:
@@ -466,6 +466,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
     if adapter_map is not None and not is_peft_available():
       raise RuntimeError("LoRA adapter requires 'peft' to be installed. Make sure to install OpenLLM with 'pip install \"openllm[fine-tune]\"'")
     if adapter_map: logger.debug('OpenLLM will apply the following adapters layers: %s', list(adapter_map))
+    if isinstance(prompt_template, str): prompt_template = PromptTemplate(prompt_template)
 
     if llm_config is None:
       llm_config = cls.config_class.model_construct_env(**attrs)
@@ -549,7 +550,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
                _tag: bentoml.Tag,
                _serialisation: LiteralSerialisation,
                _local: bool,
-               _prompt_template: PromptTemplate | str | None,
+               _prompt_template: PromptTemplate | None,
                _system_message: str | None,
                _adapters_mapping: AdaptersMapping | None,
                **attrs: t.Any,

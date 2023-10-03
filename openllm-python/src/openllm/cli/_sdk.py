@@ -40,6 +40,8 @@ def _start(model_name: str,
            workers_per_resource: t.Literal['conserved', 'round_robin'] | float | None = None,
            device: tuple[str, ...] | t.Literal['all'] | None = None,
            quantize: LiteralQuantise | None = None,
+           system_message: str | None = None,
+           prompt_template_file: str | None = None,
            adapter_map: dict[LiteralString, str | None] | None = None,
            backend: LiteralBackend | None = None,
            additional_args: list[str] | None = None,
@@ -61,6 +63,8 @@ def _start(model_name: str,
     model_name: The model name to start this LLM
     model_id: Optional model id for this given LLM
     timeout: The server timeout
+    system_message: Optional system message for supported LLMs. If given LLM supports system message, OpenLLM will provide a default system message.
+    prompt_template_file: Optional file path containing user-defined custom prompt template. By default, the prompt template for the specified LLM will be used..
     workers_per_resource: Number of workers per resource assigned.
                           See [resource scheduling](https://docs.bentoml.org/en/latest/guides/scheduling.html#resource-scheduling-strategy)
                           for more information. By default, this is set to 1.
@@ -90,6 +94,8 @@ def _start(model_name: str,
 
   args: list[str] = []
   if model_id: args.extend(['--model-id', model_id])
+  if system_message: args.extend(['--system-message', system_message])
+  if prompt_template_file: args.extend(['--prompt-template-file', openllm_core.utils.resolve_filepath(prompt_template_file)])
   if timeout: args.extend(['--server-timeout', str(timeout)])
   if workers_per_resource:
     args.extend(['--workers-per-resource', str(workers_per_resource) if not isinstance(workers_per_resource, str) else workers_per_resource])
