@@ -119,6 +119,8 @@ def _build(model_name: str,
            bento_version: str | None = None,
            quantize: LiteralQuantise | None = None,
            adapter_map: dict[str, str | None] | None = None,
+           system_message: str | None = None,
+           prompt_template_file: str | None = None,
            build_ctx: str | None = None,
            enable_features: tuple[str, ...] | None = None,
            workers_per_resource: float | None = None,
@@ -143,6 +145,8 @@ def _build(model_name: str,
     model_id: Optional model id for this given LLM
     model_version: Optional model version for this given LLM
     bento_version: Optional bento veresion for this given BentoLLM
+    system_message: Optional system message for supported LLMs. If given LLM supports system message, OpenLLM will provide a default system message.
+    prompt_template_file: Optional file path containing user-defined custom prompt template. By default, the prompt template for the specified LLM will be used..
     quantize: Quantize the model weights. This is only applicable for PyTorch models.
               Possible quantisation strategies:
               - int8: Quantize the model with 8bit (bitsandbytes required)
@@ -187,6 +191,8 @@ def _build(model_name: str,
   if enable_features: args.extend([f'--enable-features={f}' for f in enable_features])
   if workers_per_resource: args.extend(['--workers-per-resource', str(workers_per_resource)])
   if overwrite: args.append('--overwrite')
+  if system_message: args.extend(['--system-message', system_message])
+  if prompt_template_file: args.extend(['--prompt-template-file', openllm_core.utils.resolve_filepath(prompt_template_file)])
   if adapter_map: args.extend([f"--adapter-id={k}{':'+v if v is not None else ''}" for k, v in adapter_map.items()])
   if model_version: args.extend(['--model-version', model_version])
   if bento_version: args.extend(['--bento-version', bento_version])
