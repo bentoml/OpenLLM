@@ -124,7 +124,7 @@ Available official model_id(s): [default: {llm_config['default_id']}]
                 model_id: str | None,
                 model_version: str | None,
                 system_message: str | None,
-                prompt_template_file: t.IO[t.Any],
+                prompt_template_file: t.IO[t.Any] | None,
                 workers_per_resource: t.Literal['conserved', 'round_robin'] | LiteralString,
                 device: t.Tuple[str, ...],
                 quantize: LiteralQuantise | None,

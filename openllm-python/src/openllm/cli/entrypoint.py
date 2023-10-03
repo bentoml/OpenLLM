@@ -483,7 +483,7 @@ def build_command(
     build_ctx: str | None,
     backend: LiteralBackend,
     system_message: str | None,
-    prompt_template_file: t.IO[t.Any],
+    prompt_template_file: t.IO[t.Any] | None,
     machine: bool,
     model_version: str | None,
     dockerfile_template: t.TextIO | None,
