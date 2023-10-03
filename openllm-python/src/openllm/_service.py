@@ -2,10 +2,10 @@
 from __future__ import annotations
 import json
 import os
-import time
 import typing as t
 import warnings
 
+import attr
 import orjson
 
 from starlette.applications import Starlette
@@ -15,9 +15,10 @@ from starlette.routing import Route
 import bentoml
 import openllm
 import openllm_core
-import openllm.protocol.openai as openai
-import openllm.conversion as conversion
-import attr
+
+from openllm import conversion
+from openllm.protocol import openai
+
 if t.TYPE_CHECKING:
   from starlette.requests import Request
   from starlette.responses import Response
@@ -81,13 +82,13 @@ async def completion_v1(input_dict: dict[str, t.Any], ctx: bentoml.Context):
   input_dict = conversion.openllm_to_openai_config(input_dict, default_config)
   qa_inputs = openllm.GenerationInput.from_llm_config(llm_config)(**input_dict)
   config = qa_inputs.llm_config.model_dump()
-  
+
   def completion_response(responses: list[str]):
     choices = [openai.CompletionTextChoice(text=response, index=i) for i, response in enumerate(responses)]
     result = openai.CompletionResponse(choices=choices, model=model) # TODO: logprobs, finish_reason and usage
     print(attr.asdict(result))
     return json.dumps(attr.asdict(result))
-  
+
   def complete_stream_response(response: str):
     choices = [openai.CompletionTextChoice(text=response, index=0)]
     result = openai.CompletionResponseStream(choices=choices, model=model) # TODO: logprobs, finish_reason

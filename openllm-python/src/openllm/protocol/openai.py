@@ -1,6 +1,9 @@
-import attr
-import openllm_core
+from __future__ import annotations
 import time
+
+import attr
+
+import openllm_core
 
 @attr.define
 class LogProbs:
@@ -30,7 +33,7 @@ class CompletionResponse:
     model: str = attr.ib(default=None)
     choices: list = attr.ib(default=attr.Factory([CompletionTextChoice()]))
     usage: Usage = attr.ib(default=attr.Factory(lambda: Usage()))
-    
+
 @attr.define
 class CompletionResponseStream:
     id: str = attr.ib(default=attr.Factory(lambda: openllm_core.utils.gen_random_uuid('cmpl')))
@@ -38,7 +41,3 @@ class CompletionResponseStream:
     created: int = attr.ib(default=attr.Factory(lambda: int(time.time())))
     choices: list = attr.ib(default=attr.Factory([CompletionTextChoice()]))
     model: str = attr.ib(default=None)
-
-
-
-
