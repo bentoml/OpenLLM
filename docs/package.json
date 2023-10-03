@@ -24,7 +24,7 @@
     "clsx": "^2.0.0",
     "next": "*",
     "next-themes": "^0.2.1",
-    "nextra": "2.13.0",
+    "nextra": "2.13.1",
     "nextra-theme-docs": "2.13.1",
     "react": "*",
     "react-dom": "*"
@@ -37,7 +37,7 @@
     "@types/react-dom": "*",
     "autoprefixer": "^10.4.16",
     "eslint": "*",
-    "postcss": "^8.4.29",
+    "postcss": "^8.4.31",
     "tailwindcss": "^3.3.3",
     "typescript": "*"
   }
