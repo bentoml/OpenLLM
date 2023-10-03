@@ -1,10 +1,8 @@
-import bentoml
-import openllm
-import openllm_core
+from __future__ import annotations
 import typing as t
 
 def openllm_to_openai_config(input_dict: dict[str, t.Any], default_config: dict[str, t.Any]) -> dict[str, t.Any]:
-    """Converts OpenLLM config to OpenAI config"""
+    '''Converts OpenLLM config to OpenAI config'''
     input_dict.pop('model', None)  # We don't need the exact model name here
     for key in list(input_dict.keys()):
         if key == 'prompt': continue
