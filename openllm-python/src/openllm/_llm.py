@@ -974,6 +974,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
     stop_token_ids.append(self.tokenizer.eos_token_id)
 
     logits_processor = prepare_logits_processor(config)
+    
     with torch.inference_mode():
       input_ids = self.tokenizer(prompt).input_ids
 
