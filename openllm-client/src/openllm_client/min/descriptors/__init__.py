@@ -1,7 +1,7 @@
-"""'openllm_client.benmin.decsriptors' holds a minimal implementation of some IO Descriptors protocol.
+"""'openllm_client.min.decsriptors' holds a minimal implementation of some IO Descriptors protocol.
 
-This is subjected to change as we are currently refactoring and rework on the new generation of IO descriptors protocol. This package is meant to be used internally
-and vendorred for performance reasons."""
+This is subjected to change as we are currently refactoring and rework on the new generation of
+IO descriptors protocol. This package is meant to be used internally and vendorred for performance reasons."""
 from __future__ import annotations
 import typing as t
 

@@ -1,13 +1,5 @@
 """This holds a simple client implementation, somewhat similar to `bentoml.client`.
 
-This module is subjected to change and to be merged upstream to BentoML.
-
-```python
-import openllm_client
-
-client = openllm_client.benmin.Client.from_url("http://localhost:3000")
-```
-
 The client implementation won't include a dynamic assignment of the service endpoints, rather this should be called
 via `client.call` or `await client.call`.
 """

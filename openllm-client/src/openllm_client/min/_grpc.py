@@ -10,8 +10,8 @@ import bentoml
 from bentoml._internal.service.inference_api import InferenceAPI
 from bentoml.grpc.utils import import_generated_stubs
 from bentoml.grpc.utils import load_from_file
-from openllm_client.benmin import AsyncClient
-from openllm_client.benmin import Client
+from openllm_client.min import AsyncClient
+from openllm_client.min import Client
 from openllm_core._typing_compat import NotRequired
 from openllm_core._typing_compat import overload
 from openllm_core.utils import ensure_exec_coro

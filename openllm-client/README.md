@@ -45,7 +45,7 @@ This package holds the underlying client implementation for OpenLLM. If you are
 coming from OpenLLM, the client can be accessed via `openllm.client`.
 
 It provides somewhat of a "similar" APIs to [`bentoml.Client`](https://docs.bentoml.com/en/latest/guides/client.html)
-(via `openllm_client.benmin`) for interacting with OpenLLM server. This can also be extended to use with general
+(via `openllm_client.min`) for interacting with OpenLLM server. This can also be extended to use with general
 BentoML server as well.
 
 > [!NOTE]

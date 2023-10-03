@@ -17,8 +17,8 @@ import starlette.responses
 import bentoml
 
 from bentoml._internal.service.inference_api import InferenceAPI
-from openllm_client.benmin import AsyncClient
-from openllm_client.benmin import Client
+from openllm_client.min import AsyncClient
+from openllm_client.min import Client
 from openllm_core.utils import ensure_exec_coro
 
 logger = logging.getLogger(__name__)

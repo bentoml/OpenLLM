@@ -20,8 +20,8 @@ from openllm_core.utils import bentoml_cattr
 from openllm_core.utils import ensure_exec_coro
 from openllm_core.utils import is_transformers_available
 
-from .benmin import AsyncClient as AsyncBentoClient
-from .benmin import Client as BentoClient
+from .min import AsyncClient as AsyncBentoClient
+from .min import Client as BentoClient
 
 if t.TYPE_CHECKING:
   import transformers
