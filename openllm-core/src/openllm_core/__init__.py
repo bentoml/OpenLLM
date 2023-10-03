@@ -42,3 +42,5 @@ from .config import MPTConfig as MPTConfig
 from .config import OPTConfig as OPTConfig
 from .config import StableLMConfig as StableLMConfig
 from .config import StarCoderConfig as StarCoderConfig
+from .prompts import PromptTemplate as PromptTemplate
+from .prompts import process_prompt as process_prompt

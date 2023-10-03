@@ -13,7 +13,7 @@ from openllm.cli import termui
 from openllm.cli._factory import machine_option
 from openllm.cli._factory import model_complete_envvar
 from openllm.cli._factory import output_option
-from openllm_core._prompt import process_prompt
+from openllm_core.prompts import process_prompt
 
 LiteralOutput = t.Literal['json', 'pretty', 'porcelain']
 
@@ -51,7 +51,11 @@ def cli(ctx: click.Context, /, model_name: str, prompt: str, format: str | None,
       _prompt_template = template(format)
     else:
       _prompt_template = template
-    fully_formatted = process_prompt(prompt, _prompt_template, True, **_memoized)
+    try:
+      # backward-compatible. TO BE REMOVED once every model has default system message and prompt template.
+      fully_formatted = process_prompt(prompt, _prompt_template, True, **_memoized)
+    except RuntimeError:
+      fully_formatted = openllm.AutoConfig.for_model(model_name).sanitize_parameters(prompt, prompt_template=_prompt_template)[0]
     if machine: return repr(fully_formatted)
     elif output == 'porcelain': termui.echo(repr(fully_formatted), fg='white')
     elif output == 'json':

@@ -3,7 +3,8 @@ import typing as t
 
 import openllm_core
 
-from openllm_core._prompt import process_prompt
+from openllm_core.prompts import PromptTemplate
+from openllm_core.prompts import process_prompt
 
 START_FALCON_COMMAND_DOCSTRING = '''\
 Run a LLMServer for FalconLM model.
@@ -61,6 +62,8 @@ class FalconConfig(openllm_core.LLMConfig):
 
   def sanitize_parameters(self,
                           prompt: str,
+                          prompt_template: PromptTemplate | str | None = None,
+                          system_message: str | None = None,
                           max_new_tokens: int | None = None,
                           top_k: int | None = None,
                           num_return_sequences: int | None = None,
