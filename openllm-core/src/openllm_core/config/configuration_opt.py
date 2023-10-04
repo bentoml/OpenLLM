@@ -3,8 +3,11 @@ import typing as t
 
 import openllm_core
 
-from openllm_core._prompt import process_prompt
+from openllm_core.prompts import process_prompt
 from openllm_core.utils import dantic
+
+if t.TYPE_CHECKING:
+  from openllm_core.prompts.prompt_template import PromptTemplate
 
 START_OPT_COMMAND_DOCSTRING = '''\
 Run a LLMServer for OPT model.
@@ -64,6 +67,8 @@ class OPTConfig(openllm_core.LLMConfig):
 
   def sanitize_parameters(self,
                           prompt: str,
+                          prompt_template: PromptTemplate | str | None = None,
+                          system_message: str | None = None,
                           max_new_tokens: int | None = None,
                           temperature: float | None = None,
                           top_k: int | None = None,

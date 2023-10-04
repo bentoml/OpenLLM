@@ -1,11 +1,9 @@
 # mypy: disable-error-code="call-arg,misc,attr-defined,type-abstract,type-arg,valid-type,arg-type"
 from __future__ import annotations
-
 import os
 import typing as t
 import warnings
 
-import attr
 import orjson
 
 from starlette.applications import Starlette
@@ -15,9 +13,6 @@ from starlette.routing import Route
 import bentoml
 import openllm
 import openllm_core
-
-from openllm.protocol import openai
-from openllm_core import _prompt as prompt
 
 if t.TYPE_CHECKING:
   from starlette.requests import Request
@@ -75,26 +70,17 @@ async def generate_stream_v1(input_dict: dict[str, t.Any]) -> t.AsyncGenerator[s
     return runner.generate_iterator.async_stream(qa_inputs.prompt, adapter_name=qa_inputs.adapter_name, echo=echo, **qa_inputs.llm_config.model_dump())
 
 @svc.api(route='v1/completions', input=_JsonInput, output=bentoml.io.Text())
-async def completion_v1(input_dict: dict[str, t.Any], ctx: bentoml.Context):
+async def completion_v1(input_dict: dict[str, t.Any], ctx: bentoml.Context) -> str | t.AsyncGenerator[str, None]:
   stream = input_dict.pop('stream', False)  # Determine whether to stream the response
   echo = input_dict.pop('echo', False)
   config = llm_config.to_openai_config(input_dict)
   qa_inputs = openllm.GenerationInput.from_llm_config(llm_config)(**config)
   config = qa_inputs.llm_config.model_dump()
 
-  def completion_response(responses: list[str]):
-    choices = [openai.CompletionTextChoice(text=response, index=i) for i, response in enumerate(responses)]
-    result = openai.CompletionResponse(choices=choices, model=model) # TODO: logprobs, finish_reason and usage
-    return orjson.dumps(attr.asdict(result)).decode('utf-8')
-
-  def complete_stream_response(response: str):
-    choices = [openai.CompletionTextChoice(text=response, index=0)]
-    result = openai.CompletionResponseStream(choices=choices, model=model) # TODO: logprobs, finish_reason
-    return orjson.dumps(attr.asdict(result)).decode('utf-8')
-
-  async def stream_response_generator(responses)->t.AsyncGenerator[str, None]:
+  async def stream_response_generator(responses: t.AsyncGenerator[str, None]) -> t.AsyncGenerator[str, None]:
     async for response in responses:
-      yield f'data: {complete_stream_response(response)}\n\n'
+      st = openllm.openai.CompletionResponseStream(choices=[openllm.openai.CompletionTextChoice(text=response, index=0)], model=runner.llm_type)  # TODO: logprobs, finish_reason
+      yield f'data: {orjson.dumps(openllm.utils.bentoml_cattr.unstructure(st)).decode()}\n\n'
     yield 'data: [DONE]\n\n'
 
   if stream:
@@ -112,45 +98,36 @@ async def completion_v1(input_dict: dict[str, t.Any], ctx: bentoml.Context):
       if responses is None: raise ValueError("'responses' should not be None.")
     else:
       responses = await runner.generate.async_run(qa_inputs.prompt, adapter_name=qa_inputs.adapter_name, **config)
-    return completion_response(responses)
+
+    return orjson.dumps(
+        openllm.utils.bentoml_cattr.unstructure(
+            openllm.openai.CompletionResponse(choices=[openllm.openai.CompletionTextChoice(text=response, index=i) for i, response in enumerate(responses)],
+                                              model=runner.llm_type)  # TODO: logprobs, finish_reason and usage
+        )).decode()
 
 @svc.api(route='/v1/chat/completions', input=_JsonInput, output=bentoml.io.Text())
-async def chat_completion_v1(input_dict: dict[str, t.Any], ctx: bentoml.Context):
+async def chat_completion_v1(input_dict: dict[str, t.Any], ctx: bentoml.Context) -> str | t.AsyncGenerator[str, None]:
   stream = input_dict.pop('stream', False)  # Determine whether to stream the response
   echo = input_dict.pop('echo', False)
-  
+
   # Convert messages to a single prompt
-  input_dict['prompt'] = prompt.openai_messages_to_openllm_prompt(input_dict['messages'])
-  print(input_dict['prompt'])
+  input_dict['prompt'] = openllm.openai.openai_messages_to_openllm_prompt(input_dict['messages'])
   del input_dict['messages']
-  
+
   config = llm_config.to_openai_config(input_dict)
   qa_inputs = openllm.GenerationInput.from_llm_config(llm_config)(**input_dict)
   config = qa_inputs.llm_config.model_dump()
-  
-  def chat_completion_response(responses: list[str]):
-    # Create a message from the assistant's response
-    choices = [openai.ChatCompletionChoice(index=i, 
-      message=openai.Message(role='assistant', content=response)) 
-      for i, response in enumerate(responses)]
-    result = openai.ChatCompletionResponse(choices=choices, model=model) # TODO: logprobs, finish_reason and usage
-    return orjson.dumps(attr.asdict(result)).decode('utf-8')
 
-  def chat_completion_stream_response(response: str, stop = False):
-    delta = openai.Message(role='assistant', content=response)
-    if stop:
-      choices = [openai.ChatCompletionStreamChoice(index=0, delta=delta, finish_reason='stop')]
-    else:
-      choices = [openai.ChatCompletionStreamChoice(index=0, delta=delta)]
-    result = openai.ChatCompletionResponseStream(choices=choices, model=model) # TODO: finish_reason
-    return orjson.dumps(attr.asdict(result)).decode('utf-8')
-  
-  async def stream_response_generator(responses)->t.AsyncGenerator[str, None]:
+  async def stream_response_generator(responses: t.AsyncGenerator[str, None]) -> t.AsyncGenerator[str, None]:
     async for response in responses:
-      yield f'data: {chat_completion_stream_response(response)}\n\n'
-    yield f'data: {chat_completion_stream_response("", True)}\n\n'
+      st = openllm.openai.ChatCompletionResponseStream(
+          choices=[openllm.openai.ChatCompletionStreamChoice(index=0, delta=openllm.openai.Message(role='assistant', content=response), finish_reason=None)], model=runner.llm_type)
+      yield f'data: {orjson.dumps(openllm.utils.bentoml_cattr.unstructure(st)).decode()}\n\n'
+    final = openllm.openai.ChatCompletionResponseStream(
+        choices=[openllm.openai.ChatCompletionStreamChoice(index=0, delta=openllm.openai.Message(role='assistant', content=''), finish_reason='stop')], model=runner.llm_type)
+    yield f'data: {orjson.dumps(openllm.utils.bentoml_cattr.unstructure(final)).decode()}\n\n'
     yield 'data: [DONE]\n\n'
-  
+
   if stream:
     ctx.response.headers['Content-Type'] = 'text/event-stream'
     if runner.backend == 'vllm':
@@ -166,8 +143,14 @@ async def chat_completion_v1(input_dict: dict[str, t.Any], ctx: bentoml.Context)
       if responses is None: raise ValueError("'responses' should not be None.")
     else:
       responses = await runner.generate.async_run(qa_inputs.prompt, adapter_name=qa_inputs.adapter_name, **config)
-    return chat_completion_response(responses)
-      
+    return orjson.dumps(
+        openllm.utils.bentoml_cattr.unstructure(
+            openllm.openai.ChatCompletionResponse(choices=[
+                openllm.openai.ChatCompletionChoice(index=i, message=openllm.openai.Message(role='assistant', content=response)) for i, response in enumerate(responses)
+            ],
+                                                  model=model)  # TODO: logprobs, finish_reason and usage
+        )).decode('utf-8')
+
 @svc.api(route='/v1/metadata',
          input=bentoml.io.Text(),
          output=bentoml.io.JSON.from_sample({

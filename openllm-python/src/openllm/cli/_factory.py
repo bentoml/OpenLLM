@@ -123,6 +123,8 @@ Available official model_id(s): [default: {llm_config['default_id']}]
                 server_timeout: int,
                 model_id: str | None,
                 model_version: str | None,
+                system_message: str | None,
+                prompt_template_file: t.IO[t.Any] | None,
                 workers_per_resource: t.Literal['conserved', 'round_robin'] | LiteralString,
                 device: t.Tuple[str, ...],
                 quantize: LiteralQuantise | None,
@@ -175,6 +177,7 @@ Available official model_id(s): [default: {llm_config['default_id']}]
     start_env = os.environ.copy()
     start_env = parse_config_options(config, server_timeout, wpr, device, cors, start_env)
 
+    prompt_template: str | None = prompt_template_file.read() if prompt_template_file is not None else None
     start_env.update({
         'OPENLLM_MODEL': model,
         'BENTOML_DEBUG': str(openllm.utils.get_debug_mode()),
@@ -185,10 +188,14 @@ Available official model_id(s): [default: {llm_config['default_id']}]
     })
     if env['model_id_value']: start_env[env.model_id] = str(env['model_id_value'])
     if env['quantize_value']: start_env[env.quantize] = str(env['quantize_value'])
+    if system_message: start_env['OPENLLM_SYSTEM_MESSAGE'] = system_message
+    if prompt_template: start_env['OPENLLM_PROMPT_TEMPLATE'] = prompt_template
 
     llm = openllm.utils.infer_auto_class(env['backend_value']).for_model(model,
                                                                          model_id=start_env[env.model_id],
                                                                          model_version=model_version,
+                                                                         prompt_template=prompt_template,
+                                                                         system_message=system_message,
                                                                          llm_config=config,
                                                                          ensure_available=True,
                                                                          adapter_map=adapter_map,
@@ -233,6 +240,8 @@ def start_decorator(llm_config: LLMConfig, serve_grpc: bool = False) -> t.Callab
         cog.optgroup.group('General LLM Options', help=f"The following options are related to running '{llm_config['start_name']}' LLM Server."),
         model_id_option(factory=cog.optgroup),
         model_version_option(factory=cog.optgroup),
+        system_message_option(factory=cog.optgroup),
+        prompt_template_file_option(factory=cog.optgroup),
         cog.optgroup.option('--server-timeout', type=int, default=None, help='Server timeout in seconds'),
         workers_per_resource_option(factory=cog.optgroup),
         cors_option(factory=cog.optgroup),
@@ -376,6 +385,21 @@ def model_id_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable
 
 def model_version_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option('--model-version', type=click.STRING, default=None, help='Optional model version to save for this model. It will be inferred automatically from model-id.', **attrs)(f)
+
+def system_message_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
+  return cli_option('--system-message',
+                    type=click.STRING,
+                    default=None,
+                    envvar='OPENLLM_SYSTEM_MESSAGE',
+                    help='Optional system message for supported LLMs. If given LLM supports system message, OpenLLM will provide a default system message.',
+                    **attrs)(f)
+
+def prompt_template_file_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
+  return cli_option('--prompt-template-file',
+                    type=click.File(),
+                    default=None,
+                    help='Optional file path containing user-defined custom prompt template. By default, the prompt template for the specified LLM will be used.',
+                    **attrs)(f)
 
 def backend_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   # NOTE: LiteralBackend needs to remove the last two item as ggml and mlc is wip

@@ -4,7 +4,7 @@ import typing as t
 
 import bentoml
 import openllm
-from openllm._prompt import process_prompt
+from openllm_core.prompts import process_prompt
 from openllm.utils import generate_labels
 from openllm_core.config.configuration_opt import DEFAULT_PROMPT_TEMPLATE
 if t.TYPE_CHECKING: import transformers

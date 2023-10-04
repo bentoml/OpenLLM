@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from . import exceptions as exceptions
+from . import prompts as prompts
 from . import utils as utils
 from ._configuration import GenerationConfig as GenerationConfig
 from ._configuration import LLMConfig as LLMConfig
@@ -42,3 +43,5 @@ from .config import MPTConfig as MPTConfig
 from .config import OPTConfig as OPTConfig
 from .config import StableLMConfig as StableLMConfig
 from .config import StarCoderConfig as StarCoderConfig
+from .prompts import PromptTemplate as PromptTemplate
+from .prompts import process_prompt as process_prompt

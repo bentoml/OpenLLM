@@ -3,6 +3,9 @@ import typing as t
 
 import openllm_core
 
+if t.TYPE_CHECKING:
+  from openllm_core.prompts import PromptTemplate
+
 START_STARCODER_COMMAND_DOCSTRING = '''\
 Run a LLMServer for StarCoder model.
 
@@ -54,6 +57,8 @@ class StarCoderConfig(openllm_core.LLMConfig):
 
   def sanitize_parameters(self,
                           prompt: str,
+                          prompt_template: PromptTemplate | str | None = None,
+                          system_message: str | None = None,
                           temperature: float | None = None,
                           top_p: float | None = None,
                           max_new_tokens: int | None = None,
