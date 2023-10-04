@@ -9,6 +9,7 @@ import tempfile
 import typing as t
 
 import click
+import jupytext
 import nbformat
 import yaml
 
@@ -19,8 +20,6 @@ from openllm_core.utils import is_jupytext_available
 from openllm_core.utils import is_notebook_available
 
 if t.TYPE_CHECKING:
-  import jupytext
-
   from openllm_core._typing_compat import DictStrAny
 
 logger = logging.getLogger(__name__)
