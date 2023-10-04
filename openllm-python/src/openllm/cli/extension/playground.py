@@ -9,6 +9,7 @@ import tempfile
 import typing as t
 
 import click
+import nbformat
 import yaml
 
 from openllm import playground
@@ -19,7 +20,6 @@ from openllm_core.utils import is_notebook_available
 
 if t.TYPE_CHECKING:
   import jupytext
-  import nbformat
 
   from openllm_core._typing_compat import DictStrAny
 
