@@ -30,3 +30,9 @@ def process_prompt(prompt: str, template: str | None = None, use_prompt_template
   except KeyError as e:
     raise RuntimeError(
         f"Missing variable '{e.args[0]}' (required: {template_variables}) in the prompt template. Use 'use_prompt_template=False' to disable the default prompt template.") from None
+
+def openai_messages_to_openllm_prompt(messages: dict[str, t.Any]) -> str:
+    '''Convert OpenAI-style chat messages to an OpenLLM prompt string.'''
+    messages = '\n'.join([f'{message["role"]}: {message["content"]}' for message in messages])
+    prompt = f'Complete the assistant\'s response. Use system info if provided.\n{messages}\nassistant:' # TODO: Improve the prompt
+    return prompt

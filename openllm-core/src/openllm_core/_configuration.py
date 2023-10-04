@@ -1356,6 +1356,24 @@ class LLMConfig(_ConfigAttr):
   def model_dump_json(self, **kwargs: t.Any) -> bytes:
     return orjson.dumps(self.model_dump(**kwargs))
 
+  def to_openai_config(self, new_config: t.Any) -> t.Any:
+    default_config = bentoml_cattr.unstructure(self)
+    generation_config = bentoml_cattr.unstructure(self.generation_config)
+    sampling_config = bentoml_cattr.unstructure(self.sampling_config)
+    default_config.update(generation_config)
+    default_config.update(sampling_config)
+    new_config.pop('model', None) # Remove the model key
+    for key in list(new_config.keys()):
+        if key == 'prompt' or key == 'messages': continue
+        elif key == 'max_tokens':
+            default_config['max_new_tokens'] = new_config[key]
+        elif key in default_config:
+            default_config[key] = new_config[key]  # Replace the default config with the input config
+        del new_config[key]  # Remove the key from input_dict
+    new_config['adapter_name'] = None
+    new_config['llm_config'] = default_config
+    return new_config
+
   @classmethod
   def model_construct_json(cls, json_str: str | bytes) -> Self:
     try:
