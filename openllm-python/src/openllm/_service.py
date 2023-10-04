@@ -1,6 +1,5 @@
 # mypy: disable-error-code="call-arg,misc,attr-defined,type-abstract,type-arg,valid-type,arg-type"
 from __future__ import annotations
-import json
 import os
 import typing as t
 import warnings
