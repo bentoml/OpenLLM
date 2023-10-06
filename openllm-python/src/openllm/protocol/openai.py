@@ -8,16 +8,16 @@ import openllm_core
 
 @attr.define
 class LogProbs:
-  text_offset: t.List[int]
-  token_logprobs: t.List[float]
-  tokens: t.List[str]
-  top_logprobs: t.List[t.Dict[str, t.Any]]
+  text_offset: t.List[int] = attr.field(default=attr.Factory(list))
+  token_logprobs: t.List[float] = attr.field(default=attr.Factory(list))
+  tokens: t.List[str] = attr.field(default=attr.Factory(list))
+  top_logprobs: t.List[t.Dict[str, t.Any]] = attr.field(default=attr.Factory(list))
 
 @attr.define
 class CompletionTextChoice:
   text: str
   index: int
-  logprobs: LogProbs = attr.field(default=None)
+  logprobs: LogProbs = attr.field(default=attr.Factory(lambda: LogProbs())) 
   finish_reason: str = attr.field(default=None)
 
 @attr.define

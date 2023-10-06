@@ -115,7 +115,7 @@ async def chat_completion_v1(input_dict: dict[str, t.Any], ctx: bentoml.Context)
   del input_dict['messages']
 
   config = llm_config.to_openai_config(input_dict)
-  qa_inputs = openllm.GenerationInput.from_llm_config(llm_config)(**input_dict)
+  qa_inputs = openllm.GenerationInput.from_llm_config(llm_config)(**config)
   config = qa_inputs.llm_config.model_dump()
 
   async def stream_response_generator(responses: t.AsyncGenerator[str, None]) -> t.AsyncGenerator[str, None]:

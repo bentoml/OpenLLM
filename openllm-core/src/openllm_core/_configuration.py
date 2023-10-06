@@ -1357,11 +1357,11 @@ class LLMConfig(_ConfigAttr):
     return orjson.dumps(self.model_dump(**kwargs))
 
   def to_openai_config(self, new_config: t.Any) -> t.Any:
-    default_config = bentoml_cattr.unstructure(self)
-    generation_config = bentoml_cattr.unstructure(self.generation_config)
-    sampling_config = bentoml_cattr.unstructure(self.sampling_config)
-    default_config.update(generation_config)
-    default_config.update(sampling_config)
+    # default_config = bentoml_cattr.unstructure(self)
+    default_config = bentoml_cattr.unstructure(self.generation_config)
+    # sampling_config = bentoml_cattr.unstructure(self.sampling_config)
+    # default_config.update(generation_config)
+    # default_config.update(sampling_config)
     new_config.pop('model', None) # Remove the model key
     for key in list(new_config.keys()):
         if key == 'prompt' or key == 'messages': continue
