@@ -17,7 +17,7 @@ class LogProbs:
 class CompletionTextChoice:
   text: str
   index: int
-  logprobs: LogProbs = attr.field(default=attr.Factory(lambda: LogProbs())) 
+  logprobs: LogProbs = attr.field(default=attr.Factory(lambda: LogProbs()))
   finish_reason: str = attr.field(default=None)
 
 @attr.define
