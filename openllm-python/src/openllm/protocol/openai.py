@@ -121,4 +121,4 @@ class ChatCompletionResponseStream:
 
 def messages_to_prompt(messages: list[Message]) -> str:
   formatted = '\n'.join([f"{message['role']}: {message['content']}" for message in messages])
-  return f"{formatted}\nassistant:"
+  return f'{formatted}\nassistant:'
