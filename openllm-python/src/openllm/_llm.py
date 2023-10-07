@@ -281,22 +281,10 @@ class LLM(LLMInterface[M, T], ReprMixin):
   if t.TYPE_CHECKING: __name__: str
   if t.TYPE_CHECKING and not MYPY:
 
-    def __attrs_init__(self,
-                       config: LLMConfig,
-                       quantization_config: t.Optional[t.Union[transformers.BitsAndBytesConfig, transformers.GPTQConfig]],
-                       quantize: t.Optional[LiteralQuantise],
-                       model_id: str,
-                       model_decls: TupleAny,
-                       model_attrs: DictStrAny,
-                       tokenizer_attrs: DictStrAny,
-                       tag: bentoml.Tag,
-                       adapters_mapping: t.Optional[AdaptersMapping],
-                       model_version: t.Optional[str],
-                       serialisation: LiteralSerialisation,
-                       _local: bool,
-                       prompt_template: PromptTemplate | None,
-                       system_message: str | None,
-                       **attrs: t.Any) -> None:
+    def __attrs_init__(self, config: LLMConfig, quantization_config: t.Optional[t.Union[transformers.BitsAndBytesConfig,
+                                                                                        transformers.GPTQConfig]], quantize: t.Optional[LiteralQuantise], model_id: str, model_decls: TupleAny,
+                       model_attrs: DictStrAny, tokenizer_attrs: DictStrAny, tag: bentoml.Tag, adapters_mapping: t.Optional[AdaptersMapping], model_version: t.Optional[str],
+                       serialisation: LiteralSerialisation, _local: bool, prompt_template: PromptTemplate | None, system_message: str | None, **attrs: t.Any) -> None:
       '''Generated __attrs_init__ for openllm.LLM.'''
 
   config: LLMConfig
@@ -540,20 +528,9 @@ class LLM(LLMInterface[M, T], ReprMixin):
   def generate_tag(cls, *param_decls: t.Any, **attrs: t.Any) -> bentoml.Tag:
     return bentoml.Tag.from_taglike(cls._generate_tag_str(*param_decls, **attrs))
 
-  def __init__(self,
-               *args: t.Any,
-               model_id: str,
-               llm_config: LLMConfig,
-               quantization_config: transformers.BitsAndBytesConfig | transformers.GPTQConfig | None,
-               _quantize: LiteralQuantise | None,
-               _model_version: str,
-               _tag: bentoml.Tag,
-               _serialisation: LiteralSerialisation,
-               _local: bool,
-               _prompt_template: PromptTemplate | None,
-               _system_message: str | None,
-               _adapters_mapping: AdaptersMapping | None,
-               **attrs: t.Any,
+  def __init__(self, *args: t.Any, model_id: str, llm_config: LLMConfig, quantization_config: transformers.BitsAndBytesConfig | transformers.GPTQConfig | None,
+               _quantize: LiteralQuantise | None, _model_version: str, _tag: bentoml.Tag, _serialisation: LiteralSerialisation, _local: bool, _prompt_template: PromptTemplate | None,
+               _system_message: str | None, _adapters_mapping: AdaptersMapping | None, **attrs: t.Any,
                ):
     '''Initialize the LLM with given pretrained model.
 
@@ -651,22 +628,13 @@ class LLM(LLMInterface[M, T], ReprMixin):
     # parsing tokenizer and model kwargs, as the hierachy is param pass > default
     normalized_model_kwds, normalized_tokenizer_kwds = normalize_attrs_to_model_tokenizer_pair(**attrs)
     # NOTE: Save the args and kwargs for latter load
-    self.__attrs_init__(llm_config,
-                        quantization_config,
-                        _quantize,
-                        model_id,
-                        args, {
-                            **model_kwds, **normalized_model_kwds
-                        }, {
-                            **tokenizer_kwds, **normalized_tokenizer_kwds
-                        },
-                        _tag,
-                        _adapters_mapping,
-                        _model_version,
-                        _serialisation,
-                        _local,
-                        _prompt_template,
-                        _system_message)
+    self.__attrs_init__(llm_config, quantization_config, _quantize, model_id, args, {
+        **model_kwds,
+        **normalized_model_kwds
+    }, {
+        **tokenizer_kwds,
+        **normalized_tokenizer_kwds
+    }, _tag, _adapters_mapping, _model_version, _serialisation, _local, _prompt_template, _system_message)
 
     self.llm_post_init()
 
@@ -1306,10 +1274,11 @@ def llm_runnable_class(self: LLM[M, T], embeddings_sig: ModelSignature, generate
           pre = now
       yield ' '.join(output_text[pre:]) + ' '
 
-  return types.new_class(self.__class__.__name__ + 'Runnable', (_Runnable,), {},
-                         lambda ns: ns.update({
-                             'SUPPORTED_RESOURCES': ('nvidia.com/gpu', 'amd.com/gpu', 'cpu'), '__module__': self.__module__, '__doc__': self.config['env'].start_docstring
-                         }))
+  return types.new_class(self.__class__.__name__ + 'Runnable', (_Runnable,), {}, lambda ns: ns.update({
+      'SUPPORTED_RESOURCES': ('nvidia.com/gpu', 'amd.com/gpu', 'cpu'),
+      '__module__': self.__module__,
+      '__doc__': self.config['env'].start_docstring
+  }))
 
 def llm_runner_class(self: LLM[M, T]) -> type[LLMRunner[M, T]]:
   def available_adapters(_: LLMRunner[M, T]) -> PeftAdapterOutput:

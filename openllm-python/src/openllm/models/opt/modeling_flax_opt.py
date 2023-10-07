@@ -33,7 +33,11 @@ class FlaxOPT(openllm.LLM['transformers.TFOPTForCausalLM', 'transformers.GPT2Tok
                           use_default_prompt_template: bool = False,
                           **attrs: t.Any) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
     return process_prompt(prompt, DEFAULT_PROMPT_TEMPLATE, use_default_prompt_template, **attrs), {
-        'max_new_tokens': max_new_tokens, 'temperature': temperature, 'top_k': top_k, 'num_return_sequences': num_return_sequences, 'repetition_penalty': repetition_penalty
+        'max_new_tokens': max_new_tokens,
+        'temperature': temperature,
+        'top_k': top_k,
+        'num_return_sequences': num_return_sequences,
+        'repetition_penalty': repetition_penalty
     }, {}
 
   def generate(self, prompt: str, **attrs: t.Any) -> list[str]:

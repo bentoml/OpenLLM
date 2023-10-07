@@ -103,11 +103,8 @@ def main() -> int:
   lines.append(' ' * 2 + '# NOTE: generation_class, sampling_class and extras arguments\n')
   lines.extend([
       ' ' * 2 + line for line in [
-          '@overload\n',
-          "def __getitem__(self, item: t.Literal['generation_class']) -> t.Type[openllm_core.GenerationConfig]: ...\n",
-          '@overload\n',
-          "def __getitem__(self, item: t.Literal['sampling_class']) -> t.Type[openllm_core.SamplingParams]: ...\n",
-          '@overload\n',
+          '@overload\n', "def __getitem__(self, item: t.Literal['generation_class']) -> t.Type[openllm_core.GenerationConfig]: ...\n", '@overload\n',
+          "def __getitem__(self, item: t.Literal['sampling_class']) -> t.Type[openllm_core.SamplingParams]: ...\n", '@overload\n',
           "def __getitem__(self, item: t.Literal['extras']) -> t.Dict[str, t.Any]: ...\n",
       ]
   ])

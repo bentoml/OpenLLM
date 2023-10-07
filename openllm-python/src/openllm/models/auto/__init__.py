@@ -57,7 +57,9 @@ __lazy = LazyModule(__name__,
                     os.path.abspath('__file__'),
                     _import_structure,
                     extra_objects={
-                        'CONFIG_MAPPING': CONFIG_MAPPING, 'CONFIG_MAPPING_NAMES': CONFIG_MAPPING_NAMES, 'AutoConfig': AutoConfig,
+                        'CONFIG_MAPPING': CONFIG_MAPPING,
+                        'CONFIG_MAPPING_NAMES': CONFIG_MAPPING_NAMES,
+                        'AutoConfig': AutoConfig,
                     })
 __all__ = __lazy.__all__
 __dir__ = __lazy.__dir__

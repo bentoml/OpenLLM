@@ -163,8 +163,7 @@ def gen_sdk(func: _T, name: str | None = None, **attrs: t.Any) -> _T:
                               '__doc__': inspect.cleandoc(doc),
                               '__module__': 'openllm'
                           }),
-                          )(func, **attrs),
-          func,
+                          )(func, **attrs), func,
       ))
 
 __all__ = ['gen_sdk', 'make_attr_tuple_class', 'make_env_transformer', 'generate_unique_filename', 'generate_function']

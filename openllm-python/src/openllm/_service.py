@@ -120,8 +120,13 @@ async def completion_v1(input_dict: dict[str, t.Any], ctx: bentoml.Context) -> s
 @svc.api(route='/v1/chat/completions',
          input=bentoml.io.JSON.from_sample(
              openllm.utils.bentoml_cattr.unstructure(
-                 openllm.openai.ChatCompletionRequest(messages=[{'role': 'system', 'content': 'You are a helpful assistant.'}, {'role': 'user', 'content': 'Hello!'}],
-                                                      model=runner.llm_type))),
+                 openllm.openai.ChatCompletionRequest(messages=[{
+                     'role': 'system',
+                     'content': 'You are a helpful assistant.'
+                 }, {
+                     'role': 'user',
+                     'content': 'Hello!'
+                 }], model=runner.llm_type))),
          output=bentoml.io.Text())
 async def chat_completion_v1(input_dict: dict[str, t.Any], ctx: bentoml.Context) -> str | t.AsyncGenerator[str, None]:
   prompt = openllm.openai.messages_to_prompt(input_dict['messages'])
@@ -194,32 +199,10 @@ def metadata_v1(_: str) -> openllm.MetadataOutput:
          input=bentoml.io.JSON.from_sample(['Hey Jude, welcome to the jungle!', 'What is the meaning of life?']),
          output=bentoml.io.JSON.from_sample({
              'embeddings': [
-                 0.007917795330286026,
-                 -0.014421648345887661,
-                 0.00481307040899992,
-                 0.007331526838243008,
-                 -0.0066398633643984795,
-                 0.00945580005645752,
-                 0.0087016262114048,
-                 -0.010709521360695362,
-                 0.012635177001357079,
-                 0.010541186667978764,
-                 -0.00730888033285737,
-                 -0.001783102168701589,
-                 0.02339819073677063,
-                 -0.010825827717781067,
-                 -0.015888236463069916,
-                 0.01876218430697918,
-                 0.0076906150206923485,
-                 0.0009032754460349679,
-                 -0.010024012066423893,
-                 0.01090280432254076,
-                 -0.008668390102684498,
-                 0.02070549875497818,
-                 0.0014594447566196322,
-                 -0.018775740638375282,
-                 -0.014814382418990135,
-                 0.01796768605709076
+                 0.007917795330286026, -0.014421648345887661, 0.00481307040899992, 0.007331526838243008, -0.0066398633643984795, 0.00945580005645752, 0.0087016262114048, -0.010709521360695362,
+                 0.012635177001357079, 0.010541186667978764, -0.00730888033285737, -0.001783102168701589, 0.02339819073677063, -0.010825827717781067, -0.015888236463069916,
+                 0.01876218430697918, 0.0076906150206923485, 0.0009032754460349679, -0.010024012066423893, 0.01090280432254076, -0.008668390102684498, 0.02070549875497818,
+                 0.0014594447566196322, -0.018775740638375282, -0.014814382418990135, 0.01796768605709076
              ],
              'num_tokens': 20
          }))

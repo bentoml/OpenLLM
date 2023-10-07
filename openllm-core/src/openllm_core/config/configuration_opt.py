@@ -54,7 +54,12 @@ class OPTConfig(openllm_core.LLMConfig):
       'architecture': 'OPTForCausalLM',
       'model_ids': ['facebook/opt-125m', 'facebook/opt-350m', 'facebook/opt-1.3b', 'facebook/opt-2.7b', 'facebook/opt-6.7b', 'facebook/opt-66b'],
       'fine_tune_strategies': ({
-          'adapter_type': 'lora', 'r': 16, 'lora_alpha': 32, 'target_modules': ['q_proj', 'v_proj'], 'lora_dropout': 0.05, 'bias': 'none'
+          'adapter_type': 'lora',
+          'r': 16,
+          'lora_alpha': 32,
+          'target_modules': ['q_proj', 'v_proj'],
+          'lora_dropout': 0.05,
+          'bias': 'none'
       },)
   }
   format_outputs: bool = dantic.Field(False, description='''Whether to format the outputs. This can be used when num_return_sequences > 1.''')
@@ -76,7 +81,10 @@ class OPTConfig(openllm_core.LLMConfig):
                           use_default_prompt_template: bool = False,
                           **attrs: t.Any) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
     return process_prompt(prompt, DEFAULT_PROMPT_TEMPLATE, use_default_prompt_template, **attrs), {
-        'max_new_tokens': max_new_tokens, 'temperature': temperature, 'top_k': top_k, 'num_return_sequences': num_return_sequences
+        'max_new_tokens': max_new_tokens,
+        'temperature': temperature,
+        'top_k': top_k,
+        'num_return_sequences': num_return_sequences
     }, {}
 
   def postprocess_generate(self, prompt: str, generation_result: t.Sequence[str], **attrs: t.Any) -> str:

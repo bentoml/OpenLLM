@@ -168,8 +168,7 @@ def create_classifiers() -> Array:
       Classifier.create_classifier('audience', 'Developers'),
       Classifier.create_classifier('audience', 'Science/Research'),
       Classifier.create_classifier('audience', 'System Administrators'),
-      Classifier.create_classifier('typing', 'Typed'),
-      *Classifier.create_python_classifier(),
+      Classifier.create_classifier('typing', 'Typed'), *Classifier.create_python_classifier(),
   ])
   return arr.multiline(True)
 
@@ -216,23 +215,8 @@ def authors() -> Array:
 def keywords() -> Array:
   arr = correct_style(tomlkit.array())
   arr.extend([
-      'MLOps',
-      'AI',
-      'BentoML',
-      'Model Serving',
-      'Model Deployment',
-      'LLMOps',
-      'Falcon',
-      'Vicuna',
-      'Llama 2',
-      'Fine tuning',
-      'Serverless',
-      'Large Language Model',
-      'Generative AI',
-      'StableLM',
-      'Alpaca',
-      'PyTorch',
-      'Transformers'
+      'MLOps', 'AI', 'BentoML', 'Model Serving', 'Model Deployment', 'LLMOps', 'Falcon', 'Vicuna', 'Llama 2', 'Fine tuning', 'Serverless', 'Large Language Model', 'Generative AI', 'StableLM',
+      'Alpaca', 'PyTorch', 'Transformers'
   ])
   return arr.multiline(True)
 

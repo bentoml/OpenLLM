@@ -34,11 +34,13 @@ def test_missing_default():
     make_llm_config('MissingArchitecture', {'default_id': 'huggingface/t5-tiny-testing', 'model_ids': ['huggingface/t5-tiny-testing'], 'requirements': ['bentoml'],},)
 
 def test_forbidden_access():
-  cl_ = make_llm_config(
-      'ForbiddenAccess', {
-          'default_id': 'huggingface/t5-tiny-testing', 'model_ids': ['huggingface/t5-tiny-testing', 'bentoml/t5-tiny-testing'], 'architecture': 'PreTrainedModel', 'requirements': ['bentoml'],
-      },
-  )
+  cl_ = make_llm_config('ForbiddenAccess', {
+      'default_id': 'huggingface/t5-tiny-testing',
+      'model_ids': ['huggingface/t5-tiny-testing', 'bentoml/t5-tiny-testing'],
+      'architecture': 'PreTrainedModel',
+      'requirements': ['bentoml'],
+  },
+                        )
 
   assert pytest.raises(openllm.exceptions.ForbiddenAttributeError, cl_.__getattribute__, cl_(), '__config__',)
   assert pytest.raises(openllm.exceptions.ForbiddenAttributeError, cl_.__getattribute__, cl_(), 'GenerationConfig',)
@@ -128,7 +130,9 @@ def test_struct_envvar_with_overwrite_provided_env(monkeypatch: pytest.MonkeyPat
     mk.setenv(field_env_key('field1'), str(4.0))
     mk.setenv(field_env_key('temperature', suffix='generation'), str(0.2))
     sent = make_llm_config('OverwriteWithEnvAvailable', {
-        'default_id': 'asdfasdf', 'model_ids': ['asdf', 'asdfasdfads'], 'architecture': 'PreTrainedModel'
+        'default_id': 'asdfasdf',
+        'model_ids': ['asdf', 'asdfasdfads'],
+        'architecture': 'PreTrainedModel'
     },
                            fields=(('field1', 'float', 3.0),),
                            ).model_construct_env(field1=20.0, temperature=0.4)

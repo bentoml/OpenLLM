@@ -54,9 +54,7 @@ def parse_config_options(config: LLMConfig, server_timeout: int, workers_per_res
   # TODO: Support amd.com/gpu on k8s
   _bentoml_config_options_env = environ.pop('BENTOML_CONFIG_OPTIONS', '')
   _bentoml_config_options_opts = [
-      'tracing.sample_rate=1.0',
-      f'api_server.traffic.timeout={server_timeout}',
-      f'runners."llm-{config["start_name"]}-runner".traffic.timeout={config["timeout"]}',
+      'tracing.sample_rate=1.0', f'api_server.traffic.timeout={server_timeout}', f'runners."llm-{config["start_name"]}-runner".traffic.timeout={config["timeout"]}',
       f'runners."llm-{config["start_name"]}-runner".workers_per_resource={workers_per_resource}'
   ]
   if device:
@@ -118,22 +116,9 @@ Available official model_id(s): [default: {llm_config['default_id']}]
   @group.command(**command_attrs)
   @start_decorator(llm_config, serve_grpc=_serve_grpc)
   @click.pass_context
-  def start_cmd(ctx: click.Context,
-                /,
-                server_timeout: int,
-                model_id: str | None,
-                model_version: str | None,
-                system_message: str | None,
-                prompt_template_file: t.IO[t.Any] | None,
-                workers_per_resource: t.Literal['conserved', 'round_robin'] | LiteralString,
-                device: t.Tuple[str, ...],
-                quantize: LiteralQuantise | None,
-                backend: LiteralBackend,
-                serialisation: LiteralSerialisation | None,
-                cors: bool,
-                adapter_id: str | None,
-                return_process: bool,
-                **attrs: t.Any,
+  def start_cmd(ctx: click.Context, /, server_timeout: int, model_id: str | None, model_version: str | None, system_message: str | None, prompt_template_file: t.IO[t.Any] | None,
+                workers_per_resource: t.Literal['conserved', 'round_robin'] | LiteralString, device: t.Tuple[str, ...], quantize: LiteralQuantise | None, backend: LiteralBackend,
+                serialisation: LiteralSerialisation | None, cors: bool, adapter_id: str | None, return_process: bool, **attrs: t.Any,
                 ) -> LLMConfig | subprocess.Popen[bytes]:
     _serialisation = openllm_core.utils.first_not_none(serialisation, default=llm_config['serialisation'])
     if _serialisation == 'safetensors' and quantize is not None and openllm_core.utils.check_bool_env('OPENLLM_SERIALIZATION_WARNING'):
@@ -235,16 +220,10 @@ Available official model_id(s): [default: {llm_config['default_id']}]
 def start_decorator(llm_config: LLMConfig, serve_grpc: bool = False) -> t.Callable[[FC], t.Callable[[FC], FC]]:
   def wrapper(fn: FC) -> t.Callable[[FC], FC]:
     composed = openllm.utils.compose(
-        llm_config.to_click_options,
-        _http_server_args if not serve_grpc else _grpc_server_args,
-        cog.optgroup.group('General LLM Options', help=f"The following options are related to running '{llm_config['start_name']}' LLM Server."),
-        model_id_option(factory=cog.optgroup),
-        model_version_option(factory=cog.optgroup),
-        system_message_option(factory=cog.optgroup),
-        prompt_template_file_option(factory=cog.optgroup),
-        cog.optgroup.option('--server-timeout', type=int, default=None, help='Server timeout in seconds'),
-        workers_per_resource_option(factory=cog.optgroup),
-        cors_option(factory=cog.optgroup),
+        llm_config.to_click_options, _http_server_args if not serve_grpc else _grpc_server_args,
+        cog.optgroup.group('General LLM Options', help=f"The following options are related to running '{llm_config['start_name']}' LLM Server."), model_id_option(factory=cog.optgroup),
+        model_version_option(factory=cog.optgroup), system_message_option(factory=cog.optgroup), prompt_template_file_option(factory=cog.optgroup),
+        cog.optgroup.option('--server-timeout', type=int, default=None, help='Server timeout in seconds'), workers_per_resource_option(factory=cog.optgroup), cors_option(factory=cog.optgroup),
         backend_option(factory=cog.optgroup),
         cog.optgroup.group('LLM Optimization Options',
                            help='''Optimization related options.
@@ -255,9 +234,7 @@ def start_decorator(llm_config: LLMConfig, serve_grpc: bool = False) -> t.Callab
 
             - DeepSpeed Inference: [link](https://www.deepspeed.ai/inference/)
             - GGML: Fast inference on [bare metal](https://github.com/ggerganov/ggml)
-            '''),
-        quantize_option(factory=cog.optgroup),
-        serialisation_option(factory=cog.optgroup),
+            '''), quantize_option(factory=cog.optgroup), serialisation_option(factory=cog.optgroup),
         cog.optgroup.option('--device',
                             type=openllm.utils.dantic.CUDA,
                             multiple=True,
@@ -286,8 +263,8 @@ def start_decorator(llm_config: LLMConfig, serve_grpc: bool = False) -> t.Callab
                             help='Optional name or path for given LoRA adapter' + f" to wrap '{llm_config['model_name']}'",
                             multiple=True,
                             callback=_id_callback,
-                            metavar='[PATH | [remote/][adapter_name:]adapter_id][, ...]'),
-        click.option('--return-process', is_flag=True, default=False, help='Internal use only.', hidden=True),
+                            metavar='[PATH | [remote/][adapter_name:]adapter_id][, ...]'), click.option('--return-process', is_flag=True, default=False, help='Internal use only.',
+                                                                                                        hidden=True),
     )
     return composed(fn)
 

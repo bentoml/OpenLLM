@@ -196,7 +196,8 @@ def _container_handle(model: str, model_id: str, image_tag: str, deployment_mode
                                     detach=True,
                                     device_requests=devs,
                                     ports={
-                                        '3000/tcp': port, '3001/tcp': prom_port
+                                        '3000/tcp': port,
+                                        '3001/tcp': prom_port
                                     },
                                     )
 

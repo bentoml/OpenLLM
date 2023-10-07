@@ -16,7 +16,9 @@ _OWNER = 'bentoml'
 _REPO = 'openllm'
 
 _gz_strategies: dict[t.Literal['macos_arm', 'macos_intel', 'linux_intel'], str] = {
-    'macos_arm': 'aarch64-apple-darwin', 'macos_intel': 'x86_64-apple-darwin', 'linux_intel': 'x86_64-unknown-linux-musl'
+    'macos_arm': 'aarch64-apple-darwin',
+    'macos_intel': 'x86_64-apple-darwin',
+    'linux_intel': 'x86_64-unknown-linux-musl'
 }
 
 def determine_release_url(svn_url: str, tag: str, target: t.Literal['macos_arm', 'macos_intel', 'linux_intel', 'archive']) -> str:

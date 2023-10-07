@@ -154,10 +154,12 @@ class GrpcClient(Client):
       try:
         reflection.apis[api.name] = InferenceAPI[t.Any](None,
                                                         bentoml.io.from_spec({
-                                                            'id': api.input.descriptor_id, 'args': json_format.MessageToDict(api.input.attributes).get('args', None)
+                                                            'id': api.input.descriptor_id,
+                                                            'args': json_format.MessageToDict(api.input.attributes).get('args', None)
                                                         }),
                                                         bentoml.io.from_spec({
-                                                            'id': api.output.descriptor_id, 'args': json_format.MessageToDict(api.output.attributes).get('args', None)
+                                                            'id': api.output.descriptor_id,
+                                                            'args': json_format.MessageToDict(api.output.attributes).get('args', None)
                                                         }),
                                                         name=api.name,
                                                         doc=api.docs)
@@ -256,10 +258,12 @@ class AsyncGrpcClient(AsyncClient):
       try:
         reflection.apis[api.name] = InferenceAPI[t.Any](None,
                                                         bentoml.io.from_spec({
-                                                            'id': api.input.descriptor_id, 'args': json_format.MessageToDict(api.input.attributes).get('args', None)
+                                                            'id': api.input.descriptor_id,
+                                                            'args': json_format.MessageToDict(api.input.attributes).get('args', None)
                                                         }),
                                                         bentoml.io.from_spec({
-                                                            'id': api.output.descriptor_id, 'args': json_format.MessageToDict(api.output.attributes).get('args', None)
+                                                            'id': api.output.descriptor_id,
+                                                            'args': json_format.MessageToDict(api.output.attributes).get('args', None)
                                                         }),
                                                         name=api.name,
                                                         doc=api.docs)

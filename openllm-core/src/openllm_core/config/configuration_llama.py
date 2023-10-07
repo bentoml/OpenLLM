@@ -74,7 +74,8 @@ class LlamaConfig(openllm_core.LLMConfig):
       'name_type': 'lowercase',
       'url': 'https://github.com/facebookresearch/llama',
       'default_backend': {
-          'cpu': 'pt', 'nvidia.com/gpu': 'pt'
+          'cpu': 'pt',
+          'nvidia.com/gpu': 'pt'
       },
       'architecture': 'LlamaForCausalLM',
       'requirements': ['fairscale', 'sentencepiece', 'scipy'],
@@ -82,21 +83,16 @@ class LlamaConfig(openllm_core.LLMConfig):
       'default_id': 'NousResearch/llama-2-7b-hf',
       'serialisation': 'safetensors',
       'model_ids': [
-          'meta-llama/Llama-2-70b-chat-hf',
-          'meta-llama/Llama-2-13b-chat-hf',
-          'meta-llama/Llama-2-7b-chat-hf',
-          'meta-llama/Llama-2-70b-hf',
-          'meta-llama/Llama-2-13b-hf',
-          'meta-llama/Llama-2-7b-hf',
-          'NousResearch/llama-2-70b-chat-hf',
-          'NousResearch/llama-2-13b-chat-hf',
-          'NousResearch/llama-2-7b-chat-hf',
-          'NousResearch/llama-2-70b-hf',
-          'NousResearch/llama-2-13b-hf',
-          'NousResearch/llama-2-7b-hf',
+          'meta-llama/Llama-2-70b-chat-hf', 'meta-llama/Llama-2-13b-chat-hf', 'meta-llama/Llama-2-7b-chat-hf', 'meta-llama/Llama-2-70b-hf', 'meta-llama/Llama-2-13b-hf',
+          'meta-llama/Llama-2-7b-hf', 'NousResearch/llama-2-70b-chat-hf', 'NousResearch/llama-2-13b-chat-hf', 'NousResearch/llama-2-7b-chat-hf', 'NousResearch/llama-2-70b-hf',
+          'NousResearch/llama-2-13b-hf', 'NousResearch/llama-2-7b-hf',
       ],
       'fine_tune_strategies': ({
-          'adapter_type': 'lora', 'r': 64, 'lora_alpha': 16, 'lora_dropout': 0.1, 'bias': 'none'
+          'adapter_type': 'lora',
+          'r': 64,
+          'lora_alpha': 16,
+          'lora_dropout': 0.1,
+          'bias': 'none'
       },)
   }
 
@@ -124,7 +120,10 @@ class LlamaConfig(openllm_core.LLMConfig):
     if prompt_template is None: prompt_template = DEFAULT_PROMPT_TEMPLATE('v2' if use_llama2_prompt else 'v1')
     elif isinstance(prompt_template, str): prompt_template = PromptTemplate(template=prompt_template)
     return prompt_template.with_options(system_message=system_message).format(instruction=prompt), {
-        'max_new_tokens': max_new_tokens, 'temperature': temperature, 'top_p': top_p, 'top_k': top_k
+        'max_new_tokens': max_new_tokens,
+        'temperature': temperature,
+        'top_p': top_p,
+        'top_k': top_k
     }, {}
 
   def postprocess_generate(self, prompt: str, generation_result: list[str], **_: t.Any) -> str:

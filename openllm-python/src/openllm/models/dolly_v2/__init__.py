@@ -30,5 +30,7 @@ sys.modules[__name__] = LazyModule(__name__,
                                    globals()['__file__'],
                                    _import_structure,
                                    extra_objects={
-                                       'DEFAULT_PROMPT_TEMPLATE': DEFAULT_PROMPT_TEMPLATE, 'START_DOLLY_V2_COMMAND_DOCSTRING': START_DOLLY_V2_COMMAND_DOCSTRING, 'DollyV2Config': DollyV2Config
+                                       'DEFAULT_PROMPT_TEMPLATE': DEFAULT_PROMPT_TEMPLATE,
+                                       'START_DOLLY_V2_COMMAND_DOCSTRING': START_DOLLY_V2_COMMAND_DOCSTRING,
+                                       'DollyV2Config': DollyV2Config
                                    })

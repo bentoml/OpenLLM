@@ -22,7 +22,8 @@ def cli(ctx: click.Context, output: LiteralOutput) -> None:
           'tag': str(b.tag),
           'size': human_readable_size(openllm.utils.calc_dir_size(b.path)),
           'models': [{
-              'tag': str(m.tag), 'size': human_readable_size(openllm.utils.calc_dir_size(m.path))
+              'tag': str(m.tag),
+              'size': human_readable_size(openllm.utils.calc_dir_size(m.path))
           } for m in (bentoml.models.get(_.tag) for _ in b.info.models)]
       } for b in tuple(i for i in bentoml.list() if all(
           k in i.info.labels for k in {'start_name', 'bundler'})) if b.info.labels['start_name'] == k] for k in tuple(inflection.dasherize(key) for key in openllm.CONFIG_MAPPING.keys())

@@ -30,5 +30,7 @@ sys.modules[__name__] = LazyModule(__name__,
                                    globals()['__file__'],
                                    _import_structure,
                                    extra_objects={
-                                       'DEFAULT_PROMPT_TEMPLATE': DEFAULT_PROMPT_TEMPLATE, 'START_FALCON_COMMAND_DOCSTRING': START_FALCON_COMMAND_DOCSTRING, 'FalconConfig': FalconConfig
+                                       'DEFAULT_PROMPT_TEMPLATE': DEFAULT_PROMPT_TEMPLATE,
+                                       'START_FALCON_COMMAND_DOCSTRING': START_FALCON_COMMAND_DOCSTRING,
+                                       'FalconConfig': FalconConfig
                                    })

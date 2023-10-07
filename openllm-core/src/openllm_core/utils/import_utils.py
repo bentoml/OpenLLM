@@ -139,17 +139,8 @@ def is_tf_available() -> bool:
     _tf_version = None
     if USE_TF in ENV_VARS_TRUE_AND_AUTO_VALUES and USE_TORCH not in ENV_VARS_TRUE_VALUES:
       if _tf_available:
-        candidates = ('tensorflow',
-                      'tensorflow-cpu',
-                      'tensorflow-gpu',
-                      'tf-nightly',
-                      'tf-nightly-cpu',
-                      'tf-nightly-gpu',
-                      'intel-tensorflow',
-                      'intel-tensorflow-avx512',
-                      'tensorflow-rocm',
-                      'tensorflow-macos',
-                      'tensorflow-aarch64',
+        candidates = ('tensorflow', 'tensorflow-cpu', 'tensorflow-gpu', 'tf-nightly', 'tf-nightly-cpu', 'tf-nightly-gpu', 'intel-tensorflow', 'intel-tensorflow-avx512', 'tensorflow-rocm',
+                      'tensorflow-macos', 'tensorflow-aarch64',
                       )
         _tf_version = None
         # For the metadata, we have to look for both tensorflow and tensorflow-cpu

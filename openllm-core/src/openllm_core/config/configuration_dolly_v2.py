@@ -101,7 +101,11 @@ class DollyV2Config(openllm_core.LLMConfig):
                           use_default_prompt_template: bool = True,
                           **attrs: t.Any) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
     return process_prompt(prompt, DEFAULT_PROMPT_TEMPLATE, use_default_prompt_template, **attrs), {
-        'max_new_tokens': max_new_tokens, 'top_k': top_k, 'top_p': top_p, 'temperature': temperature, **attrs
+        'max_new_tokens': max_new_tokens,
+        'top_k': top_k,
+        'top_p': top_p,
+        'temperature': temperature,
+        **attrs
     }, {}
 
   def postprocess_generate(self, prompt: str, generation_result: list[dict[t.Literal['generated_text'], str]], **_: t.Any) -> str:

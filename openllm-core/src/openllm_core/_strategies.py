@@ -217,8 +217,7 @@ def _validate(cls: type[DynResource], val: list[t.Any]) -> None:
 
 def _make_resource_class(name: str, resource_kind: str, docstring: str) -> type[DynResource]:
   return types.new_class(
-      name, (bentoml.Resource[t.List[str]], ReprMixin), {'resource_id': resource_kind},
-      lambda ns: ns.update({
+      name, (bentoml.Resource[t.List[str]], ReprMixin), {'resource_id': resource_kind}, lambda ns: ns.update({
           'resource_id': resource_kind,
           'from_spec': classmethod(_from_spec),
           'from_system': classmethod(_from_system),
@@ -235,16 +234,12 @@ _NVIDIA_GPU_RESOURCE: t.Literal['nvidia.com/gpu'] = 'nvidia.com/gpu'
 _CPU_RESOURCE: t.Literal['cpu'] = 'cpu'
 
 NvidiaGpuResource = _make_resource_class(
-    'NvidiaGpuResource',
-    _NVIDIA_GPU_RESOURCE,
-    '''NVIDIA GPU resource.
+    'NvidiaGpuResource', _NVIDIA_GPU_RESOURCE, '''NVIDIA GPU resource.
 
     This is a modified version of internal's BentoML's NvidiaGpuResource
     where it respects and parse CUDA_VISIBLE_DEVICES correctly.''')
 AmdGpuResource = _make_resource_class(
-    'AmdGpuResource',
-    _AMD_GPU_RESOURCE,
-    '''AMD GPU resource.
+    'AmdGpuResource', _AMD_GPU_RESOURCE, '''AMD GPU resource.
 
     Since ROCm will respect CUDA_VISIBLE_DEVICES, the behaviour of from_spec, from_system are similar to
     ``NvidiaGpuResource``. Currently ``validate`` is not yet supported.''')

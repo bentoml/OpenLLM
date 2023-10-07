@@ -7,33 +7,14 @@ response = openai.Completion.create(model="gpt-3.5-turbo-instruct", prompt="Writ
 
 print(response)
 
-for chunk in openai.Completion.create(
-  model="gpt-3.5-turbo-instruct",
-  prompt="Say this is a test",
-  max_tokens=7,
-  temperature=0,
-  stream=True
-):
+for chunk in openai.Completion.create(model="gpt-3.5-turbo-instruct", prompt="Say this is a test", max_tokens=7, temperature=0, stream=True):
   print(chunk)
 
-
-completion = openai.ChatCompletion.create(
-  model="gpt-3.5-turbo",
-  messages=[
-    {"role": "system", "content": "You are a helpful assistant."},
-    {"role": "user", "content": "Hello!"}
-  ]
-)
+completion = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=[{"role": "system", "content": "You are a helpful assistant."}, {"role": "user", "content": "Hello!"}])
 
 print(completion)
 
-completion = openai.ChatCompletion.create(
-  model="gpt-3.5-turbo",
-  messages=[
-    {"role": "system", "content": "You are a helpful assistant."},
-    {"role": "user", "content": "Hello!"}
-  ],
-  stream=True
-)
+completion = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=[{"role": "system", "content": "You are a helpful assistant."}, {"role": "user", "content": "Hello!"}], stream=True)
 
-for chunk in completion: print(chunk)
+for chunk in completion:
+  print(chunk)

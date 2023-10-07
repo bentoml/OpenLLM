@@ -87,15 +87,7 @@ def construct_python_options(llm: openllm.LLM[t.Any, t.Any], llm_fs: FS, extra_d
   elif backend_envvar == 'tf':
     if not openllm_core.utils.is_tf_available():
       raise ValueError(f"TensorFlow is not available, while {env.backend} is set to 'tf'")
-    candidates = ('tensorflow',
-                  'tensorflow-cpu',
-                  'tensorflow-gpu',
-                  'tf-nightly',
-                  'tf-nightly-cpu',
-                  'tf-nightly-gpu',
-                  'intel-tensorflow',
-                  'intel-tensorflow-avx512',
-                  'tensorflow-rocm',
+    candidates = ('tensorflow', 'tensorflow-cpu', 'tensorflow-gpu', 'tf-nightly', 'tf-nightly-cpu', 'tf-nightly-gpu', 'intel-tensorflow', 'intel-tensorflow-avx512', 'tensorflow-rocm',
                   'tensorflow-macos',
                   )
     # For the metadata, we have to look for both tensorflow and tensorflow-cpu
@@ -123,14 +115,8 @@ def construct_python_options(llm: openllm.LLM[t.Any, t.Any], llm_fs: FS, extra_d
                        lock_packages=False,
                        extra_index_url=['https://download.pytorch.org/whl/cu118', 'https://huggingface.github.io/autogptq-index/whl/cu118/'])
 
-def construct_docker_options(llm: openllm.LLM[t.Any, t.Any],
-                             _: FS,
-                             workers_per_resource: float,
-                             quantize: LiteralString | None,
-                             adapter_map: dict[str, str | None] | None,
-                             dockerfile_template: str | None,
-                             serialisation: LiteralSerialisation,
-                             container_registry: LiteralContainerRegistry,
+def construct_docker_options(llm: openllm.LLM[t.Any, t.Any], _: FS, workers_per_resource: float, quantize: LiteralString | None, adapter_map: dict[str, str | None] | None,
+                             dockerfile_template: str | None, serialisation: LiteralSerialisation, container_registry: LiteralContainerRegistry,
                              container_version_strategy: LiteralContainerVersionStrategy) -> DockerOptions:
   from openllm.cli._factory import parse_config_options
   environ = parse_config_options(llm.config, llm.config['timeout'], workers_per_resource, None, True, os.environ.copy())
@@ -217,7 +203,11 @@ def create_bento(bento_tag: bentoml.Tag,
   _serialisation: LiteralSerialisation = openllm_core.utils.first_not_none(serialisation, default=llm.config['serialisation'])
   labels = dict(llm.identifying_params)
   labels.update({
-      '_type': llm.llm_type, '_framework': llm.config['env']['backend_value'], 'start_name': llm.config['start_name'], 'base_name_or_path': llm.model_id, 'bundler': 'openllm.bundle'
+      '_type': llm.llm_type,
+      '_framework': llm.config['env']['backend_value'],
+      'start_name': llm.config['start_name'],
+      'base_name_or_path': llm.model_id,
+      'bundler': 'openllm.bundle'
   })
   if adapter_map: labels.update(adapter_map)
   if isinstance(workers_per_resource, str):
@@ -244,14 +234,7 @@ def create_bento(bento_tag: bentoml.Tag,
                                   exclude=['/venv', '/.venv', '__pycache__/', '*.py[cod]', '*$py.class'],
                                   python=construct_python_options(llm, llm_fs, extra_dependencies, adapter_map),
                                   models=[llm_spec],
-                                  docker=construct_docker_options(llm,
-                                                                  llm_fs,
-                                                                  workers_per_resource,
-                                                                  quantize,
-                                                                  adapter_map,
-                                                                  dockerfile_template,
-                                                                  _serialisation,
-                                                                  container_registry,
+                                  docker=construct_docker_options(llm, llm_fs, workers_per_resource, quantize, adapter_map, dockerfile_template, _serialisation, container_registry,
                                                                   container_version_strategy))
 
   bento = bentoml.Bento.create(build_config=build_config, version=bento_tag.version, build_ctx=llm_fs.getsyspath('/'))

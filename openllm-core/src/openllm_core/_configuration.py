@@ -355,8 +355,7 @@ class GenerationConfig(ReprMixin):
     return {i.name for i in attr.fields(self.__class__)}
 
 bentoml_cattr.register_unstructure_hook_factory(
-    lambda cls: attr.has(cls) and lenient_issubclass(cls, GenerationConfig),
-    lambda cls: make_dict_unstructure_fn(
+    lambda cls: attr.has(cls) and lenient_issubclass(cls, GenerationConfig), lambda cls: make_dict_unstructure_fn(
         cls, bentoml_cattr, _cattrs_omit_if_default=False, _cattrs_use_linecache=True, **{
             k: override(omit=True) for k, v in attr.fields_dict(cls).items() if v.default in (None, attr.NOTHING)
         }))
@@ -436,8 +435,7 @@ class SamplingParams(ReprMixin):
     return cls(_internal=True, temperature=temperature, top_k=top_k, top_p=top_p, max_tokens=max_tokens, **attrs)
 
 bentoml_cattr.register_unstructure_hook_factory(
-    lambda cls: attr.has(cls) and lenient_issubclass(cls, SamplingParams),
-    lambda cls: make_dict_unstructure_fn(
+    lambda cls: attr.has(cls) and lenient_issubclass(cls, SamplingParams), lambda cls: make_dict_unstructure_fn(
         cls, bentoml_cattr, _cattrs_omit_if_default=False, _cattrs_use_linecache=True, **{
             k: override(omit=True) for k, v in attr.fields_dict(cls).items() if v.default in (None, attr.NOTHING)
         }))
@@ -494,8 +492,7 @@ _transformed_type: DictStrAny = {'fine_tune_strategies': t.Dict[AdapterType, Fin
 
 @attr.define(frozen=False,
              slots=True,
-             field_transformer=lambda _,
-             __: [
+             field_transformer=lambda _, __: [
                  attr.Attribute.from_counting_attr(
                      k,
                      dantic.Field(kw_only=False if t.get_origin(ann) is not Required else True,
@@ -503,8 +500,7 @@ _transformed_type: DictStrAny = {'fine_tune_strategies': t.Dict[AdapterType, Fin
                                   use_default_converter=False,
                                   type=_transformed_type.get(k, ann),
                                   metadata={'target': f'__openllm_{k}__'},
-                                  description=f'ModelSettings field for {k}.')) for k,
-                 ann in t.get_type_hints(ModelSettings).items()
+                                  description=f'ModelSettings field for {k}.')) for k, ann in t.get_type_hints(ModelSettings).items()
              ])
 class _ModelSettingsAttr:
   '''Internal attrs representation of ModelSettings.'''
@@ -521,7 +517,8 @@ class _ModelSettingsAttr:
                       model_ids=['__default__'],
                       architecture='PreTrainedModel',
                       default_backend={
-                          'cpu': 'pt', 'nvidia.com/gpu': 'pt'
+                          'cpu': 'pt',
+                          'nvidia.com/gpu': 'pt'
                       },
                       serialisation='legacy',
                       name_type='dasherize',
@@ -1013,8 +1010,7 @@ class LLMConfig(_ConfigAttr):
                                                                              cls.__openllm_model_name__,
                                                                              suffix=suffix_env,
                                                                              globs=globs,
-                                                                             default_callback=lambda field_name,
-                                                                             field_default: getattr(getattr(cls, class_attr), field_name, field_default)
+                                                                             default_callback=lambda field_name, field_default: getattr(getattr(cls, class_attr), field_name, field_default)
                                                                              if codegen.has_own_attribute(cls, class_attr) else field_default))
       # For pickling to work, the __module__ variable needs to be set to the
       # frame where the class is created. This respect the module that is created from cls
@@ -1329,9 +1325,9 @@ class LLMConfig(_ConfigAttr):
     _new_cfg = {k: v for k, v in attrs.items() if k in attr.fields_dict(_ModelSettingsAttr)}
     attrs = {k: v for k, v in attrs.items() if k not in _new_cfg}
     new_cls = types.new_class(
-        name or f"{cls.__name__.replace('Config', '')}DerivateConfig", (cls,), {},
-        lambda ns: ns.update({
-            '__config__': config_merger.merge(copy.deepcopy(cls.__dict__['__config__']), _new_cfg), '__base_config__': cls,  # keep a reference for easy access
+        name or f"{cls.__name__.replace('Config', '')}DerivateConfig", (cls,), {}, lambda ns: ns.update({
+            '__config__': config_merger.merge(copy.deepcopy(cls.__dict__['__config__']), _new_cfg),
+            '__base_config__': cls,  # keep a reference for easy access
         }))
 
     # For pickling to work, the __module__ variable needs to be set to the

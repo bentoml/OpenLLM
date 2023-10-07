@@ -34,7 +34,8 @@ def get_or_download(ids: str = _BENTOMODEL_ID) -> bentoml.Model:
                                options=ModelOptions(),
                                context=openllm.utils.generate_context(framework_name='transformers'),
                                labels={
-                                   'runtime': 'pt', 'framework': 'openllm'
+                                   'runtime': 'pt',
+                                   'framework': 'openllm'
                                },
                                signatures=model_signatures) as bentomodel:
       snapshot_download(_GENERIC_EMBEDDING_ID,
