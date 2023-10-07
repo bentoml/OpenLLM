@@ -40,6 +40,7 @@ _import_structure: dict[str, list[str]] = {
     "playground": [],
     "testing": [],
     "prompts": ["PromptTemplate"],
+    "protocol": ["openai"],
     "utils": ["infer_auto_class"],
     "serialisation": ["ggml", "transformers"],
     "cli._sdk": ["start", "start_grpc", "build", "import_model", "list_models"],
@@ -72,6 +73,7 @@ if _t.TYPE_CHECKING:
   from .models.auto import MODEL_FLAX_MAPPING_NAMES as MODEL_FLAX_MAPPING_NAMES, MODEL_MAPPING_NAMES as MODEL_MAPPING_NAMES, MODEL_TF_MAPPING_NAMES as MODEL_TF_MAPPING_NAMES, MODEL_VLLM_MAPPING_NAMES as MODEL_VLLM_MAPPING_NAMES
   from .serialisation import ggml as ggml, transformers as transformers
   from .prompts import PromptTemplate as PromptTemplate
+  from .protocol import openai as openai
   from .utils import infer_auto_class as infer_auto_class
 
 try:

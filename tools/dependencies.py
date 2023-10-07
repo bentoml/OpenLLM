@@ -128,7 +128,7 @@ FINE_TUNE_DEPS = ['peft>=0.5.0', 'bitsandbytes', 'datasets', 'accelerate', 'trl'
 FLAN_T5_DEPS = _ALL_RUNTIME_DEPS
 OPT_DEPS = _ALL_RUNTIME_DEPS
 GRPC_DEPS = ['openllm-client[grpc]']
-OPENAI_DEPS = ['openai', 'tiktoken']
+OPENAI_DEPS = ['openai[embeddings]', 'tiktoken']
 AGENTS_DEPS = ['transformers[agents]>=4.30', 'diffusers', 'soundfile']
 PLAYGROUND_DEPS = ['jupyter', 'notebook', 'ipython', 'jupytext', 'nbformat']
 GGML_DEPS = ['ctransformers']

@@ -69,6 +69,107 @@ async def generate_stream_v1(input_dict: dict[str, t.Any]) -> t.AsyncGenerator[s
   else:
     return runner.generate_iterator.async_stream(qa_inputs.prompt, adapter_name=qa_inputs.adapter_name, echo=echo, **qa_inputs.llm_config.model_dump())
 
+@svc.api(route='v1/completions',
+         input=bentoml.io.JSON.from_sample(openllm.utils.bentoml_cattr.unstructure(openllm.openai.CompletionRequest(prompt='What is 1+1?', model=runner.llm_type))),
+         output=bentoml.io.Text())
+async def completion_v1(input_dict: dict[str, t.Any], ctx: bentoml.Context) -> str | t.AsyncGenerator[str, None]:
+  prompt = input_dict.pop('prompt', None)
+  if prompt is None: raise ValueError("'prompt' should not be None.")
+  stream = input_dict.pop('stream', False)
+  config = {
+      'max_new_tokens': input_dict.pop('max_tokens', llm_config['max_new_tokens']),
+      'temperature': input_dict.pop('temperature', llm_config['temperature']),
+      'top_p': input_dict.pop('top_p', llm_config['top_p']),
+      'n': input_dict.pop('n', llm_config['n']),
+      'logprobs': input_dict.pop('logprobs', llm_config['logprobs']),
+      'echo': input_dict.pop('echo', False),
+      'stop': input_dict.pop('stop', llm_config['stop']),
+      'presence_penalty': input_dict.pop('presence_penalty', llm_config['presence_penalty']),
+      'frequency_penalty': input_dict.pop('frequency_penalty', llm_config['frequency_penalty']),
+      'best_of': input_dict.pop('best_of', llm_config['best_of']),
+  }
+
+  async def stream_response_generator(responses: t.AsyncGenerator[str, None]) -> t.AsyncGenerator[str, None]:
+    async for response in responses:
+      st = openllm.openai.CompletionResponseStream(choices=[openllm.openai.CompletionTextChoice(text=response, index=0)], model=runner.llm_type)  # TODO: logprobs, finish_reason
+      yield f'data: {orjson.dumps(openllm.utils.bentoml_cattr.unstructure(st)).decode()}\n\n'
+    yield 'data: [DONE]\n\n'
+
+  if stream:
+    ctx.response.headers['Content-Type'] = 'text/event-stream'
+    if runner.backend == 'vllm':
+      responses = runner.vllm_generate_iterator.async_stream(prompt, request_id=openllm_core.utils.gen_random_uuid(), **config)
+    else:
+      responses = runner.generate_iterator.async_stream(prompt, **config)
+    return stream_response_generator(responses)
+  else:
+    ctx.response.headers['Content-Type'] = 'application/json'
+    if runner.backend == 'vllm':
+      async for output in runner.vllm_generate.async_stream(prompt, request_id=openllm_core.utils.gen_random_uuid(), **config):
+        responses = output
+      if responses is None: raise ValueError("'responses' should not be None.")
+    else:
+      responses = await runner.generate.async_run(prompt, **config)
+
+    return orjson.dumps(
+        openllm.utils.bentoml_cattr.unstructure(
+            openllm.openai.CompletionResponse(choices=[openllm.openai.CompletionTextChoice(text=response, index=i) for i, response in enumerate(responses)],
+                                              model=runner.llm_type)  # TODO: logprobs, finish_reason and usage
+        )).decode()
+
+@svc.api(route='/v1/chat/completions',
+         input=bentoml.io.JSON.from_sample(
+             openllm.utils.bentoml_cattr.unstructure(
+                 openllm.openai.ChatCompletionRequest(messages=[{'role': 'system', 'content': 'You are a helpful assistant.'}, {'role': 'user', 'content': 'Hello!'}],
+                                                      model=runner.llm_type))),
+         output=bentoml.io.Text())
+async def chat_completion_v1(input_dict: dict[str, t.Any], ctx: bentoml.Context) -> str | t.AsyncGenerator[str, None]:
+  prompt = openllm.openai.messages_to_prompt(input_dict['messages'])
+  stream = input_dict.pop('stream', False)
+  config = {
+      'temperature': input_dict.pop('temperature', llm_config['temperature']),
+      'top_p': input_dict.pop('top_p', llm_config['top_p']),
+      'n': input_dict.pop('n', llm_config['n']),
+      'echo': input_dict.pop('echo', False),
+      'stop': input_dict.pop('stop', llm_config['stop']),
+      'max_new_tokens': input_dict.pop('max_tokens', llm_config['max_new_tokens']),
+      'presence_penalty': input_dict.pop('presence_penalty', llm_config['presence_penalty']),
+      'frequency_penalty': input_dict.pop('frequency_penalty', llm_config['frequency_penalty']),
+  }
+
+  async def stream_response_generator(responses: t.AsyncGenerator[str, None]) -> t.AsyncGenerator[str, None]:
+    async for response in responses:
+      st = openllm.openai.ChatCompletionResponseStream(
+          choices=[openllm.openai.ChatCompletionStreamChoice(index=0, delta=openllm.openai.Message(role='assistant', content=response), finish_reason=None)], model=runner.llm_type)
+      yield f'data: {orjson.dumps(openllm.utils.bentoml_cattr.unstructure(st)).decode()}\n\n'
+    final = openllm.openai.ChatCompletionResponseStream(
+        choices=[openllm.openai.ChatCompletionStreamChoice(index=0, delta=openllm.openai.Message(role='assistant', content=''), finish_reason='stop')], model=runner.llm_type)
+    yield f'data: {orjson.dumps(openllm.utils.bentoml_cattr.unstructure(final)).decode()}\n\n'
+    yield 'data: [DONE]\n\n'
+
+  if stream:
+    ctx.response.headers['Content-Type'] = 'text/event-stream'
+    if runner.backend == 'vllm':
+      responses = runner.vllm_generate_iterator.async_stream(prompt, request_id=openllm_core.utils.gen_random_uuid(), **config)
+    else:
+      responses = runner.generate_iterator.async_stream(prompt, **config)
+    return stream_response_generator(responses)
+  else:
+    ctx.response.headers['Content-Type'] = 'application/json'
+    if runner.backend == 'vllm':
+      async for output in runner.vllm_generate.async_stream(prompt, request_id=openllm_core.utils.gen_random_uuid(), **config):
+        responses = output
+      if responses is None: raise ValueError("'responses' should not be None.")
+    else:
+      responses = await runner.generate.async_run(prompt, **config)
+    return orjson.dumps(
+        openllm.utils.bentoml_cattr.unstructure(
+            openllm.openai.ChatCompletionResponse(choices=[
+                openllm.openai.ChatCompletionChoice(index=i, message=openllm.openai.Message(role='assistant', content=response)) for i, response in enumerate(responses)
+            ],
+                                                  model=model)  # TODO: logprobs, finish_reason and usage
+        )).decode('utf-8')
+
 @svc.api(route='/v1/metadata',
          input=bentoml.io.Text(),
          output=bentoml.io.JSON.from_sample({
