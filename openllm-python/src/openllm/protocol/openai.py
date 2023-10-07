@@ -7,6 +7,42 @@ import attr
 import openllm_core
 
 @attr.define
+class CompletionRequest:
+    model: str = attr.field(default='')
+    prompt: str = attr.field(default='')
+    suffix: t.Optional[str] = attr.field(default=None)
+    max_tokens: t.Optional[int] = attr.field(default=16)
+    temperature: t.Optional[float] = attr.field(default=1.0)
+    top_p: t.Optional[float] = attr.field(default=1)
+    n: t.Optional[int] = attr.field(default=1)
+    stream: t.Optional[bool] = attr.field(default=False)
+    logprobs: t.Optional[int] = attr.field(default=None)
+    echo: t.Optional[bool] = attr.field(default=False)
+    stop: t.Optional[t.Union[str, t.List[str]]] = attr.field(default=None)
+    presence_penalty: t.Optional[float] = attr.field(default=0.0)
+    frequency_penalty: t.Optional[float] = attr.field(default=0.0)
+    best_of: t.Optional[int] = attr.field(default=1)
+    logit_bias: t.Optional[t.Dict[str, float]] = attr.field(default=None)
+    user: t.Optional[str] = attr.field(default=None)
+
+@attr.define
+class ChatCompletionRequest():
+    model: str = attr.field(default='')
+    messages: t.List[t.Dict[str, str]] = attr.field(default=attr.Factory(list))
+    functions: t.List[t.Dict[str, str]] = attr.field(default=attr.Factory(list))
+    function_calls: t.List[t.Dict[str, str]] = attr.field(default=attr.Factory(list))
+    temperature: t.Optional[float] = attr.field(default=1.0)
+    top_p: t.Optional[float] = attr.field(default=1)
+    n: t.Optional[int] = attr.field(default=1)
+    stream: t.Optional[bool] = attr.field(default=False)
+    stop: t.Optional[t.Union[str, t.List[str]]] = attr.field(default=None)
+    max_tokens: t.Optional[int] = attr.field(default=None)
+    presence_penalty: t.Optional[float] = attr.field(default=0.0)
+    frequency_penalty: t.Optional[float] = attr.field(default=0.0)
+    logit_bias: t.Optional[t.Dict[str, float]] = attr.field(default=None)
+    user: t.Optional[str] = attr.field(default=None)
+
+@attr.define
 class LogProbs:
   text_offset: t.List[int] = attr.field(default=attr.Factory(list))
   token_logprobs: t.List[float] = attr.field(default=attr.Factory(list))
@@ -83,7 +119,6 @@ class ChatCompletionResponseStream:
   id: str = attr.field(default=attr.Factory(lambda: openllm_core.utils.gen_random_uuid('chatcmpl')))
   created: int = attr.field(default=attr.Factory(lambda: int(time.time())))
 
-def openai_messages_to_openllm_prompt(messages: list[Message]) -> str:
-  # TODO: Improve the prompt
+def messages_to_prompt(messages: list[Message]) -> str:
   formatted = '\n'.join([f"{message['role']}: {message['content']}" for message in messages])
-  return f"Complete the assistant's response. Use system info if provided.\n{formatted}\nassistant:"
+  return f"{formatted}\nassistant:"
