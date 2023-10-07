@@ -1241,6 +1241,8 @@ def llm_runnable_class(self: LLM[M, T], embeddings_sig: ModelSignature, generate
       stop: str | t.Iterable[str] | None = attrs.pop('stop', None)
       echo = attrs.pop('echo', False)
       stop_token_ids: list[int] | None = attrs.pop('stop_token_ids', None)
+      temperature = attrs.pop('temperature', self.config['temperature'])
+      top_p = attrs.pop('top_p', self.config['top_p'])
       adapter_name = attrs.pop('adapter_name', None)
       if adapter_name is not None: __self.set_adapter(adapter_name)
       request_id: str | None = attrs.pop('request_id', None)
@@ -1254,8 +1256,7 @@ def llm_runnable_class(self: LLM[M, T], embeddings_sig: ModelSignature, generate
       for tid in stop_token_ids:
         if tid: stop_.add(self.tokenizer.decode(tid))
 
-      if self.config['temperature'] <= 1e-5: top_p = 1.0
-      else: top_p = self.config['top_p']
+      if temperature <= 1e-5: top_p = 1.0
       config = self.config.model_construct_env(stop=list(stop_), top_p=top_p, **attrs)
       sampling_params = config.to_sampling_config()
 
@@ -1276,6 +1277,8 @@ def llm_runnable_class(self: LLM[M, T], embeddings_sig: ModelSignature, generate
       echo = attrs.pop('echo', False)
       stop: str | t.Iterable[str] | None = attrs.pop('stop', None)
       stop_token_ids: list[int] | None = attrs.pop('stop_token_ids', None)
+      temperature = attrs.pop('temperature', self.config['temperature'])
+      top_p = attrs.pop('top_p', self.config['top_p'])
       adapter_name = attrs.pop('adapter_name', None)
       if adapter_name is not None: __self.set_adapter(adapter_name)
       request_id: str | None = attrs.pop('request_id', None)
@@ -1289,8 +1292,7 @@ def llm_runnable_class(self: LLM[M, T], embeddings_sig: ModelSignature, generate
       for tid in stop_token_ids:
         if tid: stop_.add(self.tokenizer.decode(tid))
 
-      if self.config['temperature'] <= 1e-5: top_p = 1.0
-      else: top_p = self.config['top_p']
+      if temperature <= 1e-5: top_p = 1.0
       config = self.config.model_construct_env(stop=list(stop_), top_p=top_p, **attrs)
       sampling_params = config.to_sampling_config()
       async for request_output in t.cast('vllm.AsyncLLMEngine', self.model).generate(prompt=prompt, sampling_params=sampling_params, request_id=request_id):

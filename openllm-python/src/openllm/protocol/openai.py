@@ -68,7 +68,7 @@ class CompletionResponse:
   model: str
   object: str = 'text_completion'
   id: str = attr.field(default=attr.Factory(lambda: openllm_core.utils.gen_random_uuid('cmpl')))
-  created: int = attr.field(default=attr.Factory(lambda: int(time.time())))
+  created: int = attr.field(default=attr.Factory(lambda: int(time.monotonic())))
   usage: Usage = attr.field(default=attr.Factory(lambda: Usage()))
 
 @attr.define
@@ -77,7 +77,7 @@ class CompletionResponseStream:
   model: str
   object: str = 'text_completion'
   id: str = attr.field(default=attr.Factory(lambda: openllm_core.utils.gen_random_uuid('cmpl')))
-  created: int = attr.field(default=attr.Factory(lambda: int(time.time())))
+  created: int = attr.field(default=attr.Factory(lambda: int(time.monotonic())))
 
 LiteralRole = t.Literal['system', 'user', 'assistant']
 
