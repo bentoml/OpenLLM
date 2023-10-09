@@ -128,7 +128,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Setup python
-        uses: actions/setup-python@65d7f2d534ac1bc67fcd62888c5f4f3d2cb2b236 # ratchet:actions/setup-python@v4
+        uses: actions/setup-python@65d7f2d534ac1bc67fcd62888c5f4f3d2cb2b236 # ratchet:actions/setup-python@v4.7.1
         with:
           python-version-file: .python-version-default
       - name: Install dependencies
