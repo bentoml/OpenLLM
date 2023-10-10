@@ -1120,7 +1120,7 @@ def Runner(model_name: str,
 
   if llm_config is not None:
     attrs.update({
-        'model_id': attrs.get("model_id") or llm_config['env']['model_id_value'],
+        'model_id': attrs.get('model_id') or llm_config['env']['model_id_value'],
         'quantize': llm_config['env']['quantize_value'],
         'serialisation': first_not_none(attrs.get('serialisation'), os.environ.get('OPENLLM_SERIALIZATION'), default=llm_config['serialisation']),
         'system_message': first_not_none(os.environ.get('OPENLLM_SYSTEM_MESSAGE'), attrs.get('system_message'), None),
