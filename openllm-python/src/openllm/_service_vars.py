@@ -1,3 +1,4 @@
+from __future__ import annotations
 import os
 
 model = os.environ['OPENLLM_MODEL']  # openllm: model name

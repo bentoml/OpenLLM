@@ -1,9 +1,9 @@
 # mypy: disable-error-code="call-arg,misc,attr-defined,type-abstract,type-arg,valid-type,arg-type"
 from __future__ import annotations
-import os
 import typing as t
 import warnings
 
+import _service_vars as svars
 import orjson
 
 from starlette.applications import Starlette
@@ -13,8 +13,6 @@ from starlette.routing import Route
 import bentoml
 import openllm
 import openllm_core
-
-import _service_vars as svars
 
 if t.TYPE_CHECKING:
   from starlette.requests import Request
