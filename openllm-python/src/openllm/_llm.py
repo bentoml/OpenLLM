@@ -9,7 +9,6 @@ import types
 import typing as t
 
 import attr
-import fs.path
 import inflection
 import orjson
 
@@ -500,10 +499,6 @@ class LLM(LLMInterface[M, T], ReprMixin):
     Returns:
         ``str``: Generated tag format that can be parsed by ``bentoml.Tag``
     '''
-    # specific branch for running in docker or kubernetes, this is very hacky,
-    # and probably need a better way to support custom path
-    if os.environ.get('BENTO_PATH') is not None: return ':'.join(fs.path.parts(model_id)[-2:])
-
     model_name = normalise_model_name(model_id)
     model_id, *maybe_revision = model_id.rsplit(':')
     if len(maybe_revision) > 0:
@@ -1122,11 +1117,12 @@ def Runner(model_name: str,
     init_local: If True, it will initialize the model locally. This is useful if you want to run the model locally. (Symmetrical to bentoml.Runner.init_local())
     **attrs: The rest of kwargs will then be passed to the LLM. Refer to the LLM documentation for the kwargs behaviour
   '''
+
   if llm_config is not None:
     attrs.update({
-        'model_id': llm_config['env']['model_id_value'],
+        'model_id': attrs.get('model_id') or llm_config['env']['model_id_value'],
         'quantize': llm_config['env']['quantize_value'],
-        'serialisation': first_not_none(os.environ.get('OPENLLM_SERIALIZATION'), attrs.get('serialisation'), default=llm_config['serialisation']),
+        'serialisation': first_not_none(attrs.get('serialisation'), os.environ.get('OPENLLM_SERIALIZATION'), default=llm_config['serialisation']),
         'system_message': first_not_none(os.environ.get('OPENLLM_SYSTEM_MESSAGE'), attrs.get('system_message'), None),
         'prompt_template': first_not_none(os.environ.get('OPENLLM_PROMPT_TEMPLATE'), attrs.get('prompt_template'), None),
     })
