@@ -62,15 +62,20 @@ class Client:
       raise bentoml.exceptions.BentoMLException('Failed to create client from url: %s' % url) from err
 
   @staticmethod
-  def wait_until_server_ready(host: str, port: int, timeout: float = 30, **kwargs: t.Any) -> None:
+  def wait_until_server_ready(server: str, port: int | None = None, timeout: float = 30, **kwargs: t.Any) -> None:
     try:
       from ._http import HttpClient
-      return HttpClient.wait_until_server_ready(host, port, timeout, **kwargs)
+      return HttpClient.wait_until_server_ready(server, port, timeout, **kwargs)
     except httpx.RemoteProtocolError:
+      if port is None:
+        raise
       from ._grpc import GrpcClient
-      return GrpcClient.wait_until_server_ready(host, port, timeout, **kwargs)
+      return GrpcClient.wait_until_server_ready(server, port, timeout, **kwargs)
     except Exception as err:
-      raise bentoml.exceptions.BentoMLException('Failed to wait until server ready: %s:%d' % (host, port)) from err
+      if port is not None:
+        raise bentoml.exceptions.BentoMLException('Failed to wait until server ready: %s:%d' % (server, port)) from err
+      else:
+        raise bentoml.exceptions.BentoMLException('Failed to wait until server ready: %s' % (server)) from err
 
 @attr.define(init=False)
 class AsyncClient:
