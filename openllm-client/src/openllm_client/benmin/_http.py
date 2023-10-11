@@ -32,7 +32,7 @@ class HttpClient(Client):
   @staticmethod
   def wait_until_server_ready(host: str, port: int | None = None, timeout: float = 30, check_interval: int = 1, **kwargs: t.Any) -> None:
     host = host if '://' in host else 'http://' + host
-    server = host if port is None else f"{host}:{port}"
+    server = host if port is None else f'{host}:{port}'
     logger.debug("Waiting for server @ '%s' to be ready...", server)
     start = time.time()
     while time.time() - start < timeout:
@@ -122,7 +122,7 @@ class AsyncHttpClient(AsyncClient):
   @staticmethod
   async def wait_until_server_ready(host: str, port: int, timeout: float = 30, check_interval: int = 1, **kwargs: t.Any) -> None:
     host = host if '://' in host else 'http://' + host
-    server = host if port is None else f"{host}:{port}"
+    server = host if port is None else f'{host}:{port}'
     logger.debug("Waiting for server @ '%s' to be ready...", server)
     start = time.time()
     while time.time() - start < timeout:
