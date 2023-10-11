@@ -70,9 +70,9 @@ def lenient_issubclass(cls: t.Any, class_or_tuple: type[t.Any] | tuple[type[t.An
     raise
 
 def ensure_exec_coro(coro: t.Coroutine[t.Any, t.Any, t.Any]) -> t.Any:
-  """
+  '''
   in nootbook run_coroutine_threadsafe will got stuck for some reason (https://github.com/jupyter/notebook/issues/5261), so use asyncio.run instead
-  """
+  '''
   if in_notebook():
     return asyncio.run(coro)
   loop = asyncio.get_event_loop()
