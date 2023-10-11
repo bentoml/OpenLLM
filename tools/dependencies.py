@@ -106,11 +106,11 @@ class Dependencies:
 
 lower_bentoml_constraint = '1.1.2'
 _BENTOML_EXT = ['io']
-_TRANSFORMERS_EXT = ['torch', 'tokenizers', 'accelerate']
+_TRANSFORMERS_EXT = ['torch', 'tokenizers']
 
 _BASE_DEPENDENCIES = [
     Dependencies(name='bentoml', extensions=_BENTOML_EXT, lower_constraint=lower_bentoml_constraint),
-    Dependencies(name='transformers', extensions=_TRANSFORMERS_EXT, lower_constraint='4.32.1'),
+    Dependencies(name='transformers', extensions=_TRANSFORMERS_EXT, lower_constraint='4.34.0'),
     Dependencies(name='openllm-client'),
     Dependencies(name='openllm-core'),
     Dependencies(name='safetensors'),
@@ -120,7 +120,7 @@ _BASE_DEPENDENCIES = [
     Dependencies(name='tabulate', extensions=['widechars'], lower_constraint='0.9.0'),
     Dependencies(name='click', lower_constraint='8.1.3'),
     Dependencies(name='cuda-python', platform=('Darwin', 'ne')),
-    Dependencies(name='bitsandbytes', upper_constraint='0.42'),  # 0.41  works with CUDA 11.8
+    Dependencies(name='bitsandbytes', upper_constraint='0.42'),  # 0.41 works with CUDA 11.8
 ]
 
 _ALL_RUNTIME_DEPS = ['flax>=0.7', 'jax', 'jaxlib', 'tensorflow', 'keras']
@@ -133,7 +133,7 @@ AGENTS_DEPS = ['transformers[agents]>=4.30', 'diffusers', 'soundfile']
 PLAYGROUND_DEPS = ['jupyter', 'notebook', 'ipython', 'jupytext', 'nbformat']
 GGML_DEPS = ['ctransformers']
 GPTQ_DEPS = ['auto-gptq[triton]>=0.4.2', 'optimum>=1.12.0']
-VLLM_DEPS = ['vllm>=0.1.7', 'ray']
+VLLM_DEPS = ['vllm>=0.2.0', 'ray']
 
 _base_requirements: dict[str, t.Any] = {
     inflection.dasherize(name): config_cls.__openllm_requirements__ for name, config_cls in openllm.CONFIG_MAPPING.items() if config_cls.__openllm_requirements__

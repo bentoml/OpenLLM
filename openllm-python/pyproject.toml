@@ -39,7 +39,7 @@ classifiers = [
 ]
 dependencies = [
     "bentoml[io]>=1.1.2",
-    "transformers[torch,tokenizers,accelerate]>=4.32.1",
+    "transformers[torch,tokenizers]>=4.34.0",
     "openllm-client",
     "openllm-core",
     "safetensors",
@@ -115,7 +115,7 @@ openai = ["openai[embeddings]", "tiktoken"]
 opt = ["flax>=0.7", "jax", "jaxlib", "tensorflow", "keras"]
 playground = ["jupyter", "notebook", "ipython", "jupytext", "nbformat"]
 starcoder = ["bitsandbytes"]
-vllm = ["vllm>=0.1.7", "ray"]
+vllm = ["vllm>=0.2.0", "ray"]
 
 [tool.hatch.version]
 fallback-version = "0.0.0"
