@@ -39,7 +39,6 @@ from openllm_core._typing_compat import T
 from openllm_core._typing_compat import TupleAny
 from openllm_core._typing_compat import overload
 from openllm_core.prompts import PromptTemplate
-from openllm_core.prompts import process_prompt
 from openllm_core.utils import DEBUG
 from openllm_core.utils import MYPY
 from openllm_core.utils import EnvVarMixin
@@ -620,7 +619,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
     # set default tokenizer kwargs
     tokenizer_kwds.update({'padding_side': 'left', 'truncation_side': 'left'})
 
-    # parsing tokenizer and model kwargs, as the hierachy is param pass > default
+    # parsing tokenizer and model kwargs, as the hierarchy is param pass > default
     normalized_model_kwds, normalized_tokenizer_kwds = normalize_attrs_to_model_tokenizer_pair(**attrs)
     # NOTE: Save the args and kwargs for latter load
     self.__attrs_init__(llm_config, quantization_config, _quantize, model_id, args, {
@@ -1211,6 +1210,8 @@ def llm_runnable_class(self: LLM[M, T], embeddings_sig: ModelSignature, generate
       if adapter_name is not None: __self.set_adapter(adapter_name)
       request_id: str | None = attrs.pop('request_id', None)
       if request_id is None: raise ValueError('request_id must not be None.')
+      prompt, *_ = self.sanitize_parameters(prompt, **attrs)
+      if openllm_core.utils.DEBUG: logger.debug('Prompt:\n%s', prompt)
 
       if stop_token_ids is None: stop_token_ids = []
       stop_token_ids.append(self.tokenizer.eos_token_id)
@@ -1237,7 +1238,6 @@ def llm_runnable_class(self: LLM[M, T], embeddings_sig: ModelSignature, generate
     async def vllm_generate_iterator(__self: _Runnable, prompt: str, **attrs: t.Any) -> t.AsyncGenerator[str, None]:
       # TODO: System prompt support
       pre = 0
-      prompt = process_prompt(prompt, None, False)
       echo = attrs.pop('echo', False)
       stop: str | t.Iterable[str] | None = attrs.pop('stop', None)
       stop_token_ids: list[int] | None = attrs.pop('stop_token_ids', None)
@@ -1247,6 +1247,8 @@ def llm_runnable_class(self: LLM[M, T], embeddings_sig: ModelSignature, generate
       if adapter_name is not None: __self.set_adapter(adapter_name)
       request_id: str | None = attrs.pop('request_id', None)
       if request_id is None: raise ValueError('request_id must not be None.')
+      prompt, *_ = self.sanitize_parameters(prompt, **attrs)
+      if openllm_core.utils.DEBUG: logger.debug('Prompt:\n%s', prompt)
 
       if stop_token_ids is None: stop_token_ids = []
       stop_token_ids.append(self.tokenizer.eos_token_id)

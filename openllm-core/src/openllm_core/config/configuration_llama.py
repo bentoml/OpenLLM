@@ -69,7 +69,7 @@ class LlamaConfig(openllm_core.LLMConfig):
   Refer to [Llama's model card](https://huggingface.co/docs/transformers/main/model_doc/llama)
   for more information.
   """
-  use_llama2_prompt: bool = dantic.Field(False, description='Whether to use the prompt format for Llama 2. Disable this when working with Llama 1.')
+  use_llama2_prompt: bool = dantic.Field(True, description='Whether to use the prompt format for Llama 2. Disable this when working with Llama 1.')
   __config__ = {
       'name_type': 'lowercase',
       'url': 'https://github.com/facebookresearch/llama',
