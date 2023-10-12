@@ -19,13 +19,18 @@ class HTTPClient:
   timeout: int = 30
   api_version: str = 'v1'
   client_args: t.Dict[str, t.Any] = attr.field(factory=dict)
+  _metadata: t.Dict[str, t.Any] = attr.field(init=False)
   _inner: httpx.Client = attr.field(init=False)
 
   def __attrs_post_init__(self) -> None:
     self._inner = httpx.Client(base_url=self.address, timeout=self.timeout, **self.client_args)
+    self._metadata = self._inner.post(self._build_endpoint('metadata'))
 
   def health(self):
     return self._inner.get('/readyz')
+
+  def _build_endpoint(self, endpoint: str):
+    return '/' + f'{self.api_version}/{endpoint}'
 
   def query(self, prompt: str, **attrs: t.Any):
     prompt, generate_kwargs, postprocess_kwargs = self.sanitize_parameters(prompt, **attrs)

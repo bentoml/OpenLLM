@@ -56,6 +56,14 @@ class BaichuanConfig(openllm_core.LLMConfig):
     top_p: float = 0.7
     temperature: float = 0.95
 
+  @property
+  def default_prompt_template(self) -> str:
+    return DEFAULT_PROMPT_TEMPLATE.to_string()
+
+  @property
+  def default_system_message(self) -> str:
+    return DEFAULT_SYSTEM_MESSAGE
+
   def sanitize_parameters(self,
                           prompt: str,
                           prompt_template: PromptTemplate | str | None = None,

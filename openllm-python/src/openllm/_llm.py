@@ -1345,8 +1345,8 @@ def llm_runner_class(self: LLM[M, T]) -> type[LLMRunner[M, T]]:
                              'supports_embeddings': self['supports_embeddings'],
                              'supports_hf_agent': self['supports_generate_one'],
                              'has_adapters': self._adapters_mapping is not None,
-                             'prompt_template': self._prompt_template.to_string(),
-                             'system_message': self._system_message,
+                             'prompt_template': self._prompt_template.to_string() if self._prompt_template else self.config.default_prompt_template,
+                             'system_message': self._system_message if self._system_message else self.config.default_system_message,
                          }))
 
 __all__ = ['LLMRunner', 'LLMRunnable', 'Runner', 'LLM', 'llm_runner_class', 'llm_runnable_class', 'EmbeddingsOutput']
