@@ -844,9 +844,9 @@ def embed_command(
     termui.echo(gen_embed.embeddings, fg='white')
   ctx.exit(0)
 @cli.command()
-@shared_client_options
+@shared_client_options(output_value='porcelain')
 @click.option('--server-type', type=click.Choice(['grpc', 'http']), help='Server type', default='http', show_default=True)
-@click.option('--stream', type=click.BOOL, is_flag=True, default=False, help='Whether to stream the response.')
+@click.option('--stream/--no-stream', type=click.BOOL, is_flag=True, default=True, help='Whether to stream the response.')
 @click.argument('prompt', type=click.STRING)
 @click.option(
     '--sampling-params', help='Define query options. (format: ``--opt temperature=0.8 --opt=top_k:12)', required=False, multiple=True, callback=opt_callback, metavar='ARG=VALUE[,ARG=VALUE]'
