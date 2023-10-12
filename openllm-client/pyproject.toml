@@ -57,7 +57,7 @@ keywords = [
   "PyTorch",
   "Transformers",
 ]
-dependencies = ["openllm-core", "httpx"]
+dependencies = ["orjson", "httpx", "attrs>=23.1.0", "cattrs>=23.1.0"]
 license = "Apache-2.0"
 name = "openllm-client"
 requires-python = ">=3.8"
@@ -72,7 +72,7 @@ Tracker = "https://github.com/bentoml/OpenLLM/issues"
 Twitter = "https://twitter.com/bentomlai"
 [project.optional-dependencies]
 full = ["openllm-client[grpc,agents]"]
-grpc = ["bentoml[grpc]>=1.0.25"]
+grpc = ["bentoml[grpc]>=1.1.6"]
 agents = ["transformers[agents]>=4.30", "diffusers", "soundfile"]
 
 [tool.hatch.version]

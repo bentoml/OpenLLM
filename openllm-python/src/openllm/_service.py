@@ -32,13 +32,7 @@ model = svars.model
 model_id = svars.model_id
 adapter_map = svars.adapter_map
 llm_config = openllm.AutoConfig.for_model(model)
-runner = openllm.Runner(
-  model,
-  llm_config=llm_config,
-  model_id=model_id,
-  ensure_available=False,
-  adapter_map=orjson.loads(adapter_map)
-)
+runner = openllm.Runner(model, llm_config=llm_config, model_id=model_id, ensure_available=False, adapter_map=orjson.loads(adapter_map))
 generic_embedding_runner = bentoml.Runner(openllm.GenericEmbeddingRunnable,  # XXX: remove arg-type once bentoml.Runner is correct set with type
                                           name='llm-generic-embedding',
                                           scheduling_strategy=openllm_core.CascadingResourceStrategy,
@@ -189,7 +183,7 @@ async def chat_completion_v1(input_dict: dict[str, t.Any], ctx: bentoml.Context)
              'timeout': 3600,
              'model_name': llm_config['model_name'],
              'backend': runner.backend,
-             'configuration': '',
+             'configuration': llm_config.model_dump(flatten=True),
              'supports_embeddings': runner.supports_embeddings,
              'supports_hf_agent': runner.supports_hf_agent
          }))
