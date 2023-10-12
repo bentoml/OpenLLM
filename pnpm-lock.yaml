@@ -258,8 +258,8 @@ importers:
         version: 4.3.0
     devDependencies:
       '@types/react-transition-group':
-        specifier: ^4.4.6
-        version: 4.4.6
+        specifier: ^4.4.7
+        version: 4.4.7
       autoprefixer:
         specifier: ^10.4.16
         version: 10.4.16(postcss@8.4.31)
@@ -1957,7 +1957,7 @@ packages:
       '@mui/system': 5.14.10(@emotion/react@11.11.1)(@emotion/styled@11.11.0)(react@18.2.0)
       '@mui/types': 7.2.4
       '@mui/utils': 5.14.10(react@18.2.0)
-      '@types/react-transition-group': 4.4.6
+      '@types/react-transition-group': 4.4.7
       clsx: 2.0.0
       csstype: 3.1.2
       prop-types: 15.8.1
@@ -2126,7 +2126,7 @@ packages:
       '@mui/material': 5.14.9(@emotion/react@11.11.1)(@emotion/styled@11.11.0)(react-dom@18.2.0)(react@18.2.0)
       '@mui/system': 5.14.10(@emotion/react@11.11.1)(@emotion/styled@11.11.0)(react@18.2.0)
       '@mui/utils': 5.14.10(react@18.2.0)
-      '@types/react-transition-group': 4.4.6
+      '@types/react-transition-group': 4.4.7
       clsx: 2.0.0
       prop-types: 15.8.1
       react: 18.2.0
@@ -2674,8 +2674,8 @@ packages:
       '@types/react': 18.2.24
     dev: true
 
-  /@types/react-transition-group@4.4.6:
-    resolution: {integrity: sha512-VnCdSxfcm08KjsJVQcfBmhEQAPnLB8G08hAxn39azX1qYBQ/5RVQuoHuKIcfKOdncuaUvEpFKFzEvbtIMsfVew==}
+  /@types/react-transition-group@4.4.7:
+    resolution: {integrity: sha512-ICCyBl5mvyqYp8Qeq9B5G/fyBSRC0zx3XM3sCC6KkcMsNeAHqXBKkmat4GqdJET5jtYUpZXrxI5flve5qhi2Eg==}
     dependencies:
       '@types/react': 18.2.24
 
