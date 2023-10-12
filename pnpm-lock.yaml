@@ -2070,7 +2070,7 @@ packages:
       '@types/react':
         optional: true
     dependencies:
-      '@babel/runtime': 7.23.1
+      '@babel/runtime': 7.23.2
       '@types/prop-types': 15.7.8
       prop-types: 15.8.1
       react: 18.2.0
