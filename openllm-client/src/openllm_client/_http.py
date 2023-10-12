@@ -107,8 +107,9 @@ class AsyncHTTPClient:
 
   async def query(self, prompt: str, **attrs: t.Any) -> Response:
     _meta, _config = await self._metadata(), await self._config()
+    client = httpx.AsyncClient(base_url=self.address, timeout=self.timeout, **self.client_args)
     req = Request(prompt=_meta['prompt_template'].format(system_message=_meta['system_message'], instruction=prompt), llm_config={**_config, **attrs})
-    r = await self._inner.post(self._build_endpoint('generate'), json=req.json(), **self.client_args)
+    r = await client.post(self._build_endpoint('generate'), json=req.json(), **self.client_args)
     payload = r.json()
     if r.status_code != 200: raise ValueError("Failed to get generation from '/v1/generate'. Check server logs for more details.")
     return Response(**payload)
