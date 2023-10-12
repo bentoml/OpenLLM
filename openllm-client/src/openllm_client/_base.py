@@ -169,7 +169,7 @@ class _Client(_ClientAttr):
 
   @functools.cached_property
   def inner(self) -> BentoClient:
-    BentoClient.wait_until_server_ready(self._host, int(self._port), timeout=self._timeout)
+    BentoClient.wait_until_server_ready(self._address, timeout=self._timeout)
     return BentoClient.from_url(self._address)
 
   # Agent integration
@@ -203,7 +203,7 @@ class _AsyncClient(_ClientAttr):
 
   @functools.cached_property
   def inner(self) -> AsyncBentoClient:
-    ensure_exec_coro(AsyncBentoClient.wait_until_server_ready(self._host, int(self._port), timeout=self._timeout))
+    ensure_exec_coro(AsyncBentoClient.wait_until_server_ready(self._address, timeout=self._timeout))
     return ensure_exec_coro(AsyncBentoClient.from_url(self._address))
 
   # Agent integration
