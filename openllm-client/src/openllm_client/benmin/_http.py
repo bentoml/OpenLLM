@@ -30,13 +30,15 @@ class HttpClient(Client):
     return httpx.Client(base_url=self.server_url)
 
   @staticmethod
-  def wait_until_server_ready(host: str, port: int, timeout: float = 30, check_interval: int = 1, **kwargs: t.Any) -> None:
+  def wait_until_server_ready(host: str, port: int | None = None, timeout: float = 30, check_interval: int = 1, **kwargs: t.Any) -> None:
     host = host if '://' in host else 'http://' + host
-    logger.debug('Waiting for server @ `%s:%d` to be ready...', host, port)
+    server = host if port is None else f'{host}:{port}'
+    logger.debug("Waiting for server @ '%s' to be ready...", server)
     start = time.time()
     while time.time() - start < timeout:
       try:
-        status = httpx.get(f'{host}:{port}/readyz').status_code
+        with httpx.Client(base_url=server) as sess:
+          status = sess.get('/readyz').status_code
         if status == 200: break
         else: time.sleep(check_interval)
       except (httpx.ConnectError, urllib.error.URLError, ConnectionError):
@@ -44,9 +46,10 @@ class HttpClient(Client):
         time.sleep(check_interval)
     # Try once more and raise for exception
     try:
-      httpx.get(f'{host}:{port}/readyz').raise_for_status()
+      with httpx.Client(base_url=server) as sess:
+        status = sess.get('/readyz').status_code
     except httpx.HTTPStatusError as err:
-      logger.error('Failed to wait until server ready: %s:%d', host, port)
+      logger.error('Failed to wait until server ready: %s', server)
       logger.error(err)
       raise
 
@@ -56,10 +59,11 @@ class HttpClient(Client):
   @classmethod
   def from_url(cls, url: str, **kwargs: t.Any) -> HttpClient:
     url = url if '://' in url else 'http://' + url
-    resp = httpx.get(f'{url}/docs.json')
-    if resp.status_code != 200:
-      raise ValueError(f'Failed to get OpenAPI schema from the server: {resp.status_code} {resp.reason_phrase}:\n{resp.content.decode()}')
-    _spec = orjson.loads(resp.content)
+    with httpx.Client(base_url=url) as sess:
+      resp = sess.get('/docs.json')
+      if resp.status_code != 200:
+        raise ValueError(f'Failed to get OpenAPI schema from the server: {resp.status_code} {resp.reason_phrase}:\n{resp.content.decode()}')
+      _spec = orjson.loads(resp.content)
 
     reflection = bentoml.Service(_spec['info']['title'])
 
@@ -118,11 +122,12 @@ class AsyncHttpClient(AsyncClient):
   @staticmethod
   async def wait_until_server_ready(host: str, port: int, timeout: float = 30, check_interval: int = 1, **kwargs: t.Any) -> None:
     host = host if '://' in host else 'http://' + host
-    logger.debug('Waiting for server @ `%s:%d` to be ready...', host, port)
+    server = host if port is None else f'{host}:{port}'
+    logger.debug("Waiting for server @ '%s' to be ready...", server)
     start = time.time()
     while time.time() - start < timeout:
       try:
-        async with httpx.AsyncClient(base_url=f'{host}:{port}') as sess:
+        async with httpx.AsyncClient(base_url=server) as sess:
           resp = await sess.get('/readyz')
           if resp.status_code == 200: break
           else: await asyncio.sleep(check_interval)
@@ -130,10 +135,10 @@ class AsyncHttpClient(AsyncClient):
         logger.debug('Server is not ready yet, retrying in %d seconds...', check_interval)
         await asyncio.sleep(check_interval)
     # Try once more and raise for exception
-    async with httpx.AsyncClient(base_url=f'{host}:{port}') as sess:
+    async with httpx.AsyncClient(base_url=server) as sess:
       resp = await sess.get('/readyz')
       if resp.status_code != 200:
-        raise TimeoutError(f'Timeout while waiting for server @ `{host}:{port}` to be ready: {resp.status_code}: {resp.content!s}')
+        raise TimeoutError(f"Timeout while waiting for server @ '{server}' to be ready: {resp.status_code}: {resp.content!s}")
 
   async def health(self) -> httpx.Response:
     return await self.inner.get('/readyz')
@@ -141,8 +146,8 @@ class AsyncHttpClient(AsyncClient):
   @classmethod
   async def from_url(cls, url: str, **kwargs: t.Any) -> AsyncHttpClient:
     url = url if '://' in url else 'http://' + url
-    async with httpx.AsyncClient(base_url=url) as session:
-      resp = await session.get('/docs.json')
+    async with httpx.AsyncClient(base_url=url) as sess:
+      resp = await sess.get('/docs.json')
       if resp.status_code != 200:
         raise ValueError(f'Failed to get OpenAPI schema from the server: {resp.status_code} {resp.reason_phrase}:\n{(await resp.aread()).decode()}')
       _spec = orjson.loads(await resp.aread())
