@@ -7,7 +7,7 @@ updates:
       day: 'monday'
       time: '09:00'
   - package-ecosystem: pip
-    directory: '/openllm-python'
+    directory: '/'
     schedule:
       interval: 'weekly'
     open-pull-requests-limit: 5
@@ -16,4 +16,4 @@ updates:
     directory: '/'
     schedule:
       interval: 'weekly'
-    open-pull-requests-limit: 15
+    open-pull-requests-limit: 5
