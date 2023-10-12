@@ -111,6 +111,8 @@ class LLMRunner(bentoml.Runner, t.Generic[M, T]):
   supports_embeddings: bool
   supports_hf_agent: bool
   has_adapters: bool
+  system_message: str | None
+  prompt_template: str | None
   embeddings: RunnerMethod[LLMRunnable[M, T], [list[str]], t.Sequence[EmbeddingsOutput]]
   generate: RunnerMethod[LLMRunnable[M, T], [str], list[t.Any]]
   generate_one: RunnerMethod[LLMRunnable[M, T], [str, list[str]], t.Sequence[dict[t.Literal['generated_text'], str]]]

@@ -185,7 +185,9 @@ async def chat_completion_v1(input_dict: dict[str, t.Any], ctx: bentoml.Context)
              'backend': runner.backend,
              'configuration': llm_config.model_dump(flatten=True),
              'supports_embeddings': runner.supports_embeddings,
-             'supports_hf_agent': runner.supports_hf_agent
+             'supports_hf_agent': runner.supports_hf_agent,
+             'prompt_template': runner.prompt_template,
+             'system_message': runner.system_message,
          }))
 def metadata_v1(_: str) -> openllm.MetadataOutput:
   return openllm.MetadataOutput(timeout=llm_config['timeout'],
@@ -194,7 +196,10 @@ def metadata_v1(_: str) -> openllm.MetadataOutput:
                                 model_id=runner.llm.model_id,
                                 configuration=llm_config.model_dump_json().decode(),
                                 supports_embeddings=runner.supports_embeddings,
-                                supports_hf_agent=runner.supports_hf_agent)
+                                supports_hf_agent=runner.supports_hf_agent,
+                                prompt_template=runner.prompt_template,
+                                system_message=runner.system_message,
+                                )
 
 @svc.api(route='/v1/embeddings',
          input=bentoml.io.JSON.from_sample(['Hey Jude, welcome to the jungle!', 'What is the meaning of life?']),
