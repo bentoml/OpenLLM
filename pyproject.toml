@@ -156,6 +156,7 @@ whitelist-regex = ["test_.*"]
 toplevel = ["openllm"]
 
 [tool.ruff]
+tab-size = 2
 extend-exclude = [
   "tools",
   "examples",

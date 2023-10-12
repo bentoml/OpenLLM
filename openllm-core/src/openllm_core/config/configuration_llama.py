@@ -69,7 +69,7 @@ class LlamaConfig(openllm_core.LLMConfig):
   Refer to [Llama's model card](https://huggingface.co/docs/transformers/main/model_doc/llama)
   for more information.
   """
-  use_llama2_prompt: bool = dantic.Field(False, description='Whether to use the prompt format for Llama 2. Disable this when working with Llama 1.')
+  use_llama2_prompt: bool = dantic.Field(True, description='Whether to use the prompt format for Llama 2. Disable this when working with Llama 1.')
   __config__ = {
       'name_type': 'lowercase',
       'url': 'https://github.com/facebookresearch/llama',
@@ -105,6 +105,14 @@ class LlamaConfig(openllm_core.LLMConfig):
   class SamplingParams:
     best_of: int = 1
     presence_penalty: float = 0.5
+
+  @property
+  def default_prompt_template(self, use_llama2_prompt: bool = True) -> str:
+    return DEFAULT_PROMPT_TEMPLATE('v2' if use_llama2_prompt else 'v1').to_string()
+
+  @property
+  def default_system_message(self) -> str:
+    return DEFAULT_SYSTEM_MESSAGE
 
   def sanitize_parameters(self,
                           prompt: str,

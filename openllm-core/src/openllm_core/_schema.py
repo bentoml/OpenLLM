@@ -71,6 +71,8 @@ class MetadataOutput:
   configuration: str
   supports_embeddings: bool
   supports_hf_agent: bool
+  prompt_template: str
+  system_message: str
 
 @attr.frozen(slots=True)
 class EmbeddingsOutput:
