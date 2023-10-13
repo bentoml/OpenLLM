@@ -70,6 +70,8 @@ OpenLLM is designed for AI application developers working to build production-re
 
 ## 🏃 Get started
 
+To quickly get started with OpenLLM, follow the instructions below or try this [OpenLLM tutorial in Google Colab: Serving Llama 2 with OpenLLM](https://colab.research.google.com/github/bentoml/OpenLLM/blob/main/examples/openllm-llama2-demo/openllm_llama2_demo.ipynb).
+
 ### Prerequisites
 
 You have installed Python 3.8 (or later) and `pip`. We highly recommend using a [Virtual Environment](https://docs.python.org/3/library/venv.html) to prevent package conflicts.
