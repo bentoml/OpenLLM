@@ -3,6 +3,8 @@ import openai, os
 openai.api_base = os.getenv('OPENLLM_ENDPOINT', "http://localhost:3000") + '/v1'
 openai.api_key = "na"
 
+print("Model:", openai.Model.list())
+
 response = openai.Completion.create(model="gpt-3.5-turbo-instruct", prompt="Write a tagline for an ice cream shop.", max_tokens=256)
 
 print(response)
@@ -18,5 +20,3 @@ completion = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=[{"rol
 
 for chunk in completion:
   print(chunk)
-
-print(openai.Model.list())
