@@ -69,15 +69,9 @@ class MetadataOutput:
   model_name: str
   backend: str
   configuration: str
-  supports_embeddings: bool
   supports_hf_agent: bool
   prompt_template: str
   system_message: str
-
-@attr.frozen(slots=True)
-class EmbeddingsOutput:
-  embeddings: t.List[t.List[float]]
-  num_tokens: int
 
 def unmarshal_vllm_outputs(request_output: vllm.RequestOutput) -> dict[str, t.Any]:
   return dict(request_id=request_output.request_id,
