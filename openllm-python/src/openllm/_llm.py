@@ -21,7 +21,6 @@ import openllm_core
 from bentoml._internal.models.model import ModelSignature
 from openllm_core._configuration import FineTuneConfig
 from openllm_core._configuration import LLMConfig
-from openllm_core._schema import EmbeddingsOutput
 from openllm_core._typing_compat import AdaptersMapping
 from openllm_core._typing_compat import AdaptersTuple
 from openllm_core._typing_compat import AdapterType
@@ -165,16 +164,6 @@ class LLMFunction(abc.ABC):
     '''
     raise NotImplementedError
 
-  def embeddings(self, prompts: list[str]) -> EmbeddingsOutput:
-    '''The implementation for generating text embeddings from given prompt.
-
-    It takes the prompt and output the embeddings for this given LLM.
-
-    Returns:
-        The embeddings for the given prompt.
-    '''
-    raise NotImplementedError
-
 class LLMSerialisation(abc.ABC, t.Generic[M, T]):
   def import_model(self, *args: t.Any, trust_remote_code: bool, **attrs: t.Any) -> bentoml.Model:
     '''Import both model and tokenizer weights into as a BentoML models.
@@ -261,8 +250,6 @@ class LLMInterface(LLMFunction, LLMSerialisation[M, T], abc.ABC):
   __llm_adapter_map__: t.Optional[ResolvedAdaptersMapping]
   '''A reference to the the cached LoRA adapter mapping.'''
 
-  __llm_supports_embeddings__: bool
-  '''A boolean to determine whether models does implement ``LLM.embeddings``.'''
   __llm_supports_generate__: bool
   '''A boolean to determine whether models does implement ``LLM.generate``.'''
   __llm_supports_generate_one__: bool
@@ -336,10 +323,6 @@ class LLM(LLMInterface[M, T], ReprMixin):
 
   @overload
   def __getitem__(self, item: t.Literal['adapter_map']) -> ResolvedAdaptersMapping | None:
-    ...
-
-  @overload
-  def __getitem__(self, item: t.Literal['supports_embeddings']) -> bool:
     ...
 
   @overload
@@ -876,18 +859,16 @@ class LLM(LLMInterface[M, T], ReprMixin):
         raise RuntimeError(f'Failed to locate {self._bentomodel}:{err}') from None
 
     generate_sig = ModelSignature.from_dict(ModelSignatureDict(batchable=False))
-    embeddings_sig = ModelSignature.from_dict(ModelSignatureDict(batchable=True, batch_dim=0))
     generate_iterator_sig = ModelSignature.from_dict(ModelSignatureDict(batchable=False))
 
     # NOTE: returning the two langchain API's to the runner
-    return llm_runner_class(self)(llm_runnable_class(self, embeddings_sig, generate_sig, generate_iterator_sig),
+    return llm_runner_class(self)(llm_runnable_class(self, generate_sig, generate_iterator_sig),
                                   name=self.runner_name,
                                   embedded=False,
                                   models=models,
                                   max_batch_size=max_batch_size,
                                   max_latency_ms=max_latency_ms,
                                   method_configs=bentoml_cattr.unstructure({
-                                      'embeddings': embeddings_sig,
                                       '__call__': generate_sig,
                                       'generate': generate_sig,
                                       'generate_one': generate_sig,
@@ -970,14 +951,14 @@ class LLM(LLMInterface[M, T], ReprMixin):
       past_key_values = out = token = None
       finish_reason = None
       for i in range(config['max_new_tokens']):
-        torch.cuda.synchronize()
+        if torch.cuda.is_available(): torch.cuda.synchronize()
         if i == 0:  # prefill
           out = self.model(torch.as_tensor([input_ids], device=self.device), use_cache=True)
         else:  # decoding
           out = self.model(torch.as_tensor([[token]], device=self.device), use_cache=True, past_key_values=past_key_values)
         logits = out.logits
         past_key_values = out.past_key_values
-        torch.cuda.synchronize()
+        if torch.cuda.is_available(): torch.cuda.synchronize()
 
         if logits_processor:
           if config['repetition_penalty'] > 1.0:
@@ -1139,7 +1120,7 @@ class SetAdapterOutput(t.TypedDict):
   success: bool
   message: str
 
-def llm_runnable_class(self: LLM[M, T], embeddings_sig: ModelSignature, generate_sig: ModelSignature, generate_iterator_sig: ModelSignature) -> type[LLMRunnable[M, T]]:
+def llm_runnable_class(self: LLM[M, T], generate_sig: ModelSignature, generate_iterator_sig: ModelSignature) -> type[LLMRunnable[M, T]]:
   class _Runnable(bentoml.Runnable):
     SUPPORTED_RESOURCES = ('nvidia.com/gpu', 'amd.com/gpu', 'cpu')
     SUPPORTS_CPU_MULTI_THREADING = True
@@ -1158,10 +1139,6 @@ def llm_runnable_class(self: LLM[M, T], embeddings_sig: ModelSignature, generate
       elif not isinstance(self.model, peft.PeftModel): raise RuntimeError('Model is not a PeftModel')
       if adapter_name != 'default': self.model.set_adapter(adapter_name)
       logger.info('Successfully apply LoRA layer %s', adapter_name)
-
-    @bentoml.Runnable.method(**method_signature(embeddings_sig))  # type: ignore
-    def embeddings(__self: _Runnable, prompt: str | list[str]) -> t.Sequence[EmbeddingsOutput]:
-      return [self.embeddings([prompt] if isinstance(prompt, str) else prompt)]
 
     @bentoml.Runnable.method(**method_signature(generate_sig))  # type: ignore
     def __call__(__self: _Runnable, prompt: str, **attrs: t.Any) -> list[t.Any]:
@@ -1303,18 +1280,6 @@ def llm_runner_class(self: LLM[M, T]) -> type[LLMRunner[M, T]]:
     prompt, generate_kwargs, postprocess_kwargs = self.sanitize_parameters(prompt, **kwargs)
     return self.postprocess_generate(prompt, __self.generate.run(prompt, **generate_kwargs), **postprocess_kwargs)
 
-  def _wrapped_embeddings_run(__self: LLMRunner[M, T], prompt: str | list[str]) -> EmbeddingsOutput:
-    '''``llm.embed`` is a light wrapper around runner.embeedings.run().
-
-    Usage:
-
-    ```python
-    runner = openllm.Runner('llama', backend='pt')
-    runner.embed("What is the meaning of life?")
-    ```
-    '''
-    return __self.embeddings.run([prompt] if isinstance(prompt, str) else prompt)
-
   def _wrapped_repr_keys(_: LLMRunner[M, T]) -> set[str]:
     return {'config', 'llm_type', 'runner_methods', 'backend', 'llm_tag'}
 
@@ -1324,6 +1289,14 @@ def llm_runner_class(self: LLM[M, T]) -> type[LLMRunner[M, T]]:
     yield 'llm_type', __self.llm_type
     yield 'backend', self.__llm_backend__
     yield 'llm_tag', self.tag
+
+  if self._prompt_template: prompt_template = self._prompt_template.to_string()
+  elif hasattr(self.config, 'default_prompt_template'): prompt_template = self.config.default_prompt_template
+  else: prompt_template = None
+
+  if self._system_message: system_message = self._system_message
+  elif hasattr(self.config, 'default_system_message'): system_message = self.config.default_system_message
+  else: system_message = None
 
   return types.new_class(self.__class__.__name__ + 'Runner', (bentoml.Runner,),
                          exec_body=lambda ns: ns.update({
@@ -1336,17 +1309,15 @@ def llm_runner_class(self: LLM[M, T]) -> type[LLMRunner[M, T]]:
                              'peft_adapters': property(fget=available_adapters),
                              'download_model': self.save_pretrained,
                              '__call__': _wrapped_generate_run,
-                             'embed': _wrapped_embeddings_run,
                              '__module__': self.__module__,
                              '__doc__': self.config['env'].start_docstring,
                              '__repr__': ReprMixin.__repr__,
                              '__repr_keys__': property(_wrapped_repr_keys),
                              '__repr_args__': _wrapped_repr_args,
-                             'supports_embeddings': self['supports_embeddings'],
                              'supports_hf_agent': self['supports_generate_one'],
                              'has_adapters': self._adapters_mapping is not None,
-                             'prompt_template': self._prompt_template.to_string() if self._prompt_template else self.config.default_prompt_template,
-                             'system_message': self._system_message if self._system_message else self.config.default_system_message,
+                             'prompt_template': prompt_template,
+                             'system_message': system_message,
                          }))
 
-__all__ = ['LLMRunner', 'LLMRunnable', 'Runner', 'LLM', 'llm_runner_class', 'llm_runnable_class', 'EmbeddingsOutput']
+__all__ = ['LLMRunner', 'LLMRunnable', 'Runner', 'LLM', 'llm_runner_class', 'llm_runnable_class']
