@@ -6,7 +6,6 @@ import warnings
 import _service_vars as svars
 import orjson
 
-from fastapi import FastAPI
 from starlette.applications import Starlette
 from starlette.responses import JSONResponse
 from starlette.routing import Route
@@ -167,11 +166,11 @@ async def chat_completion_v1(input_dict: dict[str, t.Any], ctx: bentoml.Context)
                                                   model=model)  # TODO: logprobs, finish_reason and usage
         )).decode('utf-8')
 
-fastapi_app = FastAPI()
-@fastapi_app.get('/v1/models')
-def models_v1() -> t.List[dict[str, t.Any]]:
-    return [{'data': {'model': model, 'id': model_id}}]
-svc.mount_asgi_app(fastapi_app)
+def models_v1(_: Request) -> Response:
+  return JSONResponse([{'data': {'model': model, 'id': model_id}}], status_code=200)
+
+openai_app = Starlette(debug=True, routes=[Route('/models', models_v1, methods=['GET'])])
+svc.mount_asgi_app(openai_app, path='/v1')
 
 @svc.api(route='/v1/metadata',
          input=bentoml.io.Text(),
