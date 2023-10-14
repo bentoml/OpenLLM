@@ -119,6 +119,18 @@ class ChatCompletionResponseStream:
   id: str = attr.field(default=attr.Factory(lambda: openllm_core.utils.gen_random_uuid('chatcmpl')))
   created: int = attr.field(default=attr.Factory(lambda: int(time.time())))
 
+@attr.define
+class ModelCard:
+  id: str
+  object: str = 'model'
+  created: int = attr.field(default=attr.Factory(lambda: int(time.time())))
+  owned_by: str = 'na'
+
+@attr.define
+class ModelList:
+  object: str = 'list'
+  data: t.List[ModelCard] = attr.field(factory=list)
+
 def messages_to_prompt(messages: list[Message]) -> str:
   formatted = '\n'.join([f"{message['role']}: {message['content']}" for message in messages])
   return f'{formatted}\nassistant:'
