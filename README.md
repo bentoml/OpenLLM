@@ -107,7 +107,6 @@ Options:
 
 Commands:
   build       Package a given models into a Bento.
-  embed       Get embeddings interactively, from a terminal.
   import      Setup LLM interactively.
   instruct    Instruct agents interactively for given tasks, from a...
   models      List all supported models.
@@ -866,47 +865,6 @@ openllm build opt --adapter-id ./path/to/adapter_id --build-ctx .
 > [!NOTE]
 > We will gradually roll out support for fine-tuning all models.
 > Currently, the models supporting fine-tuning with OpenLLM include: OPT, Falcon, and LlaMA.
-
-## 🧮 Embeddings
-
-OpenLLM provides embeddings endpoint for embeddings calculation. This can
-be accessed via `/v1/embeddings`.
-
-To use via CLI, simply call `openllm embed`:
-
-```bash
-openllm embed --endpoint http://localhost:3000 "I like to eat apples" -o json
-{
-  "embeddings": [
-    0.006569798570126295,
-    -0.031249752268195152,
-    -0.008072729222476482,
-    0.00847396720200777,
-    -0.005293501541018486,
-    ...<many embeddings>...
-    -0.002078012563288212,
-    -0.00676426338031888,
-    -0.002022686880081892
-  ],
-  "num_tokens": 9
-}
-```
-
-To invoke this endpoint, use `client.embed` from the Python SDK:
-
-```python
-import openllm
-
-client = openllm.client.HTTPClient("http://localhost:3000")
-
-client.embed("I like to eat apples")
-```
-
-> [!NOTE]
-> Currently, the following model family supports embeddings calculation: Llama, T5 (Flan-T5, FastChat, etc.), ChatGLM
-> For the remaining LLM that doesn't have specific embedding implementation,
-> we will use a generic [BertModel](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2)
-> for embeddings generation. The implementation is largely based on [`bentoml/sentence-embedding-bento`](https://github.com/bentoml/sentence-embedding-bento)
 
 ## 🥅 Playground and Chat UI
 

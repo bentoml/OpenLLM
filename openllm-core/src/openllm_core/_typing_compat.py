@@ -21,7 +21,6 @@ if t.TYPE_CHECKING:
   from bentoml._internal.runner.runner import RunnerMethod
   from bentoml._internal.runner.strategy import Strategy
   from openllm._llm import LLM
-  from openllm_core._schema import EmbeddingsOutput
 
   from .utils.lazy import VersionInfo
 
@@ -92,7 +91,6 @@ class LLMRunnable(bentoml.Runnable, t.Generic[M, T]):
   SUPPORTED_RESOURCES = ('amd.com/gpu', 'nvidia.com/gpu', 'cpu')
   SUPPORTS_CPU_MULTI_THREADING = True
   __call__: RunnableMethod[LLMRunnable[M, T], [str], list[t.Any]]
-  embeddings: RunnableMethod[LLMRunnable[M, T], [list[str]], EmbeddingsOutput]
   generate: RunnableMethod[LLMRunnable[M, T], [str], list[t.Any]]
   generate_one: RunnableMethod[LLMRunnable[M, T], [str, list[str]], t.Sequence[dict[t.Literal['generated_text'], str]]]
   generate_iterator: RunnableMethod[LLMRunnable[M, T], [str], t.Iterator[t.Any]]
@@ -108,12 +106,10 @@ class LLMRunner(bentoml.Runner, t.Generic[M, T]):
   llm: openllm.LLM[M, T]
   config: openllm.LLMConfig
   backend: LiteralBackend
-  supports_embeddings: bool
   supports_hf_agent: bool
   has_adapters: bool
   system_message: str | None
   prompt_template: str | None
-  embeddings: RunnerMethod[LLMRunnable[M, T], [list[str]], t.Sequence[EmbeddingsOutput]]
   generate: RunnerMethod[LLMRunnable[M, T], [str], list[t.Any]]
   generate_one: RunnerMethod[LLMRunnable[M, T], [str, list[str]], t.Sequence[dict[t.Literal['generated_text'], str]]]
   generate_iterator: RunnerMethod[LLMRunnable[M, T], [str], t.Iterator[t.Any]]
@@ -135,10 +131,6 @@ class LLMRunner(bentoml.Runner, t.Generic[M, T]):
     ...
 
   def __call__(self, prompt: str, **attrs: t.Any) -> t.Any:
-    ...
-
-  @abc.abstractmethod
-  def embed(self, prompt: str | list[str]) -> EmbeddingsOutput:
     ...
 
   def run(self, prompt: str, **attrs: t.Any) -> t.Any:

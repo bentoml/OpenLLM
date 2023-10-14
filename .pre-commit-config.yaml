@@ -14,8 +14,7 @@ repos:
         verbose: true
         exclude: |
           (?x)^(
-              openllm-client/src/openllm_client/pb.*|
-              openllm-python/src/openllm/cli/entrypoint.py
+              openllm-client/src/openllm_client/pb.*
           )$
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: 'v0.0.292'
