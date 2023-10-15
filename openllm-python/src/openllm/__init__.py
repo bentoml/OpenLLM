@@ -15,7 +15,7 @@ from . import exceptions as exceptions, utils as utils
 
 from openllm_core._configuration import GenerationConfig as GenerationConfig, LLMConfig as LLMConfig, SamplingParams as SamplingParams
 from openllm_core._strategies import CascadingResourceStrategy as CascadingResourceStrategy, get_resource as get_resource
-from openllm_core._schema import GenerationInput as GenerationInput, GenerationOutput as GenerationOutput, HfAgentInput as HfAgentInput, MetadataOutput as MetadataOutput, unmarshal_vllm_outputs as unmarshal_vllm_outputs
+from openllm_core._schema import GenerateInput as GenerateInput, GenerateOutput as GenerateOutput, GenerationOutput as GenerationOutput, HfAgentInput as HfAgentInput, MetadataOutput as MetadataOutput
 from openllm_core.config import AutoConfig as AutoConfig, CONFIG_MAPPING as CONFIG_MAPPING, CONFIG_MAPPING_NAMES as CONFIG_MAPPING_NAMES, BaichuanConfig as BaichuanConfig, ChatGLMConfig as ChatGLMConfig, DollyV2Config as DollyV2Config, FalconConfig as FalconConfig, FlanT5Config as FlanT5Config, GPTNeoXConfig as GPTNeoXConfig, LlamaConfig as LlamaConfig, MPTConfig as MPTConfig, OPTConfig as OPTConfig, StableLMConfig as StableLMConfig, StarCoderConfig as StarCoderConfig
 
 if openllm_core.utils.DEBUG:
@@ -40,7 +40,8 @@ _import_structure: dict[str, list[str]] = {
     "playground": [],
     "testing": [],
     "prompts": ["PromptTemplate"],
-    "protocol": ["openai"],
+    "protocol": [],
+    'entrypoints': [],
     "utils": ["infer_auto_class"],
     "serialisation": ["ggml", "transformers"],
     "cli._sdk": ["start", "start_grpc", "build", "import_model", "list_models"],

@@ -10,12 +10,13 @@ from openllm_core._configuration import GenerationConfig
 from openllm_core._configuration import LLMConfig
 
 from .utils import bentoml_cattr
+from .utils import gen_random_uuid
 
 if t.TYPE_CHECKING:
   import vllm
 
 @attr.frozen(slots=True)
-class GenerationInput:
+class GenerateInput:
   prompt: str
   llm_config: LLMConfig
   adapter_name: str | None = attr.field(default=None)
@@ -31,13 +32,13 @@ class GenerationInput:
       return cls(**data)
 
   @classmethod
-  def for_model(cls, model_name: str, **attrs: t.Any) -> type[GenerationInput]:
+  def for_model(cls, model_name: str, **attrs: t.Any) -> type[GenerateInput]:
     import openllm
     return cls.from_llm_config(openllm.AutoConfig.for_model(model_name, **attrs))
 
   @classmethod
-  def from_llm_config(cls, llm_config: LLMConfig) -> type[GenerationInput]:
-    return attr.make_class(inflection.camelize(llm_config['model_name']) + 'GenerationInput',
+  def from_llm_config(cls, llm_config: LLMConfig) -> type[GenerateInput]:
+    return attr.make_class(inflection.camelize(llm_config['model_name']) + 'GenerateInput',
                            attrs={
                                'prompt': attr.field(type=str),
                                'llm_config': attr.field(type=llm_config.__class__, default=llm_config, converter=functools.partial(cls.convert_llm_config, cls=llm_config.__class__)),
@@ -45,7 +46,7 @@ class GenerationInput:
                            })
 
 @attr.frozen(slots=True)
-class GenerationOutput:
+class GenerateOutput:
   responses: t.List[t.Any]
   configuration: t.Dict[str, t.Any]
 
@@ -87,3 +88,22 @@ def unmarshal_vllm_outputs(request_output: vllm.RequestOutput) -> dict[str, t.An
 class HfAgentInput:
   inputs: str
   parameters: t.Dict[str, t.Any]
+
+FinishReason = t.Literal['length', 'stop']
+
+@attr.define
+class CompletionChunk:
+  index: int
+  text: str
+  token_ids: t.List[int]
+  cumulative_logprob: float
+  logprobs: t.Optional[t.List[t.Dict[int, float]]] = None
+  finish_reason: t.Optional[FinishReason] = None
+
+@attr.define
+class GenerationOutput:
+  prompt: str
+  finished: bool
+  outputs: t.List[CompletionChunk]
+  prompt_token_ids: t.Optional[t.List[int]] = attr.field(default=None)
+  request_id: str = attr.field(factory=lambda: gen_random_uuid())

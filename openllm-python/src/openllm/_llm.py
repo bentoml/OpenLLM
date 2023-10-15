@@ -911,9 +911,11 @@ class LLM(LLMInterface[M, T], ReprMixin):
   def generate(self, prompt: str, **attrs: t.Any) -> t.List[t.Any]:
     # TODO: support different generation strategies, similar to self.model.generate
     prompt, attrs, _ = self.sanitize_parameters(prompt, **attrs)
+    res: t.Any = None
     for it in self.generate_iterator(prompt, **attrs):
-      pass
-    return [it]
+      res = it
+    if res is None: raise ValueError('Failed to generate result.')
+    return [res]
 
   def generate_iterator(self,
                         prompt: str,
@@ -930,6 +932,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
     from ._generation import is_partial_stop
     from ._generation import prepare_logits_processor
 
+    # TODO: prompt_token_ids + cumul_logprob, idx
     prompt, attrs, _ = self.sanitize_parameters(prompt, **attrs)
     len_prompt = len(prompt)
     config = self.config.model_construct_env(**attrs)
@@ -1016,6 +1019,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
       else: finish_reason = 'length'  # finish stream events
       if stopped: finish_reason = 'stop'
       yield {'text': output, 'usage': {'prompt_tokens': input_echo_len, 'completion_tokens': i, 'total_tokens': input_echo_len + i}, 'finish_reason': finish_reason}
+
     # Clean
     del past_key_values, out
     gc.collect()
@@ -1161,7 +1165,7 @@ def llm_runnable_class(self: LLM[M, T], generate_sig: ModelSignature, generate_i
       if adapter_name is not None: __self.set_adapter(adapter_name)
       return self.generate_one(prompt, stop, **attrs)
 
-    @bentoml.Runnable.method(**method_signature(generate_iterator_sig))  # type: ignore
+    @bentoml.Runnable.method(**method_signature(generate_iterator_sig))
     def generate_iterator(__self: _Runnable, prompt: str, **attrs: t.Any) -> t.Generator[str, None, str]:
       prompt, attrs, _ = self.sanitize_parameters(prompt, **attrs)
       adapter_name = attrs.pop('adapter_name', None)
@@ -1178,13 +1182,14 @@ def llm_runnable_class(self: LLM[M, T], generate_sig: ModelSignature, generate_i
 
     @bentoml.Runnable.method(**method_signature(generate_sig))  # type: ignore
     async def vllm_generate(__self: _Runnable, prompt: str, **attrs: t.Any) -> t.AsyncGenerator[list[t.Any], None]:
+      # TODO: PEFT support
+      attrs.pop('adapter_name', None)
+
       stop: str | t.Iterable[str] | None = attrs.pop('stop', None)
-      echo = attrs.pop('echo', False)
+      # echo = attrs.pop('echo', False)
       stop_token_ids: list[int] | None = attrs.pop('stop_token_ids', None)
       temperature = attrs.pop('temperature', self.config['temperature'])
       top_p = attrs.pop('top_p', self.config['top_p'])
-      adapter_name = attrs.pop('adapter_name', None)
-      if adapter_name is not None: __self.set_adapter(adapter_name)
       request_id: str | None = attrs.pop('request_id', None)
       if request_id is None: raise ValueError('request_id must not be None.')
       prompt, *_ = self.sanitize_parameters(prompt, **attrs)
@@ -1206,26 +1211,29 @@ def llm_runnable_class(self: LLM[M, T], generate_sig: ModelSignature, generate_i
       async for request_output in t.cast('vllm.AsyncLLMEngine', self.model).generate(prompt=prompt, sampling_params=sampling_params, request_id=request_id):
         final_output = request_output
       if final_output is None: raise ValueError("'output' should not be None")
-      prompt = final_output.prompt
-      if echo: text_outputs = [prompt + output.text for output in final_output.outputs]
-      else: text_outputs = [output.text for output in final_output.outputs]
-      yield text_outputs
+      # prompt = final_output.prompt
+      # if echo: text_outputs = [prompt + output.text for output in final_output.outputs]
+      # else: text_outputs = [output.text for output in final_output.outputs]
+      yield final_output
 
-    @bentoml.Runnable.method(**method_signature(generate_iterator_sig))  # type: ignore
+    @bentoml.Runnable.method(**method_signature(generate_iterator_sig))
     async def vllm_generate_iterator(__self: _Runnable, prompt: str, **attrs: t.Any) -> t.AsyncGenerator[str, None]:
-      # TODO: System prompt support
-      pre = 0
-      echo = attrs.pop('echo', False)
+      # TODO: PEFT support
+      attrs.pop('adapter_name', None)
+
+      # pre = 0
+      # echo = attrs.pop('echo', False)
+      request_id: str | None = attrs.pop('request_id', None)
+      if request_id is None: raise ValueError('request_id must not be None.')
+
       stop: str | t.Iterable[str] | None = attrs.pop('stop', None)
       stop_token_ids: list[int] | None = attrs.pop('stop_token_ids', None)
       temperature = attrs.pop('temperature', self.config['temperature'])
       top_p = attrs.pop('top_p', self.config['top_p'])
       adapter_name = attrs.pop('adapter_name', None)
       if adapter_name is not None: __self.set_adapter(adapter_name)
-      request_id: str | None = attrs.pop('request_id', None)
-      if request_id is None: raise ValueError('request_id must not be None.')
       prompt, *_ = self.sanitize_parameters(prompt, **attrs)
-      if openllm_core.utils.DEBUG: logger.debug('Prompt:\n%s', prompt)
+      if openllm_core.utils.DEBUG: logger.debug('Prompt:\n%s', repr(prompt))
 
       if stop_token_ids is None: stop_token_ids = []
       stop_token_ids.append(self.tokenizer.eos_token_id)
@@ -1236,18 +1244,19 @@ def llm_runnable_class(self: LLM[M, T], generate_sig: ModelSignature, generate_i
         if tid: stop_.add(self.tokenizer.decode(tid))
 
       if temperature <= 1e-5: top_p = 1.0
-      config = self.config.model_construct_env(stop=list(stop_), top_p=top_p, **attrs)
-      sampling_params = config.to_sampling_config()
-      async for request_output in t.cast('vllm.AsyncLLMEngine', self.model).generate(prompt=prompt, sampling_params=sampling_params, request_id=request_id):
-        if echo: text_outputs = [prompt + output.text for output in request_output.outputs]
-        else: text_outputs = [output.text for output in request_output.outputs]
-        output_text = text_outputs[0]
-        output_text = output_text.strip().split(' ')
-        now = len(output_text) - 1
-        if now > pre:
-          yield ' '.join(output_text[pre:now]) + ' '
-          pre = now
-      yield ' '.join(output_text[pre:]) + ' '
+      config = self.config.model_construct_env(stop=list(stop_), temperature=temperature, top_p=top_p, **attrs)
+      async for request_output in t.cast('vllm.AsyncLLMEngine', self.model).generate(prompt=prompt, sampling_params=config.to_sampling_config(), request_id=request_id):
+        yield request_output
+
+      #   if echo: text_outputs = [prompt + output.text for output in request_output.outputs]
+      #   else: text_outputs = [output.text for output in request_output.outputs]
+      #   output_text = text_outputs[0]
+      #   output_text = output_text.strip().split(' ')
+      #   now = len(output_text) - 1
+      #   if now > pre:
+      #     yield ' '.join(output_text[pre:now]) + ' '
+      #     pre = now
+      # yield ' '.join(output_text[pre:]) + ' '
 
   return types.new_class(self.__class__.__name__ + 'Runnable', (_Runnable,), {}, lambda ns: ns.update({
       'SUPPORTED_RESOURCES': ('nvidia.com/gpu', 'amd.com/gpu', 'cpu'),
