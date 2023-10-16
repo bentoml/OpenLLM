@@ -18,6 +18,24 @@ This changelog is managed by towncrier and is compiled at release time.
 
 <!-- towncrier release notes start -->
 
+## [0.3.8](https://github.com/bentoml/openllm/tree/v0.3.8)
+
+### Backwards-incompatible Changes
+
+- Remove embeddings endpoints from the provided API, as I think it is probably not a good fit to have them here, yet.
+
+  This means that `openllm embed` will also be removed.
+
+  Client implementation is also updated to fix 0.3.7 breaking changes with models other than Llama
+  [#500](https://github.com/bentoml/openllm/issues/500)
+
+
+### Features
+
+- Add `/v1/models` endpoint for OpenAI compatible API
+  [#499](https://github.com/bentoml/openllm/issues/499)
+
+
 ## [0.3.7](https://github.com/bentoml/openllm/tree/v0.3.7)
 No significant changes.
 
