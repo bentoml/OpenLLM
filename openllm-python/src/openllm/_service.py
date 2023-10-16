@@ -36,7 +36,7 @@ svc = bentoml.Service(name=f"llm-{llm_config['start_name']}-service", runners=[r
 _JsonInput = bentoml.io.JSON.from_sample({'prompt': '', 'llm_config': llm_config.model_dump(flatten=True), 'adapter_name': None})
 
 @svc.api(route='/v1/generate', input=_JsonInput, output=bentoml.io.JSON.from_sample({'responses': [], 'configuration': llm_config.model_dump(flatten=True)}))
-async def generate_v1(input_dict: dict[str, t.Any]) -> openllm.GenerationOutput:
+async def generate_v1(input_dict: dict[str, t.Any]) -> openllm.GenerateOutput:
   echo = input_dict.pop('echo', False)
   qa_inputs = openllm.GenerationInput.from_llm_config(llm_config)(**input_dict)
   config = qa_inputs.llm_config.model_dump()
@@ -46,7 +46,7 @@ async def generate_v1(input_dict: dict[str, t.Any]) -> openllm.GenerationOutput:
     if responses is None: raise ValueError("'responses' should not be None.")
   else:
     responses = await runner.generate.async_run(qa_inputs.prompt, adapter_name=qa_inputs.adapter_name, **config)
-  return openllm.GenerationOutput(responses=responses, configuration=config)
+  return openllm.GenerateOutput(responses=responses, configuration=config)
 
 @svc.api(route='/v1/generate_stream', input=_JsonInput, output=bentoml.io.Text(content_type='text/event-stream'))
 async def generate_stream_v1(input_dict: dict[str, t.Any]) -> t.AsyncGenerator[str, None]:

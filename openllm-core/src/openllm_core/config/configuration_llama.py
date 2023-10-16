@@ -45,11 +45,11 @@ If a question does not make any sense, or is not factually coherent, explain why
 '''
 SINST_KEY, EINST_KEY, SYS_KEY, EOS_TOKEN, BOS_TOKEN = '[INST]', '[/INST]', '<<SYS>>', '</s>', '<s>'
 # TODO: support history and v1 prompt implementation
-_v1_prompt, _v2_prompt = '''{instruction}''', '''{start_key} {sys_key}\n{system_message}\n{sys_key}\n\n{instruction}\n{end_key} '''.format(start_key=SINST_KEY,
-                                                                                                                                           sys_key=SYS_KEY,
-                                                                                                                                           system_message='{system_message}',
-                                                                                                                                           instruction='{instruction}',
-                                                                                                                                           end_key=EINST_KEY)
+_v1_prompt, _v2_prompt = '''{instruction}''', '''{start_key} {sys_key}\n{system_message}\n{sys_key}\n\n{instruction}\n{end_key}\n'''.format(start_key=SINST_KEY,
+                                                                                                                                            sys_key=SYS_KEY,
+                                                                                                                                            system_message='{system_message}',
+                                                                                                                                            instruction='{instruction}',
+                                                                                                                                            end_key=EINST_KEY)
 PROMPT_MAPPING = {'v1': _v1_prompt, 'v2': _v2_prompt}
 
 def _get_prompt(model_type: t.Literal['v1', 'v2']) -> PromptTemplate:

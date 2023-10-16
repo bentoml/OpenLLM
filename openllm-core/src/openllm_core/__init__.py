@@ -6,7 +6,8 @@ from . import utils as utils
 from ._configuration import GenerationConfig as GenerationConfig
 from ._configuration import LLMConfig as LLMConfig
 from ._configuration import SamplingParams as SamplingParams
-from ._schema import GenerationInput as GenerationInput
+from ._schema import GenerateInput as GenerateInput
+from ._schema import GenerateOutput as GenerateOutput
 from ._schema import GenerationOutput as GenerationOutput
 from ._schema import HfAgentInput as HfAgentInput
 from ._schema import MetadataOutput as MetadataOutput
