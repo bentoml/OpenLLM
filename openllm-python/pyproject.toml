@@ -96,13 +96,13 @@ Tracker = "https://github.com/bentoml/OpenLLM/issues"
 Twitter = "https://twitter.com/bentomlai"
 
 [project.optional-dependencies]
-agents = ["transformers[agents]>=4.30", "diffusers", "soundfile"]
+agents = ["transformers[agents]>=4.34.0", "diffusers", "soundfile"]
 all = ["openllm[full]"]
 baichuan = ["cpm-kernels", "sentencepiece"]
 chatglm = ["cpm-kernels", "sentencepiece"]
 falcon = ["einops", "xformers"]
 fine-tune = ["peft>=0.5.0", "bitsandbytes", "datasets", "accelerate", "trl"]
-flan-t5 = ["flax>=0.7", "jax", "jaxlib", "tensorflow", "keras"]
+flan-t5 = ["transformers>=4.34.0"]
 full = [
     "openllm[agents,baichuan,chatglm,falcon,fine-tune,flan-t5,ggml,gptq,grpc,llama,mpt,openai,opt,playground,starcoder,vllm]",
 ]
@@ -112,7 +112,7 @@ grpc = ["openllm-client[grpc]"]
 llama = ["fairscale", "sentencepiece", "scipy"]
 mpt = ["triton", "einops"]
 openai = ["openai[embeddings]", "tiktoken"]
-opt = ["flax>=0.7", "jax", "jaxlib", "tensorflow", "keras"]
+opt = ["transformers>=4.34.0"]
 playground = ["jupyter", "notebook", "ipython", "jupytext", "nbformat"]
 starcoder = ["bitsandbytes"]
 vllm = ["vllm>=0.2.0", "ray"]

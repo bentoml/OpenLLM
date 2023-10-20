@@ -91,14 +91,13 @@ def llm_post_init(fn: llm_post_init_protocol[M, T]) -> t.Callable[[LLM[M, T]], N
 def make_llm_attributes(cls: type[LLM[M, T]]) -> t.Callable[[type[LLM[M, T]]], None]:
   '''Make LLM attributes for the given LLM subclass.'''
   from ._llm import LLM
-  from ._llm import LLMFunction
-  from ._llm import LLMInterface
-  from ._llm import LLMSerialisation
+  from ._llm import _Inference
+  from ._llm import _Serialisation
 
   args: ListStr = []
   globs: DictStrAny = {'cls': cls, '__wrapped_llm_post_init': llm_post_init, 'LLM': LLM}
   # _cached_LLMFunction_get and _ccached_LLMSerialisation_get
-  globs.update({f'_cached_{cl_.__name__}_get': _object_getattribute.__get__(cl_) for cl_ in {LLMSerialisation, LLMFunction}})
+  globs.update({f'_cached_{cl_.__name__}_get': _object_getattribute.__get__(cl_) for cl_ in {_Serialisation, _Inference}})
   # llm_post_init implementation
   lines: ListStr = [f'_impl_{cls.__name__}_func=cls.llm_post_init', _setattr_class('llm_post_init', f'__wrapped_llm_post_init(_impl_{cls.__name__}_func)')]
 
@@ -107,23 +106,10 @@ def make_llm_attributes(cls: type[LLM[M, T]]) -> t.Callable[[type[LLM[M, T]]], N
     impl_name = f'__wrapped_{func}'
     globs.update({f'__serialisation_{func}': getattr(openllm.serialisation, func, None), impl_name: impl})
     cached_func_name = f'_cached_{cls.__name__}_func'
-    func_call = f"_impl_{cls.__name__}_{func}={cached_func_name} if {cached_func_name} is not _cached_LLMSerialisation_get('{func}') else __serialisation_{func}"
+    func_call = f"_impl_{cls.__name__}_{func}={cached_func_name} if {cached_func_name} is not _cached__Serialisation_get('{func}') else __serialisation_{func}"
     lines.extend([f'{cached_func_name}=cls.{func}', func_call, _setattr_class(func, f'{impl_name}(_impl_{cls.__name__}_{func})')])
 
-  interface_anns = codegen.get_annotations(LLMInterface)
-
-  # cached attribute initialisation
-  def dunder_cached(key: str) -> str:
-    return f'__llm_{key}__'
-
   st_attr = {'model', 'tokenizer', 'adapter_map'}
-  lines.extend([_setattr_class(dunder_cached(v), None) for v in st_attr])
-
-  # boolean for better LLM implementation resolver
-  def dunder_support(key: str) -> str:
-    return f'__llm_supports_{key}__'
-
-  bool_attr = {it[15:-2] for it in interface_anns if it.startswith('__llm_supports_')}
-  lines.extend([_setattr_class(dunder_support(fn), f"cls.{fn} is not _cached_LLMFunction_get('{fn}')") for fn in bool_attr])
+  lines.extend([_setattr_class(f'__llm_{v}__', None) for v in st_attr])
 
   return codegen.generate_function(cls, '__assign_llm_attr', lines, args=('cls', *args), globs=globs, annotations={'cls': 't.Type[LLM]', 'return': None})

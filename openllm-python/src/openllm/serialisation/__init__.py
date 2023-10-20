@@ -1,6 +1,6 @@
 '''Serialisation utilities for OpenLLM.
 
-Currently supports transformers for PyTorch, Tensorflow and Flax.
+Currently supports transformers for PyTorch, and vLLM.
 
 Currently, GGML format is working in progress.
 '''
@@ -66,7 +66,7 @@ def _make_dispatch_function(fn: str) -> _Caller[P]:
   def caller(llm: openllm.LLM[M, T], *args: P.args, **kwargs: P.kwargs) -> t.Any:
     """Generic function dispatch to correct serialisation submodules based on LLM runtime.
 
-    > [!NOTE] See 'openllm.serialisation.transformers' if 'llm.__llm_backend__ in ("pt", "tf", "flax", "vllm")'
+    > [!NOTE] See 'openllm.serialisation.transformers' if 'llm.__llm_backend__ in ("pt", "vllm")'
 
     > [!NOTE] See 'openllm.serialisation.ggml' if 'llm.__llm_backend__="ggml"'
     """

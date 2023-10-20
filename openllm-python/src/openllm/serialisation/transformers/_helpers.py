@@ -5,7 +5,6 @@ import typing as t
 import openllm
 import openllm_core
 
-from bentoml._internal.models.model import ModelSignature
 from openllm.serialisation.constants import FRAMEWORK_TO_AUTOCLASS_MAPPING
 from openllm.serialisation.constants import HUB_ATTRS
 
@@ -15,7 +14,6 @@ if t.TYPE_CHECKING:
 
   from transformers.models.auto.auto_factory import _BaseAutoModelClass
 
-  from bentoml._internal.models.model import ModelSignaturesType
   from openllm_core._typing_compat import DictStrAny
   from openllm_core._typing_compat import M
   from openllm_core._typing_compat import T
@@ -49,10 +47,10 @@ def infer_tokenizers_from_llm(__llm: openllm.LLM[t.Any, T], /) -> T:
   return __cls
 
 def infer_autoclass_from_llm(llm: openllm.LLM[M, T], config: transformers.PretrainedConfig, /) -> _BaseAutoModelClass:
-  if llm.config['trust_remote_code']:
+  if llm.trust_remote_code:
     autoclass = 'AutoModelForSeq2SeqLM' if llm.config['model_type'] == 'seq2seq_lm' else 'AutoModelForCausalLM'
     if not hasattr(config, 'auto_map'):
-      raise ValueError(f'Invalid configuraiton for {llm.model_id}. ``trust_remote_code=True`` requires `transformers.PretrainedConfig` to contain a `auto_map` mapping')
+      raise ValueError(f'Invalid configuration for {llm.model_id}. ``trust_remote_code=True`` requires `transformers.PretrainedConfig` to contain a `auto_map` mapping')
     # in case this model doesn't use the correct auto class for model type, for example like chatglm
     # where it uses AutoModel instead of AutoModelForCausalLM. Then we fallback to AutoModel
     if autoclass not in config.auto_map: autoclass = 'AutoModel'
@@ -67,15 +65,3 @@ def check_unintialised_params(model: torch.nn.Module) -> None:
   unintialized = [n for n, param in model.named_parameters() if param.data.device == torch.device('meta')]
   if len(unintialized) > 0:
     raise RuntimeError(f'Found the following unintialized parameters in {model}: {unintialized}')
-
-# NOTE: sync with bentoml/_internal/frameworks/transformers.py#make_default_signatures
-def make_model_signatures(llm: openllm.LLM[M, T]) -> ModelSignaturesType:
-  infer_fn: tuple[str, ...] = ('__call__',)
-  default_config = ModelSignature(batchable=False)
-  if llm.__llm_backend__ in {'pt', 'vllm'}:
-    infer_fn += ('forward', 'generate', 'contrastive_search', 'greedy_search', 'sample', 'beam_search', 'beam_sample', 'group_beam_search', 'constrained_beam_search',)
-  elif llm.__llm_backend__ == 'tf':
-    infer_fn += ('predict', 'call', 'generate', 'compute_transition_scores', 'greedy_search', 'sample', 'beam_search', 'contrastive_search',)
-  else:
-    infer_fn += ('generate',)
-  return {k: default_config for k in infer_fn}

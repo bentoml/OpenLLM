@@ -1,7 +1,15 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import dataclasses, os, typing as t, sys, inflection, tomlkit
+import dataclasses
+import os
+import sys
+import typing as t
+
+import inflection
+import tomlkit
+
 from ghapi.all import GhApi
+
 if t.TYPE_CHECKING: from tomlkit.items import Array, Table
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -114,7 +122,7 @@ _BASE_DEPENDENCIES = [
     Dependencies(name='openllm-client'),
     Dependencies(name='openllm-core'),
     Dependencies(name='safetensors'),
-    Dependencies(name='optimum', lower_constraint="1.12.0"),
+    Dependencies(name='optimum', lower_constraint='1.12.0'),
     Dependencies(name='accelerate'),
     Dependencies(name='ghapi'),
     Dependencies(name='tabulate', extensions=['widechars'], lower_constraint='0.9.0'),
@@ -123,13 +131,12 @@ _BASE_DEPENDENCIES = [
     Dependencies(name='bitsandbytes', upper_constraint='0.42'),  # 0.41 works with CUDA 11.8
 ]
 
-_ALL_RUNTIME_DEPS = ['flax>=0.7', 'jax', 'jaxlib', 'tensorflow', 'keras']
 FINE_TUNE_DEPS = ['peft>=0.5.0', 'bitsandbytes', 'datasets', 'accelerate', 'trl']
-FLAN_T5_DEPS = _ALL_RUNTIME_DEPS
-OPT_DEPS = _ALL_RUNTIME_DEPS
+FLAN_T5_DEPS = ['transformers>=4.34.0']
+OPT_DEPS = ['transformers>=4.34.0']
 GRPC_DEPS = ['openllm-client[grpc]']
 OPENAI_DEPS = ['openai[embeddings]', 'tiktoken']
-AGENTS_DEPS = ['transformers[agents]>=4.30', 'diffusers', 'soundfile']
+AGENTS_DEPS = ['transformers[agents]>=4.34.0', 'diffusers', 'soundfile']
 PLAYGROUND_DEPS = ['jupyter', 'notebook', 'ipython', 'jupytext', 'nbformat']
 GGML_DEPS = ['ctransformers']
 GPTQ_DEPS = ['auto-gptq[triton]>=0.4.2', 'optimum>=1.12.0']

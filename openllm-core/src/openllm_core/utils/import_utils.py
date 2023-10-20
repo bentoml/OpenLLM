@@ -11,7 +11,6 @@ import typing as t
 from collections import OrderedDict
 
 import inflection
-import packaging.version
 
 import openllm_core
 
@@ -30,9 +29,7 @@ logger = logging.getLogger(__name__)
 OPTIONAL_DEPENDENCIES = {'opt', 'flan-t5', 'vllm', 'fine-tune', 'ggml', 'agents', 'openai', 'playground', 'gptq', 'grpc'}
 ENV_VARS_TRUE_VALUES = {'1', 'ON', 'YES', 'TRUE'}
 ENV_VARS_TRUE_AND_AUTO_VALUES = ENV_VARS_TRUE_VALUES.union({'AUTO'})
-USE_TF = os.environ.get('USE_TF', 'AUTO').upper()
 USE_TORCH = os.environ.get('USE_TORCH', 'AUTO').upper()
-USE_JAX = os.environ.get('USE_FLAX', 'AUTO').upper()
 FORCE_TF_AVAILABLE = os.environ.get('FORCE_TF_AVAILABLE', 'AUTO').upper()
 
 def _is_package_available(package: str) -> bool:
@@ -45,8 +42,6 @@ def _is_package_available(package: str) -> bool:
   return _package_available
 
 _torch_available = importlib.util.find_spec('torch') is not None
-_tf_available = importlib.util.find_spec('tensorflow') is not None
-_flax_available = importlib.util.find_spec('jax') is not None and importlib.util.find_spec('flax') is not None
 _vllm_available = importlib.util.find_spec('vllm') is not None
 _transformers_available = _is_package_available('transformers')
 _grpc_available = importlib.util.find_spec('grpc') is not None
@@ -121,57 +116,12 @@ def is_fairscale_available() -> bool:
 
 def is_torch_available() -> bool:
   global _torch_available
-  if USE_TORCH in ENV_VARS_TRUE_AND_AUTO_VALUES and USE_TF not in ENV_VARS_TRUE_VALUES:
-    if _torch_available:
-      try:
-        importlib.metadata.version('torch')
-      except importlib.metadata.PackageNotFoundError:
-        _torch_available = False
-  else:
-    logger.info('Disabling PyTorch because USE_TF is set')
-    _torch_available = False
+  if USE_TORCH in ENV_VARS_TRUE_AND_AUTO_VALUES and _torch_available:
+    try:
+      importlib.metadata.version('torch')
+    except importlib.metadata.PackageNotFoundError:
+      _torch_available = False
   return _torch_available
-
-def is_tf_available() -> bool:
-  global _tf_available
-  if FORCE_TF_AVAILABLE in ENV_VARS_TRUE_VALUES: _tf_available = True
-  else:
-    _tf_version = None
-    if USE_TF in ENV_VARS_TRUE_AND_AUTO_VALUES and USE_TORCH not in ENV_VARS_TRUE_VALUES:
-      if _tf_available:
-        candidates = ('tensorflow', 'tensorflow-cpu', 'tensorflow-gpu', 'tf-nightly', 'tf-nightly-cpu', 'tf-nightly-gpu', 'intel-tensorflow', 'intel-tensorflow-avx512', 'tensorflow-rocm',
-                      'tensorflow-macos', 'tensorflow-aarch64',
-                      )
-        _tf_version = None
-        # For the metadata, we have to look for both tensorflow and tensorflow-cpu
-        for _pkg in candidates:
-          try:
-            _tf_version = importlib.metadata.version(_pkg)
-            break
-          except importlib.metadata.PackageNotFoundError:
-            pass  # Ok to ignore here since we actually need to check for all possible tensorflow distribution.
-        _tf_available = _tf_version is not None
-      if _tf_available:
-        if _tf_version and packaging.version.parse(_tf_version) < packaging.version.parse('2'):
-          logger.info('TensorFlow found but with version %s. OpenLLM only supports TF 2.x', _tf_version)
-          _tf_available = False
-    else:
-      logger.info('Disabling Tensorflow because USE_TORCH is set')
-      _tf_available = False
-  return _tf_available
-
-def is_flax_available() -> bool:
-  global _flax_available
-  if USE_JAX in ENV_VARS_TRUE_AND_AUTO_VALUES:
-    if _flax_available:
-      try:
-        importlib.metadata.version('jax')
-        importlib.metadata.version('flax')
-      except importlib.metadata.PackageNotFoundError:
-        _flax_available = False
-  else:
-    _flax_available = False
-  return _flax_available
 
 VLLM_IMPORT_ERROR_WITH_PYTORCH = '''\
 {0} requires the vLLM library but it was not found in your environment.
@@ -191,44 +141,6 @@ If you want to use TensorFlow, please use TF classes instead!
 
 If you really do want to use vLLM, please follow the instructions on the
 installation page https://github.com/vllm-project/vllm that match your environment.
-'''
-VLLM_IMPORT_ERROR_WITH_FLAX = '''\
-{0} requires the vLLM library but it was not found in your environment.
-However, we were able to find a Flax installation. Flax classes begin
-with "Flax", but are otherwise identically named to the PyTorch classes. This
-means that the Flax equivalent of the class you tried to import would be "Flax{0}".
-If you want to use Flax, please use Flax classes instead!
-
-If you really do want to use vLLM, please follow the instructions on the
-installation page https://github.com/vllm-project/vllm that match your environment.
-'''
-PYTORCH_IMPORT_ERROR_WITH_TF = '''\
-{0} requires the PyTorch library but it was not found in your environment.
-However, we were able to find a TensorFlow installation. TensorFlow classes begin
-with "TF", but are otherwise identically named to the PyTorch classes. This
-means that the TF equivalent of the class you tried to import would be "TF{0}".
-If you want to use TensorFlow, please use TF classes instead!
-
-If you really do want to use PyTorch please go to
-https://pytorch.org/get-started/locally/ and follow the instructions that
-match your environment.
-'''
-TF_IMPORT_ERROR_WITH_PYTORCH = '''\
-{0} requires the TensorFlow library but it was not found in your environment.
-However, we were able to find a PyTorch installation. PyTorch classes do not begin
-with "TF", but are otherwise identically named to our TF classes.
-If you want to use PyTorch, please use those classes instead!
-
-If you really do want to use TensorFlow, please follow the instructions on the
-installation page https://www.tensorflow.org/install that match your environment.
-'''
-TENSORFLOW_IMPORT_ERROR = '''{0} requires the TensorFlow library but it was not found in your environment.
-Checkout the instructions on the installation page: https://www.tensorflow.org/install and follow the
-ones that match your environment. Please note that you may need to restart your runtime after installation.
-'''
-FLAX_IMPORT_ERROR = '''{0} requires the FLAX library but it was not found in your environment.
-Checkout the instructions on the installation page: https://github.com/google/flax and follow the
-ones that match your environment. Please note that you may need to restart your runtime after installation.
 '''
 PYTORCH_IMPORT_ERROR = '''{0} requires the PyTorch library but it was not found in your environment.
 Checkout the instructions on the installation page: https://pytorch.org/get-started/locally/ and follow the
@@ -279,8 +191,7 @@ You can install it with pip: `pip install fairscale`. Please note that you may n
 your runtime after installation.
 '''
 
-BACKENDS_MAPPING: BackendOrderedDict = OrderedDict([('flax', (is_flax_available, FLAX_IMPORT_ERROR)), ('tf', (is_tf_available, TENSORFLOW_IMPORT_ERROR)),
-                                                    ('torch', (is_torch_available, PYTORCH_IMPORT_ERROR)), ('vllm', (is_vllm_available, VLLM_IMPORT_ERROR)),
+BACKENDS_MAPPING: BackendOrderedDict = OrderedDict([('torch', (is_torch_available, PYTORCH_IMPORT_ERROR)), ('vllm', (is_vllm_available, VLLM_IMPORT_ERROR)),
                                                     ('cpm_kernels', (is_cpm_kernels_available, CPM_KERNELS_IMPORT_ERROR)), ('einops', (is_einops_available, EINOPS_IMPORT_ERROR)),
                                                     ('triton', (is_triton_available, TRITON_IMPORT_ERROR)), ('datasets', (is_datasets_available, DATASETS_IMPORT_ERROR)),
                                                     ('peft', (is_peft_available, PEFT_IMPORT_ERROR)), ('bitsandbytes', (is_bitsandbytes_available, BITSANDBYTES_IMPORT_ERROR)),
@@ -301,20 +212,9 @@ class DummyMetaclass(abc.ABCMeta):
 def require_backends(o: t.Any, backends: t.MutableSequence[str]) -> None:
   if not isinstance(backends, (list, tuple)): backends = list(backends)
   name = o.__name__ if hasattr(o, '__name__') else o.__class__.__name__
-  # Raise an error for users who might not realize that classes without "TF" are torch-only
-  if 'torch' in backends and 'tf' not in backends and not is_torch_available() and is_tf_available():
-    raise ImportError(PYTORCH_IMPORT_ERROR_WITH_TF.format(name))
-  # Raise the inverse error for PyTorch users trying to load TF classes
-  if 'tf' in backends and 'torch' not in backends and is_torch_available() and not is_tf_available():
-    raise ImportError(TF_IMPORT_ERROR_WITH_PYTORCH.format(name))
-  # Raise an error when vLLM is not available to consider the alternative, order from PyTorch -> Tensorflow -> Flax
-  if 'vllm' in backends:
-    if 'torch' not in backends and is_torch_available() and not is_vllm_available():
-      raise ImportError(VLLM_IMPORT_ERROR_WITH_PYTORCH.format(name))
-    if 'tf' not in backends and is_tf_available() and not is_vllm_available():
-      raise ImportError(VLLM_IMPORT_ERROR_WITH_TF.format(name))
-    if 'flax' not in backends and is_flax_available() and not is_vllm_available():
-      raise ImportError(VLLM_IMPORT_ERROR_WITH_FLAX.format(name))
+  # Raise an error when vLLM is not available to consider PyTorch
+  if 'vllm' in backends and 'torch' not in backends and is_torch_available() and not is_vllm_available():
+    raise ImportError(VLLM_IMPORT_ERROR_WITH_PYTORCH.format(name))
   failed = [msg.format(name) for available, msg in (BACKENDS_MAPPING[backend] for backend in backends) if not available()]
   if failed: raise ImportError(''.join(failed))
 

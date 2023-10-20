@@ -81,7 +81,14 @@ Twitter = "https://twitter.com/bentomlai"
 [project.optional-dependencies]
 full = ["openllm-core[vllm,fine-tune]"]
 vllm = ["vllm", "ray"]
-fine-tune = ["transformers[torch,tokenizers,accelerate]>=4.29.0", "peft>=0.4.0", "bitsandbytes", "datasets", "accelerate", "trl"]
+fine-tune = [
+  "transformers[torch,tokenizers,accelerate]>=4.34.0",
+  "peft>=0.4.0",
+  "bitsandbytes",
+  "datasets",
+  "accelerate",
+  "trl",
+]
 
 [tool.hatch.version]
 fallback-version = "0.0.0"

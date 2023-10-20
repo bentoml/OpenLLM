@@ -18,13 +18,10 @@ Run a LLMServer for OPT model.
 \b
 ## Usage
 
-By default, this model will use the PyTorch model for inference. However, this model supports both Flax and Tensorflow.
+By default, this model will use the PyTorch model for inference. However, if vLLM exists, then it will use vLLM instead.
 
 \b
-- To use Flax, set the environment variable ``OPENLLM_BACKEND="flax"``
-
-\b
-- To use Tensorflow, set the environment variable ``OPENLLM_BACKEND="tf"``
+- To use vLLM, set the environment variable ``OPENLLM_BACKEND="vllm"``
 
 \b
 OPT Runner will use facebook/opt-2.7b as the default model. To change to any other OPT

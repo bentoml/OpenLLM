@@ -16,13 +16,13 @@ import openllm
 
 from bentoml._internal.configuration.containers import BentoMLContainer
 from bentoml._internal.models.model import ModelOptions
+from bentoml._internal.models.model import ModelSignature
 from openllm_core._typing_compat import M
 from openllm_core._typing_compat import T
 
 from ._helpers import check_unintialised_params
 from ._helpers import infer_autoclass_from_llm
 from ._helpers import infer_tokenizers_from_llm
-from ._helpers import make_model_signatures
 from ._helpers import process_config
 from .weights import HfIgnore
 
@@ -49,7 +49,7 @@ def import_model(llm: openllm.LLM[M, T], *decls: t.Any, trust_remote_code: bool,
 
   For all kwargs, it will be parsed into `transformers.AutoConfig.from_pretrained` first,
   returning all of the unused kwargs.
-  The unused kwargs then parsed directly into AutoModelForSeq2SeqLM or AutoModelForCausalLM (+ TF, Flax variants).
+  The unused kwargs then parsed directly into AutoModelForSeq2SeqLM or AutoModelForCausalLM.
   For all tokenizer kwargs, make sure to prefix it with `_tokenizer_` to avoid confusion.
 
   Note: Currently, there are only two tasks supported: `text-generation` and `text2text-generation`.
@@ -57,10 +57,10 @@ def import_model(llm: openllm.LLM[M, T], *decls: t.Any, trust_remote_code: bool,
   Refer to Transformers documentation for more information about kwargs.
 
   Args:
-  llm: The LLM instance for this given model.
-  trust_remote_code: Whether to trust the remote code when loading the model.
-  *decls: Args to be passed into AutoModelForSeq2SeqLM or AutoModelForCausalLM (+ TF, Flax variants).
-  **attrs: Kwargs to be passed into AutoModelForSeq2SeqLM or AutoModelForCausalLM (+ TF, Flax variants).
+    llm: The LLM instance for this given model.
+    trust_remote_code: Whether to trust the remote code when loading the model.
+    *decls: Args to be passed into AutoModelForSeq2SeqLM or AutoModelForCausalLM.
+    **attrs: Kwargs to be passed into AutoModelForSeq2SeqLM or AutoModelForCausalLM.
   """
   config, hub_attrs, attrs = process_config(llm.model_id, trust_remote_code, **attrs)
   _, tokenizer_attrs = llm.llm_parameters
@@ -87,12 +87,17 @@ def import_model(llm: openllm.LLM[M, T], *decls: t.Any, trust_remote_code: bool,
     # since saving int4 is not yet supported
     if 'quantization_config' in attrs and getattr(attrs['quantization_config'], 'load_in_4bit', False):
       attrs.pop('quantization_config')
-    if llm.__llm_backend__ != 'flax': attrs['use_safetensors'] = safe_serialisation
+    attrs['use_safetensors'] = safe_serialisation
     metadata['_framework'] = llm.__llm_backend__
-    signatures.update(make_model_signatures(llm))
+    signatures.update({
+        k: ModelSignature(batchable=False)
+        for k in ('__call__', 'forward', 'generate', 'contrastive_search', 'greedy_search', 'sample', 'beam_search', 'beam_sample', 'group_beam_search', 'constrained_beam_search')
+    })
 
   tokenizer = infer_tokenizers_from_llm(llm).from_pretrained(llm.model_id, trust_remote_code=trust_remote_code, **hub_attrs, **tokenizer_attrs)
   if tokenizer.pad_token is None: tokenizer.pad_token = tokenizer.eos_token
+
+  model = None
 
   external_modules: list[types.ModuleType] = [importlib.import_module(tokenizer.__module__)]
   imported_modules: list[types.ModuleType] = []
@@ -133,6 +138,7 @@ def import_model(llm: openllm.LLM[M, T], *decls: t.Any, trust_remote_code: bool,
       # NOTE: We need to free up the cache after importing the model
       # in the case where users first run openllm start without the model available locally.
       if openllm.utils.is_torch_available() and torch.cuda.is_available(): torch.cuda.empty_cache()
+      del model
     return bentomodel
 
 def get(llm: openllm.LLM[M, T], auto_import: bool = False) -> bentoml.Model:

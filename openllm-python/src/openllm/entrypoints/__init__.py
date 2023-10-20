@@ -4,7 +4,7 @@ Currently support OpenAI compatible API.
 
 Each module should implement the following API:
 
-- `mount_to_svc(svc: bentoml.Service, llm_runner: openllm.LLMRunner) -> None: ...`
+- `mount_to_svc(svc: bentoml.Service, llm_runner: openllm.LLMRunner) -> bentoml.Service: ...`
 '''
 from __future__ import annotations
 import os

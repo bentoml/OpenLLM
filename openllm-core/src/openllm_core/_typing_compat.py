@@ -24,7 +24,7 @@ if t.TYPE_CHECKING:
 
   from .utils.lazy import VersionInfo
 
-M = t.TypeVar('M', bound='t.Union[transformers.PreTrainedModel, transformers.Pipeline, transformers.TFPreTrainedModel, transformers.FlaxPreTrainedModel, vllm.AsyncLLMEngine, peft.PeftModel]')
+M = t.TypeVar('M', bound='t.Union[transformers.PreTrainedModel, vllm.AsyncLLMEngine, peft.PeftModel]')
 T = t.TypeVar('T', bound='t.Union[transformers.PreTrainedTokenizerFast, transformers.PreTrainedTokenizer, transformers.PreTrainedTokenizerBase]')
 
 def get_literal_args(typ: t.Any) -> tuple[str, ...]:
@@ -39,7 +39,7 @@ At = t.TypeVar('At', bound=attr.AttrsInstance)
 
 LiteralSerialisation = t.Literal['safetensors', 'legacy']
 LiteralQuantise = t.Literal['int8', 'int4', 'gptq']
-LiteralBackend = t.Literal['pt', 'tf', 'flax', 'vllm', 'ggml', 'mlc']
+LiteralBackend = t.Literal['pt', 'vllm', 'ggml', 'mlc']
 AdapterType = t.Literal['lora', 'adalora', 'adaption_prompt', 'prefix_tuning', 'p_tuning', 'prompt_tuning', 'ia3']
 
 # TODO: support quay
@@ -106,7 +106,6 @@ class LLMRunner(bentoml.Runner, t.Generic[M, T]):
   llm: openllm.LLM[M, T]
   config: openllm.LLMConfig
   backend: LiteralBackend
-  supports_hf_agent: bool
   has_adapters: bool
   system_message: str | None
   prompt_template: str | None

@@ -55,9 +55,7 @@ from bentoml._internal.models.model import ModelStore
 from openllm import bundle
 from openllm.exceptions import OpenLLMException
 from openllm.models.auto import CONFIG_MAPPING
-from openllm.models.auto import MODEL_FLAX_MAPPING_NAMES
 from openllm.models.auto import MODEL_MAPPING_NAMES
-from openllm.models.auto import MODEL_TF_MAPPING_NAMES
 from openllm.models.auto import MODEL_VLLM_MAPPING_NAMES
 from openllm.models.auto import AutoConfig
 from openllm.models.auto import AutoLLM
@@ -641,8 +639,6 @@ def models_command(ctx: click.Context, output: LiteralOutput, show_available: bo
       config = AutoConfig.for_model(m)
       backend: tuple[str, ...] = ()
       if config['model_name'] in MODEL_MAPPING_NAMES: backend += ('pt',)
-      if config['model_name'] in MODEL_FLAX_MAPPING_NAMES: backend += ('flax',)
-      if config['model_name'] in MODEL_TF_MAPPING_NAMES: backend += ('tf',)
       if config['model_name'] in MODEL_VLLM_MAPPING_NAMES: backend += ('vllm',)
       json_data[m] = {
           'architecture': config['architecture'],

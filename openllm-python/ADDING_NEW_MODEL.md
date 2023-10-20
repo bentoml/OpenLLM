@@ -40,10 +40,9 @@ default parameters, as well as additional fields for the models.
 
 File Name: `modeling_{runtime}_{model_name}.py`
 
-For each runtime, i.e., torch (default with no prefix), TensorFlow -`tf`, Flax -
-`flax`, it is necessary to implement a class that adheres to the `openllm.LLM`
+For each runtime, i.e., torch (default with no prefix), vLLM - `vllm`, it is necessary to implement a class that adheres to the `openllm.LLM`
 interface. The conventional class name follows the `RuntimeModelName` pattern,
-e.g., `FlaxFlanT5`.
+e.g., `VLLMFlanT5`.
 
 ### Initialization Files
 
@@ -57,8 +56,7 @@ the `auto` folder files. There are four entrypoint files:
 
 - `configuration_auto.py`: Registers `ModelConfig` classes
 - `modeling_auto.py`: Registers a model's PyTorch implementation
-- `modeling_tf_auto.py`: Registers a model's TensorFlow implementation
-- `modeling_flax_auto.py`: Registers a model's Flax implementation
+- `modeling_vllm_auto.py`: Registers a model's vLLM implementation
 
 ### Updating README.md
 

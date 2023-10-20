@@ -17,8 +17,6 @@ def parametrise_local_llm(model: str,) -> t.Generator[tuple[str, openllm.LLMRunn
   if model not in _MODELING_MAPPING: pytest.skip(f"'{model}' is not yet supported in framework testing.")
   backends: tuple[LiteralBackend, ...] = tuple()
   if model in openllm.MODEL_MAPPING_NAMES: backends += ('pt',)
-  if model in openllm.MODEL_FLAX_MAPPING_NAMES: backends += ('flax',)
-  if model in openllm.MODEL_TF_MAPPING_NAMES: backends += ('tf',)
   for backend, prompt in itertools.product(backends, _PROMPT_MAPPING.keys()):
     yield prompt, openllm.Runner(model, model_id=_MODELING_MAPPING[model], ensure_available=True, backend=backend, init_local=True)
 

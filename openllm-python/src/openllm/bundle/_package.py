@@ -79,32 +79,10 @@ def construct_python_options(llm: openllm.LLM[t.Any, t.Any], llm_fs: FS, extra_d
     packages.append(f"bentoml>={'.'.join([str(i) for i in openllm_core.utils.pkg.pkg_version_info('bentoml')])}")
 
   env = llm.config['env']
-  backend_envvar = env['backend_value']
-  if backend_envvar == 'flax':
-    if not openllm_core.utils.is_flax_available():
-      raise ValueError(f"Flax is not available, while {env.backend} is set to 'flax'")
-    packages.extend([importlib.metadata.version('flax'), importlib.metadata.version('jax'), importlib.metadata.version('jaxlib')])
-  elif backend_envvar == 'tf':
-    if not openllm_core.utils.is_tf_available():
-      raise ValueError(f"TensorFlow is not available, while {env.backend} is set to 'tf'")
-    candidates = ('tensorflow', 'tensorflow-cpu', 'tensorflow-gpu', 'tf-nightly', 'tf-nightly-cpu', 'tf-nightly-gpu', 'intel-tensorflow', 'intel-tensorflow-avx512', 'tensorflow-rocm',
-                  'tensorflow-macos',
-                  )
-    # For the metadata, we have to look for both tensorflow and tensorflow-cpu
-    for candidate in candidates:
-      try:
-        pkgver = importlib.metadata.version(candidate)
-        if pkgver == candidate: packages.extend(['tensorflow'])
-        else:
-          _tf_version = importlib.metadata.version(candidate)
-          packages.extend([f'tensorflow>={_tf_version}'])
-        break
-      except importlib.metadata.PackageNotFoundError:
-        pass  # Ok to ignore here since we actually need to check for all possible tensorflow distribution.
-  else:
-    if not openllm_core.utils.is_torch_available():
-      raise ValueError('PyTorch is not available. Make sure to have it locally installed.')
-    packages.extend([f'torch>={importlib.metadata.version("torch")}'])
+  env['backend_value']
+  if not openllm_core.utils.is_torch_available():
+    raise ValueError('PyTorch is not available. Make sure to have it locally installed.')
+  packages.extend([f'torch>={importlib.metadata.version("torch")}'])
   wheels: list[str] = []
   built_wheels: list[str |
                      None] = [build_editable(llm_fs.getsyspath('/'), t.cast(t.Literal['openllm', 'openllm_core', 'openllm_client'], p)) for p in ('openllm_core', 'openllm_client', 'openllm')]

@@ -28,9 +28,6 @@ class HfIgnore:
       base = [cls.tf, cls.flax, cls.gguf]
       if has_safetensors_weights(llm.model_id) or llm._serialisation == 'safetensors': base.append(cls.pt)
       else: base.append(cls.safetensors)
-    elif llm.__llm_backend__ == 'tf': base = [cls.flax, cls.pt, cls.gguf]
-    elif llm.__llm_backend__ == 'flax':
-      base = [cls.tf, cls.pt, cls.safetensors, cls.gguf]  # as of current, safetensors is not supported with flax
     elif llm.__llm_backend__ == 'pt':
       base = [cls.tf, cls.flax, cls.gguf]
       if has_safetensors_weights(llm.model_id) or llm._serialisation == 'safetensors': base.append(cls.pt)

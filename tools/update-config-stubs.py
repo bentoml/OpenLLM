@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import os, sys
+import os
+import sys
+
 from pathlib import Path
 
 # currently we are assuming the indentatio level is 2 for comments
@@ -15,7 +17,10 @@ ROOT = Path(__file__).parent.parent
 _TARGET_FILE = ROOT / 'openllm-core' / 'src' / 'openllm_core' / '_configuration.py'
 
 sys.path.insert(0, (ROOT / 'openllm-core' / 'src').__fspath__())
-from openllm_core._configuration import GenerationConfig, ModelSettings, PeftType, SamplingParams
+from openllm_core._configuration import GenerationConfig
+from openllm_core._configuration import ModelSettings
+from openllm_core._configuration import PeftType
+from openllm_core._configuration import SamplingParams
 from openllm_core.utils import codegen
 
 def process_annotations(annotations: str) -> str:
@@ -47,11 +52,11 @@ _value_docstring = {
             ```bash
             openllm start gpt-neox --model-id stabilityai/stablelm-tuned-alpha-3b
             ```''',
-    'default_backend': '''The default backend to run LLM based on available accelerator. By default, it will be PyTorch (pt) for most models. For some models, such as Llama, it will use `vllm` or `flax`. It is a dictionary of key as the accelerator spec in k8s ('cpu', 'nvidia.com/gpu', 'amd.com/gpu', 'cloud-tpus.google.com/v2', ...) and the values as supported OpenLLM backend ('flax', 'tf', 'pt', 'vllm', 'ggml', 'mlc')''',
+    'default_backend': '''The default backend to run LLM based on available accelerator. Currently, if "vllm" is available, then we will use it, otherwise fall back to PyTorch.''',
     'serialisation': '''Default serialisation format for different models. Some will default to use the legacy 'bin'. ''',
     'url': 'The resolved url for this LLMConfig.',
     'trust_remote_code': 'Whether to always trust remote code',
-    'service_name': "Generated service name for this LLMConfig. By default, it is \"generated_{model_name}_service.py\"",
+    'service_name': 'Generated service name for this LLMConfig. By default, it is \"generated_{model_name}_service.py\"',
     'requirements': 'The default PyPI requirements needed to run this given LLM. By default, we will depend on bentoml, torch, transformers.',
     'model_type': 'The model type for this given LLM. By default, it should be causal language modeling. Currently supported "causal_lm" or "seq2seq_lm"',
     'name_type': '''The default name typed for this model. "dasherize" will convert the name to lowercase and

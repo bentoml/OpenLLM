@@ -70,6 +70,8 @@ OpenLLM is designed for AI application developers working to build production-re
 
 ## 🏃 Get started
 
+To quickly get started with OpenLLM, follow the instructions below or try this [OpenLLM tutorial in Google Colab: Serving Llama 2 with OpenLLM](https://colab.research.google.com/github/bentoml/OpenLLM/blob/main/examples/openllm-llama2-demo/openllm_llama2_demo.ipynb).
+
 ### Prerequisites
 
 You have installed Python 3.8 (or later) and `pip`. We highly recommend using a [Virtual Environment](https://docs.python.org/3/library/venv.html) to prevent package conflicts.
@@ -105,7 +107,6 @@ Options:
 
 Commands:
   build       Package a given models into a Bento.
-  embed       Get embeddings interactively, from a terminal.
   import      Setup LLM interactively.
   instruct    Instruct agents interactively for given tasks, from a...
   models      List all supported models.
@@ -421,20 +422,6 @@ You can specify any of the following Flan-T5 models by using `--model-id`.
   openllm start flan-t5 --model-id google/flan-t5-large --backend pt
   ```
 
-- Flax:
-
-  ```bash
-  pip install "openllm[flan-t5, flax]"
-  openllm start flan-t5 --model-id google/flan-t5-large --backend flax
-  ```
-
-- TensorFlow:
-
-  ```bash
-  pip install "openllm[flan-t5, tf]"
-  openllm start flan-t5 --model-id google/flan-t5-large --backend tf
-  ```
-
 > [!NOTE]
 > Currently when using the vLLM backend, quantization and adapters are not supported.
 
@@ -587,20 +574,6 @@ You can specify any of the following OPT models by using `--model-id`.
   ```bash
   pip install "openllm[opt, vllm]"
   openllm start opt --model-id facebook/opt-2.7b --backend vllm
-  ```
-
-- TensorFlow:
-
-  ```bash
-  pip install "openllm[opt, tf]"
-  openllm start opt --model-id facebook/opt-2.7b --backend tf
-  ```
-
-- Flax:
-
-  ```bash
-  pip install "openllm[opt, flax]"
-  openllm start opt --model-id facebook/opt-2.7b --backend flax
   ```
 
 > [!NOTE]
@@ -782,7 +755,7 @@ For more information, see [Resource scheduling strategy](https://docs.bentoml.or
 
 ## 🛞 Runtime implementations (Experimental)
 
-Different LLMs may support multiple runtime implementations. For instance, they might use frameworks and libraries such as PyTorch (`pt`), TensorFlow (`tf`), Flax (`flax`), and vLLM (`vllm`).
+Different LLMs may support multiple runtime implementations. Models that have `vLLM` (`vllm`) supports will use vLLM by default, otherwise it fallback to use `PyTorch` (`pt`).
 
 To specify a specific runtime for your chosen model, use the `--backend` option. For example:
 
@@ -792,9 +765,8 @@ openllm start llama --model-id meta-llama/Llama-2-7b-chat-hf --backend vllm
 
 Note:
 
-1. For GPU support on Flax, refers to [Jax's installation](https://github.com/google/jax#pip-installation-gpu-cuda-installed-via-pip-easier) to make sure that you have Jax support for the corresponding CUDA version.
-2. To use the vLLM backend, you need a GPU with at least the Ampere architecture or newer and CUDA version 11.8.
-3. To see the backend options of each model supported by OpenLLM, see the Supported models section or run `openllm models`.
+1. To use the vLLM backend, you need a GPU with at least the Ampere architecture or newer and CUDA version 11.8.
+2. To see the backend options of each model supported by OpenLLM, see the Supported models section or run `openllm models`.
 
 ## 📐 Quantization
 
@@ -864,47 +836,6 @@ openllm build opt --adapter-id ./path/to/adapter_id --build-ctx .
 > [!NOTE]
 > We will gradually roll out support for fine-tuning all models.
 > Currently, the models supporting fine-tuning with OpenLLM include: OPT, Falcon, and LlaMA.
-
-## 🧮 Embeddings
-
-OpenLLM provides embeddings endpoint for embeddings calculation. This can
-be accessed via `/v1/embeddings`.
-
-To use via CLI, simply call `openllm embed`:
-
-```bash
-openllm embed --endpoint http://localhost:3000 "I like to eat apples" -o json
-{
-  "embeddings": [
-    0.006569798570126295,
-    -0.031249752268195152,
-    -0.008072729222476482,
-    0.00847396720200777,
-    -0.005293501541018486,
-    ...<many embeddings>...
-    -0.002078012563288212,
-    -0.00676426338031888,
-    -0.002022686880081892
-  ],
-  "num_tokens": 9
-}
-```
-
-To invoke this endpoint, use `client.embed` from the Python SDK:
-
-```python
-import openllm
-
-client = openllm.client.HTTPClient("http://localhost:3000")
-
-client.embed("I like to eat apples")
-```
-
-> [!NOTE]
-> Currently, the following model family supports embeddings calculation: Llama, T5 (Flan-T5, FastChat, etc.), ChatGLM
-> For the remaining LLM that doesn't have specific embedding implementation,
-> we will use a generic [BertModel](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2)
-> for embeddings generation. The implementation is largely based on [`bentoml/sentence-embedding-bento`](https://github.com/bentoml/sentence-embedding-bento)
 
 ## 🥅 Playground and Chat UI
 

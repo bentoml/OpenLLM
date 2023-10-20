@@ -70,7 +70,6 @@ class MetadataOutput:
   model_name: str
   backend: str
   configuration: str
-  supports_hf_agent: bool
   prompt_template: str
   system_message: str
 

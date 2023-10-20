@@ -4,7 +4,6 @@ import logging
 import typing as t
 import warnings
 
-import _service_vars as svars
 import orjson
 
 from starlette.applications import Starlette
@@ -13,7 +12,11 @@ from starlette.routing import Route
 
 import bentoml
 import openllm
+import openllm._service_vars as svars
 import openllm_core
+
+from openllm.entrypoints import hf
+from openllm.entrypoints import openai
 
 if t.TYPE_CHECKING:
   from starlette.requests import Request
@@ -189,7 +192,6 @@ svc.mount_asgi_app(openai_app, path='/v1')
              'model_name': llm_config['model_name'],
              'backend': runner.backend,
              'configuration': llm_config.model_dump(flatten=True),
-             'supports_hf_agent': runner.supports_hf_agent,
              'prompt_template': runner.prompt_template,
              'system_message': runner.system_message,
          }))
@@ -199,35 +201,8 @@ def metadata_v1(_: str) -> openllm.MetadataOutput:
                                 backend=llm_config['env']['backend_value'],
                                 model_id=runner.llm.model_id,
                                 configuration=llm_config.model_dump_json().decode(),
-                                supports_hf_agent=runner.supports_hf_agent,
                                 prompt_template=runner.prompt_template,
                                 system_message=runner.system_message,
                                 )
 
-if runner.supports_hf_agent:
-
-  async def hf_agent(request: Request) -> Response:
-    json_str = await request.body()
-    try:
-      input_data = openllm.utils.bentoml_cattr.structure(orjson.loads(json_str), openllm.HfAgentInput)
-    except orjson.JSONDecodeError as err:
-      raise openllm.exceptions.OpenLLMException(f'Invalid JSON input received: {err}') from None
-    stop = input_data.parameters.pop('stop', ['\n'])
-    try:
-      return JSONResponse(await runner.generate_one.async_run(input_data.inputs, stop, **input_data.parameters), status_code=200)
-    except NotImplementedError:
-      return JSONResponse(f"'{model}' is currently not supported with HuggingFace agents.", status_code=500)
-
-  hf_app = Starlette(debug=True, routes=[Route('/agent', hf_agent, methods=['POST'])])
-  svc.mount_asgi_app(hf_app, path='/hf')
-
-# general metadata app
-async def list_adapter_v1(_: Request) -> Response:
-  res: dict[str, t.Any] = {}
-  if runner.peft_adapters['success'] is True:
-    res['result'] = {k: v.to_dict() for k, v in runner.peft_adapters['result'].items()}
-  res.update({'success': runner.peft_adapters['success'], 'error_msg': runner.peft_adapters['error_msg']})
-  return JSONResponse(res, status_code=200)
-
-adapters_app_v1 = Starlette(debug=True, routes=[Route('/adapters', list_adapter_v1, methods=['GET'])])
-svc.mount_asgi_app(adapters_app_v1, path='/v1')
+openai.mount_to_svc(hf.mount_to_svc(svc, runner), runner)

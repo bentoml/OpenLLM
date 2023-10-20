@@ -197,7 +197,7 @@ ignore = [
   "RUF012",  # mutable attributes to be used with ClassVar
   "E701",    # multiple statement on single line
 ]
-line-length = 768
+line-length = 192
 target-version = "py312"
 typing-modules = ["openllm_core._typing_compat"]
 unfixable = ["TCH004"]
@@ -211,6 +211,10 @@ runtime-evaluated-base-classes = [
   "openllm.LLMConfig",
 ]
 runtime-evaluated-decorators = ["attrs.define", "attrs.frozen", "trait"]
+[tool.ruff.format]
+quote-style = "single"
+indent-style = "space"
+skip-magic-trailing-comma = true
 [tool.ruff.pydocstyle]
 convention = "google"
 [tool.ruff.pycodestyle]
@@ -337,15 +341,14 @@ omit = [
 precision = 2
 show_missing = true
 
-# NOTE: The following strict type checker we are using:
-# - mypy: for both runtime and static type checking (since we compile the wheels )
-# - pyright: for static type checking only, as we want to use newer type feature
 [tool.pyright]
-analysis.useLibraryCodeForTypes = true
+useLibraryCodeForTypes = true
+verboseOutput = true
+include = ["openllm-core/src", "openllm-client/src", "openllm-python/src"]
+defineConstant = { MYPY = true }
 exclude = [
   "__pypackages__/*",
   "cz.py",
-  "hatch_build.py",
   "tools",
   "examples",
   "typings",
@@ -357,11 +360,6 @@ exclude = [
   "openllm-python/tests",
   "openllm-core/src/openllm_core/_typing_compat.py",
   "openllm-client/src/openllm_client/pb/**",
-]
-executionEnvironments = [
-  { root = "openllm-python/src" },
-  { root = "openllm-core/src" },
-  { root = "openllm-client/src" },
 ]
 pythonVersion = "3.12"
 enableExperimentalFeatures = true

@@ -39,7 +39,6 @@ from openllm_core._typing_compat import TupleAny
 from openllm_core._typing_compat import overload
 from openllm_core.prompts import PromptTemplate
 from openllm_core.utils import DEBUG
-from openllm_core.utils import MYPY
 from openllm_core.utils import EnvVarMixin
 from openllm_core.utils import LazyLoader
 from openllm_core.utils import ReprMixin
@@ -121,7 +120,7 @@ def resolve_peft_config_type(adapter_map: dict[str, str | None]) -> AdaptersMapp
 
 _reserved_namespace = {'config_class', 'model', 'tokenizer', 'import_kwargs'}
 
-class LLMFunction(abc.ABC):
+class _Inference(abc.ABC):
   @abc.abstractmethod
   def postprocess_generate(self, prompt: str, generation_result: t.Any, **attrs: t.Any) -> t.Any:
     '''This handler will postprocess generation results from LLM.generate and then output nicely formatted results (if the LLM decide to do so.).
@@ -164,7 +163,7 @@ class LLMFunction(abc.ABC):
     '''
     raise NotImplementedError
 
-class LLMSerialisation(abc.ABC, t.Generic[M, T]):
+class _Serialisation(abc.ABC, t.Generic[M, T]):
   def import_model(self, *args: t.Any, trust_remote_code: bool, **attrs: t.Any) -> bentoml.Model:
     '''Import both model and tokenizer weights into as a BentoML models.
 
@@ -192,7 +191,7 @@ class LLMSerialisation(abc.ABC, t.Generic[M, T]):
     '''
     raise NotImplementedError
 
-class LLMInterface(LLMFunction, LLMSerialisation[M, T], abc.ABC):
+class _Interface(_Inference, _Serialisation[M, T], abc.ABC):
   def llm_post_init(self) -> None:
     '''This function can be implemented if you need to initialized any additional variables that doesn't concern OpenLLM internals.
     By default, this will add `self.device` if the implementation is PyTorch.
@@ -233,12 +232,7 @@ class LLMInterface(LLMFunction, LLMSerialisation[M, T], abc.ABC):
   __llm_backend__: LiteralBackend
   '''This is used to determine which framework implementation for this given LLM.
 
-    Usually, this will inferred from class name, that follows the HuggingFace's naming convention:
-
-    - `OPTForConditionalGeneration` -> `pt`
-    - `TFOPTForConditionalGeneration` -> `tf`
-    - `FlaxOPTForConditionalGeneration` -> `flax`
-
+    For all PyTorch backend: Llama -> `pt` (default)
     For all VLLM backend: VLLMLlama -> `vllm`
     For all GGML backend: GGMLLlama -> `ggml`
     For all MLC backend: MLCLlama -> `mlc`
@@ -250,27 +244,13 @@ class LLMInterface(LLMFunction, LLMSerialisation[M, T], abc.ABC):
   __llm_adapter_map__: t.Optional[ResolvedAdaptersMapping]
   '''A reference to the the cached LoRA adapter mapping.'''
 
-  __llm_supports_generate__: bool
-  '''A boolean to determine whether models does implement ``LLM.generate``.'''
-  __llm_supports_generate_one__: bool
-  '''A boolean to determine whether models does implement ``LLM.generate_one``.'''
-  __llm_supports_generate_iterator__: bool
-  '''A boolean to determine whether models does implement ``LLM.generate_iterator``.'''
-
 _DEFAULT_TOKENIZER = 'hf-internal-testing/llama-tokenizer'
 
 _AdaptersTuple: type[AdaptersTuple] = codegen.make_attr_tuple_class('AdaptersTuple', ['adapter_id', 'name', 'config'])
 
 @attr.define(slots=True, repr=False, init=False)
-class LLM(LLMInterface[M, T], ReprMixin):
+class LLM(_Interface[M, T], ReprMixin):
   if t.TYPE_CHECKING: __name__: str
-  if t.TYPE_CHECKING and not MYPY:
-
-    def __attrs_init__(self, config: LLMConfig, quantization_config: t.Optional[t.Union[transformers.BitsAndBytesConfig,
-                                                                                        transformers.GPTQConfig]], quantize: t.Optional[LiteralQuantise], model_id: str, model_decls: TupleAny,
-                       model_attrs: DictStrAny, tokenizer_attrs: DictStrAny, tag: bentoml.Tag, adapters_mapping: t.Optional[AdaptersMapping], model_version: t.Optional[str],
-                       serialisation: LiteralSerialisation, _local: bool, prompt_template: PromptTemplate | None, system_message: str | None, **attrs: t.Any) -> None:
-      '''Generated __attrs_init__ for openllm.LLM.'''
 
   config: LLMConfig
   '''The config instance to use for this LLM. This will be created based on config_class and available when initialising the LLM.'''
@@ -291,11 +271,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
 
   def __init_subclass__(cls: type[LLM[M, T]]) -> None:
     cd = cls.__dict__
-    if cls.__name__.startswith('Flax'):
-      cls.__llm_backend__, config_class = 'flax', openllm.AutoConfig.infer_class_from_name(cls.__name__[4:])
-    elif cls.__name__.startswith('TF'):
-      cls.__llm_backend__, config_class = 'tf', openllm.AutoConfig.infer_class_from_name(cls.__name__[2:])
-    elif cls.__name__.startswith('VLLM'):
+    if cls.__name__.startswith('VLLM'):
       cls.__llm_backend__, config_class = 'vllm', openllm.AutoConfig.infer_class_from_name(cls.__name__[4:])
     else:
       cls.__llm_backend__, config_class = 'pt', openllm.AutoConfig.infer_class_from_name(cls.__name__)
@@ -303,39 +279,22 @@ class LLM(LLMInterface[M, T], ReprMixin):
       raise RuntimeError("Missing required key 'config_class'. Make sure to define it within the LLM subclass.")
     if '__openllm_internal__' in cd and 'config_class' not in cd: cls.config_class = config_class
     if 'tokenizer_id' not in cd and cls.__llm_backend__ == 'vllm': cls.tokenizer_id = _DEFAULT_TOKENIZER
+
+    # NOTE: This is where `load_model`, `load_tokenizer` and `import_model` is overloaded.
     make_llm_attributes(cls)(cls)
 
+  # fmt: off
   @overload
-  def __getitem__(self, item: t.Literal['trust_remote_code']) -> bool:
-    ...
-
+  def __getitem__(self, item: t.Literal['trust_remote_code']) -> bool: ...
   @overload
-  def __getitem__(self, item: t.Literal['backend']) -> LiteralBackend:
-    ...
-
+  def __getitem__(self, item: t.Literal['backend']) -> LiteralBackend: ...
   @overload
-  def __getitem__(self, item: t.Literal['model']) -> M | None:
-    ...
-
+  def __getitem__(self, item: t.Literal['model']) -> M | None: ...
   @overload
-  def __getitem__(self, item: t.Literal['tokenizer']) -> T | None:
-    ...
-
+  def __getitem__(self, item: t.Literal['tokenizer']) -> T | None: ...
   @overload
-  def __getitem__(self, item: t.Literal['adapter_map']) -> ResolvedAdaptersMapping | None:
-    ...
-
-  @overload
-  def __getitem__(self, item: t.Literal['supports_generate']) -> bool:
-    ...
-
-  @overload
-  def __getitem__(self, item: t.Literal['supports_generate_one']) -> bool:
-    ...
-
-  @overload
-  def __getitem__(self, item: t.Literal['supports_generate_iterator']) -> bool:
-    ...
+  def __getitem__(self, item: t.Literal['adapter_map']) -> ResolvedAdaptersMapping | None: ...
+  # fmt: on
 
   def __getitem__(self, item: t.Union[LiteralString, t.Any]) -> t.Any:
     if item is None: raise TypeError(f"{self} doesn't understand how to index None.")
@@ -594,8 +553,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
     # low_cpu_mem_usage is only available for model
     # this is helpful on system with low memory to avoid OOM
     low_cpu_mem_usage = attrs.pop('low_cpu_mem_usage', True)
-    if self.__llm_backend__ == 'pt':
-      attrs.update({'low_cpu_mem_usage': low_cpu_mem_usage, 'quantization_config': quantization_config})
+    if self.__llm_backend__ == 'pt': attrs.update({'low_cpu_mem_usage': low_cpu_mem_usage, 'quantization_config': quantization_config})
     model_kwds: DictStrAny = {}
     tokenizer_kwds: DictStrAny = {}
     if self.import_kwargs is not None: model_kwds, tokenizer_kwds = self.import_kwargs
@@ -613,6 +571,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
         **normalized_tokenizer_kwds
     }, _tag, _adapters_mapping, _model_version, _serialisation, _local, _prompt_template, _system_message)
 
+  def __attrs_post_init__(self) -> None:
     self.llm_post_init()
 
   def __setattr__(self, attr: str, value: t.Any) -> None:
@@ -623,15 +582,11 @@ class LLM(LLMInterface[M, T], ReprMixin):
 
   @property
   def trust_remote_code(self) -> bool:
-    return first_not_none(openllm_core.utils.check_bool_env('TRUST_REMOTE_CODE'), default=self.config['trust_remote_code'])
+    return first_not_none(openllm_core.utils.check_bool_env('TRUST_REMOTE_CODE', False), default=self.config['trust_remote_code'])
 
   @property
   def adapters_mapping(self) -> AdaptersMapping | None:
     return self._adapters_mapping
-
-  @adapters_mapping.setter
-  def adapters_mapping(self, value: AdaptersMapping) -> None:
-    _object_setattr(self, '_adapters_mapping', value)
 
   @property
   def __repr_keys__(self) -> set[str]:
@@ -1247,7 +1202,6 @@ def llm_runnable_class(self: LLM[M, T], generate_sig: ModelSignature, generate_i
       config = self.config.model_construct_env(stop=list(stop_), temperature=temperature, top_p=top_p, **attrs)
       async for request_output in t.cast('vllm.AsyncLLMEngine', self.model).generate(prompt=prompt, sampling_params=config.to_sampling_config(), request_id=request_id):
         yield request_output
-
       #   if echo: text_outputs = [prompt + output.text for output in request_output.outputs]
       #   else: text_outputs = [output.text for output in request_output.outputs]
       #   output_text = text_outputs[0]
@@ -1323,7 +1277,6 @@ def llm_runner_class(self: LLM[M, T]) -> type[LLMRunner[M, T]]:
                              '__repr__': ReprMixin.__repr__,
                              '__repr_keys__': property(_wrapped_repr_keys),
                              '__repr_args__': _wrapped_repr_args,
-                             'supports_hf_agent': self['supports_generate_one'],
                              'has_adapters': self._adapters_mapping is not None,
                              'prompt_template': prompt_template,
                              'system_message': system_message,

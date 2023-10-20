@@ -296,11 +296,6 @@ def validate_is_path(maybe_path: str) -> bool:
 def generate_context(framework_name: str) -> _ModelContext:
   framework_versions = {'transformers': pkg.get_pkg_version('transformers')}
   if openllm_core.utils.is_torch_available(): framework_versions['torch'] = pkg.get_pkg_version('torch')
-  if openllm_core.utils.is_tf_available():
-    from bentoml._internal.frameworks.utils.tensorflow import get_tf_version
-    framework_versions['tensorflow'] = get_tf_version()
-  if openllm_core.utils.is_flax_available():
-    framework_versions.update({'flax': pkg.get_pkg_version('flax'), 'jax': pkg.get_pkg_version('jax'), 'jaxlib': pkg.get_pkg_version('jaxlib')})
   return _ModelContext(framework_name=framework_name, framework_versions=framework_versions)
 
 _TOKENIZER_PREFIX = '_tokenizer_'
@@ -328,10 +323,10 @@ _import_structure: dict[str, list[str]] = {
     'lazy': [],
     'representation': ['ReprMixin'],
     'import_utils': [
-        'OPTIONAL_DEPENDENCIES', 'DummyMetaclass', 'EnvVarMixin', 'require_backends', 'is_cpm_kernels_available', 'is_einops_available', 'is_flax_available', 'is_tf_available',
-        'is_vllm_available', 'is_torch_available', 'is_bitsandbytes_available', 'is_peft_available', 'is_datasets_available', 'is_jupyter_available', 'is_jupytext_available',
-        'is_notebook_available', 'is_triton_available', 'is_autogptq_available', 'is_sentencepiece_available', 'is_xformers_available', 'is_fairscale_available', 'is_grpc_available',
-        'is_grpc_health_available', 'is_transformers_available', 'is_optimum_supports_gptq',
+        'OPTIONAL_DEPENDENCIES', 'DummyMetaclass', 'EnvVarMixin', 'require_backends', 'is_cpm_kernels_available', 'is_einops_available', 'is_vllm_available', 'is_torch_available',
+        'is_bitsandbytes_available', 'is_peft_available', 'is_datasets_available', 'is_jupyter_available', 'is_jupytext_available', 'is_notebook_available', 'is_triton_available',
+        'is_autogptq_available', 'is_sentencepiece_available', 'is_xformers_available', 'is_fairscale_available', 'is_grpc_available', 'is_grpc_health_available', 'is_transformers_available',
+        'is_optimum_supports_gptq',
     ]
 }
 
@@ -349,7 +344,6 @@ if t.TYPE_CHECKING:
   from .import_utils import is_datasets_available as is_datasets_available
   from .import_utils import is_einops_available as is_einops_available
   from .import_utils import is_fairscale_available as is_fairscale_available
-  from .import_utils import is_flax_available as is_flax_available
   from .import_utils import is_grpc_available as is_grpc_available
   from .import_utils import is_grpc_health_available as is_grpc_health_available
   from .import_utils import is_jupyter_available as is_jupyter_available
@@ -358,7 +352,6 @@ if t.TYPE_CHECKING:
   from .import_utils import is_optimum_supports_gptq as is_optimum_supports_gptq
   from .import_utils import is_peft_available as is_peft_available
   from .import_utils import is_sentencepiece_available as is_sentencepiece_available
-  from .import_utils import is_tf_available as is_tf_available
   from .import_utils import is_torch_available as is_torch_available
   from .import_utils import is_transformers_available as is_transformers_available
   from .import_utils import is_triton_available as is_triton_available

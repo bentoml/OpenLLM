@@ -2,7 +2,7 @@ ci:
   autoupdate_schedule: weekly
   skip: [changelog-dry-run, mypy, yapf, clj-kondo, eslint, prettier]
   autofix_commit_msg: "ci: auto fixes from pre-commit.ci\n\nFor more information, see https://pre-commit.ci"
-  autoupdate_commit_msg: 'ci: pre-commit autoupdate [pre-commit.ci]'
+  autoupdate_commit_msg: "ci: pre-commit autoupdate [pre-commit.ci]"
 default_language_version:
   python: python3.11 # NOTE: sync with .python-version-default
 exclude: '.*\.(css|js|svg)$'
@@ -17,7 +17,7 @@ repos:
               openllm-client/src/openllm_client/pb.*
           )$
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: 'v0.0.292'
+    rev: "v0.0.292"
     hooks:
       - id: ruff
         verbose: true
@@ -90,7 +90,7 @@ repos:
               openllm-python/tests/models/.*
           )$
       - id: check-yaml
-        args: ['--unsafe']
+        args: ["--unsafe"]
       - id: check-toml
       - id: check-docstring-first
       - id: check-added-large-files
