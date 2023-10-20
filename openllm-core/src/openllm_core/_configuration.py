@@ -81,7 +81,7 @@ from .utils import dantic
 from .utils import field_env_key
 from .utils import first_not_none
 from .utils import lenient_issubclass
-from .utils.import_utils import BACKENDS_MAPPING
+from .utils.import_utils import is_vllm_available
 
 if t.TYPE_CHECKING:
   import click
@@ -516,7 +516,7 @@ class _ModelSettingsAttr:
                       architecture='PreTrainedModel',
                       default_backend={
                           'cpu': 'pt',
-                          'nvidia.com/gpu': 'pt'
+                          'nvidia.com/gpu': 'vllm' if is_vllm_available() else 'pt',
                       },
                       serialisation='legacy',
                       name_type='dasherize',
@@ -552,16 +552,6 @@ class _ModelSettingsAttr:
     tokenizer_class: t.Optional[str]
     # update-config-stubs.py: attrs stop
 
-# a heuristic cascading implementation resolver based on available resources
-def get_default_backend(backend_mapping: dict[LiteralResourceSpec, LiteralBackend]) -> LiteralBackend:
-  from ._strategies import available_resource_spec
-  from ._strategies import resource_spec
-  available_spec = available_resource_spec()
-  if resource_spec('tpu') in available_spec: return backend_mapping.get(resource_spec('tpu'), 'pt')
-  elif resource_spec('amd') in available_spec: return backend_mapping.get(resource_spec('amd'), 'pt')
-  elif resource_spec('nvidia') in available_spec: return backend_mapping.get(resource_spec('nvidia'), 'pt')
-  else: return backend_mapping.get(resource_spec('cpu'), 'pt')
-
 def structure_settings(cl_: type[LLMConfig], cls: type[_ModelSettingsAttr]) -> _ModelSettingsAttr:
   if 'generation_class' in cl_.__config__:
     raise ValueError(f"'generation_class' shouldn't be defined in '__config__', rather defining all required attributes under '{cl_}.GenerationConfig' instead.")
@@ -580,16 +570,8 @@ def structure_settings(cl_: type[LLMConfig], cls: type[_ModelSettingsAttr]) -> _
     _final_value_dct['start_name'] = inflection.dasherize(_final_value_dct['model_name']) if _settings_attr['name_type'] == 'dasherize' else _final_value_dct['model_name']
 
   model_name = _final_value_dct['model_name'] if 'model_name' in _final_value_dct else _settings_attr.model_name
-  # if the default implementation dependencies doesn't exist, then always fallback to 'pt'
-  default_backend = _settings_attr.default_backend
-  for rs, runtime in default_backend.items():
-    library_stub = 'torch' if runtime == 'pt' else runtime
-    if not BACKENDS_MAPPING[library_stub][0](): default_backend[rs] = 'pt'
-  _final_value_dct['default_backend'] = default_backend
 
-  env = openllm_core.utils.EnvVarMixin(model_name, backend=get_default_backend(default_backend), model_id=_settings_attr.default_id)
-  _final_value_dct['env'] = env
-
+  _final_value_dct['env'] = openllm_core.utils.EnvVarMixin(model_name, backend='vllm' if is_vllm_available() else 'pt', model_id=_settings_attr.default_id)
   _final_value_dct['service_name'] = f'generated_{model_name}_service.py'
 
   # NOTE: The key for fine-tune strategies is 'fine_tune_strategies'
@@ -1459,7 +1441,7 @@ class LLMConfig(_ConfigAttr):
 
   @classmethod
   def default_backend(cls) -> LiteralBackend:
-    return first_not_none(cls.__openllm_env__['backend_value'], default=get_default_backend(cls.__openllm_default_backend__))
+    return first_not_none(cls.__openllm_env__['backend_value'], default='vllm' if is_vllm_available() else 'pt')
 
   def sanitize_parameters(self, prompt: str, **attrs: t.Any) -> tuple[str, DictStrAny, DictStrAny]:
     '''This handler will sanitize all attrs and setup prompt text.

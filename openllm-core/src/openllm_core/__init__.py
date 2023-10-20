@@ -12,7 +12,6 @@ from ._schema import GenerationOutput as GenerationOutput
 from ._schema import HfAgentInput as HfAgentInput
 from ._schema import MetadataOutput as MetadataOutput
 from ._schema import unmarshal_vllm_outputs as unmarshal_vllm_outputs
-from ._strategies import available_resource_spec as available_resource_spec
 from .config import CONFIG_MAPPING as CONFIG_MAPPING
 from .config import CONFIG_MAPPING_NAMES as CONFIG_MAPPING_NAMES
 from .config import START_BAICHUAN_COMMAND_DOCSTRING as START_BAICHUAN_COMMAND_DOCSTRING

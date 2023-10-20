@@ -16,6 +16,7 @@ import openllm_core
 
 from bentoml._internal.configuration.containers import BentoMLContainer
 from openllm.exceptions import OpenLLMException
+from openllm_core.utils import is_vllm_available
 
 from . import termui
 from ._factory import start_command_factory
@@ -88,9 +89,7 @@ def _start(model_name: str,
   """
   from .entrypoint import start_command
   from .entrypoint import start_grpc_command
-  llm_config = openllm.AutoConfig.for_model(model_name)
-  _ModelEnv = openllm_core.utils.EnvVarMixin(model_name, backend=openllm_core.utils.first_not_none(backend, default=llm_config.default_backend()), model_id=model_id, quantize=quantize)
-  os.environ[_ModelEnv.backend] = _ModelEnv['backend_value']
+  os.environ['OPENLLM_BACKEND'] = openllm_core.utils.first_not_none(backend, default='vllm' if is_vllm_available() else 'pt')
 
   args: list[str] = []
   if model_id: args.extend(['--model-id', model_id])

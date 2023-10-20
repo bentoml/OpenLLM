@@ -73,10 +73,6 @@ class LlamaConfig(openllm_core.LLMConfig):
   __config__ = {
       'name_type': 'lowercase',
       'url': 'https://github.com/facebookresearch/llama',
-      'default_backend': {
-          'cpu': 'pt',
-          'nvidia.com/gpu': 'pt'
-      },
       'architecture': 'LlamaForCausalLM',
       'requirements': ['fairscale', 'sentencepiece', 'scipy'],
       'tokenizer_class': 'LlamaTokenizerFast',

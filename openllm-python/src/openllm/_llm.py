@@ -40,7 +40,6 @@ from openllm_core._typing_compat import TupleAny
 from openllm_core._typing_compat import overload
 from openllm_core.prompts import PromptTemplate
 from openllm_core.utils import DEBUG
-from openllm_core.utils import EnvVarMixin
 from openllm_core.utils import LazyLoader
 from openllm_core.utils import ReprMixin
 from openllm_core.utils import apply
@@ -50,6 +49,7 @@ from openllm_core.utils import first_not_none
 from openllm_core.utils import generate_hash_from_file
 from openllm_core.utils import is_peft_available
 from openllm_core.utils import is_torch_available
+from openllm_core.utils import is_vllm_available
 from openllm_core.utils import normalize_attrs_to_model_tokenizer_pair
 from openllm_core.utils import resolve_filepath
 from openllm_core.utils import validate_is_path
@@ -1046,7 +1046,7 @@ def Runner(model_name: str,
         'prompt_template': first_not_none(os.environ.get('OPENLLM_PROMPT_TEMPLATE'), attrs.get('prompt_template'), None),
     })
 
-  backend = t.cast(LiteralBackend, first_not_none(backend, default=EnvVarMixin(model_name, backend=llm_config.default_backend() if llm_config is not None else 'pt')['backend_value']))
+  backend = t.cast(LiteralBackend, first_not_none(backend, default='vllm' if is_vllm_available() else 'pt'))
   if init_local: ensure_available = True
   runner = infer_auto_class(backend).create_runner(model_name, llm_config=llm_config, ensure_available=ensure_available, **attrs)
   if init_local: runner.init_local(quiet=True)
@@ -1054,10 +1054,6 @@ def Runner(model_name: str,
 
 def method_signature(sig: ModelSignature) -> ModelSignatureDict:
   return converter.unstructure(sig)
-
-class SetAdapterOutput(t.TypedDict):
-  success: bool
-  message: str
 
 def llm_runnable_class(self: LLM[M, T], generate_sig: ModelSignature, generate_iterator_sig: ModelSignature) -> type[LLMRunnable[M, T]]:
   class _Runnable(bentoml.Runnable):

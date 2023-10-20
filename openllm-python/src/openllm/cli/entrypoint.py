@@ -400,7 +400,7 @@ def import_command(model_name: str, model_id: str | None, converter: str | None,
   """
   llm_config = AutoConfig.for_model(model_name)
   _serialisation = openllm_core.utils.first_not_none(serialisation, default=llm_config['serialisation'])
-  env = EnvVarMixin(model_name, backend=llm_config.default_backend(), model_id=model_id, quantize=quantize)
+  env = EnvVarMixin(model_name, model_id=model_id, quantize=quantize)
   backend = first_not_none(backend, default=env['backend_value'])
   llm = infer_auto_class(backend).for_model(model_name,
                                             model_id=env['model_id_value'],

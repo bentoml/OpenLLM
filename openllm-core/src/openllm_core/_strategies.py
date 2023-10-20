@@ -1,7 +1,6 @@
 # NOTE: This module depends on BentoML, whereas openllm_core doesn't necessary depends on BentoML.
 # mypy: disable-error-code="no-redef"
 from __future__ import annotations
-import functools
 import inspect
 import logging
 import math
@@ -19,7 +18,6 @@ from bentoml._internal.resource import get_resource
 from bentoml._internal.resource import system_resources
 from bentoml._internal.runner.strategy import THREAD_ENVS
 
-from ._typing_compat import LiteralResourceSpec
 from ._typing_compat import overload
 from .utils import DEBUG
 from .utils import ReprMixin
@@ -245,28 +243,6 @@ AmdGpuResource = _make_resource_class(
 
     Since ROCm will respect CUDA_VISIBLE_DEVICES, the behaviour of from_spec, from_system are similar to
     ``NvidiaGpuResource``. Currently ``validate`` is not yet supported.''')
-
-# convenient mapping
-def resource_spec(name: t.Literal['tpu', 'amd', 'nvidia', 'cpu']) -> LiteralResourceSpec:
-  if name == 'tpu': return _TPU_RESOURCE
-  elif name == 'amd': return _AMD_GPU_RESOURCE
-  elif name == 'nvidia': return _NVIDIA_GPU_RESOURCE
-  elif name == 'cpu': return _CPU_RESOURCE
-  else: raise ValueError("Unknown alias. Accepted: ['tpu', 'amd', 'nvidia', 'cpu']")
-
-@functools.lru_cache
-def available_resource_spec() -> tuple[LiteralResourceSpec, ...]:
-  '''This is a utility function helps to determine the available resources from given running system.
-
-  It will first check for TPUs -> AMD GPUS -> NVIDIA GPUS -> CPUs.
-
-  TODO: Supports TPUs
-  '''
-  available: list[LiteralResourceSpec] = []
-  if len(AmdGpuResource.from_system()) > 0: available.append(_AMD_GPU_RESOURCE)
-  if len(NvidiaGpuResource.from_system()) > 0: available.append(_NVIDIA_GPU_RESOURCE)
-  available.append(_CPU_RESOURCE)
-  return tuple(available)
 
 class CascadingResourceStrategy(bentoml.Strategy, ReprMixin):
   """This is extends the default BentoML strategy where we check for NVIDIA GPU resource -> AMD GPU resource -> CPU resource.
