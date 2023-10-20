@@ -65,7 +65,7 @@ async def generate_stream_v1(input_dict: dict[str, t.Any]) -> t.AsyncGenerator[s
     return runner.generate_iterator.async_stream(qa_inputs.prompt, adapter_name=qa_inputs.adapter_name, echo=echo, **qa_inputs.llm_config.model_dump())
 
 @svc.api(route='v1/completions',
-         input=bentoml.io.JSON.from_sample(openllm.utils.bentoml_cattr.unstructure(openllm.protocol.openai.CompletionRequest(prompt='What is 1+1?', model=runner.llm_type))),
+         input=bentoml.io.JSON.from_sample(openllm.utils.converter.unstructure(openllm.protocol.openai.CompletionRequest(prompt='What is 1+1?', model=runner.llm_type))),
          output=bentoml.io.Text())
 async def completion_v1(input_dict: dict[str, t.Any], ctx: bentoml.Context) -> str | t.AsyncGenerator[str, None]:
   _model = input_dict.get('model', None)
@@ -90,7 +90,7 @@ async def completion_v1(input_dict: dict[str, t.Any], ctx: bentoml.Context) -> s
     async for response in responses:
       st = openllm.protocol.openai.CompletionStreamResponse(choices=[openllm.protocol.openai.CompletionTextChoice(text=response, index=0)],
                                                             model=runner.llm_type)  # TODO: logprobs, finish_reason
-      yield f'data: {orjson.dumps(openllm.utils.bentoml_cattr.unstructure(st)).decode()}\n\n'
+      yield f'data: {orjson.dumps(openllm.utils.converter.unstructure(st)).decode()}\n\n'
     yield 'data: [DONE]\n\n'
 
   if stream:
@@ -110,14 +110,14 @@ async def completion_v1(input_dict: dict[str, t.Any], ctx: bentoml.Context) -> s
       responses = await runner.generate.async_run(prompt, **config)
 
     return orjson.dumps(
-        openllm.utils.bentoml_cattr.unstructure(
+        openllm.utils.converter.unstructure(
             openllm.protocol.openai.CompletionResponse(choices=[openllm.protocol.openai.CompletionTextChoice(text=response, index=i) for i, response in enumerate(responses)],
                                                        model=runner.llm_type)  # TODO: logprobs, finish_reason and usage
         )).decode()
 
 @svc.api(route='/v1/chat/completions',
          input=bentoml.io.JSON.from_sample(
-             openllm.utils.bentoml_cattr.unstructure(
+             openllm.utils.converter.unstructure(
                  openllm.protocol.openai.ChatCompletionRequest(messages=[{
                      'role': 'system',
                      'content': 'You are a helpful assistant.'
@@ -148,11 +148,11 @@ async def chat_completion_v1(input_dict: dict[str, t.Any], ctx: bentoml.Context)
       st = openllm.protocol.openai.ChatCompletionStreamResponse(
           choices=[openllm.protocol.openai.ChatCompletionResponseStreamChoice(index=0, delta=openllm.protocol.openai.Message(role='assistant', content=response), finish_reason=None)],
           model=runner.llm_type)
-      yield f'data: {orjson.dumps(openllm.utils.bentoml_cattr.unstructure(st)).decode()}\n\n'
+      yield f'data: {orjson.dumps(openllm.utils.converter.unstructure(st)).decode()}\n\n'
     final = openllm.protocol.openai.ChatCompletionStreamResponse(
         choices=[openllm.protocol.openai.ChatCompletionResponseStreamChoice(index=0, delta=openllm.protocol.openai.Message(role='assistant', content=''), finish_reason='stop')],
         model=runner.llm_type)
-    yield f'data: {orjson.dumps(openllm.utils.bentoml_cattr.unstructure(final)).decode()}\n\n'
+    yield f'data: {orjson.dumps(openllm.utils.converter.unstructure(final)).decode()}\n\n'
     yield 'data: [DONE]\n\n'
 
   if stream:
@@ -171,7 +171,7 @@ async def chat_completion_v1(input_dict: dict[str, t.Any], ctx: bentoml.Context)
     else:
       responses = await runner.generate.async_run(prompt, **config)
     return orjson.dumps(
-        openllm.utils.bentoml_cattr.unstructure(
+        openllm.utils.converter.unstructure(
             openllm.protocol.openai.ChatCompletionResponse(choices=[
                 openllm.protocol.openai.ChatCompletionChoice(index=i, message=openllm.protocol.openai.Message(role='assistant', content=response)) for i, response in enumerate(responses)
             ],
@@ -179,7 +179,7 @@ async def chat_completion_v1(input_dict: dict[str, t.Any], ctx: bentoml.Context)
         )).decode('utf-8')
 
 def models_v1(_: Request) -> Response:
-  return JSONResponse(openllm.utils.bentoml_cattr.unstructure(openllm.protocol.openai.ModelList(data=[openllm.protocol.openai.ModelCard(id=runner.llm_type)])), status_code=200)
+  return JSONResponse(openllm.utils.converter.unstructure(openllm.protocol.openai.ModelList(data=[openllm.protocol.openai.ModelCard(id=runner.llm_type)])), status_code=200)
 
 openai_app = Starlette(debug=True, routes=[Route('/models', models_v1, methods=['GET'])])
 svc.mount_asgi_app(openai_app, path='/v1')
@@ -202,7 +202,6 @@ def metadata_v1(_: str) -> openllm.MetadataOutput:
                                 model_id=runner.llm.model_id,
                                 configuration=llm_config.model_dump_json().decode(),
                                 prompt_template=runner.prompt_template,
-                                system_message=runner.system_message,
-                                )
+                                system_message=runner.system_message)
 
 openai.mount_to_svc(hf.mount_to_svc(svc, runner), runner)

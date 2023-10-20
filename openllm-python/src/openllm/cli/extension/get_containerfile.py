@@ -14,7 +14,7 @@ from bentoml._internal.configuration.containers import BentoMLContainer
 from bentoml._internal.container.generate import generate_containerfile
 from openllm.cli import termui
 from openllm.cli._factory import bento_complete_envvar
-from openllm_core.utils import bentoml_cattr
+from openllm_core.utils import converter
 
 if t.TYPE_CHECKING:
   from bentoml._internal.bento import BentoStore
@@ -35,7 +35,7 @@ def cli(ctx: click.Context, bento: str, _bento_store: BentoStore = Provide[Bento
     # Dockerfile inside bento, and it is not relevant to
     # construct_containerfile. Hence it is safe to set it to None here.
     # See https://github.com/bentoml/BentoML/issues/3399.
-    docker_attrs = bentoml_cattr.unstructure(options.docker)
+    docker_attrs = converter.unstructure(options.docker)
     # NOTE: if users specify a dockerfile_template, we will
     # save it to /env/docker/Dockerfile.template. This is necessary
     # for the reconstruction of the Dockerfile.

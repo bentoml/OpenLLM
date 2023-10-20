@@ -21,6 +21,7 @@ from syrupy.extensions.json import JSONSnapshotExtension
 
 import openllm
 
+from bentoml._internal.types import LazyType
 from openllm._llm import normalise_model_name
 from openllm_core._typing_compat import DictStrAny
 from openllm_core._typing_compat import ListAny
@@ -42,7 +43,7 @@ if t.TYPE_CHECKING:
 
 class ResponseComparator(JSONSnapshotExtension):
   def serialize(self, data: SerializableData, *, exclude: PropertyFilter | None = None, matcher: PropertyMatcher | None = None,) -> SerializedData:
-    if openllm.utils.LazyType(ListAny).isinstance(data):
+    if LazyType(ListAny).isinstance(data):
       data = [d.unmarshaled for d in data]
     else:
       data = data.unmarshaled
@@ -55,9 +56,9 @@ class ResponseComparator(JSONSnapshotExtension):
         data = orjson.loads(data)
       except orjson.JSONDecodeError as err:
         raise ValueError(f'Failed to decode JSON data: {data}') from err
-      if openllm.utils.LazyType(DictStrAny).isinstance(data):
+      if LazyType(DictStrAny).isinstance(data):
         return openllm.GenerateOutput(**data)
-      elif openllm.utils.LazyType(ListAny).isinstance(data):
+      elif LazyType(ListAny).isinstance(data):
         return [openllm.GenerateOutput(**d) for d in data]
       else:
         raise NotImplementedError(f'Data {data} has unsupported type.')
@@ -65,9 +66,9 @@ class ResponseComparator(JSONSnapshotExtension):
     serialized_data = convert_data(serialized_data)
     snapshot_data = convert_data(snapshot_data)
 
-    if openllm.utils.LazyType(ListAny).isinstance(serialized_data):
+    if LazyType(ListAny).isinstance(serialized_data):
       serialized_data = [serialized_data]
-    if openllm.utils.LazyType(ListAny).isinstance(snapshot_data):
+    if LazyType(ListAny).isinstance(snapshot_data):
       snapshot_data = [snapshot_data]
 
     def eq_config(s: GenerationConfig, t: GenerationConfig) -> bool:

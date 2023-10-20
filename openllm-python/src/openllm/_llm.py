@@ -21,6 +21,7 @@ import openllm_core
 from bentoml._internal.models.model import ModelSignature
 from openllm_core._configuration import FineTuneConfig
 from openllm_core._configuration import LLMConfig
+from openllm_core._strategies import CascadingResourceStrategy
 from openllm_core._typing_compat import AdaptersMapping
 from openllm_core._typing_compat import AdaptersTuple
 from openllm_core._typing_compat import AdapterType
@@ -43,8 +44,8 @@ from openllm_core.utils import EnvVarMixin
 from openllm_core.utils import LazyLoader
 from openllm_core.utils import ReprMixin
 from openllm_core.utils import apply
-from openllm_core.utils import bentoml_cattr
 from openllm_core.utils import codegen
+from openllm_core.utils import converter
 from openllm_core.utils import first_not_none
 from openllm_core.utils import generate_hash_from_file
 from openllm_core.utils import is_peft_available
@@ -282,27 +283,6 @@ class LLM(_Interface[M, T], ReprMixin):
 
     # NOTE: This is where `load_model`, `load_tokenizer` and `import_model` is overloaded.
     make_llm_attributes(cls)(cls)
-
-  # fmt: off
-  @overload
-  def __getitem__(self, item: t.Literal['trust_remote_code']) -> bool: ...
-  @overload
-  def __getitem__(self, item: t.Literal['backend']) -> LiteralBackend: ...
-  @overload
-  def __getitem__(self, item: t.Literal['model']) -> M | None: ...
-  @overload
-  def __getitem__(self, item: t.Literal['tokenizer']) -> T | None: ...
-  @overload
-  def __getitem__(self, item: t.Literal['adapter_map']) -> ResolvedAdaptersMapping | None: ...
-  # fmt: on
-
-  def __getitem__(self, item: t.Union[LiteralString, t.Any]) -> t.Any:
-    if item is None: raise TypeError(f"{self} doesn't understand how to index None.")
-    item = inflection.underscore(item)
-    internal_attributes = f'__llm_{item}__'
-    if hasattr(self, internal_attributes): return getattr(self, internal_attributes)
-    elif hasattr(self, item): return getattr(self, item)
-    else: raise KeyError(item)
 
   @classmethod
   def from_pretrained(cls,
@@ -782,7 +762,7 @@ class LLM(_Interface[M, T], ReprMixin):
                 models: list[bentoml.Model] | None = None,
                 max_batch_size: int | None = None,
                 max_latency_ms: int | None = None,
-                scheduling_strategy: type[bentoml.Strategy] = openllm_core.CascadingResourceStrategy) -> LLMRunner[M, T]:
+                scheduling_strategy: type[bentoml.Strategy] = CascadingResourceStrategy) -> LLMRunner[M, T]:
     '''Convert this LLM into a Runner.
 
     Args:
@@ -823,7 +803,7 @@ class LLM(_Interface[M, T], ReprMixin):
                                   models=models,
                                   max_batch_size=max_batch_size,
                                   max_latency_ms=max_latency_ms,
-                                  method_configs=bentoml_cattr.unstructure({
+                                  method_configs=converter.unstructure({
                                       '__call__': generate_sig,
                                       'generate': generate_sig,
                                       'generate_one': generate_sig,
@@ -1073,7 +1053,7 @@ def Runner(model_name: str,
   return runner
 
 def method_signature(sig: ModelSignature) -> ModelSignatureDict:
-  return bentoml_cattr.unstructure(sig)
+  return converter.unstructure(sig)
 
 class SetAdapterOutput(t.TypedDict):
   success: bool

@@ -6,9 +6,13 @@ import typing as t
 
 import attr
 
-import bentoml
-
-from bentoml._internal.types import ModelSignatureDict as ModelSignatureDict
+_is_bentoml_installed = False
+try:
+  import bentoml
+  _is_bentoml_installed = True
+except ImportError:
+  bentoml = None
+  _is_bentoml_installed = False
 
 if t.TYPE_CHECKING:
   import peft
@@ -23,6 +27,15 @@ if t.TYPE_CHECKING:
   from openllm._llm import LLM
 
   from .utils.lazy import VersionInfo
+
+if t.TYPE_CHECKING:
+  from types import UnionType
+
+  from bentoml._internal.types import LazyType
+
+  AnyType: t.TypeAlias = t.Type[t.Any] | UnionType | LazyType[t.Any]
+else:
+  AnyType = t.Any
 
 M = t.TypeVar('M', bound='t.Union[transformers.PreTrainedModel, vllm.AsyncLLMEngine, peft.PeftModel]')
 T = t.TypeVar('T', bound='t.Union[transformers.PreTrainedTokenizerFast, transformers.PreTrainedTokenizer, transformers.PreTrainedTokenizerBase]')
@@ -45,6 +58,8 @@ AdapterType = t.Literal['lora', 'adalora', 'adaption_prompt', 'prefix_tuning', '
 # TODO: support quay
 LiteralContainerRegistry = t.Literal['docker', 'gh', 'ecr']
 LiteralContainerVersionStrategy = t.Literal['release', 'nightly', 'latest', 'custom']
+
+LiteralResourceSpec = t.Literal['cloud-tpus.google.com/v2', 'amd.com/gpu', 'nvidia.com/gpu', 'cpu']
 
 if sys.version_info[:2] >= (3, 11):
   from typing import LiteralString as LiteralString
@@ -70,6 +85,12 @@ else:
   from typing_extensions import ParamSpec as ParamSpec
   from typing_extensions import TypeAlias as TypeAlias
 
+class ModelSignatureDict(t.TypedDict, total=False):
+  batchable: bool
+  batch_dim: t.Union[t.Tuple[int, int], int]
+  input_spec: t.Optional[t.Union[t.Tuple[AnyType], AnyType]]
+  output_spec: t.Optional[AnyType]
+
 class PeftAdapterOutput(t.TypedDict):
   success: bool
   result: t.Dict[str, peft.PeftConfig]
@@ -87,70 +108,75 @@ class RefTuple(TupleAny):
   version: VersionInfo
   strategy: LiteralContainerVersionStrategy
 
-class LLMRunnable(bentoml.Runnable, t.Generic[M, T]):
-  SUPPORTED_RESOURCES = ('amd.com/gpu', 'nvidia.com/gpu', 'cpu')
-  SUPPORTS_CPU_MULTI_THREADING = True
-  __call__: RunnableMethod[LLMRunnable[M, T], [str], list[t.Any]]
-  generate: RunnableMethod[LLMRunnable[M, T], [str], list[t.Any]]
-  generate_one: RunnableMethod[LLMRunnable[M, T], [str, list[str]], t.Sequence[dict[t.Literal['generated_text'], str]]]
-  generate_iterator: RunnableMethod[LLMRunnable[M, T], [str], t.Iterator[t.Any]]
-  vllm_generate: RunnableMethod[LLMRunnable[M, T], [str], list[t.Any]]
-  vllm_generate_iterator: RunnableMethod[LLMRunnable[M, T], [str], t.AsyncGenerator[str, None]]
+if _is_bentoml_installed:
 
-class LLMRunner(bentoml.Runner, t.Generic[M, T]):
-  __doc__: str
-  __module__: str
-  llm_type: str
-  llm_tag: bentoml.Tag
-  identifying_params: dict[str, t.Any]
-  llm: openllm.LLM[M, T]
-  config: openllm.LLMConfig
-  backend: LiteralBackend
-  has_adapters: bool
-  system_message: str | None
-  prompt_template: str | None
-  generate: RunnerMethod[LLMRunnable[M, T], [str], list[t.Any]]
-  generate_one: RunnerMethod[LLMRunnable[M, T], [str, list[str]], t.Sequence[dict[t.Literal['generated_text'], str]]]
-  generate_iterator: RunnerMethod[LLMRunnable[M, T], [str], t.Iterator[t.Any]]
-  vllm_generate: RunnerMethod[LLMRunnable[M, T], [str], list[t.Any]]
-  vllm_generate_iterator: RunnerMethod[LLMRunnable[M, T], [str], t.AsyncGenerator[str, None]]
+  class LLMRunnable(bentoml.Runnable, t.Generic[M, T]):
+    SUPPORTED_RESOURCES = ('amd.com/gpu', 'nvidia.com/gpu', 'cpu')
+    SUPPORTS_CPU_MULTI_THREADING = True
+    __call__: RunnableMethod[LLMRunnable[M, T], [str], list[t.Any]]
+    generate: RunnableMethod[LLMRunnable[M, T], [str], list[t.Any]]
+    generate_one: RunnableMethod[LLMRunnable[M, T], [str, list[str]], t.Sequence[dict[t.Literal['generated_text'], str]]]
+    generate_iterator: RunnableMethod[LLMRunnable[M, T], [str], t.Iterator[t.Any]]
+    vllm_generate: RunnableMethod[LLMRunnable[M, T], [str], list[t.Any]]
+    vllm_generate_iterator: RunnableMethod[LLMRunnable[M, T], [str], t.AsyncGenerator[str, None]]
 
-  def __init__(self,
-               runnable_class: type[LLMRunnable[M, T]],
-               *,
-               runnable_init_params: dict[str, t.Any] | None = ...,
-               name: str | None = ...,
-               scheduling_strategy: type[Strategy] = ...,
-               models: list[bentoml.Model] | None = ...,
-               max_batch_size: int | None = ...,
-               max_latency_ms: int | None = ...,
-               method_configs: dict[str, dict[str, int]] | None = ...,
-               embedded: bool = False,
-               ) -> None:
-    ...
+  class LLMRunner(bentoml.Runner, t.Generic[M, T]):
+    __doc__: str
+    __module__: str
+    llm_type: str
+    llm_tag: bentoml.Tag
+    identifying_params: dict[str, t.Any]
+    llm: openllm.LLM[M, T]
+    config: openllm.LLMConfig
+    backend: LiteralBackend
+    has_adapters: bool
+    system_message: str | None
+    prompt_template: str | None
+    generate: RunnerMethod[LLMRunnable[M, T], [str], list[t.Any]]
+    generate_one: RunnerMethod[LLMRunnable[M, T], [str, list[str]], t.Sequence[dict[t.Literal['generated_text'], str]]]
+    generate_iterator: RunnerMethod[LLMRunnable[M, T], [str], t.Iterator[t.Any]]
+    vllm_generate: RunnerMethod[LLMRunnable[M, T], [str], list[t.Any]]
+    vllm_generate_iterator: RunnerMethod[LLMRunnable[M, T], [str], t.AsyncGenerator[str, None]]
 
-  def __call__(self, prompt: str, **attrs: t.Any) -> t.Any:
-    ...
+    def __init__(self,
+                 runnable_class: type[LLMRunnable[M, T]],
+                 *,
+                 runnable_init_params: dict[str, t.Any] | None = ...,
+                 name: str | None = ...,
+                 scheduling_strategy: type[Strategy] = ...,
+                 models: list[bentoml.Model] | None = ...,
+                 max_batch_size: int | None = ...,
+                 max_latency_ms: int | None = ...,
+                 method_configs: dict[str, dict[str, int]] | None = ...,
+                 embedded: bool = False,
+                 ) -> None:
+      ...
 
-  def run(self, prompt: str, **attrs: t.Any) -> t.Any:
-    ...
+    def __call__(self, prompt: str, **attrs: t.Any) -> t.Any:
+      ...
 
-  async def async_run(self, prompt: str, **attrs: t.Any) -> t.Any:
-    ...
+    def run(self, prompt: str, **attrs: t.Any) -> t.Any:
+      ...
 
-  @abc.abstractmethod
-  def download_model(self) -> bentoml.Model:
-    ...
+    async def async_run(self, prompt: str, **attrs: t.Any) -> t.Any:
+      ...
 
-  @property
-  @abc.abstractmethod
-  def peft_adapters(self) -> PeftAdapterOutput:
-    ...
+    @abc.abstractmethod
+    def download_model(self) -> bentoml.Model:
+      ...
 
-  @property
-  @abc.abstractmethod
-  def __repr_keys__(self) -> set[str]:
-    ...
+    @property
+    @abc.abstractmethod
+    def peft_adapters(self) -> PeftAdapterOutput:
+      ...
+
+    @property
+    @abc.abstractmethod
+    def __repr_keys__(self) -> set[str]:
+      ...
+else:
+  # NOTE: t.Any is also a type
+  LLMRunnable = LLMRunner = t.Any
 
 class load_model_protocol(t.Generic[M, T], t.Protocol):
   def __call__(self, llm: LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M:

@@ -21,7 +21,7 @@ from openllm.protocol.openai import ErrorResponse
 from openllm.protocol.openai import ModelCard
 from openllm.protocol.openai import ModelList
 from openllm.protocol.openai import get_conversation_prompt
-from openllm_core.utils import bentoml_cattr as cattr
+from openllm_core.utils import converter
 from openllm_core.utils import first_not_none
 from openllm_core.utils import gen_random_uuid
 
@@ -34,7 +34,7 @@ if t.TYPE_CHECKING:
   import openllm
 
 def error_response(status_code: HTTPStatus, message: str) -> JSONResponse:
-  return JSONResponse(cattr.unstructure(ErrorResponse(message=message, type='invalid_request_error')), status_code=status_code.value)
+  return JSONResponse(converter.unstructure(ErrorResponse(message=message, type='invalid_request_error')), status_code=status_code.value)
 
 async def check_model(request: CompletionRequest | ChatCompletionRequest, model: str) -> JSONResponse | None:
   if request.model == model: return
@@ -54,13 +54,13 @@ def mount_to_svc(svc: bentoml.Service, llm_runner: openllm.LLMRunner) -> bentoml
 
 # GET /v1/models
 def list_models(_: Request, llm_runner: openllm.LLMRunner) -> Response:
-  return JSONResponse(cattr.unstructure(ModelList(data=[ModelCard(id=llm_runner.llm_type)])), status_code=HTTPStatus.OK.value)
+  return JSONResponse(converter.unstructure(ModelList(data=[ModelCard(id=llm_runner.llm_type)])), status_code=HTTPStatus.OK.value)
 
 # POST /v1/chat/completions
 async def create_chat_completions(req: Request, llm_runner: openllm.LLMRunner) -> Response:
   json_str = await req.body()
   try:
-    request = cattr.structure(orjson.loads(json_str), ChatCompletionRequest)
+    request = converter.structure(orjson.loads(json_str), ChatCompletionRequest)
   except orjson.JSONDecodeError as err:
     logger.debug('Sent body: %s', json_str)
     logger.error('Invalid JSON input received: %s', err)
@@ -84,7 +84,7 @@ async def create_chat_completions(req: Request, llm_runner: openllm.LLMRunner) -
   def create_stream_response_json(index: int, text: str, finish_reason: str | None = None) -> str:
     choice_data = ChatCompletionResponseStreamChoice(index=index, delta=Delta(content=text), finish_reason=finish_reason)
     response = ChatCompletionStreamResponse(id=request_id, created=created_time, model=model_name, choices=[choice_data])
-    return orjson.dumps(cattr.unstructure(response)).decode()
+    return orjson.dumps(converter.unstructure(response)).decode()
 
   def completion_stream_generator() -> t.AsyncGenerator[str, None]:
     # first chunk with role

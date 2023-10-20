@@ -10,7 +10,7 @@ from starlette.routing import Route
 
 import openllm
 
-from openllm_core.utils import bentoml_cattr as cattr
+from openllm_core.utils import converter
 
 if t.TYPE_CHECKING:
   from starlette.requests import Request
@@ -26,7 +26,7 @@ def mount_to_svc(svc: bentoml.Service, llm_runner: openllm.LLMRunner) -> bentoml
 async def hf_agent(request: Request, llm_runner: openllm.LLMRunner) -> Response:
   json_str = await request.body()
   try:
-    input_data = cattr.structure(orjson.loads(json_str), openllm.HfAgentInput)
+    input_data = converter.structure(orjson.loads(json_str), openllm.HfAgentInput)
   except orjson.JSONDecodeError as err:
     raise openllm.exceptions.OpenLLMException(f'Invalid JSON input received: {err}') from None
   stop = input_data.parameters.pop('stop', ['\n'])

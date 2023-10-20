@@ -14,12 +14,11 @@ import inflection
 
 import openllm_core
 
-from bentoml._internal.utils import LazyLoader
-from bentoml._internal.utils import pkg
 from openllm_core._typing_compat import LiteralBackend
 from openllm_core._typing_compat import LiteralString
 from openllm_core._typing_compat import overload
 
+from .lazy import LazyLoader
 from .representation import ReprMixin
 
 if t.TYPE_CHECKING:
@@ -70,6 +69,7 @@ def is_grpc_health_available() -> bool:
   return _grpc_health_available
 
 def is_optimum_supports_gptq() -> bool:
+  from . import pkg
   return pkg.pkg_version_info('optimum')[:2] >= (0, 12)
 
 def is_jupyter_available() -> bool:

@@ -26,8 +26,6 @@ from openllm_core._schema import GenerateOutput as GenerateOutput
 from openllm_core._schema import GenerationOutput as GenerationOutput
 from openllm_core._schema import HfAgentInput as HfAgentInput
 from openllm_core._schema import MetadataOutput as MetadataOutput
-from openllm_core._strategies import CascadingResourceStrategy as CascadingResourceStrategy
-from openllm_core._strategies import get_resource as get_resource
 from openllm_core.config import CONFIG_MAPPING as CONFIG_MAPPING
 from openllm_core.config import CONFIG_MAPPING_NAMES as CONFIG_MAPPING_NAMES
 from openllm_core.config import AutoConfig as AutoConfig

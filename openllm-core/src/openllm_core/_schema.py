@@ -9,7 +9,7 @@ import inflection
 from openllm_core._configuration import GenerationConfig
 from openllm_core._configuration import LLMConfig
 
-from .utils import bentoml_cattr
+from .utils import converter
 from .utils import gen_random_uuid
 
 if t.TYPE_CHECKING:
@@ -52,11 +52,11 @@ class GenerateOutput:
 
   @property
   def marshaled_config(self) -> GenerationConfig:
-    return bentoml_cattr.structure(self.configuration, GenerationConfig)
+    return converter.structure(self.configuration, GenerationConfig)
 
   @property
   def unmarshaled(self) -> dict[str, t.Any]:
-    return bentoml_cattr.unstructure(self)
+    return converter.unstructure(self)
 
   def __getitem__(self, key: str) -> t.Any:
     if hasattr(self, key): return getattr(self, key)

@@ -58,15 +58,13 @@ from deepmerge.merger import Merger
 
 import openllm_core
 
-from ._strategies import LiteralResourceSpec
-from ._strategies import available_resource_spec
-from ._strategies import resource_spec
 from ._typing_compat import AdapterType
 from ._typing_compat import AnyCallable
 from ._typing_compat import At
 from ._typing_compat import DictStrAny
 from ._typing_compat import ListStr
 from ._typing_compat import LiteralBackend
+from ._typing_compat import LiteralResourceSpec
 from ._typing_compat import LiteralSerialisation
 from ._typing_compat import LiteralString
 from ._typing_compat import NotRequired
@@ -77,8 +75,8 @@ from .exceptions import ForbiddenAttributeError
 from .utils import MYPY
 from .utils import LazyLoader
 from .utils import ReprMixin
-from .utils import bentoml_cattr
 from .utils import codegen
+from .utils import converter
 from .utils import dantic
 from .utils import field_env_key
 from .utils import first_not_none
@@ -354,9 +352,9 @@ class GenerationConfig(ReprMixin):
   def __repr_keys__(self) -> set[str]:
     return {i.name for i in attr.fields(self.__class__)}
 
-bentoml_cattr.register_unstructure_hook_factory(
+converter.register_unstructure_hook_factory(
     lambda cls: attr.has(cls) and lenient_issubclass(cls, GenerationConfig), lambda cls: make_dict_unstructure_fn(
-        cls, bentoml_cattr, _cattrs_omit_if_default=False, _cattrs_use_linecache=True, **{
+        cls, converter, _cattrs_omit_if_default=False, _cattrs_use_linecache=True, **{
             k: override(omit=True) for k, v in attr.fields_dict(cls).items() if v.default in (None, attr.NOTHING)
         }))
 
@@ -418,7 +416,7 @@ class SamplingParams(ReprMixin):
     return {i.name for i in attr.fields(self.__class__)}
 
   def to_vllm(self) -> vllm.SamplingParams:
-    return vllm.SamplingParams(max_tokens=self.max_tokens, temperature=self.temperature, top_k=self.top_k, top_p=self.top_p, **bentoml_cattr.unstructure(self))
+    return vllm.SamplingParams(max_tokens=self.max_tokens, temperature=self.temperature, top_k=self.top_k, top_p=self.top_p, **converter.unstructure(self))
 
   @classmethod
   def from_generation_config(cls, generation_config: GenerationConfig, **attrs: t.Any) -> Self:
@@ -434,13 +432,13 @@ class SamplingParams(ReprMixin):
     max_tokens = first_not_none(attrs.pop('max_tokens', None), attrs.pop('max_new_tokens', None), default=generation_config['max_new_tokens'])
     return cls(_internal=True, temperature=temperature, top_k=top_k, top_p=top_p, max_tokens=max_tokens, **attrs)
 
-bentoml_cattr.register_unstructure_hook_factory(
+converter.register_unstructure_hook_factory(
     lambda cls: attr.has(cls) and lenient_issubclass(cls, SamplingParams), lambda cls: make_dict_unstructure_fn(
-        cls, bentoml_cattr, _cattrs_omit_if_default=False, _cattrs_use_linecache=True, **{
+        cls, converter, _cattrs_omit_if_default=False, _cattrs_use_linecache=True, **{
             k: override(omit=True) for k, v in attr.fields_dict(cls).items() if v.default in (None, attr.NOTHING)
         }))
-bentoml_cattr.register_structure_hook_factory(lambda cls: attr.has(cls) and lenient_issubclass(cls, SamplingParams),
-                                              lambda cls: make_dict_structure_fn(cls, bentoml_cattr, _cattrs_forbid_extra_keys=True, max_new_tokens=override(rename='max_tokens')))
+converter.register_structure_hook_factory(lambda cls: attr.has(cls) and lenient_issubclass(cls, SamplingParams),
+                                          lambda cls: make_dict_structure_fn(cls, converter, _cattrs_forbid_extra_keys=True, max_new_tokens=override(rename='max_tokens')))
 
 # cached it here to save one lookup per assignment
 _object_getattribute = object.__getattribute__
@@ -556,13 +554,13 @@ class _ModelSettingsAttr:
 
 # a heuristic cascading implementation resolver based on available resources
 def get_default_backend(backend_mapping: dict[LiteralResourceSpec, LiteralBackend]) -> LiteralBackend:
+  from ._strategies import available_resource_spec
+  from ._strategies import resource_spec
   available_spec = available_resource_spec()
   if resource_spec('tpu') in available_spec: return backend_mapping.get(resource_spec('tpu'), 'pt')
   elif resource_spec('amd') in available_spec: return backend_mapping.get(resource_spec('amd'), 'pt')
-  elif resource_spec('nvidia') in available_spec:
-    return backend_mapping.get(resource_spec('nvidia'), 'pt')
-  else:
-    return backend_mapping.get(resource_spec('cpu'), 'pt')
+  elif resource_spec('nvidia') in available_spec: return backend_mapping.get(resource_spec('nvidia'), 'pt')
+  else: return backend_mapping.get(resource_spec('cpu'), 'pt')
 
 def structure_settings(cl_: type[LLMConfig], cls: type[_ModelSettingsAttr]) -> _ModelSettingsAttr:
   if 'generation_class' in cl_.__config__:
@@ -608,7 +606,7 @@ def structure_settings(cl_: type[LLMConfig], cls: type[_ModelSettingsAttr]) -> _
   _final_value_dct['fine_tune_strategies'] = _converted
   return attr.evolve(_settings_attr, **_final_value_dct)
 
-bentoml_cattr.register_structure_hook(_ModelSettingsAttr, structure_settings)
+converter.register_structure_hook(_ModelSettingsAttr, structure_settings)
 
 def _setattr_class(attr_name: str, value_var: t.Any) -> str:
   return f"setattr(cls, '{attr_name}', {value_var})"
@@ -994,7 +992,7 @@ class LLMConfig(_ConfigAttr):
       raise RuntimeError("Given LLMConfig must have '__config__' that is not None defined.")
 
     # auto assignment attributes generated from __config__ after create the new slot class.
-    _make_assignment_script(cls, bentoml_cattr.structure(cls, _ModelSettingsAttr))(cls)
+    _make_assignment_script(cls, converter.structure(cls, _ModelSettingsAttr))(cls)
 
     def _make_subclass(class_attr: str, base: type[At], globs: dict[str, t.Any] | None = None, suffix_env: LiteralString | None = None) -> type[At]:
       camel_name = cls.__name__.replace('Config', '')
@@ -1341,9 +1339,9 @@ class LLMConfig(_ConfigAttr):
     return new_cls(**attrs)
 
   def model_dump(self, flatten: bool = False, **_: t.Any) -> DictStrAny:
-    dumped = bentoml_cattr.unstructure(self)
-    generation_config = bentoml_cattr.unstructure(self.generation_config)
-    sampling_config = bentoml_cattr.unstructure(self.sampling_config)
+    dumped = converter.unstructure(self)
+    generation_config = converter.unstructure(self.generation_config)
+    sampling_config = converter.unstructure(self.sampling_config)
     if flatten: dumped.update(generation_config)
     else: dumped['generation_config'] = generation_config
     dumped.update(sampling_config)
@@ -1358,7 +1356,7 @@ class LLMConfig(_ConfigAttr):
       attrs = orjson.loads(json_str)
     except orjson.JSONDecodeError as err:
       raise openllm_core.exceptions.ValidationError(f'Failed to load JSON: {err}') from None
-    return bentoml_cattr.structure(attrs, cls)
+    return converter.structure(attrs, cls)
 
   @classmethod
   def model_construct_env(cls, **attrs: t.Any) -> Self:
@@ -1386,7 +1384,7 @@ class LLMConfig(_ConfigAttr):
 
     config_from_env.update(attrs)
     config_from_env['generation_config'] = generation_config
-    return bentoml_cattr.structure(config_from_env, cls)
+    return converter.structure(config_from_env, cls)
 
   def model_validate_click(self, **attrs: t.Any) -> tuple[LLMConfig, DictStrAny]:
     '''Parse given click attributes into a LLMConfig and return the remaining click attributes.'''
@@ -1413,7 +1411,7 @@ class LLMConfig(_ConfigAttr):
     ...
 
   def to_generation_config(self, return_as_dict: bool = False) -> transformers.GenerationConfig | DictStrAny:
-    config = transformers.GenerationConfig(**bentoml_cattr.unstructure(self.generation_config))
+    config = transformers.GenerationConfig(**converter.unstructure(self.generation_config))
     return config.to_dict() if return_as_dict else config
 
   def to_sampling_config(self) -> vllm.SamplingParams:
@@ -1488,8 +1486,8 @@ class LLMConfig(_ConfigAttr):
     '''
     return generation_result
 
-bentoml_cattr.register_unstructure_hook_factory(lambda cls: lenient_issubclass(cls, LLMConfig),
-                                                lambda cls: make_dict_unstructure_fn(cls, bentoml_cattr, _cattrs_omit_if_default=False, _cattrs_use_linecache=True))
+converter.register_unstructure_hook_factory(lambda cls: lenient_issubclass(cls, LLMConfig),
+                                            lambda cls: make_dict_unstructure_fn(cls, converter, _cattrs_omit_if_default=False, _cattrs_use_linecache=True))
 
 def structure_llm_config(data: t.Any, cls: type[LLMConfig]) -> LLMConfig:
   """Structure a dictionary to a LLMConfig object.
@@ -1514,5 +1512,5 @@ def structure_llm_config(data: t.Any, cls: type[LLMConfig]) -> LLMConfig:
   data = {k: v for k, v in data.items() if k not in cls.__openllm_accepted_keys__}
   return cls(generation_config=generation_config, __openllm_extras__=data, **cls_attrs)
 
-bentoml_cattr.register_structure_hook_func(lambda cls: lenient_issubclass(cls, LLMConfig), structure_llm_config)
+converter.register_structure_hook_func(lambda cls: lenient_issubclass(cls, LLMConfig), structure_llm_config)
 openllm_home = os.path.expanduser(os.environ.get('OPENLLM_HOME', os.path.join(os.environ.get('XDG_CACHE_HOME', os.path.join(os.path.expanduser('~'), '.cache')), 'openllm')))

@@ -1,3 +1,4 @@
+# NOTE: This module depends on BentoML, whereas openllm_core doesn't necessary depends on BentoML.
 # mypy: disable-error-code="no-redef"
 from __future__ import annotations
 import functools
@@ -18,6 +19,7 @@ from bentoml._internal.resource import get_resource
 from bentoml._internal.resource import system_resources
 from bentoml._internal.runner.strategy import THREAD_ENVS
 
+from ._typing_compat import LiteralResourceSpec
 from ._typing_compat import overload
 from .utils import DEBUG
 from .utils import ReprMixin
@@ -243,8 +245,6 @@ AmdGpuResource = _make_resource_class(
 
     Since ROCm will respect CUDA_VISIBLE_DEVICES, the behaviour of from_spec, from_system are similar to
     ``NvidiaGpuResource``. Currently ``validate`` is not yet supported.''')
-
-LiteralResourceSpec = t.Literal['cloud-tpus.google.com/v2', 'amd.com/gpu', 'nvidia.com/gpu', 'cpu']
 
 # convenient mapping
 def resource_spec(name: t.Literal['tpu', 'amd', 'nvidia', 'cpu']) -> LiteralResourceSpec:

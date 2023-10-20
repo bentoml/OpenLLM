@@ -75,9 +75,9 @@ from openllm_core.utils import QUIET_ENV_VAR
 from openllm_core.utils import EnvVarMixin
 from openllm_core.utils import LazyLoader
 from openllm_core.utils import analytics
-from openllm_core.utils import bentoml_cattr
 from openllm_core.utils import compose
 from openllm_core.utils import configure_logging
+from openllm_core.utils import converter
 from openllm_core.utils import first_not_none
 from openllm_core.utils import get_debug_mode
 from openllm_core.utils import get_quiet_mode
@@ -522,6 +522,7 @@ def build_command(ctx: click.Context, /, model_name: str, model_id: str | None, 
                                                            **attrs)
     # FIX: This is a patch for _service_vars injection
     if 'OPENLLM_MODEL_ID' not in os.environ: os.environ['OPENLLM_MODEL_ID'] = llm.model_id
+    if 'OPENLLM_ADAPTER_MAP' not in os.environ: os.environ['OPENLLM_ADAPTER_MAP'] = orjson.dumps(llm.adapters_mapping).decode()
 
     labels = dict(llm.identifying_params)
     labels.update({'_type': llm.llm_type, '_framework': env['backend_value']})
@@ -840,7 +841,7 @@ def query_command(ctx: click.Context, /, prompt: str, endpoint: str, timeout: in
         termui.echo(it.text, fg=generated_fg, nl=False)
     elif output == 'json':
       for it in stream_res:
-        termui.echo(orjson.dumps(bentoml_cattr.unstructure(it), option=orjson.OPT_INDENT_2).decode(), fg='white')
+        termui.echo(orjson.dumps(converter.unstructure(it), option=orjson.OPT_INDENT_2).decode(), fg='white')
     else:
       for it in stream_res:
         termui.echo(it.text, fg=generated_fg, nl=False)
@@ -850,7 +851,7 @@ def query_command(ctx: click.Context, /, prompt: str, endpoint: str, timeout: in
       termui.echo('\n\n==Responses==\n', fg='white')
       termui.echo(res.responses[0], fg=generated_fg)
     elif output == 'json':
-      termui.echo(orjson.dumps(bentoml_cattr.unstructure(res), option=orjson.OPT_INDENT_2).decode(), fg='white')
+      termui.echo(orjson.dumps(converter.unstructure(res), option=orjson.OPT_INDENT_2).decode(), fg='white')
     else:
       termui.echo(res.responses, fg='white')
   ctx.exit(0)
