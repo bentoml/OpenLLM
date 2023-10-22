@@ -6,6 +6,8 @@ import attr
 
 import openllm_core
 
+from openllm import conversation
+
 @attr.define
 class CompletionRequest:
   prompt: str
@@ -131,6 +133,9 @@ class ModelList:
   object: str = 'list'
   data: t.List[ModelCard] = attr.field(factory=list)
 
-def messages_to_prompt(messages: list[Message]) -> str:
-  formatted = '\n'.join([f"{message['role']}: {message['content']}" for message in messages])
-  return f'{formatted}\nassistant:'
+def messages_to_prompt(messages: list[Message], model: str) -> str:
+  conv_template = conversation.get_conv_template(model)
+  for message in messages:
+    conv_template.append_message(message['role'], message['content'])
+  conv_template.append_message(conv_template.roles[1], '')
+  return conv_template.get_prompt()

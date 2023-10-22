@@ -125,7 +125,7 @@ async def completion_v1(input_dict: dict[str, t.Any], ctx: bentoml.Context) -> s
 async def chat_completion_v1(input_dict: dict[str, t.Any], ctx: bentoml.Context) -> str | t.AsyncGenerator[str, None]:
   _model = input_dict.get('model', None)
   if _model is not runner.llm_type: logger.warning("Model '%s' is not supported. Run openai.Model.list() to see all supported models.", _model)
-  prompt = openllm.openai.messages_to_prompt(input_dict['messages'])
+  prompt = openllm.openai.messages_to_prompt(input_dict['messages'], model)
   stream = input_dict.pop('stream', False)
   config = {
       'temperature': input_dict.pop('temperature', llm_config['temperature']),
