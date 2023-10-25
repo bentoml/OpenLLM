@@ -3,14 +3,10 @@ This conversation module is modified from the conversation.py in FastChat
 to support compatible models in OpenLLM.
 '''
 from __future__ import annotations
+import typing as t
+
 from enum import IntEnum
 from enum import auto
-from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
-from typing import Union
 
 import attr
 
@@ -43,9 +39,9 @@ class Conversation:
   # The system message
   system_message: str = ''
   # The names of two roles
-  roles: Tuple[str, str] = ('User', 'Assistant')
+  roles: t.Tuple[str, str] = ('User', 'Assistant')
   # All messages. Each item is (role, message).
-  messages: List[List[str]] = []
+  messages: t.List[t.List[str]] = []
   # The number of few shot examples
   offset: int = 0
   # The separator style and configurations
@@ -53,9 +49,9 @@ class Conversation:
   sep: str = '\n'
   sep2: str = ''
   # Stop criteria (the default one is EOS token)
-  stop_str: Union[str, List[str]] = ''
+  stop_str: t.Union[str, t.List[str]] = ''
   # Stops generation if meeting any token in this list
-  stop_token_ids: List[int] = []
+  stop_token_ids: t.List[int] = []
 
   def get_prompt(self) -> str:
     '''Get the prompt for generation.'''
@@ -196,17 +192,7 @@ class Conversation:
         '''
     self.messages[-1][1] = message
 
-  def to_gradio_chatbot(self) -> List[List[Optional[str]]]:
-    '''Convert the conversation to gradio chatbot format.'''
-    ret = []
-    for i, (role, msg) in enumerate(self.messages[self.offset:]):
-      if i % 2 == 0:
-        ret.append([msg, None])
-      else:
-        ret[-1][-1] = msg
-    return ret
-
-  def to_openai_api_messages(self) -> List[Dict[str, str]]:
+  def to_openai_api_messages(self) -> t.List[t.Dict[str, str]]:
     '''Convert the conversation to OpenAI chat completion format.'''
     ret = [{'role': 'system', 'content': self.system_message}]
 
@@ -217,25 +203,8 @@ class Conversation:
         ret.append({'role': 'assistant', 'content': msg})
     return ret
 
-  def copy(self) -> Conversation:
-    return Conversation(name=self.name,
-                        system_template=self.system_template,
-                        system_message=self.system_message,
-                        roles=self.roles,
-                        messages=[[x, y] for x, y in self.messages],
-                        offset=self.offset,
-                        sep_style=self.sep_style,
-                        sep=self.sep,
-                        sep2=self.sep2,
-                        stop_str=self.stop_str,
-                        stop_token_ids=self.stop_token_ids,
-                        )
-
-  def dict(self) -> Any:
-    return {'template_name': self.name, 'system_message': self.system_message, 'roles': self.roles, 'messages': self.messages, 'offset': self.offset,}
-
 # A global registry for all conversation templates for OpenLLM models
-conv_templates: Dict[str, Conversation] = {}
+conv_templates: t.Dict[str, Conversation] = {}
 
 def register_conv_template(template: Conversation) -> None:
   '''Register a new conversation template.'''
