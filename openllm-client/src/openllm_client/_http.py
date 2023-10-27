@@ -148,6 +148,7 @@ class HTTPClient:
         timeout = attrs.pop('timeout', self._timeout)
         verify = attrs.pop('verify', self._verify)
         _meta, _config = self._metadata(), self._config()
+        _config.update(attrs)
         if _meta['prompt_template'] is not None:
             prompt = _meta['prompt_template'].format(
                 system_message=_meta['system_message'], instruction=prompt
@@ -180,6 +181,7 @@ class HTTPClient:
         timeout = attrs.pop('timeout', self._timeout)
         verify = attrs.pop('verify', self._verify)
         _meta, _config = self._metadata(), self._config()
+        _config.update(attrs)
         if _meta['prompt_template'] is not None:
             prompt = _meta['prompt_template'].format(
                 system_message=_meta['system_message'], instruction=prompt
@@ -325,6 +327,7 @@ class AsyncHTTPClient:
         timeout = attrs.pop('timeout', self._timeout)
         verify = attrs.pop('verify', self._verify)
         _meta, _config = await self._metadata(), await self._config()
+        _config.update(attrs)
         if _meta['prompt_template'] is not None:
             prompt = _meta['prompt_template'].format(
                 system_message=_meta['system_message'], instruction=prompt
@@ -359,6 +362,7 @@ class AsyncHTTPClient:
         self, prompt: str, **attrs: t.Any
     ) -> t.AsyncGenerator[StreamResponse, t.Any]:
         _meta, _config = await self._metadata(), await self._config()
+        _config.update(attrs)
         if _meta['prompt_template'] is not None:
             prompt = _meta['prompt_template'].format(
                 system_message=_meta['system_message'], instruction=prompt
