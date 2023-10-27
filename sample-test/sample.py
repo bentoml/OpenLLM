@@ -7,7 +7,7 @@ def clientQuery(llm_endpoint, query):
     client_conn_end = time.time() - client_conn_start
 
     client_embed_start = time.time()
-    final_embedding = client.query(query, verify=False)
+    final_embedding = client.query(query, verify=False, max_new_tokens=100)
     client_embed_end = time.time() - client_embed_start
 
     print("final_embeddings are:", final_embedding)
