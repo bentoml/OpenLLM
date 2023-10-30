@@ -1149,21 +1149,24 @@ def llm_runnable_class(self: LLM[M, T], generate_sig: ModelSignature, generate_i
 
     @bentoml.Runnable.method(**method_signature(generate_sig))  # type: ignore
     def generate(__self: _Runnable, prompt: str, **attrs: t.Any) -> list[t.Any]:
-      prompt, attrs, _ = self.sanitize_parameters(prompt, **attrs)
+      use_chat_template: bool = attrs.pop('_format_chat_template', False)
+      if not use_chat_template: prompt, attrs, _ = self.sanitize_parameters(prompt, **attrs)
       adapter_name = attrs.pop('adapter_name', None)
       if adapter_name is not None: __self.set_adapter(adapter_name)
       return self.generate(prompt, **attrs)
 
     @bentoml.Runnable.method(**method_signature(generate_sig))  # type: ignore
     def generate_one(__self: _Runnable, prompt: str, stop: list[str], **attrs: t.Any) -> t.Sequence[dict[t.Literal['generated_text'], str]]:
-      prompt, attrs, _ = self.sanitize_parameters(prompt, **attrs)
+      use_chat_template: bool = attrs.pop('_format_chat_template', False)
+      if not use_chat_template: prompt, attrs, _ = self.sanitize_parameters(prompt, **attrs)
       adapter_name = attrs.pop('adapter_name', None)
       if adapter_name is not None: __self.set_adapter(adapter_name)
       return self.generate_one(prompt, stop, **attrs)
 
     @bentoml.Runnable.method(**method_signature(generate_iterator_sig))  # type: ignore
     def generate_iterator(__self: _Runnable, prompt: str, **attrs: t.Any) -> t.Generator[str, None, str]:
-      prompt, attrs, _ = self.sanitize_parameters(prompt, **attrs)
+      use_chat_template: bool = attrs.pop('_format_chat_template', False)
+      if not use_chat_template: prompt, attrs, _ = self.sanitize_parameters(prompt, **attrs)
       adapter_name = attrs.pop('adapter_name', None)
       if adapter_name is not None: __self.set_adapter(adapter_name)
       pre = 0
@@ -1178,6 +1181,7 @@ def llm_runnable_class(self: LLM[M, T], generate_sig: ModelSignature, generate_i
 
     @bentoml.Runnable.method(**method_signature(generate_sig))  # type: ignore
     async def vllm_generate(__self: _Runnable, prompt: str, **attrs: t.Any) -> t.AsyncGenerator[list[t.Any], None]:
+      use_chat_template: bool = attrs.pop('_format_chat_template', False)
       stop: str | t.Iterable[str] | None = attrs.pop('stop', None)
       echo = attrs.pop('echo', False)
       stop_token_ids: list[int] | None = attrs.pop('stop_token_ids', None)
@@ -1187,7 +1191,7 @@ def llm_runnable_class(self: LLM[M, T], generate_sig: ModelSignature, generate_i
       if adapter_name is not None: __self.set_adapter(adapter_name)
       request_id: str | None = attrs.pop('request_id', None)
       if request_id is None: raise ValueError('request_id must not be None.')
-      prompt, *_ = self.sanitize_parameters(prompt, **attrs)
+      if not use_chat_template: prompt, *_ = self.sanitize_parameters(prompt, **attrs)
       if openllm_core.utils.DEBUG: logger.debug('Prompt:\n%s', prompt)
 
       if stop_token_ids is None: stop_token_ids = []
@@ -1213,6 +1217,7 @@ def llm_runnable_class(self: LLM[M, T], generate_sig: ModelSignature, generate_i
 
     @bentoml.Runnable.method(**method_signature(generate_iterator_sig))  # type: ignore
     async def vllm_generate_iterator(__self: _Runnable, prompt: str, **attrs: t.Any) -> t.AsyncGenerator[str, None]:
+      use_chat_template: bool = attrs.pop('_format_chat_template', False)
       # TODO: System prompt support
       pre = 0
       echo = attrs.pop('echo', False)
@@ -1224,7 +1229,7 @@ def llm_runnable_class(self: LLM[M, T], generate_sig: ModelSignature, generate_i
       if adapter_name is not None: __self.set_adapter(adapter_name)
       request_id: str | None = attrs.pop('request_id', None)
       if request_id is None: raise ValueError('request_id must not be None.')
-      prompt, *_ = self.sanitize_parameters(prompt, **attrs)
+      if not use_chat_template: prompt, *_ = self.sanitize_parameters(prompt, **attrs)
       if openllm_core.utils.DEBUG: logger.debug('Prompt:\n%s', prompt)
 
       if stop_token_ids is None: stop_token_ids = []
