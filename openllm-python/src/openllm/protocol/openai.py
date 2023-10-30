@@ -136,6 +136,7 @@ class ModelList:
 def messages_to_prompt(messages: list[Message], model: str) -> str:
   conv_template = _conversation.get_conv_template(model)
   for message in messages:
-    conv_template.append_message(message['role'], message['content'])
+    if message['role'] == 'system': conv_template.set_system_message(message['content'])
+    else: conv_template.append_message(message['role'], message['content'])
   conv_template.append_message(conv_template.roles[1], '')
   return conv_template.get_prompt()

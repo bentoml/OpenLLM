@@ -10,6 +10,8 @@ from enum import auto
 
 import attr
 
+_object_setattr = object.__setattr__
+
 class SeparatorStyle(IntEnum):
   '''Separator styles.'''
 
@@ -28,7 +30,7 @@ class SeparatorStyle(IntEnum):
   MPT = auto()
   STARCODER = auto()
 
-@attr.define()
+@attr.define
 class Conversation:
   '''A class that manages prompt templates and keeps all conversation history.'''
 
@@ -108,7 +110,6 @@ class Conversation:
         else:
           ret += role
       return ret
-
     # Special separator styles for specific chat models
     elif self.sep_style == SeparatorStyle.LLAMA:
       seps = [self.sep, self.sep2]
@@ -176,10 +177,7 @@ class Conversation:
       raise ValueError(f'Invalid style: {self.sep_style}')
     return ret
 
-  def set_system_message(self, system_message: str) -> None:
-    '''Set the system message.'''
-    self.system_message = system_message
-
+  def set_system_message(self, system_message: str) -> None: _object_setattr(self, 'system_message', system_message)
   def append_message(self, role: str, message: str) -> None:
     '''Append a new message.'''
     self.messages.append([role, message])
@@ -210,17 +208,14 @@ def register_conv_template(template: Conversation) -> None:
   '''Register a new conversation template.'''
   conv_templates[template.name] = template
 
-def get_conv_template(name: str) -> Conversation:
-  return conv_templates[name]
+def get_conv_template(name: str) -> Conversation: return conv_templates[name]
 
 # Raw template
 register_conv_template(Conversation(name='raw', system_message='', roles=('', ''), sep_style=SeparatorStyle.NO_COLON_SINGLE, sep=''))
 
 # Llama template
-register_conv_template(
-    # source: https://huggingface.co/blog/codellama#conversational-instructions
-    Conversation(name='llama', system_template='[INST] <<SYS>>\n{system_message}\n<</SYS>>\n\n', roles=('[INST]', '[/INST]'), sep_style=SeparatorStyle.LLAMA, sep=' ', sep2=' </s><s>',
-                 ))
+# source: https://huggingface.co/blog/codellama#conversational-instructions
+register_conv_template(Conversation(name='llama', system_template='[INST] <<SYS>>\n{system_message}\n<</SYS>>\n\n', roles=('[INST]', '[/INST]'), sep_style=SeparatorStyle.LLAMA, sep=' ', sep2=' </s><s>',))
 
 # ChatGLM template
 register_conv_template(Conversation(name='chatglm', roles=('问', '答'), sep_style=SeparatorStyle.CHATGLM, sep='\n',))

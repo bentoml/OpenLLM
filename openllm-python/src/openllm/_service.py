@@ -112,15 +112,7 @@ async def completion_v1(input_dict: dict[str, t.Any], ctx: bentoml.Context) -> s
         )).decode()
 
 @svc.api(route='/v1/chat/completions',
-         input=bentoml.io.JSON.from_sample(
-             openllm.utils.bentoml_cattr.unstructure(
-                 openllm.openai.ChatCompletionRequest(messages=[{
-                     'role': 'system',
-                     'content': 'You are a helpful assistant.'
-                 }, {
-                     'role': 'user',
-                     'content': 'Hello!'
-                 }], model=runner.llm_type))),
+         input=bentoml.io.JSON.from_sample(openllm.utils.bentoml_cattr.unstructure(openllm.openai.ChatCompletionRequest(messages=[{'role': 'system', 'content': 'You are a helpful assistant.'}, {'role': 'user', 'content': 'Hello!'}], model=runner.llm_type))),
          output=bentoml.io.Text())
 async def chat_completion_v1(input_dict: dict[str, t.Any], ctx: bentoml.Context) -> str | t.AsyncGenerator[str, None]:
   _model = input_dict.get('model', None)
