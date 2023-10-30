@@ -31,7 +31,7 @@
   },
   "devDependencies": {
     "@svgr/webpack": "*",
-    "@types/dedent": "^0.7.0",
+    "@types/dedent": "^0.7.1",
     "@types/node": "*",
     "@types/react": "*",
     "@types/react-dom": "*",
