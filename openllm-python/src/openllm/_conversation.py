@@ -1,7 +1,3 @@
-'''
-This conversation module is modified from the conversation.py in FastChat
-to support compatible models in OpenLLM.
-'''
 from __future__ import annotations
 import typing as t
 
@@ -9,6 +5,8 @@ from enum import IntEnum
 from enum import auto
 
 import attr
+
+if t.TYPE_CHECKING: import openllm_core
 
 _object_setattr = object.__setattr__
 
@@ -208,7 +206,11 @@ def register_conv_template(template: Conversation) -> None:
   '''Register a new conversation template.'''
   conv_templates[template.name] = template
 
-def get_conv_template(name: str) -> Conversation: return conv_templates[name]
+def get_conv_template(name: str, llm_config: openllm_core.LLMConfig) -> Conversation:
+  if name not in conv_templates: raise ValueError(f"Failed to find conversation templates for {name}")
+  template = conv_templates[name]
+  if hasattr(llm_config, 'default_system_message'): template.set_system_message(llm_config.default_system_message)
+  return template
 
 # Raw template
 register_conv_template(Conversation(name='raw', system_message='', roles=('', ''), sep_style=SeparatorStyle.NO_COLON_SINGLE, sep=''))
