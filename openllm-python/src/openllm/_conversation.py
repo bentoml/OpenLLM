@@ -207,7 +207,7 @@ def register_conv_template(template: Conversation) -> None:
   conv_templates[template.name] = template
 
 def get_conv_template(name: str, llm_config: openllm_core.LLMConfig) -> Conversation:
-  if name not in conv_templates: raise ValueError(f"Failed to find conversation templates for {name}")
+  if name not in conv_templates: raise ValueError(f'Failed to find conversation templates for {name}')
   template = conv_templates[name]
   if hasattr(llm_config, 'default_system_message'): template.set_system_message(llm_config.default_system_message)
   return template
