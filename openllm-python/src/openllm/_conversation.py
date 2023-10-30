@@ -292,23 +292,3 @@ register_conv_template(
 
 # Mistral template
 register_conv_template(Conversation(name='mistral', system_message='', roles=('[INST]', '[/INST]'), sep_style=SeparatorStyle.LLAMA, sep=' ', sep2='</s>',))
-
-if __name__ == '__main__':
-  print('-- OPT template --')
-  conv = get_conv_template('opt')
-  conv.append_message(conv.roles[0], 'Hello!')
-  conv.append_message(conv.roles[1], 'Hi!')
-  conv.append_message(conv.roles[0], 'How are you?')
-  conv.append_message(conv.roles[1], '')
-  print(conv.get_prompt())
-
-  print('\n')
-
-  print('-- Llama template --')
-  conv = get_conv_template('llama')
-  conv.set_system_message('You are a helpful, respectful and honest assistant.')
-  conv.append_message(conv.roles[0], 'Hello!')
-  conv.append_message(conv.roles[1], 'Hi!')
-  conv.append_message(conv.roles[0], 'How are you?')
-  conv.append_message(conv.roles[1], '')
-  print(conv.get_prompt())

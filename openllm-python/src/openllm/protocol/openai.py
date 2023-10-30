@@ -6,7 +6,7 @@ import attr
 
 import openllm_core
 
-from openllm import conversation
+from openllm import _conversation
 
 @attr.define
 class CompletionRequest:
@@ -134,7 +134,7 @@ class ModelList:
   data: t.List[ModelCard] = attr.field(factory=list)
 
 def messages_to_prompt(messages: list[Message], model: str) -> str:
-  conv_template = conversation.get_conv_template(model)
+  conv_template = _conversation.get_conv_template(model)
   for message in messages:
     conv_template.append_message(message['role'], message['content'])
   conv_template.append_message(conv_template.roles[1], '')
