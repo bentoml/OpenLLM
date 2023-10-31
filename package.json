@@ -22,7 +22,7 @@
   },
   "packageManager": "pnpm@8.4.0",
   "devDependencies": {
-    "@edge-runtime/vm": "3.1.4",
+    "@edge-runtime/vm": "3.1.6",
     "@next/eslint-plugin-next": "13.5.5",
     "@types/node": "20.8.7",
     "@typescript-eslint/eslint-plugin": "6.9.0",
