@@ -138,4 +138,5 @@ def messages_to_prompt(messages: list[Message], model: str, llm_config: openllm_
   for message in messages:
     if message['role'] == 'system': conv_template.set_system_message(message['content'])
     else: conv_template.append_message(message['role'], message['content'])
+  conv_template.append_message('assistant', '')
   return conv_template.get_prompt()
