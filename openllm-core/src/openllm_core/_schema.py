@@ -90,13 +90,20 @@ class HfAgentInput:
 
 FinishReason = t.Literal['length', 'stop']
 
+# NOTE: vendor parameters from vllm.RequestOutput and vllm.CompletionOutput
+# since vllm is not available on CPU.
+# OpenLLM will adapt CPU outputs to similar architecture with vLLM outputs for consistency
+
+SampleLogprobs = t.List[t.Dict[int, float]]
+PromptLogprobs = t.List[t.Optional[t.Dict[int, float]]]
+
 @attr.define
 class CompletionChunk:
   index: int
   text: str
   token_ids: t.List[int]
   cumulative_logprob: float
-  logprobs: t.Optional[t.List[t.Dict[int, float]]] = None
+  logprobs: t.Optional[SampleLogprobs] = None
   finish_reason: t.Optional[FinishReason] = None
 
 @attr.define
@@ -105,4 +112,17 @@ class GenerationOutput:
   finished: bool
   outputs: t.List[CompletionChunk]
   prompt_token_ids: t.Optional[t.List[int]] = attr.field(default=None)
+  prompt_logprobs: t.Optional[PromptLogprobs] = attr.field(default=None)
   request_id: str = attr.field(factory=lambda: gen_random_uuid())
+
+  @classmethod
+  def from_vllm_outputs(cls, request_output: vllm.RequestOutput) -> GenerationOutput:
+    return cls(prompt=request_output.prompt,
+               finished=request_output.finished,
+               request_id=request_output.request_id,
+               outputs=[
+                   CompletionChunk(index=it.index, text=it.text, token_ids=it.token_ids, cumulative_logprob=it.cumulative_logprob, logprobs=it.logprobs, finish_reason=it.finish_reason)
+                   for it in request_output.outputs
+               ],
+               prompt_token_ids=request_output.prompt_token_ids,
+               prompt_logprobs=request_output.prompt_logprobs)

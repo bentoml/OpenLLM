@@ -20,7 +20,6 @@ from bentoml._internal.models.model import ModelSignature
 from openllm_core._typing_compat import M
 from openllm_core._typing_compat import T
 
-from ._helpers import check_unintialised_params
 from ._helpers import infer_autoclass_from_llm
 from ._helpers import infer_tokenizers_from_llm
 from ._helpers import process_config
@@ -186,5 +185,5 @@ def load_model(llm: openllm.LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M:
     # model = load_quantized_model(empty, save_folder=llm._bentomodel.path, device_map='auto', disable_exllama=disable_exllama)
   else:
     model = auto_class.from_pretrained(llm._bentomodel.path, *decls, config=config, trust_remote_code=llm.trust_remote_code, device_map=device_map, **hub_attrs, **attrs).eval()
-    if llm.__llm_backend__ in {'pt', 'vllm'}: check_unintialised_params(model)
+    # if llm.__llm_backend__ in {'pt', 'vllm'}: check_unintialised_params(model)
   return t.cast('M', model)

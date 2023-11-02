@@ -1,6 +1,6 @@
 ci:
   autoupdate_schedule: weekly
-  skip: [changelog-dry-run, mypy, yapf, clj-kondo, eslint, prettier]
+  skip: [changelog-dry-run, mypy, yapf, eslint, prettier]
   autofix_commit_msg: "ci: auto fixes from pre-commit.ci\n\nFor more information, see https://pre-commit.ci"
   autoupdate_commit_msg: "ci: pre-commit autoupdate [pre-commit.ci]"
 default_language_version:
@@ -73,11 +73,6 @@ repos:
           - types-tabulate
           - types-PyYAML
           - types-protobuf
-  - repo: https://github.com/vincentjames501/pre-commit-clojure
-    rev: v2.0.3
-    hooks:
-      - id: clj-kondo
-        verbose: true
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.5.0
     hooks:

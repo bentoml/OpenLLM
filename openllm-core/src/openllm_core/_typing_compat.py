@@ -17,7 +17,6 @@ except ImportError:
 if t.TYPE_CHECKING:
   import peft
   import transformers
-  import vllm
 
   import openllm
 
@@ -37,7 +36,7 @@ if t.TYPE_CHECKING:
 else:
   AnyType = t.Any
 
-M = t.TypeVar('M', bound='t.Union[transformers.PreTrainedModel, vllm.AsyncLLMEngine, peft.PeftModel]')
+M = t.TypeVar('M', bound='t.Union[transformers.PreTrainedModel, peft.PeftModel]')
 T = t.TypeVar('T', bound='t.Union[transformers.PreTrainedTokenizerFast, transformers.PreTrainedTokenizer, transformers.PreTrainedTokenizerBase]')
 
 def get_literal_args(typ: t.Any) -> tuple[str, ...]:

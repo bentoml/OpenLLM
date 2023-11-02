@@ -2,7 +2,6 @@
 from __future__ import annotations
 import abc
 import gc
-import inspect
 import logging
 import os
 import types
@@ -19,8 +18,6 @@ import openllm
 import openllm_core
 
 from bentoml._internal.models.model import ModelSignature
-from openllm_core._configuration import FineTuneConfig
-from openllm_core._configuration import LLMConfig
 from openllm_core._strategies import CascadingResourceStrategy
 from openllm_core._typing_compat import AdaptersMapping
 from openllm_core._typing_compat import AdaptersTuple
@@ -34,12 +31,9 @@ from openllm_core._typing_compat import LLMRunnable
 from openllm_core._typing_compat import LLMRunner
 from openllm_core._typing_compat import M
 from openllm_core._typing_compat import ModelSignatureDict
-from openllm_core._typing_compat import PeftAdapterOutput
 from openllm_core._typing_compat import T
 from openllm_core._typing_compat import TupleAny
-from openllm_core._typing_compat import overload
 from openllm_core.prompts import PromptTemplate
-from openllm_core.utils import DEBUG
 from openllm_core.utils import LazyLoader
 from openllm_core.utils import ReprMixin
 from openllm_core.utils import apply
@@ -67,7 +61,7 @@ if t.TYPE_CHECKING:
   import transformers
   import vllm
 
-  from openllm_core._configuration import PeftType
+  from openllm_core._configuration import LLMConfig
   from openllm_core.utils.representation import ReprArgs
 else:
   transformers = LazyLoader('transformers', globals(), 'transformers')
@@ -579,100 +573,6 @@ class LLM(_Interface[M, T], ReprMixin):
     if self.__llm_tokenizer__ is None: self.__llm_tokenizer__ = self.load_tokenizer(**self._tokenizer_attrs)
     return self.__llm_tokenizer__
 
-  def _transpose_adapter_mapping(self, inference_mode: bool = True, use_cache: bool = True) -> ResolvedAdaptersMapping:
-    if self._adapters_mapping is None: raise ValueError('LoRA mapping is not set up correctly.')
-    # early out if we already serialized everything.
-    if use_cache and self.__llm_adapter_map__ is not None: return self.__llm_adapter_map__
-    if not use_cache:
-      logger.debug('Adapter mapping resolution will not be cached. This should only be used during training.')
-    adapter_map: ResolvedAdaptersMapping = {k: {} for k in self._adapters_mapping}
-    # this is a temporary check to accept the first option name as 'default'
-    # then we will raise Error when the optional_name is set to None in next iteration.
-    _converted_first_none = False
-    for _adapter_type, _adapters_tuples in self._adapters_mapping.items():
-      strategy = first_not_none(self.config['fine_tune_strategies'].get(_adapter_type),
-                                default=FineTuneConfig(adapter_type=t.cast('PeftType', _adapter_type), llm_config_class=self.config_class))
-      default_config = strategy.eval() if inference_mode else strategy.train()
-      for adapter in _adapters_tuples:
-        if not adapter.name and _converted_first_none:
-          raise ValueError(f"{self.__class__.__name__} doesn't know how to resolve adapter_name None mapping: {adapter.adapter_id, adapter.config}")
-        name = adapter.name
-        if name is None:
-          _converted_first_none = True
-          name = 'default'
-        peft_config = default_config.with_config(**adapter.config).to_peft_config() if name == 'default' else FineTuneConfig(
-            adapter_type=t.cast('PeftType', _adapter_type), adapter_config=adapter.config, inference_mode=inference_mode, llm_config_class=self.config_class).to_peft_config()
-        adapter_map[_adapter_type][name] = (peft_config, adapter.adapter_id)
-    if self.__llm_adapter_map__ is None and use_cache: self.__llm_adapter_map__ = adapter_map
-    return adapter_map
-
-  def prepare_for_training(self, adapter_type: AdapterType = 'lora', use_gradient_checkpointing: bool = True, **attrs: t.Any) -> tuple[peft.PeftModel, T]:
-    from peft import prepare_model_for_kbit_training
-    peft_config = self.config['fine_tune_strategies'].get(adapter_type, FineTuneConfig(adapter_type=t.cast('PeftType', adapter_type),
-                                                                                       llm_config_class=self.config_class)).train().with_config(**attrs).to_peft_config()
-    wrapped_peft = peft.get_peft_model(prepare_model_for_kbit_training(  # type: ignore[no-untyped-call]
-        self.model, use_gradient_checkpointing=use_gradient_checkpointing), peft_config)
-    if DEBUG: wrapped_peft.print_trainable_parameters()
-    return wrapped_peft, self.tokenizer
-
-  def apply_adapter(self, inference_mode: bool = True, adapter_type: AdapterType = 'lora', load_adapters: t.Literal['all'] | list[str] | None = None, use_cache: bool = True) -> M:
-    '''Apply given LoRA mapping to the model. Note that the base model can still be accessed via self.model.get_base_model().'''
-    if self.__llm_model__ is None: raise ValueError('Error: Model is not loaded correctly')
-    # early out if _adapters_mapping is empty or it is already wrapped with peft.
-    if not self._adapters_mapping: return self.__llm_model__
-    if isinstance(self.__llm_model__, peft.PeftModel): return self.__llm_model__
-
-    _mapping = self._transpose_adapter_mapping(inference_mode=inference_mode, use_cache=use_cache)
-    if adapter_type not in _mapping:
-      raise ValueError(f'Given adapter type {adapter_type} is not supported. Please choose from {list(_mapping.keys())}')
-    adapter_mapping = _mapping[adapter_type]
-
-    self.__llm_model__ = self._wrap_default_peft_model(adapter_mapping, inference_mode=inference_mode)
-    # now we loop through the rest with add_adapter
-    if len(adapter_mapping) > 0:
-      for adapter_name, (_peft_config, _) in adapter_mapping.items():
-        t.cast(peft.PeftModel, self.__llm_model__).add_adapter(adapter_name, _peft_config)
-
-      # optionally load adapters. In case of multiple adapters, or on Runner,
-      # we will need to set load_adapters='all'
-      if load_adapters is not None:
-        adapters_to_load = adapter_mapping.keys() if load_adapters == 'all' else load_adapters
-        for adapter_name in adapters_to_load:
-          _peft_config, _peft_model_id = adapter_mapping[adapter_name]
-          t.cast(peft.PeftModel, self.__llm_model__).load_adapter(_peft_model_id, adapter_name=adapter_name, is_trainable=not inference_mode, **dict(_peft_config.to_dict()))
-
-    return self.__llm_model__
-
-  def _wrap_default_peft_model(self, adapter_mapping: dict[str, tuple[peft.PeftConfig, str]], inference_mode: bool) -> M:
-    if self.__llm_model__ is None: raise ValueError('Error: Model is not loaded correctly')
-    if isinstance(self.__llm_model__, peft.PeftModel): return self.__llm_model__
-    if not isinstance(self.__llm_model__, transformers.PreTrainedModel):
-      raise ValueError('Loading LoRA layers currently only runs on PyTorch models.')
-
-    if 'default' not in adapter_mapping:
-      raise ValueError("There is no 'default' mapping. Please check the adapter mapping and report this bug to the OpenLLM team.")
-    default_config, peft_model_id = adapter_mapping.pop('default')
-
-    # the below shared similar logics with `get_peft_model`
-    # TODO: Support PromptLearningConfig
-    if default_config.task_type not in peft.MODEL_TYPE_TO_PEFT_MODEL_MAPPING.keys() and not isinstance(default_config, peft.PromptLearningConfig):
-      logger.debug("Given task type '%s' is not supported by peft. Make sure the adapter is loaded manually before running inference.", default_config.task_type)
-      model = peft.PeftModel(self.__llm_model__, default_config)
-    else:
-      # XXX: this is not ideal to serialize like this, maybe for fine-tune we will only support 0.4.0
-      # onwards. For now, keep this logic here.
-      peft_class = peft.MODEL_TYPE_TO_PEFT_MODEL_MAPPING[default_config.task_type]
-      if default_config.base_model_name_or_path:
-        kwargs: DictStrAny = {'is_trainable': not inference_mode}
-        if 'config' in inspect.signature(peft_class.from_pretrained).parameters: kwargs['config'] = default_config
-        else: kwargs.update(dict(default_config.to_dict().items()))
-        # BUG: This hits during inference, need fixing
-        model = peft_class.from_pretrained(self.__llm_model__, peft_model_id, **kwargs)
-      else:
-        # in this case, the given base_model_name_or_path is None. This will be hit during training
-        model = peft_class(self.__llm_model__, default_config)
-    return model
-
   # order of these fields matter here, make sure to sync it with
   # openllm.models.auto.factory.BaseAutoLLMClass.for_model
   def to_runner(self,
@@ -794,7 +694,7 @@ class LLM(_Interface[M, T], ReprMixin):
     logits_processor = prepare_logits_processor(config)
 
     with torch.inference_mode():
-      input_ids = self.tokenizer(prompt).input_ids
+      input_ids = self.tokenizer(prompt).input_ids  # prompt_token_ids
 
       if context_length is None: context_length = get_context_length(self.model.config)
       max_src_len = context_length - config['max_new_tokens'] - 1
@@ -877,48 +777,6 @@ class LLM(_Interface[M, T], ReprMixin):
     gc.collect()
     torch.cuda.empty_cache()
 
-@overload
-def Runner(model_name: str, *, model_id: str | None = None, model_version: str | None = ..., init_local: t.Literal[False, True] = ..., **attrs: t.Any) -> LLMRunner[t.Any, t.Any]:
-  ...
-
-@overload
-def Runner(model_name: str,
-           *,
-           model_id: str = ...,
-           model_version: str | None = ...,
-           models: list[bentoml.Model] | None = ...,
-           max_batch_size: int | None = ...,
-           max_latency_ms: int | None = ...,
-           method_configs: dict[str, ModelSignatureDict | ModelSignature] | None = ...,
-           scheduling_strategy: type[bentoml.Strategy] | None = ...,
-           **attrs: t.Any) -> LLMRunner[t.Any, t.Any]:
-  ...
-
-@overload
-def Runner(model_name: str,
-           *,
-           ensure_available: bool = ...,
-           init_local: bool = ...,
-           backend: LiteralBackend | None = None,
-           llm_config: LLMConfig | None = None,
-           **attrs: t.Any) -> LLMRunner[t.Any, t.Any]:
-  ...
-
-@overload
-def Runner(model_name: str,
-           *,
-           model_id: str | None = ...,
-           model_version: str | None = ...,
-           llm_config: LLMConfig | None = ...,
-           quantize: LiteralQuantise | None = ...,
-           adapter_id: str | None = ...,
-           adapter_name: str | None = ...,
-           adapter_map: dict[str, str | None] | None = ...,
-           quantization_config: transformers.BitsAndBytesConfig | transformers.GPTQConfig | None = None,
-           serialisation: LiteralSerialisation = ...,
-           **attrs: t.Any) -> LLMRunner[t.Any, t.Any]:
-  ...
-
 def Runner(model_name: str,
            ensure_available: bool = False,
            init_local: bool = False,
@@ -967,6 +825,41 @@ def Runner(model_name: str,
   if init_local: ensure_available = True
   runner = infer_auto_class(backend).create_runner(model_name, llm_config=llm_config, ensure_available=ensure_available, **attrs)
   if init_local: runner.init_local(quiet=True)
+  return runner
+
+def _RunnerFactory(llm: openllm.LLM[M, T],
+                   models: list[bentoml.Model] | None = None,
+                   max_batch_size: int | None = None,
+                   max_latency_ms: int | None = None,
+                   scheduling_strategy: type[bentoml.Strategy] = CascadingResourceStrategy) -> bentoml.Runner:
+
+  models = models if models is not None else []
+  if os.environ.get('BENTO_PATH') is None:
+    # Hmm we should only add this if it is not in the container environment
+    # BentoML sets BENTO_PATH so we can use this as switch logic here.
+    try:
+      models.append(llm._bentomodel)
+    except bentoml.exceptions.NotFound as err:
+      raise RuntimeError(f'Failed to locate {llm._bentomodel}:{err}') from err
+
+  if is_vllm_available():
+    from ._runners import vLLMRunnable as OpenLLMRunnable
+  else:
+    from ._runners import PyTorchRunnable as OpenLLMRunnable
+  runner = bentoml.Runner(OpenLLMRunnable,
+                          name=llm.runner_name,
+                          embedded=False,
+                          models=models,
+                          max_batch_size=max_batch_size,
+                          max_latency_ms=max_latency_ms,
+                          scheduling_strategy=scheduling_strategy,
+                          runnable_init_params={'llm': llm},
+                          method_configs=converter.unstructure({
+                              'generate': ModelSignature.from_dict(ModelSignatureDict(batchable=False)),
+                              'generate_iterator': ModelSignature.from_dict(ModelSignatureDict(batchable=False))
+                          }))
+
+  if os.environ.get('BENTO_PATH') is None: runner.init_local(quiet=True)  # we init local if the runner is not on the API service pod.
   return runner
 
 def method_signature(sig: ModelSignature) -> ModelSignatureDict:
@@ -1110,12 +1003,6 @@ def llm_runnable_class(self: LLM[M, T], generate_sig: ModelSignature, generate_i
   }))
 
 def llm_runner_class(self: LLM[M, T]) -> type[LLMRunner[M, T]]:
-  def available_adapters(_: LLMRunner[M, T]) -> PeftAdapterOutput:
-    if not is_peft_available(): return PeftAdapterOutput(success=False, result={}, error_msg="peft is not available. Make sure to install: 'pip install \"openllm[fine-tune]\"'")
-    if self.__llm_adapter_map__ is None: return PeftAdapterOutput(success=False, result={}, error_msg='No adapters available for current running server.')
-    if not isinstance(self.model, peft.PeftModel): return PeftAdapterOutput(success=False, result={}, error_msg='Model is not a PeftModel')
-    return PeftAdapterOutput(success=True, result=self.model.peft_config, error_msg='')
-
   def _wrapped_generate_run(__self: LLMRunner[M, T], prompt: str, **kwargs: t.Any) -> t.Any:
     '''Wrapper for runner.generate.run() to handle the prompt and postprocessing.
 
@@ -1157,7 +1044,6 @@ def llm_runner_class(self: LLM[M, T]) -> type[LLMRunner[M, T]]:
                              'llm': self,
                              'config': self.config,
                              'backend': self.__llm_backend__,
-                             'peft_adapters': property(fget=available_adapters),
                              'download_model': self.save_pretrained,
                              '__call__': _wrapped_generate_run,
                              '__module__': self.__module__,
