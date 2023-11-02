@@ -460,9 +460,16 @@ class LLM(_Interface[M, T], ReprMixin):
     # parsing tokenizer and model kwargs, as the hierarchy is param pass > default
     normalized_model_kwds, normalized_tokenizer_kwds = normalize_attrs_to_model_tokenizer_pair(**attrs)
     # NOTE: Save the args and kwargs for latter load
-    self.__attrs_init__(model_id, _model_version, llm_config, quantization_config, _quantize, args, {**model_kwds, **normalized_model_kwds}, {**tokenizer_kwds, **normalized_tokenizer_kwds}, _tag, _adapters_mapping, _serialisation, _local, _prompt_template, _system_message)
+    self.__attrs_init__(model_id, _model_version, llm_config, quantization_config, _quantize, args, {
+        **model_kwds,
+        **normalized_model_kwds
+    }, {
+        **tokenizer_kwds,
+        **normalized_tokenizer_kwds
+    }, _tag, _adapters_mapping, _serialisation, _local, _prompt_template, _system_message)
 
-  def __attrs_post_init__(self) -> None: self.llm_post_init()
+  def __attrs_post_init__(self) -> None:
+    self.llm_post_init()
 
   def __setattr__(self, attr: str, value: t.Any) -> None:
     if attr in _reserved_namespace:
@@ -481,19 +488,29 @@ class LLM(_Interface[M, T], ReprMixin):
     yield 'backend', self.__llm_backend__
 
   @property
-  def trust_remote_code(self) -> bool: return first_not_none(openllm_core.utils.check_bool_env('TRUST_REMOTE_CODE', False), default=self.config['trust_remote_code'])
+  def trust_remote_code(self) -> bool:
+    return first_not_none(openllm_core.utils.check_bool_env('TRUST_REMOTE_CODE', False), default=self.config['trust_remote_code'])
+
   @property
-  def adapters_mapping(self) -> AdaptersMapping | None: return self._adapters_mapping
+  def adapters_mapping(self) -> AdaptersMapping | None:
+    return self._adapters_mapping
+
   @property
-  def model_id(self) -> str: return self._model_id
+  def model_id(self) -> str:
+    return self._model_id
+
   @property
-  def runner_name(self) -> str: return f"llm-{self.config['start_name']}-runner"
+  def runner_name(self) -> str:
+    return f"llm-{self.config['start_name']}-runner"
 
   # NOTE: The section below defines a loose contract with langchain's LLM interface.
   @property
-  def llm_type(self) -> str: return normalise_model_name(self._model_id)
+  def llm_type(self) -> str:
+    return normalise_model_name(self._model_id)
+
   @property
-  def identifying_params(self) -> DictStrAny: return {'configuration': self.config.model_dump_json().decode(), 'model_ids': orjson.dumps(self.config['model_ids']).decode()}
+  def identifying_params(self) -> DictStrAny:
+    return {'configuration': self.config.model_dump_json().decode(), 'model_ids': orjson.dumps(self.config['model_ids']).decode()}
 
   @property
   def llm_parameters(self) -> tuple[tuple[tuple[t.Any, ...], DictStrAny], DictStrAny]:
@@ -1058,14 +1075,12 @@ def llm_runnable_class(self: LLM[M, T], generate_sig: ModelSignature, generate_i
       if request_id is None: raise ValueError('request_id must not be None.')
 
       stop: str | t.Iterable[str] | None = attrs.pop('stop', None)
-      stop_token_ids: list[int] | None = attrs.pop('stop_token_ids', None)
       temperature = attrs.pop('temperature', self.config['temperature'])
       top_p = attrs.pop('top_p', self.config['top_p'])
-      adapter_name = attrs.pop('adapter_name', None)
-      if adapter_name is not None: __self.set_adapter(adapter_name)
       prompt, *_ = self.sanitize_parameters(prompt, **attrs)
       if openllm_core.utils.DEBUG: logger.debug('Prompt:\n%s', repr(prompt))
 
+      stop_token_ids: list[int] | None = attrs.pop('stop_token_ids', None)
       if stop_token_ids is None: stop_token_ids = []
       stop_token_ids.append(self.tokenizer.eos_token_id)
       stop_: set[str] = set()
