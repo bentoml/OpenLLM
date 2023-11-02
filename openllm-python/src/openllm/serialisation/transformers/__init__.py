@@ -62,6 +62,7 @@ def import_model(llm: openllm.LLM[M, T], *decls: t.Any, trust_remote_code: bool,
   *decls: Args to be passed into AutoModelForSeq2SeqLM or AutoModelForCausalLM (+ TF, Flax variants).
   **attrs: Kwargs to be passed into AutoModelForSeq2SeqLM or AutoModelForCausalLM (+ TF, Flax variants).
   """
+  print("is import model called?")
   config, hub_attrs, attrs = process_config(llm.model_id, trust_remote_code, **attrs)
   _, tokenizer_attrs = llm.llm_parameters
   quantize = llm._quantize
@@ -155,7 +156,7 @@ def get(llm: openllm.LLM[M, T], auto_import: bool = False) -> bentoml.Model:
     raise openllm.exceptions.OpenLLMException(f'Failed while getting stored artefact (lookup for traceback):\n{err}') from err
 
 def load_model(llm: openllm.LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M:
-  config, hub_attrs, attrs = process_config(llm.model_id, llm.trust_remote_code, **attrs)
+  config, hub_attrs, attrs = process_config(llm._bentomodel.path, llm.trust_remote_code, **attrs)
   auto_class = infer_autoclass_from_llm(llm, config)
   device_map: str | None = attrs.pop('device_map', 'auto' if torch.cuda.is_available() and torch.cuda.device_count() > 1 else None)
 

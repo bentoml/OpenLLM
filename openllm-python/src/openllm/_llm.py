@@ -349,6 +349,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
   def from_pretrained(cls,
                       model_id: str | None = None,
                       model_version: str | None = None,
+                      model_tag: str | bentoml.Tag | None = None,
                       prompt_template: PromptTemplate | str | None = None,
                       system_message: str | None = None,
                       llm_config: LLMConfig | None = None,
@@ -397,6 +398,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
         model_version: Optional version for this given model id. Default to None. This is useful for saving from custom path.
                       If set to None, the version will either be the git hash from given pretrained model, or the hash inferred
                       from last modified time of the given directory.
+        model_tag: Optional BentoML model tag. If provided, we will skip tag generation and use this tag directly
         system_message: Optional system message for what the system prompt for the specified LLM is. If not given, the default system message will be used.
         prompt_template: Optional custom prompt template. If not given, the default prompt template for the specified model will be used.
         llm_config: The config to use for this LLM. Defaults to None. If not passed, OpenLLM
@@ -442,12 +444,15 @@ class LLM(LLMInterface[M, T], ReprMixin):
       # The rests of the kwargs that is not used by the config class should be stored into __openllm_extras__.
       attrs = llm_config['extras']
 
-    try:
-      _tag = cls.generate_tag(_model_id, model_version)
-      if _tag.version is None:
-        raise ValueError(f'Failed to resolve the correct model version for {cfg_cls.__openllm_start_name__}')
-    except Exception as err:
-      raise OpenLLMException(f"Failed to generate a valid tag for {cfg_cls.__openllm_start_name__} with 'model_id={_model_id}' (lookup to see its traceback):\n{err}") from err
+    if model_tag:
+      _tag = bentoml.Tag.from_taglike(model_tag)
+    else:
+      try:
+        _tag = cls.generate_tag(_model_id, model_version)
+        if _tag.version is None:
+          raise ValueError(f'Failed to resolve the correct model version for {cfg_cls.__openllm_start_name__}')
+      except Exception as err:
+        raise OpenLLMException(f"Failed to generate a valid tag for {cfg_cls.__openllm_start_name__} with 'model_id={_model_id}' (lookup to see its traceback):\n{err}") from err
 
     return cls(*args,
                model_id=_model_id,
@@ -1051,8 +1056,10 @@ def Runner(model_name: str,
 @overload
 def Runner(model_name: str,
            *,
+           ensure_available: bool = False,
            model_id: str | None = ...,
            model_version: str | None = ...,
+           model_tag: str | None = ...,
            llm_config: LLMConfig | None = ...,
            quantize: LiteralQuantise | None = ...,
            adapter_id: str | None = ...,
@@ -1065,6 +1072,7 @@ def Runner(model_name: str,
 
 def Runner(model_name: str,
            ensure_available: bool = False,
+           model_tag: str | bentoml.Tag | None = ...,
            init_local: bool = False,
            backend: LiteralBackend | None = None,
            llm_config: LLMConfig | None = None,
@@ -1092,6 +1100,7 @@ def Runner(model_name: str,
     model_name: Supported model name from 'openllm models'
     ensure_available: If True, it will download the model if it is not available. If False, it will skip downloading the model.
                       If False, make sure the model is available locally.
+    model_tag: if provided, OpenLLM will use this tag instead of generating tag based on model_name and other infomation
     backend: The given Runner implementation one choose for this Runner. If `OPENLLM_BACKEND` is set, it will respect it.
     llm_config: Optional ``openllm.LLMConfig`` to initialise this ``openllm.LLMRunner``.
     init_local: If True, it will initialize the model locally. This is useful if you want to run the model locally. (Symmetrical to bentoml.Runner.init_local())
@@ -1109,7 +1118,7 @@ def Runner(model_name: str,
 
   backend = t.cast(LiteralBackend, first_not_none(backend, default=EnvVarMixin(model_name, backend=llm_config.default_backend() if llm_config is not None else 'pt')['backend_value']))
   if init_local: ensure_available = True
-  runner = infer_auto_class(backend).create_runner(model_name, llm_config=llm_config, ensure_available=ensure_available, **attrs)
+  runner = infer_auto_class(backend).create_runner(model_name, llm_config=llm_config, ensure_available=ensure_available, model_tag=model_tag, **attrs)
   if init_local: runner.init_local(quiet=True)
   return runner
 
