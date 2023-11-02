@@ -75,8 +75,7 @@ def infer_quantisation_config(cls: type[LLM[t.Any, t.Any]], quantise: LiteralQua
                                            llm_int8_enable_fp32_cpu_offload=int8_enable_fp32_cpu_offload,
                                            llm_int8_threshhold=int8_threshold,
                                            llm_int8_skip_modules=int8_skip_modules,
-                                           llm_int8_has_fp16_weight=int8_has_fp16_weight,
-                                           )
+                                           llm_int8_has_fp16_weight=int8_has_fp16_weight)
 
   # 4 bit configuration
   int4_compute_dtype = attrs.pop('bnb_4bit_compute_dtype', torch.bfloat16)

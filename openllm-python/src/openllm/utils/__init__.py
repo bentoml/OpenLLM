@@ -25,10 +25,9 @@ def infer_auto_class(backend: LiteralBackend) -> type[openllm.AutoLLM | openllm.
   elif backend == 'vllm': return openllm.AutoVLLM
   else: raise RuntimeError(f"Unknown backend: {backend} (supported: 'pt', 'vllm')")
 
-__all__ = ['generate_labels', 'infer_auto_class', 'dummy_pt_objects', 'dummy_vllm_objects']
+__all__ = ['generate_labels', 'dummy_pt_objects', 'dummy_vllm_objects']
 
-def __dir__() -> t.Sequence[str]:
-  return sorted(__all__)
+def __dir__() -> t.Sequence[str]: return sorted(__all__)
 
 def __getattr__(it: str) -> t.Any:
   if hasattr(openllm_core.utils, it): return getattr(openllm_core.utils, it)

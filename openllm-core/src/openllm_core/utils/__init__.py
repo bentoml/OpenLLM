@@ -28,6 +28,7 @@ from .import_utils import ENV_VARS_TRUE_VALUES as ENV_VARS_TRUE_VALUES
 from .lazy import LazyLoader as LazyLoader
 from .lazy import LazyModule as LazyModule
 from .lazy import VersionInfo as VersionInfo
+from .._typing_compat import overload
 
 if t.TYPE_CHECKING:
   from bentoml._internal.models.model import ModelContext
@@ -352,11 +353,11 @@ def in_docker() -> bool:
 
 T, K = t.TypeVar('T'), t.TypeVar('K')
 
-@t.overload
+@overload
 def first_not_none(*args: T | None, default: T) -> T:
   ...
 
-@t.overload
+@overload
 def first_not_none(*args: T | None) -> T | None:
   ...
 
