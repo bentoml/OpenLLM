@@ -930,7 +930,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
     from ._generation import is_partial_stop
     from ._generation import prepare_logits_processor
 
-    prompt, attrs, _ = self.sanitize_parameters(prompt, **attrs)
+    prompt, *_ = self.sanitize_parameters(prompt, **attrs)
     len_prompt = len(prompt)
     config = self.config.model_construct_env(**attrs)
     if stop_token_ids is None: stop_token_ids = []
@@ -1150,7 +1150,7 @@ def llm_runnable_class(self: LLM[M, T], generate_sig: ModelSignature, generate_i
     @bentoml.Runnable.method(**method_signature(generate_sig))  # type: ignore
     def generate(__self: _Runnable, prompt: str, **attrs: t.Any) -> list[t.Any]:
       use_chat_template: bool = attrs.pop('_format_chat_template', False)
-      if not use_chat_template: prompt, attrs, _ = self.sanitize_parameters(prompt, **attrs)
+      if not use_chat_template: prompt, *_ = self.sanitize_parameters(prompt, **attrs)
       adapter_name = attrs.pop('adapter_name', None)
       if adapter_name is not None: __self.set_adapter(adapter_name)
       return self.generate(prompt, **attrs)
@@ -1158,7 +1158,7 @@ def llm_runnable_class(self: LLM[M, T], generate_sig: ModelSignature, generate_i
     @bentoml.Runnable.method(**method_signature(generate_sig))  # type: ignore
     def generate_one(__self: _Runnable, prompt: str, stop: list[str], **attrs: t.Any) -> t.Sequence[dict[t.Literal['generated_text'], str]]:
       use_chat_template: bool = attrs.pop('_format_chat_template', False)
-      if not use_chat_template: prompt, attrs, _ = self.sanitize_parameters(prompt, **attrs)
+      if not use_chat_template: prompt, *_ = self.sanitize_parameters(prompt, **attrs)
       adapter_name = attrs.pop('adapter_name', None)
       if adapter_name is not None: __self.set_adapter(adapter_name)
       return self.generate_one(prompt, stop, **attrs)
@@ -1166,7 +1166,7 @@ def llm_runnable_class(self: LLM[M, T], generate_sig: ModelSignature, generate_i
     @bentoml.Runnable.method(**method_signature(generate_iterator_sig))  # type: ignore
     def generate_iterator(__self: _Runnable, prompt: str, **attrs: t.Any) -> t.Generator[str, None, str]:
       use_chat_template: bool = attrs.pop('_format_chat_template', False)
-      if not use_chat_template: prompt, attrs, _ = self.sanitize_parameters(prompt, **attrs)
+      if not use_chat_template: prompt, *_ = self.sanitize_parameters(prompt, **attrs)
       adapter_name = attrs.pop('adapter_name', None)
       if adapter_name is not None: __self.set_adapter(adapter_name)
       pre = 0
