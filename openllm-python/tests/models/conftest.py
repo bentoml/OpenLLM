@@ -22,7 +22,7 @@ from syrupy.extensions.json import JSONSnapshotExtension
 import openllm
 
 from bentoml._internal.types import LazyType
-from openllm._llm import normalise_model_name
+from openllm._llm import self
 from openllm_core._typing_compat import DictStrAny
 from openllm_core._typing_compat import ListAny
 from openllm_core._typing_compat import LiteralQuantise
@@ -169,7 +169,7 @@ def _container_handle(model: str, model_id: str, image_tag: str, deployment_mode
 
   with openllm.utils.reserve_free_port() as port, openllm.utils.reserve_free_port() as prom_port:
     pass
-  container_name = f'openllm-{model}-{normalise_model_name(model_id)}'.replace('-', '_')
+  container_name = f'openllm-{model}-{self(model_id)}'.replace('-', '_')
   client = docker.from_env()
   try:
     container = client.containers.get(container_name)

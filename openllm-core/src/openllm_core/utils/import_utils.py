@@ -25,11 +25,11 @@ if t.TYPE_CHECKING:
   BackendOrderedDict = OrderedDict[str, t.Tuple[t.Callable[[], bool], str]]
 
 logger = logging.getLogger(__name__)
-OPTIONAL_DEPENDENCIES = {'opt', 'flan-t5', 'vllm', 'fine-tune', 'ggml', 'agents', 'openai', 'playground', 'gptq', 'grpc'}
+OPTIONAL_DEPENDENCIES = {'opt', 'flan-t5', 'vllm', 'fine-tune', 'ggml', 'agents', 'openai', 'playground', 'gptq', 'grpc', 'awq'}
 ENV_VARS_TRUE_VALUES = {'1', 'ON', 'YES', 'TRUE'}
 ENV_VARS_TRUE_AND_AUTO_VALUES = ENV_VARS_TRUE_VALUES.union({'AUTO'})
 USE_TORCH = os.environ.get('USE_TORCH', 'AUTO').upper()
-FORCE_TF_AVAILABLE = os.environ.get('FORCE_TF_AVAILABLE', 'AUTO').upper()
+USE_VLLM = os.environ.get('USE_VLLM', 'AUTO').upper()
 
 def _is_package_available(package: str) -> bool:
   _package_available = importlib.util.find_spec(package) is not None
@@ -55,6 +55,7 @@ _jupyter_available = _is_package_available('jupyter')
 _jupytext_available = _is_package_available('jupytext')
 _notebook_available = _is_package_available('notebook')
 _autogptq_available = _is_package_available('auto_gptq')
+_autoawq_available = _is_package_available('auto_awq')
 _sentencepiece_available = _is_package_available('sentencepiece')
 _xformers_available = _is_package_available('xformers')
 _fairscale_available = _is_package_available('fairscale')
@@ -102,9 +103,6 @@ def is_bitsandbytes_available() -> bool:
 def is_autogptq_available() -> bool:
   return _autogptq_available
 
-def is_vllm_available() -> bool:
-  return _vllm_available
-
 def is_sentencepiece_available() -> bool:
   return _sentencepiece_available
 
@@ -122,6 +120,18 @@ def is_torch_available() -> bool:
     except importlib.metadata.PackageNotFoundError:
       _torch_available = False
   return _torch_available
+
+def is_autoawq_available() -> bool:
+  return _autoawq_available
+
+def is_vllm_available() -> bool:
+  global _vllm_available
+  if USE_VLLM in ENV_VARS_TRUE_AND_AUTO_VALUES and _vllm_available:
+    try:
+      importlib.metadata.version('vllm')
+    except importlib.metadata.PackageNotFoundError:
+      _vllm_available = False
+  return _vllm_available
 
 VLLM_IMPORT_ERROR_WITH_PYTORCH = '''\
 {0} requires the vLLM library but it was not found in your environment.

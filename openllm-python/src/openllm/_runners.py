@@ -21,6 +21,8 @@ if t.TYPE_CHECKING:
 else:
   vllm = openllm.utils.LazyLoader('vllm', globals(), 'vllm')
 
+_DEFAULT_TOKENIZER = 'hf-internal-testing/llama-tokenizer'
+
 class vLLMRunnable(bentoml.Runnable):
   SUPPORTED_RESOURCES = ('nvidia.com/gpu', 'amd.com/gpu', 'cpu')
   SUPPORTS_CPU_MULTI_THREADING = True
@@ -31,8 +33,8 @@ class vLLMRunnable(bentoml.Runnable):
     if dev >= 2: num_gpus = min(dev // 2 * 2, dev)
     try:
       self.model = vllm.AsyncLLMEngine.from_engine_args(
-          vllm.AsyncEngineArgs(model=llm._bentomodel.path,
-                               tokenizer=llm._bentomodel.path if llm.tokenizer_id == 'local' else llm.tokenizer_id,
+          vllm.AsyncEngineArgs(model=llm.bentomodel.path,
+                               tokenizer=llm.bentomodel.path,
                                tokenizer_mode='auto',
                                tensor_parallel_size=num_gpus,
                                dtype='auto',
@@ -72,21 +74,20 @@ class vLLMRunnable(bentoml.Runnable):
     sampling_params = self.config.model_construct_env(stop=list(stop_), temperature=temperature, top_p=top_p, **attrs).to_sampling_config()
     # async for request_output in self.model.generate(None, sampling_params, request_id, prompt_token_ids): yield f"event: message\ndata: {unmarshal_vllm_outputs(request_output)}\n\n"
     # yield "event: end\n\n"
-    final_output: GenerationOutput | None = None
     async for request_output in self.model.generate(None, sampling_params, request_id, prompt_token_ids):
-      final_output = GenerationOutput.from_vllm_outputs(request_output)
-    if final_output is None: raise ValueError("'output' should not be None")
-    yield final_output
+      pass
+    yield GenerationOutput.from_vllm_outputs(request_output)
 
 class PyTorchRunnable(bentoml.Runnable):
   SUPPORTED_RESOURCES = ('nvidia.com/gpu', 'amd.com/gpu', 'cpu')
   SUPPORTS_CPU_MULTI_THREADING = True
 
   def __init__(self, llm: openllm.LLM[M, T]) -> None:
-    self.model: M = llm.model
-    self.tokenizer: T = llm.tokenizer
+    self.model = llm.model
+    self.tokenizer = llm.tokenizer
     self.config = llm.config
     self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    # TODO: add back apply custom fine tune layers
 
   @bentoml.Runnable.method(batchable=False)
   async def generate(self, prompt_token_ids: list[int], request_id: str, stop: str | t.Iterable[str] | None = None, **attrs: t.Any) -> t.AsyncGenerator[GenerationOutput, None]:
@@ -144,6 +145,7 @@ class PyTorchRunnable(bentoml.Runnable):
           probs = torch.softmax(last_token_logits, dim=-1)
           indices = torch.multinomial(probs, num_samples=2)
           tokens = [int(token) for token in indices.tolist()]
+
         token = tokens[0]
         output_token_ids.append(token)
 

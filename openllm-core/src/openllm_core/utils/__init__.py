@@ -413,7 +413,7 @@ _import_structure: dict[str, list[str]] = {
         'OPTIONAL_DEPENDENCIES', 'DummyMetaclass', 'EnvVarMixin', 'require_backends', 'is_cpm_kernels_available', 'is_einops_available', 'is_vllm_available', 'is_torch_available',
         'is_bitsandbytes_available', 'is_peft_available', 'is_datasets_available', 'is_jupyter_available', 'is_jupytext_available', 'is_notebook_available', 'is_triton_available',
         'is_autogptq_available', 'is_sentencepiece_available', 'is_xformers_available', 'is_fairscale_available', 'is_grpc_available', 'is_grpc_health_available', 'is_transformers_available',
-        'is_optimum_supports_gptq',
+        'is_optimum_supports_gptq', 'is_autoawq_available',
     ]
 }
 

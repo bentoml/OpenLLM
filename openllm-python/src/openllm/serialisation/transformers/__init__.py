@@ -164,14 +164,14 @@ def load_model(llm: openllm.LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M:
   auto_class = infer_autoclass_from_llm(llm, config)
   device_map: str | None = attrs.pop('device_map', 'auto' if torch.cuda.is_available() and torch.cuda.device_count() > 1 else None)
 
-  if '_quantize' in llm._bentomodel.info.metadata and llm._bentomodel.info.metadata['_quantize'] == 'gptq':
+  if '_quantize' in llm.bentomodel.info.metadata and llm.bentomodel.info.metadata['_quantize'] == 'gptq':
     if not openllm.utils.is_autogptq_available() or not openllm.utils.is_optimum_supports_gptq():
       raise openllm.exceptions.OpenLLMException(
           "GPTQ quantisation requires 'auto-gptq' and 'optimum' (Not found in local environment). Install it with 'pip install \"openllm[gptq]\" --extra-index-url https://huggingface.github.io/autogptq-index/whl/cu118/'"
       )
     if llm.config['model_type'] != 'causal_lm': raise openllm.exceptions.OpenLLMException(f"GPTQ only support Causal LM (got {llm.__class__} of {llm.config['model_type']})")
 
-    model = auto_class.from_pretrained(llm._bentomodel.path, device_map='auto', **hub_attrs, **attrs)
+    model = auto_class.from_pretrained(llm.bentomodel.path, device_map='auto', **hub_attrs, **attrs)
     # XXX: Use the below logic once TheBloke finished migration to new GPTQConfig from transformers
     # Seems like the logic below requires to add support for safetensors on accelerate
     #
@@ -184,6 +184,6 @@ def load_model(llm: openllm.LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M:
     # empty.tie_weights()
     # model = load_quantized_model(empty, save_folder=llm._bentomodel.path, device_map='auto', disable_exllama=disable_exllama)
   else:
-    model = auto_class.from_pretrained(llm._bentomodel.path, *decls, config=config, trust_remote_code=llm.trust_remote_code, device_map=device_map, **hub_attrs, **attrs).eval()
+    model = auto_class.from_pretrained(llm.bentomodel.path, *decls, config=config, trust_remote_code=llm.trust_remote_code, device_map=device_map, **hub_attrs, **attrs).eval()
     # if llm.__llm_backend__ in {'pt', 'vllm'}: check_unintialised_params(model)
   return t.cast('M', model)

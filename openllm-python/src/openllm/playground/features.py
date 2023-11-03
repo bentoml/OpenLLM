@@ -23,25 +23,25 @@ def main() -> int:
   else:
     args = parser.parse_args()
 
-  model = openllm.AutoLLM.for_model('opt', model_id='facebook/opt-2.7b', ensure_available=True)
+  model = openllm.LLM('facebook/opt-2.7b')
   prompt = Q.format(q=args.question)
 
   logger.info('-' * 50, "Running with 'generate()'", '-' * 50)
   res = model.generate(prompt, max_new_tokens=MAX_NEW_TOKENS)
-  logger.info('=' * 10, 'Response:', model.postprocess_generate(prompt, res))
+  logger.info('=' * 10, 'Response:', res)
 
   logger.info('-' * 50, "Running with 'generate()' with per-requests argument", '-' * 50)
   res = model.generate(prompt, num_return_sequences=3)
-  logger.info('=' * 10, 'Response:', model.postprocess_generate(prompt, res))
+  logger.info('=' * 10, 'Response:', res)
 
   logger.info('-' * 50, 'Using Runner abstraction with runner.generate.run()', '-' * 50)
   r = openllm.Runner('opt', model_id='facebook/opt-350m', init_local=True)
   res = r.generate.run(prompt)
-  logger.info('=' * 10, 'Response:', r.llm.postprocess_generate(prompt, res))
+  logger.info('=' * 10, 'Response:', res)
 
   logger.info('-' * 50, 'Using Runner abstraction with runner()', '-' * 50)
   res = r(prompt)
-  logger.info('=' * 10, 'Response:', r.llm.postprocess_generate(prompt, res))
+  logger.info('=' * 10, 'Response:', res)
 
   return 0
 

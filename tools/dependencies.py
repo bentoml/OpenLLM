@@ -118,7 +118,7 @@ _TRANSFORMERS_EXT = ['torch', 'tokenizers']
 
 _BASE_DEPENDENCIES = [
     Dependencies(name='bentoml', extensions=_BENTOML_EXT, lower_constraint=lower_bentoml_constraint),
-    Dependencies(name='transformers', extensions=_TRANSFORMERS_EXT, lower_constraint='4.34.0'),
+    Dependencies(name='transformers', extensions=_TRANSFORMERS_EXT, lower_constraint='4.35.0'),
     Dependencies(name='openllm-client'),
     Dependencies(name='openllm-core'),
     Dependencies(name='safetensors'),
@@ -139,6 +139,7 @@ OPENAI_DEPS = ['openai[embeddings]', 'tiktoken']
 AGENTS_DEPS = ['transformers[agents]>=4.34.0', 'diffusers', 'soundfile']
 PLAYGROUND_DEPS = ['jupyter', 'notebook', 'ipython', 'jupytext', 'nbformat']
 GGML_DEPS = ['ctransformers']
+AWQ_DEPS = ["autoawq"]
 GPTQ_DEPS = ['auto-gptq[triton]>=0.4.2', 'optimum>=1.12.0']
 VLLM_DEPS = ['vllm>=0.2.0', 'ray']
 

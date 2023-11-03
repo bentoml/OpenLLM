@@ -402,13 +402,7 @@ def import_command(model_name: str, model_id: str | None, converter: str | None,
   _serialisation = openllm_core.utils.first_not_none(serialisation, default=llm_config['serialisation'])
   env = EnvVarMixin(model_name, model_id=model_id, quantize=quantize)
   backend = first_not_none(backend, default=env['backend_value'])
-  llm = infer_auto_class(backend).for_model(model_name,
-                                            model_id=env['model_id_value'],
-                                            llm_config=llm_config,
-                                            model_version=model_version,
-                                            ensure_available=False,
-                                            quantize=env['quantize_value'],
-                                            serialisation=_serialisation)
+  llm = openllm.LLM(model_id=env['model_id_value'], llm_config=llm_config, model_version=model_version, quantize=env['quantize_value'], serialisation=_serialisation)
   _previously_saved = False
   try:
     _ref = openllm.serialisation.get(llm)

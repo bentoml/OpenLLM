@@ -33,10 +33,10 @@ model = svars.model
 model_id = svars.model_id
 adapter_map = svars.adapter_map
 llm_config = openllm.AutoConfig.for_model(model)
-runner = openllm.Runner(model, llm_config=llm_config, model_id=model_id, ensure_available=False, adapter_map=orjson.loads(adapter_map))
-svc = bentoml.Service(name=f"llm-{llm_config['start_name']}-service", runners=[runner])
+llm = openllm.LLM(model_id, llm_config=llm_config, adapter_map=orjson.loads(adapter_map))
+svc = bentoml.Service(name=f"llm-{llm_config['start_name']}-service", runners=[llm.runner])
 
-_JsonInput = bentoml.io.JSON.from_sample({'prompt': '', 'llm_config': llm_config.model_dump(flatten=True), 'adapter_name': None})
+_JsonInput = bentoml.io.JSON.from_sample({'prompt': '', 'llm_config': llm_config.model_dump(flatten=True)})
 
 @svc.api(route='/v1/generate', input=_JsonInput, output=bentoml.io.JSON.from_sample({'responses': [], 'configuration': llm_config.model_dump(flatten=True)}))
 async def generate_v1(input_dict: dict[str, t.Any]) -> openllm.GenerateOutput:

@@ -23,7 +23,6 @@ if t.TYPE_CHECKING:
   from bentoml._internal.runner.runnable import RunnableMethod
   from bentoml._internal.runner.runner import RunnerMethod
   from bentoml._internal.runner.strategy import Strategy
-  from openllm._llm import LLM
 
   from .utils.lazy import VersionInfo
 
@@ -50,7 +49,7 @@ TupleAny = t.Tuple[t.Any, ...]
 At = t.TypeVar('At', bound=attr.AttrsInstance)
 
 LiteralSerialisation = t.Literal['safetensors', 'legacy']
-LiteralQuantise = t.Literal['int8', 'int4', 'gptq']
+LiteralQuantise = t.Literal['int8', 'int4', 'gptq', 'awq']
 LiteralBackend = t.Literal['pt', 'vllm', 'ggml', 'mlc']
 AdapterType = t.Literal['lora', 'adalora', 'adaption_prompt', 'prefix_tuning', 'p_tuning', 'prompt_tuning', 'ia3']
 
@@ -176,21 +175,3 @@ if _is_bentoml_installed:
 else:
   # NOTE: t.Any is also a type
   LLMRunnable = LLMRunner = t.Any
-
-class load_model_protocol(t.Generic[M, T], t.Protocol):
-  def __call__(self, llm: LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M:
-    ...
-
-class load_tokenizer_protocol(t.Generic[M, T], t.Protocol):
-  def __call__(self, llm: LLM[M, T], **attrs: t.Any) -> T:
-    ...
-
-_R = t.TypeVar('_R', covariant=True)
-
-class import_model_protocol(t.Generic[_R, M, T], t.Protocol):
-  def __call__(self, llm: LLM[M, T], *decls: t.Any, trust_remote_code: bool, **attrs: t.Any) -> _R:
-    ...
-
-class llm_post_init_protocol(t.Generic[M, T], t.Protocol):
-  def __call__(self, llm: LLM[M, T]) -> T:
-    ...

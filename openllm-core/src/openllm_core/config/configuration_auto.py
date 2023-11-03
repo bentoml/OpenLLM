@@ -1,4 +1,3 @@
-# mypy: disable-error-code="type-arg"
 from __future__ import annotations
 import importlib
 import typing as t
@@ -6,10 +5,13 @@ import typing as t
 from collections import OrderedDict
 
 import inflection
+import orjson
 
 import openllm_core
 
+from openllm_core.exceptions import MissingDependencyError
 from openllm_core.utils import ReprMixin
+from openllm_core.utils import is_transformers_available
 
 if t.TYPE_CHECKING:
   import types
@@ -74,9 +76,11 @@ class _LazyConfigMapping(OrderedDict, ReprMixin):
     if key in self._mapping.keys(): raise ValueError(f"'{key}' is already used by a OpenLLM config, pick another name.")
     self._extra_content[key] = value
 
-CONFIG_MAPPING: dict[str, type[openllm_core.LLMConfig]] = _LazyConfigMapping(CONFIG_MAPPING_NAMES)
+CONFIG_MAPPING: dict[LiteralString, type[openllm_core.LLMConfig]] = _LazyConfigMapping(CONFIG_MAPPING_NAMES)
 # The below handle special alias when we call underscore to the name directly without processing camelcase first.
 CONFIG_NAME_ALIASES: dict[str, str] = {'chat_glm': 'chatglm', 'stable_lm': 'stablelm', 'star_coder': 'starcoder', 'gpt_neo_x': 'gpt_neox'}
+
+CONFIG_FILE_NAME = 'config.json'
 
 class AutoConfig:
   def __init__(self, *_: t.Any, **__: t.Any):
@@ -94,3 +98,21 @@ class AutoConfig:
     if model_name in CONFIG_NAME_ALIASES: model_name = CONFIG_NAME_ALIASES[model_name]
     if model_name in CONFIG_MAPPING: return CONFIG_MAPPING[model_name]
     raise ValueError(f"Unrecognized configuration class for {model_name}. Model name should be one of {', '.join(CONFIG_MAPPING.keys())}.")
+
+  @classmethod
+  def infer_class_from_model_id(cls, model_id: str) -> type[openllm_core.LLMConfig]:
+    if not is_transformers_available():
+      raise MissingDependencyError('"infer_class_from_architecture" requires "transformers" to be available. Make sure to install it with "pip install transformers"')
+    CONFIG_MAPPING_NAMES_TO_ARCHITECTURE: dict[str, str] = {v.__config__['architecture']: k for k, v in CONFIG_MAPPING.items()}
+    # TODO: support offline mode
+    from transformers.utils import cached_file
+    config_file = cached_file(model_id, CONFIG_FILE_NAME)
+    if config_file is None: raise ValueError(f"Failed to download 'config.json' from HuggingFace model hub for {model_id}.")
+    with open(config_file, 'r', encoding='utf-8') as f:
+      loaded_config = orjson.loads(f.read())
+    if 'architectures' in loaded_config:
+      for architecture in loaded_config['architectures']:
+        if architecture in CONFIG_MAPPING_NAMES_TO_ARCHITECTURE: return cls.infer_class_from_name(CONFIG_MAPPING_NAMES_TO_ARCHITECTURE[architecture])
+    raise ValueError(
+        f"Failed to determine config class from model_id '{model_id}'. Hint: Make sure the 'config.json' contains supported 'architetures' keyword. See `openllm models` for more information on suppported architectures."
+    )

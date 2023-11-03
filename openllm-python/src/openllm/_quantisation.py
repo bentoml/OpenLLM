@@ -20,14 +20,14 @@ if t.TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 @overload
-def infer_quantisation_config(cls: type[LLM[t.Any, t.Any]], quantise: t.Literal['int8', 'int4'], **attrs: t.Any) -> tuple[transformers.BitsAndBytesConfig, DictStrAny]:
+def infer_quantisation_config(self: LLM[t.Any, t.Any], quantise: t.Literal['int8', 'int4'], **attrs: t.Any) -> tuple[transformers.BitsAndBytesConfig, DictStrAny]:
   ...
 
 @overload
-def infer_quantisation_config(cls: type[LLM[t.Any, t.Any]], quantise: t.Literal['gptq'], **attrs: t.Any) -> tuple[transformers.GPTQConfig, DictStrAny]:
+def infer_quantisation_config(self: LLM[t.Any, t.Any], quantise: t.Literal['gptq'], **attrs: t.Any) -> tuple[transformers.GPTQConfig, DictStrAny]:
   ...
 
-def infer_quantisation_config(cls: type[LLM[t.Any, t.Any]], quantise: LiteralQuantise, **attrs: t.Any) -> tuple[transformers.BitsAndBytesConfig | transformers.GPTQConfig, DictStrAny]:
+def infer_quantisation_config(self: LLM[t.Any, t.Any], quantise: LiteralQuantise, **attrs: t.Any) -> tuple[transformers.BitsAndBytesConfig | transformers.GPTQConfig, DictStrAny]:
   # 8 bit configuration
   int8_threshold = attrs.pop('llm_int8_threshhold', 6.0)
   int8_enable_fp32_cpu_offload = attrs.pop('llm_int8_enable_fp32_cpu_offload', False)
@@ -68,8 +68,8 @@ def infer_quantisation_config(cls: type[LLM[t.Any, t.Any]], quantise: LiteralQua
 
   def create_int8_config(int8_skip_modules: list[str] | None) -> transformers.BitsAndBytesConfig:
     if int8_skip_modules is None: int8_skip_modules = []
-    if 'lm_head' not in int8_skip_modules and cls.config_class.__openllm_model_type__ == 'causal_lm':
-      logger.debug("Skipping 'lm_head' for quantization for %s", cls.__name__)
+    if 'lm_head' not in int8_skip_modules and self.config_class.__openllm_model_type__ == 'causal_lm':
+      logger.debug("Skipping 'lm_head' for quantization for %s", self.__name__)
       int8_skip_modules.append('lm_head')
     return transformers.BitsAndBytesConfig(load_in_8bit=True,
                                            llm_int8_enable_fp32_cpu_offload=int8_enable_fp32_cpu_offload,
@@ -82,9 +82,7 @@ def infer_quantisation_config(cls: type[LLM[t.Any, t.Any]], quantise: LiteralQua
   int4_quant_type = attrs.pop('bnb_4bit_quant_type', 'nf4')
   int4_use_double_quant = attrs.pop('bnb_4bit_use_double_quant', True)
 
-  # NOTE: Quantization setup
-  # quantize is a openllm.LLM feature, where we can quantize the model
-  # with bitsandbytes or quantization aware training.
+  # NOTE: Quantization setup quantize is a openllm.LLM feature, where we can quantize the model with bitsandbytes or quantization aware training.
   if not is_bitsandbytes_available():
     raise RuntimeError("Quantization requires bitsandbytes to be installed. Make sure to install OpenLLM with 'pip install \"openllm[fine-tune]\"'")
   if quantise == 'int8': quantisation_config = create_int8_config(int8_skip_modules)
