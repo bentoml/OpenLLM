@@ -27,7 +27,8 @@ from openllm_core._typing_compat import LiteralSerialisation
 from openllm_core._typing_compat import LiteralString
 from openllm_core._typing_compat import ParamSpec
 from openllm_core._typing_compat import get_literal_args
-from openllm_core.utils import DEBUG, is_vllm_available
+from openllm_core.utils import DEBUG
+from openllm_core.utils import is_vllm_available
 
 from . import termui
 
