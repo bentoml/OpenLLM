@@ -76,7 +76,7 @@ def import_model(llm: openllm.LLM[M, T], *decls: t.Any, trust_remote_code: bool,
   config, hub_attrs, attrs = process_config(llm.model_id, trust_remote_code, **attrs)
   _patch_correct_tag(llm, config)
   _, tokenizer_attrs = llm.llm_parameters
-  quantize = llm._quantize
+  quantize = llm._quantise
   safe_serialisation = openllm.utils.first_not_none(attrs.get('safe_serialization'), default=llm._serialisation == 'safetensors')
   metadata: DictStrAny = {'safe_serialisation': safe_serialisation}
   if quantize: metadata['_quantize'] = quantize

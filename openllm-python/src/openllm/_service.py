@@ -24,7 +24,7 @@ model = svars.model
 model_id = svars.model_id
 adapter_map = svars.adapter_map
 llm_config = openllm.AutoConfig.for_model(model)
-llm = openllm.LLM[t.Any, t.Any](model_id, llm_config=llm_config, adapter_map=orjson.loads(adapter_map))
+llm = openllm.LLM(model_id, llm_config=llm_config, adapter_map=orjson.loads(adapter_map))
 svc = bentoml.Service(name=f"llm-{llm_config['start_name']}-service", runners=[llm.runner])
 
 _JsonInput = bentoml.io.JSON.from_sample({'prompt': '', 'llm_config': llm_config.model_dump(flatten=True)})

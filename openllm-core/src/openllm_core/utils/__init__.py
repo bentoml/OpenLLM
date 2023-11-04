@@ -386,7 +386,7 @@ def generate_context(framework_name: str) -> ModelContext:
 
 _TOKENIZER_PREFIX = '_tokenizer_'
 
-def normalize_attrs_to_model_tokenizer_pair(**attrs: t.Any) -> tuple[dict[str, t.Any], dict[str, t.Any]]:
+def flatten_attrs(**attrs: t.Any) -> tuple[dict[str, t.Any], dict[str, t.Any]]:
   '''Normalize the given attrs to a model and tokenizer kwargs accordingly.'''
   tokenizer_attrs = {k[len(_TOKENIZER_PREFIX):]: v for k, v in attrs.items() if k.startswith(_TOKENIZER_PREFIX)}
   for k in tuple(attrs.keys()):

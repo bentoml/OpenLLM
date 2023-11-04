@@ -45,12 +45,12 @@ from openllm_core.utils import apply
 from openllm_core.utils import codegen
 from openllm_core.utils import converter
 from openllm_core.utils import first_not_none
+from openllm_core.utils import flatten_attrs
 from openllm_core.utils import generate_hash_from_file
 from openllm_core.utils import is_async_callable
 from openllm_core.utils import is_peft_available
 from openllm_core.utils import is_torch_available
 from openllm_core.utils import is_vllm_available
-from openllm_core.utils import normalize_attrs_to_model_tokenizer_pair
 from openllm_core.utils import resolve_filepath
 from openllm_core.utils import validate_is_path
 
@@ -118,12 +118,27 @@ _reserved_namespace = {'model', 'tokenizer', 'runner', 'import_kwargs'}
 _AdaptersTuple: type[AdaptersTuple] = codegen.make_attr_tuple_class('AdaptersTuple', ['adapter_id', 'name', 'config'])
 InferenceReturnType = t.Literal['text', 'object', 'sse']
 
+def inferece_wrapper(func: t.Callable[Concatenate[LLM[M, T], P], t.Any]) -> t.Callable[P, t.Any]:
+  _is_async_gen = inspect.isasyncgenfunction(func)
+  if not is_async_callable(func):
+    if _is_async_gen: pass
+    else: raise RuntimeError(f'assert_runner_is_ready can only be used on async function or async gen function, while {func} is not.')
+
+  @functools.wraps(func)
+  async def wrapped(self: LLM[M, T], *args: P.args, **kwargs: P.kwargs) -> t.Any:
+    if isinstance(self.runner._runner_handle, DummyRunnerHandle):
+      if os.getenv('BENTO_PATH') is not None: raise RuntimeError('Runner client failed to set up correctly.')
+      else: self.runner.init_local(quiet=True)
+    return await func(self, *args, **kwargs) if not _is_async_gen else func(self, *args, **kwargs)
+
+  return wrapped
+
 @attr.define(slots=True, repr=False, init=False)
 class LLM(t.Generic[M, T]):
   _model_id: str
   _revision: str | None
   quantization_config: transformers.BitsAndBytesConfig | transformers.GPTQConfig | transformers.AwqConfig | None
-  _quantize: LiteralQuantise | None
+  _quantise: LiteralQuantise | None
   _model_decls: TupleAny
   _model_attrs: DictStrAny
   _tokenizer_attrs: DictStrAny
@@ -135,7 +150,7 @@ class LLM(t.Generic[M, T]):
   _system_message: str | None
 
   __llm_config__: LLMConfig | None = None
-  __llm_backend__: LiteralBackend = None
+  __llm_backend__: LiteralBackend = None  # type: ignore
   __llm_runner__: t.Optional[LLMRunner[M, T]] = None
   __llm_model__: t.Optional[M] = None
   __llm_tokenizer__: t.Optional[T] = None
@@ -163,12 +178,11 @@ class LLM(t.Generic[M, T]):
     # low_cpu_mem_usage is only available for model
     # this is helpful on system with low memory to avoid OOM
     low_cpu_mem_usage = attrs.pop('low_cpu_mem_usage', True)
-
     _local = False
     if validate_is_path(model_id): model_id, _local = resolve_filepath(model_id), True
-    quantize = first_not_none(quantize, t.cast(t.Optional[LiteralQuantise], os.getenv('OPENLLM_QUANTIZE')), default=None)
     if backend is None: backend = 'vllm' if is_vllm_available() else 'pt'
 
+    quantize = first_not_none(quantize, t.cast(t.Optional[LiteralQuantise], os.getenv('OPENLLM_QUANTIZE')), default=None)
     # quantization setup
     if quantization_config and quantize:
       logger.warning("Both 'quantization_config' and 'quantize' are specified. 'quantize' will be ignored.")
@@ -177,34 +191,25 @@ class LLM(t.Generic[M, T]):
       if quantize == 'gptq': attrs.setdefault('tokenizer', model_id)
       # TODO: support AWQConfig
       quantization_config, attrs = infer_quantisation_config(self, quantize, **attrs)
-
-    attrs.update({'low_cpu_mem_usage': low_cpu_mem_usage, 'quantization_config': quantization_config, 'torch_dtype': torch.float16 if torch.cuda.is_available() else torch.float32})
-    model_kwds, tokenizer_kwds = self.import_kwargs
+    attrs.update({'low_cpu_mem_usage': low_cpu_mem_usage, 'quantization_config': quantization_config})
 
     # parsing tokenizer and model kwargs, as the hierarchy is param pass > default
-    normalized_model_kwds, normalized_tokenizer_kwds = normalize_attrs_to_model_tokenizer_pair(**attrs)
-    # NOTE: Save the args and kwargs for latter load
-    model_attrs = {**model_kwds, **normalized_model_kwds}
-    tokenizer_attrs = {**tokenizer_kwds, **normalized_tokenizer_kwds}
+    model_attrs, tokenizer_attrs = flatten_attrs(**attrs)
 
-    if adapter_map is not None and not is_peft_available():
-      raise RuntimeError("LoRA adapter requires 'peft' to be installed. Make sure to install OpenLLM with 'pip install \"openllm[fine-tune]\"'")
-    if adapter_map: logger.debug('OpenLLM will apply the following adapters layers: %s', list(adapter_map))
-
+    if adapter_map is not None and not is_peft_available(): raise RuntimeError("LoRA adapter requires 'peft' to be installed. Make sure to do 'pip install \"openllm[fine-tune]\"'")
     if isinstance(prompt_template, str): prompt_template = PromptTemplate(prompt_template)
-
     if model_tag is None:
       model_tag, model_version = self._make_tag_components(model_id, model_version, backend=backend)
       if model_version: model_tag = f'{model_tag}:{model_version}'
 
     self.__attrs_init__(model_id=model_id,
                         revision=model_version,
-                        tag=bentoml.Tag.from_taglike(model_tag),
+                        tag=bentoml.Tag.from_taglike(t.cast(t.Union[str, bentoml.Tag], model_tag)),
                         quantization_config=quantization_config,
-                        quantize=quantize,
+                        quantise=quantize,
                         model_decls=args,
-                        model_attrs=model_attrs,
-                        tokenizer_attrs=tokenizer_attrs,
+                        model_attrs=dict(**self.import_kwargs[0], **model_attrs),
+                        tokenizer_attrs=dict(**self.import_kwargs[-1], **tokenizer_attrs),
                         adapter_map=resolve_peft_config_type(adapter_map) if adapter_map is not None else None,
                         serialisation=serialisation,
                         local=_local,
@@ -247,7 +252,7 @@ class LLM(t.Generic[M, T]):
   def config(self)->LLMConfig:
     if self.__llm_config__ is None: self.__llm_config__=openllm.AutoConfig.infer_class_from_llm(self).model_construct_env(**self._model_attrs)
     return self.__llm_config__
-  def save_pretrained(self) -> bentoml.Model: return openllm.import_model(self.config['start_name'], model_id=self.model_id, model_version=self._revision, backend=self.__llm_backend__, quantize=self._quantize)
+  def save_pretrained(self) -> bentoml.Model: return openllm.import_model(self.config['start_name'], model_id=self.model_id, model_version=self._revision, backend=self.__llm_backend__, quantize=self._quantise)
   # NOTE: The section below defines a loose contract with langchain's LLM interface.
   @property
   def llm_type(self)->str:return normalise_model_name(self._model_id)
@@ -288,22 +293,6 @@ class LLM(t.Generic[M, T]):
   def runner(self) -> LLMRunner[M, T]:
     if self.__llm_runner__ is None: self.__llm_runner__ = _RunnerFactory(self)
     return self.__llm_runner__
-
-  @staticmethod
-  def inferece_wrapper(func: t.Callable[Concatenate[LLM[M, T], P], t.Any]) -> t.Callable[P, t.Any]:
-    _is_async_gen = inspect.isasyncgenfunction(func)
-    if not is_async_callable(func):
-      if _is_async_gen: pass
-      else: raise RuntimeError(f'assert_runner_is_ready can only be used on async function or async gen function, while {func} is not.')
-
-    @functools.wraps(func)
-    async def wrapped(self: LLM[M, T], *args: P.args, **kwargs: P.kwargs) -> t.Any:
-      if isinstance(self.runner._runner_handle, DummyRunnerHandle):
-        if os.getenv('BENTO_PATH') is not None: raise RuntimeError('Runner client failed to set up correctly.')
-        else: self.runner.init_local(quiet=True)
-      return await func(self, *args, **kwargs) if not _is_async_gen else func(self, *args, **kwargs)
-
-    return wrapped
 
   @inferece_wrapper
   async def generate(self,
@@ -464,27 +453,23 @@ def _RunnerFactory(self: openllm.LLM[M, T],
   if self._prompt_template: prompt_template = self._prompt_template.to_string()
   elif hasattr(self.config, 'default_prompt_template'): prompt_template = self.config.default_prompt_template
   else: prompt_template = None
-
   if self._system_message: system_message = self._system_message
   elif hasattr(self.config, 'default_system_message'): system_message = self.config.default_system_message
   else: system_message = None
 
-  def _wrapped_repr_keys(_: LLMRunner[M, T]) -> set[str]:
-    return {'config', 'llm_type', 'runner_methods', 'backend', 'llm_tag'}
-
+  # yapf: disable
+  def _wrapped_repr_keys(_: LLMRunner[M, T]) -> set[str]: return {'config', 'llm_type', 'runner_methods', 'backend', 'llm_tag'}
   def _generate_sync(_: LLMRunner[M, T], prompt: str, **kwargs: t.Any) -> t.Any:
     # NOTE: This should only be used with LangChain
-    async def infer():
-      return await self.generate(prompt, **kwargs)
-
+    async def infer(): return await self.generate(prompt, **kwargs)
     return asyncio.run(infer())
-
   def _wrapped_repr_args(_: LLMRunner[M, T]) -> ReprArgs:
     yield 'runner_methods', {method.name: {'batchable': method.config.batchable, 'batch_dim': method.config.batch_dim if method.config.batchable else None} for method in _.runner_methods}
     yield 'config', self.config.model_dump(flatten=True)
     yield 'llm_type', _.llm_type
     yield 'backend', backend
     yield 'llm_tag', self.tag
+  # yapf: enable
 
   return types.new_class(self.__class__.__name__ + 'Runner', (bentoml.Runner,),
                          exec_body=lambda ns: ns.update({

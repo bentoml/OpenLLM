@@ -29,6 +29,7 @@ logger = logging.getLogger(__name__)
 
 if t.TYPE_CHECKING:
   from starlette.requests import Request
+  from starlette.responses import Response
 
   import bentoml
   import openllm

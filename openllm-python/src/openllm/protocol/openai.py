@@ -141,12 +141,9 @@ class ModelList:
   object: str = 'list'
   data: t.List[ModelCard] = attr.field(factory=list)
 
-async def get_conversation_prompt(request: ChatCompletionRequest) -> str:
-  ...
-
-def messages_to_prompt(messages: list[Message], model: str, llm_config: openllm_core.LLMConfig) -> str:
+async def get_conversation_prompt(request: ChatCompletionRequest, model: str, llm_config: openllm_core.LLMConfig) -> str:
   conv_template = _conversation.get_conv_template(model, llm_config)
-  for message in messages:
+  for message in request.messages:
     if message['role'] == 'system': conv_template.set_system_message(message['content'])
     else: conv_template.append_message(message['role'], message['content'])
   conv_template.append_message('assistant', '')
