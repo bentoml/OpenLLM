@@ -5,6 +5,7 @@ import typing as t
 
 import attr
 import inflection
+import orjson
 
 from openllm_core._configuration import GenerationConfig
 from openllm_core._configuration import LLMConfig
@@ -115,8 +116,34 @@ class GenerationOutput:
   prompt_logprobs: t.Optional[PromptLogprobs] = attr.field(default=None)
   request_id: str = attr.field(factory=lambda: gen_random_uuid())
 
+  @staticmethod
+  def examples() -> GenerationOutput:
+    return GenerationOutput(prompt='What is the meaning of life?',
+                            finished=True,
+                            outputs=[
+                                CompletionChunk(index=0,
+                                                text='\nLife is the process by which organisms, such as bacteria and cells, reproduce themselves and continue to exist.',
+                                                token_ids=[50118, 12116, 16, 5, 609, 30, 61, 28340, 6, 215, 25, 9436, 8, 4590, 6, 33942, 1235, 8, 535],
+                                                cumulative_logprob=0.0,
+                                                logprobs=None,
+                                                finish_reason='length')
+                            ],
+                            prompt_token_ids=[2, 2264, 16, 5, 3099, 9, 301, 116],
+                            prompt_logprobs=None,
+                            request_id=gen_random_uuid())
+
   @classmethod
-  def from_vllm_outputs(cls, request_output: vllm.RequestOutput) -> GenerationOutput:
+  def from_sse(cls, sse_message: str) -> GenerationOutput:
+    data = [line[6:] for line in sse_message.strip().split('\n') if line.startswith('data: ')]
+    if not data: raise ValueError('No data found in SSE message.')
+    if len(data) > 1: raise ValueError('Multiple data found in SSE message.')
+    try:
+      return converter.structure(orjson.loads(''.join(data)), cls)
+    except orjson.JSONDecodeError as e:
+      raise ValueError(f'Failed to parse JSON from SSE message: {sse_message}') from e
+
+  @classmethod
+  def from_vllm(cls, request_output: vllm.RequestOutput) -> GenerationOutput:
     return cls(prompt=request_output.prompt,
                finished=request_output.finished,
                request_id=request_output.request_id,
@@ -126,3 +153,9 @@ class GenerationOutput:
                ],
                prompt_token_ids=request_output.prompt_token_ids,
                prompt_logprobs=request_output.prompt_logprobs)
+
+  # yapf: disable
+  def with_options(self,**options: t.Any)->GenerationOutput: return attr.evolve(self, **options)
+  def unmarshal(self):return converter.unstructure(self)
+  def unmarshal_json(self):return orjson.dumps(self.unmarshal()).decode('utf-8')
+  # yapf: enable

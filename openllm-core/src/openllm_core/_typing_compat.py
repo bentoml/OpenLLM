@@ -111,12 +111,9 @@ if _is_bentoml_installed:
   class LLMRunnable(bentoml.Runnable, t.Generic[M, T]):
     SUPPORTED_RESOURCES = ('amd.com/gpu', 'nvidia.com/gpu', 'cpu')
     SUPPORTS_CPU_MULTI_THREADING = True
-    __call__: RunnableMethod[LLMRunnable[M, T], [str], list[t.Any]]
-    generate: RunnableMethod[LLMRunnable[M, T], [str], list[t.Any]]
-    generate_one: RunnableMethod[LLMRunnable[M, T], [str, list[str]], t.Sequence[dict[t.Literal['generated_text'], str]]]
-    generate_iterator: RunnableMethod[LLMRunnable[M, T], [str], t.Iterator[t.Any]]
-    vllm_generate: RunnableMethod[LLMRunnable[M, T], [str], list[t.Any]]
-    vllm_generate_iterator: RunnableMethod[LLMRunnable[M, T], [str], t.AsyncGenerator[str, None]]
+    generate: RunnableMethod[LLMRunnable[M, T], [list[int], str, str | t.Iterable[str] | None], t.AsyncGenerator[str, None]]
+    generate_iterator: RunnableMethod[LLMRunnable[M, T], [list[int], str, str | t.Iterable[str] | None], t.AsyncGenerator[str, None]]
+    # generate_one: RunnableMethod[LLMRunnable[M, T], [str, list[str]], t.Sequence[dict[t.Literal['generated_text'], str]]]
 
   class LLMRunner(bentoml.Runner, t.Generic[M, T]):
     __doc__: str
@@ -130,11 +127,10 @@ if _is_bentoml_installed:
     has_adapters: bool
     system_message: str | None
     prompt_template: str | None
-    generate: RunnerMethod[LLMRunnable[M, T], [str], list[t.Any]]
-    generate_one: RunnerMethod[LLMRunnable[M, T], [str, list[str]], t.Sequence[dict[t.Literal['generated_text'], str]]]
-    generate_iterator: RunnerMethod[LLMRunnable[M, T], [str], t.Iterator[t.Any]]
-    vllm_generate: RunnerMethod[LLMRunnable[M, T], [str], list[t.Any]]
-    vllm_generate_iterator: RunnerMethod[LLMRunnable[M, T], [str], t.AsyncGenerator[str, None]]
+    generate: RunnerMethod[LLMRunnable[M, T], [list[int], str, str | t.Iterable[str] | None], t.AsyncGenerator[str, None]]
+    generate_iterator: RunnerMethod[LLMRunnable[M, T], [list[int], str, str | t.Iterable[str] | None], t.AsyncGenerator[str, None]]
+
+    # generate_one: RunnerMethod[LLMRunnable[M, T], [str, list[str]], t.Sequence[dict[t.Literal['generated_text'], str]]]
 
     def __init__(self,
                  runnable_class: type[LLMRunnable[M, T]],
@@ -148,15 +144,6 @@ if _is_bentoml_installed:
                  method_configs: dict[str, dict[str, int]] | None = ...,
                  embedded: bool = False,
                  ) -> None:
-      ...
-
-    def __call__(self, prompt: str, **attrs: t.Any) -> t.Any:
-      ...
-
-    def run(self, prompt: str, **attrs: t.Any) -> t.Any:
-      ...
-
-    async def async_run(self, prompt: str, **attrs: t.Any) -> t.Any:
       ...
 
     @abc.abstractmethod

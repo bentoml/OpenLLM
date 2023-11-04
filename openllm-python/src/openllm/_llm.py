@@ -1,10 +1,13 @@
 # mypy: disable-error-code="name-defined,attr-defined"
 from __future__ import annotations
 import abc
+import functools
+import inspect
 import logging
 import os
 import types
 import typing as t
+import warnings
 
 import attr
 import inflection
@@ -18,10 +21,12 @@ import openllm_core
 
 from bentoml._internal.models.model import ModelSignature
 from bentoml._internal.runner.runner_handle import DummyRunnerHandle
+from openllm_core._schema import GenerationOutput
 from openllm_core._strategies import CascadingResourceStrategy
 from openllm_core._typing_compat import AdaptersMapping
 from openllm_core._typing_compat import AdaptersTuple
 from openllm_core._typing_compat import AdapterType
+from openllm_core._typing_compat import Concatenate
 from openllm_core._typing_compat import DictStrAny
 from openllm_core._typing_compat import LiteralBackend
 from openllm_core._typing_compat import LiteralQuantise
@@ -30,6 +35,7 @@ from openllm_core._typing_compat import LLMRunnable
 from openllm_core._typing_compat import LLMRunner
 from openllm_core._typing_compat import M
 from openllm_core._typing_compat import ModelSignatureDict
+from openllm_core._typing_compat import ParamSpec
 from openllm_core._typing_compat import T
 from openllm_core._typing_compat import TupleAny
 from openllm_core.prompts import PromptTemplate
@@ -40,6 +46,7 @@ from openllm_core.utils import codegen
 from openllm_core.utils import converter
 from openllm_core.utils import first_not_none
 from openllm_core.utils import generate_hash_from_file
+from openllm_core.utils import is_async_callable
 from openllm_core.utils import is_peft_available
 from openllm_core.utils import is_torch_available
 from openllm_core.utils import is_vllm_available
@@ -52,21 +59,21 @@ from .exceptions import ForbiddenAttributeError
 from .exceptions import OpenLLMException
 
 if t.TYPE_CHECKING:
-
   import peft
   import torch
   import transformers
-  import vllm
 
   from openllm_core._configuration import LLMConfig
-  from openllm_core._schema import GenerationOutput
   from openllm_core.utils.representation import ReprArgs
+
 else:
   transformers = LazyLoader('transformers', globals(), 'transformers')
   torch = LazyLoader('torch', globals(), 'torch')
   peft = LazyLoader('peft', globals(), 'peft')
 
 ResolvedAdaptersMapping = t.Dict[AdapterType, t.Dict[str, t.Tuple['peft.PeftConfig', str]]]
+
+P = ParamSpec('P')
 
 logger = logging.getLogger(__name__)
 
@@ -178,18 +185,20 @@ class _Interface(abc.ABC, t.Generic[M, T]):
 
 _AdaptersTuple: type[AdaptersTuple] = codegen.make_attr_tuple_class('AdaptersTuple', ['adapter_id', 'name', 'config'])
 
+InferenceReturnType = t.Literal['text', 'object']
+
 @attr.define(slots=True, repr=False, init=False)
 class LLM(_Interface[M, T], ReprMixin):
   _model_id: str
-  _model_version: str
+  _model_version: str | None
   config: LLMConfig
-  quantization_config: transformers.BitsAndBytesConfig | transformers.GPTQConfig | transformers.AWQConfig | None
+  quantization_config: transformers.BitsAndBytesConfig | transformers.GPTQConfig | transformers.AwqConfig | None
   _quantize: LiteralQuantise | None
   _model_decls: TupleAny
   _model_attrs: DictStrAny
   _tokenizer_attrs: DictStrAny
   _tag: bentoml.Tag
-  _adapters_mapping: AdaptersMapping | None
+  _adapter_map: AdaptersMapping | None
   _serialisation: LiteralSerialisation
   _local: bool
   _prompt_template: PromptTemplate | None
@@ -208,13 +217,14 @@ class LLM(_Interface[M, T], ReprMixin):
   def __init__(self,
                model_id: str,
                model_version: str | None = None,
+               model_tag: str | bentoml.Tag | None = None,
                prompt_template: PromptTemplate | str | None = None,
                system_message: str | None = None,
                llm_config: LLMConfig | None = None,
                backend: LiteralBackend | None = None,
                *args: t.Any,
                quantize: LiteralQuantise | None = None,
-               quantization_config: transformers.BitsAndBytesConfig | transformers.GPTQConfig | transformers.AWQConfig | None = None,
+               quantization_config: transformers.BitsAndBytesConfig | transformers.GPTQConfig | transformers.AwqConfig | None = None,
                adapter_map: dict[str, str | None] | None = None,
                serialisation: LiteralSerialisation = 'safetensors',
                **attrs: t.Any):
@@ -259,102 +269,67 @@ class LLM(_Interface[M, T], ReprMixin):
       # The rests of the kwargs that is not used by the config class should be stored into __openllm_extras__.
       attrs = llm_config['extras']
 
-    try:
-      _tag = self.generate_tag(model_id, model_version)
-      if _tag.version is None:
-        raise ValueError(f'Failed to resolve the correct model version for {self.config_class.__openllm_start_name__}')
-    except Exception as err:
-      raise OpenLLMException(f"Failed to generate a valid tag for {self.config_class.__openllm_start_name__} with 'model_id={model_id}' (lookup to see its traceback):\n{err}") from err
+    if model_tag is None:
+      model_tag, model_version = self.generate_tag(model_id, model_version, backend=backend)
+      if model_version: model_tag = f'{model_tag}:{model_version}'
 
     self.__attrs_init__(model_id=model_id,
-                        model_version=_tag.version,
+                        model_version=model_version,
+                        tag=bentoml.Tag.from_taglike(model_tag),
                         config=llm_config,
                         quantization_config=quantization_config,
                         quantize=quantize,
                         model_decls=args,
                         model_attrs=model_attrs,
                         tokenizer_attrs=tokenizer_attrs,
-                        tag=_tag,
-                        adapters_mapping=resolve_peft_config_type(adapter_map) if adapter_map is not None else None,
+                        adapter_map=resolve_peft_config_type(adapter_map) if adapter_map is not None else None,
                         serialisation=serialisation,
                         local=_local,
                         prompt_template=prompt_template,
                         system_message=system_message,
                         llm_backend__=backend)
 
-  @apply(str.lower)
-  def _generate_tag_str(self, model_id: str, model_version: str | None) -> str:
-    model_name = normalise_model_name(model_id)
+  @apply(lambda val: tuple(str.lower(i) if i else i for i in val))
+  def generate_tag(self, model_id: str, model_version: str | None, backend: LiteralBackend) -> tuple[str, str]:
+    '''Return a valid tag name (<backend>-<repo>--<model_id>) and its tag version.'''
     model_id, *maybe_revision = model_id.rsplit(':')
     if len(maybe_revision) > 0:
-      if model_version is not None:
-        logger.warning("revision is specified within 'model_id' (%s), and 'model_version=%s' will be ignored.", maybe_revision[0], model_version)
-      return f'{self.__llm_backend__}-{model_name}:{maybe_revision[0]}'
+      if model_version is not None: logger.warning("revision is specified within 'model_id' (%s), and 'model_version=%s' will be ignored.", maybe_revision[0], model_version)
+      model_version = maybe_revision[0]
+    if validate_is_path(model_id): model_id, model_version = resolve_filepath(model_id), first_not_none(model_version, default=generate_hash_from_file(model_id))
+    return f'{backend}-{normalise_model_name(model_id)}', model_version
 
-    tag_name = f'{self.__llm_backend__}-{model_name}'
-    if openllm_core.utils.check_bool_env('OPENLLM_USE_LOCAL_LATEST', False):
-      return str(bentoml.models.get(f"{tag_name}{':'+model_version if model_version is not None else ''}").tag)
-    if validate_is_path(model_id):
-      model_id, model_version = resolve_filepath(model_id), first_not_none(model_version, default=generate_hash_from_file(model_id))
-    else:
-      from .serialisation.transformers._helpers import process_config
-      model_version = getattr(
-          process_config(model_id, trust_remote_code=self.config_class.__openllm_trust_remote_code__, revision=first_not_none(model_version, default='main'))[0], '_commit_hash', None)
-      if model_version is None:
-        raise ValueError(f"Internal errors when parsing config for pretrained '{model_id}' ('commit_hash' not found)")
-    return f'{tag_name}:{model_version}'
-
-  def generate_tag(self, *param_decls: t.Any, **attrs: t.Any) -> bentoml.Tag:
-    return bentoml.Tag.from_taglike(self._generate_tag_str(*param_decls, **attrs))
-
-  def __setattr__(self, attr: str, value: t.Any) -> None:
-    if attr in _reserved_namespace:
-      raise ForbiddenAttributeError(
-          f'{attr} should not be set during runtime as these value will be reflected during runtime. Instead, you can create a custom LLM subclass {self.__class__.__name__}.')
-    super().__setattr__(attr, value)
-
-  @property
-  def __repr_keys__(self) -> set[str]:
-    return {'model_id', 'runner_name', 'config', 'adapters_mapping', 'tag'}
-
-  def __repr_args__(self) -> ReprArgs:
+  # yapf: disable
+  def __setattr__(self,attr: str,value: t.Any)->None:
+    if attr in _reserved_namespace:raise ForbiddenAttributeError(f'{attr} should not be set during runtime.')
+    super().__setattr__(attr,value)
+  def __repr_args__(self)->ReprArgs:
     for k in self.__repr_keys__:
-      if k == 'config': yield k, self.config.model_dump(flatten=True)
-      else: yield k, getattr(self, k)
-    yield 'backend', self.__llm_backend__
-
+      if k=='config':yield k,self.config.model_dump(flatten=True)
+      else:yield k,getattr(self, k)
+    yield 'backend',self.__llm_backend__
   @property
-  def trust_remote_code(self) -> bool:
-    return first_not_none(openllm_core.utils.check_bool_env('TRUST_REMOTE_CODE', False), default=self.config['trust_remote_code'])
-
+  def __repr_keys__(self)->set[str]:return {'model_id', 'runner_name', 'config', 'adapters_mapping', 'tag'}
   @property
-  def adapters_mapping(self) -> AdaptersMapping | None:
-    return self._adapters_mapping
-
+  def trust_remote_code(self)->bool:return first_not_none(openllm_core.utils.check_bool_env('TRUST_REMOTE_CODE',False),default=self.config['trust_remote_code'])
   @property
-  def model_id(self) -> str:
-    return self._model_id
-
+  def adapters_mapping(self)->AdaptersMapping|None:return self._adapter_map
   @property
-  def runner_name(self) -> str:
-    return f"llm-{self.config['start_name']}-runner"
-
+  def model_id(self)->str:return self._model_id
+  @property
+  def runner_name(self)->str:return f"llm-{self.config['start_name']}-runner"
   # NOTE: The section below defines a loose contract with langchain's LLM interface.
   @property
-  def llm_type(self) -> str:
-    return normalise_model_name(self._model_id)
-
+  def llm_type(self)->str:return normalise_model_name(self._model_id)
   @property
-  def identifying_params(self) -> DictStrAny:
-    return {'configuration': self.config.model_dump_json().decode(), 'model_ids': orjson.dumps(self.config['model_ids']).decode()}
-
+  def identifying_params(self)->DictStrAny: return {'configuration': self.config.model_dump_json().decode(),'model_ids': orjson.dumps(self.config['model_ids']).decode(),'model_id': self.model_id}
   @property
-  def llm_parameters(self) -> tuple[tuple[tuple[t.Any, ...], DictStrAny], DictStrAny]:
-    return (self._model_decls, self._model_attrs), self._tokenizer_attrs
-
+  def llm_parameters(self)->tuple[tuple[tuple[t.Any,...],DictStrAny],DictStrAny]:return (self._model_decls,self._model_attrs),self._tokenizer_attrs
   @property
-  def tag(self) -> bentoml.Tag:
-    return self._tag
+  def tag(self)->bentoml.Tag:return self._tag
+  @property
+  def bentomodel(self)->bentoml.Model:return openllm.serialisation.get(self,auto_import=True)
+  # yapf: enable
 
   def save_pretrained(self) -> bentoml.Model:
     return openllm.import_model(self.config['start_name'],
@@ -363,10 +338,6 @@ class LLM(_Interface[M, T], ReprMixin):
                                 backend=self.__llm_backend__,
                                 quantize=self._quantize,
                                 serialisation=self._serialisation)
-
-  @property
-  def bentomodel(self) -> bentoml.Model:
-    return openllm.serialisation.get(self, auto_import=True)
 
   def sanitize_parameters(self, prompt: str, **attrs: t.Any) -> tuple[str, DictStrAny, DictStrAny]:
     '''This handler will sanitize all attrs and setup prompt text.
@@ -415,72 +386,52 @@ class LLM(_Interface[M, T], ReprMixin):
     if self.__llm_tokenizer__ is None: self.__llm_tokenizer__ = openllm.serialisation.load_tokenizer(self, **self.llm_parameters[-1])
     return self.__llm_tokenizer__
 
-  # order of these fields matter here, make sure to sync it with
-  # openllm.models.auto.factory.BaseAutoLLMClass.for_model
-  def to_runner(self,
-                models: list[bentoml.Model] | None = None,
-                max_batch_size: int | None = None,
-                max_latency_ms: int | None = None,
-                scheduling_strategy: type[bentoml.Strategy] = CascadingResourceStrategy) -> LLMRunner[M, T]:
-    '''Convert this LLM into a Runner.
-
-    Args:
-      models: Any additional ``bentoml.Model`` to be included in this given models.
-      By default, this will be determined from the model_name.
-      max_batch_size: The maximum batch size for the runner.
-      max_latency_ms: The maximum latency for the runner.
-      strategy: The strategy to use for this runner.
-      embedded: Whether to run this runner in embedded mode.
-      scheduling_strategy: Whether to create a custom scheduling strategy for this Runner.
-
-    Returns:
-      A generated LLMRunner for this LLM.
-
-    > [!NOTE]: There are some difference between bentoml.models.get().to_runner() and LLM.to_runner():
-    >
-    > - 'name': will be generated by OpenLLM, hence users don't shouldn't worry about this. The generated name will be 'llm-<model-start-name>-runner' (ex: llm-dolly-v2-runner, llm-chatglm-runner)
-    > - 'embedded': Will be disabled by default. There is no reason to run LLM in embedded mode.
-    > - 'method_configs': The method configs for the runner will be managed internally by OpenLLM.
-    '''
-    models = models if models is not None else []
-
-    if os.environ.get('BENTO_PATH') is None:
-      # Hmm we should only add this if it is not in the container environment
-      # BentoML sets BENTO_PATH so we can use this as switch logic here.
-      try:
-        models.append(self.bentomodel)
-      except bentoml.exceptions.NotFound as err:
-        raise RuntimeError(f'Failed to locate {self.bentomodel}:{err}') from None
-
-    generate_sig = ModelSignature.from_dict(ModelSignatureDict(batchable=False))
-    generate_iterator_sig = ModelSignature.from_dict(ModelSignatureDict(batchable=False))
-
-    # NOTE: returning the two langchain API's to the runner
-    return llm_runner_class(self)(llm_runnable_class(self, generate_sig, generate_iterator_sig),
-                                  name=self.runner_name,
-                                  embedded=False,
-                                  models=models,
-                                  max_batch_size=max_batch_size,
-                                  max_latency_ms=max_latency_ms,
-                                  method_configs=converter.unstructure({
-                                      '__call__': generate_sig,
-                                      'generate': generate_sig,
-                                      'generate_one': generate_sig,
-                                      'generate_iterator': generate_iterator_sig
-                                  }),
-                                  scheduling_strategy=scheduling_strategy)
-
   @property
   def runner(self) -> LLMRunner[M, T]:
-    if self.__llm_runner__ is None: self.__llm_runner__ = _RunnerFactory(self, backend=self.__llm_backend__)
+    if self.__llm_runner__ is None: self.__llm_runner__ = _RunnerFactory(self)
     return self.__llm_runner__
 
-  async def generate(self, prompt: str, stop: str | t.Iterable[str] | None = None, stop_token_ids: list[int] | None = None, **attrs: t.Any) -> GenerationOutput:
-    assert await self.runner.runner_handle_is_ready()
-    if isinstance(self.runner._runner_handle, DummyRunnerHandle):
-      if os.getenv('BENTO_PATH') is not None: raise RuntimeError('Runner client failed to set up correctly.')
-      else: self.runner.init_local(quiet=True)
+  @staticmethod
+  def inferece_wrapper(func: t.Callable[Concatenate[LLM[M, T], P], t.Any]) -> t.Callable[P, t.Any]:
+    _is_async_gen = inspect.isasyncgenfunction(func)
+    if not is_async_callable(func):
+      if _is_async_gen: pass
+      else: raise RuntimeError(f'assert_runner_is_ready can only be used on async function or async gen function, while {func} is not.')
 
+    @functools.wraps(func)
+    async def wrapped(self: LLM[M, T], *args: P.args, **kwargs: P.kwargs) -> t.Any:
+      return_type = kwargs.pop('return_type', 'object')  # by default, we return the object and let users handle what they want to do with it.
+      if isinstance(self.runner._runner_handle, DummyRunnerHandle):
+        if os.getenv('BENTO_PATH') is not None: raise RuntimeError('Runner client failed to set up correctly.')
+        else: self.runner.init_local(quiet=True)
+
+      awaitable = await func(self, *args, **kwargs) if not _is_async_gen else func(self, *args, **kwargs)
+
+      if return_type == 'object': return awaitable
+      elif return_type == 'text':
+        if _is_async_gen:
+
+          async def stream_text_generator() -> t.AsyncGenerator[str, None]:
+            pre = 0
+            async for it in t.cast(t.AsyncGenerator[GenerationOutput, None], awaitable):
+              text_outputs = [output.text for output in it.outputs]
+              output_text = text_outputs[0].strip().split(' ')
+              now = len(output_text) - 1
+              if now > pre:
+                yield ' '.join(output_text[pre:now]) + ' '
+                pre = now
+            yield ' '.join(output_text[pre:]) + ' '
+
+          return stream_text_generator()
+        else:
+          return t.cast(GenerationOutput, awaitable).outputs[0].text
+      else:
+        raise ValueError(f"return_type can only be 'object' or 'text', while '{return_type}' is given.")
+
+    return wrapped
+
+  @inferece_wrapper
+  async def generate(self, prompt: str, stop: str | t.Iterable[str] | None = None, stop_token_ids: list[int] | None = None, **attrs: t.Any) -> GenerationOutput:
     prompt, *_ = self.sanitize_parameters(prompt, **attrs)
     config = self.config.model_construct_env(**attrs)
 
@@ -495,20 +446,15 @@ class LLM(_Interface[M, T], ReprMixin):
     prompt_token_ids, request_id = self.tokenizer.encode(prompt), openllm_core.utils.gen_random_uuid()
     async for out in self.runner.generate.async_stream(prompt_token_ids, request_id, stop=stop, **config.model_dump()):
       pass
-    return out
+    return GenerationOutput.from_sse(out)
 
+  @inferece_wrapper
   async def generate_iterator(self,
                               prompt: str,
                               stop: str | t.Iterable[str] | None = None,
                               stop_token_ids: list[int] | None = None,
                               **attrs: t.Any) -> t.AsyncGenerator[GenerationOutput, None]:
-    assert await self.runner.runner_handle_is_ready()
-    if isinstance(self.runner._runner_handle, DummyRunnerHandle):
-      if os.getenv('BENTO_PATH') is not None: raise RuntimeError('Runner client failed to set up correctly.')
-      else: self.runner.init_local(quiet=True)
-
     prompt, *_ = self.sanitize_parameters(prompt, **attrs)
-    print(prompt)
     config = self.config.model_construct_env(**attrs)
 
     if stop_token_ids is None: stop_token_ids = []
@@ -521,7 +467,9 @@ class LLM(_Interface[M, T], ReprMixin):
 
     prompt_token_ids, request_id = self.tokenizer.encode(prompt), openllm_core.utils.gen_random_uuid()
     async for out in self.runner.generate_iterator.async_stream(prompt_token_ids, request_id, stop=stop, **config.model_dump()):
-      yield out
+      outputs = GenerationOutput.from_sse(out)
+      if outputs.finished: break
+      yield outputs
 
 def Runner(model_name: str,
            ensure_available: bool = False,
@@ -537,7 +485,6 @@ def Runner(model_name: str,
   hook to check download if you don't want to do it manually:
 
   ```python
-
   runner = openllm.Runner("dolly-v2")
 
   @svc.on_startup
@@ -557,10 +504,24 @@ def Runner(model_name: str,
     init_local: If True, it will initialize the model locally. This is useful if you want to run the model locally. (Symmetrical to bentoml.Runner.init_local())
     **attrs: The rest of kwargs will then be passed to the LLM. Refer to the LLM documentation for the kwargs behaviour
   '''
-
   if llm_config is None: llm_config = openllm.AutoConfig.for_model(model_name)
+  model_id = attrs.get('model_id') or llm_config['env']['model_id_value']
+  msg = f'''\
+Using 'openllm.Runner' is now deprecated. Make sure to switch to the following syntax:
+
+```python
+llm = openllm.LLM('{model_id}')
+
+svc = bentoml.Service('...', runners=[llm.runner])
+
+@svc.api(...)
+async def chat(input: str) -> str:
+  await llm.generate(input)
+```
+  '''
+  warnings.warn(msg, DeprecationWarning, stacklevel=3)
   attrs.update({
-      'model_id': attrs.get('model_id') or llm_config['env']['model_id_value'],
+      'model_id': model_id,
       'quantize': llm_config['env']['quantize_value'],
       'serialisation': first_not_none(attrs.get('serialisation'), os.environ.get('OPENLLM_SERIALIZATION'), default=llm_config['serialisation']),
       'system_message': first_not_none(os.environ.get('OPENLLM_SYSTEM_MESSAGE'), attrs.get('system_message'), None),
@@ -568,211 +529,34 @@ def Runner(model_name: str,
   })
 
   backend = t.cast(LiteralBackend, first_not_none(backend, default='vllm' if is_vllm_available() else 'pt'))
-  if init_local: ensure_available = True
+  if init_local: pass
   runner = LLM(backend=backend, llm_config=llm_config, **attrs).runner
   if init_local: runner.init_local(quiet=True)
   return runner
 
-def _RunnerFactory(llm: openllm.LLM[M, T],
+def _RunnerFactory(self: openllm.LLM[M, T],
+                   /,
                    models: list[bentoml.Model] | None = None,
                    max_batch_size: int | None = None,
                    max_latency_ms: int | None = None,
                    scheduling_strategy: type[bentoml.Strategy] = CascadingResourceStrategy,
-                   backend: LiteralBackend | None = None) -> bentoml.Runner:
-
-  backend = t.cast(LiteralBackend, first_not_none(backend, os.environ.get('OPENLLM_BACKEND'), default='vllm' if is_vllm_available() else 'pt'))
+                   *,
+                   backend: LiteralBackend | None = None) -> LLMRunner[M, T]:
+  backend = t.cast(LiteralBackend, first_not_none(backend, os.environ.get('OPENLLM_BACKEND'), default=self.__llm_backend__))
 
   models = models if models is not None else []
   if os.environ.get('BENTO_PATH') is None:
     # Hmm we should only add this if it is not in the container environment
     # BentoML sets BENTO_PATH so we can use this as switch logic here.
     try:
-      models.append(llm.bentomodel)
+      models.append(self.bentomodel)
     except bentoml.exceptions.NotFound as err:
-      raise RuntimeError(f'Failed to locate {llm.bentomodel}:{err}') from err
+      raise RuntimeError(f'Failed to locate {self.bentomodel}:{err}') from err
 
   if backend == 'vllm':
     from ._runners import vLLMRunnable as OpenLLMRunnable
   else:
     from ._runners import PyTorchRunnable as OpenLLMRunnable
-  return bentoml.Runner(OpenLLMRunnable,
-                        name=llm.runner_name,
-                        embedded=False,
-                        models=models,
-                        max_batch_size=max_batch_size,
-                        max_latency_ms=max_latency_ms,
-                        scheduling_strategy=scheduling_strategy,
-                        runnable_init_params={'llm': llm},
-                        method_configs=converter.unstructure({
-                            'generate': ModelSignature.from_dict(ModelSignatureDict(batchable=False)),
-                            'generate_iterator': ModelSignature.from_dict(ModelSignatureDict(batchable=False))
-                        }))
-
-def method_signature(sig: ModelSignature) -> ModelSignatureDict:
-  return converter.unstructure(sig)
-
-def llm_runnable_class(self: LLM[M, T], generate_sig: ModelSignature, generate_iterator_sig: ModelSignature) -> type[LLMRunnable[M, T]]:
-  class _Runnable(bentoml.Runnable):
-    SUPPORTED_RESOURCES = ('nvidia.com/gpu', 'amd.com/gpu', 'cpu')
-    SUPPORTS_CPU_MULTI_THREADING = True
-    backend = self.__llm_backend__
-
-    def __init__(__self: _Runnable):
-      # NOTE: The side effect of this line is that it will load the
-      # imported model during runner startup. So don't remove it!!
-      if not self.model: raise RuntimeError('Failed to load the model correctly (See traceback above)')
-      if self.adapters_mapping is not None:
-        logger.info('Applying LoRA to %s...', self.runner_name)
-        self.apply_adapter(inference_mode=True, load_adapters='all')
-
-    def set_adapter(__self: _Runnable, adapter_name: str) -> None:
-      if self.__llm_adapter_map__ is None: raise ValueError('No adapters available for current running server.')
-      elif not isinstance(self.model, peft.PeftModel): raise RuntimeError('Model is not a PeftModel')
-      if adapter_name != 'default': self.model.set_adapter(adapter_name)
-      logger.info('Successfully apply LoRA layer %s', adapter_name)
-
-    @bentoml.Runnable.method(**method_signature(generate_sig))  # type: ignore
-    def __call__(__self: _Runnable, prompt: str, **attrs: t.Any) -> list[t.Any]:
-      prompt, *_ = self.sanitize_parameters(prompt, **attrs)
-      adapter_name = attrs.pop('adapter_name', None)
-      if adapter_name is not None: __self.set_adapter(adapter_name)
-      return self.generate(prompt, **attrs)
-
-    @bentoml.Runnable.method(**method_signature(generate_sig))  # type: ignore
-    def generate(__self: _Runnable, prompt: str, **attrs: t.Any) -> list[t.Any]:
-      prompt, *_ = self.sanitize_parameters(prompt, **attrs)
-      adapter_name = attrs.pop('adapter_name', None)
-      if adapter_name is not None: __self.set_adapter(adapter_name)
-      return self.generate(prompt, **attrs)
-
-    @bentoml.Runnable.method(**method_signature(generate_sig))  # type: ignore
-    def generate_one(__self: _Runnable, prompt: str, stop: list[str], **attrs: t.Any) -> t.Sequence[dict[t.Literal['generated_text'], str]]:
-      prompt, *_ = self.sanitize_parameters(prompt, **attrs)
-      adapter_name = attrs.pop('adapter_name', None)
-      if adapter_name is not None: __self.set_adapter(adapter_name)
-      return self.generate_one(prompt, stop, **attrs)
-
-    @bentoml.Runnable.method(**method_signature(generate_iterator_sig))
-    def generate_iterator(__self: _Runnable, prompt: str, **attrs: t.Any) -> t.Generator[str, None, str]:
-      prompt, *_ = self.sanitize_parameters(prompt, **attrs)
-      adapter_name = attrs.pop('adapter_name', None)
-      if adapter_name is not None: __self.set_adapter(adapter_name)
-      pre = 0
-      for outputs in self.generate_iterator(prompt, request_id=openllm_core.utils.gen_random_uuid(), **attrs):
-        output_text = outputs['text'].strip().split(' ')
-        now = len(output_text) - 1
-        if now > pre:
-          yield ' '.join(output_text[pre:now]) + ' '
-          pre = now
-      yield ' '.join(output_text[pre:]) + ' '
-      return ' '.join(output_text) + ' '
-
-    @bentoml.Runnable.method(**method_signature(generate_sig))  # type: ignore
-    async def vllm_generate(__self: _Runnable, prompt: str, **attrs: t.Any) -> t.AsyncGenerator[list[t.Any], None]:
-      # TODO: PEFT support
-      attrs.pop('adapter_name', None)
-
-      stop: str | t.Iterable[str] | None = attrs.pop('stop', None)
-      # echo = attrs.pop('echo', False)
-      stop_token_ids: list[int] | None = attrs.pop('stop_token_ids', None)
-      temperature = attrs.pop('temperature', self.config['temperature'])
-      top_p = attrs.pop('top_p', self.config['top_p'])
-      request_id: str | None = attrs.pop('request_id', None)
-      if request_id is None: raise ValueError('request_id must not be None.')
-      prompt, *_ = self.sanitize_parameters(prompt, **attrs)
-      if openllm_core.utils.DEBUG: logger.debug('Prompt:\n%s', prompt)
-
-      if stop_token_ids is None: stop_token_ids = []
-      stop_token_ids.append(self.tokenizer.eos_token_id)
-      stop_: set[str] = set()
-      if isinstance(stop, str) and stop != '': stop_.add(stop)
-      elif isinstance(stop, list) and stop != []: stop_.update(stop)
-      for tid in stop_token_ids:
-        if tid: stop_.add(self.tokenizer.decode(tid))
-
-      if temperature <= 1e-5: top_p = 1.0
-      config = self.config.model_construct_env(stop=list(stop_), top_p=top_p, **attrs)
-      sampling_params = config.to_sampling_config()
-
-      final_output = None
-      async for request_output in t.cast('vllm.AsyncLLMEngine', self.model).generate(prompt=prompt, sampling_params=sampling_params, request_id=request_id):
-        final_output = request_output
-      if final_output is None: raise ValueError("'output' should not be None")
-      # prompt = final_output.prompt
-      # if echo: text_outputs = [prompt + output.text for output in final_output.outputs]
-      # else: text_outputs = [output.text for output in final_output.outputs]
-      yield final_output
-
-    @bentoml.Runnable.method(**method_signature(generate_iterator_sig))
-    async def vllm_generate_iterator(__self: _Runnable, prompt: str, **attrs: t.Any) -> t.AsyncGenerator[str, None]:
-      # TODO: PEFT support
-      attrs.pop('adapter_name', None)
-
-      # pre = 0
-      # echo = attrs.pop('echo', False)
-      request_id: str | None = attrs.pop('request_id', None)
-      if request_id is None: raise ValueError('request_id must not be None.')
-
-      stop: str | t.Iterable[str] | None = attrs.pop('stop', None)
-      temperature = attrs.pop('temperature', self.config['temperature'])
-      top_p = attrs.pop('top_p', self.config['top_p'])
-      prompt, *_ = self.sanitize_parameters(prompt, **attrs)
-      if openllm_core.utils.DEBUG: logger.debug('Prompt:\n%s', repr(prompt))
-
-      stop_token_ids: list[int] | None = attrs.pop('stop_token_ids', None)
-      if stop_token_ids is None: stop_token_ids = []
-      stop_token_ids.append(self.tokenizer.eos_token_id)
-      stop_: set[str] = set()
-      if isinstance(stop, str) and stop != '': stop_.add(stop)
-      elif isinstance(stop, list) and stop != []: stop_.update(stop)
-      for tid in stop_token_ids:
-        if tid: stop_.add(self.tokenizer.decode(tid))
-
-      if temperature <= 1e-5: top_p = 1.0
-      config = self.config.model_construct_env(stop=list(stop_), temperature=temperature, top_p=top_p, **attrs)
-      async for request_output in t.cast('vllm.AsyncLLMEngine', self.model).generate(prompt=prompt, sampling_params=config.to_sampling_config(), request_id=request_id):
-        yield request_output
-      #   if echo: text_outputs = [prompt + output.text for output in request_output.outputs]
-      #   else: text_outputs = [output.text for output in request_output.outputs]
-      #   output_text = text_outputs[0]
-      #   output_text = output_text.strip().split(' ')
-      #   now = len(output_text) - 1
-      #   if now > pre:
-      #     yield ' '.join(output_text[pre:now]) + ' '
-      #     pre = now
-      # yield ' '.join(output_text[pre:]) + ' '
-
-  return types.new_class(self.__class__.__name__ + 'Runnable', (_Runnable,), {}, lambda ns: ns.update({
-      'SUPPORTED_RESOURCES': ('nvidia.com/gpu', 'amd.com/gpu', 'cpu'),
-      '__module__': self.__module__,
-      '__doc__': self.config['env'].start_docstring
-  }))
-
-def llm_runner_class(self: LLM[M, T]) -> type[LLMRunner[M, T]]:
-  def _wrapped_generate_run(__self: LLMRunner[M, T], prompt: str, **kwargs: t.Any) -> t.Any:
-    '''Wrapper for runner.generate.run() to handle the prompt and postprocessing.
-
-    This will be used for LangChain API.
-
-    Usage:
-
-    ```python
-    runner = openllm.Runner("dolly-v2", init_local=True)
-    runner("What is the meaning of life?")
-    ```
-    '''
-    prompt, generate_kwargs, postprocess_kwargs = self.sanitize_parameters(prompt, **kwargs)
-    return self.postprocess_generate(prompt, __self.generate.run(prompt, **generate_kwargs), **postprocess_kwargs)
-
-  def _wrapped_repr_keys(_: LLMRunner[M, T]) -> set[str]:
-    return {'config', 'llm_type', 'runner_methods', 'backend', 'llm_tag'}
-
-  def _wrapped_repr_args(__self: LLMRunner[M, T]) -> ReprArgs:
-    yield 'runner_methods', {method.name: {'batchable': method.config.batchable, 'batch_dim': method.config.batch_dim if method.config.batchable else None} for method in __self.runner_methods}
-    yield 'config', self.config.model_dump(flatten=True)
-    yield 'llm_type', __self.llm_type
-    yield 'backend', self.__llm_backend__
-    yield 'llm_tag', self.tag
 
   if self._prompt_template: prompt_template = self._prompt_template.to_string()
   elif hasattr(self.config, 'default_prompt_template'): prompt_template = self.config.default_prompt_template
@@ -782,6 +566,16 @@ def llm_runner_class(self: LLM[M, T]) -> type[LLMRunner[M, T]]:
   elif hasattr(self.config, 'default_system_message'): system_message = self.config.default_system_message
   else: system_message = None
 
+  def _wrapped_repr_keys(_: LLMRunner[M, T]) -> set[str]:
+    return {'config', 'llm_type', 'runner_methods', 'backend', 'llm_tag'}
+
+  def _wrapped_repr_args(_: LLMRunner[M, T]) -> ReprArgs:
+    yield 'runner_methods', {method.name: {'batchable': method.config.batchable, 'batch_dim': method.config.batch_dim if method.config.batchable else None} for method in _.runner_methods}
+    yield 'config', self.config.model_dump(flatten=True)
+    yield 'llm_type', _.llm_type
+    yield 'backend', backend
+    yield 'llm_tag', self.tag
+
   return types.new_class(self.__class__.__name__ + 'Runner', (bentoml.Runner,),
                          exec_body=lambda ns: ns.update({
                              'llm_type': self.llm_type,
@@ -789,17 +583,218 @@ def llm_runner_class(self: LLM[M, T]) -> type[LLMRunner[M, T]]:
                              'llm_tag': self.tag,
                              'llm': self,
                              'config': self.config,
-                             'backend': self.__llm_backend__,
+                             'backend': backend,
                              'download_model': self.save_pretrained,
-                             '__call__': _wrapped_generate_run,
                              '__module__': self.__module__,
                              '__doc__': self.config['env'].start_docstring,
                              '__repr__': ReprMixin.__repr__,
                              '__repr_keys__': property(_wrapped_repr_keys),
                              '__repr_args__': _wrapped_repr_args,
-                             'has_adapters': self._adapters_mapping is not None,
+                             'has_adapters': self.adapters_mapping is not None,
                              'prompt_template': prompt_template,
                              'system_message': system_message,
-                         }))
+                         }))(OpenLLMRunnable,
+                             name=self.runner_name,
+                             embedded=False,
+                             models=models,
+                             max_batch_size=max_batch_size,
+                             max_latency_ms=max_latency_ms,
+                             scheduling_strategy=scheduling_strategy,
+                             runnable_init_params=dict(llm=self),
+                             method_configs=converter.unstructure({
+                                 'generate': ModelSignature.from_dict(ModelSignatureDict(batchable=False)),
+                                 'generate_iterator': ModelSignature.from_dict(ModelSignatureDict(batchable=False))
+                             }))
 
-__all__ = ['LLMRunner', 'LLMRunnable', 'Runner', 'LLM', 'llm_runner_class', 'llm_runnable_class']
+# def llm_runnable_class(self: LLM[M, T], generate_sig: ModelSignature, generate_iterator_sig: ModelSignature) -> type[LLMRunnable[M, T]]:
+#   class _Runnable(bentoml.Runnable):
+#     SUPPORTED_RESOURCES = ('nvidia.com/gpu', 'amd.com/gpu', 'cpu')
+#     SUPPORTS_CPU_MULTI_THREADING = True
+#     backend = self.__llm_backend__
+#
+#     def __init__(__self: _Runnable):
+#       # NOTE: The side effect of this line is that it will load the
+#       # imported model during runner startup. So don't remove it!!
+#       if not self.model: raise RuntimeError('Failed to load the model correctly (See traceback above)')
+#       if self.adapters_mapping is not None:
+#         logger.info('Applying LoRA to %s...', self.runner_name)
+#         self.apply_adapter(inference_mode=True, load_adapters='all')
+#
+#     def set_adapter(__self: _Runnable, adapter_name: str) -> None:
+#       if self.__llm_adapter_map__ is None: raise ValueError('No adapters available for current running server.')
+#       elif not isinstance(self.model, peft.PeftModel): raise RuntimeError('Model is not a PeftModel')
+#       if adapter_name != 'default': self.model.set_adapter(adapter_name)
+#       logger.info('Successfully apply LoRA layer %s', adapter_name)
+#
+#     @bentoml.Runnable.method(**method_signature(generate_sig))  # type: ignore
+#     def __call__(__self: _Runnable, prompt: str, **attrs: t.Any) -> list[t.Any]:
+#       prompt, *_ = self.sanitize_parameters(prompt, **attrs)
+#       adapter_name = attrs.pop('adapter_name', None)
+#       if adapter_name is not None: __self.set_adapter(adapter_name)
+#       return self.generate(prompt, **attrs)
+#
+#     @bentoml.Runnable.method(**method_signature(generate_sig))  # type: ignore
+#     def generate(__self: _Runnable, prompt: str, **attrs: t.Any) -> list[t.Any]:
+#       prompt, *_ = self.sanitize_parameters(prompt, **attrs)
+#       adapter_name = attrs.pop('adapter_name', None)
+#       if adapter_name is not None: __self.set_adapter(adapter_name)
+#       return self.generate(prompt, **attrs)
+#
+#     @bentoml.Runnable.method(**method_signature(generate_sig))  # type: ignore
+#     def generate_one(__self: _Runnable, prompt: str, stop: list[str], **attrs: t.Any) -> t.Sequence[dict[t.Literal['generated_text'], str]]:
+#       prompt, *_ = self.sanitize_parameters(prompt, **attrs)
+#       adapter_name = attrs.pop('adapter_name', None)
+#       if adapter_name is not None: __self.set_adapter(adapter_name)
+#       return self.generate_one(prompt, stop, **attrs)
+#
+#     @bentoml.Runnable.method(**method_signature(generate_iterator_sig))
+#     def generate_iterator(__self: _Runnable, prompt: str, **attrs: t.Any) -> t.Generator[str, None, str]:
+#       prompt, *_ = self.sanitize_parameters(prompt, **attrs)
+#       adapter_name = attrs.pop('adapter_name', None)
+#       if adapter_name is not None: __self.set_adapter(adapter_name)
+#       pre = 0
+#       for outputs in self.generate_iterator(prompt, request_id=openllm_core.utils.gen_random_uuid(), **attrs):
+#         output_text = outputs['text'].strip().split(' ')
+#         now = len(output_text) - 1
+#         if now > pre:
+#           yield ' '.join(output_text[pre:now]) + ' '
+#           pre = now
+#       yield ' '.join(output_text[pre:]) + ' '
+#       return ' '.join(output_text) + ' '
+#
+#     @bentoml.Runnable.method(**method_signature(generate_sig))  # type: ignore
+#     async def vllm_generate(__self: _Runnable, prompt: str, **attrs: t.Any) -> t.AsyncGenerator[list[t.Any], None]:
+#       # TODO: PEFT support
+#       attrs.pop('adapter_name', None)
+#
+#       stop: str | t.Iterable[str] | None = attrs.pop('stop', None)
+#       # echo = attrs.pop('echo', False)
+#       stop_token_ids: list[int] | None = attrs.pop('stop_token_ids', None)
+#       temperature = attrs.pop('temperature', self.config['temperature'])
+#       top_p = attrs.pop('top_p', self.config['top_p'])
+#       request_id: str | None = attrs.pop('request_id', None)
+#       if request_id is None: raise ValueError('request_id must not be None.')
+#       prompt, *_ = self.sanitize_parameters(prompt, **attrs)
+#       if openllm_core.utils.DEBUG: logger.debug('Prompt:\n%s', prompt)
+#
+#       if stop_token_ids is None: stop_token_ids = []
+#       stop_token_ids.append(self.tokenizer.eos_token_id)
+#       stop_: set[str] = set()
+#       if isinstance(stop, str) and stop != '': stop_.add(stop)
+#       elif isinstance(stop, list) and stop != []: stop_.update(stop)
+#       for tid in stop_token_ids:
+#         if tid: stop_.add(self.tokenizer.decode(tid))
+#
+#       if temperature <= 1e-5: top_p = 1.0
+#       config = self.config.model_construct_env(stop=list(stop_), top_p=top_p, **attrs)
+#       sampling_params = config.to_sampling_config()
+#
+#       final_output = None
+#       async for request_output in t.cast('vllm.AsyncLLMEngine', self.model).generate(prompt=prompt, sampling_params=sampling_params, request_id=request_id):
+#         final_output = request_output
+#       if final_output is None: raise ValueError("'output' should not be None")
+#       # prompt = final_output.prompt
+#       # if echo: text_outputs = [prompt + output.text for output in final_output.outputs]
+#       # else: text_outputs = [output.text for output in final_output.outputs]
+#       yield final_output
+#
+#     @bentoml.Runnable.method(**method_signature(generate_iterator_sig))
+#     async def vllm_generate_iterator(__self: _Runnable, prompt: str, **attrs: t.Any) -> t.AsyncGenerator[str, None]:
+#       # TODO: PEFT support
+#       attrs.pop('adapter_name', None)
+#
+#       # pre = 0
+#       # echo = attrs.pop('echo', False)
+#       request_id: str | None = attrs.pop('request_id', None)
+#       if request_id is None: raise ValueError('request_id must not be None.')
+#
+#       stop: str | t.Iterable[str] | None = attrs.pop('stop', None)
+#       temperature = attrs.pop('temperature', self.config['temperature'])
+#       top_p = attrs.pop('top_p', self.config['top_p'])
+#       prompt, *_ = self.sanitize_parameters(prompt, **attrs)
+#       if openllm_core.utils.DEBUG: logger.debug('Prompt:\n%s', repr(prompt))
+#
+#       stop_token_ids: list[int] | None = attrs.pop('stop_token_ids', None)
+#       if stop_token_ids is None: stop_token_ids = []
+#       stop_token_ids.append(self.tokenizer.eos_token_id)
+#       stop_: set[str] = set()
+#       if isinstance(stop, str) and stop != '': stop_.add(stop)
+#       elif isinstance(stop, list) and stop != []: stop_.update(stop)
+#       for tid in stop_token_ids:
+#         if tid: stop_.add(self.tokenizer.decode(tid))
+#
+#       if temperature <= 1e-5: top_p = 1.0
+#       config = self.config.model_construct_env(stop=list(stop_), temperature=temperature, top_p=top_p, **attrs)
+#       async for request_output in t.cast('vllm.AsyncLLMEngine', self.model).generate(prompt=prompt, sampling_params=config.to_sampling_config(), request_id=request_id):
+#         # yield request_output
+#         if echo: text_outputs = [prompt + output.text for output in request_output.outputs]
+#         else: text_outputs = [output.text for output in request_output.outputs]
+#         output_text = text_outputs[0]
+#         output_text = output_text.strip().split(' ')
+#         now = len(output_text) - 1
+#         if now > pre:
+#           yield ' '.join(output_text[pre:now]) + ' '
+#           pre = now
+#       yield ' '.join(output_text[pre:]) + ' '
+#
+#   return types.new_class(self.__class__.__name__ + 'Runnable', (_Runnable,), {}, lambda ns: ns.update({
+#       'SUPPORTED_RESOURCES': ('nvidia.com/gpu', 'amd.com/gpu', 'cpu'),
+#       '__module__': self.__module__,
+#       '__doc__': self.config['env'].start_docstring
+#   }))
+#
+# def llm_runner_class(self: LLM[M, T]) -> type[LLMRunner[M, T]]:
+#   def _wrapped_generate_run(__self: LLMRunner[M, T], prompt: str, **kwargs: t.Any) -> t.Any:
+#     '''Wrapper for runner.generate.run() to handle the prompt and postprocessing.
+#
+#     This will be used for LangChain API.
+#
+#     Usage:
+#
+#     ```python
+#     runner = openllm.Runner("dolly-v2", init_local=True)
+#     runner("What is the meaning of life?")
+#     ```
+#     '''
+#     prompt, generate_kwargs, postprocess_kwargs = self.sanitize_parameters(prompt, **kwargs)
+#     return self.postprocess_generate(prompt, __self.generate.run(prompt, **generate_kwargs), **postprocess_kwargs)
+#
+#   def _wrapped_repr_keys(_: LLMRunner[M, T]) -> set[str]:
+#     return {'config', 'llm_type', 'runner_methods', 'backend', 'llm_tag'}
+#
+#   def _wrapped_repr_args(__self: LLMRunner[M, T]) -> ReprArgs:
+#     yield 'runner_methods', {method.name: {'batchable': method.config.batchable, 'batch_dim': method.config.batch_dim if method.config.batchable else None} for method in __self.runner_methods}
+#     yield 'config', self.config.model_dump(flatten=True)
+#     yield 'llm_type', __self.llm_type
+#     yield 'backend', self.__llm_backend__
+#     yield 'llm_tag', self.tag
+#
+#   if self._prompt_template: prompt_template = self._prompt_template.to_string()
+#   elif hasattr(self.config, 'default_prompt_template'): prompt_template = self.config.default_prompt_template
+#   else: prompt_template = None
+#
+#   if self._system_message: system_message = self._system_message
+#   elif hasattr(self.config, 'default_system_message'): system_message = self.config.default_system_message
+#   else: system_message = None
+#
+#   return types.new_class(self.__class__.__name__ + 'Runner', (bentoml.Runner,),
+#                          exec_body=lambda ns: ns.update({
+#                              'llm_type': self.llm_type,
+#                              'identifying_params': self.identifying_params,
+#                              'llm_tag': self.tag,
+#                              'llm': self,
+#                              'config': self.config,
+#                              'backend': self.__llm_backend__,
+#                              'download_model': self.save_pretrained,
+#                              '__call__': _wrapped_generate_run,
+#                              '__module__': self.__module__,
+#                              '__doc__': self.config['env'].start_docstring,
+#                              '__repr__': ReprMixin.__repr__,
+#                              '__repr_keys__': property(_wrapped_repr_keys),
+#                              '__repr_args__': _wrapped_repr_args,
+#                              'has_adapters': self._adapter_map is not None,
+#                              'prompt_template': prompt_template,
+#                              'system_message': system_message,
+#                          }))
+
+__all__ = ['LLMRunner', 'LLMRunnable', 'Runner', 'LLM']

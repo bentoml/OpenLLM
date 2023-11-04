@@ -19,10 +19,6 @@ import uuid
 
 from pathlib import Path
 
-from circus.exc import ConflictError
-
-import openllm_core
-
 from . import pkg
 from .import_utils import ENV_VARS_TRUE_VALUES as ENV_VARS_TRUE_VALUES
 from .lazy import LazyLoader as LazyLoader
@@ -53,6 +49,12 @@ else:
   _WithArgsTypes: t.Any = (t._GenericAlias, types.GenericAlias, types.UnionType)  # type: ignore
 
 DEV_DEBUG_VAR = 'OPENLLMDEVDEBUG'
+
+def is_async_callable(obj: t.Any) -> t.TypeGuard[t.Callable[..., t.Awaitable[t.Any]]]:
+  # Borrowed from starlette._utils
+  while isinstance(obj, functools.partial):
+    obj = obj.func
+  return asyncio.iscoroutinefunction(obj) or (callable(obj) and asyncio.iscoroutinefunction(obj.__call__))
 
 def resolve_user_filepath(filepath: str, ctx: str | None) -> str:
   '''Resolve the abspath of a filepath provided by user. User provided file path can:
@@ -196,9 +198,12 @@ def set_quiet_mode(enabled: bool) -> None:
 
 class ExceptionFilter(logging.Filter):
   def __init__(self, exclude_exceptions: list[type[Exception]] | None = None, **kwargs: t.Any):
-    '''A filter of all exception.'''
-    if exclude_exceptions is None: exclude_exceptions = [ConflictError]
-    if ConflictError not in exclude_exceptions: exclude_exceptions.append(ConflictError)
+    if exclude_exceptions is None: exclude_exceptions = []
+    try:
+      from circus.exc import ConflictError
+      if ConflictError not in exclude_exceptions: exclude_exceptions.append(ConflictError)
+    except ImportError:
+      pass
     super(ExceptionFilter, self).__init__(**kwargs)
     self.EXCLUDE_EXCEPTIONS = exclude_exceptions
 
@@ -353,19 +358,13 @@ def in_docker() -> bool:
 
 T, K = t.TypeVar('T'), t.TypeVar('K')
 
+# yapf: disable
 @overload
-def first_not_none(*args: T | None, default: T) -> T:
-  ...
-
+def first_not_none(*args: T | None, default: T) -> T: ...
 @overload
-def first_not_none(*args: T | None) -> T | None:
-  ...
-
-def first_not_none(*args: T | None, default: None | T = None) -> T | None:
-  '''
-    Returns the first argument that is not None.
-    '''
-  return next((arg for arg in args if arg is not None), default)
+def first_not_none(*args: T | None) -> T | None: ...
+def first_not_none(*args: T | None, default: None | T = None) -> T | None: return next((arg for arg in args if arg is not None), default)
+# yapf: enable
 
 def resolve_filepath(path: str, ctx: str | None = None) -> str:
   '''Resolve a file path to an absolute path, expand user and environment variables.'''
@@ -378,6 +377,8 @@ def validate_is_path(maybe_path: str) -> bool:
   return os.path.exists(os.path.dirname(resolve_filepath(maybe_path)))
 
 def generate_context(framework_name: str) -> ModelContext:
+  import openllm_core
+
   from bentoml._internal.models.model import ModelContext
   framework_versions = {'transformers': pkg.get_pkg_version('transformers')}
   if openllm_core.utils.is_torch_available(): framework_versions['torch'] = pkg.get_pkg_version('torch')

@@ -46,37 +46,34 @@ class vLLMRunnable(bentoml.Runnable):
       raise OpenLLMException(f'Failed to initialise vLLMEngine due to the following error:\n{err}') from err
 
   @bentoml.Runnable.method(batchable=False)
-  async def generate_iterator(self, prompt_token_ids: list[int], request_id: str, stop: str | t.Iterable[str] | None = None, **attrs: t.Any) -> t.AsyncGenerator[GenerationOutput, None]:
+  async def generate(self, prompt_token_ids: list[int], request_id: str, stop: str | t.Iterable[str] | None = None, **attrs: t.Any) -> t.AsyncGenerator[str, None]:
     stop_: set[str] = set()
     if isinstance(stop, str) and stop != '': stop_.add(stop)
     elif isinstance(stop, t.Iterable): stop_.update(stop)
 
     temperature = attrs.pop('temperature', self.config['temperature'])
     top_p = attrs.pop('top_p', self.config['top_p'])
-
     if temperature <= 1e-5: top_p = 1.0
     sampling_params = self.config.model_construct_env(stop=list(stop_), temperature=temperature, top_p=top_p, **attrs).to_sampling_config()
-    # async for request_output in self.model.generate(None, sampling_params, request_id, prompt_token_ids): yield f"event: message\ndata: {unmarshal_vllm_outputs(request_output)}\n\n"
-    # yield "event: end\n\n"
-    async for request_output in self.model.generate(None, sampling_params, request_id, prompt_token_ids):
-      yield GenerationOutput.from_vllm_outputs(request_output)
 
-  @bentoml.Runnable.method(batchable=False)
-  async def generate(self, prompt_token_ids: list[int], request_id: str, stop: str | t.Iterable[str] | None = None, **attrs: t.Any) -> t.AsyncGenerator[GenerationOutput, None]:
-    stop_: set[str] = set()
-    if isinstance(stop, str) and stop != '': stop_.add(stop)
-    elif isinstance(stop, t.Iterable): stop_.update(stop)
-
-    temperature = attrs.pop('temperature', self.config['temperature'])
-    top_p = attrs.pop('top_p', self.config['top_p'])
-
-    if temperature <= 1e-5: top_p = 1.0
-    sampling_params = self.config.model_construct_env(stop=list(stop_), temperature=temperature, top_p=top_p, **attrs).to_sampling_config()
-    # async for request_output in self.model.generate(None, sampling_params, request_id, prompt_token_ids): yield f"event: message\ndata: {unmarshal_vllm_outputs(request_output)}\n\n"
-    # yield "event: end\n\n"
     async for request_output in self.model.generate(None, sampling_params, request_id, prompt_token_ids):
       pass
-    yield GenerationOutput.from_vllm_outputs(request_output)
+    yield f'event: message\ndata: {GenerationOutput.from_vllm(request_output).unmarshal_json()}\n\nevent: end\n\n'
+
+  @bentoml.Runnable.method(batchable=False)
+  async def generate_iterator(self, prompt_token_ids: list[int], request_id: str, stop: str | t.Iterable[str] | None = None, **attrs: t.Any) -> t.AsyncGenerator[str, None]:
+    stop_: set[str] = set()
+    if isinstance(stop, str) and stop != '': stop_.add(stop)
+    elif isinstance(stop, t.Iterable): stop_.update(stop)
+
+    temperature = attrs.pop('temperature', self.config['temperature'])
+    top_p = attrs.pop('top_p', self.config['top_p'])
+    if temperature <= 1e-5: top_p = 1.0
+    sampling_params = self.config.model_construct_env(stop=list(stop_), temperature=temperature, top_p=top_p, **attrs).to_sampling_config()
+
+    async for request_output in self.model.generate(None, sampling_params, request_id, prompt_token_ids):
+      yield f'event: message\ndata: {GenerationOutput.from_vllm(request_output).unmarshal_json()}\n\n'
+    yield 'event: end\n\n'
 
 class PyTorchRunnable(bentoml.Runnable):
   SUPPORTED_RESOURCES = ('nvidia.com/gpu', 'amd.com/gpu', 'cpu')
@@ -87,16 +84,23 @@ class PyTorchRunnable(bentoml.Runnable):
     self.tokenizer = llm.tokenizer
     self.config = llm.config
     self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    # TODO: add back apply custom fine tune layers
+    # if llm.adapters_mapping is not None:
+    #   logger.info('Applying LoRA to %s...', llm.runner_name)
+    #   self.apply_adapter(inference_mode=True, load_adapters='all')
 
   @bentoml.Runnable.method(batchable=False)
-  async def generate(self, prompt_token_ids: list[int], request_id: str, stop: str | t.Iterable[str] | None = None, **attrs: t.Any) -> t.AsyncGenerator[GenerationOutput, None]:
-    async for generation_output in self.generate_iterator(prompt_token_ids, request_id, stop, **attrs):
+  async def generate(self, prompt_token_ids: list[int], request_id: str, stop: str | t.Iterable[str] | None = None, **attrs: t.Any) -> t.AsyncGenerator[str, None]:
+    async for generation_output in self._generate_stream(prompt_token_ids, request_id, stop=stop, **attrs):
       pass
-    yield generation_output
+    yield f'event: message\ndata: {generation_output.unmarshal_json()}\n\nevent: end\n\n'
 
   @bentoml.Runnable.method(batchable=False)
-  async def generate_iterator(self, prompt_token_ids: list[int], request_id: str, stop: str | t.Iterable[str] | None = None, **attrs: t.Any) -> t.AsyncGenerator[GenerationOutput, None]:
+  async def generate_iterator(self, prompt_token_ids: list[int], request_id: str, stop: str | t.Iterable[str] | None = None, **attrs: t.Any) -> t.AsyncGenerator[str, None]:
+    async for generation_output in self._generate_stream(prompt_token_ids, request_id, stop=stop, **attrs):
+      yield f'event: message\ndata: {generation_output.unmarshal_json()}\n\n'
+    yield 'event: end\n\n'
+
+  async def _generate_stream(self, prompt_token_ids: list[int], request_id: str, stop: str | t.Iterable[str] | None = None, **attrs: t.Any) -> t.AsyncGenerator[GenerationOutput, None]:
     from ._generation import is_partial_stop
     from ._generation import prepare_logits_processor
 

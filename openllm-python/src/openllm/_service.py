@@ -33,36 +33,20 @@ model = svars.model
 model_id = svars.model_id
 adapter_map = svars.adapter_map
 llm_config = openllm.AutoConfig.for_model(model)
-llm = openllm.LLM(model_id, llm_config=llm_config, adapter_map=orjson.loads(adapter_map))
+llm = openllm.LLM[t.Any, t.Any](model_id, llm_config=llm_config, adapter_map=orjson.loads(adapter_map))
 svc = bentoml.Service(name=f"llm-{llm_config['start_name']}-service", runners=[llm.runner])
 
 _JsonInput = bentoml.io.JSON.from_sample({'prompt': '', 'llm_config': llm_config.model_dump(flatten=True)})
 
-@svc.api(route='/v1/generate', input=_JsonInput, output=bentoml.io.JSON.from_sample({'responses': [], 'configuration': llm_config.model_dump(flatten=True)}))
-async def generate_v1(input_dict: dict[str, t.Any]) -> openllm.GenerateOutput:
-  echo = input_dict.pop('echo', False)
+@svc.api(route='/v1/generate', input=_JsonInput, output=bentoml.io.JSON.from_sample(openllm.GenerationOutput.examples().unmarshal()))
+async def generate_v1(input_dict: dict[str, t.Any]) -> openllm.GenerationOutput:
   qa_inputs = openllm.GenerateInput.from_llm_config(llm_config)(**input_dict)
-  config = qa_inputs.llm_config.model_dump()
-  if runner.backend == 'vllm':
-    async for output in runner.vllm_generate.async_stream(qa_inputs.prompt, adapter_name=qa_inputs.adapter_name, echo=echo, request_id=openllm_core.utils.gen_random_uuid(), **config):
-      responses = output
-    if responses is None: raise ValueError("'responses' should not be None.")
-  else:
-    responses = await runner.generate.async_run(qa_inputs.prompt, adapter_name=qa_inputs.adapter_name, **config)
-  return openllm.GenerateOutput(responses=responses, configuration=config)
+  return await llm.generate(qa_inputs.prompt, **qa_inputs.llm_config.model_dump())
 
 @svc.api(route='/v1/generate_stream', input=_JsonInput, output=bentoml.io.Text(content_type='text/event-stream'))
 async def generate_stream_v1(input_dict: dict[str, t.Any]) -> t.AsyncGenerator[str, None]:
-  echo = input_dict.pop('echo', False)
   qa_inputs = openllm.GenerateInput.from_llm_config(llm_config)(**input_dict)
-  if runner.backend == 'vllm':
-    return runner.vllm_generate_iterator.async_stream(qa_inputs.prompt,
-                                                      adapter_name=qa_inputs.adapter_name,
-                                                      echo=echo,
-                                                      request_id=openllm_core.utils.gen_random_uuid(),
-                                                      **qa_inputs.llm_config.model_dump())
-  else:
-    return runner.generate_iterator.async_stream(qa_inputs.prompt, adapter_name=qa_inputs.adapter_name, echo=echo, **qa_inputs.llm_config.model_dump())
+  return await llm.generate_iterator(qa_inputs.prompt, return_type='text', **qa_inputs.llm_config.model_dump())
 
 @svc.api(route='v1/completions',
          input=bentoml.io.JSON.from_sample(openllm.utils.converter.unstructure(openllm.protocol.openai.CompletionRequest(prompt='What is 1+1?', model=runner.llm_type))),
@@ -187,21 +171,21 @@ svc.mount_asgi_app(openai_app, path='/v1')
 @svc.api(route='/v1/metadata',
          input=bentoml.io.Text(),
          output=bentoml.io.JSON.from_sample({
-             'model_id': runner.llm.model_id,
+             'model_id': llm.model_id,
              'timeout': 3600,
              'model_name': llm_config['model_name'],
-             'backend': runner.backend,
+             'backend': llm.runner.backend,
              'configuration': llm_config.model_dump(flatten=True),
-             'prompt_template': runner.prompt_template,
-             'system_message': runner.system_message,
+             'prompt_template': llm.runner.prompt_template,
+             'system_message': llm.runner.system_message,
          }))
 def metadata_v1(_: str) -> openllm.MetadataOutput:
   return openllm.MetadataOutput(timeout=llm_config['timeout'],
                                 model_name=llm_config['model_name'],
                                 backend=llm_config['env']['backend_value'],
-                                model_id=runner.llm.model_id,
+                                model_id=llm.model_id,
                                 configuration=llm_config.model_dump_json().decode(),
-                                prompt_template=runner.prompt_template,
-                                system_message=runner.system_message)
+                                prompt_template=llm.runner.prompt_template,
+                                system_message=llm.runner.system_message)
 
-openai.mount_to_svc(hf.mount_to_svc(svc, runner), runner)
+openai.mount_to_svc(hf.mount_to_svc(svc, llm.runner), llm.runner)

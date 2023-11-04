@@ -64,7 +64,7 @@ class OPTConfig(openllm_core.LLMConfig):
   class GenerationConfig:
     top_k: int = 15
     temperature: float = 0.75
-    max_new_tokens: int = 1024
+    max_new_tokens: int = 256
     num_return_sequences: int = 1
 
   def sanitize_parameters(self,
