@@ -1,8 +1,6 @@
 # mypy: disable-error-code="name-defined,attr-defined"
 from __future__ import annotations
 import asyncio
-import functools
-import inspect
 import logging
 import os
 import types
@@ -26,7 +24,6 @@ from openllm_core._strategies import CascadingResourceStrategy
 from openllm_core._typing_compat import AdaptersMapping
 from openllm_core._typing_compat import AdaptersTuple
 from openllm_core._typing_compat import AdapterType
-from openllm_core._typing_compat import Concatenate
 from openllm_core._typing_compat import DictStrAny
 from openllm_core._typing_compat import LiteralBackend
 from openllm_core._typing_compat import LiteralQuantise
@@ -47,7 +44,6 @@ from openllm_core.utils import converter
 from openllm_core.utils import first_not_none
 from openllm_core.utils import flatten_attrs
 from openllm_core.utils import generate_hash_from_file
-from openllm_core.utils import is_async_callable
 from openllm_core.utils import is_peft_available
 from openllm_core.utils import is_torch_available
 from openllm_core.utils import is_vllm_available
@@ -118,21 +114,6 @@ _reserved_namespace = {'model', 'tokenizer', 'runner', 'import_kwargs'}
 _AdaptersTuple: type[AdaptersTuple] = codegen.make_attr_tuple_class('AdaptersTuple', ['adapter_id', 'name', 'config'])
 InferenceReturnType = t.Literal['text', 'object', 'sse']
 
-def inferece_wrapper(func: t.Callable[Concatenate[LLM[M, T], P], t.Any]) -> t.Callable[P, t.Any]:
-  _is_async_gen = inspect.isasyncgenfunction(func)
-  if not is_async_callable(func):
-    if _is_async_gen: pass
-    else: raise RuntimeError(f'assert_runner_is_ready can only be used on async function or async gen function, while {func} is not.')
-
-  @functools.wraps(func)
-  async def wrapped(self: LLM[M, T], *args: P.args, **kwargs: P.kwargs) -> t.Any:
-    if isinstance(self.runner._runner_handle, DummyRunnerHandle):
-      if os.getenv('BENTO_PATH') is not None: raise RuntimeError('Runner client failed to set up correctly.')
-      else: self.runner.init_local(quiet=True)
-    return await func(self, *args, **kwargs) if not _is_async_gen else func(self, *args, **kwargs)
-
-  return wrapped
-
 @attr.define(slots=True, repr=False, init=False)
 class LLM(t.Generic[M, T]):
   _model_id: str
@@ -180,7 +161,7 @@ class LLM(t.Generic[M, T]):
     low_cpu_mem_usage = attrs.pop('low_cpu_mem_usage', True)
     _local = False
     if validate_is_path(model_id): model_id, _local = resolve_filepath(model_id), True
-    if backend is None: backend = 'vllm' if is_vllm_available() else 'pt'
+    backend = openllm.utils.first_not_none(os.getenv('OPENLLM_BACKEND'), default='vllm' if openllm.utils.is_vllm_available() else 'pt')
 
     quantize = first_not_none(quantize, t.cast(t.Optional[LiteralQuantise], os.getenv('OPENLLM_QUANTIZE')), default=None)
     # quantization setup
@@ -294,13 +275,17 @@ class LLM(t.Generic[M, T]):
     if self.__llm_runner__ is None: self.__llm_runner__ = _RunnerFactory(self)
     return self.__llm_runner__
 
-  @inferece_wrapper
   async def generate(self,
                      prompt: str,
                      stop: str | t.Iterable[str] | None = None,
                      stop_token_ids: list[int] | None = None,
+                     request_id: str | None = None,
                      return_type: InferenceReturnType = 'object',
                      **attrs: t.Any) -> GenerationOutput:
+    if isinstance(self.runner._runner_handle, DummyRunnerHandle):
+      if os.getenv('BENTO_PATH') is not None: raise RuntimeError('Runner client failed to set up correctly.')
+      else: self.runner.init_local(quiet=True)
+
     prompt, *_ = self.sanitize_parameters(prompt, **attrs)
     config = self.config.model_construct_env(**attrs)
 
@@ -312,7 +297,8 @@ class LLM(t.Generic[M, T]):
     for tid in stop_token_ids:
       if tid: stop.add(self.tokenizer.decode(tid))
 
-    prompt_token_ids, request_id = self.tokenizer.encode(prompt), openllm_core.utils.gen_random_uuid()
+    prompt_token_ids = self.tokenizer.encode(prompt)
+    if request_id is None: request_id = openllm_core.utils.gen_random_uuid()
     async for out in self.runner.generate.async_stream(prompt_token_ids, request_id, stop=stop, **config.model_dump()):
       pass
 
@@ -323,13 +309,17 @@ class LLM(t.Generic[M, T]):
       elif return_type == 'text': return generated.outputs[0].text
       else: raise ValueError(f"'return_type' can only be one of ['object', 'text', 'sse'], while '{return_type}' is given.")
 
-  @inferece_wrapper
   async def generate_iterator(self,
                               prompt: str,
                               stop: str | t.Iterable[str] | None = None,
                               stop_token_ids: list[int] | None = None,
+                              request_id: str | None = None,
                               return_type: InferenceReturnType = 'object',
                               **attrs: t.Any) -> t.AsyncGenerator[GenerationOutput | str, None]:
+    if isinstance(self.runner._runner_handle, DummyRunnerHandle):
+      if os.getenv('BENTO_PATH') is not None: raise RuntimeError('Runner client failed to set up correctly.')
+      else: self.runner.init_local(quiet=True)
+
     prompt, *_ = self.sanitize_parameters(prompt, **attrs)
     config = self.config.model_construct_env(**attrs)
 
@@ -341,7 +331,8 @@ class LLM(t.Generic[M, T]):
     for tid in stop_token_ids:
       if tid: stop.add(self.tokenizer.decode(tid))
 
-    prompt_token_ids, request_id, pre = self.tokenizer.encode(prompt), openllm_core.utils.gen_random_uuid(), 0
+    prompt_token_ids, pre = self.tokenizer.encode(prompt), 0
+    if request_id is None: request_id = openllm_core.utils.gen_random_uuid()
     output_text = []
     async for out in self.runner.generate_iterator.async_stream(prompt_token_ids, request_id, stop=stop, **config.model_dump()):
       if return_type == 'sse': yield out
@@ -433,13 +424,6 @@ def _RunnerFactory(self: openllm.LLM[M, T],
   backend = t.cast(LiteralBackend, first_not_none(backend, os.environ.get('OPENLLM_BACKEND'), default=self.__llm_backend__))
 
   models = models if models is not None else []
-  # if os.environ.get('BENTO_PATH') is None:
-  #   # Hmm we should only add this if it is not in the container environment
-  #   # BentoML sets BENTO_PATH so we can use this as switch logic here.
-  #   try:
-  #     models.append(self.bentomodel)
-  #   except bentoml.exceptions.NotFound as err:
-  #     raise RuntimeError(f'Failed to locate {self.bentomodel}:{err}') from err
   try:
     models.append(self.bentomodel)
   except bentoml.exceptions.NotFound as err:
@@ -449,7 +433,6 @@ def _RunnerFactory(self: openllm.LLM[M, T],
     from ._runners import vLLMRunnable as OpenLLMRunnable
   else:
     from ._runners import PyTorchRunnable as OpenLLMRunnable
-
   if self._prompt_template: prompt_template = self._prompt_template.to_string()
   elif hasattr(self.config, 'default_prompt_template'): prompt_template = self.config.default_prompt_template
   else: prompt_template = None
@@ -501,196 +484,5 @@ def _RunnerFactory(self: openllm.LLM[M, T],
                                  'generate': ModelSignature.from_dict(ModelSignatureDict(batchable=False)),
                                  'generate_iterator': ModelSignature.from_dict(ModelSignatureDict(batchable=False))
                              }))
-
-# def llm_runnable_class(self: LLM[M, T], generate_sig: ModelSignature, generate_iterator_sig: ModelSignature) -> type[LLMRunnable[M, T]]:
-#   class _Runnable(bentoml.Runnable):
-#     SUPPORTED_RESOURCES = ('nvidia.com/gpu', 'amd.com/gpu', 'cpu')
-#     SUPPORTS_CPU_MULTI_THREADING = True
-#     backend = self.__llm_backend__
-#
-#     def __init__(__self: _Runnable):
-#       # NOTE: The side effect of this line is that it will load the
-#       # imported model during runner startup. So don't remove it!!
-#       if not self.model: raise RuntimeError('Failed to load the model correctly (See traceback above)')
-#       if self.adapters_mapping is not None:
-#         logger.info('Applying LoRA to %s...', self.runner_name)
-#         self.apply_adapter(inference_mode=True, load_adapters='all')
-#
-#     def set_adapter(__self: _Runnable, adapter_name: str) -> None:
-#       if self.__llm_adapter_map__ is None: raise ValueError('No adapters available for current running server.')
-#       elif not isinstance(self.model, peft.PeftModel): raise RuntimeError('Model is not a PeftModel')
-#       if adapter_name != 'default': self.model.set_adapter(adapter_name)
-#       logger.info('Successfully apply LoRA layer %s', adapter_name)
-#
-#     @bentoml.Runnable.method(**method_signature(generate_sig))  # type: ignore
-#     def __call__(__self: _Runnable, prompt: str, **attrs: t.Any) -> list[t.Any]:
-#       prompt, *_ = self.sanitize_parameters(prompt, **attrs)
-#       adapter_name = attrs.pop('adapter_name', None)
-#       if adapter_name is not None: __self.set_adapter(adapter_name)
-#       return self.generate(prompt, **attrs)
-#
-#     @bentoml.Runnable.method(**method_signature(generate_sig))  # type: ignore
-#     def generate(__self: _Runnable, prompt: str, **attrs: t.Any) -> list[t.Any]:
-#       prompt, *_ = self.sanitize_parameters(prompt, **attrs)
-#       adapter_name = attrs.pop('adapter_name', None)
-#       if adapter_name is not None: __self.set_adapter(adapter_name)
-#       return self.generate(prompt, **attrs)
-#
-#     @bentoml.Runnable.method(**method_signature(generate_sig))  # type: ignore
-#     def generate_one(__self: _Runnable, prompt: str, stop: list[str], **attrs: t.Any) -> t.Sequence[dict[t.Literal['generated_text'], str]]:
-#       prompt, *_ = self.sanitize_parameters(prompt, **attrs)
-#       adapter_name = attrs.pop('adapter_name', None)
-#       if adapter_name is not None: __self.set_adapter(adapter_name)
-#       return self.generate_one(prompt, stop, **attrs)
-#
-#     @bentoml.Runnable.method(**method_signature(generate_iterator_sig))
-#     def generate_iterator(__self: _Runnable, prompt: str, **attrs: t.Any) -> t.Generator[str, None, str]:
-#       prompt, *_ = self.sanitize_parameters(prompt, **attrs)
-#       adapter_name = attrs.pop('adapter_name', None)
-#       if adapter_name is not None: __self.set_adapter(adapter_name)
-#       pre = 0
-#       for outputs in self.generate_iterator(prompt, request_id=openllm_core.utils.gen_random_uuid(), **attrs):
-#         output_text = outputs['text'].strip().split(' ')
-#         now = len(output_text) - 1
-#         if now > pre:
-#           yield ' '.join(output_text[pre:now]) + ' '
-#           pre = now
-#       yield ' '.join(output_text[pre:]) + ' '
-#       return ' '.join(output_text) + ' '
-#
-#     @bentoml.Runnable.method(**method_signature(generate_sig))  # type: ignore
-#     async def vllm_generate(__self: _Runnable, prompt: str, **attrs: t.Any) -> t.AsyncGenerator[list[t.Any], None]:
-#       # TODO: PEFT support
-#       attrs.pop('adapter_name', None)
-#
-#       stop: str | t.Iterable[str] | None = attrs.pop('stop', None)
-#       # echo = attrs.pop('echo', False)
-#       stop_token_ids: list[int] | None = attrs.pop('stop_token_ids', None)
-#       temperature = attrs.pop('temperature', self.config['temperature'])
-#       top_p = attrs.pop('top_p', self.config['top_p'])
-#       request_id: str | None = attrs.pop('request_id', None)
-#       if request_id is None: raise ValueError('request_id must not be None.')
-#       prompt, *_ = self.sanitize_parameters(prompt, **attrs)
-#       if openllm_core.utils.DEBUG: logger.debug('Prompt:\n%s', prompt)
-#
-#       if stop_token_ids is None: stop_token_ids = []
-#       stop_token_ids.append(self.tokenizer.eos_token_id)
-#       stop_: set[str] = set()
-#       if isinstance(stop, str) and stop != '': stop_.add(stop)
-#       elif isinstance(stop, list) and stop != []: stop_.update(stop)
-#       for tid in stop_token_ids:
-#         if tid: stop_.add(self.tokenizer.decode(tid))
-#
-#       if temperature <= 1e-5: top_p = 1.0
-#       config = self.config.model_construct_env(stop=list(stop_), top_p=top_p, **attrs)
-#       sampling_params = config.to_sampling_config()
-#
-#       final_output = None
-#       async for request_output in t.cast('vllm.AsyncLLMEngine', self.model).generate(prompt=prompt, sampling_params=sampling_params, request_id=request_id):
-#         final_output = request_output
-#       if final_output is None: raise ValueError("'output' should not be None")
-#       # prompt = final_output.prompt
-#       # if echo: text_outputs = [prompt + output.text for output in final_output.outputs]
-#       # else: text_outputs = [output.text for output in final_output.outputs]
-#       yield final_output
-#
-#     @bentoml.Runnable.method(**method_signature(generate_iterator_sig))
-#     async def vllm_generate_iterator(__self: _Runnable, prompt: str, **attrs: t.Any) -> t.AsyncGenerator[str, None]:
-#       # TODO: PEFT support
-#       attrs.pop('adapter_name', None)
-#
-#       # pre = 0
-#       # echo = attrs.pop('echo', False)
-#       request_id: str | None = attrs.pop('request_id', None)
-#       if request_id is None: raise ValueError('request_id must not be None.')
-#
-#       stop: str | t.Iterable[str] | None = attrs.pop('stop', None)
-#       temperature = attrs.pop('temperature', self.config['temperature'])
-#       top_p = attrs.pop('top_p', self.config['top_p'])
-#       prompt, *_ = self.sanitize_parameters(prompt, **attrs)
-#       if openllm_core.utils.DEBUG: logger.debug('Prompt:\n%s', repr(prompt))
-#
-#       stop_token_ids: list[int] | None = attrs.pop('stop_token_ids', None)
-#       if stop_token_ids is None: stop_token_ids = []
-#       stop_token_ids.append(self.tokenizer.eos_token_id)
-#       stop_: set[str] = set()
-#       if isinstance(stop, str) and stop != '': stop_.add(stop)
-#       elif isinstance(stop, list) and stop != []: stop_.update(stop)
-#       for tid in stop_token_ids:
-#         if tid: stop_.add(self.tokenizer.decode(tid))
-#
-#       if temperature <= 1e-5: top_p = 1.0
-#       config = self.config.model_construct_env(stop=list(stop_), temperature=temperature, top_p=top_p, **attrs)
-#       async for request_output in t.cast('vllm.AsyncLLMEngine', self.model).generate(prompt=prompt, sampling_params=config.to_sampling_config(), request_id=request_id):
-#         # yield request_output
-#         if echo: text_outputs = [prompt + output.text for output in request_output.outputs]
-#         else: text_outputs = [output.text for output in request_output.outputs]
-#         output_text = text_outputs[0]
-#         output_text = output_text.strip().split(' ')
-#         now = len(output_text) - 1
-#         if now > pre:
-#           yield ' '.join(output_text[pre:now]) + ' '
-#           pre = now
-#       yield ' '.join(output_text[pre:]) + ' '
-#
-#   return types.new_class(self.__class__.__name__ + 'Runnable', (_Runnable,), {}, lambda ns: ns.update({
-#       'SUPPORTED_RESOURCES': ('nvidia.com/gpu', 'amd.com/gpu', 'cpu'),
-#       '__module__': self.__module__,
-#       '__doc__': self.config['env'].start_docstring
-#   }))
-#
-# def llm_runner_class(self: LLM[M, T]) -> type[LLMRunner[M, T]]:
-#   def _wrapped_generate_run(__self: LLMRunner[M, T], prompt: str, **kwargs: t.Any) -> t.Any:
-#     '''Wrapper for runner.generate.run() to handle the prompt and postprocessing.
-#
-#     This will be used for LangChain API.
-#
-#     Usage:
-#
-#     ```python
-#     runner = openllm.Runner("dolly-v2", init_local=True)
-#     runner("What is the meaning of life?")
-#     ```
-#     '''
-#     prompt, generate_kwargs, postprocess_kwargs = self.sanitize_parameters(prompt, **kwargs)
-#     return self.postprocess_generate(prompt, __self.generate.run(prompt, **generate_kwargs), **postprocess_kwargs)
-#
-#   def _wrapped_repr_keys(_: LLMRunner[M, T]) -> set[str]:
-#     return {'config', 'llm_type', 'runner_methods', 'backend', 'llm_tag'}
-#
-#   def _wrapped_repr_args(__self: LLMRunner[M, T]) -> ReprArgs:
-#     yield 'runner_methods', {method.name: {'batchable': method.config.batchable, 'batch_dim': method.config.batch_dim if method.config.batchable else None} for method in __self.runner_methods}
-#     yield 'config', self.config.model_dump(flatten=True)
-#     yield 'llm_type', __self.llm_type
-#     yield 'backend', self.__llm_backend__
-#     yield 'llm_tag', self.tag
-#
-#   if self._prompt_template: prompt_template = self._prompt_template.to_string()
-#   elif hasattr(self.config, 'default_prompt_template'): prompt_template = self.config.default_prompt_template
-#   else: prompt_template = None
-#
-#   if self._system_message: system_message = self._system_message
-#   elif hasattr(self.config, 'default_system_message'): system_message = self.config.default_system_message
-#   else: system_message = None
-#
-#   return types.new_class(self.__class__.__name__ + 'Runner', (bentoml.Runner,),
-#                          exec_body=lambda ns: ns.update({
-#                              'llm_type': self.llm_type,
-#                              'identifying_params': self.identifying_params,
-#                              'llm_tag': self.tag,
-#                              'llm': self,
-#                              'config': self.config,
-#                              'backend': self.__llm_backend__,
-#                              'download_model': self.save_pretrained,
-#                              '__call__': _wrapped_generate_run,
-#                              '__module__': self.__module__,
-#                              '__doc__': self.config['env'].start_docstring,
-#                              '__repr__': ReprMixin.__repr__,
-#                              '__repr_keys__': property(_wrapped_repr_keys),
-#                              '__repr_args__': _wrapped_repr_args,
-#                              'has_adapters': self._adapter_map is not None,
-#                              'prompt_template': prompt_template,
-#                              'system_message': system_message,
-#                          }))
 
 __all__ = ['LLMRunner', 'LLMRunnable', 'Runner', 'LLM']

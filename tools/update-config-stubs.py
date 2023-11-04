@@ -52,7 +52,7 @@ _value_docstring = {
             ```bash
             openllm start gpt-neox --model-id stabilityai/stablelm-tuned-alpha-3b
             ```''',
-    'default_backend': '''The default backend to run LLM based on available accelerator. Currently, if "vllm" is available, then we will use it, otherwise fall back to PyTorch.''',
+    'conversation': '''The conversation class for this given LLM to determine its chat templates.''',
     'backend': '''List of supported backend for this given LLM class. Currently, we support "pt" and "vllm".''',
     'serialisation': '''Default serialisation format for different models. Some will default to use the legacy 'bin'. ''',
     'url': 'The resolved url for this LLMConfig.',
@@ -80,7 +80,7 @@ _value_docstring = {
     'tokenizer_class': 'Optional tokenizer class for this given LLM. See Llama for example.',
 }
 
-_transformed = {'fine_tune_strategies': 't.Dict[AdapterType, FineTuneConfig]'}
+_transformed = {'fine_tune_strategies': 't.Dict[AdapterType, FineTuneConfig]', 'conversation': 'Conversation'}
 
 def main() -> int:
   with _TARGET_FILE.open('r') as f:

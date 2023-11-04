@@ -3,6 +3,7 @@ import typing as t
 
 import openllm_core
 
+from openllm_core._conversation import SeparatorStyle
 from openllm_core.prompts import PromptTemplate
 from openllm_core.prompts import process_prompt
 
@@ -46,6 +47,8 @@ class FalconConfig(openllm_core.LLMConfig):
       'url': 'https://falconllm.tii.ae/',
       'requirements': ['einops', 'xformers'],
       'architecture': 'FalconForCausalLM',
+      # NOTE: See https://huggingface.co/tiiuae/falcon-7b-instruct/discussions/1
+      'conversation': dict(roles=('User', 'Assistant'), messages=[], sep_style=SeparatorStyle.ADD_COLON_SINGLE, sep='\n'),  #  No space after colon
       'default_id': 'tiiuae/falcon-7b',
       'model_ids': ['tiiuae/falcon-7b', 'tiiuae/falcon-40b', 'tiiuae/falcon-7b-instruct', 'tiiuae/falcon-40b-instruct'],
       'fine_tune_strategies': ({

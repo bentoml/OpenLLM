@@ -1,6 +1,7 @@
 # mypy: disable-error-code="call-arg,misc,attr-defined,type-abstract,type-arg,valid-type,arg-type"
 from __future__ import annotations
 import logging
+import os
 import typing as t
 import warnings
 
@@ -24,20 +25,25 @@ model = svars.model
 model_id = svars.model_id
 adapter_map = svars.adapter_map
 llm_config = openllm.AutoConfig.for_model(model)
-llm = openllm.LLM(model_id, llm_config=llm_config, adapter_map=orjson.loads(adapter_map))
+llm = openllm.LLM[t.Any, t.Any](model_id,
+                                llm_config=llm_config,
+                                prompt_template=openllm.utils.first_not_none(os.getenv('OPENLLM_PROMPT_TEMPLATE'), getattr(llm_config, 'default_prompt_template', None)),
+                                system_message=openllm.utils.first_not_none(os.getenv('OPENLLM_SYSTEM_MESSAGE'), getattr(llm_config, 'default_system_message', None)),
+                                serialisation=openllm.utils.first_not_none(os.getenv('OPENLLM_SERIALIZATION'), default=llm_config['serialisation']),
+                                adapter_map=orjson.loads(adapter_map))
 svc = bentoml.Service(name=f"llm-{llm_config['start_name']}-service", runners=[llm.runner])
 
-_JsonInput = bentoml.io.JSON.from_sample({'prompt': '', 'llm_config': llm_config.model_dump(flatten=True)})
+_GenerateJsonInput = bentoml.io.JSON.from_sample({'prompt': '', 'stop': [], 'llm_config': llm_config.model_dump(flatten=True)})
 
-@svc.api(route='/v1/generate', input=_JsonInput, output=bentoml.io.JSON.from_sample(openllm.GenerationOutput.examples().unmarshal()))
+@svc.api(route='/v1/generate', input=_GenerateJsonInput, output=bentoml.io.JSON.from_sample(openllm.GenerationOutput.examples().unmarshal()))
 async def generate_v1(input_dict: dict[str, t.Any]) -> openllm.GenerationOutput:
   qa_inputs = openllm.GenerateInput.from_llm_config(llm_config)(**input_dict)
   return await llm.generate(qa_inputs.prompt, **qa_inputs.llm_config.model_dump())
 
-@svc.api(route='/v1/generate_stream', input=_JsonInput, output=bentoml.io.Text(content_type='text/event-stream'))
+@svc.api(route='/v1/generate_stream', input=_GenerateJsonInput, output=bentoml.io.Text(content_type='text/event-stream'))
 async def generate_stream_v1(input_dict: dict[str, t.Any]) -> t.AsyncGenerator[str, None]:
   qa_inputs = openllm.GenerateInput.from_llm_config(llm_config)(**input_dict)
-  return await llm.generate_iterator(qa_inputs.prompt, return_type='text', **qa_inputs.llm_config.model_dump())
+  return llm.generate_iterator(qa_inputs.prompt, return_type='text', **qa_inputs.llm_config.model_dump())
 
 @svc.api(route='/v1/metadata',
          input=bentoml.io.Text(),

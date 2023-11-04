@@ -58,13 +58,14 @@ from deepmerge.merger import Merger
 
 import openllm_core
 
+from ._conversation import Conversation
+from ._conversation import SeparatorStyle
 from ._typing_compat import AdapterType
 from ._typing_compat import AnyCallable
 from ._typing_compat import At
 from ._typing_compat import DictStrAny
 from ._typing_compat import ListStr
 from ._typing_compat import LiteralBackend
-from ._typing_compat import LiteralResourceSpec
 from ._typing_compat import LiteralSerialisation
 from ._typing_compat import LiteralString
 from ._typing_compat import NotRequired
@@ -90,6 +91,9 @@ if t.TYPE_CHECKING:
   import vllm
 
   from transformers.generation.beam_constraints import Constraint
+
+  from openllm.protocol.openai import ChatCompletionRequest
+  from openllm.protocol.openai import CompletionRequest
 else:
   Constraint = t.Any
   vllm = LazyLoader('vllm', globals(), 'vllm')
@@ -473,9 +477,6 @@ class ModelSettings(t.TypedDict, total=False):
   model_ids: Required[ListStr]
   architecture: Required[str]
 
-  # default OpenLLM runtime imlementation
-  default_backend: NotRequired[t.Dict[LiteralResourceSpec, LiteralBackend]]
-
   # meta
   url: str
   serialisation: LiteralSerialisation
@@ -502,8 +503,9 @@ class ModelSettings(t.TypedDict, total=False):
 
   # tokenizer_class is the custom tokenizer class for this given LLM
   tokenizer_class: t.Optional[str]
+  conversation: t.Optional[t.Dict[str, t.Any]]
 
-_transformed_type: DictStrAny = {'fine_tune_strategies': t.Dict[AdapterType, FineTuneConfig], 'default_backend': t.Dict[LiteralResourceSpec, LiteralBackend]}
+_transformed_type: DictStrAny = {'fine_tune_strategies': t.Dict[AdapterType, FineTuneConfig], 'conversation': Conversation}
 
 @attr.define(frozen=False,
              slots=True,
@@ -531,10 +533,6 @@ class _ModelSettingsAttr:
         ModelSettings(default_id='__default__',
                       model_ids=['__default__'],
                       architecture='PreTrainedModel',
-                      default_backend={
-                          'cpu': 'pt',
-                          'nvidia.com/gpu': 'vllm' if is_vllm_available() else 'pt',
-                      },
                       serialisation='legacy',
                       backend=('pt', 'vllm'),
                       name_type='dasherize',
@@ -553,7 +551,6 @@ class _ModelSettingsAttr:
     default_id: str
     model_ids: ListStr
     architecture: str
-    default_backend: t.Dict[LiteralResourceSpec, LiteralBackend]
     url: str
     serialisation: LiteralSerialisation
     trust_remote_code: bool
@@ -569,6 +566,7 @@ class _ModelSettingsAttr:
     workers_per_resource: t.Union[int, float]
     fine_tune_strategies: t.Dict[AdapterType, FineTuneConfig]
     tokenizer_class: t.Optional[str]
+    conversation: Conversation
     # update-config-stubs.py: attrs stop
 
 def structure_settings(cl_: type[LLMConfig], cls: type[_ModelSettingsAttr]) -> _ModelSettingsAttr:
@@ -592,6 +590,11 @@ def structure_settings(cl_: type[LLMConfig], cls: type[_ModelSettingsAttr]) -> _
 
   _final_value_dct['env'] = openllm_core.utils.EnvVarMixin(model_name, backend='vllm' if is_vllm_available() else 'pt', model_id=_settings_attr.default_id)
   _final_value_dct['service_name'] = f'generated_{model_name}_service.py'
+
+  # NOTE: default conversation templates
+  _conversation = getattr(_settings_attr, 'conversation', None)
+  if _conversation is None: _conversation = dict(system_message='', roles=('', ''), sep_style=SeparatorStyle.NO_COLON_SINGLE, sep='')
+  _final_value_dct['conversation'] = Conversation(name=model_name, **_conversation)
 
   # NOTE: The key for fine-tune strategies is 'fine_tune_strategies'
   _fine_tune_strategies: tuple[dict[str, t.Any], ...] | None = getattr(_settings_attr, 'fine_tune_strategies', None)
@@ -730,8 +733,6 @@ class _ConfigAttr:
             ```bash
             openllm start gpt-neox --model-id stabilityai/stablelm-tuned-alpha-3b
             ```'''
-    __openllm_default_backend__: t.Dict[LiteralResourceSpec, LiteralBackend] = Field(None)
-    '''The default backend to run LLM based on available accelerator. Currently, if "vllm" is available, then we will use it, otherwise fall back to PyTorch.'''
     __openllm_url__: str = Field(None)
     '''The resolved url for this LLMConfig.'''
     __openllm_serialisation__: LiteralSerialisation = Field(None)
@@ -772,6 +773,8 @@ class _ConfigAttr:
     '''The fine-tune strategies for this given LLM.'''
     __openllm_tokenizer_class__: t.Optional[str] = Field(None)
     '''Optional tokenizer class for this given LLM. See Llama for example.'''
+    __openllm_conversation__: Conversation = Field(None)
+    '''The conversation class for this given LLM to determine its chat templates.'''
     # update-config-stubs.py: special stop
 
 class _ConfigBuilder:
@@ -1101,8 +1104,6 @@ class LLMConfig(_ConfigAttr):
   @overload
   def __getitem__(self, item: t.Literal['architecture']) -> str: ...
   @overload
-  def __getitem__(self, item: t.Literal['default_backend']) -> t.Dict[LiteralResourceSpec, LiteralBackend]: ...
-  @overload
   def __getitem__(self, item: t.Literal['url']) -> str: ...
   @overload
   def __getitem__(self, item: t.Literal['serialisation']) -> LiteralSerialisation: ...
@@ -1132,6 +1133,8 @@ class LLMConfig(_ConfigAttr):
   def __getitem__(self, item: t.Literal['fine_tune_strategies']) -> t.Dict[AdapterType, FineTuneConfig]: ...
   @overload
   def __getitem__(self, item: t.Literal['tokenizer_class']) -> t.Optional[str]: ...
+  @overload
+  def __getitem__(self, item: t.Literal['conversation']) -> Conversation: ...
   # NOTE: generation_class, sampling_class and extras arguments
   @overload
   def __getitem__(self, item: t.Literal['generation_class']) -> t.Type[openllm_core.GenerationConfig]: ...
@@ -1411,6 +1414,11 @@ class LLMConfig(_ConfigAttr):
         key_to_remove.append(k)
     return self.model_construct_env(**llm_config_attrs), {k: v for k, v in attrs.items() if k not in key_to_remove}
 
+  def get_conversation_template(self) -> Conversation:
+    template = self['conversation'].copy()
+    if hasattr(self, 'default_system_message'): template.set_system_message(self.default_system_message)
+    return template
+
   @overload
   def to_generation_config(self, return_as_dict: t.Literal[False] = False) -> transformers.GenerationConfig:
     ...
@@ -1425,6 +1433,15 @@ class LLMConfig(_ConfigAttr):
 
   def to_sampling_config(self) -> vllm.SamplingParams:
     return self.sampling_config.build()
+
+  def with_openai_request(self, request: ChatCompletionRequest | CompletionRequest) -> dict[str, t.Any]:
+    return dict(temperature=first_not_none(request.temperature, self['temperature']),
+                top_p=first_not_none(request.top_p, self['top_p']),
+                n=first_not_none(request.n, default=self['n']),
+                stop=first_not_none(request.stop, default=self['stop']),
+                max_new_tokens=first_not_none(request.max_tokens, default=self['max_new_tokens']),
+                presence_penalty=first_not_none(request.presence_penalty, default=self['presence_penalty']),
+                frequency_penalty=first_not_none(request.frequency_penalty, default=self['frequency_penalty']))
 
   @classmethod
   def to_click_options(cls, f: AnyCallable) -> click.Command:
@@ -1465,10 +1482,6 @@ class LLMConfig(_ConfigAttr):
   @classmethod
   def peft_task_type(cls) -> str:
     return _PEFT_TASK_TYPE_TARGET_MAPPING[cls.__openllm_model_type__]
-
-  @classmethod
-  def default_backend(cls) -> LiteralBackend:
-    return first_not_none(cls.__openllm_env__['backend_value'], default='vllm' if is_vllm_available() else 'pt')
 
   def sanitize_parameters(self, prompt: str, **attrs: t.Any) -> tuple[str, DictStrAny, DictStrAny]:
     '''This handler will sanitize all attrs and setup prompt text.

@@ -74,6 +74,7 @@ from openllm_core.utils import first_not_none
 from openllm_core.utils import get_debug_mode
 from openllm_core.utils import get_quiet_mode
 from openllm_core.utils import is_torch_available
+from openllm_core.utils import is_vllm_available
 from openllm_core.utils import resolve_user_filepath
 from openllm_core.utils import set_debug_mode
 from openllm_core.utils import set_quiet_mode
@@ -337,7 +338,7 @@ _start_mapping = {
 @machine_option
 @backend_option
 @serialisation_option
-def import_command(model_name: str, model_id: str | None, converter: str | None, model_version: str | None, output: LiteralOutput, machine: bool, backend: LiteralBackend,
+def import_command(model_name: str, model_id: str | None, converter: str | None, model_version: str | None, output: LiteralOutput, machine: bool, backend: LiteralBackend | None,
                    quantize: LiteralQuantise | None, serialisation: LiteralSerialisation | None) -> bentoml.Model:
   """Setup LLM interactively.
 
@@ -393,8 +394,8 @@ def import_command(model_name: str, model_id: str | None, converter: str | None,
   _serialisation = openllm_core.utils.first_not_none(serialisation, default=llm_config['serialisation'])
   env = EnvVarMixin(model_name, model_id=model_id, quantize=quantize)
   model_id = first_not_none(model_id, env['model_id_value'], default=llm_config['default_id'])
-  backend = first_not_none(backend, default=env['backend_value'])
-  llm = openllm.LLM(model_id=model_id, llm_config=llm_config, revision=model_version, quantize=env['quantize_value'], serialisation=_serialisation)
+  backend = first_not_none(backend, env['backend_value'], default='vllm' if is_vllm_available() else 'pt')
+  llm = openllm.LLM(model_id=model_id, llm_config=llm_config, revision=model_version, quantize=env['quantize_value'], serialisation=_serialisation, backend=backend)
   _previously_saved = False
   try:
     _ref = openllm.serialisation.get(llm)
@@ -455,11 +456,10 @@ def import_command(model_name: str, model_id: str | None, converter: str | None,
 @click.option('--force-push', default=False, is_flag=True, type=click.BOOL, help='Whether to force push.')
 @click.pass_context
 def build_command(ctx: click.Context, /, model_name: str, model_id: str | None, bento_version: str | None, overwrite: bool, output: LiteralOutput, quantize: LiteralQuantise | None,
-                  enable_features: tuple[str, ...] | None, workers_per_resource: float | None, adapter_id: tuple[str, ...], build_ctx: str | None, backend: LiteralBackend,
+                  enable_features: tuple[str, ...] | None, workers_per_resource: float | None, adapter_id: tuple[str, ...], build_ctx: str | None, backend: LiteralBackend | None,
                   system_message: str | None, prompt_template_file: t.IO[t.Any] | None, machine: bool, model_version: str | None, dockerfile_template: t.TextIO | None, containerize: bool,
                   push: bool, serialisation: LiteralSerialisation | None, container_registry: LiteralContainerRegistry, container_version_strategy: LiteralContainerVersionStrategy,
-                  force_push: bool, **attrs: t.Any,
-                  ) -> bentoml.Bento:
+                  force_push: bool, **attrs: t.Any) -> bentoml.Bento:
   '''Package a given models into a Bento.
 
   \b
@@ -484,7 +484,7 @@ def build_command(ctx: click.Context, /, model_name: str, model_id: str | None, 
 
   llm_config = openllm.AutoConfig.for_model(model_name)
   _serialisation = openllm_core.utils.first_not_none(serialisation, default=llm_config['serialisation'])
-  env = EnvVarMixin(model_name, backend=backend, model_id=model_id or llm_config['default_id'], quantize=quantize)
+  env = EnvVarMixin(model_name, backend=first_not_none(backend, default='vllm' if is_vllm_available() else 'pt'), model_id=model_id or llm_config['default_id'], quantize=quantize)
   prompt_template: str | None = prompt_template_file.read() if prompt_template_file is not None else None
 
   # NOTE: We set this environment variable so that our service.py logic won't raise RuntimeError
@@ -493,6 +493,7 @@ def build_command(ctx: click.Context, /, model_name: str, model_id: str | None, 
     os.environ.update({'OPENLLM_MODEL': inflection.underscore(model_name), 'OPENLLM_SERIALIZATION': _serialisation, env.backend: env['backend_value']})
     if env['model_id_value']: os.environ[env.model_id] = str(env['model_id_value'])
     if env['quantize_value']: os.environ[env.quantize] = str(env['quantize_value'])
+    if env['backend_value']: os.environ[env.backend] = str(env['backend_value'])
     if system_message: os.environ['OPENLLM_SYSTEM_MESSAGE'] = system_message
     if prompt_template: os.environ['OPENLLM_PROMPT_TEMPLATE'] = prompt_template
 

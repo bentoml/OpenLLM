@@ -6,7 +6,7 @@ import attr
 
 import openllm_core
 
-from openllm import _conversation
+from openllm_core.utils import converter
 
 @attr.define
 class ErrorResponse:
@@ -67,7 +67,7 @@ class CompletionTextChoice:
   finish_reason: str = attr.field(default=None)
 
 @attr.define
-class Usage:
+class UsageInfo:
   prompt_tokens: int = attr.field(default=0)
   completion_tokens: int = attr.field(default=0)
   total_tokens: int = attr.field(default=0)
@@ -79,7 +79,7 @@ class CompletionResponse:
   object: str = 'text_completion'
   id: str = attr.field(default=attr.Factory(lambda: openllm_core.utils.gen_random_uuid('cmpl')))
   created: int = attr.field(default=attr.Factory(lambda: int(time.monotonic())))
-  usage: Usage = attr.field(default=attr.Factory(lambda: Usage()))
+  usage: UsageInfo = attr.field(default=attr.Factory(lambda: UsageInfo()))
 
 @attr.define
 class CompletionStreamResponse:
@@ -101,9 +101,14 @@ class Delta:
   content: t.Optional[str] = None
 
 @attr.define
+class ChatMessage:
+  role: LiteralRole
+  content: str
+
+@attr.define
 class ChatCompletionChoice:
   index: int
-  message: Message
+  message: ChatMessage
   finish_reason: str = attr.field(default=None)
 
 @attr.define
@@ -112,6 +117,14 @@ class ChatCompletionResponseStreamChoice:
   delta: Delta
   finish_reason: str = attr.field(default=None)
 
+converter.register_unstructure_hook(ChatMessage, lambda msg: {'role': msg.role, 'content': msg.content})
+
+@attr.define
+class ChatCompletionResponseChoice:
+  index: int
+  message: ChatMessage
+  finish_reason: t.Optional[t.Literal['stop', 'length']] = attr.field(default=None)
+
 @attr.define
 class ChatCompletionResponse:
   choices: t.List[ChatCompletionChoice]
@@ -119,7 +132,7 @@ class ChatCompletionResponse:
   object: str = 'chat.completion'
   id: str = attr.field(default=attr.Factory(lambda: openllm_core.utils.gen_random_uuid('chatcmpl')))
   created: int = attr.field(default=attr.Factory(lambda: int(time.monotonic())))
-  usage: Usage = attr.field(default=attr.Factory(lambda: Usage()))
+  usage: UsageInfo = attr.field(default=attr.Factory(lambda: UsageInfo()))
 
 @attr.define
 class ChatCompletionStreamResponse:
@@ -141,10 +154,14 @@ class ModelList:
   object: str = 'list'
   data: t.List[ModelCard] = attr.field(factory=list)
 
-async def get_conversation_prompt(request: ChatCompletionRequest, model: str, llm_config: openllm_core.LLMConfig) -> str:
-  conv_template = _conversation.get_conv_template(model, llm_config)
+async def get_conversation_prompt(request: ChatCompletionRequest, llm_config: openllm_core.LLMConfig) -> str:
+  conv = llm_config.get_conversation_template()
   for message in request.messages:
-    if message['role'] == 'system': conv_template.set_system_message(message['content'])
-    else: conv_template.append_message(message['role'], message['content'])
-  conv_template.append_message('assistant', '')
-  return conv_template.get_prompt()
+    msg_role = message['role']
+    if msg_role == 'system': conv.set_system_message(message['content'])
+    elif msg_role == 'user': conv.append_message(conv.roles[0], message['content'])
+    elif msg_role == 'assistant': conv.append_message(conv.roles[1], message['content'])
+    else: raise ValueError(f'Unknown role: {msg_role}')
+  # Add a blank message for the assistant.
+  conv.append_message(conv.roles[1], '')
+  return conv.get_prompt()

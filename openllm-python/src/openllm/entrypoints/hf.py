@@ -34,6 +34,6 @@ async def hf_agent(request: Request, llm: openllm.LLM[M, T]) -> Response:
     raise openllm.exceptions.OpenLLMException(f'Invalid JSON input received: {err}') from None
   stop = input_data.parameters.pop('stop', ['\n'])
   try:
-    return JSONResponse(await llm_runner.generate_one.async_run(input_data.inputs, stop, **input_data.parameters), status_code=200)
+    return JSONResponse(await llm.runner.generate_one.async_run(input_data.inputs, stop, **input_data.parameters), status_code=200)
   except NotImplementedError:
-    return JSONResponse(f"'{llm_runner.llm_type}' is currently not supported with HuggingFace agents.", status_code=500)
+    return JSONResponse(f"'{llm.llm_type}' is currently not supported with HuggingFace agents.", status_code=500)

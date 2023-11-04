@@ -3,6 +3,8 @@ import typing as t
 
 import openllm_core
 
+from openllm_core._conversation import SeparatorStyle
+
 if t.TYPE_CHECKING:
   from openllm_core.prompts import PromptTemplate
 
@@ -41,6 +43,7 @@ class StarCoderConfig(openllm_core.LLMConfig):
       'name_type': 'lowercase',
       'url': 'https://github.com/bigcode-project/starcoder',
       'architecture': 'GPTBigCodeForCausalLM',
+      'conversation': dict(system_message='', roles=('<|user|>', '<|assistant|>'), sep_style=SeparatorStyle.STARCODER, sep='\n'),
       'requirements': ['bitsandbytes'],
       'default_id': 'bigcode/starcoder',
       'model_ids': ['bigcode/starcoder', 'bigcode/starcoderbase']

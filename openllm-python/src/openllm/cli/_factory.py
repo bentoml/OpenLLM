@@ -117,7 +117,7 @@ Available official model_id(s): [default: {llm_config['default_id']}]
   @start_decorator(llm_config, serve_grpc=_serve_grpc)
   @click.pass_context
   def start_cmd(ctx: click.Context, /, server_timeout: int, model_id: str | None, model_version: str | None, system_message: str | None, prompt_template_file: t.IO[t.Any] | None,
-                workers_per_resource: t.Literal['conserved', 'round_robin'] | LiteralString, device: t.Tuple[str, ...], quantize: LiteralQuantise | None, backend: LiteralBackend,
+                workers_per_resource: t.Literal['conserved', 'round_robin'] | LiteralString, device: t.Tuple[str, ...], quantize: LiteralQuantise | None, backend: LiteralBackend | None,
                 serialisation: LiteralSerialisation | None, cors: bool, adapter_id: str | None, return_process: bool, **attrs: t.Any,
                 ) -> LLMConfig | subprocess.Popen[bytes]:
     _serialisation = openllm_core.utils.first_not_none(serialisation, default=llm_config['serialisation'])
@@ -151,7 +151,10 @@ Available official model_id(s): [default: {llm_config['default_id']}]
       wpr = float(wpr)
 
     # Create a new model env to work with the envvar during CLI invocation
-    env = openllm.utils.EnvVarMixin(config['model_name'], backend, model_id=model_id or config['default_id'], quantize=quantize)
+    env = openllm.utils.EnvVarMixin(config['model_name'],
+                                    backend=openllm_core.utils.first_not_none(backend, default='vllm' if is_vllm_available() else 'pt'),
+                                    model_id=model_id or config['default_id'],
+                                    quantize=quantize)
     requirements = llm_config['requirements']
     if requirements is not None and len(requirements) > 0:
       missing_requirements = [i for i in requirements if importlib.util.find_spec(inflection.underscore(i)) is None]
@@ -383,7 +386,7 @@ def backend_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[
   # XXX: remove the check for __args__ once we have ggml and mlc supports
   return cli_option('--backend',
                     type=click.Choice(get_literal_args(LiteralBackend)[:-2]),
-                    default='vllm' if is_vllm_available() else 'pt',
+                    default=None,
                     envvar='OPENLLM_BACKEND',
                     show_envvar=True,
                     help='The implementation for saving this LLM.',

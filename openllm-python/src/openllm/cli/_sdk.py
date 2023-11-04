@@ -217,7 +217,7 @@ def _import_model(model_name: str,
                   *,
                   model_id: str | None = None,
                   model_version: str | None = None,
-                  backend: LiteralBackend = 'pt',
+                  backend: LiteralBackend | None = None,
                   quantize: LiteralQuantise | None = None,
                   serialisation: t.Literal['legacy', 'safetensors'] | None = None,
                   additional_args: t.Sequence[str] | None = None) -> bentoml.Model:
@@ -253,7 +253,8 @@ def _import_model(model_name: str,
   from .entrypoint import import_command
   config = openllm.AutoConfig.for_model(model_name)
   _serialisation = openllm_core.utils.first_not_none(serialisation, default=config['serialisation'])
-  args = [model_name, '--backend', backend, '--machine', '--serialisation', _serialisation]
+  args = [model_name, '--machine', '--serialisation', _serialisation]
+  if backend is not None: args.extend(['--backend', backend])
   if model_id is not None: args.append(model_id)
   if model_version is not None: args.extend(['--model-version', str(model_version)])
   if additional_args is not None: args.extend(additional_args)
