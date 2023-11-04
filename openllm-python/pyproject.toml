@@ -115,7 +115,7 @@ openai = ["openai[embeddings]", "tiktoken"]
 opt = ["flax>=0.7", "jax", "jaxlib", "tensorflow", "keras"]
 playground = ["jupyter", "notebook", "ipython", "jupytext", "nbformat"]
 starcoder = ["bitsandbytes"]
-vllm = ["vllm>=0.2.0", "ray"]
+vllm = ["vllm>=0.2.1post1", "ray"]
 
 [tool.hatch.version]
 fallback-version = "0.0.0"
