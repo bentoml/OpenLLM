@@ -27,7 +27,7 @@ from openllm_core._typing_compat import LiteralSerialisation
 from openllm_core._typing_compat import LiteralString
 from openllm_core._typing_compat import ParamSpec
 from openllm_core._typing_compat import get_literal_args
-from openllm_core.utils import DEBUG
+from openllm_core.utils import DEBUG, is_vllm_available
 
 from . import termui
 
@@ -382,7 +382,7 @@ def backend_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[
   # XXX: remove the check for __args__ once we have ggml and mlc supports
   return cli_option('--backend',
                     type=click.Choice(get_literal_args(LiteralBackend)[:-2]),
-                    default='pt',
+                    default='vllm' if is_vllm_available() else 'pt',
                     envvar='OPENLLM_BACKEND',
                     show_envvar=True,
                     help='The implementation for saving this LLM.',
