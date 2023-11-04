@@ -163,7 +163,6 @@ extend-exclude = [
   "openllm-python/src/openllm/playground",
   "openllm-python/src/openllm/__init__.py",
   "openllm-python/src/openllm/_version.py",
-  "openllm-python/src/openllm/utils/dummy_*.py",
   "openllm-python/src/openllm/models/__init__.py",
   "openllm-client/src/openllm_client/pb/**",
 ]
@@ -257,7 +256,6 @@ docstring-quotes = "single"
 [tool.yapfignore]
 ignore_patterns = [
   "openllm-python/src/openllm/playground",
-  "openllm-python/src/openllm/utils/dummy_*.py",
   "openllm-python/src/openllm/models/__init__.py",
   "openllm-client/src/openllm_client/pb/**",
 ]
@@ -301,7 +299,6 @@ omit = [
   "openllm-python/src/openllm/playground/",
   "openllm-python/src/openllm/__init__.py",
   "openllm-python/src/openllm/__main__.py",
-  "openllm-python/src/openllm/utils/dummy_*.py",
   "openllm-core/src/openllm_core/_typing_compat.py",
   "openllm-client/src/openllm_client/pb/**",
 ]
@@ -334,7 +331,6 @@ omit = [
   "openllm-python/src/openllm/playground/",
   "openllm-python/src/openllm/__init__.py",
   "openllm-python/src/openllm/__main__.py",
-  "openllm-python/src/openllm/utils/dummy_*.py",
   "openllm-core/src/openllm_core/_typing_compat.py",
   "openllm-client/src/openllm_client/pb/**",
 ]
@@ -356,7 +352,6 @@ exclude = [
   "openllm-python/src/openllm/models/",
   "openllm-python/src/openllm/__init__.py",
   "openllm-python/src/openllm/__main__.py",
-  "openllm-python/src/openllm/utils/dummy_*.py",
   "openllm-python/tests",
   "openllm-core/src/openllm_core/_typing_compat.py",
   "openllm-client/src/openllm_client/pb/**",
@@ -385,7 +380,6 @@ exclude = [
   "openllm-core/setup.py",
   "openllm-python/tests",
   "openllm-python/src/openllm/playground",
-  "openllm-python/src/openllm/utils/dummy_*.py",
   "openllm-python/src/openllm/models",
   "openllm-python/src/openllm/_service.py",
   "openllm-core/src/openllm_core/_typing_compat.py",

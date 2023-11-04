@@ -489,6 +489,7 @@ class ModelSettings(t.TypedDict, total=False):
   # naming convention, only name_type is needed to infer from the class
   # as the three below it can be determined automatically
   name_type: NotRequired[t.Optional[t.Literal['dasherize', 'lowercase']]]
+  backend: t.Tuple[LiteralBackend, ...]
   model_name: NotRequired[str]
   start_name: NotRequired[str]
   env: NotRequired[openllm_core.utils.EnvVarMixin]
@@ -535,6 +536,7 @@ class _ModelSettingsAttr:
                           'nvidia.com/gpu': 'vllm' if is_vllm_available() else 'pt',
                       },
                       serialisation='legacy',
+                      backend=('pt', 'vllm'),
                       name_type='dasherize',
                       url='',
                       model_type='causal_lm',
@@ -559,6 +561,7 @@ class _ModelSettingsAttr:
     requirements: t.Optional[ListStr]
     model_type: t.Literal['causal_lm', 'seq2seq_lm']
     name_type: t.Optional[t.Literal['dasherize', 'lowercase']]
+    backend: t.Tuple[LiteralBackend, ...]
     model_name: str
     start_name: str
     env: openllm_core.utils.EnvVarMixin
@@ -745,6 +748,8 @@ class _ConfigAttr:
     '''The default name typed for this model. "dasherize" will convert the name to lowercase and
         replace spaces with dashes. "lowercase" will convert the name to lowercase. If this is not set, then both
         `model_name` and `start_name` must be specified.'''
+    __openllm_backend__: t.Tuple[LiteralBackend, ...] = Field(None)
+    '''List of supported backend for this given LLM class. Currently, we support "pt" and "vllm".'''
     __openllm_model_name__: str = Field(None)
     '''The normalized version of __openllm_start_name__, determined by __openllm_name_type__'''
     __openllm_start_name__: str = Field(None)
@@ -1112,6 +1117,8 @@ class LLMConfig(_ConfigAttr):
   @overload
   def __getitem__(self, item: t.Literal['name_type']) -> t.Optional[t.Literal['dasherize', 'lowercase']]: ...
   @overload
+  def __getitem__(self, item: t.Literal['backend']) -> t.Tuple[LiteralBackend, ...]: ...
+  @overload
   def __getitem__(self, item: t.Literal['model_name']) -> str: ...
   @overload
   def __getitem__(self, item: t.Literal['start_name']) -> str: ...
@@ -1234,8 +1241,6 @@ class LLMConfig(_ConfigAttr):
   def __getitem__(self, item: t.Literal['prompt_logprobs']) -> t.Optional[int]: ...
   @overload
   def __getitem__(self, item: t.Literal['skip_special_tokens']) -> bool: ...
-  @overload
-  def __getitem__(self, item: t.Literal['space_between_special_tokens']) -> bool: ...
   # NOTE: PeftType arguments
   @overload
   def __getitem__(self, item: t.Literal['prompt_tuning']) -> dict[str, t.Any]: ...

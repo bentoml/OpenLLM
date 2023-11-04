@@ -176,7 +176,7 @@ Available official model_id(s): [default: {llm_config['default_id']}]
     if prompt_template: start_env['OPENLLM_PROMPT_TEMPLATE'] = prompt_template
 
     llm = openllm.LLM(model_id=start_env[env.model_id],
-                      model_version=model_version,
+                      revision=model_version,
                       prompt_template=prompt_template,
                       system_message=system_message,
                       llm_config=config,
@@ -184,8 +184,7 @@ Available official model_id(s): [default: {llm_config['default_id']}]
                       adapter_map=adapter_map,
                       quantize=env['quantize_value'],
                       serialisation=_serialisation)
-    # ensure_available = True
-    llm.save_pretrained()
+    llm.save_pretrained()  # ensure_available = True
     start_env.update({env.config: llm.config.model_dump_json().decode()})
 
     server = bentoml.GrpcServer('_service:svc', **server_attrs) if _serve_grpc else bentoml.HTTPServer('_service:svc', **server_attrs)

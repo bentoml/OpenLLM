@@ -20,7 +20,6 @@ Here's your roadmap:
 - [ ] Adjust the entrypoints for files at `$GIT_ROOT/openllm-python/src/openllm/models/auto/*` If it is a
       new runtime, then add it a `$GIT_ROOT/openllm-python/src/openllm/models/auto/modeling_{runtime}_auto.py`.
       See the other auto runtime for example.
-- [ ] Run the following script: `$GIT_ROOT/tools/update-models-import.py`
 - [ ] Run the following to update stubs: `hatch run check-stubs`
 
 > [!NOTE]

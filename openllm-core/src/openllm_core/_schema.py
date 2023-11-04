@@ -7,7 +7,6 @@ import attr
 import inflection
 import orjson
 
-from openllm_core._configuration import GenerationConfig
 from openllm_core._configuration import LLMConfig
 
 from .utils import converter
@@ -47,24 +46,6 @@ class GenerateInput:
                            })
 
 @attr.frozen(slots=True)
-class GenerateOutput:
-  responses: t.List[t.Any]
-  configuration: t.Dict[str, t.Any]
-
-  @property
-  def marshaled_config(self) -> GenerationConfig:
-    return converter.structure(self.configuration, GenerationConfig)
-
-  @property
-  def unmarshaled(self) -> dict[str, t.Any]:
-    return converter.unstructure(self)
-
-  def __getitem__(self, key: str) -> t.Any:
-    if hasattr(self, key): return getattr(self, key)
-    elif key in self.configuration: return self.configuration[key]
-    else: raise KeyError(key)
-
-@attr.frozen(slots=True)
 class MetadataOutput:
   model_id: str
   timeout: int
@@ -73,16 +54,6 @@ class MetadataOutput:
   configuration: str
   prompt_template: str
   system_message: str
-
-def unmarshal_vllm_outputs(request_output: vllm.RequestOutput) -> dict[str, t.Any]:
-  return dict(request_id=request_output.request_id,
-              prompt=request_output.prompt,
-              finished=request_output.finished,
-              prompt_token_ids=request_output.prompt_token_ids,
-              outputs=[
-                  dict(index=it.index, text=it.text, token_ids=it.token_ids, cumulative_logprob=it.cumulative_logprob, logprobs=it.logprobs, finish_reason=it.finish_reason)
-                  for it in request_output.outputs
-              ])
 
 @attr.define
 class HfAgentInput:
@@ -156,6 +127,6 @@ class GenerationOutput:
 
   # yapf: disable
   def with_options(self,**options: t.Any)->GenerationOutput: return attr.evolve(self, **options)
-  def unmarshal(self):return converter.unstructure(self)
-  def unmarshal_json(self):return orjson.dumps(self.unmarshal()).decode('utf-8')
+  def unmarshal(self)->dict[str, t.Any]:return converter.unstructure(self)
+  def unmarshal_json(self)->str:return orjson.dumps(self.unmarshal()).decode('utf-8')
   # yapf: enable

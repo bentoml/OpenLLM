@@ -20,6 +20,11 @@ if t.TYPE_CHECKING:
 else:
   transformers, torch = openllm_core.utils.LazyLoader('transformers', globals(), 'transformers'), openllm_core.utils.LazyLoader('torch', globals(), 'torch')
 
+def get_hash(config: transformers.PretrainedConfig) -> str:
+  _commit_hash = getattr(config, '_commit_hash', None)
+  if _commit_hash is None: raise ValueError(f'Cannot find commit hash in {config}')
+  return _commit_hash
+
 def process_config(model_id: str, trust_remote_code: bool, **attrs: t.Any) -> tuple[transformers.PretrainedConfig, DictStrAny, DictStrAny]:
   '''A helper function that correctly parse config and attributes for transformers.PretrainedConfig.
 
@@ -39,12 +44,6 @@ def process_config(model_id: str, trust_remote_code: bool, **attrs: t.Any) -> tu
     if copied_attrs.get('torch_dtype', None) == 'auto': copied_attrs.pop('torch_dtype')
     config, attrs = transformers.AutoConfig.from_pretrained(model_id, return_unused_kwargs=True, trust_remote_code=trust_remote_code, **hub_attrs, **copied_attrs)
   return config, hub_attrs, attrs
-
-def infer_tokenizers_from_llm(__llm: openllm.LLM[t.Any, T], /) -> T:
-  __cls = getattr(transformers, openllm_core.utils.first_not_none(__llm.config['tokenizer_class'], default='AutoTokenizer'), None)
-  if __cls is None:
-    raise ValueError(f'Cannot infer correct tokenizer class for {__llm}. Make sure to unset `tokenizer_class`')
-  return __cls
 
 def infer_autoclass_from_llm(llm: openllm.LLM[M, T], config: transformers.PretrainedConfig, /) -> _BaseAutoModelClass:
   if llm.trust_remote_code:

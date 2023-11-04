@@ -67,10 +67,10 @@ def infer_quantisation_config(self: LLM[t.Any, t.Any], quantise: LiteralQuantise
                                    disable_exllama=gptq_disable_exllama)
 
   def create_int8_config(int8_skip_modules: list[str] | None) -> transformers.BitsAndBytesConfig:
-    if int8_skip_modules is None: int8_skip_modules = []
-    if 'lm_head' not in int8_skip_modules and self.config_class.__openllm_model_type__ == 'causal_lm':
-      logger.debug("Skipping 'lm_head' for quantization for %s", self.__name__)
-      int8_skip_modules.append('lm_head')
+    # if int8_skip_modules is None: int8_skip_modules = []
+    # if 'lm_head' not in int8_skip_modules and self.config_class.__openllm_model_type__ == 'causal_lm':
+    #   logger.debug("Skipping 'lm_head' for quantization for %s", self.__name__)
+    #   int8_skip_modules.append('lm_head')
     return transformers.BitsAndBytesConfig(load_in_8bit=True,
                                            llm_int8_enable_fp32_cpu_offload=int8_enable_fp32_cpu_offload,
                                            llm_int8_threshhold=int8_threshold,

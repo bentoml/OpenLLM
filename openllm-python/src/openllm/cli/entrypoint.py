@@ -27,9 +27,7 @@ import logging
 import os
 import platform
 import subprocess
-import sys
 import time
-import traceback
 import typing as t
 
 import attr
@@ -54,12 +52,6 @@ from bentoml._internal.configuration.containers import BentoMLContainer
 from bentoml._internal.models.model import ModelStore
 from openllm import bundle
 from openllm.exceptions import OpenLLMException
-from openllm.models.auto import CONFIG_MAPPING
-from openllm.models.auto import MODEL_MAPPING_NAMES
-from openllm.models.auto import MODEL_VLLM_MAPPING_NAMES
-from openllm.models.auto import AutoConfig
-from openllm.models.auto import AutoLLM
-from openllm.utils import infer_auto_class
 from openllm_core._typing_compat import Concatenate
 from openllm_core._typing_compat import DictStrAny
 from openllm_core._typing_compat import LiteralBackend
@@ -68,7 +60,7 @@ from openllm_core._typing_compat import LiteralSerialisation
 from openllm_core._typing_compat import LiteralString
 from openllm_core._typing_compat import ParamSpec
 from openllm_core._typing_compat import Self
-from openllm_core.utils import DEBUG
+from openllm_core.config import CONFIG_MAPPING
 from openllm_core.utils import DEBUG_ENV_VAR
 from openllm_core.utils import OPTIONAL_DEPENDENCIES
 from openllm_core.utils import QUIET_ENV_VAR
@@ -346,8 +338,7 @@ _start_mapping = {
 @backend_option
 @serialisation_option
 def import_command(model_name: str, model_id: str | None, converter: str | None, model_version: str | None, output: LiteralOutput, machine: bool, backend: LiteralBackend,
-                   quantize: LiteralQuantise | None, serialisation: LiteralSerialisation | None,
-                   ) -> bentoml.Model:
+                   quantize: LiteralQuantise | None, serialisation: LiteralSerialisation | None) -> bentoml.Model:
   """Setup LLM interactively.
 
   It accepts two positional arguments: `model_name` and `model_id`. The first name determine
@@ -398,11 +389,12 @@ def import_command(model_name: str, model_id: str | None, converter: str | None,
   $ CONVERTER=llama2-hf openllm import llama /path/to/llama-2
   ```
   """
-  llm_config = AutoConfig.for_model(model_name)
+  llm_config = openllm.AutoConfig.for_model(model_name)
   _serialisation = openllm_core.utils.first_not_none(serialisation, default=llm_config['serialisation'])
   env = EnvVarMixin(model_name, model_id=model_id, quantize=quantize)
+  model_id = first_not_none(model_id, env['model_id_value'], default=llm_config['default_id'])
   backend = first_not_none(backend, default=env['backend_value'])
-  llm = openllm.LLM(model_id=env['model_id_value'], llm_config=llm_config, model_version=model_version, quantize=env['quantize_value'], serialisation=_serialisation)
+  llm = openllm.LLM(model_id=model_id, llm_config=llm_config, revision=model_version, quantize=env['quantize_value'], serialisation=_serialisation)
   _previously_saved = False
   try:
     _ref = openllm.serialisation.get(llm)
@@ -490,9 +482,9 @@ def build_command(ctx: click.Context, /, model_name: str, model_id: str | None, 
 
   _previously_built = False
 
-  llm_config = AutoConfig.for_model(model_name)
+  llm_config = openllm.AutoConfig.for_model(model_name)
   _serialisation = openllm_core.utils.first_not_none(serialisation, default=llm_config['serialisation'])
-  env = EnvVarMixin(model_name, backend=backend, model_id=model_id, quantize=quantize)
+  env = EnvVarMixin(model_name, backend=backend, model_id=model_id or llm_config['default_id'], quantize=quantize)
   prompt_template: str | None = prompt_template_file.read() if prompt_template_file is not None else None
 
   # NOTE: We set this environment variable so that our service.py logic won't raise RuntimeError
@@ -504,16 +496,18 @@ def build_command(ctx: click.Context, /, model_name: str, model_id: str | None, 
     if system_message: os.environ['OPENLLM_SYSTEM_MESSAGE'] = system_message
     if prompt_template: os.environ['OPENLLM_PROMPT_TEMPLATE'] = prompt_template
 
-    llm = infer_auto_class(env['backend_value']).for_model(model_name,
-                                                           model_id=env['model_id_value'],
-                                                           prompt_template=prompt_template,
-                                                           system_message=system_message,
-                                                           llm_config=llm_config,
-                                                           ensure_available=True,
-                                                           model_version=model_version,
-                                                           quantize=env['quantize_value'],
-                                                           serialisation=_serialisation,
-                                                           **attrs)
+    llm = openllm.LLM(model_id=env['model_id_value'],
+                      revision=model_version,
+                      prompt_template=prompt_template,
+                      system_message=system_message,
+                      llm_config=llm_config,
+                      backend=env['backend_value'],
+                      quantize=env['quantize_value'],
+                      serialisation=_serialisation,
+                      **attrs)
+    llm.save_pretrained()  # ensure_available = True
+
+    assert llm.bentomodel  # HACK: call it here to patch correct tag with revision and everything
     # FIX: This is a patch for _service_vars injection
     if 'OPENLLM_MODEL_ID' not in os.environ: os.environ['OPENLLM_MODEL_ID'] = llm.model_id
     if 'OPENLLM_ADAPTER_MAP' not in os.environ: os.environ['OPENLLM_ADAPTER_MAP'] = orjson.dumps(llm.adapters_mapping).decode()
@@ -626,27 +620,17 @@ def models_command(ctx: click.Context, output: LiteralOutput, show_available: bo
     if show_available: raise click.BadOptionUsage('--show-available', "Cannot use '--show-available' with '-o porcelain' (mutually exclusive).")
     termui.echo('\n'.join(models), fg='white')
   else:
-    failed_initialized: list[tuple[str, Exception]] = []
-
     json_data: dict[str, dict[t.Literal['architecture', 'model_id', 'url', 'installation', 'cpu', 'gpu', 'backend'], t.Any] | t.Any] = {}
     converted: list[str] = []
     for m in models:
-      config = AutoConfig.for_model(m)
-      backend: tuple[str, ...] = ()
-      if config['model_name'] in MODEL_MAPPING_NAMES: backend += ('pt',)
-      if config['model_name'] in MODEL_VLLM_MAPPING_NAMES: backend += ('vllm',)
+      config = openllm.AutoConfig.for_model(m)
       json_data[m] = {
           'architecture': config['architecture'],
           'model_id': config['model_ids'],
-          'backend': backend,
+          'backend': config['backend'],
           'installation': f'"openllm[{m}]"' if m in OPTIONAL_DEPENDENCIES or config['requirements'] else 'openllm',
       }
       converted.extend([normalise_model_name(i) for i in config['model_ids']])
-      if DEBUG:
-        try:
-          AutoLLM.for_model(m, llm_config=config)
-        except Exception as e:
-          failed_initialized.append((m, e))
 
     ids_in_local_store = {
         k: [
@@ -671,21 +655,8 @@ def models_command(ctx: click.Context, output: LiteralOutput, show_available: bo
         data.extend([(m, v['architecture'], v['model_id'], v['installation'], v['backend'])])
       column_widths = [int(termui.COLUMNS / 12), int(termui.COLUMNS / 6), int(termui.COLUMNS / 4), int(termui.COLUMNS / 6), int(termui.COLUMNS / 4)]
 
-      if len(data) == 0 and len(failed_initialized) > 0:
-        termui.echo('Exception found while parsing models:\n', fg='yellow')
-        for m, err in failed_initialized:
-          termui.echo(f'- {m}: ', fg='yellow', nl=False)
-          termui.echo(traceback.print_exception(None, err, None, limit=5), fg='red')  # type: ignore[func-returns-value]
-        sys.exit(1)
-
       table = tabulate.tabulate(data, tablefmt='fancy_grid', headers=['LLM', 'Architecture', 'Models Id', 'Installation', 'Runtime'], maxcolwidths=column_widths)
       termui.echo(table, fg='white')
-
-      if DEBUG and len(failed_initialized) > 0:
-        termui.echo('\nThe following models are supported but failed to initialize:\n')
-        for m, err in failed_initialized:
-          termui.echo(f'- {m}: ', fg='blue', nl=False)
-          termui.echo(err, fg='red')
 
       if show_available:
         if len(ids_in_local_store) == 0:

@@ -111,7 +111,7 @@ def prepare_for_int4_training(model_id: str,
                               ) -> tuple[peft.PeftModel, transformers.LlamaTokenizerFast]:
   from peft.tuners.lora import LoraLayer
 
-  llm = openllm.LLM(model_id, model_version=model_version, quantize="int4", bnb_4bit_compute_dtype=torch.bfloat16, use_cache=not gradient_checkpointing, device_map="auto")
+  llm = openllm.LLM(model_id, revision=model_version, quantize="int4", bnb_4bit_compute_dtype=torch.bfloat16, use_cache=not gradient_checkpointing, device_map="auto")
   print("Model summary:", llm.model)
 
   # get lora target modules

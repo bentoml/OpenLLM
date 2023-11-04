@@ -1,5 +1,6 @@
 from __future__ import annotations
 import importlib
+import os
 import typing as t
 
 from collections import OrderedDict
@@ -7,11 +8,11 @@ from collections import OrderedDict
 import inflection
 import orjson
 
-import openllm_core
-
 from openllm_core.exceptions import MissingDependencyError
+from openllm_core.exceptions import OpenLLMException
 from openllm_core.utils import ReprMixin
-from openllm_core.utils import is_transformers_available
+from openllm_core.utils import is_bentoml_available
+from openllm_core.utils.import_utils import is_transformers_available
 
 if t.TYPE_CHECKING:
   import types
@@ -20,7 +21,12 @@ if t.TYPE_CHECKING:
   from collections import _odict_keys
   from collections import _odict_values
 
+  import openllm
+  import openllm_core
+
   from openllm_core._typing_compat import LiteralString
+  from openllm_core._typing_compat import M
+  from openllm_core._typing_compat import T
   ConfigKeysView = _odict_keys[str, type[openllm_core.LLMConfig]]
   ConfigValuesView = _odict_values[str, type[openllm_core.LLMConfig]]
   ConfigItemsView = _odict_items[str, type[openllm_core.LLMConfig]]
@@ -42,7 +48,7 @@ class _LazyConfigMapping(OrderedDict, ReprMixin):
       if inflection.underscore(key) in self._mapping: return self.__getitem__(inflection.underscore(key))
       raise KeyError(key)
     value, module_name = self._mapping[key], inflection.underscore(key)
-    if module_name not in self._modules: self._modules[module_name] = openllm_core.utils.EnvVarMixin(module_name).module
+    if module_name not in self._modules: self._modules[module_name] = importlib.import_module(f'.configuration_{module_name}', 'openllm_core.config')
     if hasattr(self._modules[module_name], value): return getattr(self._modules[module_name], value)
     # Some of the mappings have entries model_type -> config of another model type. In that case we try to grab the object at the top level.
     return getattr(importlib.import_module('openllm'), value)
@@ -79,7 +85,6 @@ class _LazyConfigMapping(OrderedDict, ReprMixin):
 CONFIG_MAPPING: dict[LiteralString, type[openllm_core.LLMConfig]] = _LazyConfigMapping(CONFIG_MAPPING_NAMES)
 # The below handle special alias when we call underscore to the name directly without processing camelcase first.
 CONFIG_NAME_ALIASES: dict[str, str] = {'chat_glm': 'chatglm', 'stable_lm': 'stablelm', 'star_coder': 'starcoder', 'gpt_neo_x': 'gpt_neox'}
-
 CONFIG_FILE_NAME = 'config.json'
 
 class AutoConfig:
@@ -100,19 +105,26 @@ class AutoConfig:
     raise ValueError(f"Unrecognized configuration class for {model_name}. Model name should be one of {', '.join(CONFIG_MAPPING.keys())}.")
 
   @classmethod
-  def infer_class_from_model_id(cls, model_id: str) -> type[openllm_core.LLMConfig]:
-    if not is_transformers_available():
-      raise MissingDependencyError('"infer_class_from_architecture" requires "transformers" to be available. Make sure to install it with "pip install transformers"')
+  def infer_class_from_llm(cls, llm: openllm.LLM[M, T]) -> type[openllm_core.LLMConfig]:
+    if not is_bentoml_available(): raise MissingDependencyError("'infer_class_from_llm' requires 'bentoml' to be available. Make sure to install it with 'pip install bentoml'")
     CONFIG_MAPPING_NAMES_TO_ARCHITECTURE: dict[str, str] = {v.__config__['architecture']: k for k, v in CONFIG_MAPPING.items()}
-    # TODO: support offline mode
-    from transformers.utils import cached_file
-    config_file = cached_file(model_id, CONFIG_FILE_NAME)
-    if config_file is None: raise ValueError(f"Failed to download 'config.json' from HuggingFace model hub for {model_id}.")
+    if llm._local:
+      config_file = os.path.join(llm.model_id, CONFIG_FILE_NAME)
+    else:
+      try:
+        config_file = llm.bentomodel.path_of(CONFIG_FILE_NAME)
+      except OpenLLMException:
+        if not is_transformers_available():
+          raise MissingDependencyError("'infer_class_from_llm' requires 'transformers' to be available. Make sure to install it with 'pip install transformers'")
+        from transformers.utils import cached_file
+        try:
+          config_file = cached_file(llm.model_id, CONFIG_FILE_NAME)
+        except Exception as err:
+          raise ValueError("Failed to determine architecture from 'config.json'. If this is a gated model, make sure to pass in HUGGING_FACE_HUB_TOKEN") from err
+    if not os.path.exists(config_file): raise ValueError(f"Failed to find 'config.json' (config_json_path={config_file})")
     with open(config_file, 'r', encoding='utf-8') as f:
       loaded_config = orjson.loads(f.read())
     if 'architectures' in loaded_config:
       for architecture in loaded_config['architectures']:
         if architecture in CONFIG_MAPPING_NAMES_TO_ARCHITECTURE: return cls.infer_class_from_name(CONFIG_MAPPING_NAMES_TO_ARCHITECTURE[architecture])
-    raise ValueError(
-        f"Failed to determine config class from model_id '{model_id}'. Hint: Make sure the 'config.json' contains supported 'architetures' keyword. See `openllm models` for more information on suppported architectures."
-    )
+    raise ValueError(f"Failed to determine config class for '{llm.model_id}'. Make sure {llm.model_id} is saved with openllm.")

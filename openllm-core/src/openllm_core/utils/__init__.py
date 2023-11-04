@@ -411,10 +411,10 @@ _import_structure: dict[str, list[str]] = {
     'representation': ['ReprMixin'],
     'serde': ['converter'],
     'import_utils': [
-        'OPTIONAL_DEPENDENCIES', 'DummyMetaclass', 'EnvVarMixin', 'require_backends', 'is_cpm_kernels_available', 'is_einops_available', 'is_vllm_available', 'is_torch_available',
-        'is_bitsandbytes_available', 'is_peft_available', 'is_datasets_available', 'is_jupyter_available', 'is_jupytext_available', 'is_notebook_available', 'is_triton_available',
-        'is_autogptq_available', 'is_sentencepiece_available', 'is_xformers_available', 'is_fairscale_available', 'is_grpc_available', 'is_grpc_health_available', 'is_transformers_available',
-        'is_optimum_supports_gptq', 'is_autoawq_available',
+        'OPTIONAL_DEPENDENCIES', 'EnvVarMixin', 'is_cpm_kernels_available', 'is_einops_available', 'is_vllm_available', 'is_torch_available', 'is_bitsandbytes_available', 'is_peft_available',
+        'is_datasets_available', 'is_jupyter_available', 'is_jupytext_available', 'is_notebook_available', 'is_triton_available', 'is_autogptq_available', 'is_sentencepiece_available',
+        'is_xformers_available', 'is_fairscale_available', 'is_grpc_available', 'is_grpc_health_available', 'is_transformers_available', 'is_optimum_supports_gptq', 'is_autoawq_available',
+        'is_bentoml_available'
     ]
 }
 
@@ -425,9 +425,10 @@ if t.TYPE_CHECKING:
   from . import dantic as dantic
   from . import serde as serde
   from .import_utils import OPTIONAL_DEPENDENCIES as OPTIONAL_DEPENDENCIES
-  from .import_utils import DummyMetaclass as DummyMetaclass
   from .import_utils import EnvVarMixin as EnvVarMixin
+  from .import_utils import is_autoawq_available as is_autoawq_available
   from .import_utils import is_autogptq_available as is_autogptq_available
+  from .import_utils import is_bentoml_available as is_bentoml_available
   from .import_utils import is_bitsandbytes_available as is_bitsandbytes_available
   from .import_utils import is_cpm_kernels_available as is_cpm_kernels_available
   from .import_utils import is_datasets_available as is_datasets_available
@@ -446,7 +447,6 @@ if t.TYPE_CHECKING:
   from .import_utils import is_triton_available as is_triton_available
   from .import_utils import is_vllm_available as is_vllm_available
   from .import_utils import is_xformers_available as is_xformers_available
-  from .import_utils import require_backends as require_backends
   from .representation import ReprMixin as ReprMixin
   from .serde import converter as converter
 

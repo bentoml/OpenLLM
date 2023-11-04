@@ -4,7 +4,7 @@ Currently support OpenAI compatible API.
 
 Each module should implement the following API:
 
-- `mount_to_svc(svc: bentoml.Service, llm_runner: openllm.LLMRunner) -> bentoml.Service: ...`
+- `mount_to_svc(svc: bentoml.Service, llm: openllm.LLM[M, T]) -> bentoml.Service: ...`
 '''
 from __future__ import annotations
 import os
@@ -12,9 +12,10 @@ import typing as t
 
 from openllm_core.utils import LazyModule
 
-_import_structure: dict[str, list[str]] = {'openai': []}
+_import_structure: dict[str, list[str]] = {'openai': [], 'hf': []}
 
 if t.TYPE_CHECKING:
+  from . import hf as hf
   from . import openai as openai
 
 __lazy = LazyModule(__name__, os.path.abspath('__file__'), _import_structure)

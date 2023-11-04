@@ -1,6 +1,6 @@
 # mypy: disable-error-code="name-defined,attr-defined"
 from __future__ import annotations
-import abc
+import asyncio
 import functools
 import inspect
 import logging
@@ -57,6 +57,7 @@ from openllm_core.utils import validate_is_path
 from ._quantisation import infer_quantisation_config
 from .exceptions import ForbiddenAttributeError
 from .exceptions import OpenLLMException
+from .serialisation.constants import PEFT_CONFIG_NAME
 
 if t.TYPE_CHECKING:
   import peft
@@ -77,15 +78,10 @@ P = ParamSpec('P')
 
 logger = logging.getLogger(__name__)
 
-_object_setattr = object.__setattr__
-
 def normalise_model_name(name: str) -> str:
   if validate_is_path(name): return os.path.basename(resolve_filepath(name))
   name = name.replace('/', '--')
   return inflection.dasherize(name)
-
-# the below is similar to peft.utils.other.CONFIG_NAME
-PEFT_CONFIG_NAME = 'adapter_config.json'
 
 def resolve_peft_config_type(adapter_map: dict[str, str | None]) -> AdaptersMapping:
   '''Resolve the type of the PeftConfig given the adapter_map.
@@ -119,79 +115,13 @@ def resolve_peft_config_type(adapter_map: dict[str, str | None]) -> AdaptersMapp
   return resolved
 
 _reserved_namespace = {'model', 'tokenizer', 'runner', 'import_kwargs'}
-
-class _Interface(abc.ABC, t.Generic[M, T]):
-  def import_model(self, *args: t.Any, trust_remote_code: bool, **attrs: t.Any) -> bentoml.Model:
-    '''Import both model and tokenizer weights into as a BentoML models.
-
-    Note that tokenizer attrs can be accessed via ``llm.llm_parameters``.
-
-    ```python
-    _, tokenizer_attrs = llm.llm_parameters
-    ```
-
-    By default, `model_decls` and `model_attrs` is already sanitised and concatenated into `args` and `attrs`
-    '''
-    raise NotImplementedError
-
-  def load_model(self, *args: t.Any, **attrs: t.Any) -> M:
-    '''This function can be implemented to override the default load_model behaviour.
-
-    See falcon for example implementation. Tag can be accessed via ``self.tag``
-    '''
-    raise NotImplementedError
-
-  def load_tokenizer(self, tag: bentoml.Tag, **attrs: t.Any) -> T:
-    '''This function can be implemented to override how to load the tokenizer.
-
-    See falcon for example implementation.
-    '''
-    raise NotImplementedError
-
-  def llm_post_init(self) -> None:
-    '''This function can be implemented if you need to initialized any additional variables that doesn't concern OpenLLM internals.
-    By default, this will add `self.device` if the implementation is PyTorch.
-    '''
-    pass
-
-  def sanitize_parameters(self, prompt: str, **attrs: t.Any) -> tuple[str, DictStrAny, DictStrAny]:
-    '''This handler will sanitize all attrs and setup prompt text.
-
-    It takes a prompt that is given by the user, attrs that can be parsed with the prompt.
-
-    Returns a tuple of three items:
-    - The attributes dictionary that can be passed into LLMConfig to generate a GenerationConfig
-    - The attributes dictionary that will be passed into `self.postprocess_generate`.
-    '''
-    raise NotImplementedError
-
-  @property
-  def import_kwargs(self) -> tuple[DictStrAny, DictStrAny]:
-    '''The default import kwargs to used when importing the model.
-
-    This will be passed into 'openllm.LLM.import_model'.
-    It returns two dictionaries: one for model kwargs and one for tokenizer kwargs.
-
-    Returns:
-        Optional tuple of model kwargs and tokenizer kwargs
-    '''
-    return {}, {}
-
-  # NOTE: All fields below are attributes that can be accessed by users.
-  config_class: t.Type[LLMConfig]
-  '''The config class to use for this LLM. If you are creating a custom LLM, you must specify this class.'''
-  device: 'torch.device'
-  '''The device to be used for this LLM. If the implementation is 'pt', then it will be torch.device, else string.'''
-
 _AdaptersTuple: type[AdaptersTuple] = codegen.make_attr_tuple_class('AdaptersTuple', ['adapter_id', 'name', 'config'])
-
-InferenceReturnType = t.Literal['text', 'object']
+InferenceReturnType = t.Literal['text', 'object', 'sse']
 
 @attr.define(slots=True, repr=False, init=False)
-class LLM(_Interface[M, T], ReprMixin):
+class LLM(t.Generic[M, T]):
   _model_id: str
-  _model_version: str | None
-  config: LLMConfig
+  _revision: str | None
   quantization_config: transformers.BitsAndBytesConfig | transformers.GPTQConfig | transformers.AwqConfig | None
   _quantize: LiteralQuantise | None
   _model_decls: TupleAny
@@ -204,12 +134,14 @@ class LLM(_Interface[M, T], ReprMixin):
   _prompt_template: PromptTemplate | None
   _system_message: str | None
 
-  # NOTE: The following will be populated by __init_subclass__, note that these should be immutable.
+  __llm_config__: LLMConfig | None = None
   __llm_backend__: LiteralBackend = None
   __llm_runner__: t.Optional[LLMRunner[M, T]] = None
   __llm_model__: t.Optional[M] = None
   __llm_tokenizer__: t.Optional[T] = None
   __llm_adapter_map__: t.Optional[ResolvedAdaptersMapping] = None
+
+  device: 'torch.device' | None = None
 
   def __attrs_post_init__(self) -> None:
     if self.__llm_backend__ == 'pt': self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -235,7 +167,6 @@ class LLM(_Interface[M, T], ReprMixin):
     _local = False
     if validate_is_path(model_id): model_id, _local = resolve_filepath(model_id), True
     quantize = first_not_none(quantize, t.cast(t.Optional[LiteralQuantise], os.getenv('OPENLLM_QUANTIZE')), default=None)
-    self.config_class = openllm.AutoConfig.infer_class_from_model_id(model_id)
     if backend is None: backend = 'vllm' if is_vllm_available() else 'pt'
 
     # quantization setup
@@ -249,8 +180,6 @@ class LLM(_Interface[M, T], ReprMixin):
 
     attrs.update({'low_cpu_mem_usage': low_cpu_mem_usage, 'quantization_config': quantization_config, 'torch_dtype': torch.float16 if torch.cuda.is_available() else torch.float32})
     model_kwds, tokenizer_kwds = self.import_kwargs
-    # set default tokenizer kwargs
-    tokenizer_kwds.update({'padding_side': 'left', 'truncation_side': 'left'})
 
     # parsing tokenizer and model kwargs, as the hierarchy is param pass > default
     normalized_model_kwds, normalized_tokenizer_kwds = normalize_attrs_to_model_tokenizer_pair(**attrs)
@@ -264,19 +193,13 @@ class LLM(_Interface[M, T], ReprMixin):
 
     if isinstance(prompt_template, str): prompt_template = PromptTemplate(prompt_template)
 
-    if llm_config is None:
-      llm_config = self.config_class.model_construct_env(**attrs)
-      # The rests of the kwargs that is not used by the config class should be stored into __openllm_extras__.
-      attrs = llm_config['extras']
-
     if model_tag is None:
-      model_tag, model_version = self.generate_tag(model_id, model_version, backend=backend)
+      model_tag, model_version = self._make_tag_components(model_id, model_version, backend=backend)
       if model_version: model_tag = f'{model_tag}:{model_version}'
 
     self.__attrs_init__(model_id=model_id,
-                        model_version=model_version,
+                        revision=model_version,
                         tag=bentoml.Tag.from_taglike(model_tag),
-                        config=llm_config,
                         quantization_config=quantization_config,
                         quantize=quantize,
                         model_decls=args,
@@ -287,10 +210,11 @@ class LLM(_Interface[M, T], ReprMixin):
                         local=_local,
                         prompt_template=prompt_template,
                         system_message=system_message,
-                        llm_backend__=backend)
+                        llm_backend__=backend,
+                        llm_config__=llm_config)
 
   @apply(lambda val: tuple(str.lower(i) if i else i for i in val))
-  def generate_tag(self, model_id: str, model_version: str | None, backend: LiteralBackend) -> tuple[str, str]:
+  def _make_tag_components(self, model_id: str, model_version: str | None, backend: LiteralBackend) -> tuple[str, str]:
     '''Return a valid tag name (<backend>-<repo>--<model_id>) and its tag version.'''
     model_id, *maybe_revision = model_id.rsplit(':')
     if len(maybe_revision) > 0:
@@ -303,21 +227,27 @@ class LLM(_Interface[M, T], ReprMixin):
   def __setattr__(self,attr: str,value: t.Any)->None:
     if attr in _reserved_namespace:raise ForbiddenAttributeError(f'{attr} should not be set during runtime.')
     super().__setattr__(attr,value)
-  def __repr_args__(self)->ReprArgs:
-    for k in self.__repr_keys__:
-      if k=='config':yield k,self.config.model_dump(flatten=True)
-      else:yield k,getattr(self, k)
-    yield 'backend',self.__llm_backend__
   @property
-  def __repr_keys__(self)->set[str]:return {'model_id', 'runner_name', 'config', 'adapters_mapping', 'tag'}
-  @property
-  def trust_remote_code(self)->bool:return first_not_none(openllm_core.utils.check_bool_env('TRUST_REMOTE_CODE',False),default=self.config['trust_remote_code'])
+  def import_kwargs(self)->tuple[dict[str, t.Any],dict[str, t.Any]]: return {'device_map': 'auto' if torch.cuda.is_available() and torch.cuda.device_count() > 1 else None, 'torch_dtype': torch.float16 if torch.cuda.is_available() else torch.float32}, {'padding_side': 'left', 'truncation_side': 'left'}
   @property
   def adapters_mapping(self)->AdaptersMapping|None:return self._adapter_map
   @property
-  def model_id(self)->str:return self._model_id
+  def trust_remote_code(self)->bool:return first_not_none(openllm_core.utils.check_bool_env('TRUST_REMOTE_CODE',False),default=self.config['trust_remote_code'])
   @property
   def runner_name(self)->str:return f"llm-{self.config['start_name']}-runner"
+  @property
+  def model_id(self)->str:return self._model_id
+  @property
+  def revision(self)->str:return t.cast(str, self._revision)
+  @property
+  def tag(self)->bentoml.Tag:return self._tag
+  @property
+  def bentomodel(self)->bentoml.Model:return openllm.serialisation.get(self)
+  @property
+  def config(self)->LLMConfig:
+    if self.__llm_config__ is None: self.__llm_config__=openllm.AutoConfig.infer_class_from_llm(self).model_construct_env(**self._model_attrs)
+    return self.__llm_config__
+  def save_pretrained(self) -> bentoml.Model: return openllm.import_model(self.config['start_name'], model_id=self.model_id, model_version=self._revision, backend=self.__llm_backend__, quantize=self._quantize)
   # NOTE: The section below defines a loose contract with langchain's LLM interface.
   @property
   def llm_type(self)->str:return normalise_model_name(self._model_id)
@@ -325,46 +255,14 @@ class LLM(_Interface[M, T], ReprMixin):
   def identifying_params(self)->DictStrAny: return {'configuration': self.config.model_dump_json().decode(),'model_ids': orjson.dumps(self.config['model_ids']).decode(),'model_id': self.model_id}
   @property
   def llm_parameters(self)->tuple[tuple[tuple[t.Any,...],DictStrAny],DictStrAny]:return (self._model_decls,self._model_attrs),self._tokenizer_attrs
-  @property
-  def tag(self)->bentoml.Tag:return self._tag
-  @property
-  def bentomodel(self)->bentoml.Model:return openllm.serialisation.get(self,auto_import=True)
-  # yapf: enable
-
-  def save_pretrained(self) -> bentoml.Model:
-    return openllm.import_model(self.config['start_name'],
-                                model_id=self.model_id,
-                                model_version=self._model_version,
-                                backend=self.__llm_backend__,
-                                quantize=self._quantize,
-                                serialisation=self._serialisation)
-
-  def sanitize_parameters(self, prompt: str, **attrs: t.Any) -> tuple[str, DictStrAny, DictStrAny]:
-    '''This handler will sanitize all attrs and setup prompt text.
-
-    It takes a prompt that is given by the user, attrs that can be parsed with the prompt.
-
-    Returns a tuple of three items:
-    - The attributes dictionary that can be passed into LLMConfig to generate a GenerationConfig
-    - The attributes dictionary that will be passed into `self.postprocess_generate`.
-    '''
-    attrs.update({'prompt_template': self._prompt_template, 'system_message': self._system_message})
-    return self.config.sanitize_parameters(prompt, **attrs)
-
+  def sanitize_parameters(self, prompt: str, **attrs: t.Any) -> tuple[str, DictStrAny, DictStrAny]: return self.config.sanitize_parameters(prompt,prompt_template=self._prompt_template,system_message=self._system_message,**attrs)
   def postprocess_generate(self, prompt: str, generation_result: t.Any, **attrs: t.Any) -> t.Any:
-    '''This handler will postprocess generation results from LLM.generate and then output nicely formatted results (if the LLM decide to do so.).
-
-    You can customize how the output of the LLM looks with this hook. By default, it is a simple echo.
-
-    > [!NOTE]
-    > This will be used from the client side.
-    '''
     if isinstance(generation_result, dict) and 'text' in generation_result: return generation_result['text']
     return self.config.postprocess_generate(prompt, generation_result, **attrs)
+  # yapf: enable
 
   @property
   def model(self) -> M:
-    # NOTE: the signature of load_model here is the wrapper under _wrapped_load_model
     if self.__llm_model__ is None:
       model = openllm.serialisation.load_model(self, *self._model_decls, **self._model_attrs)
       # If OOM, then it is probably you don't have enough VRAM to run this model.
@@ -400,38 +298,20 @@ class LLM(_Interface[M, T], ReprMixin):
 
     @functools.wraps(func)
     async def wrapped(self: LLM[M, T], *args: P.args, **kwargs: P.kwargs) -> t.Any:
-      return_type = kwargs.pop('return_type', 'object')  # by default, we return the object and let users handle what they want to do with it.
       if isinstance(self.runner._runner_handle, DummyRunnerHandle):
         if os.getenv('BENTO_PATH') is not None: raise RuntimeError('Runner client failed to set up correctly.')
         else: self.runner.init_local(quiet=True)
-
-      awaitable = await func(self, *args, **kwargs) if not _is_async_gen else func(self, *args, **kwargs)
-
-      if return_type == 'object': return awaitable
-      elif return_type == 'text':
-        if _is_async_gen:
-
-          async def stream_text_generator() -> t.AsyncGenerator[str, None]:
-            pre = 0
-            async for it in t.cast(t.AsyncGenerator[GenerationOutput, None], awaitable):
-              text_outputs = [output.text for output in it.outputs]
-              output_text = text_outputs[0].strip().split(' ')
-              now = len(output_text) - 1
-              if now > pre:
-                yield ' '.join(output_text[pre:now]) + ' '
-                pre = now
-            yield ' '.join(output_text[pre:]) + ' '
-
-          return stream_text_generator()
-        else:
-          return t.cast(GenerationOutput, awaitable).outputs[0].text
-      else:
-        raise ValueError(f"return_type can only be 'object' or 'text', while '{return_type}' is given.")
+      return await func(self, *args, **kwargs) if not _is_async_gen else func(self, *args, **kwargs)
 
     return wrapped
 
   @inferece_wrapper
-  async def generate(self, prompt: str, stop: str | t.Iterable[str] | None = None, stop_token_ids: list[int] | None = None, **attrs: t.Any) -> GenerationOutput:
+  async def generate(self,
+                     prompt: str,
+                     stop: str | t.Iterable[str] | None = None,
+                     stop_token_ids: list[int] | None = None,
+                     return_type: InferenceReturnType = 'object',
+                     **attrs: t.Any) -> GenerationOutput:
     prompt, *_ = self.sanitize_parameters(prompt, **attrs)
     config = self.config.model_construct_env(**attrs)
 
@@ -446,13 +326,19 @@ class LLM(_Interface[M, T], ReprMixin):
     prompt_token_ids, request_id = self.tokenizer.encode(prompt), openllm_core.utils.gen_random_uuid()
     async for out in self.runner.generate.async_stream(prompt_token_ids, request_id, stop=stop, **config.model_dump()):
       pass
-    return GenerationOutput.from_sse(out)
+
+    if return_type == 'sse': return out
+    generated = GenerationOutput.from_sse(out).with_options(prompt=prompt)
+    if return_type == 'object': return generated
+    elif return_type == 'text': return generated.outputs[0].text
+    else: raise ValueError(f"'return_type' can only be one of ['object', 'text', 'sse'], while '{return_type}' is given.")
 
   @inferece_wrapper
   async def generate_iterator(self,
                               prompt: str,
                               stop: str | t.Iterable[str] | None = None,
                               stop_token_ids: list[int] | None = None,
+                              return_type: InferenceReturnType = 'object',
                               **attrs: t.Any) -> t.AsyncGenerator[GenerationOutput, None]:
     prompt, *_ = self.sanitize_parameters(prompt, **attrs)
     config = self.config.model_construct_env(**attrs)
@@ -465,11 +351,22 @@ class LLM(_Interface[M, T], ReprMixin):
     for tid in stop_token_ids:
       if tid: stop.add(self.tokenizer.decode(tid))
 
-    prompt_token_ids, request_id = self.tokenizer.encode(prompt), openllm_core.utils.gen_random_uuid()
+    prompt_token_ids, request_id, pre = self.tokenizer.encode(prompt), openllm_core.utils.gen_random_uuid(), 0
     async for out in self.runner.generate_iterator.async_stream(prompt_token_ids, request_id, stop=stop, **config.model_dump()):
-      outputs = GenerationOutput.from_sse(out)
-      if outputs.finished: break
-      yield outputs
+      if return_type == 'sse': yield out
+      generated = GenerationOutput.from_sse(out).with_options(prompt=prompt)
+      if return_type == 'object': yield generated
+      elif return_type == 'text':
+        text_outputs = [output.text for output in generated.outputs]
+        output_text = text_outputs[0].strip().split(' ')
+        now = len(output_text) - 1
+        if now > pre:
+          yield ' '.join(output_text[pre:now]) + ' '
+          pre = now
+      else:
+        raise ValueError(f"'return_type' can only be one of ['object', 'text', 'sse'], while '{return_type}' is given.")
+      if generated.finished: break
+    if return_type == 'text': yield ' '.join(output_text[pre:]) + ' '
 
 def Runner(model_name: str,
            ensure_available: bool = False,
@@ -479,10 +376,8 @@ def Runner(model_name: str,
            **attrs: t.Any) -> LLMRunner[t.Any, t.Any]:
   '''Create a Runner for given LLM. For a list of currently supported LLM, check out 'openllm models'.
 
-  The behaviour of ensure_available that is synonymous to `AutoLLM.for_model` depends on `init_local`.
-  By default, `ensure_available` is synonymous to `init_local`, meaning on the service when creating
-  runner, it won't download the model. So before running your BentoML Service, you should create a `on_startup`
-  hook to check download if you don't want to do it manually:
+  > [!WARNING]
+  > This method is now deprecated and in favor of 'openllm.LLM.runner'
 
   ```python
   runner = openllm.Runner("dolly-v2")
@@ -529,10 +424,11 @@ async def chat(input: str) -> str:
   })
 
   backend = t.cast(LiteralBackend, first_not_none(backend, default='vllm' if is_vllm_available() else 'pt'))
-  if init_local: pass
-  runner = LLM(backend=backend, llm_config=llm_config, **attrs).runner
-  if init_local: runner.init_local(quiet=True)
-  return runner
+  if init_local: ensure_available = True
+  llm = LLM(backend=backend, llm_config=llm_config, **attrs)
+  if ensure_available: llm.save_pretrained()
+  if init_local: llm.runner.init_local(quiet=True)
+  return llm.runner
 
 def _RunnerFactory(self: openllm.LLM[M, T],
                    /,
@@ -545,13 +441,17 @@ def _RunnerFactory(self: openllm.LLM[M, T],
   backend = t.cast(LiteralBackend, first_not_none(backend, os.environ.get('OPENLLM_BACKEND'), default=self.__llm_backend__))
 
   models = models if models is not None else []
-  if os.environ.get('BENTO_PATH') is None:
-    # Hmm we should only add this if it is not in the container environment
-    # BentoML sets BENTO_PATH so we can use this as switch logic here.
-    try:
-      models.append(self.bentomodel)
-    except bentoml.exceptions.NotFound as err:
-      raise RuntimeError(f'Failed to locate {self.bentomodel}:{err}') from err
+  # if os.environ.get('BENTO_PATH') is None:
+  #   # Hmm we should only add this if it is not in the container environment
+  #   # BentoML sets BENTO_PATH so we can use this as switch logic here.
+  #   try:
+  #     models.append(self.bentomodel)
+  #   except bentoml.exceptions.NotFound as err:
+  #     raise RuntimeError(f'Failed to locate {self.bentomodel}:{err}') from err
+  try:
+    models.append(self.bentomodel)
+  except bentoml.exceptions.NotFound as err:
+    raise RuntimeError(f'Failed to locate {self.bentomodel}:{err}') from err
 
   if backend == 'vllm':
     from ._runners import vLLMRunnable as OpenLLMRunnable
@@ -568,6 +468,13 @@ def _RunnerFactory(self: openllm.LLM[M, T],
 
   def _wrapped_repr_keys(_: LLMRunner[M, T]) -> set[str]:
     return {'config', 'llm_type', 'runner_methods', 'backend', 'llm_tag'}
+
+  def _generate_sync(_: LLMRunner[M, T], prompt: str, **kwargs: t.Any) -> t.Any:
+    # NOTE: This should only be used with LangChain
+    async def infer():
+      return await self.generate(prompt, **kwargs)
+
+    return asyncio.run(infer())
 
   def _wrapped_repr_args(_: LLMRunner[M, T]) -> ReprArgs:
     yield 'runner_methods', {method.name: {'batchable': method.config.batchable, 'batch_dim': method.config.batch_dim if method.config.batchable else None} for method in _.runner_methods}
@@ -586,6 +493,7 @@ def _RunnerFactory(self: openllm.LLM[M, T],
                              'backend': backend,
                              'download_model': self.save_pretrained,
                              '__module__': self.__module__,
+                             '__call__': _generate_sync,
                              '__doc__': self.config['env'].start_docstring,
                              '__repr__': ReprMixin.__repr__,
                              '__repr_keys__': property(_wrapped_repr_keys),
