@@ -141,7 +141,9 @@ class ModelList:
   object: str = 'list'
   data: t.List[ModelCard] = attr.field(factory=list)
 
-# async def get_conversation_prompt(request: ChatCompletionRequest) -> str:
+async def get_conversation_prompt(request: ChatCompletionRequest) -> str:
+  ...
+
 def messages_to_prompt(messages: list[Message], model: str, llm_config: openllm_core.LLMConfig) -> str:
   conv_template = _conversation.get_conv_template(model, llm_config)
   for message in messages:
