@@ -339,7 +339,7 @@ class LLM(t.Generic[M, T]):
                               stop: str | t.Iterable[str] | None = None,
                               stop_token_ids: list[int] | None = None,
                               return_type: InferenceReturnType = 'object',
-                              **attrs: t.Any) -> t.AsyncGenerator[GenerationOutput, None]:
+                              **attrs: t.Any) -> t.AsyncGenerator[GenerationOutput | str, None]:
     prompt, *_ = self.sanitize_parameters(prompt, **attrs)
     config = self.config.model_construct_env(**attrs)
 
@@ -352,20 +352,21 @@ class LLM(t.Generic[M, T]):
       if tid: stop.add(self.tokenizer.decode(tid))
 
     prompt_token_ids, request_id, pre = self.tokenizer.encode(prompt), openllm_core.utils.gen_random_uuid(), 0
+    output_text = []
     async for out in self.runner.generate_iterator.async_stream(prompt_token_ids, request_id, stop=stop, **config.model_dump()):
       if return_type == 'sse': yield out
-      generated = GenerationOutput.from_sse(out).with_options(prompt=prompt)
-      if return_type == 'object': yield generated
+      elif return_type == 'object': yield GenerationOutput.from_sse(out).with_options(prompt=prompt)
       elif return_type == 'text':
+        generated = GenerationOutput.from_sse(out).with_options(prompt=prompt)
         text_outputs = [output.text for output in generated.outputs]
         output_text = text_outputs[0].strip().split(' ')
         now = len(output_text) - 1
         if now > pre:
           yield ' '.join(output_text[pre:now]) + ' '
           pre = now
+        if generated.finished: break
       else:
         raise ValueError(f"'return_type' can only be one of ['object', 'text', 'sse'], while '{return_type}' is given.")
-      if generated.finished: break
     if return_type == 'text': yield ' '.join(output_text[pre:]) + ' '
 
 def Runner(model_name: str,
