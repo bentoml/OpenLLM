@@ -1,6 +1,6 @@
 {
   "name": "@bentoml/openllm-monorepo",
-  "version": "0.3.10.dev0",
+  "version": "0.3.14.dev0",
   "description": "OpenLLM: Operating LLMs in production",
   "author": "Aaron Pham <29749331+aarnphm@users.noreply.github.com>",
   "license": "Apache-2.0",
@@ -22,14 +22,14 @@
   },
   "packageManager": "pnpm@8.4.0",
   "devDependencies": {
-    "@edge-runtime/vm": "3.1.4",
+    "@edge-runtime/vm": "3.1.6",
     "@next/eslint-plugin-next": "13.5.5",
-    "@types/node": "20.8.6",
-    "@typescript-eslint/eslint-plugin": "6.8.0",
+    "@types/node": "20.8.7",
+    "@typescript-eslint/eslint-plugin": "6.9.0",
     "@typescript-eslint/parser": "6.8.0",
-    "eslint": "8.51.0",
+    "eslint": "8.52.0",
     "eslint-config-prettier": "9.0.0",
-    "eslint-plugin-import": "2.28.1",
+    "eslint-plugin-import": "2.29.0",
     "eslint-plugin-react": "7.33.2",
     "eslint-plugin-react-hooks": "4.6.0",
     "eslint-plugin-tailwindcss": "3.13.0",
@@ -37,7 +37,7 @@
     "prettier": "3.0.3",
     "prettier-plugin-pkg": "0.18.0",
     "prettier-plugin-tailwindcss": "0.5.6",
-    "turbo": "1.10.15",
+    "turbo": "1.10.16",
     "typescript": "5.2.2"
   },
   "pnpm": {

@@ -41,7 +41,7 @@ class FalconConfig(openllm_core.LLMConfig):
   """
   __config__ = {
       'name_type': 'lowercase',
-      'trust_remote_code': True,
+      'trust_remote_code': False,
       'timeout': int(36e6),
       'url': 'https://falconllm.tii.ae/',
       'requirements': ['einops', 'xformers'],
