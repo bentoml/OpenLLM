@@ -57,11 +57,6 @@ class MetadataOutput:
   prompt_template: str
   system_message: str
 
-@attr.define
-class HfAgentInput:
-  inputs: str
-  parameters: t.Dict[str, t.Any]
-
 FinishReason = t.Literal['length', 'stop']
 
 # NOTE: vendor parameters from vllm.RequestOutput and vllm.CompletionOutput

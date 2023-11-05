@@ -50,7 +50,7 @@ At = t.TypeVar('At', bound=attr.AttrsInstance)
 
 LiteralSerialisation = t.Literal['safetensors', 'legacy']
 LiteralQuantise = t.Literal['int8', 'int4', 'gptq', 'awq']
-LiteralBackend = t.Literal['pt', 'vllm', 'ggml', 'mlc']
+LiteralBackend = t.Literal['pt', 'vllm', 'ggml']
 AdapterType = t.Literal['lora', 'adalora', 'adaption_prompt', 'prefix_tuning', 'p_tuning', 'prompt_tuning', 'ia3']
 
 # TODO: support quay

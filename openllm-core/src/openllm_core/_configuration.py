@@ -1437,6 +1437,8 @@ class LLMConfig(_ConfigAttr):
   def with_openai_request(self, request: ChatCompletionRequest | CompletionRequest) -> dict[str, t.Any]:
     return dict(temperature=first_not_none(request.temperature, self['temperature']),
                 top_p=first_not_none(request.top_p, self['top_p']),
+                top_k=first_not_none(request.top_k, self['top_k']),
+                best_of=first_not_none(request.best_of, self['best_of']),
                 n=first_not_none(request.n, default=self['n']),
                 stop=first_not_none(request.stop, default=self['stop']),
                 max_new_tokens=first_not_none(request.max_tokens, default=self['max_new_tokens']),

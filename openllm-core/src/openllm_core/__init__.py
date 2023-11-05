@@ -8,7 +8,6 @@ from ._configuration import LLMConfig as LLMConfig
 from ._configuration import SamplingParams as SamplingParams
 from ._schema import GenerateInput as GenerateInput
 from ._schema import GenerationOutput as GenerationOutput
-from ._schema import HfAgentInput as HfAgentInput
 from ._schema import MetadataOutput as MetadataOutput
 from .config import CONFIG_MAPPING as CONFIG_MAPPING
 from .config import CONFIG_MAPPING_NAMES as CONFIG_MAPPING_NAMES

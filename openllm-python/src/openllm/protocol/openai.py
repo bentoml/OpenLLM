@@ -31,9 +31,11 @@ class CompletionRequest:
   stop: t.Optional[t.Union[str, t.List[str]]] = attr.field(default=None)
   presence_penalty: t.Optional[float] = attr.field(default=0.0)
   frequency_penalty: t.Optional[float] = attr.field(default=0.0)
-  best_of: t.Optional[int] = attr.field(default=1)
   logit_bias: t.Optional[t.Dict[str, float]] = attr.field(default=None)
   user: t.Optional[str] = attr.field(default=None)
+  # supported by vLLM and us
+  top_k: t.Optional[int] = attr.field(default=None)
+  best_of: t.Optional[int] = attr.field(default=1)
 
 @attr.define
 class ChatCompletionRequest:
@@ -51,6 +53,9 @@ class ChatCompletionRequest:
   frequency_penalty: t.Optional[float] = attr.field(default=None)
   logit_bias: t.Optional[t.Dict[str, float]] = attr.field(default=None)
   user: t.Optional[str] = attr.field(default=None)
+  # supported by vLLM and us
+  top_k: t.Optional[int] = attr.field(default=None)
+  best_of: t.Optional[int] = attr.field(default=1)
 
 @attr.define
 class LogProbs:
@@ -60,40 +65,43 @@ class LogProbs:
   top_logprobs: t.List[t.Dict[str, t.Any]] = attr.field(default=attr.Factory(list))
 
 @attr.define
-class CompletionTextChoice:
-  text: str
-  index: int
-  logprobs: LogProbs = attr.field(default=attr.Factory(lambda: LogProbs()))
-  finish_reason: str = attr.field(default=None)
-
-@attr.define
 class UsageInfo:
   prompt_tokens: int = attr.field(default=0)
   completion_tokens: int = attr.field(default=0)
   total_tokens: int = attr.field(default=0)
 
 @attr.define
-class CompletionResponse:
-  choices: t.List[CompletionTextChoice]
-  model: str
-  object: str = 'text_completion'
-  id: str = attr.field(default=attr.Factory(lambda: openllm_core.utils.gen_random_uuid('cmpl')))
-  created: int = attr.field(default=attr.Factory(lambda: int(time.monotonic())))
-  usage: UsageInfo = attr.field(default=attr.Factory(lambda: UsageInfo()))
+class CompletionResponseChoice:
+  index: int
+  text: str
+  logprobs: t.Optional[LogProbs] = None
+  finish_reason: t.Optional[t.Literal['stop', 'length']] = None
+
+@attr.define
+class CompletionResponseStreamChoice:
+  index: int
+  text: str
+  logprobs: t.Optional[LogProbs] = None
+  finish_reason: t.Optional[t.Literal['stop', 'length']] = None
 
 @attr.define
 class CompletionStreamResponse:
-  choices: t.List[CompletionTextChoice]
   model: str
+  choices: t.List[CompletionResponseStreamChoice]
+  object: str = 'text_completion'
+  id: str = attr.field(default=attr.Factory(lambda: openllm_core.utils.gen_random_uuid('cmpl')))
+  created: int = attr.field(default=attr.Factory(lambda: int(time.monotonic())))
+
+@attr.define
+class CompletionResponse:
+  choices: t.List[CompletionResponseChoice]
+  model: str
+  usage: UsageInfo
   object: str = 'text_completion'
   id: str = attr.field(default=attr.Factory(lambda: openllm_core.utils.gen_random_uuid('cmpl')))
   created: int = attr.field(default=attr.Factory(lambda: int(time.monotonic())))
 
 LiteralRole = t.Literal['system', 'user', 'assistant']
-
-class Message(t.TypedDict):
-  role: LiteralRole
-  content: str
 
 @attr.define
 class Delta:
@@ -105,19 +113,13 @@ class ChatMessage:
   role: LiteralRole
   content: str
 
-@attr.define
-class ChatCompletionChoice:
-  index: int
-  message: ChatMessage
-  finish_reason: str = attr.field(default=None)
+converter.register_unstructure_hook(ChatMessage, lambda msg: {'role': msg.role, 'content': msg.content})
 
 @attr.define
 class ChatCompletionResponseStreamChoice:
   index: int
   delta: Delta
   finish_reason: str = attr.field(default=None)
-
-converter.register_unstructure_hook(ChatMessage, lambda msg: {'role': msg.role, 'content': msg.content})
 
 @attr.define
 class ChatCompletionResponseChoice:
@@ -127,7 +129,7 @@ class ChatCompletionResponseChoice:
 
 @attr.define
 class ChatCompletionResponse:
-  choices: t.List[ChatCompletionChoice]
+  choices: t.List[ChatCompletionResponseChoice]
   model: str
   object: str = 'chat.completion'
   id: str = attr.field(default=attr.Factory(lambda: openllm_core.utils.gen_random_uuid('chatcmpl')))

@@ -281,12 +281,13 @@ class LLM(t.Generic[M, T]):
                      stop_token_ids: list[int] | None = None,
                      request_id: str | None = None,
                      return_type: InferenceReturnType = 'object',
+                     format_prompt: bool = True,
                      **attrs: t.Any) -> GenerationOutput:
     if isinstance(self.runner._runner_handle, DummyRunnerHandle):
       if os.getenv('BENTO_PATH') is not None: raise RuntimeError('Runner client failed to set up correctly.')
       else: self.runner.init_local(quiet=True)
 
-    prompt, *_ = self.sanitize_parameters(prompt, **attrs)
+    if format_prompt: prompt, *_ = self.sanitize_parameters(prompt, **attrs)
     config = self.config.model_construct_env(**attrs)
 
     if stop_token_ids is None: stop_token_ids = []
@@ -315,12 +316,13 @@ class LLM(t.Generic[M, T]):
                               stop_token_ids: list[int] | None = None,
                               request_id: str | None = None,
                               return_type: InferenceReturnType = 'object',
+                              format_prompt: bool = True,
                               **attrs: t.Any) -> t.AsyncGenerator[GenerationOutput | str, None]:
     if isinstance(self.runner._runner_handle, DummyRunnerHandle):
       if os.getenv('BENTO_PATH') is not None: raise RuntimeError('Runner client failed to set up correctly.')
       else: self.runner.init_local(quiet=True)
 
-    prompt, *_ = self.sanitize_parameters(prompt, **attrs)
+    if format_prompt: prompt, *_ = self.sanitize_parameters(prompt, **attrs)
     config = self.config.model_construct_env(**attrs)
 
     if stop_token_ids is None: stop_token_ids = []
