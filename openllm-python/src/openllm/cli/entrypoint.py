@@ -558,7 +558,7 @@ def build_command(ctx: click.Context, /, model_name: str, model_id: str | None, 
             adapter_map[_adapter_id] = name
         os.environ['OPENLLM_ADAPTER_MAP'] = orjson.dumps(adapter_map).decode()
 
-      _bento_version = first_not_none(bento_version, default=llm.tag.version)
+      _bento_version = first_not_none(bento_version, default=llm._bentomodel.tag.version)
       bento_tag = bentoml.Tag.from_taglike(f'{llm.llm_type}-service:{_bento_version}'.lower().strip())
       try:
         bento = bentoml.get(bento_tag)

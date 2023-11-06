@@ -42,6 +42,7 @@ class BaseAutoLLMClass:
                 model_version: str | None = None,
                 llm_config: openllm.LLMConfig | None = None,
                 ensure_available: bool = False,
+                use_local_latest: bool = True,
                 model_tag: str | bentoml.Tag | None = None,
                 **attrs: t.Any) -> openllm.LLM[t.Any, t.Any]:
     '''The lower level API for creating a LLM instance.
@@ -51,7 +52,7 @@ class BaseAutoLLMClass:
     >>> llm = openllm.AutoLLM.for_model("flan-t5")
     ```
     '''
-    llm = cls.infer_class_from_name(model).from_pretrained(model_id=model_id, model_version=model_version, llm_config=llm_config, model_tag=model_tag, **attrs)
+    llm = cls.infer_class_from_name(model).from_pretrained(model_id=model_id, model_version=model_version, llm_config=llm_config, model_tag=model_tag, use_local_latest=use_local_latest, **attrs)
     if ensure_available: llm.save_pretrained()
     return llm
 

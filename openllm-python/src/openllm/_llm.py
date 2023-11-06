@@ -350,6 +350,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
                       model_id: str | None = None,
                       model_version: str | None = None,
                       model_tag: str | bentoml.Tag | None = None,
+                      use_local_latest: bool = True,
                       prompt_template: PromptTemplate | str | None = None,
                       system_message: str | None = None,
                       llm_config: LLMConfig | None = None,
@@ -399,6 +400,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
                       If set to None, the version will either be the git hash from given pretrained model, or the hash inferred
                       from last modified time of the given directory.
         model_tag: Optional BentoML model tag. If provided, we will skip tag generation and use this tag directly
+        use_local_latest: If OpenLLM should use the latest model in local store if available, default to True
         system_message: Optional system message for what the system prompt for the specified LLM is. If not given, the default system message will be used.
         prompt_template: Optional custom prompt template. If not given, the default prompt template for the specified model will be used.
         llm_config: The config to use for this LLM. Defaults to None. If not passed, OpenLLM
@@ -448,7 +450,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
       _tag = bentoml.Tag.from_taglike(model_tag)
     else:
       try:
-        _tag = cls.generate_tag(_model_id, model_version)
+        _tag = cls.generate_tag(_model_id, model_version, use_local_latest=use_local_latest)
         if _tag.version is None:
           raise ValueError(f'Failed to resolve the correct model version for {cfg_cls.__openllm_start_name__}')
       except Exception as err:
@@ -470,7 +472,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
 
   @classmethod
   @apply(str.lower)
-  def _generate_tag_str(cls, model_id: str, model_version: str | None) -> str:
+  def _generate_tag_str(cls, model_id: str, model_version: str | None, use_local_latest: bool) -> str:
     '''Generate a compliant ``bentoml.Tag`` from model_id.
 
     If model_id is a pretrained_id from HF, then it will have the following format: <backend>-<normalise_model_id>:<revision>
@@ -494,14 +496,21 @@ class LLM(LLMInterface[M, T], ReprMixin):
       return f'{cls.__llm_backend__}-{model_name}:{maybe_revision[0]}'
 
     tag_name = f'{cls.__llm_backend__}-{model_name}'
-    if openllm_core.utils.check_bool_env('OPENLLM_USE_LOCAL_LATEST', False):
-      return str(bentoml.models.get(f"{tag_name}{':'+model_version if model_version is not None else ''}").tag)
+    if use_local_latest:
+      try:
+        existed_latest = bentoml.models.get(f"{tag_name}:latest")
+        if existed_latest:
+          return str(existed_latest.tag)
+      except bentoml.exceptions.NotFound:
+        # fallback to tag generation procedures below
+        pass
     if validate_is_path(model_id):
       model_id, model_version = resolve_filepath(model_id), first_not_none(model_version, default=generate_hash_from_file(model_id))
     else:
       from .serialisation.transformers._helpers import process_config
-      model_version = getattr(
-          process_config(model_id, trust_remote_code=cls.config_class.__openllm_trust_remote_code__, revision=first_not_none(model_version, default='main'))[0], '_commit_hash', None)
+      if model_version is None:
+        model_version = getattr(
+            process_config(model_id, trust_remote_code=cls.config_class.__openllm_trust_remote_code__, revision=first_not_none(model_version, default='main'))[0], '_commit_hash', None)
       if model_version is None:
         raise ValueError(f"Internal errors when parsing config for pretrained '{model_id}' ('commit_hash' not found)")
     return f'{tag_name}:{model_version}'
@@ -1057,6 +1066,7 @@ def Runner(model_name: str,
 def Runner(model_name: str,
            *,
            ensure_available: bool = False,
+           use_local_latest: bool = True,
            model_id: str | None = ...,
            model_version: str | None = ...,
            model_tag: str | None = ...,
@@ -1072,7 +1082,8 @@ def Runner(model_name: str,
 
 def Runner(model_name: str,
            ensure_available: bool = False,
-           model_tag: str | bentoml.Tag | None = ...,
+           use_local_latest: bool = True,
+           model_tag: str | bentoml.Tag | None = None,
            init_local: bool = False,
            backend: LiteralBackend | None = None,
            llm_config: LLMConfig | None = None,
@@ -1118,7 +1129,7 @@ def Runner(model_name: str,
 
   backend = t.cast(LiteralBackend, first_not_none(backend, default=EnvVarMixin(model_name, backend=llm_config.default_backend() if llm_config is not None else 'pt')['backend_value']))
   if init_local: ensure_available = True
-  runner = infer_auto_class(backend).create_runner(model_name, llm_config=llm_config, ensure_available=ensure_available, model_tag=model_tag, **attrs)
+  runner = infer_auto_class(backend).create_runner(model_name, llm_config=llm_config, ensure_available=ensure_available, use_local_latest=use_local_latest, model_tag=model_tag, **attrs)
   if init_local: runner.init_local(quiet=True)
   return runner
 

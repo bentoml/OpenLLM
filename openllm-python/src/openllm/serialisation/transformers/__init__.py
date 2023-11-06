@@ -62,7 +62,6 @@ def import_model(llm: openllm.LLM[M, T], *decls: t.Any, trust_remote_code: bool,
   *decls: Args to be passed into AutoModelForSeq2SeqLM or AutoModelForCausalLM (+ TF, Flax variants).
   **attrs: Kwargs to be passed into AutoModelForSeq2SeqLM or AutoModelForCausalLM (+ TF, Flax variants).
   """
-  print("is import model called?")
   config, hub_attrs, attrs = process_config(llm.model_id, trust_remote_code, **attrs)
   _, tokenizer_attrs = llm.llm_parameters
   quantize = llm._quantize
