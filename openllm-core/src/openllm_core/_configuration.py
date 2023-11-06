@@ -115,12 +115,15 @@ class _PeftEnumMeta(enum.EnumMeta):
 # see https://github.com/huggingface/peft/blob/main/src/peft/utils/config.py
 class PeftType(str, enum.Enum, metaclass=_PeftEnumMeta):
   PROMPT_TUNING = 'PROMPT_TUNING'
+  MULTITASK_PROMPT_TUNING = 'MULTITASK_PROMPT_TUNING'
   P_TUNING = 'P_TUNING'
   PREFIX_TUNING = 'PREFIX_TUNING'
   LORA = 'LORA'
   ADALORA = 'ADALORA'
   ADAPTION_PROMPT = 'ADAPTION_PROMPT'
   IA3 = 'IA3'
+  LOHA = 'LOHA'
+  LOKR = 'LOKR'
 
   @classmethod
   def _missing_(cls, value: object) -> enum.Enum | None:

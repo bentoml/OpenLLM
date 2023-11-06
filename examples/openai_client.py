@@ -6,7 +6,7 @@ import openai
 openai.api_base = os.getenv('OPENLLM_ENDPOINT', 'http://localhost:3000') + '/v1'
 openai.api_key = 'na'
 
-MODEL = 'na'  # XXX: CHANGE THIS TO THE MODEL USED AT $OPENLLM_ENDPOINT
+MODEL = os.getenv('MODEL', 'na')  # XXX: CHANGE THIS TO THE MODEL USED AT $OPENLLM_ENDPOINT
 
 print('\n' +'-'*50 + ' /v1/models ' + '-'*50 + "\n")
 print(openai.Model.list())

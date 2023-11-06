@@ -241,7 +241,8 @@ class LLM(t.Generic[M, T]):
   def identifying_params(self)->DictStrAny: return {'configuration': self.config.model_dump_json().decode(),'model_ids': orjson.dumps(self.config['model_ids']).decode(),'model_id': self.model_id}
   @property
   def llm_parameters(self)->tuple[tuple[tuple[t.Any,...],DictStrAny],DictStrAny]:return (self._model_decls,self._model_attrs),self._tokenizer_attrs
-  def sanitize_parameters(self, prompt: str, **attrs: t.Any) -> tuple[str, DictStrAny, DictStrAny]: return self.config.sanitize_parameters(prompt,prompt_template=self._prompt_template,system_message=self._system_message,**attrs)
+  def sanitize_parameters(self, prompt: str, **attrs: t.Any) -> tuple[str, DictStrAny, DictStrAny]:
+    return self.config.sanitize_parameters(prompt,prompt_template=self._prompt_template,system_message=self._system_message,**attrs)
   def postprocess_generate(self, prompt: str, generation_result: t.Any, **attrs: t.Any) -> t.Any:
     if isinstance(generation_result, dict) and 'text' in generation_result: return generation_result['text']
     return self.config.postprocess_generate(prompt, generation_result, **attrs)
@@ -301,10 +302,9 @@ class LLM(t.Generic[M, T]):
 
     prompt_token_ids = self.tokenizer.encode(prompt)
     if request_id is None: request_id = openllm_core.utils.gen_random_uuid()
-    # yapf: disable
-    async for out in self.runner.generate.async_stream(prompt_token_ids, request_id, stop=stop, adapter_name=adapter_name, **config.model_dump()):      pass
+    async for out in self.runner.generate.async_stream(prompt_token_ids, request_id, stop=stop, adapter_name=adapter_name, **config.model_dump()):
+      pass
     return GenerationOutput.from_sse(out).with_options(prompt=prompt)
-    # yapf: enable
 
   @t.overload
   async def generate_iterator(self,

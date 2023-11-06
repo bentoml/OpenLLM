@@ -3,7 +3,6 @@ import typing as t
 
 import attr
 import cattr
-import orjson
 
 if t.TYPE_CHECKING:
   from attr import AttrsInstance
@@ -14,12 +13,9 @@ class _Mixin:
     return cattr.unstructure(self)
 
   @classmethod
-  def model_construct_json(cls, data: str) -> type[AttrsInstance]:
+  def model_construct(cls, data: dict[str, t.Any]) -> type[AttrsInstance]:
     if not attr.has(cls): raise TypeError(f'Class {cls} must be attr class')
-    try:
-      return cattr.structure(orjson.loads(data), cls)
-    except orjson.JSONDecodeError as e:
-      raise ValueError(f'Failed to decode {cls}: {e}') from e
+    return cattr.structure(data, cls)
 
 # XXX: sync with openllm-core/src/openllm_core/_schemas.py
 @attr.define

@@ -131,7 +131,7 @@ _BASE_DEPENDENCIES = [
     Dependencies(name='bitsandbytes', upper_constraint='0.42'),  # 0.41 works with CUDA 11.8
 ]
 
-FINE_TUNE_DEPS = ['peft>=0.5.0', 'bitsandbytes', 'datasets', 'accelerate', 'trl']
+FINE_TUNE_DEPS = ['peft>=0.6.0', 'bitsandbytes', 'datasets', 'accelerate', 'trl']
 FLAN_T5_DEPS = ['transformers>=4.34.0']
 OPT_DEPS = ['transformers>=4.34.0']
 GRPC_DEPS = ['openllm-client[grpc]']

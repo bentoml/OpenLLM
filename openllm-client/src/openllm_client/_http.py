@@ -144,10 +144,11 @@ class HTTPClient:
           if payload == b'\n': continue
           if payload.startswith(b'data: '):
             try:
-              resp = Response.model_construct_json(payload.decode('utf-8').lstrip('data: ').rstrip('\n'))
-            except Exception as e:
-              print(e)
-            yield StreamingResponse.from_response_chunk(resp)
+              proc = payload.decode('utf-8').lstrip('data: ').rstrip('\n')
+              data = orjson.loads(proc)
+            except Exception:
+              pass  # FIXME: Handle this
+            yield StreamingResponse.from_response_chunk(Response.model_construct(data))
 
 @attr.define(init=False)
 class AsyncHTTPClient:
@@ -256,7 +257,8 @@ class AsyncHTTPClient:
           if payload == b'\n': continue
           if payload.startswith(b'data: '):
             try:
-              resp = Response.model_construct_json(payload.decode('utf-8').lstrip('data: ').rstrip('\n'))
-            except Exception as e:
-              print(e)
-            yield StreamingResponse.from_response_chunk(resp)
+              proc = payload.decode('utf-8').lstrip('data: ').rstrip('\n')
+              data = orjson.loads(proc)
+            except Exception:
+              pass  # FIXME: Handle this
+            yield StreamingResponse.from_response_chunk(Response.model_construct(data))
