@@ -22,7 +22,6 @@ class _Mixin:
 class Request(_Mixin):
   prompt: str
   llm_config: t.Dict[str, t.Any]
-  return_type: t.Literal['token'] = 'token'
   stop: t.Optional[t.Union[str, t.List[str]]] = attr.field(default=None)
   adapter_name: t.Optional[str] = attr.field(default=None)
 

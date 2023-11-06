@@ -15,11 +15,11 @@ print('\n' +'-'*50 + ' /v1/completions' + ' [stream=False] ' + '-'*50 + "\n")
 print(openai.Completion.create(model=MODEL, prompt='Write a tagline for an ice cream shop.', max_tokens=128))
 
 print('\n' +'-'*50 + ' /v1/completions' + ' [stream=True] ' + '-'*50 + "\n")
-for chunk in openai.Completion.create(model=MODEL, prompt='Say this is a test', max_tokens=7, temperature=0.8, stream=True):
+for chunk in openai.Completion.create(model=MODEL, prompt='Say this is a test', max_tokens=12, temperature=0.8, stream=True, logprobs=2):
   print(chunk)
 
 print('\n' +'-'*50 + ' /v1/chat/completions' + ' [stream=False] ' + '-'*50 + "\n")
-print(openai.ChatCompletion.create(model=MODEL, messages=[{'role': 'system', 'content': 'You are a helpful assistant.'}, {'role': 'user', 'content': 'Hello!'}], max_tokens=64))
+print(openai.ChatCompletion.create(model=MODEL, messages=[{'role': 'system', 'content': 'You are a helpful assistant.'}, {'role': 'user', 'content': 'Hello!'}], max_tokens=128, n=2, best_of=2))
 
 print('\n' +'-'*50 + ' /v1/chat/completions' + ' [stream=True] ' + '-'*50 + "\n")
 for chunk in openai.ChatCompletion.create(model=MODEL,

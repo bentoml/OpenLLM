@@ -2,6 +2,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import os
 
 import aiohttp
 
@@ -17,7 +18,7 @@ async def send_request(url, it, prompt, session, model, **attrs):
 
 async def main(args: argparse.Namespace) -> int:
   endpoint = 'generate' if args.generate else 'generate_stream'
-  url = f'http://localhost:3000/v1/{endpoint}'
+  url = f'{os.getenv("OPENLLM_ENDPOINT", "http://localhost:3000")}/v1/{endpoint}'
   # len=572
   prompts = [
       "Translate the following English text to French: 'Hello, how are you?'", "Summarize the plot of the book 'To Kill a Mockingbird.'",
