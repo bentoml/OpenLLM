@@ -385,7 +385,7 @@ def backend_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[
   # NOTE: LiteralBackend needs to remove the last two item as ggml and mlc is wip
   # XXX: remove the check for __args__ once we have ggml and mlc supports
   return cli_option('--backend',
-                    type=click.Choice(get_literal_args(LiteralBackend)[:-2]),
+                    type=click.Choice(get_literal_args(LiteralBackend)[:2]),
                     default=None,
                     envvar='OPENLLM_BACKEND',
                     show_envvar=True,
