@@ -156,7 +156,7 @@ class LLM(t.Generic[M, T]):
     low_cpu_mem_usage = attrs.pop('low_cpu_mem_usage', True)
     _local = False
     if validate_is_path(model_id): model_id, _local = resolve_filepath(model_id), True
-    backend = openllm.utils.first_not_none(os.getenv('OPENLLM_BACKEND'), default='vllm' if openllm.utils.is_vllm_available() else 'pt')
+    backend = openllm.utils.first_not_none(backend, os.getenv('OPENLLM_BACKEND'), default='vllm' if openllm.utils.is_vllm_available() else 'pt')
 
     quantize = first_not_none(quantize, t.cast(t.Optional[LiteralQuantise], os.getenv('OPENLLM_QUANTIZE')), default=None)
     # elif quantization_config is None and quantize is not None:
@@ -187,6 +187,7 @@ class LLM(t.Generic[M, T]):
                         system_message=system_message,
                         llm_backend__=backend,
                         llm_config__=llm_config)
+    self.__llm_backend__ = backend
 
   @apply(lambda val: tuple(str.lower(i) if i else i for i in val))
   def _make_tag_components(self, model_id: str, model_version: str | None, backend: LiteralBackend) -> tuple[str, str]:
