@@ -103,7 +103,7 @@ if t.TYPE_CHECKING:
   from bentoml._internal.bento import BentoStore
   from bentoml._internal.container import DefaultBuilder
   from openllm_client._schemas import Response
-  from openllm_client._schemas import StreamResponse
+  from openllm_client._schemas import StreamingResponse
   from openllm_core._typing_compat import LiteralContainerRegistry
   from openllm_core._typing_compat import LiteralContainerVersionStrategy
 else:
@@ -800,7 +800,7 @@ def query_command(ctx: click.Context, /, prompt: str, endpoint: str, timeout: in
     termui.echo(f'{prompt}', fg=input_fg)
 
   if stream:
-    stream_res: t.Iterator[StreamResponse] = client.generate_stream(prompt, **{**client._config(), **_memoized})
+    stream_res: t.Iterator[StreamingResponse] = client.generate_stream(prompt, **{**client._config(), **_memoized})
     if output == 'pretty':
       termui.echo('\n\n==Responses==\n', fg='white')
       for it in stream_res:

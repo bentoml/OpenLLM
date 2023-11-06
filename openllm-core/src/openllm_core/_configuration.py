@@ -1384,10 +1384,12 @@ class LLMConfig(_ConfigAttr):
       except orjson.JSONDecodeError as e:
         raise RuntimeError(f"Failed to parse '{model_config}' as valid JSON string.") from e
 
-    if 'generation_config' in attrs:
+    if 'generation_config' in attrs:  # backward compatibility
       generation_config = attrs.pop('generation_config')
-      if not isinstance(generation_config, dict):
-        raise RuntimeError(f'Expected a dictionary, but got {type(generation_config)}')
+      if not isinstance(generation_config, dict): raise RuntimeError(f'Expected a dictionary, but got {type(generation_config)}')
+    elif 'llm_config' in attrs:  # NOTE: this is the new key
+      llm_config = attrs.pop('llm_config')
+      generation_config = {k: v for k, v in llm_config.items() if k in attr.fields_dict(cls.__openllm_generation_class__)}
     else:
       generation_config = {k: v for k, v in attrs.items() if k in attr.fields_dict(cls.__openllm_generation_class__)}
 

@@ -13,6 +13,8 @@ from starlette.routing import Route
 
 from openllm_core.utils import converter
 
+from ._openapi import HF_AGENT_SCHEMA
+from ._openapi import add_schema_definitions
 from ._openapi import append_schemas
 from ._openapi import get_generator
 from ..protocol.hf import AgentErrorResponse
@@ -46,66 +48,13 @@ def mount_to_svc(svc: bentoml.Service, llm: openllm.LLM[M, T]) -> bentoml.Servic
   mount_path = '/hf'
   generated_schema = schemas.get_schema(routes=app.routes, mount_path=mount_path)
   svc.mount_asgi_app(app, path=mount_path)
-  return append_schemas(svc, generated_schema)
+  return append_schemas(svc, generated_schema, tags_order='append')
 
 def error_response(status_code: HTTPStatus, message: str) -> JSONResponse:
   return JSONResponse(converter.unstructure(AgentErrorResponse(message=message, error_code=status_code.value)), status_code=status_code.value)
 
+@add_schema_definitions(HF_AGENT_SCHEMA)
 async def hf_agent(req: Request, llm: openllm.LLM[M, T]) -> Response:
-  """
-  Return the generated instruction for given HF Agent chain for all OpenLLM supported models.
-
-  Args:
-    req: Request object.
-    llm: OpenLLM instance.
-
-  Returns:
-    Response object.
-
-  ---
-  consumes:
-    - application/json
-  description: Generate instruction for given HF Agent chain for all OpenLLM supported models.
-  operationId: hf__agent
-  produces:
-    - application/json
-  requestBody:
-    content:
-      application/json:
-        schema:
-          $ref: '#/components/schemas/AgentRequest'
-        example:
-          inputs: "Is the following `text` positive or negative?"
-          parameters:
-            text: "This is a positive text."
-            stop: ["\n"]
-    required: true
-  responses:
-    200:
-      description: Successfull generated instruction.
-      content:
-        application/json:
-          example:
-            - generated_text: "This is a generated instruction."
-          schema:
-            $ref: '#/components/schemas/AgentResponse'
-    400:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/AgentErrorResponse'
-      description: Bad Request
-    500:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/AgentErrorResponse'
-      description: Not Found
-  summary: Generate instruction for given HF Agent.
-  tags:
-    - HF
-  x-bentoml-name: hf_agent
-  """
   json_str = await req.body()
   try:
     request = converter.structure(orjson.loads(json_str), AgentRequest)

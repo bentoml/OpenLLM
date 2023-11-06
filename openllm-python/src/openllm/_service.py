@@ -1,4 +1,4 @@
-# mypy: disable-error-code="call-arg,misc,attr-defined,type-abstract,type-arg,valid-type,arg-type"
+# mypy: disable-errort-code="call-arg,misc,attr-defined,type-abstract,type-arg,valid-type,arg-type"
 from __future__ import annotations
 import logging
 import os
@@ -10,6 +10,8 @@ import orjson
 
 import bentoml
 import openllm
+
+from openllm_core import GenerationOutput
 
 # The following warnings from bitsandbytes, and probably not that important for users to see
 warnings.filterwarnings('ignore', message='MatMul8bitLt: inputs will be cast from torch.float32 to float16 during quantization')
@@ -30,37 +32,35 @@ llm = openllm.LLM[t.Any, t.Any](model_id,
                                 adapter_map=orjson.loads(adapter_map))
 svc = bentoml.Service(name=f"llm-{llm_config['start_name']}-service", runners=[llm.runner])
 
-_GenerateJsonInput = bentoml.io.JSON.from_sample({'prompt': '', 'stop': [], 'llm_config': llm_config.model_dump(flatten=True)})
+llm_model_class = openllm.GenerationInput.from_llm_config(llm_config)
 
-@svc.api(route='/v1/generate', input=_GenerateJsonInput, output=bentoml.io.JSON.from_sample(openllm.GenerationOutput.examples().unmarshal()))
+@svc.api(route='/v1/generate',
+         input=bentoml.io.JSON.from_sample(llm_model_class.examples(return_type=None).model_dump()),
+         output=bentoml.io.JSON.from_sample(openllm.GenerationOutput.examples().model_dump()))
 async def generate_v1(input_dict: dict[str, t.Any]) -> openllm.GenerationOutput:
-  qa_inputs = openllm.GenerateInput.from_llm_config(llm_config)(**input_dict)
-  return await llm.generate(qa_inputs.prompt, **qa_inputs.llm_config.model_dump())
+  return await llm.generate(**llm_model_class(**input_dict).model_dump())
 
-@svc.api(route='/v1/generate_stream', input=_GenerateJsonInput, output=bentoml.io.Text(content_type='text/event-stream'))
+@svc.api(route='/v1/generate_stream', input=bentoml.io.JSON.from_sample(llm_model_class.examples(return_type='token').model_dump()), output=bentoml.io.Text(content_type='text/event-stream'))
 async def generate_stream_v1(input_dict: dict[str, t.Any]) -> t.AsyncGenerator[str, None]:
-  qa_inputs = openllm.GenerateInput.from_llm_config(llm_config)(**input_dict)
-  return llm.generate_iterator(qa_inputs.prompt, return_type='text', **qa_inputs.llm_config.model_dump())
+  request = llm_model_class(**input_dict)
+  generator = llm.generate_iterator(**request.model_dump())  # type: ignore
 
-@svc.api(route='/v1/metadata',
-         input=bentoml.io.Text(),
-         output=bentoml.io.JSON.from_sample({
-             'model_id': llm.model_id,
-             'timeout': 3600,
-             'model_name': llm_config['model_name'],
-             'backend': llm.runner.backend,
-             'configuration': llm_config.model_dump(flatten=True),
-             'prompt_template': llm.runner.prompt_template,
-             'system_message': llm.runner.system_message,
-         }))
+  async def stream_generation_objects() -> t.AsyncGenerator[str, None]:
+    async for it in t.cast(t.AsyncGenerator[GenerationOutput, None], generator):
+      yield f'data: {it.model_dump_json()}\n\n'
+    yield 'data: [DONE]\n\n'
+
+  if request.return_type in {'object', 'token'}: return stream_generation_objects()
+  else: return t.cast(t.AsyncGenerator[str, None], generator)
+
+@svc.api(route='/v1/metadata', input=bentoml.io.Text(), output=bentoml.io.JSON.from_sample(openllm.MetadataOutput.examples(llm).model_dump()))
 def metadata_v1(_: str) -> openllm.MetadataOutput:
   return openllm.MetadataOutput(timeout=llm_config['timeout'],
                                 model_name=llm_config['model_name'],
-                                backend=llm_config['env']['backend_value'],
+                                backend=llm.__llm_backend__,
                                 model_id=llm.model_id,
                                 configuration=llm_config.model_dump_json().decode(),
                                 prompt_template=llm.runner.prompt_template,
                                 system_message=llm.runner.system_message)
 
-# HACK: This must always be the last line in this file, as we will do some MK for OpenAPI schema.
-openllm.mount_entrypoints_to_svc(svc, llm)
+openllm.mount_entrypoints(svc, llm)  # HACK: This must always be the last line in this file, as we will do some MK for OpenAPI schema.

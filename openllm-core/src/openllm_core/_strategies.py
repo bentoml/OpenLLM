@@ -12,7 +12,10 @@ import warnings
 
 import psutil
 
-import bentoml
+try:
+  import bentoml
+except ImportError:
+  raise RuntimeError("Importing 'openllm_core._strategies' requires bentoml (not available locally). Make sure to do 'pip install -U bentoml'")
 
 from bentoml._internal.resource import get_resource
 from bentoml._internal.resource import system_resources

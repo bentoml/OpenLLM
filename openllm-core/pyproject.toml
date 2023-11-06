@@ -138,7 +138,7 @@ include = [
   "src/openllm_core/utils/__init__.py",
   "src/openllm_core/__init__.py",
   "src/openllm_core/_prompt.py",
-  "src/openllm_core/_schema.py",
+  "src/openllm_core/_schemas.py",
   "src/openllm_core/_strategies.py",
   "src/openllm_core/exceptions.py",
 ]

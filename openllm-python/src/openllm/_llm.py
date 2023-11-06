@@ -19,12 +19,13 @@ import openllm_core
 
 from bentoml._internal.models.model import ModelSignature
 from bentoml._internal.runner.runner_handle import DummyRunnerHandle
-from openllm_core._schema import GenerationOutput
+from openllm_core._schemas import GenerationOutput
 from openllm_core._strategies import CascadingResourceStrategy
 from openllm_core._typing_compat import AdaptersMapping
 from openllm_core._typing_compat import AdaptersTuple
 from openllm_core._typing_compat import AdapterType
 from openllm_core._typing_compat import DictStrAny
+from openllm_core._typing_compat import InferenceReturnType
 from openllm_core._typing_compat import LiteralBackend
 from openllm_core._typing_compat import LiteralQuantise
 from openllm_core._typing_compat import LiteralSerialisation
@@ -112,7 +113,6 @@ def resolve_peft_config_type(adapter_map: dict[str, str | None]) -> AdaptersMapp
 
 _reserved_namespace = {'model', 'tokenizer', 'runner', 'import_kwargs'}
 _AdaptersTuple: type[AdaptersTuple] = codegen.make_attr_tuple_class('AdaptersTuple', ['adapter_id', 'name', 'config'])
-InferenceReturnType = t.Literal['text', 'object', 'sse']
 
 @attr.define(slots=True, repr=False, init=False)
 class LLM(t.Generic[M, T]):
@@ -231,7 +231,7 @@ class LLM(t.Generic[M, T]):
   def bentomodel(self)->bentoml.Model:return openllm.serialisation.get(self)
   @property
   def config(self)->LLMConfig:
-    if self.__llm_config__ is None: self.__llm_config__=openllm.AutoConfig.infer_class_from_llm(self).model_construct_env(**self._model_attrs)
+    if self.__llm_config__ is None:self.__llm_config__=openllm.AutoConfig.infer_class_from_llm(self).model_construct_env(**self._model_attrs)
     return self.__llm_config__
   def save_pretrained(self) -> bentoml.Model: return openllm.import_model(self.config['start_name'], model_id=self.model_id, model_version=self._revision, backend=self.__llm_backend__, quantize=self._quantise)
   # NOTE: The section below defines a loose contract with langchain's LLM interface.
@@ -280,9 +280,10 @@ class LLM(t.Generic[M, T]):
                      stop: str | t.Iterable[str] | None = None,
                      stop_token_ids: list[int] | None = None,
                      request_id: str | None = None,
-                     return_type: InferenceReturnType = 'object',
                      format_prompt: bool = True,
+                     adapter_name: str | None = None,
                      **attrs: t.Any) -> GenerationOutput:
+    attrs.pop('return_type', None)  # We don't need return type here, since we will always return objects
     if isinstance(self.runner._runner_handle, DummyRunnerHandle):
       if os.getenv('BENTO_PATH') is not None: raise RuntimeError('Runner client failed to set up correctly.')
       else: self.runner.init_local(quiet=True)
@@ -300,15 +301,34 @@ class LLM(t.Generic[M, T]):
 
     prompt_token_ids = self.tokenizer.encode(prompt)
     if request_id is None: request_id = openllm_core.utils.gen_random_uuid()
-    async for out in self.runner.generate.async_stream(prompt_token_ids, request_id, stop=stop, **config.model_dump()):
-      pass
+    # yapf: disable
+    async for out in self.runner.generate.async_stream(prompt_token_ids, request_id, stop=stop, adapter_name=adapter_name, **config.model_dump()):      pass
+    return GenerationOutput.from_sse(out).with_options(prompt=prompt)
+    # yapf: enable
 
-    if return_type == 'sse': return out
-    else:
-      generated = GenerationOutput.from_sse(out).with_options(prompt=prompt)
-      if return_type == 'object': return generated
-      elif return_type == 'text': return generated.outputs[0].text
-      else: raise ValueError(f"'return_type' can only be one of ['object', 'text', 'sse'], while '{return_type}' is given.")
+  @t.overload
+  async def generate_iterator(self,
+                              prompt: str,
+                              stop: str | t.Iterable[str] | None = ...,
+                              stop_token_ids: list[int] | None = ...,
+                              request_id: str | None = ...,
+                              return_type: t.Literal['object', 'token'] = ...,
+                              format_prompt: bool = ...,
+                              adapter_name: str | None = ...,
+                              **attrs: t.Any) -> t.AsyncGenerator[GenerationOutput, None]:
+    ...
+
+  @t.overload
+  async def generate_iterator(self,
+                              prompt: str,
+                              stop: str | t.Iterable[str] | None = ...,
+                              stop_token_ids: list[int] | None = ...,
+                              request_id: str | None = ...,
+                              return_type: t.Literal['text', 'sse'] = ...,
+                              format_prompt: bool = ...,
+                              adapter_name: str | None = ...,
+                              **attrs: t.Any) -> t.AsyncGenerator[str, None]:
+    ...
 
   async def generate_iterator(self,
                               prompt: str,
@@ -317,7 +337,9 @@ class LLM(t.Generic[M, T]):
                               request_id: str | None = None,
                               return_type: InferenceReturnType = 'object',
                               format_prompt: bool = True,
+                              adapter_name: str | None = None,
                               **attrs: t.Any) -> t.AsyncGenerator[GenerationOutput | str, None]:
+    if return_type not in {'text', 'sse', 'object', 'token'}: raise ValueError(f"'return_type' can only be one of ['token', 'text', 'sse'], while '{return_type}' is given.")
     if isinstance(self.runner._runner_handle, DummyRunnerHandle):
       if os.getenv('BENTO_PATH') is not None: raise RuntimeError('Runner client failed to set up correctly.')
       else: self.runner.init_local(quiet=True)
@@ -333,25 +355,28 @@ class LLM(t.Generic[M, T]):
     for tid in stop_token_ids:
       if tid: stop.add(self.tokenizer.decode(tid))
 
-    prompt_token_ids, pre = self.tokenizer.encode(prompt), 0
+    prompt_token_ids = self.tokenizer.encode(prompt)
     if request_id is None: request_id = openllm_core.utils.gen_random_uuid()
-    output_text = []
-    async for out in self.runner.generate_iterator.async_stream(prompt_token_ids, request_id, stop=stop, **config.model_dump()):
+    previous_texts, previous_num_tokens = [''] * config['n'], [0] * config['n']
+    async for out in self.runner.generate_iterator.async_stream(prompt_token_ids, request_id, stop=stop, adapter_name=adapter_name, **config.model_dump()):
       if return_type == 'sse': yield out
       else:
         generated = GenerationOutput.from_sse(out).with_options(prompt=prompt)
-        if return_type == 'object': yield generated
-        elif return_type == 'text':
-          text_outputs = [output.text for output in generated.outputs]
-          output_text = text_outputs[0].strip().split(' ')
-          now = len(output_text) - 1
-          if now > pre:
-            yield ' '.join(output_text[pre:now]) + ' '
-            pre = now
-        else:
-          raise ValueError(f"'return_type' can only be one of ['object', 'text', 'sse'], while '{return_type}' is given.")
         if generated.finished: break
-    if return_type == 'text': yield ' '.join(output_text[pre:]) + ' '
+        if return_type == 'object': yield generated
+        else:
+          for output in generated.outputs:
+            i = output.index
+            delta_text = output.text[len(previous_texts[i]):]
+            delta_token = output.token_ids[previous_num_tokens[i]:]
+            previous_texts[i] = output.text
+            previous_num_tokens[i] = len(output.token_ids)
+            if return_type == 'text': yield delta_text
+            else:
+              delta_outputs = [None] * len(generated.outputs)
+              delta_outputs[i] = output.with_options(text=delta_text, token_ids=delta_token)
+              yield generated.with_options(outputs=delta_outputs)
+            if output.finish_reason is not None: break
 
 def Runner(model_name: str,
            ensure_available: bool = False,

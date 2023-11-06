@@ -15,7 +15,7 @@ import orjson
 
 from ._schemas import Request
 from ._schemas import Response
-from ._schemas import StreamResponse
+from ._schemas import StreamingResponse
 
 logger = logging.getLogger(__name__)
 
@@ -88,18 +88,13 @@ class HTTPClient:
       self.__config = {**config, **generation_config}
     return self.__config
 
-  def __del__(self) -> None:
-    self._inner.close()
-
-  def _build_endpoint(self, endpoint: str) -> str:
-    return '/' + f'{self._api_version}/{endpoint}'
-
+  # yapf: disable
+  def __del__(self)->None:self._inner.close()
+  def _build_endpoint(self,endpoint: str)->str:return ('/' if not self._api_version.startswith('/') else '')+f'{self._api_version}/{endpoint}'
   @property
-  def is_ready(self) -> bool:
-    return self._state == ServerState.READY
-
-  def generate(self, prompt: str, **attrs: t.Any) -> Response:
-    return self.query(prompt, **attrs)
+  def is_ready(self)->bool:return self._state==ServerState.READY
+  def query(self, prompt: str, **attrs: t.Any)->Response: return self.generate(prompt,**attrs)
+  # yapf: enable
 
   def health(self) -> None:
     try:
@@ -109,38 +104,50 @@ class HTTPClient:
       logger.error('Server is not healthy (Scroll up for traceback)\n%s', e)
       _object_setattr(self, '_state', ServerState.CLOSED)
 
-  def query(self, prompt: str, **attrs: t.Any) -> Response:
-    timeout = attrs.pop('timeout', self._timeout)
-    _meta, _config = self._metadata(), self._config()
-    if _meta['prompt_template'] is not None: prompt = _meta['prompt_template'].format(system_message=_meta['system_message'], instruction=prompt)
-
+  def generate(self, prompt: str, llm_config: dict[str, t.Any] | None = None, stop: str | list[str] | None = None, adapter_name: str | None = None, **attrs: t.Any) -> Response:
     if not self.is_ready:
       self.health()
       if not self.is_ready: raise RuntimeError('Server is not ready. Check server logs for more information.')
+    timeout = attrs.pop('timeout', self._timeout)
+    _meta, _config = self._metadata(), self._config()
+    if llm_config is not None: llm_config = {**_config, **llm_config, **attrs}
+    else: llm_config = {**_config, **attrs}
+    if _meta['prompt_template'] is not None: prompt = _meta['prompt_template'].format(system_message=_meta['system_message'], instruction=prompt)
 
+    req = Request(prompt=prompt, llm_config=llm_config, stop=stop, adapter_name=adapter_name)
     with httpx.Client(base_url=self.address, timeout=timeout, **self.client_args) as client:
-      r = client.post(self._build_endpoint('generate'), json=Request(prompt=prompt, llm_config={**_config, **attrs}).json(), **self.client_args)
+      r = client.post(self._build_endpoint('generate'), json=req.model_dump_json(), **self.client_args)
     if r.status_code != 200: raise ValueError("Failed to get generation from '/v1/generate'. Check server logs for more details.")
     return Response(**r.json())
 
-  def generate_stream(self, prompt: str, **attrs: t.Any) -> t.Iterator[StreamResponse]:
+  def generate_stream(self,
+                      prompt: str,
+                      llm_config: dict[str, t.Any] | None = None,
+                      stop: str | list[str] | None = None,
+                      adapter_name: str | None = None,
+                      **attrs: t.Any) -> t.Iterator[StreamingResponse]:
+    if not self.is_ready:
+      self.health()
+      if not self.is_ready: raise RuntimeError('Server is not ready. Check server logs for more information.')
     timeout = attrs.pop('timeout', self._timeout)
     _meta, _config = self._metadata(), self._config()
+    if llm_config is not None: llm_config = {**_config, **llm_config, **attrs}
+    else: llm_config = {**_config, **attrs}
     if _meta['prompt_template'] is not None: prompt = _meta['prompt_template'].format(system_message=_meta['system_message'], instruction=prompt)
+
+    req = Request(prompt=prompt, llm_config=llm_config, stop=stop, adapter_name=adapter_name)
     with httpx.Client(base_url=self.address, timeout=timeout, **self.client_args) as client:
-      with client.stream('POST', self._build_endpoint('generate_stream'), json=Request(prompt=prompt, llm_config={**_config, **attrs}).json(), **self.client_args) as r:
+      with client.stream('POST', self._build_endpoint('generate_stream'), json=req.model_dump_json(), **self.client_args) as r:
         for payload in r.iter_bytes():
-          yield StreamResponse(text=payload.decode('utf-8'))
-        # TODO: make it SSE correct for streaming
-        # Skip line
-        # if payload == b"\n": continue
-        # payload = payload.decode("utf-8")
-        # if payload.startswith("data:"):
-        #   json_payload = orjson.loads(payload.lstrip('data:').rstrip("\n"))
-        #   print(json_payload)
-        #   try: resp = StreamResponse(text=json_payload)
-        #   except Exception as e: print(e)
-        #   yield resp
+          if payload == b'data: [DONE]\n\n': break
+          # Skip line
+          if payload == b'\n': continue
+          if payload.startswith(b'data: '):
+            try:
+              resp = Response.model_construct_json(payload.decode('utf-8').lstrip('data: ').rstrip('\n'))
+            except Exception as e:
+              print(e)
+            yield StreamingResponse.from_response_chunk(resp)
 
 @attr.define(init=False)
 class AsyncHTTPClient:
@@ -196,16 +203,12 @@ class AsyncHTTPClient:
       self.__config = {**config, **generation_config}
     return self.__config
 
-  def _build_endpoint(self, endpoint: str) -> str:
-    return '/' + f'{self._api_version}/{endpoint}'
-
+  # yapf: disable
+  def _build_endpoint(self,endpoint:str) -> str: return '/'+f'{self._api_version}/{endpoint}'
   @property
-  def is_ready(self) -> bool:
-    return self._state == ServerState.READY
-
-  async def generate(self, prompt: str, **attrs: t.Any) -> Response:
-    return await self.query(prompt, **attrs)
-
+  def is_ready(self)->bool:return self._state==ServerState.READY
+  async def query(self,prompt:str,**attrs: t.Any)->Response: return await self.generate(prompt,**attrs)
+  # yapf: enable
   async def health(self) -> None:
     try:
       await self.wait_until_server_ready(self.address, timeout=self._timeout, **self.client_args)
@@ -214,36 +217,46 @@ class AsyncHTTPClient:
       logger.error('Server is not healthy (Scroll up for traceback)\n%s', e)
       _object_setattr(self, '_state', ServerState.CLOSED)
 
-  async def query(self, prompt: str, **attrs: t.Any) -> Response:
-    timeout = attrs.pop('timeout', self._timeout)
-    _meta, _config = await self._metadata(), await self._config()
-    if _meta['prompt_template'] is not None: prompt = _meta['prompt_template'].format(system_message=_meta['system_message'], instruction=prompt)
-
+  async def generate(self, prompt: str, llm_config: dict[str, t.Any] | None = None, stop: str | list[str] | None = None, adapter_name: str | None = None, **attrs: t.Any) -> Response:
     if not self.is_ready:
       await self.health()
       if not self.is_ready: raise RuntimeError('Server is not ready. Check server logs for more information.')
+    timeout = attrs.pop('timeout', self._timeout)
+    _meta, _config = await self._metadata(), await self._config()
+    if llm_config is not None: llm_config = {**_config, **llm_config, **attrs}
+    else: llm_config = {**_config, **attrs}
+    if _meta['prompt_template'] is not None: prompt = _meta['prompt_template'].format(system_message=_meta['system_message'], instruction=prompt)
 
-    req = Request(prompt=_meta['prompt_template'].format(system_message=_meta['system_message'], instruction=prompt), llm_config={**_config, **attrs})
+    req = Request(prompt=prompt, llm_config=llm_config, stop=stop, adapter_name=adapter_name)
     async with httpx.AsyncClient(base_url=self.address, timeout=timeout, **self.client_args) as client:
-      r = await client.post(self._build_endpoint('generate'), json=req.json(), **self.client_args)
+      r = await client.post(self._build_endpoint('generate'), json=req.model_dump_json(), **self.client_args)
     if r.status_code != 200: raise ValueError("Failed to get generation from '/v1/generate'. Check server logs for more details.")
     return Response(**r.json())
 
-  async def generate_stream(self, prompt: str, **attrs: t.Any) -> t.AsyncGenerator[StreamResponse, t.Any]:
+  async def generate_stream(self,
+                            prompt: str,
+                            llm_config: dict[str, t.Any] | None = None,
+                            stop: str | list[str] | None = None,
+                            adapter_name: str | None = None,
+                            **attrs: t.Any) -> t.AsyncGenerator[StreamingResponse, t.Any]:
+    if not self.is_ready:
+      await self.health()
+      if not self.is_ready: raise RuntimeError('Server is not ready. Check server logs for more information.')
     _meta, _config = await self._metadata(), await self._config()
+    if llm_config is not None: llm_config = {**_config, **llm_config, **attrs}
+    else: llm_config = {**_config, **attrs}
     if _meta['prompt_template'] is not None: prompt = _meta['prompt_template'].format(system_message=_meta['system_message'], instruction=prompt)
-    req = Request(prompt=prompt, llm_config={**_config, **attrs})
+
+    req = Request(prompt=prompt, llm_config=llm_config, stop=stop, adapter_name=adapter_name)
     async with httpx.AsyncClient(base_url=self.address, timeout=self._timeout, **self.client_args) as client:
-      async with client.stream('POST', self._build_endpoint('generate_stream'), json=req.json(), **self.client_args) as r:
+      async with client.stream('POST', self._build_endpoint('generate_stream'), json=req.model_dump_json(), **self.client_args) as r:
         async for payload in r.aiter_bytes():
-          yield StreamResponse(text=payload.decode('utf-8'))
-        # TODO: make it SSE correct for streaming
-        # Skip line
-        # if payload == b"\n": continue
-        # payload = payload.decode("utf-8")
-        # if payload.startswith("data:"):
-        #   json_payload = orjson.loads(payload.lstrip('data:').rstrip("\n"))
-        #   print(json_payload)
-        #   try: resp = StreamResponse(text=json_payload)
-        #   except Exception as e: print(e)
-        #   yield resp
+          if payload == b'data: [DONE]\n\n': break
+          # Skip line
+          if payload == b'\n': continue
+          if payload.startswith(b'data: '):
+            try:
+              resp = Response.model_construct_json(payload.decode('utf-8').lstrip('data: ').rstrip('\n'))
+            except Exception as e:
+              print(e)
+            yield StreamingResponse.from_response_chunk(resp)

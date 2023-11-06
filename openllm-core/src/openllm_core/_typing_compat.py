@@ -59,6 +59,8 @@ LiteralContainerVersionStrategy = t.Literal['release', 'nightly', 'latest', 'cus
 
 LiteralResourceSpec = t.Literal['cloud-tpus.google.com/v2', 'amd.com/gpu', 'nvidia.com/gpu', 'cpu']
 
+InferenceReturnType = t.Literal['text', 'object', 'sse', 'token']
+
 if sys.version_info[:2] >= (3, 11):
   from typing import LiteralString as LiteralString
   from typing import NotRequired as NotRequired

@@ -2,6 +2,7 @@ from __future__ import annotations
 import functools
 import logging
 import time
+import traceback
 import typing as t
 
 from http import HTTPStatus
@@ -17,6 +18,10 @@ from openllm_core import GenerationOutput
 from openllm_core.utils import converter
 from openllm_core.utils import gen_random_uuid
 
+from ._openapi import CHAT_COMPLETION_SCHEMA
+from ._openapi import COMPLETION_SCHEMA
+from ._openapi import LIST_MODEL_SCHEMA
+from ._openapi import add_schema_definitions
 from ._openapi import append_schemas
 from ._openapi import get_generator
 from ..protocol.openai import ChatCompletionRequest
@@ -102,77 +107,13 @@ def mount_to_svc(svc: bentoml.Service, llm: openllm.LLM[M, T]) -> bentoml.Servic
   return append_schemas(svc, generated_schema)
 
 # GET /v1/models
+@add_schema_definitions(LIST_MODEL_SCHEMA)
 def list_models(_: Request, llm: openllm.LLM[M, T]) -> Response:
-  """
-  ---
-  consumes:
-  - application/json
-  description: >
-    List and describe the various models available in the API.
-
-    You can refer to the available supported models with `openllm models` for more
-    information.
-  operationId: openai__list_models
-  produces:
-    - application/json
-  summary: Describes a model offering that can be used with the API.
-  tags:
-    - OpenAI
-  x-bentoml-name: list_models
-  responses:
-    '200':
-      description: The Model object
-      content:
-        application/json:
-          example:
-            id: davinci
-            object: model
-            created: 1686935002
-            owned_by: openai
-          schema:
-            $ref: '#/components/schemas/ModelList'
-  """
   return JSONResponse(converter.unstructure(ModelList(data=[ModelCard(id=llm.llm_type)])), status_code=HTTPStatus.OK.value)
 
 # POST /v1/chat/completions
+@add_schema_definitions(CHAT_COMPLETION_SCHEMA)
 async def create_chat_completions(req: Request, llm: openllm.LLM[M, T]) -> Response:
-  """
-  ---
-  consumes:
-  - application/json
-  description: >-
-    Given a list of messages comprising a conversation, the model will return a
-    response.
-  operationId: openai__create_chat_completions
-  produces:
-    - application/json
-  tags:
-    - OpenAI
-  x-bentoml-name: create_chat_completions
-  summary: Creates a model response for the given chat conversation.
-  requestBody:
-    required: true
-    content:
-      application/json:
-        schema:
-          $ref: '#/components/schemas/ChatCompletionRequest'
-  responses:
-    '200':
-      description: OK
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ChatCompletionResponse'
-          examples:
-            streaming:
-              summary: Streaming output example
-              value: >
-                {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1694268190,"model":"gpt-3.5-turbo-0613","choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":null}]}
-            non-streaming:
-              summary: Non-streaming output example
-              value: >
-                {"id": "chatcmpl-123", "object": "chat.completion", "created": 1677652288, "model": "gpt-3.5-turbo-0613", "choices": [{"index": 0, "message": {"role": "assistant", "content": "Hello there, how may I assist you today?"}, "finish_reason": "stop"}], "usage": {"prompt_tokens": 9, "completion_tokens": 12, "total_tokens": 21}}
-"""
   # TODO: Check for length based on model context_length
   json_str = await req.body()
   try:
@@ -191,10 +132,11 @@ async def create_chat_completions(req: Request, llm: openllm.LLM[M, T]) -> Respo
   config = llm.config.with_openai_request(request)
 
   try:
-    result_generator = llm.generate_iterator(prompt, request_id=request_id, format_prompt=False, **config)
+    result_generator = llm.generate_iterator(prompt, request_id=request_id, format_prompt=False, return_type='object', **config)
   except Exception as err:
+    traceback.print_exc()
     logger.error('Error generating completion: %s', err)
-    return error_response(HTTPStatus.BAD_REQUEST, str(err))
+    return error_response(HTTPStatus.INTERNAL_SERVER_ERROR, f'Exception: {err!s} (check server log)')
 
   def create_stream_response_json(index: int, text: str, finish_reason: str | None = None) -> str:
     return jsonify_attr(
@@ -221,93 +163,40 @@ async def create_chat_completions(req: Request, llm: openllm.LLM[M, T]) -> Respo
           yield f'data: {create_stream_response_json(i, "", output.finish_reason)}\n\n'
     yield 'data: [DONE]\n\n'
 
-  # Streaming case
-  if request.stream: return StreamingResponse(completion_stream_generator(), media_type='text/event-stream')
+  try:
+    # Streaming case
+    if request.stream: return StreamingResponse(completion_stream_generator(), media_type='text/event-stream')
+    # Non-streaming case
+    final_result: GenerationOutput | None = None
+    async for res in result_generator:
+      if await req.is_disconnected(): return error_response(HTTPStatus.BAD_REQUEST, 'Client disconnected.')
+      final_result = t.cast(GenerationOutput, res)
+    if final_result is None: return error_response(HTTPStatus.BAD_REQUEST, 'No response from model.')
+    choices = [
+        ChatCompletionResponseChoice(index=output.index, message=ChatMessage(role='assistant', content=output.text), finish_reason=output.finish_reason) for output in final_result.outputs
+    ]
+    num_prompt_tokens, num_generated_tokens = len(final_result.prompt_token_ids), sum(len(output.token_ids) for output in final_result.outputs)
+    usage = UsageInfo(prompt_tokens=num_prompt_tokens, completion_tokens=num_generated_tokens, total_tokens=num_prompt_tokens + num_generated_tokens)
+    response = ChatCompletionResponse(id=request_id, created=created_time, model=model_name, usage=usage, choices=choices)
 
-  # Non-streaming case
-  final_result: GenerationOutput | None = None
-  async for res in result_generator:
-    if await req.is_disconnected(): return error_response(HTTPStatus.BAD_REQUEST, 'Client disconnected.')
-    final_result = t.cast(GenerationOutput, res)
-  if final_result is None: return error_response(HTTPStatus.BAD_REQUEST, 'No response from model.')
-  choices = [
-      ChatCompletionResponseChoice(index=output.index, message=ChatMessage(role='assistant', content=output.text), finish_reason=output.finish_reason) for output in final_result.outputs
-  ]
-  num_prompt_tokens, num_generated_tokens = len(final_result.prompt_token_ids), sum(len(output.token_ids) for output in final_result.outputs)
-  usage = UsageInfo(prompt_tokens=num_prompt_tokens, completion_tokens=num_generated_tokens, total_tokens=num_prompt_tokens + num_generated_tokens)
-  response = ChatCompletionResponse(id=request_id, created=created_time, model=model_name, usage=usage, choices=choices)
+    if request.stream:
+      # When user requests streaming but we don't stream, we still need to
+      # return a streaming response with a single event.
+      async def fake_stream_generator() -> t.AsyncGenerator[str, None]:
+        yield f'data: {jsonify_attr(response)}\n\n'
+        yield 'data: [DONE]\n\n'
 
-  if request.stream:
-    # When user requests streaming but we don't stream, we still need to
-    # return a streaming response with a single event.
-    async def fake_stream_generator() -> t.AsyncGenerator[str, None]:
-      yield f'data: {jsonify_attr(response)}\n\n'
-      yield 'data: [DONE]\n\n'
+      return StreamingResponse(fake_stream_generator(), media_type='text/event-stream', status_code=HTTPStatus.OK.value)
 
-    return StreamingResponse(fake_stream_generator(), media_type='text/event-stream', status_code=HTTPStatus.OK.value)
-
-  return JSONResponse(converter.unstructure(response), status_code=HTTPStatus.OK.value)
+    return JSONResponse(converter.unstructure(response), status_code=HTTPStatus.OK.value)
+  except Exception as err:
+    traceback.print_exc()
+    logger.error('Error generating completion: %s', err)
+    return error_response(HTTPStatus.INTERNAL_SERVER_ERROR, f'Exception: {err!s} (check server log)')
 
 # POST /v1/completions
+@add_schema_definitions(COMPLETION_SCHEMA)
 async def create_completions(req: Request, llm: openllm.LLM[M, T]) -> Response:
-  """
-  ---
-  consumes:
-    - application/json
-  description: >-
-    Given a prompt, the model will return one or more predicted completions, and
-    can also return the probabilities of alternative tokens at each position. We
-    recommend most users use our Chat completions API.
-  operationId: openai__create_completions
-  produces:
-    - application/json
-  tags:
-    - OpenAI
-  x-bentoml-name: create_completions
-  summary: Creates a completion for the provided prompt and parameters.
-  requestBody:
-    required: true
-    content:
-      application/json:
-        schema:
-          $ref: '#/components/schemas/CompletionRequest'
-  responses:
-    '200':
-      description: OK
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/CompletionResponse'
-          examples:
-            streaming:
-              summary: Streaming output example
-              value:
-                id: cmpl-7iA7iJjj8V2zOkCGvWF2hAkDWBQZe
-                object: text_completion
-                created: 1690759702
-                choices:
-                  - text: This
-                    index: 0
-                    logprobs: null
-                    finish_reason: null
-                model: gpt-3.5-turbo-instruct
-            non-streaming:
-              summary: Non-streaming output example
-              value:
-                id: cmpl-uqkvlQyYK7bGYrRHQ0eXlWi7
-                object: text_completion
-                created: 1589478378
-                model: VAR_model_id
-                choices:
-                  - text: This is indeed a test
-                    index: 0
-                    logprobs: null
-                    finish_reason: length
-                usage:
-                  prompt_tokens: 5
-                  completion_tokens: 7
-                  total_tokens: 12
-  """
   # TODO: Check for length based on model context_length
   json_str = await req.body()
   try:
@@ -330,16 +219,21 @@ async def create_completions(req: Request, llm: openllm.LLM[M, T]) -> Response:
     prompt = request.prompt[0]
   else:
     prompt = request.prompt
+    if not prompt: return error_response(HTTPStatus.BAD_REQUEST, 'Please provide a prompt.')
+
+  if request.logprobs is not None and llm.__llm_backend__ == 'pt':  # TODO: support logprobs generation for PyTorch
+    return error_response(HTTPStatus.BAD_REQUEST, "'logprobs' is not yet supported for PyTorch models. Make sure to unset `logprobs`.")
 
   model_name, request_id = request.model, gen_random_uuid('cmpl')
   created_time = int(time.monotonic())
   config = llm.config.with_openai_request(request)
 
   try:
-    result_generator = llm.generate_iterator(prompt, request_id=request_id, **config)
+    result_generator = llm.generate_iterator(prompt, request_id=request_id, return_type='object', **config)
   except Exception as err:
+    traceback.print_exc()
     logger.error('Error generating completion: %s', err)
-    return error_response(HTTPStatus.BAD_REQUEST, str(err))
+    return error_response(HTTPStatus.INTERNAL_SERVER_ERROR, f'Exception: {err!s} (check server log)')
 
   # best_of != n then we don't stream
   # TODO: support use_beam_search
@@ -374,36 +268,41 @@ async def create_completions(req: Request, llm: openllm.LLM[M, T]) -> Response:
           yield f'data: {create_stream_response_json(index=i, text="", logprobs=logprobs, finish_reason=output.finish_reason)}\n\n'
     yield 'data: [DONE]\n\n'
 
-  # Streaming case
-  if stream: return StreamingResponse(completion_stream_generator(), media_type='text/event-stream')
-  # Non-streaming case
-  final_result: GenerationOutput | None = None
-  async for res in result_generator:
-    if await req.is_disconnected(): return error_response(HTTPStatus.BAD_REQUEST, 'Client disconnected.')
-    final_result = t.cast(GenerationOutput, res)
-  if final_result is None: return error_response(HTTPStatus.BAD_REQUEST, 'No response from model.')
+  try:
+    # Streaming case
+    if stream: return StreamingResponse(completion_stream_generator(), media_type='text/event-stream')
+    # Non-streaming case
+    final_result: GenerationOutput | None = None
+    async for res in result_generator:
+      if await req.is_disconnected(): return error_response(HTTPStatus.BAD_REQUEST, 'Client disconnected.')
+      final_result = t.cast(GenerationOutput, res)
+    if final_result is None: return error_response(HTTPStatus.BAD_REQUEST, 'No response from model.')
 
-  choices: list[CompletionResponseChoice] = []
-  for output in final_result.outputs:
-    if request.logprobs is not None:
-      logprobs = create_logprobs(token_ids=output.token_ids, id_logprobs=output.logprobs, llm=llm)
-    else:
-      logprobs = None
-    choice_data = CompletionResponseChoice(index=output.index, text=output.text, logprobs=logprobs, finish_reason=output.finish_reason)
-    choices.append(choice_data)
+    choices: list[CompletionResponseChoice] = []
+    for output in final_result.outputs:
+      if request.logprobs is not None:
+        logprobs = create_logprobs(token_ids=output.token_ids, id_logprobs=output.logprobs, llm=llm)
+      else:
+        logprobs = None
+      choice_data = CompletionResponseChoice(index=output.index, text=output.text, logprobs=logprobs, finish_reason=output.finish_reason)
+      choices.append(choice_data)
 
-  num_prompt_tokens = len(final_result.prompt_token_ids)
-  num_generated_tokens = sum(len(output.token_ids) for output in final_result.outputs)
-  usage = UsageInfo(prompt_tokens=num_prompt_tokens, completion_tokens=num_generated_tokens, total_tokens=num_prompt_tokens + num_generated_tokens)
-  response = CompletionResponse(id=request_id, created=created_time, model=model_name, usage=usage, choices=choices)
+    num_prompt_tokens = len(final_result.prompt_token_ids)
+    num_generated_tokens = sum(len(output.token_ids) for output in final_result.outputs)
+    usage = UsageInfo(prompt_tokens=num_prompt_tokens, completion_tokens=num_generated_tokens, total_tokens=num_prompt_tokens + num_generated_tokens)
+    response = CompletionResponse(id=request_id, created=created_time, model=model_name, usage=usage, choices=choices)
 
-  if request.stream:
-    # When user requests streaming but we don't stream, we still need to
-    # return a streaming response with a single event.
-    async def fake_stream_generator() -> t.AsyncGenerator[str, None]:
-      yield f'data: {jsonify_attr(response)}\n\n'
-      yield 'data: [DONE]\n\n'
+    if request.stream:
+      # When user requests streaming but we don't stream, we still need to
+      # return a streaming response with a single event.
+      async def fake_stream_generator() -> t.AsyncGenerator[str, None]:
+        yield f'data: {jsonify_attr(response)}\n\n'
+        yield 'data: [DONE]\n\n'
 
-    return StreamingResponse(fake_stream_generator(), media_type='text/event-stream', status_code=HTTPStatus.OK.value)
+      return StreamingResponse(fake_stream_generator(), media_type='text/event-stream', status_code=HTTPStatus.OK.value)
 
-  return JSONResponse(converter.unstructure(response), status_code=HTTPStatus.OK.value)
+    return JSONResponse(converter.unstructure(response), status_code=HTTPStatus.OK.value)
+  except Exception as err:
+    traceback.print_exc()
+    logger.error('Error generating completion: %s', err)
+    return error_response(HTTPStatus.INTERNAL_SERVER_ERROR, f'Exception: {err!s} (check server log)')

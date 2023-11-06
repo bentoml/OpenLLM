@@ -21,9 +21,9 @@ import openllm_core
 from openllm_core._configuration import GenerationConfig as GenerationConfig
 from openllm_core._configuration import LLMConfig as LLMConfig
 from openllm_core._configuration import SamplingParams as SamplingParams
-from openllm_core._schema import GenerateInput as GenerateInput
-from openllm_core._schema import GenerationOutput as GenerationOutput
-from openllm_core._schema import MetadataOutput as MetadataOutput
+from openllm_core._schemas import GenerationInput as GenerationInput
+from openllm_core._schemas import GenerationOutput as GenerationOutput
+from openllm_core._schemas import MetadataOutput as MetadataOutput
 from openllm_core.config import CONFIG_MAPPING as CONFIG_MAPPING
 from openllm_core.config import CONFIG_MAPPING_NAMES as CONFIG_MAPPING_NAMES
 from openllm_core.config import AutoConfig as AutoConfig
@@ -64,7 +64,7 @@ _import_structure: dict[str, list[str]] = {
     'testing': [],
     'prompts': ['PromptTemplate'],
     'protocol': [],
-    'entrypoints': ['mount_entrypoints_to_svc'],
+    'entrypoints': ['mount_entrypoints'],
     'utils': [],
     'serialisation': ['ggml', 'transformers'],
     'cli._sdk': ['start', 'start_grpc', 'build', 'import_model', 'list_models'],
@@ -100,7 +100,7 @@ if _t.TYPE_CHECKING:
   from .protocol import openai as openai
   from .serialisation import ggml as ggml
   from .serialisation import transformers as transformers
-  from .entrypoints import mount_entrypoints_to_svc as mount_entrypoints_to_svc
+  from .entrypoints import mount_entrypoints as mount_entrypoints
 
 # NOTE: update this to sys.modules[__name__] once mypy_extensions can recognize __spec__
 __lazy = openllm_core.utils.LazyModule(__name__, globals()['__file__'], _import_structure, extra_objects={'COMPILED': COMPILED})
