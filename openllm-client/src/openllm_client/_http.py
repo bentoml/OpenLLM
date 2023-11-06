@@ -42,19 +42,20 @@ class HTTPClient:
 
   _timeout: int = attr.field(default=30, repr=False)
   _api_version: str = attr.field(default='v1', repr=False)
+  _verify: bool = attr.field(default=True, repr=False)
   _state: ServerState = attr.field(default=ServerState.CLOSED, repr=False)
 
   __metadata: dict[str, t.Any] | None = attr.field(default=None, repr=False)
   __config: dict[str, t.Any] | None = attr.field(default=None, repr=False)
 
   @staticmethod
-  def wait_until_server_ready(addr: str, timeout: float = 30, check_interval: int = 1, **client_args: t.Any) -> None:
+  def wait_until_server_ready(addr: str, timeout: float = 30, verify: bool = False, check_interval: int = 1, **client_args: t.Any) -> None:
     addr = _address_converter(addr)
     logger.debug('Wait for server @ %s to be ready', addr)
     start = time.monotonic()
     while time.monotonic() - start < timeout:
       try:
-        with httpx.Client(base_url=addr, **client_args) as sess:
+        with httpx.Client(base_url=addr, verify=verify, **client_args) as sess:
           status = sess.get('/readyz').status_code
         if status == 200: break
         else: time.sleep(check_interval)
@@ -63,19 +64,19 @@ class HTTPClient:
         time.sleep(check_interval)
     # Try once more and raise for exception
     try:
-      with httpx.Client(base_url=addr, **client_args) as sess:
+      with httpx.Client(base_url=addr, verify=verify, **client_args) as sess:
         status = sess.get('/readyz').status_code
     except httpx.HTTPStatusError as err:
       logger.error('Failed to wait until server ready: %s', addr)
       logger.error(err)
       raise
 
-  def __init__(self, address: str | None = None, timeout: int = 30, api_version: str = 'v1', **client_args: t.Any) -> None:
+  def __init__(self, address: str | None = None, timeout: int = 30, verify: bool = False, api_version: str = 'v1', **client_args: t.Any) -> None:
     if address is None:
       env = os.environ.get('OPENLLM_ENDPOINT')
       if env is None: raise ValueError('address must be provided')
       address = env
-    self.__attrs_init__(address, client_args, httpx.Client(base_url=address, timeout=timeout, **client_args), timeout, api_version)  # type: ignore[attr-defined]
+    self.__attrs_init__(address, client_args, httpx.Client(base_url=address, timeout=timeout, verify=verify, **client_args), timeout, api_version, verify)  # type: ignore[attr-defined]
 
   def _metadata(self) -> dict[str, t.Any]:
     if self.__metadata is None: self.__metadata = self._inner.post(self._build_endpoint('metadata')).json()
@@ -103,7 +104,7 @@ class HTTPClient:
 
   def health(self) -> None:
     try:
-      self.wait_until_server_ready(self.address, timeout=self._timeout, **self.client_args)
+      self.wait_until_server_ready(self.address, timeout=self._timeout, verify=self._verify, **self.client_args)
       _object_setattr(self, '_state', ServerState.READY)
     except Exception as e:
       logger.error('Server is not healthy (Scroll up for traceback)\n%s', e)
@@ -111,6 +112,7 @@ class HTTPClient:
 
   def query(self, prompt: str, **attrs: t.Any) -> Response:
     timeout = attrs.pop('timeout', self._timeout)
+    verify = attrs.pop('verify', self._verify)
     _meta, _config = self._metadata(), self._config()
     if _meta['prompt_template'] is not None: prompt = _meta['prompt_template'].format(system_message=_meta['system_message'], instruction=prompt)
 
@@ -118,16 +120,17 @@ class HTTPClient:
       self.health()
       if not self.is_ready: raise RuntimeError('Server is not ready. Check server logs for more information.')
 
-    with httpx.Client(base_url=self.address, timeout=timeout, **self.client_args) as client:
+    with httpx.Client(base_url=self.address, timeout=timeout, verify=verify, **self.client_args) as client:
       r = client.post(self._build_endpoint('generate'), json=Request(prompt=prompt, llm_config={**_config, **attrs}).json(), **self.client_args)
     if r.status_code != 200: raise ValueError("Failed to get generation from '/v1/generate'. Check server logs for more details.")
     return Response(**r.json())
 
   def generate_stream(self, prompt: str, **attrs: t.Any) -> t.Iterator[StreamResponse]:
     timeout = attrs.pop('timeout', self._timeout)
+    verify = attrs.pop('verify', self._verify)
     _meta, _config = self._metadata(), self._config()
     if _meta['prompt_template'] is not None: prompt = _meta['prompt_template'].format(system_message=_meta['system_message'], instruction=prompt)
-    with httpx.Client(base_url=self.address, timeout=timeout, **self.client_args) as client:
+    with httpx.Client(base_url=self.address, timeout=timeout, verify=verify, **self.client_args) as client:
       with client.stream('POST', self._build_endpoint('generate_stream'), json=Request(prompt=prompt, llm_config={**_config, **attrs}).json(), **self.client_args) as r:
         for payload in r.iter_bytes():
           yield StreamResponse(text=payload.decode('utf-8'))
@@ -150,19 +153,20 @@ class AsyncHTTPClient:
 
   _timeout: int = attr.field(default=30, repr=False)
   _api_version: str = attr.field(default='v1', repr=False)
+  _verify: bool = attr.field(default=True, repr=False)
   _state: ServerState = attr.field(default=ServerState.CLOSED, repr=False)
 
   __metadata: dict[str, t.Any] | None = attr.field(default=None, repr=False)
   __config: dict[str, t.Any] | None = attr.field(default=None, repr=False)
 
   @staticmethod
-  async def wait_until_server_ready(addr: str, timeout: float = 30, check_interval: int = 1, **client_args: t.Any) -> None:
+  async def wait_until_server_ready(addr: str, timeout: float = 30, verify: bool = False, check_interval: int = 1, **client_args: t.Any) -> None:
     addr = _address_converter(addr)
     logger.debug('Wait for server @ %s to be ready', addr)
     start = time.monotonic()
     while time.monotonic() - start < timeout:
       try:
-        async with httpx.AsyncClient(base_url=addr, **client_args) as sess:
+        async with httpx.AsyncClient(base_url=addr, verify=verify, **client_args) as sess:
           status = (await sess.get('/readyz')).status_code
         if status == 200: break
         else: await asyncio.sleep(check_interval)
@@ -171,19 +175,19 @@ class AsyncHTTPClient:
         await asyncio.sleep(check_interval)
     # Try once more and raise for exception
     try:
-      async with httpx.AsyncClient(base_url=addr, **client_args) as sess:
+      async with httpx.AsyncClient(base_url=addr, verify=verify, **client_args) as sess:
         status = (await sess.get('/readyz')).status_code
     except httpx.HTTPStatusError as err:
       logger.error('Failed to wait until server ready: %s', addr)
       logger.error(err)
       raise
 
-  def __init__(self, address: str | None = None, timeout: int = 30, api_version: str = 'v1', **client_args: t.Any) -> None:
+  def __init__(self, address: str | None = None, timeout: int = 30, verify: bool = False, api_version: str = 'v1', **client_args: t.Any) -> None:
     if address is None:
       env = os.environ.get('OPENLLM_ENDPOINT')
       if env is None: raise ValueError('address must be provided')
       address = env
-    self.__attrs_init__(address, client_args, httpx.AsyncClient(base_url=address, timeout=timeout, **client_args), timeout, api_version)
+    self.__attrs_init__(address, client_args, httpx.AsyncClient(base_url=address, timeout=timeout, verify=verify, **client_args), timeout, api_version, verify)
 
   async def _metadata(self) -> dict[str, t.Any]:
     if self.__metadata is None: self.__metadata = (await self._inner.post(self._build_endpoint('metadata'))).json()
@@ -208,7 +212,7 @@ class AsyncHTTPClient:
 
   async def health(self) -> None:
     try:
-      await self.wait_until_server_ready(self.address, timeout=self._timeout, **self.client_args)
+      await self.wait_until_server_ready(self.address, timeout=self._timeout, verify=self._verify, **self.client_args)
       _object_setattr(self, '_state', ServerState.READY)
     except Exception as e:
       logger.error('Server is not healthy (Scroll up for traceback)\n%s', e)
@@ -216,6 +220,7 @@ class AsyncHTTPClient:
 
   async def query(self, prompt: str, **attrs: t.Any) -> Response:
     timeout = attrs.pop('timeout', self._timeout)
+    verify = attrs.pop('verify', self._verify)
     _meta, _config = await self._metadata(), await self._config()
     if _meta['prompt_template'] is not None: prompt = _meta['prompt_template'].format(system_message=_meta['system_message'], instruction=prompt)
 
@@ -224,16 +229,18 @@ class AsyncHTTPClient:
       if not self.is_ready: raise RuntimeError('Server is not ready. Check server logs for more information.')
 
     req = Request(prompt=_meta['prompt_template'].format(system_message=_meta['system_message'], instruction=prompt), llm_config={**_config, **attrs})
-    async with httpx.AsyncClient(base_url=self.address, timeout=timeout, **self.client_args) as client:
+    async with httpx.AsyncClient(base_url=self.address, timeout=timeout, verify=verify, **self.client_args) as client:
       r = await client.post(self._build_endpoint('generate'), json=req.json(), **self.client_args)
     if r.status_code != 200: raise ValueError("Failed to get generation from '/v1/generate'. Check server logs for more details.")
     return Response(**r.json())
 
   async def generate_stream(self, prompt: str, **attrs: t.Any) -> t.AsyncGenerator[StreamResponse, t.Any]:
+    timeout = attrs.pop('timeout', self._timeout)
+    verify = attrs.pop('verify', self._verify)
     _meta, _config = await self._metadata(), await self._config()
     if _meta['prompt_template'] is not None: prompt = _meta['prompt_template'].format(system_message=_meta['system_message'], instruction=prompt)
     req = Request(prompt=prompt, llm_config={**_config, **attrs})
-    async with httpx.AsyncClient(base_url=self.address, timeout=self._timeout, **self.client_args) as client:
+    async with httpx.AsyncClient(base_url=self.address, timeout=timeout, verify=verify, **self.client_args) as client:
       async with client.stream('POST', self._build_endpoint('generate_stream'), json=req.json(), **self.client_args) as r:
         async for payload in r.aiter_bytes():
           yield StreamResponse(text=payload.decode('utf-8'))
