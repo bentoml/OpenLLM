@@ -1,6 +1,5 @@
 # mypy: disable-error-code="name-defined,attr-defined"
 from __future__ import annotations
-import asyncio
 import logging
 import os
 import types
@@ -18,6 +17,7 @@ import openllm_core
 
 from bentoml._internal.models.model import ModelSignature
 from bentoml._internal.runner.runner_handle import DummyRunnerHandle
+from openllm_core._schemas import CompletionChunk
 from openllm_core._schemas import GenerationOutput
 from openllm_core._strategies import CascadingResourceStrategy
 from openllm_core._typing_compat import AdapterMap
@@ -30,7 +30,6 @@ from openllm_core._typing_compat import LiteralSerialisation
 from openllm_core._typing_compat import LLMRunnable
 from openllm_core._typing_compat import LLMRunner
 from openllm_core._typing_compat import M
-from openllm_core._typing_compat import ModelSignatureDict
 from openllm_core._typing_compat import ParamSpec
 from openllm_core._typing_compat import T
 from openllm_core._typing_compat import TupleAny
@@ -149,14 +148,14 @@ class LLM(t.Generic[M, T]):
                *args: t.Any,
                quantize: LiteralQuantise | None = None,
                quantization_config: transformers.BitsAndBytesConfig | transformers.GPTQConfig | transformers.AwqConfig | None = None,
-               adapter_map: dict[str, str | None] | None = None,
+               adapter_map: dict[str, str] | None = None,
                serialisation: LiteralSerialisation = 'safetensors',
                **attrs: t.Any):
     # low_cpu_mem_usage is only available for model this is helpful on system with low memory to avoid OOM
     low_cpu_mem_usage = attrs.pop('low_cpu_mem_usage', True)
     _local = False
     if validate_is_path(model_id): model_id, _local = resolve_filepath(model_id), True
-    backend = openllm.utils.first_not_none(backend, os.getenv('OPENLLM_BACKEND'), default='vllm' if openllm.utils.is_vllm_available() else 'pt')
+    backend = t.cast(LiteralBackend, first_not_none(backend, os.getenv('OPENLLM_BACKEND'), default='vllm' if openllm.utils.is_vllm_available() else 'pt'))
 
     quantize = first_not_none(quantize, t.cast(t.Optional[LiteralQuantise], os.getenv('OPENLLM_QUANTIZE')), default=None)
     # elif quantization_config is None and quantize is not None:
@@ -190,7 +189,7 @@ class LLM(t.Generic[M, T]):
     self.__llm_backend__ = backend
 
   @apply(lambda val: tuple(str.lower(i) if i else i for i in val))
-  def _make_tag_components(self, model_id: str, model_version: str | None, backend: LiteralBackend) -> tuple[str, str]:
+  def _make_tag_components(self, model_id: str, model_version: str | None, backend: LiteralBackend) -> tuple[str, str | None]:
     '''Return a valid tag name (<backend>-<repo>--<model_id>) and its tag version.'''
     model_id, *maybe_revision = model_id.rsplit(':')
     if len(maybe_revision) > 0:
@@ -238,11 +237,6 @@ class LLM(t.Generic[M, T]):
   def identifying_params(self)->DictStrAny: return {'configuration': self.config.model_dump_json().decode(),'model_ids': orjson.dumps(self.config['model_ids']).decode(),'model_id': self.model_id}
   @property
   def llm_parameters(self)->tuple[tuple[tuple[t.Any,...],DictStrAny],DictStrAny]:return (self._model_decls,self._model_attrs),self._tokenizer_attrs
-  def sanitize_parameters(self, prompt: str, **attrs: t.Any) -> tuple[str, DictStrAny, DictStrAny]:
-    return self.config.sanitize_parameters(prompt,prompt_template=self._prompt_template,system_message=self._system_message,**attrs)
-  def postprocess_generate(self, prompt: str, generation_result: t.Any, **attrs: t.Any) -> t.Any:
-    if isinstance(generation_result, dict) and 'text' in generation_result: return generation_result['text']
-    return self.config.postprocess_generate(prompt, generation_result, **attrs)
   # yapf: enable
 
   # NOTE: The section helps with fine-tuning.
@@ -253,6 +247,7 @@ class LLM(t.Generic[M, T]):
     except ImportError as err:
       raise MissingDependencyError("Failed to import 'peft'. Make sure to do 'pip install \"openllm[fine-tune]\"'") from err
     if not self.has_adapters: raise AttributeError('Adapter map is not available.')
+    assert self._adapter_map is not None
     if self.__llm_adapter_map__ is None:
       _map: ResolvedAdapterMap = {k: {} for k in self._adapter_map}
       for adapter_type, adapter_tuple in self._adapter_map.items():
@@ -270,8 +265,8 @@ class LLM(t.Generic[M, T]):
     from peft import prepare_model_for_kbit_training
     peft_config = self.config['fine_tune_strategies'].get(adapter_type, self.config.make_fine_tune_config(adapter_type)).train().with_config(**attrs).build()
     if self.has_adapters: raise ValueError('Adapter should not be specified when fine-tuning.')
-    model = get_peft_model(prepare_model_for_kbit_training(self.model, use_gradient_checkpointing=use_gradient_checking), peft_config)
-    if DEBUG: model.print_trainable_parameters()
+    model = get_peft_model(prepare_model_for_kbit_training(self.model, use_gradient_checkpointing=use_gradient_checking), peft_config)  # type: ignore[no-untyped-call]
+    if DEBUG: model.print_trainable_parameters()  # type: ignore[no-untyped-call]
     return model, self.tokenizer
 
   @property
@@ -317,7 +312,8 @@ class LLM(t.Generic[M, T]):
                      adapter_name: str | None = None,
                      **attrs: t.Any) -> GenerationOutput:
     config = self.config.model_construct_env(**attrs)
-    texts, token_ids = [[]] * config['n'], [[]] * config['n']
+    texts: list[list[str]] = [[]] * config['n']
+    token_ids: list[list[int]] = [[]] * config['n']
     final_result: GenerationOutput | None = None
     async for result in self.generate_iterator(prompt, prompt_token_ids, stop, stop_token_ids, request_id, adapter_name, **config.model_dump(flatten=True)):
       for output in result.outputs:
@@ -355,9 +351,9 @@ class LLM(t.Generic[M, T]):
 
     if request_id is None: request_id = openllm_core.utils.gen_random_uuid()
     previous_texts, previous_num_tokens = [''] * config['n'], [0] * config['n']
-    async for out in self.runner.generate_iterator.async_stream(prompt_token_ids, request_id, stop=stop, adapter_name=adapter_name, **config.model_dump(flatten=True)):
+    async for out in self.runner.generate_iterator.async_stream(prompt_token_ids, request_id, stop, adapter_name, **config.model_dump(flatten=True)):
       generated = GenerationOutput.from_sse(out).with_options(prompt=prompt)
-      delta_outputs = [None] * len(generated.outputs)
+      delta_outputs = t.cast(t.List[CompletionChunk], [None] * len(generated.outputs))
       if generated.finished: break
       for output in generated.outputs:
         i = output.index
@@ -376,6 +372,7 @@ def _RunnerFactory(self: openllm.LLM[M, T],
                    scheduling_strategy: type[bentoml.Strategy] = CascadingResourceStrategy,
                    *,
                    backend: LiteralBackend | None = None) -> LLMRunner[M, T]:
+  from ._runners import runnable
   backend = t.cast(LiteralBackend, first_not_none(backend, os.environ.get('OPENLLM_BACKEND'), default=self.__llm_backend__))
 
   models = models if models is not None else []
@@ -384,10 +381,6 @@ def _RunnerFactory(self: openllm.LLM[M, T],
   except bentoml.exceptions.NotFound as err:
     raise RuntimeError(f'Failed to locate {self.bentomodel}:{err}') from err
 
-  if backend == 'vllm':
-    from ._runners import vLLMRunnable as OpenLLMRunnable
-  else:
-    from ._runners import PyTorchRunnable as OpenLLMRunnable
   if self._prompt_template: prompt_template = self._prompt_template.to_string()
   elif hasattr(self.config, 'default_prompt_template'): prompt_template = self.config.default_prompt_template
   else: prompt_template = None
@@ -397,10 +390,6 @@ def _RunnerFactory(self: openllm.LLM[M, T],
 
   # yapf: disable
   def _wrapped_repr_keys(_: LLMRunner[M, T]) -> set[str]: return {'config', 'llm_type', 'runner_methods', 'backend', 'llm_tag'}
-  def _generate_sync(_: LLMRunner[M, T], prompt: str, **kwargs: t.Any) -> t.Any:
-    # NOTE: This should only be used with LangChain
-    async def infer(): return await self.generate(prompt, **kwargs)
-    return asyncio.run(infer())
   def _wrapped_repr_args(_: LLMRunner[M, T]) -> ReprArgs:
     yield 'runner_methods', {method.name: {'batchable': method.config.batchable, 'batch_dim': method.config.batch_dim if method.config.batchable else None} for method in _.runner_methods}
     yield 'config', self.config.model_dump(flatten=True)
@@ -419,7 +408,6 @@ def _RunnerFactory(self: openllm.LLM[M, T],
                              'backend': backend,
                              'download_model': self.save_pretrained,
                              '__module__': self.__module__,
-                             '__call__': _generate_sync,
                              '__doc__': self.config['env'].start_docstring,
                              '__repr__': ReprMixin.__repr__,
                              '__repr_keys__': property(_wrapped_repr_keys),
@@ -427,7 +415,7 @@ def _RunnerFactory(self: openllm.LLM[M, T],
                              'has_adapters': self.has_adapters,
                              'prompt_template': prompt_template,
                              'system_message': system_message,
-                         }))(OpenLLMRunnable,
+                         }))(runnable(backend),
                              name=self.runner_name,
                              embedded=False,
                              models=models,
@@ -435,9 +423,6 @@ def _RunnerFactory(self: openllm.LLM[M, T],
                              max_latency_ms=max_latency_ms,
                              scheduling_strategy=scheduling_strategy,
                              runnable_init_params=dict(llm=self),
-                             method_configs=converter.unstructure({
-                                 'generate': ModelSignature.from_dict(ModelSignatureDict(batchable=False)),
-                                 'generate_iterator': ModelSignature.from_dict(ModelSignatureDict(batchable=False))
-                             }))
+                             method_configs=converter.unstructure({'generate_iterator': ModelSignature(batchable=False)}))
 
 __all__ = ['LLMRunner', 'LLMRunnable', 'LLM']

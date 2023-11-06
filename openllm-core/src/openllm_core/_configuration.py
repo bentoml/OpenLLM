@@ -1,4 +1,4 @@
-# mypy: disable-error-code="attr-defined,no-untyped-call,type-var,operator,arg-type,no-redef"
+# mypy: disable-error-code="attr-defined,no-untyped-call,type-var,operator,arg-type,no-redef,misc"
 '''Configuration utilities for OpenLLM. All model configuration will inherit from ``openllm.LLMConfig``.
 
 Highlight feature: Each fields in ``openllm.LLMConfig`` will also automatically generate a environment

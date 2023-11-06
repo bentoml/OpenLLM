@@ -42,7 +42,7 @@ def build_container(bento: bentoml.Bento | str | bentoml.Tag, image_tag: str | N
 
 @contextlib.contextmanager
 def prepare(model: str,
-            model_id: str | None = None,
+            model_id: str,
             backend: LiteralBackend = 'pt',
             deployment_mode: t.Literal['container', 'local'] = 'local',
             clean_context: contextlib.ExitStack | None = None,
@@ -50,7 +50,7 @@ def prepare(model: str,
   if clean_context is None:
     clean_context = contextlib.ExitStack()
     cleanup = True
-  llm = openllm.LLM(model_id, ackend=backend)
+  llm = openllm.LLM[t.Any, t.Any](model_id, backend=backend)
   bento_tag = bentoml.Tag.from_taglike(f'{llm.llm_type}-service:{llm.tag.version}')
   if not bentoml.list(bento_tag):
     bento = clean_context.enter_context(build_bento(model, model_id=model_id, cleanup=cleanup))

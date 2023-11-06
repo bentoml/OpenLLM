@@ -44,7 +44,7 @@ class MetadataOutput:
   def model_dump_json(self)->str:return orjson.dumps(self.model_dump(),option=orjson.OPT_INDENT_2).decode('utf-8')
   # yapf: enable
 
-@attr.frozen(slots=True)
+@attr.define(slots=True, frozen=True)
 class GenerationInput:
   prompt: str
   llm_config: LLMConfig
@@ -60,8 +60,8 @@ class GenerationInput:
 
   @classmethod
   def from_llm_config(cls, llm_config: LLMConfig) -> type[GenerationInput]:
-    def init(self, prompt: str, stop: list[str] | None, adapter_name: str | None) -> None:
-      self.__attrs_init__(prompt=prompt, llm_config=llm_config, stop=stop, adapter_name=adapter_name)
+    def init(self: GenerationInput, prompt: str, stop: list[str] | None, adapter_name: str | None) -> None:
+      self.__attrs_init__(prompt=prompt, llm_config=llm_config, stop=stop, adapter_name=adapter_name)  # type: ignore
 
     def _llm_config_converter(data: dict[str, t.Any] | LLMConfig) -> LLMConfig:
       if isinstance(data, LLMConfig): return data

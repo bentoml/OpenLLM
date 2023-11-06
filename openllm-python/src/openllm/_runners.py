@@ -1,5 +1,6 @@
 from __future__ import annotations
 import gc
+import os
 import traceback
 import typing as t
 
@@ -11,17 +12,28 @@ import openllm
 from openllm.exceptions import OpenLLMException
 from openllm_core._schemas import CompletionChunk
 from openllm_core._schemas import GenerationOutput
+from openllm_core._typing_compat import LiteralBackend
 from openllm_core._typing_compat import M
 from openllm_core._typing_compat import T
 from openllm_core.utils import device_count
+from openllm_core.utils import first_not_none
 from openllm_core.utils import get_debug_mode
+from openllm_core.utils import is_vllm_available
 
 if t.TYPE_CHECKING:
   import vllm
+
+  from openllm_core._schemas import FinishReason
 else:
   vllm = openllm.utils.LazyLoader('vllm', globals(), 'vllm')
 
 _DEFAULT_TOKENIZER = 'hf-internal-testing/llama-tokenizer'
+
+__all__ = ['runnable']
+
+def runnable(backend: LiteralBackend | None = None) -> type[bentoml.Runnable]:
+  backend = t.cast(LiteralBackend, first_not_none(backend, os.getenv('OPENLLM_BACKEND'), default='vllm' if is_vllm_available() else 'pt'))
+  return vLLMRunnable if backend == 'vllm' else PyTorchRunnable
 
 class vLLMRunnable(bentoml.Runnable):
   SUPPORTED_RESOURCES = ('nvidia.com/gpu', 'amd.com/gpu', 'cpu')
@@ -112,7 +124,7 @@ class PyTorchRunnable(bentoml.Runnable):
       logits_processor = prepare_logits_processor(config)
 
       past_key_values = out = token = None
-      finish_reason = None
+      finish_reason: t.Optional[FinishReason] = None
       for i in range(config['max_new_tokens']):
         if i == 0:  # prefill
           out = self.model(torch.as_tensor([prompt_token_ids], device=self.device), use_cache=True)

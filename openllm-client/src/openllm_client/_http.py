@@ -146,9 +146,9 @@ class HTTPClient:
             try:
               proc = payload.decode('utf-8').lstrip('data: ').rstrip('\n')
               data = orjson.loads(proc)
+              yield StreamingResponse.from_response_chunk(Response.model_construct(data))
             except Exception:
               pass  # FIXME: Handle this
-            yield StreamingResponse.from_response_chunk(Response.model_construct(data))
 
 @attr.define(init=False)
 class AsyncHTTPClient:
@@ -259,6 +259,6 @@ class AsyncHTTPClient:
             try:
               proc = payload.decode('utf-8').lstrip('data: ').rstrip('\n')
               data = orjson.loads(proc)
+              yield StreamingResponse.from_response_chunk(Response.model_construct(data))
             except Exception:
               pass  # FIXME: Handle this
-            yield StreamingResponse.from_response_chunk(Response.model_construct(data))

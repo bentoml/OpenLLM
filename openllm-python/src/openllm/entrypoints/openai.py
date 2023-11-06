@@ -14,7 +14,7 @@ from starlette.responses import JSONResponse
 from starlette.responses import StreamingResponse
 from starlette.routing import Route
 
-from openllm_core import GenerationOutput
+from openllm_core._schemas import SampleLogprobs
 from openllm_core.utils import converter
 from openllm_core.utils import gen_random_uuid
 
@@ -61,6 +61,7 @@ if t.TYPE_CHECKING:
   import bentoml
   import openllm
 
+  from openllm_core._schemas import GenerationOutput
   from openllm_core._typing_compat import M
   from openllm_core._typing_compat import T
 
@@ -68,10 +69,10 @@ def jsonify_attr(obj: AttrsInstance) -> str:
   return orjson.dumps(converter.unstructure(obj)).decode()
 
 def error_response(status_code: HTTPStatus, message: str) -> JSONResponse:
-  return JSONResponse({'error': converter.unstructure(ErrorResponse(message=message, type='invalid_request_error', code=status_code.value))}, status_code=status_code.value)
+  return JSONResponse({'error': converter.unstructure(ErrorResponse(message=message, type='invalid_request_error', code=str(status_code.value)))}, status_code=status_code.value)
 
 async def check_model(request: CompletionRequest | ChatCompletionRequest, model: str) -> JSONResponse | None:
-  if request.model == model: return
+  if request.model == model: return None
   return error_response(
       HTTPStatus.NOT_FOUND,
       f"Model '{request.model}' does not exists. Try 'GET /v1/models' to see available models.\nTip: If you are migrating from OpenAI, make sure to update your 'model' parameters in the request."
@@ -162,26 +163,27 @@ async def create_chat_completions(req: Request, llm: openllm.LLM[M, T]) -> Respo
     if request.stream: return StreamingResponse(completion_stream_generator(), media_type='text/event-stream')
     # Non-streaming case
     final_result: GenerationOutput | None = None
-    texts, token_ids = [[]] * config['n'], [[]] * config['n']
+    texts: list[list[str]] = [[]] * config['n']
+    token_ids: list[list[int]] = [[]] * config['n']
     async for res in result_generator:
       if await req.is_disconnected(): return error_response(HTTPStatus.BAD_REQUEST, 'Client disconnected.')
       for output in res.outputs:
         texts[output.index].append(output.text)
         token_ids[output.index].extend(output.token_ids)
-      final_result = t.cast(GenerationOutput, res)
+      final_result = res
     if final_result is None: return error_response(HTTPStatus.BAD_REQUEST, 'No response from model.')
     final_result = final_result.with_options(outputs=[output.with_options(text=''.join(texts[output.index]), token_ids=token_ids[output.index]) for output in final_result.outputs])
     choices = [
         ChatCompletionResponseChoice(index=output.index, message=ChatMessage(role='assistant', content=output.text), finish_reason=output.finish_reason) for output in final_result.outputs
     ]
-    num_prompt_tokens, num_generated_tokens = len(final_result.prompt_token_ids), sum(len(output.token_ids) for output in final_result.outputs)
+    num_prompt_tokens, num_generated_tokens = len(t.cast(t.List[int], final_result.prompt_token_ids)), sum(len(output.token_ids) for output in final_result.outputs)
     usage = UsageInfo(prompt_tokens=num_prompt_tokens, completion_tokens=num_generated_tokens, total_tokens=num_prompt_tokens + num_generated_tokens)
     response = ChatCompletionResponse(id=request_id, created=created_time, model=model_name, usage=usage, choices=choices)
 
-    if request.stream:
+    if request.stream:  # type: ignore[unreachable]
       # When user requests streaming but we don't stream, we still need to
       # return a streaming response with a single event.
-      async def fake_stream_generator() -> t.AsyncGenerator[str, None]:
+      async def fake_stream_generator() -> t.AsyncGenerator[str, None]:  # type: ignore[unreachable]
         yield f'data: {jsonify_attr(response)}\n\n'
         yield 'data: [DONE]\n\n'
 
@@ -212,13 +214,9 @@ async def create_completions(req: Request, llm: openllm.LLM[M, T]) -> Response:
   if request.suffix is not None: return error_response(HTTPStatus.BAD_REQUEST, "'suffix' is not yet supported.")
   if request.logit_bias is not None and len(request.logit_bias) > 0: return error_response(HTTPStatus.BAD_REQUEST, "'logit_bias' is not yet supported.")
 
-  if isinstance(request.prompt, list):
-    if len(request.prompt) == 0: return error_response(HTTPStatus.BAD_REQUEST, 'Please provide at least one prompt..')
-    if len(request.prompt) > 1: return error_response(HTTPStatus.BAD_REQUEST, 'Multiple prompts in a batch is not yet supported.')
-    prompt = request.prompt[0]
-  else:
-    prompt = request.prompt
-    if not prompt: return error_response(HTTPStatus.BAD_REQUEST, 'Please provide a prompt.')
+  if not request.prompt: return error_response(HTTPStatus.BAD_REQUEST, 'Please provide a prompt.')
+  prompt = request.prompt
+  # TODO: Support multiple prompts
 
   if request.logprobs is not None and llm.__llm_backend__ == 'pt':  # TODO: support logprobs generation for PyTorch
     return error_response(HTTPStatus.BAD_REQUEST, "'logprobs' is not yet supported for PyTorch models. Make sure to unset `logprobs`.")
@@ -238,7 +236,7 @@ async def create_completions(req: Request, llm: openllm.LLM[M, T]) -> Response:
   # TODO: support use_beam_search
   stream = request.stream and (config['best_of'] is None or config['n'] == config['best_of'])
 
-  def create_stream_response_json(index: int, text: str, logprobs: LogProbs | None = None, finish_reason: t.Literal['stop', 'length'] | None = None) -> str:
+  def create_stream_response_json(index: int, text: str, logprobs: LogProbs | None = None, finish_reason: str | None = None) -> str:
     return jsonify_attr(
         CompletionStreamResponse(id=request_id,
                                  created=created_time,
@@ -248,10 +246,10 @@ async def create_completions(req: Request, llm: openllm.LLM[M, T]) -> Response:
   async def completion_stream_generator() -> t.AsyncGenerator[str, None]:
     previous_num_tokens = [0] * config['n']
     async for res in result_generator:
-      for output in t.cast(GenerationOutput, res).outputs:
+      for output in res.outputs:
         i = output.index
         if request.logprobs is not None:
-          logprobs = create_logprobs(token_ids=output.token_ids, id_logprobs=output.logprobs[previous_num_tokens[i]:], llm=llm)
+          logprobs = create_logprobs(token_ids=output.token_ids, id_logprobs=t.cast(SampleLogprobs, output.logprobs)[previous_num_tokens[i]:], llm=llm)
         else:
           logprobs = None
         previous_num_tokens[i] += len(output.token_ids)
@@ -266,26 +264,27 @@ async def create_completions(req: Request, llm: openllm.LLM[M, T]) -> Response:
     if stream: return StreamingResponse(completion_stream_generator(), media_type='text/event-stream')
     # Non-streaming case
     final_result: GenerationOutput | None = None
-    texts, token_ids = [[]] * config['n'], [[]] * config['n']
+    texts: list[list[str]] = [[]] * config['n']
+    token_ids: list[list[int]] = [[]] * config['n']
     async for res in result_generator:
       if await req.is_disconnected(): return error_response(HTTPStatus.BAD_REQUEST, 'Client disconnected.')
       for output in res.outputs:
         texts[output.index].append(output.text)
         token_ids[output.index].extend(output.token_ids)
-      final_result = t.cast(GenerationOutput, res)
+      final_result = res
     if final_result is None: return error_response(HTTPStatus.BAD_REQUEST, 'No response from model.')
     final_result = final_result.with_options(outputs=[output.with_options(text=''.join(texts[output.index]), token_ids=token_ids[output.index]) for output in final_result.outputs])
 
     choices: list[CompletionResponseChoice] = []
     for output in final_result.outputs:
       if request.logprobs is not None:
-        logprobs = create_logprobs(token_ids=output.token_ids, id_logprobs=output.logprobs, llm=llm)
+        logprobs = create_logprobs(token_ids=output.token_ids, id_logprobs=t.cast(SampleLogprobs, output.logprobs), llm=llm)
       else:
         logprobs = None
       choice_data = CompletionResponseChoice(index=output.index, text=output.text, logprobs=logprobs, finish_reason=output.finish_reason)
       choices.append(choice_data)
 
-    num_prompt_tokens = len(final_result.prompt_token_ids)
+    num_prompt_tokens = len(t.cast(t.List[int], final_result.prompt_token_ids))  # XXX: We will always return prompt_token_ids, so this won't be None
     num_generated_tokens = sum(len(output.token_ids) for output in final_result.outputs)
     usage = UsageInfo(prompt_tokens=num_prompt_tokens, completion_tokens=num_generated_tokens, total_tokens=num_prompt_tokens + num_generated_tokens)
     response = CompletionResponse(id=request_id, created=created_time, model=model_name, usage=usage, choices=choices)

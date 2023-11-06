@@ -81,7 +81,7 @@ def Runner(model_name: str,
 
   backend = t.cast(LiteralBackend, first_not_none(backend, default='vllm' if is_vllm_available() else 'pt'))
   if init_local: ensure_available = True
-  llm = LLM(backend=backend, llm_config=llm_config, **attrs)
+  llm = LLM[t.Any, t.Any](backend=backend, llm_config=llm_config, **attrs)
   if ensure_available: llm.save_pretrained()
   if init_local: llm.runner.init_local(quiet=True)
   return llm.runner

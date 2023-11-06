@@ -75,14 +75,14 @@ class CompletionResponseChoice:
   index: int
   text: str
   logprobs: t.Optional[LogProbs] = None
-  finish_reason: t.Optional[t.Literal['stop', 'length']] = None
+  finish_reason: t.Optional[str] = None
 
 @attr.define
 class CompletionResponseStreamChoice:
   index: int
   text: str
   logprobs: t.Optional[LogProbs] = None
-  finish_reason: t.Optional[t.Literal['stop', 'length']] = None
+  finish_reason: t.Optional[str] = None
 
 @attr.define
 class CompletionStreamResponse:
@@ -119,13 +119,13 @@ converter.register_unstructure_hook(ChatMessage, lambda msg: {'role': msg.role, 
 class ChatCompletionResponseStreamChoice:
   index: int
   delta: Delta
-  finish_reason: str = attr.field(default=None)
+  finish_reason: t.Optional[str] = attr.field(default=None)
 
 @attr.define
 class ChatCompletionResponseChoice:
   index: int
   message: ChatMessage
-  finish_reason: t.Optional[t.Literal['stop', 'length']] = attr.field(default=None)
+  finish_reason: t.Optional[str] = attr.field(default=None)
 
 @attr.define
 class ChatCompletionResponse:

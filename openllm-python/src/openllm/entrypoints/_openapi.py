@@ -422,7 +422,7 @@ class OpenLLMSchemaGenerator(SchemaGenerator):
           endpoints_info.append(EndpointInfo(path, method.lower(), func))
     return endpoints_info
 
-  def get_schema(self, routes: list[Route], mount_path: str | None = None) -> dict[str, t.Any]:
+  def get_schema(self, routes: list[BaseRoute], mount_path: str | None = None) -> dict[str, t.Any]:
     schema = dict(self.base_schema)
     schema.setdefault('paths', {})
     endpoints_info = self.get_endpoints(routes)
@@ -438,16 +438,16 @@ class OpenLLMSchemaGenerator(SchemaGenerator):
 
     return schema
 
-def get_generator(title: str, components: list[AttrsInstance] | None = None, tags: list[dict[str, t.Any]] | None = None) -> SchemaGenerator:
-  base_schema = dict(info={'title': title, 'version': API_VERSION}, version=OPENAPI_VERSION)
+def get_generator(title: str, components: list[type[AttrsInstance]] | None = None, tags: list[dict[str, t.Any]] | None = None) -> OpenLLMSchemaGenerator:
+  base_schema: dict[str, t.Any] = dict(info={'title': title, 'version': API_VERSION}, version=OPENAPI_VERSION)
   if components: base_schema['components'] = {'schemas': {c.__name__: component_schema_generator(c) for c in components}}
-  if tags: base_schema['tags'] = tags
+  if tags is not None and tags: base_schema['tags'] = tags
   return OpenLLMSchemaGenerator(base_schema)
 
 def component_schema_generator(attr_cls: type[AttrsInstance], description: str | None = None) -> dict[str, t.Any]:
   schema: dict[str, t.Any] = {'type': 'object', 'required': [], 'properties': {}, 'title': attr_cls.__name__}
   schema['description'] = first_not_none(getattr(attr_cls, '__doc__', None), description, default=f'Generated components for {attr_cls.__name__}')
-  for field in attr.fields(attr.resolve_types(attr_cls)):
+  for field in attr.fields(attr.resolve_types(attr_cls)):  # type: ignore[misc]
     attr_type = field.type
     origin_type = t.get_origin(attr_type)
     args_type = t.get_args(attr_type)
@@ -481,7 +481,7 @@ def component_schema_generator(attr_cls: type[AttrsInstance], description: str |
       schema_type = 'string'
 
     if 'prop_schema' not in locals(): prop_schema = {'type': schema_type}
-    if field.default is not attr.NOTHING and not isinstance(field.default, attr.Factory): prop_schema['default'] = field.default
+    if field.default is not attr.NOTHING and not isinstance(field.default, attr.Factory): prop_schema['default'] = field.default  # type: ignore[arg-type]
     if field.default is attr.NOTHING and not isinstance(attr_type, type(t.Optional)): schema['required'].append(field.name)
     schema['properties'][field.name] = prop_schema
     locals().pop('prop_schema', None)
@@ -508,6 +508,11 @@ def append_schemas(svc: bentoml.Service, generated_schema: dict[str, t.Any], tag
   svc_schema['paths'].update(generated_schema['paths'])
 
   from bentoml._internal.service import openapi  # HACK: mk this attribute until we have a better way to add starlette schemas.
-  openapi.generate_spec = lambda svc: MKSchema(svc_schema)
-  OpenAPISpecification.asdict = lambda self: svc_schema
+
+  # yapf: disable
+  def mk_generate_spec(svc:bentoml.Service,openapi_version:str=OPENAPI_VERSION)->MKSchema:return MKSchema(svc_schema)
+  def mk_asdict(self:OpenAPISpecification)->dict[str,t.Any]:return svc_schema
+  openapi.generate_spec=mk_generate_spec
+  setattr(OpenAPISpecification, 'asdict', mk_asdict)
+  # yapf: disable
   return svc

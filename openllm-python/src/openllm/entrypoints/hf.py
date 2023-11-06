@@ -65,7 +65,7 @@ async def hf_agent(req: Request, llm: openllm.LLM[M, T]) -> Response:
 
   stop = request.parameters.pop('stop', ['\n'])
   try:
-    result: str = await llm.generate(request.inputs, stop=stop, **request.parameters)
+    result = await llm.generate(request.inputs, stop=stop, **request.parameters)
     return JSONResponse(converter.unstructure([AgentResponse(generated_text=result.outputs[0].text)]), status_code=HTTPStatus.OK.value)
   except Exception as err:
     logger.error('Error while generating: %s', err)

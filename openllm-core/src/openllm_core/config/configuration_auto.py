@@ -30,13 +30,16 @@ if t.TYPE_CHECKING:
   ConfigKeysView = _odict_keys[str, type[openllm_core.LLMConfig]]
   ConfigValuesView = _odict_values[str, type[openllm_core.LLMConfig]]
   ConfigItemsView = _odict_items[str, type[openllm_core.LLMConfig]]
+  OrderedDictType = OrderedDict[LiteralString, type[openllm_core.LLMConfig]]
+else:
+  OrderedDictType = OrderedDict
 
 # NOTE: This is the entrypoint when adding new model config
 CONFIG_MAPPING_NAMES = OrderedDict([('chatglm', 'ChatGLMConfig'), ('dolly_v2', 'DollyV2Config'), ('falcon', 'FalconConfig'), ('flan_t5', 'FlanT5Config'), ('gpt_neox', 'GPTNeoXConfig'),
                                     ('llama', 'LlamaConfig'), ('mpt', 'MPTConfig'), ('opt', 'OPTConfig'), ('stablelm', 'StableLMConfig'), ('starcoder', 'StarCoderConfig'),
                                     ('baichuan', 'BaichuanConfig')])
 
-class _LazyConfigMapping(OrderedDict, ReprMixin):
+class _LazyConfigMapping(OrderedDictType, ReprMixin):
   def __init__(self, mapping: OrderedDict[LiteralString, LiteralString]):
     self._mapping = mapping
     self._extra_content: dict[str, t.Any] = {}

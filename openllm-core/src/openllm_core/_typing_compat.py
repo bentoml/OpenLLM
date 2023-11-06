@@ -24,7 +24,6 @@ if t.TYPE_CHECKING:
   from bentoml._internal.runner.runner import RunnerMethod
   from bentoml._internal.runner.strategy import Strategy
 
-  from ._schemas import GenerationOutput
   from .utils.lazy import VersionInfo
 
 if t.TYPE_CHECKING:
@@ -81,10 +80,12 @@ if sys.version_info[:2] >= (3, 10):
   from typing import Concatenate as Concatenate
   from typing import ParamSpec as ParamSpec
   from typing import TypeAlias as TypeAlias
+  from typing import TypeGuard as TypeGuard
 else:
   from typing_extensions import Concatenate as Concatenate
   from typing_extensions import ParamSpec as ParamSpec
   from typing_extensions import TypeAlias as TypeAlias
+  from typing_extensions import TypeGuard as TypeGuard
 
 class ModelSignatureDict(t.TypedDict, total=False):
   batchable: bool
@@ -114,7 +115,7 @@ if _is_bentoml_installed:
   class LLMRunnable(bentoml.Runnable, t.Generic[M, T]):
     SUPPORTED_RESOURCES = ('amd.com/gpu', 'nvidia.com/gpu', 'cpu')
     SUPPORTS_CPU_MULTI_THREADING = True
-    generate_iterator: RunnableMethod[LLMRunnable[M, T], [list[int], str, str | t.Iterable[str] | None], t.AsyncGenerator[GenerationOutput, None]]
+    generate_iterator: RunnableMethod[LLMRunnable[M, T], [list[int], str, str | t.Iterable[str] | None, str | None], str]
 
   class LLMRunner(bentoml.Runner, t.Generic[M, T]):
     __doc__: str
@@ -128,9 +129,7 @@ if _is_bentoml_installed:
     has_adapters: bool
     system_message: str | None
     prompt_template: str | None
-    generate_iterator: RunnerMethod[LLMRunnable[M, T], [list[int], str, str | t.Iterable[str] | None], t.AsyncGenerator[GenerationOutput, None]]
-
-    # generate_one: RunnerMethod[LLMRunnable[M, T], [str, list[str]], t.Sequence[dict[t.Literal['generated_text'], str]]]
+    generate_iterator: RunnerMethod[LLMRunnable[M, T], [list[int], str, str | t.Iterable[str] | None, str | None], str]
 
     def __init__(self,
                  runnable_class: type[LLMRunnable[M, T]],

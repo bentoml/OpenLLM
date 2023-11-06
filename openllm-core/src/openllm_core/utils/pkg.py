@@ -21,6 +21,6 @@ def pkg_version_info(pkg_name: str | ModuleType) -> tuple[int, int, int]:
 
 def source_locations(pkg: str) -> str | None:
   module = find_spec(pkg)
-  if module is None: return
-  (module_path,) = module.submodule_search_locations  # type: ignore (unfinished typed)
+  if module is None: return None
+  (module_path,) = module.submodule_search_locations  # type: ignore[misc]
   return cast(str, module_path)

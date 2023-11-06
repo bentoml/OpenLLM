@@ -38,7 +38,7 @@ class LazyLoader(types.ModuleType):
                name: str,
                warning: str | None = None,
                exc_msg: str | None = None,
-               exc: type[Exception] = openllm_core.exceptions.MissingDependencyError,
+               exc: type[BaseException] = openllm_core.exceptions.MissingDependencyError,
                ):
     self._local_name = local_name
     self._parent_module_globals = parent_module_globals

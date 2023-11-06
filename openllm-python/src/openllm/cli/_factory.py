@@ -29,6 +29,8 @@ from openllm_core._typing_compat import LiteralString
 from openllm_core._typing_compat import ParamSpec
 from openllm_core._typing_compat import get_literal_args
 from openllm_core.utils import DEBUG
+from openllm_core.utils import check_bool_env
+from openllm_core.utils import first_not_none
 from openllm_core.utils import is_vllm_available
 
 from . import termui
@@ -121,21 +123,21 @@ Available official model_id(s): [default: {llm_config['default_id']}]
   def start_cmd(ctx: click.Context, /, server_timeout: int, model_id: str | None, model_version: str | None, system_message: str | None, prompt_template_file: t.IO[t.Any] | None,
                 workers_per_resource: t.Literal['conserved', 'round_robin'] | LiteralString, device: t.Tuple[str, ...], quantize: LiteralQuantise | None, backend: LiteralBackend | None,
                 serialisation: LiteralSerialisation | None, cors: bool, adapter_id: str | None, return_process: bool, **attrs: t.Any) -> LLMConfig | subprocess.Popen[bytes]:
-    _serialisation = openllm_core.utils.first_not_none(serialisation, default=llm_config['serialisation'])
-    if _serialisation == 'safetensors' and quantize is not None and openllm_core.utils.check_bool_env('OPENLLM_SERIALIZATION_WARNING'):
+    _serialisation = t.cast(LiteralSerialisation, first_not_none(serialisation, default=llm_config['serialisation']))
+    if _serialisation == 'safetensors' and quantize is not None and check_bool_env('OPENLLM_SERIALIZATION_WARNING'):
       termui.echo(
           f"'--quantize={quantize}' might not work with 'safetensors' serialisation format. To silence this warning, set \"OPENLLM_SERIALIZATION_WARNING=False\"\nNote: You can always fallback to '--serialisation legacy' when running quantisation.",
           fg='yellow')
       termui.echo(f"Make sure to check out '{model_id}' repository to see if the weights is in '{_serialisation}' format if unsure.")
-    adapter_map: dict[str, str | None] | None = attrs.pop(_adapter_mapping_key, None)
+    adapter_map: dict[str, str] | None = attrs.pop(_adapter_mapping_key, None)
     config, server_attrs = llm_config.model_validate_click(**attrs)
-    server_timeout = openllm.utils.first_not_none(server_timeout, default=config['timeout'])
+    server_timeout = first_not_none(server_timeout, default=config['timeout'])
     server_attrs.update({'working_dir': os.path.dirname(os.path.dirname(__file__)), 'timeout': server_timeout})
     if _serve_grpc: server_attrs['grpc_protocol_version'] = 'v1'
     # NOTE: currently, theres no development args in bentoml.Server. To be fixed upstream.
     development = server_attrs.pop('development')
     server_attrs.setdefault('production', not development)
-    wpr = openllm.utils.first_not_none(workers_per_resource, default=config['workers_per_resource'])
+    wpr = first_not_none(workers_per_resource, default=config['workers_per_resource'])
 
     if isinstance(wpr, str):
       if wpr == 'round_robin': wpr = 1.0
@@ -180,15 +182,15 @@ Available official model_id(s): [default: {llm_config['default_id']}]
     if system_message: start_env['OPENLLM_SYSTEM_MESSAGE'] = system_message
     if prompt_template: start_env['OPENLLM_PROMPT_TEMPLATE'] = prompt_template
 
-    llm = openllm.LLM(model_id=start_env[env.model_id],
-                      revision=model_version,
-                      prompt_template=prompt_template,
-                      system_message=system_message,
-                      llm_config=config,
-                      backend=env['backend_value'],
-                      adapter_map=adapter_map,
-                      quantize=env['quantize_value'],
-                      serialisation=_serialisation)
+    llm = openllm.LLM[t.Any, t.Any](model_id=start_env[env.model_id],
+                                    revision=model_version,
+                                    prompt_template=prompt_template,
+                                    system_message=system_message,
+                                    llm_config=config,
+                                    backend=env['backend_value'],
+                                    adapter_map=adapter_map,
+                                    quantize=env['quantize_value'],
+                                    serialisation=_serialisation)
     llm.save_pretrained()  # ensure_available = True
     start_env.update({env.config: llm.config.model_dump_json().decode()})
 

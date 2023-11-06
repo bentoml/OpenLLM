@@ -24,6 +24,7 @@ from .import_utils import ENV_VARS_TRUE_VALUES as ENV_VARS_TRUE_VALUES
 from .lazy import LazyLoader as LazyLoader
 from .lazy import LazyModule as LazyModule
 from .lazy import VersionInfo as VersionInfo
+from .._typing_compat import TypeGuard
 from .._typing_compat import overload
 
 if t.TYPE_CHECKING:
@@ -50,7 +51,7 @@ else:
 
 DEV_DEBUG_VAR = 'OPENLLMDEVDEBUG'
 
-def is_async_callable(obj: t.Any) -> t.TypeGuard[t.Callable[..., t.Awaitable[t.Any]]]:
+def is_async_callable(obj: t.Any) -> TypeGuard[t.Callable[..., t.Awaitable[t.Any]]]:
   # Borrowed from starlette._utils
   while isinstance(obj, functools.partial):
     obj = obj.func
@@ -356,7 +357,8 @@ def in_docker() -> bool:
   '''
   return _dockerenv.exists() or _text_in_file('docker', _cgroup)
 
-T, K = t.TypeVar('T'), t.TypeVar('K')
+T = t.TypeVar('T')
+K = t.TypeVar('K')
 
 # yapf: disable
 @overload

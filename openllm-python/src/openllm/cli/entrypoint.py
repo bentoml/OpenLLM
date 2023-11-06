@@ -46,7 +46,6 @@ from simple_di import inject
 
 import bentoml
 import openllm
-import openllm_core
 
 from bentoml._internal.configuration.containers import BentoMLContainer
 from bentoml._internal.models.model import ModelStore
@@ -391,18 +390,18 @@ def import_command(model_name: str, model_id: str | None, converter: str | None,
   ```
   """
   llm_config = openllm.AutoConfig.for_model(model_name)
-  _serialisation = openllm_core.utils.first_not_none(serialisation, default=llm_config['serialisation'])
+  _serialisation = t.cast(LiteralSerialisation, first_not_none(serialisation, default=llm_config['serialisation']))
   env = EnvVarMixin(model_name, model_id=model_id, quantize=quantize)
   model_id = first_not_none(model_id, env['model_id_value'], default=llm_config['default_id'])
   backend = first_not_none(backend, env['backend_value'], default='vllm' if is_vllm_available() else 'pt')
-  llm = openllm.LLM(model_id=model_id, llm_config=llm_config, revision=model_version, quantize=env['quantize_value'], serialisation=_serialisation, backend=backend)
+  llm = openllm.LLM[t.Any, t.Any](model_id=model_id, llm_config=llm_config, revision=model_version, quantize=env['quantize_value'], serialisation=_serialisation, backend=backend)
   _previously_saved = False
   try:
     _ref = openllm.serialisation.get(llm)
     _previously_saved = True
   except openllm.exceptions.OpenLLMException:
     if not machine and output == 'pretty':
-      msg = f"'{model_name}' {'with model_id='+ model_id if model_id is not None else ''} does not exists in local store for backend {llm.__llm_backend__}. Saving to BENTOML_HOME{' (path=' + os.environ.get('BENTOML_HOME', BentoMLContainer.bentoml_home.get()) + ')' if get_debug_mode() else ''}..."
+      msg = f"'{model_name}' with model_id='{model_id}' does not exists in local store for backend {llm.__llm_backend__}. Saving to BENTOML_HOME{' (path=' + os.environ.get('BENTOML_HOME', BentoMLContainer.bentoml_home.get()) + ')' if get_debug_mode() else ''}..."
       termui.echo(msg, fg='yellow', nl=True)
     _ref = openllm.serialisation.get(llm, auto_import=True)
     if backend == 'pt' and is_torch_available() and torch.cuda.is_available(): torch.cuda.empty_cache()
@@ -483,7 +482,7 @@ def build_command(ctx: click.Context, /, model_name: str, model_id: str | None, 
   _previously_built = False
 
   llm_config = openllm.AutoConfig.for_model(model_name)
-  _serialisation = openllm_core.utils.first_not_none(serialisation, default=llm_config['serialisation'])
+  _serialisation = t.cast(LiteralSerialisation, first_not_none(serialisation, default=llm_config['serialisation']))
   env = EnvVarMixin(model_name, backend=first_not_none(backend, default='vllm' if is_vllm_available() else 'pt'), model_id=model_id or llm_config['default_id'], quantize=quantize)
   prompt_template: str | None = prompt_template_file.read() if prompt_template_file is not None else None
 
@@ -497,15 +496,15 @@ def build_command(ctx: click.Context, /, model_name: str, model_id: str | None, 
     if system_message: os.environ['OPENLLM_SYSTEM_MESSAGE'] = system_message
     if prompt_template: os.environ['OPENLLM_PROMPT_TEMPLATE'] = prompt_template
 
-    llm = openllm.LLM(model_id=env['model_id_value'],
-                      revision=model_version,
-                      prompt_template=prompt_template,
-                      system_message=system_message,
-                      llm_config=llm_config,
-                      backend=env['backend_value'],
-                      quantize=env['quantize_value'],
-                      serialisation=_serialisation,
-                      **attrs)
+    llm = openllm.LLM[t.Any, t.Any](model_id=env['model_id_value'] or llm_config['default_id'],
+                                    revision=model_version,
+                                    prompt_template=prompt_template,
+                                    system_message=system_message,
+                                    llm_config=llm_config,
+                                    backend=env['backend_value'],
+                                    quantize=env['quantize_value'],
+                                    serialisation=_serialisation,
+                                    **attrs)
     llm.save_pretrained()  # ensure_available = True
 
     assert llm.bentomodel  # HACK: call it here to patch correct tag with revision and everything
@@ -815,11 +814,11 @@ def query_command(ctx: click.Context, /, prompt: str, endpoint: str, timeout: in
     res: Response = client.generate(prompt, **{**client._config(), **_memoized})
     if output == 'pretty':
       termui.echo('\n\n==Responses==\n', fg='white')
-      termui.echo(res.responses[0], fg=generated_fg)
+      termui.echo(res.outputs[0].text, fg=generated_fg)
     elif output == 'json':
       termui.echo(orjson.dumps(converter.unstructure(res), option=orjson.OPT_INDENT_2).decode(), fg='white')
     else:
-      termui.echo(res.responses, fg='white')
+      termui.echo(res.outputs[0].text, fg='white')
   ctx.exit(0)
 
 @cli.group(cls=Extensions, hidden=True, name='extension')
