@@ -4,7 +4,7 @@ ci:
   autofix_commit_msg: "ci: auto fixes from pre-commit.ci\n\nFor more information, see https://pre-commit.ci"
   autoupdate_commit_msg: "ci: pre-commit autoupdate [pre-commit.ci]"
 default_language_version:
-  python: python3.11 # NOTE: sync with .python-version-default
+  python: python3.9 # NOTE: sync with .python-version-default
 exclude: '.*\.(css|js|svg)$'
 repos:
   - repo: https://github.com/google/yapf

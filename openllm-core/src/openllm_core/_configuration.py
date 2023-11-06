@@ -209,6 +209,8 @@ class FineTuneConfig:
     adapter_config = self.adapter_config.copy()
     # no need for peft_type since it is internally managed by OpenLLM and PEFT
     if 'peft_type' in adapter_config: adapter_config.pop('peft_type')
+    for k in {'enable_lora', 'merge_weights'}:
+      if k in adapter_config: adapter_config.pop(k)  # this is an old key for older lora layer
     # respect user set task_type if it is passed, otherwise use one managed by OpenLLM
     task_type, inference_mode = adapter_config.pop('task_type', peft.TaskType[self.llm_config_class.peft_task_type()]), adapter_config.pop('inference_mode', self.inference_mode)
     return peft.PEFT_TYPE_TO_CONFIG_MAPPING[self.adapter_type.to_str()](task_type=task_type, inference_mode=inference_mode, **adapter_config)
