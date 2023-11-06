@@ -101,9 +101,9 @@ class PyTorchRunnable(bentoml.Runnable):
     config = self.config.model_construct_env(**attrs)
 
     with torch.inference_mode():
+      # TODO: Support context_length check
       # context_length: int | None = attrs.pop('context_length', None)
       # if context_length is None: context_length = get_context_length(self.model.config)
-
       # max_src_len = context_length - config['max_new_tokens'] - 1
       # prompt_token_ids = prompt_token_ids[-max_src_len:]
       output_token_ids = list(prompt_token_ids)
@@ -147,6 +147,7 @@ class PyTorchRunnable(bentoml.Runnable):
         stopped = False
 
         tmp_output_ids, rfind_start = output_token_ids[input_len:], 0
+        # XXX: Move this to API server
         text = self.tokenizer.decode(tmp_output_ids, skip_special_tokens=True, spaces_between_special_tokens=False, clean_up_tokenization_spaces=True)
         partially_stopped = False
         if stop_:

@@ -361,8 +361,8 @@ class LLM(t.Generic[M, T]):
       if generated.finished: break
       for output in generated.outputs:
         i = output.index
-        delta_text = output.text[len(previous_texts[i]):]
         delta_tokens = output.token_ids[previous_num_tokens[i]:]
+        delta_text = output.text[len(previous_texts[i]):]
         previous_texts[i] = output.text
         previous_num_tokens[i] = len(output.token_ids)
         delta_outputs[i] = output.with_options(text=delta_text, token_ids=delta_tokens)
