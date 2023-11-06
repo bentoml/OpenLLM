@@ -52,7 +52,7 @@ At = t.TypeVar('At', bound=attr.AttrsInstance)
 LiteralSerialisation = t.Literal['safetensors', 'legacy']
 LiteralQuantise = t.Literal['int8', 'int4', 'gptq', 'awq']
 LiteralBackend = t.Literal['pt', 'vllm', 'ggml', 'mlc']
-AdapterType = t.Literal['lora', 'adalora', 'adaption_prompt', 'prefix_tuning', 'p_tuning', 'prompt_tuning', 'ia3']
+AdapterType = t.Literal['lora', 'adalora', 'adaption_prompt', 'prefix_tuning', 'p_tuning', 'prompt_tuning', 'ia3', 'loha', 'lokr']
 
 # TODO: support quay
 LiteralContainerRegistry = t.Literal['docker', 'gh', 'ecr']
@@ -97,12 +97,12 @@ class PeftAdapterOutput(t.TypedDict):
   result: t.Dict[str, peft.PeftConfig]
   error_msg: str
 
-class AdaptersTuple(TupleAny):
+class AdapterTuple(TupleAny):
   adapter_id: str
-  name: t.Optional[str]
+  name: str
   config: DictStrAny
 
-AdaptersMapping = t.Dict[AdapterType, t.Tuple[AdaptersTuple, ...]]
+AdapterMap = t.Dict[AdapterType, t.Tuple[AdapterTuple, ...]]
 
 class RefTuple(TupleAny):
   git_hash: str

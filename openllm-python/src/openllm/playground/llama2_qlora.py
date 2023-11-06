@@ -177,8 +177,7 @@ def train_loop(model_args: ModelArguments, training_args: TrainingArguments):
   trainer = transformers.Trainer(model=model,
                                  args=dataclasses.replace(transformers.TrainingArguments(training_args.output_dir), **dataclasses.asdict(training_args)),
                                  train_dataset=datasets,
-                                 data_collator=transformers.default_data_collator,
-                                 )
+                                 data_collator=transformers.default_data_collator)
 
   trainer.train()
 

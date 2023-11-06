@@ -205,7 +205,7 @@ class FineTuneConfig:
   inference_mode: bool = dantic.Field(False, description='Whether to use this Adapter for inference', use_default_converter=False)
   llm_config_class: type[LLMConfig] = dantic.Field(None, description='The reference class to openllm.LLMConfig', use_default_converter=False)
 
-  def to_peft_config(self) -> peft.PeftConfig:  # type: ignore[name-defined]
+  def build(self) -> peft.PeftConfig:  # type: ignore[name-defined]
     adapter_config = self.adapter_config.copy()
     # no need for peft_type since it is internally managed by OpenLLM and PEFT
     if 'peft_type' in adapter_config: adapter_config.pop('peft_type')
@@ -223,8 +223,7 @@ class FineTuneConfig:
 
   def with_config(self, **attrs: t.Any) -> FineTuneConfig:
     adapter_type, inference_mode = attrs.pop('adapter_type', self.adapter_type), attrs.get('inference_mode', self.inference_mode)
-    if 'llm_config_class' in attrs:
-      raise ForbiddenAttributeError("'llm_config_class' should not be passed when using 'with_config'.")
+    if 'llm_config_class' in attrs: raise ForbiddenAttributeError("'llm_config_class' should not be passed when using 'with_config'.")
     return attr.evolve(self, adapter_type=adapter_type, inference_mode=inference_mode, adapter_config=config_merger.merge(self.adapter_config, attrs))
 
 @attr.frozen(slots=True, repr=False, init=False)
@@ -1438,6 +1437,9 @@ class LLMConfig(_ConfigAttr):
     template = self['conversation'].copy()
     if hasattr(self, 'default_system_message'): template.set_system_message(self.default_system_message)
     return template
+
+  def make_fine_tune_config(self, adapter_type: AdapterType, **attrs: t.Any) -> FineTuneConfig:
+    return FineTuneConfig(adapter_type=adapter_type, llm_config_class=self.__class__).with_config(**attrs)
 
   @overload
   def to_generation_config(self, return_as_dict: t.Literal[False] = False) -> transformers.GenerationConfig:

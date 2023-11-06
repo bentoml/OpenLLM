@@ -79,9 +79,6 @@ class PyTorchRunnable(bentoml.Runnable):
     self.tokenizer = llm.tokenizer
     self.config = llm.config
     self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    # if llm.adapters_mapping is not None:
-    #   logger.info('Applying LoRA to %s...', llm.runner_name)
-    #   self.apply_adapter(inference_mode=True, load_adapters='all')
 
   @bentoml.Runnable.method(batchable=False)
   async def generate_iterator(self,
@@ -90,6 +87,7 @@ class PyTorchRunnable(bentoml.Runnable):
                               stop: str | t.Iterable[str] | None = None,
                               adapter_name: str | None = None,
                               **attrs: t.Any) -> t.AsyncGenerator[str, None]:
+    if adapter_name is not None: self.model.set_adapter(adapter_name)
     async for generation_output in self.forward(prompt_token_ids, request_id, stop=stop, **attrs):
       yield f'data: {generation_output.model_dump_json()}\n\n'
 

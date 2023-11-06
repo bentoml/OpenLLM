@@ -102,7 +102,7 @@ awq = ["autoawq"]
 baichuan = ["cpm-kernels", "sentencepiece"]
 chatglm = ["cpm-kernels", "sentencepiece"]
 falcon = ["einops", "xformers"]
-fine-tune = ["peft>=0.6.0", "bitsandbytes", "datasets", "accelerate", "trl"]
+fine-tune = ["peft>=0.6.0", "bitsandbytes", "datasets", "accelerate", "trl", "scipy"]
 flan-t5 = ["transformers>=4.34.0"]
 full = [
     "openllm[agents,awq,baichuan,chatglm,falcon,fine-tune,flan-t5,ggml,gptq,grpc,llama,mpt,openai,opt,playground,starcoder,vllm]",

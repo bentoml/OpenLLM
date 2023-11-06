@@ -56,8 +56,7 @@ else:
   model_args, training_args = t.cast(t.Tuple[ModelArguments, TrainingArguments], parser.parse_args_into_dataclasses())
 
 llm = openllm.LLM(model_args.model_id, quantize="int8")
-openllm.serialisation.import_model(llm, llm.trust_remote_code)
-
+llm.save_pretrained()
 model, tokenizer = llm.prepare_for_training(adapter_type="lora", r=16, lora_alpha=32, target_modules=["q_proj", "v_proj"], lora_dropout=0.05, bias="none")
 
 # ft on english_quotes

@@ -118,7 +118,7 @@ def import_model(llm: openllm.LLM[M, T], *decls: t.Any, trust_remote_code: bool,
     try:
       bentomodel.enter_cloudpickle_context(external_modules, imported_modules)
       tokenizer.save_pretrained(bentomodel.path)
-      if llm.quantization_config: attrs['quantization_config'] = llm.quantization_config
+      if llm._quantise or llm._quantization_config: attrs['quantization_config'] = llm.quantization_config
       if quantize == 'gptq':
         from optimum.gptq.constants import GPTQ_CONFIG
         with open(bentomodel.path_of(GPTQ_CONFIG), 'w', encoding='utf-8') as f:
@@ -167,9 +167,8 @@ def load_model(llm: openllm.LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M:
   config, hub_attrs, attrs = process_config(llm.bentomodel.path, llm.trust_remote_code, **attrs)
   _patch_correct_tag(llm, config, _revision=llm.bentomodel.info.metadata['_revision'])
   auto_class = infer_autoclass_from_llm(llm, config)
-  attrs.setdefault('use_flash_attention_2', True)
   device_map: str | None = attrs.pop('device_map', 'auto' if torch.cuda.is_available() and torch.cuda.device_count() > 1 else None)
-  if llm.quantization_config: attrs['quantization_config'] = llm.quantization_config
+  if llm._quantise or llm._quantization_config: attrs['quantization_config'] = llm.quantization_config
 
   if '_quantize' in llm.bentomodel.info.metadata and llm.bentomodel.info.metadata['_quantize'] == 'gptq':
     if not openllm.utils.is_autogptq_available() or not openllm.utils.is_optimum_supports_gptq():
@@ -178,7 +177,11 @@ def load_model(llm: openllm.LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M:
       )
     if llm.config['model_type'] != 'causal_lm': raise openllm.exceptions.OpenLLMException(f"GPTQ only support Causal LM (got {llm.__class__} of {llm.config['model_type']})")
 
-    model = auto_class.from_pretrained(llm.bentomodel.path, device_map='auto', **hub_attrs, **attrs)
+    try:
+      model = auto_class.from_pretrained(llm.bentomodel.path, device_map='auto', use_flash_attention_2=True, **hub_attrs, **attrs)
+    except Exception as err:
+      logger.debug("Exception caught while trying to load with 'flash_attention_2': %s", err)
+      model = auto_class.from_pretrained(llm.bentomodel.path, device_map='auto', use_flash_attention_2=False, **hub_attrs, **attrs)
     # XXX: Use the below logic once TheBloke finished migration to new GPTQConfig from transformers
     # Seems like the logic below requires to add support for safetensors on accelerate
     # from accelerate import init_empty_weights

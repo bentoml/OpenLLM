@@ -511,7 +511,7 @@ def build_command(ctx: click.Context, /, model_name: str, model_id: str | None, 
     assert llm.bentomodel  # HACK: call it here to patch correct tag with revision and everything
     # FIX: This is a patch for _service_vars injection
     if 'OPENLLM_MODEL_ID' not in os.environ: os.environ['OPENLLM_MODEL_ID'] = llm.model_id
-    if 'OPENLLM_ADAPTER_MAP' not in os.environ: os.environ['OPENLLM_ADAPTER_MAP'] = orjson.dumps(llm.adapters_mapping).decode()
+    if 'OPENLLM_ADAPTER_MAP' not in os.environ: os.environ['OPENLLM_ADAPTER_MAP'] = orjson.dumps(llm.adapter_map).decode()
 
     labels = dict(llm.identifying_params)
     labels.update({'_type': llm.llm_type, '_framework': env['backend_value']})

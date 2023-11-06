@@ -11,6 +11,7 @@ import inflection
 import orjson
 
 from bentoml_cli.utils import BentoMLCommandGroup
+from click import ClickException
 from click import shell_completion as sc
 from click.shell_completion import CompletionItem
 
@@ -84,7 +85,8 @@ def _id_callback(ctx: click.Context, _: click.Parameter, value: t.Tuple[str, ...
       adapter_id = openllm.utils.resolve_user_filepath(adapter_id, os.getcwd())
     except FileNotFoundError:
       pass
-    ctx.params[_adapter_mapping_key][adapter_id] = adapter_name[0] if len(adapter_name) > 0 else None
+    if len(adapter_name) == 0: raise ClickException(f'Adapter name is required for {adapter_id}')
+    ctx.params[_adapter_mapping_key][adapter_id] = adapter_name[0]
   return None
 
 def start_command_factory(group: click.Group, model: str, _context_settings: DictStrAny | None = None, _serve_grpc: bool = False) -> click.Command:

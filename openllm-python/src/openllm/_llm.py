@@ -20,8 +20,8 @@ from bentoml._internal.models.model import ModelSignature
 from bentoml._internal.runner.runner_handle import DummyRunnerHandle
 from openllm_core._schemas import GenerationOutput
 from openllm_core._strategies import CascadingResourceStrategy
-from openllm_core._typing_compat import AdaptersMapping
-from openllm_core._typing_compat import AdaptersTuple
+from openllm_core._typing_compat import AdapterMap
+from openllm_core._typing_compat import AdapterTuple
 from openllm_core._typing_compat import AdapterType
 from openllm_core._typing_compat import DictStrAny
 from openllm_core._typing_compat import LiteralBackend
@@ -34,7 +34,9 @@ from openllm_core._typing_compat import ModelSignatureDict
 from openllm_core._typing_compat import ParamSpec
 from openllm_core._typing_compat import T
 from openllm_core._typing_compat import TupleAny
+from openllm_core.exceptions import MissingDependencyError
 from openllm_core.prompts import PromptTemplate
+from openllm_core.utils import DEBUG
 from openllm_core.utils import LazyLoader
 from openllm_core.utils import ReprMixin
 from openllm_core.utils import apply
@@ -66,7 +68,7 @@ else:
   torch = LazyLoader('torch', globals(), 'torch')
   peft = LazyLoader('peft', globals(), 'peft')
 
-ResolvedAdaptersMapping = t.Dict[AdapterType, t.Dict[str, t.Tuple['peft.PeftConfig', str]]]
+ResolvedAdapterMap = t.Dict[AdapterType, t.Dict[str, t.Tuple['peft.PeftConfig', str]]]
 
 P = ParamSpec('P')
 
@@ -77,7 +79,7 @@ def normalise_model_name(name: str) -> str:
   name = name.replace('/', '--')
   return inflection.dasherize(name)
 
-def resolve_peft_config_type(adapter_map: dict[str, str | None]) -> AdaptersMapping:
+def resolve_peft_config_type(adapter_map: dict[str, str]) -> AdapterMap:
   '''Resolve the type of the PeftConfig given the adapter_map.
 
   This is similar to how PeftConfig resolve its config type.
@@ -85,14 +87,10 @@ def resolve_peft_config_type(adapter_map: dict[str, str | None]) -> AdaptersMapp
   Args:
   adapter_map: The given mapping from either SDK or CLI. See CLI docs for more information.
   '''
-  resolved: AdaptersMapping = {}
+  resolved: AdapterMap = {}
   _has_set_default = False
   for path_or_adapter_id, name in adapter_map.items():
-    resolve_name = name
-    if resolve_name is None:
-      if _has_set_default: raise ValueError('Only one adapter can be set as default.')
-      resolve_name = 'default'
-      _has_set_default = True
+    if name is None: raise ValueError('Adapter name must be specified.')
     if os.path.isfile(os.path.join(path_or_adapter_id, PEFT_CONFIG_NAME)):
       config_file = os.path.join(path_or_adapter_id, PEFT_CONFIG_NAME)
     else:
@@ -105,11 +103,11 @@ def resolve_peft_config_type(adapter_map: dict[str, str | None]) -> AdaptersMapp
     # all peft_type should be available in PEFT_CONFIG_NAME
     _peft_type: AdapterType = resolved_config['peft_type'].lower()
     if _peft_type not in resolved: resolved[_peft_type] = ()
-    resolved[_peft_type] += (_AdaptersTuple((path_or_adapter_id, resolve_name, resolved_config)),)
+    resolved[_peft_type] += (_AdapterTuple((path_or_adapter_id, name, resolved_config)),)
   return resolved
 
 _reserved_namespace = {'model', 'tokenizer', 'runner', 'import_kwargs'}
-_AdaptersTuple: type[AdaptersTuple] = codegen.make_attr_tuple_class('AdaptersTuple', ['adapter_id', 'name', 'config'])
+_AdapterTuple: type[AdapterTuple] = codegen.make_attr_tuple_class('AdapterTuple', ['adapter_id', 'name', 'config'])
 
 @attr.define(slots=True, repr=False, init=False)
 class LLM(t.Generic[M, T]):
@@ -121,7 +119,7 @@ class LLM(t.Generic[M, T]):
   _model_attrs: DictStrAny
   _tokenizer_attrs: DictStrAny
   _tag: bentoml.Tag
-  _adapter_map: AdaptersMapping | None
+  _adapter_map: AdapterMap | None
   _serialisation: LiteralSerialisation
   _local: bool
   _prompt_template: PromptTemplate | None
@@ -133,9 +131,9 @@ class LLM(t.Generic[M, T]):
   __llm_runner__: t.Optional[LLMRunner[M, T]] = None
   __llm_model__: t.Optional[M] = None
   __llm_tokenizer__: t.Optional[T] = None
-  __llm_adapter_map__: t.Optional[ResolvedAdaptersMapping] = None
+  __llm_adapter_map__: t.Optional[ResolvedAdapterMap] = None
 
-  device: 'torch.device' | None = None
+  device: 'torch.device | None' = None
 
   def __attrs_post_init__(self) -> None:
     if self.__llm_backend__ == 'pt': self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -154,8 +152,7 @@ class LLM(t.Generic[M, T]):
                adapter_map: dict[str, str | None] | None = None,
                serialisation: LiteralSerialisation = 'safetensors',
                **attrs: t.Any):
-    # low_cpu_mem_usage is only available for model
-    # this is helpful on system with low memory to avoid OOM
+    # low_cpu_mem_usage is only available for model this is helpful on system with low memory to avoid OOM
     low_cpu_mem_usage = attrs.pop('low_cpu_mem_usage', True)
     _local = False
     if validate_is_path(model_id): model_id, _local = resolve_filepath(model_id), True
@@ -208,8 +205,6 @@ class LLM(t.Generic[M, T]):
   @property
   def import_kwargs(self)->tuple[dict[str, t.Any],dict[str, t.Any]]: return {'device_map': 'auto' if torch.cuda.is_available() and torch.cuda.device_count() > 1 else None, 'torch_dtype': torch.float16 if torch.cuda.is_available() else torch.float32}, {'padding_side': 'left', 'truncation_side': 'left'}
   @property
-  def adapters_mapping(self)->AdaptersMapping|None:return self._adapter_map
-  @property
   def trust_remote_code(self)->bool:return first_not_none(openllm_core.utils.check_bool_env('TRUST_REMOTE_CODE',False),default=self.config['trust_remote_code'])
   @property
   def runner_name(self)->str:return f"llm-{self.config['start_name']}-runner"
@@ -226,13 +221,15 @@ class LLM(t.Generic[M, T]):
     if self.__llm_config__ is None:self.__llm_config__=openllm.AutoConfig.infer_class_from_llm(self).model_construct_env(**self._model_attrs)
     return self.__llm_config__
   @property
-  def quantization_config(self)->transformers.BitsAndBytesConfig|transformers.GPTQConfig|transformers.AwqConfig|None:
+  def quantization_config(self)->transformers.BitsAndBytesConfig|transformers.GPTQConfig|transformers.AwqConfig:
     if self.__llm_quantization_config__ is None:
       if self._quantization_config is not None:self.__llm_quantization_config__=self._quantization_config
       elif self._quantise is not None:self.__llm_quantization_config__,self._model_attrs=infer_quantisation_config(self, self._quantise, **self._model_attrs)
       else:raise ValueError("Either 'quantization_config' or 'quantise' must be specified.")
     return self.__llm_quantization_config__
   def save_pretrained(self)->bentoml.Model: return openllm.import_model(self.config['start_name'], model_id=self.model_id, model_version=self._revision, backend=self.__llm_backend__, quantize=self._quantise)
+  @property
+  def has_adapters(self)->bool: return self._adapter_map is not None
   # NOTE: The section below defines a loose contract with langchain's LLM interface.
   @property
   def llm_type(self)->str:return normalise_model_name(self._model_id)
@@ -247,20 +244,55 @@ class LLM(t.Generic[M, T]):
     return self.config.postprocess_generate(prompt, generation_result, **attrs)
   # yapf: enable
 
+  # NOTE: The section helps with fine-tuning.
+  @property
+  def adapter_map(self) -> ResolvedAdapterMap:
+    try:
+      import peft as _  # noqa: F401
+    except ImportError as err:
+      raise MissingDependencyError("Failed to import 'peft'. Make sure to do 'pip install \"openllm[fine-tune]\"'") from err
+    if not self.has_adapters: raise AttributeError('Adapter map is not available.')
+    if self.__llm_adapter_map__ is None:
+      _map: ResolvedAdapterMap = {k: {} for k in self._adapter_map}
+      for adapter_type, adapter_tuple in self._adapter_map.items():
+        base = first_not_none(self.config['fine_tune_strategies'].get(adapter_type), default=self.config.make_fine_tune_config(adapter_type))
+        for adapter in adapter_tuple:
+          _map[adapter_type][adapter.name] = (base.with_config(**adapter.config).build(), adapter.adapter_id)
+      self.__llm_adapter_map__ = _map
+    return self.__llm_adapter_map__
+
+  def prepare_for_training(self,
+                           adapter_type: AdapterType = 'lora',
+                           use_gradient_checking: bool = True,
+                           **attrs: t.Any) -> tuple[peft.PeftModel | peft.PeftModelForCausalLM | peft.PeftModelForSeq2SeqLM, T]:
+    from peft import get_peft_model
+    from peft import prepare_model_for_kbit_training
+    peft_config = self.config['fine_tune_strategies'].get(adapter_type, self.config.make_fine_tune_config(adapter_type)).train().with_config(**attrs).build()
+    if self.has_adapters: raise ValueError('Adapter should not be specified when fine-tuning.')
+    model = get_peft_model(prepare_model_for_kbit_training(self.model, use_gradient_checkpointing=use_gradient_checking), peft_config)
+    if DEBUG: model.print_trainable_parameters()
+    return model, self.tokenizer
+
   @property
   def model(self) -> M:
     if self.__llm_model__ is None:
       model = openllm.serialisation.load_model(self, *self._model_decls, **self._model_attrs)
       # If OOM, then it is probably you don't have enough VRAM to run this model.
-      if self.__llm_backend__ == 'pt' and is_torch_available():
-        loaded_in_kbit = getattr(model, 'is_loaded_in_8bit', False) or getattr(model, 'is_loaded_in_4bit', False) or getattr(model, 'is_quantized', False)
-        if torch.cuda.is_available() and torch.cuda.device_count() == 1 and not loaded_in_kbit and not isinstance(model, transformers.Pipeline):
-          try:
-            model = model.to('cuda')
-          except Exception as err:
-            raise OpenLLMException(
-                f'Failed to load {self} into GPU: {err}\nTip: If you run into OOM issue, maybe try different offload strategy. See https://huggingface.co/docs/transformers/v4.31.0/en/main_classes/quantization#offload-between-cpu-and-gpu for more information.'
-            ) from err
+      if self.__llm_backend__ == 'pt':
+        if is_torch_available():
+          loaded_in_kbit = getattr(model, 'is_loaded_in_8bit', False) or getattr(model, 'is_loaded_in_4bit', False) or getattr(model, 'is_quantized', False)
+          if torch.cuda.is_available() and torch.cuda.device_count() == 1 and not loaded_in_kbit and not isinstance(model, transformers.Pipeline):
+            try:
+              model = model.to('cuda')
+            except Exception as err:
+              raise OpenLLMException(
+                  f'Failed to load {self} into GPU: {err}\nTip: If you run into OOM issue, maybe try different offload strategy. See https://huggingface.co/docs/transformers/v4.31.0/en/main_classes/quantization#offload-between-cpu-and-gpu for more information.'
+              ) from err
+        if self.has_adapters:
+          logger.debug('Applying the following adapters: %s', self.adapter_map)
+          for adapter_dict in self.adapter_map.values():
+            for adapter_name, (peft_config, peft_model_id) in adapter_dict.items():
+              model.load_adapter(peft_model_id, adapter_name, peft_config=peft_config)
       self.__llm_model__ = model
     return self.__llm_model__
 
@@ -328,11 +360,8 @@ class LLM(t.Generic[M, T]):
       if generated.finished: break
       for output in generated.outputs:
         i = output.index
-        delta_text = output.text[len(previous_texts[i]):]
-        delta_token = output.token_ids[previous_num_tokens[i]:]
-        previous_texts[i] = output.text
-        previous_num_tokens[i] = len(output.token_ids)
-        delta_outputs[i] = output.with_options(text=delta_text, token_ids=delta_token)
+        previous_texts[i], previous_num_tokens[i] = output.text, len(output.token_ids)
+        delta_outputs[i] = output.with_options(text=output.text[len(previous_texts[i]):], token_ids=output.token_ids[previous_num_tokens[i]:])
       yield generated.with_options(outputs=delta_outputs)
 
 def _RunnerFactory(self: openllm.LLM[M, T],
@@ -371,7 +400,7 @@ def _RunnerFactory(self: openllm.LLM[M, T],
   def _wrapped_repr_args(_: LLMRunner[M, T]) -> ReprArgs:
     yield 'runner_methods', {method.name: {'batchable': method.config.batchable, 'batch_dim': method.config.batch_dim if method.config.batchable else None} for method in _.runner_methods}
     yield 'config', self.config.model_dump(flatten=True)
-    yield 'llm_type', _.llm_type
+    yield 'llm_type', self.llm_type
     yield 'backend', backend
     yield 'llm_tag', self.tag
   # yapf: enable
@@ -391,7 +420,7 @@ def _RunnerFactory(self: openllm.LLM[M, T],
                              '__repr__': ReprMixin.__repr__,
                              '__repr_keys__': property(_wrapped_repr_keys),
                              '__repr_args__': _wrapped_repr_args,
-                             'has_adapters': self.adapters_mapping is not None,
+                             'has_adapters': self.has_adapters,
                              'prompt_template': prompt_template,
                              'system_message': system_message,
                          }))(OpenLLMRunnable,
