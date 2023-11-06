@@ -34,24 +34,15 @@ svc = bentoml.Service(name=f"llm-{llm_config['start_name']}-service", runners=[l
 
 llm_model_class = openllm.GenerationInput.from_llm_config(llm_config)
 
-@svc.api(route='/v1/generate',
-         input=bentoml.io.JSON.from_sample(llm_model_class.examples(return_type=None).model_dump()),
-         output=bentoml.io.JSON.from_sample(openllm.GenerationOutput.examples().model_dump()))
+@svc.api(route='/v1/generate', input=bentoml.io.JSON.from_sample(llm_model_class.examples().model_dump()), output=bentoml.io.JSON.from_sample(openllm.GenerationOutput.examples().model_dump()))
 async def generate_v1(input_dict: dict[str, t.Any]) -> openllm.GenerationOutput:
   return await llm.generate(**llm_model_class(**input_dict).model_dump())
 
-@svc.api(route='/v1/generate_stream', input=bentoml.io.JSON.from_sample(llm_model_class.examples(return_type='token').model_dump()), output=bentoml.io.Text(content_type='text/event-stream'))
+@svc.api(route='/v1/generate_stream', input=bentoml.io.JSON.from_sample(llm_model_class.examples().model_dump()), output=bentoml.io.Text(content_type='text/event-stream'))
 async def generate_stream_v1(input_dict: dict[str, t.Any]) -> t.AsyncGenerator[str, None]:
-  request = llm_model_class(**input_dict)
-  generator = llm.generate_iterator(**request.model_dump())  # type: ignore
-
-  async def stream_generation_objects() -> t.AsyncGenerator[str, None]:
-    async for it in t.cast(t.AsyncGenerator[GenerationOutput, None], generator):
-      yield f'data: {it.model_dump_json()}\n\n'
-    yield 'data: [DONE]\n\n'
-
-  if request.return_type in {'object', 'token'}: return stream_generation_objects()
-  else: return t.cast(t.AsyncGenerator[str, None], generator)
+  async for it in t.cast(t.AsyncGenerator[GenerationOutput, None], llm.generate_iterator(**llm_model_class(**input_dict).model_dump())):
+    yield f'data: {it.model_dump_json()}\n\n'
+  yield 'data: [DONE]\n\n'
 
 @svc.api(route='/v1/metadata', input=bentoml.io.Text(), output=bentoml.io.JSON.from_sample(openllm.MetadataOutput.examples(llm).model_dump()))
 def metadata_v1(_: str) -> openllm.MetadataOutput:

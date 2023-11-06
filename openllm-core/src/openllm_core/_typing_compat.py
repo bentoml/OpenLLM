@@ -24,6 +24,7 @@ if t.TYPE_CHECKING:
   from bentoml._internal.runner.runner import RunnerMethod
   from bentoml._internal.runner.strategy import Strategy
 
+  from ._schemas import GenerationOutput
   from .utils.lazy import VersionInfo
 
 if t.TYPE_CHECKING:
@@ -59,7 +60,7 @@ LiteralContainerVersionStrategy = t.Literal['release', 'nightly', 'latest', 'cus
 
 LiteralResourceSpec = t.Literal['cloud-tpus.google.com/v2', 'amd.com/gpu', 'nvidia.com/gpu', 'cpu']
 
-InferenceReturnType = t.Literal['text', 'object', 'sse', 'token']
+InferenceReturnType = t.Literal['text', 'object', 'token']
 
 if sys.version_info[:2] >= (3, 11):
   from typing import LiteralString as LiteralString
@@ -113,9 +114,7 @@ if _is_bentoml_installed:
   class LLMRunnable(bentoml.Runnable, t.Generic[M, T]):
     SUPPORTED_RESOURCES = ('amd.com/gpu', 'nvidia.com/gpu', 'cpu')
     SUPPORTS_CPU_MULTI_THREADING = True
-    generate: RunnableMethod[LLMRunnable[M, T], [list[int], str, str | t.Iterable[str] | None], t.AsyncGenerator[str, None]]
-    generate_iterator: RunnableMethod[LLMRunnable[M, T], [list[int], str, str | t.Iterable[str] | None], t.AsyncGenerator[str, None]]
-    # generate_one: RunnableMethod[LLMRunnable[M, T], [str, list[str]], t.Sequence[dict[t.Literal['generated_text'], str]]]
+    generate_iterator: RunnableMethod[LLMRunnable[M, T], [list[int], str, str | t.Iterable[str] | None], t.AsyncGenerator[GenerationOutput, None]]
 
   class LLMRunner(bentoml.Runner, t.Generic[M, T]):
     __doc__: str
@@ -129,8 +128,7 @@ if _is_bentoml_installed:
     has_adapters: bool
     system_message: str | None
     prompt_template: str | None
-    generate: RunnerMethod[LLMRunnable[M, T], [list[int], str, str | t.Iterable[str] | None], t.AsyncGenerator[str, None]]
-    generate_iterator: RunnerMethod[LLMRunnable[M, T], [list[int], str, str | t.Iterable[str] | None], t.AsyncGenerator[str, None]]
+    generate_iterator: RunnerMethod[LLMRunnable[M, T], [list[int], str, str | t.Iterable[str] | None], t.AsyncGenerator[GenerationOutput, None]]
 
     # generate_one: RunnerMethod[LLMRunnable[M, T], [str, list[str]], t.Sequence[dict[t.Literal['generated_text'], str]]]
 

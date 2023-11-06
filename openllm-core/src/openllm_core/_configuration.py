@@ -428,7 +428,13 @@ class SamplingParams(ReprMixin):
     return {i.name for i in attr.fields(self.__class__)}
 
   def build(self) -> vllm.SamplingParams:
-    return vllm.SamplingParams(max_tokens=self.max_tokens, temperature=self.temperature, top_k=self.top_k, top_p=self.top_p, **converter.unstructure(self))
+    return vllm.SamplingParams(max_tokens=self.max_tokens,
+                               early_stopping=self.early_stopping,
+                               length_penalty=self.length_penalty,
+                               temperature=self.temperature,
+                               top_k=self.top_k,
+                               top_p=self.top_p,
+                               **converter.unstructure(self))
 
   @classmethod
   def from_generation_config(cls, generation_config: GenerationConfig, **attrs: t.Any) -> Self:
@@ -444,6 +450,8 @@ class SamplingParams(ReprMixin):
     repetition_penalty = first_not_none(attrs.pop('repetition_penalty', None), default=generation_config['repetition_penalty'])
     length_penalty = first_not_none(attrs.pop('length_penalty', None), default=generation_config['length_penalty'])
     early_stopping = first_not_none(attrs.pop('early_stopping', None), default=generation_config['early_stopping'])
+    logprobs = first_not_none(attrs.pop('logprobs', None), default=None)
+    prompt_logprobs = first_not_none(attrs.pop('prompt_logprobs', None), default=None)
 
     return cls(_internal=True,
                temperature=temperature,
@@ -453,13 +461,19 @@ class SamplingParams(ReprMixin):
                repetition_penalty=repetition_penalty,
                length_penalty=length_penalty,
                early_stopping=early_stopping,
+               logprobs=logprobs,
+               prompt_logprobs=prompt_logprobs,
                **attrs)
 
 converter.register_unstructure_hook_factory(
-    lambda cls: attr.has(cls) and lenient_issubclass(cls, SamplingParams), lambda cls: make_dict_unstructure_fn(
-        cls, converter, _cattrs_omit_if_default=False, _cattrs_use_linecache=True, **{
-            k: override(omit=True) for k, v in attr.fields_dict(cls).items() if v.default in (None, attr.NOTHING)
-        }))
+    lambda cls: attr.has(cls) and lenient_issubclass(cls, SamplingParams),
+    lambda cls: make_dict_unstructure_fn(cls,
+                                         converter,
+                                         _cattrs_omit_if_default=False,
+                                         _cattrs_use_linecache=True,
+                                         **{
+                                             k: override(omit_if_default=True) for k, v in attr.fields_dict(cls).items() if v.default in (None, attr.NOTHING)
+                                         }))
 converter.register_structure_hook_factory(lambda cls: attr.has(cls) and lenient_issubclass(cls, SamplingParams),
                                           lambda cls: make_dict_structure_fn(cls, converter, _cattrs_forbid_extra_keys=True, max_new_tokens=override(rename='max_tokens')))
 
@@ -1078,15 +1092,17 @@ class LLMConfig(_ConfigAttr):
           f'{attr} should not be set during runtime as these value will be reflected during runtime. Instead, you can create a custom LLM subclass {self.__class__.__name__}.')
     super().__setattr__(attr, value)
 
-  def __init__(self, *, generation_config: DictStrAny | None = None, __openllm_extras__: DictStrAny | None = None, **attrs: t.Any):
+  def __init__(self, *, generation_config: DictStrAny | None = None, sampling_config: DictStrAny | None = None, __openllm_extras__: DictStrAny | None = None, **attrs: t.Any):
     # create a copy of the keys as cache
     _cached_keys = tuple(attrs.keys())
     _generation_cl_dict = attr.fields_dict(self.__openllm_generation_class__)
+    _sampling_cl_dict = attr.fields_dict(self.__openllm_sampling_class__)
     if generation_config is None: generation_config = {k: v for k, v in attrs.items() if k in _generation_cl_dict}
     else:
       generation_config = config_merger.merge(generation_config, {k: v for k, v in attrs.items() if k in _generation_cl_dict})
 
-    sampling_config = {k: v for k, v in attrs.items() if k in attr.fields_dict(self.__openllm_sampling_class__)}
+    if sampling_config is None: sampling_config = {k: v for k, v in attrs.items() if k in _sampling_cl_dict}
+    else: sampling_config = config_merger.merge(sampling_config, {k: v for k, v in attrs.items() if k in _sampling_cl_dict})
     for k in _cached_keys:
       if k in generation_config or k in sampling_config or attrs[k] is None: del attrs[k]
 
@@ -1387,32 +1403,35 @@ class LLMConfig(_ConfigAttr):
       except orjson.JSONDecodeError as e:
         raise RuntimeError(f"Failed to parse '{model_config}' as valid JSON string.") from e
 
-    if 'generation_config' in attrs:  # backward compatibility
+    if 'generation_config' in attrs and 'sampling_config' in attrs:  # backward compatibility
       generation_config = attrs.pop('generation_config')
-      if not isinstance(generation_config, dict): raise RuntimeError(f'Expected a dictionary, but got {type(generation_config)}')
+      sampling_config = attrs.pop('sampling_config')
     elif 'llm_config' in attrs:  # NOTE: this is the new key
       llm_config = attrs.pop('llm_config')
       generation_config = {k: v for k, v in llm_config.items() if k in attr.fields_dict(cls.__openllm_generation_class__)}
+      sampling_config = {k: v for k, v in llm_config.items() if k in attr.fields_dict(cls.__openllm_sampling_class__)}
     else:
       generation_config = {k: v for k, v in attrs.items() if k in attr.fields_dict(cls.__openllm_generation_class__)}
+      sampling_config = {k: v for k, v in attrs.items() if k in attr.fields_dict(cls.__openllm_sampling_class__)}
 
     for k in tuple(attrs.keys()):
-      if k in generation_config: del attrs[k]
+      if k in generation_config or k in sampling_config: del attrs[k]
 
     config_from_env.update(attrs)
+    config_from_env.update(sampling_config)
     config_from_env['generation_config'] = generation_config
     return converter.structure(config_from_env, cls)
 
   def model_validate_click(self, **attrs: t.Any) -> tuple[LLMConfig, DictStrAny]:
     '''Parse given click attributes into a LLMConfig and return the remaining click attributes.'''
-    llm_config_attrs: DictStrAny = {'generation_config': {}}
+    llm_config_attrs: DictStrAny = {'generation_config': {}, 'sampling_config': {}}
     key_to_remove: ListStr = []
     for k, v in attrs.items():
       if k.startswith(f"{self['model_name']}_generation_"):
         llm_config_attrs['generation_config'][k[len(self['model_name'] + '_generation_'):]] = v
         key_to_remove.append(k)
       elif k.startswith(f"{self['model_name']}_sampling_"):
-        llm_config_attrs[k[len(self['model_name'] + '_sampling_'):]] = v
+        llm_config_attrs['sampling_config'][k[len(self['model_name'] + '_sampling_'):]] = v
         key_to_remove.append(k)
       elif k.startswith(f"{self['model_name']}_"):
         llm_config_attrs[k[len(self['model_name'] + '_'):]] = v
@@ -1440,15 +1459,17 @@ class LLMConfig(_ConfigAttr):
     return self.sampling_config.build()
 
   def with_openai_request(self, request: ChatCompletionRequest | CompletionRequest) -> dict[str, t.Any]:
-    return dict(temperature=first_not_none(request.temperature, self['temperature']),
-                top_p=first_not_none(request.top_p, self['top_p']),
-                top_k=first_not_none(request.top_k, self['top_k']),
-                best_of=first_not_none(request.best_of, self['best_of']),
-                n=first_not_none(request.n, default=self['n']),
-                stop=first_not_none(request.stop, default=self['stop']),
-                max_new_tokens=first_not_none(request.max_tokens, default=self['max_new_tokens']),
-                presence_penalty=first_not_none(request.presence_penalty, default=self['presence_penalty']),
-                frequency_penalty=first_not_none(request.frequency_penalty, default=self['frequency_penalty']))
+    d = dict(temperature=first_not_none(request.temperature, self['temperature']),
+             top_p=first_not_none(request.top_p, self['top_p']),
+             top_k=first_not_none(request.top_k, self['top_k']),
+             best_of=first_not_none(request.best_of, self['best_of']),
+             n=first_not_none(request.n, default=self['n']),
+             stop=first_not_none(request.stop, default=self['stop']),
+             max_new_tokens=first_not_none(request.max_tokens, default=self['max_new_tokens']),
+             presence_penalty=first_not_none(request.presence_penalty, default=self['presence_penalty']),
+             frequency_penalty=first_not_none(request.frequency_penalty, default=self['frequency_penalty']))
+    if hasattr(request, 'logprobs'): d['logprobs'] = first_not_none(request.logprobs, default=self['logprobs'])
+    return d
 
   @classmethod
   def to_click_options(cls, f: AnyCallable) -> click.Command:
@@ -1530,6 +1551,7 @@ def structure_llm_config(data: t.Any, cls: type[LLMConfig]) -> LLMConfig:
   if not isinstance(data, dict): raise RuntimeError(f'Expected a dictionary, but got {type(data)}')
   cls_attrs = {k: v for k, v in data.items() if k in cls.__openllm_accepted_keys__}
   generation_cls_fields = attr.fields_dict(cls.__openllm_generation_class__)
+  sampling_cls_fields = attr.fields_dict(cls.__openllm_sampling_class__)
   if 'generation_config' in data:
     generation_config = data.pop('generation_config')
     if not isinstance(generation_config, dict):
@@ -1537,9 +1559,16 @@ def structure_llm_config(data: t.Any, cls: type[LLMConfig]) -> LLMConfig:
     config_merger.merge(generation_config, {k: v for k, v in data.items() if k in generation_cls_fields})
   else:
     generation_config = {k: v for k, v in data.items() if k in generation_cls_fields}
+  if 'sampling_config' in data:
+    sampling_config = data.pop('sampling_config')
+    if not isinstance(sampling_config, dict):
+      raise RuntimeError(f'Expected a dictionary, but got {type(sampling_config)}')
+    config_merger.merge(sampling_config, {k: v for k, v in data.items() if k in sampling_cls_fields})
+  else:
+    sampling_config = {k: v for k, v in data.items() if k in sampling_cls_fields}
   # The rest should be passed to extras
   data = {k: v for k, v in data.items() if k not in cls.__openllm_accepted_keys__}
-  return cls(generation_config=generation_config, __openllm_extras__=data, **cls_attrs)
+  return cls(generation_config=generation_config, sampling_config=sampling_config, __openllm_extras__=data, **cls_attrs)
 
 converter.register_structure_hook_func(lambda cls: lenient_issubclass(cls, LLMConfig), structure_llm_config)
 openllm_home = os.path.expanduser(os.environ.get('OPENLLM_HOME', os.path.join(os.environ.get('XDG_CACHE_HOME', os.path.join(os.path.expanduser('~'), '.cache')), 'openllm')))

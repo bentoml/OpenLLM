@@ -25,7 +25,6 @@ from openllm_core._typing_compat import AdaptersMapping
 from openllm_core._typing_compat import AdaptersTuple
 from openllm_core._typing_compat import AdapterType
 from openllm_core._typing_compat import DictStrAny
-from openllm_core._typing_compat import InferenceReturnType
 from openllm_core._typing_compat import LiteralBackend
 from openllm_core._typing_compat import LiteralQuantise
 from openllm_core._typing_compat import LiteralSerialisation
@@ -277,106 +276,71 @@ class LLM(t.Generic[M, T]):
     return self.__llm_runner__
 
   async def generate(self,
-                     prompt: str,
+                     prompt: str | None,
+                     prompt_token_ids: list[int] | None = None,
                      stop: str | t.Iterable[str] | None = None,
                      stop_token_ids: list[int] | None = None,
                      request_id: str | None = None,
-                     format_prompt: bool = True,
                      adapter_name: str | None = None,
                      **attrs: t.Any) -> GenerationOutput:
-    attrs.pop('return_type', None)  # We don't need return type here, since we will always return objects
-    if isinstance(self.runner._runner_handle, DummyRunnerHandle):
-      if os.getenv('BENTO_PATH') is not None: raise RuntimeError('Runner client failed to set up correctly.')
-      else: self.runner.init_local(quiet=True)
-
-    if format_prompt: prompt, *_ = self.sanitize_parameters(prompt, **attrs)
     config = self.config.model_construct_env(**attrs)
-
-    if stop_token_ids is None: stop_token_ids = []
-    if self.tokenizer.eos_token_id not in stop_token_ids: stop_token_ids.append(self.tokenizer.eos_token_id)
-    if stop is None: stop = set()
-    elif isinstance(stop, str): stop = {stop}
-    else: stop = set(stop)
-    for tid in stop_token_ids:
-      if tid: stop.add(self.tokenizer.decode(tid))
-
-    prompt_token_ids = self.tokenizer.encode(prompt)
-    if request_id is None: request_id = openllm_core.utils.gen_random_uuid()
-    async for out in self.runner.generate.async_stream(prompt_token_ids, request_id, stop=stop, adapter_name=adapter_name, **config.model_dump()):
-      pass
-    return GenerationOutput.from_sse(out).with_options(prompt=prompt)
-
-  @t.overload
-  async def generate_iterator(self,
-                              prompt: str,
-                              stop: str | t.Iterable[str] | None = ...,
-                              stop_token_ids: list[int] | None = ...,
-                              request_id: str | None = ...,
-                              return_type: t.Literal['object', 'token'] = ...,
-                              format_prompt: bool = ...,
-                              adapter_name: str | None = ...,
-                              **attrs: t.Any) -> t.AsyncGenerator[GenerationOutput, None]:
-    ...
-
-  @t.overload
-  async def generate_iterator(self,
-                              prompt: str,
-                              stop: str | t.Iterable[str] | None = ...,
-                              stop_token_ids: list[int] | None = ...,
-                              request_id: str | None = ...,
-                              return_type: t.Literal['text', 'sse'] = ...,
-                              format_prompt: bool = ...,
-                              adapter_name: str | None = ...,
-                              **attrs: t.Any) -> t.AsyncGenerator[str, None]:
-    ...
+    texts, token_ids = [[]] * config['n'], [[]] * config['n']
+    final_result: GenerationOutput | None = None
+    async for result in self.generate_iterator(prompt, prompt_token_ids, stop, stop_token_ids, request_id, adapter_name, **config.model_dump(flatten=True)):
+      for output in result.outputs:
+        texts[output.index].append(output.text)
+        token_ids[output.index].extend(output.token_ids)
+      final_result = result
+    if final_result is None: raise RuntimeError('No result is returned.')
+    return final_result.with_options(prompt=prompt, outputs=[output.with_options(text=''.join(texts[output.index]), token_ids=token_ids[output.index]) for output in final_result.outputs])
 
   async def generate_iterator(self,
-                              prompt: str,
+                              prompt: str | None,
+                              prompt_token_ids: list[int] | None = None,
                               stop: str | t.Iterable[str] | None = None,
                               stop_token_ids: list[int] | None = None,
                               request_id: str | None = None,
-                              return_type: InferenceReturnType = 'object',
-                              format_prompt: bool = True,
                               adapter_name: str | None = None,
-                              **attrs: t.Any) -> t.AsyncGenerator[GenerationOutput | str, None]:
-    if return_type not in {'text', 'sse', 'object', 'token'}: raise ValueError(f"'return_type' can only be one of ['token', 'text', 'sse'], while '{return_type}' is given.")
+                              **attrs: t.Any) -> t.AsyncGenerator[GenerationOutput, None]:
     if isinstance(self.runner._runner_handle, DummyRunnerHandle):
       if os.getenv('BENTO_PATH') is not None: raise RuntimeError('Runner client failed to set up correctly.')
       else: self.runner.init_local(quiet=True)
 
-    if format_prompt: prompt, *_ = self.sanitize_parameters(prompt, **attrs)
     config = self.config.model_construct_env(**attrs)
+    unmarshal_config = config.model_dump(flatten=True)
+    config_stop = unmarshal_config.pop('stop', None)
 
     if stop_token_ids is None: stop_token_ids = []
     if self.tokenizer.eos_token_id not in stop_token_ids: stop_token_ids.append(self.tokenizer.eos_token_id)
     if stop is None: stop = set()
     elif isinstance(stop, str): stop = {stop}
     else: stop = set(stop)
+    if config_stop:
+      if isinstance(config_stop, str): stop.add(config_stop)
+      else:
+        for sid in config_stop:
+          if sid: stop.add(sid)
     for tid in stop_token_ids:
       if tid: stop.add(self.tokenizer.decode(tid))
 
-    prompt_token_ids = self.tokenizer.encode(prompt)
+    if prompt_token_ids is None:
+      if prompt is None: raise ValueError('Either prompt or prompt_token_ids must be specified.')
+      prompt_token_ids = self.tokenizer.encode(prompt)
+
     if request_id is None: request_id = openllm_core.utils.gen_random_uuid()
     previous_texts, previous_num_tokens = [''] * config['n'], [0] * config['n']
-    async for out in self.runner.generate_iterator.async_stream(prompt_token_ids, request_id, stop=stop, adapter_name=adapter_name, **config.model_dump()):
-      if return_type == 'sse': yield out
-      else:
-        generated = GenerationOutput.from_sse(out).with_options(prompt=prompt)
-        if generated.finished: break
-        if return_type == 'object': yield generated
-        else:
-          for output in generated.outputs:
-            i = output.index
-            delta_text = output.text[len(previous_texts[i]):]
-            delta_token = output.token_ids[previous_num_tokens[i]:]
-            previous_texts[i] = output.text
-            previous_num_tokens[i] = len(output.token_ids)
-            if return_type == 'text': yield delta_text
-            else:
-              delta_outputs = [None] * len(generated.outputs)
-              delta_outputs[i] = output.with_options(text=delta_text, token_ids=delta_token)
-              yield generated.with_options(outputs=delta_outputs)
-            if output.finish_reason is not None: break
+    async for out in self.runner.generate_iterator.async_stream(prompt_token_ids, request_id, stop=stop, adapter_name=adapter_name, **unmarshal_config):
+      generated = GenerationOutput.from_sse(out).with_options(prompt=prompt)
+      delta_outputs = [None] * len(generated.outputs)
+      if generated.finished: break
+      for output in generated.outputs:
+        i = output.index
+        delta_text = output.text[len(previous_texts[i]):]
+        delta_token = output.token_ids[previous_num_tokens[i]:]
+        previous_texts[i] = output.text
+        previous_num_tokens[i] = len(output.token_ids)
+        delta_outputs[i] = output.with_options(text=delta_text, token_ids=delta_token)
+      yield generated.with_options(outputs=delta_outputs)
 
 def Runner(model_name: str,
            ensure_available: bool = False,

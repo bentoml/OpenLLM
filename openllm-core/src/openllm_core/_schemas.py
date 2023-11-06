@@ -16,7 +16,6 @@ if t.TYPE_CHECKING:
 
   import openllm
 
-  from ._typing_compat import InferenceReturnType
   from ._typing_compat import M
   from ._typing_compat import T
 
@@ -51,15 +50,11 @@ class GenerationInput:
   llm_config: LLMConfig
   stop: list[str] | None = attr.field(default=None)
   adapter_name: str | None = attr.field(default=None)
-  return_type: InferenceReturnType = attr.field(default='object')
 
   # yapf: disable
   @classmethod
   def from_model(cls,model_name:str,**attrs: t.Any)->type[GenerationInput]:return cls.from_llm_config(AutoConfig.for_model(model_name,**attrs))
-  def model_dump(self)->dict[str,t.Any]:
-    d={'prompt': self.prompt,'stop': self.stop,'llm_config': self.llm_config.model_dump(flatten=True),'adapter_name': self.adapter_name}
-    if self.return_type is not None:d['return_type']=self.return_type  # type: ignore # NOTE: A hack not to set return_type
-    return d
+  def model_dump(self)->dict[str,t.Any]:return {'prompt': self.prompt,'stop': self.stop,'llm_config': self.llm_config.model_dump(flatten=True),'adapter_name': self.adapter_name}
   def model_dump_json(self)->str:return orjson.dumps(self.model_dump(),option=orjson.OPT_INDENT_2).decode('utf-8')
   # yapf: enable
 
@@ -83,8 +78,8 @@ class GenerationInput:
                                                    repr=True,
                                                    collect_by_mro=True)
 
-    def examples(_: type[GenerationInput], return_type: InferenceReturnType = 'object') -> GenerationInput:
-      return klass(prompt='What is the meaning of life?', llm_config=llm_config, stop=['\n'], return_type=return_type)
+    def examples(_: type[GenerationInput]) -> GenerationInput:
+      return klass(prompt='What is the meaning of life?', llm_config=llm_config, stop=['\n'])
 
     setattr(klass, 'examples', classmethod(examples))
 
@@ -113,7 +108,7 @@ class CompletionChunk:
   # yapf: disable
   def with_options(self,**options: t.Any)->CompletionChunk: return attr.evolve(self, **options)
   def model_dump(self)->dict[str, t.Any]:return converter.unstructure(self)
-  def model_dump_json(self)->str:return orjson.dumps(self.model_dump()).decode('utf-8')
+  def model_dump_json(self)->str:return orjson.dumps(self.model_dump(),option=orjson.OPT_NON_STR_KEYS).decode('utf-8')
   # yapf: enable
 
 @attr.define
@@ -147,9 +142,9 @@ class GenerationOutput:
     if not data: raise ValueError('No data found in SSE message.')
     if len(data) > 1: raise ValueError('Multiple data found in SSE message.')
     try:
-      return converter.structure(orjson.loads(''.join(data)), cls)
+      return converter.structure(orjson.loads(data[0]), cls)
     except orjson.JSONDecodeError as e:
-      raise ValueError(f'Failed to parse JSON from SSE message: {sse_message}') from e
+      raise ValueError(f'Failed to parse JSON from SSE message: {sse_message!r}') from e
 
   @classmethod
   def from_vllm(cls, request_output: vllm.RequestOutput) -> GenerationOutput:
@@ -166,5 +161,5 @@ class GenerationOutput:
   # yapf: disable
   def with_options(self,**options: t.Any)->GenerationOutput: return attr.evolve(self, **options)
   def model_dump(self)->dict[str, t.Any]:return converter.unstructure(self)
-  def model_dump_json(self)->str:return orjson.dumps(self.model_dump()).decode('utf-8')
+  def model_dump_json(self)->str:return orjson.dumps(self.model_dump(),option=orjson.OPT_NON_STR_KEYS).decode('utf-8')
   # yapf: enable

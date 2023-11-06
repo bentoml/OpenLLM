@@ -46,27 +46,6 @@ class vLLMRunnable(bentoml.Runnable):
       raise OpenLLMException(f'Failed to initialise vLLMEngine due to the following error:\n{err}') from err
 
   @bentoml.Runnable.method(batchable=False)
-  async def generate(self,
-                     prompt_token_ids: list[int],
-                     request_id: str,
-                     stop: str | t.Iterable[str] | None = None,
-                     adapter_name: str | None = None,
-                     **attrs: t.Any) -> t.AsyncGenerator[str, None]:
-    if adapter_name is not None: raise NotImplementedError('Adapter is not supported with vLLM.')
-    stop_: set[str] = set()
-    if isinstance(stop, str) and stop != '': stop_.add(stop)
-    elif isinstance(stop, t.Iterable): stop_.update(stop)
-
-    temperature = attrs.pop('temperature', self.config['temperature'])
-    top_p = attrs.pop('top_p', self.config['top_p'])
-    if temperature <= 1e-5: top_p = 1.0
-    sampling_params = self.config.model_construct_env(stop=list(stop_), temperature=temperature, top_p=top_p, **attrs).to_sampling_config()
-
-    async for request_output in self.model.generate(None, sampling_params, request_id, prompt_token_ids):
-      pass
-    yield f'event: message\ndata: {GenerationOutput.from_vllm(request_output).model_dump_json()}\n\nevent: end\n\n'
-
-  @bentoml.Runnable.method(batchable=False)
   async def generate_iterator(self,
                               prompt_token_ids: list[int],
                               request_id: str,
@@ -84,8 +63,9 @@ class vLLMRunnable(bentoml.Runnable):
     sampling_params = self.config.model_construct_env(stop=list(stop_), temperature=temperature, top_p=top_p, **attrs).to_sampling_config()
 
     async for request_output in self.model.generate(None, sampling_params, request_id, prompt_token_ids):
-      yield f'event: message\ndata: {GenerationOutput.from_vllm(request_output).model_dump_json()}\n\n'
-    yield 'event: end\n\n'
+      # XXX: Need to write a hook for serialisation None correctly
+      if request_output.prompt_logprobs is not None: request_output.prompt_logprobs = [it if it else {} for it in request_output.prompt_logprobs]
+      yield f'data: {GenerationOutput.from_vllm(request_output).model_dump_json()}\n\n'
 
 class PyTorchRunnable(bentoml.Runnable):
   SUPPORTED_RESOURCES = ('nvidia.com/gpu', 'amd.com/gpu', 'cpu')
@@ -101,28 +81,16 @@ class PyTorchRunnable(bentoml.Runnable):
     #   self.apply_adapter(inference_mode=True, load_adapters='all')
 
   @bentoml.Runnable.method(batchable=False)
-  async def generate(self,
-                     prompt_token_ids: list[int],
-                     request_id: str,
-                     stop: str | t.Iterable[str] | None = None,
-                     adapter_name: str | None = None,
-                     **attrs: t.Any) -> t.AsyncGenerator[str, None]:
-    async for generation_output in self._generate_stream(prompt_token_ids, request_id, stop=stop, **attrs):
-      pass
-    yield f'event: message\ndata: {generation_output.model_dump_json()}\n\nevent: end\n\n'
-
-  @bentoml.Runnable.method(batchable=False)
   async def generate_iterator(self,
                               prompt_token_ids: list[int],
                               request_id: str,
                               stop: str | t.Iterable[str] | None = None,
                               adapter_name: str | None = None,
                               **attrs: t.Any) -> t.AsyncGenerator[str, None]:
-    async for generation_output in self._generate_stream(prompt_token_ids, request_id, stop=stop, **attrs):
-      yield f'event: message\ndata: {generation_output.model_dump_json()}\n\n'
-    yield 'event: end\n\n'
+    async for generation_output in self.forward(prompt_token_ids, request_id, stop=stop, **attrs):
+      yield f'data: {generation_output.model_dump_json()}\n\n'
 
-  async def _generate_stream(self, prompt_token_ids: list[int], request_id: str, stop: str | t.Iterable[str] | None = None, **attrs: t.Any) -> t.AsyncGenerator[GenerationOutput, None]:
+  async def forward(self, prompt_token_ids: list[int], request_id: str, stop: str | t.Iterable[str] | None = None, **attrs: t.Any) -> t.AsyncGenerator[GenerationOutput, None]:
     from ._generation import is_partial_stop
     from ._generation import prepare_logits_processor
 

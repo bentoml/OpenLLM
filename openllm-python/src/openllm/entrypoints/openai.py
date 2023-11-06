@@ -132,7 +132,7 @@ async def create_chat_completions(req: Request, llm: openllm.LLM[M, T]) -> Respo
   config = llm.config.with_openai_request(request)
 
   try:
-    result_generator = llm.generate_iterator(prompt, request_id=request_id, format_prompt=False, return_type='object', **config)
+    result_generator = llm.generate_iterator(prompt, request_id=request_id, **config)
   except Exception as err:
     traceback.print_exc()
     logger.error('Error generating completion: %s', err)
@@ -150,17 +150,11 @@ async def create_chat_completions(req: Request, llm: openllm.LLM[M, T]) -> Respo
     for i in range(config['n']):
       yield f"data: {jsonify_attr(ChatCompletionStreamResponse(id=request_id, choices=[ChatCompletionResponseStreamChoice(index=i, delta=Delta(role='assistant'), finish_reason=None)], model=model_name))}\n\n"
 
-    previous_texts = [''] * config['n']
-    previous_num_tokens = [0] * config['n']
     async for res in result_generator:
       for output in res.outputs:
-        i = output.index
-        delta_text = output.text[len(previous_texts[i]):]
-        previous_texts[i] = output.text
-        previous_num_tokens[i] += len(output.token_ids)
-        yield f'data: {create_stream_response_json(i, delta_text)}\n\n'
+        yield f'data: {create_stream_response_json(output.index, output.text)}\n\n'
         if output.finish_reason is not None:
-          yield f'data: {create_stream_response_json(i, "", output.finish_reason)}\n\n'
+          yield f'data: {create_stream_response_json(output.index, "", output.finish_reason)}\n\n'
     yield 'data: [DONE]\n\n'
 
   try:
@@ -168,10 +162,15 @@ async def create_chat_completions(req: Request, llm: openllm.LLM[M, T]) -> Respo
     if request.stream: return StreamingResponse(completion_stream_generator(), media_type='text/event-stream')
     # Non-streaming case
     final_result: GenerationOutput | None = None
+    texts, token_ids = [[]] * config['n'], [[]] * config['n']
     async for res in result_generator:
       if await req.is_disconnected(): return error_response(HTTPStatus.BAD_REQUEST, 'Client disconnected.')
+      for output in res.outputs:
+        texts[output.index].append(output.text)
+        token_ids[output.index].extend(output.token_ids)
       final_result = t.cast(GenerationOutput, res)
     if final_result is None: return error_response(HTTPStatus.BAD_REQUEST, 'No response from model.')
+    final_result = final_result.with_options(outputs=[output.with_options(text=''.join(texts[output.index]), token_ids=token_ids[output.index]) for output in final_result.outputs])
     choices = [
         ChatCompletionResponseChoice(index=output.index, message=ChatMessage(role='assistant', content=output.text), finish_reason=output.finish_reason) for output in final_result.outputs
     ]
@@ -229,7 +228,7 @@ async def create_completions(req: Request, llm: openllm.LLM[M, T]) -> Response:
   config = llm.config.with_openai_request(request)
 
   try:
-    result_generator = llm.generate_iterator(prompt, request_id=request_id, return_type='object', **config)
+    result_generator = llm.generate_iterator(prompt, request_id=request_id, **config)
   except Exception as err:
     traceback.print_exc()
     logger.error('Error generating completion: %s', err)
@@ -247,22 +246,16 @@ async def create_completions(req: Request, llm: openllm.LLM[M, T]) -> Response:
                                  choices=[CompletionResponseStreamChoice(index=index, text=text, logprobs=logprobs, finish_reason=finish_reason)]))
 
   async def completion_stream_generator() -> t.AsyncGenerator[str, None]:
-    previous_texts = [''] * config['n']
     previous_num_tokens = [0] * config['n']
     async for res in result_generator:
       for output in t.cast(GenerationOutput, res).outputs:
         i = output.index
-        delta_text = output.text[len(previous_texts[i]):]
         if request.logprobs is not None:
-          logprobs = create_logprobs(token_ids=output.token_ids[previous_num_tokens[i]:],
-                                     id_logprobs=output.logprobs[previous_num_tokens[i]:],
-                                     initial_text_offset=len(previous_texts[i]),
-                                     llm=llm)
+          logprobs = create_logprobs(token_ids=output.token_ids, id_logprobs=output.logprobs[previous_num_tokens[i]:], llm=llm)
         else:
           logprobs = None
-        previous_texts[i] = output.text
         previous_num_tokens[i] += len(output.token_ids)
-        yield f'data: {create_stream_response_json(index=i, text=delta_text, logprobs=logprobs)}\n\n'
+        yield f'data: {create_stream_response_json(index=i, text=output.text, logprobs=logprobs)}\n\n'
         if output.finish_reason is not None:
           logprobs = LogProbs() if request.logprobs is not None else None
           yield f'data: {create_stream_response_json(index=i, text="", logprobs=logprobs, finish_reason=output.finish_reason)}\n\n'
@@ -273,10 +266,15 @@ async def create_completions(req: Request, llm: openllm.LLM[M, T]) -> Response:
     if stream: return StreamingResponse(completion_stream_generator(), media_type='text/event-stream')
     # Non-streaming case
     final_result: GenerationOutput | None = None
+    texts, token_ids = [[]] * config['n'], [[]] * config['n']
     async for res in result_generator:
       if await req.is_disconnected(): return error_response(HTTPStatus.BAD_REQUEST, 'Client disconnected.')
+      for output in res.outputs:
+        texts[output.index].append(output.text)
+        token_ids[output.index].extend(output.token_ids)
       final_result = t.cast(GenerationOutput, res)
     if final_result is None: return error_response(HTTPStatus.BAD_REQUEST, 'No response from model.')
+    final_result = final_result.with_options(outputs=[output.with_options(text=''.join(texts[output.index]), token_ids=token_ids[output.index]) for output in final_result.outputs])
 
     choices: list[CompletionResponseChoice] = []
     for output in final_result.outputs:
