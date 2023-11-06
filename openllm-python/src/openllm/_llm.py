@@ -307,19 +307,12 @@ class LLM(t.Generic[M, T]):
       else: self.runner.init_local(quiet=True)
 
     config = self.config.model_construct_env(**attrs)
-    unmarshal_config = config.model_dump(flatten=True)
-    config_stop = unmarshal_config.pop('stop', None)
 
     if stop_token_ids is None: stop_token_ids = []
     if self.tokenizer.eos_token_id not in stop_token_ids: stop_token_ids.append(self.tokenizer.eos_token_id)
     if stop is None: stop = set()
     elif isinstance(stop, str): stop = {stop}
     else: stop = set(stop)
-    if config_stop:
-      if isinstance(config_stop, str): stop.add(config_stop)
-      else:
-        for sid in config_stop:
-          if sid: stop.add(sid)
     for tid in stop_token_ids:
       if tid: stop.add(self.tokenizer.decode(tid))
 
@@ -329,7 +322,7 @@ class LLM(t.Generic[M, T]):
 
     if request_id is None: request_id = openllm_core.utils.gen_random_uuid()
     previous_texts, previous_num_tokens = [''] * config['n'], [0] * config['n']
-    async for out in self.runner.generate_iterator.async_stream(prompt_token_ids, request_id, stop=stop, adapter_name=adapter_name, **unmarshal_config):
+    async for out in self.runner.generate_iterator.async_stream(prompt_token_ids, request_id, stop=stop, adapter_name=adapter_name, **config.model_dump(flatten=True)):
       generated = GenerationOutput.from_sse(out).with_options(prompt=prompt)
       delta_outputs = [None] * len(generated.outputs)
       if generated.finished: break

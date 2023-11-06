@@ -392,7 +392,6 @@ class SamplingParams(ReprMixin):
       'Float that penalizes new tokens based on their frequency in the generated text so far. Values > 0 encourage the model to use new tokens, while values < 0 encourage the model to repeat tokens.'
   )
   use_beam_search: bool = dantic.Field(False, description='Whether to use beam search instead of sampling.')
-  stop: t.List[str] = dantic.Field(None, description='List of strings that stop the generation when they are generated. The returned output will not contain the stop strings.')
   ignore_eos: bool = dantic.Field(False, description='Whether to ignore the EOS token and continue generating tokens after the EOS token is generated.')
   logprobs: int = dantic.Field(None, description='Number of log probabilities to return per output token.')
   prompt_logprobs: t.Optional[int] = dantic.Field(None, description='Number of log probabilities to return per input token.')
@@ -439,9 +438,6 @@ class SamplingParams(ReprMixin):
   @classmethod
   def from_generation_config(cls, generation_config: GenerationConfig, **attrs: t.Any) -> Self:
     '''The main entrypoint for creating a SamplingParams from ``openllm.LLMConfig``.'''
-    stop = attrs.pop('stop', None)
-    if stop is not None and isinstance(stop, str): stop = [stop]
-    attrs['stop'] = stop
     if 'max_tokens' in attrs and 'max_new_tokens' in attrs: raise ValueError("Both 'max_tokens' and 'max_new_tokens' are passed. Make sure to only use one of them.")
     temperature = first_not_none(attrs.pop('temperature', None), default=generation_config['temperature'])
     top_k = first_not_none(attrs.pop('top_k', None), default=generation_config['top_k'])
