@@ -232,8 +232,7 @@ class LLM(t.Generic[M, T]):
       elif self._quantise is not None:self.__llm_quantization_config__,self._model_attrs=infer_quantisation_config(self, self._quantise, **self._model_attrs)
       else:raise ValueError("Either 'quantization_config' or 'quantise' must be specified.")
     return self.__llm_quantization_config__
-  @property
-  def save_pretrained(self) -> bentoml.Model: return openllm.import_model(self.config['start_name'], model_id=self.model_id, model_version=self._revision, backend=self.__llm_backend__, quantize=self._quantise)
+  def save_pretrained(self)->bentoml.Model: return openllm.import_model(self.config['start_name'], model_id=self.model_id, model_version=self._revision, backend=self.__llm_backend__, quantize=self._quantise)
   # NOTE: The section below defines a loose contract with langchain's LLM interface.
   @property
   def llm_type(self)->str:return normalise_model_name(self._model_id)
