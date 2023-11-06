@@ -31,6 +31,8 @@ class vLLMRunnable(bentoml.Runnable):
     self.config = llm.config
     num_gpus, dev = 1, device_count()
     if dev >= 2: num_gpus = min(dev // 2 * 2, dev)
+    quantization = None
+    if llm._quantise and llm._quantise == 'awq': quantization = llm._quantise
     try:
       self.model = vllm.AsyncLLMEngine.from_engine_args(
           vllm.AsyncEngineArgs(model=llm.bentomodel.path,
@@ -38,6 +40,7 @@ class vLLMRunnable(bentoml.Runnable):
                                tokenizer_mode='auto',
                                tensor_parallel_size=num_gpus,
                                dtype='auto',
+                               quantization=quantization,
                                disable_log_requests=not get_debug_mode(),
                                worker_use_ray=False,
                                engine_use_ray=False))

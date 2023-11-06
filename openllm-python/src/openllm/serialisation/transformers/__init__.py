@@ -8,7 +8,6 @@ import attr
 import orjson
 
 from huggingface_hub import snapshot_download
-from packaging.version import Version
 from simple_di import Provide
 from simple_di import inject
 
@@ -158,7 +157,6 @@ def get(llm: openllm.LLM[M, T], auto_import: bool = False) -> bentoml.Model:
   try:
     model = bentoml.models.get(llm.tag)
     backend = model.info.labels['backend']
-    if Version(model.info.api_version) < Version('v2.1.0'): raise openllm.exceptions.OpenLLMException("Please run 'openllm prune -y --include-bentos' (model saved <2.1.0).")
     if backend != llm.__llm_backend__: raise openllm.exceptions.OpenLLMException(f"'{model.tag!s}' was saved with backend '{backend}', while loading with '{llm.__llm_backend__}'.")
     _patch_correct_tag(llm, process_config(model.path, llm.trust_remote_code)[0], _revision=model.info.metadata['_revision'])
     return model

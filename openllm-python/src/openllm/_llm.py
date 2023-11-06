@@ -5,7 +5,6 @@ import logging
 import os
 import types
 import typing as t
-import warnings
 
 import attr
 import inflection
@@ -46,7 +45,6 @@ from openllm_core.utils import flatten_attrs
 from openllm_core.utils import generate_hash_from_file
 from openllm_core.utils import is_peft_available
 from openllm_core.utils import is_torch_available
-from openllm_core.utils import is_vllm_available
 from openllm_core.utils import resolve_filepath
 from openllm_core.utils import validate_is_path
 
@@ -335,68 +333,6 @@ class LLM(t.Generic[M, T]):
         delta_outputs[i] = output.with_options(text=delta_text, token_ids=delta_token)
       yield generated.with_options(outputs=delta_outputs)
 
-def Runner(model_name: str,
-           ensure_available: bool = False,
-           init_local: bool = False,
-           backend: LiteralBackend | None = None,
-           llm_config: LLMConfig | None = None,
-           **attrs: t.Any) -> LLMRunner[t.Any, t.Any]:
-  '''Create a Runner for given LLM. For a list of currently supported LLM, check out 'openllm models'.
-
-  > [!WARNING]
-  > This method is now deprecated and in favor of 'openllm.LLM.runner'
-
-  ```python
-  runner = openllm.Runner("dolly-v2")
-
-  @svc.on_startup
-  def download():
-    runner.download_model()
-  ```
-
-  if `init_local=True` (For development workflow), it will also enable `ensure_available`.
-  Default value of `ensure_available` is None. If set then use that given value, otherwise fallback to the aforementioned behaviour.
-
-  Args:
-    model_name: Supported model name from 'openllm models'
-    ensure_available: If True, it will download the model if it is not available. If False, it will skip downloading the model.
-                      If False, make sure the model is available locally.
-    backend: The given Runner implementation one choose for this Runner. If `OPENLLM_BACKEND` is set, it will respect it.
-    llm_config: Optional ``openllm.LLMConfig`` to initialise this ``openllm.LLMRunner``.
-    init_local: If True, it will initialize the model locally. This is useful if you want to run the model locally. (Symmetrical to bentoml.Runner.init_local())
-    **attrs: The rest of kwargs will then be passed to the LLM. Refer to the LLM documentation for the kwargs behaviour
-  '''
-  if llm_config is None: llm_config = openllm.AutoConfig.for_model(model_name)
-  model_id = attrs.get('model_id') or llm_config['env']['model_id_value']
-  msg = f'''\
-Using 'openllm.Runner' is now deprecated. Make sure to switch to the following syntax:
-
-```python
-llm = openllm.LLM('{model_id}')
-
-svc = bentoml.Service('...', runners=[llm.runner])
-
-@svc.api(...)
-async def chat(input: str) -> str:
-  await llm.generate(input)
-```
-  '''
-  warnings.warn(msg, DeprecationWarning, stacklevel=3)
-  attrs.update({
-      'model_id': model_id,
-      'quantize': llm_config['env']['quantize_value'],
-      'serialisation': first_not_none(attrs.get('serialisation'), os.environ.get('OPENLLM_SERIALIZATION'), default=llm_config['serialisation']),
-      'system_message': first_not_none(os.environ.get('OPENLLM_SYSTEM_MESSAGE'), attrs.get('system_message'), None),
-      'prompt_template': first_not_none(os.environ.get('OPENLLM_PROMPT_TEMPLATE'), attrs.get('prompt_template'), None),
-  })
-
-  backend = t.cast(LiteralBackend, first_not_none(backend, default='vllm' if is_vllm_available() else 'pt'))
-  if init_local: ensure_available = True
-  llm = LLM(backend=backend, llm_config=llm_config, **attrs)
-  if ensure_available: llm.save_pretrained()
-  if init_local: llm.runner.init_local(quiet=True)
-  return llm.runner
-
 def _RunnerFactory(self: openllm.LLM[M, T],
                    /,
                    models: list[bentoml.Model] | None = None,
@@ -469,4 +405,4 @@ def _RunnerFactory(self: openllm.LLM[M, T],
                                  'generate_iterator': ModelSignature.from_dict(ModelSignatureDict(batchable=False))
                              }))
 
-__all__ = ['LLMRunner', 'LLMRunnable', 'Runner', 'LLM']
+__all__ = ['LLMRunner', 'LLMRunnable', 'LLM']

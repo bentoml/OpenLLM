@@ -64,12 +64,13 @@ _import_structure: dict[str, list[str]] = {
     'testing': [],
     'prompts': ['PromptTemplate'],
     'protocol': [],
-    'entrypoints': ['mount_entrypoints'],
     'utils': [],
+    '_deprecated': ['Runner'],
+    'entrypoints': ['mount_entrypoints'],
     'serialisation': ['ggml', 'transformers'],
     'cli._sdk': ['start', 'start_grpc', 'build', 'import_model', 'list_models'],
     '_quantisation': ['infer_quantisation_config'],
-    '_llm': ['LLM', 'Runner', 'LLMRunner', 'LLMRunnable'],
+    '_llm': ['LLM', 'LLMRunner', 'LLMRunnable'],
     '_generation': ['StopSequenceCriteria', 'StopOnTokens', 'LogitsProcessorList', 'StoppingCriteriaList', 'prepare_logits_processor'],
 }
 COMPILED = _Path(__file__).suffix in ('.pyd', '.so')
@@ -81,6 +82,7 @@ if _t.TYPE_CHECKING:
   from . import playground as playground
   from . import serialisation as serialisation
   from . import testing as testing
+  from . import utils as utils
   from ._generation import LogitsProcessorList as LogitsProcessorList
   from ._generation import StopOnTokens as StopOnTokens
   from ._generation import StoppingCriteriaList as StoppingCriteriaList
@@ -89,8 +91,8 @@ if _t.TYPE_CHECKING:
   from ._llm import LLM as LLM
   from ._llm import LLMRunnable as LLMRunnable
   from ._llm import LLMRunner as LLMRunner
-  from ._llm import Runner as Runner
   from ._quantisation import infer_quantisation_config as infer_quantisation_config
+  from ._deprecated import Runner as Runner
   from .cli._sdk import build as build
   from .cli._sdk import import_model as import_model
   from .cli._sdk import list_models as list_models

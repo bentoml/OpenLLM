@@ -8,6 +8,7 @@ import transformers
 
 from openllm_core._typing_compat import LiteralQuantise
 from openllm_core._typing_compat import overload
+from openllm_core.utils import is_autoawq_available
 from openllm_core.utils import is_autogptq_available
 from openllm_core.utils import is_bitsandbytes_available
 from openllm_core.utils import is_optimum_supports_gptq
@@ -27,18 +28,29 @@ def infer_quantisation_config(self: LLM[t.Any, t.Any], quantise: t.Literal['int8
 def infer_quantisation_config(self: LLM[t.Any, t.Any], quantise: t.Literal['gptq'], **attrs: t.Any) -> tuple[transformers.GPTQConfig, DictStrAny]:
   ...
 
-def infer_quantisation_config(self: LLM[t.Any, t.Any], quantise: LiteralQuantise, **attrs: t.Any) -> tuple[transformers.BitsAndBytesConfig | transformers.GPTQConfig, DictStrAny]:
+@overload
+def infer_quantisation_config(self: LLM[t.Any, t.Any], quantise: t.Literal['awq'], **attrs: t.Any) -> tuple[transformers.AwqConfig, DictStrAny]:
+  ...
+
+def infer_quantisation_config(self: LLM[t.Any, t.Any], quantise: LiteralQuantise,
+                              **attrs: t.Any) -> tuple[transformers.BitsAndBytesConfig | transformers.GPTQConfig | transformers.AwqConfig, DictStrAny]:
   # 8 bit configuration
   int8_threshold = attrs.pop('llm_int8_threshhold', 6.0)
   int8_enable_fp32_cpu_offload = attrs.pop('llm_int8_enable_fp32_cpu_offload', False)
   int8_skip_modules: list[str] | None = attrs.pop('llm_int8_skip_modules', None)
   int8_has_fp16_weight = attrs.pop('llm_int8_has_fp16_weight', False)
 
+  # shared arguments for gptq and awq
+  bits = attrs.pop('bits', 4)
+  group_size = attrs.pop('group_size', 128)
+
+  def create_awq_config() -> transformers.AwqConfig:
+    zero_point = attrs.pop('zero_point', True)
+    return transformers.AwqConfig(bits=bits, group_size=group_size, zero_point=zero_point)
+
   def create_gptq_config() -> transformers.GPTQConfig:
-    gptq_bits = attrs.pop('bits', 4)
     gptq_tokenizer = attrs.pop('tokenizer', None)
     gptq_dataset = attrs.pop('dataset', 'c4')
-    gptq_group_size = attrs.pop('group_size', 128)
     gptq_damp_percent = attrs.pop('damp_percent', 0.1)
     gptq_desc_act = attrs.pop('desc_act', False)
     gptq_sym = attrs.pop('sym', True)
@@ -50,10 +62,10 @@ def infer_quantisation_config(self: LLM[t.Any, t.Any], quantise: LiteralQuantise
     gptq_batch_size = attrs.pop('batch_size', 1)
     gptq_pad_token_id = attrs.pop('pad_token_id', None)
     gptq_disable_exllama = attrs.pop('disable_exllama', False)
-    return transformers.GPTQConfig(bits=gptq_bits,
+    return transformers.GPTQConfig(bits=bits,
                                    tokenizer=gptq_tokenizer,
                                    dataset=gptq_dataset,
-                                   group_size=gptq_group_size,
+                                   group_size=group_size,
                                    damp_percent=gptq_damp_percent,
                                    desc_act=gptq_desc_act,
                                    sym=gptq_sym,
@@ -99,6 +111,12 @@ def infer_quantisation_config(self: LLM[t.Any, t.Any], quantise: LiteralQuantise
       quantisation_config = create_int8_config(int8_skip_modules)
     else:
       quantisation_config = create_gptq_config()
+  elif quantise == 'awq':
+    if not is_autoawq_available():
+      logger.warning("quantize='awq' requires 'auto-awq' to be installed. Make sure to do 'pip install \"openllm[awq]\"'. OpenLLM will fallback to int8 with bitsandbytes.")
+      quantisation_config = create_int8_config(int8_skip_modules)
+    else:
+      quantisation_config = create_awq_config()
   else:
-    raise ValueError(f"'quantize' must be one of ['int8', 'int4', 'gptq'], got {quantise} instead.")
+    raise ValueError(f"'quantize' must be one of ['int8', 'int4', 'gptq', 'awq'], got {quantise} instead.")
   return quantisation_config, attrs
