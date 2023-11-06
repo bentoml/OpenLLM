@@ -498,7 +498,7 @@ class LLM(LLMInterface[M, T], ReprMixin):
     tag_name = f'{cls.__llm_backend__}-{model_name}'
     if use_local_latest:
       try:
-        existed_latest = bentoml.models.get(f"{tag_name}:latest")
+        existed_latest = bentoml.models.get(f'{tag_name}:latest')
         if existed_latest:
           return str(existed_latest.tag)
       except bentoml.exceptions.NotFound:
