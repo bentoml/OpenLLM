@@ -399,7 +399,7 @@ def quantize_option(f: _AnyCallable | None = None, *, build: bool = False, **att
   return cli_option('--quantise',
                     '--quantize',
                     'quantize',
-                    type=click.Choice(['int8', 'int4', 'gptq']),
+                    type=click.Choice(get_literal_args(LiteralQuantise)),
                     default=None,
                     envvar='OPENLLM_QUANTIZE',
                     show_envvar=True,

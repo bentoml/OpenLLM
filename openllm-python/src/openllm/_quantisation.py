@@ -2,6 +2,7 @@
 from __future__ import annotations
 import logging
 import typing as t
+from openllm_core.exceptions import MissingDependencyError
 
 import torch
 import transformers
@@ -49,7 +50,7 @@ def infer_quantisation_config(self: LLM[t.Any, t.Any], quantise: LiteralQuantise
     return transformers.AwqConfig(bits=bits, group_size=group_size, zero_point=zero_point)
 
   def create_gptq_config() -> transformers.GPTQConfig:
-    gptq_tokenizer = attrs.pop('tokenizer', None)
+    gptq_tokenizer = attrs.pop('tokenizer', self.model_id)
     gptq_dataset = attrs.pop('dataset', 'c4')
     gptq_damp_percent = attrs.pop('damp_percent', 0.1)
     gptq_desc_act = attrs.pop('desc_act', False)
@@ -105,18 +106,11 @@ def infer_quantisation_config(self: LLM[t.Any, t.Any], quantise: LiteralQuantise
                                                           bnb_4bit_use_double_quant=int4_use_double_quant)
   elif quantise == 'gptq':
     if not is_autogptq_available() or not is_optimum_supports_gptq():
-      logger.warning(
-          "'quantize=\"gptq\"' requires 'auto-gptq' and 'optimum>=0.12' to be installed (not available with local environment). Make sure to have 'auto-gptq' available locally: 'pip install \"openllm[gptq]\"'. OpenLLM will fallback to int8 with bitsandbytes."
-      )
-      quantisation_config = create_int8_config(int8_skip_modules)
-    else:
-      quantisation_config = create_gptq_config()
+      raise MissingDependencyError("'quantize=\"gptq\"' requires 'auto-gptq' and 'optimum>=0.12' to be installed (missing or failed to import). Make sure to do 'pip install \"openllm[gptq]\"'")
+    else: quantisation_config = create_gptq_config()
   elif quantise == 'awq':
-    if not is_autoawq_available():
-      logger.warning("quantize='awq' requires 'auto-awq' to be installed. Make sure to do 'pip install \"openllm[awq]\"'. OpenLLM will fallback to int8 with bitsandbytes.")
-      quantisation_config = create_int8_config(int8_skip_modules)
-    else:
-      quantisation_config = create_awq_config()
+    if not is_autoawq_available(): raise MissingDependencyError("quantize='awq' requires 'auto-awq' to be installed (missing or failed to import). Make sure to do 'pip install \"openllm[awq]\"'.")
+    else: quantisation_config = create_awq_config()
   else:
     raise ValueError(f"'quantize' must be one of ['int8', 'int4', 'gptq', 'awq'], got {quantise} instead.")
   return quantisation_config, attrs

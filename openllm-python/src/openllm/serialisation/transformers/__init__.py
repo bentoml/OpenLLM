@@ -93,8 +93,6 @@ def import_model(llm: openllm.LLM[M, T], *decls: t.Any, trust_remote_code: bool,
       )
     signatures['generate'] = {'batchable': False}
   else:
-    # this model might be called with --quantize int4, therefore we need to pop this out since saving int4 is not yet supported
-    if 'quantization_config' in attrs and getattr(attrs['quantization_config'], 'load_in_4bit', False): attrs.pop('quantization_config')
     attrs['use_safetensors'] = safe_serialisation
     metadata['_framework'] = llm.__llm_backend__
     signatures.update({
@@ -120,6 +118,7 @@ def import_model(llm: openllm.LLM[M, T], *decls: t.Any, trust_remote_code: bool,
     try:
       bentomodel.enter_cloudpickle_context(external_modules, imported_modules)
       tokenizer.save_pretrained(bentomodel.path)
+      if llm.quantization_config: attrs['quantization_config'] = llm.quantization_config
       if quantize == 'gptq':
         from optimum.gptq.constants import GPTQ_CONFIG
         with open(bentomodel.path_of(GPTQ_CONFIG), 'w', encoding='utf-8') as f:
@@ -168,7 +167,9 @@ def load_model(llm: openllm.LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M:
   config, hub_attrs, attrs = process_config(llm.bentomodel.path, llm.trust_remote_code, **attrs)
   _patch_correct_tag(llm, config, _revision=llm.bentomodel.info.metadata['_revision'])
   auto_class = infer_autoclass_from_llm(llm, config)
+  attrs.setdefault('use_flash_attention_2', True)
   device_map: str | None = attrs.pop('device_map', 'auto' if torch.cuda.is_available() and torch.cuda.device_count() > 1 else None)
+  if llm.quantization_config: attrs['quantization_config'] = llm.quantization_config
 
   if '_quantize' in llm.bentomodel.info.metadata and llm.bentomodel.info.metadata['_quantize'] == 'gptq':
     if not openllm.utils.is_autogptq_available() or not openllm.utils.is_optimum_supports_gptq():

@@ -115,7 +115,7 @@ _AdaptersTuple: type[AdaptersTuple] = codegen.make_attr_tuple_class('AdaptersTup
 class LLM(t.Generic[M, T]):
   _model_id: str
   _revision: str | None
-  quantization_config: transformers.BitsAndBytesConfig | transformers.GPTQConfig | transformers.AwqConfig | None
+  _quantization_config: transformers.BitsAndBytesConfig | transformers.GPTQConfig | transformers.AwqConfig | None
   _quantise: LiteralQuantise | None
   _model_decls: TupleAny
   _model_attrs: DictStrAny
@@ -129,6 +129,7 @@ class LLM(t.Generic[M, T]):
 
   __llm_config__: LLMConfig | None = None
   __llm_backend__: LiteralBackend = None  # type: ignore
+  __llm_quantization_config__: transformers.BitsAndBytesConfig | transformers.GPTQConfig | transformers.AwqConfig | None = None
   __llm_runner__: t.Optional[LLMRunner[M, T]] = None
   __llm_model__: t.Optional[M] = None
   __llm_tokenizer__: t.Optional[T] = None
@@ -161,15 +162,9 @@ class LLM(t.Generic[M, T]):
     backend = openllm.utils.first_not_none(os.getenv('OPENLLM_BACKEND'), default='vllm' if openllm.utils.is_vllm_available() else 'pt')
 
     quantize = first_not_none(quantize, t.cast(t.Optional[LiteralQuantise], os.getenv('OPENLLM_QUANTIZE')), default=None)
-    # quantization setup
-    if quantization_config and quantize:
-      logger.warning("Both 'quantization_config' and 'quantize' are specified. 'quantize' will be ignored.")
-    elif quantization_config is None and quantize is not None:
-      # in case users input `tokenizer` to __init__, default to the _model_id
-      if quantize == 'gptq': attrs.setdefault('tokenizer', model_id)
-      # TODO: support AWQConfig
-      quantization_config, attrs = infer_quantisation_config(self, quantize, **attrs)
-    attrs.update({'low_cpu_mem_usage': low_cpu_mem_usage, 'quantization_config': quantization_config})
+    # elif quantization_config is None and quantize is not None:
+    #   quantization_config, attrs = infer_quantisation_config(self, quantize, **attrs)
+    attrs.update({'low_cpu_mem_usage': low_cpu_mem_usage})
 
     # parsing tokenizer and model kwargs, as the hierarchy is param pass > default
     model_attrs, tokenizer_attrs = flatten_attrs(**attrs)
@@ -230,6 +225,14 @@ class LLM(t.Generic[M, T]):
   def config(self)->LLMConfig:
     if self.__llm_config__ is None:self.__llm_config__=openllm.AutoConfig.infer_class_from_llm(self).model_construct_env(**self._model_attrs)
     return self.__llm_config__
+  @property
+  def quantization_config(self)->transformers.BitsAndBytesConfig|transformers.GPTQConfig|transformers.AwqConfig|None:
+    if self.__llm_quantization_config__ is None:
+      if self._quantization_config is not None:self.__llm_quantization_config__=self._quantization_config
+      elif self._quantise is not None:self.__llm_quantization_config__,self._model_attrs=infer_quantisation_config(self, self._quantise, **self._model_attrs)
+      else:raise ValueError("Either 'quantization_config' or 'quantise' must be specified.")
+    return self.__llm_quantization_config__
+  @property
   def save_pretrained(self) -> bentoml.Model: return openllm.import_model(self.config['start_name'], model_id=self.model_id, model_version=self._revision, backend=self.__llm_backend__, quantize=self._quantise)
   # NOTE: The section below defines a loose contract with langchain's LLM interface.
   @property
