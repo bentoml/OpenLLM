@@ -39,6 +39,7 @@ from openllm_core.utils import DEBUG
 from openllm_core.utils import LazyLoader
 from openllm_core.utils import ReprMixin
 from openllm_core.utils import apply
+from openllm_core.utils import check_bool_env
 from openllm_core.utils import codegen
 from openllm_core.utils import converter
 from openllm_core.utils import first_not_none
@@ -205,7 +206,7 @@ class LLM(t.Generic[M, T]):
   @property
   def import_kwargs(self)->tuple[dict[str, t.Any],dict[str, t.Any]]: return {'device_map': 'auto' if torch.cuda.is_available() and torch.cuda.device_count() > 1 else None, 'torch_dtype': torch.float16 if torch.cuda.is_available() else torch.float32}, {'padding_side': 'left', 'truncation_side': 'left'}
   @property
-  def trust_remote_code(self)->bool:return first_not_none(openllm_core.utils.check_bool_env('TRUST_REMOTE_CODE',False),default=self.config['trust_remote_code'])
+  def trust_remote_code(self)->bool:return first_not_none(check_bool_env('TRUST_REMOTE_CODE',False),default=self.config['trust_remote_code'])
   @property
   def runner_name(self)->str:return f"llm-{self.config['start_name']}-runner"
   @property
@@ -227,14 +228,14 @@ class LLM(t.Generic[M, T]):
       elif self._quantise is not None:self.__llm_quantization_config__,self._model_attrs=infer_quantisation_config(self, self._quantise, **self._model_attrs)
       else:raise ValueError("Either 'quantization_config' or 'quantise' must be specified.")
     return self.__llm_quantization_config__
-  def save_pretrained(self)->bentoml.Model: return openllm.import_model(self.config['start_name'], model_id=self.model_id, model_version=self._revision, backend=self.__llm_backend__, quantize=self._quantise)
+  def save_pretrained(self)->bentoml.Model:return openllm.import_model(self.config['start_name'], model_id=self.model_id, model_version=self._revision, backend=self.__llm_backend__, quantize=self._quantise)
   @property
-  def has_adapters(self)->bool: return self._adapter_map is not None
+  def has_adapters(self)->bool:return self._adapter_map is not None
   # NOTE: The section below defines a loose contract with langchain's LLM interface.
   @property
   def llm_type(self)->str:return normalise_model_name(self._model_id)
   @property
-  def identifying_params(self)->DictStrAny: return {'configuration': self.config.model_dump_json().decode(),'model_ids': orjson.dumps(self.config['model_ids']).decode(),'model_id': self.model_id}
+  def identifying_params(self)->DictStrAny:return {'configuration': self.config.model_dump_json().decode(),'model_ids': orjson.dumps(self.config['model_ids']).decode(),'model_id': self.model_id}
   @property
   def llm_parameters(self)->tuple[tuple[tuple[t.Any,...],DictStrAny],DictStrAny]:return (self._model_decls,self._model_attrs),self._tokenizer_attrs
   # yapf: enable
