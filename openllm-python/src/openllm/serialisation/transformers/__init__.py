@@ -7,7 +7,6 @@ import typing as t
 import attr
 import orjson
 
-from packaging.version import Version
 from huggingface_hub import snapshot_download
 from simple_di import Provide
 from simple_di import inject
@@ -157,9 +156,8 @@ def get(llm: openllm.LLM[M, T], auto_import: bool = False) -> bentoml.Model:
   try:
     model = bentoml.models.get(llm.tag)
     backend = model.info.labels['backend']
-    if Version(model.info.api_version) < Version('v2.1.0'): raise openllm.exceptions.OpenLLMException("Please run 'openllm prune -y --include-bentos' (model saved <2.1.0).")
     if backend != llm.__llm_backend__: raise openllm.exceptions.OpenLLMException(f"'{model.tag!s}' was saved with backend '{backend}', while loading with '{llm.__llm_backend__}'.")
-    _patch_correct_tag(llm, process_config(model.path, llm.trust_remote_code)[0], _revision=model.info.metadata['_revision'])
+    _patch_correct_tag(llm, process_config(model.path, llm.trust_remote_code)[0], _revision=t.cast(t.Optional[str], model.info.metadata.get('_revision')))
     return model
   except Exception as err:
     if auto_import: return import_model(llm, trust_remote_code=llm.trust_remote_code)
@@ -167,7 +165,7 @@ def get(llm: openllm.LLM[M, T], auto_import: bool = False) -> bentoml.Model:
 
 def load_model(llm: openllm.LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M:
   config, hub_attrs, attrs = process_config(llm.bentomodel.path, llm.trust_remote_code, **attrs)
-  _patch_correct_tag(llm, config, _revision=llm.bentomodel.info.metadata['_revision'])
+  _patch_correct_tag(llm, config, _revision=t.cast(t.Optional[str], llm.bentomodel.info.metadata.get('_revision')))
   auto_class = infer_autoclass_from_llm(llm, config)
   device_map: str | None = attrs.pop('device_map', 'auto' if torch.cuda.is_available() and torch.cuda.device_count() > 1 else None)
   if llm._quantise or llm._quantization_config: attrs['quantization_config'] = llm.quantization_config

@@ -510,7 +510,7 @@ def build_command(ctx: click.Context, /, model_name: str, model_id: str | None, 
     assert llm.bentomodel  # HACK: call it here to patch correct tag with revision and everything
     # FIX: This is a patch for _service_vars injection
     if 'OPENLLM_MODEL_ID' not in os.environ: os.environ['OPENLLM_MODEL_ID'] = llm.model_id
-    if 'OPENLLM_ADAPTER_MAP' not in os.environ: os.environ['OPENLLM_ADAPTER_MAP'] = orjson.dumps(llm.adapter_map).decode()
+    if 'OPENLLM_ADAPTER_MAP' not in os.environ: os.environ['OPENLLM_ADAPTER_MAP'] = orjson.dumps(None).decode()
 
     labels = dict(llm.identifying_params)
     labels.update({'_type': llm.llm_type, '_framework': env['backend_value']})
@@ -523,13 +523,13 @@ def build_command(ctx: click.Context, /, model_name: str, model_id: str | None, 
           llm_fs.writetext('Dockerfile.template', dockerfile_template.read())
         dockerfile_template_path = llm_fs.getsyspath('/Dockerfile.template')
 
-      adapter_map: dict[str, str | None] | None = None
+      adapter_map: dict[str, str] | None = None
       if adapter_id:
         if not build_ctx: ctx.fail("'build_ctx' is required when '--adapter-id' is passsed.")
         adapter_map = {}
         for v in adapter_id:
           _adapter_id, *adapter_name = v.rsplit(':', maxsplit=1)
-          name = adapter_name[0] if len(adapter_name) > 0 else None
+          name = adapter_name[0] if len(adapter_name) > 0 else 'default'
           try:
             resolve_user_filepath(_adapter_id, build_ctx)
             src_folder_name = os.path.basename(_adapter_id)
@@ -545,7 +545,7 @@ def build_command(ctx: click.Context, /, model_name: str, model_id: str | None, 
             adapter_map[_adapter_id] = name
         os.environ['OPENLLM_ADAPTER_MAP'] = orjson.dumps(adapter_map).decode()
 
-      _bento_version = first_not_none(bento_version, default=llm.tag.version)
+      _bento_version = first_not_none(bento_version, default=llm.bentomodel.tag.version)
       bento_tag = bentoml.Tag.from_taglike(f'{llm.llm_type}-service:{_bento_version}'.lower().strip())
       try:
         bento = bentoml.get(bento_tag)
