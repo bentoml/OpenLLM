@@ -950,24 +950,6 @@ agent = transformers.HfAgent("http://localhost:3000/hf/agent")  # URL that runs 
 agent.run("Is the following `text` positive or negative?", text="I don't like how this models is generate inputs")
 ```
 
-> [!IMPORTANT]
-> Only `starcoder` is currently supported with Agent integration.
-> The example above was also run with four T4s on EC2 `g4dn.12xlarge`
-
-If you want to use OpenLLM client to ask questions to the running agent, you can
-also do so:
-
-```python
-import openllm
-
-client = openllm.client.HTTPClient("http://localhost:3000")
-
-client.ask_agent(
-    task="Is the following `text` positive or negative?",
-    text="What are you thinking about?",
-)
-```
-
 <!-- hatch-fancy-pypi-readme interim stop -->
 
 ![Gif showing Agent integration](/.github/assets/agent.gif)
