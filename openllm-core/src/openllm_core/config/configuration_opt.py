@@ -3,6 +3,7 @@ import typing as t
 
 import openllm_core
 
+from openllm_core._conversation import SeparatorStyle
 from openllm_core.prompts import process_prompt
 from openllm_core.utils import dantic
 
@@ -18,13 +19,10 @@ Run a LLMServer for OPT model.
 \b
 ## Usage
 
-By default, this model will use the PyTorch model for inference. However, this model supports both Flax and Tensorflow.
+By default, this model will use the PyTorch model for inference. However, if vLLM exists, then it will use vLLM instead.
 
 \b
-- To use Flax, set the environment variable ``OPENLLM_BACKEND="flax"``
-
-\b
-- To use Tensorflow, set the environment variable ``OPENLLM_BACKEND="tf"``
+- To use vLLM, set the environment variable ``OPENLLM_BACKEND="vllm"``
 
 \b
 OPT Runner will use facebook/opt-2.7b as the default model. To change to any other OPT
@@ -52,6 +50,7 @@ class OPTConfig(openllm_core.LLMConfig):
       'url': 'https://huggingface.co/docs/transformers/model_doc/opt',
       'default_id': 'facebook/opt-1.3b',
       'architecture': 'OPTForCausalLM',
+      'conversation': dict(roles=('User', 'Assistant'), messages=[], sep_style=SeparatorStyle.ADD_COLON_SINGLE, sep='\n'),
       'model_ids': ['facebook/opt-125m', 'facebook/opt-350m', 'facebook/opt-1.3b', 'facebook/opt-2.7b', 'facebook/opt-6.7b', 'facebook/opt-66b'],
       'fine_tune_strategies': ({
           'adapter_type': 'lora',
@@ -67,7 +66,7 @@ class OPTConfig(openllm_core.LLMConfig):
   class GenerationConfig:
     top_k: int = 15
     temperature: float = 0.75
-    max_new_tokens: int = 1024
+    max_new_tokens: int = 256
     num_return_sequences: int = 1
 
   def sanitize_parameters(self,

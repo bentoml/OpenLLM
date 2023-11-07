@@ -15,7 +15,6 @@ import attr
 
 import openllm_core
 
-from bentoml._internal.utils import analytics as _internal_analytics
 from openllm_core._typing_compat import ParamSpec
 
 P = ParamSpec('P')
@@ -48,17 +47,19 @@ def silent(func: t.Callable[P, T]) -> t.Callable[P, T]:
 
 @silent
 def track(event_properties: attr.AttrsInstance) -> None:
+  from bentoml._internal.utils import analytics
   if do_not_track(): return
-  _internal_analytics.track(t.cast('_internal_analytics.schemas.EventMeta', event_properties))
+  analytics.track(t.cast('analytics.schemas.EventMeta', event_properties))
 
 @contextlib.contextmanager
 def set_bentoml_tracking() -> t.Generator[None, None, None]:
-  original_value = os.environ.pop(_internal_analytics.BENTOML_DO_NOT_TRACK, str(False))
+  from bentoml._internal.utils import analytics
+  original_value = os.environ.pop(analytics.BENTOML_DO_NOT_TRACK, str(False))
   try:
-    os.environ[_internal_analytics.BENTOML_DO_NOT_TRACK] = str(do_not_track())
+    os.environ[analytics.BENTOML_DO_NOT_TRACK] = str(do_not_track())
     yield
   finally:
-    os.environ[_internal_analytics.BENTOML_DO_NOT_TRACK] = original_value
+    os.environ[analytics.BENTOML_DO_NOT_TRACK] = original_value
 
 class EventMeta:
   @property

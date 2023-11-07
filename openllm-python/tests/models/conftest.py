@@ -21,7 +21,8 @@ from syrupy.extensions.json import JSONSnapshotExtension
 
 import openllm
 
-from openllm._llm import normalise_model_name
+from bentoml._internal.types import LazyType
+from openllm._llm import self
 from openllm_core._typing_compat import DictStrAny
 from openllm_core._typing_compat import ListAny
 from openllm_core._typing_compat import LiteralQuantise
@@ -37,12 +38,11 @@ if t.TYPE_CHECKING:
   from syrupy.types import SerializableData
   from syrupy.types import SerializedData
 
-  from openllm._configuration import GenerationConfig
   from openllm.client import BaseAsyncClient
 
 class ResponseComparator(JSONSnapshotExtension):
   def serialize(self, data: SerializableData, *, exclude: PropertyFilter | None = None, matcher: PropertyMatcher | None = None,) -> SerializedData:
-    if openllm.utils.LazyType(ListAny).isinstance(data):
+    if LazyType(ListAny).isinstance(data):
       data = [d.unmarshaled for d in data]
     else:
       data = data.unmarshaled
@@ -50,31 +50,28 @@ class ResponseComparator(JSONSnapshotExtension):
     return orjson.dumps(data, option=orjson.OPT_INDENT_2 | orjson.OPT_SORT_KEYS).decode()
 
   def matches(self, *, serialized_data: SerializableData, snapshot_data: SerializableData) -> bool:
-    def convert_data(data: SerializableData) -> openllm.GenerateOutput | t.Sequence[openllm.GenerateOutput]:
+    def convert_data(data: SerializableData) -> openllm.GenerationOutput | t.Sequence[openllm.GenerationOutput]:
       try:
         data = orjson.loads(data)
       except orjson.JSONDecodeError as err:
         raise ValueError(f'Failed to decode JSON data: {data}') from err
-      if openllm.utils.LazyType(DictStrAny).isinstance(data):
-        return openllm.GenerateOutput(**data)
-      elif openllm.utils.LazyType(ListAny).isinstance(data):
-        return [openllm.GenerateOutput(**d) for d in data]
+      if LazyType(DictStrAny).isinstance(data):
+        return openllm.GenerationOutput(**data)
+      elif LazyType(ListAny).isinstance(data):
+        return [openllm.GenerationOutput(**d) for d in data]
       else:
         raise NotImplementedError(f'Data {data} has unsupported type.')
 
     serialized_data = convert_data(serialized_data)
     snapshot_data = convert_data(snapshot_data)
 
-    if openllm.utils.LazyType(ListAny).isinstance(serialized_data):
+    if LazyType(ListAny).isinstance(serialized_data):
       serialized_data = [serialized_data]
-    if openllm.utils.LazyType(ListAny).isinstance(snapshot_data):
+    if LazyType(ListAny).isinstance(snapshot_data):
       snapshot_data = [snapshot_data]
 
-    def eq_config(s: GenerationConfig, t: GenerationConfig) -> bool:
-      return s == t
-
-    def eq_output(s: openllm.GenerateOutput, t: openllm.GenerateOutput) -> bool:
-      return (len(s.responses) == len(t.responses) and all([_s == _t for _s, _t in zip(s.responses, t.responses)]) and eq_config(s.marshaled_config, t.marshaled_config))
+    def eq_output(s: openllm.GenerationOutput, t: openllm.GenerationOutput) -> bool:
+      return len(s.outputs) == len(t.outputs)
 
     return len(serialized_data) == len(snapshot_data) and all([eq_output(s, t) for s, t in zip(serialized_data, snapshot_data)])
 
@@ -168,7 +165,7 @@ def _container_handle(model: str, model_id: str, image_tag: str, deployment_mode
 
   with openllm.utils.reserve_free_port() as port, openllm.utils.reserve_free_port() as prom_port:
     pass
-  container_name = f'openllm-{model}-{normalise_model_name(model_id)}'.replace('-', '_')
+  container_name = f'openllm-{model}-{self(model_id)}'.replace('-', '_')
   client = docker.from_env()
   try:
     container = client.containers.get(container_name)

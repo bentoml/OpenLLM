@@ -3,6 +3,7 @@ import typing as t
 
 import openllm_core
 
+from openllm_core._conversation import SeparatorStyle
 from openllm_core.prompts import PromptTemplate
 from openllm_core.prompts import process_prompt
 
@@ -15,13 +16,7 @@ Run a LLMServer for FLAN-T5 model.
 \b
 ## Usage
 
-By default, this model will use the PyTorch model for inference. However, this model supports both Flax and Tensorflow.
-
-\b
-- To use Flax, set the environment variable ``OPENLLM_BACKEND="flax"``
-
-\b
-- To use Tensorflow, set the environment variable ``OPENLLM_BACKEND="tf"``
+By default, this model will use the PyTorch model for inference.
 
 \b
 FLAN-T5 Runner will use google/flan-t5-large as the default model. To change to any other FLAN-T5
@@ -44,6 +39,9 @@ class FlanT5Config(openllm_core.LLMConfig):
       'url': 'https://huggingface.co/docs/transformers/model_doc/flan-t5',
       'architecture': 'T5ForConditionalGeneration',
       'model_type': 'seq2seq_lm',
+      'backend': ('pt',),
+      # NOTE: See https://www.philschmid.de/fine-tune-flan-t5. No specific template found, but seems to have the same dialogue style
+      'conversation': dict(system_message='', roles=('User', 'Assistant'), sep_style=SeparatorStyle.ADD_COLON_SINGLE, sep='\n'),
       'default_id': 'google/flan-t5-large',
       'model_ids': ['google/flan-t5-small', 'google/flan-t5-base', 'google/flan-t5-large', 'google/flan-t5-xl', 'google/flan-t5-xxl']
   }

@@ -1,22 +1,29 @@
-import openai, os
+from __future__ import annotations
+import os
 
-openai.api_base = os.getenv('OPENLLM_ENDPOINT', "http://localhost:3000") + '/v1'
-openai.api_key = "na"
+import openai
 
-print("Model:", openai.Model.list())
+openai.api_base = os.getenv('OPENLLM_ENDPOINT', 'http://localhost:3000') + '/v1'
+openai.api_key = 'na'
 
-response = openai.Completion.create(model="gpt-3.5-turbo-instruct", prompt="Write a tagline for an ice cream shop.", max_tokens=256)
+MODEL = os.getenv('MODEL', 'na')  # XXX: CHANGE THIS TO THE MODEL USED AT $OPENLLM_ENDPOINT
 
-print(response)
+print('\n' +'-'*50 + ' /v1/models ' + '-'*50 + "\n")
+print(openai.Model.list())
 
-for chunk in openai.Completion.create(model="gpt-3.5-turbo-instruct", prompt="Say this is a test", max_tokens=7, temperature=0, stream=True):
+print('\n' +'-'*50 + ' /v1/completions' + ' [stream=False] ' + '-'*50 + "\n")
+print(openai.Completion.create(model=MODEL, prompt='Write a tagline for an ice cream shop.', max_tokens=128))
+
+print('\n' +'-'*50 + ' /v1/completions' + ' [stream=True] ' + '-'*50 + "\n")
+for chunk in openai.Completion.create(model=MODEL, prompt='Say this is a test', max_tokens=12, temperature=0.8, stream=True, logprobs=2):
   print(chunk)
 
-completion = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=[{"role": "system", "content": "You are a helpful assistant."}, {"role": "user", "content": "Hello!"}])
+print('\n' +'-'*50 + ' /v1/chat/completions' + ' [stream=False] ' + '-'*50 + "\n")
+print(openai.ChatCompletion.create(model=MODEL, messages=[{'role': 'system', 'content': 'You are a helpful assistant.'}, {'role': 'user', 'content': 'Hello!'}], max_tokens=128, n=2, best_of=2))
 
-print(completion)
-
-completion = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=[{"role": "system", "content": "You are a helpful assistant."}, {"role": "user", "content": "Hello!"}], stream=True)
-
-for chunk in completion:
+print('\n' +'-'*50 + ' /v1/chat/completions' + ' [stream=True] ' + '-'*50 + "\n")
+for chunk in openai.ChatCompletion.create(model=MODEL,
+                                          messages=[{'role': 'system', 'content': 'You are a helpful assistant.'}, {'role': 'user', 'content': 'Hello!'}],
+                                          stream=True,
+                                          max_tokens=64):
   print(chunk)

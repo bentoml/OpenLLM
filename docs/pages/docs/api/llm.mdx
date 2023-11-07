@@ -1,0 +1,88 @@
+# `openllm.LLM`
+
+This page entails the API documentation for the `openllm.LLM` class.
+
+```python title="play.py"
+import openllm, asyncio, typing as t
+
+llm = openllm.LLM('meta-llama/Llama-2-13b-chat-hf')
+
+async def main(prompt:str, stream: bool=True,**kwargs: t.Any) -> str|t.Iterator[str]:
+  if not stream: return await llm.generate(prompt,**kwargs).outputs[0].text
+  async for output in llm.generate_iterator(prompt,**kwargs): yield output.text
+
+if __name__ == '__main__': asyncio.run(main('What is the meaning of life?'))
+```
+
+## `openllm.LLM.__init__()`
+
+Initialize the LLM with given pretrained model.
+
+> [!NOTE]
+> - *args to be passed to the model.
+> - **attrs will first be parsed to the AutoConfig, then the rest will be parsed to the `import_model`
+> - For any specific tokenizer kwargs, it should be prefixed with _tokenizer_*
+
+For custom pretrained path, it is recommended to pass in `model_version` alongside with the path
+to ensure that it won't be loaded multiple times.
+Internally, if a pretrained is given as a HuggingFace repository path, OpenLLM will use the `commit_hash`
+to generate the model version.
+
+For better consistency, we recommend users to also push the fine-tuned model to HuggingFace repository.
+
+If you need to overwrite the default ``import_model``, implement the following in your subclass:
+
+```python
+def import_model(
+    self,
+    *args: t.Any,
+    trust_remote_code: bool,
+    **attrs: t.Any,
+):
+    _, tokenizer_attrs = self.llm_parameters
+
+    return bentoml.transformers.save_model(
+        tag,
+        transformers.AutoModelForCausalLM.from_pretrained(self.model_id, device_map="auto", torch_dtype=torch.bfloat16, **attrs),
+        custom_objects={"tokenizer": transformers.AutoTokenizer.from_pretrained(self.model_id, padding_side="left", **tokenizer_attrs)},
+    )
+```
+
+If your import model doesn't require specific customisation, but you still want to control how the model is imported to `llm.model`,
+you can simply pass in `import_kwargs` at class level that will be then passed into The default `import_model` implementation.
+See ``openllm.DollyV2`` for example.
+
+```python
+dolly_v2_runner = openllm.Runner("dolly-v2", _tokenizer_padding_side="left", torch_dtype=torch.bfloat16, device_map="cuda")
+```
+
+Note: If you implement your own `import_model`, then `import_kwargs` will be the
+base kwargs. You can still override those via ``openllm.Runner``.
+
+Note that this tag will be generated based on `self.default_id`.
+passed from the __init__ constructor.
+
+``llm_post_init`` can also be implemented if you need to do any additional
+initialization after everything is setup.
+
+> [!NOTE]
+> If you need to implement a custom `load_model`, the following is an example from Falcon implementation:
+>
+> ```python
+> def load_model(self, tag: bentoml.Tag, *args: t.Any, **attrs: t.Any) -> t.Any:
+>     torch_dtype = attrs.pop("torch_dtype", torch.bfloat16)
+>     device_map = attrs.pop("device_map", "auto")
+>
+>     _ref = bentoml.transformers.get(tag)
+>
+>     model = bentoml.transformers.load_model(_ref, device_map=device_map, torch_dtype=torch_dtype, **attrs)
+>     return transformers.pipeline("text-generation", model=model, tokenizer=_ref.custom_objects["tokenizer"])
+> ```
+
+Args:
+    model_id: The pretrained model to use. Defaults to None. If None, 'self.default_id' will be used.
+    llm_config: The config to use for this LLM. Defaults to None. If not passed, OpenLLM
+                will use `config_class` to construct default configuration.
+    quantization_config: ``transformers.BitsAndBytesConfig`` configuration, or 'gptq' denoting this model to be loaded with GPTQ.
+    *args: The args to be passed to the model.
+    **attrs: The kwargs to be passed to the model.

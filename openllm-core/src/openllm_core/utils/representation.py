@@ -22,7 +22,7 @@ class ReprMixin:
   '''This can be overriden by base class using this mixin.'''
 
   def __repr__(self) -> str:
-    return f'{self.__class__.__name__} {orjson.dumps({k: utils.bentoml_cattr.unstructure(v) if attr.has(v) else v for k, v in self.__repr_args__()}, option=orjson.OPT_INDENT_2).decode()}'
+    return f'{self.__class__.__name__} {orjson.dumps({k: utils.converter.unstructure(v) if attr.has(v) else v for k, v in self.__repr_args__()}, option=orjson.OPT_INDENT_2).decode()}'
 
   '''The `__repr__` for any subclass of Mixin.
 

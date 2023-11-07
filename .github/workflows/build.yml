@@ -7,7 +7,6 @@ on:
     tags:
       - '*'
     paths:
-      - '.github/workflows/build-embedding.yml'
       - 'openllm-python/src/openllm/**'
       - 'openllm-core/src/openllm_core/**'
       - 'openllm-client/src/openllm_client/**'
@@ -15,7 +14,6 @@ on:
     branches:
       - 'main'
     paths:
-      - '.github/workflows/build-embedding.yml'
       - 'openllm-python/src/openllm/**'
       - 'openllm-core/src/openllm_core/**'
       - 'openllm-client/src/openllm_client/**'

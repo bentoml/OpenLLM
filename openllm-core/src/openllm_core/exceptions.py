@@ -1,10 +1,15 @@
 '''Base exceptions for OpenLLM. This extends BentoML exceptions.'''
 from __future__ import annotations
+from http import HTTPStatus
 
-import bentoml
+class OpenLLMException(Exception):
+  '''Base class for all OpenLLM exceptions. This shares similar interface with BentoMLException.'''
 
-class OpenLLMException(bentoml.exceptions.BentoMLException):
-  '''Base class for all OpenLLM exceptions. This extends BentoMLException.'''
+  error_code = HTTPStatus.INTERNAL_SERVER_ERROR
+
+  def __init__(self, message: str):
+    self.message = message
+    super().__init__(message)
 
 class GpuNotAvailableError(OpenLLMException):
   '''Raised when there is no GPU available in given system.'''

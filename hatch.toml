@@ -21,11 +21,7 @@ dependencies = [
 ]
 [envs.default.scripts]
 changelog = "towncrier build --version main --draft"
-check-stubs = [
-  "./tools/update-config-stubs.py",
-  "./tools/update-models-import.py",
-  "update-dummy",
-]
+check-stubs = ["./tools/update-config-stubs.py"]
 inplace-changelog = "towncrier build --version main --keep"
 quality = [
   "./tools/dependencies.py",
@@ -45,7 +41,6 @@ typing = [
   "- pre-commit run mypy {args:-a}",
   "- pre-commit run pyright {args:-a}",
 ]
-update-dummy = ["- ./tools/update-dummy.py", "./tools/update-dummy.py"]
 [envs.tests]
 dependencies = [
   "openllm-core @ {root:uri}/openllm-core",

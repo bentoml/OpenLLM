@@ -3,6 +3,7 @@ import typing as t
 
 import openllm_core
 
+from openllm_core._conversation import SeparatorStyle
 from openllm_core.prompts import PromptTemplate
 from openllm_core.prompts import process_prompt
 from openllm_core.utils import dantic
@@ -68,6 +69,8 @@ class MPTConfig(openllm_core.LLMConfig):
       'timeout': int(36e6),
       'requirements': ['triton', 'einops'],
       'architecture': 'MPTForCausalLM',
+      # NOTE: See https://huggingface.co/TheBloke/mpt-30B-chat-GGML/discussions/4
+      'conversation': dict(roles=('user', 'assistant'), messages=[], sep_style=SeparatorStyle.MPT, sep='\n'),
       'default_id': 'mosaicml/mpt-7b-instruct',
       'model_ids': [
           'mosaicml/mpt-7b', 'mosaicml/mpt-7b-instruct', 'mosaicml/mpt-7b-chat', 'mosaicml/mpt-7b-storywriter', 'mosaicml/mpt-30b', 'mosaicml/mpt-30b-instruct', 'mosaicml/mpt-30b-chat'

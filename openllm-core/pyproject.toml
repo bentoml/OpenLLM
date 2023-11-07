@@ -58,7 +58,6 @@ keywords = [
   "Transformers",
 ]
 dependencies = [
-  "bentoml>=1.1.2",
   "attrs>=23.1.0",
   "cattrs>=23.1.0",
   "orjson",
@@ -79,9 +78,17 @@ Homepage = "https://bentoml.com"
 Tracker = "https://github.com/bentoml/OpenLLM/issues"
 Twitter = "https://twitter.com/bentomlai"
 [project.optional-dependencies]
-full = ["openllm-core[vllm,fine-tune]"]
-vllm = ["vllm", "ray"]
-fine-tune = ["transformers[torch,tokenizers,accelerate]>=4.29.0", "peft>=0.4.0", "bitsandbytes", "datasets", "accelerate", "trl"]
+full = ["openllm-core[vllm,fine-tune,bentoml]"]
+vllm = ["vllm"]
+bentoml = ["bentoml>=1.1.2"]
+fine-tune = [
+  "transformers[torch,tokenizers,accelerate]>=4.34.0",
+  "peft>=0.4.0",
+  "bitsandbytes",
+  "datasets",
+  "accelerate",
+  "trl",
+]
 
 [tool.hatch.version]
 fallback-version = "0.0.0"
@@ -131,7 +138,7 @@ include = [
   "src/openllm_core/utils/__init__.py",
   "src/openllm_core/__init__.py",
   "src/openllm_core/_prompt.py",
-  "src/openllm_core/_schema.py",
+  "src/openllm_core/_schemas.py",
   "src/openllm_core/_strategies.py",
   "src/openllm_core/exceptions.py",
 ]

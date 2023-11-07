@@ -3,6 +3,7 @@ import typing as t
 
 import openllm_core
 
+from openllm_core._conversation import SeparatorStyle
 from openllm_core.prompts import PromptTemplate
 
 START_BAICHUAN_COMMAND_DOCSTRING = '''\
@@ -44,6 +45,11 @@ class BaichuanConfig(openllm_core.LLMConfig):
       'url': 'https://github.com/baichuan-inc/Baichuan-7B',
       'requirements': ['cpm-kernels', 'sentencepiece'],
       'architecture': 'BaiChuanForCausalLM',
+      # NOTE: See the following
+      # https://huggingface.co/baichuan-inc/Baichuan-13B-Chat/blob/19ef51ba5bad8935b03acd20ff04a269210983bc/modeling_baichuan.py#L555
+      # https://huggingface.co/baichuan-inc/Baichuan-13B-Chat/blob/main/generation_config.json
+      # https://github.com/baichuan-inc/Baichuan-13B/issues/25
+      'conversation': dict(roles=('<reserved_102>', '<reserved_103>'), sep_style=SeparatorStyle.NO_COLON_SINGLE, sep=''),
       'default_id': 'baichuan-inc/baichuan-7b',
       'model_ids': [
           'baichuan-inc/baichuan-7b', 'baichuan-inc/baichuan-13b-base', 'baichuan-inc/baichuan-13b-chat', 'fireballoon/baichuan-vicuna-chinese-7b', 'fireballoon/baichuan-vicuna-7b',

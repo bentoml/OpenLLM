@@ -39,7 +39,7 @@ classifiers = [
 ]
 dependencies = [
     "bentoml[io]>=1.1.2",
-    "transformers[torch,tokenizers]>=4.34.0",
+    "transformers[torch,tokenizers]>=4.35.0",
     "openllm-client",
     "openllm-core",
     "safetensors",
@@ -96,15 +96,16 @@ Tracker = "https://github.com/bentoml/OpenLLM/issues"
 Twitter = "https://twitter.com/bentomlai"
 
 [project.optional-dependencies]
-agents = ["transformers[agents]>=4.30", "diffusers", "soundfile"]
+agents = ["transformers[agents]>=4.34.0", "diffusers", "soundfile"]
 all = ["openllm[full]"]
+awq = ["autoawq"]
 baichuan = ["cpm-kernels", "sentencepiece"]
 chatglm = ["cpm-kernels", "sentencepiece"]
 falcon = ["einops", "xformers"]
-fine-tune = ["peft>=0.5.0", "bitsandbytes", "datasets", "accelerate", "trl"]
-flan-t5 = ["flax>=0.7", "jax", "jaxlib", "tensorflow", "keras"]
+fine-tune = ["peft>=0.6.0", "bitsandbytes", "datasets", "accelerate", "trl", "scipy"]
+flan-t5 = ["transformers>=4.34.0"]
 full = [
-    "openllm[agents,baichuan,chatglm,falcon,fine-tune,flan-t5,ggml,gptq,grpc,llama,mpt,openai,opt,playground,starcoder,vllm]",
+    "openllm[agents,awq,baichuan,chatglm,falcon,fine-tune,flan-t5,ggml,gptq,grpc,llama,mpt,openai,opt,playground,starcoder,vllm]",
 ]
 ggml = ["ctransformers"]
 gptq = ["auto-gptq[triton]>=0.4.2", "optimum>=1.12.0"]
@@ -112,7 +113,7 @@ grpc = ["openllm-client[grpc]"]
 llama = ["fairscale", "sentencepiece", "scipy"]
 mpt = ["triton", "einops"]
 openai = ["openai[embeddings]", "tiktoken"]
-opt = ["flax>=0.7", "jax", "jaxlib", "tensorflow", "keras"]
+opt = ["transformers>=4.34.0"]
 playground = ["jupyter", "notebook", "ipython", "jupytext", "nbformat"]
 starcoder = ["bitsandbytes"]
 vllm = ["vllm>=0.2.1post1", "ray"]

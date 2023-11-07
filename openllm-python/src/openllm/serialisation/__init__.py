@@ -1,6 +1,6 @@
 '''Serialisation utilities for OpenLLM.
 
-Currently supports transformers for PyTorch, Tensorflow and Flax.
+Currently supports transformers for PyTorch, and vLLM.
 
 Currently, GGML format is working in progress.
 '''
@@ -19,11 +19,15 @@ from openllm_core._typing_compat import ParamSpec
 from openllm_core._typing_compat import T
 
 if t.TYPE_CHECKING:
+  import transformers as _transformers
+
   import bentoml
 
   from . import constants as constants
   from . import ggml as ggml
   from . import transformers as transformers
+else:
+  _transformers = openllm.utils.LazyLoader('_transformers', globals(), 'transformers')
 
 P = ParamSpec('P')
 
@@ -33,12 +37,11 @@ def load_tokenizer(llm: openllm.LLM[t.Any, T], **tokenizer_attrs: t.Any) -> T:
   By default, it will try to find the bentomodel whether it is in store..
   If model is not found, it will raises a ``bentoml.exceptions.NotFound``.
   '''
-  from .transformers._helpers import infer_tokenizers_from_llm
   from .transformers._helpers import process_config
 
-  config, *_ = process_config(llm._bentomodel.path, llm.trust_remote_code)
+  config, *_ = process_config(llm.bentomodel.path, llm.trust_remote_code)
 
-  bentomodel_fs = fs.open_fs(llm._bentomodel.path)
+  bentomodel_fs = fs.open_fs(llm.bentomodel.path)
   if bentomodel_fs.isfile(CUSTOM_OBJECTS_FILENAME):
     with bentomodel_fs.open(CUSTOM_OBJECTS_FILENAME, 'rb') as cofile:
       try:
@@ -47,7 +50,7 @@ def load_tokenizer(llm: openllm.LLM[t.Any, T], **tokenizer_attrs: t.Any) -> T:
         raise openllm.exceptions.OpenLLMException("Bento model does not have tokenizer. Make sure to save the tokenizer within the model via 'custom_objects'. "
                                                   "For example: \"bentoml.transformers.save_model(..., custom_objects={'tokenizer': tokenizer})\"") from None
   else:
-    tokenizer = infer_tokenizers_from_llm(llm).from_pretrained(bentomodel_fs.getsyspath('/'), trust_remote_code=llm.trust_remote_code, **tokenizer_attrs)
+    tokenizer = _transformers.AutoTokenizer.from_pretrained(bentomodel_fs.getsyspath('/'), trust_remote_code=llm.trust_remote_code, **tokenizer_attrs)
 
   if tokenizer.pad_token_id is None:
     if config.pad_token_id is not None: tokenizer.pad_token_id = config.pad_token_id
@@ -66,7 +69,7 @@ def _make_dispatch_function(fn: str) -> _Caller[P]:
   def caller(llm: openllm.LLM[M, T], *args: P.args, **kwargs: P.kwargs) -> t.Any:
     """Generic function dispatch to correct serialisation submodules based on LLM runtime.
 
-    > [!NOTE] See 'openllm.serialisation.transformers' if 'llm.__llm_backend__ in ("pt", "tf", "flax", "vllm")'
+    > [!NOTE] See 'openllm.serialisation.transformers' if 'llm.__llm_backend__ in ("pt", "vllm")'
 
     > [!NOTE] See 'openllm.serialisation.ggml' if 'llm.__llm_backend__="ggml"'
     """

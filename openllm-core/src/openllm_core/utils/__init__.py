@@ -10,6 +10,8 @@ import hashlib
 import logging
 import logging.config
 import os
+import random
+import socket
 import sys
 import types
 import typing as t
@@ -17,33 +19,26 @@ import uuid
 
 from pathlib import Path
 
-from circus.exc import ConflictError
-
-import openllm_core
-
-from bentoml._internal.configuration import DEBUG_ENV_VAR as DEBUG_ENV_VAR
-from bentoml._internal.configuration import GRPC_DEBUG_ENV_VAR as _GRPC_DEBUG_ENV_VAR
-from bentoml._internal.configuration import QUIET_ENV_VAR as QUIET_ENV_VAR
-from bentoml._internal.configuration import get_debug_mode as _get_debug_mode
-from bentoml._internal.configuration import get_quiet_mode as _get_quiet_mode
-from bentoml._internal.configuration import set_quiet_mode as set_quiet_mode
-from bentoml._internal.models.model import ModelContext as _ModelContext
-from bentoml._internal.types import LazyType as LazyType
-from bentoml._internal.utils import LazyLoader as LazyLoader
-from bentoml._internal.utils import bentoml_cattr as bentoml_cattr
-from bentoml._internal.utils import calc_dir_size as calc_dir_size
-from bentoml._internal.utils import first_not_none as first_not_none
-from bentoml._internal.utils import pkg as pkg
-from bentoml._internal.utils import reserve_free_port as reserve_free_port
-from bentoml._internal.utils import resolve_user_filepath as resolve_user_filepath
-from openllm_core.utils.import_utils import ENV_VARS_TRUE_VALUES as ENV_VARS_TRUE_VALUES
-from openllm_core.utils.lazy import LazyModule as LazyModule
-from openllm_core.utils.lazy import VersionInfo as VersionInfo
+from . import pkg
+from .import_utils import ENV_VARS_TRUE_VALUES as ENV_VARS_TRUE_VALUES
+from .lazy import LazyLoader as LazyLoader
+from .lazy import LazyModule as LazyModule
+from .lazy import VersionInfo as VersionInfo
+from .._typing_compat import TypeGuard
+from .._typing_compat import overload
 
 if t.TYPE_CHECKING:
+  from bentoml._internal.models.model import ModelContext
+  from bentoml._internal.types import PathType
   from openllm_core._typing_compat import AnyCallable
 
+DEBUG_ENV_VAR = 'BENTOML_DEBUG'
+QUIET_ENV_VAR = 'BENTOML_QUIET'
+# https://github.com/grpc/grpc/blob/master/doc/environment_variables.md
+_GRPC_DEBUG_ENV_VAR = 'GRPC_VERBOSITY'
+
 logger = logging.getLogger(__name__)
+
 try:
   from typing import GenericAlias as _TypingGenericAlias  # type: ignore
 except ImportError:
@@ -55,6 +50,74 @@ else:
   _WithArgsTypes: t.Any = (t._GenericAlias, types.GenericAlias, types.UnionType)  # type: ignore
 
 DEV_DEBUG_VAR = 'OPENLLMDEVDEBUG'
+
+def is_async_callable(obj: t.Any) -> TypeGuard[t.Callable[..., t.Awaitable[t.Any]]]:
+  # Borrowed from starlette._utils
+  while isinstance(obj, functools.partial):
+    obj = obj.func
+  return asyncio.iscoroutinefunction(obj) or (callable(obj) and asyncio.iscoroutinefunction(obj.__call__))
+
+def resolve_user_filepath(filepath: str, ctx: str | None) -> str:
+  '''Resolve the abspath of a filepath provided by user. User provided file path can:
+    * be a relative path base on ctx dir
+    * contain leading "~" for HOME directory
+    * contain environment variables such as "$HOME/workspace"
+    '''
+  # Return if filepath exist after expanduser
+
+  _path = os.path.expanduser(os.path.expandvars(filepath))
+  if os.path.exists(_path):
+    return os.path.realpath(_path)
+
+  # Try finding file in ctx if provided
+  if ctx:
+    _path = os.path.expanduser(os.path.join(ctx, filepath))
+    if os.path.exists(_path):
+      return os.path.realpath(_path)
+
+  raise FileNotFoundError(f'file {filepath} not found')
+
+@contextlib.contextmanager
+def reserve_free_port(host: str = 'localhost', port: int | None = None, prefix: str | None = None, max_retry: int = 50, enable_so_reuseport: bool = False,) -> t.Iterator[int]:
+  '''
+    detect free port and reserve until exit the context
+    '''
+  import psutil
+
+  sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+  if enable_so_reuseport:
+    if psutil.WINDOWS:
+      sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    elif psutil.MACOS or psutil.FREEBSD:
+      sock.setsockopt(socket.SOL_SOCKET, 0x10000, 1)  # SO_REUSEPORT_LB
+    else:
+      sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+      if sock.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT) == 0:
+        raise RuntimeError('Failed to set SO_REUSEPORT.') from None
+  if prefix is not None:
+    prefix_num = int(prefix) * 10**(5 - len(prefix))
+    suffix_range = min(65535 - prefix_num, 10**(5 - len(prefix)))
+    for _ in range(max_retry):
+      suffix = random.randint(0, suffix_range)
+      port = int(f'{prefix_num + suffix}')
+      try:
+        sock.bind((host, port))
+        break
+      except OSError:
+        continue
+    else:
+      raise RuntimeError(f'Cannot find free port with prefix {prefix} after {max_retry} retries.') from None
+  elif port:
+    sock.bind((host, port))
+  else:
+    sock.bind((host, 0))
+  try:
+    yield sock.getsockname()[1]
+  finally:
+    sock.close()
+
+def calc_dir_size(path: PathType) -> int:
+  return sum(f.stat().st_size for f in Path(path).glob('**/*') if f.is_file())
 
 def set_debug_mode(enabled: bool, level: int = 1) -> None:
   # monkeypatch bentoml._internal.configuration.set_debug_mode to remove unused logs
@@ -98,7 +161,9 @@ def device_count() -> int:
   return len(available_devices())
 
 def check_bool_env(env: str, default: bool = True) -> bool:
-  return os.environ.get(env, str(default)).upper() in ENV_VARS_TRUE_VALUES
+  v = os.environ.get(env, str(default)).upper()
+  if v.isdigit(): return bool(int(v))  # special check for digits
+  return v in ENV_VARS_TRUE_VALUES
 
 # equivocal setattr to save one lookup per assignment
 _object_setattr = object.__setattr__
@@ -119,16 +184,27 @@ SHOW_CODEGEN: bool = DEBUG and (os.environ.get(DEV_DEBUG_VAR, str(0)).isdigit() 
 MYPY = False
 
 def get_debug_mode() -> bool:
-  return DEBUG or _get_debug_mode()
+  if not DEBUG and DEBUG_ENV_VAR in os.environ: return check_bool_env(DEBUG_ENV_VAR)
+  return DEBUG
 
 def get_quiet_mode() -> bool:
-  return not DEBUG and _get_quiet_mode()
+  if QUIET_ENV_VAR in os.environ: return check_bool_env(QUIET_ENV_VAR)
+  if DEBUG: return False
+  return False
+
+def set_quiet_mode(enabled: bool) -> None:
+  # do not log setting quiet mode
+  os.environ[QUIET_ENV_VAR] = str(enabled)
+  os.environ[_GRPC_DEBUG_ENV_VAR] = 'NONE'
 
 class ExceptionFilter(logging.Filter):
   def __init__(self, exclude_exceptions: list[type[Exception]] | None = None, **kwargs: t.Any):
-    '''A filter of all exception.'''
-    if exclude_exceptions is None: exclude_exceptions = [ConflictError]
-    if ConflictError not in exclude_exceptions: exclude_exceptions.append(ConflictError)
+    if exclude_exceptions is None: exclude_exceptions = []
+    try:
+      from circus.exc import ConflictError
+      if ConflictError not in exclude_exceptions: exclude_exceptions.append(ConflictError)
+    except ImportError:
+      pass
     super(ExceptionFilter, self).__init__(**kwargs)
     self.EXCLUDE_EXCEPTIONS = exclude_exceptions
 
@@ -281,7 +357,16 @@ def in_docker() -> bool:
   '''
   return _dockerenv.exists() or _text_in_file('docker', _cgroup)
 
-T, K = t.TypeVar('T'), t.TypeVar('K')
+T = t.TypeVar('T')
+K = t.TypeVar('K')
+
+# yapf: disable
+@overload
+def first_not_none(*args: T | None, default: T) -> T: ...
+@overload
+def first_not_none(*args: T | None) -> T | None: ...
+def first_not_none(*args: T | None, default: None | T = None) -> T | None: return next((arg for arg in args if arg is not None), default)
+# yapf: enable
 
 def resolve_filepath(path: str, ctx: str | None = None) -> str:
   '''Resolve a file path to an absolute path, expand user and environment variables.'''
@@ -293,19 +378,17 @@ def resolve_filepath(path: str, ctx: str | None = None) -> str:
 def validate_is_path(maybe_path: str) -> bool:
   return os.path.exists(os.path.dirname(resolve_filepath(maybe_path)))
 
-def generate_context(framework_name: str) -> _ModelContext:
+def generate_context(framework_name: str) -> ModelContext:
+  import openllm_core
+
+  from bentoml._internal.models.model import ModelContext
   framework_versions = {'transformers': pkg.get_pkg_version('transformers')}
   if openllm_core.utils.is_torch_available(): framework_versions['torch'] = pkg.get_pkg_version('torch')
-  if openllm_core.utils.is_tf_available():
-    from bentoml._internal.frameworks.utils.tensorflow import get_tf_version
-    framework_versions['tensorflow'] = get_tf_version()
-  if openllm_core.utils.is_flax_available():
-    framework_versions.update({'flax': pkg.get_pkg_version('flax'), 'jax': pkg.get_pkg_version('jax'), 'jaxlib': pkg.get_pkg_version('jaxlib')})
-  return _ModelContext(framework_name=framework_name, framework_versions=framework_versions)
+  return ModelContext(framework_name=framework_name, framework_versions=framework_versions)
 
 _TOKENIZER_PREFIX = '_tokenizer_'
 
-def normalize_attrs_to_model_tokenizer_pair(**attrs: t.Any) -> tuple[dict[str, t.Any], dict[str, t.Any]]:
+def flatten_attrs(**attrs: t.Any) -> tuple[dict[str, t.Any], dict[str, t.Any]]:
   '''Normalize the given attrs to a model and tokenizer kwargs accordingly.'''
   tokenizer_attrs = {k[len(_TOKENIZER_PREFIX):]: v for k, v in attrs.items() if k.startswith(_TOKENIZER_PREFIX)}
   for k in tuple(attrs.keys()):
@@ -320,18 +403,20 @@ _whitelist_modules = {'pkg'}
 # XXX: define all classes, functions import above this line
 # since _extras will be the locals() import from this file.
 _extras: dict[str, t.Any] = {k: v for k, v in locals().items() if k in _whitelist_modules or (not isinstance(v, types.ModuleType) and not k.startswith('_'))}
-_extras['__openllm_migration__'] = {'ModelEnv': 'EnvVarMixin'}
+_extras['__openllm_migration__'] = {'ModelEnv': 'EnvVarMixin', 'bentoml_cattr': 'converter'}
 _import_structure: dict[str, list[str]] = {
     'analytics': [],
     'codegen': [],
     'dantic': [],
     'lazy': [],
+    'pkg': [],
     'representation': ['ReprMixin'],
+    'serde': ['converter'],
     'import_utils': [
-        'OPTIONAL_DEPENDENCIES', 'DummyMetaclass', 'EnvVarMixin', 'require_backends', 'is_cpm_kernels_available', 'is_einops_available', 'is_flax_available', 'is_tf_available',
-        'is_vllm_available', 'is_torch_available', 'is_bitsandbytes_available', 'is_peft_available', 'is_datasets_available', 'is_jupyter_available', 'is_jupytext_available',
-        'is_notebook_available', 'is_triton_available', 'is_autogptq_available', 'is_sentencepiece_available', 'is_xformers_available', 'is_fairscale_available', 'is_grpc_available',
-        'is_grpc_health_available', 'is_transformers_available', 'is_optimum_supports_gptq',
+        'OPTIONAL_DEPENDENCIES', 'EnvVarMixin', 'is_cpm_kernels_available', 'is_einops_available', 'is_vllm_available', 'is_torch_available', 'is_bitsandbytes_available', 'is_peft_available',
+        'is_datasets_available', 'is_jupyter_available', 'is_jupytext_available', 'is_notebook_available', 'is_triton_available', 'is_autogptq_available', 'is_sentencepiece_available',
+        'is_xformers_available', 'is_fairscale_available', 'is_grpc_available', 'is_grpc_health_available', 'is_transformers_available', 'is_optimum_supports_gptq', 'is_autoawq_available',
+        'is_bentoml_available'
     ]
 }
 
@@ -340,16 +425,17 @@ if t.TYPE_CHECKING:
   from . import analytics as analytics
   from . import codegen as codegen
   from . import dantic as dantic
+  from . import serde as serde
   from .import_utils import OPTIONAL_DEPENDENCIES as OPTIONAL_DEPENDENCIES
-  from .import_utils import DummyMetaclass as DummyMetaclass
   from .import_utils import EnvVarMixin as EnvVarMixin
+  from .import_utils import is_autoawq_available as is_autoawq_available
   from .import_utils import is_autogptq_available as is_autogptq_available
+  from .import_utils import is_bentoml_available as is_bentoml_available
   from .import_utils import is_bitsandbytes_available as is_bitsandbytes_available
   from .import_utils import is_cpm_kernels_available as is_cpm_kernels_available
   from .import_utils import is_datasets_available as is_datasets_available
   from .import_utils import is_einops_available as is_einops_available
   from .import_utils import is_fairscale_available as is_fairscale_available
-  from .import_utils import is_flax_available as is_flax_available
   from .import_utils import is_grpc_available as is_grpc_available
   from .import_utils import is_grpc_health_available as is_grpc_health_available
   from .import_utils import is_jupyter_available as is_jupyter_available
@@ -358,14 +444,13 @@ if t.TYPE_CHECKING:
   from .import_utils import is_optimum_supports_gptq as is_optimum_supports_gptq
   from .import_utils import is_peft_available as is_peft_available
   from .import_utils import is_sentencepiece_available as is_sentencepiece_available
-  from .import_utils import is_tf_available as is_tf_available
   from .import_utils import is_torch_available as is_torch_available
   from .import_utils import is_transformers_available as is_transformers_available
   from .import_utils import is_triton_available as is_triton_available
   from .import_utils import is_vllm_available as is_vllm_available
   from .import_utils import is_xformers_available as is_xformers_available
-  from .import_utils import require_backends as require_backends
   from .representation import ReprMixin as ReprMixin
+  from .serde import converter as converter
 
 __lazy = LazyModule(__name__, globals()['__file__'], _import_structure, extra_objects=_extras)
 __all__ = __lazy.__all__

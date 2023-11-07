@@ -422,20 +422,6 @@ You can specify any of the following Flan-T5 models by using `--model-id`.
   openllm start flan-t5 --model-id google/flan-t5-large --backend pt
   ```
 
-- Flax:
-
-  ```bash
-  pip install "openllm[flan-t5, flax]"
-  openllm start flan-t5 --model-id google/flan-t5-large --backend flax
-  ```
-
-- TensorFlow:
-
-  ```bash
-  pip install "openllm[flan-t5, tf]"
-  openllm start flan-t5 --model-id google/flan-t5-large --backend tf
-  ```
-
 > [!NOTE]
 > Currently when using the vLLM backend, quantization and adapters are not supported.
 
@@ -588,20 +574,6 @@ You can specify any of the following OPT models by using `--model-id`.
   ```bash
   pip install "openllm[opt, vllm]"
   openllm start opt --model-id facebook/opt-2.7b --backend vllm
-  ```
-
-- TensorFlow:
-
-  ```bash
-  pip install "openllm[opt, tf]"
-  openllm start opt --model-id facebook/opt-2.7b --backend tf
-  ```
-
-- Flax:
-
-  ```bash
-  pip install "openllm[opt, flax]"
-  openllm start opt --model-id facebook/opt-2.7b --backend flax
   ```
 
 > [!NOTE]
@@ -783,7 +755,7 @@ For more information, see [Resource scheduling strategy](https://docs.bentoml.or
 
 ## 🛞 Runtime implementations (Experimental)
 
-Different LLMs may support multiple runtime implementations. For instance, they might use frameworks and libraries such as PyTorch (`pt`), TensorFlow (`tf`), Flax (`flax`), and vLLM (`vllm`).
+Different LLMs may support multiple runtime implementations. Models that have `vLLM` (`vllm`) supports will use vLLM by default, otherwise it fallback to use `PyTorch` (`pt`).
 
 To specify a specific runtime for your chosen model, use the `--backend` option. For example:
 
@@ -793,9 +765,8 @@ openllm start llama --model-id meta-llama/Llama-2-7b-chat-hf --backend vllm
 
 Note:
 
-1. For GPU support on Flax, refers to [Jax's installation](https://github.com/google/jax#pip-installation-gpu-cuda-installed-via-pip-easier) to make sure that you have Jax support for the corresponding CUDA version.
-2. To use the vLLM backend, you need a GPU with at least the Ampere architecture or newer and CUDA version 11.8.
-3. To see the backend options of each model supported by OpenLLM, see the Supported models section or run `openllm models`.
+1. To use the vLLM backend, you need a GPU with at least the Ampere architecture or newer and CUDA version 11.8.
+2. To see the backend options of each model supported by OpenLLM, see the Supported models section or run `openllm models`.
 
 ## 📐 Quantization
 

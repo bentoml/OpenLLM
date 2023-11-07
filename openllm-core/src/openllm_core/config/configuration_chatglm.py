@@ -3,6 +3,7 @@ import typing as t
 
 import openllm_core
 
+from openllm_core._conversation import SeparatorStyle
 from openllm_core.utils import dantic
 
 if t.TYPE_CHECKING:
@@ -47,9 +48,11 @@ class ChatGLMConfig(openllm_core.LLMConfig):
       'name_type': 'lowercase',
       'trust_remote_code': True,
       'timeout': 3600000,
+      'backend': ('pt',),
       'url': 'https://github.com/THUDM/ChatGLM-6B',
+      'conversation': dict(roles=('问', '答'), sep_style=SeparatorStyle.CHATGLM, sep='\n'),
       'requirements': ['cpm-kernels', 'sentencepiece'],
-      'architecture': 'ChatGLMForConditionalGeneration',
+      'architecture': 'ChatGLMModel',
       'default_id': 'thudm/chatglm-6b',
       'model_ids': ['thudm/chatglm-6b', 'thudm/chatglm-6b-int8', 'thudm/chatglm-6b-int4', 'thudm/chatglm2-6b', 'thudm/chatglm2-6b-int4']
   }

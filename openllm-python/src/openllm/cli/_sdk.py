@@ -16,6 +16,7 @@ import openllm_core
 
 from bentoml._internal.configuration.containers import BentoMLContainer
 from openllm.exceptions import OpenLLMException
+from openllm_core.utils import is_vllm_available
 
 from . import termui
 from ._factory import start_command_factory
@@ -88,9 +89,7 @@ def _start(model_name: str,
   """
   from .entrypoint import start_command
   from .entrypoint import start_grpc_command
-  llm_config = openllm.AutoConfig.for_model(model_name)
-  _ModelEnv = openllm_core.utils.EnvVarMixin(model_name, backend=openllm_core.utils.first_not_none(backend, default=llm_config.default_backend()), model_id=model_id, quantize=quantize)
-  os.environ[_ModelEnv.backend] = _ModelEnv['backend_value']
+  os.environ['OPENLLM_BACKEND'] = openllm_core.utils.first_not_none(backend, default='vllm' if is_vllm_available() else 'pt')
 
   args: list[str] = []
   if model_id: args.extend(['--model-id', model_id])
@@ -218,7 +217,7 @@ def _import_model(model_name: str,
                   *,
                   model_id: str | None = None,
                   model_version: str | None = None,
-                  backend: LiteralBackend = 'pt',
+                  backend: LiteralBackend | None = None,
                   quantize: LiteralQuantise | None = None,
                   serialisation: t.Literal['legacy', 'safetensors'] | None = None,
                   additional_args: t.Sequence[str] | None = None) -> bentoml.Model:
@@ -254,7 +253,8 @@ def _import_model(model_name: str,
   from .entrypoint import import_command
   config = openllm.AutoConfig.for_model(model_name)
   _serialisation = openllm_core.utils.first_not_none(serialisation, default=config['serialisation'])
-  args = [model_name, '--backend', backend, '--machine', '--serialisation', _serialisation]
+  args = [model_name, '--machine', '--serialisation', _serialisation]
+  if backend is not None: args.extend(['--backend', backend])
   if model_id is not None: args.append(model_id)
   if model_version is not None: args.extend(['--model-version', str(model_version)])
   if additional_args is not None: args.extend(additional_args)

@@ -24,7 +24,7 @@ actions_xfail = functools.partial(pytest.mark.xfail,
 def test_general_build_with_internal_testing():
   bento_store = BentoMLContainer.bento_store.get()
 
-  llm = openllm.AutoLLM.for_model('flan-t5', model_id=HF_INTERNAL_T5_TESTING)
+  llm = openllm.LLM(model_id=HF_INTERNAL_T5_TESTING, serialisation='legacy')
   bento = openllm.build('flan-t5', model_id=HF_INTERNAL_T5_TESTING)
 
   assert llm.llm_type == bento.info.labels['_type']
@@ -36,7 +36,8 @@ def test_general_build_with_internal_testing():
 @actions_xfail
 def test_general_build_from_local(tmp_path_factory: pytest.TempPathFactory):
   local_path = tmp_path_factory.mktemp('local_t5')
-  llm = openllm.AutoLLM.for_model('flan-t5', model_id=HF_INTERNAL_T5_TESTING, ensure_available=True)
+  llm = openllm.LLM(model_id=HF_INTERNAL_T5_TESTING, serialisation='legacy')
+  llm.save_pretrained()
 
   if isinstance(llm.model, transformers.Pipeline):
     llm.model.save_pretrained(str(local_path))

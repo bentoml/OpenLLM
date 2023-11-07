@@ -111,15 +111,7 @@ def prepare_for_int4_training(model_id: str,
                               ) -> tuple[peft.PeftModel, transformers.LlamaTokenizerFast]:
   from peft.tuners.lora import LoraLayer
 
-  llm = openllm.AutoLLM.for_model("llama",
-                                  model_id=model_id,
-                                  model_version=model_version,
-                                  ensure_available=True,
-                                  quantize="int4",
-                                  bnb_4bit_compute_dtype=torch.bfloat16,
-                                  use_cache=not gradient_checkpointing,
-                                  device_map="auto",
-                                  )
+  llm = openllm.LLM(model_id, revision=model_version, quantize="int4", bnb_4bit_compute_dtype=torch.bfloat16, use_cache=not gradient_checkpointing, device_map="auto")
   print("Model summary:", llm.model)
 
   # get lora target modules
@@ -185,8 +177,7 @@ def train_loop(model_args: ModelArguments, training_args: TrainingArguments):
   trainer = transformers.Trainer(model=model,
                                  args=dataclasses.replace(transformers.TrainingArguments(training_args.output_dir), **dataclasses.asdict(training_args)),
                                  train_dataset=datasets,
-                                 data_collator=transformers.default_data_collator,
-                                 )
+                                 data_collator=transformers.default_data_collator)
 
   trainer.train()
 

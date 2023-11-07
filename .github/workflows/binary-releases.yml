@@ -148,7 +148,7 @@ jobs:
       - name: Install Hatch
         run: pip install -U hatch
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@7270583354e7defc2a2693a5656e481365434ba2 # ratchet:dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@d76c2a93c593483c9892fd8d2538734f73ed8588 # ratchet:dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.job.target }}
       - name: Set up cross compiling

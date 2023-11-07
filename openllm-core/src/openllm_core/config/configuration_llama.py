@@ -3,6 +3,7 @@ import typing as t
 
 import openllm_core
 
+from openllm_core._conversation import SeparatorStyle
 from openllm_core.prompts import PromptTemplate
 from openllm_core.utils import dantic
 
@@ -69,19 +70,17 @@ class LlamaConfig(openllm_core.LLMConfig):
   Refer to [Llama's model card](https://huggingface.co/docs/transformers/main/model_doc/llama)
   for more information.
   """
-  use_llama2_prompt: bool = dantic.Field(True, description='Whether to use the prompt format for Llama 2. Disable this when working with Llama 1.')
+  use_llama2_prompt: bool = dantic.Field(False, description='Whether to use the prompt format for Llama 2. Disable this when working with Llama 1.')
   __config__ = {
       'name_type': 'lowercase',
       'url': 'https://github.com/facebookresearch/llama',
-      'default_backend': {
-          'cpu': 'pt',
-          'nvidia.com/gpu': 'pt'
-      },
       'architecture': 'LlamaForCausalLM',
       'requirements': ['fairscale', 'sentencepiece', 'scipy'],
       'tokenizer_class': 'LlamaTokenizerFast',
       'default_id': 'NousResearch/llama-2-7b-hf',
       'serialisation': 'safetensors',
+      # NOTE: see https://huggingface.co/blog/codellama#conversational-instructions
+      'conversation': dict(system_template='<s>[INST] <<SYS>>\n{system_message}\n<</SYS>>\n\n', roles=('[INST]', '[/INST]'), sep_style=SeparatorStyle.LLAMA, sep=' ', sep2=' </s><s>'),
       'model_ids': [
           'meta-llama/Llama-2-70b-chat-hf', 'meta-llama/Llama-2-13b-chat-hf', 'meta-llama/Llama-2-7b-chat-hf', 'meta-llama/Llama-2-70b-hf', 'meta-llama/Llama-2-13b-hf',
           'meta-llama/Llama-2-7b-hf', 'NousResearch/llama-2-70b-chat-hf', 'NousResearch/llama-2-13b-chat-hf', 'NousResearch/llama-2-7b-chat-hf', 'NousResearch/llama-2-70b-hf',
