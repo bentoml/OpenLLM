@@ -856,29 +856,23 @@ integrate with other powerful tools easily. We currently offer integration with
 
 ### BentoML
 
-OpenLLM models can be integrated as a
+OpenLLM LLM can be integrated as a
 [Runner](https://docs.bentoml.com/en/latest/concepts/runner.html) in your
-BentoML service. These runners have a `generate` method that takes a string as a
-prompt and returns a corresponding output string. This will allow you to plug
-and play any OpenLLM models with your existing ML workflow.
+BentoML service. Simply call `await llm.generate` to generate text. Note that
+`llm.generate` uses `runner` under the hood:
 
 ```python
 import bentoml
 import openllm
 
-model = "opt"
+llm = openllm.LLM('facebook/opt-2.7b')
 
-llm_config = openllm.AutoConfig.for_model(model)
-llm_runner = openllm.Runner(model, llm_config=llm_config)
+svc = bentoml.Service(name="llm-opt-service", runners=[llm.runner])
 
-svc = bentoml.Service(
-    name=f"llm-opt-service", runners=[llm_runner]
-)
-
-@svc.api(input=Text(), output=Text())
+@svc.api(input=bentoml.io.Text(), output=bentoml.io.Text())
 async def prompt(input_text: str) -> str:
-    answer = await llm_runner.generate(input_text)
-    return answer
+  generation = await llm.generate(input_text)
+  return generation.outputs[0].text
 ```
 
 ### [LangChain](https://python.langchain.com/docs/ecosystem/integrations/openllm)
