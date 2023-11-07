@@ -20,9 +20,9 @@ def gen_llm(model_name: str, model_id: str | None = None, **attrs: t.Any) -> Ope
   lc_llm.runner.download_model()
   return lc_llm
 
-llm = gen_llm("llama", model_id="TheBloke/Llama-2-13B-chat-GPTQ", quantize="gptq")
+llm = gen_llm('llama', model_id='TheBloke/Llama-2-13B-chat-GPTQ', quantize='gptq')
 
-prompt = PromptTemplate(input_variables=["industry", "product_name", "keywords"],
+prompt = PromptTemplate(input_variables=['industry', 'product_name', 'keywords'],
                         template="""
 You are a Facebook Ads Copywriter with a strong background in persuasive
 writing and marketing. You craft compelling copy that appeals to the target
@@ -38,13 +38,13 @@ Facebook Ads copy:
     """)
 chain = LLMChain(llm=llm, prompt=prompt)
 
-svc = bentoml.Service("fb-ads-copy", runners=[llm.runner])
+svc = bentoml.Service('fb-ads-copy', runners=[llm.runner])
 
-SAMPLE_INPUT = Query(industry="SAAS",
-                     product_name="BentoML",
-                     keywords=["open source", "developer tool", "AI application platform", "serverless", "cost-efficient"],
+SAMPLE_INPUT = Query(industry='SAAS',
+                     product_name='BentoML',
+                     keywords=['open source', 'developer tool', 'AI application platform', 'serverless', 'cost-efficient'],
                      llm_config=llm.runner.config.model_dump())
 
 @svc.api(input=JSON.from_sample(sample=SAMPLE_INPUT), output=Text())
 def generate(query: Query):
-  return chain.run({"industry": query.industry, "product_name": query.product_name, "keywords": ", ".join(query.keywords)})
+  return chain.run({'industry': query.industry, 'product_name': query.product_name, 'keywords': ', '.join(query.keywords)})
