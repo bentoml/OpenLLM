@@ -167,6 +167,54 @@ openllm start opt --model-id facebook/opt-2.7b
 OpenLLM currently supports the following models. By default, OpenLLM doesn't include dependencies to run all models. The extra model-specific dependencies can be installed with the instructions below.
 
 <details>
+<summary>Mistral</summary>
+
+### Quickstart
+
+Run the following commands to quickly spin up a Llama 2 server and send a request to it.
+
+```bash
+openllm start mistral --model-id HuggingFaceH4/zephyr-7b-beta
+export OPENLLM_ENDPOINT=http://localhost:3000
+openllm query 'What are large language models?'
+```
+
+> [!NOTE]
+> Note that any Mistral variants can be deployed with OpenLLM.
+> Visit the [Hugging Face Model Hub](https://huggingface.co/models?sort=trending&search=mistral) to see more Mistral compatible models.
+
+### Supported models
+
+You can specify any of the following Mistral models by using `--model-id`.
+
+- [mistralai/Mistral-7B-v0.1](https://huggingface.co/mistralai/Mistral-7B-v0.1)
+- [mistralai/Mistral-7B-Instruct-v0.1](https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.1)
+- [amazon/MistralLite](https://huggingface.co/amazon/MistralLite)
+- [HuggingFaceH4/zephyr-7b-beta](https://huggingface.co/HuggingFaceH4/zephyr-7b-beta)
+- [HuggingFaceH4/zephyr-7b-alpha](https://huggingface.co/HuggingFaceH4/zephyr-7b-alpha)
+- Any other models that strictly follows the [MistralForCausalLM](https://huggingface.co/docs/transformers/main/en/model_doc/mistral#transformers.MistralForCausalLM) architecture
+
+### Supported backends
+
+- PyTorch (Default):
+
+  ```bash
+  openllm start mistral --model-id HuggingFaceH4/zephyr-7b-beta --backend pt
+  ```
+
+- vLLM (Recommended):
+
+  ```bash
+  pip install "openllm[vllm]"
+  openllm start mistral --model-id HuggingFaceH4/zephyr-7b-beta --backend vllm
+  ```
+
+> [!NOTE]
+> Currently when using the vLLM backend, quantization and adapters are not supported.
+
+</details>
+
+<details>
 <summary>Llama</summary>
 
 ### Installation
