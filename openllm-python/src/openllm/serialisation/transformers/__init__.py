@@ -49,9 +49,13 @@ _object_setattr = object.__setattr__
 def _patch_correct_tag(llm: openllm.LLM[M, T], config: transformers.PretrainedConfig, _revision: str | None = None) -> None:
   # NOTE: The following won't hit during local since we generated a correct version based on local path hash It will only hit if we use model from HF Hub
   if not llm._local:
-    if _revision is None: _revision = get_hash(config)
-    if llm._revision is None: _object_setattr(llm, '_revision', _revision)  # HACK: This copies the correct revision into llm._model_version
+    try:
+      if _revision is None: _revision = get_hash(config)
+    except ValueError:
+      pass
     if llm._tag.version is None: _object_setattr(llm, '_tag', attr.evolve(llm.tag, version=_revision))  # HACK: This copies the correct revision into llm.tag
+    else: _revision = llm._tag.version
+    if llm._revision is None: _object_setattr(llm, '_revision', _revision)  # HACK: This copies the correct revision into llm._model_version
 
 @inject
 def import_model(llm: openllm.LLM[M, T], *decls: t.Any, trust_remote_code: bool, _model_store: ModelStore = Provide[BentoMLContainer.model_store], **attrs: t.Any) -> bentoml.Model:
