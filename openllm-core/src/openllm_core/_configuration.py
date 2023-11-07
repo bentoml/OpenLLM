@@ -1464,7 +1464,7 @@ class LLMConfig(_ConfigAttr):
              top_k=first_not_none(request.top_k, self['top_k']),
              best_of=first_not_none(request.best_of, self['best_of']),
              n=first_not_none(request.n, default=self['n']),
-             stop=first_not_none(request.stop, default=self['stop']),
+             stop=first_not_none(request.stop, default=None),
              max_new_tokens=first_not_none(request.max_tokens, default=self['max_new_tokens']),
              presence_penalty=first_not_none(request.presence_penalty, default=self['presence_penalty']),
              frequency_penalty=first_not_none(request.frequency_penalty, default=self['frequency_penalty']))
