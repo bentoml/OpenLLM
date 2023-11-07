@@ -1511,31 +1511,6 @@ class LLMConfig(_ConfigAttr):
   def peft_task_type(cls) -> str:
     return _PEFT_TASK_TYPE_TARGET_MAPPING[cls.__openllm_model_type__]
 
-  def sanitize_parameters(self, prompt: str, **attrs: t.Any) -> tuple[str, DictStrAny, DictStrAny]:
-    '''This handler will sanitize all attrs and setup prompt text.
-
-    It takes a prompt that is given by the user, attrs that can be parsed with the prompt.
-
-    Returns a tuple of three items:
-    - The attributes dictionary that can be passed into LLMConfig to generate a GenerationConfig
-    - The attributes dictionary that will be passed into `self.postprocess_generate`.
-
-    `openllm.LLM` also has a sanitize_parameters that will just call this method.
-    '''
-    return prompt, attrs, attrs
-
-  def postprocess_generate(self, prompt: str, generation_result: t.Any, **attrs: t.Any) -> t.Any:
-    '''This handler will postprocess generation results from LLM.generate and then output nicely formatted results (if the LLM decide to do so.).
-
-    You can customize how the output of the LLM looks with this hook. By default, it is a simple echo.
-
-    > [!NOTE]
-    > This will be used from the client side.
-
-    `openllm.LLM` also has a postprocess_generate that will just call this method.
-    '''
-    return generation_result
-
 converter.register_unstructure_hook_factory(lambda cls: lenient_issubclass(cls, LLMConfig),
                                             lambda cls: make_dict_unstructure_fn(cls, converter, _cattrs_omit_if_default=False, _cattrs_use_linecache=True))
 

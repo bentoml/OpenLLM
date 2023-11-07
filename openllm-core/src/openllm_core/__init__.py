@@ -22,6 +22,7 @@ from .config import START_MPT_COMMAND_DOCSTRING as START_MPT_COMMAND_DOCSTRING
 from .config import START_OPT_COMMAND_DOCSTRING as START_OPT_COMMAND_DOCSTRING
 from .config import START_STABLELM_COMMAND_DOCSTRING as START_STABLELM_COMMAND_DOCSTRING
 from .config import START_STARCODER_COMMAND_DOCSTRING as START_STARCODER_COMMAND_DOCSTRING
+from .config import START_MISTRAL_COMMAND_DOCSTRING as START_MISTRAL_COMMAND_DOCSTRING
 from .config import AutoConfig as AutoConfig
 from .config import BaichuanConfig as BaichuanConfig
 from .config import ChatGLMConfig as ChatGLMConfig
@@ -34,5 +35,6 @@ from .config import MPTConfig as MPTConfig
 from .config import OPTConfig as OPTConfig
 from .config import StableLMConfig as StableLMConfig
 from .config import StarCoderConfig as StarCoderConfig
+from .config import MistralConfig as MistralConfig
 from .prompts import PromptTemplate as PromptTemplate
 from .prompts import process_prompt as process_prompt

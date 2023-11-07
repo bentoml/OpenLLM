@@ -36,7 +36,7 @@ else:
 
 # NOTE: This is the entrypoint when adding new model config
 CONFIG_MAPPING_NAMES = OrderedDict([('chatglm', 'ChatGLMConfig'), ('dolly_v2', 'DollyV2Config'), ('falcon', 'FalconConfig'), ('flan_t5', 'FlanT5Config'), ('gpt_neox', 'GPTNeoXConfig'),
-                                    ('llama', 'LlamaConfig'), ('mpt', 'MPTConfig'), ('opt', 'OPTConfig'), ('stablelm', 'StableLMConfig'), ('starcoder', 'StarCoderConfig'),
+                                    ('llama', 'LlamaConfig'), ('mpt', 'MPTConfig'), ('opt', 'OPTConfig'), ('stablelm', 'StableLMConfig'), ('starcoder', 'StarCoderConfig'), ('mistral', "MistralConfig"),
                                     ('baichuan', 'BaichuanConfig')])
 
 class _LazyConfigMapping(OrderedDictType, ReprMixin):
