@@ -45,10 +45,12 @@ responses:
     content:
       application/json:
         example:
-          id: davinci
-          object: model
-          created: 1686935002
-          owned_by: openai
+          object: 'list'
+          data:
+            - id: meta-llama--Llama-2-13-chat-hf
+              object: model
+              created: 1686935002
+              owned_by: 'na'
         schema:
           $ref: '#/components/schemas/ModelList'
 '''

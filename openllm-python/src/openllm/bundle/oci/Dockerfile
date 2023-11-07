@@ -57,7 +57,7 @@ FROM pytorch-install as kernel-builder
 RUN apt-get update && apt-get install -y --no-install-recommends ninja-build && \
     rm -rf /var/lib/apt/lists/*
 
-RUN /opt/conda/bin/conda install -c "nvidia/label/cuda-11.8.0"  cuda==11.8 && \
+RUN /opt/conda/bin/conda install -c "nvidia/label/cuda-11.8.0" cuda==11.8 && \
     /opt/conda/bin/conda clean -ya
 
 # base image
@@ -95,7 +95,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
   pip install --extra-index-url "https://download.pytorch.org/whl/cu118" \
               --extra-index-url "https://huggingface.github.io/autogptq-index/whl/cu118/" \
               -v --no-cache-dir \
-              "ray==2.6.0" "einops" "vllm>=0.1.4" "auto-gptq[triton]" "torch>=2.0.1+cu118" xformers "jax[cuda11_local]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html ".[opt,mpt,fine-tune,llama,chatglm]"
+              "ray==2.6.0" "einops" "vllm==0.2.1.post1" "auto-gptq[triton]" "torch==2.0.1+cu118" xformers
 
 FROM base-container
 

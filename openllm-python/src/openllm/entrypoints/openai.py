@@ -41,7 +41,6 @@ from ..protocol.openai import LogProbs
 from ..protocol.openai import ModelCard
 from ..protocol.openai import ModelList
 from ..protocol.openai import UsageInfo
-from ..protocol.openai import get_conversation_prompt
 
 schemas = get_generator(
     'openai',
@@ -129,7 +128,8 @@ async def create_chat_completions(req: Request, llm: openllm.LLM[M, T]) -> Respo
 
   model_name, request_id = request.model, gen_random_uuid('chatcmpl')
   created_time = int(time.monotonic())
-  prompt = await get_conversation_prompt(request, llm.config)
+  prompt = llm.tokenizer.apply_chat_template(request.messages, tokenize=False)
+  logger.debug('Prompt: %r', prompt)
   config = llm.config.with_openai_request(request)
 
   try:
