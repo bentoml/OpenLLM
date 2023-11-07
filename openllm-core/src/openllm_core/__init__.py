@@ -18,6 +18,7 @@ from .config import START_FALCON_COMMAND_DOCSTRING as START_FALCON_COMMAND_DOCST
 from .config import START_FLAN_T5_COMMAND_DOCSTRING as START_FLAN_T5_COMMAND_DOCSTRING
 from .config import START_GPT_NEOX_COMMAND_DOCSTRING as START_GPT_NEOX_COMMAND_DOCSTRING
 from .config import START_LLAMA_COMMAND_DOCSTRING as START_LLAMA_COMMAND_DOCSTRING
+from .config import START_MISTRAL_COMMAND_DOCSTRING as START_MISTRAL_COMMAND_DOCSTRING
 from .config import START_MPT_COMMAND_DOCSTRING as START_MPT_COMMAND_DOCSTRING
 from .config import START_OPT_COMMAND_DOCSTRING as START_OPT_COMMAND_DOCSTRING
 from .config import START_STABLELM_COMMAND_DOCSTRING as START_STABLELM_COMMAND_DOCSTRING
@@ -30,6 +31,7 @@ from .config import FalconConfig as FalconConfig
 from .config import FlanT5Config as FlanT5Config
 from .config import GPTNeoXConfig as GPTNeoXConfig
 from .config import LlamaConfig as LlamaConfig
+from .config import MistralConfig as MistralConfig
 from .config import MPTConfig as MPTConfig
 from .config import OPTConfig as OPTConfig
 from .config import StableLMConfig as StableLMConfig

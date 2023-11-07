@@ -38,6 +38,7 @@ from openllm_core.config import MPTConfig as MPTConfig
 from openllm_core.config import OPTConfig as OPTConfig
 from openllm_core.config import StableLMConfig as StableLMConfig
 from openllm_core.config import StarCoderConfig as StarCoderConfig
+from openllm_core.config import MistralConfig as MistralConfig
 
 from . import exceptions as exceptions
 from . import utils as utils
