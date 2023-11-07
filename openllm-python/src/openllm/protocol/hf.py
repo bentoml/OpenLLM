@@ -13,6 +13,6 @@ class AgentResponse:
   generated_text: str
 
 @attr.define
-class AgentErrorResponse:
+class HFErrorResponse:
   error_code: int
   message: str

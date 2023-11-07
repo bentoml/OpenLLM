@@ -396,6 +396,7 @@ def _RunnerFactory(self: openllm.LLM[M, T],
     yield 'llm_type', self.llm_type
     yield 'backend', backend
     yield 'llm_tag', self.tag
+  def _get_adapter_map(_: LLMRunner[M, T]) -> ResolvedAdapterMap: return converter.unstructure(self.adapter_map)
   # yapf: enable
 
   return types.new_class(self.__class__.__name__ + 'Runner', (bentoml.Runner,),

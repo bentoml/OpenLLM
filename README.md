@@ -791,35 +791,49 @@ openllm start falcon --model-id TheBloke/falcon-40b-instruct-GPTQ --quantize gpt
 > first to install the dependency. From the GPTQ paper, it is recommended to quantized the weights before serving.
 > See [AutoGPTQ](https://github.com/PanQiWei/AutoGPTQ) for more information on GPTQ quantization.
 
-## 🛠️ Fine-tuning support (Experimental)
+## 🛠️ Serving fine-tuning layers
 
 [PEFT](https://huggingface.co/docs/peft/index), or Parameter-Efficient Fine-Tuning, is a methodology designed to fine-tune pre-trained models more efficiently. Instead of adjusting all model parameters, PEFT focuses on tuning only a subset, reducing computational and storage costs. [LoRA](https://huggingface.co/docs/peft/conceptual_guides/lora) (Low-Rank Adaptation) is one of the techniques supported by PEFT. It streamlines fine-tuning by using low-rank decomposition to represent weight updates, thereby drastically reducing the number of trainable parameters.
 
 With OpenLLM, you can take advantage of the fine-tuning feature by serving models with any PEFT-compatible layers using the `--adapter-id` option. For example:
 
 ```bash
-openllm start opt --model-id facebook/opt-6.7b --adapter-id aarnphm/opt-6-7b-quotes
+openllm start opt --model-id facebook/opt-6.7b --adapter-id aarnphm/opt-6-7b-quotes:default
 ```
 
 OpenLLM also provides flexibility by supporting adapters from custom file paths:
 
 ```bash
-openllm start opt --model-id facebook/opt-6.7b --adapter-id /path/to/adapters
+openllm start opt --model-id facebook/opt-6.7b --adapter-id /path/to/adapters:local_adapter
 ```
 
 To use multiple adapters, use the following format:
 
 ```bash
-openllm start opt --model-id facebook/opt-6.7b --adapter-id aarnphm/opt-6.7b-lora --adapter-id aarnphm/opt-6.7b-lora:french_lora
+openllm start opt --model-id facebook/opt-6.7b --adapter-id aarnphm/opt-6.7b-lora:default --adapter-id aarnphm/opt-6.7b-french:french_lora
 ```
 
-By default, the first specified `adapter-id` is the default LoRA layer, but optionally you can specify a different LoRA layer for inference using the `/v1/adapters` endpoint:
+By default, all adapters will be injected into the models during startup. Adapters can be specified per request via `adapter_name`:
 
 ```bash
-curl -X POST http://localhost:3000/v1/adapters --json '{"adapter_name": "vn_lora"}'
+curl -X 'POST' \
+  'http://localhost:3000/v1/generate' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "prompt": "What is the meaning of life?",
+  "stop": [
+    "philosopher"
+  ],
+  "llm_config": {
+    "max_new_tokens": 256,
+    "temperature": 0.75,
+    "top_k": 15,
+    "top_p": 1
+  },
+  "adapter_name": "default"
+}'
 ```
-
-Note that if you are using multiple adapter names and IDs, it is recommended to set the default adapter before sending the inference to avoid any performance degradation.
 
 To include this into the Bento, you can specify the `--adapter-id` option when using the `openllm build` command:
 
@@ -833,9 +847,9 @@ If you use a relative path for `--adapter-id`, you need to add `--build-ctx`.
 openllm build opt --adapter-id ./path/to/adapter_id --build-ctx .
 ```
 
-> [!NOTE]
-> We will gradually roll out support for fine-tuning all models.
-> Currently, the models supporting fine-tuning with OpenLLM include: OPT, Falcon, and LlaMA.
+> [!IMPORTANT]
+> Fine-tuning support is still experimental and currently only works with PyTorch backend. vLLM support is coming soon.
+
 
 ## 🥅 Playground and Chat UI
 
