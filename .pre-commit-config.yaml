@@ -17,7 +17,7 @@ repos:
               openllm-client/src/openllm_client/pb.*
           )$
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: 'v0.1.3'
+    rev: 'v0.1.4'
     hooks:
       - id: ruff
         verbose: true
@@ -31,7 +31,7 @@ repos:
         exclude: ^(docs|tools|openllm-python/tests)
         args: [--config=pyproject.toml]
   - repo: https://github.com/pre-commit/mirrors-eslint
-    rev: v8.52.0
+    rev: v8.53.0
     hooks:
       - id: eslint
         verbose: true
