@@ -40,7 +40,7 @@ tags:
   - OpenAI
 x-bentoml-name: list_models
 responses:
-  '200':
+  200:
     description: The Model object
     content:
       application/json:
@@ -105,7 +105,7 @@ requestBody:
       schema:
         $ref: '#/components/schemas/ChatCompletionRequest'
 responses:
-  '200':
+  200:
     description: OK
     content:
       application/json:
@@ -120,7 +120,7 @@ responses:
             summary: One-shot output example
             value: >
               {"id": "chatcmpl-123", "object": "chat.completion", "created": 1677652288, "model": "gpt-3.5-turbo-0613", "choices": [{"index": 0, "message": {"role": "assistant", "content": "Hello there, how may I assist you today?"}, "finish_reason": "stop"}], "usage": {"prompt_tokens": 9, "completion_tokens": 12, "total_tokens": 21}}
-  '404':
+  404:
     content:
       application/json:
         schema:
@@ -139,7 +139,7 @@ responses:
                 }
               }
     description: NotFound
-  '500':
+  500:
     content:
       application/json:
         schema:
@@ -158,7 +158,7 @@ responses:
                 }
               }
     description: Internal Server Error
-  '400':
+  400:
     content:
       application/json:
         schema:
@@ -238,7 +238,7 @@ requestBody:
               - "\\n"
               - "<|endoftext|>"
 responses:
-  '200':
+  200:
     description: OK
     content:
       application/json:
@@ -273,7 +273,7 @@ responses:
                   logprobs: null
                   finish_reason: null
               model: gpt-3.5-turbo-instruct
-  '404':
+  404:
     content:
       application/json:
         schema:
@@ -292,7 +292,7 @@ responses:
                 }
               }
     description: NotFound
-  '500':
+  500:
     content:
       application/json:
         schema:
@@ -311,7 +311,7 @@ responses:
                 }
               }
     description: Internal Server Error
-  '400':
+  400:
     content:
       application/json:
         schema:
@@ -379,13 +379,44 @@ responses:
     content:
       application/json:
         schema:
-          $ref: '#/components/schemas/AgentErrorResponse'
+          $ref: '#/components/schemas/HFErrorResponse'
     description: Bad Request
   500:
     content:
       application/json:
         schema:
-          $ref: '#/components/schemas/AgentErrorResponse'
+          $ref: '#/components/schemas/HFErrorResponse'
+    description: Not Found
+'''
+HF_ADAPTERS_SCHEMA = '''\
+---
+consumes:
+- application/json
+description: Return current list of adapters for given LLM.
+operationId: hf__adapters_map
+produces:
+  - application/json
+summary: Describes a model offering that can be used with the API.
+tags:
+  - HF
+x-bentoml-name: adapters_map
+responses:
+  200:
+    description: Return list of LoRA adapters.
+    content:
+      application/json:
+        example:
+          aarnphm/opt-6-7b-quotes:
+            adapter_name: default
+            adapter_type: LORA
+          aarnphm/opt-6-7b-dolly:
+            adapter_name: dolly
+            adapter_type: LORA
+  500:
+    content:
+      application/json:
+        schema:
+          $ref: '#/components/schemas/HFErrorResponse'
     description: Not Found
 '''
 
