@@ -17,12 +17,12 @@ from .configuration_gpt_neox import START_GPT_NEOX_COMMAND_DOCSTRING as START_GP
 from .configuration_gpt_neox import GPTNeoXConfig as GPTNeoXConfig
 from .configuration_llama import START_LLAMA_COMMAND_DOCSTRING as START_LLAMA_COMMAND_DOCSTRING
 from .configuration_llama import LlamaConfig as LlamaConfig
+from .configuration_mistral import START_MISTRAL_COMMAND_DOCSTRING as START_MISTRAL_COMMAND_DOCSTRING
+from .configuration_mistral import MistralConfig as MistralConfig
 from .configuration_mpt import START_MPT_COMMAND_DOCSTRING as START_MPT_COMMAND_DOCSTRING
 from .configuration_mpt import MPTConfig as MPTConfig
 from .configuration_opt import START_OPT_COMMAND_DOCSTRING as START_OPT_COMMAND_DOCSTRING
 from .configuration_opt import OPTConfig as OPTConfig
-from .configuration_mistral import MistralConfig as MistralConfig
-from .configuration_mistral import START_MISTRAL_COMMAND_DOCSTRING as START_MISTRAL_COMMAND_DOCSTRING
 from .configuration_stablelm import START_STABLELM_COMMAND_DOCSTRING as START_STABLELM_COMMAND_DOCSTRING
 from .configuration_stablelm import StableLMConfig as StableLMConfig
 from .configuration_starcoder import START_STARCODER_COMMAND_DOCSTRING as START_STARCODER_COMMAND_DOCSTRING
