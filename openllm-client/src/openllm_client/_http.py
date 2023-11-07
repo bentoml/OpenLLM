@@ -120,7 +120,7 @@ class HTTPClient:
     with httpx.Client(base_url=self.address, timeout=timeout, verify=verify, **self.client_args) as client:
       r = client.post(self._build_endpoint('generate'), json=req.model_dump_json(), **self.client_args)
     if r.status_code != 200: raise ValueError("Failed to get generation from '/v1/generate'. Check server logs for more details.")
-    return Response(**r.json())
+    return Response.model_construct(r.json())
 
   def generate_stream(self,
                       prompt: str,
@@ -237,7 +237,7 @@ class AsyncHTTPClient:
     async with httpx.AsyncClient(base_url=self.address, timeout=timeout, verify=verify, **self.client_args) as client:
       r = await client.post(self._build_endpoint('generate'), json=req.model_dump_json(), **self.client_args)
     if r.status_code != 200: raise ValueError("Failed to get generation from '/v1/generate'. Check server logs for more details.")
-    return Response(**r.json())
+    return Response.model_construct(r.json())
 
   async def generate_stream(self,
                             prompt: str,
