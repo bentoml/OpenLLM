@@ -179,7 +179,6 @@ def write_service(llm: openllm.LLM[t.Any, t.Any], adapter_map: dict[str, str] | 
 def create_bento(bento_tag: bentoml.Tag,
                  llm_fs: FS,
                  llm: openllm.LLM[t.Any, t.Any],
-                 workers_per_resource: str | float,
                  quantize: LiteralString | None,
                  dockerfile_template: str | None,
                  adapter_map: dict[str, str] | None = None,
@@ -199,18 +198,7 @@ def create_bento(bento_tag: bentoml.Tag,
       'bundler': 'openllm.bundle'
   })
   if adapter_map: labels.update(adapter_map)
-  if isinstance(workers_per_resource, str):
-    if workers_per_resource == 'round_robin': workers_per_resource = 1.0
-    elif workers_per_resource == 'conserved':
-      workers_per_resource = 1.0 if openllm.utils.device_count() == 0 else float(1 / openllm.utils.device_count())
-    else:
-      try:
-        workers_per_resource = float(workers_per_resource)
-      except ValueError:
-        raise ValueError("'workers_per_resource' only accept ['round_robin', 'conserved'] as possible strategies.") from None
-  elif isinstance(workers_per_resource, int):
-    workers_per_resource = float(workers_per_resource)
-  logger.info("Building Bento for '%s'", llm.config['start_name'])
+  logger.debug("Building Bento '%s' with model backend '%s'", bento_tag, llm.__llm_backend__)
   # add service.py definition to this temporary folder
   write_service(llm, adapter_map, llm_fs)
 

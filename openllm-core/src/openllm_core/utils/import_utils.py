@@ -174,9 +174,5 @@ class EnvVarMixin(ReprMixin):
     return {'config', 'model_id', 'quantize', 'backend'}
 
   @property
-  def start_docstring(self) -> str:
-    return getattr(openllm_core.config, f'START_{self.model_name.upper()}_COMMAND_DOCSTRING')
-
-  @property
   def module(self) -> LazyLoader:
     return LazyLoader(f'configuration_{self.model_name}', globals(), f'openllm_core.config.configuration_{self.model_name}')

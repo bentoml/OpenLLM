@@ -93,12 +93,13 @@ def _id_callback(ctx: click.Context, _: click.Parameter, value: t.Tuple[str, ...
 
 def start_command_factory(group: click.Group, model: str, _context_settings: DictStrAny | None = None, _serve_grpc: bool = False) -> click.Command:
   llm_config = openllm.AutoConfig.for_model(model)
+  docstring = getattr(openllm_core.config, f'START_{llm_config["model_name"].upper()}_COMMAND_DOCSTRING')
   command_attrs: DictStrAny = dict(name=llm_config['model_name'],
                                    context_settings=_context_settings or termui.CONTEXT_SETTINGS,
                                    short_help=f"Start a LLMServer for '{model}'",
                                    aliases=[llm_config['start_name']] if llm_config['name_type'] == 'dasherize' else None,
                                    help=f'''\
-{llm_config['env'].start_docstring}
+{docstring}
 
 \b
 Note: ``{llm_config['start_name']}`` can also be run with any other models available on HuggingFace
@@ -190,8 +191,8 @@ Available official model_id(s): [default: {llm_config['default_id']}]
                                     backend=env['backend_value'],
                                     adapter_map=adapter_map,
                                     quantize=env['quantize_value'],
-                                    serialisation=_serialisation)
-    llm.save_pretrained()  # ensure_available = True
+                                    serialisation=_serialisation,
+                                    trust_remote_code=openllm.utils.check_bool_env('TRUST_REMOTE_CODE', default=llm_config['trust_remote_code']))
     start_env.update({env.config: llm.config.model_dump_json().decode()})
 
     server = bentoml.GrpcServer('_service:svc', **server_attrs) if _serve_grpc else bentoml.HTTPServer('_service:svc', **server_attrs)
@@ -450,36 +451,22 @@ def serialisation_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Cal
   return cli_option('--serialisation',
                     '--serialization',
                     'serialisation',
-                    type=str,
+                    type=click.Choice(get_literal_args(LiteralSerialisation)),
                     default=None,
                     show_default=True,
                     show_envvar=True,
                     envvar='OPENLLM_SERIALIZATION',
-                    callback=serialisation_callback,
                     help='''Serialisation format for save/load LLM.
 
       Currently the following strategies are supported:
 
-      - ``safetensors``: This will use safetensors format, which is synonymous to
+      - ``safetensors``: This will use safetensors format, which is synonymous to ``safe_serialization=True``.
 
-                  \b
-                  ``safe_serialization=True``.
-
-                  \b
-                  > [!NOTE] that this format might not work for every cases, and
-                  you can always fallback to ``legacy`` if needed.
+      > [!NOTE] Safetensors might not work for every cases, and you can always fallback to ``legacy`` if needed.
 
       - ``legacy``: This will use PyTorch serialisation format, often as ``.bin`` files. This should be used if the model doesn't yet support safetensors.
-
-      > [!NOTE] that GGML format is working in progress.
       ''',
                     **attrs)(f)
-
-def serialisation_callback(ctx: click.Context, param: click.Parameter, value: LiteralSerialisation | None) -> LiteralSerialisation | None:
-  if value is None: return value
-  if value not in {'safetensors', 'legacy'}:
-    raise click.BadParameter(f"'serialisation' only accept 'safetensors', 'legacy' as serialisation format. got {value} instead.", ctx, param) from None
-  return value
 
 def container_registry_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option('--container-registry',

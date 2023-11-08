@@ -191,6 +191,13 @@ class LLM(t.Generic[M, T]):
                         llm_config__=llm_config,
                         llm_trust_remote_code__=trust_remote_code)
 
+    try:
+      model = bentoml.models.get(self.tag)
+    except bentoml.exceptions.NotFound:
+      model = openllm.serialisation.import_model(self, trust_remote_code=self.trust_remote_code)
+    # resolve the tag
+    self._tag = model.tag
+
   @apply(lambda val: tuple(str.lower(i) if i else i for i in val))
   def _make_tag_components(self, model_id: str, model_version: str | None, backend: LiteralBackend) -> tuple[str, str | None]:
     """Return a valid tag name (<backend>-<repo>--<model_id>) and its tag version."""
@@ -230,7 +237,6 @@ class LLM(t.Generic[M, T]):
       elif self._quantise is not None:self.__llm_quantization_config__,self._model_attrs=infer_quantisation_config(self, self._quantise, **self._model_attrs)
       else:raise ValueError("Either 'quantization_config' or 'quantise' must be specified.")
     return self.__llm_quantization_config__
-  def save_pretrained(self)->bentoml.Model:return openllm.import_model(self.config['start_name'], model_id=self.model_id, model_version=self._revision, backend=self.__llm_backend__, quantize=self._quantise)
   @property
   def has_adapters(self)->bool:return self._adapter_map is not None
   # NOTE: The section below defines a loose contract with langchain's LLM interface.
@@ -408,9 +414,8 @@ def _RunnerFactory(self: openllm.LLM[M, T],
                              'llm': self,
                              'config': self.config,
                              'backend': backend,
-                             'download_model': self.save_pretrained,
                              '__module__': self.__module__,
-                             '__doc__': self.config['env'].start_docstring,
+                             '__doc__': getattr(openllm_core.config, f'START_{self.config["model_name"].upper()}_COMMAND_DOCSTRING'),
                              '__repr__': ReprMixin.__repr__,
                              '__repr_keys__': property(_wrapped_repr_keys),
                              '__repr_args__': _wrapped_repr_args,

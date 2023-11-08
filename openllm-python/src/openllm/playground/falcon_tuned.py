@@ -57,7 +57,6 @@ else:
   model_args, training_args = t.cast(t.Tuple[ModelArguments, TrainingArguments], parser.parse_args_into_dataclasses())
 
 llm = openllm.LLM(model_args.model_id, quantize="int4", bnb_4bit_quant_type="nf4", bnb_4bit_compute_dtype=torch.float16)
-llm.save_pretrained()
 model, tokenizer = llm.prepare_for_training(adapter_type="lora",
                                             lora_alpha=16,
                                             lora_dropout=0.1,

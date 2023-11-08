@@ -47,12 +47,6 @@ else:
 
 DEV_DEBUG_VAR = 'OPENLLMDEVDEBUG'
 
-def is_async_callable(obj: t.Any) -> TypeGuard[t.Callable[..., t.Awaitable[t.Any]]]:
-  # Borrowed from starlette._utils
-  while isinstance(obj, functools.partial):
-    obj = obj.func
-  return asyncio.iscoroutinefunction(obj) or (callable(obj) and asyncio.iscoroutinefunction(obj.__call__))
-
 def resolve_user_filepath(filepath: str, ctx: str | None) -> str:
   # Return if filepath exist after expanduser
 
@@ -122,12 +116,6 @@ def lenient_issubclass(cls: t.Any, class_or_tuple: type[t.Any] | tuple[type[t.An
   except TypeError:
     if isinstance(cls, _WithArgsTypes): return False
     raise
-
-def ensure_exec_coro(coro: t.Coroutine[t.Any, t.Any, t.Any]) -> t.Any:
-  if in_notebook(): return asyncio.run(coro)  # For running coroutine in notebooks see https://github.com/jupyter/notebook/issues/5261
-  loop = asyncio.get_event_loop()
-  if loop.is_running(): return asyncio.run_coroutine_threadsafe(coro, loop).result()
-  else: return loop.run_until_complete(coro)
 
 @functools.lru_cache(maxsize=128)
 def generate_hash_from_file(f: str, algorithm: t.Literal['md5', 'sha1'] = 'sha1') -> str:
@@ -270,8 +258,6 @@ def in_notebook() -> bool:
   except (ImportError, AttributeError):
     return False
 
-_dockerenv, _cgroup = Path('/.dockerenv'), Path('/proc/self/cgroup')
-
 class suppress(contextlib.suppress, contextlib.ContextDecorator):
   """A version of contextlib.suppress with decorator support.
 
@@ -319,20 +305,6 @@ def apply(transform: AnyCallable) -> t.Callable[[AnyCallable], AnyCallable]:
   ```
   """
   return lambda func: functools.wraps(func)(compose(transform, func))
-
-@apply(bool)
-@suppress(FileNotFoundError)
-def _text_in_file(text: str, filename: Path) -> bool:
-  return any(text in line for line in filename.open())
-
-def in_docker() -> bool:
-  """Is this current environment running in docker?
-
-  ```python
-  type(in_docker())
-  ```
-  """
-  return _dockerenv.exists() or _text_in_file('docker', _cgroup)
 
 T = t.TypeVar('T')
 K = t.TypeVar('K')

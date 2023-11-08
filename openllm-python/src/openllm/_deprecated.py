@@ -24,7 +24,7 @@ def _mark_deprecated(fn: t.Callable[P, t.Any]) -> t.Callable[P, t.Any]:
 
 @_mark_deprecated
 def Runner(model_name: str,
-           ensure_available: bool = False,
+           ensure_available: bool = True,
            init_local: bool = False,
            backend: LiteralBackend | None = None,
            llm_config: LLMConfig | None = None,
@@ -48,7 +48,8 @@ def Runner(model_name: str,
   Args:
     model_name: Supported model name from 'openllm models'
     ensure_available: If True, it will download the model if it is not available. If False, it will skip downloading the model.
-                      If False, make sure the model is available locally.
+                      If False, make sure the model is available locally. Default to True, and openllm.LLM will always check if models
+                      are available locally. based on generated tag.
     backend: The given Runner implementation one choose for this Runner. If `OPENLLM_BACKEND` is set, it will respect it.
     llm_config: Optional ``openllm.LLMConfig`` to initialise this ``openllm.LLMRunner``.
     init_local: If True, it will initialize the model locally. This is useful if you want to run the model locally. (Symmetrical to bentoml.Runner.init_local())
@@ -80,13 +81,13 @@ def Runner(model_name: str,
   })
 
   backend = t.cast(LiteralBackend, first_not_none(backend, default='vllm' if is_vllm_available() else 'pt'))
-  if init_local: ensure_available = True
   llm = LLM[t.Any, t.Any](backend=backend, llm_config=llm_config, **attrs)
-  if ensure_available: llm.save_pretrained()
   if init_local: llm.runner.init_local(quiet=True)
   return llm.runner
 
 _DEPRECATED = {k: v for k, v in locals().items() if getattr(v, '__deprecated__', False)}
+
+__all__ = list(_DEPRECATED)
 
 def __dir__() -> list[str]:
   return sorted(_DEPRECATED.keys())

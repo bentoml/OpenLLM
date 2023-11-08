@@ -124,7 +124,7 @@ def import_model(llm: openllm.LLM[M, T], *decls: t.Any, trust_remote_code: bool,
       del model
     return bentomodel
 
-def get(llm: openllm.LLM[M, T], auto_import: bool = False) -> bentoml.Model:
+def get(llm: openllm.LLM[M, T]) -> bentoml.Model:
   try:
     model = bentoml.models.get(llm.tag)
     backend = model.info.labels['backend']
@@ -132,7 +132,6 @@ def get(llm: openllm.LLM[M, T], auto_import: bool = False) -> bentoml.Model:
     _patch_correct_tag(llm, transformers.AutoConfig.from_pretrained(model.path, trust_remote_code=llm.trust_remote_code), _revision=model.info.metadata.get('_revision'))
     return model
   except Exception as err:
-    if auto_import: return import_model(llm, trust_remote_code=llm.trust_remote_code)
     raise openllm.exceptions.OpenLLMException(f'Failed while getting stored artefact (lookup for traceback):\n{err}') from err
 
 def load_model(llm: openllm.LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M:
