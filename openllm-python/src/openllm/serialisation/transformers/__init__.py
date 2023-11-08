@@ -51,7 +51,7 @@ def _patch_correct_tag(llm: openllm.LLM[M, T], config: transformers.PretrainedCo
 
 @inject
 def import_model(llm: openllm.LLM[M, T], *decls: t.Any, trust_remote_code: bool, _model_store: ModelStore = Provide[BentoMLContainer.model_store], **attrs: t.Any) -> bentoml.Model:
-  if llm._quantise =='awq': raise RuntimeError('AWQ is not yet supported with PyTorch backend.')
+  if llm._quantise == 'awq': raise RuntimeError('AWQ is not yet supported with PyTorch backend.')
   config, hub_attrs, attrs = process_config(llm.model_id, trust_remote_code, **attrs)
   _patch_correct_tag(llm, config)
   _, tokenizer_attrs = llm.llm_parameters
@@ -137,7 +137,7 @@ def get(llm: openllm.LLM[M, T], auto_import: bool = False) -> bentoml.Model:
     raise openllm.exceptions.OpenLLMException(f'Failed while getting stored artefact (lookup for traceback):\n{err}') from err
 
 def load_model(llm: openllm.LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M:
-  if llm._quantise =='awq': raise RuntimeError('AWQ is not yet supported with PyTorch backend.')
+  if llm._quantise == 'awq': raise RuntimeError('AWQ is not yet supported with PyTorch backend.')
   config, attrs = transformers.AutoConfig.from_pretrained(llm.bentomodel.path, return_unused_kwargs=True, trust_remote_code=llm.trust_remote_code, **attrs)
   auto_class = infer_autoclass_from_llm(llm, config)
   device_map = attrs.pop('device_map', None)
