@@ -1,5 +1,4 @@
 from __future__ import annotations
-import asyncio
 import contextlib
 import functools
 import hashlib
@@ -20,7 +19,6 @@ from .import_utils import ENV_VARS_TRUE_VALUES as ENV_VARS_TRUE_VALUES
 from .lazy import LazyLoader as LazyLoader
 from .lazy import LazyModule as LazyModule
 from .lazy import VersionInfo as VersionInfo
-from .._typing_compat import TypeGuard
 from .._typing_compat import overload
 
 if t.TYPE_CHECKING:

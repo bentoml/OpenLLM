@@ -4,7 +4,6 @@ import os
 import typing as t
 
 import pytest
-import transformers
 
 import openllm
 

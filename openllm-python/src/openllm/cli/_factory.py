@@ -1,6 +1,5 @@
 from __future__ import annotations
 import functools
-import importlib.util
 import logging
 import os
 import typing as t
@@ -8,35 +7,24 @@ import typing as t
 import click
 import click_option_group as cog
 import inflection
-import orjson
 
 from bentoml_cli.utils import BentoMLCommandGroup
 from click import ClickException
 from click import shell_completion as sc
-from click.shell_completion import CompletionItem
 
 import bentoml
 import openllm
-import openllm_core
 
-from bentoml._internal.configuration.containers import BentoMLContainer
 from openllm_core._typing_compat import Concatenate
 from openllm_core._typing_compat import DictStrAny
 from openllm_core._typing_compat import LiteralBackend
 from openllm_core._typing_compat import LiteralQuantise
 from openllm_core._typing_compat import LiteralSerialisation
-from openllm_core._typing_compat import LiteralString
 from openllm_core._typing_compat import ParamSpec
 from openllm_core._typing_compat import get_literal_args
 from openllm_core.utils import DEBUG
-from openllm_core.utils import check_bool_env
-from openllm_core.utils import first_not_none
-from openllm_core.utils import is_vllm_available
-
-from . import termui
 
 if t.TYPE_CHECKING:
-  import subprocess
 
   from openllm_core._configuration import LLMConfig
 
@@ -114,7 +102,7 @@ def start_decorator(serve_grpc: bool = False) -> t.Callable[[FC], t.Callable[[FC
                             multiple=True,
                             envvar='CUDA_VISIBLE_DEVICES',
                             callback=parse_device_callback,
-                            help=f"Assign GPU devices (if available)",
+                            help='Assign GPU devices (if available)',
                             show_envvar=True),
         cog.optgroup.group('Fine-tuning related options',
                            help='''\

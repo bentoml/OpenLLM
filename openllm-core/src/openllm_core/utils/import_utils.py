@@ -8,8 +8,6 @@ import typing as t
 
 import inflection
 
-import openllm_core
-
 from openllm_core._typing_compat import LiteralBackend
 from openllm_core._typing_compat import LiteralString
 from openllm_core._typing_compat import overload

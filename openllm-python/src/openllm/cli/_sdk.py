@@ -7,18 +7,20 @@ import subprocess
 import sys
 import typing as t
 
+import orjson
+
 from simple_di import Provide
 from simple_di import inject
 
 import bentoml
 import openllm_core
-import orjson
 
 from bentoml._internal.configuration.containers import BentoMLContainer
-from openllm_core.exceptions import OpenLLMException
-from openllm_core.utils import codegen, first_not_none
-from openllm_core.utils import is_vllm_available
 from openllm_core._typing_compat import LiteralSerialisation
+from openllm_core.exceptions import OpenLLMException
+from openllm_core.utils import codegen
+from openllm_core.utils import first_not_none
+from openllm_core.utils import is_vllm_available
 
 if t.TYPE_CHECKING:
   from bentoml._internal.bento import BentoStore

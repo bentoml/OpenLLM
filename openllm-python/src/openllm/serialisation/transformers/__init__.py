@@ -6,6 +6,8 @@ import typing as t
 
 import attr
 import orjson
+import torch
+import transformers
 
 from huggingface_hub import snapshot_download
 from simple_di import Provide
@@ -13,8 +15,6 @@ from simple_di import inject
 
 import bentoml
 import openllm
-import torch
-import transformers
 
 from bentoml._internal.configuration.containers import BentoMLContainer
 from bentoml._internal.models.model import ModelOptions
@@ -29,6 +29,7 @@ from .weights import HfIgnore
 
 if t.TYPE_CHECKING:
   import types
+
   from bentoml._internal.models import ModelStore
   from openllm_core._typing_compat import DictStrAny
 

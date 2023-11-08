@@ -5,7 +5,6 @@ import openllm_core
 
 from openllm_core._conversation import SeparatorStyle
 from openllm_core.prompts import process_prompt
-from openllm_core.utils import dantic
 
 if t.TYPE_CHECKING:
   from openllm_core.prompts.prompt_template import PromptTemplate

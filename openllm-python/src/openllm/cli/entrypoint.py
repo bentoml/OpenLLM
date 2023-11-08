@@ -20,17 +20,18 @@ bentomodel = openllm.import_model('mistralai/Mistral-7B-v0.1')
 ```
 """
 from __future__ import annotations
-import enum, traceback
+import enum
 import functools
+import importlib.util
 import inspect
 import itertools
-import importlib.util
 import logging
 import os
 import platform
 import random
 import subprocess
 import time
+import traceback
 import typing as t
 
 import attr
@@ -69,9 +70,10 @@ from openllm_core.utils import OPTIONAL_DEPENDENCIES
 from openllm_core.utils import QUIET_ENV_VAR
 from openllm_core.utils import LazyLoader
 from openllm_core.utils import analytics
+from openllm_core.utils import check_bool_env
 from openllm_core.utils import compose
 from openllm_core.utils import configure_logging
-from openllm_core.utils import first_not_none, check_bool_env
+from openllm_core.utils import first_not_none
 from openllm_core.utils import get_quiet_mode
 from openllm_core.utils import is_torch_available
 from openllm_core.utils import resolve_user_filepath
@@ -81,23 +83,26 @@ from openllm_core.utils import set_quiet_mode
 from . import termui
 from ._factory import FC
 from ._factory import LiteralOutput
-from ._factory import _AnyCallable, parse_config_options
-from ._factory import backend_option, start_decorator
+from ._factory import _AnyCallable
+from ._factory import backend_option
 from ._factory import container_registry_option
+from ._factory import machine_option
 from ._factory import model_name_argument
 from ._factory import model_version_option
+from ._factory import parse_config_options
 from ._factory import prompt_template_file_option
-from ._factory import quantize_option, machine_option
+from ._factory import quantize_option
 from ._factory import serialisation_option
+from ._factory import start_decorator
 from ._factory import system_message_option
 
 if t.TYPE_CHECKING:
   import torch
 
-  from openllm_core._configuration import LLMConfig
   from bentoml._internal.bento import BentoStore
   from bentoml._internal.container import DefaultBuilder
   from openllm_client._schemas import StreamingResponse
+  from openllm_core._configuration import LLMConfig
   from openllm_core._typing_compat import LiteralContainerRegistry
   from openllm_core._typing_compat import LiteralContainerVersionStrategy
 else:
@@ -611,8 +616,8 @@ def build_command(ctx: click.Context, /, model_id: str, bento_version: str | Non
   > To build the bento with compiled OpenLLM, make sure to prepend HATCH_BUILD_HOOKS_ENABLE=1. Make sure that the deployment
   > target also use the same Python version and architecture as build machine.
   """
-  from ..serialisation.transformers.weights import has_safetensors_weights
   from .._llm import normalise_model_name
+  from ..serialisation.transformers.weights import has_safetensors_weights
   if enable_features: enable_features = tuple(itertools.chain.from_iterable((s.split(',') for s in enable_features)))
 
   previous_state = ItemState.NOT_FOUND

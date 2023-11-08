@@ -25,7 +25,6 @@ repos:
       - id: ruff
         verbose: true
         args: [--exit-non-zero-on-fix, --show-fixes]
-        types_or: [pyi, python3, jupyter]
       - id: ruff-format
         verbose: true
         types: [pyi]
