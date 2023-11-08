@@ -48,6 +48,7 @@ class vLLMRunnable(bentoml.Runnable):
       self.model = vllm.AsyncLLMEngine.from_engine_args(
           vllm.AsyncEngineArgs(model=llm.bentomodel.path,
                                tokenizer=llm.bentomodel.path,
+                               trust_remote_code=llm.trust_remote_code,
                                tokenizer_mode='auto',
                                tensor_parallel_size=num_gpus,
                                dtype='auto',
