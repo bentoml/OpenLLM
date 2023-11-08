@@ -50,7 +50,7 @@ def cli(ctx: click.Context, /, model_name: str, prompt: str, format: str | None,
       fully_formatted = process_prompt(prompt, _prompt_template, True, **_memoized)
     except RuntimeError:
       fully_formatted = openllm.AutoConfig.for_model(model_name).sanitize_parameters(prompt, prompt_template=_prompt_template)[0]
-    termui.echo(orjson.dumps({'prompt': repr(fully_formatted)}, option=orjson.OPT_INDENT_2).decode(), fg='white')
+    termui.echo(orjson.dumps({'prompt': fully_formatted}, option=orjson.OPT_INDENT_2).decode(), fg='white')
   except AttributeError:
     raise click.ClickException(f'Failed to determine a default prompt template for {model_name}.') from None
   ctx.exit(0)
