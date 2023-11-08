@@ -98,7 +98,7 @@ def import_model(llm: openllm.LLM[M, T], *decls: t.Any, trust_remote_code: bool,
     try:
       bentomodel.enter_cloudpickle_context(external_modules, imported_modules)
       tokenizer.save_pretrained(bentomodel.path)
-      if llm._quantise or llm._quantization_config: attrs['quantization_config'] = llm.quantization_config
+      if llm._quantization_config or (llm._quantise and llm._quantise not in {'squeezellm'}): attrs['quantization_config'] = llm.quantization_config
       if quantize == 'gptq':
         from optimum.gptq.constants import GPTQ_CONFIG
         with open(bentomodel.path_of(GPTQ_CONFIG), 'w', encoding='utf-8') as f:
