@@ -7,13 +7,22 @@ updates:
       day: 'monday'
       time: '09:00'
   - package-ecosystem: pip
-    directory: '/'
+    directory: '/openllm-python'
     schedule:
       interval: 'weekly'
     open-pull-requests-limit: 5
-    versioning-strategy: increase-if-necessary
+  - package-ecosystem: pip
+    directory: '/openllm-core'
+    schedule:
+      interval: 'weekly'
+    open-pull-requests-limit: 5
+  - package-ecosystem: pip
+    directory: '/openllm-client'
+    schedule:
+      interval: 'weekly'
+    open-pull-requests-limit: 5
   - package-ecosystem: npm
     directory: '/'
     schedule:
       interval: 'weekly'
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 0
