@@ -12,11 +12,12 @@ class Request:
   stop: t.Optional[t.Union[str, t.List[str]]] = attr.field(default=None)
   adapter_name: t.Optional[str] = attr.field(default=None)
 
-  # yapf: disable
-  def model_dump_json(self)->dict[str, t.Any]:return cattr.unstructure(self)
+  def model_dump_json(self) -> t.Dict[str, t.Any]:
+    return cattr.unstructure(self)
+
   @classmethod
-  def model_construct(cls,data:dict[str,t.Any])->Request: return cattr.structure(data,cls)
-  # yapf: enable
+  def model_construct(cls, data: t.Dict[str, t.Any]) -> Request:
+    return cattr.structure(data, cls)
 
 SampleLogprobs = t.List[t.Dict[int, float]]
 PromptLogprobs = t.List[t.Optional[t.Dict[int, float]]]
@@ -40,11 +41,12 @@ class Response:
   prompt_token_ids: t.Optional[t.List[int]] = attr.field(default=None)
   prompt_logprobs: t.Optional[PromptLogprobs] = attr.field(default=None)
 
-  # yapf: disable
-  def model_dump_json(self)->dict[str, t.Any]:return cattr.unstructure(self)
+  def model_dump_json(self) -> t.Dict[str, t.Any]:
+    return cattr.unstructure(self)
+
   @classmethod
-  def model_construct(cls,data:dict[str,t.Any])->Response: return cattr.structure(data,cls)
-  # yapf: enable
+  def model_construct(cls, data: t.Dict[str, t.Any]) -> Response:
+    return cattr.structure(data, cls)
 
 @attr.define
 class StreamingResponse:
@@ -53,10 +55,13 @@ class StreamingResponse:
   text: str
   token_ids: int
 
-  # yapf: disable
   @classmethod
-  def from_response_chunk(cls,response:Response)->StreamingResponse:return cls(request_id=response.request_id,index=response.outputs[0].index,text=response.outputs[0].text,token_ids=response.outputs[0].token_ids[0])
-  def model_dump_json(self)->dict[str, t.Any]:return cattr.unstructure(self)
+  def from_response_chunk(cls, response: Response) -> StreamingResponse:
+    return cls(request_id=response.request_id, index=response.outputs[0].index, text=response.outputs[0].text, token_ids=response.outputs[0].token_ids[0])
+
+  def model_dump_json(self) -> t.Dict[str, t.Any]:
+    return cattr.unstructure(self)
+
   @classmethod
-  def model_construct(cls,data:dict[str,t.Any])->StreamingResponse: return cattr.structure(data,cls)
-  # yapf: enable
+  def model_construct(cls, data: t.Dict[str, t.Any]) -> StreamingResponse:
+    return cattr.structure(data, cls)

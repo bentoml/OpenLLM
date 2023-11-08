@@ -1,7 +1,7 @@
-'''Serialisation related implementation for GGML-based implementation.
+"""Serialisation related implementation for GGML-based implementation.
 
 This requires ctransformers to be installed.
-'''
+"""
 from __future__ import annotations
 import typing as t
 

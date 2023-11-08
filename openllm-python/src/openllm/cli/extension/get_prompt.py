@@ -31,7 +31,7 @@ LiteralOutput = t.Literal['json', 'pretty', 'porcelain']
               metavar='ARG=VALUE[,ARG=VALUE]')
 @click.pass_context
 def cli(ctx: click.Context, /, model_name: str, prompt: str, format: str | None, output: LiteralOutput, machine: bool, _memoized: dict[str, t.Any], **_: t.Any) -> str | None:
-  '''Get the default prompt used by OpenLLM.'''
+  """Get the default prompt used by OpenLLM."""
   module = openllm.utils.EnvVarMixin(model_name).module
   _memoized = {k: v[0] for k, v in _memoized.items() if v}
   try:

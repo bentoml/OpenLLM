@@ -1,7 +1,7 @@
-'''Telemetry related for OpenLLM tracking.
+"""Telemetry related for OpenLLM tracking.
 
 Users can disable this with OPENLLM_DO_NOT_TRACK envvar.
-'''
+"""
 from __future__ import annotations
 import contextlib
 import functools

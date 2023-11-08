@@ -1,4 +1,4 @@
-'''Schema definition for OpenLLM. This schema is used throughout openllm core components library.'''
+"""Schema definition for OpenLLM. This schema is used throughout openllm core components library."""
 from __future__ import annotations
 import typing as t
 

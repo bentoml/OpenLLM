@@ -22,7 +22,7 @@ if t.TYPE_CHECKING:
 @model_name_argument(required=False, shell_complete=model_complete_envvar)
 @output_option(default_value='json')
 def cli(model_name: str | None, output: LiteralOutput) -> DictStrAny:
-  '''This is equivalent to openllm models --show-available less the nice table.'''
+  """This is equivalent to openllm models --show-available less the nice table."""
   models = tuple(inflection.dasherize(key) for key in openllm.CONFIG_MAPPING.keys())
   ids_in_local_store = {
       k: [i for i in bentoml.models.list() if 'framework' in i.info.labels and i.info.labels['framework'] == 'openllm' and 'model_name' in i.info.labels and i.info.labels['model_name'] == k]

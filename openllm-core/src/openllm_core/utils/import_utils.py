@@ -1,4 +1,4 @@
-'''Some imports utils are vendorred from transformers/utils/import_utils.py for performance reasons.'''
+"""Some imports utils are vendorred from transformers/utils/import_utils.py for performance reasons."""
 from __future__ import annotations
 import importlib
 import importlib.metadata
@@ -176,7 +176,7 @@ class EnvVarMixin(ReprMixin):
     raise KeyError(f'Key {item} not found in {self}')
 
   def __init__(self, model_name: str, backend: LiteralBackend = 'pt', model_id: str | None = None, quantize: LiteralString | None = None) -> None:
-    '''EnvVarMixin is a mixin class that returns the value extracted from environment variables.'''
+    """EnvVarMixin is a mixin class that returns the value extracted from environment variables."""
     from openllm_core.utils import field_env_key
     self.model_name = inflection.underscore(model_name)
     self._backend = backend

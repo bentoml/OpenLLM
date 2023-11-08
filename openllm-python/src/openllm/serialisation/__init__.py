@@ -1,9 +1,9 @@
-'''Serialisation utilities for OpenLLM.
+"""Serialisation utilities for OpenLLM.
 
 Currently supports transformers for PyTorch, and vLLM.
 
 Currently, GGML format is working in progress.
-'''
+"""
 from __future__ import annotations
 import importlib
 import typing as t
@@ -32,11 +32,11 @@ else:
 P = ParamSpec('P')
 
 def load_tokenizer(llm: openllm.LLM[t.Any, T], **tokenizer_attrs: t.Any) -> T:
-  '''Load the tokenizer from BentoML store.
+  """Load the tokenizer from BentoML store.
 
   By default, it will try to find the bentomodel whether it is in store..
   If model is not found, it will raises a ``bentoml.exceptions.NotFound``.
-  '''
+  """
   from .transformers._helpers import process_config
 
   config, *_ = process_config(llm.bentomodel.path, llm.trust_remote_code)

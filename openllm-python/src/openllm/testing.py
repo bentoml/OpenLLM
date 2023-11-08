@@ -1,4 +1,4 @@
-'''Tests utilities for OpenLLM.'''
+"""Tests utilities for OpenLLM."""
 from __future__ import annotations
 import contextlib
 import logging

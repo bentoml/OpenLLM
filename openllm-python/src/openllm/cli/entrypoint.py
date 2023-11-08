@@ -151,7 +151,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
   @staticmethod
   def common_params(f: t.Callable[P, t.Any]) -> t.Callable[[FC], FC]:
     # The following logics is similar to one of BentoMLCommandGroup
-    @cog.optgroup.group(name='Global options', help='Shared globals options for all OpenLLM CLI.')
+    @cog.optgroup.group(name='Global options', help='Shared globals options for all OpenLLM CLI.')  # type: ignore[misc]
     @cog.optgroup.option('-q', '--quiet', envvar=QUIET_ENV_VAR, is_flag=True, default=False, help='Suppress all output.', show_envvar=True)
     @cog.optgroup.option('--debug', '--verbose', 'debug', envvar=DEBUG_ENV_VAR, is_flag=True, default=False, help='Print out debug logs.', show_envvar=True)
     @cog.optgroup.option('--do-not-track', is_flag=True, default=False, envvar=analytics.OPENLLM_DO_NOT_TRACK, help='Do not send usage info', show_envvar=True)
@@ -249,7 +249,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
     return decorator
 
   def format_commands(self, ctx: click.Context, formatter: click.HelpFormatter) -> None:
-    '''Additional format methods that include extensions as well as the default cli command.'''
+    """Additional format methods that include extensions as well as the default cli command."""
     from gettext import gettext as _
     commands: list[tuple[str, click.Command]] = []
     extensions: list[tuple[str, click.Command]] = []
@@ -285,7 +285,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
                       '-v',
                       message=f"%(prog)s, %(version)s (compiled: {'yes' if openllm.COMPILED else 'no'})\nPython ({platform.python_implementation()}) {platform.python_version()}")
 def cli() -> None:
-  '''\b
+  """\b
    ██████╗ ██████╗ ███████╗███╗   ██╗██╗     ██╗     ███╗   ███╗
   ██╔═══██╗██╔══██╗██╔════╝████╗  ██║██║     ██║     ████╗ ████║
   ██║   ██║██████╔╝█████╗  ██╔██╗ ██║██║     ██║     ██╔████╔██║
@@ -296,27 +296,27 @@ def cli() -> None:
   \b
   An open platform for operating large language models in production.
   Fine-tune, serve, deploy, and monitor any LLMs with ease.
-  '''
+  """
 
 @cli.group(cls=OpenLLMCommandGroup, context_settings=termui.CONTEXT_SETTINGS, name='start', aliases=['start-http'])
 def start_command() -> None:
-  '''Start any LLM as a REST server.
+  """Start any LLM as a REST server.
 
   \b
   ```bash
   $ openllm <start|start-http> <model_name> --<options> ...
   ```
-  '''
+  """
 
 @cli.group(cls=OpenLLMCommandGroup, context_settings=termui.CONTEXT_SETTINGS, name='start-grpc')
 def start_grpc_command() -> None:
-  '''Start any LLM as a gRPC server.
+  """Start any LLM as a gRPC server.
 
   \b
   ```bash
   $ openllm start-grpc <model_name> --<options> ...
   ```
-  '''
+  """
 
 _start_mapping = {
     'start': {
@@ -424,7 +424,7 @@ def import_command(model_name: str, model_id: str | None, converter: str | None,
 @click.option('--bento-version', type=str, default=None, help='Optional bento version for this BentoLLM. Default is the the model revision.')
 @click.option('--overwrite', is_flag=True, help='Overwrite existing Bento for given LLM if it already exists.')
 @workers_per_resource_option(factory=click, build=True)
-@cog.optgroup.group(cls=cog.MutuallyExclusiveOptionGroup, name='Optimisation options')
+@cog.optgroup.group(cls=cog.MutuallyExclusiveOptionGroup, name='Optimisation options')  # type: ignore[misc]
 @quantize_option(factory=cog.optgroup, build=True)
 @click.option('--enable-features',
               multiple=True,
@@ -445,7 +445,7 @@ def import_command(model_name: str, model_id: str | None, converter: str | None,
               type=click.Choice(['release', 'latest', 'nightly']),
               default='release',
               help="Default container version strategy for the image from '--container-registry'")
-@cog.optgroup.group(cls=cog.MutuallyExclusiveOptionGroup, name='Utilities options')
+@cog.optgroup.group(cls=cog.MutuallyExclusiveOptionGroup, name='Utilities options')  # type: ignore[misc]
 @cog.optgroup.option('--containerize',
                      default=False,
                      is_flag=True,
@@ -459,7 +459,7 @@ def build_command(ctx: click.Context, /, model_name: str, model_id: str | None, 
                   system_message: str | None, prompt_template_file: t.IO[t.Any] | None, machine: bool, model_version: str | None, dockerfile_template: t.TextIO | None, containerize: bool,
                   push: bool, serialisation: LiteralSerialisation | None, container_registry: LiteralContainerRegistry, container_version_strategy: LiteralContainerVersionStrategy,
                   force_push: bool, **attrs: t.Any) -> bentoml.Bento:
-  '''Package a given models into a Bento.
+  """Package a given models into a Bento.
 
   \b
   ```bash
@@ -475,7 +475,7 @@ def build_command(ctx: click.Context, /, model_name: str, model_id: str | None, 
   > [!IMPORTANT]
   > To build the bento with compiled OpenLLM, make sure to prepend HATCH_BUILD_HOOKS_ENABLE=1. Make sure that the deployment
   > target also use the same Python version and architecture as build machine.
-  '''
+  """
   if machine: output = 'porcelain'
   if enable_features: enable_features = tuple(itertools.chain.from_iterable((s.split(',') for s in enable_features)))
 
@@ -679,11 +679,11 @@ def prune_command(model_name: str | None,
                   include_bentos: bool,
                   model_store: ModelStore = Provide[BentoMLContainer.model_store],
                   bento_store: BentoStore = Provide[BentoMLContainer.bento_store]) -> None:
-  '''Remove all saved models, (and optionally bentos) built with OpenLLM locally.
+  """Remove all saved models, (and optionally bentos) built with OpenLLM locally.
 
   \b
   If a model type is passed, then only prune models for that given model type.
-  '''
+  """
   available: list[tuple[bentoml.Model | bentoml.Bento,
                         ModelStore | BentoStore]] = [(m, model_store) for m in bentoml.models.list() if 'framework' in m.info.labels and m.info.labels['framework'] == 'openllm']
   if model_name is not None: available = [(m, store) for m, store in available if 'model_name' in m.info.labels and m.info.labels['model_name'] == inflection.underscore(model_name)]
@@ -823,6 +823,6 @@ def query_command(ctx: click.Context, /, prompt: str, endpoint: str, timeout: in
 
 @cli.group(cls=Extensions, hidden=True, name='extension')
 def extension_command() -> None:
-  '''Extension for OpenLLM CLI.'''
+  """Extension for OpenLLM CLI."""
 
 if __name__ == '__main__': cli()

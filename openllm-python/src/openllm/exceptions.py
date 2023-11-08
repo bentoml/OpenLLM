@@ -1,4 +1,4 @@
-'''Base exceptions for OpenLLM. This extends BentoML exceptions.'''
+"""Base exceptions for OpenLLM. This extends BentoML exceptions."""
 from __future__ import annotations
 
 from openllm_core.exceptions import Error as Error

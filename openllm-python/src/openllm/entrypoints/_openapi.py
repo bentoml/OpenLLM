@@ -480,7 +480,7 @@ def get_generator(title: str, components: list[type[AttrsInstance]] | None = Non
 def component_schema_generator(attr_cls: type[AttrsInstance], description: str | None = None) -> dict[str, t.Any]:
   schema: dict[str, t.Any] = {'type': 'object', 'required': [], 'properties': {}, 'title': attr_cls.__name__}
   schema['description'] = first_not_none(getattr(attr_cls, '__doc__', None), description, default=f'Generated components for {attr_cls.__name__}')
-  for field in attr.fields(attr.resolve_types(attr_cls)):  # type: ignore[misc]
+  for field in attr.fields(attr.resolve_types(attr_cls)):  # type: ignore[misc,type-var]
     attr_type = field.type
     origin_type = t.get_origin(attr_type)
     args_type = t.get_args(attr_type)
@@ -495,21 +495,12 @@ def component_schema_generator(attr_cls: type[AttrsInstance], description: str |
     elif origin_type is dict:
       schema_type = 'object'
       # Assuming string keys for simplicity, and handling Any type for values
-      prop_schema = {
-          'type': 'object',
-          'additionalProperties':
-              True if args_type[1] is t.Any else {
-                  'type': 'string'
-              }  # Simplified
-      }
+      prop_schema = {'type': 'object', 'additionalProperties': True if args_type[1] is t.Any else {'type': 'string'}}
     elif attr_type == t.Optional[str]:
       schema_type = 'string'
     elif origin_type is t.Union and t.Any in args_type:
       schema_type = 'object'
-      prop_schema = {
-          'type': 'object',
-          'additionalProperties': True  # Allows any type of values
-      }
+      prop_schema = {'type': 'object', 'additionalProperties': True}
     else:
       schema_type = 'string'
 
