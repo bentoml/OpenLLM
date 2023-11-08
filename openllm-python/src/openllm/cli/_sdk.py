@@ -20,9 +20,6 @@ from openllm_core.utils import codegen, first_not_none
 from openllm_core.utils import is_vllm_available
 from openllm_core._typing_compat import LiteralSerialisation
 
-from . import termui
-from ._factory import start_command_factory
-
 if t.TYPE_CHECKING:
   from bentoml._internal.bento import BentoStore
   from openllm_core._configuration import LLMConfig
@@ -34,10 +31,7 @@ if t.TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-def _start(model_name: str,
-           /,
-           *,
-           model_id: str | None = None,
+def _start(model_id: str,
            timeout: int = 30,
            workers_per_resource: t.Literal['conserved', 'round_robin'] | float | None = None,
            device: tuple[str, ...] | t.Literal['all'] | None = None,
@@ -62,8 +56,7 @@ def _start(model_name: str,
   ``openllm.start`` will invoke ``click.Command`` under the hood, so it behaves exactly the same as the CLI interaction.
 
   Args:
-    model_name: The model name to start this LLM
-    model_id: Optional model id for this given LLM
+    model_id: The model id to start this LLMServer
     timeout: The server timeout
     system_message: Optional system message for supported LLMs. If given LLM supports system message, OpenLLM will provide a default system message.
     prompt_template_file: Optional file path containing user-defined custom prompt template. By default, the prompt template for the specified LLM will be used..
@@ -92,8 +85,7 @@ def _start(model_name: str,
   from .entrypoint import start_grpc_command
   os.environ['OPENLLM_BACKEND'] = openllm_core.utils.first_not_none(backend, default='vllm' if is_vllm_available() else 'pt')
 
-  args: list[str] = []
-  if model_id: args.extend(['--model-id', model_id])
+  args: list[str] = [model_id]
   if system_message: args.extend(['--system-message', system_message])
   if prompt_template_file: args.extend(['--prompt-template-file', openllm_core.utils.resolve_filepath(prompt_template_file)])
   if timeout: args.extend(['--server-timeout', str(timeout)])
@@ -107,8 +99,8 @@ def _start(model_name: str,
   if additional_args: args.extend(additional_args)
   if __test__: args.append('--return-process')
 
-  return start_command_factory(start_command if not _serve_grpc else start_grpc_command, model_name, _context_settings=termui.CONTEXT_SETTINGS,
-                               _serve_grpc=_serve_grpc).main(args=args if len(args) > 0 else None, standalone_mode=False)
+  cmd = start_command if not _serve_grpc else start_grpc_command
+  return cmd.main(args=args, standalone_mode=False)
 
 @inject
 def _build(model_id: str,

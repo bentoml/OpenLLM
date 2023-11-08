@@ -61,7 +61,6 @@ class OPTConfig(openllm_core.LLMConfig):
           'bias': 'none'
       },)
   }
-  format_outputs: bool = dantic.Field(False, description='''Whether to format the outputs. This can be used when num_return_sequences > 1.''')
 
   class GenerationConfig:
     top_k: int = 15
@@ -88,5 +87,4 @@ class OPTConfig(openllm_core.LLMConfig):
 
   def postprocess_generate(self, prompt: str, generation_result: t.Sequence[str], **attrs: t.Any) -> str:
     if len(generation_result) == 1: return generation_result[0]
-    if self.config.format_outputs: return 'Generated result:\n' + '\n -'.join(generation_result)
-    else: return '\n'.join(generation_result)
+    return '\n'.join(generation_result)

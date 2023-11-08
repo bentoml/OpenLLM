@@ -1304,14 +1304,14 @@ class LLMConfig(_ConfigAttr):
       # NOTE: Union type is currently not yet supported, we probably just need to use environment instead.
       if t.get_origin(ty) is t.Union: continue
       f = dantic.attrs_to_options(name, field, cls.__openllm_model_name__, typ=ty, suffix_generation=True)(f)
-    f = cog.optgroup.group(f'{cls.__openllm_generation_class__.__name__} generation options')(f)
+    f = cog.optgroup.group('GenerationConfig generation options')(f)
 
     for name, field in attr.fields_dict(cls.__openllm_sampling_class__).items():
       ty = cls.__openllm_hints__.get(name)
       # NOTE: Union type is currently not yet supported, we probably just need to use environment instead.
       if t.get_origin(ty) is t.Union: continue
       f = dantic.attrs_to_options(name, field, cls.__openllm_model_name__, typ=ty, suffix_sampling=True)(f)
-    f = cog.optgroup.group(f'{cls.__openllm_sampling_class__.__name__} sampling options')(f)
+    f = cog.optgroup.group('SamplingParams sampling options')(f)
 
     total_keys = set(attr.fields_dict(cls.__openllm_generation_class__)) | set(attr.fields_dict(cls.__openllm_sampling_class__))
 

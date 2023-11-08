@@ -125,7 +125,6 @@ _BASE_DEPENDENCIES = [
     Dependencies(name='optimum', lower_constraint='1.12.0'),
     Dependencies(name='accelerate'),
     Dependencies(name='ghapi'),
-    Dependencies(name='tabulate', extensions=['widechars'], lower_constraint='0.9.0'),
     Dependencies(name='click', lower_constraint='8.1.3'),
     Dependencies(name='cuda-python', platform=('Darwin', 'ne')),
     Dependencies(name='bitsandbytes', upper_constraint='0.42'),  # 0.41 works with CUDA 11.8
