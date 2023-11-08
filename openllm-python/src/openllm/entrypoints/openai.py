@@ -128,7 +128,7 @@ async def create_chat_completions(req: Request, llm: openllm.LLM[M, T]) -> Respo
 
   model_name, request_id = request.model, gen_random_uuid('chatcmpl')
   created_time = int(time.monotonic())
-  prompt = llm.tokenizer.apply_chat_template(request.messages, tokenize=False)
+  prompt = llm.tokenizer.apply_chat_template(request.messages, tokenize=False, add_generation_prompt=llm.config['add_generation_prompt'])
   logger.debug('Prompt: %r', prompt)
   config = llm.config.with_openai_request(request)
 

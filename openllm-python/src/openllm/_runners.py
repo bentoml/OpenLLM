@@ -80,7 +80,7 @@ class vLLMRunnable(bentoml.Runnable):
     async for request_output in self.model.generate(None, sampling_params, request_id, prompt_token_ids):
       # XXX: Need to write a hook for serialisation None correctly
       if request_output.prompt_logprobs is not None: request_output.prompt_logprobs = [it if it else {} for it in request_output.prompt_logprobs]
-      yield f'data: {GenerationOutput.from_vllm(request_output).model_dump_json()}\n\n'
+      yield GenerationOutput.from_vllm(request_output).model_dump_json()
 
 class PyTorchRunnable(bentoml.Runnable):
   SUPPORTED_RESOURCES = ('nvidia.com/gpu', 'amd.com/gpu', 'cpu')
@@ -101,7 +101,7 @@ class PyTorchRunnable(bentoml.Runnable):
                               **attrs: t.Any) -> t.AsyncGenerator[str, None]:
     if adapter_name is not None: self.model.set_adapter(adapter_name)
     async for generation_output in self.forward(prompt_token_ids, request_id, stop=stop, **attrs):
-      yield f'data: {generation_output.model_dump_json()}\n\n'
+      yield generation_output.model_dump_json()
 
   async def forward(self, prompt_token_ids: list[int], request_id: str, stop: str | t.Iterable[str] | None = None, **attrs: t.Any) -> t.AsyncGenerator[GenerationOutput, None]:
     from ._generation import is_partial_stop
