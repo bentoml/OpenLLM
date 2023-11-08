@@ -137,8 +137,6 @@ def build_container(registries: LiteralContainerRegistry | t.Sequence[LiteralCon
     if not _BUILDER.health(): raise openllm.exceptions.Error
   except (openllm.exceptions.Error, subprocess.CalledProcessError):
     raise RuntimeError('Building base container requires BuildKit (via Buildx) to be installed. See https://docs.docker.com/build/buildx/install/ for instalation instruction.') from None
-  if openllm_core.utils.device_count() == 0:
-    raise RuntimeError('Building base container requires GPUs (None available)')
   if not shutil.which('nvidia-container-runtime'):
     raise RuntimeError('NVIDIA Container Toolkit is required to compile CUDA kernel in container.')
   if not _module_location:
@@ -147,9 +145,7 @@ def build_container(registries: LiteralContainerRegistry | t.Sequence[LiteralCon
   if not pyproject_path.exists():
     raise ValueError("This utility can only be run within OpenLLM git repository. Clone it first with 'git clone https://github.com/bentoml/OpenLLM.git'")
   if not registries:
-    tags: dict[str | LiteralContainerRegistry, str] = {
-        alias: f'{value}:{get_base_container_tag(version_strategy)}' for alias, value in _CONTAINER_REGISTRY.items()
-    }  # default to all registries with latest tag strategy
+    tags: dict[str | LiteralContainerRegistry, str] = {alias: f'{value}:{get_base_container_tag(version_strategy)}' for alias, value in _CONTAINER_REGISTRY.items()}
   else:
     registries = [registries] if isinstance(registries, str) else list(registries)
     tags = {name: f'{_CONTAINER_REGISTRY[name]}:{get_base_container_tag(version_strategy)}' for name in registries}

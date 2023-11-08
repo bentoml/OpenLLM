@@ -399,7 +399,7 @@ class CudaValueType(ParamType):
     param: The parameter that is requesting completion.
     incomplete: Value being completed. May be empty.
     """
-    from openllm_core.utils import available_devices
+    from openllm.utils import available_devices
     mapping = incomplete.split(self.envvar_list_splitter) if incomplete else available_devices()
     return [sc.CompletionItem(str(i), help=f'CUDA device index {i}') for i in mapping]
 

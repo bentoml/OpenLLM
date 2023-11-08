@@ -138,11 +138,6 @@ def ensure_exec_coro(coro: t.Coroutine[t.Any, t.Any, t.Any]) -> t.Any:
   if loop.is_running(): return asyncio.run_coroutine_threadsafe(coro, loop).result()
   else: return loop.run_until_complete(coro)
 
-def available_devices() -> tuple[str, ...]:
-  """Return available GPU under system. Currently only supports NVIDIA GPUs."""
-  from openllm_core._strategies import NvidiaGpuResource
-  return tuple(NvidiaGpuResource.from_system())
-
 @functools.lru_cache(maxsize=128)
 def generate_hash_from_file(f: str, algorithm: t.Literal['md5', 'sha1'] = 'sha1') -> str:
   """Generate a hash from given file's modification time.
@@ -155,10 +150,6 @@ def generate_hash_from_file(f: str, algorithm: t.Literal['md5', 'sha1'] = 'sha1'
   The generated hash.
   """
   return getattr(hashlib, algorithm)(str(os.path.getmtime(resolve_filepath(f))).encode()).hexdigest()
-
-@functools.lru_cache(maxsize=1)
-def device_count() -> int:
-  return len(available_devices())
 
 def check_bool_env(env: str, default: bool = True) -> bool:
   v = os.environ.get(env, str(default)).upper()
