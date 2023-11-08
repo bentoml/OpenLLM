@@ -1,0 +1,36 @@
+{
+  "useLibraryCodeForTypes": true,
+  "typeCheckingMode": "strict",
+  "verboseOutput": true,
+  "include": [
+    "openllm-core/src",
+    "openllm-client/src",
+    "openllm-python/src"
+  ],
+  "define": {
+    "MYPY": true
+  },
+  "exclude": [
+    "cz.py",
+    "tools",
+    "examples",
+    "typings",
+    "openllm-python/src/openllm/playground/",
+    "openllm-python/src/openllm/models/",
+    "openllm-python/src/openllm/__init__.py",
+    "openllm-python/src/openllm/__main__.py",
+    "openllm-python/tests",
+    "openllm-core/src/openllm_core/_typing_compat.py",
+    "openllm-client/src/openllm_client/pb/**"
+  ],
+  "pythonVersion": "3.12",
+  "enableExperimentalFeatures": true,
+  "reportMissingImports": "warning",
+  "reportMissingTypeStubs": false,
+  "reportPrivateUsage": "warning",
+  "reportUnknownArgumentType": "warning",
+  "reportUnknownMemberType": "warning",
+  "reportUnknownVariableType": "warning",
+  "reportUnsupportedDunderAll": "warning",
+  "reportWildcardImportFromLibrary": "warning"
+}
