@@ -1,6 +1,6 @@
 {
   "name": "openllm-clojure-ui",
-  "version": "0.4.1",
+  "version": "",
   "description": "OpenLLM Clojure UI",
   "repository": {
     "url": "git@github.com:bentoml/OpenLLM.git",
