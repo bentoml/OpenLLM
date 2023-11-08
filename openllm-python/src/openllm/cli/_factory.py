@@ -199,6 +199,7 @@ Available official model_id(s): [default: {llm_config['default_id']}]
 
     def next_step(model_name: str, adapter_map: DictStrAny | None) -> None:
       cmd_name = f'openllm build {model_name}'
+      if not llm._local: cmd_name += f' --model-id {llm.model_id}'
       if adapter_map is not None:
         cmd_name += ' ' + ' '.join([f'--adapter-id {s}' for s in [f'{p}:{name}' if name not in (None, 'default') else p for p, name in adapter_map.items()]])
       if not openllm.utils.get_quiet_mode():
