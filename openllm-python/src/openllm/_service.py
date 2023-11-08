@@ -22,7 +22,8 @@ llm = openllm.LLM[t.Any, t.Any](svars.model_id,
                                 prompt_template=openllm.utils.first_not_none(os.getenv('OPENLLM_PROMPT_TEMPLATE'), getattr(llm_config, 'default_prompt_template', None)),
                                 system_message=openllm.utils.first_not_none(os.getenv('OPENLLM_SYSTEM_MESSAGE'), getattr(llm_config, 'default_system_message', None)),
                                 serialisation=openllm.utils.first_not_none(os.getenv('OPENLLM_SERIALIZATION'), default=llm_config['serialisation']),
-                                adapter_map=orjson.loads(svars.adapter_map))
+                                adapter_map=orjson.loads(svars.adapter_map),
+                                trust_remote_code=openllm.utils.check_bool_env('TRUST_REMOTE_CODE', default=llm_config['trust_remote_code']))
 svc = bentoml.Service(name=f"llm-{llm_config['start_name']}-service", runners=[llm.runner])
 
 llm_model_class = openllm.GenerationInput.from_llm_config(llm_config)

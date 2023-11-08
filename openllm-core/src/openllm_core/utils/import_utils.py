@@ -1,4 +1,3 @@
-"""Some imports utils are vendorred from transformers/utils/import_utils.py for performance reasons."""
 from __future__ import annotations
 import importlib
 import importlib.metadata
@@ -42,22 +41,14 @@ _torch_available = importlib.util.find_spec('torch') is not None
 _vllm_available = importlib.util.find_spec('vllm') is not None
 _transformers_available = _is_package_available('transformers')
 _grpc_available = importlib.util.find_spec('grpc') is not None
-_grpc_health_available = importlib.util.find_spec('grpc_health') is not None
 _bentoml_available = _is_package_available('bentoml')
 _peft_available = _is_package_available('peft')
-_einops_available = _is_package_available('einops')
-_cpm_kernel_available = _is_package_available('cpm_kernels')
 _bitsandbytes_available = _is_package_available('bitsandbytes')
-_datasets_available = _is_package_available('datasets')
-_triton_available = _is_package_available('triton')
 _jupyter_available = _is_package_available('jupyter')
 _jupytext_available = _is_package_available('jupytext')
 _notebook_available = _is_package_available('notebook')
 _autogptq_available = _is_package_available('auto_gptq')
 _autoawq_available = importlib.util.find_spec('awq') is not None
-_sentencepiece_available = _is_package_available('sentencepiece')
-_xformers_available = _is_package_available('xformers')
-_fairscale_available = _is_package_available('fairscale')
 
 def is_bentoml_available() -> bool:
   return _bentoml_available
@@ -67,9 +58,6 @@ def is_transformers_available() -> bool:
 
 def is_grpc_available() -> bool:
   return _grpc_available
-
-def is_grpc_health_available() -> bool:
-  return _grpc_health_available
 
 def is_optimum_supports_gptq() -> bool:
   from . import pkg
@@ -84,35 +72,14 @@ def is_jupytext_available() -> bool:
 def is_notebook_available() -> bool:
   return _notebook_available
 
-def is_triton_available() -> bool:
-  return _triton_available
-
-def is_datasets_available() -> bool:
-  return _datasets_available
-
 def is_peft_available() -> bool:
   return _peft_available
-
-def is_einops_available() -> bool:
-  return _einops_available
-
-def is_cpm_kernels_available() -> bool:
-  return _cpm_kernel_available
 
 def is_bitsandbytes_available() -> bool:
   return _bitsandbytes_available
 
 def is_autogptq_available() -> bool:
   return _autogptq_available
-
-def is_sentencepiece_available() -> bool:
-  return _sentencepiece_available
-
-def is_xformers_available() -> bool:
-  return _xformers_available
-
-def is_fairscale_available() -> bool:
-  return _fairscale_available
 
 def is_torch_available() -> bool:
   global _torch_available

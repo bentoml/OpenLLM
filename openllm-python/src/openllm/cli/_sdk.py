@@ -16,6 +16,7 @@ import openllm_core
 
 from bentoml._internal.configuration.containers import BentoMLContainer
 from openllm.exceptions import OpenLLMException
+from openllm_core.utils import codegen
 from openllm_core.utils import is_vllm_available
 
 from . import termui
@@ -266,6 +267,6 @@ def _list_models() -> dict[str, t.Any]:
   from .entrypoint import models_command
   return models_command.main(args=['-o', 'json', '--show-available', '--machine'], standalone_mode=False)
 
-start, start_grpc, build, import_model, list_models = openllm_core.utils.codegen.gen_sdk(_start, _serve_grpc=False), openllm_core.utils.codegen.gen_sdk(
-    _start, _serve_grpc=True), openllm_core.utils.codegen.gen_sdk(_build), openllm_core.utils.codegen.gen_sdk(_import_model), openllm_core.utils.codegen.gen_sdk(_list_models)
+start, start_grpc = codegen.gen_sdk(_start, _serve_grpc=False), codegen.gen_sdk(_start, _serve_grpc=True)
+build, import_model, list_models = codegen.gen_sdk(_build), codegen.gen_sdk(_import_model), codegen.gen_sdk(_list_models)
 __all__ = ['start', 'start_grpc', 'build', 'import_model', 'list_models']
