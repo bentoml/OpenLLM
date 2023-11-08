@@ -369,25 +369,6 @@ def import_command(model_name: str, model_id: str | None, converter: str | None,
   > If ``quantize`` is passed, the model weights will be saved as quantized weights. You should
   > only use this option if you want the weight to be quantized by default. Note that OpenLLM also
   > support on-demand quantisation during initial startup.
-
-  \b
-  ## Conversion strategies [EXPERIMENTAL]
-
-  \b
-  Some models will include built-in conversion strategies for specific weights format.
-  It will be determined via the `CONVERTER` environment variable. Note that this envvar should only be use provisionally as it is not RECOMMENDED to export this
-  and save to a ``.env`` file.
-
-  The conversion strategies will have the following format and will be determined per architecture implementation:
-  <base_format>-<target_format>
-
-  \b
-  For example: the below convert LlaMA-2 model format to hf:
-
-  \b
-  ```bash
-  $ CONVERTER=llama2-hf openllm import llama /path/to/llama-2
-  ```
   """
   llm_config = openllm.AutoConfig.for_model(model_name)
   _serialisation = t.cast(LiteralSerialisation, first_not_none(serialisation, default=llm_config['serialisation']))
