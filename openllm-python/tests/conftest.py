@@ -13,7 +13,7 @@ if t.TYPE_CHECKING:
 _MODELING_MAPPING = {'flan_t5': 'google/flan-t5-small', 'opt': 'facebook/opt-125m', 'baichuan': 'baichuan-inc/Baichuan-7B'}
 _PROMPT_MAPPING = {'qa': 'Answer the following yes/no question by reasoning step-by-step. Can you write a whole Haiku in a single tweet?'}
 
-def parametrise_local_llm(model: str,) -> t.Generator[tuple[str, openllm.LLMRunner[t.Any, t.Any] | openllm.LLM[t.Any, t.Any]], None, None]:
+def parametrise_local_llm(model: str) -> t.Generator[tuple[str, openllm.LLMRunner[t.Any, t.Any] | openllm.LLM[t.Any, t.Any]], None, None]:
   if model not in _MODELING_MAPPING: pytest.skip(f"'{model}' is not yet supported in framework testing.")
   backends: tuple[LiteralBackend, ...] = ('pt',)
   for backend, prompt in itertools.product(backends, _PROMPT_MAPPING.keys()):

@@ -91,6 +91,9 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
         rm -rf /var/lib/apt/lists/*
 
 # Install all required dependencies
+# We have to install autoawq first to avoid conflict with torch, then reinstall torch with vllm
+# below
+# pip install autoawq --no-cache-dir && \
 RUN --mount=type=cache,target=/root/.cache/pip \
   pip install --extra-index-url "https://download.pytorch.org/whl/cu118" \
               --extra-index-url "https://huggingface.github.io/autogptq-index/whl/cu118/" \

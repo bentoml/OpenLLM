@@ -54,7 +54,7 @@ _jupyter_available = _is_package_available('jupyter')
 _jupytext_available = _is_package_available('jupytext')
 _notebook_available = _is_package_available('notebook')
 _autogptq_available = _is_package_available('auto_gptq')
-_autoawq_available = _is_package_available('awq')
+_autoawq_available = importlib.util.find_spec('awq') is not None
 _sentencepiece_available = _is_package_available('sentencepiece')
 _xformers_available = _is_package_available('xformers')
 _fairscale_available = _is_package_available('fairscale')
@@ -124,6 +124,11 @@ def is_torch_available() -> bool:
   return _torch_available
 
 def is_autoawq_available() -> bool:
+  global _autoawq_available
+  try:
+    importlib.metadata.version('autoawq')
+  except importlib.metadata.PackageNotFoundError:
+    _autoawq_available = False
   return _autoawq_available
 
 def is_vllm_available() -> bool:

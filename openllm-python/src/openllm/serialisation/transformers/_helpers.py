@@ -1,24 +1,21 @@
 from __future__ import annotations
-import copy
+import copy, re
+from pathlib import Path
 import typing as t
 
 import openllm
-import openllm_core
+import transformers
+import torch
 
 from openllm.serialisation.constants import FRAMEWORK_TO_AUTOCLASS_MAPPING
 from openllm.serialisation.constants import HUB_ATTRS
 
 if t.TYPE_CHECKING:
-  import torch
-  import transformers
-
   from transformers.models.auto.auto_factory import _BaseAutoModelClass
 
   from openllm_core._typing_compat import DictStrAny
   from openllm_core._typing_compat import M
   from openllm_core._typing_compat import T
-else:
-  transformers, torch = openllm_core.utils.LazyLoader('transformers', globals(), 'transformers'), openllm_core.utils.LazyLoader('torch', globals(), 'torch')
 
 def get_hash(config: transformers.PretrainedConfig) -> str:
   _commit_hash = getattr(config, '_commit_hash', None)
