@@ -2,7 +2,7 @@
 import os, openai
 from openai.types.chat import ChatCompletionSystemMessageParam, ChatCompletionUserMessageParam, ChatCompletionAssistantMessageParam
 
-client=openai.OpenAI(base_url=os.getenv('OPENLLM_ENDPOINT', 'http://localhost:3000') + '/v1', api_key='na')
+client = openai.OpenAI(base_url=os.getenv('OPENLLM_ENDPOINT', 'http://localhost:3000') + '/v1', api_key='na')
 
 models = client.models.list()
 print('Models:', models.model_dump_json(indent=2))
@@ -16,12 +16,13 @@ messages = [
   ChatCompletionAssistantMessageParam(role='assistant', content='Yes?'),
   ChatCompletionUserMessageParam(role='user', content='What is the meaning of life?'),
 ]
-completions = client.chat.completions.create(messages=messages, model=model, max_tokens=128,stream=stream)
+completions = client.chat.completions.create(messages=messages, model=model, max_tokens=128, stream=stream)
 
-print(f"Chat completion result (stream={stream}):")
+print(f'Chat completion result (stream={stream}):')
 if stream:
   for chunk in completions:
     text = chunk.choices[0].delta.content
-    if text: print(text, flush=True, end='')
+    if text:
+      print(text, flush=True, end='')
 else:
   print(completions)
