@@ -63,7 +63,7 @@ def build_editable(path: str, package: t.Literal['openllm', 'openllm_core', 'ope
       return builder.build('wheel', path, config_settings={'--global-option': '--quiet'})
   raise RuntimeError('Custom OpenLLM build is currently not supported. Please install OpenLLM from PyPI or built it from Git source.')
 
-def construct_python_options(llm: openllm.LLM[t.Any, t.Any], llm_fs: FS, extra_dependencies: tuple[str, ...] | None = None, adapter_map: dict[str, str] | None = None,) -> PythonOptions:
+def construct_python_options(llm: openllm.LLM[t.Any, t.Any], llm_fs: FS, extra_dependencies: tuple[str, ...] | None = None, adapter_map: dict[str, str] | None = None) -> PythonOptions:
   packages = ['openllm', 'scipy']  # apparently bnb misses this one
   if adapter_map is not None: packages += ['openllm[fine-tune]']
   # NOTE: add openllm to the default dependencies
@@ -81,7 +81,7 @@ def construct_python_options(llm: openllm.LLM[t.Any, t.Any], llm_fs: FS, extra_d
   env['backend_value']
   if not openllm_core.utils.is_torch_available():
     raise ValueError('PyTorch is not available. Make sure to have it locally installed.')
-  packages.extend(['torch==2.0.1+cu118', 'vllm==0.2.1.post1', 'xformers==0.0.22'])  # XXX: Currently locking this for correctness
+  packages.extend(['torch==2.0.1+cu118', 'vllm==0.2.1.post1', 'xformers==0.0.22', 'bentoml[tracing]==1.1.9'])  # XXX: Currently locking this for correctness
   wheels: list[str] = []
   built_wheels = [build_editable(llm_fs.getsyspath('/'), t.cast(t.Literal['openllm', 'openllm_core', 'openllm_client'], p)) for p in ('openllm_core', 'openllm_client', 'openllm')]
   if all(i for i in built_wheels):

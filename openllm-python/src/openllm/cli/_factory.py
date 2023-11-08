@@ -198,8 +198,10 @@ Available official model_id(s): [default: {llm_config['default_id']}]
     openllm.utils.analytics.track_start_init(llm.config)
 
     def next_step(model_name: str, adapter_map: DictStrAny | None) -> None:
-      cmd_name = f'openllm build {model_name} --serialiazation {_serialisation} --quantize {quantize}'
+      cmd_name = f'openllm build {model_name}'
       if not llm._local: cmd_name += f' --model-id {llm.model_id}'
+      if llm._quantise: cmd_name += f' --quantize {llm._quantise}'
+      cmd_name += f' --serialization {_serialisation}'
       if adapter_map is not None:
         cmd_name += ' ' + ' '.join([f'--adapter-id {s}' for s in [f'{p}:{name}' if name not in (None, 'default') else p for p, name in adapter_map.items()]])
       if not openllm.utils.get_quiet_mode():
@@ -212,10 +214,9 @@ Available official model_id(s): [default: {llm_config['default_id']}]
     else:
       try:
         server.start(env=start_env, text=True, blocking=True)
-      except KeyboardInterrupt:
-        next_step(model, adapter_map)
       except Exception as err:
         termui.echo(f'Error caught while running LLM Server:\n{err}', fg='red')
+        raise
       else:
         next_step(model, adapter_map)
 
