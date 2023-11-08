@@ -8,7 +8,6 @@ import aiohttp
 
 import openllm
 
-
 async def send_request(url, it, prompt, session, model, **attrs):
   headers = {'accept': 'application/json', 'Content-Type': 'application/json'}
   config = openllm.AutoConfig.for_model(model).model_construct_env(**attrs).model_dump()
