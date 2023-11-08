@@ -15,7 +15,6 @@ from openllm_core._schemas import GenerationOutput
 from openllm_core._typing_compat import LiteralBackend
 from openllm_core._typing_compat import M
 from openllm_core._typing_compat import T
-from openllm_core.utils import device_count
 from openllm_core.utils import first_not_none
 from openllm_core.utils import get_debug_mode
 from openllm_core.utils import is_vllm_available
@@ -41,7 +40,7 @@ class vLLMRunnable(bentoml.Runnable):
 
   def __init__(self, llm: openllm.LLM[M, T]) -> None:
     self.config = llm.config
-    num_gpus, dev = 1, device_count()
+    num_gpus, dev = 1, openllm.utils.device_count()
     if dev >= 2: num_gpus = min(dev // 2 * 2, dev)
     quantization = None
     if llm._quantise and llm._quantise == 'awq': quantization = llm._quantise
@@ -49,6 +48,7 @@ class vLLMRunnable(bentoml.Runnable):
       self.model = vllm.AsyncLLMEngine.from_engine_args(
           vllm.AsyncEngineArgs(model=llm.bentomodel.path,
                                tokenizer=llm.bentomodel.path,
+                               trust_remote_code=llm.trust_remote_code,
                                tokenizer_mode='auto',
                                tensor_parallel_size=num_gpus,
                                dtype='auto',

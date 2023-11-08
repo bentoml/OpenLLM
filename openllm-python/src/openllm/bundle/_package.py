@@ -202,7 +202,7 @@ def create_bento(bento_tag: bentoml.Tag,
   if isinstance(workers_per_resource, str):
     if workers_per_resource == 'round_robin': workers_per_resource = 1.0
     elif workers_per_resource == 'conserved':
-      workers_per_resource = 1.0 if openllm_core.utils.device_count() == 0 else float(1 / openllm_core.utils.device_count())
+      workers_per_resource = 1.0 if openllm.utils.device_count() == 0 else float(1 / openllm.utils.device_count())
     else:
       try:
         workers_per_resource = float(workers_per_resource)
