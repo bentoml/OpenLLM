@@ -10,7 +10,8 @@ import orjson
 import bentoml
 import openllm
 
-from bentoml.io import JSON, Text
+from bentoml.io import JSON
+from bentoml.io import Text
 
 logger = logging.getLogger(__name__)
 

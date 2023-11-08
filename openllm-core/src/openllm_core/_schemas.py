@@ -14,11 +14,6 @@ from .utils import gen_random_uuid
 if t.TYPE_CHECKING:
   import vllm
 
-  import openllm
-
-  from ._typing_compat import M
-  from ._typing_compat import T
-
 @attr.frozen(slots=True)
 class MetadataOutput:
   model_id: str

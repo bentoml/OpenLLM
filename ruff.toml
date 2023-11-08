@@ -43,7 +43,7 @@ target-version = "py312"
 typing-modules = ["openllm_core._typing_compat"]
 unfixable = ["TCH004"]
 
-[flake8-type-checking]
+[lint.flake8-type-checking]
 exempt-modules = ["typing", "typing_extensions", "openllm_core._typing_compat"]
 runtime-evaluated-base-classes = [
   "openllm_core._configuration.LLMConfig",
@@ -59,13 +59,13 @@ quote-style = "single"
 indent-style = "space"
 skip-magic-trailing-comma = true
 
-[pydocstyle]
+[lint.pydocstyle]
 convention = "google"
 
-[pycodestyle]
+[lint.pycodestyle]
 ignore-overlong-task-comments = true
 
-[isort]
+[lint.isort]
 combine-as-imports = true
 force-single-line = true
 force-wrap-aliases = false
@@ -85,13 +85,13 @@ lines-between-types = 1
 no-lines-before = ["future", "standard-library"]
 relative-imports-order = "closest-to-furthest"
 
-[flake8-quotes]
+[lint.flake8-quotes]
 avoid-escape = false
 multiline-quotes = "single"
 inline-quotes = "single"
 docstring-quotes = "double"
 
-[extend-per-file-ignores]
+[lint.extend-per-file-ignores]
 "openllm-python/src/openllm/models/**" = ["E", "F", "I001"]
 "openllm-python/tests/**/*" = ["S101", "TID252", "PT011", "S307"]
 "openllm-python/src/openllm/_llm.py" = ["F811"]

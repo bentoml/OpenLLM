@@ -1,7 +1,6 @@
 # mypy: disable-error-code="attr-defined,no-untyped-call,type-var,operator,arg-type,no-redef,misc"
 from __future__ import annotations
 import copy
-import enum
 import logging
 import os
 import sys
@@ -39,7 +38,6 @@ from ._typing_compat import Required
 from ._typing_compat import Self
 from ._typing_compat import overload
 from .exceptions import ForbiddenAttributeError
-from .utils import MYPY
 from .utils import LazyLoader
 from .utils import ReprMixin
 from .utils import codegen
@@ -48,8 +46,10 @@ from .utils import dantic
 from .utils import field_env_key
 from .utils import first_not_none
 from .utils import lenient_issubclass
-from .utils.peft import FineTuneConfig, PEFT_TASK_TYPE_TARGET_MAPPING, PeftType
 from .utils.import_utils import is_vllm_available
+from .utils.peft import PEFT_TASK_TYPE_TARGET_MAPPING
+from .utils.peft import FineTuneConfig
+from .utils.peft import PeftType
 
 if t.TYPE_CHECKING:
   import click
