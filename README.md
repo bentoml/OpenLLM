@@ -52,7 +52,7 @@ Key features include:
 
 🤖️ **Bring your own LLM**: Fine-tune any LLM to suit your needs. You can load LoRA layers to fine-tune models for higher accuracy and performance for specific tasks. A unified fine-tuning API for models (`LLM.tuning()`) is coming soon.
 
-⚡ **Quantization**: Run inference with less computational and memory costs though quantization techniques like [bitsandbytes](https://github.com/TimDettmers/bitsandbytes) and [GPTQ](https://arxiv.org/abs/2210.17323).
+⚡ **Quantization**: Run inference with less computational and memory costs with quantization techniques such as [LLM.int8](https://arxiv.org/abs/2208.07339), [SpQR (int4)](https://arxiv.org/abs/2306.03078), [AWQ](https://arxiv.org/pdf/2306.00978.pdf), [GPTQ](https://arxiv.org/abs/2210.17323), and [SqueezeLLM](https://arxiv.org/pdf/2306.07629v2.pdf).
 
 📡 **Streaming**: Support token streaming through server-sent events (SSE). You can use the `/v1/generate_stream` endpoint for streaming responses from LLMs.
 
@@ -210,7 +210,7 @@ You can specify any of the following Mistral models by using `--model-id`.
   ```
 
 > [!NOTE]
-> Currently when using the vLLM backend, quantization and adapters are not supported.
+> Currently when using the vLLM backend, adapters is yet to be supported.
 
 </details>
 
@@ -284,7 +284,7 @@ You can specify any of the following Llama models by using `--model-id`.
   ```
 
 > [!NOTE]
-> Currently when using the vLLM backend, quantization and adapters are not supported.
+> Currently when using the vLLM backend, adapters is yet to be supported.
 
 </details>
 
@@ -375,7 +375,7 @@ You can specify any of the following Dolly-v2 models by using `--model-id`.
   ```
 
 > [!NOTE]
-> Currently when using the vLLM backend, quantization and adapters are not supported.
+> Currently when using the vLLM backend, adapters is yet to be supported.
 
 </details>
 
@@ -426,7 +426,7 @@ You can specify any of the following Falcon models by using `--model-id`.
   ```
 
 > [!NOTE]
-> Currently when using the vLLM backend, quantization and adapters are not supported.
+> Currently when using the vLLM backend, adapters is yet to be supported.
 
 </details>
 
@@ -471,7 +471,7 @@ You can specify any of the following Flan-T5 models by using `--model-id`.
   ```
 
 > [!NOTE]
-> Currently when using the vLLM backend, quantization and adapters are not supported.
+> Currently when using the vLLM backend, adapters is yet to be supported.
 
 </details>
 
@@ -518,7 +518,7 @@ You can specify any of the following GPT-NeoX models by using `--model-id`.
   ```
 
 > [!NOTE]
-> Currently when using the vLLM backend, quantization and adapters are not supported.
+> Currently when using the vLLM backend, adapters is yet to be supported.
 
 </details>
 
@@ -572,7 +572,7 @@ You can specify any of the following MPT models by using `--model-id`.
   ```
 
 > [!NOTE]
-> Currently when using the vLLM backend, quantization and adapters are not supported.
+> Currently when using the vLLM backend, adapters is yet to be supported.
 
 </details>
 
@@ -625,7 +625,7 @@ You can specify any of the following OPT models by using `--model-id`.
   ```
 
 > [!NOTE]
-> Currently when using the vLLM backend, quantization and adapters are not supported.
+> Currently when using the vLLM backend, adapters is yet to be supported.
 
 </details>
 
@@ -675,7 +675,7 @@ You can specify any of the following StableLM models by using `--model-id`.
   ```
 
 > [!NOTE]
-> Currently when using the vLLM backend, quantization and adapters are not supported.
+> Currently when using the vLLM backend, adapters is yet to be supported.
 
 </details>
 
@@ -724,7 +724,7 @@ You can specify any of the following StarCoder models by using `--model-id`.
   ```
 
 > [!NOTE]
-> Currently when using the vLLM backend, quantization and adapters are not supported.
+> Currently when using the vLLM backend, adapters is yet to be supported.
 
 </details>
 
@@ -777,7 +777,7 @@ You can specify any of the following Baichuan models by using `--model-id`.
   ```
 
 > [!NOTE]
-> Currently when using the vLLM backend, quantization and adapters are not supported.
+> Currently when using the vLLM backend, adapters is yet to be supported.
 
 </details>
 
@@ -820,9 +820,20 @@ Note:
 
 Quantization is a technique to reduce the storage and computation requirements for machine learning models, particularly during inference. By approximating floating-point numbers as integers (quantized values), quantization allows for faster computations, reduced memory footprint, and can make it feasible to deploy large models on resource-constrained devices.
 
-OpenLLM supports quantization through two methods - [bitsandbytes](https://github.com/TimDettmers/bitsandbytes) and [GPTQ](https://arxiv.org/abs/2210.17323).
+OpenLLM supports the following quantization techniques
 
-To run a model using the `bitsandbytes` method for quantization, you can use the following command:
+- [LLM.int8(): 8-bit Matrix Multiplication](https://arxiv.org/abs/2208.07339) through [bitsandbytes](https://github.com/TimDettmers/bitsandbytes)
+- [SpQR: A Sparse-Quantized Representation for Near-Lossless LLM Weight Compression
+](https://arxiv.org/abs/2306.03078) through [bitsandbytes](https://github.com/TimDettmers/bitsandbytes)
+- [AWQ: Activation-aware Weight Quantization](https://arxiv.org/abs/2306.00978), 
+- [GPTQ: Accurate Post-Training Quantization](https://arxiv.org/abs/2210.17323)
+- [SqueezeLLM: Dense-and-Sparse Quantization](https://arxiv.org/abs/2306.07629).
+
+### PyTorch backend
+
+With PyTorch backend, OpenLLM supports `int8`, `int4`, `gptq`
+
+For using int8 and int4 quantization through `bitsandbytes`, you can use the following command:
 
 ```bash
 openllm start opt --quantize int8
@@ -831,13 +842,32 @@ openllm start opt --quantize int8
 To run inference with `gptq`, simply pass `--quantize gptq`:
 
 ```bash
-openllm start falcon --model-id TheBloke/falcon-40b-instruct-GPTQ --quantize gptq --device 0
+openllm start llama --model-id TheBloke/Llama-2-7B-Chat-GPTQ --quantize gptq
 ```
 
 > [!NOTE]
 > In order to run GPTQ, make sure you run `pip install "openllm[gptq]" --extra-index-url https://huggingface.github.io/autogptq-index/whl/cu118/`
 > first to install the dependency. From the GPTQ paper, it is recommended to quantized the weights before serving.
 > See [AutoGPTQ](https://github.com/PanQiWei/AutoGPTQ) for more information on GPTQ quantization.
+
+### vLLM backend
+
+With vLLM backend, OpenLLM supports `awq`, `squeezellm`
+
+To run inference with `awq`, simply pass `--quantize awq`:
+
+```bash
+openllm start mistral --model-id TheBloke/zephyr-7B-alpha-AWQ --quantize awq
+```
+
+To run inference with `squeezellm`, simply pass `--quantize squeezellm`:
+
+```bash
+openllm start llama --model-id squeeze-ai-lab/sq-llama-2-7b-w4-s0 --quantize squeezellm --serialization legacy
+```
+
+> [!IMPORTANT]
+> Since both `squeezellm` and `awq` are weight-aware quantization methods, meaning the quantization is done during training, all pre-trained weights needs to get quantized before inference time. Make sure to fine compatible weights on HuggingFace Hub for your model of choice.
 
 ## 🛠️ Serving fine-tuning layers
 
