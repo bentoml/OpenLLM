@@ -132,6 +132,7 @@ class LLM(t.Generic[M, T]):
   __llm_model__: t.Optional[M] = None
   __llm_tokenizer__: t.Optional[T] = None
   __llm_adapter_map__: t.Optional[ResolvedAdapterMap] = None
+  __llm_trust_remote_code__: bool = False
 
   device: 'torch.device | None' = None
 
@@ -151,6 +152,7 @@ class LLM(t.Generic[M, T]):
                quantization_config: transformers.BitsAndBytesConfig | transformers.GPTQConfig | transformers.AwqConfig | None = None,
                adapter_map: dict[str, str] | None = None,
                serialisation: LiteralSerialisation = 'safetensors',
+               trust_remote_code: bool = False,
                **attrs: t.Any):
     # low_cpu_mem_usage is only available for model this is helpful on system with low memory to avoid OOM
     low_cpu_mem_usage = attrs.pop('low_cpu_mem_usage', True)
@@ -186,8 +188,8 @@ class LLM(t.Generic[M, T]):
                         prompt_template=prompt_template,
                         system_message=system_message,
                         llm_backend__=backend,
-                        llm_config__=llm_config)
-    self.__llm_backend__ = backend
+                        llm_config__=llm_config,
+                        llm_trust_remote_code__=trust_remote_code)
 
   @apply(lambda val: tuple(str.lower(i) if i else i for i in val))
   def _make_tag_components(self, model_id: str, model_version: str | None, backend: LiteralBackend) -> tuple[str, str | None]:
@@ -206,7 +208,7 @@ class LLM(t.Generic[M, T]):
   @property
   def import_kwargs(self)->tuple[dict[str, t.Any],dict[str, t.Any]]: return {'device_map': 'auto' if torch.cuda.is_available() and torch.cuda.device_count() > 1 else None, 'torch_dtype': torch.float16 if torch.cuda.is_available() else torch.float32}, {'padding_side': 'left', 'truncation_side': 'left'}
   @property
-  def trust_remote_code(self)->bool:return first_not_none(check_bool_env('TRUST_REMOTE_CODE',False),default=self.config['trust_remote_code'])
+  def trust_remote_code(self)->bool:return first_not_none(check_bool_env('TRUST_REMOTE_CODE',False),default=self.__llm_trust_remote_code__)
   @property
   def runner_name(self)->str:return f"llm-{self.config['start_name']}-runner"
   @property
