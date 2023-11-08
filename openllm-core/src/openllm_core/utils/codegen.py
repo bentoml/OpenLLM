@@ -113,7 +113,7 @@ def generate_function(typ: type[t.Any],
   script = 'def %s(%s):\n    %s\n' % (func_name, ', '.join(args) if args is not None else '', '\n    '.join(lines) if lines else 'pass')
   meth = _make_method(func_name, script, generate_unique_filename(typ, func_name), globs)
   if annotations: meth.__annotations__ = annotations
-  if SHOW_CODEGEN: print('Generated script for {typ}:\n\n', script)
+  if SHOW_CODEGEN: print(f'Generated script for {typ}:\n\n', script)
   return meth
 
 def make_env_transformer(cls: type[openllm_core.LLMConfig],

@@ -237,7 +237,6 @@ lines-after-imports = 1
 lines-between-types = 1
 no-lines-before = ["future", "standard-library"]
 relative-imports-order = "closest-to-furthest"
-required-imports = ["from __future__ import annotations"]
 [tool.ruff.flake8-quotes]
 avoid-escape = false
 multiline-quotes = "single"
