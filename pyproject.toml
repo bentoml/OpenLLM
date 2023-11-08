@@ -283,11 +283,11 @@ testpaths = ["openllm-python/tests"]
 
 [tool.pyright]
 useLibraryCodeForTypes = true
+typeCheckingMode = "strict"
 verboseOutput = true
 include = ["openllm-core/src", "openllm-client/src", "openllm-python/src"]
 defineConstant = { MYPY = true }
 exclude = [
-  "__pypackages__/*",
   "cz.py",
   "tools",
   "examples",
@@ -310,11 +310,9 @@ reportUnknownMemberType = "warning"
 reportUnknownVariableType = "warning"
 reportUnsupportedDunderAll = "warning"
 reportWildcardImportFromLibrary = "warning"
-typeCheckingMode = "strict"
 
 [tool.mypy]
 exclude = [
-  "__pypackages__/*",
   "examples",
   "tools",
   "cz.py",
@@ -337,8 +335,6 @@ show_error_codes = true
 strict = true
 warn_return_any = false
 warn_unreachable = true
-warn_unused_ignores = false
-explicit_package_bases = true
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
 module = [

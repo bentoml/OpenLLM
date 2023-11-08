@@ -19,37 +19,38 @@ from ._schemas import StreamingResponse
 
 logger = logging.getLogger(__name__)
 
-def _address_validator(_: t.Any, attr: attr.Attribute[t.Any], value: str) -> None:
+def _address_validator(_, attr, value):
   if not isinstance(value, str): raise TypeError(f'{attr.name} must be a string')
   if not urlparse(value).netloc: raise ValueError(f'{attr.name} must be a valid URL')
 
-def _address_converter(addr: str) -> str:
+def _address_converter(addr: str):
   return addr if '://' in addr else 'http://' + addr
 
 class ServerState(enum.Enum):
-  # CLOSED: The server is not yet ready or `wait_until_server_ready` has not been called/failed.
-  CLOSED = 1
-  # READY: The server is ready and `wait_until_server_ready` has been called.
-  READY = 2
+  CLOSED = 1  # CLOSED: The server is not yet ready or `wait_until_server_ready` has not been called/failed.
+  READY = 2  # READY: The server is ready and `wait_until_server_ready` has been called.
 
 _object_setattr = object.__setattr__
 
 @attr.define(init=False)
 class HTTPClient:
   address: str = attr.field(validator=_address_validator, converter=_address_converter)
-  client_args: t.Dict[str, t.Any] = attr.field()
-  _inner: httpx.Client = attr.field(repr=False)
+  client_args: t.Dict[str, t.Any]
 
-  _timeout: int = attr.field(default=30, repr=False)
-  _api_version: str = attr.field(default='v1', repr=False)
-  _verify: bool = attr.field(default=True, repr=False)
-  _state: ServerState = attr.field(default=ServerState.CLOSED, repr=False)
+  _inner: httpx.Client
+  _timeout: int = 30
+  _api_version: str = 'v1'
+  _verify: bool = True
+  _state: ServerState = ServerState.CLOSED
 
-  __metadata: dict[str, t.Any] | None = attr.field(default=None, repr=False)
-  __config: dict[str, t.Any] | None = attr.field(default=None, repr=False)
+  __metadata: dict[str, t.Any] | None = None
+  __config: dict[str, t.Any] | None = None
+
+  def __repr__(self):
+    return f'<HTTPClient timeout={self._timeout} api_version={self._api_version} verify={self._verify} state={self._state}>'
 
   @staticmethod
-  def wait_until_server_ready(addr: str, timeout: float = 30, verify: bool = False, check_interval: int = 1, **client_args: t.Any) -> None:
+  def wait_until_server_ready(addr, timeout=30, verify=False, check_interval=1, **client_args):
     addr = _address_converter(addr)
     logger.debug('Wait for server @ %s to be ready', addr)
     start = time.monotonic()
@@ -71,12 +72,12 @@ class HTTPClient:
       logger.error(err)
       raise
 
-  def __init__(self, address: str | None = None, timeout: int = 30, verify: bool = False, api_version: str = 'v1', **client_args: t.Any) -> None:
+  def __init__(self, address=None, timeout=30, verify=False, api_version='v1', **client_args):
     if address is None:
-      env = os.environ.get('OPENLLM_ENDPOINT')
+      env = os.getenv('OPENLLM_ENDPOINT')
       if env is None: raise ValueError('address must be provided')
       address = env
-    self.__attrs_init__(address, client_args, httpx.Client(base_url=address, timeout=timeout, verify=verify, **client_args), timeout, api_version, verify)  # type: ignore[attr-defined]
+    self.__attrs_init__(address, client_args, httpx.Client(base_url=address, timeout=timeout, verify=verify, **client_args), timeout, api_version, verify)
 
   def _metadata(self) -> dict[str, t.Any]:
     if self.__metadata is None: self.__metadata = self._inner.post(self._build_endpoint('metadata')).json()
@@ -89,15 +90,20 @@ class HTTPClient:
       self.__config = {**config, **generation_config}
     return self.__config
 
-  # yapf: disable
-  def __del__(self)->None:self._inner.close()
-  def _build_endpoint(self,endpoint: str)->str:return ('/' if not self._api_version.startswith('/') else '')+f'{self._api_version}/{endpoint}'
-  @property
-  def is_ready(self)->bool:return self._state==ServerState.READY
-  def query(self, prompt: str, **attrs: t.Any)->Response: return self.generate(prompt,**attrs)
-  # yapf: enable
+  def __del__(self):
+    self._inner.close()
 
-  def health(self) -> None:
+  def _build_endpoint(self, endpoint):
+    return ('/' if not self._api_version.startswith('/') else '') + f'{self._api_version}/{endpoint}'
+
+  @property
+  def is_ready(self):
+    return self._state == ServerState.READY
+
+  def query(self, prompt, **attrs):
+    return self.generate(prompt, **attrs)
+
+  def health(self):
     try:
       self.wait_until_server_ready(self.address, timeout=self._timeout, verify=self._verify, **self.client_args)
       _object_setattr(self, '_state', ServerState.READY)
@@ -105,12 +111,12 @@ class HTTPClient:
       logger.error('Server is not healthy (Scroll up for traceback)\n%s', e)
       _object_setattr(self, '_state', ServerState.CLOSED)
 
-  def generate(self, prompt: str, llm_config: dict[str, t.Any] | None = None, stop: str | list[str] | None = None, adapter_name: str | None = None, **attrs: t.Any) -> Response:
+  def generate(self, prompt, llm_config=None, stop=None, adapter_name=None, timeout=None, verify=None, **attrs) -> Response:
     if not self.is_ready:
       self.health()
       if not self.is_ready: raise RuntimeError('Server is not ready. Check server logs for more information.')
-    timeout = attrs.pop('timeout', self._timeout)
-    verify = attrs.pop('verify', self._verify)
+    if timeout is None: timeout = self._timeout
+    if verify is None: verify = self._verify
     _meta, _config = self._metadata(), self._config()
     if llm_config is not None: llm_config = {**_config, **llm_config, **attrs}
     else: llm_config = {**_config, **attrs}
@@ -122,17 +128,12 @@ class HTTPClient:
     if r.status_code != 200: raise ValueError("Failed to get generation from '/v1/generate'. Check server logs for more details.")
     return Response.model_construct(r.json())
 
-  def generate_stream(self,
-                      prompt: str,
-                      llm_config: dict[str, t.Any] | None = None,
-                      stop: str | list[str] | None = None,
-                      adapter_name: str | None = None,
-                      **attrs: t.Any) -> t.Iterator[StreamingResponse]:
+  def generate_stream(self, prompt, llm_config=None, stop=None, adapter_name=None, timeout=None, verify=None, **attrs) -> t.Iterator[StreamingResponse]:
     if not self.is_ready:
       self.health()
       if not self.is_ready: raise RuntimeError('Server is not ready. Check server logs for more information.')
-    timeout = attrs.pop('timeout', self._timeout)
-    verify = attrs.pop('verify', self._verify)
+    if timeout is None: timeout = self._timeout
+    if verify is None: verify = self._verify
     _meta, _config = self._metadata(), self._config()
     if llm_config is not None: llm_config = {**_config, **llm_config, **attrs}
     else: llm_config = {**_config, **attrs}
@@ -156,19 +157,22 @@ class HTTPClient:
 @attr.define(init=False)
 class AsyncHTTPClient:
   address: str = attr.field(validator=_address_validator, converter=_address_converter)
-  client_args: t.Dict[str, t.Any] = attr.field()
-  _inner: httpx.AsyncClient = attr.field(repr=False)
+  client_args: t.Dict[str, t.Any]
 
-  _timeout: int = attr.field(default=30, repr=False)
-  _api_version: str = attr.field(default='v1', repr=False)
-  _verify: bool = attr.field(default=True, repr=False)
-  _state: ServerState = attr.field(default=ServerState.CLOSED, repr=False)
+  _inner: httpx.AsyncClient
+  _timeout: int = 30
+  _api_version: str = 'v1'
+  _verify: bool = True
+  _state: ServerState = ServerState.CLOSED
 
-  __metadata: dict[str, t.Any] | None = attr.field(default=None, repr=False)
-  __config: dict[str, t.Any] | None = attr.field(default=None, repr=False)
+  __metadata: dict[str, t.Any] | None = None
+  __config: dict[str, t.Any] | None = None
+
+  def __repr__(self):
+    return f'<AsyncHTTPClient timeout={self._timeout} api_version={self._api_version} verify={self._verify} state={self._state}>'
 
   @staticmethod
-  async def wait_until_server_ready(addr: str, timeout: float = 30, verify: bool = False, check_interval: int = 1, **client_args: t.Any) -> None:
+  async def wait_until_server_ready(addr, timeout=30, verify=False, check_interval=1, **client_args):
     addr = _address_converter(addr)
     logger.debug('Wait for server @ %s to be ready', addr)
     start = time.monotonic()
@@ -190,9 +194,9 @@ class AsyncHTTPClient:
       logger.error(err)
       raise
 
-  def __init__(self, address: str | None = None, timeout: int = 30, verify: bool = False, api_version: str = 'v1', **client_args: t.Any) -> None:
+  def __init__(self, address=None, timeout=30, verify=False, api_version='v1', **client_args):
     if address is None:
-      env = os.environ.get('OPENLLM_ENDPOINT')
+      env = os.getenv('OPENLLM_ENDPOINT')
       if env is None: raise ValueError('address must be provided')
       address = env
     self.__attrs_init__(address, client_args, httpx.AsyncClient(base_url=address, timeout=timeout, verify=verify, **client_args), timeout, api_version, verify)
@@ -208,13 +212,17 @@ class AsyncHTTPClient:
       self.__config = {**config, **generation_config}
     return self.__config
 
-  # yapf: disable
-  def _build_endpoint(self,endpoint:str) -> str: return '/'+f'{self._api_version}/{endpoint}'
+  def _build_endpoint(self, endpoint):
+    return '/' + f'{self._api_version}/{endpoint}'
+
   @property
-  def is_ready(self)->bool:return self._state==ServerState.READY
-  async def query(self,prompt:str,**attrs: t.Any)->Response:return await self.generate(prompt,**attrs)
-  # yapf: enable
-  async def health(self) -> None:
+  def is_ready(self):
+    return self._state == ServerState.READY
+
+  async def query(self, prompt, **attrs):
+    return await self.generate(prompt, **attrs)
+
+  async def health(self):
     try:
       await self.wait_until_server_ready(self.address, timeout=self._timeout, verify=self._verify, **self.client_args)
       _object_setattr(self, '_state', ServerState.READY)
@@ -222,12 +230,12 @@ class AsyncHTTPClient:
       logger.error('Server is not healthy (Scroll up for traceback)\n%s', e)
       _object_setattr(self, '_state', ServerState.CLOSED)
 
-  async def generate(self, prompt: str, llm_config: dict[str, t.Any] | None = None, stop: str | list[str] | None = None, adapter_name: str | None = None, **attrs: t.Any) -> Response:
+  async def generate(self, prompt, llm_config=None, stop=None, adapter_name=None, timeout=None, verify=None, **attrs) -> Response:
     if not self.is_ready:
       await self.health()
       if not self.is_ready: raise RuntimeError('Server is not ready. Check server logs for more information.')
-    timeout = attrs.pop('timeout', self._timeout)
-    verify = attrs.pop('verify', self._verify)
+    if timeout is None: timeout = self._timeout
+    if verify is None: verify = self._verify
     _meta, _config = await self._metadata(), await self._config()
     if llm_config is not None: llm_config = {**_config, **llm_config, **attrs}
     else: llm_config = {**_config, **attrs}
@@ -239,17 +247,12 @@ class AsyncHTTPClient:
     if r.status_code != 200: raise ValueError("Failed to get generation from '/v1/generate'. Check server logs for more details.")
     return Response.model_construct(r.json())
 
-  async def generate_stream(self,
-                            prompt: str,
-                            llm_config: dict[str, t.Any] | None = None,
-                            stop: str | list[str] | None = None,
-                            adapter_name: str | None = None,
-                            **attrs: t.Any) -> t.AsyncGenerator[StreamingResponse, t.Any]:
+  async def generate_stream(self, prompt, llm_config=None, stop=None, adapter_name=None, timeout=None, verify=None, **attrs) -> t.AsyncGenerator[StreamingResponse, t.Any]:
     if not self.is_ready:
       await self.health()
       if not self.is_ready: raise RuntimeError('Server is not ready. Check server logs for more information.')
-    timeout = attrs.pop('timeout', self._timeout)
-    verify = attrs.pop('verify', self._verify)
+    if timeout is None: timeout = self._timeout
+    if verify is None: verify = self._verify
     _meta, _config = await self._metadata(), await self._config()
     if llm_config is not None: llm_config = {**_config, **llm_config, **attrs}
     else: llm_config = {**_config, **attrs}
