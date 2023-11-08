@@ -6,10 +6,10 @@ import pytest
 
 import bentoml
 
-from openllm_core import _strategies as strategy
-from openllm_core._strategies import CascadingResourceStrategy
-from openllm_core._strategies import NvidiaGpuResource
-from openllm_core._strategies import get_resource
+from openllm import _strategies as strategy
+from openllm._strategies import CascadingResourceStrategy
+from openllm._strategies import NvidiaGpuResource
+from openllm._strategies import get_resource
 
 if t.TYPE_CHECKING:
   from _pytest.monkeypatch import MonkeyPatch

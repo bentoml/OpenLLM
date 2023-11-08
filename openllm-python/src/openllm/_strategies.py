@@ -1,4 +1,3 @@
-# NOTE: This module depends on BentoML, whereas openllm_core doesn't necessary depends on BentoML.
 # mypy: disable-error-code="no-redef"
 from __future__ import annotations
 import inspect
@@ -10,20 +9,15 @@ import types
 import typing as t
 import warnings
 
-import psutil
-
-try:
-  import bentoml
-except ImportError:
-  raise RuntimeError("Importing 'openllm_core._strategies' requires bentoml (not available locally). Make sure to do 'pip install -U bentoml'")
+import psutil, bentoml
 
 from bentoml._internal.resource import get_resource
 from bentoml._internal.resource import system_resources
 from bentoml._internal.runner.strategy import THREAD_ENVS
 
-from ._typing_compat import overload
-from .utils import DEBUG
-from .utils import ReprMixin
+from openllm_core._typing_compat import overload
+from openllm_core.utils import DEBUG
+from openllm_core.utils import ReprMixin
 
 class DynResource(t.Protocol):
   resource_id: t.ClassVar[str]
@@ -230,7 +224,7 @@ def _make_resource_class(name: str, resource_kind: str, docstring: str) -> type[
           '__module__': 'openllm._strategies'
       }))
 
-# NOTE: we need to hint these t.Literal since mypy is to dumb to infer this as literal :facepalm:
+# NOTE: we need to hint these t.Literal since mypy is to dumb to infer this as literal 🤦
 _TPU_RESOURCE: t.Literal['cloud-tpus.google.com/v2'] = 'cloud-tpus.google.com/v2'
 _AMD_GPU_RESOURCE: t.Literal['amd.com/gpu'] = 'amd.com/gpu'
 _NVIDIA_GPU_RESOURCE: t.Literal['nvidia.com/gpu'] = 'nvidia.com/gpu'

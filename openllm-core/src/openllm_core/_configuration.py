@@ -1,38 +1,4 @@
 # mypy: disable-error-code="attr-defined,no-untyped-call,type-var,operator,arg-type,no-redef,misc"
-'''Configuration utilities for OpenLLM. All model configuration will inherit from ``openllm.LLMConfig``.
-
-Highlight feature: Each fields in ``openllm.LLMConfig`` will also automatically generate a environment
-variable based on its name field.
-
-For example, the following config class:
-
-```python
-class FlanT5Config(openllm.LLMConfig):
-  __config__ = {
-    "url": "https://huggingface.co/docs/transformers/model_doc/flan-t5",
-    "default_id": "google/flan-t5-large",
-    "model_ids": [
-        "google/flan-t5-small",
-        "google/flan-t5-base",
-        "google/flan-t5-large",
-        "google/flan-t5-xl",
-        "google/flan-t5-xxl",
-    ],
-  }
-
-  class GenerationConfig:
-    temperature: float = 0.9
-    max_new_tokens: int = 2048
-    top_k: int = 50
-    top_p: float = 0.4
-    repetition_penalty = 1.0
-```
-
-which generates the environment OPENLLM_FLAN_T5_GENERATION_TEMPERATURE for users to configure temperature
-dynamically during serve, ahead-of-serve or per requests.
-
-Refer to ``openllm.LLMConfig`` docstring for more information.
-'''
 from __future__ import annotations
 import copy
 import enum
@@ -82,20 +48,17 @@ from .utils import dantic
 from .utils import field_env_key
 from .utils import first_not_none
 from .utils import lenient_issubclass
+from .utils.peft import FineTuneConfig, PEFT_TASK_TYPE_TARGET_MAPPING, PeftType
 from .utils.import_utils import is_vllm_available
 
 if t.TYPE_CHECKING:
   import click
-  import peft
   import transformers
   import vllm
-
-  from transformers.generation.beam_constraints import Constraint
 
   from openllm.protocol.openai import ChatCompletionRequest
   from openllm.protocol.openai import CompletionRequest
 else:
-  Constraint = t.Any
   vllm = LazyLoader('vllm', globals(), 'vllm')
   transformers = LazyLoader('transformers', globals(), 'transformers')
   peft = LazyLoader('peft', globals(), 'peft')
@@ -104,129 +67,7 @@ __all__ = ['LLMConfig', 'GenerationConfig', 'SamplingParams', 'field_env_key']
 
 logger = logging.getLogger(__name__)
 config_merger = Merger([(dict, 'merge')], ['override'], ['override'])
-
-# case insensitive, but rename to conform with type
-class _PeftEnumMeta(enum.EnumMeta):
-  def __getitem__(self, __key: str | t.Any, /) -> t.Any:
-    if isinstance(__key, str): __key = inflection.underscore(__key).upper()
-    return self._member_map_[__key]
-
-# vendorred from peft.utils.config.PeftType since we don't have hard dependency on peft
-# see https://github.com/huggingface/peft/blob/main/src/peft/utils/config.py
-class PeftType(str, enum.Enum, metaclass=_PeftEnumMeta):
-  PROMPT_TUNING = 'PROMPT_TUNING'
-  MULTITASK_PROMPT_TUNING = 'MULTITASK_PROMPT_TUNING'
-  P_TUNING = 'P_TUNING'
-  PREFIX_TUNING = 'PREFIX_TUNING'
-  LORA = 'LORA'
-  ADALORA = 'ADALORA'
-  ADAPTION_PROMPT = 'ADAPTION_PROMPT'
-  IA3 = 'IA3'
-  LOHA = 'LOHA'
-  LOKR = 'LOKR'
-
-  @classmethod
-  def _missing_(cls, value: object) -> enum.Enum | None:
-    if isinstance(value, str):
-      normalized = inflection.underscore(value).upper()
-      if normalized in cls._member_map_: return cls._member_map_[normalized]
-    return None
-
-  @classmethod
-  def supported(cls) -> set[str]:
-    return {inflection.underscore(v.value) for v in cls}
-
-  def to_str(self) -> str:
-    return self.value
-
-  @staticmethod
-  def get(__key: str | t.Any, /) -> PeftType:
-    return PeftType[__key]  # type-safe getitem.
-
-_PEFT_TASK_TYPE_TARGET_MAPPING = {'causal_lm': 'CAUSAL_LM', 'seq2seq_lm': 'SEQ_2_SEQ_LM'}
-
 _object_setattr = object.__setattr__
-
-def _adapter_converter(value: AdapterType | str | PeftType | None) -> PeftType:
-  if value is None: raise ValueError("'AdapterType' cannot be None.")
-  if isinstance(value, PeftType): return value
-  if value not in PeftType.supported(): raise ValueError(f"Given '{value}' is not a supported adapter type.")
-  return PeftType.get(value)
-
-@attr.define(slots=True, init=True)
-class FineTuneConfig:
-  '''FineTuneConfig defines a default value for fine-tuning this any given LLM.
-
-  For example:
-
-  ```python
-  class FalconConfig(openllm.LLMConfig):
-      __config__ = {
-          "fine_tune_strategies": (
-              {
-                  "adapter_type": "lora",
-                  "r": 64,
-                  "lora_alpha": 16,
-                  "lora_dropout": 0.1,
-                  "bias": "none",
-                  "target_modules": ["query_key_value", "dense", "dense_h_to_4h", "dense_4h_to_h"],
-              },
-          ),
-      }
-  ```
-
-  This is a lower level API that leverage `peft` as well as openllm.LLMConfig to create default
-  and customization
-  '''
-
-  if t.TYPE_CHECKING and not MYPY:
-    # The following type stubs makes __init__ aware of attrs internal type converter.
-    @overload
-    def __init__(self, adapter_type: AdapterType = ..., adapter_config: dict[str, t.Any] = ..., inference_mode: bool = ..., llm_config_class: type[LLMConfig] = ...) -> None:
-      ...
-
-    @overload
-    def __init__(self, adapter_type: PeftType = ..., adapter_config: dict[str, t.Any] = ..., inference_mode: bool = ..., llm_config_class: type[LLMConfig] = ...) -> None:
-      ...
-
-    # The below should be generated via attrs. Only here to conform with pyright strict checking.
-    def __init__(self, *args: t.Any, **kwargs: t.Any) -> None:
-      ...
-
-  adapter_type: PeftType = dantic.Field('lora',
-                                        description=f"The type of adapter to use for fine-tuning. Available supported methods: {PeftType.supported()}, default to 'lora'",
-                                        use_default_converter=False,
-                                        converter=_adapter_converter)
-  adapter_config: t.Dict[str, t.Any] = dantic.Field(None,
-                                                    description='The configuration for the adapter. The content of the dict depends on the adapter type.',
-                                                    validator=attr.validators.optional(attr.validators.instance_of(dict)),
-                                                    converter=attr.converters.default_if_none(factory=dict),
-                                                    use_default_converter=False)
-  inference_mode: bool = dantic.Field(False, description='Whether to use this Adapter for inference', use_default_converter=False)
-  llm_config_class: type[LLMConfig] = dantic.Field(None, description='The reference class to openllm.LLMConfig', use_default_converter=False)
-
-  def build(self) -> peft.PeftConfig:  # type: ignore[name-defined]
-    adapter_config = self.adapter_config.copy()
-    # no need for peft_type since it is internally managed by OpenLLM and PEFT
-    if 'peft_type' in adapter_config: adapter_config.pop('peft_type')
-    for k in {'enable_lora', 'merge_weights'}:
-      if k in adapter_config: adapter_config.pop(k)  # this is an old key for older lora layer
-    # respect user set task_type if it is passed, otherwise use one managed by OpenLLM
-    task_type, inference_mode = adapter_config.pop('task_type', peft.TaskType[self.llm_config_class.peft_task_type()]), adapter_config.pop('inference_mode', self.inference_mode)
-    return peft.PEFT_TYPE_TO_CONFIG_MAPPING[self.adapter_type.to_str()](task_type=task_type, inference_mode=inference_mode, **adapter_config)
-
-  def train(self) -> FineTuneConfig:
-    _object_setattr(self, 'inference_mode', False)
-    return self
-
-  def eval(self) -> FineTuneConfig:
-    _object_setattr(self, 'inference_mode', True)
-    return self
-
-  def with_config(self, **attrs: t.Any) -> FineTuneConfig:
-    adapter_type, inference_mode = attrs.pop('adapter_type', self.adapter_type), attrs.get('inference_mode', self.inference_mode)
-    if 'llm_config_class' in attrs: raise ForbiddenAttributeError("'llm_config_class' should not be passed when using 'with_config'.")
-    return attr.evolve(self, adapter_type=adapter_type, inference_mode=inference_mode, adapter_config=config_merger.merge(self.adapter_config, attrs))
 
 @attr.frozen(slots=True, repr=False, init=False)
 class GenerationConfig(ReprMixin):
@@ -304,10 +145,6 @@ class GenerationConfig(ReprMixin):
       description=
       "Whether to renormalize the logits after applying all the logits processors or warpers (including the custom ones). It's highly recommended to set this flag to `True` as the search algorithms suppose the score logits are normalized but some logit processors or warpers break the normalization. "
   )
-  constraints: t.List[Constraint] = dantic.Field(
-      description=
-      'Custom constraints that can be added to the generation to ensure that the output will contain the use of certain tokens as defined by ``Constraint`` objects, in the most sensible way possible.'
-  )
   forced_bos_token_id: int = dantic.Field(
       description=
       'The id of the token to force as the first generated token after the ``decoder_start_token_id``. Useful for multilingual models like [mBART](https://huggingface.co/docs/transformers/model_doc/mbart) where the first generated token needs to be the target language token. '
@@ -341,11 +178,6 @@ class GenerationConfig(ReprMixin):
   eos_token_id: t.Union[int, t.List[int]] = dantic.Field(description='The id of the *end-of-sequence* token. Optionally, use a list to set multiple *end-of-sequence* tokens.')
   encoder_no_repeat_ngram_size: int = dantic.Field(0, description='If set to int > 0, all ngrams of that size that occur in the `encoder_input_ids` cannot occur in the `decoder_input_ids`.')
   decoder_start_token_id: int = dantic.Field(description='If an encoder-decoder model starts decoding with a different token than *bos*, the id of that token.')
-
-  if t.TYPE_CHECKING and not MYPY:
-    # stubs this for pyright as mypy already has a attr plugin builtin
-    def __attrs_init__(self, *args: t.Any, **attrs: t.Any) -> None:
-      ...
 
   def __init__(self, *, _internal: bool = False, **attrs: t.Any):
     if not _internal:
@@ -404,9 +236,6 @@ class SamplingParams(ReprMixin):
     temperature: float
     top_k: int
     top_p: float
-
-    def __attrs_init__(self, *args: t.Any, **attrs: t.Any) -> None:
-      ...
 
   def __init__(self, *, _internal: bool = False, **attrs: t.Any):
     if not _internal: raise RuntimeError('SamplingParams is not meant to be used directly, but you can access this via a LLMConfig.sampling_config.')
@@ -534,7 +363,6 @@ _transformed_type: DictStrAny = {'fine_tune_strategies': t.Dict[AdapterType, Fin
                                   description=f'ModelSettings field for {k}.')) for k, ann in t.get_type_hints(ModelSettings).items()
              ])
 class _ModelSettingsAttr:
-  """Internal attrs representation of ModelSettings."""
   def __getitem__(self, key: str) -> t.Any:
     if key in codegen.get_annotations(ModelSettings):
       return _object_getattribute(self, key)
@@ -594,7 +422,7 @@ def structure_settings(cl_: type[LLMConfig], cls: type[_ModelSettingsAttr]) -> _
   _cl_name = cl_.__name__.replace('Config', '')
   _settings_attr = cls.default()
   has_custom_name = all(i in cl_.__config__ for i in {'model_name', 'start_name'})
-  _settings_attr = attr.evolve(_settings_attr, **cl_.__config__)  # type: ignore[misc]
+  _settings_attr = attr.evolve(_settings_attr, **cl_.__config__)
   _final_value_dct: DictStrAny = {}
 
   if not has_custom_name:
@@ -667,7 +495,7 @@ class _ConfigAttr:
     __config__: ModelSettings = Field(None)
     '''Internal configuration for this LLM model. Each of the field in here will be populated
         and prefixed with __openllm_<value>__'''
-    GenerationConfig: object = Field(None)
+    GenerationConfig: GenerationConfig = Field(None)
     '''Users can override this subclass of any given LLMConfig to provide GenerationConfig
         default value. For example:
 
@@ -680,7 +508,7 @@ class _ConfigAttr:
                 eos_token_id: int = 11
         ```
         '''
-    SamplingParams: object = Field(None)
+    SamplingParams: SamplingParams = Field(None)
     '''Users can override this subclass of any given LLMConfig to provide SamplingParams
         default value. For example:
 
@@ -793,26 +621,14 @@ class _ConfigAttr:
     # update-config-stubs.py: special stop
 
 class _ConfigBuilder:
-  """A modified version of attrs internal _ClassBuilder, and should only be called within __init_subclass__ of LLMConfig.
-
-  Where:
-  - has_custom_setattr=True
-  - getstate_setstate=None (config class will always be a slotted class.)
-  - slots=True
-  - auto_attribs=False (We should handle it before _ConfigBuilder is invoked)
-  - cache_hash=False (We don't need to cache the hash code of this object for now.)
-  - collect_by_mro=True (The correct behaviour to resolve inheritance)
-  - field_transformer=codegen.make_env_transformer (We need to transform the field to have env variable)
-
-  It takes `these` arguments as a fully parsed attr.Attribute[t.Any] from __init_subclass__
-  """
-
   __slots__ = ('_cls', '_cls_dict', '_attr_names', '_attrs', '_model_name', '_base_attr_map', '_base_names', '_has_pre_init', '_has_post_init')
 
   def __init__(self, cls: type[LLMConfig], these: dict[str, _CountingAttr], auto_attribs: bool = False, kw_only: bool = False, collect_by_mro: bool = True):
     attrs, base_attrs, base_attr_map = _transform_attrs(cls, these, auto_attribs, kw_only, collect_by_mro, field_transformer=codegen.make_env_transformer(cls, cls.__openllm_model_name__))
-    self._cls, self._model_name, self._cls_dict, self._attrs, self._base_names, self._base_attr_map = cls, cls.__openllm_model_name__, dict(cls.__dict__), attrs, {a.name for a in base_attrs
-                                                                                                                                                                   }, base_attr_map
+    self._cls, self._model_name, self._cls_dict = cls, cls.__openllm_model_name__, dict(cls.__dict__)
+    self._attrs = attrs
+    self._base_attr_map = base_attr_map
+    self._base_names = {a.name for a in base_attrs}
     self._attr_names = tuple(a.name for a in attrs)
     self._has_pre_init = bool(getattr(cls, '__attrs_pre_init__', False))
     self._has_post_init = bool(getattr(cls, '__attrs_post_init__', False))
@@ -1070,7 +886,7 @@ class LLMConfig(_ConfigAttr):
     # Finally, resolve the types
     if getattr(cls, '__attrs_types_resolved__', None) != cls:
       # NOTE: We will try to resolve type here, and cached it for faster use
-      globs: DictStrAny = {'t': t, 'typing': t, 'Constraint': Constraint}
+      globs: DictStrAny = {'t': t, 'typing': t}
       if cls.__module__ in sys.modules: globs.update(sys.modules[cls.__module__].__dict__)
       attr.resolve_types(cls.__openllm_generation_class__, globalns=globs)
       attr.resolve_types(cls.__openllm_sampling_class__, globalns=globs)
@@ -1206,8 +1022,6 @@ class LLMConfig(_ConfigAttr):
   def __getitem__(self, item: t.Literal['force_words_ids']) -> t.Union[t.List[t.List[int]], t.List[t.List[t.List[int]]]]: ...
   @overload
   def __getitem__(self, item: t.Literal['renormalize_logits']) -> bool: ...
-  @overload
-  def __getitem__(self, item: t.Literal['constraints']) -> t.List[Constraint]: ...
   @overload
   def __getitem__(self, item: t.Literal['forced_bos_token_id']) -> int: ...
   @overload
@@ -1514,20 +1328,12 @@ class LLMConfig(_ConfigAttr):
   # holds a mapping from self.__openllm_model_type__ to peft.TaskType
   @classmethod
   def peft_task_type(cls) -> str:
-    return _PEFT_TASK_TYPE_TARGET_MAPPING[cls.__openllm_model_type__]
+    return PEFT_TASK_TYPE_TARGET_MAPPING[cls.__openllm_model_type__]
 
 converter.register_unstructure_hook_factory(lambda cls: lenient_issubclass(cls, LLMConfig),
                                             lambda cls: make_dict_unstructure_fn(cls, converter, _cattrs_omit_if_default=False, _cattrs_use_linecache=True))
 
 def structure_llm_config(data: t.Any, cls: type[LLMConfig]) -> LLMConfig:
-  """Structure a dictionary to a LLMConfig object.
-
-  Essentially, if the given dictionary contains a 'generation_config' key, then we will
-  use it for LLMConfig.generation_config
-
-  Otherwise, we will filter out all keys are first in LLMConfig, parse it in, then
-  parse the remaining keys into LLMConfig.generation_config
-  """
   if not isinstance(data, dict): raise RuntimeError(f'Expected a dictionary, but got {type(data)}')
   cls_attrs = {k: v for k, v in data.items() if k in cls.__openllm_accepted_keys__}
   generation_cls_fields = attr.fields_dict(cls.__openllm_generation_class__)

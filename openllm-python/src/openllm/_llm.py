@@ -19,7 +19,7 @@ from bentoml._internal.models.model import ModelSignature
 from bentoml._internal.runner.runner_handle import DummyRunnerHandle
 from openllm_core._schemas import CompletionChunk
 from openllm_core._schemas import GenerationOutput
-from openllm_core._strategies import CascadingResourceStrategy
+from ._strategies import CascadingResourceStrategy
 from openllm_core._typing_compat import AdapterMap
 from openllm_core._typing_compat import AdapterTuple
 from openllm_core._typing_compat import AdapterType

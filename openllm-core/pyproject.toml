@@ -62,6 +62,7 @@ dependencies = [
   "cattrs>=23.1.0",
   "orjson",
   "inflection",
+  "deepmerge",
   "typing_extensions",
   "mypy_extensions",
 ]
