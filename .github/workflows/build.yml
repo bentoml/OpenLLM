@@ -109,7 +109,7 @@ jobs:
             network=host
       - name: Install cosign
         if: github.event_name != 'pull_request'
-        uses: sigstore/cosign-installer@11086d25041f77fe8fe7b9ea4e48e3b9192b8f19 # ratchet:sigstore/cosign-installer@v3.1.2
+        uses: sigstore/cosign-installer@1fc5bd396d372bee37d608f955b336615edf79c8 # ratchet:sigstore/cosign-installer@v3.2.0
         with:
           cosign-release: 'v2.1.1'
       - name: Login to GitHub Container Registry
