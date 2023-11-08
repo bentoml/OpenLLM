@@ -9,6 +9,7 @@ from tabulate import tabulate
 
 TOKEN_WHITELIST = [token.OP, token.NAME, token.NUMBER, token.STRING]
 
+
 def run_cz(dir: str, package: str):
   headers = ['Name', 'Lines', 'Tokens/Line']
   table = []
@@ -32,10 +33,13 @@ def run_cz(dir: str, package: str):
   )
   print(f'total line count for {package}: {sum([x[1] for x in table])}\n')
 
+
 def main() -> int:
   run_cz('openllm-python', 'openllm')
   run_cz('openllm-core', 'openllm_core')
   run_cz('openllm-client', 'openllm_client')
   return 0
 
-if __name__ == '__main__': raise SystemExit(main())
+
+if __name__ == '__main__':
+  raise SystemExit(main())
