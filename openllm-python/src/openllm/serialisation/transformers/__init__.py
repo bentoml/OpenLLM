@@ -1,4 +1,4 @@
-'''Serialisation related implementation for Transformers-based implementation.'''
+"""Serialisation related implementation for Transformers-based implementation."""
 from __future__ import annotations
 import importlib
 import logging
@@ -150,13 +150,13 @@ def import_model(llm: openllm.LLM[M, T], *decls: t.Any, trust_remote_code: bool,
     return bentomodel
 
 def get(llm: openllm.LLM[M, T], auto_import: bool = False) -> bentoml.Model:
-  '''Return an instance of ``bentoml.Model`` from given LLM instance.
+  """Return an instance of ``bentoml.Model`` from given LLM instance.
 
   By default, it will try to check the model in the local store.
   If model is not found, and ``auto_import`` is set to True, it will try to import the model from HuggingFace Hub.
 
   Otherwise, it will raises a ``bentoml.exceptions.NotFound``.
-  '''
+  """
   try:
     model = bentoml.models.get(llm.tag)
     backend = model.info.labels['backend']

@@ -230,12 +230,12 @@ class FineTuneConfig:
 
 @attr.frozen(slots=True, repr=False, init=False)
 class GenerationConfig(ReprMixin):
-  '''GenerationConfig is the attrs-compatible version of ``transformers.GenerationConfig``, with some additional validation and environment constructor.
+  """GenerationConfig is the attrs-compatible version of ``transformers.GenerationConfig``, with some additional validation and environment constructor.
 
   Note that we always set `do_sample=True`. This class is not designed to be used directly, rather
   to be used conjunction with LLMConfig. The instance of the generation config can then be accessed
   via ``LLMConfig.generation_config``.
-  '''
+  """
   max_new_tokens: int = dantic.Field(20, ge=0, description='The maximum numbers of tokens to generate, ignoring the number of tokens in the prompt.')
   min_length: int = dantic.Field(
       0,
@@ -368,14 +368,14 @@ converter.register_unstructure_hook_factory(
 
 @attr.frozen(slots=True, repr=False, init=False)
 class SamplingParams(ReprMixin):
-  '''SamplingParams is the attr-compatible version of ``vllm.SamplingParams``. It provides some utilities to also respect shared variables from ``openllm.LLMConfig``.
+  """SamplingParams is the attr-compatible version of ``vllm.SamplingParams``. It provides some utilities to also respect shared variables from ``openllm.LLMConfig``.
 
   The following value will be parsed directly from ``openllm.LLMConfig``:
   - temperature
   - top_k
   - top_p
   - max_tokens -> max_new_tokens
-  '''
+  """
   n: int = dantic.Field(1, description='Number of output sequences to return for the given prompt.')
   best_of: int = dantic.Field(
       None,
@@ -438,7 +438,7 @@ class SamplingParams(ReprMixin):
 
   @classmethod
   def from_generation_config(cls, generation_config: GenerationConfig, **attrs: t.Any) -> Self:
-    '''The main entrypoint for creating a SamplingParams from ``openllm.LLMConfig``.'''
+    """The main entrypoint for creating a SamplingParams from ``openllm.LLMConfig``."""
     if 'max_tokens' in attrs and 'max_new_tokens' in attrs: raise ValueError("Both 'max_tokens' and 'max_new_tokens' are passed. Make sure to only use one of them.")
     temperature = first_not_none(attrs.pop('temperature', None), default=generation_config['temperature'])
     top_k = first_not_none(attrs.pop('top_k', None), default=generation_config['top_k'])
@@ -478,13 +478,13 @@ converter.register_structure_hook_factory(lambda cls: attr.has(cls) and lenient_
 _object_getattribute = object.__getattribute__
 
 class ModelSettings(t.TypedDict, total=False):
-  '''ModelSettings serve only for typing purposes as this is transcribed into LLMConfig.__config__.
+  """ModelSettings serve only for typing purposes as this is transcribed into LLMConfig.__config__.
 
   Note that all fields from this dictionary will then be converted to __openllm_*__ fields in LLMConfig.
 
   If the field below changes, make sure to run ./tools/update-config-stubs.py to generate correct __getitem__
   stubs for type-checking purposes.
-  '''
+  """
 
   # NOTE: These required fields should be at the top, as it will be kw_only
   default_id: Required[str]
@@ -534,7 +534,7 @@ _transformed_type: DictStrAny = {'fine_tune_strategies': t.Dict[AdapterType, Fin
                                   description=f'ModelSettings field for {k}.')) for k, ann in t.get_type_hints(ModelSettings).items()
              ])
 class _ModelSettingsAttr:
-  '''Internal attrs representation of ModelSettings.'''
+  """Internal attrs representation of ModelSettings."""
   def __getitem__(self, key: str) -> t.Any:
     if key in codegen.get_annotations(ModelSettings):
       return _object_getattribute(self, key)
@@ -631,7 +631,7 @@ def _setattr_class(attr_name: str, value_var: t.Any) -> str:
   return f"setattr(cls, '{attr_name}', {value_var})"
 
 def _make_assignment_script(cls: type[LLMConfig], attributes: attr.AttrsInstance, _prefix: LiteralString = 'openllm') -> t.Callable[..., None]:
-  '''Generate the assignment script with prefix attributes __openllm_<value>__.'''
+  """Generate the assignment script with prefix attributes __openllm_<value>__."""
   args: ListStr = []
   globs: DictStrAny = {'cls': cls, '_cached_attribute': attributes, '_cached_getattribute_get': _object_getattribute.__get__}
   annotations: DictStrAny = {'return': None}
@@ -651,14 +651,14 @@ _reserved_namespace = {'__config__', 'GenerationConfig', 'SamplingParams'}
 class _ConfigAttr:
   @staticmethod
   def Field(default: t.Any = None, **attrs: t.Any) -> t.Any:
-    '''Field is a alias to the internal dantic utilities to easily create
+    """Field is a alias to the internal dantic utilities to easily create
       attrs.fields with pydantic-compatible interface. For example:
 
       ```python
       class MyModelConfig(openllm.LLMConfig):
           field1 = openllm.LLMConfig.Field(...)
       ```
-    '''
+    """
     return dantic.Field(default, **attrs)
 
   # NOTE: The following is handled via __init_subclass__, and is only used for TYPE_CHECKING
@@ -715,7 +715,7 @@ class _ConfigAttr:
         to create arguments for vLLM LLMEngine that can be used throughout the lifecycle.
         This class will also be managed internally by OpenLLM.'''
     def __attrs_init__(self, *args: t.Any, **attrs: t.Any) -> None:
-      '''Generated __attrs_init__ for LLMConfig subclass that follows the attrs contract.'''
+      """Generated __attrs_init__ for LLMConfig subclass that follows the attrs contract."""
 
     # NOTE: The following will be populated from __config__ and also
     # considered to be public API. Users can also access these via self[key]
@@ -1393,7 +1393,7 @@ class LLMConfig(_ConfigAttr):
 
   @classmethod
   def model_construct_env(cls, **attrs: t.Any) -> Self:
-    '''A helpers that respect configuration values environment variables.'''
+    """A helpers that respect configuration values environment variables."""
     attrs = {k: v for k, v in attrs.items() if v is not None}
     model_config = cls.__openllm_env__.config
     env_json_string = os.environ.get(model_config, None)
@@ -1425,7 +1425,7 @@ class LLMConfig(_ConfigAttr):
     return converter.structure(config_from_env, cls)
 
   def model_validate_click(self, **attrs: t.Any) -> tuple[LLMConfig, DictStrAny]:
-    '''Parse given click attributes into a LLMConfig and return the remaining click attributes.'''
+    """Parse given click attributes into a LLMConfig and return the remaining click attributes."""
     llm_config_attrs: DictStrAny = {'generation_config': {}, 'sampling_config': {}}
     key_to_remove: ListStr = []
     for k, v in attrs.items():

@@ -35,7 +35,7 @@ class DynResource(t.Protocol):
 logger = logging.getLogger(__name__)
 
 def _strtoul(s: str) -> int:
-  '''Return -1 or positive integer sequence string starts with,.'''
+  """Return -1 or positive integer sequence string starts with,."""
   if not s: return -1
   idx = 0
   for idx, c in enumerate(s):
@@ -69,7 +69,7 @@ def _parse_visible_devices(default_var: str = ..., *, respect_env: t.Literal[Fal
   ...
 
 def _parse_visible_devices(default_var: str | None = None, respect_env: bool = True) -> list[str] | None:
-  '''CUDA_VISIBLE_DEVICES aware with default var for parsing spec.'''
+  """CUDA_VISIBLE_DEVICES aware with default var for parsing spec."""
   if respect_env:
     spec = os.environ.get('CUDA_VISIBLE_DEVICES', default_var)
     if not spec: return None
@@ -258,10 +258,10 @@ class CascadingResourceStrategy(bentoml.Strategy, ReprMixin):
   """
   @classmethod
   def get_worker_count(cls, runnable_class: type[bentoml.Runnable], resource_request: dict[str, t.Any] | None, workers_per_resource: float) -> int:
-    '''Return the number of workers to be used for the given runnable class.
+    """Return the number of workers to be used for the given runnable class.
 
     Note that for all available GPU, the number of workers will always be 1.
-    '''
+    """
     if resource_request is None: resource_request = system_resources()
     # use NVIDIA
     kind = 'nvidia.com/gpu'
@@ -288,14 +288,14 @@ class CascadingResourceStrategy(bentoml.Strategy, ReprMixin):
 
   @classmethod
   def get_worker_env(cls, runnable_class: type[bentoml.Runnable], resource_request: dict[str, t.Any] | None, workers_per_resource: int | float, worker_index: int) -> dict[str, t.Any]:
-    '''Get worker env for this given worker_index.
+    """Get worker env for this given worker_index.
 
     Args:
       runnable_class: The runnable class to be run.
       resource_request: The resource request of the runnable.
       workers_per_resource: # of workers per resource.
       worker_index: The index of the worker, start from 0.
-    '''
+    """
     cuda_env = os.environ.get('CUDA_VISIBLE_DEVICES', None)
     disabled = cuda_env in ('', '-1')
     environ: dict[str, t.Any] = {}

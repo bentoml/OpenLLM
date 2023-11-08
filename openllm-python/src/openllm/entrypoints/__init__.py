@@ -1,11 +1,11 @@
-'''Entrypoint for all third-party apps.
+"""Entrypoint for all third-party apps.
 
 Currently support OpenAI compatible API.
 
 Each module should implement the following API:
 
 - `mount_to_svc(svc: bentoml.Service, llm: openllm.LLM[M, T]) -> bentoml.Service: ...`
-'''
+"""
 from __future__ import annotations
 import typing as t
 

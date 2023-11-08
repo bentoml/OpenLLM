@@ -14,7 +14,7 @@ env_strats = st.sampled_from([openllm.utils.EnvVarMixin(model_name) for model_na
 
 @st.composite
 def model_settings(draw: st.DrawFn):
-  '''Strategy for generating ModelSettings objects.'''
+  """Strategy for generating ModelSettings objects."""
   kwargs: dict[str, t.Any] = {
       'default_id': st.text(min_size=1),
       'model_ids': st.lists(st.text(), min_size=1),

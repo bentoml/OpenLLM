@@ -1,6 +1,6 @@
 ci:
   autoupdate_schedule: weekly
-  skip: [changelog-dry-run, mypy, yapf, eslint, prettier]
+  skip: [changelog-dry-run, eslint, prettier]
   autofix_commit_msg: "ci: auto fixes from pre-commit.ci\n\nFor more information, see https://pre-commit.ci"
   autoupdate_commit_msg: "ci: pre-commit autoupdate [pre-commit.ci]"
 default_language_version:

@@ -26,7 +26,7 @@ def get_hash(config: transformers.PretrainedConfig) -> str:
   return _commit_hash
 
 def process_config(model_id: str, trust_remote_code: bool, **attrs: t.Any) -> tuple[transformers.PretrainedConfig, DictStrAny, DictStrAny]:
-  '''A helper function that correctly parse config and attributes for transformers.PretrainedConfig.
+  """A helper function that correctly parse config and attributes for transformers.PretrainedConfig.
 
   Args:
     model_id: Model id to pass into ``transformers.AutoConfig``.
@@ -35,7 +35,7 @@ def process_config(model_id: str, trust_remote_code: bool, **attrs: t.Any) -> tu
 
   Returns:
     A tuple of ``transformers.PretrainedConfig``, all hub attributes, and remanining attributes that can be used by the Model class.
-  '''
+  """
   config = attrs.pop('config', None)
   # this logic below is synonymous to handling `from_pretrained` attrs.
   hub_attrs = {k: attrs.pop(k) for k in HUB_ATTRS if k in attrs}

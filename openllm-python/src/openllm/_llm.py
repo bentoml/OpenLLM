@@ -80,13 +80,13 @@ def normalise_model_name(name: str) -> str:
   return inflection.dasherize(name)
 
 def resolve_peft_config_type(adapter_map: dict[str, str]) -> AdapterMap:
-  '''Resolve the type of the PeftConfig given the adapter_map.
+  """Resolve the type of the PeftConfig given the adapter_map.
 
   This is similar to how PeftConfig resolve its config type.
 
   Args:
   adapter_map: The given mapping from either SDK or CLI. See CLI docs for more information.
-  '''
+  """
   resolved: AdapterMap = {}
   _has_set_default = False
   for path_or_adapter_id, name in adapter_map.items():
@@ -191,7 +191,7 @@ class LLM(t.Generic[M, T]):
 
   @apply(lambda val: tuple(str.lower(i) if i else i for i in val))
   def _make_tag_components(self, model_id: str, model_version: str | None, backend: LiteralBackend) -> tuple[str, str | None]:
-    '''Return a valid tag name (<backend>-<repo>--<model_id>) and its tag version.'''
+    """Return a valid tag name (<backend>-<repo>--<model_id>) and its tag version."""
     model_id, *maybe_revision = model_id.rsplit(':')
     if len(maybe_revision) > 0:
       if model_version is not None: logger.warning("revision is specified within 'model_id' (%s), and 'model_version=%s' will be ignored.", maybe_revision[0], model_version)

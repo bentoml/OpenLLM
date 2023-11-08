@@ -1,7 +1,7 @@
-'''Protocol-related packages for all library integrations.
+"""Protocol-related packages for all library integrations.
 
 Currently support OpenAI compatible API.
-'''
+"""
 from __future__ import annotations
 import os
 import typing as t

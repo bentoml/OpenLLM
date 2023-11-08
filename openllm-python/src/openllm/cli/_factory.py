@@ -290,7 +290,7 @@ def parse_device_callback(ctx: click.Context, param: click.Parameter, value: tup
 _IGNORED_OPTIONS = {'working_dir', 'production', 'protocol_version'}
 
 def parse_serve_args(serve_grpc: bool) -> t.Callable[[t.Callable[..., LLMConfig]], t.Callable[[FC], FC]]:
-  '''Parsing `bentoml serve|serve-grpc` click.Option to be parsed via `openllm start`.'''
+  """Parsing `bentoml serve|serve-grpc` click.Option to be parsed via `openllm start`."""
   from bentoml_cli.cli import cli
 
   command = 'serve' if not serve_grpc else 'serve-grpc'
@@ -320,11 +320,11 @@ def parse_serve_args(serve_grpc: bool) -> t.Callable[[t.Callable[..., LLMConfig]
 _http_server_args, _grpc_server_args = parse_serve_args(False), parse_serve_args(True)
 
 def _click_factory_type(*param_decls: t.Any, **attrs: t.Any) -> t.Callable[[FC | None], FC]:
-  '''General ``@click`` decorator with some sauce.
+  """General ``@click`` decorator with some sauce.
 
   This decorator extends the default ``@click.option`` plus a factory option and factory attr to
   provide type-safe click.option or click.argument wrapper for all compatible factory.
-  '''
+  """
   factory = attrs.pop('factory', click)
   factory_attr = attrs.pop('attr', 'option')
   if factory_attr != 'argument': attrs.setdefault('help', 'General option for OpenLLM CLI.')

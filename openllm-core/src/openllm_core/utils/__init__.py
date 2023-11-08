@@ -79,9 +79,9 @@ def resolve_user_filepath(filepath: str, ctx: str | None) -> str:
 
 @contextlib.contextmanager
 def reserve_free_port(host: str = 'localhost', port: int | None = None, prefix: str | None = None, max_retry: int = 50, enable_so_reuseport: bool = False,) -> t.Iterator[int]:
-  '''
+  """
     detect free port and reserve until exit the context
-    '''
+    """
   import psutil
 
   sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -139,7 +139,7 @@ def ensure_exec_coro(coro: t.Coroutine[t.Any, t.Any, t.Any]) -> t.Any:
   else: return loop.run_until_complete(coro)
 
 def available_devices() -> tuple[str, ...]:
-  '''Return available GPU under system. Currently only supports NVIDIA GPUs.'''
+  """Return available GPU under system. Currently only supports NVIDIA GPUs."""
   from openllm_core._strategies import NvidiaGpuResource
   return tuple(NvidiaGpuResource.from_system())
 
@@ -263,10 +263,10 @@ _LOGGING_CONFIG: dict[str, t.Any] = {
 }
 
 def configure_logging() -> None:
-  '''Configure logging for OpenLLM.
+  """Configure logging for OpenLLM.
 
   Behaves similar to how BentoML loggers are being configured.
-  '''
+  """
   if get_quiet_mode():
     _LOGGING_CONFIG['loggers']['openllm']['level'] = logging.ERROR
     _LOGGING_CONFIG['loggers']['bentoml']['level'] = logging.ERROR
@@ -305,7 +305,7 @@ class suppress(contextlib.suppress, contextlib.ContextDecorator):
   """
 
 def compose(*funcs: AnyCallable) -> AnyCallable:
-  '''Compose any number of unary functions into a single unary function.
+  """Compose any number of unary functions into a single unary function.
 
   >>> import textwrap
   >>> expected = str.strip(textwrap.dedent(compose.__doc__))
@@ -319,7 +319,7 @@ def compose(*funcs: AnyCallable) -> AnyCallable:
   >>> f = compose(round_three, int.__truediv__)
   >>> [f(3*x, x+1) for x in range(1,10)]
   [1.5, 2.0, 2.25, 2.4, 2.5, 2.571, 2.625, 2.667, 2.7]
-  '''
+  """
   def compose_two(f1: AnyCallable, f2: AnyCallable) -> AnyCallable:
     return lambda *args, **kwargs: f1(f2(*args, **kwargs))
 
@@ -349,12 +349,12 @@ def _text_in_file(text: str, filename: Path) -> bool:
   return any(text in line for line in filename.open())
 
 def in_docker() -> bool:
-  '''Is this current environment running in docker?
+  """Is this current environment running in docker?
 
   ```python
   type(in_docker())
   ```
-  '''
+  """
   return _dockerenv.exists() or _text_in_file('docker', _cgroup)
 
 T = t.TypeVar('T')
@@ -369,7 +369,7 @@ def first_not_none(*args: T | None, default: None | T = None) -> T | None: retur
 # yapf: enable
 
 def resolve_filepath(path: str, ctx: str | None = None) -> str:
-  '''Resolve a file path to an absolute path, expand user and environment variables.'''
+  """Resolve a file path to an absolute path, expand user and environment variables."""
   try:
     return resolve_user_filepath(path, ctx)
   except FileNotFoundError:
@@ -389,7 +389,7 @@ def generate_context(framework_name: str) -> ModelContext:
 _TOKENIZER_PREFIX = '_tokenizer_'
 
 def flatten_attrs(**attrs: t.Any) -> tuple[dict[str, t.Any], dict[str, t.Any]]:
-  '''Normalize the given attrs to a model and tokenizer kwargs accordingly.'''
+  """Normalize the given attrs to a model and tokenizer kwargs accordingly."""
   tokenizer_attrs = {k[len(_TOKENIZER_PREFIX):]: v for k, v in attrs.items() if k.startswith(_TOKENIZER_PREFIX)}
   for k in tuple(attrs.keys()):
     if k.startswith(_TOKENIZER_PREFIX): del attrs[k]

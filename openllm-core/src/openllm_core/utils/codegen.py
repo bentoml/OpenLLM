@@ -78,14 +78,14 @@ def _make_method(name: str, script: str, filename: str, globs: DictStrAny) -> An
   return locs[name]
 
 def make_attr_tuple_class(cls_name: str, attr_names: t.Sequence[str]) -> type[t.Any]:
-  '''Create a tuple subclass to hold class attributes.
+  """Create a tuple subclass to hold class attributes.
 
   The subclass is a bare tuple with properties for names.
 
   class MyClassAttributes(tuple):
   __slots__ = ()
   x = property(itemgetter(0))
-  '''
+  """
   from . import SHOW_CODEGEN
 
   attr_class_name = f'{cls_name}Attributes'
@@ -139,7 +139,7 @@ def make_env_transformer(cls: type[openllm_core.LLMConfig],
   return generate_function(cls, '__auto_env', lines, args=('_', 'fields'), globs=globs, annotations={'_': 'type[LLMConfig]', 'fields': fields_ann, 'return': fields_ann})
 
 def gen_sdk(func: _T, name: str | None = None, **attrs: t.Any) -> _T:
-  '''Enhance sdk with nice repr that plays well with your brain.'''
+  """Enhance sdk with nice repr that plays well with your brain."""
   from openllm_core.utils import ReprMixin
   if name is None: name = func.__name__.strip('_')
   _signatures = inspect.signature(func).parameters

@@ -1,5 +1,5 @@
 # mypy: disable-error-code="misc"
-'''OCI-related utilities for OpenLLM. This module is considered to be internal and API are subjected to change.'''
+"""OCI-related utilities for OpenLLM. This module is considered to be internal and API are subjected to change."""
 from __future__ import annotations
 import functools
 import importlib

@@ -168,12 +168,12 @@ class LazyModule(types.ModuleType):
     return result + [i for i in self.__all__ if i not in result]
 
   def __getattr__(self, name: str) -> t.Any:
-    '''Equivocal __getattr__ implementation.
+    """Equivocal __getattr__ implementation.
 
     It checks from _objects > _modules and does it recursively.
 
     It also contains a special case for all of the metadata information, such as __version__ and __version_info__.
-    '''
+    """
     if name in _reserved_namespace:
       raise openllm_core.exceptions.ForbiddenAttributeError(f"'{name}' is a reserved namespace for {self._name} and should not be access nor modified.")
     dunder_to_metadata = {

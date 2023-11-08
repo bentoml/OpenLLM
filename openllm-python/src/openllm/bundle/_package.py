@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 OPENLLM_DEV_BUILD = 'OPENLLM_DEV_BUILD'
 
 def build_editable(path: str, package: t.Literal['openllm', 'openllm_core', 'openllm_client'] = 'openllm') -> str | None:
-  '''Build OpenLLM if the OPENLLM_DEV_BUILD environment variable is set.'''
+  """Build OpenLLM if the OPENLLM_DEV_BUILD environment variable is set."""
   if str(os.environ.get(OPENLLM_DEV_BUILD, False)).lower() != 'true': return None
   # We need to build the package in editable mode, so that we can import it
   from build import ProjectBuilder

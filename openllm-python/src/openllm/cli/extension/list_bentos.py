@@ -16,7 +16,7 @@ from openllm.cli._factory import output_option
 @output_option(default_value='json')
 @click.pass_context
 def cli(ctx: click.Context, output: LiteralOutput) -> None:
-  '''List available bentos built by OpenLLM.'''
+  """List available bentos built by OpenLLM."""
   mapping = {
       k: [{
           'tag': str(b.tag),

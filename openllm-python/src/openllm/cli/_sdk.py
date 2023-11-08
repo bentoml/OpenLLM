@@ -262,7 +262,7 @@ def _import_model(model_name: str,
   return import_command.main(args=args, standalone_mode=False)
 
 def _list_models() -> dict[str, t.Any]:
-  '''List all available models within the local store.'''
+  """List all available models within the local store."""
   from .entrypoint import models_command
   return models_command.main(args=['-o', 'json', '--show-available', '--machine'], standalone_mode=False)
 
