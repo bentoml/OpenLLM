@@ -40,8 +40,3 @@ async def main() -> int:
 def _mp_fn(index: t.Any):  # type: ignore
   # For xla_spawn (TPUs)
   asyncio.run(main())
-
-if openllm.utils.in_notebook():
-  await main()
-else:
-  raise SystemExit(asyncio.run(main()))

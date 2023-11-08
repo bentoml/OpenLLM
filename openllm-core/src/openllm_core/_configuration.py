@@ -515,9 +515,9 @@ class ModelSettings(t.TypedDict, total=False):
   # the target generation_config class to be used.
   fine_tune_strategies: t.Tuple[t.Dict[str, t.Any], ...]
 
-  # tokenizer_class is the custom tokenizer class for this given LLM
-  tokenizer_class: t.Optional[str]
+  # Chat models related configuration
   conversation: t.Optional[t.Dict[str, t.Any]]
+  add_generation_prompt: bool
 
 _transformed_type: DictStrAny = {'fine_tune_strategies': t.Dict[AdapterType, FineTuneConfig], 'conversation': Conversation}
 
@@ -554,7 +554,8 @@ class _ModelSettingsAttr:
                       model_type='causal_lm',
                       trust_remote_code=False,
                       requirements=None,
-                      tokenizer_class=None,
+                      conversation=dict(system_message='', roles=('', ''), sep_style=SeparatorStyle.NO_COLON_SINGLE, sep=''),
+                      add_generation_prompt=False,
                       timeout=int(36e6),
                       service_name='',
                       workers_per_resource=1.)))
@@ -579,8 +580,8 @@ class _ModelSettingsAttr:
     timeout: int
     workers_per_resource: t.Union[int, float]
     fine_tune_strategies: t.Dict[AdapterType, FineTuneConfig]
-    tokenizer_class: t.Optional[str]
     conversation: Conversation
+    add_generation_prompt: bool
     # update-config-stubs.py: attrs stop
 
 def structure_settings(cl_: type[LLMConfig], cls: type[_ModelSettingsAttr]) -> _ModelSettingsAttr:
@@ -785,10 +786,10 @@ class _ConfigAttr:
         '''
     __openllm_fine_tune_strategies__: t.Dict[AdapterType, FineTuneConfig] = Field(None)
     '''The fine-tune strategies for this given LLM.'''
-    __openllm_tokenizer_class__: t.Optional[str] = Field(None)
-    '''Optional tokenizer class for this given LLM. See Llama for example.'''
     __openllm_conversation__: Conversation = Field(None)
     '''The conversation class for this given LLM to determine its chat templates.'''
+    __openllm_add_generation_prompt__: bool = Field(None)
+    '''Whether to add generation prompt token for formatting chat templates. This arguments will be used for chat-based models.'''
     # update-config-stubs.py: special stop
 
 class _ConfigBuilder:
@@ -1148,9 +1149,9 @@ class LLMConfig(_ConfigAttr):
   @overload
   def __getitem__(self, item: t.Literal['fine_tune_strategies']) -> t.Dict[AdapterType, FineTuneConfig]: ...
   @overload
-  def __getitem__(self, item: t.Literal['tokenizer_class']) -> t.Optional[str]: ...
-  @overload
   def __getitem__(self, item: t.Literal['conversation']) -> Conversation: ...
+  @overload
+  def __getitem__(self, item: t.Literal['add_generation_prompt']) -> bool: ...
   # NOTE: generation_class, sampling_class and extras arguments
   @overload
   def __getitem__(self, item: t.Literal['generation_class']) -> t.Type[openllm_core.GenerationConfig]: ...
@@ -1251,8 +1252,6 @@ class LLMConfig(_ConfigAttr):
   @overload
   def __getitem__(self, item: t.Literal['use_beam_search']) -> bool: ...
   @overload
-  def __getitem__(self, item: t.Literal['stop']) -> t.List[str]: ...
-  @overload
   def __getitem__(self, item: t.Literal['ignore_eos']) -> bool: ...
   @overload
   def __getitem__(self, item: t.Literal['logprobs']) -> int: ...
@@ -1263,6 +1262,8 @@ class LLMConfig(_ConfigAttr):
   # NOTE: PeftType arguments
   @overload
   def __getitem__(self, item: t.Literal['prompt_tuning']) -> dict[str, t.Any]: ...
+  @overload
+  def __getitem__(self, item: t.Literal['multitask_prompt_tuning']) -> dict[str, t.Any]: ...
   @overload
   def __getitem__(self, item: t.Literal['p_tuning']) -> dict[str, t.Any]: ...
   @overload
@@ -1275,6 +1276,10 @@ class LLMConfig(_ConfigAttr):
   def __getitem__(self, item: t.Literal['adaption_prompt']) -> dict[str, t.Any]: ...
   @overload
   def __getitem__(self, item: t.Literal['ia3']) -> dict[str, t.Any]: ...
+  @overload
+  def __getitem__(self, item: t.Literal['loha']) -> dict[str, t.Any]: ...
+  @overload
+  def __getitem__(self, item: t.Literal['lokr']) -> dict[str, t.Any]: ...
   # update-config-stubs.py: stop
   # fmt: on
 

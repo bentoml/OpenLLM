@@ -37,6 +37,7 @@ class MistralConfig(openllm_core.LLMConfig):
       'url': 'https://huggingface.co/docs/transformers/v4.35.0/en/model_doc/mistral#overview',
       'default_id': 'mistralai/Mistral-7B-Instruct-v0.1',
       'architecture': 'MistralForCausalLM',
+      'add_generation_prompt': True,
       'model_ids': ['mistralai/Mistral-7B-v0.1', 'mistralai/Mistral-7B-Instruct-v0.1', 'amazon/MistralLite', 'HuggingFaceH4/zephyr-7b-beta', 'HuggingFaceH4/zephyr-7b-alpha'],
   }
 

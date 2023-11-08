@@ -76,7 +76,6 @@ class LlamaConfig(openllm_core.LLMConfig):
       'url': 'https://github.com/facebookresearch/llama',
       'architecture': 'LlamaForCausalLM',
       'requirements': ['fairscale', 'sentencepiece', 'scipy'],
-      'tokenizer_class': 'LlamaTokenizerFast',
       'default_id': 'NousResearch/llama-2-7b-hf',
       'serialisation': 'safetensors',
       # NOTE: see https://huggingface.co/blog/codellama#conversational-instructions

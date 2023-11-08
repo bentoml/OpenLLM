@@ -137,12 +137,10 @@ class GenerationOutput:
                request_id=gen_random_uuid())
 
   @classmethod
-  def from_sse(cls, sse_message: str) -> GenerationOutput:
-    data = [line[6:] for line in sse_message.strip().split('\n') if line.startswith('data: ')]
-    if not data: raise ValueError('No data found in SSE message.')
-    if len(data) > 1: raise ValueError('Multiple data found in SSE message.')
+  def from_runner(cls, data: str) -> GenerationOutput:
+    if not data: raise ValueError('No data found from messages.')
     try:
-      return converter.structure(orjson.loads(data[0]), cls)
+      return converter.structure(orjson.loads(data), cls)
     except orjson.JSONDecodeError as e:
       raise ValueError(f'Failed to parse JSON from SSE message: {sse_message!r}') from e
 
