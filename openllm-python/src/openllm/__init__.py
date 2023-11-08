@@ -67,6 +67,7 @@ _import_structure: dict[str, list[str]] = {
     'protocol': [],
     'utils': [],
     '_deprecated': ['Runner'],
+    '_strategies': ['CascadingResourceStrategy', 'get_resource'],
     'entrypoints': ['mount_entrypoints'],
     'serialisation': ['ggml', 'transformers'],
     'cli._sdk': ['start', 'start_grpc', 'build', 'import_model', 'list_models'],
@@ -84,6 +85,8 @@ if _t.TYPE_CHECKING:
   from . import serialisation as serialisation
   from . import testing as testing
   from . import utils as utils
+  from ._strategies import CascadingResourceStrategy as CascadingResourceStrategy
+  from ._strategies import get_resource as get_resource
   from ._generation import LogitsProcessorList as LogitsProcessorList
   from ._generation import StopOnTokens as StopOnTokens
   from ._generation import StoppingCriteriaList as StoppingCriteriaList
