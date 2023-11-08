@@ -14,11 +14,6 @@ from .utils import gen_random_uuid
 if t.TYPE_CHECKING:
   import vllm
 
-  import openllm
-
-  from ._typing_compat import M
-  from ._typing_compat import T
-
 @attr.frozen(slots=True)
 class MetadataOutput:
   model_id: str
@@ -29,20 +24,11 @@ class MetadataOutput:
   prompt_template: str
   system_message: str
 
-  @classmethod
-  def examples(cls, llm: openllm.LLM[M, T]) -> MetadataOutput:
-    return cls(model_id=llm.model_id,
-               timeout=llm.config['timeout'],
-               model_name=llm.config['model_name'],
-               backend=llm.__llm_backend__,
-               configuration=llm.config.model_dump_json().decode(),
-               prompt_template='{system_message}',
-               system_message='You are a helpful assistant.')
+  def model_dump(self) -> dict[str, t.Any]:
+    return converter.unstructure(self)
 
-  # yapf: disable
-  def model_dump(self)->dict[str, t.Any]: return converter.unstructure(self)
-  def model_dump_json(self)->str:return orjson.dumps(self.model_dump(),option=orjson.OPT_INDENT_2).decode('utf-8')
-  # yapf: enable
+  def model_dump_json(self) -> str:
+    return orjson.dumps(self.model_dump(), option=orjson.OPT_INDENT_2).decode('utf-8')
 
 @attr.define(slots=True, frozen=True)
 class GenerationInput:
@@ -51,12 +37,15 @@ class GenerationInput:
   stop: list[str] | None = attr.field(default=None)
   adapter_name: str | None = attr.field(default=None)
 
-  # yapf: disable
   @classmethod
-  def from_model(cls,model_name:str,**attrs: t.Any)->type[GenerationInput]:return cls.from_llm_config(AutoConfig.for_model(model_name,**attrs))
-  def model_dump(self)->dict[str,t.Any]:return {'prompt': self.prompt,'stop': self.stop,'llm_config': self.llm_config.model_dump(flatten=True),'adapter_name': self.adapter_name}
-  def model_dump_json(self)->str:return orjson.dumps(self.model_dump(),option=orjson.OPT_INDENT_2).decode('utf-8')
-  # yapf: enable
+  def from_model(cls, model_name: str, **attrs: t.Any) -> type[GenerationInput]:
+    return cls.from_llm_config(AutoConfig.for_model(model_name, **attrs))
+
+  def model_dump(self) -> dict[str, t.Any]:
+    return {'prompt': self.prompt, 'stop': self.stop, 'llm_config': self.llm_config.model_dump(flatten=True), 'adapter_name': self.adapter_name}
+
+  def model_dump_json(self) -> str:
+    return orjson.dumps(self.model_dump(), option=orjson.OPT_INDENT_2).decode('utf-8')
 
   @classmethod
   def from_llm_config(cls, llm_config: LLMConfig) -> type[GenerationInput]:
@@ -78,8 +67,8 @@ class GenerationInput:
                                                    repr=True,
                                                    collect_by_mro=True)
 
-    def examples(_: type[GenerationInput]) -> GenerationInput:
-      return klass(prompt='What is the meaning of life?', llm_config=llm_config, stop=['\n'])
+    def examples(_: type[GenerationInput]) -> dict[str, t.Any]:
+      return klass(prompt='What is the meaning of life?', llm_config=llm_config, stop=['\n']).model_dump()
 
     setattr(klass, 'examples', classmethod(examples))
 
@@ -121,7 +110,7 @@ class GenerationOutput:
   request_id: str = attr.field(factory=lambda: gen_random_uuid())
 
   @classmethod
-  def examples(cls) -> GenerationOutput:
+  def examples(cls) -> dict[str, t.Any]:
     return cls(prompt='What is the meaning of life?',
                finished=True,
                outputs=[
@@ -134,7 +123,7 @@ class GenerationOutput:
                ],
                prompt_token_ids=[2, 2264, 16, 5, 3099, 9, 301, 116],
                prompt_logprobs=None,
-               request_id=gen_random_uuid())
+               request_id=gen_random_uuid()).model_dump()
 
   @staticmethod
   def _preprocess_sse_message(data: str) -> str:
@@ -164,8 +153,11 @@ class GenerationOutput:
                prompt_token_ids=request_output.prompt_token_ids,
                prompt_logprobs=request_output.prompt_logprobs)
 
-  # yapf: disable
-  def with_options(self,**options: t.Any)->GenerationOutput: return attr.evolve(self, **options)
-  def model_dump(self)->dict[str, t.Any]:return converter.unstructure(self)
-  def model_dump_json(self)->str:return orjson.dumps(self.model_dump(),option=orjson.OPT_NON_STR_KEYS).decode('utf-8')
-  # yapf: enable
+  def with_options(self, **options: t.Any) -> GenerationOutput:
+    return attr.evolve(self, **options)
+
+  def model_dump(self) -> dict[str, t.Any]:
+    return converter.unstructure(self)
+
+  def model_dump_json(self) -> str:
+    return orjson.dumps(self.model_dump(), option=orjson.OPT_NON_STR_KEYS).decode('utf-8')

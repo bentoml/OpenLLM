@@ -1,6 +1,12 @@
 from __future__ import annotations
-import enum, typing as t, inflection, attr
+import enum
+import typing as t
+
+import attr
+import inflection
+
 from deepmerge import Merger
+
 from . import dantic
 from ..exceptions import ForbiddenAttributeError
 
@@ -8,8 +14,9 @@ config_merger = Merger([(dict, 'merge')], ['override'], ['override'])
 
 if t.TYPE_CHECKING:
   from peft.config import PeftConfig
-  from .._typing_compat import AdapterType
+
   from .._configuration import LLMConfig
+  from .._typing_compat import AdapterType
 
 # case insensitive, but rename to conform with type
 class _PeftEnumMeta(enum.EnumMeta):
@@ -72,7 +79,8 @@ class FineTuneConfig:
 
   def build(self) -> PeftConfig:
     try:
-      from peft import TaskType, PEFT_TYPE_TO_CONFIG_MAPPING, get_peft_config
+      from peft.utils.peft_types import TaskType
+      from peft.mapping import get_peft_config
     except ImportError:
       raise ImportError('PEFT is not installed. Please install it via `pip install "openllm[fine-tune]"`.')
     adapter_config = self.adapter_config.copy()
@@ -83,7 +91,7 @@ class FineTuneConfig:
     # respect user set task_type if it is passed, otherwise use one managed by OpenLLM
     inference_mode = adapter_config.pop('inference_mode', self.inference_mode)
     task_type = adapter_config.pop('task_type', TaskType[self.llm_config_class.peft_task_type()])
-    adapter_config = {'peft_type': self.adapter_type.value, "task_type": task_type, "inference_mode": inference_mode, **adapter_config}
+    adapter_config = {'peft_type': self.adapter_type.value, 'task_type': task_type, 'inference_mode': inference_mode, **adapter_config}
     return get_peft_config(adapter_config)
 
   def train(self) -> FineTuneConfig:

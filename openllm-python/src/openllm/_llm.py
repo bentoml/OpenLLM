@@ -19,7 +19,6 @@ from bentoml._internal.models.model import ModelSignature
 from bentoml._internal.runner.runner_handle import DummyRunnerHandle
 from openllm_core._schemas import CompletionChunk
 from openllm_core._schemas import GenerationOutput
-from ._strategies import CascadingResourceStrategy
 from openllm_core._typing_compat import AdapterMap
 from openllm_core._typing_compat import AdapterTuple
 from openllm_core._typing_compat import AdapterType
@@ -51,6 +50,7 @@ from openllm_core.utils import resolve_filepath
 from openllm_core.utils import validate_is_path
 
 from ._quantisation import infer_quantisation_config
+from ._strategies import CascadingResourceStrategy
 from .exceptions import ForbiddenAttributeError
 from .exceptions import OpenLLMException
 from .serialisation.constants import PEFT_CONFIG_NAME
