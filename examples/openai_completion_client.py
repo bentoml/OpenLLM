@@ -15,6 +15,6 @@ if stream:
   for chunk in completions:
     text = chunk.choices[0].text
     if text:
-      print(content, flush=True, end='')
+      print(text, flush=True, end='')
 else:
   print(completions)
