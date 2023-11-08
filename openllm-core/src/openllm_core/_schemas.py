@@ -136,13 +136,21 @@ class GenerationOutput:
                prompt_logprobs=None,
                request_id=gen_random_uuid())
 
+  @staticmethod
+  def _preprocess_sse_message(data: str) -> str:
+    proc = [line[6:] for line in data.strip().split('\n') if line.startswith('data: ')]
+    if not proc: return data
+    if len(proc) > 1: raise ValueError('Multiple data found in SSE message.')
+    return proc[0]
+
   @classmethod
   def from_runner(cls, data: str) -> GenerationOutput:
+    data = cls._preprocess_sse_message(data)
     if not data: raise ValueError('No data found from messages.')
     try:
       return converter.structure(orjson.loads(data), cls)
     except orjson.JSONDecodeError as e:
-      raise ValueError(f'Failed to parse JSON from SSE message: {sse_message!r}') from e
+      raise ValueError(f'Failed to parse JSON from SSE message: {data!r}') from e
 
   @classmethod
   def from_vllm(cls, request_output: vllm.RequestOutput) -> GenerationOutput:
