@@ -184,3 +184,58 @@ COALESCE_BRACKETS = true
 addopts = ["-rfEX", "-pno:warnings", "--snapshot-warn-unused"]
 python_files = ["test_*.py", "*_test.py"]
 testpaths = ["openllm-python/tests"]
+
+[tool.coverage.paths]
+openllm = [
+  "openllm-python/src/openllm",
+  "*/openllm-python/src/openllm",
+  "openllm-client/src/openllm_client",
+  "*/openllm-client/src/openllm_client",
+  "openllm-core/src/openllm_core",
+  "*/openllm-core/src/openllm_core",
+]
+[tool.coverage.run]
+branch = true
+omit = [
+  "__pypackages__/*",
+  "openllm-python/src/openllm/_version.py",
+  "openllm-python/src/openllm/playground/",
+  "openllm-python/src/openllm/__init__.py",
+  "openllm-python/src/openllm/__main__.py",
+  "openllm-core/src/openllm_core/_typing_compat.py",
+  "openllm-client/src/openllm_client/pb/**",
+]
+source_pkgs = ["openllm", "openllm_core", "openllm_client"]
+[tool.coverage.report]
+exclude_lines = [
+  "no cov",
+  "pragma: no cover",
+  "if __name__ == .__main__.:",
+  "if t.TYPE_CHECKING:",
+  "if _t.TYPE_CHECKING:",
+  'if TYPE_CHECKING:',
+  'if typing.TYPE_CHECKING:',
+  'if t.TYPE_CHECKING and not MYPY:',
+  'if DEBUG:',
+  'if utils.DEBUG',
+  'if openllm.utils.DEBUG',
+  'if openllm_core.utils.DEBUG',
+  '@_overload',
+  '@overload',
+  '@t.overload',
+  '@typing.overload',
+  'raise NotImplementedError',
+  'raise NotImplemented',
+  'except MissingDependencyError:',
+]
+omit = [
+  "__pypackages__/*",
+  "openllm-python/src/openllm/_version.py",
+  "openllm-python/src/openllm/playground/",
+  "openllm-python/src/openllm/__init__.py",
+  "openllm-python/src/openllm/__main__.py",
+  "openllm-core/src/openllm_core/_typing_compat.py",
+  "openllm-client/src/openllm_client/pb/**",
+]
+precision = 2
+show_missing = true
