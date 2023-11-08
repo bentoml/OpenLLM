@@ -8,15 +8,16 @@ import aiohttp
 
 import openllm
 
-
 async def send_request(url, it, prompt, session, model, **attrs):
   headers = {'accept': 'application/json', 'Content-Type': 'application/json'}
   config = openllm.AutoConfig.for_model(model).model_construct_env(**attrs).model_dump()
   data = {'prompt': prompt, 'llm_config': config, 'adapter_name': None}
   async with session.post(url, headers=headers, data=json.dumps(data)) as response:
-    result = await response.text()
-  print('-' * 10 + '\n\nreq:', it, ', prompt:', prompt, '\n\nGeneration:', result)
-
+    try:
+      result = await response.json()
+      print('-' * 10 + '\n\nreq:', it, ', prompt:', prompt, '\n\nGeneration:', result['outputs'][0]['text'])
+    except Exception as err:
+      print("Exception while sending request %d (%s):" % (it, prompt), await response.text(), err)
 
 async def main(args: argparse.Namespace) -> int:
   endpoint = 'generate' if args.generate else 'generate_stream'
