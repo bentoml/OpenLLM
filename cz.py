@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-import itertools, os, token, tokenize
+from __future__ import annotations
+import itertools
+import os
+import token
+import tokenize
 
 from tabulate import tabulate
 
