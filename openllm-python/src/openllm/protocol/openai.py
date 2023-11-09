@@ -8,6 +8,7 @@ import openllm_core
 
 from openllm_core.utils import converter
 
+
 @attr.define
 class ErrorResponse:
   message: str
@@ -15,6 +16,7 @@ class ErrorResponse:
   object: str = 'error'
   param: t.Optional[str] = None
   code: t.Optional[str] = None
+
 
 @attr.define
 class CompletionRequest:
@@ -37,6 +39,7 @@ class CompletionRequest:
   top_k: t.Optional[int] = attr.field(default=None)
   best_of: t.Optional[int] = attr.field(default=1)
 
+
 @attr.define
 class ChatCompletionRequest:
   messages: t.List[t.Dict[str, str]]
@@ -57,6 +60,7 @@ class ChatCompletionRequest:
   top_k: t.Optional[int] = attr.field(default=None)
   best_of: t.Optional[int] = attr.field(default=1)
 
+
 @attr.define
 class LogProbs:
   text_offset: t.List[int] = attr.field(default=attr.Factory(list))
@@ -64,11 +68,13 @@ class LogProbs:
   tokens: t.List[str] = attr.field(default=attr.Factory(list))
   top_logprobs: t.List[t.Dict[str, t.Any]] = attr.field(default=attr.Factory(list))
 
+
 @attr.define
 class UsageInfo:
   prompt_tokens: int = attr.field(default=0)
   completion_tokens: int = attr.field(default=0)
   total_tokens: int = attr.field(default=0)
+
 
 @attr.define
 class CompletionResponseChoice:
@@ -77,12 +83,14 @@ class CompletionResponseChoice:
   logprobs: t.Optional[LogProbs] = None
   finish_reason: t.Optional[str] = None
 
+
 @attr.define
 class CompletionResponseStreamChoice:
   index: int
   text: str
   logprobs: t.Optional[LogProbs] = None
   finish_reason: t.Optional[str] = None
+
 
 @attr.define
 class CompletionStreamResponse:
@@ -91,6 +99,7 @@ class CompletionStreamResponse:
   object: str = 'text_completion'
   id: str = attr.field(default=attr.Factory(lambda: openllm_core.utils.gen_random_uuid('cmpl')))
   created: int = attr.field(default=attr.Factory(lambda: int(time.monotonic())))
+
 
 @attr.define
 class CompletionResponse:
@@ -101,19 +110,24 @@ class CompletionResponse:
   id: str = attr.field(default=attr.Factory(lambda: openllm_core.utils.gen_random_uuid('cmpl')))
   created: int = attr.field(default=attr.Factory(lambda: int(time.monotonic())))
 
+
 LiteralRole = t.Literal['system', 'user', 'assistant']
+
 
 @attr.define
 class Delta:
   role: t.Optional[LiteralRole] = None
   content: t.Optional[str] = None
 
+
 @attr.define
 class ChatMessage:
   role: LiteralRole
   content: str
 
+
 converter.register_unstructure_hook(ChatMessage, lambda msg: {'role': msg.role, 'content': msg.content})
+
 
 @attr.define
 class ChatCompletionResponseStreamChoice:
@@ -121,11 +135,13 @@ class ChatCompletionResponseStreamChoice:
   delta: Delta
   finish_reason: t.Optional[str] = attr.field(default=None)
 
+
 @attr.define
 class ChatCompletionResponseChoice:
   index: int
   message: ChatMessage
   finish_reason: t.Optional[str] = attr.field(default=None)
+
 
 @attr.define
 class ChatCompletionResponse:
@@ -136,6 +152,7 @@ class ChatCompletionResponse:
   created: int = attr.field(default=attr.Factory(lambda: int(time.monotonic())))
   usage: UsageInfo = attr.field(default=attr.Factory(lambda: UsageInfo()))
 
+
 @attr.define
 class ChatCompletionStreamResponse:
   choices: t.List[ChatCompletionResponseStreamChoice]
@@ -144,6 +161,7 @@ class ChatCompletionStreamResponse:
   id: str = attr.field(default=attr.Factory(lambda: openllm_core.utils.gen_random_uuid('chatcmpl')))
   created: int = attr.field(default=attr.Factory(lambda: int(time.monotonic())))
 
+
 @attr.define
 class ModelCard:
   id: str
@@ -151,19 +169,25 @@ class ModelCard:
   created: int = attr.field(default=attr.Factory(lambda: int(time.monotonic())))
   owned_by: str = 'na'
 
+
 @attr.define
 class ModelList:
   object: str = 'list'
   data: t.List[ModelCard] = attr.field(factory=list)
 
+
 async def get_conversation_prompt(request: ChatCompletionRequest, llm_config: openllm_core.LLMConfig) -> str:
   conv = llm_config.get_conversation_template()
   for message in request.messages:
     msg_role = message['role']
-    if msg_role == 'system': conv.set_system_message(message['content'])
-    elif msg_role == 'user': conv.append_message(conv.roles[0], message['content'])
-    elif msg_role == 'assistant': conv.append_message(conv.roles[1], message['content'])
-    else: raise ValueError(f'Unknown role: {msg_role}')
+    if msg_role == 'system':
+      conv.set_system_message(message['content'])
+    elif msg_role == 'user':
+      conv.append_message(conv.roles[0], message['content'])
+    elif msg_role == 'assistant':
+      conv.append_message(conv.roles[1], message['content'])
+    else:
+      raise ValueError(f'Unknown role: {msg_role}')
   # Add a blank message for the assistant.
   conv.append_message(conv.roles[1], '')
   return conv.get_prompt()

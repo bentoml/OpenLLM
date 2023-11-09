@@ -8,6 +8,7 @@ import aiohttp
 
 import openllm
 
+
 async def send_request(url, it, prompt, session, model, **attrs):
   headers = {'accept': 'application/json', 'Content-Type': 'application/json'}
   config = openllm.AutoConfig.for_model(model).model_construct_env(**attrs).model_dump()
@@ -223,12 +224,20 @@ async def main(args: argparse.Namespace) -> int:
     'Write a letter to your future self, offering reflections on personal growth, achievements, and aspirations, as well as words of encouragement and guidance for your future journey.',
   ]
   async with aiohttp.ClientSession() as session:
-    await asyncio.gather(*[send_request(url, it, prompt, session, args.model, max_new_tokens=2048) for it, prompt in enumerate(prompts)])
+    await asyncio.gather(
+      *[send_request(url, it, prompt, session, args.model, max_new_tokens=2048) for it, prompt in enumerate(prompts)]
+    )
   return 0
 
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser()
   parser.add_argument('--generate', default=False, action='store_true', help='Whether to test with stream endpoint.')
-  parser.add_argument('--model', default='llama', choices=openllm.CONFIG_MAPPING_NAMES.keys(), action='store', help='Whether to test with stream endpoint.')
+  parser.add_argument(
+    '--model',
+    default='llama',
+    choices=openllm.CONFIG_MAPPING_NAMES.keys(),
+    action='store',
+    help='Whether to test with stream endpoint.',
+  )
   raise SystemExit(asyncio.run(main(parser.parse_args())))

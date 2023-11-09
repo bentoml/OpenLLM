@@ -27,6 +27,7 @@ from openllm_core._typing_compat import DictStrAny
 from openllm_core._typing_compat import ListAny
 from openllm_core._typing_compat import LiteralQuantise
 
+
 logger = logging.getLogger(__name__)
 
 if t.TYPE_CHECKING:
@@ -40,8 +41,11 @@ if t.TYPE_CHECKING:
 
   from openllm.client import BaseAsyncClient
 
+
 class ResponseComparator(JSONSnapshotExtension):
-  def serialize(self, data: SerializableData, *, exclude: PropertyFilter | None = None, matcher: PropertyMatcher | None = None,) -> SerializedData:
+  def serialize(
+    self, data: SerializableData, *, exclude: PropertyFilter | None = None, matcher: PropertyMatcher | None = None
+  ) -> SerializedData:
     if LazyType(ListAny).isinstance(data):
       data = [d.unmarshaled for d in data]
     else:
@@ -73,11 +77,15 @@ class ResponseComparator(JSONSnapshotExtension):
     def eq_output(s: openllm.GenerationOutput, t: openllm.GenerationOutput) -> bool:
       return len(s.outputs) == len(t.outputs)
 
-    return len(serialized_data) == len(snapshot_data) and all([eq_output(s, t) for s, t in zip(serialized_data, snapshot_data)])
+    return len(serialized_data) == len(snapshot_data) and all(
+      [eq_output(s, t) for s, t in zip(serialized_data, snapshot_data)]
+    )
+
 
 @pytest.fixture()
 def response_snapshot(snapshot: SnapshotAssertion):
   return snapshot.use_extension(ResponseComparator)
+
 
 @attr.define(init=False)
 class _Handle(ABC):
@@ -88,8 +96,7 @@ class _Handle(ABC):
 
   if t.TYPE_CHECKING:
 
-    def __attrs_init__(self, *args: t.Any, **attrs: t.Any):
-      ...
+    def __attrs_init__(self, *args: t.Any, **attrs: t.Any): ...
 
   def __attrs_post_init__(self):
     self.client = openllm.client.AsyncHTTPClient(f'http://localhost:{self.port}')
@@ -111,42 +118,65 @@ class _Handle(ABC):
         time.sleep(1)
     raise RuntimeError(f'Handle failed to initialise within {timeout} seconds.')
 
+
 @attr.define(init=False)
 class LocalHandle(_Handle):
   process: subprocess.Popen[bytes]
 
-  def __init__(self, process: subprocess.Popen[bytes], port: int, deployment_mode: t.Literal['container', 'local'],):
+  def __init__(self, process: subprocess.Popen[bytes], port: int, deployment_mode: t.Literal['container', 'local']):
     self.__attrs_init__(port, deployment_mode, process)
 
   def status(self) -> bool:
     return self.process.poll() is None
 
+
 class HandleProtocol(t.Protocol):
   @contextlib.contextmanager
-  def __call__(*, model: str, model_id: str, image_tag: str, quantize: t.AnyStr | None = None,) -> t.Generator[_Handle, None, None]:
-    ...
+  def __call__(
+    *, model: str, model_id: str, image_tag: str, quantize: t.AnyStr | None = None
+  ) -> t.Generator[_Handle, None, None]: ...
+
 
 @attr.define(init=False)
 class DockerHandle(_Handle):
   container_name: str
   docker_client: docker.DockerClient
 
-  def __init__(self, docker_client: docker.DockerClient, container_name: str, port: int, deployment_mode: t.Literal['container', 'local'],):
+  def __init__(
+    self,
+    docker_client: docker.DockerClient,
+    container_name: str,
+    port: int,
+    deployment_mode: t.Literal['container', 'local'],
+  ):
     self.__attrs_init__(port, deployment_mode, container_name, docker_client)
 
   def status(self) -> bool:
     container = self.docker_client.containers.get(self.container_name)
     return container.status in ['running', 'created']
 
+
 @contextlib.contextmanager
-def _local_handle(model: str, model_id: str, image_tag: str, deployment_mode: t.Literal['container', 'local'], quantize: LiteralQuantise | None = None, *, _serve_grpc: bool = False):
+def _local_handle(
+  model: str,
+  model_id: str,
+  image_tag: str,
+  deployment_mode: t.Literal['container', 'local'],
+  quantize: LiteralQuantise | None = None,
+  *,
+  _serve_grpc: bool = False,
+):
   with openllm.utils.reserve_free_port() as port:
     pass
 
   if not _serve_grpc:
-    proc = openllm.start(model, model_id=model_id, quantize=quantize, additional_args=['--port', str(port)], __test__=True)
+    proc = openllm.start(
+      model, model_id=model_id, quantize=quantize, additional_args=['--port', str(port)], __test__=True
+    )
   else:
-    proc = openllm.start_grpc(model, model_id=model_id, quantize=quantize, additional_args=['--port', str(port)], __test__=True)
+    proc = openllm.start_grpc(
+      model, model_id=model_id, quantize=quantize, additional_args=['--port', str(port)], __test__=True
+    )
 
   yield LocalHandle(proc, port, deployment_mode)
   proc.terminate()
@@ -159,8 +189,17 @@ def _local_handle(model: str, model_id: str, image_tag: str, deployment_mode: t.
   if proc.stderr:
     proc.stderr.close()
 
+
 @contextlib.contextmanager
-def _container_handle(model: str, model_id: str, image_tag: str, deployment_mode: t.Literal['container', 'local'], quantize: LiteralQuantise | None = None, *, _serve_grpc: bool = False):
+def _container_handle(
+  model: str,
+  model_id: str,
+  image_tag: str,
+  deployment_mode: t.Literal['container', 'local'],
+  quantize: LiteralQuantise | None = None,
+  *,
+  _serve_grpc: bool = False,
+):
   with openllm.utils.reserve_free_port() as port, openllm.utils.reserve_free_port() as prom_port:
     pass
   container_name = f'openllm-{model}-{self(model_id)}'.replace('-', '_')
@@ -177,22 +216,22 @@ def _container_handle(model: str, model_id: str, image_tag: str, deployment_mode
 
   env: DictStrAny = {}
 
-  if quantize is not None: env['OPENLLM_QUANTIZE'] = quantize
+  if quantize is not None:
+    env['OPENLLM_QUANTIZE'] = quantize
 
   gpus = openllm.utils.device_count() or -1
   devs = [docker.types.DeviceRequest(count=gpus, capabilities=[['gpu']])] if gpus > 0 else None
 
-  container = client.containers.run(image_tag,
-                                    command=args,
-                                    name=container_name,
-                                    environment=env,
-                                    auto_remove=False,
-                                    detach=True,
-                                    device_requests=devs,
-                                    ports={
-                                        '3000/tcp': port,
-                                        '3001/tcp': prom_port
-                                    })
+  container = client.containers.run(
+    image_tag,
+    command=args,
+    name=container_name,
+    environment=env,
+    auto_remove=False,
+    detach=True,
+    device_requests=devs,
+    ports={'3000/tcp': port, '3001/tcp': prom_port},
+  )
 
   yield DockerHandle(client, container.name, port, deployment_mode)
 
@@ -207,11 +246,13 @@ def _container_handle(model: str, model_id: str, image_tag: str, deployment_mode
 
   container.remove()
 
+
 @pytest.fixture(scope='session', autouse=True)
 def clean_context() -> t.Generator[contextlib.ExitStack, None, None]:
   stack = contextlib.ExitStack()
   yield stack
   stack.close()
+
 
 @pytest.fixture(scope='module')
 def el() -> t.Generator[asyncio.AbstractEventLoop, None, None]:
@@ -219,9 +260,11 @@ def el() -> t.Generator[asyncio.AbstractEventLoop, None, None]:
   yield loop
   loop.close()
 
+
 @pytest.fixture(params=['container', 'local'], scope='session')
 def deployment_mode(request: pytest.FixtureRequest) -> str:
   return request.param
+
 
 @pytest.fixture(scope='module')
 def handler(el: asyncio.AbstractEventLoop, deployment_mode: t.Literal['container', 'local']):

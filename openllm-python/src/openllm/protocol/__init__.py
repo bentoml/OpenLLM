@@ -2,11 +2,13 @@
 
 Currently support OpenAI compatible API.
 """
+
 from __future__ import annotations
 import os
 import typing as t
 
 from openllm_core.utils import LazyModule
+
 
 _import_structure: dict[str, list[str]] = {'openai': []}
 

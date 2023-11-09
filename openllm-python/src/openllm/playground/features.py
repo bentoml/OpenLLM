@@ -15,6 +15,7 @@ MAX_NEW_TOKENS = 384
 Q = 'Answer the following question, step by step:\n{q}\nA:'
 question = 'What is the meaning of life?'
 
+
 async def main() -> int:
   parser = argparse.ArgumentParser()
   parser.add_argument('question', default=question)
@@ -36,6 +37,7 @@ async def main() -> int:
   logger.info('=' * 10, 'Response:', res)
 
   return 0
+
 
 def _mp_fn(index: t.Any):  # type: ignore
   # For xla_spawn (TPUs)

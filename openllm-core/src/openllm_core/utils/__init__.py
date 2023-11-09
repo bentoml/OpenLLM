@@ -21,6 +21,7 @@ from .lazy import LazyModule as LazyModule
 from .lazy import VersionInfo as VersionInfo
 from .._typing_compat import overload
 
+
 if t.TYPE_CHECKING:
   from bentoml._internal.models.model import ModelContext
   from bentoml._internal.types import PathType
@@ -38,12 +39,14 @@ try:
 except ImportError:
   # python < 3.9 does not have GenericAlias (list[int], tuple[str, ...] and so on)
   _TypingGenericAlias = ()  # type: ignore
-if sys.version_info < (3, 10): _WithArgsTypes = (_TypingGenericAlias,)
+if sys.version_info < (3, 10):
+  _WithArgsTypes = (_TypingGenericAlias,)
 else:
   #  _GenericAlias is the actual GenericAlias implementation
   _WithArgsTypes: t.Any = (t._GenericAlias, types.GenericAlias, types.UnionType)  # type: ignore
 
 DEV_DEBUG_VAR = 'OPENLLMDEVDEBUG'
+
 
 def resolve_user_filepath(filepath: str, ctx: str | None) -> str:
   # Return if filepath exist after expanduser
@@ -60,11 +63,18 @@ def resolve_user_filepath(filepath: str, ctx: str | None) -> str:
 
   raise FileNotFoundError(f'file {filepath} not found')
 
+
 @contextlib.contextmanager
-def reserve_free_port(host: str = 'localhost', port: int | None = None, prefix: str | None = None, max_retry: int = 50, enable_so_reuseport: bool = False,) -> t.Iterator[int]:
+def reserve_free_port(
+  host: str = 'localhost',
+  port: int | None = None,
+  prefix: str | None = None,
+  max_retry: int = 50,
+  enable_so_reuseport: bool = False,
+) -> t.Iterator[int]:
   """
-    detect free port and reserve until exit the context
-    """
+  detect free port and reserve until exit the context
+  """
   import psutil
 
   sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -78,8 +88,8 @@ def reserve_free_port(host: str = 'localhost', port: int | None = None, prefix: 
       if sock.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT) == 0:
         raise RuntimeError('Failed to set SO_REUSEPORT.') from None
   if prefix is not None:
-    prefix_num = int(prefix) * 10**(5 - len(prefix))
-    suffix_range = min(65535 - prefix_num, 10**(5 - len(prefix)))
+    prefix_num = int(prefix) * 10 ** (5 - len(prefix))
+    suffix_range = min(65535 - prefix_num, 10 ** (5 - len(prefix)))
     for _ in range(max_retry):
       suffix = random.randint(0, suffix_range)
       port = int(f'{prefix_num + suffix}')
@@ -99,21 +109,27 @@ def reserve_free_port(host: str = 'localhost', port: int | None = None, prefix: 
   finally:
     sock.close()
 
+
 def calc_dir_size(path: PathType) -> int:
   return sum(f.stat().st_size for f in Path(path).glob('**/*') if f.is_file())
 
+
 def set_debug_mode(enabled: bool, level: int = 1) -> None:
   # monkeypatch bentoml._internal.configuration.set_debug_mode to remove unused logs
-  if enabled: os.environ[DEV_DEBUG_VAR] = str(level)
+  if enabled:
+    os.environ[DEV_DEBUG_VAR] = str(level)
   os.environ[DEBUG_ENV_VAR] = str(enabled)
   os.environ[_GRPC_DEBUG_ENV_VAR] = 'DEBUG' if enabled else 'ERROR'
+
 
 def lenient_issubclass(cls: t.Any, class_or_tuple: type[t.Any] | tuple[type[t.Any], ...] | None) -> bool:
   try:
     return isinstance(cls, type) and issubclass(cls, class_or_tuple)  # type: ignore[arg-type]
   except TypeError:
-    if isinstance(cls, _WithArgsTypes): return False
+    if isinstance(cls, _WithArgsTypes):
+      return False
     raise
+
 
 @functools.lru_cache(maxsize=128)
 def generate_hash_from_file(f: str, algorithm: t.Literal['md5', 'sha1'] = 'sha1') -> str:
@@ -128,44 +144,61 @@ def generate_hash_from_file(f: str, algorithm: t.Literal['md5', 'sha1'] = 'sha1'
   """
   return getattr(hashlib, algorithm)(str(os.path.getmtime(resolve_filepath(f))).encode()).hexdigest()
 
+
 def check_bool_env(env: str, default: bool = True) -> bool:
   v = os.environ.get(env, str(default)).upper()
-  if v.isdigit(): return bool(int(v))  # special check for digits
+  if v.isdigit():
+    return bool(int(v))  # special check for digits
   return v in ENV_VARS_TRUE_VALUES
+
 
 # equivocal setattr to save one lookup per assignment
 _object_setattr = object.__setattr__
 
+
 def field_env_key(key: str, suffix: str | None = None) -> str:
   return '_'.join(filter(None, map(str.upper, ['OPENLLM', suffix.strip('_') if suffix else '', key])))
+
 
 # Special debug flag controled via OPENLLMDEVDEBUG
 DEBUG: bool = sys.flags.dev_mode or (not sys.flags.ignore_environment and check_bool_env(DEV_DEBUG_VAR, default=False))
 # Whether to show the codenge for debug purposes
-SHOW_CODEGEN: bool = DEBUG and (os.environ.get(DEV_DEBUG_VAR, str(0)).isdigit() and int(os.environ.get(DEV_DEBUG_VAR, str(0))) > 3)
+SHOW_CODEGEN: bool = DEBUG and (
+  os.environ.get(DEV_DEBUG_VAR, str(0)).isdigit() and int(os.environ.get(DEV_DEBUG_VAR, str(0))) > 3
+)
 # MYPY is like t.TYPE_CHECKING, but reserved for Mypy plugins
 MYPY = False
 
+
 def get_debug_mode() -> bool:
-  if not DEBUG and DEBUG_ENV_VAR in os.environ: return check_bool_env(DEBUG_ENV_VAR, False)
+  if not DEBUG and DEBUG_ENV_VAR in os.environ:
+    return check_bool_env(DEBUG_ENV_VAR, False)
   return DEBUG
 
+
 def get_quiet_mode() -> bool:
-  if QUIET_ENV_VAR in os.environ: return check_bool_env(QUIET_ENV_VAR, False)
-  if DEBUG: return False
+  if QUIET_ENV_VAR in os.environ:
+    return check_bool_env(QUIET_ENV_VAR, False)
+  if DEBUG:
+    return False
   return False
+
 
 def set_quiet_mode(enabled: bool) -> None:
   # do not log setting quiet mode
   os.environ[QUIET_ENV_VAR] = str(enabled)
   os.environ[_GRPC_DEBUG_ENV_VAR] = 'NONE'
 
+
 class ExceptionFilter(logging.Filter):
   def __init__(self, exclude_exceptions: list[type[Exception]] | None = None, **kwargs: t.Any):
-    if exclude_exceptions is None: exclude_exceptions = []
+    if exclude_exceptions is None:
+      exclude_exceptions = []
     try:
       from circus.exc import ConflictError
-      if ConflictError not in exclude_exceptions: exclude_exceptions.append(ConflictError)
+
+      if ConflictError not in exclude_exceptions:
+        exclude_exceptions.append(ConflictError)
     except ImportError:
       pass
     super(ExceptionFilter, self).__init__(**kwargs)
@@ -176,54 +209,42 @@ class ExceptionFilter(logging.Filter):
       etype, _, _ = record.exc_info
       if etype is not None:
         for exc in self.EXCLUDE_EXCEPTIONS:
-          if issubclass(etype, exc): return False
+          if issubclass(etype, exc):
+            return False
     return True
+
 
 class InfoFilter(logging.Filter):
   def filter(self, record: logging.LogRecord) -> bool:
     return logging.INFO <= record.levelno < logging.WARNING
 
+
 def gen_random_uuid(prefix: str | None = None) -> str:
   return '-'.join([prefix or 'openllm', str(uuid.uuid4().hex)])
 
+
 _LOGGING_CONFIG: dict[str, t.Any] = {
-    'version': 1,
-    'disable_existing_loggers': True,
-    'filters': {
-        'excfilter': {
-            '()': 'openllm_core.utils.ExceptionFilter'
-        },
-        'infofilter': {
-            '()': 'openllm_core.utils.InfoFilter'
-        }
+  'version': 1,
+  'disable_existing_loggers': True,
+  'filters': {
+    'excfilter': {'()': 'openllm_core.utils.ExceptionFilter'},
+    'infofilter': {'()': 'openllm_core.utils.InfoFilter'},
+  },
+  'handlers': {
+    'bentomlhandler': {
+      'class': 'logging.StreamHandler',
+      'filters': ['excfilter', 'infofilter'],
+      'stream': 'ext://sys.stdout',
     },
-    'handlers': {
-        'bentomlhandler': {
-            'class': 'logging.StreamHandler',
-            'filters': ['excfilter', 'infofilter'],
-            'stream': 'ext://sys.stdout'
-        },
-        'defaulthandler': {
-            'class': 'logging.StreamHandler',
-            'level': logging.WARNING
-        }
-    },
-    'loggers': {
-        'bentoml': {
-            'handlers': ['bentomlhandler', 'defaulthandler'],
-            'level': logging.INFO,
-            'propagate': False
-        },
-        'openllm': {
-            'handlers': ['bentomlhandler', 'defaulthandler'],
-            'level': logging.INFO,
-            'propagate': False
-        }
-    },
-    'root': {
-        'level': logging.WARNING
-    },
+    'defaulthandler': {'class': 'logging.StreamHandler', 'level': logging.WARNING},
+  },
+  'loggers': {
+    'bentoml': {'handlers': ['bentomlhandler', 'defaulthandler'], 'level': logging.INFO, 'propagate': False},
+    'openllm': {'handlers': ['bentomlhandler', 'defaulthandler'], 'level': logging.INFO, 'propagate': False},
+  },
+  'root': {'level': logging.WARNING},
 }
+
 
 def configure_logging() -> None:
   """Configure logging for OpenLLM.
@@ -246,15 +267,20 @@ def configure_logging() -> None:
 
   logging.config.dictConfig(_LOGGING_CONFIG)
 
+
 @functools.lru_cache(maxsize=1)
 def in_notebook() -> bool:
   try:
     from IPython.core.getipython import get_ipython
+
     if t.TYPE_CHECKING:
       from IPython.core.interactiveshell import InteractiveShell
-    return 'IPKernelApp' in t.cast('dict[str, t.Any]', t.cast(t.Callable[[], 'InteractiveShell'], get_ipython)().config)
+    return 'IPKernelApp' in t.cast(
+      'dict[str, t.Any]', t.cast(t.Callable[[], 'InteractiveShell'], get_ipython)().config
+    )
   except (ImportError, AttributeError):
     return False
+
 
 class suppress(contextlib.suppress, contextlib.ContextDecorator):
   """A version of contextlib.suppress with decorator support.
@@ -264,6 +290,7 @@ class suppress(contextlib.suppress, contextlib.ContextDecorator):
   ...     {}['']
   >>> key_error()
   """
+
 
 def compose(*funcs: AnyCallable) -> AnyCallable:
   """Compose any number of unary functions into a single unary function.
@@ -281,10 +308,12 @@ def compose(*funcs: AnyCallable) -> AnyCallable:
   >>> [f(3*x, x+1) for x in range(1,10)]
   [1.5, 2.0, 2.25, 2.4, 2.5, 2.571, 2.625, 2.667, 2.7]
   """
+
   def compose_two(f1: AnyCallable, f2: AnyCallable) -> AnyCallable:
     return lambda *args, **kwargs: f1(f2(*args, **kwargs))
 
   return functools.reduce(compose_two, funcs)
+
 
 def apply(transform: AnyCallable) -> t.Callable[[AnyCallable], AnyCallable]:
   """Decorate a function with a transform function that is invoked on results returned from the decorated function.
@@ -304,8 +333,10 @@ def apply(transform: AnyCallable) -> t.Callable[[AnyCallable], AnyCallable]:
   """
   return lambda func: functools.wraps(func)(compose(transform, func))
 
+
 T = t.TypeVar('T')
 K = t.TypeVar('K')
+
 
 # yapf: disable
 @overload
@@ -315,6 +346,7 @@ def first_not_none(*args: T | None) -> T | None: ...
 def first_not_none(*args: T | None, default: None | T = None) -> T | None: return next((arg for arg in args if arg is not None), default)
 # yapf: enable
 
+
 def resolve_filepath(path: str, ctx: str | None = None) -> str:
   """Resolve a file path to an absolute path, expand user and environment variables."""
   try:
@@ -322,25 +354,33 @@ def resolve_filepath(path: str, ctx: str | None = None) -> str:
   except FileNotFoundError:
     return path
 
+
 def validate_is_path(maybe_path: str) -> bool:
   return os.path.exists(os.path.dirname(resolve_filepath(maybe_path)))
+
 
 def generate_context(framework_name: str) -> ModelContext:
   import openllm_core
 
   from bentoml._internal.models.model import ModelContext
+
   framework_versions = {'transformers': pkg.get_pkg_version('transformers')}
-  if openllm_core.utils.is_torch_available(): framework_versions['torch'] = pkg.get_pkg_version('torch')
+  if openllm_core.utils.is_torch_available():
+    framework_versions['torch'] = pkg.get_pkg_version('torch')
   return ModelContext(framework_name=framework_name, framework_versions=framework_versions)
+
 
 _TOKENIZER_PREFIX = '_tokenizer_'
 
+
 def flatten_attrs(**attrs: t.Any) -> tuple[dict[str, t.Any], dict[str, t.Any]]:
   """Normalize the given attrs to a model and tokenizer kwargs accordingly."""
-  tokenizer_attrs = {k[len(_TOKENIZER_PREFIX):]: v for k, v in attrs.items() if k.startswith(_TOKENIZER_PREFIX)}
+  tokenizer_attrs = {k[len(_TOKENIZER_PREFIX) :]: v for k, v in attrs.items() if k.startswith(_TOKENIZER_PREFIX)}
   for k in tuple(attrs.keys()):
-    if k.startswith(_TOKENIZER_PREFIX): del attrs[k]
+    if k.startswith(_TOKENIZER_PREFIX):
+      del attrs[k]
   return attrs, tokenizer_attrs
+
 
 # NOTE: The set marks contains a set of modules name
 # that are available above and are whitelisted
@@ -349,20 +389,36 @@ _whitelist_modules = {'pkg'}
 
 # XXX: define all classes, functions import above this line
 # since _extras will be the locals() import from this file.
-_extras: dict[str, t.Any] = {k: v for k, v in locals().items() if k in _whitelist_modules or (not isinstance(v, types.ModuleType) and not k.startswith('_'))}
+_extras: dict[str, t.Any] = {
+  k: v
+  for k, v in locals().items()
+  if k in _whitelist_modules or (not isinstance(v, types.ModuleType) and not k.startswith('_'))
+}
 _extras['__openllm_migration__'] = {'bentoml_cattr': 'converter'}
 _import_structure: dict[str, list[str]] = {
-    'analytics': [],
-    'codegen': [],
-    'dantic': [],
-    'lazy': [],
-    'pkg': [],
-    'representation': ['ReprMixin'],
-    'serde': ['converter'],
-    'import_utils': [
-        'OPTIONAL_DEPENDENCIES', 'is_vllm_available', 'is_torch_available', 'is_bitsandbytes_available', 'is_peft_available', 'is_jupyter_available', 'is_jupytext_available',
-        'is_notebook_available', 'is_autogptq_available', 'is_grpc_available', 'is_transformers_available', 'is_optimum_supports_gptq', 'is_autoawq_available', 'is_bentoml_available'
-    ]
+  'analytics': [],
+  'codegen': [],
+  'dantic': [],
+  'lazy': [],
+  'pkg': [],
+  'representation': ['ReprMixin'],
+  'serde': ['converter'],
+  'import_utils': [
+    'OPTIONAL_DEPENDENCIES',
+    'is_vllm_available',
+    'is_torch_available',
+    'is_bitsandbytes_available',
+    'is_peft_available',
+    'is_jupyter_available',
+    'is_jupytext_available',
+    'is_notebook_available',
+    'is_autogptq_available',
+    'is_grpc_available',
+    'is_transformers_available',
+    'is_optimum_supports_gptq',
+    'is_autoawq_available',
+    'is_bentoml_available',
+  ],
 }
 
 if t.TYPE_CHECKING:

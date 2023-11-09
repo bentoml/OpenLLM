@@ -9,27 +9,33 @@ from openllm_core._typing_compat import LiteralBackend
 from openllm_core.utils import first_not_none
 from openllm_core.utils import is_vllm_available
 
+
 if t.TYPE_CHECKING:
   from openllm_core import LLMConfig
   from openllm_core._typing_compat import ParamSpec
 
   from ._llm import LLMRunner
+
   P = ParamSpec('P')
 
 _object_setattr = object.__setattr__
+
 
 def _mark_deprecated(fn: t.Callable[P, t.Any]) -> t.Callable[P, t.Any]:
   _object_setattr(fn, '__deprecated__', True)
   return fn
 
+
 @_mark_deprecated
-def Runner(model_name: str,
-           ensure_available: bool = True,
-           init_local: bool = False,
-           backend: LiteralBackend | None = None,
-           llm_config: LLMConfig | None = None,
-           **attrs: t.Any) -> LLMRunner[t.Any, t.Any]:
-  '''Create a Runner for given LLM. For a list of currently supported LLM, check out 'openllm models'.
+def Runner(
+  model_name: str,
+  ensure_available: bool = True,
+  init_local: bool = False,
+  backend: LiteralBackend | None = None,
+  llm_config: LLMConfig | None = None,
+  **attrs: t.Any,
+) -> LLMRunner[t.Any, t.Any]:
+  """Create a Runner for given LLM. For a list of currently supported LLM, check out 'openllm models'.
 
   > [!WARNING]
   > This method is now deprecated and in favor of 'openllm.LLM.runner'
@@ -54,11 +60,13 @@ def Runner(model_name: str,
     llm_config: Optional ``openllm.LLMConfig`` to initialise this ``openllm.LLMRunner``.
     init_local: If True, it will initialize the model locally. This is useful if you want to run the model locally. (Symmetrical to bentoml.Runner.init_local())
     **attrs: The rest of kwargs will then be passed to the LLM. Refer to the LLM documentation for the kwargs behaviour
-  '''
+  """
   from ._llm import LLM
-  if llm_config is None: llm_config = openllm.AutoConfig.for_model(model_name)
+
+  if llm_config is None:
+    llm_config = openllm.AutoConfig.for_model(model_name)
   model_id = attrs.get('model_id', default=os.getenv('OPENLLM_MODEL_ID', llm_config['default_id']))
-  _RUNNER_MSG = f'''\
+  _RUNNER_MSG = f"""\
   Using 'openllm.Runner' is now deprecated. Make sure to switch to the following syntax:
 
   ```python
@@ -70,24 +78,31 @@ def Runner(model_name: str,
   async def chat(input: str) -> str:
     async for it in llm.generate_iterator(input): print(it)
   ```
-    '''
+    """
   warnings.warn(_RUNNER_MSG, DeprecationWarning, stacklevel=2)
-  attrs.update({
+  attrs.update(
+    {
       'model_id': model_id,
       'quantize': os.getenv('OPENLLM_QUANTIZE', attrs.get('quantize', None)),
-      'serialisation': first_not_none(attrs.get('serialisation'), os.environ.get('OPENLLM_SERIALIZATION'), default=llm_config['serialisation']),
+      'serialisation': first_not_none(
+        attrs.get('serialisation'), os.environ.get('OPENLLM_SERIALIZATION'), default=llm_config['serialisation']
+      ),
       'system_message': first_not_none(os.environ.get('OPENLLM_SYSTEM_MESSAGE'), attrs.get('system_message'), None),
       'prompt_template': first_not_none(os.environ.get('OPENLLM_PROMPT_TEMPLATE'), attrs.get('prompt_template'), None),
-  })
+    }
+  )
 
   backend = t.cast(LiteralBackend, first_not_none(backend, default='vllm' if is_vllm_available() else 'pt'))
   llm = LLM[t.Any, t.Any](backend=backend, llm_config=llm_config, **attrs)
-  if init_local: llm.runner.init_local(quiet=True)
+  if init_local:
+    llm.runner.init_local(quiet=True)
   return llm.runner
+
 
 _DEPRECATED = {k: v for k, v in locals().items() if getattr(v, '__deprecated__', False)}
 
 __all__ = list(_DEPRECATED)
+
 
 def __dir__() -> list[str]:
   return sorted(_DEPRECATED.keys())

@@ -7,21 +7,8 @@ default_language_version:
   python: python3.9 # NOTE: sync with .python-version-default
 exclude: '.*\.(css|js|svg)$'
 repos:
-  - repo: https://github.com/google/yapf
-    rev: v0.40.2
-    hooks:
-      - id: yapf
-        alias: f
-        verbose: true
-        exclude: |
-          (?x)^(
-              examples/.*|
-              bench.py |
-              cz.py |
-              openllm-client/src/openllm_client/pb.*
-          )$
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: 'v0.1.4'
+    rev: 'v0.1.5'
     hooks:
       - id: ruff
         alias: r
@@ -30,7 +17,6 @@ repos:
       - id: ruff-format
         alias: rf
         verbose: true
-        types: [pyi]
   - repo: local
     hooks:
       - id: mypy
@@ -45,6 +31,10 @@ repos:
       - id: editorconfig-checker
         verbose: true
         alias: ec
+        exclude: |
+          (?x)^(
+              openllm-python/src/openllm/cli/entrypoint.py
+          )$
   - repo: meta
     hooks:
       - id: check-hooks-apply

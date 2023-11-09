@@ -17,20 +17,28 @@ from ._schemas import Request
 from ._schemas import Response
 from ._schemas import StreamingResponse
 
+
 logger = logging.getLogger(__name__)
 
+
 def _address_validator(_, attr, value):
-  if not isinstance(value, str): raise TypeError(f'{attr.name} must be a string')
-  if not urlparse(value).netloc: raise ValueError(f'{attr.name} must be a valid URL')
+  if not isinstance(value, str):
+    raise TypeError(f'{attr.name} must be a string')
+  if not urlparse(value).netloc:
+    raise ValueError(f'{attr.name} must be a valid URL')
+
 
 def _address_converter(addr: str):
   return addr if '://' in addr else 'http://' + addr
+
 
 class ServerState(enum.Enum):
   CLOSED = 1  # CLOSED: The server is not yet ready or `wait_until_server_ready` has not been called/failed.
   READY = 2  # READY: The server is ready and `wait_until_server_ready` has been called.
 
+
 _object_setattr = object.__setattr__
+
 
 @attr.define(init=False)
 class HTTPClient:
@@ -47,7 +55,9 @@ class HTTPClient:
   __config: dict[str, t.Any] | None = None
 
   def __repr__(self):
-    return f'<HTTPClient timeout={self._timeout} api_version={self._api_version} verify={self._verify} state={self._state}>'
+    return (
+      f'<HTTPClient timeout={self._timeout} api_version={self._api_version} verify={self._verify} state={self._state}>'
+    )
 
   @staticmethod
   def wait_until_server_ready(addr, timeout=30, verify=False, check_interval=1, **client_args):
@@ -58,8 +68,10 @@ class HTTPClient:
       try:
         with httpx.Client(base_url=addr, verify=verify, **client_args) as sess:
           status = sess.get('/readyz').status_code
-        if status == 200: break
-        else: time.sleep(check_interval)
+        if status == 200:
+          break
+        else:
+          time.sleep(check_interval)
       except (httpx.ConnectError, urllib.error.URLError, ConnectionError):
         logger.debug('Server is not ready yet, retrying in %d seconds...', check_interval)
         time.sleep(check_interval)
@@ -75,12 +87,21 @@ class HTTPClient:
   def __init__(self, address=None, timeout=30, verify=False, api_version='v1', **client_args):
     if address is None:
       env = os.getenv('OPENLLM_ENDPOINT')
-      if env is None: raise ValueError('address must be provided')
+      if env is None:
+        raise ValueError('address must be provided')
       address = env
-    self.__attrs_init__(address, client_args, httpx.Client(base_url=address, timeout=timeout, verify=verify, **client_args), timeout, api_version, verify)
+    self.__attrs_init__(
+      address,
+      client_args,
+      httpx.Client(base_url=address, timeout=timeout, verify=verify, **client_args),
+      timeout,
+      api_version,
+      verify,
+    )
 
   def _metadata(self) -> dict[str, t.Any]:
-    if self.__metadata is None: self.__metadata = self._inner.post(self._build_endpoint('metadata')).json()
+    if self.__metadata is None:
+      self.__metadata = self._inner.post(self._build_endpoint('metadata')).json()
     return self.__metadata
 
   def _config(self) -> dict[str, t.Any]:
@@ -111,41 +132,62 @@ class HTTPClient:
       logger.error('Server is not healthy (Scroll up for traceback)\n%s', e)
       _object_setattr(self, '_state', ServerState.CLOSED)
 
-  def generate(self, prompt, llm_config=None, stop=None, adapter_name=None, timeout=None, verify=None, **attrs) -> Response:
+  def generate(
+    self, prompt, llm_config=None, stop=None, adapter_name=None, timeout=None, verify=None, **attrs
+  ) -> Response:
     if not self.is_ready:
       self.health()
-      if not self.is_ready: raise RuntimeError('Server is not ready. Check server logs for more information.')
-    if timeout is None: timeout = self._timeout
-    if verify is None: verify = self._verify
+      if not self.is_ready:
+        raise RuntimeError('Server is not ready. Check server logs for more information.')
+    if timeout is None:
+      timeout = self._timeout
+    if verify is None:
+      verify = self._verify
     _meta, _config = self._metadata(), self._config()
-    if llm_config is not None: llm_config = {**_config, **llm_config, **attrs}
-    else: llm_config = {**_config, **attrs}
-    if _meta['prompt_template'] is not None: prompt = _meta['prompt_template'].format(system_message=_meta['system_message'], instruction=prompt)
+    if llm_config is not None:
+      llm_config = {**_config, **llm_config, **attrs}
+    else:
+      llm_config = {**_config, **attrs}
+    if _meta['prompt_template'] is not None:
+      prompt = _meta['prompt_template'].format(system_message=_meta['system_message'], instruction=prompt)
 
     req = Request(prompt=prompt, llm_config=llm_config, stop=stop, adapter_name=adapter_name)
     with httpx.Client(base_url=self.address, timeout=timeout, verify=verify, **self.client_args) as client:
       r = client.post(self._build_endpoint('generate'), json=req.model_dump_json(), **self.client_args)
-    if r.status_code != 200: raise ValueError("Failed to get generation from '/v1/generate'. Check server logs for more details.")
+    if r.status_code != 200:
+      raise ValueError("Failed to get generation from '/v1/generate'. Check server logs for more details.")
     return Response.model_construct(r.json())
 
-  def generate_stream(self, prompt, llm_config=None, stop=None, adapter_name=None, timeout=None, verify=None, **attrs) -> t.Iterator[StreamingResponse]:
+  def generate_stream(
+    self, prompt, llm_config=None, stop=None, adapter_name=None, timeout=None, verify=None, **attrs
+  ) -> t.Iterator[StreamingResponse]:
     if not self.is_ready:
       self.health()
-      if not self.is_ready: raise RuntimeError('Server is not ready. Check server logs for more information.')
-    if timeout is None: timeout = self._timeout
-    if verify is None: verify = self._verify
+      if not self.is_ready:
+        raise RuntimeError('Server is not ready. Check server logs for more information.')
+    if timeout is None:
+      timeout = self._timeout
+    if verify is None:
+      verify = self._verify
     _meta, _config = self._metadata(), self._config()
-    if llm_config is not None: llm_config = {**_config, **llm_config, **attrs}
-    else: llm_config = {**_config, **attrs}
-    if _meta['prompt_template'] is not None: prompt = _meta['prompt_template'].format(system_message=_meta['system_message'], instruction=prompt)
+    if llm_config is not None:
+      llm_config = {**_config, **llm_config, **attrs}
+    else:
+      llm_config = {**_config, **attrs}
+    if _meta['prompt_template'] is not None:
+      prompt = _meta['prompt_template'].format(system_message=_meta['system_message'], instruction=prompt)
 
     req = Request(prompt=prompt, llm_config=llm_config, stop=stop, adapter_name=adapter_name)
     with httpx.Client(base_url=self.address, timeout=timeout, verify=verify, **self.client_args) as client:
-      with client.stream('POST', self._build_endpoint('generate_stream'), json=req.model_dump_json(), **self.client_args) as r:
+      with client.stream(
+        'POST', self._build_endpoint('generate_stream'), json=req.model_dump_json(), **self.client_args
+      ) as r:
         for payload in r.iter_bytes():
-          if payload == b'data: [DONE]\n\n': break
+          if payload == b'data: [DONE]\n\n':
+            break
           # Skip line
-          if payload == b'\n': continue
+          if payload == b'\n':
+            continue
           if payload.startswith(b'data: '):
             try:
               proc = payload.decode('utf-8').lstrip('data: ').rstrip('\n')
@@ -153,6 +195,7 @@ class HTTPClient:
               yield StreamingResponse.from_response_chunk(Response.model_construct(data))
             except Exception:
               pass  # FIXME: Handle this
+
 
 @attr.define(init=False)
 class AsyncHTTPClient:
@@ -180,8 +223,10 @@ class AsyncHTTPClient:
       try:
         async with httpx.AsyncClient(base_url=addr, verify=verify, **client_args) as sess:
           status = (await sess.get('/readyz')).status_code
-        if status == 200: break
-        else: await asyncio.sleep(check_interval)
+        if status == 200:
+          break
+        else:
+          await asyncio.sleep(check_interval)
       except (httpx.ConnectError, urllib.error.URLError, ConnectionError):
         logger.debug('Server is not ready yet, retrying in %d seconds...', check_interval)
         await asyncio.sleep(check_interval)
@@ -197,12 +242,21 @@ class AsyncHTTPClient:
   def __init__(self, address=None, timeout=30, verify=False, api_version='v1', **client_args):
     if address is None:
       env = os.getenv('OPENLLM_ENDPOINT')
-      if env is None: raise ValueError('address must be provided')
+      if env is None:
+        raise ValueError('address must be provided')
       address = env
-    self.__attrs_init__(address, client_args, httpx.AsyncClient(base_url=address, timeout=timeout, verify=verify, **client_args), timeout, api_version, verify)
+    self.__attrs_init__(
+      address,
+      client_args,
+      httpx.AsyncClient(base_url=address, timeout=timeout, verify=verify, **client_args),
+      timeout,
+      api_version,
+      verify,
+    )
 
   async def _metadata(self) -> dict[str, t.Any]:
-    if self.__metadata is None: self.__metadata = (await self._inner.post(self._build_endpoint('metadata'))).json()
+    if self.__metadata is None:
+      self.__metadata = (await self._inner.post(self._build_endpoint('metadata'))).json()
     return self.__metadata
 
   async def _config(self) -> dict[str, t.Any]:
@@ -230,41 +284,62 @@ class AsyncHTTPClient:
       logger.error('Server is not healthy (Scroll up for traceback)\n%s', e)
       _object_setattr(self, '_state', ServerState.CLOSED)
 
-  async def generate(self, prompt, llm_config=None, stop=None, adapter_name=None, timeout=None, verify=None, **attrs) -> Response:
+  async def generate(
+    self, prompt, llm_config=None, stop=None, adapter_name=None, timeout=None, verify=None, **attrs
+  ) -> Response:
     if not self.is_ready:
       await self.health()
-      if not self.is_ready: raise RuntimeError('Server is not ready. Check server logs for more information.')
-    if timeout is None: timeout = self._timeout
-    if verify is None: verify = self._verify
+      if not self.is_ready:
+        raise RuntimeError('Server is not ready. Check server logs for more information.')
+    if timeout is None:
+      timeout = self._timeout
+    if verify is None:
+      verify = self._verify
     _meta, _config = await self._metadata(), await self._config()
-    if llm_config is not None: llm_config = {**_config, **llm_config, **attrs}
-    else: llm_config = {**_config, **attrs}
-    if _meta['prompt_template'] is not None: prompt = _meta['prompt_template'].format(system_message=_meta['system_message'], instruction=prompt)
+    if llm_config is not None:
+      llm_config = {**_config, **llm_config, **attrs}
+    else:
+      llm_config = {**_config, **attrs}
+    if _meta['prompt_template'] is not None:
+      prompt = _meta['prompt_template'].format(system_message=_meta['system_message'], instruction=prompt)
 
     req = Request(prompt=prompt, llm_config=llm_config, stop=stop, adapter_name=adapter_name)
     async with httpx.AsyncClient(base_url=self.address, timeout=timeout, verify=verify, **self.client_args) as client:
       r = await client.post(self._build_endpoint('generate'), json=req.model_dump_json(), **self.client_args)
-    if r.status_code != 200: raise ValueError("Failed to get generation from '/v1/generate'. Check server logs for more details.")
+    if r.status_code != 200:
+      raise ValueError("Failed to get generation from '/v1/generate'. Check server logs for more details.")
     return Response.model_construct(r.json())
 
-  async def generate_stream(self, prompt, llm_config=None, stop=None, adapter_name=None, timeout=None, verify=None, **attrs) -> t.AsyncGenerator[StreamingResponse, t.Any]:
+  async def generate_stream(
+    self, prompt, llm_config=None, stop=None, adapter_name=None, timeout=None, verify=None, **attrs
+  ) -> t.AsyncGenerator[StreamingResponse, t.Any]:
     if not self.is_ready:
       await self.health()
-      if not self.is_ready: raise RuntimeError('Server is not ready. Check server logs for more information.')
-    if timeout is None: timeout = self._timeout
-    if verify is None: verify = self._verify
+      if not self.is_ready:
+        raise RuntimeError('Server is not ready. Check server logs for more information.')
+    if timeout is None:
+      timeout = self._timeout
+    if verify is None:
+      verify = self._verify
     _meta, _config = await self._metadata(), await self._config()
-    if llm_config is not None: llm_config = {**_config, **llm_config, **attrs}
-    else: llm_config = {**_config, **attrs}
-    if _meta['prompt_template'] is not None: prompt = _meta['prompt_template'].format(system_message=_meta['system_message'], instruction=prompt)
+    if llm_config is not None:
+      llm_config = {**_config, **llm_config, **attrs}
+    else:
+      llm_config = {**_config, **attrs}
+    if _meta['prompt_template'] is not None:
+      prompt = _meta['prompt_template'].format(system_message=_meta['system_message'], instruction=prompt)
 
     req = Request(prompt=prompt, llm_config=llm_config, stop=stop, adapter_name=adapter_name)
     async with httpx.AsyncClient(base_url=self.address, timeout=timeout, verify=verify, **self.client_args) as client:
-      async with client.stream('POST', self._build_endpoint('generate_stream'), json=req.model_dump_json(), **self.client_args) as r:
+      async with client.stream(
+        'POST', self._build_endpoint('generate_stream'), json=req.model_dump_json(), **self.client_args
+      ) as r:
         async for payload in r.aiter_bytes():
-          if payload == b'data: [DONE]\n\n': break
+          if payload == b'data: [DONE]\n\n':
+            break
           # Skip line
-          if payload == b'\n': continue
+          if payload == b'\n':
+            continue
           if payload.startswith(b'data: '):
             try:
               proc = payload.decode('utf-8').lstrip('data: ').rstrip('\n')

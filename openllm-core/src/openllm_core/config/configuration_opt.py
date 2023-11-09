@@ -6,10 +6,11 @@ import openllm_core
 from openllm_core._conversation import SeparatorStyle
 from openllm_core.prompts import process_prompt
 
+
 if t.TYPE_CHECKING:
   from openllm_core.prompts.prompt_template import PromptTemplate
 
-START_OPT_COMMAND_DOCSTRING = '''\
+START_OPT_COMMAND_DOCSTRING = """\
 Run a LLMServer for OPT model.
 
 \b
@@ -30,8 +31,9 @@ or provide `--model-id` flag when running ``openllm start opt``:
 
 \b
 $ openllm start opt --model-id facebook/opt-6.7b
-'''
-DEFAULT_PROMPT_TEMPLATE = '''{instruction}'''
+"""
+DEFAULT_PROMPT_TEMPLATE = """{instruction}"""
+
 
 class OPTConfig(openllm_core.LLMConfig):
   """OPT was first introduced in [Open Pre-trained Transformer Language Models](https://arxiv.org/abs/2205.01068) and first released in [metaseq's repository](https://github.com/facebookresearch/metaseq) on May 3rd 2022 by Meta AI.
@@ -43,22 +45,34 @@ class OPTConfig(openllm_core.LLMConfig):
 
   Refer to [OPT's HuggingFace page](https://huggingface.co/docs/transformers/model_doc/opt) for more information.
   """
+
   __config__ = {
-      'name_type': 'lowercase',
-      'trust_remote_code': False,
-      'url': 'https://huggingface.co/docs/transformers/model_doc/opt',
-      'default_id': 'facebook/opt-1.3b',
-      'architecture': 'OPTForCausalLM',
-      'conversation': dict(roles=('User', 'Assistant'), messages=[], sep_style=SeparatorStyle.ADD_COLON_SINGLE, sep='\n'),
-      'model_ids': ['facebook/opt-125m', 'facebook/opt-350m', 'facebook/opt-1.3b', 'facebook/opt-2.7b', 'facebook/opt-6.7b', 'facebook/opt-66b'],
-      'fine_tune_strategies': ({
-          'adapter_type': 'lora',
-          'r': 16,
-          'lora_alpha': 32,
-          'target_modules': ['q_proj', 'v_proj'],
-          'lora_dropout': 0.05,
-          'bias': 'none'
-      },)
+    'name_type': 'lowercase',
+    'trust_remote_code': False,
+    'url': 'https://huggingface.co/docs/transformers/model_doc/opt',
+    'default_id': 'facebook/opt-1.3b',
+    'architecture': 'OPTForCausalLM',
+    'conversation': dict(
+      roles=('User', 'Assistant'), messages=[], sep_style=SeparatorStyle.ADD_COLON_SINGLE, sep='\n'
+    ),
+    'model_ids': [
+      'facebook/opt-125m',
+      'facebook/opt-350m',
+      'facebook/opt-1.3b',
+      'facebook/opt-2.7b',
+      'facebook/opt-6.7b',
+      'facebook/opt-66b',
+    ],
+    'fine_tune_strategies': (
+      {
+        'adapter_type': 'lora',
+        'r': 16,
+        'lora_alpha': 32,
+        'target_modules': ['q_proj', 'v_proj'],
+        'lora_dropout': 0.05,
+        'bias': 'none',
+      },
+    ),
   }
 
   class GenerationConfig:
@@ -67,23 +81,30 @@ class OPTConfig(openllm_core.LLMConfig):
     max_new_tokens: int = 256
     num_return_sequences: int = 1
 
-  def sanitize_parameters(self,
-                          prompt: str,
-                          prompt_template: PromptTemplate | str | None = None,
-                          system_message: str | None = None,
-                          max_new_tokens: int | None = None,
-                          temperature: float | None = None,
-                          top_k: int | None = None,
-                          num_return_sequences: int | None = None,
-                          use_default_prompt_template: bool = False,
-                          **attrs: t.Any) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
-    return process_prompt(prompt, DEFAULT_PROMPT_TEMPLATE, use_default_prompt_template, **attrs), {
+  def sanitize_parameters(
+    self,
+    prompt: str,
+    prompt_template: PromptTemplate | str | None = None,
+    system_message: str | None = None,
+    max_new_tokens: int | None = None,
+    temperature: float | None = None,
+    top_k: int | None = None,
+    num_return_sequences: int | None = None,
+    use_default_prompt_template: bool = False,
+    **attrs: t.Any,
+  ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
+    return (
+      process_prompt(prompt, DEFAULT_PROMPT_TEMPLATE, use_default_prompt_template, **attrs),
+      {
         'max_new_tokens': max_new_tokens,
         'temperature': temperature,
         'top_k': top_k,
-        'num_return_sequences': num_return_sequences
-    }, {}
+        'num_return_sequences': num_return_sequences,
+      },
+      {},
+    )
 
   def postprocess_generate(self, prompt: str, generation_result: t.Sequence[str], **attrs: t.Any) -> str:
-    if len(generation_result) == 1: return generation_result[0]
+    if len(generation_result) == 1:
+      return generation_result[0]
     return '\n'.join(generation_result)
