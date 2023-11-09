@@ -31,10 +31,7 @@ repos:
       - id: editorconfig-checker
         verbose: true
         alias: ec
-        exclude: |
-          (?x)^(
-              openllm-python/src/openllm/cli/entrypoint.py
-          )$
+        types_or: [python, javascript]
   - repo: meta
     hooks:
       - id: check-hooks-apply
