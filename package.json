@@ -14,27 +14,28 @@
   "engines": {
     "node": ">=18"
   },
+  "type": "module",
   "private": true,
   "scripts": {
     "lint": "eslint . --cache",
     "check": "npx prettier . --check",
     "format": "npx prettier . --write"
   },
-  "packageManager": "pnpm@8.4.0",
+  "packageManager": "pnpm@8.6.3",
   "devDependencies": {
     "@edge-runtime/vm": "3.1.6",
     "@next/eslint-plugin-next": "13.5.5",
     "@types/node": "20.8.7",
     "@typescript-eslint/eslint-plugin": "6.10.0",
     "@typescript-eslint/parser": "6.8.0",
-    "eslint": "8.53.0",
+    "eslint": "^8.53.0",
     "eslint-config-prettier": "9.0.0",
     "eslint-plugin-import": "2.29.0",
     "eslint-plugin-react": "7.33.2",
     "eslint-plugin-react-hooks": "4.6.0",
     "eslint-plugin-tailwindcss": "3.13.0",
     "eslint-plugin-unicorn": "48.0.1",
-    "prettier": "3.0.3",
+    "prettier": "^3.0.3",
     "prettier-plugin-pkg": "0.18.0",
     "prettier-plugin-tailwindcss": "0.5.6",
     "turbo": "1.10.16",

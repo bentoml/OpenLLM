@@ -151,3 +151,8 @@ prof
 tsconfig.tsbuildinfo
 .quartz-cache
 private/
+
+.idea
+.vscode/*
+node_modules
+.eslintcache

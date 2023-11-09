@@ -823,8 +823,8 @@ OpenLLM supports the following quantization techniques
 
 - [LLM.int8(): 8-bit Matrix Multiplication](https://arxiv.org/abs/2208.07339) through [bitsandbytes](https://github.com/TimDettmers/bitsandbytes)
 - [SpQR: A Sparse-Quantized Representation for Near-Lossless LLM Weight Compression
-](https://arxiv.org/abs/2306.03078) through [bitsandbytes](https://github.com/TimDettmers/bitsandbytes)
-- [AWQ: Activation-aware Weight Quantization](https://arxiv.org/abs/2306.00978), 
+  ](https://arxiv.org/abs/2306.03078) through [bitsandbytes](https://github.com/TimDettmers/bitsandbytes)
+- [AWQ: Activation-aware Weight Quantization](https://arxiv.org/abs/2306.00978),
 - [GPTQ: Accurate Post-Training Quantization](https://arxiv.org/abs/2210.17323)
 - [SqueezeLLM: Dense-and-Sparse Quantization](https://arxiv.org/abs/2306.07629).
 
@@ -927,15 +927,14 @@ openllm build facebook/opt-6.7b --adapter-id ./path/to/adapter_id --build-ctx .
 > [!IMPORTANT]
 > Fine-tuning support is still experimental and currently only works with PyTorch backend. vLLM support is coming soon.
 
-
 ## 🥅 Playground and Chat UI
 
 The following UIs are currently available for OpenLLM:
 
-| UI                                                                                        | Owner                                        | Type                 | Progress |
-| ----------------------------------------------------------------------------------------- | -------------------------------------------- | -------------------- | -------- |
-| [Clojure](https://github.com/bentoml/OpenLLM/blob/main/openllm-contrib/clojure/README.md) | [@GutZuFusss](https://github.com/GutZuFusss) | Community-maintained | 🔧       |
-| TS                                                                                        | BentoML Team                                 |                      | 🚧       |
+| UI                                                                                 | Owner                                        | Type                 | Progress |
+| ---------------------------------------------------------------------------------- | -------------------------------------------- | -------------------- | -------- |
+| [Clojure](https://github.com/bentoml/OpenLLM/blob/main/external/clojure/README.md) | [@GutZuFusss](https://github.com/GutZuFusss) | Community-maintained | 🔧       |
+| TS                                                                                 | BentoML Team                                 |                      | 🚧       |
 
 ## 🐍 Python SDK
 
@@ -967,12 +966,12 @@ This method is easy to use for one-shot generation use case, but merely served a
 
 > [!IMPORTANT]
 > If you need to call your code in a synchronous context, you can use `asyncio.run` that wraps an async function:
+>
 > ```python
 > import asyncio
 > async def generate(prompt, **attrs): return await llm.generate(prompt, **attrs)
 > asyncio.run(generate("The meaning of life is", temperature=0.23))
 > ```
-
 
 ## ⚙️ Integrations
 

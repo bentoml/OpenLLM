@@ -1,4 +1,4 @@
 packages:
   - docs
   - openllm-node
-  - openllm-contrib/clojure
+  - external/clojure

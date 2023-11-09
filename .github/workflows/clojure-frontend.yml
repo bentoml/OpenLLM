@@ -6,13 +6,13 @@ on:
     tags:
       - '*'
     paths:
-      - 'contrib/clojure/**'
+      - 'external/clojure/**'
       - '.github/workflows/clojure-frontend.yml'
   pull_request:
     types: [labeled, opened, synchronize, reopened]
     branches: [main]
     paths:
-      - 'contrib/clojure/**'
+      - 'external/clojure/**'
       - '.github/workflows/clojure-frontend.yml'
 # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#defaultsrun
 defaults:
@@ -102,8 +102,8 @@ jobs:
         id: build-and-push
         uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09 # ratchet:docker/build-push-action@v5.0.0
         with:
-          context: openllm-contrib/clojure
-          file: openllm-contrib/clojure/Dockerfile
+          context: external/clojure
+          file: external/clojure/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           build-args: |

@@ -11,6 +11,7 @@ repos:
     rev: v0.40.2
     hooks:
       - id: yapf
+        alias: f
         verbose: true
         exclude: |
           (?x)^(
@@ -23,11 +24,49 @@ repos:
     rev: 'v0.1.4'
     hooks:
       - id: ruff
+        alias: r
         verbose: true
         args: [--exit-non-zero-on-fix, --show-fixes]
       - id: ruff-format
+        alias: rf
         verbose: true
         types: [pyi]
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy
+        language: system
+        always_run: true
+        pass_filenames: false
+        entry: mypy --strict openllm-client/src/openllm_client/__init__.pyi openllm-core/src/openllm_core/_typing_compat.py
+  - repo: https://github.com/editorconfig-checker/editorconfig-checker.python
+    rev: '2.7.3'
+    hooks:
+      - id: editorconfig-checker
+        verbose: true
+        alias: ec
+  - repo: meta
+    hooks:
+      - id: check-hooks-apply
+      - id: check-useless-excludes
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+        verbose: true
+      - id: end-of-file-fixer
+        verbose: true
+        exclude: |
+          (?x)^(
+              openllm-python/tests/models/.*
+          )$
+      - id: check-yaml
+        args: ["--unsafe"]
+      - id: check-toml
+      - id: check-docstring-first
+      - id: check-added-large-files
+      - id: debug-statements
+      - id: check-merge-conflict
   - repo: https://github.com/econchick/interrogate
     rev: 1.5.0
     hooks:
@@ -50,33 +89,3 @@ repos:
         verbose: true
         files: \.[jt]sx?$ # *.js, *.jsx, *.ts and *.tsx
         types_or: [javascript, yaml, ts]
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
-    hooks:
-      - id: trailing-whitespace
-        verbose: true
-      - id: end-of-file-fixer
-        verbose: true
-        exclude: |
-          (?x)^(
-              openllm-python/tests/models/.*
-          )$
-      - id: check-yaml
-        args: ["--unsafe"]
-      - id: check-toml
-      - id: check-docstring-first
-      - id: check-added-large-files
-      - id: debug-statements
-      - id: check-merge-conflict
-  - repo: meta
-    hooks:
-      - id: check-hooks-apply
-      - id: check-useless-excludes
-  - repo: local
-    hooks:
-      - id: mypy
-        name: mypy
-        language: system
-        always_run: true
-        pass_filenames: false
-        entry: mypy --strict openllm-client/src/openllm_client/__init__.pyi openllm-core/src/openllm_core/_typing_compat.py
