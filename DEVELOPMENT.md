@@ -204,7 +204,7 @@ See this [docs](/.github/INFRA.md) for more information on OpenLLM's CI/CD workf
 
 ## UI
 
-See [ClojureScript UI's README.md](/openllm-contrib/clojure/README.md) for more information.
+See [ClojureScript UI's README.md](/external/clojure/README.md) for more information.
 
 See [Documentation's README.md](/docs/README.md) for more information on running locally.
 

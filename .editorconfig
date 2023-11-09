@@ -4,10 +4,11 @@ root = true
 end_of_line = lf
 trim_trailing_whitespace = true
 charset = utf-8
-
-[*.py]
 indent_style = space
 indent_size = 2
 
 [openllm-client/src/openllm_client/pb/v1/*]
 indent_size = unset
+
+[{package.json,.travis.yml,.eslintrc.json}]
+indent_style = space
