@@ -41,7 +41,7 @@ _Metadata = openllm.MetadataOutput(timeout=llm_config['timeout'],
                                    model_name=llm_config['model_name'],
                                    backend=llm.__llm_backend__,
                                    model_id=llm.model_id,
-                                   configuration=llm_config.model_dump_json().decode(),
+                                   configuration=llm_config.model_dump_json(flatten=True).decode(),
                                    prompt_template=llm.runner.prompt_template,
                                    system_message=llm.runner.system_message)
 

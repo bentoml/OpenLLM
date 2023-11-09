@@ -74,6 +74,7 @@ from openllm_core.utils import check_bool_env
 from openllm_core.utils import compose
 from openllm_core.utils import configure_logging
 from openllm_core.utils import first_not_none
+from openllm_core.utils import get_debug_mode
 from openllm_core.utils import get_quiet_mode
 from openllm_core.utils import is_torch_available
 from openllm_core.utils import resolve_user_filepath
@@ -134,6 +135,16 @@ _object_setattr = object.__setattr__
 
 _EXT_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), 'extension'))
 
+def backend_warning(backend: LiteralBackend):
+  if backend == 'pt' and check_bool_env('OPENLLM_BACKEND_WARNING') and not get_quiet_mode():
+    if openllm.utils.is_vllm_available():
+      termui.warning(
+          '\nvLLM is available, but using PyTorch backend instead. Note that vLLM is a lot more performant and should always be used in production (by explicitly set --backend vllm).')
+    else:
+      termui.warning('\nvLLM is not available. Note that PyTorch backend is not as performant as vLLM and you should always consider using vLLM for production.')
+    termui.debug(
+        content="\nTip: if you are running 'openllm build' you can set '--backend vllm' to package your Bento with vLLM backend. To hide these messages, set 'OPENLLM_BACKEND_WARNING=False'\n")
+
 class Extensions(click.MultiCommand):
   def list_commands(self, ctx: click.Context) -> list[str]:
     return sorted([filename[:-3] for filename in os.listdir(_EXT_FOLDER) if filename.endswith('.py') and not filename.startswith('__')])
@@ -162,7 +173,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
       ctx.obj = GlobalOptions(cloud_context=cloud_context)
       if quiet:
         set_quiet_mode(True)
-        if debug: logger.warning("'--quiet' passed; ignoring '--verbose/--debug'")
+        if debug: termui.warning("'--quiet' passed; ignoring '--verbose/--debug'")
       elif debug: set_debug_mode(True)
       configure_logging()
       return f(*args, **attrs)
@@ -285,10 +296,18 @@ def cli() -> None:
 
 @cli.command(context_settings=termui.CONTEXT_SETTINGS, name='start', aliases=['start-http'], short_help='Start a LLMServer for any supported LLM.')
 @click.argument('model_id', type=click.STRING, metavar='[REMOTE_REPO/MODEL_ID | /path/to/local/model]', required=True)
+@click.option('--model-id',
+              'deprecated_model_id',
+              type=click.STRING,
+              default=None,
+              hidden=True,
+              metavar='[REMOTE_REPO/MODEL_ID | /path/to/local/model]',
+              help='Deprecated. Use positional argument instead.')
 @start_decorator(serve_grpc=False)
 def start_command(model_id: str, server_timeout: int, model_version: str | None, system_message: str | None, prompt_template_file: t.IO[t.Any] | None,
                   workers_per_resource: t.Literal['conserved', 'round_robin'] | LiteralString, device: t.Tuple[str, ...], quantize: LiteralQuantise | None, backend: LiteralBackend | None,
-                  serialisation: LiteralSerialisation | None, cors: bool, adapter_id: str | None, return_process: bool, **attrs: t.Any) -> LLMConfig | subprocess.Popen[bytes]:
+                  serialisation: LiteralSerialisation | None, cors: bool, adapter_id: str | None, return_process: bool, deprecated_model_id: str | None,
+                  **attrs: t.Any) -> LLMConfig | subprocess.Popen[bytes]:
   """Start any LLM as a REST server.
 
   \b
@@ -296,16 +315,24 @@ def start_command(model_id: str, server_timeout: int, model_version: str | None,
   $ openllm <start|start-http> <model_id> --<options> ...
   ```
   """
+  if model_id in openllm.CONFIG_MAPPING:
+    _model_name = model_id
+    if deprecated_model_id is not None: model_id = deprecated_model_id
+    else: model_id = openllm.AutoConfig.for_model(_model_name)['default_id']
+    termui.warning(
+        f"Passing 'openllm start {_model_name}{'' if deprecated_model_id is None else ' --model-id ' + deprecated_model_id}' is deprecated and will be remove in a future version. Use 'openllm start {model_id}' instead."
+    )
+
   adapter_map: dict[str, str] | None = attrs.pop('adapter_map', None)
   prompt_template = prompt_template_file.read() if prompt_template_file is not None else None
 
   from ..serialisation.transformers.weights import has_safetensors_weights
   serialisation = t.cast(LiteralSerialisation, first_not_none(serialisation, default='safetensors' if has_safetensors_weights(model_id) else 'legacy'))
   if serialisation == 'safetensors' and quantize is not None and check_bool_env('OPENLLM_SERIALIZATION_WARNING'):
-    termui.echo(
-        f"'--quantize={quantize}' might not work with 'safetensors' serialisation format. To silence this warning, set \"OPENLLM_SERIALIZATION_WARNING=False\"\nNote: You can always fallback to '--serialisation legacy' when running quantisation.",
-        fg='yellow')
-    termui.echo(f"Make sure to check out '{model_id}' repository to see if the weights is in '{serialisation}' format if unsure.")
+    termui.warning(
+        f"'--quantize={quantize}' might not work with 'safetensors' serialisation format. To silence this warning, set \"OPENLLM_SERIALIZATION_WARNING=False\"\nNote: You can always fallback to '--serialisation legacy' when running quantisation."
+    )
+    termui.warning(f"Make sure to check out '{model_id}' repository to see if the weights is in '{serialisation}' format if unsure.")
 
   llm = openllm.LLM[t.Any, t.Any](model_id=model_id,
                                   model_version=model_version,
@@ -316,6 +343,7 @@ def start_command(model_id: str, server_timeout: int, model_version: str | None,
                                   quantize=quantize,
                                   serialisation=serialisation,
                                   trust_remote_code=check_bool_env('TRUST_REMOTE_CODE'))
+  backend_warning(llm.__llm_backend__)
 
   config, server_attrs = llm.config.model_validate_click(**attrs)
   server_timeout = first_not_none(server_timeout, default=config['timeout'])
@@ -352,7 +380,7 @@ def start_command(model_id: str, server_timeout: int, model_version: str | None,
       'OPENLLM_ADAPTER_MAP': orjson.dumps(adapter_map).decode(),
       'OPENLLM_SERIALIZATION': serialisation,
       'OPENLLM_BACKEND': llm.__llm_backend__,
-      'OPENLLM_CONFIG': llm.config.model_dump_json().decode(),
+      'OPENLLM_CONFIG': llm.config.model_dump_json(flatten=True).decode(),
   })
   if llm._quantise: start_env['OPENLLM_QUANTIZE'] = str(llm._quantise)
   if system_message: start_env['OPENLLM_SYSTEM_MESSAGE'] = system_message
@@ -361,15 +389,17 @@ def start_command(model_id: str, server_timeout: int, model_version: str | None,
   server = bentoml.HTTPServer('_service:svc', **server_attrs)
   openllm.utils.analytics.track_start_init(llm.config)
 
-  def next_step(adapter_map: DictStrAny | None) -> None:
+  def next_step(adapter_map: DictStrAny | None, caught_exception: bool = False) -> None:
+    if caught_exception: return
     cmd_name = f'openllm build {model_id}'
     if llm._quantise: cmd_name += f' --quantize {llm._quantise}'
     cmd_name += f' --serialization {serialisation}'
     if adapter_map is not None:
       cmd_name += ' ' + ' '.join([f'--adapter-id {s}' for s in [f'{p}:{name}' if name not in (None, 'default') else p for p, name in adapter_map.items()]])
     if not openllm.utils.get_quiet_mode():
-      termui.echo(f"\n🚀 Next step: run '{cmd_name}' to create a BentoLLM for '{model_id}'", fg='blue')
+      termui.info(f"\n\n🚀 Next step: run '{cmd_name}' to create a BentoLLM for '{model_id}'")
 
+  _exception = False
   if return_process:
     server.start(env=start_env, text=True)
     if server.process is None: raise click.ClickException('Failed to start the server.')
@@ -377,21 +407,32 @@ def start_command(model_id: str, server_timeout: int, model_version: str | None,
   else:
     try:
       server.start(env=start_env, text=True, blocking=True)
+    except KeyboardInterrupt:
+      _exception = True
     except Exception as err:
-      termui.echo(f'Error caught while running LLM Server:\n{err}', fg='red')
+      termui.error(f'Error caught while running LLM Server:\n{err}')
+      _exception = True
       raise
     else:
-      next_step(adapter_map)
+      next_step(adapter_map, _exception)
 
   # NOTE: Return the configuration for telemetry purposes.
   return config
 
 @cli.command(context_settings=termui.CONTEXT_SETTINGS, name='start-grpc', short_help='Start a gRPC LLMServer for any supported LLM.')
 @click.argument('model_id', type=click.STRING, metavar='[REMOTE_REPO/MODEL_ID | /path/to/local/model]', required=True)
+@click.option('--model-id',
+              'deprecated_model_id',
+              type=click.STRING,
+              default=None,
+              hidden=True,
+              metavar='[REMOTE_REPO/MODEL_ID | /path/to/local/model]',
+              help='Deprecated. Use positional argument instead.')
 @start_decorator(serve_grpc=True)
 def start_grpc_command(model_id: str, server_timeout: int, model_version: str | None, system_message: str | None, prompt_template_file: t.IO[t.Any] | None,
                        workers_per_resource: t.Literal['conserved', 'round_robin'] | LiteralString, device: t.Tuple[str, ...], quantize: LiteralQuantise | None, backend: LiteralBackend | None,
-                       serialisation: LiteralSerialisation | None, cors: bool, adapter_id: str | None, return_process: bool, **attrs: t.Any) -> LLMConfig | subprocess.Popen[bytes]:
+                       serialisation: LiteralSerialisation | None, cors: bool, adapter_id: str | None, return_process: bool, deprecated_model_id: str | None,
+                       **attrs: t.Any) -> LLMConfig | subprocess.Popen[bytes]:
   """Start any LLM as a gRPC server.
 
   \b
@@ -399,16 +440,25 @@ def start_grpc_command(model_id: str, server_timeout: int, model_version: str | 
   $ openllm start-grpc <model_id> --<options> ...
   ```
   """
+  termui.warning('Continuous batching is currently not yet supported with gPRC. If you want to use continuous batching with gRPC, feel free to open a GitHub issue about your usecase.\n')
+  if model_id in openllm.CONFIG_MAPPING:
+    _model_name = model_id
+    if deprecated_model_id is not None: model_id = deprecated_model_id
+    else: model_id = openllm.AutoConfig.for_model(_model_name)['default_id']
+    termui.warning(
+        f"Passing 'openllm start-grpc {_model_name}{'' if deprecated_model_id is None else ' --model-id ' + deprecated_model_id}' is deprecated and will be remove in a future version. Use 'openllm start-grpc {model_id}' instead."
+    )
+
   adapter_map: dict[str, str] | None = attrs.pop('adapter_map', None)
   prompt_template = prompt_template_file.read() if prompt_template_file is not None else None
 
   from ..serialisation.transformers.weights import has_safetensors_weights
   serialisation = t.cast(LiteralSerialisation, first_not_none(serialisation, default='safetensors' if has_safetensors_weights(model_id) else 'legacy'))
   if serialisation == 'safetensors' and quantize is not None and check_bool_env('OPENLLM_SERIALIZATION_WARNING'):
-    termui.echo(
-        f"'--quantize={quantize}' might not work with 'safetensors' serialisation format. To silence this warning, set \"OPENLLM_SERIALIZATION_WARNING=False\"\nNote: You can always fallback to '--serialisation legacy' when running quantisation.",
-        fg='yellow')
-    termui.echo(f"Make sure to check out '{model_id}' repository to see if the weights is in '{serialisation}' format if unsure.")
+    termui.warning(
+        f"'--quantize={quantize}' might not work with 'safetensors' serialisation format. To silence this warning, set \"OPENLLM_SERIALIZATION_WARNING=False\"\nNote: You can always fallback to '--serialisation legacy' when running quantisation."
+    )
+    termui.warning(f"Make sure to check out '{model_id}' repository to see if the weights is in '{serialisation}' format if unsure.")
 
   llm = openllm.LLM[t.Any, t.Any](model_id=model_id,
                                   model_version=model_version,
@@ -419,6 +469,7 @@ def start_grpc_command(model_id: str, server_timeout: int, model_version: str | 
                                   quantize=quantize,
                                   serialisation=serialisation,
                                   trust_remote_code=check_bool_env('TRUST_REMOTE_CODE'))
+  backend_warning(llm.__llm_backend__)
 
   config, server_attrs = llm.config.model_validate_click(**attrs)
   server_timeout = first_not_none(server_timeout, default=config['timeout'])
@@ -446,7 +497,7 @@ def start_grpc_command(model_id: str, server_timeout: int, model_version: str | 
   if requirements is not None and len(requirements) > 0:
     missing_requirements = [i for i in requirements if importlib.util.find_spec(inflection.underscore(i)) is None]
     if len(missing_requirements) > 0:
-      termui.echo(f'Make sure to have the following dependencies available: {missing_requirements}', fg='yellow')
+      termui.warning(f'Make sure to have the following dependencies available: {missing_requirements}')
 
   start_env = parse_config_options(config, server_timeout, wpr, device, cors, os.environ.copy())
   start_env.update({
@@ -465,15 +516,17 @@ def start_grpc_command(model_id: str, server_timeout: int, model_version: str | 
   server = bentoml.GrpcServer('_service:svc', **server_attrs)
   openllm.utils.analytics.track_start_init(llm.config)
 
-  def next_step(adapter_map: DictStrAny | None) -> None:
+  def next_step(adapter_map: DictStrAny | None, caught_exception: bool = False) -> None:
+    if caught_exception: return
     cmd_name = f'openllm build {model_id}'
     if llm._quantise: cmd_name += f' --quantize {llm._quantise}'
     cmd_name += f' --serialization {serialisation}'
     if adapter_map is not None:
       cmd_name += ' ' + ' '.join([f'--adapter-id {s}' for s in [f'{p}:{name}' if name not in (None, 'default') else p for p, name in adapter_map.items()]])
     if not openllm.utils.get_quiet_mode():
-      termui.echo(f"\n🚀 Next step: run '{cmd_name}' to create a BentoLLM for '{model_id}'", fg='blue')
+      termui.info(f"\n🚀 Next step: run '{cmd_name}' to create a BentoLLM for '{model_id}'")
 
+  _exception = False
   if return_process:
     server.start(env=start_env, text=True)
     if server.process is None: raise click.ClickException('Failed to start the server.')
@@ -481,11 +534,14 @@ def start_grpc_command(model_id: str, server_timeout: int, model_version: str | 
   else:
     try:
       server.start(env=start_env, text=True, blocking=True)
+    except KeyboardInterrupt:
+      _exception = True
     except Exception as err:
-      termui.echo(f'Error caught while running LLM Server:\n{err}', fg='red')
+      termui.error(f'Error caught while running LLM Server:\n{err}')
+      _exception = True
       raise
     else:
-      next_step(adapter_map)
+      next_step(adapter_map, _exception)
 
   # NOTE: Return the configuration for telemetry purposes.
   return config
@@ -496,17 +552,25 @@ class ItemState(enum.Enum):
   OVERWRITE = 'OVERWRITE'
 
 class ImportModelOutput(t.TypedDict):
-  previous_state: ItemState
+  state: ItemState
   backend: LiteralBackend
   tag: str
 
 @cli.command(name='import', aliases=['download'])
 @click.argument('model_id', type=click.STRING, metavar='[REMOTE_REPO/MODEL_ID | /path/to/local/model]', required=True)
+@click.option('--model-id',
+              'deprecated_model_id',
+              type=click.STRING,
+              default=None,
+              hidden=True,
+              metavar='[REMOTE_REPO/MODEL_ID | /path/to/local/model]',
+              help='Deprecated. Use positional argument instead.')
 @model_version_option
 @backend_option
 @quantize_option
 @serialisation_option
-def import_command(model_id: str, model_version: str | None, backend: LiteralBackend | None, quantize: LiteralQuantise | None, serialisation: LiteralSerialisation | None) -> dict[str, t.Any]:
+def import_command(model_id: str, deprecated_model_id: str | None, model_version: str | None, backend: LiteralBackend | None, quantize: LiteralQuantise | None,
+                   serialisation: LiteralSerialisation | None) -> ImportModelOutput:
   """Setup LLM interactively.
 
   \b
@@ -537,28 +601,52 @@ def import_command(model_id: str, model_version: str | None, backend: LiteralBac
   > support on-demand quantisation during initial startup.
   """
   from ..serialisation.transformers.weights import has_safetensors_weights
+
+  if model_id in openllm.CONFIG_MAPPING:
+    _model_name = model_id
+    if deprecated_model_id is not None: model_id = deprecated_model_id
+    else: model_id = openllm.AutoConfig.for_model(_model_name)['default_id']
+    termui.echo(
+        f"Passing 'openllm import {_model_name}{'' if deprecated_model_id is None else ' --model-id ' + deprecated_model_id}' is deprecated and will be remove in a future version. Use 'openllm import {model_id}' instead.",
+        fg='yellow')
+
   llm = openllm.LLM[t.Any, t.Any](model_id=model_id,
                                   model_version=model_version,
                                   quantize=quantize,
+                                  backend=backend,
                                   serialisation=t.cast(LiteralSerialisation, first_not_none(serialisation, default='safetensors' if has_safetensors_weights(model_id) else 'legacy')))
+  backend_warning(llm.__llm_backend__)
 
-  previous_state = ItemState.NOT_FOUND
+  state = ItemState.NOT_FOUND
   try:
     model = bentoml.models.get(llm.tag)
-    previous_state = ItemState.EXISTS
+    state = ItemState.EXISTS
   except bentoml.exceptions.NotFound:
     model = openllm.serialisation.import_model(llm, trust_remote_code=llm.trust_remote_code)
     if llm.__llm_backend__ == 'pt' and is_torch_available() and torch.cuda.is_available(): torch.cuda.empty_cache()
-  response = ImportModelOutput(previous_state=previous_state, backend=llm.__llm_backend__, tag=str(model.tag))
-  termui.echo(orjson.dumps(response).decode())
+  response = ImportModelOutput(state=state, backend=llm.__llm_backend__, tag=str(model.tag))
+  termui.echo(orjson.dumps(response).decode(), fg='white')
   return response
 
+class DeploymentInstruction(t.TypedDict):
+  type: t.Literal['container', 'bentocloud']
+  content: str
+
 class BuildBentoOutput(t.TypedDict):
-  previous_state: ItemState
+  state: ItemState
   tag: str
+  backend: LiteralBackend
+  instructions: t.List[DeploymentInstruction]
 
 @cli.command(context_settings={'token_normalize_func': inflection.underscore})
 @click.argument('model_id', type=click.STRING, metavar='[REMOTE_REPO/MODEL_ID | /path/to/local/model]', required=True)
+@click.option('--model-id',
+              'deprecated_model_id',
+              type=click.STRING,
+              default=None,
+              hidden=True,
+              metavar='[REMOTE_REPO/MODEL_ID | /path/to/local/model]',
+              help='Deprecated. Use positional argument instead.')
 @backend_option
 @system_message_option
 @prompt_template_file_option
@@ -595,10 +683,11 @@ class BuildBentoOutput(t.TypedDict):
 @click.option('--force-push', default=False, is_flag=True, type=click.BOOL, help='Whether to force push.')
 @machine_option
 @click.pass_context
-def build_command(ctx: click.Context, /, model_id: str, bento_version: str | None, overwrite: bool, quantize: LiteralQuantise | None, machine: bool, enable_features: tuple[str, ...] | None,
-                  adapter_id: tuple[str, ...], build_ctx: str | None, backend: LiteralBackend | None, system_message: str | None, prompt_template_file: t.IO[t.Any] | None,
-                  model_version: str | None, dockerfile_template: t.TextIO | None, containerize: bool, push: bool, serialisation: LiteralSerialisation | None,
-                  container_registry: LiteralContainerRegistry, container_version_strategy: LiteralContainerVersionStrategy, force_push: bool, **_: t.Any) -> BuildBentoOutput:
+def build_command(ctx: click.Context, /, model_id: str, deprecated_model_id: str | None, bento_version: str | None, overwrite: bool, quantize: LiteralQuantise | None, machine: bool,
+                  enable_features: tuple[str, ...] | None, adapter_id: tuple[str, ...], build_ctx: str | None, backend: LiteralBackend | None, system_message: str | None,
+                  prompt_template_file: t.IO[t.Any] | None, model_version: str | None, dockerfile_template: t.TextIO | None, containerize: bool, push: bool,
+                  serialisation: LiteralSerialisation | None, container_registry: LiteralContainerRegistry, container_version_strategy: LiteralContainerVersionStrategy, force_push: bool,
+                  **_: t.Any) -> BuildBentoOutput:
   """Package a given models into a BentoLLM.
 
   \b
@@ -618,9 +707,18 @@ def build_command(ctx: click.Context, /, model_id: str, bento_version: str | Non
   """
   from .._llm import normalise_model_name
   from ..serialisation.transformers.weights import has_safetensors_weights
+
+  if model_id in openllm.CONFIG_MAPPING:
+    _model_name = model_id
+    if deprecated_model_id is not None: model_id = deprecated_model_id
+    else: model_id = openllm.AutoConfig.for_model(_model_name)['default_id']
+    termui.echo(
+        f"Passing 'openllm build {_model_name}{'' if deprecated_model_id is None else ' --model-id ' + deprecated_model_id}' is deprecated and will be remove in a future version. Use 'openllm build {model_id}' instead.",
+        fg='yellow')
+
   if enable_features: enable_features = tuple(itertools.chain.from_iterable((s.split(',') for s in enable_features)))
 
-  previous_state = ItemState.NOT_FOUND
+  state = ItemState.NOT_FOUND
 
   prompt_template = prompt_template_file.read() if prompt_template_file is not None else None
   llm = openllm.LLM[t.Any, t.Any](model_id=model_id,
@@ -630,6 +728,7 @@ def build_command(ctx: click.Context, /, model_id: str, bento_version: str | Non
                                   backend=backend,
                                   quantize=quantize,
                                   serialisation=t.cast(LiteralSerialisation, first_not_none(serialisation, default='safetensors' if has_safetensors_weights(model_id) else 'legacy')))
+  backend_warning(llm.__llm_backend__)
 
   os.environ.update({'OPENLLM_BACKEND': llm.__llm_backend__, 'OPENLLM_SERIALIZATION': llm._serialisation, 'OPENLLM_MODEL_ID': llm.model_id})
   if llm._quantise: os.environ['OPENLLM_QUANTIZE'] = str(llm._quantise)
@@ -681,9 +780,9 @@ def build_command(ctx: click.Context, /, model_id: str, bento_version: str | Non
         bento = bentoml.get(bento_tag)
         if overwrite:
           bentoml.delete(bento_tag)
-          previous_state = ItemState.OVERWRITE
+          state = ItemState.OVERWRITE
           raise bentoml.exceptions.NotFound(f'Rebuilding existing Bento {bento_tag}') from None
-        previous_state = ItemState.EXISTS
+        state = ItemState.EXISTS
       except bentoml.exceptions.NotFound:
         bento = bundle.create_bento(bento_tag,
                                     llm_fs,
@@ -698,18 +797,23 @@ def build_command(ctx: click.Context, /, model_id: str, bento_version: str | Non
     traceback.print_exc()
     raise click.ClickException('Exception caught while building BentoLLM:\n' + str(err)) from err
 
-  response = BuildBentoOutput(previous_state=previous_state, tag=str(bento_tag))
+  response = BuildBentoOutput(state=state,
+                              tag=str(bento_tag),
+                              backend=llm.__llm_backend__,
+                              instructions=[
+                                  DeploymentInstruction(type='bentocloud', content=f"Push to BentoCloud with 'bentoml push': `bentoml push {bento_tag}`"),
+                                  DeploymentInstruction(type='container', content=f"Container BentoLLM with 'bentoml containerize': `bentoml containerize {bento_tag} --opt progress=plain`")
+                              ])
 
   if machine: termui.echo(f'__object__:{orjson.dumps(response).decode()}\n\n', fg='white')
   elif not get_quiet_mode() and (not push or not containerize):
-    termui.echo('\n' + OPENLLM_FIGLET, fg='white')
-    if not previous_state != ItemState.EXISTS: termui.echo(f'Successfully built {bento}.', fg='green')
-    elif not overwrite: termui.echo(f"Bento for '{model_id}' already exists [{bento}]. To overwrite it pass '--overwrite'.", fg='yellow')
-    termui.echo('📖 Next steps:\n\n' + f"* Push to BentoCloud with 'bentoml push':\n\t$ bentoml push {bento_tag}\n\n" +
-                f"* Containerize your Bento with 'bentoml containerize':\n\t$ bentoml containerize {bento_tag} --opt progress=plain\n\n" +
-                "\tTip: To enable additional BentoML features for 'containerize', use '--enable-features=FEATURE[,FEATURE]' [see 'bentoml containerize -h' for more advanced usage]\n",
-                fg='blue',
-                )
+    if not overwrite: termui.warning(f"Bento for '{model_id}' already exists [{bento}]. To overwrite it pass '--overwrite'.\n")
+    elif state != ItemState.EXISTS: termui.info(f"Successfully built Bento '{bento.tag}'.\n")
+    if not get_debug_mode():
+      termui.echo(OPENLLM_FIGLET)
+      termui.echo('\n📖 Next steps:\n\n', nl=False)
+      for instruction in response['instructions']:
+        termui.echo(f"* {instruction['content']}\n", nl=False)
 
   if push: BentoMLContainer.bentocloud_client.get().push_bento(bento, context=t.cast(GlobalOptions, ctx.obj).cloud_context, force=force_push)
   elif containerize:
@@ -723,6 +827,8 @@ def build_command(ctx: click.Context, /, model_id: str, bento_version: str | Non
     except Exception as err:
       raise OpenLLMException(f"Exception caught while containerizing '{bento.tag!s}':\n{err}") from err
 
+  response.pop('instructions')
+  if get_debug_mode(): termui.echo('\n' + orjson.dumps(response).decode(), fg=None)
   return response
 
 class ModelItem(t.TypedDict):
@@ -734,7 +840,7 @@ class ModelItem(t.TypedDict):
 
 @cli.command()
 @click.option('--show-available', is_flag=True, default=False, help="Show available models in local store (mutually exclusive with '-o porcelain').")
-def models_command(show_available: bool) -> t.Dict[str, t.Any]:
+def models_command(show_available: bool) -> dict[t.LiteralString, ModelItem]:
   """List all supported models.
 
   \b
@@ -753,7 +859,7 @@ def models_command(show_available: bool) -> t.Dict[str, t.Any]:
                        if 'framework' in md.info.labels and md.info.labels['framework'] == 'openllm' and 'model_name' in md.info.labels and md.info.labels['model_name'] == m
                    ]) for m, config in CONFIG_MAPPING.items()
   }
-  termui.echo(orjson.dumps(result, option=orjson.OPT_INDENT_2).decode(), fg='white')
+  termui.echo(orjson.dumps(result, option=orjson.OPT_INDENT_2).decode(), fg=None)
   return result
 
 @cli.command()
@@ -761,7 +867,9 @@ def models_command(show_available: bool) -> t.Dict[str, t.Any]:
 @click.option('-y', '--yes', '--assume-yes', is_flag=True, help='Skip confirmation when deleting a specific model')
 @click.option('--include-bentos/--no-include-bentos', is_flag=True, default=False, help='Whether to also include pruning bentos.')
 @inject
-def prune_command(model_name: str | None,
+@click.pass_context
+def prune_command(ctx: click.Context,
+                  model_name: str | None,
                   yes: bool,
                   include_bentos: bool,
                   model_store: ModelStore = Provide[BentoMLContainer.model_store],
@@ -785,7 +893,8 @@ def prune_command(model_name: str | None,
     else: delete_confirmed = click.confirm(f"delete {'model' if isinstance(store, ModelStore) else 'bento'} {store_item.tag}?")
     if delete_confirmed:
       store.delete(store_item.tag)
-      termui.echo(f"{store_item} deleted from {'model' if isinstance(store, ModelStore) else 'bento'} store.", fg='yellow')
+      termui.warning(f"{store_item} deleted from {'model' if isinstance(store, ModelStore) else 'bento'} store.")
+  ctx.exit(0)
 
 def parsing_instruction_callback(ctx: click.Context, param: click.Parameter, value: list[str] | str | None) -> tuple[str, bool | str] | list[str] | str | None:
   if value is None:

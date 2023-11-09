@@ -1,5 +1,6 @@
 # mypy: disable-error-code="name-defined,attr-defined"
 from __future__ import annotations
+import abc
 import logging
 import os
 import types
@@ -26,8 +27,6 @@ from openllm_core._typing_compat import DictStrAny
 from openllm_core._typing_compat import LiteralBackend
 from openllm_core._typing_compat import LiteralQuantise
 from openllm_core._typing_compat import LiteralSerialisation
-from openllm_core._typing_compat import LLMRunnable
-from openllm_core._typing_compat import LLMRunner
 from openllm_core._typing_compat import M
 from openllm_core._typing_compat import ParamSpec
 from openllm_core._typing_compat import T
@@ -60,6 +59,10 @@ if t.TYPE_CHECKING:
   import torch
   import transformers
 
+  from bentoml._internal.runner.runnable import RunnableMethod
+  from bentoml._internal.runner.runner import RunnerMethod
+  from bentoml._internal.runner.runner_handle import RunnerHandle
+  from bentoml._internal.runner.strategy import Strategy
   from openllm_core._configuration import LLMConfig
   from openllm_core.utils.representation import ReprArgs
 
@@ -403,7 +406,6 @@ def _RunnerFactory(self: openllm.LLM[M, T],
     yield 'llm_type', self.llm_type
     yield 'backend', backend
     yield 'llm_tag', self.tag
-  def _get_adapter_map(_: LLMRunner[M, T]) -> ResolvedAdapterMap: return converter.unstructure(self.adapter_map)
   # yapf: enable
 
   return types.new_class(self.__class__.__name__ + 'Runner', (bentoml.Runner,),
@@ -431,5 +433,50 @@ def _RunnerFactory(self: openllm.LLM[M, T],
                              scheduling_strategy=scheduling_strategy,
                              runnable_init_params=dict(llm=self),
                              method_configs=converter.unstructure({'generate_iterator': ModelSignature(batchable=False)}))
+
+@t.final
+class LLMRunnable(bentoml.Runnable, t.Generic[M, T]):
+  SUPPORTED_RESOURCES = ('amd.com/gpu', 'nvidia.com/gpu', 'cpu')
+  SUPPORTS_CPU_MULTI_THREADING = True
+  generate_iterator: RunnableMethod[LLMRunnable[M, T], [list[int], str, str | t.Iterable[str] | None, str | None], str]
+
+@t.final
+class LLMRunner(t.Protocol[M, T]):
+  __doc__: str
+  __module__: str
+  llm_type: str
+  llm_tag: bentoml.Tag
+  identifying_params: dict[str, t.Any]
+  llm: openllm.LLM[M, T]
+  config: openllm.LLMConfig
+  backend: LiteralBackend
+  has_adapters: bool
+  system_message: str | None
+  prompt_template: str | None
+  generate_iterator: RunnerMethod[LLMRunnable[M, T], [list[int], str, str | t.Iterable[str] | None, str | None], str]
+
+  runner_methods: list[RunnerMethod[t.Any, t.Any, t.Any]]
+  scheduling_strategy: type[Strategy]
+  workers_per_resource: int | float
+  runnable_init_params: dict[str, t.Any]
+  _runner_handle: RunnerHandle
+
+  def __init__(self,
+               runnable_class: type[LLMRunnable[M, T]],
+               *,
+               runnable_init_params: dict[str, t.Any] | None = ...,
+               name: str | None = ...,
+               scheduling_strategy: type[Strategy] = ...,
+               models: list[bentoml.Model] | None = ...,
+               max_batch_size: int | None = ...,
+               max_latency_ms: int | None = ...,
+               method_configs: dict[str, dict[str, int]] | None = ...,
+               embedded: bool = False) -> None:
+    ...
+
+  @property
+  @abc.abstractmethod
+  def __repr_keys__(self) -> set[str]:
+    ...
 
 __all__ = ['LLMRunner', 'LLMRunnable', 'LLM']

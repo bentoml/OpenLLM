@@ -147,11 +147,11 @@ SHOW_CODEGEN: bool = DEBUG and (os.environ.get(DEV_DEBUG_VAR, str(0)).isdigit() 
 MYPY = False
 
 def get_debug_mode() -> bool:
-  if not DEBUG and DEBUG_ENV_VAR in os.environ: return check_bool_env(DEBUG_ENV_VAR)
+  if not DEBUG and DEBUG_ENV_VAR in os.environ: return check_bool_env(DEBUG_ENV_VAR, False)
   return DEBUG
 
 def get_quiet_mode() -> bool:
-  if QUIET_ENV_VAR in os.environ: return check_bool_env(QUIET_ENV_VAR)
+  if QUIET_ENV_VAR in os.environ: return check_bool_env(QUIET_ENV_VAR, False)
   if DEBUG: return False
   return False
 
@@ -350,7 +350,7 @@ _whitelist_modules = {'pkg'}
 # XXX: define all classes, functions import above this line
 # since _extras will be the locals() import from this file.
 _extras: dict[str, t.Any] = {k: v for k, v in locals().items() if k in _whitelist_modules or (not isinstance(v, types.ModuleType) and not k.startswith('_'))}
-_extras['__openllm_migration__'] = {'ModelEnv': 'EnvVarMixin', 'bentoml_cattr': 'converter'}
+_extras['__openllm_migration__'] = {'bentoml_cattr': 'converter'}
 _import_structure: dict[str, list[str]] = {
     'analytics': [],
     'codegen': [],
@@ -360,7 +360,7 @@ _import_structure: dict[str, list[str]] = {
     'representation': ['ReprMixin'],
     'serde': ['converter'],
     'import_utils': [
-        'OPTIONAL_DEPENDENCIES', 'EnvVarMixin', 'is_vllm_available', 'is_torch_available', 'is_bitsandbytes_available', 'is_peft_available', 'is_jupyter_available', 'is_jupytext_available',
+        'OPTIONAL_DEPENDENCIES', 'is_vllm_available', 'is_torch_available', 'is_bitsandbytes_available', 'is_peft_available', 'is_jupyter_available', 'is_jupytext_available',
         'is_notebook_available', 'is_autogptq_available', 'is_grpc_available', 'is_transformers_available', 'is_optimum_supports_gptq', 'is_autoawq_available', 'is_bentoml_available'
     ]
 }
@@ -372,7 +372,6 @@ if t.TYPE_CHECKING:
   from . import dantic as dantic
   from . import serde as serde
   from .import_utils import OPTIONAL_DEPENDENCIES as OPTIONAL_DEPENDENCIES
-  from .import_utils import EnvVarMixin as EnvVarMixin
   from .import_utils import is_autoawq_available as is_autoawq_available
   from .import_utils import is_autogptq_available as is_autogptq_available
   from .import_utils import is_bentoml_available as is_bentoml_available

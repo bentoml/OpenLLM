@@ -47,7 +47,7 @@ responses:
         example:
           object: 'list'
           data:
-            - id: meta-llama--Llama-2-13-chat-hf
+            - id: meta-llama--Llama-2-13b-chat-hf
               object: model
               created: 1686935002
               owned_by: 'na'
@@ -81,7 +81,7 @@ requestBody:
                 content: You are a helpful assistant.
               - role: user
                 content: Hello, I'm looking for a chatbot that can help me with my work.
-            model: meta-llama--Llama-2-13-chat-hf
+            model: meta-llama--Llama-2-13b-chat-hf
             max_tokens: 256
             temperature: 0.7
             top_p: 0.43
@@ -95,7 +95,7 @@ requestBody:
                 content: You are a helpful assistant.
               - role: user
                 content: Hello, I'm looking for a chatbot that can help me with my work.
-            model: meta-llama--Llama-2-13-chat-hf
+            model: meta-llama--Llama-2-13b-chat-hf
             max_tokens: 256
             temperature: 0.7
             top_p: 0.43
@@ -133,7 +133,7 @@ responses:
             value: >
               {
                 "error": {
-                  "message": "Model 'meta-llama--Llama-2-13-chat-hf' does not exists. Try 'GET /v1/models' to see available models.\\nTip: If you are migrating from OpenAI, make sure to update your 'model' parameters in the request.",
+                  "message": "Model 'meta-llama--Llama-2-13b-chat-hf' does not exists. Try 'GET /v1/models' to see available models.\\nTip: If you are migrating from OpenAI, make sure to update your 'model' parameters in the request.",
                   "type": "invalid_request_error",
                   "object": "error",
                   "param": null,
@@ -218,7 +218,7 @@ requestBody:
           summary: One-shot input example
           value:
             prompt: This is a test
-            model: meta-llama--Llama-2-13-chat-hf
+            model: meta-llama--Llama-2-13b-chat-hf
             max_tokens: 256
             temperature: 0.7
             logprobs: 1
@@ -229,7 +229,7 @@ requestBody:
           summary: Streaming input example
           value:
             prompt: This is a test
-            model: meta-llama--Llama-2-13-chat-hf
+            model: meta-llama--Llama-2-13b-chat-hf
             max_tokens: 256
             temperature: 0.7
             top_p: 0.43
@@ -286,7 +286,7 @@ responses:
             value: >
               {
                 "error": {
-                  "message": "Model 'meta-llama--Llama-2-13-chat-hf' does not exists. Try 'GET /v1/models' to see available models.\\nTip: If you are migrating from OpenAI, make sure to update your 'model' parameters in the request.",
+                  "message": "Model 'meta-llama--Llama-2-13b-chat-hf' does not exists. Try 'GET /v1/models' to see available models.\\nTip: If you are migrating from OpenAI, make sure to update your 'model' parameters in the request.",
                   "type": "invalid_request_error",
                   "object": "error",
                   "param": null,

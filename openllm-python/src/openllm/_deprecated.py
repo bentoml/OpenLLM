@@ -57,7 +57,7 @@ def Runner(model_name: str,
   '''
   from ._llm import LLM
   if llm_config is None: llm_config = openllm.AutoConfig.for_model(model_name)
-  model_id = attrs.get('model_id') or llm_config['env']['model_id_value']
+  model_id = attrs.get('model_id', default=os.getenv('OPENLLM_MODEL_ID', llm_config['default_id']))
   _RUNNER_MSG = f'''\
   Using 'openllm.Runner' is now deprecated. Make sure to switch to the following syntax:
 
@@ -74,7 +74,7 @@ def Runner(model_name: str,
   warnings.warn(_RUNNER_MSG, DeprecationWarning, stacklevel=2)
   attrs.update({
       'model_id': model_id,
-      'quantize': llm_config['env']['quantize_value'],
+      'quantize': os.getenv('OPENLLM_QUANTIZE', attrs.get('quantize', None)),
       'serialisation': first_not_none(attrs.get('serialisation'), os.environ.get('OPENLLM_SERIALIZATION'), default=llm_config['serialisation']),
       'system_message': first_not_none(os.environ.get('OPENLLM_SYSTEM_MESSAGE'), attrs.get('system_message'), None),
       'prompt_template': first_not_none(os.environ.get('OPENLLM_PROMPT_TEMPLATE'), attrs.get('prompt_template'), None),

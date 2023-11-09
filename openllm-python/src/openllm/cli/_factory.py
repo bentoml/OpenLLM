@@ -15,6 +15,7 @@ from click import shell_completion as sc
 import bentoml
 import openllm
 
+from openllm_core._configuration import LLMConfig
 from openllm_core._typing_compat import Concatenate
 from openllm_core._typing_compat import DictStrAny
 from openllm_core._typing_compat import LiteralBackend
@@ -24,9 +25,14 @@ from openllm_core._typing_compat import ParamSpec
 from openllm_core._typing_compat import get_literal_args
 from openllm_core.utils import DEBUG
 
-if t.TYPE_CHECKING:
+class _OpenLLM_GenericInternalConfig(LLMConfig):
+  __config__ = {'name_type': 'lowercase', 'default_id': 'openllm/generic', 'model_ids': ['openllm/generic'], 'architecture': 'PreTrainedModel'}
 
-  from openllm_core._configuration import LLMConfig
+  class GenerationConfig:
+    top_k: int = 15
+    top_p: float = 0.9
+    temperature: float = 0.75
+    max_new_tokens: int = 128
 
 logger = logging.getLogger(__name__)
 
@@ -82,9 +88,9 @@ def _id_callback(ctx: click.Context, _: click.Parameter, value: t.Tuple[str, ...
 def start_decorator(serve_grpc: bool = False) -> t.Callable[[FC], t.Callable[[FC], FC]]:
   def wrapper(fn: FC) -> t.Callable[[FC], FC]:
     composed = openllm.utils.compose(
-        openllm.OPTConfig().to_click_options,  # XXX: We use OPTConfig here since it is generic enough to generate click args
-        _http_server_args if not serve_grpc else _grpc_server_args, cog.optgroup.group('General LLM Options', help='The following options are related to running LLM Server.'),
-        model_version_option(factory=cog.optgroup), system_message_option(factory=cog.optgroup), prompt_template_file_option(factory=cog.optgroup),
+        _OpenLLM_GenericInternalConfig().to_click_options, _http_server_args if not serve_grpc else _grpc_server_args,
+        cog.optgroup.group('General LLM Options', help='The following options are related to running LLM Server.'), model_version_option(factory=cog.optgroup),
+        system_message_option(factory=cog.optgroup), prompt_template_file_option(factory=cog.optgroup),
         cog.optgroup.option('--server-timeout', type=int, default=None, help='Server timeout in seconds'), workers_per_resource_option(factory=cog.optgroup), cors_option(factory=cog.optgroup),
         backend_option(factory=cog.optgroup),
         cog.optgroup.group('LLM Optimization Options',

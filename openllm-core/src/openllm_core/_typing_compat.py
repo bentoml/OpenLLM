@@ -1,45 +1,23 @@
-# mypy: disable-error-code="type-arg,valid-type"
 from __future__ import annotations
-import abc
 import sys
 import typing as t
 
 import attr
 
-_is_bentoml_installed = False
-try:
-  import bentoml
-  _is_bentoml_installed = True
-except ImportError:
-  bentoml = None
-  _is_bentoml_installed = False
-
 if t.TYPE_CHECKING:
-  import peft
-  import transformers
-
-  import openllm
-
-  from bentoml._internal.runner.runnable import RunnableMethod
-  from bentoml._internal.runner.runner import RunnerMethod
-  from bentoml._internal.runner.strategy import Strategy
+  from peft.peft_model import PeftModel
+  from transformers import PreTrainedModel
+  from transformers import PreTrainedTokenizer
+  from transformers import PreTrainedTokenizerBase
+  from transformers import PreTrainedTokenizerFast
 
   from .utils.lazy import VersionInfo
 
-if t.TYPE_CHECKING:
-  from types import UnionType
-
-  from bentoml._internal.types import LazyType
-
-  AnyType: t.TypeAlias = t.Type[t.Any] | UnionType | LazyType[t.Any]
-else:
-  AnyType = t.Any
-
-M = t.TypeVar('M', bound='t.Union[transformers.PreTrainedModel, peft.PeftModel]')
-T = t.TypeVar('T', bound='t.Union[transformers.PreTrainedTokenizerFast, transformers.PreTrainedTokenizer, transformers.PreTrainedTokenizerBase]')
+M = t.TypeVar('M', bound='t.Union[PreTrainedModel, PeftModel]')
+T = t.TypeVar('T', bound='t.Union[PreTrainedTokenizerFast, PreTrainedTokenizer, PreTrainedTokenizerBase]')
 
 def get_literal_args(typ: t.Any) -> tuple[str, ...]:
-  return getattr(typ, '__args__')
+  return getattr(typ, '__args__', tuple())
 
 AnyCallable = t.Callable[..., t.Any]
 DictStrAny = t.Dict[str, t.Any]
@@ -87,17 +65,6 @@ else:
   from typing_extensions import TypeAlias as TypeAlias
   from typing_extensions import TypeGuard as TypeGuard
 
-class ModelSignatureDict(t.TypedDict, total=False):
-  batchable: bool
-  batch_dim: t.Union[t.Tuple[int, int], int]
-  input_spec: t.Optional[t.Union[t.Tuple[AnyType], AnyType]]
-  output_spec: t.Optional[AnyType]
-
-class PeftAdapterOutput(t.TypedDict):
-  success: bool
-  result: t.Dict[str, peft.PeftConfig]
-  error_msg: str
-
 class AdapterTuple(TupleAny):
   adapter_id: str
   name: str
@@ -109,55 +76,3 @@ class RefTuple(TupleAny):
   git_hash: str
   version: VersionInfo
   strategy: LiteralContainerVersionStrategy
-
-if _is_bentoml_installed:
-
-  class LLMRunnable(bentoml.Runnable, t.Generic[M, T]):
-    SUPPORTED_RESOURCES = ('amd.com/gpu', 'nvidia.com/gpu', 'cpu')
-    SUPPORTS_CPU_MULTI_THREADING = True
-    generate_iterator: RunnableMethod[LLMRunnable[M, T], [list[int], str, str | t.Iterable[str] | None, str | None], str]
-
-  class LLMRunner(bentoml.Runner, t.Generic[M, T]):
-    __doc__: str
-    __module__: str
-    llm_type: str
-    llm_tag: bentoml.Tag
-    identifying_params: dict[str, t.Any]
-    llm: openllm.LLM[M, T]
-    config: openllm.LLMConfig
-    backend: LiteralBackend
-    has_adapters: bool
-    system_message: str | None
-    prompt_template: str | None
-    generate_iterator: RunnerMethod[LLMRunnable[M, T], [list[int], str, str | t.Iterable[str] | None, str | None], str]
-
-    def __init__(self,
-                 runnable_class: type[LLMRunnable[M, T]],
-                 *,
-                 runnable_init_params: dict[str, t.Any] | None = ...,
-                 name: str | None = ...,
-                 scheduling_strategy: type[Strategy] = ...,
-                 models: list[bentoml.Model] | None = ...,
-                 max_batch_size: int | None = ...,
-                 max_latency_ms: int | None = ...,
-                 method_configs: dict[str, dict[str, int]] | None = ...,
-                 embedded: bool = False,
-                 ) -> None:
-      ...
-
-    @abc.abstractmethod
-    def download_model(self) -> bentoml.Model:
-      ...
-
-    @property
-    @abc.abstractmethod
-    def peft_adapters(self) -> PeftAdapterOutput:
-      ...
-
-    @property
-    @abc.abstractmethod
-    def __repr_keys__(self) -> set[str]:
-      ...
-else:
-  # NOTE: t.Any is also a type
-  LLMRunnable = LLMRunner = t.Any

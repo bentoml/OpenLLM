@@ -6,15 +6,6 @@ import logging
 import os
 import typing as t
 
-import inflection
-
-from openllm_core._typing_compat import LiteralBackend
-from openllm_core._typing_compat import LiteralString
-from openllm_core._typing_compat import overload
-
-from .lazy import LazyLoader
-from .representation import ReprMixin
-
 if t.TYPE_CHECKING:
   from collections import OrderedDict
   BackendOrderedDict = OrderedDict[str, t.Tuple[t.Callable[[], bool], str]]
@@ -104,73 +95,3 @@ def is_vllm_available() -> bool:
     except importlib.metadata.PackageNotFoundError:
       _vllm_available = False
   return _vllm_available
-
-class EnvVarMixin(ReprMixin):
-  model_name: str
-  config: str
-  model_id: str
-  quantize: str
-  backend: str
-
-  @overload
-  def __getitem__(self, item: t.Literal['config']) -> str:
-    ...
-
-  @overload
-  def __getitem__(self, item: t.Literal['model_id']) -> str:
-    ...
-
-  @overload
-  def __getitem__(self, item: t.Literal['quantize']) -> str:
-    ...
-
-  @overload
-  def __getitem__(self, item: t.Literal['backend']) -> str:
-    ...
-
-  @overload
-  def __getitem__(self, item: t.Literal['backend_value']) -> LiteralBackend:
-    ...
-
-  @overload
-  def __getitem__(self, item: t.Literal['quantize_value']) -> t.Literal['int8', 'int4', 'gptq'] | None:
-    ...
-
-  @overload
-  def __getitem__(self, item: t.Literal['model_id_value']) -> str | None:
-    ...
-
-  def __getitem__(self, item: str | t.Any) -> t.Any:
-    if item.endswith('_value') and hasattr(self, f'_{item}'): return object.__getattribute__(self, f'_{item}')()
-    elif hasattr(self, item): return getattr(self, item)
-    raise KeyError(f'Key {item} not found in {self}')
-
-  def __init__(self, model_name: str, backend: LiteralBackend = 'pt', model_id: str | None = None, quantize: LiteralString | None = None) -> None:
-    """EnvVarMixin is a mixin class that returns the value extracted from environment variables."""
-    from openllm_core.utils import field_env_key
-    self.model_name = inflection.underscore(model_name)
-    self._backend = backend
-    self._model_id = model_id
-    self._quantize = quantize
-    for att in {'config', 'model_id', 'quantize', 'backend'}:
-      setattr(self, att, field_env_key(att.upper()))
-
-  def _quantize_value(self) -> t.Literal['int8', 'int4', 'gptq'] | None:
-    from . import first_not_none
-    return t.cast(t.Optional[t.Literal['int8', 'int4', 'gptq']], first_not_none(os.environ.get(self['quantize']), default=self._quantize))
-
-  def _backend_value(self) -> LiteralBackend:
-    from . import first_not_none
-    return t.cast(LiteralBackend, first_not_none(os.environ.get(self['backend']), default=self._backend))
-
-  def _model_id_value(self) -> str | None:
-    from . import first_not_none
-    return first_not_none(os.environ.get(self['model_id']), default=self._model_id)
-
-  @property
-  def __repr_keys__(self) -> set[str]:
-    return {'config', 'model_id', 'quantize', 'backend'}
-
-  @property
-  def module(self) -> LazyLoader:
-    return LazyLoader(f'configuration_{self.model_name}', globals(), f'openllm_core.config.configuration_{self.model_name}')

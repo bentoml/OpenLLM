@@ -20,7 +20,6 @@ if t.TYPE_CHECKING:
   from openllm_core.utils import OPTIONAL_DEPENDENCIES as OPTIONAL_DEPENDENCIES
   from openllm_core.utils import QUIET_ENV_VAR as QUIET_ENV_VAR
   from openllm_core.utils import SHOW_CODEGEN as SHOW_CODEGEN
-  from openllm_core.utils import EnvVarMixin as EnvVarMixin
   from openllm_core.utils import LazyLoader as LazyLoader
   from openllm_core.utils import LazyModule as LazyModule
   from openllm_core.utils import ReprMixin as ReprMixin

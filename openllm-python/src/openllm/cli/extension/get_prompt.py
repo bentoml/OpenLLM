@@ -1,4 +1,6 @@
 from __future__ import annotations
+import logging
+import traceback
 import typing as t
 
 import click
@@ -8,10 +10,13 @@ import orjson
 from bentoml_cli.utils import opt_callback
 
 import openllm
+import openllm_core
 
 from openllm.cli import termui
 from openllm.cli._factory import model_complete_envvar
 from openllm_core.prompts import process_prompt
+
+logger = logging.getLogger(__name__)
 
 @click.command('get_prompt', context_settings=termui.CONTEXT_SETTINGS)
 @click.argument('model_name', type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING.keys()]), shell_complete=model_complete_envvar)
@@ -26,7 +31,7 @@ from openllm_core.prompts import process_prompt
 @click.pass_context
 def cli(ctx: click.Context, /, model_name: str, prompt: str, format: str | None, _memoized: dict[str, t.Any], **_: t.Any) -> str | None:
   """Get the default prompt used by OpenLLM."""
-  module = openllm.utils.EnvVarMixin(model_name).module
+  module = getattr(openllm_core.config, f'configuration_{model_name}')
   _memoized = {k: v[0] for k, v in _memoized.items() if v}
   try:
     template = getattr(module, 'DEFAULT_PROMPT_TEMPLATE', None)
@@ -48,9 +53,11 @@ def cli(ctx: click.Context, /, model_name: str, prompt: str, format: str | None,
     try:
       # backward-compatible. TO BE REMOVED once every model has default system message and prompt template.
       fully_formatted = process_prompt(prompt, _prompt_template, True, **_memoized)
-    except RuntimeError:
+    except RuntimeError as err:
+      logger.debug('Exception caught while formatting prompt: %s', err)
       fully_formatted = openllm.AutoConfig.for_model(model_name).sanitize_parameters(prompt, prompt_template=_prompt_template)[0]
     termui.echo(orjson.dumps({'prompt': fully_formatted}, option=orjson.OPT_INDENT_2).decode(), fg='white')
-  except AttributeError:
-    raise click.ClickException(f'Failed to determine a default prompt template for {model_name}.') from None
+  except Exception as err:
+    traceback.print_exc()
+    raise click.ClickException(f'Failed to determine a default prompt template for {model_name}.') from err
   ctx.exit(0)
