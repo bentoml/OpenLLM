@@ -32,6 +32,11 @@ repos:
         verbose: true
         alias: ec
         types_or: [python, javascript]
+        exclude: |
+          (?x)^(
+              openllm-python/src/openllm/cli/entrypoint.py |
+              openllm-client/src/openllm_client/pb.*
+          )$
   - repo: meta
     hooks:
       - id: check-hooks-apply
