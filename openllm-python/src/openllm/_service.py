@@ -56,7 +56,7 @@ _Metadata = openllm.MetadataOutput(
   model_name=llm_config['model_name'],
   backend=llm.__llm_backend__,
   model_id=llm.model_id,
-  configuration=llm_config.model_dump_json(flatten=True).decode(),
+  configuration=llm_config.model_dump_json().decode(),
   prompt_template=llm.runner.prompt_template,
   system_message=llm.runner.system_message,
 )
@@ -67,6 +67,5 @@ def metadata_v1(_: str) -> openllm.MetadataOutput:
   return _Metadata
 
 
-openllm.mount_entrypoints(
-  svc, llm
-)  # HACK: This must always be the last line in this file, as we will do some MK for OpenAPI schema.
+# HACK: This must always be the last line in this file, as we will do some MK for OpenAPI schema.
+openllm.mount_entrypoints(svc, llm)
