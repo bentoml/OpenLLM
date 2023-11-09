@@ -1,9 +1,4 @@
-"""Utilities function for OpenLLM.
-
-User can import these function for convenience, but we won't ensure backward compatibility for these functions. So use with caution.
-"""
 from __future__ import annotations
-import asyncio
 import contextlib
 import functools
 import hashlib
@@ -24,7 +19,6 @@ from .import_utils import ENV_VARS_TRUE_VALUES as ENV_VARS_TRUE_VALUES
 from .lazy import LazyLoader as LazyLoader
 from .lazy import LazyModule as LazyModule
 from .lazy import VersionInfo as VersionInfo
-from .._typing_compat import TypeGuard
 from .._typing_compat import overload
 
 if t.TYPE_CHECKING:
@@ -51,18 +45,7 @@ else:
 
 DEV_DEBUG_VAR = 'OPENLLMDEVDEBUG'
 
-def is_async_callable(obj: t.Any) -> TypeGuard[t.Callable[..., t.Awaitable[t.Any]]]:
-  # Borrowed from starlette._utils
-  while isinstance(obj, functools.partial):
-    obj = obj.func
-  return asyncio.iscoroutinefunction(obj) or (callable(obj) and asyncio.iscoroutinefunction(obj.__call__))
-
 def resolve_user_filepath(filepath: str, ctx: str | None) -> str:
-  '''Resolve the abspath of a filepath provided by user. User provided file path can:
-    * be a relative path base on ctx dir
-    * contain leading "~" for HOME directory
-    * contain environment variables such as "$HOME/workspace"
-    '''
   # Return if filepath exist after expanduser
 
   _path = os.path.expanduser(os.path.expandvars(filepath))
@@ -132,12 +115,6 @@ def lenient_issubclass(cls: t.Any, class_or_tuple: type[t.Any] | tuple[type[t.An
     if isinstance(cls, _WithArgsTypes): return False
     raise
 
-def ensure_exec_coro(coro: t.Coroutine[t.Any, t.Any, t.Any]) -> t.Any:
-  if in_notebook(): return asyncio.run(coro)  # For running coroutine in notebooks see https://github.com/jupyter/notebook/issues/5261
-  loop = asyncio.get_event_loop()
-  if loop.is_running(): return asyncio.run_coroutine_threadsafe(coro, loop).result()
-  else: return loop.run_until_complete(coro)
-
 @functools.lru_cache(maxsize=128)
 def generate_hash_from_file(f: str, algorithm: t.Literal['md5', 'sha1'] = 'sha1') -> str:
   """Generate a hash from given file's modification time.
@@ -159,11 +136,6 @@ def check_bool_env(env: str, default: bool = True) -> bool:
 # equivocal setattr to save one lookup per assignment
 _object_setattr = object.__setattr__
 
-def non_intrusive_setattr(obj: t.Any, name: str, value: t.Any) -> None:
-  """This makes sure that we don't overwrite any existing attributes on the object."""
-  _setattr = functools.partial(setattr, obj) if isinstance(obj, type) else _object_setattr.__get__(obj)
-  if not hasattr(obj, name): _setattr(name, value)
-
 def field_env_key(key: str, suffix: str | None = None) -> str:
   return '_'.join(filter(None, map(str.upper, ['OPENLLM', suffix.strip('_') if suffix else '', key])))
 
@@ -175,11 +147,11 @@ SHOW_CODEGEN: bool = DEBUG and (os.environ.get(DEV_DEBUG_VAR, str(0)).isdigit() 
 MYPY = False
 
 def get_debug_mode() -> bool:
-  if not DEBUG and DEBUG_ENV_VAR in os.environ: return check_bool_env(DEBUG_ENV_VAR)
+  if not DEBUG and DEBUG_ENV_VAR in os.environ: return check_bool_env(DEBUG_ENV_VAR, False)
   return DEBUG
 
 def get_quiet_mode() -> bool:
-  if QUIET_ENV_VAR in os.environ: return check_bool_env(QUIET_ENV_VAR)
+  if QUIET_ENV_VAR in os.environ: return check_bool_env(QUIET_ENV_VAR, False)
   if DEBUG: return False
   return False
 
@@ -284,8 +256,6 @@ def in_notebook() -> bool:
   except (ImportError, AttributeError):
     return False
 
-_dockerenv, _cgroup = Path('/.dockerenv'), Path('/proc/self/cgroup')
-
 class suppress(contextlib.suppress, contextlib.ContextDecorator):
   """A version of contextlib.suppress with decorator support.
 
@@ -334,20 +304,6 @@ def apply(transform: AnyCallable) -> t.Callable[[AnyCallable], AnyCallable]:
   """
   return lambda func: functools.wraps(func)(compose(transform, func))
 
-@apply(bool)
-@suppress(FileNotFoundError)
-def _text_in_file(text: str, filename: Path) -> bool:
-  return any(text in line for line in filename.open())
-
-def in_docker() -> bool:
-  """Is this current environment running in docker?
-
-  ```python
-  type(in_docker())
-  ```
-  """
-  return _dockerenv.exists() or _text_in_file('docker', _cgroup)
-
 T = t.TypeVar('T')
 K = t.TypeVar('K')
 
@@ -394,7 +350,7 @@ _whitelist_modules = {'pkg'}
 # XXX: define all classes, functions import above this line
 # since _extras will be the locals() import from this file.
 _extras: dict[str, t.Any] = {k: v for k, v in locals().items() if k in _whitelist_modules or (not isinstance(v, types.ModuleType) and not k.startswith('_'))}
-_extras['__openllm_migration__'] = {'ModelEnv': 'EnvVarMixin', 'bentoml_cattr': 'converter'}
+_extras['__openllm_migration__'] = {'bentoml_cattr': 'converter'}
 _import_structure: dict[str, list[str]] = {
     'analytics': [],
     'codegen': [],
@@ -404,10 +360,8 @@ _import_structure: dict[str, list[str]] = {
     'representation': ['ReprMixin'],
     'serde': ['converter'],
     'import_utils': [
-        'OPTIONAL_DEPENDENCIES', 'EnvVarMixin', 'is_cpm_kernels_available', 'is_einops_available', 'is_vllm_available', 'is_torch_available', 'is_bitsandbytes_available', 'is_peft_available',
-        'is_datasets_available', 'is_jupyter_available', 'is_jupytext_available', 'is_notebook_available', 'is_triton_available', 'is_autogptq_available', 'is_sentencepiece_available',
-        'is_xformers_available', 'is_fairscale_available', 'is_grpc_available', 'is_grpc_health_available', 'is_transformers_available', 'is_optimum_supports_gptq', 'is_autoawq_available',
-        'is_bentoml_available'
+        'OPTIONAL_DEPENDENCIES', 'is_vllm_available', 'is_torch_available', 'is_bitsandbytes_available', 'is_peft_available', 'is_jupyter_available', 'is_jupytext_available',
+        'is_notebook_available', 'is_autogptq_available', 'is_grpc_available', 'is_transformers_available', 'is_optimum_supports_gptq', 'is_autoawq_available', 'is_bentoml_available'
     ]
 }
 
@@ -418,28 +372,19 @@ if t.TYPE_CHECKING:
   from . import dantic as dantic
   from . import serde as serde
   from .import_utils import OPTIONAL_DEPENDENCIES as OPTIONAL_DEPENDENCIES
-  from .import_utils import EnvVarMixin as EnvVarMixin
   from .import_utils import is_autoawq_available as is_autoawq_available
   from .import_utils import is_autogptq_available as is_autogptq_available
   from .import_utils import is_bentoml_available as is_bentoml_available
   from .import_utils import is_bitsandbytes_available as is_bitsandbytes_available
-  from .import_utils import is_cpm_kernels_available as is_cpm_kernels_available
-  from .import_utils import is_datasets_available as is_datasets_available
-  from .import_utils import is_einops_available as is_einops_available
-  from .import_utils import is_fairscale_available as is_fairscale_available
   from .import_utils import is_grpc_available as is_grpc_available
-  from .import_utils import is_grpc_health_available as is_grpc_health_available
   from .import_utils import is_jupyter_available as is_jupyter_available
   from .import_utils import is_jupytext_available as is_jupytext_available
   from .import_utils import is_notebook_available as is_notebook_available
   from .import_utils import is_optimum_supports_gptq as is_optimum_supports_gptq
   from .import_utils import is_peft_available as is_peft_available
-  from .import_utils import is_sentencepiece_available as is_sentencepiece_available
   from .import_utils import is_torch_available as is_torch_available
   from .import_utils import is_transformers_available as is_transformers_available
-  from .import_utils import is_triton_available as is_triton_available
   from .import_utils import is_vllm_available as is_vllm_available
-  from .import_utils import is_xformers_available as is_xformers_available
   from .representation import ReprMixin as ReprMixin
   from .serde import converter as converter
 

@@ -79,8 +79,8 @@ class FineTuneConfig:
 
   def build(self) -> PeftConfig:
     try:
-      from peft.utils.peft_types import TaskType
       from peft.mapping import get_peft_config
+      from peft.utils.peft_types import TaskType
     except ImportError:
       raise ImportError('PEFT is not installed. Please install it via `pip install "openllm[fine-tune]"`.')
     adapter_config = self.adapter_config.copy()

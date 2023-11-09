@@ -25,7 +25,6 @@ repos:
       - id: ruff
         verbose: true
         args: [--exit-non-zero-on-fix, --show-fixes]
-        types_or: [pyi, python3, jupyter]
       - id: ruff-format
         verbose: true
         types: [pyi]
@@ -80,4 +79,4 @@ repos:
         language: system
         always_run: true
         pass_filenames: false
-        entry: mypy -m openllm_client
+        entry: mypy --strict openllm-client/src/openllm_client/__init__.pyi openllm-core/src/openllm_core/_typing_compat.py

@@ -1,4 +1,6 @@
 from __future__ import annotations
+import logging
+import traceback
 import typing as t
 
 import click
@@ -8,21 +10,18 @@ import orjson
 from bentoml_cli.utils import opt_callback
 
 import openllm
+import openllm_core
 
 from openllm.cli import termui
-from openllm.cli._factory import machine_option
 from openllm.cli._factory import model_complete_envvar
-from openllm.cli._factory import output_option
 from openllm_core.prompts import process_prompt
 
-LiteralOutput = t.Literal['json', 'pretty', 'porcelain']
+logger = logging.getLogger(__name__)
 
 @click.command('get_prompt', context_settings=termui.CONTEXT_SETTINGS)
 @click.argument('model_name', type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING.keys()]), shell_complete=model_complete_envvar)
 @click.argument('prompt', type=click.STRING)
-@output_option
 @click.option('--format', type=click.STRING, default=None)
-@machine_option
 @click.option('--opt',
               help="Define additional prompt variables. (format: ``--opt system_prompt='You are a useful assistant'``)",
               required=False,
@@ -30,9 +29,9 @@ LiteralOutput = t.Literal['json', 'pretty', 'porcelain']
               callback=opt_callback,
               metavar='ARG=VALUE[,ARG=VALUE]')
 @click.pass_context
-def cli(ctx: click.Context, /, model_name: str, prompt: str, format: str | None, output: LiteralOutput, machine: bool, _memoized: dict[str, t.Any], **_: t.Any) -> str | None:
+def cli(ctx: click.Context, /, model_name: str, prompt: str, format: str | None, _memoized: dict[str, t.Any], **_: t.Any) -> str | None:
   """Get the default prompt used by OpenLLM."""
-  module = openllm.utils.EnvVarMixin(model_name).module
+  module = getattr(openllm_core.config, f'configuration_{model_name}')
   _memoized = {k: v[0] for k, v in _memoized.items() if v}
   try:
     template = getattr(module, 'DEFAULT_PROMPT_TEMPLATE', None)
@@ -54,15 +53,11 @@ def cli(ctx: click.Context, /, model_name: str, prompt: str, format: str | None,
     try:
       # backward-compatible. TO BE REMOVED once every model has default system message and prompt template.
       fully_formatted = process_prompt(prompt, _prompt_template, True, **_memoized)
-    except RuntimeError:
+    except RuntimeError as err:
+      logger.debug('Exception caught while formatting prompt: %s', err)
       fully_formatted = openllm.AutoConfig.for_model(model_name).sanitize_parameters(prompt, prompt_template=_prompt_template)[0]
-    if machine: return repr(fully_formatted)
-    elif output == 'porcelain': termui.echo(repr(fully_formatted), fg='white')
-    elif output == 'json':
-      termui.echo(orjson.dumps({'prompt': fully_formatted}, option=orjson.OPT_INDENT_2).decode(), fg='white')
-    else:
-      termui.echo(f'== Prompt for {model_name} ==\n', fg='magenta')
-      termui.echo(fully_formatted, fg='white')
-  except AttributeError:
-    raise click.ClickException(f'Failed to determine a default prompt template for {model_name}.') from None
+    termui.echo(orjson.dumps({'prompt': fully_formatted}, option=orjson.OPT_INDENT_2).decode(), fg='white')
+  except Exception as err:
+    traceback.print_exc()
+    raise click.ClickException(f'Failed to determine a default prompt template for {model_name}.') from err
   ctx.exit(0)

@@ -139,8 +139,7 @@ def make_env_transformer(cls: type[openllm_core.LLMConfig],
   return generate_function(cls, '__auto_env', lines, args=('_', 'fields'), globs=globs, annotations={'_': 'type[LLMConfig]', 'fields': fields_ann, 'return': fields_ann})
 
 def gen_sdk(func: _T, name: str | None = None, **attrs: t.Any) -> _T:
-  """Enhance sdk with nice repr that plays well with your brain."""
-  from openllm_core.utils import ReprMixin
+  from .representation import ReprMixin
   if name is None: name = func.__name__.strip('_')
   _signatures = inspect.signature(func).parameters
 

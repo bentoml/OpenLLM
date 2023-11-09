@@ -15,14 +15,14 @@ from bentoml.io import Text
 
 logger = logging.getLogger(__name__)
 
-llm_config = openllm.AutoConfig.for_model(svars.model)
 llm = openllm.LLM[t.Any, t.Any](svars.model_id,
-                                llm_config=llm_config,
                                 model_tag=svars.model_tag,
-                                prompt_template=openllm.utils.first_not_none(os.getenv('OPENLLM_PROMPT_TEMPLATE'), getattr(llm_config, 'default_prompt_template', None)),
-                                system_message=openllm.utils.first_not_none(os.getenv('OPENLLM_SYSTEM_MESSAGE'), getattr(llm_config, 'default_system_message', None)),
-                                serialisation=openllm.utils.first_not_none(os.getenv('OPENLLM_SERIALIZATION'), default=llm_config['serialisation']),
-                                adapter_map=orjson.loads(svars.adapter_map))
+                                prompt_template=openllm.utils.first_not_none(os.getenv('OPENLLM_PROMPT_TEMPLATE'), None),
+                                system_message=openllm.utils.first_not_none(os.getenv('OPENLLM_SYSTEM_MESSAGE'), None),
+                                serialisation=openllm.utils.first_not_none(os.getenv('OPENLLM_SERIALIZATION'), 'safetensors'),
+                                adapter_map=orjson.loads(svars.adapter_map),
+                                trust_remote_code=openllm.utils.check_bool_env('TRUST_REMOTE_CODE', default=False))
+llm_config = llm.config
 svc = bentoml.Service(name=f"llm-{llm_config['start_name']}-service", runners=[llm.runner])
 
 llm_model_class = openllm.GenerationInput.from_llm_config(llm_config)
@@ -41,7 +41,7 @@ _Metadata = openllm.MetadataOutput(timeout=llm_config['timeout'],
                                    model_name=llm_config['model_name'],
                                    backend=llm.__llm_backend__,
                                    model_id=llm.model_id,
-                                   configuration=llm_config.model_dump_json().decode(),
+                                   configuration=llm_config.model_dump_json(flatten=True).decode(),
                                    prompt_template=llm.runner.prompt_template,
                                    system_message=llm.runner.system_message)
 

@@ -164,7 +164,7 @@ else:
     model_args, training_args = t.cast(t.Tuple[ModelArguments, TrainingArguments], parser.parse_args_into_dataclasses())
 
 # import the model first hand
-openllm.import_model("llama", model_id=model_args.model_id, model_version=model_args.model_version)
+openllm.import_model(model_id=model_args.model_id, model_version=model_args.model_version)
 
 def train_loop(model_args: ModelArguments, training_args: TrainingArguments):
   import peft

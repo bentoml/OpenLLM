@@ -45,7 +45,7 @@ OPENLLM_DEV_BUILD = 'OPENLLM_DEV_BUILD'
 
 def build_editable(path: str, package: t.Literal['openllm', 'openllm_core', 'openllm_client'] = 'openllm') -> str | None:
   """Build OpenLLM if the OPENLLM_DEV_BUILD environment variable is set."""
-  if str(os.environ.get(OPENLLM_DEV_BUILD, False)).lower() != 'true': return None
+  if openllm_core.utils.check_bool_env(OPENLLM_DEV_BUILD, default=False): return None
   # We need to build the package in editable mode, so that we can import it
   from build import ProjectBuilder
   from build.env import IsolatedEnvBuilder
@@ -77,8 +77,6 @@ def construct_python_options(llm: openllm.LLM[t.Any, t.Any], llm_fs: FS, extra_d
   if str(os.environ.get('BENTOML_BUNDLE_LOCAL_BUILD', False)).lower() == 'false':
     packages.append(f"bentoml>={'.'.join([str(i) for i in openllm_core.utils.pkg.pkg_version_info('bentoml')])}")
 
-  env = llm.config['env']
-  env['backend_value']
   if not openllm_core.utils.is_torch_available():
     raise ValueError('PyTorch is not available. Make sure to have it locally installed.')
   packages.extend(['torch==2.0.1+cu118', 'vllm==0.2.1.post1', 'xformers==0.0.22', 'bentoml[tracing]==1.1.9'])  # XXX: Currently locking this for correctness
@@ -95,10 +93,9 @@ def construct_docker_options(llm: openllm.LLM[t.Any, t.Any], _: FS, quantize: Li
                              serialisation: LiteralSerialisation, container_registry: LiteralContainerRegistry, container_version_strategy: LiteralContainerVersionStrategy) -> DockerOptions:
   from openllm.cli._factory import parse_config_options
   environ = parse_config_options(llm.config, llm.config['timeout'], 1.0, None, True, os.environ.copy())
-  env: openllm_core.utils.EnvVarMixin = llm.config['env']
   env_dict = {
-      env.backend: env['backend_value'],
-      env.config: f"'{llm.config.model_dump_json().decode()}'",
+      'OPENLLM_BACKEND': llm.__llm_backend__,
+      'OPENLLM_CONFIG': f"'{llm.config.model_dump_json(flatten=True).decode()}'",
       'OPENLLM_SERIALIZATION': serialisation,
       'BENTOML_DEBUG': str(True),
       'BENTOML_QUIET': str(False),
@@ -107,11 +104,7 @@ def construct_docker_options(llm: openllm.LLM[t.Any, t.Any], _: FS, quantize: Li
   if adapter_map: env_dict['BITSANDBYTES_NOWELCOME'] = os.environ.get('BITSANDBYTES_NOWELCOME', '1')
   if llm._system_message: env_dict['OPENLLM_SYSTEM_MESSAGE'] = repr(llm._system_message)
   if llm._prompt_template: env_dict['OPENLLM_PROMPT_TEMPLATE'] = repr(llm._prompt_template.to_string())
-
-  # We need to handle None separately here, as env from subprocess doesn't accept None value.
-  _env = openllm_core.utils.EnvVarMixin(llm.config['model_name'], quantize=quantize)
-
-  if _env['quantize_value'] is not None: env_dict[_env.quantize] = t.cast(str, _env['quantize_value'])
+  if quantize: env_dict['OPENLLM_QUANTISE'] = str(quantize)
   return DockerOptions(base_image=f'{oci.CONTAINER_NAMES[container_registry]}:{oci.get_base_container_tag(container_version_strategy)}', env=env_dict, dockerfile_template=dockerfile_template)
 
 OPENLLM_MODEL_NAME = '# openllm: model name'
@@ -179,7 +172,6 @@ def write_service(llm: openllm.LLM[t.Any, t.Any], adapter_map: dict[str, str] | 
 def create_bento(bento_tag: bentoml.Tag,
                  llm_fs: FS,
                  llm: openllm.LLM[t.Any, t.Any],
-                 workers_per_resource: str | float,
                  quantize: LiteralString | None,
                  dockerfile_template: str | None,
                  adapter_map: dict[str, str] | None = None,
@@ -191,26 +183,9 @@ def create_bento(bento_tag: bentoml.Tag,
                  _model_store: ModelStore = Provide[BentoMLContainer.model_store]) -> bentoml.Bento:
   _serialisation: LiteralSerialisation = openllm_core.utils.first_not_none(serialisation, default=llm.config['serialisation'])
   labels = dict(llm.identifying_params)
-  labels.update({
-      '_type': llm.llm_type,
-      '_framework': llm.config['env']['backend_value'],
-      'start_name': llm.config['start_name'],
-      'base_name_or_path': llm.model_id,
-      'bundler': 'openllm.bundle'
-  })
+  labels.update({'_type': llm.llm_type, '_framework': llm.__llm_backend__, 'start_name': llm.config['start_name'], 'base_name_or_path': llm.model_id, 'bundler': 'openllm.bundle'})
   if adapter_map: labels.update(adapter_map)
-  if isinstance(workers_per_resource, str):
-    if workers_per_resource == 'round_robin': workers_per_resource = 1.0
-    elif workers_per_resource == 'conserved':
-      workers_per_resource = 1.0 if openllm.utils.device_count() == 0 else float(1 / openllm.utils.device_count())
-    else:
-      try:
-        workers_per_resource = float(workers_per_resource)
-      except ValueError:
-        raise ValueError("'workers_per_resource' only accept ['round_robin', 'conserved'] as possible strategies.") from None
-  elif isinstance(workers_per_resource, int):
-    workers_per_resource = float(workers_per_resource)
-  logger.info("Building Bento for '%s'", llm.config['start_name'])
+  logger.debug("Building Bento '%s' with model backend '%s'", bento_tag, llm.__llm_backend__)
   # add service.py definition to this temporary folder
   write_service(llm, adapter_map, llm_fs)
 

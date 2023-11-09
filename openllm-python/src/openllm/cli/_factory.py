@@ -1,6 +1,5 @@
 from __future__ import annotations
 import functools
-import importlib.util
 import logging
 import os
 import typing as t
@@ -8,37 +7,32 @@ import typing as t
 import click
 import click_option_group as cog
 import inflection
-import orjson
 
 from bentoml_cli.utils import BentoMLCommandGroup
 from click import ClickException
 from click import shell_completion as sc
-from click.shell_completion import CompletionItem
 
 import bentoml
 import openllm
-import openllm_core
 
-from bentoml._internal.configuration.containers import BentoMLContainer
+from openllm_core._configuration import LLMConfig
 from openllm_core._typing_compat import Concatenate
 from openllm_core._typing_compat import DictStrAny
 from openllm_core._typing_compat import LiteralBackend
 from openllm_core._typing_compat import LiteralQuantise
 from openllm_core._typing_compat import LiteralSerialisation
-from openllm_core._typing_compat import LiteralString
 from openllm_core._typing_compat import ParamSpec
 from openllm_core._typing_compat import get_literal_args
 from openllm_core.utils import DEBUG
-from openllm_core.utils import check_bool_env
-from openllm_core.utils import first_not_none
-from openllm_core.utils import is_vllm_available
 
-from . import termui
+class _OpenLLM_GenericInternalConfig(LLMConfig):
+  __config__ = {'name_type': 'lowercase', 'default_id': 'openllm/generic', 'model_ids': ['openllm/generic'], 'architecture': 'PreTrainedModel'}
 
-if t.TYPE_CHECKING:
-  import subprocess
-
-  from openllm_core._configuration import LLMConfig
+  class GenerationConfig:
+    top_k: int = 15
+    top_p: float = 0.9
+    temperature: float = 0.75
+    max_new_tokens: int = 128
 
 logger = logging.getLogger(__name__)
 
@@ -91,146 +85,12 @@ def _id_callback(ctx: click.Context, _: click.Parameter, value: t.Tuple[str, ...
     ctx.params[_adapter_mapping_key][adapter_id] = adapter_name[0]
   return None
 
-def start_command_factory(group: click.Group, model: str, _context_settings: DictStrAny | None = None, _serve_grpc: bool = False) -> click.Command:
-  llm_config = openllm.AutoConfig.for_model(model)
-  command_attrs: DictStrAny = dict(name=llm_config['model_name'],
-                                   context_settings=_context_settings or termui.CONTEXT_SETTINGS,
-                                   short_help=f"Start a LLMServer for '{model}'",
-                                   aliases=[llm_config['start_name']] if llm_config['name_type'] == 'dasherize' else None,
-                                   help=f'''\
-{llm_config['env'].start_docstring}
-
-\b
-Note: ``{llm_config['start_name']}`` can also be run with any other models available on HuggingFace
-or fine-tuned variants as long as it belongs to the architecture generation ``{llm_config['architecture']}`` (trust_remote_code={llm_config['trust_remote_code']}).
-
-\b
-For example: One can start [Fastchat-T5](https://huggingface.co/lmsys/fastchat-t5-3b-v1.0) with ``openllm start flan-t5``:
-
-\b
-$ openllm start flan-t5 --model-id lmsys/fastchat-t5-3b-v1.0
-
-\b
-Available official model_id(s): [default: {llm_config['default_id']}]
-
-\b
-{orjson.dumps(llm_config['model_ids'], option=orjson.OPT_INDENT_2).decode()}
-''')
-
-  @group.command(**command_attrs)
-  @start_decorator(llm_config, serve_grpc=_serve_grpc)
-  @click.pass_context
-  def start_cmd(ctx: click.Context, /, server_timeout: int, model_id: str | None, model_version: str | None, system_message: str | None, prompt_template_file: t.IO[t.Any] | None,
-                workers_per_resource: t.Literal['conserved', 'round_robin'] | LiteralString, device: t.Tuple[str, ...], quantize: LiteralQuantise | None, backend: LiteralBackend | None,
-                serialisation: LiteralSerialisation | None, cors: bool, adapter_id: str | None, return_process: bool, **attrs: t.Any) -> LLMConfig | subprocess.Popen[bytes]:
-    _serialisation = t.cast(LiteralSerialisation, first_not_none(serialisation, default=llm_config['serialisation']))
-    if _serialisation == 'safetensors' and quantize is not None and check_bool_env('OPENLLM_SERIALIZATION_WARNING'):
-      termui.echo(
-          f"'--quantize={quantize}' might not work with 'safetensors' serialisation format. To silence this warning, set \"OPENLLM_SERIALIZATION_WARNING=False\"\nNote: You can always fallback to '--serialisation legacy' when running quantisation.",
-          fg='yellow')
-      termui.echo(f"Make sure to check out '{model_id}' repository to see if the weights is in '{_serialisation}' format if unsure.")
-    adapter_map: dict[str, str] | None = attrs.pop(_adapter_mapping_key, None)
-    config, server_attrs = llm_config.model_validate_click(**attrs)
-    server_timeout = first_not_none(server_timeout, default=config['timeout'])
-    server_attrs.update({'working_dir': os.path.dirname(os.path.dirname(__file__)), 'timeout': server_timeout})
-    if _serve_grpc: server_attrs['grpc_protocol_version'] = 'v1'
-    # NOTE: currently, theres no development args in bentoml.Server. To be fixed upstream.
-    development = server_attrs.pop('development')
-    server_attrs.setdefault('production', not development)
-    wpr = first_not_none(workers_per_resource, default=config['workers_per_resource'])
-
-    if isinstance(wpr, str):
-      if wpr == 'round_robin': wpr = 1.0
-      elif wpr == 'conserved':
-        if device and openllm.utils.device_count() == 0:
-          termui.echo('--device will have no effect as there is no GPUs available', fg='yellow')
-          wpr = 1.0
-        else:
-          available_gpu = len(device) if device else openllm.utils.device_count()
-          wpr = 1.0 if available_gpu == 0 else float(1 / available_gpu)
-      else:
-        wpr = float(wpr)
-    elif isinstance(wpr, int):
-      wpr = float(wpr)
-
-    # Create a new model env to work with the envvar during CLI invocation
-    env = openllm.utils.EnvVarMixin(config['model_name'],
-                                    backend=openllm_core.utils.first_not_none(backend, default='vllm' if is_vllm_available() else 'pt'),
-                                    model_id=model_id or config['default_id'],
-                                    quantize=quantize)
-    requirements = llm_config['requirements']
-    if requirements is not None and len(requirements) > 0:
-      missing_requirements = [i for i in requirements if importlib.util.find_spec(inflection.underscore(i)) is None]
-      if len(missing_requirements) > 0:
-        termui.echo(f'Make sure to have the following dependencies available: {missing_requirements}', fg='yellow')
-
-    # NOTE: This is to set current configuration
-    start_env = os.environ.copy()
-    start_env = parse_config_options(config, server_timeout, wpr, device, cors, start_env)
-
-    prompt_template: str | None = prompt_template_file.read() if prompt_template_file is not None else None
-    start_env.update({
-        'OPENLLM_MODEL': model,
-        'BENTOML_DEBUG': str(openllm.utils.get_debug_mode()),
-        'BENTOML_HOME': os.environ.get('BENTOML_HOME', BentoMLContainer.bentoml_home.get()),
-        'OPENLLM_ADAPTER_MAP': orjson.dumps(adapter_map).decode(),
-        'OPENLLM_SERIALIZATION': _serialisation,
-        env.backend: env['backend_value'],
-    })
-    if env['model_id_value']: start_env[env.model_id] = str(env['model_id_value'])
-    if env['quantize_value']: start_env[env.quantize] = str(env['quantize_value'])
-    if system_message: start_env['OPENLLM_SYSTEM_MESSAGE'] = system_message
-    if prompt_template: start_env['OPENLLM_PROMPT_TEMPLATE'] = prompt_template
-
-    llm = openllm.LLM[t.Any, t.Any](model_id=start_env[env.model_id],
-                                    revision=model_version,
-                                    prompt_template=prompt_template,
-                                    system_message=system_message,
-                                    llm_config=config,
-                                    backend=env['backend_value'],
-                                    adapter_map=adapter_map,
-                                    quantize=env['quantize_value'],
-                                    serialisation=_serialisation)
-    llm.save_pretrained()  # ensure_available = True
-    start_env.update({env.config: llm.config.model_dump_json().decode()})
-
-    server = bentoml.GrpcServer('_service:svc', **server_attrs) if _serve_grpc else bentoml.HTTPServer('_service:svc', **server_attrs)
-    openllm.utils.analytics.track_start_init(llm.config)
-
-    def next_step(model_name: str, adapter_map: DictStrAny | None) -> None:
-      cmd_name = f'openllm build {model_name}'
-      if not llm._local: cmd_name += f' --model-id {llm.model_id}'
-      if llm._quantise: cmd_name += f' --quantize {llm._quantise}'
-      cmd_name += f' --serialization {_serialisation}'
-      if adapter_map is not None:
-        cmd_name += ' ' + ' '.join([f'--adapter-id {s}' for s in [f'{p}:{name}' if name not in (None, 'default') else p for p, name in adapter_map.items()]])
-      if not openllm.utils.get_quiet_mode():
-        termui.echo(f"\n🚀 Next step: run '{cmd_name}' to create a Bento for {model_name}", fg='blue')
-
-    if return_process:
-      server.start(env=start_env, text=True)
-      if server.process is None: raise click.ClickException('Failed to start the server.')
-      return server.process
-    else:
-      try:
-        server.start(env=start_env, text=True, blocking=True)
-      except Exception as err:
-        termui.echo(f'Error caught while running LLM Server:\n{err}', fg='red')
-        raise
-      else:
-        next_step(model, adapter_map)
-
-    # NOTE: Return the configuration for telemetry purposes.
-    return config
-
-  return start_cmd
-
-def start_decorator(llm_config: LLMConfig, serve_grpc: bool = False) -> t.Callable[[FC], t.Callable[[FC], FC]]:
+def start_decorator(serve_grpc: bool = False) -> t.Callable[[FC], t.Callable[[FC], FC]]:
   def wrapper(fn: FC) -> t.Callable[[FC], FC]:
     composed = openllm.utils.compose(
-        llm_config.to_click_options, _http_server_args if not serve_grpc else _grpc_server_args,
-        cog.optgroup.group('General LLM Options', help=f"The following options are related to running '{llm_config['start_name']}' LLM Server."), model_id_option(factory=cog.optgroup),
-        model_version_option(factory=cog.optgroup), system_message_option(factory=cog.optgroup), prompt_template_file_option(factory=cog.optgroup),
+        _OpenLLM_GenericInternalConfig().to_click_options, _http_server_args if not serve_grpc else _grpc_server_args,
+        cog.optgroup.group('General LLM Options', help='The following options are related to running LLM Server.'), model_version_option(factory=cog.optgroup),
+        system_message_option(factory=cog.optgroup), prompt_template_file_option(factory=cog.optgroup),
         cog.optgroup.option('--server-timeout', type=int, default=None, help='Server timeout in seconds'), workers_per_resource_option(factory=cog.optgroup), cors_option(factory=cog.optgroup),
         backend_option(factory=cog.optgroup),
         cog.optgroup.group('LLM Optimization Options',
@@ -248,7 +108,7 @@ def start_decorator(llm_config: LLMConfig, serve_grpc: bool = False) -> t.Callab
                             multiple=True,
                             envvar='CUDA_VISIBLE_DEVICES',
                             callback=parse_device_callback,
-                            help=f"Assign GPU devices (if available) for {llm_config['model_name']}.",
+                            help='Assign GPU devices (if available)',
                             show_envvar=True),
         cog.optgroup.group('Fine-tuning related options',
                            help='''\
@@ -268,7 +128,7 @@ def start_decorator(llm_config: LLMConfig, serve_grpc: bool = False) -> t.Callab
     '''),
         cog.optgroup.option('--adapter-id',
                             default=None,
-                            help='Optional name or path for given LoRA adapter' + f" to wrap '{llm_config['model_name']}'",
+                            help='Optional name or path for given LoRA adapter',
                             multiple=True,
                             callback=_id_callback,
                             metavar='[PATH | [remote/][adapter_name:]adapter_id][, ...]'), click.option('--return-process', is_flag=True, default=False, help='Internal use only.',
@@ -340,24 +200,6 @@ def _click_factory_type(*param_decls: t.Any, **attrs: t.Any) -> t.Callable[[FC |
 
 cli_option = functools.partial(_click_factory_type, attr='option')
 cli_argument = functools.partial(_click_factory_type, attr='argument')
-
-def output_option(f: _AnyCallable | None = None, *, default_value: LiteralOutput = 'pretty', **attrs: t.Any) -> t.Callable[[FC], FC]:
-  output = ['json', 'pretty', 'porcelain']
-
-  def complete_output_var(ctx: click.Context, param: click.Parameter, incomplete: str) -> list[CompletionItem]:
-    return [CompletionItem(it) for it in output]
-
-  return cli_option('-o',
-                    '--output',
-                    'output',
-                    type=click.Choice(output),
-                    default=default_value,
-                    help='Showing output type.',
-                    show_default=True,
-                    envvar='OPENLLM_OUTPUT',
-                    show_envvar=True,
-                    shell_complete=complete_output_var,
-                    **attrs)(f)
 
 def cors_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option('--cors/--no-cors', show_default=True, default=False, envvar='OPENLLM_CORS', show_envvar=True, help='Enable CORS for the server.', **attrs)(f)
@@ -450,36 +292,22 @@ def serialisation_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Cal
   return cli_option('--serialisation',
                     '--serialization',
                     'serialisation',
-                    type=str,
+                    type=click.Choice(get_literal_args(LiteralSerialisation)),
                     default=None,
                     show_default=True,
                     show_envvar=True,
                     envvar='OPENLLM_SERIALIZATION',
-                    callback=serialisation_callback,
                     help='''Serialisation format for save/load LLM.
 
       Currently the following strategies are supported:
 
-      - ``safetensors``: This will use safetensors format, which is synonymous to
+      - ``safetensors``: This will use safetensors format, which is synonymous to ``safe_serialization=True``.
 
-                  \b
-                  ``safe_serialization=True``.
-
-                  \b
-                  > [!NOTE] that this format might not work for every cases, and
-                  you can always fallback to ``legacy`` if needed.
+      > [!NOTE] Safetensors might not work for every cases, and you can always fallback to ``legacy`` if needed.
 
       - ``legacy``: This will use PyTorch serialisation format, often as ``.bin`` files. This should be used if the model doesn't yet support safetensors.
-
-      > [!NOTE] that GGML format is working in progress.
       ''',
                     **attrs)(f)
-
-def serialisation_callback(ctx: click.Context, param: click.Parameter, value: LiteralSerialisation | None) -> LiteralSerialisation | None:
-  if value is None: return value
-  if value not in {'safetensors', 'legacy'}:
-    raise click.BadParameter(f"'serialisation' only accept 'safetensors', 'legacy' as serialisation format. got {value} instead.", ctx, param) from None
-  return value
 
 def container_registry_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option('--container-registry',

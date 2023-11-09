@@ -66,7 +66,6 @@ _value_docstring = {
         `model_name` and `start_name` must be specified.''',
     'model_name': 'The normalized version of __openllm_start_name__, determined by __openllm_name_type__',
     'start_name': 'Default name to be used with `openllm start`',
-    'env': 'A EnvVarMixin instance for this LLMConfig.',
     'timeout': 'The default timeout to be set for this given LLM.',
     'workers_per_resource': '''The number of workers per resource. This is used to determine the number of workers to use for this model.
         For example, if this is set to 0.5, then OpenLLM will use 1 worker per 2 resources. If this is set to 1, then

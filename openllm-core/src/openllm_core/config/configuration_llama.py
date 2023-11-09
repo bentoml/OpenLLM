@@ -5,7 +5,6 @@ import openllm_core
 
 from openllm_core._conversation import SeparatorStyle
 from openllm_core.prompts import PromptTemplate
-from openllm_core.utils import dantic
 
 START_LLAMA_COMMAND_DOCSTRING = '''\
 Run a LLMServer for Llama model.
@@ -70,7 +69,6 @@ class LlamaConfig(openllm_core.LLMConfig):
   Refer to [Llama's model card](https://huggingface.co/docs/transformers/main/model_doc/llama)
   for more information.
   """
-  use_llama2_prompt: bool = dantic.Field(False, description='Whether to use the prompt format for Llama 2. Disable this when working with Llama 1.')
   __config__ = {
       'name_type': 'lowercase',
       'url': 'https://github.com/facebookresearch/llama',
@@ -106,7 +104,7 @@ class LlamaConfig(openllm_core.LLMConfig):
 
   @property
   def default_prompt_template(self) -> str:
-    return DEFAULT_PROMPT_TEMPLATE('v2' if self.use_llama2_prompt else 'v1').to_string()
+    return DEFAULT_PROMPT_TEMPLATE('v2').to_string()
 
   @property
   def default_system_message(self) -> str:
@@ -120,10 +118,9 @@ class LlamaConfig(openllm_core.LLMConfig):
                           top_p: float | None = None,
                           temperature: float | None = None,
                           max_new_tokens: int | None = None,
-                          use_llama2_prompt: bool = True,
                           **attrs: t.Any) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
     system_message = DEFAULT_SYSTEM_MESSAGE if system_message is None else system_message
-    if prompt_template is None: prompt_template = DEFAULT_PROMPT_TEMPLATE('v2' if use_llama2_prompt else 'v1')
+    if prompt_template is None: prompt_template = DEFAULT_PROMPT_TEMPLATE('v2')
     elif isinstance(prompt_template, str): prompt_template = PromptTemplate(template=prompt_template)
     return prompt_template.with_options(system_message=system_message).format(instruction=prompt), {
         'max_new_tokens': max_new_tokens,

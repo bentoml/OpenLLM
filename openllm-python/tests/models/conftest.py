@@ -161,8 +161,6 @@ def _local_handle(model: str, model_id: str, image_tag: str, deployment_mode: t.
 
 @contextlib.contextmanager
 def _container_handle(model: str, model_id: str, image_tag: str, deployment_mode: t.Literal['container', 'local'], quantize: LiteralQuantise | None = None, *, _serve_grpc: bool = False):
-  envvar = openllm.utils.EnvVarMixin(model)
-
   with openllm.utils.reserve_free_port() as port, openllm.utils.reserve_free_port() as prom_port:
     pass
   container_name = f'openllm-{model}-{self(model_id)}'.replace('-', '_')
@@ -179,8 +177,7 @@ def _container_handle(model: str, model_id: str, image_tag: str, deployment_mode
 
   env: DictStrAny = {}
 
-  if quantize is not None:
-    env[envvar.quantize] = quantize
+  if quantize is not None: env['OPENLLM_QUANTIZE'] = quantize
 
   gpus = openllm.utils.device_count() or -1
   devs = [docker.types.DeviceRequest(count=gpus, capabilities=[['gpu']])] if gpus > 0 else None
@@ -195,8 +192,7 @@ def _container_handle(model: str, model_id: str, image_tag: str, deployment_mode
                                     ports={
                                         '3000/tcp': port,
                                         '3001/tcp': prom_port
-                                    },
-                                    )
+                                    })
 
   yield DockerHandle(client, container.name, port, deployment_mode)
 

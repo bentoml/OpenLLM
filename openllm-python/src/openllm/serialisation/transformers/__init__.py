@@ -6,6 +6,8 @@ import typing as t
 
 import attr
 import orjson
+import torch
+import transformers
 
 from huggingface_hub import snapshot_download
 from simple_di import Provide
@@ -13,8 +15,6 @@ from simple_di import inject
 
 import bentoml
 import openllm
-import torch
-import transformers
 
 from bentoml._internal.configuration.containers import BentoMLContainer
 from bentoml._internal.models.model import ModelOptions
@@ -29,6 +29,7 @@ from .weights import HfIgnore
 
 if t.TYPE_CHECKING:
   import types
+
   from bentoml._internal.models import ModelStore
   from openllm_core._typing_compat import DictStrAny
 
@@ -124,7 +125,7 @@ def import_model(llm: openllm.LLM[M, T], *decls: t.Any, trust_remote_code: bool,
       del model
     return bentomodel
 
-def get(llm: openllm.LLM[M, T], auto_import: bool = False) -> bentoml.Model:
+def get(llm: openllm.LLM[M, T]) -> bentoml.Model:
   try:
     model = bentoml.models.get(llm.tag)
     backend = model.info.labels['backend']
@@ -132,7 +133,6 @@ def get(llm: openllm.LLM[M, T], auto_import: bool = False) -> bentoml.Model:
     _patch_correct_tag(llm, transformers.AutoConfig.from_pretrained(model.path, trust_remote_code=llm.trust_remote_code), _revision=model.info.metadata.get('_revision'))
     return model
   except Exception as err:
-    if auto_import: return import_model(llm, trust_remote_code=llm.trust_remote_code)
     raise openllm.exceptions.OpenLLMException(f'Failed while getting stored artefact (lookup for traceback):\n{err}') from err
 
 def load_model(llm: openllm.LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M:

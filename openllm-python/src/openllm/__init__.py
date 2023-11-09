@@ -1,4 +1,4 @@
-'''OpenLLM.
+"""OpenLLM.
 
 An open platform for operating large language models in production. Fine-tune, serve,
 deploy, and monitor any LLMs with ease.
@@ -7,7 +7,7 @@ deploy, and monitor any LLMs with ease.
 * Option to bring your own fine-tuned LLMs
 * Online Serving with HTTP, gRPC, SSE(coming soon) or custom API
 * Native integration with BentoML and LangChain for custom LLM apps
-'''
+"""
 from __future__ import annotations
 import logging as _logging
 import os as _os
@@ -34,11 +34,11 @@ from openllm_core.config import FalconConfig as FalconConfig
 from openllm_core.config import FlanT5Config as FlanT5Config
 from openllm_core.config import GPTNeoXConfig as GPTNeoXConfig
 from openllm_core.config import LlamaConfig as LlamaConfig
+from openllm_core.config import MistralConfig as MistralConfig
 from openllm_core.config import MPTConfig as MPTConfig
 from openllm_core.config import OPTConfig as OPTConfig
 from openllm_core.config import StableLMConfig as StableLMConfig
 from openllm_core.config import StarCoderConfig as StarCoderConfig
-from openllm_core.config import MistralConfig as MistralConfig
 
 from . import exceptions as exceptions
 from . import utils as utils
@@ -85,8 +85,7 @@ if _t.TYPE_CHECKING:
   from . import serialisation as serialisation
   from . import testing as testing
   from . import utils as utils
-  from ._strategies import CascadingResourceStrategy as CascadingResourceStrategy
-  from ._strategies import get_resource as get_resource
+  from ._deprecated import Runner as Runner
   from ._generation import LogitsProcessorList as LogitsProcessorList
   from ._generation import StopOnTokens as StopOnTokens
   from ._generation import StoppingCriteriaList as StoppingCriteriaList
@@ -96,17 +95,18 @@ if _t.TYPE_CHECKING:
   from ._llm import LLMRunnable as LLMRunnable
   from ._llm import LLMRunner as LLMRunner
   from ._quantisation import infer_quantisation_config as infer_quantisation_config
-  from ._deprecated import Runner as Runner
+  from ._strategies import CascadingResourceStrategy as CascadingResourceStrategy
+  from ._strategies import get_resource as get_resource
   from .cli._sdk import build as build
   from .cli._sdk import import_model as import_model
   from .cli._sdk import list_models as list_models
   from .cli._sdk import start as start
   from .cli._sdk import start_grpc as start_grpc
+  from .entrypoints import mount_entrypoints as mount_entrypoints
   from .prompts import PromptTemplate as PromptTemplate
   from .protocol import openai as openai
   from .serialisation import ggml as ggml
   from .serialisation import transformers as transformers
-  from .entrypoints import mount_entrypoints as mount_entrypoints
 
 # NOTE: update this to sys.modules[__name__] once mypy_extensions can recognize __spec__
 __lazy = openllm_core.utils.LazyModule(__name__, globals()['__file__'], _import_structure, extra_objects={'COMPILED': COMPILED})
