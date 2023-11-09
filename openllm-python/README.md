@@ -52,7 +52,7 @@ Key features include:
 
 🤖️ **Bring your own LLM**: Fine-tune any LLM to suit your needs. You can load LoRA layers to fine-tune models for higher accuracy and performance for specific tasks. A unified fine-tuning API for models (`LLM.tuning()`) is coming soon.
 
-⚡ **Quantization**: Run inference with less computational and memory costs though quantization techniques like [bitsandbytes](https://github.com/TimDettmers/bitsandbytes) and [GPTQ](https://arxiv.org/abs/2210.17323).
+⚡ **Quantization**: Run inference with less computational and memory costs with quantization techniques such as [LLM.int8](https://arxiv.org/abs/2208.07339), [SpQR (int4)](https://arxiv.org/abs/2306.03078), [AWQ](https://arxiv.org/pdf/2306.00978.pdf), [GPTQ](https://arxiv.org/abs/2210.17323), and [SqueezeLLM](https://arxiv.org/pdf/2306.07629v2.pdf).
 
 📡 **Streaming**: Support token streaming through server-sent events (SSE). You can use the `/v1/generate_stream` endpoint for streaming responses from LLMs.
 
@@ -106,14 +106,13 @@ Options:
   -h, --help     Show this message and exit.
 
 Commands:
-  build       Package a given models into a Bento.
+  build       Package a given models into a BentoLLM.
   import      Setup LLM interactively.
-  instruct    Instruct agents interactively for given tasks, from a...
   models      List all supported models.
-  prune       Remove all saved models, (and optionally bentos) built with...
-  query       Ask a LLM interactively, from a terminal.
-  start       Start any LLM as a REST server.
-  start-grpc  Start any LLM as a gRPC server.
+  prune       Remove all saved models, (and optionally bentos) built with OpenLLM locally.
+  query       Query a LLM interactively, from a terminal.
+  start       Start a LLMServer for any supported LLM.
+  start-grpc  Start a gRPC LLMServer for any supported LLM.
 
 Extensions:
   build-base-container  Base image builder for BentoLLM.
@@ -130,7 +129,7 @@ Extensions:
 OpenLLM allows you to quickly spin up an LLM server using `openllm start`. For example, to start an [OPT](https://huggingface.co/docs/transformers/model_doc/opt) server, run the following:
 
 ```bash
-openllm start opt
+openllm start facebook/opt-1.3b
 ```
 
 This starts the server at [http://0.0.0.0:3000/](http://0.0.0.0:3000/). OpenLLM downloads the model to the BentoML local Model Store if they have not been registered before. To view your local models, run `bentoml models list`.
@@ -153,7 +152,7 @@ openllm query 'Explain to me the difference between "further" and "farther"'
 OpenLLM seamlessly supports many models and their variants. You can specify different variants of the model to be served by providing the `--model-id` option. For example:
 
 ```bash
-openllm start opt --model-id facebook/opt-2.7b
+openllm start facebook/opt-2.7b
 ```
 
 > [!NOTE]
@@ -165,6 +164,54 @@ openllm start opt --model-id facebook/opt-2.7b
 ## 🧩 Supported models
 
 OpenLLM currently supports the following models. By default, OpenLLM doesn't include dependencies to run all models. The extra model-specific dependencies can be installed with the instructions below.
+
+<details>
+<summary>Mistral</summary>
+
+### Quickstart
+
+Run the following commands to quickly spin up a Llama 2 server and send a request to it.
+
+```bash
+openllm start HuggingFaceH4/zephyr-7b-beta
+export OPENLLM_ENDPOINT=http://localhost:3000
+openllm query 'What are large language models?'
+```
+
+> [!NOTE]
+> Note that any Mistral variants can be deployed with OpenLLM.
+> Visit the [Hugging Face Model Hub](https://huggingface.co/models?sort=trending&search=mistral) to see more Mistral compatible models.
+
+### Supported models
+
+You can specify any of the following Mistral models by using `--model-id`.
+
+- [mistralai/Mistral-7B-v0.1](https://huggingface.co/mistralai/Mistral-7B-v0.1)
+- [mistralai/Mistral-7B-Instruct-v0.1](https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.1)
+- [amazon/MistralLite](https://huggingface.co/amazon/MistralLite)
+- [HuggingFaceH4/zephyr-7b-beta](https://huggingface.co/HuggingFaceH4/zephyr-7b-beta)
+- [HuggingFaceH4/zephyr-7b-alpha](https://huggingface.co/HuggingFaceH4/zephyr-7b-alpha)
+- Any other models that strictly follows the [MistralForCausalLM](https://huggingface.co/docs/transformers/main/en/model_doc/mistral#transformers.MistralForCausalLM) architecture
+
+### Supported backends
+
+- PyTorch (Default):
+
+  ```bash
+  openllm start HuggingFaceH4/zephyr-7b-beta --backend pt
+  ```
+
+- vLLM (Recommended):
+
+  ```bash
+  pip install "openllm[vllm]"
+  openllm start HuggingFaceH4/zephyr-7b-beta --backend vllm
+  ```
+
+> [!NOTE]
+> Currently when using the vLLM backend, adapters is yet to be supported.
+
+</details>
 
 <details>
 <summary>Llama</summary>
@@ -182,7 +229,7 @@ pip install "openllm[llama]"
 Run the following commands to quickly spin up a Llama 2 server and send a request to it.
 
 ```bash
-openllm start llama --model-id meta-llama/Llama-2-7b-chat-hf
+openllm start meta-llama/Llama-2-7b-chat-hf
 export OPENLLM_ENDPOINT=http://localhost:3000
 openllm query 'What are large language models?'
 ```
@@ -225,18 +272,18 @@ You can specify any of the following Llama models by using `--model-id`.
 - PyTorch (Default):
 
   ```bash
-  openllm start llama --model-id meta-llama/Llama-2-7b-chat-hf --backend pt
+  openllm start meta-llama/Llama-2-7b-chat-hf --backend pt
   ```
 
 - vLLM (Recommended):
 
   ```bash
   pip install "openllm[llama, vllm]"
-  openllm start llama --model-id meta-llama/Llama-2-7b-chat-hf --backend vllm
+  openllm start meta-llama/Llama-2-7b-chat-hf --backend vllm
   ```
 
 > [!NOTE]
-> Currently when using the vLLM backend, quantization and adapters are not supported.
+> Currently when using the vLLM backend, adapters is yet to be supported.
 
 </details>
 
@@ -256,7 +303,7 @@ pip install "openllm[chatglm]"
 Run the following commands to quickly spin up a ChatGLM server and send a request to it.
 
 ```bash
-openllm start chatglm --model-id thudm/chatglm-6b
+openllm start thudm/chatglm2-6b
 export OPENLLM_ENDPOINT=http://localhost:3000
 openllm query 'What are large language models?'
 ```
@@ -277,7 +324,7 @@ You can specify any of the following ChatGLM models by using `--model-id`.
 - PyTorch (Default):
 
   ```bash
-  openllm start chatglm --model-id thudm/chatglm-6b --backend pt
+  openllm start thudm/chatglm2-6b --backend pt
   ```
 
 </details>
@@ -298,7 +345,7 @@ pip install openllm
 Run the following commands to quickly spin up a Dolly-v2 server and send a request to it.
 
 ```bash
-openllm start dolly-v2 --model-id databricks/dolly-v2-3b
+openllm start databricks/dolly-v2-3b
 export OPENLLM_ENDPOINT=http://localhost:3000
 openllm query 'What are large language models?'
 ```
@@ -317,17 +364,17 @@ You can specify any of the following Dolly-v2 models by using `--model-id`.
 - PyTorch (Default):
 
   ```bash
-  openllm start dolly-v2 --model-id databricks/dolly-v2-3b --backend pt
+  openllm start databricks/dolly-v2-3b --backend pt
   ```
 
 - vLLM:
 
   ```bash
-  openllm start dolly-v2 --model-id databricks/dolly-v2-3b --backend vllm
+  openllm start databricks/dolly-v2-3b --backend vllm
   ```
 
 > [!NOTE]
-> Currently when using the vLLM backend, quantization and adapters are not supported.
+> Currently when using the vLLM backend, adapters is yet to be supported.
 
 </details>
 
@@ -347,7 +394,7 @@ pip install "openllm[falcon]"
 Run the following commands to quickly spin up a Falcon server and send a request to it.
 
 ```bash
-openllm start falcon --model-id tiiuae/falcon-7b
+openllm start tiiuae/falcon-7b
 export OPENLLM_ENDPOINT=http://localhost:3000
 openllm query 'What are large language models?'
 ```
@@ -367,18 +414,18 @@ You can specify any of the following Falcon models by using `--model-id`.
 - PyTorch (Default):
 
   ```bash
-  openllm start falcon --model-id tiiuae/falcon-7b --backend pt
+  openllm start tiiuae/falcon-7b --backend pt
   ```
 
 - vLLM:
 
   ```bash
   pip install "openllm[falcon, vllm]"
-  openllm start falcon --model-id tiiuae/falcon-7b --backend vllm
+  openllm start tiiuae/falcon-7b --backend vllm
   ```
 
 > [!NOTE]
-> Currently when using the vLLM backend, quantization and adapters are not supported.
+> Currently when using the vLLM backend, adapters is yet to be supported.
 
 </details>
 
@@ -398,7 +445,7 @@ pip install "openllm[flan-t5]"
 Run the following commands to quickly spin up a Flan-T5 server and send a request to it.
 
 ```bash
-openllm start flan-t5 --model-id google/flan-t5-large
+openllm start google/flan-t5-large
 export OPENLLM_ENDPOINT=http://localhost:3000
 openllm query 'What are large language models?'
 ```
@@ -419,11 +466,11 @@ You can specify any of the following Flan-T5 models by using `--model-id`.
 - PyTorch (Default):
 
   ```bash
-  openllm start flan-t5 --model-id google/flan-t5-large --backend pt
+  openllm start google/flan-t5-large --backend pt
   ```
 
 > [!NOTE]
-> Currently when using the vLLM backend, quantization and adapters are not supported.
+> Currently when using the vLLM backend, adapters is yet to be supported.
 
 </details>
 
@@ -443,7 +490,7 @@ pip install openllm
 Run the following commands to quickly spin up a GPT-NeoX server and send a request to it.
 
 ```bash
-openllm start gpt-neox --model-id eleutherai/gpt-neox-20b
+openllm start eleutherai/gpt-neox-20b
 export OPENLLM_ENDPOINT=http://localhost:3000
 openllm query 'What are large language models?'
 ```
@@ -460,17 +507,17 @@ You can specify any of the following GPT-NeoX models by using `--model-id`.
 - PyTorch (Default):
 
   ```bash
-  openllm start gpt-neox --model-id eleutherai/gpt-neox-20b --backend pt
+  openllm start eleutherai/gpt-neox-20b --backend pt
   ```
 
 - vLLM:
 
   ```bash
-  openllm start gpt-neox --model-id eleutherai/gpt-neox-20b --backend vllm
+  openllm start eleutherai/gpt-neox-20b --backend vllm
   ```
 
 > [!NOTE]
-> Currently when using the vLLM backend, quantization and adapters are not supported.
+> Currently when using the vLLM backend, adapters is yet to be supported.
 
 </details>
 
@@ -490,7 +537,7 @@ pip install "openllm[mpt]"
 Run the following commands to quickly spin up a MPT server and send a request to it.
 
 ```bash
-openllm start mpt --model-id mosaicml/mpt-7b-chat
+openllm start mosaicml/mpt-7b-chat
 export OPENLLM_ENDPOINT=http://localhost:3000
 openllm query 'What are large language models?'
 ```
@@ -513,18 +560,18 @@ You can specify any of the following MPT models by using `--model-id`.
 - PyTorch (Default):
 
   ```bash
-  openllm start mpt --model-id mosaicml/mpt-7b-chat --backend pt
+  openllm start mosaicml/mpt-7b-chat --backend pt
   ```
 
 - vLLM (Recommended):
 
   ```bash
   pip install "openllm[mpt, vllm]"
-  openllm start mpt --model-id mosaicml/mpt-7b-chat --backend vllm
+  openllm start mosaicml/mpt-7b-chat --backend vllm
   ```
 
 > [!NOTE]
-> Currently when using the vLLM backend, quantization and adapters are not supported.
+> Currently when using the vLLM backend, adapters is yet to be supported.
 
 </details>
 
@@ -544,7 +591,7 @@ pip install "openllm[opt]"
 Run the following commands to quickly spin up an OPT server and send a request to it.
 
 ```bash
-openllm start opt --model-id facebook/opt-2.7b
+openllm start facebook/opt-2.7b
 export OPENLLM_ENDPOINT=http://localhost:3000
 openllm query 'What are large language models?'
 ```
@@ -566,18 +613,18 @@ You can specify any of the following OPT models by using `--model-id`.
 - PyTorch (Default):
 
   ```bash
-  openllm start opt --model-id facebook/opt-2.7b --backend pt
+  openllm start facebook/opt-2.7b --backend pt
   ```
 
 - vLLM:
 
   ```bash
   pip install "openllm[opt, vllm]"
-  openllm start opt --model-id facebook/opt-2.7b --backend vllm
+  openllm start facebook/opt-2.7b --backend vllm
   ```
 
 > [!NOTE]
-> Currently when using the vLLM backend, quantization and adapters are not supported.
+> Currently when using the vLLM backend, adapters is yet to be supported.
 
 </details>
 
@@ -597,7 +644,7 @@ pip install openllm
 Run the following commands to quickly spin up a StableLM server and send a request to it.
 
 ```bash
-openllm start stablelm --model-id stabilityai/stablelm-tuned-alpha-7b
+openllm start stabilityai/stablelm-tuned-alpha-7b
 export OPENLLM_ENDPOINT=http://localhost:3000
 openllm query 'What are large language models?'
 ```
@@ -617,17 +664,17 @@ You can specify any of the following StableLM models by using `--model-id`.
 - PyTorch (Default):
 
   ```bash
-  openllm start stablelm --model-id stabilityai/stablelm-tuned-alpha-7b --backend pt
+  openllm start stabilityai/stablelm-tuned-alpha-7b --backend pt
   ```
 
 - vLLM:
 
   ```bash
-  openllm start stablelm --model-id stabilityai/stablelm-tuned-alpha-7b --backend vllm
+  openllm start stabilityai/stablelm-tuned-alpha-7b --backend vllm
   ```
 
 > [!NOTE]
-> Currently when using the vLLM backend, quantization and adapters are not supported.
+> Currently when using the vLLM backend, adapters is yet to be supported.
 
 </details>
 
@@ -647,7 +694,7 @@ pip install "openllm[starcoder]"
 Run the following commands to quickly spin up a StarCoder server and send a request to it.
 
 ```bash
-openllm start startcoder --model-id [bigcode/starcoder](https://huggingface.co/bigcode/starcoder)
+openllm start bigcode/starcoder
 export OPENLLM_ENDPOINT=http://localhost:3000
 openllm query 'What are large language models?'
 ```
@@ -665,18 +712,18 @@ You can specify any of the following StarCoder models by using `--model-id`.
 - PyTorch (Default):
 
   ```bash
-  openllm start startcoder --model-id bigcode/starcoder --backend pt
+  openllm start bigcode/starcoder --backend pt
   ```
 
 - vLLM:
 
   ```bash
   pip install "openllm[startcoder, vllm]"
-  openllm start startcoder --model-id bigcode/starcoder --backend vllm
+  openllm start bigcode/starcoder --backend vllm
   ```
 
 > [!NOTE]
-> Currently when using the vLLM backend, quantization and adapters are not supported.
+> Currently when using the vLLM backend, adapters is yet to be supported.
 
 </details>
 
@@ -696,7 +743,7 @@ pip install "openllm[baichuan]"
 Run the following commands to quickly spin up a Baichuan server and send a request to it.
 
 ```bash
-openllm start baichuan --model-id baichuan-inc/baichuan-13b-base
+openllm start baichuan-inc/baichuan-13b-base
 export OPENLLM_ENDPOINT=http://localhost:3000
 openllm query 'What are large language models?'
 ```
@@ -718,18 +765,18 @@ You can specify any of the following Baichuan models by using `--model-id`.
 - PyTorch (Default):
 
   ```bash
-  openllm start baichuan --model-id baichuan-inc/baichuan-13b-base --backend pt
+  openllm start baichuan-inc/baichuan-13b-base --backend pt
   ```
 
 - vLLM:
 
   ```bash
   pip install "openllm[baichuan, vllm]"
-  openllm start baichuan --model-id baichuan-inc/baichuan-13b-base --backend vllm
+  openllm start baichuan-inc/baichuan-13b-base --backend vllm
   ```
 
 > [!NOTE]
-> Currently when using the vLLM backend, quantization and adapters are not supported.
+> Currently when using the vLLM backend, adapters is yet to be supported.
 
 </details>
 
@@ -740,7 +787,7 @@ More models will be integrated with OpenLLM and we welcome your contributions if
 OpenLLM allows you to start your model server on multiple GPUs and specify the number of workers per resource assigned using the `--workers-per-resource` option. For example, if you have 4 available GPUs, you set the value as one divided by the number as only one instance of the Runner server will be spawned.
 
 ```bash
-openllm start opt --workers-per-resource 0.25
+openllm start facebook/opt-2.7b --workers-per-resource 0.25
 ```
 
 > [!NOTE]
@@ -760,7 +807,7 @@ Different LLMs may support multiple runtime implementations. Models that have `v
 To specify a specific runtime for your chosen model, use the `--backend` option. For example:
 
 ```bash
-openllm start llama --model-id meta-llama/Llama-2-7b-chat-hf --backend vllm
+openllm start meta-llama/Llama-2-7b-chat-hf --backend vllm
 ```
 
 Note:
@@ -772,9 +819,20 @@ Note:
 
 Quantization is a technique to reduce the storage and computation requirements for machine learning models, particularly during inference. By approximating floating-point numbers as integers (quantized values), quantization allows for faster computations, reduced memory footprint, and can make it feasible to deploy large models on resource-constrained devices.
 
-OpenLLM supports quantization through two methods - [bitsandbytes](https://github.com/TimDettmers/bitsandbytes) and [GPTQ](https://arxiv.org/abs/2210.17323).
+OpenLLM supports the following quantization techniques
 
-To run a model using the `bitsandbytes` method for quantization, you can use the following command:
+- [LLM.int8(): 8-bit Matrix Multiplication](https://arxiv.org/abs/2208.07339) through [bitsandbytes](https://github.com/TimDettmers/bitsandbytes)
+- [SpQR: A Sparse-Quantized Representation for Near-Lossless LLM Weight Compression
+  ](https://arxiv.org/abs/2306.03078) through [bitsandbytes](https://github.com/TimDettmers/bitsandbytes)
+- [AWQ: Activation-aware Weight Quantization](https://arxiv.org/abs/2306.00978),
+- [GPTQ: Accurate Post-Training Quantization](https://arxiv.org/abs/2210.17323)
+- [SqueezeLLM: Dense-and-Sparse Quantization](https://arxiv.org/abs/2306.07629).
+
+### PyTorch backend
+
+With PyTorch backend, OpenLLM supports `int8`, `int4`, `gptq`
+
+For using int8 and int4 quantization through `bitsandbytes`, you can use the following command:
 
 ```bash
 openllm start opt --quantize int8
@@ -783,7 +841,7 @@ openllm start opt --quantize int8
 To run inference with `gptq`, simply pass `--quantize gptq`:
 
 ```bash
-openllm start falcon --model-id TheBloke/falcon-40b-instruct-GPTQ --quantize gptq --device 0
+openllm start TheBloke/Llama-2-7B-Chat-GPTQ --quantize gptq
 ```
 
 > [!NOTE]
@@ -791,60 +849,129 @@ openllm start falcon --model-id TheBloke/falcon-40b-instruct-GPTQ --quantize gpt
 > first to install the dependency. From the GPTQ paper, it is recommended to quantized the weights before serving.
 > See [AutoGPTQ](https://github.com/PanQiWei/AutoGPTQ) for more information on GPTQ quantization.
 
-## 🛠️ Fine-tuning support (Experimental)
+### vLLM backend
+
+With vLLM backend, OpenLLM supports `awq`, `squeezellm`
+
+To run inference with `awq`, simply pass `--quantize awq`:
+
+```bash
+openllm start mistral --model-id TheBloke/zephyr-7B-alpha-AWQ --quantize awq
+```
+
+To run inference with `squeezellm`, simply pass `--quantize squeezellm`:
+
+```bash
+openllm start squeeze-ai-lab/sq-llama-2-7b-w4-s0 --quantize squeezellm --serialization legacy
+```
+
+> [!IMPORTANT]
+> Since both `squeezellm` and `awq` are weight-aware quantization methods, meaning the quantization is done during training, all pre-trained weights needs to get quantized before inference time. Make sure to fine compatible weights on HuggingFace Hub for your model of choice.
+
+## 🛠️ Serving fine-tuning layers
 
 [PEFT](https://huggingface.co/docs/peft/index), or Parameter-Efficient Fine-Tuning, is a methodology designed to fine-tune pre-trained models more efficiently. Instead of adjusting all model parameters, PEFT focuses on tuning only a subset, reducing computational and storage costs. [LoRA](https://huggingface.co/docs/peft/conceptual_guides/lora) (Low-Rank Adaptation) is one of the techniques supported by PEFT. It streamlines fine-tuning by using low-rank decomposition to represent weight updates, thereby drastically reducing the number of trainable parameters.
 
 With OpenLLM, you can take advantage of the fine-tuning feature by serving models with any PEFT-compatible layers using the `--adapter-id` option. For example:
 
 ```bash
-openllm start opt --model-id facebook/opt-6.7b --adapter-id aarnphm/opt-6-7b-quotes
+openllm start opt --model-id facebook/opt-6.7b --adapter-id aarnphm/opt-6-7b-quotes:default
 ```
 
 OpenLLM also provides flexibility by supporting adapters from custom file paths:
 
 ```bash
-openllm start opt --model-id facebook/opt-6.7b --adapter-id /path/to/adapters
+openllm start opt --model-id facebook/opt-6.7b --adapter-id /path/to/adapters:local_adapter
 ```
 
 To use multiple adapters, use the following format:
 
 ```bash
-openllm start opt --model-id facebook/opt-6.7b --adapter-id aarnphm/opt-6.7b-lora --adapter-id aarnphm/opt-6.7b-lora:french_lora
+openllm start opt --model-id facebook/opt-6.7b --adapter-id aarnphm/opt-6.7b-lora:default --adapter-id aarnphm/opt-6.7b-french:french_lora
 ```
 
-By default, the first specified `adapter-id` is the default LoRA layer, but optionally you can specify a different LoRA layer for inference using the `/v1/adapters` endpoint:
+By default, all adapters will be injected into the models during startup. Adapters can be specified per request via `adapter_name`:
 
 ```bash
-curl -X POST http://localhost:3000/v1/adapters --json '{"adapter_name": "vn_lora"}'
+curl -X 'POST' \
+  'http://localhost:3000/v1/generate' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "prompt": "What is the meaning of life?",
+  "stop": [
+    "philosopher"
+  ],
+  "llm_config": {
+    "max_new_tokens": 256,
+    "temperature": 0.75,
+    "top_k": 15,
+    "top_p": 1
+  },
+  "adapter_name": "default"
+}'
 ```
-
-Note that if you are using multiple adapter names and IDs, it is recommended to set the default adapter before sending the inference to avoid any performance degradation.
 
 To include this into the Bento, you can specify the `--adapter-id` option when using the `openllm build` command:
 
 ```bash
-openllm build opt --model-id facebook/opt-6.7b --adapter-id ...
+openllm build facebook/opt-6.7b --adapter-id ...
 ```
 
 If you use a relative path for `--adapter-id`, you need to add `--build-ctx`.
 
 ```bash
-openllm build opt --adapter-id ./path/to/adapter_id --build-ctx .
+openllm build facebook/opt-6.7b --adapter-id ./path/to/adapter_id --build-ctx .
 ```
 
-> [!NOTE]
-> We will gradually roll out support for fine-tuning all models.
-> Currently, the models supporting fine-tuning with OpenLLM include: OPT, Falcon, and LlaMA.
+> [!IMPORTANT]
+> Fine-tuning support is still experimental and currently only works with PyTorch backend. vLLM support is coming soon.
 
 ## 🥅 Playground and Chat UI
 
 The following UIs are currently available for OpenLLM:
 
-| UI                                                                                        | Owner                                        | Type                 | Progress |
-| ----------------------------------------------------------------------------------------- | -------------------------------------------- | -------------------- | -------- |
-| [Clojure](https://github.com/bentoml/OpenLLM/blob/main/openllm-contrib/clojure/README.md) | [@GutZuFusss](https://github.com/GutZuFusss) | Community-maintained | 🔧       |
-| TS                                                                                        | BentoML Team                                 |                      | 🚧       |
+| UI                                                                                 | Owner                                        | Type                 | Progress |
+| ---------------------------------------------------------------------------------- | -------------------------------------------- | -------------------- | -------- |
+| [Clojure](https://github.com/bentoml/OpenLLM/blob/main/external/clojure/README.md) | [@GutZuFusss](https://github.com/GutZuFusss) | Community-maintained | 🔧       |
+| TS                                                                                 | BentoML Team                                 |                      | 🚧       |
+
+## 🐍 Python SDK
+
+Each LLM can be instantiated with `openllm.LLM`:
+
+```python
+import openllm
+
+llm = openllm.LLM('facebook/opt-2.7b')
+```
+
+The main inference API is the streaming `generate_iterator` method:
+
+```python
+async for generation in llm.generate_iterator('What is the meaning of life?'): print(generation.outputs[0].text)
+```
+
+> [!NOTE]
+> The motivation behind making `llm.generate_iterator` an async generator is to provide support for Continuous batching with vLLM backend. By having the async endpoints, each prompt
+> will be added correctly to the request queue to process with vLLM backend.
+
+There is also a _one-shot_ `generate` method:
+
+```python
+await llm.generate('What is the meaning of life?')
+```
+
+This method is easy to use for one-shot generation use case, but merely served as an example how to use `llm.generate_iterator` as it uses `generate_iterator` under the hood.
+
+> [!IMPORTANT]
+> If you need to call your code in a synchronous context, you can use `asyncio.run` that wraps an async function:
+>
+> ```python
+> import asyncio
+> async def generate(prompt, **attrs): return await llm.generate(prompt, **attrs)
+> asyncio.run(generate("The meaning of life is", temperature=0.23))
+> ```
 
 ## ⚙️ Integrations
 
@@ -856,29 +983,23 @@ integrate with other powerful tools easily. We currently offer integration with
 
 ### BentoML
 
-OpenLLM models can be integrated as a
+OpenLLM LLM can be integrated as a
 [Runner](https://docs.bentoml.com/en/latest/concepts/runner.html) in your
-BentoML service. These runners have a `generate` method that takes a string as a
-prompt and returns a corresponding output string. This will allow you to plug
-and play any OpenLLM models with your existing ML workflow.
+BentoML service. Simply call `await llm.generate` to generate text. Note that
+`llm.generate` uses `runner` under the hood:
 
 ```python
 import bentoml
 import openllm
 
-model = "opt"
+llm = openllm.LLM('facebook/opt-2.7b')
 
-llm_config = openllm.AutoConfig.for_model(model)
-llm_runner = openllm.Runner(model, llm_config=llm_config)
+svc = bentoml.Service(name="llm-opt-service", runners=[llm.runner])
 
-svc = bentoml.Service(
-    name=f"llm-opt-service", runners=[llm_runner]
-)
-
-@svc.api(input=Text(), output=Text())
+@svc.api(input=bentoml.io.Text(), output=bentoml.io.Text())
 async def prompt(input_text: str) -> str:
-    answer = await llm_runner.generate(input_text)
-    return answer
+  generation = await llm.generate(input_text)
+  return generation.outputs[0].text
 ```
 
 ### [LangChain](https://python.langchain.com/docs/ecosystem/integrations/openllm)
@@ -950,24 +1071,6 @@ agent = transformers.HfAgent("http://localhost:3000/hf/agent")  # URL that runs 
 agent.run("Is the following `text` positive or negative?", text="I don't like how this models is generate inputs")
 ```
 
-> [!IMPORTANT]
-> Only `starcoder` is currently supported with Agent integration.
-> The example above was also run with four T4s on EC2 `g4dn.12xlarge`
-
-If you want to use OpenLLM client to ask questions to the running agent, you can
-also do so:
-
-```python
-import openllm
-
-client = openllm.client.HTTPClient("http://localhost:3000")
-
-client.ask_agent(
-    task="Is the following `text` positive or negative?",
-    text="What are you thinking about?",
-)
-```
-
 <!-- hatch-fancy-pypi-readme interim stop -->
 
 ![Gif showing Agent integration](/.github/assets/agent.gif)
@@ -983,10 +1086,10 @@ There are several ways to deploy your LLMs:
 ### 🐳 Docker container
 
 1. **Building a Bento**: With OpenLLM, you can easily build a Bento for a
-   specific model, like `dolly-v2`, using the `build` command.:
+   specific model, like `mistralai/Mistral-7B-Instruct-v0.1`, using the `build` command.:
 
    ```bash
-   openllm build dolly-v2
+   openllm build mistralai/Mistral-7B-Instruct-v0.1
    ```
 
    A
@@ -1023,10 +1126,10 @@ serverless cloud for shipping and scaling AI applications.
 > specific API token and the BentoCloud endpoint respectively.
 
 3. **Bulding a Bento**: With OpenLLM, you can easily build a Bento for a
-   specific model, such as `dolly-v2`:
+   specific model, such as `mistralai/Mistral-7B-Instruct-v0.1`:
 
    ```bash
-   openllm build dolly-v2
+   openllm build mistralai/Mistral-7B-Instruct-v0.1
    ```
 
 4. **Pushing a Bento**: Push your freshly-built Bento service to BentoCloud via
