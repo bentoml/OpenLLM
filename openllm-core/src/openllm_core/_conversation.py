@@ -6,7 +6,9 @@ from enum import auto
 
 import attr
 
+
 _object_setattr = object.__setattr__
+
 
 class SeparatorStyle(IntEnum):
   # Generic separator styles for chat models
@@ -23,6 +25,7 @@ class SeparatorStyle(IntEnum):
   DOLLY = auto()
   MPT = auto()
   STARCODER = auto()
+
 
 @attr.define
 class Conversation:
@@ -129,8 +132,10 @@ class Conversation:
       for i, (role, message) in enumerate(self.messages):
         if message:
           ret += role + ':\n' + message + seps[i % 2]
-          if i % 2 == 1: ret += '\n\n'
-        else: ret += role + ':\n'
+          if i % 2 == 1:
+            ret += '\n\n'
+        else:
+          ret += role + ':\n'
       return ret
     elif self.sep_style == SeparatorStyle.MPT:
       ret = f'<|im_start|>system\n{system_prompt}<|im_end|>{self.sep}' if system_prompt else ''
@@ -156,7 +161,7 @@ class Conversation:
 
   def to_openai_messages(self) -> t.List[t.Dict[str, str]]:
     ret = [{'role': 'system', 'content': self.system_message}]
-    for i, (_, msg) in enumerate(self.messages[self.offset:]):
+    for i, (_, msg) in enumerate(self.messages[self.offset :]):
       if i % 2 == 0:
         ret.append({'role': 'user', 'content': msg})
       elif msg is not None:
@@ -164,14 +169,16 @@ class Conversation:
     return ret
 
   def copy(self) -> Conversation:
-    return Conversation(name=self.name,
-                        system_template=self.system_template,
-                        system_message=self.system_message,
-                        roles=self.roles,
-                        messages=self.messages,
-                        offset=self.offset,
-                        sep_style=self.sep_style,
-                        sep=self.sep,
-                        sep2=self.sep2,
-                        stop_str=self.stop_str,
-                        stop_token_ids=self.stop_token_ids)
+    return Conversation(
+      name=self.name,
+      system_template=self.system_template,
+      system_message=self.system_message,
+      roles=self.roles,
+      messages=self.messages,
+      offset=self.offset,
+      sep_style=self.sep_style,
+      sep=self.sep,
+      sep2=self.sep2,
+      stop_str=self.stop_str,
+      stop_token_ids=self.stop_token_ids,
+    )

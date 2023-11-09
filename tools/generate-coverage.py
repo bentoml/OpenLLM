@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parent.parent
 
 PACKAGES = {'openllm-python/src/openllm/': 'openllm'}
 
+
 def main() -> int:
   coverage_report = ROOT / 'coverage.xml'
   root = etree.fromstring(coverage_report.read_text())
@@ -27,8 +28,10 @@ def main() -> int:
         raise ValueError(message)
 
       for line in module.find('lines'):
-        if line.attrib['hits'] == '1': data['hits'] += 1
-        else: data['misses'] += 1
+        if line.attrib['hits'] == '1':
+          data['hits'] += 1
+        else:
+          data['misses'] += 1
 
   total_statements_covered = 0
   total_statements = 0
@@ -45,4 +48,6 @@ def main() -> int:
   coverage_summary.write_text(orjson.dumps(coverage_data, option=orjson.OPT_INDENT_2).decode(), encoding='utf-8')
   return 0
 
-if __name__ == '__main__': raise SystemExit(main())
+
+if __name__ == '__main__':
+  raise SystemExit(main())

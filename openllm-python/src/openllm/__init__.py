@@ -8,6 +8,7 @@ deploy, and monitor any LLMs with ease.
 * Online Serving with HTTP, gRPC, SSE(coming soon) or custom API
 * Native integration with BentoML and LangChain for custom LLM apps
 """
+
 from __future__ import annotations
 import logging as _logging
 import os as _os
@@ -51,29 +52,41 @@ else:
   # configuration for bitsandbytes before import
   _os.environ['BITSANDBYTES_NOWELCOME'] = _os.environ.get('BITSANDBYTES_NOWELCOME', '1')
   # NOTE: The following warnings from bitsandbytes, and probably not that important for users to see when DEBUG is False
-  _warnings.filterwarnings('ignore', message='MatMul8bitLt: inputs will be cast from torch.float32 to float16 during quantization')
-  _warnings.filterwarnings('ignore', message='MatMul8bitLt: inputs will be cast from torch.bfloat16 to float16 during quantization')
+  _warnings.filterwarnings(
+    'ignore', message='MatMul8bitLt: inputs will be cast from torch.float32 to float16 during quantization'
+  )
+  _warnings.filterwarnings(
+    'ignore', message='MatMul8bitLt: inputs will be cast from torch.bfloat16 to float16 during quantization'
+  )
   _warnings.filterwarnings('ignore', message='The installed version of bitsandbytes was compiled without GPU support.')
   # NOTE: ignore the following warning from ghapi as it is not important for users
-  _warnings.filterwarnings('ignore', message='Neither GITHUB_TOKEN nor GITHUB_JWT_TOKEN found: running as unauthenticated')
+  _warnings.filterwarnings(
+    'ignore', message='Neither GITHUB_TOKEN nor GITHUB_JWT_TOKEN found: running as unauthenticated'
+  )
 
 _import_structure: dict[str, list[str]] = {
-    'exceptions': [],
-    'client': [],
-    'bundle': [],
-    'playground': [],
-    'testing': [],
-    'prompts': ['PromptTemplate'],
-    'protocol': [],
-    'utils': [],
-    '_deprecated': ['Runner'],
-    '_strategies': ['CascadingResourceStrategy', 'get_resource'],
-    'entrypoints': ['mount_entrypoints'],
-    'serialisation': ['ggml', 'transformers'],
-    'cli._sdk': ['start', 'start_grpc', 'build', 'import_model', 'list_models'],
-    '_quantisation': ['infer_quantisation_config'],
-    '_llm': ['LLM', 'LLMRunner', 'LLMRunnable'],
-    '_generation': ['StopSequenceCriteria', 'StopOnTokens', 'LogitsProcessorList', 'StoppingCriteriaList', 'prepare_logits_processor'],
+  'exceptions': [],
+  'client': [],
+  'bundle': [],
+  'playground': [],
+  'testing': [],
+  'prompts': ['PromptTemplate'],
+  'protocol': [],
+  'utils': [],
+  '_deprecated': ['Runner'],
+  '_strategies': ['CascadingResourceStrategy', 'get_resource'],
+  'entrypoints': ['mount_entrypoints'],
+  'serialisation': ['ggml', 'transformers'],
+  'cli._sdk': ['start', 'start_grpc', 'build', 'import_model', 'list_models'],
+  '_quantisation': ['infer_quantisation_config'],
+  '_llm': ['LLM', 'LLMRunner', 'LLMRunnable'],
+  '_generation': [
+    'StopSequenceCriteria',
+    'StopOnTokens',
+    'LogitsProcessorList',
+    'StoppingCriteriaList',
+    'prepare_logits_processor',
+  ],
 }
 COMPILED = _Path(__file__).suffix in ('.pyd', '.so')
 
@@ -109,7 +122,9 @@ if _t.TYPE_CHECKING:
   from .serialisation import transformers as transformers
 
 # NOTE: update this to sys.modules[__name__] once mypy_extensions can recognize __spec__
-__lazy = openllm_core.utils.LazyModule(__name__, globals()['__file__'], _import_structure, extra_objects={'COMPILED': COMPILED})
+__lazy = openllm_core.utils.LazyModule(
+  __name__, globals()['__file__'], _import_structure, extra_objects={'COMPILED': COMPILED}
+)
 __all__ = __lazy.__all__
 __dir__ = __lazy.__dir__
 __getattr__ = __lazy.__getattr__

@@ -8,7 +8,9 @@ model = models.data[0].id
 
 # Completion API
 stream = str(os.getenv('STREAM', False)).upper() in ['TRUE', '1', 'YES', 'Y', 'ON']
-completions = client.completions.create(prompt='Write me a tag line for an ice cream shop.', model=model, max_tokens=64, stream=stream)
+completions = client.completions.create(
+  prompt='Write me a tag line for an ice cream shop.', model=model, max_tokens=64, stream=stream
+)
 
 print(f'Completion result (stream={stream}):')
 if stream:

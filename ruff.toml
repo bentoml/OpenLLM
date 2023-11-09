@@ -1,4 +1,3 @@
-indent-width = 2
 extend-exclude = [
   "tools",
   "examples",
@@ -38,8 +37,9 @@ ignore = [
   "RUF012",  # mutable attributes to be used with ClassVar
   "E701",    # multiple statement on single line
 ]
-line-length = 192
-target-version = "py312"
+line-length = 119
+indent-width = 2
+target-version = "py38"
 typing-modules = ["openllm_core._typing_compat"]
 unfixable = ["TCH004"]
 
@@ -55,6 +55,7 @@ runtime-evaluated-base-classes = [
 runtime-evaluated-decorators = ["attrs.define", "attrs.frozen", "trait"]
 
 [format]
+preview = true
 quote-style = "single"
 indent-style = "space"
 skip-magic-trailing-comma = true
@@ -80,19 +81,19 @@ known-third-party = [
   "peft",
   "click_option_group",
 ]
-lines-after-imports = 1
+lines-after-imports = 2
 lines-between-types = 1
 no-lines-before = ["future", "standard-library"]
 relative-imports-order = "closest-to-furthest"
 
 [lint.flake8-quotes]
 avoid-escape = false
-multiline-quotes = "single"
 inline-quotes = "single"
+multiline-quotes = "double"
 docstring-quotes = "double"
 
 [lint.extend-per-file-ignores]
-"openllm-python/src/openllm/models/**" = ["E", "F", "I001"]
+"openllm-client/src/openllm_client/__init__.pyi" = ["I001"]
 "openllm-python/tests/**/*" = ["S101", "TID252", "PT011", "S307"]
 "openllm-python/src/openllm/_llm.py" = ["F811"]
 "openllm-core/src/openllm_core/utils/import_utils.py" = ["PLW0603", "F811"]

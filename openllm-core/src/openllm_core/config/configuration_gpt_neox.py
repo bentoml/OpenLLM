@@ -8,7 +8,8 @@ from openllm_core.prompts import PromptTemplate
 from openllm_core.prompts import process_prompt
 from openllm_core.utils import dantic
 
-START_GPT_NEOX_COMMAND_DOCSTRING = '''\
+
+START_GPT_NEOX_COMMAND_DOCSTRING = """\
 Run a LLMServer for GPTNeoX model.
 
 \b
@@ -26,8 +27,9 @@ or provide `--model-id` flag when running ``openllm start gpt-neox``:
 
 \b
 $ openllm start gpt-neox --model-id 'stabilityai/stablelm-tuned-alpha-3b'
-'''
-DEFAULT_PROMPT_TEMPLATE = '''{instruction}'''
+"""
+DEFAULT_PROMPT_TEMPLATE = """{instruction}"""
+
 
 class GPTNeoXConfig(openllm_core.LLMConfig):
   """GPTNeoX is an autoregressive language model trained on the Pile, whose weights will be made freely and openly available to the public through a permissive license.
@@ -44,15 +46,18 @@ class GPTNeoXConfig(openllm_core.LLMConfig):
   Refer to [GPTNeoX's model card](https://huggingface.co/docs/transformers/model_doc/gpt_neox)
   for more information.
   """
+
   __config__ = {
-      'model_name': 'gpt_neox',
-      'start_name': 'gpt-neox',
-      'architecture': 'GPTNeoXForCausalLM',
-      # NOTE: See https://huggingface.co/togethercomputer/GPT-NeoXT-Chat-Base-20B
-      'conversation': dict(system_message='', roles=('<human>', '<bot>'), sep_style=SeparatorStyle.ADD_COLON_SPACE_SINGLE, sep='\n'),
-      'url': 'https://github.com/EleutherAI/gpt-neox',
-      'default_id': 'eleutherai/gpt-neox-20b',
-      'model_ids': ['eleutherai/gpt-neox-20b']
+    'model_name': 'gpt_neox',
+    'start_name': 'gpt-neox',
+    'architecture': 'GPTNeoXForCausalLM',
+    # NOTE: See https://huggingface.co/togethercomputer/GPT-NeoXT-Chat-Base-20B
+    'conversation': dict(
+      system_message='', roles=('<human>', '<bot>'), sep_style=SeparatorStyle.ADD_COLON_SPACE_SINGLE, sep='\n'
+    ),
+    'url': 'https://github.com/EleutherAI/gpt-neox',
+    'default_id': 'eleutherai/gpt-neox-20b',
+    'model_ids': ['eleutherai/gpt-neox-20b'],
   }
   use_half_precision: bool = dantic.Field(True, description='Whether to use half precision for model.')
 
@@ -60,15 +65,21 @@ class GPTNeoXConfig(openllm_core.LLMConfig):
     temperature: float = 0.9
     max_new_tokens: int = 100
 
-  def sanitize_parameters(self,
-                          prompt: str,
-                          prompt_template: PromptTemplate | str | None = None,
-                          system_message: str | None = None,
-                          temperature: float | None = None,
-                          max_new_tokens: int | None = None,
-                          use_default_prompt_template: bool = True,
-                          **attrs: t.Any) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
-    return process_prompt(prompt, DEFAULT_PROMPT_TEMPLATE, use_default_prompt_template, **attrs), {'max_new_tokens': max_new_tokens, 'temperature': temperature}, {}
+  def sanitize_parameters(
+    self,
+    prompt: str,
+    prompt_template: PromptTemplate | str | None = None,
+    system_message: str | None = None,
+    temperature: float | None = None,
+    max_new_tokens: int | None = None,
+    use_default_prompt_template: bool = True,
+    **attrs: t.Any,
+  ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
+    return (
+      process_prompt(prompt, DEFAULT_PROMPT_TEMPLATE, use_default_prompt_template, **attrs),
+      {'max_new_tokens': max_new_tokens, 'temperature': temperature},
+      {},
+    )
 
   def postprocess_generate(self, prompt: str, generation_result: list[str], **_: t.Any) -> str:
     return generation_result[0]

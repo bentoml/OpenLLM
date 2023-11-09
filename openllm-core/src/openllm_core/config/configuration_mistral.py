@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import openllm_core
 
-START_MISTRAL_COMMAND_DOCSTRING = '''\
+
+START_MISTRAL_COMMAND_DOCSTRING = """\
 Run a LLMServer for Mistral model.
 
 \b
@@ -23,8 +24,9 @@ or provide `--model-id` flag when running ``openllm start mistral``:
 
 \b
 $ openllm start mistral --model-id HuggingFaceH4/zephyr-7b-alpha
-'''
-DEFAULT_PROMPT_TEMPLATE = '''{instruction}'''
+"""
+DEFAULT_PROMPT_TEMPLATE = """{instruction}"""
+
 
 class MistralConfig(openllm_core.LLMConfig):
   """Mistral's [paper](https://arxiv.org/abs/2310.06825) and first released by [MistralAI](https://mistral.ai/news/announcing-mistral-7b/).
@@ -32,13 +34,20 @@ class MistralConfig(openllm_core.LLMConfig):
   Mistral-7B-v0.1 is Mistral AI\'s first Large Language Model (LLM).
   Refer to [Mistral's HuggingFace page](https://huggingface.co/docs/transformers/v4.35.0/en/model_doc/mistral#overview) for more information.
   """
+
   __config__ = {
-      'name_type': 'lowercase',
-      'url': 'https://huggingface.co/docs/transformers/v4.35.0/en/model_doc/mistral#overview',
-      'default_id': 'mistralai/Mistral-7B-Instruct-v0.1',
-      'architecture': 'MistralForCausalLM',
-      'add_generation_prompt': True,
-      'model_ids': ['mistralai/Mistral-7B-v0.1', 'mistralai/Mistral-7B-Instruct-v0.1', 'amazon/MistralLite', 'HuggingFaceH4/zephyr-7b-beta', 'HuggingFaceH4/zephyr-7b-alpha'],
+    'name_type': 'lowercase',
+    'url': 'https://huggingface.co/docs/transformers/v4.35.0/en/model_doc/mistral#overview',
+    'default_id': 'mistralai/Mistral-7B-Instruct-v0.1',
+    'architecture': 'MistralForCausalLM',
+    'add_generation_prompt': True,
+    'model_ids': [
+      'mistralai/Mistral-7B-v0.1',
+      'mistralai/Mistral-7B-Instruct-v0.1',
+      'amazon/MistralLite',
+      'HuggingFaceH4/zephyr-7b-beta',
+      'HuggingFaceH4/zephyr-7b-alpha',
+    ],
   }
 
   class GenerationConfig:

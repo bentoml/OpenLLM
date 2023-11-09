@@ -5,10 +5,11 @@ import openllm_core
 
 from openllm_core._conversation import SeparatorStyle
 
+
 if t.TYPE_CHECKING:
   from openllm_core.prompts import PromptTemplate
 
-START_STARCODER_COMMAND_DOCSTRING = '''\
+START_STARCODER_COMMAND_DOCSTRING = """\
 Run a LLMServer for StarCoder model.
 
 \b
@@ -26,9 +27,17 @@ or provide `--model-id` flag when running ``openllm start starcoder``:
 
 \b
 $ openllm start starcoder --model-id 'bigcode/starcoder'
-'''
-DEFAULT_PROMPT_TEMPLATE = '''{instruction}'''
-FIM_PREFIX, FIM_MIDDLE, FIM_SUFFIX, FIM_PAD, EOD, FIM_INDICATOR = '<fim-prefix>', '<fim-middle>', '<fim-suffix>', '<fim-pad>', '<|endoftext|>', '<FILL_HERE>'
+"""
+DEFAULT_PROMPT_TEMPLATE = """{instruction}"""
+FIM_PREFIX, FIM_MIDDLE, FIM_SUFFIX, FIM_PAD, EOD, FIM_INDICATOR = (
+  '<fim-prefix>',
+  '<fim-middle>',
+  '<fim-suffix>',
+  '<fim-pad>',
+  '<|endoftext|>',
+  '<FILL_HERE>',
+)
+
 
 class StarCoderConfig(openllm_core.LLMConfig):
   """The StarCoder models are 15.5B parameter models trained on 80+ programming languages from [The Stack (v1.2)](https://huggingface.co/datasets/bigcode/the-stack), with opt-out requests excluded.
@@ -39,14 +48,17 @@ class StarCoderConfig(openllm_core.LLMConfig):
 
   Refer to [StarCoder's model card](https://huggingface.co/bigcode/starcoder) for more information.
   """
+
   __config__ = {
-      'name_type': 'lowercase',
-      'url': 'https://github.com/bigcode-project/starcoder',
-      'architecture': 'GPTBigCodeForCausalLM',
-      'conversation': dict(system_message='', roles=('<|user|>', '<|assistant|>'), sep_style=SeparatorStyle.STARCODER, sep='\n'),
-      'requirements': ['bitsandbytes'],
-      'default_id': 'bigcode/starcoder',
-      'model_ids': ['bigcode/starcoder', 'bigcode/starcoderbase']
+    'name_type': 'lowercase',
+    'url': 'https://github.com/bigcode-project/starcoder',
+    'architecture': 'GPTBigCodeForCausalLM',
+    'conversation': dict(
+      system_message='', roles=('<|user|>', '<|assistant|>'), sep_style=SeparatorStyle.STARCODER, sep='\n'
+    ),
+    'requirements': ['bitsandbytes'],
+    'default_id': 'bigcode/starcoder',
+    'model_ids': ['bigcode/starcoder', 'bigcode/starcoderbase'],
   }
 
   class GenerationConfig:
@@ -58,15 +70,17 @@ class StarCoderConfig(openllm_core.LLMConfig):
     pad_token_id: int = 49152
     repetition_penalty: float = 1.2
 
-  def sanitize_parameters(self,
-                          prompt: str,
-                          prompt_template: PromptTemplate | str | None = None,
-                          system_message: str | None = None,
-                          temperature: float | None = None,
-                          top_p: float | None = None,
-                          max_new_tokens: int | None = None,
-                          repetition_penalty: float | None = None,
-                          **attrs: t.Any) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
+  def sanitize_parameters(
+    self,
+    prompt: str,
+    prompt_template: PromptTemplate | str | None = None,
+    system_message: str | None = None,
+    temperature: float | None = None,
+    top_p: float | None = None,
+    max_new_tokens: int | None = None,
+    repetition_penalty: float | None = None,
+    **attrs: t.Any,
+  ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
     fim_mode, prefix, suffix = FIM_INDICATOR in prompt, None, None
     if fim_mode:
       try:
@@ -77,7 +91,18 @@ class StarCoderConfig(openllm_core.LLMConfig):
     else:
       prompt_text = prompt
     # XXX: This value for pad_token_id is currently a hack, need more investigate why the default starcoder doesn't include the same value as santacoder EOD
-    return prompt_text, {'temperature': temperature, 'top_p': top_p, 'max_new_tokens': max_new_tokens, 'repetition_penalty': repetition_penalty, 'pad_token_id': 49152, **attrs}, {}
+    return (
+      prompt_text,
+      {
+        'temperature': temperature,
+        'top_p': top_p,
+        'max_new_tokens': max_new_tokens,
+        'repetition_penalty': repetition_penalty,
+        'pad_token_id': 49152,
+        **attrs,
+      },
+      {},
+    )
 
   def postprocess_generate(self, prompt: str, generation_result: t.Sequence[str], **_: t.Any) -> str:
     return generation_result[0]

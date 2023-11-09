@@ -4,6 +4,7 @@ import typing as t
 import attr
 import cattr
 
+
 # XXX: sync with openllm-core/src/openllm_core/_schemas.py
 @attr.define
 class Request:
@@ -19,9 +20,11 @@ class Request:
   def model_construct(cls, data: t.Dict[str, t.Any]) -> Request:
     return cattr.structure(data, cls)
 
+
 SampleLogprobs = t.List[t.Dict[int, float]]
 PromptLogprobs = t.List[t.Optional[t.Dict[int, float]]]
 FinishReason = t.Literal['length', 'stop']
+
 
 @attr.define
 class CompletionChunk:
@@ -31,6 +34,7 @@ class CompletionChunk:
   cumulative_logprob: float
   logprobs: t.Optional[SampleLogprobs] = None
   finish_reason: t.Optional[FinishReason] = None
+
 
 @attr.define
 class Response:
@@ -48,6 +52,7 @@ class Response:
   def model_construct(cls, data: t.Dict[str, t.Any]) -> Response:
     return cattr.structure(data, cls)
 
+
 @attr.define
 class StreamingResponse:
   request_id: str
@@ -57,7 +62,12 @@ class StreamingResponse:
 
   @classmethod
   def from_response_chunk(cls, response: Response) -> StreamingResponse:
-    return cls(request_id=response.request_id, index=response.outputs[0].index, text=response.outputs[0].text, token_ids=response.outputs[0].token_ids[0])
+    return cls(
+      request_id=response.request_id,
+      index=response.outputs[0].index,
+      text=response.outputs[0].text,
+      token_ids=response.outputs[0].token_ids[0],
+    )
 
   def model_dump_json(self) -> t.Dict[str, t.Any]:
     return cattr.unstructure(self)
