@@ -66,7 +66,7 @@ else:
 
 _import_structure: dict[str, list[str]] = {
   'exceptions': [],
-  'client': [],
+  'client': ['HTTPClient', 'AsyncHTTPClient'],
   'bundle': [],
   'playground': [],
   'testing': [],
@@ -98,6 +98,8 @@ if _t.TYPE_CHECKING:
   from . import serialisation as serialisation
   from . import testing as testing
   from . import utils as utils
+  from .client import HTTPClient as HTTPClient
+  from .client import AsyncHTTPClient as AsyncHTTPClient
   from ._deprecated import Runner as Runner
   from ._generation import LogitsProcessorList as LogitsProcessorList
   from ._generation import StopOnTokens as StopOnTokens

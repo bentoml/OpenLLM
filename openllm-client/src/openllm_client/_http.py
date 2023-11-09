@@ -21,7 +21,7 @@ from ._schemas import StreamingResponse
 logger = logging.getLogger(__name__)
 
 
-def _address_validator(_, attr, value):
+def _address_validator(_: t.Any, attr: attr.Attribute[t.Any], value: t.Any):
   if not isinstance(value, str):
     raise TypeError(f'{attr.name} must be a string')
   if not urlparse(value).netloc:
@@ -37,10 +37,7 @@ class ServerState(enum.Enum):
   READY = 2  # READY: The server is ready and `wait_until_server_ready` has been called.
 
 
-_object_setattr = object.__setattr__
-
-
-@attr.define(init=False)
+@attr.define(init=False, slots=True)
 class HTTPClient:
   address: str = attr.field(validator=_address_validator, converter=_address_converter)
   client_args: t.Dict[str, t.Any]
@@ -127,10 +124,10 @@ class HTTPClient:
   def health(self):
     try:
       self.wait_until_server_ready(self.address, timeout=self._timeout, verify=self._verify, **self.client_args)
-      _object_setattr(self, '_state', ServerState.READY)
+      self._state = ServerState.READY
     except Exception as e:
       logger.error('Server is not healthy (Scroll up for traceback)\n%s', e)
-      _object_setattr(self, '_state', ServerState.CLOSED)
+      self._state = ServerState.CLOSED
 
   def generate(
     self, prompt, llm_config=None, stop=None, adapter_name=None, timeout=None, verify=None, **attrs
@@ -161,6 +158,12 @@ class HTTPClient:
   def generate_stream(
     self, prompt, llm_config=None, stop=None, adapter_name=None, timeout=None, verify=None, **attrs
   ) -> t.Iterator[StreamingResponse]:
+    for response_chunk in self.generate_iterator(prompt, llm_config, stop, adapter_name, timeout, verify, **attrs):
+      yield StreamingResponse.from_response_chunk(response_chunk)
+
+  def generate_iterator(
+    self, prompt, llm_config=None, stop=None, adapter_name=None, timeout=None, verify=None, **attrs
+  ) -> t.Iterator[Response]:
     if not self.is_ready:
       self.health()
       if not self.is_ready:
@@ -192,7 +195,7 @@ class HTTPClient:
             try:
               proc = payload.decode('utf-8').lstrip('data: ').rstrip('\n')
               data = orjson.loads(proc)
-              yield StreamingResponse.from_response_chunk(Response.model_construct(data))
+              yield Response.model_construct(data)
             except Exception:
               pass  # FIXME: Handle this
 
@@ -279,10 +282,10 @@ class AsyncHTTPClient:
   async def health(self):
     try:
       await self.wait_until_server_ready(self.address, timeout=self._timeout, verify=self._verify, **self.client_args)
-      _object_setattr(self, '_state', ServerState.READY)
+      self._state = ServerState.READY
     except Exception as e:
       logger.error('Server is not healthy (Scroll up for traceback)\n%s', e)
-      _object_setattr(self, '_state', ServerState.CLOSED)
+      self._state = ServerState.CLOSED
 
   async def generate(
     self, prompt, llm_config=None, stop=None, adapter_name=None, timeout=None, verify=None, **attrs
@@ -313,6 +316,14 @@ class AsyncHTTPClient:
   async def generate_stream(
     self, prompt, llm_config=None, stop=None, adapter_name=None, timeout=None, verify=None, **attrs
   ) -> t.AsyncGenerator[StreamingResponse, t.Any]:
+    async for response_chunk in self.generate_iterator(
+      prompt, llm_config, stop, adapter_name, timeout, verify, **attrs
+    ):
+      yield StreamingResponse.from_response_chunk(response_chunk)
+
+  async def generate_iterator(
+    self, prompt, llm_config=None, stop=None, adapter_name=None, timeout=None, verify=None, **attrs
+  ) -> t.AsyncGenerator[Response, t.Any]:
     if not self.is_ready:
       await self.health()
       if not self.is_ready:
@@ -344,6 +355,6 @@ class AsyncHTTPClient:
             try:
               proc = payload.decode('utf-8').lstrip('data: ').rstrip('\n')
               data = orjson.loads(proc)
-              yield StreamingResponse.from_response_chunk(Response.model_construct(data))
+              yield Response.model_construct(data)
             except Exception:
               pass  # FIXME: Handle this

@@ -46,6 +46,16 @@ class HTTPClient:
     verify: Optional[bool] = ...,
     **attrs: Any,
   ) -> _Response: ...
+  def generate_iterator(
+    self,
+    prompt: str,
+    llm_config: Optional[Dict[str, Any]] = ...,
+    stop: Optional[Union[str, List[str]]] = ...,
+    adapter_name: Optional[str] = ...,
+    timeout: Optional[int] = ...,
+    verify: Optional[bool] = ...,
+    **attrs: Any,
+  ) -> Iterator[_Response]: ...
   def generate_stream(
     self,
     prompt: str,
@@ -91,6 +101,16 @@ class AsyncHTTPClient:
     verify: Optional[bool] = ...,
     **attrs: Any,
   ) -> _Response: ...
+  async def generate_iterator(
+    self,
+    prompt: str,
+    llm_config: Optional[Dict[str, Any]] = ...,
+    stop: Optional[Union[str, List[str]]] = ...,
+    adapter_name: Optional[str] = ...,
+    timeout: Optional[int] = ...,
+    verify: Optional[bool] = ...,
+    **attrs: Any,
+  ) -> Iterator[_Response]: ...
   async def generate_stream(
     self,
     prompt: str,
