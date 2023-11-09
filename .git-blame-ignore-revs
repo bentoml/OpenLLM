@@ -14,3 +14,5 @@ eddbc063743b198d72c21bd7dced59dbd949b9f1
 b545ad2ad1e3acbb69f6578d8a5ee03613867505
 # 09/01/2023: ignore new line split on comma-separated item
 7d893e6cd217ddfe845210503c8f2cf1667d16b6
+# 11/09/2023: running ruff format preview
+ac377fe490bd886cf76c3855e6a2a50fc0e03b51
