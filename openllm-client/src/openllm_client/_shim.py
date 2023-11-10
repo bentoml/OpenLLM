@@ -313,10 +313,11 @@ class BaseClient(t.Generic[InnerClient, StreamType]):
 
   def _should_retry(self, response: httpx.Response) -> bool:
     should_retry_header = response.headers.get('x-should-retry')
-    if should_retry_header.lower() == 'true':
-      return True
-    if should_retry_header.lower() == 'false':
-      return False
+    if should_retry_header:
+      if should_retry_header.lower() == 'true':
+        return True
+      if should_retry_header.lower() == 'false':
+        return False
     if response.status_code in {408, 409, 429}:
       return True
     if response.status_code >= 500:
