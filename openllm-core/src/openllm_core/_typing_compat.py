@@ -70,6 +70,11 @@ else:
   from typing_extensions import TypeAlias as TypeAlias
   from typing_extensions import TypeGuard as TypeGuard
 
+if sys.version_info[:2] >= (3, 9):
+  from typing import Annotated as Annotated
+else:
+  from typing_extensions import Annotated as Annotated
+
 
 class AdapterTuple(TupleAny):
   adapter_id: str

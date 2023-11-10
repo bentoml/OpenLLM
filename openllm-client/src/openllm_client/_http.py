@@ -16,6 +16,10 @@ import orjson
 from ._schemas import Request
 from ._schemas import Response
 from ._schemas import StreamingResponse
+from ._shim import AsyncClient
+from ._shim import Client
+from ._stream import AsyncStream
+from ._stream import Stream
 
 
 logger = logging.getLogger(__name__)
@@ -32,13 +36,14 @@ def _address_converter(addr: str):
   return addr if '://' in addr else 'http://' + addr
 
 
-class ServerState(enum.Enum):
+class ClientState(enum.Enum):
   CLOSED = 1  # CLOSED: The server is not yet ready or `wait_until_server_ready` has not been called/failed.
   READY = 2  # READY: The server is ready and `wait_until_server_ready` has been called.
+  DISCONNECTED = 3  # DISCONNECTED: The server is disconnected and `wait_until_server_ready` has been called.
 
 
 @attr.define(init=False, slots=True)
-class HTTPClient:
+class HTTPClient(Client[httpx.Client, Stream]):
   address: str = attr.field(validator=_address_validator, converter=_address_converter)
   client_args: t.Dict[str, t.Any]
 
@@ -46,7 +51,7 @@ class HTTPClient:
   _timeout: int = 30
   _api_version: str = 'v1'
   _verify: bool = True
-  _state: ServerState = ServerState.CLOSED
+  _state: ClientState = ClientState.DISCONNECTED
 
   __metadata: dict[str, t.Any] | None = None
   __config: dict[str, t.Any] | None = None
@@ -116,7 +121,7 @@ class HTTPClient:
 
   @property
   def is_ready(self):
-    return self._state == ServerState.READY
+    return self._state == ClientState.READY
 
   def query(self, prompt, **attrs):
     return self.generate(prompt, **attrs)
@@ -124,10 +129,10 @@ class HTTPClient:
   def health(self):
     try:
       self.wait_until_server_ready(self.address, timeout=self._timeout, verify=self._verify, **self.client_args)
-      self._state = ServerState.READY
+      self._state = ClientState.READY
     except Exception as e:
       logger.error('Server is not healthy (Scroll up for traceback)\n%s', e)
-      self._state = ServerState.CLOSED
+      self._state = ClientState.CLOSED
 
   def generate(
     self, prompt, llm_config=None, stop=None, adapter_name=None, timeout=None, verify=None, **attrs
@@ -201,7 +206,7 @@ class HTTPClient:
 
 
 @attr.define(init=False)
-class AsyncHTTPClient:
+class AsyncHTTPClient(AsyncClient[httpx.AsyncClient, AsyncStream]):
   address: str = attr.field(validator=_address_validator, converter=_address_converter)
   client_args: t.Dict[str, t.Any]
 
@@ -209,7 +214,7 @@ class AsyncHTTPClient:
   _timeout: int = 30
   _api_version: str = 'v1'
   _verify: bool = True
-  _state: ServerState = ServerState.CLOSED
+  _state: ClientState = ClientState.DISCONNECTED
 
   __metadata: dict[str, t.Any] | None = None
   __config: dict[str, t.Any] | None = None
@@ -274,7 +279,7 @@ class AsyncHTTPClient:
 
   @property
   def is_ready(self):
-    return self._state == ServerState.READY
+    return self._state == ClientState.READY
 
   async def query(self, prompt, **attrs):
     return await self.generate(prompt, **attrs)
@@ -282,10 +287,10 @@ class AsyncHTTPClient:
   async def health(self):
     try:
       await self.wait_until_server_ready(self.address, timeout=self._timeout, verify=self._verify, **self.client_args)
-      self._state = ServerState.READY
+      self._state = ClientState.READY
     except Exception as e:
       logger.error('Server is not healthy (Scroll up for traceback)\n%s', e)
-      self._state = ServerState.CLOSED
+      self._state = ClientState.CLOSED
 
   async def generate(
     self, prompt, llm_config=None, stop=None, adapter_name=None, timeout=None, verify=None, **attrs

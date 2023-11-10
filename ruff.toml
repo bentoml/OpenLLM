@@ -9,6 +9,10 @@ extend-exclude = [
 ]
 extend-include = ["*.ipynb"]
 extend-select = [
+  "E",
+  "F",
+  "B",
+  "PIE",
   "I",    # isort
   "G",    # flake8-logging-format
   "W",    # pycodestyle
@@ -40,11 +44,19 @@ ignore = [
 line-length = 119
 indent-width = 2
 target-version = "py38"
-typing-modules = ["openllm_core._typing_compat"]
+typing-modules = [
+  "openllm_core._typing_compat",
+  "openllm_client._typing_compat",
+]
 unfixable = ["TCH004"]
 
 [lint.flake8-type-checking]
-exempt-modules = ["typing", "typing_extensions", "openllm_core._typing_compat"]
+exempt-modules = [
+  "typing",
+  "typing_extensions",
+  "openllm_core._typing_compat",
+  "openllm_client._typing_compat",
+]
 runtime-evaluated-base-classes = [
   "openllm_core._configuration.LLMConfig",
   "openllm_core._configuration.GenerationConfig",
@@ -52,7 +64,15 @@ runtime-evaluated-base-classes = [
   "openllm_core._configuration.ModelSettings",
   "openllm.LLMConfig",
 ]
-runtime-evaluated-decorators = ["attrs.define", "attrs.frozen", "trait"]
+runtime-evaluated-decorators = [
+  "attrs.define",
+  "attrs.frozen",
+  "trait",
+  "attr.attrs",
+  'attr.define',
+  '_attr.define',
+  'attr.frozen',
+]
 
 [format]
 preview = true
@@ -65,6 +85,7 @@ convention = "google"
 
 [lint.pycodestyle]
 ignore-overlong-task-comments = true
+max-line-length = 119
 
 [lint.isort]
 combine-as-imports = true
