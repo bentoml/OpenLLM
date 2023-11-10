@@ -1,6 +1,5 @@
 from __future__ import annotations
 import asyncio
-import enum
 import importlib.metadata
 import logging
 import os
@@ -23,12 +22,6 @@ VERSION = importlib.metadata.version('openllm-client')
 
 def _address_converter(addr: str):
   return addr if '://' in addr else 'http://' + addr
-
-
-class ClientState(enum.Enum):
-  CLOSED = 1  # CLOSED: The server is not yet ready or `wait_until_server_ready` has not been called/failed.
-  READY = 2  # READY: The server is ready and `wait_until_server_ready` has been called.
-  DISCONNECTED = 3  # DISCONNECTED: The server is disconnected and `wait_until_server_ready` has been called.
 
 
 @attr.define(init=False)
