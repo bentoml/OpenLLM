@@ -1,6 +1,5 @@
 from __future__ import annotations
 import importlib
-import typing as t
 
 import cloudpickle
 import fs
@@ -9,11 +8,6 @@ import openllm
 
 from openllm_core._typing_compat import ParamSpec
 
-
-if t.TYPE_CHECKING:
-  import transformers as transformers
-else:
-  transformers = openllm.utils.LazyLoader('transformers', globals(), 'transformers')
 
 P = ParamSpec('P')
 
@@ -24,6 +18,8 @@ def load_tokenizer(llm, **tokenizer_attrs):
   By default, it will try to find the bentomodel whether it is in store..
   If model is not found, it will raises a ``bentoml.exceptions.NotFound``.
   """
+  from transformers import AutoTokenizer
+
   tokenizer_attrs = {**llm.llm_parameters[-1], **tokenizer_attrs}
   from bentoml._internal.models.model import CUSTOM_OBJECTS_FILENAME
 
@@ -42,7 +38,7 @@ def load_tokenizer(llm, **tokenizer_attrs):
           'For example: "bentoml.transformers.save_model(..., custom_objects={\'tokenizer\': tokenizer})"'
         ) from None
   else:
-    tokenizer = transformers.AutoTokenizer.from_pretrained(
+    tokenizer = AutoTokenizer.from_pretrained(
       bentomodel_fs.getsyspath('/'), trust_remote_code=llm.trust_remote_code, **tokenizer_attrs
     )
 
