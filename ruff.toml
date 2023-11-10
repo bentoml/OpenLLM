@@ -93,7 +93,7 @@ multiline-quotes = "double"
 docstring-quotes = "double"
 
 [lint.extend-per-file-ignores]
-"openllm-client/src/openllm_client/__init__.pyi" = ["I001"]
+"/**/*.pyi" = ["I001"]
 "openllm-python/tests/**/*" = ["S101", "TID252", "PT011", "S307"]
 "openllm-python/src/openllm/_llm.py" = ["F811"]
 "openllm-core/src/openllm_core/utils/import_utils.py" = ["PLW0603", "F811"]
