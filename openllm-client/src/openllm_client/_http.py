@@ -18,8 +18,6 @@ from ._schemas import Response
 from ._schemas import StreamingResponse
 from ._shim import AsyncClient
 from ._shim import Client
-from ._stream import AsyncStream
-from ._stream import Stream
 
 
 logger = logging.getLogger(__name__)
@@ -42,8 +40,8 @@ class ClientState(enum.Enum):
   DISCONNECTED = 3  # DISCONNECTED: The server is disconnected and `wait_until_server_ready` has been called.
 
 
-@attr.define(init=False, slots=True)
-class HTTPClient(Client[httpx.Client, Stream]):
+@attr.define(init=False)
+class HTTPClient(Client):
   address: str = attr.field(validator=_address_validator, converter=_address_converter)
   client_args: t.Dict[str, t.Any]
 
@@ -206,7 +204,7 @@ class HTTPClient(Client[httpx.Client, Stream]):
 
 
 @attr.define(init=False)
-class AsyncHTTPClient(AsyncClient[httpx.AsyncClient, AsyncStream]):
+class AsyncHTTPClient(AsyncClient):
   address: str = attr.field(validator=_address_validator, converter=_address_converter)
   client_args: t.Dict[str, t.Any]
 

@@ -16,12 +16,11 @@ Response = t.TypeVar('Response')
 @attr.define(auto_attribs=True)
 class Stream(t.Generic[Response]):
   _client: Client
-  _cast_type: type[Response]
   _response: httpx.Response
   _decoder: SSEDecoder = attr.field(default=lambda: SSEDecoder())
 
-  def __init__(self, client, cast_type, response):
-    self.__attrs_init__(client, cast_type, response)
+  def __init__(self, client, response):
+    self.__attrs_init__(client, response)
     self._iterator = self._stream()
 
   def __next__(self):
@@ -40,18 +39,17 @@ class Stream(t.Generic[Response]):
         break
       if sse.event is None:
         data = sse.model_dump()
-        yield self._client._process_response(data, self._cast_type, self._response)
+        yield self._client._process_response_data(data, self._response)
 
 
 @attr.define(auto_attribs=True)
 class AsyncStream(t.Generic[Response]):
   _client: AsyncClient
-  _cast_type: type[Response]
   _response: httpx.Response
   _decoder: SSEDecoder = attr.field(default=lambda: SSEDecoder())
 
-  def __init__(self, client, cast_type, response):
-    self.__attrs_init__(client, cast_type, response)
+  def __init__(self, client, response):
+    self.__attrs_init__(client, response)
     self._iterator = self._stream()
 
   async def __anext__(self):
@@ -71,7 +69,7 @@ class AsyncStream(t.Generic[Response]):
         break
       if sse.event is None:
         data = sse.model_dump()
-        yield self._client._process_response(data, self._cast_type, self._response)
+        yield self._client._process_response_data(data, self._response)
 
 
 @attr.define

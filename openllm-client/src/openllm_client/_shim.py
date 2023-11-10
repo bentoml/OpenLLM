@@ -1,6 +1,7 @@
 # This provides a base shim with httpx and acts as base request
 from __future__ import annotations
 import email.utils
+import logging
 import platform
 import random
 import time
@@ -18,8 +19,11 @@ from ._typing_compat import LiteralString
 from ._typing_compat import Platform
 
 
+logger = logging.getLogger(__name__)
+
 InnerClient = t.TypeVar('InnerClient', bound=t.Union[httpx.Client, httpx.AsyncClient])
-StreamType = t.TypeVar('StreamType', bound=t.Union[Stream, AsyncStream])
+_Stream = t.TypeVar('_Stream', bound=Stream[t.Any])
+_AsyncStream = t.TypeVar('_AsyncStream', bound=AsyncStream[t.Any])
 LiteralVersion = t.Annotated[LiteralString, t.Literal['v1'], str]
 
 
@@ -112,7 +116,7 @@ class RequestOptions:
 
 
 @attr.define(init=False)
-class Client(t.Generic[InnerClient, StreamType]):
+class BaseClient(t.Generic[InnerClient, StreamType]):
   _base_url: httpx.URL = attr.field(converter=_address_converter)
   _version: LiteralVersion
   _timeout: httpx.Timeout
@@ -141,9 +145,6 @@ class Client(t.Generic[InnerClient, StreamType]):
       return self._base_url.copy_with(path=merge_raw)
     return merge_url
 
-  def _remaining_retries(self, remaining_retries: int | None, options: RequestOptions) -> int:
-    return remaining_retries if remaining_retries is not None else options.get_max_retries(self._max_retries)
-
   @property
   def _default_headers(self) -> t.Dict[str, str]:
     return {'Content-Type': 'application/json', 'Accept': 'application/json', **self._platform_headers}
@@ -171,6 +172,9 @@ class Client(t.Generic[InnerClient, StreamType]):
   @base_url.setter
   def base_url(self, url):
     self._base_url = url if isinstance(url, httpx.URL) else httpx.URL(url)
+
+  def _remaining_retries(self, remaining_retries: int | None, options: RequestOptions) -> int:
+    return remaining_retries if remaining_retries is not None else options.get_max_retries(self._max_retries)
 
   def _build_headers(self, options: RequestOptions) -> httpx.Headers:
     return httpx.Headers(_merge_mapping(self._default_headers, options.headers or {}))
@@ -223,8 +227,82 @@ class Client(t.Generic[InnerClient, StreamType]):
       return True  # Retry on internal server errors
     return False
 
-  def _process_response(self, data: t.Any, cast_to: type[Response], response: httpx.Response) -> Response: ...
+  def _process_response_data(self, data: t.Any, response: httpx.Response) -> Response: ...
 
 
 @attr.define(init=False)
-class AsyncClient(Client[InnerClient, StreamType]): ...
+class Client(BaseClient[httpx.Client, Stream[t.Any]]):
+  def __init__(
+    self,
+    base_url: str | httpx.URL,
+    version: str,
+    timeout: int | httpx.Timeout = DEFAULT_TIMEOUT,
+    max_retries: int = MAX_RETRIES,
+  ):
+    client = httpx.Client(base_url=base_url, timeout=timeout)
+    super().__init__(
+      base_url=base_url, version=version, timeout=timeout, max_retries=max_retries, client=client, _internal=True
+    )
+
+  @property
+  def is_closed(self):
+    return self._inner.is_closed
+
+  def close(self):
+    self._inner.close()
+
+  def __enter__(self):
+    return self
+
+  def __exit__(self, *args) -> None:
+    self.close()
+
+  def _request(
+    self,
+    options: RequestOptions,
+    remaining_retries: int | None = None,
+    *,
+    stream: bool = False,
+    stream_cls: type[_Stream] | None = None,
+  ) -> Response | _Stream:
+    retries = self._remaining_retries(remaining_retries, options)
+    request = self._build_request(options)
+    try:
+      response = self._inner.send(request, stream=stream)
+      logger.debug(f'HTTP: {request.method} {request.url} {response.status_code}')
+      response.raise_for_status()
+    except httpx.HTTPStatusError as exc:
+      if retries > 0 and self._should_retry(exc.response):
+        return self._retry_request(options, retries, exc.response)
+      # If the response is streamed then we need to explicitly read the completed response
+      exc.response.read()
+      raise ValueError(exc.message) from None
+    except httpx.TimeoutException:
+      if retries > 0:
+        return self._retry_request(options, retries, stream=stream, stream_cls=stream_cls)
+      raise ValueError(request) from None  # timeout
+    except Exception:
+      if retries > 0:
+        return self._retry_request(options, retries, stream=stream, stream_cls=stream_cls)
+      raise ValueError(request) from None  # connection error
+    return self._process_response(response, stream=stream, stream_cls=stream_cls)
+
+  def _retry_request(
+    self,
+    options: RequestOptions,
+    remaining_retries: int,
+    response_headers: httpx.Headers | None = None,
+    *,
+    stream: bool = False,
+    stream_cls: type[_Stream] | None,
+  ) -> Response | _Stream:
+    remaining = remaining_retries - 1
+    timeout = self._calculate_retry_timeout(remaining_retries, options, response_headers)
+    logger.info('Retrying request to %s in %f seconds', options.url, timeout)
+    # In synchronous thread we are blocking the thread. Depends on how users want to do this downstream.
+    time.sleep(timeout)
+    return self._request(options, remaining, stream=stream, stream_cls=stream_cls)
+
+
+@attr.define(init=False)
+class AsyncClient(BaseClient[httpx.AsyncClient, AsyncStream[t.Any]]): ...
