@@ -1,5 +1,6 @@
 # mypy: disable-error-code="misc"
 from __future__ import annotations
+import importlib.metadata
 import inspect
 import logging
 import os
@@ -266,6 +267,10 @@ def create_bento(
       'start_name': llm.config['start_name'],
       'base_name_or_path': llm.model_id,
       'bundler': 'openllm.bundle',
+      **{
+        f'{package.replace("-","_")}_version': importlib.metadata.version(package)
+        for package in {'openllm', 'openllm-core', 'openllm-client'}
+      },
     }
   )
   if adapter_map:
