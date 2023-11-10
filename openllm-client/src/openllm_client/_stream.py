@@ -10,17 +10,19 @@ if t.TYPE_CHECKING:
   from ._shim import AsyncClient
   from ._shim import Client
 
-Response = t.TypeVar('Response')
+Response = t.TypeVar('Response', bound=attr.AttrsInstance)
 
 
 @attr.define(auto_attribs=True)
 class Stream(t.Generic[Response]):
-  _client: Client
+  _response_cls: t.Type[Response]
   _response: httpx.Response
-  _decoder: SSEDecoder = attr.field(default=lambda: SSEDecoder())
+  _client: Client
+  _decoder: SSEDecoder = attr.field(factory=lambda: SSEDecoder())
+  _iterator: t.Iterator[Response] = attr.field(init=False)
 
-  def __init__(self, client, response):
-    self.__attrs_init__(client, response)
+  def __init__(self, response_cls, response, client):
+    self.__attrs_init__(response_cls, response, client)
     self._iterator = self._stream()
 
   def __next__(self):
@@ -38,18 +40,21 @@ class Stream(t.Generic[Response]):
       if sse.data.startswith('[DONE]'):
         break
       if sse.event is None:
-        data = sse.model_dump()
-        yield self._client._process_response_data(data, self._response)
+        yield self._client._process_response_data(
+          data=sse.model_dump(), response_cls=self._response_cls, raw_response=self._response
+        )
 
 
 @attr.define(auto_attribs=True)
 class AsyncStream(t.Generic[Response]):
-  _client: AsyncClient
+  _response_cls: t.Type[Response]
   _response: httpx.Response
-  _decoder: SSEDecoder = attr.field(default=lambda: SSEDecoder())
+  _client: AsyncClient
+  _decoder: SSEDecoder = attr.field(factory=lambda: SSEDecoder())
+  _iterator: t.Iterator[Response] = attr.field(init=False)
 
-  def __init__(self, client, response):
-    self.__attrs_init__(client, response)
+  def __init__(self, response_cls, response, client):
+    self.__attrs_init__(response_cls, response, client)
     self._iterator = self._stream()
 
   async def __anext__(self):
@@ -68,8 +73,9 @@ class AsyncStream(t.Generic[Response]):
       if sse.data.startswith('[DONE]'):
         break
       if sse.event is None:
-        data = sse.model_dump()
-        yield self._client._process_response_data(data, self._response)
+        yield self._client._process_response_data(
+          data=sse.model_dump(), response_cls=self._response_cls, raw_response=self._response
+        )
 
 
 @attr.define
