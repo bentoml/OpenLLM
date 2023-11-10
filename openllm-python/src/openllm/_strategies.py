@@ -235,7 +235,7 @@ def _validate(cls: type[DynResource], val: list[t.Any]) -> None:
       raise RuntimeError('Failed to initialise CUDA runtime binding.')
     # correctly parse handle
     for el in val:
-      if el.startswith('GPU-') or el.startswith('MIG-'):
+      if el.startswith(('GPU-', 'MIG-')):
         uuids = _raw_device_uuid_nvml()
         if uuids is None:
           raise ValueError('Failed to parse available GPUs UUID')
