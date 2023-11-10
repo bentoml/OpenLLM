@@ -3,7 +3,6 @@
 from __future__ import annotations
 import importlib
 import logging
-import typing as t
 
 import attr
 import orjson
@@ -29,25 +28,17 @@ from ._helpers import process_config
 from .weights import HfIgnore
 
 
-if t.TYPE_CHECKING:
-  import types
-
-  from bentoml._internal.models import ModelStore
-  from openllm_core._typing_compat import DictStrAny
-
 logger = logging.getLogger(__name__)
 
 __all__ = ['import_model', 'get', 'load_model']
 _object_setattr = object.__setattr__
 
 
-def _patch_correct_tag(
-  llm: openllm.LLM[M, T], config: transformers.PretrainedConfig, _revision: str | None = None
-) -> None:
+def _patch_correct_tag(llm: openllm.LLM[M, T], config: transformers.PretrainedConfig, _revision: str | None = None):
   # NOTE: The following won't hit during local since we generated a correct version based on local path hash It will only hit if we use model from HF Hub
   if llm.revision is not None:
     return
-  if not llm._local:
+  if not llm.local:
     try:
       if _revision is None:
         _revision = get_hash(config)
@@ -55,7 +46,7 @@ def _patch_correct_tag(
       pass
     if _revision is None and llm.tag.version is not None:
       _revision = llm.tag.version
-    if llm._tag.version is None:
+    if llm.tag.version is None:
       _object_setattr(
         llm, '_tag', attr.evolve(llm.tag, version=_revision)
       )  # HACK: This copies the correct revision into llm.tag
@@ -64,13 +55,7 @@ def _patch_correct_tag(
 
 
 @inject
-def import_model(
-  llm: openllm.LLM[M, T],
-  *decls: t.Any,
-  trust_remote_code: bool,
-  _model_store: ModelStore = Provide[BentoMLContainer.model_store],
-  **attrs: t.Any,
-) -> bentoml.Model:
+def import_model(llm, *decls, trust_remote_code, _model_store=Provide[BentoMLContainer.model_store], **attrs):
   _base_decls, _base_attrs = llm.llm_parameters[0]
   decls = (*_base_decls, *decls)
   attrs = {**_base_attrs, **attrs}
@@ -83,7 +68,7 @@ def import_model(
   safe_serialisation = openllm.utils.first_not_none(
     attrs.get('safe_serialization'), default=llm._serialisation == 'safetensors'
   )
-  metadata: DictStrAny = {'safe_serialisation': safe_serialisation}
+  metadata = {'safe_serialisation': safe_serialisation}
   if quantize:
     metadata['_quantize'] = quantize
   architectures = getattr(config, 'architectures', [])
@@ -97,7 +82,7 @@ def import_model(
   else:
     metadata['_revision'] = llm.revision
 
-  signatures: DictStrAny = {}
+  signatures = {}
 
   if quantize == 'gptq':
     if not openllm.utils.is_autogptq_available() or not openllm.utils.is_optimum_supports_gptq():
@@ -133,8 +118,8 @@ def import_model(
     tokenizer.pad_token = tokenizer.eos_token
 
   model = None
-  external_modules: list[types.ModuleType] = [importlib.import_module(tokenizer.__module__)]
-  imported_modules: list[types.ModuleType] = []
+  external_modules = [importlib.import_module(tokenizer.__module__)]
+  imported_modules = []
   bentomodel = bentoml.Model.create(
     llm.tag,
     module='openllm.serialisation.transformers',
@@ -195,7 +180,7 @@ def import_model(
     return bentomodel
 
 
-def get(llm: openllm.LLM[M, T]) -> bentoml.Model:
+def get(llm):
   try:
     model = bentoml.models.get(llm.tag)
     backend = model.info.labels['backend']
@@ -215,7 +200,13 @@ def get(llm: openllm.LLM[M, T]) -> bentoml.Model:
     ) from err
 
 
-def load_model(llm: openllm.LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M:
+def check_unintialised_params(model):
+  unintialized = [n for n, param in model.named_parameters() if param.data.device == torch.device('meta')]
+  if len(unintialized) > 0:
+    raise RuntimeError(f'Found the following unintialized parameters in {model}: {unintialized}')
+
+
+def load_model(llm, *decls, **attrs):
   if llm._quantise in {'awq', 'squeezellm'}:
     raise RuntimeError('AWQ is not yet supported with PyTorch backend.')
   config, attrs = transformers.AutoConfig.from_pretrained(
@@ -244,7 +235,9 @@ def load_model(llm: openllm.LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M:
         )
 
     # TODO: investigate load with flash attention
-    model = auto_class.from_pretrained(llm.bentomodel.path, device_map=device_map, **attrs)
+    model = auto_class.from_pretrained(
+      llm.bentomodel.path, device_map=device_map, trust_remote_code=llm.trust_remote_code, **attrs
+    )
   else:
     model = auto_class.from_pretrained(
       llm.bentomodel.path,
@@ -254,4 +247,5 @@ def load_model(llm: openllm.LLM[M, T], *decls: t.Any, **attrs: t.Any) -> M:
       device_map=device_map,
       **attrs,
     )
-  return t.cast('M', model)
+  check_unintialised_params(model)
+  return model

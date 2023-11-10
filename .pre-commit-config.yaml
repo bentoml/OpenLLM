@@ -24,7 +24,7 @@ repos:
         language: system
         always_run: true
         pass_filenames: false
-        entry: mypy --strict openllm-client/src/openllm_client/__init__.pyi openllm-core/src/openllm_core/_typing_compat.py
+        entry: mypy --strict openllm-client/src/openllm_client/__init__.pyi openllm-core/src/openllm_core/_typing_compat.py openllm-python/src/openllm/serialisation/__init__.pyi
   - repo: https://github.com/editorconfig-checker/editorconfig-checker.python
     rev: '2.7.3'
     hooks:
