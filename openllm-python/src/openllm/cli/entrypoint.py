@@ -420,7 +420,9 @@ def start_command(
 
   serialisation = t.cast(
     LiteralSerialisation,
-    first_not_none(serialisation, default='safetensors' if has_safetensors_weights(model_id) else 'legacy'),
+    first_not_none(
+      serialisation, default='safetensors' if has_safetensors_weights(model_id, model_version) else 'legacy'
+    ),
   )
   if serialisation == 'safetensors' and quantize is not None and check_bool_env('OPENLLM_SERIALIZATION_WARNING'):
     termui.warning(
@@ -592,7 +594,9 @@ def start_grpc_command(
 
   serialisation = t.cast(
     LiteralSerialisation,
-    first_not_none(serialisation, default='safetensors' if has_safetensors_weights(model_id) else 'legacy'),
+    first_not_none(
+      serialisation, default='safetensors' if has_safetensors_weights(model_id, model_version) else 'legacy'
+    ),
   )
   if serialisation == 'safetensors' and quantize is not None and check_bool_env('OPENLLM_SERIALIZATION_WARNING'):
     termui.warning(
@@ -789,7 +793,9 @@ def import_command(
     backend=backend,
     serialisation=t.cast(
       LiteralSerialisation,
-      first_not_none(serialisation, default='safetensors' if has_safetensors_weights(model_id) else 'legacy'),
+      first_not_none(
+        serialisation, default='safetensors' if has_safetensors_weights(model_id, model_version) else 'legacy'
+      ),
     ),
   )
   backend_warning(llm.__llm_backend__)
@@ -963,7 +969,9 @@ def build_command(
     quantize=quantize,
     serialisation=t.cast(
       LiteralSerialisation,
-      first_not_none(serialisation, default='safetensors' if has_safetensors_weights(model_id) else 'legacy'),
+      first_not_none(
+        serialisation, default='safetensors' if has_safetensors_weights(model_id, model_version) else 'legacy'
+      ),
     ),
   )
   backend_warning(llm.__llm_backend__)

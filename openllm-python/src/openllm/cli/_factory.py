@@ -78,6 +78,8 @@ def parse_config_options(
   _bentoml_config_options_env = environ.pop('BENTOML_CONFIG_OPTIONS', '')
   _bentoml_config_options_opts = [
     'tracing.sample_rate=1.0',
+    'api_server.max_runner_connections=25',
+    f'runners."llm-{config["start_name"]}-runner".batching.max_batch_size=128',
     f'api_server.traffic.timeout={server_timeout}',
     f'runners."llm-{config["start_name"]}-runner".traffic.timeout={config["timeout"]}',
     f'runners."llm-{config["start_name"]}-runner".workers_per_resource={workers_per_resource}',
