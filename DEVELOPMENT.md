@@ -202,11 +202,8 @@ After you change or update any CI related under `.github`, run `bash tools/lock-
 
 See this [docs](/.github/INFRA.md) for more information on OpenLLM's CI/CD workflow.
 
-## UI
-
-See [ClojureScript UI's README.md](/external/clojure/README.md) for more information.
-
-See [Documentation's README.md](/docs/README.md) for more information on running locally.
+## Typing
+For all internal functions, it is recommended to provide type hint. For all public function definitions, it is recommended to create a stubs file `.pyi` to separate supported external API to increase code visibility. See [openllm-client's `__init__.pyi`](/openllm-client/src/openllm_client/__init__.pyi) for example.
 
 ## Install from git archive install
 

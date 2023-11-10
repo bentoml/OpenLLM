@@ -1,6 +1,7 @@
 # NOTE: Make sure to install openai>1
-import os, openai
+import os, openai, typing as t
 from openai.types.chat import (
+  ChatCompletionMessageParam,
   ChatCompletionSystemMessageParam,
   ChatCompletionUserMessageParam,
   ChatCompletionAssistantMessageParam,
@@ -14,7 +15,7 @@ model = models.data[0].id
 
 # Chat completion API
 stream = str(os.getenv('STREAM', False)).upper() in ['TRUE', '1', 'YES', 'Y', 'ON']
-messages = [
+messages: t.List[ChatCompletionMessageParam]= [
   ChatCompletionSystemMessageParam(role='system', content='You are acting as Ernest Hemmingway.'),
   ChatCompletionUserMessageParam(role='user', content='Hi there!'),
   ChatCompletionAssistantMessageParam(role='assistant', content='Yes?'),

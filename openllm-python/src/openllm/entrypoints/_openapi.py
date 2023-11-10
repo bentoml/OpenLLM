@@ -580,6 +580,6 @@ def append_schemas(
   def mk_generate_spec(svc:bentoml.Service,openapi_version:str=OPENAPI_VERSION)->MKSchema:return MKSchema(svc_schema)
   def mk_asdict(self:OpenAPISpecification)->dict[str,t.Any]:return svc_schema
   openapi.generate_spec=mk_generate_spec
-  setattr(OpenAPISpecification, 'asdict', mk_asdict)
+  OpenAPISpecification.asdict = mk_asdict
   # yapf: disable
   return svc

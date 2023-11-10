@@ -1,5 +1,3 @@
-"""Serialisation related implementation for Transformers-based implementation."""
-
 from __future__ import annotations
 import importlib
 import logging

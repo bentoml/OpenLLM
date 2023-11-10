@@ -158,11 +158,11 @@ class AutoConfig:
     else:
       try:
         config_file = llm.bentomodel.path_of(CONFIG_FILE_NAME)
-      except OpenLLMException:
+      except OpenLLMException as err:
         if not is_transformers_available():
           raise MissingDependencyError(
             "'infer_class_from_llm' requires 'transformers' to be available. Make sure to install it with 'pip install transformers'"
-          )
+          ) from err
         from transformers.utils import cached_file
 
         try:

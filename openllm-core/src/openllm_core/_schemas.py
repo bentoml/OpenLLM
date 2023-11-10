@@ -16,26 +16,45 @@ from .utils import gen_random_uuid
 if t.TYPE_CHECKING:
   import vllm
 
+  from ._typing_compat import Self
 
-@attr.frozen(slots=True)
-class MetadataOutput:
-  model_id: str
-  timeout: int
-  model_name: str
-  backend: str
-  configuration: str
-  prompt_template: str
-  system_message: str
 
+@attr.define
+class _SchemaMixin:
   def model_dump(self) -> dict[str, t.Any]:
     return converter.unstructure(self)
 
   def model_dump_json(self) -> str:
     return orjson.dumps(self.model_dump(), option=orjson.OPT_INDENT_2).decode('utf-8')
 
+  def with_options(self, **options: t.Any) -> Self:
+    return attr.evolve(self, **options)
 
-@attr.define(slots=True, frozen=True)
-class GenerationInput:
+
+@attr.define
+class MetadataOutput(_SchemaMixin):
+  model_id: str
+  timeout: int
+  model_name: str
+  backend: str
+  configuration: str
+  prompt_template: t.Optional[str]
+  system_message: t.Optional[str]
+
+  def model_dump(self) -> dict[str, t.Any]:
+    return {
+      'model_id': self.model_id,
+      'timeout': self.timeout,
+      'model_name': self.model_name,
+      'backend': self.backend,
+      'configuration': self.configuration,
+      'prompt_template': orjson.dumps(self.prompt_template).decode(),
+      'system_message': orjson.dumps(self.system_message).decode(),
+    }
+
+
+@attr.define
+class GenerationInput(_SchemaMixin):
   prompt: str
   llm_config: LLMConfig
   stop: list[str] | None = attr.field(default=None)
@@ -52,9 +71,6 @@ class GenerationInput:
       'llm_config': self.llm_config.model_dump(flatten=True),
       'adapter_name': self.adapter_name,
     }
-
-  def model_dump_json(self) -> str:
-    return orjson.dumps(self.model_dump(), option=orjson.OPT_INDENT_2).decode('utf-8')
 
   @classmethod
   def from_llm_config(cls, llm_config: LLMConfig) -> type[GenerationInput]:
@@ -80,7 +96,7 @@ class GenerationInput:
     def examples(_: type[GenerationInput]) -> dict[str, t.Any]:
       return klass(prompt='What is the meaning of life?', llm_config=llm_config, stop=['\n']).model_dump()
 
-    setattr(klass, 'examples', classmethod(examples))
+    klass.examples = classmethod(examples)
 
     try:
       klass.__module__ = cls.__module__
@@ -98,7 +114,7 @@ FinishReason = t.Literal['length', 'stop']
 
 
 @attr.define
-class CompletionChunk:
+class CompletionChunk(_SchemaMixin):
   index: int
   text: str
   token_ids: t.List[int]
@@ -106,15 +122,12 @@ class CompletionChunk:
   logprobs: t.Optional[SampleLogprobs] = None
   finish_reason: t.Optional[FinishReason] = None
 
-  # yapf: disable
-  def with_options(self,**options: t.Any)->CompletionChunk: return attr.evolve(self, **options)
-  def model_dump(self)->dict[str, t.Any]:return converter.unstructure(self)
-  def model_dump_json(self)->str:return orjson.dumps(self.model_dump(),option=orjson.OPT_NON_STR_KEYS).decode('utf-8')
-  # yapf: enable
+  def model_dump_json(self) -> str:
+    return orjson.dumps(self.model_dump(), option=orjson.OPT_NON_STR_KEYS).decode('utf-8')
 
 
 @attr.define
-class GenerationOutput:
+class GenerationOutput(_SchemaMixin):
   prompt: str
   finished: bool
   outputs: t.List[CompletionChunk]
@@ -181,12 +194,6 @@ class GenerationOutput:
       prompt_token_ids=request_output.prompt_token_ids,
       prompt_logprobs=request_output.prompt_logprobs,
     )
-
-  def with_options(self, **options: t.Any) -> GenerationOutput:
-    return attr.evolve(self, **options)
-
-  def model_dump(self) -> dict[str, t.Any]:
-    return converter.unstructure(self)
 
   def model_dump_json(self) -> str:
     return orjson.dumps(self.model_dump(), option=orjson.OPT_NON_STR_KEYS).decode('utf-8')

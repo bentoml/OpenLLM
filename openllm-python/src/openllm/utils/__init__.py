@@ -6,6 +6,7 @@ we won't ensure backward compatibility for these functions. So use with caution.
 
 from __future__ import annotations
 import functools
+import importlib.metadata
 import typing as t
 
 import openllm_core
@@ -72,6 +73,7 @@ def generate_labels(llm: openllm.LLM[t.Any, t.Any]) -> dict[str, t.Any]:
     'model_name': llm.config['model_name'],
     'architecture': llm.config['architecture'],
     'serialisation': llm._serialisation,
+    **{package: importlib.metadata.version(package) for package in {'openllm', 'openllm-core', 'openllm-client'}},
   }
 
 

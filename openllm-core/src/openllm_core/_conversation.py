@@ -108,7 +108,7 @@ class Conversation:
     elif self.sep_style == SeparatorStyle.LLAMA:
       seps = [self.sep, self.sep2]
       ret = system_prompt if self.system_message else '<s>[INST] '
-      for i, (role, message) in enumerate(self.messages):
+      for i, (_, message) in enumerate(self.messages):
         tag = self.roles[i % 2]
         if message:
           if i == 0:
@@ -139,12 +139,12 @@ class Conversation:
       return ret
     elif self.sep_style == SeparatorStyle.MPT:
       ret = f'<|im_start|>system\n{system_prompt}<|im_end|>{self.sep}' if system_prompt else ''
-      for i, (role, message) in enumerate(self.messages):
+      for _, (role, message) in enumerate(self.messages):
         ret += f'<|im_start|>{role}\n{message}<|im_end|>{self.sep}' if message else f'{role}:'
       return ret
     elif self.sep_style == SeparatorStyle.STARCODER:
       ret = f'<|system|>\n{system_prompt}<|end|>{self.sep}' if system_prompt else ''
-      for i, (role, message) in enumerate(self.messages):
+      for _, (role, message) in enumerate(self.messages):
         ret += f'{role}\n{message}<|end|>{self.sep}' if message else f'{role}:'
     else:
       raise ValueError(f'Invalid style: {self.sep_style}')
