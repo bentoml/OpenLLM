@@ -1470,7 +1470,7 @@ class LLMConfig(_ConfigAttr[t.Any, t.Any]):
 
     config_from_env.update(attrs)
     config_from_env.update(sampling_config)
-    config_from_env['generation_config'] = generation_config
+    config_from_env.update(generation_config)
     return converter.structure(config_from_env, cls)
 
   def model_validate_click(self, **attrs: t.Any) -> tuple[LLMConfig, DictStrAny]:
