@@ -71,6 +71,11 @@ def import_model(
   _model_store: ModelStore = Provide[BentoMLContainer.model_store],
   **attrs: t.Any,
 ) -> bentoml.Model:
+  _base_decls, _base_attrs = llm.llm_parameters[0]
+  decls = (*_base_decls, *decls)
+  attrs = {**_base_attrs, **attrs}
+  if llm._local:
+    logger.warning('Given model is a local model, OpenLLM will load model into memory for serialisation.')
   config, hub_attrs, attrs = process_config(llm.model_id, trust_remote_code, **attrs)
   _patch_correct_tag(llm, config)
   _, tokenizer_attrs = llm.llm_parameters
@@ -87,7 +92,10 @@ def import_model(
       'Failed to determine the architecture for this model. Make sure the `config.json` is valid and can be loaded with `transformers.AutoConfig`'
     )
   metadata['_pretrained_class'] = architectures[0]
-  metadata['_revision'] = get_hash(config)
+  if not llm._local:
+    metadata['_revision'] = get_hash(config)
+  else:
+    metadata['_revision'] = llm.revision
 
   signatures: DictStrAny = {}
 
@@ -150,11 +158,20 @@ def import_model(
           f.write(orjson.dumps(config.quantization_config, option=orjson.OPT_INDENT_2 | orjson.OPT_SORT_KEYS).decode())
       if llm._local:  # possible local path
         model = infer_autoclass_from_llm(llm, config).from_pretrained(
-          llm.model_id, *decls, config=config, trust_remote_code=trust_remote_code, **hub_attrs, **attrs
+          llm.model_id,
+          *decls,
+          local_files_only=True,
+          config=config,
+          trust_remote_code=trust_remote_code,
+          **hub_attrs,
+          **attrs,
         )
         # for trust_remote_code to work
         bentomodel.enter_cloudpickle_context([importlib.import_module(model.__module__)], imported_modules)
-        model.save_pretrained(bentomodel.path, max_shard_size='5GB', safe_serialization=safe_serialisation)
+        model.save_pretrained(bentomodel.path, max_shard_size='2GB', safe_serialization=safe_serialisation)
+        del model
+        if torch.cuda.is_available():
+          torch.cuda.empty_cache()
       else:
         # we will clone the all tings into the bentomodel path without loading model into memory
         snapshot_download(
@@ -175,11 +192,6 @@ def import_model(
       )
     finally:
       bentomodel.exit_cloudpickle_context(imported_modules)
-      # NOTE: We need to free up the cache after importing the model
-      # in the case where users first run openllm start without the model available locally.
-      if openllm.utils.is_torch_available() and torch.cuda.is_available():
-        torch.cuda.empty_cache()
-      del model
     return bentomodel
 
 

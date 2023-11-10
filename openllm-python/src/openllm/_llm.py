@@ -256,7 +256,7 @@ class LLM(t.Generic[M, T]):
     if attr in _reserved_namespace:raise ForbiddenAttributeError(f'{attr} should not be set during runtime.')
     super().__setattr__(attr,value)
   @property
-  def import_kwargs(self)->tuple[dict[str, t.Any],dict[str, t.Any]]: return {'device_map': 'auto' if torch.cuda.is_available() and torch.cuda.device_count() > 1 else None, 'torch_dtype': torch.float16 if torch.cuda.is_available() else torch.float32}, {'padding_side': 'left', 'truncation_side': 'left'}
+  def import_kwargs(self)->tuple[dict[str, t.Any],dict[str, t.Any]]: return {'device_map': 'auto' if torch.cuda.is_available() else None, 'torch_dtype': torch.float16 if torch.cuda.is_available() else torch.float32}, {'padding_side': 'left', 'truncation_side': 'left'}
   @property
   def trust_remote_code(self)->bool:return first_not_none(check_bool_env('TRUST_REMOTE_CODE',False),default=self.__llm_trust_remote_code__)
   @property
@@ -282,6 +282,8 @@ class LLM(t.Generic[M, T]):
     return self.__llm_quantization_config__
   @property
   def has_adapters(self)->bool:return self._adapter_map is not None
+  @property
+  def local(self)->bool:return self._local
   # NOTE: The section below defines a loose contract with langchain's LLM interface.
   @property
   def llm_type(self)->str:return normalise_model_name(self._model_id)

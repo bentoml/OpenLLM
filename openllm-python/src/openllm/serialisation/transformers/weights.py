@@ -2,11 +2,15 @@ from __future__ import annotations
 import traceback
 import typing as t
 
+from pathlib import Path
+
 import attr
 
 from huggingface_hub import HfApi
 
 from openllm_core.exceptions import Error
+from openllm_core.utils import resolve_filepath
+from openllm_core.utils import validate_is_path
 
 
 if t.TYPE_CHECKING:
@@ -40,6 +44,8 @@ def ModelInfo(model_id: str, revision: str | None = None) -> HfModelInfo:
 
 
 def has_safetensors_weights(model_id: str, revision: str | None = None) -> bool:
+  if validate_is_path(model_id):
+    return next((True for item in Path(resolve_filepath(model_id)).glob('*.safetensors')), False)
   return any(s.rfilename.endswith('.safetensors') for s in ModelInfo(model_id, revision=revision).siblings)
 
 
