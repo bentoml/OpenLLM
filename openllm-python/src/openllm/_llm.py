@@ -277,7 +277,7 @@ class LLM(t.Generic[M, T], ReprMixin):
   @property
   def tag(self)->bentoml.Tag:return self._tag
   @property
-  def bentomodel(self)->bentoml.Model:return self._bentomodel
+  def bentomodel(self)->bentoml.Model:return openllm.serialisation.get(self)
   @property
   def config(self)->LLMConfig:
     if self.__llm_config__ is None:self.__llm_config__=openllm.AutoConfig.infer_class_from_llm(self).model_construct_env(**self._model_attrs)

@@ -31,6 +31,7 @@ import os
 import platform
 import random
 import subprocess
+import threading
 import time
 import traceback
 import typing as t
@@ -362,6 +363,22 @@ def cli() -> None:
   """
 
 
+class StartState(enum.Enum):
+  READY = 'READY'
+  FAILED = 'FAILED'
+  STOPPED = 'STOPPED'
+
+
+def handle(stream, stop_event):
+  while not stop_event.is_set():
+    line = stream.readline()
+    if line:
+      print(line.strip())
+    else:
+      break
+  stream.close()
+
+
 @cli.command(
   context_settings=termui.CONTEXT_SETTINGS,
   name='start',
@@ -403,6 +420,7 @@ def start_command(
   $ openllm <start|start-http> <model_id> --<options> ...
   ```
   """
+  state = StartState.READY
   if model_id in openllm.CONFIG_MAPPING:
     _model_name = model_id
     if deprecated_model_id is not None:
@@ -495,9 +513,7 @@ def start_command(
   server = bentoml.HTTPServer('_service:svc', **server_attrs)
   openllm.utils.analytics.track_start_init(llm.config)
 
-  def next_step(adapter_map: DictStrAny | None, caught_exception: bool = False) -> None:
-    if caught_exception:
-      return
+  def next_step(adapter_map, state):
     cmd_name = f'openllm build {model_id}'
     if llm._quantise:
       cmd_name += f' --quantize {llm._quantise}'
@@ -512,26 +528,32 @@ def start_command(
     if not openllm.utils.get_quiet_mode():
       termui.info(f"\n\n🚀 Next step: run '{cmd_name}' to create a BentoLLM for '{model_id}'")
 
-  _exception = False
-  if return_process:
-    server.start(env=start_env, text=True)
-    if server.process is None:
-      raise click.ClickException('Failed to start the server.')
-    return server.process
-  else:
-    try:
-      server.start(env=start_env, text=True, blocking=True)
-    except KeyboardInterrupt:
-      _exception = True
-    except Exception as err:
-      termui.error(f'Error caught while running LLM Server:\n{err}')
-      _exception = True
-      raise
-    else:
-      next_step(adapter_map, _exception)
+  stop_event = threading.Event()
+
+  state = StartState.READY
+  process = subprocess.Popen(server.args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=start_env, text=True)
+
+  # yapf: disable
+  if return_process: return process
+
+  stdout, stderr = threading.Thread(target=handle, args=(process.stdout, stop_event)), threading.Thread(target=handle, args=(process.stderr, stop_event))
+  stdout.start(); stderr.start()
+  try:
+    process.wait()
+  except Exception as err:
+    state = StartState.FAILED
+    if err is KeyboardInterrupt: state = StartState.STOPPED
+    stop_event.set()
+    process.terminate()
+  finally:
+    if state == StartState.STOPPED: next_step(adapter_map, state)
+    stdout.join(1); stderr.join(1)
+    if stdout.is_alive() or stderr.is_alive(): process.kill(); stdout.join(); stdout.join()
+  if process.poll() is not None: termui.error(f'Return code: {process.returncode}')
 
   # NOTE: Return the configuration for telemetry purposes.
   return config
+  # yapf: enable
 
 
 @cli.command(
@@ -550,7 +572,9 @@ def start_command(
   help='Deprecated. Use positional argument instead.',
 )
 @start_decorator(serve_grpc=True)
+@click.pass_context
 def start_grpc_command(
+  ctx: click.Context,
   model_id: str,
   server_timeout: int,
   model_version: str | None,
@@ -670,9 +694,7 @@ def start_grpc_command(
   server = bentoml.GrpcServer('_service:svc', **server_attrs)
   openllm.utils.analytics.track_start_init(llm.config)
 
-  def next_step(adapter_map: DictStrAny | None, caught_exception: bool = False) -> None:
-    if caught_exception:
-      return
+  def next_step(adapter_map, state):
     cmd_name = f'openllm build {model_id}'
     if llm._quantise:
       cmd_name += f' --quantize {llm._quantise}'
@@ -687,30 +709,36 @@ def start_grpc_command(
     if not openllm.utils.get_quiet_mode():
       termui.info(f"\n🚀 Next step: run '{cmd_name}' to create a BentoLLM for '{model_id}'")
 
-  _exception = False
-  if return_process:
-    server.start(env=start_env, text=True)
-    if server.process is None:
-      raise click.ClickException('Failed to start the server.')
-    return server.process
-  else:
-    try:
-      server.start(env=start_env, text=True, blocking=True)
-    except KeyboardInterrupt:
-      _exception = True
-    except Exception as err:
-      termui.error(f'Error caught while running LLM Server:\n{err}')
-      _exception = True
-      raise
-    else:
-      next_step(adapter_map, _exception)
+  stop_event = threading.Event()
+
+  state = StartState.READY
+  process = subprocess.Popen(server.args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=start_env, text=True)
+
+  # yapf: disable
+  if return_process: return process
+  stdout, stderr = threading.Thread(target=handle, args=(process.stdout, stop_event)), threading.Thread(target=handle, args=(process.stderr, stop_event))
+  stdout.start(); stderr.start()
+  try:
+    process.wait()
+  except KeyboardInterrupt:
+    state = StartState.FAILED
+    stop_event.set()
+    process.terminate()
+  finally:
+    if state != StartState.FAILED: next_step(adapter_map, state)
+    stdout.join(1); stderr.join(1)
+    if stdout.is_alive() or stderr.is_alive():
+      process.kill(); stdout.join(); stderr.join()
+  if process.poll() is not None and process.returncode != 0: termui.error(f'\nReturn code: {process.returncode}')
 
   # NOTE: Return the configuration for telemetry purposes.
   return config
+  # yapf: enable
 
 
 class ItemState(enum.Enum):
   NOT_FOUND = 'NOT_FOUND'
+  ADDED = 'ADDED'
   EXISTS = 'EXISTS'
   OVERWRITE = 'OVERWRITE'
 
@@ -808,6 +836,7 @@ def import_command(
     model = openllm.serialisation.import_model(llm, trust_remote_code=llm.trust_remote_code)
     if llm.__llm_backend__ == 'pt' and is_torch_available() and torch.cuda.is_available():
       torch.cuda.empty_cache()
+    state = ItemState.ADDED
   response = ImportModelOutput(state=state, backend=llm.__llm_backend__, tag=str(model.tag))
   termui.echo(orjson.dumps(response).decode(), fg='white')
   return response
@@ -1052,6 +1081,8 @@ def build_command(
           container_registry=container_registry,
           container_version_strategy=container_version_strategy,
         )
+        if state != ItemState.OVERWRITE:
+          state = ItemState.ADDED
   except Exception as err:
     traceback.print_exc()
     raise click.ClickException('Exception caught while building BentoLLM:\n' + str(err)) from err
@@ -1074,10 +1105,10 @@ def build_command(
   if machine:
     termui.echo(f'__object__:{orjson.dumps(response).decode()}\n\n', fg='white')
   elif not get_quiet_mode() and (not push or not containerize):
-    if not overwrite:
-      termui.warning(f"Bento for '{model_id}' already exists [{bento}]. To overwrite it pass '--overwrite'.\n")
-    elif state != ItemState.EXISTS:
+    if state != ItemState.EXISTS:
       termui.info(f"Successfully built Bento '{bento.tag}'.\n")
+    elif not overwrite:
+      termui.warning(f"Bento for '{model_id}' already exists [{bento}]. To overwrite it pass '--overwrite'.\n")
     if not get_debug_mode():
       termui.echo(OPENLLM_FIGLET)
       termui.echo('\n📖 Next steps:\n\n', nl=False)

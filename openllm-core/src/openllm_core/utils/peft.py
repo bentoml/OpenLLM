@@ -141,3 +141,16 @@ class FineTuneConfig:
       inference_mode=inference_mode,
       adapter_config=config_merger.merge(self.adapter_config, attrs),
     )
+
+  @classmethod
+  def from_config(cls, ft_config: dict[str, t.Any], llm_config_cls: type[LLMConfig]) -> FineTuneConfig:
+    copied = ft_config.copy()
+    adapter_type = copied.pop('adapter_type', 'lora')
+    inference_mode = copied.pop('inference_mode', False)
+    llm_config_class = copied.pop('llm_confg_class', llm_config_cls)
+    return cls(
+      adapter_type=adapter_type,
+      adapter_config=copied,
+      inference_mode=inference_mode,
+      llm_config_class=llm_config_class,
+    )
