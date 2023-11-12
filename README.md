@@ -45,7 +45,7 @@ Key features include:
 
 🔥 **Flexible APIs**: Serve LLMs over a RESTful API or gRPC with a single command. You can interact with the model using a Web UI, CLI, Python/JavaScript clients, or any HTTP client of your choice.
 
-⛓️ **Freedom to build**: First-class support for LangChain, BentoML and Hugging Face, allowing you to easily create your own AI applications by composing LLMs with other models and services.
+⛓️ **Freedom to build**: First-class support for LangChain, BentoML, OpenAI endpoints, and Hugging Face, allowing you to easily create your own AI applications by composing LLMs with other models and services.
 
 🎯 **Streamline deployment**: Automatically generate your LLM server Docker images or deploy as serverless endpoints via
 [☁️ BentoCloud](https://l.bentoml.com/bento-cloud), which effortlessly manages GPU resources, scales according to traffic, and ensures cost-effectiveness.
