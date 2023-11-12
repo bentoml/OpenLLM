@@ -18,6 +18,45 @@ This changelog is managed by towncrier and is compiled at release time.
 
 <!-- towncrier release notes start -->
 
+## [0.4.3](https://github.com/bentoml/openllm/tree/v0.4.3)
+
+### Features
+
+- OpenLLM server now provides a helpers endpoint to help easily create new prompt and other utilities in the future
+
+  `/v1/helpers/messages` will format a list of messages into the correct chat messages given the chat model
+  [#613](https://github.com/bentoml/openllm/issues/613)
+- client now have an additional helpers attribute class to work with helpers endpoint
+
+  ```python
+  client = openllm.HTTPClient()
+
+  prompt = client.helpers.messages(
+    add_generation_prompt=False,
+    messages=[
+      {'role': 'system', 'content': 'You are acting as Ernest Hemmingway.'},
+      {'role': 'user', 'content': 'Hi there!'},
+      {'role': 'assistant', 'content': 'Yes?'},
+    ],
+  )
+  ```
+
+  Async variant
+
+  ```python
+  client = openllm.AsyncHTTPClient()
+
+  prompt = await client.helpers.messages(
+    add_generation_prompt=False,
+    messages=[
+      {'role': 'system', 'content': 'You are acting as Ernest Hemmingway.'},
+      {'role': 'user', 'content': 'Hi there!'},
+      {'role': 'assistant', 'content': 'Yes?'},
+    ],
+  )
+  ```
+  [#615](https://github.com/bentoml/openllm/issues/615)
+
 ## [0.4.2](https://github.com/bentoml/openllm/tree/v0.4.2)
 
 ### Changes
