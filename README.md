@@ -978,8 +978,29 @@ This method is easy to use for one-shot generation use case, but merely served a
 OpenLLM is not just a standalone product; it's a building block designed to
 integrate with other powerful tools easily. We currently offer integration with
 [BentoML](https://github.com/bentoml/BentoML),
+[OpenAI's Compatible Endpoints](https://platform.openai.com/docs/api-reference/completions/object),
 [LangChain](https://github.com/hwchase17/langchain), and
 [Transformers Agents](https://huggingface.co/docs/transformers/transformers_agents).
+
+### OpenAI Compatible Endpoints
+
+OpenLLM Server can be used as a drop-in replacement for OpenAI's API. Simply
+specify the base_url to `llm-endpoint/v1` and you are good to go:
+
+```python
+import openai
+client = openai.OpenAI(base_url='http://localhost:3000/v1', api_key='na')  # Here the server is running on localhost:3000
+
+completions = client.completions.create(
+  prompt='Write me a tag line for an ice cream shop.', model=model, max_tokens=64, stream=stream
+)
+```
+
+The compatible endpoints supports `/completions`, `/chat/completions`, and `/models`
+
+> [!NOTE]
+> You can find out OpenAI example clients under the
+> [examples](https://github.com/bentoml/OpenLLM/tree/main/examples) folder.
 
 ### BentoML
 

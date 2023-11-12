@@ -28,12 +28,7 @@ def parametrise_local_llm(
     pytest.skip(f"'{model}' is not yet supported in framework testing.")
   backends: tuple[LiteralBackend, ...] = ('pt',)
   for backend, prompt in itertools.product(backends, _PROMPT_MAPPING.keys()):
-    yield (
-      prompt,
-      openllm.Runner(
-        model, model_id=_MODELING_MAPPING[model], ensure_available=True, backend=backend, init_local=True
-      ),
-    )
+    yield prompt, openllm.LLM(_MODELING_MAPPING[model], backend=backend)
 
 
 def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:

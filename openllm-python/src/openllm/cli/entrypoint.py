@@ -23,7 +23,6 @@ bentomodel = openllm.import_model('mistralai/Mistral-7B-v0.1')
 from __future__ import annotations
 import enum
 import functools
-import importlib.util
 import inspect
 import itertools
 import logging
@@ -31,6 +30,7 @@ import os
 import platform
 import random
 import subprocess
+import threading
 import time
 import traceback
 import typing as t
@@ -65,6 +65,7 @@ from openllm_core._typing_compat import LiteralString
 from openllm_core._typing_compat import NotRequired
 from openllm_core._typing_compat import ParamSpec
 from openllm_core._typing_compat import Self
+from openllm_core._typing_compat import TypeGuard
 from openllm_core.config import CONFIG_MAPPING
 from openllm_core.utils import DEBUG_ENV_VAR
 from openllm_core.utils import OPTIONAL_DEPENDENCIES
@@ -451,84 +452,31 @@ def start_command(
   # XXX: currently, theres no development args in bentoml.Server. To be fixed upstream.
   development = server_attrs.pop('development')
   server_attrs.setdefault('production', not development)
-  wpr = first_not_none(workers_per_resource, default=config['workers_per_resource'])
-  if isinstance(wpr, str):
-    if wpr == 'round_robin':
-      wpr = 1.0
-    elif wpr == 'conserved':
-      if device and openllm.utils.device_count() == 0:
-        termui.echo('--device will have no effect as there is no GPUs available', fg='yellow')
-        wpr = 1.0
-      else:
-        available_gpu = len(device) if device else openllm.utils.device_count()
-        wpr = 1.0 if available_gpu == 0 else float(1 / available_gpu)
-    else:
-      wpr = float(wpr)
-  elif isinstance(wpr, int):
-    wpr = float(wpr)
 
-  requirements = llm.config['requirements']
-  if requirements is not None and len(requirements) > 0:
-    missing_requirements = [i for i in requirements if importlib.util.find_spec(inflection.underscore(i)) is None]
-    if len(missing_requirements) > 0:
-      termui.echo(f'Make sure to have the following dependencies available: {missing_requirements}', fg='yellow')
-
-  start_env = parse_config_options(config, server_timeout, wpr, device, cors, os.environ.copy())
-  start_env.update(
-    {
-      'OPENLLM_MODEL_ID': model_id,
-      'BENTOML_DEBUG': str(openllm.utils.get_debug_mode()),
-      'BENTOML_HOME': os.environ.get('BENTOML_HOME', BentoMLContainer.bentoml_home.get()),
-      'OPENLLM_ADAPTER_MAP': orjson.dumps(adapter_map).decode(),
-      'OPENLLM_SERIALIZATION': serialisation,
-      'OPENLLM_BACKEND': llm.__llm_backend__,
-      'OPENLLM_CONFIG': llm.config.model_dump_json(flatten=True).decode(),
-    }
+  start_env = process_environ(
+    config,
+    server_timeout,
+    process_workers_per_resource(first_not_none(workers_per_resource, default=config['workers_per_resource']), device),
+    device,
+    cors,
+    model_id,
+    adapter_map,
+    serialisation,
+    llm,
+    system_message,
+    prompt_template,
   )
-  if llm._quantise:
-    start_env['OPENLLM_QUANTIZE'] = str(llm._quantise)
-  if system_message:
-    start_env['OPENLLM_SYSTEM_MESSAGE'] = system_message
-  if prompt_template:
-    start_env['OPENLLM_PROMPT_TEMPLATE'] = prompt_template
 
   server = bentoml.HTTPServer('_service:svc', **server_attrs)
-  openllm.utils.analytics.track_start_init(llm.config)
+  openllm.utils.analytics.track_start_init(config)
 
-  def next_step(adapter_map: DictStrAny | None, caught_exception: bool = False) -> None:
-    if caught_exception:
-      return
-    cmd_name = f'openllm build {model_id}'
-    if llm._quantise:
-      cmd_name += f' --quantize {llm._quantise}'
-    cmd_name += f' --serialization {serialisation}'
-    if adapter_map is not None:
-      cmd_name += ' ' + ' '.join(
-        [
-          f'--adapter-id {s}'
-          for s in [f'{p}:{name}' if name not in (None, 'default') else p for p, name in adapter_map.items()]
-        ]
-      )
-    if not openllm.utils.get_quiet_mode():
-      termui.info(f"\n\n🚀 Next step: run '{cmd_name}' to create a BentoLLM for '{model_id}'")
-
-  _exception = False
-  if return_process:
-    server.start(env=start_env, text=True)
-    if server.process is None:
-      raise click.ClickException('Failed to start the server.')
-    return server.process
-  else:
-    try:
-      server.start(env=start_env, text=True, blocking=True)
-    except KeyboardInterrupt:
-      _exception = True
-    except Exception as err:
-      termui.error(f'Error caught while running LLM Server:\n{err}')
-      _exception = True
-      raise
-    else:
-      next_step(adapter_map, _exception)
+  try:
+    build_bento_instruction(llm, model_id, serialisation, adapter_map)
+    it = run_server(server.args, start_env, return_process=return_process)
+    if return_process:
+      return it
+  except KeyboardInterrupt:
+    pass
 
   # NOTE: Return the configuration for telemetry purposes.
   return config
@@ -550,7 +498,9 @@ def start_command(
   help='Deprecated. Use positional argument instead.',
 )
 @start_decorator(serve_grpc=True)
+@click.pass_context
 def start_grpc_command(
+  ctx: click.Context,
   model_id: str,
   server_timeout: int,
   model_version: str | None,
@@ -626,7 +576,61 @@ def start_grpc_command(
   # XXX: currently, theres no development args in bentoml.Server. To be fixed upstream.
   development = server_attrs.pop('development')
   server_attrs.setdefault('production', not development)
-  wpr = first_not_none(workers_per_resource, default=config['workers_per_resource'])
+
+  start_env = process_environ(
+    config,
+    server_timeout,
+    process_workers_per_resource(first_not_none(workers_per_resource, default=config['workers_per_resource']), device),
+    device,
+    cors,
+    model_id,
+    adapter_map,
+    serialisation,
+    llm,
+    system_message,
+    prompt_template,
+  )
+
+  server = bentoml.GrpcServer('_service:svc', **server_attrs)
+  openllm.utils.analytics.track_start_init(llm.config)
+
+  try:
+    build_bento_instruction(llm, model_id, serialisation, adapter_map)
+    it = run_server(server.args, start_env, return_process=return_process)
+    if return_process:
+      return it
+  except KeyboardInterrupt:
+    pass
+
+  # NOTE: Return the configuration for telemetry purposes.
+  return config
+
+
+def process_environ(
+  config, server_timeout, wpr, device, cors, model_id, adapter_map, serialisation, llm, system_message, prompt_template
+) -> t.Dict[str, t.Any]:
+  environ = parse_config_options(config, server_timeout, wpr, device, cors, os.environ.copy())
+  environ.update(
+    {
+      'OPENLLM_MODEL_ID': model_id,
+      'BENTOML_DEBUG': str(openllm.utils.get_debug_mode()),
+      'BENTOML_HOME': os.environ.get('BENTOML_HOME', BentoMLContainer.bentoml_home.get()),
+      'OPENLLM_ADAPTER_MAP': orjson.dumps(adapter_map).decode(),
+      'OPENLLM_SERIALIZATION': serialisation,
+      'OPENLLM_BACKEND': llm.__llm_backend__,
+      'OPENLLM_CONFIG': config.model_dump_json(flatten=True).decode(),
+    }
+  )
+  if llm._quantise:
+    environ['OPENLLM_QUANTIZE'] = str(llm._quantise)
+  if system_message:
+    environ['OPENLLM_SYSTEM_MESSAGE'] = system_message
+  if prompt_template:
+    environ['OPENLLM_PROMPT_TEMPLATE'] = prompt_template
+  return environ
+
+
+def process_workers_per_resource(wpr: str | float | int, device: tuple[str, ...]) -> TypeGuard[float]:
   if isinstance(wpr, str):
     if wpr == 'round_robin':
       wpr = 1.0
@@ -641,76 +645,82 @@ def start_grpc_command(
       wpr = float(wpr)
   elif isinstance(wpr, int):
     wpr = float(wpr)
+  return wpr
 
-  requirements = llm.config['requirements']
-  if requirements is not None and len(requirements) > 0:
-    missing_requirements = [i for i in requirements if importlib.util.find_spec(inflection.underscore(i)) is None]
-    if len(missing_requirements) > 0:
-      termui.warning(f'Make sure to have the following dependencies available: {missing_requirements}')
 
-  start_env = parse_config_options(config, server_timeout, wpr, device, cors, os.environ.copy())
-  start_env.update(
-    {
-      'OPENLLM_MODEL_ID': model_id,
-      'BENTOML_DEBUG': str(openllm.utils.get_debug_mode()),
-      'BENTOML_HOME': os.environ.get('BENTOML_HOME', BentoMLContainer.bentoml_home.get()),
-      'OPENLLM_ADAPTER_MAP': orjson.dumps(adapter_map).decode(),
-      'OPENLLM_SERIALIZATION': serialisation,
-      'OPENLLM_BACKEND': llm.__llm_backend__,
-      'OPENLLM_CONFIG': llm.config.model_dump_json().decode(),
-    }
-  )
+def build_bento_instruction(llm, model_id, serialisation, adapter_map):
+  cmd_name = f'openllm build {model_id}'
   if llm._quantise:
-    start_env['OPENLLM_QUANTIZE'] = str(llm._quantise)
-  if system_message:
-    start_env['OPENLLM_SYSTEM_MESSAGE'] = system_message
-  if prompt_template:
-    start_env['OPENLLM_PROMPT_TEMPLATE'] = prompt_template
+    cmd_name += f' --quantize {llm._quantise}'
+  cmd_name += f' --serialization {serialisation}'
+  if adapter_map is not None:
+    cmd_name += ' ' + ' '.join(
+      [
+        f'--adapter-id {s}'
+        for s in [f'{p}:{name}' if name not in (None, 'default') else p for p, name in adapter_map.items()]
+      ]
+    )
+  if not openllm.utils.get_quiet_mode():
+    termui.info(f"🚀Tip: run '{cmd_name}' to create a BentoLLM for '{model_id}'")
 
-  server = bentoml.GrpcServer('_service:svc', **server_attrs)
-  openllm.utils.analytics.track_start_init(llm.config)
 
-  def next_step(adapter_map: DictStrAny | None, caught_exception: bool = False) -> None:
-    if caught_exception:
-      return
-    cmd_name = f'openllm build {model_id}'
-    if llm._quantise:
-      cmd_name += f' --quantize {llm._quantise}'
-    cmd_name += f' --serialization {serialisation}'
-    if adapter_map is not None:
-      cmd_name += ' ' + ' '.join(
-        [
-          f'--adapter-id {s}'
-          for s in [f'{p}:{name}' if name not in (None, 'default') else p for p, name in adapter_map.items()]
-        ]
-      )
-    if not openllm.utils.get_quiet_mode():
-      termui.info(f"\n🚀 Next step: run '{cmd_name}' to create a BentoLLM for '{model_id}'")
-
-  _exception = False
-  if return_process:
-    server.start(env=start_env, text=True)
-    if server.process is None:
-      raise click.ClickException('Failed to start the server.')
-    return server.process
+def pretty_print(line: str):
+  if 'WARNING' in line:
+    caller = termui.warning
+  elif 'INFO' in line:
+    caller = termui.info
+  elif 'DEBUG' in line:
+    caller = termui.debug
+  elif 'ERROR' in line:
+    caller = termui.error
   else:
-    try:
-      server.start(env=start_env, text=True, blocking=True)
-    except KeyboardInterrupt:
-      _exception = True
-    except Exception as err:
-      termui.error(f'Error caught while running LLM Server:\n{err}')
-      _exception = True
-      raise
-    else:
-      next_step(adapter_map, _exception)
+    caller = caller = functools.partial(termui.echo, fg=None)
+  caller(line.strip())
 
-  # NOTE: Return the configuration for telemetry purposes.
-  return config
+
+def handle(stream, stop_event):
+  try:
+    for line in iter(stream.readline, ''):
+      if stop_event.is_set():
+        break
+      pretty_print(line)
+  finally:
+    stream.close()
+
+
+def run_server(args, env, return_process=False) -> subprocess.Popen[bytes] | int:
+  process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env, text=True)
+  if return_process:
+    return process
+  stop_event = threading.Event()
+  # yapf: disable
+  stdout, stderr = threading.Thread(target=handle, args=(process.stdout, stop_event)), threading.Thread(target=handle, args=(process.stderr, stop_event))
+  stdout.start(); stderr.start()
+
+  try:
+    process.wait()
+  except KeyboardInterrupt:
+    stop_event.set()
+    process.terminate()
+    try:
+      process.wait(0.1)
+    except subprocess.TimeoutExpired:
+      # not sure if the process exits cleanly
+      process.kill()
+    raise
+  finally:
+    stop_event.set()
+    stdout.join(); stderr.join()
+    if process.poll() is not None: process.kill()
+    stdout.join(); stderr.join()
+  # yapf: disable
+
+  return process.returncode
 
 
 class ItemState(enum.Enum):
   NOT_FOUND = 'NOT_FOUND'
+  ADDED = 'ADDED'
   EXISTS = 'EXISTS'
   OVERWRITE = 'OVERWRITE'
 
@@ -808,6 +818,7 @@ def import_command(
     model = openllm.serialisation.import_model(llm, trust_remote_code=llm.trust_remote_code)
     if llm.__llm_backend__ == 'pt' and is_torch_available() and torch.cuda.is_available():
       torch.cuda.empty_cache()
+    state = ItemState.ADDED
   response = ImportModelOutput(state=state, backend=llm.__llm_backend__, tag=str(model.tag))
   termui.echo(orjson.dumps(response).decode(), fg='white')
   return response
@@ -1052,6 +1063,8 @@ def build_command(
           container_registry=container_registry,
           container_version_strategy=container_version_strategy,
         )
+        if state != ItemState.OVERWRITE:
+          state = ItemState.ADDED
   except Exception as err:
     traceback.print_exc()
     raise click.ClickException('Exception caught while building BentoLLM:\n' + str(err)) from err
@@ -1074,10 +1087,10 @@ def build_command(
   if machine:
     termui.echo(f'__object__:{orjson.dumps(response).decode()}\n\n', fg='white')
   elif not get_quiet_mode() and (not push or not containerize):
-    if not overwrite:
-      termui.warning(f"Bento for '{model_id}' already exists [{bento}]. To overwrite it pass '--overwrite'.\n")
-    elif state != ItemState.EXISTS:
+    if state != ItemState.EXISTS:
       termui.info(f"Successfully built Bento '{bento.tag}'.\n")
+    elif not overwrite:
+      termui.warning(f"Bento for '{model_id}' already exists [{bento}]. To overwrite it pass '--overwrite'.\n")
     if not get_debug_mode():
       termui.echo(OPENLLM_FIGLET)
       termui.echo('\n📖 Next steps:\n\n', nl=False)

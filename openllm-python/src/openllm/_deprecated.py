@@ -1,4 +1,5 @@
 from __future__ import annotations
+import logging
 import os
 import typing as t
 import warnings
@@ -6,39 +7,28 @@ import warnings
 import openllm
 
 from openllm_core._typing_compat import LiteralBackend
+from openllm_core._typing_compat import ParamSpec
 from openllm_core.utils import first_not_none
 from openllm_core.utils import is_vllm_available
 
 
-if t.TYPE_CHECKING:
-  from openllm_core import LLMConfig
-  from openllm_core._typing_compat import ParamSpec
+P = ParamSpec('P')
 
-  from ._llm import LLMRunner
-
-  P = ParamSpec('P')
-
-_object_setattr = object.__setattr__
+logger = logging.getLogger(__name__)
 
 
-def _mark_deprecated(fn: t.Callable[P, t.Any]) -> t.Callable[P, t.Any]:
-  _object_setattr(fn, '__deprecated__', True)
-  return fn
-
-
-@_mark_deprecated
 def Runner(
   model_name: str,
   ensure_available: bool = True,
   init_local: bool = False,
   backend: LiteralBackend | None = None,
-  llm_config: LLMConfig | None = None,
+  llm_config: openllm.LLMConfig | None = None,
   **attrs: t.Any,
-) -> LLMRunner[t.Any, t.Any]:
+) -> openllm.LLMRunner[t.Any, t.Any]:
   """Create a Runner for given LLM. For a list of currently supported LLM, check out 'openllm models'.
 
   > [!WARNING]
-  > This method is now deprecated and in favor of 'openllm.LLM.runner'
+  > This method is now deprecated and in favor of 'openllm.LLM'
 
   ```python
   runner = openllm.Runner("dolly-v2")
@@ -65,6 +55,10 @@ def Runner(
 
   if llm_config is None:
     llm_config = openllm.AutoConfig.for_model(model_name)
+  if not ensure_available:
+    logger.warning(
+      "'ensure_available=False' won't have any effect as LLM will always check to download the model on initialisation."
+    )
   model_id = attrs.get('model_id', default=os.getenv('OPENLLM_MODEL_ID', llm_config['default_id']))
   _RUNNER_MSG = f"""\
   Using 'openllm.Runner' is now deprecated. Make sure to switch to the following syntax:
@@ -99,10 +93,4 @@ def Runner(
   return llm.runner
 
 
-_DEPRECATED = {k: v for k, v in locals().items() if getattr(v, '__deprecated__', False)}
-
-__all__ = list(_DEPRECATED)
-
-
-def __dir__() -> list[str]:
-  return sorted(_DEPRECATED.keys())
+__all__ = ['Runner']
