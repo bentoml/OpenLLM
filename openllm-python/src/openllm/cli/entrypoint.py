@@ -363,22 +363,6 @@ def cli() -> None:
   """
 
 
-class StartState(enum.Enum):
-  READY = 'READY'
-  FAILED = 'FAILED'
-  STOPPED = 'STOPPED'
-
-
-def handle(stream, stop_event):
-  while not stop_event.is_set():
-    line = stream.readline()
-    if line:
-      print(line.strip())
-    else:
-      break
-  stream.close()
-
-
 @cli.command(
   context_settings=termui.CONTEXT_SETTINGS,
   name='start',
@@ -420,7 +404,6 @@ def start_command(
   $ openllm <start|start-http> <model_id> --<options> ...
   ```
   """
-  state = StartState.READY
   if model_id in openllm.CONFIG_MAPPING:
     _model_name = model_id
     if deprecated_model_id is not None:
@@ -513,47 +496,15 @@ def start_command(
   server = bentoml.HTTPServer('_service:svc', **server_attrs)
   openllm.utils.analytics.track_start_init(llm.config)
 
-  def next_step(adapter_map, state):
-    cmd_name = f'openllm build {model_id}'
-    if llm._quantise:
-      cmd_name += f' --quantize {llm._quantise}'
-    cmd_name += f' --serialization {serialisation}'
-    if adapter_map is not None:
-      cmd_name += ' ' + ' '.join(
-        [
-          f'--adapter-id {s}'
-          for s in [f'{p}:{name}' if name not in (None, 'default') else p for p, name in adapter_map.items()]
-        ]
-      )
-    if not openllm.utils.get_quiet_mode():
-      termui.info(f"\n\n🚀 Next step: run '{cmd_name}' to create a BentoLLM for '{model_id}'")
-
-  stop_event = threading.Event()
-
-  state = StartState.READY
-  process = subprocess.Popen(server.args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=start_env, text=True)
-
-  # yapf: disable
-  if return_process: return process
-
-  stdout, stderr = threading.Thread(target=handle, args=(process.stdout, stop_event)), threading.Thread(target=handle, args=(process.stderr, stop_event))
-  stdout.start(); stderr.start()
   try:
-    process.wait()
-  except Exception as err:
-    state = StartState.FAILED
-    if err is KeyboardInterrupt: state = StartState.STOPPED
-    stop_event.set()
-    process.terminate()
-  finally:
-    if state == StartState.STOPPED: next_step(adapter_map, state)
-    stdout.join(1); stderr.join(1)
-    if stdout.is_alive() or stderr.is_alive(): process.kill(); stdout.join(); stdout.join()
-  if process.poll() is not None: termui.error(f'Return code: {process.returncode}')
+    it = run_server(server.args, start_env, return_process=return_process)
+    if return_process:
+      return it
+  except KeyboardInterrupt:
+    pass
 
   # NOTE: Return the configuration for telemetry purposes.
   return config
-  # yapf: enable
 
 
 @cli.command(
@@ -694,46 +645,55 @@ def start_grpc_command(
   server = bentoml.GrpcServer('_service:svc', **server_attrs)
   openllm.utils.analytics.track_start_init(llm.config)
 
-  def next_step(adapter_map, state):
-    cmd_name = f'openllm build {model_id}'
-    if llm._quantise:
-      cmd_name += f' --quantize {llm._quantise}'
-    cmd_name += f' --serialization {serialisation}'
-    if adapter_map is not None:
-      cmd_name += ' ' + ' '.join(
-        [
-          f'--adapter-id {s}'
-          for s in [f'{p}:{name}' if name not in (None, 'default') else p for p, name in adapter_map.items()]
-        ]
-      )
-    if not openllm.utils.get_quiet_mode():
-      termui.info(f"\n🚀 Next step: run '{cmd_name}' to create a BentoLLM for '{model_id}'")
-
-  stop_event = threading.Event()
-
-  state = StartState.READY
-  process = subprocess.Popen(server.args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=start_env, text=True)
-
-  # yapf: disable
-  if return_process: return process
-  stdout, stderr = threading.Thread(target=handle, args=(process.stdout, stop_event)), threading.Thread(target=handle, args=(process.stderr, stop_event))
-  stdout.start(); stderr.start()
   try:
-    process.wait()
+    it = run_server(server.args, start_env, return_process=return_process)
+    if return_process:
+      return it
   except KeyboardInterrupt:
-    state = StartState.FAILED
-    stop_event.set()
-    process.terminate()
-  finally:
-    if state != StartState.FAILED: next_step(adapter_map, state)
-    stdout.join(1); stderr.join(1)
-    if stdout.is_alive() or stderr.is_alive():
-      process.kill(); stdout.join(); stderr.join()
-  if process.poll() is not None and process.returncode != 0: termui.error(f'\nReturn code: {process.returncode}')
+    pass
 
   # NOTE: Return the configuration for telemetry purposes.
   return config
-  # yapf: enable
+
+
+def handle(stream, stop_event):
+  try:
+    for line in iter(stream.readline, ''):
+      if stop_event.is_set():
+        break
+      print(line.strip())
+  finally:
+    stream.close()
+
+
+def run_server(args, env, return_process=False) -> subprocess.Popen[bytes] | int:
+  process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env, text=True)
+  if return_process:
+    return process
+  stop_event = threading.Event()
+  # yapf: disable
+  stdout, stderr = threading.Thread(target=handle, args=(process.stdout, stop_event)), threading.Thread(target=handle, args=(process.stderr, stop_event))
+  stdout.start(); stderr.start()
+
+  try:
+    process.wait()
+  except KeyboardInterrupt:
+    stop_event.set()
+    process.terminate()
+    try:
+      process.wait(0.1)
+    except subprocess.TimeoutExpired:
+      # not sure if the process exits cleanly
+      process.kill()
+    raise
+  finally:
+    stop_event.set()
+    stdout.join(); stderr.join()
+    if process.poll() is not None: process.kill()
+    stdout.join(); stderr.join()
+  # yapf: disable
+
+  return process.returncode
 
 
 class ItemState(enum.Enum):
