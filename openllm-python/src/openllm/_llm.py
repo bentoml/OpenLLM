@@ -9,7 +9,6 @@ import typing as t
 import attr
 import inflection
 import orjson
-import transformers
 
 from huggingface_hub import hf_hub_download
 
@@ -57,6 +56,7 @@ from .serialisation.constants import PEFT_CONFIG_NAME
 
 if t.TYPE_CHECKING:
   import peft
+  import transformers
 
   from bentoml._internal.runner.runnable import RunnableMethod
   from bentoml._internal.runner.runner import RunnerMethod
