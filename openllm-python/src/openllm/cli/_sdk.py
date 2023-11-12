@@ -18,8 +18,10 @@ import openllm_core
 from bentoml._internal.configuration.containers import BentoMLContainer
 from openllm_core._typing_compat import LiteralSerialisation
 from openllm_core.exceptions import OpenLLMException
+from openllm_core.utils import WARNING_ENV_VAR
 from openllm_core.utils import codegen
 from openllm_core.utils import first_not_none
+from openllm_core.utils import get_disable_warnings
 from openllm_core.utils import is_vllm_available
 
 
@@ -197,11 +199,8 @@ def _build(
     model_id,
     '--machine',
     '--serialisation',
-    t.cast(
-      LiteralSerialisation,
-      first_not_none(
-        serialisation, default='safetensors' if has_safetensors_weights(model_id, model_version) else 'legacy'
-      ),
+    first_not_none(
+      serialisation, default='safetensors' if has_safetensors_weights(model_id, model_version) else 'legacy'
     ),
   ]
   if quantize:
@@ -237,7 +236,11 @@ def _build(
   args.extend(['--container-registry', container_registry, '--container-version-strategy', container_version_strategy])
   if additional_args:
     args.extend(additional_args)
+  if force_push:
+    args.append('--force-push')
 
+  current_disable_warning = get_disable_warnings()
+  os.environ[WARNING_ENV_VAR] = str(True)
   try:
     output = subprocess.check_output(args, env=os.environ.copy(), cwd=build_ctx or os.getcwd())
   except subprocess.CalledProcessError as e:
@@ -250,6 +253,7 @@ def _build(
     raise ValueError(
       f"Failed to find tag from output: {output.decode('utf-8').strip()}\nNote: Output from 'openllm build' might not be correct. Please open an issue on GitHub."
     )
+  os.environ[WARNING_ENV_VAR] = str(current_disable_warning)
   try:
     result = orjson.loads(matched.group(1))
   except orjson.JSONDecodeError as e:

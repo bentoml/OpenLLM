@@ -11,7 +11,6 @@ import orjson
 
 from openllm_core._typing_compat import DictStrAny
 from openllm_core.utils import get_debug_mode
-from openllm_core.utils import get_quiet_mode
 
 
 logger = logging.getLogger('openllm')
@@ -53,7 +52,10 @@ class JsonLog(t.TypedDict):
 
 
 def log(content: str, level: Level = Level.INFO, fg: str | None = None) -> None:
-  echo(orjson.dumps(JsonLog(log_level=level, content=content)).decode(), fg=fg, json=True)
+  if get_debug_mode():
+    echo(content, fg=fg)
+  else:
+    echo(orjson.dumps(JsonLog(log_level=level, content=content)).decode(), fg=fg, json=True)
 
 
 warning = functools.partial(log, level=Level.WARNING)
@@ -64,7 +66,7 @@ info = functools.partial(log, level=Level.INFO)
 notset = functools.partial(log, level=Level.NOTSET)
 
 
-def echo(text: t.Any, fg: str | None = None, _with_style: bool = True, json: bool = False, **attrs: t.Any) -> None:
+def echo(text: t.Any, fg: str | None = None, *, _with_style: bool = True, json: bool = False, **attrs: t.Any) -> None:
   if json:
     text = orjson.loads(text)
     if 'content' in text and 'log_level' in text:
@@ -77,8 +79,7 @@ def echo(text: t.Any, fg: str | None = None, _with_style: bool = True, json: boo
     content = t.cast(str, text)
   attrs['fg'] = fg
 
-  if not get_quiet_mode():
-    t.cast(t.Callable[..., None], click.echo if not _with_style else click.secho)(content, **attrs)
+  (click.echo if not _with_style else click.secho)(content, **attrs)
 
 
 COLUMNS: int = int(os.environ.get('COLUMNS', str(120)))

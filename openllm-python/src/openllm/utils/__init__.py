@@ -40,6 +40,7 @@ if t.TYPE_CHECKING:
   from openllm_core.utils import generate_context as generate_context
   from openllm_core.utils import generate_hash_from_file as generate_hash_from_file
   from openllm_core.utils import get_debug_mode as get_debug_mode
+  from openllm_core.utils import get_disable_warnings as get_disable_warnings
   from openllm_core.utils import get_quiet_mode as get_quiet_mode
   from openllm_core.utils import in_notebook as in_notebook
   from openllm_core.utils import is_autoawq_available as is_autoawq_available
@@ -61,6 +62,7 @@ if t.TYPE_CHECKING:
   from openllm_core.utils import resolve_user_filepath as resolve_user_filepath
   from openllm_core.utils import serde as serde
   from openllm_core.utils import set_debug_mode as set_debug_mode
+  from openllm_core.utils import set_disable_warnings as set_disable_warnings
   from openllm_core.utils import set_quiet_mode as set_quiet_mode
   from openllm_core.utils import validate_is_path as validate_is_path
   from openllm_core.utils.serde import converter as converter

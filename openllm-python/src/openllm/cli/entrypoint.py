@@ -77,6 +77,7 @@ from openllm_core.utils import compose
 from openllm_core.utils import configure_logging
 from openllm_core.utils import first_not_none
 from openllm_core.utils import get_debug_mode
+from openllm_core.utils import get_disable_warnings
 from openllm_core.utils import get_quiet_mode
 from openllm_core.utils import is_torch_available
 from openllm_core.utils import resolve_user_filepath
@@ -141,19 +142,22 @@ _object_setattr = object.__setattr__
 _EXT_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), 'extension'))
 
 
-def backend_warning(backend: LiteralBackend):
-  if backend == 'pt' and check_bool_env('OPENLLM_BACKEND_WARNING') and not get_quiet_mode():
+def backend_warning(backend: LiteralBackend, build: bool = False) -> None:
+  if backend == 'pt' and (not get_disable_warnings()) and not get_quiet_mode():
     if openllm.utils.is_vllm_available():
       termui.warning(
-        '\nvLLM is available, but using PyTorch backend instead. Note that vLLM is a lot more performant and should always be used in production (by explicitly set --backend vllm).'
+        'vLLM is available, but using PyTorch backend instead. Note that vLLM is a lot more performant and should always be used in production (by explicitly set --backend vllm).'
       )
     else:
       termui.warning(
-        '\nvLLM is not available. Note that PyTorch backend is not as performant as vLLM and you should always consider using vLLM for production.'
+        'vLLM is not available. Note that PyTorch backend is not as performant as vLLM and you should always consider using vLLM for production.'
       )
-    termui.debug(
-      content="\nTip: if you are running 'openllm build' you can set '--backend vllm' to package your Bento with vLLM backend. To hide these messages, set 'OPENLLM_BACKEND_WARNING=False'\n"
-    )
+    if build:
+      termui.info(
+        "Tip: You can set '--backend vllm' to package your Bento with vLLM backend regardless if vLLM is available locally."
+      )
+    if not get_debug_mode():
+      termui.info("To disable these warnings, set 'OPENLLM_DISABLE_WARNING=True'")
 
 
 class Extensions(click.MultiCommand):
@@ -425,13 +429,14 @@ def start_command(
       serialisation, default='safetensors' if has_safetensors_weights(model_id, model_version) else 'legacy'
     ),
   )
-  if serialisation == 'safetensors' and quantize is not None and check_bool_env('OPENLLM_SERIALIZATION_WARNING'):
-    termui.warning(
-      f"'--quantize={quantize}' might not work with 'safetensors' serialisation format. To silence this warning, set \"OPENLLM_SERIALIZATION_WARNING=False\"\nNote: You can always fallback to '--serialisation legacy' when running quantisation."
-    )
+  if serialisation == 'safetensors' and quantize is not None and not get_disable_warnings() and not get_quiet_mode():
+    termui.warning(f"'--quantize={quantize}' might not work with 'safetensors' serialisation format.")
     termui.warning(
       f"Make sure to check out '{model_id}' repository to see if the weights is in '{serialisation}' format if unsure."
     )
+    termui.info("Tip: You can always fallback to '--serialisation legacy' when running quantisation.")
+    if not get_debug_mode():
+      termui.info("To disable these warnings, set 'OPENLLM_DISABLE_WARNING=True'")
 
   llm = openllm.LLM[t.Any, t.Any](
     model_id=model_id,
@@ -542,19 +547,17 @@ def start_grpc_command(
 
   from ..serialisation.transformers.weights import has_safetensors_weights
 
-  serialisation = t.cast(
-    LiteralSerialisation,
-    first_not_none(
-      serialisation, default='safetensors' if has_safetensors_weights(model_id, model_version) else 'legacy'
-    ),
+  serialisation = first_not_none(
+    serialisation, default='safetensors' if has_safetensors_weights(model_id, model_version) else 'legacy'
   )
-  if serialisation == 'safetensors' and quantize is not None and check_bool_env('OPENLLM_SERIALIZATION_WARNING'):
-    termui.warning(
-      f"'--quantize={quantize}' might not work with 'safetensors' serialisation format. To silence this warning, set \"OPENLLM_SERIALIZATION_WARNING=False\"\nNote: You can always fallback to '--serialisation legacy' when running quantisation."
-    )
+  if serialisation == 'safetensors' and quantize is not None and not get_disable_warnings() and not get_quiet_mode():
+    termui.warning(f"'--quantize={quantize}' might not work with 'safetensors' serialisation format.")
     termui.warning(
       f"Make sure to check out '{model_id}' repository to see if the weights is in '{serialisation}' format if unsure."
     )
+    termui.info("Tip: You can always fallback to '--serialisation legacy' when running quantisation.")
+    if not get_debug_mode():
+      termui.info("To disable these warnings, set 'OPENLLM_DISABLE_WARNING=True'")
 
   llm = openllm.LLM[t.Any, t.Any](
     model_id=model_id,
@@ -824,9 +827,26 @@ def import_command(
   return response
 
 
-class DeploymentInstruction(t.TypedDict):
+@attr.define(auto_attribs=True)
+class _Content:
+  instr: str
+  cmd: str
+
+  def __str__(self) -> str:
+    return self.instr.format(cmd=self.cmd)
+
+
+@attr.define(auto_attribs=True)
+class DeploymentInstruction:
   type: t.Literal['container', 'bentocloud']
-  content: str
+  content: _Content
+
+  @classmethod
+  def from_content(cls, type: t.Literal['container', 'bentocloud'], instr: str, cmd: str) -> DeploymentInstruction:
+    return cls(type=type, content=_Content(instr=instr, cmd=cmd))
+
+  def __getitem__(self, key: str) -> str:
+    return getattr(self, key)
 
 
 class BuildBentoOutput(t.TypedDict):
@@ -985,7 +1005,7 @@ def build_command(
       ),
     ),
   )
-  backend_warning(llm.__llm_backend__)
+  backend_warning(llm.__llm_backend__, build=True)
 
   os.environ.update(
     {
@@ -1069,21 +1089,36 @@ def build_command(
     traceback.print_exc()
     raise click.ClickException('Exception caught while building BentoLLM:\n' + str(err)) from err
 
+  def get_current_bentocloud_context() -> str:
+    passed = t.cast(t.Optional[str], ctx.obj.cloud_context)
+    if passed:
+      return passed
+    else:
+      return t.cast(
+        str, orjson.loads(subprocess.check_output(['bentoml', 'cloud', 'current-context'], env=os.environ))['name']
+      )
+
   response = BuildBentoOutput(
     state=state,
     tag=str(bento_tag),
     backend=llm.__llm_backend__,
     instructions=[
-      DeploymentInstruction(
-        type='bentocloud', content=f"Push to BentoCloud with 'bentoml push': `bentoml push {bento_tag}`"
+      DeploymentInstruction.from_content(
+        type='bentocloud',
+        instr="☁️  Push to BentoCloud with 'bentoml push':\n    $ {cmd}",
+        cmd=f'bentoml push {bento_tag} --context {get_current_bentocloud_context()}',
       ),
-      DeploymentInstruction(
+      DeploymentInstruction.from_content(
         type='container',
-        content=f"Container BentoLLM with 'bentoml containerize': `bentoml containerize {bento_tag} --opt progress=plain`",
+        instr="🐳 Container BentoLLM with 'bentoml containerize':\n    $ {cmd}",
+        cmd=f'bentoml containerize {bento_tag} --opt progress=plain',
       ),
     ],
   )
 
+  plain_instruction = {i.type: i['content'].cmd for i in response['instructions']}
+  if machine or get_debug_mode():
+    response['instructions'] = plain_instruction
   if machine:
     termui.echo(f'__object__:{orjson.dumps(response).decode()}\n\n', fg='white')
   elif not get_quiet_mode() and (not push or not containerize):
@@ -1093,9 +1128,9 @@ def build_command(
       termui.warning(f"Bento for '{model_id}' already exists [{bento}]. To overwrite it pass '--overwrite'.\n")
     if not get_debug_mode():
       termui.echo(OPENLLM_FIGLET)
-      termui.echo('\n📖 Next steps:\n\n', nl=False)
+      termui.echo('📖 Next steps:\n', nl=False)
       for instruction in response['instructions']:
-        termui.echo(f"* {instruction['content']}\n", nl=False)
+        termui.echo(f"  * {instruction['content']}\n", nl=False)
 
   if push:
     BentoMLContainer.bentocloud_client.get().push_bento(
@@ -1112,7 +1147,6 @@ def build_command(
     except Exception as err:
       raise OpenLLMException(f"Exception caught while containerizing '{bento.tag!s}':\n{err}") from err
 
-  response.pop('instructions')
   if get_debug_mode():
     termui.echo('\n' + orjson.dumps(response).decode(), fg=None)
   return response
