@@ -1,5 +1,4 @@
 from __future__ import annotations
-import asyncio
 import importlib.metadata
 import logging
 import os
@@ -145,13 +144,6 @@ class AsyncHTTPClient(AsyncClient):
     if env is not None:
       return {'Authorization': f'Bearer {env}'}
     return super()._build_auth_headers()
-
-  @property
-  def _loop(self) -> asyncio.AbstractEventLoop:
-    try:
-      return asyncio.get_running_loop()
-    except RuntimeError:
-      return asyncio.get_event_loop()
 
   @property
   async def _metadata(self) -> t.Awaitable[MetadataOutput]:

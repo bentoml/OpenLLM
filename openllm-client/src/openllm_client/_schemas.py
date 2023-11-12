@@ -8,9 +8,26 @@ import orjson
 from ._utils import converter
 
 
+if t.TYPE_CHECKING:
+  from ._typing_compat import Self
+
+
+@attr.define
+class _SchemaMixin:
+  def model_dump(self) -> t.Dict[str, t.Any]:
+    return cattr.unstructure(self)
+
+  def model_dump_json(self) -> str:
+    return orjson.dumps(self.model_dump()).decode('utf-8')
+
+  @classmethod
+  def model_construct(cls, data: t.Dict[str, t.Any]) -> Self:
+    return cattr.structure(data, cls)
+
+
 # XXX: sync with openllm-core/src/openllm_core/_schemas.py
 @attr.define
-class MetadataOutput:
+class MetadataOutput(_SchemaMixin):
   model_id: str
   timeout: int
   model_name: str
@@ -45,18 +62,11 @@ converter.register_structure_hook(MetadataOutput, _structure_metadata)
 
 
 @attr.define
-class Request:
+class Request(_SchemaMixin):
   prompt: str
   llm_config: t.Dict[str, t.Any]
   stop: t.Optional[t.Union[str, t.List[str]]] = attr.field(default=None)
   adapter_name: t.Optional[str] = attr.field(default=None)
-
-  def model_dump_json(self) -> t.Dict[str, t.Any]:
-    return cattr.unstructure(self)
-
-  @classmethod
-  def model_construct(cls, data: t.Dict[str, t.Any]) -> Request:
-    return cattr.structure(data, cls)
 
 
 SampleLogprobs = t.List[t.Dict[int, float]]
@@ -65,7 +75,7 @@ FinishReason = t.Literal['length', 'stop']
 
 
 @attr.define
-class CompletionChunk:
+class CompletionChunk(_SchemaMixin):
   index: int
   text: str
   token_ids: t.List[int]
@@ -75,7 +85,7 @@ class CompletionChunk:
 
 
 @attr.define
-class Response:
+class Response(_SchemaMixin):
   prompt: str
   finished: bool
   request_id: str
@@ -83,16 +93,12 @@ class Response:
   prompt_token_ids: t.Optional[t.List[int]] = attr.field(default=None)
   prompt_logprobs: t.Optional[PromptLogprobs] = attr.field(default=None)
 
-  def model_dump_json(self) -> t.Dict[str, t.Any]:
-    return cattr.unstructure(self)
-
-  @classmethod
-  def model_construct(cls, data: t.Dict[str, t.Any]) -> Response:
-    return cattr.structure(data, cls)
+  def model_dump_json(self) -> str:
+    return orjson.dumps(self.model_dump(), option=orjson.OPT_NON_STR_KEYS).decode('utf-8')
 
 
 @attr.define
-class StreamingResponse:
+class StreamingResponse(_SchemaMixin):
   request_id: str
   index: int
   text: str
@@ -106,10 +112,3 @@ class StreamingResponse:
       text=response.outputs[0].text,
       token_ids=response.outputs[0].token_ids[0],
     )
-
-  def model_dump_json(self) -> t.Dict[str, t.Any]:
-    return cattr.unstructure(self)
-
-  @classmethod
-  def model_construct(cls, data: t.Dict[str, t.Any]) -> StreamingResponse:
-    return cattr.structure(data, cls)

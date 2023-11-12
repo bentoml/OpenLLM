@@ -67,5 +67,35 @@ def metadata_v1(_: str) -> openllm.MetadataOutput:
   return _Metadata
 
 
+class MessagesConverterInput(t.TypedDict):
+  add_generation_prompt: bool
+  messages: t.List[t.Dict[str, t.Any]]
+
+
+class MessageParam(t.TypedDict):
+  role: t.Literal['system', 'user', 'assistant']
+  content: str
+
+
+@svc.api(
+  route='/v1/helpers/messages',
+  input=JSON.from_sample(
+    MessagesConverterInput(
+      add_generation_prompt=False,
+      messages=[
+        MessageParam(role='system', content='You are acting as Ernest Hemmingway.'),
+        MessageParam(role='user', content='Hi there!'),
+        MessageParam(role='assistant', content='Yes?'),
+      ],
+    )
+  ),
+  output=Text(),
+)
+def helpers_messages_v1(message: MessagesConverterInput) -> str:
+  add_generation_prompt = message['add_generation_prompt']
+  messages = message['messages']
+  return llm.tokenizer.apply_chat_template(messages, add_generation_prompt=add_generation_prompt, tokenize=False)
+
+
 # HACK: This must always be the last line in this file, as we will do some MK for OpenAPI schema.
 openllm.mount_entrypoints(svc, llm)
