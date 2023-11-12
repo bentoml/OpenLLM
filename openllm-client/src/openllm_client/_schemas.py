@@ -2,15 +2,24 @@ from __future__ import annotations
 import typing as t
 
 import attr
-import cattr
 import orjson
+
+from openllm_core._schemas import CompletionChunk as CompletionChunk
+from openllm_core._schemas import GenerationOutput as Response  # backward compatibility
+from openllm_core._schemas import _SchemaMixin as _SchemaMixin
 
 from ._utils import converter
 
 
-# XXX: sync with openllm-core/src/openllm_core/_schemas.py
+__all__ = ['Response', 'CompletionChunk', 'Metadata', 'StreamingResponse']
+
+
 @attr.define
-class MetadataOutput:
+class Metadata(_SchemaMixin):
+  """NOTE: Metadata is a modified version of the original MetadataOutput from openllm-core.
+
+  The configuration is now structured into a dictionary for easy of use."""
+
   model_id: str
   timeout: int
   model_name: str
@@ -20,7 +29,7 @@ class MetadataOutput:
   system_message: t.Optional[str]
 
 
-def _structure_metadata(data: t.Dict[str, t.Any], cls: type[MetadataOutput]) -> MetadataOutput:
+def _structure_metadata(data: t.Dict[str, t.Any], cls: type[Metadata]) -> Metadata:
   try:
     configuration = orjson.loads(data['configuration'])
     generation_config = configuration.pop('generation_config')
@@ -41,58 +50,11 @@ def _structure_metadata(data: t.Dict[str, t.Any], cls: type[MetadataOutput]) -> 
     raise RuntimeError(f'Malformed metadata (Server-side issue): {e}') from None
 
 
-converter.register_structure_hook(MetadataOutput, _structure_metadata)
+converter.register_structure_hook(Metadata, _structure_metadata)
 
 
 @attr.define
-class Request:
-  prompt: str
-  llm_config: t.Dict[str, t.Any]
-  stop: t.Optional[t.Union[str, t.List[str]]] = attr.field(default=None)
-  adapter_name: t.Optional[str] = attr.field(default=None)
-
-  def model_dump_json(self) -> t.Dict[str, t.Any]:
-    return cattr.unstructure(self)
-
-  @classmethod
-  def model_construct(cls, data: t.Dict[str, t.Any]) -> Request:
-    return cattr.structure(data, cls)
-
-
-SampleLogprobs = t.List[t.Dict[int, float]]
-PromptLogprobs = t.List[t.Optional[t.Dict[int, float]]]
-FinishReason = t.Literal['length', 'stop']
-
-
-@attr.define
-class CompletionChunk:
-  index: int
-  text: str
-  token_ids: t.List[int]
-  cumulative_logprob: float
-  logprobs: t.Optional[SampleLogprobs] = None
-  finish_reason: t.Optional[FinishReason] = None
-
-
-@attr.define
-class Response:
-  prompt: str
-  finished: bool
-  request_id: str
-  outputs: t.List[CompletionChunk]
-  prompt_token_ids: t.Optional[t.List[int]] = attr.field(default=None)
-  prompt_logprobs: t.Optional[PromptLogprobs] = attr.field(default=None)
-
-  def model_dump_json(self) -> t.Dict[str, t.Any]:
-    return cattr.unstructure(self)
-
-  @classmethod
-  def model_construct(cls, data: t.Dict[str, t.Any]) -> Response:
-    return cattr.structure(data, cls)
-
-
-@attr.define
-class StreamingResponse:
+class StreamingResponse(_SchemaMixin):
   request_id: str
   index: int
   text: str
@@ -106,10 +68,3 @@ class StreamingResponse:
       text=response.outputs[0].text,
       token_ids=response.outputs[0].token_ids[0],
     )
-
-  def model_dump_json(self) -> t.Dict[str, t.Any]:
-    return cattr.unstructure(self)
-
-  @classmethod
-  def model_construct(cls, data: t.Dict[str, t.Any]) -> StreamingResponse:
-    return cattr.structure(data, cls)
