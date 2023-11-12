@@ -93,7 +93,7 @@ __all__ = ['generate_labels', 'available_devices', 'device_count']
 
 
 def __dir__() -> t.Sequence[str]:
-  return sorted(__all__)
+  return sorted(__all__) + sorted(dir(openllm_core.utils))
 
 
 def __getattr__(it: str) -> t.Any:

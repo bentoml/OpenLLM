@@ -6,7 +6,7 @@ import typing as t
 
 import attr
 
-from ._schemas import MetadataOutput
+from ._schemas import Metadata
 from ._schemas import Response
 from ._schemas import StreamingResponse
 from ._shim import MAX_RETRIES
@@ -27,7 +27,7 @@ def _address_converter(addr: str):
 class HTTPClient(Client):
   _api_version: str = 'v1'
   _verify: bool = True
-  __metadata: MetadataOutput | None = None
+  __metadata: Metadata | None = None
   __config: dict[str, t.Any] | None = None
 
   def __repr__(self):
@@ -54,9 +54,7 @@ class HTTPClient(Client):
   def _metadata(self):
     if self.__metadata is None:
       path = f'/{self._api_version}/metadata'
-      self.__metadata = self._post(
-        path, response_cls=MetadataOutput, json={}, options={'max_retries': self._max_retries}
-      )
+      self.__metadata = self._post(path, response_cls=Metadata, json={}, options={'max_retries': self._max_retries})
     return self.__metadata
 
   @property
@@ -92,6 +90,7 @@ class HTTPClient(Client):
       f'/{self._api_version}/generate',
       response_cls=Response,
       json=dict(prompt=prompt, llm_config=llm_config, stop=stop, adapter_name=adapter_name),
+      options={'max_retries': self._max_retries},
     )
 
   def generate_stream(
@@ -117,6 +116,7 @@ class HTTPClient(Client):
       f'/{self._api_version}/generate_stream',
       response_cls=Response,
       json=dict(prompt=prompt, llm_config=llm_config, stop=stop, adapter_name=adapter_name),
+      options={'max_retries': self._max_retries},
       stream=True,
     )
 
@@ -125,7 +125,7 @@ class HTTPClient(Client):
 class AsyncHTTPClient(AsyncClient):
   _api_version: str = 'v1'
   _verify: bool = True
-  __metadata: MetadataOutput | None = None
+  __metadata: Metadata | None = None
   __config: dict[str, t.Any] | None = None
 
   def __repr__(self):
@@ -146,13 +146,10 @@ class AsyncHTTPClient(AsyncClient):
     return super()._build_auth_headers()
 
   @property
-  async def _metadata(self) -> t.Awaitable[MetadataOutput]:
+  async def _metadata(self) -> t.Awaitable[Metadata]:
     if self.__metadata is None:
       self.__metadata = await self._post(
-        f'/{self._api_version}/metadata',
-        response_cls=MetadataOutput,
-        json={},
-        options={'max_retries': self._max_retries},
+        f'/{self._api_version}/metadata', response_cls=Metadata, json={}, options={'max_retries': self._max_retries}
       )
     return self.__metadata
 
@@ -190,6 +187,7 @@ class AsyncHTTPClient(AsyncClient):
       f'/{self._api_version}/generate',
       response_cls=Response,
       json=dict(prompt=prompt, llm_config=llm_config, stop=stop, adapter_name=adapter_name),
+      options={'max_retries': self._max_retries},
     )
 
   async def generate_stream(
@@ -220,6 +218,7 @@ class AsyncHTTPClient(AsyncClient):
       f'/{self._api_version}/generate_stream',
       response_cls=Response,
       json=dict(prompt=prompt, llm_config=llm_config, stop=stop, adapter_name=adapter_name),
+      options={'max_retries': self._max_retries},
       stream=True,
     ):
       yield response_chunk

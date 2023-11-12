@@ -2,32 +2,24 @@ from __future__ import annotations
 import typing as t
 
 import attr
-import cattr
 import orjson
+
+from openllm_core._schemas import CompletionChunk as CompletionChunk
+from openllm_core._schemas import GenerationOutput as Response  # backward compatibility
+from openllm_core._schemas import _SchemaMixin as _SchemaMixin
 
 from ._utils import converter
 
 
-if t.TYPE_CHECKING:
-  from ._typing_compat import Self
+__all__ = ['Response', 'CompletionChunk', 'Metadata', 'StreamingResponse']
 
 
 @attr.define
-class _SchemaMixin:
-  def model_dump(self) -> t.Dict[str, t.Any]:
-    return cattr.unstructure(self)
+class Metadata(_SchemaMixin):
+  """NOTE: Metadata is a modified version of the original MetadataOutput from openllm-core.
 
-  def model_dump_json(self) -> str:
-    return orjson.dumps(self.model_dump()).decode('utf-8')
+  The configuration is now structured into a dictionary for easy of use."""
 
-  @classmethod
-  def model_construct(cls, data: t.Dict[str, t.Any]) -> Self:
-    return cattr.structure(data, cls)
-
-
-# XXX: sync with openllm-core/src/openllm_core/_schemas.py
-@attr.define
-class MetadataOutput(_SchemaMixin):
   model_id: str
   timeout: int
   model_name: str
@@ -37,7 +29,7 @@ class MetadataOutput(_SchemaMixin):
   system_message: t.Optional[str]
 
 
-def _structure_metadata(data: t.Dict[str, t.Any], cls: type[MetadataOutput]) -> MetadataOutput:
+def _structure_metadata(data: t.Dict[str, t.Any], cls: type[Metadata]) -> Metadata:
   try:
     configuration = orjson.loads(data['configuration'])
     generation_config = configuration.pop('generation_config')
@@ -58,43 +50,7 @@ def _structure_metadata(data: t.Dict[str, t.Any], cls: type[MetadataOutput]) -> 
     raise RuntimeError(f'Malformed metadata (Server-side issue): {e}') from None
 
 
-converter.register_structure_hook(MetadataOutput, _structure_metadata)
-
-
-@attr.define
-class Request(_SchemaMixin):
-  prompt: str
-  llm_config: t.Dict[str, t.Any]
-  stop: t.Optional[t.Union[str, t.List[str]]] = attr.field(default=None)
-  adapter_name: t.Optional[str] = attr.field(default=None)
-
-
-SampleLogprobs = t.List[t.Dict[int, float]]
-PromptLogprobs = t.List[t.Optional[t.Dict[int, float]]]
-FinishReason = t.Literal['length', 'stop']
-
-
-@attr.define
-class CompletionChunk(_SchemaMixin):
-  index: int
-  text: str
-  token_ids: t.List[int]
-  cumulative_logprob: float
-  logprobs: t.Optional[SampleLogprobs] = None
-  finish_reason: t.Optional[FinishReason] = None
-
-
-@attr.define
-class Response(_SchemaMixin):
-  prompt: str
-  finished: bool
-  request_id: str
-  outputs: t.List[CompletionChunk]
-  prompt_token_ids: t.Optional[t.List[int]] = attr.field(default=None)
-  prompt_logprobs: t.Optional[PromptLogprobs] = attr.field(default=None)
-
-  def model_dump_json(self) -> str:
-    return orjson.dumps(self.model_dump(), option=orjson.OPT_NON_STR_KEYS).decode('utf-8')
+converter.register_structure_hook(Metadata, _structure_metadata)
 
 
 @attr.define

@@ -395,31 +395,39 @@ _extras: dict[str, t.Any] = {
   if k in _whitelist_modules or (not isinstance(v, types.ModuleType) and not k.startswith('_'))
 }
 _extras['__openllm_migration__'] = {'bentoml_cattr': 'converter'}
-_import_structure: dict[str, list[str]] = {
-  'analytics': [],
-  'codegen': [],
-  'dantic': [],
-  'lazy': [],
-  'pkg': [],
-  'representation': ['ReprMixin'],
-  'serde': ['converter'],
-  'import_utils': [
-    'OPTIONAL_DEPENDENCIES',
-    'is_vllm_available',
-    'is_torch_available',
-    'is_bitsandbytes_available',
-    'is_peft_available',
-    'is_jupyter_available',
-    'is_jupytext_available',
-    'is_notebook_available',
-    'is_autogptq_available',
-    'is_grpc_available',
-    'is_transformers_available',
-    'is_optimum_supports_gptq',
-    'is_autoawq_available',
-    'is_bentoml_available',
-  ],
-}
+__lazy = LazyModule(
+  __name__,
+  globals()['__file__'],
+  {
+    'analytics': [],
+    'codegen': [],
+    'dantic': [],
+    'lazy': [],
+    'pkg': [],
+    'representation': ['ReprMixin'],
+    'serde': ['converter'],
+    'import_utils': [
+      'OPTIONAL_DEPENDENCIES',
+      'is_vllm_available',
+      'is_torch_available',
+      'is_bitsandbytes_available',
+      'is_peft_available',
+      'is_jupyter_available',
+      'is_jupytext_available',
+      'is_notebook_available',
+      'is_autogptq_available',
+      'is_grpc_available',
+      'is_transformers_available',
+      'is_optimum_supports_gptq',
+      'is_autoawq_available',
+      'is_bentoml_available',
+    ],
+  },
+  extra_objects=_extras,
+)
+__all__ = __lazy.__all__
+__dir__ = __lazy.__dir__
+__getattr__ = __lazy.__getattr__
 
 if t.TYPE_CHECKING:
   # NOTE: The following exports useful utils from bentoml
@@ -443,8 +451,3 @@ if t.TYPE_CHECKING:
   from .import_utils import is_vllm_available as is_vllm_available
   from .representation import ReprMixin as ReprMixin
   from .serde import converter as converter
-
-__lazy = LazyModule(__name__, globals()['__file__'], _import_structure, extra_objects=_extras)
-__all__ = __lazy.__all__
-__dir__ = __lazy.__dir__
-__getattr__ = __lazy.__getattr__

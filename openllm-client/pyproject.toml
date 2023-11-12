@@ -13,14 +13,9 @@ authors = [
 ]
 dynamic = ['readme', 'version']
 classifiers = [
-  "Development Status :: 5 - Production/Stable",
-  "Environment :: GPU :: NVIDIA CUDA",
-  "Environment :: GPU :: NVIDIA CUDA :: 12",
-  "Environment :: GPU :: NVIDIA CUDA :: 11.8",
-  "Environment :: GPU :: NVIDIA CUDA :: 11.7",
+  "Development Status :: 4 - Beta",
   "License :: OSI Approved :: Apache Software License",
   "Topic :: Scientific/Engineering",
-  "Topic :: Scientific/Engineering :: Artificial Intelligence",
   "Topic :: Software Development :: Libraries",
   "Operating System :: OS Independent",
   "Intended Audience :: Developers",
@@ -57,7 +52,7 @@ keywords = [
   "PyTorch",
   "Transformers",
 ]
-dependencies = ["orjson", "httpx", "attrs>=23.1.0", "cattrs>=23.1.0", 'distro', 'anyio']
+dependencies = ["openllm-core", "httpx", "distro", "anyio"]
 license = "Apache-2.0"
 name = "openllm-client"
 requires-python = ">=3.8"
