@@ -134,6 +134,9 @@ class APIResponse(t.Generic[Response]):
       stream_cls = self._stream_cls or self._client._default_stream_cls
       return stream_cls(response_cls=self._response_cls, response=self._raw_response, client=self._client)
 
+    if self._response_cls is str:
+      return self._raw_response.text
+
     content_type, *_ = self._raw_response.headers.get('content-type', '').split(';')
     if content_type != 'application/json':
       # Since users specific different content_type, then we return the raw binary text without and deserialisation
