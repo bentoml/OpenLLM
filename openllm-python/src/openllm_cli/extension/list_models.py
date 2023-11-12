@@ -9,9 +9,9 @@ import bentoml
 import openllm
 
 from bentoml._internal.utils import human_readable_size
-from openllm.cli import termui
-from openllm.cli._factory import model_complete_envvar
-from openllm.cli._factory import model_name_argument
+from openllm_cli import termui
+from openllm_cli._factory import model_complete_envvar
+from openllm_cli._factory import model_name_argument
 
 
 if t.TYPE_CHECKING:

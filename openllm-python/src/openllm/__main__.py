@@ -8,6 +8,6 @@ To start any OpenLLM model:
 """
 
 if __name__ == '__main__':
-  from openllm.cli.entrypoint import cli
+  from openllm_cli.entrypoint import cli
 
   cli()

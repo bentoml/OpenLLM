@@ -8,6 +8,7 @@ on:
       - '*'
     paths:
       - 'openllm-python/src/openllm/**'
+      - 'openllm-python/src/openllm_cli/**'
       - 'openllm-core/src/openllm_core/**'
       - 'openllm-client/src/openllm_client/**'
   pull_request:
@@ -15,6 +16,7 @@ on:
       - 'main'
     paths:
       - 'openllm-python/src/openllm/**'
+      - 'openllm-python/src/openllm_cli/**'
       - 'openllm-core/src/openllm_core/**'
       - 'openllm-client/src/openllm_client/**'
     types: [labeled, opened, synchronize, reopened]

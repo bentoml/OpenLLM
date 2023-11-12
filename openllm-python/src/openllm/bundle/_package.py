@@ -130,7 +130,7 @@ def construct_docker_options(
   container_registry: LiteralContainerRegistry,
   container_version_strategy: LiteralContainerVersionStrategy,
 ) -> DockerOptions:
-  from openllm.cli._factory import parse_config_options
+  from openllm_cli._factory import parse_config_options
 
   environ = parse_config_options(llm.config, llm.config['timeout'], 1.0, None, True, os.environ.copy())
   env_dict = {
