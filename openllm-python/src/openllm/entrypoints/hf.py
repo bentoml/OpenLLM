@@ -14,8 +14,6 @@ from starlette.routing import Route
 
 from openllm_core.utils import converter
 
-from ._openapi import HF_ADAPTERS_SCHEMA
-from ._openapi import HF_AGENT_SCHEMA
 from ._openapi import add_schema_definitions
 from ._openapi import append_schemas
 from ._openapi import get_generator
@@ -54,7 +52,7 @@ def mount_to_svc(svc: bentoml.Service, llm: openllm.LLM[M, T]) -> bentoml.Servic
     debug=True,
     routes=[
       Route('/agent', endpoint=functools.partial(hf_agent, llm=llm), name='hf_agent', methods=['POST']),
-      Route('/adapters', endpoint=functools.partial(adapters_map, llm=llm), name='adapters', methods=['GET']),
+      Route('/adapters', endpoint=functools.partial(hf_adapters, llm=llm), name='adapters', methods=['GET']),
       Route('/schema', endpoint=openapi_schema, include_in_schema=False),
     ],
   )
@@ -71,7 +69,7 @@ def error_response(status_code: HTTPStatus, message: str) -> JSONResponse:
   )
 
 
-@add_schema_definitions(HF_AGENT_SCHEMA)
+@add_schema_definitions
 async def hf_agent(req: Request, llm: openllm.LLM[M, T]) -> Response:
   json_str = await req.body()
   try:
@@ -92,8 +90,8 @@ async def hf_agent(req: Request, llm: openllm.LLM[M, T]) -> Response:
     return error_response(HTTPStatus.INTERNAL_SERVER_ERROR, 'Error while generating (Check server log).')
 
 
-@add_schema_definitions(HF_ADAPTERS_SCHEMA)
-def adapters_map(req: Request, llm: openllm.LLM[M, T]) -> Response:
+@add_schema_definitions
+def hf_adapters(req: Request, llm: openllm.LLM[M, T]) -> Response:
   if not llm.has_adapters:
     return error_response(HTTPStatus.NOT_FOUND, 'No adapters found.')
   return JSONResponse(

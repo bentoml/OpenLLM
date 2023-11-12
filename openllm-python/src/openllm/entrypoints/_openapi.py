@@ -24,7 +24,7 @@ if t.TYPE_CHECKING:
 P = ParamSpec('P')
 OPENAPI_VERSION, API_VERSION = '3.0.2', '1.0'
 # NOTE: OpenAI schema
-LIST_MODEL_SCHEMA = """\
+LIST_MODELS_SCHEMA = """\
 ---
 consumes:
 - application/json
@@ -55,14 +55,14 @@ responses:
         schema:
           $ref: '#/components/schemas/ModelList'
 """
-CHAT_COMPLETION_SCHEMA = """\
+CHAT_COMPLETIONS_SCHEMA = """\
 ---
 consumes:
 - application/json
 description: >-
   Given a list of messages comprising a conversation, the model will return a
   response.
-operationId: openai__create_chat_completions
+operationId: openai__chat_completions
 produces:
   - application/json
 tags:
@@ -193,7 +193,7 @@ responses:
               }
     description: Bad Request
 """
-COMPLETION_SCHEMA = """\
+COMPLETIONS_SCHEMA = """\
 ---
 consumes:
   - application/json
@@ -201,7 +201,7 @@ description: >-
   Given a prompt, the model will return one or more predicted completions, and
   can also return the probabilities of alternative tokens at each position. We
   recommend most users use our Chat completions API.
-operationId: openai__create_completions
+operationId: openai__completions
 produces:
   - application/json
 tags:
@@ -423,15 +423,17 @@ responses:
     description: Not Found
 """
 
+_SCHEMAS = {k[:-7].lower(): v for k, v in locals().items() if k.endswith('_SCHEMA')}
 
-def add_schema_definitions(append_str: str) -> t.Callable[[t.Callable[P, t.Any]], t.Callable[P, t.Any]]:
-  def docstring_decorator(func: t.Callable[P, t.Any]) -> t.Callable[P, t.Any]:
-    if func.__doc__ is None:
-      func.__doc__ = ''
-    func.__doc__ = func.__doc__.strip() + '\n\n' + append_str.strip()
+
+def add_schema_definitions(func: t.Callable[P, t.Any]) -> t.Callable[P, t.Any]:
+  append_str = _SCHEMAS.get(func.__name__.lower(), '')
+  if not append_str:
     return func
-
-  return docstring_decorator
+  if func.__doc__ is None:
+    func.__doc__ = ''
+  func.__doc__ = func.__doc__.strip() + '\n\n' + append_str.strip()
+  return func
 
 
 class OpenLLMSchemaGenerator(SchemaGenerator):
@@ -558,7 +560,7 @@ def append_schemas(
   # HACK: Dirty hack to append schemas to existing service. We def need to support mounting Starlette app OpenAPI spec.
   from bentoml._internal.service.openapi.specification import OpenAPISpecification
 
-  svc_schema: t.Any = svc.openapi_spec
+  svc_schema = svc.openapi_spec
   if isinstance(svc_schema, (OpenAPISpecification, MKSchema)):
     svc_schema = svc_schema.asdict()
   if 'tags' in generated_schema:
@@ -572,14 +574,15 @@ def append_schemas(
     svc_schema['components']['schemas'].update(generated_schema['components']['schemas'])
   svc_schema['paths'].update(generated_schema['paths'])
 
-  from bentoml._internal.service import (
-    openapi,  # HACK: mk this attribute until we have a better way to add starlette schemas.
-  )
+  # HACK: mk this attribute until we have a better way to add starlette schemas.
+  from bentoml._internal.service import openapi
 
-  # yapf: disable
-  def mk_generate_spec(svc:bentoml.Service,openapi_version:str=OPENAPI_VERSION)->MKSchema:return MKSchema(svc_schema)
-  def mk_asdict(self:OpenAPISpecification)->dict[str,t.Any]:return svc_schema
-  openapi.generate_spec=mk_generate_spec
+  def mk_generate_spec(svc, openapi_version=OPENAPI_VERSION):
+    return MKSchema(svc_schema)
+
+  def mk_asdict(self):
+    return svc_schema
+
+  openapi.generate_spec = mk_generate_spec
   OpenAPISpecification.asdict = mk_asdict
-  # yapf: disable
   return svc

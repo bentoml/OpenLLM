@@ -148,7 +148,7 @@ def construct_docker_options(
   if llm._prompt_template:
     env_dict['OPENLLM_PROMPT_TEMPLATE'] = repr(llm._prompt_template.to_string())
   if quantize:
-    env_dict['OPENLLM_QUANTISE'] = str(quantize)
+    env_dict['OPENLLM_QUANTIZE'] = str(quantize)
   return DockerOptions(
     base_image=f'{oci.CONTAINER_NAMES[container_registry]}:{oci.get_base_container_tag(container_version_strategy)}',
     env=env_dict,

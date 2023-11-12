@@ -18,9 +18,6 @@ from openllm_core._schemas import SampleLogprobs
 from openllm_core.utils import converter
 from openllm_core.utils import gen_random_uuid
 
-from ._openapi import CHAT_COMPLETION_SCHEMA
-from ._openapi import COMPLETION_SCHEMA
-from ._openapi import LIST_MODEL_SCHEMA
 from ._openapi import add_schema_definitions
 from ._openapi import append_schemas
 from ._openapi import get_generator
@@ -127,8 +124,8 @@ def mount_to_svc(svc: bentoml.Service, llm: openllm.LLM[M, T]) -> bentoml.Servic
     debug=True,
     routes=[
       Route('/models', functools.partial(list_models, llm=llm), methods=['GET']),
-      Route('/completions', functools.partial(create_completions, llm=llm), methods=['POST']),
-      Route('/chat/completions', functools.partial(create_chat_completions, llm=llm), methods=['POST']),
+      Route('/completions', functools.partial(completions, llm=llm), methods=['POST']),
+      Route('/chat/completions', functools.partial(chat_completions, llm=llm), methods=['POST']),
     ],
   )
   mount_path = '/v1'
@@ -138,7 +135,7 @@ def mount_to_svc(svc: bentoml.Service, llm: openllm.LLM[M, T]) -> bentoml.Servic
 
 
 # GET /v1/models
-@add_schema_definitions(LIST_MODEL_SCHEMA)
+@add_schema_definitions
 def list_models(_: Request, llm: openllm.LLM[M, T]) -> Response:
   return JSONResponse(
     converter.unstructure(ModelList(data=[ModelCard(id=llm.llm_type)])), status_code=HTTPStatus.OK.value
@@ -146,8 +143,8 @@ def list_models(_: Request, llm: openllm.LLM[M, T]) -> Response:
 
 
 # POST /v1/chat/completions
-@add_schema_definitions(CHAT_COMPLETION_SCHEMA)
-async def create_chat_completions(req: Request, llm: openllm.LLM[M, T]) -> Response:
+@add_schema_definitions
+async def chat_completions(req: Request, llm: openllm.LLM[M, T]) -> Response:
   # TODO: Check for length based on model context_length
   json_str = await req.body()
   try:
@@ -263,8 +260,8 @@ async def create_chat_completions(req: Request, llm: openllm.LLM[M, T]) -> Respo
 
 
 # POST /v1/completions
-@add_schema_definitions(COMPLETION_SCHEMA)
-async def create_completions(req: Request, llm: openllm.LLM[M, T]) -> Response:
+@add_schema_definitions
+async def completions(req: Request, llm: openllm.LLM[M, T]) -> Response:
   # TODO: Check for length based on model context_length
   json_str = await req.body()
   try:

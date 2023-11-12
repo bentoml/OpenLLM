@@ -621,8 +621,8 @@ def process_environ(
       'OPENLLM_CONFIG': config.model_dump_json(flatten=True).decode(),
     }
   )
-  if llm._quantise:
-    environ['OPENLLM_QUANTIZE'] = str(llm._quantise)
+  if llm.quantise:
+    environ['OPENLLM_QUANTIZE'] = str(llm.quantise)
   if system_message:
     environ['OPENLLM_SYSTEM_MESSAGE'] = system_message
   if prompt_template:
@@ -650,8 +650,8 @@ def process_workers_per_resource(wpr: str | float | int, device: tuple[str, ...]
 
 def build_bento_instruction(llm, model_id, serialisation, adapter_map):
   cmd_name = f'openllm build {model_id}'
-  if llm._quantise:
-    cmd_name += f' --quantize {llm._quantise}'
+  if llm.quantise:
+    cmd_name += f' --quantize {llm.quantise}'
   cmd_name += f' --serialization {serialisation}'
   if adapter_map is not None:
     cmd_name += ' ' + ' '.join(
@@ -994,8 +994,8 @@ def build_command(
       'OPENLLM_MODEL_ID': llm.model_id,
     }
   )
-  if llm._quantise:
-    os.environ['OPENLLM_QUANTIZE'] = str(llm._quantise)
+  if llm.quantise:
+    os.environ['OPENLLM_QUANTIZE'] = str(llm.quantise)
   if system_message:
     os.environ['OPENLLM_SYSTEM_MESSAGE'] = system_message
   if prompt_template:

@@ -50,8 +50,8 @@ class vLLMRunnable(bentoml.Runnable):
     if dev >= 2:
       num_gpus = min(dev // 2 * 2, dev)
     quantization = None
-    if llm._quantise and llm._quantise in {'awq', 'squeezellm'}:
-      quantization = llm._quantise
+    if llm.quantise and llm.quantise in {'awq', 'squeezellm'}:
+      quantization = llm.quantise
     try:
       self.model = vllm.AsyncLLMEngine.from_engine_args(
         vllm.AsyncEngineArgs(
@@ -111,7 +111,6 @@ class PyTorchRunnable(bentoml.Runnable):
     self.model = llm.model
     self.tokenizer = llm.tokenizer
     self.config = llm.config
-    self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
   @bentoml.Runnable.method(batchable=False)
   async def generate_iterator(
@@ -155,17 +154,17 @@ class PyTorchRunnable(bentoml.Runnable):
       finish_reason: t.Optional[FinishReason] = None
       for i in range(config['max_new_tokens']):
         if i == 0:  # prefill
-          out = self.model(torch.as_tensor([prompt_token_ids], device=self.device), use_cache=True)
+          out = self.model(torch.as_tensor([prompt_token_ids], device=self.model.device), use_cache=True)
         else:  # decoding
           out = self.model(
-            torch.as_tensor([[token]], device=self.device), use_cache=True, past_key_values=past_key_values
+            torch.as_tensor([[token]], device=self.model.device), use_cache=True, past_key_values=past_key_values
           )
         logits = out.logits
         past_key_values = out.past_key_values
 
         if logits_processor:
           if config['repetition_penalty'] > 1.0:
-            tmp_output_ids: t.Any = torch.as_tensor([output_token_ids], device=self.device)
+            tmp_output_ids: t.Any = torch.as_tensor([output_token_ids], device=self.model.device)
           else:
             tmp_output_ids = None
           last_token_logits = logits_processor(tmp_output_ids, logits[:, -1, :])[0]
@@ -173,7 +172,7 @@ class PyTorchRunnable(bentoml.Runnable):
           last_token_logits = logits[0, -1, :]
 
         # Switch to CPU by avoiding some bugs in mps backend.
-        if self.device.type == 'mps':
+        if self.model.device.type == 'mps':
           last_token_logits = last_token_logits.float().to('cpu')
 
         if config['temperature'] < 1e-5 or config['top_p'] < 1e-8:  # greedy
