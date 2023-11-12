@@ -6,15 +6,23 @@ from typing import List
 from typing import Optional
 from typing import Union
 from typing import overload
+from typing import Sequence
 
 import attr as _attr
 
-from ._schemas import Response as _Response
+from ._schemas import Response as _Response, MesssageParam as _MesssageParam
 from ._schemas import StreamingResponse as _StreamingResponse
+
+class _Helpers:
+  def messages(self, messages: Sequence[_MesssageParam], add_generation_prompt: bool = ...) -> str: ...
+
+class _AsyncHelpers:
+  async def messages(self, messages: Sequence[_MesssageParam], add_generation_prompt: bool = ...) -> str: ...
 
 @_attr.define
 class HTTPClient:
   address: str
+  helpers: _Helpers
   @overload
   def __init__(
     self, address: str, timeout: int = ..., verify: bool = ..., max_retries: int = ..., api_version: str = ...
@@ -65,6 +73,7 @@ class HTTPClient:
 @_attr.define
 class AsyncHTTPClient:
   address: str
+  helpers: _AsyncHelpers
   @overload
   def __init__(
     self, address: str, timeout: int = ..., verify: bool = ..., max_retries: int = ..., api_version: str = ...

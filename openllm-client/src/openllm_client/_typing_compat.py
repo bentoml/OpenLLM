@@ -5,6 +5,7 @@ from openllm_core._typing_compat import LiteralString as LiteralString
 from openllm_core._typing_compat import NotRequired as NotRequired
 from openllm_core._typing_compat import Required as Required
 from openllm_core._typing_compat import Self as Self
+from openllm_core._typing_compat import TypeGuard as TypeGuard
 from openllm_core._typing_compat import dataclass_transform as dataclass_transform
 from openllm_core._typing_compat import overload as overload
 

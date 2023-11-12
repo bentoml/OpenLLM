@@ -6,6 +6,7 @@ import typing as t
 
 import attr
 
+from ._schemas import Helpers
 from ._schemas import Metadata
 from ._schemas import Response
 from ._schemas import StreamingResponse
@@ -25,6 +26,7 @@ def _address_converter(addr: str):
 
 @attr.define(init=False)
 class HTTPClient(Client):
+  helpers: Helpers = attr.field(init=False)
   _api_version: str = 'v1'
   _verify: bool = True
   __metadata: Metadata | None = None
@@ -39,6 +41,9 @@ class HTTPClient(Client):
       if address is None:
         raise ValueError("address must either be provided or through 'OPENLLM_ENDPOINT'")
     self._api_version, self._verify = api_version, verify
+
+    self.helpers = Helpers(client=self)
+
     super().__init__(_address_converter(address), VERSION, timeout=timeout, max_retries=max_retries)
 
   def _build_auth_headers(self) -> t.Dict[str, str]:
@@ -123,6 +128,7 @@ class HTTPClient(Client):
 
 @attr.define(init=False)
 class AsyncHTTPClient(AsyncClient):
+  helpers: Helpers = attr.field(init=False)
   _api_version: str = 'v1'
   _verify: bool = True
   __metadata: Metadata | None = None
@@ -137,6 +143,10 @@ class AsyncHTTPClient(AsyncClient):
       if address is None:
         raise ValueError("address must either be provided or through 'OPENLLM_ENDPOINT'")
     self._api_version, self._verify = api_version, verify
+
+    # mk messages to be async here
+    self.helpers = Helpers.permute(messages=Helpers.async_messages)(async_client=self)
+
     super().__init__(_address_converter(address), VERSION, timeout=timeout, max_retries=max_retries)
 
   def _build_auth_headers(self) -> t.Dict[str, str]:
