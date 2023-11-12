@@ -189,7 +189,7 @@ def _build(
   Returns:
       ``bentoml.Bento | str``: BentoLLM instance. This can be used to serve the LLM or can be pushed to BentoCloud.
   """
-  from ..serialisation.transformers.weights import has_safetensors_weights
+  from openllm.serialisation.transformers.weights import has_safetensors_weights
 
   args: list[str] = [
     sys.executable,

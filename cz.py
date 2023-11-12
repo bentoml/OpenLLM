@@ -48,6 +48,7 @@ def run_cz(dir: str, package: str):
 
 def main() -> int:
   run_cz('openllm-python', 'openllm')
+  run_cz('openllm-python', 'openllm_cli')
   run_cz('openllm-core', 'openllm_core')
   run_cz('openllm-client', 'openllm_client')
   return 0

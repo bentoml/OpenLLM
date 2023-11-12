@@ -12,8 +12,8 @@ from bentoml_cli.utils import opt_callback
 import openllm
 import openllm_core
 
-from openllm.cli import termui
-from openllm.cli._factory import model_complete_envvar
+from openllm_cli import termui
+from openllm_cli._factory import model_complete_envvar
 from openllm_core.prompts import process_prompt
 
 

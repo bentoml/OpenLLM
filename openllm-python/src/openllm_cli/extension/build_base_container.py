@@ -6,9 +6,9 @@ import orjson
 
 import openllm
 
-from openllm.cli import termui
-from openllm.cli._factory import container_registry_option
-from openllm.cli._factory import machine_option
+from openllm_cli import termui
+from openllm_cli._factory import container_registry_option
+from openllm_cli._factory import machine_option
 
 
 if t.TYPE_CHECKING:

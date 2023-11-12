@@ -172,7 +172,7 @@ class Extensions(click.MultiCommand):
 
   def get_command(self, ctx: click.Context, cmd_name: str) -> click.Command | None:
     try:
-      mod = __import__(f'openllm.cli.extension.{cmd_name}', None, None, ['cli'])
+      mod = __import__(f'openllm_cli.extension.{cmd_name}', None, None, ['cli'])
     except ImportError:
       return None
     return mod.cli
@@ -345,12 +345,16 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
           formatter.write_dl(rows)
 
 
+_PACKAGE_NAME = 'openllm'
+
+
 @click.group(cls=OpenLLMCommandGroup, context_settings=termui.CONTEXT_SETTINGS, name='openllm')
 @click.version_option(
   None,
   '--version',
   '-v',
-  message=f'%(prog)s, %(version)s (compiled: {openllm.COMPILED})\nPython ({platform.python_implementation()}) {platform.python_version()}',
+  package_name=_PACKAGE_NAME,
+  message=f'{_PACKAGE_NAME}, %(version)s (compiled: {openllm.COMPILED})\nPython ({platform.python_implementation()}) {platform.python_version()}',
 )
 def cli() -> None:
   """\b
@@ -421,7 +425,7 @@ def start_command(
   adapter_map: dict[str, str] | None = attrs.pop('adapter_map', None)
   prompt_template = prompt_template_file.read() if prompt_template_file is not None else None
 
-  from ..serialisation.transformers.weights import has_safetensors_weights
+  from openllm.serialisation.transformers.weights import has_safetensors_weights
 
   serialisation = t.cast(
     LiteralSerialisation,
@@ -545,7 +549,7 @@ def start_grpc_command(
   adapter_map: dict[str, str] | None = attrs.pop('adapter_map', None)
   prompt_template = prompt_template_file.read() if prompt_template_file is not None else None
 
-  from ..serialisation.transformers.weights import has_safetensors_weights
+  from openllm.serialisation.transformers.weights import has_safetensors_weights
 
   serialisation = first_not_none(
     serialisation, default='safetensors' if has_safetensors_weights(model_id, model_version) else 'legacy'
@@ -786,7 +790,7 @@ def import_command(
   > only use this option if you want the weight to be quantized by default. Note that OpenLLM also
   > support on-demand quantisation during initial startup.
   """
-  from ..serialisation.transformers.weights import has_safetensors_weights
+  from openllm.serialisation.transformers.weights import has_safetensors_weights
 
   if model_id in openllm.CONFIG_MAPPING:
     _model_name = model_id
@@ -971,8 +975,8 @@ def build_command(
   > To build the bento with compiled OpenLLM, make sure to prepend HATCH_BUILD_HOOKS_ENABLE=1. Make sure that the deployment
   > target also use the same Python version and architecture as build machine.
   """
-  from .._llm import normalise_model_name
-  from ..serialisation.transformers.weights import has_safetensors_weights
+  from openllm._llm import normalise_model_name
+  from openllm.serialisation.transformers.weights import has_safetensors_weights
 
   if model_id in openllm.CONFIG_MAPPING:
     _model_name = model_id
@@ -1402,7 +1406,7 @@ def query_command(
     raise click.ClickException("'grpc' is currently disabled.")
   _memoized = {k: orjson.loads(v[0]) for k, v in _memoized.items() if v}
   # TODO: grpc support
-  client = openllm.client.HTTPClient(address=endpoint, timeout=timeout)
+  client = openllm.HTTPClient(address=endpoint, timeout=timeout)
   input_fg, generated_fg = 'magenta', 'cyan'
 
   if stream:

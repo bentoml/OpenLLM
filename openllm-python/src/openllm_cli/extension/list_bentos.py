@@ -8,7 +8,7 @@ import bentoml
 import openllm
 
 from bentoml._internal.utils import human_readable_size
-from openllm.cli import termui
+from openllm_cli import termui
 
 
 @click.command('list_bentos', context_settings=termui.CONTEXT_SETTINGS)

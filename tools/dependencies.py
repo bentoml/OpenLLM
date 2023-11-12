@@ -10,13 +10,16 @@ import tomlkit
 
 from ghapi.all import GhApi
 
+
 if t.TYPE_CHECKING:
-  from tomlkit.items import Array, Table
+  from tomlkit.items import Array
+  from tomlkit.items import Table
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, 'openllm-python', 'src'))
 
 import openllm
+
 
 _OWNER, _REPO = 'bentoml', 'openllm'
 
@@ -292,15 +295,15 @@ def keywords() -> Array:
 
 def build_cli_extensions() -> Table:
   table = tomlkit.table()
-  ext: dict[str, str] = {'openllm': 'openllm.cli.entrypoint:cli'}
+  ext: dict[str, str] = {'openllm': 'openllm_cli.entrypoint:cli'}
   ext.update(
     {
-      f'openllm-{inflection.dasherize(ke)}': f'openllm.cli.extension.{ke}:cli'
+      f'openllm-{inflection.dasherize(ke)}': f'openllm_cli.extension.{ke}:cli'
       for ke in sorted(
         [
           fname[:-3]
           for fname in os.listdir(
-            os.path.abspath(os.path.join(ROOT, 'openllm-python', 'src', 'openllm', 'cli', 'extension'))
+            os.path.abspath(os.path.join(ROOT, 'openllm-python', 'src', 'openllm_cli', 'extension'))
           )
           if fname.endswith('.py') and not fname.startswith('__')
         ]

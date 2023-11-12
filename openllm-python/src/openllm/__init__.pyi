@@ -1,3 +1,4 @@
+import openllm_cli as _cli
 from openllm_core._configuration import GenerationConfig as GenerationConfig
 from openllm_core._configuration import LLMConfig as LLMConfig
 from openllm_core._configuration import SamplingParams as SamplingParams
@@ -21,7 +22,6 @@ from openllm_core.config import StableLMConfig as StableLMConfig
 from openllm_core.config import StarCoderConfig as StarCoderConfig
 from . import exceptions as exceptions
 from . import bundle as bundle
-from . import cli as cli
 from . import client as client
 from . import playground as playground
 from . import serialisation as serialisation
@@ -39,11 +39,11 @@ from ._llm import LLMRunner as LLMRunner
 from ._quantisation import infer_quantisation_config as infer_quantisation_config
 from ._strategies import CascadingResourceStrategy as CascadingResourceStrategy
 from ._strategies import get_resource as get_resource
-from .cli._sdk import build as build
-from .cli._sdk import import_model as import_model
-from .cli._sdk import list_models as list_models
-from .cli._sdk import start as start
-from .cli._sdk import start_grpc as start_grpc
+from openllm_cli._sdk import build as build
+from openllm_cli._sdk import import_model as import_model
+from openllm_cli._sdk import list_models as list_models
+from openllm_cli._sdk import start as start
+from openllm_cli._sdk import start_grpc as start_grpc
 from .client import AsyncHTTPClient as AsyncHTTPClient
 from .client import HTTPClient as HTTPClient
 from .entrypoints import mount_entrypoints as mount_entrypoints
@@ -51,4 +51,5 @@ from .protocol import openai as openai
 from .serialisation import ggml as ggml
 from .serialisation import transformers as transformers
 
+cli = _cli
 COMPILED: bool = ...

@@ -14,6 +14,10 @@ import os as _os
 import pathlib as _pathlib
 import warnings as _warnings
 
+import openllm_cli as _cli
+
+from openllm_cli import _sdk
+
 from . import utils as utils
 
 
@@ -55,7 +59,6 @@ __lazy = utils.LazyModule(
     '_strategies': ['CascadingResourceStrategy', 'get_resource'],
     'entrypoints': ['mount_entrypoints'],
     'serialisation': ['ggml', 'transformers'],
-    'cli._sdk': ['start', 'start_grpc', 'build', 'import_model', 'list_models'],
     '_quantisation': ['infer_quantisation_config'],
     '_llm': ['LLM', 'LLMRunner', 'LLMRunnable'],
     '_generation': [
@@ -66,7 +69,15 @@ __lazy = utils.LazyModule(
       'prepare_logits_processor',
     ],
   },
-  extra_objects={'COMPILED': COMPILED},
+  extra_objects={
+    'COMPILED': COMPILED,
+    'cli': _cli,
+    'start': _sdk.start,
+    'start_grpc': _sdk.start_grpc,
+    'build': _sdk.build,
+    'import_model': _sdk.import_model,
+    'list_models': _sdk.list_models,
+  },
 )
 __all__ = __lazy.__all__
 __dir__ = __lazy.__dir__

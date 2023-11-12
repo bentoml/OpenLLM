@@ -34,7 +34,7 @@ repos:
         types_or: [python, javascript]
         exclude: |
           (?x)^(
-              openllm-python/src/openllm/cli/entrypoint.py |
+              openllm-python/src/openllm_cli/entrypoint.py |
               openllm-client/src/openllm_client/pb.*
           )$
   - repo: meta

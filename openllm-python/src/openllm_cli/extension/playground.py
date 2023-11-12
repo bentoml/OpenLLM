@@ -14,7 +14,7 @@ import nbformat
 import yaml
 
 from openllm import playground
-from openllm.cli import termui
+from openllm_cli import termui
 from openllm_core.utils import is_jupyter_available
 from openllm_core.utils import is_jupytext_available
 from openllm_core.utils import is_notebook_available
