@@ -198,6 +198,7 @@ def _build(
     'build',
     model_id,
     '--machine',
+    '--quiet',
     '--serialisation',
     first_not_none(
       serialisation, default='safetensors' if has_safetensors_weights(model_id, model_version) else 'legacy'
