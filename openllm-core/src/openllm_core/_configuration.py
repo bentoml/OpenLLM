@@ -12,7 +12,6 @@ import click_option_group as cog
 import inflection
 import orjson
 
-from attr._compat import set_closure_cell
 from attr._make import _CountingAttr
 from attr._make import _make_init
 from attr._make import _transform_attrs
@@ -821,7 +820,7 @@ class _ConfigBuilder:
           pass  # ValueError: Cell is empty
         else:
           if match:
-            set_closure_cell(cell, cls)
+            cell.cell_contents = cls
     return cls
 
   def add_attrs_init(self) -> Self:
