@@ -36,6 +36,16 @@ class Level(enum.IntEnum):
       Level.CRITICAL: 'red',
     }[self]
 
+  @classmethod
+  def from_logging_level(cls, level: int) -> Level:
+    return {
+      logging.DEBUG: Level.DEBUG,
+      logging.INFO: Level.INFO,
+      logging.WARNING: Level.WARNING,
+      logging.ERROR: Level.ERROR,
+      logging.CRITICAL: Level.CRITICAL,
+    }[level]
+
 
 class JsonLog(t.TypedDict):
   log_level: Level
@@ -43,13 +53,7 @@ class JsonLog(t.TypedDict):
 
 
 def log(content: str, level: Level = Level.INFO, fg: str | None = None) -> None:
-  def caller(text: str) -> None:
-    if get_debug_mode():
-      logger.log(level.value, text)
-    else:
-      echo(JsonLog(log_level=level, content=content), json=True, fg=fg)
-
-  caller(orjson.dumps(JsonLog(log_level=level, content=content)).decode())
+  echo(orjson.dumps(JsonLog(log_level=level, content=content)).decode(), fg=fg, json=True)
 
 
 warning = functools.partial(log, level=Level.WARNING)
@@ -61,18 +65,17 @@ notset = functools.partial(log, level=Level.NOTSET)
 
 
 def echo(text: t.Any, fg: str | None = None, _with_style: bool = True, json: bool = False, **attrs: t.Any) -> None:
-  if json and not isinstance(text, dict):
-    raise TypeError('text must be a dict')
   if json:
+    text = orjson.loads(text)
     if 'content' in text and 'log_level' in text:
-      content = t.cast(DictStrAny, text)['content']
-      fg = t.cast(Level, text['log_level']).color
+      content = text['content']
+      fg = Level.from_logging_level(text['log_level']).color
     else:
       content = orjson.dumps(text).decode()
       fg = Level.INFO.color if not get_debug_mode() else Level.DEBUG.color
   else:
     content = t.cast(str, text)
-  attrs['fg'] = fg if not get_debug_mode() else None
+  attrs['fg'] = fg
 
   if not get_quiet_mode():
     t.cast(t.Callable[..., None], click.echo if not _with_style else click.secho)(content, **attrs)
