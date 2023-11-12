@@ -18,6 +18,191 @@ This changelog is managed by towncrier and is compiled at release time.
 
 <!-- towncrier release notes start -->
 
+## [0.4.2](https://github.com/bentoml/openllm/tree/v0.4.2)
+
+### Changes
+
+- Update client implementation and support Authentication through `OPENLLM_AUTH_TOKEN`
+  [#605](https://github.com/bentoml/openllm/issues/605)
+
+
+### Refactor
+
+- ## Auto backend detection
+
+  By default, OpenLLM will use vLLM (if available) to run the server. We recommend users to always explicitly set backend to `--backend vllm` for the best performance.
+
+  if vLLM is not available, OpenLLM will fall back to PyTorch backend. Note that the PyTorch backend won't be as performant
+
+  ## Revamped CLI interface
+
+  This is a part of the recent restructure of `openllm.LLM`
+
+  For all CLI, there is no need to pass in the architecture anymore. One can directly pass in the model and save a few characters
+
+  Start:
+
+  ```bash
+
+  openllm start meta-llama/Llama-2-13b-chat-hf --device 0
+
+  ```
+
+  Build:
+
+  ```bash
+
+  openllm build meta-llama/Llama-2-13b-chat-hf --serialisation safetensors
+
+  ```
+
+  Import:
+
+  ```bash
+
+  openllm build mistralai/Mistral-7B-v0.1 --serialisation legacy
+
+  ```
+
+  All CLI outputs will now dump JSON objects to stdout. This will ensure easier programmatic access to the CLI.
+  This means `--output/-o` is removed from all CLI commands, as all of them will output JSON.
+
+  Passing in `model_name` will now be deprecated and will be removed from the future. If you try `openllm start opt`, you will see the following
+
+  ```bash
+  $ openllm start opt
+
+  Passing 'openllm start opt' is deprecated and will be remove in a future version. Use 'openllm start facebook/opt-1.3b' instead.
+  ```
+
+  Example outputs of `openllm models`:
+
+  ```bash
+  $ openllm models
+
+  {
+    "chatglm": {
+      "architecture": "ChatGLMModel",
+      "example_id": "thudm/chatglm2-6b",
+      "supported_backends": [
+        "pt"
+      ],
+      "installation": "pip install \"openllm[chatglm]\"",
+      "items": []
+    },
+    "dolly_v2": {
+      "architecture": "GPTNeoXForCausalLM",
+      "example_id": "databricks/dolly-v2-3b",
+      "supported_backends": [
+        "pt",
+        "vllm"
+      ],
+      "installation": "pip install openllm",
+      "items": []
+    },
+    "falcon": {
+      "architecture": "FalconForCausalLM",
+      "example_id": "tiiuae/falcon-40b-instruct",
+      "supported_backends": [
+        "pt",
+        "vllm"
+      ],
+      "installation": "pip install \"openllm[falcon]\"",
+      "items": []
+    },
+    "flan_t5": {
+      "architecture": "T5ForConditionalGeneration",
+      "example_id": "google/flan-t5-small",
+      "supported_backends": [
+        "pt"
+      ],
+      "installation": "pip install openllm",
+      "items": []
+    },
+    "gpt_neox": {
+      "architecture": "GPTNeoXForCausalLM",
+      "example_id": "eleutherai/gpt-neox-20b",
+      "supported_backends": [
+        "pt",
+        "vllm"
+      ],
+      "installation": "pip install openllm",
+      "items": []
+    },
+    "llama": {
+      "architecture": "LlamaForCausalLM",
+      "example_id": "NousResearch/llama-2-70b-hf",
+      "supported_backends": [
+        "pt",
+        "vllm"
+      ],
+      "installation": "pip install \"openllm[llama]\"",
+      "items": []
+    },
+    "mpt": {
+      "architecture": "MPTForCausalLM",
+      "example_id": "mosaicml/mpt-7b-chat",
+      "supported_backends": [
+        "pt",
+        "vllm"
+      ],
+      "installation": "pip install \"openllm[mpt]\"",
+      "items": []
+    },
+    "opt": {
+      "architecture": "OPTForCausalLM",
+      "example_id": "facebook/opt-2.7b",
+      "supported_backends": [
+        "pt",
+        "vllm"
+      ],
+      "installation": "pip install \"openllm[opt]\"",
+      "items": []
+    },
+    "stablelm": {
+      "architecture": "GPTNeoXForCausalLM",
+      "example_id": "stabilityai/stablelm-base-alpha-3b",
+      "supported_backends": [
+        "pt",
+        "vllm"
+      ],
+      "installation": "pip install openllm",
+      "items": []
+    },
+    "starcoder": {
+      "architecture": "GPTBigCodeForCausalLM",
+      "example_id": "bigcode/starcoder",
+      "supported_backends": [
+        "pt",
+        "vllm"
+      ],
+      "installation": "pip install \"openllm[starcoder]\"",
+      "items": []
+    },
+    "mistral": {
+      "architecture": "MistralForCausalLM",
+      "example_id": "amazon/MistralLite",
+      "supported_backends": [
+        "pt",
+        "vllm"
+      ],
+      "installation": "pip install openllm",
+      "items": []
+    },
+    "baichuan": {
+      "architecture": "BaiChuanForCausalLM",
+      "example_id": "fireballoon/baichuan-vicuna-chinese-7b",
+      "supported_backends": [
+        "pt",
+        "vllm"
+      ],
+      "installation": "pip install \"openllm[baichuan]\"",
+      "items": []
+    }
+  }
+  ```
+  [#592](https://github.com/bentoml/openllm/issues/592)
+
 ## [0.4.1](https://github.com/bentoml/openllm/tree/v0.4.1)
 No significant changes.
 
