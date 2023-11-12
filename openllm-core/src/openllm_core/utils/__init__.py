@@ -120,6 +120,7 @@ def set_debug_mode(enabled: bool, level: int = 1) -> None:
     os.environ[DEV_DEBUG_VAR] = str(level)
   os.environ[DEBUG_ENV_VAR] = str(enabled)
   os.environ[_GRPC_DEBUG_ENV_VAR] = 'DEBUG' if enabled else 'ERROR'
+  set_disable_warnings(enabled)
 
 
 def lenient_issubclass(cls: t.Any, class_or_tuple: type[t.Any] | tuple[type[t.Any], ...] | None) -> bool:
@@ -188,6 +189,21 @@ def set_quiet_mode(enabled: bool) -> None:
   # do not log setting quiet mode
   os.environ[QUIET_ENV_VAR] = str(enabled)
   os.environ[_GRPC_DEBUG_ENV_VAR] = 'NONE'
+  set_disable_warnings(enabled)
+
+
+WARNING_ENV_VAR = 'OPENLLM_DISABLE_WARNING'
+
+
+def get_disable_warnings() -> bool:
+  if get_debug_mode():
+    return False
+  return check_bool_env(WARNING_ENV_VAR, False)
+
+
+def set_disable_warnings(disable: bool = True) -> None:
+  if get_disable_warnings():
+    os.environ[WARNING_ENV_VAR] = str(disable)
 
 
 class ExceptionFilter(logging.Filter):

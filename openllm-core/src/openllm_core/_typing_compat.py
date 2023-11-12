@@ -13,9 +13,14 @@ if t.TYPE_CHECKING:
   from transformers import PreTrainedTokenizerFast
 
   from .utils.lazy import VersionInfo
+else:
+  # NOTE: t.Any is also a type
+  PeftModel = PreTrainedModel = PreTrainedTokenizer = PreTrainedTokenizerBase = PreTrainedTokenizerFast = t.Any
+  # NOTE: that VersionInfo is from openllm.utils.lazy.VersionInfo
+  VersionInfo = t.Any
 
-M = t.TypeVar('M', bound='t.Union[PreTrainedModel, PeftModel]')
-T = t.TypeVar('T', bound='t.Union[PreTrainedTokenizerFast, PreTrainedTokenizer, PreTrainedTokenizerBase]')
+M = t.TypeVar('M', bound=t.Union[PreTrainedModel, PeftModel])
+T = t.TypeVar('T', bound=t.Union[PreTrainedTokenizerFast, PreTrainedTokenizer, PreTrainedTokenizerBase])
 
 
 def get_literal_args(typ: t.Any) -> tuple[str, ...]:

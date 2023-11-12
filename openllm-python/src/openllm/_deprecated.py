@@ -87,9 +87,7 @@ def Runner(
   )
 
   backend = t.cast(LiteralBackend, first_not_none(backend, default='vllm' if is_vllm_available() else 'pt'))
-  llm = LLM[t.Any, t.Any](backend=backend, llm_config=llm_config, **attrs)
-  if init_local:
-    llm.runner.init_local(quiet=True)
+  llm = LLM[t.Any, t.Any](backend=backend, llm_config=llm_config, embedded=init_local, **attrs)
   return llm.runner
 
 

@@ -34,7 +34,6 @@ from openllm_core._typing_compat import TupleAny
 from openllm_core.exceptions import MissingDependencyError
 from openllm_core.prompts import PromptTemplate
 from openllm_core.utils import DEBUG
-from openllm_core.utils import LazyLoader
 from openllm_core.utils import ReprMixin
 from openllm_core.utils import apply
 from openllm_core.utils import check_bool_env
@@ -43,6 +42,9 @@ from openllm_core.utils import converter
 from openllm_core.utils import first_not_none
 from openllm_core.utils import flatten_attrs
 from openllm_core.utils import generate_hash_from_file
+from openllm_core.utils import get_debug_mode
+from openllm_core.utils import get_disable_warnings
+from openllm_core.utils import get_quiet_mode
 from openllm_core.utils import is_peft_available
 from openllm_core.utils import resolve_filepath
 from openllm_core.utils import validate_is_path
@@ -55,8 +57,12 @@ from .serialisation.constants import PEFT_CONFIG_NAME
 
 
 if t.TYPE_CHECKING:
-  import peft
   import transformers
+
+  from peft.config import PeftConfig
+  from peft.peft_model import PeftModel
+  from peft.peft_model import PeftModelForCausalLM
+  from peft.peft_model import PeftModelForSeq2SeqLM
 
   from bentoml._internal.runner.runnable import RunnableMethod
   from bentoml._internal.runner.runner import RunnerMethod
@@ -65,10 +71,7 @@ if t.TYPE_CHECKING:
   from openllm_core._configuration import LLMConfig
   from openllm_core.utils.representation import ReprArgs
 
-else:
-  peft = LazyLoader('peft', globals(), 'peft')
-
-ResolvedAdapterMap = t.Dict[AdapterType, t.Dict[str, t.Tuple['peft.PeftConfig', str]]]
+ResolvedAdapterMap = t.Dict[AdapterType, t.Dict[str, t.Tuple['PeftConfig', str]]]
 
 P = ParamSpec('P')
 
@@ -159,6 +162,7 @@ class LLM(t.Generic[M, T], ReprMixin):
     adapter_map: dict[str, str] | None = None,
     serialisation: LiteralSerialisation = 'safetensors',
     trust_remote_code: bool = False,
+    embedded: bool = False,
     **attrs: t.Any,
   ):
     # low_cpu_mem_usage is only available for model this is helpful on system with low memory to avoid OOM
@@ -214,6 +218,14 @@ class LLM(t.Generic[M, T], ReprMixin):
       model = openllm.serialisation.import_model(self, trust_remote_code=self.trust_remote_code)
     # resolve the tag
     self._tag = model.tag
+
+    if embedded and not get_disable_warnings() and not get_quiet_mode():
+      logger.warning(
+        'You are using embedded mode, which means the models will be loaded into memory. This is often not recommended in production and should only be used for local development only.'
+      )
+      if not get_debug_mode():
+        logger.info("To disable this warning, set 'OPENLLM_DISABLE_WARNING=True'")
+      self.runner.init_local(quiet=True)
 
   @apply(lambda val: tuple(str.lower(i) if i else i for i in val))
   def _make_tag_components(self, model_id, model_version, backend) -> tuple[str, str | None]:
@@ -401,9 +413,9 @@ class LLM(t.Generic[M, T], ReprMixin):
 
   def prepare_for_training(
     self, adapter_type: AdapterType = 'lora', use_gradient_checking: bool = True, **attrs: t.Any
-  ) -> tuple[peft.PeftModel | peft.PeftModelForCausalLM | peft.PeftModelForSeq2SeqLM, T]:
-    from peft import get_peft_model
-    from peft import prepare_model_for_kbit_training
+  ) -> tuple[PeftModel | PeftModelForCausalLM | PeftModelForSeq2SeqLM, T]:
+    from peft.mapping import get_peft_model
+    from peft.utils.other import prepare_model_for_kbit_training
 
     peft_config = (
       self.config['fine_tune_strategies']
