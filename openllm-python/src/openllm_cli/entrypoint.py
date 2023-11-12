@@ -1169,7 +1169,8 @@ class ModelItem(t.TypedDict):
 @click.option(
   '--show-available',
   is_flag=True,
-  default=False,
+  default=True,
+  hidden=True,
   help="Show available models in local store (mutually exclusive with '-o porcelain').",
 )
 def models_command(show_available: bool) -> dict[t.LiteralString, ModelItem]:
@@ -1177,7 +1178,7 @@ def models_command(show_available: bool) -> dict[t.LiteralString, ModelItem]:
 
   \b
   ```bash
-  openllm models --show-available
+  openllm models
   ```
   """
   result: dict[t.LiteralString, ModelItem] = {
@@ -1187,9 +1188,7 @@ def models_command(show_available: bool) -> dict[t.LiteralString, ModelItem]:
       supported_backends=config.__openllm_backend__,
       installation='pip install '
       + (f'"openllm[{m}]"' if m in OPTIONAL_DEPENDENCIES or config.__openllm_requirements__ else 'openllm'),
-      items=[]
-      if not show_available
-      else [
+      items=[
         str(md.tag)
         for md in bentoml.models.list()
         if 'framework' in md.info.labels
