@@ -18,6 +18,26 @@ This changelog is managed by towncrier and is compiled at release time.
 
 <!-- towncrier release notes start -->
 
+## [0.4.4](https://github.com/bentoml/openllm/tree/v0.4.4)
+
+### Features
+
+- Certain warnings can now be disabled with `OPENLLM_DISABLE_WARNINGS=True` in the environment.
+
+  `openllm.LLM` now also brings `embedded` mode. By default this is True. if `embedded=True`, then
+  the model will be loaded eagerly. This should only be used during developmen
+
+  ```python
+
+  import openllm
+
+  llm = openllm.LLM('HuggingFaceH4/zephyr-7b-beta', backend='vllm', embedded=True)
+  ```
+
+  The default behaviour of loading the model first time when `llm.generate` or `llm.generate_iterator` is unchanged.
+  `embedded` option is mainly for backward compatibility and more explicit definition.
+  [#618](https://github.com/bentoml/openllm/issues/618)
+
 ## [0.4.3](https://github.com/bentoml/openllm/tree/v0.4.3)
 
 ### Features
