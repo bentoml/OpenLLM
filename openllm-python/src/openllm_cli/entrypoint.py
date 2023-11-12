@@ -80,6 +80,7 @@ from openllm_core.utils import get_debug_mode
 from openllm_core.utils import get_disable_warnings
 from openllm_core.utils import get_quiet_mode
 from openllm_core.utils import is_torch_available
+from openllm_core.utils import pkg
 from openllm_core.utils import resolve_user_filepath
 from openllm_core.utils import set_debug_mode
 from openllm_core.utils import set_quiet_mode
@@ -457,7 +458,7 @@ def start_command(
 
   config, server_attrs = llm.config.model_validate_click(**attrs)
   server_timeout = first_not_none(server_timeout, default=config['timeout'])
-  server_attrs.update({'working_dir': os.path.dirname(os.path.dirname(__file__)), 'timeout': server_timeout})
+  server_attrs.update({'working_dir': pkg.source_locations('openllm'), 'timeout': server_timeout})
   # XXX: currently, theres no development args in bentoml.Server. To be fixed upstream.
   development = server_attrs.pop('development')
   server_attrs.setdefault('production', not development)
@@ -578,7 +579,7 @@ def start_grpc_command(
 
   config, server_attrs = llm.config.model_validate_click(**attrs)
   server_timeout = first_not_none(server_timeout, default=config['timeout'])
-  server_attrs.update({'working_dir': os.path.dirname(os.path.dirname(__file__)), 'timeout': server_timeout})
+  server_attrs.update({'working_dir': pkg.source_locations('openllm'), 'timeout': server_timeout})
   server_attrs['grpc_protocol_version'] = 'v1'
   # XXX: currently, theres no development args in bentoml.Server. To be fixed upstream.
   development = server_attrs.pop('development')
