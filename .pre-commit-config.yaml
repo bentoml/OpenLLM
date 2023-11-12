@@ -2,7 +2,7 @@ ci:
   autoupdate_schedule: weekly
   skip: [eslint, prettier, mypy]
   autofix_commit_msg: "ci: auto fixes from pre-commit.ci\n\nFor more information, see https://pre-commit.ci"
-  autoupdate_commit_msg: "ci: pre-commit autoupdate [pre-commit.ci]"
+  autoupdate_commit_msg: 'ci: pre-commit autoupdate [pre-commit.ci]'
 default_language_version:
   python: python3.9 # NOTE: sync with .python-version-default
 exclude: '.*\.(css|js|svg)$'
@@ -24,7 +24,7 @@ repos:
         language: system
         always_run: true
         pass_filenames: false
-        entry: mypy --strict openllm-client/src/openllm_client/__init__.pyi openllm-core/src/openllm_core/_typing_compat.py openllm-python/src/openllm/serialisation/__init__.pyi
+        entry: mypy --strict
   - repo: https://github.com/editorconfig-checker/editorconfig-checker.python
     rev: '2.7.3'
     hooks:
@@ -53,7 +53,7 @@ repos:
               openllm-python/tests/models/.*
           )$
       - id: check-yaml
-        args: ["--unsafe"]
+        args: ['--unsafe']
       - id: check-toml
       - id: check-docstring-first
       - id: check-added-large-files

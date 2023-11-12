@@ -239,6 +239,9 @@ class LazyModule(types.ModuleType):
       value = self._get_module(name)
     elif name in self._class_to_module.keys():
       value = getattr(self._get_module(self._class_to_module.__getitem__(name)), name)
+    # special branch for openllm_core
+    elif hasattr(openllm_core, name):
+      return getattr(openllm_core, name)
     else:
       raise AttributeError(f'module {self.__name__} has no attribute {name}')
     setattr(self, name, value)
