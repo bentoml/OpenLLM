@@ -9,8 +9,6 @@ import typing as t
 import attr
 import inflection
 import orjson
-import torch
-import transformers
 
 from huggingface_hub import hf_hub_download
 
@@ -58,6 +56,7 @@ from .serialisation.constants import PEFT_CONFIG_NAME
 
 if t.TYPE_CHECKING:
   import peft
+  import transformers
 
   from bentoml._internal.runner.runnable import RunnableMethod
   from bentoml._internal.runner.runner import RunnerMethod
@@ -124,8 +123,8 @@ class LLM(t.Generic[M, T], ReprMixin):
   _quantization_config: transformers.BitsAndBytesConfig | transformers.GPTQConfig | transformers.AwqConfig | None
   _quantise: LiteralQuantise | None
   _model_decls: TupleAny
-  _model_attrs: DictStrAny
-  _tokenizer_attrs: DictStrAny
+  __model_attrs: DictStrAny
+  __tokenizer_attrs: DictStrAny
   _tag: bentoml.Tag
   _adapter_map: AdapterMap | None
   _serialisation: LiteralSerialisation
@@ -133,7 +132,6 @@ class LLM(t.Generic[M, T], ReprMixin):
   _prompt_template: PromptTemplate | None
   _system_message: str | None
 
-  _bentomodel: bentoml.Model = attr.field(init=False)
   __llm_config__: LLMConfig | None = None
   __llm_backend__: LiteralBackend = None  # type: ignore
   __llm_quantization_config__: transformers.BitsAndBytesConfig | transformers.GPTQConfig | transformers.AwqConfig | None = None
@@ -168,16 +166,11 @@ class LLM(t.Generic[M, T], ReprMixin):
     _local = False
     if validate_is_path(model_id):
       model_id, _local = resolve_filepath(model_id), True
-    backend = t.cast(
-      LiteralBackend,
-      first_not_none(
-        backend, os.getenv('OPENLLM_BACKEND'), default='vllm' if openllm.utils.is_vllm_available() else 'pt'
-      ),
-    )
 
-    quantize = first_not_none(
-      quantize, t.cast(t.Optional[LiteralQuantise], os.getenv('OPENLLM_QUANTIZE')), default=None
+    backend = first_not_none(
+      backend, os.getenv('OPENLLM_BACKEND'), default='vllm' if openllm.utils.is_vllm_available() else 'pt'
     )
+    quantize = first_not_none(quantize, os.getenv('OPENLLM_QUANTIZE'), default=None)
     # elif quantization_config is None and quantize is not None:
     #   quantization_config, attrs = infer_quantisation_config(self, quantize, **attrs)
     attrs.update({'low_cpu_mem_usage': low_cpu_mem_usage})
@@ -199,17 +192,17 @@ class LLM(t.Generic[M, T], ReprMixin):
     self.__attrs_init__(
       model_id=model_id,
       revision=model_version,
-      tag=bentoml.Tag.from_taglike(t.cast(t.Union[str, bentoml.Tag], model_tag)),
+      tag=bentoml.Tag.from_taglike(model_tag),
       quantization_config=quantization_config,
       quantise=quantize,
       model_decls=args,
-      model_attrs=dict(**self.import_kwargs[0], **model_attrs),
-      tokenizer_attrs=dict(**self.import_kwargs[-1], **tokenizer_attrs),
       adapter_map=resolve_peft_config_type(adapter_map) if adapter_map is not None else None,
       serialisation=serialisation,
       local=_local,
       prompt_template=prompt_template,
       system_message=system_message,
+      LLM__model_attrs=model_attrs,
+      LLM__tokenizer_attrs=tokenizer_attrs,
       llm_backend__=backend,
       llm_config__=llm_config,
       llm_trust_remote_code__=trust_remote_code,
@@ -221,7 +214,6 @@ class LLM(t.Generic[M, T], ReprMixin):
       model = openllm.serialisation.import_model(self, trust_remote_code=self.trust_remote_code)
     # resolve the tag
     self._tag = model.tag
-    self._bentomodel = model
 
   @apply(lambda val: tuple(str.lower(i) if i else i for i in val))
   def _make_tag_components(self, model_id, model_version, backend) -> tuple[str, str | None]:
@@ -241,72 +233,141 @@ class LLM(t.Generic[M, T], ReprMixin):
       )
     return f'{backend}-{normalise_model_name(model_id)}', model_version
 
-  # yapf: disable
-  def __setattr__(self,attr,value):
-    if attr in _reserved_namespace:raise ForbiddenAttributeError(f'{attr} should not be set during runtime.')
-    super().__setattr__(attr,value)
+  def __setattr__(self, attr, value):
+    if attr in _reserved_namespace:
+      raise ForbiddenAttributeError(f'{attr} should not be set during runtime.')
+    super().__setattr__(attr, value)
+
   @property
-  def __repr_keys__(self): return {'model_id', 'revision', 'backend', 'type'}
+  def _model_attrs(self) -> dict[str, t.Any]:
+    return {**self.import_kwargs[0], **self.__model_attrs}
+
+  @property
+  def _tokenizer_attrs(self) -> dict[str, t.Any]:
+    return {**self.import_kwargs[1], **self.__tokenizer_attrs}
+
+  @property
+  def __repr_keys__(self):
+    return {'model_id', 'revision', 'backend', 'type'}
+
   def __repr_args__(self):
-    yield 'model_id',self._model_id if not self._local else self.tag.name
-    yield 'revision',self._revision if self._revision else self.tag.version
-    yield 'backend',self.__llm_backend__
-    yield 'type',self.llm_type
+    yield 'model_id', self._model_id if not self._local else self.tag.name
+    yield 'revision', self._revision if self._revision else self.tag.version
+    yield 'backend', self.__llm_backend__
+    yield 'type', self.llm_type
+
   @property
-  def import_kwargs(self)->tuple[dict[str, t.Any],dict[str, t.Any]]: return {'device_map': 'auto' if torch.cuda.is_available() else None, 'torch_dtype': torch.float16 if torch.cuda.is_available() else torch.float32}, {'padding_side': 'left', 'truncation_side': 'left'}
+  def import_kwargs(self) -> tuple[dict[str, t.Any], dict[str, t.Any]]:
+    import torch
+
+    return {
+      'device_map': 'auto' if torch.cuda.is_available() else None,
+      'torch_dtype': torch.float16 if torch.cuda.is_available() else torch.float32,
+    }, {'padding_side': 'left', 'truncation_side': 'left'}
+
   @property
-  def trust_remote_code(self)->bool:return first_not_none(check_bool_env('TRUST_REMOTE_CODE',False),default=self.__llm_trust_remote_code__)
+  def trust_remote_code(self) -> bool:
+    return first_not_none(check_bool_env('TRUST_REMOTE_CODE', False), default=self.__llm_trust_remote_code__)
+
   @property
-  def runner_name(self)->str:return f"llm-{self.config['start_name']}-runner"
+  def runner_name(self) -> str:
+    return f"llm-{self.config['start_name']}-runner"
+
   @property
-  def model_id(self)->str:return self._model_id
+  def model_id(self) -> str:
+    return self._model_id
+
   @property
-  def revision(self)->str:return t.cast(str, self._revision)
+  def revision(self) -> str:
+    return t.cast(str, self._revision)
+
   @property
-  def tag(self)->bentoml.Tag:return self._tag
+  def tag(self) -> bentoml.Tag:
+    return self._tag
+
   @property
-  def bentomodel(self)->bentoml.Model:return openllm.serialisation.get(self)
+  def bentomodel(self) -> bentoml.Model:
+    return openllm.serialisation.get(self)
+
   @property
-  def quantization_config(self)->transformers.BitsAndBytesConfig|transformers.GPTQConfig|transformers.AwqConfig:
+  def quantization_config(self) -> transformers.BitsAndBytesConfig | transformers.GPTQConfig | transformers.AwqConfig:
     if self.__llm_quantization_config__ is None:
-      if self._quantization_config is not None:self.__llm_quantization_config__=self._quantization_config
-      elif self._quantise is not None:self.__llm_quantization_config__,self._model_attrs=infer_quantisation_config(self, self._quantise, **self._model_attrs)
-      else:raise ValueError("Either 'quantization_config' or 'quantise' must be specified.")
+      if self._quantization_config is not None:
+        self.__llm_quantization_config__ = self._quantization_config
+      elif self._quantise is not None:
+        self.__llm_quantization_config__, self._model_attrs = infer_quantisation_config(
+          self, self._quantise, **self._model_attrs
+        )
+      else:
+        raise ValueError("Either 'quantization_config' or 'quantise' must be specified.")
     return self.__llm_quantization_config__
+
   @property
-  def has_adapters(self)->bool:return self._adapter_map is not None
+  def has_adapters(self) -> bool:
+    return self._adapter_map is not None
+
   @property
-  def local(self)->bool:return self._local
+  def local(self) -> bool:
+    return self._local
+
+  @property
+  def quantise(self) -> LiteralQuantise | None:
+    return self._quantise
+
   # NOTE: The section below defines a loose contract with langchain's LLM interface.
   @property
-  def llm_type(self)->str:return normalise_model_name(self._model_id)
+  def llm_type(self) -> str:
+    return normalise_model_name(self._model_id)
+
   @property
-  def identifying_params(self)->DictStrAny:return {'configuration': self.config.model_dump_json().decode(),'model_ids': orjson.dumps(self.config['model_ids']).decode(),'model_id': self.model_id}
+  def identifying_params(self) -> DictStrAny:
+    return {
+      'configuration': self.config.model_dump_json().decode(),
+      'model_ids': orjson.dumps(self.config['model_ids']).decode(),
+      'model_id': self.model_id,
+    }
+
   @property
-  def llm_parameters(self)->tuple[tuple[tuple[t.Any,...],DictStrAny],DictStrAny]:return (self._model_decls,self._model_attrs),self._tokenizer_attrs
+  def llm_parameters(self) -> tuple[tuple[tuple[t.Any, ...], DictStrAny], DictStrAny]:
+    return (self._model_decls, self._model_attrs), self._tokenizer_attrs
+
   # NOTE: This section is the actual model, tokenizer, and config reference here.
   @property
-  def config(self)->LLMConfig:
-    if self.__llm_config__ is None:self.__llm_config__=openllm.AutoConfig.infer_class_from_llm(self).model_construct_env(**self._model_attrs)
+  def config(self) -> LLMConfig:
+    if self.__llm_config__ is None:
+      self.__llm_config__ = openllm.AutoConfig.infer_class_from_llm(self).model_construct_env(**self._model_attrs)
     return self.__llm_config__
+
   @property
-  def tokenizer(self)->T:
-    if self.__llm_tokenizer__ is None:self.__llm_tokenizer__=openllm.serialisation.load_tokenizer(self,**self.llm_parameters[-1])
+  def tokenizer(self) -> T:
+    if self.__llm_tokenizer__ is None:
+      self.__llm_tokenizer__ = openllm.serialisation.load_tokenizer(self, **self.llm_parameters[-1])
     return self.__llm_tokenizer__
+
   @property
-  def runner(self)->LLMRunner[M, T]:
-    if self.__llm_runner__ is None:self.__llm_runner__=_RunnerFactory(self)
+  def runner(self) -> LLMRunner[M, T]:
+    if self.__llm_runner__ is None:
+      self.__llm_runner__ = _RunnerFactory(self)
     return self.__llm_runner__
+
   @property
-  def model(self)->M:
+  def model(self) -> M:
     if self.__llm_model__ is None:
-      model=openllm.serialisation.load_model(self,*self._model_decls,**self._model_attrs)
+      model = openllm.serialisation.load_model(self, *self._model_decls, **self._model_attrs)
       # If OOM, then it is probably you don't have enough VRAM to run this model.
       if self.__llm_backend__ == 'pt':
-        loaded_in_kbit = getattr(model,'is_loaded_in_8bit',False) or getattr(model,'is_loaded_in_4bit',False) or getattr(model,'is_quantized',False)
+        import torch
+
+        loaded_in_kbit = (
+          getattr(model, 'is_loaded_in_8bit', False)
+          or getattr(model, 'is_loaded_in_4bit', False)
+          or getattr(model, 'is_quantized', False)
+        )
         if torch.cuda.is_available() and torch.cuda.device_count() == 1 and not loaded_in_kbit:
-          try: model = model.to('cuda')
-          except Exception as err: raise OpenLLMException(f'Failed to load model into GPU: {err}\n. See https://huggingface.co/docs/transformers/main/en/main_classes/quantization#offload-between-cpu-and-gpu for more information.') from err
+          try:
+            model = model.to('cuda')
+          except Exception as err:
+            raise OpenLLMException(f'Failed to load model into GPU: {err}.\n') from err
         if self.has_adapters:
           logger.debug('Applying the following adapters: %s', self.adapter_map)
           for adapter_dict in self.adapter_map.values():
@@ -314,23 +375,29 @@ class LLM(t.Generic[M, T], ReprMixin):
               model.load_adapter(peft_model_id, adapter_name, peft_config=peft_config)
       self.__llm_model__ = model
     return self.__llm_model__
+
   @property
   def adapter_map(self) -> ResolvedAdapterMap:
     try:
       import peft as _  # noqa: F401
     except ImportError as err:
-      raise MissingDependencyError("Failed to import 'peft'. Make sure to do 'pip install \"openllm[fine-tune]\"'") from err
-    if not self.has_adapters: raise AttributeError('Adapter map is not available.')
+      raise MissingDependencyError(
+        "Failed to import 'peft'. Make sure to do 'pip install \"openllm[fine-tune]\"'"
+      ) from err
+    if not self.has_adapters:
+      raise AttributeError('Adapter map is not available.')
     assert self._adapter_map is not None
     if self.__llm_adapter_map__ is None:
       _map: ResolvedAdapterMap = {k: {} for k in self._adapter_map}
       for adapter_type, adapter_tuple in self._adapter_map.items():
-        base = first_not_none(self.config['fine_tune_strategies'].get(adapter_type), default=self.config.make_fine_tune_config(adapter_type))
+        base = first_not_none(
+          self.config['fine_tune_strategies'].get(adapter_type),
+          default=self.config.make_fine_tune_config(adapter_type),
+        )
         for adapter in adapter_tuple:
           _map[adapter_type][adapter.name] = (base.with_config(**adapter.config).build(), adapter.adapter_id)
       self.__llm_adapter_map__ = _map
     return self.__llm_adapter_map__
-  # yapf: enable
 
   def prepare_for_training(
     self, adapter_type: AdapterType = 'lora', use_gradient_checking: bool = True, **attrs: t.Any
@@ -475,15 +542,24 @@ def _RunnerFactory(
   else:
     system_message = None
 
-  # yapf: disable
-  def _wrapped_repr_keys(_: LLMRunner[M, T]) -> set[str]: return {'config', 'llm_type', 'runner_methods', 'backend', 'llm_tag'}
+  def _wrapped_repr_keys(_: LLMRunner[M, T]) -> set[str]:
+    return {'config', 'llm_type', 'runner_methods', 'backend', 'llm_tag'}
+
   def _wrapped_repr_args(_: LLMRunner[M, T]) -> ReprArgs:
-    yield 'runner_methods', {method.name: {'batchable': method.config.batchable, 'batch_dim': method.config.batch_dim if method.config.batchable else None} for method in _.runner_methods}
+    yield (
+      'runner_methods',
+      {
+        method.name: {
+          'batchable': method.config.batchable,
+          'batch_dim': method.config.batch_dim if method.config.batchable else None,
+        }
+        for method in _.runner_methods
+      },
+    )
     yield 'config', self.config.model_dump(flatten=True)
     yield 'llm_type', self.llm_type
     yield 'backend', backend
     yield 'llm_tag', self.tag
-  # yapf: enable
 
   return types.new_class(
     self.__class__.__name__ + 'Runner',
