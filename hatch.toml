@@ -84,7 +84,7 @@ write-summary-report = "python tools/write-coverage-report.py"
 [envs.ui]
 detached = true
 [envs.ui.scripts]
-server = "openllm start {args:flan-t5} --working-dir {root:uri} --cors --debug"
+server = "openllm start {args:facebook/opt-250m} --working-dir {root:uri} --cors --debug"
 docs = "cd docs && pnpm dev"
 clojure = ["bash external/clojure/run-clojure-ui.sh"]
 [envs.ci]

@@ -1,5 +1,5 @@
 {
-  "name": "openllm-clojure-ui",
+  "name": "@bentoml/openllm-clojure-ui",
   "version": "",
   "description": "OpenLLM Clojure UI",
   "repository": {
