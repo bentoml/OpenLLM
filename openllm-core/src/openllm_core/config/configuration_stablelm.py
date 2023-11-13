@@ -90,6 +90,3 @@ class StableLMConfig(openllm_core.LLMConfig):
       {'max_new_tokens': max_new_tokens, 'temperature': temperature, 'top_k': top_k, 'top_p': top_p},
       {},
     )
-
-  def postprocess_generate(self, prompt: str, generation_result: list[str], **_: t.Any) -> str:
-    return generation_result[0]

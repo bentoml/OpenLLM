@@ -91,6 +91,3 @@ class FalconConfig(openllm_core.LLMConfig):
       },
       {},
     )
-
-  def postprocess_generate(self, prompt: str, generation_result: t.Sequence[str], **_: t.Any) -> str:
-    return generation_result[0]

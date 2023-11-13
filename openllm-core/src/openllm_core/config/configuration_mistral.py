@@ -109,6 +109,3 @@ class MistralConfig(openllm_core.LLMConfig):
       {'max_new_tokens': max_new_tokens, 'temperature': temperature, 'top_p': top_p, 'top_k': top_k},
       {},
     )
-
-  def postprocess_generate(self, prompt: str, generation_result: list[str], **_: t.Any) -> str:
-    return generation_result[0]
