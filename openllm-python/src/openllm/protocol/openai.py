@@ -5,7 +5,6 @@ import typing as t
 import attr
 
 import openllm_core
-
 from openllm_core.utils import converter
 
 

@@ -2,25 +2,18 @@ from __future__ import annotations
 import functools
 import logging
 import typing as t
-
 from enum import Enum
 from http import HTTPStatus
 
 import orjson
-
 from starlette.applications import Starlette
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 
 from openllm_core.utils import converter
 
-from ._openapi import add_schema_definitions
-from ._openapi import append_schemas
-from ._openapi import get_generator
-from ..protocol.hf import AgentRequest
-from ..protocol.hf import AgentResponse
-from ..protocol.hf import HFErrorResponse
-
+from ._openapi import add_schema_definitions, append_schemas, get_generator
+from ..protocol.hf import AgentRequest, AgentResponse, HFErrorResponse
 
 schemas = get_generator(
   'hf',
@@ -42,9 +35,7 @@ if t.TYPE_CHECKING:
 
   import bentoml
   import openllm
-
-  from openllm_core._typing_compat import M
-  from openllm_core._typing_compat import T
+  from openllm_core._typing_compat import M, T
 
 
 def mount_to_svc(svc: bentoml.Service, llm: openllm.LLM[M, T]) -> bentoml.Service:

@@ -12,9 +12,7 @@ import typing as t
 
 from openllm_core.utils import LazyModule
 
-from . import hf as hf
-from . import openai as openai
-
+from . import hf as hf, openai as openai
 
 if t.TYPE_CHECKING:
   import bentoml

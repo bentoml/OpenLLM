@@ -4,7 +4,6 @@ import typing as t
 
 import transformers
 
-
 if t.TYPE_CHECKING:
   import torch
 

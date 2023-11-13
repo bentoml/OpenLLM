@@ -9,12 +9,9 @@ from typing import Any
 
 from bentoml import Model
 from openllm import LLM
-from openllm_core._typing_compat import M
-from openllm_core._typing_compat import T
+from openllm_core._typing_compat import M, T
 
-from . import constants as constants
-from . import ggml as ggml
-from . import transformers as transformers
+from . import constants as constants, ggml as ggml, transformers as transformers
 
 def load_tokenizer(llm: LLM[M, T], **attrs: Any) -> T: ...
 def get(llm: LLM[M, T]) -> Model: ...

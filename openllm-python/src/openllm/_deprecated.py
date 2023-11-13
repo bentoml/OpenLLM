@@ -5,12 +5,8 @@ import typing as t
 import warnings
 
 import openllm
-
-from openllm_core._typing_compat import LiteralBackend
-from openllm_core._typing_compat import ParamSpec
-from openllm_core.utils import first_not_none
-from openllm_core.utils import is_vllm_available
-
+from openllm_core._typing_compat import LiteralBackend, ParamSpec
+from openllm_core.utils import first_not_none, is_vllm_available
 
 P = ParamSpec('P')
 

@@ -2,12 +2,9 @@ from __future__ import annotations
 import typing as t
 
 import click
-
-from simple_di import Provide
-from simple_di import inject
+from simple_di import Provide, inject
 
 import bentoml
-
 from bentoml._internal.bento.bento import BentoInfo
 from bentoml._internal.bento.build_config import DockerOptions
 from bentoml._internal.configuration.containers import BentoMLContainer
@@ -15,7 +12,6 @@ from bentoml._internal.container.generate import generate_containerfile
 from openllm_cli import termui
 from openllm_cli._factory import bento_complete_envvar
 from openllm_core.utils import converter
-
 
 if t.TYPE_CHECKING:
   from bentoml._internal.bento import BentoStore

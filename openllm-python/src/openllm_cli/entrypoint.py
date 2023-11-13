@@ -43,64 +43,65 @@ import fs.copy
 import fs.errors
 import inflection
 import orjson
-
-from bentoml_cli.utils import BentoMLCommandGroup
-from bentoml_cli.utils import opt_callback
-from simple_di import Provide
-from simple_di import inject
+from bentoml_cli.utils import BentoMLCommandGroup, opt_callback
+from simple_di import Provide, inject
 
 import bentoml
 import openllm
-
 from bentoml._internal.configuration.containers import BentoMLContainer
 from bentoml._internal.models.model import ModelStore
 from openllm import bundle
 from openllm.exceptions import OpenLLMException
-from openllm_core._typing_compat import Concatenate
-from openllm_core._typing_compat import DictStrAny
-from openllm_core._typing_compat import LiteralBackend
-from openllm_core._typing_compat import LiteralQuantise
-from openllm_core._typing_compat import LiteralSerialisation
-from openllm_core._typing_compat import LiteralString
-from openllm_core._typing_compat import NotRequired
-from openllm_core._typing_compat import ParamSpec
-from openllm_core._typing_compat import Self
-from openllm_core._typing_compat import TypeGuard
+from openllm_core._typing_compat import (
+  Concatenate,
+  DictStrAny,
+  LiteralBackend,
+  LiteralQuantise,
+  LiteralSerialisation,
+  LiteralString,
+  NotRequired,
+  ParamSpec,
+  Self,
+  TypeGuard,
+)
 from openllm_core.config import CONFIG_MAPPING
-from openllm_core.utils import DEBUG_ENV_VAR
-from openllm_core.utils import OPTIONAL_DEPENDENCIES
-from openllm_core.utils import QUIET_ENV_VAR
-from openllm_core.utils import LazyLoader
-from openllm_core.utils import analytics
-from openllm_core.utils import check_bool_env
-from openllm_core.utils import compose
-from openllm_core.utils import configure_logging
-from openllm_core.utils import first_not_none
-from openllm_core.utils import get_debug_mode
-from openllm_core.utils import get_disable_warnings
-from openllm_core.utils import get_quiet_mode
-from openllm_core.utils import is_torch_available
-from openllm_core.utils import pkg
-from openllm_core.utils import resolve_user_filepath
-from openllm_core.utils import set_debug_mode
-from openllm_core.utils import set_quiet_mode
+from openllm_core.utils import (
+  DEBUG_ENV_VAR,
+  OPTIONAL_DEPENDENCIES,
+  QUIET_ENV_VAR,
+  LazyLoader,
+  analytics,
+  check_bool_env,
+  compose,
+  configure_logging,
+  first_not_none,
+  get_debug_mode,
+  get_disable_warnings,
+  get_quiet_mode,
+  is_torch_available,
+  pkg,
+  resolve_user_filepath,
+  set_debug_mode,
+  set_quiet_mode,
+)
 
 from . import termui
-from ._factory import FC
-from ._factory import LiteralOutput
-from ._factory import _AnyCallable
-from ._factory import backend_option
-from ._factory import container_registry_option
-from ._factory import machine_option
-from ._factory import model_name_argument
-from ._factory import model_version_option
-from ._factory import parse_config_options
-from ._factory import prompt_template_file_option
-from ._factory import quantize_option
-from ._factory import serialisation_option
-from ._factory import start_decorator
-from ._factory import system_message_option
-
+from ._factory import (
+  FC,
+  LiteralOutput,
+  _AnyCallable,
+  backend_option,
+  container_registry_option,
+  machine_option,
+  model_name_argument,
+  model_version_option,
+  parse_config_options,
+  prompt_template_file_option,
+  quantize_option,
+  serialisation_option,
+  start_decorator,
+  system_message_option,
+)
 
 if t.TYPE_CHECKING:
   import torch
@@ -109,8 +110,7 @@ if t.TYPE_CHECKING:
   from bentoml._internal.container import DefaultBuilder
   from openllm_client._schemas import StreamingResponse
   from openllm_core._configuration import LLMConfig
-  from openllm_core._typing_compat import LiteralContainerRegistry
-  from openllm_core._typing_compat import LiteralContainerVersionStrategy
+  from openllm_core._typing_compat import LiteralContainerRegistry, LiteralContainerVersionStrategy
 else:
   torch = LazyLoader('torch', globals(), 'torch')
 

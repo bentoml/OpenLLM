@@ -15,10 +15,7 @@ import yaml
 
 from openllm import playground
 from openllm_cli import termui
-from openllm_core.utils import is_jupyter_available
-from openllm_core.utils import is_jupytext_available
-from openllm_core.utils import is_notebook_available
-
+from openllm_core.utils import is_jupyter_available, is_jupytext_available, is_notebook_available
 
 if t.TYPE_CHECKING:
   from openllm_core._typing_compat import DictStrAny

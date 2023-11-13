@@ -7,7 +7,6 @@ import tokenize
 
 from tabulate import tabulate
 
-
 TOKEN_WHITELIST = [token.OP, token.NAME, token.NUMBER, token.STRING]
 
 

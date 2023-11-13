@@ -5,19 +5,13 @@ import linecache
 import logging
 import types
 import typing as t
-
 from operator import itemgetter
 
 import orjson
 
-
 if t.TYPE_CHECKING:
   import openllm_core
-
-  from openllm_core._typing_compat import AnyCallable
-  from openllm_core._typing_compat import DictStrAny
-  from openllm_core._typing_compat import ListStr
-  from openllm_core._typing_compat import LiteralString
+  from openllm_core._typing_compat import AnyCallable, DictStrAny, ListStr, LiteralString
 
   PartialAny = functools.partial[t.Any]
 
@@ -150,8 +144,7 @@ def make_env_transformer(
   default_callback: t.Callable[[str, t.Any], t.Any] | None = None,
   globs: DictStrAny | None = None,
 ) -> AnyCallable:
-  from openllm_core.utils import dantic
-  from openllm_core.utils import field_env_key
+  from openllm_core.utils import dantic, field_env_key
 
   def identity(_: str, x_value: t.Any) -> t.Any:
     return x_value

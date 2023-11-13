@@ -89,9 +89,13 @@ max-line-length = 119
 
 [lint.isort]
 combine-as-imports = true
-force-single-line = true
-force-wrap-aliases = false
-known-first-party = ["openllm", "bentoml", "openllm_core", "openllm_client"]
+known-first-party = [
+  "openllm",
+  "bentoml",
+  "openllm_core",
+  "openllm_client",
+  "openllm_cli",
+]
 known-third-party = [
   "transformers",
   "click",
@@ -102,8 +106,7 @@ known-third-party = [
   "peft",
   "click_option_group",
 ]
-lines-after-imports = 2
-lines-between-types = 1
+split-on-trailing-comma = false
 no-lines-before = ["future", "standard-library"]
 relative-imports-order = "closest-to-furthest"
 
@@ -114,7 +117,6 @@ multiline-quotes = "double"
 docstring-quotes = "double"
 
 [lint.extend-per-file-ignores]
-"/**/*.pyi" = ["I001"]
 "openllm-python/tests/**/*" = ["S101", "TID252", "PT011", "S307"]
 "openllm-python/src/openllm/_llm.py" = ["F811"]
 "openllm-core/src/openllm_core/utils/import_utils.py" = ["PLW0603", "F811"]

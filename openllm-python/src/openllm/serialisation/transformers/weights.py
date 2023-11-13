@@ -1,25 +1,19 @@
 from __future__ import annotations
 import traceback
 import typing as t
-
 from pathlib import Path
 
 import attr
-
 from huggingface_hub import HfApi
 
 from openllm_core.exceptions import Error
-from openllm_core.utils import resolve_filepath
-from openllm_core.utils import validate_is_path
-
+from openllm_core.utils import resolve_filepath, validate_is_path
 
 if t.TYPE_CHECKING:
   from huggingface_hub.hf_api import ModelInfo as HfModelInfo
 
   import openllm
-
-  from openllm_core._typing_compat import M
-  from openllm_core._typing_compat import T
+  from openllm_core._typing_compat import M, T
 
 __global_inst__ = None
 __cached_id__: dict[str, HfModelInfo] = dict()

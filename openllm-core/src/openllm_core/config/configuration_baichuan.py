@@ -2,10 +2,8 @@ from __future__ import annotations
 import typing as t
 
 import openllm_core
-
 from openllm_core._conversation import SeparatorStyle
 from openllm_core.prompts import PromptTemplate
-
 
 START_BAICHUAN_COMMAND_DOCSTRING = """\
 Run a LLMServer for Baichuan model.

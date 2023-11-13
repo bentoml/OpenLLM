@@ -4,17 +4,11 @@ import inspect
 import typing as t
 
 import attr
-
-from starlette.routing import BaseRoute
-from starlette.routing import Host
-from starlette.routing import Mount
-from starlette.routing import Route
-from starlette.schemas import EndpointInfo
-from starlette.schemas import SchemaGenerator
+from starlette.routing import BaseRoute, Host, Mount, Route
+from starlette.schemas import EndpointInfo, SchemaGenerator
 
 from openllm_core._typing_compat import ParamSpec
 from openllm_core.utils import first_not_none
-
 
 if t.TYPE_CHECKING:
   from attr import AttrsInstance

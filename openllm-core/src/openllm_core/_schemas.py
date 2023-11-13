@@ -9,9 +9,7 @@ import orjson
 
 from ._configuration import LLMConfig
 from .config import AutoConfig
-from .utils import converter
-from .utils import gen_random_uuid
-
+from .utils import converter, gen_random_uuid
 
 if t.TYPE_CHECKING:
   import vllm

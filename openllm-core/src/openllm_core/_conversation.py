@@ -1,11 +1,8 @@
 from __future__ import annotations
 import typing as t
-
-from enum import IntEnum
-from enum import auto
+from enum import IntEnum, auto
 
 import attr
-
 
 _object_setattr = object.__setattr__
 

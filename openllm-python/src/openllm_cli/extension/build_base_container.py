@@ -5,15 +5,11 @@ import click
 import orjson
 
 import openllm
-
 from openllm_cli import termui
-from openllm_cli._factory import container_registry_option
-from openllm_cli._factory import machine_option
-
+from openllm_cli._factory import container_registry_option, machine_option
 
 if t.TYPE_CHECKING:
-  from openllm_core._typing_compat import LiteralContainerRegistry
-  from openllm_core._typing_compat import LiteralContainerVersionStrategy
+  from openllm_core._typing_compat import LiteralContainerRegistry, LiteralContainerVersionStrategy
 
 
 @click.command(

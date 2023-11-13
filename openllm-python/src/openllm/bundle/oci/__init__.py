@@ -10,10 +10,7 @@ import pathlib
 import shutil
 import subprocess
 import typing as t
-
-from datetime import datetime
-from datetime import timedelta
-from datetime import timezone
+from datetime import datetime, timedelta, timezone
 
 import attr
 import orjson
@@ -21,17 +18,17 @@ import orjson
 import bentoml
 import openllm
 import openllm_core
-
 from openllm_core.utils.lazy import VersionInfo
-
 
 if t.TYPE_CHECKING:
   from ghapi import all
 
-  from openllm_core._typing_compat import LiteralContainerRegistry
-  from openllm_core._typing_compat import LiteralContainerVersionStrategy
-  from openllm_core._typing_compat import LiteralString
-  from openllm_core._typing_compat import RefTuple
+  from openllm_core._typing_compat import (
+    LiteralContainerRegistry,
+    LiteralContainerVersionStrategy,
+    LiteralString,
+    RefTuple,
+  )
 
 all = openllm_core.utils.LazyLoader('all', globals(), 'ghapi.all')  # noqa: F811
 

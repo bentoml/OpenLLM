@@ -9,7 +9,6 @@ import typing as t
 
 from openllm_core.utils import LazyModule
 
-
 _import_structure: dict[str, list[str]] = {'openai': []}
 
 if t.TYPE_CHECKING:

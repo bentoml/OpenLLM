@@ -2,32 +2,22 @@ from __future__ import annotations
 import importlib
 import os
 import typing as t
-
 from collections import OrderedDict
 
 import inflection
 import orjson
 
-from openllm_core.exceptions import MissingDependencyError
-from openllm_core.exceptions import OpenLLMException
-from openllm_core.utils import ReprMixin
-from openllm_core.utils import is_bentoml_available
+from openllm_core.exceptions import MissingDependencyError, OpenLLMException
+from openllm_core.utils import ReprMixin, is_bentoml_available
 from openllm_core.utils.import_utils import is_transformers_available
-
 
 if t.TYPE_CHECKING:
   import types
-
-  from collections import _odict_items
-  from collections import _odict_keys
-  from collections import _odict_values
+  from collections import _odict_items, _odict_keys, _odict_values
 
   import openllm
   import openllm_core
-
-  from openllm_core._typing_compat import LiteralString
-  from openllm_core._typing_compat import M
-  from openllm_core._typing_compat import T
+  from openllm_core._typing_compat import LiteralString, M, T
 
   ConfigKeysView = _odict_keys[str, type[openllm_core.LLMConfig]]
   ConfigValuesView = _odict_values[str, type[openllm_core.LLMConfig]]

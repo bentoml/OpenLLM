@@ -9,60 +9,56 @@ import typing as t
 import attr
 import inflection
 import orjson
-
 from huggingface_hub import hf_hub_download
 
 import bentoml
 import openllm
 import openllm_core
-
 from bentoml._internal.models.model import ModelSignature
 from bentoml._internal.runner.runner_handle import DummyRunnerHandle
-from openllm_core._schemas import CompletionChunk
-from openllm_core._schemas import GenerationOutput
-from openllm_core._typing_compat import AdapterMap
-from openllm_core._typing_compat import AdapterTuple
-from openllm_core._typing_compat import AdapterType
-from openllm_core._typing_compat import DictStrAny
-from openllm_core._typing_compat import LiteralBackend
-from openllm_core._typing_compat import LiteralQuantise
-from openllm_core._typing_compat import LiteralSerialisation
-from openllm_core._typing_compat import M
-from openllm_core._typing_compat import ParamSpec
-from openllm_core._typing_compat import T
-from openllm_core._typing_compat import TupleAny
+from openllm_core._schemas import CompletionChunk, GenerationOutput
+from openllm_core._typing_compat import (
+  AdapterMap,
+  AdapterTuple,
+  AdapterType,
+  DictStrAny,
+  LiteralBackend,
+  LiteralQuantise,
+  LiteralSerialisation,
+  M,
+  ParamSpec,
+  T,
+  TupleAny,
+)
 from openllm_core.exceptions import MissingDependencyError
 from openllm_core.prompts import PromptTemplate
-from openllm_core.utils import DEBUG
-from openllm_core.utils import ReprMixin
-from openllm_core.utils import apply
-from openllm_core.utils import check_bool_env
-from openllm_core.utils import codegen
-from openllm_core.utils import converter
-from openllm_core.utils import first_not_none
-from openllm_core.utils import flatten_attrs
-from openllm_core.utils import generate_hash_from_file
-from openllm_core.utils import get_debug_mode
-from openllm_core.utils import get_disable_warnings
-from openllm_core.utils import get_quiet_mode
-from openllm_core.utils import is_peft_available
-from openllm_core.utils import resolve_filepath
-from openllm_core.utils import validate_is_path
+from openllm_core.utils import (
+  DEBUG,
+  ReprMixin,
+  apply,
+  check_bool_env,
+  codegen,
+  converter,
+  first_not_none,
+  flatten_attrs,
+  generate_hash_from_file,
+  get_debug_mode,
+  get_disable_warnings,
+  get_quiet_mode,
+  is_peft_available,
+  resolve_filepath,
+  validate_is_path,
+)
 
 from ._quantisation import infer_quantisation_config
 from ._strategies import CascadingResourceStrategy
-from .exceptions import ForbiddenAttributeError
-from .exceptions import OpenLLMException
+from .exceptions import ForbiddenAttributeError, OpenLLMException
 from .serialisation.constants import PEFT_CONFIG_NAME
-
 
 if t.TYPE_CHECKING:
   import transformers
-
   from peft.config import PeftConfig
-  from peft.peft_model import PeftModel
-  from peft.peft_model import PeftModelForCausalLM
-  from peft.peft_model import PeftModelForSeq2SeqLM
+  from peft.peft_model import PeftModel, PeftModelForCausalLM, PeftModelForSeq2SeqLM
 
   from bentoml._internal.runner.runnable import RunnableMethod
   from bentoml._internal.runner.runner import RunnerMethod

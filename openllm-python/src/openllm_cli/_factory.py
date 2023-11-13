@@ -7,22 +7,21 @@ import typing as t
 import click
 import click_option_group as cog
 import inflection
-
 from bentoml_cli.utils import BentoMLCommandGroup
-from click import ClickException
-from click import shell_completion as sc
+from click import ClickException, shell_completion as sc
 
 import bentoml
 import openllm
-
 from openllm_core._configuration import LLMConfig
-from openllm_core._typing_compat import Concatenate
-from openllm_core._typing_compat import DictStrAny
-from openllm_core._typing_compat import LiteralBackend
-from openllm_core._typing_compat import LiteralQuantise
-from openllm_core._typing_compat import LiteralSerialisation
-from openllm_core._typing_compat import ParamSpec
-from openllm_core._typing_compat import get_literal_args
+from openllm_core._typing_compat import (
+  Concatenate,
+  DictStrAny,
+  LiteralBackend,
+  LiteralQuantise,
+  LiteralSerialisation,
+  ParamSpec,
+  get_literal_args,
+)
 from openllm_core.utils import DEBUG
 
 

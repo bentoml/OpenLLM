@@ -11,51 +11,37 @@ import attr
 import click_option_group as cog
 import inflection
 import orjson
-
-from attr._make import _CountingAttr
-from attr._make import _make_init
-from attr._make import _transform_attrs
-from cattr.gen import make_dict_structure_fn
-from cattr.gen import make_dict_unstructure_fn
-from cattr.gen import override
+from attr._make import _CountingAttr, _make_init, _transform_attrs
+from cattr.gen import make_dict_structure_fn, make_dict_unstructure_fn, override
 from deepmerge.merger import Merger
 
 import openllm_core
 
-from ._conversation import Conversation
-from ._conversation import SeparatorStyle
-from ._typing_compat import AdapterType
-from ._typing_compat import AnyCallable
-from ._typing_compat import At
-from ._typing_compat import DictStrAny
-from ._typing_compat import ListStr
-from ._typing_compat import LiteralBackend
-from ._typing_compat import LiteralSerialisation
-from ._typing_compat import LiteralString
-from ._typing_compat import NotRequired
-from ._typing_compat import Required
-from ._typing_compat import Self
-from ._typing_compat import overload
+from ._conversation import Conversation, SeparatorStyle
+from ._typing_compat import (
+  AdapterType,
+  AnyCallable,
+  At,
+  DictStrAny,
+  ListStr,
+  LiteralBackend,
+  LiteralSerialisation,
+  LiteralString,
+  NotRequired,
+  Required,
+  Self,
+  overload,
+)
 from .exceptions import ForbiddenAttributeError
-from .utils import LazyLoader
-from .utils import ReprMixin
-from .utils import codegen
-from .utils import converter
-from .utils import dantic
-from .utils import field_env_key
-from .utils import first_not_none
-from .utils import lenient_issubclass
-from .utils.peft import PEFT_TASK_TYPE_TARGET_MAPPING
-from .utils.peft import FineTuneConfig
-
+from .utils import LazyLoader, ReprMixin, codegen, converter, dantic, field_env_key, first_not_none, lenient_issubclass
+from .utils.peft import PEFT_TASK_TYPE_TARGET_MAPPING, FineTuneConfig
 
 if t.TYPE_CHECKING:
   import click
   import transformers
   import vllm
 
-  from openllm.protocol.openai import ChatCompletionRequest
-  from openllm.protocol.openai import CompletionRequest
+  from openllm.protocol.openai import ChatCompletionRequest, CompletionRequest
 else:
   vllm = LazyLoader('vllm', globals(), 'vllm')
   transformers = LazyLoader('transformers', globals(), 'transformers')

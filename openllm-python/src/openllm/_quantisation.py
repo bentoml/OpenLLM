@@ -6,14 +6,14 @@ import typing as t
 import torch
 import transformers
 
-from openllm_core._typing_compat import LiteralQuantise
-from openllm_core._typing_compat import overload
+from openllm_core._typing_compat import LiteralQuantise, overload
 from openllm_core.exceptions import MissingDependencyError
-from openllm_core.utils import is_autoawq_available
-from openllm_core.utils import is_autogptq_available
-from openllm_core.utils import is_bitsandbytes_available
-from openllm_core.utils import is_optimum_supports_gptq
-
+from openllm_core.utils import (
+  is_autoawq_available,
+  is_autogptq_available,
+  is_bitsandbytes_available,
+  is_optimum_supports_gptq,
+)
 
 if t.TYPE_CHECKING:
   from openllm_core._typing_compat import DictStrAny

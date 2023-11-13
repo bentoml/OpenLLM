@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import openllm_core
 
-
 START_MISTRAL_COMMAND_DOCSTRING = """\
 Run a LLMServer for Mistral model.
 
