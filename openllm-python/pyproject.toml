@@ -143,7 +143,6 @@ exclude = [
   "/.git_archival.txt",
   "tests",
   "/.python-version-default",
-  "ADDING_NEW_MODEL.md",
 ]
 [tool.hatch.build.targets.wheel.hooks.mypyc]
 dependencies = [
