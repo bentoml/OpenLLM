@@ -8,21 +8,28 @@ Each module should implement the following API:
 """
 
 from __future__ import annotations
+import importlib
 import typing as t
 
 from openllm_core.utils import LazyModule
-
-from . import hf as hf, openai as openai
 
 if t.TYPE_CHECKING:
   import bentoml
   import openllm
 
-_import_structure: dict[str, list[str]] = {'openai': [], 'hf': []}
+
+class IntegrationModule(t.Protocol):
+  def mount_to_svc(self, svc: bentoml.Service, llm: openllm.LLM[t.Any, t.Any]) -> bentoml.Service: ...
+
+
+_import_structure: dict[str, list[str]] = {'openai': [], 'hf': [], 'cohere': []}
 
 
 def mount_entrypoints(svc: bentoml.Service, llm: openllm.LLM[t.Any, t.Any]) -> bentoml.Service:
-  return openai.mount_to_svc(hf.mount_to_svc(svc, llm), llm)
+  for module_name in _import_structure:
+    module = t.cast(IntegrationModule, importlib.import_module(f'.{module_name}', __name__))
+    svc = module.mount_to_svc(svc, llm)
+  return svc
 
 
 __lazy = LazyModule(
