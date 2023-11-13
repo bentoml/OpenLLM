@@ -12,14 +12,9 @@ import attr
 import distro
 import httpx
 
-from ._stream import AsyncStream
-from ._stream import Response
-from ._stream import Stream
-from ._typing_compat import Architecture
-from ._typing_compat import LiteralString
-from ._typing_compat import Platform
+from ._stream import AsyncStream, Response, Stream
+from ._typing_compat import Architecture, LiteralString, Platform
 from ._utils import converter
-
 
 logger = logging.getLogger(__name__)
 

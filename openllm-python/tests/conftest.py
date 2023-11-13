@@ -7,7 +7,6 @@ import pytest
 
 import openllm
 
-
 if t.TYPE_CHECKING:
   from openllm_core._typing_compat import LiteralBackend
 

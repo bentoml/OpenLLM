@@ -8,17 +8,10 @@ import torch
 
 import bentoml
 import openllm
-
 from openllm.exceptions import OpenLLMException
-from openllm_core._schemas import CompletionChunk
-from openllm_core._schemas import GenerationOutput
-from openllm_core._typing_compat import LiteralBackend
-from openllm_core._typing_compat import M
-from openllm_core._typing_compat import T
-from openllm_core.utils import first_not_none
-from openllm_core.utils import get_debug_mode
-from openllm_core.utils import is_vllm_available
-
+from openllm_core._schemas import CompletionChunk, GenerationOutput
+from openllm_core._typing_compat import LiteralBackend, M, T
+from openllm_core.utils import first_not_none, get_debug_mode, is_vllm_available
 
 if t.TYPE_CHECKING:
   import vllm
@@ -129,8 +122,7 @@ class PyTorchRunnable(bentoml.Runnable):
   async def forward(
     self, prompt_token_ids: list[int], request_id: str, stop: str | t.Iterable[str] | None = None, **attrs: t.Any
   ) -> t.AsyncGenerator[GenerationOutput, None]:
-    from ._generation import is_partial_stop
-    from ._generation import prepare_logits_processor
+    from ._generation import is_partial_stop, prepare_logits_processor
 
     stop_: set[str] = set()
     if isinstance(stop, str) and stop != '':

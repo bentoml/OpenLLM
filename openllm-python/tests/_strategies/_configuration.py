@@ -5,9 +5,7 @@ import typing as t
 from hypothesis import strategies as st
 
 import openllm
-
 from openllm_core._configuration import ModelSettings
-
 
 logger = logging.getLogger(__name__)
 

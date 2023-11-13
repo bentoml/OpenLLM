@@ -11,16 +11,12 @@ import sys
 import types
 import typing as t
 import uuid
-
 from pathlib import Path
 
 from . import pkg
 from .import_utils import ENV_VARS_TRUE_VALUES as ENV_VARS_TRUE_VALUES
-from .lazy import LazyLoader as LazyLoader
-from .lazy import LazyModule as LazyModule
-from .lazy import VersionInfo as VersionInfo
+from .lazy import LazyLoader as LazyLoader, LazyModule as LazyModule, VersionInfo as VersionInfo
 from .._typing_compat import overload
-
 
 if t.TYPE_CHECKING:
   from bentoml._internal.models.model import ModelContext
@@ -377,7 +373,6 @@ def validate_is_path(maybe_path: str) -> bool:
 
 def generate_context(framework_name: str) -> ModelContext:
   import openllm_core
-
   from bentoml._internal.models.model import ModelContext
 
   framework_versions = {'transformers': pkg.get_pkg_version('transformers')}
@@ -447,23 +442,22 @@ __getattr__ = __lazy.__getattr__
 
 if t.TYPE_CHECKING:
   # NOTE: The following exports useful utils from bentoml
-  from . import analytics as analytics
-  from . import codegen as codegen
-  from . import dantic as dantic
-  from . import serde as serde
-  from .import_utils import OPTIONAL_DEPENDENCIES as OPTIONAL_DEPENDENCIES
-  from .import_utils import is_autoawq_available as is_autoawq_available
-  from .import_utils import is_autogptq_available as is_autogptq_available
-  from .import_utils import is_bentoml_available as is_bentoml_available
-  from .import_utils import is_bitsandbytes_available as is_bitsandbytes_available
-  from .import_utils import is_grpc_available as is_grpc_available
-  from .import_utils import is_jupyter_available as is_jupyter_available
-  from .import_utils import is_jupytext_available as is_jupytext_available
-  from .import_utils import is_notebook_available as is_notebook_available
-  from .import_utils import is_optimum_supports_gptq as is_optimum_supports_gptq
-  from .import_utils import is_peft_available as is_peft_available
-  from .import_utils import is_torch_available as is_torch_available
-  from .import_utils import is_transformers_available as is_transformers_available
-  from .import_utils import is_vllm_available as is_vllm_available
+  from . import analytics as analytics, codegen as codegen, dantic as dantic, serde as serde
+  from .import_utils import (
+    OPTIONAL_DEPENDENCIES as OPTIONAL_DEPENDENCIES,
+    is_autoawq_available as is_autoawq_available,
+    is_autogptq_available as is_autogptq_available,
+    is_bentoml_available as is_bentoml_available,
+    is_bitsandbytes_available as is_bitsandbytes_available,
+    is_grpc_available as is_grpc_available,
+    is_jupyter_available as is_jupyter_available,
+    is_jupytext_available as is_jupytext_available,
+    is_notebook_available as is_notebook_available,
+    is_optimum_supports_gptq as is_optimum_supports_gptq,
+    is_peft_available as is_peft_available,
+    is_torch_available as is_torch_available,
+    is_transformers_available as is_transformers_available,
+    is_vllm_available as is_vllm_available,
+  )
   from .representation import ReprMixin as ReprMixin
   from .serde import converter as converter

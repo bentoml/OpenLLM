@@ -10,9 +10,7 @@ import typing as t
 import attr
 
 import openllm_core
-
 from openllm_core._typing_compat import ParamSpec
-
 
 P = ParamSpec('P')
 T = t.TypeVar('T')

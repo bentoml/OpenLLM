@@ -8,31 +8,25 @@ import sys
 import typing as t
 
 import orjson
-
-from simple_di import Provide
-from simple_di import inject
+from simple_di import Provide, inject
 
 import bentoml
 import openllm_core
-
 from bentoml._internal.configuration.containers import BentoMLContainer
 from openllm_core._typing_compat import LiteralSerialisation
 from openllm_core.exceptions import OpenLLMException
-from openllm_core.utils import WARNING_ENV_VAR
-from openllm_core.utils import codegen
-from openllm_core.utils import first_not_none
-from openllm_core.utils import get_disable_warnings
-from openllm_core.utils import is_vllm_available
-
+from openllm_core.utils import WARNING_ENV_VAR, codegen, first_not_none, get_disable_warnings, is_vllm_available
 
 if t.TYPE_CHECKING:
   from bentoml._internal.bento import BentoStore
   from openllm_core._configuration import LLMConfig
-  from openllm_core._typing_compat import LiteralBackend
-  from openllm_core._typing_compat import LiteralContainerRegistry
-  from openllm_core._typing_compat import LiteralContainerVersionStrategy
-  from openllm_core._typing_compat import LiteralQuantise
-  from openllm_core._typing_compat import LiteralString
+  from openllm_core._typing_compat import (
+    LiteralBackend,
+    LiteralContainerRegistry,
+    LiteralContainerVersionStrategy,
+    LiteralQuantise,
+    LiteralString,
+  )
 
 logger = logging.getLogger(__name__)
 
@@ -89,8 +83,7 @@ def _start(
     backend: The backend to use for this LLM. By default, this is set to ``pt``.
     additional_args: Additional arguments to pass to ``openllm start``.
   """
-  from .entrypoint import start_command
-  from .entrypoint import start_grpc_command
+  from .entrypoint import start_command, start_grpc_command
 
   os.environ['OPENLLM_BACKEND'] = openllm_core.utils.first_not_none(
     backend, default='vllm' if is_vllm_available() else 'pt'

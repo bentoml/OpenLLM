@@ -6,16 +6,13 @@ import typing as t
 import click
 import inflection
 import orjson
-
 from bentoml_cli.utils import opt_callback
 
 import openllm
 import openllm_core
-
 from openllm_cli import termui
 from openllm_cli._factory import model_complete_envvar
 from openllm_core.prompts import process_prompt
-
 
 logger = logging.getLogger(__name__)
 

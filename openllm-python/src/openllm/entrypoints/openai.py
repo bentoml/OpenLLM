@@ -4,41 +4,36 @@ import logging
 import time
 import traceback
 import typing as t
-
 from http import HTTPStatus
 
 import orjson
-
 from starlette.applications import Starlette
-from starlette.responses import JSONResponse
-from starlette.responses import StreamingResponse
+from starlette.responses import JSONResponse, StreamingResponse
 from starlette.routing import Route
 
 from openllm_core._schemas import SampleLogprobs
-from openllm_core.utils import converter
-from openllm_core.utils import gen_random_uuid
+from openllm_core.utils import converter, gen_random_uuid
 
-from ._openapi import add_schema_definitions
-from ._openapi import append_schemas
-from ._openapi import get_generator
-from ..protocol.openai import ChatCompletionRequest
-from ..protocol.openai import ChatCompletionResponse
-from ..protocol.openai import ChatCompletionResponseChoice
-from ..protocol.openai import ChatCompletionResponseStreamChoice
-from ..protocol.openai import ChatCompletionStreamResponse
-from ..protocol.openai import ChatMessage
-from ..protocol.openai import CompletionRequest
-from ..protocol.openai import CompletionResponse
-from ..protocol.openai import CompletionResponseChoice
-from ..protocol.openai import CompletionResponseStreamChoice
-from ..protocol.openai import CompletionStreamResponse
-from ..protocol.openai import Delta
-from ..protocol.openai import ErrorResponse
-from ..protocol.openai import LogProbs
-from ..protocol.openai import ModelCard
-from ..protocol.openai import ModelList
-from ..protocol.openai import UsageInfo
-
+from ._openapi import add_schema_definitions, append_schemas, get_generator
+from ..protocol.openai import (
+  ChatCompletionRequest,
+  ChatCompletionResponse,
+  ChatCompletionResponseChoice,
+  ChatCompletionResponseStreamChoice,
+  ChatCompletionStreamResponse,
+  ChatMessage,
+  CompletionRequest,
+  CompletionResponse,
+  CompletionResponseChoice,
+  CompletionResponseStreamChoice,
+  CompletionStreamResponse,
+  Delta,
+  ErrorResponse,
+  LogProbs,
+  ModelCard,
+  ModelList,
+  UsageInfo,
+)
 
 schemas = get_generator(
   'openai',
@@ -69,10 +64,8 @@ if t.TYPE_CHECKING:
 
   import bentoml
   import openllm
-
   from openllm_core._schemas import GenerationOutput
-  from openllm_core._typing_compat import M
-  from openllm_core._typing_compat import T
+  from openllm_core._typing_compat import M, T
 
 
 def jsonify_attr(obj: AttrsInstance) -> str:

@@ -5,16 +5,16 @@ import typing as t
 import attr
 import orjson
 
-from openllm_core._schemas import CompletionChunk as CompletionChunk
-from openllm_core._schemas import GenerationOutput as Response  # backward compatibility
-from openllm_core._schemas import _SchemaMixin as _SchemaMixin
+from openllm_core._schemas import (
+  CompletionChunk as CompletionChunk,
+  GenerationOutput as Response,  # backward compatibility
+  _SchemaMixin as _SchemaMixin,
+)
 
 from ._utils import converter
 
-
 if t.TYPE_CHECKING:
-  from ._shim import AsyncClient
-  from ._shim import Client
+  from ._shim import AsyncClient, Client
 
 
 __all__ = ['Response', 'CompletionChunk', 'Metadata', 'StreamingResponse', 'Helpers']

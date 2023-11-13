@@ -4,12 +4,10 @@ import typing as t
 
 import attr
 import inflection
-
 from deepmerge import Merger
 
 from . import dantic
 from ..exceptions import ForbiddenAttributeError
-
 
 config_merger = Merger([(dict, 'merge')], ['override'], ['override'])
 

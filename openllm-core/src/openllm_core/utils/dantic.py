@@ -6,7 +6,6 @@ import importlib
 import os
 import sys
 import typing as t
-
 from enum import Enum
 
 import attr
@@ -14,11 +13,7 @@ import click
 import click_option_group as cog
 import inflection
 import orjson
-
-from click import ParamType
-from click import shell_completion as sc
-from click import types as click_types
-
+from click import ParamType, shell_completion as sc, types as click_types
 
 if t.TYPE_CHECKING:
   from attr import _ValidatorType

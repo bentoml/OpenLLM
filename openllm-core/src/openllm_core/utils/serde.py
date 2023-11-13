@@ -1,14 +1,10 @@
 from __future__ import annotations
 import typing as t
-
 from datetime import datetime
 
 import attr
-
 from cattr import Converter
-from cattr.gen import make_dict_structure_fn
-from cattr.gen import make_dict_unstructure_fn
-
+from cattr.gen import make_dict_structure_fn, make_dict_unstructure_fn
 
 converter = Converter(omit_if_default=True)
 

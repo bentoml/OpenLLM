@@ -5,9 +5,7 @@ import cloudpickle
 import fs
 
 import openllm
-
 from openllm_core._typing_compat import ParamSpec
-
 
 P = ParamSpec('P')
 

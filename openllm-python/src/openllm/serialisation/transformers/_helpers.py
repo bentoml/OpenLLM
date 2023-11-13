@@ -4,14 +4,11 @@ import typing as t
 
 import transformers
 
-from openllm.serialisation.constants import FRAMEWORK_TO_AUTOCLASS_MAPPING
-from openllm.serialisation.constants import HUB_ATTRS
+from openllm.serialisation.constants import FRAMEWORK_TO_AUTOCLASS_MAPPING, HUB_ATTRS
 from openllm_core.exceptions import OpenLLMException
 
-
 if t.TYPE_CHECKING:
-  from openllm_core._typing_compat import M
-  from openllm_core._typing_compat import T
+  from openllm_core._typing_compat import M, T
 
   from ..._llm import LLM
 

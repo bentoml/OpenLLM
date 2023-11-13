@@ -6,14 +6,8 @@ import typing as t
 
 import attr
 
-from ._schemas import Helpers
-from ._schemas import Metadata
-from ._schemas import Response
-from ._schemas import StreamingResponse
-from ._shim import MAX_RETRIES
-from ._shim import AsyncClient
-from ._shim import Client
-
+from ._schemas import Helpers, Metadata, Response, StreamingResponse
+from ._shim import MAX_RETRIES, AsyncClient, Client
 
 logger = logging.getLogger(__name__)
 

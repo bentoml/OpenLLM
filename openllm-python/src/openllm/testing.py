@@ -10,10 +10,8 @@ import typing as t
 import bentoml
 import openllm
 
-
 if t.TYPE_CHECKING:
-  from openllm_core._typing_compat import LiteralBackend
-  from openllm_core._typing_compat import LiteralQuantise
+  from openllm_core._typing_compat import LiteralBackend, LiteralQuantise
 
 logger = logging.getLogger(__name__)
 

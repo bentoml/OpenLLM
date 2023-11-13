@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-
 FRAMEWORK_TO_AUTOCLASS_MAPPING = {
   'pt': ('AutoModelForCausalLM', 'AutoModelForSeq2SeqLM'),
   'vllm': ('AutoModelForCausalLM', 'AutoModelForSeq2SeqLM'),

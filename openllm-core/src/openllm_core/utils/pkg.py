@@ -2,13 +2,11 @@
 from __future__ import annotations
 import importlib.metadata
 import importlib.util
-
 from importlib.metadata import PackageNotFoundError
 from types import ModuleType
 from typing import cast
 
 from packaging.version import Version
-
 
 __all__ = ['PackageNotFoundError', 'pkg_version_info', 'get_pkg_version', 'source_locations', 'find_spec']
 

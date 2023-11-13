@@ -5,10 +5,8 @@ import attr
 import httpx
 import orjson
 
-
 if t.TYPE_CHECKING:
-  from ._shim import AsyncClient
-  from ._shim import Client
+  from ._shim import AsyncClient, Client
 
 Response = t.TypeVar('Response', bound=attr.AttrsInstance)
 

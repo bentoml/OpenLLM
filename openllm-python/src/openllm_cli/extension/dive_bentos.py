@@ -5,17 +5,12 @@ import typing as t
 
 import click
 import psutil
-
-from simple_di import Provide
-from simple_di import inject
+from simple_di import Provide, inject
 
 import bentoml
-
 from bentoml._internal.configuration.containers import BentoMLContainer
 from openllm_cli import termui
-from openllm_cli._factory import bento_complete_envvar
-from openllm_cli._factory import machine_option
-
+from openllm_cli._factory import bento_complete_envvar, machine_option
 
 if t.TYPE_CHECKING:
   from bentoml._internal.bento import BentoStore

@@ -5,7 +5,6 @@ import attr
 
 from .utils import default_formatter
 
-
 # equivocal setattr to save one lookup per assignment
 _object_setattr = object.__setattr__
 

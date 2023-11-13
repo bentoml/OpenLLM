@@ -6,7 +6,6 @@ import orjson
 
 import bentoml
 import openllm
-
 from bentoml._internal.utils import human_readable_size
 from openllm_cli import termui
 

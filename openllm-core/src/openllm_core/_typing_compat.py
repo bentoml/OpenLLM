@@ -4,13 +4,9 @@ import typing as t
 
 import attr
 
-
 if t.TYPE_CHECKING:
   from peft.peft_model import PeftModel
-  from transformers import PreTrainedModel
-  from transformers import PreTrainedTokenizer
-  from transformers import PreTrainedTokenizerBase
-  from transformers import PreTrainedTokenizerFast
+  from transformers import PreTrainedModel, PreTrainedTokenizer, PreTrainedTokenizerBase, PreTrainedTokenizerFast
 
   from .utils.lazy import VersionInfo
 else:
@@ -50,30 +46,33 @@ LiteralResourceSpec = t.Literal['cloud-tpus.google.com/v2', 'amd.com/gpu', 'nvid
 InferenceReturnType = t.Literal['text', 'object', 'token']
 
 if sys.version_info[:2] >= (3, 11):
-  from typing import LiteralString as LiteralString
-  from typing import NotRequired as NotRequired
-  from typing import Required as Required
-  from typing import Self as Self
-  from typing import dataclass_transform as dataclass_transform
-  from typing import overload as overload
+  from typing import (
+    LiteralString as LiteralString,
+    NotRequired as NotRequired,
+    Required as Required,
+    Self as Self,
+    dataclass_transform as dataclass_transform,
+    overload as overload,
+  )
 else:
-  from typing_extensions import LiteralString as LiteralString
-  from typing_extensions import NotRequired as NotRequired
-  from typing_extensions import Required as Required
-  from typing_extensions import Self as Self
-  from typing_extensions import dataclass_transform as dataclass_transform
-  from typing_extensions import overload as overload
+  from typing_extensions import (
+    LiteralString as LiteralString,
+    NotRequired as NotRequired,
+    Required as Required,
+    Self as Self,
+    dataclass_transform as dataclass_transform,
+    overload as overload,
+  )
 
 if sys.version_info[:2] >= (3, 10):
-  from typing import Concatenate as Concatenate
-  from typing import ParamSpec as ParamSpec
-  from typing import TypeAlias as TypeAlias
-  from typing import TypeGuard as TypeGuard
+  from typing import Concatenate as Concatenate, ParamSpec as ParamSpec, TypeAlias as TypeAlias, TypeGuard as TypeGuard
 else:
-  from typing_extensions import Concatenate as Concatenate
-  from typing_extensions import ParamSpec as ParamSpec
-  from typing_extensions import TypeAlias as TypeAlias
-  from typing_extensions import TypeGuard as TypeGuard
+  from typing_extensions import (
+    Concatenate as Concatenate,
+    ParamSpec as ParamSpec,
+    TypeAlias as TypeAlias,
+    TypeGuard as TypeGuard,
+  )
 
 if sys.version_info[:2] >= (3, 9):
   from typing import Annotated as Annotated
