@@ -2,7 +2,6 @@ from __future__ import annotations
 import typing as t
 
 import openllm_core
-from openllm_core._conversation import SeparatorStyle
 from openllm_core.prompts import process_prompt
 
 if t.TYPE_CHECKING:
@@ -50,9 +49,6 @@ class OPTConfig(openllm_core.LLMConfig):
     'url': 'https://huggingface.co/docs/transformers/model_doc/opt',
     'default_id': 'facebook/opt-1.3b',
     'architecture': 'OPTForCausalLM',
-    'conversation': dict(
-      roles=('User', 'Assistant'), messages=[], sep_style=SeparatorStyle.ADD_COLON_SINGLE, sep='\n'
-    ),
     'model_ids': [
       'facebook/opt-125m',
       'facebook/opt-350m',
