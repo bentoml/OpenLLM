@@ -188,6 +188,7 @@ class LLM(t.Generic[M, T], ReprMixin):
     backend = first_not_none(
       backend, os.getenv('OPENLLM_BACKEND'), default='vllm' if openllm.utils.is_vllm_available() else 'pt'
     )
+    torch_dtype = first_not_none(os.getenv('TORCH_DTYPE'), torch_dtype, default='auto')
     quantize = first_not_none(quantize, os.getenv('OPENLLM_QUANTIZE'), default=None)
     # elif quantization_config is None and quantize is not None:
     #   quantization_config, attrs = infer_quantisation_config(self, quantize, **attrs)
@@ -254,7 +255,7 @@ class LLM(t.Generic[M, T], ReprMixin):
         None,
       )
       if config_dtype is None:
-        config_type = torch.float32
+        config_dtype = torch.float32
       if self.__llm_torch_dtype__ == 'auto':
         if config_dtype == torch.float32:
           torch_dtype = torch.float16  # following common practice

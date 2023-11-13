@@ -140,6 +140,7 @@ def start_decorator(serve_grpc: bool = False) -> t.Callable[[FC], t.Callable[[FC
       _OpenLLM_GenericInternalConfig().to_click_options,
       _http_server_args if not serve_grpc else _grpc_server_args,
       cog.optgroup.group('General LLM Options', help='The following options are related to running LLM Server.'),
+      dtype_option(factory=cog.optgroup),
       model_version_option(factory=cog.optgroup),
       system_message_option(factory=cog.optgroup),
       prompt_template_file_option(factory=cog.optgroup),
@@ -298,6 +299,17 @@ def cors_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC
 
 def machine_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option('--machine', is_flag=True, default=False, hidden=True, **attrs)(f)
+
+
+def dtype_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
+  return cli_option(
+    '--dtype',
+    type=click.Choice(['float16', 'float32', 'bfloat16']),
+    envvar='TORCH_DTYPE',
+    default='float16',
+    help='Optional dtype for casting tensors for running inference.',
+    **attrs,
+  )(f)
 
 
 def model_id_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:

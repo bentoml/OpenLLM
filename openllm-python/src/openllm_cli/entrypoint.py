@@ -56,6 +56,7 @@ from openllm_core._typing_compat import (
   Concatenate,
   DictStrAny,
   LiteralBackend,
+  LiteralDtype,
   LiteralQuantise,
   LiteralSerialisation,
   LiteralString,
@@ -92,6 +93,7 @@ from ._factory import (
   _AnyCallable,
   backend_option,
   container_registry_option,
+  dtype_option,
   machine_option,
   model_name_argument,
   model_version_option,
@@ -403,6 +405,7 @@ def start_command(
   cors: bool,
   adapter_id: str | None,
   return_process: bool,
+  dtype: LiteralDtype,
   deprecated_model_id: str | None,
   **attrs: t.Any,
 ) -> LLMConfig | subprocess.Popen[bytes]:
@@ -452,6 +455,7 @@ def start_command(
     adapter_map=adapter_map,
     quantize=quantize,
     serialisation=serialisation,
+    torch_dtype=dtype,
     trust_remote_code=check_bool_env('TRUST_REMOTE_CODE'),
   )
   backend_warning(llm.__llm_backend__)
@@ -522,6 +526,7 @@ def start_grpc_command(
   backend: LiteralBackend | None,
   serialisation: LiteralSerialisation | None,
   cors: bool,
+  dtype: LiteralDtype,
   adapter_id: str | None,
   return_process: bool,
   deprecated_model_id: str | None,
@@ -573,6 +578,7 @@ def start_grpc_command(
     adapter_map=adapter_map,
     quantize=quantize,
     serialisation=serialisation,
+    torch_dtype=dtype,
     trust_remote_code=check_bool_env('TRUST_REMOTE_CODE'),
   )
   backend_warning(llm.__llm_backend__)
@@ -872,6 +878,7 @@ class BuildBentoOutput(t.TypedDict):
   metavar='[REMOTE_REPO/MODEL_ID | /path/to/local/model]',
   help='Deprecated. Use positional argument instead.',
 )
+@dtype_option
 @backend_option
 @system_message_option
 @prompt_template_file_option
@@ -943,6 +950,7 @@ def build_command(
   overwrite: bool,
   quantize: LiteralQuantise | None,
   machine: bool,
+  dtype: LiteralDtype,
   enable_features: tuple[str, ...] | None,
   adapter_id: tuple[str, ...],
   build_ctx: str | None,
@@ -1003,17 +1011,16 @@ def build_command(
     system_message=system_message,
     backend=backend,
     quantize=quantize,
-    serialisation=t.cast(
-      LiteralSerialisation,
-      first_not_none(
-        serialisation, default='safetensors' if has_safetensors_weights(model_id, model_version) else 'legacy'
-      ),
+    torch_dtype=dtype,
+    serialisation=first_not_none(
+      serialisation, default='safetensors' if has_safetensors_weights(model_id, model_version) else 'legacy'
     ),
   )
   backend_warning(llm.__llm_backend__, build=True)
 
   os.environ.update(
     {
+      'TORCH_DTYPE': dtype,
       'OPENLLM_BACKEND': llm.__llm_backend__,
       'OPENLLM_SERIALIZATION': llm._serialisation,
       'OPENLLM_MODEL_ID': llm.model_id,
