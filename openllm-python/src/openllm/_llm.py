@@ -121,12 +121,13 @@ _AdapterTuple: type[AdapterTuple] = codegen.make_attr_tuple_class('AdapterTuple'
 @functools.lru_cache(maxsize=1)
 def _torch_dtype_mapping():
   import torch
+
   return {
-      'half': torch.float16,
-      'float16': torch.float16,
-      'float': torch.float32,
-      'float32': torch.float32,
-      'bfloat16': torch.bfloat16,
+    'half': torch.float16,
+    'float16': torch.float16,
+    'float': torch.float32,
+    'float32': torch.float32,
+    'bfloat16': torch.bfloat16,
   }
 
 
@@ -245,12 +246,20 @@ class LLM(t.Generic[M, T], ReprMixin):
   def _torch_dtype(self) -> torch.dtype:
     import torch
     import transformers
+
     if not isinstance(self.__llm_torch_dtype__, torch.dtype):
-      config_dtype = getattr(transformers.AutoConfig.from_pretrained(self.bentomodel.path, trust_remote_code=self.trust_remote_code), 'torch_dtype', None)
-      if config_dtype is None: config_type = torch.float32
+      config_dtype = getattr(
+        transformers.AutoConfig.from_pretrained(self.bentomodel.path, trust_remote_code=self.trust_remote_code),
+        'torch_dtype',
+        None,
+      )
+      if config_dtype is None:
+        config_type = torch.float32
       if self.__llm_torch_dtype__ == 'auto':
-        if config_dtype == torch.float32: torch_dtype = torch.float16  # following common practice
-        else: torch_dtype = config_dtype
+        if config_dtype == torch.float32:
+          torch_dtype = torch.float16  # following common practice
+        else:
+          torch_dtype = config_dtype
       else:
         if self.__llm_torch_dtype__ not in _torch_dtype_mapping():
           raise ValueError(f"Unknown dtype '{self.__llm_torch_dtype__}'")
@@ -303,10 +312,10 @@ class LLM(t.Generic[M, T], ReprMixin):
   def import_kwargs(self) -> tuple[dict[str, t.Any], dict[str, t.Any]]:
     import torch
 
-    return {
-      'device_map': 'auto' if torch.cuda.is_available() else None,
-      'torch_dtype': self._torch_dtype,
-    }, {'padding_side': 'left', 'truncation_side': 'left'}
+    return {'device_map': 'auto' if torch.cuda.is_available() else None, 'torch_dtype': self._torch_dtype}, {
+      'padding_side': 'left',
+      'truncation_side': 'left',
+    }
 
   @property
   def trust_remote_code(self) -> bool:
