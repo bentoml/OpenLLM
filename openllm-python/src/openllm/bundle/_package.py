@@ -127,6 +127,7 @@ def construct_docker_options(
 
   environ = parse_config_options(llm.config, llm.config['timeout'], 1.0, None, True, os.environ.copy())
   env_dict = {
+    'TORCH_DTYPE': str(llm._torch_dtype).split('.')[-1],
     'OPENLLM_BACKEND': llm.__llm_backend__,
     'OPENLLM_CONFIG': f"'{llm.config.model_dump_json(flatten=True).decode()}'",
     'OPENLLM_SERIALIZATION': serialisation,
