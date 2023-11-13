@@ -2,7 +2,6 @@ from __future__ import annotations
 import typing as t
 
 import openllm_core
-from openllm_core._conversation import SeparatorStyle
 from openllm_core.prompts import PromptTemplate, process_prompt
 
 START_FLAN_T5_COMMAND_DOCSTRING = """\
@@ -41,9 +40,6 @@ class FlanT5Config(openllm_core.LLMConfig):
     'model_type': 'seq2seq_lm',
     'backend': ('pt',),
     # NOTE: See https://www.philschmid.de/fine-tune-flan-t5. No specific template found, but seems to have the same dialogue style
-    'conversation': dict(
-      system_message='', roles=('User', 'Assistant'), sep_style=SeparatorStyle.ADD_COLON_SINGLE, sep='\n'
-    ),
     'default_id': 'google/flan-t5-large',
     'model_ids': [
       'google/flan-t5-small',
