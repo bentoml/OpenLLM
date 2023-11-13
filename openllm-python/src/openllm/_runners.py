@@ -11,7 +11,7 @@ import openllm
 from openllm.exceptions import OpenLLMException
 from openllm_core._schemas import CompletionChunk, GenerationOutput
 from openllm_core._typing_compat import LiteralBackend, M, T
-from openllm_core.utils import first_not_none, get_debug_mode, is_vllm_available
+from openllm_core.utils import first_not_none, is_vllm_available
 
 if t.TYPE_CHECKING:
   import vllm
@@ -53,9 +53,8 @@ class vLLMRunnable(bentoml.Runnable):
           trust_remote_code=llm.trust_remote_code,
           tokenizer_mode='auto',
           tensor_parallel_size=num_gpus,
-          dtype=llm._torch_dtype,
+          dtype=str(llm._torch_dtype).split('.')[-1],
           quantization=quantization,
-          disable_log_requests=not get_debug_mode(),
           worker_use_ray=False,
           engine_use_ray=False,
         )

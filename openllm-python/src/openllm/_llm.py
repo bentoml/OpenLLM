@@ -1,6 +1,7 @@
 # mypy: disable-error-code="name-defined,attr-defined"
 from __future__ import annotations
 import abc
+import functools
 import logging
 import os
 import types
@@ -11,7 +12,7 @@ import inflection
 import orjson
 from huggingface_hub import hf_hub_download
 
-import bentoml, functools
+import bentoml
 import openllm
 import openllm_core
 from bentoml._internal.models.model import ModelSignature
@@ -23,12 +24,13 @@ from openllm_core._typing_compat import (
   AdapterType,
   DictStrAny,
   LiteralBackend,
+  LiteralDtype,
   LiteralQuantise,
   LiteralSerialisation,
   M,
   ParamSpec,
   T,
-  TupleAny, LiteralDtype
+  TupleAny,
 )
 from openllm_core.exceptions import MissingDependencyError
 from openllm_core.prompts import PromptTemplate
@@ -56,6 +58,7 @@ from .exceptions import ForbiddenAttributeError, OpenLLMException
 from .serialisation.constants import PEFT_CONFIG_NAME
 
 if t.TYPE_CHECKING:
+  import torch
   import transformers
   from peft.config import PeftConfig
   from peft.peft_model import PeftModel, PeftModelForCausalLM, PeftModelForSeq2SeqLM
@@ -119,11 +122,11 @@ _AdapterTuple: type[AdapterTuple] = codegen.make_attr_tuple_class('AdapterTuple'
 def _torch_dtype_mapping():
   import torch
   return {
-      "half": torch.float16,
-      "float16": torch.float16,
-      "float": torch.float32,
-      "float32": torch.float32,
-      "bfloat16": torch.bfloat16,
+      'half': torch.float16,
+      'float16': torch.float16,
+      'float': torch.float32,
+      'float32': torch.float32,
+      'bfloat16': torch.bfloat16,
   }
 
 
@@ -217,7 +220,7 @@ class LLM(t.Generic[M, T], ReprMixin):
       system_message=system_message,
       LLM__model_attrs=model_attrs,
       LLM__tokenizer_attrs=tokenizer_attrs,
-      llm_torch_dtype__=torch_dtype,
+      llm_torch_dtype__=torch_dtype.lower(),
       llm_backend__=backend,
       llm_config__=llm_config,
       llm_trust_remote_code__=trust_remote_code,
@@ -239,17 +242,21 @@ class LLM(t.Generic[M, T], ReprMixin):
       self.runner.init_local(quiet=True)
 
   @property
-  def _torch_dtype(self) -> LiteralDtype:
-    import transformers, torch
-    config_dtype = getattr(transformers.AutoConfig.from_pretrained(self.bentomodel.path, trust_remote_code=self.trust_remote_code), 'torch_dtype', None)
-    if config_dtype is None: config_type = torch.float32
-    if self.__llm_torch_dtype__ == 'auto':
-      if config_dtype == torch.float32: return 'float16'  # following common practice
-      else: return str(config_dtype).split('.')[-1]
-    else:
-      if self.__llm_torch_dtype__ not in _torch_dtype_mapping():
-        raise ValueError(f"Unknown dtype '{self.__llm_torch_dtype__}'")
-      return self.__llm_torch_dtype__
+  def _torch_dtype(self) -> torch.dtype:
+    import torch
+    import transformers
+    if not isinstance(self.__llm_torch_dtype__, torch.dtype):
+      config_dtype = getattr(transformers.AutoConfig.from_pretrained(self.bentomodel.path, trust_remote_code=self.trust_remote_code), 'torch_dtype', None)
+      if config_dtype is None: config_type = torch.float32
+      if self.__llm_torch_dtype__ == 'auto':
+        if config_dtype == torch.float32: torch_dtype = torch.float16  # following common practice
+        else: torch_dtype = config_dtype
+      else:
+        if self.__llm_torch_dtype__ not in _torch_dtype_mapping():
+          raise ValueError(f"Unknown dtype '{self.__llm_torch_dtype__}'")
+        torch_dtype = _torch_dtype_mapping()[self.__llm_torch_dtype__]
+      self.__llm_torch_dtype__ = torch_dtype
+    return self.__llm_torch_dtype__
 
   @apply(lambda val: tuple(str.lower(i) if i else i for i in val))
   def _make_tag_components(self, model_id, model_version, backend) -> tuple[str, str | None]:
@@ -298,7 +305,7 @@ class LLM(t.Generic[M, T], ReprMixin):
 
     return {
       'device_map': 'auto' if torch.cuda.is_available() else None,
-      'torch_dtype': torch.float16 if torch.cuda.is_available() else torch.float32,
+      'torch_dtype': self._torch_dtype,
     }, {'padding_side': 'left', 'truncation_side': 'left'}
 
   @property
