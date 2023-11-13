@@ -53,7 +53,7 @@ class vLLMRunnable(bentoml.Runnable):
           trust_remote_code=llm.trust_remote_code,
           tokenizer_mode='auto',
           tensor_parallel_size=num_gpus,
-          dtype='auto',
+          dtype=llm._torch_dtype,
           quantization=quantization,
           disable_log_requests=not get_debug_mode(),
           worker_use_ray=False,
