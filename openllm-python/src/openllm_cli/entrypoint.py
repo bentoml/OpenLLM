@@ -633,7 +633,7 @@ def process_environ(
       'OPENLLM_SERIALIZATION': serialisation,
       'OPENLLM_BACKEND': llm.__llm_backend__,
       'OPENLLM_CONFIG': config.model_dump_json(flatten=True).decode(),
-      'TORCH_DTYPE': str(llm._torch_dtype).split('.')[-1]
+      'TORCH_DTYPE': str(llm._torch_dtype).split('.')[-1],
     }
   )
   if llm.quantise:
