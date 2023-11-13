@@ -22,6 +22,7 @@ class SeparatorStyle(IntEnum):
   DOLLY = auto()
   MPT = auto()
   STARCODER = auto()
+  MISTRAL = auto()
 
 
 @attr.define
@@ -143,6 +144,19 @@ class Conversation:
       ret = f'<|system|>\n{system_prompt}<|end|>{self.sep}' if system_prompt else ''
       for _, (role, message) in enumerate(self.messages):
         ret += f'{role}\n{message}<|end|>{self.sep}' if message else f'{role}:'
+    elif self.sep_style == SeparatorStyle.MISTRAL:
+      seps = [self.sep, self.sep2]
+      ret = system_prompt if self.system_message else '<s>[INST] '
+      for i, (role, message) in enumerate(self.messages):
+        tag = self.roles[i % 2]
+        if message:
+          if i == 0:
+            ret += message + ' '
+          else:
+            ret += tag + ' ' + message + seps[i % 2]
+        else:
+          ret += tag
+      return ret
     else:
       raise ValueError(f'Invalid style: {self.sep_style}')
     return ret
