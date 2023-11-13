@@ -8,7 +8,7 @@ environment by referring to our
 ## Procedure
 
 All the relevant code for incorporating a new model resides within
-[`$GIT_ROOT/openllm-core/src/openllm_core/config`](./src/openllm/models/) `model_name` in snake_case.
+[`$GIT_ROOT/openllm-core/src/openllm_core/config`](../openllm-core/src/openllm_core/config/) `model_name` in snake_case.
 Here's your roadmap:
 
 - [ ] Generate model configuration file:
