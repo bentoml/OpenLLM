@@ -97,8 +97,3 @@ class OPTConfig(openllm_core.LLMConfig):
       },
       {},
     )
-
-  def postprocess_generate(self, prompt: str, generation_result: t.Sequence[str], **attrs: t.Any) -> str:
-    if len(generation_result) == 1:
-      return generation_result[0]
-    return '\n'.join(generation_result)

@@ -111,8 +111,3 @@ class DollyV2Config(openllm_core.LLMConfig):
       {'max_new_tokens': max_new_tokens, 'top_k': top_k, 'top_p': top_p, 'temperature': temperature, **attrs},
       {},
     )
-
-  def postprocess_generate(
-    self, prompt: str, generation_result: list[dict[t.Literal['generated_text'], str]], **_: t.Any
-  ) -> str:
-    return generation_result[0]['generated_text']

@@ -93,6 +93,3 @@ class BaichuanConfig(openllm_core.LLMConfig):
       {'max_new_tokens': max_new_tokens, 'top_p': top_p, 'temperature': temperature, **attrs},
       {},
     )
-
-  def postprocess_generate(self, prompt: str, generation_result: t.Sequence[str], **_: t.Any) -> str:
-    return generation_result[0]
