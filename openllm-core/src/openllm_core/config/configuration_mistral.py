@@ -2,11 +2,10 @@ from __future__ import annotations
 import typing as t
 
 import openllm_core
-
 from openllm_core._conversation import SeparatorStyle
 from openllm_core.prompts import PromptTemplate
 
-START_MISTRAL_COMMAND_DOCSTRING = '''\
+START_MISTRAL_COMMAND_DOCSTRING = """\
 Run a LLMServer for Mistral model.
 
 \b
@@ -33,18 +32,19 @@ provide ``OPENLLM_MODEL_ID='openlm-research/open_mistral_7b'`` or provide
 \b
 $ openllm start mistral --model-id 'mistralai/Mistral-7B-v0.1'
 
-'''
+"""
 
 # https://docs.mistral.ai/usage/guardrailing/
-DEFAULT_SYSTEM_MESSAGE = '''Always assist with care, respect, and truth. Respond with utmost utility yet securely. Avoid harmful, unethical, prejudiced, or negative content. Ensure replies promote fairness and positivity.'''
+DEFAULT_SYSTEM_MESSAGE = """Always assist with care, respect, and truth. Respond with utmost utility yet securely. Avoid harmful, unethical, prejudiced, or negative content. Ensure replies promote fairness and positivity."""
 SINST_KEY, EINST_KEY, BOS_TOKEN, EOS_TOKEN = '[INST]', '[/INST]', '<s>', '</s>'
-DEFAULT_PROMPT_TEMPLATE = '''{start_key}{start_inst} {system_message} {instruction} {end_inst}\n'''.format(
+DEFAULT_PROMPT_TEMPLATE = """{start_key}{start_inst} {system_message} {instruction} {end_inst}\n""".format(
   start_inst=SINST_KEY,
   end_inst=EINST_KEY,
   start_key=BOS_TOKEN,
   system_message='{system_message}',
   instruction='{instruction}',
 )
+
 
 class MistralConfig(openllm_core.LLMConfig):
   """Mistral-7B-v0.1 is a small, yet powerful model adaptable to many use-cases. It’s released under Apache 2.0 licence, and it's easy to deploy on any cloud
@@ -56,26 +56,25 @@ class MistralConfig(openllm_core.LLMConfig):
   """
 
   __config__ = {
-      'name_type': 'lowercase',
-      'url': 'https://mistral.ai',
-      'architecture': 'MistralForCausalLM',
-      'requirements': [],
-      'default_id': 'mistralai/Mistral-7B-Instruct-v0.1',
-      'serialisation': 'safetensors',
-      # NOTE: see https://docs.mistral.ai/usage/guardrailing/
-      # and https://docs.mistral.ai/llm/mistral-instruct-v0.1
-      'conversation': dict(system_template='<s>[INST] {system_message} ', roles=('[INST]', '[/INST]'), sep_style=SeparatorStyle.MISTRAL, sep=' ', sep2=' </s>'),
-      'model_ids': [
-        'mistralai/Mistral-7B-Instruct-v0.1',
-        'mistralai/Mistral-7B-v0.1',
-      ],
-      'fine_tune_strategies': ({
-          'adapter_type': 'lora',
-          'r': 64,
-          'lora_alpha': 16,
-          'lora_dropout': 0.1,
-          'bias': 'none'
-      },)
+    'name_type': 'lowercase',
+    'url': 'https://mistral.ai',
+    'architecture': 'MistralForCausalLM',
+    'requirements': [],
+    'default_id': 'mistralai/Mistral-7B-Instruct-v0.1',
+    'serialisation': 'safetensors',
+    # NOTE: see https://docs.mistral.ai/usage/guardrailing/
+    # and https://docs.mistral.ai/llm/mistral-instruct-v0.1
+    'conversation': dict(
+      system_template='<s>[INST] {system_message} ',
+      roles=('[INST]', '[/INST]'),
+      sep_style=SeparatorStyle.MISTRAL,
+      sep=' ',
+      sep2=' </s>',
+    ),
+    'model_ids': ['mistralai/Mistral-7B-Instruct-v0.1', 'mistralai/Mistral-7B-v0.1'],
+    'fine_tune_strategies': (
+      {'adapter_type': 'lora', 'r': 64, 'lora_alpha': 16, 'lora_dropout': 0.1, 'bias': 'none'},
+    ),
   }
 
   class GenerationConfig:
@@ -96,25 +95,28 @@ class MistralConfig(openllm_core.LLMConfig):
   def default_system_message(self) -> str:
     return DEFAULT_SYSTEM_MESSAGE
 
-  def sanitize_parameters(self,
-                          prompt: str,
-                          prompt_template: PromptTemplate | str | None = None,
-                          system_message: str | None = None,
-                          top_k: int | None = None,
-                          top_p: float | None = None,
-                          temperature: float | None = None,
-                          max_new_tokens: int | None = None,
-                          **attrs: t.Any) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
+  def sanitize_parameters(
+    self,
+    prompt: str,
+    prompt_template: PromptTemplate | str | None = None,
+    system_message: str | None = None,
+    top_k: int | None = None,
+    top_p: float | None = None,
+    temperature: float | None = None,
+    max_new_tokens: int | None = None,
+    **attrs: t.Any,
+  ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
     system_message = DEFAULT_SYSTEM_MESSAGE if system_message is None else system_message
-    if prompt_template is None: prompt_template = DEFAULT_PROMPT_TEMPLATE
-    elif isinstance(prompt_template, str): prompt_template = PromptTemplate(template=prompt_template)
+    if prompt_template is None:
+      prompt_template = DEFAULT_PROMPT_TEMPLATE
+    elif isinstance(prompt_template, str):
+      prompt_template = PromptTemplate(template=prompt_template)
 
-    return prompt_template.with_options(system_message=system_message).format(instruction=prompt), {
-        'max_new_tokens': max_new_tokens,
-        'temperature': temperature,
-        'top_p': top_p,
-        'top_k': top_k
-    }, {}
+    return (
+      prompt_template.with_options(system_message=system_message).format(instruction=prompt),
+      {'max_new_tokens': max_new_tokens, 'temperature': temperature, 'top_p': top_p, 'top_k': top_k},
+      {},
+    )
 
   def postprocess_generate(self, prompt: str, generation_result: list[str], **_: t.Any) -> str:
     return generation_result[0]
