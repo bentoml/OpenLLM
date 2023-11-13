@@ -173,20 +173,3 @@ class ModelCard:
 class ModelList:
   object: str = 'list'
   data: t.List[ModelCard] = attr.field(factory=list)
-
-
-async def get_conversation_prompt(request: ChatCompletionRequest, llm_config: openllm_core.LLMConfig) -> str:
-  conv = llm_config.get_conversation_template()
-  for message in request.messages:
-    msg_role = message['role']
-    if msg_role == 'system':
-      conv.set_system_message(message['content'])
-    elif msg_role == 'user':
-      conv.append_message(conv.roles[0], message['content'])
-    elif msg_role == 'assistant':
-      conv.append_message(conv.roles[1], message['content'])
-    else:
-      raise ValueError(f'Unknown role: {msg_role}')
-  # Add a blank message for the assistant.
-  conv.append_message(conv.roles[1], '')
-  return conv.get_prompt()
