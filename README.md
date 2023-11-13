@@ -927,15 +927,6 @@ openllm build facebook/opt-6.7b --adapter-id ./path/to/adapter_id --build-ctx .
 > [!IMPORTANT]
 > Fine-tuning support is still experimental and currently only works with PyTorch backend. vLLM support is coming soon.
 
-## 🥅 Playground and Chat UI
-
-The following UIs are currently available for OpenLLM:
-
-| UI                                                                                 | Owner                                        | Type                 | Progress |
-| ---------------------------------------------------------------------------------- | -------------------------------------------- | -------------------- | -------- |
-| [Clojure](https://github.com/bentoml/OpenLLM/blob/main/external/clojure/README.md) | [@GutZuFusss](https://github.com/GutZuFusss) | Community-maintained | 🔧       |
-| TS                                                                                 | BentoML Team                                 |                      | 🚧       |
-
 ## 🐍 Python SDK
 
 Each LLM can be instantiated with `openllm.LLM`:
