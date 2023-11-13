@@ -2,7 +2,6 @@ from __future__ import annotations
 import typing as t
 
 import openllm_core
-from openllm_core._conversation import SeparatorStyle
 from openllm_core.prompts import PromptTemplate
 
 START_MISTRAL_COMMAND_DOCSTRING = """\
@@ -47,7 +46,7 @@ DEFAULT_PROMPT_TEMPLATE = """{start_key}{start_inst} {system_message} {instructi
 
 
 class MistralConfig(openllm_core.LLMConfig):
-  """Mistral-7B-v0.1 is a small, yet powerful model adaptable to many use-cases. It’s released under Apache 2.0 licence, and it's easy to deploy on any cloud
+  """Mistral-7B-v0.1 is a small, yet powerful model adaptable to many use-cases. It is released under Apache 2.0 licence, and it's easy to deploy on any cloud
 
   It currently contains a foundation model and a instruct-finetuned model.
 
@@ -59,18 +58,11 @@ class MistralConfig(openllm_core.LLMConfig):
     'name_type': 'lowercase',
     'url': 'https://mistral.ai',
     'architecture': 'MistralForCausalLM',
-    'requirements': [],
+    'add_generation_prompt': True,
     'default_id': 'mistralai/Mistral-7B-Instruct-v0.1',
     'serialisation': 'safetensors',
     # NOTE: see https://docs.mistral.ai/usage/guardrailing/
     # and https://docs.mistral.ai/llm/mistral-instruct-v0.1
-    'conversation': dict(
-      system_template='<s>[INST] {system_message} ',
-      roles=('[INST]', '[/INST]'),
-      sep_style=SeparatorStyle.MISTRAL,
-      sep=' ',
-      sep2=' </s>',
-    ),
     'model_ids': ['mistralai/Mistral-7B-Instruct-v0.1', 'mistralai/Mistral-7B-v0.1'],
     'fine_tune_strategies': (
       {'adapter_type': 'lora', 'r': 64, 'lora_alpha': 16, 'lora_dropout': 0.1, 'bias': 'none'},
