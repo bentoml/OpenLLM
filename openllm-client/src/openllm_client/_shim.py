@@ -1,5 +1,6 @@
 # This provides a base shim with httpx and acts as base request
 from __future__ import annotations
+import asyncio
 import email.utils
 import logging
 import platform
@@ -374,6 +375,9 @@ class Client(BaseClient[httpx.Client, Stream[t.Any]]):
   def __exit__(self, *args) -> None:
     self.close()
 
+  def __del__(self):
+    self.close()
+
   def request(
     self,
     response_cls: type[Response],
@@ -503,6 +507,16 @@ class AsyncClient(BaseClient[httpx.AsyncClient, AsyncStream[t.Any]]):
 
   async def __aexit__(self, *args) -> None:
     await self.close()
+
+  def __del__(self):
+    try:
+      loop = asyncio.get_event_loop()
+      if loop.is_running():
+        loop.create_task(self.close())
+      else:
+        loop.run_until_complete(self.close())
+    except Exception:
+      pass
 
   async def request(
     self,
