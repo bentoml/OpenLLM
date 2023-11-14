@@ -29,7 +29,7 @@ Before you can start developing, you'll need to set up your environment:
 > Therefore any tools that understand `.python-version` will use the correct Python version.
 
 > [!NOTE]
-> When in doubt, set `OPENLLMDEVDEBUG=5` to see all generation debug logs and outputs
+> When in doubt, set `DEBUG=5` to see all generation debug logs and outputs
 
 1. Ensure you have [Git](https://git-scm.com/), and
    [Python3.8+](https://www.python.org/downloads/) installed.
