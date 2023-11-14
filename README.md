@@ -970,7 +970,7 @@ OpenLLM is not just a standalone product; it's a building block designed to
 integrate with other powerful tools easily. We currently offer integration with
 [BentoML](https://github.com/bentoml/BentoML),
 [OpenAI's Compatible Endpoints](https://platform.openai.com/docs/api-reference/completions/object),
-[LlamaIndex](https://www.llamaindex.ai/), 
+[LlamaIndex](https://www.llamaindex.ai/),
 [LangChain](https://github.com/hwchase17/langchain), and
 [Transformers Agents](https://huggingface.co/docs/transformers/transformers_agents).
 
