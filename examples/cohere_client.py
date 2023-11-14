@@ -1,3 +1,5 @@
+import os
+
 import cohere
 
 client = cohere.Client(api_key='na', api_url=os.getenv('OPENLLM_ENDPOINT', 'http://localhost:3000') + '/cohere')

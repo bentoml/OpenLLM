@@ -1503,17 +1503,15 @@ class LLMConfig(_ConfigAttr[t.Any, t.Any]):
   def _with_cohere_request(self, request: CohereGenerateRequest | CohereChatRequest) -> dict[str, t.Any]:
     d = dict(
       num_generations=first_not_none(request.num_generations, default=self['n']),
-      max_tokens=first_not_none(request.max_tokens, default=self['max_new_tokens']),
+      max_new_tokens=first_not_none(request.max_tokens, default=self['max_new_tokens']),
       temperature=first_not_none(request.temperature, default=self['temperature']),
-      k=first_not_none(request.k, default=self['top_k']),
-      p=first_not_none(request.p, default=self['top_p']),
+      top_k=first_not_none(request.k, default=self['top_k']),
+      top_p=first_not_none(request.p, default=self['top_p']),
     )
     if hasattr(request, 'frequency_penalty'):
       d['frequency_penalty'] = first_not_none(request.frequency_penalty, default=self['frequency_penalty'])
     if hasattr(request, 'presence_penalty'):
       d['presence_penalty'] = first_not_none(request.presence_penalty, default=self['presence_penalty'])
-    if hasattr(request, 'stop_sequences'):
-      d['stop_sequences'] = first_not_none(request.stop_sequences, default=None)
     return d
 
   @classmethod

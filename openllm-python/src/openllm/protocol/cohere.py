@@ -71,7 +71,7 @@ class Generation:
   text: str
   prompt: str
   likelihood: t.Optional[float] = None
-  token_likelihoods: t.Optional[t.List[TokenLikelihood]] = None
+  token_likelihoods: t.List[TokenLikelihood] = attr.field(factory=list)
   finish_reason: t.Optional[str] = None
 
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 import functools
+import json
 import logging
 import traceback
 import typing as t
@@ -56,7 +57,7 @@ if t.TYPE_CHECKING:
 
 
 def jsonify_attr(obj: AttrsInstance) -> str:
-  return orjson.dumps(converter.unstructure(obj)).decode()
+  return json.dumps(converter.unstructure(obj))
 
 
 def error_response(status_code: HTTPStatus, message: str) -> JSONResponse:
@@ -77,9 +78,9 @@ def mount_to_svc(svc: bentoml.Service, llm: openllm.LLM[M, T]) -> bentoml.Servic
     debug=True,
     routes=[
       Route(
-        '/generate', endpoint=functools.partial(cohere_generate, llm=llm), name='cohere_generate', methods=['POST']
+        '/v1/generate', endpoint=functools.partial(cohere_generate, llm=llm), name='cohere_generate', methods=['POST']
       ),
-      Route('/chat', endpoint=functools.partial(cohere_chat, llm=llm), name='cohere_chat', methods=['POST']),
+      Route('/v1/chat', endpoint=functools.partial(cohere_chat, llm=llm), name='cohere_chat', methods=['POST']),
       Route('/schema', endpoint=openapi_schema, include_in_schema=False),
     ],
   )
@@ -104,7 +105,7 @@ async def cohere_generate(req: Request, llm: openllm.LLM[M, T]) -> Response:
   if err_check is not None:
     return err_check
 
-  request_id = gen_random_uuid('cohere_generate')
+  request_id = gen_random_uuid('cohere-generate')
   config = llm.config.with_request(request)
 
   if request.prompt_vars is not None:
@@ -115,21 +116,19 @@ async def cohere_generate(req: Request, llm: openllm.LLM[M, T]) -> Response:
   # TODO: support end_sequences, stop_sequences, logit_bias, return_likelihoods, truncate
 
   try:
-    result_generator = llm.generate_iterator(prompt, request_id=request_id, **config)
+    result_generator = llm.generate_iterator(prompt, request_id=request_id, stop=request.stop_sequences, **config)
   except Exception as err:
     traceback.print_exc()
     logger.error('Error generating completion: %s', err)
     return error_response(HTTPStatus.INTERNAL_SERVER_ERROR, f'Exception: {err!s} (check server log)')
 
   def create_stream_response_json(index: int, text: str, is_finished: bool) -> str:
-    return jsonify_attr(StreamingText(index=index, text=text, is_finished=is_finished))
+    return f'{jsonify_attr(StreamingText(index=index, text=text, is_finished=is_finished))}\n'
 
   async def generate_stream_generator() -> t.AsyncGenerator[str, None]:
     async for res in result_generator:
       for output in res.outputs:
-        yield create_stream_response_json(index=output.index, text=output.text, is_finished=False)
-        if output.finish_reason is not None:
-          yield create_stream_response_json(index=output.index, text='', is_finished=True)
+        yield create_stream_response_json(index=output.index, text=output.text, is_finished=output.finish_reason)
 
   try:
     # streaming case
