@@ -33,8 +33,8 @@ llm_model_class = openllm.GenerationInput.from_llm_config(llm_config)
   input=JSON.from_sample(llm_model_class.examples()),
   output=JSON.from_sample(openllm.GenerationOutput.examples()),
 )
-async def generate_v1(input_dict: dict[str, t.Any]) -> openllm.GenerationOutput:
-  return await llm.generate(**llm_model_class(**input_dict).model_dump())
+async def generate_v1(input_dict: dict[str, t.Any]) -> dict[str, t.Any]:
+  return (await llm.generate(**llm_model_class(**input_dict).model_dump())).model_dump()
 
 
 @svc.api(
