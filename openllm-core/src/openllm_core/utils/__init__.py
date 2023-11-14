@@ -41,7 +41,7 @@ else:
   #  _GenericAlias is the actual GenericAlias implementation
   _WithArgsTypes: t.Any = (t._GenericAlias, types.GenericAlias, types.UnionType)  # type: ignore
 
-DEV_DEBUG_VAR = 'OPENLLMDEVDEBUG'
+DEV_DEBUG_VAR = 'DEBUG'
 
 
 def resolve_user_filepath(filepath: str, ctx: str | None) -> str:
@@ -157,7 +157,7 @@ def field_env_key(key: str, suffix: str | None = None) -> str:
   return '_'.join(filter(None, map(str.upper, ['OPENLLM', suffix.strip('_') if suffix else '', key])))
 
 
-# Special debug flag controled via OPENLLMDEVDEBUG
+# Special debug flag controled via DEBUG
 DEBUG: bool = sys.flags.dev_mode or (not sys.flags.ignore_environment and check_bool_env(DEV_DEBUG_VAR, default=False))
 # Whether to show the codenge for debug purposes
 SHOW_CODEGEN: bool = DEBUG and (

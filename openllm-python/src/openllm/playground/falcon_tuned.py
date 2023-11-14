@@ -8,7 +8,6 @@ import typing as t
 import torch
 import transformers
 
-# import openllm here for OPENLLMDEVDEBUG
 import openllm
 
 # Make sure to have at least one GPU to run this script

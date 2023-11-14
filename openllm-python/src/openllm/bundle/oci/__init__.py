@@ -213,7 +213,7 @@ def build_container(
       tags['image_sha'] = outputs.decode('utf-8').strip()
   except Exception as err:
     raise openllm.exceptions.OpenLLMException(
-      f'Failed to containerize base container images (Scroll up to see error above, or set OPENLLMDEVDEBUG=True for more traceback):\n{err}'
+      f'Failed to containerize base container images (Scroll up to see error above, or set DEBUG=5 for more traceback):\n{err}'
     ) from err
   return tags
 

@@ -147,8 +147,8 @@ async def cohere_generate(req: Request, llm: openllm.LLM[M, T]) -> Response:
       return StreamingResponse(generate_stream_generator(), media_type='text/event-stream')
     # None-streaming case
     final_result: GenerationOutput | None = None
-    texts: list[list[str]] = [[]] * config['num_generations']
-    token_ids: list[list[int]] = [[]] * config['num_generations']
+    texts: list[list[str]] = [[]] * config['n']
+    token_ids: list[list[int]] = [[]] * config['n']
     async for res in result_generator:
       if await req.is_disconnected():
         return error_response(HTTPStatus.BAD_REQUEST, 'Client disconnected.')
