@@ -11,7 +11,7 @@ from starlette.applications import Starlette
 from starlette.responses import JSONResponse, StreamingResponse
 from starlette.routing import Route
 
-from openllm_core.utils import converter, gen_random_uuid
+from openllm_core.utils import DEBUG, converter, gen_random_uuid
 
 from ._openapi import add_schema_definitions, append_schemas, get_generator
 from ..protocol.cohere import (
@@ -50,7 +50,7 @@ schemas = get_generator(
       'externalDocs': 'https://docs.cohere.com/docs/the-cohere-platform',
     }
   ],
-  inject=False,
+  inject=DEBUG,
 )
 logger = logging.getLogger(__name__)
 
@@ -97,7 +97,7 @@ def mount_to_svc(svc: bentoml.Service, llm: openllm.LLM[M, T]) -> bentoml.Servic
 
   svc.mount_asgi_app(app, path=mount_path)
   return append_schemas(
-    svc, schemas.get_schema(routes=app.routes, mount_path=mount_path), tags_order='append', inject=False
+    svc, schemas.get_schema(routes=app.routes, mount_path=mount_path), tags_order='append', inject=DEBUG
   )
 
 
