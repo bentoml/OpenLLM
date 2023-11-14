@@ -123,9 +123,8 @@ def mount_to_svc(svc: bentoml.Service, llm: openllm.LLM[M, T]) -> bentoml.Servic
     ],
   )
   mount_path = '/v1'
-  generated_schema = schemas.get_schema(routes=app.routes, mount_path=mount_path)
   svc.mount_asgi_app(app, path=mount_path)
-  return append_schemas(svc, generated_schema)
+  return append_schemas(svc, schemas.get_schema(routes=app.routes, mount_path=mount_path))
 
 
 # GET /v1/models
