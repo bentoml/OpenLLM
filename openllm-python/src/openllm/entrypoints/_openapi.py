@@ -611,10 +611,16 @@ class MKSchema:
 
 
 def append_schemas(
-  svc: bentoml.Service, generated_schema: dict[str, t.Any], tags_order: t.Literal['prepend', 'append'] = 'prepend'
+  svc: bentoml.Service,
+  generated_schema: dict[str, t.Any],
+  tags_order: t.Literal['prepend', 'append'] = 'prepend',
+  inject: bool = True,
 ) -> bentoml.Service:
   # HACK: Dirty hack to append schemas to existing service. We def need to support mounting Starlette app OpenAPI spec.
   from bentoml._internal.service.openapi.specification import OpenAPISpecification
+
+  if not inject:
+    return svc
 
   svc_schema = svc.openapi_spec
   if isinstance(svc_schema, (OpenAPISpecification, MKSchema)):
