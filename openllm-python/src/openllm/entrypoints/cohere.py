@@ -15,6 +15,10 @@ from openllm_core.utils import DEBUG, converter, gen_random_uuid
 
 from ._openapi import add_schema_definitions, append_schemas, get_generator
 from ..protocol.cohere import (
+  Chat,
+  ChatStreamEnd,
+  ChatStreamStart,
+  ChatStreamTextGeneration,
   CohereChatRequest,
   CohereErrorResponse,
   CohereGenerateRequest,
@@ -34,6 +38,10 @@ schemas = get_generator(
     Generations,
     StreamingGenerations,
     StreamingText,
+    Chat,
+    ChatStreamStart,
+    ChatStreamEnd,
+    ChatStreamTextGeneration,
   ],
   tags=[
     {
@@ -170,8 +178,95 @@ async def cohere_generate(req: Request, llm: openllm.LLM[M, T]) -> Response:
     return error_response(HTTPStatus.INTERNAL_SERVER_ERROR, f'Exception: {err!s} (check server log)')
 
 
+def _transpile_cohere_chat_messages(request: CohereChatRequest) -> list[dict[str, str]]:
+  def convert_role(role):
+    return {'User': 'user', 'Chatbot': 'assistant'}[role]
+
+  chat_history = request.chat_history
+  if chat_history:
+    messages = [{'role': convert_role(msg['role']), 'content': msg['message']} for msg in chat_history]
+  else:
+    messages = []
+  messages.append({'role': 'user', 'content': request.message})
+  return messages
+
+
 @add_schema_definitions
-async def cohere_chat(req: Request, llm: openllm.LLM[M, T]) -> Response: ...
+async def cohere_chat(req: Request, llm: openllm.LLM[M, T]) -> Response:
+  json_str = await req.body()
+  try:
+    request = converter.structure(orjson.loads(json_str), CohereChatRequest)
+  except orjson.JSONDecodeError as err:
+    logger.debug('Sent body: %s', json_str)
+    logger.error('Invalid JSON input received: %s', err)
+    return error_response(HTTPStatus.BAD_REQUEST, 'Invalid JSON input received (Check server log).')
+  logger.debug('Received chat completion request: %s', request)
+
+  err_check = await check_model(request, llm.llm_type)
+  if err_check is not None:
+    return err_check
+
+  request_id = gen_random_uuid('cohere-chat')
+  prompt = llm.tokenizer.apply_chat_template(
+    _transpile_cohere_chat_messages(request), tokenize=False, add_generation_prompt=llm.config['add_generation_prompt']
+  )
+  logger.debug('Prompt: %r', prompt)
+  config = llm.config.with_request(request)
+
+  try:
+    result_generator = llm.generate_iterator(prompt, request_id=request_id, **config)
+  except Exception as err:
+    traceback.print_exc()
+    logger.error('Error generating completion: %s', err)
+    return error_response(HTTPStatus.INTERNAL_SERVER_ERROR, f'Exception: {err!s} (check server log)')
+
+  def create_stream_generation_json(index: int, text: str, is_finished: bool) -> str:
+    return f'{jsonify_attr(ChatStreamTextGeneration(index=index, text=text, is_finished=is_finished))}\n'
+
+  async def completion_stream_generator() -> t.AsyncGenerator[str, None]:
+    texts: list[str] = []
+    token_ids: list[int] = []
+    yield f'{jsonify_attr(ChatStreamStart(is_finished=False, index=0, generation_id=request_id))}\n'
+
+    async for res in result_generator:
+      yield f'{create_stream_generation_json(index=res.outputs[0].index, text=res.outputs[0].text, is_finished=False)}\n'
+      texts.append(res.outputs[0].text)
+      token_ids.extend(res.outputs[0].token_ids)
+
+      yield f'{jsonify_attr(ChatStreamEnd(is_finished=True, index=0, response=Chat(response_id=request_id, message=request.message, text="".join(texts), prompt=prompt, chat_history=request.chat_history, token_count=len(token_ids))))}\n'
+
+  try:
+    if request.stream:
+      return StreamingResponse(completion_stream_generator(), media_type='text/event-stream')
+    # Non-streaming case
+    final_result: GenerationOutput | None = None
+    texts: list[str] = []
+    token_ids: list[int] = []
+    async for res in result_generator:
+      if await req.is_disconnected():
+        return error_response(HTTPStatus.BAD_REQUEST, 'Client disconnected.')
+      texts.append(res.outputs[0].text)
+      token_ids.extend(res.outputs[0].token_ids)
+      final_result = res
+    if final_result is None:
+      return error_response(HTTPStatus.BAD_REQUEST, 'No response from model.')
+    final_result = final_result.with_options(
+      outputs=[final_result.outputs[0].with_options(text=''.join(texts), token_ids=token_ids)]
+    )
+
+    response = Chat(
+      response_id=request_id,
+      message=request.message,
+      text=final_result.outputs[0].text,
+      prompt=prompt,
+      chat_history=request.chat_history,
+      token_count=len(token_ids),
+    )
+    return JSONResponse(converter.unstructure(response), status_code=HTTPStatus.OK.value)
+  except Exception as err:
+    traceback.print_exc()
+    logger.error('Error generating completion: %s', err)
+    return error_response(HTTPStatus.INTERNAL_SERVER_ERROR, f'Exception: {err!s} (check server log)')
 
 
 def openapi_schema(req: Request) -> Response:

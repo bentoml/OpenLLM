@@ -150,4 +150,5 @@ class ChatStreamTextGeneration(ChatStreamResponse):
 @attr.define
 class ChatStreamEnd(ChatStreamResponse):
   finish_reason: str
+  response: Chat
   event_type: StreamEvent = StreamEvent.STREAM_END
