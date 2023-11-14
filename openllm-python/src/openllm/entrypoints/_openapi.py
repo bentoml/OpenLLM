@@ -396,7 +396,7 @@ produces:
 summary: Describes a model offering that can be used with the API.
 tags:
   - HF
-x-bentoml-name: adapters_map
+x-bentoml-name: hf_adapters
 responses:
   200:
     description: Return list of LoRA adapters.
@@ -415,6 +415,65 @@ responses:
         schema:
           $ref: '#/components/schemas/HFErrorResponse'
     description: Not Found
+"""
+COHERE_GENERATE_SCHEMA = """\
+---
+consumes:
+  - application/json
+description: >-
+  Given a prompt, the model will return one or more predicted completions, and
+  can also return the probabilities of alternative tokens at each position.
+operationId: cohere__generate
+produces:
+  - application/json
+tags:
+  - Cohere
+x-bentoml-name: cohere_generate
+summary: Creates a completion for the provided prompt and parameters.
+requestBody:
+  required: true
+  content:
+    application/json:
+      schema:
+        $ref: '#/components/schemas/CohereGenerateRequest'
+      examples:
+        one-shot:
+          summary: One-shot input example
+          value:
+            prompt: This is a test
+            max_tokens: 256
+            temperature: 0.7
+            p: 0.43
+            k: 12
+            num_generations: 2
+            stream: false
+        streaming:
+          summary: Streaming input example
+          value:
+            prompt: This is a test
+            max_tokens: 256
+            temperature: 0.7
+            p: 0.43
+            k: 12
+            num_generations: 2
+            stream: true
+            stop_sequences:
+              - "\\n"
+              - "<|endoftext|>"
+"""
+COHERE_CHAT_SCHEMA = """\
+---
+consumes:
+- application/json
+description: >-
+  Given a list of messages comprising a conversation, the model will return a response.
+operationId: cohere__chat
+produces:
+  - application/json
+tags:
+  - Cohere
+x-bentoml-name: cohere_chat
+summary: Creates a model response for the given chat conversation.
 """
 
 _SCHEMAS = {k[:-7].lower(): v for k, v in locals().items() if k.endswith('_SCHEMA')}
@@ -485,12 +544,15 @@ class OpenLLMSchemaGenerator(SchemaGenerator):
 
 
 def get_generator(
-  title: str, components: list[type[AttrsInstance]] | None = None, tags: list[dict[str, t.Any]] | None = None
+  title: str,
+  components: list[type[AttrsInstance]] | None = None,
+  tags: list[dict[str, t.Any]] | None = None,
+  inject: bool = True,
 ) -> OpenLLMSchemaGenerator:
   base_schema: dict[str, t.Any] = dict(info={'title': title, 'version': API_VERSION}, version=OPENAPI_VERSION)
-  if components:
+  if components and inject:
     base_schema['components'] = {'schemas': {c.__name__: component_schema_generator(c) for c in components}}
-  if tags is not None and tags:
+  if tags is not None and tags and inject:
     base_schema['tags'] = tags
   return OpenLLMSchemaGenerator(base_schema)
 

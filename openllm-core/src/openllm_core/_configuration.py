@@ -1,6 +1,7 @@
 # mypy: disable-error-code="attr-defined,no-untyped-call,type-var,operator,arg-type,no-redef,misc"
 from __future__ import annotations
 import copy
+import importlib.util
 import logging
 import os
 import sys
@@ -31,7 +32,7 @@ from ._typing_compat import (
   Self,
   overload,
 )
-from .exceptions import ForbiddenAttributeError
+from .exceptions import ForbiddenAttributeError, MissingDependencyError
 from .utils import LazyLoader, ReprMixin, codegen, converter, dantic, field_env_key, first_not_none, lenient_issubclass
 from .utils.peft import PEFT_TASK_TYPE_TARGET_MAPPING, FineTuneConfig
 
@@ -39,7 +40,9 @@ if t.TYPE_CHECKING:
   import click
   import transformers
   import vllm
+  from attrs import AttrsInstance
 
+  from openllm.protocol.cohere import CohereChatRequest, CohereGenerateRequest
   from openllm.protocol.openai import ChatCompletionRequest, CompletionRequest
 else:
   vllm = LazyLoader('vllm', globals(), 'vllm')
@@ -1460,7 +1463,28 @@ class LLMConfig(_ConfigAttr[t.Any, t.Any]):
   def to_sampling_config(self) -> vllm.SamplingParams:
     return self.sampling_config.build()
 
-  def with_openai_request(self, request: ChatCompletionRequest | CompletionRequest) -> dict[str, t.Any]:
+  @overload
+  def with_request(self, request: ChatCompletionRequest | CompletionRequest) -> dict[str, t.Any]: ...
+
+  @overload
+  def with_request(self, request: CohereChatRequest | CohereGenerateRequest) -> dict[str, t.Any]: ...
+
+  def with_request(self, request: AttrsInstance) -> dict[str, t.Any]:
+    if importlib.util.find_spec('openllm') is None:
+      raise MissingDependencyError(
+        "'openllm' is required to use 'with_request'. Make sure to install with 'pip install openllm'."
+      )
+    from openllm.protocol.cohere import CohereChatRequest, CohereGenerateRequest
+    from openllm.protocol.openai import ChatCompletionRequest, CompletionRequest
+
+    if isinstance(request, (ChatCompletionRequest, CompletionRequest)):
+      return self._with_openai_request(request)
+    elif isinstance(request, (CohereChatRequest, CohereGenerateRequest)):
+      return self._with_cohere_request(request)
+    else:
+      raise TypeError(f'Unknown request type {type(request)}')
+
+  def _with_openai_request(self, request: ChatCompletionRequest | CompletionRequest) -> dict[str, t.Any]:
     d = dict(
       temperature=first_not_none(request.temperature, self['temperature']),
       top_p=first_not_none(request.top_p, self['top_p']),
@@ -1474,6 +1498,21 @@ class LLMConfig(_ConfigAttr[t.Any, t.Any]):
     )
     if hasattr(request, 'logprobs'):
       d['logprobs'] = first_not_none(request.logprobs, default=self['logprobs'])
+    return d
+
+  def _with_cohere_request(self, request: CohereGenerateRequest | CohereChatRequest) -> dict[str, t.Any]:
+    d = dict(
+      max_new_tokens=first_not_none(request.max_tokens, default=self['max_new_tokens']),
+      temperature=first_not_none(request.temperature, default=self['temperature']),
+      top_k=first_not_none(request.k, default=self['top_k']),
+      top_p=first_not_none(request.p, default=self['top_p']),
+    )
+    if hasattr(request, 'num_generations'):
+      d['n'] = first_not_none(request.num_generations, default=self['n'])
+    if hasattr(request, 'frequency_penalty'):
+      d['frequency_penalty'] = first_not_none(request.frequency_penalty, default=self['frequency_penalty'])
+    if hasattr(request, 'presence_penalty'):
+      d['presence_penalty'] = first_not_none(request.presence_penalty, default=self['presence_penalty'])
     return d
 
   @classmethod
