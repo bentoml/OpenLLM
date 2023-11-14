@@ -11,9 +11,11 @@ from starlette.applications import Starlette
 from starlette.responses import JSONResponse, StreamingResponse
 from starlette.routing import Route
 
-from openllm_core.utils import DEBUG, converter, gen_random_uuid
+from openllm_core.utils import converter, gen_random_uuid
 
-from ._openapi import add_schema_definitions, append_schemas, get_generator
+from ._openapi import append_schemas, get_generator
+
+# from ._openapi import add_schema_definitions
 from ..protocol.cohere import (
   Chat,
   ChatStreamEnd,
@@ -50,6 +52,7 @@ schemas = get_generator(
       'externalDocs': 'https://docs.cohere.com/docs/the-cohere-platform',
     }
   ],
+  inject=False,
 )
 logger = logging.getLogger(__name__)
 
@@ -86,22 +89,29 @@ def mount_to_svc(svc: bentoml.Service, llm: openllm.LLM[M, T]) -> bentoml.Servic
     debug=True,
     routes=[
       Route(
-        '/v1/generate', endpoint=functools.partial(cohere_generate, llm=llm), name='cohere_generate', methods=['POST']
+        '/v1/generate',
+        endpoint=functools.partial(cohere_generate, llm=llm),
+        name='cohere_generate',
+        methods=['POST'],
+        include_in_schema=False,
       ),
-      Route('/v1/chat', endpoint=functools.partial(cohere_chat, llm=llm), name='cohere_chat', methods=['POST']),
+      Route(
+        '/v1/chat',
+        endpoint=functools.partial(cohere_chat, llm=llm),
+        name='cohere_chat',
+        methods=['POST'],
+        include_in_schema=False,
+      ),
       Route('/schema', endpoint=openapi_schema, include_in_schema=False),
     ],
   )
   mount_path = '/cohere'
+
   svc.mount_asgi_app(app, path=mount_path)
-  return (
-    append_schemas(svc, schemas.get_schema(routes=app.routes, mount_path=mount_path), tags_order='append')
-    if DEBUG
-    else svc
-  )
+  return append_schemas(svc, schemas.get_schema(routes=app.routes, mount_path=mount_path), tags_order='append')
 
 
-@add_schema_definitions
+# @add_schema_definitions
 async def cohere_generate(req: Request, llm: openllm.LLM[M, T]) -> Response:
   json_str = await req.body()
   try:
@@ -191,7 +201,7 @@ def _transpile_cohere_chat_messages(request: CohereChatRequest) -> list[dict[str
   return messages
 
 
-@add_schema_definitions
+# @add_schema_definitions
 async def cohere_chat(req: Request, llm: openllm.LLM[M, T]) -> Response:
   json_str = await req.body()
   try:
@@ -207,7 +217,7 @@ async def cohere_chat(req: Request, llm: openllm.LLM[M, T]) -> Response:
     return err_check
 
   request_id = gen_random_uuid('cohere-chat')
-  prompt = llm.tokenizer.apply_chat_template(
+  prompt: str = llm.tokenizer.apply_chat_template(
     _transpile_cohere_chat_messages(request), tokenize=False, add_generation_prompt=llm.config['add_generation_prompt']
   )
   logger.debug('Prompt: %r', prompt)
@@ -228,12 +238,39 @@ async def cohere_chat(req: Request, llm: openllm.LLM[M, T]) -> Response:
     token_ids: list[int] = []
     yield f'{jsonify_attr(ChatStreamStart(is_finished=False, index=0, generation_id=request_id))}\n'
 
+    it = None
     async for res in result_generator:
-      yield f'{create_stream_generation_json(index=res.outputs[0].index, text=res.outputs[0].text, is_finished=False)}\n'
+      yield create_stream_generation_json(index=res.outputs[0].index, text=res.outputs[0].text, is_finished=False)
       texts.append(res.outputs[0].text)
       token_ids.extend(res.outputs[0].token_ids)
+      it = res
 
-      yield f'{jsonify_attr(ChatStreamEnd(is_finished=True, index=0, response=Chat(response_id=request_id, message=request.message, text="".join(texts), prompt=prompt, chat_history=request.chat_history, token_count=len(token_ids))))}\n'
+    if it is None:
+      raise ValueError('No response from model.')
+    num_prompt_tokens = len(t.cast(t.List[int], it.prompt_token_ids))
+    num_response_tokens = len(token_ids)
+    total_tokens = num_prompt_tokens + num_response_tokens
+
+    json_str = jsonify_attr(
+      ChatStreamEnd(
+        is_finished=True,
+        finish_reason='COMPLETE',
+        index=0,
+        response=Chat(
+          response_id=request_id,
+          message=request.message,
+          text=''.join(texts),
+          prompt=prompt,
+          chat_history=request.chat_history,
+          token_count={
+            'prompt_tokens': num_prompt_tokens,
+            'response_tokens': num_response_tokens,
+            'total_tokens': total_tokens,
+          },
+        ),
+      )
+    )
+    yield f'{json_str}\n'
 
   try:
     if request.stream:
@@ -253,14 +290,21 @@ async def cohere_chat(req: Request, llm: openllm.LLM[M, T]) -> Response:
     final_result = final_result.with_options(
       outputs=[final_result.outputs[0].with_options(text=''.join(texts), token_ids=token_ids)]
     )
+    num_prompt_tokens = len(t.cast(t.List[int], final_result.prompt_token_ids))
+    num_response_tokens = len(token_ids)
+    total_tokens = num_prompt_tokens + num_response_tokens
 
     response = Chat(
       response_id=request_id,
       message=request.message,
-      text=final_result.outputs[0].text,
+      text=''.join(texts),
       prompt=prompt,
       chat_history=request.chat_history,
-      token_count=len(token_ids),
+      token_count={
+        'prompt_tokens': num_prompt_tokens,
+        'response_tokens': num_response_tokens,
+        'total_tokens': total_tokens,
+      },
     )
     return JSONResponse(converter.unstructure(response), status_code=HTTPStatus.OK.value)
   except Exception as err:

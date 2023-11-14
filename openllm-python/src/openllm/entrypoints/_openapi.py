@@ -544,12 +544,15 @@ class OpenLLMSchemaGenerator(SchemaGenerator):
 
 
 def get_generator(
-  title: str, components: list[type[AttrsInstance]] | None = None, tags: list[dict[str, t.Any]] | None = None
+  title: str,
+  components: list[type[AttrsInstance]] | None = None,
+  tags: list[dict[str, t.Any]] | None = None,
+  inject: bool = True,
 ) -> OpenLLMSchemaGenerator:
   base_schema: dict[str, t.Any] = dict(info={'title': title, 'version': API_VERSION}, version=OPENAPI_VERSION)
-  if components:
+  if components and inject:
     base_schema['components'] = {'schemas': {c.__name__: component_schema_generator(c) for c in components}}
-  if tags is not None and tags:
+  if tags is not None and tags and inject:
     base_schema['tags'] = tags
   return OpenLLMSchemaGenerator(base_schema)
 
