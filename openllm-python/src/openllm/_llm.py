@@ -249,14 +249,20 @@ class LLM(t.Generic[M, T], ReprMixin):
     import transformers
 
     if not isinstance(self.__llm_torch_dtype__, torch.dtype):
-      config_dtype = getattr(
-        transformers.AutoConfig.from_pretrained(self.bentomodel.path, trust_remote_code=self.trust_remote_code),
-        'torch_dtype',
-        None,
-      )
+      try:
+        hf_config = transformers.AutoConfig.from_pretrained(
+          self.bentomodel.path, trust_remote_code=self.trust_remote_code
+        )
+      except OpenLLMException:
+        hf_config = transformers.AutoConfig.from_pretrained(self.model_id, trust_remote_code=self.trust_remote_code)
+      config_dtype = getattr(hf_config, 'torch_dtype', None)
       if config_dtype is None:
         config_dtype = torch.float32
-      if self.__llm_torch_dtype__ == 'auto':
+      if not torch.cuda.is_available():
+        if self.__llm_torch_dtype__ in {'auto', 'half'}:
+          logger.warning('"auto" and "half" are not supported on CPU. OpenLLM will default fallback to "float32".')
+        torch_dtype = torch.float32  # we need to cast back to full precision if cuda is not available
+      elif self.__llm_torch_dtype__ == 'auto':
         if config_dtype == torch.float32:
           torch_dtype = torch.float16  # following common practice
         else:

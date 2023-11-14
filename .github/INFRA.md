@@ -22,7 +22,6 @@ The folder structure of this are as follow:
     ├── build.yml             # Self-hosted EC2 runners
     ├── ci.yml                # CI workflow
     ├── cleanup.yml           # Cache cleanup
-    ├── clojure-frontend.yml  # Clojure frontend build
     ├── compile-pypi.yml      # Compile PyPI packages
     ├── create-releases.yml   # Create GitHub releases
     ├── cron.yml              # Cron jobs
@@ -51,17 +50,6 @@ There are a few ways to trigger this workflow:
 - On pull request: This will be triggered manually when the label `00 - EC2 Build`
 
 - On commit with the following `[ec2 build]`
-
-### Clojure UI (Community-maintained)
-
-The workflow for Clojure UI is located in [clojure-frontend.yml](/.github/workflows/clojure-frontend.yml).
-This workflow is currently used for building the Clojure UI and published to GitHub Container Registry (`ghcr.io/bentoml/openllm-ui-clojure`).
-
-There are a few ways to trigger this workflow:
-
-- This workflow will only trigger when there is a new `tag`
-
-- On commit that contains `[clojure-ui build]` or Pull request with tag `01 - Clojure Build`
 
 ### Wheel compilation
 

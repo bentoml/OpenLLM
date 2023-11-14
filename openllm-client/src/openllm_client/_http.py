@@ -46,9 +46,6 @@ class HTTPClient(Client):
       return {'Authorization': f'Bearer {env}'}
     return super()._build_auth_headers()
 
-  def __del__(self):
-    self.close()
-
   @property
   def _metadata(self):
     if self.__metadata is None:

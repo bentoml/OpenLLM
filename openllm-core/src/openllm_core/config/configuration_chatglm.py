@@ -2,7 +2,6 @@ from __future__ import annotations
 import typing as t
 
 import openllm_core
-from openllm_core._conversation import SeparatorStyle
 from openllm_core.utils import dantic
 
 if t.TYPE_CHECKING:
@@ -51,7 +50,6 @@ class ChatGLMConfig(openllm_core.LLMConfig):
     'timeout': 3600000,
     'backend': ('pt',),
     'url': 'https://github.com/THUDM/ChatGLM-6B',
-    'conversation': dict(roles=('问', '答'), sep_style=SeparatorStyle.CHATGLM, sep='\n'),
     'requirements': ['cpm-kernels', 'sentencepiece'],
     'architecture': 'ChatGLMModel',
     'default_id': 'thudm/chatglm-6b',
@@ -95,24 +93,8 @@ class ChatGLMConfig(openllm_core.LLMConfig):
       prompt_text += f'[Round {len(chat_history)}]\n问:{prompt}\n答:'
     else:
       prompt_text = prompt
-    postprocess_generate_kwargs = {'chat_history': chat_history if chat_history is not None else None}
     return (
       prompt_text,
       {'max_new_tokens': max_new_tokens, 'num_beams': num_beams, 'top_p': top_p, 'temperature': temperature, **attrs},
-      postprocess_generate_kwargs,
+      {},
     )
-
-  def postprocess_generate(
-    self,
-    prompt: str,
-    generation_result: tuple[str, list[tuple[str, str]]],
-    *,
-    chat_history: list[tuple[str, str]] | None = None,
-    **attrs: t.Any,
-  ) -> str:
-    generated, history = generation_result
-    if self.config.retain_history:
-      if chat_history is None:
-        raise ValueError("'retain_history' is True while there is no history provided.")
-      chat_history.extend(history)
-    return generated

@@ -24,7 +24,6 @@ on:
       - '*.md'
       - 'changelog.d/**'
       - 'assets/**'
-      - 'external/clojure/**'
   pull_request:
     branches: [main]
     paths-ignore:
@@ -34,7 +33,6 @@ on:
       - '*.md'
       - 'changelog.d/**'
       - 'assets/**'
-      - 'external/clojure/**'
 env:
   LINES: 120
   COLUMNS: 120

@@ -2,7 +2,6 @@ from __future__ import annotations
 import typing as t
 
 import openllm_core
-from openllm_core._conversation import SeparatorStyle
 from openllm_core.prompts import PromptTemplate, process_prompt
 from openllm_core.utils import dantic
 
@@ -83,7 +82,6 @@ class MPTConfig(openllm_core.LLMConfig):
     'requirements': ['triton', 'einops'],
     'architecture': 'MPTForCausalLM',
     # NOTE: See https://huggingface.co/TheBloke/mpt-30B-chat-GGML/discussions/4
-    'conversation': dict(roles=('user', 'assistant'), messages=[], sep_style=SeparatorStyle.MPT, sep='\n'),
     'default_id': 'mosaicml/mpt-7b-instruct',
     'model_ids': [
       'mosaicml/mpt-7b',
@@ -138,6 +136,3 @@ class MPTConfig(openllm_core.LLMConfig):
       {'max_new_tokens': max_new_tokens, 'temperature': temperature, 'top_p': top_p},
       {},
     )
-
-  def postprocess_generate(self, prompt: str, generation_result: t.Sequence[str], **attrs: t.Any) -> str:
-    return generation_result[0]

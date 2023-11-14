@@ -780,7 +780,7 @@ You can specify any of the following Baichuan models by using `--model-id`.
 
 </details>
 
-More models will be integrated with OpenLLM and we welcome your contributions if you want to incorporate your custom LLMs into the ecosystem. Check out [Adding a New Model Guide](https://github.com/bentoml/OpenLLM/blob/main/openllm-python/ADDING_NEW_MODEL.md) to learn more.
+More models will be integrated with OpenLLM and we welcome your contributions if you want to incorporate your custom LLMs into the ecosystem. Check out [Adding a New Model Guide](https://github.com/bentoml/OpenLLM/blob/main/ADDING_NEW_MODEL.md) to learn more.
 
 ## 💻 Run your model on multiple GPUs
 
@@ -926,15 +926,6 @@ openllm build facebook/opt-6.7b --adapter-id ./path/to/adapter_id --build-ctx .
 
 > [!IMPORTANT]
 > Fine-tuning support is still experimental and currently only works with PyTorch backend. vLLM support is coming soon.
-
-## 🥅 Playground and Chat UI
-
-The following UIs are currently available for OpenLLM:
-
-| UI                                                                                 | Owner                                        | Type                 | Progress |
-| ---------------------------------------------------------------------------------- | -------------------------------------------- | -------------------- | -------- |
-| [Clojure](https://github.com/bentoml/OpenLLM/blob/main/external/clojure/README.md) | [@GutZuFusss](https://github.com/GutZuFusss) | Community-maintained | 🔧       |
-| TS                                                                                 | BentoML Team                                 |                      | 🚧       |
 
 ## 🐍 Python SDK
 

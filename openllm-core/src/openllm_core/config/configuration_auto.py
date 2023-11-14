@@ -114,6 +114,47 @@ class AutoConfig:
       'Cannot instantiate AutoConfig directly. Please use `AutoConfig.for_model(model_name)` instead.'
     )
 
+  # fmt: off
+  # update-config-stubs.py: auto stubs start
+  @t.overload
+  @classmethod
+  def for_model(cls,model_name:t.Literal['chatglm'],**attrs:t.Any)->openllm_core.config.ChatGLMConfig:...
+  @t.overload
+  @classmethod
+  def for_model(cls,model_name:t.Literal['dolly_v2'],**attrs:t.Any)->openllm_core.config.DollyV2Config:...
+  @t.overload
+  @classmethod
+  def for_model(cls,model_name:t.Literal['falcon'],**attrs:t.Any)->openllm_core.config.FalconConfig:...
+  @t.overload
+  @classmethod
+  def for_model(cls,model_name:t.Literal['flan_t5'],**attrs:t.Any)->openllm_core.config.FlanT5Config:...
+  @t.overload
+  @classmethod
+  def for_model(cls,model_name:t.Literal['gpt_neox'],**attrs:t.Any)->openllm_core.config.GPTNeoXConfig:...
+  @t.overload
+  @classmethod
+  def for_model(cls,model_name:t.Literal['llama'],**attrs:t.Any)->openllm_core.config.LlamaConfig:...
+  @t.overload
+  @classmethod
+  def for_model(cls,model_name:t.Literal['mpt'],**attrs:t.Any)->openllm_core.config.MPTConfig:...
+  @t.overload
+  @classmethod
+  def for_model(cls,model_name:t.Literal['opt'],**attrs:t.Any)->openllm_core.config.OPTConfig:...
+  @t.overload
+  @classmethod
+  def for_model(cls,model_name:t.Literal['stablelm'],**attrs:t.Any)->openllm_core.config.StableLMConfig:...
+  @t.overload
+  @classmethod
+  def for_model(cls,model_name:t.Literal['starcoder'],**attrs:t.Any)->openllm_core.config.StarCoderConfig:...
+  @t.overload
+  @classmethod
+  def for_model(cls,model_name:t.Literal['mistral'],**attrs:t.Any)->openllm_core.config.MistralConfig:...
+  @t.overload
+  @classmethod
+  def for_model(cls,model_name:t.Literal['baichuan'],**attrs:t.Any)->openllm_core.config.BaichuanConfig:...
+  # update-config-stubs.py: auto stubs stop
+  # fmt: on
+
   @classmethod
   def for_model(cls, model_name: str, **attrs: t.Any) -> openllm_core.LLMConfig:
     model_name = inflection.underscore(model_name)

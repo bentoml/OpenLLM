@@ -119,12 +119,12 @@ def mount_to_svc(svc: bentoml.Service, llm: openllm.LLM[M, T]) -> bentoml.Servic
       Route('/models', functools.partial(list_models, llm=llm), methods=['GET']),
       Route('/completions', functools.partial(completions, llm=llm), methods=['POST']),
       Route('/chat/completions', functools.partial(chat_completions, llm=llm), methods=['POST']),
+      Route('/schema', endpoint=openapi_schema, include_in_schema=False),
     ],
   )
   mount_path = '/v1'
-  generated_schema = schemas.get_schema(routes=app.routes, mount_path=mount_path)
   svc.mount_asgi_app(app, path=mount_path)
-  return append_schemas(svc, generated_schema)
+  return append_schemas(svc, schemas.get_schema(routes=app.routes, mount_path=mount_path))
 
 
 # GET /v1/models
@@ -157,7 +157,7 @@ async def chat_completions(req: Request, llm: openllm.LLM[M, T]) -> Response:
     request.messages, tokenize=False, add_generation_prompt=llm.config['add_generation_prompt']
   )
   logger.debug('Prompt: %r', prompt)
-  config = llm.config.with_openai_request(request)
+  config = llm.config.with_request(request)
 
   try:
     result_generator = llm.generate_iterator(prompt, request_id=request_id, **config)
@@ -287,7 +287,7 @@ async def completions(req: Request, llm: openllm.LLM[M, T]) -> Response:
 
   model_name, request_id = request.model, gen_random_uuid('cmpl')
   created_time = int(time.monotonic())
-  config = llm.config.with_openai_request(request)
+  config = llm.config.with_request(request)
 
   try:
     result_generator = llm.generate_iterator(prompt, request_id=request_id, **config)
@@ -398,3 +398,7 @@ async def completions(req: Request, llm: openllm.LLM[M, T]) -> Response:
     traceback.print_exc()
     logger.error('Error generating completion: %s', err)
     return error_response(HTTPStatus.INTERNAL_SERVER_ERROR, f'Exception: {err!s} (check server log)')
+
+
+def openapi_schema(req: Request) -> Response:
+  return schemas.OpenAPIResponse(req)

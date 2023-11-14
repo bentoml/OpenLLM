@@ -2,7 +2,6 @@ from __future__ import annotations
 import typing as t
 
 import openllm_core
-from openllm_core._conversation import SeparatorStyle
 from openllm_core.prompts import PromptTemplate
 
 START_LLAMA_COMMAND_DOCSTRING = """\
@@ -84,14 +83,6 @@ class LlamaConfig(openllm_core.LLMConfig):
     'requirements': ['fairscale', 'sentencepiece', 'scipy'],
     'default_id': 'NousResearch/llama-2-7b-hf',
     'serialisation': 'safetensors',
-    # NOTE: see https://huggingface.co/blog/codellama#conversational-instructions
-    'conversation': dict(
-      system_template='<s>[INST] <<SYS>>\n{system_message}\n<</SYS>>\n\n',
-      roles=('[INST]', '[/INST]'),
-      sep_style=SeparatorStyle.LLAMA,
-      sep=' ',
-      sep2=' </s><s>',
-    ),
     'model_ids': [
       'meta-llama/Llama-2-70b-chat-hf',
       'meta-llama/Llama-2-13b-chat-hf',
@@ -150,6 +141,3 @@ class LlamaConfig(openllm_core.LLMConfig):
       {'max_new_tokens': max_new_tokens, 'temperature': temperature, 'top_p': top_p, 'top_k': top_k},
       {},
     )
-
-  def postprocess_generate(self, prompt: str, generation_result: list[str], **_: t.Any) -> str:
-    return generation_result[0]

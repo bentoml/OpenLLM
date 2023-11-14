@@ -2,7 +2,6 @@ from __future__ import annotations
 import typing as t
 
 import openllm_core
-from openllm_core._conversation import SeparatorStyle
 from openllm_core.prompts import PromptTemplate, process_prompt
 
 START_STABLELM_COMMAND_DOCSTRING = """\
@@ -51,19 +50,6 @@ class StableLMConfig(openllm_core.LLMConfig):
   __config__ = {
     'name_type': 'lowercase',
     'url': 'https://github.com/Stability-AI/StableLM',
-    'conversation': dict(
-      system_template='<|SYSTEM|>{system_message}',
-      system_message="""# StableLM Tuned (Alpha version)
-- StableLM is a helpful and harmless open-source AI language model developed by StabilityAI.
-- StableLM is excited to be able to help the user, but will refuse to do anything that could be considered harmful to the user.
-- StableLM is more than just an information source, StableLM is also able to write poetry, short stories, and make jokes.
-- StableLM will refuse to participate in anything that could harm a human.
-""",
-      roles=('<|USER|>', '<|ASSISTANT|>'),
-      sep_style=SeparatorStyle.NO_COLON_SINGLE,
-      sep='',
-      stop_token_ids=[50278, 50279, 50277, 1, 0],
-    ),
     'architecture': 'GPTNeoXForCausalLM',
     'default_id': 'stabilityai/stablelm-tuned-alpha-3b',
     'model_ids': [
@@ -104,6 +90,3 @@ class StableLMConfig(openllm_core.LLMConfig):
       {'max_new_tokens': max_new_tokens, 'temperature': temperature, 'top_k': top_k, 'top_p': top_p},
       {},
     )
-
-  def postprocess_generate(self, prompt: str, generation_result: list[str], **_: t.Any) -> str:
-    return generation_result[0]

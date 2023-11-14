@@ -2,7 +2,6 @@ from __future__ import annotations
 import typing as t
 
 import openllm_core
-from openllm_core._conversation import SeparatorStyle
 from openllm_core.prompts import PromptTemplate, process_prompt
 from openllm_core.utils import dantic
 
@@ -49,9 +48,6 @@ class GPTNeoXConfig(openllm_core.LLMConfig):
     'start_name': 'gpt-neox',
     'architecture': 'GPTNeoXForCausalLM',
     # NOTE: See https://huggingface.co/togethercomputer/GPT-NeoXT-Chat-Base-20B
-    'conversation': dict(
-      system_message='', roles=('<human>', '<bot>'), sep_style=SeparatorStyle.ADD_COLON_SPACE_SINGLE, sep='\n'
-    ),
     'url': 'https://github.com/EleutherAI/gpt-neox',
     'default_id': 'eleutherai/gpt-neox-20b',
     'model_ids': ['eleutherai/gpt-neox-20b'],
@@ -77,6 +73,3 @@ class GPTNeoXConfig(openllm_core.LLMConfig):
       {'max_new_tokens': max_new_tokens, 'temperature': temperature},
       {},
     )
-
-  def postprocess_generate(self, prompt: str, generation_result: list[str], **_: t.Any) -> str:
-    return generation_result[0]

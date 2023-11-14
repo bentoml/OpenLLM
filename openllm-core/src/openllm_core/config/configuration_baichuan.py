@@ -2,7 +2,6 @@ from __future__ import annotations
 import typing as t
 
 import openllm_core
-from openllm_core._conversation import SeparatorStyle
 from openllm_core.prompts import PromptTemplate
 
 START_BAICHUAN_COMMAND_DOCSTRING = """\
@@ -50,7 +49,6 @@ class BaichuanConfig(openllm_core.LLMConfig):
     # https://huggingface.co/baichuan-inc/Baichuan-13B-Chat/blob/19ef51ba5bad8935b03acd20ff04a269210983bc/modeling_baichuan.py#L555
     # https://huggingface.co/baichuan-inc/Baichuan-13B-Chat/blob/main/generation_config.json
     # https://github.com/baichuan-inc/Baichuan-13B/issues/25
-    'conversation': dict(roles=('<reserved_102>', '<reserved_103>'), sep_style=SeparatorStyle.NO_COLON_SINGLE, sep=''),
     'default_id': 'baichuan-inc/baichuan-7b',
     'model_ids': [
       'baichuan-inc/baichuan-7b',
@@ -95,6 +93,3 @@ class BaichuanConfig(openllm_core.LLMConfig):
       {'max_new_tokens': max_new_tokens, 'top_p': top_p, 'temperature': temperature, **attrs},
       {},
     )
-
-  def postprocess_generate(self, prompt: str, generation_result: t.Sequence[str], **_: t.Any) -> str:
-    return generation_result[0]

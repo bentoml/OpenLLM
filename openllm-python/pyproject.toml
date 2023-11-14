@@ -46,6 +46,7 @@ dependencies = [
     "optimum>=1.12.0",
     "accelerate",
     "ghapi",
+    "build[virtualenv]<1",
     "click>=8.1.3",
     "cuda-python;platform_system!=\"Darwin\"",
     "bitsandbytes<0.42",
@@ -143,7 +144,6 @@ exclude = [
   "/.git_archival.txt",
   "tests",
   "/.python-version-default",
-  "ADDING_NEW_MODEL.md",
 ]
 [tool.hatch.build.targets.wheel.hooks.mypyc]
 dependencies = [

@@ -2,7 +2,6 @@ from __future__ import annotations
 import typing as t
 
 import openllm_core
-from openllm_core._conversation import SeparatorStyle
 from openllm_core.prompts import PromptTemplate, process_prompt
 from openllm_core.utils import dantic
 
@@ -84,13 +83,6 @@ class DollyV2Config(openllm_core.LLMConfig):
     'url': 'https://github.com/databrickslabs/dolly',
     'architecture': 'GPTNeoXForCausalLM',
     'default_id': 'databricks/dolly-v2-3b',
-    'conversation': dict(
-      system_message='Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n',
-      roles=('### Instruction', '### Response'),
-      sep_style=SeparatorStyle.DOLLY,
-      sep='\n\n',
-      sep2='### End',
-    ),
     'model_ids': ['databricks/dolly-v2-3b', 'databricks/dolly-v2-7b', 'databricks/dolly-v2-12b'],
   }
   return_full_text: bool = dantic.Field(False, description='Whether to return the full prompt to the users.')
@@ -119,8 +111,3 @@ class DollyV2Config(openllm_core.LLMConfig):
       {'max_new_tokens': max_new_tokens, 'top_k': top_k, 'top_p': top_p, 'temperature': temperature, **attrs},
       {},
     )
-
-  def postprocess_generate(
-    self, prompt: str, generation_result: list[dict[t.Literal['generated_text'], str]], **_: t.Any
-  ) -> str:
-    return generation_result[0]['generated_text']
