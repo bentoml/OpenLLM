@@ -134,6 +134,7 @@ def construct_docker_options(
     'BENTOML_DEBUG': str(True),
     'BENTOML_QUIET': str(False),
     'BENTOML_CONFIG_OPTIONS': f"'{environ['BENTOML_CONFIG_OPTIONS']}'",
+    'TRUST_REMOTE_CODE': str(llm.trust_remote_code),
   }
   if adapter_map:
     env_dict['BITSANDBYTES_NOWELCOME'] = os.environ.get('BITSANDBYTES_NOWELCOME', '1')

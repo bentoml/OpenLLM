@@ -40,6 +40,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
     ('stablelm', 'StableLMConfig'),
     ('starcoder', 'StarCoderConfig'),
     ('mistral', 'MistralConfig'),
+    ('yi', 'YiConfig'),
     ('baichuan', 'BaichuanConfig'),
   ]
 )
@@ -149,6 +150,9 @@ class AutoConfig:
   @t.overload
   @classmethod
   def for_model(cls,model_name:t.Literal['mistral'],**attrs:t.Any)->openllm_core.config.MistralConfig:...
+  @t.overload
+  @classmethod
+  def for_model(cls,model_name:t.Literal['yi'],**attrs:t.Any)->openllm_core.config.YiConfig:...
   @t.overload
   @classmethod
   def for_model(cls,model_name:t.Literal['baichuan'],**attrs:t.Any)->openllm_core.config.BaichuanConfig:...

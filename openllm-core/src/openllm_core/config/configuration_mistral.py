@@ -8,7 +8,7 @@ START_MISTRAL_COMMAND_DOCSTRING = """\
 Run a LLMServer for Mistral model.
 
 \b
-> See more information about Mistral at [Mistral's model card](https://huggingface.co/docs/transformers/main/model_doc/mistral
+> See more information about Mistral at [Mistral's model card](https://huggingface.co/docs/transformers/main/model_doc/mistral)
 
 \b
 ## Usage
