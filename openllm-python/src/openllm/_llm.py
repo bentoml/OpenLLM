@@ -36,9 +36,9 @@ from openllm_core.exceptions import MissingDependencyError
 from openllm_core.prompts import PromptTemplate
 from openllm_core.utils import (
   DEBUG,
+  ENV_VARS_TRUE_VALUES,
   ReprMixin,
   apply,
-  check_bool_env,
   codegen,
   converter,
   first_not_none,
@@ -326,7 +326,10 @@ class LLM(t.Generic[M, T], ReprMixin):
 
   @property
   def trust_remote_code(self) -> bool:
-    return first_not_none(check_bool_env('TRUST_REMOTE_CODE', False), default=self.__llm_trust_remote_code__)
+    env = os.getenv('TRUST_REMOTE_CODE')
+    if env is not None:
+      return str(env).upper() in ENV_VARS_TRUE_VALUES
+    return self.__llm_trust_remote_code__
 
   @property
   def runner_name(self) -> str:

@@ -47,3 +47,4 @@ from .configuration_starcoder import (
   START_STARCODER_COMMAND_DOCSTRING as START_STARCODER_COMMAND_DOCSTRING,
   StarCoderConfig as StarCoderConfig,
 )
+from .configuration_yi import START_YI_COMMAND_DOCSTRING as START_YI_COMMAND_DOCSTRING, YiConfig as YiConfig

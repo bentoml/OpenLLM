@@ -276,7 +276,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
   def list_commands(self, ctx: click.Context) -> list[str]:
     return super().list_commands(ctx) + t.cast('Extensions', extension_command).list_commands(ctx)
 
-  def command(self, *args: t.Any, **kwargs: t.Any) -> t.Callable[[t.Callable[..., t.Any]], click.Command]:  # type: ignore[override] # XXX: fix decorator on BentoMLCommandGroup
+  def command(self, *args: t.Any, **kwargs: t.Any) -> t.Callable[[t.Callable[..., t.Any]], click.Command]:
     """Override the default 'cli.command' with supports for aliases for given command, and it wraps the implementation with common parameters."""
     if 'context_settings' not in kwargs:
       kwargs['context_settings'] = {}
@@ -456,7 +456,6 @@ def start_command(
     quantize=quantize,
     serialisation=serialisation,
     torch_dtype=dtype,
-    trust_remote_code=check_bool_env('TRUST_REMOTE_CODE'),
   )
   backend_warning(llm.__llm_backend__)
 
@@ -634,6 +633,7 @@ def process_environ(
       'OPENLLM_BACKEND': llm.__llm_backend__,
       'OPENLLM_CONFIG': config.model_dump_json(flatten=True).decode(),
       'TORCH_DTYPE': str(llm._torch_dtype).split('.')[-1],
+      'TRUST_REMOTE_CODE': str(llm.trust_remote_code),
     }
   )
   if llm.quantise:
