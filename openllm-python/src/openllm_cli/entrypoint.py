@@ -48,6 +48,7 @@ from simple_di import Provide, inject
 
 import bentoml
 import openllm
+from bentoml._internal.cloud.config import CloudClientConfig
 from bentoml._internal.configuration.containers import BentoMLContainer
 from bentoml._internal.models.model import ModelStore
 from openllm import bundle
@@ -1102,14 +1103,31 @@ def build_command(
     traceback.print_exc()
     raise click.ClickException('Exception caught while building BentoLLM:\n' + str(err)) from err
 
-  def get_current_bentocloud_context() -> str:
-    passed = t.cast(t.Optional[str], ctx.obj.cloud_context)
-    if passed:
-      return passed
-    else:
-      return t.cast(
-        str, orjson.loads(subprocess.check_output(['bentoml', 'cloud', 'current-context'], env=os.environ))['name']
+  cloud_config = CloudClientConfig.get_config()
+
+  def get_current_bentocloud_context() -> str | None:
+    try:
+      context = (
+        cloud_config.get_context(ctx.obj.cloud_context)
+        if ctx.obj.cloud_context
+        else cloud_config.get_current_context()
       )
+      return context.name
+    except Exception:
+      return None
+
+  push_cmd = f'bentoml push {bento_tag}'
+  cloud_context = get_current_bentocloud_context()
+  if cloud_context is None and (not get_disable_warnings()) and not get_quiet_mode():
+    available_context = [c.name for c in cloud_config.contexts]
+    if not available_context:
+      termui.warning('No default BentoCloud context found. Please login with `bentoml cloud login` first.')
+    else:
+      termui.warning(
+        f'No context is passed, but the following context is available: {available_context}. Make sure to specify the argument "--context" for specific context you want to push to.'
+      )
+  else:
+    push_cmd += f' --context {cloud_context}'
 
   response = BuildBentoOutput(
     state=state,
@@ -1117,9 +1135,7 @@ def build_command(
     backend=llm.__llm_backend__,
     instructions=[
       DeploymentInstruction.from_content(
-        type='bentocloud',
-        instr="☁️  Push to BentoCloud with 'bentoml push':\n    $ {cmd}",
-        cmd=f'bentoml push {bento_tag} --context {get_current_bentocloud_context()}',
+        type='bentocloud', instr="☁️  Push to BentoCloud with 'bentoml push':\n    $ {cmd}", cmd=push_cmd
       ),
       DeploymentInstruction.from_content(
         type='container',
