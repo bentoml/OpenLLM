@@ -4,8 +4,8 @@ import importlib
 import cloudpickle
 import fs
 
-import openllm
 from openllm_core._typing_compat import ParamSpec
+from openllm_core.exceptions import OpenLLMException
 
 P = ParamSpec('P')
 
@@ -31,7 +31,7 @@ def load_tokenizer(llm, **tokenizer_attrs):
       try:
         tokenizer = cloudpickle.load(cofile)['tokenizer']
       except KeyError:
-        raise openllm.exceptions.OpenLLMException(
+        raise OpenLLMException(
           "Bento model does not have tokenizer. Make sure to save the tokenizer within the model via 'custom_objects'. "
           'For example: "bentoml.transformers.save_model(..., custom_objects={\'tokenizer\': tokenizer})"'
         ) from None

@@ -13,7 +13,6 @@ if t.TYPE_CHECKING:
   from huggingface_hub.hf_api import ModelInfo as HfModelInfo
 
   import openllm
-  from openllm_core._typing_compat import M, T
 
 __global_inst__ = None
 __cached_id__: dict[str, HfModelInfo] = dict()
@@ -39,7 +38,7 @@ def ModelInfo(model_id: str, revision: str | None = None) -> HfModelInfo:
 
 def has_safetensors_weights(model_id: str, revision: str | None = None) -> bool:
   if validate_is_path(model_id):
-    return next((True for item in Path(resolve_filepath(model_id)).glob('*.safetensors')), False)
+    return next((True for _ in Path(resolve_filepath(model_id)).glob('*.safetensors')), False)
   return any(s.rfilename.endswith('.safetensors') for s in ModelInfo(model_id, revision=revision).siblings)
 
 
@@ -52,7 +51,7 @@ class HfIgnore:
   gguf = '*.gguf'
 
   @classmethod
-  def ignore_patterns(cls, llm: openllm.LLM[M, T]) -> list[str]:
+  def ignore_patterns(cls, llm: openllm.LLM[t.Any, t.Any]) -> list[str]:
     if llm.__llm_backend__ in {'vllm', 'pt'}:
       base = [cls.tf, cls.flax, cls.gguf]
       if has_safetensors_weights(llm.model_id):

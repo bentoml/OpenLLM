@@ -13,7 +13,7 @@ import bentoml
 import openllm
 from bentoml._internal.configuration.containers import BentoMLContainer
 from bentoml._internal.models.model import ModelOptions, ModelSignature
-from openllm_core._typing_compat import M, T
+from openllm_core.exceptions import OpenLLMException
 
 from ._helpers import get_hash, infer_autoclass_from_llm, process_config
 from .weights import HfIgnore
@@ -24,7 +24,7 @@ __all__ = ['import_model', 'get', 'load_model']
 _object_setattr = object.__setattr__
 
 
-def _patch_correct_tag(llm: openllm.LLM[M, T], config: transformers.PretrainedConfig, _revision: str | None = None):
+def _patch_correct_tag(llm, config, _revision=None):
   # NOTE: The following won't hit during local since we generated a correct version based on local path hash It will only hit if we use model from HF Hub
   if llm.revision is not None:
     return
@@ -76,7 +76,7 @@ def import_model(llm, *decls, trust_remote_code, _model_store=Provide[BentoMLCon
 
   if quantize == 'gptq':
     if not openllm.utils.is_autogptq_available() or not openllm.utils.is_optimum_supports_gptq():
-      raise openllm.exceptions.OpenLLMException(
+      raise OpenLLMException(
         "GPTQ quantisation requires 'auto-gptq' and 'optimum' (Not found in local environment). Install it with 'pip install \"openllm[gptq]\" --extra-index-url https://huggingface.github.io/autogptq-index/whl/cu118/'"
       )
     signatures['generate'] = {'batchable': False}
@@ -175,7 +175,7 @@ def get(llm):
     model = bentoml.models.get(llm.tag)
     backend = model.info.labels['backend']
     if backend != llm.__llm_backend__:
-      raise openllm.exceptions.OpenLLMException(
+      raise OpenLLMException(
         f"'{model.tag!s}' was saved with backend '{backend}', while loading with '{llm.__llm_backend__}'."
       )
     _patch_correct_tag(
@@ -185,9 +185,7 @@ def get(llm):
     )
     return model
   except Exception as err:
-    raise openllm.exceptions.OpenLLMException(
-      f'Failed while getting stored artefact (lookup for traceback):\n{err}'
-    ) from err
+    raise OpenLLMException(f'Failed while getting stored artefact (lookup for traceback):\n{err}') from err
 
 
 def check_unintialised_params(model):
@@ -216,13 +214,11 @@ def load_model(llm, *decls, **attrs):
     _quantise = llm.bentomodel.info.metadata['_quantize']
     if _quantise == 'gptq':
       if not openllm.utils.is_autogptq_available() or not openllm.utils.is_optimum_supports_gptq():
-        raise openllm.exceptions.OpenLLMException(
+        raise OpenLLMException(
           "GPTQ quantisation requires 'auto-gptq' and 'optimum' (Not found in local environment). Install it with 'pip install \"openllm[gptq]\" --extra-index-url https://huggingface.github.io/autogptq-index/whl/cu118/'"
         )
       if llm.config['model_type'] != 'causal_lm':
-        raise openllm.exceptions.OpenLLMException(
-          f"GPTQ only support Causal LM (got {llm.__class__} of {llm.config['model_type']})"
-        )
+        raise OpenLLMException(f"GPTQ only support Causal LM (got {llm.__class__} of {llm.config['model_type']})")
 
     # TODO: investigate load with flash attention
     model = auto_class.from_pretrained(
