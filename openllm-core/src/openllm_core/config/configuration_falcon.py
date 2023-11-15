@@ -45,7 +45,6 @@ class FalconConfig(openllm_core.LLMConfig):
     top_k: int = 10
     num_return_sequences: int = 1
     num_beams: int = 4
-    early_stopping: bool = True
 
   def sanitize_parameters(
     self,
