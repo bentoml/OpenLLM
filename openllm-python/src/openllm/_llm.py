@@ -635,7 +635,6 @@ def _RunnerFactory(
         'config': self.config,
         'backend': backend,
         '__module__': self.__module__,
-        '__doc__': getattr(openllm_core.config, f'START_{self.config["model_name"].upper()}_COMMAND_DOCSTRING'),
         '__repr__': ReprMixin.__repr__,
         '__repr_keys__': property(_wrapped_repr_keys),
         '__repr_args__': _wrapped_repr_args,

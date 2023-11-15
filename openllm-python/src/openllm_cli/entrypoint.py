@@ -52,7 +52,6 @@ from bentoml._internal.cloud.config import CloudClientConfig
 from bentoml._internal.configuration.containers import BentoMLContainer
 from bentoml._internal.models.model import ModelStore
 from openllm import bundle
-from openllm.exceptions import OpenLLMException
 from openllm_core._typing_compat import (
   Concatenate,
   DictStrAny,
@@ -67,6 +66,7 @@ from openllm_core._typing_compat import (
   TypeGuard,
 )
 from openllm_core.config import CONFIG_MAPPING
+from openllm_core.exceptions import OpenLLMException
 from openllm_core.utils import (
   DEBUG_ENV_VAR,
   OPTIONAL_DEPENDENCIES,

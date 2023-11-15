@@ -1,16 +1,10 @@
 from __future__ import annotations
 import copy
-import typing as t
 
 import transformers
 
 from openllm.serialisation.constants import FRAMEWORK_TO_AUTOCLASS_MAPPING, HUB_ATTRS
 from openllm_core.exceptions import OpenLLMException
-
-if t.TYPE_CHECKING:
-  from openllm_core._typing_compat import M, T
-
-  from ..._llm import LLM
 
 
 def get_hash(config) -> str:
@@ -34,7 +28,7 @@ def process_config(model_id, trust_remote_code, **attrs):
   return config, hub_attrs, attrs
 
 
-def infer_autoclass_from_llm(llm: LLM[M, T], config, /):
+def infer_autoclass_from_llm(llm, config, /):
   if llm.trust_remote_code:
     autoclass = 'AutoModelForSeq2SeqLM' if llm.config['model_type'] == 'seq2seq_lm' else 'AutoModelForCausalLM'
     if not hasattr(config, 'auto_map'):

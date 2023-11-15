@@ -8,9 +8,9 @@ import torch
 
 import bentoml
 import openllm
-from openllm.exceptions import OpenLLMException
 from openllm_core._schemas import CompletionChunk, GenerationOutput
 from openllm_core._typing_compat import LiteralBackend, M, T
+from openllm_core.exceptions import OpenLLMException
 from openllm_core.utils import first_not_none, is_vllm_available
 
 if t.TYPE_CHECKING:
