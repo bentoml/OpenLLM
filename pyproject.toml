@@ -155,13 +155,6 @@ whitelist-regex = ["test_.*"]
 [tool.check-wheel-contents]
 toplevel = ["openllm"]
 
-[tool.yapfignore]
-ignore_patterns = [
-  "openllm-python/src/openllm/playground",
-  "openllm-python/src/openllm/models/__init__.py",
-  "openllm-client/src/openllm_client/pb/**",
-]
-
 
 [tool.pytest.ini_options]
 addopts = ["-rfEX", "-pno:warnings", "--snapshot-warn-unused"]
@@ -182,7 +175,6 @@ branch = true
 omit = [
   "__pypackages__/*",
   "openllm-python/src/openllm/_version.py",
-  "openllm-python/src/openllm/playground/",
   "openllm-python/src/openllm/__init__.py",
   "openllm-python/src/openllm/__main__.py",
   "openllm-core/src/openllm_core/_typing_compat.py",
@@ -214,7 +206,6 @@ exclude_lines = [
 omit = [
   "__pypackages__/*",
   "openllm-python/src/openllm/_version.py",
-  "openllm-python/src/openllm/playground/",
   "openllm-python/src/openllm/__init__.py",
   "openllm-python/src/openllm/__main__.py",
   "openllm-core/src/openllm_core/_typing_compat.py",

@@ -2,75 +2,75 @@
 [build-system]
 build-backend = "hatchling.build"
 requires = [
-    "hatchling==1.18.0",
-    "hatch-vcs==0.3.0",
-    "hatch-fancy-pypi-readme==23.1.0",
+  "hatchling==1.18.0",
+  "hatch-vcs==0.3.0",
+  "hatch-fancy-pypi-readme==23.1.0",
 ]
 
 [project]
 authors = [
-    {name = "Aaron Pham",email = "aarnphm@bentoml.com"},
-    {name = "BentoML Team",email = "contact@bentoml.com"},
+  { name = "Aaron Pham", email = "aarnphm@bentoml.com" },
+  { name = "BentoML Team", email = "contact@bentoml.com" },
 ]
 classifiers = [
-    "Development Status :: 5 - Production/Stable",
-    "Environment :: GPU :: NVIDIA CUDA",
-    "Environment :: GPU :: NVIDIA CUDA :: 12",
-    "Environment :: GPU :: NVIDIA CUDA :: 11.8",
-    "Environment :: GPU :: NVIDIA CUDA :: 11.7",
-    "License :: OSI Approved :: Apache Software License",
-    "Topic :: Scientific/Engineering :: Artificial Intelligence",
-    "Topic :: Software Development :: Libraries",
-    "Operating System :: OS Independent",
-    "Intended Audience :: Developers",
-    "Intended Audience :: Science/Research",
-    "Intended Audience :: System Administrators",
-    "Typing :: Typed",
-    "Programming Language :: Python",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: Implementation :: CPython",
-    "Programming Language :: Python :: Implementation :: PyPy",
+  "Development Status :: 5 - Production/Stable",
+  "Environment :: GPU :: NVIDIA CUDA",
+  "Environment :: GPU :: NVIDIA CUDA :: 12",
+  "Environment :: GPU :: NVIDIA CUDA :: 11.8",
+  "Environment :: GPU :: NVIDIA CUDA :: 11.7",
+  "License :: OSI Approved :: Apache Software License",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Topic :: Software Development :: Libraries",
+  "Operating System :: OS Independent",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Science/Research",
+  "Intended Audience :: System Administrators",
+  "Typing :: Typed",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dependencies = [
-    "bentoml[io]>=1.1.2",
-    "transformers[torch,tokenizers]>=4.35.0",
-    "openllm-client",
-    "openllm-core",
-    "safetensors",
-    "optimum>=1.12.0",
-    "accelerate",
-    "ghapi",
-    "build[virtualenv]<1",
-    "click>=8.1.3",
-    "cuda-python;platform_system!=\"Darwin\"",
-    "bitsandbytes<0.42",
+  "bentoml[io]>=1.1.2",
+  "transformers[torch,tokenizers]>=4.35.0",
+  "openllm-client",
+  "openllm-core",
+  "safetensors",
+  "optimum>=1.12.0",
+  "accelerate",
+  "ghapi",
+  "build[virtualenv]<1",
+  "click>=8.1.3",
+  "cuda-python;platform_system!=\"Darwin\"",
+  "bitsandbytes<0.42",
 ]
 description = "OpenLLM: Operating LLMs in production"
 dynamic = ["version", "readme"]
 keywords = [
-    "MLOps",
-    "AI",
-    "BentoML",
-    "Model Serving",
-    "Model Deployment",
-    "LLMOps",
-    "Falcon",
-    "Vicuna",
-    "Llama 2",
-    "Fine tuning",
-    "Serverless",
-    "Large Language Model",
-    "Generative AI",
-    "StableLM",
-    "Alpaca",
-    "PyTorch",
-    "Transformers",
+  "MLOps",
+  "AI",
+  "BentoML",
+  "Model Serving",
+  "Model Deployment",
+  "LLMOps",
+  "Falcon",
+  "Vicuna",
+  "Llama 2",
+  "Fine tuning",
+  "Serverless",
+  "Large Language Model",
+  "Generative AI",
+  "StableLM",
+  "Alpaca",
+  "PyTorch",
+  "Transformers",
 ]
 license = "Apache-2.0"
 name = "openllm"
@@ -102,10 +102,17 @@ awq = ["autoawq"]
 baichuan = ["cpm-kernels", "sentencepiece"]
 chatglm = ["cpm-kernels", "sentencepiece"]
 falcon = ["einops", "xformers"]
-fine-tune = ["peft>=0.6.0", "bitsandbytes", "datasets", "accelerate", "trl", "scipy"]
+fine-tune = [
+  "peft>=0.6.0",
+  "bitsandbytes",
+  "datasets",
+  "accelerate",
+  "trl",
+  "scipy",
+]
 flan-t5 = ["transformers>=4.34.0"]
 full = [
-    "openllm[agents,awq,baichuan,chatglm,falcon,fine-tune,flan-t5,ggml,gptq,grpc,llama,mpt,openai,opt,playground,starcoder,vllm]",
+  "openllm[agents,awq,baichuan,chatglm,falcon,fine-tune,flan-t5,ggml,gptq,grpc,llama,mpt,openai,opt,playground,starcoder,vllm]",
 ]
 ggml = ["ctransformers"]
 gptq = ["auto-gptq[triton]>=0.4.2", "optimum>=1.12.0"]
@@ -140,11 +147,7 @@ allow-direct-references = true
 only-include = ["src/openllm", "src/openllm_cli"]
 sources = ["src"]
 [tool.hatch.build.targets.sdist]
-exclude = [
-  "/.git_archival.txt",
-  "tests",
-  "/.python-version-default",
-]
+exclude = ["/.git_archival.txt", "tests", "/.python-version-default"]
 [tool.hatch.build.targets.wheel.hooks.mypyc]
 dependencies = [
   "hatch-mypyc==0.16.0",
@@ -181,7 +184,6 @@ mypy-args = [
   "--warn-unreachable",
   "--no-warn-no-return",
   "--no-warn-unused-ignores",
-  "--exclude='/src\\/openllm\\/playground\\/**'",
 ]
 options = { verbose = true, strip_asserts = true, debug_level = "2", opt_level = "3", include_runtime_files = true }
 require-runtime-dependencies = true

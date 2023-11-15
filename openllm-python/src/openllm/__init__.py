@@ -15,11 +15,9 @@ import pathlib as _pathlib
 import warnings as _warnings
 
 import openllm_cli as _cli
-
 from openllm_cli import _sdk
 
 from . import utils as utils
-
 
 if utils.DEBUG:
   utils.set_debug_mode(True)
@@ -51,7 +49,6 @@ __lazy = utils.LazyModule(
     'exceptions': [],
     'client': ['HTTPClient', 'AsyncHTTPClient'],
     'bundle': [],
-    'playground': [],
     'testing': [],
     'protocol': [],
     'utils': [],

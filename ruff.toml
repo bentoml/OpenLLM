@@ -1,10 +1,10 @@
 extend-exclude = [
   "tools",
   "examples",
-  "openllm-python/src/openllm/playground",
   "openllm-python/src/openllm/__init__.py",
   "openllm-python/src/openllm/_version.py",
   "openllm-python/src/openllm/models/__init__.py",
+  "openllm-python/src/openllm_cli/playground",
   "openllm-client/src/openllm_client/pb/**",
 ]
 extend-include = ["*.ipynb"]
