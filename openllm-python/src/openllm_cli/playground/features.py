@@ -1,9 +1,9 @@
 from __future__ import annotations
 import argparse
+import asyncio
 import logging
 import typing as t
 
-import asyncio
 import openllm
 
 openllm.utils.configure_logging()

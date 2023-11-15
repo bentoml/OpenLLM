@@ -38,7 +38,6 @@ from . import (
   bundle as bundle,
   client as client,
   exceptions as exceptions,
-  playground as playground,
   serialisation as serialisation,
   testing as testing,
   utils as utils,
