@@ -33,12 +33,13 @@ def main() -> int:
 
   for it in CONFIG_MAPPING.values():
     it = it()
-    details_block = ['<details>\n']
     architecture_name = it.__class__.__name__[:-6]
+    details_block = ['<details>\n', f'<summary>{architecture_name}</summary>\n\n', '### Quickstart\n']
+    if it['start_name'] in deps:
+      instruction = f'> ```bash\n> pip install "openllm[{it["start_name"]}]"\n> ```'
+      details_block.extend(markdown_noteblock(f'{architecture_name} requires to install with:\n{instruction}\n'))
     details_block.extend(
       [
-        f'<summary>{architecture_name}</summary>\n\n',
-        '### Quickstart\n',
         f'Run the following command to quickly spin up a {architecture_name} server:\n',
         f"""\
 ```bash

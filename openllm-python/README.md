@@ -173,6 +173,14 @@ OpenLLM currently supports the following models. By default, OpenLLM doesn't inc
 
 ### Quickstart
 
+
+
+> **Note:** Baichuan requires to install with:
+> ```bash
+> pip install "openllm[baichuan]"
+> ```
+
+
 Run the following command to quickly spin up a Baichuan server:
 
 ```bash
@@ -243,6 +251,14 @@ openllm start baichuan-inc/baichuan-7b --backend pt
 
 
 ### Quickstart
+
+
+
+> **Note:** ChatGLM requires to install with:
+> ```bash
+> pip install "openllm[chatglm]"
+> ```
+
 
 Run the following command to quickly spin up a ChatGLM server:
 
@@ -365,6 +381,14 @@ openllm start databricks/dolly-v2-3b --backend pt
 
 ### Quickstart
 
+
+
+> **Note:** Falcon requires to install with:
+> ```bash
+> pip install "openllm[falcon]"
+> ```
+
+
 Run the following command to quickly spin up a Falcon server:
 
 ```bash
@@ -433,6 +457,14 @@ openllm start tiiuae/falcon-7b --backend pt
 
 
 ### Quickstart
+
+
+
+> **Note:** FlanT5 requires to install with:
+> ```bash
+> pip install "openllm[flan-t5]"
+> ```
+
 
 Run the following command to quickly spin up a FlanT5 server:
 
@@ -552,6 +584,14 @@ openllm start eleutherai/gpt-neox-20b --backend pt
 
 
 ### Quickstart
+
+
+
+> **Note:** Llama requires to install with:
+> ```bash
+> pip install "openllm[llama]"
+> ```
+
 
 Run the following command to quickly spin up a Llama server:
 
@@ -699,6 +739,14 @@ openllm start HuggingFaceH4/zephyr-7b-alpha --backend pt
 
 ### Quickstart
 
+
+
+> **Note:** MPT requires to install with:
+> ```bash
+> pip install "openllm[mpt]"
+> ```
+
+
 Run the following command to quickly spin up a MPT server:
 
 ```bash
@@ -770,6 +818,14 @@ openllm start mosaicml/mpt-7b --backend pt
 
 
 ### Quickstart
+
+
+
+> **Note:** OPT requires to install with:
+> ```bash
+> pip install "openllm[opt]"
+> ```
+
 
 Run the following command to quickly spin up a OPT server:
 
@@ -910,6 +966,14 @@ openllm start stabilityai/stablelm-tuned-alpha-3b --backend pt
 
 
 ### Quickstart
+
+
+
+> **Note:** StarCoder requires to install with:
+> ```bash
+> pip install "openllm[starcoder]"
+> ```
+
 
 Run the following command to quickly spin up a StarCoder server:
 
