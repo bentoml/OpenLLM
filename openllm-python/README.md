@@ -45,7 +45,7 @@ Key features include:
 
 🔥 **Flexible APIs**: Serve LLMs over a RESTful API or gRPC with a single command. You can interact with the model using a Web UI, CLI, Python/JavaScript clients, or any HTTP client of your choice.
 
-⛓️ **Freedom to build**: First-class support for LangChain, BentoML and Hugging Face, allowing you to easily create your own AI applications by composing LLMs with other models and services.
+⛓️ **Freedom to build**: First-class support for LangChain, BentoML, OpenAI endpoints, and Hugging Face, allowing you to easily create your own AI applications by composing LLMs with other models and services.
 
 🎯 **Streamline deployment**: Automatically generate your LLM server Docker images or deploy as serverless endpoints via
 [☁️ BentoCloud](https://l.bentoml.com/bento-cloud), which effortlessly manages GPU resources, scales according to traffic, and ensures cost-effectiveness.
@@ -165,86 +165,415 @@ openllm start facebook/opt-2.7b
 
 OpenLLM currently supports the following models. By default, OpenLLM doesn't include dependencies to run all models. The extra model-specific dependencies can be installed with the instructions below.
 
+<!-- update-readme.py: start -->
 <details>
-<summary>Mistral</summary>
+
+<summary>Baichuan</summary>
+
 
 ### Quickstart
 
-Run the following commands to quickly spin up a Llama 2 server and send a request to it.
+Run the following command to quickly spin up a Baichuan server:
 
 ```bash
-openllm start HuggingFaceH4/zephyr-7b-beta
+TRUST_REMOTE_CODE=True openllm start baichuan-inc/baichuan-7b
+```
+In a different terminal, run the following command to interact with the server:
+
+```bash
 export OPENLLM_ENDPOINT=http://localhost:3000
 openllm query 'What are large language models?'
 ```
 
-> [!NOTE]
-> Note that any Mistral variants can be deployed with OpenLLM.
-> Visit the [Hugging Face Model Hub](https://huggingface.co/models?sort=trending&search=mistral) to see more Mistral compatible models.
+
+> **Note:** Any Baichuan variants can be deployed with OpenLLM. Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=baichuan) to see more Baichuan-compatible models.
+
+
 
 ### Supported models
 
-You can specify any of the following Mistral models by using `--model-id`.
+You can specify any of the following Baichuan models via `openllm start`:
 
-- [mistralai/Mistral-7B-v0.1](https://huggingface.co/mistralai/Mistral-7B-v0.1)
-- [mistralai/Mistral-7B-Instruct-v0.1](https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.1)
-- [amazon/MistralLite](https://huggingface.co/amazon/MistralLite)
-- [HuggingFaceH4/zephyr-7b-beta](https://huggingface.co/HuggingFaceH4/zephyr-7b-beta)
-- [HuggingFaceH4/zephyr-7b-alpha](https://huggingface.co/HuggingFaceH4/zephyr-7b-alpha)
-- Any other models that strictly follows the [MistralForCausalLM](https://huggingface.co/docs/transformers/main/en/model_doc/mistral#transformers.MistralForCausalLM) architecture
 
+- [baichuan-inc/baichuan-7b](https://huggingface.co/baichuan-inc/baichuan-7b)
+- [baichuan-inc/baichuan-13b-base](https://huggingface.co/baichuan-inc/baichuan-13b-base)
+- [baichuan-inc/baichuan-13b-chat](https://huggingface.co/baichuan-inc/baichuan-13b-chat)
+- [fireballoon/baichuan-vicuna-chinese-7b](https://huggingface.co/fireballoon/baichuan-vicuna-chinese-7b)
+- [fireballoon/baichuan-vicuna-7b](https://huggingface.co/fireballoon/baichuan-vicuna-7b)
+- [hiyouga/baichuan-7b-sft](https://huggingface.co/hiyouga/baichuan-7b-sft)
 ### Supported backends
 
-- PyTorch (Default):
+OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
 
-  ```bash
-  openllm start HuggingFaceH4/zephyr-7b-beta --backend pt
-  ```
+
+
+> **Important:** We recommend user to explicitly specify `--backend` to choose the desired backend to run the model. If you have access to a GPU, always use `--backend vllm`.
+
+
 
 - vLLM (Recommended):
 
-  ```bash
-  pip install "openllm[vllm]"
-  openllm start HuggingFaceH4/zephyr-7b-beta --backend vllm
-  ```
 
-> [!NOTE]
-> Currently when using the vLLM backend, adapters is yet to be supported.
+To install vLLM, run `pip install "openllm[vllm]"`
+
+```bash
+openllm start baichuan-inc/baichuan-7b --backend vllm
+```
+
+
+> **Important:** Using vLLM requires a GPU that has architecture newer than 8.0 to get the best performance for serving. It is recommended that for all serving usecase in production, you should choose vLLM for serving.
+
+
+
+> **Note:** Currently, adapters are yet to be supported with vLLM.
+
+
+- PyTorch:
+
+
+```bash
+openllm start baichuan-inc/baichuan-7b --backend pt
+```
 
 </details>
 
 <details>
-<summary>Llama</summary>
 
-### Installation
+<summary>ChatGLM</summary>
 
-To run Llama models with OpenLLM, you need to install the `llama` dependency as it is not installed by default.
-
-```bash
-pip install "openllm[llama]"
-```
 
 ### Quickstart
 
-Run the following commands to quickly spin up a Llama 2 server and send a request to it.
+Run the following command to quickly spin up a ChatGLM server:
 
 ```bash
-openllm start meta-llama/Llama-2-7b-chat-hf
+TRUST_REMOTE_CODE=True openllm start thudm/chatglm-6b
+```
+In a different terminal, run the following command to interact with the server:
+
+```bash
 export OPENLLM_ENDPOINT=http://localhost:3000
 openllm query 'What are large language models?'
 ```
 
-> [!NOTE]
-> To use the official Llama 2 models, you must gain access by visiting
-> the [Meta AI website](https://ai.meta.com/resources/models-and-libraries/llama-downloads/) and
-> accepting its license terms and acceptable use policy. You also need to obtain access to these
-> models on [Hugging Face](https://huggingface.co/meta-llama). Note that any Llama 2 variants can
-> be deployed with OpenLLM if you don’t have access to the official Llama 2 model.
-> Visit the [Hugging Face Model Hub](https://huggingface.co/models?sort=trending&search=llama2) to see more Llama 2 compatible models.
+
+> **Note:** Any ChatGLM variants can be deployed with OpenLLM. Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=chatglm) to see more ChatGLM-compatible models.
+
+
 
 ### Supported models
 
-You can specify any of the following Llama models by using `--model-id`.
+You can specify any of the following ChatGLM models via `openllm start`:
+
+
+- [thudm/chatglm-6b](https://huggingface.co/thudm/chatglm-6b)
+- [thudm/chatglm-6b-int8](https://huggingface.co/thudm/chatglm-6b-int8)
+- [thudm/chatglm-6b-int4](https://huggingface.co/thudm/chatglm-6b-int4)
+- [thudm/chatglm2-6b](https://huggingface.co/thudm/chatglm2-6b)
+- [thudm/chatglm2-6b-int4](https://huggingface.co/thudm/chatglm2-6b-int4)
+### Supported backends
+
+OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
+
+
+
+> **Important:** We recommend user to explicitly specify `--backend` to choose the desired backend to run the model. If you have access to a GPU, always use `--backend vllm`.
+
+
+
+- PyTorch:
+
+
+```bash
+openllm start thudm/chatglm-6b --backend pt
+```
+
+</details>
+
+<details>
+
+<summary>DollyV2</summary>
+
+
+### Quickstart
+
+Run the following command to quickly spin up a DollyV2 server:
+
+```bash
+openllm start databricks/dolly-v2-3b
+```
+In a different terminal, run the following command to interact with the server:
+
+```bash
+export OPENLLM_ENDPOINT=http://localhost:3000
+openllm query 'What are large language models?'
+```
+
+
+> **Note:** Any DollyV2 variants can be deployed with OpenLLM. Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=dolly_v2) to see more DollyV2-compatible models.
+
+
+
+### Supported models
+
+You can specify any of the following DollyV2 models via `openllm start`:
+
+
+- [databricks/dolly-v2-3b](https://huggingface.co/databricks/dolly-v2-3b)
+- [databricks/dolly-v2-7b](https://huggingface.co/databricks/dolly-v2-7b)
+- [databricks/dolly-v2-12b](https://huggingface.co/databricks/dolly-v2-12b)
+### Supported backends
+
+OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
+
+
+
+> **Important:** We recommend user to explicitly specify `--backend` to choose the desired backend to run the model. If you have access to a GPU, always use `--backend vllm`.
+
+
+
+- vLLM (Recommended):
+
+
+To install vLLM, run `pip install "openllm[vllm]"`
+
+```bash
+openllm start databricks/dolly-v2-3b --backend vllm
+```
+
+
+> **Important:** Using vLLM requires a GPU that has architecture newer than 8.0 to get the best performance for serving. It is recommended that for all serving usecase in production, you should choose vLLM for serving.
+
+
+
+> **Note:** Currently, adapters are yet to be supported with vLLM.
+
+
+- PyTorch:
+
+
+```bash
+openllm start databricks/dolly-v2-3b --backend pt
+```
+
+</details>
+
+<details>
+
+<summary>Falcon</summary>
+
+
+### Quickstart
+
+Run the following command to quickly spin up a Falcon server:
+
+```bash
+openllm start tiiuae/falcon-7b
+```
+In a different terminal, run the following command to interact with the server:
+
+```bash
+export OPENLLM_ENDPOINT=http://localhost:3000
+openllm query 'What are large language models?'
+```
+
+
+> **Note:** Any Falcon variants can be deployed with OpenLLM. Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=falcon) to see more Falcon-compatible models.
+
+
+
+### Supported models
+
+You can specify any of the following Falcon models via `openllm start`:
+
+
+- [tiiuae/falcon-7b](https://huggingface.co/tiiuae/falcon-7b)
+- [tiiuae/falcon-40b](https://huggingface.co/tiiuae/falcon-40b)
+- [tiiuae/falcon-7b-instruct](https://huggingface.co/tiiuae/falcon-7b-instruct)
+- [tiiuae/falcon-40b-instruct](https://huggingface.co/tiiuae/falcon-40b-instruct)
+### Supported backends
+
+OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
+
+
+
+> **Important:** We recommend user to explicitly specify `--backend` to choose the desired backend to run the model. If you have access to a GPU, always use `--backend vllm`.
+
+
+
+- vLLM (Recommended):
+
+
+To install vLLM, run `pip install "openllm[vllm]"`
+
+```bash
+openllm start tiiuae/falcon-7b --backend vllm
+```
+
+
+> **Important:** Using vLLM requires a GPU that has architecture newer than 8.0 to get the best performance for serving. It is recommended that for all serving usecase in production, you should choose vLLM for serving.
+
+
+
+> **Note:** Currently, adapters are yet to be supported with vLLM.
+
+
+- PyTorch:
+
+
+```bash
+openllm start tiiuae/falcon-7b --backend pt
+```
+
+</details>
+
+<details>
+
+<summary>FlanT5</summary>
+
+
+### Quickstart
+
+Run the following command to quickly spin up a FlanT5 server:
+
+```bash
+openllm start google/flan-t5-large
+```
+In a different terminal, run the following command to interact with the server:
+
+```bash
+export OPENLLM_ENDPOINT=http://localhost:3000
+openllm query 'What are large language models?'
+```
+
+
+> **Note:** Any FlanT5 variants can be deployed with OpenLLM. Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=flan_t5) to see more FlanT5-compatible models.
+
+
+
+### Supported models
+
+You can specify any of the following FlanT5 models via `openllm start`:
+
+
+- [google/flan-t5-small](https://huggingface.co/google/flan-t5-small)
+- [google/flan-t5-base](https://huggingface.co/google/flan-t5-base)
+- [google/flan-t5-large](https://huggingface.co/google/flan-t5-large)
+- [google/flan-t5-xl](https://huggingface.co/google/flan-t5-xl)
+- [google/flan-t5-xxl](https://huggingface.co/google/flan-t5-xxl)
+### Supported backends
+
+OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
+
+
+
+> **Important:** We recommend user to explicitly specify `--backend` to choose the desired backend to run the model. If you have access to a GPU, always use `--backend vllm`.
+
+
+
+- PyTorch:
+
+
+```bash
+openllm start google/flan-t5-small --backend pt
+```
+
+</details>
+
+<details>
+
+<summary>GPTNeoX</summary>
+
+
+### Quickstart
+
+Run the following command to quickly spin up a GPTNeoX server:
+
+```bash
+openllm start eleutherai/gpt-neox-20b
+```
+In a different terminal, run the following command to interact with the server:
+
+```bash
+export OPENLLM_ENDPOINT=http://localhost:3000
+openllm query 'What are large language models?'
+```
+
+
+> **Note:** Any GPTNeoX variants can be deployed with OpenLLM. Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=gpt_neox) to see more GPTNeoX-compatible models.
+
+
+
+### Supported models
+
+You can specify any of the following GPTNeoX models via `openllm start`:
+
+
+- [eleutherai/gpt-neox-20b](https://huggingface.co/eleutherai/gpt-neox-20b)
+### Supported backends
+
+OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
+
+
+
+> **Important:** We recommend user to explicitly specify `--backend` to choose the desired backend to run the model. If you have access to a GPU, always use `--backend vllm`.
+
+
+
+- vLLM (Recommended):
+
+
+To install vLLM, run `pip install "openllm[vllm]"`
+
+```bash
+openllm start eleutherai/gpt-neox-20b --backend vllm
+```
+
+
+> **Important:** Using vLLM requires a GPU that has architecture newer than 8.0 to get the best performance for serving. It is recommended that for all serving usecase in production, you should choose vLLM for serving.
+
+
+
+> **Note:** Currently, adapters are yet to be supported with vLLM.
+
+
+- PyTorch:
+
+
+```bash
+openllm start eleutherai/gpt-neox-20b --backend pt
+```
+
+</details>
+
+<details>
+
+<summary>Llama</summary>
+
+
+### Quickstart
+
+Run the following command to quickly spin up a Llama server:
+
+```bash
+openllm start NousResearch/llama-2-7b-hf
+```
+In a different terminal, run the following command to interact with the server:
+
+```bash
+export OPENLLM_ENDPOINT=http://localhost:3000
+openllm query 'What are large language models?'
+```
+
+
+> **Note:** Any Llama variants can be deployed with OpenLLM. Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=llama) to see more Llama-compatible models.
+
+
+
+### Supported models
+
+You can specify any of the following Llama models via `openllm start`:
+
 
 - [meta-llama/Llama-2-70b-chat-hf](https://huggingface.co/meta-llama/Llama-2-70b-chat-hf)
 - [meta-llama/Llama-2-13b-chat-hf](https://huggingface.co/meta-llama/Llama-2-13b-chat-hf)
@@ -258,293 +587,139 @@ You can specify any of the following Llama models by using `--model-id`.
 - [NousResearch/llama-2-70b-hf](https://huggingface.co/NousResearch/llama-2-70b-hf)
 - [NousResearch/llama-2-13b-hf](https://huggingface.co/NousResearch/llama-2-13b-hf)
 - [NousResearch/llama-2-7b-hf](https://huggingface.co/NousResearch/llama-2-7b-hf)
-- [openlm-research/open_llama_7b_v2](https://huggingface.co/openlm-research/open_llama_7b_v2)
-- [openlm-research/open_llama_3b_v2](https://huggingface.co/openlm-research/open_llama_3b_v2)
-- [openlm-research/open_llama_13b](https://huggingface.co/openlm-research/open_llama_13b)
-- [huggyllama/llama-65b](https://huggingface.co/huggyllama/llama-65b)
-- [huggyllama/llama-30b](https://huggingface.co/huggyllama/llama-30b)
-- [huggyllama/llama-13b](https://huggingface.co/huggyllama/llama-13b)
-- [huggyllama/llama-7b](https://huggingface.co/huggyllama/llama-7b)
-- Any other models that strictly follows the [LlamaForCausalLM](https://huggingface.co/docs/transformers/main/model_doc/llama#transformers.LlamaForCausalLM) architecture
-
 ### Supported backends
 
-- PyTorch (Default):
+OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
 
-  ```bash
-  openllm start meta-llama/Llama-2-7b-chat-hf --backend pt
-  ```
+
+
+> **Important:** We recommend user to explicitly specify `--backend` to choose the desired backend to run the model. If you have access to a GPU, always use `--backend vllm`.
+
+
 
 - vLLM (Recommended):
 
-  ```bash
-  pip install "openllm[llama, vllm]"
-  openllm start meta-llama/Llama-2-7b-chat-hf --backend vllm
-  ```
 
-> [!NOTE]
-> Currently when using the vLLM backend, adapters is yet to be supported.
+To install vLLM, run `pip install "openllm[vllm]"`
+
+```bash
+openllm start meta-llama/Llama-2-70b-chat-hf --backend vllm
+```
+
+
+> **Important:** Using vLLM requires a GPU that has architecture newer than 8.0 to get the best performance for serving. It is recommended that for all serving usecase in production, you should choose vLLM for serving.
+
+
+
+> **Note:** Currently, adapters are yet to be supported with vLLM.
+
+
+- PyTorch:
+
+
+```bash
+openllm start meta-llama/Llama-2-70b-chat-hf --backend pt
+```
 
 </details>
 
 <details>
-<summary>ChatGLM</summary>
 
-### Installation
+<summary>Mistral</summary>
 
-To run ChatGLM models with OpenLLM, you need to install the `chatglm` dependency as it is not installed by default.
-
-```bash
-pip install "openllm[chatglm]"
-```
 
 ### Quickstart
 
-Run the following commands to quickly spin up a ChatGLM server and send a request to it.
+Run the following command to quickly spin up a Mistral server:
 
 ```bash
-openllm start thudm/chatglm2-6b
+openllm start mistralai/Mistral-7B-Instruct-v0.1
+```
+In a different terminal, run the following command to interact with the server:
+
+```bash
 export OPENLLM_ENDPOINT=http://localhost:3000
 openllm query 'What are large language models?'
 ```
 
+
+> **Note:** Any Mistral variants can be deployed with OpenLLM. Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=mistral) to see more Mistral-compatible models.
+
+
+
 ### Supported models
 
-You can specify any of the following ChatGLM models by using `--model-id`.
+You can specify any of the following Mistral models via `openllm start`:
 
-- [thudm/chatglm-6b](https://huggingface.co/thudm/chatglm-6b)
-- [thudm/chatglm-6b-int8](https://huggingface.co/thudm/chatglm-6b-int8)
-- [thudm/chatglm-6b-int4](https://huggingface.co/thudm/chatglm-6b-int4)
-- [thudm/chatglm2-6b](https://huggingface.co/thudm/chatglm2-6b)
-- [thudm/chatglm2-6b-int4](https://huggingface.co/thudm/chatglm2-6b-int4)
-- Any other models that strictly follows the [ChatGLMForConditionalGeneration](https://github.com/THUDM/ChatGLM-6B) architecture
 
+- [HuggingFaceH4/zephyr-7b-alpha](https://huggingface.co/HuggingFaceH4/zephyr-7b-alpha)
+- [HuggingFaceH4/zephyr-7b-beta](https://huggingface.co/HuggingFaceH4/zephyr-7b-beta)
+- [mistralai/Mistral-7B-Instruct-v0.1](https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.1)
+- [mistralai/Mistral-7B-v0.1](https://huggingface.co/mistralai/Mistral-7B-v0.1)
 ### Supported backends
 
-- PyTorch (Default):
+OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
 
-  ```bash
-  openllm start thudm/chatglm2-6b --backend pt
-  ```
+
+
+> **Important:** We recommend user to explicitly specify `--backend` to choose the desired backend to run the model. If you have access to a GPU, always use `--backend vllm`.
+
+
+
+- vLLM (Recommended):
+
+
+To install vLLM, run `pip install "openllm[vllm]"`
+
+```bash
+openllm start HuggingFaceH4/zephyr-7b-alpha --backend vllm
+```
+
+
+> **Important:** Using vLLM requires a GPU that has architecture newer than 8.0 to get the best performance for serving. It is recommended that for all serving usecase in production, you should choose vLLM for serving.
+
+
+
+> **Note:** Currently, adapters are yet to be supported with vLLM.
+
+
+- PyTorch:
+
+
+```bash
+openllm start HuggingFaceH4/zephyr-7b-alpha --backend pt
+```
 
 </details>
 
 <details>
-<summary>Dolly-v2</summary>
 
-### Installation
-
-Dolly-v2 models do not require you to install any model-specific dependencies once you have `openllm` installed.
-
-```bash
-pip install openllm
-```
-
-### Quickstart
-
-Run the following commands to quickly spin up a Dolly-v2 server and send a request to it.
-
-```bash
-openllm start databricks/dolly-v2-3b
-export OPENLLM_ENDPOINT=http://localhost:3000
-openllm query 'What are large language models?'
-```
-
-### Supported models
-
-You can specify any of the following Dolly-v2 models by using `--model-id`.
-
-- [databricks/dolly-v2-3b](https://huggingface.co/databricks/dolly-v2-3b)
-- [databricks/dolly-v2-7b](https://huggingface.co/databricks/dolly-v2-7b)
-- [databricks/dolly-v2-12b](https://huggingface.co/databricks/dolly-v2-12b)
-- Any other models that strictly follows the [GPTNeoXForCausalLM](https://huggingface.co/docs/transformers/main/model_doc/gpt_neox#transformers.GPTNeoXForCausalLM) architecture
-
-### Supported backends
-
-- PyTorch (Default):
-
-  ```bash
-  openllm start databricks/dolly-v2-3b --backend pt
-  ```
-
-- vLLM:
-
-  ```bash
-  openllm start databricks/dolly-v2-3b --backend vllm
-  ```
-
-> [!NOTE]
-> Currently when using the vLLM backend, adapters is yet to be supported.
-
-</details>
-
-<details>
-<summary>Falcon</summary>
-
-### Installation
-
-To run Falcon models with OpenLLM, you need to install the `falcon` dependency as it is not installed by default.
-
-```bash
-pip install "openllm[falcon]"
-```
-
-### Quickstart
-
-Run the following commands to quickly spin up a Falcon server and send a request to it.
-
-```bash
-openllm start tiiuae/falcon-7b
-export OPENLLM_ENDPOINT=http://localhost:3000
-openllm query 'What are large language models?'
-```
-
-### Supported models
-
-You can specify any of the following Falcon models by using `--model-id`.
-
-- [tiiuae/falcon-7b](https://huggingface.co/tiiuae/falcon-7b)
-- [tiiuae/falcon-40b](https://huggingface.co/tiiuae/falcon-40b)
-- [tiiuae/falcon-7b-instruct](https://huggingface.co/tiiuae/falcon-7b-instruct)
-- [tiiuae/falcon-40b-instruct](https://huggingface.co/tiiuae/falcon-40b-instruct)
-- Any other models that strictly follows the [FalconForCausalLM](https://falconllm.tii.ae/) architecture
-
-### Supported backends
-
-- PyTorch (Default):
-
-  ```bash
-  openllm start tiiuae/falcon-7b --backend pt
-  ```
-
-- vLLM:
-
-  ```bash
-  pip install "openllm[falcon, vllm]"
-  openllm start tiiuae/falcon-7b --backend vllm
-  ```
-
-> [!NOTE]
-> Currently when using the vLLM backend, adapters is yet to be supported.
-
-</details>
-
-<details>
-<summary>Flan-T5</summary>
-
-### Installation
-
-To run Flan-T5 models with OpenLLM, you need to install the `flan-t5` dependency as it is not installed by default.
-
-```bash
-pip install "openllm[flan-t5]"
-```
-
-### Quickstart
-
-Run the following commands to quickly spin up a Flan-T5 server and send a request to it.
-
-```bash
-openllm start google/flan-t5-large
-export OPENLLM_ENDPOINT=http://localhost:3000
-openllm query 'What are large language models?'
-```
-
-### Supported models
-
-You can specify any of the following Flan-T5 models by using `--model-id`.
-
-- [google/flan-t5-small](https://huggingface.co/google/flan-t5-small)
-- [google/flan-t5-base](https://huggingface.co/google/flan-t5-base)
-- [google/flan-t5-large](https://huggingface.co/google/flan-t5-large)
-- [google/flan-t5-xl](https://huggingface.co/google/flan-t5-xl)
-- [google/flan-t5-xxl](https://huggingface.co/google/flan-t5-xxl)
-- Any other models that strictly follows the [T5ForConditionalGeneration](https://huggingface.co/docs/transformers/main/model_doc/t5#transformers.T5ForConditionalGeneration) architecture
-
-### Supported backends
-
-- PyTorch (Default):
-
-  ```bash
-  openllm start google/flan-t5-large --backend pt
-  ```
-
-> [!NOTE]
-> Currently when using the vLLM backend, adapters is yet to be supported.
-
-</details>
-
-<details>
-<summary>GPT-NeoX</summary>
-
-### Installation
-
-GPT-NeoX models do not require you to install any model-specific dependencies once you have `openllm` installed.
-
-```bash
-pip install openllm
-```
-
-### Quickstart
-
-Run the following commands to quickly spin up a GPT-NeoX server and send a request to it.
-
-```bash
-openllm start eleutherai/gpt-neox-20b
-export OPENLLM_ENDPOINT=http://localhost:3000
-openllm query 'What are large language models?'
-```
-
-### Supported models
-
-You can specify any of the following GPT-NeoX models by using `--model-id`.
-
-- [eleutherai/gpt-neox-20b](https://huggingface.co/eleutherai/gpt-neox-20b)
-- Any other models that strictly follows the [GPTNeoXForCausalLM](https://huggingface.co/docs/transformers/main/model_doc/gpt_neox#transformers.GPTNeoXForCausalLM) architecture
-
-### Supported backends
-
-- PyTorch (Default):
-
-  ```bash
-  openllm start eleutherai/gpt-neox-20b --backend pt
-  ```
-
-- vLLM:
-
-  ```bash
-  openllm start eleutherai/gpt-neox-20b --backend vllm
-  ```
-
-> [!NOTE]
-> Currently when using the vLLM backend, adapters is yet to be supported.
-
-</details>
-
-<details>
 <summary>MPT</summary>
 
-### Installation
-
-To run MPT models with OpenLLM, you need to install the `mpt` dependency as it is not installed by default.
-
-```bash
-pip install "openllm[mpt]"
-```
 
 ### Quickstart
 
-Run the following commands to quickly spin up a MPT server and send a request to it.
+Run the following command to quickly spin up a MPT server:
 
 ```bash
-openllm start mosaicml/mpt-7b-chat
+TRUST_REMOTE_CODE=True openllm start mosaicml/mpt-7b-instruct
+```
+In a different terminal, run the following command to interact with the server:
+
+```bash
 export OPENLLM_ENDPOINT=http://localhost:3000
 openllm query 'What are large language models?'
 ```
 
+
+> **Note:** Any MPT variants can be deployed with OpenLLM. Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=mpt) to see more MPT-compatible models.
+
+
+
 ### Supported models
 
-You can specify any of the following MPT models by using `--model-id`.
+You can specify any of the following MPT models via `openllm start`:
+
 
 - [mosaicml/mpt-7b](https://huggingface.co/mosaicml/mpt-7b)
 - [mosaicml/mpt-7b-instruct](https://huggingface.co/mosaicml/mpt-7b-instruct)
@@ -553,52 +728,70 @@ You can specify any of the following MPT models by using `--model-id`.
 - [mosaicml/mpt-30b](https://huggingface.co/mosaicml/mpt-30b)
 - [mosaicml/mpt-30b-instruct](https://huggingface.co/mosaicml/mpt-30b-instruct)
 - [mosaicml/mpt-30b-chat](https://huggingface.co/mosaicml/mpt-30b-chat)
-- Any other models that strictly follows the [MPTForCausalLM](https://huggingface.co/mosaicml) architecture
-
 ### Supported backends
 
-- PyTorch (Default):
+OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
 
-  ```bash
-  openllm start mosaicml/mpt-7b-chat --backend pt
-  ```
+
+
+> **Important:** We recommend user to explicitly specify `--backend` to choose the desired backend to run the model. If you have access to a GPU, always use `--backend vllm`.
+
+
 
 - vLLM (Recommended):
 
-  ```bash
-  pip install "openllm[mpt, vllm]"
-  openllm start mosaicml/mpt-7b-chat --backend vllm
-  ```
 
-> [!NOTE]
-> Currently when using the vLLM backend, adapters is yet to be supported.
+To install vLLM, run `pip install "openllm[vllm]"`
+
+```bash
+openllm start mosaicml/mpt-7b --backend vllm
+```
+
+
+> **Important:** Using vLLM requires a GPU that has architecture newer than 8.0 to get the best performance for serving. It is recommended that for all serving usecase in production, you should choose vLLM for serving.
+
+
+
+> **Note:** Currently, adapters are yet to be supported with vLLM.
+
+
+- PyTorch:
+
+
+```bash
+openllm start mosaicml/mpt-7b --backend pt
+```
 
 </details>
 
 <details>
+
 <summary>OPT</summary>
 
-### Installation
-
-To run OPT models with OpenLLM, you need to install the `opt` dependency as it is not installed by default.
-
-```bash
-pip install "openllm[opt]"
-```
 
 ### Quickstart
 
-Run the following commands to quickly spin up an OPT server and send a request to it.
+Run the following command to quickly spin up a OPT server:
 
 ```bash
-openllm start facebook/opt-2.7b
+openllm start facebook/opt-1.3b
+```
+In a different terminal, run the following command to interact with the server:
+
+```bash
 export OPENLLM_ENDPOINT=http://localhost:3000
 openllm query 'What are large language models?'
 ```
 
+
+> **Note:** Any OPT variants can be deployed with OpenLLM. Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=opt) to see more OPT-compatible models.
+
+
+
 ### Supported models
 
-You can specify any of the following OPT models by using `--model-id`.
+You can specify any of the following OPT models via `openllm start`:
+
 
 - [facebook/opt-125m](https://huggingface.co/facebook/opt-125m)
 - [facebook/opt-350m](https://huggingface.co/facebook/opt-350m)
@@ -606,179 +799,248 @@ You can specify any of the following OPT models by using `--model-id`.
 - [facebook/opt-2.7b](https://huggingface.co/facebook/opt-2.7b)
 - [facebook/opt-6.7b](https://huggingface.co/facebook/opt-6.7b)
 - [facebook/opt-66b](https://huggingface.co/facebook/opt-66b)
-- Any other models that strictly follows the [OPTForCausalLM](https://huggingface.co/docs/transformers/main/model_doc/opt#transformers.OPTForCausalLM) architecture
-
 ### Supported backends
 
-- PyTorch (Default):
+OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
 
-  ```bash
-  openllm start facebook/opt-2.7b --backend pt
-  ```
 
-- vLLM:
 
-  ```bash
-  pip install "openllm[opt, vllm]"
-  openllm start facebook/opt-2.7b --backend vllm
-  ```
+> **Important:** We recommend user to explicitly specify `--backend` to choose the desired backend to run the model. If you have access to a GPU, always use `--backend vllm`.
 
-> [!NOTE]
-> Currently when using the vLLM backend, adapters is yet to be supported.
+
+
+- vLLM (Recommended):
+
+
+To install vLLM, run `pip install "openllm[vllm]"`
+
+```bash
+openllm start facebook/opt-125m --backend vllm
+```
+
+
+> **Important:** Using vLLM requires a GPU that has architecture newer than 8.0 to get the best performance for serving. It is recommended that for all serving usecase in production, you should choose vLLM for serving.
+
+
+
+> **Note:** Currently, adapters are yet to be supported with vLLM.
+
+
+- PyTorch:
+
+
+```bash
+openllm start facebook/opt-125m --backend pt
+```
 
 </details>
 
 <details>
+
 <summary>StableLM</summary>
 
-### Installation
-
-StableLM models do not require you to install any model-specific dependencies once you have `openllm` installed.
-
-```bash
-pip install openllm
-```
 
 ### Quickstart
 
-Run the following commands to quickly spin up a StableLM server and send a request to it.
+Run the following command to quickly spin up a StableLM server:
 
 ```bash
-openllm start stabilityai/stablelm-tuned-alpha-7b
+openllm start stabilityai/stablelm-tuned-alpha-3b
+```
+In a different terminal, run the following command to interact with the server:
+
+```bash
 export OPENLLM_ENDPOINT=http://localhost:3000
 openllm query 'What are large language models?'
 ```
 
+
+> **Note:** Any StableLM variants can be deployed with OpenLLM. Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=stablelm) to see more StableLM-compatible models.
+
+
+
 ### Supported models
 
-You can specify any of the following StableLM models by using `--model-id`.
+You can specify any of the following StableLM models via `openllm start`:
+
 
 - [stabilityai/stablelm-tuned-alpha-3b](https://huggingface.co/stabilityai/stablelm-tuned-alpha-3b)
 - [stabilityai/stablelm-tuned-alpha-7b](https://huggingface.co/stabilityai/stablelm-tuned-alpha-7b)
 - [stabilityai/stablelm-base-alpha-3b](https://huggingface.co/stabilityai/stablelm-base-alpha-3b)
 - [stabilityai/stablelm-base-alpha-7b](https://huggingface.co/stabilityai/stablelm-base-alpha-7b)
-- Any other models that strictly follows the [GPTNeoXForCausalLM](https://huggingface.co/docs/transformers/main/model_doc/gpt_neox#transformers.GPTNeoXForCausalLM) architecture
-
 ### Supported backends
 
-- PyTorch (Default):
+OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
 
-  ```bash
-  openllm start stabilityai/stablelm-tuned-alpha-7b --backend pt
-  ```
 
-- vLLM:
 
-  ```bash
-  openllm start stabilityai/stablelm-tuned-alpha-7b --backend vllm
-  ```
+> **Important:** We recommend user to explicitly specify `--backend` to choose the desired backend to run the model. If you have access to a GPU, always use `--backend vllm`.
 
-> [!NOTE]
-> Currently when using the vLLM backend, adapters is yet to be supported.
+
+
+- vLLM (Recommended):
+
+
+To install vLLM, run `pip install "openllm[vllm]"`
+
+```bash
+openllm start stabilityai/stablelm-tuned-alpha-3b --backend vllm
+```
+
+
+> **Important:** Using vLLM requires a GPU that has architecture newer than 8.0 to get the best performance for serving. It is recommended that for all serving usecase in production, you should choose vLLM for serving.
+
+
+
+> **Note:** Currently, adapters are yet to be supported with vLLM.
+
+
+- PyTorch:
+
+
+```bash
+openllm start stabilityai/stablelm-tuned-alpha-3b --backend pt
+```
 
 </details>
 
 <details>
+
 <summary>StarCoder</summary>
 
-### Installation
-
-To run StarCoder models with OpenLLM, you need to install the `starcoder` dependency as it is not installed by default.
-
-```bash
-pip install "openllm[starcoder]"
-```
 
 ### Quickstart
 
-Run the following commands to quickly spin up a StarCoder server and send a request to it.
+Run the following command to quickly spin up a StarCoder server:
 
 ```bash
 openllm start bigcode/starcoder
+```
+In a different terminal, run the following command to interact with the server:
+
+```bash
 export OPENLLM_ENDPOINT=http://localhost:3000
 openllm query 'What are large language models?'
 ```
 
+
+> **Note:** Any StarCoder variants can be deployed with OpenLLM. Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=starcoder) to see more StarCoder-compatible models.
+
+
+
 ### Supported models
 
-You can specify any of the following StarCoder models by using `--model-id`.
+You can specify any of the following StarCoder models via `openllm start`:
+
 
 - [bigcode/starcoder](https://huggingface.co/bigcode/starcoder)
 - [bigcode/starcoderbase](https://huggingface.co/bigcode/starcoderbase)
-- Any other models that strictly follows the [GPTBigCodeForCausalLM](https://huggingface.co/docs/transformers/main/model_doc/gpt_bigcode#transformers.GPTBigCodeForCausalLM) architecture
-
 ### Supported backends
 
-- PyTorch (Default):
+OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
 
-  ```bash
-  openllm start bigcode/starcoder --backend pt
-  ```
 
-- vLLM:
 
-  ```bash
-  pip install "openllm[startcoder, vllm]"
-  openllm start bigcode/starcoder --backend vllm
-  ```
+> **Important:** We recommend user to explicitly specify `--backend` to choose the desired backend to run the model. If you have access to a GPU, always use `--backend vllm`.
 
-> [!NOTE]
-> Currently when using the vLLM backend, adapters is yet to be supported.
+
+
+- vLLM (Recommended):
+
+
+To install vLLM, run `pip install "openllm[vllm]"`
+
+```bash
+openllm start bigcode/starcoder --backend vllm
+```
+
+
+> **Important:** Using vLLM requires a GPU that has architecture newer than 8.0 to get the best performance for serving. It is recommended that for all serving usecase in production, you should choose vLLM for serving.
+
+
+
+> **Note:** Currently, adapters are yet to be supported with vLLM.
+
+
+- PyTorch:
+
+
+```bash
+openllm start bigcode/starcoder --backend pt
+```
 
 </details>
 
 <details>
-<summary>Baichuan</summary>
 
-### Installation
+<summary>Yi</summary>
 
-To run Baichuan models with OpenLLM, you need to install the `baichuan` dependency as it is not installed by default.
-
-```bash
-pip install "openllm[baichuan]"
-```
 
 ### Quickstart
 
-Run the following commands to quickly spin up a Baichuan server and send a request to it.
+Run the following command to quickly spin up a Yi server:
 
 ```bash
-openllm start baichuan-inc/baichuan-13b-base
+TRUST_REMOTE_CODE=True openllm start 01-ai/Yi-6B
+```
+In a different terminal, run the following command to interact with the server:
+
+```bash
 export OPENLLM_ENDPOINT=http://localhost:3000
 openllm query 'What are large language models?'
 ```
 
+
+> **Note:** Any Yi variants can be deployed with OpenLLM. Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=yi) to see more Yi-compatible models.
+
+
+
 ### Supported models
 
-You can specify any of the following Baichuan models by using `--model-id`.
+You can specify any of the following Yi models via `openllm start`:
 
-- [baichuan-inc/baichuan-7b](https://huggingface.co/baichuan-inc/baichuan-7b)
-- [baichuan-inc/baichuan-13b-base](https://huggingface.co/baichuan-inc/baichuan-13b-base)
-- [baichuan-inc/baichuan-13b-chat](https://huggingface.co/baichuan-inc/baichuan-13b-chat)
-- [fireballoon/baichuan-vicuna-chinese-7b](https://huggingface.co/fireballoon/baichuan-vicuna-chinese-7b)
-- [fireballoon/baichuan-vicuna-7b](https://huggingface.co/fireballoon/baichuan-vicuna-7b)
-- [hiyouga/baichuan-7b-sft](https://huggingface.co/hiyouga/baichuan-7b-sft)
-- Any other models that strictly follows the [BaiChuanForCausalLM](https://github.com/baichuan-inc/Baichuan-7B) architecture
 
+- [01-ai/Yi-6B](https://huggingface.co/01-ai/Yi-6B)
+- [01-ai/Yi-34B](https://huggingface.co/01-ai/Yi-34B)
+- [01-ai/Yi-6B-200K](https://huggingface.co/01-ai/Yi-6B-200K)
+- [01-ai/Yi-34B-200K](https://huggingface.co/01-ai/Yi-34B-200K)
 ### Supported backends
 
-- PyTorch (Default):
+OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
 
-  ```bash
-  openllm start baichuan-inc/baichuan-13b-base --backend pt
-  ```
 
-- vLLM:
 
-  ```bash
-  pip install "openllm[baichuan, vllm]"
-  openllm start baichuan-inc/baichuan-13b-base --backend vllm
-  ```
+> **Important:** We recommend user to explicitly specify `--backend` to choose the desired backend to run the model. If you have access to a GPU, always use `--backend vllm`.
 
-> [!NOTE]
-> Currently when using the vLLM backend, adapters is yet to be supported.
+
+
+- vLLM (Recommended):
+
+
+To install vLLM, run `pip install "openllm[vllm]"`
+
+```bash
+openllm start 01-ai/Yi-6B --backend vllm
+```
+
+
+> **Important:** Using vLLM requires a GPU that has architecture newer than 8.0 to get the best performance for serving. It is recommended that for all serving usecase in production, you should choose vLLM for serving.
+
+
+
+> **Note:** Currently, adapters are yet to be supported with vLLM.
+
+
+- PyTorch:
+
+
+```bash
+openllm start 01-ai/Yi-6B --backend pt
+```
 
 </details>
+
+<!-- update-readme.py: stop -->
 
 More models will be integrated with OpenLLM and we welcome your contributions if you want to incorporate your custom LLMs into the ecosystem. Check out [Adding a New Model Guide](https://github.com/bentoml/OpenLLM/blob/main/ADDING_NEW_MODEL.md) to learn more.
 
@@ -835,7 +1097,7 @@ With PyTorch backend, OpenLLM supports `int8`, `int4`, `gptq`
 For using int8 and int4 quantization through `bitsandbytes`, you can use the following command:
 
 ```bash
-openllm start opt --quantize int8
+openllm start facebook/opt-6.7b --quantize int8
 ```
 
 To run inference with `gptq`, simply pass `--quantize gptq`:
@@ -856,7 +1118,7 @@ With vLLM backend, OpenLLM supports `awq`, `squeezellm`
 To run inference with `awq`, simply pass `--quantize awq`:
 
 ```bash
-openllm start mistral --model-id TheBloke/zephyr-7B-alpha-AWQ --quantize awq
+openllm start TheBloke/zephyr-7B-alpha-AWQ --quantize awq
 ```
 
 To run inference with `squeezellm`, simply pass `--quantize squeezellm`:
@@ -875,19 +1137,19 @@ openllm start squeeze-ai-lab/sq-llama-2-7b-w4-s0 --quantize squeezellm --seriali
 With OpenLLM, you can take advantage of the fine-tuning feature by serving models with any PEFT-compatible layers using the `--adapter-id` option. For example:
 
 ```bash
-openllm start opt --model-id facebook/opt-6.7b --adapter-id aarnphm/opt-6-7b-quotes:default
+openllm start facebook/opt-6.7b --adapter-id aarnphm/opt-6-7b-quotes:default
 ```
 
 OpenLLM also provides flexibility by supporting adapters from custom file paths:
 
 ```bash
-openllm start opt --model-id facebook/opt-6.7b --adapter-id /path/to/adapters:local_adapter
+openllm start facebook/opt-6.7b --adapter-id /path/to/adapters:local_adapter
 ```
 
 To use multiple adapters, use the following format:
 
 ```bash
-openllm start opt --model-id facebook/opt-6.7b --adapter-id aarnphm/opt-6.7b-lora:default --adapter-id aarnphm/opt-6.7b-french:french_lora
+openllm start facebook/opt-6.7b --adapter-id aarnphm/opt-6.7b-lora:default --adapter-id aarnphm/opt-6.7b-french:french_lora
 ```
 
 By default, all adapters will be injected into the models during startup. Adapters can be specified per request via `adapter_name`:
@@ -926,15 +1188,6 @@ openllm build facebook/opt-6.7b --adapter-id ./path/to/adapter_id --build-ctx .
 
 > [!IMPORTANT]
 > Fine-tuning support is still experimental and currently only works with PyTorch backend. vLLM support is coming soon.
-
-## 🥅 Playground and Chat UI
-
-The following UIs are currently available for OpenLLM:
-
-| UI                                                                                 | Owner                                        | Type                 | Progress |
-| ---------------------------------------------------------------------------------- | -------------------------------------------- | -------------------- | -------- |
-| [Clojure](https://github.com/bentoml/OpenLLM/blob/main/external/clojure/README.md) | [@GutZuFusss](https://github.com/GutZuFusss) | Community-maintained | 🔧       |
-| TS                                                                                 | BentoML Team                                 |                      | 🚧       |
 
 ## 🐍 Python SDK
 
@@ -978,8 +1231,29 @@ This method is easy to use for one-shot generation use case, but merely served a
 OpenLLM is not just a standalone product; it's a building block designed to
 integrate with other powerful tools easily. We currently offer integration with
 [BentoML](https://github.com/bentoml/BentoML),
+[OpenAI's Compatible Endpoints](https://platform.openai.com/docs/api-reference/completions/object),
 [LangChain](https://github.com/hwchase17/langchain), and
 [Transformers Agents](https://huggingface.co/docs/transformers/transformers_agents).
+
+### OpenAI Compatible Endpoints
+
+OpenLLM Server can be used as a drop-in replacement for OpenAI's API. Simply
+specify the base_url to `llm-endpoint/v1` and you are good to go:
+
+```python
+import openai
+client = openai.OpenAI(base_url='http://localhost:3000/v1', api_key='na')  # Here the server is running on localhost:3000
+
+completions = client.completions.create(
+  prompt='Write me a tag line for an ice cream shop.', model=model, max_tokens=64, stream=stream
+)
+```
+
+The compatible endpoints supports `/completions`, `/chat/completions`, and `/models`
+
+> [!NOTE]
+> You can find out OpenAI example clients under the
+> [examples](https://github.com/bentoml/OpenLLM/tree/main/examples) folder.
 
 ### BentoML
 

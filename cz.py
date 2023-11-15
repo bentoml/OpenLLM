@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-from __future__ import annotations
 import itertools
 import os
 import token
@@ -9,13 +8,15 @@ from tabulate import tabulate
 
 TOKEN_WHITELIST = [token.OP, token.NAME, token.NUMBER, token.STRING]
 
+_ignored = ['_version.py']
 
-def run_cz(dir: str, package: str):
+
+def run_cz(dir, package):
   headers = ['Name', 'Lines', 'Tokens/Line']
   table = []
   for path, _, files in os.walk(os.path.join(dir, 'src', package)):
     for name in files:
-      if not name.endswith('.py'):
+      if not name.endswith('.py') or name in _ignored:
         continue
       filepath = os.path.join(path, name)
       with tokenize.open(filepath) as file_:
@@ -28,7 +29,6 @@ def run_cz(dir: str, package: str):
             token_count / line_count if line_count != 0 else 0,
           ]
         )
-  print(f'\n{"=" * 80}\n')
   print(tabulate([headers, *sorted(table, key=lambda x: -x[1])], headers='firstrow', floatfmt='.1f') + '\n')
   print(
     tabulate(
@@ -43,15 +43,8 @@ def run_cz(dir: str, package: str):
     )
   )
   print(f'total line count for {package}: {sum([x[1] for x in table])}\n')
-
-
-def main() -> int:
-  run_cz('openllm-python', 'openllm')
-  run_cz('openllm-python', 'openllm_cli')
-  run_cz('openllm-core', 'openllm_core')
-  run_cz('openllm-client', 'openllm_client')
   return 0
 
 
 if __name__ == '__main__':
-  raise SystemExit(main())
+  raise SystemExit((lambda: run_cz('openllm-python', 'openllm') or 0)())
