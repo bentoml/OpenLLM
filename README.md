@@ -184,9 +184,11 @@ In a different terminal, run the following command to interact with the server:
 export OPENLLM_ENDPOINT=http://localhost:3000
 openllm query 'What are large language models?'
 ```
+
 > [!NOTE]
 > Any Baichuan variants can be deployed with OpenLLM.
 > Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=baichuan) to see more Baichuan-compatible models.
+
 ### Supported models
 
 You can specify any of the following Baichuan models via `openllm start`:
@@ -202,9 +204,11 @@ You can specify any of the following Baichuan models via `openllm start`:
 
 OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
 
+
 > [!IMPORTANT]
 > We recommend user to explicitly specify `--backend` to choose the desired backend to run the model.
 > If you have access to a GPU, always use `--backend vllm`.
+
 
 - vLLM (Recommended):
 
@@ -249,9 +253,11 @@ In a different terminal, run the following command to interact with the server:
 export OPENLLM_ENDPOINT=http://localhost:3000
 openllm query 'What are large language models?'
 ```
+
 > [!NOTE]
 > Any ChatGLM variants can be deployed with OpenLLM.
 > Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=chatglm) to see more ChatGLM-compatible models.
+
 ### Supported models
 
 You can specify any of the following ChatGLM models via `openllm start`:
@@ -266,9 +272,11 @@ You can specify any of the following ChatGLM models via `openllm start`:
 
 OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
 
+
 > [!IMPORTANT]
 > We recommend user to explicitly specify `--backend` to choose the desired backend to run the model.
 > If you have access to a GPU, always use `--backend vllm`.
+
 
 - PyTorch:
 
@@ -297,9 +305,11 @@ In a different terminal, run the following command to interact with the server:
 export OPENLLM_ENDPOINT=http://localhost:3000
 openllm query 'What are large language models?'
 ```
+
 > [!NOTE]
 > Any DollyV2 variants can be deployed with OpenLLM.
 > Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=dolly_v2) to see more DollyV2-compatible models.
+
 ### Supported models
 
 You can specify any of the following DollyV2 models via `openllm start`:
@@ -312,9 +322,11 @@ You can specify any of the following DollyV2 models via `openllm start`:
 
 OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
 
+
 > [!IMPORTANT]
 > We recommend user to explicitly specify `--backend` to choose the desired backend to run the model.
 > If you have access to a GPU, always use `--backend vllm`.
+
 
 - vLLM (Recommended):
 
@@ -359,9 +371,11 @@ In a different terminal, run the following command to interact with the server:
 export OPENLLM_ENDPOINT=http://localhost:3000
 openllm query 'What are large language models?'
 ```
+
 > [!NOTE]
 > Any Falcon variants can be deployed with OpenLLM.
 > Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=falcon) to see more Falcon-compatible models.
+
 ### Supported models
 
 You can specify any of the following Falcon models via `openllm start`:
@@ -375,9 +389,11 @@ You can specify any of the following Falcon models via `openllm start`:
 
 OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
 
+
 > [!IMPORTANT]
 > We recommend user to explicitly specify `--backend` to choose the desired backend to run the model.
 > If you have access to a GPU, always use `--backend vllm`.
+
 
 - vLLM (Recommended):
 
@@ -422,9 +438,11 @@ In a different terminal, run the following command to interact with the server:
 export OPENLLM_ENDPOINT=http://localhost:3000
 openllm query 'What are large language models?'
 ```
+
 > [!NOTE]
 > Any FlanT5 variants can be deployed with OpenLLM.
 > Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=flan_t5) to see more FlanT5-compatible models.
+
 ### Supported models
 
 You can specify any of the following FlanT5 models via `openllm start`:
@@ -439,9 +457,11 @@ You can specify any of the following FlanT5 models via `openllm start`:
 
 OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
 
+
 > [!IMPORTANT]
 > We recommend user to explicitly specify `--backend` to choose the desired backend to run the model.
 > If you have access to a GPU, always use `--backend vllm`.
+
 
 - PyTorch:
 
@@ -470,9 +490,11 @@ In a different terminal, run the following command to interact with the server:
 export OPENLLM_ENDPOINT=http://localhost:3000
 openllm query 'What are large language models?'
 ```
+
 > [!NOTE]
 > Any GPTNeoX variants can be deployed with OpenLLM.
 > Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=gpt_neox) to see more GPTNeoX-compatible models.
+
 ### Supported models
 
 You can specify any of the following GPTNeoX models via `openllm start`:
@@ -483,9 +505,11 @@ You can specify any of the following GPTNeoX models via `openllm start`:
 
 OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
 
+
 > [!IMPORTANT]
 > We recommend user to explicitly specify `--backend` to choose the desired backend to run the model.
 > If you have access to a GPU, always use `--backend vllm`.
+
 
 - vLLM (Recommended):
 
@@ -530,9 +554,11 @@ In a different terminal, run the following command to interact with the server:
 export OPENLLM_ENDPOINT=http://localhost:3000
 openllm query 'What are large language models?'
 ```
+
 > [!NOTE]
 > Any Llama variants can be deployed with OpenLLM.
 > Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=llama) to see more Llama-compatible models.
+
 ### Supported models
 
 You can specify any of the following Llama models via `openllm start`:
@@ -554,9 +580,11 @@ You can specify any of the following Llama models via `openllm start`:
 
 OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
 
+
 > [!IMPORTANT]
 > We recommend user to explicitly specify `--backend` to choose the desired backend to run the model.
 > If you have access to a GPU, always use `--backend vllm`.
+
 
 - vLLM (Recommended):
 
@@ -601,9 +629,11 @@ In a different terminal, run the following command to interact with the server:
 export OPENLLM_ENDPOINT=http://localhost:3000
 openllm query 'What are large language models?'
 ```
+
 > [!NOTE]
 > Any Mistral variants can be deployed with OpenLLM.
 > Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=mistral) to see more Mistral-compatible models.
+
 ### Supported models
 
 You can specify any of the following Mistral models via `openllm start`:
@@ -617,9 +647,11 @@ You can specify any of the following Mistral models via `openllm start`:
 
 OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
 
+
 > [!IMPORTANT]
 > We recommend user to explicitly specify `--backend` to choose the desired backend to run the model.
 > If you have access to a GPU, always use `--backend vllm`.
+
 
 - vLLM (Recommended):
 
@@ -664,9 +696,11 @@ In a different terminal, run the following command to interact with the server:
 export OPENLLM_ENDPOINT=http://localhost:3000
 openllm query 'What are large language models?'
 ```
+
 > [!NOTE]
 > Any MPT variants can be deployed with OpenLLM.
 > Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=mpt) to see more MPT-compatible models.
+
 ### Supported models
 
 You can specify any of the following MPT models via `openllm start`:
@@ -683,9 +717,11 @@ You can specify any of the following MPT models via `openllm start`:
 
 OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
 
+
 > [!IMPORTANT]
 > We recommend user to explicitly specify `--backend` to choose the desired backend to run the model.
 > If you have access to a GPU, always use `--backend vllm`.
+
 
 - vLLM (Recommended):
 
@@ -730,9 +766,11 @@ In a different terminal, run the following command to interact with the server:
 export OPENLLM_ENDPOINT=http://localhost:3000
 openllm query 'What are large language models?'
 ```
+
 > [!NOTE]
 > Any OPT variants can be deployed with OpenLLM.
 > Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=opt) to see more OPT-compatible models.
+
 ### Supported models
 
 You can specify any of the following OPT models via `openllm start`:
@@ -748,9 +786,11 @@ You can specify any of the following OPT models via `openllm start`:
 
 OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
 
+
 > [!IMPORTANT]
 > We recommend user to explicitly specify `--backend` to choose the desired backend to run the model.
 > If you have access to a GPU, always use `--backend vllm`.
+
 
 - vLLM (Recommended):
 
@@ -795,9 +835,11 @@ In a different terminal, run the following command to interact with the server:
 export OPENLLM_ENDPOINT=http://localhost:3000
 openllm query 'What are large language models?'
 ```
+
 > [!NOTE]
 > Any StableLM variants can be deployed with OpenLLM.
 > Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=stablelm) to see more StableLM-compatible models.
+
 ### Supported models
 
 You can specify any of the following StableLM models via `openllm start`:
@@ -811,9 +853,11 @@ You can specify any of the following StableLM models via `openllm start`:
 
 OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
 
+
 > [!IMPORTANT]
 > We recommend user to explicitly specify `--backend` to choose the desired backend to run the model.
 > If you have access to a GPU, always use `--backend vllm`.
+
 
 - vLLM (Recommended):
 
@@ -858,9 +902,11 @@ In a different terminal, run the following command to interact with the server:
 export OPENLLM_ENDPOINT=http://localhost:3000
 openllm query 'What are large language models?'
 ```
+
 > [!NOTE]
 > Any StarCoder variants can be deployed with OpenLLM.
 > Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=starcoder) to see more StarCoder-compatible models.
+
 ### Supported models
 
 You can specify any of the following StarCoder models via `openllm start`:
@@ -872,9 +918,11 @@ You can specify any of the following StarCoder models via `openllm start`:
 
 OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
 
+
 > [!IMPORTANT]
 > We recommend user to explicitly specify `--backend` to choose the desired backend to run the model.
 > If you have access to a GPU, always use `--backend vllm`.
+
 
 - vLLM (Recommended):
 
@@ -919,9 +967,11 @@ In a different terminal, run the following command to interact with the server:
 export OPENLLM_ENDPOINT=http://localhost:3000
 openllm query 'What are large language models?'
 ```
+
 > [!NOTE]
 > Any Yi variants can be deployed with OpenLLM.
 > Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=yi) to see more Yi-compatible models.
+
 ### Supported models
 
 You can specify any of the following Yi models via `openllm start`:
@@ -935,9 +985,11 @@ You can specify any of the following Yi models via `openllm start`:
 
 OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
 
+
 > [!IMPORTANT]
 > We recommend user to explicitly specify `--backend` to choose the desired backend to run the model.
 > If you have access to a GPU, always use `--backend vllm`.
+
 
 - vLLM (Recommended):
 

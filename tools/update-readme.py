@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os
+import shutil
 import sys
 
 import tomlkit
@@ -42,9 +43,10 @@ export OPENLLM_ENDPOINT=http://localhost:3000
 openllm query 'What are large language models?'
 ```""",
         f"""\
+
 > [!NOTE]
 > Any {architecture_name} variants can be deployed with OpenLLM.
-> Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search={it['model_name']}) to see more {architecture_name}-compatible models.""",
+> Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search={it['model_name']}) to see more {architecture_name}-compatible models.\n""",
         '### Supported models\n',
         f'You can specify any of the following {architecture_name} models via `openllm start`:\n\n',
       ]
@@ -56,9 +58,10 @@ openllm query 'What are large language models?'
         '### Supported backends\n',
         'OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.\n',
         """\
+
 > [!IMPORTANT]
 > We recommend user to explicitly specify `--backend` to choose the desired backend to run the model.
-> If you have access to a GPU, always use `--backend vllm`.""",
+> If you have access to a GPU, always use `--backend vllm`.\n""",
       ]
     )
     if 'vllm' in it['backend']:
@@ -96,6 +99,8 @@ openllm start {it['model_ids'][0]} --backend pt
   readme = readme[:start_index] + [START_COMMENT] + content + [END_COMMENT] + readme[stop_index + 1 :]
   with open(os.path.join(ROOT, 'README.md'), 'w') as f:
     f.writelines(readme)
+
+  shutil.copyfile(os.path.join(ROOT, 'README.md'), os.path.join(ROOT, 'openllm-python', 'README.md'))
   return 0
 
 
