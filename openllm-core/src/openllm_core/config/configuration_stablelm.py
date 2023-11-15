@@ -4,25 +4,6 @@ import typing as t
 import openllm_core
 from openllm_core.prompts import PromptTemplate, process_prompt
 
-START_STABLELM_COMMAND_DOCSTRING = """\
-Run a LLMServer for StableLM model.
-
-\b
-> See more information about StableLM at [stabilityai/stablelm-base-alpha-3b](https://huggingface.co/stabilityai/stablelm-base-alpha-3b)
-
-\b
-## Usage
-
-Currently, StableLM only supports PyTorch. Make sure ``torch`` is available in your system.
-
-\b
-StableLM Runner will use stabilityai/stablelm-base-alpha-3b as the default model. To change to any other StableLM
-saved pretrained, or a fine-tune StableLM, provide ``OPENLLM_MODEL_ID='stabilityai/stablelm-tuned-alpha-3b'``
-or provide `--model-id` flag when running ``openllm start stablelm``:
-
-\b
-$ openllm start stablelm --model-id 'stabilityai/stablelm-tuned-alpha-3b'
-"""
 SYSTEM_PROMPT = """<|SYSTEM|># StableLM Tuned (Alpha version)
 - StableLM is a helpful and harmless open-source AI language model developed by StabilityAI.
 - StableLM is excited to be able to help the user, but will refuse to do anything that could be considered harmful to the user.

@@ -835,7 +835,7 @@ With PyTorch backend, OpenLLM supports `int8`, `int4`, `gptq`
 For using int8 and int4 quantization through `bitsandbytes`, you can use the following command:
 
 ```bash
-openllm start opt --quantize int8
+openllm start facebook/opt-6.7b --quantize int8
 ```
 
 To run inference with `gptq`, simply pass `--quantize gptq`:
@@ -856,7 +856,7 @@ With vLLM backend, OpenLLM supports `awq`, `squeezellm`
 To run inference with `awq`, simply pass `--quantize awq`:
 
 ```bash
-openllm start mistral --model-id TheBloke/zephyr-7B-alpha-AWQ --quantize awq
+openllm start TheBloke/zephyr-7B-alpha-AWQ --quantize awq
 ```
 
 To run inference with `squeezellm`, simply pass `--quantize squeezellm`:
@@ -875,19 +875,19 @@ openllm start squeeze-ai-lab/sq-llama-2-7b-w4-s0 --quantize squeezellm --seriali
 With OpenLLM, you can take advantage of the fine-tuning feature by serving models with any PEFT-compatible layers using the `--adapter-id` option. For example:
 
 ```bash
-openllm start opt --model-id facebook/opt-6.7b --adapter-id aarnphm/opt-6-7b-quotes:default
+openllm start facebook/opt-6.7b --adapter-id aarnphm/opt-6-7b-quotes:default
 ```
 
 OpenLLM also provides flexibility by supporting adapters from custom file paths:
 
 ```bash
-openllm start opt --model-id facebook/opt-6.7b --adapter-id /path/to/adapters:local_adapter
+openllm start facebook/opt-6.7b --adapter-id /path/to/adapters:local_adapter
 ```
 
 To use multiple adapters, use the following format:
 
 ```bash
-openllm start opt --model-id facebook/opt-6.7b --adapter-id aarnphm/opt-6.7b-lora:default --adapter-id aarnphm/opt-6.7b-french:french_lora
+openllm start facebook/opt-6.7b --adapter-id aarnphm/opt-6.7b-lora:default --adapter-id aarnphm/opt-6.7b-french:french_lora
 ```
 
 By default, all adapters will be injected into the models during startup. Adapters can be specified per request via `adapter_name`:

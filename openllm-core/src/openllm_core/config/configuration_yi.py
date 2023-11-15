@@ -4,34 +4,6 @@ import typing as t
 import openllm_core
 from openllm_core.prompts import PromptTemplate
 
-START_YI_COMMAND_DOCSTRING = """\
-Run a LLMServer for Yi model.
-
-\b
-> See more information about Yi at [Yi's GitHub](https://github.com/01-ai/Yi)
-
-\b
-## Usage
-
-By default, this model will use [vLLM](https://github.com/vllm-project/vllm) for inference.
-This model will also supports PyTorch. Note that this models requires to trust remote code,
-meaning you need to set ``TRUST_REMOTE_CODE=True`` before running the model.
-
-\b
-- To use PyTorch, set the environment variable ``OPENLLM_BACKEND="pt"``
-
-\b
-- To use vLLM, set the environment variable ``OPENLLM_BACKEND="vllm"``
-
-\b
-Yi Runner will use 01-ai/Yi-6B, as the default model.
-To change to any other Yi saved pretrained, or a fine-tune Yi,
-provide ``OPENLLM_MODEL_ID='01-ai/Yi-6B'`` or provide the model_id running ``openllm start``:
-
-\b
-$ TRUST_REMOTE_CODE=True openllm start 01-ai/Yi-6B
-"""
-
 DEFAULT_SYSTEM_MESSAGE = ''
 DEFAULT_PROMPT_TEMPLATE = '{instruction}'
 

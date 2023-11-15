@@ -33,8 +33,7 @@ default parameters, as well as additional fields for the models.
 ### Entrypoint
 
 After establishing the model config and implementation class, register them in
-the `__init__` file, and the tuple under `CONFIG_MAPPING_NAMES` in [openllm-core/src/openllm_core/config/configuration_auto.py#CONFIG_MAPPING_NAMES](https://github.com/bentoml/OpenLLM/blob/main/openllm-core/src/openllm_core/config/configuration_auto.py#L30). Basically you need to register `ModelConfig` classes and
-`START_{MODEL}_COMMAND_DOCSTRING` strings.
+the `__init__` file, and the tuple under `CONFIG_MAPPING_NAMES` in [openllm-core/src/openllm_core/config/configuration_auto.py#CONFIG_MAPPING_NAMES](https://github.com/bentoml/OpenLLM/blob/main/openllm-core/src/openllm_core/config/configuration_auto.py#L30). Basically you need to register `ModelConfig` classes with its given name for `for_model` to use.
 
 ## Raise a Pull Request
 

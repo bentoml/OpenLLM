@@ -4,35 +4,6 @@ import typing as t
 import openllm_core
 from openllm_core.prompts import PromptTemplate
 
-START_MISTRAL_COMMAND_DOCSTRING = """\
-Run a LLMServer for Mistral model.
-
-\b
-> See more information about Mistral at [Mistral's model card](https://huggingface.co/docs/transformers/main/model_doc/mistral)
-
-\b
-## Usage
-
-By default, this model will use [vLLM](https://github.com/vllm-project/vllm) for inference.
-This model will also supports PyTorch.
-
-\b
-- To use PyTorch, set the environment variable ``OPENLLM_BACKEND="pt"``
-
-\b
-- To use vLLM, set the environment variable ``OPENLLM_BACKEND="vllm"``
-
-\b
-Mistral Runner will use mistralai/Mistral-7B-Instruct-v0.1, as the default model.
-To change to any other Mistral saved pretrained, or a fine-tune Mistral,
-provide ``OPENLLM_MODEL_ID='openlm-research/open_mistral_7b'`` or provide
-`--model-id` flag when running ``openllm start mistral``:
-
-\b
-$ openllm start mistral --model-id 'mistralai/Mistral-7B-v0.1'
-
-"""
-
 # https://docs.mistral.ai/usage/guardrailing/
 DEFAULT_SYSTEM_MESSAGE = """Always assist with care, respect, and truth. Respond with utmost utility yet securely. Avoid harmful, unethical, prejudiced, or negative content. Ensure replies promote fairness and positivity."""
 SINST_KEY, EINST_KEY, BOS_TOKEN, EOS_TOKEN = '[INST]', '[/INST]', '<s>', '</s>'

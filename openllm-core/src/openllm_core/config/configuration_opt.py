@@ -7,28 +7,6 @@ from openllm_core.prompts import process_prompt
 if t.TYPE_CHECKING:
   from openllm_core.prompts.prompt_template import PromptTemplate
 
-START_OPT_COMMAND_DOCSTRING = """\
-Run a LLMServer for OPT model.
-
-\b
-> See more information about OPT at [facebook/opt-66b](https://huggingface.co/facebook/opt-66b)
-
-\b
-## Usage
-
-By default, this model will use the PyTorch model for inference. However, if vLLM exists, then it will use vLLM instead.
-
-\b
-- To use vLLM, set the environment variable ``OPENLLM_BACKEND="vllm"``
-
-\b
-OPT Runner will use facebook/opt-2.7b as the default model. To change to any other OPT
-saved pretrained, or a fine-tune OPT, provide ``OPENLLM_MODEL_ID='facebook/opt-6.7b'``
-or provide `--model-id` flag when running ``openllm start opt``:
-
-\b
-$ openllm start opt --model-id facebook/opt-6.7b
-"""
 DEFAULT_PROMPT_TEMPLATE = """{instruction}"""
 
 
