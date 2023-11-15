@@ -55,7 +55,7 @@ def Runner(
     logger.warning(
       "'ensure_available=False' won't have any effect as LLM will always check to download the model on initialisation."
     )
-  model_id = attrs.get('model_id', default=os.getenv('OPENLLM_MODEL_ID', llm_config['default_id']))
+  model_id = attrs.get('model_id', os.getenv('OPENLLM_MODEL_ID', llm_config['default_id']))
   _RUNNER_MSG = f"""\
   Using 'openllm.Runner' is now deprecated. Make sure to switch to the following syntax:
 
