@@ -5,25 +5,6 @@ import openllm_core
 from openllm_core.prompts import PromptTemplate, process_prompt
 from openllm_core.utils import dantic
 
-START_GPT_NEOX_COMMAND_DOCSTRING = """\
-Run a LLMServer for GPTNeoX model.
-
-\b
-> See more information about GPTNeoX at [HuggingFace's model card](https://huggingface.co/docs/transformers/model_doc/gpt_neox)
-
-\b
-## Usage
-
-Currently, GPTNeoX only supports PyTorch. Make sure ``torch`` is available in your system.
-
-\b
-GPTNeoX Runner will use EleutherAI/gpt-neox-20b as the default model. To change to any other GPTNeoX
-saved pretrained, or a fine-tune GPTNeoX, provide ``OPENLLM_MODEL_ID='stabilityai/stablelm-tuned-alpha-3b'``
-or provide `--model-id` flag when running ``openllm start gpt-neox``:
-
-\b
-$ openllm start gpt-neox --model-id 'stabilityai/stablelm-tuned-alpha-3b'
-"""
 DEFAULT_PROMPT_TEMPLATE = """{instruction}"""
 
 

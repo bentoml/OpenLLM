@@ -4,25 +4,6 @@ import typing as t
 import openllm_core
 from openllm_core.prompts import PromptTemplate
 
-START_BAICHUAN_COMMAND_DOCSTRING = """\
-Run a LLMServer for Baichuan model.
-
-\b
-> See more information about Baichuan at [baichuan-inc/Baichuan-7B](https://github.com/baichuan-inc/Baichuan-7B)
-
-\b
-## Usage
-
-Currently, Baichuan only supports PyTorch. Make sure ``torch`` is available in your system.
-
-\b
-Baichuan Runner will use baichuan-inc/Baichuan-7B as the default model. To change to any other
-saved pretrained Baichuan, provide ``OPENLLM_MODEL_ID='fireballoon/baichuan-vicuna-chinese-7b'``
-or provide `--model-id` flag when running ``openllm start baichuan``:
-
-\b
-$ openllm start baichuan --model-id='fireballoon/baichuan-vicuna-chinese-7b'
-"""
 DEFAULT_SYSTEM_MESSAGE = ''
 DEFAULT_PROMPT_TEMPLATE = PromptTemplate('{instruction}')
 

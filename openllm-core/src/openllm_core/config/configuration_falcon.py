@@ -4,27 +4,6 @@ import typing as t
 import openllm_core
 from openllm_core.prompts import PromptTemplate, process_prompt
 
-START_FALCON_COMMAND_DOCSTRING = """\
-Run a LLMServer for FalconLM model.
-
-\b
-> See more information about falcon at [tiiuae/falcon-7b](https://huggingface.co/tiiuae/falcon-7b)
-
-\b
-## Usage
-
-By default, this model will use the PyTorch model for inference. However, this model also support vLLM.
-
-Note that if you use vLLM, a NVIDIA GPU is required.
-
-\b
-FalconLM Runner will use tiiuae/falcon-7b as the default model. To change to any other FalconLM
-saved pretrained, or a fine-tune FalconLM, provide ``OPENLLM_MODEL_ID='tiiuae/falcon-7b-instruct'``
-or provide `--model-id` flag when running ``openllm start falcon``:
-
-\b
-$ openllm start falcon --model-id tiiuae/falcon-7b-instruct
-"""
 DEFAULT_PROMPT_TEMPLATE = """{context}
 {user_name}: {instruction}
 {agent}:

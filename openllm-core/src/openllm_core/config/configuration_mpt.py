@@ -7,32 +7,6 @@ from openllm_core.utils import dantic
 
 MPTPromptType = t.Literal['default', 'instruct', 'chat', 'storywriter']
 
-START_MPT_COMMAND_DOCSTRING = """\
-Run a LLMServer for MPT model.
-
-\b
-> See more information about MPT at [HuggingFace's MosaicML page](https://huggingface.co/mosaicml)
-
-\b
-## Usage
-
-Currently, MPT only supports PyTorch. Make sure ``torch`` is available in your system.
-
-If you want to use Flash Attention support with openai/triton, make sure to install OpenLLM with
-
-\b
-```bash
-pip install "openllm[mpt]"
-```
-
-\b
-MPT Runner will use mosaicml/mpt-7b-instruct as the default model. To change to any other MPT
-saved pretrained, or a fine-tune MPT, provide ``OPENLLM_MODEL_ID='mosaicml/mpt-30b'``
-or provide `--model-id` flag when running ``openllm start mpt``:
-
-\b
-$ openllm start mpt --model-id mosaicml/mpt-30b
-"""
 INSTRUCTION_KEY, RESPONSE_KEY, END_KEY = '### Instruction:', '### Response:', '### End'
 INTRO_BLURB = (
   'Below is an instruction that describes a task. Write a response that appropriately completes the request.'

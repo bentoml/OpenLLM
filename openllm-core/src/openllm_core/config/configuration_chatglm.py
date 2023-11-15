@@ -7,26 +7,7 @@ from openllm_core.utils import dantic
 if t.TYPE_CHECKING:
   from openllm_core.prompts import PromptTemplate
 
-START_CHATGLM_COMMAND_DOCSTRING = """\
-Run a LLMServer for ChatGLM model.
-
-\b
-> See more information about ChatGLM at [THUDM/ChatGLM-6b](https://huggingface.co/thudm/chatglm-6b)
-
-\b
-## Usage
-
-Currently, ChatGLM only supports PyTorch. Make sure ``torch`` is available in your system.
-
-\b
-ChatGLM Runner will use THUDM/ChatGLM-6b as the default model. To change to any other ChatGLM
-saved pretrained, or a fine-tune ChatGLM, provide ``OPENLLM_MODEL_ID='thudm/chatglm-6b-int8'``
-or provide `--model-id` flag when running ``openllm start chatglm``:
-
-\b
-$ openllm start chatglm --model-id='thudm/chatglm-6b-int8'
-"""
-DEFAULT_PROMPT_TEMPLATE = """{instruction}"""
+DEFAULT_PROMPT_TEMPLATE = '{instruction}'
 
 
 class ChatGLMConfig(openllm_core.LLMConfig):

@@ -4,38 +4,6 @@ import typing as t
 import openllm_core
 from openllm_core.prompts import PromptTemplate
 
-START_LLAMA_COMMAND_DOCSTRING = """\
-Run a LLMServer for Llama model.
-
-\b
-> See more information about Llama at [Llama's model card](https://huggingface.co/docs/transformers/main/model_doc/llama
-
-\b
-## Usage
-
-By default, this model will use [vLLM](https://github.com/vllm-project/vllm) for inference.
-This model will also supports PyTorch.
-
-\b
-- To use PyTorch, set the environment variable ``OPENLLM_BACKEND="pt"``
-
-\b
-- To use vLLM, set the environment variable ``OPENLLM_BACKEND="vllm"``
-
-\b
-Llama Runner will use decapoda-research/llama-7b-hf as the default model. To change to any other Llama
-saved pretrained, or a fine-tune Llama, provide ``OPENLLM_MODEL_ID='openlm-research/open_llama_7b_v2'``
-or provide `--model-id` flag when running ``openllm start llama``:
-
-\b
-$ openllm start llama --model-id 'openlm-research/open_llama_7b_v2'
-
-\b
-OpenLLM also supports running Llama-2 and its fine-tune and variants. To import the Llama weights, one can use the following:
-
-\b
-$ CONVERTER=hf-llama2 openllm import llama /path/to/llama-2
-"""
 DEFAULT_SYSTEM_MESSAGE = """
 You are a helpful, respectful and honest assistant. Always answer as helpfully as possible, while being safe.  Your answers should not include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that your responses are socially unbiased and positive in nature.
 

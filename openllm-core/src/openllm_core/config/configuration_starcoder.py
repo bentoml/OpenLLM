@@ -6,25 +6,6 @@ import openllm_core
 if t.TYPE_CHECKING:
   from openllm_core.prompts import PromptTemplate
 
-START_STARCODER_COMMAND_DOCSTRING = """\
-Run a LLMServer for StarCoder model.
-
-\b
-> See more information about StarCoder at [bigcode/starcoder](https://huggingface.co/bigcode/starcoder)
-
-\b
-## Usage
-
-Currently, StarCoder only supports PyTorch. Make sure ``torch`` is available in your system.
-
-\b
-StarCoder Runner will use bigcode/starcoder as the default model. To change to any other StarCoder
-saved pretrained, or a fine-tune StarCoder, provide ``OPENLLM_MODEL_ID='bigcode/starcoder'``
-or provide `--model-id` flag when running ``openllm start starcoder``:
-
-\b
-$ openllm start starcoder --model-id 'bigcode/starcoder'
-"""
 DEFAULT_PROMPT_TEMPLATE = """{instruction}"""
 FIM_PREFIX, FIM_MIDDLE, FIM_SUFFIX, FIM_PAD, EOD, FIM_INDICATOR = (
   '<fim-prefix>',
