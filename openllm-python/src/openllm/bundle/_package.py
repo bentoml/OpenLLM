@@ -43,7 +43,7 @@ def build_editable(
   path: str, package: t.Literal['openllm', 'openllm_core', 'openllm_client'] = 'openllm'
 ) -> str | None:
   """Build OpenLLM if the OPENLLM_DEV_BUILD environment variable is set."""
-  if openllm_core.utils.check_bool_env(OPENLLM_DEV_BUILD, default=False):
+  if not openllm_core.utils.check_bool_env(OPENLLM_DEV_BUILD, default=False):
     return None
   # We need to build the package in editable mode, so that we can import it
   from build import ProjectBuilder
