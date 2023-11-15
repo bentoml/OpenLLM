@@ -34,7 +34,12 @@ class MistralConfig(openllm_core.LLMConfig):
     'serialisation': 'safetensors',
     # NOTE: see https://docs.mistral.ai/usage/guardrailing/
     # and https://docs.mistral.ai/llm/mistral-instruct-v0.1
-    'model_ids': ['mistralai/Mistral-7B-Instruct-v0.1', 'mistralai/Mistral-7B-v0.1'],
+    'model_ids': [
+      'HuggingFaceH4/zephyr-7b-alpha',
+      'HuggingFaceH4/zephyr-7b-beta',
+      'mistralai/Mistral-7B-Instruct-v0.1',
+      'mistralai/Mistral-7B-v0.1',
+    ],
     'fine_tune_strategies': (
       {'adapter_type': 'lora', 'r': 64, 'lora_alpha': 16, 'lora_dropout': 0.1, 'bias': 'none'},
     ),

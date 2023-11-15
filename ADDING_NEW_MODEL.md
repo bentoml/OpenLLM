@@ -15,7 +15,7 @@ Here's your roadmap:
       `$GIT_ROOT/openllm-core/src/openllm_core/config/configuration_{model_name}.py`
 - [ ] Update `$GIT_ROOT/openllm-core/src/openllm_core/config/__init__.py` to import the new model
 - [ ] Add your new model entry in `$GIT_ROOT/openllm-core/src/openllm_core/config/configuration_auto.py` with a tuple of the `model_name` alongside with the `ModelConfig`
-- [ ] Run `./tools/update-config-stubs.py`
+- [ ] Run `./tools/update-config-stubs.py` and `./tools/update-readme.py`
 
 > [!NOTE]
 >
@@ -40,8 +40,3 @@ the `__init__` file, and the tuple under `CONFIG_MAPPING_NAMES` in [openllm-core
 Once you have completed the checklist above, raise a PR and the OpenLLMs
 maintainer will review it ASAP. Once the PR is merged, you should be able to see
 your model in the next release! 🎉 🎊
-
-### Updating README.md
-
-After a model is added, just ping OpenLLM's maintainers to update the README.md file
-with the new model.
