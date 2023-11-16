@@ -62,7 +62,7 @@ openllm query 'What are large language models?'
     details_block.extend(list_ids)
     details_block.extend(
       [
-        '### Supported backends\n',
+        '\n### Supported backends\n',
         'OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.\n',
         *markdown_importantblock(
           'We recommend user to explicitly specify `--backend` to choose the desired backend to run the model. If you have access to a GPU, always use `--backend vllm`.\n'
@@ -76,7 +76,7 @@ openllm query 'What are large language models?'
           'To install vLLM, run `pip install "openllm[vllm]"`\n',
           f"""\
 ```bash
-openllm start {it['model_ids'][0]} --backend vllm
+{'' if not it['trust_remote_code'] else 'TRUST_REMOTE_CODE=True '}openllm start {it['model_ids'][0]} --backend vllm
 ```""",
           *markdown_importantblock(
             'Using vLLM requires a GPU that has architecture newer than 8.0 to get the best performance for serving. It is recommended that for all serving usecase in production, you should choose vLLM for serving.'
@@ -90,7 +90,7 @@ openllm start {it['model_ids'][0]} --backend vllm
           '\n- PyTorch:\n\n',
           f"""\
 ```bash
-openllm start {it['model_ids'][0]} --backend pt
+{'' if not it['trust_remote_code'] else 'TRUST_REMOTE_CODE=True '}openllm start {it['model_ids'][0]} --backend pt
 ```""",
         ]
       )
