@@ -9,27 +9,14 @@ import torch
 import bentoml
 import openllm
 from openllm_core._schemas import CompletionChunk, GenerationOutput
-from openllm_core._typing_compat import LiteralBackend, M, T
 from openllm_core.exceptions import OpenLLMException
 from openllm_core.utils import first_not_none, is_vllm_available
-
-if t.TYPE_CHECKING:
-  import vllm
-
-  from openllm_core._schemas import FinishReason
-else:
-  vllm = openllm.utils.LazyLoader('vllm', globals(), 'vllm')
-
-_DEFAULT_TOKENIZER = 'hf-internal-testing/llama-tokenizer'
 
 __all__ = ['runnable']
 
 
-def runnable(backend: LiteralBackend | None = None) -> type[bentoml.Runnable]:
-  backend = t.cast(
-    LiteralBackend,
-    first_not_none(backend, os.getenv('OPENLLM_BACKEND'), default='vllm' if is_vllm_available() else 'pt'),
-  )
+def runnable(backend=None):
+  backend = first_not_none(backend, os.getenv('OPENLLM_BACKEND'), default='vllm' if is_vllm_available() else 'pt')
   return vLLMRunnable if backend == 'vllm' else PyTorchRunnable
 
 
@@ -37,7 +24,11 @@ class vLLMRunnable(bentoml.Runnable):
   SUPPORTED_RESOURCES = ('nvidia.com/gpu', 'amd.com/gpu', 'cpu')
   SUPPORTS_CPU_MULTI_THREADING = True
 
-  def __init__(self, llm: openllm.LLM[M, T]) -> None:
+  def __init__(self, llm):
+    try:
+      import vllm
+    except ImportError:
+      raise OpenLLMException('vLLM is not installed. Please install it via `pip install "openllm[vllm]"`.') from None
     self.config = llm.config
     num_gpus, dev = 1, openllm.utils.device_count()
     if dev >= 2:
@@ -64,14 +55,7 @@ class vLLMRunnable(bentoml.Runnable):
       raise OpenLLMException(f'Failed to initialise vLLMEngine due to the following error:\n{err}') from err
 
   @bentoml.Runnable.method(batchable=False)
-  async def generate_iterator(
-    self,
-    prompt_token_ids: list[int],
-    request_id: str,
-    stop: str | t.Iterable[str] | None = None,
-    adapter_name: str | None = None,
-    **attrs: t.Any,
-  ) -> t.AsyncGenerator[str, None]:
+  async def generate_iterator(self, prompt_token_ids, request_id, stop=None, adapter_name=None, **attrs):
     if adapter_name is not None:
       raise NotImplementedError('Adapter is not supported with vLLM.')
     stop_: set[str] = set()
@@ -99,28 +83,19 @@ class PyTorchRunnable(bentoml.Runnable):
   SUPPORTED_RESOURCES = ('nvidia.com/gpu', 'amd.com/gpu', 'cpu')
   SUPPORTS_CPU_MULTI_THREADING = True
 
-  def __init__(self, llm: openllm.LLM[M, T]) -> None:
+  def __init__(self, llm):
     self.model = llm.model
     self.tokenizer = llm.tokenizer
     self.config = llm.config
 
   @bentoml.Runnable.method(batchable=False)
-  async def generate_iterator(
-    self,
-    prompt_token_ids: list[int],
-    request_id: str,
-    stop: str | t.Iterable[str] | None = None,
-    adapter_name: str | None = None,
-    **attrs: t.Any,
-  ) -> t.AsyncGenerator[str, None]:
+  async def generate_iterator(self, prompt_token_ids, request_id, stop=None, adapter_name=None, **attrs):
     if adapter_name is not None:
       self.model.set_adapter(adapter_name)
     async for generation_output in self.forward(prompt_token_ids, request_id, stop=stop, **attrs):
       yield generation_output.model_dump_json()
 
-  async def forward(
-    self, prompt_token_ids: list[int], request_id: str, stop: str | t.Iterable[str] | None = None, **attrs: t.Any
-  ) -> t.AsyncGenerator[GenerationOutput, None]:
+  async def forward(self, prompt_token_ids, request_id, stop=None, **attrs):
     from ._generation import is_partial_stop, prepare_logits_processor
 
     stop_: set[str] = set()
@@ -142,7 +117,7 @@ class PyTorchRunnable(bentoml.Runnable):
       logits_processor = prepare_logits_processor(config)
 
       past_key_values = out = token = None
-      finish_reason: t.Optional[FinishReason] = None
+      finish_reason = None
       for i in range(config['max_new_tokens']):
         if i == 0:  # prefill
           out = self.model(torch.as_tensor([prompt_token_ids], device=self.model.device), use_cache=True)

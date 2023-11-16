@@ -1,14 +1,3 @@
-"""OpenLLM.
-
-An open platform for operating large language models in production. Fine-tune, serve,
-deploy, and monitor any LLMs with ease.
-
-* Built-in support for StableLM, Llama 2, Dolly, Flan-T5, Vicuna
-* Option to bring your own fine-tuned LLMs
-* Online Serving with HTTP, gRPC, SSE(coming soon) or custom API
-* Native integration with BentoML and LangChain for custom LLM apps
-"""
-
 import logging as _logging
 import os as _os
 import pathlib as _pathlib
@@ -57,13 +46,14 @@ __lazy = utils.LazyModule(
     'entrypoints': ['mount_entrypoints'],
     'serialisation': ['ggml', 'transformers'],
     '_quantisation': ['infer_quantisation_config'],
-    '_llm': ['LLM', 'LLMRunner', 'LLMRunnable'],
+    '_llm': ['LLM'],
     '_generation': [
       'StopSequenceCriteria',
       'StopOnTokens',
-      'LogitsProcessorList',
-      'StoppingCriteriaList',
       'prepare_logits_processor',
+      'get_context_length',
+      'is_sentence_complete',
+      'is_partial_stop',
     ],
   },
   extra_objects={

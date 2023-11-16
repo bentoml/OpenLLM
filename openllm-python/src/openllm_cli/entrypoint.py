@@ -77,6 +77,7 @@ from openllm_core.utils import (
   compose,
   configure_logging,
   first_not_none,
+  gen_random_uuid,
   get_debug_mode,
   get_disable_warnings,
   get_quiet_mode,
@@ -986,7 +987,6 @@ def build_command(
   > To build the bento with compiled OpenLLM, make sure to prepend HATCH_BUILD_HOOKS_ENABLE=1. Make sure that the deployment
   > target also use the same Python version and architecture as build machine.
   """
-  from openllm._llm import normalise_model_name
   from openllm.serialisation.transformers.weights import has_safetensors_weights
 
   if model_id in openllm.CONFIG_MAPPING:
@@ -1046,7 +1046,7 @@ def build_command(
     labels = dict(llm.identifying_params)
     labels.update({'_type': llm.llm_type, '_framework': llm.__llm_backend__})
 
-    with fs.open_fs(f'temp://llm_{normalise_model_name(model_id)}') as llm_fs:
+    with fs.open_fs(f'temp://llm_{gen_random_uuid()}') as llm_fs:
       dockerfile_template_path = None
       if dockerfile_template:
         with dockerfile_template:

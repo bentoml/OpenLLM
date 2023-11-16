@@ -1,3 +1,21 @@
+"""OpenLLM.
+===========
+
+An open platform for operating large language models in production.
+Fine-tune, serve, deploy, and monitor any LLMs with ease.
+
+* Built-in support for Mistral, Llama 2, Yi, StableLM, Dolly, Flan-T5, Vicuna
+* Option to bring your own fine-tuned LLMs
+* Online Serving with HTTP, gRPC, SSE or custom API
+* Native integration with BentoML, LangChain, OpenAI compatible endpoints, LlamaIndex for custom LLM apps
+"""
+
+# fmt: off
+# update-config-stubs.py: import stubs start
+from openlm_core.config import CONFIG_MAPPING as CONFIG_MAPPING,CONFIG_MAPPING_NAMES as CONFIG_MAPPING_NAMES,AutoConfig as AutoConfig,BaichuanConfig as BaichuanConfig,ChatGLMConfig as ChatGLMConfig,DollyV2Config as DollyV2Config,FalconConfig as FalconConfig,FlanT5Config as FlanT5Config,GPTNeoXConfig as GPTNeoXConfig,LlamaConfig as LlamaConfig,MistralConfig as MistralConfig,MPTConfig as MPTConfig,OPTConfig as OPTConfig,StableLMConfig as StableLMConfig,StarCoderConfig as StarCoderConfig,YiConfig as YiConfig
+# update-config-stubs.py: import stubs stop
+# fmt: on
+
 import openllm_cli as _cli
 from openllm_cli._sdk import (
   build as build,
@@ -16,23 +34,6 @@ from openllm_core._schemas import (
   GenerationOutput as GenerationOutput,
   MetadataOutput as MetadataOutput,
 )
-from openllm_core.config import (
-  CONFIG_MAPPING as CONFIG_MAPPING,
-  CONFIG_MAPPING_NAMES as CONFIG_MAPPING_NAMES,
-  AutoConfig as AutoConfig,
-  BaichuanConfig as BaichuanConfig,
-  ChatGLMConfig as ChatGLMConfig,
-  DollyV2Config as DollyV2Config,
-  FalconConfig as FalconConfig,
-  FlanT5Config as FlanT5Config,
-  GPTNeoXConfig as GPTNeoXConfig,
-  LlamaConfig as LlamaConfig,
-  MistralConfig as MistralConfig,
-  MPTConfig as MPTConfig,
-  OPTConfig as OPTConfig,
-  StableLMConfig as StableLMConfig,
-  StarCoderConfig as StarCoderConfig,
-)
 
 from . import (
   bundle as bundle,
@@ -44,13 +45,14 @@ from . import (
 )
 from ._deprecated import Runner as Runner
 from ._generation import (
-  LogitsProcessorList as LogitsProcessorList,
   StopOnTokens as StopOnTokens,
-  StoppingCriteriaList as StoppingCriteriaList,
   StopSequenceCriteria as StopSequenceCriteria,
   prepare_logits_processor as prepare_logits_processor,
+  is_partial_stop as is_partial_stop,
+  is_sentence_complete as is_sentence_complete,
+  get_context_length as get_context_length,
 )
-from ._llm import LLM as LLM, LLMRunnable as LLMRunnable, LLMRunner as LLMRunner
+from ._llm import LLM as LLM
 from ._quantisation import infer_quantisation_config as infer_quantisation_config
 from ._strategies import CascadingResourceStrategy as CascadingResourceStrategy, get_resource as get_resource
 from .client import AsyncHTTPClient as AsyncHTTPClient, HTTPClient as HTTPClient

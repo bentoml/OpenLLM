@@ -121,3 +121,4 @@ docstring-quotes = "double"
 "openllm-python/src/openllm/_llm.py" = ["F811"]
 "openllm-core/src/openllm_core/utils/import_utils.py" = ["PLW0603", "F811"]
 "openllm-core/src/openllm_core/_configuration.py" = ["F811", "Q001"]
+"openllm-python/src/openllm/__init__.pyi" = ["I001"]

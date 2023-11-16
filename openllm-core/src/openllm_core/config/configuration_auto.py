@@ -121,6 +121,9 @@ class AutoConfig:
   # update-config-stubs.py: auto stubs start
   @t.overload
   @classmethod
+  def for_model(cls,model_name:t.Literal['baichuan'],**attrs:t.Any)->openllm_core.config.BaichuanConfig:...
+  @t.overload
+  @classmethod
   def for_model(cls,model_name:t.Literal['chatglm'],**attrs:t.Any)->openllm_core.config.ChatGLMConfig:...
   @t.overload
   @classmethod
@@ -139,6 +142,9 @@ class AutoConfig:
   def for_model(cls,model_name:t.Literal['llama'],**attrs:t.Any)->openllm_core.config.LlamaConfig:...
   @t.overload
   @classmethod
+  def for_model(cls,model_name:t.Literal['mistral'],**attrs:t.Any)->openllm_core.config.MistralConfig:...
+  @t.overload
+  @classmethod
   def for_model(cls,model_name:t.Literal['mpt'],**attrs:t.Any)->openllm_core.config.MPTConfig:...
   @t.overload
   @classmethod
@@ -151,13 +157,7 @@ class AutoConfig:
   def for_model(cls,model_name:t.Literal['starcoder'],**attrs:t.Any)->openllm_core.config.StarCoderConfig:...
   @t.overload
   @classmethod
-  def for_model(cls,model_name:t.Literal['mistral'],**attrs:t.Any)->openllm_core.config.MistralConfig:...
-  @t.overload
-  @classmethod
   def for_model(cls,model_name:t.Literal['yi'],**attrs:t.Any)->openllm_core.config.YiConfig:...
-  @t.overload
-  @classmethod
-  def for_model(cls,model_name:t.Literal['baichuan'],**attrs:t.Any)->openllm_core.config.BaichuanConfig:...
   # update-config-stubs.py: auto stubs stop
   # fmt: on
 
