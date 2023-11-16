@@ -190,7 +190,6 @@ exclude_lines = [
   "if _t.TYPE_CHECKING:",
   'if TYPE_CHECKING:',
   'if typing.TYPE_CHECKING:',
-  'if t.TYPE_CHECKING and not MYPY:',
   'if DEBUG:',
   'if utils.DEBUG',
   'if openllm.utils.DEBUG',
