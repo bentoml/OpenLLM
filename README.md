@@ -288,6 +288,7 @@ You can specify any of the following ChatGLM models via `openllm start`:
 - [thudm/chatglm-6b-int4](https://huggingface.co/thudm/chatglm-6b-int4)
 - [thudm/chatglm2-6b](https://huggingface.co/thudm/chatglm2-6b)
 - [thudm/chatglm2-6b-int4](https://huggingface.co/thudm/chatglm2-6b-int4)
+- [thudm/chatglm3-6b](https://huggingface.co/thudm/chatglm3-6b)
 
 ### Supported backends
 
@@ -297,6 +298,23 @@ OpenLLM will support vLLM and PyTorch as default backend. By default, it will us
 
 > **Important:** We recommend user to explicitly specify `--backend` to choose the desired backend to run the model. If you have access to a GPU, always use `--backend vllm`.
 
+
+
+- vLLM (Recommended):
+
+
+To install vLLM, run `pip install "openllm[vllm]"`
+
+```bash
+TRUST_REMOTE_CODE=True openllm start thudm/chatglm-6b --backend vllm
+```
+
+
+> **Important:** Using vLLM requires a GPU that has architecture newer than 8.0 to get the best performance for serving. It is recommended that for all serving usecase in production, you should choose vLLM for serving.
+
+
+
+> **Note:** Currently, adapters are yet to be supported with vLLM.
 
 
 - PyTorch:
