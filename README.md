@@ -1296,6 +1296,7 @@ OpenLLM is not just a standalone product; it's a building block designed to
 integrate with other powerful tools easily. We currently offer integration with
 [BentoML](https://github.com/bentoml/BentoML),
 [OpenAI's Compatible Endpoints](https://platform.openai.com/docs/api-reference/completions/object),
+[LlamaIndex](https://www.llamaindex.ai/),
 [LangChain](https://github.com/hwchase17/langchain), and
 [Transformers Agents](https://huggingface.co/docs/transformers/transformers_agents).
 
@@ -1340,6 +1341,33 @@ async def prompt(input_text: str) -> str:
   return generation.outputs[0].text
 ```
 
+### [LlamaIndex](https://docs.llamaindex.ai/en/stable/module_guides/models/llms/modules.html#openllm)
+
+To start a local LLM with `llama_index`, simply use `llama_index.llms.openllm.OpenLLM`:
+
+```python
+import asyncio
+from llama_index.llms.openllm import OpenLLM
+
+llm = OpenLLM('HuggingFaceH4/zephyr-7b-alpha')
+
+llm.complete("The meaning of life is")
+
+async def main(prompt, **kwargs):
+  async for it in llm.astream_chat(prompt, **kwargs): print(it)
+
+asyncio.run(main("The time at San Francisco is"))
+```
+
+If there is a remote LLM Server running elsewhere, then you can use `llama_index.llms.openllm.OpenLLMAPI`:
+
+```python
+from llama_index.llms.openllm import OpenLLMAPI
+```
+
+> [!NOTE]
+> All synchronous and asynchronous API from `llama_index.llms.LLM` are supported.
+
 ### [LangChain](https://python.langchain.com/docs/ecosystem/integrations/openllm)
 
 To quickly start a local LLM with `langchain`, simply do the following:
@@ -1372,7 +1400,6 @@ To integrate a LangChain agent with BentoML, you can do the following:
 
 ```python
 llm = OpenLLM(
-    model_name='flan-t5',
     model_id='google/flan-t5-large',
     embedded=False,
     serialisation="legacy"
