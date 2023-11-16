@@ -209,6 +209,7 @@ You can specify any of the following Baichuan models via `openllm start`:
 - [fireballoon/baichuan-vicuna-chinese-7b](https://huggingface.co/fireballoon/baichuan-vicuna-chinese-7b)
 - [fireballoon/baichuan-vicuna-7b](https://huggingface.co/fireballoon/baichuan-vicuna-7b)
 - [hiyouga/baichuan-7b-sft](https://huggingface.co/hiyouga/baichuan-7b-sft)
+
 ### Supported backends
 
 OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
@@ -225,7 +226,7 @@ OpenLLM will support vLLM and PyTorch as default backend. By default, it will us
 To install vLLM, run `pip install "openllm[vllm]"`
 
 ```bash
-openllm start baichuan-inc/baichuan-7b --backend vllm
+TRUST_REMOTE_CODE=True openllm start baichuan-inc/baichuan-7b --backend vllm
 ```
 
 
@@ -240,7 +241,7 @@ openllm start baichuan-inc/baichuan-7b --backend vllm
 
 
 ```bash
-openllm start baichuan-inc/baichuan-7b --backend pt
+TRUST_REMOTE_CODE=True openllm start baichuan-inc/baichuan-7b --backend pt
 ```
 
 </details>
@@ -287,6 +288,7 @@ You can specify any of the following ChatGLM models via `openllm start`:
 - [thudm/chatglm-6b-int4](https://huggingface.co/thudm/chatglm-6b-int4)
 - [thudm/chatglm2-6b](https://huggingface.co/thudm/chatglm2-6b)
 - [thudm/chatglm2-6b-int4](https://huggingface.co/thudm/chatglm2-6b-int4)
+
 ### Supported backends
 
 OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
@@ -301,7 +303,7 @@ OpenLLM will support vLLM and PyTorch as default backend. By default, it will us
 
 
 ```bash
-openllm start thudm/chatglm-6b --backend pt
+TRUST_REMOTE_CODE=True openllm start thudm/chatglm-6b --backend pt
 ```
 
 </details>
@@ -338,6 +340,7 @@ You can specify any of the following DollyV2 models via `openllm start`:
 - [databricks/dolly-v2-3b](https://huggingface.co/databricks/dolly-v2-3b)
 - [databricks/dolly-v2-7b](https://huggingface.co/databricks/dolly-v2-7b)
 - [databricks/dolly-v2-12b](https://huggingface.co/databricks/dolly-v2-12b)
+
 ### Supported backends
 
 OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
@@ -415,6 +418,7 @@ You can specify any of the following Falcon models via `openllm start`:
 - [tiiuae/falcon-40b](https://huggingface.co/tiiuae/falcon-40b)
 - [tiiuae/falcon-7b-instruct](https://huggingface.co/tiiuae/falcon-7b-instruct)
 - [tiiuae/falcon-40b-instruct](https://huggingface.co/tiiuae/falcon-40b-instruct)
+
 ### Supported backends
 
 OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
@@ -493,6 +497,7 @@ You can specify any of the following FlanT5 models via `openllm start`:
 - [google/flan-t5-large](https://huggingface.co/google/flan-t5-large)
 - [google/flan-t5-xl](https://huggingface.co/google/flan-t5-xl)
 - [google/flan-t5-xxl](https://huggingface.co/google/flan-t5-xxl)
+
 ### Supported backends
 
 OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
@@ -542,6 +547,7 @@ You can specify any of the following GPTNeoX models via `openllm start`:
 
 
 - [eleutherai/gpt-neox-20b](https://huggingface.co/eleutherai/gpt-neox-20b)
+
 ### Supported backends
 
 OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
@@ -627,6 +633,7 @@ You can specify any of the following Llama models via `openllm start`:
 - [NousResearch/llama-2-70b-hf](https://huggingface.co/NousResearch/llama-2-70b-hf)
 - [NousResearch/llama-2-13b-hf](https://huggingface.co/NousResearch/llama-2-13b-hf)
 - [NousResearch/llama-2-7b-hf](https://huggingface.co/NousResearch/llama-2-7b-hf)
+
 ### Supported backends
 
 OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
@@ -696,6 +703,7 @@ You can specify any of the following Mistral models via `openllm start`:
 - [HuggingFaceH4/zephyr-7b-beta](https://huggingface.co/HuggingFaceH4/zephyr-7b-beta)
 - [mistralai/Mistral-7B-Instruct-v0.1](https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.1)
 - [mistralai/Mistral-7B-v0.1](https://huggingface.co/mistralai/Mistral-7B-v0.1)
+
 ### Supported backends
 
 OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
@@ -776,6 +784,7 @@ You can specify any of the following MPT models via `openllm start`:
 - [mosaicml/mpt-30b](https://huggingface.co/mosaicml/mpt-30b)
 - [mosaicml/mpt-30b-instruct](https://huggingface.co/mosaicml/mpt-30b-instruct)
 - [mosaicml/mpt-30b-chat](https://huggingface.co/mosaicml/mpt-30b-chat)
+
 ### Supported backends
 
 OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
@@ -792,7 +801,7 @@ OpenLLM will support vLLM and PyTorch as default backend. By default, it will us
 To install vLLM, run `pip install "openllm[vllm]"`
 
 ```bash
-openllm start mosaicml/mpt-7b --backend vllm
+TRUST_REMOTE_CODE=True openllm start mosaicml/mpt-7b --backend vllm
 ```
 
 
@@ -807,7 +816,7 @@ openllm start mosaicml/mpt-7b --backend vllm
 
 
 ```bash
-openllm start mosaicml/mpt-7b --backend pt
+TRUST_REMOTE_CODE=True openllm start mosaicml/mpt-7b --backend pt
 ```
 
 </details>
@@ -855,6 +864,7 @@ You can specify any of the following OPT models via `openllm start`:
 - [facebook/opt-2.7b](https://huggingface.co/facebook/opt-2.7b)
 - [facebook/opt-6.7b](https://huggingface.co/facebook/opt-6.7b)
 - [facebook/opt-66b](https://huggingface.co/facebook/opt-66b)
+
 ### Supported backends
 
 OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
@@ -893,6 +903,73 @@ openllm start facebook/opt-125m --backend pt
 
 <details>
 
+<summary>Phi</summary>
+
+
+### Quickstart
+
+Run the following command to quickly spin up a Phi server:
+
+```bash
+TRUST_REMOTE_CODE=True openllm start microsoft/phi-1_5
+```
+In a different terminal, run the following command to interact with the server:
+
+```bash
+export OPENLLM_ENDPOINT=http://localhost:3000
+openllm query 'What are large language models?'
+```
+
+
+> **Note:** Any Phi variants can be deployed with OpenLLM. Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=phi) to see more Phi-compatible models.
+
+
+
+### Supported models
+
+You can specify any of the following Phi models via `openllm start`:
+
+
+- [microsoft/phi-1_5](https://huggingface.co/microsoft/phi-1_5)
+
+### Supported backends
+
+OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
+
+
+
+> **Important:** We recommend user to explicitly specify `--backend` to choose the desired backend to run the model. If you have access to a GPU, always use `--backend vllm`.
+
+
+
+- vLLM (Recommended):
+
+
+To install vLLM, run `pip install "openllm[vllm]"`
+
+```bash
+TRUST_REMOTE_CODE=True openllm start microsoft/phi-1_5 --backend vllm
+```
+
+
+> **Important:** Using vLLM requires a GPU that has architecture newer than 8.0 to get the best performance for serving. It is recommended that for all serving usecase in production, you should choose vLLM for serving.
+
+
+
+> **Note:** Currently, adapters are yet to be supported with vLLM.
+
+
+- PyTorch:
+
+
+```bash
+TRUST_REMOTE_CODE=True openllm start microsoft/phi-1_5 --backend pt
+```
+
+</details>
+
+<details>
+
 <summary>StableLM</summary>
 
 
@@ -924,6 +1001,7 @@ You can specify any of the following StableLM models via `openllm start`:
 - [stabilityai/stablelm-tuned-alpha-7b](https://huggingface.co/stabilityai/stablelm-tuned-alpha-7b)
 - [stabilityai/stablelm-base-alpha-3b](https://huggingface.co/stabilityai/stablelm-base-alpha-3b)
 - [stabilityai/stablelm-base-alpha-7b](https://huggingface.co/stabilityai/stablelm-base-alpha-7b)
+
 ### Supported backends
 
 OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
@@ -999,6 +1077,7 @@ You can specify any of the following StarCoder models via `openllm start`:
 
 - [bigcode/starcoder](https://huggingface.co/bigcode/starcoder)
 - [bigcode/starcoderbase](https://huggingface.co/bigcode/starcoderbase)
+
 ### Supported backends
 
 OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
@@ -1068,6 +1147,7 @@ You can specify any of the following Yi models via `openllm start`:
 - [01-ai/Yi-34B](https://huggingface.co/01-ai/Yi-34B)
 - [01-ai/Yi-6B-200K](https://huggingface.co/01-ai/Yi-6B-200K)
 - [01-ai/Yi-34B-200K](https://huggingface.co/01-ai/Yi-34B-200K)
+
 ### Supported backends
 
 OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
@@ -1084,7 +1164,7 @@ OpenLLM will support vLLM and PyTorch as default backend. By default, it will us
 To install vLLM, run `pip install "openllm[vllm]"`
 
 ```bash
-openllm start 01-ai/Yi-6B --backend vllm
+TRUST_REMOTE_CODE=True openllm start 01-ai/Yi-6B --backend vllm
 ```
 
 
@@ -1099,7 +1179,7 @@ openllm start 01-ai/Yi-6B --backend vllm
 
 
 ```bash
-openllm start 01-ai/Yi-6B --backend pt
+TRUST_REMOTE_CODE=True openllm start 01-ai/Yi-6B --backend pt
 ```
 
 </details>
