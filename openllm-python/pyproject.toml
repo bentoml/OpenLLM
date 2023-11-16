@@ -109,6 +109,7 @@ fine-tune = [
   "accelerate",
   "trl",
   "scipy",
+  "huggingface-hub",
 ]
 flan-t5 = ["transformers>=4.34.0"]
 full = [

@@ -80,12 +80,7 @@ def _resolve_peft_config_type(adapter_map: dict[str, str]) -> AdapterMap:
     raise RuntimeError(
       "LoRA adapter requires 'peft' to be installed. Make sure to do 'pip install \"openllm[fine-tune]\"'"
     )
-  try:
-    from huggingface_hub import hf_hub_download
-  except ImportError:
-    raise MissingDependencyError(
-      "Failed to import 'huggingface_hub'. Make sure to do 'pip install \"openllm[fine-tune]\"'"
-    ) from None
+  from huggingface_hub import hf_hub_download
 
   resolved: AdapterMap = {}
   for path_or_adapter_id, name in adapter_map.items():
