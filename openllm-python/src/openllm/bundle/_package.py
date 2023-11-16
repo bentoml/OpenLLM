@@ -79,7 +79,7 @@ def construct_python_options(llm, llm_fs, extra_dependencies=None, adapter_map=N
   return PythonOptions(
     packages=packages,
     wheels=wheels,
-    lock_packages=True,
+    lock_packages=False,
     extra_index_url=[
       'https://download.pytorch.org/whl/cu118',
       'https://huggingface.github.io/autogptq-index/whl/cu118/',
