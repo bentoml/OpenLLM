@@ -29,7 +29,6 @@ class ChatGLMConfig(openllm_core.LLMConfig):
     'name_type': 'lowercase',
     'trust_remote_code': True,
     'timeout': 3600000,
-    'backend': ('pt',),
     'url': 'https://github.com/THUDM/ChatGLM-6B',
     'requirements': ['cpm-kernels', 'sentencepiece'],
     'architecture': 'ChatGLMModel',
@@ -40,6 +39,7 @@ class ChatGLMConfig(openllm_core.LLMConfig):
       'thudm/chatglm-6b-int4',
       'thudm/chatglm2-6b',
       'thudm/chatglm2-6b-int4',
+      'thudm/chatglm3-6b',
     ],
   }
   retain_history: bool = dantic.Field(
