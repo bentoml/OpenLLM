@@ -14,10 +14,14 @@ END_ATTRS_COMMENT = f'# {os.path.basename(__file__)}: attrs stop\n'
 # Stubs for auto class
 START_AUTO_STUBS_COMMENT = f'# {os.path.basename(__file__)}: auto stubs start\n'
 END_AUTO_STUBS_COMMENT = f'# {os.path.basename(__file__)}: auto stubs stop\n'
+# Stubs for actual imports
+START_IMPORT_STUBS_COMMENT = f'# {os.path.basename(__file__)}: import stubs start\n'
+END_IMPORT_STUBS_COMMENT = f'# {os.path.basename(__file__)}: import stubs stop\n'
 
 ROOT = Path(__file__).parent.parent
 _TARGET_FILE = ROOT / 'openllm-core' / 'src' / 'openllm_core' / '_configuration.py'
 _TARGET_AUTO_FILE = ROOT / 'openllm-core' / 'src' / 'openllm_core' / 'config' / 'configuration_auto.py'
+_TARGET_INIT_FILE = ROOT / 'openllm-python' / 'src' / 'openllm' / '__init__.pyi'
 
 sys.path.insert(0, (ROOT / 'openllm-core' / 'src').__fspath__())
 from openllm_core._configuration import GenerationConfig, ModelSettings, SamplingParams
@@ -216,6 +220,22 @@ def main() -> int:
   )
   with _TARGET_AUTO_FILE.open('w') as f:
     f.writelines(processed)
+
+  with _TARGET_INIT_FILE.open('r') as f:
+    processed = f.readlines()
+  start_import_stubs_idx, end_import_stubs_idx = (
+    processed.index(START_IMPORT_STUBS_COMMENT),
+    processed.index(END_IMPORT_STUBS_COMMENT),
+  )
+  lines = f'from openlm_core.config import CONFIG_MAPPING as CONFIG_MAPPING,CONFIG_MAPPING_NAMES as CONFIG_MAPPING_NAMES,AutoConfig as AutoConfig,{",".join([a+" as "+a for a in CONFIG_MAPPING_NAMES.values()])}\n'
+  processed = (
+    processed[:start_import_stubs_idx]
+    + [START_IMPORT_STUBS_COMMENT, lines, END_IMPORT_STUBS_COMMENT]
+    + processed[end_import_stubs_idx + 1 :]
+  )
+  with _TARGET_INIT_FILE.open('w') as f:
+    f.writelines(processed)
+
   return 0
 
 

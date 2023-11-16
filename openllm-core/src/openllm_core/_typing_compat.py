@@ -88,9 +88,3 @@ class AdapterTuple(TupleAny):
 
 
 AdapterMap = t.Dict[AdapterType, t.Tuple[AdapterTuple, ...]]
-
-
-class RefTuple(TupleAny):
-  git_hash: str
-  version: VersionInfo
-  strategy: LiteralContainerVersionStrategy

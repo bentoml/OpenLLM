@@ -43,16 +43,13 @@ def build_container(
       "This utility can only be run within OpenLLM git repository. Clone it first with 'git clone https://github.com/bentoml/OpenLLM.git'"
     )
   if not registries:
-    tags: dict[str | LiteralContainerRegistry, str] = {
-      alias: f'{value}:{openllm.bundle.get_base_container_tag(version_strategy)}'
-      for alias, value in openllm.bundle.CONTAINER_NAMES.items()
+    tags = {
+      alias: openllm.bundle.RefResolver.construct_base_image(alias, version_strategy)
+      for alias in openllm.bundle.CONTAINER_NAMES
     }
   else:
     registries = [registries] if isinstance(registries, str) else list(registries)
-    tags = {
-      name: f'{openllm.bundle.CONTAINER_NAMES[name]}:{openllm.bundle.get_base_container_tag(version_strategy)}'
-      for name in registries
-    }
+    tags = {name: openllm.bundle.RefResolver.construct_base_image(name, version_strategy) for name in registries}
   try:
     outputs = _BUILDER.build(
       file=pathlib.Path(__file__).parent.joinpath('Dockerfile').resolve().__fspath__(),

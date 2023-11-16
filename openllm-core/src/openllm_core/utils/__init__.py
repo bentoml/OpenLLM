@@ -350,13 +350,16 @@ T = t.TypeVar('T')
 K = t.TypeVar('K')
 
 
-# yapf: disable
 @overload
 def first_not_none(*args: T | None, default: T) -> T: ...
+
+
 @overload
 def first_not_none(*args: T | None) -> T | None: ...
-def first_not_none(*args: T | None, default: None | T = None) -> T | None: return next((arg for arg in args if arg is not None), default)
-# yapf: enable
+
+
+def first_not_none(*args: T | None, default: T | None = None) -> T | None:
+  return next((arg for arg in args if arg is not None), default)
 
 
 def resolve_filepath(path: str, ctx: str | None = None) -> str:
