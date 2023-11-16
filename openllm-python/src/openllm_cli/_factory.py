@@ -170,24 +170,6 @@ def start_decorator(serve_grpc: bool = False) -> t.Callable[[FC], t.Callable[[FC
         help='Assign GPU devices (if available)',
         show_envvar=True,
       ),
-      cog.optgroup.group(
-        'Fine-tuning related options',
-        help="""\
-    Note that the argument `--adapter-id` can accept the following format:
-
-    - `--adapter-id /path/to/adapter` (local adapter)
-
-    - `--adapter-id remote/adapter` (remote adapter from HuggingFace Hub)
-
-    - `--adapter-id remote/adapter:eng_lora` (two previous adapter options with the given adapter_name)
-
-    ```bash
-
-    $ openllm start opt --adapter-id /path/to/adapter_dir --adapter-id remote/adapter:eng_lora
-
-    ```
-    """,
-      ),
       adapter_id_option(factory=cog.optgroup),
       click.option('--return-process', is_flag=True, default=False, help='Internal use only.', hidden=True),
     )
