@@ -691,7 +691,7 @@ def pretty_print(line: str):
   elif 'ERROR' in line:
     caller = termui.error
   else:
-    caller = caller = functools.partial(termui.echo, fg=None)
+    caller = functools.partial(termui.echo, fg=None)
   caller(line.strip())
 
 
@@ -1026,6 +1026,7 @@ def build_command(
       'OPENLLM_BACKEND': llm.__llm_backend__,
       'OPENLLM_SERIALIZATION': llm._serialisation,
       'OPENLLM_MODEL_ID': llm.model_id,
+      'OPENLLM_ADAPTER_MAP': orjson.dumps(None).decode(),
     }
   )
   if llm.quantise:
@@ -1035,13 +1036,8 @@ def build_command(
   if prompt_template:
     os.environ['OPENLLM_PROMPT_TEMPLATE'] = prompt_template
 
-  # NOTE: We set this environment variable so that our service.py logic won't raise RuntimeError
-  # during build. This is a current limitation of bentoml build where we actually import the service.py into sys.path
   try:
     assert llm.bentomodel  # HACK: call it here to patch correct tag with revision and everything
-    # FIX: This is a patch for _service_vars injection
-    if 'OPENLLM_ADAPTER_MAP' not in os.environ:
-      os.environ['OPENLLM_ADAPTER_MAP'] = orjson.dumps(None).decode()
 
     labels = dict(llm.identifying_params)
     labels.update({'_type': llm.llm_type, '_framework': llm.__llm_backend__})
@@ -1190,14 +1186,8 @@ class ModelItem(t.TypedDict):
 
 
 @cli.command()
-@click.option(
-  '--show-available',
-  is_flag=True,
-  default=True,
-  hidden=True,
-  help="Show available models in local store (mutually exclusive with '-o porcelain').",
-)
-def models_command(show_available: bool) -> dict[t.LiteralString, ModelItem]:
+@click.option('--show-available', is_flag=True, default=True, hidden=True)
+def models_command(**_: t.Any) -> dict[t.LiteralString, ModelItem]:
   """List all supported models.
 
   \b

@@ -1,4 +1,3 @@
-from __future__ import annotations
 import functools
 import logging
 import time
@@ -57,22 +56,12 @@ schemas = get_generator(
 )
 logger = logging.getLogger(__name__)
 
-if t.TYPE_CHECKING:
-  from attr import AttrsInstance
-  from starlette.requests import Request
-  from starlette.responses import Response
 
-  import bentoml
-  import openllm
-  from openllm_core._schemas import GenerationOutput
-  from openllm_core._typing_compat import M, T
-
-
-def jsonify_attr(obj: AttrsInstance) -> str:
+def jsonify_attr(obj):
   return orjson.dumps(converter.unstructure(obj)).decode()
 
 
-def error_response(status_code: HTTPStatus, message: str) -> JSONResponse:
+def error_response(status_code, message):
   return JSONResponse(
     {
       'error': converter.unstructure(
@@ -83,7 +72,7 @@ def error_response(status_code: HTTPStatus, message: str) -> JSONResponse:
   )
 
 
-async def check_model(request: CompletionRequest | ChatCompletionRequest, model: str) -> JSONResponse | None:
+async def check_model(request, model):
   if request.model == model:
     return None
   return error_response(
@@ -92,9 +81,7 @@ async def check_model(request: CompletionRequest | ChatCompletionRequest, model:
   )
 
 
-def create_logprobs(
-  token_ids: list[int], id_logprobs: list[dict[int, float]], initial_text_offset: int = 0, *, llm: openllm.LLM[M, T]
-) -> LogProbs:
+def create_logprobs(token_ids, id_logprobs, initial_text_offset=0, *, llm):
   # Create OpenAI-style logprobs.
   logprobs = LogProbs()
   last_token_len = 0
@@ -112,24 +99,23 @@ def create_logprobs(
   return logprobs
 
 
-def mount_to_svc(svc: bentoml.Service, llm: openllm.LLM[M, T]) -> bentoml.Service:
+def mount_to_svc(svc, llm):
   app = Starlette(
     debug=True,
     routes=[
       Route('/models', functools.partial(list_models, llm=llm), methods=['GET']),
       Route('/completions', functools.partial(completions, llm=llm), methods=['POST']),
       Route('/chat/completions', functools.partial(chat_completions, llm=llm), methods=['POST']),
-      Route('/schema', endpoint=openapi_schema, include_in_schema=False),
+      Route('/schema', endpoint=lambda req: schemas.OpenAPIResponse(req), include_in_schema=False),
     ],
   )
-  mount_path = '/v1'
-  svc.mount_asgi_app(app, path=mount_path)
-  return append_schemas(svc, schemas.get_schema(routes=app.routes, mount_path=mount_path))
+  svc.mount_asgi_app(app, path='/v1')
+  return append_schemas(svc, schemas.get_schema(routes=app.routes, mount_path='/v1'))
 
 
 # GET /v1/models
 @add_schema_definitions
-def list_models(_: Request, llm: openllm.LLM[M, T]) -> Response:
+def list_models(_, llm):
   return JSONResponse(
     converter.unstructure(ModelList(data=[ModelCard(id=llm.llm_type)])), status_code=HTTPStatus.OK.value
   )
@@ -137,7 +123,7 @@ def list_models(_: Request, llm: openllm.LLM[M, T]) -> Response:
 
 # POST /v1/chat/completions
 @add_schema_definitions
-async def chat_completions(req: Request, llm: openllm.LLM[M, T]) -> Response:
+async def chat_completions(req, llm):
   # TODO: Check for length based on model context_length
   json_str = await req.body()
   try:
@@ -166,7 +152,7 @@ async def chat_completions(req: Request, llm: openllm.LLM[M, T]) -> Response:
     logger.error('Error generating completion: %s', err)
     return error_response(HTTPStatus.INTERNAL_SERVER_ERROR, f'Exception: {err!s} (check server log)')
 
-  def create_stream_response_json(index: int, text: str, finish_reason: str | None = None) -> str:
+  def create_stream_response_json(index, text, finish_reason=None):
     return jsonify_attr(
       ChatCompletionStreamResponse(
         id=request_id,
@@ -178,7 +164,7 @@ async def chat_completions(req: Request, llm: openllm.LLM[M, T]) -> Response:
       )
     )
 
-  async def completion_stream_generator() -> t.AsyncGenerator[str, None]:
+  async def completion_stream_generator():
     # first chunk with role
     for i in range(config['n']):
       yield f"data: {jsonify_attr(ChatCompletionStreamResponse(id=request_id, choices=[ChatCompletionResponseStreamChoice(index=i, delta=Delta(role='assistant'), finish_reason=None)], model=model_name))}\n\n"
@@ -195,9 +181,8 @@ async def chat_completions(req: Request, llm: openllm.LLM[M, T]) -> Response:
     if request.stream:
       return StreamingResponse(completion_stream_generator(), media_type='text/event-stream')
     # Non-streaming case
-    final_result: GenerationOutput | None = None
-    texts: list[list[str]] = [[]] * config['n']
-    token_ids: list[list[int]] = [[]] * config['n']
+    final_result = None
+    texts, token_ids = [[]] * config['n'], [[]] * config['n']
     async for res in result_generator:
       if await req.is_disconnected():
         return error_response(HTTPStatus.BAD_REQUEST, 'Client disconnected.')
@@ -221,15 +206,9 @@ async def chat_completions(req: Request, llm: openllm.LLM[M, T]) -> Response:
       )
       for output in final_result.outputs
     ]
-    num_prompt_tokens, num_generated_tokens = (
-      len(t.cast(t.List[int], final_result.prompt_token_ids)),
-      sum(len(output.token_ids) for output in final_result.outputs),
-    )
-    usage = UsageInfo(
-      prompt_tokens=num_prompt_tokens,
-      completion_tokens=num_generated_tokens,
-      total_tokens=num_prompt_tokens + num_generated_tokens,
-    )
+    num_prompt_tokens = len(final_result.prompt_token_ids)
+    num_generated_tokens = sum(len(output.token_ids) for output in final_result.outputs)
+    usage = UsageInfo(num_prompt_tokens, num_generated_tokens, num_prompt_tokens + num_generated_tokens)
     response = ChatCompletionResponse(
       id=request_id, created=created_time, model=model_name, usage=usage, choices=choices
     )
@@ -254,7 +233,7 @@ async def chat_completions(req: Request, llm: openllm.LLM[M, T]) -> Response:
 
 # POST /v1/completions
 @add_schema_definitions
-async def completions(req: Request, llm: openllm.LLM[M, T]) -> Response:
+async def completions(req, llm):
   # TODO: Check for length based on model context_length
   json_str = await req.body()
   try:
@@ -300,9 +279,7 @@ async def completions(req: Request, llm: openllm.LLM[M, T]) -> Response:
   # TODO: support use_beam_search
   stream = request.stream and (config['best_of'] is None or config['n'] == config['best_of'])
 
-  def create_stream_response_json(
-    index: int, text: str, logprobs: LogProbs | None = None, finish_reason: str | None = None
-  ) -> str:
+  def create_stream_response_json(index, text, logprobs=None, finish_reason=None):
     return jsonify_attr(
       CompletionStreamResponse(
         id=request_id,
@@ -314,16 +291,14 @@ async def completions(req: Request, llm: openllm.LLM[M, T]) -> Response:
       )
     )
 
-  async def completion_stream_generator() -> t.AsyncGenerator[str, None]:
+  async def completion_stream_generator():
     previous_num_tokens = [0] * config['n']
     async for res in result_generator:
       for output in res.outputs:
         i = output.index
         if request.logprobs is not None:
           logprobs = create_logprobs(
-            token_ids=output.token_ids,
-            id_logprobs=t.cast(SampleLogprobs, output.logprobs)[previous_num_tokens[i] :],
-            llm=llm,
+            token_ids=output.token_ids, id_logprobs=output.logprobs[previous_num_tokens[i] :], llm=llm
           )
         else:
           logprobs = None
@@ -339,9 +314,8 @@ async def completions(req: Request, llm: openllm.LLM[M, T]) -> Response:
     if stream:
       return StreamingResponse(completion_stream_generator(), media_type='text/event-stream')
     # Non-streaming case
-    final_result: GenerationOutput | None = None
-    texts: list[list[str]] = [[]] * config['n']
-    token_ids: list[list[int]] = [[]] * config['n']
+    final_result = None
+    texts, token_ids = [[]] * config['n'], [[]] * config['n']
     async for res in result_generator:
       if await req.is_disconnected():
         return error_response(HTTPStatus.BAD_REQUEST, 'Client disconnected.')
@@ -358,7 +332,7 @@ async def completions(req: Request, llm: openllm.LLM[M, T]) -> Response:
       ]
     )
 
-    choices: list[CompletionResponseChoice] = []
+    choices = []
     for output in final_result.outputs:
       if request.logprobs is not None:
         logprobs = create_logprobs(
@@ -371,15 +345,9 @@ async def completions(req: Request, llm: openllm.LLM[M, T]) -> Response:
       )
       choices.append(choice_data)
 
-    num_prompt_tokens = len(
-      t.cast(t.List[int], final_result.prompt_token_ids)
-    )  # XXX: We will always return prompt_token_ids, so this won't be None
+    num_prompt_tokens = len(final_result.prompt_token_ids)
     num_generated_tokens = sum(len(output.token_ids) for output in final_result.outputs)
-    usage = UsageInfo(
-      prompt_tokens=num_prompt_tokens,
-      completion_tokens=num_generated_tokens,
-      total_tokens=num_prompt_tokens + num_generated_tokens,
-    )
+    usage = UsageInfo(num_prompt_tokens, num_generated_tokens, num_prompt_tokens + num_generated_tokens)
     response = CompletionResponse(id=request_id, created=created_time, model=model_name, usage=usage, choices=choices)
 
     if request.stream:
@@ -398,7 +366,3 @@ async def completions(req: Request, llm: openllm.LLM[M, T]) -> Response:
     traceback.print_exc()
     logger.error('Error generating completion: %s', err)
     return error_response(HTTPStatus.INTERNAL_SERVER_ERROR, f'Exception: {err!s} (check server log)')
-
-
-def openapi_schema(req: Request) -> Response:
-  return schemas.OpenAPIResponse(req)

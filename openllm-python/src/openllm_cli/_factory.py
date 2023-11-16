@@ -8,7 +8,7 @@ import click
 import click_option_group as cog
 import inflection
 from bentoml_cli.utils import BentoMLCommandGroup
-from click import ClickException, shell_completion as sc
+from click import shell_completion as sc
 
 import bentoml
 import openllm
@@ -22,7 +22,7 @@ from openllm_core._typing_compat import (
   ParamSpec,
   get_literal_args,
 )
-from openllm_core.utils import DEBUG
+from openllm_core.utils import DEBUG, resolve_user_filepath
 
 
 class _OpenLLM_GenericInternalConfig(LLMConfig):
@@ -125,12 +125,11 @@ def _id_callback(ctx: click.Context, _: click.Parameter, value: t.Tuple[str, ...
     # try to resolve the full path if users pass in relative,
     # currently only support one level of resolve path with current directory
     try:
-      adapter_id = openllm.utils.resolve_user_filepath(adapter_id, os.getcwd())
+      adapter_id = resolve_user_filepath(adapter_id, os.getcwd())
     except FileNotFoundError:
       pass
-    if len(adapter_name) == 0:
-      raise ClickException(f'Adapter name is required for {adapter_id}')
-    ctx.params[_adapter_mapping_key][adapter_id] = adapter_name[0]
+    name = adapter_name[0] if len(adapter_name) > 0 else 'default'
+    ctx.params[_adapter_mapping_key][adapter_id] = name
   return None
 
 
@@ -171,32 +170,7 @@ def start_decorator(serve_grpc: bool = False) -> t.Callable[[FC], t.Callable[[FC
         help='Assign GPU devices (if available)',
         show_envvar=True,
       ),
-      cog.optgroup.group(
-        'Fine-tuning related options',
-        help="""\
-    Note that the argument `--adapter-id` can accept the following format:
-
-    - `--adapter-id /path/to/adapter` (local adapter)
-
-    - `--adapter-id remote/adapter` (remote adapter from HuggingFace Hub)
-
-    - `--adapter-id remote/adapter:eng_lora` (two previous adapter options with the given adapter_name)
-
-    ```bash
-
-    $ openllm start opt --adapter-id /path/to/adapter_dir --adapter-id remote/adapter:eng_lora
-
-    ```
-    """,
-      ),
-      cog.optgroup.option(
-        '--adapter-id',
-        default=None,
-        help='Optional name or path for given LoRA adapter',
-        multiple=True,
-        callback=_id_callback,
-        metavar='[PATH | [remote/][adapter_name:]adapter_id][, ...]',
-      ),
+      adapter_id_option(factory=cog.optgroup),
       click.option('--return-process', is_flag=True, default=False, help='Internal use only.', hidden=True),
     )
     return composed(fn)
@@ -283,6 +257,17 @@ def _click_factory_type(*param_decls: t.Any, **attrs: t.Any) -> t.Callable[[FC |
 
 cli_option = functools.partial(_click_factory_type, attr='option')
 cli_argument = functools.partial(_click_factory_type, attr='argument')
+
+
+def adapter_id_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
+  return cli_option(
+    '--adapter-id',
+    default=None,
+    help='Optional name or path for given LoRA adapter',
+    multiple=True,
+    callback=_id_callback,
+    metavar='[PATH | [remote/][adapter_name:]adapter_id][, ...]',
+  )
 
 
 def cors_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:

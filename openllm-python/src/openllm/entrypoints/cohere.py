@@ -3,7 +3,6 @@ import functools
 import json
 import logging
 import traceback
-import typing as t
 from http import HTTPStatus
 
 import orjson
@@ -54,26 +53,16 @@ schemas = get_generator(
 )
 logger = logging.getLogger(__name__)
 
-if t.TYPE_CHECKING:
-  from attr import AttrsInstance
-  from starlette.requests import Request
-  from starlette.responses import Response
 
-  import bentoml
-  import openllm
-  from openllm_core._schemas import GenerationOutput
-  from openllm_core._typing_compat import M, T
-
-
-def jsonify_attr(obj: AttrsInstance) -> str:
+def jsonify_attr(obj):
   return json.dumps(converter.unstructure(obj))
 
 
-def error_response(status_code: HTTPStatus, message: str) -> JSONResponse:
+def error_response(status_code, message):
   return JSONResponse(converter.unstructure(CohereErrorResponse(text=message)), status_code=status_code.value)
 
 
-async def check_model(request: CohereGenerateRequest | CohereChatRequest, model: str) -> JSONResponse | None:
+async def check_model(request, model):
   if request.model is None or request.model == model:
     return None
   return error_response(
@@ -82,7 +71,7 @@ async def check_model(request: CohereGenerateRequest | CohereChatRequest, model:
   )
 
 
-def mount_to_svc(svc: bentoml.Service, llm: openllm.LLM[M, T]) -> bentoml.Service:
+def mount_to_svc(svc, llm):
   app = Starlette(
     debug=True,
     routes=[
@@ -90,7 +79,7 @@ def mount_to_svc(svc: bentoml.Service, llm: openllm.LLM[M, T]) -> bentoml.Servic
         '/v1/generate', endpoint=functools.partial(cohere_generate, llm=llm), name='cohere_generate', methods=['POST']
       ),
       Route('/v1/chat', endpoint=functools.partial(cohere_chat, llm=llm), name='cohere_chat', methods=['POST']),
-      Route('/schema', endpoint=openapi_schema, include_in_schema=False),
+      Route('/schema', endpoint=lambda req: schemas.OpenAPIResponse(req), include_in_schema=False),
     ],
   )
   mount_path = '/cohere'
@@ -102,7 +91,7 @@ def mount_to_svc(svc: bentoml.Service, llm: openllm.LLM[M, T]) -> bentoml.Servic
 
 
 @add_schema_definitions
-async def cohere_generate(req: Request, llm: openllm.LLM[M, T]) -> Response:
+async def cohere_generate(req, llm):
   json_str = await req.body()
   try:
     request = converter.structure(orjson.loads(json_str), CohereGenerateRequest)
@@ -115,7 +104,6 @@ async def cohere_generate(req: Request, llm: openllm.LLM[M, T]) -> Response:
   err_check = await check_model(request, llm.llm_type)
   if err_check is not None:
     return err_check
-
   request_id = gen_random_uuid('cohere-generate')
   config = llm.config.with_request(request)
 
@@ -133,10 +121,10 @@ async def cohere_generate(req: Request, llm: openllm.LLM[M, T]) -> Response:
     logger.error('Error generating completion: %s', err)
     return error_response(HTTPStatus.INTERNAL_SERVER_ERROR, f'Exception: {err!s} (check server log)')
 
-  def create_stream_response_json(index: int, text: str, is_finished: bool) -> str:
+  def create_stream_response_json(index, text, is_finished):
     return f'{jsonify_attr(StreamingText(index=index, text=text, is_finished=is_finished))}\n'
 
-  async def generate_stream_generator() -> t.AsyncGenerator[str, None]:
+  async def generate_stream_generator():
     async for res in result_generator:
       for output in res.outputs:
         yield create_stream_response_json(index=output.index, text=output.text, is_finished=output.finish_reason)
@@ -146,9 +134,8 @@ async def cohere_generate(req: Request, llm: openllm.LLM[M, T]) -> Response:
     if request.stream:
       return StreamingResponse(generate_stream_generator(), media_type='text/event-stream')
     # None-streaming case
-    final_result: GenerationOutput | None = None
-    texts: list[list[str]] = [[]] * config['n']
-    token_ids: list[list[int]] = [[]] * config['n']
+    final_result = None
+    texts, token_ids = [[]] * config['n'], [[]] * config['n']
     async for res in result_generator:
       if await req.is_disconnected():
         return error_response(HTTPStatus.BAD_REQUEST, 'Client disconnected.')
@@ -164,14 +151,18 @@ async def cohere_generate(req: Request, llm: openllm.LLM[M, T]) -> Response:
         for output in final_result.outputs
       ]
     )
-    response = Generations(
-      id=request_id,
-      generations=[
-        Generation(id=request_id, text=output.text, prompt=prompt, finish_reason=output.finish_reason)
-        for output in final_result.outputs
-      ],
+    return JSONResponse(
+      converter.unstructure(
+        Generations(
+          id=request_id,
+          generations=[
+            Generation(id=request_id, text=output.text, prompt=prompt, finish_reason=output.finish_reason)
+            for output in final_result.outputs
+          ],
+        )
+      ),
+      status_code=HTTPStatus.OK.value,
     )
-    return JSONResponse(converter.unstructure(response), status_code=HTTPStatus.OK.value)
   except Exception as err:
     traceback.print_exc()
     logger.error('Error generating completion: %s', err)
@@ -192,7 +183,7 @@ def _transpile_cohere_chat_messages(request: CohereChatRequest) -> list[dict[str
 
 
 @add_schema_definitions
-async def cohere_chat(req: Request, llm: openllm.LLM[M, T]) -> Response:
+async def cohere_chat(req, llm):
   json_str = await req.body()
   try:
     request = converter.structure(orjson.loads(json_str), CohereChatRequest)
@@ -223,9 +214,8 @@ async def cohere_chat(req: Request, llm: openllm.LLM[M, T]) -> Response:
   def create_stream_generation_json(index: int, text: str, is_finished: bool) -> str:
     return f'{jsonify_attr(ChatStreamTextGeneration(index=index, text=text, is_finished=is_finished))}\n'
 
-  async def completion_stream_generator() -> t.AsyncGenerator[str, None]:
-    texts: list[str] = []
-    token_ids: list[int] = []
+  async def completion_stream_generator():
+    texts, token_ids = [], []
     yield f'{jsonify_attr(ChatStreamStart(is_finished=False, index=0, generation_id=request_id))}\n'
 
     it = None
@@ -237,9 +227,7 @@ async def cohere_chat(req: Request, llm: openllm.LLM[M, T]) -> Response:
 
     if it is None:
       raise ValueError('No response from model.')
-    num_prompt_tokens = len(t.cast(t.List[int], it.prompt_token_ids))
-    num_response_tokens = len(token_ids)
-    total_tokens = num_prompt_tokens + num_response_tokens
+    num_prompt_tokens, num_response_tokens = len(it.prompt_token_ids), len(token_ids)
 
     json_str = jsonify_attr(
       ChatStreamEnd(
@@ -255,7 +243,7 @@ async def cohere_chat(req: Request, llm: openllm.LLM[M, T]) -> Response:
           token_count={
             'prompt_tokens': num_prompt_tokens,
             'response_tokens': num_response_tokens,
-            'total_tokens': total_tokens,
+            'total_tokens': num_prompt_tokens + num_response_tokens,
           },
         ),
       )
@@ -266,9 +254,8 @@ async def cohere_chat(req: Request, llm: openllm.LLM[M, T]) -> Response:
     if request.stream:
       return StreamingResponse(completion_stream_generator(), media_type='text/event-stream')
     # Non-streaming case
-    final_result: GenerationOutput | None = None
-    texts: list[str] = []
-    token_ids: list[int] = []
+    final_result = None
+    texts, token_ids = [], []
     async for res in result_generator:
       if await req.is_disconnected():
         return error_response(HTTPStatus.BAD_REQUEST, 'Client disconnected.')
@@ -280,28 +267,25 @@ async def cohere_chat(req: Request, llm: openllm.LLM[M, T]) -> Response:
     final_result = final_result.with_options(
       outputs=[final_result.outputs[0].with_options(text=''.join(texts), token_ids=token_ids)]
     )
-    num_prompt_tokens = len(t.cast(t.List[int], final_result.prompt_token_ids))
-    num_response_tokens = len(token_ids)
-    total_tokens = num_prompt_tokens + num_response_tokens
-
-    response = Chat(
-      response_id=request_id,
-      message=request.message,
-      text=''.join(texts),
-      prompt=prompt,
-      chat_history=request.chat_history,
-      token_count={
-        'prompt_tokens': num_prompt_tokens,
-        'response_tokens': num_response_tokens,
-        'total_tokens': total_tokens,
-      },
+    num_prompt_tokens, num_response_tokens = len(final_result.prompt_token_ids), len(token_ids)
+    return JSONResponse(
+      converter.unstructure(
+        Chat(
+          response_id=request_id,
+          message=request.message,
+          text=''.join(texts),
+          prompt=prompt,
+          chat_history=request.chat_history,
+          token_count={
+            'prompt_tokens': num_prompt_tokens,
+            'response_tokens': num_response_tokens,
+            'total_tokens': num_prompt_tokens + num_response_tokens,
+          },
+        )
+      ),
+      status_code=HTTPStatus.OK.value,
     )
-    return JSONResponse(converter.unstructure(response), status_code=HTTPStatus.OK.value)
   except Exception as err:
     traceback.print_exc()
     logger.error('Error generating completion: %s', err)
     return error_response(HTTPStatus.INTERNAL_SERVER_ERROR, f'Exception: {err!s} (check server log)')
-
-
-def openapi_schema(req: Request) -> Response:
-  return schemas.OpenAPIResponse(req)
