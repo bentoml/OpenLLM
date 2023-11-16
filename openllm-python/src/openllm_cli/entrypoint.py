@@ -622,9 +622,22 @@ def start_grpc_command(
 
 
 def process_environ(
-  config, server_timeout, wpr, device, cors, model_id, adapter_map, serialisation, llm, system_message, prompt_template
+  config,
+  server_timeout,
+  wpr,
+  device,
+  cors,
+  model_id,
+  adapter_map,
+  serialisation,
+  llm,
+  system_message,
+  prompt_template,
+  use_current_env=True,
 ) -> t.Dict[str, t.Any]:
-  environ = parse_config_options(config, server_timeout, wpr, device, cors, os.environ.copy())
+  environ = parse_config_options(
+    config, server_timeout, wpr, device, cors, os.environ.copy() if use_current_env else {}
+  )
   environ.update(
     {
       'OPENLLM_MODEL_ID': model_id,
@@ -1019,22 +1032,21 @@ def build_command(
     ),
   )
   backend_warning(llm.__llm_backend__, build=True)
-
   os.environ.update(
-    {
-      'TORCH_DTYPE': dtype,
-      'OPENLLM_BACKEND': llm.__llm_backend__,
-      'OPENLLM_SERIALIZATION': llm._serialisation,
-      'OPENLLM_MODEL_ID': llm.model_id,
-      'OPENLLM_ADAPTER_MAP': orjson.dumps(None).decode(),
-    }
+    **process_environ(
+      llm.config,
+      llm.config['timeout'],
+      1.0,
+      None,
+      True,
+      llm.model_id,
+      None,
+      llm._serialisation,
+      llm,
+      llm._system_message,
+      llm._prompt_template,
+    )
   )
-  if llm.quantise:
-    os.environ['OPENLLM_QUANTIZE'] = str(llm.quantise)
-  if system_message:
-    os.environ['OPENLLM_SYSTEM_MESSAGE'] = system_message
-  if prompt_template:
-    os.environ['OPENLLM_PROMPT_TEMPLATE'] = prompt_template
 
   try:
     assert llm.bentomodel  # HACK: call it here to patch correct tag with revision and everything
@@ -1049,7 +1061,7 @@ def build_command(
           llm_fs.writetext('Dockerfile.template', dockerfile_template.read())
         dockerfile_template_path = llm_fs.getsyspath('/Dockerfile.template')
 
-      adapter_map: dict[str, str] | None = None
+      adapter_map = None
       if adapter_id and not build_ctx:
         ctx.fail("'build_ctx' is required when '--adapter-id' is passsed.")
       if adapter_id:
