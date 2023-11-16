@@ -109,9 +109,8 @@ def mount_to_svc(svc, llm):
       Route('/schema', endpoint=lambda req: schemas.OpenAPIResponse(req), include_in_schema=False),
     ],
   )
-  mount_path = '/v1'
-  svc.mount_asgi_app(app, path=mount_path)
-  return append_schemas(svc, schemas.get_schema(routes=app.routes, mount_path=mount_path))
+  svc.mount_asgi_app(app, path='/v1')
+  return append_schemas(svc, schemas.get_schema(routes=app.routes, mount_path='/v1'))
 
 
 # GET /v1/models
