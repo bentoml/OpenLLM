@@ -61,7 +61,7 @@ RUN /opt/conda/bin/conda install -c "nvidia/label/cuda-11.8.0" cuda==11.8 && \
     /opt/conda/bin/conda clean -ya
 
 # base image
-FROM nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04 as base-container
+FROM debian:bullseye-slim as base-container
 
 # Conda env
 ENV PATH=/opt/conda/bin:$PATH \
