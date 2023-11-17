@@ -98,6 +98,7 @@ def construct_docker_options(
   # XXX: We need to quote this so that the envvar in container recognize as valid json
   environ['OPENLLM_CONFIG'] = f"'{environ['OPENLLM_CONFIG']}'"
   environ.pop('BENTOML_HOME', None)  # NOTE: irrelevant in container
+  environ['NVIDIA_DRIVER_CAPABILITIES'] = 'compute,utility'
   return DockerOptions(
     base_image=oci.RefResolver.construct_base_image(container_registry, container_version_strategy),
     env=environ,
