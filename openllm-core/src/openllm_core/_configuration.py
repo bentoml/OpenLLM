@@ -1,7 +1,7 @@
-# mypy: disable-error-code="attr-defined,no-untyped-call,type-var,operator,arg-type,no-redef,misc"
 from __future__ import annotations
 import copy
 import importlib.util
+import inspect
 import logging
 import os
 import sys
@@ -807,22 +807,23 @@ class _ConfigBuilder:
     return cls
 
   def add_attrs_init(self) -> Self:
-    self._cls_dict['__attrs_init__'] = codegen.add_method_dunders(
-      self._cls,
-      _make_init(
-        self._cls,
-        self._attrs,
-        self._has_pre_init,
-        self._has_post_init,
-        False,
-        True,
-        False,
-        self._base_attr_map,
-        False,
-        None,
-        True,
-      ),
+    _item = dict(
+      cls=self._cls,
+      attrs=self._attrs,
+      pre_init=self._has_pre_init,
+      post_init=self._has_post_init,
+      frozen=False,
+      slots=True,
+      cache_hash=False,
+      base_attr_map=self._base_attr_map,
+      is_exc=False,
+      cls_on_setattr=None,
+      attrs_init=True,
     )
+    _make_init_args = inspect.getfullargspec(_make_init)
+    if 'pre_init_has_args' in _make_init_args.args:
+      _item['pre_init_has_args'] = False
+    self._cls_dict['__attrs_init__'] = codegen.add_method_dunders(self._cls, _make_init(**_item))
     return self
 
   def add_repr(self) -> Self:
@@ -836,7 +837,7 @@ class _ConfigBuilder:
 
 
 @attr.define(slots=True, init=False)
-class LLMConfig(_ConfigAttr[t.Any, t.Any]):
+class LLMConfig(_ConfigAttr[GenerationConfig, SamplingParams]):
   """``openllm.LLMConfig`` is a pydantic-like ``attrs`` interface that offers fast and easy-to-use APIs.
 
   It lives in between the nice UX of `pydantic` and fast performance of `attrs` where it allows users to quickly formulate

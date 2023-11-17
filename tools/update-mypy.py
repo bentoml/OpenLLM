@@ -54,6 +54,12 @@ def update_mypy_ini(pyi_files: List[str], mypy_ini_path: str) -> int:
   # Write changes back to mypy.ini
   with open(mypy_ini_path, 'w') as configfile:
     config.write(configfile)
+  # Remove last newline if exists
+  with open(mypy_ini_path, 'rb+') as file:
+    file.seek(-1, os.SEEK_END)
+    if file.read(1) == b'\n':
+      file.seek(-1, os.SEEK_END)
+      file.truncate()
   return 0
 
 
