@@ -28,10 +28,9 @@ COPY hatch.toml README.md CHANGELOG.md openllm-python/pyproject.toml ./
 # below
 # pip install autoawq --no-cache-dir && \
 RUN --mount=type=cache,target=/root/.cache/pip \
-  pip install --extra-index-url "https://download.pytorch.org/whl/cu118" \
-              --extra-index-url "https://huggingface.github.io/autogptq-index/whl/cu118/" \
+  pip install --extra-index-url "https://huggingface.github.io/autogptq-index/whl/cu118/" \
               -v --no-cache-dir \
-              "ray==2.6.0" "einops" "vllm==0.2.1.post1" "auto-gptq[triton]" "torch==2.0.1+cu118" xformers && \
+              "ray==2.6.0" "einops" "vllm==0.2.1.post1" "auto-gptq[triton]" "torch==2.0.1" xformers && \
   pip install --no-cache-dir -e .
 
 FROM base-container
