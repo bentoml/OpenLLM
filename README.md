@@ -138,6 +138,7 @@ To interact with the server, you can visit the web UI at [http://0.0.0.0:3000/]
 
 ```python
 import openllm
+
 client = openllm.client.HTTPClient('http://localhost:3000')
 client.query('Explain to me the difference between "further" and "farther"')
 ```
@@ -1364,7 +1365,8 @@ llm = openllm.LLM('facebook/opt-2.7b')
 The main inference API is the streaming `generate_iterator` method:
 
 ```python
-async for generation in llm.generate_iterator('What is the meaning of life?'): print(generation.outputs[0].text)
+async for generation in llm.generate_iterator('What is the meaning of life?'):
+  print(generation.outputs[0].text)
 ```
 
 > [!NOTE]
@@ -1405,7 +1407,10 @@ specify the base_url to `llm-endpoint/v1` and you are good to go:
 
 ```python
 import openai
-client = openai.OpenAI(base_url='http://localhost:3000/v1', api_key='na')  # Here the server is running on localhost:3000
+
+client = openai.OpenAI(
+  base_url='http://localhost:3000/v1', api_key='na'
+)  # Here the server is running on localhost:3000
 
 completions = client.completions.create(
   prompt='Write me a tag line for an ice cream shop.', model=model, max_tokens=64, stream=stream
@@ -1431,7 +1436,8 @@ import openllm
 
 llm = openllm.LLM('facebook/opt-2.7b')
 
-svc = bentoml.Service(name="llm-opt-service", runners=[llm.runner])
+svc = bentoml.Service(name='llm-opt-service', runners=[llm.runner])
+
 
 @svc.api(input=bentoml.io.Text(), output=bentoml.io.Text())
 async def prompt(input_text: str) -> str:
@@ -1449,12 +1455,15 @@ from llama_index.llms.openllm import OpenLLM
 
 llm = OpenLLM('HuggingFaceH4/zephyr-7b-alpha')
 
-llm.complete("The meaning of life is")
+llm.complete('The meaning of life is')
+
 
 async def main(prompt, **kwargs):
-  async for it in llm.astream_chat(prompt, **kwargs): print(it)
+  async for it in llm.astream_chat(prompt, **kwargs):
+    print(it)
 
-asyncio.run(main("The time at San Francisco is"))
+
+asyncio.run(main('The time at San Francisco is'))
 ```
 
 If there is a remote LLM Server running elsewhere, then you can use `llama_index.llms.openllm.OpenLLMAPI`:
@@ -1473,9 +1482,9 @@ To quickly start a local LLM with `langchain`, simply do the following:
 ```python
 from langchain.llms import OpenLLM
 
-llm = OpenLLM(model_name="llama", model_id='meta-llama/Llama-2-7b-hf')
+llm = OpenLLM(model_name='llama', model_id='meta-llama/Llama-2-7b-hf')
 
-llm("What is the difference between a duck and a goose? And why there are so many Goose in Canada?")
+llm('What is the difference between a duck and a goose? And why there are so many Goose in Canada?')
 ```
 
 > [!IMPORTANT]
@@ -1491,25 +1500,21 @@ it by specifying its URL:
 from langchain.llms import OpenLLM
 
 llm = OpenLLM(server_url='http://44.23.123.1:3000', server_type='grpc')
-llm("What is the difference between a duck and a goose? And why there are so many Goose in Canada?")
+llm('What is the difference between a duck and a goose? And why there are so many Goose in Canada?')
 ```
 
 To integrate a LangChain agent with BentoML, you can do the following:
 
 ```python
-llm = OpenLLM(
-    model_id='google/flan-t5-large',
-    embedded=False,
-    serialisation="legacy"
-)
-tools = load_tools(["serpapi", "llm-math"], llm=llm)
-agent = initialize_agent(
-    tools, llm, agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION
-)
-svc = bentoml.Service("langchain-openllm", runners=[llm.runner])
+llm = OpenLLM(model_id='google/flan-t5-large', embedded=False, serialisation='legacy')
+tools = load_tools(['serpapi', 'llm-math'], llm=llm)
+agent = initialize_agent(tools, llm, agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION)
+svc = bentoml.Service('langchain-openllm', runners=[llm.runner])
+
+
 @svc.api(input=Text(), output=Text())
 def chat(input_text: str):
-    return agent.run(input_text)
+  return agent.run(input_text)
 ```
 
 > [!NOTE]
@@ -1529,9 +1534,9 @@ OpenLLM seamlessly integrates with
 ```python
 import transformers
 
-agent = transformers.HfAgent("http://localhost:3000/hf/agent")  # URL that runs the OpenLLM server
+agent = transformers.HfAgent('http://localhost:3000/hf/agent')  # URL that runs the OpenLLM server
 
-agent.run("Is the following `text` positive or negative?", text="I don't like how this models is generate inputs")
+agent.run('Is the following `text` positive or negative?', text="I don't like how this models is generate inputs")
 ```
 
 <!-- hatch-fancy-pypi-readme interim stop -->
