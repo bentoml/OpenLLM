@@ -95,6 +95,9 @@ def construct_docker_options(
     llm._prompt_template,
     use_current_env=False,
   )
+  # XXX: We need to quote this so that the envvar in container recognize as valid json
+  environ['OPENLLM_CONFIG'] = f"'{environ['OPENLLM_CONFIG']}'"
+  environ.pop('BENTOML_HOME', None)  # NOTE: irrelevant in container
   return DockerOptions(
     base_image=oci.RefResolver.construct_base_image(container_registry, container_version_strategy),
     env=environ,
