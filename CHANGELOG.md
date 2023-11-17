@@ -18,6 +18,28 @@ This changelog is managed by towncrier and is compiled at release time.
 
 <!-- towncrier release notes start -->
 
+## [0.4.10](https://github.com/bentoml/openllm/tree/v0.4.10)
+
+### Changes
+
+- `openllm build` from 0.4.10 will start locking packages for hemerticity
+
+  We also remove some of the packages that is not required, since it should already be in the base image.
+
+  Improve general codegen for service_vars to static save all variables in `_service_vars.py` to save two access call in envvar.
+  The envvar for all variables are still there in the container for backwards compatibility.
+  [#669](https://github.com/bentoml/openllm/issues/669)
+
+
+### Features
+
+- Type hints for all exposed API are now provided through stubs. This means REPL
+  and static analysis tools like mypy can infer types from library instantly without
+  having to infer types from runtime function signatures.
+  [#663](https://github.com/bentoml/openllm/issues/663)
+- OpenLLM image sizes now has been compressed and reduced to around 6.75 GB uncompressed.
+  [#675](https://github.com/bentoml/openllm/issues/675)
+
 ## [0.4.9](https://github.com/bentoml/openllm/tree/v0.4.9)
 No significant changes.
 
