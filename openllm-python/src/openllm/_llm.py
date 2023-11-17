@@ -222,7 +222,7 @@ class LLM(t.Generic[M, T], ReprMixin):
       if config_dtype is None:
         config_dtype = torch.float32
       if self.__llm_torch_dtype__ == 'auto':
-        if config_dtype == torch.float32 and torch.cuda.is_available():
+        if config_dtype == torch.float32:
           torch_dtype = torch.float16  # following common practice
         else:
           torch_dtype = config_dtype
