@@ -625,6 +625,9 @@ def append_schemas(svc, generated_schema, tags_order='prepend', inject=True):
   def _generate_spec(svc, openapi_version=OPENAPI_VERSION):
     return _SimpleSchema(svc_schema)
 
+  def asdict(self):
+    return svc_schema
+
   openapi.generate_spec = _generate_spec
-  OpenAPISpecification.asdict = lambda self: svc_schema
+  OpenAPISpecification.asdict = asdict
   return svc

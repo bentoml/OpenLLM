@@ -1,56 +1,56 @@
 [build-system]
 build-backend = "hatchling.build"
 requires = [
-  "hatchling==1.18.0",
-  "hatch-vcs==0.3.0",
-  "hatch-fancy-pypi-readme==23.1.0",
+    "hatchling==1.18.0",
+    "hatch-vcs==0.3.0",
+    "hatch-fancy-pypi-readme==23.1.0",
 ]
 
 [project]
 authors = [
-  { name = "Aaron Pham", email = "aarnphm@bentoml.com" },
-  { name = "BentoML Team", email = "contact@bentoml.com" },
+    { name = "Aaron Pham", email = "aarnphm@bentoml.com" },
+    { name = "BentoML Team", email = "contact@bentoml.com" },
 ]
 dynamic = ['readme', 'version']
 classifiers = [
-  "Development Status :: 4 - Beta",
-  "License :: OSI Approved :: Apache Software License",
-  "Topic :: Scientific/Engineering",
-  "Topic :: Software Development :: Libraries",
-  "Operating System :: OS Independent",
-  "Intended Audience :: Developers",
-  "Intended Audience :: Science/Research",
-  "Intended Audience :: System Administrators",
-  "Typing :: Typed",
-  "Programming Language :: Python",
-  "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.8",
-  "Programming Language :: Python :: 3.9",
-  "Programming Language :: Python :: 3.10",
-  "Programming Language :: Python :: 3.11",
-  "Programming Language :: Python :: Implementation :: CPython",
-  "Programming Language :: Python :: Implementation :: PyPy",
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: Apache Software License",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Software Development :: Libraries",
+    "Operating System :: OS Independent",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: System Administrators",
+    "Typing :: Typed",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
 ]
 description = "OpenLLM Client: Interacting with OpenLLM HTTP/gRPC server, or any BentoML server."
 keywords = [
-  "MLOps",
-  "AI",
-  "BentoML",
-  "Model Serving",
-  "Model Deployment",
-  "LLMOps",
-  "Falcon",
-  "Vicuna",
-  "Llama 2",
-  "Fine tuning",
-  "Serverless",
-  "Large Language Model",
-  "Generative AI",
-  "StableLM",
-  "Alpaca",
-  "PyTorch",
-  "Transformers",
+    "MLOps",
+    "AI",
+    "BentoML",
+    "Model Serving",
+    "Model Deployment",
+    "LLMOps",
+    "Falcon",
+    "Vicuna",
+    "Llama 2",
+    "Fine tuning",
+    "Serverless",
+    "Large Language Model",
+    "Generative AI",
+    "StableLM",
+    "Alpaca",
+    "PyTorch",
+    "Transformers",
 ]
 dependencies = ["openllm-core", "httpx", "distro", "anyio"]
 license = "Apache-2.0"
@@ -78,12 +78,12 @@ source = "vcs"
 version-file = "src/openllm_client/_version.py"
 [tool.hatch.version.raw-options]
 git_describe_command = [
-  "git",
-  "describe",
-  "--dirty",
-  "--tags",
-  "--long",
-  "--first-parent",
+    "git",
+    "describe",
+    "--dirty",
+    "--tags",
+    "--long",
+    "--first-parent",
 ]
 local_scheme = "no-local-version"
 root = ".."
@@ -94,11 +94,11 @@ only-include = ["src/openllm_client"]
 sources = ["src"]
 [tool.hatch.build.targets.sdist]
 exclude = [
-  "/.git_archival.txt",
-  "tests",
-  "/.python-version-default",
-  "/generate-grpc-stubs",
-  "/dev.Dockerfile",
+    "/.git_archival.txt",
+    "tests",
+    "/.python-version-default",
+    "/generate-grpc-stubs",
+    "/dev.Dockerfile",
 ]
 
 [tool.hatch.metadata.hooks.fancy-pypi-readme]

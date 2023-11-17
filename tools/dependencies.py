@@ -143,28 +143,14 @@ class Dependencies:
 lower_bentoml_constraint = '1.1.9'
 _BENTOML_EXT = ['io']
 _TRANSFORMERS_EXT = ['torch', 'tokenizers']
+_TRANSFORMERS_CONSTRAINTS = '4.35.0'
 
-_BASE_DEPENDENCIES = [
-  Dependencies(name='bentoml', extensions=_BENTOML_EXT, lower_constraint=lower_bentoml_constraint),
-  Dependencies(name='transformers', extensions=_TRANSFORMERS_EXT, lower_constraint='4.35.0'),
-  Dependencies(name='openllm-client'),
-  Dependencies(name='openllm-core'),
-  Dependencies(name='safetensors'),
-  Dependencies(name='optimum', lower_constraint='1.12.0'),
-  Dependencies(name='accelerate'),
-  Dependencies(name='ghapi'),
-  Dependencies(name='build', upper_constraint='1', extensions=['virtualenv']),
-  Dependencies(name='click', lower_constraint='8.1.3'),
-  Dependencies(name='cuda-python', platform=('Darwin', 'ne')),
-  Dependencies(name='bitsandbytes', upper_constraint='0.42'),  # 0.41 works with CUDA 11.8
-]
-
-FINE_TUNE_DEPS = ['peft>=0.6.0', 'bitsandbytes', 'datasets', 'accelerate', 'trl', 'scipy', 'huggingface-hub']
-FLAN_T5_DEPS = ['transformers>=4.34.0']
-OPT_DEPS = ['transformers>=4.34.0']
+FINE_TUNE_DEPS = ['peft>=0.6.0', 'datasets', 'trl', 'scipy', 'huggingface-hub']
+FLAN_T5_DEPS = [f'transformers>={_TRANSFORMERS_CONSTRAINTS}']
+OPT_DEPS = [f'transformers>={_TRANSFORMERS_CONSTRAINTS}']
 GRPC_DEPS = ['openllm-client[grpc]']
 OPENAI_DEPS = ['openai[datalib]>=1', 'tiktoken']
-AGENTS_DEPS = ['transformers[agents]>=4.34.0', 'diffusers', 'soundfile']
+AGENTS_DEPS = [f'transformers[agents]>={_TRANSFORMERS_CONSTRAINTS}', 'diffusers', 'soundfile']
 PLAYGROUND_DEPS = ['jupyter', 'notebook', 'ipython', 'jupytext', 'nbformat']
 GGML_DEPS = ['ctransformers']
 AWQ_DEPS = ['autoawq']
@@ -257,13 +243,6 @@ def build_system() -> Table:
   return table
 
 
-def authors() -> Array:
-  arr = correct_style(tomlkit.array())
-  arr.append(dict(name='Aaron Pham', email='aarnphm@bentoml.com'))
-  arr.append(dict(name='BentoML Team', email='contact@bentoml.com'))
-  return arr.multiline(True)
-
-
 def keywords() -> Array:
   arr = correct_style(tomlkit.array())
   arr.extend(
@@ -311,11 +290,31 @@ def build_cli_extensions() -> Table:
   return table
 
 
-def main() -> int:
+def main(args) -> int:
   api = GhApi(owner=_OWNER, repo=_REPO, authenticate=False)
   _info = api.repos.get()
   with open(os.path.join(ROOT, 'openllm-python', 'pyproject.toml'), 'r') as f:
     pyproject = tomlkit.parse(f.read())
+
+  if args.release_version is not None:
+    release_version = args.release_version
+  else:
+    release_version = openllm.bundle.RefResolver.from_strategy('release').version
+
+  _BASE_DEPENDENCIES = [
+    Dependencies(name='bentoml', extensions=_BENTOML_EXT, lower_constraint=lower_bentoml_constraint),
+    Dependencies(name='transformers', extensions=_TRANSFORMERS_EXT, lower_constraint=_TRANSFORMERS_CONSTRAINTS),
+    Dependencies(name='openllm-client', lower_constraint=release_version),
+    Dependencies(name='openllm-core', lower_constraint=release_version),
+    Dependencies(name='safetensors'),
+    Dependencies(name='optimum', lower_constraint='1.12.0'),
+    Dependencies(name='accelerate'),
+    Dependencies(name='ghapi'),
+    Dependencies(name='build', upper_constraint='1', extensions=['virtualenv']),
+    Dependencies(name='click', lower_constraint='8.1.3'),
+    Dependencies(name='cuda-python', platform=('Darwin', 'ne')),
+    Dependencies(name='bitsandbytes', upper_constraint='0.42'),  # 0.41 works with CUDA 11.8
+  ]
 
   dependencies_array = correct_style(tomlkit.array())
   dependencies_array.extend([v.to_str() for v in _BASE_DEPENDENCIES])
@@ -324,7 +323,6 @@ def main() -> int:
   dyn_arr.extend(['version', 'readme'])
 
   pyproject['build-system'] = build_system()
-  pyproject['project']['authors'] = authors()
   pyproject['project']['classifiers'] = create_classifiers()
   pyproject['project']['dependencies'] = dependencies_array.multiline(True)
   pyproject['project']['description'] = f'{_info.name}: {_info.description}'
@@ -344,4 +342,8 @@ def main() -> int:
 
 
 if __name__ == '__main__':
-  raise SystemExit(main())
+  import argparse
+
+  parser = argparse.ArgumentParser()
+  parser.add_argument('--release-version', type=str, default=None)
+  raise SystemExit(main(parser.parse_args()))
