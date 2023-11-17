@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile-upstream:master
 # Adapted from: https://github.com/pytorch/pytorch/blob/master/Dockerfile
-FROM python:3.9-slim-bullseye as base
+FROM python:3.9-slim-bullseye as base-container
 
 # Automatically set by buildx
 ARG TARGETPLATFORM
