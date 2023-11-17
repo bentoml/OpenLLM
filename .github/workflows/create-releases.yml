@@ -56,7 +56,10 @@ jobs:
           GIT_AUTHOR_EMAIL: ${{ steps.import-gpg.outputs.email }}
           GIT_COMMITTER_NAME: ${{ steps.import-gpg.outputs.name }}
           GIT_COMMITTER_EMAIL: ${{ steps.import-gpg.outputs.email }}
-        run: ./.github/actions/release.sh --release ${{ inputs.release_type }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |-
+          pip install ghapi inflection tomlkit orjson
+          ./.github/actions/release.sh --release ${{ inputs.release_type }}
       - name: Set project version
         id: version
         run: |-
