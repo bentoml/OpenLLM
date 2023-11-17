@@ -18,6 +18,13 @@ This changelog is managed by towncrier and is compiled at release time.
 
 <!-- towncrier release notes start -->
 
+## [0.4.11](https://github.com/bentoml/openllm/tree/v0.4.11)
+
+### Bug fix
+
+- Fixes a environment generation bug that caused CONFIG envvar to be invalid JSON
+  [#680](https://github.com/bentoml/openllm/issues/680)
+
 ## [0.4.10](https://github.com/bentoml/openllm/tree/v0.4.10)
 
 ### Changes
