@@ -1,10 +1,13 @@
 from __future__ import annotations
 import copy
+import logging
 
 import transformers
 
-from openllm.serialisation.constants import FRAMEWORK_TO_AUTOCLASS_MAPPING, HUB_ATTRS
-from openllm_core.exceptions import OpenLLMException
+from openllm.serialisation.constants import HUB_ATTRS
+from openllm_core.utils import get_disable_warnings, get_quiet_mode
+
+logger = logging.getLogger(__name__)
 
 
 def get_hash(config) -> str:
@@ -29,8 +32,8 @@ def process_config(model_id, trust_remote_code, **attrs):
 
 
 def infer_autoclass_from_llm(llm, config, /):
+  autoclass = 'AutoModelForSeq2SeqLM' if llm.config['model_type'] == 'seq2seq_lm' else 'AutoModelForCausalLM'
   if llm.trust_remote_code:
-    autoclass = 'AutoModelForSeq2SeqLM' if llm.config['model_type'] == 'seq2seq_lm' else 'AutoModelForCausalLM'
     if not hasattr(config, 'auto_map'):
       raise ValueError(
         f'Invalid configuration for {llm.model_id}. ``trust_remote_code=True`` requires `transformers.PretrainedConfig` to contain a `auto_map` mapping'
@@ -38,13 +41,10 @@ def infer_autoclass_from_llm(llm, config, /):
     # in case this model doesn't use the correct auto class for model type, for example like chatglm
     # where it uses AutoModel instead of AutoModelForCausalLM. Then we fallback to AutoModel
     if autoclass not in config.auto_map:
+      if not get_disable_warnings() and not get_quiet_mode():
+        logger.warning(
+          "OpenLLM failed to determine compatible Auto classes to load %s. Falling back to 'AutoModel'.\nTip: Make sure to specify 'AutoModelForCausalLM' or 'AutoModelForSeq2SeqLM' in your 'config.auto_map'. If your model type is yet to be supported, please file an issues on our GitHub tracker.",
+          llm._model_id,
+        )
       autoclass = 'AutoModel'
-    return getattr(transformers, autoclass)
-  else:
-    if type(config) in transformers.MODEL_FOR_CAUSAL_LM_MAPPING:
-      idx = 0
-    elif type(config) in transformers.MODEL_FOR_SEQ_TO_SEQ_CAUSAL_LM_MAPPING:
-      idx = 1
-    else:
-      raise OpenLLMException(f'Model type {type(config)} is not supported yet.')
-    return getattr(transformers, FRAMEWORK_TO_AUTOCLASS_MAPPING[llm.__llm_backend__][idx])
+  return getattr(transformers, autoclass)
