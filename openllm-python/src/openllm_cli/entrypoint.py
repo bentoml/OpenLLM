@@ -448,6 +448,14 @@ def start_command(
     if not get_debug_mode():
       termui.info("To disable these warnings, set 'OPENLLM_DISABLE_WARNING=True'")
 
+  import torch
+
+  if not torch.cuda.is_available():
+    if dtype == 'auto':
+      dtype = 'float'
+    elif dtype not in {'float', 'float32'} and not get_disable_warnings() and not get_quiet_mode():
+      termui.warning('"bfloat16" and "half" are not supported on CPU. OpenLLM will default fallback to "float32".')
+    dtype = 'float'  # we need to cast back to full precision if cuda is not available
   llm = openllm.LLM[t.Any, t.Any](
     model_id=model_id,
     model_version=model_version,
@@ -570,6 +578,14 @@ def start_grpc_command(
     if not get_debug_mode():
       termui.info("To disable these warnings, set 'OPENLLM_DISABLE_WARNING=True'")
 
+  import torch
+
+  if not torch.cuda.is_available():
+    if dtype == 'auto':
+      dtype = 'float'
+    elif dtype not in {'float', 'float32'} and not get_disable_warnings() and not get_quiet_mode():
+      termui.warning('"bfloat16" and "half" are not supported on CPU. OpenLLM will default fallback to "float32".')
+    dtype = 'float'  # we need to cast back to full precision if cuda is not available
   llm = openllm.LLM[t.Any, t.Any](
     model_id=model_id,
     model_version=model_version,
