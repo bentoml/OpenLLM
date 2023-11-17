@@ -646,7 +646,7 @@ def process_environ(
       'OPENLLM_ADAPTER_MAP': orjson.dumps(adapter_map).decode(),
       'OPENLLM_SERIALIZATION': serialisation,
       'OPENLLM_BACKEND': llm.__llm_backend__,
-      'OPENLLM_CONFIG': config.model_dump_json(flatten=True).decode(),
+      'OPENLLM_CONFIG': f'"""{config.model_dump_json(flatten=True).decode()}"""',
       'TORCH_DTYPE': str(llm._torch_dtype).split('.')[-1],
       'TRUST_REMOTE_CODE': str(llm.trust_remote_code),
     }
