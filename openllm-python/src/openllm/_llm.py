@@ -1,5 +1,6 @@
 from __future__ import annotations
 import functools
+import importlib.util
 import logging
 import os
 import types
@@ -349,12 +350,8 @@ class LLM(t.Generic[M, T], ReprMixin):
 
   @property
   def adapter_map(self):
-    try:
-      import peft as _  # noqa: F401
-    except ImportError as err:
-      raise MissingDependencyError(
-        "Failed to import 'peft'. Make sure to do 'pip install \"openllm[fine-tune]\"'"
-      ) from err
+    if importlib.util.find_spec('peft') is None:
+      raise MissingDependencyError("Failed to import 'peft'. Make sure to do 'pip install \"openllm[fine-tune]\"'")
     if not self.has_adapters:
       raise AttributeError('Adapter map is not available.')
     assert self._adapter_map is not None

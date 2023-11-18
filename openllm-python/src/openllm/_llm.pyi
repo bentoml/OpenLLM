@@ -24,7 +24,7 @@ from openllm_core.utils.representation import ReprArgs
 from ._quantisation import QuantizationConfig
 from ._runners import Runner
 
-InjectedModel = Union[PeftModel | PeftModelForCausalLM | PeftModelForSeq2SeqLM]
+InjectedModel = Union[PeftModel, PeftModelForCausalLM, PeftModelForSeq2SeqLM]
 
 class IdentifyingParams(TypedDict):
   configuration: str
