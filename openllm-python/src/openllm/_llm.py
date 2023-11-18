@@ -387,7 +387,7 @@ class LLM(t.Generic[M, T], ReprMixin):
 
   async def generate(
     self, prompt, prompt_token_ids=None, stop=None, stop_token_ids=None, request_id=None, adapter_name=None, **attrs
-  ):
+  ) -> GenerationOutput:
     config = self.config.model_construct_env(**attrs)
     texts, token_ids = [[]] * config['n'], [[]] * config['n']
     final_result = None
@@ -410,7 +410,7 @@ class LLM(t.Generic[M, T], ReprMixin):
 
   async def generate_iterator(
     self, prompt, prompt_token_ids=None, stop=None, stop_token_ids=None, request_id=None, adapter_name=None, **attrs
-  ):
+  ) -> t.AsyncGenerator[GenerationOutput, None]:
     from bentoml._internal.runner.runner_handle import DummyRunnerHandle
 
     if isinstance(self.runner._runner_handle, DummyRunnerHandle):

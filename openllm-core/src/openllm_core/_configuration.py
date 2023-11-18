@@ -195,6 +195,8 @@ class GenerationConfig(ReprMixin):
   decoder_start_token_id: int = dantic.Field(
     description='If an encoder-decoder model starts decoding with a different token than *bos*, the id of that token.'
   )
+  # NOTE: This is now implemented and supported for both PyTorch and vLLM
+  logprobs: int = dantic.Field(None, description='Number of log probabilities to return per output token.')
 
   def __init__(self, *, _internal: bool = False, **attrs: t.Any):
     if not _internal:
@@ -256,7 +258,6 @@ class SamplingParams(ReprMixin):
     False,
     description='Whether to ignore the EOS token and continue generating tokens after the EOS token is generated.',
   )
-  logprobs: int = dantic.Field(None, description='Number of log probabilities to return per output token.')
   prompt_logprobs: t.Optional[int] = dantic.Field(
     None, description='Number of log probabilities to return per input token.'
   )
@@ -268,6 +269,7 @@ class SamplingParams(ReprMixin):
     temperature: float
     top_k: int
     top_p: float
+    logprobs: int
 
   def __init__(self, *, _internal: bool = False, **attrs: t.Any):
     if not _internal:
@@ -319,7 +321,6 @@ class SamplingParams(ReprMixin):
     )
     length_penalty = first_not_none(attrs.pop('length_penalty', None), default=generation_config['length_penalty'])
     early_stopping = first_not_none(attrs.pop('early_stopping', None), default=generation_config['early_stopping'])
-    logprobs = first_not_none(attrs.pop('logprobs', None), default=None)
     prompt_logprobs = first_not_none(attrs.pop('prompt_logprobs', None), default=None)
 
     return cls(
@@ -331,7 +332,6 @@ class SamplingParams(ReprMixin):
       repetition_penalty=repetition_penalty,
       length_penalty=length_penalty,
       early_stopping=early_stopping,
-      logprobs=logprobs,
       prompt_logprobs=prompt_logprobs,
       **attrs,
     )

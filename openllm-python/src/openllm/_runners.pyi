@@ -60,6 +60,14 @@ class vLLMRunnable(_Runnable[AsyncLLMEngine]): ...
 @final
 class PyTorchRunnable(_Runnable[PreTrainedModel]):
   tokenizer: Any
+  async def forward(
+    self,
+    prompt_token_ids: List[int],
+    request_id: str,
+    stop: Iterable[str],
+    adapter_name: Optional[str] = ...,
+    **attrs: Any,
+  ) -> AsyncGenerator[str, None]: ...
 
 @overload
 def runnable(backend: Literal['vllm']) -> Type[vLLMRunnable]: ...
