@@ -624,14 +624,6 @@ openllm start eleutherai/gpt-neox-20b --backend pt
 
 ### Quickstart
 
-
-
-> **Note:** Llama requires to install with:
-> ```bash
-> pip install "openllm[llama]"
-> ```
-
-
 Run the following command to quickly spin up a Llama server:
 
 ```bash
