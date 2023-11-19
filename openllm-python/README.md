@@ -1375,7 +1375,7 @@ When using the `--workers-per-resource` option with the `openllm build` command,
 
 For more information, see [Resource scheduling strategy](https://docs.bentoml.org/en/latest/guides/scheduling.html#).
 
-## 🛞 Runtime implementations (Experimental)
+## 🛞 Runtime implementations
 
 Different LLMs may support multiple runtime implementations. Models that have `vLLM` (`vllm`) supports will use vLLM by default, otherwise it fallback to use `PyTorch` (`pt`).
 
