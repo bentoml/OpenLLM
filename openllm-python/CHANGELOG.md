@@ -18,6 +18,15 @@ This changelog is managed by towncrier and is compiled at release time.
 
 <!-- towncrier release notes start -->
 
+## [0.4.15](https://github.com/bentoml/openllm/tree/v0.4.15)
+
+### Features
+
+- PyTorch runners now supports logprobs calculation for the `logits` output.
+
+  Update logits calculation to support encoder-decoder models (which fix T5 inference)
+  [#692](https://github.com/bentoml/openllm/issues/692)
+
 ## [0.4.14](https://github.com/bentoml/openllm/tree/v0.4.14)
 No significant changes.
 
