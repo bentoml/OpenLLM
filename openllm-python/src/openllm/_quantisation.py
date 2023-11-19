@@ -1,12 +1,7 @@
 from __future__ import annotations
 
 from openllm_core.exceptions import MissingDependencyError
-from openllm_core.utils import (
-  is_autoawq_available,
-  is_autogptq_available,
-  is_bitsandbytes_available,
-  is_optimum_supports_gptq,
-)
+from openllm_core.utils import is_autoawq_available, is_autogptq_available, is_bitsandbytes_available
 
 
 def infer_quantisation_config(llm, quantise, **attrs):
@@ -98,7 +93,7 @@ def infer_quantisation_config(llm, quantise, **attrs):
   elif quantise == 'int4':
     quantisation_config = create_int4_config()
   elif quantise == 'gptq':
-    if not is_autogptq_available() or not is_optimum_supports_gptq():
+    if not is_autogptq_available():
       raise MissingDependencyError(
         "GPTQ requires 'auto-gptq' and 'optimum>=0.12' to be installed. Do it with 'pip install \"openllm[gptq]\"'"
       )

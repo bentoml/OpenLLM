@@ -42,6 +42,7 @@ from openllm_core.utils import (
   generate_hash_from_file,
   get_disable_warnings,
   get_quiet_mode,
+  getenv,
   is_peft_available,
   is_vllm_available,
   resolve_filepath,
@@ -52,6 +53,7 @@ from .exceptions import ForbiddenAttributeError, OpenLLMException
 from .serialisation.constants import PEFT_CONFIG_NAME
 
 if t.TYPE_CHECKING:
+  import torch
   import transformers
   from peft.config import PeftConfig
 
@@ -109,8 +111,8 @@ def _torch_dtype_mapping():
 
   return {
     'half': torch.float16,
-    'float16': torch.float16,
     'float': torch.float32,
+    'float16': torch.float16,
     'float32': torch.float32,
     'bfloat16': torch.bfloat16,
   }
@@ -132,7 +134,8 @@ class LLM(t.Generic[M, T], ReprMixin):
   _prompt_template: PromptTemplate | None
   _system_message: str | None
 
-  __llm_torch_dtype__: LiteralDtype | t.Literal['auto', 'half', 'float'] = 'auto'
+  __llm_dtype__: LiteralDtype | t.Literal['auto', 'half', 'float'] = 'auto'
+  __llm_torch_dtype__: 'torch.dtype' = None
   __llm_config__: LLMConfig | None = None
   __llm_backend__: LiteralBackend = None  # type: ignore
   __llm_quantization_config__: transformers.BitsAndBytesConfig | transformers.GPTQConfig | transformers.AwqConfig | None = None
@@ -158,16 +161,23 @@ class LLM(t.Generic[M, T], ReprMixin):
     serialisation='safetensors',
     trust_remote_code=False,
     embedded=False,
-    torch_dtype='auto',
+    dtype='auto',
     low_cpu_mem_usage=True,
     **attrs,
   ):
+    # backward compatible
+    torch_dtype = attrs.pop('torch_dtype', None)
+    if torch_dtype is not None:
+      logger.warning(
+        'The argument "torch_dtype" is deprecated and will be removed in the future. Please use "dtype" instead.'
+      )
+      dtype = torch_dtype
     _local = False
     if validate_is_path(model_id):
       model_id, _local = resolve_filepath(model_id), True
     backend = first_not_none(backend, os.getenv('OPENLLM_BACKEND'), default='vllm' if is_vllm_available() else 'pt')
-    torch_dtype = first_not_none(os.getenv('TORCH_DTYPE'), torch_dtype, default='auto')
-    quantize = first_not_none(quantize, os.getenv('OPENLLM_QUANTIZE'), default=None)
+    dtype = first_not_none(getenv('dtype', default=dtype, var=['TORCH_DTYPE']), default='auto')
+    quantize = first_not_none(getenv('quantize', default=quantize, var=['QUANITSE']), default=None)
     attrs.update({'low_cpu_mem_usage': low_cpu_mem_usage})
     # parsing tokenizer and model kwargs, as the hierarchy is param pass > default
     model_attrs, tokenizer_attrs = flatten_attrs(**attrs)
@@ -189,7 +199,7 @@ class LLM(t.Generic[M, T], ReprMixin):
       system_message=system_message,
       LLM__model_attrs=model_attrs,
       LLM__tokenizer_attrs=tokenizer_attrs,
-      llm_torch_dtype__=torch_dtype.lower(),
+      llm_dtype__=torch_dtype.lower(),
       llm_backend__=backend,
       llm_config__=llm_config,
       llm_trust_remote_code__=trust_remote_code,
@@ -222,15 +232,15 @@ class LLM(t.Generic[M, T], ReprMixin):
       config_dtype = getattr(hf_config, 'torch_dtype', None)
       if config_dtype is None:
         config_dtype = torch.float32
-      if self.__llm_torch_dtype__ == 'auto':
+      if self.__llm_dtype__ == 'auto':
         if config_dtype == torch.float32:
           torch_dtype = torch.float16  # following common practice
         else:
           torch_dtype = config_dtype
       else:
-        if self.__llm_torch_dtype__ not in _torch_dtype_mapping():
-          raise ValueError(f"Unknown dtype '{self.__llm_torch_dtype__}'")
-        torch_dtype = _torch_dtype_mapping()[self.__llm_torch_dtype__]
+        if self.__llm_dtype__ not in _torch_dtype_mapping():
+          raise ValueError(f"Unknown dtype '{self.__llm_dtype__}'")
+        torch_dtype = _torch_dtype_mapping()[self.__llm_dtype__]
       self.__llm_torch_dtype__ = torch_dtype
     return self.__llm_torch_dtype__
 

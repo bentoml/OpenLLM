@@ -503,14 +503,6 @@ openllm start tiiuae/falcon-7b --backend pt
 
 ### Quickstart
 
-
-
-> **Note:** FlanT5 requires to install with:
-> ```bash
-> pip install "openllm[flan-t5]"
-> ```
-
-
 Run the following command to quickly spin up a FlanT5 server:
 
 ```bash
@@ -868,14 +860,6 @@ TRUST_REMOTE_CODE=True openllm start mosaicml/mpt-7b --backend pt
 
 
 ### Quickstart
-
-
-
-> **Note:** OPT requires to install with:
-> ```bash
-> pip install "openllm[opt]"
-> ```
-
 
 Run the following command to quickly spin up a OPT server:
 

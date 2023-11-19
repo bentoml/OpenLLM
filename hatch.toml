@@ -1,66 +1,53 @@
 [envs.default]
 dependencies = [
-  "openllm-core @ {root:uri}/openllm-core",
-  "openllm-client @ {root:uri}/openllm-client",
-  "openllm[opt,chatglm,fine-tune] @ {root:uri}/openllm-python",
-  # NOTE: To run all hooks
-  "pre-commit",
-  # NOTE: towncrier for changelog
-  "towncrier",
-  # NOTE: Using under ./tools/update-optional-dependencies.py
-  "tomlkit",
-  # NOTE: For fancy PyPI readme
-  "hatch-fancy-pypi-readme",
-  # NOTE: For working with shell pipe
-  "plumbum",
-  # The below sync with mypyc deps and pre-commit mypy
-  "types-psutil",
-  "types-tabulate",
-  "types-PyYAML",
-  "types-protobuf",
+    "openllm-core @ {root:uri}/openllm-core",
+    "openllm-client @ {root:uri}/openllm-client",
+    "openllm[chatglm,fine-tune] @ {root:uri}/openllm-python",
+    # NOTE: To run all hooks
+    "pre-commit",
+    # NOTE: towncrier for changelog
+    "towncrier",
+    # NOTE: Using under ./tools/update-optional-dependencies.py
+    "tomlkit",
+    # NOTE: For fancy PyPI readme
+    "hatch-fancy-pypi-readme",
+    # NOTE: For working with shell pipe
+    "plumbum",
+    # The below sync with mypyc deps and pre-commit mypy
+    "types-psutil",
+    "types-tabulate",
+    "types-PyYAML",
+    "types-protobuf",
 ]
 [envs.default.scripts]
 changelog = "towncrier build --version main --draft"
-check-stubs = ["./tools/update-config-stubs.py"]
 inplace-changelog = "towncrier build --version main --keep"
-quality = [
-  "./tools/dependencies.py",
-  "- ./tools/update-brew-tap.py",
-  "check-stubs",
-  "bash ./tools/mirror.sh",
-  "- pre-commit run --all-files",
-  "- pnpm format",
-]
 setup = [
-  "pre-commit install",
-  "- ln -s .python-version-default .python-version",
-  "curl -fsSL https://raw.githubusercontent.com/clj-kondo/clj-kondo/master/script/install-clj-kondo | bash -",
+    "pre-commit install",
+    "- ln -s .python-version-default .python-version",
 ]
-tool = ["quality", "bash ./clean.sh", "bash ./compile.sh {args}"]
-typing = [
-  "- pre-commit run mypy {args:-a}",
-  "- pre-commit run pyright {args:-a}",
-]
+quality = ["bash ./all.sh", "- pre-commit run --all-files", "- pnpm format"]
+tool = ["quality", "bash ./clean.sh", 'python ./cz.py']
 [envs.tests]
 dependencies = [
-  "openllm-core @ {root:uri}/openllm-core",
-  "openllm-client @ {root:uri}/openllm-client",
-  "openllm[opt,chatglm,fine-tune] @ {root:uri}/openllm-python",
-  # NOTE: interact with docker for container tests.
-  "docker",
-  # NOTE: Tests strategies with Hypothesis and pytest, and snapshot testing with syrupy
-  "coverage[toml]>=6.5",
-  "filelock>=3.7.1",
-  "pytest",
-  "pytest-cov",
-  "pytest-mock",
-  "pytest-randomly",
-  "pytest-rerunfailures",
-  "pytest-asyncio>=0.21.0",
-  "pytest-xdist[psutil]",
-  "trustme",
-  "hypothesis",
-  "syrupy",
+    "openllm-core @ {root:uri}/openllm-core",
+    "openllm-client @ {root:uri}/openllm-client",
+    "openllm[chatglm,fine-tune] @ {root:uri}/openllm-python",
+    # NOTE: interact with docker for container tests.
+    "docker",
+    # NOTE: Tests strategies with Hypothesis and pytest, and snapshot testing with syrupy
+    "coverage[toml]>=6.5",
+    "filelock>=3.7.1",
+    "pytest",
+    "pytest-cov",
+    "pytest-mock",
+    "pytest-randomly",
+    "pytest-rerunfailures",
+    "pytest-asyncio>=0.21.0",
+    "pytest-xdist[psutil]",
+    "trustme",
+    "hypothesis",
+    "syrupy",
 ]
 skip-install = false
 template = "tests"
@@ -91,10 +78,10 @@ clojure = ["bash external/clojure/run-clojure-ui.sh"]
 detached = true
 [envs.ci.scripts]
 client-stubs = "bash openllm-client/generate-grpc-stubs"
-compile = "bash ./compile.sh {args}"
+compile = "bash ./tools/compile.sh {args}"
 recompile = ["bash ./clean.sh", "compile"]
 edi = "bash local.sh"
 lock = [
-  "bash tools/lock-actions.sh",
-  "pushd external/clojure && pnpm i --frozen-lockfile",
+    "bash tools/lock-actions.sh",
+    "pushd external/clojure && pnpm i --frozen-lockfile",
 ]

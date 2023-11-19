@@ -53,7 +53,7 @@ class MPTConfig(openllm_core.LLMConfig):
     'trust_remote_code': True,
     'url': 'https://huggingface.co/mosaicml',
     'timeout': int(36e6),
-    'requirements': ['triton', 'einops'],
+    'requirements': ['triton'],
     'architecture': 'MPTForCausalLM',
     # NOTE: See https://huggingface.co/TheBloke/mpt-30B-chat-GGML/discussions/4
     'default_id': 'mosaicml/mpt-7b-instruct',

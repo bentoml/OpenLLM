@@ -17,6 +17,7 @@ sys.path.insert(0, os.path.join(ROOT, 'openllm-python', 'src'))
 sys.path.insert(1, os.path.join(ROOT, 'openllm-core', 'src'))
 
 import openllm
+from openllm_core.utils.lazy import VersionInfo
 
 _OWNER, _REPO = 'bentoml', 'openllm'
 
@@ -141,19 +142,19 @@ class Dependencies:
     return cls(*decls)
 
 
-lower_bentoml_constraint = '1.1.9'
+_LOWER_BENTOML_CONSTRAINT = '1.1.9'
+_OPENLLM_CLIENT_CONSTRAINT = str(VersionInfo.from_package('openllm-client'))
 _BENTOML_EXT = ['io']
 _TRANSFORMERS_EXT = ['torch', 'tokenizers']
 _TRANSFORMERS_CONSTRAINTS = '4.35.0'
 
-FINE_TUNE_DEPS = ['peft>=0.6.0', 'datasets', 'trl', 'scipy', 'huggingface-hub']
-FLAN_T5_DEPS = [f'transformers>={_TRANSFORMERS_CONSTRAINTS}']
-OPT_DEPS = [f'transformers>={_TRANSFORMERS_CONSTRAINTS}']
-GRPC_DEPS = ['openllm-client[grpc]']
+FINE_TUNE_DEPS = ['peft>=0.6.0', 'datasets', 'trl', 'huggingface-hub']
+GRPC_DEPS = [f'bentoml[grpc]>={_LOWER_BENTOML_CONSTRAINT}', f'openllm-client[grpc]>={_OPENLLM_CLIENT_CONSTRAINT}']
 OPENAI_DEPS = ['openai[datalib]>=1', 'tiktoken']
 AGENTS_DEPS = [f'transformers[agents]>={_TRANSFORMERS_CONSTRAINTS}', 'diffusers', 'soundfile']
 PLAYGROUND_DEPS = ['jupyter', 'notebook', 'ipython', 'jupytext', 'nbformat']
 GGML_DEPS = ['ctransformers']
+CTRANSLATE_DEPS = ['ctranslate2']
 AWQ_DEPS = ['autoawq']
 GPTQ_DEPS = ['auto-gptq[triton]>=0.4.2', 'optimum>=1.12.0']
 VLLM_DEPS = ['vllm>=0.2.1post1', 'ray']
@@ -264,6 +265,8 @@ def keywords() -> Array:
       'StableLM',
       'Alpaca',
       'PyTorch',
+      'Mistral',
+      'vLLM',
       'Transformers',
     ]
   )
@@ -303,7 +306,7 @@ def main(args) -> int:
     release_version = openllm.bundle.RefResolver.from_strategy('release').version
 
   _BASE_DEPENDENCIES = [
-    Dependencies(name='bentoml', extensions=_BENTOML_EXT, lower_constraint=lower_bentoml_constraint),
+    Dependencies(name='bentoml', extensions=_BENTOML_EXT, lower_constraint=_LOWER_BENTOML_CONSTRAINT),
     Dependencies(name='transformers', extensions=_TRANSFORMERS_EXT, lower_constraint=_TRANSFORMERS_CONSTRAINTS),
     Dependencies(name='openllm-client', lower_constraint=release_version),
     Dependencies(name='openllm-core', lower_constraint=release_version),
@@ -311,6 +314,9 @@ def main(args) -> int:
     Dependencies(name='optimum', lower_constraint='1.12.0'),
     Dependencies(name='accelerate'),
     Dependencies(name='ghapi'),
+    Dependencies(name='einops'),
+    Dependencies(name='sentencepiece'),
+    Dependencies(name='scipy'),
     Dependencies(name='build', upper_constraint='1', extensions=['virtualenv']),
     Dependencies(name='click', lower_constraint='8.1.3'),
     Dependencies(name='cuda-python', platform=('Darwin', 'ne')),

@@ -2,7 +2,8 @@ import openllm_core
 
 
 def __dir__():
-  return dir(openllm_core.utils)
+  coreutils = set(dir(openllm_core.utils)) | set([it for it in openllm_core.utils._extras if not it.startswith('_')])
+  return sorted(list(coreutils))
 
 
 def __getattr__(name):

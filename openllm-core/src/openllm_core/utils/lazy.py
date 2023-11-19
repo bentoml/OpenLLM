@@ -91,6 +91,10 @@ class VersionInfo:
   releaselevel: str = attr.field()
 
   @classmethod
+  def from_package(cls, package: str) -> VersionInfo:
+    return cls.from_version_string(importlib.metadata.version(package))
+
+  @classmethod
   def from_version_string(cls, s: str) -> VersionInfo:
     v = s.split('.')
     if len(v) == 3:
