@@ -1,18 +1,13 @@
-"""Protocol-related packages for all library integrations.
-
-Currently support OpenAI compatible API.
-"""
-
 from __future__ import annotations
 import os
 import typing as t
 
 from openllm_core.utils import LazyModule
 
-_import_structure: dict[str, list[str]] = {'openai': []}
+_import_structure: dict[str, list[str]] = {'openai': [], 'cohere': [], 'hf': []}
 
 if t.TYPE_CHECKING:
-  from . import openai as openai
+  from . import cohere as cohere, hf as hf, openai as openai
 
 __lazy = LazyModule(__name__, os.path.abspath('__file__'), _import_structure)
 __all__ = __lazy.__all__

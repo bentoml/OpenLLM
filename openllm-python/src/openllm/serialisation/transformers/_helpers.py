@@ -1,6 +1,7 @@
 from __future__ import annotations
 import copy
 import logging
+import typing as t
 
 import transformers
 
@@ -10,14 +11,14 @@ from openllm_core.utils import get_disable_warnings, get_quiet_mode
 logger = logging.getLogger(__name__)
 
 
-def get_hash(config) -> str:
+def get_hash(config: transformers.PretrainedConfig) -> str:
   _commit_hash = getattr(config, '_commit_hash', None)
   if _commit_hash is None:
     raise ValueError(f'Cannot find commit hash in {config}')
   return _commit_hash
 
 
-def process_config(model_id, trust_remote_code, **attrs):
+def process_config(model_id: str, trust_remote_code: bool, **attrs: t.Any):
   config = attrs.pop('config', None)
   # this logic below is synonymous to handling `from_pretrained` attrs.
   hub_attrs = {k: attrs.pop(k) for k in HUB_ATTRS if k in attrs}
