@@ -69,10 +69,7 @@ def construct_python_options(llm, llm_fs, extra_dependencies=None, adapter_map=N
     packages=packages,
     wheels=wheels,
     lock_packages=True,
-    extra_index_url=[
-      'https://download.pytorch.org/whl/cu118',
-      'https://huggingface.github.io/autogptq-index/whl/cu118/',
-    ],
+    extra_index_url=['https://huggingface.github.io/autogptq-index/whl/cu118/'],
   )
 
 

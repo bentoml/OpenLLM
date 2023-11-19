@@ -3,4 +3,4 @@ include:
   - 'api_server.py'
 python:
   packages:
-    - openllm[vllm]==0.4.12
+    - openllm[vllm]>=0.4.15

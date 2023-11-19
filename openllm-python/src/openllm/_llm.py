@@ -199,7 +199,7 @@ class LLM(t.Generic[M, T], ReprMixin):
       system_message=system_message,
       LLM__model_attrs=model_attrs,
       LLM__tokenizer_attrs=tokenizer_attrs,
-      llm_dtype__=torch_dtype.lower(),
+      llm_dtype__=dtype.lower(),
       llm_backend__=backend,
       llm_config__=llm_config,
       llm_trust_remote_code__=trust_remote_code,
