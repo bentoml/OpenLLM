@@ -61,7 +61,7 @@ _value_docstring = {
             For GPT-NeoX implementation, it is based on GptNeoXForCausalLM, which supports dolly-v2, stablelm:
 
             ```bash
-            openllm start gpt-neox --model-id stabilityai/stablelm-tuned-alpha-3b
+            openllm start stabilityai/stablelm-tuned-alpha-3b
             ```""",
   'add_generation_prompt': """Whether to add generation prompt token for formatting chat templates. This arguments will be used for chat-based models.""",
   'backend': """List of supported backend for this given LLM class. Currently, we support "pt" and "vllm".""",
