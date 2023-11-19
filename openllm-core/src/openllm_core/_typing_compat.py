@@ -33,7 +33,7 @@ At = t.TypeVar('At', bound=attr.AttrsInstance)
 LiteralDtype = t.Literal['float16', 'float32', 'bfloat16', 'int8', 'int16']
 LiteralSerialisation = t.Literal['safetensors', 'legacy']
 LiteralQuantise = t.Literal['int8', 'int4', 'gptq', 'awq', 'squeezellm']
-LiteralBackend = t.Literal['pt', 'vllm', 'ggml', 'mlc']
+LiteralBackend = t.Literal['pt', 'vllm', 'ctranslate', 'ggml', 'mlc']
 AdapterType = t.Literal[
   'lora', 'adalora', 'adaption_prompt', 'prefix_tuning', 'p_tuning', 'prompt_tuning', 'ia3', 'loha', 'lokr'
 ]
