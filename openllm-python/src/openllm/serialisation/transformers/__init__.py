@@ -63,9 +63,22 @@ def import_model(llm, *decls, trust_remote_code, _model_store=Provide[BentoMLCon
     metadata['_quantize'] = quantize
   architectures = getattr(config, 'architectures', [])
   if not architectures:
-    raise RuntimeError(
-      'Failed to determine the architecture for this model. Make sure the `config.json` is valid and can be loaded with `transformers.AutoConfig`'
-    )
+    if trust_remote_code:
+      auto_map = getattr(config, 'auto_map', {})
+      if not auto_map:
+        raise RuntimeError(
+          f'Failed to determine the architecture from both `auto_map` and `architectures` from {llm.model_id}'
+        )
+      autoclass = 'AutoModelForSeq2SeqLM' if llm.config['model_type'] == 'seq2seq_lm' else 'AutoModelForCausalLM'
+      if autoclass not in auto_map:
+        raise RuntimeError(
+          f"Given model '{llm.model_id}' is yet to be supported with 'auto_map'. OpenLLM currently only support encoder-decoders or decoders only models."
+        )
+      architectures = [auto_map[autoclass]]
+    else:
+      raise RuntimeError(
+        'Failed to determine the architecture for this model. Make sure the `config.json` is valid and can be loaded with `transformers.AutoConfig`'
+      )
   metadata['_pretrained_class'] = architectures[0]
   if not llm._local:
     metadata['_revision'] = get_hash(config)
@@ -75,7 +88,7 @@ def import_model(llm, *decls, trust_remote_code, _model_store=Provide[BentoMLCon
   signatures = {}
 
   if quantize == 'gptq':
-    if not openllm.utils.is_autogptq_available() or not openllm.utils.is_optimum_supports_gptq():
+    if not openllm.utils.is_autogptq_available():
       raise OpenLLMException(
         "GPTQ quantisation requires 'auto-gptq' and 'optimum' (Not found in local environment). Install it with 'pip install \"openllm[gptq]\" --extra-index-url https://huggingface.github.io/autogptq-index/whl/cu118/'"
       )
@@ -213,7 +226,7 @@ def load_model(llm, *decls, **attrs):
   if '_quantize' in llm.bentomodel.info.metadata:
     _quantise = llm.bentomodel.info.metadata['_quantize']
     if _quantise == 'gptq':
-      if not openllm.utils.is_autogptq_available() or not openllm.utils.is_optimum_supports_gptq():
+      if not openllm.utils.is_autogptq_available():
         raise OpenLLMException(
           "GPTQ quantisation requires 'auto-gptq' and 'optimum' (Not found in local environment). Install it with 'pip install \"openllm[gptq]\" --extra-index-url https://huggingface.github.io/autogptq-index/whl/cu118/'"
         )

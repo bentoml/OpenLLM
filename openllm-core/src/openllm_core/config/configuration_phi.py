@@ -25,7 +25,6 @@ class PhiConfig(openllm_core.LLMConfig):
     'name_type': 'lowercase',
     'url': 'https://arxiv.org/abs/2309.05463',
     'architecture': 'PhiForCausalLM',
-    'requirements': ['einops'],
     'trust_remote_code': True,
     'default_id': 'microsoft/phi-1_5',
     'serialisation': 'safetensors',

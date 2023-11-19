@@ -68,10 +68,32 @@ OpenLLM is designed for AI application developers working to build production-re
 
 <!-- hatch-fancy-pypi-readme interim start -->
 
+## 💾 TL/DR
+
+For starter, we provide two ways to quickly try out OpenLLM:
+### Jupyter Notebooks
+
+Try this [OpenLLM tutorial in Google Colab: Serving Llama 2 with OpenLLM](https://colab.research.google.com/github/bentoml/OpenLLM/blob/main/examples/llama2.ipynb).
+
+### Docker
+
+We provide a docker container that helps you start running OpenLLM:
+
+```bash
+docker run --rm -it -p 3000:3000 ghcr.io/bentoml/openllm start facebook/opt-1.3b --backend pt
+```
+
+> [!NOTE]
+> Given you have access to GPUs and have setup [nvidia-docker](https://github.com/NVIDIA/nvidia-container-toolkit),  you can additionally pass in `--gpus`
+> to use GPU for faster inference and optimization
+>```bash
+> docker run --rm --gpus all -p 3000:3000 -it ghcr.io/bentoml/openllm start HuggingFaceH4/zephyr-7b-beta --backend vllm
+> ```
+
+
 ## 🏃 Get started
 
-To quickly get started with OpenLLM, follow the instructions below or try this [OpenLLM tutorial in Google Colab: Serving Llama 2 with OpenLLM](https://colab.research.google.com/github/bentoml/OpenLLM/blob/main/examples/openllm-llama2-demo/openllm_llama2_demo.ipynb).
-
+The following provides instructions for how to get started with OpenLLM locally.
 ### Prerequisites
 
 You have installed Python 3.8 (or later) and `pip`. We highly recommend using a [Virtual Environment](https://docs.python.org/3/library/venv.html) to prevent package conflicts.
@@ -124,7 +146,7 @@ Extensions:
   playground            OpenLLM Playground.
 ```
 
-### Start an LLM server
+### Start a LLM server
 
 OpenLLM allows you to quickly spin up an LLM server using `openllm start`. For example, to start an [OPT](https://huggingface.co/docs/transformers/model_doc/opt) server, run the following:
 
@@ -480,14 +502,6 @@ openllm start tiiuae/falcon-7b --backend pt
 
 
 ### Quickstart
-
-
-
-> **Note:** FlanT5 requires to install with:
-> ```bash
-> pip install "openllm[flan-t5]"
-> ```
-
 
 Run the following command to quickly spin up a FlanT5 server:
 
@@ -846,14 +860,6 @@ TRUST_REMOTE_CODE=True openllm start mosaicml/mpt-7b --backend pt
 
 
 ### Quickstart
-
-
-
-> **Note:** OPT requires to install with:
-> ```bash
-> pip install "openllm[opt]"
-> ```
-
 
 Run the following command to quickly spin up a OPT server:
 

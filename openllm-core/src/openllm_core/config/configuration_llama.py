@@ -48,7 +48,6 @@ class LlamaConfig(openllm_core.LLMConfig):
     'name_type': 'lowercase',
     'url': 'https://github.com/facebookresearch/llama',
     'architecture': 'LlamaForCausalLM',
-    'requirements': ['fairscale', 'sentencepiece', 'scipy'],
     'default_id': 'NousResearch/llama-2-7b-hf',
     'serialisation': 'safetensors',
     'model_ids': [

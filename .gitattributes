@@ -12,6 +12,7 @@ openllm-python/CHANGELOG.md linguist-generated=true
 
 # Others
 Formula/openllm.rb linguist-generated=true
+mypy.ini linguist-generated=true
 
 * text=auto eol=lf
 # Needed for setuptools-scm-git-archive

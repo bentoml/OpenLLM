@@ -18,20 +18,23 @@ validate_release() {
     fi
 }
 
-if ! command -v gh @ >&1 > /dev/null; then
-    echo "ERROR: gh not installed. Aborting..."
+check_membership() {
+  local org="BentoML"
+  local username=$(gh api user | jq -r '.login')
+  if gh api orgs/$org/members/$username -q '.message' | grep -q "Not Found"; then
+    echo "ERROR: You must be a member of $org to run this script."
     exit 1
-fi
+  fi
+}
 
-if ! command -v jq @ >&1 > /dev/null; then
-    echo "ERROR: jq not installed. Aborting..."
-    exit 1
-fi
+for cmd in gh jq hatch; do
+    if ! command -v "$cmd" @ >&1 > /dev/null; then
+        echo "ERROR: $cmd not installed. Aborting..."
+        exit 1
+    fi
+done
 
-if ! command -v hatch @ >&1 > /dev/null; then
-    echo "ERROR: hatch not installed. Aborting..."
-    exit 1
-fi
+check_membership
 
 # Check if release flag is provided
 if [[ $1 == "--release" ]]; then

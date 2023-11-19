@@ -30,7 +30,7 @@ class ChatGLMConfig(openllm_core.LLMConfig):
     'trust_remote_code': True,
     'timeout': 3600000,
     'url': 'https://github.com/THUDM/ChatGLM-6B',
-    'requirements': ['cpm-kernels', 'sentencepiece'],
+    'requirements': ['cpm-kernels'],
     'architecture': 'ChatGLMModel',
     'default_id': 'thudm/chatglm-6b',
     'model_ids': [

@@ -32,7 +32,8 @@ class IdentifyingParams(TypedDict):
   model_id: str
 
 ResolvedAdapterMap = Dict[AdapterType, Dict[str, Tuple[PeftConfig, str]]]
-Dtype = Union[LiteralDtype, Literal['auto', 'half', 'float']]
+CTranslateDtype = Literal['int8_float32', 'int8_float16', 'int8_bfloat16']
+Dtype = Union[LiteralDtype, CTranslateDtype, Literal['auto', 'half', 'float']]
 
 @attr.define(slots=True, repr=False, init=False)
 class LLM(Generic[M, T]):
@@ -50,7 +51,8 @@ class LLM(Generic[M, T]):
   _prompt_template: Optional[PromptTemplate]
   _system_message: Optional[str]
 
-  __llm_torch_dtype__: Dtype = ...
+  __llm_dtype__: Dtype = ...
+  __llm_torch_dtype__: Optional[torch.dtype] = ...
   __llm_config__: Optional[LLMConfig] = ...
   __llm_backend__: LiteralBackend = ...
   __llm_quantization_config__: Optional[QuantizationConfig] = ...

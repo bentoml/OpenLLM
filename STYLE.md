@@ -1,4 +1,4 @@
-## the coding style
+## the coding style.
 
 This documentation serves as a brief discussion of the coding style used for
 OpenLLM. As you have noticed, it is different from the conventional
@@ -48,14 +48,16 @@ rather the brevity of expression. (it enables
 [expository programming](http://archive.vector.org.uk/art10000980), combining
 with prototyping new ideas and logics within models implementation)
 
-## some guidelines
+## some guidelines.
 
 Though I have stopped using deterministic formatter and linter, I do understand
 that people have preferences for using these tools, and it plays nicely with IDE
 and editors. As such, I included a [`pyproject.toml`](./pyproject.toml) file
 that specifies some configuration for the tools that makes it compiliant with
-the repository's style. In short, some of the tools include `ruff`, `yapf`, and
-`interrogate`. Since we manage everything via `hatch`, refer back to the
+the repository's style. In short, I'm using `ruff` for both linting and formatting,
+`mypy` for type checking, and provide a `pyright` compatible configuration for those
+who wishes to use VSCode or `pyright` LSP.
+Since we manage everything via `hatch`, refer back to the
 [DEVELOPMENT.md](./DEVELOPMENT.md) for more information on this.
 
 Overtime, Python has incorporated a lot of features that supports this style of
@@ -68,7 +70,7 @@ somewhat, type-safe. Since there is no real type-safety when working with
 Python, typing should be a best-effort to make sure we don't introduce too many
 bugs.
 
-### naming
+### naming.
 
 - follow Python standard for this, I don't have too much opinion on this. Just
   make sure that it is descriptive, and the abbreviation describes the intent of
@@ -84,7 +86,7 @@ bugs.
 
 _If you have any suggestions, feel free to give it on our discord server!_
 
-### layout
+### layout.
 
 - Preferably not a lot of whitespaces, but rather flowing. If you can fit
   everything for `if`, `def` or a `return` within one line, then there's no need
@@ -108,7 +110,7 @@ _If you have any suggestions, feel free to give it on our discord server!_
 
 - With regards to writing operator, try to follow the domain-specific notation.
   I.e: when writing pathlib, just don't add space since that is not how you
-  write a path in the terminal. `yapf` will try to accommodate some of this
+  write a path in the terminal. `ruff format` will try to accommodate some of this
   changes.
 
 - Avoid trailing whitespace
@@ -116,9 +118,10 @@ _If you have any suggestions, feel free to give it on our discord server!_
 - use array, pytorch or numpy-based indexing where possible.
 
 - If you need to export anything, put it in `__all__` or do lazy export for
-  type-safe checker.
+  type-safe checker. See [OpenLLM's `__init__.py`](./openllm-python/src/openllm/__init__.py)
+  for example on how to lazily export a module.
 
-### misc
+### misc.
 
 - import alias should be concise and descriptive. A convention is to always
   `import typing as t`.
@@ -129,12 +132,53 @@ _If you have any suggestions, feel free to give it on our discord server!_
   MDX and will be hosted on the GitHub Pages, so stay tuned!
 - If anything that is not used for runtime, just put it under `t.TYPE_CHECKING`
 
-### note on codegen
+### note on codegen.
 
 - We also do some codegen for some of the assignment functions. These logics are
   largely based on the work of [attrs](https://github.com/python-attrs/attrs) to
   ensure fast and isolated codegen in Python. If you need codegen but don't know
   how it works, feel free to mention @aarnphm on discord!
+
+### types.
+
+I do believe in static type checking, and often times all of the code in OpenLLM are safely-types.
+Types play nicely with static analysis tools, and it is a great way to catch bugs for applications
+downstream. In Python, there are two ways for doing static type:
+
+1. Stubs files (recommended)
+
+If you have seen files that ends with `.pyi`, those are stubs files. Stubs files are great format
+for specifying types for external API, and it is a great way to separate the implementation from
+the API. For example, if you want to specify the type for `openllm_client.Client`, you can create
+a stubs file `openllm_client/__init__.pyi` and specify the type there.
+
+A few examples include [`openllm.LLM` types definition](./openllm-python/src/openllm/_llm.pyi) versus
+the [actual implementation](./openllm-python/src/openllm/_llm.py).
+
+> Therefore, if you touch any public API, make sure to also update and add/update the stubs files correctly.
+
+2. Inline annotations (encourage, not required)
+
+Inline annotations are great for specifying types for internal functions. For example:
+```python
+def _resolve_internal_converter(llm: LLM, type_: str) -> Converter: ...
+```
+
+This is not always required. If the internal functions are expressive enough, as well
+as the variable names are descriptive to ensure there is not type abrasion, then it is not
+required to specify the types. For example:
+```python
+import torch, torch.nn.functional as F
+rms_norm = lambda tensor: torch.sqrt(F.mean(torch.square(tensor)))
+```
+As you can see, the function calculate the RMSNorm of a given torch tensor.
+
+#### note on `TYPE_CHECKING` block.
+
+As you can see, we also incorporate `TYPE_CHECKING` argument into various places.
+This will provides some nice in line type checking when development. Usually, I think
+it is nice to have, but once the files get more and more complex, it is better to just
+provide a stubs file for it.
 
 ## FAQ
 
@@ -142,6 +186,9 @@ _If you have any suggestions, feel free to give it on our discord server!_
 
 `black` is used on our other projects, but I rather find `black` to be very
 verbose and overtime it is annoying to work with too much whitespaces.
+
+Personally, I think four spaces is a mistake, as in some cases it is harder to read
+with four spaces code versus 2 spaces code.
 
 ### Why not PEP8?
 
@@ -152,7 +199,7 @@ probably not fit here, and want to explore more expressive style.
 ### Editor is complaining about the style, what should I do?
 
 Kindly ask you to disable linting for this project 🤗. I will try my best to
-accomodate with ruff and yapf, but I don't want to spend too much time on this.
+accomodate for ruff and yapf, but I don't want to spend too much time on this.
 It is pretty stragithforward to disable it in your editor, with google.
 
 ### Style might put off new contributors?

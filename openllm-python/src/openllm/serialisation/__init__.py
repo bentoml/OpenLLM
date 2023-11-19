@@ -1,21 +1,26 @@
 from __future__ import annotations
 import importlib
+import typing as t
 
-import cloudpickle
-import fs
-
-from openllm_core._typing_compat import ParamSpec
+from openllm_core._typing_compat import M, ParamSpec, T, TypeGuard
 from openllm_core.exceptions import OpenLLMException
+
+if t.TYPE_CHECKING:
+  from bentoml import Model
+
+  from .._llm import LLM
 
 P = ParamSpec('P')
 
 
-def load_tokenizer(llm, **tokenizer_attrs):
+def load_tokenizer(llm: LLM[M, T], **tokenizer_attrs: t.Any) -> TypeGuard[T]:
   """Load the tokenizer from BentoML store.
 
   By default, it will try to find the bentomodel whether it is in store..
   If model is not found, it will raises a ``bentoml.exceptions.NotFound``.
   """
+  import cloudpickle
+  import fs
   from transformers import AutoTokenizer
 
   tokenizer_attrs = {**llm.llm_parameters[-1], **tokenizer_attrs}
@@ -52,34 +57,39 @@ def load_tokenizer(llm, **tokenizer_attrs):
   return tokenizer
 
 
-_extras = ['get', 'import_model', 'load_model']
-
-
 def _make_dispatch_function(fn):
-  def caller(llm, *args, **kwargs):
+  def caller(llm: LLM[M, T], *args: P.args, **kwargs: P.kwargs) -> TypeGuard[M | T | Model]:
     """Generic function dispatch to correct serialisation submodules based on LLM runtime.
 
     > [!NOTE] See 'openllm.serialisation.transformers' if 'llm.__llm_backend__ in ("pt", "vllm")'
 
     > [!NOTE] See 'openllm.serialisation.ggml' if 'llm.__llm_backend__="ggml"'
+
+    > [!NOTE] See 'openllm.serialisation.ctranslate' if 'llm.__llm_backend__="ctranslate"'
     """
-    serde = 'transformers'
     if llm.__llm_backend__ == 'ggml':
       serde = 'ggml'
-    return getattr(importlib.import_module(f'.{serde}', __name__), fn)(llm, *args, **kwargs)
+    elif llm.__llm_backend__ == 'ctranslate':
+      serde = 'ctranslate'
+    elif llm.__llm_backend__ in {'pt', 'vllm'}:
+      serde = 'transformers'
+    else:
+      raise OpenLLMException(f'Not supported backend {llm.__llm_backend__}')
+    return getattr(importlib.import_module(f'.{serde}', 'openllm.serialisation'), fn)(llm, *args, **kwargs)
 
   return caller
 
 
-_import_structure: dict[str, list[str]] = {'ggml': [], 'transformers': [], 'constants': []}
-__all__ = ['ggml', 'transformers', 'constants', 'load_tokenizer', *_extras]
+_extras = ['get', 'import_model', 'load_model']
+_import_structure = {'ggml', 'transformers', 'ctranslate', 'constants'}
+__all__ = ['load_tokenizer', *_extras, *_import_structure]
 
 
-def __dir__():
+def __dir__() -> t.Sequence[str]:
   return sorted(__all__)
 
 
-def __getattr__(name):
+def __getattr__(name: str) -> t.Any:
   if name == 'load_tokenizer':
     return load_tokenizer
   elif name in _import_structure:

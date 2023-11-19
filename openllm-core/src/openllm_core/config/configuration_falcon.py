@@ -23,7 +23,7 @@ class FalconConfig(openllm_core.LLMConfig):
     'trust_remote_code': False,
     'timeout': int(36e6),
     'url': 'https://falconllm.tii.ae/',
-    'requirements': ['einops', 'xformers'],
+    'requirements': ['xformers'],
     'architecture': 'FalconForCausalLM',
     # NOTE: See https://huggingface.co/tiiuae/falcon-7b-instruct/discussions/1
     'default_id': 'tiiuae/falcon-7b',

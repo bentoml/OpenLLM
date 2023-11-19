@@ -1,5 +1,3 @@
-"""An interface provides the best of pydantic and attrs."""
-
 from __future__ import annotations
 import functools
 import importlib

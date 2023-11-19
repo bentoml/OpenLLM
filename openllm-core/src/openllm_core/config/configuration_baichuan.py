@@ -24,7 +24,7 @@ class BaichuanConfig(openllm_core.LLMConfig):
     'trust_remote_code': True,
     'timeout': 3600000,
     'url': 'https://github.com/baichuan-inc/Baichuan-7B',
-    'requirements': ['cpm-kernels', 'sentencepiece'],
+    'requirements': ['cpm-kernels'],
     'architecture': 'BaiChuanForCausalLM',
     # NOTE: See the following
     # https://huggingface.co/baichuan-inc/Baichuan-13B-Chat/blob/19ef51ba5bad8935b03acd20ff04a269210983bc/modeling_baichuan.py#L555
