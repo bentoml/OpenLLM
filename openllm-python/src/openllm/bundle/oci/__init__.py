@@ -55,10 +55,8 @@ class RefResolver:
   def tag(self):return 'latest' if self.strategy in {'latest','nightly'} else repr(self.version)
   @staticmethod
   def construct_base_image(reg,strategy=None):
-    if strategy is not None and strategy != 'release':  # We currently only release latest and nightly on ghcr.io
-      logger.warning("Using 'latest/nightly' strategy will set base image to 'ghcr.io'.")
-      if reg != 'gh': logger.warning('This will affect cold start performance on GCP/AWS.'); reg = 'gh'
-    if reg == 'docker': logger.warning('docker is base image is yet to be supported. Falling back to "gh".'); reg = 'gh'
+    if reg == 'gh': logger.warning("Setting base registry to 'gh' will affect cold start performance on GCP/AWS.")
+    elif reg == 'docker': logger.warning('docker is base image is yet to be supported. Falling back to "ecr".'); reg = 'ecr'
     return f'{_CONTAINER_REGISTRY[reg]}:{RefResolver.from_strategy(strategy).tag}'
 
 
