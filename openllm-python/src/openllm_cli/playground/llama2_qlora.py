@@ -135,9 +135,7 @@ def prepare_for_int4_training(
   modules = find_all_linear_names(llm.model)
   print(f'Found {len(modules)} modules to quantize: {modules}')
 
-  model, tokenizer = llm.prepare_for_training(
-    adapter_type='lora', use_gradient_checkpointing=gradient_checkpointing, target_modules=modules
-  )
+  model, tokenizer = llm.prepare('lora', use_gradient_checkpointing=gradient_checkpointing, target_modules=modules)
 
   # pre-process the model by upcasting the layer norms in float 32 for
   for name, module in model.named_modules():

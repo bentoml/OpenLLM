@@ -7,7 +7,7 @@ import orjson
 
 from ._configuration import LLMConfig
 from .config import AutoConfig
-from .utils import ReprMixin, converter, gen_random_uuid
+from .utils import converter, gen_random_uuid
 
 if t.TYPE_CHECKING:
   import vllm
@@ -15,15 +15,8 @@ if t.TYPE_CHECKING:
   from ._typing_compat import Self
 
 
-@attr.define(repr=False)
-class _SchemaMixin(ReprMixin):
-  @property
-  def __repr_keys__(self):
-    return list(attr.fields_dict(self.__class__))
-
-  def __repr_args__(self):
-    yield from ((k, getattr(self, k)) for k in self.__repr_keys__)
-
+@attr.define
+class _SchemaMixin:
   def model_dump(self) -> dict[str, t.Any]:
     return converter.unstructure(self)
 
@@ -34,7 +27,7 @@ class _SchemaMixin(ReprMixin):
     return attr.evolve(self, **options)
 
 
-@attr.define(repr=False)
+@attr.define
 class MetadataOutput(_SchemaMixin):
   model_id: str
   timeout: int
@@ -56,7 +49,7 @@ class MetadataOutput(_SchemaMixin):
     }
 
 
-@attr.define(repr=False)
+@attr.define
 class GenerationInput(_SchemaMixin):
   prompt: str
   llm_config: LLMConfig
@@ -116,7 +109,7 @@ PromptLogprobs = t.List[t.Optional[t.Dict[int, float]]]
 FinishReason = t.Literal['length', 'stop']
 
 
-@attr.define(repr=False)
+@attr.define
 class CompletionChunk(_SchemaMixin):
   index: int
   text: str
@@ -129,7 +122,7 @@ class CompletionChunk(_SchemaMixin):
     return orjson.dumps(self.model_dump(), option=orjson.OPT_NON_STR_KEYS).decode('utf-8')
 
 
-@attr.define(repr=False)
+@attr.define
 class GenerationOutput(_SchemaMixin):
   prompt: str
   finished: bool

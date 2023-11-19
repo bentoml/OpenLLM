@@ -18,7 +18,7 @@ from typing import (
 from bentoml import Model, Strategy, Tag
 from bentoml._internal.runner.runner_handle import RunnerHandle
 from openllm_core import LLMConfig
-from openllm_core._typing_compat import LiteralBackend, T, overload
+from openllm_core._typing_compat import LiteralBackend, M, T, overload
 
 from ._llm import LLM
 
@@ -32,10 +32,16 @@ try:
 except ImportError:
   PreTrainedModel = Any
 
+try:
+  from ctranslate2 import Generator, Translator
+except ImportError:
+  Translator = Any
+  Generator = Any
+
 Mo = TypeVar('Mo')
 
 class _Runnable(Protocol[Mo]):
-  SUPPORTED_RESOURCES: Tuple[Literal['nvidia.com/gpu'], Literal['amd.com/gpu'], Literal['cpu']] = ...
+  SUPPORTED_RESOURCES: Tuple[Literal['nvidia.com/gpu', 'amd.com/gpu', 'cpu'], ...] = ...
   SUPPORTS_CPU_MULTI_THREADING: bool = ...
   config: LLMConfig = ...
   model: Mo = ...
@@ -58,6 +64,10 @@ class RunnerMethod(Generic[In, Ret]): ...
 class vLLMRunnable(_Runnable[AsyncLLMEngine]): ...
 
 @final
+class CTranslateRunnable(_Runnable[Union[Translator, Generator]]):
+  tokenizer: Any
+
+@final
 class PyTorchRunnable(_Runnable[PreTrainedModel]):
   tokenizer: Any
   async def forward(
@@ -70,11 +80,15 @@ class PyTorchRunnable(_Runnable[PreTrainedModel]):
   ) -> AsyncGenerator[str, None]: ...
 
 @overload
-def runnable(backend: Literal['vllm']) -> Type[vLLMRunnable]: ...
+def runnable(llm: LLM[M, T], backend: Literal['vllm']) -> Type[vLLMRunnable]: ...
 @overload
-def runnable(backend: Literal['pt']) -> Type[PyTorchRunnable]: ...
+def runnable(llm: LLM[M, T], backend: Literal['pt']) -> Type[PyTorchRunnable]: ...
 @overload
-def runnable(backend: Optional[str] = ...) -> Type[Union[vLLMRunnable, PyTorchRunnable]]: ...
+def runnable(llm: LLM[M, T], backend: Literal['ctranslate']) -> Type[CTranslateRunnable]: ...
+@overload
+def runnable(
+  llm: LLM[M, T], backend: Optional[str] = ...
+) -> Type[Union[vLLMRunnable, PyTorchRunnable, CTranslateRunnable]]: ...
 
 class Runner(Protocol[Mo, T]):
   __doc__: str = ...

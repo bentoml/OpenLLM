@@ -32,6 +32,7 @@ class MistralConfig(openllm_core.LLMConfig):
     'add_generation_prompt': True,
     'default_id': 'mistralai/Mistral-7B-Instruct-v0.1',
     'serialisation': 'safetensors',
+    'backend': ('pt', 'vllm'),
     # NOTE: see https://docs.mistral.ai/usage/guardrailing/
     # and https://docs.mistral.ai/llm/mistral-instruct-v0.1
     'model_ids': [

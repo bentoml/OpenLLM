@@ -17,7 +17,6 @@ from openllm_core._typing_compat import (
   Concatenate,
   DictStrAny,
   LiteralBackend,
-  LiteralQuantise,
   LiteralSerialisation,
   ParamSpec,
   get_literal_args,
@@ -289,10 +288,10 @@ def machine_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[
 def dtype_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option(
     '--dtype',
-    type=click.Choice(['float16', 'float32', 'bfloat16', 'auto']),
+    type=str,
     envvar='TORCH_DTYPE',
     default='auto',
-    help='Optional dtype for casting tensors for running inference.',
+    help="Optional dtype for casting tensors for running inference ['float16', 'float32', 'bfloat16', 'int8', 'int16']. For CTranslate2, it also accepts the following ['int8_float32', 'int8_float16', 'int8_bfloat16']",
     **attrs,
   )(f)
 
@@ -341,15 +340,13 @@ def prompt_template_file_option(f: _AnyCallable | None = None, **attrs: t.Any) -
 
 
 def backend_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
-  # NOTE: LiteralBackend needs to remove the last two item as ggml and mlc is wip
-  # XXX: remove the check for __args__ once we have ggml and mlc supports
   return cli_option(
     '--backend',
-    type=click.Choice(get_literal_args(LiteralBackend)[:2]),
+    type=click.Choice(get_literal_args(LiteralBackend)),
     default=None,
     envvar='OPENLLM_BACKEND',
     show_envvar=True,
-    help='The implementation for saving this LLM.',
+    help='Runtime to use for both serialisation/inference engine.',
     **attrs,
   )(f)
 
@@ -368,7 +365,7 @@ def quantize_option(f: _AnyCallable | None = None, *, build: bool = False, **att
     '--quantise',
     '--quantize',
     'quantize',
-    type=click.Choice(get_literal_args(LiteralQuantise)),
+    type=str,
     default=None,
     envvar='OPENLLM_QUANTIZE',
     show_envvar=True,
@@ -381,6 +378,10 @@ def quantize_option(f: _AnyCallable | None = None, *, build: bool = False, **att
       - ``int4``: ``SpQR`` for [4-bit](https://arxiv.org/abs/2306.03078) quantization.
 
       - ``gptq``: ``GPTQ`` [quantization](https://arxiv.org/abs/2210.17323)
+
+      - ``awq``: ``AWQ`` [AWQ: Activation-aware Weight Quantization](https://arxiv.org/abs/2306.00978)
+
+      - ``squeezellm``: ``SqueezeLLM`` [SqueezeLLM: Dense-and-Sparse Quantization](https://arxiv.org/abs/2306.07629)
 
       > [!NOTE] that the model can also be served with quantized weights.
       """

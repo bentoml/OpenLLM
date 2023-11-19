@@ -1,6 +1,5 @@
 from __future__ import annotations
 import functools
-import importlib.util
 import logging
 import os
 import types
@@ -43,6 +42,7 @@ from openllm_core.utils import (
   get_disable_warnings,
   get_quiet_mode,
   getenv,
+  is_ctranslate_available,
   is_peft_available,
   is_vllm_available,
   resolve_filepath,
@@ -165,32 +165,28 @@ class LLM(t.Generic[M, T], ReprMixin):
     low_cpu_mem_usage=True,
     **attrs,
   ):
-    # backward compatible
-    torch_dtype = attrs.pop('torch_dtype', None)
-    if torch_dtype is not None:
-      logger.warning(
-        'The argument "torch_dtype" is deprecated and will be removed in the future. Please use "dtype" instead.'
-      )
-      dtype = torch_dtype
+    # fmt: off
+    torch_dtype = attrs.pop('torch_dtype',None)  # backward compatible
+    if torch_dtype is not None:logger.warning('The argument "torch_dtype" is deprecated and will be removed in the future. Please use "dtype" instead.');dtype=torch_dtype
     _local = False
-    if validate_is_path(model_id):
-      model_id, _local = resolve_filepath(model_id), True
-    backend = first_not_none(backend, os.getenv('OPENLLM_BACKEND'), default='vllm' if is_vllm_available() else 'pt')
-    dtype = first_not_none(getenv('dtype', default=dtype, var=['TORCH_DTYPE']), default='auto')
-    quantize = first_not_none(getenv('quantize', default=quantize, var=['QUANITSE']), default=None)
-    attrs.update({'low_cpu_mem_usage': low_cpu_mem_usage})
+    if validate_is_path(model_id):model_id,_local=resolve_filepath(model_id),True
+    backend=first_not_none(getenv('backend',default=backend),default=self._cascade_backend())
+    dtype=first_not_none(getenv('dtype',default=dtype,var=['TORCH_DTYPE']),default='auto')
+    quantize=first_not_none(getenv('quantize',default=quantize,var=['QUANITSE']),default=None)
+    attrs.update({'low_cpu_mem_usage':low_cpu_mem_usage})
     # parsing tokenizer and model kwargs, as the hierarchy is param pass > default
     model_attrs, tokenizer_attrs = flatten_attrs(**attrs)
     if model_tag is None:
-      model_tag, model_version = self._make_tag_components(model_id, model_version, backend=backend)
-      if model_version:
-        model_tag = f'{model_tag}:{model_version}'
+      model_tag,model_version=self._make_tag_components(model_id,model_version,backend=backend)
+      if model_version:model_tag=f'{model_tag}:{model_version}'
+    # fmt: on
+
     self.__attrs_init__(
       model_id=model_id,
       revision=model_version,
       tag=bentoml.Tag.from_taglike(model_tag),
       quantization_config=quantization_config,
-      quantise=quantize,
+      quantise=self._resolve_quantise(quantize, backend),
       model_decls=args,
       adapter_map=_resolve_peft_config_type(adapter_map) if adapter_map is not None else None,
       serialisation=serialisation,
@@ -217,63 +213,66 @@ class LLM(t.Generic[M, T], ReprMixin):
       )
       self.runner.init_local(quiet=True)
 
+  # fmt: off
+  def _resolve_quantise(self, quantise, backend):
+    if backend in ('pt', 'vllm'):return quantise
+    if backend=='ctranslate':return self._resolve_ctranslate_quantise(quantise)
+    raise NotImplementedError(f"Quantisation is not supported for backend '{self.__llm_backend__}'")
+  def _resolve_ctranslate_quantise(self,quantise):
+    if quantise in {'int4', 'awq', 'gptq', 'squeezellm'}:raise ValueError(f"Quantisation '{quantise}' is not supported for backend 'ctranslate'")
+    if quantise == 'int8':quantise='int8_float16' if self._has_gpus else 'int8_float32'
+    return quantise
+  @apply(lambda val:tuple(str.lower(i) if i else i for i in val))
+  def _make_tag_components(self,model_id:str,model_version:str|None,backend:str)->tuple[str,str|None]:
+    model_id,*maybe_revision=model_id.rsplit(':')
+    if len(maybe_revision)>0:
+      if model_version is not None:logger.warning("revision is specified within 'model_id' (%s), and 'model_version=%s' will be ignored.",maybe_revision[0],model_version)
+      model_version = maybe_revision[0]
+    if validate_is_path(model_id):model_id,model_version=resolve_filepath(model_id),first_not_none(model_version,default=generate_hash_from_file(model_id))
+    return f'{backend}-{normalise_model_name(model_id)}',model_version
+  @functools.cached_property
+  def _has_gpus(self):
+    try:
+      from cuda import cuda
+      err,*_=cuda.cuInit(0)
+      if err!=cuda.CUresult.CUDA_SUCCESS:raise RuntimeError('Failed to initialise CUDA runtime binding.')
+      err,num_gpus=cuda.cuDeviceGetCount()
+      if err!=cuda.CUresult.CUDA_SUCCESS:raise RuntimeError('Failed to get CUDA device count.')
+      return True
+    except (ImportError, RuntimeError):return False
   @property
   def _torch_dtype(self):
-    import torch
-    import transformers
-
-    if not isinstance(self.__llm_torch_dtype__, torch.dtype):
-      try:
-        hf_config = transformers.AutoConfig.from_pretrained(
-          self.bentomodel.path, trust_remote_code=self.trust_remote_code
-        )
-      except OpenLLMException:
-        hf_config = transformers.AutoConfig.from_pretrained(self.model_id, trust_remote_code=self.trust_remote_code)
-      config_dtype = getattr(hf_config, 'torch_dtype', None)
-      if config_dtype is None:
-        config_dtype = torch.float32
-      if self.__llm_dtype__ == 'auto':
-        if config_dtype == torch.float32:
-          torch_dtype = torch.float16  # following common practice
-        else:
-          torch_dtype = config_dtype
+    import torch, transformers  # noqa: I001
+    _map=_torch_dtype_mapping()
+    if not isinstance(self.__llm_torch_dtype__,torch.dtype):
+      try:hf_config=transformers.AutoConfig.from_pretrained(self.bentomodel.path,trust_remote_code=self.trust_remote_code)
+      except OpenLLMException:hf_config=transformers.AutoConfig.from_pretrained(self.model_id,trust_remote_code=self.trust_remote_code)
+      config_dtype=getattr(hf_config,'torch_dtype',None)
+      if config_dtype is None:config_dtype=torch.float32
+      if self.__llm_dtype__=='auto':
+        if config_dtype==torch.float32:torch_dtype=torch.float16
+        else:torch_dtype=config_dtype
       else:
-        if self.__llm_dtype__ not in _torch_dtype_mapping():
-          raise ValueError(f"Unknown dtype '{self.__llm_dtype__}'")
-        torch_dtype = _torch_dtype_mapping()[self.__llm_dtype__]
-      self.__llm_torch_dtype__ = torch_dtype
+        if self.__llm_dtype__ not in _map:raise ValueError(f"Unknown dtype '{self.__llm_dtype__}'")
+        torch_dtype=_map[self.__llm_dtype__]
+      self.__llm_torch_dtype__=torch_dtype
     return self.__llm_torch_dtype__
-
-  @apply(lambda val: tuple(str.lower(i) if i else i for i in val))
-  def _make_tag_components(self, model_id, model_version, backend) -> tuple[str, str | None]:
-    model_id, *maybe_revision = model_id.rsplit(':')
-    if len(maybe_revision) > 0:
-      if model_version is not None:
-        logger.warning(
-          "revision is specified within 'model_id' (%s), and 'model_version=%s' will be ignored.",
-          maybe_revision[0],
-          model_version,
-        )
-      model_version = maybe_revision[0]
-    if validate_is_path(model_id):
-      model_id, model_version = (
-        resolve_filepath(model_id),
-        first_not_none(model_version, default=generate_hash_from_file(model_id)),
-      )
-    return f'{backend}-{normalise_model_name(model_id)}', model_version
-
-  def __setattr__(self, attr, value):
-    if attr in _reserved_namespace:
-      raise ForbiddenAttributeError(f'{attr} should not be set during runtime.')
-    super().__setattr__(attr, value)
-
-  # fmt: off
   @property
   def _model_attrs(self):return {**self.import_kwargs[0],**self.__model_attrs}
   @_model_attrs.setter
   def _model_attrs(self, value):self.__model_attrs = value
   @property
   def _tokenizer_attrs(self):return {**self.import_kwargs[1],**self.__tokenizer_attrs}
+  def _cascade_backend(self)->LiteralBackend:
+    if self._has_gpus:
+      if is_vllm_available():return 'vllm'
+      elif is_ctranslate_available():return 'ctranslate'  # XXX: base OpenLLM image should always include vLLM
+    elif is_ctranslate_available():return 'ctranslate'
+    else:return 'pt'
+  def __setattr__(self,attr,value):
+    if attr in _reserved_namespace:raise ForbiddenAttributeError(f'{attr} should not be set during runtime.')
+    super().__setattr__(attr, value)
+  def __del__(self):del self.__llm_model__,self.__llm_tokenizer__,self.__llm_adapter_map__
   @property
   def __repr_keys__(self):return {'model_id','revision','backend','type'}
   def __repr_args__(self):
@@ -282,10 +281,10 @@ class LLM(t.Generic[M, T], ReprMixin):
     yield 'backend',self.__llm_backend__
     yield 'type',self.llm_type
   @property
-  def import_kwargs(self):import torch;return {'device_map':'auto' if torch.cuda.is_available() else None, 'torch_dtype':self._torch_dtype},{'padding_side':'left','truncation_side':'left'}  # noqa: I001
+  def import_kwargs(self):return {'device_map':'auto' if self._has_gpus else None,'torch_dtype':self._torch_dtype},{'padding_side':'left','truncation_side':'left'}
   @property
   def trust_remote_code(self):
-    env = os.getenv('TRUST_REMOTE_CODE')
+    env=os.getenv('TRUST_REMOTE_CODE')
     if env is not None:return str(env).upper() in ENV_VARS_TRUE_VALUES
     return self.__llm_trust_remote_code__
   @property
@@ -319,10 +318,6 @@ class LLM(t.Generic[M, T], ReprMixin):
   @property
   def identifying_params(self):return {'configuration':self.config.model_dump_json().decode(),'model_ids':orjson.dumps(self.config['model_ids']).decode(),'model_id':self.model_id}
   @property
-  def config(self):
-    if self.__llm_config__ is None:self.__llm_config__=openllm.AutoConfig.infer_class_from_llm(self).model_construct_env(**self._model_attrs)
-    return self.__llm_config__
-  @property
   def tokenizer(self):
     if self.__llm_tokenizer__ is None:self.__llm_tokenizer__=openllm.serialisation.load_tokenizer(self, **self.llm_parameters[-1])
     return self.__llm_tokenizer__
@@ -330,7 +325,41 @@ class LLM(t.Generic[M, T], ReprMixin):
   def runner(self):
     if self.__llm_runner__ is None:self.__llm_runner__=_RunnerFactory(self)
     return self.__llm_runner__
+  def prepare(self,adapter_type='lora',use_gradient_checking=True,**attrs):
+    if self.__llm_backend__!='pt':raise RuntimeError('Fine tuning is only supported for PyTorch backend.')
+    from peft.mapping import get_peft_model
+    from peft.utils.other import prepare_model_for_kbit_training
+    model=get_peft_model(
+      prepare_model_for_kbit_training(self.model,use_gradient_checkpointing=use_gradient_checking),
+      self.config['fine_tune_strategies']
+      .get(adapter_type,self.config.make_fine_tune_config(adapter_type))
+      .train()
+      .with_config(**attrs)
+      .build(),
+    )
+    if DEBUG:model.print_trainable_parameters()
+    return model,self.tokenizer
+  def prepare_for_training(self,*args,**attrs):logger.warning('`prepare_for_training` is deprecated and will be removed in the future. Please use `prepare` instead.');return self.prepare(*args,**attrs)
   # fmt: on
+
+  @property
+  def adapter_map(self):
+    if not is_peft_available():
+      raise MissingDependencyError("Failed to import 'peft'. Make sure to do 'pip install \"openllm[fine-tune]\"'")
+    if not self.has_adapters:
+      raise AttributeError('Adapter map is not available.')
+    assert self._adapter_map is not None
+    if self.__llm_adapter_map__ is None:
+      _map: ResolvedAdapterMap = {k: {} for k in self._adapter_map}
+      for adapter_type, adapter_tuple in self._adapter_map.items():
+        base = first_not_none(
+          self.config['fine_tune_strategies'].get(adapter_type),
+          default=self.config.make_fine_tune_config(adapter_type),
+        )
+        for adapter in adapter_tuple:
+          _map[adapter_type][adapter.name] = (base.with_config(**adapter.config).build(), adapter.adapter_id)
+      self.__llm_adapter_map__ = _map
+    return self.__llm_adapter_map__
 
   @property
   def model(self):
@@ -359,41 +388,31 @@ class LLM(t.Generic[M, T], ReprMixin):
     return self.__llm_model__
 
   @property
-  def adapter_map(self):
-    if importlib.util.find_spec('peft') is None:
-      raise MissingDependencyError("Failed to import 'peft'. Make sure to do 'pip install \"openllm[fine-tune]\"'")
-    if not self.has_adapters:
-      raise AttributeError('Adapter map is not available.')
-    assert self._adapter_map is not None
-    if self.__llm_adapter_map__ is None:
-      _map: ResolvedAdapterMap = {k: {} for k in self._adapter_map}
-      for adapter_type, adapter_tuple in self._adapter_map.items():
-        base = first_not_none(
-          self.config['fine_tune_strategies'].get(adapter_type),
-          default=self.config.make_fine_tune_config(adapter_type),
-        )
-        for adapter in adapter_tuple:
-          _map[adapter_type][adapter.name] = (base.with_config(**adapter.config).build(), adapter.adapter_id)
-      self.__llm_adapter_map__ = _map
-    return self.__llm_adapter_map__
+  def config(self):
+    import transformers
 
-  def prepare_for_training(self, adapter_type='lora', use_gradient_checking=True, **attrs):
-    from peft.mapping import get_peft_model
-    from peft.utils.other import prepare_model_for_kbit_training
-
-    peft_config = (
-      self.config['fine_tune_strategies']
-      .get(adapter_type, self.config.make_fine_tune_config(adapter_type))
-      .train()
-      .with_config(**attrs)
-      .build()
-    )
-    model = get_peft_model(
-      prepare_model_for_kbit_training(self.model, use_gradient_checkpointing=use_gradient_checking), peft_config
-    )
-    if DEBUG:
-      model.print_trainable_parameters()
-    return model, self.tokenizer
+    if self.__llm_config__ is None:
+      if self.__llm_backend__ == 'ctranslate':
+        try:
+          config = transformers.AutoConfig.from_pretrained(
+            self.bentomodel.path_of('/hf'), trust_remote_code=self.trust_remote_code
+          )
+        except OpenLLMException:
+          config = transformers.AutoConfig.from_pretrained(self.model_id, trust_remote_code=self.trust_remote_code)
+        for architecture in config.architectures:
+          if architecture in openllm.AutoConfig._CONFIG_MAPPING_NAMES_TO_ARCHITECTURE():
+            config = openllm.AutoConfig.infer_class_from_name(
+              openllm.AutoConfig._CONFIG_MAPPING_NAMES_TO_ARCHITECTURE()[architecture]
+            ).model_construct_env(**self._model_attrs)
+            break
+          else:
+            raise OpenLLMException(
+              f"Failed to infer the configuration class from the given model. Make sure the model is a supported model. Supported models are: {', '.join(openllm.AutoConfig._CONFIG_MAPPING_NAMES_TO_ARCHITECTURE.keys())}"
+            )
+      else:
+        config = openllm.AutoConfig.infer_class_from_llm(self).model_construct_env(**self._model_attrs)
+      self.__llm_config__ = config
+    return self.__llm_config__
 
   async def generate(
     self, prompt, prompt_token_ids=None, stop=None, stop_token_ids=None, request_id=None, adapter_name=None, **attrs
@@ -476,7 +495,7 @@ def _RunnerFactory(
 
     scheduling_strategy = CascadingResourceStrategy
 
-  backend = first_not_none(backend, os.getenv('OPENLLM_BACKEND', default=llm.__llm_backend__))
+  backend = first_not_none(getenv('backend', default=backend), default=llm.__llm_backend__)
 
   models = models if models is not None else []
   try:
@@ -533,7 +552,7 @@ def _RunnerFactory(
       }
     ),
   )(
-    runnable(backend),
+    runnable(llm, backend),
     name=llm.runner_name,
     embedded=False,
     models=models,

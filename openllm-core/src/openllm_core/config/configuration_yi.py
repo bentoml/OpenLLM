@@ -22,6 +22,7 @@ class YiConfig(openllm_core.LLMConfig):
     'url': 'https://01.ai/',
     'architecture': 'YiForCausalLM',
     'trust_remote_code': True,
+    'backend': ('pt', 'vllm'),
     'default_id': '01-ai/Yi-6B',
     'serialisation': 'safetensors',
     'model_ids': ['01-ai/Yi-6B', '01-ai/Yi-34B', '01-ai/Yi-6B-200K', '01-ai/Yi-34B-200K'],

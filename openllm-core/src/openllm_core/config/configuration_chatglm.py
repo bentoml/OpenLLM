@@ -31,6 +31,7 @@ class ChatGLMConfig(openllm_core.LLMConfig):
     'timeout': 3600000,
     'url': 'https://github.com/THUDM/ChatGLM-6B',
     'requirements': ['cpm-kernels'],
+    'backend': ('pt', 'vllm'),
     'architecture': 'ChatGLMModel',
     'default_id': 'thudm/chatglm-6b',
     'model_ids': [

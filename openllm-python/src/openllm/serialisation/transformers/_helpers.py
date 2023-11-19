@@ -11,11 +11,13 @@ from openllm_core.utils import get_disable_warnings, get_quiet_mode
 logger = logging.getLogger(__name__)
 
 
-def get_hash(config: transformers.PretrainedConfig) -> str:
-  _commit_hash = getattr(config, '_commit_hash', None)
-  if _commit_hash is None:
-    raise ValueError(f'Cannot find commit hash in {config}')
-  return _commit_hash
+def get_tokenizer(model_id_or_path, trust_remote_code, **attrs):
+  tokenizer = transformers.AutoTokenizer.from_pretrained(
+    model_id_or_path, trust_remote_code=trust_remote_code, **attrs
+  )
+  if tokenizer.pad_token is None:
+    tokenizer.pad_token = tokenizer.eos_token
+  return tokenizer
 
 
 def process_config(model_id: str, trust_remote_code: bool, **attrs: t.Any):

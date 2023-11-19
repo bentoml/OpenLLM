@@ -85,9 +85,7 @@ def _start(
   """
   from .entrypoint import start_command, start_grpc_command
 
-  os.environ['OPENLLM_BACKEND'] = openllm_core.utils.first_not_none(
-    backend, default='vllm' if is_vllm_available() else 'pt'
-  )
+  os.environ['BACKEND'] = openllm_core.utils.first_not_none(backend, default='vllm' if is_vllm_available() else 'pt')
 
   args: list[str] = [model_id]
   if system_message:
