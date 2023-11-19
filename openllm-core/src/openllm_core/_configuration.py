@@ -636,7 +636,7 @@ class _ConfigAttr(t.Generic[_GenerationConfigT, _SamplingParamsT]):
             For GPT-NeoX implementation, it is based on GptNeoXForCausalLM, which supports dolly-v2, stablelm:
 
             ```bash
-            openllm start gpt-neox --model-id stabilityai/stablelm-tuned-alpha-3b
+            openllm start stabilityai/stablelm-tuned-alpha-3b
             ```'''
     __openllm_url__:str=Field(None)
     '''The resolved url for this LLMConfig.'''
