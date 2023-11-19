@@ -4,8 +4,8 @@ TAG="${1#v}"
 
 # Check if an argument is provided
 if [ $# -eq 0 ]; then
-    echo "No argument provided."
-    exit 1
+  echo "No argument provided."
+  exit 1
 fi
 
 cat > release_notes.txt << EOF
@@ -24,11 +24,9 @@ pip install --upgrade openllm==${TAG}
 
 All available models: \`\`\`openllm models\`\`\`
 
-To start a LLM: \`\`\`python -m openllm start opt\`\`\`
+To start a LLM: \`\`\`python -m openllm start HuggingFaceH4/zephyr-7b-beta\`\`\`
 
-To run OpenLLM within a container environment (requires GPUs): \`\`\`docker run --gpus all -it -P ghcr.io/bentoml/openllm:${TAG} start opt\`\`\`
-
-To run OpenLLM Clojure UI (community-maintained): \`\`\`docker run -p 8420:80 ghcr.io/bentoml/openllm-ui-clojure:${TAG}\`\`\`
+To run OpenLLM within a container environment (requires GPUs): \`\`\`docker run --gpus all -it -P -v \$PWD/data:\$HOME/.cache/huggingface/ ghcr.io/bentoml/openllm:${TAG} start HuggingFaceH4/zephyr-7b-beta\`\`\`
 
 Find more information about this release in the [CHANGELOG.md](https://github.com/bentoml/OpenLLM/blob/main/CHANGELOG.md)
 

@@ -4,18 +4,18 @@ set -e -o pipefail
 
 # Function to print script usage
 print_usage() {
-    echo "Usage: $0 [--release <major|minor|patch>]"
+  echo "Usage: $0 [--release <major|minor|patch>]"
 }
 
 # Function to validate release argument
 validate_release() {
-    local release=$1
+  local release=$1
 
-    if [[ $release == "major" || $release == "minor" || $release == "patch" ]]; then
-        return 0
-    else
-        return 1
-    fi
+  if [[ $release == "major" || $release == "minor" || $release == "patch" ]]; then
+    return 0
+  else
+    return 1
+  fi
 }
 
 check_membership() {
@@ -28,34 +28,34 @@ check_membership() {
 }
 
 for cmd in gh jq hatch; do
-    if ! command -v "$cmd" @ >&1 > /dev/null; then
-        echo "ERROR: $cmd not installed. Aborting..."
-        exit 1
-    fi
+  if ! command -v "$cmd" @ >&1 > /dev/null; then
+    echo "ERROR: $cmd not installed. Aborting..."
+    exit 1
+  fi
 done
 
 check_membership
 
 # Check if release flag is provided
 if [[ $1 == "--release" ]]; then
-    # Check if release argument is provided
-    if [[ -z $2 ]]; then
-        echo "Error: No release argument provided."
-        print_usage
-        exit 1
-    fi
-
-    release=$2
-
-    if ! validate_release "$release"; then
-        echo "Error: Invalid release argument. Only 'major', 'minor', or 'patch' are allowed."
-        print_usage
-        exit 1
-    fi
-else
-    echo "Error: Unknown option or no option provided."
+  # Check if release argument is provided
+  if [[ -z $2 ]]; then
+    echo "Error: No release argument provided."
     print_usage
     exit 1
+  fi
+
+  release=$2
+
+  if ! validate_release "$release"; then
+    echo "Error: Invalid release argument. Only 'major', 'minor', or 'patch' are allowed."
+    print_usage
+    exit 1
+  fi
+else
+  echo "Error: Unknown option or no option provided."
+  print_usage
+  exit 1
 fi
 
 #get highest tags across all branches, not just the current branch
@@ -73,14 +73,14 @@ VNUM2=${VERSION_BITS[1]}
 VNUM3=${VERSION_BITS[2]}
 
 if [[ $release == 'major' ]]; then
-    VNUM1=$((VNUM1 + 1))
-    VNUM2=0
-    VNUM3=0
+  VNUM1=$((VNUM1 + 1))
+  VNUM2=0
+  VNUM3=0
 elif [[ $release == 'minor' ]]; then
-    VNUM2=$((VNUM2 + 1))
-    VNUM3=0
+  VNUM2=$((VNUM2 + 1))
+  VNUM3=0
 else
-    VNUM3=$((VNUM3 + 1))
+  VNUM3=$((VNUM3 + 1))
 fi
 #create new tag
 RELEASE_TAG="v$VNUM1.$VNUM2.$VNUM3"
@@ -94,11 +94,11 @@ set -x
 
 echo "Waiting for new tags to be released from 'create-releases.yml'"
 while true; do
-    git pull --autostash --no-edit --gpg-sign --ff origin main
-    if git ls-remote -t --exit-code origin "refs/tags/${RELEASE_TAG}" &> /dev/null; then
-        break
-    fi
-    sleep 10
+  git pull --autostash --no-edit --gpg-sign --ff origin main
+  if git ls-remote -t --exit-code origin "refs/tags/${RELEASE_TAG}" &> /dev/null; then
+    break
+  fi
+  sleep 10
 done
 
 sleep 5
