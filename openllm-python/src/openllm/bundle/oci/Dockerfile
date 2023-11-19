@@ -30,7 +30,7 @@ COPY hatch.toml README.md CHANGELOG.md openllm-python/pyproject.toml ./
 RUN --mount=type=cache,target=/root/.cache/pip \
   pip install --extra-index-url "https://huggingface.github.io/autogptq-index/whl/cu118/" \
   -v --no-cache-dir \
-  "ray==2.6.0" "vllm==0.2.2" "auto-gptq[triton]" xformers && \
+  "ray==2.6.0" "vllm==0.2.2" xformers && \
   pip install --no-cache-dir -e .
 
 FROM base-container
