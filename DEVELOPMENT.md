@@ -205,6 +205,12 @@ See this [docs](/.github/INFRA.md) for more information on OpenLLM's CI/CD workf
 ## Typing
 For all internal functions, it is recommended to provide type hint. For all public function definitions, it is recommended to create a stubs file `.pyi` to separate supported external API to increase code visibility. See [openllm-client's `__init__.pyi`](/openllm-client/src/openllm_client/__init__.pyi) for example.
 
+If an internal helpers or any functions, utilities that is prefixed with `_`, then it is recommended to provide inline annotations. See [STYLE.md](./STYLE.md) to learn more about style and typing philosophy.
+
+If you want to update any mypy configuration, please update the [`./tools/update-mypy.py`](./tools/update-mypy.py)
+
+If you need to update pyright configuration, please update the [`pyrightconfig.json`](./pyrightconfig.json)
+
 ## Install from git archive install
 
 ```bash
