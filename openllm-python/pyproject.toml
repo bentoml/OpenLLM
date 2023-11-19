@@ -113,13 +113,13 @@ full = [
     "openllm[agents,awq,baichuan,chatglm,ctranslate,falcon,fine-tune,ggml,gptq,grpc,mpt,openai,playground,starcoder,vllm]",
 ]
 ggml = ["ctransformers"]
-gptq = ["auto-gptq[triton]>=0.4.2", "optimum>=1.12.0"]
-grpc = ["bentoml[grpc]>=1.1.9", "openllm-client[grpc]>=0.4.15"]
+gptq = ["auto-gptq[triton]>=0.4.2"]
+grpc = ["bentoml[grpc]>=1.1.9", "openllm-client[grpc]>=0.4.16"]
 mpt = ["triton"]
 openai = ["openai[datalib]>=1", "tiktoken"]
 playground = ["jupyter", "notebook", "ipython", "jupytext", "nbformat"]
 starcoder = ["bitsandbytes"]
-vllm = ["vllm>=0.2.1post1", "ray"]
+vllm = ["vllm>=0.2.2"]
 
 [tool.hatch.version]
 fallback-version = "0.0.0"

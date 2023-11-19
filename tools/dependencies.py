@@ -156,8 +156,8 @@ PLAYGROUND_DEPS = ['jupyter', 'notebook', 'ipython', 'jupytext', 'nbformat']
 GGML_DEPS = ['ctransformers']
 CTRANSLATE_DEPS = ['ctranslate2']
 AWQ_DEPS = ['autoawq']
-GPTQ_DEPS = ['auto-gptq[triton]>=0.4.2', 'optimum>=1.12.0']
-VLLM_DEPS = ['vllm>=0.2.1post1', 'ray']
+GPTQ_DEPS = ['auto-gptq[triton]>=0.4.2']
+VLLM_DEPS = ['vllm>=0.2.2']
 
 _base_requirements: dict[str, t.Any] = {
   inflection.dasherize(name): config_cls.__openllm_requirements__

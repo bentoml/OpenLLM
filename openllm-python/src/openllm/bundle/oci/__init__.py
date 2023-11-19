@@ -50,12 +50,13 @@ class RefResolver:
     else:
       raise ValueError(f'Unknown strategy: {strategy_or_version}')
 
+  # fmt: off
   @property
-  def tag(self):
-    return 'latest' if self.strategy in {'latest', 'nightly'} else repr(self.version)
-
+  def tag(self):return 'latest' if self.strategy in {'latest','nightly'} else repr(self.version)
   @staticmethod
-  def construct_base_image(reg, strategy=None):
+  def construct_base_image(reg,strategy=None):
+    if reg == 'gh': logger.warning("Setting base registry to 'gh' will affect cold start performance on GCP/AWS.")
+    elif reg == 'docker': logger.warning('docker is base image is yet to be supported. Falling back to "ecr".'); reg = 'ecr'
     return f'{_CONTAINER_REGISTRY[reg]}:{RefResolver.from_strategy(strategy).tag}'
 
 
