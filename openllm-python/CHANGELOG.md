@@ -18,6 +18,21 @@ This changelog is managed by towncrier and is compiled at release time.
 
 <!-- towncrier release notes start -->
 
+## [0.4.16](https://github.com/bentoml/openllm/tree/v0.4.16)
+
+### Changes
+
+- Update vLLM to 0.2.2, bringing supports and a lot of improvement upstream
+  [#695](https://github.com/bentoml/openllm/issues/695)
+
+
+### Features
+
+- Added experimental CTranslate backend to run on CPU, that yields higher TPS comparing to PyTorch counterpart.
+
+  This has been tested on c5.4xlarge instances
+  [#698](https://github.com/bentoml/openllm/issues/698)
+
 ## [0.4.15](https://github.com/bentoml/openllm/tree/v0.4.15)
 
 ### Features
