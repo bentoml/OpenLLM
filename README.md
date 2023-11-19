@@ -68,9 +68,9 @@ OpenLLM is designed for AI application developers working to build production-re
 
 <!-- hatch-fancy-pypi-readme interim start -->
 
-## TL/DR
+## 💾 TL/DR
 
-For the impatience, we provide two ways for you to start using OpenLLM
+For starter, we provide two ways to quickly try out OpenLLM:
 ### Jupyter Notebooks
 
 Try this [OpenLLM tutorial in Google Colab: Serving Llama 2 with OpenLLM](https://colab.research.google.com/github/bentoml/OpenLLM/blob/main/examples/llama2.ipynb).
@@ -85,7 +85,7 @@ docker run --rm -it -p 3000:3000 ghcr.io/bentoml/openllm start facebook/opt-1.3b
 
 > [!NOTE]
 > Given you have access to GPUs and have setup [nvidia-docker](https://github.com/NVIDIA/nvidia-container-toolkit),  you can additionally pass in `--gpus`
-> to use GPU for inference
+> to use GPU for faster inference and optimization
 >```bash
 > docker run --rm --gpus all -p 3000:3000 -it ghcr.io/bentoml/openllm start HuggingFaceH4/zephyr-7b-beta --backend vllm
 > ```
