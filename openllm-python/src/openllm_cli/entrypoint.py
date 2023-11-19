@@ -450,7 +450,7 @@ def start_command(
 
   import torch
 
-  if not torch.cuda.is_available():
+  if backend == 'pt' and not torch.cuda.is_available():
     if dtype == 'auto':
       dtype = 'float'
     elif dtype not in {'float', 'float32'} and not get_disable_warnings() and not get_quiet_mode():
@@ -465,7 +465,7 @@ def start_command(
     adapter_map=adapter_map,
     quantize=quantize,
     serialisation=serialisation,
-    torch_dtype=dtype,
+    dtype=dtype,
   )
   backend_warning(llm.__llm_backend__)
 
@@ -580,7 +580,7 @@ def start_grpc_command(
 
   import torch
 
-  if not torch.cuda.is_available():
+  if backend == 'pt' and not torch.cuda.is_available():
     if dtype == 'auto':
       dtype = 'float'
     elif dtype not in {'float', 'float32'} and not get_disable_warnings() and not get_quiet_mode():
@@ -595,7 +595,7 @@ def start_grpc_command(
     adapter_map=adapter_map,
     quantize=quantize,
     serialisation=serialisation,
-    torch_dtype=dtype,
+    dtype=dtype,
     trust_remote_code=check_bool_env('TRUST_REMOTE_CODE'),
   )
   backend_warning(llm.__llm_backend__)
@@ -661,14 +661,14 @@ def process_environ(
       'BENTOML_HOME': os.environ.get('BENTOML_HOME', BentoMLContainer.bentoml_home.get()),
       'OPENLLM_ADAPTER_MAP': orjson.dumps(adapter_map).decode(),
       'OPENLLM_SERIALIZATION': serialisation,
-      'OPENLLM_BACKEND': llm.__llm_backend__,
       'OPENLLM_CONFIG': config.model_dump_json(flatten=True).decode(),
-      'TORCH_DTYPE': str(llm._torch_dtype).split('.')[-1],
+      'BACKEND': llm.__llm_backend__,
+      'DTYPE': str(llm._torch_dtype).split('.')[-1],
       'TRUST_REMOTE_CODE': str(llm.trust_remote_code),
     }
   )
   if llm.quantise:
-    environ['OPENLLM_QUANTIZE'] = str(llm.quantise)
+    environ['QUANTIZE'] = str(llm.quantise)
   if system_message:
     environ['OPENLLM_SYSTEM_MESSAGE'] = system_message
   if prompt_template:
@@ -695,10 +695,11 @@ def process_workers_per_resource(wpr: str | float | int, device: tuple[str, ...]
 
 
 def build_bento_instruction(llm, model_id, serialisation, adapter_map):
-  cmd_name = f'openllm build {model_id}'
+  cmd_name = f'openllm build {model_id} --backend {llm.__llm_backend__}'
   if llm.quantise:
     cmd_name += f' --quantize {llm.quantise}'
-  cmd_name += f' --serialization {serialisation}'
+  if llm.__llm_backend__ in {'pt', 'vllm'}:
+    cmd_name += f' --serialization {serialisation}'
   if adapter_map is not None:
     cmd_name += ' ' + ' '.join(
       [
@@ -1042,7 +1043,7 @@ def build_command(
     system_message=system_message,
     backend=backend,
     quantize=quantize,
-    torch_dtype=dtype,
+    dtype=dtype,
     serialisation=first_not_none(
       serialisation, default='safetensors' if has_safetensors_weights(model_id, model_version) else 'legacy'
     ),

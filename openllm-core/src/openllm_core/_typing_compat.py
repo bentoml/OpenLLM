@@ -5,17 +5,20 @@ import typing as t
 import attr
 
 if t.TYPE_CHECKING:
+  from ctranslate2 import Generator, Translator
   from peft.peft_model import PeftModel
   from transformers import PreTrainedModel, PreTrainedTokenizer, PreTrainedTokenizerBase, PreTrainedTokenizerFast
 
   from .utils.lazy import VersionInfo
 else:
   # NOTE: t.Any is also a type
-  PeftModel = PreTrainedModel = PreTrainedTokenizer = PreTrainedTokenizerBase = PreTrainedTokenizerFast = t.Any
+  PeftModel = (
+    PreTrainedModel
+  ) = PreTrainedTokenizer = PreTrainedTokenizerBase = PreTrainedTokenizerFast = Generator = Translator = t.Any
   # NOTE: that VersionInfo is from openllm.utils.lazy.VersionInfo
   VersionInfo = t.Any
 
-M = t.TypeVar('M', bound=t.Union[PreTrainedModel, PeftModel])
+M = t.TypeVar('M', bound=t.Union[PreTrainedModel, PeftModel, Generator, Translator])
 T = t.TypeVar('T', bound=t.Union[PreTrainedTokenizerFast, PreTrainedTokenizer, PreTrainedTokenizerBase])
 
 
@@ -33,7 +36,7 @@ At = t.TypeVar('At', bound=attr.AttrsInstance)
 LiteralDtype = t.Literal['float16', 'float32', 'bfloat16', 'int8', 'int16']
 LiteralSerialisation = t.Literal['safetensors', 'legacy']
 LiteralQuantise = t.Literal['int8', 'int4', 'gptq', 'awq', 'squeezellm']
-LiteralBackend = t.Literal['pt', 'vllm', 'ctranslate', 'ggml', 'mlc']
+LiteralBackend = t.Literal['pt', 'vllm', 'ctranslate']  # TODO: ggml
 AdapterType = t.Literal[
   'lora', 'adalora', 'adaption_prompt', 'prefix_tuning', 'p_tuning', 'prompt_tuning', 'ia3', 'loha', 'lokr'
 ]

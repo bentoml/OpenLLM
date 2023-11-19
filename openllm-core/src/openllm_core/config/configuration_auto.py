@@ -185,15 +185,20 @@ class AutoConfig:
       f"Unrecognized configuration class for {model_name}. Model name should be one of {', '.join(CONFIG_MAPPING.keys())}."
     )
 
+  _cached_mapping = None
+
+  @classmethod
+  def _CONFIG_MAPPING_NAMES_TO_ARCHITECTURE(cls) -> dict[str, str]:
+    if cls._cached_mapping is None:
+      AutoConfig._cached_mapping = {v.__config__['architecture']: k for k, v in CONFIG_MAPPING.items()}
+    return AutoConfig._cached_mapping
+
   @classmethod
   def infer_class_from_llm(cls, llm: openllm.LLM[M, T]) -> type[openllm_core.LLMConfig]:
     if not is_bentoml_available():
       raise MissingDependencyError(
         "'infer_class_from_llm' requires 'bentoml' to be available. Make sure to install it with 'pip install bentoml'"
       )
-    CONFIG_MAPPING_NAMES_TO_ARCHITECTURE: dict[str, str] = {
-      v.__config__['architecture']: k for k, v in CONFIG_MAPPING.items()
-    }
     if llm._local:
       config_file = os.path.join(llm.model_id, CONFIG_FILE_NAME)
     else:
@@ -218,8 +223,8 @@ class AutoConfig:
       loaded_config = orjson.loads(f.read())
     if 'architectures' in loaded_config:
       for architecture in loaded_config['architectures']:
-        if architecture in CONFIG_MAPPING_NAMES_TO_ARCHITECTURE:
-          return cls.infer_class_from_name(CONFIG_MAPPING_NAMES_TO_ARCHITECTURE[architecture])
+        if architecture in cls._CONFIG_MAPPING_NAMES_TO_ARCHITECTURE():
+          return cls.infer_class_from_name(cls._CONFIG_MAPPING_NAMES_TO_ARCHITECTURE()[architecture])
     raise ValueError(
       f"Failed to determine config class for '{llm.model_id}'. Make sure {llm.model_id} is saved with openllm."
     )

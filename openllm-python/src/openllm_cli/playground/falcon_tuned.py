@@ -61,8 +61,8 @@ else:
 llm = openllm.LLM(
   model_args.model_id, quantize='int4', bnb_4bit_quant_type='nf4', bnb_4bit_compute_dtype=torch.float16
 )
-model, tokenizer = llm.prepare_for_training(
-  adapter_type='lora',
+model, tokenizer = llm.prepare(
+  'lora',
   lora_alpha=16,
   lora_dropout=0.1,
   r=16,

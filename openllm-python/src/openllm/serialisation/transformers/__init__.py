@@ -1,22 +1,18 @@
-from __future__ import annotations
 import importlib
 import logging
 
-import attr
 import orjson
 import torch
 import transformers
 from huggingface_hub import snapshot_download
-from simple_di import Provide, inject
 
 import bentoml
-import openllm
-from bentoml._internal.configuration.containers import BentoMLContainer
-from bentoml._internal.models.model import ModelOptions, ModelSignature
 from openllm_core.exceptions import OpenLLMException
+from openllm_core.utils import first_not_none, is_autogptq_available
 
-from ._helpers import get_hash, infer_autoclass_from_llm, process_config
+from ._helpers import get_tokenizer, infer_autoclass_from_llm, process_config
 from .weights import HfIgnore
+from .._helpers import patch_correct_tag, save_model
 
 logger = logging.getLogger(__name__)
 
@@ -24,162 +20,56 @@ __all__ = ['import_model', 'get', 'load_model']
 _object_setattr = object.__setattr__
 
 
-def _patch_correct_tag(llm, config, _revision=None):
-  # NOTE: The following won't hit during local since we generated a correct version based on local path hash It will only hit if we use model from HF Hub
-  if llm.revision is not None:
-    return
-  if not llm.local:
-    try:
-      if _revision is None:
-        _revision = get_hash(config)
-    except ValueError:
-      pass
-    if _revision is None and llm.tag.version is not None:
-      _revision = llm.tag.version
-    if llm.tag.version is None:
-      _object_setattr(
-        llm, '_tag', attr.evolve(llm.tag, version=_revision)
-      )  # HACK: This copies the correct revision into llm.tag
-    if llm._revision is None:
-      _object_setattr(llm, '_revision', _revision)  # HACK: This copies the correct revision into llm._model_version
-
-
-@inject
-def import_model(llm, *decls, trust_remote_code, _model_store=Provide[BentoMLContainer.model_store], **attrs):
-  _base_decls, _base_attrs = llm.llm_parameters[0]
+def import_model(llm, *decls, trust_remote_code, **attrs):
+  (_base_decls, _base_attrs), tokenizer_attrs = llm.llm_parameters
   decls = (*_base_decls, *decls)
   attrs = {**_base_attrs, **attrs}
   if llm._local:
     logger.warning('Given model is a local model, OpenLLM will load model into memory for serialisation.')
   config, hub_attrs, attrs = process_config(llm.model_id, trust_remote_code, **attrs)
-  _patch_correct_tag(llm, config)
-  _, tokenizer_attrs = llm.llm_parameters
-  quantize = llm.quantise
-  safe_serialisation = openllm.utils.first_not_none(
-    attrs.get('safe_serialization'), default=llm._serialisation == 'safetensors'
-  )
-  metadata = {'safe_serialisation': safe_serialisation}
-  if quantize:
-    metadata['_quantize'] = quantize
-  architectures = getattr(config, 'architectures', [])
-  if not architectures:
-    if trust_remote_code:
-      auto_map = getattr(config, 'auto_map', {})
-      if not auto_map:
-        raise RuntimeError(
-          f'Failed to determine the architecture from both `auto_map` and `architectures` from {llm.model_id}'
-        )
-      autoclass = 'AutoModelForSeq2SeqLM' if llm.config['model_type'] == 'seq2seq_lm' else 'AutoModelForCausalLM'
-      if autoclass not in auto_map:
-        raise RuntimeError(
-          f"Given model '{llm.model_id}' is yet to be supported with 'auto_map'. OpenLLM currently only support encoder-decoders or decoders only models."
-        )
-      architectures = [auto_map[autoclass]]
-    else:
-      raise RuntimeError(
-        'Failed to determine the architecture for this model. Make sure the `config.json` is valid and can be loaded with `transformers.AutoConfig`'
-      )
-  metadata['_pretrained_class'] = architectures[0]
-  if not llm._local:
-    metadata['_revision'] = get_hash(config)
-  else:
-    metadata['_revision'] = llm.revision
-
-  signatures = {}
-
-  if quantize == 'gptq':
-    if not openllm.utils.is_autogptq_available():
-      raise OpenLLMException(
-        "GPTQ quantisation requires 'auto-gptq' and 'optimum' (Not found in local environment). Install it with 'pip install \"openllm[gptq]\" --extra-index-url https://huggingface.github.io/autogptq-index/whl/cu118/'"
-      )
-    signatures['generate'] = {'batchable': False}
-  else:
+  patch_correct_tag(llm, config)
+  safe_serialisation = first_not_none(attrs.get('safe_serialization'), default=llm._serialisation == 'safetensors')
+  if llm.quantise != 'gptq':
     attrs['use_safetensors'] = safe_serialisation
-    metadata['_framework'] = llm.__llm_backend__
-    signatures.update(
-      {
-        k: ModelSignature(batchable=False)
-        for k in (
-          '__call__',
-          'forward',
-          'generate',
-          'contrastive_search',
-          'greedy_search',
-          'sample',
-          'beam_search',
-          'beam_sample',
-          'group_beam_search',
-          'constrained_beam_search',
-        )
-      }
-    )
-
-  tokenizer = transformers.AutoTokenizer.from_pretrained(
-    llm.model_id, trust_remote_code=trust_remote_code, **hub_attrs, **tokenizer_attrs
-  )
-  if tokenizer.pad_token is None:
-    tokenizer.pad_token = tokenizer.eos_token
 
   model = None
-  external_modules = [importlib.import_module(tokenizer.__module__)]
-  imported_modules = []
-  bentomodel = bentoml.Model.create(
-    llm.tag,
-    module='openllm.serialisation.transformers',
-    api_version='v2.1.0',
-    options=ModelOptions(),
-    context=openllm.utils.generate_context(framework_name='openllm'),
-    labels=openllm.utils.generate_labels(llm),
-    metadata=metadata,
-    signatures=signatures,
-  )
-  with openllm.utils.analytics.set_bentoml_tracking():
-    try:
-      bentomodel.enter_cloudpickle_context(external_modules, imported_modules)
-      tokenizer.save_pretrained(bentomodel.path)
-      if llm._quantization_config or (llm.quantise and llm.quantise not in {'squeezellm', 'awq'}):
-        attrs['quantization_config'] = llm.quantization_config
-      if quantize == 'gptq':
-        from optimum.gptq.constants import GPTQ_CONFIG
+  tokenizer = get_tokenizer(llm.model_id, trust_remote_code=trust_remote_code, **hub_attrs, **tokenizer_attrs)
+  with save_model(
+    llm, config, safe_serialisation, trust_remote_code, 'transformers', [importlib.import_module(tokenizer.__module__)]
+  ) as save_metadata:
+    bentomodel, imported_modules = save_metadata
+    tokenizer.save_pretrained(bentomodel.path)
+    if llm._quantization_config or (llm.quantise and llm.quantise not in {'squeezellm', 'awq'}):
+      attrs['quantization_config'] = llm.quantization_config
+    if llm.quantise == 'gptq':
+      from optimum.gptq.constants import GPTQ_CONFIG
 
-        with open(bentomodel.path_of(GPTQ_CONFIG), 'w', encoding='utf-8') as f:
-          f.write(orjson.dumps(config.quantization_config, option=orjson.OPT_INDENT_2 | orjson.OPT_SORT_KEYS).decode())
-      if llm._local:  # possible local path
-        model = infer_autoclass_from_llm(llm, config).from_pretrained(
-          llm.model_id,
-          *decls,
-          local_files_only=True,
-          config=config,
-          trust_remote_code=trust_remote_code,
-          **hub_attrs,
-          **attrs,
-        )
-        # for trust_remote_code to work
-        bentomodel.enter_cloudpickle_context([importlib.import_module(model.__module__)], imported_modules)
-        model.save_pretrained(bentomodel.path, max_shard_size='2GB', safe_serialization=safe_serialisation)
-        del model
-        if torch.cuda.is_available():
-          torch.cuda.empty_cache()
-      else:
-        # we will clone the all tings into the bentomodel path without loading model into memory
-        snapshot_download(
-          llm.model_id,
-          local_dir=bentomodel.path,
-          local_dir_use_symlinks=False,
-          ignore_patterns=HfIgnore.ignore_patterns(llm),
-        )
-    except Exception:
-      raise
-    else:
-      bentomodel.flush()  # type: ignore[no-untyped-call]
-      bentomodel.save(_model_store)
-      openllm.utils.analytics.track(
-        openllm.utils.analytics.ModelSaveEvent(
-          module=bentomodel.info.module, model_size_in_kb=openllm.utils.calc_dir_size(bentomodel.path) / 1024
-        )
+      with open(bentomodel.path_of(GPTQ_CONFIG), 'w', encoding='utf-8') as f:
+        f.write(orjson.dumps(config.quantization_config, option=orjson.OPT_INDENT_2 | orjson.OPT_SORT_KEYS).decode())
+    if llm._local:  # possible local path
+      model = infer_autoclass_from_llm(llm, config).from_pretrained(
+        llm.model_id,
+        *decls,
+        local_files_only=True,
+        config=config,
+        trust_remote_code=trust_remote_code,
+        **hub_attrs,
+        **attrs,
       )
-    finally:
-      bentomodel.exit_cloudpickle_context(imported_modules)
+      # for trust_remote_code to work
+      bentomodel.enter_cloudpickle_context([importlib.import_module(model.__module__)], imported_modules)
+      model.save_pretrained(bentomodel.path, max_shard_size='2GB', safe_serialization=safe_serialisation)
+      del model
+      if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+    else:
+      # we will clone the all tings into the bentomodel path without loading model into memory
+      snapshot_download(
+        llm.model_id,
+        local_dir=bentomodel.path,
+        local_dir_use_symlinks=False,
+        ignore_patterns=HfIgnore.ignore_patterns(llm),
+      )
     return bentomodel
 
 
@@ -191,7 +81,7 @@ def get(llm):
       raise OpenLLMException(
         f"'{model.tag!s}' was saved with backend '{backend}', while loading with '{llm.__llm_backend__}'."
       )
-    _patch_correct_tag(
+    patch_correct_tag(
       llm,
       transformers.AutoConfig.from_pretrained(model.path, trust_remote_code=llm.trust_remote_code),
       _revision=model.info.metadata.get('_revision'),
@@ -226,7 +116,7 @@ def load_model(llm, *decls, **attrs):
   if '_quantize' in llm.bentomodel.info.metadata:
     _quantise = llm.bentomodel.info.metadata['_quantize']
     if _quantise == 'gptq':
-      if not openllm.utils.is_autogptq_available():
+      if not is_autogptq_available():
         raise OpenLLMException(
           "GPTQ quantisation requires 'auto-gptq' and 'optimum' (Not found in local environment). Install it with 'pip install \"openllm[gptq]\" --extra-index-url https://huggingface.github.io/autogptq-index/whl/cu118/'"
         )

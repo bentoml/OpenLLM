@@ -416,6 +416,25 @@ openllm start databricks/dolly-v2-3b --backend vllm
 openllm start databricks/dolly-v2-3b --backend pt
 ```
 
+- CTranslate2 (*experimental*):
+
+
+```bash
+openllm start databricks/dolly-v2-3b --backend ctranslate
+```
+
+
+> **Note:** Currently, All quantization methods from ctranslate2 are supported. This includes int8, int8_float16, int8_bfloat16
+
+
+
+> **Note:** We recommend users to convert the models beforehand, and then provide the given directory of the converted models to `openllm start`. See [CTranslate2](https://opennmt.net/CTranslate2/conversion.html) for more information.
+
+
+
+> **Important:** CTranslate2 is an experimental backend and yet to be fully supported. It is recommended to use vLLM for all production use-case.
+
+
 </details>
 
 <details>
@@ -493,6 +512,25 @@ openllm start tiiuae/falcon-7b --backend vllm
 ```bash
 openllm start tiiuae/falcon-7b --backend pt
 ```
+
+- CTranslate2 (*experimental*):
+
+
+```bash
+openllm start tiiuae/falcon-7b --backend ctranslate
+```
+
+
+> **Note:** Currently, All quantization methods from ctranslate2 are supported. This includes int8, int8_float16, int8_bfloat16
+
+
+
+> **Note:** We recommend users to convert the models beforehand, and then provide the given directory of the converted models to `openllm start`. See [CTranslate2](https://opennmt.net/CTranslate2/conversion.html) for more information.
+
+
+
+> **Important:** CTranslate2 is an experimental backend and yet to be fully supported. It is recommended to use vLLM for all production use-case.
+
 
 </details>
 
@@ -615,6 +653,25 @@ openllm start eleutherai/gpt-neox-20b --backend vllm
 openllm start eleutherai/gpt-neox-20b --backend pt
 ```
 
+- CTranslate2 (*experimental*):
+
+
+```bash
+openllm start eleutherai/gpt-neox-20b --backend ctranslate
+```
+
+
+> **Note:** Currently, All quantization methods from ctranslate2 are supported. This includes int8, int8_float16, int8_bfloat16
+
+
+
+> **Note:** We recommend users to convert the models beforehand, and then provide the given directory of the converted models to `openllm start`. See [CTranslate2](https://opennmt.net/CTranslate2/conversion.html) for more information.
+
+
+
+> **Important:** CTranslate2 is an experimental backend and yet to be fully supported. It is recommended to use vLLM for all production use-case.
+
+
 </details>
 
 <details>
@@ -692,6 +749,25 @@ openllm start meta-llama/Llama-2-70b-chat-hf --backend vllm
 ```bash
 openllm start meta-llama/Llama-2-70b-chat-hf --backend pt
 ```
+
+- CTranslate2 (*experimental*):
+
+
+```bash
+openllm start meta-llama/Llama-2-70b-chat-hf --backend ctranslate
+```
+
+
+> **Note:** Currently, All quantization methods from ctranslate2 are supported. This includes int8, int8_float16, int8_bfloat16
+
+
+
+> **Note:** We recommend users to convert the models beforehand, and then provide the given directory of the converted models to `openllm start`. See [CTranslate2](https://opennmt.net/CTranslate2/conversion.html) for more information.
+
+
+
+> **Important:** CTranslate2 is an experimental backend and yet to be fully supported. It is recommended to use vLLM for all production use-case.
+
 
 </details>
 
@@ -844,6 +920,25 @@ TRUST_REMOTE_CODE=True openllm start mosaicml/mpt-7b --backend vllm
 TRUST_REMOTE_CODE=True openllm start mosaicml/mpt-7b --backend pt
 ```
 
+- CTranslate2 (*experimental*):
+
+
+```bash
+TRUST_REMOTE_CODE=True openllm start mosaicml/mpt-7b --backend ctranslate
+```
+
+
+> **Note:** Currently, All quantization methods from ctranslate2 are supported. This includes int8, int8_float16, int8_bfloat16
+
+
+
+> **Note:** We recommend users to convert the models beforehand, and then provide the given directory of the converted models to `openllm start`. See [CTranslate2](https://opennmt.net/CTranslate2/conversion.html) for more information.
+
+
+
+> **Important:** CTranslate2 is an experimental backend and yet to be fully supported. It is recommended to use vLLM for all production use-case.
+
+
 </details>
 
 <details>
@@ -915,6 +1010,25 @@ openllm start facebook/opt-125m --backend vllm
 ```bash
 openllm start facebook/opt-125m --backend pt
 ```
+
+- CTranslate2 (*experimental*):
+
+
+```bash
+openllm start facebook/opt-125m --backend ctranslate
+```
+
+
+> **Note:** Currently, All quantization methods from ctranslate2 are supported. This includes int8, int8_float16, int8_bfloat16
+
+
+
+> **Note:** We recommend users to convert the models beforehand, and then provide the given directory of the converted models to `openllm start`. See [CTranslate2](https://opennmt.net/CTranslate2/conversion.html) for more information.
+
+
+
+> **Important:** CTranslate2 is an experimental backend and yet to be fully supported. It is recommended to use vLLM for all production use-case.
+
 
 </details>
 
@@ -1053,6 +1167,25 @@ openllm start stabilityai/stablelm-tuned-alpha-3b --backend vllm
 openllm start stabilityai/stablelm-tuned-alpha-3b --backend pt
 ```
 
+- CTranslate2 (*experimental*):
+
+
+```bash
+openllm start stabilityai/stablelm-tuned-alpha-3b --backend ctranslate
+```
+
+
+> **Note:** Currently, All quantization methods from ctranslate2 are supported. This includes int8, int8_float16, int8_bfloat16
+
+
+
+> **Note:** We recommend users to convert the models beforehand, and then provide the given directory of the converted models to `openllm start`. See [CTranslate2](https://opennmt.net/CTranslate2/conversion.html) for more information.
+
+
+
+> **Important:** CTranslate2 is an experimental backend and yet to be fully supported. It is recommended to use vLLM for all production use-case.
+
+
 </details>
 
 <details>
@@ -1128,6 +1261,25 @@ openllm start bigcode/starcoder --backend vllm
 ```bash
 openllm start bigcode/starcoder --backend pt
 ```
+
+- CTranslate2 (*experimental*):
+
+
+```bash
+openllm start bigcode/starcoder --backend ctranslate
+```
+
+
+> **Note:** Currently, All quantization methods from ctranslate2 are supported. This includes int8, int8_float16, int8_bfloat16
+
+
+
+> **Note:** We recommend users to convert the models beforehand, and then provide the given directory of the converted models to `openllm start`. See [CTranslate2](https://opennmt.net/CTranslate2/conversion.html) for more information.
+
+
+
+> **Important:** CTranslate2 is an experimental backend and yet to be fully supported. It is recommended to use vLLM for all production use-case.
+
 
 </details>
 

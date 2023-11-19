@@ -1,6 +1,5 @@
 from __future__ import annotations
 import gc
-import os
 import traceback
 import typing as t
 
@@ -10,14 +9,87 @@ import bentoml
 import openllm
 from openllm_core._schemas import CompletionChunk, GenerationOutput, SampleLogprobs
 from openllm_core.exceptions import OpenLLMException
-from openllm_core.utils import first_not_none, is_vllm_available
+from openllm_core.utils import first_not_none, getenv, is_ctranslate_available
 
 __all__ = ['runnable']
 
 
-def runnable(backend=None):
-  backend = first_not_none(backend, os.getenv('OPENLLM_BACKEND'), default='vllm' if is_vllm_available() else 'pt')
-  return vLLMRunnable if backend == 'vllm' else PyTorchRunnable
+def runnable(llm, backend=None):
+  backend = first_not_none(getenv('backend', default=backend), default=llm._cascade_backend())
+  if backend == 'vllm':
+    return vLLMRunnable
+  elif backend == 'pt':
+    return PyTorchRunnable
+  elif backend == 'ctranslate':
+    return CTranslateRunnable
+  else:
+    raise OpenLLMException(f'Unsupported backend: {backend}')
+
+
+class CTranslateRunnable(bentoml.Runnable):
+  SUPPORTED_RESOURCES = ('nvidia.com/gpu', 'cpu')
+  SUPPORTS_CPU_MULTI_THREADING = True
+
+  def __init__(self, llm):
+    if not is_ctranslate_available():
+      raise OpenLLMException('ctranslate is not installed. Please install it with `pip install "openllm[ctranslate]"`')
+    self.config = llm.config
+    self.model = llm.model
+    self.tokenizer = llm.tokenizer
+
+  @bentoml.Runnable.method(batchable=False)
+  async def generate_iterator(self, prompt_token_ids, request_id, stop=None, adapter_name=None, **attrs):
+    if adapter_name is not None:
+      raise NotImplementedError('Adapter is not supported with CTranslate.')
+
+    stop_ = set()
+    if isinstance(stop, str) and stop != '':
+      stop_.add(stop)
+    elif isinstance(stop, t.Iterable):
+      stop_.update(stop)
+
+    config = self.config.model_construct_env(stop=list(stop_), **attrs)
+    sampling_params = dict(
+      max_length=config['max_new_tokens'],
+      min_length=config['min_length'],
+      sampling_topk=config['top_k'],
+      sampling_topp=config['top_p'],
+      sampling_temperature=config['temperature'],
+      return_log_prob=config['logprobs'] > 0,
+      repetition_penalty=config['repetition_penalty'],
+      no_repeat_ngram_size=config['no_repeat_ngram_size'],
+      end_token=config['stop'],
+    )
+    cumulative_logprob = 0.0
+    output_token_ids = list(prompt_token_ids)
+    input_len = len(prompt_token_ids)
+    async for request_output in self.model.async_generate_tokens(
+      self.tokenizer.convert_ids_to_tokens(prompt_token_ids), **sampling_params
+    ):
+      cumulative_logprob += request_output.log_prob if config['logprobs'] else 0.0
+      output_token_ids.append(request_output.token_id)
+      text = self.tokenizer.decode(
+        output_token_ids[input_len:],
+        skip_special_tokens=True,
+        spaces_between_special_tokens=False,
+        clean_up_tokenization_spaces=True,
+      )
+      yield GenerationOutput(
+        prompt='',
+        finished=request_output.is_last,
+        outputs=[
+          CompletionChunk(
+            index=0,
+            text=text,
+            token_ids=output_token_ids[input_len:],
+            cumulative_logprob=cumulative_logprob,
+            finish_reason=None,
+            # TODO: logprobs, but seems like we don't have access to the raw logits
+          )
+        ],
+        prompt_token_ids=prompt_token_ids,
+        request_id=request_id,
+      ).model_dump_json()
 
 
 class vLLMRunnable(bentoml.Runnable):
@@ -44,7 +116,7 @@ class vLLMRunnable(bentoml.Runnable):
           trust_remote_code=llm.trust_remote_code,
           tokenizer_mode='auto',
           tensor_parallel_size=num_gpus,
-          dtype=str(llm._torch_dtype).split('.')[-1],
+          dtype=llm._torch_dtype,
           quantization=quantization,
           worker_use_ray=False,
           engine_use_ray=False,
@@ -242,7 +314,7 @@ class PyTorchRunnable(bentoml.Runnable):
               CompletionChunk(
                 index=0,
                 text=text,
-                token_ids=output_token_ids[input_len:],
+                token_ids=tmp_output_ids,
                 cumulative_logprob=cumulative_logprob,
                 logprobs=sample_logprobs if config['logprobs'] else None,
                 finish_reason=None,
