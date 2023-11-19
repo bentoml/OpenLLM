@@ -196,7 +196,8 @@ class GenerationConfig(ReprMixin):
     description='If an encoder-decoder model starts decoding with a different token than *bos*, the id of that token.'
   )
   # NOTE: This is now implemented and supported for both PyTorch and vLLM
-  logprobs: int = dantic.Field(None, description='Number of log probabilities to return per output token.')
+  logprobs: int = dantic.Field(0, description='Number of log probabilities to return per output token.')
+  prompt_logprobs: int = dantic.Field(0, description='Number of log probabilities to return per input token.')
 
   def __init__(self, *, _internal: bool = False, **attrs: t.Any):
     if not _internal:
@@ -226,7 +227,7 @@ converter.register_unstructure_hook_factory(
   ),
 )
 
-_GenerationConfigT = t.TypeVar('_GenerationConfig', bound=GenerationConfig)
+_GenerationConfigT = t.TypeVar('_GenerationConfigT', bound=GenerationConfig)
 
 
 @attr.frozen(slots=True, repr=False, init=False)
@@ -257,9 +258,6 @@ class SamplingParams(ReprMixin):
   ignore_eos: bool = dantic.Field(
     False,
     description='Whether to ignore the EOS token and continue generating tokens after the EOS token is generated.',
-  )
-  prompt_logprobs: t.Optional[int] = dantic.Field(
-    None, description='Number of log probabilities to return per input token.'
   )
   skip_special_tokens: bool = dantic.Field(True, description='Whether to skip special tokens in the generated output.')
   # space_between_special_tokens: bool = dantic.Field(True, description='Whether to add a space between special tokens in the generated output.')
@@ -321,7 +319,6 @@ class SamplingParams(ReprMixin):
     )
     length_penalty = first_not_none(attrs.pop('length_penalty', None), default=generation_config['length_penalty'])
     early_stopping = first_not_none(attrs.pop('early_stopping', None), default=generation_config['early_stopping'])
-    prompt_logprobs = first_not_none(attrs.pop('prompt_logprobs', None), default=None)
 
     return cls(
       _internal=True,
@@ -332,7 +329,6 @@ class SamplingParams(ReprMixin):
       repetition_penalty=repetition_penalty,
       length_penalty=length_penalty,
       early_stopping=early_stopping,
-      prompt_logprobs=prompt_logprobs,
       **attrs,
     )
 
@@ -1213,6 +1209,10 @@ class LLMConfig(_ConfigAttr[GenerationConfig, SamplingParams]):
   def __getitem__(self,item:t.Literal['encoder_no_repeat_ngram_size'])->int:...
   @overload
   def __getitem__(self,item:t.Literal['decoder_start_token_id'])->int:...
+  @overload
+  def __getitem__(self,item:t.Literal['logprobs'])->int:...
+  @overload
+  def __getitem__(self,item:t.Literal['prompt_logprobs'])->int:...
   # NOTE: SamplingParams arguments
   @overload
   def __getitem__(self,item:t.Literal['n'])->int:...
@@ -1226,10 +1226,6 @@ class LLMConfig(_ConfigAttr[GenerationConfig, SamplingParams]):
   def __getitem__(self,item:t.Literal['use_beam_search'])->bool:...
   @overload
   def __getitem__(self,item:t.Literal['ignore_eos'])->bool:...
-  @overload
-  def __getitem__(self,item:t.Literal['logprobs'])->int:...
-  @overload
-  def __getitem__(self,item:t.Literal['prompt_logprobs'])->t.Optional[int]:...
   @overload
   def __getitem__(self,item:t.Literal['skip_special_tokens'])->bool:...
   # NOTE: PeftType arguments
