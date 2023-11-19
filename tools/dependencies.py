@@ -17,7 +17,6 @@ sys.path.insert(0, os.path.join(ROOT, 'openllm-python', 'src'))
 sys.path.insert(1, os.path.join(ROOT, 'openllm-core', 'src'))
 
 import openllm
-from openllm_core.utils.lazy import VersionInfo
 
 _OWNER, _REPO = 'bentoml', 'openllm'
 
@@ -143,13 +142,12 @@ class Dependencies:
 
 
 _LOWER_BENTOML_CONSTRAINT = '1.1.9'
-_OPENLLM_CLIENT_CONSTRAINT = str(VersionInfo.from_package('openllm-client'))
 _BENTOML_EXT = ['io']
 _TRANSFORMERS_EXT = ['torch', 'tokenizers']
 _TRANSFORMERS_CONSTRAINTS = '4.35.0'
 
 FINE_TUNE_DEPS = ['peft>=0.6.0', 'datasets', 'trl', 'huggingface-hub']
-GRPC_DEPS = [f'bentoml[grpc]>={_LOWER_BENTOML_CONSTRAINT}', f'openllm-client[grpc]>={_OPENLLM_CLIENT_CONSTRAINT}']
+GRPC_DEPS = [f'bentoml[grpc]>={_LOWER_BENTOML_CONSTRAINT}']
 OPENAI_DEPS = ['openai[datalib]>=1', 'tiktoken']
 AGENTS_DEPS = [f'transformers[agents]>={_TRANSFORMERS_CONSTRAINTS}', 'diffusers', 'soundfile']
 PLAYGROUND_DEPS = ['jupyter', 'notebook', 'ipython', 'jupytext', 'nbformat']

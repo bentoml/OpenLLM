@@ -114,7 +114,7 @@ full = [
 ]
 ggml = ["ctransformers"]
 gptq = ["auto-gptq[triton]>=0.4.2"]
-grpc = ["bentoml[grpc]>=1.1.9", "openllm-client[grpc]>=0.4.16"]
+grpc = ["bentoml[grpc]>=1.1.9"]
 mpt = ["triton"]
 openai = ["openai[datalib]>=1", "tiktoken"]
 playground = ["jupyter", "notebook", "ipython", "jupytext", "nbformat"]
