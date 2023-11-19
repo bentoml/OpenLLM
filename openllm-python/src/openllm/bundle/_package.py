@@ -65,12 +65,7 @@ def construct_python_options(llm, llm_fs, extra_dependencies=None, adapter_map=N
   built_wheels = [build_editable(llm_fs.getsyspath('/'), p) for p in ('openllm_core', 'openllm_client', 'openllm')]
   if all(i for i in built_wheels):
     wheels = [llm_fs.getsyspath(f"/{i.split('/')[-1]}") for i in built_wheels]
-  return PythonOptions(
-    packages=packages,
-    wheels=wheels,
-    lock_packages=True,
-    extra_index_url=['https://huggingface.github.io/autogptq-index/whl/cu118/'],
-  )
+  return PythonOptions(packages=packages, wheels=wheels, lock_packages=True)
 
 
 def construct_docker_options(

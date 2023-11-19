@@ -1276,7 +1276,7 @@ openllm start TheBloke/Llama-2-7B-Chat-GPTQ --quantize gptq
 ```
 
 > [!NOTE]
-> In order to run GPTQ, make sure you run `pip install "openllm[gptq]" --extra-index-url https://huggingface.github.io/autogptq-index/whl/cu118/`
+> In order to run GPTQ, make sure you run `pip install "openllm[gptq]"`
 > first to install the dependency. From the GPTQ paper, it is recommended to quantized the weights before serving.
 > See [AutoGPTQ](https://github.com/PanQiWei/AutoGPTQ) for more information on GPTQ quantization.
 
