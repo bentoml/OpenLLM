@@ -1,3 +1,4 @@
+from __future__ import annotations
 import uuid
 from typing import Any, AsyncGenerator, Dict, TypedDict, Union
 
