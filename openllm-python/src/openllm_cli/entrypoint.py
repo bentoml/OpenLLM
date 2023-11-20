@@ -1048,6 +1048,8 @@ def build_command(
       serialisation, default='safetensors' if has_safetensors_weights(model_id, model_version) else 'legacy'
     ),
   )
+  if llm.__llm_backend__ not in llm.config['backend']:
+    raise click.ClickException(f"'{backend}' is not supported with {model_id}")
   backend_warning(llm.__llm_backend__, build=True)
   os.environ.update(
     **process_environ(
