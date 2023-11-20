@@ -205,7 +205,7 @@ jobs:
           severity: 'CRITICAL'
           scanners: 'vuln'
       - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@74483a38d39275f33fcff5f35b679b5ca4a26a99 # ratchet:github/codeql-action/upload-sarif@v2.22.5
+        uses: github/codeql-action/upload-sarif@66b90a5db151a8042fa97405c6cf843bbe433f7b # ratchet:github/codeql-action/upload-sarif@v2.22.7
         if: ${{ github.event_name != 'pull_request' }}
         with:
           sarif_file: 'trivy-results.sarif'
