@@ -79,8 +79,6 @@ class HTTPClient(Client):
       llm_config = {**self._config, **llm_config, **attrs}
     else:
       llm_config = {**self._config, **attrs}
-    if self._metadata.prompt_template is not None:
-      prompt = self._metadata.prompt_template.format(system_message=self._metadata.system_message, instruction=prompt)
 
     return self._post(
       f'/{self._api_version}/generate',
@@ -106,8 +104,6 @@ class HTTPClient(Client):
       llm_config = {**self._config, **llm_config, **attrs}
     else:
       llm_config = {**self._config, **attrs}
-    if self._metadata.prompt_template is not None:
-      prompt = self._metadata.prompt_template.format(system_message=self._metadata.system_message, instruction=prompt)
     return self._post(
       f'/{self._api_version}/generate_stream',
       response_cls=Response,
@@ -182,8 +178,6 @@ class AsyncHTTPClient(AsyncClient):
       llm_config = {**_config, **llm_config, **attrs}
     else:
       llm_config = {**_config, **attrs}
-    if _metadata.prompt_template is not None:
-      prompt = _metadata.prompt_template.format(system_message=_metadata.system_message, instruction=prompt)
     return await self._post(
       f'/{self._api_version}/generate',
       response_cls=Response,
@@ -212,8 +206,6 @@ class AsyncHTTPClient(AsyncClient):
       llm_config = {**_config, **llm_config, **attrs}
     else:
       llm_config = {**_config, **attrs}
-    if _metadata.prompt_template is not None:
-      prompt = _metadata.prompt_template.format(system_message=_metadata.system_message, instruction=prompt)
 
     async for response_chunk in await self._post(
       f'/{self._api_version}/generate_stream',
