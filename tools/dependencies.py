@@ -141,7 +141,7 @@ class Dependencies:
     return cls(*decls)
 
 
-_LOWER_BENTOML_CONSTRAINT = '1.1.9'
+_LOWER_BENTOML_CONSTRAINT = '1.1.10'
 _BENTOML_EXT = ['io']
 _TRANSFORMERS_EXT = ['torch', 'tokenizers']
 _TRANSFORMERS_CONSTRAINTS = '4.35.0'
