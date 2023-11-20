@@ -163,6 +163,7 @@ class LLM(t.Generic[M, T], ReprMixin):
     embedded=False,
     dtype='auto',
     low_cpu_mem_usage=True,
+    _eager=True,
     **attrs,
   ):
     # fmt: off
@@ -201,12 +202,15 @@ class LLM(t.Generic[M, T], ReprMixin):
       llm_trust_remote_code__=trust_remote_code,
     )
 
-    try:
-      model = bentoml.models.get(self.tag)
-    except bentoml.exceptions.NotFound:
-      model = openllm.serialisation.import_model(self, trust_remote_code=self.trust_remote_code)
-    # resolve the tag
-    self._tag = model.tag
+    if _eager:
+      try:
+        model = bentoml.models.get(self.tag)
+      except bentoml.exceptions.NotFound:
+        model = openllm.serialisation.import_model(self, trust_remote_code=self.trust_remote_code)
+      # resolve the tag
+      self._tag = model.tag
+    if not _eager and embedded:
+      raise RuntimeError("Embedded mode is not supported when '_eager' is False.")
     if embedded and not get_disable_warnings() and not get_quiet_mode():
       logger.warning(
         'You are using embedded mode, which means the models will be loaded into memory. This is often not recommended in production and should only be used for local development only.'

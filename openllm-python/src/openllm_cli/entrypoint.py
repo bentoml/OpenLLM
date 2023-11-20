@@ -1047,10 +1047,17 @@ def build_command(
     serialisation=first_not_none(
       serialisation, default='safetensors' if has_safetensors_weights(model_id, model_version) else 'legacy'
     ),
+    _eager=False,
   )
   if llm.__llm_backend__ not in llm.config['backend']:
     raise click.ClickException(f"'{backend}' is not supported with {model_id}")
   backend_warning(llm.__llm_backend__, build=True)
+  try:
+    model = bentoml.models.get(llm.tag)
+  except bentoml.exceptions.NotFound:
+    model = openllm.serialisation.import_model(llm, trust_remote_code=llm.trust_remote_code)
+  llm._tag = model.tag
+
   os.environ.update(
     **process_environ(
       llm.config,
