@@ -8,7 +8,7 @@ default_language_version:
 exclude: '.*\.(css|js|svg)$'
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: 'v0.1.5'
+    rev: 'v0.1.6'
     hooks:
       - id: ruff
         alias: r
@@ -70,7 +70,7 @@ repos:
         exclude: ^(docs|tools|openllm-python/tests)
         args: [--config=pyproject.toml]
   - repo: https://github.com/pre-commit/mirrors-eslint
-    rev: v8.53.0
+    rev: v8.54.0
     hooks:
       - id: eslint
         verbose: true
