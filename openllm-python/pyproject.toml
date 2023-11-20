@@ -40,8 +40,8 @@ classifiers = [
 dependencies = [
     "bentoml[io]>=1.1.10",
     "transformers[torch,tokenizers]>=4.35.0",
-    "openllm-client>=0.4.20",
-    "openllm-core>=0.4.20",
+    "openllm-client>=0.4.21",
+    "openllm-core>=0.4.21",
     "safetensors",
     "optimum>=1.12.0",
     "accelerate",
