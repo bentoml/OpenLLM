@@ -38,7 +38,7 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dependencies = [
-    "bentoml[io]>=1.1.9",
+    "bentoml[io]>=1.1.10",
     "transformers[torch,tokenizers]>=4.35.0",
     "openllm-client>=0.4.17",
     "openllm-core>=0.4.17",
@@ -114,7 +114,7 @@ full = [
 ]
 ggml = ["ctransformers"]
 gptq = ["auto-gptq[triton]>=0.4.2"]
-grpc = ["bentoml[grpc]>=1.1.9"]
+grpc = ["bentoml[grpc]>=1.1.10"]
 mpt = ["triton"]
 openai = ["openai[datalib]>=1", "tiktoken"]
 playground = ["jupyter", "notebook", "ipython", "jupytext", "nbformat"]
