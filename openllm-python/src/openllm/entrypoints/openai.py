@@ -13,7 +13,7 @@ from starlette.routing import Route
 from openllm_core._schemas import SampleLogprobs
 from openllm_core.utils import converter, gen_random_uuid
 
-from ._openapi import add_schema_definitions, append_schemas, get_generator
+from ._openapi import add_schema_definitions, append_schemas, apply_schema, get_generator
 from ..protocol.openai import (
   ChatCompletionRequest,
   ChatCompletionResponse,
@@ -100,12 +100,25 @@ def create_logprobs(token_ids, id_logprobs, initial_text_offset=0, *, llm):
 
 
 def mount_to_svc(svc, llm):
+  list_models.__doc__ = list_models.__doc__.replace('__model_id__', llm.llm_type)
+  completions.__doc__ = completions.__doc__.replace('__model_id__', llm.llm_type)
+  chat_completions.__doc__ = chat_completions.__doc__.replace('__model_id__', llm.llm_type)
   app = Starlette(
     debug=True,
     routes=[
-      Route('/models', functools.partial(list_models, llm=llm), methods=['GET']),
-      Route('/completions', functools.partial(completions, llm=llm), methods=['POST']),
-      Route('/chat/completions', functools.partial(chat_completions, llm=llm), methods=['POST']),
+      Route(
+        '/models', functools.partial(apply_schema(list_models, __model_id__=llm.llm_type), llm=llm), methods=['GET']
+      ),
+      Route(
+        '/completions',
+        functools.partial(apply_schema(completions, __model_id__=llm.llm_type), llm=llm),
+        methods=['POST'],
+      ),
+      Route(
+        '/chat/completions',
+        functools.partial(apply_schema(chat_completions, __model_id__=llm.llm_type), llm=llm),
+        methods=['POST'],
+      ),
       Route('/schema', endpoint=lambda req: schemas.OpenAPIResponse(req), include_in_schema=False),
     ],
   )

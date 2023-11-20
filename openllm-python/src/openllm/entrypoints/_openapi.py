@@ -35,7 +35,7 @@ responses:
         example:
           object: 'list'
           data:
-            - id: meta-llama--Llama-2-13b-chat-hf
+            - id: __model_id__
               object: model
               created: 1686935002
               owned_by: 'na'
@@ -69,7 +69,7 @@ requestBody:
                 content: You are a helpful assistant.
               - role: user
                 content: Hello, I'm looking for a chatbot that can help me with my work.
-            model: meta-llama--Llama-2-13b-chat-hf
+            model: __model_id__
             max_tokens: 256
             temperature: 0.7
             top_p: 0.43
@@ -83,7 +83,7 @@ requestBody:
                 content: You are a helpful assistant.
               - role: user
                 content: Hello, I'm looking for a chatbot that can help me with my work.
-            model: meta-llama--Llama-2-13b-chat-hf
+            model: __model_id__
             max_tokens: 256
             temperature: 0.7
             top_p: 0.43
@@ -206,7 +206,7 @@ requestBody:
           summary: One-shot input example
           value:
             prompt: This is a test
-            model: meta-llama--Llama-2-13b-chat-hf
+            model: __model_id__
             max_tokens: 256
             temperature: 0.7
             logprobs: 1
@@ -217,7 +217,7 @@ requestBody:
           summary: Streaming input example
           value:
             prompt: This is a test
-            model: meta-llama--Llama-2-13b-chat-hf
+            model: __model_id__
             max_tokens: 256
             temperature: 0.7
             top_p: 0.43
@@ -470,6 +470,12 @@ summary: Creates a model response for the given chat conversation.
 """
 
 _SCHEMAS = {k[:-7].lower(): v for k, v in locals().items() if k.endswith('_SCHEMA')}
+
+
+def apply_schema(func, **attrs):
+  for k, v in attrs.items():
+    func.__doc__ = func.__doc__.replace(k, v)
+  return func
 
 
 def add_schema_definitions(func):
