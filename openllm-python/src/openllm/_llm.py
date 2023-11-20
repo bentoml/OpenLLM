@@ -217,7 +217,7 @@ class LLM(t.Generic[M, T], ReprMixin):
   def _resolve_quantise(self, quantise, backend):
     if backend in ('pt', 'vllm'):return quantise
     if backend=='ctranslate':return self._resolve_ctranslate_quantise(quantise)
-    raise NotImplementedError(f"Quantisation is not supported for backend '{self.__llm_backend__}'")
+    raise NotImplementedError(f"Quantisation is not supported for backend '{backend}'")
   def _resolve_ctranslate_quantise(self,quantise):
     if quantise in {'int4', 'awq', 'gptq', 'squeezellm'}:raise ValueError(f"Quantisation '{quantise}' is not supported for backend 'ctranslate'")
     if quantise == 'int8':quantise='int8_float16' if self._has_gpus else 'int8_float32'
