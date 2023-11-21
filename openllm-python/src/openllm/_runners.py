@@ -172,7 +172,7 @@ class vLLMRunnable(bentoml.Runnable):
           tokenizer=llm.bentomodel.path,
           trust_remote_code=llm.trust_remote_code,
           dtype=llm._torch_dtype,
-          max_seq_len=llm._max_seq_len,
+          max_model_len=llm._max_model_len,
           quantization=llm.quantise if llm.quantise and llm.quantise in {'awq', 'squeezellm'} else None,
         )
       )
