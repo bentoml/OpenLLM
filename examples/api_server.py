@@ -6,7 +6,7 @@ from bentoml import Service
 from bentoml.io import JSON, Text
 from openllm import LLM
 
-llm = LLM[Any, Any]('HuggingFaceH4/zephyr-7b-beta', backend='vllm')
+llm = LLM[Any, Any]('HuggingFaceH4/zephyr-7b-alpha', backend='vllm')
 
 
 svc = Service('tinyllm', runners=[llm.runner])
