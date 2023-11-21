@@ -7,6 +7,7 @@ import os
 import sys
 import types
 import typing as t
+import warnings
 
 import attr
 import click_option_group as cog
@@ -27,9 +28,11 @@ from ._typing_compat import (
   LiteralBackend,
   LiteralSerialisation,
   LiteralString,
+  M,
   NotRequired,
   Required,
   Self,
+  T,
   overload,
 )
 from .exceptions import ForbiddenAttributeError, MissingDependencyError
@@ -42,10 +45,16 @@ if t.TYPE_CHECKING:
   import vllm
   from attrs import AttrsInstance
 
+  import openllm
   from openllm.protocol.cohere import CohereChatRequest, CohereGenerateRequest
   from openllm.protocol.openai import ChatCompletionRequest, CompletionRequest
 else:
-  vllm = LazyLoader('vllm', globals(), 'vllm')
+  vllm = LazyLoader(
+    'vllm',
+    globals(),
+    'vllm',
+    exc_msg='vLLM is not installed. Make sure to install it with `pip install "openllm[vllm]"`',
+  )
   transformers = LazyLoader('transformers', globals(), 'transformers')
   peft = LazyLoader('peft', globals(), 'peft')
 
@@ -268,6 +277,9 @@ class SamplingParams(ReprMixin):
     top_k: int
     top_p: float
     logprobs: int
+    repetition_penalty: float
+    length_penalty: float
+    early_stopping: bool
 
   def __init__(self, *, _internal: bool = False, **attrs: t.Any):
     if not _internal:
@@ -352,7 +364,7 @@ converter.register_structure_hook_factory(
   ),
 )
 
-_SamplingParamsT = t.TypeVar('_SamplingParams', bound=SamplingParams)
+_SamplingParamsT = t.TypeVar('_SamplingParamsT', bound=SamplingParams)
 
 # cached it here to save one lookup per assignment
 _object_getattribute = object.__getattribute__
@@ -841,8 +853,7 @@ class LLMConfig(_ConfigAttr[GenerationConfig, SamplingParams]):
 
   - Automatic environment conversion: Each fields will automatically be provisioned with an environment
   variable, make it easy to work with ahead-of-time or during serving time
-  - Familiar API: It is compatible with cattrs as well as providing a few Pydantic-2 like API,
-  i.e: ``model_construct_env``, ``to_generation_config``, ``to_click_options``
+  - Familiar API: It is compatible with cattrs as well as providing a few Pydantic-2 like API, i.e: ``model_construct_env``
   - Automatic CLI generation: It can identify each fields and convert it to compatible Click options.
   This means developers can use any of the LLMConfig to create CLI with compatible-Python
   CLI library (click, typer, ...)
@@ -1447,18 +1458,63 @@ class LLMConfig(_ConfigAttr[GenerationConfig, SamplingParams]):
   def make_fine_tune_config(self, adapter_type: AdapterType, **attrs: t.Any) -> FineTuneConfig:
     return FineTuneConfig(adapter_type=adapter_type, llm_config_class=self.__class__).with_config(**attrs)
 
-  @overload
-  def to_generation_config(self, return_as_dict: t.Literal[False] = False) -> transformers.GenerationConfig: ...
+  def inference_options(self, llm: openllm.LLM[M, T], backend: str | None = None) -> tuple[Self, t.Any]:
+    backend = backend if backend is not None else llm.__llm_backend__
+    cls = getattr(self, backend, None)
+    if cls is None:
+      raise ValueError(f'Unknown backend {backend}')
+    try:
+      return self, cls.build(self)
+    except AttributeError:
+      raise RuntimeError(f'Unknown backend {llm.__llm_backend__}') from None
 
-  @overload
-  def to_generation_config(self, return_as_dict: t.Literal[True] = ...) -> DictStrAny: ...
+  class vllm:
+    @staticmethod
+    def build(config: LLMConfig) -> vllm.SamplingParams:
+      if config['temperature'] <= 1e-5:
+        top_p = 1.0
+      else:
+        top_p = config['top_p']
+      _object_setattr(config.sampling_config, 'top_p', top_p)
+      return config.sampling_config.build()
+
+  class ctranslate:
+    @staticmethod
+    def build(config: LLMConfig) -> dict[str, t.Any]:
+      return dict(
+        max_length=config['max_new_tokens'],
+        min_length=config['min_length'],
+        sampling_topk=config['top_k'],
+        sampling_topp=config['top_p'],
+        sampling_temperature=config['temperature'],
+        return_log_prob=config['logprobs'] > 0,
+        repetition_penalty=config['repetition_penalty'],
+        no_repeat_ngram_size=config['no_repeat_ngram_size'],
+        end_token=config['stop'],
+      )
+
+  class pt:
+    @staticmethod
+    def build(config: LLMConfig) -> LLMConfig:
+      return config
+
+  class hf:
+    @staticmethod
+    def build(config: LLMConfig) -> transformers.GenerationConfig:
+      return transformers.GenerationConfig(**converter.unstructure(config.generation_config))
 
   def to_generation_config(self, return_as_dict: bool = False) -> transformers.GenerationConfig | DictStrAny:
-    config = transformers.GenerationConfig(**converter.unstructure(self.generation_config))
+    warnings.warn(
+      "'to_generation_config' is deprecated, please use 'inference_options' instead.", DeprecationWarning, stacklevel=3
+    )
+    _, config = self.inference_options(None, 'hf')
     return config.to_dict() if return_as_dict else config
 
   def to_sampling_config(self) -> vllm.SamplingParams:
-    return self.sampling_config.build()
+    warnings.warn(
+      "'to_sampling_config' is deprecated, please use 'inference_options' instead.", DeprecationWarning, stacklevel=3
+    )
+    return self.inference_options(None, 'vllm')[-1]
 
   @overload
   def with_request(self, request: ChatCompletionRequest | CompletionRequest) -> dict[str, t.Any]: ...

@@ -2,7 +2,6 @@ from __future__ import annotations
 import functools
 import logging
 import os
-import types
 import typing as t
 
 import attr
@@ -11,7 +10,6 @@ import orjson
 
 import bentoml
 import openllm
-from bentoml._internal.models.model import ModelSignature
 from openllm_core._schemas import GenerationOutput
 from openllm_core._typing_compat import (
   AdapterMap,
@@ -34,7 +32,6 @@ from openllm_core.utils import (
   ReprMixin,
   apply,
   codegen,
-  converter,
   first_not_none,
   flatten_attrs,
   gen_random_uuid,
@@ -131,6 +128,7 @@ class LLM(t.Generic[M, T], ReprMixin):
   _adapter_map: AdapterMap | None
   _serialisation: LiteralSerialisation
   _local: bool
+  _max_model_len: int | None
   _prompt_template: PromptTemplate | None
   _system_message: str | None
 
@@ -163,6 +161,7 @@ class LLM(t.Generic[M, T], ReprMixin):
     embedded=False,
     dtype='auto',
     low_cpu_mem_usage=True,
+    max_model_len=None,
     _eager=True,
     **attrs,
   ):
@@ -192,6 +191,7 @@ class LLM(t.Generic[M, T], ReprMixin):
       adapter_map=_resolve_peft_config_type(adapter_map) if adapter_map is not None else None,
       serialisation=serialisation,
       local=_local,
+      max_model_len=max_model_len,
       prompt_template=PromptTemplate(prompt_template) if isinstance(prompt_template, str) else prompt_template,
       system_message=system_message,
       LLM__model_attrs=model_attrs,
@@ -327,7 +327,8 @@ class LLM(t.Generic[M, T], ReprMixin):
     return self.__llm_tokenizer__
   @property
   def runner(self):
-    if self.__llm_runner__ is None:self.__llm_runner__=_RunnerFactory(self)
+    from ._runners import runner
+    if self.__llm_runner__ is None:self.__llm_runner__=runner(self)
     return self.__llm_runner__
   def prepare(self,adapter_type='lora',use_gradient_checking=True,**attrs):
     if self.__llm_backend__!='pt':raise RuntimeError('Fine tuning is only supported for PyTorch backend.')
@@ -421,6 +422,8 @@ class LLM(t.Generic[M, T], ReprMixin):
   async def generate(
     self, prompt, prompt_token_ids=None, stop=None, stop_token_ids=None, request_id=None, adapter_name=None, **attrs
   ) -> GenerationOutput:
+    if adapter_name is not None and self.__llm_backend__ != 'pt':
+      raise NotImplementedError(f'Adapter is not supported with {self.__llm_backend__}.')
     config = self.config.model_construct_env(**attrs)
     texts, token_ids = [[]] * config['n'], [[]] * config['n']
     final_result = None
@@ -445,6 +448,9 @@ class LLM(t.Generic[M, T], ReprMixin):
     self, prompt, prompt_token_ids=None, stop=None, stop_token_ids=None, request_id=None, adapter_name=None, **attrs
   ) -> t.AsyncGenerator[GenerationOutput, None]:
     from bentoml._internal.runner.runner_handle import DummyRunnerHandle
+
+    if adapter_name is not None and self.__llm_backend__ != 'pt':
+      raise NotImplementedError(f'Adapter is not supported with {self.__llm_backend__}.')
 
     if isinstance(self.runner._runner_handle, DummyRunnerHandle):
       if os.getenv('BENTO_PATH') is not None:
@@ -487,82 +493,3 @@ class LLM(t.Generic[M, T], ReprMixin):
         previous_texts[i], previous_num_tokens[i] = output.text, len(output.token_ids)
         delta_outputs[i] = output.with_options(text=delta_text, token_ids=delta_tokens)
       yield generated.with_options(outputs=delta_outputs)
-
-
-def _RunnerFactory(
-  llm, /, models=None, max_batch_size=None, max_latency_ms=None, scheduling_strategy=None, *, backend=None
-):
-  from ._runners import runnable
-
-  if scheduling_strategy is None:
-    from ._strategies import CascadingResourceStrategy
-
-    scheduling_strategy = CascadingResourceStrategy
-
-  backend = first_not_none(getenv('backend', default=backend), default=llm.__llm_backend__)
-
-  models = models if models is not None else []
-  try:
-    models.append(llm.bentomodel)
-  except bentoml.exceptions.NotFound as err:
-    raise RuntimeError(f'Failed to locate {llm.bentomodel}:{err}') from err
-
-  if llm._prompt_template:
-    prompt_template = llm._prompt_template.to_string()
-  elif hasattr(llm.config, 'default_prompt_template'):
-    prompt_template = llm.config.default_prompt_template
-  else:
-    prompt_template = None
-  if llm._system_message:
-    system_message = llm._system_message
-  elif hasattr(llm.config, 'default_system_message'):
-    system_message = llm.config.default_system_message
-  else:
-    system_message = None
-  return types.new_class(
-    llm.config.__class__.__name__[:-6] + 'Runner',
-    (bentoml.Runner,),
-    exec_body=lambda ns: ns.update(
-      {
-        'llm_type': llm.llm_type,
-        'identifying_params': llm.identifying_params,
-        'llm_tag': llm.tag,
-        'llm': llm,
-        'config': llm.config,
-        'backend': backend,
-        '__doc__': llm.config.__class__.__doc__ or f'Generated Runner class for {llm.config["model_name"]}',
-        '__module__': llm.__module__,
-        '__repr__': ReprMixin.__repr__,
-        '__repr_keys__': property(lambda _: {'config', 'llm_type', 'runner_methods', 'backend', 'llm_tag'}),
-        '__repr_args__': lambda _: (
-          (
-            'runner_methods',
-            {
-              method.name: {
-                'batchable': method.config.batchable,
-                'batch_dim': method.config.batch_dim if method.config.batchable else None,
-              }
-              for method in _.runner_methods
-            },
-          ),
-          ('config', llm.config.model_dump(flatten=True)),
-          ('llm_type', llm.llm_type),
-          ('backend', backend),
-          ('llm_tag', llm.tag),
-        ),
-        'has_adapters': llm.has_adapters,
-        'prompt_template': prompt_template,
-        'system_message': system_message,
-      }
-    ),
-  )(
-    runnable(llm, backend),
-    name=llm.runner_name,
-    embedded=False,
-    models=models,
-    max_batch_size=max_batch_size,
-    max_latency_ms=max_latency_ms,
-    scheduling_strategy=scheduling_strategy,
-    runnable_init_params={'llm': llm},
-    method_configs=converter.unstructure({'generate_iterator': ModelSignature(batchable=False)}),
-  )

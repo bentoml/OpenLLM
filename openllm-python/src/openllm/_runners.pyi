@@ -15,10 +15,13 @@ from typing import (
   final,
 )
 
+import torch
+from transformers import PreTrainedModel, PreTrainedTokenizer
+
 from bentoml import Model, Strategy, Tag
 from bentoml._internal.runner.runner_handle import RunnerHandle
 from openllm_core import LLMConfig
-from openllm_core._typing_compat import LiteralBackend, M, T, overload
+from openllm_core._typing_compat import LiteralBackend, M, T
 
 from ._llm import LLM
 
@@ -28,23 +31,20 @@ except ImportError:
   AsyncLLMEngine = Any
 
 try:
-  from transformers import PreTrainedModel
-except ImportError:
-  PreTrainedModel = Any
-
-try:
   from ctranslate2 import Generator, Translator
 except ImportError:
-  Translator = Any
-  Generator = Any
+  Translator = Generator = Any
 
 Mo = TypeVar('Mo')
+To = TypeVar('To')
 
-class _Runnable(Protocol[Mo]):
+class _Runnable(Protocol[Mo, To]):
   SUPPORTED_RESOURCES: Tuple[Literal['nvidia.com/gpu', 'amd.com/gpu', 'cpu'], ...] = ...
   SUPPORTS_CPU_MULTI_THREADING: bool = ...
+  llm: LLM[Mo, To] = ...
   config: LLMConfig = ...
   model: Mo = ...
+  tokenizer: To = ...
   def __init__(self, llm: LLM[Mo, T]) -> None: ...
   async def generate_iterator(
     self,
@@ -61,42 +61,25 @@ Ret = TypeVar('Ret')
 class RunnerMethod(Generic[In, Ret]): ...
 
 @final
-class vLLMRunnable(_Runnable[AsyncLLMEngine]): ...
+class vLLMRunnable(_Runnable[AsyncLLMEngine, PreTrainedTokenizer]): ...
 
 @final
-class CTranslateRunnable(_Runnable[Union[Translator, Generator]]):
-  tokenizer: Any
+class CTranslateRunnable(_Runnable[Union[Translator, Generator], PreTrainedTokenizer]): ...
 
 @final
-class PyTorchRunnable(_Runnable[PreTrainedModel]):
-  tokenizer: Any
-  async def forward(
-    self,
-    prompt_token_ids: List[int],
-    request_id: str,
-    stop: Iterable[str],
-    adapter_name: Optional[str] = ...,
-    **attrs: Any,
-  ) -> AsyncGenerator[str, None]: ...
+class PyTorchRunnable(_Runnable[PreTrainedModel, PreTrainedTokenizer]):
+  is_encoder_decoder: bool = ...
+  device: torch.device = ...
 
-@overload
-def runnable(llm: LLM[M, T], backend: Literal['vllm']) -> Type[vLLMRunnable]: ...
-@overload
-def runnable(llm: LLM[M, T], backend: Literal['pt']) -> Type[PyTorchRunnable]: ...
-@overload
-def runnable(llm: LLM[M, T], backend: Literal['ctranslate']) -> Type[CTranslateRunnable]: ...
-@overload
-def runnable(
-  llm: LLM[M, T], backend: Optional[str] = ...
-) -> Type[Union[vLLMRunnable, PyTorchRunnable, CTranslateRunnable]]: ...
+def runner(llm: LLM[M, T]) -> Runner[M, T]: ...
 
-class Runner(Protocol[Mo, T]):
+class Runner(Protocol[Mo, To]):
   __doc__: str = ...
   __module__: str = ...
   llm_type: str = ...
   llm_tag: Tag = ...
   identifying_params: Dict[str, Any] = ...
-  llm: LLM[Mo, T] = ...
+  llm: LLM[Mo, To] = ...
   config: LLMConfig = ...
   backend: LiteralBackend = ...
   has_adapters: bool = ...
@@ -115,7 +98,7 @@ class Runner(Protocol[Mo, T]):
 
   def __init__(
     self,
-    runnable_class: Type[_Runnable[Mo]],
+    runnable_class: Type[_Runnable[Mo, To]],
     *,
     runnable_init_params: Optional[Dict[str, Any]] = ...,
     name: Optional[str] = ...,
@@ -130,7 +113,7 @@ class Runner(Protocol[Mo, T]):
   name: str = ...
   models: List[Model] = ...
   resource_config: Dict[str, Any]
-  runnable_class: Type[_Runnable[Mo]]
+  runnable_class: Type[_Runnable[Mo, To]]
   embedded: bool
   runner_methods: List[RunnerMethod[Any, Any]]
   scheduling_strategy: Type[Strategy]
