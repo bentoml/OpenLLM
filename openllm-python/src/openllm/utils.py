@@ -16,7 +16,7 @@ def generate_labels(llm):
 
 
 def available_devices():
-  from .._strategies import NvidiaGpuResource
+  from ._strategies import NvidiaGpuResource
 
   return tuple(NvidiaGpuResource.from_system())
 
