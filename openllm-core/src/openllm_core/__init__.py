@@ -26,4 +26,3 @@ from .config import (
   StableLMConfig as StableLMConfig,
   StarCoderConfig as StarCoderConfig,
 )
-from .prompts import PromptTemplate as PromptTemplate

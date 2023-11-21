@@ -1,13 +1,6 @@
 from __future__ import annotations
-import typing as t
 
 import openllm_core
-from openllm_core.prompts import PromptTemplate, process_prompt
-
-DEFAULT_PROMPT_TEMPLATE = """{context}
-{user_name}: {instruction}
-{agent}:
-"""
 
 
 class FalconConfig(openllm_core.LLMConfig):
@@ -46,26 +39,6 @@ class FalconConfig(openllm_core.LLMConfig):
     num_return_sequences: int = 1
     num_beams: int = 4
 
-  def sanitize_parameters(
-    self,
-    prompt: str,
-    prompt_template: PromptTemplate | str | None = None,
-    system_message: str | None = None,
-    max_new_tokens: int | None = None,
-    top_k: int | None = None,
-    num_return_sequences: int | None = None,
-    eos_token_id: int | None = None,
-    use_default_prompt_template: bool = False,
-    **attrs: t.Any,
-  ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
-    return (
-      process_prompt(prompt, DEFAULT_PROMPT_TEMPLATE, use_default_prompt_template, **attrs),
-      {
-        'max_new_tokens': max_new_tokens,
-        'top_k': top_k,
-        'num_return_sequences': num_return_sequences,
-        'eos_token_id': eos_token_id,
-        **attrs,
-      },
-      {},
-    )
+  @property
+  def template(self) -> str:
+    return '{context}\n{user_name}: {instruction}\n{agent}:'

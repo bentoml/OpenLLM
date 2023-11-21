@@ -37,8 +37,6 @@ def _start(
   workers_per_resource: t.Literal['conserved', 'round_robin'] | float | None = None,
   device: tuple[str, ...] | t.Literal['all'] | None = None,
   quantize: LiteralQuantise | None = None,
-  system_message: str | None = None,
-  prompt_template_file: str | None = None,
   adapter_map: dict[LiteralString, str | None] | None = None,
   backend: LiteralBackend | None = None,
   additional_args: list[str] | None = None,
@@ -60,8 +58,6 @@ def _start(
   Args:
     model_id: The model id to start this LLMServer
     timeout: The server timeout
-    system_message: Optional system message for supported LLMs. If given LLM supports system message, OpenLLM will provide a default system message.
-    prompt_template_file: Optional file path containing user-defined custom prompt template. By default, the prompt template for the specified LLM will be used..
     workers_per_resource: Number of workers per resource assigned.
                           See [resource scheduling](https://docs.bentoml.org/en/latest/guides/scheduling.html#resource-scheduling-strategy)
                           for more information. By default, this is set to 1.
@@ -88,10 +84,6 @@ def _start(
   os.environ['BACKEND'] = openllm_core.utils.first_not_none(backend, default='vllm' if is_vllm_available() else 'pt')
 
   args: list[str] = [model_id]
-  if system_message:
-    args.extend(['--system-message', system_message])
-  if prompt_template_file:
-    args.extend(['--prompt-template-file', openllm_core.utils.resolve_filepath(prompt_template_file)])
   if timeout:
     args.extend(['--server-timeout', str(timeout)])
   if workers_per_resource:
@@ -129,8 +121,6 @@ def _build(
   bento_version: str | None = None,
   quantize: LiteralQuantise | None = None,
   adapter_map: dict[str, str | None] | None = None,
-  system_message: str | None = None,
-  prompt_template_file: str | None = None,
   build_ctx: str | None = None,
   enable_features: tuple[str, ...] | None = None,
   dockerfile_template: str | None = None,
@@ -155,8 +145,6 @@ def _build(
     model_id: The model id to build this BentoLLM
     model_version: Optional model version for this given LLM
     bento_version: Optional bento veresion for this given BentoLLM
-    system_message: Optional system message for supported LLMs. If given LLM supports system message, OpenLLM will provide a default system message.
-    prompt_template_file: Optional file path containing user-defined custom prompt template. By default, the prompt template for the specified LLM will be used..
     quantize: Quantize the model weights. This is only applicable for PyTorch models.
               Possible quantisation strategies:
               - int8: Quantize the model with 8bit (bitsandbytes required)
@@ -209,10 +197,6 @@ def _build(
     args.extend([f'--enable-features={f}' for f in enable_features])
   if overwrite:
     args.append('--overwrite')
-  if system_message:
-    args.extend(['--system-message', system_message])
-  if prompt_template_file:
-    args.extend(['--prompt-template-file', openllm_core.utils.resolve_filepath(prompt_template_file)])
   if adapter_map:
     args.extend([f"--adapter-id={k}{':'+v if v is not None else ''}" for k, v in adapter_map.items()])
   if model_version:

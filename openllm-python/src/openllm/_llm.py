@@ -25,7 +25,6 @@ from openllm_core._typing_compat import (
   TupleAny,
 )
 from openllm_core.exceptions import MissingDependencyError
-from openllm_core.prompts import PromptTemplate
 from openllm_core.utils import (
   DEBUG,
   ENV_VARS_TRUE_VALUES,
@@ -129,8 +128,6 @@ class LLM(t.Generic[M, T], ReprMixin):
   _serialisation: LiteralSerialisation
   _local: bool
   _max_model_len: int | None
-  _prompt_template: PromptTemplate | None
-  _system_message: str | None
 
   __llm_dtype__: LiteralDtype | t.Literal['auto', 'half', 'float'] = 'auto'
   __llm_torch_dtype__: 'torch.dtype' = None
@@ -148,8 +145,6 @@ class LLM(t.Generic[M, T], ReprMixin):
     model_id,
     model_version=None,
     model_tag=None,
-    prompt_template=None,
-    system_message=None,
     llm_config=None,
     backend=None,
     *args,
@@ -192,8 +187,6 @@ class LLM(t.Generic[M, T], ReprMixin):
       serialisation=serialisation,
       local=_local,
       max_model_len=max_model_len,
-      prompt_template=PromptTemplate(prompt_template) if isinstance(prompt_template, str) else prompt_template,
-      system_message=system_message,
       LLM__model_attrs=model_attrs,
       LLM__tokenizer_attrs=tokenizer_attrs,
       llm_dtype__=dtype.lower(),
@@ -480,16 +473,24 @@ class LLM(t.Generic[M, T], ReprMixin):
 
     request_id = gen_random_uuid() if request_id is None else request_id
     previous_texts, previous_num_tokens = [''] * config['n'], [0] * config['n']
-    async for out in self.runner.generate_iterator.async_stream(
-      prompt_token_ids, request_id, stop=stop, adapter_name=adapter_name, **config.model_dump(flatten=True)
-    ):
-      generated = GenerationOutput.from_runner(out).with_options(prompt=prompt)
-      delta_outputs = [None] * len(generated.outputs)
-      if generated.finished:
-        break
-      for output in generated.outputs:
-        i = output.index
-        delta_tokens, delta_text = output.token_ids[previous_num_tokens[i] :], output.text[len(previous_texts[i]) :]
-        previous_texts[i], previous_num_tokens[i] = output.text, len(output.token_ids)
-        delta_outputs[i] = output.with_options(text=delta_text, token_ids=delta_tokens)
-      yield generated.with_options(outputs=delta_outputs)
+    try:
+      generator = self.runner.generate_iterator.async_stream(
+        prompt_token_ids, request_id, stop=stop, adapter_name=adapter_name, **config.model_dump(flatten=True)
+      )
+    except Exception as err:
+      raise RuntimeError(f'Failed to start generation task: {err}') from err
+
+    try:
+      async for out in generator:
+        generated = GenerationOutput.from_runner(out).with_options(prompt=prompt)
+        delta_outputs = [None] * len(generated.outputs)
+        if generated.finished:
+          break
+        for output in generated.outputs:
+          i = output.index
+          delta_tokens, delta_text = output.token_ids[previous_num_tokens[i] :], output.text[len(previous_texts[i]) :]
+          previous_texts[i], previous_num_tokens[i] = output.text, len(output.token_ids)
+          delta_outputs[i] = output.with_options(text=delta_text, token_ids=delta_tokens)
+        yield generated.with_options(outputs=delta_outputs)
+    except Exception as err:
+      raise RuntimeError(f'Exception caught during generation: {err}') from err

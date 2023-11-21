@@ -18,7 +18,6 @@ from openllm_core._typing_compat import (
   M,
   T,
 )
-from openllm_core.prompts import PromptTemplate
 from openllm_core.utils.representation import ReprArgs
 
 from ._quantisation import QuantizationConfig
@@ -48,8 +47,6 @@ class LLM(Generic[M, T]):
   _adapter_map: Optional[AdapterMap]
   _serialisation: LiteralSerialisation
   _local: bool
-  _prompt_template: Optional[PromptTemplate]
-  _system_message: Optional[str]
 
   __llm_dtype__: Dtype = ...
   __llm_torch_dtype__: Optional[torch.dtype] = ...
@@ -74,8 +71,6 @@ class LLM(Generic[M, T]):
     model_id: str,
     model_version: Optional[str] = ...,
     model_tag: Optional[Union[str, Tag]] = ...,
-    prompt_template: Optional[Union[str, PromptTemplate]] = ...,
-    system_message: Optional[str] = ...,
     llm_config: Optional[LLMConfig] = ...,
     backend: Optional[LiteralBackend] = ...,
     *args: Any,

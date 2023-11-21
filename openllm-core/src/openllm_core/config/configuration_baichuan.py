@@ -1,11 +1,6 @@
 from __future__ import annotations
-import typing as t
 
 import openllm_core
-from openllm_core.prompts import PromptTemplate
-
-DEFAULT_SYSTEM_MESSAGE = ''
-DEFAULT_PROMPT_TEMPLATE = PromptTemplate('{instruction}')
 
 
 class BaichuanConfig(openllm_core.LLMConfig):
@@ -46,32 +41,3 @@ class BaichuanConfig(openllm_core.LLMConfig):
     max_new_tokens: int = 2048
     top_p: float = 0.7
     temperature: float = 0.95
-
-  @property
-  def default_prompt_template(self) -> str:
-    return DEFAULT_PROMPT_TEMPLATE.to_string()
-
-  @property
-  def default_system_message(self) -> str:
-    return DEFAULT_SYSTEM_MESSAGE
-
-  def sanitize_parameters(
-    self,
-    prompt: str,
-    prompt_template: PromptTemplate | str | None = None,
-    system_message: str | None = None,
-    max_new_tokens: int | None = None,
-    top_p: float | None = None,
-    temperature: float | None = None,
-    **attrs: t.Any,
-  ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
-    system_message = DEFAULT_SYSTEM_MESSAGE if system_message is None else system_message
-    if prompt_template is None:
-      prompt_template = DEFAULT_PROMPT_TEMPLATE
-    elif isinstance(prompt_template, str):
-      prompt_template = PromptTemplate(template=prompt_template)
-    return (
-      prompt_template.with_options(system_message=system_message).format(instruction=prompt),
-      {'max_new_tokens': max_new_tokens, 'top_p': top_p, 'temperature': temperature, **attrs},
-      {},
-    )

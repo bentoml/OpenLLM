@@ -1,41 +1,6 @@
 from __future__ import annotations
-import typing as t
 
 import openllm_core
-from openllm_core.prompts import PromptTemplate, process_prompt
-from openllm_core.utils import dantic
-
-MPTPromptType = t.Literal['default', 'instruct', 'chat', 'storywriter']
-
-INSTRUCTION_KEY, RESPONSE_KEY, END_KEY = '### Instruction:', '### Response:', '### End'
-INTRO_BLURB = (
-  'Below is an instruction that describes a task. Write a response that appropriately completes the request.'
-)
-# NOTE: This is the prompt that is used for generating responses using an already
-# trained model.  It ends with the response key, where the job of the model is to provide
-# the completion that follows it (i.e. the response itself).
-_chat_prompt, _default_prompt, _instruct_prompt = (
-  """{instruction}""",
-  """{instruction}""",
-  """{intro}
-{instruction_key}
-{instruction}
-{response_key}
-""".format(intro=INTRO_BLURB, instruction_key=INSTRUCTION_KEY, instruction='{instruction}', response_key=RESPONSE_KEY),
-)
-PROMPT_MAPPING = {
-  'default': _default_prompt,
-  'instruct': _instruct_prompt,
-  'storywriter': _default_prompt,
-  'chat': _chat_prompt,
-}
-
-
-def _get_prompt(model_type: str) -> str:
-  return PROMPT_MAPPING[model_type]
-
-
-DEFAULT_PROMPT_TEMPLATE = _get_prompt
 
 
 class MPTConfig(openllm_core.LLMConfig):
@@ -67,46 +32,8 @@ class MPTConfig(openllm_core.LLMConfig):
       'mosaicml/mpt-30b-chat',
     ],
   }
-  prompt_type: MPTPromptType = dantic.Field(
-    '"default"',
-    description='Given prompt type for running MPT. Default will be inferred from model name if pretrained.',
-  )
-  max_sequence_length: int = dantic.Field(
-    2048,
-    description='Max sequence length to run MPT with. Note that MPT is trained ith sequence length of 2048, but with [ALiBi](https://arxiv.org/abs/2108.12409) it can set up to 4096 (for 7b models) and 16384 (for 30b models)',
-  )
 
   class GenerationConfig:
     max_new_tokens: int = 128
     temperature: float = 0
     top_p: float = 0.8
-
-  def sanitize_parameters(
-    self,
-    prompt: str,
-    prompt_template: PromptTemplate | str | None = None,
-    system_message: str | None = None,
-    max_new_tokens: int | None = None,
-    temperature: float | None = None,
-    top_p: float | None = None,
-    prompt_type: MPTPromptType | None = None,
-    use_default_prompt_template: bool = True,
-    **attrs: t.Any,
-  ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
-    _template = None
-    if use_default_prompt_template:
-      if prompt_type is None:
-        if 'instruct' in self.model_id:
-          prompt_type = 'instruct'
-        elif 'storywriter' in self.model_id:
-          prompt_type = 'storywriter'
-        elif 'chat' in self.model_id:
-          prompt_type = 'chat'
-        else:
-          prompt_type = 'default'
-      _template = DEFAULT_PROMPT_TEMPLATE(prompt_type)
-    return (
-      process_prompt(prompt, _template, use_default_prompt_template),
-      {'max_new_tokens': max_new_tokens, 'temperature': temperature, 'top_p': top_p},
-      {},
-    )

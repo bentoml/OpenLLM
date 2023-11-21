@@ -100,11 +100,9 @@ from ._factory import (
   model_name_argument,
   model_version_option,
   parse_config_options,
-  prompt_template_file_option,
   quantize_option,
   serialisation_option,
   start_decorator,
-  system_message_option,
 )
 
 if t.TYPE_CHECKING:
@@ -404,8 +402,6 @@ def start_command(
   model_id: str,
   server_timeout: int,
   model_version: str | None,
-  system_message: str | None,
-  prompt_template_file: t.IO[t.Any] | None,
   workers_per_resource: t.Literal['conserved', 'round_robin'] | LiteralString,
   device: t.Tuple[str, ...],
   quantize: LiteralQuantise | None,
@@ -437,7 +433,6 @@ def start_command(
     )
 
   adapter_map: dict[str, str] | None = attrs.pop('adapter_map', None)
-  prompt_template = prompt_template_file.read() if prompt_template_file is not None else None
 
   from openllm.serialisation.transformers.weights import has_safetensors_weights
 
@@ -467,8 +462,6 @@ def start_command(
   llm = openllm.LLM[t.Any, t.Any](
     model_id=model_id,
     model_version=model_version,
-    prompt_template=prompt_template,
-    system_message=system_message,
     backend=backend,
     adapter_map=adapter_map,
     quantize=quantize,
@@ -495,8 +488,6 @@ def start_command(
     adapter_map,
     serialisation,
     llm,
-    system_message,
-    prompt_template,
   )
 
   server = bentoml.HTTPServer('_service:svc', **server_attrs)
@@ -541,8 +532,6 @@ def start_grpc_command(
   model_id: str,
   server_timeout: int,
   model_version: str | None,
-  system_message: str | None,
-  prompt_template_file: t.IO[t.Any] | None,
   workers_per_resource: t.Literal['conserved', 'round_robin'] | LiteralString,
   device: t.Tuple[str, ...],
   quantize: LiteralQuantise | None,
@@ -577,7 +566,6 @@ def start_grpc_command(
     )
 
   adapter_map: dict[str, str] | None = attrs.pop('adapter_map', None)
-  prompt_template = prompt_template_file.read() if prompt_template_file is not None else None
 
   from openllm.serialisation.transformers.weights import has_safetensors_weights
 
@@ -604,8 +592,6 @@ def start_grpc_command(
   llm = openllm.LLM[t.Any, t.Any](
     model_id=model_id,
     model_version=model_version,
-    prompt_template=prompt_template,
-    system_message=system_message,
     backend=backend,
     adapter_map=adapter_map,
     quantize=quantize,
@@ -634,8 +620,6 @@ def start_grpc_command(
     adapter_map,
     serialisation,
     llm,
-    system_message,
-    prompt_template,
   )
 
   server = bentoml.GrpcServer('_service:svc', **server_attrs)
@@ -654,18 +638,7 @@ def start_grpc_command(
 
 
 def process_environ(
-  config,
-  server_timeout,
-  wpr,
-  device,
-  cors,
-  model_id,
-  adapter_map,
-  serialisation,
-  llm,
-  system_message,
-  prompt_template,
-  use_current_env=True,
+  config, server_timeout, wpr, device, cors, model_id, adapter_map, serialisation, llm, use_current_env=True
 ) -> t.Dict[str, t.Any]:
   environ = parse_config_options(
     config, server_timeout, wpr, device, cors, os.environ.copy() if use_current_env else {}
@@ -685,10 +658,6 @@ def process_environ(
   )
   if llm.quantise:
     environ['QUANTIZE'] = str(llm.quantise)
-  if system_message:
-    environ['OPENLLM_SYSTEM_MESSAGE'] = system_message
-  if prompt_template:
-    environ['OPENLLM_PROMPT_TEMPLATE'] = prompt_template
   return environ
 
 
@@ -929,8 +898,6 @@ class BuildBentoOutput(t.TypedDict):
 )
 @dtype_option
 @backend_option
-@system_message_option
-@prompt_template_file_option
 @click.option(
   '--bento-version',
   type=str,
@@ -1004,8 +971,6 @@ def build_command(
   adapter_id: tuple[str, ...],
   build_ctx: str | None,
   backend: LiteralBackend | None,
-  system_message: str | None,
-  prompt_template_file: t.IO[t.Any] | None,
   model_version: str | None,
   dockerfile_template: t.TextIO | None,
   containerize: bool,
@@ -1051,12 +1016,9 @@ def build_command(
 
   state = ItemState.NOT_FOUND
 
-  prompt_template = prompt_template_file.read() if prompt_template_file is not None else None
   llm = openllm.LLM[t.Any, t.Any](
     model_id=model_id,
     model_version=model_version,
-    prompt_template=prompt_template,
-    system_message=system_message,
     backend=backend,
     quantize=quantize,
     dtype=dtype,
@@ -1075,19 +1037,7 @@ def build_command(
   llm._tag = model.tag
 
   os.environ.update(
-    **process_environ(
-      llm.config,
-      llm.config['timeout'],
-      1.0,
-      None,
-      True,
-      llm.model_id,
-      None,
-      llm._serialisation,
-      llm,
-      llm._system_message,
-      llm._prompt_template,
-    )
+    **process_environ(llm.config, llm.config['timeout'], 1.0, None, True, llm.model_id, None, llm._serialisation, llm)
   )
 
   try:

@@ -1,20 +1,6 @@
 from __future__ import annotations
-import typing as t
 
 import openllm_core
-
-if t.TYPE_CHECKING:
-  from openllm_core.prompts import PromptTemplate
-
-DEFAULT_PROMPT_TEMPLATE = """{instruction}"""
-FIM_PREFIX, FIM_MIDDLE, FIM_SUFFIX, FIM_PAD, EOD, FIM_INDICATOR = (
-  '<fim-prefix>',
-  '<fim-middle>',
-  '<fim-suffix>',
-  '<fim-pad>',
-  '<|endoftext|>',
-  '<FILL_HERE>',
-)
 
 
 class StarCoderConfig(openllm_core.LLMConfig):
@@ -44,37 +30,3 @@ class StarCoderConfig(openllm_core.LLMConfig):
     top_p: float = 0.95
     pad_token_id: int = 49152
     repetition_penalty: float = 1.2
-
-  def sanitize_parameters(
-    self,
-    prompt: str,
-    prompt_template: PromptTemplate | str | None = None,
-    system_message: str | None = None,
-    temperature: float | None = None,
-    top_p: float | None = None,
-    max_new_tokens: int | None = None,
-    repetition_penalty: float | None = None,
-    **attrs: t.Any,
-  ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
-    fim_mode, prefix, suffix = FIM_INDICATOR in prompt, None, None
-    if fim_mode:
-      try:
-        prefix, suffix = prompt.split(FIM_INDICATOR)
-      except Exception as err:
-        raise ValueError(f'Only one {FIM_INDICATOR} allowed in prompt') from err
-      prompt_text = f'{FIM_PREFIX}{prefix}{FIM_SUFFIX}{suffix}{FIM_MIDDLE}'
-    else:
-      prompt_text = prompt
-    # XXX: This value for pad_token_id is currently a hack, need more investigate why the default starcoder doesn't include the same value as santacoder EOD
-    return (
-      prompt_text,
-      {
-        'temperature': temperature,
-        'top_p': top_p,
-        'max_new_tokens': max_new_tokens,
-        'repetition_penalty': repetition_penalty,
-        'pad_token_id': 49152,
-        **attrs,
-      },
-      {},
-    )

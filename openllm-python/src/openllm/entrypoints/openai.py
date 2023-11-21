@@ -156,7 +156,7 @@ async def chat_completions(req, llm):
     request.messages, tokenize=False, add_generation_prompt=llm.config['add_generation_prompt']
   )
   logger.debug('Prompt: %r', prompt)
-  config = llm.config.with_request(request)
+  config = llm.config.compatible_options(request)
 
   try:
     result_generator = llm.generate_iterator(prompt, request_id=request_id, **config)
@@ -272,14 +272,9 @@ async def completions(req, llm):
   prompt = request.prompt
   # TODO: Support multiple prompts
 
-  if request.logprobs is not None and llm.__llm_backend__ == 'pt':  # TODO: support logprobs generation for PyTorch
-    return error_response(
-      HTTPStatus.BAD_REQUEST, "'logprobs' is not yet supported for PyTorch models. Make sure to unset `logprobs`."
-    )
-
   model_name, request_id = request.model, gen_random_uuid('cmpl')
   created_time = int(time.monotonic())
-  config = llm.config.with_request(request)
+  config = llm.config.compatible_options(request)
 
   try:
     result_generator = llm.generate_iterator(prompt, request_id=request_id, **config)
