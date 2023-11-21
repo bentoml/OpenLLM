@@ -298,14 +298,6 @@ class SamplingParams(ReprMixin):
   def __repr_keys__(self) -> set[str]:
     return {i.name for i in attr.fields(self.__class__)}
 
-  def with_options(self, **attrs: t.Any) -> SamplingParams:
-    inst = t.cast('SamplingParams', attr.evolve(self, **attrs))
-    for k, v in attrs.items():
-      if not hasattr(inst, k):
-        raise KeyError(f"'{self.__class__.__name__}' has no attribute {k}.")
-      _object_setattr(inst, k, v)
-    return inst
-
   def build(self) -> vllm.SamplingParams:
     return vllm.SamplingParams(
       max_tokens=self.max_tokens,
@@ -1474,7 +1466,8 @@ class LLMConfig(_ConfigAttr[GenerationConfig, SamplingParams]):
         top_p = 1.0
       else:
         top_p = config['top_p']
-      return config.sampling_config.with_options(top_p=top_p).build()
+      _object_setattr(config.sampling_config, 'top_p', top_p)
+      return config.sampling_config.build()
 
   class ctranslate:
     @staticmethod
