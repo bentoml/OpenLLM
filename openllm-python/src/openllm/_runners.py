@@ -27,26 +27,13 @@ def registry(cls=None, *, alias=None):
   return decorator(cls)
 
 
-def runner(llm):
+def runner(llm: openllm.LLM):
   from ._strategies import CascadingResourceStrategy
 
   try:
     models = [llm.bentomodel]
   except bentoml.exceptions.NotFound as err:
     raise RuntimeError(f'Failed to locate {llm.bentomodel}:{err}') from err
-
-  if llm._prompt_template:
-    prompt_template = llm._prompt_template.to_string()
-  elif hasattr(llm.config, 'default_prompt_template'):
-    prompt_template = llm.config.default_prompt_template
-  else:
-    prompt_template = None
-  if llm._system_message:
-    system_message = llm._system_message
-  elif hasattr(llm.config, 'default_system_message'):
-    system_message = llm.config.default_system_message
-  else:
-    system_message = None
 
   return types.new_class(
     llm.config.__class__.__name__[:-6] + 'Runner',
@@ -80,8 +67,8 @@ def runner(llm):
           ('llm_tag', llm.tag),
         ),
         'has_adapters': llm.has_adapters,
-        'prompt_template': prompt_template,
-        'system_message': system_message,
+        'template': llm.config.template,
+        'system_message': llm.config.system_message,
       }
     ),
   )(
@@ -101,7 +88,7 @@ class CTranslateRunnable(bentoml.Runnable):
   def __init__(self, llm):
     if not is_ctranslate_available():
       raise OpenLLMException('ctranslate is not installed. Please install it with `pip install "openllm[ctranslate]"`')
-    self.llm, self.config, self.model, self.tokenizer = llm, llm.config, llm.modle, llm.tokenizer
+    self.llm, self.config, self.model, self.tokenizer = llm, llm.config, llm.model, llm.tokenizer
 
   @bentoml.Runnable.method(batchable=False)
   async def generate_iterator(self, prompt_token_ids, request_id, stop=None, adapter_name=None, **attrs):

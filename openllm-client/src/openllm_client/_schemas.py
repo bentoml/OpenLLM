@@ -31,8 +31,6 @@ class Metadata(_SchemaMixin):
   model_name: str
   backend: str
   configuration: t.Dict[str, t.Any]
-  prompt_template: t.Optional[str]
-  system_message: t.Optional[str]
 
 
 def _structure_metadata(data: t.Dict[str, t.Any], cls: type[Metadata]) -> Metadata:
@@ -49,8 +47,6 @@ def _structure_metadata(data: t.Dict[str, t.Any], cls: type[Metadata]) -> Metada
       model_name=data['model_name'],
       backend=data['backend'],
       configuration=configuration,
-      prompt_template=data['prompt_template'],
-      system_message=data['system_message'],
     )
   except Exception as e:
     raise RuntimeError(f'Malformed metadata (Server-side issue): {e}') from None

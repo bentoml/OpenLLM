@@ -1,16 +1,6 @@
 from __future__ import annotations
-import typing as t
 
 import openllm_core
-from openllm_core.prompts import PromptTemplate, process_prompt
-
-SYSTEM_PROMPT = """<|SYSTEM|># StableLM Tuned (Alpha version)
-- StableLM is a helpful and harmless open-source AI language model developed by StabilityAI.
-- StableLM is excited to be able to help the user, but will refuse to do anything that could be considered harmful to the user.
-- StableLM is more than just an information source, StableLM is also able to write poetry, short stories, and make jokes.
-- StableLM will refuse to participate in anything that could harm a human.
-"""
-DEFAULT_PROMPT_TEMPLATE = """{system_prompt}<|USER|>{instruction}<|ASSISTANT|>"""
 
 
 class StableLMConfig(openllm_core.LLMConfig):
@@ -47,27 +37,15 @@ class StableLMConfig(openllm_core.LLMConfig):
     top_k: int = 0
     top_p: float = 0.9
 
-  def sanitize_parameters(
-    self,
-    prompt: str,
-    prompt_template: PromptTemplate | str | None = None,
-    system_message: str | None = None,
-    temperature: float | None = None,
-    max_new_tokens: int | None = None,
-    top_k: int | None = None,
-    top_p: float | None = None,
-    use_default_prompt_template: bool = False,
-    **attrs: t.Any,
-  ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
-    if 'tuned' in self._model_id and use_default_prompt_template:
-      system_prompt = attrs.pop('system_prompt', SYSTEM_PROMPT)
-      prompt_text = process_prompt(
-        prompt, DEFAULT_PROMPT_TEMPLATE, use_default_prompt_template, system_prompt=system_prompt, **attrs
-      )
-    else:
-      prompt_text = prompt
-    return (
-      prompt_text,
-      {'max_new_tokens': max_new_tokens, 'temperature': temperature, 'top_k': top_k, 'top_p': top_p},
-      {},
-    )
+  @property
+  def template(self) -> str:
+    return '{system_message}<|USER|>{instruction}<|ASSISTANT|>'
+
+  @property
+  def system_message(self) -> str:
+    return """<|SYSTEM|># StableLM Tuned (Alpha version)
+- StableLM is a helpful and harmless open-source AI language model developed by StabilityAI.
+- StableLM is excited to be able to help the user, but will refuse to do anything that could be considered harmful to the user.
+- StableLM is more than just an information source, StableLM is also able to write poetry, short stories, and make jokes.
+- StableLM will refuse to participate in anything that could harm a human.
+"""

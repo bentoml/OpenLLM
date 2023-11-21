@@ -2,8 +2,6 @@ from __future__ import annotations
 import typing as t
 
 import openllm_core
-from openllm_core.prompts import PromptTemplate, process_prompt
-from openllm_core.utils import dantic
 
 if t.TYPE_CHECKING:
   import transformers
@@ -14,32 +12,9 @@ END_KEY = '### End'
 INTRO_BLURB = (
   'Below is an instruction that describes a task. Write a response that appropriately completes the request.'
 )
-# NOTE: This is the prompt that is used for generating responses using an already
-# trained model.  It ends with the response key, where the job of the model is to provide
-# the completion that follows it (i.e. the response itself).
-DEFAULT_PROMPT_TEMPLATE = """{intro}
-{instruction_key}
-{instruction}
-{response_key}
-""".format(intro=INTRO_BLURB, instruction_key=INSTRUCTION_KEY, instruction='{instruction}', response_key=RESPONSE_KEY)
 
 
 def get_special_token_id(tokenizer: transformers.PreTrainedTokenizer, key: str) -> int:
-  """Gets the token ID for a given string that has been added to the tokenizer as a special token.
-
-  When training, we configure the tokenizer so that the sequences like "### Instruction:" and "### End" are
-  treated specially and converted to a single, new token.  This retrieves the token ID each of these keys map to.
-
-  Args:
-    tokenizer: the tokenizer
-    key: the key to convert to a single token
-
-  Raises:
-    RuntimeError: if more than one ID was generated
-
-  Returns:
-    int: the token ID for the given key.
-  """
   token_ids = tokenizer.encode(key)
   if len(token_ids) > 1:
     raise ValueError(f"Expected only a single token for '{key}' but found {token_ids}")
@@ -66,7 +41,6 @@ class DollyV2Config(openllm_core.LLMConfig):
     'default_id': 'databricks/dolly-v2-3b',
     'model_ids': ['databricks/dolly-v2-3b', 'databricks/dolly-v2-7b', 'databricks/dolly-v2-12b'],
   }
-  return_full_text: bool = dantic.Field(False, description='Whether to return the full prompt to the users.')
 
   class GenerationConfig:
     temperature: float = 0.9
@@ -75,20 +49,8 @@ class DollyV2Config(openllm_core.LLMConfig):
     max_new_tokens: int = 256
     eos_token_id: int = 50277  # NOTE: from get_special_token_id(self.tokenizer, END_KEY)
 
-  def sanitize_parameters(
-    self,
-    prompt: str,
-    prompt_template: PromptTemplate | str | None = None,
-    system_message: str | None = None,
-    max_new_tokens: int | None = None,
-    temperature: float | None = None,
-    top_k: int | None = None,
-    top_p: float | None = None,
-    use_default_prompt_template: bool = True,
-    **attrs: t.Any,
-  ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
-    return (
-      process_prompt(prompt, DEFAULT_PROMPT_TEMPLATE, use_default_prompt_template, **attrs),
-      {'max_new_tokens': max_new_tokens, 'top_k': top_k, 'top_p': top_p, 'temperature': temperature, **attrs},
-      {},
+  @property
+  def template(self):
+    return '{intro}\n{instruction_key}\n{instruction}\n{response_key}\n'.format(
+      intro=INTRO_BLURB, instruction_key=INSTRUCTION_KEY, instruction='{instruction}', response_key=RESPONSE_KEY
     )

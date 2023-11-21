@@ -115,7 +115,7 @@ def calc_dir_size(path:PathType)->int:return sum(f.stat().st_size for f in _Path
 @functools.lru_cache(maxsize=128)
 def generate_hash_from_file(f:str,algorithm:t.Literal['md5','sha1']='sha1')->str:return str(getattr(hashlib,algorithm)(str(os.path.getmtime(resolve_filepath(f))).encode()).hexdigest())
 def getenv(env:str,default:t.Any=None,var:t.Sequence[str]|None=None)->t.Any:
-  env_key={f'OPENLLM_{env.upper()}',env.upper()}
+  env_key={env.upper(),f'OPENLLM_{env.upper()}'}
   if var is not None:env_key=set(var)|env_key
   def callback(k:str)->t.Any:
     _var = os.getenv(k)

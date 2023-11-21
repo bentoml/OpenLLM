@@ -1,19 +1,8 @@
 from __future__ import annotations
-import typing as t
 
 import openllm_core
-from openllm_core.prompts import PromptTemplate
 
-# https://docs.mistral.ai/usage/guardrailing/
-DEFAULT_SYSTEM_MESSAGE = """Always assist with care, respect, and truth. Respond with utmost utility yet securely. Avoid harmful, unethical, prejudiced, or negative content. Ensure replies promote fairness and positivity."""
 SINST_KEY, EINST_KEY, BOS_TOKEN, EOS_TOKEN = '[INST]', '[/INST]', '<s>', '</s>'
-DEFAULT_PROMPT_TEMPLATE = """{start_key}{start_inst} {system_message} {instruction} {end_inst}\n""".format(
-  start_inst=SINST_KEY,
-  end_inst=EINST_KEY,
-  start_key=BOS_TOKEN,
-  system_message='{system_message}',
-  instruction='{instruction}',
-)
 
 
 class MistralConfig(openllm_core.LLMConfig):
@@ -33,8 +22,7 @@ class MistralConfig(openllm_core.LLMConfig):
     'default_id': 'mistralai/Mistral-7B-Instruct-v0.1',
     'serialisation': 'safetensors',
     'backend': ('pt', 'vllm'),
-    # NOTE: see https://docs.mistral.ai/usage/guardrailing/
-    # and https://docs.mistral.ai/llm/mistral-instruct-v0.1
+    # NOTE: see https://docs.mistral.ai/usage/guardrailing/ and https://docs.mistral.ai/llm/mistral-instruct-v0.1
     'model_ids': [
       'HuggingFaceH4/zephyr-7b-alpha',
       'HuggingFaceH4/zephyr-7b-beta',
@@ -57,32 +45,16 @@ class MistralConfig(openllm_core.LLMConfig):
     presence_penalty: float = 0.5
 
   @property
-  def default_prompt_template(self) -> str:
-    return DEFAULT_PROMPT_TEMPLATE
-
-  @property
-  def default_system_message(self) -> str:
-    return DEFAULT_SYSTEM_MESSAGE
-
-  def sanitize_parameters(
-    self,
-    prompt: str,
-    prompt_template: PromptTemplate | str | None = None,
-    system_message: str | None = None,
-    top_k: int | None = None,
-    top_p: float | None = None,
-    temperature: float | None = None,
-    max_new_tokens: int | None = None,
-    **attrs: t.Any,
-  ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
-    system_message = DEFAULT_SYSTEM_MESSAGE if system_message is None else system_message
-    if prompt_template is None:
-      prompt_template = DEFAULT_PROMPT_TEMPLATE
-    elif isinstance(prompt_template, str):
-      prompt_template = PromptTemplate(template=prompt_template)
-
-    return (
-      prompt_template.with_options(system_message=system_message).format(instruction=prompt),
-      {'max_new_tokens': max_new_tokens, 'temperature': temperature, 'top_p': top_p, 'top_k': top_k},
-      {},
+  def template(self) -> str:
+    return """{start_key}{start_inst} {system_message} {instruction} {end_inst}\n""".format(
+      start_inst=SINST_KEY,
+      end_inst=EINST_KEY,
+      start_key=BOS_TOKEN,
+      system_message='{system_message}',
+      instruction='{instruction}',
     )
+
+  # NOTE: https://docs.mistral.ai/usage/guardrailing/
+  @property
+  def system_message(self) -> str:
+    return """Always assist with care, respect, and truth. Respond with utmost utility yet securely. Avoid harmful, unethical, prejudiced, or negative content. Ensure replies promote fairness and positivity."""

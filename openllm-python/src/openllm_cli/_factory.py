@@ -135,13 +135,11 @@ def _id_callback(ctx: click.Context, _: click.Parameter, value: t.Tuple[str, ...
 def start_decorator(serve_grpc: bool = False) -> t.Callable[[FC], t.Callable[[FC], FC]]:
   def wrapper(fn: FC) -> t.Callable[[FC], FC]:
     composed = openllm.utils.compose(
-      _OpenLLM_GenericInternalConfig().to_click_options,
+      _OpenLLM_GenericInternalConfig.parse,
       _http_server_args if not serve_grpc else _grpc_server_args,
       cog.optgroup.group('General LLM Options', help='The following options are related to running LLM Server.'),
       dtype_option(factory=cog.optgroup),
       model_version_option(factory=cog.optgroup),
-      system_message_option(factory=cog.optgroup),
-      prompt_template_file_option(factory=cog.optgroup),
       cog.optgroup.option('--server-timeout', type=int, default=None, help='Server timeout in seconds'),
       workers_per_resource_option(factory=cog.optgroup),
       cors_option(factory=cog.optgroup),
@@ -314,27 +312,6 @@ def model_version_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Cal
     type=click.STRING,
     default=None,
     help='Optional model version to save for this model. It will be inferred automatically from model-id.',
-    **attrs,
-  )(f)
-
-
-def system_message_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
-  return cli_option(
-    '--system-message',
-    type=click.STRING,
-    default=None,
-    envvar='OPENLLM_SYSTEM_MESSAGE',
-    help='Optional system message for supported LLMs. If given LLM supports system message, OpenLLM will provide a default system message.',
-    **attrs,
-  )(f)
-
-
-def prompt_template_file_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
-  return cli_option(
-    '--prompt-template-file',
-    type=click.File(),
-    default=None,
-    help='Optional file path containing user-defined custom prompt template. By default, the prompt template for the specified LLM will be used.',
     **attrs,
   )(f)
 

@@ -13,8 +13,6 @@ logger = logging.getLogger(__name__)
 llm = openllm.LLM[t.Any, t.Any](
   model_id=svars.model_id,
   model_tag=svars.model_tag,
-  prompt_template=svars.prompt_template,
-  system_message=svars.system_message,
   serialisation=svars.serialization,
   adapter_map=svars.adapter_map,
   trust_remote_code=svars.trust_remote_code,
@@ -50,8 +48,6 @@ _Metadata = openllm.MetadataOutput(
   backend=llm.__llm_backend__,
   model_id=llm.model_id,
   configuration=llm.config.model_dump_json().decode(),
-  prompt_template=llm.runner.prompt_template,
-  system_message=llm.runner.system_message,
 )
 
 

@@ -34,8 +34,6 @@ class MetadataOutput(_SchemaMixin):
   model_name: str
   backend: str
   configuration: str
-  prompt_template: t.Optional[str]
-  system_message: t.Optional[str]
 
   def model_dump(self) -> dict[str, t.Any]:
     return {
@@ -44,8 +42,6 @@ class MetadataOutput(_SchemaMixin):
       'model_name': self.model_name,
       'backend': self.backend,
       'configuration': self.configuration,
-      'prompt_template': orjson.dumps(self.prompt_template).decode(),
-      'system_message': orjson.dumps(self.system_message).decode(),
     }
 
 

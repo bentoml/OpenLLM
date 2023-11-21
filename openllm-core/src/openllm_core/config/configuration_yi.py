@@ -1,11 +1,6 @@
 from __future__ import annotations
-import typing as t
 
 import openllm_core
-from openllm_core.prompts import PromptTemplate
-
-DEFAULT_SYSTEM_MESSAGE = ''
-DEFAULT_PROMPT_TEMPLATE = '{instruction}'
 
 
 class YiConfig(openllm_core.LLMConfig):
@@ -39,35 +34,3 @@ class YiConfig(openllm_core.LLMConfig):
   class SamplingParams:
     best_of: int = 1
     presence_penalty: float = 0.5
-
-  @property
-  def default_prompt_template(self) -> str:
-    return DEFAULT_PROMPT_TEMPLATE
-
-  @property
-  def default_system_message(self) -> str:
-    return DEFAULT_SYSTEM_MESSAGE
-
-  def sanitize_parameters(
-    self,
-    prompt: str,
-    top_k: int,
-    top_p: float,
-    temperature: float,
-    max_new_tokens: int,
-    repetition_penalty: float,
-    prompt_template: PromptTemplate | str | None = None,
-    system_message: str | None = None,
-    **attrs: t.Any,
-  ) -> tuple[str, dict[str, t.Any], dict[str, t.Any]]:
-    system_message = DEFAULT_SYSTEM_MESSAGE if system_message is None else system_message
-    if prompt_template is None:
-      prompt_template = DEFAULT_PROMPT_TEMPLATE
-    elif isinstance(prompt_template, str):
-      prompt_template = PromptTemplate(template=prompt_template)
-
-    return (
-      prompt_template.with_options(system_message=system_message).format(instruction=prompt),
-      {'max_new_tokens': max_new_tokens, 'temperature': temperature, 'top_p': top_p, 'top_k': top_k},
-      {},
-    )

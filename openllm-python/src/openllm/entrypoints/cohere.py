@@ -105,7 +105,7 @@ async def cohere_generate(req, llm):
   if err_check is not None:
     return err_check
   request_id = gen_random_uuid('cohere-generate')
-  config = llm.config.with_request(request)
+  config = llm.config.compatible_options(request)
 
   if request.prompt_vars is not None:
     prompt = request.prompt.format(**request.prompt_vars)
@@ -202,7 +202,7 @@ async def cohere_chat(req, llm):
     _transpile_cohere_chat_messages(request), tokenize=False, add_generation_prompt=llm.config['add_generation_prompt']
   )
   logger.debug('Prompt: %r', prompt)
-  config = llm.config.with_request(request)
+  config = llm.config.compatible_options(request)
 
   try:
     result_generator = llm.generate_iterator(prompt, request_id=request_id, **config)

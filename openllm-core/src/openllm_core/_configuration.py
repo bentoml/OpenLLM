@@ -1460,13 +1460,13 @@ class LLMConfig(_ConfigAttr[GenerationConfig, SamplingParams]):
 
   def inference_options(self, llm: openllm.LLM[M, T], backend: str | None = None) -> tuple[Self, t.Any]:
     backend = backend if backend is not None else llm.__llm_backend__
-    cls = getattr(self, backend, None)
-    if cls is None:
+    framework = getattr(self, backend, None)
+    if framework is None:
       raise ValueError(f'Unknown backend {backend}')
     try:
-      return self, cls.build(self)
+      return self, framework.build(self)
     except AttributeError:
-      raise RuntimeError(f'Unknown backend {llm.__llm_backend__}') from None
+      raise RuntimeError(f'Unknown backend {backend}') from None
 
   class vllm:
     @staticmethod
@@ -1503,73 +1503,78 @@ class LLMConfig(_ConfigAttr[GenerationConfig, SamplingParams]):
     def build(config: LLMConfig) -> transformers.GenerationConfig:
       return transformers.GenerationConfig(**converter.unstructure(config.generation_config))
 
-  def to_generation_config(self, return_as_dict: bool = False) -> transformers.GenerationConfig | DictStrAny:
-    warnings.warn(
-      "'to_generation_config' is deprecated, please use 'inference_options' instead.", DeprecationWarning, stacklevel=3
-    )
-    _, config = self.inference_options(None, 'hf')
-    return config.to_dict() if return_as_dict else config
-
-  def to_sampling_config(self) -> vllm.SamplingParams:
-    warnings.warn(
-      "'to_sampling_config' is deprecated, please use 'inference_options' instead.", DeprecationWarning, stacklevel=3
-    )
-    return self.inference_options(None, 'vllm')[-1]
+  @overload
+  def compatible_options(self, request: ChatCompletionRequest | CompletionRequest) -> dict[str, t.Any]: ...
 
   @overload
-  def with_request(self, request: ChatCompletionRequest | CompletionRequest) -> dict[str, t.Any]: ...
+  def compatible_options(self, request: CohereChatRequest | CohereGenerateRequest) -> dict[str, t.Any]: ...
 
-  @overload
-  def with_request(self, request: CohereChatRequest | CohereGenerateRequest) -> dict[str, t.Any]: ...
-
-  def with_request(self, request: AttrsInstance) -> dict[str, t.Any]:
+  def compatible_options(self, request: AttrsInstance) -> dict[str, t.Any]:
     if importlib.util.find_spec('openllm') is None:
       raise MissingDependencyError(
-        "'openllm' is required to use 'with_request'. Make sure to install with 'pip install openllm'."
+        "'openllm' is required to use 'compatible_options'. Make sure to install with 'pip install openllm'."
       )
     from openllm.protocol.cohere import CohereChatRequest, CohereGenerateRequest
     from openllm.protocol.openai import ChatCompletionRequest, CompletionRequest
 
     if isinstance(request, (ChatCompletionRequest, CompletionRequest)):
-      return self._with_openai_request(request)
+      return self.openai.build(self, request)
     elif isinstance(request, (CohereChatRequest, CohereGenerateRequest)):
-      return self._with_cohere_request(request)
+      return self.cohere.build(self, request)
     else:
       raise TypeError(f'Unknown request type {type(request)}')
 
-  def _with_openai_request(self, request: ChatCompletionRequest | CompletionRequest) -> dict[str, t.Any]:
-    d = dict(
-      temperature=first_not_none(request.temperature, self['temperature']),
-      top_p=first_not_none(request.top_p, self['top_p']),
-      top_k=first_not_none(request.top_k, self['top_k']),
-      best_of=first_not_none(request.best_of, self['best_of']),
-      n=first_not_none(request.n, default=self['n']),
-      stop=first_not_none(request.stop, default=None),
-      max_new_tokens=first_not_none(request.max_tokens, default=self['max_new_tokens']),
-      presence_penalty=first_not_none(request.presence_penalty, default=self['presence_penalty']),
-      frequency_penalty=first_not_none(request.frequency_penalty, default=self['frequency_penalty']),
-    )
-    if hasattr(request, 'logprobs'):
-      d['logprobs'] = first_not_none(request.logprobs, default=self['logprobs'])
-    return d
+  class openai:
+    @staticmethod
+    def build(config: LLMConfig, request: ChatCompletionRequest | CompletionRequest) -> dict[str, t.Any]:
+      d = dict(
+        temperature=first_not_none(request.temperature, config['temperature']),
+        top_p=first_not_none(request.top_p, config['top_p']),
+        top_k=first_not_none(request.top_k, config['top_k']),
+        best_of=first_not_none(request.best_of, config['best_of']),
+        n=first_not_none(request.n, default=config['n']),
+        stop=first_not_none(request.stop, default=None),
+        max_new_tokens=first_not_none(request.max_tokens, default=config['max_new_tokens']),
+        presence_penalty=first_not_none(request.presence_penalty, default=config['presence_penalty']),
+        frequency_penalty=first_not_none(request.frequency_penalty, default=config['frequency_penalty']),
+      )
+      if hasattr(request, 'logprobs'):
+        d['logprobs'] = first_not_none(request.logprobs, default=config['logprobs'])
+      return d
 
-  def _with_cohere_request(self, request: CohereGenerateRequest | CohereChatRequest) -> dict[str, t.Any]:
-    d = dict(
-      max_new_tokens=first_not_none(request.max_tokens, default=self['max_new_tokens']),
-      temperature=first_not_none(request.temperature, default=self['temperature']),
-      top_k=first_not_none(request.k, default=self['top_k']),
-      top_p=first_not_none(request.p, default=self['top_p']),
-    )
-    if hasattr(request, 'num_generations'):
-      d['n'] = first_not_none(request.num_generations, default=self['n'])
-    if hasattr(request, 'frequency_penalty'):
-      d['frequency_penalty'] = first_not_none(request.frequency_penalty, default=self['frequency_penalty'])
-    if hasattr(request, 'presence_penalty'):
-      d['presence_penalty'] = first_not_none(request.presence_penalty, default=self['presence_penalty'])
-    return d
+  class cohere:
+    @staticmethod
+    def build(config: LLMConfig, request: CohereGenerateRequest | CohereChatRequest) -> dict[str, t.Any]:
+      d = dict(
+        max_new_tokens=first_not_none(request.max_tokens, default=config['max_new_tokens']),
+        temperature=first_not_none(request.temperature, default=config['temperature']),
+        top_k=first_not_none(request.k, default=config['top_k']),
+        top_p=first_not_none(request.p, default=config['top_p']),
+      )
+      if hasattr(request, 'num_generations'):
+        d['n'] = first_not_none(request.num_generations, default=config['n'])
+      if hasattr(request, 'frequency_penalty'):
+        d['frequency_penalty'] = first_not_none(request.frequency_penalty, default=config['frequency_penalty'])
+      if hasattr(request, 'presence_penalty'):
+        d['presence_penalty'] = first_not_none(request.presence_penalty, default=config['presence_penalty'])
+      return d
+
+  @property
+  def template(self) -> str:
+    # Return the default prompt templates for given models.
+    # This is probably only useful for debugging. Users should be responsible
+    # for formatting the prompt themselves.
+    # by default it is just a '{instruction}'
+    return '{system_message}{instruction}'
+
+  @property
+  def system_message(self) -> str:
+    # Return the default system message for given models.
+    # This should really only be used for chat models.
+    return ''
 
   @classmethod
-  def to_click_options(cls, f: AnyCallable) -> click.Command:
+  def parse(cls, f: AnyCallable) -> click.Command:
     """Convert current configuration to click options.
 
     This can be used as a decorator for click commands.
@@ -1613,6 +1618,20 @@ class LLMConfig(_ConfigAttr[GenerationConfig, SamplingParams]):
   @classmethod
   def peft_task_type(cls) -> str:
     return PEFT_TASK_TYPE_TARGET_MAPPING[cls.__openllm_model_type__]
+
+  # deprecated
+  def to_generation_config(self, return_as_dict: bool = False) -> transformers.GenerationConfig | DictStrAny:
+    warnings.warn(
+      "'to_generation_config' is deprecated, please use 'inference_options' instead.", DeprecationWarning, stacklevel=3
+    )
+    _, config = self.inference_options(None, 'hf')
+    return config.to_dict() if return_as_dict else config
+
+  def to_sampling_config(self) -> vllm.SamplingParams:
+    warnings.warn(
+      "'to_sampling_config' is deprecated, please use 'inference_options' instead.", DeprecationWarning, stacklevel=3
+    )
+    return self.inference_options(None, 'vllm')[-1]
 
 
 converter.register_unstructure_hook_factory(
