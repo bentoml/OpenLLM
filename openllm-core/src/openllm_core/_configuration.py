@@ -7,6 +7,7 @@ import os
 import sys
 import types
 import typing as t
+import warnings
 
 import attr
 import click_option_group as cog
@@ -48,7 +49,12 @@ if t.TYPE_CHECKING:
   from openllm.protocol.cohere import CohereChatRequest, CohereGenerateRequest
   from openllm.protocol.openai import ChatCompletionRequest, CompletionRequest
 else:
-  vllm = LazyLoader('vllm', globals(), 'vllm')
+  vllm = LazyLoader(
+    'vllm',
+    globals(),
+    'vllm',
+    exc_msg='vLLM is not installed. Make sure to install it with `pip install "openllm[vllm]"`',
+  )
   transformers = LazyLoader('transformers', globals(), 'transformers')
   peft = LazyLoader('peft', globals(), 'peft')
 
@@ -847,8 +853,7 @@ class LLMConfig(_ConfigAttr[GenerationConfig, SamplingParams]):
 
   - Automatic environment conversion: Each fields will automatically be provisioned with an environment
   variable, make it easy to work with ahead-of-time or during serving time
-  - Familiar API: It is compatible with cattrs as well as providing a few Pydantic-2 like API,
-  i.e: ``model_construct_env``, ``to_generation_config``, ``to_click_options``
+  - Familiar API: It is compatible with cattrs as well as providing a few Pydantic-2 like API, i.e: ``model_construct_env``
   - Automatic CLI generation: It can identify each fields and convert it to compatible Click options.
   This means developers can use any of the LLMConfig to create CLI with compatible-Python
   CLI library (click, typer, ...)
@@ -1453,9 +1458,13 @@ class LLMConfig(_ConfigAttr[GenerationConfig, SamplingParams]):
   def make_fine_tune_config(self, adapter_type: AdapterType, **attrs: t.Any) -> FineTuneConfig:
     return FineTuneConfig(adapter_type=adapter_type, llm_config_class=self.__class__).with_config(**attrs)
 
-  def inference_options(self, llm: openllm.LLM[M, T]) -> tuple[Self, t.Any]:
+  def inference_options(self, llm: openllm.LLM[M, T], backend: str | None = None) -> tuple[Self, t.Any]:
+    backend = backend if backend is not None else llm.__llm_backend__
+    cls = getattr(self, backend, None)
+    if cls is None:
+      raise ValueError(f'Unknown backend {backend}')
     try:
-      return self, getattr(self, llm.__llm_backend__).build(self)
+      return self, cls.build(self)
     except AttributeError:
       raise RuntimeError(f'Unknown backend {llm.__llm_backend__}') from None
 
@@ -1489,18 +1498,23 @@ class LLMConfig(_ConfigAttr[GenerationConfig, SamplingParams]):
     def build(config: LLMConfig) -> LLMConfig:
       return config
 
-  @overload
-  def to_generation_config(self, return_as_dict: t.Literal[False] = False) -> transformers.GenerationConfig: ...
-
-  @overload
-  def to_generation_config(self, return_as_dict: t.Literal[True] = ...) -> DictStrAny: ...
+  class hf:
+    @staticmethod
+    def build(config: LLMConfig) -> transformers.GenerationConfig:
+      return transformers.GenerationConfig(**converter.unstructure(config.generation_config))
 
   def to_generation_config(self, return_as_dict: bool = False) -> transformers.GenerationConfig | DictStrAny:
-    config = transformers.GenerationConfig(**converter.unstructure(self.generation_config))
+    warnings.warn(
+      "'to_generation_config' is deprecated, please use 'inference_options' instead.", DeprecationWarning, stacklevel=3
+    )
+    _, config = self.inference_options(None, 'hf')
     return config.to_dict() if return_as_dict else config
 
-  def to_vllm(self) -> vllm.SamplingParams:
-    return self.sampling_config.build()
+  def to_sampling_config(self) -> vllm.SamplingParams:
+    warnings.warn(
+      "'to_sampling_config' is deprecated, please use 'inference_options' instead.", DeprecationWarning, stacklevel=3
+    )
+    return self.inference_options(None, 'vllm')[-1]
 
   @overload
   def with_request(self, request: ChatCompletionRequest | CompletionRequest) -> dict[str, t.Any]: ...

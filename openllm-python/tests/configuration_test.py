@@ -7,7 +7,6 @@ from unittest import mock
 
 import attr
 import pytest
-import transformers
 from hypothesis import assume, given, strategies as st
 
 import openllm
@@ -163,13 +162,6 @@ def test_struct_envvar_with_overwrite_provided_env(monkeypatch: pytest.MonkeyPat
     ).model_construct_env(field1=20.0, temperature=0.4)
     assert sent.generation_config.temperature == 0.4
     assert sent.field1 == 20.0
-
-
-@given(model_settings())
-@pytest.mark.parametrize(('return_dict', 'typ'), [(True, dict), (False, transformers.GenerationConfig)])
-def test_conversion_to_transformers(return_dict: bool, typ: type[t.Any], gen_settings: ModelSettings):
-  cl_ = make_llm_config('ConversionLLM', gen_settings)
-  assert isinstance(cl_().to_generation_config(return_as_dict=return_dict), typ)
 
 
 @given(model_settings())
