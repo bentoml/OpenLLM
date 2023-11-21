@@ -50,10 +50,6 @@ repos:
         verbose: true
       - id: end-of-file-fixer
         verbose: true
-        exclude: |
-          (?x)^(
-              openllm-python/tests/models/.*
-          )$
       - id: check-yaml
         args: ['--unsafe']
       - id: check-toml
