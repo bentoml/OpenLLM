@@ -8,10 +8,9 @@ import torch
 
 import bentoml
 import openllm
-from bentoml._internal.models.model import ModelSignature
 from openllm_core._schemas import CompletionChunk, GenerationOutput, SampleLogprobs
 from openllm_core.exceptions import OpenLLMException
-from openllm_core.utils import ReprMixin, converter, is_ctranslate_available, is_vllm_available
+from openllm_core.utils import ReprMixin, is_ctranslate_available, is_vllm_available
 
 __all__ = ['runner']
 
@@ -88,11 +87,9 @@ def runner(llm):
   )(
     _registry[llm.__llm_backend__],
     name=llm.runner_name,
-    embedded=False,
     models=models,
     scheduling_strategy=CascadingResourceStrategy,
     runnable_init_params={'llm': llm},
-    method_configs=converter.unstructure({'generate_iterator': ModelSignature(batchable=False)}),
   )
 
 
