@@ -57,7 +57,6 @@ from openllm_core.utils import (
   first_not_none,
   gen_random_uuid,
   get_debug_mode,
-  get_disable_warnings,
   get_quiet_mode,
   is_torch_available,
   pkg,
@@ -94,7 +93,7 @@ else:
   torch = LazyLoader('torch', globals(), 'torch')
 
 P = ParamSpec('P')
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('openllm')
 OPENLLM_FIGLET = """\
  ██████╗ ██████╗ ███████╗███╗   ██╗██╗     ██╗     ███╗   ███╗
 ██╔═══██╗██╔══██╗██╔════╝████╗  ██║██║     ██║     ████╗ ████║
@@ -123,21 +122,19 @@ _EXT_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), 'extension
 
 
 def backend_warning(backend: LiteralBackend, build: bool = False) -> None:
-  if backend == 'pt' and (not get_disable_warnings()) and not get_quiet_mode():
+  if backend == 'pt':
     if openllm.utils.is_vllm_available():
-      termui.warning(
+      logger.warning(
         'vLLM is available, but using PyTorch backend instead. Note that vLLM is a lot more performant and should always be used in production (by explicitly set --backend vllm).'
       )
     else:
-      termui.warning(
+      logger.warning(
         'vLLM is not available. Note that PyTorch backend is not as performant as vLLM and you should always consider using vLLM for production.'
       )
     if build:
-      termui.info(
+      logger.info(
         "Tip: You can set '--backend vllm' to package your Bento with vLLM backend regardless if vLLM is available locally."
       )
-    if not get_debug_mode():
-      termui.info("To disable these warnings, set 'OPENLLM_DISABLE_WARNING=True'")
 
 
 class Extensions(click.MultiCommand):
@@ -419,22 +416,22 @@ def start_command(
       serialisation, default='safetensors' if has_safetensors_weights(model_id, model_version) else 'legacy'
     ),
   )
-  if serialisation == 'safetensors' and quantize is not None and not get_disable_warnings() and not get_quiet_mode():
-    termui.warning(f"'--quantize={quantize}' might not work with 'safetensors' serialisation format.")
-    termui.warning(
-      f"Make sure to check out '{model_id}' repository to see if the weights is in '{serialisation}' format if unsure."
+  if serialisation == 'safetensors' and quantize is not None:
+    logger.warning("'--quantize=%s' might not work with 'safetensors' serialisation format.", quantize)
+    logger.warning(
+      "Make sure to check out '%s' repository to see if the weights is in '%s' format if unsure.",
+      model_id,
+      serialisation,
     )
-    termui.info("Tip: You can always fallback to '--serialisation legacy' when running quantisation.")
-    if not get_debug_mode():
-      termui.info("To disable these warnings, set 'OPENLLM_DISABLE_WARNING=True'")
+    logger.info("Tip: You can always fallback to '--serialisation legacy' when running quantisation.")
 
   import torch
 
   if backend == 'pt' and not torch.cuda.is_available():
     if dtype == 'auto':
       dtype = 'float'
-    elif dtype not in {'float', 'float32'} and not get_disable_warnings() and not get_quiet_mode():
-      termui.warning('"bfloat16" and "half" are not supported on CPU. OpenLLM will default fallback to "float32".')
+    elif dtype not in {'float', 'float32'}:
+      logger.warning('"bfloat16" and "half" are not supported on CPU. OpenLLM will default fallback to "float32".')
     dtype = 'float'  # we need to cast back to full precision if cuda is not available
   llm = openllm.LLM[t.Any, t.Any](
     model_id=model_id,
@@ -549,22 +546,22 @@ def start_grpc_command(
   serialisation = first_not_none(
     serialisation, default='safetensors' if has_safetensors_weights(model_id, model_version) else 'legacy'
   )
-  if serialisation == 'safetensors' and quantize is not None and not get_disable_warnings() and not get_quiet_mode():
-    termui.warning(f"'--quantize={quantize}' might not work with 'safetensors' serialisation format.")
-    termui.warning(
-      f"Make sure to check out '{model_id}' repository to see if the weights is in '{serialisation}' format if unsure."
+  if serialisation == 'safetensors' and quantize is not None:
+    logger.warning("'--quantize=%s' might not work with 'safetensors' serialisation format.", quantize)
+    logger.warning(
+      "Make sure to check out '%s' repository to see if the weights is in '%s' format if unsure.",
+      model_id,
+      serialisation,
     )
-    termui.info("Tip: You can always fallback to '--serialisation legacy' when running quantisation.")
-    if not get_debug_mode():
-      termui.info("To disable these warnings, set 'OPENLLM_DISABLE_WARNING=True'")
+    logger.info("Tip: You can always fallback to '--serialisation legacy' when running quantisation.")
 
   import torch
 
   if backend == 'pt' and not torch.cuda.is_available():
     if dtype == 'auto':
       dtype = 'float'
-    elif dtype not in {'float', 'float32'} and not get_disable_warnings() and not get_quiet_mode():
-      termui.warning('"bfloat16" and "half" are not supported on CPU. OpenLLM will default fallback to "float32".')
+    elif dtype not in {'float', 'float32'}:
+      logger.warning('"bfloat16" and "half" are not supported on CPU. OpenLLM will default fallback to "float32".')
     dtype = 'float'  # we need to cast back to full precision if cuda is not available
   llm = openllm.LLM[t.Any, t.Any](
     model_id=model_id,
@@ -1095,13 +1092,14 @@ def build_command(
 
   push_cmd = f'bentoml push {bento_tag}'
   cloud_context = get_current_bentocloud_context()
-  if cloud_context is None and (not get_disable_warnings()) and not get_quiet_mode():
+  if cloud_context is None:
     available_context = [c.name for c in cloud_config.contexts]
     if not available_context:
-      termui.warning('No default BentoCloud context found. Please login with `bentoml cloud login` first.')
+      logger.warning('No default BentoCloud context found. Please login with `bentoml cloud login` first.')
     else:
-      termui.warning(
-        f'No context is passed, but the following context is available: {available_context}. Make sure to specify the argument "--context" for specific context you want to push to.'
+      logger.warning(
+        'No context is passed, but the following context is available: %s. Make sure to specify the argument "--context" for specific context you want to push to.',
+        available_context,
       )
   else:
     push_cmd += f' --context {cloud_context}'

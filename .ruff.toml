@@ -1,77 +1,75 @@
 extend-exclude = [
-  "tools",
-  "examples",
-  "openllm-python/src/openllm/__init__.py",
-  "openllm-python/src/openllm/_version.py",
-  "openllm-python/src/openllm/models/__init__.py",
-  "openllm-python/src/openllm_cli/playground",
-  "openllm-client/src/openllm_client/pb/**",
+    "tools",
+    "examples",
+    "openllm-python/src/openllm/__init__.py",
+    "openllm-python/src/openllm/_version.py",
+    "openllm-python/src/openllm/models/__init__.py",
+    "openllm-python/src/openllm_cli/playground",
+    "openllm-client/src/openllm_client/pb/**",
 ]
 extend-include = ["*.ipynb"]
 extend-select = [
-  "E",
-  "F",
-  "B",
-  "PIE",
-  "I",    # isort
-  "G",    # flake8-logging-format
-  "W",    # pycodestyle
-  "Q",    # flake8-quotes
-  "FA",   # flake8-future-annotations
-  "TCH",  # flake8-type-checking
-  "PLW",  # pylint-warning
-  "PLR",  # pylint-refactor
-  "PT",   # flake8-pytest-style
-  "PERF", # perflint
-  "FLY",  # flynt
-  "RUF",  # Ruff-specific rules
-  "YTT",  # flake8-2020
+    "E",
+    "F",
+    "B",
+    "PIE",
+    "G",    # flake8-logging-format
+    "W",    # pycodestyle
+    "Q",    # flake8-quotes
+    "FA",   # flake8-future-annotations
+    "TCH",  # flake8-type-checking
+    "PLW",  # pylint-warning
+    "PLR",  # pylint-refactor
+    "PT",   # flake8-pytest-style
+    "PERF", # perflint
+    "RUF",  # Ruff-specific rules
+    "YTT",  # flake8-2020
 ]
 fix = true
 ignore = [
-  "PLR0911",
-  "PLR0912",
-  "PLR0913",
-  "PLR0915",
-  "PLR2004", # magic value to use constant
-  "E501",    # ignore line length violation
-  "E401",    # ignore multiple line import
-  "E702",
-  "TCH004",  # don't move runtime import out, just warn about it
-  "RUF012",  # mutable attributes to be used with ClassVar
-  "E701",    # multiple statement on single line
+    "PLR0911",
+    "PLR0912",
+    "PLR0913",
+    "PLR0915",
+    "PLR2004", # magic value to use constant
+    "E501",    # ignore line length violation
+    "E401",    # ignore multiple line import
+    "E702",
+    "TCH004",  # don't move runtime import out, just warn about it
+    "RUF012",  # mutable attributes to be used with ClassVar
+    "E701",    # multiple statement on single line
 ]
 line-length = 119
 indent-width = 2
 target-version = "py38"
 typing-modules = [
-  "openllm_core._typing_compat",
-  "openllm_client._typing_compat",
+    "openllm_core._typing_compat",
+    "openllm_client._typing_compat",
 ]
 unfixable = ["TCH004"]
 
 [lint.flake8-type-checking]
 exempt-modules = [
-  "typing",
-  "typing_extensions",
-  "openllm_core._typing_compat",
-  "openllm_client._typing_compat",
+    "typing",
+    "typing_extensions",
+    "openllm_core._typing_compat",
+    "openllm_client._typing_compat",
 ]
 runtime-evaluated-base-classes = [
-  "openllm_core._configuration.LLMConfig",
-  "openllm_core._configuration.GenerationConfig",
-  "openllm_core._configuration.SamplingParams",
-  "openllm_core._configuration.ModelSettings",
-  "openllm.LLMConfig",
+    "openllm_core._configuration.LLMConfig",
+    "openllm_core._configuration.GenerationConfig",
+    "openllm_core._configuration.SamplingParams",
+    "openllm_core._configuration.ModelSettings",
+    "openllm.LLMConfig",
 ]
 runtime-evaluated-decorators = [
-  "attrs.define",
-  "attrs.frozen",
-  "trait",
-  "attr.attrs",
-  'attr.define',
-  '_attr.define',
-  'attr.frozen',
+    "attrs.define",
+    "attrs.frozen",
+    "trait",
+    "attr.attrs",
+    'attr.define',
+    '_attr.define',
+    'attr.frozen',
 ]
 
 [format]
@@ -87,29 +85,6 @@ convention = "google"
 ignore-overlong-task-comments = true
 max-line-length = 119
 
-[lint.isort]
-combine-as-imports = true
-known-first-party = [
-  "openllm",
-  "bentoml",
-  "openllm_core",
-  "openllm_client",
-  "openllm_cli",
-]
-known-third-party = [
-  "transformers",
-  "click",
-  "huggingface_hub",
-  "torch",
-  "vllm",
-  "auto_gptq",
-  "peft",
-  "click_option_group",
-]
-split-on-trailing-comma = false
-no-lines-before = ["future", "standard-library"]
-relative-imports-order = "closest-to-furthest"
-
 [lint.flake8-quotes]
 avoid-escape = false
 inline-quotes = "single"
@@ -121,5 +96,4 @@ docstring-quotes = "double"
 "openllm-python/src/openllm/_llm.py" = ["F811"]
 "openllm-core/src/openllm_core/utils/import_utils.py" = ["PLW0603", "F811"]
 "openllm-core/src/openllm_core/_configuration.py" = ["F811", "Q001"]
-"openllm-python/src/openllm/__init__.pyi" = ["I001"]
 "openllm-python/src/openllm/_service_vars_pkg.py" = ["F821"]

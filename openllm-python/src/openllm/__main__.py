@@ -1,2 +1,2 @@
 # fmt: off
-if __name__ == '__main__':from openllm_cli.entrypoint import cli;cli()  # noqa
+if __name__ == '__main__':from openllm_cli.entrypoint import cli;cli()

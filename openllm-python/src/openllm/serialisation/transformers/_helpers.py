@@ -6,7 +6,6 @@ import typing as t
 import transformers
 
 from openllm.serialisation.constants import HUB_ATTRS
-from openllm_core.utils import get_disable_warnings, get_quiet_mode
 
 logger = logging.getLogger(__name__)
 
@@ -44,10 +43,9 @@ def infer_autoclass_from_llm(llm, config, /):
     # in case this model doesn't use the correct auto class for model type, for example like chatglm
     # where it uses AutoModel instead of AutoModelForCausalLM. Then we fallback to AutoModel
     if autoclass not in config.auto_map:
-      if not get_disable_warnings() and not get_quiet_mode():
-        logger.warning(
-          "OpenLLM failed to determine compatible Auto classes to load %s. Falling back to 'AutoModel'.\nTip: Make sure to specify 'AutoModelForCausalLM' or 'AutoModelForSeq2SeqLM' in your 'config.auto_map'. If your model type is yet to be supported, please file an issues on our GitHub tracker.",
-          llm._model_id,
-        )
+      logger.warning(
+        "OpenLLM failed to determine compatible Auto classes to load %s. Falling back to 'AutoModel'.\nTip: Make sure to specify 'AutoModelForCausalLM' or 'AutoModelForSeq2SeqLM' in your 'config.auto_map'. If your model type is yet to be supported, please file an issues on our GitHub tracker.",
+        llm._model_id,
+      )
       autoclass = 'AutoModel'
   return getattr(transformers, autoclass)
