@@ -80,13 +80,13 @@ def get_quiet_mode()->bool:
   return False
 def get_disable_warnings()->bool:return check_bool_env(WARNING_ENV_VAR, False)
 def set_disable_warnings(disable:bool=True)->None:
-  if get_disable_warnings():os.environ[WARNING_ENV_VAR]=str(disable)
+  if disable:os.environ[WARNING_ENV_VAR]=str(disable)
 def set_debug_mode(enabled:bool,level:int=1)->None:
   if enabled:os.environ[DEV_DEBUG_VAR] = str(level)
   os.environ.update({DEBUG_ENV_VAR:str(enabled),QUIET_ENV_VAR:str(not enabled),_GRPC_DEBUG_ENV_VAR:'DEBUG' if enabled else 'ERROR','CT2_VERBOSE':'3'})
-  set_disable_warnings(enabled)
+  set_disable_warnings(not enabled)
 def set_quiet_mode(enabled:bool)->None:
-  os.environ.update({QUIET_ENV_VAR:str(enabled),_GRPC_DEBUG_ENV_VAR:'NONE','CT2_VERBOSE':'-1'})
+  os.environ.update({QUIET_ENV_VAR:str(enabled),DEBUG_ENV_VAR:str(not enabled),_GRPC_DEBUG_ENV_VAR:'NONE','CT2_VERBOSE':'-1'})
   set_disable_warnings(enabled)
 def gen_random_uuid(prefix:str|None=None)->str:return '-'.join([prefix or 'openllm', str(uuid.uuid4().hex)])
 # NOTE: `compose` any number of unary functions into a single unary function
@@ -147,9 +147,9 @@ class ExceptionFilter(logging.Filter):
 # Used to filter out INFO log
 class InfoFilter(logging.Filter):
   def filter(self,record:logging.LogRecord)->bool:return logging.INFO<=record.levelno<logging.WARNING
-class WarningFilter(logging.Filter):
+class WarningFilter(logging.Filter): # FIXME: Why does this not work?
   def filter(self,record:logging.LogRecord)->bool:
-    if get_disable_warnings() and record.levelno==logging.WARNING:return False
+    if get_disable_warnings():return record.levelno>=logging.ERROR
     return True
 # fmt: on
 
@@ -165,7 +165,7 @@ _LOGGING_CONFIG: dict[str, t.Any] = {
   'handlers': {
     'bentomlhandler': {
       'class': 'logging.StreamHandler',
-      'filters': ['warningfilter', 'excfilter', 'infofilter'],
+      'filters': ['excfilter', 'warningfilter', 'infofilter'],
       'stream': 'ext://sys.stdout',
     },
     'defaulthandler': {'class': 'logging.StreamHandler', 'level': logging.WARNING},
@@ -192,6 +192,9 @@ def configure_logging() -> None:
     _LOGGING_CONFIG['loggers']['openllm']['level'] = logging.INFO
     _LOGGING_CONFIG['loggers']['bentoml']['level'] = logging.INFO
     _LOGGING_CONFIG['root']['level'] = logging.INFO
+
+  if get_disable_warnings():  # HACK: This is a hack to disable warnings
+    _LOGGING_CONFIG['loggers']['openllm']['level'] = logging.ERROR
 
   logging.config.dictConfig(_LOGGING_CONFIG)
 

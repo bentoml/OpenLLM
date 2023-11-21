@@ -93,7 +93,7 @@ else:
   torch = LazyLoader('torch', globals(), 'torch')
 
 P = ParamSpec('P')
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('openllm')
 OPENLLM_FIGLET = """\
  ██████╗ ██████╗ ███████╗███╗   ██╗██╗     ██╗     ███╗   ███╗
 ██╔═══██╗██╔══██╗██╔════╝████╗  ██║██║     ██║     ████╗ ████║
