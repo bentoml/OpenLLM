@@ -14,22 +14,13 @@ import psutil
 import bentoml
 from bentoml._internal.resource import get_resource, system_resources
 from bentoml._internal.runner.strategy import THREAD_ENVS
-from openllm_core._typing_compat import overload
 from openllm_core.utils import DEBUG, ReprMixin
-
-
-class DynResource(t.Protocol):
-  resource_id: t.ClassVar[str]
-
-  @classmethod
-  def from_system(cls) -> t.Sequence[t.Any]: ...
-
 
 logger = logging.getLogger(__name__)
 
 
 def _strtoul(s: str) -> int:
-  """Return -1 or positive integer sequence string starts with,."""
+  # Return -1 or positive integer sequence string starts with.
   if not s:
     return -1
   idx = 0
@@ -53,21 +44,6 @@ def _parse_list_with_prefix(lst: str, prefix: str) -> list[str]:
       break
     rcs.append(elem)
   return rcs
-
-
-_STACK_LEVEL = 3
-
-
-@overload  # variant: default callback
-def _parse_visible_devices() -> list[str] | None: ...
-
-
-@overload  # variant: specify None, and respect_env
-def _parse_visible_devices(default_var: None, *, respect_env: t.Literal[True]) -> list[str] | None: ...
-
-
-@overload  # variant: default var is something other than None
-def _parse_visible_devices(default_var: str = ..., *, respect_env: t.Literal[False]) -> list[str]: ...
 
 
 def _parse_visible_devices(default_var: str | None = None, respect_env: bool = True) -> list[str] | None:
@@ -101,146 +77,136 @@ def _parse_visible_devices(default_var: str | None = None, respect_env: bool = T
   return [str(i) for i in rc]
 
 
-def _from_system(cls: type[DynResource]) -> list[str]:
-  visible_devices = _parse_visible_devices()
-  if visible_devices is None:
-    if cls.resource_id == 'amd.com/gpu':
-      if not psutil.LINUX:
-        if DEBUG:
-          logger.debug('AMD GPUs is currently only supported on Linux.')
-        return []
-      # ROCm does not currently have the rocm_smi wheel.
-      # So we need to use the ctypes bindings directly.
-      # we don't want to use CLI because parsing is a pain.
-      sys.path.append('/opt/rocm/libexec/rocm_smi')
-      try:
-        from ctypes import byref, c_uint32
-
-        # refers to https://github.com/RadeonOpenCompute/rocm_smi_lib/blob/master/python_smi_tools/rsmiBindings.py
-        from rsmiBindings import rocmsmi, rsmi_status_t
-
-        device_count = c_uint32(0)
-        ret = rocmsmi.rsmi_num_monitor_devices(byref(device_count))
-        if ret == rsmi_status_t.RSMI_STATUS_SUCCESS:
-          return [str(i) for i in range(device_count.value)]
-        return []
-      # In this case the binary is not found, returning empty list
-      except (ModuleNotFoundError, ImportError):
-        return []
-      finally:
-        sys.path.remove('/opt/rocm/libexec/rocm_smi')
-    else:
-      try:
-        from cuda import cuda
-
-        cuda.cuInit(0)
-        _, dev = cuda.cuDeviceGetCount()
-        return [str(i) for i in range(dev)]
-      except (ImportError, RuntimeError, AttributeError):
-        return []
-  return visible_devices
-
-
-@overload
-def _from_spec(cls: type[DynResource], spec: int) -> list[str]: ...
-
-
-@overload
-def _from_spec(cls: type[DynResource], spec: list[int | str]) -> list[str]: ...
-
-
-@overload
-def _from_spec(cls: type[DynResource], spec: str) -> list[str]: ...
-
-
-def _from_spec(cls: type[DynResource], spec: t.Any) -> list[str]:
-  if isinstance(spec, int):
-    if spec in (-1, 0):
-      return []
-    if spec < -1:
-      raise ValueError('Spec cannot be < -1.')
-    return [str(i) for i in range(spec)]
-  elif isinstance(spec, str):
-    if not spec:
-      return []
-    if spec.isdigit():
-      spec = ','.join([str(i) for i in range(_strtoul(spec))])
-    return _parse_visible_devices(spec, respect_env=False)
-  elif isinstance(spec, list):
-    return [str(x) for x in spec]
-  else:
-    raise TypeError(
-      f"'{cls.__name__}.from_spec' only supports parsing spec of type int, str, or list, got '{type(spec)}' instead."
-    )
-
-
 def _raw_device_uuid_nvml() -> list[str] | None:
   from ctypes import CDLL, byref, c_int, c_void_p, create_string_buffer
 
   try:
     nvml_h = CDLL('libnvidia-ml.so.1')
   except Exception:
-    warnings.warn('Failed to find nvidia binding', stacklevel=_STACK_LEVEL)
+    warnings.warn('Failed to find nvidia binding', stacklevel=3)
     return None
 
   rc = nvml_h.nvmlInit()
   if rc != 0:
-    warnings.warn("Can't initialize NVML", stacklevel=_STACK_LEVEL)
+    warnings.warn("Can't initialize NVML", stacklevel=3)
     return None
   dev_count = c_int(-1)
   rc = nvml_h.nvmlDeviceGetCount_v2(byref(dev_count))
   if rc != 0:
-    warnings.warn('Failed to get available device from system.', stacklevel=_STACK_LEVEL)
+    warnings.warn('Failed to get available device from system.', stacklevel=3)
     return None
   uuids: list[str] = []
   for idx in range(dev_count.value):
     dev_id = c_void_p()
     rc = nvml_h.nvmlDeviceGetHandleByIndex_v2(idx, byref(dev_id))
     if rc != 0:
-      warnings.warn(f'Failed to get device handle for {idx}', stacklevel=_STACK_LEVEL)
+      warnings.warn(f'Failed to get device handle for {idx}', stacklevel=3)
       return None
     buf_len = 96
     buf = create_string_buffer(buf_len)
     rc = nvml_h.nvmlDeviceGetUUID(dev_id, buf, buf_len)
     if rc != 0:
-      warnings.warn(f'Failed to get device UUID for {idx}', stacklevel=_STACK_LEVEL)
+      warnings.warn(f'Failed to get device UUID for {idx}', stacklevel=3)
       return None
     uuids.append(buf.raw.decode('ascii').strip('\0'))
   del nvml_h
   return uuids
 
 
-def _validate(cls: type[DynResource], val: list[t.Any]) -> None:
-  if cls.resource_id == 'amd.com/gpu':
-    raise RuntimeError(
-      "AMD GPU validation is not yet supported. Make sure to call 'get_resource(..., validate=False)'"
-    )
-  if not all(isinstance(i, str) for i in val):
-    raise ValueError('Input list should be all string type.')
+class _ResourceMixin:
+  @staticmethod
+  def from_system(cls) -> list[str]:
+    visible_devices = _parse_visible_devices()
+    if visible_devices is None:
+      if cls.resource_id == 'amd.com/gpu':
+        if not psutil.LINUX:
+          if DEBUG:
+            logger.debug('AMD GPUs is currently only supported on Linux.')
+          return []
+        # ROCm does not currently have the rocm_smi wheel.
+        # So we need to use the ctypes bindings directly.
+        # we don't want to use CLI because parsing is a pain.
+        sys.path.append('/opt/rocm/libexec/rocm_smi')
+        try:
+          from ctypes import byref, c_uint32
 
-  try:
-    from cuda import cuda
+          # refers to https://github.com/RadeonOpenCompute/rocm_smi_lib/blob/master/python_smi_tools/rsmiBindings.py
+          from rsmiBindings import rocmsmi, rsmi_status_t
 
-    err, *_ = cuda.cuInit(0)
-    if err != cuda.CUresult.CUDA_SUCCESS:
-      raise RuntimeError('Failed to initialise CUDA runtime binding.')
-    # correctly parse handle
-    for el in val:
-      if el.startswith(('GPU-', 'MIG-')):
-        uuids = _raw_device_uuid_nvml()
-        if uuids is None:
-          raise ValueError('Failed to parse available GPUs UUID')
-        if el not in uuids:
-          raise ValueError(f'Given UUID {el} is not found with available UUID (available: {uuids})')
-      elif el.isdigit():
-        err, _ = cuda.cuDeviceGet(int(el))
-        if err != cuda.CUresult.CUDA_SUCCESS:
-          raise ValueError(f'Failed to get device {el}')
-  except (ImportError, RuntimeError):
-    pass
+          device_count = c_uint32(0)
+          ret = rocmsmi.rsmi_num_monitor_devices(byref(device_count))
+          if ret == rsmi_status_t.RSMI_STATUS_SUCCESS:
+            return [str(i) for i in range(device_count.value)]
+          return []
+        # In this case the binary is not found, returning empty list
+        except (ModuleNotFoundError, ImportError):
+          return []
+        finally:
+          sys.path.remove('/opt/rocm/libexec/rocm_smi')
+      else:
+        try:
+          from cuda import cuda
+
+          cuda.cuInit(0)
+          _, dev = cuda.cuDeviceGetCount()
+          return [str(i) for i in range(dev)]
+        except (ImportError, RuntimeError, AttributeError):
+          return []
+    return visible_devices
+
+  @staticmethod
+  def from_spec(cls, spec) -> list[str]:
+    if isinstance(spec, int):
+      if spec in (-1, 0):
+        return []
+      if spec < -1:
+        raise ValueError('Spec cannot be < -1.')
+      return [str(i) for i in range(spec)]
+    elif isinstance(spec, str):
+      if not spec:
+        return []
+      if spec.isdigit():
+        spec = ','.join([str(i) for i in range(_strtoul(spec))])
+      return _parse_visible_devices(spec, respect_env=False)
+    elif isinstance(spec, list):
+      return [str(x) for x in spec]
+    else:
+      raise TypeError(
+        f"'{cls.__name__}.from_spec' only supports parsing spec of type int, str, or list, got '{type(spec)}' instead."
+      )
+
+  @staticmethod
+  def validate(cls, val: list[t.Any]) -> None:
+    if cls.resource_id == 'amd.com/gpu':
+      raise RuntimeError(
+        "AMD GPU validation is not yet supported. Make sure to call 'get_resource(..., validate=False)'"
+      )
+    if not all(isinstance(i, str) for i in val):
+      raise ValueError('Input list should be all string type.')
+
+    try:
+      from cuda import cuda
+
+      err, *_ = cuda.cuInit(0)
+      if err != cuda.CUresult.CUDA_SUCCESS:
+        raise RuntimeError('Failed to initialise CUDA runtime binding.')
+      # correctly parse handle
+      for el in val:
+        if el.startswith(('GPU-', 'MIG-')):
+          uuids = _raw_device_uuid_nvml()
+          if uuids is None:
+            raise ValueError('Failed to parse available GPUs UUID')
+          if el not in uuids:
+            raise ValueError(f'Given UUID {el} is not found with available UUID (available: {uuids})')
+        elif el.isdigit():
+          err, _ = cuda.cuDeviceGet(int(el))
+          if err != cuda.CUresult.CUDA_SUCCESS:
+            raise ValueError(f'Failed to get device {el}')
+    except (ImportError, RuntimeError):
+      pass
 
 
-def _make_resource_class(name: str, resource_kind: str, docstring: str) -> type[DynResource]:
+def _make_resource_class(name: str, resource_kind: str, docstring: str) -> type[bentoml.Resource[t.List[str]]]:
   return types.new_class(
     name,
     (bentoml.Resource[t.List[str]], ReprMixin),
@@ -248,9 +214,9 @@ def _make_resource_class(name: str, resource_kind: str, docstring: str) -> type[
     lambda ns: ns.update(
       {
         'resource_id': resource_kind,
-        'from_spec': classmethod(_from_spec),
-        'from_system': classmethod(_from_system),
-        'validate': classmethod(_validate),
+        'from_spec': classmethod(_ResourceMixin.from_spec),
+        'from_system': classmethod(_ResourceMixin.from_system),
+        'validate': classmethod(_ResourceMixin.validate),
         '__repr_keys__': property(lambda _: {'resource_id'}),
         '__doc__': inspect.cleandoc(docstring),
         '__module__': 'openllm._strategies',
@@ -259,15 +225,9 @@ def _make_resource_class(name: str, resource_kind: str, docstring: str) -> type[
   )
 
 
-# NOTE: we need to hint these t.Literal since mypy is to dumb to infer this as literal 🤦
-_TPU_RESOURCE: t.Literal['cloud-tpus.google.com/v2'] = 'cloud-tpus.google.com/v2'
-_AMD_GPU_RESOURCE: t.Literal['amd.com/gpu'] = 'amd.com/gpu'
-_NVIDIA_GPU_RESOURCE: t.Literal['nvidia.com/gpu'] = 'nvidia.com/gpu'
-_CPU_RESOURCE: t.Literal['cpu'] = 'cpu'
-
 NvidiaGpuResource = _make_resource_class(
   'NvidiaGpuResource',
-  _NVIDIA_GPU_RESOURCE,
+  'nvidia.com/gpu',
   """NVIDIA GPU resource.
 
     This is a modified version of internal's BentoML's NvidiaGpuResource
@@ -275,7 +235,7 @@ NvidiaGpuResource = _make_resource_class(
 )
 AmdGpuResource = _make_resource_class(
   'AmdGpuResource',
-  _AMD_GPU_RESOURCE,
+  'amd.com/gpu',
   """AMD GPU resource.
 
     Since ROCm will respect CUDA_VISIBLE_DEVICES, the behaviour of from_spec, from_system are similar to

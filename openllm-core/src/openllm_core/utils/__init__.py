@@ -1,12 +1,9 @@
 from __future__ import annotations
-import contextlib
 import functools
 import hashlib
 import logging
 import logging.config
 import os
-import random
-import socket
 import sys
 import types
 import typing as t
@@ -19,7 +16,6 @@ from .lazy import LazyLoader as LazyLoader, LazyModule as LazyModule, VersionInf
 from .._typing_compat import overload as _overload
 
 if t.TYPE_CHECKING:
-  from bentoml._internal.models.model import ModelContext
   from bentoml._internal.types import PathType
   from openllm_core._typing_compat import AnyCallable
 
@@ -34,52 +30,6 @@ DEV_DEBUG_VAR = 'DEBUG'
 _object_setattr = object.__setattr__
 
 logger = logging.getLogger(__name__)
-
-
-@contextlib.contextmanager
-def reserve_free_port(
-  host: str = 'localhost',
-  port: int | None = None,
-  prefix: str | None = None,
-  max_retry: int = 50,
-  enable_so_reuseport: bool = False,
-) -> t.Iterator[int]:
-  """
-  detect free port and reserve until exit the context
-  """
-  import psutil
-
-  sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-  if enable_so_reuseport:
-    if psutil.WINDOWS:
-      sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    elif psutil.MACOS or psutil.FREEBSD:
-      sock.setsockopt(socket.SOL_SOCKET, 0x10000, 1)  # SO_REUSEPORT_LB
-    else:
-      sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
-      if sock.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT) == 0:
-        raise RuntimeError('Failed to set SO_REUSEPORT.') from None
-  if prefix is not None:
-    prefix_num = int(prefix) * 10 ** (5 - len(prefix))
-    suffix_range = min(65535 - prefix_num, 10 ** (5 - len(prefix)))
-    for _ in range(max_retry):
-      suffix = random.randint(0, suffix_range)
-      port = int(f'{prefix_num + suffix}')
-      try:
-        sock.bind((host, port))
-        break
-      except OSError:
-        continue
-    else:
-      raise RuntimeError(f'Cannot find free port with prefix {prefix} after {max_retry} retries.') from None
-  elif port:
-    sock.bind((host, port))
-  else:
-    sock.bind((host, 0))
-  try:
-    yield sock.getsockname()[1]
-  finally:
-    sock.close()
 
 
 # fmt: off
@@ -133,7 +83,7 @@ def set_disable_warnings(disable:bool=True)->None:
   if get_disable_warnings():os.environ[WARNING_ENV_VAR]=str(disable)
 def set_debug_mode(enabled:bool,level:int=1)->None:
   if enabled:os.environ[DEV_DEBUG_VAR] = str(level)
-  os.environ.update({DEBUG_ENV_VAR:str(enabled),_GRPC_DEBUG_ENV_VAR:'DEBUG' if enabled else 'ERROR','CT2_VERBOSE':'3'})
+  os.environ.update({DEBUG_ENV_VAR:str(enabled),QUIET_ENV_VAR:str(not enabled),_GRPC_DEBUG_ENV_VAR:'DEBUG' if enabled else 'ERROR','CT2_VERBOSE':'3'})
   set_disable_warnings(enabled)
 def set_quiet_mode(enabled:bool)->None:
   os.environ.update({QUIET_ENV_VAR:str(enabled),_GRPC_DEBUG_ENV_VAR:'NONE','CT2_VERBOSE':'-1'})
@@ -151,7 +101,7 @@ def first_not_none(*args:_T|None,default:_T)->_T:...
 @_overload
 def first_not_none(*args:_T|None)->_T|None:...
 def first_not_none(*args:_T|None,default:_T|None=None)->_T|None:return next((arg for arg in args if arg is not None),default)
-def generate_context(framework_name:str)->ModelContext:
+def generate_context(framework_name:str):
   from bentoml._internal.models.model import ModelContext
   framework_versions={'transformers':pkg.get_pkg_version('transformers'),'safetensors':pkg.get_pkg_version('safetensors'),'optimum':pkg.get_pkg_version('optimum'),'accelerate':pkg.get_pkg_version('accelerate')}
   if iutils.is_torch_available():framework_versions['torch']=pkg.get_pkg_version('torch')

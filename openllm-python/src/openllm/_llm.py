@@ -71,9 +71,7 @@ def normalise_model_name(name: str) -> str:
 
 def _resolve_peft_config_type(adapter_map: dict[str, str]) -> AdapterMap:
   if not is_peft_available():
-    raise RuntimeError(
-      "LoRA adapter requires 'peft' to be installed. Make sure to do 'pip install \"openllm[fine-tune]\"'"
-    )
+    raise RuntimeError("Requires 'peft' to be installed. Do 'pip install \"openllm[fine-tune]\"'")
   from huggingface_hub import hf_hub_download
 
   resolved: AdapterMap = {}
@@ -284,8 +282,6 @@ class LLM(t.Generic[M, T], ReprMixin):
     env=os.getenv('TRUST_REMOTE_CODE')
     if env is not None:return str(env).upper() in ENV_VARS_TRUE_VALUES
     return self.__llm_trust_remote_code__
-  @property
-  def runner_name(self):return f"llm-{self.config['start_name']}-runner"
   @property
   def model_id(self):return self._model_id
   @property

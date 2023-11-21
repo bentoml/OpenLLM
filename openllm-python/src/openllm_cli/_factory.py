@@ -21,7 +21,7 @@ from openllm_core._typing_compat import (
   ParamSpec,
   get_literal_args,
 )
-from openllm_core.utils import DEBUG, resolve_user_filepath
+from openllm_core.utils import DEBUG, compose, dantic, resolve_user_filepath
 
 
 class _OpenLLM_GenericInternalConfig(LLMConfig):
@@ -134,7 +134,7 @@ def _id_callback(ctx: click.Context, _: click.Parameter, value: t.Tuple[str, ...
 
 def start_decorator(serve_grpc: bool = False) -> t.Callable[[FC], t.Callable[[FC], FC]]:
   def wrapper(fn: FC) -> t.Callable[[FC], FC]:
-    composed = openllm.utils.compose(
+    composed = compose(
       _OpenLLM_GenericInternalConfig.parse,
       _http_server_args if not serve_grpc else _grpc_server_args,
       cog.optgroup.group('General LLM Options', help='The following options are related to running LLM Server.'),
@@ -160,7 +160,7 @@ def start_decorator(serve_grpc: bool = False) -> t.Callable[[FC], t.Callable[[FC
       serialisation_option(factory=cog.optgroup),
       cog.optgroup.option(
         '--device',
-        type=openllm.utils.dantic.CUDA,
+        type=dantic.CUDA,
         multiple=True,
         envvar='CUDA_VISIBLE_DEVICES',
         callback=parse_device_callback,

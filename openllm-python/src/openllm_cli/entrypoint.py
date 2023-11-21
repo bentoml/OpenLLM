@@ -1,25 +1,3 @@
-"""OpenLLM CLI interface.
-
-This module also contains the SDK to call ``start`` and ``build`` from SDK
-
-Start any LLM:
-
-```python
-openllm.start('mistral', model_id='mistralai/Mistral-7B-v0.1')
-```
-
-Build a BentoLLM
-
-```python
-bento = openllm.build('mistralai/Mistral-7B-v0.1')
-```
-
-Import any LLM into local store
-```python
-bentomodel = openllm.import_model('mistralai/Mistral-7B-v0.1')
-```
-"""
-
 from __future__ import annotations
 import enum
 import functools
@@ -91,7 +69,6 @@ from openllm_core.utils import (
 from . import termui
 from ._factory import (
   FC,
-  LiteralOutput,
   _AnyCallable,
   backend_option,
   container_registry_option,
@@ -1225,7 +1202,11 @@ def models_command(**_: t.Any) -> dict[t.LiteralString, ModelItem]:
 @model_name_argument(required=False)
 @click.option('-y', '--yes', '--assume-yes', is_flag=True, help='Skip confirmation when deleting a specific model')
 @click.option(
-  '--include-bentos/--no-include-bentos', is_flag=True, default=False, help='Whether to also include pruning bentos.'
+  '--include-bentos/--no-include-bentos',
+  is_flag=True,
+  hidden=True,
+  default=True,
+  help='Whether to also include pruning bentos.',
 )
 @inject
 @click.pass_context
@@ -1233,11 +1214,11 @@ def prune_command(
   ctx: click.Context,
   model_name: str | None,
   yes: bool,
-  include_bentos: bool,
   model_store: ModelStore = Provide[BentoMLContainer.model_store],
   bento_store: BentoStore = Provide[BentoMLContainer.bento_store],
+  **_: t.Any,
 ) -> None:
-  """Remove all saved models, (and optionally bentos) built with OpenLLM locally.
+  """Remove all saved models, and bentos built with OpenLLM locally.
 
   \b
   If a model type is passed, then only prune models for that given model type.
@@ -1252,18 +1233,15 @@ def prune_command(
       (m, store)
       for m, store in available
       if 'model_name' in m.info.labels and m.info.labels['model_name'] == inflection.underscore(model_name)
+    ] + [
+      (b, bento_store)
+      for b in bentoml.bentos.list()
+      if 'start_name' in b.info.labels and b.info.labels['start_name'] == inflection.underscore(model_name)
     ]
-  if include_bentos:
-    if model_name is not None:
-      available += [
-        (b, bento_store)
-        for b in bentoml.bentos.list()
-        if 'start_name' in b.info.labels and b.info.labels['start_name'] == inflection.underscore(model_name)
-      ]
-    else:
-      available += [
-        (b, bento_store) for b in bentoml.bentos.list() if '_type' in b.info.labels and '_framework' in b.info.labels
-      ]
+  if model_name is None:
+    available += [
+      (b, bento_store) for b in bentoml.bentos.list() if '_type' in b.info.labels and '_framework' in b.info.labels
+    ]
 
   for store_item, store in available:
     if yes:
@@ -1314,69 +1292,6 @@ def shared_client_options(f: _AnyCallable | None = None) -> t.Callable[[FC], FC]
     click.option('--timeout', type=click.INT, default=30, help='Default server timeout', show_default=True),
   ]
   return compose(*options)(f) if f is not None else compose(*options)
-
-
-@cli.command(hidden=True)
-@click.argument('task', type=click.STRING, metavar='TASK')
-@shared_client_options
-@click.option(
-  '--agent',
-  type=click.Choice(['hf']),
-  default='hf',
-  help='Whether to interact with Agents from given Server endpoint.',
-  show_default=True,
-)
-@click.option(
-  '--remote',
-  is_flag=True,
-  default=False,
-  help='Whether or not to use remote tools (inference endpoints) instead of local ones.',
-  show_default=True,
-)
-@click.option(
-  '--opt',
-  help="Define prompt options. (format: ``--opt text='I love this' --opt audio:./path/to/audio  --opt image:/path/to/file``)",
-  required=False,
-  multiple=True,
-  callback=opt_callback,
-  metavar='ARG=VALUE[,ARG=VALUE]',
-)
-def instruct_command(
-  endpoint: str,
-  timeout: int,
-  agent: LiteralString,
-  output: LiteralOutput,
-  remote: bool,
-  task: str,
-  _memoized: DictStrAny,
-  **attrs: t.Any,
-) -> str:
-  """Instruct agents interactively for given tasks, from a terminal.
-
-  \b
-  ```bash
-  $ openllm instruct --endpoint http://12.323.2.1:3000 \\
-        "Is the following `text` (in Spanish) positive or negative?" \\
-        --text "¡Este es un API muy agradable!"
-  ```
-  """
-  raise click.ClickException("'instruct' is currently disabled")
-  # client = openllm.client.HTTPClient(endpoint, timeout=timeout)
-  #
-  # try:
-  #   client.call('metadata')
-  # except http.client.BadStatusLine:
-  #   raise click.ClickException(f'{endpoint} is neither a HTTP server nor reachable.') from None
-  # if agent == 'hf':
-  #   _memoized = {k: v[0] for k, v in _memoized.items() if v}
-  #   client._hf_agent.set_stream(logger.info)
-  #   if output != 'porcelain': termui.echo(f"Sending the following prompt ('{task}') with the following vars: {_memoized}", fg='magenta')
-  #   result = client.ask_agent(task, agent_type=agent, return_code=False, remote=remote, **_memoized)
-  #   if output == 'json': termui.echo(orjson.dumps(result, option=orjson.OPT_INDENT_2).decode(), fg='white')
-  #   else: termui.echo(result, fg='white')
-  #   return result
-  # else:
-  #   raise click.BadOptionUsage('agent', f'Unknown agent type {agent}')
 
 
 @cli.command()

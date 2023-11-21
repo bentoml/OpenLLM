@@ -294,7 +294,7 @@ def _list_models() -> dict[str, t.Any]:
   """List all available models within the local store."""
   from .entrypoint import models_command
 
-  return models_command.main(args=['--show-available', '--quiet'], standalone_mode=False)
+  return models_command.main(args=['--quiet'], standalone_mode=False)
 
 
 start, start_grpc = codegen.gen_sdk(_start, _serve_grpc=False), codegen.gen_sdk(_start, _serve_grpc=True)
