@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 _T=t.TypeVar('_T')
 @functools.lru_cache(maxsize=1)
 def _WithArgsTypes()->tuple[type[t.Any],...]:
-  try:from typing import GenericAlias as _TypingGenericAlias  # type: ignore # noqa: I001
+  try:from typing import GenericAlias as _TypingGenericAlias  # type: ignore
   except ImportError:_TypingGenericAlias = ()  # type: ignore # python < 3.9 does not have GenericAlias (list[int], tuple[str, ...] and so on)
   #  _GenericAlias is the actual GenericAlias implementation
   return (_TypingGenericAlias,) if sys.version_info<(3,10) else (t._GenericAlias, types.GenericAlias, types.UnionType) # type: ignore
@@ -69,7 +69,7 @@ def getenv(env:str,default:t.Any=None,var:t.Sequence[str]|None=None)->t.Any:
   if var is not None:env_key=set(var)|env_key
   def callback(k:str)->t.Any:
     _var = os.getenv(k)
-    if _var and k.startswith('OPENLLM_') and not get_disable_warnings() and not get_quiet_mode():logger.warning("Using '%s' environment is deprecated, use '%s' instead.",k.upper(),k[8:].upper())
+    if _var and k.startswith('OPENLLM_'):logger.warning("Using '%s' environment is deprecated, use '%s' instead.",k.upper(),k[8:].upper())
     return _var
   return first_not_none(*(callback(k) for k in env_key),default=default)
 def field_env_key(key:str,suffix:str|None=None)->str:return '_'.join(filter(None,map(str.upper,['OPENLLM',suffix.strip('_') if suffix else '',key])))
@@ -113,11 +113,8 @@ def generate_context(framework_name:str):
   return ModelContext(framework_name=framework_name,framework_versions=framework_versions)
 @functools.lru_cache(maxsize=1)
 def in_notebook()->bool:
-  try:from IPython.core.getipython import get_ipython; return 'IPKernelApp' in get_ipython().config  # noqa: I001
-  except (ImportError, AttributeError):return False
-# Used to filter out INFO log
-class InfoFilter(logging.Filter):
-  def filter(self,record:logging.LogRecord)->bool:return logging.INFO<=record.levelno<logging.WARNING
+  try:from IPython.core.getipython import get_ipython;return 'IPKernelApp' in get_ipython().config
+  except Exception:return False
 _TOKENIZER_PREFIX = '_tokenizer_'
 def flatten_attrs(**attrs:t.Any)->tuple[dict[str,t.Any],dict[str, t.Any]]:
   tokenizer_attrs = {k[len(_TOKENIZER_PREFIX):]:v for k,v in attrs.items() if k.startswith(_TOKENIZER_PREFIX)}
@@ -130,31 +127,31 @@ DEBUG=sys.flags.dev_mode or (not sys.flags.ignore_environment and check_bool_env
 SHOW_CODEGEN=DEBUG and (os.environ.get(DEV_DEBUG_VAR,str(0)).isdigit() and int(os.environ.get(DEV_DEBUG_VAR,str(0)))>3)
 # MYPY is like t.TYPE_CHECKING, but reserved for Mypy plugins
 MYPY=False
-# fmt: on
-
-
 class ExceptionFilter(logging.Filter):
   def __init__(self, exclude_exceptions: list[type[Exception]] | None = None, **kwargs: t.Any):
-    if exclude_exceptions is None:
-      exclude_exceptions = []
+    if exclude_exceptions is None:exclude_exceptions=[]
     try:
       from circus.exc import ConflictError
-
-      if ConflictError not in exclude_exceptions:
-        exclude_exceptions.append(ConflictError)
+      if ConflictError not in exclude_exceptions:exclude_exceptions.append(ConflictError)
     except ImportError:
       pass
     super(ExceptionFilter, self).__init__(**kwargs)
-    self.EXCLUDE_EXCEPTIONS = exclude_exceptions
-
-  def filter(self, record: logging.LogRecord) -> bool:
+    self.EXCLUDE_EXCEPTIONS=exclude_exceptions
+  def filter(self,record:logging.LogRecord)->bool:
     if record.exc_info:
-      etype, _, _ = record.exc_info
+      etype,_,_=record.exc_info
       if etype is not None:
         for exc in self.EXCLUDE_EXCEPTIONS:
-          if issubclass(etype, exc):
-            return False
+          if issubclass(etype, exc):return False
     return True
+# Used to filter out INFO log
+class InfoFilter(logging.Filter):
+  def filter(self,record:logging.LogRecord)->bool:return logging.INFO<=record.levelno<logging.WARNING
+class WarningFilter(logging.Filter):
+  def filter(self,record:logging.LogRecord)->bool:
+    if get_disable_warnings() and record.levelno==logging.WARNING:return False
+    return True
+# fmt: on
 
 
 _LOGGING_CONFIG: dict[str, t.Any] = {
@@ -163,11 +160,12 @@ _LOGGING_CONFIG: dict[str, t.Any] = {
   'filters': {
     'excfilter': {'()': 'openllm_core.utils.ExceptionFilter'},
     'infofilter': {'()': 'openllm_core.utils.InfoFilter'},
+    'warningfilter': {'()': 'openllm_core.utils.WarningFilter'},
   },
   'handlers': {
     'bentomlhandler': {
       'class': 'logging.StreamHandler',
-      'filters': ['excfilter', 'infofilter'],
+      'filters': ['warningfilter', 'excfilter', 'infofilter'],
       'stream': 'ext://sys.stdout',
     },
     'defaulthandler': {'class': 'logging.StreamHandler', 'level': logging.WARNING},
@@ -241,24 +239,3 @@ __lazy = LazyModule(
 __all__ = __lazy.__all__
 __dir__ = __lazy.__dir__
 __getattr__ = __lazy.__getattr__
-
-if t.TYPE_CHECKING:
-  from . import analytics as analytics, codegen as codegen, dantic as dantic, serde as serde
-  from .import_utils import (
-    OPTIONAL_DEPENDENCIES as OPTIONAL_DEPENDENCIES,
-    is_autoawq_available as is_autoawq_available,
-    is_autogptq_available as is_autogptq_available,
-    is_bentoml_available as is_bentoml_available,
-    is_bitsandbytes_available as is_bitsandbytes_available,
-    is_ctranslate_available as is_ctranslate_available,
-    is_grpc_available as is_grpc_available,
-    is_jupyter_available as is_jupyter_available,
-    is_jupytext_available as is_jupytext_available,
-    is_notebook_available as is_notebook_available,
-    is_peft_available as is_peft_available,
-    is_torch_available as is_torch_available,
-    is_transformers_available as is_transformers_available,
-    is_vllm_available as is_vllm_available,
-  )
-  from .representation import ReprMixin as ReprMixin
-  from .serde import converter as converter
