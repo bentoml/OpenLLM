@@ -44,7 +44,6 @@ from openllm_core.utils import (
   is_transformers_available as is_transformers_available,
   is_vllm_available as is_vllm_available,
   lenient_issubclass as lenient_issubclass,
-  reserve_free_port as reserve_free_port,
   resolve_filepath as resolve_filepath,
   resolve_user_filepath as resolve_user_filepath,
   serde as serde,

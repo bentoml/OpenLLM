@@ -16,7 +16,6 @@ from openlm_core.config import CONFIG_MAPPING as CONFIG_MAPPING,CONFIG_MAPPING_N
 # update-config-stubs.py: import stubs stop
 # fmt: on
 
-import openllm_cli as _cli
 from openllm_cli._sdk import (
   build as build,
   import_model as import_model,
@@ -44,14 +43,6 @@ from . import (
   utils as utils,
 )
 from ._deprecated import Runner as Runner
-from ._generation import (
-  StopOnTokens as StopOnTokens,
-  StopSequenceCriteria as StopSequenceCriteria,
-  prepare_logits_processor as prepare_logits_processor,
-  is_partial_stop as is_partial_stop,
-  is_sentence_complete as is_sentence_complete,
-  get_context_length as get_context_length,
-)
 from ._llm import LLM as LLM
 from ._quantisation import infer_quantisation_config as infer_quantisation_config
 from ._strategies import CascadingResourceStrategy as CascadingResourceStrategy, get_resource as get_resource
@@ -60,5 +51,4 @@ from .entrypoints import mount_entrypoints as mount_entrypoints
 from .protocol import openai as openai
 from .serialisation import ggml as ggml, transformers as transformers
 
-cli = _cli
 COMPILED: bool = ...

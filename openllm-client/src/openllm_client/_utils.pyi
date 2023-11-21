@@ -22,7 +22,6 @@ from openllm_core.utils import (
   getenv as getenv,
   in_notebook as in_notebook,
   lenient_issubclass as lenient_issubclass,
-  reserve_free_port as reserve_free_port,
   resolve_filepath as resolve_filepath,
   resolve_user_filepath as resolve_user_filepath,
   serde as serde,

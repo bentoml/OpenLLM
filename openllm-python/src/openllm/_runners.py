@@ -9,7 +9,6 @@ import torch
 import bentoml
 import openllm
 from openllm_core._schemas import CompletionChunk, GenerationOutput, SampleLogprobs
-from openllm_core.exceptions import OpenLLMException
 from openllm_core.utils import ReprMixin, is_ctranslate_available, is_vllm_available
 
 __all__ = ['runner']
@@ -28,12 +27,10 @@ def registry(cls=None, *, alias=None):
 
 
 def runner(llm: openllm.LLM):
-  from ._strategies import CascadingResourceStrategy
-
   try:
-    models = [llm.bentomodel]
-  except bentoml.exceptions.NotFound as err:
-    raise RuntimeError(f'Failed to locate {llm.bentomodel}:{err}') from err
+    assert llm.bentomodel
+  except (bentoml.exceptions.NotFound, AssertionError) as err:
+    raise RuntimeError(f'Failed to locate {llm.bentomodel}: {err}') from err
 
   return types.new_class(
     llm.config.__class__.__name__[:-6] + 'Runner',
@@ -73,9 +70,9 @@ def runner(llm: openllm.LLM):
     ),
   )(
     _registry[llm.__llm_backend__],
-    name=llm.runner_name,
-    models=models,
-    scheduling_strategy=CascadingResourceStrategy,
+    name=f"llm-{llm.config['start_name']}-runner",
+    models=[llm.bentomodel],
+    scheduling_strategy=openllm.CascadingResourceStrategy,
     runnable_init_params={'llm': llm},
   )
 
@@ -87,7 +84,7 @@ class CTranslateRunnable(bentoml.Runnable):
 
   def __init__(self, llm):
     if not is_ctranslate_available():
-      raise OpenLLMException('ctranslate is not installed. Please install it with `pip install "openllm[ctranslate]"`')
+      raise openllm.exceptions.OpenLLMException('ctranslate is not installed. Do `pip install "openllm[ctranslate]"`')
     self.llm, self.config, self.model, self.tokenizer = llm, llm.config, llm.model, llm.tokenizer
 
   @bentoml.Runnable.method(batchable=False)
@@ -137,7 +134,7 @@ class vLLMRunnable(bentoml.Runnable):
 
   def __init__(self, llm):
     if not is_vllm_available():
-      raise OpenLLMException('vLLM is not installed. Please install it via `pip install "openllm[vllm]"`.')
+      raise openllm.exceptions.OpenLLMException('vLLM is not installed. Do `pip install "openllm[vllm]"`.')
     import vllm
 
     self.llm, self.config, self.tokenizer = llm, llm.config, llm.tokenizer
@@ -162,7 +159,9 @@ class vLLMRunnable(bentoml.Runnable):
       )
     except Exception as err:
       traceback.print_exc()
-      raise OpenLLMException(f'Failed to initialise vLLMEngine due to the following error:\n{err}') from err
+      raise openllm.exceptions.OpenLLMException(
+        f'Failed to initialise vLLMEngine due to the following error:\n{err}'
+      ) from err
 
   @bentoml.Runnable.method(batchable=False)
   async def generate_iterator(self, prompt_token_ids, request_id, stop=None, adapter_name=None, **attrs):

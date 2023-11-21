@@ -6,7 +6,10 @@ import warnings
 
 import openllm
 from openllm_core._typing_compat import LiteralBackend, ParamSpec
-from openllm_core.utils import first_not_none, is_vllm_available
+from openllm_core.utils import first_not_none, getenv, is_vllm_available
+
+if t.TYPE_CHECKING:
+  from ._runners import Runner as _Runner
 
 P = ParamSpec('P')
 
@@ -20,7 +23,7 @@ def Runner(
   backend: LiteralBackend | None = None,
   llm_config: openllm.LLMConfig | None = None,
   **attrs: t.Any,
-) -> openllm.LLMRunner[t.Any, t.Any]:
+) -> _Runner[t.Any, t.Any]:
   """Create a Runner for given LLM. For a list of currently supported LLM, check out 'openllm models'.
 
   > [!WARNING]
@@ -73,9 +76,9 @@ def Runner(
   attrs.update(
     {
       'model_id': model_id,
-      'quantize': os.getenv('OPENLLM_QUANTIZE', attrs.get('quantize', None)),
-      'serialisation': first_not_none(
-        attrs.get('serialisation'), os.environ.get('OPENLLM_SERIALIZATION'), default=llm_config['serialisation']
+      'quantize': getenv('QUANTIZE', var=['QUANTISE'], default=attrs.get('quantize', None)),
+      'serialisation': getenv(
+        'serialization', default=attrs.get('serialisation', llm_config['serialisation']), var=['SERIALISATION']
       ),
     }
   )

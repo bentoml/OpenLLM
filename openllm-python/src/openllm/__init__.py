@@ -3,14 +3,12 @@ import os as _os
 import pathlib as _pathlib
 import warnings as _warnings
 
-import openllm_cli as _cli
 from openllm_cli import _sdk
 
 from . import utils as utils
 
 if utils.DEBUG:
   utils.set_debug_mode(True)
-  utils.set_quiet_mode(False)
   _logging.basicConfig(level=_logging.NOTSET)
 else:
   # configuration for bitsandbytes before import
@@ -47,18 +45,9 @@ __lazy = utils.LazyModule(
     'serialisation': ['ggml', 'transformers'],
     '_quantisation': ['infer_quantisation_config'],
     '_llm': ['LLM'],
-    '_generation': [
-      'StopSequenceCriteria',
-      'StopOnTokens',
-      'prepare_logits_processor',
-      'get_context_length',
-      'is_sentence_complete',
-      'is_partial_stop',
-    ],
   },
   extra_objects={
     'COMPILED': COMPILED,
-    'cli': _cli,
     'start': _sdk.start,
     'start_grpc': _sdk.start_grpc,
     'build': _sdk.build,
