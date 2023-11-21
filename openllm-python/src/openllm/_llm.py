@@ -128,6 +128,7 @@ class LLM(t.Generic[M, T], ReprMixin):
   _adapter_map: AdapterMap | None
   _serialisation: LiteralSerialisation
   _local: bool
+  _max_seq_len: int | None
   _prompt_template: PromptTemplate | None
   _system_message: str | None
 
@@ -160,6 +161,7 @@ class LLM(t.Generic[M, T], ReprMixin):
     embedded=False,
     dtype='auto',
     low_cpu_mem_usage=True,
+    max_seq_len=None,
     _eager=True,
     **attrs,
   ):
@@ -189,6 +191,7 @@ class LLM(t.Generic[M, T], ReprMixin):
       adapter_map=_resolve_peft_config_type(adapter_map) if adapter_map is not None else None,
       serialisation=serialisation,
       local=_local,
+      max_seq_len=max_seq_len,
       prompt_template=PromptTemplate(prompt_template) if isinstance(prompt_template, str) else prompt_template,
       system_message=system_message,
       LLM__model_attrs=model_attrs,
