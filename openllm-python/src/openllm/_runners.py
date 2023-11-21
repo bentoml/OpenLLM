@@ -104,7 +104,7 @@ class CTranslateRunnable(bentoml.Runnable):
   def __init__(self, llm):
     if not is_ctranslate_available():
       raise OpenLLMException('ctranslate is not installed. Please install it with `pip install "openllm[ctranslate]"`')
-    self.config, self.model, self.tokenizer = llm.config, llm.modle, llm.tokenizer
+    self.llm, self.config, self.model, self.tokenizer = llm, llm.config, llm.modle, llm.tokenizer
 
   @bentoml.Runnable.method(batchable=False)
   async def generate_iterator(self, prompt_token_ids, request_id, stop=None, adapter_name=None, **attrs):
@@ -114,7 +114,7 @@ class CTranslateRunnable(bentoml.Runnable):
     elif isinstance(stop, t.Iterable):
       stop_.update(stop)
 
-    config, sampling_params = self.config.model_construct_env(stop=list(stop_), **attrs).inference_options()
+    config, sampling_params = self.config.model_construct_env(stop=list(stop_), **attrs).inference_options(self.llm)
     cumulative_logprob, output_token_ids, input_len = 0.0, list(prompt_token_ids), len(prompt_token_ids)
     tokens = self.tokenizer.convert_ids_to_tokens(prompt_token_ids)
 
@@ -156,7 +156,7 @@ class vLLMRunnable(bentoml.Runnable):
       raise OpenLLMException('vLLM is not installed. Please install it via `pip install "openllm[vllm]"`.')
     import vllm
 
-    self.config, self.tokenizer = llm.config, llm.tokenizer
+    self.llm, self.config, self.tokenizer = llm, llm.config, llm.tokenizer
     num_gpus, dev = 1, openllm.utils.device_count()
     if dev >= 2:
       num_gpus = min(dev // 2 * 2, dev)
@@ -187,7 +187,7 @@ class vLLMRunnable(bentoml.Runnable):
     elif isinstance(stop, t.Iterable):
       stop_.update(stop)
 
-    config, sampling_params = self.config.model_construct_env(stop=list(stop_), **attrs).inference_options()
+    config, sampling_params = self.config.model_construct_env(stop=list(stop_), **attrs).inference_options(self.llm)
 
     async for request_output in self.model.generate(None, sampling_params, request_id, prompt_token_ids):
       # XXX: Need to write a hook for serialisation None correctly
@@ -202,7 +202,7 @@ class PyTorchRunnable(bentoml.Runnable):
   SUPPORTS_CPU_MULTI_THREADING = True
 
   def __init__(self, llm):
-    self.config, self.model, self.tokenizer = llm.config, llm.model, llm.tokenizer
+    self.llm, self.config, self.model, self.tokenizer = llm, llm.config, llm.model, llm.tokenizer
     self.is_encoder_decoder = llm.model.config.is_encoder_decoder
     if hasattr(llm.model, 'device'):
       self.device = llm.model.device
