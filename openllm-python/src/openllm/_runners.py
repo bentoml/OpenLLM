@@ -1,31 +1,102 @@
 from __future__ import annotations
 import gc
 import traceback
+import types
 import typing as t
 
 import torch
 
 import bentoml
 import openllm
+from bentoml._internal.models.model import ModelSignature
 from openllm_core._schemas import CompletionChunk, GenerationOutput, SampleLogprobs
 from openllm_core.exceptions import OpenLLMException
-from openllm_core.utils import first_not_none, getenv, is_ctranslate_available
+from openllm_core.utils import ReprMixin, converter, is_ctranslate_available, is_vllm_available
 
-__all__ = ['runnable']
+__all__ = ['runner']
+
+_registry = {}
 
 
-def runnable(llm, backend=None):
-  backend = first_not_none(getenv('backend', default=backend), default=llm._cascade_backend())
-  if backend == 'vllm':
-    return vLLMRunnable
-  elif backend == 'pt':
-    return PyTorchRunnable
-  elif backend == 'ctranslate':
-    return CTranslateRunnable
+def registry(cls=None, *, alias=None):
+  def decorator(_cls):
+    _registry[_cls.__name__[:-8].lower() if alias is None else alias] = _cls
+    return _cls
+
+  if cls is None:
+    return decorator
+  return decorator(cls)
+
+
+def runner(llm):
+  from ._strategies import CascadingResourceStrategy
+
+  try:
+    models = [llm.bentomodel]
+  except bentoml.exceptions.NotFound as err:
+    raise RuntimeError(f'Failed to locate {llm.bentomodel}:{err}') from err
+
+  if llm._prompt_template:
+    prompt_template = llm._prompt_template.to_string()
+  elif hasattr(llm.config, 'default_prompt_template'):
+    prompt_template = llm.config.default_prompt_template
   else:
-    raise OpenLLMException(f'Unsupported backend: {backend}')
+    prompt_template = None
+  if llm._system_message:
+    system_message = llm._system_message
+  elif hasattr(llm.config, 'default_system_message'):
+    system_message = llm.config.default_system_message
+  else:
+    system_message = None
+
+  return types.new_class(
+    llm.config.__class__.__name__[:-6] + 'Runner',
+    (bentoml.Runner,),
+    exec_body=lambda ns: ns.update(
+      {
+        'llm_type': llm.llm_type,
+        'identifying_params': llm.identifying_params,
+        'llm_tag': llm.tag,
+        'llm': llm,
+        'config': llm.config,
+        'backend': llm.__llm_backend__,
+        '__doc__': llm.config.__class__.__doc__ or f'Generated Runner class for {llm.config["model_name"]}',
+        '__module__': llm.__module__,
+        '__repr__': ReprMixin.__repr__,
+        '__repr_keys__': property(lambda _: {'config', 'llm_type', 'runner_methods', 'backend', 'llm_tag'}),
+        '__repr_args__': lambda _: (
+          (
+            'runner_methods',
+            {
+              method.name: {
+                'batchable': method.config.batchable,
+                'batch_dim': method.config.batch_dim if method.config.batchable else None,
+              }
+              for method in _.runner_methods
+            },
+          ),
+          ('config', llm.config.model_dump(flatten=True)),
+          ('llm_type', llm.llm_type),
+          ('backend', llm.__llm_backend__),
+          ('llm_tag', llm.tag),
+        ),
+        'has_adapters': llm.has_adapters,
+        'prompt_template': prompt_template,
+        'system_message': system_message,
+      }
+    ),
+  )(
+    _registry[llm.__llm_backend__],
+    name=llm.runner_name,
+    embedded=False,
+    models=models,
+    scheduling_strategy=CascadingResourceStrategy,
+    runnable_init_params={'llm': llm},
+    method_configs=converter.unstructure({'generate_iterator': ModelSignature(batchable=False)}),
+  )
 
 
+@registry
 class CTranslateRunnable(bentoml.Runnable):
   SUPPORTED_RESOURCES = ('nvidia.com/gpu', 'cpu')
   SUPPORTS_CPU_MULTI_THREADING = True
@@ -33,40 +104,23 @@ class CTranslateRunnable(bentoml.Runnable):
   def __init__(self, llm):
     if not is_ctranslate_available():
       raise OpenLLMException('ctranslate is not installed. Please install it with `pip install "openllm[ctranslate]"`')
-    self.config = llm.config
-    self.model = llm.model
-    self.tokenizer = llm.tokenizer
+    self.config, self.model, self.tokenizer = llm.config, llm.modle, llm.tokenizer
 
   @bentoml.Runnable.method(batchable=False)
   async def generate_iterator(self, prompt_token_ids, request_id, stop=None, adapter_name=None, **attrs):
-    if adapter_name is not None:
-      raise NotImplementedError('Adapter is not supported with CTranslate.')
-
     stop_ = set()
     if isinstance(stop, str) and stop != '':
       stop_.add(stop)
     elif isinstance(stop, t.Iterable):
       stop_.update(stop)
 
-    config = self.config.model_construct_env(stop=list(stop_), **attrs)
-    sampling_params = dict(
-      max_length=config['max_new_tokens'],
-      min_length=config['min_length'],
-      sampling_topk=config['top_k'],
-      sampling_topp=config['top_p'],
-      sampling_temperature=config['temperature'],
-      return_log_prob=config['logprobs'] > 0,
-      repetition_penalty=config['repetition_penalty'],
-      no_repeat_ngram_size=config['no_repeat_ngram_size'],
-      end_token=config['stop'],
-    )
-    cumulative_logprob = 0.0
-    output_token_ids = list(prompt_token_ids)
-    input_len = len(prompt_token_ids)
-    async for request_output in self.model.async_generate_tokens(
-      self.tokenizer.convert_ids_to_tokens(prompt_token_ids), **sampling_params
-    ):
-      cumulative_logprob += request_output.log_prob if config['logprobs'] else 0.0
+    config, sampling_params = self.config.model_construct_env(stop=list(stop_), **attrs).inference_options()
+    cumulative_logprob, output_token_ids, input_len = 0.0, list(prompt_token_ids), len(prompt_token_ids)
+    tokens = self.tokenizer.convert_ids_to_tokens(prompt_token_ids)
+
+    async for request_output in self.model.async_generate_tokens(tokens, **sampling_params):
+      if config['logprobs']:
+        cumulative_logprob += request_output.log_prob
       output_token_ids.append(request_output.token_id)
       text = self.tokenizer.decode(
         output_token_ids[input_len:],
@@ -92,34 +146,33 @@ class CTranslateRunnable(bentoml.Runnable):
       ).model_dump_json()
 
 
+@registry
 class vLLMRunnable(bentoml.Runnable):
   SUPPORTED_RESOURCES = ('nvidia.com/gpu', 'amd.com/gpu', 'cpu')
   SUPPORTS_CPU_MULTI_THREADING = True
 
   def __init__(self, llm):
-    try:
-      import vllm
-    except ImportError:
-      raise OpenLLMException('vLLM is not installed. Please install it via `pip install "openllm[vllm]"`.') from None
-    self.config = llm.config
+    if not is_vllm_available():
+      raise OpenLLMException('vLLM is not installed. Please install it via `pip install "openllm[vllm]"`.')
+    import vllm
+
+    self.config, self.tokenizer = llm.config, llm.tokenizer
     num_gpus, dev = 1, openllm.utils.device_count()
     if dev >= 2:
       num_gpus = min(dev // 2 * 2, dev)
-    quantization = None
-    if llm.quantise and llm.quantise in {'awq', 'squeezellm'}:
-      quantization = llm.quantise
+
     try:
       self.model = vllm.AsyncLLMEngine.from_engine_args(
         vllm.AsyncEngineArgs(
+          tokenizer_mode='auto',
+          tensor_parallel_size=num_gpus,
+          worker_use_ray=False,
+          engine_use_ray=False,
           model=llm.bentomodel.path,
           tokenizer=llm.bentomodel.path,
           trust_remote_code=llm.trust_remote_code,
-          tokenizer_mode='auto',
-          tensor_parallel_size=num_gpus,
           dtype=llm._torch_dtype,
-          quantization=quantization,
-          worker_use_ray=False,
-          engine_use_ray=False,
+          quantization=llm.quantise if llm.quantise and llm.quantise in {'awq', 'squeezellm'} else None,
         )
       )
     except Exception as err:
@@ -128,21 +181,13 @@ class vLLMRunnable(bentoml.Runnable):
 
   @bentoml.Runnable.method(batchable=False)
   async def generate_iterator(self, prompt_token_ids, request_id, stop=None, adapter_name=None, **attrs):
-    if adapter_name is not None:
-      raise NotImplementedError('Adapter is not supported with vLLM.')
     stop_ = set()
     if isinstance(stop, str) and stop != '':
       stop_.add(stop)
     elif isinstance(stop, t.Iterable):
       stop_.update(stop)
 
-    temperature = attrs.pop('temperature', self.config['temperature'])
-    top_p = attrs.pop('top_p', self.config['top_p'])
-    if temperature <= 1e-5:
-      top_p = 1.0
-    sampling_params = self.config.model_construct_env(
-      stop=list(stop_), temperature=temperature, top_p=top_p, **attrs
-    ).to_sampling_config()
+    config, sampling_params = self.config.model_construct_env(stop=list(stop_), **attrs).inference_options()
 
     async for request_output in self.model.generate(None, sampling_params, request_id, prompt_token_ids):
       # XXX: Need to write a hook for serialisation None correctly
@@ -151,32 +196,31 @@ class vLLMRunnable(bentoml.Runnable):
       yield GenerationOutput.from_vllm(request_output).model_dump_json()
 
 
+@registry(alias='pt')
 class PyTorchRunnable(bentoml.Runnable):
   SUPPORTED_RESOURCES = ('nvidia.com/gpu', 'amd.com/gpu', 'cpu')
   SUPPORTS_CPU_MULTI_THREADING = True
 
   def __init__(self, llm):
-    self.model = llm.model
-    self.tokenizer = llm.tokenizer
-    self.config = llm.config
+    self.config, self.model, self.tokenizer = llm.config, llm.model, llm.tokenizer
+    self.is_encoder_decoder = llm.model.config.is_encoder_decoder
     if hasattr(llm.model, 'device'):
       self.device = llm.model.device
     else:
       self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    self.is_encoder_decoder = llm.model.config.is_encoder_decoder
 
   @bentoml.Runnable.method(batchable=False)
   async def generate_iterator(self, prompt_token_ids, request_id, stop=None, adapter_name=None, **attrs):
     if adapter_name is not None:
       self.model.set_adapter(adapter_name)
+
     stop_ = set()
     if isinstance(stop, str) and stop != '':
       stop_.add(stop)
     elif isinstance(stop, t.Iterable):
       stop_.update(stop)
-    async for generation_output in self.forward(
-      prompt_token_ids=prompt_token_ids, request_id=request_id, stop=list(stop_), **attrs
-    ):
+
+    async for generation_output in self.forward(prompt_token_ids, request_id, list(stop_), **attrs):
       yield generation_output.model_dump_json()
 
   async def forward(self, prompt_token_ids, request_id, stop, **attrs):

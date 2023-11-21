@@ -27,9 +27,11 @@ from ._typing_compat import (
   LiteralBackend,
   LiteralSerialisation,
   LiteralString,
+  M,
   NotRequired,
   Required,
   Self,
+  T,
   overload,
 )
 from .exceptions import ForbiddenAttributeError, MissingDependencyError
@@ -42,6 +44,7 @@ if t.TYPE_CHECKING:
   import vllm
   from attrs import AttrsInstance
 
+  import openllm
   from openllm.protocol.cohere import CohereChatRequest, CohereGenerateRequest
   from openllm.protocol.openai import ChatCompletionRequest, CompletionRequest
 else:
@@ -268,6 +271,9 @@ class SamplingParams(ReprMixin):
     top_k: int
     top_p: float
     logprobs: int
+    repetition_penalty: float
+    length_penalty: float
+    early_stopping: bool
 
   def __init__(self, *, _internal: bool = False, **attrs: t.Any):
     if not _internal:
@@ -291,6 +297,14 @@ class SamplingParams(ReprMixin):
   @property
   def __repr_keys__(self) -> set[str]:
     return {i.name for i in attr.fields(self.__class__)}
+
+  def with_options(self, **attrs: t.Any) -> SamplingParams:
+    inst = t.cast('SamplingParams', attr.evolve(self, **attrs))
+    for k, v in attrs.items():
+      if not hasattr(inst, k):
+        raise KeyError(f"'{self.__class__.__name__}' has no attribute {k}.")
+      _object_setattr(inst, k, v)
+    return inst
 
   def build(self) -> vllm.SamplingParams:
     return vllm.SamplingParams(
@@ -352,7 +366,7 @@ converter.register_structure_hook_factory(
   ),
 )
 
-_SamplingParamsT = t.TypeVar('_SamplingParams', bound=SamplingParams)
+_SamplingParamsT = t.TypeVar('_SamplingParamsT', bound=SamplingParams)
 
 # cached it here to save one lookup per assignment
 _object_getattribute = object.__getattribute__
@@ -1447,6 +1461,41 @@ class LLMConfig(_ConfigAttr[GenerationConfig, SamplingParams]):
   def make_fine_tune_config(self, adapter_type: AdapterType, **attrs: t.Any) -> FineTuneConfig:
     return FineTuneConfig(adapter_type=adapter_type, llm_config_class=self.__class__).with_config(**attrs)
 
+  def inference_options(self, llm: openllm.LLM[M, T]) -> tuple[Self, t.Any]:
+    try:
+      return self, getattr(self, llm.__llm_backend__).build(self)
+    except AttributeError:
+      raise RuntimeError(f'Unknown backend {llm.__llm_backend__}') from None
+
+  class vllm:
+    @staticmethod
+    def build(config: LLMConfig) -> vllm.SamplingParams:
+      if config['temperature'] <= 1e-5:
+        top_p = 1.0
+      else:
+        top_p = config['top_p']
+      return config.sampling_config.with_options(top_p=top_p).build()
+
+  class ctranslate:
+    @staticmethod
+    def build(config: LLMConfig) -> dict[str, t.Any]:
+      return dict(
+        max_length=config['max_new_tokens'],
+        min_length=config['min_length'],
+        sampling_topk=config['top_k'],
+        sampling_topp=config['top_p'],
+        sampling_temperature=config['temperature'],
+        return_log_prob=config['logprobs'] > 0,
+        repetition_penalty=config['repetition_penalty'],
+        no_repeat_ngram_size=config['no_repeat_ngram_size'],
+        end_token=config['stop'],
+      )
+
+  class pt:
+    @staticmethod
+    def build(config: LLMConfig) -> LLMConfig:
+      return config
+
   @overload
   def to_generation_config(self, return_as_dict: t.Literal[False] = False) -> transformers.GenerationConfig: ...
 
@@ -1457,7 +1506,7 @@ class LLMConfig(_ConfigAttr[GenerationConfig, SamplingParams]):
     config = transformers.GenerationConfig(**converter.unstructure(self.generation_config))
     return config.to_dict() if return_as_dict else config
 
-  def to_sampling_config(self) -> vllm.SamplingParams:
+  def to_vllm(self) -> vllm.SamplingParams:
     return self.sampling_config.build()
 
   @overload
