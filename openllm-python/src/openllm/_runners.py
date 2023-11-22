@@ -89,13 +89,7 @@ class CTranslateRunnable(bentoml.Runnable):
 
   @bentoml.Runnable.method(batchable=False)
   async def generate_iterator(self, prompt_token_ids, request_id, stop=None, adapter_name=None, **attrs):
-    stop_ = set()
-    if isinstance(stop, str) and stop != '':
-      stop_.add(stop)
-    elif isinstance(stop, t.Iterable):
-      stop_.update(stop)
-
-    config, sampling_params = self.config.model_construct_env(stop=list(stop_), **attrs).inference_options(self.llm)
+    config, sampling_params = self.config.model_construct_env(stop=list(stop), **attrs).inference_options(self.llm)
     cumulative_logprob, output_token_ids, input_len = 0.0, list(prompt_token_ids), len(prompt_token_ids)
     tokens = self.tokenizer.convert_ids_to_tokens(prompt_token_ids)
 
@@ -165,18 +159,9 @@ class vLLMRunnable(bentoml.Runnable):
 
   @bentoml.Runnable.method(batchable=False)
   async def generate_iterator(self, prompt_token_ids, request_id, stop=None, adapter_name=None, **attrs):
-    stop_ = set()
-    if isinstance(stop, str) and stop != '':
-      stop_.add(stop)
-    elif isinstance(stop, t.Iterable):
-      stop_.update(stop)
-
-    config, sampling_params = self.config.model_construct_env(stop=list(stop_), **attrs).inference_options(self.llm)
+    config, sampling_params = self.config.model_construct_env(stop=stop, **attrs).inference_options(self.llm)
 
     async for request_output in self.model.generate(None, sampling_params, request_id, prompt_token_ids):
-      # XXX: Need to write a hook for serialisation None correctly
-      if request_output.prompt_logprobs is not None:
-        request_output.prompt_logprobs = [it if it else {} for it in request_output.prompt_logprobs]
       yield GenerationOutput.from_vllm(request_output).model_dump_json()
 
 
@@ -197,14 +182,7 @@ class PyTorchRunnable(bentoml.Runnable):
   async def generate_iterator(self, prompt_token_ids, request_id, stop=None, adapter_name=None, **attrs):
     if adapter_name is not None:
       self.model.set_adapter(adapter_name)
-
-    stop_ = set()
-    if isinstance(stop, str) and stop != '':
-      stop_.add(stop)
-    elif isinstance(stop, t.Iterable):
-      stop_.update(stop)
-
-    async for generation_output in self.forward(prompt_token_ids, request_id, list(stop_), **attrs):
+    async for generation_output in self.forward(prompt_token_ids, request_id, list(stop), **attrs):
       yield generation_output.model_dump_json()
 
   async def forward(self, prompt_token_ids, request_id, stop, **attrs):
