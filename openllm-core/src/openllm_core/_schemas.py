@@ -117,7 +117,6 @@ class CompletionChunk(_SchemaMixin):
   def model_dump_json(self) -> str:
     return orjson.dumps(self.model_dump(), option=orjson.OPT_NON_STR_KEYS).decode('utf-8')
 
-
 @attr.define
 class GenerationOutput(_SchemaMixin):
   prompt: str
@@ -166,8 +165,11 @@ class GenerationOutput(_SchemaMixin):
     except orjson.JSONDecodeError as e:
       raise ValueError(f'Failed to parse JSON from SSE message: {data!r}') from e
 
-    if structured['prompt_logprobs']: structured['prompt_logprobs'] = [{int(k): v for k,v in it.items()} if it else None for it in structured['prompt_logprobs']]
+    return cls.from_dict(structured)
 
+  @classmethod
+  def from_dict(cls, structured: dict[str, t.Any]) -> GenerationOutput:
+    if structured['prompt_logprobs']: structured['prompt_logprobs'] = [{int(k): v for k,v in it.items()} if it else None for it in structured['prompt_logprobs']]
     return cls(
       prompt=structured['prompt'],
       finished=structured['finished'],
@@ -210,3 +212,5 @@ class GenerationOutput(_SchemaMixin):
 
   def model_dump_json(self) -> str:
     return orjson.dumps(self.model_dump(), option=orjson.OPT_NON_STR_KEYS).decode('utf-8')
+
+converter.register_structure_hook_func(lambda cls: attr.has(cls) and issubclass(cls, GenerationOutput), lambda data, cls: cls.from_dict(data))
