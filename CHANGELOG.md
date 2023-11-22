@@ -18,6 +18,17 @@ This changelog is managed by towncrier and is compiled at release time.
 
 <!-- towncrier release notes start -->
 
+## [0.4.26](https://github.com/bentoml/openllm/tree/v0.4.26)
+
+### Features
+
+- `/v1/chat/completions` now accepts two additional parameters
+
+  - `chat_templates`: this is a string of [Jinja templates](https://huggingface.co/docs/transformers/main/chat_templating#templates-for-chat-models)
+                       to use with this models. By default, it will just use the default models provided chat templates based on config.json.
+  - `add_generation_prompt`: See [here](https://huggingface.co/docs/transformers/main/chat_templating#how-do-i-use-chat-templates)
+  [#725](https://github.com/bentoml/openllm/issues/725)
+
 ## [0.4.25](https://github.com/bentoml/openllm/tree/v0.4.25)
 No significant changes.
 
