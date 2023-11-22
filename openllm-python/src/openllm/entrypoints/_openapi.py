@@ -64,17 +64,15 @@ requestBody:
         one-shot:
           summary: One-shot input example
           value:
-            messages:
-              - role: system
-                content: You are a helpful assistant.
-              - role: user
-                content: Hello, I'm looking for a chatbot that can help me with my work.
+            messages: __chat_messages__
             model: __model_id__
             max_tokens: 256
             temperature: 0.7
             top_p: 0.43
             n: 1
             stream: false
+            chat_template: __chat_template__
+            add_generation_prompt: __add_generation_prompt__
         streaming:
           summary: Streaming input example
           value:
@@ -92,6 +90,8 @@ requestBody:
             stop:
               - "\\n"
               - "<|endoftext|>"
+            chat_template: __chat_template__
+            add_generation_prompt: __add_generation_prompt__
       schema:
         $ref: '#/components/schemas/ChatCompletionRequest'
 responses:

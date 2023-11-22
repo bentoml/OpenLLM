@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import openllm_core
+from openllm_core._schemas import MessageParam
 
 
 class PhiConfig(openllm_core.LLMConfig):
@@ -34,3 +35,13 @@ class PhiConfig(openllm_core.LLMConfig):
 
   class SamplingParams:
     best_of: int = 1
+
+  @property
+  def chat_template(self) -> str:
+    return repr("{% for message in messages %}{{message['role'] + ': ' + message['content'] + '\n\n'}}{% endfor %}{% if add_generation_prompt %}{{ 'assistant: ' }}{% endif %}")
+
+  @property
+  def chat_messages(self) -> list[MessageParam]:
+    return [MessageParam(role='user', content="I don't know why, I'm struggling to maintain focus while studying. Any suggestions?"),
+            MessageParam(role='assistant', content='Have you tried using a timer? It can help you stay on track and avoid distractions.'),
+            MessageParam(role='user', content="That's a good idea. I'll give it a try. What else can I do to boost my productivity?")]

@@ -115,7 +115,10 @@ def mount_to_svc(svc, llm):
       ),
       Route(
         '/chat/completions',
-        functools.partial(apply_schema(chat_completions, __model_id__=llm.llm_type), llm=llm),
+        functools.partial(apply_schema(chat_completions,
+                                        __model_id__=llm.llm_type, __chat_template__=llm.config.chat_template,
+                                        __chat_messages__=orjson.dumps(llm.config.chat_messages).decode(),
+                                        __add_generation_prompt__=str(True)), llm=llm),
         methods=['POST'],
       ),
       Route('/schema', endpoint=lambda req: schemas.OpenAPIResponse(req), include_in_schema=False),
@@ -151,9 +154,7 @@ async def chat_completions(req, llm):
 
   model_name, request_id = request.model, gen_random_uuid('chatcmpl')
   created_time = int(time.monotonic())
-  prompt = llm.tokenizer.apply_chat_template(
-    request.messages, tokenize=False, add_generation_prompt=llm.config['add_generation_prompt']
-  )
+  prompt = llm.tokenizer.apply_chat_template(request.messages, tokenize=False, chat_template=request.chat_template, add_generation_prompt=request.add_generation_prompt)
   logger.debug('Prompt: %r', prompt)
   config = llm.config.compatible_options(request)
 

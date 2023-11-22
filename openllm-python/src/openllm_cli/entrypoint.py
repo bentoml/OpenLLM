@@ -1334,8 +1334,7 @@ def query_command(
   $ openllm query --endpoint http://12.323.2.1:3000 "What is the meaning of life?"
   ```
   '''
-  if server_type == 'grpc':
-    raise click.ClickException("'grpc' is currently disabled.")
+  if server_type == 'grpc': raise click.ClickException("'grpc' is currently disabled.")
   _memoized = {k: orjson.loads(v[0]) for k, v in _memoized.items() if v}
   # TODO: grpc support
   client = openllm.HTTPClient(address=endpoint, timeout=timeout)
@@ -1343,7 +1342,7 @@ def query_command(
 
   if stream:
     stream_res: t.Iterator[StreamingResponse] = client.generate_stream(prompt, **_memoized)
-    termui.echo(prompt, fg=input_fg, nl=False)
+    termui.echo(prompt, fg=input_fg, nl=False if stream else True)
     for it in stream_res:
       termui.echo(it.text, fg=generated_fg, nl=False)
   else:

@@ -62,6 +62,9 @@ class ChatCompletionRequest:
   # supported by vLLM and us
   top_k: t.Optional[int] = attr.field(default=None)
   best_of: t.Optional[int] = attr.field(default=1)
+  # Additional features to support chat_template
+  chat_template: str = attr.field(default=None)
+  add_generation_prompt: bool = attr.field(default=True)
 
 
 @attr.define

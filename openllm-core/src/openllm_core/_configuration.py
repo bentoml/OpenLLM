@@ -48,6 +48,8 @@ if t.TYPE_CHECKING:
   import openllm
   from openllm.protocol.cohere import CohereChatRequest, CohereGenerateRequest
   from openllm.protocol.openai import ChatCompletionRequest, CompletionRequest
+
+  from ._schemas import MessageParam
 else:
   vllm = LazyLoader(
     'vllm',
@@ -428,9 +430,6 @@ class ModelSettings(t.TypedDict, total=False):
   # the target generation_config class to be used.
   fine_tune_strategies: t.Tuple[t.Dict[str, t.Any], ...]
 
-  # Chat models related configuration
-  add_generation_prompt: bool
-
 
 _transformed_type: DictStrAny = {'fine_tune_strategies': t.Dict[AdapterType, FineTuneConfig]}
 
@@ -478,7 +477,6 @@ class _ModelSettingsAttr:
     timeout: int
     workers_per_resource: t.Union[int, float]
     fine_tune_strategies: t.Dict[AdapterType, FineTuneConfig]
-    add_generation_prompt: bool
     # update-config-stubs.py: attrs stop
 
 
@@ -494,7 +492,6 @@ _DEFAULT = _ModelSettingsAttr(
     model_type='causal_lm',
     trust_remote_code=False,
     requirements=None,
-    add_generation_prompt=False,
     timeout=int(36e6),
     service_name='',
     workers_per_resource=1.0,
@@ -704,8 +701,6 @@ class _ConfigAttr(t.Generic[_GenerationConfigT, _SamplingParamsT]):
         '''
     __openllm_fine_tune_strategies__: t.Dict[AdapterType, FineTuneConfig] = Field(None)
     '''The fine-tune strategies for this given LLM.'''
-    __openllm_add_generation_prompt__: bool = Field(None)
-    '''Whether to add generation prompt token for formatting chat templates. This arguments will be used for chat-based models.'''
     # update-config-stubs.py: special stop
 
 
@@ -1148,8 +1143,6 @@ class LLMConfig(_ConfigAttr[GenerationConfig, SamplingParams]):
   def __getitem__(self, item: t.Literal['workers_per_resource']) -> t.Union[int, float]: ...
   @overload
   def __getitem__(self, item: t.Literal['fine_tune_strategies']) -> t.Dict[AdapterType, FineTuneConfig]: ...
-  @overload
-  def __getitem__(self, item: t.Literal['add_generation_prompt']) -> bool: ...
   # NOTE: generation_class, sampling_class and extras arguments
   @overload
   def __getitem__(self, item: t.Literal['generation_class']) -> t.Type[openllm_core.GenerationConfig]: ...
@@ -1594,6 +1587,17 @@ class LLMConfig(_ConfigAttr[GenerationConfig, SamplingParams]):
     # Return the default system message for given models.
     # This should really only be used for chat models.
     return ''
+
+  @property
+  def chat_template(self) -> str:
+    # return the default jinja chat templates
+    logger.warning("Using default ChatML template. Make sure to override to a specific models' chat template.")
+    return repr("{% for message in messages %}{{'<|im_start|>' + message['role'] + '\n' + message['content'] + '<|im_end|>' + '\n'}}{% endfor %}{% if add_generation_prompt %}{{ '<|im_start|>assistant\n' }}{% endif %}")
+
+  @property
+  def chat_messages(self) -> list[MessageParam]:
+    from ._schemas import MessageParam
+    return [MessageParam(role='system', content='You are a helpful assistant'), MessageParam(role='user', content="Hello, I'm looking for a chatbot that can help me with my work."), MessageParam(role='assistant', content='Yes? What can I help you with?')]
 
   @classmethod
   def parse(cls, f: AnyCallable) -> click.Command:
