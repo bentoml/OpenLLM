@@ -1575,24 +1575,11 @@ class LLMConfig(_ConfigAttr[GenerationConfig, SamplingParams]):
       return d
 
   @property
-  def template(self) -> str:
-    # Return the default prompt templates for given models.
-    # This is probably only useful for debugging. Users should be responsible
-    # for formatting the prompt themselves.
-    # by default it is just a '{instruction}'
-    return '{system_message}{instruction}'
-
+  def template(self) -> str: return '{system_message}{instruction}'
   @property
-  def system_message(self) -> str:
-    # Return the default system message for given models.
-    # This should really only be used for chat models.
-    return ''
-
+  def system_message(self) -> str: return ''
   @property
-  def chat_template(self) -> str:
-    # return the default jinja chat templates
-    logger.warning("Using default ChatML template. Make sure to override to a specific models' chat template.")
-    return repr("{% for message in messages %}{{'<|im_start|>' + message['role'] + '\n' + message['content'] + '<|im_end|>' + '\n'}}{% endfor %}{% if add_generation_prompt %}{{ '<|im_start|>assistant\n' }}{% endif %}")
+  def chat_template(self) -> str | None: return
 
   @property
   def chat_messages(self) -> list[MessageParam]:
