@@ -10,7 +10,6 @@ from starlette.applications import Starlette
 from starlette.responses import JSONResponse, StreamingResponse
 from starlette.routing import Route
 
-from openllm_core._schemas import SampleLogprobs
 from openllm_core.utils import converter, gen_random_uuid
 
 from ._openapi import add_schema_definitions, append_schemas, apply_schema, get_generator
@@ -165,34 +164,38 @@ async def chat_completions(req, llm):
     logger.error('Error generating completion: %s', err)
     return error_response(HTTPStatus.INTERNAL_SERVER_ERROR, f'Exception: {err!s} (check server log)')
 
-  def create_stream_response_json(index, text, finish_reason=None):
-    return jsonify_attr(
-      ChatCompletionStreamResponse(
-        id=request_id,
-        created=created_time,
-        model=model_name,
-        choices=[
-          ChatCompletionResponseStreamChoice(index=index, delta=Delta(content=text), finish_reason=finish_reason)
-        ],
-      )
+  def create_stream_response_json(index, text, finish_reason=None, usage=None):
+    response = ChatCompletionStreamResponse(
+      id=request_id,
+      created=created_time,
+      model=model_name,
+      choices=[
+        ChatCompletionResponseStreamChoice(index=index, delta=Delta(content=text), finish_reason=finish_reason)
+      ],
     )
+    if usage is not None: response.usage = usage
+    return jsonify_attr(response)
 
-  async def completion_stream_generator():
+  async def chat_completion_stream_generator():
     # first chunk with role
     for i in range(config['n']):
       yield f"data: {jsonify_attr(ChatCompletionStreamResponse(id=request_id, choices=[ChatCompletionResponseStreamChoice(index=i, delta=Delta(role='assistant'), finish_reason=None)], model=model_name))}\n\n"
 
+    previous_num_tokens = [0] * config['n']
     async for res in result_generator:
       for output in res.outputs:
         yield f'data: {create_stream_response_json(output.index, output.text)}\n\n'
+        previous_num_tokens[output.index] += len(output.token_ids)
         if output.finish_reason is not None:
-          yield f'data: {create_stream_response_json(output.index, "", output.finish_reason)}\n\n'
+          prompt_tokens = len(res.prompt_token_ids)
+          usage = UsageInfo(prompt_tokens, previous_num_tokens[i], prompt_tokens + previous_num_tokens[i])
+          yield f'data: {create_stream_response_json(output.index, "", output.finish_reason, usage)}\n\n'
     yield 'data: [DONE]\n\n'
 
   try:
     # Streaming case
     if request.stream:
-      return StreamingResponse(completion_stream_generator(), media_type='text/event-stream')
+      return StreamingResponse(chat_completion_stream_generator(), media_type='text/event-stream')
     # Non-streaming case
     final_result = None
     texts, token_ids = [[]] * config['n'], [[]] * config['n']
@@ -287,34 +290,38 @@ async def completions(req, llm):
   # TODO: support use_beam_search
   stream = request.stream and (config['best_of'] is None or config['n'] == config['best_of'])
 
-  def create_stream_response_json(index, text, logprobs=None, finish_reason=None):
-    return jsonify_attr(
-      CompletionStreamResponse(
-        id=request_id,
-        created=created_time,
-        model=model_name,
-        choices=[
-          CompletionResponseStreamChoice(index=index, text=text, logprobs=logprobs, finish_reason=finish_reason)
-        ],
-      )
+  def create_stream_response_json(index, text, logprobs=None, finish_reason=None, usage=None):
+    response = CompletionStreamResponse(
+      id=request_id,
+      created=created_time,
+      model=model_name,
+      choices=[
+        CompletionResponseStreamChoice(index=index, text=text, logprobs=logprobs, finish_reason=finish_reason)
+      ],
     )
+    if usage: response.usage = usage
+    return jsonify_attr(response)
 
   async def completion_stream_generator():
     previous_num_tokens = [0] * config['n']
+    previous_texts = [''] * config['n']
     async for res in result_generator:
       for output in res.outputs:
         i = output.index
         if request.logprobs is not None:
           logprobs = create_logprobs(
-            token_ids=output.token_ids, id_logprobs=output.logprobs[previous_num_tokens[i] :], llm=llm
+            token_ids=output.token_ids, id_logprobs=output.logprobs[previous_num_tokens[i]:], initial_text_offset=len(previous_texts[i]), llm=llm
           )
         else:
           logprobs = None
         previous_num_tokens[i] += len(output.token_ids)
+        previous_texts[i] += output.text
         yield f'data: {create_stream_response_json(index=i, text=output.text, logprobs=logprobs)}\n\n'
         if output.finish_reason is not None:
           logprobs = LogProbs() if request.logprobs is not None else None
-          yield f'data: {create_stream_response_json(index=i, text="", logprobs=logprobs, finish_reason=output.finish_reason)}\n\n'
+          prompt_tokens = len(res.prompt_token_ids)
+          usage = UsageInfo(prompt_tokens, previous_num_tokens[i], prompt_tokens + previous_num_tokens[i])
+          yield f'data: {create_stream_response_json(i, "", logprobs, output.finish_reason, usage)}\n\n'
     yield 'data: [DONE]\n\n'
 
   try:
@@ -344,7 +351,7 @@ async def completions(req, llm):
     for output in final_result.outputs:
       if request.logprobs is not None:
         logprobs = create_logprobs(
-          token_ids=output.token_ids, id_logprobs=t.cast(SampleLogprobs, output.logprobs), llm=llm
+          token_ids=output.token_ids, id_logprobs=output.logprobs, llm=llm
         )
       else:
         logprobs = None

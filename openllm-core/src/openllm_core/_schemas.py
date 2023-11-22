@@ -162,9 +162,30 @@ class GenerationOutput(_SchemaMixin):
     if not data:
       raise ValueError('No data found from messages.')
     try:
-      return converter.structure(orjson.loads(data), cls)
+      structured = orjson.loads(data)
     except orjson.JSONDecodeError as e:
       raise ValueError(f'Failed to parse JSON from SSE message: {data!r}') from e
+
+    if structured['prompt_logprobs']: structured['prompt_logprobs'] = [{int(k): v for k,v in it.items()} if it else None for it in structured['prompt_logprobs']]
+
+    return cls(
+      prompt=structured['prompt'],
+      finished=structured['finished'],
+      prompt_token_ids=structured['prompt_token_ids'],
+      prompt_logprobs=structured['prompt_logprobs'],
+      request_id=structured['request_id'],
+      outputs=[
+        CompletionChunk(
+          index=it['index'],
+          text=it['text'],
+          token_ids=it['token_ids'],
+          cumulative_logprob=it['cumulative_logprob'],
+          finish_reason=it['finish_reason'],
+          logprobs=[{int(k): v for k,v in s.items()} for s in it['logprobs']] if it['logprobs'] else None,
+        )
+        for it in structured['outputs']
+      ],
+    )
 
   @classmethod
   def from_vllm(cls, request_output: vllm.RequestOutput) -> GenerationOutput:
@@ -172,6 +193,8 @@ class GenerationOutput(_SchemaMixin):
       prompt=request_output.prompt,
       finished=request_output.finished,
       request_id=request_output.request_id,
+      prompt_token_ids=request_output.prompt_token_ids,
+      prompt_logprobs=request_output.prompt_logprobs,
       outputs=[
         CompletionChunk(
           index=it.index,
@@ -183,8 +206,6 @@ class GenerationOutput(_SchemaMixin):
         )
         for it in request_output.outputs
       ],
-      prompt_token_ids=request_output.prompt_token_ids,
-      prompt_logprobs=request_output.prompt_logprobs,
     )
 
   def model_dump_json(self) -> str:

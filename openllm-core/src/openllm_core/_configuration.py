@@ -280,6 +280,9 @@ class SamplingParams(ReprMixin):
     repetition_penalty: float
     length_penalty: float
     early_stopping: bool
+    prompt_logprobs: int
+    logprobs: int
+    stop: t.Optional[t.Union[str, t.List[str]]]
 
   def __init__(self, *, _internal: bool = False, **attrs: t.Any):
     if not _internal:
@@ -293,6 +296,9 @@ class SamplingParams(ReprMixin):
     _object_setattr(self, 'repetition_penalty', attrs.pop('repetition_penalty', 1.0))
     _object_setattr(self, 'length_penalty', attrs.pop('length_penalty', 1.0))
     _object_setattr(self, 'early_stopping', attrs.pop('early_stopping', False))
+    _object_setattr(self, 'logprobs', attrs.pop('logprobs', 0))
+    _object_setattr(self, 'prompt_logprobs', attrs.pop('prompt_logprobs', 0))
+    _object_setattr(self, 'stop', attrs.pop('stop', None))
     self.__attrs_init__(**attrs)
 
   def __getitem__(self, item: str) -> t.Any:
@@ -312,6 +318,10 @@ class SamplingParams(ReprMixin):
       temperature=self.temperature,
       top_k=self.top_k,
       top_p=self.top_p,
+      repetition_penalty=self.repetition_penalty,
+      logprobs=self.logprobs,
+      prompt_logprobs=self.prompt_logprobs,
+      stop=self.stop,
       **converter.unstructure(self),
     )
 
@@ -331,6 +341,14 @@ class SamplingParams(ReprMixin):
     )
     length_penalty = first_not_none(attrs.pop('length_penalty', None), default=generation_config['length_penalty'])
     early_stopping = first_not_none(attrs.pop('early_stopping', None), default=generation_config['early_stopping'])
+    logprobs = first_not_none(attrs.pop('logprobs', None), default=generation_config['logprobs'])
+    prompt_logprobs = first_not_none(attrs.pop('prompt_logprobs', None), default=generation_config['prompt_logprobs'])
+    stop = attrs.pop('stop', None)
+    if stop is None:
+      try:
+        stop = generation_config['stop']
+      except KeyError:
+        pass
 
     return cls(
       _internal=True,
@@ -341,6 +359,9 @@ class SamplingParams(ReprMixin):
       repetition_penalty=repetition_penalty,
       length_penalty=length_penalty,
       early_stopping=early_stopping,
+      logprobs=logprobs,
+      prompt_logprobs=prompt_logprobs,
+      stop=stop,
       **attrs,
     )
 
@@ -1469,7 +1490,14 @@ class LLMConfig(_ConfigAttr[GenerationConfig, SamplingParams]):
         top_p = 1.0
       else:
         top_p = config['top_p']
+      try:
+        stop = config['stop']
+      except KeyError:
+        stop = None
+      _object_setattr(config.sampling_config, 'stop', stop)
       _object_setattr(config.sampling_config, 'top_p', top_p)
+      _object_setattr(config.sampling_config, 'logprobs', config['logprobs'])
+      _object_setattr(config.sampling_config, 'prompt_logprobs', config['prompt_logprobs'])
       return config.sampling_config.build()
 
   class ctranslate:

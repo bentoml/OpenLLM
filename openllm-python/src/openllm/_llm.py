@@ -118,7 +118,7 @@ class LLM(t.Generic[M, T], ReprMixin):
     previous_texts, previous_num_tokens = [''] * config['n'], [0] * config['n']
     try:
       generator = self.runner.generate_iterator.async_stream(
-        prompt_token_ids, request_id, stop=stop, adapter_name=adapter_name, **config.model_dump(flatten=True)
+        prompt_token_ids, request_id, stop=list(stop), adapter_name=adapter_name, **config.model_dump(flatten=True)
       )
     except Exception as err:
       raise RuntimeError(f'Failed to start generation task: {err}') from err
@@ -127,8 +127,6 @@ class LLM(t.Generic[M, T], ReprMixin):
       async for out in generator:
         generated = GenerationOutput.from_runner(out).with_options(prompt=prompt)
         delta_outputs = [None] * len(generated.outputs)
-        if generated.finished:
-          break
         for output in generated.outputs:
           i = output.index
           delta_tokens, delta_text = output.token_ids[previous_num_tokens[i] :], output.text[len(previous_texts[i]) :]
