@@ -42,6 +42,27 @@ CONFIG_MAPPING_NAMES = OrderedDict(
   )
 )
 
+# NOTE: This is the entrypoint when adding new model config
+CONFIG_SUPPORTED_ARCHITECTURES_MAPPING = OrderedDict(
+  sorted(
+    [
+      ('FlanT5Config', ('T5ForConditionalGeneration',)),
+      ('BaichuanConfig', ('BaiChuanForCausalLM', 'BaichuanForCausalLM')),
+      ('ChatGLMConfig', ('ChatGLMModel',)),
+      ('FalconConfig', ('FalconForCausalLM',)),
+      ('GPTNeoXConfig', ('GPTNeoXForCausalLM',)),
+      ('DollyV2Config', ('GPTNeoXForCausalLM',)),
+      ('StableLMConfig', ('GPTNeoXForCausalLM',)),
+      ('LlamaConfig', ('LlamaForCausalLM',)),
+      ('MPTConfig', ('MPTForCausalLM',)),
+      ('OPTConfig', ('OPTForCausalLM',)),
+      ('PhiConfig', ('PhiForCausalLM',)),
+      ('StarCoderConfig', ('GPTBigCodeForCausalLM',)),
+      ('MistralConfig', ('MistralForCausalLM',)),
+      ('YiConfig', ('YiForCausalLM',)),
+    ]
+  )
+)
 
 class _LazyConfigMapping(OrderedDictType, ReprMixin):
   def __init__(self, mapping: OrderedDict[LiteralString, LiteralString]):
@@ -180,7 +201,7 @@ class AutoConfig:
   @classmethod
   def _CONFIG_MAPPING_NAMES_TO_ARCHITECTURE(cls) -> dict[str, str]:
     if cls._cached_mapping is None:
-      AutoConfig._cached_mapping = {v.__config__['architecture']: k for k, v in CONFIG_MAPPING.items()}
+      AutoConfig._cached_mapping = {arch: name for name in CONFIG_MAPPING_NAMES for arch in CONFIG_SUPPORTED_ARCHITECTURES_MAPPING[CONFIG_MAPPING_NAMES[name]]}
     return AutoConfig._cached_mapping
 
   @classmethod

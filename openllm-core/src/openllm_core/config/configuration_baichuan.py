@@ -34,6 +34,10 @@ class BaichuanConfig(openllm_core.LLMConfig):
       'fireballoon/baichuan-vicuna-chinese-7b',
       'fireballoon/baichuan-vicuna-7b',
       'hiyouga/baichuan-7b-sft',
+      'baichuan-inc/baichuan2-7b-base',
+      'baichuan-inc/baichuan2-7b-chat',
+      'baichuan-inc/baichuan2-13b-base',
+      'baichuan-inc/baichuan2-13b-chat',
     ],
   }
 
