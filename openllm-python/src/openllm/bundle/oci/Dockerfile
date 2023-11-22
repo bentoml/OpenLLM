@@ -16,10 +16,13 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
   git python3-pip && \
   rm -rf /var/lib/apt/lists/*
 
+RUN mkdir -p /openllm-python
+RUN mkdir -p /openllm-core
+RUN mkdir -p /openllm-client
 
 # Install required dependencies
-COPY openllm-python/src src
-COPY hatch.toml README.md CHANGELOG.md openllm-python/pyproject.toml ./
+COPY openllm-python/src /openllm-python/src
+COPY hatch.toml README.md CHANGELOG.md openllm-python/pyproject.toml /openllm-python/
 
 # Install all required dependencies
 # We have to install autoawq first to avoid conflict with torch, then reinstall torch with vllm
@@ -28,9 +31,6 @@ RUN --mount=type=cache,target=/root/.cache/pip \
   pip3 install -v --no-cache-dir \
   "ray==2.6.0" "vllm==0.2.2" xformers && \
   pip3 install --no-cache-dir -e .
-
-RUN mkdir -p /openllm-core
-RUN mkdir -p /openllm-client
 
 COPY openllm-core/src openllm-core/src
 COPY hatch.toml README.md CHANGELOG.md openllm-core/pyproject.toml /openllm-core/

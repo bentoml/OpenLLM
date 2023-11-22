@@ -24,7 +24,7 @@ if t.TYPE_CHECKING:
 def cli(
   ctx: click.Context, bento: str, machine: bool, _bento_store: BentoStore = Provide[BentoMLContainer.bento_store]
 ) -> str | None:
-  """Dive into a BentoLLM. This is synonymous to cd $(b get <bento>:<tag> -o path)."""
+  '''Dive into a BentoLLM. This is synonymous to cd $(b get <bento>:<tag> -o path).'''
   try:
     bentomodel = _bento_store.get(bento)
   except bentoml.exceptions.NotFound:

@@ -1,9 +1,9 @@
-"""Serialisation utilities for OpenLLM.
+'''Serialisation utilities for OpenLLM.
 
 Currently supports transformers for PyTorch, and vLLM.
 
 Currently, GGML format is working in progress.
-"""
+'''
 
 from typing import Any
 

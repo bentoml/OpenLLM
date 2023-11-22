@@ -215,18 +215,18 @@ def _make_resource_class(name: str, resource_kind: str, docstring: str) -> type[
 NvidiaGpuResource = _make_resource_class(
   'NvidiaGpuResource',
   'nvidia.com/gpu',
-  """NVIDIA GPU resource.
+  '''NVIDIA GPU resource.
 
     This is a modified version of internal's BentoML's NvidiaGpuResource
-    where it respects and parse CUDA_VISIBLE_DEVICES correctly.""",
+    where it respects and parse CUDA_VISIBLE_DEVICES correctly.''',
 )
 AmdGpuResource = _make_resource_class(
   'AmdGpuResource',
   'amd.com/gpu',
-  """AMD GPU resource.
+  '''AMD GPU resource.
 
     Since ROCm will respect CUDA_VISIBLE_DEVICES, the behaviour of from_spec, from_system are similar to
-    ``NvidiaGpuResource``. Currently ``validate`` is not yet supported.""",
+    ``NvidiaGpuResource``. Currently ``validate`` is not yet supported.''',
 )
 
 

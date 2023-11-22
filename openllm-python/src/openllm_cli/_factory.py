@@ -146,7 +146,7 @@ def start_decorator(serve_grpc: bool = False) -> t.Callable[[FC], t.Callable[[FC
       backend_option(factory=cog.optgroup),
       cog.optgroup.group(
         'LLM Optimization Options',
-        help="""Optimization related options.
+        help='''Optimization related options.
 
             OpenLLM supports running model k-bit quantization (8-bit, 4-bit), GPTQ quantization, PagedAttention via vLLM.
 
@@ -154,7 +154,7 @@ def start_decorator(serve_grpc: bool = False) -> t.Callable[[FC], t.Callable[[FC
 
             - DeepSpeed Inference: [link](https://www.deepspeed.ai/inference/)
             - GGML: Fast inference on [bare metal](https://github.com/ggerganov/ggml)
-            """,
+            ''',
       ),
       quantize_option(factory=cog.optgroup),
       serialisation_option(factory=cog.optgroup),
@@ -196,7 +196,7 @@ _IGNORED_OPTIONS = {'working_dir', 'production', 'protocol_version'}
 
 
 def parse_serve_args(serve_grpc: bool) -> t.Callable[[t.Callable[..., LLMConfig]], t.Callable[[FC], FC]]:
-  """Parsing `bentoml serve|serve-grpc` click.Option to be parsed via `openllm start`."""
+  '''Parsing `bentoml serve|serve-grpc` click.Option to be parsed via `openllm start`.'''
   from bentoml_cli.cli import cli
 
   command = 'serve' if not serve_grpc else 'serve-grpc'
@@ -233,11 +233,11 @@ _http_server_args, _grpc_server_args = parse_serve_args(False), parse_serve_args
 
 
 def _click_factory_type(*param_decls: t.Any, **attrs: t.Any) -> t.Callable[[FC | None], FC]:
-  """General ``@click`` decorator with some sauce.
+  '''General ``@click`` decorator with some sauce.
 
   This decorator extends the default ``@click.option`` plus a factory option and factory attr to
   provide type-safe click.option or click.argument wrapper for all compatible factory.
-  """
+  '''
   factory = attrs.pop('factory', click)
   factory_attr = attrs.pop('attr', 'option')
   if factory_attr != 'argument':
@@ -346,7 +346,7 @@ def quantize_option(f: _AnyCallable | None = None, *, build: bool = False, **att
     default=None,
     envvar='OPENLLM_QUANTIZE',
     show_envvar=True,
-    help="""Dynamic quantization for running this LLM.
+    help='''Dynamic quantization for running this LLM.
 
       The following quantization strategies are supported:
 
@@ -361,15 +361,15 @@ def quantize_option(f: _AnyCallable | None = None, *, build: bool = False, **att
       - ``squeezellm``: ``SqueezeLLM`` [SqueezeLLM: Dense-and-Sparse Quantization](https://arxiv.org/abs/2306.07629)
 
       > [!NOTE] that the model can also be served with quantized weights.
-      """
+      '''
     + (
-      """
-      > [!NOTE] that this will set the mode for serving within deployment."""
+      '''
+      > [!NOTE] that this will set the mode for serving within deployment.'''
       if build
       else ''
     )
-    + """
-      > [!NOTE] that quantization are currently only available in *PyTorch* models.""",
+    + '''
+      > [!NOTE] that quantization are currently only available in *PyTorch* models.''',
     **attrs,
   )(f)
 
@@ -383,7 +383,7 @@ def workers_per_resource_option(
     callback=workers_per_resource_callback,
     type=str,
     required=False,
-    help="""Number of workers per resource assigned.
+    help='''Number of workers per resource assigned.
 
       See https://docs.bentoml.org/en/latest/guides/scheduling.html#resource-scheduling-strategy
       for more information. By default, this is set to 1.
@@ -393,7 +393,7 @@ def workers_per_resource_option(
       - ``round_robin``: Similar behaviour when setting ``--workers-per-resource 1``. This is useful for smaller models.
 
       - ``conserved``: This will determine the number of available GPU resources. For example, if ther are 4 GPUs available, then ``conserved`` is equivalent to ``--workers-per-resource 0.25``.
-      """
+      '''
     + (
       """\n
       > [!NOTE] The workers value passed into 'build' will determine how the LLM can
@@ -416,7 +416,7 @@ def serialisation_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Cal
     show_default=True,
     show_envvar=True,
     envvar='OPENLLM_SERIALIZATION',
-    help="""Serialisation format for save/load LLM.
+    help='''Serialisation format for save/load LLM.
 
       Currently the following strategies are supported:
 
@@ -425,7 +425,7 @@ def serialisation_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Cal
       > [!NOTE] Safetensors might not work for every cases, and you can always fallback to ``legacy`` if needed.
 
       - ``legacy``: This will use PyTorch serialisation format, often as ``.bin`` files. This should be used if the model doesn't yet support safetensors.
-      """,
+      ''',
     **attrs,
   )(f)
 

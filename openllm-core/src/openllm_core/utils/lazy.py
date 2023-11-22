@@ -23,11 +23,11 @@ logger = logging.getLogger(__name__)
 
 
 class LazyLoader(types.ModuleType):
-  """
+  '''
   LazyLoader module borrowed from Tensorflow https://github.com/tensorflow/tensorflow/blob/v2.2.0/tensorflow/python/util/lazy_loader.py with a addition of "module caching". This will throw an exception if module cannot be imported.
 
   Lazily import a module, mainly to avoid pulling in large dependencies. `contrib`, and `ffmpeg` are examples of modules that are large and not always needed, and this allows them to only be loaded when they are used.
-  """
+  '''
 
   def __init__(
     self,
@@ -180,12 +180,12 @@ class LazyModule(types.ModuleType):
     return result + [i for i in self.__all__ if i not in result]
 
   def __getattr__(self, name: str) -> t.Any:
-    """Equivocal __getattr__ implementation.
+    '''Equivocal __getattr__ implementation.
 
     It checks from _objects > _modules and does it recursively.
 
     It also contains a special case for all of the metadata information, such as __version__ and __version_info__.
-    """
+    '''
     if name in _reserved_namespace:
       raise openllm_core.exceptions.ForbiddenAttributeError(
         f"'{name}' is a reserved namespace for {self._name} and should not be access nor modified."

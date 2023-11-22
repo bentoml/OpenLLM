@@ -59,7 +59,7 @@ def Runner(
       "'ensure_available=False' won't have any effect as LLM will always check to download the model on initialisation."
     )
   model_id = attrs.get('model_id', os.getenv('OPENLLM_MODEL_ID', llm_config['default_id']))
-  _RUNNER_MSG = f"""\
+  _RUNNER_MSG = f'''\
   Using 'openllm.Runner' is now deprecated. Make sure to switch to the following syntax:
 
   ```python
@@ -71,7 +71,7 @@ def Runner(
   async def chat(input: str) -> str:
     async for it in llm.generate_iterator(input): print(it)
   ```
-    """
+    '''
   warnings.warn(_RUNNER_MSG, DeprecationWarning, stacklevel=2)
   attrs.update(
     {

@@ -94,14 +94,14 @@ else:
 
 P = ParamSpec('P')
 logger = logging.getLogger('openllm')
-OPENLLM_FIGLET = """\
+OPENLLM_FIGLET = '''\
  ██████╗ ██████╗ ███████╗███╗   ██╗██╗     ██╗     ███╗   ███╗
 ██╔═══██╗██╔══██╗██╔════╝████╗  ██║██║     ██║     ████╗ ████║
 ██║   ██║██████╔╝█████╗  ██╔██╗ ██║██║     ██║     ██╔████╔██║
 ██║   ██║██╔═══╝ ██╔══╝  ██║╚██╗██║██║     ██║     ██║╚██╔╝██║
 ╚██████╔╝██║     ███████╗██║ ╚████║███████╗███████╗██║ ╚═╝ ██║
  ╚═════╝ ╚═╝     ╚══════╝╚═╝  ╚═══╝╚══════╝╚══════╝╚═╝     ╚═╝
-"""
+'''
 
 ServeCommand = t.Literal['serve', 'serve-grpc']
 
@@ -287,7 +287,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
     return decorator
 
   def format_commands(self, ctx: click.Context, formatter: click.HelpFormatter) -> None:
-    """Additional format methods that include extensions as well as the default cli command."""
+    '''Additional format methods that include extensions as well as the default cli command.'''
     from gettext import gettext as _
 
     commands: list[tuple[str, click.Command]] = []
@@ -334,7 +334,7 @@ _PACKAGE_NAME = 'openllm'
   message=f'{_PACKAGE_NAME}, %(version)s (compiled: {openllm.COMPILED})\nPython ({platform.python_implementation()}) {platform.python_version()}',
 )
 def cli() -> None:
-  """\b
+  '''\b
    ██████╗ ██████╗ ███████╗███╗   ██╗██╗     ██╗     ███╗   ███╗
   ██╔═══██╗██╔══██╗██╔════╝████╗  ██║██║     ██║     ████╗ ████║
   ██║   ██║██████╔╝█████╗  ██╔██╗ ██║██║     ██║     ██╔████╔██║
@@ -345,7 +345,7 @@ def cli() -> None:
   \b
   An open platform for operating large language models in production.
   Fine-tune, serve, deploy, and monitor any LLMs with ease.
-  """
+  '''
 
 
 @cli.command(
@@ -389,13 +389,13 @@ def start_command(
   max_model_len: int | None,
   **attrs: t.Any,
 ) -> LLMConfig | subprocess.Popen[bytes]:
-  """Start any LLM as a REST server.
+  '''Start any LLM as a REST server.
 
   \b
   ```bash
   $ openllm <start|start-http> <model_id> --<options> ...
   ```
-  """
+  '''
   if model_id in openllm.CONFIG_MAPPING:
     _model_name = model_id
     if deprecated_model_id is not None:
@@ -519,13 +519,13 @@ def start_grpc_command(
   max_model_len: int | None,
   **attrs: t.Any,
 ) -> LLMConfig | subprocess.Popen[bytes]:
-  """Start any LLM as a gRPC server.
+  '''Start any LLM as a gRPC server.
 
   \b
   ```bash
   $ openllm start-grpc <model_id> --<options> ...
   ```
-  """
+  '''
   termui.warning(
     'Continuous batching is currently not yet supported with gPRC. If you want to use continuous batching with gRPC, feel free to open a GitHub issue about your usecase.\n'
   )
@@ -955,7 +955,7 @@ def build_command(
   force_push: bool,
   **_: t.Any,
 ) -> BuildBentoOutput:
-  """Package a given models into a BentoLLM.
+  '''Package a given models into a BentoLLM.
 
   \b
   ```bash
@@ -971,7 +971,7 @@ def build_command(
   > [!IMPORTANT]
   > To build the bento with compiled OpenLLM, make sure to prepend HATCH_BUILD_HOOKS_ENABLE=1. Make sure that the deployment
   > target also use the same Python version and architecture as build machine.
-  """
+  '''
   from openllm.serialisation.transformers.weights import has_safetensors_weights
 
   if model_id in openllm.CONFIG_MAPPING:
@@ -1167,13 +1167,13 @@ class ModelItem(t.TypedDict):
 @cli.command()
 @click.option('--show-available', is_flag=True, default=True, hidden=True)
 def models_command(**_: t.Any) -> dict[t.LiteralString, ModelItem]:
-  """List all supported models.
+  '''List all supported models.
 
   \b
   ```bash
   openllm models
   ```
-  """
+  '''
   result: dict[t.LiteralString, ModelItem] = {
     m: ModelItem(
       architecture=config.__openllm_architecture__,
@@ -1216,11 +1216,11 @@ def prune_command(
   bento_store: BentoStore = Provide[BentoMLContainer.bento_store],
   **_: t.Any,
 ) -> None:
-  """Remove all saved models, and bentos built with OpenLLM locally.
+  '''Remove all saved models, and bentos built with OpenLLM locally.
 
   \b
   If a model type is passed, then only prune models for that given model type.
-  """
+  '''
   available: list[tuple[bentoml.Model | bentoml.Bento, ModelStore | BentoStore]] = [
     (m, model_store)
     for m in bentoml.models.list()
@@ -1326,13 +1326,13 @@ def query_command(
   _memoized: DictStrAny,
   **_: t.Any,
 ) -> None:
-  """Query a LLM interactively, from a terminal.
+  '''Query a LLM interactively, from a terminal.
 
   \b
   ```bash
   $ openllm query --endpoint http://12.323.2.1:3000 "What is the meaning of life?"
   ```
-  """
+  '''
   if server_type == 'grpc':
     raise click.ClickException("'grpc' is currently disabled.")
   _memoized = {k: orjson.loads(v[0]) for k, v in _memoized.items() if v}
@@ -1353,7 +1353,7 @@ def query_command(
 
 @cli.group(cls=Extensions, hidden=True, name='extension')
 def extension_command() -> None:
-  """Extension for OpenLLM CLI."""
+  '''Extension for OpenLLM CLI.'''
 
 
 if __name__ == '__main__':

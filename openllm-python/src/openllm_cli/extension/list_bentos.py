@@ -13,7 +13,7 @@ from openllm_cli import termui
 @click.command('list_bentos', context_settings=termui.CONTEXT_SETTINGS)
 @click.pass_context
 def cli(ctx: click.Context) -> None:
-  """List available bentos built by OpenLLM."""
+  '''List available bentos built by OpenLLM.'''
   mapping = {
     k: [
       {

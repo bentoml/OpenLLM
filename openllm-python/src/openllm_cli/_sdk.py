@@ -291,7 +291,7 @@ def _import_model(
 
 
 def _list_models() -> dict[str, t.Any]:
-  """List all available models within the local store."""
+  '''List all available models within the local store.'''
   from .entrypoint import models_command
 
   return models_command.main(args=['--quiet'], standalone_mode=False)
