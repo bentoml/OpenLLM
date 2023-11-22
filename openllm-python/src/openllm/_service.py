@@ -6,6 +6,7 @@ import _service_vars as svars
 
 import bentoml
 import openllm
+from openllm_core._schemas import MessageParam
 from bentoml.io import JSON, Text
 
 logger = logging.getLogger(__name__)
@@ -59,11 +60,6 @@ def metadata_v1(_: str) -> openllm.MetadataOutput:
 class MessagesConverterInput(t.TypedDict):
   add_generation_prompt: bool
   messages: t.List[t.Dict[str, t.Any]]
-
-
-class MessageParam(t.TypedDict):
-  role: t.Literal['system', 'user', 'assistant']
-  content: str
 
 
 @svc.api(

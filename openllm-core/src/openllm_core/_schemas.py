@@ -12,8 +12,11 @@ from .utils import converter, gen_random_uuid
 if t.TYPE_CHECKING:
   import vllm
 
-  from ._typing_compat import Self
+  from ._typing_compat import Self, LiteralString
 
+class MessageParam(t.TypedDict):
+  role: t.Union[t.Literal['system', 'user', 'assistant'], LiteralString]
+  content: str
 
 @attr.define
 class _SchemaMixin:

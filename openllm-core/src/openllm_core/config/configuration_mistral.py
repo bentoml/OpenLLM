@@ -18,7 +18,6 @@ class MistralConfig(openllm_core.LLMConfig):
     'name_type': 'lowercase',
     'url': 'https://mistral.ai',
     'architecture': 'MistralForCausalLM',
-    'add_generation_prompt': True,
     'default_id': 'mistralai/Mistral-7B-Instruct-v0.1',
     'serialisation': 'safetensors',
     'backend': ('pt', 'vllm'),
