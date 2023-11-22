@@ -29,6 +29,17 @@ RUN --mount=type=cache,target=/root/.cache/pip \
   "ray==2.6.0" "vllm==0.2.2" xformers && \
   pip3 install --no-cache-dir -e .
 
+RUN mkdir -p /openllm-core
+RUN mkdir -p /openllm-client
+
+COPY openllm-core/src openllm-core/src
+COPY hatch.toml README.md CHANGELOG.md openllm-core/pyproject.toml /openllm-core/
+RUN --mount=type=cache,target=/root/.cache/pip pip3 install -v --no-cache-dir -e /openllm-core/
+
+COPY openllm-client/src openllm-client/src
+COPY hatch.toml README.md CHANGELOG.md openllm-client/pyproject.toml /openllm-client/
+RUN --mount=type=cache,target=/root/.cache/pip pip3 install -v --no-cache-dir -e /openllm-client/
+
 FROM base-container
 
 ENTRYPOINT ["python3", "-m", "openllm"]
