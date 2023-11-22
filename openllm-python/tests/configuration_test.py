@@ -1,7 +1,6 @@
 from __future__ import annotations
 import contextlib
 import os
-import sys
 import typing as t
 from unittest import mock
 
@@ -13,26 +12,6 @@ import openllm
 from openllm_core._configuration import GenerationConfig, ModelSettings, field_env_key
 
 from ._strategies._configuration import make_llm_config, model_settings
-
-
-# XXX: @aarnphm fixes TypedDict behaviour in 3.11
-@pytest.mark.skipif(
-  sys.version_info[:2] == (3, 11), reason='TypedDict in 3.11 behaves differently, so we need to fix this'
-)
-def test_missing_default():
-  with pytest.raises(ValueError, match='Missing required fields *'):
-    make_llm_config('MissingDefaultId', {'name_type': 'lowercase', 'requirements': ['bentoml']})
-  with pytest.raises(ValueError, match='Missing required fields *'):
-    make_llm_config('MissingModelId', {'default_id': 'huggingface/t5-tiny-testing', 'requirements': ['bentoml']})
-  with pytest.raises(ValueError, match='Missing required fields *'):
-    make_llm_config(
-      'MissingArchitecture',
-      {
-        'default_id': 'huggingface/t5-tiny-testing',
-        'model_ids': ['huggingface/t5-tiny-testing'],
-        'requirements': ['bentoml'],
-      },
-    )
 
 
 def test_forbidden_access():

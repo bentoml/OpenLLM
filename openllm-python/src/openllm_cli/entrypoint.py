@@ -442,6 +442,7 @@ def start_command(
     serialisation=serialisation,
     dtype=dtype,
     max_model_len=max_model_len,
+    trust_remote_code=check_bool_env('TRUST_REMOTE_CODE'),
   )
   backend_warning(llm.__llm_backend__)
 
