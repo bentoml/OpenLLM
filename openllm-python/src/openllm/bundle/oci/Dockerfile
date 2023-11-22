@@ -30,7 +30,7 @@ COPY hatch.toml README.md CHANGELOG.md openllm-python/pyproject.toml /openllm-py
 RUN --mount=type=cache,target=/root/.cache/pip \
   pip3 install -v --no-cache-dir \
   "ray==2.6.0" "vllm==0.2.2" xformers && \
-  pip3 install --no-cache-dir -e .
+  pip3 install --no-cache-dir -e /openllm-python/
 
 COPY openllm-core/src openllm-core/src
 COPY hatch.toml README.md CHANGELOG.md openllm-core/pyproject.toml /openllm-core/
