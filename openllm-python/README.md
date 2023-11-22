@@ -839,6 +839,25 @@ openllm start HuggingFaceH4/zephyr-7b-alpha --backend vllm
 openllm start HuggingFaceH4/zephyr-7b-alpha --backend pt
 ```
 
+- CTranslate2 (*experimental*):
+
+
+```bash
+openllm start HuggingFaceH4/zephyr-7b-alpha --backend ctranslate
+```
+
+
+> **Note:** Currently, All quantization methods from ctranslate2 are supported. This includes int8, int8_float16, int8_bfloat16
+
+
+
+> **Note:** We recommend users to convert the models beforehand, and then provide the given directory of the converted models to `openllm start`. See [CTranslate2](https://opennmt.net/CTranslate2/conversion.html) for more information.
+
+
+
+> **Important:** CTranslate2 is an experimental backend and yet to be fully supported. It is recommended to use vLLM for all production use-case.
+
+
 </details>
 
 <details>

@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-import openllm_core
-from openllm_core._schemas import MessageParam
+import openllm_core, typing as t
 
+if t.TYPE_CHECKING:
+  from openllm_core._schemas import MessageParam
 
 class PhiConfig(openllm_core.LLMConfig):
   """The language model phi-1.5 is a Transformer with 1.3 billion parameters.
@@ -42,6 +43,7 @@ class PhiConfig(openllm_core.LLMConfig):
 
   @property
   def chat_messages(self) -> list[MessageParam]:
+    from openllm_core._schemas import MessageParam
     return [MessageParam(role='user', content="I don't know why, I'm struggling to maintain focus while studying. Any suggestions?"),
             MessageParam(role='assistant', content='Have you tried using a timer? It can help you stay on track and avoid distractions.'),
             MessageParam(role='user', content="That's a good idea. I'll give it a try. What else can I do to boost my productivity?")]

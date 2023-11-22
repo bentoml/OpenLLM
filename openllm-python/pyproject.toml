@@ -106,7 +106,7 @@ all = ["openllm[full]"]
 awq = ["autoawq"]
 baichuan = ["cpm-kernels"]
 chatglm = ["cpm-kernels"]
-ctranslate = ["ctranslate2"]
+ctranslate = ["ctranslate2>=3.22.0"]
 falcon = ["xformers"]
 fine-tune = ["peft>=0.6.0", "datasets", "trl", "huggingface-hub"]
 full = [
