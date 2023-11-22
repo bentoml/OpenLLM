@@ -23,10 +23,6 @@ RUN mkdir -p /openllm-client
 # Install required dependencies
 COPY openllm-python/src /openllm-python/src
 COPY hatch.toml README.md CHANGELOG.md openllm-python/pyproject.toml /openllm-python/
-
-# Install all required dependencies
-# We have to install autoawq first to avoid conflict with torch, then reinstall torch with vllm
-# below
 RUN --mount=type=cache,target=/root/.cache/pip \
   pip3 install -v --no-cache-dir \
   "ray==2.6.0" "vllm==0.2.2" xformers && \
@@ -39,6 +35,7 @@ RUN --mount=type=cache,target=/root/.cache/pip pip3 install -v --no-cache-dir -e
 COPY openllm-client/src openllm-client/src
 COPY hatch.toml README.md CHANGELOG.md openllm-client/pyproject.toml /openllm-client/
 RUN --mount=type=cache,target=/root/.cache/pip pip3 install -v --no-cache-dir -e /openllm-client/
+
 
 FROM base-container
 

@@ -435,7 +435,7 @@ def container_registry_option(f: _AnyCallable | None = None, **attrs: t.Any) -> 
     '--container-registry',
     'container_registry',
     type=click.Choice(list(openllm.bundle.CONTAINER_NAMES)),
-    default='ecr',
+    default='gh',
     show_default=True,
     show_envvar=True,
     envvar='OPENLLM_CONTAINER_REGISTRY',
