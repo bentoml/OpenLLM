@@ -11,7 +11,7 @@ from openllm_core.utils import first_not_none
 
 OPENAPI_VERSION, API_VERSION = '3.0.2', '1.0'
 # NOTE: OpenAI schema
-LIST_MODELS_SCHEMA = """\
+LIST_MODELS_SCHEMA = '''\
 ---
 consumes:
 - application/json
@@ -41,8 +41,8 @@ responses:
               owned_by: 'na'
         schema:
           $ref: '#/components/schemas/ModelList'
-"""
-CHAT_COMPLETIONS_SCHEMA = """\
+'''
+CHAT_COMPLETIONS_SCHEMA = '''\
 ---
 consumes:
 - application/json
@@ -179,8 +179,8 @@ responses:
                 }
               }
     description: Bad Request
-"""
-COMPLETIONS_SCHEMA = """\
+'''
+COMPLETIONS_SCHEMA = '''\
 ---
 consumes:
   - application/json
@@ -332,8 +332,8 @@ responses:
                 }
               }
     description: Bad Request
-"""
-HF_AGENT_SCHEMA = """\
+'''
+HF_AGENT_SCHEMA = '''\
 ---
 consumes:
   - application/json
@@ -377,8 +377,8 @@ responses:
         schema:
           $ref: '#/components/schemas/HFErrorResponse'
     description: Not Found
-"""
-HF_ADAPTERS_SCHEMA = """\
+'''
+HF_ADAPTERS_SCHEMA = '''\
 ---
 consumes:
 - application/json
@@ -408,8 +408,8 @@ responses:
         schema:
           $ref: '#/components/schemas/HFErrorResponse'
     description: Not Found
-"""
-COHERE_GENERATE_SCHEMA = """\
+'''
+COHERE_GENERATE_SCHEMA = '''\
 ---
 consumes:
   - application/json
@@ -453,8 +453,8 @@ requestBody:
             stop_sequences:
               - "\\n"
               - "<|endoftext|>"
-"""
-COHERE_CHAT_SCHEMA = """\
+'''
+COHERE_CHAT_SCHEMA = '''\
 ---
 consumes:
 - application/json
@@ -467,7 +467,7 @@ tags:
   - Cohere
 x-bentoml-name: cohere_chat
 summary: Creates a model response for the given chat conversation.
-"""
+'''
 
 _SCHEMAS = {k[:-7].lower(): v for k, v in locals().items() if k.endswith('_SCHEMA')}
 

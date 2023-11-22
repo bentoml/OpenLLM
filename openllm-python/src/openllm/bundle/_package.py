@@ -22,7 +22,7 @@ OPENLLM_DEV_BUILD = 'OPENLLM_DEV_BUILD'
 
 
 def build_editable(path, package='openllm'):
-  """Build OpenLLM if the OPENLLM_DEV_BUILD environment variable is set."""
+  '''Build OpenLLM if the OPENLLM_DEV_BUILD environment variable is set.'''
   if not check_bool_env(OPENLLM_DEV_BUILD, default=False):
     return None
   # We need to build the package in editable mode, so that we can import it

@@ -14,11 +14,11 @@ P = ParamSpec('P')
 
 
 def load_tokenizer(llm: LLM[M, T], **tokenizer_attrs: t.Any) -> TypeGuard[T]:
-  """Load the tokenizer from BentoML store.
+  '''Load the tokenizer from BentoML store.
 
   By default, it will try to find the bentomodel whether it is in store..
   If model is not found, it will raises a ``bentoml.exceptions.NotFound``.
-  """
+  '''
   import cloudpickle
   import fs
   from transformers import AutoTokenizer

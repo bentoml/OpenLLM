@@ -86,14 +86,14 @@ def _make_method(name: str, script: str, filename: str, globs: DictStrAny) -> An
 
 
 def make_attr_tuple_class(cls_name: str, attr_names: t.Sequence[str]) -> type[t.Any]:
-  """Create a tuple subclass to hold class attributes.
+  '''Create a tuple subclass to hold class attributes.
 
   The subclass is a bare tuple with properties for names.
 
   class MyClassAttributes(tuple):
   __slots__ = ()
   x = property(itemgetter(0))
-  """
+  '''
   from . import SHOW_CODEGEN
 
   attr_class_name = f'{cls_name}Attributes'

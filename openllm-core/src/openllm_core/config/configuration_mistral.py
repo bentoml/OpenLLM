@@ -46,7 +46,7 @@ class MistralConfig(openllm_core.LLMConfig):
 
   @property
   def template(self) -> str:
-    return """{start_key}{start_inst} {system_message} {instruction} {end_inst}\n""".format(
+    return '''{start_key}{start_inst} {system_message} {instruction} {end_inst}\n'''.format(
       start_inst=SINST_KEY,
       end_inst=EINST_KEY,
       start_key=BOS_TOKEN,
@@ -57,4 +57,4 @@ class MistralConfig(openllm_core.LLMConfig):
   # NOTE: https://docs.mistral.ai/usage/guardrailing/
   @property
   def system_message(self) -> str:
-    return """Always assist with care, respect, and truth. Respond with utmost utility yet securely. Avoid harmful, unethical, prejudiced, or negative content. Ensure replies promote fairness and positivity."""
+    return '''Always assist with care, respect, and truth. Respond with utmost utility yet securely. Avoid harmful, unethical, prejudiced, or negative content. Ensure replies promote fairness and positivity.'''

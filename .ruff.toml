@@ -88,8 +88,8 @@ max-line-length = 119
 [lint.flake8-quotes]
 avoid-escape = false
 inline-quotes = "single"
-multiline-quotes = "double"
-docstring-quotes = "double"
+multiline-quotes = "single"
+docstring-quotes = "single"
 
 [lint.extend-per-file-ignores]
 "openllm-python/tests/**/*" = ["S101", "TID252", "PT011", "S307"]

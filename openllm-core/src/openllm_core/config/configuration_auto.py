@@ -1,12 +1,7 @@
 from __future__ import annotations
-import importlib
-import os
-import typing as t
+import importlib, os, typing as t
 from collections import OrderedDict
-
-import inflection
-import orjson
-
+import inflection, orjson
 from openllm_core.exceptions import MissingDependencyError, OpenLLMException
 from openllm_core.utils import ReprMixin, is_bentoml_available
 from openllm_core.utils.import_utils import is_transformers_available
@@ -15,8 +10,7 @@ if t.TYPE_CHECKING:
   import types
   from collections import _odict_items, _odict_keys, _odict_values
 
-  import openllm
-  import openllm_core
+  import openllm, openllm_core
   from openllm_core._typing_compat import LiteralString, M, T
 
   ConfigKeysView = _odict_keys[str, type[openllm_core.LLMConfig]]
@@ -30,20 +24,20 @@ else:
 CONFIG_MAPPING_NAMES = OrderedDict(
   sorted(
     [
-      ('chatglm', 'ChatGLMConfig'),
-      ('dolly_v2', 'DollyV2Config'),
-      ('falcon', 'FalconConfig'),
       ('flan_t5', 'FlanT5Config'),
+      ('baichuan', 'BaichuanConfig'),
+      ('chatglm', 'ChatGLMConfig'),  #
+      ('falcon', 'FalconConfig'),
       ('gpt_neox', 'GPTNeoXConfig'),
+      ('dolly_v2', 'DollyV2Config'),
+      ('stablelm', 'StableLMConfig'),  #
       ('llama', 'LlamaConfig'),
       ('mpt', 'MPTConfig'),
       ('opt', 'OPTConfig'),
       ('phi', 'PhiConfig'),
-      ('stablelm', 'StableLMConfig'),
       ('starcoder', 'StarCoderConfig'),
       ('mistral', 'MistralConfig'),
       ('yi', 'YiConfig'),
-      ('baichuan', 'BaichuanConfig'),
     ]
   )
 )
@@ -114,56 +108,52 @@ CONFIG_FILE_NAME = 'config.json'
 
 class AutoConfig:
   def __init__(self, *_: t.Any, **__: t.Any):
-    raise EnvironmentError(
-      'Cannot instantiate AutoConfig directly. Please use `AutoConfig.for_model(model_name)` instead.'
-    )
+    raise EnvironmentError('Cannot instantiate AutoConfig directly. Use `.for_model(model_name)`')
 
-  # fmt: off
   # update-config-stubs.py: auto stubs start
   @t.overload
   @classmethod
-  def for_model(cls,model_name:t.Literal['baichuan'],**attrs:t.Any)->openllm_core.config.BaichuanConfig:...
+  def for_model(cls, model_name: t.Literal['baichuan'], **attrs: t.Any) -> openllm_core.config.BaichuanConfig: ...
   @t.overload
   @classmethod
-  def for_model(cls,model_name:t.Literal['chatglm'],**attrs:t.Any)->openllm_core.config.ChatGLMConfig:...
+  def for_model(cls, model_name: t.Literal['chatglm'], **attrs: t.Any) -> openllm_core.config.ChatGLMConfig: ...
   @t.overload
   @classmethod
-  def for_model(cls,model_name:t.Literal['dolly_v2'],**attrs:t.Any)->openllm_core.config.DollyV2Config:...
+  def for_model(cls, model_name: t.Literal['dolly_v2'], **attrs: t.Any) -> openllm_core.config.DollyV2Config: ...
   @t.overload
   @classmethod
-  def for_model(cls,model_name:t.Literal['falcon'],**attrs:t.Any)->openllm_core.config.FalconConfig:...
+  def for_model(cls, model_name: t.Literal['falcon'], **attrs: t.Any) -> openllm_core.config.FalconConfig: ...
   @t.overload
   @classmethod
-  def for_model(cls,model_name:t.Literal['flan_t5'],**attrs:t.Any)->openllm_core.config.FlanT5Config:...
+  def for_model(cls, model_name: t.Literal['flan_t5'], **attrs: t.Any) -> openllm_core.config.FlanT5Config: ...
   @t.overload
   @classmethod
-  def for_model(cls,model_name:t.Literal['gpt_neox'],**attrs:t.Any)->openllm_core.config.GPTNeoXConfig:...
+  def for_model(cls, model_name: t.Literal['gpt_neox'], **attrs: t.Any) -> openllm_core.config.GPTNeoXConfig: ...
   @t.overload
   @classmethod
-  def for_model(cls,model_name:t.Literal['llama'],**attrs:t.Any)->openllm_core.config.LlamaConfig:...
+  def for_model(cls, model_name: t.Literal['llama'], **attrs: t.Any) -> openllm_core.config.LlamaConfig: ...
   @t.overload
   @classmethod
-  def for_model(cls,model_name:t.Literal['mistral'],**attrs:t.Any)->openllm_core.config.MistralConfig:...
+  def for_model(cls, model_name: t.Literal['mistral'], **attrs: t.Any) -> openllm_core.config.MistralConfig: ...
   @t.overload
   @classmethod
-  def for_model(cls,model_name:t.Literal['mpt'],**attrs:t.Any)->openllm_core.config.MPTConfig:...
+  def for_model(cls, model_name: t.Literal['mpt'], **attrs: t.Any) -> openllm_core.config.MPTConfig: ...
   @t.overload
   @classmethod
-  def for_model(cls,model_name:t.Literal['opt'],**attrs:t.Any)->openllm_core.config.OPTConfig:...
+  def for_model(cls, model_name: t.Literal['opt'], **attrs: t.Any) -> openllm_core.config.OPTConfig: ...
   @t.overload
   @classmethod
-  def for_model(cls,model_name:t.Literal['phi'],**attrs:t.Any)->openllm_core.config.PhiConfig:...
+  def for_model(cls, model_name: t.Literal['phi'], **attrs: t.Any) -> openllm_core.config.PhiConfig: ...
   @t.overload
   @classmethod
-  def for_model(cls,model_name:t.Literal['stablelm'],**attrs:t.Any)->openllm_core.config.StableLMConfig:...
+  def for_model(cls, model_name: t.Literal['stablelm'], **attrs: t.Any) -> openllm_core.config.StableLMConfig: ...
   @t.overload
   @classmethod
-  def for_model(cls,model_name:t.Literal['starcoder'],**attrs:t.Any)->openllm_core.config.StarCoderConfig:...
+  def for_model(cls, model_name: t.Literal['starcoder'], **attrs: t.Any) -> openllm_core.config.StarCoderConfig: ...
   @t.overload
   @classmethod
-  def for_model(cls,model_name:t.Literal['yi'],**attrs:t.Any)->openllm_core.config.YiConfig:...
+  def for_model(cls, model_name: t.Literal['yi'], **attrs: t.Any) -> openllm_core.config.YiConfig: ...
   # update-config-stubs.py: auto stubs stop
-  # fmt: on
 
   @classmethod
   def for_model(cls, model_name: str, **attrs: t.Any) -> openllm_core.LLMConfig:
@@ -196,9 +186,7 @@ class AutoConfig:
   @classmethod
   def infer_class_from_llm(cls, llm: openllm.LLM[M, T]) -> type[openllm_core.LLMConfig]:
     if not is_bentoml_available():
-      raise MissingDependencyError(
-        "'infer_class_from_llm' requires 'bentoml' to be available. Make sure to install it with 'pip install bentoml'"
-      )
+      raise MissingDependencyError("Requires 'bentoml' to be available. Do 'pip install bentoml'")
     if llm._local:
       config_file = os.path.join(llm.model_id, CONFIG_FILE_NAME)
     else:
@@ -207,7 +195,7 @@ class AutoConfig:
       except OpenLLMException as err:
         if not is_transformers_available():
           raise MissingDependencyError(
-            "'infer_class_from_llm' requires 'transformers' to be available. Make sure to install it with 'pip install transformers'"
+            "Requires 'transformers' to be available. Do 'pip install transformers'"
           ) from err
         from transformers.utils import cached_file
 

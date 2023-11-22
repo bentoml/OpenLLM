@@ -22,9 +22,9 @@ __all__ = ['Response', 'CompletionChunk', 'Metadata', 'StreamingResponse', 'Help
 
 @attr.define
 class Metadata(_SchemaMixin):
-  """NOTE: Metadata is a modified version of the original MetadataOutput from openllm-core.
+  '''NOTE: Metadata is a modified version of the original MetadataOutput from openllm-core.
 
-  The configuration is now structured into a dictionary for easy of use."""
+  The configuration is now structured into a dictionary for easy of use.'''
 
   model_id: str
   timeout: int

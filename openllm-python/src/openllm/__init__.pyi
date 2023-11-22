@@ -1,4 +1,4 @@
-"""OpenLLM.
+'''OpenLLM.
 ===========
 
 An open platform for operating large language models in production.
@@ -8,13 +8,11 @@ Fine-tune, serve, deploy, and monitor any LLMs with ease.
 * Option to bring your own fine-tuned LLMs
 * Online Serving with HTTP, gRPC, SSE or custom API
 * Native integration with BentoML, LangChain, OpenAI compatible endpoints, LlamaIndex for custom LLM apps
-"""
+'''
 
-# fmt: off
 # update-config-stubs.py: import stubs start
-from openlm_core.config import CONFIG_MAPPING as CONFIG_MAPPING,CONFIG_MAPPING_NAMES as CONFIG_MAPPING_NAMES,AutoConfig as AutoConfig,BaichuanConfig as BaichuanConfig,ChatGLMConfig as ChatGLMConfig,DollyV2Config as DollyV2Config,FalconConfig as FalconConfig,FlanT5Config as FlanT5Config,GPTNeoXConfig as GPTNeoXConfig,LlamaConfig as LlamaConfig,MistralConfig as MistralConfig,MPTConfig as MPTConfig,OPTConfig as OPTConfig,PhiConfig as PhiConfig,StableLMConfig as StableLMConfig,StarCoderConfig as StarCoderConfig,YiConfig as YiConfig
+from openlm_core.config import CONFIG_MAPPING as CONFIG_MAPPING, CONFIG_MAPPING_NAMES as CONFIG_MAPPING_NAMES, AutoConfig as AutoConfig, BaichuanConfig as BaichuanConfig, ChatGLMConfig as ChatGLMConfig, DollyV2Config as DollyV2Config, FalconConfig as FalconConfig, FlanT5Config as FlanT5Config, GPTNeoXConfig as GPTNeoXConfig, LlamaConfig as LlamaConfig, MistralConfig as MistralConfig, MPTConfig as MPTConfig, OPTConfig as OPTConfig, PhiConfig as PhiConfig, StableLMConfig as StableLMConfig, StarCoderConfig as StarCoderConfig, YiConfig as YiConfig
 # update-config-stubs.py: import stubs stop
-# fmt: on
 
 from openllm_cli._sdk import (
   build as build,

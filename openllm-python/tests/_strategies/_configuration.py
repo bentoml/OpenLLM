@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 @st.composite
 def model_settings(draw: st.DrawFn):
-  """Strategy for generating ModelSettings objects."""
+  '''Strategy for generating ModelSettings objects.'''
   kwargs: dict[str, t.Any] = {
     'default_id': st.text(min_size=1),
     'model_ids': st.lists(st.text(), min_size=1),
