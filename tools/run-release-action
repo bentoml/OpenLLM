@@ -101,7 +101,7 @@ while true; do
   sleep 10
 done
 
-echo "Sleeping for 15 minutes to allow the release to propagate and PyPI to be published..."
-sleep 900
+echo "Sleeping for 7 minutes to allow the release to propagate and PyPI to be published..."
+sleep 420
 echo "Building OpenLLM container for ${RELEASE_TAG}..."
 gh workflow run build.yml -R bentoml/openllm -r "${RELEASE_TAG}"
