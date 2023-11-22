@@ -1,11 +1,2 @@
-import os
-
-import orjson
-
-from openllm_core.utils import ENV_VARS_TRUE_VALUES
-
-model_id = os.environ['OPENLLM_MODEL_ID']
-model_tag = None
-adapter_map = orjson.loads(os.getenv('OPENLLM_ADAPTER_MAP', orjson.dumps(None)))
-serialization = os.getenv('OPENLLM_SERIALIZATION', default='safetensors')
-trust_remote_code = str(os.getenv('TRUST_REMOTE_CODE', default=str(False))).upper() in ENV_VARS_TRUE_VALUES
+# fmt: off
+import os,orjson,openllm_core.utils as coreutils;model_id,model_tag,adapter_map,serialization,trust_remote_code=os.environ['OPENLLM_MODEL_ID'],None,orjson.loads(os.getenv('OPENLLM_ADAPTER_MAP',orjson.dumps(None))),os.getenv('OPENLLM_SERIALIZATION',default='safetensors'),coreutils.check_bool_env('TRUST_REMOTE_CODE',False)
