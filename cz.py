@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
-import itertools
-import os
-import token
-import tokenize
-
-from tabulate import tabulate
+import itertools, os, token, tokenize
 
 TOKEN_WHITELIST = [token.OP, token.NAME, token.NUMBER, token.STRING]
 
 _ignored = ['_version.py']
 
+_dir_package = {'openllm-python': 'openllm', 'openllm-core': 'openllm_core', 'openllm-client': 'openllm_client'}
 
-def run_cz(dir, package):
+
+def run_cz(args):
+  from tabulate import tabulate
+
   headers = ['Name', 'Lines', 'Tokens/Line']
   table = []
-  for path, _, files in os.walk(os.path.join(dir, 'src', package)):
+  package = _dir_package[args.dir]
+  for path, _, files in os.walk(os.path.join(args.dir, 'src', package)):
     for name in files:
       if not name.endswith('.py') or name in _ignored:
         continue
@@ -24,7 +24,7 @@ def run_cz(dir, package):
         token_count, line_count = len(tokens), len(set([t.start[0] for t in tokens]))
         table.append(
           [
-            filepath.replace(os.path.join(dir, 'src'), ''),
+            filepath.replace(os.path.join(args.dir, 'src'), ''),
             line_count,
             token_count / line_count if line_count != 0 else 0,
           ]
@@ -47,4 +47,17 @@ def run_cz(dir, package):
 
 
 if __name__ == '__main__':
-  raise SystemExit((lambda: run_cz('openllm-python', 'openllm') or 0)())
+  import argparse, importlib.util
+
+  if importlib.util.find_spec('tabulate') is None:
+    raise SystemExit('tabulate not installed. Install with `pip install tabulate`')
+
+  parser = argparse.ArgumentParser()
+  parser.add_argument(
+    '--dir',
+    choices=['openllm-python', 'openllm-core', 'openllm-client'],
+    help='directory to check',
+    default='openllm-python',
+    required=False,
+  )
+  raise SystemExit(run_cz(parser.parse_args()))
