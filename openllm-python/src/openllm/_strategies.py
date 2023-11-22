@@ -1,20 +1,8 @@
-# mypy: disable-error-code="no-redef"
 from __future__ import annotations
-import inspect
-import logging
-import math
-import os
-import sys
-import types
-import typing as t
-import warnings
-
-import psutil
-
-import bentoml
+import inspect, logging, math, os, sys, types, warnings, typing as t
+import psutil, bentoml, openllm_core.utils as coreutils
 from bentoml._internal.resource import get_resource, system_resources
 from bentoml._internal.runner.strategy import THREAD_ENVS
-from openllm_core.utils import DEBUG, ReprMixin
 
 logger = logging.getLogger(__name__)
 
@@ -46,8 +34,7 @@ def _parse_list_with_prefix(lst: str, prefix: str) -> list[str]:
   return rcs
 
 
-def _parse_visible_devices(default_var: str | None = None, respect_env: bool = True) -> list[str] | None:
-  """CUDA_VISIBLE_DEVICES aware with default var for parsing spec."""
+def _parse_cuda_visible_devices(default_var: str | None = None, respect_env: bool = True) -> list[str] | None:
   if respect_env:
     spec = os.environ.get('CUDA_VISIBLE_DEVICES', default_var)
     if not spec:
@@ -116,11 +103,11 @@ def _raw_device_uuid_nvml() -> list[str] | None:
 class _ResourceMixin:
   @staticmethod
   def from_system(cls) -> list[str]:
-    visible_devices = _parse_visible_devices()
+    visible_devices = _parse_cuda_visible_devices()
     if visible_devices is None:
       if cls.resource_id == 'amd.com/gpu':
         if not psutil.LINUX:
-          if DEBUG:
+          if coreutils.DEBUG:
             logger.debug('AMD GPUs is currently only supported on Linux.')
           return []
         # ROCm does not currently have the rocm_smi wheel.
@@ -167,7 +154,7 @@ class _ResourceMixin:
         return []
       if spec.isdigit():
         spec = ','.join([str(i) for i in range(_strtoul(spec))])
-      return _parse_visible_devices(spec, respect_env=False)
+      return _parse_cuda_visible_devices(spec, respect_env=False)
     elif isinstance(spec, list):
       return [str(x) for x in spec]
     else:
@@ -209,7 +196,7 @@ class _ResourceMixin:
 def _make_resource_class(name: str, resource_kind: str, docstring: str) -> type[bentoml.Resource[t.List[str]]]:
   return types.new_class(
     name,
-    (bentoml.Resource[t.List[str]], ReprMixin),
+    (bentoml.Resource[t.List[str]], coreutils.ReprMixin),
     {'resource_id': resource_kind},
     lambda ns: ns.update(
       {
@@ -243,24 +230,9 @@ AmdGpuResource = _make_resource_class(
 )
 
 
-class CascadingResourceStrategy(bentoml.Strategy, ReprMixin):
-  """This is extends the default BentoML strategy where we check for NVIDIA GPU resource -> AMD GPU resource -> CPU resource.
-
-  It also respect CUDA_VISIBLE_DEVICES for both AMD and NVIDIA GPU.
-  See https://rocm.docs.amd.com/en/develop/understand/gpu_isolation.html#cuda-visible-devices
-  for ROCm's support for CUDA_VISIBLE_DEVICES.
-
-  TODO: Support CloudTPUResource
-  """
-
+class CascadingResourceStrategy(bentoml.Strategy, coreutils.ReprMixin):
   @classmethod
-  def get_worker_count(
-    cls, runnable_class: type[bentoml.Runnable], resource_request: dict[str, t.Any] | None, workers_per_resource: float
-  ) -> int:
-    """Return the number of workers to be used for the given runnable class.
-
-    Note that for all available GPU, the number of workers will always be 1.
-    """
+  def get_worker_count(cls, runnable_class, resource_request, workers_per_resource):
     if resource_request is None:
       resource_request = system_resources()
     # use NVIDIA
@@ -291,21 +263,7 @@ class CascadingResourceStrategy(bentoml.Strategy, ReprMixin):
     )
 
   @classmethod
-  def get_worker_env(
-    cls,
-    runnable_class: type[bentoml.Runnable],
-    resource_request: dict[str, t.Any] | None,
-    workers_per_resource: int | float,
-    worker_index: int,
-  ) -> dict[str, t.Any]:
-    """Get worker env for this given worker_index.
-
-    Args:
-      runnable_class: The runnable class to be run.
-      resource_request: The resource request of the runnable.
-      workers_per_resource: # of workers per resource.
-      worker_index: The index of the worker, start from 0.
-    """
+  def get_worker_env(cls, runnable_class, resource_request, workers_per_resource, worker_index):
     cuda_env = os.environ.get('CUDA_VISIBLE_DEVICES', None)
     disabled = cuda_env in ('', '-1')
     environ: dict[str, t.Any] = {}
@@ -350,7 +308,7 @@ class CascadingResourceStrategy(bentoml.Strategy, ReprMixin):
     return environ
 
   @staticmethod
-  def transpile_workers_to_cuda_envvar(workers_per_resource: float | int, gpus: list[str], worker_index: int) -> str:
+  def transpile_workers_to_cuda_envvar(workers_per_resource, gpus, worker_index):
     # Convert given workers_per_resource to correct CUDA_VISIBLE_DEVICES string.
     if isinstance(workers_per_resource, float):
       # NOTE: We hit this branch when workers_per_resource is set to
