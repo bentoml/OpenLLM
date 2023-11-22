@@ -18,6 +18,7 @@ _ctranslate_available=importlib.util.find_spec('ctranslate2') is not None
 _vllm_available=importlib.util.find_spec('vllm') is not None
 _grpc_available=importlib.util.find_spec('grpc') is not None
 _autoawq_available=importlib.util.find_spec('awq') is not None
+_triton_available=importlib.util.find_spec('triton') is not None
 _torch_available=_is_package_available('torch')
 _transformers_available=_is_package_available('transformers')
 _bentoml_available=_is_package_available('bentoml')
@@ -27,6 +28,7 @@ _jupyter_available=_is_package_available('jupyter')
 _jupytext_available=_is_package_available('jupytext')
 _notebook_available=_is_package_available('notebook')
 _autogptq_available=_is_package_available('auto_gptq')
+def is_triton_available()->bool:return _triton_available
 def is_ctranslate_available()->bool:return _ctranslate_available
 def is_bentoml_available()->bool:return _bentoml_available  # needs this since openllm-core doesn't explicitly depends on bentoml
 def is_transformers_available()->bool:return _transformers_available  # needs this since openllm-core doesn't explicitly depends on transformers

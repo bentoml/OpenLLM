@@ -1,23 +1,10 @@
 from __future__ import annotations
-import functools
-import hashlib
-import logging
-import logging.config
-import os
-import sys
-import types
-import typing as t
-import uuid
+import functools, hashlib, logging, logging.config, os, sys, types, uuid, typing as t
 from pathlib import Path as _Path
 
 from . import import_utils as iutils, pkg
 from .import_utils import ENV_VARS_TRUE_VALUES as ENV_VARS_TRUE_VALUES
 from .lazy import LazyLoader as LazyLoader, LazyModule as LazyModule, VersionInfo as VersionInfo
-from .._typing_compat import overload as _overload
-
-if t.TYPE_CHECKING:
-  from bentoml._internal.types import PathType
-  from openllm_core._typing_compat import AnyCallable
 
 # See https://github.com/bentoml/BentoML/blob/a59750c5044bab60b6b3765e6c17041fd8984712/src/bentoml_cli/env.py#L17
 DEBUG_ENV_VAR = 'BENTOML_DEBUG'
@@ -33,19 +20,18 @@ logger = logging.getLogger(__name__)
 
 
 # fmt: off
-_T=t.TypeVar('_T')
 @functools.lru_cache(maxsize=1)
 def _WithArgsTypes()->tuple[type[t.Any],...]:
   try:from typing import GenericAlias as _TypingGenericAlias  # type: ignore
   except ImportError:_TypingGenericAlias = ()  # type: ignore # python < 3.9 does not have GenericAlias (list[int], tuple[str, ...] and so on)
   #  _GenericAlias is the actual GenericAlias implementation
   return (_TypingGenericAlias,) if sys.version_info<(3,10) else (t._GenericAlias, types.GenericAlias, types.UnionType) # type: ignore
-def lenient_issubclass(cls:t.Any,class_or_tuple:type[t.Any]|tuple[type[t.Any],...]|None)->bool:
+def lenient_issubclass(cls,class_or_tuple):
   try:return isinstance(cls,type) and issubclass(cls,class_or_tuple)
   except TypeError:
     if isinstance(cls,_WithArgsTypes()):return False
     raise
-def resolve_user_filepath(filepath:str, ctx:str|None)->str:
+def resolve_user_filepath(filepath, ctx):
   _path=os.path.expanduser(os.path.expandvars(filepath))
   if os.path.exists(_path):return os.path.realpath(_path)
   # Try finding file in ctx if provided
@@ -54,17 +40,17 @@ def resolve_user_filepath(filepath:str, ctx:str|None)->str:
     if os.path.exists(_path):return os.path.realpath(_path)
   raise FileNotFoundError(f'file {filepath} not found')
 # this is the supress version of resolve_user_filepath
-def resolve_filepath(path:str,ctx:str|None=None)->str:
+def resolve_filepath(path,ctx=None):
   try:return resolve_user_filepath(path, ctx)
   except FileNotFoundError:return path
-def check_bool_env(env:str,default:bool=True)->bool:
+def check_bool_env(env,default=True):
   v=os.getenv(env,default=str(default)).upper()
   if v.isdigit():return bool(int(v))  # special check for digits
   return v in ENV_VARS_TRUE_VALUES
-def calc_dir_size(path:PathType)->int:return sum(f.stat().st_size for f in _Path(path).glob('**/*') if f.is_file())
+def calc_dir_size(path):return sum(f.stat().st_size for f in _Path(path).glob('**/*') if f.is_file())
 @functools.lru_cache(maxsize=128)
-def generate_hash_from_file(f:str,algorithm:t.Literal['md5','sha1']='sha1')->str:return str(getattr(hashlib,algorithm)(str(os.path.getmtime(resolve_filepath(f))).encode()).hexdigest())
-def getenv(env:str,default:t.Any=None,var:t.Sequence[str]|None=None)->t.Any:
+def generate_hash_from_file(f,algorithm='sha1'):return str(getattr(hashlib,algorithm)(str(os.path.getmtime(resolve_filepath(f))).encode()).hexdigest())
+def getenv(env,default=None,var=None):
   env_key={env.upper(),f'OPENLLM_{env.upper()}'}
   if var is not None:env_key=set(var)|env_key
   def callback(k:str)->t.Any:
@@ -72,36 +58,32 @@ def getenv(env:str,default:t.Any=None,var:t.Sequence[str]|None=None)->t.Any:
     if _var and k.startswith('OPENLLM_'):logger.warning("Using '%s' environment is deprecated, use '%s' instead.",k.upper(),k[8:].upper())
     return _var
   return first_not_none(*(callback(k) for k in env_key),default=default)
-def field_env_key(key:str,suffix:str|None=None)->str:return '_'.join(filter(None,map(str.upper,['OPENLLM',suffix.strip('_') if suffix else '',key])))
-def get_debug_mode()->bool:return check_bool_env(DEBUG_ENV_VAR,False) if (not DEBUG and DEBUG_ENV_VAR in os.environ) else DEBUG
-def get_quiet_mode()->bool:
+def field_env_key(key,suffix=None):return '_'.join(filter(None,map(str.upper,['OPENLLM',suffix.strip('_') if suffix else '',key])))
+def get_debug_mode():return check_bool_env(DEBUG_ENV_VAR,False) if (not DEBUG and DEBUG_ENV_VAR in os.environ) else DEBUG
+def get_quiet_mode():
   if QUIET_ENV_VAR in os.environ:return check_bool_env(QUIET_ENV_VAR, False)
   if DEBUG:return False
   return False
-def get_disable_warnings()->bool:return check_bool_env(WARNING_ENV_VAR, False)
-def set_disable_warnings(disable:bool=True)->None:
+def get_disable_warnings():return check_bool_env(WARNING_ENV_VAR, False)
+def set_disable_warnings(disable=True):
   if disable:os.environ[WARNING_ENV_VAR]=str(disable)
-def set_debug_mode(enabled:bool,level:int=1)->None:
+def set_debug_mode(enabled,level=1):
   if enabled:os.environ[DEV_DEBUG_VAR] = str(level)
   os.environ.update({DEBUG_ENV_VAR:str(enabled),QUIET_ENV_VAR:str(not enabled),_GRPC_DEBUG_ENV_VAR:'DEBUG' if enabled else 'ERROR','CT2_VERBOSE':'3'})
   set_disable_warnings(not enabled)
-def set_quiet_mode(enabled:bool)->None:
+def set_quiet_mode(enabled):
   os.environ.update({QUIET_ENV_VAR:str(enabled),DEBUG_ENV_VAR:str(not enabled),_GRPC_DEBUG_ENV_VAR:'NONE','CT2_VERBOSE':'-1'})
   set_disable_warnings(enabled)
 def gen_random_uuid(prefix:str|None=None)->str:return '-'.join([prefix or 'openllm', str(uuid.uuid4().hex)])
 # NOTE: `compose` any number of unary functions into a single unary function
 # compose(f, g, h)(x) == f(g(h(x))); compose(f, g, h)(x, y, z) == f(g(h(x, y, z)))
-def compose(*funcs:AnyCallable)->AnyCallable:return functools.reduce(lambda f1,f2:lambda *args,**kwargs:f1(f2(*args,**kwargs)),funcs)
+def compose(*funcs):return functools.reduce(lambda f1,f2:lambda *args,**kwargs:f1(f2(*args,**kwargs)),funcs)
 # NOTE: `apply` a transform function that is invoked on results returned from the decorated function
 # apply(reversed)(func)(*args, **kwargs) == reversed(func(*args, **kwargs))
-def apply(transform:AnyCallable)->t.Callable[[AnyCallable], AnyCallable]:return lambda func:functools.wraps(func)(compose(transform,func))
-def validate_is_path(maybe_path:str)->bool:return os.path.exists(os.path.dirname(resolve_filepath(maybe_path)))
-@_overload
-def first_not_none(*args:_T|None,default:_T)->_T:...
-@_overload
-def first_not_none(*args:_T|None)->_T|None:...
-def first_not_none(*args:_T|None,default:_T|None=None)->_T|None:return next((arg for arg in args if arg is not None),default)
-def generate_context(framework_name:str):
+def apply(transform):return lambda func:functools.wraps(func)(compose(transform,func))
+def validate_is_path(maybe_path):return os.path.exists(os.path.dirname(resolve_filepath(maybe_path)))
+def first_not_none(*args,default=None):return next((arg for arg in args if arg is not None),default)
+def generate_context(framework_name):
   from bentoml._internal.models.model import ModelContext
   framework_versions={'transformers':pkg.get_pkg_version('transformers'),'safetensors':pkg.get_pkg_version('safetensors'),'optimum':pkg.get_pkg_version('optimum'),'accelerate':pkg.get_pkg_version('accelerate')}
   if iutils.is_torch_available():framework_versions['torch']=pkg.get_pkg_version('torch')
@@ -110,13 +92,14 @@ def generate_context(framework_name:str):
   if iutils.is_autoawq_available():framework_versions['autoawq']=pkg.get_pkg_version('autoawq')
   if iutils.is_autogptq_available():framework_versions['autogptq']=pkg.get_pkg_version('auto_gptq')
   if iutils.is_bentoml_available():framework_versions['bentoml']=pkg.get_pkg_version('bentoml')
+  if iutils.is_triton_available():framework_versions['triton']=pkg.get_pkg_version('triton')
   return ModelContext(framework_name=framework_name,framework_versions=framework_versions)
 @functools.lru_cache(maxsize=1)
-def in_notebook()->bool:
+def in_notebook():
   try:from IPython.core.getipython import get_ipython;return 'IPKernelApp' in get_ipython().config
   except Exception:return False
 _TOKENIZER_PREFIX = '_tokenizer_'
-def flatten_attrs(**attrs:t.Any)->tuple[dict[str,t.Any],dict[str, t.Any]]:
+def flatten_attrs(**attrs):
   tokenizer_attrs = {k[len(_TOKENIZER_PREFIX):]:v for k,v in attrs.items() if k.startswith(_TOKENIZER_PREFIX)}
   for k in tuple(attrs.keys()):
     if k.startswith(_TOKENIZER_PREFIX):del attrs[k]
@@ -178,7 +161,7 @@ _LOGGING_CONFIG: dict[str, t.Any] = {
 }
 
 
-def configure_logging() -> None:
+def configure_logging():
   if get_quiet_mode():
     _LOGGING_CONFIG['loggers']['openllm']['level'] = logging.ERROR
     _LOGGING_CONFIG['loggers']['bentoml']['level'] = logging.ERROR
@@ -235,6 +218,7 @@ __lazy = LazyModule(
       'is_transformers_available',
       'is_autoawq_available',
       'is_bentoml_available',
+      'is_triton_available',
     ],
   },
   extra_objects=_extras,

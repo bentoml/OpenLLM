@@ -1,0 +1,3 @@
+from __future__ import annotations
+import openllm, transformers
+def load_model(llm: openllm.LLM, config: transformers.PretrainedConfig, **attrs: t.Any): ...

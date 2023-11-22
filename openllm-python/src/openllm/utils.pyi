@@ -41,6 +41,7 @@ from openllm_core.utils import (
   is_notebook_available as is_notebook_available,
   is_peft_available as is_peft_available,
   is_torch_available as is_torch_available,
+  is_triton_available as is_triton_available,
   is_transformers_available as is_transformers_available,
   is_vllm_available as is_vllm_available,
   lenient_issubclass as lenient_issubclass,

@@ -1,12 +1,8 @@
-import importlib
-import logging
+from __future__ import annotations
+import importlib, logging
+import orjson, torch, transformers, bentoml, openllm
 
-import orjson
-import torch
-import transformers
 from huggingface_hub import snapshot_download
-
-import bentoml
 from openllm_core.exceptions import OpenLLMException
 from openllm_core.utils import first_not_none, is_autogptq_available
 
@@ -103,6 +99,9 @@ def load_model(llm, *decls, **attrs):
   config, attrs = transformers.AutoConfig.from_pretrained(
     llm.bentomodel.path, return_unused_kwargs=True, trust_remote_code=llm.trust_remote_code, **attrs
   )
+  if llm.__llm_backend__ == 'triton':
+    return openllm.models.load_model(llm, config, **attrs)
+
   auto_class = infer_autoclass_from_llm(llm, config)
   device_map = attrs.pop('device_map', None)
   if torch.cuda.is_available():
