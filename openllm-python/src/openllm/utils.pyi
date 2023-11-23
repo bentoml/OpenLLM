@@ -35,6 +35,7 @@ from openllm_core.utils import (
   is_bentoml_available as is_bentoml_available,
   is_bitsandbytes_available as is_bitsandbytes_available,
   is_ctranslate_available as is_ctranslate_available,
+  is_flash_attn_2_available as is_flash_attn_2_available,
   is_grpc_available as is_grpc_available,
   is_jupyter_available as is_jupyter_available,
   is_jupytext_available as is_jupytext_available,
@@ -55,7 +56,7 @@ from openllm_core.utils import (
 )
 from openllm_core.utils.serde import converter as converter
 
-from .._llm import LLM
+from ._llm import LLM
 
 def available_devices() -> Tuple[str, ...]: ...
 def device_count() -> int: ...

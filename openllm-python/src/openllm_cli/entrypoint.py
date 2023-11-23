@@ -1237,7 +1237,7 @@ def prune_command(
       for b in bentoml.bentos.list()
       if 'start_name' in b.info.labels and b.info.labels['start_name'] == inflection.underscore(model_name)
     ]
-  if model_name is None:
+  else:
     available += [
       (b, bento_store) for b in bentoml.bentos.list() if '_type' in b.info.labels and '_framework' in b.info.labels
     ]
@@ -1342,11 +1342,11 @@ def query_command(
 
   if stream:
     stream_res: t.Iterator[StreamingResponse] = client.generate_stream(prompt, **_memoized)
-    termui.echo(prompt, fg=input_fg, nl=False if stream else True)
+    termui.echo(prompt, fg=input_fg, nl=False)
     for it in stream_res:
       termui.echo(it.text, fg=generated_fg, nl=False)
   else:
-    termui.echo(prompt, fg=input_fg, nl=False)
+    termui.echo(prompt, fg=input_fg, nl=True)
     termui.echo(client.generate(prompt, **_memoized).outputs[0].text, fg=generated_fg, nl=False)
   ctx.exit(0)
 
