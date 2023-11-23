@@ -41,6 +41,7 @@ from openllm_core.utils.import_utils import (
   is_grpc_available as is_grpc_available,
   is_jupyter_available as is_jupyter_available,
   is_jupytext_available as is_jupytext_available,
+  is_flash_attn_2_available as is_flash_attn_2_available,
   is_notebook_available as is_notebook_available,
   is_peft_available as is_peft_available,
   is_torch_available as is_torch_available,

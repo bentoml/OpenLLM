@@ -16,6 +16,7 @@ from openllm_core.utils.import_utils import (
   is_jupytext_available as is_jupytext_available,
   is_notebook_available as is_notebook_available,
   is_peft_available as is_peft_available,
+  is_flash_attn_2_available as is_flash_attn_2_available,
   is_torch_available as is_torch_available,
   is_transformers_available as is_transformers_available,
   is_vllm_available as is_vllm_available,
