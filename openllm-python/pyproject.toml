@@ -82,7 +82,6 @@ name = "openllm"
 requires-python = ">=3.8"
 [project.scripts]
 openllm = "openllm_cli.entrypoint:cli"
-openllm-build-base-container = "openllm_cli.extension.build_base_container:cli"
 openllm-dive-bentos = "openllm_cli.extension.dive_bentos:cli"
 openllm-get-containerfile = "openllm_cli.extension.get_containerfile:cli"
 openllm-get-prompt = "openllm_cli.extension.get_prompt:cli"
