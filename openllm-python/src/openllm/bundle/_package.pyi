@@ -8,8 +8,6 @@ from bentoml._internal.bento import BentoStore
 from bentoml._internal.bento.build_config import DockerOptions, PythonOptions
 from bentoml._internal.models.model import ModelStore
 from openllm_core._typing_compat import (
-  LiteralContainerRegistry,
-  LiteralContainerVersionStrategy,
   LiteralQuantise,
   LiteralSerialisation,
   M,
@@ -32,8 +30,6 @@ def construct_docker_options(
   adapter_map: Optional[Dict[str, str]],
   dockerfile_template: Optional[str],
   serialisation: LiteralSerialisation,
-  container_registry: LiteralContainerRegistry,
-  container_version_strategy: LiteralContainerVersionStrategy,
 ) -> DockerOptions: ...
 def create_bento(
   bento_tag: Tag,
@@ -44,8 +40,6 @@ def create_bento(
   adapter_map: Optional[Dict[str, str]] = ...,
   extra_dependencies: Optional[Tuple[str, ...]] = ...,
   serialisation: Optional[LiteralSerialisation] = ...,
-  container_registry: LiteralContainerRegistry = ...,
-  container_version_strategy: LiteralContainerVersionStrategy = ...,
   _bento_store: BentoStore = ...,
   _model_store: ModelStore = ...,
 ) -> Bento: ...

@@ -184,7 +184,7 @@ class LLM(t.Generic[M, T], ReprMixin):
   ):
     torch_dtype = attrs.pop('torch_dtype', None)  # backward compatible
     if torch_dtype is not None:
-      warnings.warns(
+      warnings.warn(
         'The argument "torch_dtype" is deprecated and will be removed in the future. Please use "dtype" instead.',
         DeprecationWarning,
         stacklevel=3,

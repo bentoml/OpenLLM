@@ -40,14 +40,7 @@ LiteralBackend = t.Literal['pt', 'vllm', 'ctranslate', 'triton']  # TODO: ggml
 AdapterType = t.Literal[
   'lora', 'adalora', 'adaption_prompt', 'prefix_tuning', 'p_tuning', 'prompt_tuning', 'ia3', 'loha', 'lokr'
 ]
-
-# TODO: support quay
-LiteralContainerRegistry = t.Literal['docker', 'gh', 'ecr']
-LiteralContainerVersionStrategy = t.Literal['release', 'nightly', 'latest', 'custom']
-
-LiteralResourceSpec = t.Literal['cloud-tpus.google.com/v2', 'amd.com/gpu', 'nvidia.com/gpu', 'cpu']
-
-InferenceReturnType = t.Literal['text', 'object', 'token']
+LiteralVersionStrategy = t.Literal['release', 'nightly', 'latest', 'custom']
 
 if sys.version_info[:2] >= (3, 11):
   from typing import (

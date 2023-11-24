@@ -5,7 +5,6 @@ from openllm_core.exceptions import OpenLLMException
 from openllm_core.utils.lazy import VersionInfo, LazyModule
 
 _OWNER, _REPO = 'bentoml', 'openllm'
-
 @attr.attrs(eq=False, order=False, slots=True, frozen=True)
 class RefResolver:
   git_hash: str = attr.field()
@@ -23,14 +22,13 @@ class RefResolver:
         git_hash = ghapi.git.get_ref(ref=f"tags/{meta['name']}")['object']['sha']
       except Exception as err:
         raise OpenLLMException('Failed to determine latest release version.') from err
-      return cls(git_hash=git_hash, version=meta['name'].lstrip('v'), strategy='release')
+      return cls(git_hash, meta['name'].lstrip('v'), 'release')
     elif strategy_or_version in ('latest', 'nightly'):  # latest is nightly
-      return cls(git_hash='latest', version='0.0.0', strategy='latest')
+      return cls('latest', '0.0.0', 'latest')
     else:
       raise ValueError(f'Unknown strategy: {strategy_or_version}')
   @property
   def tag(self) -> str: return 'latest' if self.strategy in {'latest', 'nightly'} else repr(self.version)
-
 __lazy = LazyModule(
   __name__,
   os.path.abspath('__file__'),

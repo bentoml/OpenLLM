@@ -223,7 +223,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
     return super().get_command(ctx, cmd_name)
 
   def list_commands(self, ctx: click.Context) -> list[str]:
-    return super().list_commands(ctx) + t.cast('Extensions', extension_command).list_commands(ctx)
+    return super().list_commands(ctx) + extension_command.list_commands(ctx)
 
   def command(self, *args: t.Any, **kwargs: t.Any) -> t.Callable[[t.Callable[..., t.Any]], click.Command]:
     """Override the default 'cli.command' with supports for aliases for given command, and it wraps the implementation with common parameters."""
@@ -371,26 +371,21 @@ def start_command(
   $ openllm <start|start-http> <model_id> --<options> ...
   ```
   '''
+  if backend == 'pt': logger.warning('PyTorch backend is deprecated and will be removed in future releases. Make sure to use vLLM instead.')
   if model_id in openllm.CONFIG_MAPPING:
     _model_name = model_id
     if deprecated_model_id is not None:
       model_id = deprecated_model_id
     else:
       model_id = openllm.AutoConfig.for_model(_model_name)['default_id']
-    termui.warning(
-      f"Passing 'openllm start {_model_name}{'' if deprecated_model_id is None else ' --model-id ' + deprecated_model_id}' is deprecated and will be remove in a future version. Use 'openllm start {model_id}' instead."
-    )
+    logger.warning("Passing 'openllm start %s%s' is deprecated and will be remove in a future version. Use 'openllm start %s' instead.", _model_name, '' if deprecated_model_id is None else f' --model-id {deprecated_model_id}', model_id)
 
   adapter_map: dict[str, str] | None = attrs.pop('adapter_map', None)
 
   from openllm.serialisation.transformers.weights import has_safetensors_weights
 
-  serialisation = t.cast(
-    LiteralSerialisation,
-    first_not_none(
-      serialisation, default='safetensors' if has_safetensors_weights(model_id, model_version) else 'legacy'
-    ),
-  )
+  serialisation = first_not_none(serialisation, default='safetensors' if has_safetensors_weights(model_id, model_version) else 'legacy')
+
   if serialisation == 'safetensors' and quantize is not None:
     logger.warning("'--quantize=%s' might not work with 'safetensors' serialisation format.", quantize)
     logger.warning(
@@ -424,8 +419,7 @@ def start_command(
   config, server_attrs = llm.config.model_validate_click(**attrs)
   server_timeout = first_not_none(server_timeout, default=config['timeout'])
   server_attrs.update({'working_dir': pkg.source_locations('openllm'), 'timeout': server_timeout})
-  # XXX: currently, theres no development args in bentoml.Server. To be fixed upstream.
-  development = server_attrs.pop('development')
+  development = server_attrs.pop('development') # XXX: currently, theres no development args in bentoml.Server. To be fixed upstream.
   server_attrs.setdefault('production', not development)
 
   start_env = process_environ(
@@ -455,9 +449,7 @@ def start_command(
   return config
 
 def process_environ(config, server_timeout, wpr, device, cors, model_id, adapter_map, serialisation, llm, use_current_env=True):
-  environ = parse_config_options(
-    config, server_timeout, wpr, device, cors, os.environ.copy() if use_current_env else {}
-  )
+  environ = parse_config_options(config, server_timeout, wpr, device, cors, os.environ.copy() if use_current_env else {})
   environ.update(
     {
       'OPENLLM_MODEL_ID': model_id,
