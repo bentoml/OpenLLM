@@ -117,21 +117,11 @@ jobs:
         uses: pypa/gh-action-pypi-publish@b7f401de30cb6434a1e19f805ff006643653240e # ratchet:pypa/gh-action-pypi-publish@release/v1
         with:
           print-hash: true
-  publish-docker-images:
-    if: github.repository_owner == 'bentoml'
-    needs:
-      - release
-      - publish-python
-    name: Publish new base Docker images on GHCR
-    uses: bentoml/OpenLLM/.github/workflows/build.yml@main # ratchet:exclude
-    with:
-      tags: ${{ needs.release.outputs.version }}
   prepare-next-dev-cycle:
     needs:
       - release
       - publish-python
       - binary-distribution
-      - publish-docker-images
     runs-on: ubuntu-latest
     permissions:
       contents: write
