@@ -18,6 +18,24 @@ This changelog is managed by towncrier and is compiled at release time.
 
 <!-- towncrier release notes start -->
 
+## [0.4.27](https://github.com/bentoml/openllm/tree/v0.4.27)
+
+### Changes
+
+- We will deprecate support for PyTorch backend and will enforce all
+  built Bento to use vLLM backend going forward. This means that `openllm build`
+  with `--backend pt` will now be deprecated and move to `--backend vllm`.
+
+  We will focus more on contributing upstream to vLLM and will ensure that the core
+  value of OpenLLM is to provide a flexible and as streamlined experience to bring these
+  models to production with ease.
+
+  PyTorch backend will be removed from 0.5.0 releases onwards.
+
+  The docker images will now only be available on GHCR and not on ECR anymore as a measure
+  to reduce cost and maintenance one our side
+  [#730](https://github.com/bentoml/openllm/issues/730)
+
 ## [0.4.26](https://github.com/bentoml/openllm/tree/v0.4.26)
 
 ### Features
