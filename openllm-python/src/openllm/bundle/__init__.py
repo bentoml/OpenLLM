@@ -1,6 +1,6 @@
 from __future__ import annotations
 import os, attr, functools
-from openllm_core._typing_compat import LiteralContainerVersionStrategy
+from openllm_core._typing_compat import LiteralVersionStrategy
 from openllm_core.exceptions import OpenLLMException
 from openllm_core.utils.lazy import VersionInfo, LazyModule
 
@@ -9,10 +9,10 @@ _OWNER, _REPO = 'bentoml', 'openllm'
 class RefResolver:
   git_hash: str = attr.field()
   version: VersionInfo = attr.field(converter=lambda s: VersionInfo.from_version_string(s))
-  strategy: LiteralContainerVersionStrategy = attr.field()
+  strategy: LiteralVersionStrategy = attr.field()
   @classmethod
   @functools.lru_cache(maxsize=64)
-  def from_strategy(cls, strategy_or_version: LiteralContainerVersionStrategy | None = None) -> RefResolver:
+  def from_strategy(cls, strategy_or_version: LiteralVersionStrategy | None = None) -> RefResolver:
     # using default strategy
     if strategy_or_version is None or strategy_or_version == 'release':
       try:
