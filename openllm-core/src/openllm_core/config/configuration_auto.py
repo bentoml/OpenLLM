@@ -42,7 +42,6 @@ CONFIG_MAPPING_NAMES = OrderedDict(
   )
 )
 
-
 class _LazyConfigMapping(OrderedDictType, ReprMixin):
   def __init__(self, mapping: OrderedDict[LiteralString, LiteralString]):
     self._mapping = mapping
