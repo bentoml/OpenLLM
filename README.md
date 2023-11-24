@@ -226,12 +226,10 @@ openllm query 'What are large language models?'
 You can specify any of the following Baichuan models via `openllm start`:
 
 
-- [baichuan-inc/baichuan-7b](https://huggingface.co/baichuan-inc/baichuan-7b)
-- [baichuan-inc/baichuan-13b-base](https://huggingface.co/baichuan-inc/baichuan-13b-base)
-- [baichuan-inc/baichuan-13b-chat](https://huggingface.co/baichuan-inc/baichuan-13b-chat)
-- [fireballoon/baichuan-vicuna-chinese-7b](https://huggingface.co/fireballoon/baichuan-vicuna-chinese-7b)
-- [fireballoon/baichuan-vicuna-7b](https://huggingface.co/fireballoon/baichuan-vicuna-7b)
-- [hiyouga/baichuan-7b-sft](https://huggingface.co/hiyouga/baichuan-7b-sft)
+- [baichuan-inc/baichuan2-7b-base](https://huggingface.co/baichuan-inc/baichuan2-7b-base)
+- [baichuan-inc/baichuan2-7b-chat](https://huggingface.co/baichuan-inc/baichuan2-7b-chat)
+- [baichuan-inc/baichuan2-13b-base](https://huggingface.co/baichuan-inc/baichuan2-13b-base)
+- [baichuan-inc/baichuan2-13b-chat](https://huggingface.co/baichuan-inc/baichuan2-13b-chat)
 
 ### Supported backends
 
@@ -249,7 +247,7 @@ OpenLLM will support vLLM and PyTorch as default backend. By default, it will us
 To install vLLM, run `pip install "openllm[vllm]"`
 
 ```bash
-TRUST_REMOTE_CODE=True openllm start baichuan-inc/baichuan-7b --backend vllm
+TRUST_REMOTE_CODE=True openllm start baichuan-inc/baichuan2-7b-base --backend vllm
 ```
 
 
@@ -264,7 +262,7 @@ TRUST_REMOTE_CODE=True openllm start baichuan-inc/baichuan-7b --backend vllm
 
 
 ```bash
-TRUST_REMOTE_CODE=True openllm start baichuan-inc/baichuan-7b --backend pt
+TRUST_REMOTE_CODE=True openllm start baichuan-inc/baichuan2-7b-base --backend pt
 ```
 
 </details>
