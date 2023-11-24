@@ -44,23 +44,14 @@ def construct_python_options(llm, llm_fs, extra_dependencies=None, adapter_map=N
   if extra_dependencies is not None: packages += [f'openllm[{k}]' for k in extra_dependencies]
   if llm.config['requirements'] is not None: packages.extend(llm.config['requirements'])
   built_wheels = [build_editable(llm_fs.getsyspath('/'), p) for p in ('openllm_core', 'openllm_client', 'openllm')]
-  return PythonOptions(
-    packages=packages,
-    wheels=[llm_fs.getsyspath(f"/{i.split('/')[-1]}") for i in built_wheels] if all(i for i in built_wheels) else None,
-    lock_packages=True
-  )
+  return PythonOptions(packages=packages, wheels=[llm_fs.getsyspath(f"/{i.split('/')[-1]}") for i in built_wheels] if all(i for i in built_wheels) else None)
 def construct_docker_options(llm, _, quantize, adapter_map, dockerfile_template, serialisation):
   from openllm_cli.entrypoint import process_environ
   environ = process_environ(
-    llm.config,
-    llm.config['timeout'],
-    1.0,
-    None,
-    True,
-    llm.model_id,
-    None,
-    llm._serialisation,
-    llm,
+    llm.config, llm.config['timeout'],
+    1.0, None, True,
+    llm.model_id, None,
+    llm._serialisation, llm,
     use_current_env=False,
   )
   # XXX: We need to quote this so that the envvar in container recognize as valid json
@@ -70,26 +61,17 @@ def construct_docker_options(llm, _, quantize, adapter_map, dockerfile_template,
   return DockerOptions(cuda_version='12.1', env=environ, dockerfile_template=dockerfile_template)
 @inject
 def create_bento(
-  bento_tag,
-  llm_fs,
-  llm,
-  quantize,
-  dockerfile_template,
-  adapter_map=None,
-  extra_dependencies=None,
-  serialisation=None,
-  _bento_store=Provide[BentoMLContainer.bento_store],
-  _model_store=Provide[BentoMLContainer.model_store],
+  bento_tag, llm_fs, llm,
+  quantize, dockerfile_template,
+  adapter_map=None, extra_dependencies=None, serialisation=None,
+  _bento_store=Provide[BentoMLContainer.bento_store], _model_store=Provide[BentoMLContainer.model_store],
 ):
   _serialisation = openllm_core.utils.first_not_none(serialisation, default=llm.config['serialisation'])
   labels = dict(llm.identifying_params)
   labels.update(
     {
-      '_type': llm.llm_type,
-      '_framework': llm.__llm_backend__,
-      'start_name': llm.config['start_name'],
-      'base_name_or_path': llm.model_id,
-      'bundler': 'openllm.bundle',
+      '_type': llm.llm_type, '_framework': llm.__llm_backend__, 'start_name': llm.config['start_name'],
+      'base_name_or_path': llm.model_id, 'bundler': 'openllm.bundle',
       **{
         f'{package.replace("-","_")}_version': importlib.metadata.version(package)
         for package in {'openllm', 'openllm-core', 'openllm-client'}
