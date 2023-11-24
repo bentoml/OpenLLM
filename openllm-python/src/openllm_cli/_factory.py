@@ -1,17 +1,9 @@
 from __future__ import annotations
-import functools
-import logging
-import os
-import typing as t
-
-import click
-import click_option_group as cog
-import inflection
+import functools, logging, os, typing as t
+import bentoml, openllm, click, inflection, click_option_group as cog
 from bentoml_cli.utils import BentoMLCommandGroup
 from click import shell_completion as sc
 
-import bentoml
-import openllm
 from openllm_core._configuration import LLMConfig
 from openllm_core._typing_compat import (
   Concatenate,
@@ -22,7 +14,6 @@ from openllm_core._typing_compat import (
   get_literal_args,
 )
 from openllm_core.utils import DEBUG, compose, dantic, resolve_user_filepath
-
 
 class _OpenLLM_GenericInternalConfig(LLMConfig):
   __config__ = {
@@ -38,7 +29,6 @@ class _OpenLLM_GenericInternalConfig(LLMConfig):
     temperature: float = 0.75
     max_new_tokens: int = 128
 
-
 logger = logging.getLogger(__name__)
 
 P = ParamSpec('P')
@@ -47,7 +37,6 @@ LiteralOutput = t.Literal['json', 'pretty', 'porcelain']
 _AnyCallable = t.Callable[..., t.Any]
 FC = t.TypeVar('FC', bound=t.Union[_AnyCallable, click.Command])
 
-
 def bento_complete_envvar(ctx: click.Context, param: click.Parameter, incomplete: str) -> list[sc.CompletionItem]:
   return [
     sc.CompletionItem(str(it.tag), help='Bento')
@@ -55,14 +44,12 @@ def bento_complete_envvar(ctx: click.Context, param: click.Parameter, incomplete
     if str(it.tag).startswith(incomplete) and all(k in it.info.labels for k in {'start_name', 'bundler'})
   ]
 
-
 def model_complete_envvar(ctx: click.Context, param: click.Parameter, incomplete: str) -> list[sc.CompletionItem]:
   return [
     sc.CompletionItem(inflection.dasherize(it), help='Model')
     for it in openllm.CONFIG_MAPPING
     if it.startswith(incomplete)
   ]
-
 
 def parse_config_options(
   config: LLMConfig,
@@ -132,60 +119,52 @@ def _id_callback(ctx: click.Context, _: click.Parameter, value: t.Tuple[str, ...
   return None
 
 
-def start_decorator(serve_grpc: bool = False) -> t.Callable[[FC], t.Callable[[FC], FC]]:
-  def wrapper(fn: FC) -> t.Callable[[FC], FC]:
-    composed = compose(
-      _OpenLLM_GenericInternalConfig.parse,
-      _http_server_args if not serve_grpc else _grpc_server_args,
-      cog.optgroup.group('General LLM Options', help='The following options are related to running LLM Server.'),
-      dtype_option(factory=cog.optgroup),
-      model_version_option(factory=cog.optgroup),
-      cog.optgroup.option('--server-timeout', type=int, default=None, help='Server timeout in seconds'),
-      workers_per_resource_option(factory=cog.optgroup),
-      cors_option(factory=cog.optgroup),
-      backend_option(factory=cog.optgroup),
-      cog.optgroup.group(
-        'LLM Optimization Options',
-        help='''Optimization related options.
+def start_decorator(fn: FC) -> FC:
+  composed = compose(
+    _OpenLLM_GenericInternalConfig.parse,
+    _http_server_args,
+    cog.optgroup.group('General LLM Options', help='The following options are related to running LLM Server.'),
+    dtype_option(factory=cog.optgroup),
+    model_version_option(factory=cog.optgroup),
+    cog.optgroup.option('--server-timeout', type=int, default=None, help='Server timeout in seconds'),
+    workers_per_resource_option(factory=cog.optgroup),
+    cors_option(factory=cog.optgroup),
+    backend_option(factory=cog.optgroup),
+    cog.optgroup.group(
+      'LLM Optimization Options',
+      help='''Optimization related options.
 
-            OpenLLM supports running model k-bit quantization (8-bit, 4-bit), GPTQ quantization, PagedAttention via vLLM.
+          OpenLLM supports running model k-bit quantization (8-bit, 4-bit), GPTQ quantization, PagedAttention via vLLM.
 
-            The following are either in our roadmap or currently being worked on:
+          The following are either in our roadmap or currently being worked on:
 
-            - DeepSpeed Inference: [link](https://www.deepspeed.ai/inference/)
-            - GGML: Fast inference on [bare metal](https://github.com/ggerganov/ggml)
-            ''',
-      ),
-      quantize_option(factory=cog.optgroup),
-      serialisation_option(factory=cog.optgroup),
-      cog.optgroup.option(
-        '--device',
-        type=dantic.CUDA,
-        multiple=True,
-        envvar='CUDA_VISIBLE_DEVICES',
-        callback=parse_device_callback,
-        help='Assign GPU devices (if available)',
-        show_envvar=True,
-      ),
-      adapter_id_option(factory=cog.optgroup),
-      click.option('--return-process', is_flag=True, default=False, help='Internal use only.', hidden=True),
-    )
-    return composed(fn)
+          - DeepSpeed Inference: [link](https://www.deepspeed.ai/inference/)
+          - GGML: Fast inference on [bare metal](https://github.com/ggerganov/ggml)
+          ''',
+    ),
+    quantize_option(factory=cog.optgroup),
+    serialisation_option(factory=cog.optgroup),
+    cog.optgroup.option(
+      '--device',
+      type=dantic.CUDA,
+      multiple=True,
+      envvar='CUDA_VISIBLE_DEVICES',
+      callback=parse_device_callback,
+      help='Assign GPU devices (if available)',
+      show_envvar=True,
+    ),
+    adapter_id_option(factory=cog.optgroup),
+    click.option('--return-process', is_flag=True, default=False, help='Internal use only.', hidden=True),
+  )
 
-  return wrapper
+  return composed(fn)
 
-
-def parse_device_callback(
-  ctx: click.Context, param: click.Parameter, value: tuple[tuple[str], ...] | None
-) -> t.Tuple[str, ...] | None:
+def parse_device_callback(_: click.Context, param: click.Parameter, value: tuple[tuple[str], ...] | None) -> t.Tuple[str, ...] | None:
   if value is None:
     return value
-  if not isinstance(value, tuple):
-    ctx.fail(f'{param} only accept multiple values, not {type(value)} (value: {value})')
   el: t.Tuple[str, ...] = tuple(i for k in value for i in k)
   # NOTE: --device all is a special case
-  if len(el) == 1 and el[0] == 'all':
-    return tuple(map(str, openllm.utils.available_devices()))
+  if len(el) == 1 and el[0] == 'all': return tuple(map(str, openllm.utils.available_devices()))
   return el
 
 
@@ -195,18 +174,12 @@ def parse_device_callback(
 _IGNORED_OPTIONS = {'working_dir', 'production', 'protocol_version'}
 
 
-def parse_serve_args(serve_grpc: bool) -> t.Callable[[t.Callable[..., LLMConfig]], t.Callable[[FC], FC]]:
-  '''Parsing `bentoml serve|serve-grpc` click.Option to be parsed via `openllm start`.'''
+def parse_serve_args() -> t.Callable[[t.Callable[..., LLMConfig]], t.Callable[[FC], FC]]:
   from bentoml_cli.cli import cli
 
-  command = 'serve' if not serve_grpc else 'serve-grpc'
-  group = cog.optgroup.group(
-    f"Start a {'HTTP' if not serve_grpc else 'gRPC'} server options",
-    help=f"Related to serving the model [synonymous to `bentoml {'serve-http' if not serve_grpc else command }`]",
-  )
-
+  group = cog.optgroup.group('Start a HTTP server options', help='Related to serving the model [synonymous to `bentoml serve-http`]')
   def decorator(f: t.Callable[Concatenate[int, t.Optional[str], P], LLMConfig]) -> t.Callable[[FC], FC]:
-    serve_command = cli.commands[command]
+    serve_command = cli.commands['serve']
     # The first variable is the argument bento
     # The last five is from BentoMLCommandGroup.NUMBER_OF_COMMON_PARAMS
     serve_options = [
@@ -225,12 +198,9 @@ def parse_serve_args(serve_grpc: bool) -> t.Callable[[t.Callable[..., LLMConfig]
       param_decls = (*attrs.pop('opts'), *attrs.pop('secondary_opts'))
       f = cog.optgroup.option(*param_decls, **attrs)(f)
     return group(f)
-
   return decorator
 
-
-_http_server_args, _grpc_server_args = parse_serve_args(False), parse_serve_args(True)
-
+_http_server_args = parse_serve_args()
 
 def _click_factory_type(*param_decls: t.Any, **attrs: t.Any) -> t.Callable[[FC | None], FC]:
   '''General ``@click`` decorator with some sauce.
@@ -278,10 +248,8 @@ def cors_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC
     **attrs,
   )(f)
 
-
 def machine_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option('--machine', is_flag=True, default=False, hidden=True, **attrs)(f)
-
 
 def dtype_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option(
@@ -292,7 +260,6 @@ def dtype_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[F
     help="Optional dtype for casting tensors for running inference ['float16', 'float32', 'bfloat16', 'int8', 'int16']. For CTranslate2, it also accepts the following ['int8_float32', 'int8_float16', 'int8_bfloat16']",
     **attrs,
   )(f)
-
 
 def model_id_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option(
@@ -327,7 +294,6 @@ def backend_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[
     **attrs,
   )(f)
 
-
 def model_name_argument(f: _AnyCallable | None = None, required: bool = True, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_argument(
     'model_name',
@@ -335,7 +301,6 @@ def model_name_argument(f: _AnyCallable | None = None, required: bool = True, **
     required=required,
     **attrs,
   )(f)
-
 
 def quantize_option(f: _AnyCallable | None = None, *, build: bool = False, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option(
@@ -405,7 +370,6 @@ def workers_per_resource_option(
     **attrs,
   )(f)
 
-
 def serialisation_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option(
     '--serialisation',
@@ -429,24 +393,7 @@ def serialisation_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Cal
     **attrs,
   )(f)
 
-
-def container_registry_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
-  return cli_option(
-    '--container-registry',
-    'container_registry',
-    type=click.Choice(list(openllm.bundle.CONTAINER_NAMES)),
-    default='ecr',
-    show_default=True,
-    show_envvar=True,
-    envvar='OPENLLM_CONTAINER_REGISTRY',
-    callback=container_registry_callback,
-    help='The default container registry to get the base image for building BentoLLM. Currently, it supports ecr, ghcr, docker',
-    **attrs,
-  )(f)
-
-
 _wpr_strategies = {'round_robin', 'conserved'}
-
 
 def workers_per_resource_callback(ctx: click.Context, param: click.Parameter, value: str | None) -> str | None:
   if value is None:
@@ -465,11 +412,3 @@ def workers_per_resource_callback(ctx: click.Context, param: click.Parameter, va
       ) from None
     else:
       return value
-
-
-def container_registry_callback(ctx: click.Context, param: click.Parameter, value: str | None) -> str | None:
-  if value is None:
-    return value
-  if value not in openllm.bundle.supported_registries:
-    raise click.BadParameter(f'Value must be one of {openllm.bundle.supported_registries}', ctx, param)
-  return value

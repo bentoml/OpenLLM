@@ -20,6 +20,11 @@ on:
       - 'openllm-core/src/openllm_core/**'
       - 'openllm-client/src/openllm_client/**'
     types: [labeled, opened, synchronize, reopened]
+  workflow_call:
+    inputs:
+      tags:
+        required: true
+        type: string
 env:
   LINES: 120
   COLUMNS: 120
@@ -97,7 +102,8 @@ jobs:
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # ratchet:actions/checkout@v4.1.1
         with:
-          fetch-depth: 1
+          fetch-depth: 0
+          ref: '${{ inputs.tags }}'
       - name: Inject slug/short variables
         uses: rlespinasse/github-slug-action@102b1a064a9b145e56556e22b18b19c624538d94 # ratchet:rlespinasse/github-slug-action@v4.4.1
       - name: Set up QEMU
@@ -121,25 +127,6 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Login to public ECR
-        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # ratchet:docker/login-action@v3.0.0
-        with:
-          registry: public.ecr.aws
-          username: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          password: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        env:
-          AWS_REGION: us-east-1
-      - name: Extract metadata tags and labels on PRs
-        if: github.event_name == 'pull_request'
-        id: meta-pr
-        uses: docker/metadata-action@96383f45573cb7f253c731d3b3ab81c87ef81934 # ratchet:docker/metadata-action@v5.0.0
-        with:
-          images: |
-            public.ecr.aws/y5w8i4y6/bentoml/openllm
-          tags: |
-            type=raw,value=sha-${{ env.GITHUB_SHA_SHORT }}
-          labels: |
-            org.opencontainers.image.source="https://github.com/bentoml/OpenLLM"
       - name: Extract metadata tags and labels for main, release or tag
         if: github.event_name != 'pull_request'
         id: meta
@@ -148,7 +135,6 @@ jobs:
           flavor: |
             latest=auto
           images: |
-            public.ecr.aws/y5w8i4y6/bentoml/openllm
             ghcr.io/bentoml/openllm
           tags: |
             type=semver,pattern={{version}}
@@ -166,7 +152,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_PROD_SECRET_ACCESS_KEY }}
         with:
           context: .
-          file: openllm-python/src/openllm/bundle/oci/Dockerfile
+          file: Dockerfile
           push: true
           platforms: 'linux/amd64'
           build-args: |

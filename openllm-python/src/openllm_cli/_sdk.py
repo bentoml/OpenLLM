@@ -20,13 +20,7 @@ from openllm_core.utils import WARNING_ENV_VAR, codegen, first_not_none, get_dis
 if t.TYPE_CHECKING:
   from bentoml._internal.bento import BentoStore
   from openllm_core._configuration import LLMConfig
-  from openllm_core._typing_compat import (
-    LiteralBackend,
-    LiteralContainerRegistry,
-    LiteralContainerVersionStrategy,
-    LiteralQuantise,
-    LiteralString,
-  )
+  from openllm_core._typing_compat import LiteralBackend, LiteralQuantise, LiteralString
 
 logger = logging.getLogger(__name__)
 
@@ -125,8 +119,6 @@ def _build(
   enable_features: tuple[str, ...] | None = None,
   dockerfile_template: str | None = None,
   overwrite: bool = False,
-  container_registry: LiteralContainerRegistry | None = None,
-  container_version_strategy: LiteralContainerVersionStrategy | None = None,
   push: bool = False,
   force_push: bool = False,
   containerize: bool = False,
@@ -159,8 +151,6 @@ def _build(
     containerize: Whether to containerize the Bento after building. '--containerize' is the shortcut of 'openllm build && bentoml containerize'.
                   Note that 'containerize' and 'push' are mutually exclusive
                   container_registry: Container registry to choose the base OpenLLM container image to build from. Default to ECR.
-    container_registry: Container registry to choose the base OpenLLM container image to build from. Default to ECR.
-    container_version_strategy: The container version strategy. Default to the latest release of OpenLLM.
     serialisation: Serialisation for saving models. Default to 'safetensors', which is equivalent to `safe_serialization=True`
     additional_args: Additional arguments to pass to ``openllm build``.
     bento_store: Optional BentoStore for saving this BentoLLM. Default to the default BentoML local store.
@@ -205,11 +195,6 @@ def _build(
     args.extend(['--bento-version', bento_version])
   if dockerfile_template:
     args.extend(['--dockerfile-template', dockerfile_template])
-  if container_registry is None:
-    container_registry = 'ecr'
-  if container_version_strategy is None:
-    container_version_strategy = 'release'
-  args.extend(['--container-registry', container_registry, '--container-version-strategy', container_version_strategy])
   if additional_args:
     args.extend(additional_args)
   if force_push:
