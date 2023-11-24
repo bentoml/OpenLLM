@@ -44,7 +44,7 @@ def construct_python_options(llm, llm_fs, extra_dependencies=None, adapter_map=N
   if extra_dependencies is not None: packages += [f'openllm[{k}]' for k in extra_dependencies]
   if llm.config['requirements'] is not None: packages.extend(llm.config['requirements'])
   built_wheels = [build_editable(llm_fs.getsyspath('/'), p) for p in ('openllm_core', 'openllm_client', 'openllm')]
-  return PythonOptions(packages=packages, wheels=[llm_fs.getsyspath(f"/{i.split('/')[-1]}") for i in built_wheels] if all(i for i in built_wheels) else None)
+  return PythonOptions(packages=packages, wheels=[llm_fs.getsyspath(f"/{i.split('/')[-1]}") for i in built_wheels] if all(i for i in built_wheels) else None, lock_packages=False)
 def construct_docker_options(llm, _, quantize, adapter_map, dockerfile_template, serialisation):
   from openllm_cli.entrypoint import process_environ
   environ = process_environ(
