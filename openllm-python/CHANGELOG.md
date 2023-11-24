@@ -18,6 +18,13 @@ This changelog is managed by towncrier and is compiled at release time.
 
 <!-- towncrier release notes start -->
 
+## [0.4.28](https://github.com/bentoml/openllm/tree/v0.4.28)
+
+### Changes
+
+- Only baichuan2 and baichuan3 are supported. We dropped baichuan 1 support
+  [#728](https://github.com/bentoml/openllm/issues/728)
+
 ## [0.4.27](https://github.com/bentoml/openllm/tree/v0.4.27)
 
 ### Changes
