@@ -35,7 +35,6 @@ def construct_docker_options(
   container_registry: LiteralContainerRegistry,
   container_version_strategy: LiteralContainerVersionStrategy,
 ) -> DockerOptions: ...
-def write_service(llm: LLM[M, T], llm_fs: FS, adapter_map: Optional[Dict[str, str]]) -> None: ...
 def create_bento(
   bento_tag: Tag,
   llm_fs: FS,

@@ -1,30 +1,17 @@
-import logging as _logging
-import os as _os
-import pathlib as _pathlib
-import warnings as _warnings
-
+import logging as _logging, os as _os, pathlib as _pathlib, warnings as _warnings
 from openllm_cli import _sdk
-
 from . import utils as utils
 
 if utils.DEBUG:
-  utils.set_debug_mode(True)
-  _logging.basicConfig(level=_logging.NOTSET)
+  utils.set_debug_mode(True); _logging.basicConfig(level=_logging.NOTSET)
 else:
   # configuration for bitsandbytes before import
   _os.environ['BITSANDBYTES_NOWELCOME'] = _os.environ.get('BITSANDBYTES_NOWELCOME', '1')
   # NOTE: The following warnings from bitsandbytes, and probably not that important for users to see when DEBUG is False
-  _warnings.filterwarnings(
-    'ignore', message='MatMul8bitLt: inputs will be cast from torch.float32 to float16 during quantization'
-  )
-  _warnings.filterwarnings(
-    'ignore', message='MatMul8bitLt: inputs will be cast from torch.bfloat16 to float16 during quantization'
-  )
+  _warnings.filterwarnings('ignore', message='MatMul8bitLt: inputs will be cast from torch.float32 to float16 during quantization')
+  _warnings.filterwarnings('ignore', message='MatMul8bitLt: inputs will be cast from torch.bfloat16 to float16 during quantization')
   _warnings.filterwarnings('ignore', message='The installed version of bitsandbytes was compiled without GPU support.')
-  # NOTE: ignore the following warning from ghapi as it is not important for users
-  _warnings.filterwarnings(
-    'ignore', message='Neither GITHUB_TOKEN nor GITHUB_JWT_TOKEN found: running as unauthenticated'
-  )
+  _warnings.filterwarnings('ignore', message='Neither GITHUB_TOKEN nor GITHUB_JWT_TOKEN found: running as unauthenticated')
 
 COMPILED = _pathlib.Path(__file__).suffix in ('.pyd', '.so')
 
