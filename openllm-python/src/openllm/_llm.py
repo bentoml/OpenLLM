@@ -45,7 +45,7 @@ _AdapterTuple: type[AdapterTuple] = codegen.make_attr_tuple_class('AdapterTuple'
 ResolvedAdapterMap = t.Dict[AdapterType, t.Dict[str, t.Tuple['PeftConfig', str]]]
 
 
-@attr.define(slots=True, repr=False, init=False)
+@attr.define(slots=False, repr=False, init=False)
 class LLM(t.Generic[M, T]):
   async def generate(
     self, prompt, prompt_token_ids=None, stop=None, stop_token_ids=None, request_id=None, adapter_name=None, **attrs
