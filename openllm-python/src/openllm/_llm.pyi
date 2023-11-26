@@ -1,4 +1,4 @@
-from typing import Any, AsyncGenerator, Dict, Generic, Iterable, List, Literal, Optional, Set, Tuple, TypedDict, Union
+from typing import Any, AsyncGenerator, Dict, Generic, Iterable, List, Literal, Optional, Tuple, TypedDict, Union
 
 import attr
 import torch
@@ -18,7 +18,6 @@ from openllm_core._typing_compat import (
   M,
   T,
 )
-from openllm_core.utils.representation import ReprArgs
 
 from ._quantisation import QuantizationConfig
 from ._runners import Runner
@@ -59,13 +58,7 @@ class LLM(Generic[M, T]):
   __llm_adapter_map__: Optional[ResolvedAdapterMap] = ...
   __llm_trust_remote_code__: bool = ...
 
-  @property
-  def __repr_keys__(self) -> Set[str]: ...
   def __repr__(self) -> str: ...
-  def __str__(self) -> str: ...
-  def __repr_name__(self) -> str: ...
-  def __repr_str__(self, join_str: str) -> str: ...
-  def __repr_args__(self) -> ReprArgs: ...
   def __init__(
     self,
     model_id: str,

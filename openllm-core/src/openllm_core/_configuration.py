@@ -69,49 +69,29 @@ _object_setattr = object.__setattr__
 
 @attr.frozen(slots=True, repr=False, init=False)
 class GenerationConfig(ReprMixin):
-  '''GenerationConfig is the attrs-compatible version of ``transformers.GenerationConfig``, with some additional validation and environment constructor.
-
-  Note that we always set `do_sample=True`. This class is not designed to be used directly, rather
-  to be used conjunction with LLMConfig. The instance of the generation config can then be accessed
-  via ``LLMConfig.generation_config``.
-  '''
-
-  max_new_tokens: int = dantic.Field(
-    20, ge=0, description='The maximum numbers of tokens to generate, ignoring the number of tokens in the prompt.'
-  )
+  max_new_tokens: int = dantic.Field(20, ge=0, description='The maximum numbers of tokens to generate, ignoring the number of tokens in the prompt.')
   min_length: int = dantic.Field(
-    0,
-    ge=0,
+    0, ge=0, #
     description='The minimum length of the sequence to be generated. Corresponds to the length of the input prompt + `min_new_tokens`. Its effect is overridden by `min_new_tokens`, if also set.',
   )
-  min_new_tokens: int = dantic.Field(
-    description='The minimum numbers of tokens to generate, ignoring the number of tokens in the prompt.'
-  )
+  min_new_tokens: int = dantic.Field(description='The minimum numbers of tokens to generate, ignoring the number of tokens in the prompt.')
   early_stopping: bool = dantic.Field(
     False,
-    description="""Controls the stopping condition for beam-based methods, like beam-search. It accepts the following values: `True`, where the generation stops as soon as there are `num_beams` complete candidates; `False`, where an heuristic is applied and the generation stops when is it very unlikely to find better candidates; `"never"`, where the beam search procedure only stops when there cannot be better candidates (canonical beam search algorithm) """,
+    description="Controls the stopping condition for beam-based methods, like beam-search. It accepts the following values: `True`, where the generation stops as soon as there are `num_beams` complete candidates; `False`, where an heuristic is applied and the generation stops when is it very unlikely to find better candidates; `'never'`, where the beam search procedure only stops when there cannot be better candidates (canonical beam search algorithm) ",
   )
-  max_time: float = dantic.Field(
-    description='The maximum amount of time you allow the computation to run for in seconds. generation will still finish the current pass after allocated time has been passed.'
-  )
+  max_time: float = dantic.Field(description='The maximum amount of time you allow the computation to run for in seconds. generation will still finish the current pass after allocated time has been passed.')
   num_beams: int = dantic.Field(1, description='Number of beams for beam search. 1 means no beam search.')
   num_beam_groups: int = dantic.Field(
     1,
     description='Number of groups to divide `num_beams` into in order to ensure diversity among different groups of beams. [this paper](https://arxiv.org/pdf/1610.02424.pdf) for more details.',
   )
-  penalty_alpha: float = dantic.Field(
-    description='The values balance the model confidence and the degeneration penalty in contrastive search decoding.'
-  )
+  penalty_alpha: float = dantic.Field(description='The values balance the model confidence and the degeneration penalty in contrastive search decoding.')
   use_cache: bool = dantic.Field(
     True,
     description='Whether or not the model should use the past last key/values attentions (if applicable to the model) to speed up decoding.',
   )
-  temperature: float = dantic.Field(
-    1.0, ge=0.0, le=1.0, description='The value used to modulate the next token probabilities.'
-  )
-  top_k: int = dantic.Field(
-    50, description='The number of highest probability vocabulary tokens to keep for top-k-filtering.'
-  )
+  temperature: float = dantic.Field(1.0, ge=0.0, le=1.0, description='The value used to modulate the next token probabilities.')
+  top_k: int = dantic.Field(50, description='The number of highest probability vocabulary tokens to keep for top-k-filtering.')
   top_p: float = dantic.Field(
     1.0,
     description='If set to float < 1, only the smallest set of most probable tokens with probabilities that add up to `top_p` or higher are kept for generation.',
@@ -196,44 +176,29 @@ class GenerationConfig(ReprMixin):
   )
   pad_token_id: int = dantic.Field(description='The id of the *padding* token.')
   bos_token_id: int = dantic.Field(description='The id of the *beginning-of-sequence* token.')
-  eos_token_id: t.Union[int, t.List[int]] = dantic.Field(
-    description='The id of the *end-of-sequence* token. Optionally, use a list to set multiple *end-of-sequence* tokens.'
-  )
+  eos_token_id: t.Union[int, t.List[int]] = dantic.Field(description='The id of the *end-of-sequence* token. Optionally, use a list to set multiple *end-of-sequence* tokens.')
   encoder_no_repeat_ngram_size: int = dantic.Field(
     0,
     description='If set to int > 0, all ngrams of that size that occur in the `encoder_input_ids` cannot occur in the `decoder_input_ids`.',
   )
-  decoder_start_token_id: int = dantic.Field(
-    description='If an encoder-decoder model starts decoding with a different token than *bos*, the id of that token.'
-  )
+  decoder_start_token_id: int = dantic.Field(description='If an encoder-decoder model starts decoding with a different token than *bos*, the id of that token.')
   # NOTE: This is now implemented and supported for both PyTorch and vLLM
   logprobs: int = dantic.Field(0, description='Number of log probabilities to return per output token.')
   prompt_logprobs: int = dantic.Field(0, description='Number of log probabilities to return per input token.')
-
   def __init__(self, *, _internal: bool = False, **attrs: t.Any):
-    if not _internal:
-      raise RuntimeError(
-        'GenerationConfig is not meant to be used directly, but you can access this via a LLMConfig.generation_config'
-      )
+    if not _internal: raise RuntimeError('GenerationConfig is not meant to be used directly, but you can access this via a LLMConfig.generation_config')
     self.__attrs_init__(**attrs)
-
   def __getitem__(self, item: str) -> t.Any:
-    if hasattr(self, item):
-      return getattr(self, item)
+    if hasattr(self, item): return getattr(self, item)
     raise KeyError(f"'{self.__class__.__name__}' has no attribute {item}.")
-
   @property
-  def __repr_keys__(self) -> set[str]:
-    return {i.name for i in attr.fields(self.__class__)}
+  def __repr_keys__(self) -> set[str]: return {i.name for i in attr.fields(self.__class__)}
 
 
 converter.register_unstructure_hook_factory(
   lambda cls: attr.has(cls) and lenient_issubclass(cls, GenerationConfig),
   lambda cls: make_dict_unstructure_fn(
-    cls,
-    converter,
-    _cattrs_omit_if_default=False,
-    _cattrs_use_linecache=True,
+    cls, converter, #
     **{k: override(omit=True) for k, v in attr.fields_dict(cls).items() if v.default in (None, attr.NOTHING)},
   ),
 )
@@ -394,15 +359,6 @@ _object_getattribute = object.__getattribute__
 
 
 class ModelSettings(t.TypedDict, total=False):
-  '''ModelSettings serve only for typing purposes as this is transcribed into LLMConfig.__config__.
-
-  Note that all fields from this dictionary will then be converted to __openllm_*__ fields in LLMConfig.
-
-  If the field below changes, make sure to run ./tools/update-config-stubs.py to generate correct __getitem__
-  stubs for type-checking purposes.
-  '''
-
-  # NOTE: These required fields should be at the top, as it will be kw_only
   default_id: Required[str]
   model_ids: Required[ListStr]
   architecture: Required[str]
@@ -435,15 +391,13 @@ _transformed_type: DictStrAny = {'fine_tune_strategies': t.Dict[AdapterType, Fin
 
 
 @attr.define(
-  frozen=False,
-  slots=True,
+  frozen=False, slots=True, #
   field_transformer=lambda _, __: [
     attr.Attribute.from_counting_attr(
       k,
       dantic.Field(
         kw_only=False if t.get_origin(ann) is not Required else True,
-        auto_default=True,
-        use_default_converter=False,
+        auto_default=True, use_default_converter=False, #
         type=_transformed_type.get(k, ann),
         metadata={'target': f'__openllm_{k}__'},
         description=f'ModelSettings field for {k}.',
@@ -454,11 +408,10 @@ _transformed_type: DictStrAny = {'fine_tune_strategies': t.Dict[AdapterType, Fin
 )
 class _ModelSettingsAttr:
   def __getitem__(self, key: str) -> t.Any:
-    if key in codegen.get_annotations(ModelSettings):
-      return _object_getattribute(self, key)
+    if key in codegen.get_annotations(ModelSettings): return _object_getattribute(self, key)
     raise KeyError(key)
-
-  # NOTE: The below are dynamically generated by the field_transformer
+  @classmethod
+  def from_settings(cls, settings: ModelSettings) -> _ModelSettingsAttr: return cls(**settings)
   if t.TYPE_CHECKING:
     # update-config-stubs.py: attrs start
     default_id: str
@@ -479,22 +432,15 @@ class _ModelSettingsAttr:
     fine_tune_strategies: t.Dict[AdapterType, FineTuneConfig]
     # update-config-stubs.py: attrs stop
 
-
-_DEFAULT = _ModelSettingsAttr(
-  **ModelSettings(
-    default_id='__default__',
-    model_ids=['__default__'],
-    architecture='PreTrainedModel',
-    serialisation='legacy',
+_DEFAULT = _ModelSettingsAttr.from_settings(
+  ModelSettings(
+    name_type='dasherize', url='', #
     backend=('pt', 'vllm', 'ctranslate'),
-    name_type='dasherize',
-    url='',
-    model_type='causal_lm',
-    trust_remote_code=False,
-    requirements=None,
-    timeout=int(36e6),
-    service_name='',
-    workers_per_resource=1.0,
+    timeout=int(36e6), service_name='', #
+    model_type='causal_lm', requirements=None, #
+    trust_remote_code=False, workers_per_resource=1.0, #
+    default_id='__default__', model_ids=['__default__'], #
+    architecture='PreTrainedModel', serialisation='legacy', #
   )
 )
 
@@ -504,62 +450,39 @@ def structure_settings(cls: type[LLMConfig], _: type[_ModelSettingsAttr]) -> _Mo
   has_custom_name = all(i in cls.__config__ for i in {'model_name', 'start_name'})
   _config = attr.evolve(_DEFAULT, **cls.__config__)
   _attr = {}
-
   if not has_custom_name:
-    _attr['model_name'] = inflection.underscore(_cl_name) if _config['name_type'] == 'dasherize' else _cl_name.lower()
-    _attr['start_name'] = (
-      inflection.dasherize(_attr['model_name']) if _config['name_type'] == 'dasherize' else _attr['model_name']
-    )
-  model_name = _attr['model_name'] if 'model_name' in _attr else _config.model_name
-
+    if _config['name_type'] == 'dasherize':
+      _attr['model_name'] = inflection.underscore(_cl_name)
+      _attr['start_name'] = inflection.dasherize(_attr['model_name'])
+    else:
+      _attr['model_name'] = _cl_name.lower()
+      _attr['start_name'] = _attr['model_name']
   _attr.update(
     {
-      'service_name': f'generated_{model_name}_service.py',
+      'service_name': f'generated_{_attr["model_name"] if "model_name" in _attr else _config.model_name}_service.py',
       'fine_tune_strategies': {
-        ft_config.get('adapter_type', 'lora'): FineTuneConfig.from_config(ft_config, cls)
-        for ft_config in _config.fine_tune_strategies  # ft_config is a dict here before transformer
-      }
-      if _config.fine_tune_strategies
-      else {},
+        ft_config.get('adapter_type', 'lora'): FineTuneConfig.from_config(ft_config, cls) for ft_config in _config.fine_tune_strategies
+      } if _config.fine_tune_strategies else {},
     }
   )
-
   return attr.evolve(_config, **_attr)
 
 
 converter.register_structure_hook(_ModelSettingsAttr, structure_settings)
 
 
-def _setattr_class(attr_name: str, value_var: t.Any) -> str:
-  return f"setattr(cls, '{attr_name}', {value_var})"
-
-
-def _make_assignment_script(
-  cls: type[LLMConfig], attributes: attr.AttrsInstance, _prefix: LiteralString = 'openllm'
-) -> t.Callable[..., None]:
+_reserved_namespace = {'__config__', 'GenerationConfig', 'SamplingParams'}
+def _setattr_class(attr_name: str, value_var: t.Any) -> str: return f"setattr(cls, '{attr_name}', {value_var})"
+def _make_assignment_script(cls: type[LLMConfig], attributes: attr.AttrsInstance) -> t.Callable[[type[LLMConfig]], None]:
   '''Generate the assignment script with prefix attributes __openllm_<value>__.'''
-  args: ListStr = []
-  globs: DictStrAny = {
-    'cls': cls,
-    '_cached_attribute': attributes,
-    '_cached_getattribute_get': _object_getattribute.__get__,
-  }
-  annotations: DictStrAny = {'return': None}
-
-  lines: ListStr = []
+  args, lines, annotations = [], [], {'return': None}
+  globs = {'cls': cls, '_cached_attribute': attributes}
   for attr_name, field in attr.fields_dict(attributes.__class__).items():
-    arg_name = field.metadata.get('target', f'__{_prefix}_{inflection.underscore(attr_name)}__')
+    arg_name = field.metadata.get('target', f'__openllm_{inflection.underscore(attr_name)}__')
     args.append(f"{attr_name}=getattr(_cached_attribute, '{attr_name}')")
     lines.append(_setattr_class(arg_name, attr_name))
     annotations[attr_name] = field.type
-
-  return codegen.generate_function(
-    cls, '__assign_attr', lines, args=('cls', *args), globs=globs, annotations=annotations
-  )
-
-
-_reserved_namespace = {'__config__', 'GenerationConfig', 'SamplingParams'}
-
+  return codegen.generate_function(cls, '__assign_attr', lines, ('cls', *args), globs, annotations)
 
 @attr.define(slots=True)
 class _ConfigAttr(t.Generic[_GenerationConfigT, _SamplingParamsT]):
@@ -958,8 +881,7 @@ class LLMConfig(_ConfigAttr[GenerationConfig, SamplingParams]):
       logger.warning("LLMConfig subclass should end with 'Config'. Updating to %sConfig", cls.__name__)
       cls.__name__ = f'{cls.__name__}Config'
 
-    if not hasattr(cls, '__config__'):
-      raise RuntimeError("Given LLMConfig must have '__config__' that is not None defined.")
+    if not hasattr(cls, '__config__'): raise RuntimeError("Given LLMConfig must have '__config__' that is not None defined.")
 
     # auto assignment attributes generated from __config__ after create the new slot class.
     _make_assignment_script(cls, converter.structure(cls, _ModelSettingsAttr))(cls)
