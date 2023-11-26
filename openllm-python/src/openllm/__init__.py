@@ -1,7 +1,6 @@
 import logging as _logging, os as _os, pathlib as _pathlib, warnings as _warnings
 from openllm_cli import _sdk
 from . import utils as utils
-
 if utils.DEBUG:
   utils.set_debug_mode(True); _logging.basicConfig(level=_logging.NOTSET)
 else:
@@ -12,11 +11,8 @@ else:
   _warnings.filterwarnings('ignore', message='MatMul8bitLt: inputs will be cast from torch.bfloat16 to float16 during quantization')
   _warnings.filterwarnings('ignore', message='The installed version of bitsandbytes was compiled without GPU support.')
   _warnings.filterwarnings('ignore', message='Neither GITHUB_TOKEN nor GITHUB_JWT_TOKEN found: running as unauthenticated')
-
 COMPILED = _pathlib.Path(__file__).suffix in ('.pyd', '.so')
-
-# NOTE: update this to sys.modules[__name__] once mypy_extensions can recognize __spec__
-__lazy = utils.LazyModule(
+__lazy = utils.LazyModule(  # NOTE: update this to sys.modules[__name__] once mypy_extensions can recognize __spec__
   __name__,
   globals()['__file__'],
   {
@@ -34,14 +30,8 @@ __lazy = utils.LazyModule(
     '_llm': ['LLM'],
   },
   extra_objects={
-    'COMPILED': COMPILED,
-    'start': _sdk.start,
-    'start_grpc': _sdk.start_grpc,
-    'build': _sdk.build,
-    'import_model': _sdk.import_model,
-    'list_models': _sdk.list_models,
+    'COMPILED': COMPILED, 'start': _sdk.start, 'build': _sdk.build, #
+    'import_model': _sdk.import_model, 'list_models': _sdk.list_models, #
   },
 )
-__all__ = __lazy.__all__
-__dir__ = __lazy.__dir__
-__getattr__ = __lazy.__getattr__
+__all__, __dir__, __getattr__ = __lazy.__all__, __lazy.__dir__, __lazy.__getattr__

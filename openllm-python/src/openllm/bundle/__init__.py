@@ -4,7 +4,6 @@ from openllm_core._typing_compat import LiteralVersionStrategy
 from openllm_core.exceptions import OpenLLMException
 from openllm_core.utils.lazy import VersionInfo, LazyModule
 
-_OWNER, _REPO = 'bentoml', 'openllm'
 @attr.attrs(eq=False, order=False, slots=True, frozen=True)
 class RefResolver:
   git_hash: str = attr.field()
@@ -17,7 +16,7 @@ class RefResolver:
     if strategy_or_version is None or strategy_or_version == 'release':
       try:
         from ghapi.all import GhApi
-        ghapi = GhApi(owner=_OWNER, repo=_REPO, authenticate=False)
+        ghapi = GhApi(owner='bentoml', repo='openllm', authenticate=False)
         meta = ghapi.repos.get_latest_release()
         git_hash = ghapi.git.get_ref(ref=f"tags/{meta['name']}")['object']['sha']
       except Exception as err:
@@ -35,6 +34,4 @@ __lazy = LazyModule(
   {'_package': ['create_bento', 'build_editable', 'construct_python_options', 'construct_docker_options']},
   extra_objects={'RefResolver': RefResolver}
 )
-__all__ = __lazy.__all__
-__dir__ = __lazy.__dir__
-__getattr__ = __lazy.__getattr__
+__all__, __dir__, __getattr__ = __lazy.__all__, __lazy.__dir__, __lazy.__getattr__

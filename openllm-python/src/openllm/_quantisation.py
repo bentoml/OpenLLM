@@ -1,13 +1,8 @@
 from __future__ import annotations
-
 from openllm_core.exceptions import MissingDependencyError
 from openllm_core.utils import is_autoawq_available, is_autogptq_available, is_bitsandbytes_available
-
-
 def infer_quantisation_config(llm, quantise, **attrs):
-  import torch
-  import transformers
-
+  import torch, transformers
   # 8 bit configuration
   int8_threshold = attrs.pop('llm_int8_threshhold', 6.0)
   int8_enable_fp32_cpu_offload = attrs.pop('llm_int8_enable_fp32_cpu_offload', False)
@@ -85,25 +80,19 @@ def infer_quantisation_config(llm, quantise, **attrs):
 
   # NOTE: Quantization setup quantize is a openllm.LLM feature, where we can quantize the model with bitsandbytes or quantization aware training.
   if not is_bitsandbytes_available():
-    raise RuntimeError(
-      'Quantization requires bitsandbytes to be installed. Make sure to install OpenLLM with \'pip install "openllm[fine-tune]"\''
-    )
+    raise RuntimeError('Quantization requires bitsandbytes to be installed. Make sure to install OpenLLM with \'pip install "openllm[fine-tune]"\'')
   if quantise == 'int8':
     quantisation_config = create_int8_config(int8_skip_modules)
   elif quantise == 'int4':
     quantisation_config = create_int4_config()
   elif quantise == 'gptq':
     if not is_autogptq_available():
-      raise MissingDependencyError(
-        "GPTQ requires 'auto-gptq' and 'optimum>=0.12' to be installed. Do it with 'pip install \"openllm[gptq]\"'"
-      )
+      raise MissingDependencyError("GPTQ requires 'auto-gptq' and 'optimum>=0.12' to be installed. Do it with 'pip install \"openllm[gptq]\"'")
     else:
       quantisation_config = create_gptq_config()
   elif quantise == 'awq':
     if not is_autoawq_available():
-      raise MissingDependencyError(
-        "AWQ requires 'auto-awq' to be installed. Do it with 'pip install \"openllm[awq]\"'."
-      )
+      raise MissingDependencyError("AWQ requires 'auto-awq' to be installed. Do it with 'pip install \"openllm[awq]\"'.")
     else:
       quantisation_config = create_awq_config()
   else:

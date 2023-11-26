@@ -234,6 +234,4 @@ __lazy = LazyModule(
   },
   extra_objects=_extras,
 )
-__all__ = __lazy.__all__
-__dir__ = __lazy.__dir__
-__getattr__ = __lazy.__getattr__
+__all__, __dir__, __getattr__ = __lazy.__all__, __lazy.__dir__, __lazy.__getattr__

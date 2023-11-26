@@ -47,23 +47,17 @@ ResolvedAdapterMap = t.Dict[AdapterType, t.Dict[str, t.Tuple['PeftConfig', str]]
 
 @attr.define(slots=False, repr=False, init=False)
 class LLM(t.Generic[M, T]):
-  async def generate(
-    self, prompt, prompt_token_ids=None, stop=None, stop_token_ids=None, request_id=None, adapter_name=None, **attrs
-  ) -> GenerationOutput:
-    if adapter_name is not None and self.__llm_backend__ != 'pt':
-      raise NotImplementedError(f'Adapter is not supported with {self.__llm_backend__}.')
+  async def generate(self, prompt, prompt_token_ids=None, stop=None, stop_token_ids=None, request_id=None, adapter_name=None, **attrs):
+    if adapter_name is not None and self.__llm_backend__ != 'pt': raise NotImplementedError(f'Adapter is not supported with {self.__llm_backend__}.')
     config = self.config.model_construct_env(**attrs)
     texts, token_ids = [[]] * config['n'], [[]] * config['n']
-    final_result = None
     async for result in self.generate_iterator(
       prompt, prompt_token_ids, stop, stop_token_ids, request_id, adapter_name, **config.model_dump(flatten=True)
     ):
       for output in result.outputs:
         texts[output.index].append(output.text)
         token_ids[output.index].extend(output.token_ids)
-      final_result = result
-    if final_result is None:
-      raise RuntimeError('No result is returned.')
+    if (final_result := result) is None: raise RuntimeError('No result is returned.')
     return final_result.with_options(
       prompt=prompt,
       outputs=[
@@ -72,13 +66,9 @@ class LLM(t.Generic[M, T]):
       ],
     )
 
-  async def generate_iterator(
-    self, prompt, prompt_token_ids=None, stop=None, stop_token_ids=None, request_id=None, adapter_name=None, **attrs
-  ) -> t.AsyncGenerator[GenerationOutput, None]:
+  async def generate_iterator(self, prompt, prompt_token_ids=None, stop=None, stop_token_ids=None, request_id=None, adapter_name=None, **attrs):
     from bentoml._internal.runner.runner_handle import DummyRunnerHandle
-
-    if adapter_name is not None and self.__llm_backend__ != 'pt':
-      raise NotImplementedError(f'Adapter is not supported with {self.__llm_backend__}.')
+    if adapter_name is not None and self.__llm_backend__ != 'pt': raise NotImplementedError(f'Adapter is not supported with {self.__llm_backend__}.')
 
     if isinstance(self.runner._runner_handle, DummyRunnerHandle):
       if os.getenv('BENTO_PATH') is not None:
@@ -87,14 +77,12 @@ class LLM(t.Generic[M, T]):
         self.runner.init_local(quiet=True)
     config = self.config.model_construct_env(**attrs)
 
-    if stop_token_ids is None: stop_token_ids = []
+    stop_token_ids = stop_token_ids or []
     eos_token_id = attrs.get('eos_token_id', config['eos_token_id'])
-    if eos_token_id is not None:
-      if not isinstance(eos_token_id, list): eos_token_id = [eos_token_id]
-      stop_token_ids.extend(eos_token_id)
-    if config['eos_token_id'] and config['eos_token_id'] not in stop_token_ids: stop_token_ids.append(config['eos_token_id'])
-    if self.tokenizer.eos_token_id not in stop_token_ids:
-      stop_token_ids.append(self.tokenizer.eos_token_id)
+    if eos_token_id and not isinstance(eos_token_id, list): eos_token_id = [eos_token_id]
+    stop_token_ids.extend(eos_token_id or [])
+    if (config_eos := config['eos_token_id']) and config_eos not in stop_token_ids: stop_token_ids.append(config_eos)
+    if self.tokenizer.eos_token_id not in stop_token_ids: stop_token_ids.append(self.tokenizer.eos_token_id)
     if stop is None:
       stop = set()
     elif isinstance(stop, str):
@@ -102,20 +90,16 @@ class LLM(t.Generic[M, T]):
     else:
       stop = set(stop)
     for tid in stop_token_ids:
-      if tid:
-        stop.add(self.tokenizer.decode(tid))
+      if tid: stop.add(self.tokenizer.decode(tid))
 
     if prompt_token_ids is None:
-      if prompt is None:
-        raise ValueError('Either prompt or prompt_token_ids must be specified.')
+      if prompt is None: raise ValueError('Either prompt or prompt_token_ids must be specified.')
       prompt_token_ids = self.tokenizer.encode(prompt)
 
     request_id = gen_random_uuid() if request_id is None else request_id
     previous_texts, previous_num_tokens = [''] * config['n'], [0] * config['n']
     try:
-      generator = self.runner.generate_iterator.async_stream(
-        prompt_token_ids, request_id, stop=list(stop), adapter_name=adapter_name, **config.model_dump(flatten=True)
-      )
+      generator = self.runner.generate_iterator.async_stream(prompt_token_ids, request_id, stop=list(stop), adapter_name=adapter_name, **config.model_dump(flatten=True))
     except Exception as err:
       raise RuntimeError(f'Failed to start generation task: {err}') from err
 
@@ -134,18 +118,11 @@ class LLM(t.Generic[M, T]):
 
   # NOTE: If you are here to see how generate_iterator and generate works, see above.
   # The below are mainly for internal implementation that you don't have to worry about.
-  _model_id: str
-  _revision: t.Optional[str]
+  _model_id: str; _revision: t.Optional[str] #
   _quantization_config: t.Optional[t.Union[transformers.BitsAndBytesConfig, transformers.GPTQConfig, transformers.AwqConfig]]
-  _quantise: t.Optional[LiteralQuantise]
-  _model_decls: t.Tuple[t.Any, ...]
-  __model_attrs: t.Dict[str, t.Any]
-  __tokenizer_attrs: t.Dict[str, t.Any]
-  _tag: bentoml.Tag
-  _adapter_map: t.Optional[AdapterMap]
-  _serialisation: LiteralSerialisation
-  _local: bool
-  _max_model_len: t.Optional[int]
+  _quantise: t.Optional[LiteralQuantise]; _model_decls: t.Tuple[t.Any, ...]; __model_attrs: t.Dict[str, t.Any] #
+  __tokenizer_attrs: t.Dict[str, t.Any]; _tag: bentoml.Tag; _adapter_map: t.Optional[AdapterMap] #
+  _serialisation: LiteralSerialisation; _local: bool; _max_model_len: t.Optional[int] #
 
   __llm_dtype__: t.Union[LiteralDtype, t.Literal['auto', 'half', 'float']] = 'auto'
   __llm_torch_dtype__: 'torch.dtype' = None
@@ -180,12 +157,7 @@ class LLM(t.Generic[M, T]):
   ):
     torch_dtype = attrs.pop('torch_dtype', None)  # backward compatible
     if torch_dtype is not None:
-      warnings.warn(
-        'The argument "torch_dtype" is deprecated and will be removed in the future. Please use "dtype" instead.',
-        DeprecationWarning,
-        stacklevel=3,
-      )
-      dtype = torch_dtype
+      warnings.warn('The argument "torch_dtype" is deprecated and will be removed in the future. Please use "dtype" instead.', DeprecationWarning, stacklevel=3); dtype = torch_dtype
     _local = False
     if validate_is_path(model_id): model_id, _local = resolve_filepath(model_id), True
     backend = getenv('backend', default=backend)
@@ -291,7 +263,7 @@ class LLM(t.Generic[M, T]):
       if is_vllm_available():
         return 'vllm'
       elif is_ctranslate_available():
-        return 'ctranslate'  # XXX: base OpenLLM image should always include vLLM
+        return 'ctranslate'
     elif is_ctranslate_available():
       return 'ctranslate'
     else:
@@ -449,8 +421,7 @@ def convert_peft_config_type(adapter_map: dict[str, str]) -> AdapterMap:
         config_file = hf_hub_download(path_or_adapter_id, PEFT_CONFIG_NAME)
       except Exception as err:
         raise ValueError(f"Can't find '{PEFT_CONFIG_NAME}' at '{path_or_adapter_id}'") from err
-    with open(config_file, 'r') as file:
-      resolved_config = orjson.loads(file.read())
+    with open(config_file, 'r') as file: resolved_config = orjson.loads(file.read())
     _peft_type = resolved_config['peft_type'].lower()
     if _peft_type not in resolved: resolved[_peft_type] = ()
     resolved[_peft_type] += (_AdapterTuple((path_or_adapter_id, name, resolved_config)),)

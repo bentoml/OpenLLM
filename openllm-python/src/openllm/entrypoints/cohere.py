@@ -1,17 +1,11 @@
 from __future__ import annotations
-import functools
-import json
-import logging
-import traceback
+import functools, json, logging, traceback
 from http import HTTPStatus
-
 import orjson
 from starlette.applications import Starlette
 from starlette.responses import JSONResponse, StreamingResponse
 from starlette.routing import Route
-
 from openllm_core.utils import DEBUG, converter, gen_random_uuid
-
 from ._openapi import add_schema_definitions, append_schemas, get_generator
 from ..protocol.cohere import (
   Chat,
@@ -54,41 +48,31 @@ schemas = get_generator(
 logger = logging.getLogger(__name__)
 
 
-def jsonify_attr(obj):
-  return json.dumps(converter.unstructure(obj))
-
+def jsonify_attr(obj): return json.dumps(converter.unstructure(obj))
 
 def error_response(status_code, message):
   return JSONResponse(converter.unstructure(CohereErrorResponse(text=message)), status_code=status_code.value)
 
-
 async def check_model(request, model):
-  if request.model is None or request.model == model:
-    return None
+  if request.model is None or request.model == model: return None
   return error_response(
     HTTPStatus.NOT_FOUND,
     f"Model '{request.model}' does not exists. Try 'GET /v1/models' to see current running models.",
   )
 
-
 def mount_to_svc(svc, llm):
   app = Starlette(
     debug=True,
     routes=[
-      Route(
-        '/v1/generate', endpoint=functools.partial(cohere_generate, llm=llm), name='cohere_generate', methods=['POST']
-      ),
-      Route('/v1/chat', endpoint=functools.partial(cohere_chat, llm=llm), name='cohere_chat', methods=['POST']),
       Route('/schema', endpoint=lambda req: schemas.OpenAPIResponse(req), include_in_schema=False),
+      Route('/v1/chat', endpoint=functools.partial(cohere_chat, llm=llm), name='cohere_chat', methods=['POST']),
+      Route('/v1/generate', endpoint=functools.partial(cohere_generate, llm=llm), name='cohere_generate', methods=['POST']),
     ],
   )
   mount_path = '/cohere'
 
   svc.mount_asgi_app(app, path=mount_path)
-  return append_schemas(
-    svc, schemas.get_schema(routes=app.routes, mount_path=mount_path), tags_order='append', inject=DEBUG
-  )
-
+  return append_schemas(svc, schemas.get_schema(routes=app.routes, mount_path=mount_path), tags_order='append', inject=DEBUG)
 
 @add_schema_definitions
 async def cohere_generate(req, llm):
@@ -180,7 +164,6 @@ def _transpile_cohere_chat_messages(request: CohereChatRequest) -> list[dict[str
     messages = []
   messages.append({'role': 'user', 'content': request.message})
   return messages
-
 
 @add_schema_definitions
 async def cohere_chat(req, llm):
