@@ -1666,7 +1666,7 @@ it by specifying its URL:
 ```python
 from langchain.llms import OpenLLM
 
-llm = OpenLLM(server_url='http://44.23.123.1:3000', server_type='grpc')
+llm = OpenLLM(server_url='http://44.23.123.1:3000', server_type='http')
 llm('What is the difference between a duck and a goose? And why there are so many Goose in Canada?')
 ```
 
