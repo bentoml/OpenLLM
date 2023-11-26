@@ -46,6 +46,13 @@ class HTTPClient(Client):
       return {'Authorization': f'Bearer {env}'}
     return super()._build_auth_headers()
 
+  def __getitem__(self, item):
+    if hasattr(self._metadata, item):
+      return getattr(self._metadata, item)
+    elif item in self._config:
+      return self._config[item]
+    raise KeyError(f'No attributes: {item}')
+
   @property
   def _metadata(self):
     if self.__metadata is None:
