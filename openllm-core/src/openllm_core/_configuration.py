@@ -985,9 +985,7 @@ class LLMConfig(_ConfigAttr[GenerationConfig, SamplingParams]):
 
   def __setattr__(self, attr: str, value: t.Any) -> None:
     if attr in _reserved_namespace:
-      raise ForbiddenAttributeError(
-        f'{attr} should not be set during runtime as these value will be reflected during runtime. Instead, you can create a custom LLM subclass {self.__class__.__name__}.'
-      )
+      raise ForbiddenAttributeError(f'{attr} should not be set during runtime as these value will be reflected during runtime. Instead, you can create a custom LLM subclass {self.__class__.__name__}.')
     super().__setattr__(attr, value)
 
   def __init__(
@@ -1192,7 +1190,6 @@ class LLMConfig(_ConfigAttr[GenerationConfig, SamplingParams]):
   @overload
   def __getitem__(self, item: t.Literal['lokr']) -> t.Dict[str, t.Any]: ...
   # update-config-stubs.py: stop
-
   def __getitem__(self, item: LiteralString | t.Any) -> t.Any:
     """Allowing access LLMConfig as a dictionary. The order will always evaluate as.
 
@@ -1224,20 +1221,12 @@ class LLMConfig(_ConfigAttr[GenerationConfig, SamplingParams]):
       return self.__openllm_extras__[item]
     else:
       raise KeyError(item)
-
   def __getattribute__(self, item: str) -> t.Any:
     if item in _reserved_namespace:
-      raise ForbiddenAttributeError(
-        f"'{item}' belongs to a private namespace for {self.__class__} and should not be access nor modified."
-      )
+      raise ForbiddenAttributeError(f"'{item}' belongs to a private namespace for {self.__class__} and should not be access nor modified.")
     return _object_getattribute.__get__(self)(item)
-
-  def __len__(self) -> int:
-    return len(self.__openllm_accepted_keys__) + len(self.__openllm_extras__)
-
-  def keys(self) -> list[str]:
-    return list(self.__openllm_accepted_keys__) + list(self.__openllm_extras__)
-
+  def __len__(self) -> int: return len(self.__openllm_accepted_keys__) + len(self.__openllm_extras__)
+  def keys(self) -> list[str]: return list(self.__openllm_accepted_keys__) + list(self.__openllm_extras__)
   def values(self) -> list[t.Any]:
     return (
       [getattr(self, k.name) for k in attr.fields(self.__class__)]
@@ -1245,7 +1234,6 @@ class LLMConfig(_ConfigAttr[GenerationConfig, SamplingParams]):
       + [getattr(self.sampling_config, k.name) for k in attr.fields(self.__openllm_sampling_class__)]
       + list(self.__openllm_extras__.values())
     )
-
   def items(self) -> list[tuple[str, t.Any]]:
     return (
       [(k.name, getattr(self, k.name)) for k in attr.fields(self.__class__)]
@@ -1253,13 +1241,9 @@ class LLMConfig(_ConfigAttr[GenerationConfig, SamplingParams]):
       + [(k.name, getattr(self.sampling_config, k.name)) for k in attr.fields(self.__openllm_sampling_class__)]
       + list(self.__openllm_extras__.items())
     )
-
-  def __iter__(self) -> t.Iterator[str]:
-    return iter(self.keys())
-
+  def __iter__(self) -> t.Iterator[str]: return iter(self.keys())
   def __contains__(self, item: t.Any) -> bool:
-    if item in self.__openllm_extras__:
-      return True
+    if item in self.__openllm_extras__: return True
     return item in self.__openllm_accepted_keys__
 
   @classmethod
@@ -1429,12 +1413,10 @@ class LLMConfig(_ConfigAttr[GenerationConfig, SamplingParams]):
         no_repeat_ngram_size=config['no_repeat_ngram_size'],
         end_token=config['stop'],
       )
-
   class pt:
     @staticmethod
     def build(config: LLMConfig) -> LLMConfig:
       return config
-
   class hf:
     @staticmethod
     def build(config: LLMConfig) -> transformers.GenerationConfig:
@@ -1442,10 +1424,8 @@ class LLMConfig(_ConfigAttr[GenerationConfig, SamplingParams]):
 
   @overload
   def compatible_options(self, request: ChatCompletionRequest | CompletionRequest) -> dict[str, t.Any]: ...
-
   @overload
   def compatible_options(self, request: CohereChatRequest | CohereGenerateRequest) -> dict[str, t.Any]: ...
-
   def compatible_options(self, request: AttrsInstance) -> dict[str, t.Any]:
     if importlib.util.find_spec('openllm') is None:
       raise MissingDependencyError(
@@ -1460,7 +1440,6 @@ class LLMConfig(_ConfigAttr[GenerationConfig, SamplingParams]):
       return self.cohere.build(self, request)
     else:
       raise TypeError(f'Unknown request type {type(request)}')
-
   class openai:
     @staticmethod
     def build(config: LLMConfig, request: ChatCompletionRequest | CompletionRequest) -> dict[str, t.Any]:
@@ -1478,7 +1457,6 @@ class LLMConfig(_ConfigAttr[GenerationConfig, SamplingParams]):
       if hasattr(request, 'logprobs'):
         d['logprobs'] = first_not_none(request.logprobs, default=config['logprobs'])
       return d
-
   class cohere:
     @staticmethod
     def build(config: LLMConfig, request: CohereGenerateRequest | CohereChatRequest) -> dict[str, t.Any]:
@@ -1502,21 +1480,12 @@ class LLMConfig(_ConfigAttr[GenerationConfig, SamplingParams]):
   def system_message(self) -> str: return ''
   @property
   def chat_template(self) -> str | None: return
-
   @property
   def chat_messages(self) -> list[MessageParam]:
     from ._schemas import MessageParam
     return [MessageParam(role='system', content='You are a helpful assistant'), MessageParam(role='user', content="Hello, I'm looking for a chatbot that can help me with my work."), MessageParam(role='assistant', content='Yes? What can I help you with?')]
-
   @classmethod
   def parse(cls, f: AnyCallable) -> click.Command:
-    """Convert current configuration to click options.
-
-    This can be used as a decorator for click commands.
-
-    > [!NOTE]
-    > The identifier for all LLMConfig will be prefixed with '<model_name>_*', and the generation config will be prefixed with '<model_name>_generation_*'.
-    """
     for name, field in attr.fields_dict(cls.__openllm_generation_class__).items():
       ty = cls.__openllm_hints__.get(name)
       # NOTE: Union type is currently not yet supported, we probably just need to use environment instead.
