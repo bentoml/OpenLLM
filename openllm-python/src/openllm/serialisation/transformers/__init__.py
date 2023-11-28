@@ -15,18 +15,15 @@ logger = logging.getLogger(__name__)
 __all__ = ['import_model', 'get', 'load_model']
 _object_setattr = object.__setattr__
 
-
 def import_model(llm, *decls, trust_remote_code, **attrs):
   (_base_decls, _base_attrs), tokenizer_attrs = llm.llm_parameters
   decls = (*_base_decls, *decls)
   attrs = {**_base_attrs, **attrs}
-  if llm._local:
-    logger.warning('Given model is a local model, OpenLLM will load model into memory for serialisation.')
+  if llm._local: logger.warning('Given model is a local model, OpenLLM will load model into memory for serialisation.')
   config, hub_attrs, attrs = process_config(llm.model_id, trust_remote_code, **attrs)
   patch_correct_tag(llm, config)
   safe_serialisation = first_not_none(attrs.get('safe_serialization'), default=llm._serialisation == 'safetensors')
-  if llm.quantise != 'gptq':
-    attrs['use_safetensors'] = safe_serialisation
+  if llm.quantise != 'gptq': attrs['use_safetensors'] = safe_serialisation
 
   model = None
   tokenizer = get_tokenizer(llm.model_id, trust_remote_code=trust_remote_code, **hub_attrs, **tokenizer_attrs)
@@ -39,7 +36,6 @@ def import_model(llm, *decls, trust_remote_code, **attrs):
       attrs['quantization_config'] = llm.quantization_config
     if llm.quantise == 'gptq':
       from optimum.gptq.constants import GPTQ_CONFIG
-
       with open(bentomodel.path_of(GPTQ_CONFIG), 'w', encoding='utf-8') as f:
         f.write(orjson.dumps(config.quantization_config, option=orjson.OPT_INDENT_2 | orjson.OPT_SORT_KEYS).decode())
     if llm._local:  # possible local path
@@ -56,27 +52,21 @@ def import_model(llm, *decls, trust_remote_code, **attrs):
       bentomodel.enter_cloudpickle_context([importlib.import_module(model.__module__)], imported_modules)
       model.save_pretrained(bentomodel.path, max_shard_size='2GB', safe_serialization=safe_serialisation)
       del model
-      if torch.cuda.is_available():
-        torch.cuda.empty_cache()
+      if torch.cuda.is_available(): torch.cuda.empty_cache()
     else:
       # we will clone the all tings into the bentomodel path without loading model into memory
       snapshot_download(
-        llm.model_id,
-        local_dir=bentomodel.path,
-        local_dir_use_symlinks=False,
-        ignore_patterns=HfIgnore.ignore_patterns(llm),
+        llm.model_id, local_dir=bentomodel.path, #
+        local_dir_use_symlinks=False, ignore_patterns=HfIgnore.ignore_patterns(llm), #
       )
     return bentomodel
-
 
 def get(llm):
   try:
     model = bentoml.models.get(llm.tag)
     backend = model.info.labels['backend']
     if backend != llm.__llm_backend__:
-      raise OpenLLMException(
-        f"'{model.tag!s}' was saved with backend '{backend}', while loading with '{llm.__llm_backend__}'."
-      )
+      raise OpenLLMException(f"'{model.tag!s}' was saved with backend '{backend}', while loading with '{llm.__llm_backend__}'.")
     patch_correct_tag(
       llm,
       transformers.AutoConfig.from_pretrained(model.path, trust_remote_code=llm.trust_remote_code),
@@ -89,18 +79,15 @@ def get(llm):
 
 def check_unintialised_params(model):
   unintialized = [n for n, param in model.named_parameters() if param.data.device == torch.device('meta')]
-  if len(unintialized) > 0:
-    raise RuntimeError(f'Found the following unintialized parameters in {model}: {unintialized}')
+  if len(unintialized) > 0: raise RuntimeError(f'Found the following unintialized parameters in {model}: {unintialized}')
 
 
 def load_model(llm, *decls, **attrs):
-  if llm.quantise in {'awq', 'squeezellm'}:
-    raise RuntimeError('AWQ is not yet supported with PyTorch backend.')
+  if llm.quantise in {'awq', 'squeezellm'}: raise RuntimeError('AWQ is not yet supported with PyTorch backend.')
   config, attrs = transformers.AutoConfig.from_pretrained(
     llm.bentomodel.path, return_unused_kwargs=True, trust_remote_code=llm.trust_remote_code, **attrs
   )
-  if llm.__llm_backend__ == 'triton':
-    return openllm.models.load_model(llm, config, **attrs)
+  if llm.__llm_backend__ == 'triton': return openllm.models.load_model(llm, config, **attrs)
 
   auto_class = infer_autoclass_from_llm(llm, config)
   device_map = attrs.pop('device_map', None)
@@ -152,6 +139,5 @@ def load_model(llm, *decls, **attrs):
           device_map=device_map,
           **attrs,
         )
-
   check_unintialised_params(model)
   return model

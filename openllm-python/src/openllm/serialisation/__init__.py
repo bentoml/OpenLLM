@@ -1,32 +1,18 @@
 from __future__ import annotations
-import importlib
-import typing as t
-
-from openllm_core._typing_compat import M, ParamSpec, T, TypeGuard
+import importlib, typing as t
+from openllm_core._typing_compat import M, ParamSpec, T, TypeGuard, Concatenate
 from openllm_core.exceptions import OpenLLMException
 
-if t.TYPE_CHECKING:
-  from bentoml import Model
-
-  from .._llm import LLM
+if t.TYPE_CHECKING: from bentoml import Model; from .._llm import LLM
 
 P = ParamSpec('P')
 
-
 def load_tokenizer(llm: LLM[M, T], **tokenizer_attrs: t.Any) -> TypeGuard[T]:
-  '''Load the tokenizer from BentoML store.
-
-  By default, it will try to find the bentomodel whether it is in store..
-  If model is not found, it will raises a ``bentoml.exceptions.NotFound``.
-  '''
-  import cloudpickle
-  import fs
-  from transformers import AutoTokenizer
+  import cloudpickle, fs, transformers
+  from bentoml._internal.models.model import CUSTOM_OBJECTS_FILENAME
+  from .transformers._helpers import process_config
 
   tokenizer_attrs = {**llm.llm_parameters[-1], **tokenizer_attrs}
-  from bentoml._internal.models.model import CUSTOM_OBJECTS_FILENAME
-
-  from .transformers._helpers import process_config
 
   config, *_ = process_config(llm.bentomodel.path, llm.trust_remote_code)
 
@@ -41,9 +27,7 @@ def load_tokenizer(llm: LLM[M, T], **tokenizer_attrs: t.Any) -> TypeGuard[T]:
           'For example: "bentoml.transformers.save_model(..., custom_objects={\'tokenizer\': tokenizer})"'
         ) from None
   else:
-    tokenizer = AutoTokenizer.from_pretrained(
-      bentomodel_fs.getsyspath('/'), trust_remote_code=llm.trust_remote_code, **tokenizer_attrs
-    )
+    tokenizer = transformers.AutoTokenizer.from_pretrained(bentomodel_fs.getsyspath('/'), trust_remote_code=llm.trust_remote_code, **tokenizer_attrs)
 
   if tokenizer.pad_token_id is None:
     if config.pad_token_id is not None:
@@ -56,17 +40,16 @@ def load_tokenizer(llm: LLM[M, T], **tokenizer_attrs: t.Any) -> TypeGuard[T]:
       tokenizer.add_special_tokens({'pad_token': '[PAD]'})
   return tokenizer
 
-
-def _make_dispatch_function(fn):
+def _make_dispatch_function(fn: str) -> t.Callable[Concatenate[LLM[M, T], P], TypeGuard[M | T | Model]]:
   def caller(llm: LLM[M, T], *args: P.args, **kwargs: P.kwargs) -> TypeGuard[M | T | Model]:
-    """Generic function dispatch to correct serialisation submodules based on LLM runtime.
+    '''Generic function dispatch to correct serialisation submodules based on LLM runtime.
 
     > [!NOTE] See 'openllm.serialisation.transformers' if 'llm.__llm_backend__ in ("pt", "vllm")'
 
     > [!NOTE] See 'openllm.serialisation.ggml' if 'llm.__llm_backend__="ggml"'
 
     > [!NOTE] See 'openllm.serialisation.ctranslate' if 'llm.__llm_backend__="ctranslate"'
-    """
+    '''
     if llm.__llm_backend__ == 'ggml':
       serde = 'ggml'
     elif llm.__llm_backend__ == 'ctranslate':
@@ -76,19 +59,12 @@ def _make_dispatch_function(fn):
     else:
       raise OpenLLMException(f'Not supported backend {llm.__llm_backend__}')
     return getattr(importlib.import_module(f'.{serde}', 'openllm.serialisation'), fn)(llm, *args, **kwargs)
-
   return caller
-
 
 _extras = ['get', 'import_model', 'load_model']
 _import_structure = {'ggml', 'transformers', 'ctranslate', 'constants'}
 __all__ = ['load_tokenizer', *_extras, *_import_structure]
-
-
-def __dir__() -> t.Sequence[str]:
-  return sorted(__all__)
-
-
+def __dir__() -> t.Sequence[str]: return sorted(__all__)
 def __getattr__(name: str) -> t.Any:
   if name == 'load_tokenizer':
     return load_tokenizer
