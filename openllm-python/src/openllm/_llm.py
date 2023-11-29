@@ -123,6 +123,7 @@ class LLM(t.Generic[M, T]):
   _quantise: t.Optional[LiteralQuantise]; _model_decls: t.Tuple[t.Any, ...]; __model_attrs: t.Dict[str, t.Any] #
   __tokenizer_attrs: t.Dict[str, t.Any]; _tag: bentoml.Tag; _adapter_map: t.Optional[AdapterMap] #
   _serialisation: LiteralSerialisation; _local: bool; _max_model_len: t.Optional[int] #
+  _gpu_memory_utilization: float
 
   __llm_dtype__: t.Union[LiteralDtype, t.Literal['auto', 'half', 'float']] = 'auto'
   __llm_torch_dtype__: 'torch.dtype' = None
@@ -152,6 +153,7 @@ class LLM(t.Generic[M, T]):
     dtype='auto',
     low_cpu_mem_usage=True,
     max_model_len=None,
+    gpu_memory_utilization=0.9,
     _eager=True,
     **attrs,
   ):
@@ -182,7 +184,8 @@ class LLM(t.Generic[M, T]):
       adapter_map=convert_peft_config_type(adapter_map) if adapter_map is not None else None,
       serialisation=serialisation,
       local=_local,
-      max_model_len=max_model_len,
+      max_model_len=getenv('max_model_len', default=max_model_len),
+      gpu_memory_utilization=getenv('gpu_memory_utilization', default=gpu_memory_utilization),
       LLM__model_attrs=model_attrs,
       LLM__tokenizer_attrs=tokenizer_attrs,
       llm_dtype__=dtype.lower(),

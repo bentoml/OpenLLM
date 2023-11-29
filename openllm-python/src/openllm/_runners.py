@@ -109,7 +109,7 @@ class vLLMRunnable(bentoml.Runnable):
           tokenizer_mode='auto', tensor_parallel_size=num_gpus, #
           model=llm.bentomodel.path, tokenizer=llm.bentomodel.path, #
           trust_remote_code=llm.trust_remote_code, dtype=llm._torch_dtype, #
-          max_model_len=llm._max_model_len,
+          max_model_len=llm._max_model_len, gpu_memory_utilization=llm._gpu_memory_utilization, #
           quantization=llm.quantise if llm.quantise and llm.quantise in {'awq', 'squeezellm'} else None,
         )
       )

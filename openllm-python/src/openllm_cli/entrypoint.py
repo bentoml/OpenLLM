@@ -343,8 +343,16 @@ def cli() -> None:
   '--max-model-len',
   '--max_model_len',
   'max_model_len',
+  type=int,
   default=None,
   help='Maximum sequence length for the model. If not specified, we will use the default value from the model config.',
+)
+@click.option(
+  '--gpu-memory-utilization',
+  '--gpu_memory_utilization',
+  'gpu_memory_utilization',
+  default=0.9,
+  help='The percentage of GPU memory to be used for the model executor',
 )
 @start_decorator
 def start_command(
@@ -362,6 +370,7 @@ def start_command(
   dtype: LiteralDtype,
   deprecated_model_id: str | None,
   max_model_len: int | None,
+  gpu_memory_utilization:float,
   **attrs: t.Any,
 ) -> LLMConfig | subprocess.Popen[bytes]:
   '''Start any LLM as a REST server.
@@ -412,6 +421,7 @@ def start_command(
     serialisation=serialisation,
     dtype=dtype,
     max_model_len=max_model_len,
+    gpu_memory_utilization=gpu_memory_utilization,
     trust_remote_code=check_bool_env('TRUST_REMOTE_CODE', False),
   )
   backend_warning(llm.__llm_backend__)
@@ -461,6 +471,8 @@ def process_environ(config, server_timeout, wpr, device, cors, model_id, adapter
       'BACKEND': llm.__llm_backend__,
       'DTYPE': str(llm._torch_dtype).split('.')[-1],
       'TRUST_REMOTE_CODE': str(llm.trust_remote_code),
+      'MAX_MODEL_LEN': orjson.dumps(llm._max_model_len).decode(),
+      'GPU_MEMORY_UTILIZATION': orjson.dumps(llm._gpu_memory_utilization).decode(),
     }
   )
   if llm.quantise: environ['QUANTIZE'] = str(llm.quantise)
@@ -752,6 +764,20 @@ class BuildBentoOutput(t.TypedDict):
   help="Whether to push the result bento to BentoCloud. Make sure to login with 'bentoml cloud login' first.",
 )
 @click.option('--force-push', default=False, is_flag=True, type=click.BOOL, help='Whether to force push.')
+@click.option(
+  '--max-model-len',
+  '--max_model_len',
+  'max_model_len',
+  default=None,
+  help='Maximum sequence length for the model. If not specified, we will use the default value from the model config.',
+)
+@click.option(
+  '--gpu-memory-utilization',
+  '--gpu_memory_utilization',
+  'gpu_memory_utilization',
+  default=0.9,
+  help='The percentage of GPU memory to be used for the model executor',
+)
 @machine_option
 @click.pass_context
 def build_command(
@@ -770,6 +796,8 @@ def build_command(
   backend: LiteralBackend | None,
   model_version: str | None,
   dockerfile_template: t.TextIO | None,
+  max_model_len: int | None,
+  gpu_memory_utilization:float,
   containerize: bool,
   push: bool,
   serialisation: LiteralSerialisation | None,
@@ -820,6 +848,8 @@ def build_command(
     backend=backend,
     quantize=quantize,
     dtype=dtype,
+    max_model_len=max_model_len,
+    gpu_memory_utilization=gpu_memory_utilization,
     serialisation=first_not_none(
       serialisation, default='safetensors' if has_safetensors_weights(model_id, model_version) else 'legacy'
     ),

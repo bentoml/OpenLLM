@@ -8,7 +8,8 @@ from bentoml.io import JSON, Text
 logger = logging.getLogger(__name__)
 llm = openllm.LLM[t.Any, t.Any](
   model_id=svars.model_id, model_tag=svars.model_tag, adapter_map=svars.adapter_map, #
-  serialisation=svars.serialization, trust_remote_code=svars.trust_remote_code,
+  serialisation=svars.serialization, trust_remote_code=svars.trust_remote_code, #
+  max_model_len=svars.max_model_len, gpu_memory_utilization=svars.gpu_memory_utilization, #
 )
 svc = bentoml.Service(name=f"llm-{llm.config['start_name']}-service", runners=[llm.runner])
 llm_model_class = openllm.GenerationInput.from_llm_config(llm.config)
