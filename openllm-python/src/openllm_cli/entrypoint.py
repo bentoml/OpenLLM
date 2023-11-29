@@ -813,7 +813,6 @@ def build_command(
 
   if backend == 'pt':
     logger.warning("PyTorch backend is deprecated and will be removed from the next releases. Will set default backend to 'vllm' instead.")
-    backend = 'vllm'
 
   llm = openllm.LLM[t.Any, t.Any](
     model_id=model_id,
