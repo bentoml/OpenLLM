@@ -257,7 +257,7 @@ class LLM(t.Generic[M, T]):
   @property
   def _model_attrs(self): return {**self.import_kwargs[0], **self.__model_attrs}
   @_model_attrs.setter
-  def _model_attrs(self, value): self.__model_attrs = value
+  def _model_attrs(self, model_attrs): self.__model_attrs = model_attrs
   @property
   def _tokenizer_attrs(self): return {**self.import_kwargs[1], **self.__tokenizer_attrs}
   def _cascade_backend(self) -> LiteralBackend:
