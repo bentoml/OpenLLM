@@ -69,19 +69,16 @@ def set_disable_warnings(disable=True):
   if disable: os.environ[WARNING_ENV_VAR] = str(disable)
 def set_debug_mode(enabled, level=1):
   if enabled: os.environ[DEV_DEBUG_VAR] = str(level)
-  os.environ.update(
-    {
-      DEBUG_ENV_VAR: str(enabled),
-      QUIET_ENV_VAR: str(not enabled),
-      _GRPC_DEBUG_ENV_VAR: 'DEBUG' if enabled else 'ERROR',
-      'CT2_VERBOSE': '3',
-    }
-  )
+  os.environ.update({
+    DEBUG_ENV_VAR: str(enabled), QUIET_ENV_VAR: str(not enabled), #
+    _GRPC_DEBUG_ENV_VAR: 'DEBUG' if enabled else 'ERROR', 'CT2_VERBOSE': '3', #
+  })
   set_disable_warnings(not enabled)
 def set_quiet_mode(enabled):
-  os.environ.update(
-    {QUIET_ENV_VAR: str(enabled), DEBUG_ENV_VAR: str(not enabled), _GRPC_DEBUG_ENV_VAR: 'NONE', 'CT2_VERBOSE': '-1'}
-  )
+  os.environ.update({
+    QUIET_ENV_VAR: str(enabled), DEBUG_ENV_VAR: str(not enabled), #
+    _GRPC_DEBUG_ENV_VAR: 'NONE', 'CT2_VERBOSE': '-1', #
+  })
   set_disable_warnings(enabled)
 def gen_random_uuid(prefix: str | None = None) -> str: return '-'.join([prefix or 'openllm', str(uuid.uuid4().hex)])
 # NOTE:  `compose` any number of unary functions into a single unary function

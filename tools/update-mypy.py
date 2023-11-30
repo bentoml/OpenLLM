@@ -6,13 +6,12 @@ from typing import List
 
 _MYPY_CONFIG = {
   'pretty': 'true',
-  'python_version': '3.8',
+  'python_version': '3.9',
   'show_error_codes': 'true',
   'strict': 'true',
-  'warn_unused_configs': 'true',
   'ignore_missing_imports': 'true',
-  'check_untyped_defs': 'true',
   'warn_unreachable': 'true',
+  'explicit_package_bases': 'true',
 }
 
 

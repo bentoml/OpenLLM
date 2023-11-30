@@ -31,6 +31,7 @@ ignore = [
     "PLR0912",
     "PLR0913",
     "PLR0915",
+    "ANN",     # Use mypy
     "PLR2004", # magic value to use constant
     "E501",    # ignore line length violation
     "E401",    # ignore multiple line import
