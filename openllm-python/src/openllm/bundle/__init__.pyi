@@ -2,10 +2,10 @@ from typing import Optional
 
 import attr
 
-from openllm_core._typing_compat import LiteralContainerVersionStrategy
+from openllm_core._typing_compat import LiteralVersionStrategy
 from openllm_core.utils.lazy import VersionInfo
 
-from . import _package as _package, oci as oci
+from . import _package as _package
 from ._package import (
   build_editable as build_editable,
   construct_docker_options as construct_docker_options,
@@ -17,9 +17,9 @@ from ._package import (
 class RefResolver:
   git_hash: str
   version: VersionInfo
-  strategy: LiteralContainerVersionStrategy
+  strategy: LiteralVersionStrategy
 
   @classmethod
-  def from_strategy(cls, strategy_or_version: Optional[LiteralContainerVersionStrategy] = ...) -> RefResolver: ...
+  def from_strategy(cls, strategy_or_version: Optional[LiteralVersionStrategy] = ...) -> RefResolver: ...
   @property
   def tag(self) -> str: ...

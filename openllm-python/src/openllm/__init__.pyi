@@ -19,7 +19,6 @@ from openllm_cli._sdk import (
   import_model as import_model,
   list_models as list_models,
   start as start,
-  start_grpc as start_grpc,
 )
 from openllm_core._configuration import (
   GenerationConfig as GenerationConfig,
@@ -37,7 +36,6 @@ from . import (
   client as client,
   exceptions as exceptions,
   serialisation as serialisation,
-  testing as testing,
   utils as utils,
 )
 from ._deprecated import Runner as Runner

@@ -22,7 +22,7 @@ repos:
         language: system
         always_run: true
         pass_filenames: false
-        entry: python ./tools/update-mypy.py && mypy --strict
+        entry: mypy --strict
   - repo: https://github.com/editorconfig-checker/editorconfig-checker.python
     rev: '2.7.3'
     hooks:

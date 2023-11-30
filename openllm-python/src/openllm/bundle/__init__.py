@@ -29,8 +29,7 @@ class RefResolver:
   @property
   def tag(self) -> str: return 'latest' if self.strategy in {'latest', 'nightly'} else repr(self.version)
 __lazy = LazyModule(
-  __name__,
-  os.path.abspath('__file__'),
+  __name__, os.path.abspath('__file__'), #
   {'_package': ['create_bento', 'build_editable', 'construct_python_options', 'construct_docker_options']},
   extra_objects={'RefResolver': RefResolver}
 )
