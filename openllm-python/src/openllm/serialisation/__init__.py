@@ -36,8 +36,6 @@ def load_tokenizer(llm: LLM[M, T], **tokenizer_attrs: t.Any) -> TypeGuard[T]:
       tokenizer.pad_token_id = config.eos_token_id
     elif tokenizer.eos_token_id is not None:
       tokenizer.pad_token_id = tokenizer.eos_token_id
-    else:
-      tokenizer.add_special_tokens({'pad_token': '[PAD]'})
   return tokenizer
 
 def _make_dispatch_function(fn: str) -> t.Callable[Concatenate[LLM[M, T], P], TypeGuard[M | T | Model]]:

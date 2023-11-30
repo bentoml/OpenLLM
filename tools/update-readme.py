@@ -94,25 +94,6 @@ openllm query 'What are large language models?'
 ```""",
         ]
       )
-    if 'ctranslate' in it['backend']:
-      details_block.extend(
-        [
-          '\n- CTranslate2 (*experimental*):\n\n',
-          f"""\
-```bash
-{'' if not it['trust_remote_code'] else 'TRUST_REMOTE_CODE=True '}openllm start {it['model_ids'][0]} --backend ctranslate
-```""",
-          *markdown_noteblock(
-            'Currently, All quantization methods from ctranslate2 are supported. This includes int8, int8_float16, int8_bfloat16'
-          ),
-          *markdown_noteblock(
-            'We recommend users to convert the models beforehand, and then provide the given directory of the converted models to `openllm start`. See [CTranslate2](https://opennmt.net/CTranslate2/conversion.html) for more information.'
-          ),
-          *markdown_importantblock(
-            'CTranslate2 is an experimental backend and yet to be fully supported. It is recommended to use vLLM for all production use-case.'
-          ),
-        ]
-      )
 
     details_block.append('\n</details>\n\n')
     content.append('\n'.join(details_block))
