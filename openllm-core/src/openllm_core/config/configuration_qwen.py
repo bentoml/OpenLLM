@@ -3,10 +3,10 @@ from __future__ import annotations
 import openllm_core
 
 class QwenConfig(openllm_core.LLMConfig):
-  """Qwen-7B is the 7B-parameter version of the large language model series, Qwen (abbr. Tongyi Qianwen), 
-  proposed by Alibaba Cloud. Qwen-14B is a Transformer-based large language model, 
-  which is pretrained on a large volume of data, including web texts, books, codes, etc. 
-  Additionally, based on the pretrained Qwen-14B, we release Qwen-14B-Chat, a large-model-based AI assistant, 
+  """Qwen-7B is the 7B-parameter version of the large language model series, Qwen (abbr. Tongyi Qianwen),
+  proposed by Alibaba Cloud. Qwen-14B is a Transformer-based large language model,
+  which is pretrained on a large volume of data, including web texts, books, codes, etc.
+  Additionally, based on the pretrained Qwen-14B, we release Qwen-14B-Chat, a large-model-based AI assistant,
   which is trained with alignment techniques.
   Refer to [Qwen's GitHub page](https://github.com/QwenLM/Qwen) for more information.
   """
