@@ -16,6 +16,7 @@ from .configuration_mistral import MistralConfig as MistralConfig
 from .configuration_mpt import MPTConfig as MPTConfig
 from .configuration_opt import OPTConfig as OPTConfig
 from .configuration_phi import PhiConfig as PhiConfig
+from .configuration_qwen import QwenConfig as QwenConfig
 from .configuration_stablelm import StableLMConfig as StableLMConfig
 from .configuration_starcoder import StarCoderConfig as StarCoderConfig
 from .configuration_yi import YiConfig as YiConfig

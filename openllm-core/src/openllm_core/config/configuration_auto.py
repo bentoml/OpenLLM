@@ -35,6 +35,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
       ('mpt', 'MPTConfig'),
       ('opt', 'OPTConfig'),
       ('phi', 'PhiConfig'),
+      ('qwen', 'QwenConfig'),
       ('starcoder', 'StarCoderConfig'),
       ('mistral', 'MistralConfig'),
       ('yi', 'YiConfig'),
@@ -143,6 +144,9 @@ class AutoConfig:
   @t.overload
   @classmethod
   def for_model(cls, model_name: t.Literal['phi'], **attrs: t.Any) -> openllm_core.config.PhiConfig: ...
+  @t.overload
+  @classmethod
+  def for_model(cls, model_name: t.Literal['qwen'], **attrs: t.Any) -> openllm_core.config.QwenConfig: ...
   @t.overload
   @classmethod
   def for_model(cls, model_name: t.Literal['stablelm'], **attrs: t.Any) -> openllm_core.config.StableLMConfig: ...
