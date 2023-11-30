@@ -16,7 +16,7 @@ class QwenConfig(openllm_core.LLMConfig):
     'trust_remote_code': True,
     'timeout': 3600000,
     'url': 'https://github.com/QwenLM/Qwen',
-    'requirements': ['cpm-kernels'],
+    'requirements': ['cpm-kernels', 'tiktoken'],
     'backend': ('pt', 'vllm'),
     'architecture': 'QWenLMHeadModel',
     'default_id': 'qwen/Qwen-7B-Chat',
