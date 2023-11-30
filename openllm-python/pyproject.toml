@@ -109,7 +109,7 @@ ctranslate = ["ctranslate2>=3.22.0"]
 falcon = ["xformers"]
 fine-tune = ["peft>=0.6.0", "datasets", "trl", "huggingface-hub"]
 full = [
-    "openllm[agents,awq,baichuan,chatglm,ctranslate,falcon,fine-tune,ggml,gptq,grpc,mpt,openai,playground,starcoder,vllm]",
+    "openllm[agents,awq,baichuan,chatglm,ctranslate,falcon,fine-tune,ggml,gptq,grpc,mpt,openai,playground,qwen,starcoder,vllm]",
 ]
 ggml = ["ctransformers"]
 gptq = ["auto-gptq[triton]>=0.4.2"]
@@ -117,6 +117,7 @@ grpc = ["bentoml[grpc]>=1.1.10"]
 mpt = ["triton"]
 openai = ["openai[datalib]>=1", "tiktoken"]
 playground = ["jupyter", "notebook", "ipython", "jupytext", "nbformat"]
+qwen = ["cpm-kernels", "tiktoken"]
 starcoder = ["bitsandbytes"]
 vllm = ["vllm>=0.2.2"]
 
