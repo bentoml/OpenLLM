@@ -114,7 +114,7 @@ jobs:
       - name: Smoke test compiled artefacts
         run: ls -R dist
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@b7f401de30cb6434a1e19f805ff006643653240e # ratchet:pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@2f6f737ca5f74c637829c0f5c3acd0e29ea5e8bf # ratchet:pypa/gh-action-pypi-publish@release/v1
         with:
           print-hash: true
   prepare-next-dev-cycle:
