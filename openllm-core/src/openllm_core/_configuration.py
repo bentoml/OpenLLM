@@ -183,8 +183,8 @@ class GenerationConfig(ReprMixin):
   )
   decoder_start_token_id: int = dantic.Field(description='If an encoder-decoder model starts decoding with a different token than *bos*, the id of that token.')
   # NOTE: This is now implemented and supported for both PyTorch and vLLM
-  logprobs: int = dantic.Field(0, description='Number of log probabilities to return per output token.')
-  prompt_logprobs: int = dantic.Field(0, description='Number of log probabilities to return per input token.')
+  logprobs: t.Optional[int] = dantic.Field(None, description='Number of log probabilities to return per output token.')
+  prompt_logprobs: t.Optional[int] = dantic.Field(None, description='Number of log probabilities to return per input token.')
   def __init__(self, *, _internal: bool = False, **attrs: t.Any):
     if not _internal: raise RuntimeError('GenerationConfig is not meant to be used directly, but you can access this via a LLMConfig.generation_config')
     self.__attrs_init__(**attrs)
@@ -243,12 +243,11 @@ class SamplingParams(ReprMixin):
     temperature: float
     top_k: int
     top_p: float
-    logprobs: int
+    logprobs: t.Optional[int]
     repetition_penalty: float
     length_penalty: float
     early_stopping: bool
-    prompt_logprobs: int
-    logprobs: int
+    prompt_logprobs: t.Optional[int]
     stop: t.Optional[t.Union[str, t.List[str]]]
 
   def __init__(self, *, _internal: bool = False, **attrs: t.Any):
@@ -263,8 +262,8 @@ class SamplingParams(ReprMixin):
     _object_setattr(self, 'repetition_penalty', attrs.pop('repetition_penalty', 1.0))
     _object_setattr(self, 'length_penalty', attrs.pop('length_penalty', 1.0))
     _object_setattr(self, 'early_stopping', attrs.pop('early_stopping', False))
-    _object_setattr(self, 'logprobs', attrs.pop('logprobs', 0))
-    _object_setattr(self, 'prompt_logprobs', attrs.pop('prompt_logprobs', 0))
+    _object_setattr(self, 'logprobs', attrs.pop('logprobs', None))
+    _object_setattr(self, 'prompt_logprobs', attrs.pop('prompt_logprobs', None))
     _object_setattr(self, 'stop', attrs.pop('stop', None))
     self.__attrs_init__(**attrs)
 
@@ -1150,9 +1149,9 @@ class LLMConfig(_ConfigAttr[GenerationConfig, SamplingParams]):
   @overload
   def __getitem__(self, item: t.Literal['decoder_start_token_id']) -> int: ...
   @overload
-  def __getitem__(self, item: t.Literal['logprobs']) -> int: ...
+  def __getitem__(self, item: t.Literal['logprobs']) -> t.Optional[int]: ...
   @overload
-  def __getitem__(self, item: t.Literal['prompt_logprobs']) -> int: ...
+  def __getitem__(self, item: t.Literal['prompt_logprobs']) -> t.Optional[int]: ...
   # NOTE: SamplingParams arguments
   @overload
   def __getitem__(self, item: t.Literal['n']) -> int: ...
@@ -1408,7 +1407,7 @@ class LLMConfig(_ConfigAttr[GenerationConfig, SamplingParams]):
         sampling_topk=config['top_k'],
         sampling_topp=config['top_p'],
         sampling_temperature=config['temperature'],
-        return_log_prob=config['logprobs'] > 0,
+        return_log_prob=config['logprobs'] and config['logprobs'] > 0,
         repetition_penalty=config['repetition_penalty'],
         no_repeat_ngram_size=config['no_repeat_ngram_size'],
         end_token=config['stop'],
