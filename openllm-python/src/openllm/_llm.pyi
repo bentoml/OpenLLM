@@ -73,7 +73,7 @@ class LLM(Generic[M, T]):
     serialisation: LiteralSerialisation = ...,
     trust_remote_code: bool = ...,
     embedded: bool = ...,
-    torch_dtype: Dtype = ...,
+    dtype: Dtype = ...,
     low_cpu_mem_usage: bool = ...,
     **attrs: Any,
   ) -> None: ...
