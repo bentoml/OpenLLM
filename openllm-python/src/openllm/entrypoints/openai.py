@@ -298,18 +298,22 @@ async def completions(req, llm):
         i = output.index
         delta_text = output.text
         token_ids = output.token_ids
-        top_logprobs = output.logprobs[previous_num_tokens[i]:]
         logprobs = None
+        top_logprobs = None
+        if request.logprobs is not None:
+          top_logprobs = output.logprobs[previous_num_tokens[i]:]
 
         if request.echo and not previous_echo[i]:
           if not echo_without_generation:
             delta_text = res.prompt + delta_text
             token_ids = res.prompt_token_ids + token_ids
-            top_logprobs = res.prompt_logprobs + top_logprobs
+            if top_logprobs:
+              top_logprobs = res.prompt_logprobs + top_logprobs
           else:
             delta_text = res.prompt
             token_ids = res.prompt_token_ids
-            top_logprobs = res.prompt_logprobs
+            if top_logprobs:
+              top_logprobs = res.prompt_logprobs
           previous_echo[i] = True
         if request.logprobs is not None:
           logprobs = create_logprobs(output.token_ids, output.logprobs[previous_num_tokens[i]:], request.logprobs, len(previous_texts[i]), llm=llm)
