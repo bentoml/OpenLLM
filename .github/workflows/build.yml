@@ -130,7 +130,7 @@ jobs:
       - name: Extract metadata tags and labels for main, release or tag
         if: github.event_name != 'pull_request'
         id: meta
-        uses: docker/metadata-action@e6428a5c4e294a61438ed7f43155db912025b6b3 # ratchet:docker/metadata-action@v5.2.0
+        uses: docker/metadata-action@31cebacef4805868f9ce9a0cb03ee36c32df2ac4 # ratchet:docker/metadata-action@v5.3.0
         with:
           flavor: |
             latest=auto
