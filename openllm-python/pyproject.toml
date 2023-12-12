@@ -39,7 +39,7 @@ classifiers = [
 ]
 dependencies = [
     "bentoml[io]>=1.1.10",
-    "transformers[torch,tokenizers]>=4.35.0",
+    "transformers[torch,tokenizers]>=4.36.0",
     "openllm-client>=0.4.35",
     "openllm-core>=0.4.35",
     "safetensors",
@@ -100,7 +100,7 @@ Tracker = "https://github.com/bentoml/OpenLLM/issues"
 Twitter = "https://twitter.com/bentomlai"
 
 [project.optional-dependencies]
-agents = ["transformers[agents]>=4.35.0", "diffusers", "soundfile"]
+agents = ["transformers[agents]>=4.36.0", "diffusers", "soundfile"]
 all = ["openllm[full]"]
 awq = ["autoawq"]
 baichuan = ["cpm-kernels"]
@@ -119,7 +119,7 @@ openai = ["openai[datalib]>=1", "tiktoken"]
 playground = ["jupyter", "notebook", "ipython", "jupytext", "nbformat"]
 qwen = ["cpm-kernels", "tiktoken"]
 starcoder = ["bitsandbytes"]
-vllm = ["vllm>=0.2.2"]
+vllm = ["vllm>=0.2.4"]
 
 [tool.hatch.version]
 fallback-version = "0.0.0"

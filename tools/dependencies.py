@@ -144,7 +144,7 @@ class Dependencies:
 _LOWER_BENTOML_CONSTRAINT = '1.1.10'
 _BENTOML_EXT = ['io']
 _TRANSFORMERS_EXT = ['torch', 'tokenizers']
-_TRANSFORMERS_CONSTRAINTS = '4.35.0'
+_TRANSFORMERS_CONSTRAINTS = '4.36.0'
 
 FINE_TUNE_DEPS = ['peft>=0.6.0', 'datasets', 'trl', 'huggingface-hub']
 GRPC_DEPS = [f'bentoml[grpc]>={_LOWER_BENTOML_CONSTRAINT}']
@@ -155,7 +155,7 @@ GGML_DEPS = ['ctransformers']
 CTRANSLATE_DEPS = ['ctranslate2>=3.22.0']
 AWQ_DEPS = ['autoawq']
 GPTQ_DEPS = ['auto-gptq[triton]>=0.4.2']
-VLLM_DEPS = ['vllm>=0.2.2']
+VLLM_DEPS = ['vllm>=0.2.4']
 
 _base_requirements: dict[str, t.Any] = {
   inflection.dasherize(name): config_cls.__openllm_requirements__
