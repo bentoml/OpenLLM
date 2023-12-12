@@ -57,6 +57,7 @@ class ChatCompletionRequest:
   max_tokens: t.Optional[int] = attr.field(default=None)
   presence_penalty: t.Optional[float] = attr.field(default=None)
   frequency_penalty: t.Optional[float] = attr.field(default=None)
+  echo: t.Optional[bool] = attr.field(default=False)
   logit_bias: t.Optional[t.Dict[str, float]] = attr.field(default=None)
   user: t.Optional[str] = attr.field(default=None)
   # supported by vLLM and us

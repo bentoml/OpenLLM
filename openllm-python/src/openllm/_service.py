@@ -1,7 +1,6 @@
 from __future__ import annotations
 import logging, typing as t
-import _service_vars as svars
-import bentoml, openllm
+import bentoml, openllm, _service_vars as svars
 from openllm_core._schemas import MessageParam
 from bentoml.io import JSON, Text
 
@@ -16,23 +15,23 @@ llm_model_class = openllm.GenerationInput.from_llm_config(llm.config)
 
 @svc.api(
   route='/v1/generate',
-  input=JSON.from_sample(llm_model_class.examples()), output=JSON.from_sample(openllm.GenerationOutput.examples()), #
+  input=JSON.from_sample(llm_model_class.examples()),
+  output=JSON.from_sample(openllm.GenerationOutput.examples()),
 )
 async def generate_v1(input_dict: dict[str, t.Any]) -> dict[str, t.Any]: return (await llm.generate(**llm_model_class(**input_dict).model_dump())).model_dump()
 
 @svc.api(
   route='/v1/generate_stream',
-  input=JSON.from_sample(llm_model_class.examples()), output=Text(content_type='text/event-stream'), #
+  input=JSON.from_sample(llm_model_class.examples()),
+  output=Text(content_type='text/event-stream'),
 )
 async def generate_stream_v1(input_dict: dict[str, t.Any]) -> t.AsyncGenerator[str, None]:
-  async for it in llm.generate_iterator(**llm_model_class(**input_dict).model_dump()):
-    yield f'data: {it.model_dump_json()}\n\n'
+  async for it in llm.generate_iterator(**llm_model_class(**input_dict).model_dump()): yield f'data: {it.model_dump_json()}\n\n'
   yield 'data: [DONE]\n\n'
 
 _Metadata = openllm.MetadataOutput(
   timeout=llm.config['timeout'], model_name=llm.config['model_name'], #
-  backend=llm.__llm_backend__, model_id=llm.model_id, #
-  configuration=llm.config.model_dump_json().decode(),
+  backend=llm.__llm_backend__, model_id=llm.model_id, configuration=llm.config.model_dump_json().decode(), #
 )
 
 @svc.api(route='/v1/metadata', input=Text(), output=JSON.from_sample(_Metadata.model_dump()))
