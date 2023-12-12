@@ -173,7 +173,7 @@ jobs:
           COSIGN_EXPERIMENTAL: 'true'
         run: echo "${{ steps.meta.outputs.tags }}" | xargs -I {} cosign sign --yes {}@${{ steps.build-and-push.outputs.digest }}
       - name: Run Trivy in GitHub SBOM mode and submit results to Dependency Graph
-        uses: aquasecurity/trivy-action@2b6a709cf9c4025c5438138008beaddbb02086f0 # ratchet:aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@91713af97dc80187565512baba96e4364e983601 # ratchet:aquasecurity/trivy-action@master
         if: ${{ github.event_name != 'pull_request' }}
         with:
           image-ref: 'ghcr.io/bentoml/openllm:sha-${{ env.GITHUB_SHA_SHORT }}'
@@ -182,7 +182,7 @@ jobs:
           github-pat: ${{ secrets.GITHUB_TOKEN }}
           scanners: 'vuln'
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@2b6a709cf9c4025c5438138008beaddbb02086f0 # ratchet:aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@91713af97dc80187565512baba96e4364e983601 # ratchet:aquasecurity/trivy-action@master
         if: ${{ github.event_name != 'pull_request' }}
         with:
           image-ref: 'ghcr.io/bentoml/openllm:sha-${{ env.GITHUB_SHA_SHORT }}'
