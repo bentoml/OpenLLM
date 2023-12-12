@@ -73,6 +73,7 @@ requestBody:
             stream: false
             chat_template: __chat_template__
             add_generation_prompt: __add_generation_prompt__
+            echo: false
         streaming:
           summary: Streaming input example
           value:
@@ -92,6 +93,7 @@ requestBody:
               - "<|endoftext|>"
             chat_template: __chat_template__
             add_generation_prompt: __add_generation_prompt__
+            echo: false
       schema:
         $ref: '#/components/schemas/ChatCompletionRequest'
 responses:

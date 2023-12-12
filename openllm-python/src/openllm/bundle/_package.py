@@ -31,7 +31,7 @@ def build_editable(path, package='openllm'):
   raise RuntimeError('Please install OpenLLM from PyPI or built it from Git source.')
 def construct_python_options(llm, llm_fs, extra_dependencies=None, adapter_map=None):
   from . import RefResolver
-  packages = ['scipy', 'bentoml[tracing]>=1.1.10', 'vllm==0.2.4', 'ray==2.6.0', f'openllm>={RefResolver.from_strategy("release").version}']  # apparently bnb misses this one
+  packages = ['scipy', 'bentoml[tracing]>=1.1.10', f'openllm[vllm]>={RefResolver.from_strategy("release").version}']  # apparently bnb misses this one
   if adapter_map is not None: packages += ['openllm[fine-tune]']
   if extra_dependencies is not None: packages += [f'openllm[{k}]' for k in extra_dependencies]
   if llm.config['requirements'] is not None: packages.extend(llm.config['requirements'])
@@ -50,7 +50,7 @@ def construct_docker_options(llm, _, quantize, adapter_map, dockerfile_template,
   environ['OPENLLM_CONFIG'] = f"'{environ['OPENLLM_CONFIG']}'"
   environ.pop('BENTOML_HOME', None)  # NOTE: irrelevant in container
   environ['NVIDIA_DRIVER_CAPABILITIES'] = 'compute,utility'
-  return DockerOptions(cuda_version='12.1', env=environ, dockerfile_template=dockerfile_template)
+  return DockerOptions(cuda_version='12.1', python_version='3.11', env=environ, dockerfile_template=dockerfile_template)
 @inject
 def create_bento(
   bento_tag, llm_fs, llm, #
