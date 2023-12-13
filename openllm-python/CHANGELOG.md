@@ -18,6 +18,23 @@ This changelog is managed by towncrier and is compiled at release time.
 
 <!-- towncrier release notes start -->
 
+## [0.4.38](https://github.com/bentoml/openllm/tree/v0.4.38)
+
+### Changes
+
+- Update correct arguments for both `openllm import` and `openllm build` to be synonymous with `openllm start`
+  [#775](https://github.com/bentoml/openllm/issues/775)
+
+
+### Features
+
+- Mixtral is now fully supported on BentoCloud.
+
+  ```bash
+  openllm start mistralai/Mixtral-8x7B-Instruct-v0.1
+  ```
+  [#774](https://github.com/bentoml/openllm/issues/774)
+
 ## [0.4.37](https://github.com/bentoml/openllm/tree/v0.4.37)
 No significant changes.
 
