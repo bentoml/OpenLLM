@@ -724,6 +724,7 @@ You can specify any of the following Mistral models via `openllm start`:
 
 - [HuggingFaceH4/zephyr-7b-alpha](https://huggingface.co/HuggingFaceH4/zephyr-7b-alpha)
 - [HuggingFaceH4/zephyr-7b-beta](https://huggingface.co/HuggingFaceH4/zephyr-7b-beta)
+- [mistralai/Mistral-7B-Instruct-v0.2](https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.2)
 - [mistralai/Mistral-7B-Instruct-v0.1](https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.1)
 - [mistralai/Mistral-7B-v0.1](https://huggingface.co/mistralai/Mistral-7B-v0.1)
 
@@ -759,6 +760,74 @@ openllm start HuggingFaceH4/zephyr-7b-alpha --backend vllm
 
 ```bash
 openllm start HuggingFaceH4/zephyr-7b-alpha --backend pt
+```
+
+</details>
+
+<details>
+
+<summary>Mixtral</summary>
+
+
+### Quickstart
+
+Run the following command to quickly spin up a Mixtral server:
+
+```bash
+openllm start mistralai/Mixtral-8x7B-Instruct-v0.1
+```
+In a different terminal, run the following command to interact with the server:
+
+```bash
+export OPENLLM_ENDPOINT=http://localhost:3000
+openllm query 'What are large language models?'
+```
+
+
+> **Note:** Any Mixtral variants can be deployed with OpenLLM. Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=mixtral) to see more Mixtral-compatible models.
+
+
+
+### Supported models
+
+You can specify any of the following Mixtral models via `openllm start`:
+
+
+- [mistralai/Mixtral-8x7B-Instruct-v0.1](https://huggingface.co/mistralai/Mixtral-8x7B-Instruct-v0.1)
+- [mistralai/Mixtral-8x7B-v0.1](https://huggingface.co/mistralai/Mixtral-8x7B-v0.1)
+
+### Supported backends
+
+OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
+
+
+
+> **Important:** We recommend user to explicitly specify `--backend` to choose the desired backend to run the model. If you have access to a GPU, always use `--backend vllm`.
+
+
+
+- vLLM (Recommended):
+
+
+To install vLLM, run `pip install "openllm[vllm]"`
+
+```bash
+openllm start mistralai/Mixtral-8x7B-Instruct-v0.1 --backend vllm
+```
+
+
+> **Important:** Using vLLM requires a GPU that has architecture newer than 8.0 to get the best performance for serving. It is recommended that for all serving usecase in production, you should choose vLLM for serving.
+
+
+
+> **Note:** Currently, adapters are yet to be supported with vLLM.
+
+
+- PyTorch:
+
+
+```bash
+openllm start mistralai/Mixtral-8x7B-Instruct-v0.1 --backend pt
 ```
 
 </details>
