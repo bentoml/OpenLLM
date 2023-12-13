@@ -82,11 +82,18 @@ done
 
 validate_extensions
 
+# Check if .python-version file exists from GIT_ROOT, otherwise symlink from .python-version-default to .python-version
+if [ ! -f "$GIT_ROOT/.python-version" ]; then
+  echo "Symlinking .python-version-default to .python-version"
+  ln -s "$GIT_ROOT/.python-version-default" "$GIT_ROOT/.python-version"
+fi
+
 # Check if the EXTENSIONS array is empty
 if [ ${#EXTENSIONS[@]} -eq 0 ]; then
   echo "No extensions specified"
   EXTENSIONS_STR=""
 else
+  echo "Installing extensions: ${EXTENSIONS[*]}"
   EXTENSIONS_STR="[${EXTENSIONS[*]}]"
   EXTENSIONS_STR=${EXTENSIONS_STR// /,} # Replace spaces with commas
 fi

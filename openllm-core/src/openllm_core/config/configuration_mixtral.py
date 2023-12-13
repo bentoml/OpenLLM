@@ -8,42 +8,27 @@ if t.TYPE_CHECKING:
 SINST_KEY, EINST_KEY, BOS_TOKEN, EOS_TOKEN = '[INST]', '[/INST]', '<s>', '</s>'
 
 
-class MistralConfig(openllm_core.LLMConfig):
-  """Mistral-7B-v0.1 is a small, yet powerful model adaptable to many use-cases. It is released under Apache 2.0 licence, and it's easy to deploy on any cloud
+class MixtralConfig(openllm_core.LLMConfig):
+  """The Mixtral-8x7B Large Language Model (LLM) is a pretrained generative Sparse Mixture of Experts. The Mixtral-8x7B outperforms Llama 2 70B on most benchmarks we tested.
 
-  It currently contains a foundation model and a instruct-finetuned model.
-
-  Refer to [Mistral's HuggingFace page](https://huggingface.co/docs/transformers/main/model_doc/mistral)
+  Refer to [Mixtral's HuggingFace page](https://huggingface.co/docs/transformers/main/model_doc/mixtral)
   for more information.
   """
 
   __config__ = {
     'name_type': 'lowercase',
     'url': 'https://mistral.ai',
-    'architecture': 'MistralForCausalLM',
-    'default_id': 'mistralai/Mistral-7B-Instruct-v0.1',
-    'serialisation': 'safetensors',
-    'model_ids': [
-      'HuggingFaceH4/zephyr-7b-alpha',
-      'HuggingFaceH4/zephyr-7b-beta',
-      'mistralai/Mistral-7B-Instruct-v0.2',
-      'mistralai/Mistral-7B-Instruct-v0.1',
-      'mistralai/Mistral-7B-v0.1',
-    ],
-    'fine_tune_strategies': (
-      {'adapter_type': 'lora', 'r': 64, 'lora_alpha': 16, 'lora_dropout': 0.1, 'bias': 'none'},
-    ),
+    'architecture': 'MixtralForCausalLM',
+    'default_id': 'mistralai/Mixtral-8x7B-Instruct-v0.1',
+    'model_ids': ['mistralai/Mixtral-8x7B-Instruct-v0.1', 'mistralai/Mixtral-8x7B-v0.1'],
   }
 
   class GenerationConfig:
-    max_new_tokens: int = 256
+    max_new_tokens: int = 20
     temperature: float = 0.7
-    top_p: float = 0.95
-    top_k: int = 40
 
   class SamplingParams:
     best_of: int = 1
-    presence_penalty: float = 0.5
 
   # NOTE: see https://docs.mistral.ai/usage/guardrailing/ and https://docs.mistral.ai/llm/mistral-instruct-v0.1
   @property

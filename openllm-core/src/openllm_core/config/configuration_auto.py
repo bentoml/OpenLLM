@@ -26,11 +26,11 @@ CONFIG_MAPPING_NAMES = OrderedDict(
     [
       ('flan_t5', 'FlanT5Config'),
       ('baichuan', 'BaichuanConfig'),
-      ('chatglm', 'ChatGLMConfig'),  #
+      ('chatglm', 'ChatGLMConfig'),
       ('falcon', 'FalconConfig'),
       ('gpt_neox', 'GPTNeoXConfig'),
       ('dolly_v2', 'DollyV2Config'),
-      ('stablelm', 'StableLMConfig'),  #
+      ('stablelm', 'StableLMConfig'),
       ('llama', 'LlamaConfig'),
       ('mpt', 'MPTConfig'),
       ('opt', 'OPTConfig'),
@@ -38,6 +38,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
       ('qwen', 'QwenConfig'),
       ('starcoder', 'StarCoderConfig'),
       ('mistral', 'MistralConfig'),
+      ('mixtral', 'MixtralConfig'),
       ('yi', 'YiConfig'),
     ]
   )
@@ -135,6 +136,9 @@ class AutoConfig:
   @t.overload
   @classmethod
   def for_model(cls, model_name: t.Literal['mistral'], **attrs: t.Any) -> openllm_core.config.MistralConfig: ...
+  @t.overload
+  @classmethod
+  def for_model(cls, model_name: t.Literal['mixtral'], **attrs: t.Any) -> openllm_core.config.MixtralConfig: ...
   @t.overload
   @classmethod
   def for_model(cls, model_name: t.Literal['mpt'], **attrs: t.Any) -> openllm_core.config.MPTConfig: ...
