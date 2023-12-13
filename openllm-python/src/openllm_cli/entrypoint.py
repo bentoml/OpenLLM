@@ -46,15 +46,11 @@ from . import termui
 from ._factory import (
   FC,
   _AnyCallable,
-  backend_option,
-  dtype_option,
   machine_option,
   model_name_argument,
-  model_version_option,
   parse_config_options,
-  quantize_option,
-  serialisation_option,
   start_decorator,
+  optimization_decorator,
 )
 
 if t.TYPE_CHECKING:
@@ -590,13 +586,11 @@ class ImportModelOutput(t.TypedDict):
   metavar='[REMOTE_REPO/MODEL_ID | /path/to/local/model]',
   help='Deprecated. Use positional argument instead.',
 )
-@model_version_option
-@backend_option
-@quantize_option
-@serialisation_option
+@optimization_decorator
 def import_command(
   model_id: str,
   deprecated_model_id: str | None,
+  dtype: LiteralDtype,
   model_version: str | None,
   backend: LiteralBackend | None,
   quantize: LiteralQuantise | None,
@@ -649,6 +643,7 @@ def import_command(
     model_version=model_version,
     quantize=quantize,
     backend=backend,
+    dtype=dtype,
     serialisation=t.cast(
       LiteralSerialisation,
       first_not_none(
@@ -712,8 +707,6 @@ class BuildBentoOutput(t.TypedDict):
   metavar='[REMOTE_REPO/MODEL_ID | /path/to/local/model]',
   help='Deprecated. Use positional argument instead.',
 )
-@dtype_option
-@backend_option
 @click.option(
   '--bento-version',
   type=str,
@@ -721,8 +714,6 @@ class BuildBentoOutput(t.TypedDict):
   help='Optional bento version for this BentoLLM. Default is the the model revision.',
 )
 @click.option('--overwrite', is_flag=True, help='Overwrite existing Bento for given LLM if it already exists.')
-@cog.optgroup.group(cls=cog.MutuallyExclusiveOptionGroup, name='Optimisation options')  # type: ignore[misc]
-@quantize_option(factory=cog.optgroup, build=True)
 @click.option(
   '--enable-features',
   multiple=True,
@@ -732,6 +723,7 @@ class BuildBentoOutput(t.TypedDict):
     ', '.join(OPTIONAL_DEPENDENCIES)
   ),
 )
+@optimization_decorator
 @click.option(
   '--adapter-id',
   default=None,
@@ -740,14 +732,12 @@ class BuildBentoOutput(t.TypedDict):
   help="Optional adapters id to be included within the Bento. Note that if you are using relative path, '--build-ctx' must be passed.",
 )
 @click.option('--build-ctx', help='Build context. This is required if --adapter-id uses relative path', default=None)
-@model_version_option
 @click.option(
   '--dockerfile-template',
   default=None,
   type=click.File(),
   help='Optional custom dockerfile template to be used with this BentoLLM.',
 )
-@serialisation_option
 @cog.optgroup.group(cls=cog.MutuallyExclusiveOptionGroup, name='Utilities options')  # type: ignore[misc]
 @cog.optgroup.option(
   '--containerize',
@@ -787,20 +777,20 @@ def build_command(
   deprecated_model_id: str | None,
   bento_version: str | None,
   overwrite: bool,
-  quantize: LiteralQuantise | None,
-  machine: bool,
   dtype: LiteralDtype,
+  model_version: str | None,
+  backend: LiteralBackend | None,
+  quantize: LiteralQuantise | None,
+  serialisation: LiteralSerialisation | None,
+  machine: bool,
   enable_features: tuple[str, ...] | None,
   adapter_id: tuple[str, ...],
   build_ctx: str | None,
-  backend: LiteralBackend | None,
-  model_version: str | None,
   dockerfile_template: t.TextIO | None,
   max_model_len: int | None,
   gpu_memory_utilization:float,
   containerize: bool,
   push: bool,
-  serialisation: LiteralSerialisation | None,
   force_push: bool,
   **_: t.Any,
 ) -> BuildBentoOutput:

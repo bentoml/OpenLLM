@@ -18,7 +18,7 @@ if t.TYPE_CHECKING:
 @click.command('list_models', context_settings=termui.CONTEXT_SETTINGS)
 @model_name_argument(required=False, shell_complete=model_complete_envvar)
 def cli(model_name: str | None) -> DictStrAny:
-  '''This is equivalent to openllm models --show-available less the nice table.'''
+  '''List available models in lcoal store to be used wit OpenLLM.'''
   models = tuple(inflection.dasherize(key) for key in openllm.CONFIG_MAPPING.keys())
   ids_in_local_store = {
     k: [

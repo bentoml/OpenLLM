@@ -11,6 +11,7 @@ from openllm_core._typing_compat import (
   LiteralBackend,
   LiteralSerialisation,
   ParamSpec,
+  AnyCallable,
   get_literal_args,
 )
 from openllm_core.utils import DEBUG, compose, dantic, resolve_user_filepath
@@ -25,7 +26,7 @@ class _OpenLLM_GenericInternalConfig(LLMConfig):
 
   class GenerationConfig:
     top_k: int = 15
-    top_p: float = 0.9
+    top_p: float = 0.78
     temperature: float = 0.75
     max_new_tokens: int = 128
 
@@ -118,21 +119,22 @@ def _id_callback(ctx: click.Context, _: click.Parameter, value: t.Tuple[str, ...
     ctx.params[_adapter_mapping_key][adapter_id] = name
   return None
 
+def optimization_decorator(fn: FC, *, factory=click, _eager=True) -> FC | list[AnyCallable]:
+  shared = [
+    dtype_option(factory=factory), model_version_option(factory=factory), #
+    backend_option(factory=factory), quantize_option(factory=factory), #
+    serialisation_option(factory=factory),
+  ]
+  if not _eager: return shared
+  return compose(*shared)(fn)
 
 def start_decorator(fn: FC) -> FC:
   composed = compose(
     _OpenLLM_GenericInternalConfig.parse,
-    _http_server_args,
-    cog.optgroup.group('General LLM Options', help='The following options are related to running LLM Server.'),
-    dtype_option(factory=cog.optgroup),
-    model_version_option(factory=cog.optgroup),
-    cog.optgroup.option('--server-timeout', type=int, default=None, help='Server timeout in seconds'),
-    workers_per_resource_option(factory=cog.optgroup),
-    cors_option(factory=cog.optgroup),
-    backend_option(factory=cog.optgroup),
+    parse_serve_args(),
     cog.optgroup.group(
-      'LLM Optimization Options',
-      help='''Optimization related options.
+      'LLM Options',
+      help='''The following options are related to running LLM Server as well as optimization options.
 
           OpenLLM supports running model k-bit quantization (8-bit, 4-bit), GPTQ quantization, PagedAttention via vLLM.
 
@@ -140,10 +142,12 @@ def start_decorator(fn: FC) -> FC:
 
           - DeepSpeed Inference: [link](https://www.deepspeed.ai/inference/)
           - GGML: Fast inference on [bare metal](https://github.com/ggerganov/ggml)
-          ''',
+    ''',
     ),
-    quantize_option(factory=cog.optgroup),
-    serialisation_option(factory=cog.optgroup),
+    cog.optgroup.option('--server-timeout', type=int, default=None, help='Server timeout in seconds'),
+    workers_per_resource_option(factory=cog.optgroup),
+    cors_option(factory=cog.optgroup),
+    *optimization_decorator(fn, factory=cog.optgroup, _eager=False),
     cog.optgroup.option(
       '--device',
       type=dantic.CUDA,
@@ -200,8 +204,6 @@ def parse_serve_args() -> t.Callable[[t.Callable[..., LLMConfig]], t.Callable[[F
     return group(f)
   return decorator
 
-_http_server_args = parse_serve_args()
-
 def _click_factory_type(*param_decls: t.Any, **attrs: t.Any) -> t.Callable[[FC | None], FC]:
   '''General ``@click`` decorator with some sauce.
 
@@ -234,7 +236,8 @@ def adapter_id_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callab
     multiple=True,
     callback=_id_callback,
     metavar='[PATH | [remote/][adapter_name:]adapter_id][, ...]',
-  )
+    **attrs,
+  )(f)
 
 
 def cors_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
@@ -291,8 +294,7 @@ def backend_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[
     envvar='OPENLLM_BACKEND',
     show_envvar=True,
     help='Runtime to use for both serialisation/inference engine.',
-    **attrs,
-  )(f)
+    **attrs)(f)
 
 def model_name_argument(f: _AnyCallable | None = None, required: bool = True, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_argument(
@@ -329,15 +331,9 @@ def quantize_option(f: _AnyCallable | None = None, *, build: bool = False, **att
       '''
     + (
       '''
-      > [!NOTE] that this will set the mode for serving within deployment.'''
-      if build
-      else ''
-    )
-    + '''
-      > [!NOTE] that quantization are currently only available in *PyTorch* models.''',
-    **attrs,
-  )(f)
-
+      > [!NOTE] that this will set the mode for serving within deployment.''' if build else ''
+    ),
+    **attrs)(f)
 
 def workers_per_resource_option(
   f: _AnyCallable | None = None, *, build: bool = False, **attrs: t.Any
