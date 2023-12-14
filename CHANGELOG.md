@@ -18,6 +18,13 @@ This changelog is managed by towncrier and is compiled at release time.
 
 <!-- towncrier release notes start -->
 
+## [0.4.39](https://github.com/bentoml/openllm/tree/v0.4.39)
+
+### Bug fix
+
+- Fixes logprobs branch with PyTorch backend.
+  [#779](https://github.com/bentoml/openllm/issues/779)
+
 ## [0.4.38](https://github.com/bentoml/openllm/tree/v0.4.38)
 
 ### Changes
