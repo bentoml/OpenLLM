@@ -162,7 +162,7 @@ class PyTorchRunnable(bentoml.Runnable):
       input_len = len(prompt_token_ids)
 
       if self.is_encoder_decoder:
-        if config['logprobs'] > 0:  # FIXME: logprobs is not supported
+        if config['logprobs']:  # FIXME: logprobs is not supported
           raise NotImplementedError('Logprobs is yet to be supported with encoder-decoder models.')
         encoder_output = self.model.encoder(input_ids=torch.as_tensor([prompt_token_ids], device=self.device))[0]
         start_ids = torch.as_tensor(
