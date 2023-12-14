@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import openllm_core
 
+
 class QwenConfig(openllm_core.LLMConfig):
   """Qwen-7B is the 7B-parameter version of the large language model series, Qwen (abbr. Tongyi Qianwen),
   proposed by Alibaba Cloud. Qwen-14B is a Transformer-based large language model,

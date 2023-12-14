@@ -17,9 +17,12 @@ class ErrorResponse:
   param: t.Optional[str] = None
   code: t.Optional[str] = None
 
+
 def _stop_converter(data: t.Union[str, t.List[str]]) -> t.List[str]:
-  if not data: return None
+  if not data:
+    return None
   return [data] if isinstance(data, str) else data
+
 
 @attr.define
 class CompletionRequest:

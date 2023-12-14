@@ -48,17 +48,19 @@ schemas = get_generator(
 logger = logging.getLogger(__name__)
 
 
-def jsonify_attr(obj): return json.dumps(converter.unstructure(obj))
+def jsonify_attr(obj):
+  return json.dumps(converter.unstructure(obj))
+
 
 def error_response(status_code, message):
   return JSONResponse(converter.unstructure(CohereErrorResponse(text=message)), status_code=status_code.value)
 
+
 async def check_model(request, model):
-  if request.model is None or request.model == model: return None
-  return error_response(
-    HTTPStatus.NOT_FOUND,
-    f"Model '{request.model}' does not exists. Try 'GET /v1/models' to see current running models.",
-  )
+  if request.model is None or request.model == model:
+    return None
+  return error_response(HTTPStatus.NOT_FOUND, f"Model '{request.model}' does not exists. Try 'GET /v1/models' to see current running models.")
+
 
 def mount_to_svc(svc, llm):
   app = Starlette(
@@ -73,6 +75,7 @@ def mount_to_svc(svc, llm):
 
   svc.mount_asgi_app(app, path=mount_path)
   return append_schemas(svc, schemas.get_schema(routes=app.routes, mount_path=mount_path), tags_order='append', inject=DEBUG)
+
 
 @add_schema_definitions
 async def cohere_generate(req, llm):
@@ -130,18 +133,14 @@ async def cohere_generate(req, llm):
     if final_result is None:
       return error_response(HTTPStatus.BAD_REQUEST, 'No response from model.')
     final_result = final_result.with_options(
-      outputs=[
-        output.with_options(text=''.join(texts[output.index]), token_ids=token_ids[output.index])
-        for output in final_result.outputs
-      ]
+      outputs=[output.with_options(text=''.join(texts[output.index]), token_ids=token_ids[output.index]) for output in final_result.outputs]
     )
     return JSONResponse(
       converter.unstructure(
         Generations(
           id=request_id,
           generations=[
-            Generation(id=request_id, text=output.text, prompt=prompt, finish_reason=output.finish_reason)
-            for output in final_result.outputs
+            Generation(id=request_id, text=output.text, prompt=prompt, finish_reason=output.finish_reason) for output in final_result.outputs
           ],
         )
       ),
@@ -164,6 +163,7 @@ def _transpile_cohere_chat_messages(request: CohereChatRequest) -> list[dict[str
     messages = []
   messages.append({'role': 'user', 'content': request.message})
   return messages
+
 
 @add_schema_definitions
 async def cohere_chat(req, llm):
@@ -247,9 +247,7 @@ async def cohere_chat(req, llm):
       final_result = res
     if final_result is None:
       return error_response(HTTPStatus.BAD_REQUEST, 'No response from model.')
-    final_result = final_result.with_options(
-      outputs=[final_result.outputs[0].with_options(text=''.join(texts), token_ids=token_ids)]
-    )
+    final_result = final_result.with_options(outputs=[final_result.outputs[0].with_options(text=''.join(texts), token_ids=token_ids)])
     num_prompt_tokens, num_response_tokens = len(final_result.prompt_token_ids), len(token_ids)
     return JSONResponse(
       converter.unstructure(

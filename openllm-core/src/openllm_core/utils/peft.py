@@ -87,12 +87,8 @@ class FineTuneConfig:
     converter=attr.converters.default_if_none(factory=dict),
     use_default_converter=False,
   )
-  inference_mode: bool = dantic.Field(
-    False, description='Whether to use this Adapter for inference', use_default_converter=False
-  )
-  llm_config_class: type[LLMConfig] = dantic.Field(
-    None, description='The reference class to openllm.LLMConfig', use_default_converter=False
-  )
+  inference_mode: bool = dantic.Field(False, description='Whether to use this Adapter for inference', use_default_converter=False)
+  llm_config_class: type[LLMConfig] = dantic.Field(None, description='The reference class to openllm.LLMConfig', use_default_converter=False)
 
   def build(self) -> PeftConfig:
     try:
@@ -110,12 +106,7 @@ class FineTuneConfig:
     # respect user set task_type if it is passed, otherwise use one managed by OpenLLM
     inference_mode = adapter_config.pop('inference_mode', self.inference_mode)
     task_type = adapter_config.pop('task_type', TaskType[self.llm_config_class.peft_task_type()])
-    adapter_config = {
-      'peft_type': self.adapter_type.value,
-      'task_type': task_type,
-      'inference_mode': inference_mode,
-      **adapter_config,
-    }
+    adapter_config = {'peft_type': self.adapter_type.value, 'task_type': task_type, 'inference_mode': inference_mode, **adapter_config}
     return get_peft_config(adapter_config)
 
   def train(self) -> FineTuneConfig:
@@ -127,18 +118,10 @@ class FineTuneConfig:
     return self
 
   def with_config(self, **attrs: t.Any) -> FineTuneConfig:
-    adapter_type, inference_mode = (
-      attrs.pop('adapter_type', self.adapter_type),
-      attrs.get('inference_mode', self.inference_mode),
-    )
+    adapter_type, inference_mode = (attrs.pop('adapter_type', self.adapter_type), attrs.get('inference_mode', self.inference_mode))
     if 'llm_config_class' in attrs:
       raise ForbiddenAttributeError("'llm_config_class' should not be passed when using 'with_config'.")
-    return attr.evolve(
-      self,
-      adapter_type=adapter_type,
-      inference_mode=inference_mode,
-      adapter_config=config_merger.merge(self.adapter_config, attrs),
-    )
+    return attr.evolve(self, adapter_type=adapter_type, inference_mode=inference_mode, adapter_config=config_merger.merge(self.adapter_config, attrs))
 
   @classmethod
   def from_config(cls, ft_config: dict[str, t.Any], llm_config_cls: type[LLMConfig]) -> FineTuneConfig:
@@ -146,9 +129,4 @@ class FineTuneConfig:
     adapter_type = copied.pop('adapter_type', 'lora')
     inference_mode = copied.pop('inference_mode', False)
     llm_config_class = copied.pop('llm_confg_class', llm_config_cls)
-    return cls(
-      adapter_type=adapter_type,
-      adapter_config=copied,
-      inference_mode=inference_mode,
-      llm_config_class=llm_config_class,
-    )
+    return cls(adapter_type=adapter_type, adapter_config=copied, inference_mode=inference_mode, llm_config_class=llm_config_class)

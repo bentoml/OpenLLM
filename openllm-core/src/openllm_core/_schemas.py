@@ -14,9 +14,11 @@ if t.TYPE_CHECKING:
 
   from ._typing_compat import Self, LiteralString
 
+
 class MessageParam(t.TypedDict):
   role: t.Union[t.Literal['system', 'user', 'assistant'], LiteralString]
   content: str
+
 
 @attr.define
 class _SchemaMixin:
@@ -60,12 +62,7 @@ class GenerationInput(_SchemaMixin):
     return cls.from_llm_config(AutoConfig.for_model(model_name, **attrs))
 
   def model_dump(self) -> dict[str, t.Any]:
-    return {
-      'prompt': self.prompt,
-      'stop': self.stop,
-      'llm_config': self.llm_config.model_dump(flatten=True),
-      'adapter_name': self.adapter_name,
-    }
+    return {'prompt': self.prompt, 'stop': self.stop, 'llm_config': self.llm_config.model_dump(flatten=True), 'adapter_name': self.adapter_name}
 
   @classmethod
   def from_llm_config(cls, llm_config: LLMConfig) -> type[GenerationInput]:
@@ -120,6 +117,7 @@ class CompletionChunk(_SchemaMixin):
   def model_dump_json(self) -> str:
     return orjson.dumps(self.model_dump(), option=orjson.OPT_NON_STR_KEYS).decode('utf-8')
 
+
 @attr.define
 class GenerationOutput(_SchemaMixin):
   prompt: str
@@ -172,7 +170,8 @@ class GenerationOutput(_SchemaMixin):
 
   @classmethod
   def from_dict(cls, structured: dict[str, t.Any]) -> GenerationOutput:
-    if structured['prompt_logprobs']: structured['prompt_logprobs'] = [{int(k): v for k,v in it.items()} if it else None for it in structured['prompt_logprobs']]
+    if structured['prompt_logprobs']:
+      structured['prompt_logprobs'] = [{int(k): v for k, v in it.items()} if it else None for it in structured['prompt_logprobs']]
     return cls(
       prompt=structured['prompt'],
       finished=structured['finished'],
@@ -186,7 +185,7 @@ class GenerationOutput(_SchemaMixin):
           token_ids=it['token_ids'],
           cumulative_logprob=it['cumulative_logprob'],
           finish_reason=it['finish_reason'],
-          logprobs=[{int(k): v for k,v in s.items()} for s in it['logprobs']] if it['logprobs'] else None,
+          logprobs=[{int(k): v for k, v in s.items()} for s in it['logprobs']] if it['logprobs'] else None,
         )
         for it in structured['outputs']
       ],
@@ -215,5 +214,6 @@ class GenerationOutput(_SchemaMixin):
 
   def model_dump_json(self) -> str:
     return orjson.dumps(self.model_dump(), option=orjson.OPT_NON_STR_KEYS).decode('utf-8')
+
 
 converter.register_structure_hook_func(lambda cls: attr.has(cls) and issubclass(cls, GenerationOutput), lambda data, cls: cls.from_dict(data))

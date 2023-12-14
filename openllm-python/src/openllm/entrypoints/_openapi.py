@@ -11,7 +11,7 @@ from openllm_core.utils import first_not_none
 
 OPENAPI_VERSION, API_VERSION = '3.0.2', '1.0'
 # NOTE: OpenAI schema
-LIST_MODELS_SCHEMA = '''\
+LIST_MODELS_SCHEMA = """\
 ---
 consumes:
 - application/json
@@ -41,8 +41,8 @@ responses:
               owned_by: 'na'
         schema:
           $ref: '#/components/schemas/ModelList'
-'''
-CHAT_COMPLETIONS_SCHEMA = '''\
+"""
+CHAT_COMPLETIONS_SCHEMA = """\
 ---
 consumes:
 - application/json
@@ -181,8 +181,8 @@ responses:
                 }
               }
     description: Bad Request
-'''
-COMPLETIONS_SCHEMA = '''\
+"""
+COMPLETIONS_SCHEMA = """\
 ---
 consumes:
   - application/json
@@ -334,8 +334,8 @@ responses:
                 }
               }
     description: Bad Request
-'''
-HF_AGENT_SCHEMA = '''\
+"""
+HF_AGENT_SCHEMA = """\
 ---
 consumes:
   - application/json
@@ -379,8 +379,8 @@ responses:
         schema:
           $ref: '#/components/schemas/HFErrorResponse'
     description: Not Found
-'''
-HF_ADAPTERS_SCHEMA = '''\
+"""
+HF_ADAPTERS_SCHEMA = """\
 ---
 consumes:
 - application/json
@@ -410,8 +410,8 @@ responses:
         schema:
           $ref: '#/components/schemas/HFErrorResponse'
     description: Not Found
-'''
-COHERE_GENERATE_SCHEMA = '''\
+"""
+COHERE_GENERATE_SCHEMA = """\
 ---
 consumes:
   - application/json
@@ -455,8 +455,8 @@ requestBody:
             stop_sequences:
               - "\\n"
               - "<|endoftext|>"
-'''
-COHERE_CHAT_SCHEMA = '''\
+"""
+COHERE_CHAT_SCHEMA = """\
 ---
 consumes:
 - application/json
@@ -469,7 +469,7 @@ tags:
   - Cohere
 x-bentoml-name: cohere_chat
 summary: Creates a model response for the given chat conversation.
-'''
+"""
 
 _SCHEMAS = {k[:-7].lower(): v for k, v in locals().items() if k.endswith('_SCHEMA')}
 
@@ -504,11 +504,7 @@ class OpenLLMSchemaGenerator(SchemaGenerator):
         endpoints_info.extend(sub_endpoints)
       elif not isinstance(route, Route) or not route.include_in_schema:
         continue
-      elif (
-        inspect.isfunction(route.endpoint)
-        or inspect.ismethod(route.endpoint)
-        or isinstance(route.endpoint, functools.partial)
-      ):
+      elif inspect.isfunction(route.endpoint) or inspect.ismethod(route.endpoint) or isinstance(route.endpoint, functools.partial):
         endpoint = route.endpoint.func if isinstance(route.endpoint, functools.partial) else route.endpoint
         path = self._remove_converter(route.path)
         for method in route.methods or ['GET']:
@@ -555,22 +551,20 @@ def get_generator(title, components=None, tags=None, inject=True):
 
 def component_schema_generator(attr_cls, description=None):
   schema = {'type': 'object', 'required': [], 'properties': {}, 'title': attr_cls.__name__}
-  schema['description'] = first_not_none(
-    getattr(attr_cls, '__doc__', None), description, default=f'Generated components for {attr_cls.__name__}'
-  )
+  schema['description'] = first_not_none(getattr(attr_cls, '__doc__', None), description, default=f'Generated components for {attr_cls.__name__}')
   for field in attr.fields(attr.resolve_types(attr_cls)):
     attr_type = field.type
     origin_type = t.get_origin(attr_type)
     args_type = t.get_args(attr_type)
 
     # Map Python types to OpenAPI schema types
-    if attr_type == str:
+    if isinstance(attr_type, str):
       schema_type = 'string'
-    elif attr_type == int:
+    elif isinstance(attr_type, int):
       schema_type = 'integer'
-    elif attr_type == float:
+    elif isinstance(attr_type, float):
       schema_type = 'number'
-    elif attr_type == bool:
+    elif isinstance(attr_type, bool):
       schema_type = 'boolean'
     elif origin_type is list or origin_type is tuple:
       schema_type = 'array'
@@ -599,10 +593,7 @@ def component_schema_generator(attr_cls, description=None):
 
 
 _SimpleSchema = types.new_class(
-  '_SimpleSchema',
-  (object,),
-  {},
-  lambda ns: ns.update({'__init__': lambda self, it: setattr(self, 'it', it), 'asdict': lambda self: self.it}),
+  '_SimpleSchema', (object,), {}, lambda ns: ns.update({'__init__': lambda self, it: setattr(self, 'it', it), 'asdict': lambda self: self.it})
 )
 
 

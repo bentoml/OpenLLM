@@ -1,8 +1,10 @@
 import logging as _logging, os as _os, pathlib as _pathlib, warnings as _warnings
 from openllm_cli import _sdk
 from . import utils as utils
+
 if utils.DEBUG:
-  utils.set_debug_mode(True); _logging.basicConfig(level=_logging.NOTSET)
+  utils.set_debug_mode(True)
+  _logging.basicConfig(level=_logging.NOTSET)
 else:
   # configuration for bitsandbytes before import
   _os.environ['BITSANDBYTES_NOWELCOME'] = _os.environ.get('BITSANDBYTES_NOWELCOME', '1')
@@ -30,8 +32,11 @@ __lazy = utils.LazyModule(  # NOTE: update this to sys.modules[__name__] once my
     '_llm': ['LLM'],
   },
   extra_objects={
-    'COMPILED': COMPILED, 'start': _sdk.start, 'build': _sdk.build, #
-    'import_model': _sdk.import_model, 'list_models': _sdk.list_models, #
+    'COMPILED': COMPILED,
+    'start': _sdk.start,
+    'build': _sdk.build,  #
+    'import_model': _sdk.import_model,
+    'list_models': _sdk.list_models,  #
   },
 )
 __all__, __dir__, __getattr__ = __lazy.__all__, __lazy.__dir__, __lazy.__getattr__

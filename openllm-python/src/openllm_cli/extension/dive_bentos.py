@@ -21,10 +21,8 @@ if t.TYPE_CHECKING:
 @machine_option
 @click.pass_context
 @inject
-def cli(
-  ctx: click.Context, bento: str, machine: bool, _bento_store: BentoStore = Provide[BentoMLContainer.bento_store]
-) -> str | None:
-  '''Dive into a BentoLLM. This is synonymous to cd $(b get <bento>:<tag> -o path).'''
+def cli(ctx: click.Context, bento: str, machine: bool, _bento_store: BentoStore = Provide[BentoMLContainer.bento_store]) -> str | None:
+  """Dive into a BentoLLM. This is synonymous to cd $(b get <bento>:<tag> -o path)."""
   try:
     bentomodel = _bento_store.get(bento)
   except bentoml.exceptions.NotFound:

@@ -45,12 +45,7 @@ def __dir__() -> list[str]:
 
 
 def attrs_to_options(
-  name: str,
-  field: attr.Attribute[t.Any],
-  model_name: str,
-  typ: t.Any = None,
-  suffix_generation: bool = False,
-  suffix_sampling: bool = False,
+  name: str, field: attr.Attribute[t.Any], model_name: str, typ: t.Any = None, suffix_generation: bool = False, suffix_sampling: bool = False
 ) -> t.Callable[[FC], FC]:
   # TODO: support parsing nested attrs class and Union
   envvar = field.metadata['env']
@@ -210,14 +205,14 @@ def parse_type(field_type: t.Any) -> ParamType | tuple[ParamType, ...]:
 
 
 def is_typing(field_type: type) -> bool:
-  '''Checks whether the current type is a module-like type.
+  """Checks whether the current type is a module-like type.
 
   Args:
   field_type: pydantic field type
 
   Returns:
   bool: true if the type is itself a type
-  '''
+  """
   raw = t.get_origin(field_type)
   if raw is None:
     return False
@@ -227,7 +222,7 @@ def is_typing(field_type: type) -> bool:
 
 
 def is_literal(field_type: type) -> bool:
-  '''Checks whether the given field type is a Literal type or not.
+  """Checks whether the given field type is a Literal type or not.
 
   Literals are weird: isinstance and subclass do not work, so you compare
   the origin with the Literal declaration itself.
@@ -237,7 +232,7 @@ def is_literal(field_type: type) -> bool:
 
   Returns:
   bool: true if Literal type, false otherwise
-  '''
+  """
   origin = t.get_origin(field_type)
   return origin is not None and origin is t.Literal
 
@@ -272,12 +267,12 @@ class EnumChoice(click.Choice):
   name = 'enum'
 
   def __init__(self, enum: Enum, case_sensitive: bool = False):
-    '''Enum type support for click that extends ``click.Choice``.
+    """Enum type support for click that extends ``click.Choice``.
 
     Args:
     enum: Given enum
     case_sensitive: Whether this choice should be case case_sensitive.
-    '''
+    """
     self.mapping = enum
     self.internal_type = type(enum)
     choices: list[t.Any] = [e.name for e in enum.__class__]
@@ -296,7 +291,7 @@ class LiteralChoice(EnumChoice):
   name = 'literal'
 
   def __init__(self, value: t.Any, case_sensitive: bool = False):
-    '''Literal support for click.'''
+    """Literal support for click."""
     # expect every literal value to belong to the same primitive type
     values = list(value.__args__)
     item_type = type(values[0])
@@ -334,14 +329,14 @@ def allows_multiple(field_type: type[t.Any]) -> bool:
 
 
 def is_mapping(field_type: type) -> bool:
-  '''Checks whether this field represents a dictionary or JSON object.
+  """Checks whether this field represents a dictionary or JSON object.
 
   Args:
   field_type (type): pydantic type
 
   Returns:
   bool: true when the field is a dict-like object, false otherwise.
-  '''
+  """
   # Early out for standard containers.
   from . import lenient_issubclass
 
@@ -379,14 +374,14 @@ def is_container(field_type: type) -> bool:
 
 
 def parse_container_args(field_type: type[t.Any]) -> ParamType | tuple[ParamType, ...]:
-  '''Parses the arguments inside a container type (lists, tuples and so on).
+  """Parses the arguments inside a container type (lists, tuples and so on).
 
   Args:
   field_type: pydantic field type
 
   Returns:
   ParamType | tuple[ParamType]: single click-compatible type or a tuple
-  '''
+  """
   if not is_container(field_type):
     raise ValueError('Field type is not a container type.')
   args = t.get_args(field_type)
@@ -466,7 +461,7 @@ class CudaValueType(ParamType):
     return var
 
   def shell_complete(self, ctx: click.Context, param: click.Parameter, incomplete: str) -> list[sc.CompletionItem]:
-    '''Return a list of :class:`~click.shell_completion.CompletionItem` objects for the incomplete value.
+    """Return a list of :class:`~click.shell_completion.CompletionItem` objects for the incomplete value.
 
     Most types do not provide completions, but some do, and this allows custom types to provide custom completions as well.
 
@@ -474,7 +469,7 @@ class CudaValueType(ParamType):
     ctx: Invocation context for this command.
     param: The parameter that is requesting completion.
     incomplete: Value being completed. May be empty.
-    '''
+    """
     from openllm.utils import available_devices
 
     mapping = incomplete.split(self.envvar_list_splitter) if incomplete else available_devices()

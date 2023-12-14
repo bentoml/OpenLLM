@@ -8,16 +8,7 @@ from peft.peft_model import PeftModel, PeftModelForCausalLM, PeftModelForSeq2Seq
 from bentoml import Model, Tag
 from openllm_core import LLMConfig
 from openllm_core._schemas import GenerationOutput
-from openllm_core._typing_compat import (
-  AdapterMap,
-  AdapterType,
-  LiteralBackend,
-  LiteralDtype,
-  LiteralQuantise,
-  LiteralSerialisation,
-  M,
-  T,
-)
+from openllm_core._typing_compat import AdapterMap, AdapterType, LiteralBackend, LiteralDtype, LiteralQuantise, LiteralSerialisation, M, T
 
 from ._quantisation import QuantizationConfig
 from ._runners import Runner
@@ -121,9 +112,7 @@ class LLM(Generic[M, T]):
   def runner(self) -> Runner[M, T]: ...
   @property
   def adapter_map(self) -> ResolvedAdapterMap: ...
-  def prepare(
-    self, adapter_type: AdapterType = ..., use_gradient_checking: bool = ..., **attrs: Any
-  ) -> Tuple[InjectedModel, T]: ...
+  def prepare(self, adapter_type: AdapterType = ..., use_gradient_checking: bool = ..., **attrs: Any) -> Tuple[InjectedModel, T]: ...
   async def generate(
     self,
     prompt: Optional[str],
