@@ -11,11 +11,13 @@ if t.TYPE_CHECKING:
 __global_inst__ = None
 __cached_id__: dict[str, HfModelInfo] = dict()
 
+
 def Client() -> HfApi:
-  global __global_inst__  # noqa: PLW0603
+  global __global_inst__
   if __global_inst__ is None:
     __global_inst__ = HfApi()
   return __global_inst__
+
 
 def ModelInfo(model_id: str, revision: str | None = None) -> HfModelInfo:
   if model_id in __cached_id__:
@@ -27,13 +29,16 @@ def ModelInfo(model_id: str, revision: str | None = None) -> HfModelInfo:
     traceback.print_exc()
     raise Error(f'Failed to fetch {model_id} from huggingface.co') from err
 
+
 def has_weights(model_id: str, revision: str | None = None, *, extensions: str) -> bool:
   if validate_is_path(model_id):
     return next((True for _ in pathlib.Path(resolve_filepath(model_id)).glob(f'*.{extensions}')), False)
   return any(s.rfilename.endswith(f'.{extensions}') for s in ModelInfo(model_id, revision=revision).siblings)
 
+
 has_safetensors_weights = functools.partial(has_weights, extensions='safetensors')
 has_pt_weights = functools.partial(has_weights, extensions='pt')
+
 
 @attr.define(slots=True)
 class HfIgnore:
@@ -42,11 +47,12 @@ class HfIgnore:
   tf = '*.h5'
   flax = '*.msgpack'
   gguf = '*.gguf'
+
   @classmethod
   def ignore_patterns(cls, llm: openllm.LLM[t.Any, t.Any]) -> list[str]:
     if llm.__llm_backend__ in {'vllm', 'pt'}:
       base = [cls.tf, cls.flax, cls.gguf]
-      if llm.config['architecture'] == 'MixtralForCausalLM': # XXX: Hack for Mixtral as safetensors is yet to be working atm
+      if llm.config['architecture'] == 'MixtralForCausalLM':  # XXX: Hack for Mixtral as safetensors is yet to be working atm
         base.append(cls.safetensors)
       elif has_safetensors_weights(llm.model_id):
         base.extend([cls.pt, '*.pt'])

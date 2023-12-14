@@ -6,12 +6,14 @@ from bentoml._internal.configuration.containers import BentoMLContainer
 from openllm_core._typing_compat import LiteralSerialisation
 from openllm_core.exceptions import OpenLLMException
 from openllm_core.utils import WARNING_ENV_VAR, codegen, first_not_none, get_disable_warnings, is_vllm_available
+
 if t.TYPE_CHECKING:
   from bentoml._internal.bento import BentoStore
   from openllm_core._configuration import LLMConfig
   from openllm_core._typing_compat import LiteralBackend, LiteralQuantise, LiteralString
 
 logger = logging.getLogger(__name__)
+
 
 def _start(
   model_id: str,
@@ -61,27 +63,25 @@ def _start(
     additional_args: Additional arguments to pass to ``openllm start``.
   """
   from .entrypoint import start_command
+
   os.environ['BACKEND'] = openllm_core.utils.first_not_none(backend, default='vllm' if is_vllm_available() else 'pt')
   args: list[str] = [model_id]
-  if timeout: args.extend(['--server-timeout', str(timeout)])
+  if timeout:
+    args.extend(['--server-timeout', str(timeout)])
   if workers_per_resource:
-    args.extend(
-      [
-        '--workers-per-resource',
-        str(workers_per_resource) if not isinstance(workers_per_resource, str) else workers_per_resource,
-      ]
-    )
-  if device and not os.environ.get('CUDA_VISIBLE_DEVICES'): args.extend(['--device', ','.join(device)])
-  if quantize: args.extend(['--quantize', str(quantize)])
-  if cors: args.append('--cors')
+    args.extend(['--workers-per-resource', str(workers_per_resource) if not isinstance(workers_per_resource, str) else workers_per_resource])
+  if device and not os.environ.get('CUDA_VISIBLE_DEVICES'):
+    args.extend(['--device', ','.join(device)])
+  if quantize:
+    args.extend(['--quantize', str(quantize)])
+  if cors:
+    args.append('--cors')
   if adapter_map:
-    args.extend(
-      list(
-        itertools.chain.from_iterable([['--adapter-id', f"{k}{':'+v if v else ''}"] for k, v in adapter_map.items()])
-      )
-    )
-  if additional_args: args.extend(additional_args)
-  if __test__: args.append('--return-process')
+    args.extend(list(itertools.chain.from_iterable([['--adapter-id', f"{k}{':'+v if v else ''}"] for k, v in adapter_map.items()])))
+  if additional_args:
+    args.extend(additional_args)
+  if __test__:
+    args.append('--return-process')
 
   cmd = start_command
   return cmd.main(args=args, standalone_mode=False)
@@ -138,6 +138,7 @@ def _build(
       ``bentoml.Bento | str``: BentoLLM instance. This can be used to serve the LLM or can be pushed to BentoCloud.
   """
   from openllm.serialisation.transformers.weights import has_safetensors_weights
+
   args: list[str] = [
     sys.executable,
     '-m',
@@ -147,23 +148,34 @@ def _build(
     '--machine',
     '--quiet',
     '--serialisation',
-    first_not_none(
-      serialisation, default='safetensors' if has_safetensors_weights(model_id, model_version) else 'legacy'
-    ),
+    first_not_none(serialisation, default='safetensors' if has_safetensors_weights(model_id, model_version) else 'legacy'),
   ]
-  if quantize: args.extend(['--quantize', quantize])
-  if containerize and push: raise OpenLLMException("'containerize' and 'push' are currently mutually exclusive.")
-  if push: args.extend(['--push'])
-  if containerize: args.extend(['--containerize'])
-  if build_ctx: args.extend(['--build-ctx', build_ctx])
-  if enable_features: args.extend([f'--enable-features={f}' for f in enable_features])
-  if overwrite: args.append('--overwrite')
-  if adapter_map: args.extend([f"--adapter-id={k}{':'+v if v is not None else ''}" for k, v in adapter_map.items()])
-  if model_version: args.extend(['--model-version', model_version])
-  if bento_version: args.extend(['--bento-version', bento_version])
-  if dockerfile_template: args.extend(['--dockerfile-template', dockerfile_template])
-  if additional_args: args.extend(additional_args)
-  if force_push: args.append('--force-push')
+  if quantize:
+    args.extend(['--quantize', quantize])
+  if containerize and push:
+    raise OpenLLMException("'containerize' and 'push' are currently mutually exclusive.")
+  if push:
+    args.extend(['--push'])
+  if containerize:
+    args.extend(['--containerize'])
+  if build_ctx:
+    args.extend(['--build-ctx', build_ctx])
+  if enable_features:
+    args.extend([f'--enable-features={f}' for f in enable_features])
+  if overwrite:
+    args.append('--overwrite')
+  if adapter_map:
+    args.extend([f"--adapter-id={k}{':'+v if v is not None else ''}" for k, v in adapter_map.items()])
+  if model_version:
+    args.extend(['--model-version', model_version])
+  if bento_version:
+    args.extend(['--bento-version', bento_version])
+  if dockerfile_template:
+    args.extend(['--dockerfile-template', dockerfile_template])
+  if additional_args:
+    args.extend(additional_args)
+  if force_push:
+    args.append('--force-push')
 
   current_disable_warning = get_disable_warnings()
   os.environ[WARNING_ENV_VAR] = str(True)
@@ -171,17 +183,24 @@ def _build(
     output = subprocess.check_output(args, env=os.environ.copy(), cwd=build_ctx or os.getcwd())
   except subprocess.CalledProcessError as e:
     logger.error("Exception caught while building Bento for '%s'", model_id, exc_info=e)
-    if e.stderr: raise OpenLLMException(e.stderr.decode('utf-8')) from None
+    if e.stderr:
+      raise OpenLLMException(e.stderr.decode('utf-8')) from None
     raise OpenLLMException(str(e)) from None
   matched = re.match(r'__object__:(\{.*\})$', output.decode('utf-8').strip())
   if matched is None:
-    raise ValueError(f"Failed to find tag from output: {output.decode('utf-8').strip()}\nNote: Output from 'openllm build' might not be correct. Please open an issue on GitHub.")
+    raise ValueError(
+      f"Failed to find tag from output: {output.decode('utf-8').strip()}\nNote: Output from 'openllm build' might not be correct. Please open an issue on GitHub."
+    )
   os.environ[WARNING_ENV_VAR] = str(current_disable_warning)
   try:
     result = orjson.loads(matched.group(1))
   except orjson.JSONDecodeError as e:
-    raise ValueError(f"Failed to decode JSON from output: {output.decode('utf-8').strip()}\nNote: Output from 'openllm build' might not be correct. Please open an issue on GitHub.") from e
+    raise ValueError(
+      f"Failed to decode JSON from output: {output.decode('utf-8').strip()}\nNote: Output from 'openllm build' might not be correct. Please open an issue on GitHub."
+    ) from e
   return bentoml.get(result['tag'], _bento_store=bento_store)
+
+
 def _import_model(
   model_id: str,
   model_version: str | None = None,
@@ -218,15 +237,32 @@ def _import_model(
     ``bentoml.Model``:BentoModel of the given LLM. This can be used to serve the LLM or can be pushed to BentoCloud.
   """
   from .entrypoint import import_command
+
   args = [model_id, '--quiet']
-  if backend is not None: args.extend(['--backend', backend])
-  if model_version is not None: args.extend(['--model-version', str(model_version)])
-  if quantize is not None: args.extend(['--quantize', quantize])
-  if serialisation is not None: args.extend(['--serialisation', serialisation])
-  if additional_args is not None: args.extend(additional_args)
+  if backend is not None:
+    args.extend(['--backend', backend])
+  if model_version is not None:
+    args.extend(['--model-version', str(model_version)])
+  if quantize is not None:
+    args.extend(['--quantize', quantize])
+  if serialisation is not None:
+    args.extend(['--serialisation', serialisation])
+  if additional_args is not None:
+    args.extend(additional_args)
   return import_command.main(args=args, standalone_mode=False)
+
+
 def _list_models() -> dict[str, t.Any]:
-  '''List all available models within the local store.'''
-  from .entrypoint import models_command; return models_command.main(args=['--quiet'], standalone_mode=False)
-start, build, import_model, list_models = codegen.gen_sdk(_start), codegen.gen_sdk(_build), codegen.gen_sdk(_import_model), codegen.gen_sdk(_list_models)
+  """List all available models within the local store."""
+  from .entrypoint import models_command
+
+  return models_command.main(args=['--quiet'], standalone_mode=False)
+
+
+start, build, import_model, list_models = (
+  codegen.gen_sdk(_start),
+  codegen.gen_sdk(_build),
+  codegen.gen_sdk(_import_model),
+  codegen.gen_sdk(_list_models),
+)
 __all__ = ['start', 'build', 'import_model', 'list_models']

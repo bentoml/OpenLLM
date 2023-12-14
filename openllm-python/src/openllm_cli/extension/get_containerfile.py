@@ -17,9 +17,7 @@ if t.TYPE_CHECKING:
   from bentoml._internal.bento import BentoStore
 
 
-@click.command(
-  'get_containerfile', context_settings=termui.CONTEXT_SETTINGS, help='Return Containerfile of any given Bento.'
-)
+@click.command('get_containerfile', context_settings=termui.CONTEXT_SETTINGS, help='Return Containerfile of any given Bento.')
 @click.argument('bento', type=str, shell_complete=bento_complete_envvar)
 @click.pass_context
 @inject

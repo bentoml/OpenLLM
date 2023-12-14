@@ -1,8 +1,11 @@
 from __future__ import annotations
 from openllm_core.exceptions import MissingDependencyError
 from openllm_core.utils import is_autoawq_available, is_autogptq_available, is_bitsandbytes_available
+
+
 def infer_quantisation_config(llm, quantise, **attrs):
   import torch, transformers
+
   # 8 bit configuration
   int8_threshold = attrs.pop('llm_int8_threshhold', 6.0)
   int8_enable_fp32_cpu_offload = attrs.pop('llm_int8_enable_fp32_cpu_offload', False)

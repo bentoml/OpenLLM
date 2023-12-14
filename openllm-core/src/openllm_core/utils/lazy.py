@@ -23,11 +23,11 @@ logger = logging.getLogger(__name__)
 
 
 class LazyLoader(types.ModuleType):
-  '''
+  """
   LazyLoader module borrowed from Tensorflow https://github.com/tensorflow/tensorflow/blob/v2.2.0/tensorflow/python/util/lazy_loader.py with a addition of "module caching". This will throw an exception if module cannot be imported.
 
   Lazily import a module, mainly to avoid pulling in large dependencies. `contrib`, and `ffmpeg` are examples of modules that are large and not always needed, and this allows them to only be loaded when they are used.
-  '''
+  """
 
   def __init__(
     self,
@@ -107,9 +107,7 @@ class VersionInfo:
       raise NotImplementedError
     if not (1 <= len(cmp) <= 4):
       raise NotImplementedError
-    return t.cast(t.Tuple[int, int, int, str], attr.astuple(self)[: len(cmp)]), t.cast(
-      t.Tuple[int, int, int, str], cmp
-    )
+    return t.cast(t.Tuple[int, int, int, str], attr.astuple(self)[: len(cmp)]), t.cast(t.Tuple[int, int, int, str], cmp)
 
   def __eq__(self, other: t.Any) -> bool:
     try:
@@ -180,12 +178,12 @@ class LazyModule(types.ModuleType):
     return result + [i for i in self.__all__ if i not in result]
 
   def __getattr__(self, name: str) -> t.Any:
-    '''Equivocal __getattr__ implementation.
+    """Equivocal __getattr__ implementation.
 
     It checks from _objects > _modules and does it recursively.
 
     It also contains a special case for all of the metadata information, such as __version__ and __version_info__.
-    '''
+    """
     if name in _reserved_namespace:
       raise openllm_core.exceptions.ForbiddenAttributeError(
         f"'{name}' is a reserved namespace for {self._name} and should not be access nor modified."
@@ -231,9 +229,7 @@ class LazyModule(types.ModuleType):
       cur_value = self._objects['__openllm_migration__'].get(name, _sentinel)
       if cur_value is not _sentinel:
         warnings.warn(
-          f"'{name}' is deprecated and will be removed in future version. Make sure to use '{cur_value}' instead",
-          DeprecationWarning,
-          stacklevel=3,
+          f"'{name}' is deprecated and will be removed in future version. Make sure to use '{cur_value}' instead", DeprecationWarning, stacklevel=3
         )
         return getattr(self, cur_value)
     if name in self._objects:
@@ -254,9 +250,7 @@ class LazyModule(types.ModuleType):
     try:
       return importlib.import_module('.' + module_name, self.__name__)
     except Exception as e:
-      raise RuntimeError(
-        f'Failed to import {self.__name__}.{module_name} because of the following error (look up to see its traceback):\n{e}'
-      ) from e
+      raise RuntimeError(f'Failed to import {self.__name__}.{module_name} because of the following error (look up to see its traceback):\n{e}') from e
 
   # make sure this module is picklable
   def __reduce__(self) -> tuple[type[LazyModule], tuple[str, str | None, dict[str, list[str]]]]:

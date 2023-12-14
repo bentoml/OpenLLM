@@ -22,9 +22,9 @@ __all__ = ['Response', 'CompletionChunk', 'Metadata', 'StreamingResponse', 'Help
 
 @attr.define
 class Metadata(_SchemaMixin):
-  '''NOTE: Metadata is a modified version of the original MetadataOutput from openllm-core.
+  """NOTE: Metadata is a modified version of the original MetadataOutput from openllm-core.
 
-  The configuration is now structured into a dictionary for easy of use.'''
+  The configuration is now structured into a dictionary for easy of use."""
 
   model_id: str
   timeout: int
@@ -42,11 +42,7 @@ def _structure_metadata(data: t.Dict[str, t.Any], cls: type[Metadata]) -> Metada
     raise RuntimeError(f'Malformed metadata configuration (Server-side issue): {e}') from None
   try:
     return cls(
-      model_id=data['model_id'],
-      timeout=data['timeout'],
-      model_name=data['model_name'],
-      backend=data['backend'],
-      configuration=configuration,
+      model_id=data['model_id'], timeout=data['timeout'], model_name=data['model_name'], backend=data['backend'], configuration=configuration
     )
   except Exception as e:
     raise RuntimeError(f'Malformed metadata (Server-side issue): {e}') from None
@@ -65,10 +61,7 @@ class StreamingResponse(_SchemaMixin):
   @classmethod
   def from_response_chunk(cls, response: Response) -> StreamingResponse:
     return cls(
-      request_id=response.request_id,
-      index=response.outputs[0].index,
-      text=response.outputs[0].text,
-      token_ids=response.outputs[0].token_ids[0],
+      request_id=response.request_id, index=response.outputs[0].index, text=response.outputs[0].text, token_ids=response.outputs[0].token_ids[0]
     )
 
 
@@ -95,17 +88,11 @@ class Helpers:
     return self._async_client
 
   def messages(self, messages, add_generation_prompt=False):
-    return self.client._post(
-      '/v1/helpers/messages',
-      response_cls=str,
-      json=dict(messages=messages, add_generation_prompt=add_generation_prompt),
-    )
+    return self.client._post('/v1/helpers/messages', response_cls=str, json=dict(messages=messages, add_generation_prompt=add_generation_prompt))
 
   async def async_messages(self, messages, add_generation_prompt=False):
     return await self.async_client._post(
-      '/v1/helpers/messages',
-      response_cls=str,
-      json=dict(messages=messages, add_generation_prompt=add_generation_prompt),
+      '/v1/helpers/messages', response_cls=str, json=dict(messages=messages, add_generation_prompt=add_generation_prompt)
     )
 
   @classmethod

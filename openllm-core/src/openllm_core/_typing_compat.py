@@ -7,7 +7,11 @@ import attr
 M = TypeVar('M')
 T = TypeVar('T')
 
-def get_literal_args(typ: Any) -> Tuple[str, ...]: return getattr(typ, '__args__', tuple())
+
+def get_literal_args(typ: Any) -> Tuple[str, ...]:
+  return getattr(typ, '__args__', tuple())
+
+
 AnyCallable = Callable[..., Any]
 DictStrAny = Dict[str, Any]
 ListStr = List[str]
@@ -19,7 +23,12 @@ LiteralBackend = Literal['pt', 'vllm', 'ctranslate', 'triton']  # TODO: ggml
 AdapterType = Literal['lora', 'adalora', 'adaption_prompt', 'prefix_tuning', 'p_tuning', 'prompt_tuning', 'ia3', 'loha', 'lokr']
 LiteralVersionStrategy = Literal['release', 'nightly', 'latest', 'custom']
 
-class AdapterTuple(Tuple[Any, ...]): adapter_id: str; name: str ; config: DictStrAny
+
+class AdapterTuple(Tuple[Any, ...]):
+  adapter_id: str
+  name: str
+  config: DictStrAny
+
 
 AdapterMap = Dict[AdapterType, Tuple[AdapterTuple, ...]]
 
@@ -45,12 +54,7 @@ else:
 if sys.version_info[:2] >= (3, 10):
   from typing import Concatenate as Concatenate, ParamSpec as ParamSpec, TypeAlias as TypeAlias, TypeGuard as TypeGuard
 else:
-  from typing_extensions import (
-    Concatenate as Concatenate,
-    ParamSpec as ParamSpec,
-    TypeAlias as TypeAlias,
-    TypeGuard as TypeGuard,
-  )
+  from typing_extensions import Concatenate as Concatenate, ParamSpec as ParamSpec, TypeAlias as TypeAlias, TypeGuard as TypeGuard
 
 if sys.version_info[:2] >= (3, 9):
   from typing import Annotated as Annotated

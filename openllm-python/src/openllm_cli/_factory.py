@@ -5,30 +5,19 @@ from bentoml_cli.utils import BentoMLCommandGroup
 from click import shell_completion as sc
 
 from openllm_core._configuration import LLMConfig
-from openllm_core._typing_compat import (
-  Concatenate,
-  DictStrAny,
-  LiteralBackend,
-  LiteralSerialisation,
-  ParamSpec,
-  AnyCallable,
-  get_literal_args,
-)
+from openllm_core._typing_compat import Concatenate, DictStrAny, LiteralBackend, LiteralSerialisation, ParamSpec, AnyCallable, get_literal_args
 from openllm_core.utils import DEBUG, compose, dantic, resolve_user_filepath
 
+
 class _OpenLLM_GenericInternalConfig(LLMConfig):
-  __config__ = {
-    'name_type': 'lowercase',
-    'default_id': 'openllm/generic',
-    'model_ids': ['openllm/generic'],
-    'architecture': 'PreTrainedModel',
-  }
+  __config__ = {'name_type': 'lowercase', 'default_id': 'openllm/generic', 'model_ids': ['openllm/generic'], 'architecture': 'PreTrainedModel'}
 
   class GenerationConfig:
     top_k: int = 15
     top_p: float = 0.78
     temperature: float = 0.75
     max_new_tokens: int = 128
+
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +27,7 @@ LiteralOutput = t.Literal['json', 'pretty', 'porcelain']
 _AnyCallable = t.Callable[..., t.Any]
 FC = t.TypeVar('FC', bound=t.Union[_AnyCallable, click.Command])
 
+
 def bento_complete_envvar(ctx: click.Context, param: click.Parameter, incomplete: str) -> list[sc.CompletionItem]:
   return [
     sc.CompletionItem(str(it.tag), help='Bento')
@@ -45,20 +35,13 @@ def bento_complete_envvar(ctx: click.Context, param: click.Parameter, incomplete
     if str(it.tag).startswith(incomplete) and all(k in it.info.labels for k in {'start_name', 'bundler'})
   ]
 
+
 def model_complete_envvar(ctx: click.Context, param: click.Parameter, incomplete: str) -> list[sc.CompletionItem]:
-  return [
-    sc.CompletionItem(inflection.dasherize(it), help='Model')
-    for it in openllm.CONFIG_MAPPING
-    if it.startswith(incomplete)
-  ]
+  return [sc.CompletionItem(inflection.dasherize(it), help='Model') for it in openllm.CONFIG_MAPPING if it.startswith(incomplete)]
+
 
 def parse_config_options(
-  config: LLMConfig,
-  server_timeout: int,
-  workers_per_resource: float,
-  device: t.Tuple[str, ...] | None,
-  cors: bool,
-  environ: DictStrAny,
+  config: LLMConfig, server_timeout: int, workers_per_resource: float, device: t.Tuple[str, ...] | None, cors: bool, environ: DictStrAny
 ) -> DictStrAny:
   # TODO: Support amd.com/gpu on k8s
   _bentoml_config_options_env = environ.pop('BENTOML_CONFIG_OPTIONS', '')
@@ -72,26 +55,16 @@ def parse_config_options(
   ]
   if device:
     if len(device) > 1:
-      _bentoml_config_options_opts.extend(
-        [
-          f'runners."llm-{config["start_name"]}-runner".resources."nvidia.com/gpu"[{idx}]={dev}'
-          for idx, dev in enumerate(device)
-        ]
-      )
+      _bentoml_config_options_opts.extend([
+        f'runners."llm-{config["start_name"]}-runner".resources."nvidia.com/gpu"[{idx}]={dev}' for idx, dev in enumerate(device)
+      ])
     else:
-      _bentoml_config_options_opts.append(
-        f'runners."llm-{config["start_name"]}-runner".resources."nvidia.com/gpu"=[{device[0]}]'
-      )
+      _bentoml_config_options_opts.append(f'runners."llm-{config["start_name"]}-runner".resources."nvidia.com/gpu"=[{device[0]}]')
   if cors:
-    _bentoml_config_options_opts.extend(
-      ['api_server.http.cors.enabled=true', 'api_server.http.cors.access_control_allow_origins="*"']
-    )
-    _bentoml_config_options_opts.extend(
-      [
-        f'api_server.http.cors.access_control_allow_methods[{idx}]="{it}"'
-        for idx, it in enumerate(['GET', 'OPTIONS', 'POST', 'HEAD', 'PUT'])
-      ]
-    )
+    _bentoml_config_options_opts.extend(['api_server.http.cors.enabled=true', 'api_server.http.cors.access_control_allow_origins="*"'])
+    _bentoml_config_options_opts.extend([
+      f'api_server.http.cors.access_control_allow_methods[{idx}]="{it}"' for idx, it in enumerate(['GET', 'OPTIONS', 'POST', 'HEAD', 'PUT'])
+    ])
   _bentoml_config_options_env += ' ' if _bentoml_config_options_env else '' + ' '.join(_bentoml_config_options_opts)
   environ['BENTOML_CONFIG_OPTIONS'] = _bentoml_config_options_env
   if DEBUG:
@@ -119,14 +92,19 @@ def _id_callback(ctx: click.Context, _: click.Parameter, value: t.Tuple[str, ...
     ctx.params[_adapter_mapping_key][adapter_id] = name
   return None
 
+
 def optimization_decorator(fn: FC, *, factory=click, _eager=True) -> FC | list[AnyCallable]:
   shared = [
-    dtype_option(factory=factory), model_version_option(factory=factory), #
-    backend_option(factory=factory), quantize_option(factory=factory), #
+    dtype_option(factory=factory),
+    model_version_option(factory=factory),  #
+    backend_option(factory=factory),
+    quantize_option(factory=factory),  #
     serialisation_option(factory=factory),
   ]
-  if not _eager: return shared
+  if not _eager:
+    return shared
   return compose(*shared)(fn)
+
 
 def start_decorator(fn: FC) -> FC:
   composed = compose(
@@ -134,7 +112,7 @@ def start_decorator(fn: FC) -> FC:
     parse_serve_args(),
     cog.optgroup.group(
       'LLM Options',
-      help='''The following options are related to running LLM Server as well as optimization options.
+      help="""The following options are related to running LLM Server as well as optimization options.
 
           OpenLLM supports running model k-bit quantization (8-bit, 4-bit), GPTQ quantization, PagedAttention via vLLM.
 
@@ -142,7 +120,7 @@ def start_decorator(fn: FC) -> FC:
 
           - DeepSpeed Inference: [link](https://www.deepspeed.ai/inference/)
           - GGML: Fast inference on [bare metal](https://github.com/ggerganov/ggml)
-    ''',
+    """,
     ),
     cog.optgroup.option('--server-timeout', type=int, default=None, help='Server timeout in seconds'),
     workers_per_resource_option(factory=cog.optgroup),
@@ -163,12 +141,14 @@ def start_decorator(fn: FC) -> FC:
 
   return composed(fn)
 
+
 def parse_device_callback(_: click.Context, param: click.Parameter, value: tuple[tuple[str], ...] | None) -> t.Tuple[str, ...] | None:
   if value is None:
     return value
   el: t.Tuple[str, ...] = tuple(i for k in value for i in k)
   # NOTE: --device all is a special case
-  if len(el) == 1 and el[0] == 'all': return tuple(map(str, openllm.utils.available_devices()))
+  if len(el) == 1 and el[0] == 'all':
+    return tuple(map(str, openllm.utils.available_devices()))
   return el
 
 
@@ -182,15 +162,12 @@ def parse_serve_args() -> t.Callable[[t.Callable[..., LLMConfig]], t.Callable[[F
   from bentoml_cli.cli import cli
 
   group = cog.optgroup.group('Start a HTTP server options', help='Related to serving the model [synonymous to `bentoml serve-http`]')
+
   def decorator(f: t.Callable[Concatenate[int, t.Optional[str], P], LLMConfig]) -> t.Callable[[FC], FC]:
     serve_command = cli.commands['serve']
     # The first variable is the argument bento
     # The last five is from BentoMLCommandGroup.NUMBER_OF_COMMON_PARAMS
-    serve_options = [
-      p
-      for p in serve_command.params[1 : -BentoMLCommandGroup.NUMBER_OF_COMMON_PARAMS]
-      if p.name not in _IGNORED_OPTIONS
-    ]
+    serve_options = [p for p in serve_command.params[1 : -BentoMLCommandGroup.NUMBER_OF_COMMON_PARAMS] if p.name not in _IGNORED_OPTIONS]
     for options in reversed(serve_options):
       attrs = options.to_info_dict()
       # we don't need param_type_name, since it should all be options
@@ -202,14 +179,16 @@ def parse_serve_args() -> t.Callable[[t.Callable[..., LLMConfig]], t.Callable[[F
       param_decls = (*attrs.pop('opts'), *attrs.pop('secondary_opts'))
       f = cog.optgroup.option(*param_decls, **attrs)(f)
     return group(f)
+
   return decorator
 
+
 def _click_factory_type(*param_decls: t.Any, **attrs: t.Any) -> t.Callable[[FC | None], FC]:
-  '''General ``@click`` decorator with some sauce.
+  """General ``@click`` decorator with some sauce.
 
   This decorator extends the default ``@click.option`` plus a factory option and factory attr to
   provide type-safe click.option or click.argument wrapper for all compatible factory.
-  '''
+  """
   factory = attrs.pop('factory', click)
   factory_attr = attrs.pop('attr', 'option')
   if factory_attr != 'argument':
@@ -242,17 +221,13 @@ def adapter_id_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callab
 
 def cors_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option(
-    '--cors/--no-cors',
-    show_default=True,
-    default=False,
-    envvar='OPENLLM_CORS',
-    show_envvar=True,
-    help='Enable CORS for the server.',
-    **attrs,
+    '--cors/--no-cors', show_default=True, default=False, envvar='OPENLLM_CORS', show_envvar=True, help='Enable CORS for the server.', **attrs
   )(f)
+
 
 def machine_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option('--machine', is_flag=True, default=False, hidden=True, **attrs)(f)
+
 
 def dtype_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option(
@@ -263,6 +238,7 @@ def dtype_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[F
     help="Optional dtype for casting tensors for running inference ['float16', 'float32', 'bfloat16', 'int8', 'int16']. For CTranslate2, it also accepts the following ['int8_float32', 'int8_float16', 'int8_bfloat16']",
     **attrs,
   )(f)
+
 
 def model_id_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option(
@@ -294,15 +270,13 @@ def backend_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[
     envvar='OPENLLM_BACKEND',
     show_envvar=True,
     help='Runtime to use for both serialisation/inference engine.',
-    **attrs)(f)
-
-def model_name_argument(f: _AnyCallable | None = None, required: bool = True, **attrs: t.Any) -> t.Callable[[FC], FC]:
-  return cli_argument(
-    'model_name',
-    type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING]),
-    required=required,
     **attrs,
   )(f)
+
+
+def model_name_argument(f: _AnyCallable | None = None, required: bool = True, **attrs: t.Any) -> t.Callable[[FC], FC]:
+  return cli_argument('model_name', type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING]), required=required, **attrs)(f)
+
 
 def quantize_option(f: _AnyCallable | None = None, *, build: bool = False, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option(
@@ -313,7 +287,7 @@ def quantize_option(f: _AnyCallable | None = None, *, build: bool = False, **att
     default=None,
     envvar='OPENLLM_QUANTIZE',
     show_envvar=True,
-    help='''Dynamic quantization for running this LLM.
+    help="""Dynamic quantization for running this LLM.
 
       The following quantization strategies are supported:
 
@@ -328,23 +302,25 @@ def quantize_option(f: _AnyCallable | None = None, *, build: bool = False, **att
       - ``squeezellm``: ``SqueezeLLM`` [SqueezeLLM: Dense-and-Sparse Quantization](https://arxiv.org/abs/2306.07629)
 
       > [!NOTE] that the model can also be served with quantized weights.
-      '''
+      """
     + (
-      '''
-      > [!NOTE] that this will set the mode for serving within deployment.''' if build else ''
+      """
+      > [!NOTE] that this will set the mode for serving within deployment."""
+      if build
+      else ''
     ),
-    **attrs)(f)
+    **attrs,
+  )(f)
 
-def workers_per_resource_option(
-  f: _AnyCallable | None = None, *, build: bool = False, **attrs: t.Any
-) -> t.Callable[[FC], FC]:
+
+def workers_per_resource_option(f: _AnyCallable | None = None, *, build: bool = False, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option(
     '--workers-per-resource',
     default=None,
     callback=workers_per_resource_callback,
     type=str,
     required=False,
-    help='''Number of workers per resource assigned.
+    help="""Number of workers per resource assigned.
 
       See https://docs.bentoml.org/en/latest/guides/scheduling.html#resource-scheduling-strategy
       for more information. By default, this is set to 1.
@@ -354,7 +330,7 @@ def workers_per_resource_option(
       - ``round_robin``: Similar behaviour when setting ``--workers-per-resource 1``. This is useful for smaller models.
 
       - ``conserved``: This will determine the number of available GPU resources. For example, if ther are 4 GPUs available, then ``conserved`` is equivalent to ``--workers-per-resource 0.25``.
-      '''
+      """
     + (
       """\n
       > [!NOTE] The workers value passed into 'build' will determine how the LLM can
@@ -366,6 +342,7 @@ def workers_per_resource_option(
     **attrs,
   )(f)
 
+
 def serialisation_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option(
     '--serialisation',
@@ -376,7 +353,7 @@ def serialisation_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Cal
     show_default=True,
     show_envvar=True,
     envvar='OPENLLM_SERIALIZATION',
-    help='''Serialisation format for save/load LLM.
+    help="""Serialisation format for save/load LLM.
 
       Currently the following strategies are supported:
 
@@ -385,11 +362,13 @@ def serialisation_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Cal
       > [!NOTE] Safetensors might not work for every cases, and you can always fallback to ``legacy`` if needed.
 
       - ``legacy``: This will use PyTorch serialisation format, often as ``.bin`` files. This should be used if the model doesn't yet support safetensors.
-      ''',
+      """,
     **attrs,
   )(f)
 
+
 _wpr_strategies = {'round_robin', 'conserved'}
+
 
 def workers_per_resource_callback(ctx: click.Context, param: click.Parameter, value: str | None) -> str | None:
   if value is None:
@@ -402,9 +381,7 @@ def workers_per_resource_callback(ctx: click.Context, param: click.Parameter, va
       float(value)  # type: ignore[arg-type]
     except ValueError:
       raise click.BadParameter(
-        f"'workers_per_resource' only accept '{_wpr_strategies}' as possible strategies, otherwise pass in float.",
-        ctx,
-        param,
+        f"'workers_per_resource' only accept '{_wpr_strategies}' as possible strategies, otherwise pass in float.", ctx, param
       ) from None
     else:
       return value
