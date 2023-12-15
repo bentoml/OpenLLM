@@ -52,10 +52,10 @@ class HfIgnore:
   def ignore_patterns(cls, llm: openllm.LLM[t.Any, t.Any]) -> list[str]:
     if llm.__llm_backend__ in {'vllm', 'pt'}:
       base = [cls.tf, cls.flax, cls.gguf]
-      if llm.config['architecture'] == 'MixtralForCausalLM':  # XXX: Hack for Mixtral as safetensors is yet to be working atm
-        base.append(cls.safetensors)
-      elif has_safetensors_weights(llm.model_id):
+      if has_safetensors_weights(llm.model_id):
         base.extend([cls.pt, '*.pt'])
+      elif has_pt_weights(llm.model_id):
+        base.extend([cls.safetensors, cls.pt])
       else:
         base.append(cls.safetensors)
     elif llm.__llm_backend__ == 'ggml':
