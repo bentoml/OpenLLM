@@ -18,6 +18,7 @@ class MixtralConfig(openllm_core.LLMConfig):
   __config__ = {
     'name_type': 'lowercase',
     'url': 'https://mistral.ai',
+    'serialisation': 'safetensors',
     'architecture': 'MixtralForCausalLM',
     'default_id': 'mistralai/Mixtral-8x7B-Instruct-v0.1',
     'model_ids': ['mistralai/Mixtral-8x7B-Instruct-v0.1', 'mistralai/Mixtral-8x7B-v0.1'],
