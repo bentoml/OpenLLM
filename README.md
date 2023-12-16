@@ -184,6 +184,15 @@ openllm start facebook/opt-2.7b
 > architecture. Use the `openllm models` command to see the complete list of supported
 > models, their architectures, and their variants.
 
+> [!IMPORTANT]
+> If you are testing openllm on CPU, you might want to pass in `DTYPE=float32`. By default,
+> OpenLLM will set model `dtype` to `bfloat16` for the best performance.
+> ```bash
+> DTYPE=float32 openllm start facbeook/opt-2.7b
+> ```
+> This will also applies to older GPUs. If your GPUs doesn't support `bfloat16`, then you also
+> want to set `DTYPE=float16`.
+
 ## 🧩 Supported models
 
 OpenLLM currently supports the following models. By default, OpenLLM doesn't include dependencies to run all models. The extra model-specific dependencies can be installed with the instructions below.
