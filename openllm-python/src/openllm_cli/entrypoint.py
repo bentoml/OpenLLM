@@ -363,7 +363,7 @@ def start_command(
     elif dtype not in {'float', 'float32'}:
       logger.warning('"bfloat16" and "half" are not supported on CPU. OpenLLM will default fallback to "float32".')
     dtype = 'float'  # we need to cast back to full precision if cuda is not available
-  llm = openllm.LLM[t.Any, t.Any](
+  llm = openllm.LLM(
     model_id=model_id,
     model_version=model_version,
     backend=backend,
@@ -590,7 +590,7 @@ def import_command(
       fg='yellow',
     )
 
-  llm = openllm.LLM[t.Any, t.Any](
+  llm = openllm.LLM(
     model_id=model_id,
     model_version=model_version,
     quantize=quantize,
@@ -769,7 +769,7 @@ def build_command(
   if backend == 'pt':
     logger.warning("PyTorch backend is deprecated and will be removed from the next releases. Will set default backend to 'vllm' instead.")
 
-  llm = openllm.LLM[t.Any, t.Any](
+  llm = openllm.LLM(
     model_id=model_id,
     model_version=model_version,
     backend=backend,
