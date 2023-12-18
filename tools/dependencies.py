@@ -155,7 +155,7 @@ GGML_DEPS = ['ctransformers']
 CTRANSLATE_DEPS = ['ctranslate2>=3.22.0']
 AWQ_DEPS = ['autoawq']
 GPTQ_DEPS = ['auto-gptq[triton]>=0.4.2']
-VLLM_DEPS = ['vllm>=0.2.5', 'ray==2.6.0']
+VLLM_DEPS = ['vllm==0.2.6', 'ray==2.6.0']
 
 _base_requirements: dict[str, t.Any] = {
   inflection.dasherize(name): config_cls.__openllm_requirements__

@@ -138,7 +138,7 @@ class vLLMRunnable(bentoml.Runnable):
           dtype=llm._torch_dtype,  #
           max_model_len=llm._max_model_len,
           gpu_memory_utilization=llm._gpu_memory_utilization,  #
-          quantization=llm.quantise if llm.quantise and llm.quantise in {'awq', 'squeezellm'} else None,
+          quantization=llm.quantise if llm.quantise and llm.quantise in {'gptq', 'awq', 'squeezellm'} else None,
         )
       )
     except Exception as err:
