@@ -37,7 +37,7 @@ def import_model(llm, *decls, trust_remote_code, **attrs):
     tokenizer.save_pretrained(bentomodel.path)
     if llm._quantization_config or (llm.quantise and llm.quantise not in {'squeezellm', 'awq'}):
       attrs['quantization_config'] = llm.quantization_config
-    if llm.quantise == 'gptq':
+    if llm.quantise == 'gptq' and llm.__llm_backend__ == 'pt':
       from optimum.gptq.constants import GPTQ_CONFIG
 
       with open(bentomodel.path_of(GPTQ_CONFIG), 'w', encoding='utf-8') as f:
@@ -106,7 +106,7 @@ def load_model(llm, *decls, **attrs):
 
   if '_quantize' in llm.bentomodel.info.metadata:
     _quantise = llm.bentomodel.info.metadata['_quantize']
-    if _quantise == 'gptq':
+    if _quantise == 'gptq' and llm.__llm_backend__ == 'pt':
       if not is_autogptq_available():
         raise OpenLLMException(
           "GPTQ quantisation requires 'auto-gptq' and 'optimum' (Not found in local environment). Install it with 'pip install \"openllm[gptq]\" --extra-index-url https://huggingface.github.io/autogptq-index/whl/cu118/'"

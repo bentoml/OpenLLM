@@ -231,19 +231,13 @@ class LLM(t.Generic[M, T]):
 
   class _Quantise:
     @staticmethod
-    def pt(llm: LLM, quantise=None):
-      return quantise
-
+    def pt(llm: LLM, quantise=None): return quantise
     @staticmethod
-    def vllm(llm: LLM, quantise=None):
-      return quantise
-
+    def vllm(llm: LLM, quantise=None): return quantise
     @staticmethod
     def ctranslate(llm: LLM, quantise=None):
-      if quantise in {'int4', 'awq', 'gptq', 'squeezellm'}:
-        raise ValueError(f"Quantisation '{quantise}' is not supported for backend 'ctranslate'")
-      if quantise == 'int8':
-        quantise = 'int8_float16' if llm._has_gpus else 'int8_float32'
+      if quantise in {'int4', 'awq', 'gptq', 'squeezellm'}: raise ValueError(f"Quantisation '{quantise}' is not supported for backend 'ctranslate'")
+      if quantise == 'int8': quantise = 'int8_float16' if llm._has_gpus else 'int8_float32'
       return quantise
 
   @apply(lambda val: tuple(str.lower(i) if i else i for i in val))
