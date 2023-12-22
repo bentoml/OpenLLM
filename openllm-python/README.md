@@ -148,13 +148,13 @@ Extensions:
 
 ### Start a LLM server
 
-OpenLLM allows you to quickly spin up an LLM server using `openllm start`. For example, to start an [OPT](https://huggingface.co/docs/transformers/model_doc/opt) server, run the following:
+OpenLLM allows you to quickly spin up an LLM server using `openllm start`. For example, to start a [phi-2](https://huggingface.co/microsoft/phi-2) server, run the following:
 
 ```bash
-openllm start facebook/opt-1.3b
+TRUST_REMOTE_CODE=True openllm start microsoft/phi-2
 ```
 
-This starts the server at [http://0.0.0.0:3000/](http://0.0.0.0:3000/). OpenLLM downloads the model to the BentoML local Model Store if they have not been registered before. To view your local models, run `bentoml models list`.
+This starts the server at [http://0.0.0.0:3000/](http://0.0.0.0:3000/). OpenLLM downloads the model to the BentoML local Model Store if it has not been registered before. To view your local models, run `bentoml models list`.
 
 To interact with the server, you can visit the web UI at [http://0.0.0.0:3000/](http://0.0.0.0:3000/) or send a request using `curl`. You can also use OpenLLM’s built-in Python client to interact with the server:
 
@@ -172,10 +172,10 @@ export OPENLLM_ENDPOINT=http://localhost:3000
 openllm query 'Explain to me the difference between "further" and "farther"'
 ```
 
-OpenLLM seamlessly supports many models and their variants. You can specify different variants of the model to be served by providing the `--model-id` option. For example:
+OpenLLM seamlessly supports many models and their variants. You can specify different variants of the model to be served. For example:
 
 ```bash
-openllm start facebook/opt-2.7b
+openllm start <model_id> --<options>
 ```
 
 > [!NOTE]
@@ -185,10 +185,10 @@ openllm start facebook/opt-2.7b
 > models, their architectures, and their variants.
 
 > [!IMPORTANT]
-> If you are testing openllm on CPU, you might want to pass in `DTYPE=float32`. By default,
+> If you are testing OpenLLM on CPU, you might want to pass in `DTYPE=float32`. By default,
 > OpenLLM will set model `dtype` to `bfloat16` for the best performance.
 > ```bash
-> DTYPE=float32 openllm start facbeook/opt-2.7b
+> DTYPE=float32 openllm start microsoft/phi-2
 > ```
 > This will also applies to older GPUs. If your GPUs doesn't support `bfloat16`, then you also
 > want to set `DTYPE=float16`.
@@ -1366,7 +1366,7 @@ More models will be integrated with OpenLLM and we welcome your contributions if
 OpenLLM allows you to start your model server on multiple GPUs and specify the number of workers per resource assigned using the `--workers-per-resource` option. For example, if you have 4 available GPUs, you set the value as one divided by the number as only one instance of the Runner server will be spawned.
 
 ```bash
-openllm start facebook/opt-2.7b --workers-per-resource 0.25
+TRUST_REMOTE_CODE=True openllm start microsoft/phi-2 --workers-per-resource 0.25
 ```
 
 > [!NOTE]
@@ -1409,12 +1409,12 @@ OpenLLM supports the following quantization techniques
 
 ### PyTorch backend
 
-With PyTorch backend, OpenLLM supports `int8`, `int4`, `gptq`
+With PyTorch backend, OpenLLM supports `int8`, `int4`, and `gptq`.
 
 For using int8 and int4 quantization through `bitsandbytes`, you can use the following command:
 
 ```bash
-openllm start facebook/opt-6.7b --quantize int8
+TRUST_REMOTE_CODE=True openllm start microsoft/phi-2 --quantize int8
 ```
 
 To run inference with `gptq`, simply pass `--quantize gptq`:
@@ -1513,7 +1513,7 @@ Each LLM can be instantiated with `openllm.LLM`:
 ```python
 import openllm
 
-llm = openllm.LLM('facebook/opt-2.7b')
+llm = openllm.LLM('microsoft/phi-2')
 ```
 
 The main inference API is the streaming `generate_iterator` method:
@@ -1588,9 +1588,9 @@ BentoML service. Simply call `await llm.generate` to generate text. Note that
 import bentoml
 import openllm
 
-llm = openllm.LLM('facebook/opt-2.7b')
+llm = openllm.LLM('microsoft/phi-2')
 
-svc = bentoml.Service(name='llm-opt-service', runners=[llm.runner])
+svc = bentoml.Service(name='llm-phi-service', runners=[llm.runner])
 
 
 @svc.api(input=bentoml.io.Text(), output=bentoml.io.Text())
