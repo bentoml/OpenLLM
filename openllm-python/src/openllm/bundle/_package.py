@@ -61,7 +61,7 @@ def construct_docker_options(llm, _, quantize, adapter_map, dockerfile_template,
   environ['OPENLLM_CONFIG'] = f"'{environ['OPENLLM_CONFIG']}'"
   environ.pop('BENTOML_HOME', None)  # NOTE: irrelevant in container
   environ['NVIDIA_DRIVER_CAPABILITIES'] = 'compute,utility'
-  return DockerOptions(cuda_version='12.1', python_version='3.11', env=environ, dockerfile_template=dockerfile_template)
+  return DockerOptions(python_version='3.11', env=environ, dockerfile_template=dockerfile_template)
 
 
 @inject
