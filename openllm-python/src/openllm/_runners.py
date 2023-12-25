@@ -284,23 +284,25 @@ class PyTorchRunnable(bentoml.Runnable):
         if config['logprobs']:
           sample_logprobs.append({token: token_logprobs})
 
-        yield GenerationOutput(
-          prompt='',
-          finished=False,
-          outputs=[
-            CompletionChunk(
-              index=0,
-              text=text,
-              token_ids=tmp_output_ids,
-              cumulative_logprob=cumulative_logprob,
-              logprobs=sample_logprobs if config['logprobs'] else None,
-              finish_reason=None,
-            )
-          ],
-          prompt_token_ids=prompt_token_ids,
-          prompt_logprobs=prompt_logprobs if config['prompt_logprobs'] else None,
-          request_id=request_id,
-        ).model_dump_json()
+        # Skip potential incomplete byte sequence and proceed to next iteration
+        if not text.endswith("�"):
+          yield GenerationOutput(
+            prompt='',
+            finished=False,
+            outputs=[
+              CompletionChunk(
+                index=0,
+                text=text,
+                token_ids=tmp_output_ids,
+                cumulative_logprob=cumulative_logprob,
+                logprobs=sample_logprobs if config['logprobs'] else None,
+                finish_reason=None,
+              )
+            ],
+            prompt_token_ids=prompt_token_ids,
+            prompt_logprobs=prompt_logprobs if config['prompt_logprobs'] else None,
+            request_id=request_id,
+          ).model_dump_json()
         if stopped:
           break
       else:
