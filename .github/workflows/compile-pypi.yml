@@ -86,7 +86,7 @@ jobs:
         run: hatch build
         working-directory: ${{ matrix.directory }}
       - name: Upload artifacts
-        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # ratchet:actions/upload-artifact@v3
+        uses: actions/upload-artifact@c7d193f32edcb7bfad88892161225aeda64e9392 # ratchet:actions/upload-artifact@v3
         with:
           name: python-artefacts
           path: ${{ matrix.directory }}/dist/*
@@ -128,7 +128,7 @@ jobs:
           CIBW_ARCHS_MACOS: '${{ matrix.buildplatform[2] }}'
           MYPYPATH: /project/typings
       - name: Upload wheels as workflow artifacts
-        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # ratchet:actions/upload-artifact@v3
+        uses: actions/upload-artifact@c7d193f32edcb7bfad88892161225aeda64e9392 # ratchet:actions/upload-artifact@v3
         with:
           name: ${{ matrix.buildplatform[1] }}-mypyc-wheels
           path: ./wheelhouse/*.whl
