@@ -35,7 +35,7 @@ jobs:
       - name: Create release notes
         run: ./.github/actions/create_release_and_archive.sh ${{ inputs.tags }}
       - name: Download Python artifacts
-        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
+        uses: actions/download-artifact@f44cd7b40bfd40b6aa1cc1b9b5b7bf03d3c67110 # ratchet:actions/download-artifact@v3
         with:
           name: python-artefacts
           path: dist
@@ -60,12 +60,12 @@ jobs:
       #     name: macos-universal2-mypyc-wheels
       #     path: dist
       - name: Download binaries
-        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
+        uses: actions/download-artifact@f44cd7b40bfd40b6aa1cc1b9b5b7bf03d3c67110 # ratchet:actions/download-artifact@v3
         with:
           name: standalone
           path: archives
       - name: Download standalone MacOS
-        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
+        uses: actions/download-artifact@f44cd7b40bfd40b6aa1cc1b9b5b7bf03d3c67110 # ratchet:actions/download-artifact@v3
         with:
           name: staged-macOS
           path: archives
