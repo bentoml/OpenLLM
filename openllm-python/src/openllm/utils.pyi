@@ -53,11 +53,12 @@ from openllm_core.utils import (
   set_disable_warnings as set_disable_warnings,
   set_quiet_mode as set_quiet_mode,
   validate_is_path as validate_is_path,
+  api as api,
 )
 from openllm_core.utils.serde import converter as converter
 
-from ._llm import LLM
+from ._llm import LLM as _LLM
 
 def available_devices() -> Tuple[str, ...]: ...
 def device_count() -> int: ...
-def generate_labels(llm: LLM[Any, Any]) -> Dict[str, Any]: ...
+def generate_labels(llm: _LLM[Any, Any]) -> Dict[str, Any]: ...

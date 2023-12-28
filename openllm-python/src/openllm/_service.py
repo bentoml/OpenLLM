@@ -1,10 +1,11 @@
 from __future__ import annotations
-import logging, typing as t
+import typing as t, warnings
 import bentoml, openllm, _service_vars as svars
 from openllm_core._schemas import MessageParam
 from bentoml.io import JSON, Text
 
-logger = logging.getLogger(__name__)
+warnings.warn('This has been deprecated in favor of newer 1.2 API. Please use llm.service instead.')
+
 llm = openllm.LLM[t.Any, t.Any](
   model_id=svars.model_id,
   model_tag=svars.model_tag,

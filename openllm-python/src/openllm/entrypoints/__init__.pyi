@@ -7,7 +7,7 @@ Each module should implement the following API:
 - `mount_to_svc(svc: bentoml.Service, llm: openllm.LLM[M, T]) -> bentoml.Service: ...`
 """
 
-from bentoml import Service
+from _bentoml_sdk import Service
 from openllm_core._typing_compat import M, T
 
 from . import cohere as cohere, hf as hf, openai as openai

@@ -1,6 +1,7 @@
 from typing import Any, Dict, Tuple, TypeVar, Callable, Optional, Sequence, Literal, Union, Type
 from bentoml._internal.models.model import ModelContext
-from openllm_core._typing_compat import overload, AnyCallable
+from _bentoml_sdk.api import APIMethod
+from openllm_core._typing_compat import overload, AnyCallable, ParamSpec, Concatenate
 from bentoml._internal.types import PathType
 from openllm_core.utils.import_utils import (
   ENV_VARS_TRUE_VALUES as ENV_VARS_TRUE_VALUES,
@@ -34,6 +35,7 @@ from openllm_core.utils import (
 from openllm_core.utils.lazy import LazyLoader as LazyLoader, LazyModule as LazyModule, VersionInfo as VersionInfo
 from openllm_core.utils.representation import ReprMixin as ReprMixin
 from openllm_core.utils.serde import converter as converter
+from attr import AttrsInstance
 
 DEBUG: bool = ...
 SHOW_CODEGEN: bool = ...
@@ -44,7 +46,12 @@ DEV_DEBUG_VAR: str = ...
 WARNING_ENV_VAR: str = ...
 
 _T = TypeVar('_T')
+R = TypeVar('R')
+P = ParamSpec('P')
 
+def api(
+  output: Union[AttrsInstance, Any],
+) -> Callable[[Callable[Concatenate[Any, P], R]], Union[APIMethod[P, R], Callable[[Callable[Concatenate[Any, P], R]], APIMethod[P, R]]]]: ...
 def lenient_issubclass(cls: Type[Any], class_or_tuple: Optional[Union[Type[Any], Tuple[Type[Any], ...]]]) -> bool: ...
 def resolve_user_filepath(filepath: str, ctx: Optional[str]) -> str: ...
 def resolve_filepath(path: str, ctx: Optional[str] = ...) -> str: ...

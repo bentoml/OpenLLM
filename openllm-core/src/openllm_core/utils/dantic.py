@@ -22,6 +22,7 @@ FC = t.TypeVar('FC', bound=t.Union[AnyCallable, click.Command])
 __all__ = [
   'FC',
   'attrs_to_options',
+  'attach_pydantic_model',
   'Field',
   'parse_type',
   'is_typing',
@@ -40,8 +41,57 @@ __all__ = [
 ]
 
 
-def __dir__() -> list[str]:
-  return sorted(__all__)
+def __dir__() -> list[str]: return sorted(__all__)
+
+def _error_callable(field: str):
+  def fact(): raise ValueError(f'"{field}" is required to be set from given attrs class.')
+  return fact
+
+def attach_pydantic_model(klass=None, /, **config):
+  # attach a cls.pydantic_model() -> pydantic.BaseModel compatible components.
+  def _decorator(_cls):
+    if not attr.has((_cls := attr.resolve_types(_cls))):
+      raise TypeError('this decorator should only be used with attrs-compatible classes')
+
+    from .pkg import pkg_version_info
+
+    if (ver := pkg_version_info('pydantic')) < (2,):
+      raise ImportError(f'Requires pydantic>=2.0, but found {".".join(map(str, ver))} instead.')
+
+    import pydantic
+
+    field_dict = {}
+    for key, attrib in attr.fields_dict(_cls).items():
+      attrib_type = resolve_attrib_types(attrib.type)
+      if attrib.default is attr.NOTHING:
+        field_dict[key] = (attrib_type, pydantic.Field(default_factory=_error_callable(key)))
+      elif isinstance(attrib.default, attr.Factory):
+        field_dict[key] = (attrib_type, pydantic.Field(default_factory=attrib.default.factory))
+      else:
+        field_dict[key] = (attrib_type, pydantic.Field(default=attrib.default))
+
+    setattr(
+      _cls,
+      'pydantic_model',
+      classmethod(lambda cls: pydantic.create_model(_cls.__name__ + 'Pydantic', __config__=config, __module__=cls.__module__, **field_dict)),
+    )
+    return _cls
+  return _decorator if klass is None else _decorator(klass)
+
+def resolve_attrib_types(typ_):
+  if hasattr(typ_, 'pydantic_model'):
+    return resolve_attrib_types(typ_.pydantic_model())
+  if is_container(typ_):
+    args = t.get_args(typ_)
+    if len(args) == 0:
+      return typ_
+    # homogenous type
+    if len(args) == 1 or (len(args) == 2 and args[1] is Ellipsis):
+      if hasattr((single := args[0]), 'pydantic_model'):
+        single = single.pydantic_model()
+      return typ_.copy_with(single)
+    return tuple(resolve_attrib_types(it) for it in args)
+  return typ_
 
 
 def attrs_to_options(

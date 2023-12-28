@@ -27,7 +27,7 @@ __lazy = utils.LazyModule(  # NOTE: update this to sys.modules[__name__] once my
     '_deprecated': ['Runner'],
     '_strategies': ['CascadingResourceStrategy', 'get_resource'],
     'entrypoints': ['mount_entrypoints'],
-    'serialisation': ['ggml', 'transformers'],
+    'serialisation': ['ggml', 'transformers', 'ctranslate'],
     '_quantisation': ['infer_quantisation_config'],
     '_llm': ['LLM'],
   },

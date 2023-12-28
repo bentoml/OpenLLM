@@ -1,7 +1,7 @@
 from __future__ import annotations
 import functools, logging, os, warnings, typing as t
 import attr, inflection, orjson, bentoml, openllm
-from openllm_core._schemas import GenerationOutput
+from openllm_core._schemas import GenerationOutput, GenerationInputDict
 from openllm_core._typing_compat import (
   AdapterMap,
   AdapterTuple,
@@ -21,7 +21,6 @@ from openllm_core.utils import (
   codegen,
   first_not_none,
   flatten_attrs,
-  gen_random_uuid,
   generate_hash_from_file,
   getenv,
   is_ctranslate_available,
@@ -66,63 +65,17 @@ class LLM(t.Generic[M, T]):
     )
 
   async def generate_iterator(self, prompt, prompt_token_ids=None, stop=None, stop_token_ids=None, request_id=None, adapter_name=None, **attrs):
-    from bentoml._internal.runner.runner_handle import DummyRunnerHandle
+    if adapter_name is not None and self.__llm_backend__ != 'pt': raise NotImplementedError(f'Adapter is not supported with {self.__llm_backend__}.')
 
-    if adapter_name is not None and self.__llm_backend__ != 'pt':
-      raise NotImplementedError(f'Adapter is not supported with {self.__llm_backend__}.')
-
-    if isinstance(self.runner._runner_handle, DummyRunnerHandle):
+    # FIXME: This is broken and doesn't make sense at all.
+    if self._inst is not None:
       if os.getenv('BENTO_PATH') is not None:
-        raise RuntimeError('Runner client failed to set up correctly.')
-      else:
-        self.runner.init_local(quiet=True)
-    config = self.config.model_construct_env(**attrs)
-
-    stop_token_ids = stop_token_ids or []
-    eos_token_id = attrs.get('eos_token_id', config['eos_token_id'])
-    if eos_token_id and not isinstance(eos_token_id, list):
-      eos_token_id = [eos_token_id]
-    stop_token_ids.extend(eos_token_id or [])
-    if (config_eos := config['eos_token_id']) and config_eos not in stop_token_ids:
-      stop_token_ids.append(config_eos)
-    if self.tokenizer.eos_token_id not in stop_token_ids:
-      stop_token_ids.append(self.tokenizer.eos_token_id)
-    if stop is None:
-      stop = set()
-    elif isinstance(stop, str):
-      stop = {stop}
+        raise RuntimeError('Embedded is not supported when running in distributed environment.')
     else:
-      stop = set(stop)
-    for tid in stop_token_ids:
-      if tid:
-        stop.add(self.tokenizer.decode(tid))
-
-    if prompt_token_ids is None:
-      if prompt is None:
-        raise ValueError('Either prompt or prompt_token_ids must be specified.')
-      prompt_token_ids = self.tokenizer.encode(prompt)
-
-    request_id = gen_random_uuid() if request_id is None else request_id
-    previous_texts, previous_num_tokens = [''] * config['n'], [0] * config['n']
-    try:
-      generator = self.runner.generate_iterator.async_stream(
-        prompt_token_ids, request_id, stop=list(stop), adapter_name=adapter_name, **config.model_dump(flatten=True)
-      )
-    except Exception as err:
-      raise RuntimeError(f'Failed to start generation task: {err}') from err
-
-    try:
-      async for out in generator:
-        generated = GenerationOutput.from_runner(out).with_options(prompt=prompt)
-        delta_outputs = [None] * len(generated.outputs)
-        for output in generated.outputs:
-          i = output.index
-          delta_tokens, delta_text = output.token_ids[previous_num_tokens[i] :], output.text[len(previous_texts[i]) :]
-          previous_texts[i], previous_num_tokens[i] = output.text, len(output.token_ids)
-          delta_outputs[i] = output.with_options(text=delta_text, token_ids=delta_tokens)
-        yield generated.with_options(outputs=delta_outputs)
-    except Exception as err:
-      raise RuntimeError(f'Exception caught during generation: {err}') from err
+      self._inst = self.service()
+    async for generated in self._inst.generate_stream_v1(**GenerationInputDict(prompt=prompt, prompt_token_ids=prompt_token_ids, stop=stop, stop_token_ids=stop_token_ids, request_id=request_id, adapter_name=adapter_name, llm_config=attrs)):
+      if generated == 'data: [DONE]\n\n': break
+      yield GenerationOutput.from_runner(generated)
 
   # NOTE: If you are here to see how generate_iterator and generate works, see above.
   # The below are mainly for internal implementation that you don't have to worry about.
@@ -146,10 +99,13 @@ class LLM(t.Generic[M, T]):
   __llm_backend__: LiteralBackend = None
   __llm_quantization_config__: t.Optional[t.Union[transformers.BitsAndBytesConfig, transformers.GPTQConfig, transformers.AwqConfig]] = None
   __llm_runner__: t.Optional[Runner[M, T]] = None
+  __llm_service__: t.Optional[t.Any] = None
   __llm_model__: t.Optional[M] = None
   __llm_tokenizer__: t.Optional[T] = None
   __llm_adapter_map__: t.Optional[ResolvedAdapterMap] = None
   __llm_trust_remote_code__: bool = False
+  __llm_services_config__: t.Optional[t.Dict[str, t.Any]] = None
+  _inst: t.Any = attr.field(init=False, default=None)
 
   def __init__(
     self,
@@ -169,6 +125,7 @@ class LLM(t.Generic[M, T]):
     low_cpu_mem_usage=True,
     max_model_len=None,
     gpu_memory_utilization=0.9,
+    services_config=None,
     _eager=True,
     **attrs,
   ):
@@ -215,6 +172,7 @@ class LLM(t.Generic[M, T]):
       llm_backend__=backend,
       llm_config__=llm_config,
       llm_trust_remote_code__=trust_remote_code,
+      llm_services_config__=services_config
     )
     if _eager:
       try:
@@ -227,7 +185,7 @@ class LLM(t.Generic[M, T]):
       raise RuntimeError("Embedded mode is not supported when '_eager' is False.")
     if embedded:
       logger.warning('NOT RECOMMENDED in production and SHOULD ONLY used for development.')
-      self.runner.init_local(quiet=True)
+      self._inst = self.service()
 
   class _Quantise:
     @staticmethod
@@ -314,8 +272,7 @@ class LLM(t.Generic[M, T]):
       return 'pt'
 
   def __setattr__(self, attr, value):
-    if attr in {'model', 'tokenizer', 'runner', 'import_kwargs'}:
-      raise ForbiddenAttributeError(f'{attr} should not be set during runtime.')
+    if attr in {'model', 'tokenizer', 'runner', 'import_kwargs'}: raise ForbiddenAttributeError(f'{attr} should not be set during runtime.')
     super().__setattr__(attr, value)
 
   def __del__(self):
@@ -342,8 +299,7 @@ class LLM(t.Generic[M, T]):
   @property
   def trust_remote_code(self):
     env = os.getenv('TRUST_REMOTE_CODE')
-    if env is not None:
-      return check_bool_env('TRUST_REMOTE_CODE', env)
+    if env is not None: return check_bool_env('TRUST_REMOTE_CODE', env)
     return self.__llm_trust_remote_code__
 
   @property
@@ -409,13 +365,33 @@ class LLM(t.Generic[M, T]):
       self.__llm_tokenizer__ = openllm.serialisation.load_tokenizer(self, **self.llm_parameters[-1])
     return self.__llm_tokenizer__
 
+  class services_config:
+    @staticmethod
+    def runner(self: LLM[M, T]) -> dict[str, t.Any]:
+      if self.__llm_services_config__ is None: return {}
+      if 'runner' in self.__llm_services_config__: return self.__llm_services_config__['runner']
+      elif (full:=f"llm-{self.config['start_name']}-runner") in self.__llm_services_config__: return self.__llm_services_config__[full]
+      else: return {}
+    @staticmethod
+    def service(self: LLM[M, T]) -> dict[str, t.Any]:
+      if self.__llm_services_config__ is None: return {}
+      if 'service' in self.__llm_services_config__: return self.__llm_services_config__['service']
+      elif (full:=f"llm-{self.config['start_name']}-service") in self.__llm_services_config__: return self.__llm_services_config__[full]
+      else: return {}
+
   @property
   def runner(self):
     from ._runners import runner
-
     if self.__llm_runner__ is None:
-      self.__llm_runner__ = runner(self)
+      self.__llm_runner__ = runner(self, **self.services_config.runner(self))
     return self.__llm_runner__
+
+  @property
+  def service(self):
+    from ._services import service
+    if self.__llm_service__ is None:
+      self.__llm_service__ = service(self, **self.services_config.service(self))
+    return self.__llm_service__
 
   def prepare(self, adapter_type='lora', use_gradient_checking=True, **attrs):
     if self.__llm_backend__ != 'pt':
@@ -453,26 +429,7 @@ class LLM(t.Generic[M, T]):
 
   @property
   def model(self):
-    if self.__llm_model__ is None:
-      model = openllm.serialisation.load_model(self, *self._model_decls, **self._model_attrs)
-      # If OOM, then it is probably you don't have enough VRAM to run this model.
-      if self.__llm_backend__ == 'pt':
-        import torch
-
-        loaded_in_kbit = (
-          getattr(model, 'is_loaded_in_8bit', False) or getattr(model, 'is_loaded_in_4bit', False) or getattr(model, 'is_quantized', False)
-        )
-        if torch.cuda.is_available() and torch.cuda.device_count() == 1 and not loaded_in_kbit:
-          try:
-            model = model.to('cuda')
-          except Exception as err:
-            raise OpenLLMException(f'Failed to load model into GPU: {err}.\n') from err
-        if self.has_adapters:
-          logger.debug('Applying the following adapters: %s', self.adapter_map)
-          for adapter_dict in self.adapter_map.values():
-            for adapter_name, (peft_config, peft_model_id) in adapter_dict.items():
-              model.load_adapter(peft_model_id, adapter_name, peft_config=peft_config)
-      self.__llm_model__ = model
+    if self.__llm_model__ is None: self.__llm_model__ = openllm.serialisation.load_model(self, *self._model_decls, **self._model_attrs)
     return self.__llm_model__
 
   @property
@@ -504,29 +461,18 @@ class LLM(t.Generic[M, T]):
 @functools.lru_cache(maxsize=1)
 def _torch_dtype_mapping() -> dict[str, torch.dtype]:
   import torch
-
   return {
-    'half': torch.float16,
-    'float16': torch.float16,  #
-    'float': torch.float32,
-    'float32': torch.float32,  #
+    'half': torch.float16, 'float16': torch.float16,  #
+    'float': torch.float32, 'float32': torch.float32,  #
     'bfloat16': torch.bfloat16,
   }
-
-
-def normalise_model_name(name: str) -> str:
-  return os.path.basename(resolve_filepath(name)) if validate_is_path(name) else inflection.dasherize(name.replace('/', '--'))
-
-
+def normalise_model_name(name: str) -> str: return os.path.basename(resolve_filepath(name)) if validate_is_path(name) else inflection.dasherize(name.replace('/', '--'))
 def convert_peft_config_type(adapter_map: dict[str, str]) -> AdapterMap:
-  if not is_peft_available():
-    raise RuntimeError("LoRA adapter requires 'peft' to be installed. Make sure to do 'pip install \"openllm[fine-tune]\"'")
+  if not is_peft_available(): raise RuntimeError("LoRA adapter requires 'peft' to be installed. Make sure to do 'pip install \"openllm[fine-tune]\"'")
   from huggingface_hub import hf_hub_download
-
   resolved: AdapterMap = {}
   for path_or_adapter_id, name in adapter_map.items():
-    if name is None:
-      raise ValueError('Adapter name must be specified.')
+    if name is None: raise ValueError('Adapter name must be specified.')
     if os.path.isfile(os.path.join(path_or_adapter_id, PEFT_CONFIG_NAME)):
       config_file = os.path.join(path_or_adapter_id, PEFT_CONFIG_NAME)
     else:
@@ -534,10 +480,8 @@ def convert_peft_config_type(adapter_map: dict[str, str]) -> AdapterMap:
         config_file = hf_hub_download(path_or_adapter_id, PEFT_CONFIG_NAME)
       except Exception as err:
         raise ValueError(f"Can't find '{PEFT_CONFIG_NAME}' at '{path_or_adapter_id}'") from err
-    with open(config_file, 'r') as file:
-      resolved_config = orjson.loads(file.read())
+    with open(config_file, 'r') as file: resolved_config = orjson.loads(file.read())
     _peft_type = resolved_config['peft_type'].lower()
-    if _peft_type not in resolved:
-      resolved[_peft_type] = ()
+    if _peft_type not in resolved: resolved[_peft_type] = ()
     resolved[_peft_type] += (_AdapterTuple((path_or_adapter_id, name, resolved_config)),)
   return resolved

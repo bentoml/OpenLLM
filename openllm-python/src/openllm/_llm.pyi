@@ -37,6 +37,8 @@ class LLM(Generic[M, T]):
   _adapter_map: Optional[AdapterMap]
   _serialisation: LiteralSerialisation
   _local: bool
+  _max_model_len: Optional[int]
+  _gpu_memory_utilization: float
 
   __llm_dtype__: Dtype = ...
   __llm_torch_dtype__: Optional[torch.dtype] = ...
@@ -48,6 +50,7 @@ class LLM(Generic[M, T]):
   __llm_tokenizer__: Optional[T] = ...
   __llm_adapter_map__: Optional[ResolvedAdapterMap] = ...
   __llm_trust_remote_code__: bool = ...
+  __llm_services_config__: Optional[Dict[str, Any]] = ...
 
   def __repr__(self) -> str: ...
   def __init__(
@@ -66,6 +69,9 @@ class LLM(Generic[M, T]):
     embedded: bool = ...,
     dtype: Dtype = ...,
     low_cpu_mem_usage: bool = ...,
+    max_model_len: Optional[int] = ...,
+    gpu_memory_utilization: float = ...,
+    services_config: Optional[Dict[str, Any]] = ...,
     **attrs: Any,
   ) -> None: ...
   @property

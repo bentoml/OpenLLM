@@ -142,4 +142,20 @@ def load_model(llm, *decls, **attrs):
         llm.bentomodel.path, *decls, config=config, trust_remote_code=llm.trust_remote_code, device_map=device_map, **attrs
       )
   check_unintialised_params(model)
+
+  if llm.__llm_backend__ == 'pt':
+    # If OOM, then it is probably you don't have enough VRAM to run this model.
+    loaded_in_kbit = (
+      getattr(model, 'is_loaded_in_8bit', False) or getattr(model, 'is_loaded_in_4bit', False) or getattr(model, 'is_quantized', False)
+    )
+    if torch.cuda.is_available() and torch.cuda.device_count() == 1 and not loaded_in_kbit:
+      try:
+        model = model.to('cuda')
+      except Exception as err:
+        raise OpenLLMException(f'Failed to load model into GPU: {err}.\n') from err
+    if llm.has_adapters:
+      logger.debug('Applying the following adapters: %s', llm.adapter_map)
+      for adapter_dict in llm.adapter_map.values():
+        for adapter_name, (peft_config, peft_model_id) in adapter_dict.items():
+          model.load_adapter(peft_model_id, adapter_name, peft_config=peft_config)
   return model

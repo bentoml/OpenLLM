@@ -211,7 +211,7 @@ requestBody:
             model: __model_id__
             max_tokens: 256
             temperature: 0.7
-            logprobs: 1
+            logprobs: null
             top_p: 0.43
             n: 1
             stream: false
@@ -223,7 +223,7 @@ requestBody:
             max_tokens: 256
             temperature: 0.7
             top_p: 0.43
-            logprobs: 1
+            logprobs: null
             n: 1
             stream: true
             stop:

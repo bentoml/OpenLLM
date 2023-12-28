@@ -38,6 +38,7 @@ if sys.version_info[:2] >= (3, 11):
     NotRequired as NotRequired,
     Required as Required,
     Self as Self,
+    Unpack as Unpack,
     dataclass_transform as dataclass_transform,
     overload as overload,
   )
@@ -47,6 +48,7 @@ else:
     NotRequired as NotRequired,
     Required as Required,
     Self as Self,
+    Unpack as Unpack,
     dataclass_transform as dataclass_transform,
     overload as overload,
   )

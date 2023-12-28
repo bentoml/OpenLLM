@@ -5,6 +5,9 @@ from . import import_utils as iutils, pkg
 from .import_utils import ENV_VARS_TRUE_VALUES as ENV_VARS_TRUE_VALUES
 from .lazy import LazyLoader as LazyLoader, LazyModule as LazyModule, VersionInfo as VersionInfo
 
+if t.TYPE_CHECKING:
+  from attr import AttrsInstance
+
 # See https://github.com/bentoml/BentoML/blob/a59750c5044bab60b6b3765e6c17041fd8984712/src/bentoml_cli/env.py#L17
 DEBUG_ENV_VAR = 'BENTOML_DEBUG'
 QUIET_ENV_VAR = 'BENTOML_QUIET'
@@ -34,6 +37,19 @@ def lenient_issubclass(cls, class_or_tuple):
     if isinstance(cls, _WithArgsTypes()):
       return False
     raise
+
+
+def api(*, input=None, output=None, route=None):
+  try:
+    import bentoml
+  except ImportError:
+    raise RuntimeError('Requires "bentoml" to use `openllm_core.utils.api`') from None
+  return lambda func: bentoml.api(
+    func,
+    route=route,
+    input_spec=input.pydantic_model() if hasattr(input, 'pydantic_model') else input,
+    output_spec=output.pydantic_model() if hasattr(output, 'pydantic_model') else output,
+  )
 
 
 def resolve_user_filepath(filepath, ctx):

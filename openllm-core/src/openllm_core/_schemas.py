@@ -1,17 +1,14 @@
 from __future__ import annotations
 import typing as t
-
-import attr
-import inflection
-import orjson
-
+import attr, inflection, orjson
 from ._configuration import LLMConfig
 from .config import AutoConfig
 from .utils import converter, gen_random_uuid
+from .utils.dantic import attach_pydantic_model
+from ._typing_compat import Required
 
 if t.TYPE_CHECKING:
   import vllm
-
   from ._typing_compat import Self, LiteralString
 
 
@@ -19,19 +16,13 @@ class MessageParam(t.TypedDict):
   role: t.Union[t.Literal['system', 'user', 'assistant'], LiteralString]
   content: str
 
-
 @attr.define
 class _SchemaMixin:
-  def model_dump(self) -> dict[str, t.Any]:
-    return converter.unstructure(self)
+  def model_dump(self) -> dict[str, t.Any]: return converter.unstructure(self)
+  def model_dump_json(self) -> str: return orjson.dumps(self.model_dump(), option=orjson.OPT_INDENT_2).decode('utf-8')
+  def with_options(self, **options: t.Any) -> Self: return attr.evolve(self, **options)
 
-  def model_dump_json(self) -> str:
-    return orjson.dumps(self.model_dump(), option=orjson.OPT_INDENT_2).decode('utf-8')
-
-  def with_options(self, **options: t.Any) -> Self:
-    return attr.evolve(self, **options)
-
-
+@attach_pydantic_model(protected_namespaces=())
 @attr.define
 class MetadataOutput(_SchemaMixin):
   model_id: str
@@ -49,49 +40,67 @@ class MetadataOutput(_SchemaMixin):
       'configuration': self.configuration,
     }
 
+class GenerationInputDict(t.TypedDict):
+  prompt: t.Optional[str]
+  prompt_token_ids: t.Optional[t.List[int]]
+  llm_config: Required[t.Dict[str, t.Any]]
+  stop: t.Optional[t.List[str]]
+  stop_token_ids: t.Optional[t.List[int]]
+  request_id: t.Optional[str]
+  adapter_name: t.Optional[str]
 
+class GenerationInputProtocol(t.Protocol):
+  prompt: t.Optional[str]
+  llm_config: LLMConfig
+  prompt_token_ids: t.Optional[t.List[int]]
+  stop: t.Optional[t.List[str]]
+  stop_token_ids: t.Optional[t.List[int]]
+  request_id: t.Optional[str]
+  adapter_name: t.Optional[str]
+  examples: GenerationInputDict
+  def model_dump(self) -> dict[str, t.Any]: ...
+
+@attach_pydantic_model
 @attr.define
 class GenerationInput(_SchemaMixin):
-  prompt: str
+  prompt: t.Optional[str]
   llm_config: LLMConfig
-  stop: list[str] | None = attr.field(default=None)
-  adapter_name: str | None = attr.field(default=None)
+  prompt_token_ids: t.Optional[t.List[int]] = attr.field(default=None)
+  stop: t.Optional[t.List[str]] = attr.field(default=None)
+  stop_token_ids: t.Optional[t.List[int]] = attr.field(default=None)
+  request_id: t.Optional[str] = attr.field(default=None)
+  adapter_name: t.Optional[str] = attr.field(default=None)
 
   @classmethod
-  def from_model(cls, model_name: str, **attrs: t.Any) -> type[GenerationInput]:
+  def from_model(cls, model_name: LiteralString, **attrs: t.Any) -> type[GenerationInput]:
     return cls.from_llm_config(AutoConfig.for_model(model_name, **attrs))
 
   def model_dump(self) -> dict[str, t.Any]:
-    return {'prompt': self.prompt, 'stop': self.stop, 'llm_config': self.llm_config.model_dump(flatten=True), 'adapter_name': self.adapter_name}
+    return {'prompt': self.prompt, 'stop': self.stop, 'llm_config': self.llm_config.model_dump(flatten=True), 'prompt_token_ids': self.prompt_token_ids, 'stop_token_ids': self.stop_token_ids, 'request_id': self.request_id, 'adapter_name': self.adapter_name}
 
   @classmethod
-  def from_llm_config(cls, llm_config: LLMConfig) -> type[GenerationInput]:
-    def init(self: GenerationInput, prompt: str, stop: list[str] | None, adapter_name: str | None) -> None:
-      self.__attrs_init__(prompt=prompt, llm_config=llm_config, stop=stop, adapter_name=adapter_name)  # type: ignore
-
-    def _llm_config_converter(data: dict[str, t.Any] | LLMConfig) -> LLMConfig:
-      if isinstance(data, LLMConfig):
-        return data
-      return llm_config.__class__(**data)
-
-    klass: type[GenerationInput] = attr.make_class(
+  def from_llm_config(cls, llm_config: LLMConfig) -> type[GenerationInputProtocol]:
+    def stop_converter(data: str | list[str] | t.Iterable[str] | None) -> list[str] | None:
+      if data is None: return None
+      if isinstance(data, str): return [data]
+      else: return list(data)
+    klass: type[GenerationInputProtocol] = attach_pydantic_model(attr.make_class(
       inflection.camelize(llm_config['model_name']) + 'GenerationInput',
-      {'__init__': init, 'llm_config': attr.field(default=llm_config, converter=_llm_config_converter)},
-      bases=(cls,),
-      slots=True,
-      weakref_slot=True,
-      frozen=True,
-      repr=True,
-      collect_by_mro=True,
-    )
-
-    def examples(_: type[GenerationInput]) -> dict[str, t.Any]:
-      return klass(prompt='What is the meaning of life?', llm_config=llm_config, stop=['\n']).model_dump()
-
-    klass.examples = classmethod(examples)
+      {
+        'prompt': attr.field(type=t.Optional[str]),
+        'prompt_token_ids': attr.field(type=t.Optional[t.List[int]], default=None),
+        'stop': attr.field(type=t.Optional[t.List[str]], default=None, converter=stop_converter),
+        'stop_token_ids': attr.field(type=t.Optional[t.List[int]], default=None),
+        'request_id': attr.field(type=t.Optional[str], default=None),
+        'adapter_name': attr.field(type=t.Optional[str], default=None),
+        'llm_config': attr.field(init=False, type=llm_config.__class__, default=llm_config),
+      },
+      slots=True, weakref_slot=True, frozen=True, repr=True, collect_by_mro=True))
+    klass.examples = cls(prompt='What is the meaning of life?', llm_config=llm_config, stop=['philosopher']).model_dump()
 
     try:
       klass.__module__ = cls.__module__
+      klass.model_dump = cls.model_dump
     except (AttributeError, ValueError):
       pass
     return klass
@@ -105,6 +114,7 @@ PromptLogprobs = t.List[t.Optional[t.Dict[int, float]]]
 FinishReason = t.Literal['length', 'stop']
 
 
+@attach_pydantic_model
 @attr.define
 class CompletionChunk(_SchemaMixin):
   index: int
@@ -118,6 +128,7 @@ class CompletionChunk(_SchemaMixin):
     return orjson.dumps(self.model_dump(), option=orjson.OPT_NON_STR_KEYS).decode('utf-8')
 
 
+@attach_pydantic_model
 @attr.define
 class GenerationOutput(_SchemaMixin):
   prompt: str

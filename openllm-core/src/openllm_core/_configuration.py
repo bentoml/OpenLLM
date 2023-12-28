@@ -37,6 +37,7 @@ from ._typing_compat import (
 )
 from .exceptions import ForbiddenAttributeError, MissingDependencyError, MissingAnnotationAttributeError, ValidationError
 from .utils import LazyLoader, ReprMixin, codegen, converter, dantic, field_env_key, first_not_none, lenient_issubclass
+from .utils.dantic import attach_pydantic_model
 from .utils.peft import PEFT_TASK_TYPE_TARGET_MAPPING, FineTuneConfig
 
 if t.TYPE_CHECKING:
@@ -696,7 +697,6 @@ class _ConfigBuilder:
     self._cls_dict['__repr_keys__'] = property(lambda _: {i.name for i in self._attrs} | {'generation_config', 'sampling_config'})
     return self
 
-
 @attr.define(slots=True, init=False)
 class LLMConfig(_ConfigAttr[GenerationConfig, SamplingParams]):
   def __init_subclass__(cls, **_: t.Any):
@@ -737,7 +737,7 @@ class LLMConfig(_ConfigAttr[GenerationConfig, SamplingParams]):
         klass.__module__ = cls.__module__
       except (AttributeError, ValueError):
         pass
-      return t.cast('type[At]', klass)
+      return t.cast('type[At]', attach_pydantic_model(klass))
 
     cls.__openllm_generation_class__ = _make_subclass('GenerationConfig', GenerationConfig, suffix_env='generation')
     cls.__openllm_sampling_class__ = _make_subclass('SamplingParams', SamplingParams, suffix_env='sampling')
@@ -772,7 +772,7 @@ class LLMConfig(_ConfigAttr[GenerationConfig, SamplingParams]):
       | {a.name for a in attr.fields(cls.__openllm_generation_class__)}
       | {a.name for a in attr.fields(cls.__openllm_sampling_class__)}
     )
-    cls = _ConfigBuilder(cls, these).add_attrs_init().add_repr().build_class()
+    cls = attach_pydantic_model(_ConfigBuilder(cls, these).add_attrs_init().add_repr().build_class())
 
     # Finally, resolve the types
     if getattr(cls, '__attrs_types_resolved__', None) != cls:
