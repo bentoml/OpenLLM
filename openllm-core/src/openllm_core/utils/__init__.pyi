@@ -49,8 +49,22 @@ _T = TypeVar('_T')
 R = TypeVar('R')
 P = ParamSpec('P')
 
+@overload
+def api(func: Callable[Concatenate[Any, P], R]) -> APIMethod[P, R]: ...
+@overload
 def api(
-  output: Union[AttrsInstance, Any],
+  *,
+  route: Optional[str] = ...,
+  input: Optional[Union[AttrsInstance, Any]] = ...,
+  output: Optional[Union[AttrsInstance, Any]] = ...,
+) -> Callable[[Callable[Concatenate[Any, P], R]], APIMethod[P, R]]: ...
+@overload
+def api(
+  func: Optional[Callable[Concatenate[Any, P], R]] = ...,
+  *,
+  route: Optional[str] = ...,
+  input: Optional[Union[AttrsInstance, Any]] = ...,
+  output: Optional[Union[AttrsInstance, Any]] = ...,
 ) -> Callable[[Callable[Concatenate[Any, P], R]], Union[APIMethod[P, R], Callable[[Callable[Concatenate[Any, P], R]], APIMethod[P, R]]]]: ...
 def lenient_issubclass(cls: Type[Any], class_or_tuple: Optional[Union[Type[Any], Tuple[Type[Any], ...]]]) -> bool: ...
 def resolve_user_filepath(filepath: str, ctx: Optional[str]) -> str: ...

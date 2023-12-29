@@ -1,6 +1,5 @@
 from __future__ import annotations
-import gc, traceback, sys, types, typing as t
-from attr import AttrsInstance
+import gc, traceback, types, typing as t
 import bentoml, openllm
 from openllm_core.exceptions import OpenLLMException, MissingDependencyError
 from openllm_core._schemas import CompletionChunk, GenerationOutput, SampleLogprobs
@@ -8,7 +7,6 @@ from openllm_core._typing_compat import LiteralString, Unpack, ParamSpec
 from openllm_core.utils import ReprMixin, is_ctranslate_available, is_vllm_available
 
 if t.TYPE_CHECKING:
-  from attr import AttrsInstance
   from _bentoml_sdk import Service
   from _bentoml_sdk.service.config import ServiceConfig
   from openllm_core._typing_compat import M, T
@@ -22,12 +20,12 @@ _registry, _generated_runners = {}, {}
 def __dir__() -> list[str]: return ['runner', *list(_generated_runners)]
 
 @t.overload
-def registry(cls: None = ..., /, alias: str = ...) -> t.Type[Runner[M, T]]: ...
+def registry(cls: None = ..., /, *, alias: LiteralString = ...) -> t.Type[Runner[M, T]]: ...
 
 @t.overload
 def registry(cls: t.Type[Runner[M, T]], /) -> t.Type[Runner[M, T]]: ...
 
-def registry(cls: t.Optional[t.Type[Runner[M, T]]] = None, *, alias: t.Optional[LiteralString] = None) -> t.Any:
+def registry(cls: t.Optional[t.Type[Runner[M, T]]] = None, *, alias: t.Optional[LiteralString] = None) -> t.Type[Runner[M, T]]:
   def decorator(_cls: t.Type[Runner[M, T]]) -> t.Type[Runner[M, T]]:
     _registry[_cls.__name__[:-8].lower() if alias is None else alias] = _cls
     return _cls
@@ -80,10 +78,7 @@ def runner(llm: openllm.LLM[M, T], /, **attrs: Unpack[ServiceConfig]) -> Service
       '__repr_args__': lambda _: (('name', _.name), ('inner', f'generated: <{inner_cls.__qualname__}>'), ('llm_type', llm.llm_type), ('backend', llm.__llm_backend__)),
     }),
   )
-  # NOTE: We need to inject the generated cache into module globals such that the generated class can be called from module globals.
-  runner = _generated_runners[runner_service](config=validate(attrs), inner=inner_cls, models=[llm.bentomodel])
-  if (runner_qualname := runner.__class__.__qualname__) not in (runner_mod := sys.modules[__name__].__dict__): runner_mod[runner_qualname] = runner
-  return runner
+  return _generated_runners[runner_service](config=validate(attrs), inner=inner_cls, models=[llm.bentomodel])
 
 
 @registry
@@ -94,7 +89,7 @@ class CTranslateRunnable:
     if not is_ctranslate_available(): raise MissingDependencyError('ctranslate is not installed. Do `pip install "openllm[ctranslate]"`')
     self.model, self.tokenizer = self.llm.model, self.llm.tokenizer
 
-  @openllm.utils.api(output=GenerationOutput)
+  @openllm.utils.api
   async def generate_iterator(
     self,
     prompt_token_ids: t.List[int],
@@ -102,7 +97,7 @@ class CTranslateRunnable:
     stop: t.Optional[t.Iterable[str]] = None,
     adapter_name: t.Optional[str] = None,
     **attrs: t.Any,
-  ) -> t.AsyncGenerator[GenerationOutput, None]:
+  ) -> t.AsyncGenerator[str, None]:
     if adapter_name is not None:
       raise OpenLLMException('Adapter is not supported with CTranslate')
     config, sampling_params = self.llm_config.model_construct_env(stop=list(stop) if stop else None, **attrs).inference_options(self.llm)
@@ -133,7 +128,7 @@ class CTranslateRunnable:
             # TODO: logprobs, but seems like we don't have access to the raw logits
           )
         ],
-      )
+      ).model_dump_json()
 
 
 @registry
@@ -170,7 +165,7 @@ class vLLMRunnable:
       traceback.print_exc()
       raise openllm.exceptions.OpenLLMException(f'Failed to initialise vLLMEngine due to the following error:\n{err}') from err
 
-  @openllm.utils.api(output=GenerationOutput)
+  @openllm.utils.api
   async def generate_iterator(
     self,
     prompt_token_ids: t.List[int],
@@ -178,10 +173,10 @@ class vLLMRunnable:
     stop: t.Optional[t.Iterable[str]] = None,
     adapter_name: t.Optional[str] = None,
     **attrs: t.Any,
-  ) -> t.AsyncGenerator[GenerationOutput, None]:
+  ) -> t.AsyncGenerator[str, None]:
     _, sampling_params = self.llm_config.model_construct_env(stop=list(stop) if stop else None, **attrs).inference_options(self.llm)
     async for request_output in self.model.generate(None, sampling_params, request_id, prompt_token_ids):
-      yield GenerationOutput.from_vllm(request_output)
+      yield GenerationOutput.from_vllm(request_output).model_dump_json()
 
 
 @registry(alias='pt')
@@ -197,7 +192,7 @@ class PyTorchRunnable:
     else:
       self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-  @openllm.utils.api(output=GenerationOutput)
+  @openllm.utils.api
   async def generate_iterator(
     self,
     prompt_token_ids: t.List[int],
@@ -205,7 +200,7 @@ class PyTorchRunnable:
     stop: t.Optional[t.Iterable[str]] = None,
     adapter_name: t.Optional[str] = None,
     **attrs: t.Any,
-  ) -> t.AsyncGenerator[GenerationOutput, None]:
+  ) -> t.AsyncGenerator[str, None]:
     from ._generation import get_context_length, prepare_logits_processor
     import torch
 
@@ -337,7 +332,7 @@ class PyTorchRunnable:
           prompt_token_ids=prompt_token_ids,
           prompt_logprobs=prompt_logprobs if config['prompt_logprobs'] else None,
           request_id=request_id,
-        )
+        ).model_dump_json()
         if stopped:
           break
       else:
@@ -360,7 +355,7 @@ class PyTorchRunnable:
         prompt_token_ids=prompt_token_ids,
         prompt_logprobs=prompt_logprobs if config['prompt_logprobs'] else None,
         request_id=request_id,
-      )
+      ).model_dump_json()
 
     # Clean
     del past_key_values, out

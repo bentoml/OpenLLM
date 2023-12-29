@@ -1,7 +1,7 @@
 from __future__ import annotations
-import functools, logging, os, warnings, typing as t
+import functools, logging, os, warnings, inspect, typing as t
 import attr, inflection, orjson, bentoml, openllm
-from openllm_core._schemas import GenerationOutput, GenerationInputDict
+from openllm_core._schemas import GenerationOutput
 from openllm_core._typing_compat import (
   AdapterMap,
   AdapterTuple,
@@ -21,6 +21,7 @@ from openllm_core.utils import (
   codegen,
   first_not_none,
   flatten_attrs,
+  gen_random_uuid,
   generate_hash_from_file,
   getenv,
   is_ctranslate_available,
@@ -38,11 +39,38 @@ if t.TYPE_CHECKING:
   from peft.config import PeftConfig
   from openllm_core._configuration import LLMConfig
   from ._runners import Runner
+  from _bentoml_sdk.service.dependency import Dependency
 
 logger = logging.getLogger(__name__)
 _AdapterTuple: type[AdapterTuple] = codegen.make_attr_tuple_class('AdapterTuple', ['adapter_id', 'name', 'config'])
 ResolvedAdapterMap = t.Dict[AdapterType, t.Dict[str, t.Tuple['PeftConfig', str]]]
 
+# NOTE: This is to determine the correct module and inject class accordingly
+def dynproperty(meth):
+  try:
+    from _bentoml_sdk.service.dependency import Dependency
+    from _bentoml_sdk.service.factory import Service
+  except ImportError:
+    raise MissingDependencyError('Requires bentoml>=1.2 to be installed. Do "pip install -U "bentoml>=1.2""') from None
+
+  def getter(self):
+    generated = meth(self)
+    if isinstance(generated, Dependency): generated = generated.on
+    if not isinstance(generated, Service): raise ValueError('@dynproperty can only be used on Service.')
+    current_frame = inspect.currentframe()
+    frame = current_frame
+    while frame:
+      caller = inspect.getmodule(frame)
+      if caller and (module_name := caller.__name__) != __name__:
+        if module_name == '__main__':
+          module_name = os.path.splitext(os.path.basename(caller.__file__))[0]
+        generated.__module__ = module_name
+        break
+      frame = frame.f_back
+    # klass = generated.__class__ if not inspect.isclass(generated) else generated
+    # if (cls_qualname := klass.__qualname__) not in (sys_mod := sys.modules[module_name].__dict__): sys_mod[cls_qualname] = generated
+    return generated
+  return property(getter)
 
 @attr.define(slots=False, repr=False, init=False)
 class LLM(t.Generic[M, T]):
@@ -67,15 +95,51 @@ class LLM(t.Generic[M, T]):
   async def generate_iterator(self, prompt, prompt_token_ids=None, stop=None, stop_token_ids=None, request_id=None, adapter_name=None, **attrs):
     if adapter_name is not None and self.__llm_backend__ != 'pt': raise NotImplementedError(f'Adapter is not supported with {self.__llm_backend__}.')
 
-    # FIXME: This is broken and doesn't make sense at all.
-    if self._inst is not None:
-      if os.getenv('BENTO_PATH') is not None:
-        raise RuntimeError('Embedded is not supported when running in distributed environment.')
+    proxy, config = self.runner.get(), self.config.model_construct_env(**attrs)
+
+    stop_token_ids = stop_token_ids or []
+    eos_token_id = attrs.get('eos_token_id', config['eos_token_id'])
+    if eos_token_id and not isinstance(eos_token_id, list): eos_token_id = [eos_token_id]
+    stop_token_ids.extend(eos_token_id or [])
+    if (config_eos := config['eos_token_id']) and config_eos not in stop_token_ids: stop_token_ids.append(config_eos)
+    if self.tokenizer.eos_token_id not in stop_token_ids: stop_token_ids.append(self.tokenizer.eos_token_id)
+
+    if stop is None:
+      stop = set()
+    elif isinstance(stop, str):
+      stop = {stop}
     else:
-      self._inst = self.service()
-    async for generated in self._inst.generate_stream_v1(**GenerationInputDict(prompt=prompt, prompt_token_ids=prompt_token_ids, stop=stop, stop_token_ids=stop_token_ids, request_id=request_id, adapter_name=adapter_name, llm_config=attrs)):
-      if generated == 'data: [DONE]\n\n': break
-      yield GenerationOutput.from_runner(generated)
+      stop = set(stop)
+
+    for tid in stop_token_ids:
+      if tid: stop.add(self.tokenizer.decode(tid))
+
+    if prompt_token_ids is None:
+      if prompt is None:
+        raise ValueError('Either prompt or prompt_token_ids must be specified.')
+      prompt_token_ids = self.tokenizer.encode(prompt)
+
+    request_id = gen_random_uuid() if request_id is None else request_id
+    previous_texts, previous_num_tokens = [''] * config['n'], [0] * config['n']
+    try:
+      generator = proxy.generate_iterator(
+        prompt_token_ids, request_id, stop=list(stop), adapter_name=adapter_name, **config.model_dump(flatten=True)
+      )
+    except Exception as err:
+      raise RuntimeError(f'Failed to start generation task: {err}') from err
+
+    try:
+      async for out in generator:
+        generated = GenerationOutput.from_runner(out).with_options(prompt=prompt)
+        delta_outputs = [None] * len(generated.outputs)
+        for output in generated.outputs:
+          i = output.index
+          delta_tokens, delta_text = output.token_ids[previous_num_tokens[i]:], output.text[len(previous_texts[i]):]
+          previous_texts[i], previous_num_tokens[i] = output.text, len(output.token_ids)
+          delta_outputs[i] = output.with_options(text=delta_text, token_ids=delta_tokens)
+        yield generated.with_options(outputs=delta_outputs)
+    except Exception as err:
+      raise RuntimeError(f'Exception caught during generation: {err}') from err
 
   # NOTE: If you are here to see how generate_iterator and generate works, see above.
   # The below are mainly for internal implementation that you don't have to worry about.
@@ -98,14 +162,12 @@ class LLM(t.Generic[M, T]):
   __llm_config__: t.Optional[LLMConfig] = None
   __llm_backend__: LiteralBackend = None
   __llm_quantization_config__: t.Optional[t.Union[transformers.BitsAndBytesConfig, transformers.GPTQConfig, transformers.AwqConfig]] = None
-  __llm_runner__: t.Optional[Runner[M, T]] = None
-  __llm_service__: t.Optional[t.Any] = None
+  __llm_runner__: t.Optional[Dependency[Runner[M, T]]] = None
   __llm_model__: t.Optional[M] = None
   __llm_tokenizer__: t.Optional[T] = None
   __llm_adapter_map__: t.Optional[ResolvedAdapterMap] = None
   __llm_trust_remote_code__: bool = False
   __llm_services_config__: t.Optional[t.Dict[str, t.Any]] = None
-  _inst: t.Any = attr.field(init=False, default=None)
 
   def __init__(
     self,
@@ -185,7 +247,7 @@ class LLM(t.Generic[M, T]):
       raise RuntimeError("Embedded mode is not supported when '_eager' is False.")
     if embedded:
       logger.warning('NOT RECOMMENDED in production and SHOULD ONLY used for development.')
-      self._inst = self.service()
+      self.runner.get()
 
   class _Quantise:
     @staticmethod
@@ -367,31 +429,25 @@ class LLM(t.Generic[M, T]):
 
   class services_config:
     @staticmethod
-    def runner(self: LLM[M, T]) -> dict[str, t.Any]:
-      if self.__llm_services_config__ is None: return {}
-      if 'runner' in self.__llm_services_config__: return self.__llm_services_config__['runner']
-      elif (full:=f"llm-{self.config['start_name']}-runner") in self.__llm_services_config__: return self.__llm_services_config__[full]
+    def runner(llm):
+      if llm.__llm_services_config__ is None: return {}
+      if 'runner' in llm.__llm_services_config__: return llm.__llm_services_config__['runner']
+      elif (full:=f"llm-{llm.config['start_name']}-runner") in llm.__llm_services_config__: return llm.__llm_services_config__[full]
       else: return {}
     @staticmethod
-    def service(self: LLM[M, T]) -> dict[str, t.Any]:
-      if self.__llm_services_config__ is None: return {}
-      if 'service' in self.__llm_services_config__: return self.__llm_services_config__['service']
-      elif (full:=f"llm-{self.config['start_name']}-service") in self.__llm_services_config__: return self.__llm_services_config__[full]
+    def service(llm):
+      if llm.__llm_services_config__ is None: return {}
+      if 'service' in llm.__llm_services_config__: return llm.__llm_services_config__['service']
+      elif (full:=f"llm-{llm.config['start_name']}-service") in llm.__llm_services_config__: return llm.__llm_services_config__[full]
       else: return {}
 
-  @property
+  @dynproperty
   def runner(self):
     from ._runners import runner
+    from _bentoml_sdk.service.dependency import Dependency
     if self.__llm_runner__ is None:
-      self.__llm_runner__ = runner(self, **self.services_config.runner(self))
+      self.__llm_runner__ = Dependency(runner(self, **self.services_config.runner(self)))
     return self.__llm_runner__
-
-  @property
-  def service(self):
-    from ._services import service
-    if self.__llm_service__ is None:
-      self.__llm_service__ = service(self, **self.services_config.service(self))
-    return self.__llm_service__
 
   def prepare(self, adapter_type='lora', use_gradient_checking=True, **attrs):
     if self.__llm_backend__ != 'pt':

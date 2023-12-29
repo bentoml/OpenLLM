@@ -13,6 +13,7 @@ from openllm_core.utils import (
   LazyModule as LazyModule,
   ReprMixin as ReprMixin,
   VersionInfo as VersionInfo,
+  api as api,
   analytics as analytics,
   calc_dir_size as calc_dir_size,
   check_bool_env as check_bool_env,
@@ -53,7 +54,6 @@ from openllm_core.utils import (
   set_disable_warnings as set_disable_warnings,
   set_quiet_mode as set_quiet_mode,
   validate_is_path as validate_is_path,
-  api as api,
 )
 from openllm_core.utils.serde import converter as converter
 
