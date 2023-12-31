@@ -55,6 +55,7 @@ def api(func: Callable[Concatenate[Any, P], R]) -> APIMethod[P, R]: ...
 def api(
   *,
   route: Optional[str] = ...,
+  media_type: Optional[str] = ...,
   input: Optional[Union[AttrsInstance, Any]] = ...,
   output: Optional[Union[AttrsInstance, Any]] = ...,
 ) -> Callable[[Callable[Concatenate[Any, P], R]], APIMethod[P, R]]: ...
@@ -63,6 +64,7 @@ def api(
   func: Optional[Callable[Concatenate[Any, P], R]] = ...,
   *,
   route: Optional[str] = ...,
+  media_type: Optional[str] = ...,
   input: Optional[Union[AttrsInstance, Any]] = ...,
   output: Optional[Union[AttrsInstance, Any]] = ...,
 ) -> Callable[[Callable[Concatenate[Any, P], R]], Union[APIMethod[P, R], Callable[[Callable[Concatenate[Any, P], R]], APIMethod[P, R]]]]: ...

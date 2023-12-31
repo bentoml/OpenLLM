@@ -32,6 +32,7 @@ from ._typing_compat import (
   NotRequired,
   Required,
   Self,
+  TypedDict,
   T,
   overload,
 )
@@ -350,7 +351,7 @@ _SamplingParamsT = t.TypeVar('_SamplingParamsT', bound=SamplingParams)
 _object_getattribute = object.__getattribute__
 
 
-class ModelSettings(t.TypedDict, total=False):
+class ModelSettings(TypedDict, total=False):
   default_id: Required[str]
   model_ids: Required[ListStr]
   architecture: Required[str]

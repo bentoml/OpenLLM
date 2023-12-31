@@ -54,8 +54,9 @@ def dynproperty(meth):
     raise MissingDependencyError('Requires bentoml>=1.2 to be installed. Do "pip install -U "bentoml>=1.2""') from None
 
   def getter(self):
+    _is_dependency = False
     generated = meth(self)
-    if isinstance(generated, Dependency): generated = generated.on
+    if isinstance(generated, Dependency): generated, _is_dependency = generated.on, True
     if not isinstance(generated, Service): raise ValueError('@dynproperty can only be used on Service.')
     current_frame = inspect.currentframe()
     frame = current_frame
@@ -67,8 +68,7 @@ def dynproperty(meth):
         generated.__module__ = module_name
         break
       frame = frame.f_back
-    # klass = generated.__class__ if not inspect.isclass(generated) else generated
-    # if (cls_qualname := klass.__qualname__) not in (sys_mod := sys.modules[module_name].__dict__): sys_mod[cls_qualname] = generated
+    if _is_dependency: generated = Dependency(generated)
     return generated
   return property(getter)
 

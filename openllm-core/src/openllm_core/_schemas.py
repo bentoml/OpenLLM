@@ -5,14 +5,14 @@ from ._configuration import LLMConfig
 from .config import AutoConfig
 from .utils import converter, gen_random_uuid
 from .utils.dantic import attach_pydantic_model
-from ._typing_compat import Required
+from ._typing_compat import Required, TypedDict
 
 if t.TYPE_CHECKING:
   import vllm
   from ._typing_compat import Self, LiteralString
 
 
-class MessageParam(t.TypedDict):
+class MessageParam(TypedDict):
   role: t.Union[t.Literal['system', 'user', 'assistant'], LiteralString]
   content: str
 
@@ -40,7 +40,7 @@ class MetadataOutput(_SchemaMixin):
       'configuration': self.configuration,
     }
 
-class GenerationInputDict(t.TypedDict):
+class GenerationInputDict(TypedDict):
   prompt: t.Optional[str]
   prompt_token_ids: t.Optional[t.List[int]]
   llm_config: Required[t.Dict[str, t.Any]]
@@ -84,6 +84,9 @@ class GenerationInput(_SchemaMixin):
       if data is None: return None
       if isinstance(data, str): return [data]
       else: return list(data)
+    def llm_converter(data: dict[str, t.Any]) -> LLMConfig:
+      if isinstance(data, LLMConfig): return data
+      return llm_config.__class__(**data)
     klass: type[GenerationInputProtocol] = attach_pydantic_model(attr.make_class(
       inflection.camelize(llm_config['model_name']) + 'GenerationInput',
       {
@@ -93,7 +96,7 @@ class GenerationInput(_SchemaMixin):
         'stop_token_ids': attr.field(type=t.Optional[t.List[int]], default=None),
         'request_id': attr.field(type=t.Optional[str], default=None),
         'adapter_name': attr.field(type=t.Optional[str], default=None),
-        'llm_config': attr.field(init=False, type=llm_config.__class__, default=llm_config),
+        'llm_config': attr.field(init=False, type=llm_config.__class__, default=llm_config.model_dump(), converter=llm_converter),
       },
       slots=True, weakref_slot=True, frozen=True, repr=True, collect_by_mro=True))
     klass.examples = cls(prompt='What is the meaning of life?', llm_config=llm_config, stop=['philosopher']).model_dump()

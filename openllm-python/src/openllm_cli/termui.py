@@ -9,7 +9,7 @@ import click
 import inflection
 import orjson
 
-from openllm_core._typing_compat import DictStrAny
+from openllm_core._typing_compat import DictStrAny, TypedDict
 from openllm_core.utils import get_debug_mode
 
 logger = logging.getLogger('openllm')
@@ -38,7 +38,7 @@ class Level(enum.IntEnum):
     }[level]
 
 
-class JsonLog(t.TypedDict):
+class JsonLog(TypedDict):
   log_level: Level
   content: str
 

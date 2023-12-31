@@ -126,8 +126,7 @@ def mount_to_svc(svc, llm):
     ],
   )
   svc.mount_asgi_app(app, path='/v1')
-  # return append_schemas(svc, schemas.get_schema(routes=app.routes, mount_path='/v1'))
-  return svc
+  return append_schemas(svc, schemas.get_schema(routes=app.routes, mount_path='/v1'))
 
 
 # GET /v1/models

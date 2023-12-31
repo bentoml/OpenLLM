@@ -36,18 +36,21 @@ def lenient_issubclass(cls, class_or_tuple):
     raise
 
 
-def api(func=None, *, input=None, output=None, route=None):
+def api(func=None, *, input=None, output=None, route=None, media_type=None):
   try:
     import bentoml
   except ImportError:
     raise RuntimeError('Requires "bentoml" to use `openllm_core.utils.api`') from None
   def caller(func):
-    return bentoml.api(
+    wrapped = bentoml.api(
     func,
     route=route,
+    media_type=media_type,
     input_spec=input.pydantic_model() if hasattr(input, 'pydantic_model') else input,
     output_spec=output.pydantic_model() if hasattr(output, 'pydantic_model') else output,
-  )
+    )
+    object.__setattr__(func, '__openllm_api_func__', True)
+    return wrapped
   return caller(func) if func is not None else caller
 
 

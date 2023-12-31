@@ -1,16 +1,7 @@
 from __future__ import annotations
-import functools
-import importlib
-import os
-import sys
-import typing as t
+import functools, importlib, os, sys, typing as t
 from enum import Enum
-
-import attr
-import click
-import click_option_group as cog
-import inflection
-import orjson
+import attr, click, inflection, orjson, click_option_group as cog
 from click import ParamType, shell_completion as sc, types as click_types
 
 if t.TYPE_CHECKING:
@@ -43,9 +34,11 @@ __all__ = [
 
 def __dir__() -> list[str]: return sorted(__all__)
 
+
 def _error_callable(field: str):
   def fact(): raise ValueError(f'"{field}" is required to be set from given attrs class.')
   return fact
+
 
 def attach_pydantic_model(klass=None, /, **config):
   # attach a cls.pydantic_model() -> pydantic.BaseModel compatible components.
@@ -57,6 +50,11 @@ def attach_pydantic_model(klass=None, /, **config):
 
     if (ver := pkg_version_info('pydantic')) < (2,):
       raise ImportError(f'Requires pydantic>=2.0, but found {".".join(map(str, ver))} instead.')
+
+    try:
+      from _bentoml_sdk.io_models import IODescriptor
+    except ImportError:
+      raise ImportError('Requires bentoml>=1.2 to be installed. Do "pip install -U "bentoml>=1.2""') from None
 
     import pydantic
 
@@ -73,10 +71,19 @@ def attach_pydantic_model(klass=None, /, **config):
     setattr(
       _cls,
       'pydantic_model',
-      classmethod(lambda cls: pydantic.create_model(_cls.__name__ + 'Pydantic', __config__=config, __module__=cls.__module__, **field_dict)),
+      classmethod(
+        lambda cls: pydantic.create_model(
+          cls.__name__ + 'Pydantic',
+          __base__=(IODescriptor, pydantic.create_model(cls.__name__ + 'BaseModel', __config__=config, __module__=cls.__module__)),
+          __module__=cls.__module__,
+          **field_dict,
+        )
+      ),
     )
     return _cls
+
   return _decorator if klass is None else _decorator(klass)
+
 
 def resolve_attrib_types(typ_):
   if hasattr(typ_, 'pydantic_model'):

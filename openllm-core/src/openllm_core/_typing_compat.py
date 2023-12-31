@@ -32,6 +32,11 @@ class AdapterTuple(Tuple[Any, ...]):
 
 AdapterMap = Dict[AdapterType, Tuple[AdapterTuple, ...]]
 
+if sys.version_info[:2] >= (3, 12):
+  from typing import TypedDict as TypedDict
+else:
+  from typing_extensions import TypedDict as TypedDict
+
 if sys.version_info[:2] >= (3, 11):
   from typing import (
     LiteralString as LiteralString,

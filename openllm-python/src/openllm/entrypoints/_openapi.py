@@ -475,8 +475,7 @@ _SCHEMAS = {k[:-7].lower(): v for k, v in locals().items() if k.endswith('_SCHEM
 
 
 def apply_schema(func, **attrs):
-  for k, v in attrs.items():
-    func.__doc__ = func.__doc__.replace(k, v)
+  for k, v in attrs.items(): func.__doc__ = func.__doc__.replace(k, v)
   return func
 
 

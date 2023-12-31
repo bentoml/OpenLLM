@@ -19,6 +19,7 @@ from openllm_core._typing_compat import (
   ParamSpec,
   Self,
   TypeGuard,
+  TypedDict,
 )
 from openllm_core.config import CONFIG_MAPPING
 from openllm_core.exceptions import OpenLLMException
@@ -521,7 +522,7 @@ class ItemState(enum.Enum):
   OVERWRITE = 'OVERWRITE'
 
 
-class ImportModelOutput(t.TypedDict):
+class ImportModelOutput(TypedDict):
   state: ItemState
   backend: LiteralBackend
   tag: str
@@ -638,7 +639,7 @@ class DeploymentInstruction:
     return getattr(self, key)
 
 
-class BuildBentoOutput(t.TypedDict):
+class BuildBentoOutput(TypedDict):
   state: ItemState
   tag: str
   backend: LiteralBackend
@@ -923,7 +924,7 @@ def build_command(
   return response
 
 
-class ModelItem(t.TypedDict):
+class ModelItem(TypedDict):
   architecture: str
   example_id: str
   supported_backends: t.Tuple[LiteralBackend, ...]

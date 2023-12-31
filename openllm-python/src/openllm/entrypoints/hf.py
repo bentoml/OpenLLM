@@ -33,8 +33,7 @@ def mount_to_svc(svc, llm):
   )
   mount_path = '/hf'
   svc.mount_asgi_app(app, path=mount_path)
-  # return append_schemas(svc, schemas.get_schema(routes=app.routes, mount_path=mount_path), tags_order='append')
-  return svc
+  return append_schemas(svc, schemas.get_schema(routes=app.routes, mount_path=mount_path), tags_order='append')
 
 
 def error_response(status_code, message):

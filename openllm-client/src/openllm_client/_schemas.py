@@ -10,6 +10,7 @@ from openllm_core._schemas import (
   GenerationOutput as Response,  # backward compatibility
   _SchemaMixin as _SchemaMixin,
 )
+from openllm_core._typing_compat import TypedDict
 
 from ._utils import converter
 
@@ -65,7 +66,7 @@ class StreamingResponse(_SchemaMixin):
     )
 
 
-class MesssageParam(t.TypedDict):
+class MesssageParam(TypedDict):
   role: t.Literal['user', 'system', 'assistant']
   content: str
 
