@@ -1445,7 +1445,7 @@ openllm start squeeze-ai-lab/sq-llama-2-7b-w4-s0 --quantize squeezellm --seriali
 ```
 
 > [!IMPORTANT]
-> Since both `squeezellm` and `awq` are weight-aware quantization methods, meaning the quantization is done during training, all pre-trained weights needs to get quantized before inference time. Make sure to fine compatible weights on HuggingFace Hub for your model of choice.
+> Since both `squeezellm` and `awq` are weight-aware quantization methods, meaning the quantization is done during training, all pre-trained weights needs to get quantized before inference time. Make sure to find compatible weights on HuggingFace Hub for your model of choice.
 
 ## 🛠️ Serving fine-tuning layers
 
