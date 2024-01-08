@@ -25,6 +25,7 @@ __lazy = utils.LazyModule(  # NOTE: update this to sys.modules[__name__] once my
     'protocol': [],
     'utils': [],
     '_deprecated': ['Runner'],
+    '_runners': ['runner'],
     '_strategies': ['CascadingResourceStrategy', 'get_resource'],
     'entrypoints': ['mount_entrypoints'],
     'serialisation': ['ggml', 'transformers', 'ctranslate'],

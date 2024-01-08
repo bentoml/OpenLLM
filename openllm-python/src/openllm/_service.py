@@ -25,30 +25,23 @@ class LLMService:
 
   @openllm.utils.api(route='/v1/generate', output=GenerationOutput, input=generations, media_type='application/json')
   async def generate_v1(self, parameters: GenerationInputDict = generations.examples) -> GenerationOutput:
-    structured = GenerationInput(**parameters)
-    config = llm.config.model_construct_env(**structured.llm_config)
+    structured = generations.from_dict(**parameters)
     return await llm.generate(
-      structured.prompt,
-      structured.prompt_token_ids,
-      structured.stop,
-      structured.stop_token_ids,
-      structured.request_id,
-      structured.adapter_name,
-      **config.model_dump(),
+      structured.prompt, structured.prompt_token_ids, #
+      structured.stop, structured.stop_token_ids, #
+      structured.request_id, structured.adapter_name, #
+      **structured.llm_config.model_dump(flatten=True),
     )
 
   @openllm.utils.api(route='/v1/generate_stream', input=generations)
   async def generate_stream_v1(self, parameters: GenerationInputDict = generations.examples) -> t.AsyncGenerator[str, None]:
     structured = GenerationInput(**parameters)
-    config = llm.config.model_construct_env(**structured.llm_config)
-
     async for generated in llm.generate_iterator(
       structured.prompt, structured.prompt_token_ids, #
       structured.stop, structured.stop_token_ids, #
       structured.request_id, structured.adapter_name, #
-      **config.model_dump(flatten=True),
-    ):
-      yield f'data: {generated.model_dump_json()}\n\n'
+      **structured.llm_config.model_dump(flatten=True),
+    ): yield f'data: {generated.model_dump_json()}\n\n'
     yield 'data: [DONE]\n\n'
 
   @openllm.utils.api(output=openllm.MetadataOutput, route='/v1/metadata', media_type='application/json')
@@ -79,4 +72,4 @@ class LLMService:
 LLMService.inner.__name__ = f"llm-{llm.config['start_name']}-service"
 openllm.mount_entrypoints(LLMService, llm)
 
-if __name__ == '__main__': LLMService.serve_http(reload=True, development_mode=True)
+if __name__ == '__main__': LLMService.serve_http(reload=openllm.utils.getenv('reload', default=True), development_mode=openllm.utils.getenv('development', default=False))

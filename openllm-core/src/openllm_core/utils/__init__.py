@@ -2,16 +2,9 @@ from __future__ import annotations
 import functools, hashlib, logging, logging.config, os, sys, types, uuid, typing as t
 from pathlib import Path as _Path
 from . import import_utils as iutils, pkg
-from .import_utils import ENV_VARS_TRUE_VALUES as ENV_VARS_TRUE_VALUES
 from .lazy import LazyLoader as LazyLoader, LazyModule as LazyModule, VersionInfo as VersionInfo
+from ._constants import DEBUG_ENV_VAR as DEBUG_ENV_VAR, QUIET_ENV_VAR as QUIET_ENV_VAR, GRPC_DEBUG_ENV_VAR as GRPC_DEBUG_ENV_VAR, WARNING_ENV_VAR as WARNING_ENV_VAR, DEV_DEBUG_VAR as DEV_DEBUG_VAR, ENV_VARS_TRUE_VALUES as ENV_VARS_TRUE_VALUES, check_bool_env as check_bool_env, DEBUG as DEBUG, SHOW_CODEGEN as SHOW_CODEGEN, MYPY as MYPY
 
-# See https://github.com/bentoml/BentoML/blob/a59750c5044bab60b6b3765e6c17041fd8984712/src/bentoml_cli/env.py#L17
-DEBUG_ENV_VAR = 'BENTOML_DEBUG'
-QUIET_ENV_VAR = 'BENTOML_QUIET'
-# https://github.com/grpc/grpc/blob/master/doc/environment_variables.md
-_GRPC_DEBUG_ENV_VAR = 'GRPC_VERBOSITY'
-WARNING_ENV_VAR = 'OPENLLM_DISABLE_WARNING'
-DEV_DEBUG_VAR = 'DEBUG'
 # equivocal setattr to save one lookup per assignment
 _object_setattr = object.__setattr__
 logger = logging.getLogger(__name__)
@@ -74,13 +67,6 @@ def resolve_filepath(path, ctx=None):
     return path
 
 
-def check_bool_env(env, default=True):
-  v = os.getenv(env, default=str(default)).upper()
-  if v.isdigit():
-    return bool(int(v))  # special check for digits
-  return v in ENV_VARS_TRUE_VALUES
-
-
 def calc_dir_size(path):
   return sum(f.stat().st_size for f in _Path(path).glob('**/*') if f.is_file())
 
@@ -135,7 +121,7 @@ def set_debug_mode(enabled, level=1):
   os.environ.update({
     DEBUG_ENV_VAR: str(enabled),
     QUIET_ENV_VAR: str(not enabled),  #
-    _GRPC_DEBUG_ENV_VAR: 'DEBUG' if enabled else 'ERROR',
+    GRPC_DEBUG_ENV_VAR: 'DEBUG' if enabled else 'ERROR',
     'CT2_VERBOSE': '3',  #
   })
   set_disable_warnings(not enabled)
@@ -145,7 +131,7 @@ def set_quiet_mode(enabled):
   os.environ.update({
     QUIET_ENV_VAR: str(enabled),
     DEBUG_ENV_VAR: str(not enabled),  #
-    _GRPC_DEBUG_ENV_VAR: 'NONE',
+    GRPC_DEBUG_ENV_VAR: 'NONE',
     'CT2_VERBOSE': '-1',  #
   })
   set_disable_warnings(enabled)
@@ -220,14 +206,6 @@ def flatten_attrs(**attrs):
     if k.startswith(_TOKENIZER_PREFIX):
       del attrs[k]
   return attrs, tokenizer_attrs
-
-
-# Special debug flag controled via DEBUG
-DEBUG = sys.flags.dev_mode or (not sys.flags.ignore_environment and check_bool_env(DEV_DEBUG_VAR, default=False))
-# Whether to show the codenge for debug purposes
-SHOW_CODEGEN = DEBUG and os.environ.get(DEV_DEBUG_VAR, str(0)).isdigit() and int(os.environ.get(DEV_DEBUG_VAR, str(0))) > 3
-# MYPY is like t.TYPE_CHECKING, but reserved for Mypy plugins
-MYPY = False
 
 
 class ExceptionFilter(logging.Filter):

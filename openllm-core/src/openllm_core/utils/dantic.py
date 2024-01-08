@@ -3,10 +3,13 @@ import functools, importlib, os, sys, typing as t
 from enum import Enum
 import attr, click, inflection, orjson, click_option_group as cog
 from click import ParamType, shell_completion as sc, types as click_types
+from .._typing_compat import overload, Unpack
 
 if t.TYPE_CHECKING:
   from attr import _ValidatorType
+  from pydantic import ConfigDict
 
+T = t.TypeVar('T')
 AnyCallable = t.Callable[..., t.Any]
 FC = t.TypeVar('FC', bound=t.Union[AnyCallable, click.Command])
 
@@ -39,10 +42,13 @@ def _error_callable(field: str):
   def fact(): raise ValueError(f'"{field}" is required to be set from given attrs class.')
   return fact
 
-
-def attach_pydantic_model(klass=None, /, **config):
+@overload
+def attach_pydantic_model(klass: t.Type[T], /, **config: Unpack[ConfigDict]) -> t.Type[T]: ...
+@overload
+def attach_pydantic_model(**config: Unpack[ConfigDict]) -> t.Callable[[t.Type[T]], t.Type[T]]: ...
+def attach_pydantic_model(klass: t.Optional[t.Type[T]] = None, /, **config: Unpack[ConfigDict]) -> t.Type[T] | t.Callable[[t.Type[T]], t.Type[T]]:
   # attach a cls.pydantic_model() -> pydantic.BaseModel compatible components.
-  def _decorator(_cls):
+  def _decorator(_cls: t.Type[T]) -> t.Type[T]:
     if not attr.has((_cls := attr.resolve_types(_cls))):
       raise TypeError('this decorator should only be used with attrs-compatible classes')
 
@@ -85,7 +91,7 @@ def attach_pydantic_model(klass=None, /, **config):
   return _decorator if klass is None else _decorator(klass)
 
 
-def resolve_attrib_types(typ_):
+def resolve_attrib_types(typ_: t.Any) -> t.Any:
   if hasattr(typ_, 'pydantic_model'):
     return resolve_attrib_types(typ_.pydantic_model())
   if is_container(typ_):

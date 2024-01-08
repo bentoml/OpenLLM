@@ -34,7 +34,9 @@ AdapterMap = Dict[AdapterType, Tuple[AdapterTuple, ...]]
 
 if sys.version_info[:2] >= (3, 12):
   from typing import TypedDict as TypedDict
+  from typing import override as override
 else:
+  from typing_extensions import override as override
   from typing_extensions import TypedDict as TypedDict
 
 if sys.version_info[:2] >= (3, 11):

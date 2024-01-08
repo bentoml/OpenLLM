@@ -110,12 +110,13 @@ class Extensions(click.MultiCommand):
       return None
     return mod.cli
 
+R = t.TypeVar('R')
 
 class OpenLLMCommandGroup(BentoMLCommandGroup):
   NUMBER_OF_COMMON_PARAMS = 5  # parameters in common_params + 1 faked group option header
 
   @staticmethod
-  def common_params(f: t.Callable[P, t.Any]) -> t.Callable[[FC], FC]:
+  def common_params(f: t.Callable[P, R]) -> t.Callable[Concatenate[bool, bool, str | None, P], R]:
     # The following logics is similar to one of BentoMLCommandGroup
     @cog.optgroup.group(name='Global options', help='Shared globals options for all OpenLLM CLI.')  # type: ignore[misc]
     @cog.optgroup.option('-q', '--quiet', envvar=QUIET_ENV_VAR, is_flag=True, default=False, help='Suppress all output.', show_envvar=True)
@@ -130,7 +131,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
     )
     @click.pass_context
     @functools.wraps(f)
-    def wrapper(ctx: click.Context, quiet: bool, debug: bool, cloud_context: str | None, *args: P.args, **attrs: P.kwargs) -> t.Any:
+    def wrapper(ctx: click.Context, quiet: bool, debug: bool, cloud_context: str | None, *args: P.args, **attrs: P.kwargs) -> R:
       ctx.obj = GlobalOptions(cloud_context=cloud_context)
       if quiet:
         set_quiet_mode(True)
@@ -144,11 +145,11 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
     return wrapper
 
   @staticmethod
-  def usage_tracking(func: t.Callable[P, t.Any], group: click.Group, **attrs: t.Any) -> t.Callable[Concatenate[bool, P], t.Any]:
+  def usage_tracking(func: t.Callable[P, R], group: click.Group, **attrs: t.Any) -> t.Callable[Concatenate[bool, P], R]:
     command_name = attrs.get('name', func.__name__)
 
     @functools.wraps(func)
-    def wrapper(do_not_track: bool, *args: P.args, **attrs: P.kwargs) -> t.Any:
+    def wrapper(do_not_track: bool, *args: P.args, **attrs: P.kwargs) -> R:
       if do_not_track:
         with analytics.set_bentoml_tracking():
           return func(*args, **attrs)
@@ -171,7 +172,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
           analytics.track(event)
           raise
 
-    return t.cast(t.Callable[Concatenate[bool, P], t.Any], wrapper)
+    return wrapper
 
   def get_command(self, ctx: click.Context, cmd_name: str) -> click.Command | None:
     if cmd_name in t.cast('Extensions', extension_command).list_commands(ctx):
@@ -182,7 +183,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
   def list_commands(self, ctx: click.Context) -> list[str]:
     return super().list_commands(ctx) + extension_command.list_commands(ctx)
 
-  def command(self, *args: t.Any, **kwargs: t.Any) -> t.Callable[[t.Callable[..., t.Any]], click.Command]:
+  def command(self, *args: t.Any, **kwargs: t.Any) -> t.Callable[[t.Callable[P, t.Any]], click.Command]:
     """Override the default 'cli.command' with supports for aliases for given command, and it wraps the implementation with common parameters."""
     if 'context_settings' not in kwargs:
       kwargs['context_settings'] = {}
@@ -190,7 +191,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
       kwargs['context_settings']['max_content_width'] = 120
     aliases = kwargs.pop('aliases', None)
 
-    def decorator(f: _AnyCallable) -> click.Command:
+    def decorator(f: t.Callable[P, t.Any]) -> click.Command:
       name = f.__name__.lower()
       if name.endswith('_command'):
         name = name[:-8]
@@ -201,15 +202,13 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
 
       # move common parameters to end of the parameters list
       _memo = getattr(wrapped, '__click_params__', None)
-      if _memo is None:
-        raise ValueError('Click command not register correctly.')
+      if _memo is None: raise ValueError('Click command not register correctly.')
       _object_setattr(wrapped, '__click_params__', _memo[-self.NUMBER_OF_COMMON_PARAMS :] + _memo[: -self.NUMBER_OF_COMMON_PARAMS])
       # NOTE: we need to call super of super to avoid conflict with BentoMLCommandGroup command setup
       cmd = super(BentoMLCommandGroup, self).command(*args, **kwargs)(wrapped)
       # NOTE: add aliases to a given commands if it is specified.
       if aliases is not None:
-        if not cmd.name:
-          raise ValueError('name is required when aliases are available.')
+        if not cmd.name: raise ValueError('name is required when aliases are available.')
         self._commands[cmd.name] = aliases
         self._aliases.update({alias: cmd.name for alias in aliases})
       return cmd
@@ -317,7 +316,7 @@ def start_command(
   cors: bool,
   adapter_id: str | None,
   return_process: bool,
-  dtype: LiteralDtype,
+  dtype: LiteralDtype | t.Literal['auto', 'float'],
   deprecated_model_id: str | None,
   max_model_len: int | None,
   gpu_memory_utilization: float,
@@ -543,7 +542,7 @@ class ImportModelOutput(TypedDict):
 def import_command(
   model_id: str,
   deprecated_model_id: str | None,
-  dtype: LiteralDtype,
+  dtype: LiteralDtype | t.Literal['auto', 'float'],
   model_version: str | None,
   backend: LiteralBackend | None,
   quantize: LiteralQuantise | None,
@@ -715,7 +714,7 @@ def build_command(
   deprecated_model_id: str | None,
   bento_version: str | None,
   overwrite: bool,
-  dtype: LiteralDtype,
+  dtype: LiteralDtype | t.Literal['auto', 'float'],
   model_version: str | None,
   backend: LiteralBackend | None,
   quantize: LiteralQuantise | None,
@@ -1099,6 +1098,4 @@ def query_command(
 def extension_command() -> None:
   """Extension for OpenLLM CLI."""
 
-
-if __name__ == '__main__':
-  cli()
+if __name__ == '__main__': cli()

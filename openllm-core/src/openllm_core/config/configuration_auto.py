@@ -3,8 +3,8 @@ import importlib, os, typing as t
 from collections import OrderedDict
 import inflection, orjson
 from openllm_core.exceptions import MissingDependencyError, OpenLLMException
-from openllm_core.utils import ReprMixin, is_bentoml_available
-from openllm_core.utils.import_utils import is_transformers_available
+from openllm_core.utils import ReprMixin
+from openllm_core.utils.import_utils import is_transformers_available, is_bentoml_available
 
 if t.TYPE_CHECKING:
   import types

@@ -1,5 +1,5 @@
 from __future__ import annotations
-import functools, logging, os, warnings, inspect, typing as t
+import functools, logging, os, warnings, typing as t
 import attr, inflection, orjson, bentoml, openllm
 from openllm_core._schemas import GenerationOutput
 from openllm_core._typing_compat import (
@@ -44,33 +44,6 @@ if t.TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 _AdapterTuple: type[AdapterTuple] = codegen.make_attr_tuple_class('AdapterTuple', ['adapter_id', 'name', 'config'])
 ResolvedAdapterMap = t.Dict[AdapterType, t.Dict[str, t.Tuple['PeftConfig', str]]]
-
-# NOTE: This is to determine the correct module and inject class accordingly
-def dynproperty(meth):
-  try:
-    from _bentoml_sdk.service.dependency import Dependency
-    from _bentoml_sdk.service.factory import Service
-  except ImportError:
-    raise MissingDependencyError('Requires bentoml>=1.2 to be installed. Do "pip install -U "bentoml>=1.2""') from None
-
-  def getter(self):
-    _is_dependency = False
-    generated = meth(self)
-    if isinstance(generated, Dependency): generated, _is_dependency = generated.on, True
-    if not isinstance(generated, Service): raise ValueError('@dynproperty can only be used on Service.')
-    current_frame = inspect.currentframe()
-    frame = current_frame
-    while frame:
-      caller = inspect.getmodule(frame)
-      if caller and (module_name := caller.__name__) != __name__:
-        if module_name == '__main__':
-          module_name = os.path.splitext(os.path.basename(caller.__file__))[0]
-        generated.__module__ = module_name
-        break
-      frame = frame.f_back
-    if _is_dependency: generated = Dependency(generated)
-    return generated
-  return property(getter)
 
 @attr.define(slots=False, repr=False, init=False)
 class LLM(t.Generic[M, T]):
@@ -193,9 +166,7 @@ class LLM(t.Generic[M, T]):
   ):
     torch_dtype = attrs.pop('torch_dtype', None)  # backward compatible
     if torch_dtype is not None:
-      warnings.warn(
-        'The argument "torch_dtype" is deprecated and will be removed in the future. Please use "dtype" instead.', DeprecationWarning, stacklevel=3
-      )
+      warnings.warn('The argument "torch_dtype" is deprecated and will be removed in the future. Please use "dtype" instead.', DeprecationWarning, stacklevel=3)
       dtype = torch_dtype
     _local = False
     if validate_is_path(model_id):
@@ -241,8 +212,7 @@ class LLM(t.Generic[M, T]):
         model = bentoml.models.get(self.tag)
       except bentoml.exceptions.NotFound:
         model = openllm.serialisation.import_model(self, trust_remote_code=self.trust_remote_code)
-      # resolve the tag
-      self._tag = model.tag
+      self._tag = model.tag  # resolve the tag
     if not _eager and embedded:
       raise RuntimeError("Embedded mode is not supported when '_eager' is False.")
     if embedded:
@@ -339,7 +309,7 @@ class LLM(t.Generic[M, T]):
 
   def __del__(self):
     try:
-      del self.__llm_model__, self.__llm_tokenizer__, self.__llm_adapter_map__
+      del self.__llm_model__, self.__llm_tokenizer__, self.__llm_adapter_map__, self.__llm_runner__
     except AttributeError:
       pass
 
@@ -441,7 +411,7 @@ class LLM(t.Generic[M, T]):
       elif (full:=f"llm-{llm.config['start_name']}-service") in llm.__llm_services_config__: return llm.__llm_services_config__[full]
       else: return {}
 
-  @dynproperty
+  @property
   def runner(self):
     from ._runners import runner
     from _bentoml_sdk.service.dependency import Dependency

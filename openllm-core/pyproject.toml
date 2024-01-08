@@ -58,7 +58,7 @@ keywords = [
     "Transformers",
 ]
 dependencies = [
-    "attrs>=23.1.0",
+    "attrs>=23.2.0",
     "cattrs>=23.1.0,<23.2.0",
     "orjson",
     "inflection",

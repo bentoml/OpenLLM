@@ -42,6 +42,7 @@ def Runner(
     'quantize': getenv('QUANTIZE', var=['QUANTISE'], default=attrs.get('quantize', None)),  #
     'serialisation': getenv('serialization', default=attrs.get('serialisation', llm_config['serialisation']), var=['SERIALISATION']),
   })
+  # XXX: Make this back to Runnable implementation
   return openllm.LLM(
     backend=first_not_none(backend, default='vllm' if is_vllm_available() else 'pt'), llm_config=llm_config, embedded=init_local, **attrs
   ).runner
