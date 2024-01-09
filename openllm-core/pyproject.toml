@@ -71,7 +71,7 @@ name = "openllm-core"
 requires-python = ">=3.8"
 [project.urls]
 Blog = "https://modelserving.com"
-Chat = "https://discord.gg/openllm"
+Chat = "https://l.bentoml.com/join-openllm-discord"
 Documentation = "https://github.com/bentoml/OpenLLM/blob/main/openllm-core/README.md"
 GitHub = "https://github.com/bentoml/OpenLLM/blob/main/openllm-core"
 History = "https://github.com/bentoml/OpenLLM/blob/main/CHANGELOG.md"
