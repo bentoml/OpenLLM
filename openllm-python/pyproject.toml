@@ -91,7 +91,7 @@ openllm-playground = "openllm_cli.extension.playground:cli"
 
 [project.urls]
 Blog = "https://modelserving.com"
-Chat = "https://discord.gg/openllm"
+Chat = "https://l.bentoml.com/join-openllm-discord"
 Documentation = "https://github.com/bentoml/openllm#readme"
 GitHub = "https://github.com/bentoml/OpenLLM"
 History = "https://github.com/bentoml/OpenLLM/blob/main/CHANGELOG.md"
