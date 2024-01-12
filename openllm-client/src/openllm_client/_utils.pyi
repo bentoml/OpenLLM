@@ -5,6 +5,7 @@ from openllm_core.utils import (
   MYPY as MYPY,
   QUIET_ENV_VAR as QUIET_ENV_VAR,
   SHOW_CODEGEN as SHOW_CODEGEN,
+  correct_closure as correct_closure,
   analytics as analytics,
   calc_dir_size as calc_dir_size,
   check_bool_env as check_bool_env,

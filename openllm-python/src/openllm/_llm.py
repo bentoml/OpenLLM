@@ -404,12 +404,6 @@ class LLM(t.Generic[M, T]):
       if 'runner' in llm.__llm_services_config__: return llm.__llm_services_config__['runner']
       elif (full:=f"llm-{llm.config['start_name']}-runner") in llm.__llm_services_config__: return llm.__llm_services_config__[full]
       else: return {}
-    @staticmethod
-    def service(llm):
-      if llm.__llm_services_config__ is None: return {}
-      if 'service' in llm.__llm_services_config__: return llm.__llm_services_config__['service']
-      elif (full:=f"llm-{llm.config['start_name']}-service") in llm.__llm_services_config__: return llm.__llm_services_config__[full]
-      else: return {}
 
   @property
   def runner(self):

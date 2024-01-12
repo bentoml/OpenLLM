@@ -37,7 +37,7 @@ from ._typing_compat import (
   overload,
 )
 from .exceptions import ForbiddenAttributeError, MissingDependencyError, MissingAnnotationAttributeError, ValidationError
-from .utils import LazyLoader, ReprMixin, codegen, converter, dantic, field_env_key, first_not_none, lenient_issubclass
+from .utils import LazyLoader, ReprMixin, codegen, converter, dantic, field_env_key, first_not_none, lenient_issubclass, correct_closure
 from .utils.dantic import attach_pydantic_model
 from .utils.peft import PEFT_TASK_TYPE_TARGET_MAPPING, FineTuneConfig
 
@@ -636,40 +636,8 @@ class _ConfigBuilder:
     # and since we use the _ConfigBuilder in __init_subclass__, it will
     # raise recusion error. See https://peps.python.org/pep-0487/ for more
     # information on how __init_subclass__ works.
-    for k, value in cd.items():
-      setattr(self._cls, k, value)
-    return self.make_closure(self._cls)
-
-  def make_closure(self, cls: type[t.Any]) -> type[t.Any]:
-    # The following is a fix for
-    # <https://github.com/python-attrs/attrs/issues/102>.
-    # If a method mentions `__class__` or uses the no-arg super(), the
-    # compiler will bake a reference to the class in the method itself
-    # as `method.__closure__`.  Since we replace the class with a
-    # clone, we rewrite these references so it keeps working.
-    for item in cls.__dict__.values():
-      if isinstance(item, (classmethod, staticmethod)):
-        # Class- and staticmethods hide their functions inside.
-        # These might need to be rewritten as well.
-        closure_cells = getattr(item.__func__, '__closure__', None)
-      elif isinstance(item, property):
-        # Workaround for property `super()` shortcut (PY3-only).
-        # There is no universal way for other descriptors.
-        closure_cells = getattr(item.fget, '__closure__', None)
-      else:
-        closure_cells = getattr(item, '__closure__', None)
-
-      if not closure_cells:
-        continue  # Catch None or the empty list.
-      for cell in closure_cells:
-        try:
-          match = cell.cell_contents is self._cls
-        except ValueError:  # noqa: PERF203
-          pass  # ValueError: Cell is empty
-        else:
-          if match:
-            cell.cell_contents = cls
-    return cls
+    for k, value in cd.items(): setattr(self._cls, k, value)
+    return correct_closure(self._cls, self._cls)
 
   def add_attrs_init(self) -> Self:
     _item = dict(

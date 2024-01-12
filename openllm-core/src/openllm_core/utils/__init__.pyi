@@ -49,6 +49,7 @@ _T = TypeVar('_T')
 R = TypeVar('R')
 P = ParamSpec('P')
 
+def correct_closure(cls: Type[_T], ref: Type[R]) -> Type[_T]: ...
 @overload
 def api(func: Callable[Concatenate[Any, P], R]) -> APIMethod[P, R]: ...
 @overload

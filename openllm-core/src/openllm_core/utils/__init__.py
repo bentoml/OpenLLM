@@ -10,6 +10,37 @@ _object_setattr = object.__setattr__
 logger = logging.getLogger(__name__)
 
 
+def correct_closure(cls, ref):
+  # The following is a fix for
+  # <https://github.com/python-attrs/attrs/issues/102>.
+  # If a method mentions `__class__` or uses the no-arg super(), the
+  # compiler will bake a reference to the class in the method itself
+  # as `method.__closure__`.  Since we replace the class with a
+  # clone, we rewrite these references so it keeps working.
+  for item in cls.__dict__.values():
+    if isinstance(item, (classmethod, staticmethod)):
+      # Class- and staticmethods hide their functions inside.
+      # These might need to be rewritten as well.
+      closure_cells = getattr(item.__func__, '__closure__', None)
+    elif isinstance(item, property):
+      # Workaround for property `super()` shortcut (PY3-only).
+      # There is no universal way for other descriptors.
+      closure_cells = getattr(item.fget, '__closure__', None)
+    else:
+      closure_cells = getattr(item, '__closure__', None)
+
+    if not closure_cells:
+      continue  # Catch None or the empty list.
+    for cell in closure_cells:
+      try:
+        match = cell.cell_contents is ref
+      except ValueError:  # noqa: PERF203
+        pass  # ValueError: Cell is empty
+      else:
+        if match: cell.cell_contents = cls
+  return cls
+
+
 @functools.lru_cache(maxsize=1)
 def _WithArgsTypes() -> tuple[type[t.Any], ...]:
   try:

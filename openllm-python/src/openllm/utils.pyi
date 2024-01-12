@@ -14,6 +14,7 @@ from openllm_core.utils import (
   ReprMixin as ReprMixin,
   VersionInfo as VersionInfo,
   api as api,
+  correct_closure as correct_closure,
   analytics as analytics,
   calc_dir_size as calc_dir_size,
   check_bool_env as check_bool_env,

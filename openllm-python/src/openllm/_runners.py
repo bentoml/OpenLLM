@@ -3,74 +3,73 @@ import gc, traceback, types, typing as t
 import bentoml, openllm
 from openllm_core.exceptions import OpenLLMException, MissingDependencyError
 from openllm_core._schemas import CompletionChunk, GenerationOutput, SampleLogprobs
-from openllm_core._typing_compat import LiteralString, Unpack, ParamSpec
-from openllm_core.utils import ReprMixin, is_ctranslate_available, is_vllm_available
+from openllm_core._typing_compat import LiteralString, Unpack, ParamSpec, RunnerImplType, overload
+from openllm_core.utils import ReprMixin, is_ctranslate_available, is_vllm_available, correct_closure
 
 if t.TYPE_CHECKING:
   from _bentoml_sdk import Service
   from _bentoml_sdk.service.config import ServiceConfig
   from openllm_core._typing_compat import M, T
-  from ._runners import Runner
+  from ._runners import Runner, DeprecatedRunner
 
 P, R = ParamSpec('P'), t.TypeVar('R')
 
 _registry = {}
 __all__ = ['runner']
 
-@t.overload
-def registry(cls: None = ..., /, *, alias: LiteralString = ...) -> t.Type[Runner[M, T]]: ...
-
-@t.overload
-def registry(cls: t.Type[Runner[M, T]], /) -> t.Type[Runner[M, T]]: ...
-
-def registry(cls: t.Optional[t.Type[Runner[M, T]]] = None, *, alias: t.Optional[LiteralString] = None) -> t.Type[Runner[M, T]]:
-  def _gated_new(cls: t.Type[Runner[M, T]], /, **_: t.Any) -> Runner[M, T]:
+@overload
+def registry(cls: None = ..., /, *, alias: LiteralString = ...) -> type[Runner[M, T]]: ...
+@overload
+def registry(cls: type[Runner[M, T]], /) -> type[Runner[M, T]]: ...
+def registry(cls: type[Runner[M, T]] | None = None, *, alias: LiteralString | None = None) -> type[Runner[M, T]]:
+  def _gated_new(cls: type[Runner[M, T]], /, **_: t.Any) -> Runner[M, T]:
     if not cls.__openllm_can_init__: raise TypeError(f'Cannot instantiate {cls.__name__} directly.')
     return object.__new__(cls)
-  def decorator(_cls: t.Type[Runner[M, T]]) -> t.Type[Runner[M, T]]:
+  def decorator(_cls: type[Runner[M, T]]) -> type[Runner[M, T]]:
     _registry[_cls.__name__[:-8].lower() if alias is None else alias] = _cls
     cd = {'__openllm_can_init__': False, '__new__': _gated_new}
     cd.update(dict(_cls.__dict__))
-    return type(_cls)(_cls.__name__, _cls.__bases__, cd)
+    cls = type(_cls)(_cls.__name__, _cls.__bases__, cd)
+    return correct_closure(cls, _cls)
   return decorator(cls) if cls is not None else decorator
 
-def runner(llm: openllm.LLM[M, T], /, **attrs: Unpack[ServiceConfig]) -> Service[Runner[M, T]]:
+def runner(llm, /, **attrs):
   try:
     assert llm.bentomodel
   except (bentoml.exceptions.NotFound, AssertionError) as err:
     raise RuntimeError(f'Failed to locate {llm.bentomodel}: {err}') from err
-  return bentoml.service(
-    types.new_class(
-      (backend_cls := _registry[llm.__llm_backend__]).__name__[:-8] + llm.config.__class__.__name__[:-6] + 'Runner',
-      (backend_cls,),
-      exec_body=lambda ns: ns.update({
-        'llm': llm,
-        'llm_tag': llm.tag,
-        'llm_config': llm.config,
-        'llm_bentomodel': llm.bentomodel,
-        'llm_type': llm.llm_type,
-        'backend': llm.__llm_backend__,
-        'identifying_params': llm.identifying_params,
-        '__module__': __name__,
-        '__openllm_can_init__': True,
-        '__repr__': ReprMixin.__repr__,
-        '__doc__': llm.config.__class__.__doc__ or f'Generated RunnerService for {llm.config["model_name"]}',
-        '__repr_keys__': property(lambda _: {'config', 'llm_type', 'backend', 'llm_tag'}),
-        '__repr_args__': lambda _: (
-          ('config', llm.config.model_dump(flatten=True)),
-          ('llm_type', llm.llm_type),
-          ('backend', llm.__llm_backend__),
-          ('llm_tag', llm.tag),
-        ),
-        'has_adapters': llm.has_adapters,
-        'template': llm.config.template,
-        'system_message': llm.config.system_message,
-        'impl': backend_cls,
-      }),
-    ),
-    name=f"llm-{llm.config['start_name']}-runner",
-    **attrs,
+
+  classname = llm.config.__class__.__name__[:-6] + 'Runner'
+
+  impl_cls = types.new_class(
+    (backend_cls := _registry[llm.__llm_backend__]).__name__[:-8] + classname,
+    (backend_cls,),
+    exec_body=lambda ns: ns.update({
+      'llm': llm,
+      'llm_tag': llm.tag,
+      'llm_config': llm.config,
+      'llm_bentomodel': llm.bentomodel,
+      'llm_type': llm.llm_type,
+      'backend': llm.__llm_backend__,
+      'identifying_params': llm.identifying_params,
+      '__module__': __name__,
+      '__openllm_can_init__': True,
+      '__repr__': ReprMixin.__repr__,
+      '__doc__': llm.config.__class__.__doc__ or f'Generated RunnerService for {llm.config["model_name"]}',
+      '__repr_keys__': property(lambda _: {'config', 'llm_type', 'backend', 'llm_tag'}),
+      '__repr_args__': lambda _: (
+        ('config', llm.config.model_dump(flatten=True)),
+        ('llm_type', llm.llm_type),
+        ('backend', llm.__llm_backend__),
+        ('llm_tag', llm.tag),
+      ),
+      'has_adapters': llm.has_adapters,
+      'template': llm.config.template,
+      'system_message': llm.config.system_message,
+      'impl': backend_cls,
+    }),
   )
+  return bentoml.service(impl_cls, name=f"llm-{llm.config['start_name']}-runner", **attrs)
 
 
 @registry
